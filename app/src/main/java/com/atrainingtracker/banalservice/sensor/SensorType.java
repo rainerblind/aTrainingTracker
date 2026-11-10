@@ -28,12 +28,14 @@ import com.atrainingtracker.banalservice.sensor.formater.BatteryRemainingTimeFor
 import com.atrainingtracker.banalservice.sensor.formater.CadenceFormatter;
 import com.atrainingtracker.banalservice.sensor.formater.DefaultNumberFormatter;
 import com.atrainingtracker.banalservice.sensor.formater.DefaultStringFormatter;
+import com.atrainingtracker.banalservice.sensor.formater.DfaA1Formatter;
 import com.atrainingtracker.banalservice.sensor.formater.DistanceFormatter;
 import com.atrainingtracker.banalservice.sensor.formater.IntegerFormatter;
 import com.atrainingtracker.banalservice.sensor.formater.IntensityFactorFormatter;
 import com.atrainingtracker.banalservice.sensor.formater.MyFormatter;
 import com.atrainingtracker.banalservice.sensor.formater.PaceFormatter;
 import com.atrainingtracker.banalservice.sensor.formater.PowerToWeightFormatter;
+import com.atrainingtracker.banalservice.sensor.formater.SignedIntegerFormatter;
 import com.atrainingtracker.banalservice.sensor.formater.SpeedFormatter;
 import com.atrainingtracker.banalservice.sensor.formater.TimeFormatter;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
@@ -86,6 +88,14 @@ public enum SensorType
     WORK_KJ(SensorCategory.POWER_AND_PEDALING, R.string.work_kj, R.string.work_kj_short, R.string.units_work_kj, SensorValueType.DOUBLE, new IntegerFormatter(), false),
     TSS(SensorCategory.POWER_AND_PEDALING, R.string.tss, R.string.tss_short, R.string.units_none, SensorValueType.DOUBLE, new IntegerFormatter(), false),
     W_PRIME_BAL(SensorCategory.POWER_AND_PEDALING, R.string.w_prime_bal, R.string.w_prime_bal_short, R.string.units_work_kj, SensorValueType.DOUBLE, new PowerToWeightFormatter(), false),
+    POWER_5S(SensorCategory.POWER_AND_PEDALING, R.string.power_5s, R.string.power_5s_short, R.string.units_power, SensorValueType.DOUBLE, new IntegerFormatter(), true),
+    POWER_1M(SensorCategory.POWER_AND_PEDALING, R.string.power_1m, R.string.power_1m_short, R.string.units_power, SensorValueType.DOUBLE, new IntegerFormatter(), true),
+    POWER_5M(SensorCategory.POWER_AND_PEDALING, R.string.power_5m, R.string.power_5m_short, R.string.units_power, SensorValueType.DOUBLE, new IntegerFormatter(), true),
+    POWER_20M(SensorCategory.POWER_AND_PEDALING, R.string.power_20m, R.string.power_20m_short, R.string.units_power, SensorValueType.DOUBLE, new IntegerFormatter(), true),
+    POWER_PEAK_5S(SensorCategory.POWER_AND_PEDALING, R.string.power_peak_5s, R.string.power_peak_5s_short, R.string.units_power, SensorValueType.DOUBLE, new IntegerFormatter(), false),
+    POWER_PEAK_1M(SensorCategory.POWER_AND_PEDALING, R.string.power_peak_1m, R.string.power_peak_1m_short, R.string.units_power, SensorValueType.DOUBLE, new IntegerFormatter(), false),
+    POWER_PEAK_5M(SensorCategory.POWER_AND_PEDALING, R.string.power_peak_5m, R.string.power_peak_5m_short, R.string.units_power, SensorValueType.DOUBLE, new IntegerFormatter(), false),
+    POWER_PEAK_20M(SensorCategory.POWER_AND_PEDALING, R.string.power_peak_20m, R.string.power_peak_20m_short, R.string.units_power, SensorValueType.DOUBLE, new IntegerFormatter(), false),
     SPEED_mps(SensorCategory.SPEED_PACE_AND_DISTANCE, R.string.speed, R.string.speed_short, R.string.units_speed_basic, SensorValueType.DOUBLE, new SpeedFormatter(), true),
     // SPEED_mps_gps          (R.string.speed,                  R.string.speed_short,                  R.string.units_speed_basic,     SensorValueType.DOUBLE,  new SpeedFormatter()),
     // SPEED_mps_network      (R.string.speed,                  R.string.speed_short,                  R.string.units_speed_basic,     SensorValueType.DOUBLE,  new SpeedFormatter()),
@@ -105,7 +115,18 @@ public enum SensorType
     TORQUE_EFFECTIVENESS_R(SensorCategory.POWER_AND_PEDALING, R.string.torque_effectiveness_r, R.string.torque_effectiveness_r_short, R.string.units_percent, SensorValueType.INTEGER, new IntegerFormatter(), true),
     VERTICAL_SPEED(SensorCategory.ELEVATION_AND_NAVIGATION, R.string.vertical_speed, R.string.vertical_speed_short, R.string.units_vertical_speed_basic, SensorValueType.INTEGER, new IntegerFormatter(), true),
     PHONE_BATTERY(SensorCategory.SYSTEM_ENVIRONMENT_AND_DIAGNOSTICS, R.string.phone_battery, R.string.phone_battery_short, R.string.units_percent, SensorValueType.INTEGER, new IntegerFormatter(), false),
-    BATTERY_REMAINING_TIME(SensorCategory.SYSTEM_ENVIRONMENT_AND_DIAGNOSTICS, R.string.battery_remaining_time, R.string.battery_remaining_time_short, R.string.units_none, SensorValueType.INTEGER, new BatteryRemainingTimeFormatter(), false);
+    BATTERY_REMAINING_TIME(SensorCategory.SYSTEM_ENVIRONMENT_AND_DIAGNOSTICS, R.string.battery_remaining_time, R.string.battery_remaining_time_short, R.string.units_none, SensorValueType.INTEGER, new BatteryRemainingTimeFormatter(), false),
+    RR_INTERVAL(SensorCategory.SYSTEM_ENVIRONMENT_AND_DIAGNOSTICS, R.string.rr_interval, R.string.rr_interval_short, R.string.units_time_ms, SensorValueType.INTEGER, new IntegerFormatter(), true),
+    HRV_RMSSD(SensorCategory.HEART_RATE_AND_ENERGY, R.string.hrv_rmssd, R.string.hrv_rmssd_short, R.string.units_time_ms, SensorValueType.DOUBLE, new DefaultNumberFormatter(), true),
+    HRV_DFA_A1(SensorCategory.HEART_RATE_AND_ENERGY, R.string.hrv_dfa_a1, R.string.hrv_dfa_a1_short, R.string.units_none, SensorValueType.DOUBLE, new DfaA1Formatter(), true),
+    HRV_ARTIFACT_RATE(SensorCategory.SYSTEM_ENVIRONMENT_AND_DIAGNOSTICS, R.string.hrv_artifact_rate, R.string.hrv_artifact_rate_short, R.string.units_percent, SensorValueType.DOUBLE, new DefaultNumberFormatter(), true),
+    RADAR_THREAT_COUNT(SensorCategory.SYSTEM_ENVIRONMENT_AND_DIAGNOSTICS, R.string.radar_threat_count, R.string.radar_threat_count_short, R.string.units_none, SensorValueType.INTEGER, new IntegerFormatter(), false),
+    RADAR_CLOSEST_DISTANCE_m(SensorCategory.SYSTEM_ENVIRONMENT_AND_DIAGNOSTICS, R.string.radar_closest_distance, R.string.radar_closest_distance_short, R.string.units_distance_basic, SensorValueType.DOUBLE, new DistanceFormatter(), false),
+    RADAR_APPROACH_SPEED_mps(SensorCategory.SYSTEM_ENVIRONMENT_AND_DIAGNOSTICS, R.string.radar_approach_speed, R.string.radar_approach_speed_short, R.string.units_speed_basic, SensorValueType.DOUBLE, new SpeedFormatter(), false),
+    RADAR_VEHICLE_COUNT(SensorCategory.SYSTEM_ENVIRONMENT_AND_DIAGNOSTICS, R.string.radar_vehicle_count, R.string.radar_vehicle_count_short, R.string.units_none, SensorValueType.INTEGER, new IntegerFormatter(), false),
+    RADAR_PASSING_DISTANCE_m(SensorCategory.SYSTEM_ENVIRONMENT_AND_DIAGNOSTICS, R.string.radar_passing_distance, R.string.radar_passing_distance_short, R.string.units_distance_basic, SensorValueType.DOUBLE, new DistanceFormatter(), false),
+    RADAR_LARGE_VEHICLE_COUNT(SensorCategory.SYSTEM_ENVIRONMENT_AND_DIAGNOSTICS, R.string.radar_large_vehicle_count, R.string.radar_large_vehicle_count_short, R.string.units_none, SensorValueType.INTEGER, new IntegerFormatter(), false),
+    LIVE_HR_DRIFT(SensorCategory.HEART_RATE_AND_ENERGY, R.string.live_hr_drift, R.string.live_hr_drift_short, R.string.units_heart_rate, SensorValueType.INTEGER, new SignedIntegerFormatter(), true);
 
     // max bit = 118
 
@@ -113,7 +134,6 @@ public enum SensorType
             POWER, HR, SPEED_mps, CADENCE, ALTITUDE, TEMPERATURE
     );
 
-    // RR_INTERVAL     (0x0011, "RR interval",            "RR",                 "",     SensorValueType.DOUBLE,  new DefaultNumberFormatter()),
     // POWER_DIFF      (0x0022, "power differentiation",  "power diff",         "",     SensorValueType.DOUBLE,  new DefaultNumberFormatter()),
 
     public static final Creator<SensorType> CREATOR = new Creator<SensorType>() {
@@ -160,8 +180,10 @@ public enum SensorType
             case DISTANCE_m -> R.drawable.ic_distance;
             case SPEED_mps -> R.drawable.ic_speed;
             case CADENCE -> R.drawable.ic_cadence;
-            case HR -> R.drawable.ic_heart_rate;
-            case POWER, POWER_TO_WEIGHT, NORMALIZED_POWER, INTENSITY_FACTOR, WORK_KJ, TSS -> R.drawable.ic_power;
+            case HR, RR_INTERVAL, HRV_RMSSD, HRV_DFA_A1, HRV_ARTIFACT_RATE, LIVE_HR_DRIFT -> R.drawable.ic_heart_rate;
+            case POWER, POWER_TO_WEIGHT, NORMALIZED_POWER, INTENSITY_FACTOR, WORK_KJ, TSS, W_PRIME_BAL,
+                 POWER_5S, POWER_1M, POWER_5M, POWER_20M,
+                 POWER_PEAK_5S, POWER_PEAK_1M, POWER_PEAK_5M, POWER_PEAK_20M -> R.drawable.ic_power;
             case PHONE_BATTERY, BATTERY_REMAINING_TIME -> R.drawable.ic_battery_full;
             default -> R.drawable.ic_cross;
         };

@@ -34,7 +34,19 @@ import com.atrainingtracker.trainingtracker.database.LapsDatabaseManager;
 import com.atrainingtracker.trainingtracker.database.WorkoutSamplesDatabaseManager;
 import com.atrainingtracker.trainingtracker.database.WorkoutSamplesDatabaseManager.WorkoutSamplesDbHelper;
 import com.atrainingtracker.trainingtracker.exporter.ExportInfo;
-
+import com.atrainingtracker.trainingtracker.repositories.SportTypesRepository;
+import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository;
+import com.atrainingtracker.trainingtracker.tcx.model.TcxActivity;
+import com.atrainingtracker.trainingtracker.tcx.model.TcxActivityExtensions;
+import com.atrainingtracker.trainingtracker.tcx.model.TcxAuthor;
+import com.atrainingtracker.trainingtracker.tcx.model.TcxCreator;
+import com.atrainingtracker.trainingtracker.tcx.model.TcxDocument;
+import com.atrainingtracker.trainingtracker.tcx.model.TcxLap;
+import com.atrainingtracker.trainingtracker.tcx.model.TcxLapExtensions;
+import com.atrainingtracker.trainingtracker.tcx.model.TcxPosition;
+import com.atrainingtracker.trainingtracker.tcx.model.TcxTrackpoint;
+import com.atrainingtracker.trainingtracker.tcx.model.TcxTrackpointExtensions;
+import com.atrainingtracker.trainingtracker.tcx.serializer.TcxSerializer;
 import com.atrainingtracker.trainingtracker.ui.aftermath.LapData;
 
 import com.atrainingtracker.BuildConfig;
@@ -46,12 +58,21 @@ import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CancellationException;
 
-
+/**
+ * TCX workout exporter refactored to use structured DTO serialization via {@link TcxSerializer}.
+ *
+ * Traceability:
+ * - REQ-DAT-040: TCX Structured DTO Serialization, Parsing Decoupling & Round-Trip Fidelity.
+ * - REQ-EXP-001: Export Interoperability & integer Watts/Cadence.
+ * - REQ-EXP-022: Garmin TCX v2 sequence ordering, XML escaping, thread safety.
+ */
 public class TCXFileWriter extends BaseFileWriter {
     protected static final boolean WRITE_ONLY_ON_NEW_GEO_DATA = true;
     private static final String TAG = "TCXFileExporter";
@@ -83,13 +104,8 @@ public class TCXFileWriter extends BaseFileWriter {
     }
 
     @NonNull
-    protected static String escapeXml(String text) {
-        if (text == null) return "";
-        return text.replace("&", "&amp;")
-                .replace("<", "&lt;")
-                .replace(">", "&gt;")
-                .replace("\"", "&quot;")
-                .replace("'", "&apos;");
+    public static String escapeXml(String text) {
+        return TcxSerializer.INSTANCE.escapeXml(text);
     }
 
     /**
@@ -132,39 +148,6 @@ public class TCXFileWriter extends BaseFileWriter {
         return DEFAULT_VERSION_MINOR;
     }
 
-    private void writeLapNotesAndExtensions(@NonNull BufferedWriter bufferedWriter, long lapNr, @NonNull Map<Long, LapData> lapDataMap) throws IOException {
-        LapData lapData = lapDataMap.get(lapNr);
-        if (lapData != null) {
-            String name = lapData.getName();
-            String desc = lapData.getDescription();
-            boolean hasName = name != null && !name.trim().isEmpty();
-            boolean hasDesc = desc != null && !desc.trim().isEmpty();
-
-            if (hasName || hasDesc) {
-                String noteContent;
-                if (hasName && hasDesc) {
-                    noteContent = "[" + name.trim() + "] " + desc.trim();
-                } else if (hasName) {
-                    noteContent = "[" + name.trim() + "]";
-                } else {
-                    noteContent = desc.trim();
-                }
-                bufferedWriter.write("        <Notes>" + escapeXml(noteContent) + "</Notes>\n");
-
-                bufferedWriter.write("        <Extensions>\n");
-                bufferedWriter.write("          <att:LapExtension xmlns:att=\"http://atrainingtracker.com/xmlschemas/TrainingCenterDatabaseExtensions/v1\">\n");
-                if (hasName) {
-                    bufferedWriter.write("            <att:Name>" + escapeXml(name.trim()) + "</att:Name>\n");
-                }
-                if (hasDesc) {
-                    bufferedWriter.write("            <att:Description>" + escapeXml(desc.trim()) + "</att:Description>\n");
-                }
-                bufferedWriter.write("          </att:LapExtension>\n");
-                bufferedWriter.write("        </Extensions>\n");
-            }
-        }
-    }
-
     @NonNull
     @Override
     protected ExportResult doExport(@NonNull ExportInfo exportInfo)
@@ -173,21 +156,20 @@ public class TCXFileWriter extends BaseFileWriter {
 
         getHeaderData(exportInfo);
 
-        try (BufferedWriter bufferedWriter = getBufferedWriter(exportInfo.getShortPath())) {
-            // write the header data to the file
-            bufferedWriter.write("<?xml version=\"1.0\"?>\n");
-            bufferedWriter.write("<TrainingCenterDatabase xmlns=\"http://www.garmin.com/xmlschemas/TrainingCenterDatabase/v2\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xsi:schemaLocation=\"http://www.garmin.com/xmlschemas/ActivityExtension/v2 http://www.garmin.com/xmlschemas/ActivityExtensionv2.xsd http://www.garmin.com/xmlschemas/TrainingCenterDatabase/v2 http://www.garmin.com/xmlschemas/TrainingCenterDatabasev2.xsd\">\n");
-            bufferedWriter.write("  <Activities>\n");
-            bufferedWriter.write("    <Activity Sport=\"" + SportTypeDatabaseManager.getInstance(mContext).getTcxName(sportTypeId) + "\">\n");
-            bufferedWriter.write("      <Id>" + dbTime2XMLTime(startTime) + "</Id>\n");
-
-            List<LapData> lapsList = LapsDatabaseManager.getInstance(mContext).getLaps(workoutID);
+        try {
+            List<LapData> lapsList = WorkoutRepository.getInstance(mContext).getLaps(workoutID);
             Map<Long, LapData> lapDataMap = new HashMap<>();
             for (LapData lapData : lapsList) {
                 lapDataMap.put(lapData.getLapNr(), lapData);
             }
 
-            SQLiteDatabase db = WorkoutSamplesDatabaseManager.getInstance(mContext).getDatabase();
+            List<TcxLap> tcxLaps = new ArrayList<>();
+            List<TcxTrackpoint> currentTrackpoints = new ArrayList<>();
+            String currentLapStartTime = null;
+            String totalTime = "0";
+            String totalDistance = "0";
+
+            SQLiteDatabase db = WorkoutRepository.getInstance(mContext).getWorkoutSamplesDatabaseManager().getDatabase();
             try (Cursor cursor = db.query(WorkoutSamplesDatabaseManager.getTableName(exportInfo.getFileBaseName()),
                     null,
                     null,
@@ -196,8 +178,6 @@ public class TCXFileWriter extends BaseFileWriter {
                     null,
                     null)) {
 
-                int hr;
-                double distance, speed, power, cadence, altitude;
                 double latitude = 0.0;
                 double longitude = 0.0;
                 double latitudeOld;
@@ -210,211 +190,182 @@ public class TCXFileWriter extends BaseFileWriter {
                         throw new CancellationException("TCX export cancelled at start of loop iteration");
                     }
 
-                    // TODO: avoid writing laps with zero distance and time and ...
-
                     int lap = cursor.getInt(cursor.getColumnIndexOrThrow(SensorType.LAP_NR.name()));
                     if (prevLineLap != lap) { // new lap
-
                         if (prevLineLap != BANALService.INIT_LAP_NR - 1) { // finish previous lap
-                            bufferedWriter.write("        </Track>\n");
-                            writeLapNotesAndExtensions(bufferedWriter, prevLineLap, lapDataMap);
-                    bufferedWriter.write("      </Lap>\n");
-                }
+                            tcxLaps.add(buildLap(prevLineLap, currentLapStartTime, totalTime, totalDistance, currentTrackpoints, lapDataMap));
+                            currentTrackpoints = new ArrayList<>();
+                        }
 
-                // get the lap data
-                LapData lapData = lapDataMap.get((long) lap);
-                if (lapData != null) {
-                    totalTime = String.valueOf(lapData.getTimeTotalS());
-                    totalDistance = String.valueOf(lapData.getDistanceTotalM());
-                } else {
-                    SQLiteDatabase lapDb = LapsDatabaseManager.getInstance(mContext).getDatabase();
-                    Cursor lapCursor = lapDb.query(LapsDatabaseManager.Laps.TABLE,
-                            null,
-                            LapsDatabaseManager.Laps.WORKOUT_ID + "=? AND " + LapsDatabaseManager.Laps.LAP_NR + "=?",
-                            new String[]{workoutID + "", lap + ""},
-                            null,
-                            null,
-                            null);
-                    if (lapCursor.moveToFirst()) {
-                        totalTime = myGet(lapCursor, LapsDatabaseManager.Laps.TIME_TOTAL_s, "0");
-                        totalDistance = myGet(lapCursor, LapsDatabaseManager.Laps.DISTANCE_TOTAL_m, "0");
-                    } else {
-                        totalTime = "0";
-                        totalDistance = "0";
+                        // get the lap data
+                        LapData lapData = lapDataMap.get((long) lap);
+                        if (lapData != null) {
+                            totalTime = String.valueOf(lapData.getTimeTotalS());
+                            totalDistance = String.valueOf(lapData.getDistanceTotalM());
+                        } else {
+                            SQLiteDatabase lapDb = WorkoutRepository.getInstance(mContext).getLapsDatabaseManagerInstance().getDatabase();
+                            try (Cursor lapCursor = lapDb.query(LapsDatabaseManager.Laps.TABLE,
+                                    null,
+                                    LapsDatabaseManager.Laps.WORKOUT_ID + "=? AND " + LapsDatabaseManager.Laps.LAP_NR + "=?",
+                                    new String[]{workoutID + "", lap + ""},
+                                    null,
+                                    null,
+                                    null)) {
+                                if (lapCursor.moveToFirst()) {
+                                    totalTime = myGet(lapCursor, LapsDatabaseManager.Laps.TIME_TOTAL_s, "0");
+                                    totalDistance = myGet(lapCursor, LapsDatabaseManager.Laps.DISTANCE_TOTAL_m, "0");
+                                } else {
+                                    totalTime = "0";
+                                    totalDistance = "0";
+                                }
+                            }
+                        }
+
+                        currentLapStartTime = dbTime2XMLTime(cursor.getString(cursor.getColumnIndexOrThrow(WorkoutSamplesDbHelper.TIME)));
                     }
-                    lapCursor.close();
+                    prevLineLap = lap;
+
+                    String tpTime = dbTime2XMLTime(cursor.getString(cursor.getColumnIndexOrThrow(WorkoutSamplesDbHelper.TIME)));
+
+                    TcxPosition position = null;
+                    // we do not write location data when it was a (indoor) trainer session
+                    if (!indoorTrainerSession && haveGeo && dataValid(cursor, SensorType.LATITUDE.name()) && dataValid(cursor, SensorType.LONGITUDE.name())) {
+                        latitudeOld = latitude;
+                        longitudeOld = longitude;
+                        latitude = cursor.getDouble(cursor.getColumnIndexOrThrow(SensorType.LATITUDE.name()));
+                        longitude = cursor.getDouble(cursor.getColumnIndexOrThrow(SensorType.LONGITUDE.name()));
+
+                        if (!(WRITE_ONLY_ON_NEW_GEO_DATA && latitude == latitudeOld && longitude == longitudeOld)) {
+                            position = new TcxPosition(latitude, longitude);
+                        }
+                    }
+
+                    Double altitude = null;
+                    if (haveAltitude && dataValid(cursor, SensorType.ALTITUDE.name())) {
+                        double alt = cursor.getDouble(cursor.getColumnIndexOrThrow(SensorType.ALTITUDE.name()));
+                        if (alt >= -500.0 && alt <= 9000.0) {
+                            altitude = alt;
+                        }
+                    }
+
+                    Double distance = null;
+                    if (haveDistance && dataValid(cursor, SensorType.DISTANCE_m.name())) {
+                        distance = cursor.getDouble(cursor.getColumnIndexOrThrow(SensorType.DISTANCE_m.name()));
+                    }
+
+                    Integer hrVal = null;
+                    if (haveHR && dataValid(cursor, SensorType.HR.name())) {
+                        hrVal = cursor.getInt(cursor.getColumnIndexOrThrow(SensorType.HR.name()));
+                    }
+
+                    Integer cadenceVal = null;
+                    if (haveBikeCadence && dataValid(cursor, SensorType.CADENCE.name())) {
+                        cadenceVal = (int) Math.round(cursor.getDouble(cursor.getColumnIndexOrThrow(SensorType.CADENCE.name())));
+                    }
+
+                    Double speedVal = null;
+                    Integer powerVal = null;
+                    Integer runCadenceVal = null;
+
+                    if (haveSpeed && dataValid(cursor, SensorType.SPEED_mps.name())) {
+                        speedVal = cursor.getDouble(cursor.getColumnIndexOrThrow(SensorType.SPEED_mps.name()));
+                    }
+
+                    if (havePower && dataValid(cursor, SensorType.POWER.name())) {
+                        powerVal = (int) Math.round(cursor.getDouble(cursor.getColumnIndexOrThrow(SensorType.POWER.name())));
+                    }
+
+                    if (haveRunCadence && dataValid(cursor, SensorType.CADENCE.name())) {
+                        runCadenceVal = (int) Math.round(cursor.getDouble(cursor.getColumnIndexOrThrow(SensorType.CADENCE.name())));
+                    }
+
+                    TcxTrackpointExtensions tpExt = (speedVal != null || powerVal != null || runCadenceVal != null)
+                            ? new TcxTrackpointExtensions(speedVal, powerVal, runCadenceVal)
+                            : null;
+
+                    currentTrackpoints.add(new TcxTrackpoint(
+                            tpTime,
+                            position,
+                            altitude,
+                            distance,
+                            hrVal,
+                            cadenceVal,
+                            tpExt
+                    ));
+
+                    if (isCancelled()) {
+                        throw new CancellationException("TCX export cancelled post-I/O");
+                    }
                 }
 
-                // write the lap data
-                bufferedWriter.write("      <Lap StartTime=\"" + dbTime2XMLTime(cursor.getString(cursor.getColumnIndexOrThrow(WorkoutSamplesDbHelper.TIME))) + "\">\n");
-                bufferedWriter.write("        <TotalTimeSeconds>" + totalTime + "</TotalTimeSeconds>\n");
-                bufferedWriter.write("        <DistanceMeters>" + totalDistance + "</DistanceMeters>\n");
-                // bufferedWriter.write("        <Calories>" + 0 + "</Calories>\n");    // TODO
-                // bufferedWriter.write("        <Intensity>Active</Intensity>\n"); // TODO: meaning???
-                // bufferedWriter.write("        <TriggerMethod>Manual</TriggerMethod>\n"); // TODO: meaning?
-                bufferedWriter.write("        <Track>\n");
+                if (prevLineLap != BANALService.INIT_LAP_NR - 1) {
+                    tcxLaps.add(buildLap(prevLineLap, currentLapStartTime, totalTime, totalDistance, currentTrackpoints, lapDataMap));
+                }
+            } // close cursor try
 
-            }
-            prevLineLap = lap;
+            String activityWorkoutName = (workoutName != null && !workoutName.trim().isEmpty() && !workoutName.equals(exportInfo.getFileBaseName()))
+                    ? workoutName.trim() : null;
+            String activityDesc = (description != null && !description.trim().isEmpty())
+                    ? description.trim() : null;
 
-            bufferedWriter.write("          <Trackpoint>\n");
-            bufferedWriter.write("            <Time>"
-                    + dbTime2XMLTime(cursor.getString(cursor.getColumnIndexOrThrow(WorkoutSamplesDbHelper.TIME)))
-                    + "</Time>\n");
-
-            // we do not write location data when it was a (indoor) trainer session
-            if (!indoorTrainerSession && haveGeo && dataValid(cursor, SensorType.LATITUDE.name()) && dataValid(cursor, SensorType.LONGITUDE.name())) {
-                latitudeOld = latitude;
-                longitudeOld = longitude;
-                latitude = cursor.getDouble(cursor.getColumnIndexOrThrow(SensorType.LATITUDE.name()));
-                longitude = cursor.getDouble(cursor.getColumnIndexOrThrow(SensorType.LONGITUDE.name()));
-
-                if (WRITE_ONLY_ON_NEW_GEO_DATA && latitude == latitudeOld && longitude == longitudeOld) {
-                    // do nothing
+            String activityNotes = null;
+            if (activityWorkoutName != null || activityDesc != null) {
+                if (activityWorkoutName != null && activityDesc != null) {
+                    activityNotes = "[" + activityWorkoutName + "] " + activityDesc;
+                } else if (activityWorkoutName != null) {
+                    activityNotes = "[" + activityWorkoutName + "]";
                 } else {
-                    bufferedWriter.write("            <Position>\n");
-                    bufferedWriter.write("              <LatitudeDegrees>" +
-                            latitude + "</LatitudeDegrees>\n");
-                    bufferedWriter.write("              <LongitudeDegrees>" +
-                            longitude + "</LongitudeDegrees>\n");
-                    bufferedWriter.write("            </Position>\n");
+                    activityNotes = activityDesc;
                 }
             }
 
-            if (haveAltitude && dataValid(cursor, SensorType.ALTITUDE.name())) {
-                altitude = cursor.getDouble(cursor.getColumnIndexOrThrow(SensorType.ALTITUDE.name()));
-                if (altitude >= -500.0 && altitude <= 9000.0) {
-                    bufferedWriter.write("            <AltitudeMeters>" +
-                            altitude + "</AltitudeMeters>\n");
-                }
+            TcxActivityExtensions actExt = (activityWorkoutName != null || activityDesc != null)
+                    ? new TcxActivityExtensions(activityWorkoutName, activityDesc)
+                    : null;
+
+            TcxCreator creator = new TcxCreator(
+                    android.os.Build.MANUFACTURER + " " + android.os.Build.MODEL,
+                    0L,
+                    1,
+                    parseVersionMajor(),
+                    parseVersionMinor(),
+                    BuildConfig.VERSION_CODE,
+                    0
+            );
+
+            String authorName = TrainingApplication.getAppName();
+            if (HavePressureSensor.havePressureSensor(mContext)) {
+                authorName += " with barometer";
+            }
+            TcxAuthor author = new TcxAuthor(
+                    authorName,
+                    parseVersionMajor(),
+                    parseVersionMinor(),
+                    BuildConfig.VERSION_CODE,
+                    0,
+                    "Release",
+                    GARMIN_AUTHOR_LANG_ID,
+                    GARMIN_AUTHOR_PART_NUMBER
+            );
+
+            TcxActivity activity = new TcxActivity(
+                    SportTypesRepository.getInstance(mContext).getTcxName(sportTypeId),
+                    dbTime2XMLTime(startTime),
+                    tcxLaps,
+                    activityNotes,
+                    creator,
+                    actExt
+            );
+
+            TcxDocument document = new TcxDocument(
+                    Collections.singletonList(activity),
+                    author
+            );
+
+            try (BufferedWriter bufferedWriter = getBufferedWriter(exportInfo.getShortPath())) {
+                TcxSerializer.INSTANCE.serialize(document, bufferedWriter);
             }
 
-            if (haveDistance && dataValid(cursor, SensorType.DISTANCE_m.name())) {
-                distance = cursor.getDouble(cursor.getColumnIndexOrThrow(SensorType.DISTANCE_m.name()));
-                bufferedWriter.write("            <DistanceMeters>" +
-                        distance + "</DistanceMeters>\n");
-            }
-
-            if (haveHR && dataValid(cursor, SensorType.HR.name())) {
-                bufferedWriter.write("            <HeartRateBpm xsi:type=\"HeartRateInBeatsPerMinute_t\">\n");
-                hr = cursor.getInt(cursor.getColumnIndexOrThrow(SensorType.HR.name()));
-                bufferedWriter.write("              <Value>" +
-                        hr + "</Value>\n");
-                bufferedWriter.write("            </HeartRateBpm>\n");
-            }
-
-            if (haveBikeCadence && dataValid(cursor, SensorType.CADENCE.name())) {
-                cadence = cursor.getDouble(cursor.getColumnIndexOrThrow(SensorType.CADENCE.name()));
-                bufferedWriter.write("            <Cadence>" +
-                        (int) Math.round(cadence) + "</Cadence>\n");
-            }
-
-            if ((haveSpeed || havePower || haveRunCadence)
-                    && (dataValid(cursor, SensorType.SPEED_mps.name())
-                    || dataValid(cursor, SensorType.POWER.name())
-                    || dataValid(cursor, SensorType.CADENCE.name()))) {
-                bufferedWriter.write("            <Extensions>\n");
-                bufferedWriter.write("              <TPX xmlns=\"http://www.garmin.com/xmlschemas/ActivityExtension/v2\">\n");
-                if (haveSpeed && dataValid(cursor, SensorType.SPEED_mps.name())) {
-                    speed = cursor.getDouble(cursor.getColumnIndexOrThrow(SensorType.SPEED_mps.name()));
-                    bufferedWriter.write("            <Speed>" +
-                            speed + "</Speed>\n");
-                }
-
-                if (havePower && dataValid(cursor, SensorType.POWER.name())) {
-                    power = cursor.getDouble(cursor.getColumnIndexOrThrow(SensorType.POWER.name()));
-                    bufferedWriter.write("            <Watts>" +
-                            (int) Math.round(power) + "</Watts>\n");
-                }
-
-                if (haveRunCadence && dataValid(cursor, SensorType.CADENCE.name())) {
-                    cadence = cursor.getDouble(cursor.getColumnIndexOrThrow(SensorType.CADENCE.name()));
-                    bufferedWriter.write("            <RunCadence>" +
-                            (int) Math.round(cadence) + "</RunCadence>\n");
-                }
-
-
-                bufferedWriter.write("              </TPX>\n");
-                bufferedWriter.write("            </Extensions>\n");
-            }
-            bufferedWriter.write("          </Trackpoint>\n");
-
-            if (isCancelled()) {
-                throw new CancellationException("TCX export cancelled post-I/O");
-            }
-        }
-
-        // now the tail
-        bufferedWriter.write("        </Track>\n");
-        if (prevLineLap != BANALService.INIT_LAP_NR - 1) {
-            writeLapNotesAndExtensions(bufferedWriter, prevLineLap, lapDataMap);
-        }
-        bufferedWriter.write("      </Lap>\n");
-        String activityWorkoutName = (workoutName != null && !workoutName.trim().isEmpty() && !workoutName.equals(exportInfo.getFileBaseName()))
-                ? workoutName.trim() : null;
-        String activityDesc = (description != null && !description.trim().isEmpty())
-                ? description.trim() : null;
-
-        if (activityWorkoutName != null || activityDesc != null) {
-            String noteContent;
-            if (activityWorkoutName != null && activityDesc != null) {
-                noteContent = "[" + activityWorkoutName + "] " + activityDesc;
-            } else if (activityWorkoutName != null) {
-                noteContent = "[" + activityWorkoutName + "]";
-            } else {
-                noteContent = activityDesc;
-            }
-            bufferedWriter.write("      <Notes>" + escapeXml(noteContent) + "</Notes>\n");
-        }
-
-        // Creator is a child of Activity in TrainingCenterDatabasev2.xsd (placed before Extensions)
-        bufferedWriter.write("      <Creator xsi:type=\"Device_t\">\n");
-        bufferedWriter.write("        <Name>" + escapeXml(android.os.Build.MANUFACTURER + " " + android.os.Build.MODEL) + "</Name>\n");
-        bufferedWriter.write("        <UnitId>0</UnitId>\n");
-        bufferedWriter.write("        <ProductID>1</ProductID>\n");
-        bufferedWriter.write("        <Version>\n");
-        bufferedWriter.write("          <VersionMajor>" + parseVersionMajor() + "</VersionMajor>\n");
-        bufferedWriter.write("          <VersionMinor>" + parseVersionMinor() + "</VersionMinor>\n");
-        bufferedWriter.write("          <BuildMajor>" + BuildConfig.VERSION_CODE + "</BuildMajor>\n");
-        bufferedWriter.write("          <BuildMinor>0</BuildMinor>\n");
-        bufferedWriter.write("        </Version>\n");
-        bufferedWriter.write("      </Creator>\n");
-
-        if (activityWorkoutName != null || activityDesc != null) {
-            bufferedWriter.write("      <Extensions>\n");
-            bufferedWriter.write("        <att:ActivityExtension xmlns:att=\"http://atrainingtracker.com/xmlschemas/TrainingCenterDatabaseExtensions/v1\">\n");
-            if (activityWorkoutName != null) {
-                bufferedWriter.write("          <att:Name>" + escapeXml(activityWorkoutName) + "</att:Name>\n");
-            }
-            if (activityDesc != null) {
-                bufferedWriter.write("          <att:Description>" + escapeXml(activityDesc) + "</att:Description>\n");
-            }
-            bufferedWriter.write("        </att:ActivityExtension>\n");
-            bufferedWriter.write("      </Extensions>\n");
-        }
-        bufferedWriter.write("    </Activity>\n");
-        bufferedWriter.write("  </Activities>\n");
-        bufferedWriter.write("  <Author xsi:type=\"Application_t\">\n");
-        String name = TrainingApplication.getAppName();
-        if (HavePressureSensor.havePressureSensor(mContext)) {
-            name += " with barometer";
-        } // add "with barometer" when a barometer was/is available, see Strava API Documentations
-        bufferedWriter.write("    <Name>" + escapeXml(name) + "</Name>\n");
-        bufferedWriter.write("    <Build>\n");
-        bufferedWriter.write("      <Version>\n");
-        bufferedWriter.write("        <VersionMajor>" + parseVersionMajor() + "</VersionMajor>\n");
-        bufferedWriter.write("        <VersionMinor>" + parseVersionMinor() + "</VersionMinor>\n");
-        bufferedWriter.write("        <BuildMajor>" + BuildConfig.VERSION_CODE + "</BuildMajor>\n");
-        bufferedWriter.write("        <BuildMinor>0</BuildMinor>\n");
-        bufferedWriter.write("      </Version>\n");
-        bufferedWriter.write("      <Type>Release</Type>\n");
-        bufferedWriter.write("    </Build>\n");
-        bufferedWriter.write("    <LangID>" + GARMIN_AUTHOR_LANG_ID + "</LangID>\n");
-        bufferedWriter.write("    <PartNumber>" + GARMIN_AUTHOR_PART_NUMBER + "</PartNumber>\n");
-        bufferedWriter.write("  </Author>\n");
-        bufferedWriter.write("</TrainingCenterDatabase>\n");
-
-        } // close cursor try
         } catch (CancellationException e) {
             deleteOutputFileSafely(exportInfo);
             throw e;
@@ -423,4 +374,56 @@ public class TCXFileWriter extends BaseFileWriter {
         return new ExportResult(true, false, "Successfully exported to TCX File");
     }
 
+    private TcxLap buildLap(long lapNr, String startTime, String totalTime, String totalDistance,
+                            List<TcxTrackpoint> trackpoints, Map<Long, LapData> lapDataMap) {
+        String lapNotes = null;
+        TcxLapExtensions lapExt = null;
+
+        LapData lapData = lapDataMap.get(lapNr);
+        if (lapData != null) {
+            String name = lapData.getName();
+            String desc = lapData.getDescription();
+            boolean hasName = name != null && !name.trim().isEmpty();
+            boolean hasDesc = desc != null && !desc.trim().isEmpty();
+
+            if (hasName || hasDesc) {
+                if (hasName && hasDesc) {
+                    lapNotes = "[" + name.trim() + "] " + desc.trim();
+                } else if (hasName) {
+                    lapNotes = "[" + name.trim() + "]";
+                } else {
+                    lapNotes = desc.trim();
+                }
+                lapExt = new TcxLapExtensions(hasName ? name.trim() : null, hasDesc ? desc.trim() : null);
+            }
+        }
+
+        double totalTimeSec = 0.0;
+        try {
+            totalTimeSec = Double.parseDouble(totalTime);
+        } catch (Exception ignored) {
+        }
+
+        double totalDistM = 0.0;
+        try {
+            totalDistM = Double.parseDouble(totalDistance);
+        } catch (Exception ignored) {
+        }
+
+        return new TcxLap(
+                startTime != null ? startTime : "",
+                totalTimeSec,
+                totalDistM,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                trackpoints,
+                lapNotes,
+                lapExt
+        );
+    }
 }

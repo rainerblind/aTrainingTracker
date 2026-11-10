@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ~ aTrainingTracker (ANT+ BTLE)
+  ~ Copyright (c) 2011 - 2026 Rainer Blind <rainer.blind@gmail.com>
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ This program is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~ GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License
+  ~ along with this program.  If not, see https://www.gnu.org/licenses/gpl-3.0
+  -->
+
+<resources>
+    <string name="hrv_rmssd">rMSSD</string>
+    <string name="hrv_rmssd_short">rMSSD</string>
+    <string name="hrv_dfa_a1">DFA a1</string>
+    <string name="hrv_dfa_a1_short">a1</string>
+    <string name="hrv_artifact_rate">Artefactpercentage</string>
+    <string name="hrv_artifact_rate_short">Art. %</string>
+
+    <string name="hrv_info_title">Hartslagvariabiliteit &amp; aerobe drempels</string>
+    <string name="hrv_info_trailing_lag_title">Glijdend venster &amp; tempovertraging</string>
+    <string name="hrv_info_trailing_lag_desc">Realtime DFA a1 wordt berekend over een glijdend venster van 2 minuten (elke 5 seconden bijgewerkt) en rMSSD over 60 seconden. Tempowijzigingen zijn pas na 1–2 minuten zichtbaar in de autonome telemetrie.</string>
+    <string name="hrv_info_sensor_recommendation_title">Sensoraanbevelingen</string>
+    <string name="hrv_info_sensor_recommendation_desc">Nauwkeurige beat-to-beat RR-intervallen vereisen een bevochtigde ECG-borstband (zoals Polar H10 of Garmin HRM-Pro). Optische polssensoren vlakken intervallen af en zijn ongeschikt voor DFA a1.</string>
+    <string name="hrv_info_zones_title">Aerobe drempelzones</string>
+    <string name="hrv_info_zones_desc">DFA a1 &gt; 0,75 duidt op een aëroob uithoudingsvermogen (Zone 2). Waarden tussen 0,75 en 0,50 weerspiegelen de drempelovergang (Zone 3). Waarden onder 0,50 duiden op hoge anaërobe intensiteit (Zone 4).</string>
+    <string name="hrv_info_disclaimer_title">Medische disclaimer</string>
+    <string name="hrv_info_disclaimer_desc">Autonome HRV-metrieken in aTrainingTracker zijn bedoeld voor trainingsbegeleiding en vervangen geen medisch advies. Hartritmestoornissen of ectopische slagen kunnen drempelschattingen vertekenen.</string>
+
+    <!-- Morning Resting HRV Check (ATT-3556 / REQ-PER-032) -->
+    <string name="morning_hrv_title">Ochtend HRV-check</string>
+    <string name="morning_hrv_subtitle">Ochtendprotocol voor autonoom herstel</string>
+    <string name="morning_hrv_posture_label">Houding</string>
+    <string name="morning_hrv_posture_supine">Liggend</string>
+    <string name="morning_hrv_posture_seated">Zittend</string>
+    <string name="morning_hrv_posture_standing">Staand</string>
+    <string name="morning_hrv_duration_label">Duur</string>
+    <string name="morning_hrv_duration_60s">60 s (Standaard)</string>
+    <string name="morning_hrv_duration_120s">120 s (Uitgebreid)</string>
+    <string name="morning_hrv_state_ready">Klaar voor meting</string>
+    <string name="morning_hrv_state_stabilizing">Stabiliseren: %1$ds</string>
+    <string name="morning_hrv_state_measuring">Meten: %1$ds / %2$ds</string>
+    <string name="morning_hrv_state_completed">Meting voltooid</string>
+    <string name="morning_hrv_btn_start">Meting starten</string>
+    <string name="morning_hrv_btn_cancel">Annuleren</string>
+    <string name="morning_hrv_btn_save">Meting opslaan</string>
+    <string name="morning_hrv_btn_discard">Verwerpen</string>
+    <string name="morning_hrv_instructions_title">Gestandaardiseerd protocol</string>
+    <string name="morning_hrv_instructions_desc">Meet direct na het ontwaken en legen van de blaas. Blijf stil liggen en adem rustig zonder te spreken. Behoud dezelfde houding voor betrouwbare SWC-vergelijkingen.</string>
+    <string name="morning_hrv_artifact_warning_title">Hoog artefactpercentage</string>
+    <string name="morning_hrv_artifact_warning_desc">Artefactpercentage overschrijdt 5%% (%1$.1f%%). Bevochtig de elektroden van de borstband en controleer de pasvorm.</string>
+    <string name="morning_hrv_summary_rmssd">rMSSD: %1$.1f ms</string>
+    <string name="morning_hrv_summary_ln_rmssd">ln(rMSSD): %1$.2f</string>
+    <string name="morning_hrv_summary_resting_hr">Rusthartslag: %1$d bpm</string>
+    <string name="morning_hrv_saved_toast">Ochtend HRV-meting opgeslagen</string>
+
+    <!-- Longitudinal HRV Readiness Trend in Periods Screen (ATT-3557 / REQ-PER-033) -->
+    <string name="hrv_readiness_trend_title">HRV-gereedheidstrend</string>
+    <string name="hrv_readiness_trend_subtitle">7-daags gemiddelde &amp; 60-daagse SWC-corridor</string>
+    <string name="hrv_readiness_metric_ln_rmssd">ln(rMSSD)</string>
+    <string name="hrv_readiness_metric_rmssd">rMSSD (ms)</string>
+    <string name="hrv_readiness_toggle_training_load">Trainingsbelasting</string>
+    <string name="hrv_readiness_no_entries_posture">Geen metingen vastgelegd voor houding %1$s</string>
+    <string name="hrv_readiness_swc_baseline_label">60d SWC-basislijn</string>
+    <string name="hrv_readiness_rolling_avg_label">7-daags rollend gemiddelde</string>
+
+    <!-- Interactive DFA a1 / rMSSD Charts & Scatter Plot in Workout Details (ATT-3544 / REQ-PER-035) -->
+    <string name="hrv_scatter_card_title">DFA a1 Aërobe drempelwaardedynamiek</string>
+    <string name="hrv_scatter_card_subtitle">a1 vs. hartslag &amp; fietsvermogen</string>
+    <string name="hrv_scatter_aerobic_threshold">Aërobe drempel (a1 = 0,75)</string>
+    <string name="hrv_scatter_anaerobic_threshold">Anaërobe drempel (a1 = 0,50)</string>
+    <string name="hrv_scatter_toggle_hr">Hartslag</string>
+    <string name="hrv_scatter_toggle_power">Vermogen</string>
+    <string name="hrv_scatter_artifact_suppressed">Intervallen met hoge artefacten (&gt;5%%) onderdrukt</string>
+    <string name="hrv_scatter_no_data">Geen HRV-gegevens beschikbaar voor deze training</string>
+    <string name="hrv_chart_artifact_gap_label">Artefactkloof</string>
+</resources>

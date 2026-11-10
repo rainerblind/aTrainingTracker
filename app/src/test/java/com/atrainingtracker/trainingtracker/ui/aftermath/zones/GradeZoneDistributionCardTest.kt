@@ -49,25 +49,25 @@ class GradeZoneDistributionCardTest {
         val file = resolveSourceFile("app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/zones/GradeZoneDistributionCard.kt")
         val content = file.readText()
 
-        // 1. Header Row Architecture
-        assertTrue("Header must use R.drawable.ic_grade", content.contains("R.drawable.ic_grade"))
-        assertTrue("Header must use R.string.aftermath_grade_zones_title", content.contains("R.string.aftermath_grade_zones_title"))
-        assertTrue("Header must format duration via ZoneDistributionChartMath", content.contains("ZoneDistributionChartMath.formatZoneDuration"))
-
-        // 2. Body Display Modes
-        assertTrue("Must render ZoneDistributionStackedBar in STACKED_BAR mode", content.contains("ZoneDistributionStackedBar("))
-        assertTrue("Must render ZoneDistributionColumnChart in COLUMNS mode", content.contains("ZoneDistributionColumnChart("))
-        assertTrue("Must render TelemetryHistogramChart in HISTOGRAM mode", content.contains("TelemetryHistogramChart("))
-        assertTrue("Must pass unit = \"%\" to TelemetryHistogramChart", content.contains("unit = \"%\""))
-
-        // 3. 3-Way Mode Switcher
-        assertTrue("Must contain SingleChoiceSegmentedButtonRow", content.contains("SingleChoiceSegmentedButtonRow"))
-        assertTrue("Must reference zone_mode_stacked_bar", content.contains("R.string.zone_mode_stacked_bar"))
-        assertTrue("Must reference zone_mode_columns", content.contains("R.string.zone_mode_columns"))
-        assertTrue("Must reference zone_mode_histogram", content.contains("R.string.zone_mode_histogram"))
-
-        // 4. Default display mode is COLUMNS
+        // 1. Delegation to generic ZoneDistributionCard
+        assertTrue("GradeZoneDistributionCard must delegate to ZoneDistributionCard", content.contains("ZoneDistributionCard("))
+        assertTrue("Must use R.drawable.ic_grade", content.contains("R.drawable.ic_grade"))
+        assertTrue("Must use R.string.aftermath_grade_zones_title", content.contains("R.string.aftermath_grade_zones_title"))
+        assertTrue("Must pass unit = \"%\"", content.contains("unit = \"%\""))
+        assertTrue("Must declare showModeSelector: Boolean = true", content.contains("showModeSelector: Boolean = true"))
         assertTrue("Default internal display mode should be COLUMNS", content.contains("mutableStateOf(ZoneCardDisplayMode.COLUMNS)"))
+
+        // 2. Underlying ZoneDistributionCard architecture
+        val genericFile = resolveSourceFile("app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/zones/ZoneDistributionCard.kt")
+        val genericContent = genericFile.readText()
+        assertTrue("Header must format duration via ZoneDistributionChartMath", genericContent.contains("ZoneDistributionChartMath.formatZoneDuration"))
+        assertTrue("Must render ZoneDistributionStackedBar in STACKED_BAR mode", genericContent.contains("ZoneDistributionStackedBar("))
+        assertTrue("Must render ZoneDistributionColumnChart in COLUMNS mode", genericContent.contains("ZoneDistributionColumnChart("))
+        assertTrue("Must render TelemetryHistogramChart in HISTOGRAM mode", genericContent.contains("TelemetryHistogramChart("))
+        assertTrue("Must contain SingleChoiceSegmentedButtonRow", genericContent.contains("SingleChoiceSegmentedButtonRow"))
+        assertTrue("Must reference zone_mode_stacked_bar", genericContent.contains("R.string.zone_mode_stacked_bar"))
+        assertTrue("Must reference zone_mode_columns", genericContent.contains("R.string.zone_mode_columns"))
+        assertTrue("Must reference zone_mode_histogram", genericContent.contains("R.string.zone_mode_histogram"))
     }
 
     @Test

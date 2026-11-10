@@ -550,6 +550,12 @@ class RoutesRepository internal constructor(
         repositoryScope.cancel()
     }
 
+    val databaseManager: RoutesDatabaseManager get() = routesDb
+    fun getAllRoutesFromDb(): List<RouteWithPath> = routesDb.getAllRoutes()
+    fun updateRouteSummarySync(summary: RouteSummary) = routesDb.updateRouteSummary(summary)
+    fun reassignClusterRoutes(sourceId: Long, targetId: Long) = routesDb.reassignClusterRoutes(sourceId, targetId)
+    fun getDatabase(): android.database.sqlite.SQLiteDatabase = routesDb.getDatabase()
+
     companion object {
         private val TAG = RoutesRepository::class.java.simpleName
 

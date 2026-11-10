@@ -127,6 +127,13 @@ public class BTSearchForNewDevicesEngine
                 @Override
                 public void run() {
                     String address = gatt.getDevice().getAddress();
+                    if (getDeviceType() == DeviceType.BIKE_RADAR) {
+                        BluetoothGattService radarService = gatt.getService(BluetoothConstants.UUID_SERVICE_RADAR);
+                        if (radarService == null) {
+                            if (DEBUG) Log.i(TAG, "Device does not provide Radar service, skipping");
+                            return;
+                        }
+                    }
                     mReadCharacteristicQueue.put(address, new LinkedList<BluetoothGattCharacteristic>());
 
                     enqueueCharacteristicIfPresent(address,
@@ -392,9 +399,16 @@ public class BTSearchForNewDevicesEngine
             List<ScanFilter> filters = null;
             UUID serviceUuid = BluetoothConstants.getServiceUUID(getDeviceType());
             if (serviceUuid != null) {
-                filters = Collections.singletonList(new ScanFilter.Builder()
-                        .setServiceUuid(new ParcelUuid(serviceUuid))
-                        .build());
+                if (getDeviceType() == DeviceType.BIKE_RADAR) {
+                    filters = java.util.Arrays.asList(
+                            new ScanFilter.Builder().setServiceUuid(new ParcelUuid(serviceUuid)).build(),
+                            new ScanFilter.Builder().setServiceData(new ParcelUuid(serviceUuid), null).build()
+                    );
+                } else {
+                    filters = Collections.singletonList(new ScanFilter.Builder()
+                            .setServiceUuid(new ParcelUuid(serviceUuid))
+                            .build());
+                }
             }
 
             ScanSettings settings = new ScanSettings.Builder()
@@ -502,6 +516,23 @@ public class BTSearchForNewDevicesEngine
         } else {
             newDeviceFound(address);
         }
+    }
+
+    /**
+     * Resiliently matches ScanRecord service UUIDs or service data against target UUID (REQ-CON-028.3).
+     */
+    public static boolean matchesScanRecord(ScanResult result, UUID targetServiceUuid) {
+        if (result == null || targetServiceUuid == null) return false;
+        android.bluetooth.le.ScanRecord record = result.getScanRecord();
+        if (record == null) return false;
+        ParcelUuid targetParcelUuid = new ParcelUuid(targetServiceUuid);
+        if (record.getServiceUuids() != null && record.getServiceUuids().contains(targetParcelUuid)) {
+            return true;
+        }
+        if (record.getServiceData() != null && record.getServiceData().containsKey(targetParcelUuid)) {
+            return true;
+        }
+        return false;
     }
 
     public interface IBTSearchForNewDevicesEngineInterface {

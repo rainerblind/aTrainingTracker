@@ -24,6 +24,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CallMerge
+import androidx.compose.material.icons.filled.CallSplit
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.LocationOn
@@ -251,7 +252,8 @@ fun ClusterItem(
     onClick: () -> Unit,
     onDeleteRequest: (WorkoutCluster) -> Unit,
     onHitCountClick: (WorkoutCluster) -> Unit,
-    onMergeRequest: ((WorkoutCluster) -> Unit)? = null
+    onMergeRequest: ((WorkoutCluster) -> Unit)? = null,
+    onSplitRequest: ((WorkoutCluster) -> Unit)? = null
 ) {
     var showContextMenu by remember { mutableStateOf(false) }
     val haptic = LocalHapticFeedback.current
@@ -428,6 +430,16 @@ fun ClusterItem(
                 expanded = showContextMenu,
                 onDismissRequest = { showContextMenu = false }
             ) {
+                if (cluster.hitCount >= 2 && onSplitRequest != null) {
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.cluster_split_action)) },
+                        onClick = {
+                            showContextMenu = false
+                            onSplitRequest(cluster)
+                        },
+                        leadingIcon = { Icon(Icons.Default.CallSplit, contentDescription = null) }
+                    )
+                }
                 if (onMergeRequest != null) {
                     DropdownMenuItem(
                         text = { Text(stringResource(R.string.cluster_menu_merge)) },

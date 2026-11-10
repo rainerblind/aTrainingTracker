@@ -23,6 +23,7 @@ import android.bluetooth.BluetoothGattCharacteristic;
 import android.content.Context;
 import android.util.Log;
 
+import androidx.annotation.VisibleForTesting;
 import com.atrainingtracker.banalservice.BANALService;
 import com.atrainingtracker.banalservice.devices.DeviceType;
 import com.atrainingtracker.banalservice.sensor.MyDoubleAccumulatorSensor;
@@ -44,18 +45,29 @@ public class BTLERunSpeedDevice extends MyBTLEDevice {
     protected MyDoubleAccumulatorSensor mDistanceSensor;    // WTF: a distance sensor is not always present in bluetooth devices!
     protected MyDoubleAccumulatorSensor mLapDistanceSensor;
     private final String TAG = "BTLERunSpeedDevice";
-    private boolean mDistancePresent;
-    private double mDistance = 0;
-    private double mSpeed;
+    private static final long PACKET_TIMEOUT_THRESHOLD_MS = 5000L;
+    private volatile boolean mDistancePresent;
+    private volatile double mDistance = 0;
+    private volatile double mSpeed;
+    private volatile long mLastMeasurementTimestamp;
     final Runnable distanceCalculator = new Runnable() {
         public void run() {
             if (!mDistancePresent) {
-                mDistance += mSpeed;   // since the sampling time is 1 second, we just have to add the speed;
+                long now = System.currentTimeMillis();
+                if (mLastMeasurementTimestamp > 0 && (now - mLastMeasurementTimestamp) <= PACKET_TIMEOUT_THRESHOLD_MS) {
+                    mDistance += mSpeed;   // since the sampling time is 1 second, we just have to add the speed;
 
-                if (DEBUG) Log.d(TAG, "had to calc distance (in meters): " + mDistance);
+                    if (DEBUG) Log.d(TAG, "had to calc distance (in meters): " + mDistance);
 
-                mDistanceSensor.accumulate(mDistance);
-                mLapDistanceSensor.accumulate(mDistance);
+                    if (mDistanceSensor != null) {
+                        mDistanceSensor.accumulate(mDistance);
+                    }
+                    if (mLapDistanceSensor != null) {
+                        mLapDistanceSensor.accumulate(mDistance);
+                    }
+                } else if (DEBUG) {
+                    Log.d(TAG, "distanceCalculator: packet timeout or no measurement, skipping distance accumulation");
+                }
             }
         }
     };
@@ -125,6 +137,7 @@ public class BTLERunSpeedDevice extends MyBTLEDevice {
             if (speedInt != null) {
                 int speed = speedInt;
                 mSpeed = mCalibrationFactor * speed / 256;
+                mLastMeasurementTimestamp = System.currentTimeMillis();
                 mSpeedSensor.newValue(mSpeed);
                 if (speed != 0) {
                     mPaceSensor.newValue(1 / mSpeed);
@@ -166,11 +179,74 @@ public class BTLERunSpeedDevice extends MyBTLEDevice {
     }
 
     @Override
+    protected void unregisterSensors() {
+        super.unregisterSensors();
+        mSpeed = 0.0;
+        mLastMeasurementTimestamp = 0L;
+    }
+
+    @Override
     public void shutDown() {
         super.shutDown();
 
         if (mDistanceCalculatorHandle != null) {
             mDistanceCalculatorHandle.cancel(true);
         }
+        mScheduler.shutdownNow();
+    }
+
+    @VisibleForTesting
+    public ScheduledExecutorService getSchedulerForTesting() {
+        return mScheduler;
+    }
+
+    @VisibleForTesting
+    public ScheduledFuture<?> getDistanceCalculatorHandleForTesting() {
+        return mDistanceCalculatorHandle;
+    }
+
+    @VisibleForTesting
+    public Runnable getDistanceCalculatorRunnableForTesting() {
+        return distanceCalculator;
+    }
+
+    @VisibleForTesting
+    public double getSpeedForTesting() {
+        return mSpeed;
+    }
+
+    @VisibleForTesting
+    public void setSpeedForTesting(double speed) {
+        this.mSpeed = speed;
+    }
+
+    @VisibleForTesting
+    public double getDistanceForTesting() {
+        return mDistance;
+    }
+
+    @VisibleForTesting
+    public void setDistanceForTesting(double distance) {
+        this.mDistance = distance;
+    }
+
+    @VisibleForTesting
+    public boolean isDistancePresentForTesting() {
+        return mDistancePresent;
+    }
+
+    @VisibleForTesting
+    public void setDistancePresentForTesting(boolean distancePresent) {
+        this.mDistancePresent = distancePresent;
+    }
+
+    @VisibleForTesting
+    public long getLastMeasurementTimestampForTesting() {
+        return mLastMeasurementTimestamp;
+    }
+
+    @VisibleForTesting
+    public void setLastMeasurementTimestampForTesting(long timestamp) {
+        this.mLastMeasurementTimestamp = timestamp;
     }
 }

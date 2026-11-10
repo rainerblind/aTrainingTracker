@@ -40,3 +40,10 @@ scratch/
 
 # Local Android / ADB artifacts
 .android/
+
+# Ephemeral process & agent artifacts (ATT-6153 / REQ-STP-007)
+.active_task.json
+.artifacts/
+*.artifact.md
+.reviews/
+

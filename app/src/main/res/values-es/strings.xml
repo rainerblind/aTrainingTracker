@@ -178,6 +178,8 @@
     <string name="distance_lap_short">dist. vta.</string>
     <string name="heart_rate">ritmo cardíaco</string>
     <string name="heart_rate_short">RC</string>
+    <string name="rr_interval">Intervalo RR</string>
+    <string name="rr_interval_short">RR</string>
     <string name="lap_number">número de vuelta</string>
     <string name="lap_number_short">nº vta</string>
     <string name="line_distance">distancia lineal</string>
@@ -278,8 +280,10 @@
 
     <string name="prefsDisplayTitle">Pantalla</string>
     <string name="prefsDisplaySummary">Configurar pantalla y orientación</string>
-    <string name="prefsKeepScreenOnTitle">mantener pantalla encendida</string>
-    <string name="prefsNoUnlockingTitle">mantener pantalla desbloqueada</string>
+    <string name="prefsKeepScreenOnTitle">Mantener pantalla encendida</string>
+    <string name="prefsKeepScreenOnSummary">Evita que la pantalla se apague automáticamente durante el seguimiento activo</string>
+    <string name="prefsNoUnlockingTitle">Mantener pantalla desbloqueada</string>
+    <string name="prefsNoUnlockingSummary">Muestra el panel sobre la pantalla de bloqueo sin necesidad de introducir PIN o patrón</string>
     <string name="prefZoomDependingOnSpeedTitle">zoom depende de la velocidad</string>
     <string name="prefsUnitsTitle">Unidades</string>
     <string name="prefsUnitsSummary">métrico</string>
@@ -498,6 +502,7 @@
     <string name="do_not_check_again">no volver a comprobar</string>
     <string name="check_ANT_installation">comprobar instalación ANT</string>
     <string name="forcePortrait">Orientación vertical</string>
+    <string name="forcePortraitSummary">Bloquea la pantalla en modo vertical e impide el giro automático a horizontal</string>
     <string name="Display">Pantalla</string>
     <string name="settings_category_savings">Ahorro de batería</string>
     <string name="settings_category_savings_desc">Prolonga la duración de la batería para entrenamientos más largos</string>
@@ -1915,6 +1920,7 @@
     <string name="map_layer_locations">Ubicaciones favoritas</string>
     <string name="map_layer_track">Track grabado</string>
     <string name="map_layer_clusters">Rutas favoritas</string>
+    <string name="map_layer_climbs">Subidas</string>
     <string name="ant_dialog_view_status">Ver estado de ANT+</string>
     <string name="ant_dialog_dismiss">Entendido</string>
 
@@ -1962,7 +1968,7 @@
     <string name="zone_calc_hr_max_label">Frecuencia cardíaca máxima (FCmáx)</string>
     <string name="zone_calc_hr_rest_label">Frecuencia cardíaca en reposo (FCreposo)</string>
     <string name="zone_calc_method_label">Método de cálculo</string>
-    <string name="zone_calc_method_max_hr">% FCmáx</string>
+    <string name="zone_calc_method_max_hr" formatted="false">% FCmáx</string>
     <string name="zone_calc_method_karvonen">Karvonen (FCR)</string>
     <string name="zone_calc_preview_title">Vista previa de zonas calculadas</string>
     <string name="zone_calc_apply_button">Aplicar</string>
@@ -2366,7 +2372,7 @@
     <string name="drawer_tier_pioneer">★ Pionero</string>
     <string name="pioneer_badge_label_with_year">★ Pionero (Desde %1$d)</string>
     <string name="pioneer_badge_label">★ Pionero</string>
-    <string name="pioneer_thank_you_body">¡Gracias por apoyar aTrainingTracker desde los primeros días de ANT+! Sensores ilimitados y todas las funciones futuras están desbloqueados permanentemente.</string>
+    <string name="pioneer_thank_you_body">¡Gracias por registrar tus entrenamientos con una versión anterior de aTrainingTracker! Sensores ilimitados y todas las funciones futuras están desbloqueados permanentemente para ti.</string>
     <string name="debug_supporter_override_title">Anulación de nivel de patrocinador (Debug)</string>
     <string name="debug_supporter_override_subtitle">Simula niveles de licencia localmente sin credenciales de Google Play Billing</string>
 

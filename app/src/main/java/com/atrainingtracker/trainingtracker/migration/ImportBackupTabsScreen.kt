@@ -61,12 +61,11 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
-import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager
 import com.atrainingtracker.banalservice.sensor.formater.DistanceFormatter
 import com.atrainingtracker.trainingtracker.database.WorkoutCluster
 import com.atrainingtracker.trainingtracker.database.WorkoutClusterRepository
-import com.atrainingtracker.trainingtracker.database.WorkoutClusterDatabaseManager
 import com.atrainingtracker.trainingtracker.database.WorkoutClusterEngine
+import com.atrainingtracker.trainingtracker.repositories.SportTypesRepository
 import com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClusterSelectionDialog
 import com.atrainingtracker.trainingtracker.ui.clusters.ClusterTuningContent
 import com.atrainingtracker.trainingtracker.ui.clusters.ClusterInfoDialog
@@ -885,8 +884,8 @@ fun ClusterNamingDialog(
                 showSelectionDialog = false
             },
             onDismiss = { showSelectionDialog = false },
-            sportNameResolver = { SportTypeDatabaseManager.getInstance(localContext).getUIName(it) },
-            bSportTypeResolver = { SportTypeDatabaseManager.getInstance(localContext).getBSportType(it) },
+            sportNameResolver = { SportTypesRepository.getInstance(localContext).getUIName(it) },
+            bSportTypeResolver = { SportTypesRepository.getInstance(localContext).getBSportType(it) },
             onCreateNew = {
                 selectedCluster = null
                 showSelectionDialog = false
@@ -935,8 +934,8 @@ fun ClusterNamingDialog(
                     tint = Color.Unspecified
                 )
                 val sportName = remember(state.bSportType) {
-                    val sportId = SportTypeDatabaseManager.getSportTypeId(state.bSportType)
-                    SportTypeDatabaseManager.getInstance(localContext).getUIName(sportId)
+                    val sportId = SportTypesRepository.getSportTypeId(state.bSportType)
+                    SportTypesRepository.getInstance(localContext).getUIName(sportId)
                 }
                 Text(
                     text = sportName,
@@ -1098,14 +1097,14 @@ fun ImportMappingDialog(
     onDismiss: () -> Unit
 ) {
     val context = LocalContext.current
-    val localSportTypes = remember { SportTypeDatabaseManager.getInstance(context).getSportTypes(null) }
+    val localSportTypes = remember { SportTypesRepository.getInstance(context).getSportTypes(null) }
     val localEquipment = remember { com.atrainingtracker.trainingtracker.database.EquipmentDbHelper.getInstance(context).equipmentItems }
 
     val sportMapping = remember {
         mutableStateMapOf<Long, Long>().apply {
             analysis.sportTypes.forEach { source ->
                 val exactMatch = localSportTypes.find { it.name.equals(source.name, ignoreCase = true) }
-                this[source.id] = exactMatch?.id ?: SportTypeDatabaseManager.getSportTypeId(source.bSportType)
+                this[source.id] = exactMatch?.id ?: SportTypesRepository.getSportTypeId(source.bSportType)
             }
         }
     }

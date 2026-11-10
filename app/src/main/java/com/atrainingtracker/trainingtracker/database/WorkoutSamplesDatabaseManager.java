@@ -32,6 +32,7 @@ import android.util.Log;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.annotation.VisibleForTesting;
 
 import com.atrainingtracker.R;
 import com.atrainingtracker.banalservice.sensor.SensorType;
@@ -65,6 +66,20 @@ public class WorkoutSamplesDatabaseManager {
             }
         }
         return cInstance;
+    }
+
+    @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
+    public static synchronized void resetForTesting(@Nullable WorkoutSamplesDatabaseManager newInstance) {
+        if (cInstance != null) {
+            try {
+                if (cInstance.mDatabase != null && cInstance.mDatabase.isOpen()) {
+                    cInstance.mDatabase.close();
+                }
+                cInstance.cDbHelper.close();
+            } catch (Exception ignored) {
+            }
+        }
+        cInstance = newInstance;
     }
 
     /**
@@ -718,9 +733,10 @@ public class WorkoutSamplesDatabaseManager {
     }
 
     /**
-     * REQ-TRK-047.2: Applies retroactive altitude correction to the workout samples table.
+     * REQ-TRK-047.2 & REQ-TRK-057.3: Applies retroactive altitude correction to the workout samples table.
      * When t0Ms <= 0, applies a uniform shift across all existing rows (Case A).
      * When t0Ms > 0 and t1Ms > t0Ms, applies piecewise-linear drift interpolation (Case B).
+     * Symmetrically updates canonical ALTITUDE and all source-attributed ALTITUDE (*) columns.
      *
      * @param samplesTable Table name of the active workout samples.
      * @param deltaOffset  Altitude shift delta in meters.
@@ -732,34 +748,59 @@ public class WorkoutSamplesDatabaseManager {
             return;
         }
         SQLiteDatabase db = getDatabase();
+
+        // REQ-TRK-057.3: Discover canonical ALTITUDE and any source-attributed ALTITUDE (*) columns
+        List<String> altitudeColumns = new ArrayList<>();
+        try (Cursor cursor = db.rawQuery("SELECT * FROM " + samplesTable + " LIMIT 0", null)) {
+            if (cursor != null) {
+                String[] columnNames = cursor.getColumnNames();
+                if (columnNames != null) {
+                    for (String col : columnNames) {
+                        if (SensorType.ALTITUDE.name().equals(col)
+                                || (col.startsWith(SensorType.ALTITUDE.name() + " (") && col.endsWith(")"))) {
+                            altitudeColumns.add(col);
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            Log.w(TAG, "Error inspecting columns in " + samplesTable + ": " + e.getMessage());
+        }
+        if (altitudeColumns.isEmpty()) {
+            altitudeColumns.add(SensorType.ALTITUDE.name());
+        }
+
         db.beginTransaction();
         try {
-            if (t0Ms <= 0 || t1Ms <= t0Ms) {
-                // Case A: Uncalibrated workout start -> uniform shift across all recorded samples
-                String operator = deltaOffset >= 0 ? " + " : " - ";
-                db.execSQL("UPDATE " + samplesTable + " SET " + SensorType.ALTITUDE.name()
-                        + " = " + SensorType.ALTITUDE.name() + operator + Math.abs(deltaOffset)
-                        + " WHERE " + SensorType.ALTITUDE.name() + " IS NOT NULL");
-            } else {
-                // Case B: Piecewise-linear drift interpolation between t0 and t1
-                double t0Sec = t0Ms / 1000.0;
-                double t1Sec = t1Ms / 1000.0;
-                double duration = t1Sec - t0Sec;
+            for (String col : altitudeColumns) {
+                String quotedCol = "\"" + col.replace("\"", "\"\"") + "\"";
+                if (t0Ms <= 0 || t1Ms <= t0Ms) {
+                    // Case A: Uncalibrated workout start -> uniform shift across all recorded samples
+                    String operator = deltaOffset >= 0 ? " + " : " - ";
+                    db.execSQL("UPDATE " + samplesTable + " SET " + quotedCol
+                            + " = " + quotedCol + operator + Math.abs(deltaOffset)
+                            + " WHERE " + quotedCol + " IS NOT NULL");
+                } else {
+                    // Case B: Piecewise-linear drift interpolation between t0 and t1
+                    double t0Sec = t0Ms / 1000.0;
+                    double t1Sec = t1Ms / 1000.0;
+                    double duration = t1Sec - t0Sec;
 
-                // 1. Linearly interpolate samples in [t0, t1]
-                db.execSQL("UPDATE " + samplesTable
-                        + " SET " + SensorType.ALTITUDE.name() + " = " + SensorType.ALTITUDE.name()
-                        + " + (" + deltaOffset + " * (CAST(strftime('%s', " + WorkoutSamplesDbHelper.TIME + ") AS REAL) - " + t0Sec + ") / " + duration + ")"
-                        + " WHERE " + SensorType.ALTITUDE.name() + " IS NOT NULL"
-                        + " AND CAST(strftime('%s', " + WorkoutSamplesDbHelper.TIME + ") AS REAL) >= " + t0Sec
-                        + " AND CAST(strftime('%s', " + WorkoutSamplesDbHelper.TIME + ") AS REAL) <= " + t1Sec);
+                    // 1. Linearly interpolate samples in [t0, t1]
+                    db.execSQL("UPDATE " + samplesTable
+                            + " SET " + quotedCol + " = " + quotedCol
+                            + " + (" + deltaOffset + " * (CAST(strftime('%s', " + WorkoutSamplesDbHelper.TIME + ") AS REAL) - " + t0Sec + ") / " + duration + ")"
+                            + " WHERE " + quotedCol + " IS NOT NULL"
+                            + " AND CAST(strftime('%s', " + WorkoutSamplesDbHelper.TIME + ") AS REAL) >= " + t0Sec
+                            + " AND CAST(strftime('%s', " + WorkoutSamplesDbHelper.TIME + ") AS REAL) <= " + t1Sec);
 
-                // 2. Uniformly shift any samples recorded after t1 (if any)
-                String operator = deltaOffset >= 0 ? " + " : " - ";
-                db.execSQL("UPDATE " + samplesTable
-                        + " SET " + SensorType.ALTITUDE.name() + " = " + SensorType.ALTITUDE.name() + operator + Math.abs(deltaOffset)
-                        + " WHERE " + SensorType.ALTITUDE.name() + " IS NOT NULL"
-                        + " AND CAST(strftime('%s', " + WorkoutSamplesDbHelper.TIME + ") AS REAL) > " + t1Sec);
+                    // 2. Uniformly shift any samples recorded after t1 (if any)
+                    String operator = deltaOffset >= 0 ? " + " : " - ";
+                    db.execSQL("UPDATE " + samplesTable
+                            + " SET " + quotedCol + " = " + quotedCol + operator + Math.abs(deltaOffset)
+                            + " WHERE " + quotedCol + " IS NOT NULL"
+                            + " AND CAST(strftime('%s', " + WorkoutSamplesDbHelper.TIME + ") AS REAL) > " + t1Sec);
+                }
             }
             db.setTransactionSuccessful();
         } finally {

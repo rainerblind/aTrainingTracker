@@ -178,6 +178,8 @@
     <string name="distance_lap_short">ラップ距離</string>
     <string name="heart_rate">心拍数</string>
     <string name="heart_rate_short">HR</string>
+    <string name="rr_interval">RR間隔</string>
+    <string name="rr_interval_short">RR</string>
     <string name="lap_number">ラップ数</string>
     <string name="lap_number_short">ラップ</string>
     <string name="line_distance">直線距離</string>
@@ -279,7 +281,9 @@
     <string name="prefsDisplayTitle">表示</string>
     <string name="prefsDisplaySummary">画面と向きの設定</string>
     <string name="prefsKeepScreenOnTitle">画面を常時点灯</string>
+    <string name="prefsKeepScreenOnSummary">アクティブな記録中に画面が自動的に消灯するのを防ぎます</string>
     <string name="prefsNoUnlockingTitle">ロック解除を維持</string>
+    <string name="prefsNoUnlockingSummary">ロック画面の上にコックピットを表示し、PINやパターンの入力を不要にします</string>
     <string name="prefZoomDependingOnSpeedTitle">速度に応じてズーム</string>
     <string name="prefsUnitsTitle">単位</string>
     <string name="prefsUnitsSummary">メートル法</string>
@@ -494,6 +498,7 @@
     <string name="do_not_check_again">再確認しない</string>
     <string name="check_ANT_installation">ANTのインストール状況を確認</string>
     <string name="forcePortrait">縦向き固定</string>
+    <string name="forcePortraitSummary">画面を縦向きに固定し、横向きへの自動回転を防止します</string>
     <string name="Display">画面</string>
     <string name="settings_category_savings">バッテリー節約</string>
     <string name="settings_category_savings_desc">バッテリー駆動時間を延ばし、より長時間のトラッキングを可能にします</string>
@@ -1891,6 +1896,7 @@
     <string name="map_layer_locations">お気に入りの場所</string>
     <string name="map_layer_track">記録トラック</string>
     <string name="map_layer_clusters">お気に入りトラック</string>
+    <string name="map_layer_climbs">クライム</string>
     <string name="ant_dialog_view_status">ANT+ ステータスを表示</string>
     <string name="ant_dialog_dismiss">了解</string>
 
@@ -1941,7 +1947,7 @@
     <string name="zone_calc_hr_max_label">最大心拍数 (HRmax)</string>
     <string name="zone_calc_hr_rest_label">安静時心拍数 (HRrest)</string>
     <string name="zone_calc_method_label">計算方法</string>
-    <string name="zone_calc_method_max_hr">% HRmax</string>
+    <string name="zone_calc_method_max_hr" formatted="false">% HRmax</string>
     <string name="zone_calc_method_karvonen">カルボーネン (HRR)</string>
     <string name="zone_calc_preview_title">計算されたゾーンのプレビュー</string>
     <string name="zone_calc_apply_button">適用</string>
@@ -2345,7 +2351,7 @@
     <string name="drawer_tier_pioneer">★ パイオニア</string>
     <string name="pioneer_badge_label_with_year">★ パイオニア（%1$d年より）</string>
     <string name="pioneer_badge_label">★ パイオニア</string>
-    <string name="pioneer_thank_you_body">初期のANT+時代からaTrainingTrackerを支えていただきありがとうございます！無制限のセンサー接続と今後の全機能が永続的にアンロックされています。</string>
+    <string name="pioneer_thank_you_body">以前のバージョンのaTrainingTrackerでワークアウトを記録していただきありがとうございます！無制限のセンサー接続と今後の全機能が永続的にアンロックされています。</string>
     <string name="debug_supporter_override_title">サポーターティア上書き（デバッグ）</string>
     <string name="debug_supporter_override_subtitle">Google Play Billing認証情報なしでローカルにライセンス層をシミュレート</string>
 

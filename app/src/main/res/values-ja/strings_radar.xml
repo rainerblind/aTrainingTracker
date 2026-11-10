@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ~ aTrainingTracker (ANT+ BTLE)
+  ~ Copyright (c) 2011 - 2026 Rainer Blind <rainer.blind@gmail.com>
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ This program is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~ GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License
+  ~ along with this program.  If not, see https://www.gnu.org/licenses/gpl-3.0
+  -->
+
+<resources>
+    <!-- DeviceType BIKE_RADAR (ATT-5083 / REQ-CON-028.1) -->
+    <string name="device_type_bike_radar">自転車レーダー</string>
+    <string name="device_type_short_bike_radar">レーダー</string>
+
+    <!-- Radar Scalar Sensor Types (ATT-5083 / REQ-CON-028.5) -->
+    <string name="radar_threat_count">レーダー脅威数</string>
+    <string name="radar_threat_count_short">脅威数</string>
+
+    <string name="radar_closest_distance">レーダー最近接距離</string>
+    <string name="radar_closest_distance_short">レーダー距離</string>
+
+    <string name="radar_approach_speed">レーダー接近速度</string>
+    <string name="radar_approach_speed_short">レーダー速度</string>
+
+    <string name="radar_vehicle_count">レーダー通過車両数</string>
+    <string name="radar_vehicle_count_short">通過車両</string>
+
+    <!-- Radar V2 Passing Clearance & Vehicle Sizing (ATT-5095 / REQ-CON-030) -->
+    <string name="radar_passing_distance">レーダー追越間隔</string>
+    <string name="radar_passing_distance_short">追越間隔</string>
+    <string name="radar_large_vehicle_count">レーダー大型車数</string>
+    <string name="radar_large_vehicle_count_short">大型車</string>
+
+    <!-- Radar Traffic Simulator (ATT-5087 / REQ-CON-029.5) -->
+    <string name="radar_simulator_title">レーダートラフィックシミュレータ</string>
+    <string name="radar_simulator_subtitle">インドアトレーニングやUIテスト用の交通シナリオをシミュレート</string>
+    <string name="radar_simulator_start">シミュレーション開始</string>
+    <string name="radar_simulator_stop">シミュレーション停止</string>
+    <string name="radar_simulator_running">シミュレーション実行中</string>
+    <string name="radar_simulator_idle">シミュレーション停止中</string>
+    <string name="radar_scenario_single_car">単一車両</string>
+    <string name="radar_scenario_single_car_desc">12 m/sで追い越す1台の車両</string>
+    <string name="radar_scenario_convoy">車列</string>
+    <string name="radar_scenario_convoy_desc">同時に追い越す3台の車両</string>
+    <string name="radar_scenario_high_speed">高速接近車両</string>
+    <string name="radar_scenario_high_speed_desc">25 m/sで高速接近する車両</string>
+    <string name="radar_scenario_disconnect">切断と再接続</string>
+    <string name="radar_scenario_disconnect_desc">接続切断と復旧をシミュレート</string>
+    <string name="radar_scenario_country_road">郊外道路ループ</string>
+    <string name="radar_scenario_country_road_desc">連続的なランダム交通ループ</string>
+    <string name="radar_simulator_preempted">物理レーダー接続によりシミュレーションを停止しました</string>
+
+    <!-- Radar Edge Overlay (ATT-5085 / REQ-TRK-062) -->
+    <string name="radar_overlay_settings_title">レーダーオーバーレイ</string>
+    <string name="radar_overlay_edge_side">画面端の位置</string>
+    <string name="radar_overlay_edge_left">左端</string>
+    <string name="radar_overlay_edge_right">右端</string>
+    <string name="radar_overlay_clear_mode">クリア時の表示</string>
+    <string name="radar_overlay_clear_mode_slim">スリムレール</string>
+    <string name="radar_overlay_clear_mode_badge">バッジのみ</string>
+    <string name="radar_overlay_clear_mode_autohide">自動非表示（3秒）</string>
+    <string name="radar_overlay_disconnected">レーダー切断</string>
+    <string name="radar_overlay_connecting">レーダー接続中</string>
+    <string name="radar_overlay_clear">後方クリア</string>
+
+    <!-- Radar Audio & Haptic Alerts (ATT-5086 / REQ-TRK-063) -->
+    <string name="radar_alerts_settings_title">レーダー警告と音声</string>
+    <string name="radar_alert_mode_title">音声警告モード</string>
+    <string name="radar_alert_mode_all">すべての警告</string>
+    <string name="radar_alert_mode_approach_fast">接近と高速</string>
+    <string name="radar_alert_mode_fast_only">高速のみ</string>
+    <string name="radar_alert_mode_muted">消音</string>
+    <string name="radar_alert_volume_title">警告音量</string>
+    <string name="radar_alert_speaker_boost">スピーカー音量を増幅</string>
+    <string name="radar_alert_speaker_boost_desc">警告時にスマホの控えめなスピーカー音量を一時的に増幅します</string>
+    <string name="radar_alert_route_title">音声出力先</string>
+    <string name="radar_alert_route_default">システム / ヘッドホン</string>
+    <string name="radar_alert_route_speaker">スマホのスピーカーを強制</string>
+    <string name="radar_alert_haptic_title">触覚バイブレーション</string>
+    <string name="radar_alert_haptic_desc">車両接近および脅威変化時に振動します</string>
+
+    <!-- Radar Tail Light Control (ATT-5102 / REQ-CON-031) -->
+    <string name="radar_light_settings_title">テールライト制御</string>
+    <string name="radar_light_mode_title">点灯モード</string>
+    <string name="radar_light_mode_off">オフ（レーダーのみ）</string>
+    <string name="radar_light_mode_day_flash">デイフラッシュ</string>
+    <string name="radar_light_mode_night_flash">ナイトフラッシュ</string>
+    <string name="radar_light_mode_solid">点灯</string>
+    <string name="radar_light_mode_peloton">プロトン</string>
+    <string name="radar_light_auto_switch">ワークアウト自動点灯</string>
+    <string name="radar_light_auto_switch_desc">ワークアウト開始時に点灯し、終了時に消灯します</string>
+    <string name="radar_light_sheet_title">レーダーテールライト</string>
+    <string name="radar_light_stvzo_notice">StVZOモード（点滅無効）</string>
+
+    <!-- Radar Audio Snooze, Peloton Sync & Urban Suppression (ATT-5119 / REQ-TRK-064) -->
+    <string name="radar_snooze_title">レーダー音声スヌーズ</string>
+    <string name="radar_snooze_15m">15分間ミュート</string>
+    <string name="radar_snooze_30m">30分間ミュート</string>
+    <string name="radar_snooze_fast_only">高脅威のみ</string>
+    <string name="radar_snooze_rest_of_ride">ライド終了までミュート</string>
+    <string name="radar_snooze_resume">音声アラート再開</string>
+    <string name="radar_snooze_active_format">レーダー音声ミュート中 (%1$s)</string>
+    <string name="radar_peloton_audio_sync_title">集団モード音声同期</string>
+    <string name="radar_peloton_audio_sync_desc">テールライトが集団モードの時は標準接近アラート音を抑制します</string>
+    <string name="radar_smart_urban_mute_title">スマート市街地混雑フィルター</string>
+    <string name="radar_smart_urban_mute_desc">低速な市街地渋滞での連続接近音を抑制し、高速接近アラートのみ鳴らします</string>
+
+    <!-- 3D Stereo Audio Panning & Speed Pitch Modulation (ATT-5120 / REQ-TRK-065) -->
+    <string name="radar_spatial_audio_title">3Dステレオ空間オーディオ</string>
+    <string name="radar_spatial_audio_desc">ヘッドフォンで追い越し車両の車線方向に警告音を定位</string>
+    <string name="radar_traffic_orientation_title">通行区分</string>
+    <string name="radar_traffic_orientation_rht">右側通行</string>
+    <string name="radar_traffic_orientation_lht">左側通行</string>
+    <string name="radar_lane_change_tick_title">車線変更空間合図</string>
+    <string name="radar_lane_change_tick_desc">車両が追い越し車線へ移行した際にクリック音を再生</string>
+    <string name="radar_speed_pitch_title">速度連動ピッチ変調</string>
+    <string name="radar_speed_pitch_desc">急接近する車両に対して警告音の音程を高く調整</string>
+    <string name="radar_preview_title">オーディオプレビュー</string>
+    <string name="radar_preview_centered">車線内</string>
+    <string name="radar_preview_passing">追い越し</string>
+    <string name="radar_preview_slow">低速</string>
+    <string name="radar_preview_fast">高速接近</string>
+    <string name="radar_preview_lane_change">車線変更</string>
+</resources>

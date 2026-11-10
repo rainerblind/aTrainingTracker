@@ -20,6 +20,7 @@ package com.atrainingtracker.trainingtracker.ui.components.workoutdetails
 
 
 import com.atrainingtracker.banalservice.BSportType
+import com.atrainingtracker.trainingtracker.database.CardioPowerDynamicsRecord
 
 /**
  * A simple Data Transfer Object (DTO) to hold all the necessary information
@@ -50,5 +51,6 @@ data class WorkoutDetailsData(
     val workKj: Double? = null,
     val avgPowerToWeight: Double? = null,
     val maxPowerToWeight: Double? = null,
-    val variabilityIndex: Double? = null
+    val variabilityIndex: Double? = null,
+    val cardioPowerDynamics: CardioPowerDynamicsRecord? = null
 )

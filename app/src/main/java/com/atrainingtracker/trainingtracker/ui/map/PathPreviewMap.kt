@@ -50,7 +50,8 @@ import com.google.maps.android.compose.rememberCameraPositionState
 
 @Composable
 fun PathPreviewMap(
-    path: MappablePath?,
+    path: MappablePath? = null,
+    paths: List<MappablePath> = emptyList(),
     modifier: Modifier = Modifier,
     start: LatLng? = null,
     end: LatLng? = null,
@@ -90,61 +91,84 @@ fun PathPreviewMap(
             onMapLoaded = { isMapLoaded = true },
             onMapClick = { onMapClick() }
         ) {
-            if (path != null && path.latLngs.isNotEmpty()) {
+            val allPaths = remember(path, paths) {
+                if (path != null) listOf(path) + paths else paths
+            }
 
-                Polyline(
-                    points = path.latLngs,
-                    color = path.color,
-                    width = 8f
+            allPaths.forEach { p ->
+                if (p.latLngs.isNotEmpty()) {
+                    Polyline(
+                        points = p.latLngs,
+                        color = p.color,
+                        width = 8f
+                    )
+                }
+            }
+
+            // --- START, END, APEX MARKERS (SCRUM-233) ---
+            val actualStart = start ?: path?.latLngs?.firstOrNull() ?: allPaths.firstOrNull()?.latLngs?.firstOrNull()
+            val actualEnd = end ?: path?.latLngs?.lastOrNull() ?: allPaths.lastOrNull()?.latLngs?.lastOrNull()
+            val actualApex = apex
+
+            actualStart?.let {
+                Marker(
+                    state = remember(it) { MarkerState(position = it) },
+                    title = startTitle,
+                    icon = remember { createSensorMarker(context, R.drawable.control_start, TTColor.StartPoint) }
                 )
+            }
+            actualEnd?.let {
+                Marker(
+                    state = remember(it) { MarkerState(position = it) },
+                    title = endTitle,
+                    icon = remember { createSensorMarker(context, R.drawable.control_stop, TTColor.EndPoint) }
+                )
+            }
 
-                // --- START, END, APEX MARKERS (SCRUM-233) ---
-                val actualStart = start ?: path.latLngs.firstOrNull()
-                val actualEnd = end ?: path.latLngs.lastOrNull()
-                val actualApex = apex
+            actualApex?.let {
+                Marker(
+                    state = remember(it) { MarkerState(position = it) },
+                    title = apexTitle,
+                    icon = remember(apexIconRes, apexColor) { createSensorMarker(context, apexIconRes, apexColor) }
+                )
+            }
 
-                actualStart?.let {
-                    Marker(
-                        state = remember(it) { MarkerState(position = it) },
-                        title = startTitle,
-                        icon = remember { createSensorMarker(context, R.drawable.control_start, TTColor.StartPoint) }
-                    )
-                }
-                actualEnd?.let {
-                    Marker(
-                        state = remember(it) { MarkerState(position = it) },
-                        title = endTitle,
-                        icon = remember { createSensorMarker(context, R.drawable.control_stop, TTColor.EndPoint) }
-                    )
-                }
+            if (path is MapRoute && path.waypoints.isNotEmpty()) {
+                RouteWaypointsLayer(
+                    waypoints = path.waypoints,
+                    context = context
+                )
+            }
 
-                actualApex?.let {
-                    Marker(
-                        state = remember(it) { MarkerState(position = it) },
-                        title = apexTitle,
-                        icon = remember(apexIconRes, apexColor) { createSensorMarker(context, apexIconRes, apexColor) }
-                    )
-                }
-
-                if (path is MapRoute && path.waypoints.isNotEmpty()) {
+            paths.filterIsInstance<MapRoute>().forEach { route ->
+                if (route.waypoints.isNotEmpty()) {
                     RouteWaypointsLayer(
-                        waypoints = path.waypoints,
+                        waypoints = route.waypoints,
                         context = context
                     )
                 }
+            }
 
-                // Auto-zoom to fit the segment whenever pathPoints change
-                LaunchedEffect(path, actualStart, actualEnd, actualApex, isMapLoaded, targetBounds) {
-                    if (isMapLoaded && path.latLngs.isNotEmpty()) {
-                        val bounds = targetBounds ?: run {
-                            val boundsBuilder = LatLngBounds.Builder()
-                            path.latLngs.forEach { boundsBuilder.include(it) }
-                            actualStart?.let { boundsBuilder.include(it) }
-                            actualEnd?.let { boundsBuilder.include(it) }
-                            actualApex?.let { boundsBuilder.include(it) }
-                            boundsBuilder.build()
+            // Auto-zoom to fit the segment whenever pathPoints change
+            val hasPoints = remember(allPaths) { allPaths.any { it.latLngs.isNotEmpty() } }
+            LaunchedEffect(allPaths, actualStart, actualEnd, actualApex, isMapLoaded, targetBounds) {
+                if (isMapLoaded && (hasPoints || targetBounds != null)) {
+                    val bounds = targetBounds ?: run {
+                        val boundsBuilder = LatLngBounds.Builder()
+                        var count = 0
+                        allPaths.forEach { p ->
+                            p.latLngs.forEach {
+                                boundsBuilder.include(it)
+                                count++
+                            }
                         }
+                        actualStart?.let { boundsBuilder.include(it); count++ }
+                        actualEnd?.let { boundsBuilder.include(it); count++ }
+                        actualApex?.let { boundsBuilder.include(it); count++ }
+                        if (count > 0) boundsBuilder.build() else null
+                    }
 
+                    if (bounds != null) {
                         try {
                             cameraPositionState.move(
                                 CameraUpdateFactory.newLatLngBounds(

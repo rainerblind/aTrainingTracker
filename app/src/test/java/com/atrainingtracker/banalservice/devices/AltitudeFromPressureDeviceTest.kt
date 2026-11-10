@@ -451,4 +451,42 @@ class AltitudeFromPressureDeviceTest {
         // No redundant registerReceiver was called during shutDown; count remains 2
         verify(exactly = 2) { ContextCompat.registerReceiver(any(), any(), any(), any()) }
     }
+
+    /**
+     * TST-TRK-057.3: Calibration baseline spike immunity (REQ-TRK-057.2).
+     * Calibration during a +40m transient pulse anchors to the filtered baseline,
+     * preventing permanent calibration distortion.
+     */
+    @Test
+    fun testCalibrationBaseline_anchorsToFilteredAltitudeDuringSpike() {
+        val device = AltitudeFromPressureDevice(mockContext, mockSensorManager)
+        val normalPressure = 960.0f
+        every { SensorManager.getAltitude(SensorManager.PRESSURE_STANDARD_ATMOSPHERE, normalPressure) } returns 450.0f
+
+        // Feed normal baseline for 10 samples
+        repeat(10) {
+            device.handlePressureMeasurement(normalPressure)
+        }
+        assertEquals("Filtered baseline should be 450.0m", 450.0, device.filteredRawAltitude, 0.5)
+
+        // Simulate a sudden +40m compression transient
+        val spikePressure = 955.0f
+        every { SensorManager.getAltitude(SensorManager.PRESSURE_STANDARD_ATMOSPHERE, spikePressure) } returns 490.0f
+        device.handlePressureMeasurement(spikePressure)
+
+        // Raw altitude is 490.0, but filtered baseline should remain ~450.0
+        assertEquals(490.0, device.lastRawAltitude, 0.001)
+        assertEquals(450.0, device.filteredRawAltitude, 1.0)
+
+        val broadcastSlot = slot<Intent>()
+        every { mockContext.sendBroadcast(capture(broadcastSlot)) } returns Unit
+
+        // Calibrate to 500.0m during the spike
+        val calibrated = device.calibrate(500.0)
+        assertTrue(calibrated)
+
+        // Target: 500.0 - 450.0 = +50.0m. Without filter, it would have been 500.0 - 490.0 = +10.0m (40m error).
+        assertEquals("Correction offset must anchor to filtered baseline (approx +50m)", 50.0, device.altitudeCorrection, 1.5)
+        assertEquals(50.0, broadcastSlot.captured.getDoubleExtra(AltitudeFromPressureDevice.ALTITUDE_CORRECTION_VALUE, 0.0), 1.5)
+    }
 }

@@ -33,6 +33,7 @@ import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaStrea
 import com.atrainingtracker.trainingtracker.ui.map.MapSegment
 import com.atrainingtracker.trainingtracker.ui.map.PathPoint
 import com.google.android.gms.maps.model.LatLng
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -130,9 +131,9 @@ private val json = Json {
     coerceInputValues = true
 }
 
-class SegmentsRepository private constructor(context: Context) {
+class SegmentsRepository private constructor(private val context: Context) {
 
-    private val segmentsDb = SegmentsDatabaseManager.getInstance(context)
+    private val segmentsDb get() = SegmentsDatabaseManager.getInstance(context)
 
 
     // Repository scope for background loading
@@ -200,16 +201,16 @@ class SegmentsRepository private constructor(context: Context) {
 
     /**
      * Java-friendly method to trigger a sync without dealing with Coroutines in Java code.
+     * Executes on [repositoryScope] and catches unhandled non-cancellation exceptions to prevent crashes (REQ-MAP-061.1, ATT-6165).
      */
     fun syncSegmentsAsync(bSportType: BSportType) {
-        // Use GlobalScope or pass a scope in. For a one-time sync after login,
-        // a background scope is appropriate.
-        CoroutineScope(Dispatchers.IO).launch {
-            // try {
+        repositoryScope.launch {
+            try {
                 syncStarredSegments(bSportType)
-            //} catch (e: Exception) {
-            //    Log.e("SegmentsRepository", "Async sync failed", e)
-            //}
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                Log.e(TAG, "Async segment sync failed", e)
+            }
         }
     }
 
@@ -408,6 +409,17 @@ class SegmentsRepository private constructor(context: Context) {
                 }
             }
         }
+    }
+
+    /**
+     * Updates personal record (PR) time in both the database and reactive state flow.
+     */
+    fun updateSegmentPrTime(stravaSegmentId: Long, newPrTimeSeconds: Int): Boolean {
+        val updated = segmentsDb.updateSegmentPrTime(stravaSegmentId, newPrTimeSeconds)
+        if (updated) {
+            updateSegmentPr(stravaSegmentId, newPrTimeSeconds)
+        }
+        return updated
     }
 
     private suspend fun fetchDetailedSegment(segmentId: Long): StravaSegment? = withContext(Dispatchers.IO) {

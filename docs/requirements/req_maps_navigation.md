@@ -2021,3 +2021,200 @@
 • *Then* camera remains anchored at `initialLocation` at zoom 14.0f and does not fit world bounds.
 
 **Invariants**: Rule 33 single spatial authority; `MapInitialLocationResolver` priority cascade; zero reflection violations; zero database schema alterations.
+
+### REQ-MAP-061: Strava Segment Synchronization Exception Containment & Coroutine Safety [Verified]
+- **Tests**: `TST-MAP-063` | **Tickets**: `ATT-6165`
+- **Implementation**: `SegmentsRepository.kt`, `SegmentListViewModel.kt`
+- **Rationale**: The system SHALL catch and log unhandled exceptions during background and pull-to-refresh Strava segment synchronizations to prevent fatal application crashes during network dropouts, API timeouts, or malformed payload parsing, while strictly preserving coroutine cancellation semantics and guaranteeing background worker retry mechanisms (Sprint 2026-46.1, ATT-6165, refining `REQ-MAP-005` and `REQ-EXP-014`):
+1. *Repository Async Synchronization Scope & Error Containment (`SegmentsRepository.kt`, `REQ-MAP-061.1`)*:
+• In `SegmentsRepository.syncSegmentsAsync(bSportType)`, the system SHALL execute segment synchronization within the existing instance `repositoryScope` (`SupervisorJob() + Dispatchers.IO`) instead of creating an unmanaged, unhandled `CoroutineScope`.
+• The synchronization invocation SHALL be enclosed in a `try ... catch (e: Exception)` block.
+• If `e is CancellationException`, it SHALL be immediately rethrown to preserve structured coroutine cancellation.
+• All other non-cancellation exceptions SHALL be caught and logged via `Log.e(TAG, ...)`, preventing uncaught coroutine exceptions from crashing the process.
+2. *ViewModel Pull-to-Refresh Exception Containment (`SegmentListViewModel.kt`, `REQ-MAP-061.2`)*:
+• In `SegmentListViewModel.onRefresh(sport)`, the call to `segmentsRepository.syncStarredSegments(sport)` within `viewModelScope.launch` SHALL be enclosed in a `try ... catch (e: Exception)` block.
+• If `e is CancellationException`, it SHALL be immediately rethrown to ensure proper ViewModel lifecycle cancellation.
+• All other non-cancellation exceptions SHALL be caught and logged, preventing pull-to-refresh gestures from crashing the app during offline or transient error states.
+3. *Worker Retry & Invariant Preservation (`REQ-MAP-061.3`)*:
+• `SegmentsRepository.syncStarredSegments(bSportType)` SHALL strictly retain its rethrow behavior (`throw e`) for non-cancellation exceptions to ensure calling WorkManager workers (such as `StravaSegmentsSyncWorker`) receive the failure and return `ListenableWorker.Result.retry()`.
+• `SegmentsRepository.syncStarredSegments(bSportType)` SHALL guarantee that `_isSyncing.value = false` is executed in its `finally` block under both normal completion and exceptional termination.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new refinement `REQ-MAP-061` refining `REQ-MAP-005` (*Strava Segments and Routes as map overlays*) and `REQ-EXP-014` (*Reactive Strava Segment Synchronization Progress*).
+2. *Historical Origin & Commit Trace*: Ticket `ATT-1078` introduced `syncSegmentsAsync` and `syncStarredSegments`. `SegmentListViewModel` added in Compose migration.
+3. *Root Reason for Existing Formulation*: `syncStarredSegments` rethrows so `StravaSegmentsSyncWorker` can detect failures and trigger `Result.retry()`. `syncSegmentsAsync` was an asynchronous fire-and-forget helper where error handling was temporarily commented out during development.
+4. *Preservation of Core Invariants*: Retaining `throw e` in `syncStarredSegments` preserves worker retry; preserving `CancellationException` maintains structured coroutine cancellation; `_isSyncing` always resets to `false` in `finally`.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* `SegmentsRepository.syncSegmentsAsync` invoked while offline or when Strava API fails,
+• *When* `syncStarredSegments` throws an `IOException` or `SerializationException`,
+• *Then* the exception is caught, logged, and does not crash the application process, and `isSyncing` resets to `false`.
+• *Given* an athlete triggering pull-to-refresh via `SegmentListViewModel.onRefresh` during a network failure,
+• *When* `syncStarredSegments` throws an exception,
+• *Then* the exception is caught and logged within `viewModelScope`, the app does not crash, and `isSyncing` resets to `false`.
+• *Given* `StravaSegmentsSyncWorker` invoking `syncStarredSegments`,
+• *When* a network or synchronization failure occurs,
+• *Then* `syncStarredSegments` rethrows the exception, allowing `StravaSegmentsSyncWorker` to catch it and return `Result.retry()`.
+• *Given* an active synchronization coroutine in `syncSegmentsAsync` or `onRefresh`,
+• *When* the coroutine is cancelled,
+• *Then* `CancellationException` is rethrown and not swallowed.
+
+**Invariants**: Zero changes to SQLite database schemas; zero UI layout mutations; 100% full-suite unit test pass rate; structured coroutine cancellation strictly preserved.
+
+### REQ-MAP-062: KnownLocationCard Sport Starts Breakdown Drill-Down Filter [Verified]
+- **Tests**: `TST-MAP-064` | **Tickets**: `ATT-6321` | **Target Release**: `V5.0.0`
+- **Implementation**: `KnownLocationsScreen.kt`, `WorkoutFilterCriteria.kt`, `ATrainingTrackerApp.kt`, `WorkoutSummariesTabbedScreen.kt`
+- **Rationale**: In `KnownLocationCard`, tapping an individual sport badge (`SportStartsItem`: Bike, Run, Other) SHALL filter the workout list by the clicked `BSportType` rather than opening all workouts unfiltered (Sprint 2026-46.1, ATT-6321, refining `REQ-UI-470.6` and `REQ-UI-185`):
+1. *Independent Sport Starts Touch Targets on KnownLocationCard (`KnownLocationsScreen.kt`, `REQ-MAP-062.1`)*:
+• In `KnownLocationCard`, when `sportStarts.total > 0`, each rendered `SportStartsItem` (`Bike`, `Run`, `Other`) SHALL be an independent clickable element (`Modifier.clickable`) with dedicated test tag `location_starts_badge_${item.id}_${sportName.lowercase()}`.
+• Tapping a specific sport badge SHALL invoke `onShowWorkoutsForSport(item, bSportType)` with the respective `BSportType` (`BSportType.BIKE`, `BSportType.RUN`, `BSportType.UNKNOWN`).
+2. *Fallback Total Starts Touch Target (`KnownLocationsScreen.kt`, `REQ-MAP-062.2`)*:
+• When `sportStarts.total == 0` (or when tapping the surrounding container without a sport badge hit), tapping the starts badge SHALL invoke `onShowWorkouts(item)` to display all workouts at that location unfiltered.
+3. *Base Sport Type Filter Criteria Dimension (`WorkoutFilterCriteria.kt`, `REQ-MAP-062.3`)*:
+• `WorkoutFilterCriteria` SHALL declare optional `bSportType: BSportType? = null`.
+• `matches(workout)` SHALL evaluate `bSportType == null || workout.bSportType == bSportType`.
+• `activeFilterCount` SHALL increment when `bSportType != null`.
+• `bSportType` SHALL be serialized and deserialized in JSON (`toJson()` / `fromJson()`).
+• `ActiveFilterChipsRow` SHALL render a removable filter chip when `bSportType != null` with 9-language localized label.
+4. *Cross-Screen Navigation & Tab Synchronization (`ATrainingTrackerApp.kt`, `WorkoutSummariesTabbedScreen.kt`, `REQ-MAP-062.4`)*:
+• In `ATrainingTrackerApp.kt`, `onShowWorkoutsForSport` SHALL configure `WorkoutFilterCriteria` with location bounds (`startLocationName`, `startLocationLat`, `startLocationLng`, `startLocationRadiusM`) and `bSportType`, set criteria in `WorkoutSummariesViewModel`, and navigate to `NavRoutes.WORKOUTS`.
+• `WorkoutSummariesTabbedScreen` SHALL synchronize its active tab index to the specified sport tab (Index 1 for Bike, Index 2 for Run, Index 3 for Other).
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new refinement `REQ-MAP-062` refining `REQ-UI-470.6` (*Workout Starts Breakdown by Sport Type on KnownLocationCard*), `REQ-UI-185` (*Drill-Down Filter to View Workouts by Starting Location*), and `REQ-UI-469.2` (*Unboxed Starts Metric*).
+2. *Historical Origin & Commit Trace*: Ticket `ATT-1643` (`REQ-UI-185`), `ATT-5887` (`REQ-UI-469.2`), `ATT-6210` (`71f11f9e8c`, `REQ-UI-470.6`).
+3. *Root Reason for Existing Formulation*: Outer `Row` click was an interim implementation in ATT-6210 to retain the single-tap contract of `REQ-UI-185` before individual sport touch targets were separated.
+4. *Preservation of Core Invariants*: Outer test tag `location_starts_badge_${item.id}`, unboxed typography, multi-color icons (`tint = Color.Unspecified`), 0-starts fallback, card edit/delete interactions, and 9-language translation parity are strictly preserved.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* a `KnownLocationCard` with sport starts breakdown (`sportStarts.total > 0`),
+• *When* the athlete taps the Bike badge (`location_starts_badge_${item.id}_bike`),
+• *Then* `onShowWorkoutsForSport` is invoked with `BSportType.BIKE`, navigating to `NavRoutes.WORKOUTS` with `WorkoutFilterCriteria` configured for that location and `BSportType.BIKE`, and opening the Bike tab.
+• *Given* a `KnownLocationCard` with sport starts breakdown,
+• *When* the athlete taps the Run badge (`location_starts_badge_${item.id}_run`),
+• *Then* `onShowWorkoutsForSport` is invoked with `BSportType.RUN`, opening the workout list filtered by location and `BSportType.RUN`.
+• *Given* a `KnownLocationCard` with sport starts breakdown,
+• *When* the athlete taps the Other badge (`location_starts_badge_${item.id}_other`),
+• *Then* `onShowWorkoutsForSport` is invoked with `BSportType.UNKNOWN`, opening the workout list filtered by location and `BSportType.UNKNOWN`.
+• *Given* a `KnownLocationCard` with `sportStarts.total == 0` ("0 Starts"),
+• *When* the athlete taps the starts badge,
+• *Then* `onShowWorkouts` is invoked without a sport filter, opening all workouts for that location.
+
+**Invariants**: Zero changes to SQLite database schemas; zero disruption to existing location drill-down tests; backward-compatible JSON serialization in `WorkoutFilterCriteria`.
+
+### REQ-MAP-063: Cross-Surface Centered Material Heart Marker Parity for Known Locations [Verified]
+- **Tests**: `TST-MAP-065` | **Tickets**: `ATT-6320` | **Target Release**: `V5.0.0`
+- **Implementation**: `EditKnownLocationDialog.kt`, `MapContentScope.kt`, `MapUtils.kt`
+- **Rationale**: To achieve visual parity and concentric spatial alignment across all map surfaces displaying Lieblingsorte (Known Locations) per Rule 80 (`docs/coding_standards.md` §1.11), the detail/edit map view and the global map view SHALL render the centered Material heart glyph marker (`createCenteredHeartGlyphMarker`) with a centered anchor (`Offset(0.5f, 0.5f)`), replacing the legacy standing pin (`createHeartPinMarker`):
+1. *Edit/Detail Dialog Map Marker Parity (`EditKnownLocationDialog.kt`, `REQ-MAP-063.1`)*:
+• In `EditKnownLocationDialog.kt` (`LocationMiniMap`), the system SHALL instantiate `createCenteredHeartGlyphMarker` with `heartColor = TTColor.GeofencePin`, `outlineColor = Color.White`, and `alpha = 0.85f`.
+• The `Marker` composable SHALL specify `anchor = Offset(0.5f, 0.5f)` to ensure the glyph sits concentrically in the geofence circle center.
+• In `LocalInspectionMode.current == true` (Compose preview), it SHALL display `Icons.Default.Favorite` (centered in the geofence preview) instead of `R.drawable.my_locations`.
+2. *Global Inspection Map Marker Parity (`MapContentScope.kt`, `REQ-MAP-063.2`)*:
+• In `MapContentScope.kt` (`locationData.forEach`), the system SHALL render each known location using `createCenteredHeartGlyphMarker(context, primaryColor, Color.White, alpha = 0.85f)`.
+• The `Marker` composable SHALL specify `anchor = Offset(0.5f, 0.5f)`, ensuring concentric alignment with the geofence circle.
+3. *Legacy Pin Deprecation & Invariant Preservation (`MapUtils.kt`, `REQ-MAP-063.3`)*:
+• `createHeartPinMarker` in `MapUtils.kt` SHALL be annotated with `@Deprecated` for backwards binary compatibility.
+• All existing geofence circle colors (`TTColor.GeofenceFill`, `TTColor.GeofenceStroke`), click handlers, titles, and dark mode anti-flash overlays MUST remain intact.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new refinement `REQ-MAP-063` refining `REQ-UI-470.2` (*Canonical Material Heart Glyph Marker & Opaque Halo*) and `REQ-MAP-021` (*Map Styling*).
+2. *Historical Origin & Commit Trace*: Ticket `ATT-1816` (`44d51eac`), `ATT-5884` (`ce73d561`), `ATT-6211` (`9e49a75d`).
+3. *Root Reason for Existing Formulation*: The standing pin with heart cutout was an interim marker design inherited from general POIs before `KnownLocationThumbnailMap` introduced the concentric Material heart glyph with opaque halo in ATT-6211.
+4. *Preservation of Core Invariants*: Geofence radius scaling, circle strokes, dark mode contrast, click callbacks, marker titles, and touch targets remain 100% preserved.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* `EditKnownLocationDialog` (`LocationMiniMap`) opened for an existing or new Lieblingsort,
+• *When* the map is displayed,
+• *Then* the marker is rendered as a centered Material heart glyph (`createCenteredHeartGlyphMarker`) with `anchor = Offset(0.5f, 0.5f)` sitting concentrically within the geofence circle.
+• *Given* the global map screen (`MapScreenWithTrack`),
+• *When* the "Lieblingsorte" layer is enabled,
+• *Then* all known location markers render as centered Material heart glyphs with `anchor = Offset(0.5f, 0.5f)`.
+• *Given* `EditKnownLocationDialog` rendered in Compose `@Preview` (`LocalInspectionMode`),
+• *When* inspecting the preview,
+• *Then* `Icons.Default.Favorite` is rendered at the center.
+
+**Invariants**: Zero changes to SQLite database schemas; zero UI regression in existing map tests; binary compatibility preserved for `MapUtils.kt`.
+
+### REQ-MAP-064: Workout Climb Ingestion, Spatial Deduplication & Toggleable Map Climbs Layer [Verified]
+- **Tests**: `TST-MAP-066` | **Tickets**: `ATT-2766` | **Target Release**: `V5.0.0`
+- **Implementation**: `WorkoutRepository.kt`, `GeneralMapLayer.kt`, `MapFragmentWithTrackViewModel.kt`, `MapScreenWithTrack.kt`, `MapContentScope.kt`, `LiveClimbsRepository.kt`
+- **Rationale**: Currently, `ClimbsDatabaseManager` (`Climbs.db`) is only populated when importing GPX routes in `RoutesRepository`. Athletes recording free workouts or importing historical workouts/backups have an empty `Climbs.db`, preventing Free-Riding Live ClimbPro (`LiveClimbsRepository`) from operating on conquered terrain. Furthermore, the general map screen (`MapScreenWithTrack`) lacks a toggleable layer to view stored climbs and inspect elevation profiles. The system SHALL extract qualifying climbs from recorded and imported workouts, persist them to `Climbs.db` with 50m spatial deduplication, expose a toggleable `CLIMBS` layer in `GeneralMapLayer`, render climb polylines/markers on `MapScreenWithTrack`, and open `ClimbDetailSheet` on climb tap (ATT-2766, refining `REQ-MAP-027`, `REQ-MAP-055`, and `REQ-UI-322`):
+1. *Post-Workout & Import Climb Extraction (`WorkoutRepository.kt`, `REQ-MAP-064.1`)*:
+• Upon workout completion or import (`isNewImportOrFinish` in `reloadWorkoutData`), the system SHALL retrieve the session's track points via `getWorkoutTrackPoints(workoutId, TrackType.BEST)` on `Dispatchers.IO`.
+• If `points.size >= 2`, the system SHALL detect climbs via `ClimbDetector.detectClimbs(points, routeId = null)`.
+• If qualifying climbs are detected, they SHALL be persisted to `Climbs.db` via `ClimbsDatabaseManager.insertClimbsWithDeduplicationBatch(detectedClimbs, thresholdMeters = 50.0f)`.
+• Following successful insertion, `LiveClimbsRepository.refreshClimbs()` SHALL be invoked to ensure immediate free-riding live ClimbPro awareness.
+2. *General Map Layer Model & Default Preferences (`GeneralMapLayer.kt`, `REQ-MAP-064.2`)*:
+• `enum class GeneralMapLayer` SHALL declare entry `CLIMBS` alongside `ROUTES`, `SEGMENTS`, `KNOWN_LOCATIONS`, `TRACK`, and `CLUSTERS` (total 6 entries).
+• `GeneralMapLayer.DEFAULT_ENABLED` SHALL remain `setOf(ROUTES, SEGMENTS, KNOWN_LOCATIONS, TRACK)`, strictly excluding `CLIMBS` (and `CLUSTERS`) to prevent initial visual clutter.
+• String resource `map_layer_climbs` SHALL maintain 100% parity across all 9 supported locales (values, values-de, values-es, values-fr, values-it, values-ja, values-nl, values-pl, values-pt).
+3. *ViewModel State & Dynamic Layer Gating (`MapFragmentWithTrackViewModel.kt`, `REQ-MAP-064.3`)*:
+• `MapFragmentUIState` SHALL expose `val climbs: List<Climb> = emptyList()`.
+• `MapFragmentWithTrackViewModel` SHALL observe `enabledLayers` and query `ClimbsDatabaseManager.getAllClimbs()` on `Dispatchers.IO` / `defaultDispatcher` when `GeneralMapLayer.CLIMBS in enabledLayers`. When disabled, `climbs` in `uiState` SHALL emit `emptyList()`.
+4. *Map Screen Visual Styling & Tap-to-Inspect Interaction (`MapScreenWithTrack.kt`, `MapContentScope.kt`, `REQ-MAP-064.4`)*:
+• `MapScreenWithTrack` layer menu SHALL render a toggle item for `GeneralMapLayer.CLIMBS` using `stringResource(R.string.map_layer_climbs)`.
+• In `ATrainingTrackerMap`, climb polylines SHALL only be composed when `GeneralMapLayer.CLIMBS in enabledLayers`.
+• Tapping a climb polyline or marker SHALL select the climb and open `ClimbDetailSheet(climb = selectedClimb, onDismiss = { selectedClimb = null })`.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new refinement `REQ-MAP-064` refining `REQ-MAP-027` (*ClimbPro Real-Time Live Climb Cockpit Sheet*), `REQ-MAP-055` (*Climb Engine Optimization*), and `REQ-UI-322` (*General Map Layers*).
+2. *Historical Origin & Commit Trace*: Ticket `ATT-2565` (`c7438e78`, ClimbPro), `ATT-3053` (`cf4ba98b`, ClimbDetailSheet), `ATT-5074` (`3c261ef4`, GeneralMapLayer.CLUSTERS).
+3. *Root Reason for Existing Formulation*: Climbs were originally populated exclusively from GPX route imports in `RoutesRepository`. Free-riding climb awareness was architected in `LiveClimbsRepository` but remained inactive for athletes not using GPX routes.
+4. *Preservation of Core Invariants*: 50m spatial deduplication threshold is strictly preserved; route climb associations (`routeId`) remain intact; existing layer preferences format and non-cluttering defaults (`CLIMBS` excluded from `DEFAULT_ENABLED`) are preserved.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* an athlete finishing or importing a workout containing qualifying ascents,
+• *When* post-workout processing runs in `WorkoutRepository.reloadWorkoutData`,
+• *Then* detected climbs are persisted to `Climbs.db` with 50m start/summit spatial deduplication (`routeId = null`), and `LiveClimbsRepository` refreshes its climb candidates.
+• *Given* the general map screen (`MapScreenWithTrack`),
+• *When* the user enables the `GeneralMapLayer.CLIMBS` layer,
+• *Then* stored climbs from `Climbs.db` are rendered with category-specific colors and tapping any climb opens `ClimbDetailSheet`.
+• *Given* a fresh install or unconfigured map layer preferences,
+• *When* opening `MapScreenWithTrack`,
+• *Then* `GeneralMapLayer.CLIMBS` is disabled by default, preventing initial visual map clutter.
+
+**Invariants**: `Climbs.db` SQLite schema v1 integrity; zero modification to `PathPreviewMap.kt` or `ui/clusters/*` (Lane 3 isolation); 100% test pass rate across full test suite.
+
+### REQ-MAP-065: LiveSegmentsRepository Concurrency Safety & Immutability [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-MAP-067` | **Tickets**: `ATT-6172`
+- **Implementation**: `app/src/main/java/com/atrainingtracker/trainingtracker/segments/LiveSegmentsRepository.kt`
+- **Rationale**: In `LiveSegmentsRepository.kt`, `_liveSegments` (`MutableStateFlow<List<LiveSegment>>`) is updated concurrently from `reconcileSegments` (database synchronization) and `updateLiveSegments` (GPS location listener) under `Dispatchers.Default`. Non-atomic read-modify-write operations (`_liveSegments.value = ...`) lead to lost updates, overwriting active segment status transitions or newly synced segments. Furthermore, `LiveSegmentMath` declares 6 mutable `var` properties, and in-place field mutations invalidate compare-and-set retry idempotency. In addition, line 126 contains a redundant dead `.collect()` call. The system SHALL modernize `LiveSegmentsRepository` with atomic `_liveSegments.update { ... }` operations, convert `LiveSegmentMath` to an immutable data structure (`val` only), utilize pure state copying, and eliminate dead collection code:
+1. *Atomic StateFlow Update & Lost Update Elimination (`REQ-MAP-065.1`)*:
+• In `LiveSegmentsRepository.kt`, all updates to `_liveSegments` across `reconcileSegments` and `updateLiveSegments` SHALL be executed atomically using `_liveSegments.update { ... }`.
+• Direct non-atomic assignments (`_liveSegments.value = ...`) SHALL be strictly prohibited.
+2. *LiveSegmentMath Immutability & Functional Transformation (`REQ-MAP-065.2`)*:
+• `LiveSegmentMath` SHALL be strictly immutable with all properties declared as `val`.
+• Tracking loops and gate calculations SHALL use pure state transformations returning new immutable `LiveSegmentMath` and `LiveSegment` copies without in-place mutation, guaranteeing idempotent CAS retries.
+3. *Dead Coroutine Collector Elimination (`REQ-MAP-065.3`)*:
+• The redundant trailing `.collect()` call at line 126 on `banalRepository.currentLocation.collect { ... }` SHALL be removed.
+4. *Preservation of Live Segment Tracking Invariants (`REQ-MAP-065.4`)*:
+• Gate crossing detection, bearing thresholds (45°), along-track distance calculation, PR delta computation, and public `liveSegments` StateFlow contracts SHALL remain 100% functionally identical.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new refinement `REQ-MAP-065` refining `REQ-GEO-001` (*Polyline Engine & Live Segments*). Targets `LiveSegmentsRepository.kt`.
+2. *Historical Origin & Commit Trace*: Sprint 2026-41 (`ATT-2582`), where Kotlin coroutines were initially integrated for segment tracking.
+3. *Root Reason for Existing Formulation*: Early implementation assumed sequential single-threaded execution, overlooking multi-threaded races on `Dispatchers.Default`.
+4. *Preservation of Core Invariants*: Gate crossing detection, bearing tolerance (45°), along-track progress computation, PR delta formatting, and existing UI StateFlow contracts are 100% preserved.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* high-frequency GPS updates and asynchronous segment database reloads running concurrently across multiple threads on `Dispatchers.Default`,
+• *When* updating `_liveSegments`,
+• *Then* all segment state transitions (e.g. crossing start gate -> `ON_SEGMENT`) and newly synchronized segments are preserved without lost updates.
+• *Given* an active live segment,
+• *When* location updates process tracking math,
+• *Then* existing `LiveSegmentMath` instances are never mutated in-place; a new immutable copy is emitted.
+• *Given* repository initialization,
+• *When* location flow collection is launched,
+• *Then* it executes cleanly as a single terminal collector without trailing dead calls.
+• *Given* existing segment tracking test cases,
+• *When* tests run,
+• *Then* 100% pass rate is maintained with zero behavioral regressions.
+
+**Invariants**: Zero lost updates; pure immutable state transitions; 100% test pass rate across `LiveSegmentsRepositoryTest`.
+
+
+
+
+

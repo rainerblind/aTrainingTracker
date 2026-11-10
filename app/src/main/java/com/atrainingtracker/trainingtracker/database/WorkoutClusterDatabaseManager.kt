@@ -98,6 +98,35 @@ data class WorkoutEquipmentDto(
     }
 }
 
+data class WorkoutPolylineCandidateDto(
+    val workoutId: Long,
+    val clusterId: Long,
+    val polyline: String?
+) {
+    companion object {
+        fun fromCursor(cursor: Cursor): WorkoutPolylineCandidateDto {
+            val id = cursor.getLong(cursor.getColumnIndexOrThrow(WorkoutSummaries.C_ID))
+            val clusterId = cursor.getLong(cursor.getColumnIndexOrThrow(WorkoutSummaries.CLUSTER_ID))
+            val polylineIdx = cursor.getColumnIndexOrThrow(WorkoutSummaries.MAP_POLYLINE)
+            val polyline = if (!cursor.isNull(polylineIdx)) cursor.getString(polylineIdx) else null
+            return WorkoutPolylineCandidateDto(id, clusterId, polyline)
+        }
+    }
+}
+
+data class WorkoutDistanceCandidateDto(
+    val workoutId: Long,
+    val distance: Double
+) {
+    companion object {
+        fun fromCursor(cursor: Cursor): WorkoutDistanceCandidateDto {
+            val id = cursor.getLong(cursor.getColumnIndexOrThrow(WorkoutSummaries.C_ID))
+            val dist = cursor.getDouble(cursor.getColumnIndexOrThrow(WorkoutSummaries.DISTANCE_TOTAL_m))
+            return WorkoutDistanceCandidateDto(id, dist)
+        }
+    }
+}
+
 data class WorkoutBatchKey(
     val id: Long,
     val fileName: String?,

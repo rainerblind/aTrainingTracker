@@ -28,6 +28,10 @@ import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.database.EquipmentDbHelper
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
+import com.atrainingtracker.trainingtracker.repositories.EquipmentRepository
+import com.atrainingtracker.trainingtracker.repositories.SportTypesRepository
+import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
+import com.atrainingtracker.trainingtracker.ui.components.export.ExportStatusRepository
 import com.atrainingtracker.trainingtracker.exporter.BaseExporter
 import com.atrainingtracker.trainingtracker.exporter.ExportInfo
 import com.atrainingtracker.trainingtracker.exporter.db.StravaUploadDbHelper
@@ -193,8 +197,8 @@ open class StravaUploader @JvmOverloads constructor(context: Context, internal v
         Log.i(TAG, "Strava access token verified.")
 
         // ATT-1105 / REQ-EXP-008: Check if activity is already recorded in local Strava DB
-        val stravaUploadDbHelper = StravaUploadDbHelper.getInstance(mContext)
-        val existingDbActivityId = stravaUploadDbHelper.getActivityId(exportInfo.fileBaseName)
+        val exportStatusRepo = ExportStatusRepository.getInstance(mContext)
+        val existingDbActivityId = exportStatusRepo.getStravaActivityId(exportInfo.fileBaseName)
         if (!existingDbActivityId.isNullOrEmpty()) {
             Log.i(TAG, "Activity already tracked locally as Strava ID $existingDbActivityId. Testing update.")
             val updateResult = doUpdate(exportInfo, isDuplicate = true)
@@ -205,7 +209,7 @@ open class StravaUploader @JvmOverloads constructor(context: Context, internal v
             // If updating failed (e.g. deleted activity on Strava returning 404),
             // the locally cached activityId is stale. Clear stale record and fall through to pre-upload duplicate discovery!
             Log.w(TAG, "Local Strava activity $existingDbActivityId could not be updated (${updateResult.answer()}). Clearing stale record and searching Strava.")
-            stravaUploadDbHelper.deleteWorkout(exportInfo.fileBaseName)
+            exportStatusRepo.deleteStravaWorkout(exportInfo.fileBaseName)
         }
 
         // ATT-1105 / REQ-EXP-008: Pre-upload duplicate discovery
@@ -215,7 +219,7 @@ open class StravaUploader @JvmOverloads constructor(context: Context, internal v
             val activityId = existingStravaActivity.optString(ID).ifBlank { existingStravaActivity.optString("id") }
             if (activityId.isNotBlank()) {
                 Log.i(TAG, "Found pre-existing Strava activity $activityId ('${existingStravaActivity.optString(NAME)}') for ${exportInfo.fileBaseName}. Bypassing TCX upload.")
-                StravaUploadDbHelper.getInstance(mContext).updateAll(
+                exportStatusRepo.updateStravaAll(
                     exportInfo.fileBaseName,
                     activityId,
                     activityId,
@@ -304,10 +308,10 @@ open class StravaUploader @JvmOverloads constructor(context: Context, internal v
             return ExportResult(false, false, uploadResponseJson.getString(ERROR))  // probably something strange -> do not retry
         } else if (uploadResponseJson.has(ID)) {
             val uploadId = uploadResponseJson.getString(ID)
-            val stravaUploadDbHelper = StravaUploadDbHelper.getInstance(mContext)
+            val exportStatusRepo = ExportStatusRepository.getInstance(mContext)
 
-            stravaUploadDbHelper.updateUploadId(exportInfo.fileBaseName, uploadId)
-            stravaUploadDbHelper.updateStatus(exportInfo.fileBaseName, "Uploaded to STRAVA, checking result")
+            exportStatusRepo.updateStravaUploadId(exportInfo.fileBaseName, uploadId)
+            exportStatusRepo.updateStravaStatus(exportInfo.fileBaseName, "Uploaded to STRAVA, checking result")
 
             // 5. Poll for processing status (REQ-EXP-021: fault-tolerant polling)
             var exportResult: ExportResult? = null
@@ -342,7 +346,7 @@ open class StravaUploader @JvmOverloads constructor(context: Context, internal v
                     Log.i(TAG, "Polling attempt $attempt for uploadId=$uploadId: status='$status'")
 
                     // when the upload was successful, update status in DB
-                    stravaUploadDbHelper.updateStatus(exportInfo.fileBaseName, status)
+                    exportStatusRepo.updateStravaStatus(exportInfo.fileBaseName, status)
 
                     when (status) {
                         STATUS_PROCESSING -> { /* continue waiting */ }
@@ -359,7 +363,7 @@ open class StravaUploader @JvmOverloads constructor(context: Context, internal v
                             val activityId = uploadStatusJsonAnswer.optString(ACTIVITY_ID)
                             Log.i(TAG, "Strava activity is ready! uploadId=$uploadId, activityId=$activityId")
                             if (!activityId.isNullOrEmpty()) {
-                                stravaUploadDbHelper.updateActivityId(exportInfo.fileBaseName, activityId)
+                                exportStatusRepo.updateStravaActivityId(exportInfo.fileBaseName, activityId)
                                 exportResult = doUpdate(exportInfo, isDuplicate = false)
                             } else {
                                 Log.e(TAG, "Status ready but no activity_id?")
@@ -396,7 +400,7 @@ open class StravaUploader @JvmOverloads constructor(context: Context, internal v
 
             Log.i(TAG, "checkAndUpdateDuplicate: Found duplicate of activityId=$activityId, combinedText='$combinedText'")
 
-            StravaUploadDbHelper.getInstance(mContext).updateAll(
+            ExportStatusRepository.getInstance(mContext).updateStravaAll(
                 exportInfo.fileBaseName,
                 id,
                 activityId,
@@ -413,14 +417,14 @@ open class StravaUploader @JvmOverloads constructor(context: Context, internal v
     internal open fun doUpdate(exportInfo: ExportInfo, isDuplicate: Boolean = false): ExportResult {
         Log.i(TAG, "doUpdate: fileBaseName=${exportInfo.fileBaseName}, isDuplicate=$isDuplicate")
 
-        val activityId = StravaUploadDbHelper.getInstance(mContext).getActivityId(exportInfo.fileBaseName)
+        val activityId = ExportStatusRepository.getInstance(mContext).getStravaActivityId(exportInfo.fileBaseName)
         if (activityId.isNullOrEmpty()) {
             Log.w(TAG, "doUpdate skipped: No Activity ID for ${exportInfo.fileBaseName}")
             return ExportResult(true, false, "Update skipped: No Activity ID")  // no retry
         }
 
         // Get Summary from DB
-        val dbManager = WorkoutSummariesDatabaseManager.getInstance(mContext)
+        val dbManager = WorkoutRepository.getInstance(mContext).workoutSummariesDatabaseManager
         val db = dbManager.database
         val cursor = db.query(
             WorkoutSummariesDatabaseManager.WorkoutSummaries.TABLE, null,
@@ -435,7 +439,7 @@ open class StravaUploader @JvmOverloads constructor(context: Context, internal v
         }
 
         val sportId = cursor.getLong(cursor.getColumnIndexOrThrow(WorkoutSummariesDatabaseManager.WorkoutSummaries.SPORT_ID))
-        val sportName = SportTypeDatabaseManager.getInstance(mContext).getStravaName(sportId)
+        val sportName = SportTypesRepository.getInstance(mContext).getStravaName(sportId)
         
         if (sportName == null) {
             Log.i(TAG, "doUpdate skipped: Sport mapping set to 'No upload' (sportId=$sportId)")
@@ -450,7 +454,7 @@ open class StravaUploader @JvmOverloads constructor(context: Context, internal v
         val race = myGetBooleanFromCursor(cursor, WorkoutSummariesDatabaseManager.WorkoutSummaries.RACE)
         val bSportString = myGetStringFromCursor(cursor, WorkoutSummariesDatabaseManager.WorkoutSummaries.B_SPORT)
         val bSportType = safeEnumValueOfOrNull<BSportType>(bSportString, TAG)
-            ?: SportTypeDatabaseManager.getInstance(mContext).getBSportType(sportId)
+            ?: SportTypesRepository.getInstance(mContext).getBSportType(sportId)
 
         val eqIndex = cursor.getColumnIndex(WorkoutSummariesDatabaseManager.WorkoutSummaries.EQUIPMENT_ID)
         val gearId: String? = if (!cursor.isNull(eqIndex)) {
@@ -493,7 +497,7 @@ open class StravaUploader @JvmOverloads constructor(context: Context, internal v
 
         // SAVE STRAVA ACTIVITY DATA (REQ-EXP-013: minimize to athlete achievements)
         val minimizedData = StravaActivityParser.minimize(activityJSON)
-        StravaUploadDbHelper.getInstance(mContext).updateStravaActivityData(exportInfo.fileBaseName, minimizedData)
+        ExportStatusRepository.getInstance(mContext).updateStravaActivityData(exportInfo.fileBaseName, minimizedData)
 
         // ATT-912 / REQ-EXP-010: Ingest Strava segment feedback to update local PRs:
         processSegmentEffortsForPrs(activityJSON)
@@ -519,7 +523,7 @@ open class StravaUploader @JvmOverloads constructor(context: Context, internal v
             val stravaGearId = activityJSON.optString(GEAR_ID).takeIf { it.isNotBlank() && it != "null" }
                 ?: activityJSON.optJSONObject("gear")?.optString("id")?.takeIf { it.isNotBlank() && it != "null" }
             if (stravaGearId != null) {
-                val equipmentDb = EquipmentDbHelper.getInstance(mContext)
+                val equipmentDb = EquipmentRepository.getInstance(mContext)
                 var localEquipmentId = equipmentDb.getIdFromStravaId(stravaGearId)
                 if (localEquipmentId <= 0) {
                     val gearJson = getStravaGear(stravaGearId)
@@ -551,7 +555,7 @@ open class StravaUploader @JvmOverloads constructor(context: Context, internal v
             val stravaSportType = activityJSON.optString(SPORT_TYPE).takeIf { it.isNotBlank() && it != "null" }
                 ?: activityJSON.optString(TYPE).takeIf { it.isNotBlank() && it != "null" }
             if (stravaSportType != null) {
-                val sportTypeDb = SportTypeDatabaseManager.getInstance(mContext)
+                val sportTypeDb = SportTypesRepository.getInstance(mContext)
                 val localSportId = sportTypeDb.getSportTypeIdFromStravaName(stravaSportType)
                 if (localSportId > 0) {
                     updateValues.put(WorkoutSummariesDatabaseManager.WorkoutSummaries.SPORT_ID, localSportId)
@@ -654,7 +658,7 @@ open class StravaUploader @JvmOverloads constructor(context: Context, internal v
     }
 
     internal open fun getGearId(eqId: Long): String? {
-        return if (eqId > 0) EquipmentDbHelper.getInstance(mContext).getStravaIdFromId(eqId) else null
+        return if (eqId > 0) EquipmentRepository.getInstance(mContext).getStravaIdFromId(eqId) else null
     }
 
     private fun getStravaUploadStatus(uploadId: String): JSONObject? {
@@ -739,7 +743,7 @@ open class StravaUploader @JvmOverloads constructor(context: Context, internal v
     )
 
     internal open fun getWorkoutMetadataForDuplicateCheck(fileBaseName: String): WorkoutDuplicateCheckMetadata {
-        val dbManager = WorkoutSummariesDatabaseManager.getInstance(mContext)
+        val dbManager = WorkoutRepository.getInstance(mContext).workoutSummariesDatabaseManager
         return try {
             val projection = arrayOf(
                 WorkoutSummariesDatabaseManager.WorkoutSummaries.TIME_START,
@@ -772,7 +776,7 @@ open class StravaUploader @JvmOverloads constructor(context: Context, internal v
                     val sportId = if (sportIdIdx != -1 && !it.isNull(sportIdIdx)) it.getLong(sportIdIdx) else null
 
                     bSportType = safeEnumValueOfOrNull<BSportType>(sportStr, TAG)
-                        ?: if (sportId != null) SportTypeDatabaseManager.getInstance(mContext).getBSportType(sportId) else null
+                        ?: if (sportId != null) SportTypesRepository.getInstance(mContext).getBSportType(sportId) else null
 
                     val totalTimeIdx = it.getColumnIndex(WorkoutSummariesDatabaseManager.WorkoutSummaries.TIME_TOTAL_s)
                     val activeTimeIdx = it.getColumnIndex(WorkoutSummariesDatabaseManager.WorkoutSummaries.TIME_ACTIVE_s)
@@ -966,7 +970,6 @@ open class StravaUploader @JvmOverloads constructor(context: Context, internal v
     internal open fun processSegmentEffortsForPrs(activityJson: JSONObject?) {
         if (activityJson == null) return
         val segmentEffortsArray = activityJson.optJSONArray("segment_efforts") ?: return
-        val segmentsDb = SegmentsDatabaseManager.getInstance(mContext)
         val segmentsRepo = SegmentsRepository.getInstance(mContext)
 
         for (i in 0 until segmentEffortsArray.length()) {
@@ -1006,9 +1009,8 @@ open class StravaUploader @JvmOverloads constructor(context: Context, internal v
             }
 
             if (isNewPr) {
-                val updated = segmentsDb.updateSegmentPrTime(segmentId, elapsedTime)
+                val updated = segmentsRepo.updateSegmentPrTime(segmentId, elapsedTime)
                 if (updated) {
-                    segmentsRepo.updateSegmentPr(segmentId, elapsedTime)
                     if (DEBUG) Log.i(TAG, "processSegmentEffortsForPrs: Updated PR for segment $segmentId to ${elapsedTime}s")
                 }
             }

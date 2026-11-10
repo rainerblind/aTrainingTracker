@@ -204,6 +204,12 @@ class WorkoutSummariesListFragment : Fragment() {
                                     powerZoneThresholds = aftermathUIState.powerThresholds,
                                     telemetryPath = aftermathUIState.telemetryPath,
                                     initialAutoShareSnapshot = autoShareSnapshotOnOpen,
+                                    onSnapshotComplete = {
+                                        if (autoShareSnapshotOnOpen) {
+                                            selectedWorkoutForDetails = null
+                                            autoShareSnapshotOnOpen = false
+                                        }
+                                    },
                                     modifier = Modifier
                                 )
 

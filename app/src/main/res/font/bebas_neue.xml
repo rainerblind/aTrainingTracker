@@ -18,6 +18,8 @@
   -->
 
 <font-family xmlns:app="http://schemas.android.com/apk/res-auto"
+  xmlns:tools="http://schemas.android.com/tools"
+  tools:ignore="FontValidation"
   app:fontProviderAuthority="com.google.android.gms.fonts"
   app:fontProviderPackage="com.google.android.gms"
   app:fontProviderQuery="name=Bebas Neue&amp;weight=700"

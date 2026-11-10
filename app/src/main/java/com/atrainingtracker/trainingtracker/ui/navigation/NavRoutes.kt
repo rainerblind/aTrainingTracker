@@ -32,7 +32,8 @@ enum class SettingsBottomSheetType {
     DISPLAY,
     ADVANCED_TUNING,
     SEARCH,
-    ACTIVITY_TYPE
+    ACTIVITY_TYPE,
+    HEALTH_CONNECT
 }
 
 /**
@@ -42,6 +43,7 @@ object NavRoutes {
     const val START_TRACKING = "start_tracking"
     const val WORKOUTS = "workouts"
     const val PERIODS = "periods"
+    const val MORNING_HRV = "morning_hrv"
     const val MAP = "map"
     const val MAP_PATTERN = "map?locationId={locationId}"
     const val ARG_LOCATION_ID = "locationId"
@@ -107,6 +109,7 @@ object NavRoutes {
         R.id.drawer_start_tracking -> START_TRACKING
         R.id.drawer_workouts -> WORKOUTS
         R.id.drawer_periods -> PERIODS
+        R.id.drawer_morning_hrv -> MORNING_HRV
         R.id.drawer_map -> MAP
         R.id.drawer_segments -> SEGMENTS
         R.id.drawer_routes -> ROUTES
@@ -134,6 +137,7 @@ object NavRoutes {
         START_TRACKING -> R.id.drawer_start_tracking
         WORKOUTS -> R.id.drawer_workouts
         PERIODS -> R.id.drawer_periods
+        MORNING_HRV -> R.id.drawer_morning_hrv
         MAP -> R.id.drawer_map
         SEGMENTS -> R.id.drawer_segments
         ROUTES -> R.id.drawer_routes

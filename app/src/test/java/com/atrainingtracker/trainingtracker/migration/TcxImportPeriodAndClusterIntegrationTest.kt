@@ -169,6 +169,9 @@ class TcxImportPeriodAndClusterIntegrationTest {
 
         mockWorkoutRepo = mockk(relaxed = true)
         every { mockWorkoutRepo.allWorkouts } returns kotlinx.coroutines.flow.MutableStateFlow(emptyList())
+        every { mockWorkoutRepo.workoutSummariesDatabaseManager } returns mockSummariesDb
+        every { mockWorkoutRepo.workoutSamplesDatabaseManager } returns mockSamplesDb
+        every { mockWorkoutRepo.lapsDatabaseManagerInstance } returns mockLapsDb
         WorkoutRepository.resetForTesting(mockWorkoutRepo)
 
         mockClusterRepo = mockk(relaxed = true)
@@ -315,7 +318,8 @@ class TcxImportPeriodAndClusterIntegrationTest {
                 any(), any(), any(), any(),
                 captureNullable(workoutNameSlot),
                 capture(candidateSportsSlot),
-                any(), any(), any(), any()
+                any(), any(), any(), any(),
+                any()
             )
         } returns mockMatchingCluster
 

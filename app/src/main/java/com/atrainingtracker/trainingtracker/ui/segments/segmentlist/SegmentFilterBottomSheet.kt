@@ -45,6 +45,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.ui.common.filters.FilterBottomSheetScaffold
+import com.atrainingtracker.trainingtracker.ui.common.filters.FilterSearchField
 
 /**
  * Material 3 modal bottom sheet for multi-dimensional starred segment filtering.
@@ -66,58 +67,25 @@ fun SegmentFilterBottomSheet(
     onClearAll: () -> Unit,
     onDismissRequest: () -> Unit
 ) {
-    var localQuery by remember(criteria.query) { mutableStateOf(criteria.query) }
-    var localMinClimbCategory by remember(criteria.minClimbCategory) { mutableStateOf(criteria.minClimbCategory) }
-    var localMinDistanceMeters by remember(criteria.minDistanceMeters) { mutableStateOf(criteria.minDistanceMeters) }
-    var localMinElevationGainMeters by remember(criteria.minElevationGainMeters) { mutableStateOf(criteria.minElevationGainMeters) }
-    var localHasPR by remember(criteria.hasPR) { mutableStateOf(criteria.hasPR) }
+    var draft by remember(criteria) { mutableStateOf(criteria) }
 
     FilterBottomSheetScaffold(
         title = stringResource(R.string.filter_segments_title),
         onDismissRequest = onDismissRequest,
         onClearAll = {
-            localQuery = ""
-            localMinClimbCategory = null
-            localMinDistanceMeters = null
-            localMinElevationGainMeters = null
-            localHasPR = null
+            draft = SegmentFilterCriteria()
             onClearAll()
         },
         onApply = {
-            val updated = criteria.copy(
-                query = localQuery.trim(),
-                minClimbCategory = localMinClimbCategory,
-                minDistanceMeters = localMinDistanceMeters,
-                minElevationGainMeters = localMinElevationGainMeters,
-                hasPR = localHasPR
-            )
-            onApplyCriteria(updated)
+            onApplyCriteria(draft.copy(query = draft.query.trim()))
             onDismissRequest()
         }
     ) {
-        // 1. Text Search Input
-        OutlinedTextField(
-            value = localQuery,
-            onValueChange = { localQuery = it },
-            label = { Text(stringResource(R.string.filter_search_segments_hint)) },
-            leadingIcon = {
-                Icon(
-                    imageVector = Icons.Default.Search,
-                    contentDescription = null
-                )
-            },
-            trailingIcon = {
-                if (localQuery.isNotBlank()) {
-                    IconButton(onClick = { localQuery = "" }) {
-                        Icon(
-                            imageVector = Icons.Default.Close,
-                            contentDescription = stringResource(R.string.Cancel)
-                        )
-                    }
-                }
-            },
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth()
+        // 1. Text Search Input (REQ-UI-509.1)
+        FilterSearchField(
+            query = draft.query,
+            onQueryChange = { draft = draft.copy(query = it) },
+            label = stringResource(R.string.filter_search_segments_hint)
         )
 
         // 2. Climb Category Selection (1 = Cat.4 … 5 = HC)
@@ -141,9 +109,11 @@ fun SegmentFilterBottomSheet(
                     stringResource(R.string.filter_climb_cat_hc) to 5
                 ).forEach { (label, value) ->
                     FilterChip(
-                        selected = (localMinClimbCategory == value),
+                        selected = (draft.minClimbCategory == value),
                         onClick = {
-                            localMinClimbCategory = if (localMinClimbCategory == value) null else value
+                            draft = draft.copy(
+                                minClimbCategory = if (draft.minClimbCategory == value) null else value
+                            )
                         },
                         label = { Text(label) }
                     )
@@ -167,9 +137,11 @@ fun SegmentFilterBottomSheet(
                 listOf(5.0, 10.0, 25.0, 50.0).forEach { km ->
                     val meters = km * 1000.0
                     FilterChip(
-                        selected = (localMinDistanceMeters == meters),
+                        selected = (draft.minDistanceMeters == meters),
                         onClick = {
-                            localMinDistanceMeters = if (localMinDistanceMeters == meters) null else meters
+                            draft = draft.copy(
+                                minDistanceMeters = if (draft.minDistanceMeters == meters) null else meters
+                            )
                         },
                         label = { Text(stringResource(R.string.filter_min_distance_format, km.toInt().toString())) }
                     )
@@ -178,9 +150,11 @@ fun SegmentFilterBottomSheet(
                 // Elevation Gain Thresholds: 100m, 250m, 500m, 1000m
                 listOf(100.0, 250.0, 500.0, 1000.0).forEach { m ->
                     FilterChip(
-                        selected = (localMinElevationGainMeters == m),
+                        selected = (draft.minElevationGainMeters == m),
                         onClick = {
-                            localMinElevationGainMeters = if (localMinElevationGainMeters == m) null else m
+                            draft = draft.copy(
+                                minElevationGainMeters = if (draft.minElevationGainMeters == m) null else m
+                            )
                         },
                         label = { Text(stringResource(R.string.filter_min_elevation_format, m.toInt().toString())) }
                     )
@@ -201,8 +175,8 @@ fun SegmentFilterBottomSheet(
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 FilterChip(
-                    selected = (localHasPR == true),
-                    onClick = { localHasPR = if (localHasPR == true) null else true },
+                    selected = (draft.hasPR == true),
+                    onClick = { draft = draft.copy(hasPR = if (draft.hasPR == true) null else true) },
                     label = { Text(stringResource(R.string.filter_has_pr)) }
                 )
             }

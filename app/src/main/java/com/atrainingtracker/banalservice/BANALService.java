@@ -37,6 +37,7 @@ import com.atrainingtracker.banalservice.devices.DeviceManager;
 import com.atrainingtracker.banalservice.devices.DeviceType;
 import com.atrainingtracker.banalservice.devices.MyDevice;
 import com.atrainingtracker.banalservice.devices.MyRemoteDevice;
+import com.atrainingtracker.banalservice.devices.RrBeatListener;
 import com.atrainingtracker.banalservice.sensor.MyAccumulatorSensor;
 import com.atrainingtracker.banalservice.sensor.MySensor;
 import com.atrainingtracker.banalservice.sensor.MySensorManager;
@@ -583,6 +584,7 @@ public class BANALService
         // when there is a FilterManager, we can create the devices that need filtered data.
         cDeviceManager.createVerticalSpeedAndSlopeDevice();
         cDeviceManager.createCyclingPowerMetricsDevice();
+        cDeviceManager.createHrvMetricsDevice();
 
         ContextCompat.registerReceiver(this, mStartSearchForPairedDevices, new IntentFilter(REQUEST_START_SEARCH_FOR_PAIRED_DEVICES), ContextCompat.RECEIVER_NOT_EXPORTED);
         ContextCompat.registerReceiver(this, mNewLapReceiver, new IntentFilter(REQUEST_NEW_LAP), ContextCompat.RECEIVER_NOT_EXPORTED);
@@ -810,6 +812,20 @@ public class BANALService
             }
             MySensor sensor = sensorManager.getSensor(SensorType.SENSORS);
             return sensor != null ? sensor.getStringValue() : MySensorManager.EMPTY_GC_DATA;
+        }
+
+        public void addRrBeatListener(@NonNull RrBeatListener listener) {
+            DeviceManager deviceManager = cDeviceManager;
+            if (deviceManager != null) {
+                deviceManager.addRrBeatListener(listener);
+            }
+        }
+
+        public void removeRrBeatListener(@NonNull RrBeatListener listener) {
+            DeviceManager deviceManager = cDeviceManager;
+            if (deviceManager != null) {
+                deviceManager.removeRrBeatListener(listener);
+            }
         }
     }
 

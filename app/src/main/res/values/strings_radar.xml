@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ~ aTrainingTracker (ANT+ BTLE)
+  ~ Copyright (c) 2011 - 2026 Rainer Blind <rainer.blind@gmail.com>
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ This program is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~ GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License
+  ~ along with this program.  If not, see https://www.gnu.org/licenses/gpl-3.0
+  -->
+
+<resources>
+    <!-- DeviceType BIKE_RADAR (ATT-5083 / REQ-CON-028.1) -->
+    <string name="device_type_bike_radar">bike radar</string>
+    <string name="device_type_short_bike_radar">radar</string>
+
+    <!-- Radar Scalar Sensor Types (ATT-5083 / REQ-CON-028.5) -->
+    <string name="radar_threat_count">Radar Threat Count</string>
+    <string name="radar_threat_count_short">Threats</string>
+
+    <string name="radar_closest_distance">Radar Closest Distance</string>
+    <string name="radar_closest_distance_short">Radar Dist</string>
+
+    <string name="radar_approach_speed">Radar Approach Speed</string>
+    <string name="radar_approach_speed_short">Radar Spd</string>
+
+    <string name="radar_vehicle_count">Radar Vehicle Count</string>
+    <string name="radar_vehicle_count_short">Vehicles</string>
+
+    <!-- Radar V2 Passing Clearance & Vehicle Sizing (ATT-5095 / REQ-CON-030) -->
+    <string name="radar_passing_distance">Radar Passing Distance</string>
+    <string name="radar_passing_distance_short">Pass Dist</string>
+    <string name="radar_large_vehicle_count">Radar Large Vehicle Count</string>
+    <string name="radar_large_vehicle_count_short">Large Veh</string>
+
+    <!-- Radar Traffic Simulator (ATT-5087 / REQ-CON-029.5) -->
+    <string name="radar_simulator_title">Radar Traffic Simulator</string>
+    <string name="radar_simulator_subtitle">Simulate traffic scenarios for indoor workouts and UI testing</string>
+    <string name="radar_simulator_start">Start Simulation</string>
+    <string name="radar_simulator_stop">Stop Simulation</string>
+    <string name="radar_simulator_running">Simulation active</string>
+    <string name="radar_simulator_idle">Simulation stopped</string>
+    <string name="radar_scenario_single_car">Single Car</string>
+    <string name="radar_scenario_single_car_desc">Single overtaking vehicle at 12 m/s</string>
+    <string name="radar_scenario_convoy">Convoy</string>
+    <string name="radar_scenario_convoy_desc">3 simultaneous overtaking vehicles</string>
+    <string name="radar_scenario_high_speed">High-Speed Threat</string>
+    <string name="radar_scenario_high_speed_desc">Fast vehicle approaching at 25 m/s</string>
+    <string name="radar_scenario_disconnect">Disconnect &amp; Reconnect</string>
+    <string name="radar_scenario_disconnect_desc">Simulates connection loss and recovery</string>
+    <string name="radar_scenario_country_road">Country Road Loop</string>
+    <string name="radar_scenario_country_road_desc">Continuous randomized traffic loop</string>
+    <string name="radar_simulator_preempted">Simulation halted by physical radar</string>
+
+    <!-- Radar Edge Overlay (ATT-5085 / REQ-TRK-062) -->
+    <string name="radar_overlay_settings_title">Radar Overlay</string>
+    <string name="radar_overlay_edge_side">Screen Edge</string>
+    <string name="radar_overlay_edge_left">Left Edge</string>
+    <string name="radar_overlay_edge_right">Right Edge</string>
+    <string name="radar_overlay_clear_mode">Clear State Display</string>
+    <string name="radar_overlay_clear_mode_slim">Slim Rail</string>
+    <string name="radar_overlay_clear_mode_badge">Badge Only</string>
+    <string name="radar_overlay_clear_mode_autohide">Auto-Hide (3s)</string>
+    <string name="radar_overlay_disconnected">Radar Disconnected</string>
+    <string name="radar_overlay_connecting">Radar Connecting</string>
+    <string name="radar_overlay_clear">All Clear</string>
+
+    <!-- Radar Audio & Haptic Alerts (ATT-5086 / REQ-TRK-063) -->
+    <string name="radar_alerts_settings_title">Radar Alerts &amp; Audio</string>
+    <string name="radar_alert_mode_title">Audio Alert Mode</string>
+    <string name="radar_alert_mode_all">All Alerts</string>
+    <string name="radar_alert_mode_approach_fast">Approach &amp; Fast</string>
+    <string name="radar_alert_mode_fast_only">Fast Only</string>
+    <string name="radar_alert_mode_muted">Muted</string>
+    <string name="radar_alert_volume_title">Alert Volume</string>
+    <string name="radar_alert_speaker_boost">Boost Speaker Volume</string>
+    <string name="radar_alert_speaker_boost_desc">Temporarily overrides quiet phone speaker during alerts</string>
+    <string name="radar_alert_route_title">Audio Output Route</string>
+    <string name="radar_alert_route_default">System / Headphones</string>
+    <string name="radar_alert_route_speaker">Force Phone Speaker</string>
+    <string name="radar_alert_haptic_title">Haptic Vibration</string>
+    <string name="radar_alert_haptic_desc">Vibrate on vehicle approach and threat transitions</string>
+
+    <!-- Radar Tail Light Control (ATT-5102 / REQ-CON-031) -->
+    <string name="radar_light_settings_title">Tail Light Control</string>
+    <string name="radar_light_mode_title">Light Mode</string>
+    <string name="radar_light_mode_off">Off (Radar Only)</string>
+    <string name="radar_light_mode_day_flash">Day Flash</string>
+    <string name="radar_light_mode_night_flash">Night Flash</string>
+    <string name="radar_light_mode_solid">Solid</string>
+    <string name="radar_light_mode_peloton">Peloton</string>
+    <string name="radar_light_auto_switch">Auto Workout Light</string>
+    <string name="radar_light_auto_switch_desc">Turn tail light on at workout start and off at finish</string>
+    <string name="radar_light_sheet_title">Radar Tail Light</string>
+    <string name="radar_light_stvzo_notice">StVZO Mode (Flashing disabled)</string>
+
+    <!-- Radar Audio Snooze, Peloton Sync & Urban Suppression (ATT-5119 / REQ-TRK-064) -->
+    <string name="radar_snooze_title">Audio Snooze</string>
+    <string name="radar_snooze_15m">Snooze 15 min</string>
+    <string name="radar_snooze_30m">Snooze 30 min</string>
+    <string name="radar_snooze_fast_only">High-Threat Only</string>
+    <string name="radar_snooze_rest_of_ride">Mute Rest of Ride</string>
+    <string name="radar_snooze_resume">Resume Audio Alerts</string>
+    <string name="radar_snooze_active_format">Radar Audio Muted (%1$s)</string>
+    <string name="radar_peloton_audio_sync_title">Peloton Mode Audio Sync</string>
+    <string name="radar_peloton_audio_sync_desc">Suppress standard radar chimes when tail light is in Peloton mode</string>
+    <string name="radar_smart_urban_mute_title">Smart Urban Congestion Filter</string>
+    <string name="radar_smart_urban_mute_desc">Suppress repetitive approach chimes in slow city traffic queues while keeping high-speed alerts</string>
+
+    <!-- 3D Stereo Audio Panning & Speed Pitch Modulation (ATT-5120 / REQ-TRK-065) -->
+    <string name="radar_spatial_audio_title">3D Stereo Audio Panning</string>
+    <string name="radar_spatial_audio_desc">Pan alert sound toward overtaking vehicle lane in headphones</string>
+    <string name="radar_traffic_orientation_title">Traffic Orientation</string>
+    <string name="radar_traffic_orientation_rht">Right-Hand Traffic</string>
+    <string name="radar_traffic_orientation_lht">Left-Hand Traffic</string>
+    <string name="radar_lane_change_tick_title">Lane-Change Spatial Cue</string>
+    <string name="radar_lane_change_tick_desc">Play subtle tick when approaching vehicle moves to passing lane</string>
+    <string name="radar_speed_pitch_title">Speed-Adaptive Pitch</string>
+    <string name="radar_speed_pitch_desc">Modulate chime pitch higher for rapidly closing vehicles</string>
+    <string name="radar_preview_title">Audio Preview</string>
+    <string name="radar_preview_centered">In-Lane</string>
+    <string name="radar_preview_passing">Passing</string>
+    <string name="radar_preview_slow">Slow</string>
+    <string name="radar_preview_fast">Fast Threat</string>
+    <string name="radar_preview_lane_change">Lane Change</string>
+</resources>

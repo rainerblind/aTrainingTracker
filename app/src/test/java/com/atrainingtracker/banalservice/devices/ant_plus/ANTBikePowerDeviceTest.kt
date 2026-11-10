@@ -26,13 +26,14 @@ import com.atrainingtracker.banalservice.sensor.MySensor
 import com.atrainingtracker.banalservice.sensor.MySensorManager
 import com.dsi.ant.plugins.antplus.pcc.AntPlusBikePowerPcc
 import com.dsi.ant.plugins.antplus.pcc.AntPlusBikePowerPcc.IPedalPowerBalanceReceiver
+import com.dsi.ant.plugins.antplus.pcc.AntPlusBikePowerPcc.IPedalSmoothnessReceiver
 import com.dsi.ant.plugins.antplus.pcc.defines.EventFlag
 import io.mockk.*
 import org.junit.After
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
+import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
+import java.math.BigDecimal
 import java.util.EnumSet
 
 /**
@@ -45,6 +46,7 @@ class ANTBikePowerDeviceTest {
     private lateinit var mockSensorManager: MySensorManager
     private lateinit var mockPcc: AntPlusBikePowerPcc
     private var capturedReceiver: IPedalPowerBalanceReceiver? = null
+    private var capturedSmoothnessReceiver: IPedalSmoothnessReceiver? = null
 
     private class TestANTBikePowerDevice(
         context: Context,
@@ -65,6 +67,10 @@ class ANTBikePowerDeviceTest {
         }
 
         fun getPowerBalanceSensor(): MySensor<Int>? = mPowerBalanceSensor
+
+        fun getPedalSmoothnessSensor(): MySensor<Int>? = mPedalSmoothnessSensor
+
+        fun getDevicesDatabaseManager(): DevicesDatabaseManager = mDevicesDatabaseManager
     }
 
     @Before
@@ -92,6 +98,11 @@ class ANTBikePowerDeviceTest {
         val slot = slot<IPedalPowerBalanceReceiver>()
         every { mockPcc.subscribePedalPowerBalanceEvent(capture(slot)) } answers {
             capturedReceiver = slot.captured
+        }
+
+        val smoothnessSlot = slot<IPedalSmoothnessReceiver>()
+        every { mockPcc.subscribePedalSmoothnessEvent(capture(smoothnessSlot)) } answers {
+            capturedSmoothnessReceiver = smoothnessSlot.captured
         }
     }
 
@@ -171,5 +182,55 @@ class ANTBikePowerDeviceTest {
         // Then invalid reading (< 0) -> publishes null
         capturedReceiver?.onNewPedalPowerBalance(1001L, EnumSet.noneOf(EventFlag::class.java), true, -1)
         assertNull(device.getPowerBalanceSensor()?.value)
+    }
+
+    /**
+     * TST-CON-025.3: Verify combined pedal smoothness telemetry (separatePedalSmoothnessSupport == false)
+     * creates and dispatches to mPedalSmoothnessSensor even though mPedalSmoothnessLeftSensor is null.
+     */
+    @Test
+    fun testANTBikePower_combinedPedalSmoothness_routesToCombinedSensor() {
+        val device = TestANTBikePowerDevice(mockContext, mockSensorManager, 205L, 12349)
+        device.setMockPcc(mockPcc)
+        device.subscribeSpecificEvents()
+
+        assertNull("Pedal smoothness sensor initially null", device.getPedalSmoothnessSensor())
+
+        // Deliver combined pedal smoothness event (separatePedalSmoothnessSupport = false, leftOrCombined = 68%)
+        capturedSmoothnessReceiver?.onNewPedalSmoothness(
+            1000L,
+            EnumSet.noneOf(EventFlag::class.java),
+            1L,
+            false,
+            BigDecimal.valueOf(68),
+            BigDecimal.valueOf(-1)
+        )
+
+        assertNotNull("Combined pedal smoothness sensor must be created", device.getPedalSmoothnessSensor())
+        assertEquals(68, device.getPedalSmoothnessSensor()?.value)
+    }
+
+    /**
+     * TST-CON-025.4: Verify ANTBikePowerDevice does not declare a shadow field for mDevicesDatabaseManager,
+     * relying cleanly on inherited field from MyDevice.
+     */
+    @Test
+    fun testANTBikePower_noFieldShadowingForDevicesDatabaseManager() {
+        val declaredField = try {
+            ANTBikePowerDevice::class.java.getDeclaredField("mDevicesDatabaseManager")
+        } catch (e: NoSuchFieldException) {
+            null
+        }
+
+        assertNull(
+            "ANTBikePowerDevice must not declare mDevicesDatabaseManager field (shadowing MyDevice)",
+            declaredField
+        )
+
+        val device = TestANTBikePowerDevice(mockContext, mockSensorManager, 206L, 12350)
+        assertNotNull(
+            "Inherited mDevicesDatabaseManager from MyDevice must be initialized",
+            device.getDevicesDatabaseManager()
+        )
     }
 }

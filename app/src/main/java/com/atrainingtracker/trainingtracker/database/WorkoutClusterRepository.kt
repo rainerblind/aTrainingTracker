@@ -21,6 +21,7 @@ package com.atrainingtracker.trainingtracker.database
 import android.content.Context
 import android.database.Cursor
 import com.atrainingtracker.R
+import com.atrainingtracker.trainingtracker.repositories.SportTypesRepository
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDataMapper
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager
@@ -48,8 +49,8 @@ class WorkoutClusterRepository internal constructor(
     private val repositoryScope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 ) {
 
-    private val clusterDb = WorkoutClusterDatabaseManager.getInstance(context)
-    private val summariesManager = WorkoutSummariesDatabaseManager.getInstance(context)
+    private val clusterDb get() = WorkoutClusterDatabaseManager.getInstance(context)
+    private val summariesManager get() = WorkoutSummariesDatabaseManager.getInstance(context)
     private val DEBUG = com.atrainingtracker.trainingtracker.TrainingApplication.getDebug(true)
     private val prefs = androidx.preference.PreferenceManager.getDefaultSharedPreferences(context)
     private val isRecalculatingLock = AtomicBoolean(false)
@@ -137,6 +138,7 @@ class WorkoutClusterRepository internal constructor(
 
     companion object {
         private const val SP_KEY_LAST_BOUNDS_REPAIR = "last_cluster_bounds_repair_v5"
+        const val SP_KEY_LAST_APEX_REPAIR = "last_apex_repair_v1"
         @Volatile
         private var instance: WorkoutClusterRepository? = null
 
@@ -167,7 +169,7 @@ class WorkoutClusterRepository internal constructor(
     }
 
     suspend fun refreshClusters(forceShowProgress: Boolean = false, forceCheckIntegrity: Boolean = false): Unit = withContext(Dispatchers.IO) {
-        val currentClusters = clusterDb.getAllClusters()
+        var currentClusters = clusterDb.getAllClusters()
         
         // --- SELF-HEALING BOOTSTRAPPER (ATT-392 Refinement) ---
         // If the DB is empty (e.g. after a destructive upgrade), automatically repopulate from history.
@@ -181,6 +183,16 @@ class WorkoutClusterRepository internal constructor(
         val lastRepair = prefs.getInt(SP_KEY_LAST_BOUNDS_REPAIR, 0)
         if (lastRepair < 5 && currentClusters.isNotEmpty()) {
             repairClusterMetadata()
+            currentClusters = clusterDb.getAllClusters()
+        }
+
+        // 0.1 Point-to-point Apex Self-Healing Migration (REQ-DAT-039, ATT-6319)
+        val lastApexRepair = prefs.getInt(SP_KEY_LAST_APEX_REPAIR, 0)
+        if (lastApexRepair < 1 && currentClusters.isNotEmpty()) {
+            val engine = WorkoutClusterEngine.getInstance(context)
+            engine.healLegacyPointToPointApexes(context)
+            prefs.edit().putInt(SP_KEY_LAST_APEX_REPAIR, 1).apply()
+            currentClusters = clusterDb.getAllClusters()
         }
 
         // --- ATT-441: Optimized Refresh Logic ---
@@ -511,14 +523,26 @@ class WorkoutClusterRepository internal constructor(
     }
 
     suspend fun getWorkoutTrackPoints(workoutId: Long, trackType: TrackType): List<PathPoint> {
-        return WorkoutRepository.getInstance(context as android.app.Application).getWorkoutTrackPoints(workoutId, trackType)
+        return WorkoutRepository.getInstance(context).getWorkoutTrackPoints(workoutId, trackType)
     }
 
     fun getSportName(sportId: Long): String {
-        return SportTypeDatabaseManager.getInstance(context).getUIName(sportId)
+        return SportTypesRepository.getInstance(context).getUIName(sportId)
     }
 
     fun getBSportType(sportId: Long): com.atrainingtracker.banalservice.BSportType {
-        return SportTypeDatabaseManager.getInstance(context).getBSportType(sportId)
+        return SportTypesRepository.getInstance(context).getBSportType(sportId)
     }
+
+    val databaseManager: WorkoutClusterDatabaseManager get() = clusterDb
+    fun getAllClustersSync(): List<WorkoutCluster> = clusterDb.getAllClusters()
+    fun getClusterByIdSync(id: Long): WorkoutCluster? = clusterDb.getClusterById(id)
+    fun getClusterByName(name: String): WorkoutCluster? = clusterDb.getClusterByName(name)
+    fun getClusterNameById(id: Long): String? = clusterDb.getClusterNameById(id)
+    fun insertCluster(cluster: WorkoutCluster): Long = clusterDb.insertCluster(cluster)
+    fun updateClusterSync(cluster: WorkoutCluster) = clusterDb.updateCluster(cluster)
+    fun deleteClusterSync(id: Long) = clusterDb.deleteCluster(id)
+    fun deleteAllClustersSync() = clusterDb.deleteAllClusters()
+    fun isNameTaken(name: String, excludeId: Long = -1): Boolean = clusterDb.isNameTaken(name, excludeId)
+    fun getDatabase(): android.database.sqlite.SQLiteDatabase = clusterDb.getDatabase()
 }

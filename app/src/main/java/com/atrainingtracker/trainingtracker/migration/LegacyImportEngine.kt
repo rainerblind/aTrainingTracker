@@ -36,7 +36,9 @@ import com.atrainingtracker.trainingtracker.database.WorkoutClusterRepository
 import com.atrainingtracker.trainingtracker.database.WorkoutSource
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries
+import com.atrainingtracker.trainingtracker.repositories.SportTypesRepository
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
+import com.atrainingtracker.trainingtracker.ui.components.export.ExportStatusRepository
 import com.atrainingtracker.trainingtracker.exporter.ExportManager
 import com.atrainingtracker.trainingtracker.exporter.ExportType
 import com.atrainingtracker.trainingtracker.exporter.FileFormat
@@ -198,7 +200,7 @@ object LegacyImportEngine {
         }
         if (entries.isEmpty()) return RecoveryResult(0, 0, 0, 0)
         
-        val summaryDb = WorkoutSummariesDatabaseManager.getInstance(context)
+        val summaryDb = WorkoutRepository.getInstance(context).workoutSummariesDatabaseManager
         val tempDir = File(context.cacheDir, "legacy_recovery")
         if (tempDir.exists()) tempDir.deleteRecursively()
         tempDir.mkdirs()
@@ -421,7 +423,7 @@ object LegacyImportEngine {
         }
         if (entries.isEmpty()) return RecoveryResult(0, 0, 0, 0)
 
-        val summaryDb = WorkoutSummariesDatabaseManager.getInstance(context)
+        val summaryDb = WorkoutRepository.getInstance(context).workoutSummariesDatabaseManager
         val tempDir = File(context.cacheDir, "gdrive_recovery")
         if (tempDir.exists()) tempDir.deleteRecursively()
         tempDir.mkdirs()
@@ -554,7 +556,7 @@ object LegacyImportEngine {
     ): ImportResult {
         try {
             val baseFileName = tcxFile.nameWithoutExtension.removeSuffix("-TMP").removeSuffix("~")
-            val summaryDb = WorkoutSummariesDatabaseManager.getInstance(context)
+            val summaryDb = WorkoutRepository.getInstance(context).workoutSummariesDatabaseManager
 
             // ATT-314: Early exit if workout already exists to prevent redundant processing
             if (!baseFileName.startsWith("legacy_import", ignoreCase = true) && isWorkoutExisting(summaryDb, baseFileName)) {
@@ -618,7 +620,7 @@ object LegacyImportEngine {
     ): ImportResult {
         try {
             val baseFileName = gpxFile.nameWithoutExtension.removeSuffix("-TMP").removeSuffix("~")
-            val summaryDb = WorkoutSummariesDatabaseManager.getInstance(context)
+            val summaryDb = WorkoutRepository.getInstance(context).workoutSummariesDatabaseManager
 
             // Early exit if workout already exists to prevent redundant processing
             if (!baseFileName.startsWith("legacy_import", ignoreCase = true) && isWorkoutExisting(summaryDb, baseFileName)) {
@@ -683,7 +685,7 @@ object LegacyImportEngine {
     ): ImportResult {
         try {
             val baseFileName = fitFile.nameWithoutExtension.removeSuffix("-TMP").removeSuffix("~")
-            val summaryDb = WorkoutSummariesDatabaseManager.getInstance(context)
+            val summaryDb = WorkoutRepository.getInstance(context).workoutSummariesDatabaseManager
 
             // Early exit if workout already exists to prevent redundant processing
             if (!baseFileName.startsWith("legacy_import", ignoreCase = true) && isWorkoutExisting(summaryDb, baseFileName)) {
@@ -743,8 +745,10 @@ object LegacyImportEngine {
             return ImportResult(ImportStatus.FAILED)
         }
 
-        val summaryDb = WorkoutSummariesDatabaseManager.getInstance(context)
-        val samplesDbManager = WorkoutSamplesDatabaseManager.getInstance(context)
+        val workoutRepo = WorkoutRepository.getInstance(context)
+        val summaryDb = workoutRepo.workoutSummariesDatabaseManager
+        val samplesDbManager = workoutRepo.workoutSamplesDatabaseManager
+        val exportStatusRepo = ExportStatusRepository.getInstance(context)
         var workoutId = -1L
 
         // Mutex-guarded multi-dimensional deduplication and atomic insertion (REQ-MIG-031, REQ-MIG-043)
@@ -758,7 +762,7 @@ object LegacyImportEngine {
                 workoutId = getWorkoutId(summaryDb, effectiveBaseFileName)
                 if (workoutId == -1L) {
                     try {
-                        StravaUploadDbHelper.getInstance(context).deleteWorkout(effectiveBaseFileName)
+                        exportStatusRepo.deleteStravaWorkout(effectiveBaseFileName)
                     } catch (t: Throwable) {
                         Log.w(TAG, "Could not clean StravaUploadDb for $effectiveBaseFileName: ${t.message}")
                     }
@@ -795,7 +799,7 @@ object LegacyImportEngine {
 
                     if (!parsedWorkout.stravaActivityId.isNullOrBlank()) {
                         try {
-                            StravaUploadDbHelper.getInstance(context).updateAll(
+                            exportStatusRepo.updateStravaAll(
                                 effectiveBaseFileName,
                                 parsedWorkout.stravaActivityId,
                                 parsedWorkout.stravaActivityId,
@@ -867,6 +871,31 @@ object LegacyImportEngine {
                 sessionWorkKj = parsedWorkout.sessionWorkKj
             )
 
+            if (parsedWorkout.rawRrIntervals.isNotEmpty() && workoutId > 0) {
+                try {
+                    val startMs = parseTimeToMs(firstTime)
+                    val reconstructor = com.atrainingtracker.trainingtracker.database.hrv.RrBeatTimestampReconstructor(startMs)
+                    val rrEntities = ArrayList<com.atrainingtracker.trainingtracker.database.hrv.WorkoutRrInterval>(parsedWorkout.rawRrIntervals.size)
+                    for ((idx, rrMs) in parsedWorkout.rawRrIntervals.withIndex()) {
+                        val beat = reconstructor.reconstruct(startMs, rrMs)
+                        rrEntities.add(
+                            com.atrainingtracker.trainingtracker.database.hrv.WorkoutRrInterval(
+                                workoutId = workoutId,
+                                beatIndex = idx,
+                                beatTimestampMs = beat.beatTimestampMs,
+                                rrMs = rrMs.toFloat(),
+                                artifactFlag = beat.artifactFlag,
+                                gapBeats = beat.gapBeats
+                            )
+                        )
+                    }
+                    com.atrainingtracker.trainingtracker.database.hrv.WorkoutRrRepository.getInstance(context).insertIntervalsBlocking(rrEntities)
+                    com.atrainingtracker.trainingtracker.database.hrv.HrvPostWorkoutRecomputer.recomputeWorkout(context, workoutId)
+                } catch (t: Throwable) {
+                    Log.e(TAG, "Failed to persist imported RR intervals or recompute HRV for $effectiveBaseFileName", t)
+                }
+            }
+
             schedulePostImportCommunityUpload(context, workoutId, effectiveBaseFileName)
             return ImportResult(ImportStatus.SUCCESS, workoutId)
         } catch (ce: CancellationException) {
@@ -898,11 +927,36 @@ object LegacyImportEngine {
                 Log.e(TAG, "CRITICAL: Compensatory cleanup failed to delete summary row for $workoutId ($baseFileName)", t)
             }
             try {
-                LapsDatabaseManager.getInstance(context).deleteWorkout(workoutId)
+                WorkoutRepository.getInstance(context).deleteWorkoutLaps(workoutId)
             } catch (t: Throwable) {
                 Log.e(TAG, "CRITICAL: Compensatory cleanup failed to delete laps for $workoutId ($baseFileName)", t)
             }
+            try {
+                com.atrainingtracker.trainingtracker.database.hrv.WorkoutRrRepository.getInstance(context).deleteWorkoutBlocking(workoutId)
+            } catch (t: Throwable) {
+                Log.e(TAG, "CRITICAL: Compensatory cleanup failed to delete RR intervals for $workoutId ($baseFileName)", t)
+            }
         }
+    }
+
+    private fun parseTimeToMs(timeStr: String?): Long {
+        if (timeStr == null) return System.currentTimeMillis()
+        val formats = listOf(
+            "yyyy-MM-dd HH:mm:ss",
+            "yyyy-MM-dd'T'HH:mm:ss",
+            "yyyy-MM-dd'T'HH:mm:ss'Z'",
+            "yyyy-MM-dd_HHmmss"
+        )
+        for (f in formats) {
+            try {
+                val sdf = SimpleDateFormat(f, Locale.US).apply {
+                    timeZone = java.util.TimeZone.getTimeZone("UTC")
+                }
+                val d = sdf.parse(timeStr)
+                if (d != null) return d.time
+            } catch (_: Exception) {}
+        }
+        return System.currentTimeMillis()
     }
 
     /**
@@ -1006,8 +1060,9 @@ object LegacyImportEngine {
         sessionTss: Double? = null,
         sessionWorkKj: Double? = null
     ) {
-        val summariesDb = WorkoutSummariesDatabaseManager.getInstance(context)
-        val samplesDb = WorkoutSamplesDatabaseManager.getInstance(context)
+        val workoutRepo = WorkoutRepository.getInstance(context)
+        val summariesDb = workoutRepo.workoutSummariesDatabaseManager
+        val samplesDb = workoutRepo.workoutSamplesDatabaseManager
         
         // 1. Basic Stats
         var totalDistance = distances.lastOrNull() ?: 0.0
@@ -1082,7 +1137,7 @@ object LegacyImportEngine {
 
         // ATT-617: Save multi-lap entries in LapsDatabaseManager for this imported workout
         try {
-            val lapsDb = LapsDatabaseManager.getInstance(context)
+            val lapsDb = WorkoutRepository.getInstance(context).lapsDatabaseManagerInstance
             lapsDb.deleteWorkout(workoutId)
             if (parsedLaps.isNotEmpty()) {
                 parsedLaps.forEach { lap ->
@@ -1310,6 +1365,16 @@ object LegacyImportEngine {
                 powerMetrics.maxPowerToWeight?.let { maxWPerKg ->
                     summariesDb.updateExtremaValue(workoutId, SensorType.POWER_TO_WEIGHT, ExtremaType.MAX, maxWPerKg, null)
                 }
+
+                // REQ-REV-009.2 (ATT-3904): 1st-order dynamical Power-HR identification
+                val dynamics = com.atrainingtracker.trainingtracker.physiology.PowerHrDynamicsCalculator.calculate(
+                    powerSamples = powerSamples,
+                    hrSamples = hrSamples,
+                    workoutId = workoutId
+                )
+                if (dynamics != null) {
+                    summariesDb.saveCardioPowerDynamics(workoutId, dynamics)
+                }
             }
         } catch (e: Exception) {
             Log.w(TAG, "Could not compute W'bal, Aerobic Efficiency, or Power Training extrema during recalculateStats: ${e.message}")
@@ -1319,16 +1384,9 @@ object LegacyImportEngine {
         if (points.isNotEmpty()) {
             val start = points.first()
             val end = points.last()
-            
-            var maxDisp = -1.0
-            var apex = start
-            points.forEach { pt ->
-                val d = WorkoutClusterEngine.getInstance(context).distanceBetween(start, pt).toDouble()
-                if (d > maxDisp) {
-                    maxDisp = d
-                    apex = pt
-                }
-            }
+            val clusterEngine = WorkoutClusterEngine.getInstance(context)
+            val apex = clusterEngine.findApexFromPoints(start, points, end)
+            val maxDisp = clusterEngine.distanceBetween(start, apex).toDouble()
 
             summariesDb.updateExtremaValue(workoutId, SensorType.LATITUDE, ExtremaType.START, start.latitude, start)
             summariesDb.updateExtremaValue(workoutId, SensorType.LONGITUDE, ExtremaType.START, start.longitude, start)
@@ -1341,7 +1399,6 @@ object LegacyImportEngine {
             if (existingClusterId != -1L) {
                 if (TrainingApplication.getDebug(true)) Log.d(TAG, "Workout $workoutId already has cluster $existingClusterId assigned. Skipping clustering logic.")
             } else {
-                val clusterEngine = WorkoutClusterEngine.getInstance(context)
                 // ATT-909 / REQ-MIG-027: Candidate sport inference and workout name matching
                 val avgSpeed = if (activeTime > 0) totalDistance / activeTime else 0.0
                 val candidateSports = if (bSportType != BSportType.UNKNOWN) {
@@ -1363,7 +1420,8 @@ object LegacyImportEngine {
                     workoutName = workoutName,
                     candidateSportTypes = candidateSports,
                     minAltPos = minAltPos,
-                    maxAltPos = maxAltPos
+                    maxAltPos = maxAltPos,
+                    workoutPolyline = points
                 )
                 
                 if (matchingCluster != null) {
@@ -1373,7 +1431,7 @@ object LegacyImportEngine {
                         effectiveBSport = matchingCluster.bSportType
                     }
                     if (sportId == -1L && effectiveBSport != BSportType.UNKNOWN) {
-                        sportId = com.atrainingtracker.banalservice.database.SportTypeDatabaseManager.getSportTypeId(effectiveBSport)
+                        sportId = SportTypesRepository.getSportTypeId(effectiveBSport)
                         val updateVals = ContentValues().apply {
                             put(WorkoutSummaries.SPORT_ID, sportId)
                             put(WorkoutSummaries.B_SPORT, effectiveBSport.name)
@@ -1407,10 +1465,10 @@ object LegacyImportEngine {
 
                     recalculationMutex.withLock {
                         if (existingId != null) {
-                            val cluster = WorkoutClusterDatabaseManager.getInstance(context).getClusterById(existingId)
+                            val cluster = WorkoutClusterRepository.getInstance(context).getClusterById(existingId)
                             var sportId = summariesDb.getLong(workoutId, WorkoutSummaries.SPORT_ID) ?: -1L
                             if (sportId == -1L && bSportType != BSportType.UNKNOWN) {
-                                sportId = com.atrainingtracker.banalservice.database.SportTypeDatabaseManager.getSportTypeId(bSportType)
+                                sportId = SportTypesRepository.getSportTypeId(bSportType)
                             }
                             if (cluster != null) {
                                 clusterEngine.learnFromWorkout(start, end, apex, totalDistance, cluster.name, sportId, existingId, minAltPos = minAltPos, maxAltPos = maxAltPos)
@@ -1419,7 +1477,7 @@ object LegacyImportEngine {
                         } else if (!customName.isNullOrBlank()) {
                             var sportId = summariesDb.getLong(workoutId, WorkoutSummaries.SPORT_ID) ?: -1L
                             if (sportId == -1L && bSportType != BSportType.UNKNOWN) {
-                                sportId = com.atrainingtracker.banalservice.database.SportTypeDatabaseManager.getSportTypeId(bSportType)
+                                sportId = SportTypesRepository.getSportTypeId(bSportType)
                             }
                             val newId = clusterEngine.learnFromWorkout(start, end, apex, totalDistance, customName, sportId, -1L, minAltPos = minAltPos, maxAltPos = maxAltPos)
                             clusterEngine.assignClusterToWorkout(context, workoutId, newId, true, customWorkoutName)
@@ -1486,8 +1544,8 @@ object LegacyImportEngine {
             Log.i(TAG, "schedulePostImportCommunityUpload: workoutId=$workoutId, baseFileName=$baseFileName")
             // ATT-602: Ensure export status entries exist for this workout in ExportStatusDatabaseManager
             try {
-                val exportStatusDb = ExportStatusDatabaseManager.getInstance(context)
-                val existingRows = exportStatusDb.getExportRows(baseFileName)
+                val exportStatusRepo = ExportStatusRepository.getInstance(context)
+                val existingRows = exportStatusRepo.getExportRows(baseFileName)
                 Log.i(TAG, "Existing export status rows for $baseFileName: count=${existingRows.size}")
                 if (existingRows.isEmpty()) {
                     exportManager.newWorkout(baseFileName)
@@ -1502,12 +1560,12 @@ object LegacyImportEngine {
                 Log.i(TAG, "Checking community format ${format.name}: uploadToCommunity=$uploadEnabled")
                 if (uploadEnabled) {
                     if (format == FileFormat.STRAVA) {
-                        val summaryDb = try {
-                            WorkoutSummariesDatabaseManager.getInstance(context)
-                        } catch (_: Exception) {
-                            null
+                        val uploadToStrava = try {
+                            WorkoutRepository.getInstance(context).getUploadToStravaStatus(workoutId)
+                        } catch (e: Exception) {
+                            Log.w(TAG, "Could not query uploadToStrava for workout $workoutId", e)
+                            -1
                         }
-                        val uploadToStrava = getUploadToStravaStatus(summaryDb, workoutId)
                         Log.i(TAG, "Strava uploadToStrava status in DB for workout $workoutId: $uploadToStrava")
                         if (uploadToStrava == 0) {
                             Log.i(TAG, "Skipping Strava upload for workout $workoutId: Explicitly opted out.")
@@ -1521,24 +1579,6 @@ object LegacyImportEngine {
             }
         } catch (e: Exception) {
             Log.e(TAG, "Failed to schedule community upload for workout $workoutId ($baseFileName)", e)
-        }
-    }
-
-    private fun getUploadToStravaStatus(db: WorkoutSummariesDatabaseManager?, workoutId: Long): Int {
-        return try {
-            val database = db?.database ?: return -1
-            database.query(
-                WorkoutSummaries.TABLE,
-                arrayOf(WorkoutSummaries.UPLOAD_TO_STRAVA),
-                "${WorkoutSummaries.C_ID} = ?",
-                arrayOf(workoutId.toString()),
-                null, null, null
-            ).use { cursor ->
-                if (cursor.moveToFirst()) cursor.getInt(0) else -1
-            }
-        } catch (e: Exception) {
-            Log.w(TAG, "Could not query uploadToStrava for workout $workoutId", e)
-            -1
         }
     }
 }

@@ -213,9 +213,23 @@ class StravaBulkExportImporterTest {
                 11223344,activities/11223344.tcx.gz,Morning Ride,Ride
             """.trimIndent()
 
+            val minimalTcx = """
+                <TrainingCenterDatabase xmlns="http://www.garmin.com/xmlschemas/TrainingCenterDatabase/v2">
+                  <Activities>
+                    <Activity Sport="Biking">
+                      <Id>2026-11-01T01:46:43Z</Id>
+                      <Lap StartTime="2026-11-01T01:46:43Z">
+                        <TotalTimeSeconds>10.0</TotalTimeSeconds>
+                        <DistanceMeters>100.0</DistanceMeters>
+                      </Lap>
+                    </Activity>
+                  </Activities>
+                </TrainingCenterDatabase>
+            """.trimIndent()
+
             val baos = ByteArrayOutputStream()
             GZIPOutputStream(baos).use { gzip ->
-                gzip.write("<TrainingCenterDatabase/>".toByteArray(Charsets.UTF_8))
+                gzip.write(minimalTcx.toByteArray(Charsets.UTF_8))
             }
 
             ZipOutputStream(FileOutputStream(tempZip)).use { zip ->
@@ -255,9 +269,23 @@ class StravaBulkExportImporterTest {
                 1000,activities/1000.tcx.gz,Oldest Workout,Ride
             """.trimIndent()
 
+            val minimalTcx = """
+                <TrainingCenterDatabase xmlns="http://www.garmin.com/xmlschemas/TrainingCenterDatabase/v2">
+                  <Activities>
+                    <Activity Sport="Biking">
+                      <Id>2026-11-01T01:46:43Z</Id>
+                      <Lap StartTime="2026-11-01T01:46:43Z">
+                        <TotalTimeSeconds>10.0</TotalTimeSeconds>
+                        <DistanceMeters>100.0</DistanceMeters>
+                      </Lap>
+                    </Activity>
+                  </Activities>
+                </TrainingCenterDatabase>
+            """.trimIndent()
+
             val baos = ByteArrayOutputStream()
             GZIPOutputStream(baos).use { gzip ->
-                gzip.write("<TrainingCenterDatabase/>".toByteArray(Charsets.UTF_8))
+                gzip.write(minimalTcx.toByteArray(Charsets.UTF_8))
             }
             val streamBytes = baos.toByteArray()
 

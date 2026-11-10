@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ~ aTrainingTracker (ANT+ BTLE)
+  ~ Copyright (c) 2011 - 2026 Rainer Blind <rainer.blind@gmail.com>
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ This program is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~ GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License
+  ~ along with this program.  If not, see https://www.gnu.org/licenses/gpl-3.0
+  -->
+
+<resources>
+    <!-- DeviceType BIKE_RADAR (ATT-5083 / REQ-CON-028.1) -->
+    <string name="device_type_bike_radar">fietsradar</string>
+    <string name="device_type_short_bike_radar">radar</string>
+
+    <!-- Radar Scalar Sensor Types (ATT-5083 / REQ-CON-028.5) -->
+    <string name="radar_threat_count">Aantal radargevaren</string>
+    <string name="radar_threat_count_short">Gevaren</string>
+
+    <string name="radar_closest_distance">Dichtstbijzijnde radarafstand</string>
+    <string name="radar_closest_distance_short">Radar afst</string>
+
+    <string name="radar_approach_speed">Radarnaderingssnelheid</string>
+    <string name="radar_approach_speed_short">Radar snelh</string>
+
+    <string name="radar_vehicle_count">Aantal radarvoertuigen</string>
+    <string name="radar_vehicle_count_short">Voertuigen</string>
+
+    <!-- Radar V2 Passing Clearance & Vehicle Sizing (ATT-5095 / REQ-CON-030) -->
+    <string name="radar_passing_distance">Radar inhaalsafstand</string>
+    <string name="radar_passing_distance_short">Inhaalafst</string>
+    <string name="radar_large_vehicle_count">Radar grote voertuigen</string>
+    <string name="radar_large_vehicle_count_short">Grote voert</string>
+
+    <!-- Radar Traffic Simulator (ATT-5087 / REQ-CON-029.5) -->
+    <string name="radar_simulator_title">Radar verkeerssimulator</string>
+    <string name="radar_simulator_subtitle">Simuleer verkeersscenario\'s voor binnentrainingen en UI-tests</string>
+    <string name="radar_simulator_start">Simulatie starten</string>
+    <string name="radar_simulator_stop">Simulatie stoppen</string>
+    <string name="radar_simulator_running">Simulatie actief</string>
+    <string name="radar_simulator_idle">Simulatie gestopt</string>
+    <string name="radar_scenario_single_car">Enkele auto</string>
+    <string name="radar_scenario_single_car_desc">Enkele inhalende auto met 12 m/s</string>
+    <string name="radar_scenario_convoy">Konvooi</string>
+    <string name="radar_scenario_convoy_desc">3 gelijktijdig inhalende voertuigen</string>
+    <string name="radar_scenario_high_speed">Gevaar met hoge snelheid</string>
+    <string name="radar_scenario_high_speed_desc">Snel naderend voertuig met 25 m/s</string>
+    <string name="radar_scenario_disconnect">Verbinding verbreken &amp; herstellen</string>
+    <string name="radar_scenario_disconnect_desc">Simuleert verbindingsverlies en herstel</string>
+    <string name="radar_scenario_country_road">Buitenweg-lus</string>
+    <string name="radar_scenario_country_road_desc">Continue willekeurige verkeerslus</string>
+    <string name="radar_simulator_preempted">Simulatie onderbroken door fysieke radar</string>
+
+    <!-- Radar Edge Overlay (ATT-5085 / REQ-TRK-062) -->
+    <string name="radar_overlay_settings_title">Radar-overlay</string>
+    <string name="radar_overlay_edge_side">Schermrand</string>
+    <string name="radar_overlay_edge_left">Linkerrand</string>
+    <string name="radar_overlay_edge_right">Rechterrand</string>
+    <string name="radar_overlay_clear_mode">Weergave bij vrije weg</string>
+    <string name="radar_overlay_clear_mode_slim">Smalle balk</string>
+    <string name="radar_overlay_clear_mode_badge">Alleen badge</string>
+    <string name="radar_overlay_clear_mode_autohide">Autom. verbergen (3s)</string>
+    <string name="radar_overlay_disconnected">Radar verbroken</string>
+    <string name="radar_overlay_connecting">Radar verbinden</string>
+    <string name="radar_overlay_clear">Weg vrij</string>
+
+    <!-- Radar Audio & Haptic Alerts (ATT-5086 / REQ-TRK-063) -->
+    <string name="radar_alerts_settings_title">Radarwaarschuwingen en audio</string>
+    <string name="radar_alert_mode_title">Audiowaarschuwingsmodus</string>
+    <string name="radar_alert_mode_all">Alle waarschuwingen</string>
+    <string name="radar_alert_mode_approach_fast">Nadering en snel</string>
+    <string name="radar_alert_mode_fast_only">Alleen snel</string>
+    <string name="radar_alert_mode_muted">Gedempt</string>
+    <string name="radar_alert_volume_title">Waarschuwingsvolume</string>
+    <string name="radar_alert_speaker_boost">Luidsprekervolume versterken</string>
+    <string name="radar_alert_speaker_boost_desc">Verhoogt stil luidsprekervolume tijdelijk tijdens waarschuwingen</string>
+    <string name="radar_alert_route_title">Audio-uitvoer</string>
+    <string name="radar_alert_route_default">Systeem / Hoofdtelefoon</string>
+    <string name="radar_alert_route_speaker">Telefoonluidspreker forceren</string>
+    <string name="radar_alert_haptic_title">Haptische trilling</string>
+    <string name="radar_alert_haptic_desc">Trillen bij naderende voertuigen en dreigingsovergangen</string>
+
+    <!-- Radar Tail Light Control (ATT-5102 / REQ-CON-031) -->
+    <string name="radar_light_settings_title">Achterlichtbediening</string>
+    <string name="radar_light_mode_title">Lichtmodus</string>
+    <string name="radar_light_mode_off">Uit (Alleen radar)</string>
+    <string name="radar_light_mode_day_flash">Dagknipperen</string>
+    <string name="radar_light_mode_night_flash">Nachtknipperen</string>
+    <string name="radar_light_mode_solid">Continu</string>
+    <string name="radar_light_mode_peloton">Peloton</string>
+    <string name="radar_light_auto_switch">Automatische trainingsverlichting</string>
+    <string name="radar_light_auto_switch_desc">Schakelt achterlicht in bij start training en uit bij einde</string>
+    <string name="radar_light_sheet_title">Radar-achterlicht</string>
+    <string name="radar_light_stvzo_notice">StVZO-modus (Knipperen uitgeschakeld)</string>
+
+    <!-- Radar Audio Snooze, Peloton Sync & Urban Suppression (ATT-5119 / REQ-TRK-064) -->
+    <string name="radar_snooze_title">Radar-audio snoozen</string>
+    <string name="radar_snooze_15m">15 min dempen</string>
+    <string name="radar_snooze_30m">30 min dempen</string>
+    <string name="radar_snooze_fast_only">Alleen hoge dreiging</string>
+    <string name="radar_snooze_rest_of_ride">Dempen voor rest van rit</string>
+    <string name="radar_snooze_resume">Audiowaarschuwingen hervatten</string>
+    <string name="radar_snooze_active_format">Radar-audio gedempt (%1$s)</string>
+    <string name="radar_peloton_audio_sync_title">Pelotonmodus audiosynchronisatie</string>
+    <string name="radar_peloton_audio_sync_desc">Standaard naderingsgeluiden onderdrukken wanneer achterlicht in pelotonmodus staat</string>
+    <string name="radar_smart_urban_mute_title">Slimme stadsverkeersfilter</string>
+    <string name="radar_smart_urban_mute_desc">Onderdruk herhaalde naderingstonen in langzaam stadsverkeer terwijl waarschuwingen voor hoge snelheid behouden blijven</string>
+
+    <!-- 3D Stereo Audio Panning & Speed Pitch Modulation (ATT-5120 / REQ-TRK-065) -->
+    <string name="radar_spatial_audio_title">3D-stereogeluidspil</string>
+    <string name="radar_spatial_audio_desc">Richt waarschuwingstoon in koptelefoon naar de inhaalstrook</string>
+    <string name="radar_traffic_orientation_title">Verkeersrichting</string>
+    <string name="radar_traffic_orientation_rht">Rechts rijden</string>
+    <string name="radar_traffic_orientation_lht">Links rijden</string>
+    <string name="radar_lane_change_tick_title">Rijstrookwissel-klik</string>
+    <string name="radar_lane_change_tick_desc">Subtiel geluid wanneer voertuig naar de inhaalstrook gaat</string>
+    <string name="radar_speed_pitch_title">Snelheidsafhankelijke toonhoogte</string>
+    <string name="radar_speed_pitch_desc">Hogere toonhoogte bij snel naderende voertuigen</string>
+    <string name="radar_preview_title">Audiovoorbeeld</string>
+    <string name="radar_preview_centered">Op rijstrook</string>
+    <string name="radar_preview_passing">Inhalen</string>
+    <string name="radar_preview_slow">Langzaam</string>
+    <string name="radar_preview_fast">Snelle dreiging</string>
+    <string name="radar_preview_lane_change">Rijstrookwissel</string>
+</resources>

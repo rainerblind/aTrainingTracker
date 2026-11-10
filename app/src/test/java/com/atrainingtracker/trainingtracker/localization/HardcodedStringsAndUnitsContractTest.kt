@@ -71,12 +71,15 @@ class HardcodedStringsAndUnitsContractTest {
 
     @Test
     fun `WorkoutFilterBottomSheet supports imperial distance and elevation presets and parsing`() {
-        val content = loadSource("app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/workoutlist/WorkoutFilterBottomSheet.kt")
-        assertTrue("WorkoutFilterBottomSheet must check imperial unit preference", content.contains("MyUnits.IMPERIAL"))
-        assertTrue("WorkoutFilterBottomSheet must use METER_PER_MILE conversion", content.contains("BANALService.METER_PER_MILE"))
-        assertTrue("WorkoutFilterBottomSheet must use METER_PER_FOOT conversion", content.contains("BANALService.METER_PER_FOOT"))
-        assertTrue("WorkoutFilterBottomSheet must define miles preset labels", content.contains("\"mi\""))
-        assertTrue("WorkoutFilterBottomSheet must define feet preset labels", content.contains("\"ft\""))
+        val sheetContent = loadSource("app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/workoutlist/WorkoutFilterBottomSheet.kt")
+        assertTrue("WorkoutFilterBottomSheet must delegate unit formatting to FilterFormattingUtils", sheetContent.contains("FilterFormattingUtils"))
+
+        val utilsContent = loadSource("app/src/main/java/com/atrainingtracker/trainingtracker/ui/common/filters/FilterFormattingUtils.kt")
+        assertTrue("FilterFormattingUtils must check imperial unit preference", utilsContent.contains("MyUnits.IMPERIAL"))
+        assertTrue("FilterFormattingUtils must use METER_PER_MILE conversion", utilsContent.contains("BANALService.METER_PER_MILE"))
+        assertTrue("FilterFormattingUtils must use METER_PER_FOOT conversion", utilsContent.contains("BANALService.METER_PER_FOOT"))
+        assertTrue("FilterFormattingUtils must define miles preset labels", utilsContent.contains("\"mi\""))
+        assertTrue("FilterFormattingUtils must define feet preset labels", utilsContent.contains("\"ft\""))
     }
 
     @Test

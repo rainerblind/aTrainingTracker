@@ -178,6 +178,8 @@
     <string name="distance_lap_short">afst. ronde</string>
     <string name="heart_rate">hartslag</string>
     <string name="heart_rate_short">HS</string>
+    <string name="rr_interval">RR-interval</string>
+    <string name="rr_interval_short">RR</string>
     <string name="lap_number">rondenummer</string>
     <string name="lap_number_short">ronde nr</string>
     <string name="line_distance">hemelsbreed</string>
@@ -278,8 +280,10 @@
 
     <string name="prefsDisplayTitle">Scherm</string>
     <string name="prefsDisplaySummary">Scherm- en oriëntatie-instellingen</string>
-    <string name="prefsKeepScreenOnTitle">scherm aanhouden</string>
-    <string name="prefsNoUnlockingTitle">scherm ontgrendeld houden</string>
+    <string name="prefsKeepScreenOnTitle">Scherm aanhouden</string>
+    <string name="prefsKeepScreenOnSummary">Voorkomt dat het scherm automatisch uitschakelt tijdens actieve registratie</string>
+    <string name="prefsNoUnlockingTitle">Scherm ontgrendeld houden</string>
+    <string name="prefsNoUnlockingSummary">Toont de cockpit boven het vergrendelscherm zonder pincode of patroon</string>
     <string name="prefZoomDependingOnSpeedTitle">zoom op basis van snelheid</string>
     <string name="prefsUnitsTitle">Eenheden</string>
     <string name="prefsUnitsSummary">metrisch</string>
@@ -496,6 +500,7 @@
     <string name="do_not_check_again">niet meer controleren</string>
     <string name="check_ANT_installation">ANT installatie controleren</string>
     <string name="forcePortrait">Staande oriëntatie</string>
+    <string name="forcePortraitSummary">Vergrendelt het scherm in staande modus en voorkomt automatisch draaien naar liggend</string>
     <string name="Display">Scherm</string>
     <string name="settings_category_savings">Batterijbesparing</string>
     <string name="settings_category_savings_desc">Verlengt de batterijduur voor langere trainingssessies</string>
@@ -1911,6 +1916,7 @@
     <string name="map_layer_locations">Favoriete locaties</string>
     <string name="map_layer_track">Opgenomen track</string>
     <string name="map_layer_clusters">Favoriete tracks</string>
+    <string name="map_layer_climbs">Klimmen</string>
     <string name="ant_dialog_view_status">ANT+ status weergeven</string>
     <string name="ant_dialog_dismiss">Begrepen</string>
 
@@ -1961,7 +1967,7 @@
     <string name="zone_calc_hr_max_label">Maximale hartslag (HFmax)</string>
     <string name="zone_calc_hr_rest_label">Rusthartslag (HFrust)</string>
     <string name="zone_calc_method_label">Berekeningsmethode</string>
-    <string name="zone_calc_method_max_hr">% HFmax</string>
+    <string name="zone_calc_method_max_hr" formatted="false">% HFmax</string>
     <string name="zone_calc_method_karvonen">Karvonen (HRR)</string>
     <string name="zone_calc_preview_title">Voorbeeld berekende zones</string>
     <string name="zone_calc_apply_button">Toepassen</string>
@@ -2365,7 +2371,7 @@
     <string name="drawer_tier_pioneer">★ Pionier</string>
     <string name="pioneer_badge_label_with_year">★ Pionier (Sinds %1$d)</string>
     <string name="pioneer_badge_label">★ Pionier</string>
-    <string name="pioneer_thank_you_body">Bedankt voor het steunen van aTrainingTracker sinds de vroege ANT+-dagen! Onbeperkte sensoren en alle toekomstige functies zijn permanent ontgrendeld.</string>
+    <string name="pioneer_thank_you_body">Bedankt voor het vastleggen van je trainingen met een eerdere versie van aTrainingTracker! Onbeperkte sensoren en alle toekomstige functies zijn permanent voor jou ontgrendeld.</string>
     <string name="debug_supporter_override_title">Supporter-niveau overschrijven (Debug)</string>
     <string name="debug_supporter_override_subtitle">Simuleert licentieniveaus lokaal zonder Google Play Billing inloggegevens</string>
 

@@ -28,6 +28,7 @@ public class MaxValueFilter extends MyFilter<Number> {
     private static final boolean DEBUG = false;
 
     protected Number mMaxValue = 0;
+    protected boolean mIsInitialized = false;
 
     public MaxValueFilter(String deviceName, SensorType sensorType) {
         super(deviceName, sensorType);
@@ -46,6 +47,7 @@ public class MaxValueFilter extends MyFilter<Number> {
     @Override
     public synchronized void reset() {
         mMaxValue = 0;
+        mIsInitialized = false;
     }
 
     @Override
@@ -53,8 +55,13 @@ public class MaxValueFilter extends MyFilter<Number> {
         if (DEBUG) Log.i(TAG, "newValue: value=" + value + ", maxValue=" + mMaxValue);
 
         if (!TrainingApplication.isPaused()) {
-            if (value != null && value.doubleValue() > mMaxValue.doubleValue()) {
-                mMaxValue = value;
+            if (value != null) {
+                if (!mIsInitialized) {
+                    mMaxValue = value;
+                    mIsInitialized = true;
+                } else if (value.doubleValue() > mMaxValue.doubleValue()) {
+                    mMaxValue = value;
+                }
             }
         }
     }
@@ -63,5 +70,9 @@ public class MaxValueFilter extends MyFilter<Number> {
     public synchronized Number getFilteredValue() {
         if (DEBUG) Log.i(TAG, "getFilteredValue: " + mMaxValue);
         return mMaxValue;
+    }
+
+    public synchronized boolean isInitialized() {
+        return mIsInitialized;
     }
 }

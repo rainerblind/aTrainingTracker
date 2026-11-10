@@ -45,17 +45,17 @@ class FilterResetAndPreStartTest {
     fun exponentialSmoothingFilter_shouldProcessSamplesContinuouslyWhenPaused() {
         val filter = ExponentialSmoothingFilter("test", SensorType.HR, 0.5)
 
-        // Pre-start / paused mode: should update value continuously
+        // Pre-start / paused mode: should update value continuously with unbiased first-sample seeding (REQ-FIL-015.3)
         filter.newValue(100.0)
-        assertEquals(50.0, filter.filteredValue.toDouble(), 0.01)
+        assertEquals(100.0, filter.filteredValue.toDouble(), 0.01)
 
         filter.newValue(150.0)
-        // 0.5 * 150 + 0.5 * 50 = 100.0
-        assertEquals(100.0, filter.filteredValue.toDouble(), 0.01)
+        // 0.5 * 150 + 0.5 * 100 = 125.0
+        assertEquals(125.0, filter.filteredValue.toDouble(), 0.01)
 
         // Passing null should not mutate or crash (REQ-FIL-011)
         filter.newValue(null)
-        assertEquals(100.0, filter.filteredValue.toDouble(), 0.01)
+        assertEquals(125.0, filter.filteredValue.toDouble(), 0.01)
 
         // Verify reset clears filtered value
         filter.reset()

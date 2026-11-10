@@ -2064,6 +2064,68 @@
   5. *Clean-Room Regression Suite Execution (`TST-MIG-048.5`)*:
   • Execute targeted package tests (`com.atrainingtracker.trainingtracker.migration.*`) asserting 100% pass rate.
 
+### TST-DAT-035: **Point-to-Point Route Apex Migration, Import Unification & Mapper Parity Suite** [Verified]
+- **Target Release**: `V5.0.0`
+- **Requirement(s)**: `REQ-DAT-039`
+- **Component**: `WorkoutClusterEngine.kt`, `WorkoutClusterRepository.kt`, `LegacyImportEngine.kt`, `WorkoutDataMapper.kt`, `WorkoutClusterApexMigrationTest.kt`
+- **Jira**: `ATT-6319`
+- **Test Description**:
+  1. *Database Self-Healing Apex Migration Contract Test (`TST-DAT-035.1`)*:
+  • Verify in `WorkoutClusterApexMigrationTest.kt` that `healLegacyPointToPointApexes()` recomputes degenerated apex coordinates ($P_{\text{apex}} \approx P_{\text{end}}$) for point-to-point routes ($d \ge 150\text{ m}$) while leaving closed-loop routes ($d < 150\text{ m}$) unmodified.
+  • Verify that cluster centroids (`maxDispLat`, `maxDispLng`) are updated to reflect the healed member workout apexes.
+  2. *Legacy Import Pipeline Unification Test (`TST-DAT-035.2`)*:
+  • Verify in `LegacyImportEngineTest` / `WorkoutClusterApexMigrationTest` that `LegacyImportEngine` calculates apex coordinates via `findApexFromPoints(start, points, end)` and passes `workoutPolyline` to `suggestCluster`.
+  3. *WorkoutDataMapper Authoritative Apex Resolution Test (`TST-DAT-035.3`)*:
+  • Verify in `WorkoutDataMapperTest` / `WorkoutClusterApexMigrationTest` that `resolveAuthoritativeApex` delegates to `findApexFromPoints` when `endLatLng` is provided.
+  4. *Tier 1 Targeted Unit Test Regression (`TST-DAT-035.4`)*:
+  • Execute targeted test suite (`database.WorkoutCluster*`, `migration.*`, `ui.aftermath.*`, `build.*`) asserting 100% pass rate.
+
+### TST-DAT-036: **TCX Structured DTO Serialization, Parsing Decoupling & Round-Trip Verification Suite** [Verified]
+- **Target Release**: `V5.0.0`
+- **Requirement(s)**: `REQ-DAT-040`
+- **Component**: `TcxDocument.kt`, `TcxSerializer.kt`, `TcxParser.kt`, `TCXFileWriter.java`, `TcxWorkoutParser.kt`, `TCXRoundTripTest.kt`
+- **Jira**: `ATT-938`
+- **Test Description**:
+  1. *TCX DTO Serialization & Schema Compliance Contract Test (`TST-DAT-036.1`, `TcxSerializerTest.kt`)*:
+  • Serialize a complete synthetic `TcxDocument` containing multi-lap data, TPX sensor extensions, and XML special characters (`&`, `<`, `>`, `"`, `'`).
+  • Verify XML structure against Garmin TCX v2 sequence rules (`Id` -> `Lap`* -> `Notes`? -> `Creator`? -> `Extensions`? -> `Author`?).
+  • Verify `<Cadence>`, `<Watts>`, and `<RunCadence>` contain integer values only.
+  2. *TCX DTO Streaming Parser Decoupling Test (`TST-DAT-036.2`, `TcxParserTest.kt`)*:
+  • Parse valid Garmin TCX v2 and legacy `aTrainingTracker` TCX streams into `TcxDocument`.
+  • Verify correct extraction of `att:ActivityExtension`, `att:LapExtension`, and bracketed workout name/description fallbacks.
+  • Assert graceful handling of missing optional elements (no HR, no cadence, no GPS).
+  3. *Bidirectional TCX Export-Import Round-Trip Verification (`TST-DAT-036.3`, `TCXRoundTripTest.kt`)*:
+  • Export synthetic workouts across sport types (Running, Biking) with multiple laps and dense trackpoints to TCX via `TcxSerializer`.
+  • Re-parse the generated TCX via `TcxWorkoutParser` / `TcxParser`.
+  • Assert 1:1 parity for workout name, notes, lap split timestamps, lap statistics, and trackpoint streams.
+  4. *Existing Exporter & Parser Regression Suite (`TST-DAT-036.4`)*:
+  • Run `TCXFileWriterWorkoutNameTest`, `TCXFileWriterLapTest`, and `TcxWorkoutParserTest`.
+  • Verify 100% backward compatibility with existing tests.
+  5. *Tier 1 Targeted Unit Test Regression (`TST-DAT-036.5`)*:
+  • Execute targeted test suite (`--tests "com.atrainingtracker.trainingtracker.tcx.*" --tests "com.atrainingtracker.trainingtracker.exporter.*" --tests "com.atrainingtracker.trainingtracker.migration.*" --tests "com.atrainingtracker.trainingtracker.build.*"`).
+  • Assert 100% pass rate.
+
+### TST-DAT-037: **Repository-Only Engine, Exporter & Migration Layer Verification Suite** [Verified]
+- **Target Release**: `V5.0.0`
+- **Requirement(s)**: `REQ-DAT-041`
+- **Component**: `WorkoutClusterEngine.kt`, `LegacyImportEngine.kt`, `StravaUploader.kt`, `FitFileWriter.java`, `TCXFileWriter.java`, `WorkoutDeletionHelper.java`, `RepositoryEngineCleanlinessContractTest.kt`
+- **Jira**: `ATT-6426`
+- **Test Description**:
+  1. *AST DatabaseManager Prohibition Contract Test (`TST-DAT-037.1`, `RepositoryEngineCleanlinessContractTest.kt`)*:
+  • Verify via automated contract test that `WorkoutClusterEngine.kt`, `LegacyImportEngine.kt`, `StravaUploader.kt`, `FitFileWriter.java`, `TCXFileWriter.java`, and `WorkoutDeletionHelper.java` contain zero occurrences of `*DatabaseManager.getInstance(...)`.
+  2. *Workout Clustering & Migration Engine Delegation Test (`TST-DAT-037.2`)*:
+  • Run `WorkoutClusterEngineTest` and `LegacyImportEngineTest`.
+  • Assert that cluster centroid heuristic calculations, recurring route identification, and TCX/GPX backup import execute with 100% functional and numeric parity via domain repository delegates.
+  3. *FIT/TCX Exporter & Deletion Cascade Parity Test (`TST-DAT-037.3`)*:
+  • Run `FitFileWriterTest`, `TCXRoundTripTest`, and `WorkoutDeletionHelperTest`.
+  • Assert that binary FIT telemetry records, TCX XML documents, and database deletion cascade workflows maintain 100% bit-exact and transactional parity.
+  4. *Tier 1 Targeted Unit Test Regression (`TST-DAT-037.4`)*:
+  • Execute targeted test suite (`--tests "com.atrainingtracker.trainingtracker.database.*" --tests "com.atrainingtracker.trainingtracker.exporter.*" --tests "com.atrainingtracker.trainingtracker.migration.*" --tests "com.atrainingtracker.trainingtracker.tcx.*"`).
+  • Assert 100% pass rate.
+
+
+
+
 
 
 

@@ -83,10 +83,23 @@ object SettingsDataStoreJavaHelper {
      * Synchronous bridge for legacy Java sensor drivers to fetch the active tuning configuration.
      * Non-blocking O(1) in-memory lookup from TuningPreferencesDataStore.
      */
+    private fun isRealFilesDir(dir: java.io.File?): Boolean {
+        return dir != null &&
+            dir.javaClass == java.io.File::class.java &&
+            java.io.File(dir, "datastore").path.isNotEmpty()
+    }
+
     @JvmStatic
     fun getTuningConfig(context: Context): TuningConfig {
         return try {
-            TuningPreferencesDataStore.getInstance(context).getTuningConfig()
+            val appCtx = context.applicationContext ?: context
+            val canReadStore = TuningPreferencesDataStore.hasInitializedInstance() ||
+                isRealFilesDir(appCtx.filesDir)
+            if (canReadStore) {
+                TuningPreferencesDataStore.getInstance(context).getTuningConfig()
+            } else {
+                TuningConfig()
+            }
         } catch (_: Throwable) {
             TuningConfig()
         }

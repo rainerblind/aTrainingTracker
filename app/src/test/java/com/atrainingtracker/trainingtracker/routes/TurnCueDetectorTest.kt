@@ -328,6 +328,9 @@ class TurnCueDetectorTest {
             pts.add(offsetLatLng(origin, curN, curE))
         }
 
+        // Warm up JVM classloading & JIT before microbenchmark measurement
+        TurnCueDetector.detectGeometricCuesFromLatLng(pts)
+
         val duration = measureTimeMillis {
             val cues = TurnCueDetector.detectGeometricCuesFromLatLng(pts)
             assertTrue("Detected turns along 5,000pt track", cues.isNotEmpty())
@@ -355,6 +358,9 @@ class TurnCueDetectorTest {
             curN += 5.0
             pts.add(offsetLatLng(origin, curN, curE))
         }
+
+        // Warm up JVM classloading & JIT before microbenchmark measurement
+        TurnCueDetector.detectGeometricCuesFromLatLng(pts)
 
         val duration = measureTimeMillis {
             val cues = TurnCueDetector.detectGeometricCuesFromLatLng(pts)

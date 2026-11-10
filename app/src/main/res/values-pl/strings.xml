@@ -178,6 +178,8 @@
     <string name="distance_lap_short">dyst. okr.</string>
     <string name="heart_rate">tętno</string>
     <string name="heart_rate_short">HR</string>
+    <string name="rr_interval">Interwał RR</string>
+    <string name="rr_interval_short">RR</string>
     <string name="lap_number">numer okrążenia</string>
     <string name="lap_number_short">okr. nr</string>
     <string name="line_distance">dystans w linii prostej</string>
@@ -234,6 +236,7 @@
     <string name="do_not_check_again">nie sprawdzaj ponownie</string>
     <string name="check_ANT_installation">sprawdź instalację ANT</string>
     <string name="forcePortrait">Orientacja pionowa</string>
+    <string name="forcePortraitSummary">Blokuje ekran w orientacji pionowej i zapobiega automatycznemu obracaniu do poziomu</string>
     <string name="Display">Ekran</string>
     <string name="settings_category_savings">Oszczędzanie baterii</string>
     <string name="settings_category_savings_desc">Wydłuża czas pracy baterii na dłuższe sesje treningowe</string>
@@ -1102,8 +1105,10 @@
     <string name="prefsTrackingTitle">Śledzenie</string>
     <string name="prefsDisplayTitle">Ekran</string>
     <string name="prefsDisplaySummary">Skonfiguruj zachowanie ekranu i orientację</string>
-    <string name="prefsKeepScreenOnTitle">utrzymuj włączony ekran</string>
-    <string name="prefsNoUnlockingTitle">utrzymuj odblokowany ekran</string>
+    <string name="prefsKeepScreenOnTitle">Utrzymuj włączony ekran</string>
+    <string name="prefsKeepScreenOnSummary">Zapobiega automatycznemu wyłączaniu ekranu podczas aktywnego rejestrowania</string>
+    <string name="prefsNoUnlockingTitle">Utrzymuj odblokowany ekran</string>
+    <string name="prefsNoUnlockingSummary">Wyświetla kokpit nad ekranem blokady bez konieczności wprowadzania kodu PIN lub wzoru</string>
     <string name="prefZoomDependingOnSpeedTitle">zoom zależny od prędkości</string>
     <string name="prefsUnitsTitle">Jednostki</string>
     <string name="prefsUnitsSummary">metryczne</string>
@@ -1914,6 +1919,7 @@
     <string name="map_layer_locations">Ulubione lokalizacje</string>
     <string name="map_layer_track">Zarejestrowany ślad</string>
     <string name="map_layer_clusters">Ulubione trasy</string>
+    <string name="map_layer_climbs">Podjazdy</string>
     <string name="ant_dialog_view_status">Pokaż status ANT+</string>
     <string name="ant_dialog_dismiss">Rozumiem</string>
 
@@ -1964,7 +1970,7 @@
     <string name="zone_calc_hr_max_label">Tętno maksymalne (HRmax)</string>
     <string name="zone_calc_hr_rest_label">Tętno spoczynkowe (HRspocz)</string>
     <string name="zone_calc_method_label">Metoda obliczania</string>
-    <string name="zone_calc_method_max_hr">% HRmax</string>
+    <string name="zone_calc_method_max_hr" formatted="false">% HRmax</string>
     <string name="zone_calc_method_karvonen">Karvonen (HRR)</string>
     <string name="zone_calc_preview_title">Podgląd obliczonych stref</string>
     <string name="zone_calc_apply_button">Zastosuj</string>
@@ -2367,7 +2373,7 @@
     <string name="drawer_tier_pioneer">★ Pionier</string>
     <string name="pioneer_badge_label_with_year">★ Pionier (Od %1$d)</string>
     <string name="pioneer_badge_label">★ Pionier</string>
-    <string name="pioneer_thank_you_body">Dziękujemy za wspieranie aTrainingTracker od wczesnych dni ANT+! Nieograniczona liczba czujników i wszystkie przyszłe funkcje są trwale odblokowane.</string>
+    <string name="pioneer_thank_you_body">Dziękujemy za rejestrowanie treningów we wcześniejszej wersji aTrainingTracker! Nieograniczona liczba czujników i wszystkie przyszłe funkcje są dla Ciebie trwale odblokowane.</string>
     <string name="debug_supporter_override_title">Nadpisanie poziomu wspierającego (Debug)</string>
     <string name="debug_supporter_override_subtitle">Symuluje poziomy licencji lokalnie bez poświadczeń Google Play Billing</string>
 

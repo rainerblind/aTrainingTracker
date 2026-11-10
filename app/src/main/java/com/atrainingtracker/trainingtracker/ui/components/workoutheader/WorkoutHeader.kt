@@ -29,6 +29,7 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.EmojiEvents
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.WarningAmber
 import androidx.compose.material3.*
@@ -91,6 +92,7 @@ fun WorkoutHeader(
     onEditWorkout: (() -> Unit)? = null,
     onShareWorkout: (() -> Unit)? = null,
     onClearRecordingErrors: (() -> Unit)? = null,
+    onSyncHealthConnect: (() -> Unit)? = null,
     actions: @Composable RowScope.() -> Unit = {}
 ) {
     // State to control menu visibility
@@ -235,6 +237,28 @@ fun WorkoutHeader(
                                     onClick = {
                                         showMenu = false
                                         onExport(FileFormat.STRAVA)
+                                    }
+                                )
+                            }
+
+                            if (onSyncHealthConnect != null) {
+                                HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                                DropdownMenuItem(
+                                    text = {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Icon(
+                                                imageVector = Icons.Default.Favorite,
+                                                contentDescription = null,
+                                                modifier = Modifier.size(18.dp),
+                                                tint = MaterialTheme.colorScheme.primary
+                                            )
+                                            Spacer(Modifier.width(8.dp))
+                                            Text(stringResource(R.string.health_connect_sync_manual))
+                                        }
+                                    },
+                                    onClick = {
+                                        showMenu = false
+                                        onSyncHealthConnect()
                                     }
                                 )
                             }

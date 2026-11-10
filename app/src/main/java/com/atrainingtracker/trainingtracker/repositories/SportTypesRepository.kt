@@ -19,6 +19,7 @@
 package com.atrainingtracker.trainingtracker.repositories
 
 import android.app.Application
+import android.content.Context
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager
 import com.atrainingtracker.trainingtracker.TrainingApplication
@@ -28,23 +29,48 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlin.getValue
 
-class SportTypesRepository private constructor(private val application: Application) :
+class SportTypesRepository private constructor(private val context: Context) :
     CoroutineScope {
 
 
     private val job = SupervisorJob()
     override val coroutineContext = Dispatchers.Main + job
 
-    // Helper instances, initialized lazily
-    private val sportTypeDatabaseManager by lazy { SportTypeDatabaseManager.getInstance(application) }
+    private val sportTypeDatabaseManager get() = SportTypeDatabaseManager.getInstance(context)
 
     val sportTypesList: List<SportTypeDatabaseManager.SimpleSportTypeInfo>
+        get() = sportTypeDatabaseManager.getSportTypes(BSportType.UNKNOWN)
 
-    init {
-        sportTypesList = sportTypeDatabaseManager.getSportTypes(BSportType.UNKNOWN)
-    }
+    /**
+     * Resolves localized UI display name for sport type id (REQ-UI-507.5).
+     */
+    fun getUIName(sportId: Long): String = sportTypeDatabaseManager.getUIName(sportId)
 
+    /**
+     * Resolves base sport type for sport type id (REQ-UI-507.5).
+     */
+    fun getBSportType(sportId: Long): BSportType = sportTypeDatabaseManager.getBSportType(sportId)
 
+    /**
+     * Resolves TCX activity name for sport type id (REQ-DAT-041.4).
+     */
+    fun getTcxName(sportId: Long): String? = sportTypeDatabaseManager.getTcxName(sportId)
+
+    /**
+     * Resolves Strava sport type name for sport type id (REQ-DAT-041.3).
+     */
+    fun getStravaName(sportId: Long): String? = sportTypeDatabaseManager.getStravaName(sportId)
+
+    /**
+     * Resolves sport type ID from Strava activity type name (REQ-DAT-041.3).
+     */
+    fun getSportTypeIdFromStravaName(stravaName: String?): Long = sportTypeDatabaseManager.getSportTypeIdFromStravaName(stravaName)
+
+    /**
+     * Resolves list of sport types matching [bSportType] (or all if null) (REQ-UI-507.5).
+     */
+    fun getSportTypes(bSportType: BSportType?): List<SportTypeDatabaseManager.SimpleSportTypeInfo> =
+        sportTypeDatabaseManager.getSportTypes(bSportType)
 
     companion object {
         private val TAG = "SportTypesRepository"
@@ -56,24 +82,31 @@ class SportTypesRepository private constructor(private val application: Applicat
         private var INSTANCE: SportTypesRepository? = null
 
         /**
-         * Gets the singleton instance of the EquipmentRepository.
+         * Gets the singleton instance of the SportTypesRepository.
          *
-         * @param application The application context, needed to create the instance for the first time.
-         * @return The single instance of EquipmentRepository.
+         * @param context The context, needed to create the instance for the first time.
+         * @return The single instance of SportTypesRepository.
          */
+        @JvmStatic
         fun getInstance(application: Application): SportTypesRepository {
-            // Double-check locking ensures thread safety and performance.
+            return getInstance(application as Context)
+        }
+
+        @JvmStatic
+        fun getInstance(context: Context): SportTypesRepository {
             return INSTANCE ?: synchronized(this) {
-                val instance = INSTANCE
-                if (instance != null) {
-                    instance
-                } else {
-                    val newInstance = SportTypesRepository(application)
-                    INSTANCE = newInstance
-                    newInstance
+                INSTANCE ?: run {
+                    val appContext = context.applicationContext ?: context
+                    SportTypesRepository(appContext).also { INSTANCE = it }
                 }
             }
         }
+
+        /**
+         * Resolves canonical sport type ID for a base sport type (REQ-UI-507.5).
+         */
+        @JvmStatic
+        fun getSportTypeId(bSportType: BSportType): Long = SportTypeDatabaseManager.getSportTypeId(bSportType)
 
         @androidx.annotation.VisibleForTesting
         fun resetForTesting(newInstance: SportTypesRepository? = null) {

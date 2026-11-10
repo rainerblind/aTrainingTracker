@@ -85,3 +85,77 @@
   4. *JUnit 4 Build Contract Suite (`TST-STP-006.4`)*:
   • Execute `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.build.PromoVideoAssetsContractTest"` asserting 100% pass rate in CI.
 
+### TST-STP-007: Stale Process Artifacts Excision & Gitignore Hygiene Contract Test [Verified]
+- **Requirement(s)**: `REQ-STP-007`
+- **Component**: `.gitignore`, `ReleaseCiAndLintConfigContractTest.kt`, `AspiceSweAuditContractTest.kt`
+- **Jira**: `ATT-6153`
+- **Test Description**:
+  1. *Stale Artifact Absence Audit (`TST-STP-007.1`)*:
+     • Verify that `.active_task.json`, `implementation_plan.artifact.md`, and `.artifacts/` do not exist in the repository root or on disk.
+     • Verify that git tracking contains zero entries for `.active_task.json`, `implementation_plan.artifact.md`, or `.artifacts/`.
+  2. *.gitignore Pattern Enforcement (`TST-STP-007.2`)*:
+     • Inspect `.gitignore` at repository root.
+     • Assert presence of ignore rules for `.active_task.json`, `.artifacts/`, `*.artifact.md`, and `.reviews/`.
+  3. *Canonical Directory Governance Verification (`TST-STP-007.3`)*:
+     • Execute `python3 tools/verify_requirement_governance.py` and verify exit code 0, confirming zero non-canonical directories under `docs/engineering/`.
+  4. *Build Contract Suite Execution (`TST-STP-007.4`)*:
+     • Execute `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.build.*"` asserting 100% pass rate in CI.
+
+### TST-STP-008: Keystore Password Decoupling & Secure Provider Chain Contract Test [Verified]
+- **Requirement(s)**: `REQ-STP-008`
+- **Component**: `app/build.gradle`, `.github/workflows/android-release.yml`, `ReleaseCiAndLintConfigContractTest.kt`
+- **Jira**: `ATT-6148`
+- **Test Description**:
+  1. *Build Signing Configuration Provider Audit (`TST-STP-008.1`)*:
+     • Inspect `app/build.gradle` signing configs.
+     • Assert that keystore and key alias passwords resolve via environment variables, `secret-tool` keyring lookup, and `~/.config/atrainingtracker/release.properties`.
+     • Assert absence of `props.keyStorePassword` and `props.keyAliasPassword` workspace lookups.
+  2. *CI Workflow Secret Exposure Audit (`TST-STP-008.2`)*:
+     • Inspect `.github/workflows/android-release.yml`.
+     • Verify that release signing step injects secrets via environment variables (`KEYSTORE_PASSWORD`, `KEY_ALIAS_PASSWORD`).
+     • Verify zero workflow steps write keystore passwords to a repository `release.properties` file.
+  3. *Workspace Property Hygiene Guard (`TST-STP-008.3`)*:
+     • Inspect repository root `release.properties` if present.
+     • Assert that neither `keyStorePassword` nor `keyAliasPassword` is present in any working-tree properties file.
+  4. *Build Contract Suite Execution (`TST-STP-008.4`)*:
+     • Execute `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.build.*"` asserting 100% pass rate in CI.
+
+### TST-STP-009: CM Plan Integrity & Submodule Pinning Contract Test [Verified]
+- **Requirement(s)**: `REQ-STP-009`
+- **Component**: `docs/management/cm_plan.md`, `.gitmodules`, `ReleaseCiAndLintConfigContractTest.kt`
+- **Jira**: `ATT-6152`
+- **Test Description**:
+  1. *CM Plan Documentation & Section Audit (`TST-STP-009.1`)*:
+     • Verify existence of `docs/management/cm_plan.md`.
+     • Assert presence of mandatory ASPICE SUP.8 sections: Scope & Configuration Items, Branching & Release Strategy, Baseline Management & Traceability, Submodule Governance, and Disaster Recovery.
+  2. *Submodule Pinning Audit (`TST-STP-009.2`)*:
+     • Inspect `.gitmodules`.
+     • Verify that `[submodule "ANT-Android-SDKs"]` does not contain a `branch =` entry.
+     • Verify submodule URL points to canonical repository and gitlink resolves to committed SHA-1.
+  3. *Rule 67 Canonical Engineering Boundary Guard (`TST-STP-009.3`)*:
+     • Execute `python3 tools/verify_requirement_governance.py` and verify exit code 0, confirming zero non-canonical entries in `docs/engineering/`.
+  4. *Build Contract Suite Execution (`TST-STP-009.4`)*:
+     • Execute `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.build.*"` asserting 100% pass rate in CI.
+
+### TST-STP-010: Project Risk Register & Sprint-Start Governance Contract Test [Verified]
+- **Requirement(s)**: `REQ-STP-010`
+- **Component**: `docs/management/risk_register.md`, `.agents/skills/sprint-planner/SKILL.md`, `ReleaseCiAndLintConfigContractTest.kt`
+- **Jira**: `ATT-6151`
+- **Test Description**:
+  1. *Risk Register Documentation & Structure Audit (`TST-STP-010.1`)*:
+     • Verify existence of `docs/management/risk_register.md`.
+     • Assert presence of mandatory sections: Scoring Matrix ($P \times I$), Exposure Thresholds (Low/Medium/High), and Registered Risks Table.
+     • Assert presence of initial risks: `PR-01` (Single Human Bottleneck), `PR-02` (AI Model Drift), `PR-03` (Google Play Policy), and `PR-04` (Sensor Fragmentation).
+     • Assert all High-exposure risks link to a concrete mitigation ticket.
+  2. *Ceremony 1 Sprint-Start Review Checkpoint Audit (`TST-STP-010.2`)*:
+     • Inspect `.agents/skills/sprint-planner/SKILL.md`.
+     • Verify Ceremony 1 includes an explicit risk register review and last-reviewed date check.
+  3. *Rule 67 Canonical Engineering Boundary Guard (`TST-STP-010.3`)*:
+     • Execute `python3 tools/verify_requirement_governance.py` and verify exit code 0, confirming zero non-canonical entries in `docs/engineering/`.
+  4. *Build Contract Suite Execution (`TST-STP-010.4`)*:
+     • Execute `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.build.*"` asserting 100% pass rate in CI.
+
+
+
+
+

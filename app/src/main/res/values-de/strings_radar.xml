@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ~ aTrainingTracker (ANT+ BTLE)
+  ~ Copyright (c) 2011 - 2026 Rainer Blind <rainer.blind@gmail.com>
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ This program is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~ GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License
+  ~ along with this program.  If not, see https://www.gnu.org/licenses/gpl-3.0
+  -->
+
+<resources>
+    <!-- DeviceType BIKE_RADAR (ATT-5083 / REQ-CON-028.1) -->
+    <string name="device_type_bike_radar">Fahrrad-Radar</string>
+    <string name="device_type_short_bike_radar">Radar</string>
+
+    <!-- Radar Scalar Sensor Types (ATT-5083 / REQ-CON-028.5) -->
+    <string name="radar_threat_count">Radar-Gefahrenanzahl</string>
+    <string name="radar_threat_count_short">Gefahren</string>
+
+    <string name="radar_closest_distance">Radar Nächste Distanz</string>
+    <string name="radar_closest_distance_short">Radar Dist</string>
+
+    <string name="radar_approach_speed">Radar Annäherungsgeschw.</string>
+    <string name="radar_approach_speed_short">Radar Geschw</string>
+
+    <string name="radar_vehicle_count">Radar Fahrzeuganzahl</string>
+    <string name="radar_vehicle_count_short">Fahrzeuge</string>
+
+    <!-- Radar V2 Passing Clearance & Vehicle Sizing (ATT-5095 / REQ-CON-030) -->
+    <string name="radar_passing_distance">Radar-Überholabstand</string>
+    <string name="radar_passing_distance_short">Überholabst</string>
+    <string name="radar_large_vehicle_count">Radar Große Fahrzeuge</string>
+    <string name="radar_large_vehicle_count_short">Großfz</string>
+
+    <!-- Radar Traffic Simulator (ATT-5087 / REQ-CON-029.5) -->
+    <string name="radar_simulator_title">Radar-Verkehrssimulator</string>
+    <string name="radar_simulator_subtitle">Verkehrsszenarien für Indoor-Workouts und UI-Tests simulieren</string>
+    <string name="radar_simulator_start">Simulation starten</string>
+    <string name="radar_simulator_stop">Simulation beenden</string>
+    <string name="radar_simulator_running">Simulation aktiv</string>
+    <string name="radar_simulator_idle">Simulation angehalten</string>
+    <string name="radar_scenario_single_car">Einzelnes Fahrzeug</string>
+    <string name="radar_scenario_single_car_desc">Einzelnes überholendes Fahrzeug mit 12 m/s</string>
+    <string name="radar_scenario_convoy">Fahrzeugkolonne</string>
+    <string name="radar_scenario_convoy_desc">3 gleichzeitige überholende Fahrzeuge</string>
+    <string name="radar_scenario_high_speed">Schnell näherndes Fahrzeug</string>
+    <string name="radar_scenario_high_speed_desc">Schnelles Fahrzeug mit 25 m/s Annäherung</string>
+    <string name="radar_scenario_disconnect">Verbindung trennen &amp; verbinden</string>
+    <string name="radar_scenario_disconnect_desc">Simuliert Verbindungsverlust und Wiederverbindung</string>
+    <string name="radar_scenario_country_road">Landstraßen-Schleife</string>
+    <string name="radar_scenario_country_road_desc">Kontinuierliche zufällige Verkehrsschleife</string>
+    <string name="radar_simulator_preempted">Simulation durch physisches Radar gestoppt</string>
+
+    <!-- Radar Edge Overlay (ATT-5085 / REQ-TRK-062) -->
+    <string name="radar_overlay_settings_title">Radar-Overlay</string>
+    <string name="radar_overlay_edge_side">Bildschirmkante</string>
+    <string name="radar_overlay_edge_left">Linke Kante</string>
+    <string name="radar_overlay_edge_right">Rechte Kante</string>
+    <string name="radar_overlay_clear_mode">Anzeige bei freier Straße</string>
+    <string name="radar_overlay_clear_mode_slim">Schmale Leiste</string>
+    <string name="radar_overlay_clear_mode_badge">Nur Status-Badge</string>
+    <string name="radar_overlay_clear_mode_autohide">Autom. Ausblenden (3s)</string>
+    <string name="radar_overlay_disconnected">Radar getrennt</string>
+    <string name="radar_overlay_connecting">Radar verbindet</string>
+    <string name="radar_overlay_clear">Straße frei</string>
+
+    <!-- Radar Audio & Haptic Alerts (ATT-5086 / REQ-TRK-063) -->
+    <string name="radar_alerts_settings_title">Radar-Warnungen &amp; Audio</string>
+    <string name="radar_alert_mode_title">Audio-Warnmodus</string>
+    <string name="radar_alert_mode_all">Alle Warnungen</string>
+    <string name="radar_alert_mode_approach_fast">Annäherung &amp; Schnell</string>
+    <string name="radar_alert_mode_fast_only">Nur schnelle Fahrzeuge</string>
+    <string name="radar_alert_mode_muted">Stumm</string>
+    <string name="radar_alert_volume_title">Warnlautstärke</string>
+    <string name="radar_alert_speaker_boost">Lautsprecher verstärken</string>
+    <string name="radar_alert_speaker_boost_desc">Erhöht leise Lautsprecherlautstärke während Warnungen kurzzeitig</string>
+    <string name="radar_alert_route_title">Audio-Ausgabe</string>
+    <string name="radar_alert_route_default">System / Kopfhörer</string>
+    <string name="radar_alert_route_speaker">Telefon-Lautsprecher erzwingen</string>
+    <string name="radar_alert_haptic_title">Haptische Vibration</string>
+    <string name="radar_alert_haptic_desc">Vibrieren bei Annäherung und Bedrohungswechsel</string>
+
+    <!-- Radar Tail Light Control (ATT-5102 / REQ-CON-031) -->
+    <string name="radar_light_settings_title">Rücklicht-Steuerung</string>
+    <string name="radar_light_mode_title">Lichtmodus</string>
+    <string name="radar_light_mode_off">Aus (Nur Radar)</string>
+    <string name="radar_light_mode_day_flash">Tag-Blinken</string>
+    <string name="radar_light_mode_night_flash">Nacht-Blinken</string>
+    <string name="radar_light_mode_solid">Dauerlicht</string>
+    <string name="radar_light_mode_peloton">Peloton</string>
+    <string name="radar_light_auto_switch">Automatisches Trainingslicht</string>
+    <string name="radar_light_auto_switch_desc">Schaltet das Rücklicht bei Trainingsbeginn ein und bei Trainingsende aus</string>
+    <string name="radar_light_sheet_title">Radar-Rücklicht</string>
+    <string name="radar_light_stvzo_notice">StVZO-Modus (Blinken deaktiviert)</string>
+
+    <!-- Radar Audio Snooze, Peloton Sync & Urban Suppression (ATT-5119 / REQ-TRK-064) -->
+    <string name="radar_snooze_title">Audio-Schlummern</string>
+    <string name="radar_snooze_15m">15 Min. stummschalten</string>
+    <string name="radar_snooze_30m">30 Min. stummschalten</string>
+    <string name="radar_snooze_fast_only">Nur hohe Warnstufe</string>
+    <string name="radar_snooze_rest_of_ride">Rest der Fahrt stummschalten</string>
+    <string name="radar_snooze_resume">Warntöne fortsetzen</string>
+    <string name="radar_snooze_active_format">Radar-Audio stummgeschaltet (%1$s)</string>
+    <string name="radar_peloton_audio_sync_title">Peloton-Modus Audio-Sync</string>
+    <string name="radar_peloton_audio_sync_desc">Standard-Annäherungstöne im Peloton-Rücklichtmodus automatisch stummschalten</string>
+    <string name="radar_smart_urban_mute_title">Intelligenter Stadtverkehrsfilter</string>
+    <string name="radar_smart_urban_mute_desc">Wiederholte Annäherungstöne im dichten Stadtverkehr unterdrücken, Hochgeschwindigkeitswarnungen beibehalten</string>
+
+    <!-- 3D Stereo Audio Panning & Speed Pitch Modulation (ATT-5120 / REQ-TRK-065) -->
+    <string name="radar_spatial_audio_title">3D-Stereo-Audiopanning</string>
+    <string name="radar_spatial_audio_desc">Warnton im Kopfhörer zur Überholspur des Fahrzeugs ausrichten</string>
+    <string name="radar_traffic_orientation_title">Verkehrsausrichtung</string>
+    <string name="radar_traffic_orientation_rht">Rechtsverkehr</string>
+    <string name="radar_traffic_orientation_lht">Linksverkehr</string>
+    <string name="radar_lane_change_tick_title">Spurwechsel-Signalton</string>
+    <string name="radar_lane_change_tick_desc">Dezentes Klicken abspielen, wenn Fahrzeug auf Überholspur wechselt</string>
+    <string name="radar_speed_pitch_title">Geschwindigkeitsadaptive Tonhöhe</string>
+    <string name="radar_speed_pitch_desc">Höhere Tonhöhe bei schnellen Annäherungsgeschwindigkeiten</string>
+    <string name="radar_preview_title">Audio-Vorschau</string>
+    <string name="radar_preview_centered">Auf Spur</string>
+    <string name="radar_preview_passing">Überholen</string>
+    <string name="radar_preview_slow">Langsam</string>
+    <string name="radar_preview_fast">Schnelle Gefahr</string>
+    <string name="radar_preview_lane_change">Spurwechsel</string>
+</resources>

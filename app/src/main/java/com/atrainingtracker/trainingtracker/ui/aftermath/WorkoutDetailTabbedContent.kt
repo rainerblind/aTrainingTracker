@@ -60,6 +60,7 @@ import com.atrainingtracker.trainingtracker.ui.aftermath.photos.WorkoutPhotoPrev
 import com.atrainingtracker.trainingtracker.ui.aftermath.photos.WorkoutPhotoStrip
 import com.atrainingtracker.trainingtracker.ui.aftermath.splits.LapSplitChartData
 import com.atrainingtracker.trainingtracker.ui.aftermath.splits.LapSplitVisualizerCard
+import com.atrainingtracker.trainingtracker.ui.aftermath.workoutdetail.HrvAlpha1ScatterCard
 import com.atrainingtracker.trainingtracker.ui.aftermath.zones.GradeZoneDistributionCard
 import com.atrainingtracker.trainingtracker.ui.aftermath.zones.HeartRateZoneDistributionCard
 import com.atrainingtracker.trainingtracker.ui.aftermath.zones.HeartRateZoneThresholds
@@ -73,6 +74,7 @@ import com.atrainingtracker.trainingtracker.ui.components.workoutdescription.Wor
 import com.atrainingtracker.trainingtracker.ui.components.workoutdetails.WorkoutDetails
 import com.atrainingtracker.trainingtracker.ui.components.workoutextrema.WorkoutExtrema
 import com.atrainingtracker.trainingtracker.ui.components.workoutheader.WorkoutHeader
+import com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricUtils
 import com.atrainingtracker.trainingtracker.ui.components.workoutlaps.LapDisplayMode
 import com.atrainingtracker.trainingtracker.ui.components.workoutlaps.WorkoutLaps
 import com.atrainingtracker.trainingtracker.ui.map.*
@@ -129,6 +131,7 @@ fun WorkoutDetailTabbedContent(
     onMoveBoundaryClick: ((boundaryLapNr: Long) -> Unit)? = null,
     onLapClick: ((LapData) -> Unit)? = null,
     initialAutoShareSnapshot: Boolean = false,
+    onSnapshotComplete: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val visibleTabs = remember(tabs, availability, detailPreferences) {
@@ -164,6 +167,7 @@ fun WorkoutDetailTabbedContent(
     var pendingAutoShare by remember(workoutData.id, initialAutoShareSnapshot) {
         mutableStateOf(initialAutoShareSnapshot)
     }
+    var originPageIndex by rememberSaveable(workoutData.id) { mutableStateOf<Int?>(null) }
 
     val mapTabIndex = remember(visibleTabs) {
         val idx = visibleTabs.indexOfFirst { WorkoutDetailSectionType.MAP in it.sections }
@@ -172,15 +176,27 @@ fun WorkoutDetailTabbedContent(
         }
     }
 
-    LaunchedEffect(pendingAutoShare, pagerState.currentPage, mapTabIndex) {
+    LaunchedEffect(pendingAutoShare, mapTabIndex) {
         if (pendingAutoShare && mapTabIndex >= 0) {
             if (pagerState.currentPage != mapTabIndex) {
-                pagerState.animateScrollToPage(mapTabIndex)
-            } else {
-                kotlinx.coroutines.delay(350L)
-                pendingAutoShare = false
-                triggerMapSnapshot = true
+                pagerState.scrollToPage(mapTabIndex)
             }
+            kotlinx.coroutines.delay(350L)
+            pendingAutoShare = false
+            triggerMapSnapshot = true
+        }
+    }
+
+    val handleSnapshotComplete = {
+        triggerMapSnapshot = false
+        coroutineScope.launch {
+            originPageIndex?.let { targetPage ->
+                if (targetPage in 0 until visibleTabs.size) {
+                    pagerState.scrollToPage(targetPage)
+                }
+                originPageIndex = null
+            }
+            onSnapshotComplete?.invoke()
         }
     }
 
@@ -300,6 +316,7 @@ fun WorkoutDetailTabbedContent(
                             maxAltitudeOverride = workoutData.maxAltitude,
                             useStatusBarsPadding = false,
                             isBottomSheet = false,
+                            showHeader = false,
                             showMap = true,
                             showElevationProfile = false,
                             showTelemetryCharts = false,
@@ -319,7 +336,7 @@ fun WorkoutDetailTabbedContent(
                             metadataContent = null,
                             analyticsContent = null,
                             externalSnapshotTrigger = (pageIndex == mapTabIndex) && triggerMapSnapshot,
-                            onSnapshotComplete = { triggerMapSnapshot = false },
+                            onSnapshotComplete = { handleSnapshotComplete() },
                             modifier = Modifier.fillMaxSize()
                         )
                     }
@@ -334,6 +351,7 @@ fun WorkoutDetailTabbedContent(
                             maxAltitudeOverride = workoutData.maxAltitude,
                             useStatusBarsPadding = false,
                             isBottomSheet = false,
+                            showHeader = false,
                             showMap = true,
                             showElevationProfile = tabHasElevation,
                             showTelemetryCharts = tabHasCharts,
@@ -348,7 +366,7 @@ fun WorkoutDetailTabbedContent(
                             onInteractiveCanvasTouch = { isTouchingInteractiveCanvas = it },
                             header = snapshotHeader,
                             externalSnapshotTrigger = (pageIndex == mapTabIndex) && triggerMapSnapshot,
-                            onSnapshotComplete = { triggerMapSnapshot = false },
+                            onSnapshotComplete = { handleSnapshotComplete() },
                             mapContent = mapContent,
                             overlay = mapOverlay,
                             topEndActions = mapTopEndActions,
@@ -384,6 +402,7 @@ fun WorkoutDetailTabbedContent(
                                             onHrZoneDisplayModeChange = onHrZoneDisplayModeChange,
                                             onPowerZoneDisplayModeChange = onPowerZoneDisplayModeChange,
                                             onGradeZoneDisplayModeChange = onGradeZoneDisplayModeChange,
+                                            activeScrubPath = activeScrubPath,
                                             photos = workoutPhotos,
                                             onPhotoClick = { activePreviewPhoto = it },
                                             onSplitLapClick = onSplitLapClick,
@@ -418,6 +437,7 @@ fun WorkoutDetailTabbedContent(
                                 maxAltitudeOverride = workoutData.maxAltitude,
                                 useStatusBarsPadding = false,
                                 isBottomSheet = false,
+                                showHeader = false,
                                 showMap = false,
                                 showElevationProfile = tabHasElevation,
                                 showTelemetryCharts = tabHasCharts,
@@ -432,7 +452,7 @@ fun WorkoutDetailTabbedContent(
                                 onInteractiveCanvasTouch = { isTouchingInteractiveCanvas = it },
                                 header = snapshotHeader,
                                 externalSnapshotTrigger = (pageIndex == mapTabIndex) && triggerMapSnapshot,
-                                onSnapshotComplete = { triggerMapSnapshot = false },
+                                onSnapshotComplete = { handleSnapshotComplete() },
                                 metadataContent = null,
                                 analyticsContent = if (nonMapNonGraphSections.isNotEmpty()) {
                                     {
@@ -465,6 +485,7 @@ fun WorkoutDetailTabbedContent(
                                                 onHrZoneDisplayModeChange = onHrZoneDisplayModeChange,
                                                 onPowerZoneDisplayModeChange = onPowerZoneDisplayModeChange,
                                                 onGradeZoneDisplayModeChange = onGradeZoneDisplayModeChange,
+                                                activeScrubPath = activeScrubPath,
                                                 photos = workoutPhotos,
                                                 onPhotoClick = { activePreviewPhoto = it },
                                                 onSplitLapClick = onSplitLapClick,
@@ -520,6 +541,7 @@ fun WorkoutDetailTabbedContent(
                                     onHrZoneDisplayModeChange = onHrZoneDisplayModeChange,
                                     onPowerZoneDisplayModeChange = onPowerZoneDisplayModeChange,
                                     onGradeZoneDisplayModeChange = onGradeZoneDisplayModeChange,
+                                    activeScrubPath = activeScrubPath,
                                     photos = workoutPhotos,
                                     onPhotoClick = { activePreviewPhoto = it },
                                     onSplitLapClick = onSplitLapClick,
@@ -730,6 +752,7 @@ fun WorkoutDetailTabbedContent(
             onSelectMapSnapshot = {
                 showShareModeSheet = false
                 if (mapTabIndex >= 0) {
+                    originPageIndex = pagerState.currentPage
                     pendingAutoShare = true
                 }
             },
@@ -759,6 +782,7 @@ private fun RenderWorkoutDetailCardSections(
     onHrZoneDisplayModeChange: (ZoneCardDisplayMode) -> Unit,
     onPowerZoneDisplayModeChange: (ZoneCardDisplayMode) -> Unit,
     onGradeZoneDisplayModeChange: (ZoneCardDisplayMode) -> Unit = {},
+    activeScrubPath: List<com.atrainingtracker.trainingtracker.ui.map.PathPoint>? = null,
     photos: List<WorkoutPhotoEntry> = emptyList(),
     onPhotoClick: ((WorkoutPhotoEntry) -> Unit)? = null,
     onAddPhotos: ((List<android.net.Uri>) -> Unit)? = null,
@@ -777,6 +801,8 @@ private fun RenderWorkoutDetailCardSections(
                     showAerobicEfficiencyInWorkoutSummary = tuningConfig.showAerobicEfficiencyInWorkoutSummary,
                     enableCriticalPowerModel = tuningConfig.enableCriticalPowerModel,
                     showCriticalPowerInWorkoutSummary = tuningConfig.showCriticalPowerInWorkoutSummary,
+                    enableCardioPowerDynamics = tuningConfig.enableCardioPowerDynamics,
+                    showCardioPowerInWorkoutSummary = tuningConfig.showCardioPowerInWorkoutSummary,
                     modifier = Modifier.fillMaxWidth()
                 )
             }
@@ -814,6 +840,14 @@ private fun RenderWorkoutDetailCardSections(
                         distribution = distribution,
                         displayMode = effectivePowerZoneDisplayMode,
                         onDisplayModeChange = onPowerZoneDisplayModeChange,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 4.dp)
+                    )
+                }
+                if (TelemetryMetricUtils.hasHrvData(activeScrubPath)) {
+                    HrvAlpha1ScatterCard(
+                        points = activeScrubPath ?: emptyList(),
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 16.dp, vertical = 4.dp)

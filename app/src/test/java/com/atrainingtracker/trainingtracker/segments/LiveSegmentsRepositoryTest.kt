@@ -253,8 +253,9 @@ class LiveSegmentsRepositoryTest {
         assertEquals(LiveSegmentStatus.ON_SEGMENT_CLOSE_TO_FINISH, repository.liveSegments.value.first().liveData.segmentStatus)
 
         // 3. Set start time to simulate 219s duration (PR is 229s -> delta is -10s)
-        val liveBeforeFinish = repository.liveSegments.value.first()
-        liveBeforeFinish.math.startTime_ms = System.currentTimeMillis() - 219_000L
+        repository.updateLiveSegmentsForTesting { list ->
+            list.map { it.copy(math = it.math.copy(startTime_ms = System.currentTimeMillis() - 219_000L)) }
+        }
 
         // 4. Cross finish gate forward
         repository.updateLiveSegments(LatLng(47.0082, 10.0), currentBearing = 0.0, currentDistance = 1020.0)
@@ -293,7 +294,9 @@ class LiveSegmentsRepositoryTest {
         repository.updateLiveSegments(LatLng(46.9995, 10.0), currentBearing = 0.0, currentDistance = 100.0)
         repository.updateLiveSegments(LatLng(47.0001, 10.0), currentBearing = 0.0, currentDistance = 150.0)
         repository.updateLiveSegments(LatLng(47.0075, 10.0), currentBearing = 0.0, currentDistance = 950.0)
-        repository.liveSegments.value.first().math.startTime_ms = System.currentTimeMillis() - 229_000L
+        repository.updateLiveSegmentsForTesting { list ->
+            list.map { it.copy(math = it.math.copy(startTime_ms = System.currentTimeMillis() - 229_000L)) }
+        }
         repository.updateLiveSegments(LatLng(47.0082, 10.0), currentBearing = 0.0, currentDistance = 1020.0)
 
         val finishedTie = repository.liveSegments.value.first()
@@ -311,7 +314,9 @@ class LiveSegmentsRepositoryTest {
         repository.updateLiveSegments(LatLng(46.9995, 10.0), currentBearing = 0.0, currentDistance = 100.0)
         repository.updateLiveSegments(LatLng(47.0001, 10.0), currentBearing = 0.0, currentDistance = 150.0)
         repository.updateLiveSegments(LatLng(47.0075, 10.0), currentBearing = 0.0, currentDistance = 950.0)
-        repository.liveSegments.value.first().math.startTime_ms = System.currentTimeMillis() - 234_000L
+        repository.updateLiveSegmentsForTesting { list ->
+            list.map { it.copy(math = it.math.copy(startTime_ms = System.currentTimeMillis() - 234_000L)) }
+        }
         repository.updateLiveSegments(LatLng(47.0082, 10.0), currentBearing = 0.0, currentDistance = 1020.0)
 
         val finishedSlower = repository.liveSegments.value.first()
@@ -329,7 +334,9 @@ class LiveSegmentsRepositoryTest {
         repository.updateLiveSegments(LatLng(46.9995, 10.0), currentBearing = 0.0, currentDistance = 100.0)
         repository.updateLiveSegments(LatLng(47.0001, 10.0), currentBearing = 0.0, currentDistance = 150.0)
         repository.updateLiveSegments(LatLng(47.0075, 10.0), currentBearing = 0.0, currentDistance = 950.0)
-        repository.liveSegments.value.first().math.startTime_ms = System.currentTimeMillis() - 3829_000L
+        repository.updateLiveSegmentsForTesting { list ->
+            list.map { it.copy(math = it.math.copy(startTime_ms = System.currentTimeMillis() - 3829_000L)) }
+        }
         repository.updateLiveSegments(LatLng(47.0082, 10.0), currentBearing = 0.0, currentDistance = 1020.0)
 
         val finishedOutlier = repository.liveSegments.value.first()
@@ -347,7 +354,9 @@ class LiveSegmentsRepositoryTest {
         repository.updateLiveSegments(LatLng(46.9995, 10.0), currentBearing = 0.0, currentDistance = 100.0)
         repository.updateLiveSegments(LatLng(47.0001, 10.0), currentBearing = 0.0, currentDistance = 150.0)
         repository.updateLiveSegments(LatLng(47.0075, 10.0), currentBearing = 0.0, currentDistance = 950.0)
-        repository.liveSegments.value.first().math.startTime_ms = System.currentTimeMillis() - 219_000L
+        repository.updateLiveSegmentsForTesting { list ->
+            list.map { it.copy(math = it.math.copy(startTime_ms = System.currentTimeMillis() - 219_000L)) }
+        }
         repository.updateLiveSegments(LatLng(47.0082, 10.0), currentBearing = 0.0, currentDistance = 1020.0)
 
         val finishedNoPr = repository.liveSegments.value.first()
@@ -410,7 +419,9 @@ class LiveSegmentsRepositoryTest {
         repository.updateLiveSegments(LatLng(46.9995, 10.0), currentBearing = 0.0, currentDistance = 100.0)
         repository.updateLiveSegments(LatLng(47.0001, 10.0), currentBearing = 0.0, currentDistance = 150.0)
         repository.updateLiveSegments(LatLng(47.0075, 10.0), currentBearing = 0.0, currentDistance = 950.0)
-        repository.liveSegments.value.first().math.startTime_ms = System.currentTimeMillis() - 200_000L
+        repository.updateLiveSegmentsForTesting { list ->
+            list.map { it.copy(math = it.math.copy(startTime_ms = System.currentTimeMillis() - 200_000L)) }
+        }
         repository.updateLiveSegments(LatLng(47.0082, 10.0), currentBearing = 0.0, currentDistance = 1020.0)
 
         val finished = repository.liveSegments.value.first()

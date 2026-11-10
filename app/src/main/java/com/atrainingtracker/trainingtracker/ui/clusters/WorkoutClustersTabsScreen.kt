@@ -62,7 +62,8 @@ fun WorkoutClustersTabsScreen(
     onDeleteRequest: (WorkoutCluster) -> Unit,
     migrationStatus: com.atrainingtracker.trainingtracker.ui.util.MigrationStatus? = null,
     onNavigateToAdvancedSettings: () -> Unit = {},
-    onMergeRequest: (WorkoutCluster) -> Unit = {}
+    onMergeRequest: (WorkoutCluster) -> Unit = {},
+    onSplitRequest: (WorkoutCluster) -> Unit = {}
 ) {
     val clusters by viewModel.allClusters.collectAsState()
     val unclusteredWorkouts by viewModel.unclusteredWorkouts.collectAsState()
@@ -190,7 +191,8 @@ fun WorkoutClustersTabsScreen(
                         headerHeightDp = headerHeightDp,
                         density = density,
                         emptyMessage = emptyMessage,
-                        onMergeRequest = onMergeRequest
+                        onMergeRequest = onMergeRequest,
+                        onSplitRequest = onSplitRequest
                     )
                 }
             }
@@ -366,7 +368,6 @@ fun WorkoutClustersTabsScreen(
                                 onRemoveQuery = { viewModel.updateFilterCriteria { it.copy(query = "") } },
                                 onRemoveEquipment = { viewModel.updateFilterCriteria { it.copy(equipmentName = null) } },
                                 onRemoveDistanceRange = { viewModel.updateFilterCriteria { it.copy(minDistanceMeters = null, maxDistanceMeters = null) } },
-                                onRemoveMinDistance = { viewModel.updateFilterCriteria { it.copy(minDistanceMeters = null, maxDistanceMeters = null) } },
                                 onRemoveElevationRange = { viewModel.updateFilterCriteria { it.copy(minElevationGainMeters = null, maxElevationGainMeters = null) } },
                                 onRemoveMinHitCount = { viewModel.updateFilterCriteria { it.copy(minHitCount = null) } },
                                 onRemoveStartLocation = {

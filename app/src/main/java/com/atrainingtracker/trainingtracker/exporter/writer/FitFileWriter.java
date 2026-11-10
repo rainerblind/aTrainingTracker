@@ -35,6 +35,8 @@ import com.atrainingtracker.trainingtracker.database.WorkoutSamplesDatabaseManag
 import com.atrainingtracker.trainingtracker.database.WorkoutSamplesDatabaseManager.WorkoutSamplesDbHelper;
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager;
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries;
+import com.atrainingtracker.trainingtracker.repositories.SportTypesRepository;
+import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository;
 import com.atrainingtracker.trainingtracker.exporter.ExportInfo;
 import com.atrainingtracker.trainingtracker.ui.aftermath.LapData;
 import com.garmin.fit.Activity;
@@ -43,8 +45,11 @@ import com.garmin.fit.DateTime;
 import com.garmin.fit.FileEncoder;
 import com.garmin.fit.FileIdMesg;
 import com.garmin.fit.Fit;
+import com.garmin.fit.HrvMesg;
 import com.garmin.fit.Intensity;
 import com.garmin.fit.LapMesg;
+import com.atrainingtracker.trainingtracker.database.hrv.WorkoutRrInterval;
+import com.atrainingtracker.trainingtracker.database.hrv.WorkoutRrRepository;
 import com.garmin.fit.Manufacturer;
 import com.garmin.fit.RecordMesg;
 import com.garmin.fit.SessionMesg;
@@ -58,6 +63,7 @@ import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
@@ -161,8 +167,8 @@ public class FitFileWriter extends BaseFileWriter {
             Sport sport = Sport.GENERIC;
             SubSport subSport = SubSport.GENERIC;
 
-            BSportType bSport = SportTypeDatabaseManager.getInstance(mContext).getBSportType(sportTypeId);
-            String tcxName = SportTypeDatabaseManager.getInstance(mContext).getTcxName(sportTypeId);
+            BSportType bSport = SportTypesRepository.getInstance(mContext).getBSportType(sportTypeId);
+            String tcxName = SportTypesRepository.getInstance(mContext).getTcxName(sportTypeId);
             if (tcxName == null) tcxName = "";
             String tcxLower = tcxName.toLowerCase(Locale.US);
 
@@ -187,9 +193,40 @@ public class FitFileWriter extends BaseFileWriter {
             }
 
             // 2. Iterate samples and write RecordMesg entries
-            WorkoutSamplesDatabaseManager samplesDbManager = WorkoutSamplesDatabaseManager.getInstance(mContext);
+            WorkoutSamplesDatabaseManager samplesDbManager = WorkoutRepository.getInstance(mContext).getWorkoutSamplesDatabaseManager();
             SQLiteDatabase samplesDb = samplesDbManager.getDatabase();
             String tableName = WorkoutSamplesDatabaseManager.getTableName(exportInfo.getFileBaseName());
+
+            long workoutId = this.workoutID;
+            if (workoutId <= 0) {
+                try {
+                    WorkoutSummariesDatabaseManager summaryDbManagerForId = WorkoutRepository.getInstance(mContext).getWorkoutSummariesDatabaseManager();
+                    try (Cursor idCursor = summaryDbManagerForId.getDatabase().query(
+                            WorkoutSummaries.TABLE,
+                            new String[]{WorkoutSummaries.C_ID},
+                            WorkoutSummaries.FILE_BASE_NAME + "=?",
+                            new String[]{exportInfo.getFileBaseName()},
+                            null, null, null)) {
+                        if (idCursor != null && idCursor.moveToFirst()) {
+                            int idx = idCursor.getColumnIndex(WorkoutSummaries.C_ID);
+                            workoutId = idx >= 0 ? idCursor.getLong(idx) : idCursor.getLong(0);
+                        }
+                    }
+                } catch (Exception e) {
+                    Log.w(TAG, "Could not resolve workoutId for FIT export: " + e.getMessage());
+                }
+            }
+
+            List<WorkoutRrInterval> rrIntervals = null;
+            if (workoutId > 0) {
+                try {
+                    rrIntervals = WorkoutRrRepository.getInstance(mContext).getIntervalsForWorkoutBlocking(workoutId);
+                } catch (Exception e) {
+                    Log.w(TAG, "Could not query RR intervals for workout " + workoutId + ": " + e.getMessage());
+                }
+            }
+            int rrCursorIdx = 0;
+            final int totalRr = (rrIntervals != null) ? rrIntervals.size() : 0;
 
             Date firstSampleDate = null;
             Date lastSampleDate = null;
@@ -294,6 +331,24 @@ public class FitFileWriter extends BaseFileWriter {
                         }
                     }
 
+                    // Write pending HrvMesg intervals that occurred up to sampleDate (REQ-PER-034.4)
+                    if (rrIntervals != null && rrCursorIdx < totalRr) {
+                        long sampleTs = sampleDate.getTime();
+                        List<Float> hrvBatch = new ArrayList<>(5);
+                        while (rrCursorIdx < totalRr && rrIntervals.get(rrCursorIdx).getBeatTimestampMs() <= sampleTs) {
+                            hrvBatch.add(rrIntervals.get(rrCursorIdx).getRrMs() / 1000.0f);
+                            rrCursorIdx++;
+                            if (hrvBatch.size() == 5) {
+                                writeHrvMesg(encoder, hrvBatch);
+                                hrvBatch.clear();
+                            }
+                        }
+                        if (!hrvBatch.isEmpty()) {
+                            writeHrvMesg(encoder, hrvBatch);
+                            hrvBatch.clear();
+                        }
+                    }
+
                     encoder.write(record);
                     if (isCancelled()) {
                         throw new CancellationException("FIT export cancelled post-I/O");
@@ -305,6 +360,22 @@ public class FitFileWriter extends BaseFileWriter {
             } catch (Exception e) {
                 Log.e(TAG, "Error querying samples for FIT export: " + e.getMessage(), e);
                 throw new IOException("FIT export failed during sample encoding: " + e.getMessage(), e);
+            }
+
+            // Write remaining trailing HrvMesg intervals (REQ-PER-034.4)
+            if (rrIntervals != null && rrCursorIdx < totalRr) {
+                List<Float> hrvBatch = new ArrayList<>(5);
+                while (rrCursorIdx < totalRr) {
+                    hrvBatch.add(rrIntervals.get(rrCursorIdx).getRrMs() / 1000.0f);
+                    rrCursorIdx++;
+                    if (hrvBatch.size() == 5) {
+                        writeHrvMesg(encoder, hrvBatch);
+                        hrvBatch.clear();
+                    }
+                }
+                if (!hrvBatch.isEmpty()) {
+                    writeHrvMesg(encoder, hrvBatch);
+                }
             }
 
             // Calculate timing metrics supporting pauses
@@ -321,7 +392,7 @@ public class FitFileWriter extends BaseFileWriter {
 
             // 3. LapMesg entries
             // Query laps from Laps.db (strictly read-only access)
-            List<LapData> laps = LapsDatabaseManager.getInstance(mContext).getLaps(workoutID);
+            List<LapData> laps = WorkoutRepository.getInstance(mContext).getLaps(workoutID);
             if (laps != null && !laps.isEmpty()) {
                 for (LapData lap : laps) {
                     LapMesg lapMesg = new LapMesg();
@@ -377,7 +448,7 @@ public class FitFileWriter extends BaseFileWriter {
             sessionMesg.setNumLaps(laps != null && !laps.isEmpty() ? laps.size() : 1);
 
             // Populate summary metrics from WorkoutSummaries table
-            WorkoutSummariesDatabaseManager summaryDbManager = WorkoutSummariesDatabaseManager.getInstance(mContext);
+            WorkoutSummariesDatabaseManager summaryDbManager = WorkoutRepository.getInstance(mContext).getWorkoutSummariesDatabaseManager();
             SQLiteDatabase summaryDb = summaryDbManager.getDatabase();
             try (Cursor sumCursor = summaryDb.query(WorkoutSummaries.TABLE,
                     new String[]{WorkoutSummaries.CALORIES, WorkoutSummaries.ASCENDING, WorkoutSummaries.DESCENDING, WorkoutSummaries.SPEED_AVERAGE_mps},
@@ -486,5 +557,14 @@ public class FitFileWriter extends BaseFileWriter {
 
     private int summaryCursorIndex(@NonNull Cursor cursor, @NonNull String columnName) {
         return cursor.getColumnIndex(columnName);
+    }
+
+    private void writeHrvMesg(@NonNull FileEncoder encoder, @NonNull List<Float> intervalsSec) {
+        if (intervalsSec.isEmpty()) return;
+        HrvMesg hrvMesg = new HrvMesg();
+        for (int i = 0; i < intervalsSec.size(); i++) {
+            hrvMesg.setTime(i, intervalsSec.get(i));
+        }
+        encoder.write(hrvMesg);
     }
 }

@@ -64,6 +64,7 @@ object ProcessExitReasonHelper {
      * In debug builds ([isDebug]), checks [PREF_DEBUG_SIMULATED_KILL_REASON] for desk simulation injection (REQ-STB-015).
      * Idempotently tracks exit timestamps to prevent spurious counter increments during screen rotation.
      */
+    @android.annotation.SuppressLint("NewApi")
     fun resolveKillReason(
         context: Context,
         sdkInt: Int = Build.VERSION.SDK_INT,
@@ -96,17 +97,10 @@ object ProcessExitReasonHelper {
 
         if (!isSimulated && sdkInt >= Build.VERSION_CODES.R) {
             try {
-                val activityManager = context.getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager
-                val exitInfos = activityManager?.getHistoricalProcessExitReasons(context.packageName, 0, 1)
-                val exitInfo = exitInfos?.firstOrNull()
-                if (exitInfo != null) {
-                    exitTimestamp = exitInfo.timestamp
-                    detectedReason = when (exitInfo.reason) {
-                        ApplicationExitInfo.REASON_EXCESSIVE_RESOURCE_USAGE -> KillReason.BATTERY_KILL
-                        ApplicationExitInfo.REASON_LOW_MEMORY -> KillReason.LOW_MEMORY
-                        ApplicationExitInfo.REASON_PERMISSION_CHANGE -> KillReason.PERMISSION_REVOKED
-                        else -> KillReason.GENERIC_UNFINISHED
-                    }
+                val historical = queryHistoricalProcessExitReason(context)
+                if (historical != null) {
+                    exitTimestamp = historical.first
+                    detectedReason = historical.second
                 }
             } catch (e: Throwable) {
                 Log.w(TAG, "Failed to query historical process exit reasons", e)
@@ -262,5 +256,21 @@ object ProcessExitReasonHelper {
                 }
             }
         }
+    }
+
+    @androidx.annotation.RequiresApi(Build.VERSION_CODES.R)
+    private fun queryHistoricalProcessExitReason(
+        context: Context
+    ): Pair<Long?, KillReason>? {
+        val activityManager = context.getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager
+        val exitInfos = activityManager?.getHistoricalProcessExitReasons(context.packageName, 0, 1)
+        val exitInfo = exitInfos?.firstOrNull() ?: return null
+        val reason = when (exitInfo.reason) {
+            ApplicationExitInfo.REASON_EXCESSIVE_RESOURCE_USAGE -> KillReason.BATTERY_KILL
+            ApplicationExitInfo.REASON_LOW_MEMORY -> KillReason.LOW_MEMORY
+            ApplicationExitInfo.REASON_PERMISSION_CHANGE -> KillReason.PERMISSION_REVOKED
+            else -> KillReason.GENERIC_UNFINISHED
+        }
+        return Pair(exitInfo.timestamp, reason)
     }
 }

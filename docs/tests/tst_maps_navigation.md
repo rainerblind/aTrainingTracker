@@ -1053,3 +1053,104 @@
   • Verify `ATrainingTrackerMap` accepts and forwards `initialLocation` to `MapBoundsController`.
   5. *Targeted Regression Verification Suite (`TST-MAP-062.5`)*:
   • Execute targeted tests across `ui.map.*` and `build.*` asserting 100% pass rate.
+
+### TST-MAP-063: **Strava Segment Synchronization Exception Containment & Coroutine Safety Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-MAP-061` (`REQ-MAP-061.1`..`REQ-MAP-061.3`)
+- **Component**: `SegmentsRepositorySyncTest.kt`, `SegmentListViewModelTest.kt`, `StravaSegmentsSyncWorkerTest.kt`
+- **Jira**: `ATT-6165`
+- **Test Description**:
+  1. *SegmentsRepository syncSegmentsAsync Exception Containment Test (`TST-MAP-063.1`, `SegmentsRepositorySyncTest.kt`)*:
+  • Mock failure during sync; invoke `repository.syncSegmentsAsync(BSportType.UNKNOWN)`.
+  • Verify coroutine completes without uncaught exception crash on `repositoryScope`.
+  • Verify `isSyncing` resets to `false`.
+  2. *SegmentsRepository syncStarredSegments Exception Rethrow & Finally Reset Test (`TST-MAP-063.2`, `SegmentsRepositorySyncTest.kt`)*:
+  • Mock `pruneExpiredSegments` to throw `IOException`.
+  • Invoke `repository.syncStarredSegments(BSportType.UNKNOWN)` inside `runBlocking`.
+  • Assert `IOException` is thrown to caller (preserving Worker retry contract).
+  • Assert `isSyncing.value == false` via `finally` execution.
+  3. *SegmentListViewModel onRefresh Exception Containment Test (`TST-MAP-063.3`, `SegmentListViewModelTest.kt`)*:
+  • Mock `segmentsRepository.syncStarredSegments(any())` to throw `IOException("Network timeout")`.
+  • Invoke `viewModel.onRefresh(BSportType.BIKE)`.
+  • Assert no uncaught exception is thrown to caller or `viewModelScope`.
+  4. *CancellationException Propagation Invariant Test (`TST-MAP-063.4`, `SegmentsRepositorySyncTest.kt` / `SegmentListViewModelTest.kt`)*:
+  • Assert that when a `CancellationException` is thrown during sync, it is rethrown and not swallowed by catch-all blocks.
+  5. *StravaSegmentsSyncWorker Retry Preservation Test (`TST-MAP-063.5`, `StravaSegmentsSyncWorkerTest.kt`)*:
+  • Run `StravaSegmentsSyncWorkerTest` asserting that worker returns `Result.retry()` on segment sync failure.
+  6. *Targeted Tier 1 Unit Test Suite (`TST-MAP-063.6`)*:
+  • Run `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.segments.*" --tests "com.atrainingtracker.trainingtracker.ui.segments.segmentlist.*" --tests "com.atrainingtracker.trainingtracker.build.*"` asserting 100% pass rate.
+
+### TST-MAP-064: **KnownLocationCard Sport Starts Breakdown Drill-Down Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-MAP-062` (`REQ-MAP-062.1`..`REQ-MAP-062.4`)
+- **Component**: `KnownLocationsScreenDrillDownTest.kt`, `WorkoutFilterCriteriaTest.kt`, `KnownLocationsScreen.kt`
+- **Jira**: `ATT-6321` | **Target Release**: `V5.0.0`
+- **Test Description**:
+  1. *SportStartsItem Click & Test Tag Verification (`TST-MAP-064.1`, `KnownLocationsScreenDrillDownTest.kt`)*:
+  • Verify each `SportStartsItem` (Bike, Run, Other) renders with dedicated test tag `location_starts_badge_${item.id}_${sport}` and invokes `onShowWorkoutsForSport` with matching `BSportType`.
+  2. *Fallback 0-Starts Badge Click Verification (`TST-MAP-064.2`, `KnownLocationsScreenDrillDownTest.kt`)*:
+  • Verify tapping 0-starts badge invokes `onShowWorkouts` with location item.
+  3. *WorkoutFilterCriteria bSportType Model & Predicate Verification (`TST-MAP-064.3`, `WorkoutFilterCriteriaTest.kt`)*:
+  • Verify `bSportType` field correctly filters `WorkoutData` in `matches()`, increments `activeFilterCount`, and serializes/deserializes cleanly via JSON.
+  4. *Navigation & Pager Synchronization Wiring Contract (`TST-MAP-064.4`, `KnownLocationsScreenDrillDownTest.kt`)*:
+  • Verify `ATrainingTrackerApp` wiring sets `WorkoutFilterCriteria` with both location and `bSportType` and switches to target sport tab.
+  5. *Targeted Regression Verification Suite (`TST-MAP-064.5`)*:
+  • Execute targeted tests across `ui.knownlocations.*`, `ui.aftermath.workoutlist.*`, and `ui.theme.*` asserting 100% pass rate.
+
+### TST-MAP-065: **Cross-Surface Centered Material Heart Marker Parity Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-MAP-063` (`REQ-MAP-063.1`..`REQ-MAP-063.3`)
+- **Component**: `EditKnownLocationDialogTest.kt`, `MapScreenWithTrackTest.kt`, `MapUtils.kt`
+- **Jira**: `ATT-6320` | **Target Release**: `V5.0.0`
+- **Test Description**:
+  1. *EditKnownLocationDialog Concentric Marker & Anchor Verification (`TST-MAP-065.1`, `EditKnownLocationDialogTest.kt`)*:
+  • Verify `LocationMiniMap` creates centered heart glyph marker and sets `anchor = Offset(0.5f, 0.5f)`.
+  2. *MapContentScope Known Locations Concentric Marker & Anchor Verification (`TST-MAP-065.2`, `MapScreenWithTrackTest.kt`)*:
+  • Verify `MapContentScope` uses `createCenteredHeartGlyphMarker` with `anchor = Offset(0.5f, 0.5f)`.
+  3. *Cross-Surface Marker Parity Audit (`TST-MAP-065.3`, `KnownLocationsScreenTest.kt`)*:
+  • Verify thumbnail map, edit dialog map, and global map all share identical centered heart marker geometry.
+  4. *Legacy Marker Deprecation Contract (`TST-MAP-065.4`, `MapUtilsTest.kt`)*:
+  • Verify `createHeartPinMarker` is annotated with `@Deprecated`.
+  5. *Targeted Regression Verification Suite (`TST-MAP-065.5`)*:
+  • Execute targeted tests across `ui.knownlocations.*`, `ui.map.*`, and `ui.theme.*` asserting 100% pass rate.
+
+### TST-MAP-066: **Workout Climb Ingestion, Climbs Database Deduplication & Map Climbs Layer Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-MAP-064` (`REQ-MAP-064.1`..`REQ-MAP-064.4`)
+- **Component**: `WorkoutClimbIngestionTest.kt`, `GeneralMapLayersContractTest.kt`, `MapFragmentWithTrackViewModelTest.kt`, `MapScreenWithTrackTest.kt`, `GeneralMapLayersLocalizationTest.kt`
+- **Jira**: `ATT-2766` | **Target Release**: `V5.0.0`
+- **Test Description**:
+  1. *Post-Workout Climb Ingestion & Deduplication Test (`TST-MAP-066.1`, `WorkoutClimbIngestionTest.kt`)*:
+  • Verify that when `reloadWorkoutData` processes a finished workout, qualifying track points yield detected climbs inserted into `ClimbsDatabaseManager` with `routeId = null`.
+  • Verify that identical or near-identical ascents within 50m are deduplicated via `insertClimbsWithDeduplicationBatch`.
+  • Verify `LiveClimbsRepository.refreshClimbs()` is invoked following climb persistence.
+  2. *GeneralMapLayer Enum & Default Enabled Contract (`TST-MAP-066.2`, `GeneralMapLayersContractTest.kt`)*:
+  • Verify `GeneralMapLayer` enum contains exactly 6 entries including `CLIMBS`.
+  • Verify `GeneralMapLayer.DEFAULT_ENABLED` contains exactly 4 entries and strictly excludes `CLIMBS` and `CLUSTERS`.
+  3. *MapFragmentWithTrackViewModel Climbs Flow & Layer Toggling (`TST-MAP-066.3`, `MapFragmentWithTrackViewModelTest.kt` / `GeneralMapLayersContractTest.kt`)*:
+  • Verify `MapFragmentWithTrackViewModel` exposes `uiState.climbs`.
+  • Verify that when `GeneralMapLayer.CLIMBS` is toggled off, `uiState.climbs` emits `emptyList()`.
+  • Verify that when `GeneralMapLayer.CLIMBS` is enabled, `uiState.climbs` emits stored climbs from `ClimbsDatabaseManager`.
+  4. *MapScreenWithTrack Climbs Layer & ClimbDetailSheet Integration (`TST-MAP-066.4`, `MapScreenWithTrackTest.kt`)*:
+  • Verify layer menu renders the Climbs toggle item with `R.string.map_layer_climbs`.
+  • Verify tapping a climb polyline selects the climb and displays `ClimbDetailSheet`.
+  5. *9-Language Localization Parity Audit (`TST-MAP-066.5`, `GeneralMapLayersLocalizationTest.kt`)*:
+  • Verify `map_layer_climbs` exists and is non-empty across all 9 supported locales.
+  6. *Targeted Regression Verification Suite (`TST-MAP-066.6`)*:
+  • Run targeted tests: `--tests "com.atrainingtracker.trainingtracker.ui.map.*" --tests "com.atrainingtracker.trainingtracker.database.ClimbsDatabaseManagerTest" --tests "com.atrainingtracker.trainingtracker.climbs.*"` asserting 100% pass rate.
+
+### TST-MAP-067: **LiveSegmentsRepository Concurrency Safety & Immutability Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-MAP-065` (`REQ-MAP-065.1`..`REQ-MAP-065.4`)
+- **Component**: `LiveSegmentsRepository.kt`, `LiveSegmentsRepositoryConcurrencyTest.kt`, `LiveSegmentsRepositoryImmutabilityTest.kt`, `LiveSegmentsRepositoryTest.kt`
+- **Jira**: `ATT-6172` | **Target Release**: `V5.0.0`
+- **Test Description**:
+  1. *Concurrent State Update & Lost Update Prevention (`TST-MAP-067.1`, `LiveSegmentsRepositoryConcurrencyTest.kt`)*:
+  • Verify that concurrent calls to `updateLiveSegments` and `reconcileSegments` on `Dispatchers.Default` under multi-threaded stress never drop active segment transitions or newly synchronized segments.
+  2. *LiveSegmentMath Immutability & CAS Retry Idempotency (`TST-MAP-067.2`, `LiveSegmentsRepositoryImmutabilityTest.kt`)*:
+  • Verify via reflection and compile-time contract that all properties in `LiveSegmentMath` are declared as `val`.
+  • Verify that location updates never mutate existing instances in-place, emitting new immutable copies.
+  3. *Dead Coroutine Collector Elimination Contract (`TST-MAP-067.3`, `LiveSegmentsRepositoryContractTest.kt`)*:
+  • Verify that the trailing dead `.collect()` call at line 126 is eliminated from the location flow listener.
+  4. *Targeted Regression Verification Suite (`TST-MAP-067.4`)*:
+  • Run targeted tests: `--tests "com.atrainingtracker.trainingtracker.segments.*"` asserting 100% pass rate.
+
+
+
+
+

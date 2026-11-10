@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ~ aTrainingTracker (ANT+ BTLE)
+  ~ Copyright (c) 2011 - 2026 Rainer Blind <rainer.blind@gmail.com>
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ This program is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~ GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License
+  ~ along with this program.  If not, see https://www.gnu.org/licenses/gpl-3.0
+  -->
+
+<resources>
+    <string name="hrv_rmssd">rMSSD</string>
+    <string name="hrv_rmssd_short">rMSSD</string>
+    <string name="hrv_dfa_a1">DFA a1</string>
+    <string name="hrv_dfa_a1_short">a1</string>
+    <string name="hrv_artifact_rate">Taux d\'artefacts</string>
+    <string name="hrv_artifact_rate_short">Art. %</string>
+
+    <string name="hrv_info_title">Variabilité de la fréquence cardiaque et seuils aérobies</string>
+    <string name="hrv_info_trailing_lag_title">Fenêtre glissante et délai d\'allure</string>
+    <string name="hrv_info_trailing_lag_desc">Le DFA a1 en temps réel est calculé sur une fenêtre glissante de 2 minutes (mise à jour toutes les 5 secondes) et le rMSSD sur 60 secondes. Les changements d\'allure mettent 1 à 2 minutes à se refléter dans la télémétrie autonome.</string>
+    <string name="hrv_info_sensor_recommendation_title">Recommandations de capteurs</string>
+    <string name="hrv_info_sensor_recommendation_desc">Des intervalles RR battement par battement précis nécessitent une ceinture pectorale ECG humidifiée (comme Polar H10 ou Garmin HRM-Pro). Les capteurs optiques au poignet lissent les intervalles et ne conviennent pas au DFA a1.</string>
+    <string name="hrv_info_zones_title">Zones de seuil aérobie</string>
+    <string name="hrv_info_zones_desc">DFA a1 &gt; 0,75 indique une endurance aérobie fondamentale (Zone 2). Les valeurs entre 0,75 et 0,50 marquent la transition vers le seuil anaérobie (Zone 3). Les valeurs inférieures à 0,50 signalent une forte intensité anaérobie (Zone 4).</string>
+    <string name="hrv_info_disclaimer_title">Avertissement médical</string>
+    <string name="hrv_info_disclaimer_desc">Les métriques de VRC dans aTrainingTracker sont conçues pour le guidage de l\'entraînement et ne remplacent pas un avis médical. Les arythmies cardiaques ou extrasystoles peuvent invalider les estimations de seuils.</string>
+
+    <!-- Morning Resting HRV Check (ATT-3556 / REQ-PER-032) -->
+    <string name="morning_hrv_title">Contrôle matinal VRC</string>
+    <string name="morning_hrv_subtitle">Protocole de réveil pour récupération autonome</string>
+    <string name="morning_hrv_posture_label">Posture</string>
+    <string name="morning_hrv_posture_supine">Couché</string>
+    <string name="morning_hrv_posture_seated">Assis</string>
+    <string name="morning_hrv_posture_standing">Debout</string>
+    <string name="morning_hrv_duration_label">Durée</string>
+    <string name="morning_hrv_duration_60s">60 s (Standard)</string>
+    <string name="morning_hrv_duration_120s">120 s (Étendu)</string>
+    <string name="morning_hrv_state_ready">Prêt à mesurer</string>
+    <string name="morning_hrv_state_stabilizing">Stabilisation : %1$ds</string>
+    <string name="morning_hrv_state_measuring">Mesure : %1$ds / %2$ds</string>
+    <string name="morning_hrv_state_completed">Mesure terminée</string>
+    <string name="morning_hrv_btn_start">Démarrer la mesure</string>
+    <string name="morning_hrv_btn_cancel">Annuler</string>
+    <string name="morning_hrv_btn_save">Enregistrer la mesure</string>
+    <string name="morning_hrv_btn_discard">Ignorer</string>
+    <string name="morning_hrv_instructions_title">Protocole standardisé</string>
+    <string name="morning_hrv_instructions_desc">Mesurer au réveil après avoir vidé la vessie. Rester immobile et respirer normalement sans parler. Garder la même posture pour des comparaisons fiables.</string>
+    <string name="morning_hrv_artifact_warning_title">Taux élevé d\'artefacts</string>
+    <string name="morning_hrv_artifact_warning_desc">Le taux d\'artefacts dépasse 5%% (%1$.1f%%). Humidifiez les électrodes de la ceinture pectorale et ajustez sa position.</string>
+    <string name="morning_hrv_summary_rmssd">rMSSD : %1$.1f ms</string>
+    <string name="morning_hrv_summary_ln_rmssd">ln(rMSSD) : %1$.2f</string>
+    <string name="morning_hrv_summary_resting_hr">FC au repos : %1$d bpm</string>
+    <string name="morning_hrv_saved_toast">Mesure matinale de VRC enregistrée</string>
+
+    <!-- Longitudinal HRV Readiness Trend in Periods Screen (ATT-3557 / REQ-PER-033) -->
+    <string name="hrv_readiness_trend_title">Tendance de récupération VRC</string>
+    <string name="hrv_readiness_trend_subtitle">Moyenne sur 7 jours et corridor SWC sur 60 jours</string>
+    <string name="hrv_readiness_metric_ln_rmssd">ln(rMSSD)</string>
+    <string name="hrv_readiness_metric_rmssd">rMSSD (ms)</string>
+    <string name="hrv_readiness_toggle_training_load">Charge d’entraînement</string>
+    <string name="hrv_readiness_no_entries_posture">Aucune mesure enregistrée pour la posture %1$s</string>
+    <string name="hrv_readiness_swc_baseline_label">Base SWC 60 j</string>
+    <string name="hrv_readiness_rolling_avg_label">Moyenne mobile 7 j</string>
+
+    <!-- Interactive DFA a1 / rMSSD Charts & Scatter Plot in Workout Details (ATT-3544 / REQ-PER-035) -->
+    <string name="hrv_scatter_card_title">Dynamique des seuils aérobies DFA a1</string>
+    <string name="hrv_scatter_card_subtitle">a1 vs fréquence cardiaque et puissance</string>
+    <string name="hrv_scatter_aerobic_threshold">Seuil aérobie (a1 = 0,75)</string>
+    <string name="hrv_scatter_anaerobic_threshold">Seuil anaérobie (a1 = 0,50)</string>
+    <string name="hrv_scatter_toggle_hr">Fréquence cardiaque</string>
+    <string name="hrv_scatter_toggle_power">Puissance</string>
+    <string name="hrv_scatter_artifact_suppressed">Intervalles à forts artéfacts (&gt;5%%) supprimés</string>
+    <string name="hrv_scatter_no_data">Aucune donnée VRC disponible pour cet entraînement</string>
+    <string name="hrv_chart_artifact_gap_label">Interruption d\'artéfact</string>
+</resources>

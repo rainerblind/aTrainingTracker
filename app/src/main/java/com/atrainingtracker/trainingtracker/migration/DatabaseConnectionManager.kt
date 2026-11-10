@@ -122,7 +122,9 @@ object DatabaseConnectionManager {
             try { ExportStatusDatabaseManager.getInstance(context)?.getDatabase() } catch (_: Throwable) { null },
             try { SegmentsDatabaseManager.getInstance(context).getDatabase() } catch (_: Throwable) { null },
             try { EquipmentDbHelper.getInstance(context).writableDatabase } catch (_: Throwable) { null },
-            try { ActiveDevicesDbHelper.getInstance(context).writableDatabase } catch (_: Throwable) { null }
+            try { ActiveDevicesDbHelper.getInstance(context).writableDatabase } catch (_: Throwable) { null },
+            try { com.atrainingtracker.trainingtracker.database.hrv.HrvReadinessDatabaseManager.getInstance(context).database } catch (_: Throwable) { null },
+            try { com.atrainingtracker.trainingtracker.database.hrv.WorkoutRrDatabaseManager.getInstance(context).database } catch (_: Throwable) { null }
         )
     }
 }

@@ -3175,6 +3175,109 @@
 
 **Invariants**: Downstream transactional `isWorkoutExisting` intact, no false-positive skipping of `legacy_import` files, zero duplicate workout rows created.
 
+### REQ-DAT-039: Point-to-Point (A->B) Route Apex Migration, Import Unification & Mapper Parity [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-DAT-035` | **Tickets**: `ATT-6319`
+- **Implementation**: `app/src/main/java/com/atrainingtracker/trainingtracker/database/WorkoutClusterEngine.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/database/WorkoutClusterRepository.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/migration/LegacyImportEngine.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/WorkoutDataMapper.kt`
+- **Rationale**: While `REQ-SET-097` (`ATT-5899`) introduced non-degenerate elliptical apex calculation (`findApexFromPoints`) for live recordings on point-to-point (A->B) routes ($d(\text{start}, \text{end}) \ge 150\text{ m}$), historical workouts in `TABLE_EXTREMA_VALUES` and historical clusters in `WorkoutClusters.db` still store legacy apex coordinates that collapsed onto the destination point ($P_{\text{apex}} \approx P_{\text{end}}$). Furthermore, `LegacyImportEngine.kt` and `WorkoutDataMapper.kt` still calculate apex exclusively by maximizing $d(\text{start}, pt)$, re-corrupting apex coordinates during file imports and summary mapping. The system SHALL perform a self-healing migration across existing point-to-point database records and unify apex calculation across import pipelines and data mappers.
+- **Description**:
+  1. *Self-Healing Database Apex Migration (`REQ-DAT-039.1`)*:
+     - `WorkoutClusterEngine` SHALL provide `healLegacyPointToPointApexes()` to scan point-to-point workouts ($d(\text{start}, \text{end}) \ge 150\text{ m}$) having valid track points or map polylines.
+     - For any workout where the stored apex degenerates near the destination ($d(P_{\text{apex}}, P_{\text{end}}) < 50\text{ m}$ or collinearity collapse), the system SHALL recompute non-degenerate apex coordinates via `findApexFromPoints(start, points, end)` and persist the corrected `MAX_LINE_DISTANCE_LAT`, `LNG`, and `LINE_DISTANCE_m` in `TABLE_EXTREMA_VALUES`.
+     - The migration SHALL recalculate cluster centroids (`maxDispLat`, `maxDispLng`) for all affected clusters.
+  2. *Repository SharedPreferences-Guarded Trigger (`REQ-DAT-039.2`)*:
+     - `WorkoutClusterRepository.refreshClusters()` SHALL trigger the self-healing migration asynchronously on `Dispatchers.IO`, guarded by a persistent SharedPreferences flag (`SP_KEY_LAST_APEX_REPAIR = "last_apex_repair_v1"`), ensuring the migration executes strictly once without blocking app startup or UI composition.
+  3. *Legacy Import Pipeline Unification (`REQ-DAT-039.3`)*:
+     - In `LegacyImportEngine.kt`, apex calculation for imported FIT, TCX, GPX, and Strava streams SHALL use `WorkoutClusterEngine.findApexFromPoints(start, points, end)` instead of raw distance-from-start maximization.
+     - Imported workouts SHALL persist `MAX_LINE_DISTANCE_LAT`, `LNG`, and `LINE_DISTANCE_m` in `TABLE_EXTREMA_VALUES` and pass `workoutPolyline = points` into `suggestCluster` for corridor-aware cluster assignment.
+  4. *Data Mapper Symmetrical Apex Resolution (`REQ-DAT-039.4`)*:
+     - In `WorkoutDataMapper.kt`, `resolveAuthoritativeApex` SHALL accept `endLatLng: LatLng?` and delegate to `findApexFromPoints(start, points, end)`, guaranteeing UI representation parity with database records.
+  5. *Preservation of System Invariants (`REQ-DAT-039.5`)*:
+     - Closed-loop routes ($d(\text{start}, \text{end}) < 150\text{ m}$) SHALL remain completely untouched and preserve distance-from-start apex calculation; no SQLite DDL schema changes; 100% unit test pass rate.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* existing historical point-to-point workouts with degenerated apex coordinates ($P_{\text{apex}} \approx P_{\text{end}}$),
+• *When* `WorkoutClusterRepository.refreshClusters()` executes,
+• *Then* `healLegacyPointToPointApexes()` recalculates non-degenerate apex coordinates using `findApexFromPoints`, updates `TABLE_EXTREMA_VALUES` and cluster centroids, and records the SharedPreferences completion flag.
+• *Given* an imported FIT/TCX/GPX point-to-point activity in `LegacyImportEngine`,
+• *When* imported into the database,
+• *Then* its apex coordinates are computed via `findApexFromPoints`, persisted to extrema tables, and forwarded to `suggestCluster` with polyline stations.
+• *Given* `WorkoutDataMapper.resolveAuthoritativeApex` called with track points, start, and end,
+• *When* evaluated for a point-to-point route,
+• *Then* it resolves the non-degenerate mid-corridor apex matching `findApexFromPoints`.
+
+**Invariants**: Closed-loop route ($d < 150\text{ m}$) apex behavior unmodified; no blocking UI threads; transactional SQLite updates; 100% unit test pass rate.
+
+### REQ-DAT-040: TCX Structured DTO Serialization, Parsing Decoupling & Round-Trip Fidelity [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-DAT-036` | **Tickets**: `ATT-938`
+- **Implementation**: `app/src/main/java/com/atrainingtracker/trainingtracker/tcx/model/`, `app/src/main/java/com/atrainingtracker/trainingtracker/tcx/serializer/`, `app/src/main/java/com/atrainingtracker/trainingtracker/tcx/parser/`, `app/src/main/java/com/atrainingtracker/trainingtracker/exporter/writer/TCXFileWriter.java`, `app/src/main/java/com/atrainingtracker/trainingtracker/migration/parsers/TcxWorkoutParser.kt`
+- **Rationale**: To prevent schema sequence violations, escaping bugs, and silent field drops during XML interchange, the system SHALL introduce structured, immutable Data Transfer Objects (DTOs) for the Garmin TCX schema (`TrainingCenterDatabasev2.xsd`), decoupling XML serialization and parsing from internal SQLite database representations and providing bit-exact round-trip fidelity across workout export and re-import.
+- **Description**:
+  1. *Structured TCX DTO Domain Models (`REQ-DAT-040.1`)*:
+     - The system SHALL define strongly-typed, immutable Kotlin data classes representing the TCX Activity schema (`TcxDocument`, `TcxActivity`, `TcxLap`, `TcxTrackpoint`, `TcxPosition`, `TcxHeartRate`, `TcxExtensions`, `TcxDevice`, `TcxApplication`).
+     - Models SHALL encapsulate all standard TCX elements (`Id`, `Lap`, `Notes`, `Creator`, `Extensions`, `Author`) and Garmin Trackpoint Extension v2 (`TPX`) elements (`Speed`, `RunCadence`, `Watts`).
+  2. *Streaming DTO XML Serializer (`REQ-DAT-040.2`)*:
+     - The system SHALL provide a dedicated streaming XML serializer (`TcxSerializer`) that writes a `TcxDocument` / `TcxActivity` to an `OutputStream` or `Writer`.
+     - The serializer MUST enforce Garmin TCX v2 sequence ordering (`Id` -> `Lap`* -> `Notes`? -> `Creator`? -> `Extensions`? -> `Author`?).
+     - The serializer MUST automatically escape XML reserved characters (`&`, `<`, `>`, `"`, `'`) in workout names, lap notes, and descriptions.
+     - Integer-only constraints for `<Cadence>`, `<Watts>`, and `<RunCadence>` (`REQ-EXP-001`) MUST be strictly enforced.
+  3. *Decoupled DTO XML Parser Bridge (`REQ-DAT-040.3`)*:
+     - The system SHALL provide a streaming parser bridge (`TcxParser`) that constructs `TcxDocument` DTOs from TCX XML input streams using `XmlPullParser`.
+     - `TcxWorkoutParser` SHALL delegate XML ingestion to `TcxParser` and map the resulting DTOs into `ParsedWorkoutData`, preserving existing database persistence pathways in `LegacyImportEngine`.
+     - Proprietary `att:ActivityExtension` / `att:LapExtension` and bracketed name fallback heuristics (`[Name] Description`) MUST be preserved without regression.
+  4. *Bidirectional Round-Trip Fidelity (`REQ-DAT-040.4`)*:
+     - Exporting an activity via `TCXFileWriter` and re-parsing it via `TcxWorkoutParser` SHALL preserve 100% of activity timestamps, workout names, descriptions, lap boundaries, durations, distances, trackpoint coordinates, heart rate, cadence, speed, and power telemetry.
+  5. *Streaming & Memory Safety Invariant (`REQ-DAT-040.5`)*:
+     - TCX serialization and parsing MUST operate in a streaming or batch-friendly fashion, ensuring workouts with 50,000+ trackpoints process without `OutOfMemoryError` or Main Thread blocking.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* a recorded or imported workout with custom name, notes, multiple laps, and power/cadence telemetry,
+• *When* exported to TCX format via `TCXFileWriter`,
+• *Then* the resulting XML validates against Garmin `TrainingCenterDatabasev2.xsd`, with strictly ordered elements, integer watts/cadence values, and escaped XML special characters.
+• *Given* a valid TCX XML file exported by `aTrainingTracker` or third-party platforms (Garmin Connect, Strava),
+• *When* parsed via `TcxWorkoutParser`,
+• *Then* the parser deserializes the XML into structured TCX DTOs and maps them into `ParsedWorkoutData` without loss of metadata or telemetry channels.
+• *Given* an exported TCX activity re-imported via `LegacyImportEngine`,
+• *When* comparing the original workout entities with the re-imported entities,
+• *Then* start time, sport type, active duration, lap count, per-lap metrics, and trackpoint streams match within IEEE floating-point tolerance.
+
+**Invariants**: Zero database schema alterations; zero regression in existing GPX or FIT export/import engines; strict Garmin TCX v2 schema compliance; 100% unit test pass rate.
+
+### REQ-DAT-041: Repository-Only Engine, Exporter & Migration Layer Database Access (Phase B) [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-DAT-037` | **Tickets**: `ATT-6426`
+- **Implementation**: `app/src/main/java/com/atrainingtracker/trainingtracker/database/WorkoutClusterEngine.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/migration/LegacyImportEngine.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/exporter/StravaUploader.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/exporter/FitFileWriter.java`, `app/src/main/java/com/atrainingtracker/trainingtracker/exporter/TCXFileWriter.java`, `app/src/main/java/com/atrainingtracker/trainingtracker/database/WorkoutDeletionHelper.java`
+- **Rationale**: Direct instantiation of SQLite database manager singletons (`*DatabaseManager.getInstance()`) inside processing engines, exporters, and migration helpers violates Clean Architecture (SWE.2) and couples core background pipelines directly to low-level SQLite helpers. The system SHALL eliminate all direct database manager references from Phase B components by routing all database operations through domain repositories (`WorkoutRepository`, `SportTypesRepository`, `EquipmentRepository`, `WorkoutClusterRepository`, `KnownLocationsRepository`, `RoutesRepository`, `SegmentsRepository`, `ExportStatusRepository`).
+- **Description**:
+  1. *WorkoutClusterEngine Decoupling (`REQ-DAT-041.1`)*:
+     - `WorkoutClusterEngine.kt` SHALL execute all cluster centroid calculations, candidate route lookups, sport type filtering, and milestone naming through `WorkoutClusterRepository`, `SportTypesRepository`, `KnownLocationsRepository`, `WorkoutRepository`, and `RoutesRepository`.
+  2. *LegacyImportEngine Decoupling (`REQ-DAT-041.2`)*:
+     - `LegacyImportEngine.kt` SHALL execute workout, lap, sample, cluster, and export status persistence via `WorkoutRepository`, `SportTypesRepository`, `WorkoutClusterRepository`, and `ExportStatusRepository`.
+  3. *StravaUploader Decoupling (`REQ-DAT-041.3`)*:
+     - `StravaUploader.kt` SHALL route workout metadata queries, segment detection, equipment resolution, and upload state updates through `WorkoutRepository`, `SportTypesRepository`, `EquipmentRepository`, and `SegmentsRepository`.
+  4. *FitFileWriter & TCXFileWriter Decoupling (`REQ-DAT-041.4`)*:
+     - `FitFileWriter.java` and `TCXFileWriter.java` SHALL retrieve lap, sample, summary, and sport type telemetry via domain repositories while preserving existing constructors for unit test backward compatibility.
+  5. *WorkoutDeletionHelper Decoupling (`REQ-DAT-041.5`)*:
+     - `WorkoutDeletionHelper.java` SHALL execute cascade deletions through repository delegates while preserving test constructor compatibility.
+  6. *Domain Repository Batch & Mutation Delegates (`REQ-DAT-041.6`)*:
+     - Target domain repositories SHALL expose any required batch queries and mutations on `Dispatchers.IO` / repository executors.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* `WorkoutClusterEngine`, `LegacyImportEngine`, `StravaUploader`, `FitFileWriter`, `TCXFileWriter`, and `WorkoutDeletionHelper`,
+• *When* auditing source code and AST references,
+• *Then* zero occurrences of `*DatabaseManager.getInstance(...)` exist across all Phase B target files.
+• *Given* a recorded workout session exported to FIT or TCX or uploaded to Strava,
+• *When* processed via the refactored exporters and engines,
+• *Then* file contents, Strava payloads, cluster centroids, and deletion cascades remain 100% bit-exact and functionally identical.
+• *Given* a multi-sport TCX or GPX backup archive,
+• *When* imported via `LegacyImportEngine`,
+• *Then* all workouts, laps, and sensor samples are fully persisted with 100% data integrity via domain repository delegates.
+
+**Invariants**: Phase C (`TrackerService`, `BANALService`) strictly untouched; zero SQLite schema alterations; 100% unit test pass rate.
+
+
+
 
 
 

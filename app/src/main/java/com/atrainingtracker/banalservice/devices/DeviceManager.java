@@ -47,6 +47,9 @@ import com.atrainingtracker.banalservice.devices.bluetooth_le.BTLEBikeCadenceDev
 import com.atrainingtracker.banalservice.devices.bluetooth_le.BTLEBikePowerDevice;
 import com.atrainingtracker.banalservice.devices.bluetooth_le.BTLEBikeSpeedAndCadenceDevice;
 import com.atrainingtracker.banalservice.devices.bluetooth_le.BTLEBikeSpeedDevice;
+import com.atrainingtracker.banalservice.devices.RrBeatListener;
+import com.atrainingtracker.banalservice.devices.RrBeatSource;
+import com.atrainingtracker.banalservice.devices.hrv.HRVMetricsDevice;
 import com.atrainingtracker.banalservice.devices.bluetooth_le.BTLEHeartRateDevice;
 import com.atrainingtracker.banalservice.devices.bluetooth_le.BTLERunSpeedDevice;
 import com.atrainingtracker.banalservice.devices.bluetooth_le.MyBTLEDevice;
@@ -95,6 +98,7 @@ public class DeviceManager {
     protected volatile AltitudeFromPositionDevice mAltitudeFromPositionDevice;
     protected volatile VerticalSpeedAndSlopeDevice mVerticalSpeedAndSlopeDevice;
     protected volatile CyclingPowerMetricsDevice mCyclingPowerMetricsDevice;
+    protected volatile HRVMetricsDevice mHrvMetricsDevice;
     protected boolean mHavePressureSensor = false;
     protected IntentFilter mPairingChangedFilter = new IntentFilter(BANALService.PAIRING_CHANGED);
     // protected IntentFilter mRemoveDeviceFilter            = new IntentFilter(BANALService.REMOVE_DEVICE);
@@ -302,6 +306,7 @@ public class DeviceManager {
             if (protocol == null || deviceType == null) {
                 Log.e(TAG, "Cannot start device search: invalid or missing Protocol / DeviceType in intent extra");
                 Intent stoppedIntent = new Intent(BANALService.SEARCHING_STOPPED_FOR_ONE_INTENT);
+                stoppedIntent.setPackage(mContext.getPackageName());
                 mContext.sendBroadcast(stoppedIntent);
                 return;
             }
@@ -414,6 +419,43 @@ public class DeviceManager {
         return mCyclingPowerMetricsDevice;
     }
 
+    public void createHrvMetricsDevice() {
+        mHrvMetricsDevice = new HRVMetricsDevice(mContext, mSensorManager);
+        for (MyRemoteDevice remote : mMyRemoteDevices.values()) {
+            if (remote instanceof RrBeatSource) {
+                ((RrBeatSource) remote).addRrBeatListener(mHrvMetricsDevice);
+            }
+        }
+    }
+
+    private final List<RrBeatListener> mRrBeatListeners = new CopyOnWriteArrayList<>();
+
+    public void addRrBeatListener(RrBeatListener listener) {
+        if (listener != null && !mRrBeatListeners.contains(listener)) {
+            mRrBeatListeners.add(listener);
+            for (MyRemoteDevice remote : mMyRemoteDevices.values()) {
+                if (remote instanceof RrBeatSource) {
+                    ((RrBeatSource) remote).addRrBeatListener(listener);
+                }
+            }
+        }
+    }
+
+    public void removeRrBeatListener(RrBeatListener listener) {
+        if (listener != null) {
+            mRrBeatListeners.remove(listener);
+            for (MyRemoteDevice remote : mMyRemoteDevices.values()) {
+                if (remote instanceof RrBeatSource) {
+                    ((RrBeatSource) remote).removeRrBeatListener(listener);
+                }
+            }
+        }
+    }
+
+    public HRVMetricsDevice getHrvMetricsDevice() {
+        return mHrvMetricsDevice;
+    }
+
     public ClockDevice getClockDevice() {
         return mClockDevice;
     }
@@ -510,6 +552,7 @@ public class DeviceManager {
         mAltitudeFromPositionDevice = null;
         mVerticalSpeedAndSlopeDevice = null;
         mCyclingPowerMetricsDevice = null;
+        mHrvMetricsDevice = null;
 
         LifecycleUtils.safeUnregisterReceiver(mContext, mPairingChangedReceiver, TAG);
         LifecycleUtils.safeUnregisterReceiver(mContext, mSearchingStoppedForOneReceiver, TAG);
@@ -872,6 +915,10 @@ public class DeviceManager {
         if (powerMetricsDevice != null) {
             myDeviceList.add(powerMetricsDevice);
         }
+        HRVMetricsDevice hrvMetricsDevice = mHrvMetricsDevice;
+        if (hrvMetricsDevice != null) {
+            myDeviceList.add(hrvMetricsDevice);
+        }
         myDeviceList.addAll(getRemoteDeviceList());
 
         return myDeviceList;
@@ -986,6 +1033,14 @@ public class DeviceManager {
         }
 
         if (myANTDevice != null) {
+            if (myANTDevice instanceof RrBeatSource) {
+                if (mHrvMetricsDevice != null) {
+                    ((RrBeatSource) myANTDevice).addRrBeatListener(mHrvMetricsDevice);
+                }
+                for (RrBeatListener listener : mRrBeatListeners) {
+                    ((RrBeatSource) myANTDevice).addRrBeatListener(listener);
+                }
+            }
             MyRemoteDevice existing = mMyRemoteDevices.putIfAbsent(deviceID, myANTDevice);
             if (existing != null) {
                 myANTDevice.shutDown();
@@ -1038,11 +1093,24 @@ public class DeviceManager {
                 myBTLEDevice = new BTLEBikePowerDevice(mContext, mSensorManager, deviceID, address);
                 break;
 
+            case BIKE_RADAR:
+                if (DEBUG) Log.i(TAG, "create new bluetooth bike radar device");
+                myBTLEDevice = new com.atrainingtracker.banalservice.devices.bluetooth_le.BTLERadarDevice(mContext, mSensorManager, deviceID, address);
+                break;
+
             default:
                 Log.i(TAG, "Bluetooth device not yet supported");
         }
 
         if (myBTLEDevice != null) {
+            if (myBTLEDevice instanceof RrBeatSource) {
+                if (mHrvMetricsDevice != null) {
+                    ((RrBeatSource) myBTLEDevice).addRrBeatListener(mHrvMetricsDevice);
+                }
+                for (RrBeatListener listener : mRrBeatListeners) {
+                    ((RrBeatSource) myBTLEDevice).addRrBeatListener(listener);
+                }
+            }
             MyRemoteDevice existing = mMyRemoteDevices.putIfAbsent(deviceID, myBTLEDevice);
             if (existing != null) {
                 myBTLEDevice.shutDown();

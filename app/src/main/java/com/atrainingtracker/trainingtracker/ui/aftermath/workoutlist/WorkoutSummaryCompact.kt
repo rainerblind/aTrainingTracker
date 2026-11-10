@@ -18,7 +18,6 @@
 
 package com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist
 
-import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
@@ -32,46 +31,43 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.atrainingtracker.trainingtracker.TrainingApplication
-import com.atrainingtracker.trainingtracker.ui.theme.TTAlpha
 import com.atrainingtracker.R
+import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.banalservice.sensor.SensorType
+import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
 import com.atrainingtracker.trainingtracker.ui.components.MappableListItem
-import com.atrainingtracker.trainingtracker.ui.components.MetricItem
+import com.atrainingtracker.trainingtracker.ui.theme.TTAlpha
 import com.atrainingtracker.trainingtracker.ui.util.LocalMetricFormatter
 
+/**
+ * Pure UI state-driven composable rendering a compact workout summary list card (REQ-UI-506.2).
+ *
+ * Decouples rendering from formatter calls, string concatenation, and live tracking checks.
+ */
 @Composable
 fun WorkoutSummaryCompact(
-    workoutData: WorkoutData,
+    uiState: WorkoutCardUiState,
     onMapClick: () -> Unit,
     onDeleteRequest: () -> Unit,
     modifier: Modifier = Modifier,
     onMarkFinished: (() -> Unit)? = null
 ) {
-    // Maintain the "unfinished" state visual feedback
-    val contentAlpha = if (workoutData.headerData.finished) TTAlpha.High else 0.5f
-
     var showContextMenu by remember { mutableStateOf(false) }
-
-    val formatters = LocalMetricFormatter.current
-    val isActivelyTracked = TrainingApplication.isActivelyTracked(workoutData.id)
-    val canDelete = !isActivelyTracked
-    val canMarkFinished = !workoutData.headerData.finished && !isActivelyTracked && onMarkFinished != null
-    val hasContextMenu = canDelete || canMarkFinished
+    val hasContextMenu = uiState.hasContextMenu && (uiState.canDelete || (uiState.canMarkFinished && onMarkFinished != null))
 
     Box {
         MappableListItem(
             modifier = modifier,
             onClick = onMapClick,
             onLongClick = if (hasContextMenu) { { showContextMenu = true } } else null,
-            alpha = contentAlpha
+            alpha = uiState.contentAlpha
         ) {
             Column(
                 modifier = Modifier
@@ -79,7 +75,7 @@ fun WorkoutSummaryCompact(
             ) {
                 // --- ROW 1: Workout Name ---
                 Text(
-                    text = workoutData.workoutName,
+                    text = uiState.workoutName,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     maxLines = 1,
@@ -96,7 +92,7 @@ fun WorkoutSummaryCompact(
                 ) {
                     // Sport Icon
                     Icon(
-                        painter = painterResource(id = workoutData.bSportType.iconResId),
+                        painter = painterResource(id = uiState.sportIconResId),
                         contentDescription = null,
                         modifier = Modifier.size(21.dp),
                         tint = Color.Unspecified
@@ -106,21 +102,21 @@ fun WorkoutSummaryCompact(
 
                     // Sport Name
                     Text(
-                        text = workoutData.headerData.sportName,
+                        text = uiState.sportName,
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurface
                     )
 
                     // Equipment (if present)
-                    if (!workoutData.headerData.equipmentName.isNullOrBlank()) {
+                    if (!uiState.equipmentName.isNullOrBlank()) {
                         Text(
-                            text = ": ${workoutData.headerData.equipmentName}",
+                            text = ": ${uiState.equipmentName}",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                             modifier = Modifier
-                                .weight(1f) //, fill = false)
+                                .weight(1f)
                                 .padding(start = 4.dp)
                         )
                     } else {
@@ -129,7 +125,7 @@ fun WorkoutSummaryCompact(
 
                     // Date and Time
                     Text(
-                        text = "${workoutData.headerData.formattedDate}  ${workoutData.headerData.formattedTime}",
+                        text = uiState.formattedDateTime,
                         style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.secondary,
@@ -146,25 +142,25 @@ fun WorkoutSummaryCompact(
                     // Active Time
                     CompactMetricItem(
                         label = stringResource(SensorType.TIME_ACTIVE.fullNameId),
-                        value = formatters.time.format_with_units(workoutData.detailsData.activeTimeSec)
+                        value = uiState.activeTimeFormatted
                     )
 
                     // Distance
                     CompactMetricItem(
                         label = stringResource(SensorType.DISTANCE_m.fullNameId),
-                        value = formatters.distance.format_with_units(workoutData.detailsData.totalDistance)
+                        value = uiState.distanceFormatted
                     )
 
                     // Speed/Pace
                     CompactMetricItem(
                         label = "Ø " + stringResource(SensorType.SPEED_mps.fullNameId),
-                        value = formatters.speed.format_with_units(workoutData.detailsData.avgSpeedMps)
+                        value = uiState.speedPaceFormatted
                     )
 
                     // Ascent
                     CompactMetricItem(
                         label = stringResource(SensorType.ASCENT.fullNameId),
-                        value = formatters.altitude.format_with_units(workoutData.ascentMeters)
+                        value = uiState.ascentFormatted
                     )
                 }
             }
@@ -180,7 +176,7 @@ fun WorkoutSummaryCompact(
                 expanded = showContextMenu,
                 onDismissRequest = { showContextMenu = false }
             ) {
-                if (canMarkFinished) {
+                if (uiState.canMarkFinished && onMarkFinished != null) {
                     DropdownMenuItem(
                         text = { Text(stringResource(R.string.mark_as_finished)) },
                         onClick = {
@@ -190,7 +186,7 @@ fun WorkoutSummaryCompact(
                         leadingIcon = { Icon(Icons.Default.Check, contentDescription = null) }
                     )
                 }
-                if (canDelete) {
+                if (uiState.canDelete) {
                     DropdownMenuItem(
                         text = { Text(stringResource(R.string.delete)) },
                         onClick = {
@@ -203,6 +199,36 @@ fun WorkoutSummaryCompact(
             }
         }
     }
+}
+
+/**
+ * Backward-compatible domain model overload of [WorkoutSummaryCompact] (REQ-UI-506.4).
+ */
+@Composable
+fun WorkoutSummaryCompact(
+    workoutData: WorkoutData,
+    onMapClick: () -> Unit,
+    onDeleteRequest: () -> Unit,
+    modifier: Modifier = Modifier,
+    onMarkFinished: (() -> Unit)? = null
+) {
+    val formatters = LocalMetricFormatter.current
+    val isActivelyTracked = TrainingApplication.isActivelyTracked(workoutData.id)
+    val uiState = remember(workoutData, formatters, isActivelyTracked) {
+        WorkoutCardUiState.from(
+            workoutData = workoutData,
+            formatters = formatters,
+            isActivelyTracked = isActivelyTracked
+        )
+    }
+
+    WorkoutSummaryCompact(
+        uiState = uiState,
+        onMapClick = onMapClick,
+        onDeleteRequest = onDeleteRequest,
+        modifier = modifier,
+        onMarkFinished = onMarkFinished
+    )
 }
 
 @Composable
@@ -225,4 +251,30 @@ private fun CompactMetricItem(
             )
         }
     }
+}
+
+// --- Previews ---
+
+@Preview(showBackground = true, name = "Workout Summary Compact Preview")
+@Composable
+private fun WorkoutSummaryCompactPreview() {
+    val sampleState = WorkoutCardUiState(
+        workoutId = 1L,
+        workoutName = "Morning Run in the Park",
+        sportIconResId = BSportType.RUN.iconResId,
+        sportName = "Running",
+        equipmentName = "Nike Pegasus",
+        formattedDateTime = "10.11.2026  07:30",
+        activeTimeFormatted = "45:12 min",
+        distanceFormatted = "8.45 km",
+        speedPaceFormatted = "5:21 /km",
+        ascentFormatted = "120 m",
+        isFinished = true,
+        isActivelyTracked = false
+    )
+    WorkoutSummaryCompact(
+        uiState = sampleState,
+        onMapClick = {},
+        onDeleteRequest = {}
+    )
 }

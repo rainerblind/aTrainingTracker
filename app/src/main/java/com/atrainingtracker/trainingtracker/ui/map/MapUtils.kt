@@ -75,6 +75,7 @@ fun createSensorMarker(
  * Creates a custom Google Maps marker with a theme-colored pin base and a white heart glyph.
  * Used for Lieblingsorte (known start locations) map visualization (REQ-UI-166).
  */
+@Deprecated("Use createCenteredHeartGlyphMarker for concentric geofence alignment (REQ-MAP-063)")
 fun createHeartPinMarker(
     context: Context,
     pinColor: Color,

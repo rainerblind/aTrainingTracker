@@ -33,6 +33,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.atrainingtracker.R
@@ -45,51 +46,40 @@ import com.atrainingtracker.trainingtracker.ui.components.core.AppTableHeaderCel
 import com.atrainingtracker.trainingtracker.ui.components.core.BadgeBox
 import com.atrainingtracker.trainingtracker.ui.components.core.BadgeSpacer
 import com.atrainingtracker.trainingtracker.ui.aftermath.splits.LapSplitCalculator
+import com.atrainingtracker.trainingtracker.ui.aftermath.splits.LapSplitChartData
 import com.atrainingtracker.trainingtracker.ui.aftermath.splits.LapSplitVisualizer
 import com.atrainingtracker.trainingtracker.ui.util.LocalMetricFormatter
+import com.atrainingtracker.trainingtracker.ui.util.MetricFormatterContext
 
+/**
+ * Pure UI state-driven composable rendering the workout laps section (REQ-UI-506.1).
+ *
+ * Decouples rendering from metric calculations and formatting during composition.
+ */
 @Composable
 fun WorkoutLaps(
-    laps: List<LapData>,
-    bSportType: BSportType = BSportType.UNKNOWN,
+    lapRows: List<LapRowUiState>,
+    isRunningSport: Boolean,
     lapDisplayMode: LapDisplayMode = LapDisplayMode.VISUALIZER_ONLY,
     modifier: Modifier = Modifier,
-    onLapClick: ((LapData) -> Unit)? = null,
+    splitChartData: LapSplitChartData? = null,
+    onVisualizerLapClick: ((Long) -> Unit)? = null,
     onSplitLapClick: (() -> Unit)? = null,
     onMoveBoundaryClick: ((boundaryLapNr: Long) -> Unit)? = null
 ) {
-    if (laps.isEmpty()) return
+    if (lapRows.isEmpty()) return
 
-    val formatters = LocalMetricFormatter.current
     var isExpanded by rememberSaveable { mutableStateOf(false) }
+    val displayedRows = WorkoutLapsHelper.getDisplayedRows(lapRows, isExpanded)
 
-    val splitChartData = remember(laps, bSportType, formatters) {
-        LapSplitCalculator.calculateSplitData(
-            laps = laps,
-            bSportType = bSportType,
-            paceFormatter = { formatters.pace.format_with_units(it) },
-            speedFormatter = { formatters.speed.format_with_units(it) }
-        )
+    val visualizerLapClick: ((Long) -> Unit)? = onVisualizerLapClick ?: run {
+        if (lapRows.any { it.onClick != null }) {
+            { lapNr: Long ->
+                lapRows.find { it.lapNr == lapNr }?.onClick?.invoke()
+                Unit
+            }
+        } else null
     }
-
-    // Performance highlight badges: Rabbit (fastest) and Hedgehog (slowest)
-    // Only applied when >= 2 laps exist and speeds differ.
-    val validSpeeds = remember(laps) {
-        laps.map { it.speedAverageMps }.filter { it > 0.001 }
-    }
-    val hasDifferentSpeeds = remember(validSpeeds) {
-        validSpeeds.distinct().size > 1
-    }
-    val fastestSpeed = remember(hasDifferentSpeeds, validSpeeds) {
-        if (hasDifferentSpeeds) validSpeeds.maxOrNull() else null
-    }
-    val slowestSpeed = remember(hasDifferentSpeeds, validSpeeds) {
-        if (hasDifferentSpeeds) validSpeeds.minOrNull() else null
-    }
-
-    val isRunningSport = (bSportType == BSportType.RUN)
-
-    val displayedLaps = if (isExpanded || laps.size <= 3) laps else laps.take(3)
 
     Column(
         modifier = modifier
@@ -105,13 +95,13 @@ fun WorkoutLaps(
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Text(
-                text = stringResource(R.string.laps_header, laps.size),
+                text = stringResource(R.string.laps_header, lapRows.size),
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface
             )
             Row(verticalAlignment = Alignment.CenterVertically) {
-                if (onMoveBoundaryClick != null && laps.size >= 2) {
+                if (onMoveBoundaryClick != null && lapRows.size >= 2) {
                     IconButton(
                         onClick = { onMoveBoundaryClick(1L) },
                         modifier = Modifier.size(24.dp)
@@ -145,11 +135,7 @@ fun WorkoutLaps(
         if (splitChartData != null && WorkoutLapsHelper.shouldShowVisualizer(lapDisplayMode)) {
             LapSplitVisualizer(
                 splitData = splitChartData,
-                onLapClick = onLapClick?.let { callback ->
-                    { lapNr ->
-                        laps.find { it.lapNr == lapNr }?.let { callback(it) }
-                    }
-                },
+                onLapClick = visualizerLapClick,
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 12.dp, vertical = 4.dp)
@@ -172,50 +158,13 @@ fun WorkoutLaps(
                     .fillMaxWidth()
                     .padding(horizontal = 12.dp)
             ) {
-                displayedLaps.forEachIndexed { index, lap ->
-                    val lapIndex = laps.indexOf(lap) + 1
-                    val displayName = lap.getDisplayName(lapIndex)
-
-                    val isFastest = hasDifferentSpeeds && fastestSpeed != null &&
-                            kotlin.math.abs(lap.speedAverageMps - fastestSpeed) < 1e-5
-                    val isSlowest = hasDifferentSpeeds && slowestSpeed != null &&
-                            kotlin.math.abs(lap.speedAverageMps - slowestSpeed) < 1e-5
-
-                    val badgeEmoji = when {
-                        isFastest -> "🐇"
-                        isSlowest -> "🦔"
-                        else -> null
-                    }
-                    val badgeDescription = when {
-                        isFastest -> stringResource(R.string.fastest_lap)
-                        isSlowest -> stringResource(R.string.slowest_lap)
-                        else -> null
-                    }
-
-                    // Speed / Pace formatted string (pure numbers, units are in the table header)
-                    val speedPaceFormatted = if (isRunningSport) {
-                        if (lap.speedAverageMps > 0.001) {
-                            formatters.pace.format(1.0 / lap.speedAverageMps)
-                        } else {
-                            "--"
-                        }
-                    } else {
-                        formatters.speed.format(lap.speedAverageMps)
-                    }
-
+                displayedRows.forEachIndexed { index, row ->
                     LapRow(
-                        displayName = displayName,
-                        description = lap.description,
-                        timeFormatted = formatters.time.format(lap.timeTotalS.toLong()),
-                        distanceFormatted = formatters.distance.format_with_units(lap.distanceTotalM),
-                        speedPaceFormatted = speedPaceFormatted,
-                        badgeEmoji = badgeEmoji,
-                        badgeDescription = badgeDescription,
-                        onClick = if (onLapClick != null) { { onLapClick(lap) } } else null,
+                        uiState = row,
                         modifier = Modifier.padding(vertical = 4.dp)
                     )
 
-                    if (index < displayedLaps.size - 1) {
+                    if (index < displayedRows.size - 1) {
                         HorizontalDivider(
                             thickness = 0.5.dp,
                             color = MaterialTheme.colorScheme.outlineVariant,
@@ -226,7 +175,7 @@ fun WorkoutLaps(
             }
 
             // Expandable toggle button if > 3 laps
-            if (laps.size > 3) {
+            if (lapRows.size > 3) {
                 Spacer(modifier = Modifier.height(4.dp))
                 TextButton(
                     onClick = { isExpanded = !isExpanded },
@@ -236,7 +185,7 @@ fun WorkoutLaps(
                 ) {
                     Text(
                         text = if (!isExpanded) {
-                            stringResource(R.string.show_all_laps, laps.size)
+                            stringResource(R.string.show_all_laps, lapRows.size)
                         } else {
                             stringResource(R.string.show_fewer_laps)
                         },
@@ -247,6 +196,61 @@ fun WorkoutLaps(
             }
         }
     }
+}
+
+/**
+ * Backward-compatible domain model overload of [WorkoutLaps] (REQ-UI-506.4).
+ */
+@Composable
+fun WorkoutLaps(
+    laps: List<LapData>,
+    bSportType: BSportType = BSportType.UNKNOWN,
+    lapDisplayMode: LapDisplayMode = LapDisplayMode.VISUALIZER_ONLY,
+    modifier: Modifier = Modifier,
+    onLapClick: ((LapData) -> Unit)? = null,
+    onSplitLapClick: (() -> Unit)? = null,
+    onMoveBoundaryClick: ((boundaryLapNr: Long) -> Unit)? = null
+) {
+    if (laps.isEmpty()) return
+
+    val formatters = LocalMetricFormatter.current
+    val fastestDesc = stringResource(R.string.fastest_lap)
+    val slowestDesc = stringResource(R.string.slowest_lap)
+
+    val lapRows = remember(laps, bSportType, formatters, fastestDesc, slowestDesc, onLapClick) {
+        WorkoutLapsHelper.buildLapRowUiStates(
+            laps = laps,
+            bSportType = bSportType,
+            formatters = formatters,
+            fastestBadgeDescription = fastestDesc,
+            slowestBadgeDescription = slowestDesc,
+            onLapClick = onLapClick
+        )
+    }
+
+    val splitChartData = remember(laps, bSportType, formatters, lapDisplayMode) {
+        if (WorkoutLapsHelper.shouldShowVisualizer(lapDisplayMode)) {
+            LapSplitCalculator.calculateSplitData(
+                laps = laps,
+                bSportType = bSportType,
+                paceFormatter = { formatters.pace.format_with_units(it) },
+                speedFormatter = { formatters.speed.format_with_units(it) }
+            )
+        } else null
+    }
+
+    WorkoutLaps(
+        lapRows = lapRows,
+        isRunningSport = (bSportType == BSportType.RUN),
+        lapDisplayMode = lapDisplayMode,
+        modifier = modifier,
+        splitChartData = splitChartData,
+        onVisualizerLapClick = onLapClick?.let { callback ->
+            { lapNr -> laps.find { it.lapNr == lapNr }?.let { callback(it) } }
+        },
+        onSplitLapClick = onSplitLapClick,
+        onMoveBoundaryClick = onMoveBoundaryClick
+    )
 }
 
 @Composable
@@ -292,7 +296,25 @@ private fun LapTableHeader(
 }
 
 @Composable
-private fun LapRow(
+fun LapRow(
+    uiState: LapRowUiState,
+    modifier: Modifier = Modifier
+) {
+    LapRow(
+        displayName = uiState.displayName,
+        description = uiState.description,
+        timeFormatted = uiState.timeFormatted,
+        distanceFormatted = uiState.distanceFormatted,
+        speedPaceFormatted = uiState.speedPaceFormatted,
+        badgeEmoji = uiState.badgeEmoji,
+        badgeDescription = uiState.badgeDescription,
+        onClick = uiState.onClick,
+        modifier = modifier
+    )
+}
+
+@Composable
+fun LapRow(
     displayName: String,
     description: String?,
     timeFormatted: String,
@@ -418,10 +440,133 @@ object WorkoutLapsHelper {
         return if (isExpanded || laps.size <= 3) laps else laps.take(3)
     }
 
+    fun getDisplayedRows(rows: List<LapRowUiState>, isExpanded: Boolean): List<LapRowUiState> {
+        return if (isExpanded || rows.size <= 3) rows else rows.take(3)
+    }
+
     fun shouldShowVisualizer(mode: LapDisplayMode): Boolean =
         mode == LapDisplayMode.VISUALIZER_ONLY
 
     fun shouldShowTable(mode: LapDisplayMode): Boolean =
         mode == LapDisplayMode.TABLE_ONLY
+
+    /**
+     * Pure mapper function converting domain [LapData] models and formatters into immutable [LapRowUiState]s.
+     */
+    fun buildLapRowUiStates(
+        laps: List<LapData>,
+        bSportType: BSportType = BSportType.UNKNOWN,
+        timeFormatter: (Long) -> String,
+        distanceFormatter: (Double) -> String,
+        paceFormatter: (Double) -> String,
+        speedFormatter: (Double) -> String,
+        fastestBadgeDescription: String? = null,
+        slowestBadgeDescription: String? = null,
+        onLapClick: ((LapData) -> Unit)? = null
+    ): List<LapRowUiState> {
+        if (laps.isEmpty()) return emptyList()
+        val isRunningSport = (bSportType == BSportType.RUN)
+        val badges = determineBadges(laps)
+
+        return laps.mapIndexed { index, lap ->
+            val lapIndex = index + 1
+            val displayName = lap.getDisplayName(lapIndex)
+            val badge = badges[lap.lapNr] ?: PerformanceBadge.NONE
+            val badgeEmoji = when (badge) {
+                PerformanceBadge.FASTEST_RABBIT -> "🐇"
+                PerformanceBadge.SLOWEST_HEDGEHOG -> "🦔"
+                PerformanceBadge.NONE -> null
+            }
+            val badgeDesc = when (badge) {
+                PerformanceBadge.FASTEST_RABBIT -> fastestBadgeDescription
+                PerformanceBadge.SLOWEST_HEDGEHOG -> slowestBadgeDescription
+                PerformanceBadge.NONE -> null
+            }
+
+            val speedPaceFormatted = if (isRunningSport) {
+                if (lap.speedAverageMps > 0.001) {
+                    paceFormatter(1.0 / lap.speedAverageMps)
+                } else {
+                    "--"
+                }
+            } else {
+                speedFormatter(lap.speedAverageMps)
+            }
+
+            LapRowUiState(
+                lapNr = lap.lapNr,
+                displayName = displayName,
+                description = lap.description,
+                timeFormatted = timeFormatter(lap.timeTotalS.toLong()),
+                distanceFormatted = distanceFormatter(lap.distanceTotalM),
+                speedPaceFormatted = speedPaceFormatted,
+                badgeEmoji = badgeEmoji,
+                badgeDescription = badgeDesc,
+                onClick = if (onLapClick != null) { { onLapClick(lap) } } else null
+            )
+        }
+    }
+
+    /**
+     * Overload using central [MetricFormatterContext].
+     */
+    fun buildLapRowUiStates(
+        laps: List<LapData>,
+        bSportType: BSportType = BSportType.UNKNOWN,
+        formatters: MetricFormatterContext,
+        fastestBadgeDescription: String? = null,
+        slowestBadgeDescription: String? = null,
+        onLapClick: ((LapData) -> Unit)? = null
+    ): List<LapRowUiState> {
+        return buildLapRowUiStates(
+            laps = laps,
+            bSportType = bSportType,
+            timeFormatter = { formatters.time.format(it) },
+            distanceFormatter = { formatters.distance.format_with_units(it) },
+            paceFormatter = { formatters.pace.format(it) },
+            speedFormatter = { formatters.speed.format(it) },
+            fastestBadgeDescription = fastestBadgeDescription,
+            slowestBadgeDescription = slowestBadgeDescription,
+            onLapClick = onLapClick
+        )
+    }
 }
 
+// --- Previews ---
+
+@Preview(showBackground = true, name = "Workout Laps Preview")
+@Composable
+private fun WorkoutLapsPreview() {
+    val sampleRows = listOf(
+        LapRowUiState(
+            lapNr = 1L,
+            displayName = "Lap 1",
+            timeFormatted = "04:45",
+            distanceFormatted = "1.00 km",
+            speedPaceFormatted = "4:45",
+            badgeEmoji = "🐇",
+            badgeDescription = "Fastest lap"
+        ),
+        LapRowUiState(
+            lapNr = 2L,
+            displayName = "Lap 2",
+            timeFormatted = "05:12",
+            distanceFormatted = "1.00 km",
+            speedPaceFormatted = "5:12"
+        ),
+        LapRowUiState(
+            lapNr = 3L,
+            displayName = "Lap 3",
+            timeFormatted = "05:30",
+            distanceFormatted = "1.00 km",
+            speedPaceFormatted = "5:30",
+            badgeEmoji = "🦔",
+            badgeDescription = "Slowest lap"
+        )
+    )
+    WorkoutLaps(
+        lapRows = sampleRows,
+        isRunningSport = true,
+        lapDisplayMode = LapDisplayMode.TABLE_ONLY
+    )
+}

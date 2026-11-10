@@ -46,6 +46,7 @@ import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDefaults
 import com.atrainingtracker.trainingtracker.ui.components.MetricItem
 import com.atrainingtracker.trainingtracker.ui.components.MetricLayout
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
+import kotlin.math.roundToInt
 
 /**
  * Shared workout telemetry summary details rendered inside `WorkoutSummary` cards
@@ -61,7 +62,9 @@ fun WorkoutDetails(
     enableAerobicEfficiencyModel: Boolean = TuningPreferencesDefaults.DEFAULT_ENABLE_AEROBIC_EFFICIENCY_MODEL,
     showAerobicEfficiencyInWorkoutSummary: Boolean = TuningPreferencesDefaults.DEFAULT_SHOW_AEROBIC_EFFICIENCY_IN_WORKOUT_SUMMARY,
     enableCriticalPowerModel: Boolean = TuningPreferencesDefaults.DEFAULT_ENABLE_CRITICAL_POWER_MODEL,
-    showCriticalPowerInWorkoutSummary: Boolean = TuningPreferencesDefaults.DEFAULT_SHOW_CRITICAL_POWER_IN_WORKOUT_SUMMARY
+    showCriticalPowerInWorkoutSummary: Boolean = TuningPreferencesDefaults.DEFAULT_SHOW_CRITICAL_POWER_IN_WORKOUT_SUMMARY,
+    enableCardioPowerDynamics: Boolean = TuningPreferencesDefaults.DEFAULT_ENABLE_CARDIO_POWER_DYNAMICS,
+    showCardioPowerInWorkoutSummary: Boolean = TuningPreferencesDefaults.DEFAULT_SHOW_CARDIO_POWER_IN_WORKOUT_SUMMARY
 ) {
     val visibleSections = buildVisibleWorkoutDetailSections(
         data = data,
@@ -70,7 +73,9 @@ fun WorkoutDetails(
         enableAerobicEfficiencyModel = enableAerobicEfficiencyModel,
         showAerobicEfficiencyInWorkoutSummary = showAerobicEfficiencyInWorkoutSummary,
         enableCriticalPowerModel = enableCriticalPowerModel,
-        showCriticalPowerInWorkoutSummary = showCriticalPowerInWorkoutSummary
+        showCriticalPowerInWorkoutSummary = showCriticalPowerInWorkoutSummary,
+        enableCardioPowerDynamics = enableCardioPowerDynamics,
+        showCardioPowerInWorkoutSummary = showCardioPowerInWorkoutSummary
     )
 
     Column(
@@ -109,7 +114,9 @@ private fun buildVisibleWorkoutDetailSections(
     enableAerobicEfficiencyModel: Boolean,
     showAerobicEfficiencyInWorkoutSummary: Boolean,
     enableCriticalPowerModel: Boolean,
-    showCriticalPowerInWorkoutSummary: Boolean
+    showCriticalPowerInWorkoutSummary: Boolean,
+    enableCardioPowerDynamics: Boolean = TuningPreferencesDefaults.DEFAULT_ENABLE_CARDIO_POWER_DYNAMICS,
+    showCardioPowerInWorkoutSummary: Boolean = TuningPreferencesDefaults.DEFAULT_SHOW_CARDIO_POWER_IN_WORKOUT_SUMMARY
 ): List<@Composable () -> Unit> = buildList {
     // Section 1: Active Time & Distance (always visible)
     add { MetricsTimeDistanceRow(data = data) }
@@ -143,6 +150,11 @@ private fun buildVisibleWorkoutDetailSections(
     // Section 5: Anaerobic Battery (W'bal) Minimum & Empty-Tank Status (REQ-UI-399, REQ-UI-403, REQ-UI-404, REQ-UI-424)
     if (enableCriticalPowerModel && showCriticalPowerInWorkoutSummary && data.minWPrimeBalKj != null && data.minWPrimeBalPct != null) {
         add { AnaerobicBatteryRow(data = data) }
+    }
+
+    // Section 6: Cardio-Power Dynamics (REQ-REV-010 / ATT-3905)
+    if (enableCardioPowerDynamics && showCardioPowerInWorkoutSummary && data.cardioPowerDynamics != null) {
+        add { CardioPowerDynamicsRow(data = data) }
     }
 }
 
@@ -193,7 +205,7 @@ private fun MetricsTimeDistanceRow(
  * and right column of equal-weight `MetricItem(layout = MetricLayout.VERTICAL, modifier = Modifier.weight(1f))` rows.
  */
 @Composable
-private fun WorkoutDomainRow(
+internal fun WorkoutDomainRow(
     domainLabel: String,
     @DrawableRes domainIconRes: Int,
     modifier: Modifier = Modifier,
@@ -426,6 +438,7 @@ private fun AnaerobicBatteryRow(
         }
     }
 }
+
 
 
 @Preview(showBackground = true)

@@ -37,6 +37,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -77,7 +78,7 @@ import com.atrainingtracker.trainingtracker.ui.components.core.AppDialogActions
 import com.atrainingtracker.trainingtracker.ui.components.core.AppModalBottomSheet
 import com.atrainingtracker.trainingtracker.ui.map.DarkMapStyle
 import com.atrainingtracker.trainingtracker.ui.map.DarkMapAntiFlashOverlay
-import com.atrainingtracker.trainingtracker.ui.map.createHeartPinMarker
+import com.atrainingtracker.trainingtracker.ui.map.createCenteredHeartGlyphMarker
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 import com.atrainingtracker.trainingtracker.ui.theme.TTColor
 import com.google.android.gms.maps.model.CameraPosition
@@ -587,10 +588,10 @@ fun LocationMiniMap(
                 verticalArrangement = Arrangement.Center
             ) {
                 Icon(
-                    painter = painterResource(R.drawable.my_locations),
+                    imageVector = Icons.Default.Favorite,
                     contentDescription = null,
-                    modifier = Modifier.size(32.dp),
-                    tint = MaterialTheme.colorScheme.primary
+                    modifier = Modifier.size(24.dp),
+                    tint = TTColor.GeofencePin
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
@@ -607,11 +608,12 @@ fun LocationMiniMap(
         position = CameraPosition.fromLatLngZoom(latLng, 15f)
     }
     val context = LocalContext.current
-    val heartMarkerIcon = remember {
-        createHeartPinMarker(
+    val heartMarkerIcon = remember(context) {
+        createCenteredHeartGlyphMarker(
             context = context,
-            pinColor = TTColor.GeofencePin,
-            heartColor = Color.White
+            heartColor = TTColor.GeofencePin,
+            outlineColor = Color.White,
+            alpha = 0.85f
         )
     }
 
@@ -636,8 +638,9 @@ fun LocationMiniMap(
             )
         ) {
             Marker(
-                state = MarkerState(position = latLng),
-                icon = heartMarkerIcon
+                state = remember(latLng) { MarkerState(position = latLng) },
+                icon = heartMarkerIcon,
+                anchor = Offset(0.5f, 0.5f)
             )
             Circle(
                 center = latLng,

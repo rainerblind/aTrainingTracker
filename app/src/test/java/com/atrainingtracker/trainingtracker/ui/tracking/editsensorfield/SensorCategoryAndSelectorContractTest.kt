@@ -53,7 +53,7 @@ class SensorCategoryAndSelectorContractTest {
         }
 
         val allSensors = SensorType.values().toList()
-        assertEquals("SensorType must contain 44 constants", 44, allSensors.size)
+        assertEquals("SensorType must contain 63 constants", 63, allSensors.size)
         allSensors.forEach { sensorType ->
             assertNotNull("SensorType.${sensorType.name} must have a non-null category", sensorType.category)
         }
@@ -78,7 +78,10 @@ class SensorCategoryAndSelectorContractTest {
             ),
             SensorCategory.HEART_RATE_AND_ENERGY to setOf(
                 SensorType.HR,
-                SensorType.CALORIES
+                SensorType.CALORIES,
+                SensorType.HRV_RMSSD,
+                SensorType.HRV_DFA_A1,
+                SensorType.LIVE_HR_DRIFT
             ),
             SensorCategory.POWER_AND_PEDALING to setOf(
                 SensorType.POWER,
@@ -88,6 +91,14 @@ class SensorCategoryAndSelectorContractTest {
                 SensorType.TSS,
                 SensorType.WORK_KJ,
                 SensorType.W_PRIME_BAL,
+                SensorType.POWER_5S,
+                SensorType.POWER_1M,
+                SensorType.POWER_5M,
+                SensorType.POWER_20M,
+                SensorType.POWER_PEAK_5S,
+                SensorType.POWER_PEAK_1M,
+                SensorType.POWER_PEAK_5M,
+                SensorType.POWER_PEAK_20M,
                 SensorType.TORQUE,
                 SensorType.PEDAL_POWER_BALANCE,
                 SensorType.PEDAL_SMOOTHNESS,
@@ -115,7 +126,15 @@ class SensorCategoryAndSelectorContractTest {
                 SensorType.ACCURACY,
                 SensorType.TEMPERATURE,
                 SensorType.TEMPERATURE_MIN,
-                SensorType.TEMPERATURE_MAX
+                SensorType.TEMPERATURE_MAX,
+                SensorType.RR_INTERVAL,
+                SensorType.HRV_ARTIFACT_RATE,
+                SensorType.RADAR_THREAT_COUNT,
+                SensorType.RADAR_CLOSEST_DISTANCE_m,
+                SensorType.RADAR_APPROACH_SPEED_mps,
+                SensorType.RADAR_VEHICLE_COUNT,
+                SensorType.RADAR_PASSING_DISTANCE_m,
+                SensorType.RADAR_LARGE_VEHICLE_COUNT
             )
         )
 

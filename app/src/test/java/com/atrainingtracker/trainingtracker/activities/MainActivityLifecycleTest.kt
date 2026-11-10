@@ -26,8 +26,8 @@ import androidx.test.core.app.ApplicationProvider
 import com.atrainingtracker.banalservice.BANALService
 import com.atrainingtracker.trainingtracker.TrackingMode
 import com.atrainingtracker.trainingtracker.TrainingApplication
-import com.atrainingtracker.trainingtracker.database.TrackingViewsDatabaseManager
-import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
+import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
+import com.atrainingtracker.trainingtracker.ui.tracking.TrackingViewsRepository
 import com.google.android.gms.common.GooglePlayServicesUtil
 import com.google.android.gms.maps.MapsInitializer
 import io.mockk.every
@@ -65,16 +65,15 @@ class MainActivityLifecycleTest {
 
     private val testDispatcher = UnconfinedTestDispatcher()
     private lateinit var context: Context
-    private lateinit var dbManagerMock: WorkoutSummariesDatabaseManager
+    private lateinit var workoutRepoMock: WorkoutRepository
 
     @Before
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
         MainActivityWithNavigation.defaultIoDispatcher = testDispatcher
         context = ApplicationProvider.getApplicationContext()
-        mockkStatic(WorkoutSummariesDatabaseManager::class)
-        dbManagerMock = mockk(relaxed = true)
-        every { WorkoutSummariesDatabaseManager.getInstance(any()) } returns dbManagerMock
+        workoutRepoMock = mockk(relaxed = true)
+        WorkoutRepository.resetForTesting(workoutRepoMock)
 
         mockkStatic(MapsInitializer::class)
         every { MapsInitializer.initialize(any(), any(), any()) } returns 0
@@ -102,6 +101,8 @@ class MainActivityLifecycleTest {
 
     @After
     fun tearDown() {
+        WorkoutRepository.resetForTesting(null)
+        TrackingViewsRepository.resetForTesting(null)
         unmockkAll()
         MainActivityWithNavigation.sInRideAlertedSensorIds.clear()
         MainActivityWithNavigation.sInRideCriticalAlertedSensorIds.clear()
@@ -252,13 +253,13 @@ class MainActivityLifecycleTest {
 
     @Test
     fun testCheckUnfinishedWorkout_dispatchesToIoDispatcher() {
-        every { dbManagerMock.hasUnfinishedWorkout() } returns true
+        every { workoutRepoMock.hasUnfinishedWorkout() } returns true
 
         val controller = createActivity()
         val activity = controller.get()
         activity.checkUnfinishedWorkout()
 
-        verify(atLeast = 1) { dbManagerMock.hasUnfinishedWorkout() }
+        verify(atLeast = 1) { workoutRepoMock.hasUnfinishedWorkout() }
         controller.destroy()
     }
 
@@ -267,17 +268,17 @@ class MainActivityLifecycleTest {
         val activity = Robolectric.buildActivity(MainActivityWithNavigation::class.java).get()
         activity.chooseStart()
 
-        verify { dbManagerMock.discardOrFinishUnfinishedWorkout() }
+        verify { workoutRepoMock.discardOrFinishUnfinishedWorkout() }
         assertFalse(TrainingApplication.isResumeFromCrash())
     }
 
     @Test
     fun testChooseResume_dispatchesCheckToIoDispatcher() {
-        every { dbManagerMock.hasUnfinishedWorkout() } returns true
+        every { workoutRepoMock.hasUnfinishedWorkout() } returns true
         val activity = Robolectric.buildActivity(MainActivityWithNavigation::class.java).get()
         activity.chooseResume()
 
-        verify { dbManagerMock.hasUnfinishedWorkout() }
+        verify { workoutRepoMock.hasUnfinishedWorkout() }
         assertTrue(TrainingApplication.isResumeFromCrash())
     }
 
@@ -294,17 +295,20 @@ class MainActivityLifecycleTest {
 
     @Test
     fun testOnServiceConnected_dispatchesFiltersQueryToIoDispatcher() {
-        mockkStatic(TrackingViewsDatabaseManager::class)
-        val trackingViewsDbMock = mockk<TrackingViewsDatabaseManager>(relaxed = true)
-        every { TrackingViewsDatabaseManager.getInstance(any()) } returns trackingViewsDbMock
-        every { trackingViewsDbMock.getAllFilterData(any()) } returns emptyList()
+        val trackingViewsRepoMock = mockk<TrackingViewsRepository>(relaxed = true)
+        TrackingViewsRepository.resetForTesting(trackingViewsRepoMock)
+        every { trackingViewsRepoMock.getAllFilterData() } returns emptyList()
 
-        val activity = Robolectric.buildActivity(MainActivityWithNavigation::class.java).get()
-        val mockServiceComm = mockk<BANALService.BANALServiceComm>(relaxed = true)
+        try {
+            val activity = Robolectric.buildActivity(MainActivityWithNavigation::class.java).get()
+            val mockServiceComm = mockk<BANALService.BANALServiceComm>(relaxed = true)
 
-        activity.mBanalConnection.onServiceConnected(null, mockServiceComm)
+            activity.mBanalConnection.onServiceConnected(null, mockServiceComm)
 
-        verify { trackingViewsDbMock.getAllFilterData(any()) }
+            verify { trackingViewsRepoMock.getAllFilterData() }
+        } finally {
+            TrackingViewsRepository.resetForTesting(null)
+        }
     }
 
     // --- TST-STB-019.5: Dialog Window Leak Prevention ---

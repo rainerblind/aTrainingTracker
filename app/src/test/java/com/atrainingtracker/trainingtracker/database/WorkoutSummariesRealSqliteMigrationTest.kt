@@ -536,8 +536,87 @@ class WorkoutSummariesRealSqliteMigrationTest {
     }
 
     @Test
-    fun testSchemaRegistryMatchesV28() {
-        assertEquals(28, DatabaseSchemaRegistry.getMaxSupportedVersion("WorkoutSummaries.db"))
+    fun testIncrementalUpgradeV28ToV29CreatesCardioPowerDynamicsTable() {
+        val database = checkNotNull(db)
+        scaffoldV22Schema(database)
+        helper.onUpgrade(database, 22, 28)
+        database.version = 28
+
+        // Insert workout at v28
+        val cv = ContentValues().apply {
+            put(WorkoutSummaries.WORKOUT_NAME, "Tempo Ride v28")
+            put(WorkoutSummaries.DISTANCE_TOTAL_m, 35000.0)
+        }
+        val insertedWorkoutId = database.insertOrThrow(WorkoutSummaries.TABLE, null, cv)
+        assertEquals(1L, insertedWorkoutId)
+
+        // Upgrade v28 -> v29
+        helper.onUpgrade(database, 28, 29)
+        database.version = 29
+
+        // Verify table and columns exist in real SQLite
+        assertTrue("Table cardio_power_dynamics must exist", RealSqliteTestHelper.hasTable(database, WorkoutSummaries.TABLE_CARDIO_POWER_DYNAMICS))
+        assertTrue(RealSqliteTestHelper.hasColumn(database, WorkoutSummaries.TABLE_CARDIO_POWER_DYNAMICS, WorkoutSummaries.CPD_WORKOUT_ID))
+        assertTrue(RealSqliteTestHelper.hasColumn(database, WorkoutSummaries.TABLE_CARDIO_POWER_DYNAMICS, WorkoutSummaries.CPD_TAU_START))
+        assertTrue(RealSqliteTestHelper.hasColumn(database, WorkoutSummaries.TABLE_CARDIO_POWER_DYNAMICS, WorkoutSummaries.CPD_HR0_START))
+        assertTrue(RealSqliteTestHelper.hasColumn(database, WorkoutSummaries.TABLE_CARDIO_POWER_DYNAMICS, WorkoutSummaries.CPD_K_START))
+        assertTrue(RealSqliteTestHelper.hasColumn(database, WorkoutSummaries.TABLE_CARDIO_POWER_DYNAMICS, WorkoutSummaries.CPD_HR200_START))
+        assertTrue(RealSqliteTestHelper.hasColumn(database, WorkoutSummaries.TABLE_CARDIO_POWER_DYNAMICS, WorkoutSummaries.CPD_R2_START))
+        assertTrue(RealSqliteTestHelper.hasColumn(database, WorkoutSummaries.TABLE_CARDIO_POWER_DYNAMICS, WorkoutSummaries.CPD_RMSE_START))
+        assertTrue(RealSqliteTestHelper.hasColumn(database, WorkoutSummaries.TABLE_CARDIO_POWER_DYNAMICS, WorkoutSummaries.CPD_TAU_END))
+        assertTrue(RealSqliteTestHelper.hasColumn(database, WorkoutSummaries.TABLE_CARDIO_POWER_DYNAMICS, WorkoutSummaries.CPD_HR0_END))
+        assertTrue(RealSqliteTestHelper.hasColumn(database, WorkoutSummaries.TABLE_CARDIO_POWER_DYNAMICS, WorkoutSummaries.CPD_K_END))
+        assertTrue(RealSqliteTestHelper.hasColumn(database, WorkoutSummaries.TABLE_CARDIO_POWER_DYNAMICS, WorkoutSummaries.CPD_HR200_END))
+        assertTrue(RealSqliteTestHelper.hasColumn(database, WorkoutSummaries.TABLE_CARDIO_POWER_DYNAMICS, WorkoutSummaries.CPD_R2_END))
+        assertTrue(RealSqliteTestHelper.hasColumn(database, WorkoutSummaries.TABLE_CARDIO_POWER_DYNAMICS, WorkoutSummaries.CPD_RMSE_END))
+        assertTrue(RealSqliteTestHelper.hasColumn(database, WorkoutSummaries.TABLE_CARDIO_POWER_DYNAMICS, WorkoutSummaries.CPD_DELTA_HR200))
+        assertTrue(RealSqliteTestHelper.hasColumn(database, WorkoutSummaries.TABLE_CARDIO_POWER_DYNAMICS, WorkoutSummaries.CPD_DELTA_TAU))
+        assertTrue(RealSqliteTestHelper.hasColumn(database, WorkoutSummaries.TABLE_CARDIO_POWER_DYNAMICS, WorkoutSummaries.CPD_DELTA_HR0))
+
+        // Verify insertion and querying of dynamics
+        val record = CardioPowerDynamicsRecord(
+            workoutId = insertedWorkoutId,
+            tauStart = 34.5,
+            hr0Start = 86.2,
+            kStart = 0.215,
+            hr200Start = 129.2,
+            r2Start = 0.85,
+            rmseStart = 2.1,
+            tauEnd = 48.0,
+            hr0End = 98.0,
+            kEnd = 0.235,
+            hr200End = 145.0,
+            r2End = 0.82,
+            rmseEnd = 2.4,
+            deltaHr200 = 15.8,
+            deltaTau = 13.5,
+            deltaHr0 = 11.8
+        )
+        val manager = WorkoutSummariesDatabaseManager.getInstance(context)
+        manager.saveCardioPowerDynamics(insertedWorkoutId, record)
+
+        val retrieved = manager.getCardioPowerDynamics(insertedWorkoutId)
+        assertNotNull(retrieved)
+        val r = checkNotNull(retrieved)
+        assertEquals(insertedWorkoutId, r.workoutId)
+        assertEquals(34.5, r.tauStart, 0.001)
+        assertEquals(86.2, r.hr0Start, 0.001)
+        assertEquals(0.215, r.kStart, 0.001)
+        assertEquals(129.2, r.hr200Start, 0.001)
+        assertEquals(0.85, r.r2Start, 0.001)
+        assertEquals(2.1, r.rmseStart, 0.001)
+        assertEquals(48.0, r.tauEnd ?: 0.0, 0.001)
+        assertEquals(145.0, r.hr200End ?: 0.0, 0.001)
+        assertEquals(15.8, r.deltaHr200 ?: 0.0, 0.001)
+
+        // Verify deletion
+        manager.deleteCardioPowerDynamics(insertedWorkoutId)
+        assertNull(manager.getCardioPowerDynamics(insertedWorkoutId))
+    }
+
+    @Test
+    fun testSchemaRegistryMatchesV29() {
+        assertEquals(29, DatabaseSchemaRegistry.getMaxSupportedVersion("WorkoutSummaries.db"))
     }
 }
 

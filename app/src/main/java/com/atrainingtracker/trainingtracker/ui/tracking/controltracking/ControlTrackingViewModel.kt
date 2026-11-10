@@ -27,14 +27,13 @@ import androidx.lifecycle.viewModelScope
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.banalservice.Protocol
-import com.atrainingtracker.banalservice.database.DevicesDatabaseManager
 import com.atrainingtracker.banalservice.devices.DeviceType
 import com.atrainingtracker.banalservice.helpers.UIHelper
 import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceDataRepository
 import com.atrainingtracker.trainingtracker.TrainingApplication
-import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
 import com.atrainingtracker.trainingtracker.monetization.SensorQuotaReconciliationManager
 import com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository
+import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
@@ -72,12 +71,11 @@ class ControlTrackingViewModel @JvmOverloads constructor(
 
     val banalServiceRepository = BANALServiceRepository.getInstance(application)
     private val devicesRepository = DeviceDataRepository.getInstance(application)
+    private val workoutRepository by lazy { WorkoutRepository.getInstance(application) }
 
     // A channel for one-time events (like clicking a button to navigate)
     private val _navigationEvent = Channel<ControlNavigation>(Channel.BUFFERED)
     val navigationEvent: Flow<ControlNavigation> = _navigationEvent.receiveAsFlow()
-
-    val devicesDatabaseManager = DevicesDatabaseManager.getInstance(application)
 
     val trackingMode = banalServiceRepository.trackingMode
     val activeSensors = banalServiceRepository.activeSensors
@@ -109,7 +107,7 @@ class ControlTrackingViewModel @JvmOverloads constructor(
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
-            initialValue = devicesDatabaseManager.hasPairedRemoteDevices()
+            initialValue = devicesRepository.hasPairedRemoteDevices()
         )
 
     /**
@@ -124,7 +122,7 @@ class ControlTrackingViewModel @JvmOverloads constructor(
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
-            initialValue = devicesDatabaseManager.hasPairedBluetoothDevices()
+            initialValue = devicesRepository.hasPairedBluetoothDevices()
         )
 
     // 2. Combine the IDs from the BANALService with the Data from the Database
@@ -184,8 +182,7 @@ class ControlTrackingViewModel @JvmOverloads constructor(
         if (reconciliationManager.checkDowngradeReconciliation()) {
             return
         }
-        val dbManager = WorkoutSummariesDatabaseManager.getInstance(application)
-        if (!TrainingApplication.isTracking() && dbManager.hasUnfinishedWorkout()) {
+        if (!TrainingApplication.isTracking() && workoutRepository.hasUnfinishedWorkout()) {
             viewModelScope.launch {
                 _navigationEvent.send(ControlNavigation.ShowRecoveryDialog)
             }

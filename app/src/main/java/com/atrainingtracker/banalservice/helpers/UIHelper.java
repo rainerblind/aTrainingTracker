@@ -121,6 +121,8 @@ public class UIHelper {
                 return R.string.device_type_run_speed;
             case SENSOR_MANAGER:
                 return R.string.device_type_sensor_manager;
+            case BIKE_RADAR:
+                return R.string.device_type_bike_radar;
         }
         return 0;
     }
@@ -156,6 +158,8 @@ public class UIHelper {
                 return R.string.device_type_short_run_speed;
             case SENSOR_MANAGER:
                 return R.string.device_type_sensor_manager;
+            case BIKE_RADAR:
+                return R.string.device_type_short_bike_radar;
         }
         return 0;
     }

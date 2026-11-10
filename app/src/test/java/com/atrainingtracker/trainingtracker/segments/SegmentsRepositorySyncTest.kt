@@ -156,6 +156,38 @@ class SegmentsRepositorySyncTest {
     }
 
     @Test
+    fun testSyncSegmentsAsyncCatchesExceptionAndLogsError() = runBlocking {
+        val repository = SegmentsRepository.getInstance(mockContext)
+        every { mockSegmentsDb.pruneExpiredSegments(any()) } throws IOException("Simulated network/DB error")
+
+        repository.syncSegmentsAsync(BSportType.UNKNOWN)
+
+        var retries = 50
+        while (retries-- > 0 && repository.isSyncing.value) {
+            delay(20)
+        }
+        delay(50)
+
+        assertFalse("isSyncing MUST be false after async failure", repository.isSyncing.value)
+        verify(atLeast = 1) {
+            Log.e(eq("SegmentsRepository"), eq("Async segment sync failed"), any<IOException>())
+        }
+    }
+
+    @Test
+    fun testSyncSegmentsAsyncRethrowsCancellationException() = runBlocking {
+        val repository = SegmentsRepository.getInstance(mockContext)
+        every { mockSegmentsDb.pruneExpiredSegments(any()) } throws CancellationException("Job was cancelled")
+
+        repository.syncSegmentsAsync(BSportType.UNKNOWN)
+
+        delay(50)
+        verify(exactly = 0) {
+            Log.e(eq("SegmentsRepository"), eq("Async segment sync failed"), any<CancellationException>())
+        }
+    }
+
+    @Test
     fun testNineLanguageParityForLastUpdateOfSegmentsNow() {
         val resDir = findResDirectory()
         val expectedTranslations = mapOf(

@@ -54,11 +54,14 @@ class TcxImportCommunityUploadTest {
         every { TrainingApplication.getDebug(any()) } returns false
 
         mockContext = mockk(relaxed = true)
+        every { mockContext.applicationContext } returns mockContext
         mockExportManager = mockk(relaxed = true)
+        com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository.resetForTesting(null)
     }
 
     @After
     fun tearDown() {
+        com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository.resetForTesting(null)
         unmockkAll()
     }
 
@@ -134,7 +137,7 @@ class TcxImportCommunityUploadTest {
 
         val mockSummaryDb = mockk<com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager>(relaxed = true)
         mockkStatic(com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager::class)
-        every { com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.getInstance(mockContext) } returns mockSummaryDb
+        every { com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.getInstance(any()) } returns mockSummaryDb
 
         val mockCursor = mockk<android.database.Cursor>(relaxed = true)
         every {
@@ -173,7 +176,7 @@ class TcxImportCommunityUploadTest {
 
         val mockSummaryDb = mockk<com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager>(relaxed = true)
         mockkStatic(com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager::class)
-        every { com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.getInstance(mockContext) } returns mockSummaryDb
+        every { com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.getInstance(any()) } returns mockSummaryDb
 
         val mockCursor = mockk<android.database.Cursor>(relaxed = true)
         every {

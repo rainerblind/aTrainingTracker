@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ~ aTrainingTracker (ANT+ BTLE)
+  ~ Copyright (c) 2011 - 2026 Rainer Blind <rainer.blind@gmail.com>
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ This program is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~ GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License
+  ~ along with this program.  If not, see https://www.gnu.org/licenses/gpl-3.0
+  -->
+
+<resources>
+    <string name="hrv_rmssd">rMSSD</string>
+    <string name="hrv_rmssd_short">rMSSD</string>
+    <string name="hrv_dfa_a1">DFA a1</string>
+    <string name="hrv_dfa_a1_short">a1</string>
+    <string name="hrv_artifact_rate">Tasso di artefatti</string>
+    <string name="hrv_artifact_rate_short">Art. %</string>
+
+    <string name="hrv_info_title">Variabilità della frequenza cardiaca e soglie aerobiche</string>
+    <string name="hrv_info_trailing_lag_title">Finestra mobile e ritardo di andatura</string>
+    <string name="hrv_info_trailing_lag_desc">Il DFA a1 in tempo reale viene calcolato su una finestra mobile di 2 minuti (aggiornata ogni 5 secondi) e rMSSD su 60 secondi. Le variazioni di andatura richiedono 1–2 minuti per manifestarsi nella telemetria autonomica.</string>
+    <string name="hrv_info_sensor_recommendation_title">Raccomandazioni sui sensori</string>
+    <string name="hrv_info_sensor_recommendation_desc">Intervalli RR battito per battito accurati richiedono una fascia cardio ECG inumidita (come Polar H10 o Garmin HRM-Pro). I sensori ottici da polso approssimano gli intervalli e non sono adatti per DFA a1.</string>
+    <string name="hrv_info_zones_title">Zone di soglia aerobica</string>
+    <string name="hrv_info_zones_desc">DFA a1 &gt; 0,75 indica andatura di resistenza aerobica (Zona 2). Valori tra 0,75 e 0,50 riflettono la transizione di soglia (Zona 3). Valori inferiori a 0,50 indicano elevata intensità anaerobica (Zona 4).</string>
+    <string name="hrv_info_disclaimer_title">Avvertenza medica</string>
+    <string name="hrv_info_disclaimer_desc">Le metriche HRV autonomiche in aTrainingTracker sono progettate per la guida sportiva e non sostituiscono un parere medico. Le aritmie cardiache o i battiti ectopici possono alterare le stime di soglia.</string>
+
+    <!-- Morning Resting HRV Check (ATT-3556 / REQ-PER-032) -->
+    <string name="morning_hrv_title">Controllo mattutino VFC</string>
+    <string name="morning_hrv_subtitle">Protocollo di risveglio per recupero autonomico</string>
+    <string name="morning_hrv_posture_label">Postura</string>
+    <string name="morning_hrv_posture_supine">Supino</string>
+    <string name="morning_hrv_posture_seated">Seduto</string>
+    <string name="morning_hrv_posture_standing">In piedi</string>
+    <string name="morning_hrv_duration_label">Durata</string>
+    <string name="morning_hrv_duration_60s">60 s (Standard)</string>
+    <string name="morning_hrv_duration_120s">120 s (Esteso)</string>
+    <string name="morning_hrv_state_ready">Pronto per misurare</string>
+    <string name="morning_hrv_state_stabilizing">Stabilizzazione: %1$ds</string>
+    <string name="morning_hrv_state_measuring">Misurazione: %1$ds / %2$ds</string>
+    <string name="morning_hrv_state_completed">Misurazione completata</string>
+    <string name="morning_hrv_btn_start">Avvia misurazione</string>
+    <string name="morning_hrv_btn_cancel">Annulla</string>
+    <string name="morning_hrv_btn_save">Salva misurazione</string>
+    <string name="morning_hrv_btn_discard">Scarta</string>
+    <string name="morning_hrv_instructions_title">Protocollo standardizzato</string>
+    <string name="morning_hrv_instructions_desc">Misurare al risveglio dopo aver svuotato la vescica. Rimanere fermi e respirare normalmente senza parlare. Mantenere la postura per confronti affidabili.</string>
+    <string name="morning_hrv_artifact_warning_title">Tasso di artefatti elevato</string>
+    <string name="morning_hrv_artifact_warning_desc">Il tasso di artefatti supera il 5%% (%1$.1f%%). Inumidire gli elettrodi della fascia cardio e verificare il posizionamento.</string>
+    <string name="morning_hrv_summary_rmssd">rMSSD: %1$.1f ms</string>
+    <string name="morning_hrv_summary_ln_rmssd">ln(rMSSD): %1$.2f</string>
+    <string name="morning_hrv_summary_resting_hr">FC a riposo: %1$d bpm</string>
+    <string name="morning_hrv_saved_toast">Misurazione mattutina VFC salvata</string>
+
+    <!-- Longitudinal HRV Readiness Trend in Periods Screen (ATT-3557 / REQ-PER-033) -->
+    <string name="hrv_readiness_trend_title">Tendenza prontezza VFC</string>
+    <string name="hrv_readiness_trend_subtitle">Media a 7 giorni e corridoio SWC a 60 giorni</string>
+    <string name="hrv_readiness_metric_ln_rmssd">ln(rMSSD)</string>
+    <string name="hrv_readiness_metric_rmssd">rMSSD (ms)</string>
+    <string name="hrv_readiness_toggle_training_load">Carico di allenamento</string>
+    <string name="hrv_readiness_no_entries_posture">Nessuna lettura registrata per la postura %1$s</string>
+    <string name="hrv_readiness_swc_baseline_label">Base SWC 60 gg</string>
+    <string name="hrv_readiness_rolling_avg_label">Media mobile 7 gg</string>
+
+    <!-- Interactive DFA a1 / rMSSD Charts & Scatter Plot in Workout Details (ATT-3544 / REQ-PER-035) -->
+    <string name="hrv_scatter_card_title">Dinamica delle soglie aerobiche DFA a1</string>
+    <string name="hrv_scatter_card_subtitle">a1 vs. frequenza cardiaca e potenza</string>
+    <string name="hrv_scatter_aerobic_threshold">Soglia aerobica (a1 = 0,75)</string>
+    <string name="hrv_scatter_anaerobic_threshold">Soglia anaerobica (a1 = 0,50)</string>
+    <string name="hrv_scatter_toggle_hr">Frequenza cardiaca</string>
+    <string name="hrv_scatter_toggle_power">Potenza</string>
+    <string name="hrv_scatter_artifact_suppressed">Intervalli con artefatti elevati (&gt;5%%) soppressi</string>
+    <string name="hrv_scatter_no_data">Nessun dato VFC disponibile per questo allenamento</string>
+    <string name="hrv_chart_artifact_gap_label">Intervallo artefatti</string>
+</resources>

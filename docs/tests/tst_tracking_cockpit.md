@@ -3,7 +3,7 @@
 **Domain**: `tracking_cockpit`  
 **Prefixes**: `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA`  
 **Scope**: Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle.  
-**Total Tests**: 53
+**Total Tests**: 55
 
 ---
 
@@ -621,15 +621,17 @@
 ### TST-TRK-016: **MySensorManager Priority Hierarchy, DeviceType Enum Alignment, LINE_DISTANCE_m, Default Pairing & Canonical Rank Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-TRK-024`
 - **Component**: **`MySensorManager` Priority Hierarchy, `DeviceType` Enum Alignment, `LINE_DISTANCE_m`, Default Pairing & Canonical Rank Verification Suite**
-- **Jira**: ``ATT-3961`, `ATT-4375`, `ATT-5491`, `ATT-5492``
+- **Jira**: ``ATT-3961`, `ATT-4375`, `ATT-5491`, `ATT-5492`, `ATT-6264``
 - **Test Description**:
   1. *`SPEED_PRIORITY`, `ALTITUDE_PRIORITY` & `LOCATION_PRIORITY` Ordering Invariant Test (`MySensorManagerPriorityTest.kt`)*:
   • Verify `MySensorManager.SPEED_PRIORITY` equals `[RUN_SPEED, BIKE_SPEED, BIKE_SPEED_AND_CADENCE, BIKE_POWER, SPEED_AND_LOCATION_GOOGLE_FUSED, SPEED_AND_LOCATION_GPS]`, with `SPEED_AND_LOCATION_GOOGLE_FUSED` strictly preceding `SPEED_AND_LOCATION_GPS`.
-  • Verify `MySensorManager.ALTITUDE_PRIORITY` and `LOCATION_PRIORITY` order `SPEED_AND_LOCATION_GOOGLE_FUSED` ahead of `SPEED_AND_LOCATION_GPS`.
+  • Verify `MySensorManager.ALTITUDE_PRIORITY` equals `[ALTITUDE_FROM_POSITION, ALTITUDE_FROM_PRESSURE, SPEED_AND_LOCATION_GOOGLE_FUSED, SPEED_AND_LOCATION_GPS]`, with `ALTITUDE_FROM_POSITION` strictly preceding `ALTITUDE_FROM_PRESSURE`.
+  • Verify `MySensorManager.LOCATION_PRIORITY` orders `SPEED_AND_LOCATION_GOOGLE_FUSED` ahead of `SPEED_AND_LOCATION_GPS`.
   2. *Google Fused `ProxySensor` Retention & GC String Test (`MySensorManagerPriorityTest.kt`)*:
   • Verify that registering `SPEED_mps`, `PACE_spm`, `DISTANCE_m`, `DISTANCE_m_LAP`, `ALTITUDE`, `LATITUDE`, and `LONGITUDE` from a `DeviceType.SPEED_AND_LOCATION_GOOGLE_FUSED` device retains non-null `ProxySensor` instances in `MySensorManager`, propagates live values (`6.5 m/s`, `2896.48 m`), and sets `'D'` and `'S'` in `SensorType.SENSORS` (`"-DS----AG--"`).
   3. *Priority Upgrade & Fallback Test (`MySensorManagerPriorityTest.kt`)*:
   • Verify that registering and unregistering `SPEED_AND_LOCATION_GPS`, `SPEED_AND_LOCATION_GOOGLE_FUSED`, and `BIKE_SPEED` dynamically upgrades and falls back `getBestSensor` and `ProxySensor` values according to `BIKE_SPEED > SPEED_AND_LOCATION_GOOGLE_FUSED > SPEED_AND_LOCATION_GPS`.
+  • Verify that registering `ALTITUDE_FROM_POSITION` dynamically upgrades over `ALTITUDE_FROM_PRESSURE`, and unregistering `ALTITUDE_FROM_POSITION` falls back to `ALTITUDE_FROM_PRESSURE`.
   4. *`DeviceType` Enum Declaration Order Test (`DeviceTypeEnumOrderTest.kt`)*:
   • Verify that in `DeviceType.java`, `SPEED_AND_LOCATION_GPS.ordinal() < SPEED_AND_LOCATION_GOOGLE_FUSED.ordinal()`.
   5. *`LINE_DISTANCE_m` Priority Mapping & `getBestSensor` Fallback Test (`MySensorManagerPriorityTest.kt`)*:
@@ -638,7 +640,7 @@
   6. *Canonical Priority Rank Helper Test (`MySensorManagerPriorityTest.kt`)*:
   • Verify `MySensorManager.getPriorityRank(sensorType, deviceType)` returns 0 for `SPEED_AND_LOCATION_GOOGLE_FUSED` and 1 for `SPEED_AND_LOCATION_GPS` across location sensor types.
   • Verify speed ranks: `BIKE_SPEED (1) -> SPEED_AND_LOCATION_GOOGLE_FUSED (4) -> SPEED_AND_LOCATION_GPS (5)`.
-  • Verify altitude ranks: `PRESSURE (0) -> POSITION (1) -> SPEED_AND_LOCATION_GOOGLE_FUSED (2) -> SPEED_AND_LOCATION_GPS (3)`.
+  • Verify altitude ranks: `POSITION (0) -> PRESSURE (1) -> SPEED_AND_LOCATION_GOOGLE_FUSED (2) -> SPEED_AND_LOCATION_GPS (3)`.
   • Verify fallback ranks `1000 + deviceType.ordinal()` for unmapped devices and `Integer.MAX_VALUE` for null `deviceType`.
   7. *`DevicesDatabaseManager.addLocationDevicesToDb` Insertion Sequence & Default Pairing Tests (`DevicesDatabaseManagerOrderingTest.kt`)*:
   • Verify insertion sequence `_id = 1` for `SPEED_AND_LOCATION_GPS` and `_id = 2` for `SPEED_AND_LOCATION_GOOGLE_FUSED`.
@@ -1474,6 +1476,73 @@
   6. *Targeted Suite Regression Execution (`TST-CON-023.6`)*:
   • Execute targeted unit tests verifying 100% test pass rate across modified packages without regressions.
 
+### TST-CON-024: **BLE Crank Revolution 16-Bit Rollover, Precision & State Reset Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-CON-024` (`REQ-CON-024.1`..`REQ-CON-024.4`)
+- **Component**: `BTLEBikeDevice.java`, `BTLEBikePowerDevice.java`, `BTLEMeasurementParsingTest.kt`
+- **Jira**: `ATT-6162`
+- **Test Description**:
+  1. *BTLEBikeDevice 16-Bit Rollover & Float Division Unit Test (`TST-CON-024.1`, `BTLEMeasurementParsingTest.kt`)*:
+  • Seed baseline packet (`cumulativeCrankRevolutions = 65535`, `crankEventTime = 1000`).
+  • Send rollover packet (`cumulativeCrankRevolutions = 1`, `crankEventTime = 2024`).
+  • Verify `mCadenceSensor` receives `120.0 rpm` without negative spike or integer truncation.
+  2. *BTLEBikePowerDevice 16-Bit Rollover & Float Division Unit Test (`TST-CON-024.2`, `BTLEMeasurementParsingTest.kt`)*:
+  • Seed baseline power packet with crank data (`revolutions = 65535`, `time = 1000`).
+  • Send rollover packet (`revolutions = 1`, `time = 2024`).
+  • Verify `mCadenceSensor` receives `120.0 rpm`.
+  3. *Plausibility Guard > 250.0 rpm Discard Unit Test (`TST-CON-024.3`, `BTLEMeasurementParsingTest.kt`)*:
+  • Send packet calculating cadence > 250.0 rpm (e.g. 50 revs in 1024 ticks -> 3000 rpm).
+  • Verify sample is discarded and `mCadenceSensor` does not receive the unplausible value.
+  4. *Disconnect State Reset Unit Test (`TST-CON-024.4`, `BTLEMeasurementParsingTest.kt`)*:
+  • Initialize device with valid crank and wheel state (`mLastCrankRevolutionsValid = true`).
+  • Invoke `device.unregisterSensors()`.
+  • Verify `mLastCrankRevolutionsValid`, `mLastWheelRevolutionsValid`, and identical counters are reset.
+  5. *Targeted Regression Verification Suite (`TST-CON-024.5`)*:
+  • Run targeted package tests across `com.atrainingtracker.banalservice.devices.bluetooth_le.*` and `com.atrainingtracker.trainingtracker.build.*` asserting 100% pass rate.
+
+### TST-CON-025: **ANT+ Speed/Cadence PCC Handle Leak Prevention & Power Pedal Smoothness Routing Test Suite** [Verified]
+- **Requirement(s)**: `REQ-CON-025`
+- **Component**: `ANTBikeSpeedAndCadenceDevice.java`, `ANTBikePowerDevice.java`, `ANTBikeSpeedAndCadenceDeviceTest.kt`, `ANTBikePowerDeviceTest.kt`
+- **Jira**: `ATT-6046`
+- **Test Description**:
+  1. *Speed/Cadence Disconnect With Null Secondary Handle Unit Test (`TST-CON-025.1`, `ANTBikeSpeedAndCadenceDeviceTest.kt`)*:
+  • Initialize `ANTBikeSpeedAndCadenceDevice` with mock primary speed handle and null `pccReleaseHandle2`.
+  • Invoke `releaseAccess()`.
+  • Verify `super.releaseAccess()` executes and the primary speed handle is closed and nulled.
+  2. *Speed/Cadence Disconnect With Active Secondary Handle Unit Test (`TST-CON-025.2`, `ANTBikeSpeedAndCadenceDeviceTest.kt`)*:
+  • Initialize device with both active primary speed handle and active `pccReleaseHandle2`.
+  • Invoke `releaseAccess()`.
+  • Verify both `pccReleaseHandle2` and primary handle are closed and nulled, with exception safety in try-finally.
+  3. *Combined Pedal Smoothness Telemetry Routing Unit Test (`TST-CON-025.3`, `ANTBikePowerDeviceTest.kt`)*:
+  • Simulate `separatePedalSmoothnessSupport = false` and deliver pedal smoothness events.
+  • Verify `mPedalSmoothnessSensor.newValue(...)` receives the value when `mPedalSmoothnessLeftSensor` is null.
+  4. *Field Shadowing Audit (`TST-CON-025.4`, `ANTBikePowerDeviceTest.kt`)*:
+  • Verify `ANTBikePowerDevice` does not declare a duplicate `mDevicesDatabaseManager` field and uses inherited field from `MyDevice`.
+  5. *Clean-Room Targeted Test Suite Execution (`TST-CON-025.5`)*:
+  • Execute targeted package tests (`com.atrainingtracker.banalservice.devices.ant_plus.*`) asserting 100% pass rate.
+
+### TST-CON-026: **BLE Run Speed Device Lifecycle & Telemetry Hygiene Test Suite** [Verified]
+- **Requirement(s)**: `REQ-CON-026`
+- **Component**: `BTLERunSpeedDevice.java`, `BTLERunSpeedDeviceTest.kt`
+- **Jira**: `ATT-6381`
+- **Test Description**:
+  1. *Scheduler Shutdown & Thread Leak Prevention Unit Test (`TST-CON-026.1`, `BTLERunSpeedDeviceTest.kt`)*:
+  • Instantiate `BTLERunSpeedDevice`.
+  • Invoke `shutDown()`.
+  • Verify `mScheduler.isShutdown()` returns true and `mDistanceCalculatorHandle.isCancelled()` returns true.
+  2. *Stale Speed Timeout & Runaway Distance Prevention Unit Test (`TST-CON-026.2`, `BTLERunSpeedDeviceTest.kt`)*:
+  • Provide valid BLE RSC packet with non-zero speed and `mDistancePresent = false`.
+  • Advance simulated clock past 5000 ms threshold.
+  • Execute `distanceCalculator.run()`.
+  • Verify `mDistance` does not accumulate stale speed.
+  3. *Sensor Unregistration / Disconnect Speed Reset Unit Test (`TST-CON-026.3`, `BTLERunSpeedDeviceTest.kt`)*:
+  • Set non-zero speed.
+  • Invoke `unregisterSensors()`.
+  • Verify `mSpeed` is reset to 0.0.
+  4. *Field Shadowing & Inheritance Audit Test (`TST-CON-026.4`, `BTLERunSpeedDeviceTest.kt`)*:
+  • Verify via reflection that `BTLERunSpeedDevice` does not declare redundant shadow fields for `mAddress` or `mTotalDistance`.
+  5. *Clean-Room Targeted Test Suite Execution (`TST-CON-026.5`)*:
+  • Run targeted package tests across `com.atrainingtracker.banalservice.devices.bluetooth_le.*` and `com.atrainingtracker.trainingtracker.build.*` asserting 100% pass rate.
+
 ### TST-TRK-052: **Zero-Allocation 1-Hz ClockTimeTask Time-of-Day Formatting Test Suite** [Verified]
 - **Requirement(s)**: `REQ-TRK-052`
 - **Component**: `ClockDevice.java`, `ClockDeviceResilienceTest.kt`
@@ -1575,6 +1644,374 @@
   • Verify `BANALService.onDestroy()` resets static manager references and `DeviceManager.shutDown()` clears device instances.
   5. *Targeted Regression Suite Execution (`TST-TRK-055.5`)*:
   • Execute targeted package tests (`com.atrainingtracker.banalservice.filters.*`, `com.atrainingtracker.banalservice.sensor.*`, `com.atrainingtracker.banalservice.devices.*`) asserting 100% pass rate.
+
+### TST-TRK-056: **Google Fused Doppler Velocity Plausibility & Stationary Pinning Prevention Test Suite** [Verified]
+- **Requirement(s)**: `REQ-TRK-056`
+- **Component**: `SpeedAndLocationDevice.java`, `SpeedAndLocationDeviceStationaryJitterTest.kt`
+- **Jira**: `ATT-6256`
+- **Test Description**:
+  1. *Continuous Movement with Zero-Speed Provider Unit Test (`TST-TRK-056.1`, `SpeedAndLocationDeviceStationaryJitterTest.kt`)*:
+  • Deliver continuous 1-Hz location fixes advancing 8 m/s (accuracy = 3.0 m, escapeRadius = 4.5 m) with `hasSpeed() == true` and `getSpeed() == 0.0f`.
+  • Verify speed never toggles to 0.0 m/s across successive fixes ($t=1, 2, 3\dots$), distance accumulates steadily (~8 m per fix), and no stationary anchor is pinned.
+  2. *Damped Doppler Speed Fallback Unit Test (`TST-TRK-056.2`, `SpeedAndLocationDeviceStationaryJitterTest.kt`)*:
+  • Deliver continuous 1-Hz location fixes advancing 8 m/s with `hasSpeed() == true` and `getSpeed() == 0.15f` (damped Google Fused sub-case).
+  • Verify geometric fallback activates, reporting ~8 m/s instead of 0.15 m/s, and distance accumulates steadily.
+  3. *Genuine Standstill Pinning & Unpinning Multi-Cycle Test (`TST-TRK-056.3`, `SpeedAndLocationDeviceStationaryJitterTest.kt`)*:
+  • Deliver jitter fixes within 1.5 m accuracy deadband with Doppler zero speed; verify anchor pins immediately with `speed = 0.0 m/s` and zero distance creep (`REQ-TRK-048`).
+  • Advance position past escape radius; verify anchor unpins smoothly and resumes movement without re-pinning on subsequent zero/damped fixes.
+  4. *Teleportation Spike Guard Continuity Test (`TST-TRK-056.4`, `SpeedAndLocationDeviceStationaryJitterTest.kt`)*:
+  • Verify sudden large position jumps (> 70 m/s = 252 km/h) are clamped with `delta_distance = 0.0` preserving `REQ-TRK-041.1`.
+  5. *Clean-Room Targeted Test Suite Execution (`TST-TRK-056.5`)*:
+  • Execute targeted package tests (`com.atrainingtracker.banalservice.devices.*`) asserting 100% pass rate.
+
+### TST-TRK-057: **Barometer Altitude Pocket-Compression Spike Rejection & Sourced DB Sync Test Suite** [Verified]
+- **Requirement(s)**: `REQ-TRK-057`
+- **Component**: `AltitudeFromPressureDevice.java`, `BarometricAltitudeFilter.kt`, `WorkoutSamplesDatabaseManager.java`
+- **Jira**: `ATT-6265`
+- **Test Description**:
+  1. *Pocket-Compression Pulse Rejection Unit Test (`TST-TRK-057.1`, `BarometricAltitudeFilterTest.kt`)*:
+  • Deliver synthetic 1-Hz altitude data with isolated 1–2s transient pulses ($\pm 20\text{--}80\text{ m}$).
+  • Verify single-step output changes are clamped $\le 1.2\text{ m/s}$, transient pulses are rejected by the sliding median, and total phantom hysteresis gain is $\le 1.0\text{ m}$.
+  2. *High-Gradient Climb Preservation Unit Test (`TST-TRK-057.2`, `BarometricAltitudeFilterTest.kt`)*:
+  • Deliver continuous 300-second ascent climbing at $0.80\text{ m/s}$ (2,880 m/h).
+  • Verify output tracks ground-truth ascent with $< 0.5\text{ m}$ phase lag and zero slope attenuation.
+  3. *Calibration Baseline Spike Immunity Unit Test (`TST-TRK-057.3`, `AltitudeFromPressureDeviceTest.kt`)*:
+  • Inject a $+40\text{ m}$ pocket spike during barometric sensor warmup/sampling immediately before `calibrate(500.0)`.
+  • Verify `mAltitudeCorrection` anchors to the filtered baseline ($< 1.5\text{ m}$ error from true ground truth), rejecting the $40\text{ m}$ transient offset.
+  4. *Sourced-Column Retroactive Altitude Drift Synchronization Unit Test (`TST-TRK-057.4`, `WorkoutSamplesDatabaseManagerTest.kt`)*:
+  • Populate a workout sample table with both `ALTITUDE` and `"ALTITUDE (Höhe aus Luftdruck)"`.
+  • Execute `applyAltitudeDriftCorrection()` for Case A (uniform shift) and Case B (piecewise-linear interpolation).
+  • Verify both `ALTITUDE` and `"ALTITUDE (Höhe aus Luftdruck)"` are updated with 100% numerical parity across all target sample rows.
+  5. *Clean-Room Targeted Test Suite Execution (`TST-TRK-057.5`)*:
+  • Execute targeted package tests (`com.atrainingtracker.banalservice.devices.*` and `com.atrainingtracker.trainingtracker.database.*`) asserting 100% pass rate.
+
+### TST-TRK-058: **Live Mean Maximal Power (MMP) & Rolling/Peak Duration Test Suite** [Verified]
+- **Requirement(s)**: `REQ-TRK-058`
+- **Component**: `CyclingPowerMetricsDevice.java`, `SlidingWindowPowerAccumulator.kt`, `SensorType.java`, `LiveMmpCurveChart.kt`
+- **Jira**: `ATT-1298`
+- **Test Description**:
+  1. *Sliding Window Accumulator & Growing Window Unit Test (`TST-TRK-058.1`, `SlidingWindowPowerAccumulatorTest.kt`)*:
+  • Verify $O(1)$ ring-buffer sliding window accumulator computes correct sum and average across 5s, 60s, 300s, and 1200s windows.
+  • Verify growing-window warm-up phase ($1 \le k < W$) returns immediate valid averages from second 1 (`Rule 40`).
+  • Verify buffer wrap-around properly subtracts evicted old samples and adds new samples without cumulative floating-point drift.
+  2. *Rolling & Session Peak Power Metric Device Integration Test (`TST-TRK-058.2`, `CyclingPowerMetricsDeviceMmpTest.kt`)*:
+  • Verify 1-Hz metrics execution correctly updates `POWER_5S`, `POWER_1M`, `POWER_5M`, `POWER_20M` and peak power sensors.
+  • Verify session peak power retains the highest observed rolling average and never decreases during the session.
+  • Verify pause gating freezes accumulators without ingesting zero-watt samples.
+  • Verify `resetSession()` clears all buffers and peak power registers (`Rule 51`).
+  • Verify Rule 52 sensor-presence gating prevents emitting non-null values before valid power telemetry is received.
+  3. *SensorType & 9-Language Localization Audit (`TST-TRK-058.3`, `SensorTypeMmpTest.kt`)*:
+  • Verify all 8 new `SensorType` entries (`POWER_5S`, `POWER_1M`, `POWER_5M`, `POWER_20M`, `POWER_PEAK_5S`, `POWER_PEAK_1M`, `POWER_PEAK_5M`, `POWER_PEAK_20M`) are registered under `SensorCategory.POWER_AND_PEDALING`.
+  • Verify full 9-language string parity across EN, DE, ES, FR, IT, JA, NL, PL, PT.
+  4. *Live MMP Curve Chart Contract & Gesture Test (`TST-TRK-058.4`, `LiveMmpCurveChartTest.kt`)*:
+  • Verify vector curve mapping on logarithmic duration axis ($1\text{s} \dots 7200\text{s}$).
+  • Verify benchmark duration callout pins (5s, 1m, 5m, 20m) render at expected logarithmic coordinates.
+  • Verify zero Compose `MutableState` snapshot writes occur inside composition (`Rule 66`).
+  5. *Clean-Room Targeted Test Suite Execution (`TST-TRK-058.5`)*:
+  • Execute targeted package tests (`com.atrainingtracker.banalservice.devices.*`, `com.atrainingtracker.banalservice.sensor.*`, `com.atrainingtracker.trainingtracker.ui.tracking.*`) asserting 100% pass rate.
+
+### TST-TRK-059: **Live Sparkline Graph Cockpit Tiles & Database Migration Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-TRK-059`
+- **Component**: `TrackingViewsDatabaseManager.java`, `TrackingViewsDbHelper.java`, `SensorFieldView.kt`, `EditSensorFieldDialog.kt`, `LiveSparklineBuffer.kt`, `SensorSparklineView.kt`
+- **Jira**: `ATT-1294`
+- **Test Description**:
+  1. *Database Schema v19 Migration & Default Column Integrity Unit Test (`TST-TRK-059.1`, `TrackingViewsDbMigrationV19Test.kt`)*:
+  • Execute SQLite schema migration from version 18 to 19; assert `ShowGraph` and `GraphHorizonS` columns exist on `ROWS_TABLE` with default values `0` and `300`.
+  • Verify existing user tile layouts in `ROWS_TABLE` remain intact after migration.
+  2. *Numeric Metric Support Gating Unit Test (`TST-TRK-059.2`, `TrackingViewsSparklineSupportTest.kt`)*:
+  • Verify `TrackingViewsDbHelper.isGraphSupported(sensorType)` returns `true` for all numeric metrics (HR, Speed, Cadence, Power, W/kg, NP, IF, Altitude, Ascent, Descent, Slope, Temp, Battery).
+  • Verify `isGraphSupported` returns `false` for string sensors (ACCUMULATED_SENSORS, SENSORS, TIME_OF_DAY), timers (TIME_TOTAL, TIME_ACTIVE, TIME_LAP, LAP_NR), and coordinates (LATITUDE, LONGITUDE).
+  3. *Live Sparkline Buffer & Decimation Unit Test (`TST-TRK-059.3`, `LiveSparklineBufferTest.kt`)*:
+  • Verify fixed-capacity ring buffer sliding and eviction for time horizons 1m (60s), 2m (120s), 5m (300s), 10m (600s), 20m (1200s), and 1h (3600s).
+  • Verify Full Workout ($0\text{s}$) dynamic decimation maintains $\le 300$ samples without unbounded growth during multi-hour workouts.
+  4. *Edit Dialog Selector & Horizon UI Contract Test (`TST-TRK-059.4`, `EditSensorFieldDialogSparklineTest.kt`)*:
+  • Verify `Graph` filter chip in `DisplayElementsSelector` is conditionally displayed based on `isGraphSupported`.
+  • Verify selection of 7 duration horizons and full 9-language localization parity in `strings_cockpit.xml`.
+  5. *Clean-Room Targeted Test Suite Execution (`TST-TRK-059.5`)*:
+  • Execute targeted package tests (`com.atrainingtracker.trainingtracker.database.*`, `com.atrainingtracker.trainingtracker.ui.tracking.*`) asserting 100% pass rate.
+
+### TST-FIL-015: **Filter Initialization State Tracking, Alpha Validation & Zero-Bias Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-FIL-015`, `REQ-FIL-011`, `REQ-FIL-012.5`, `REQ-FIL-013`
+- **Component**: **Filter Initialization State Tracking, Alpha Validation & Zero-Bias Verification Suite**
+- **Jira**: `ATT-6382`
+- **Test Description**:
+  1. *MaxValueFilter Sub-Zero and First Sample Seeding Unit Test (`TST-FIL-015.1`, `FilterInitializationAndBoundsTest.kt`)*:
+  • Instantiate `MaxValueFilter` in active tracking mode (`isPaused = false`).
+  • Feed initial negative sample `-5.0`; assert `getFilteredValue().toDouble() == -5.0`.
+  • Feed sample `-3.0`; assert `getFilteredValue().toDouble() == -3.0`.
+  • Feed sample `-8.0`; assert `getFilteredValue().toDouble() == -3.0`.
+  2. *MaxValueFilter Pause Session Isolation and Reset Test (`TST-FIL-015.2`, `FilterResetAndPreStartTest.kt`)*:
+  • In paused / ready mode, feed sample `500`; assert `getFilteredValue().toInt() == 0`.
+  • Unpause, feed sample `350`; assert `getFilteredValue().toInt() == 350`.
+  • Reset filter; assert `getFilteredValue().toInt() == 0`.
+  3. *ExponentialSmoothingFilter Alpha Range Validation Test (`TST-FIL-015.3`, `FilterInitializationAndBoundsTest.kt`)*:
+  • Verify constructor throws `IllegalArgumentException` for `alpha = 0.0`, `-0.1`, `1.0001`, `Double.NaN`, `Double.POSITIVE_INFINITY`.
+  • Verify constructor succeeds for boundary values `Double.MIN_VALUE`, `0.5`, `1.0`.
+  4. *ExponentialSmoothingFilter First Sample Baseline Seeding and Reseed Test (`TST-FIL-015.4`, `FilterInitializationAndBoundsTest.kt`, `FilterResetAndPreStartTest.kt`)*:
+  • With $\alpha = 0.5$, feed sample `100.0`; assert `getFilteredValue().toDouble() == 100.0` (zero 0.0-bias).
+  • Feed second sample `150.0`; assert `getFilteredValue().toDouble() == 125.0`.
+  • Call `reseed(200.0)`; assert `getFilteredValue().toDouble() == 200.0`.
+  • Call `reset()`; assert `getFilteredValue().toDouble() == 0.0`.
+  5. *Concurrent Thread Safety Stress Test (`TST-FIL-015.5`, `FilterInitializationAndBoundsTest.kt`)*:
+  • Execute concurrent multi-threaded writes (`newValue`) and reads (`getFilteredValue`, `reset`) across multiple threads on `MaxValueFilter` and `ExponentialSmoothingFilter`; assert zero race conditions or data corruption.
+  6. *9-Language Localization & String Specifier Audit (`TST-FIL-015.6`, `TranslationParityTest.kt`)*:
+  • Verify zero new UI string resources required across all 9 canonical app locales.
+  7. *Clean-Room Targeted Test Suite Execution (`TST-FIL-015.7`)*:
+  • Execute targeted package tests (`com.atrainingtracker.banalservice.filters.*`) asserting 100% pass rate.
+
+### TST-CON-027: **Beat-to-Beat RR-Interval Acquisition, BLE GATT 0x2A37 Multi-RR Unpacking & ANT+ Continuity Guard Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-CON-027` (`REQ-CON-027.1`..`REQ-CON-027.5`)
+- **Component**: `SensorType.java`, `BTLEHeartRateDevice.java`, `ANTHeartRateDevice.java`, `RrBeatEvent.kt`, `RrBeatListener.kt`
+- **Jira**: `ATT-3540`
+- **Test Description**:
+  1. *SensorType & 9-Language Localization Audit (`TST-CON-027.1`, `SensorTypeTest.kt`, `TranslationParityTest.kt`)*:
+  • Verify `SensorType.RR_INTERVAL` is registered under `SensorCategory.HEART_RATE_AND_ENERGY` with `SensorValueType.INTEGER` and unit `ms`.
+  • Verify full 9-language translation parity across EN, DE, ES, FR, IT, JA, NL, PL, PT.
+  2. *BTLEHeartRateDevice Multi-RR Parsing Unit Tests (`TST-CON-027.2`, `BTLEHeartRateDeviceTest.kt`)*:
+  • Verify correct parsing of 0, 1, 2, and 3 bundled RR intervals.
+  • Verify proper offset calculations for UINT8 HR (`flag & 0x01 == 0`) and UINT16 HR (`flag & 0x01 != 0`).
+  • Verify proper offset advancement when Energy Expended is present (`flag & 0x08 != 0`).
+  • Verify conversion scaling from $1/1024\text{ s}$ to milliseconds ($\text{raw} \times 1000.0 / 1024.0$).
+  3. *Cumulative Timestamp Reconstruction & Drift Guard Unit Tests (`TST-CON-027.3`, `BTLEHeartRateDeviceTest.kt`)*:
+  • Verify sequential monotonic timestamps for bundled RR intervals sharing a single packet arrival time.
+  • Verify re-anchoring to wall-clock $t_{\text{pkt}}$ and accurate `gapBeats` computation when drift exceeds 2000 ms.
+  4. *ANTHeartRateDevice Continuity Guard & Rollover Unit Tests (`TST-CON-027.4`, `ANTHeartRateDeviceTest.kt`)*:
+  • Verify normal beat emission when $\Delta c == 1$.
+  • Verify seamless 8-bit rollover handling ($255 \to 0$ yields $\Delta c = 1$).
+  • Verify rejection/discard of duplicate packets ($\Delta c == 0$).
+  • Verify `GAP` event emission (`artifactFlag = 5`, `gapBeats = deltaC - 1`) when $\Delta c \ge 2$.
+  5. *Optical HR Compatibility & Truncated Payload Defensive Tests (`TST-CON-027.5`, `BTLEHeartRateDeviceTest.kt`)*:
+  • Verify packets lacking Bit 4 update `SensorType.HR` without activating or emitting to `mRrIntervalSensor`.
+  • Verify truncated packets (length shorter than required for indicated flags) are safely logged without throwing exceptions (`REQ-CON-014`).
+  6. *Clean-Room Targeted Test Suite Execution (`TST-CON-027.6`)*:
+  • Execute targeted package tests (`com.atrainingtracker.banalservice.devices.*`, `com.atrainingtracker.banalservice.sensor.*`) asserting 100% pass rate.
+
+### TST-TRK-060: **Lipponen Artifact Correction, Real-Time HRV Engine & NeuroKit2 Golden Parity Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-TRK-060` (`REQ-TRK-060.1`..`REQ-TRK-060.6`)
+- **Component**: `SensorType.java`, `RrArtifactFilter.kt`, `DfaCalculator.kt`, `HRVMetricsDevice.kt`, `DeviceType.java`, `DeviceManager.java`, `strings_hrv.xml`
+- **Jira**: `ATT-3541`
+- **Test Description**:
+  1. *SensorType & 9-Language Localization Audit (`TST-TRK-060.1`, `SensorTypeHrvTest.kt`, `TranslationParityTest.kt`)*:
+  • Verify `SensorType.HRV_RMSSD`, `SensorType.HRV_DFA_A1`, `SensorType.HRV_ARTIFACT_RATE` registered under `SensorCategory.HEART_RATE_AND_ENERGY`.
+  • Verify 100% 9-language translation parity in partitioned `strings_hrv.xml` across EN, DE, ES, FR, IT, JA, NL, PL, PT.
+  2. *RrArtifactFilter Mode A & Mode B Unit Tests (`TST-TRK-060.2`, `RrArtifactFilterTest.kt`)*:
+  • Mode A causal streaming: 5-beat lookahead + 90-beat trailing quartile window accurately detects ectopic pairs, short beats, and long beats.
+  • Mode B centered window: 91-beat bidirectional centered window produces symmetric Kubios-grade corrected NN series.
+  3. *Rolling rMSSD Engine & Artifact Exclusion Unit Tests (`TST-TRK-060.3`, `HRVMetricsDeviceTest.kt`)*:
+  • Verify 60s sliding window $rMSSD$ calculation.
+  • Verify consecutive beat differences $(i, i+1)$ exclude artifact-adjacent pairs where beat $i$ or $i+1$ is flagged, eliminating downward bias.
+  • Verify minimum sample size guard ($\ge 10$ valid pairs).
+  4. *DFA Calculator & Artifact Suppression Gate Unit Tests (`TST-TRK-060.4`, `DfaCalculatorTest.kt`)*:
+  • Verify 120s DFA $\alpha_1$ calculation across scales $n \in [4, 16]$.
+  • Verify artifact rate gate: suppresses $\alpha_1$ emission (`null`) when window artifact rate $> 5.0\%$.
+  5. *HRVMetricsDevice Lifecycle & Rule 51/52 Contract Tests (`TST-TRK-060.5`, `HRVMetricsDeviceTest.kt`)*:
+  • Verify Rule 51 constructor state parity with `resetSession()`.
+  • Verify Rule 52 physical sensor presence gating (zero phantom sensor rows when HR strap is absent).
+  6. *NeuroKit2 0.2.10 Pinned Golden Oracle Parity (`TST-TRK-060.6`, `HrvGoldenOracleTest.kt`)*:
+  • Assert $rMSSD$ matches NeuroKit2 benchmark vectors within $|\Delta rMSSD| \le 0.5\text{ ms}$.
+  • Assert DFA $\alpha_1$ matches NeuroKit2 benchmark vectors within $|\Delta\alpha_1| \le 0.02$ on clean/pre-corrected series and $|\Delta\alpha_1| \le 0.03$ end-to-end.
+
+
+### TST-TRK-061: **Live HRV Telemetry, Category Partitioning & Aerobic Threshold Guidance Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-TRK-061` (`REQ-TRK-061.1`..`REQ-TRK-061.5`)
+- **Component**: `SensorType.java`, `ActivityType.java`, `DfaA1Formatter.java`, `SensorFieldView.kt`, `TrackingViewModel.kt`, `TuningPreferencesDataStore.kt`, `HrvInfoBottomSheet.kt`, `strings_hrv.xml`
+- **Jira**: `ATT-3542`
+- **Test Description**:
+  1. *Sensor Category & Selector Exposure Contract Tests (`TST-TRK-061.1`, `SensorCategoryAndSelectorContractTest.kt`, `ActivityTypeTest.kt`)*:
+  • Verify `HRV_DFA_A1` and `HRV_RMSSD` belong to `SensorCategory.HEART_RATE_AND_ENERGY`.
+  • Verify `RR_INTERVAL` and `HRV_ARTIFACT_RATE` belong to `SensorCategory.SYSTEM_ENVIRONMENT_AND_DIAGNOSTICS`.
+  • Verify all 4 HRV sensor types are present in `ActivityType.getSensorTypeArray()` for HR/running/cycling activities.
+  • Verify full contract audit across all 56 sensor constants.
+  2. *DfaA1Formatter Unit Tests (`TST-TRK-061.2`, `DfaA1FormatterTest.kt`)*:
+  • Verify 2 decimal place formatting (`0.00`) for valid continuous ratio values.
+  • Verify `--.--` formatting for null, negative, NaN, or artifact-suppressed inputs.
+  3. *Tracking HRV Semantic Zone Indicator Unit Tests (`TST-TRK-061.3`, `TrackingHrvZoneIndicatorTest.kt`, `ThemeColorCentralizationAuditTest.kt`)*:
+  • Verify $\alpha_1 > \alpha_{1,\text{T1}}$ resolves to `TTColor.Zone2` (Green).
+  • Verify $\alpha_{1,\text{T2}} \le \alpha_1 \le \alpha_{1,\text{T1}}$ resolves to `TTColor.Zone3` (Orange).
+  • Verify $\alpha_1 < \alpha_{1,\text{T2}}$ resolves to `TTColor.Zone4` (Red).
+  • Verify artifact rate $> 5.0\%$ or uninitialized state resolves to neutral/outline.
+  • Enforce Rule 71: assert zero hardcoded hex literals in Compose UI files.
+  4. *TuningPreferencesDataStore Threshold Configuration Unit Tests (`TST-TRK-061.4`, `TuningPreferencesDataStoreTest.kt`)*:
+  • Verify default values $\alpha_{1,\text{T1}} = 0.75f$ and $\alpha_{1,\text{T2}} = 0.50f$.
+  • Verify custom threshold persistence and validation bounds ($0.20 \le \alpha_{1,\text{T2}} < \alpha_{1,\text{T1}} \le 1.50$).
+  5. *HrvInfoBottomSheet & 9-Language Localization Audit (`TST-TRK-061.5`, `HrvInfoBottomSheetTest.kt`, `TranslationParityTest.kt`)*:
+  • Enforce Rule 72: verify zero nested `verticalScroll` inside `AppModalBottomSheet`.
+  • Verify 100% 9-language translation parity in `strings_hrv.xml` across EN, DE, ES, FR, IT, JA, NL, PL, PT.
+  6. *Clean-Room Targeted Test Suite Execution (`TST-TRK-061.6`)*:
+  • Execute targeted package tests asserting 100% pass rate.
+
+
+### TST-CON-028: **BLE Cycling Radar Protocol Driver, Serialized GATT Queue, Latch Aggregator & Parity Test Suite** [Verified]
+- **Requirement(s)**: `REQ-CON-028` (`REQ-CON-028.1`..`REQ-CON-028.6`)
+- **Component**: `DeviceType.java`, `SensorType.java`, `ActivityType.java`, `BluetoothConstants.java`, `MyBTLEDevice.java`, `BTSearchForNewDevicesEngine.java`, `BTLERadarDevice.java`, `RadarStateRepository.kt`, `RadarWindowAggregator.kt`, `EquipmentSensorOrdering.kt`, `strings_radar.xml`
+- **Jira**: `ATT-5083`
+- **Test Description**:
+  1. *Serialized GATT Operation Queue Unit Tests (`TST-CON-028.1`, `MyBTLEDeviceQueueTest.kt`)*:
+  • Verify sequential FIFO execution of CCCD descriptor writes and characteristic read/write requests without race conditions.
+  • Verify that pending queue operations wait for explicit callback confirmations (`onDescriptorWrite`, `onCharacteristicRead`, `onCharacteristicWrite`).
+  2. *BTLERadarDevice V1 Threat Decoding & Watchdog Unit Tests (`TST-CON-028.2`, `BTLERadarDeviceTest.kt`)*:
+  • Verify header `byte[0]` demuxing cleanly isolates threat triplets (`1 + 3*N` bytes) while ignoring heartbeat and sector amplitude frames.
+  • Verify accurate conversion of target distance, closing speed, and threat level into immutable `RadarTarget` instances.
+  • Verify that 3.5 seconds of packet starvation triggers transition to `DISCONNECTED_ERROR`.
+  3. *1 Hz Window Aggregator & Vehicle Counter Hysteresis Unit Tests (`TST-CON-028.3`, `RadarWindowAggregatorTest.kt`)*:
+  • Verify 1-second retention of peak threat count, max approach speed, and closest vehicle distance between 1 Hz polling ticks.
+  • Verify overtaking vehicle counter increments once per passed vehicle using target-ID lifecycle and closing-range hysteresis.
+  4. *DeviceType, SensorType & Database Parity Unit Tests (`TST-CON-028.4`, `DeviceTypeTest.kt`, `SensorTypeTest.kt`, `WorkoutSamplesDatabaseManagerTest.kt`)*:
+  • Verify `DeviceType.BIKE_RADAR` correctly registers under `BSportType.BIKE` and is identified by `DevicesDatabaseManager.isBikeSensor()`.
+  • Verify `SensorType.RADAR_*` dynamic column creation and extrema registration with zero SQLite schema migrations (`DB_VERSION` unchanged).
+  5. *9-Language Parity & Localization Test (`TST-CON-028.5`, `TranslationParityTest.kt`)*:
+  • Verify 100% string key and format parity across partitioned `strings_radar.xml` in all 9 supported locales (`values`, `values-de`, `values-es`, `values-fr`, `values-it`, `values-ja`, `values-nl`, `values-pl`, `values-pt`).
+  6. *Clean-Room Targeted Test Suite Execution (`TST-CON-028.6`)*:
+  • Execute targeted package tests (`com.atrainingtracker.banalservice.*`, `com.atrainingtracker.trainingtracker.build.*`) asserting 100% pass rate.
+
+
+### TST-CON-029: **Cycling Radar Traffic Simulator, Pipeline Integration & Parity Test Suite** [Verified]
+- **Requirement(s)**: `REQ-CON-029` (`REQ-CON-029.1`..`REQ-CON-029.5`)
+- **Component**: `RadarTrafficSimulator.kt`, `RadarStateRepository.kt`, `RadarWindowAggregator.kt`, `RadarSettingsSection.kt`, `strings_radar.xml`
+- **Jira**: `ATT-5087`
+- **Test Description**:
+  1. *Scenario Generation & 8 Hz Stream Unit Tests (`TST-CON-029.1`, `RadarTrafficSimulatorTest.kt`)*:
+  • Verify all 5 scenario presets emit synthetic target vectors at 8 Hz with correct kinematics (range, approach speed, threat level).
+  • Verify Single Overtaking Car passing increments `RADAR_VEHICLE_COUNT` via hysteresis.
+  • Verify Multi-Vehicle Convoy generates 3 simultaneous distinct target IDs.
+  • Verify High-Speed Threat closes at 25 m/s with `FAST_APPROACHING` threat level.
+  • Verify Mid-Ride Disconnect transitions to `DISCONNECTED_ERROR` and recovers after 5 seconds.
+  2. *Hardware Precedence & Preemption Unit Tests (`TST-CON-029.2`, `RadarTrafficSimulatorTest.kt`)*:
+  • Verify simulation halts immediately and yields when physical radar streams data (`isReceivingData() == true`).
+  3. *Coroutine Lifecycle & Scope Cleanup Unit Tests (`TST-CON-029.3`, `RadarTrafficSimulatorTest.kt`)*:
+  • Verify calling `stop()` cancels running coroutine job cleanly without background leaks or lingering state emissions.
+  4. *9-Language Parity & Localization Test (`TST-CON-029.4`, `TranslationParityTest.kt`)*:
+  • Verify 100% string key and format parity across partitioned `strings_radar.xml` in all 9 supported locales (`values`, `values-de`, `values-es`, `values-fr`, `values-it`, `values-ja`, `values-nl`, `values-pl`, `values-pt`).
+  5. *Clean-Room Targeted Test Suite Execution (`TST-CON-029.5`)*:
+  • Execute targeted package tests (`com.atrainingtracker.banalservice.devices.radar.*`, `com.atrainingtracker.trainingtracker.build.*`) asserting 100% pass rate.
+
+
+### TST-TRK-062: **Live Rearview Radar Vertical Edge Overlay & Gesture Pass-Through Test Suite** [Verified]
+- **Requirement(s)**: `REQ-TRK-062` (`REQ-TRK-062.1`..`REQ-TRK-062.6`)
+- **Component**: `RadarEdgeOverlay.kt`, `TrackingTabsScreen.kt`, `TuningPreferencesDataStore.kt`, `RadarSettingsSection.kt`, `strings_radar.xml`
+- **Jira**: `ATT-5085`
+- **Test Description**:
+  1. *Radar Edge Rail Kinematics & Dot Position Unit Tests (`TST-TRK-062.1`, `RadarEdgeOverlayTest.kt`)*:
+  • Verify target range normalization ($y = 1 - d/d_{\max}$) and multi-target dot coordinate resolution.
+  2. *Semantic Threat Color & Pulsing Alert Tests (`TST-TRK-062.2`, `RadarEdgeOverlayTest.kt`)*:
+  • Verify color mapping (Green = `NONE`, Amber = `APPROACHING`, Red = `FAST_APPROACHING`).
+  3. *Fail-Safe Disconnect Warning & Error State Tests (`TST-TRK-062.3`, `RadarEdgeOverlayTest.kt`)*:
+  • Verify `DISCONNECTED_ERROR` and `DISCONNECTED` render warning indicator and strictly prohibit green clear state.
+  4. *TuningPreferencesDataStore Edge Side & Clear Mode Tests (`TST-TRK-062.4`, `TuningPreferencesDataStoreTest.kt`)*:
+  • Verify default values (`RIGHT`, `SLIM_RAIL`) and persistence of custom edge side and clear mode selections.
+  5. *9-Language Localization Parity Test (`TST-TRK-062.5`, `TranslationParityTest.kt`)*:
+  • Verify 100% key and format parity across `strings_radar.xml` in all 9 supported locales (`values`, `values-de`, `values-es`, `values-fr`, `values-it`, `values-ja`, `values-nl`, `values-pl`, `values-pt`).
+  6. *Clean-Room Targeted Test Suite Execution (`TST-TRK-062.6`)*:
+  • Execute targeted package tests (`com.atrainingtracker.trainingtracker.ui.tracking.radar.*`, `com.atrainingtracker.trainingtracker.build.*`) asserting 100% pass rate.
+
+### TST-TRK-063: **Radar Audio Chime and Haptic Alert Engine Test Suite** [Verified]
+- **Requirement(s)**: `REQ-TRK-063` (`REQ-TRK-063.1`..`REQ-TRK-063.7`)
+- **Component**: `RadarAlertManager.kt`, `RadarAudioSynthesizer.kt`, `TrackerService.kt`, `TuningPreferencesDataStore.kt`, `RadarSettingsSection.kt`, `strings_radar.xml`
+- **Jira**: `ATT-5086`
+- **Test Description**:
+  1. *Threat Transition & Debounce Unit Tests (`TST-TRK-063.1`, `RadarAlertManagerTest.kt`)*:
+  • Verify audio chime and vibration triggers on `NONE -> APPROACHING`, escalation to `FAST_APPROACHING`, all-clear `-> NONE`, and disconnect `-> DISCONNECTED_ERROR`. Verify debouncing prevents repeated chimes on continuous 8 Hz range telemetry.
+  2. *PCM Audio Synthesis & MODE_STATIC Replay Tests (`TST-TRK-063.2`, `RadarAudioSynthesizerTest.kt`)*:
+  • Verify multi-tone PCM wave generation (non-empty byte arrays, 16-bit signed PCM within [-1.0, 1.0]), `USAGE_MEDIA` AudioAttributes, and warm `MODE_STATIC` replay (`pause()`, `playbackHeadPosition = 0`, `play()`).
+  3. *Independent Volume Boost & Safe Restoration Tests (`TST-TRK-063.3`, `RadarAlertManagerTest.kt`)*:
+  • Verify saving everyday stream volume, boosting hardware volume during chime playback with `flags = 0`, and guaranteed auto-restoration in `finally` and service `onDestroy()`.
+  4. *Transient Audio Ducking Tests (`TST-TRK-063.4`, `RadarAlertManagerTest.kt`)*:
+  • Verify `AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK` request before playback and immediate abandonment on chime completion.
+  5. *Audio Device Routing Tests (`TST-TRK-063.5`, `RadarAudioSynthesizerTest.kt`)*:
+  • Verify `AudioTrack.setPreferredDevice()` sets `TYPE_BUILTIN_SPEAKER` when forced, and `null` for system default / connected headphones.
+  6. *TuningPreferencesDataStore Alert Preferences Tests (`TST-TRK-063.6`, `TuningPreferencesDataStoreTest.kt`)*:
+  • Verify defaults and DataStore persistence for alert mode, volume, speaker boost, audio route, and haptic vibration.
+  7. *9-Language Localization Parity Test (`TST-TRK-063.7`, `TranslationParityTest.kt`)*:
+  • Verify 100% key and format parity across `strings_radar.xml` in all 9 supported locales (`values`, `values-de`, `values-es`, `values-fr`, `values-it`, `values-ja`, `values-nl`, `values-pl`, `values-pt`).
+  8. *Clean-Room Targeted Test Suite Execution (`TST-TRK-063.8`)*:
+  • Execute targeted package tests (`com.atrainingtracker.trainingtracker.audio.radar.*`, `com.atrainingtracker.trainingtracker.settings.*`, `com.atrainingtracker.trainingtracker.build.*`) asserting 100% pass rate.
+
+### TST-CON-030: **Garmin Varia BLE V2 High-Resolution Radar Stream Test Suite** [Verified]
+- **Requirement(s)**: `REQ-CON-030` (`REQ-CON-030.1`..`REQ-CON-030.7`)
+- **Component**: `BTLERadarDevice.java`, `RadarTarget.kt`, `RadarWindowAggregator.kt`, `RadarTrafficSimulator.kt`, `SensorType.java`, `BluetoothConstants.java`, `strings_radar.xml`
+- **Jira**: `ATT-5095`
+- **Test Description**:
+  1. *V2 Handshake Choreography & MTU Negotiation Tests (`TST-CON-030.1`, `BTLERadarDeviceTest.kt`)*:
+  • Verify request of MTU 247, bonding verification, and serialized GATT handshake execution on peripheral discovery of characteristic `6a4e3204`.
+  2. *Automatic Legacy Fallback Invariant Tests (`TST-CON-030.2`, `BTLERadarDeviceTest.kt`)*:
+  • Verify immediate fallback to V1 characteristic `6a4e3203` when `6a4e3204` is absent or handshake negotiation times out.
+  3. *V2 Packet Parsing & Domain Mapping Tests (`TST-CON-030.3`, `BTLERadarDeviceTest.kt`)*:
+  • Verify decoding of V2 multi-target packets, checking range up to 175 m (0.1 m resolution), approach speed, signed lateral offset, and vehicle size classification.
+  4. *Lateral Passing Clearance & Large Vehicle Aggregation Tests (`TST-CON-030.4`, `RadarWindowAggregatorTest.kt`)*:
+  • Verify latching of minimum lateral passing clearance when $y \le 3.0\text{ m}$ and cumulative tracking of large vehicle counts.
+  5. *SensorType Enum & Unit Formatter Tests (`TST-CON-030.5`, `SensorTypeTest.kt`)*:
+  • Verify `RADAR_PASSING_DISTANCE_m` and `RADAR_LARGE_VEHICLE_COUNT` sensor definitions, categories, and formatting parity.
+  6. *Traffic Simulator V2 Trajectory Tests (`TST-CON-030.6`, `RadarTrafficSimulatorTest.kt`)*:
+  • Verify generation of simulated V2 frames with lateral offsets and vehicle classifications.
+  7. *9-Language Localization Parity Test (`TST-CON-030.7`, `TranslationParityTest.kt`)*:
+  • Verify 100% key and format parity across `strings_radar.xml` in all 9 supported locales (`values`, `values-de`, `values-es`, `values-fr`, `values-it`, `values-ja`, `values-nl`, `values-pl`, `values-pt`).
+  8. *Clean-Room Targeted Test Suite Execution (`TST-CON-030.8`)*:
+  • Execute targeted package tests (`com.atrainingtracker.banalservice.devices.bluetooth_le.*`, `com.atrainingtracker.banalservice.devices.radar.*`, `com.atrainingtracker.trainingtracker.build.*`) asserting 100% pass rate.
+
+### TST-CON-031: **BLE Radar Tail Light Mode Control Test Suite** [Verified]
+- **Requirement(s)**: `REQ-CON-031` (`REQ-CON-031.1`..`REQ-CON-031.7`)
+- **Component**: `BTLERadarDevice.java`, `RadarLightController.kt`, `RadarLightMode.kt`, `RadarEdgeOverlay.kt`, `RadarSettingsSection.kt`, `TuningPreferencesDataStore.kt`, `TrackerService.java`, `strings_radar.xml`
+- **Jira**: `ATT-5102`
+- **Test Description**:
+  1. *Light Characteristic Discovery & Queue Routing Tests (`TST-CON-031.1`, `BTLERadarDeviceTest.kt`)*:
+  • Verify discovery of characteristic `6a4e3202` and validation that light mode writes are queued via `enqueueWriteCharacteristic` without blocking radar measurement notifications.
+  2. *Mode Command Encoding & StVZO Pruning Tests (`TST-CON-031.2`, `RadarLightControllerTest.kt`)*:
+  • Verify encoding of light mode commands into raw GATT byte arrays (`OFF`, `DAY_FLASH`, `NIGHT_FLASH`, `SOLID`, `PELOTON`) and verify flashing mode pruning when StVZO hardware is indicated.
+  3. *Cockpit Quick-Switch Sheet UI & State Tests (`TST-CON-031.3`, `RadarLightQuickSwitchSheetTest.kt`)*:
+  • Verify modal sheet rendering upon badge tap, active mode indication, selection callback invocation, and non-interactive badge behavior on devices lacking light characteristic.
+  4. *Workout Lifecycle Auto-Switch Automation Tests (`TST-CON-031.4`, `RadarLightControllerTest.kt`)*:
+  • Verify automatic transmission of workout light command on tracker start and off command on tracker stop when `radarAutoLightControl` is enabled.
+  5. *Settings Persistence & Config Parity Tests (`TST-CON-031.5`, `TuningPreferencesDataStoreTest.kt`)*:
+  • Verify preference persistence for `radarLightDefaultMode` and `radarAutoLightControl` in DataStore.
+  6. *Traffic Simulator Light State Tests (`TST-CON-031.6`, `RadarTrafficSimulatorTest.kt`)*:
+  • Verify light command handling and simulated state reflections in `RadarTrafficSimulator`.
+  7. *9-Language Localization Parity Test (`TST-CON-031.7`, `TranslationParityTest.kt`)*:
+  • Verify 100% key and format parity for light mode and auto-switch string resources across all 9 supported locales.
+  8. *Clean-Room Targeted Test Suite Execution (`TST-CON-031.8`)*:
+  • Execute targeted package tests asserting 100% pass rate.
+
+### TST-TRK-064: **1-Tap Radar Audio Snooze, Peloton Sync & Urban Suppression Test Suite** [Verified]
+- **Requirement(s)**: `REQ-TRK-064` (`REQ-TRK-064.1`..`REQ-TRK-064.7`)
+- **Component**: `RadarAlertManager.kt`, `RadarEdgeOverlay.kt`, `RadarLightQuickSwitchSheet.kt`, `RadarState.kt`, `RadarStateRepository.kt`, `TuningPreferencesDataStore.kt`, `RadarSettingsSection.kt`, `strings_radar.xml`
+- **Jira**: `ATT-5119`
+- **Test Description**:
+  1. *1-Tap Audio Snooze Gating & Expiration Tests (`TST-TRK-064.1`, `RadarAlertManagerTest.kt`)*:
+  • Verify audio snooze triggers (15m, 30m, Rest of Ride), countdown decrementing, automatic restoration upon timer expiry, and manual resume.
+  2. *Muted Badge Countdown Indicator & Touch Pass-Through Tests (`TST-TRK-064.2`, `RadarEdgeOverlayTest.kt`)*:
+  • Verify top badge pill displays muted indicator and countdown during snooze, unhindered tap response on radar-only devices, and 100% target rail rendering.
+  3. *Handlebar Remote Shifter Snooze Toggle Tests (`TST-TRK-064.3`, `RadarAlertManagerTest.kt`)*:
+  • Verify `RadarAlertManager.toggleRadarAudioSnooze()` alternates between snooze and active audio alerts.
+  4. *Peloton Mode Light-Audio Sync Tests (`TST-TRK-064.4`, `RadarAlertManagerTest.kt`)*:
+  • Verify routine `APPROACHING` chimes are suppressed when tail light enters `PELOTON` mode and restored when exiting, while `FAST_APPROACHING` threats continue to sound.
+  5. *Smart Urban Congestion Filter Tests (`TST-TRK-064.5`, `RadarAlertManagerTest.kt`)*:
+  • Verify convoy suppression when $\ge 3$ vehicles $< 5\text{ m/s}$ persist for $\ge 30\text{ s}$, exit after $\ge 20\text{ s}$ clear, and immediate high-speed threat alert triggering.
+  6. *Settings Persistence & DataStore Parity Tests (`TST-TRK-064.6`, `TuningPreferencesDataStoreTest.kt`)*:
+  • Verify preference persistence and defaults for `radarPelotonAudioSync` and `radarSmartUrbanMute`.
+  7. *9-Language Localization Parity Test (`TST-TRK-064.7`, `TranslationParityTest.kt`)*:
+  • Verify 100% key and format parity across `strings_radar.xml` in all 9 supported locales.
+  8. *Clean-Room Targeted Test Suite Execution (`TST-TRK-064.8`)*:
+  • Execute targeted package tests asserting 100% pass rate.
+
+### TST-TRK-065: **3D Stereo Panning & Approach-Speed Pitch Modulation Test Suite** [Verified]
+- **Requirement(s)**: `REQ-TRK-065` (`REQ-TRK-065.1`..`REQ-TRK-065.6`)
+- **Component**: `RadarSpatialAudioMath.kt`, `RadarAlertManager.kt`, `RadarAudioSynthesizer.kt`, `TuningPreferencesDataStore.kt`, `RadarSettingsSection.kt`, `strings_radar.xml`
+- **Jira**: `ATT-5120`
+- **Test Description**:
+  1. *Stereo Lateral Gain Computation Tests (`TST-TRK-065.1`, `RadarSpatialAudioMathTest.kt`)*:
+  • Verify stereo gain calculation `(leftGain, rightGain)` for in-lane ($|x| < 1.0\text{ m}$), safe passing ($|x| \ge 1.5\text{ m}$), intermediate linear interpolation, and traffic orientation (RHT vs. LHT).
+  2. *Speed-to-Pitch Linear Mapping Tests (`TST-TRK-065.2`, `RadarSpatialAudioMathTest.kt`)*:
+  • Verify linear mapping from approach velocity ($3.0\text{--}30.0\text{ m/s}$) to pitch factors ($0.95x\text{--}1.35x$) and boundary clamping.
+  3. *Lane-Change Confirmation Spatial Cue Tests (`TST-TRK-065.3`, `RadarAlertManagerTest.kt`)*:
+  • Verify spatial tick chime emission when primary target transitions from in-lane to safe passing lane and suppression when disabled.
+  4. *Force Speaker Fallback Invariant Tests (`TST-TRK-065.4`, `RadarAlertManagerTest.kt`)*:
+  • Verify stereo gains collapse to centered `(1.0, 1.0)` when audio route is `FORCE_SPEAKER` regardless of lateral target offset.
+  5. *Preferences Persistence & DataStore Parity Tests (`TST-TRK-065.5`, `TuningConfigTest.kt`)*:
+  • Verify DataStore keys, default values, and serialization for `radarSpatialAudioEnabled`, `radarSpeedPitchModulation`, `radarTrafficOrientation`, and `radarLaneChangeTickEnabled`.
+  6. *9-Language Localization Parity Test (`TST-TRK-065.6`, `TranslationParityTest.kt`)*:
+  • Verify 100% key and format parity across `strings_radar.xml` in all 9 supported locales.
+  7. *Clean-Room Targeted Test Suite Execution (`TST-TRK-065.7`)*:
+  • Execute targeted package tests asserting 100% pass rate.
+
 
 
 

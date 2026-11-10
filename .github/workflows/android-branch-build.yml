@@ -102,6 +102,36 @@ jobs:
       - name: Run unit tests
         run: ./gradlew :app:testDebugUnitTest
 
+      - name: Run Android Lint
+        run: ./gradlew :app:lintDebug
+
+      - name: Upload Lint Report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: lint-report
+          path: app/build/reports/lint-results-debug.*
+
+      - name: Run Detekt
+        run: ./gradlew :app:detekt
+
+      - name: Upload Detekt Report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: detekt-report
+          path: app/build/reports/detekt/
+
+      - name: Run Kover Coverage & Verification
+        run: ./gradlew :app:koverXmlReportDebug :app:koverHtmlReportDebug :app:koverVerifyDebug
+
+      - name: Upload Coverage Report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: kover-report
+          path: app/build/reports/kover/
+
       - name: Build debug APK
         run: ./gradlew :app:assembleDebug
 
@@ -111,3 +141,112 @@ jobs:
           name: debug-apk
           path: app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
+
+  emulator-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK components
+        run: |
+          sdkmanager "platforms;android-37.0" "build-tools;36.0.0" "platform-tools"
+
+      - name: Create CI secrets.properties
+        run: |
+          cat > secrets.properties <<'EOF'
+          MAPS_API_KEY=ci-dummy-key
+          STRAVA_CLIENT_ID=ci-dummy-id
+          STRAVA_CLIENT_SECRET=ci-dummy-secret
+          DROPBOX_APP_KEY=ci-dummy-key
+          EOF
+
+      - name: Create CI google-services.json
+        run: |
+          cat > app/google-services.json <<'EOF'
+          {
+            "project_info": {
+              "project_number": "0",
+              "project_id": "atrainingtracker-ci",
+              "storage_bucket": "atrainingtracker-ci.appspot.com",
+              "firebase_url": "https://atrainingtracker-ci.firebaseio.com"
+            },
+            "client": [
+              {
+                "client_info": {
+                  "mobilesdk_app_id": "1:0:android:0000000000000000",
+                  "android_client_info": {
+                    "package_name": "com.atrainingtracker"
+                  }
+                },
+                "api_key": [
+                  {
+                    "current_key": "ci-dummy-api-key"
+                  }
+                ],
+                "services": {
+                  "appinvite_service": {
+                    "status": 1
+                  }
+                }
+              },
+              {
+                "client_info": {
+                  "mobilesdk_app_id": "1:0:android:0000000000000001",
+                  "android_client_info": {
+                    "package_name": "com.atrainingtracker.debug"
+                  }
+                },
+                "api_key": [
+                  {
+                    "current_key": "ci-dummy-api-key"
+                  }
+                ],
+                "services": {
+                  "appinvite_service": {
+                    "status": 1
+                  }
+                }
+              }
+            ],
+            "configuration_version": "1"
+          }
+          EOF
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Enable KVM group perms
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Run instrumented tests on Android emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 30
+          target: default
+          arch: x86_64
+          profile: pixel
+          script: ./gradlew :app:connectedDebugAndroidTest
+
+      - name: Upload Connected Android Test Reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: connected-test-report
+          path: app/build/reports/androidTests/connected/
+

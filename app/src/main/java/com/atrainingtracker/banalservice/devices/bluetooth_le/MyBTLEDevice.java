@@ -77,11 +77,114 @@ public abstract class MyBTLEDevice extends MyRemoteDevice {
     protected final Queue<BluetoothGattCharacteristic> mReadCharacteristicQueue = new ConcurrentLinkedQueue<BluetoothGattCharacteristic>();
     protected volatile State mState = State.DISCONNECTED;
     Handler mHandler;
-    private volatile BluetoothGattCharacteristic mBatteryCharacteristic;
+    protected volatile BluetoothGattCharacteristic mBatteryCharacteristic;
     private volatile boolean mIsShutDown = false;
     private volatile long mCurrentReconnectDelayMs = INITIAL_RECONNECT_DELAY_MS;
     private volatile boolean mIsScanning = false;
     private ScanCallback mScanCallback;
+
+    public interface GattOperation {
+        boolean execute(BluetoothGatt gatt);
+    }
+
+    public static class WriteDescriptorOp implements GattOperation {
+        private final BluetoothGattDescriptor descriptor;
+        private final byte[] value;
+
+        public WriteDescriptorOp(BluetoothGattDescriptor descriptor, byte[] value) {
+            this.descriptor = descriptor;
+            this.value = value;
+        }
+
+        public BluetoothGattDescriptor getDescriptor() {
+            return descriptor;
+        }
+
+        public byte[] getValue() {
+            return value;
+        }
+
+        @Override
+        @android.annotation.SuppressLint("MissingPermission")
+        public boolean execute(BluetoothGatt gatt) {
+            if (descriptor == null || gatt == null) return false;
+            descriptor.setValue(value);
+            try {
+                return gatt.writeDescriptor(descriptor);
+            } catch (SecurityException e) {
+                Log.w("MyBTLEDevice", "Missing BLUETOOTH_CONNECT permission writing descriptor", e);
+                return false;
+            }
+        }
+    }
+
+    public static class ReadCharacteristicOp implements GattOperation {
+        private final BluetoothGattCharacteristic characteristic;
+
+        public ReadCharacteristicOp(BluetoothGattCharacteristic characteristic) {
+            this.characteristic = characteristic;
+        }
+
+        public BluetoothGattCharacteristic getCharacteristic() {
+            return characteristic;
+        }
+
+        @Override
+        @android.annotation.SuppressLint("MissingPermission")
+        public boolean execute(BluetoothGatt gatt) {
+            if (characteristic == null || gatt == null) return false;
+            try {
+                return gatt.readCharacteristic(characteristic);
+            } catch (SecurityException e) {
+                Log.w("MyBTLEDevice", "Missing BLUETOOTH_CONNECT permission reading characteristic", e);
+                return false;
+            }
+        }
+    }
+
+    public static class WriteCharacteristicOp implements GattOperation {
+        private final BluetoothGattCharacteristic characteristic;
+        private final byte[] value;
+
+        public WriteCharacteristicOp(BluetoothGattCharacteristic characteristic, byte[] value) {
+            this.characteristic = characteristic;
+            this.value = value;
+        }
+
+        public BluetoothGattCharacteristic getCharacteristic() {
+            return characteristic;
+        }
+
+        public byte[] getValue() {
+            return value;
+        }
+
+        @Override
+        @android.annotation.SuppressLint("MissingPermission")
+        public boolean execute(BluetoothGatt gatt) {
+            if (characteristic == null || gatt == null) return false;
+            characteristic.setValue(value);
+            try {
+                return gatt.writeCharacteristic(characteristic);
+            } catch (SecurityException e) {
+                Log.w("MyBTLEDevice", "Missing BLUETOOTH_CONNECT permission writing characteristic", e);
+                return false;
+            }
+        }
+    }
+
+    protected final Queue<GattOperation> mGattQueue = new ConcurrentLinkedQueue<>();
+    private volatile boolean mGattOperationPending = false;
+    private static final long GATT_OP_TIMEOUT_MS = 2500L;
+
+    private final Runnable mGattTimeoutRunnable = new Runnable() {
+        @Override
+        public void run() {
+            if (mIsShutDown) return;
+            Log.w(TAG, "GATT operation timed out after " + GATT_OP_TIMEOUT_MS + " ms; forcing queue advance");
+            onGattOperationCompleted();
+        }
+    };
 
     private static final int SNAPSHOT_POOL_SIZE = 8;
     private final Map<UUID, BluetoothGattCharacteristic[]> mCharacteristicPool = new ConcurrentHashMap<>();
@@ -390,6 +493,7 @@ public abstract class MyBTLEDevice extends MyRemoteDevice {
             mHandler.post(new Runnable() {
 
                 @Override
+                @android.annotation.SuppressLint("MissingPermission")
                 public void run() {
                     BluetoothGattService btGattService;
                     BluetoothGattCharacteristic btGattChar;
@@ -426,6 +530,7 @@ public abstract class MyBTLEDevice extends MyRemoteDevice {
             } else if (characteristic != null && !mIsShutDown) {
                 characteristicUpdate(gatt, characteristic);
             }
+            onGattOperationCompleted();
             readNextCharacteristic();
         }
 
@@ -479,17 +584,14 @@ public abstract class MyBTLEDevice extends MyRemoteDevice {
 
         @Override
         public void onDescriptorWrite(BluetoothGatt gatt, BluetoothGattDescriptor descriptor, int status) {
-            if (DEBUG) Log.i(TAG, "onDescriptorWrite: " + descriptor.getUuid() + " status: " + status);
-            // After primary measurement descriptor is written, chain writing battery CCCD if supported (REQ-CON-007, ATT-3312)
-            if (mBatteryCharacteristic != null && (mBatteryCharacteristic.getProperties() & BluetoothGattCharacteristic.PROPERTY_NOTIFY) != 0) {
-                BluetoothGattDescriptor batteryDescriptor = mBatteryCharacteristic.getDescriptor(BluetoothConstants.UUID_CHARACTERISTIC_CLIENT_CONFIG);
-                if (batteryDescriptor != null && !batteryDescriptor.equals(descriptor)) {
-                    if (ActivityCompat.checkSelfPermission(mContext, Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED) {
-                        batteryDescriptor.setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);
-                        gatt.writeDescriptor(batteryDescriptor);
-                    }
-                }
-            }
+            if (DEBUG) Log.i(TAG, "onDescriptorWrite: " + (descriptor != null ? descriptor.getUuid() : "null") + " status: " + status);
+            onGattOperationCompleted();
+        }
+
+        @Override
+        public void onCharacteristicWrite(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic, int status) {
+            if (DEBUG) Log.i(TAG, "onCharacteristicWrite: " + (characteristic != null ? characteristic.getUuid() : "null") + " status: " + status);
+            onGattOperationCompleted();
         }
     };
 
@@ -578,7 +680,13 @@ public abstract class MyBTLEDevice extends MyRemoteDevice {
         stopScanAssistance();
         mHandler.removeCallbacks(mSearchTimeoutRunnable);
         mHandler.removeCallbacks(mBatteryReadRunnable);
+        mHandler.removeCallbacks(mGattTimeoutRunnable);
         mReadCharacteristicQueue.clear();
+
+        synchronized (mGattLock) {
+            mGattQueue.clear();
+            mGattOperationPending = false;
+        }
 
         final BluetoothGatt gattToClose;
         synchronized (mGattLock) {
@@ -707,6 +815,80 @@ public abstract class MyBTLEDevice extends MyRemoteDevice {
         // }
     }
 
+    public void enqueueGattOperation(GattOperation op) {
+        if (op == null || mIsShutDown) return;
+        mGattQueue.add(op);
+        processNextGattOperation();
+    }
+
+    public void enqueueWriteDescriptor(BluetoothGattDescriptor descriptor, byte[] value) {
+        enqueueGattOperation(new WriteDescriptorOp(descriptor, value));
+    }
+
+    public void enqueueReadCharacteristic(BluetoothGattCharacteristic characteristic) {
+        enqueueGattOperation(new ReadCharacteristicOp(characteristic));
+    }
+
+    public void enqueueWriteCharacteristic(BluetoothGattCharacteristic characteristic, byte[] value) {
+        enqueueGattOperation(new WriteCharacteristicOp(characteristic, value));
+    }
+
+    protected void processNextGattOperation() {
+        synchronized (mGattLock) {
+            if (mGattOperationPending || mIsShutDown) {
+                return;
+            }
+            final BluetoothGatt gatt = mBluetoothGatt;
+            if (gatt == null) {
+                mGattQueue.clear();
+                return;
+            }
+            final GattOperation op = mGattQueue.poll();
+            if (op != null) {
+                mGattOperationPending = true;
+                if (mHandler != null) {
+                    mHandler.removeCallbacks(mGattTimeoutRunnable);
+                    mHandler.postDelayed(mGattTimeoutRunnable, GATT_OP_TIMEOUT_MS);
+                    mHandler.post(new Runnable() {
+                        @Override
+                        public void run() {
+                            boolean success = false;
+                            try {
+                                if (ActivityCompat.checkSelfPermission(mContext, Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED) {
+                                    success = op.execute(gatt);
+                                }
+                            } catch (Exception e) {
+                                Log.w(TAG, "Exception executing queued GATT operation", e);
+                            }
+                            if (!success) {
+                                if (DEBUG) Log.w(TAG, "Queued GATT op execute returned false; advancing queue");
+                                onGattOperationCompleted();
+                            }
+                        }
+                    });
+                }
+            }
+        }
+    }
+
+    protected void onGattOperationCompleted() {
+        if (mHandler != null) {
+            mHandler.removeCallbacks(mGattTimeoutRunnable);
+        }
+        synchronized (mGattLock) {
+            mGattOperationPending = false;
+        }
+        processNextGattOperation();
+    }
+
+    public Queue<GattOperation> getGattQueueForTesting() {
+        return mGattQueue;
+    }
+
+    public boolean isGattOperationPendingForTesting() {
+        return mGattOperationPending;
+    }
+
     protected void readNextCharacteristic() {
         if (DEBUG) Log.i(TAG, "readNextCharacteristic");
 
@@ -744,25 +926,42 @@ public abstract class MyBTLEDevice extends MyRemoteDevice {
                         if (gatt == null) {
                             return;
                         }
-                        BluetoothGattService btGattService = gatt.getService(BluetoothConstants.getServiceUUID(getDeviceType()));
-                        if (btGattService == null) {
-                            Log.d(TAG, "WTF, we expected a service here!");
-                            return;
-                        }
-                        BluetoothGattCharacteristic btGattChar = btGattService.getCharacteristic(BluetoothConstants.getCharacteristicUUID(getDeviceType()));
-                        if (btGattChar == null) {
-                            Log.d(TAG, "Expected characteristic not found!");
-                            return;
-                        }
-                        gatt.setCharacteristicNotification(btGattChar, true);
-
-                        BluetoothGattDescriptor descriptor = btGattChar.getDescriptor(BluetoothConstants.UUID_CHARACTERISTIC_CLIENT_CONFIG);
-                        if (descriptor != null) {
-                            descriptor.setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);
-                            gatt.writeDescriptor(descriptor);
-                        }
+                        configureServices(gatt);
                     }
                 });
+            }
+        }
+    }
+
+    @android.annotation.SuppressLint("MissingPermission")
+    protected void configureServices(BluetoothGatt gatt) {
+        BluetoothGattService btGattService = gatt.getService(BluetoothConstants.getServiceUUID(getDeviceType()));
+        if (btGattService == null) {
+            Log.d(TAG, "WTF, we expected a service here!");
+            return;
+        }
+        BluetoothGattCharacteristic btGattChar = btGattService.getCharacteristic(BluetoothConstants.getCharacteristicUUID(getDeviceType()));
+        if (btGattChar == null) {
+            Log.d(TAG, "Expected characteristic not found!");
+            return;
+        }
+        try {
+            gatt.setCharacteristicNotification(btGattChar, true);
+        } catch (SecurityException e) {
+            Log.w(TAG, "Missing BLUETOOTH_CONNECT permission enabling characteristic notification", e);
+            return;
+        }
+
+        BluetoothGattDescriptor descriptor = btGattChar.getDescriptor(BluetoothConstants.UUID_CHARACTERISTIC_CLIENT_CONFIG);
+        if (descriptor != null) {
+            enqueueWriteDescriptor(descriptor, BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);
+        }
+
+        // Chained battery CCCD write (REQ-CON-007, ATT-3312) via queue
+        if (mBatteryCharacteristic != null && (mBatteryCharacteristic.getProperties() & BluetoothGattCharacteristic.PROPERTY_NOTIFY) != 0) {
+            BluetoothGattDescriptor batteryDescriptor = mBatteryCharacteristic.getDescriptor(BluetoothConstants.UUID_CHARACTERISTIC_CLIENT_CONFIG);
+            if (batteryDescriptor != null) {
+                enqueueWriteDescriptor(batteryDescriptor, BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);
             }
         }
     }

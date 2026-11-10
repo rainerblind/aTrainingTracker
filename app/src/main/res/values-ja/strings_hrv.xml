@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ~ aTrainingTracker (ANT+ BTLE)
+  ~ Copyright (c) 2011 - 2026 Rainer Blind <rainer.blind@gmail.com>
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ This program is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~ GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License
+  ~ along with this program.  If not, see https://www.gnu.org/licenses/gpl-3.0
+  -->
+
+<resources>
+    <string name="hrv_rmssd">rMSSD</string>
+    <string name="hrv_rmssd_short">rMSSD</string>
+    <string name="hrv_dfa_a1">DFA a1</string>
+    <string name="hrv_dfa_a1_short">a1</string>
+    <string name="hrv_artifact_rate">アーチファクト率</string>
+    <string name="hrv_artifact_rate_short">Art. %</string>
+
+    <string name="hrv_info_title">心拍変動（HRV）と有酸素閾値</string>
+    <string name="hrv_info_trailing_lag_title">ローリングウィンドウとペーシング遅延</string>
+    <string name="hrv_info_trailing_lag_desc">リアルタイムDFA a1は2分間のローリングウィンドウ（5秒毎更新）、rMSSDは60秒間で計算されます。ペース変化が自律神経テレメトリに反映されるまで1〜2分かかります。</string>
+    <string name="hrv_info_sensor_recommendation_title">推奨センサー</string>
+    <string name="hrv_info_sensor_recommendation_desc">正確な拍動間RR間隔の測定には、湿らせたECG心拍計チェストストラップ（Polar H10やGarmin HRM-Proなど）が必要です。光学式手首心拍計は間隔を平滑化するためDFA a1には適していません。</string>
+    <string name="hrv_info_zones_title">有酸素閾値ゾーン</string>
+    <string name="hrv_info_zones_desc">DFA a1 &gt; 0.75は有酸素持久力ペース（ゾーン2）を示します。0.75〜0.50は閾値移行期（ゾーン3）を反映します。0.50未満は高強度の無酸素運動（ゾーン4）を示します。</string>
+    <string name="hrv_info_disclaimer_title">医療上の免責事項</string>
+    <string name="hrv_info_disclaimer_desc">aTrainingTrackerにおける自律神経HRVメトリクスはアスリートのトレーニング管理を目的としており、医師の診断に代わるものではありません。不整脈や期外収縮は推定値に影響を与える場合があります。</string>
+
+    <!-- Morning Resting HRV Check (ATT-3556 / REQ-PER-032) -->
+    <string name="morning_hrv_title">朝のHRVチェック</string>
+    <string name="morning_hrv_subtitle">自律神経コンディション起床プロトコル</string>
+    <string name="morning_hrv_posture_label">姿勢</string>
+    <string name="morning_hrv_posture_supine">仰向け</string>
+    <string name="morning_hrv_posture_seated">座位</string>
+    <string name="morning_hrv_posture_standing">立位</string>
+    <string name="morning_hrv_duration_label">測定時間</string>
+    <string name="morning_hrv_duration_60s">60秒（標準）</string>
+    <string name="morning_hrv_duration_120s">120秒（延長）</string>
+    <string name="morning_hrv_state_ready">測定準備完了</string>
+    <string name="morning_hrv_state_stabilizing">安静安定化中: %1$ds</string>
+    <string name="morning_hrv_state_measuring">測定中: %1$ds / %2$ds</string>
+    <string name="morning_hrv_state_completed">測定完了</string>
+    <string name="morning_hrv_btn_start">測定を開始</string>
+    <string name="morning_hrv_btn_cancel">キャンセル</string>
+    <string name="morning_hrv_btn_save">測定値を保存</string>
+    <string name="morning_hrv_btn_discard">破棄</string>
+    <string name="morning_hrv_instructions_title">標準測定プロトコル</string>
+    <string name="morning_hrv_instructions_desc">起床後、排尿を済ませてから測定してください。会話を控え、静かに自然な呼吸を保ちます。正確なSWC比較のため常に同じ姿勢を維持してください。</string>
+    <string name="morning_hrv_artifact_warning_title">高いアーチファクト率</string>
+    <string name="morning_hrv_artifact_warning_desc">アーチファクト率が5%%を超えています（%1$.1f%%）。胸部心拍ストラップの電極を十分に湿らせ、しっかりと装着してください。</string>
+    <string name="morning_hrv_summary_rmssd">rMSSD: %1$.1f ms</string>
+    <string name="morning_hrv_summary_ln_rmssd">ln(rMSSD): %1$.2f</string>
+    <string name="morning_hrv_summary_resting_hr">安静時心拍数: %1$d bpm</string>
+    <string name="morning_hrv_saved_toast">朝のHRV測定値を保存しました</string>
+
+    <!-- Longitudinal HRV Readiness Trend in Periods Screen (ATT-3557 / REQ-PER-033) -->
+    <string name="hrv_readiness_trend_title">HRV回復トレンド</string>
+    <string name="hrv_readiness_trend_subtitle">7日間移動平均と60日間SWCコリドー</string>
+    <string name="hrv_readiness_metric_ln_rmssd">ln(rMSSD)</string>
+    <string name="hrv_readiness_metric_rmssd">rMSSD (ms)</string>
+    <string name="hrv_readiness_toggle_training_load">トレーニング負荷</string>
+    <string name="hrv_readiness_no_entries_posture">%1$sの姿勢の記録はありません</string>
+    <string name="hrv_readiness_swc_baseline_label">60日間SWCベースライン</string>
+    <string name="hrv_readiness_rolling_avg_label">7日間移動平均</string>
+
+    <!-- Interactive DFA a1 / rMSSD Charts & Scatter Plot in Workout Details (ATT-3544 / REQ-PER-035) -->
+    <string name="hrv_scatter_card_title">DFA a1 有酸素閾値ダイナミクス</string>
+    <string name="hrv_scatter_card_subtitle">a1 vs 心拍数・サイクリングパワー</string>
+    <string name="hrv_scatter_aerobic_threshold">有酸素閾値 (a1 = 0.75)</string>
+    <string name="hrv_scatter_anaerobic_threshold">無酸素閾値 (a1 = 0.50)</string>
+    <string name="hrv_scatter_toggle_hr">心拍数</string>
+    <string name="hrv_scatter_toggle_power">パワー</string>
+    <string name="hrv_scatter_artifact_suppressed">アーティファクト率5%%超の区間を除外</string>
+    <string name="hrv_scatter_no_data">このトレーニングのHRVデータはありません</string>
+    <string name="hrv_chart_artifact_gap_label">アーティファクトギャップ</string>
+</resources>

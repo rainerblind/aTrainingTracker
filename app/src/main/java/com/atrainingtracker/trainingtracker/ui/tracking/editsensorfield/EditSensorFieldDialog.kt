@@ -31,6 +31,7 @@ import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Sensors
 import androidx.compose.material.icons.filled.Tune
@@ -163,8 +164,8 @@ fun EditSensorFieldDialog(
 
             Spacer(Modifier.height(16.dp))
 
-            // --- Display Elements Selection (REQ-TRK-046, ATT-4841) ---
-            if (uiState.isBarSupported) {
+            // --- Display Elements Selection (REQ-TRK-046, ATT-4841, ATT-1294) ---
+            if (uiState.isBarSupported || uiState.isGraphSupported) {
                 Text(
                     text = stringResource(R.string.sensor_field_display_elements_title),
                     style = MaterialTheme.typography.labelLarge,
@@ -180,11 +181,54 @@ fun EditSensorFieldDialog(
                         onClick = { viewModel.onShowValueChanged(!uiState.showValue) },
                         label = { Text(stringResource(R.string.sensor_field_show_value)) }
                     )
-                    FilterChip(
-                        selected = uiState.showBar,
-                        onClick = { viewModel.onShowBarChanged(!uiState.showBar) },
-                        label = { Text(stringResource(R.string.sensor_field_show_bar)) }
-                    )
+                    if (uiState.isBarSupported) {
+                        FilterChip(
+                            selected = uiState.showBar,
+                            onClick = { viewModel.onShowBarChanged(!uiState.showBar) },
+                            label = { Text(stringResource(R.string.sensor_field_show_bar)) }
+                        )
+                    }
+                    if (uiState.isGraphSupported) {
+                        FilterChip(
+                            selected = uiState.showGraph,
+                            onClick = { viewModel.onShowGraphChanged(!uiState.showGraph) },
+                            label = { Text(stringResource(R.string.sensor_field_show_graph)) }
+                        )
+                    }
+                }
+                Spacer(Modifier.height(16.dp))
+            }
+
+            // --- Sparkline Time Horizon Selection (REQ-TRK-059, ATT-1294) ---
+            if (uiState.isGraphSupported && uiState.showGraph) {
+                Text(
+                    text = stringResource(R.string.sensor_field_graph_horizon),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(Modifier.height(4.dp))
+                val horizons = listOf(
+                    60 to R.string.graph_horizon_1m,
+                    120 to R.string.graph_horizon_2m,
+                    300 to R.string.graph_horizon_5m,
+                    600 to R.string.graph_horizon_10m,
+                    1200 to R.string.graph_horizon_20m,
+                    3600 to R.string.graph_horizon_1h,
+                    0 to R.string.graph_horizon_full
+                )
+                FlowRow(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    horizons.forEach { (durationSeconds, labelResId) ->
+                        FilterChip(
+                            selected = (uiState.graphHorizonSeconds == durationSeconds),
+                            onClick = { viewModel.onGraphHorizonChanged(durationSeconds) },
+                            label = { Text(stringResource(labelResId)) }
+                        )
+                    }
                 }
                 Spacer(Modifier.height(16.dp))
             }
@@ -317,6 +361,36 @@ fun EditSensorFieldDialog(
                     }
                 }
                 Spacer(Modifier.height(8.dp))
+            }
+
+            // HRV Guidance & Aerobic Threshold Information (ATT-3542, REQ-TRK-061.5)
+            val isHrvMetric = uiState.selectedSensorType in listOf(
+                SensorType.HRV_DFA_A1,
+                SensorType.HRV_RMSSD,
+                SensorType.RR_INTERVAL,
+                SensorType.HRV_ARTIFACT_RATE
+            )
+            if (isHrvMetric) {
+                var showHrvInfo by remember { mutableStateOf(false) }
+                OutlinedButton(
+                    onClick = { showHrvInfo = true },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Info,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text(stringResource(R.string.hrv_info_title))
+                }
+                Spacer(Modifier.height(8.dp))
+
+                if (showHrvInfo) {
+                    com.atrainingtracker.trainingtracker.ui.tracking.HrvInfoBottomSheet(
+                        onDismissRequest = { showHrvInfo = false }
+                    )
+                }
             }
         }
     }

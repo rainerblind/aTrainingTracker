@@ -305,27 +305,27 @@ object TcxTrackpointParser {
             val lines = trimmed.lines()
             if (lines.size > 1) {
                 val firstLine = lines.first().trim()
-                    if (lap != null) {
-                        if (lap.name.isNullOrBlank() && firstLine.length <= 40) {
-                            lap.name = firstLine
-                            if (lap.description.isNullOrBlank()) {
-                                val rem = lines.drop(1).joinToString("\n").trim()
-                                if (rem.isNotEmpty()) lap.description = rem
-                            }
-                        } else if (lap.description.isNullOrBlank()) {
-                            lap.description = trimmed
+                if (lap != null) {
+                    if (lap.name.isNullOrBlank() && firstLine.length <= 40) {
+                        lap.name = firstLine
+                        if (lap.description.isNullOrBlank()) {
+                            val rem = lines.drop(1).joinToString("\n").trim()
+                            if (rem.isNotEmpty()) lap.description = rem
                         }
-                    } else {
-                        if (data.name.isNullOrBlank() && firstLine.length <= 60) {
-                            data.name = firstLine
-                            if (data.notes.isNullOrBlank()) {
-                                val rem = lines.drop(1).joinToString("\n").trim()
-                                if (rem.isNotEmpty()) data.notes = rem
-                            }
-                        } else if (data.notes.isNullOrBlank()) {
-                            data.notes = trimmed
-                        }
+                    } else if (lap.description.isNullOrBlank()) {
+                        lap.description = trimmed
                     }
+                } else {
+                    if (data.name.isNullOrBlank() && firstLine.length <= 60) {
+                        data.name = firstLine
+                        if (data.notes.isNullOrBlank()) {
+                            val rem = lines.drop(1).joinToString("\n").trim()
+                            if (rem.isNotEmpty()) data.notes = rem
+                        }
+                    } else if (data.notes.isNullOrBlank()) {
+                        data.notes = trimmed
+                    }
+                }
             } else {
                 if (lap != null) {
                     if (trimmed.length <= 40 && lap.name.isNullOrBlank()) lap.name = trimmed

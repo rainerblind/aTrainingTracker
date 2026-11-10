@@ -54,7 +54,8 @@ fun shouldIncludeSensorType(
     type: SensorType,
     initialSensorType: SensorType?,
     enableCogganPowerMetrics: Boolean,
-    enableCriticalPowerModel: Boolean
+    enableCriticalPowerModel: Boolean,
+    enableCardioPowerDynamics: Boolean = false
 ): Boolean {
     if (type == initialSensorType) return true
     return when (type) {
@@ -62,6 +63,7 @@ fun shouldIncludeSensorType(
         SensorType.INTENSITY_FACTOR,
         SensorType.TSS -> enableCogganPowerMetrics
         SensorType.W_PRIME_BAL -> enableCriticalPowerModel
+        SensorType.LIVE_HR_DRIFT -> enableCardioPowerDynamics
         else -> true
     }
 }
@@ -141,11 +143,16 @@ data class EditDialogUiState(
     val isCustomFilterExpanded: Boolean = false,
     val showValue: Boolean = true,
     val showBar: Boolean = false,
+    val showGraph: Boolean = false,
+    val graphHorizonSeconds: Int = 300,
     val colWeight: Float = 1.0f,
     val isMultiFieldRow: Boolean = false
 ) {
     val isBarSupported: Boolean
         get() = TrackingViewsDatabaseManager.TrackingViewsDbHelper.isBarSupported(selectedSensorType, sportType)
+
+    val isGraphSupported: Boolean
+        get() = TrackingViewsDatabaseManager.TrackingViewsDbHelper.isGraphSupported(selectedSensorType)
 
     val activePreset: FilterPreset
         get() = if (isCustomFilterExpanded && resolveFilterPreset(selectedFilterType, filterConstant, movingAverageUnit) != FilterPreset.CUSTOM) {
@@ -203,7 +210,8 @@ class EditSensorFieldViewModel(
                 type = type,
                 initialSensorType = initialType,
                 enableCogganPowerMetrics = config.enableCogganPowerMetrics,
-                enableCriticalPowerModel = config.enableCriticalPowerModel
+                enableCriticalPowerModel = config.enableCriticalPowerModel,
+                enableCardioPowerDynamics = config.enableCardioPowerDynamics
             )
         }
     }
@@ -255,7 +263,9 @@ class EditSensorFieldViewModel(
             filterType = defaultFilterType,
             filterConstant = defaultConstant,
             showValue = true,
-            showBar = isBarSupported
+            showBar = isBarSupported,
+            showGraph = false,
+            graphHorizonSeconds = 300
         )
 
         _uiState.update {
@@ -274,6 +284,8 @@ class EditSensorFieldViewModel(
                 isCustomFilterExpanded = false,
                 showValue = true,
                 showBar = isBarSupported,
+                showGraph = false,
+                graphHorizonSeconds = 300,
                 isMultiFieldRow = false
             )
         }
@@ -314,8 +326,11 @@ class EditSensorFieldViewModel(
 
             val sportType = activityType.sportType
             val isBarSupported = TrackingViewsDatabaseManager.TrackingViewsDbHelper.isBarSupported(initialConfig.sensorType, sportType)
-            val showValue = if (isBarSupported) initialConfig.showValue else true
+            val isGraphSupported = TrackingViewsDatabaseManager.TrackingViewsDbHelper.isGraphSupported(initialConfig.sensorType)
+            val showValue = if (isBarSupported || isGraphSupported) initialConfig.showValue else true
             val showBar = if (isBarSupported) initialConfig.showBar else false
+            val showGraph = if (isGraphSupported) initialConfig.showGraph else false
+            val graphHorizonSeconds = initialConfig.graphHorizonSeconds
 
             val configs = trackingViewsRepository.getSensorFieldConfigsForView(tabViewId).firstOrNull() ?: emptyList()
             val fieldsInRow = configs.filter { it.rowNr == initialConfig.rowNr }
@@ -336,6 +351,8 @@ class EditSensorFieldViewModel(
                 isCustomFilterExpanded = (initialPreset == FilterPreset.CUSTOM),
                 showValue = showValue,
                 showBar = showBar,
+                showGraph = showGraph,
+                graphHorizonSeconds = graphHorizonSeconds,
                 colWeight = initialConfig.colWeight,
                 isMultiFieldRow = isMulti
             )
@@ -373,7 +390,9 @@ class EditSensorFieldViewModel(
                     movingAverageUnit = defaultFilterConfig.unit,
                     isCustomFilterExpanded = isCustom,
                     showValue = true,
-                    showBar = isBarSupported
+                    showBar = isBarSupported,
+                    showGraph = false,
+                    graphHorizonSeconds = 300
                 )
             }
         }
@@ -381,8 +400,9 @@ class EditSensorFieldViewModel(
 
     fun onShowValueChanged(enabled: Boolean) {
         _uiState.update { state ->
-            // Mutual exclusion invariant: athlete cannot deselect both Value and Bar simultaneously
-            if (!enabled && (!state.isBarSupported || !state.showBar)) {
+            // Mutual exclusion invariant: at least one supported & active display element must remain enabled
+            val otherActive = (state.isBarSupported && state.showBar) || (state.isGraphSupported && state.showGraph)
+            if (!enabled && !otherActive) {
                 state
             } else {
                 state.copy(showValue = enabled)
@@ -392,13 +412,28 @@ class EditSensorFieldViewModel(
 
     fun onShowBarChanged(enabled: Boolean) {
         _uiState.update { state ->
-            // Mutual exclusion invariant: athlete cannot deselect both Value and Bar simultaneously
-            if (!enabled && !state.showValue) {
+            val otherActive = state.showValue || (state.isGraphSupported && state.showGraph)
+            if (!enabled && !otherActive) {
                 state
             } else {
                 state.copy(showBar = enabled)
             }
         }
+    }
+
+    fun onShowGraphChanged(enabled: Boolean) {
+        _uiState.update { state ->
+            val otherActive = state.showValue || (state.isBarSupported && state.showBar)
+            if (!enabled && !otherActive) {
+                state
+            } else {
+                state.copy(showGraph = enabled)
+            }
+        }
+    }
+
+    fun onGraphHorizonChanged(horizonSeconds: Int) {
+        _uiState.update { it.copy(graphHorizonSeconds = horizonSeconds) }
     }
 
     fun onDeviceChanged(newDeviceId: Long, newDeviceName: String) {
@@ -653,8 +688,10 @@ class EditSensorFieldViewModel(
         val filterData = FilterData(newSourceDeviceName, newSensorType, newFilterType, newFilterConstant)
         banalServiceRepository.createFilter(filterData)
 
-        val showValue = if (currentState.isBarSupported) currentState.showValue else true
+        val showValue = if (currentState.isBarSupported || currentState.isGraphSupported) currentState.showValue else true
         val showBar = if (currentState.isBarSupported) currentState.showBar else false
+        val showGraph = if (currentState.isGraphSupported) currentState.showGraph else false
+        val graphHorizonSeconds = currentState.graphHorizonSeconds
         val colWeight = currentState.colWeight
 
         viewModelScope.launch {
@@ -671,7 +708,9 @@ class EditSensorFieldViewModel(
                     newFilterConstant = newFilterConstant,
                     showValue = showValue,
                     showBar = showBar,
-                    colWeight = colWeight
+                    colWeight = colWeight,
+                    showGraph = showGraph,
+                    graphHorizonSeconds = graphHorizonSeconds
                 )
             } else {
                 trackingViewsRepository.updateSensorFieldConfig(
@@ -684,7 +723,9 @@ class EditSensorFieldViewModel(
                     newFilterConstant = newFilterConstant,
                     showValue = showValue,
                     showBar = showBar,
-                    colWeight = colWeight
+                    colWeight = colWeight,
+                    showGraph = showGraph,
+                    graphHorizonSeconds = graphHorizonSeconds
                 )
             }
         }

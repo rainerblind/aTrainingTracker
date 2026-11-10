@@ -29,6 +29,8 @@ import com.atrainingtracker.trainingtracker.migration.ParsedLap
 import com.garmin.fit.Decode
 import com.garmin.fit.FileIdMesg
 import com.garmin.fit.FileIdMesgListener
+import com.garmin.fit.HrvMesg
+import com.garmin.fit.HrvMesgListener
 import com.garmin.fit.LapMesg
 import com.garmin.fit.LapMesgListener
 import com.garmin.fit.MesgBroadcaster
@@ -100,12 +102,14 @@ object FitWorkoutParser {
             val rawSessions = mutableListOf<SessionMesg>()
             val rawLaps = mutableListOf<LapMesg>()
             val rawRecords = mutableListOf<RecordMesg>()
+            val rawHrvs = mutableListOf<HrvMesg>()
 
             val broadcaster = MesgBroadcaster(decode)
             broadcaster.addListener(FileIdMesgListener { rawFileIds.add(it) })
             broadcaster.addListener(SessionMesgListener { rawSessions.add(it) })
             broadcaster.addListener(LapMesgListener { rawLaps.add(it) })
             broadcaster.addListener(RecordMesgListener { rawRecords.add(it) })
+            broadcaster.addListener(HrvMesgListener { rawHrvs.add(it) })
 
             val readSuccess = try {
                 java.io.ByteArrayInputStream(bytes).use { bais ->
@@ -301,6 +305,17 @@ object FitWorkoutParser {
                 }
             }
 
+            val extractedRrIntervals = mutableListOf<Double>()
+            for (hrvMesg in rawHrvs) {
+                val numTime = hrvMesg.numTime
+                for (i in 0 until numTime) {
+                    val tSec = hrvMesg.getTime(i)
+                    if (tSec != null && tSec > 0f && tSec < 10f) {
+                        extractedRrIntervals.add(tSec.toDouble() * 1000.0)
+                    }
+                }
+            }
+
             Result.success(
                 ParsedWorkoutData(
                     workoutName = null,
@@ -323,7 +338,8 @@ object FitWorkoutParser {
                     sessionNormalizedPowerWatts = sessionNp,
                     sessionIntensityFactor = sessionIf,
                     sessionTss = sessionTss,
-                    sessionWorkKj = sessionWorkKj
+                    sessionWorkKj = sessionWorkKj,
+                    rawRrIntervals = extractedRrIntervals
                 )
             )
         } catch (e: Exception) {

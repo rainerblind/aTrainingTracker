@@ -23,6 +23,7 @@ import android.content.Intent
 import android.util.Log
 import com.atrainingtracker.banalservice.ActivityType
 import com.atrainingtracker.banalservice.database.DevicesDatabaseManager
+import com.atrainingtracker.banalservice.filters.FilterData
 import com.atrainingtracker.banalservice.filters.FilterType
 import com.atrainingtracker.banalservice.sensor.SensorType
 import com.atrainingtracker.trainingtracker.TrainingApplication
@@ -88,6 +89,8 @@ data class SensorFieldConfig(
     val sourceDeviceName: String? = null,
     val showValue: Boolean = true,
     val showBar: Boolean = false,
+    val showGraph: Boolean = false,
+    val graphHorizonSeconds: Int = 300,
     val colWeight: Float = 1.0f
 )
 
@@ -297,6 +300,8 @@ class TrackingViewsRepository private constructor(private val context: Context) 
                 val showValueIndex = c.getColumnIndex(TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_VALUE)
                 val showBarIndex = c.getColumnIndex(TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_BAR)
                 val colWeightIndex = c.getColumnIndex(TrackingViewsDatabaseManager.TrackingViewsDbHelper.COL_WEIGHT)
+                val showGraphIndex = c.getColumnIndex(TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_GRAPH)
+                val graphHorizonIndex = c.getColumnIndex(TrackingViewsDatabaseManager.TrackingViewsDbHelper.GRAPH_HORIZON_S)
 
                 do {
                     val viewSize = safeEnumValueOf(c.getString(viewSizeIndex), ViewSize.NORMAL)
@@ -323,6 +328,8 @@ class TrackingViewsRepository private constructor(private val context: Context) 
                     } else {
                         1.0f
                     }
+                    val showGraph = if (showGraphIndex != -1 && !c.isNull(showGraphIndex)) c.getInt(showGraphIndex) == 1 else false
+                    val graphHorizonSeconds = if (graphHorizonIndex != -1 && !c.isNull(graphHorizonIndex)) c.getInt(graphHorizonIndex) else 300
 
                     fieldList.add(
                         SensorFieldConfig(
@@ -337,6 +344,8 @@ class TrackingViewsRepository private constructor(private val context: Context) 
                             sourceDeviceName = deviceName,
                             showValue = showValue,
                             showBar = showBar,
+                            showGraph = showGraph,
+                            graphHorizonSeconds = graphHorizonSeconds,
                             colWeight = colWeight
                         )
                     )
@@ -376,6 +385,8 @@ class TrackingViewsRepository private constructor(private val context: Context) 
                     val showValueIndex = c.getColumnIndex(TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_VALUE)
                     val showBarIndex = c.getColumnIndex(TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_BAR)
                     val colWeightIndex = c.getColumnIndex(TrackingViewsDatabaseManager.TrackingViewsDbHelper.COL_WEIGHT)
+                    val showGraphIndex = c.getColumnIndex(TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_GRAPH)
+                    val graphHorizonIndex = c.getColumnIndex(TrackingViewsDatabaseManager.TrackingViewsDbHelper.GRAPH_HORIZON_S)
                     val showValue = if (showValueIndex != -1 && !c.isNull(showValueIndex)) c.getInt(showValueIndex) == 1 else true
                     val showBar = if (showBarIndex != -1 && !c.isNull(showBarIndex)) {
                         c.getInt(showBarIndex) == 1
@@ -388,6 +399,8 @@ class TrackingViewsRepository private constructor(private val context: Context) 
                     } else {
                         1.0f
                     }
+                    val showGraph = if (showGraphIndex != -1 && !c.isNull(showGraphIndex)) c.getInt(showGraphIndex) == 1 else false
+                    val graphHorizonSeconds = if (graphHorizonIndex != -1 && !c.isNull(graphHorizonIndex)) c.getInt(graphHorizonIndex) else 300
 
                     return@withContext SensorFieldConfig(
                         sensorFieldId = sensorFieldId,
@@ -401,6 +414,8 @@ class TrackingViewsRepository private constructor(private val context: Context) 
                         sourceDeviceName = deviceName,
                         showValue = showValue,
                         showBar = showBar,
+                        showGraph = showGraph,
+                        graphHorizonSeconds = graphHorizonSeconds,
                         colWeight = colWeight
                     )
                 } else {
@@ -437,7 +452,9 @@ class TrackingViewsRepository private constructor(private val context: Context) 
         newFilterConstant: Double,
         showValue: Boolean = true,
         showBar: Boolean = false,
-        colWeight: Float = 1.0f
+        colWeight: Float = 1.0f,
+        showGraph: Boolean = false,
+        graphHorizonSeconds: Int = 300
     ) {
         withContext(Dispatchers.IO) {
 
@@ -451,7 +468,9 @@ class TrackingViewsRepository private constructor(private val context: Context) 
                 newFilterConstant,
                 showValue,
                 showBar,
-                colWeight
+                colWeight,
+                showGraph,
+                graphHorizonSeconds
             )
         }
 
@@ -473,7 +492,9 @@ class TrackingViewsRepository private constructor(private val context: Context) 
         newFilterConstant: Double,
         showValue: Boolean = true,
         showBar: Boolean = false,
-        colWeight: Float = 1.0f
+        colWeight: Float = 1.0f,
+        showGraph: Boolean = false,
+        graphHorizonSeconds: Int = 300
     ) {
         Log.i("TrackingRepository", "insertSensorFieldConfig: $tabViewId, $rowNr, $colNr")
 
@@ -489,7 +510,9 @@ class TrackingViewsRepository private constructor(private val context: Context) 
                 newFilterConstant,
                 showValue,
                 showBar,
-                colWeight
+                colWeight,
+                showGraph,
+                graphHorizonSeconds
             )
         }
 
@@ -752,6 +775,13 @@ class TrackingViewsRepository private constructor(private val context: Context) 
         }
     }
 
+    /**
+     * Retrieves all filter configurations for views (REQ-UI-507.5).
+     */
+    fun getAllFilterData(devicesDbManager: DevicesDatabaseManager = this.devicesDbManager): List<FilterData> {
+        return viewsDbManager.getAllFilterData(devicesDbManager)
+    }
+
 
 
 
@@ -759,12 +789,19 @@ class TrackingViewsRepository private constructor(private val context: Context) 
         @Volatile
         private var INSTANCE: TrackingViewsRepository? = null
 
+        @JvmStatic
         fun getInstance(context: Context): TrackingViewsRepository {
             return INSTANCE ?: synchronized(this) {
                 val instance = TrackingViewsRepository(context)
                 INSTANCE = instance
                 instance
             }
+        }
+
+        @JvmStatic
+        @androidx.annotation.VisibleForTesting
+        fun resetForTesting(newInstance: TrackingViewsRepository? = null) {
+            INSTANCE = newInstance
         }
     }
 }

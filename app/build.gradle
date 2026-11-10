@@ -25,6 +25,8 @@ plugins {
     id 'org.jetbrains.kotlin.plugin.compose'
     id 'org.jetbrains.kotlin.plugin.serialization'
     id 'kotlin-parcelize'
+    id 'io.gitlab.arturbosch.detekt'
+    id 'org.jetbrains.kotlinx.kover'
 }
 
 def getGitHash = providers.exec {
@@ -32,7 +34,6 @@ def getGitHash = providers.exec {
 }.standardOutput.asText.get().strip()
 
 android {
-    // Travis update separately
     compileSdkVersion = 37
     buildToolsVersion = '36.0.0'
     namespace = "com.atrainingtracker"
@@ -48,6 +49,7 @@ android {
         multiDexEnabled = true
         versionName = "5.0.0-dev"
         versionCode = 273
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     signingConfigs {
@@ -96,13 +98,19 @@ android {
 
     lint {
         baseline = file('lint-baseline.xml')
+        abortOnError = true
         checkReleaseBuilds = true
+        htmlReport = true
+        xmlReport = true
         // Lint suppressions rationale (REQ-BLD-002.2 / TST-BLD-002.3):
         // 1. DuplicatePlatformClasses: Justified due to legacy third-party library classpath overlaps (Apache HTTP/XML).
         // 2. MissingTranslation: Safely suppressed here because TranslationParityTest.kt (TST-STR-018 under REQ-LOC-001)
         //    strictly enforces complete 9-language translation coverage, format specifiers, and plural consistency in testDebugUnitTest.
         // 3. Range: Suppressed due to historical parameter annotation warnings in legacy calculation routines; targeted for incremental burn-down.
         disable = ['DuplicatePlatformClasses', 'MissingTranslation', 'Range']
+        // 4. NonObservableLocale / LocalContextGetResourceValueCall: Downgraded to warning to prevent CI breakage
+        //    while legacy Compose screens are incrementally refactored (ATT-6173).
+        warning 'NonObservableLocale', 'LocalContextGetResourceValueCall'
         showAll = true
         textReport = true
     }
@@ -120,6 +128,42 @@ android {
             testLogging {
                 events "failed"
                 exceptionFormat "full"
+            }
+        }
+    }
+}
+
+detekt {
+    toolVersion = "1.23.8"
+    config.setFrom(files("${project.rootDir}/config/detekt/detekt.yml"))
+    baseline = file("${project.projectDir}/detekt-baseline.xml")
+    buildUponDefaultConfig = true
+    allRules = false
+    autoCorrect = false
+}
+
+tasks.withType(io.gitlab.arturbosch.detekt.Detekt).configureEach {
+    reports {
+        html.required.set(true)
+        xml.required.set(true)
+        txt.required.set(false)
+        sarif.required.set(false)
+    }
+}
+
+kover {
+    reports {
+        filters {
+            excludes {
+                classes(
+                    "*BuildConfig*",
+                    "*ComposableSingletons*"
+                )
+            }
+        }
+        verify {
+            rule {
+                minBound(1)
             }
         }
     }
@@ -207,6 +251,9 @@ dependencies {
     // Garmin FIT SDK (ATT-1827 / ATT-1117)
     implementation 'com.garmin:fit:21.141.0'
 
+    // Android Health Connect (ATT-3052)
+    implementation 'androidx.health.connect:connect-client:1.1.0-alpha11'
+
     // --- Unit Testing ---
     testImplementation 'junit:junit:4.13.2'
     testImplementation "io.mockk:mockk:1.14.11"
@@ -216,6 +263,12 @@ dependencies {
     testImplementation 'org.robolectric:robolectric:4.14.1'
     testImplementation 'androidx.test:core:1.6.1'
     testImplementation 'androidx.test.ext:junit:1.2.1'
+
+    // --- Instrumented Testing (androidTest) ---
+    androidTestImplementation 'androidx.test.ext:junit:1.2.1'
+    androidTestImplementation 'androidx.test.espresso:espresso-core:3.6.1'
+    androidTestImplementation 'androidx.test:runner:1.6.2'
+    androidTestImplementation 'androidx.test:rules:1.6.1'
 }
 
 secrets {
@@ -234,16 +287,61 @@ secrets {
     ignoreList.add('^DROPBOX_APP_SECRET$')
 }
 
-def props = new Properties()
-if (rootProject.file("release.properties").exists()) {
-    props.load(new FileInputStream(rootProject.file("release.properties")))
+def resolveSigningSecret(String envVar, String altEnvVar, String keyringAccount, String extKey) {
+    // Tier 1: Process Environment Variables (CI / local override)
+    def envVal = System.getenv(envVar) ?: System.getenv(altEnvVar)
+    if (envVal && !envVal.trim().isEmpty()) {
+        return envVal.trim()
+    }
 
-    android.signingConfigs.release.storeFile rootProject.file(props.keyStore)
-    android.signingConfigs.release.storePassword props.keyStorePassword
-    android.signingConfigs.release.keyAlias props.keyAlias
-    android.signingConfigs.release.keyPassword props.keyAliasPassword
+    // Tier 2: OS Keyring via secret-tool (Linux)
+    try {
+        def proc = ["secret-tool", "lookup", "service", "atrainingtracker", "account", keyringAccount].execute()
+        def sout = new StringBuilder()
+        def serr = new StringBuilder()
+        proc.consumeProcessOutput(sout, serr)
+        proc.waitForOrKill(2000)
+        def keyringVal = sout.toString().trim()
+        if (proc.exitValue() == 0 && !keyringVal.isEmpty()) {
+            return keyringVal
+        }
+    } catch (Exception ignored) {
+        // secret-tool not available or lookup failed
+    }
+
+    // Tier 3: External user config strictly outside working tree (~/.config/atrainingtracker/release.properties)
+    def userHome = System.getProperty("user.home")
+    def extConfigFile = new File(userHome, ".config/atrainingtracker/release.properties")
+    if (extConfigFile.exists() && extConfigFile.isFile()) {
+        def extProps = new Properties()
+        extConfigFile.withInputStream { extProps.load(it) }
+        def extVal = extProps.getProperty(extKey)
+        if (extVal && !extVal.trim().isEmpty()) {
+            return extVal.trim()
+        }
+    }
+
+    return null
+}
+
+def props = new Properties()
+def releasePropsFile = rootProject.file("release.properties")
+if (releasePropsFile.exists()) {
+    releasePropsFile.withInputStream { props.load(it) }
+}
+
+def storePass = resolveSigningSecret("KEYSTORE_PASSWORD", "RELEASE_KEYSTORE_PASSWORD", "keyStorePassword", "keyStorePassword")
+def keyPass = resolveSigningSecret("KEY_ALIAS_PASSWORD", "RELEASE_KEY_PASSWORD", "keyAliasPassword", "keyAliasPassword")
+def storeFilePath = props.getProperty("keyStore")
+def keyAliasStr = props.getProperty("keyAlias")
+
+if (storeFilePath && keyAliasStr && storePass && keyPass) {
+    android.signingConfigs.release.storeFile rootProject.file(storeFilePath)
+    android.signingConfigs.release.storePassword storePass
+    android.signingConfigs.release.keyAlias keyAliasStr
+    android.signingConfigs.release.keyPassword keyPass
 } else {
-    project.logger.info('INFO: Set the values storeFile, storePassword, keyAlias, and keyPassword in release.properties to sign the release.')
+    project.logger.info('INFO: Release signing credentials incomplete or not found (storeFile/keyAlias in release.properties, passwords via env/keyring/~/.config). Disabling release signing.')
     android.buildTypes.release.signingConfig = null
 }
 

@@ -18,6 +18,10 @@ import android.util.Log
 import androidx.preference.PreferenceManager
 import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.TrainingApplication
+import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
+import com.atrainingtracker.trainingtracker.exporter.db.StravaUploadDbHelper
+import com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodSummariesDatabaseManager
+import com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodsRepository
 import com.dropbox.core.oauth.DbxCredential
 import io.mockk.*
 import kotlinx.coroutines.Dispatchers
@@ -53,6 +57,7 @@ class BackupRestoreViewModelFormatScopingTest {
 
         mockkStatic(Log::class)
         every { Log.w(any<String>(), any<String>()) } returns 0
+        every { Log.w(any<String>(), any<String>(), any()) } returns 0
         every { Log.e(any<String>(), any<String>()) } returns 0
         every { Log.e(any<String>(), any<String>(), any()) } returns 0
         every { Log.d(any<String>(), any<String>()) } returns 0
@@ -61,6 +66,17 @@ class BackupRestoreViewModelFormatScopingTest {
         mockApp = mockk(relaxed = true)
         mockContext = mockk(relaxed = true)
         mockPrefs = mockk(relaxed = true)
+
+        val mockSummaryDb = mockk<WorkoutSummariesDatabaseManager>(relaxed = true)
+        val mockStravaDb = mockk<StravaUploadDbHelper>(relaxed = true)
+        every { mockSummaryDb.allFileBaseNames } returns emptySet()
+        every { mockStravaDb.allActivityIds } returns emptySet()
+        WorkoutSummariesDatabaseManager.setInstanceForTesting(mockSummaryDb)
+        StravaUploadDbHelper.resetForTesting(mockStravaDb)
+        val mockPeriodDb = mockk<PeriodSummariesDatabaseManager>(relaxed = true)
+        PeriodSummariesDatabaseManager.setInstanceForTesting(mockPeriodDb)
+        val mockPeriodsRepo = mockk<PeriodsRepository>(relaxed = true)
+        PeriodsRepository.setInstanceForTesting(mockPeriodsRepo)
 
         mockkStatic(PreferenceManager::class)
         every { PreferenceManager.getDefaultSharedPreferences(any()) } returns mockPrefs
@@ -91,6 +107,11 @@ class BackupRestoreViewModelFormatScopingTest {
     @After
     fun tearDown() {
         Dispatchers.resetMain()
+        runCatching { WorkoutSummariesDatabaseManager.setInstanceForTesting(null) }
+        runCatching { StravaUploadDbHelper.resetForTesting(null) }
+        runCatching { PeriodSummariesDatabaseManager.setInstanceForTesting(null) }
+        runCatching { PeriodsRepository.setInstanceForTesting(null) }
+        runCatching { PeriodsRepository.resetInstanceForTesting() }
         unmockkAll()
     }
 
@@ -175,13 +196,13 @@ class BackupRestoreViewModelFormatScopingTest {
 
         val viewModel = BackupRestoreViewModel(mockApp)
 
-        viewModel.importLegacyFile(mockContext, mockUri, "tcx")
-        advanceUntilIdle()
+        val jobTcx = viewModel.importLegacyFile(mockContext, mockUri, "tcx", testDispatcher)
+        jobTcx.join()
 
         coVerify(exactly = 1) { LegacyImportEngine.importFromTcxResult(any(), any(), any(), any()) }
 
-        viewModel.importLegacyFile(mockContext, mockUri, "gpx")
-        advanceUntilIdle()
+        val jobGpx = viewModel.importLegacyFile(mockContext, mockUri, "gpx", testDispatcher)
+        jobGpx.join()
 
         coVerify(exactly = 1) { LegacyImportEngine.importFromGpxResult(any(), any(), any(), any()) }
     }

@@ -141,6 +141,9 @@ public class TrainingApplication extends Application {
     public static final String SP_GOOGLE_DRIVE_AUTH_TOKEN = "googleDriveAuthToken";
     public static final String SP_GOOGLE_DRIVE_LAST_SYNC = "googleDriveLastSync";
     public static final String SP_GOOGLE_DRIVE_LAST_SYNC_STATUS = "googleDriveLastSyncStatus";
+    public static final String SP_SYNC_TO_HEALTH_CONNECT = "syncToHealthConnect";
+    public static final String SP_HEALTH_CONNECT_LAST_SYNC = "healthConnectLastSync";
+    public static final String SP_IMPORT_HRV_FROM_HEALTH_CONNECT = "importHrvFromHealthConnect";
     public static final String PREFERENCE_SCREEN_STRAVA = "psUploadToStrava";
     public static final String SP_UPLOAD_TO_STRAVA = "uploadToStrava";
     public static final String SP_IMPORT_TCX_UPLOAD_TO_STRAVA = "import_tcx_upload_to_strava";
@@ -564,6 +567,23 @@ public class TrainingApplication extends Application {
         notifyDisplaySettingsChanged();
     }
 
+    public static final String SP_HRV_LAST_POSTURE = "hrvLastPosture";
+    public static final String DEFAULT_HRV_LAST_POSTURE = "SUPINE";
+
+    @NonNull
+    public static String getLastHrvPosture() {
+        if (cSharedPreferences == null) {
+            return DEFAULT_HRV_LAST_POSTURE;
+        }
+        return cSharedPreferences.getString(SP_HRV_LAST_POSTURE, DEFAULT_HRV_LAST_POSTURE);
+    }
+
+    public static void setLastHrvPosture(@NonNull String posture) {
+        if (cSharedPreferences != null) {
+            cSharedPreferences.edit().putString(SP_HRV_LAST_POSTURE, posture).apply();
+        }
+    }
+
     public interface OnDisplaySettingsChangeListener {
         void onDisplaySettingsChanged();
     }
@@ -899,6 +919,42 @@ public class TrainingApplication extends Application {
     public static void setGoogleDriveLastSyncStatus(String status) {
         if (cSharedPreferences == null) return;
         cSharedPreferences.edit().putString(SP_GOOGLE_DRIVE_LAST_SYNC_STATUS, status).apply();
+    }
+
+    /*
+     * Health Connect helpers (ATT-3052 / REQ-SET-100..103)
+     */
+    public static boolean syncToHealthConnect() {
+        if (cSharedPreferences == null) return false;
+        return cSharedPreferences.getBoolean(SP_SYNC_TO_HEALTH_CONNECT, false);
+    }
+
+    public static void setSyncToHealthConnect(boolean value) {
+        if (cSharedPreferences == null) return;
+        cSharedPreferences.edit().putBoolean(SP_SYNC_TO_HEALTH_CONNECT, value).apply();
+    }
+
+    public static long getHealthConnectLastSyncTimestamp() {
+        if (cSharedPreferences == null) return 0L;
+        return cSharedPreferences.getLong(SP_HEALTH_CONNECT_LAST_SYNC, 0L);
+    }
+
+    public static void setHealthConnectLastSyncTimestamp(long timestamp) {
+        if (cSharedPreferences == null) return;
+        cSharedPreferences.edit().putLong(SP_HEALTH_CONNECT_LAST_SYNC, timestamp).apply();
+    }
+
+    /*
+     * Health Connect Resting HRV Import helpers (ATT-4981 / REQ-PER-031)
+     */
+    public static boolean isHealthConnectHrvImportEnabled() {
+        if (cSharedPreferences == null) return false;
+        return cSharedPreferences.getBoolean(SP_IMPORT_HRV_FROM_HEALTH_CONNECT, false);
+    }
+
+    public static void setHealthConnectHrvImportEnabled(boolean value) {
+        if (cSharedPreferences == null) return;
+        cSharedPreferences.edit().putBoolean(SP_IMPORT_HRV_FROM_HEALTH_CONNECT, value).apply();
     }
 
     /*

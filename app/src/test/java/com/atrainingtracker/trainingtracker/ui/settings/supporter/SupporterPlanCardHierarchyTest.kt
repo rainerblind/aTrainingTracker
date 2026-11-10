@@ -181,4 +181,37 @@ class SupporterPlanCardHierarchyTest {
             content.contains("effectiveTier = effectiveTier")
         )
     }
+
+    @Test
+    fun testSupporterPlanCardButtonPaddingAndTitleOverflowContracts() {
+        val candidates = listOf(
+            File("src/main/java/com/atrainingtracker/trainingtracker/ui/settings/supporter/SupporterComponents.kt"),
+            File("app/src/main/java/com/atrainingtracker/trainingtracker/ui/settings/supporter/SupporterComponents.kt"),
+            File("../app/src/main/java/com/atrainingtracker/trainingtracker/ui/settings/supporter/SupporterComponents.kt")
+        )
+        val file = candidates.firstOrNull { it.exists() }
+            ?: error("SupporterComponents.kt not found in candidate paths: $candidates")
+
+        val content = file.readText()
+
+        // Contract 1: Button content padding tuned to 16.dp horizontal (REQ-UI-504.1)
+        assertTrue(
+            "SupporterComponents.kt must define compact button padding with 16.dp horizontal",
+            content.contains("PaddingValues(horizontal = 16.dp, vertical = 8.dp)")
+        )
+        assertTrue(
+            "SupporterPlanCard buttons must declare contentPadding parameter",
+            content.contains("contentPadding = buttonContentPadding")
+        )
+
+        // Contract 2: Title composable safeguards against single-letter line wrap (REQ-UI-504.2)
+        assertTrue(
+            "SupporterPlanCard title composable must enforce maxLines = 1",
+            content.contains("maxLines = 1")
+        )
+        assertTrue(
+            "SupporterPlanCard title composable must enforce TextOverflow.Ellipsis",
+            content.contains("overflow = TextOverflow.Ellipsis")
+        )
+    }
 }

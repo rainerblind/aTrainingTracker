@@ -31,6 +31,8 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.*
+import com.atrainingtracker.trainingtracker.database.hrv.HrvPosture
+import com.atrainingtracker.trainingtracker.database.hrv.HrvReadinessRepository
 import com.atrainingtracker.util.safeEnumValueOfOrNull
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -62,7 +64,8 @@ data class PeriodMapState(
 class PeriodsViewModel @JvmOverloads constructor(
     application: Application,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
-    private val defaultDispatcher: CoroutineDispatcher = Dispatchers.Default
+    private val defaultDispatcher: CoroutineDispatcher = Dispatchers.Default,
+    private val hrvReadinessRepo: HrvReadinessRepository = HrvReadinessRepository.getInstance(application)
 ) : AndroidViewModel(application) {
 
     private val workoutRepo = WorkoutRepository.getInstance(application)
@@ -74,6 +77,32 @@ class PeriodsViewModel @JvmOverloads constructor(
 
     fun selectMetric(metric: PeriodBarMetric) {
         _selectedMetric.value = metric
+    }
+
+    private val _selectedHrvPosture = MutableStateFlow(HrvPosture.SUPINE)
+    val selectedHrvPosture: StateFlow<HrvPosture> = _selectedHrvPosture.asStateFlow()
+
+    private val _selectedHrvMetricMode = MutableStateFlow(HrvTrendMetricMode.LN_RMSSD)
+    val selectedHrvMetricMode: StateFlow<HrvTrendMetricMode> = _selectedHrvMetricMode.asStateFlow()
+
+    private val _showTrainingLoad = MutableStateFlow(false)
+    val showTrainingLoad: StateFlow<Boolean> = _showTrainingLoad.asStateFlow()
+
+    private val _hrvReadinessTrendState = MutableStateFlow<HrvTrendSeries?>(null)
+    val hrvReadinessTrendState: StateFlow<HrvTrendSeries?> = _hrvReadinessTrendState.asStateFlow()
+
+    fun selectHrvPosture(posture: HrvPosture) {
+        _selectedHrvPosture.value = posture
+        refreshHrvTrend()
+    }
+
+    fun selectHrvMetricMode(mode: HrvTrendMetricMode) {
+        _selectedHrvMetricMode.value = mode
+        refreshHrvTrend()
+    }
+
+    fun toggleShowTrainingLoad(show: Boolean) {
+        _showTrainingLoad.value = show
     }
 
     val groups = listOf(
@@ -378,6 +407,52 @@ class PeriodsViewModel @JvmOverloads constructor(
         viewModelScope.launch {
             workoutRepo.loadAllWorkouts()
             periodsRepo.checkIntegrityAndSync()
+            refreshHrvTrend()
+        }
+    }
+
+    fun refreshHrvTrend() {
+        viewModelScope.launch(ioDispatcher) {
+            val entries = hrvReadinessRepo.getAllEntries()
+            if (entries.isEmpty()) {
+                _hrvReadinessTrendState.value = null
+                return@launch
+            }
+
+            val workouts = workoutRepo.allWorkouts.value
+            val dailyLoads = mutableMapOf<String, Double>()
+            for (w in workouts) {
+                if (w.startTimeS <= 0L) continue
+                try {
+                    val dateIso = java.time.Instant.ofEpochSecond(w.startTimeS)
+                        .atZone(java.time.ZoneId.systemDefault())
+                        .toLocalDate()
+                        .toString()
+                    val load = w.tss ?: if (w.activeTimeSec > 0L) (w.activeTimeSec / 3600.0 * 50.0) else 0.0
+                    if (load > 0.0) {
+                        dailyLoads[dateIso] = (dailyLoads[dateIso] ?: 0.0) + load
+                    }
+                } catch (_: Exception) {}
+            }
+
+            val (defaultPosture, availablePostures) = HrvReadinessTrendMath.resolveAvailablePostures(entries)
+            val currentSelected = _selectedHrvPosture.value
+            val postureToUse = if (availablePostures.contains(currentSelected)) {
+                currentSelected
+            } else {
+                defaultPosture
+            }
+            if (_selectedHrvPosture.value != postureToUse) {
+                _selectedHrvPosture.value = postureToUse
+            }
+
+            val series = HrvReadinessTrendMath.calculateTrendSeries(
+                entries = entries,
+                selectedPosture = postureToUse,
+                metricMode = _selectedHrvMetricMode.value,
+                dailyTrainingLoads = dailyLoads
+            )
+            _hrvReadinessTrendState.value = series
         }
     }
 

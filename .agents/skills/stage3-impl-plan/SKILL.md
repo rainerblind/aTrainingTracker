@@ -18,9 +18,9 @@ Reuse the ticket's two persistent `TypeName: "self"` subagents via `send_message
    - Identify clean architecture boundaries: UI (Jetpack Compose), ViewModel (`StateFlow`), Repository, Database (SQLite / Room / ContentProvider), Service (`TrackerService`).
    - Define thread dispatchers (`dbDispatcher`, `Dispatchers.Main`, `Dispatchers.IO`).
    - **Continuous SWE.2 Maintenance**: If the ticket introduces a new subsystem, foreground service, database manager, repository, or requirement prefix family, explicitly schedule an atomic step to update [`docs/architecture.md`](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/docs/architecture.md) (component models, requirement allocations, Mermaid dynamic flows, and threading/DB invariants).
-2. **Atomic Step Sequencing**:
-   - Break down construction into bite-sized, order-dependent steps.
-   - Map each step to specific target files and targeted unit test commands.
+2. **Atomic Step Sequencing & Production Reachability Wiring (`Rule 81` — `ATT-6289`)**:
+   - Break down construction into bite-sized, order-dependent steps, mapping each step to specific target files and targeted unit test commands.
+   - **Mandatory Reachability Step (`Rule 81`)**: Whenever introducing a new `@Composable` screen/section/dialog, `SensorType` enum, or background importer/backfill engine, explicitly schedule an atomic step to mount it in its live host (`MainActivityWithNavigation` / `AppNavigationDrawer` / `AdvancedTuningScreen` / `SensorGridScreen` / `WorkoutDetailTabbedContent`, `ActivityType.getSensorTypeArray()`, or startup/`WorkManager` hook). Never plan an isolated component without its host wiring, and never plan public `*DatabaseManager`/`Cursor` getters on Repositories (`docs/coding_standards.md` §1.12, §2.5).
 3. **Invariant Protection & Rollback Safety**:
    - Explicitly list non-negotiable invariants (backward compatibility, null safety, human decision gate).
    - **UI Consistency**: If the ticket adds or changes UI, read `docs/design_guidelines.md` (Section 5) and fill the plan's `UI Consistency` section: closest existing reference screen, reused components (`ui/components/`), theme tokens (shapes, spacing, `MaterialTheme.colorScheme`, `TTColor`), and a justification for any new one-off style.

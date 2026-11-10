@@ -43,6 +43,7 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -129,6 +130,7 @@ fun MapDetailLayout(
     modifier: Modifier = Modifier,
     useStatusBarsPadding: Boolean = true,
     isBottomSheet: Boolean = !useStatusBarsPadding,
+    showHeader: Boolean = true,
     showMap: Boolean = true,
     showElevationProfile: Boolean = true,
     showZoomControls: Boolean = true,
@@ -583,6 +585,8 @@ fun MapDetailLayout(
                                             hrZoneThresholds = hrThresholds,
                                             zoneDistribution = hrZoneDistribution,
                                             zoneDisplayMode = hrZoneDisplayMode,
+                                            cardioPowerDynamics = workoutData?.cardioPowerDynamics,
+                                            enableCardioPowerDynamics = tuningConfig.enableCardioPowerDynamics,
                                             modifier = Modifier
                                                 .fillMaxWidth()
                                                 .chartInteractiveTouchDetector(
@@ -696,6 +700,113 @@ fun MapDetailLayout(
                                                 )
                                         )
                                     }
+
+                                    // DFA a1 Graph (REQ-PER-035.1)
+                                    if (TelemetryMetricUtils.hasHrvDfaA1Data(path)) {
+                                        Spacer(modifier = Modifier.height(8.dp))
+                                        val activePoint = if (selectedDistance != null) {
+                                            TelemetryMetricUtils.findNearestPoint(
+                                                points = path,
+                                                targetValue = selectedDistance!!,
+                                                isTimeDomain = isTrackless
+                                            )
+                                        } else null
+                                        val activeA1 = activePoint?.hrvDfaA1
+                                        val a1HeaderText = if (activeA1 != null) {
+                                            "${stringResource(R.string.hrv_dfa_a1)}: ${String.format(java.util.Locale.US, "%.2f", activeA1)}"
+                                        } else {
+                                            stringResource(R.string.hrv_dfa_a1)
+                                        }
+                                        Text(
+                                            text = a1HeaderText,
+                                            style = MaterialTheme.typography.titleSmall,
+                                            fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
+                                            color = MaterialTheme.colorScheme.onSurface,
+                                            modifier = Modifier.padding(start = 16.dp, top = 4.dp, bottom = 4.dp)
+                                        )
+                                        TelemetryMetricGraph(
+                                            pathPoints = path,
+                                            metricType = TelemetryMetricType.HRV_DFA_A1,
+                                            currentDistance = selectedDistance,
+                                            onDistanceSelected = { selectedDistance = it },
+                                            xAxisDomain = activeTelemetryDomain,
+                                            bSportType = bSportType,
+                                            zoomScale = profileZoomScale,
+                                            startDist = MapDetailViewportMath.fractionToDomain(viewportStartFraction, telemetryTotalSpan, profileZoomScale),
+                                            isPanMode = isPanMode,
+                                            onZoomChanged = { z, s ->
+                                                profileZoomScale = z
+                                                viewportStartFraction = MapDetailViewportMath.domainToFraction(s, telemetryTotalSpan, z)
+                                            },
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .chartInteractiveTouchDetector(
+                                                    density = density,
+                                                    isLandscape = isLandscape,
+                                                    alignWithHistogram = true,
+                                                    onInteractiveCanvasTouch = onInteractiveCanvasTouch
+                                                )
+                                        )
+                                    }
+
+                                    // rMSSD Graph (REQ-PER-035.1)
+                                    if (TelemetryMetricUtils.hasHrvRmssdData(path)) {
+                                        Spacer(modifier = Modifier.height(8.dp))
+                                        val activePoint = if (selectedDistance != null) {
+                                            TelemetryMetricUtils.findNearestPoint(
+                                                points = path,
+                                                targetValue = selectedDistance!!,
+                                                isTimeDomain = isTrackless
+                                            )
+                                        } else null
+                                        val activeRmssd = activePoint?.hrvRmssd
+                                        val rmssdHeaderText = if (activeRmssd != null) {
+                                            "${stringResource(R.string.hrv_rmssd)}: ${String.format(java.util.Locale.US, "%.1f ms", activeRmssd)}"
+                                        } else {
+                                            stringResource(R.string.hrv_rmssd)
+                                        }
+                                        Text(
+                                            text = rmssdHeaderText,
+                                            style = MaterialTheme.typography.titleSmall,
+                                            fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
+                                            color = MaterialTheme.colorScheme.onSurface,
+                                            modifier = Modifier.padding(start = 16.dp, top = 4.dp, bottom = 4.dp)
+                                        )
+                                        TelemetryMetricGraph(
+                                            pathPoints = path,
+                                            metricType = TelemetryMetricType.HRV_RMSSD,
+                                            currentDistance = selectedDistance,
+                                            onDistanceSelected = { selectedDistance = it },
+                                            xAxisDomain = activeTelemetryDomain,
+                                            bSportType = bSportType,
+                                            zoomScale = profileZoomScale,
+                                            startDist = MapDetailViewportMath.fractionToDomain(viewportStartFraction, telemetryTotalSpan, profileZoomScale),
+                                            isPanMode = isPanMode,
+                                            onZoomChanged = { z, s ->
+                                                profileZoomScale = z
+                                                viewportStartFraction = MapDetailViewportMath.domainToFraction(s, telemetryTotalSpan, z)
+                                            },
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .chartInteractiveTouchDetector(
+                                                    density = density,
+                                                    isLandscape = isLandscape,
+                                                    alignWithHistogram = true,
+                                                    onInteractiveCanvasTouch = onInteractiveCanvasTouch
+                                                )
+                                        )
+                                    }
+
+                                    // DFA a1 vs HR / Power Scatter Card (REQ-PER-035.4)
+                                    if (TelemetryMetricUtils.hasHrvData(path)) {
+                                        Spacer(modifier = Modifier.height(12.dp))
+                                        com.atrainingtracker.trainingtracker.ui.aftermath.workoutdetail.HrvAlpha1ScatterCard(
+                                            points = path,
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(horizontal = 16.dp, vertical = 4.dp)
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -774,19 +885,40 @@ fun MapDetailLayout(
             }
 
             // 1. HEADER (Slotted)
-            Surface(
-                color = MaterialTheme.colorScheme.surface,
-                contentColor = MaterialTheme.colorScheme.onSurface,
-                shape = if (isBottomSheet) BottomSheetDesign.SheetShape else RectangleShape,
-                modifier = if (useStatusBarsPadding) Modifier.statusBarsPadding() else Modifier
-            ) {
-                Box(modifier = Modifier.drawWithContent {
-                    headerLayer.record {
-                        this@drawWithContent.drawContent()
+            if (showHeader) {
+                Surface(
+                    color = MaterialTheme.colorScheme.surface,
+                    contentColor = MaterialTheme.colorScheme.onSurface,
+                    shape = if (isBottomSheet) BottomSheetDesign.SheetShape else RectangleShape,
+                    modifier = if (useStatusBarsPadding) Modifier.statusBarsPadding() else Modifier
+                ) {
+                    Box(modifier = Modifier.drawWithContent {
+                        headerLayer.record {
+                            this@drawWithContent.drawContent()
+                        }
+                        drawLayer(headerLayer)
+                    }) {
+                        header()
                     }
-                    drawLayer(headerLayer)
-                }) {
-                    header()
+                }
+            } else {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .layout { measurable, constraints ->
+                            val placeable = measurable.measure(constraints)
+                            layout(0, 0) {
+                                placeable.place(0, 0)
+                            }
+                        }
+                ) {
+                    Box(modifier = Modifier.drawWithContent {
+                        headerLayer.record {
+                            this@drawWithContent.drawContent()
+                        }
+                    }) {
+                        header()
+                    }
                 }
             }
 

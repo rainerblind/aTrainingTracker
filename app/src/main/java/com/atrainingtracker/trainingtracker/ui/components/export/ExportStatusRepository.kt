@@ -37,12 +37,30 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.*
 
-class ExportStatusRepository private constructor(context: Context) {
+class ExportStatusRepository private constructor(private val context: Context) {
 
     private val appContext = context.applicationContext
 
     // Acquire the manager internally so we don't have to pass it to getInstance
-    private val dbManager = ExportStatusDatabaseManager.getInstance(appContext)
+    private val dbManager get() = ExportStatusDatabaseManager.getInstance(appContext ?: context)
+    private val stravaUploadDbHelper get() =
+        com.atrainingtracker.trainingtracker.exporter.db.StravaUploadDbHelper.getInstance(appContext ?: context)
+
+    val databaseManager: ExportStatusDatabaseManager get() = dbManager
+    val stravaHelper: com.atrainingtracker.trainingtracker.exporter.db.StravaUploadDbHelper get() = stravaUploadDbHelper
+
+    fun getExportRows(fileBaseName: String): List<ExportStatusDatabaseManager.ExportRow> = dbManager.getExportRows(fileBaseName)
+    fun deleteExportWorkout(fileBaseName: String) {
+        dbManager.deleteWorkout(fileBaseName)
+    }
+    fun getStravaActivityId(fileBaseName: String): String? = stravaUploadDbHelper.getActivityId(fileBaseName)
+    fun deleteStravaWorkout(fileBaseName: String): Int = stravaUploadDbHelper.deleteWorkout(fileBaseName)
+    fun updateStravaAll(fileBaseName: String, uploadId: String?, activityId: String?, status: String?, activityData: String?) =
+        stravaUploadDbHelper.updateAll(fileBaseName, uploadId, activityId, status, activityData)
+    fun updateStravaUploadId(fileBaseName: String, uploadId: String) = stravaUploadDbHelper.updateUploadId(fileBaseName, uploadId)
+    fun updateStravaStatus(fileBaseName: String, status: String) = stravaUploadDbHelper.updateStatus(fileBaseName, status)
+    fun updateStravaActivityId(fileBaseName: String, activityId: String) = stravaUploadDbHelper.updateActivityId(fileBaseName, activityId)
+    fun updateStravaActivityData(fileBaseName: String, activityData: String?) = stravaUploadDbHelper.updateStravaActivityData(fileBaseName, activityData)
 
     // Repository scope to keep flows alive independently of specific ViewModels
     private val repositoryScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
@@ -54,10 +72,16 @@ class ExportStatusRepository private constructor(context: Context) {
         @Volatile
         private var INSTANCE: ExportStatusRepository? = null
 
+        @JvmStatic
         fun getInstance(context: Context): ExportStatusRepository {
             return INSTANCE ?: synchronized(this) {
-                INSTANCE ?: ExportStatusRepository(context).also { INSTANCE = it }
+                INSTANCE ?: ExportStatusRepository(context.applicationContext ?: context).also { INSTANCE = it }
             }
+        }
+
+        @androidx.annotation.VisibleForTesting
+        fun resetForTesting(testInstance: ExportStatusRepository? = null) {
+            INSTANCE = testInstance
         }
     }
 

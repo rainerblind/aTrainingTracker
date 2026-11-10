@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ~ aTrainingTracker (ANT+ BTLE)
+  ~ Copyright (c) 2011 - 2026 Rainer Blind <rainer.blind@gmail.com>
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ This program is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~ GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License
+  ~ along with this program.  If not, see https://www.gnu.org/licenses/gpl-3.0
+  -->
+
+<resources>
+    <string name="hrv_rmssd">rMSSD</string>
+    <string name="hrv_rmssd_short">rMSSD</string>
+    <string name="hrv_dfa_a1">DFA a1</string>
+    <string name="hrv_dfa_a1_short">a1</string>
+    <string name="hrv_artifact_rate">Artifact rate</string>
+    <string name="hrv_artifact_rate_short">Art. %</string>
+
+    <string name="hrv_info_title">Heart Rate Variability &amp; Aerobic Thresholds</string>
+    <string name="hrv_info_trailing_lag_title">Rolling Window &amp; Pacing Lag</string>
+    <string name="hrv_info_trailing_lag_desc">Real-time DFA a1 is calculated over a rolling 2-minute window (updated every 5 seconds) and rMSSD over 60 seconds. Rapid pacing changes take 1–2 minutes to manifest in autonomic telemetry.</string>
+    <string name="hrv_info_sensor_recommendation_title">Sensor Recommendations</string>
+    <string name="hrv_info_sensor_recommendation_desc">Accurate beat-to-beat RR intervals require a moistened ECG chest strap (such as Polar H10 or Garmin HRM-Pro). Optical wrist sensors smooth interval timings and are unsuitable for DFA a1.</string>
+    <string name="hrv_info_zones_title">Aerobic Threshold Zones</string>
+    <string name="hrv_info_zones_desc">DFA a1 &gt; 0.75 indicates aerobic endurance pacing (Zone 2). Values between 0.75 and 0.50 reflect the aerobic-anaerobic threshold transition (Zone 3). Values below 0.50 indicate high anaerobic intensity (Zone 4).</string>
+    <string name="hrv_info_disclaimer_title">Medical Disclaimer</string>
+    <string name="hrv_info_disclaimer_desc">Autonomic HRV metrics in aTrainingTracker are designed for athletic training guidance and do not replace medical evaluation. Cardiac arrhythmias or ectopic beats may invalidate threshold estimates.</string>
+
+    <!-- Morning Resting HRV Check (ATT-3556 / REQ-PER-032) -->
+    <string name="morning_hrv_title">Morning HRV Check</string>
+    <string name="morning_hrv_subtitle">Autonomic Readiness Waking Protocol</string>
+    <string name="morning_hrv_posture_label">Posture</string>
+    <string name="morning_hrv_posture_supine">Supine</string>
+    <string name="morning_hrv_posture_seated">Seated</string>
+    <string name="morning_hrv_posture_standing">Standing</string>
+    <string name="morning_hrv_duration_label">Duration</string>
+    <string name="morning_hrv_duration_60s">60s (Standard)</string>
+    <string name="morning_hrv_duration_120s">120s (Extended)</string>
+    <string name="morning_hrv_state_ready">Ready to Measure</string>
+    <string name="morning_hrv_state_stabilizing">Stabilizing: %1$ds</string>
+    <string name="morning_hrv_state_measuring">Measuring: %1$ds / %2$ds</string>
+    <string name="morning_hrv_state_completed">Measurement Completed</string>
+    <string name="morning_hrv_btn_start">Start Measurement</string>
+    <string name="morning_hrv_btn_cancel">Cancel</string>
+    <string name="morning_hrv_btn_save">Save Reading</string>
+    <string name="morning_hrv_btn_discard">Discard</string>
+    <string name="morning_hrv_instructions_title">Standardized Protocol</string>
+    <string name="morning_hrv_instructions_desc">Measure upon waking after bladder voiding. Remain still and breathe normally without speaking. Maintain posture consistency for reliable SWC baseline comparisons.</string>
+    <string name="morning_hrv_artifact_warning_title">High Artifact Rate</string>
+    <string name="morning_hrv_artifact_warning_desc">Artifact rate exceeds 5%% (%1$.1f%%). Ensure your ECG chest strap electrodes are well moistened and firmly positioned.</string>
+    <string name="morning_hrv_summary_rmssd">rMSSD: %1$.1f ms</string>
+    <string name="morning_hrv_summary_ln_rmssd">ln(rMSSD): %1$.2f</string>
+    <string name="morning_hrv_summary_resting_hr">Resting HR: %1$d bpm</string>
+    <string name="morning_hrv_saved_toast">Morning HRV reading saved</string>
+
+    <!-- Longitudinal HRV Readiness Trend in Periods Screen (ATT-3557 / REQ-PER-033) -->
+    <string name="hrv_readiness_trend_title">HRV Readiness Trend</string>
+    <string name="hrv_readiness_trend_subtitle">Longitudinal 7d Average &amp; 60d SWC Corridor</string>
+    <string name="hrv_readiness_metric_ln_rmssd">ln(rMSSD)</string>
+    <string name="hrv_readiness_metric_rmssd">rMSSD (ms)</string>
+    <string name="hrv_readiness_toggle_training_load">Training Load</string>
+    <string name="hrv_readiness_no_entries_posture">No readings recorded for %1$s posture</string>
+    <string name="hrv_readiness_swc_baseline_label">60d SWC Baseline</string>
+    <string name="hrv_readiness_rolling_avg_label">7d Rolling Average</string>
+
+    <!-- Interactive DFA a1 / rMSSD Charts & Scatter Plot in Workout Details (ATT-3544 / REQ-PER-035) -->
+    <string name="hrv_scatter_card_title">DFA a1 Aerobic Threshold Dynamics</string>
+    <string name="hrv_scatter_card_subtitle">a1 vs. Heart Rate &amp; Cycling Power</string>
+    <string name="hrv_scatter_aerobic_threshold">Aerobic Threshold (a1 = 0.75)</string>
+    <string name="hrv_scatter_anaerobic_threshold">Anaerobic Threshold (a1 = 0.50)</string>
+    <string name="hrv_scatter_toggle_hr">Heart Rate</string>
+    <string name="hrv_scatter_toggle_power">Power</string>
+    <string name="hrv_scatter_artifact_suppressed">High-artifact intervals (&gt;5%%) suppressed</string>
+    <string name="hrv_scatter_no_data">No HRV data available for this workout</string>
+    <string name="hrv_chart_artifact_gap_label">Artifact Gap</string>
+</resources>

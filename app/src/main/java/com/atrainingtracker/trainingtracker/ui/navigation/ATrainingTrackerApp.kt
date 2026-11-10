@@ -116,6 +116,7 @@ import com.atrainingtracker.trainingtracker.ui.segments.segmentlist.StarredSegme
 import com.atrainingtracker.trainingtracker.ui.settings.display.DisplaySettingsDialog
 import com.atrainingtracker.trainingtracker.ui.settings.dropbox.DropboxSettingsDialog
 import com.atrainingtracker.trainingtracker.ui.settings.export.ExportSettingsDialog
+import com.atrainingtracker.trainingtracker.ui.settings.healthconnect.HealthConnectSettingsDialog
 import com.atrainingtracker.trainingtracker.ui.settings.googledrive.GoogleDriveSettingsDialog
 import com.atrainingtracker.trainingtracker.ui.help.TipsGuideScreen
 import com.atrainingtracker.trainingtracker.ui.settings.tuning.AdvancedTuningDialog
@@ -426,6 +427,17 @@ fun ATrainingTrackerApp(
                             summariesViewModel.setFilterCriteria(criteria)
                             navController.navigate(NavRoutes.WORKOUTS)
                         },
+                        onShowWorkoutsForSport = { locationItem, bSportType ->
+                            val criteria = WorkoutFilterCriteria(
+                                startLocationName = locationItem.name,
+                                startLocationLat = locationItem.latLng.latitude,
+                                startLocationLng = locationItem.latLng.longitude,
+                                startLocationRadiusM = locationItem.radius.toDouble().takeIf { it > 0.0 } ?: 200.0,
+                                bSportType = bSportType
+                            )
+                            summariesViewModel.setFilterCriteria(criteria)
+                            navController.navigate(NavRoutes.WORKOUTS)
+                        },
                         onSelectCluster = { clusterId ->
                             navController.navigate(NavRoutes.locations(clusterId))
                         },
@@ -629,6 +641,14 @@ fun ATrainingTrackerApp(
                         }
                     )
                 }
+
+                composable(NavRoutes.MORNING_HRV) {
+                    val morningHrvViewModel: com.atrainingtracker.trainingtracker.ui.hrv.MorningHrvCheckViewModel = viewModel(activity)
+                    com.atrainingtracker.trainingtracker.ui.hrv.MorningHrvCheckScreen(
+                        viewModel = morningHrvViewModel,
+                        onNavigateBack = { navController.popBackStack() }
+                    )
+                }
             }
         }
     }
@@ -677,6 +697,9 @@ fun ATrainingTrackerApp(
                         drawerController.activeBottomSheet = null
                         activity.onActivityTypeSelected(activityType)
                     },
+                    onDismiss = { drawerController.activeBottomSheet = null }
+                )
+                SettingsBottomSheetType.HEALTH_CONNECT -> HealthConnectSettingsDialog(
                     onDismiss = { drawerController.activeBottomSheet = null }
                 )
             }

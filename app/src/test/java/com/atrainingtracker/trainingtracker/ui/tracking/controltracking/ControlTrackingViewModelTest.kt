@@ -19,6 +19,7 @@
 package com.atrainingtracker.trainingtracker.ui.tracking.controltracking
 
 import android.app.Application
+import android.content.Context
 import android.util.Log
 import androidx.arch.core.executor.ArchTaskExecutor
 import androidx.arch.core.executor.TaskExecutor
@@ -33,6 +34,7 @@ import com.atrainingtracker.trainingtracker.TrackingMode
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
 import com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository
+import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkConstructor
@@ -88,8 +90,11 @@ class ControlTrackingViewModelTest {
 
         mockDeviceDataRepository = mockk(relaxed = true)
         mockkObject(DeviceDataRepository.Companion)
-        every { DeviceDataRepository.getInstance(any()) } returns mockDeviceDataRepository
+        every { DeviceDataRepository.getInstance(any<Application>()) } returns mockDeviceDataRepository
+        every { DeviceDataRepository.getInstance(any<Context>()) } returns mockDeviceDataRepository
         every { mockDeviceDataRepository.allDevices } returns allDevicesFlow
+        every { mockDeviceDataRepository.hasPairedRemoteDevices() } answers { mockDevicesDb.hasPairedRemoteDevices() }
+        every { mockDeviceDataRepository.hasPairedBluetoothDevices() } answers { mockDevicesDb.hasPairedBluetoothDevices() }
 
         mockBanalRepo = mockk(relaxed = true)
         mockkObject(BANALServiceRepository.Companion)
@@ -103,11 +108,16 @@ class ControlTrackingViewModelTest {
         mockkStatic(DevicesDatabaseManager::class)
         every { DevicesDatabaseManager.getInstance(any()) } returns mockDevicesDb
         every { mockDevicesDb.hasPairedRemoteDevices() } returns false
+        every { mockDevicesDb.hasPairedBluetoothDevices() } returns false
 
         mockWorkoutSummariesDb = mockk(relaxed = true)
         mockkStatic(WorkoutSummariesDatabaseManager::class)
         every { WorkoutSummariesDatabaseManager.getInstance(any()) } returns mockWorkoutSummariesDb
         every { mockWorkoutSummariesDb.hasUnfinishedWorkout() } returns false
+
+        val mockWorkoutRepo = mockk<WorkoutRepository>(relaxed = true)
+        WorkoutRepository.resetForTesting(mockWorkoutRepo)
+        every { mockWorkoutRepo.hasUnfinishedWorkout() } answers { mockWorkoutSummariesDb.hasUnfinishedWorkout() }
 
         mockkConstructor(android.content.Intent::class)
         every { anyConstructed<android.content.Intent>().setPackage(any()) } answers { self as android.content.Intent }
@@ -123,6 +133,7 @@ class ControlTrackingViewModelTest {
 
     @After
     fun tearDown() {
+        WorkoutRepository.resetForTesting(null)
         Dispatchers.resetMain()
         ArchTaskExecutor.getInstance().setDelegate(null)
         unmockkAll()

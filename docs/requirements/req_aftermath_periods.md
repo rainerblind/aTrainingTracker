@@ -3,7 +3,7 @@
 **Domain**: `aftermath_periods`  
 **Prefixes**: `PER`, `PERF`  
 **Scope**: Post-workout analytics, period statistics, zone distributions, graphs and visual scrubbers.  
-**Total Requirements**: 26
+**Total Requirements**: 33
 
 ---
 
@@ -802,6 +802,196 @@
 • *Then* `showFloatingShareButton` is false and top-end actions dock at `16.dp` per `REQ-UI-500`.
 
 **Invariants**: Zero changes to database schema, zero UI freezes on main thread during snapshot composition, preservation of `showFloatingShareButton: Boolean = workoutData == null`, and 100% clean-room test pass rate.
+
+### REQ-PER-030: Morning HRV Readiness Database Persistence, Backup Parity & Per-Posture SWC Baseline Calculator [Verified]
+- **Tests**: `TST-PER-038` | **Tickets**: `ATT-3545`
+- **Implementation**: `HrvReadinessDatabaseManager.kt`, `HrvReadinessRepository.kt`, `HrvReadinessEntry.kt`, `HrvPosture.kt`, `ReadinessStatus.kt`, `HrvReadinessCalculator.kt`, `DatabaseSchemaRegistry.kt`, `DatabaseConnectionManager.kt`
+- **Rationale**: Resting morning Heart Rate Variability (HRV / $\ln(\text{rMSSD})$) provides objective longitudinal insight into autonomic nervous system recovery and physiological training readiness. To ensure clinically sound baselines without orthostatic contamination, the application SHALL persist daily waking HRV measurements in a dedicated database (`HrvReadiness.db`), integrate with `.attbackup` backup/restore, deduplicate multiple daily readings transactionally, and compute Smallest Worthwhile Change (SWC) baselines strictly isolated per posture:
+1. *Dedicated SQLite Persistence & Symmetric DTO Mapping (`REQ-PER-030.1`)*: The system SHALL persist morning readiness records in a dedicated SQLite database `HrvReadiness.db` (table `hrv_readiness_entries`, managed by `HrvReadinessDatabaseManager`, `DB_VERSION = 1`). Columns SHALL include `_id` (INTEGER PRIMARY KEY AUTOINCREMENT), `timestamp_ms` (INTEGER NOT NULL), `date_iso` (TEXT NOT NULL, `YYYY-MM-DD` local calendar date), `timezone_id` (TEXT NOT NULL), `resting_hr_bpm` (INTEGER NOT NULL), `rmssd_ms` (REAL NOT NULL), `ln_rmssd` (REAL NOT NULL), `hrv_score_100` (REAL NOT NULL, $20 \times \ln(\text{rMSSD})$), `sdnn_ms` (REAL), `artifact_rate_pct` (REAL), `duration_sec` (INTEGER NOT NULL), `posture` (TEXT NOT NULL, `SUPINE` / `SEATED` / `STANDING`), `is_primary_for_day` (INTEGER NOT NULL DEFAULT 0), and `notes` (TEXT). Domain model `HrvReadinessEntry` SHALL enforce symmetric single-row and batch `fromCursor` mapping per Rule 20.
+2. *Database Schema Registry & Backup Integration (`REQ-PER-030.2`)*: `HrvReadiness.db` SHALL be registered in `DatabaseSchemaRegistry.SUPPORTED_DB_VERSIONS` referencing `HrvReadinessDatabaseManager.DB_VERSION` directly per Rule 62, and registered in `DatabaseConnectionManager.getActiveDatabases()` to ensure atomic `VACUUM INTO` snapshots and write-lock synchronization during `.attbackup` creation and restore (`REQ-DAT-031`).
+3. *Daily Deduplication & Transactional Primary Reading Maintenance (`REQ-PER-030.3`)*: Daily aggregation SHALL key strictly on `(date_iso, posture)` in the athlete's local calendar day. When evaluating daily readiness, invalid readings (`artifact_rate_pct > 5.0%`) SHALL be excluded. Multiple valid readings on the same day SHALL be resolved deterministically at query time via `ORDER BY is_primary_for_day DESC, timestamp_ms ASC LIMIT 1`. `HrvReadinessDatabaseManager` SHALL maintain `is_primary_for_day` transactionally upon insertion, deletion, and user pin toggles so the earliest valid morning reading or pinned reading is always accurately marked.
+4. *Per-Posture SWC Baseline Calculator (`REQ-PER-030.4`)*: `HrvReadinessCalculator` SHALL compute rolling baselines strictly partitioned by `HrvPosture` (`SUPINE`, `SEATED`, `STANDING`). The rolling 7-day average $\mu_{7d}$ SHALL require $\ge 3$ valid daily readings in `[D-6, D]`. The rolling 60-day baseline mean $\mu_{60d}$ and sample standard deviation $\sigma_{60d}$ (evaluated using Bessel's correction with $N-1$ denominator over daily $\ln(\text{rMSSD})$) SHALL require $\ge 14$ valid daily readings in `[D-59, D]`. The Smallest Worthwhile Change (SWC) corridor SHALL be defined as $[\mu_{60d} - 0.5\sigma_{60d},\; \mu_{60d} + 0.5\sigma_{60d}]$. Readiness status SHALL be classified into:
+   - `CALIBRATING`: $N_{60d} < 14$ or $N_{7d} < 3$, exposing progress count `"Day X of 14 baseline calibration"`.
+   - `OPTIMAL`: $\mu_{7d} \in [\mu_{60d} - 0.5\sigma_{60d},\; \mu_{60d} + 0.5\sigma_{60d}]$.
+   - `FATIGUED_LOW`: $\mu_{7d} < \mu_{60d} - 0.5\sigma_{60d}$.
+   - `ABOVE_NORMAL`: $\mu_{7d} > \mu_{60d} + 0.5\sigma_{60d}$.
+5. *Preservation of System Invariants (`REQ-PER-030.5`)*: Standalone isolation of `HrvReadiness.db` SHALL introduce zero modifications or locking dependencies to existing workout, sensor, or lap databases. Mathematical calculations SHALL remain pure Kotlin without Android UI framework coupling.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-PER-030` (extending `REQ-PER-001` longitudinal period metrics and `REQ-DAT-031` backup integration). Targets `HrvReadinessDatabaseManager.kt`, `HrvReadinessEntry.kt`, `HrvPosture.kt`, `ReadinessStatus.kt`, `HrvReadinessCalculator.kt`, `DatabaseSchemaRegistry.kt`, and `DatabaseConnectionManager.kt`.
+2. *Historical Origin & Commit Trace*: Net-new capability introduced in `ATT-3545` as foundational substrate for Epic `ATT-3539` (*Heart Rate Variability*).
+3. *Root Reason for Existing Formulation*: Prior to ATT-3545, all HRV processing was real-time or post-workout session based. Morning readiness monitoring requires persistent waking baseline tracking across weeks and months with orthostatic posture separation.
+4. *Preservation of Core Invariants*: Existing database versions and schemas (`WorkoutSummaries.db`, `WorkoutSamples.db`, `PeriodSummaries.db`) remain 100% untouched.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* an athlete recording 10 `SUPINE` and 10 `SEATED` valid readings across distinct days,
+• *When* `HrvReadinessCalculator` evaluates `SUPINE` readiness,
+• *Then* `SEATED` readings are strictly excluded from the `SUPINE` baseline and the status remains `CALIBRATING` (`10 / 14 days`).
+• *Given* $\ge 14$ daily `SUPINE` $\ln(\text{rMSSD})$ values with $\mu_{60d} = 4.00$ and sample SD $\sigma_{60d} = 0.30$ (SWC corridor $[3.85, 4.15]$), and two readings recorded on the target day (`07:00` and `19:00`),
+• *When* daily readiness is evaluated,
+• *Then* only the primary morning reading represents that calendar day; $\mu_{7d} = 3.70$ classifies as `FATIGUED_LOW` and $\mu_{7d} = 4.22$ classifies as `ABOVE_NORMAL`.
+• *Given* recorded entries in `HrvReadiness.db`,
+• *When* an `.attbackup` archive is created and restored onto a clean database state,
+• *Then* all `hrv_readiness_entries` rows are restored intact.
+
+**Invariants**: Zero changes to existing workout/sensor databases, pure Kotlin calculation logic, and 100% clean-room test pass rate.
+
+### REQ-PER-031: Android Health Connect Morning and Overnight Resting HRV Ingestion [Verified]
+- **Tests**: `TST-PER-039` | **Tickets**: `ATT-4981`
+- **Implementation**: `HealthConnectHrvImporter.kt`, `HealthConnectManager.kt`, `HrvPosture.kt`, `HrvReadinessRepository.kt`, `AndroidManifest.xml`
+- **Rationale**: Passive overnight wearable monitoring (smart rings, smartwatches) provides continuous nocturnal resting HRV and resting heart rate data via Android Health Connect. To allow athletes to utilize nocturnal biometric tracking without contaminating waking spot-check baselines, the system SHALL ingest nocturnal `HeartRateVariabilityRmssdRecord` and `RestingHeartRateRecord` into `HrvReadinessRepository` under an isolated `OVERNIGHT_WEARABLE` cohort:
+1. *Permission & User Opt-In Gating (`REQ-PER-031.1`)*: The system SHALL declare `READ_HEART_RATE_VARIABILITY` and `READ_RESTING_HEART_RATE` permissions in `AndroidManifest.xml` and manage runtime permission checks through `HealthConnectManager.kt`. Ingestion SHALL require explicit user opt-in (`isHealthConnectHrvImportEnabled`) in preferences.
+2. *Nocturnal Log-Normal Multi-Sample Aggregation & Date Attribution (`REQ-PER-031.2`)*: When syncing, `HealthConnectHrvImporter` SHALL query nocturnal records in the target time window. Records recorded between 18:00 and 12:00 SHALL be attributed to the waking calendar day `date_iso` (records before midnight attribute to the following day; records after midnight attribute to the current day). Because nocturnal rMSSD follows a log-normal distribution, multiple sample epochs within the nocturnal window SHALL be aggregated using the arithmetic mean of log values: $\text{ln\_rmssd} = \frac{1}{M}\sum \ln(\text{rMSSD}_i)$ and geometric mean $\text{rmssd\_ms} = \exp(\text{ln\_rmssd})$. Associated resting heart rate SHALL be aggregated as the arithmetic mean of valid nocturnal samples.
+3. *Isolated Cohort Persistence (`REQ-PER-031.3`)*: The system SHALL extend `HrvPosture` with `OVERNIGHT_WEARABLE` and persist the aggregated measurement via `HrvReadinessRepository` with `artifact_rate_pct = null`. `HrvReadinessCalculator` SHALL evaluate `OVERNIGHT_WEARABLE` baselines in complete isolation from waking postures (`SUPINE`, `SEATED`, `STANDING`).
+4. *Idempotent Ingestion & Source Tracking (`REQ-PER-031.4`)*: Ingestion SHALL be idempotent, deduplicating records by `(date_iso, OVERNIGHT_WEARABLE)` and persisting the source package and record UID in `notes`. Subsequent import syncs SHALL NOT overwrite manually pinned entries or create duplicate rows.
+5. *Preservation of System Invariants (`REQ-PER-031.5`)*: Standalone isolation of `OVERNIGHT_WEARABLE` baseline math, zero schema changes to `HrvReadiness.db` (v1), full `.attbackup` export/restore parity, and zero unprompted background sync operations when disabled.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-PER-031` (extending `REQ-PER-030` morning HRV readiness persistence and `REQ-SET-080` Health Connect integration). Targets `HealthConnectHrvImporter.kt`, `HealthConnectManager.kt`, `HrvPosture.kt`, `HrvReadinessRepository.kt`, and `AndroidManifest.xml`.
+2. *Historical Origin & Commit Trace*: Net-new capability introduced in `ATT-4981` under Epic `ATT-3539` (*Heart Rate Variability*).
+3. *Root Reason for Existing Formulation*: Wearables record multi-sample nocturnal readings that exhibit distinct physiological baselines from orthostatic waking spot checks. Introducing `OVERNIGHT_WEARABLE` cleanly partitions wearable data from chest-strap measurements.
+4. *Preservation of Core Invariants*: Waking postures (`SUPINE`, `SEATED`, `STANDING`) and `HrvReadiness.db` SQLite schema remain 100% untouched.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* nocturnal Health Connect records across sleep epochs (e.g. 30.0 ms, 40.0 ms, 50.0 ms),
+• *When* imported by `HealthConnectHrvImporter`,
+• *Then* $\text{ln\_rmssd}$ is the mean of logs ($\approx 3.655$), $\text{rmssd\_ms} \approx 38.67\text{ ms}$, and attributed to waking date `date_iso`.
+• *Given* an athlete with 14 `OVERNIGHT_WEARABLE` days and 10 `SUPINE` waking spot-checks,
+• *When* evaluating `SUPINE` readiness,
+• *Then* `OVERNIGHT_WEARABLE` records are strictly excluded and `SUPINE` remains `CALIBRATING` (`10 / 14 days`).
+• *Given* user has not opted in or granted Health Connect permissions,
+• *When* import sync is invoked,
+• *Then* import aborts safely without exception and zero database records are modified.
+
+**Invariants**: Zero changes to `HrvReadiness.db` (v1) schema, strict posture isolation, and 100% clean-room test pass rate.
+
+### REQ-PER-032: Guided Morning Resting HRV Measurement Screen & Waking Protocol [Verified]
+- **Tests**: `TST-PER-040` | **Tickets**: `ATT-3556`
+- **Implementation**: `MorningHrvCheckScreen.kt`, `MorningHrvCheckViewModel.kt`, `HrvReadinessRepository.kt`, `RrArtifactFilter.kt`, `strings_hrv.xml`
+- **Rationale**: Accurate morning resting HRV evaluation requires standardized waking conditions (post-voiding, rested posture, normal breathing) without starting a full GPS workout. The system SHALL provide a dedicated Compose UI measurement screen (`MorningHrvCheckScreen`) and ViewModel (`MorningHrvCheckViewModel`) executing a guided waking protocol:
+1. *Standardized Protocol Lifecycle (`REQ-PER-032.1`)*: The measurement state machine SHALL transition through `READY` -> `STABILIZING` -> `MEASURING` -> `COMPLETED`. The stabilization phase SHALL default to 15–30s to allow autonomic balance. The measurement duration SHALL default to 60s (validated per Esco & Flatt 2014) with a selectable 120s extended option.
+2. *Posture Stickiness & Standardization (`REQ-PER-032.2`)*: The screen SHALL provide a posture selector for waking cohorts (`SUPINE`, `SEATED`, `STANDING`) and remember the athlete's last-used posture via SharedPreferences (`SP_HRV_LAST_POSTURE = "hrvLastPosture"`) across app sessions to preserve longitudinal baseline consistency.
+3. *Sensor Ingestion & Zero-Workout Invariant (`REQ-PER-032.3`)*: Measurement SHALL ingest raw beat-to-beat intervals via `BANALServiceRepository` without launching `TrackerService` or creating rows in `WorkoutSummaries.db`.
+4. *Post-Hoc Full-Window Centered Filter Invariant (`REQ-PER-032.4`)*: Raw RR intervals buffered during the measurement phase SHALL be processed post hoc upon completion using `RrArtifactFilter.filterBidirectional` (Lipponen & Tarvainen 2019 centered filter) to compute `rmssdMs`, `lnRmssd`, `hrvScore100`, `sdnnMs`, `restingHrBpm`, and `artifactRatePct`. Live rolling metrics SHALL provide real-time UI pacing only and SHALL NOT be used for persistence.
+5. *Persistence, Gating & Baseline Feedback (`REQ-PER-032.5`)*: When user confirms save, the measurement SHALL be persisted into `HrvReadinessRepository` (`HrvReadiness.db`). If `artifactRatePct > 5.0%`, the UI SHALL display a warning indicating potential electrode drying/poor contact. The completion view SHALL display the evaluated `ReadinessStatus` compared against the athlete's per-posture 7d/60d SWC baseline.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-PER-032` (extending `REQ-PER-030` morning HRV persistence and `REQ-SEN-020` RR interval ingestion). Targets `MorningHrvCheckScreen.kt`, `MorningHrvCheckViewModel.kt`, `HrvReadinessRepository.kt`, `RrArtifactFilter.kt`, and `strings_hrv.xml`.
+2. *Historical Origin & Commit Trace*: Net-new capability introduced in `ATT-3556` under Epic `ATT-3539` (*Heart Rate Variability*).
+3. *Root Reason for Existing Formulation*: Athletes previously had to launch a full workout session to capture RR intervals, cluttering workout summaries with non-exercise data and lacking posture-standardized waking guidance.
+4. *Preservation of Core Invariants*: Zero modifications to workout database schemas; pure Compose UI and Kotlin calculation logic; strict posture isolation in SWC baselines.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* an athlete launching `MorningHrvCheckScreen`,
+• *When* the screen initializes,
+• *Then* it displays the sticky last-used posture (defaulting to `SUPINE`), 60s standard duration, and standardized waking checklist.
+• *Given* an active measurement session reaching 60s,
+• *When* the measurement phase concludes,
+• *Then* `filterBidirectional` evaluates the buffered RR intervals post hoc, computing `rmssdMs`, `lnRmssd`, `hrvScore100`, `sdnnMs`, `restingHrBpm`, and `artifactRatePct`.
+• *Given* an artifact rate of 7.2% (> 5.0%),
+• *When* viewing the measurement summary,
+• *Then* an amber artifact warning is displayed advising the athlete to moisten strap electrodes.
+• *Given* user taps "Save Reading",
+• *When* persisted,
+• *Then* the measurement is stored in `HrvReadiness.db` without creating any workout sessions in `WorkoutSummaries.db`.
+
+**Invariants**: Zero workout generation, post-hoc centered filter calculation, 100% clean-room test pass rate.
+
+### REQ-PER-033: Longitudinal HRV Readiness Trend, Posture-Matched 60-Day SWC Corridor & Training Load Overlay [Verified]
+- **Tests**: `TST-PER-041` | **Tickets**: `ATT-3557`
+- **Implementation**: `HrvReadinessTrendCard.kt`, `HrvReadinessTrendMath.kt`, `PeriodsScreen.kt`, `PeriodsTabsScreen.kt`, `PeriodsViewModel.kt`, `strings_hrv.xml`
+- **Rationale**: Athletes tracking daily morning resting HRV require longitudinal visualization within the `PeriodsScreen` analytical hub to observe autonomic nervous system adaptation and recovery across days, weeks, and months in relation to training load (*Plews et al. 2013*). The system SHALL render an interactive longitudinal HRV trend visualization:
+1. *Posture Isolation & Automatic Default (`REQ-PER-033.1`)*: The HRV trend card SHALL provide a posture selector chip row (`SUPINE`, `SEATED`, `STANDING`). To preserve baseline validity against orthostatic shifts, each posture's trend, rolling 7-day average, and 60-day baseline corridor SHALL compute strictly in isolation without mixing postures. When multiple postures have data, the initial selection SHALL default to the posture with the greatest number of recorded readings.
+2. *Daily Scatter, 7-Day Rolling Trend & 60-Day SWC Corridor (`REQ-PER-033.2`)*: For the selected posture, the chart SHALL render daily primary resting $\ln(\text{rMSSD})$ (or $\text{rMSSD}$ in ms) points, a continuous 7-day rolling average curve ($\mu_{7d}$ when valid daily days $\ge 3$), and a shaded Smallest Worthwhile Change (SWC) baseline corridor $[\mu_{60d} - 0.5\sigma_{60d},\; \mu_{60d} + 0.5\sigma_{60d}]$ (when valid days $\ge 14$, Bessel's correction $N-1$). Points and line segments SHALL reflect autonomic readiness classification (`OPTIMAL`, `FATIGUED_LOW`, `ABOVE_NORMAL`, `CALIBRATING`).
+3. *Optional Training Load Context Overlay (`REQ-PER-033.3`)*: The card SHALL support toggling a synchronized training load overlay (daily training load / TSS bars or ATL/CTL curves derived from `PowerPhysiologyCalculator`) plotted on the shared time axis, enabling direct visual correlation between training volume/intensity and autonomic recovery excursions.
+4. *Touch Scrubbing & Gesture Disambiguation Invariant (`REQ-PER-033.4`)*: The chart surface SHALL support touch scrubbing/tap inspection to inspect exact daily values, 7d rolling average, and SWC bounds via tooltip overlay. In accordance with `design_guidelines.md` §2.2, touch interaction SHALL be governed by `ChartGestureDisambiguator` (`isDominantHorizontal` vs `isDominantVertical`) to ensure horizontal date scrubbing never traps or locks vertical parent list scrolling.
+5. *Graceful Empty Omission Invariant (`REQ-PER-033.5`)*: When the athlete has zero morning HRV records across all postures in `HrvReadinessRepository`, the HRV readiness trend card SHALL be completely omitted from `PeriodsScreen`, avoiding empty cards and maintaining clean UI scannability.
+6. *Axis Scaling & Rule 48 Outlier Resilience (`REQ-PER-033.6`)*: Canvas drawing SHALL render human-readable X-axis date labels and Y-axis scale markers. Vertical Y-scaling SHALL be outlier-resilient, clamping extreme excursions so the 60-day SWC corridor and 7-day trend utilize the optimal vertical plot height.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-PER-033` (extending `REQ-PER-030` morning HRV persistence, `REQ-PER-032` guided waking check, and `REQ-UI-159` Periods screen). Targets `HrvReadinessTrendCard.kt`, `HrvReadinessTrendMath.kt`, `PeriodsScreen.kt`, `PeriodsTabsScreen.kt`, `PeriodsViewModel.kt`, and `strings_hrv.xml`.
+2. *Historical Origin & Commit Trace*: Net-new capability introduced in `ATT-3557` under Epic `ATT-3539` (*Heart Rate Variability*).
+3. *Root Reason for Existing Formulation*: Previously, `PeriodsScreen` visualized only post-workout metrics and route clusters. Athletes lacked longitudinal autonomic recovery context alongside period aggregations.
+4. *Preservation of Core Invariants*: Existing `PeriodsScreen` tabs, sport filters, and spatial map navigation remain 100% untouched; strict posture isolation in SWC baseline math; zero empty UI clutter when no HRV data exists.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* historical morning HRV entries stored in `HrvReadinessRepository`,
+• *When* viewing `PeriodsScreen`,
+• *Then* `HrvReadinessTrendCard` renders daily values, the 7-day rolling curve, and the shaded 60-day SWC corridor for the selected posture, with optional training-load context.
+• *Given* an athlete with zero morning HRV entries,
+• *When* opening `PeriodsScreen`,
+• *Then* no empty HRV card is displayed, preserving unobstructed access to period summaries.
+• *Given* an athlete scrubbing horizontally across the HRV trend chart,
+• *When* dragging along the time axis,
+• *Then* `ChartGestureDisambiguator` consumes horizontal drag for date tooltips while releasing vertical drag to parent list scrolling.
+
+**Invariants**: Zero schema changes to `PeriodSummaries.db` or `HrvReadiness.db`, strict posture segregation in baseline math, 100% clean-room test pass rate.
+
+### REQ-PER-034: Lossless WorkoutRrIntervals Persistence, Centered Recompute & Garmin FIT HrvMesg [Verified]
+- **Tests**: `TST-PER-042` | **Tickets**: `ATT-3543`
+- **Implementation**: `WorkoutRrDatabaseManager.kt`, `WorkoutRrInterval.kt`, `HrvPostWorkoutRecomputer.kt`, `FitFileWriter.java`, `FitWorkoutParser.kt`, `LegacyImportEngine.kt`, `TrackerService.java`
+- **Rationale**: Live tracking calculates HRV metrics (DFA $\alpha_1$, $\text{rMSSD}$) using causal trailing windows with ~60s delay and discards raw beat-to-beat intervals upon session completion. Persisting raw beat intervals enables centered-window recomputation to eliminate phase lag and supports bidirectional Garmin FIT `HrvMesg` interoperability. The system SHALL support lossless RR persistence, centered recomputation, and FIT export/import:
+1. *Lossless RR Persistence (`REQ-PER-034.1`)*: The system SHALL persist raw beat-to-beat intervals into `WorkoutRr.db` table `workout_rr_intervals` (`workout_id: Long`, `beat_index: Int`, `beat_timestamp_ms: Long`, `rr_ms: Float`, `artifact_flag: Boolean`, `gap_beats: Int`). Access SHALL be encapsulated in `WorkoutRrDatabaseManager`, registered in `DatabaseSchemaRegistry`, and cascaded on session deletion via `WorkoutDeletionHelper`.
+2. *Monotonic Timestamp Reconstruction (`REQ-PER-034.2`)*: Live beats buffered from `RrBeatListener` in `TrackerService` SHALL accumulate timestamps monotonically as $t_k = t_{k-1} + \text{round}(\text{rr\_ms}_k)$ with wall-clock drift resynchronization when $|t_{\text{pkt}} - t_{\text{beat}}| > 2000\text{ ms}$, ensuring exact UTC epoch alignment with `WorkoutSamples`.
+3. *Lag-Free Centered-Window Recomputation (`REQ-PER-034.3`)*: Upon workout finalization or FIT import, `HrvPostWorkoutRecomputer` SHALL evaluate centered-window DFA $\alpha_1$ ($t \pm 60\text{s}$) and $\text{rMSSD}$ ($t \pm 30\text{s}$) via `RrArtifactFilter.filterBidirectional`, updating `WorkoutSamples` and `WorkoutSummaries` session extrema.
+4. *Garmin FIT Export Interleaving (`REQ-PER-034.4`)*: `FitFileWriter` SHALL write standard Garmin FIT `HrvMesg` records (packing up to 5 intervals in seconds) interleaved with `RecordMesg` trackpoints when RR data exists. Workouts without RR data SHALL omit `HrvMesg`.
+5. *Garmin FIT Import & Timestamp Reconstruction (`REQ-PER-034.5`)*: `FitWorkoutParser` and `LegacyImportEngine` SHALL extract `HrvMesg` intervals, reconstruct timestamps anchored to session start UTC with pause resync, persist beats into `WorkoutRr.db`, and trigger post-workout recomputation.
+6. *Non-HRV Workout Invariant & Asynchronous Execution (`REQ-PER-034.6`)*: Non-HRV workouts SHALL incur zero persistence overhead (0 rows, 0 `HrvMesg`). Recomputation SHALL execute asynchronously on `Dispatchers.IO` without delaying UI finalization or completion intents.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-PER-034` (extending live RR ingestion `REQ-TRA-018`, workout samples `REQ-TRA-002`, and FIT export/import `REQ-EXP-001`). Targets `WorkoutRrDatabaseManager.kt`, `WorkoutRrInterval.kt`, `HrvPostWorkoutRecomputer.kt`, `FitFileWriter.java`, `FitWorkoutParser.kt`, `LegacyImportEngine.kt`, and `TrackerService.java`.
+2. *Historical Origin & Commit Trace*: Net-new capability introduced in `ATT-3543` under Epic `ATT-3539` (*Heart Rate Variability*).
+3. *Root Reason for Existing Formulation*: Previously, raw beat-to-beat intervals were discarded at the end of tracking; live 1-Hz sample tables could not store high-frequency intervals, preventing centered post-workout signal recomputation and FIT HRV export.
+4. *Preservation of Core Invariants*: Existing `WorkoutSamples` 1-Hz cadence and non-HRV workout flows remain 100% untouched; zero performance impact for non-HRV workouts; asynchronous non-blocking execution.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* a workout recorded with a BLE/ANT+ RR sensor stream,
+• *When* the workout is completed and finalized,
+• *Then* raw beats are persisted in `WorkoutRr.db` and centered-window HRV metrics are recomputed and populated in `WorkoutSamples`.
+• *Given* a workout with persisted RR intervals,
+• *When* exported to Garmin FIT and imported into another instance,
+• *Then* `HrvMesg` intervals are preserved losslessly and post-workout HRV streams recompute identically.
+• *Given* a workout recorded without an RR sensor,
+• *When* saved or exported to FIT,
+• *Then* zero rows are inserted into `workout_rr_intervals` and zero `HrvMesg` messages are written.
+
+**Invariants**: Raw RR interval values preserved losslessly unmodified alongside artifact flags, monotonic beat timestamps strictly anchored in UTC epoch milliseconds, zero overhead and 100% backward compatibility for non-HRV workouts.
+
+### REQ-PER-035: Interactive Workout Details DFA a1/rMSSD Charts & a1 Scatter Plot [Verified]
+- **Tests**: `TST-PER-043` | **Tickets**: `ATT-3544`
+- **Implementation**: `TelemetryMetricGraph.kt`, `HrvAlpha1ScatterChart.kt`, `HrvAlpha1ScatterCard.kt`, `PathPoint.kt`, `WorkoutRepository.kt`, `MapDetailLayout.kt`
+- **Rationale**: Workout Details visualizes continuous telemetry curves for Speed, HR, and Power, but lacks visualization for centered post-workout HRV telemetry. Athletes and coaches require interactive inspection of DFA $\alpha_1$ and $\text{rMSSD}$ time-series to assess autonomic recovery, monitor threshold transitions ($\alpha_1 \approx 0.75$ aerobic, $\alpha_1 \approx 0.50$ anaerobic), and identify decoupling via an $\alpha_1$ vs. HR/Power scatter plot while suppressing high-artifact intervals. The system SHALL support interactive HRV telemetry and scatter visualization:
+1. *DFA $\alpha_1$ and rMSSD Telemetry Tracks (`REQ-PER-035.1`)*: `TelemetryMetricGraph` SHALL support `TelemetryMetricType.HRV_DFA_A1` and `TelemetryMetricType.HRV_RMSSD`. Curves SHALL share exact horizontal padding (`startPadding = 50.dp`) and scrubbing synchronization with existing telemetry graphs per Rule 64.
+2. *Artifact Suppression & Gap Hatching (`REQ-PER-035.2`)*: Where `hrvDfaA1` is null or `hrvArtifactRate > 5.0%`, the polyline path SHALL break rather than interpolating across dropouts. An angled hatched pattern SHALL be rendered across suppressed intervals to delineate artifact dropout zones.
+3. *Threshold Reference Lines & Clamping (`REQ-PER-035.3`)*: DFA $\alpha_1$ graphs SHALL render horizontal dashed threshold guide lines at $\alpha_1 = 0.75$ (Aerobic Threshold / HRVT1) and $\alpha_1 = 0.50$ (Anaerobic Threshold / HRVT2). Y-axis scaling SHALL be clamped to $[0.2, 1.4]$ with outlier resilience per Rule 48.
+4. *$\alpha_1$ vs. Power/HR Scatter Plot (`REQ-PER-035.4`)*: Workout Details SHALL provide `HrvAlpha1ScatterCard` containing `HrvAlpha1ScatterChart` plotting intensity (Heart Rate in bpm or Cycling Power in Watts) on the X-axis against DFA $\alpha_1$ on the Y-axis across valid samples ($\alpha_1 \in [0.35, 1.15]$, artifact rate $\le 5\%$), with toggleable linear regression overlay.
+5. *Graceful Omission for Non-HRV Workouts (`REQ-PER-035.5`)*: Workouts without valid HRV trackpoints SHALL completely omit the HRV telemetry tracks and scatter card with zero layout shifts or performance overhead.
+6. *Touch Disambiguation & 9-Language Localization (`REQ-PER-035.6`)*: Horizontal scrubbing in HRV charts SHALL be disambiguated from parent vertical scrolling via `ChartGestureDisambiguator`. All labels and threshold descriptions SHALL support 100% localization parity across all 9 supported locales.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-PER-035` (extending telemetry visualization `REQ-UI-206` and post-workout analytics `REQ-PER-034`). Targets `TelemetryMetricGraph.kt`, `HrvAlpha1ScatterChart.kt`, `HrvAlpha1ScatterCard.kt`, `PathPoint.kt`, `WorkoutRepository.kt`, and `MapDetailLayout.kt`.
+2. *Historical Origin & Commit Trace*: Net-new feature introduced in `ATT-3544` under Epic `ATT-3539` (*Heart Rate Variability*).
+3. *Root Reason for Existing Formulation*: Previously, workout details only supported speed, HR, and power curves. HRV streams recomputed in `ATT-3543` remained stored in database samples without visual representation.
+4. *Preservation of Core Invariants*: Existing telemetry graphs and non-HRV workouts remain 100% unaffected; horizontal padding alignment strictly preserved; zero snapshot state writes during composition (Rule 66).
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* a workout with valid centered HRV samples,
+• *When* inspecting telemetry graphs in Workout Details,
+• *Then* DFA $\alpha_1$ and $\text{rMSSD}$ graphs are selectable with threshold guide lines ($\alpha_1 = 0.75, 0.50$) and high-artifact ($> 5\%$) intervals rendered as hatched gaps.
+• *Given* a workout with valid DFA $\alpha_1$ and HR/Power data,
+• *When* viewing the HRV threshold card in Workout Details,
+• *Then* an interactive $(\text{HR/Power}, \alpha_1)$ scatter plot is rendered with a toggleable linear regression line.
+• *Given* a workout recorded without an HRV sensor,
+• *When* opening Workout Details,
+• *Then* HRV graphs and the scatter card are gracefully omitted without error or blank cards.
+
+**Invariants**: Pixel-perfect vertical alignment with `startPadding = 50.dp`, non-interpolated artifact gap rendering, zero UI presentation for non-HRV sessions, 100% 9-language localization parity.
+
+
+
+
+
+
 
 
 

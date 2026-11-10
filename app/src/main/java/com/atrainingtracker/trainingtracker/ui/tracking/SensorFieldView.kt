@@ -49,7 +49,10 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -273,6 +276,14 @@ fun SensorFieldView(
         ViewSize.XXXHUGE -> MaterialTheme.typography.titleLarge.copy(fontSize = 22.sp)
     }
 
+    var showHrvInfoSheet by remember { mutableStateOf(false) }
+    val isHrvMetric = fieldState.sensorType in listOf(
+        com.atrainingtracker.banalservice.sensor.SensorType.HRV_DFA_A1,
+        com.atrainingtracker.banalservice.sensor.SensorType.HRV_RMSSD,
+        com.atrainingtracker.banalservice.sensor.SensorType.RR_INTERVAL,
+        com.atrainingtracker.banalservice.sensor.SensorType.HRV_ARTIFACT_RATE
+    )
+
     Card(
         modifier = modifier
             .fillMaxWidth()
@@ -282,6 +293,8 @@ fun SensorFieldView(
                 onClick = {
                     if (screenMode == ScreenMode.CONFIGURATION) {
                         onEdit()
+                    } else if (screenMode == ScreenMode.TRACKING && isHrvMetric) {
+                        showHrvInfoSheet = true
                     }
                 },
                 onLongClick = {
@@ -354,6 +367,7 @@ fun SensorFieldView(
                     fieldState.pedalBalanceState != null ||
                     fieldState.wPrimeBatteryState != null
                 )
+                val hasActiveVisual = hasActiveBar || fieldState.showGraph
 
                 Column(
                     modifier = Modifier
@@ -362,7 +376,7 @@ fun SensorFieldView(
                     verticalArrangement = Arrangement.Center
                 ) {
                     // Value and Unit Row, centered (REQ-TRK-046, REQ-TRK-046.3 empty-tile fallback)
-                    if (fieldState.showValue || !hasActiveBar) {
+                    if (fieldState.showValue || !hasActiveVisual) {
                         Row(
                             horizontalArrangement = Arrangement.Center,
                             verticalAlignment = Alignment.Bottom,
@@ -425,6 +439,31 @@ fun SensorFieldView(
                                 .padding(horizontal = 4.dp)
                         )
                     }
+
+                    // Optional Live Sparkline Graph (REQ-TRK-059, ATT-1294)
+                    if (fieldState.showGraph) {
+                        Spacer(modifier = Modifier.height(4.dp))
+                        val sparklineLineColor = if (fieldState.zoneColor != Color.Transparent && fieldState.zoneDisplayOptions.showTextColor) {
+                            fieldState.zoneColor
+                        } else {
+                            MaterialTheme.colorScheme.primary
+                        }
+                        SensorSparklineView(
+                            samples = fieldState.sparklineSamples,
+                            lineColor = sparklineLineColor,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .then(
+                                    if (!fieldState.showValue) {
+                                        Modifier.weight(1f).padding(horizontal = 4.dp, vertical = 2.dp)
+                                    } else {
+                                        Modifier
+                                            .height(resolveSparklineHeight(fieldState.viewSize, isGraphOnly = false))
+                                            .padding(horizontal = 4.dp)
+                                    }
+                                )
+                        )
+                    }
                 }
 
                 // Conditionally add the action buttons at the bottom in configuration mode
@@ -468,6 +507,10 @@ fun SensorFieldView(
                 )
             }
         }
+    }
+
+    if (showHrvInfoSheet) {
+        HrvInfoBottomSheet(onDismissRequest = { showHrvInfoSheet = false })
     }
 }
 

@@ -194,6 +194,7 @@ fun createDrawerGroups(startTrackingTitleRes: Int): List<DrawerGroup> {
                 DrawerItemConfig(R.id.drawer_start_tracking, R.drawable.control_start, startTrackingTitleRes),
                 DrawerItemConfig(R.id.drawer_workouts, R.drawable.workout_list, R.string.tab_workouts),
                 DrawerItemConfig(R.id.drawer_periods, R.drawable.ic_calendar_month, R.string.workout_periods__periods),
+                DrawerItemConfig(R.id.drawer_morning_hrv, R.drawable.ic_heart_rate, R.string.morning_hrv_title),
                 DrawerItemConfig(R.id.drawer_athlete_profile, R.drawable.ic_athlete_profile, R.string.drawer_athlete_profile)
             )
         ),

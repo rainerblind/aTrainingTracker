@@ -10,6 +10,7 @@
 
 package com.atrainingtracker.trainingtracker.settings
 
+import com.atrainingtracker.banalservice.devices.radar.RadarLightMode
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -62,6 +63,36 @@ class TuningConfigTest {
         assertEquals(true, TuningPreferencesDefaults.CLUSTER_USE_SPORT_TYPE)
         assertEquals(true, config.clusterUseAltitudePos)
         assertEquals(true, TuningPreferencesDefaults.CLUSTER_USE_ALTITUDE_POS)
+        assertEquals(RadarEdgeSide.RIGHT, config.radarEdgeSide)
+        assertEquals(RadarEdgeSide.RIGHT, TuningPreferencesDefaults.RADAR_EDGE_SIDE)
+        assertEquals(RadarClearMode.SLIM_RAIL, config.radarClearMode)
+        assertEquals(RadarClearMode.SLIM_RAIL, TuningPreferencesDefaults.RADAR_CLEAR_MODE)
+        assertEquals(RadarAudioAlertMode.ALL_ALERTS, config.radarAudioAlertMode)
+        assertEquals(RadarAudioAlertMode.ALL_ALERTS, TuningPreferencesDefaults.RADAR_AUDIO_ALERT_MODE)
+        assertEquals(90, config.radarAlertVolume)
+        assertEquals(90, TuningPreferencesDefaults.RADAR_ALERT_VOLUME)
+        assertEquals(true, config.radarSpeakerBoost)
+        assertEquals(true, TuningPreferencesDefaults.RADAR_SPEAKER_BOOST)
+        assertEquals(RadarAudioRoute.SYSTEM_DEFAULT, config.radarAudioRoute)
+        assertEquals(RadarAudioRoute.SYSTEM_DEFAULT, TuningPreferencesDefaults.RADAR_AUDIO_ROUTE)
+        assertEquals(true, config.radarHapticAlert)
+        assertEquals(true, TuningPreferencesDefaults.RADAR_HAPTIC_ALERT)
+        assertEquals(RadarLightMode.DAY_FLASH, config.radarLightDefaultMode)
+        assertEquals(RadarLightMode.DAY_FLASH, TuningPreferencesDefaults.RADAR_LIGHT_DEFAULT_MODE)
+        assertEquals(true, config.radarAutoLightControl)
+        assertEquals(true, TuningPreferencesDefaults.RADAR_AUTO_LIGHT_CONTROL)
+        assertEquals(true, config.radarPelotonAudioSync)
+        assertEquals(true, TuningPreferencesDefaults.RADAR_PELOTON_AUDIO_SYNC)
+        assertEquals(false, config.radarSmartUrbanMute)
+        assertEquals(false, TuningPreferencesDefaults.RADAR_SMART_URBAN_MUTE)
+        assertEquals(true, config.radarSpatialAudioEnabled)
+        assertEquals(true, TuningPreferencesDefaults.RADAR_SPATIAL_AUDIO_ENABLED)
+        assertEquals(true, config.radarSpeedPitchModulation)
+        assertEquals(true, TuningPreferencesDefaults.RADAR_SPEED_PITCH_MODULATION)
+        assertEquals(RadarTrafficOrientation.RIGHT_HAND, config.radarTrafficOrientation)
+        assertEquals(RadarTrafficOrientation.RIGHT_HAND, TuningPreferencesDefaults.RADAR_TRAFFIC_ORIENTATION)
+        assertEquals(true, config.radarLaneChangeTickEnabled)
+        assertEquals(true, TuningPreferencesDefaults.RADAR_LANE_CHANGE_TICK_ENABLED)
     }
 
     @Test

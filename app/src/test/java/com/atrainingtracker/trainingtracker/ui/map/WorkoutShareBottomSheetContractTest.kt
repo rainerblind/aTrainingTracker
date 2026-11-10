@@ -296,4 +296,108 @@ class WorkoutShareBottomSheetContractTest {
         }
         assertNotNull("WorkoutList function must exist", listMethod)
     }
+
+    @Test
+    fun testWorkoutDetailTabbedContent_launchedEffectOmitsCurrentPageKeyAndUsesScrollToPage_TST_REV_007_1() {
+        val tabbedFile = findSourceFile("src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/WorkoutDetailTabbedContent.kt")
+        assertTrue("WorkoutDetailTabbedContent.kt must exist", tabbedFile.exists())
+        val source = tabbedFile.readText()
+
+        // Rule 80 / REQ-REV-006.1: LaunchedEffect must not include pagerState.currentPage in key list
+        assertFalse(
+            "WorkoutDetailTabbedContent must not include pagerState.currentPage in LaunchedEffect key list (Rule 80)",
+            source.contains("LaunchedEffect(pendingAutoShare, pagerState.currentPage, mapTabIndex)")
+        )
+        assertTrue(
+            "WorkoutDetailTabbedContent must key LaunchedEffect strictly on (pendingAutoShare, mapTabIndex)",
+            source.contains("LaunchedEffect(pendingAutoShare, mapTabIndex)")
+        )
+        assertTrue(
+            "WorkoutDetailTabbedContent must use instant scrollToPage(mapTabIndex) without animation",
+            source.contains("pagerState.scrollToPage(mapTabIndex)")
+        )
+    }
+
+    @Test
+    fun testWorkoutDetailTabbedContent_preservesAndRestoresOriginPageIndex_TST_REV_007_2() {
+        val tabbedFile = findSourceFile("src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/WorkoutDetailTabbedContent.kt")
+        val trackMapFile = findSourceFile("src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/TrackOnMapScreen.kt")
+        val summariesTabbedFile = findSourceFile("src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/workoutlist/WorkoutSummariesTabbedScreen.kt")
+        val summariesListFile = findSourceFile("src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/workoutlist/WorkoutSummariesListFragment.kt")
+        val clustersFile = findSourceFile("src/main/java/com/atrainingtracker/trainingtracker/ui/clusters/WorkoutClustersScreen.kt")
+
+        assertTrue("WorkoutDetailTabbedContent.kt must exist", tabbedFile.exists())
+        assertTrue("TrackOnMapScreen.kt must exist", trackMapFile.exists())
+        assertTrue("WorkoutSummariesTabbedScreen.kt must exist", summariesTabbedFile.exists())
+        assertTrue("WorkoutSummariesListFragment.kt must exist", summariesListFile.exists())
+        assertTrue("WorkoutClustersScreen.kt must exist", clustersFile.exists())
+
+        val tabbedSource = tabbedFile.readText()
+        val trackMapSource = trackMapFile.readText()
+        val summariesTabbedSource = summariesTabbedFile.readText()
+        val summariesListSource = summariesListFile.readText()
+        val clustersSource = clustersFile.readText()
+
+        // REQ-REV-006.2: originPageIndex capture & restore
+        assertTrue(
+            "WorkoutDetailTabbedContent must rememberSaveable originPageIndex",
+            tabbedSource.contains("var originPageIndex by rememberSaveable")
+        )
+        assertTrue(
+            "WorkoutDetailTabbedContent must capture originPageIndex on Option A selection",
+            tabbedSource.contains("originPageIndex = pagerState.currentPage")
+        )
+        assertTrue(
+            "WorkoutDetailTabbedContent must restore originPageIndex on snapshot complete",
+            tabbedSource.contains("pagerState.scrollToPage(targetPage)")
+        )
+
+        // Caller dismissal propagation
+        assertTrue(
+            "TrackOnMapScreen must declare and forward onSnapshotComplete",
+            trackMapSource.contains("onSnapshotComplete: (() -> Unit)? = null") &&
+                trackMapSource.contains("onSnapshotComplete = onSnapshotComplete")
+        )
+        assertTrue(
+            "WorkoutSummariesTabbedScreen must dismiss detail view on snapshot complete",
+            summariesTabbedSource.contains("onSnapshotComplete = {") &&
+                summariesTabbedSource.contains("selectedWorkoutIdForDetails = null")
+        )
+        assertTrue(
+            "WorkoutSummariesListFragment must dismiss detail view on snapshot complete",
+            summariesListSource.contains("onSnapshotComplete = {") &&
+                summariesListSource.contains("selectedWorkoutForDetails = null")
+        )
+        assertTrue(
+            "WorkoutClustersScreen must dismiss detail view on snapshot complete",
+            clustersSource.contains("onSnapshotComplete = {") &&
+                clustersSource.contains("inspectedWorkout = null")
+        )
+    }
+
+    @Test
+    fun testMapDetailLayout_declaresShowHeaderAndWorkoutDetailTabbedContentPassesFalse_TST_REV_007_3() {
+        val mapLayoutFile = findSourceFile("src/main/java/com/atrainingtracker/trainingtracker/ui/map/MapDetailLayout.kt")
+        val tabbedFile = findSourceFile("src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/WorkoutDetailTabbedContent.kt")
+
+        assertTrue("MapDetailLayout.kt must exist", mapLayoutFile.exists())
+        assertTrue("WorkoutDetailTabbedContent.kt must exist", tabbedFile.exists())
+
+        val mapLayoutSource = mapLayoutFile.readText()
+        val tabbedSource = tabbedFile.readText()
+
+        // REQ-REV-006.3 / REQ-REV-006.4: showHeader declaration & offscreen recording
+        assertTrue(
+            "MapDetailLayout must declare showHeader: Boolean = true parameter",
+            mapLayoutSource.contains("showHeader: Boolean = true")
+        )
+        assertTrue(
+            "MapDetailLayout must branch header rendering on showHeader",
+            mapLayoutSource.contains("if (showHeader)")
+        )
+        assertTrue(
+            "WorkoutDetailTabbedContent must pass showHeader = false across child MapDetailLayout invocations",
+            tabbedSource.contains("showHeader = false")
+        )
+    }
 }

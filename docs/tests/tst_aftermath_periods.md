@@ -3,7 +3,7 @@
 **Domain**: `aftermath_periods`  
 **Prefixes**: `PER`, `PERF`  
 **Scope**: Post-workout analytics, period statistics, zone distributions, graphs and visual scrubbers.  
-**Total Tests**: 32
+**Total Tests**: 42
 
 ---
 
@@ -532,6 +532,158 @@
   • Verify that `showFloatingShareButton: Boolean = workoutData == null` is preserved intact and top-end actions dock at `16.dp` without duplicate buttons or layout regressions (REQ-UI-500).
   5. *Clean-Room Targeted Regression Execution (`TST-PER-037.5`)*:
   • Execute targeted unit tests `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.map.*" --tests "com.atrainingtracker.trainingtracker.ui.aftermath.*" --tests "com.atrainingtracker.trainingtracker.ui.theme.ThemeColorCentralizationAuditTest"` verifying 100% clean-room test pass rate.
+
+### TST-PER-038: **Morning HRV Readiness Database Persistence, Backup Parity & Per-Posture SWC Baseline Calculator Suite** [Verified]
+- **Requirement(s)**: `REQ-PER-030` (`REQ-PER-030.1`..`REQ-PER-030.5`)
+- **Component**: `HrvReadinessEntryTest.kt`, `HrvReadinessDatabaseManagerTest.kt`, `HrvReadinessCalculatorTest.kt`, `DatabaseSchemaRegistryTest.kt`, `BackupManagerHrvReadinessTest.kt`
+- **Jira**: `ATT-3545`
+- **Test Description**:
+  1. *Schema Creation & DTO Cursor Mapping Symmetry Unit Test (`TST-PER-038.1`, `HrvReadinessEntryTest.kt` / `HrvReadinessDatabaseManagerTest.kt`)*:
+  • Verify `HrvReadiness.db` schema creation (`DB_VERSION = 1`) with all 14 columns, type constraints, and indexes.
+  • Verify symmetric mapping between single-item `fromCursor(Cursor)` and batch `fromCursorBatch(Cursor)` over identical SQLite cursor rows per Rule 20.
+  2. *Transactional Primary-Day Deduplication & Pin Promotion Test (`TST-PER-038.2`, `HrvReadinessDatabaseManagerTest.kt`)*:
+  • Verify that multiple readings on the same `(date_iso, posture)` designate the earliest valid reading as primary (`is_primary_for_day = 1`).
+  • Verify that toggling a manual pin promotes the selected reading to primary and demotes previous readings transactionally.
+  • Verify that deleting the primary reading promotes the next earliest valid reading for that calendar day.
+  3. *DatabaseSchemaRegistry & Backup Integration Parity Test (`TST-PER-038.3`, `DatabaseSchemaRegistryTest.kt` / `BackupManagerHrvReadinessTest.kt`)*:
+  • Verify that `DatabaseSchemaRegistry.getMaxSupportedVersion("HrvReadiness.db")` matches `HrvReadinessDatabaseManager.DB_VERSION` directly per Rule 62.
+  • Verify that `DatabaseConnectionManager.getActiveDatabases(context)` includes `HrvReadiness.db`.
+  • Verify that `.attbackup` export snapshots `HrvReadiness.db` via `VACUUM INTO` and restores it completely intact.
+  4. *Per-Posture Isolation, Artifact Gate & 14-Day Calibration Gate Test (`TST-PER-038.4`, `HrvReadinessCalculatorTest.kt`)*:
+  • Verify complete isolation across `SUPINE`, `SEATED`, and `STANDING` posture baselines.
+  • Verify that readings with `artifact_rate_pct > 5.0%` are excluded from 7-day and 60-day baseline averages.
+  • Verify that $< 14$ baseline days in 60d or $< 3$ days in 7d returns `ReadinessStatus.CALIBRATING` with exact day progress (`"Day X of 14 baseline calibration"`).
+  5. *Bessel-Corrected Sample SD & SWC Corridor Classification Test (`TST-PER-038.5`, `HrvReadinessCalculatorTest.kt`)*:
+  • Verify that $\sigma_{60d}$ evaluates unbiased sample standard deviation with $N-1$ denominator over daily $\ln(\text{rMSSD})$.
+  • Verify SWC corridor calculation $[\mu_{60d} - 0.5\sigma_{60d}, \mu_{60d} + 0.5\sigma_{60d}]$.
+  • Verify threshold classifications: `OPTIMAL` when inside corridor, `FATIGUED_LOW` when below, and `ABOVE_NORMAL` when above.
+  6. *Tier 1 Clean-Room Targeted Regression Execution (`TST-PER-038.6`)*:
+  • Execute targeted unit tests `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.database.hrv.*" --tests "com.atrainingtracker.trainingtracker.migration.*" --tests "com.atrainingtracker.trainingtracker.build.*"` verifying 100% clean-room test pass rate.
+
+### TST-PER-039: **Android Health Connect Morning & Overnight Resting HRV Ingestion Suite** [Verified]
+- **Requirement(s)**: `REQ-PER-031` (`REQ-PER-031.1`..`REQ-PER-031.5`)
+- **Component**: `HealthConnectHrvImporterTest.kt`, `HealthConnectManagerTest.kt`, `HrvReadinessCalculatorTest.kt`, `HrvReadinessRepositoryTest.kt`
+- **Jira**: `ATT-4981`
+- **Test Description**:
+  1. *Permission & Opt-In Gating Contract Test (`TST-PER-039.1`, `HealthConnectHrvImporterTest.kt`)*:
+  • Verify that `HealthConnectHrvImporter` halts sync and modifies zero database records when permissions are missing or `isHealthConnectHrvImportEnabled` is false.
+  • Verify that `READ_HEART_RATE_VARIABILITY` and `READ_RESTING_HEART_RATE` permissions are declared in `AndroidManifest.xml`.
+  2. *Log-Normal Multi-Epoch Aggregation & Date Attribution Unit Test (`TST-PER-039.2`, `HealthConnectHrvImporterTest.kt`)*:
+  • Verify that multiple nocturnal `HeartRateVariabilityRmssdRecord` epochs (e.g. 30.0, 40.0, 50.0 ms) aggregate to log-normal mean $\text{ln\_rmssd} = \frac{1}{M}\sum \ln(\text{rMSSD}_i)$ and geometric mean $\text{rmssd\_ms} = \exp(\text{ln\_rmssd})$.
+  • Verify that sleep records before midnight (e.g. 23:00) attribute to the waking date `date_iso`, and records after midnight (e.g. 05:00) attribute to the current waking date.
+  3. *Isolated Cohort Persistence & Idempotency Test (`TST-PER-039.3`, `HealthConnectHrvImporterTest.kt` / `HrvReadinessRepositoryTest.kt`)*:
+  • Verify that imported measurements persist with `posture = HrvPosture.OVERNIGHT_WEARABLE` and `artifactRatePct = null`.
+  • Verify that repeated imports do not produce duplicate rows for the same `(date_iso, OVERNIGHT_WEARABLE)` and preserve user pins.
+  4. *Posture Isolation in SWC Baseline Calculator Contract Test (`TST-PER-039.4`, `HrvReadinessCalculatorTest.kt`)*:
+  • Verify complete baseline isolation between `OVERNIGHT_WEARABLE` and waking postures (`SUPINE`, `SEATED`, `STANDING`).
+  5. *Tier 1 Clean-Room Targeted Regression Execution (`TST-PER-039.5`)*:
+  • Execute targeted unit tests `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.database.hrv.*" --tests "com.atrainingtracker.trainingtracker.cloud.healthconnect.*" --tests "com.atrainingtracker.trainingtracker.build.*"` verifying 100% clean-room test pass rate.
+
+### TST-PER-040: **Guided Morning Resting HRV Measurement & Waking Protocol Suite** [Verified]
+- **Requirement(s)**: `REQ-PER-032` (`REQ-PER-032.1`..`REQ-PER-032.5`)
+- **Component**: `MorningHrvCheckViewModelTest.kt`, `MorningHrvCheckScreenTest.kt`, `HrvReadinessRepositoryTest.kt`, `TranslationParityTest.kt`
+- **Jira**: `ATT-3556`
+- **Test Description**:
+  1. *Measurement Lifecycle State Machine Unit Test (`TST-PER-040.1`, `MorningHrvCheckViewModelTest.kt`)*:
+  • Verify transition lifecycle: `READY` -> `STABILIZING` (15–30s countdown) -> `MEASURING` (60s/120s countdown) -> `COMPLETED`.
+  • Verify cancel and reset behavior returns state machine cleanly to `READY`.
+  2. *Sticky Posture & Duration Preference Contract Test (`TST-PER-040.2`, `MorningHrvCheckViewModelTest.kt`)*:
+  • Verify that selecting `SEATED` or `STANDING` persists to `SP_HRV_LAST_POSTURE` and reloads on new ViewModel instances.
+  • Verify duration selection (60s vs. 120s) configuration.
+  3. *Sensor Ingestion & Zero-Workout Invariant (`TST-PER-040.3`, `MorningHrvCheckViewModelTest.kt`)*:
+  • Verify that `MorningHrvCheckViewModel` consumes `RrBeatListener` stream from `BANALServiceRepository` without launching `TrackerService` or writing to `WorkoutSummaries.db`.
+  4. *Post-Hoc Full-Window Centered Filter Calculation Test (`TST-PER-040.4`, `MorningHrvCheckViewModelTest.kt`)*:
+  • Verify that completed measurement runs `RrArtifactFilter.filterBidirectional` across all buffered RR intervals, computing post-hoc `rmssd_ms`, `ln_rmssd`, `resting_hr_bpm`, and `artifact_rate_pct`.
+  5. *Persistence, Artifact Warning & SWC Feedback Test (`TST-PER-040.5`, `MorningHrvCheckViewModelTest.kt`)*:
+  • Verify that saving persists `HrvReadinessEntry` into `HrvReadinessRepository` (`HrvReadiness.db`).
+  • Verify that artifact rate > 5.0% surfaces warning state.
+  • Verify completion view displays `ReadinessStatus` evaluated against per-posture 7d/60d SWC baseline.
+  6. *Tier 1 Clean-Room Targeted Regression Execution (`TST-PER-040.6`)*:
+  • Execute targeted unit tests `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.aftermath.hrv.*" --tests "com.atrainingtracker.trainingtracker.database.hrv.*" --tests "com.atrainingtracker.trainingtracker.localization.TranslationParityTest" --tests "com.atrainingtracker.trainingtracker.build.*"` verifying 100% clean-room test pass rate.
+
+### TST-PER-041: **Longitudinal HRV Readiness Trend, Posture SWC Corridor & Periods Integration Suite** [Verified]
+- **Requirement(s)**: `REQ-PER-033` (`REQ-PER-033.1`..`REQ-PER-033.6`)
+- **Component**: `HrvReadinessTrendMathTest.kt`, `PeriodsViewModelTest.kt`, `TranslationParityTest.kt`
+- **Jira**: `ATT-3557`
+- **Test Description**:
+  1. *Posture Filtering, Deduplication & Series Calculation Test (`TST-PER-041.1`, `HrvReadinessTrendMathTest.kt`)*:
+  • Verify that `HrvReadinessTrendMath.calculateTrendSeries` segregates entries by posture, selects daily primary readings (`is_primary_for_day` then timestamp), and filters out artifact rate > 5.0%.
+  • Verify default posture selection picks posture with the highest count of readings.
+  2. *7-Day Rolling Mean & 60-Day Bessel-Corrected SWC Corridor Test (`TST-PER-041.2`, `HrvReadinessTrendMathTest.kt`)*:
+  • Verify 7-day rolling window: null if $N_{7d} < 3$, mean of daily $\ln(\text{rMSSD})$ when $N_{7d} \ge 3$.
+  • Verify 60-day baseline corridor: null if $N_{60d} < 14$, $\mu_{60d} \pm 0.5\sigma_{60d}$ with $N-1$ Bessel denominator when $N_{60d} \ge 14$.
+  • Verify status classification: `OPTIMAL`, `FATIGUED_LOW`, `ABOVE_NORMAL`, `CALIBRATING`.
+  3. *Training Load Alignment & Touch Scrubbing Math Test (`TST-PER-041.3`, `HrvReadinessTrendMathTest.kt`)*:
+  • Verify time-series alignment of daily training load (TSS/ATL) with HRV calendar dates.
+  • Verify touch coordinate projection correctly resolves nearest date point and tooltip payload.
+  4. *PeriodsViewModel Integration & Graceful Empty State Test (`TST-PER-041.4`, `PeriodsViewModelTest.kt`)*:
+  • Verify `PeriodsViewModel` exposes `hrvReadinessTrendState` Flow.
+  • When `HrvReadinessRepository` has zero entries, verify state indicates empty/omitted.
+  • When entries exist, verify populated trend state with active posture and metrics.
+  5. *9-Language Localization Parity Test (`TST-PER-041.5`, `TranslationParityTest.kt`)*:
+  • Verify all new HRV readiness trend strings in `strings_hrv.xml` match 100% across all 9 locales (EN, DE, ES, FR, IT, JA, NL, PL, PT) with valid format specifiers.
+  6. *Tier 1 Clean-Room Targeted Regression Execution (`TST-PER-041.6`)*:
+  • Execute targeted unit tests `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.*" --tests "com.atrainingtracker.trainingtracker.database.hrv.*" --tests "com.atrainingtracker.trainingtracker.localization.TranslationParityTest" --tests "com.atrainingtracker.trainingtracker.build.*"` verifying 100% clean-room test pass rate.
+
+### TST-PER-042: **Lossless WorkoutRrIntervals, Centered Recompute & Garmin FIT HrvMesg Suite** [Verified]
+- **Requirement(s)**: `REQ-PER-034` (`REQ-PER-034.1`..`REQ-PER-034.6`)
+- **Component**: `WorkoutRrDatabaseManagerTest.kt`, `RrBeatTimestampReconstructionTest.kt`, `HrvPostWorkoutRecomputerTest.kt`, `FitFileWriterHrvTest.kt`, `LegacyImportEngineFitHrvTest.kt`
+- **Jira**: `ATT-3543`
+- **Test Description**:
+  1. *WorkoutRrDatabaseManager & Schema Integrity Test (`TST-PER-042.1`, `WorkoutRrDatabaseManagerTest.kt`)*:
+  • Verify creation of table `workout_rr_intervals` with columns `workout_id`, `beat_index`, `beat_timestamp_ms`, `rr_ms`, `artifact_flag`, `gap_beats`.
+  • Verify batch insertion and query by `workout_id` ordered by `beat_index`.
+  • Verify cascading deletion via `WorkoutDeletionHelper` when parent workout is removed.
+  • Verify registration in `DatabaseSchemaRegistry`.
+  2. *Beat Timestamp Cumulative Reconstruction Test (`TST-PER-042.2`, `RrBeatTimestampReconstructionTest.kt`)*:
+  • Verify cumulative timestamp progression $t_k = t_{k-1} + \text{rr\_ms}_k$ preserves exact interval durations.
+  • Verify drift resynchronization when $|t_{\text{pkt}} - t_{\text{beat}}| > 2000\text{ ms}$.
+  • Verify strict monotonic order of timestamps.
+  3. *Centered-Window Post-Workout Recomputation Test (`TST-PER-042.3`, `HrvPostWorkoutRecomputerTest.kt`)*:
+  • Verify centered window evaluation for DFA $\alpha_1$ ($t \pm 60\text{s}$) and $\text{rMSSD}$ ($t \pm 30\text{s}$) using bidirectional filtering.
+  • Verify elimination of ~60s trailing filter lag when comparing against step-change synthetic data.
+  • Verify updates to `WorkoutSamples` and `WorkoutSummaries` session extrema.
+  4. *Garmin FIT HrvMesg Export Interleaving Test (`TST-PER-042.4`, `FitFileWriterHrvTest.kt`)*:
+  • Verify `FitFileWriter` exports standard `HrvMesg` messages interleaved with `RecordMesg` trackpoints when RR data exists.
+  • Verify time intervals are scaled in fractional seconds (FIT standard).
+  • Verify workouts without RR intervals write zero `HrvMesg` messages.
+  5. *Garmin FIT HrvMesg Import & Recomputation Trigger Test (`TST-PER-042.5`, `LegacyImportEngineFitHrvTest.kt`)*:
+  • Verify `FitWorkoutParser` and `LegacyImportEngine` parse `HrvMesg` intervals and reconstruct timestamps across pause events.
+  • Verify extracted beats are persisted in `WorkoutRr.db` and post-workout recomputation is triggered.
+  6. *Tier 1 Clean-Room Targeted Regression Execution (`TST-PER-042.6`)*:
+  • Execute targeted unit tests `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.database.hrv.*" --tests "com.atrainingtracker.trainingtracker.exporter.writer.*" --tests "com.atrainingtracker.trainingtracker.migration.*" --tests "com.atrainingtracker.trainingtracker.build.*"` verifying 100% clean-room test pass rate.
+
+### TST-PER-043: **Interactive DFA a1/rMSSD Charts & a1 Scatter Plot Suite** [Verified]
+- **Requirement(s)**: `REQ-PER-035` (`REQ-PER-035.1`..`REQ-PER-035.6`)
+- **Component**: `TelemetryMetricGraphHrvTest.kt`, `HrvAlpha1ScatterChartTest.kt`, `HrvPathPointEnrichmentTest.kt`, `ThemeColorCentralizationAuditTest`, `TranslationParityTest`
+- **Jira**: `ATT-3544`
+- **Test Description**:
+  1. *PathPoint HRV Enrichment Unit Test (`TST-PER-043.1`, `HrvPathPointEnrichmentTest.kt`)*:
+  • Verify `WorkoutRepository` enriches `PathPoint` instances with `hrvDfaA1`, `hrvRmssd`, and `hrvArtifactRate` from `WorkoutSamples.db`.
+  • Verify `@JvmOverloads` constructor backwards compatibility when HRV parameters are omitted (defaults to null).
+  2. *TelemetryMetricGraph DFA a1 & rMSSD Tracks (`TST-PER-043.2`, `TelemetryMetricGraphHrvTest.kt`)*:
+  • Verify `TelemetryMetricGraph` renders continuous paths for `TelemetryMetricType.HRV_DFA_A1` and `TelemetryMetricType.HRV_RMSSD`.
+  • Verify horizontal plot bounds (`startPadding = 50.dp`) match `ElevationProfile` and other telemetry graphs per Rule 64.
+  • Verify dashed horizontal threshold lines at $\alpha_1 = 0.75$ and $\alpha_1 = 0.50$ when `metricType == HRV_DFA_A1`.
+  • Verify Y-axis clamped within $[0.2, 1.4]$ for DFA $\alpha_1$.
+  3. *Artifact Gap & Non-Interpolation Hatching Test (`TST-PER-043.3`, `TelemetryMetricGraphHrvTest.kt`)*:
+  • Verify path breaks and does NOT draw continuous line segments across dropouts where `hrvArtifactRate > 5.0%` or `hrvDfaA1 == null`.
+  • Verify hatched background path overlay is rendered across artifact-suppressed regions.
+  4. *HrvAlpha1ScatterChart Dynamics & Regression Line Test (`TST-PER-043.4`, `HrvAlpha1ScatterChartTest.kt`)*:
+  • Verify scatter points are plotted for $(\text{HR}, \alpha_1)$ and $(\text{Power}, \alpha_1)$ strictly within valid transition domain $\alpha_1 \in [0.35, 1.15]$ and artifact rate $\le 5\%$.
+  • Verify ordinary least squares linear regression slope ($m$) and intercept ($b$) calculation with threshold intersection estimates.
+  • Verify graceful fallback/empty state when zero valid points exist.
+  5. *9-Language Localization & Color Centralization Audit (`TST-PER-043.5`)*:
+  • Execute `TranslationParityTest` verifying all 9 locales match with 100% parity for new `strings_hrv.xml` keys.
+  • Execute `ThemeColorCentralizationAuditTest` verifying all chart and card colors use centralized `TTColor` tokens.
+  6. *Tier 1 Clean-Room Targeted Regression Execution (`TST-PER-043.6`)*:
+  • Execute targeted unit tests `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.map.*" --tests "com.atrainingtracker.trainingtracker.ui.aftermath.*" --tests "com.atrainingtracker.trainingtracker.localization.TranslationParityTest" --tests "com.atrainingtracker.trainingtracker.ui.theme.ThemeColorCentralizationAuditTest" --tests "com.atrainingtracker.trainingtracker.build.*"` verifying 100% clean-room test pass rate.
+
+
+
+
+
+
 
 
 

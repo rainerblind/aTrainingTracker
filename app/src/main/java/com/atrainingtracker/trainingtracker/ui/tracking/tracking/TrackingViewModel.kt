@@ -153,6 +153,9 @@ class TrackingViewModel @JvmOverloads constructor(
     private val _pendingAddition = MutableStateFlow<AdditionParams?>(null)
     val pendingAddition = _pendingAddition.asStateFlow()
 
+    // Bounded live sparkline buffer cache keyed by sensorFieldId (REQ-TRK-059.4, ATT-1294)
+    private val sparklineBuffers = mutableMapOf<Long, com.atrainingtracker.trainingtracker.ui.tracking.LiveSparklineBuffer>()
+
     // Screen mode is now local and driven by the parent (ATT-245)
     private val _screenMode = MutableStateFlow(ScreenMode.TRACKING)
     val screenMode: StateFlow<ScreenMode> = _screenMode.asStateFlow()
@@ -543,6 +546,21 @@ class TrackingViewModel @JvmOverloads constructor(
                             )
                         } else null
 
+                        val existingBuffer = sparklineBuffers[config.sensorFieldId]
+                        val sparklineSamples = if (config.showGraph) {
+                            val buffer = if (existingBuffer != null && existingBuffer.horizonSeconds == config.graphHorizonSeconds) {
+                                existingBuffer
+                            } else {
+                                val newBuf = com.atrainingtracker.trainingtracker.ui.tracking.LiveSparklineBuffer(config.graphHorizonSeconds)
+                                sparklineBuffers[config.sensorFieldId] = newBuf
+                                newBuf
+                            }
+                            buffer.getSamples()
+                        } else {
+                            sparklineBuffers.remove(config.sensorFieldId)
+                            emptyList()
+                        }
+
                         SensorFieldState(
                             configHash = uniqueHash,
                             sensorFieldId = config.sensorFieldId,
@@ -561,6 +579,9 @@ class TrackingViewModel @JvmOverloads constructor(
                             sensorType = config.sensorType,
                             showValue = config.showValue,
                             showBar = config.showBar,
+                            showGraph = config.showGraph,
+                            graphHorizonSeconds = config.graphHorizonSeconds,
+                            sparklineSamples = sparklineSamples,
                             colWeight = config.colWeight
                         )
                     }
@@ -690,10 +711,19 @@ class TrackingViewModel @JvmOverloads constructor(
 
                 // 3. Iterate through every field that needs this update.
                 val isBike = (activityType.sportType == BSportType.BIKE)
+                val sparklineSample = numericValue?.toFloat()
                 for (fieldToUpdate in fieldsToUpdate) {
                     val fieldZoneGaugeState = if (fieldToUpdate.showBar) rawZoneGaugeState else null
                     val fieldPedalBalanceState = if (fieldToUpdate.showBar && isBike) newPedalBalanceState else null
                     val fieldWPrimeBatteryState = if (fieldToUpdate.showBar && isBike && isWPrimeBal) newWPrimeBatteryState else null
+
+                    val newSparklineSamples = if (fieldToUpdate.showGraph && sparklineSample != null) {
+                        val buffer = sparklineBuffers.getOrPut(fieldToUpdate.sensorFieldId) {
+                            com.atrainingtracker.trainingtracker.ui.tracking.LiveSparklineBuffer(fieldToUpdate.graphHorizonSeconds)
+                        }
+                        buffer.addSample(sparklineSample)
+                        buffer.getSamples()
+                    } else null
 
                     // Check if this specific instance needs an update to avoid unnecessary changes.
                     if (fieldToUpdate.value != newFormattedValue ||
@@ -701,7 +731,8 @@ class TrackingViewModel @JvmOverloads constructor(
                         fieldToUpdate.zoneDisplayOptions != displayOptions ||
                         fieldToUpdate.zoneGaugeState != fieldZoneGaugeState ||
                         fieldToUpdate.pedalBalanceState != fieldPedalBalanceState ||
-                        (isWPrimeBal && fieldToUpdate.wPrimeBatteryState != fieldWPrimeBatteryState)) {
+                        (isWPrimeBal && fieldToUpdate.wPrimeBatteryState != fieldWPrimeBatteryState) ||
+                        (newSparklineSamples != null && fieldToUpdate.sparklineSamples != newSparklineSamples)) {
                         val index = updatedFields.indexOf(fieldToUpdate)
                         if (index != -1) {
                             updatedFields[index] = fieldToUpdate.copy(
@@ -710,7 +741,8 @@ class TrackingViewModel @JvmOverloads constructor(
                                 zoneDisplayOptions = displayOptions,
                                 zoneGaugeState = fieldZoneGaugeState,
                                 pedalBalanceState = fieldPedalBalanceState,
-                                wPrimeBatteryState = if (isWPrimeBal) fieldWPrimeBatteryState else fieldToUpdate.wPrimeBatteryState
+                                wPrimeBatteryState = if (isWPrimeBal) fieldWPrimeBatteryState else fieldToUpdate.wPrimeBatteryState,
+                                sparklineSamples = newSparklineSamples ?: fieldToUpdate.sparklineSamples
                             )
                             hasChanged = true
                         }
@@ -728,6 +760,31 @@ class TrackingViewModel @JvmOverloads constructor(
         sensorData: FilteredSensorData<*>,
         activityType: ActivityType
     ): Color {
+        if (sensorData.sensorType == SensorType.HRV_DFA_A1) {
+            val currentValue = sensorData.value
+            val alpha1 = if (currentValue is Number) currentValue.toDouble() else null
+            val config = _tuningConfig.value
+            return com.atrainingtracker.trainingtracker.ui.tracking.HrvZoneIndicator.calculateZoneColor(
+                alpha1 = alpha1,
+                t1 = config.dfaA1ThresholdT1,
+                t2 = config.dfaA1ThresholdT2,
+                defaultColor = defaultZoneColor
+            )
+        }
+
+        if (sensorData.sensorType == SensorType.LIVE_HR_DRIFT) {
+            val currentValue = sensorData.value
+            if (currentValue is Number) {
+                val drift = currentValue.toDouble()
+                return when {
+                    drift <= 3.0 -> zoneColors.getOrElse(1) { defaultZoneColor }
+                    drift <= 8.0 -> zoneColors.getOrElse(2) { defaultZoneColor }
+                    else -> zoneColors.getOrElse(3) { defaultZoneColor }
+                }
+            }
+            return defaultZoneColor
+        }
+
         val currentValue = sensorData.value
         val zoneType = getZoneType(sensorData.sensorType, activityType.sportType)
 

@@ -39,11 +39,67 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
+import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.database.WorkoutSource
+import com.atrainingtracker.trainingtracker.ui.common.filters.FilterFormattingUtils
 import com.atrainingtracker.trainingtracker.ui.common.filters.RemovableFilterChip
 import java.text.DateFormat
 import java.util.Date
 import java.util.Locale
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ActiveFilterChipsRow(
+    criteria: WorkoutFilterCriteria,
+    onUpdateCriteria: ((WorkoutFilterCriteria) -> WorkoutFilterCriteria) -> Unit,
+    onClearAll: () -> Unit,
+    sportName: String? = null,
+    equipmentName: String? = null,
+    modifier: Modifier = Modifier
+) {
+    if (criteria.isEmpty) return
+
+    ActiveFilterChipsRow(
+        criteria = criteria,
+        onRemoveQuery = { onUpdateCriteria { it.copy(query = "") } },
+        onRemoveYear = { onUpdateCriteria { it.copy(year = null) } },
+        onRemoveMonth = { onUpdateCriteria { it.copy(month = null) } },
+        onRemoveDateRange = { onUpdateCriteria { it.copy(startDateS = null, endDateS = null) } },
+        onRemoveBSportType = { onUpdateCriteria { it.copy(bSportType = null) } },
+        onRemoveSport = { onUpdateCriteria { it.copy(sportTypeId = null) } },
+        onRemoveEquipment = { onUpdateCriteria { it.copy(equipmentId = null) } },
+        onRemoveCommute = { onUpdateCriteria { it.copy(isCommute = null) } },
+        onRemoveTrainer = { onUpdateCriteria { it.copy(isTrainer = null) } },
+        onRemoveRace = { onUpdateCriteria { it.copy(isRace = null) } },
+        onRemoveSource = { onUpdateCriteria { it.copy(source = null) } },
+        onRemoveGpsTrack = { onUpdateCriteria { it.copy(hasGpsTrack = null) } },
+        onRemoveDistanceRange = { onUpdateCriteria { it.copy(minDistanceMeters = null, maxDistanceMeters = null) } },
+        onRemoveDurationRange = { onUpdateCriteria { it.copy(minDurationSec = null, maxDurationSec = null) } },
+        onRemoveElevationRange = { onUpdateCriteria { it.copy(minElevationGainMeters = null, maxElevationGainMeters = null) } },
+        onRemoveStartLocation = {
+            onUpdateCriteria {
+                it.copy(
+                    startLocationName = null,
+                    startLocationLat = null,
+                    startLocationLng = null,
+                    startLocationRadiusM = null
+                )
+            }
+        },
+        onRemoveCluster = {
+            onUpdateCriteria {
+                it.copy(
+                    clusterId = null,
+                    clusterName = null
+                )
+            }
+        },
+        onClearAll = onClearAll,
+        sportName = sportName,
+        equipmentName = equipmentName,
+        modifier = modifier
+    )
+}
 
 /**
  * Horizontal scrolling row displaying removable chips for each active workout filter dimension.
@@ -59,6 +115,7 @@ fun ActiveFilterChipsRow(
     onRemoveYear: () -> Unit,
     onRemoveMonth: () -> Unit,
     onRemoveDateRange: () -> Unit,
+    onRemoveBSportType: () -> Unit = {},
     onRemoveSport: () -> Unit,
     onRemoveEquipment: () -> Unit,
     onRemoveCommute: () -> Unit,
@@ -69,8 +126,6 @@ fun ActiveFilterChipsRow(
     onRemoveDistanceRange: () -> Unit = {},
     onRemoveDurationRange: () -> Unit = {},
     onRemoveElevationRange: () -> Unit = {},
-    onRemoveMinDistance: () -> Unit = onRemoveDistanceRange,
-    onRemoveMinDuration: () -> Unit = onRemoveDurationRange,
     onRemoveStartLocation: () -> Unit = {},
     onRemoveCluster: () -> Unit = {},
     onClearAll: () -> Unit,
@@ -165,6 +220,21 @@ fun ActiveFilterChipsRow(
             }
         }
 
+        // Base Sport Type Chip (ATT-6321)
+        if (criteria.bSportType != null) {
+            item("bSportType") {
+                val label = when (criteria.bSportType) {
+                    BSportType.BIKE -> stringResource(R.string.workout_summaries_tab_bike)
+                    BSportType.RUN -> stringResource(R.string.workout_summaries_tab_run)
+                    BSportType.UNKNOWN, BSportType.CONFLICT, null -> stringResource(R.string.workout_summaries_tab_other)
+                }
+                RemovableFilterChip(
+                    label = label,
+                    onRemove = onRemoveBSportType
+                )
+            }
+        }
+
         // Sport Sub-Type Chip
         if (criteria.sportTypeId != null) {
             item("sport") {
@@ -246,13 +316,12 @@ fun ActiveFilterChipsRow(
         // Distance Interval Chip
         if (criteria.minDistanceMeters != null || criteria.maxDistanceMeters != null) {
             item("distance") {
-                val minKm = criteria.minDistanceMeters?.let { (it / 1000.0).let { v -> if (v % 1.0 == 0.0) v.toInt().toString() else v.toString() } }
-                val maxKm = criteria.maxDistanceMeters?.let { (it / 1000.0).let { v -> if (v % 1.0 == 0.0) v.toInt().toString() else v.toString() } }
-                val label = when {
-                    minKm != null && maxKm != null -> stringResource(R.string.filter_distance_interval_format, minKm, maxKm)
-                    minKm != null -> stringResource(R.string.filter_min_distance_format, minKm)
-                    else -> stringResource(R.string.filter_max_distance_format, maxKm!!)
-                }
+                val isImperial = FilterFormattingUtils.rememberIsImperialUnits()
+                val label = FilterFormattingUtils.formatFilterDistanceChip(
+                    criteria.minDistanceMeters,
+                    criteria.maxDistanceMeters,
+                    isImperial
+                )
                 RemovableFilterChip(
                     label = label,
                     onRemove = onRemoveDistanceRange
@@ -280,13 +349,12 @@ fun ActiveFilterChipsRow(
         // Elevation Gain Interval Chip (REQ-UI-425)
         if (criteria.minElevationGainMeters != null || criteria.maxElevationGainMeters != null) {
             item("elevation") {
-                val minM = criteria.minElevationGainMeters?.toInt()?.toString()
-                val maxM = criteria.maxElevationGainMeters?.toInt()?.toString()
-                val label = when {
-                    minM != null && maxM != null -> stringResource(R.string.filter_elevation_interval_format, minM, maxM)
-                    minM != null -> stringResource(R.string.filter_min_elevation_format, minM)
-                    else -> stringResource(R.string.filter_max_elevation_format, maxM!!)
-                }
+                val isImperial = FilterFormattingUtils.rememberIsImperialUnits()
+                val label = FilterFormattingUtils.formatFilterElevationChip(
+                    criteria.minElevationGainMeters,
+                    criteria.maxElevationGainMeters,
+                    isImperial
+                )
                 RemovableFilterChip(
                     label = label,
                     onRemove = onRemoveElevationRange

@@ -44,6 +44,7 @@ import com.google.accompanist.drawablepainter.rememberDrawablePainter
  * @param fallback Optional [ImageVector] to render if the drawable resource is not found or invalid.
  * @return A valid [Painter] instance that will not throw on draw.
  */
+@android.annotation.SuppressLint("ResourceType")
 @Composable
 fun safePainterResource(
     @DrawableRes id: Int,

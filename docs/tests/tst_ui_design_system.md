@@ -3,7 +3,7 @@
 **Domain**: `ui_design_system`  
 **Prefixes**: `UI`, `UNT`  
 **Scope**: Jetpack Compose design system, UI components, typography, dialogs, gestures, and layout contracts.  
-**Total Tests**: 390
+**Total Tests**: 392
 
 ---
 
@@ -8042,14 +8042,132 @@
   4. *Tier 1 Targeted Unit Test Regression (`TST-UI-501.4`)*:
   • Execute targeted test suite (`ui.settings.supporter.*`, `ui.branding.*`, `ui.theme.ThemeColorCentralizationAuditTest`, `build.*`) asserting 100% pass rate.
 
+### TST-UI-502: **SupporterScreen PioneerStatusBanner Neutral Copy Verification Suite** [Verified]
+- **Target Release**: `V5.0.0`
+- **Requirement(s)**: `REQ-UI-502`
+- **Component**: `SupporterComponents.kt`, `res/values*/strings.xml`, `SupporterCopyContractTest.kt`, `TranslationParityTest.kt`
+- **Jira**: `ATT-6290`
+- **Test Description**:
+  1. *Pioneer Copy Contract & ANT+ Elimination Test (`TST-UI-502.1`)*:
+  • Verify in `SupporterCopyContractTest.kt` across all 9 locales (`values`, `de`, `es`, `fr`, `it`, `ja`, `nl`, `pl`, `pt`) that `pioneer_thank_you_body` exists, has non-blank content, contains zero references to "ANT+" (case-insensitive), contains zero decorative emojis (`ATT-5400`), and contains zero format specifiers.
+  • Verify exact appreciative wording match in German (`values-de`) and English (`values`).
+  2. *9-Language Localization & Translation Parity Suite (`TST-UI-502.2`)*:
+  • Execute `TranslationParityTest` asserting that `pioneer_thank_you_body` exists in all 9 supported locales with 100% parity.
+  3. *Tier 1 Targeted Unit Test Regression (`TST-UI-502.3`)*:
+  • Execute targeted test suite (`ui.settings.supporter.*`, `ui.branding.*`, `ui.theme.ThemeColorCentralizationAuditTest`, `build.*`) asserting 100% pass rate.
 
+### TST-UI-503: **DisplaySettingsDialog Display Option Subtitles Verification Suite** [Verified]
+- **Target Release**: `V5.0.0`
+- **Requirement(s)**: `REQ-UI-503`
+- **Component**: `DisplaySettingsDialog.kt`, `res/values*/strings.xml`, `DisplaySettingsTest.kt`, `TranslationParityTest.kt`
+- **Jira**: `ATT-6282`
+- **Test Description**:
+  1. *Display Option Subtitle Resource Contract Test (`TST-UI-503.1`)*:
+  • Verify in `DisplaySettingsTest.kt` that `forcePortraitSummary`, `prefsKeepScreenOnSummary`, and `prefsNoUnlockingSummary` exist across all 9 locales, are non-blank, contain zero format specifiers, and contain zero decorative emojis (`ATT-5400`).
+  • Verify that `prefsKeepScreenOnTitle` and `prefsNoUnlockingTitle` start with a capitalized letter across all applicable locales.
+  2. *9-Language Localization Parity Suite (`TST-UI-503.2`)*:
+  • Execute `TranslationParityTest` asserting that all 3 new string resources exist across all 9 supported locales with 100% parity.
+  3. *Tier 1 Targeted Unit Test Regression (`TST-UI-503.3`)*:
+  • Execute targeted test suite (`ui.settings.display.*`, `ui.branding.*`, `ui.theme.ThemeColorCentralizationAuditTest`, `build.*`) asserting 100% pass rate.
 
+### TST-UI-504: **SupporterPlanCard Compact Button Padding & Title Truncation Verification Suite** [Verified]
+- **Target Release**: `V5.0.0`
+- **Requirement(s)**: `REQ-UI-504`
+- **Component**: `SupporterComponents.kt`, `SupporterPlanCardHierarchyTest.kt`
+- **Jira**: `ATT-6323`
+- **Test Description**:
+  1. *Button Content Padding & Single-Line Title Contract Test (`TST-UI-504.1`)*:
+  • Verify in `SupporterPlanCardHierarchyTest.kt` that `SupporterComponents.kt` defines `contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)` across `OutlinedButton` and `Button` instances in `SupporterPlanCard`.
+  • Verify that the card tier title `Text` composable declares `maxLines = 1` and `overflow = TextOverflow.Ellipsis`.
+  2. *Tier Hierarchy & Action Button Integrity Test (`TST-UI-504.2`)*:
+  • Execute existing hierarchy tests verifying `PlanCardHierarchyState` resolution, recommendation badge suppression, and button label mappings across all supported tiers.
+  3. *Tier 1 Targeted Unit Test Regression (`TST-UI-504.3`)*:
+  • Execute targeted test suite (`ui.settings.supporter.*`, `ui.branding.*`, `ui.theme.ThemeColorCentralizationAuditTest`, `build.*`) asserting 100% pass rate.
 
+### TST-UI-505: **WorkoutClusterSplitSheet Embedded Map Preview & Split Action Verification Suite** [Verified]
+- **Target Release**: `V5.0.0`
+- **Requirement(s)**: `REQ-UI-505`
+- **Component**: `WorkoutClusterSplitSheet.kt`, `PathPreviewMap.kt`, `WorkoutClustersViewModel.kt`, `WorkoutClusterComponents.kt`, `WorkoutClustersScreen.kt`, `WorkoutClusterSplitMapPreviewTest.kt`
+- **Jira**: `ATT-6318`
+- **Test Description**:
+  1. *Embedded Map Composable Layout & Placement Contract (`TST-UI-505.1`)*:
+  • Verify via contract test in `WorkoutClusterSplitMapPreviewTest.kt` that `WorkoutClusterSplitSheet.kt` embeds `PathPreviewMap` directly above the sensitivity slider column with `paths = splitVariantPaths` and a bounded 200dp height.
+  2. *PathPreviewMap Multi-Path Rendering & Backward Compatibility (`TST-UI-505.2`)*:
+  • Verify in `PathPreviewMapContractTest.kt` that `PathPreviewMap` accepts `paths: List<MappablePath> = emptyList()` with default parameter hygiene, renders polyline loops, and accurately computes composite `LatLngBounds` across multiple paths.
+  3. *List-Level Split Action Context Menu Integration (`TST-UI-505.3`)*:
+  • Verify in `WorkoutClusterComponentsContractTest.kt` / `WorkoutClusterSplitMapPreviewTest.kt` that `ClusterItem` context menu contains `cluster_split_action` when `cluster.hitCount >= 2`, and that triggering the action invokes the split sheet callback.
+  4. *Tier 1 Targeted Unit Test Regression (`TST-UI-505.4`)*:
+  • Execute targeted test suite (`ui.clusters.*`, `ui.map.*`, `ui.theme.ThemeColorCentralizationAuditTest`, `ui.components.core.*`, `build.*`) asserting 100% pass rate.
 
+### TST-UI-506: **Decoupled Compose UI State Models & Mapping Verification Suite** [Verified]
+- **Target Release**: `V5.0.0`
+- **Requirement(s)**: `REQ-UI-506`
+- **Component**: `WorkoutLaps.kt`, `LapRowUiState.kt`, `WorkoutSummaryCompact.kt`, `WorkoutCardUiState.kt`, `WorkoutExtrema.kt`, `ExtremaUiState.kt`, `WorkoutUiStateMappingTest.kt`
+- **Jira**: `ATT-936`
+- **Test Description**:
+  1. *LapRowUiState Mapping & Badge Determination Contract Test (`TST-UI-506.1`)*:
+  • Verify in `WorkoutUiStateMappingTest.kt` that `buildLapRowUiStates(...)` accurately computes fastest/slowest lap badges, formatted time, distance, and speed/pace for RUN and non-RUN sports.
+  2. *WorkoutCardUiState Transformation Contract Test (`TST-UI-506.2`)*:
+  • Verify in `WorkoutUiStateMappingTest.kt` that `WorkoutCardUiState.from(...)` formats active time, total distance, speed/pace, and elevation ascent according to athlete unit settings and maps sport type and equipment properly.
+  3. *ExtremaUiState Transformation Contract Test (`TST-UI-506.3`)*:
+  • Verify that `ExtremaUiState.from(...)` maps extrema rows, correctly applies fallback `"-"` strings, respects `isMinRelevant`, and propagates bolding flags.
+  4. *Composable Signature & Backward Compatibility Test (`TST-UI-506.4`)*:
+  • Verify that existing composable callers compile and render without breaking changes.
+  5. *Tier 1 Targeted Unit Test Regression (`TST-UI-506.5`)*:
+  • Execute targeted test suite (`ui.components.workoutlaps.*`, `ui.components.workoutextrema.*`, `ui.aftermath.workoutlist.*`, `ui.theme.ThemeColorCentralizationAuditTest`, `ui.components.core.*`, `build.*`) asserting 100% pass rate.
 
+### TST-UI-507: **Repository-Only UI Database Access Layer Verification Suite** [Verified]
+- **Target Release**: `V5.0.0`
+- **Requirement(s)**: `REQ-UI-507`
+- **Component**: `MainActivityWithNavigation.kt`, `ImportBackupTabsScreen.kt`, `EquipmentViewModel.kt`, `ControlTrackingViewModel.kt`, `RepositoryUiCleanlinessContractTest.kt`
+- **Jira**: `ATT-432`
+- **Test Description**:
+  1. *AST DatabaseManager Prohibition Contract Test (`TST-UI-507.1`)*:
+  • Verify via contract test in `RepositoryUiCleanlinessContractTest.kt` that `MainActivityWithNavigation.kt`, `ImportBackupTabsScreen.kt`, `EquipmentViewModel.kt`, and `ControlTrackingViewModel.kt` contain zero occurrences of `*DatabaseManager` imports or invocations.
+  2. *EquipmentViewModel Repository Delegation Test (`TST-UI-507.2`)*:
+  • Verify in `EquipmentViewModelLifecycleTest.kt` / `EquipmentViewModelTest.kt` that `EquipmentViewModel` correctly loads equipment, sport types, and sensor counts via repository delegates.
+  3. *ControlTrackingViewModel Unfinished Workout & Sensor Seeding Test (`TST-UI-507.3`)*:
+  • Verify in `ControlTrackingViewModelTest.kt` that `ControlTrackingViewModel` correctly verifies unfinished workouts and seeds sensor state via `WorkoutRepository` and `DeviceDataRepository`.
+  4. *Tier 1 Targeted Unit Test Regression (`TST-UI-507.4`)*:
+  • Execute targeted test suite (`ui.equipment.*`, `ui.tracking.controltracking.*`, `ui.settings.importbackup.*`, `ui.theme.ThemeColorCentralizationAuditTest`, `ui.components.core.*`, `build.*`) asserting 100% pass rate.
 
+### TST-UI-508: **Filter Chips & Sheets Imperial Unit Parity & Rounding Verification Suite** [Verified]
+- **Target Release**: `V5.0.0`
+- **Requirement(s)**: `REQ-UI-508`, `REQ-UI-157`, `REQ-UI-187`, `REQ-UI-425`
+- **Component**: `FilterFormattingUtils.kt`, `FilterFormattingUtilsTest.kt`, `ActiveFilterChipsRow.kt`, `ActiveClusterFilterChipsRow.kt`, `ActiveRouteFilterChipsRow.kt`, `ClusterFilterBottomSheet.kt`, `RouteFilterBottomSheet.kt`
+- **Jira**: `ATT-6168`
+- **Test Description**:
+  1. *Filter Distance & Elevation Formatting Unit Test (`TST-UI-508.1`, `FilterFormattingUtilsTest.kt`)*:
+  • Verify `formatFilterDistanceChip` formats interval, min-only, and max-only correctly for metric (`km`) and imperial (`mi`), asserting at most 1 decimal place without trailing `.0` (e.g. "10 km", "12.5 mi").
+  • Verify `formatFilterElevationChip` formats elevation correctly for metric (`m`) and imperial (`ft`), asserting rounded integer values (e.g. "100 m", "500 ft").
+  2. *Active Filter Chips Row Imperial Unit Presentation Contract Test (`TST-UI-508.2`, `ActiveFilterChipsRowTest.kt`)*:
+  • Verify `ActiveFilterChipsRow`, `ActiveClusterFilterChipsRow`, and `ActiveRouteFilterChipsRow` display imperial distance (`mi`) and elevation (`ft`) chips when `TrainingApplication.getUnit() == MyUnits.IMPERIAL`.
+  3. *Cluster & Route Bottom Sheet Preset & Input Conversion Test (`TST-UI-508.3`, `FilterFormattingUtilsTest.kt` / `ClusterFilterBottomSheetTest.kt`)*:
+  • Verify distance and elevation presets return appropriate athletic thresholds for metric vs imperial.
+  • Verify two-way input conversion between display strings (mi/ft) and domain criteria meters.
+  4. *9-Language Localization & Translation Parity Suite (`TST-UI-508.4`, `TranslationParityTest.kt`)*:
+  • Verify all newly added imperial filter format strings exist across all 9 canonical locales (`values`, `values-de`, `values-es`, `values-fr`, `values-it`, `values-ja`, `values-nl`, `values-pl`, `values-pt`) with matching format specifiers.
+  5. *Tier 1 Targeted Unit Test Regression (`TST-UI-508.5`)*:
+  • Execute targeted UI filter test suite (`ui.common.filters.*`, `ui.aftermath.workoutlist.*`, `ui.clusters.*`, `ui.routes.*`, `ui.theme.ThemeColorCentralizationAuditTest`, `ui.components.core.*`) asserting 100% pass rate.
 
-
+### TST-UI-509: **Shared Filter UI Components, Draft State & Functional Chip Transformers Verification Suite** [Verified]
+- **Target Release**: `V5.0.0`
+- **Requirement(s)**: `REQ-UI-509`, `REQ-UI-157`, `REQ-UI-187`, `REQ-UI-425`, `REQ-UI-468`, `REQ-UI-508`
+- **Component**: `FilterSearchField.kt`, `NumericIntervalFilterSection.kt`, `StartLocationFilterSection.kt`, `WorkoutFilterBottomSheet.kt`, `ClusterFilterBottomSheet.kt`, `RouteFilterBottomSheet.kt`, `SegmentFilterBottomSheet.kt`, `KnownLocationsFilterBottomSheet.kt`, `ActiveFilterChipsRow.kt`
+- **Jira**: `ATT-6043`
+- **Test Description**:
+  1. *Shared Filter Components Unit & Composable Contract Tests (`TST-UI-509.1`, `FilterSearchFieldTest.kt`, `NumericIntervalFilterSectionTest.kt`, `StartLocationFilterSectionTest.kt`)*:
+  • Verify `FilterSearchField` handles query emission and clears text on close icon click.
+  • Verify `NumericIntervalFilterSection` emits updated bounds on preset selection and manual text changes without losing partial text ("1.").
+  • Verify `StartLocationFilterSection` filters infrequent locations (`hitCount < 5`) and toggles "Show all".
+  2. *Filter Bottom Sheets Draft State & Reset Contract Tests (`TST-UI-509.2`, `WorkoutFilterBottomSheetTest.kt`, `ClusterFilterBottomSheetTest.kt`, `RouteFilterBottomSheetTest.kt`)*:
+  • Verify `draft` criteria state captures modifications and applies them on OK click.
+  • Verify `onClearAll` resets draft state to default criteria and clears text buffers.
+  3. *Active Filter Chips Functional Transformer & Clear-All Contract Test (`TST-UI-509.3`, `ActiveFilterChipsRowTest.kt`, `ActiveFilterChipsRowClearAllContractTest.kt`)*:
+  • Verify dismissing individual filter chips applies the expected copy transform via `onUpdateCriteria`.
+  • Verify `ActiveFilterChipsRowClearAllContractTest` passes with zero regressions on clear-all semantics.
+  4. *Tier 1 Targeted Unit Test Regression Suite (`TST-UI-509.4`)*:
+  • Execute targeted UI filter test suite (`ui.common.filters.*`, `ui.aftermath.workoutlist.*`, `ui.clusters.*`, `ui.routes.*`, `ui.segments.*`, `ui.knownlocations.*`, `ui.theme.ThemeColorCentralizationAuditTest`, `ui.components.core.*`, `build.*`) asserting 100% pass rate.
 
 
 

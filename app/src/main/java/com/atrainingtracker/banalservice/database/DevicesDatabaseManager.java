@@ -799,7 +799,8 @@ public class DevicesDatabaseManager {
                 || type == DeviceType.BIKE_SPEED
                 || type == DeviceType.BIKE_CADENCE
                 || type == DeviceType.BIKE_SPEED_AND_CADENCE
-                || type == DeviceType.BIKE_POWER;
+                || type == DeviceType.BIKE_POWER
+                || type == DeviceType.BIKE_RADAR;
     }
 
     public static boolean isRunSensor(@Nullable DeviceType type) {

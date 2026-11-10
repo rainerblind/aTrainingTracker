@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Android Health Connect Integration (ATT-3052 / REQ-SET-100..103) -->
+    <string name="health_connect_title">Health Connect</string>
+    <string name="health_connect_sync_title">Mit Health Connect synchronisieren</string>
+    <string name="health_connect_sync_summary">Abgeschlossene Trainings und Telemetrie automatisch zu Android Health Connect exportieren</string>
+    <string name="health_connect_not_available">Health Connect ist auf diesem Gerät nicht verfügbar</string>
+    <string name="health_connect_update_required">Health Connect-Aktualisierung erforderlich</string>
+    <string name="health_connect_sync_manual">Zu Health Connect synchronisieren</string>
+    <string name="health_connect_sync_success">Training mit Health Connect synchronisiert</string>
+    <string name="health_connect_permissions_needed">Health Connect-Schreibberechtigungen sind erforderlich, um Trainingsdaten zu synchronisieren</string>
+</resources>

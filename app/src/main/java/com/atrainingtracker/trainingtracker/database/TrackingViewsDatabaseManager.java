@@ -172,6 +172,34 @@ public class TrackingViewsDatabaseManager {
             boolean showBar,
             float colWeight
     ) {
+        updateSensorView(
+                sensorFieldId,
+                sensorType,
+                viewSize,
+                sourceDeviceId,
+                filterType,
+                filterConstant,
+                showValue,
+                showBar,
+                colWeight,
+                false,
+                300
+        );
+    }
+
+    public void updateSensorView(
+            long sensorFieldId,
+            SensorType sensorType,
+            ViewSize viewSize,
+            @Nullable Long sourceDeviceId,
+            FilterType filterType,
+            double filterConstant,
+            boolean showValue,
+            boolean showBar,
+            float colWeight,
+            boolean showGraph,
+            int graphHorizonSeconds
+    ) {
         ContentValues values = new ContentValues();
         values.put(TrackingViewsDbHelper.SENSOR_TYPE, sensorType.name());
         values.put(TrackingViewsDbHelper.VIEW_SIZE, viewSize.name());
@@ -188,6 +216,10 @@ public class TrackingViewsDatabaseManager {
         }
         if (hasColWeightColumn(getDatabase())) {
             values.put(TrackingViewsDbHelper.COL_WEIGHT, colWeight > 0f ? colWeight : 1.0f);
+        }
+        if (hasGraphColumns(getDatabase())) {
+            values.put(TrackingViewsDbHelper.SHOW_GRAPH, showGraph ? 1 : 0);
+            values.put(TrackingViewsDbHelper.GRAPH_HORIZON_S, graphHorizonSeconds);
         }
 
         getDatabase().update(TrackingViewsDbHelper.ROWS_TABLE,
@@ -246,6 +278,20 @@ public class TrackingViewsDatabaseManager {
                 int nameIdx = cursor.getColumnIndex("name");
                 while (cursor.moveToNext()) {
                     if (TrackingViewsDbHelper.COL_WEIGHT.equalsIgnoreCase(cursor.getString(nameIdx))) {
+                        return true;
+                    }
+                }
+            }
+        } catch (Exception ignored) {}
+        return false;
+    }
+
+    private boolean hasGraphColumns(SQLiteDatabase db) {
+        try (Cursor cursor = db.rawQuery("PRAGMA table_info(" + TrackingViewsDbHelper.ROWS_TABLE + ")", null)) {
+            if (cursor != null) {
+                int nameIdx = cursor.getColumnIndex("name");
+                while (cursor.moveToNext()) {
+                    if (TrackingViewsDbHelper.SHOW_GRAPH.equalsIgnoreCase(cursor.getString(nameIdx))) {
                         return true;
                     }
                 }
@@ -315,6 +361,37 @@ public class TrackingViewsDatabaseManager {
             boolean showValue,
             boolean showBar,
             float colWeight) {
+        insertSensorFieldAt(
+                tabViewId,
+                rowNr,
+                colNr,
+                sensorType,
+                viewSize,
+                sourceDeviceId,
+                filterType,
+                filterConstant,
+                showValue,
+                showBar,
+                colWeight,
+                false,
+                300
+        );
+    }
+
+    public void insertSensorFieldAt(
+            long tabViewId,
+            int rowNr,
+            int colNr,                        // -1 means new row
+            SensorType sensorType,
+            ViewSize viewSize,
+            @Nullable Long sourceDeviceId,    // null means none = best
+            FilterType filterType,
+            double filterConstant,
+            boolean showValue,
+            boolean showBar,
+            float colWeight,
+            boolean showGraph,
+            int graphHorizonSeconds) {
 
         if (tabViewId <= 0 || rowNr < 1) {
             Log.w(TAG, "Invalid parameters for insertSensorFieldAt: tabViewId=" + tabViewId + ", rowNr=" + rowNr);
@@ -368,6 +445,10 @@ public class TrackingViewsDatabaseManager {
             }
             if (hasColWeightColumn(db)) {
                 values.put(TrackingViewsDbHelper.COL_WEIGHT, colWeight > 0f ? colWeight : 1.0f);
+            }
+            if (hasGraphColumns(db)) {
+                values.put(TrackingViewsDbHelper.SHOW_GRAPH, showGraph ? 1 : 0);
+                values.put(TrackingViewsDbHelper.GRAPH_HORIZON_S, graphHorizonSeconds);
             }
 
             db.insertOrThrow(TrackingViewsDbHelper.ROWS_TABLE, null, values);
@@ -1104,7 +1185,8 @@ public class TrackingViewsDatabaseManager {
         // public static final int DB_VERSION = 14; // upgraded to version 14 at 18.10.2026: Adding Section Dividers Table (ATT-4055)
         // public static final int DB_VERSION = 16; // upgraded to version 16 at 01.11.2026: Adding ShowValue and ShowBar columns to LayoutRowsTable (ATT-4841)
         // public static final int DB_VERSION = 17; // upgraded to version 17 at 01.11.2026: Adding ColWeight column to LayoutRowsTable (ATT-4861)
-        public static final int DB_VERSION = 18; // upgraded to version 18 at 01.11.2026: Sport-dependent bar gating & upgrade migration (ATT-4927)
+        // public static final int DB_VERSION = 18; // upgraded to version 18 at 01.11.2026: Sport-dependent bar gating & upgrade migration (ATT-4927)
+        public static final int DB_VERSION = 19; // upgraded to version 19 at 10.11.2026: Configurable live sparkline graph tiles & time horizon (ATT-1294)
         public static final String VIEWS_TABLE = "ViewsTable";                // the table for the different 'tabs'
         public static final String ROWS_TABLE = "LayoutRowsTable";            // the table for the sensor fields within each tab
         public static final String SECTION_DIVIDERS_TABLE = "SectionDividersTable"; // new in version 14 (ATT-4055)
@@ -1134,6 +1216,8 @@ public class TrackingViewsDatabaseManager {
         public static final String SHOW_VALUE = "ShowValue";      // new in version 16 (ATT-4841)
         public static final String SHOW_BAR = "ShowBar";          // new in version 16 (ATT-4841)
         public static final String COL_WEIGHT = "ColWeight";      // new in version 17 (ATT-4861)
+        public static final String SHOW_GRAPH = "ShowGraph";      // new in version 19 (ATT-1294)
+        public static final String GRAPH_HORIZON_S = "GraphHorizonS"; // new in version 19 (ATT-1294)
         // protected static final int SMALL = 20;                 removed in version 8
         // protected static final int MEDIUM = 25;                removed in version 8
         // protected static final int LARGE = 30;                 removed in version 8
@@ -1366,6 +1450,23 @@ public class TrackingViewsDatabaseManager {
 
         protected static final String CREATE_LAYOUTS_TABLE_V18 = CREATE_LAYOUTS_TABLE_V17;
 
+        protected static final String CREATE_LAYOUTS_TABLE_V19 = "create table " + ROWS_TABLE + " ("
+                + ROW_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
+                + VIEW_ID + " int, "
+                + ROW_NR + " int, "
+                + COL_NR + " int, "
+                + SENSOR_TYPE + " text, "
+                + TEXT_SIZE + " int, "
+                + VIEW_SIZE + " text, "
+                + SOURCE_DEVICE_ID + " int, "
+                + FILTER_TYPE + " text, "
+                + FILTER_CONSTANT + " real, "
+                + SHOW_VALUE + " int DEFAULT 1, "
+                + SHOW_BAR + " int DEFAULT 0, "
+                + COL_WEIGHT + " real DEFAULT 1.0, "
+                + SHOW_GRAPH + " int DEFAULT 0, "
+                + GRAPH_HORIZON_S + " int DEFAULT 300)";
+
         protected static final String CREATE_SECTION_DIVIDERS_TABLE_V14 = "CREATE TABLE IF NOT EXISTS "
                 + SECTION_DIVIDERS_TABLE + " ("
                 + C_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
@@ -1393,11 +1494,11 @@ public class TrackingViewsDatabaseManager {
         @Override
         public void onCreate(@NonNull SQLiteDatabase db) {
             db.execSQL(CREATE_VIEWS_TABLE_V15);
-            db.execSQL(CREATE_LAYOUTS_TABLE_V18);
+            db.execSQL(CREATE_LAYOUTS_TABLE_V19);
             db.execSQL(CREATE_SECTION_DIVIDERS_TABLE_V14);
 
             if (DEBUG) Log.d(TAG, "onCreated sql: " + CREATE_VIEWS_TABLE_V15);
-            if (DEBUG) Log.d(TAG, "onCreated sql: " + CREATE_LAYOUTS_TABLE_V18);
+            if (DEBUG) Log.d(TAG, "onCreated sql: " + CREATE_LAYOUTS_TABLE_V19);
             if (DEBUG) Log.d(TAG, "onCreated sql: " + CREATE_SECTION_DIVIDERS_TABLE_V14);
 
 
@@ -1575,6 +1676,8 @@ public class TrackingViewsDatabaseManager {
                 values.put(SHOW_VALUE, 1);
                 values.put(SHOW_BAR, isBarSupported(rowData.sensorType, activityType) ? 1 : 0);
                 values.put(COL_WEIGHT, rowData.colWeight());
+                values.put(SHOW_GRAPH, 0);
+                values.put(GRAPH_HORIZON_S, 300);
                 db.insert(ROWS_TABLE, null, values);
             }
 
@@ -1979,6 +2082,57 @@ public class TrackingViewsDatabaseManager {
                     }
                 }
             }
+
+            if (oldVersion < 19 && (newVersion >= 19 || newVersion == 0)) {
+                Log.i(TAG, "Upgrading database to version 19: Adding ShowGraph and GraphHorizonS columns to LayoutRowsTable (ATT-1294)");
+                boolean hasRowsTable = false;
+                try (Cursor cursor = db.rawQuery("SELECT name FROM sqlite_master WHERE type='table' AND name=?", new String[]{ROWS_TABLE})) {
+                    if (cursor != null && cursor.moveToFirst()) {
+                        hasRowsTable = true;
+                    }
+                }
+                if (hasRowsTable) {
+                    db.beginTransaction();
+                    try {
+                        boolean hasShowGraph = false;
+                        boolean hasGraphHorizonS = false;
+                        try (Cursor cursor = db.rawQuery("PRAGMA table_info(" + ROWS_TABLE + ")", null)) {
+                            if (cursor != null) {
+                                int nameIndex = cursor.getColumnIndex("name");
+                                while (cursor.moveToNext()) {
+                                    String colName = cursor.getString(nameIndex);
+                                    if (SHOW_GRAPH.equalsIgnoreCase(colName)) hasShowGraph = true;
+                                    if (GRAPH_HORIZON_S.equalsIgnoreCase(colName)) hasGraphHorizonS = true;
+                                }
+                            }
+                        }
+                        if (!hasShowGraph) {
+                            addColumn(db, ROWS_TABLE, SHOW_GRAPH, "int DEFAULT 0");
+                        }
+                        if (!hasGraphHorizonS) {
+                            addColumn(db, ROWS_TABLE, GRAPH_HORIZON_S, "int DEFAULT 300");
+                        }
+                        // Backfill defaults: ShowGraph = 0, GraphHorizonS = 300 across all rows
+                        db.execSQL("UPDATE " + ROWS_TABLE + " SET " + SHOW_GRAPH + " = 0 WHERE " + SHOW_GRAPH + " IS NULL;");
+                        db.execSQL("UPDATE " + ROWS_TABLE + " SET " + GRAPH_HORIZON_S + " = 300 WHERE " + GRAPH_HORIZON_S + " IS NULL;");
+                        db.setTransactionSuccessful();
+                    } finally {
+                        db.endTransaction();
+                    }
+                }
+            }
+        }
+
+        /**
+         * Evaluates whether a given {@link SensorType} supports live sparkline rendering (REQ-TRK-059.2).
+         * Returns true for numeric continuous and integer metrics; false for strings, timers, and coordinates.
+         */
+        public static boolean isGraphSupported(@Nullable SensorType sensorType) {
+            if (sensorType == null) return false;
+            return switch (sensorType) {
+                case ACCUMULATED_SENSORS, SENSORS, TIME_OF_DAY, TIME_TOTAL, TIME_ACTIVE, TIME_LAP, LAP_NR, LATITUDE, LONGITUDE -> false;
+                default -> true;
+            };
         }
 
         public static boolean isBarSupported(@Nullable SensorType sensorType, @Nullable BSportType sportType) {

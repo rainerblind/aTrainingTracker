@@ -21,6 +21,9 @@ package com.atrainingtracker.trainingtracker.ui.map
 import android.app.Application
 import android.content.SharedPreferences
 import com.atrainingtracker.banalservice.BSportType
+import com.atrainingtracker.trainingtracker.climbs.Climb
+import com.atrainingtracker.trainingtracker.climbs.ClimbCategory
+import com.atrainingtracker.trainingtracker.database.ClimbsDatabaseManager
 import com.atrainingtracker.trainingtracker.database.WorkoutCluster
 import com.atrainingtracker.trainingtracker.database.WorkoutClusterRepository
 import com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository
@@ -28,6 +31,7 @@ import com.atrainingtracker.trainingtracker.repositories.KnownLocationsRepositor
 import com.atrainingtracker.trainingtracker.repositories.RoutesRepository
 import com.atrainingtracker.trainingtracker.segments.SegmentsRepository
 import io.mockk.clearAllMocks
+import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -62,6 +66,7 @@ class GeneralMapLayersContractTest {
     private lateinit var mockSegmentsRepository: SegmentsRepository
     private lateinit var mockRoutesRepository: RoutesRepository
     private lateinit var mockWorkoutClusterRepository: WorkoutClusterRepository
+    private lateinit var mockClimbsDatabaseManager: ClimbsDatabaseManager
     private lateinit var mockPrefs: SharedPreferences
     private lateinit var mockEditor: SharedPreferences.Editor
 
@@ -74,6 +79,7 @@ class GeneralMapLayersContractTest {
         mockSegmentsRepository = mockk(relaxed = true)
         mockRoutesRepository = mockk(relaxed = true)
         mockWorkoutClusterRepository = mockk(relaxed = true)
+        mockClimbsDatabaseManager = mockk(relaxed = true)
         mockPrefs = mockk(relaxed = true)
         mockEditor = mockk(relaxed = true)
 
@@ -86,6 +92,7 @@ class GeneralMapLayersContractTest {
         every { mockRoutesRepository.activeNavigatedRouteId } returns MutableStateFlow(null)
         every { mockWorkoutClusterRepository.allClusters } returns MutableStateFlow(emptyList())
         every { mockWorkoutClusterRepository.clusterStats } returns MutableStateFlow(emptyMap())
+        coEvery { mockClimbsDatabaseManager.getAllClimbs() } returns emptyList()
 
         every { mockPrefs.edit() } returns mockEditor
         every { mockEditor.putStringSet(any(), any()) } returns mockEditor
@@ -105,6 +112,7 @@ class GeneralMapLayersContractTest {
             segmentsRepo = mockSegmentsRepository,
             routesRepo = mockRoutesRepository,
             workoutClusterRepo = mockWorkoutClusterRepository,
+            climbsDbManager = mockClimbsDatabaseManager,
             prefs = prefs,
             defaultDispatcher = testDispatcher
         )
@@ -113,12 +121,13 @@ class GeneralMapLayersContractTest {
     @Test
     fun testGeneralMapLayer_enumEntries() {
         val entries = GeneralMapLayer.entries
-        assertEquals("GeneralMapLayer must have exactly 5 entries", 5, entries.size)
+        assertEquals("GeneralMapLayer must have exactly 6 entries", 6, entries.size)
         assertTrue(entries.contains(GeneralMapLayer.ROUTES))
         assertTrue(entries.contains(GeneralMapLayer.SEGMENTS))
         assertTrue(entries.contains(GeneralMapLayer.KNOWN_LOCATIONS))
         assertTrue(entries.contains(GeneralMapLayer.TRACK))
         assertTrue(entries.contains(GeneralMapLayer.CLUSTERS))
+        assertTrue(entries.contains(GeneralMapLayer.CLIMBS))
     }
 
     @Test
@@ -130,6 +139,7 @@ class GeneralMapLayersContractTest {
         assertTrue(defaults.contains(GeneralMapLayer.KNOWN_LOCATIONS))
         assertTrue(defaults.contains(GeneralMapLayer.TRACK))
         assertFalse("DEFAULT_ENABLED must strictly exclude CLUSTERS (REQ-UI-322.1, ATT-5074)", defaults.contains(GeneralMapLayer.CLUSTERS))
+        assertFalse("DEFAULT_ENABLED must strictly exclude CLIMBS (REQ-MAP-064.2, ATT-2766)", defaults.contains(GeneralMapLayer.CLIMBS))
     }
 
     @Test
@@ -156,7 +166,7 @@ class GeneralMapLayersContractTest {
         verify {
             mockEditor.putStringSet(
                 MapFragmentWithTrackViewModel.PREF_GENERAL_MAP_ENABLED_LAYERS,
-                match { set -> !set.contains("ROUTES") && set.contains("SEGMENTS") && set.contains("TRACK") && set.contains("KNOWN_LOCATIONS") && !set.contains("CLUSTERS") }
+                match { set -> !set.contains("ROUTES") && set.contains("SEGMENTS") && set.contains("TRACK") && set.contains("KNOWN_LOCATIONS") && !set.contains("CLUSTERS") && !set.contains("CLIMBS") }
             )
             mockEditor.apply()
         }
@@ -167,7 +177,7 @@ class GeneralMapLayersContractTest {
         verify {
             mockEditor.putStringSet(
                 MapFragmentWithTrackViewModel.PREF_GENERAL_MAP_ENABLED_LAYERS,
-                match { set -> set.contains("ROUTES") && set.contains("SEGMENTS") && set.contains("TRACK") && set.contains("KNOWN_LOCATIONS") && !set.contains("CLUSTERS") }
+                match { set -> set.contains("ROUTES") && set.contains("SEGMENTS") && set.contains("TRACK") && set.contains("KNOWN_LOCATIONS") && !set.contains("CLUSTERS") && !set.contains("CLIMBS") }
             )
         }
     }
@@ -185,7 +195,7 @@ class GeneralMapLayersContractTest {
         verify {
             mockEditor.putStringSet(
                 MapFragmentWithTrackViewModel.PREF_GENERAL_MAP_ENABLED_LAYERS,
-                match { set -> set.contains("CLUSTERS") && set.contains("ROUTES") && set.contains("SEGMENTS") && set.contains("TRACK") && set.contains("KNOWN_LOCATIONS") }
+                match { set -> set.contains("CLUSTERS") && set.contains("ROUTES") && set.contains("SEGMENTS") && set.contains("TRACK") && set.contains("KNOWN_LOCATIONS") && !set.contains("CLIMBS") }
             )
             mockEditor.apply()
         }
@@ -196,7 +206,36 @@ class GeneralMapLayersContractTest {
         verify {
             mockEditor.putStringSet(
                 MapFragmentWithTrackViewModel.PREF_GENERAL_MAP_ENABLED_LAYERS,
-                match { set -> !set.contains("CLUSTERS") && set.contains("ROUTES") && set.contains("SEGMENTS") && set.contains("TRACK") && set.contains("KNOWN_LOCATIONS") }
+                match { set -> !set.contains("CLUSTERS") && set.contains("ROUTES") && set.contains("SEGMENTS") && set.contains("TRACK") && set.contains("KNOWN_LOCATIONS") && !set.contains("CLIMBS") }
+            )
+        }
+    }
+
+    @Test
+    fun testToggleClimbsLayer_persistsAndUpdatesFlow() = runTest {
+        every { mockPrefs.getStringSet(MapFragmentWithTrackViewModel.PREF_GENERAL_MAP_ENABLED_LAYERS, null) } returns null
+
+        val viewModel = createViewModel()
+        assertFalse("Initially CLIMBS is disabled by default (REQ-MAP-064.2, ATT-2766)", GeneralMapLayer.CLIMBS in viewModel.enabledLayers.value)
+
+        // Toggle CLIMBS on
+        viewModel.toggleLayer(GeneralMapLayer.CLIMBS)
+        assertTrue("CLIMBS must be enabled after toggle", GeneralMapLayer.CLIMBS in viewModel.enabledLayers.value)
+        verify {
+            mockEditor.putStringSet(
+                MapFragmentWithTrackViewModel.PREF_GENERAL_MAP_ENABLED_LAYERS,
+                match { set -> set.contains("CLIMBS") && set.contains("ROUTES") && set.contains("SEGMENTS") && set.contains("TRACK") && set.contains("KNOWN_LOCATIONS") && !set.contains("CLUSTERS") }
+            )
+            mockEditor.apply()
+        }
+
+        // Toggle CLIMBS back off
+        viewModel.toggleLayer(GeneralMapLayer.CLIMBS)
+        assertFalse("CLIMBS must be disabled after second toggle", GeneralMapLayer.CLIMBS in viewModel.enabledLayers.value)
+        verify {
+            mockEditor.putStringSet(
+                MapFragmentWithTrackViewModel.PREF_GENERAL_MAP_ENABLED_LAYERS,
+                match { set -> !set.contains("CLIMBS") && set.contains("ROUTES") && set.contains("SEGMENTS") && set.contains("TRACK") && set.contains("KNOWN_LOCATIONS") && !set.contains("CLUSTERS") }
             )
         }
     }
@@ -237,6 +276,41 @@ class GeneralMapLayersContractTest {
 
         assertEquals("Clusters must populate when layer is enabled", 1, viewModel.uiState.value.clusters.size)
         assertEquals("Morning Ridge", viewModel.uiState.value.clusters.first().name)
+    }
+
+    @Test
+    fun testMapClimbsFlow_gatedByClimbLayer() = runTest {
+        val testClimb = Climb(
+            id = 7L,
+            name = "Alpe d'Huez Test",
+            startLat = 45.0,
+            startLng = 6.0,
+            endLat = 45.1,
+            endLng = 6.1,
+            distanceMeters = 13800.0,
+            elevationGainMeters = 1060.0,
+            avgGradePercent = 8.1,
+            maxGradePercent = 11.5,
+            category = ClimbCategory.CAT_1
+        )
+        coEvery { mockClimbsDatabaseManager.getAllClimbs() } returns listOf(testClimb)
+        every { mockPrefs.getStringSet(MapFragmentWithTrackViewModel.PREF_GENERAL_MAP_ENABLED_LAYERS, null) } returns null
+
+        val viewModel = createViewModel()
+        backgroundScope.launch(kotlinx.coroutines.test.UnconfinedTestDispatcher(testScheduler)) {
+            viewModel.uiState.collect()
+        }
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        // Gated: By default CLIMBS is disabled, so uiState.climbs must be empty
+        assertEquals("Climbs must be empty when layer is disabled", emptyList<Climb>(), viewModel.uiState.value.climbs)
+
+        // Toggle CLIMBS on
+        viewModel.toggleLayer(GeneralMapLayer.CLIMBS)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertEquals("Climbs must populate when layer is enabled", 1, viewModel.uiState.value.climbs.size)
+        assertEquals("Alpe d'Huez Test", viewModel.uiState.value.climbs.first().name)
     }
 
     @Test
@@ -296,6 +370,10 @@ class GeneralMapLayersContractTest {
         assertTrue(
             "Must gate clusters with GeneralMapLayer.CLUSTERS in enabledLayers",
             content.contains("GeneralMapLayer.CLUSTERS in enabledLayers")
+        )
+        assertTrue(
+            "Must gate climbs with GeneralMapLayer.CLIMBS in enabledLayers",
+            content.contains("GeneralMapLayer.CLIMBS in enabledLayers")
         )
     }
 

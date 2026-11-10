@@ -234,6 +234,15 @@ class StravaUploaderNamingTest {
 
         mockkObject(SegmentsRepository.Companion)
         every { SegmentsRepository.getInstance(any()) } returns mockSegmentsRepository
+        every { mockSegmentsRepository.updateSegmentPrTime(any(), any()) } answers {
+            val segmentId = firstArg<Long>()
+            val prTime = secondArg<Int>()
+            val dbUpdated = mockSegmentsDbManager.updateSegmentPrTime(segmentId, prTime)
+            if (dbUpdated) {
+                mockSegmentsRepository.updateSegmentPr(segmentId, prTime)
+            }
+            dbUpdated
+        }
     }
 
     @After

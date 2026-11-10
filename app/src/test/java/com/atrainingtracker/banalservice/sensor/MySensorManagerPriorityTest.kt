@@ -85,6 +85,14 @@ class MySensorManagerPriorityTest {
         )
         assertArrayEquals(expectedSpeedPriority, MySensorManager.SPEED_PRIORITY)
 
+        val expectedAltitudePriority = arrayOf(
+            DeviceType.ALTITUDE_FROM_POSITION,
+            DeviceType.ALTITUDE_FROM_PRESSURE,
+            DeviceType.SPEED_AND_LOCATION_GOOGLE_FUSED,
+            DeviceType.SPEED_AND_LOCATION_GPS
+        )
+        assertArrayEquals(expectedAltitudePriority, MySensorManager.ALTITUDE_PRIORITY)
+
         // Verify relative location priority consistency across SPEED, ALTITUDE, and LOCATION
         val locationProviders = listOf(
             DeviceType.SPEED_AND_LOCATION_GOOGLE_FUSED,
@@ -224,7 +232,7 @@ class MySensorManagerPriorityTest {
 
     /**
      * `TST-SEN-025.1`: Verifies that [SensorType.ALTITUDE] dynamic priority correctly switches across
-     * Pressure > Position > Google Fused > GPS (REQ-TRK-024.1, REQ-SEN-027.4, ATT-5491, ATT-5492).
+     * Position (DEM) > Pressure > Google Fused > GPS (`REQ-TRK-024.1`, `REQ-SEN-025.1`, `ATT-6264`).
      */
     @Test
     fun altitudePriority_upgradesAndFallsBackAcrossPressurePositionAndGps() {
@@ -246,20 +254,20 @@ class MySensorManagerPriorityTest {
         sensorManager.registerSensor(fusedAlt)
         assertSame(fusedAlt, sensorManager.getBestSensor(SensorType.ALTITUDE))
 
-        // 3. Altitude From Position registered -> upgrades over Google Fused
-        sensorManager.registerSensor(posAlt)
-        assertSame(posAlt, sensorManager.getBestSensor(SensorType.ALTITUDE))
-
-        // 4. Altitude From Pressure registered -> upgrades over Position
+        // 3. Altitude From Pressure registered -> upgrades over Google Fused
         sensorManager.registerSensor(pressureAlt)
         assertSame(pressureAlt, sensorManager.getBestSensor(SensorType.ALTITUDE))
 
-        // 5. Unregister Pressure -> falls back to Position
-        sensorManager.unregisterSensor(pressureAlt)
+        // 4. Altitude From Position (DEM) registered -> upgrades over Pressure (REQ-TRK-024.1 / ATT-6264)
+        sensorManager.registerSensor(posAlt)
         assertSame(posAlt, sensorManager.getBestSensor(SensorType.ALTITUDE))
 
-        // 6. Unregister Position -> falls back to Google Fused
+        // 5. Unregister Position (DEM) -> falls back to Pressure
         sensorManager.unregisterSensor(posAlt)
+        assertSame(pressureAlt, sensorManager.getBestSensor(SensorType.ALTITUDE))
+
+        // 6. Unregister Pressure -> falls back to Google Fused
+        sensorManager.unregisterSensor(pressureAlt)
         assertSame(fusedAlt, sensorManager.getBestSensor(SensorType.ALTITUDE))
 
         // 7. Unregister Google Fused -> falls back to GPS
@@ -305,9 +313,9 @@ class MySensorManagerPriorityTest {
             assertEquals(5, MySensorManager.getPriorityRank(sensor, DeviceType.SPEED_AND_LOCATION_GPS))
         }
 
-        // Altitude: ALTITUDE_FROM_PRESSURE (0) -> ALTITUDE_FROM_POSITION (1) -> GOOGLE_FUSED (2) -> GPS (3)
-        assertEquals(0, MySensorManager.getPriorityRank(SensorType.ALTITUDE, DeviceType.ALTITUDE_FROM_PRESSURE))
-        assertEquals(1, MySensorManager.getPriorityRank(SensorType.ALTITUDE, DeviceType.ALTITUDE_FROM_POSITION))
+        // Altitude: ALTITUDE_FROM_POSITION (0) -> ALTITUDE_FROM_PRESSURE (1) -> GOOGLE_FUSED (2) -> GPS (3)
+        assertEquals(0, MySensorManager.getPriorityRank(SensorType.ALTITUDE, DeviceType.ALTITUDE_FROM_POSITION))
+        assertEquals(1, MySensorManager.getPriorityRank(SensorType.ALTITUDE, DeviceType.ALTITUDE_FROM_PRESSURE))
         assertEquals(2, MySensorManager.getPriorityRank(SensorType.ALTITUDE, DeviceType.SPEED_AND_LOCATION_GOOGLE_FUSED))
         assertEquals(3, MySensorManager.getPriorityRank(SensorType.ALTITUDE, DeviceType.SPEED_AND_LOCATION_GPS))
 

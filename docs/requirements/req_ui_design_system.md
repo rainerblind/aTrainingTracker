@@ -3,7 +3,7 @@
 **Domain**: `ui_design_system`  
 **Prefixes**: `UI`, `UNT`  
 **Scope**: Jetpack Compose design system, UI components, typography, dialogs, gestures, and layout contracts.  
-**Total Requirements**: 370
+**Total Requirements**: 372
 
 ---
 
@@ -14986,6 +14986,65 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 
 **Invariants**: Full-color 44dp tier emblems (`REQ-UI-445.4`); single-line buttons without text wrapping (`Rule 38`); 9-locale translation parity; 100% test pass rate.
 
+### REQ-UI-502: SupporterScreen: Neutral Pioneer Early Adopter Recognition Copy [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-UI-502`
+- **Implementation**: `res/values*/strings.xml`, `SupporterComponents.kt`, `SupporterCopyContractTest.kt`
+- **Rationale**: In `SupporterComponents.kt` (`PioneerStatusBanner`), `R.string.pioneer_thank_you_body` specifically referenced "the early ANT+ days" across all 9 locales. Early adopters who used Bluetooth LE, GPS, or internal phone sensors before V5.0.0 were alienated by ANT+-specific phrasing. The copy SHALL express neutral, appreciative gratitude for tracking workouts with an earlier version of the app.
+- **Description**:
+  1. *Neutral Pioneer Gratitude Copy (`REQ-UI-502.1`)*:
+     - `pioneer_thank_you_body` SHALL express appreciation for recording workouts with an earlier version of `aTrainingTracker` and state that unlimited sensors and all future features are permanently unlocked for the athlete.
+     - The copy SHALL contain zero references to "ANT+" across all 9 supported locales (`values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`).
+  2. *Prohibition of Decorative Inline Emojis (`REQ-UI-502.2`)*:
+     - Pursuant to `ATT-5400`, `pioneer_thank_you_body` SHALL NOT contain decorative inline Unicode emojis.
+  3. *9-Language Localization Parity (`REQ-UI-502.3`)*:
+     - The updated string SHALL maintain 100% localization parity across all 9 supported application locales without format specifiers (`%s`, `%d`).
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Amends `REQ-SET-085.3` / `REQ-UI-445.3` (`PioneerStatusBanner` copy). Targets `res/values*/strings.xml` and `SupporterComponents.kt`.
+2. *Historical Origin & Commit Trace*: Ticket `ATT-5371` (commit `31da409a`), which extracted `pioneer_thank_you_body` and added dynamic since-year formatting.
+3. *Root Reason for Existing Formulation*: Early copy colloquially assumed early adopters used ANT+ because of the app's historical origin. However, many athletes tracked with BLE/GPS in early versions.
+4. *Preservation of Core Invariants*: Lifetime Pro privileges (`isProActive() == true`), unlimited sensor pairing, dynamic `pioneerSinceYear` badge, 36dp vector emblem, and 9-locale parity remain 100% preserved.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* an athlete with Pioneer status opening `SupporterScreen`,
+• *When* `PioneerStatusBanner` is displayed,
+• *Then* `pioneer_thank_you_body` expresses appreciation for recording workouts with an earlier version of `aTrainingTracker` and contains zero references to "ANT+" and zero decorative emojis across all 9 supported locales.
+• *Given* the localization parity test suite (`TST-LOC-001` / `TST-UI-502.2`),
+• *When* executed,
+• *Then* all 9 locales pass with 100% translation parity and zero format specifier errors.
+
+**Invariants**: Lifetime Pro privileges (`isProActive() == true`); dynamic since-year badge formatting; 36dp tier emblem; zero format specifier mismatches; 100% test pass rate.
+
+### REQ-UI-503: DisplaySettingsDialog: Descriptive Subtitles and Capitalized Titles for Top Display Toggles [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-UI-503`
+- **Implementation**: `DisplaySettingsDialog.kt`, `res/values*/strings.xml`, `DisplaySettingsTest.kt`
+- **Rationale**: In `DisplaySettingsDialog.kt`, the top three display option toggles (`forcePortrait`, `keepScreenOn`, and `noUnlocking`) historically lacked explanatory subtitle descriptions, while legacy title strings started with lowercase letters in multiple locales. The system SHALL display clear, localized subtitle descriptions for all four top display toggles and ensure consistent title capitalization across all 9 supported locales.
+- **Description**:
+  1. *Descriptive Subtitle Wiring (`REQ-UI-503.1`)*:
+     - `DisplaySettingsDialog.kt` SHALL supply descriptive subtitles to the top three `DisplayOptionToggle` instances via `forcePortraitSummary`, `prefsKeepScreenOnSummary`, and `prefsNoUnlockingSummary`.
+     - Subtitles SHALL explain vertical portrait orientation lock, active tracking wake-lock retention, and lock-screen overlay access.
+  2. *Consistent Title Capitalization (`REQ-UI-503.2`)*:
+     - `prefsKeepScreenOnTitle` and `prefsNoUnlockingTitle` SHALL begin with a capital letter across all supported locales (e.g., EN: *"Keep screen on"*, *"Keep screen unlocked"*).
+  3. *9-Language Localization Parity (`REQ-UI-503.3`)*:
+     - All 3 summary strings SHALL be defined across all 9 supported application locales (`values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`) with 100% parity, zero format specifiers, and zero decorative emojis (`ATT-5400`).
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Amends `REQ-UI-149.1` (`DisplaySettingsDialog` presentation). Targets `DisplaySettingsDialog.kt` and `res/values*/strings.xml`.
+2. *Historical Origin & Commit Trace*: Ticket `ATT-1016` (commit `3aa0845a`) and `ATT-3549` (commit `f9d7842e`).
+3. *Root Reason for Existing Formulation*: Direct initial port of legacy XML preference entries where summaries were omitted and titles had lowercase casing in older Android versions.
+4. *Preservation of Core Invariants*: Preference keys (`DEFAULT_DISPLAY_OPTIONS`), SharedPreferences storage, boolean getters in `TrainingApplication`, and Material 3 `DisplayOptionToggle` structure remain 100% preserved.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* the athlete opens `DisplaySettingsDialog`,
+• *When* inspecting the top four display option switches,
+• *Then* all four toggles (`forcePortrait`, `keepScreenOn`, `noUnlocking`, `volumeKeysSwitchCockpitTabs`) render a capitalized title and a helpful, localized subtitle description.
+• *Given* the localization parity test suite (`TST-LOC-001` / `TST-UI-503.2`),
+• *When* executed,
+• *Then* all 9 locales pass with 100% parity and zero format specifier errors.
+
+**Invariants**: SharedPreferences key string set `DEFAULT_DISPLAY_OPTIONS`; `TrainingApplication` display getters; Material 3 typography and token hierarchy; zero format specifiers; 100% test pass rate.
 
 
 
@@ -14995,6 +15054,228 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 
 
 
+
+
+
+
+
+
+
+### REQ-UI-504: SupporterPlanCard: Compact Action Button Content Padding & Title Row Overflow Protection [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-UI-504` | **Tickets**: `ATT-6323`
+- **Implementation**: `app/src/main/java/com/atrainingtracker/trainingtracker/ui/settings/supporter/SupporterComponents.kt`, `SupporterPlanCardHierarchyTest.kt`
+- **Rationale**: In `SupporterComponents.kt` (`SupporterPlanCard`), `OutlinedButton` and `Button` inherit default Material 3 horizontal padding (`24.dp`), causing `"Wechseln"` (~108dp) to consume excessive horizontal space. On compact viewports, the German compound title *"Bronze-Unterstützer"* wraps before its trailing letter (*"Bronze-Unterstütze"* / *"r"*), producing an awkward single-letter orphan line. The system SHALL apply compact horizontal button padding (`16.dp`) and enforce single-line title truncation with ellipsis.
+- **Description**:
+  1. *Compact Action Button Padding (`REQ-UI-504.1`)*:
+     - In `SupporterComponents.kt` (`SupporterPlanCard`), all action button composables (`OutlinedButton` for `CURRENT_TIER` and `LOWER_TIER`, `Button` for `UPGRADE_TIER`) SHALL declare explicit `contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)` instead of inheriting default Material 3 padding (`24.dp`), reclaiming 16dp of horizontal width for the card title row.
+  2. *Single-Line Title Row & Overflow Ellipsis Safeguard (`REQ-UI-504.2`)*:
+     - In `SupporterComponents.kt` (`SupporterPlanCard`), the plan tier title `Text` composable SHALL enforce `maxLines = 1` and `overflow = TextOverflow.Ellipsis`, preventing awkward single-letter orphan line wrapping on compound tier names across compact viewports.
+  3. *Preservation of Visual Hierarchy & Accessibility (`REQ-UI-504.3`)*:
+     - Single-line button text without wrapping (`Rule 38`), 44dp tier emblems (`REQ-UI-445.4`), tier hierarchy state resolution (`REQ-UI-501`), click targets, and 9-language localization parity SHALL remain 100% preserved.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Amends `REQ-UI-501.1` (`SupporterPlanCard` presentation). Targets `SupporterComponents.kt`.
+2. *Historical Origin & Commit Trace*: Ticket `ATT-6286` (commit `7d72425c`), which introduced `PlanCardHierarchyState.LOWER_TIER` with `"Wechseln"` `OutlinedButton`.
+3. *Root Reason for Existing Formulation*: Default M3 button padding was retained during initial hierarchy implementation without verifying compound German string width budgets.
+4. *Preservation of Core Invariants*: Full-color 44dp emblems, hierarchy states, click handlers, and 100% unit test pass rate remain preserved.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* `SupporterPlanCard` rendered in German for Bronze with an active Silver subscription,
+• *When* inspecting the card title and `"Wechseln"` button,
+• *Then* the button uses `16.dp` horizontal padding and the title *"Bronze-Unterstützer"* renders without single-letter line wrapping.
+• *Given* `SupporterPlanCard` across all hierarchy states (`CURRENT_TIER`, `LOWER_TIER`, `UPGRADE_TIER`),
+• *When* rendered on compact displays,
+• *Then* all action buttons maintain `PaddingValues(horizontal = 16.dp, vertical = 8.dp)` and card titles truncate with `TextOverflow.Ellipsis` if horizontal space is exhausted.
+
+**Invariants**: 44dp emblem size; single-line button text (`Rule 38`); visual hierarchy states (`REQ-UI-501`); 100% unit test pass rate.
+
+### REQ-UI-505: WorkoutClusterSplitSheet Embedded Color-Coded Map Preview & List-Level Split Action [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-UI-505` | **Tickets**: `ATT-6318`
+- **Implementation**: `app/src/main/java/com/atrainingtracker/trainingtracker/ui/clusters/WorkoutClusterSplitSheet.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/ui/map/PathPreviewMap.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/ui/clusters/WorkoutClustersViewModel.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/ui/clusters/WorkoutClusterComponents.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/ui/clusters/WorkoutClustersTabsScreen.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/ui/clusters/WorkoutClustersScreen.kt`
+- **Rationale**: When opening `WorkoutClusterSplitSheet` (`AppModalBottomSheet`), the detected corridor variants (`splitVariantPaths`) are currently rendered only on the background heatmap of `WorkoutClusterHeatmapScreen`, which is largely obscured by the modal sheet and darkened scrim. Furthermore, when browsing clusters in the tabbed list view (`WorkoutClustersScreen`), no background map exists and the card 3-dot context menu lacks a split action. The system SHALL embed an interactive, color-coded map preview directly above the corridor sensitivity slider within `WorkoutClusterSplitSheet` and expose the split action in cluster card context menus.
+- **Description**:
+  1. *Embedded Color-Coded Map Preview (`REQ-UI-505.1`)*:
+     - In `WorkoutClusterSplitSheet.kt`, directly above the corridor sensitivity slider (`cluster_split_corridor_threshold`), the sheet SHALL render an embedded map preview (`PathPreviewMap`) hosted within a rounded surface (`RoundedCornerShape(12.dp)` with height `200.dp`).
+     - The embedded map SHALL render all detected corridor variants (`splitVariantPaths`) in their corresponding group colors (`getVariantColor(index)`) matching the numbered variant badges (1, 2, 3...) in the sheet.
+     - The embedded map SHALL automatically fit camera bounds to the cluster's bounding box (`cluster.bounds`) or encompass all detected variant polylines with appropriate map padding (`20.dp`).
+  2. *Live Sensitivity Modulation & Dynamic Map Synchronization (`REQ-UI-505.2`)*:
+     - Adjusting the corridor sensitivity slider SHALL dynamically recalculate variant groupings and update the embedded map preview in real time, visually reflecting the redistribution of member workout polylines across primary and secondary corridors.
+  3. *Multi-Path Support in PathPreviewMap (`REQ-UI-505.3`)*:
+     - `PathPreviewMap.kt` SHALL support rendering multiple polyline paths via `paths: List<MappablePath> = emptyList()` alongside the existing single `path: MappablePath? = null` parameter, computing unified bounding box coordinates across all supplied paths while preserving `liteMode(true)` touch isolation and backward compatibility for all single-path callers.
+  4. *List-Level Split Action Entry Point (`REQ-UI-505.4`)*:
+     - In `WorkoutClusterComponents.kt` (`ClusterItem` / `WorkoutClusterCard`), for clusters having `hitCount >= 2`, the 3-dot context menu SHALL expose a "Split Favorite Route…" (`cluster_split_action`, `Icons.Default.CallSplit`) action.
+     - Selecting this action SHALL open `WorkoutClusterSplitSheet` directly from `WorkoutClustersScreen.kt` with cluster workouts asynchronously loaded, operating identically to the heatmap screen entry point.
+  5. *Preservation of Invariants & Scope Boundaries (`REQ-UI-505.5`)*:
+     - Invariants: `WorkoutClusterEngine.kt` clustering heuristics and medoid algorithms SHALL NOT be modified; single-path `PathPreviewMap` callers (`CreateLapOnMapSheet`, `MoveLapBoundaryOnMapSheet`, `CropWorkoutScreen`, `WorkoutSummary`) SHALL remain 100% backward-compatible; 9-language localization parity SHALL be preserved.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* `WorkoutClusterSplitSheet` open for a route cluster with detected sub-corridors,
+• *When* the athlete views the top section of the bottom sheet,
+• *Then* an embedded 200dp `PathPreviewMap` is rendered directly above the sensitivity slider, displaying all detected variant polylines color-coded to match the variant badges.
+• *Given* the corridor sensitivity slider inside `WorkoutClusterSplitSheet`,
+• *When* the athlete drags the slider between 250m and 1500m,
+• *Then* `splitVariantPaths` are recalculated asynchronously and the embedded map polylines update their groupings and colors dynamically without UI stutter.
+• *Given* a cluster card in `WorkoutClustersScreen` with `hitCount >= 2`,
+• *When* the athlete opens the 3-dot context menu,
+• *Then* "Split Favorite Route…" (`cluster_split_action`) is displayed, and tapping it opens `WorkoutClusterSplitSheet` with the embedded map preview and loaded variants.
+
+**Invariants**: `WorkoutClusterEngine.kt` algorithms unmodified; `liteMode(true)` touch isolation preserved; single-path `PathPreviewMap` callers backward-compatible; 100% unit test pass rate.
+
+### REQ-UI-506: Decoupled Compose UI State Models (WorkoutLaps, WorkoutSummaryCard, WorkoutExtrema) [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-UI-506` | **Tickets**: `ATT-936`
+- **Implementation**: `app/src/main/java/com/atrainingtracker/trainingtracker/ui/components/workoutlaps/WorkoutLaps.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/ui/components/workoutlaps/LapRowUiState.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/workoutlist/WorkoutSummaryCompact.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/workoutlist/WorkoutCardUiState.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/ui/components/workoutextrema/WorkoutExtrema.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/ui/components/workoutextrema/ExtremaUiState.kt`
+- **Rationale**: Several core Jetpack Compose composables (`WorkoutLaps.kt`, `WorkoutSummaryCompact.kt`, `WorkoutExtrema.kt`) directly invoke metric formatters and perform math/aggregations inside rendering loops during composition. To eliminate redundant formatting on recomposition, enable pure JVM unit testing without Robolectric harnesses, and simplify `@Preview` authoring, the system SHALL decouple these composables via dedicated, immutable UI state models and pure transformation functions.
+- **Description**:
+  1. *LapRowUiState & WorkoutLaps Decoupling (`REQ-UI-506.1`)*:
+     - The system SHALL introduce an immutable `LapRowUiState` data class encapsulating pre-formatted display strings (`displayName`, `description`, `timeFormatted`, `distanceFormatted`, `speedPaceFormatted`, `badgeEmoji`, `badgeDescription`) and an optional click callback.
+     - `WorkoutLapsHelper` SHALL expose a pure function `buildLapRowUiStates(...)` calculating fastest (`🐇`) and slowest (`🦔`) badges and formatting time, distance, and speed/pace strings outside composition.
+     - `WorkoutLaps.kt` SHALL render rows from `List<LapRowUiState>` without performing metric formatting or min/max calculations inside the composable row loop.
+  2. *WorkoutCardUiState & WorkoutSummaryCompact Decoupling (`REQ-UI-506.2`)*:
+     - The system SHALL introduce an immutable `WorkoutCardUiState` data class encapsulating pre-formatted card metadata (`workoutName`, `sportIconResId`, `sportEquipmentText`, `formattedDateTime`, `activeTimeFormatted`, `distanceFormatted`, `speedPaceFormatted`, `ascentFormatted`, `isFinished`, `contentAlpha`).
+     - A pure mapper function `WorkoutCardUiState.from(...)` SHALL transform `WorkoutData` and formatters into `WorkoutCardUiState`.
+     - `WorkoutSummaryCompact.kt` SHALL support rendering directly from `WorkoutCardUiState`.
+  3. *ExtremaUiState & WorkoutExtrema Decoupling (`REQ-UI-506.3`)*:
+     - The system SHALL introduce immutable `ExtremaRowUiState` and `ExtremaUiState` representing pre-computed extrema display strings (`label`, `min`, `avg`, `max`, `unit`, `iconResId`, bold flags), decoupling null-coalescing and fallback `"-"` logic from `WorkoutExtrema.kt`.
+     - A pure transformation function `ExtremaUiState.from(ExtremaData)` SHALL produce the decoupled state.
+  4. *Composable Signature & Backward Compatibility (`REQ-UI-506.4`)*:
+     - `WorkoutLaps`, `WorkoutSummaryCompact`, and `WorkoutExtrema` SHALL maintain backward-compatible overloads accepting existing domain models so all existing screen callers compile and operate without disruption.
+  5. *Tooling Previews & Pure JVM Testability (`REQ-UI-506.5`)*:
+     - Target composables SHALL provide Jetpack Compose `@Preview` definitions instantiated with static UI state objects without requiring mocked `LocalMetricFormatter` instances. Pure JVM unit tests SHALL assert 100% of the UI state mapping logic.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* a list of `LapData` with distinct average speeds,
+• *When* transformed via `WorkoutLapsHelper.buildLapRowUiStates(...)`,
+• *Then* the fastest lap receives `"🐇"`, the slowest receives `"🦔"`, and all pace, speed, time, and distance strings match canonical formatter outputs.
+• *Given* a `WorkoutData` instance,
+• *When* transformed via `WorkoutCardUiState.from(...)`,
+• *Then* active time, total distance, speed/pace, and elevation ascent are pre-formatted, and sport icon and equipment text are resolved without calling formatters inside `@Composable`.
+• *Given* an `ExtremaData` instance containing null min or max values,
+• *When* converted via `ExtremaUiState.from(...)`,
+• *Then* missing values resolve to `"-"` in the state model rather than within the composable layout.
+
+**Invariants**: 100% visual and functional parity; zero regression across all 9 supported languages; zero breaking changes to existing callers; all contract tests green.
+
+### REQ-UI-507: Repository-Only UI Database Access Layer (Phase A: UI & ViewModel Cleanup) [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-UI-507` | **Tickets**: `ATT-432`
+- **Implementation**: `app/src/main/java/com/atrainingtracker/trainingtracker/MainActivityWithNavigation.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/ui/settings/importbackup/ImportBackupTabsScreen.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/ui/equipment/EquipmentViewModel.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/ui/tracking/controltracking/ControlTrackingViewModel.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/WorkoutRepository.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/devices/DeviceDataRepository.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/sporttypes/SportTypesRepository.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/trackingviews/TrackingViewsRepository.kt`
+- **Rationale**: Direct instantiation of SQLite database manager singletons (`*DatabaseManager.getInstance()`) inside UI screens, Composables, and ViewModels violates Clean Architecture (SWE.2) and couples presentation layers to raw database operations. The system SHALL eliminate all direct database manager references from `MainActivityWithNavigation.kt`, `ImportBackupTabsScreen.kt`, `EquipmentViewModel.kt`, and `ControlTrackingViewModel.kt` by routing all database operations through domain repositories (`WorkoutRepository`, `DeviceDataRepository`, `SportTypesRepository`, `TrackingViewsRepository`).
+- **Description**:
+  1. *MainActivityWithNavigation Database Decoupling (`REQ-UI-507.1`)*:
+     - In `MainActivityWithNavigation.kt`, all direct references to `DevicesDatabaseManager`, `TrackingViewsDatabaseManager`, and `WorkoutSummariesDatabaseManager` SHALL be replaced with calls to `DeviceDataRepository`, `TrackingViewsRepository`, and `WorkoutRepository`.
+     - Low-battery alerts, filter generation, and unfinished workout detection/recovery flows SHALL execute via repository delegates on `Dispatchers.IO`.
+  2. *ImportBackupTabsScreen Database Decoupling (`REQ-UI-507.2`)*:
+     - In `ImportBackupTabsScreen.kt`, all direct calls to `SportTypeDatabaseManager` for resolving sport names, UI names, and default sport types SHALL route through `SportTypesRepository` delegates.
+  3. *EquipmentViewModel Repository Encapsulation (`REQ-UI-507.3`)*:
+     - `EquipmentViewModel.kt` SHALL consume `SportTypesRepository`, `DeviceDataRepository`, and `WorkoutRepository` directly.
+     - Direct construction of `SportTypeDatabaseManager`, `DevicesDatabaseManager`, and `WorkoutSummariesDatabaseManager` SHALL be removed, while preserving secondary constructor overloads for backward compatibility with existing unit test harnesses.
+  4. *ControlTrackingViewModel Database Decoupling (`REQ-UI-507.4`)*:
+     - In `ControlTrackingViewModel.kt`, cold-start sensor state seeding and unfinished workout verification SHALL route through `DeviceDataRepository` and `WorkoutRepository` instead of instantiating `DevicesDatabaseManager` and `WorkoutSummariesDatabaseManager`.
+  5. *Domain Repository Query Delegates & Invariant Preservation (`REQ-UI-507.5`)*:
+     - `WorkoutRepository`, `DeviceDataRepository`, `SportTypesRepository`, and `TrackingViewsRepository` SHALL expose the necessary query and mutation delegates.
+     - SQLite schema stability, thread dispatching (`Dispatchers.IO`), battery alert thresholds, and sensor tracking lifecycles SHALL remain 100% preserved.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* `MainActivityWithNavigation`, `ImportBackupTabsScreen`, `EquipmentViewModel`, and `ControlTrackingViewModel`,
+• *When* auditing source code and AST references,
+• *Then* zero occurrences of `*DatabaseManager.getInstance()` exist across all four target presentation files.
+• *Given* an unfinished workout in the database,
+• *When* `MainActivityWithNavigation` resumes or `ControlTrackingViewModel` initializes,
+• *Then* unfinished workout status is detected via `WorkoutRepository` and the recovery prompt operates identically to the legacy flow.
+• *Given* paired sensors with low battery,
+• *When* `MainActivityWithNavigation` checks device states,
+• *Then* battery warnings are evaluated via `DeviceDataRepository` and notifications trigger without regression.
+
+**Invariants**: Phase A scope bounded strictly to UI & ViewModels; zero modifications to Phase B (`ATT-6426`) or Phase C (`ATT-6427`) components; 100% unit test pass rate.
+
+### REQ-UI-508: Filter Chips & Sheets Imperial Unit Parity & Consistent Rounding [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-UI-508` | **Tickets**: `ATT-6168`
+- **Implementation**: `app/src/main/java/com/atrainingtracker/trainingtracker/ui/common/filters/FilterFormattingUtils.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/workoutlist/ActiveFilterChipsRow.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/ui/clusters/ActiveClusterFilterChipsRow.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/ui/routes/ActiveRouteFilterChipsRow.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/ui/clusters/ClusterFilterBottomSheet.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/ui/routes/RouteFilterBottomSheet.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/workoutlist/WorkoutFilterBottomSheet.kt`
+- **Rationale**: Filter chips across Workouts, Clusters, and Routes hardcode metric units (`km`, `m`) and unconditional division by `1000.0`, resulting in inaccurate labels (e.g., 10 mi displays as "16.09344 km") and floating-point precision artifacts when Imperial units (`TrainingApplication.getUnit() == MyUnits.IMPERIAL`) are configured. Furthermore, Cluster and Route filter bottom sheets hardcode metric presets and labels. The system SHALL introduce centralized filter unit formatting utilities (`FilterFormattingUtils.kt`), provide imperial unit conversion and consistent rounding (max 1 decimal for distance without trailing `.0`; integer for elevation) across all three active filter chip rows, and support imperial presets and text inputs in `ClusterFilterBottomSheet` and `RouteFilterBottomSheet` with 9-language localization parity in `strings_filters.xml` (ATT-6168, refining `REQ-UI-157`, `REQ-UI-187`, and `REQ-UI-425`):
+1. *Centralized Filter Formatting Utilities (`REQ-UI-508.1`)*:
+• `FilterFormattingUtils.kt` SHALL provide `formatFilterDistanceChip(...)` and `formatFilterElevationChip(...)` to format interval, min-only, and max-only filter chips using unit-aware string resources (`km`/`mi` and `m`/`ft`).
+• Distance input strings SHALL be formatted to at most 1 decimal place, stripping redundant `.0` for integers (e.g. `10`, `12.5`). Elevation input strings SHALL be formatted as rounded integers.
+• Reusable preset lists (`getDistancePresets(isImperial)` and `getElevationPresets(isImperial)`) SHALL provide standard athletic interval thresholds for both metric and imperial units.
+2. *Active Filter Chips Imperial Unit Parity (`REQ-UI-508.2`)*:
+• In `ActiveFilterChipsRow.kt`, `ActiveClusterFilterChipsRow.kt`, and `ActiveRouteFilterChipsRow.kt`, distance and elevation filter chip labels SHALL evaluate `TrainingApplication.getUnit() == MyUnits.IMPERIAL`.
+• When imperial is active: distance meters SHALL be converted to miles (`meters / 1609.344`) and formatted with `"mi"`; elevation gain meters SHALL be converted to feet (`meters * 3.28084`) and formatted with `"ft"`.
+• When metric is active: distance meters SHALL be converted to kilometers (`meters / 1000.0`) and formatted with `"km"`; elevation gain meters SHALL be formatted with `"m"`.
+3. *Cluster & Route Bottom Sheet Imperial Presets and Inputs (`REQ-UI-508.3`)*:
+• In `ClusterFilterBottomSheet.kt` and `RouteFilterBottomSheet.kt`, distance and elevation filter chip presets and text field labels SHALL dynamically reflect metric or imperial units based on `TrainingApplication.getUnit()`.
+• User-entered imperial distance (`mi`) and elevation (`ft`) values SHALL be converted to raw meters when updating `ClusterFilterCriteria` and `RouteFilterCriteria` drafts (`meters = miles * 1609.344`, `meters = feet / 3.28084`), preserving raw SI meter storage in domain models.
+4. *Domain-Partitioned 9-Language Localization Parity (`REQ-UI-508.4`)*:
+• Imperial filter format strings (intervals, min-only, max-only, and unit labels) SHALL be defined in `strings_filters.xml` across all 9 canonical locales (`values`, `values-de`, `values-es`, `values-fr`, `values-it`, `values-ja`, `values-nl`, `values-pl`, `values-pt`) per Rule 9 (`REQ-PRO-041.3`).
+5. *Preservation of Domain Invariants (`REQ-UI-508.5`)*:
+• `WorkoutFilterCriteria`, `ClusterFilterCriteria`, and `RouteFilterCriteria` data classes SHALL continue storing distance and elevation thresholds strictly in raw SI meters (`minDistanceMeters`, `maxDistanceMeters`, `minElevationGainMeters`, `maxElevationGainMeters`).
+• Database queries, repository filtering pipelines, and sorting algorithms SHALL remain 100% untouched.
+
+### Requirement Archaeology & Chesterton's Fence Audit:
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-UI-508`, refining `REQ-UI-157` (*Workout Filter*), `REQ-UI-187` (*Cluster Filter*), and `REQ-UI-425` (*Elevation Gain Filter*). Targets `ActiveFilterChipsRow.kt`, `ActiveClusterFilterChipsRow.kt`, `ActiveRouteFilterChipsRow.kt`, `ClusterFilterBottomSheet.kt`, `RouteFilterBottomSheet.kt`, and `FilterFormattingUtils.kt`.
+2. *Historical Origin & Commit Trace*: Sprint 2026-40.4 (`ATT-1276`, commit `69e4f1a2`), where filter chips were initially introduced with metric-only strings.
+3. *Root Reason for Existing Formulation*: Metric was the original baseline; imperial units were added incrementally to `WorkoutFilterBottomSheet` but chips and secondary filter sheets retained legacy hardcoded `/ 1000.0` metric formatting.
+4. *Preservation of Core Invariants*: Raw SI meter storage in domain criteria models (`minDistanceMeters`, `maxDistanceMeters`, etc.), database query stability, and 100% backward compatibility for metric users are strictly preserved.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* an athlete with Imperial units selected (`MyUnits.IMPERIAL`),
+• *When* an active distance filter of 16,093.44 meters (10 miles) is displayed on `ActiveFilterChipsRow`, `ActiveClusterFilterChipsRow`, or `ActiveRouteFilterChipsRow`,
+• *Then* the chip label displays "10 mi" (or localized equivalent) without floating-point precision artifacts, instead of "16.09344 km".
+• *Given* an athlete with Imperial units selected,
+• *When* an active elevation filter of 304.8 meters (1,000 feet) is displayed,
+• *Then* the chip label displays "1000 ft" (or localized equivalent) instead of "304 m".
+• *Given* `ClusterFilterBottomSheet` or `RouteFilterBottomSheet` opened under Imperial units,
+• *When* inspecting the distance and elevation filter sections,
+• *Then* presets display athletic mile and feet thresholds and text fields display "(mi)" and "(ft)" labels.
+• *Given* an athlete entering "5.5" miles in `ClusterFilterBottomSheet` or `RouteFilterBottomSheet`,
+• *When* applying the filter,
+• *Then* the criteria stores the converted meter equivalent (~8,851.39 m) in `minDistanceMeters`.
+
+**Invariants**: Raw SI meter storage in filter criteria; 100% 9-language translation parity in `strings_filters.xml`; metric formatting parity preserved for metric users; 100% clean-room test pass rate.
+
+### REQ-UI-509: Shared Filter UI Components, Draft State & Functional Chip Transformers [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-UI-509` | **Tickets**: `ATT-6043`
+- **Implementation**: `app/src/main/java/com/atrainingtracker/trainingtracker/ui/common/filters/FilterSearchField.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/ui/common/filters/NumericIntervalFilterSection.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/ui/common/filters/StartLocationFilterSection.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/workoutlist/WorkoutFilterBottomSheet.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/ui/clusters/ClusterFilterBottomSheet.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/ui/routes/RouteFilterBottomSheet.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/ui/segments/segmentlist/SegmentFilterBottomSheet.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/ui/knownlocations/KnownLocationsFilterBottomSheet.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/workoutlist/ActiveFilterChipsRow.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/workoutlist/WorkoutTabsScreen.kt`
+- **Rationale**: Across 5 filter bottom sheets and 5 active filter chip rows, search input (`OutlinedTextField`), distance/elevation numeric intervals (~75 lines each), and "Start at" favorite locations (~65 lines) are duplicated. Furthermore, `WorkoutFilterBottomSheet` maintains 27 loose `mutableStateOf` variables, and `ActiveFilterChipsRow` exposes 19 individual callbacks. The system SHALL extract reusable filter primitives (`FilterSearchField`, `NumericIntervalFilterSection`, `StartLocationFilterSection`), migrate sheets to an immutable `draft` state with intermediate text buffers, and migrate `ActiveFilterChipsRow` to functional criteria transformers (`onUpdateCriteria`):
+1. *Reusable Filter Input Primitives (`REQ-UI-509.1`)*:
+• `FilterSearchField.kt` in `ui/common/filters/` SHALL provide a standardized `OutlinedTextField` parameterized by `query`, `onQueryChange`, and `label`, with leading search icon and single-tap clear icon (`Icons.Default.Close`) when non-blank.
+• `NumericIntervalFilterSection.kt` in `ui/common/filters/` SHALL provide a reusable numeric interval filtering component rendering section title, athletic preset chips (`FlowRow`), and min/max inputs with unit indicator, preserving raw metric thresholds and calling back with updated min/max bounds and text buffers.
+• `StartLocationFilterSection.kt` in `ui/common/filters/` SHALL provide a reusable favorite location selector rendering `KnownLocationItem` chips, filtering infrequent locations (`hitCount < 5`) by default, and providing a toggle chip to show all locations.
+2. *Filter Bottom Sheet Immutable Draft State Architecture (`REQ-UI-509.2`)*:
+• All 5 filter bottom sheets (`WorkoutFilterBottomSheet`, `ClusterFilterBottomSheet`, `RouteFilterBottomSheet`, `SegmentFilterBottomSheet`, `KnownLocationsFilterBottomSheet`) SHALL replace loose per-field `mutableStateOf` variables with an immutable `draft` criteria state (`var draft by remember(criteria) { mutableStateOf(criteria) }`).
+• Decoupled text buffers (`minDistanceText`, `maxDistanceText`, etc.) SHALL be maintained alongside the `draft` state to preserve intermediate text typing (e.g. `"1."`, `""`) without premature numeric parsing collapse or re-key reset during recomposition.
+• `onClearAll` SHALL reset `draft` to a fresh default instance and clear text buffers; `onApply` SHALL emit the finalized criteria.
+3. *Functional Transformer Architecture for Active Filter Chips (`REQ-UI-509.3`)*:
+• `ActiveFilterChipsRow.kt` SHALL consume a functional transformer callback `onUpdateCriteria: ((WorkoutFilterCriteria) -> WorkoutFilterCriteria) -> Unit` instead of 19 individual removal lambdas, delegating chip removals directly to `WorkoutSummariesViewModel.updateFilterCriteria`.
+• Dead unused alias callbacks (`onRemoveMinDistance`, `onRemoveMinDuration`, `onRemoveMinElevation`) SHALL be eliminated across `ActiveFilterChipsRow`, `ActiveClusterFilterChipsRow`, and `ActiveRouteFilterChipsRow`.
+4. *Preservation of Filter Contracts & Interaction Invariants (`REQ-UI-509.4`)*:
+• `ActiveFilterChipsRowClearAllContractTest.kt` invariants (`if (criteria.isEmpty) return`, `onClick = onClearAll`, and `Modifier.padding(start = 4.dp)` on the clear chip) SHALL remain 100% intact and verified across all chip rows.
+• Visual layout, padding, typography, animations, and Imperial unit parity (`REQ-UI-508`) across all 5 filter bottom sheets and chip rows SHALL remain visually indistinguishable.
+
+### Requirement Archaeology & Chesterton's Fence Audit:
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-UI-509`, refining `REQ-UI-157` (*Workout Filter*), `REQ-UI-187` (*Cluster Filter*), `REQ-UI-425` (*Elevation Filter*), `REQ-UI-466` (*Known Locations Filter*), `REQ-UI-468` (*Clear All Contract*), and `REQ-UI-508` (*Imperial Unit Parity*). Targets `FilterSearchField.kt`, `NumericIntervalFilterSection.kt`, `StartLocationFilterSection.kt`, bottom sheets, and chip rows.
+2. *Historical Origin & Commit Trace*: Sprints 2026-40.4 (`ATT-1276`), 2026-42.2 (`ATT-1593`), 2026-45.12 (`ATT-5888`), and 2026-46.1 (`ATT-6168`).
+3. *Root Reason for Existing Formulation*: Sheets and chip rows were built iteratively per list screen prior to ViewModel transformer unification; state and callbacks grew organically without shared input primitives.
+4. *Preservation of Core Invariants*: Zero UI layout or interaction regression, intermediate text buffer typing preserved, `ActiveFilterChipsRowClearAllContractTest` preserved, 100% unit test pass rate.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* `FilterSearchField` rendered with query `"tempo"`,
+• *When* the clear icon is tapped,
+• *Then* `query` becomes empty and the field displays hint text.
+• *Given* an athlete typing `"1."` into a distance interval text field,
+• *When* recomposition occurs,
+• *Then* the field preserves `"1."` without collapsing to `1` or clearing.
+• *Given* `StartLocationFilterSection` with infrequent locations (`hitCount < 5`),
+• *When* the athlete toggles "Show all",
+• *Then* the full location list is displayed.
+• *Given* `ActiveFilterChipsRow` with an active query filter,
+• *When* the query chip remove icon is clicked,
+• *Then* `onUpdateCriteria` receives `{ it.copy(query = "") }`.
+
+**Invariants**: Decoupled text buffers preserved for in-progress typing; `ActiveFilterChipsRowClearAllContractTest` 100% compliant; Imperial unit parity (`REQ-UI-508`) preserved; 100% clean-room test pass rate.
 
 
 

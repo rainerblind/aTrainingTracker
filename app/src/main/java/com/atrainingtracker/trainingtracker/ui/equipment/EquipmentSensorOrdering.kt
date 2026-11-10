@@ -50,6 +50,7 @@ object EquipmentSensorOrdering {
                 DeviceType.BIKE_SPEED_AND_CADENCE -> 20
                 DeviceType.BIKE_SPEED -> 30
                 DeviceType.BIKE_CADENCE -> 40
+                DeviceType.BIKE_RADAR -> 45
                 else -> if (DevicesDatabaseManager.isBikeSensor(deviceType)) {
                     50
                 } else if (deviceType == DeviceType.HRM) {

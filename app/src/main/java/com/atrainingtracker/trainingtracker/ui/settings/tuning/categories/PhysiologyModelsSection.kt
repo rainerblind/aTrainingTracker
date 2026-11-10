@@ -21,26 +21,37 @@ package com.atrainingtracker.trainingtracker.ui.settings.tuning.categories
 import android.content.res.Configuration
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
+import com.atrainingtracker.trainingtracker.ui.dialogs.PowerHrDynamicsInfoDialog
 import com.atrainingtracker.trainingtracker.ui.settings.tuning.SubordinateTuningToggleItem
 import com.atrainingtracker.trainingtracker.ui.settings.tuning.TuningToggleItem
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 
 /**
- * Physiology & Training Models accordion category in Advanced Settings (REQ-UI-403 / REQ-UI-424).
+ * Physiology & Training Models accordion category in Advanced Settings (REQ-UI-403 / REQ-UI-424 / REQ-REV-009).
  *
- * Provides progressive disclosure toggles for 4 training science models:
+ * Provides progressive disclosure toggles for 5 training science models:
  * 1. Coggan Power Metrics (NP, IF, TSS, VI) — Default: ON
  *    - Show in Workout Summary subordinate toggle — Default: ON (Rule 59)
  * 2. Performance Management (PMC: ATL, CTL, TSB, ACWR, Ramp Rate) — Default: OFF
@@ -48,6 +59,8 @@ import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
  *    - Show in Workout Summary subordinate toggle — Default: ON (Rule 59)
  * 4. Critical Power & Anaerobic Battery (CP, W', W'bal) — Default: OFF
  *    - Show in Workout Summary subordinate toggle — Default: ON (Rule 59)
+ * 5. Cardio-Power Dynamics (HR@200W, \u03c4 & Model Drift) — Default: OFF (REQ-REV-009 / ATT-3904)
+ *    - Show in Workout Summary subordinate toggle — Default: ON
  */
 @Composable
 fun PhysiologyModelsSection(
@@ -64,8 +77,15 @@ fun PhysiologyModelsSection(
     enableCriticalPowerModel: Boolean,
     onEnableCriticalPowerModelChange: (Boolean) -> Unit,
     showCriticalPowerInWorkoutSummary: Boolean = true,
-    onShowCriticalPowerInWorkoutSummaryChange: (Boolean) -> Unit = {}
+    onShowCriticalPowerInWorkoutSummaryChange: (Boolean) -> Unit = {},
+    enableCardioPowerDynamics: Boolean = false,
+    onEnableCardioPowerDynamicsChange: (Boolean) -> Unit = {},
+    showCardioPowerInWorkoutSummary: Boolean = true,
+    onShowCardioPowerInWorkoutSummaryChange: (Boolean) -> Unit = {},
+    onCardioPowerInfoClick: (() -> Unit)? = null
 ) {
+    var showInternalInfoDialog by remember { mutableStateOf(false) }
+
     val cogganCallback = remember(onEnableCogganPowerMetricsChange) { onEnableCogganPowerMetricsChange }
     val showCogganPowerCallback = remember(onShowCogganPowerInWorkoutSummaryChange) { onShowCogganPowerInWorkoutSummaryChange }
     val pmcCallback = remember(onEnablePmcModelChange) { onEnablePmcModelChange }
@@ -73,6 +93,8 @@ fun PhysiologyModelsSection(
     val showEfCallback = remember(onShowAerobicEfficiencyInWorkoutSummaryChange) { onShowAerobicEfficiencyInWorkoutSummaryChange }
     val cpCallback = remember(onEnableCriticalPowerModelChange) { onEnableCriticalPowerModelChange }
     val showCpCallback = remember(onShowCriticalPowerInWorkoutSummaryChange) { onShowCriticalPowerInWorkoutSummaryChange }
+    val cardioPowerCallback = remember(onEnableCardioPowerDynamicsChange) { onEnableCardioPowerDynamicsChange }
+    val showCardioPowerCallback = remember(onShowCardioPowerInWorkoutSummaryChange) { onShowCardioPowerInWorkoutSummaryChange }
 
     Column(
         modifier = Modifier
@@ -138,6 +160,53 @@ fun PhysiologyModelsSection(
                 onCheckedChange = showCpCallback
             )
         }
+
+        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+
+        // Model 5: Cardio-Power Dynamics (HR@200W, \u03c4 & Model Drift)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                TuningToggleItem(
+                    title = stringResource(R.string.tuning_physiology_cardio_power_title),
+                    isChecked = enableCardioPowerDynamics,
+                    onCheckedChange = cardioPowerCallback,
+                    summary = stringResource(R.string.tuning_physiology_cardio_power_desc)
+                )
+            }
+            IconButton(
+                onClick = {
+                    if (onCardioPowerInfoClick != null) {
+                        onCardioPowerInfoClick()
+                    } else {
+                        showInternalInfoDialog = true
+                    }
+                },
+                modifier = Modifier.size(36.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Info,
+                    contentDescription = stringResource(R.string.cardio_power_info_title),
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+        }
+        if (enableCardioPowerDynamics) {
+            SubordinateTuningToggleItem(
+                title = stringResource(R.string.tuning_physiology_show_in_workout_summary),
+                isChecked = showCardioPowerInWorkoutSummary,
+                onCheckedChange = showCardioPowerCallback
+            )
+        }
+    }
+
+    if (showInternalInfoDialog) {
+        PowerHrDynamicsInfoDialog(
+            onDismissRequest = { showInternalInfoDialog = false }
+        )
     }
 }
 
@@ -161,7 +230,11 @@ private fun PhysiologyModelsSectionDefaultPreview() {
                 enableCriticalPowerModel = false,
                 onEnableCriticalPowerModelChange = {},
                 showCriticalPowerInWorkoutSummary = true,
-                onShowCriticalPowerInWorkoutSummaryChange = {}
+                onShowCriticalPowerInWorkoutSummaryChange = {},
+                enableCardioPowerDynamics = false,
+                onEnableCardioPowerDynamicsChange = {},
+                showCardioPowerInWorkoutSummary = true,
+                onShowCardioPowerInWorkoutSummaryChange = {}
             )
         }
     }
@@ -186,7 +259,11 @@ private fun PhysiologyModelsSectionAllEnabledPreview() {
                 enableCriticalPowerModel = true,
                 onEnableCriticalPowerModelChange = {},
                 showCriticalPowerInWorkoutSummary = true,
-                onShowCriticalPowerInWorkoutSummaryChange = {}
+                onShowCriticalPowerInWorkoutSummaryChange = {},
+                enableCardioPowerDynamics = true,
+                onEnableCardioPowerDynamicsChange = {},
+                showCardioPowerInWorkoutSummary = true,
+                onShowCardioPowerInWorkoutSummaryChange = {}
             )
         }
     }

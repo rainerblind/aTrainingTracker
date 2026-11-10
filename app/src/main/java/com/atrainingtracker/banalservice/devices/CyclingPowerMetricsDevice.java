@@ -31,7 +31,11 @@ import com.atrainingtracker.banalservice.sensor.MySensor;
 import com.atrainingtracker.banalservice.sensor.MySensorManager;
 import com.atrainingtracker.banalservice.sensor.SensorType;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
+import com.atrainingtracker.trainingtracker.database.CardioPowerDynamicsRecord;
+import com.atrainingtracker.trainingtracker.database.CardioPowerTrendSample;
+import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager;
 import com.atrainingtracker.trainingtracker.physiology.PowerPhysiologyCalculator;
+import com.atrainingtracker.trainingtracker.physiology.SlidingWindowPowerAccumulator;
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper;
 
 import java.util.ArrayDeque;
@@ -72,6 +76,25 @@ public class CyclingPowerMetricsDevice extends MyDevice {
     private MySensor<Double> mWorkKjSensor;
     private MySensor<Double> mTssSensor;
     private MySensor<Double> mWPrimeBalSensor;
+    private MySensor<Double> mPower5sSensor;
+    private MySensor<Double> mPower1mSensor;
+    private MySensor<Double> mPower5mSensor;
+    private MySensor<Double> mPower20mSensor;
+    private MySensor<Double> mPowerPeak5sSensor;
+    private MySensor<Double> mPowerPeak1mSensor;
+    private MySensor<Double> mPowerPeak5mSensor;
+    private MySensor<Double> mPowerPeak20mSensor;
+    private MySensor<Double> mLiveHrDriftSensor;
+
+    // Sliding window accumulators for Mean Maximal Power (MMP) durations (REQ-TRK-058.1)
+    private final SlidingWindowPowerAccumulator mAccumulator5s = new SlidingWindowPowerAccumulator(5);
+    private final SlidingWindowPowerAccumulator mAccumulator1m = new SlidingWindowPowerAccumulator(60);
+    private final SlidingWindowPowerAccumulator mAccumulator5m = new SlidingWindowPowerAccumulator(300);
+    private final SlidingWindowPowerAccumulator mAccumulator20m = new SlidingWindowPowerAccumulator(1200);
+
+    public static final double DEFAULT_FALLBACK_TAU = 40.0;
+    public static final double DEFAULT_FALLBACK_HR0 = 90.0;
+    public static final double DEFAULT_FALLBACK_K = 0.20;
 
     public interface RecordingStateProvider {
         boolean isRecordingSuspended();
@@ -97,12 +120,34 @@ public class CyclingPowerMetricsDevice extends MyDevice {
         float getWPrimeKj(Context context);
     }
 
+    public interface CardioPowerDynamicsEnabledProvider {
+        boolean isCardioPowerDynamicsEnabled(Context context);
+    }
+
+    public interface CardioPowerBaselineProvider {
+        DynamicalBaseline getBaseline(Context context);
+    }
+
+    public static class DynamicalBaseline {
+        public final double tau;
+        public final double hr0;
+        public final double k;
+
+        public DynamicalBaseline(double tau, double hr0, double k) {
+            this.tau = tau;
+            this.hr0 = hr0;
+            this.k = k;
+        }
+    }
+
     private final RecordingStateProvider mRecordingStateProvider;
     private final AthleteWeightProvider mWeightProvider;
     private final FtpProvider mFtpProvider;
     private final TimeProvider mTimeProvider;
     private final CpProvider mCpProvider;
     private final WPrimeKjProvider mWPrimeKjProvider;
+    private final CardioPowerDynamicsEnabledProvider mCardioPowerDynamicsEnabledProvider;
+    private final CardioPowerBaselineProvider mCardioBaselineProvider;
 
     // Internal state for Normalized Power calculation (Welford's online running mean)
     private final ArrayDeque<Double> mPowerWindow30s = new ArrayDeque<>(30);
@@ -115,11 +160,16 @@ public class CyclingPowerMetricsDevice extends MyDevice {
     private long mActivePowerDurationSec = 0L;
     private Double mCurrentWPrimeBalJoules = null;
 
+    // Internal state for Live HR Drift (REQ-REV-012 / ATT-3907)
+    private Double mDriftStateX = null;
+    private final ArrayDeque<Double> mDriftResidualWindow30s = new ArrayDeque<>(30);
+
     // Pause tracking for long-pause window flushing (> 30s)
     private boolean mWasSuspended = false;
     private long mSuspendedStartMs = 0L;
 
     private static final FilterData cPowerFilter = new FilterData(null, SensorType.POWER, FilterType.MOVING_AVERAGE_TIME, 3);
+    private static final FilterData cHeartRateFilter = new FilterData(null, SensorType.HR, FilterType.MOVING_AVERAGE_TIME, 3);
 
     public CyclingPowerMetricsDevice(Context context, MySensorManager mySensorManager) {
         this(context, mySensorManager, TrainingApplication::isRecordingSuspended, SettingsDataStoreJavaHelper::getAthleteWeightKg, SettingsDataStoreJavaHelper::getFtp, System::currentTimeMillis, null, SettingsDataStoreJavaHelper::getEffectiveWPrimeKj);
@@ -167,6 +217,18 @@ public class CyclingPowerMetricsDevice extends MyDevice {
                                      TimeProvider timeProvider,
                                      CpProvider cpProvider,
                                      WPrimeKjProvider wPrimeKjProvider) {
+        this(context, mySensorManager, recordingStateProvider, weightProvider, ftpProvider, timeProvider, cpProvider, wPrimeKjProvider, null, null);
+    }
+
+    public CyclingPowerMetricsDevice(Context context, MySensorManager mySensorManager,
+                                     RecordingStateProvider recordingStateProvider,
+                                     AthleteWeightProvider weightProvider,
+                                     FtpProvider ftpProvider,
+                                     TimeProvider timeProvider,
+                                     CpProvider cpProvider,
+                                     WPrimeKjProvider wPrimeKjProvider,
+                                     CardioPowerDynamicsEnabledProvider cardioPowerDynamicsEnabledProvider,
+                                     CardioPowerBaselineProvider cardioBaselineProvider) {
         super(context, mySensorManager, DeviceType.CYCLING_POWER_METRICS);
         mRecordingStateProvider = recordingStateProvider != null ? recordingStateProvider : TrainingApplication::isRecordingSuspended;
         mWeightProvider = weightProvider != null ? weightProvider : SettingsDataStoreJavaHelper::getAthleteWeightKg;
@@ -178,10 +240,40 @@ public class CyclingPowerMetricsDevice extends MyDevice {
             return mFtpProvider.getFtp(ctx);
         };
         mWPrimeKjProvider = wPrimeKjProvider != null ? wPrimeKjProvider : SettingsDataStoreJavaHelper::getEffectiveWPrimeKj;
+        mCardioPowerDynamicsEnabledProvider = cardioPowerDynamicsEnabledProvider != null
+                ? cardioPowerDynamicsEnabledProvider
+                : ctx -> {
+                    try {
+                        return SettingsDataStoreJavaHelper.getTuningConfig(ctx).getEnableCardioPowerDynamics();
+                    } catch (Throwable t) {
+                        return false;
+                    }
+                };
+        mCardioBaselineProvider = cardioBaselineProvider != null
+                ? cardioBaselineProvider
+                : ctx -> {
+                    try {
+                        WorkoutSummariesDatabaseManager db = WorkoutSummariesDatabaseManager.getInstance(ctx);
+                        java.util.List<CardioPowerTrendSample> samples = db.getCardioPowerDynamicsFitnessTrendSamples(0.50);
+                        if (samples != null && !samples.isEmpty()) {
+                            CardioPowerTrendSample latest = samples.get(samples.size() - 1);
+                            if (latest != null && latest.getRecord() != null) {
+                                CardioPowerDynamicsRecord rec = latest.getRecord();
+                                if (rec.getTauStart() > 0.0 && rec.getKStart() > 0.0 && rec.getHr0Start() > 0.0) {
+                                    return new DynamicalBaseline(rec.getTauStart(), rec.getHr0Start(), rec.getKStart());
+                                }
+                            }
+                        }
+                    } catch (Throwable t) {
+                        // ignore
+                    }
+                    return new DynamicalBaseline(DEFAULT_FALLBACK_TAU, DEFAULT_FALLBACK_HR0, DEFAULT_FALLBACK_K);
+                };
         if (DEBUG) Log.i(TAG, "CyclingPowerMetricsDevice initialized");
 
         try {
             BANALService.createFilter(cPowerFilter);
+            BANALService.createFilter(cHeartRateFilter);
         } catch (Throwable t) {
             // Graceful fallback for unit tests where FilterManager is not running
         }
@@ -227,6 +319,37 @@ public class CyclingPowerMetricsDevice extends MyDevice {
 
         mWPrimeBalSensor = new MySensor<>(this, SensorType.W_PRIME_BAL);
         addSensor(mWPrimeBalSensor);
+
+        mPower5sSensor = new MySensor<>(this, SensorType.POWER_5S);
+        addSensor(mPower5sSensor);
+
+        mPower1mSensor = new MySensor<>(this, SensorType.POWER_1M);
+        addSensor(mPower1mSensor);
+
+        mPower5mSensor = new MySensor<>(this, SensorType.POWER_5M);
+        addSensor(mPower5mSensor);
+
+        mPower20mSensor = new MySensor<>(this, SensorType.POWER_20M);
+        addSensor(mPower20mSensor);
+
+        mPowerPeak5sSensor = new MySensor<>(this, SensorType.POWER_PEAK_5S);
+        addSensor(mPowerPeak5sSensor);
+
+        mPowerPeak1mSensor = new MySensor<>(this, SensorType.POWER_PEAK_1M);
+        addSensor(mPowerPeak1mSensor);
+
+        mPowerPeak5mSensor = new MySensor<>(this, SensorType.POWER_PEAK_5M);
+        addSensor(mPowerPeak5mSensor);
+
+        mPowerPeak20mSensor = new MySensor<>(this, SensorType.POWER_PEAK_20M);
+        addSensor(mPowerPeak20mSensor);
+
+        mLiveHrDriftSensor = new MySensor<>(this, SensorType.LIVE_HR_DRIFT);
+        addSensor(mLiveHrDriftSensor);
+    }
+
+    public synchronized MySensor<Double> getLiveHrDriftSensor() {
+        return mLiveHrDriftSensor;
     }
 
     public synchronized MySensor<Double> getPowerToWeightSensor() {
@@ -251,6 +374,54 @@ public class CyclingPowerMetricsDevice extends MyDevice {
 
     public synchronized MySensor<Double> getWPrimeBalSensor() {
         return mWPrimeBalSensor;
+    }
+
+    public synchronized MySensor<Double> getPower5sSensor() {
+        return mPower5sSensor;
+    }
+
+    public synchronized MySensor<Double> getPower1mSensor() {
+        return mPower1mSensor;
+    }
+
+    public synchronized MySensor<Double> getPower5mSensor() {
+        return mPower5mSensor;
+    }
+
+    public synchronized MySensor<Double> getPower20mSensor() {
+        return mPower20mSensor;
+    }
+
+    public synchronized MySensor<Double> getPowerPeak5sSensor() {
+        return mPowerPeak5sSensor;
+    }
+
+    public synchronized MySensor<Double> getPowerPeak1mSensor() {
+        return mPowerPeak1mSensor;
+    }
+
+    public synchronized MySensor<Double> getPowerPeak5mSensor() {
+        return mPowerPeak5mSensor;
+    }
+
+    public synchronized MySensor<Double> getPowerPeak20mSensor() {
+        return mPowerPeak20mSensor;
+    }
+
+    public SlidingWindowPowerAccumulator getAccumulator5s() {
+        return mAccumulator5s;
+    }
+
+    public SlidingWindowPowerAccumulator getAccumulator1m() {
+        return mAccumulator1m;
+    }
+
+    public SlidingWindowPowerAccumulator getAccumulator5m() {
+        return mAccumulator5m;
+    }
+
+    public SlidingWindowPowerAccumulator getAccumulator20m() {
+        return mAccumulator20m;
     }
 
     public synchronized void resetSession() {
@@ -284,8 +455,41 @@ public class CyclingPowerMetricsDevice extends MyDevice {
         } else {
             mCurrentWPrimeBalJoules = null;
         }
+        mAccumulator5s.reset();
+        mAccumulator1m.reset();
+        mAccumulator5m.reset();
+        mAccumulator20m.reset();
+        if (mPower5sSensor != null) {
+            mPower5sSensor.newValue(null);
+        }
+        if (mPower1mSensor != null) {
+            mPower1mSensor.newValue(null);
+        }
+        if (mPower5mSensor != null) {
+            mPower5mSensor.newValue(null);
+        }
+        if (mPower20mSensor != null) {
+            mPower20mSensor.newValue(null);
+        }
+        if (mPowerPeak5sSensor != null) {
+            mPowerPeak5sSensor.newValue(null);
+        }
+        if (mPowerPeak1mSensor != null) {
+            mPowerPeak1mSensor.newValue(null);
+        }
+        if (mPowerPeak5mSensor != null) {
+            mPowerPeak5mSensor.newValue(null);
+        }
+        if (mPowerPeak20mSensor != null) {
+            mPowerPeak20mSensor.newValue(null);
+        }
         if (mWPrimeBalSensor != null) {
             mWPrimeBalSensor.newValue(null);
+        }
+        mDriftStateX = null;
+        mDriftResidualWindow30s.clear();
+        if (mLiveHrDriftSensor != null) {
+            mLiveHrDriftSensor.newValue(null);
         }
     }
 
@@ -317,6 +521,39 @@ public class CyclingPowerMetricsDevice extends MyDevice {
                 if (val instanceof Number) {
                     power = ((Number) val).doubleValue();
                 }
+            }
+        }
+
+        // Query filtered HR (3-second moving average) or raw HR
+        FilteredSensorData<Double> hrFiltered = null;
+        try {
+            hrFiltered = BANALService.getFilteredSensorData(cHeartRateFilter);
+        } catch (Throwable t) {
+            // ignore
+        }
+        Double hr = (hrFiltered != null) ? hrFiltered.getValue() : null;
+
+        // Fallback to raw HR if filtered data is not yet available
+        if (hr == null && mMySensorManager != null) {
+            MySensor<?> rawHrSensor = mMySensorManager.getSensor(SensorType.HR);
+            if (rawHrSensor != null && rawHrSensor.getSensorData() != null && rawHrSensor.getSensorData().getValue() != null) {
+                Object val = rawHrSensor.getSensorData().getValue();
+                if (val instanceof Number) {
+                    double d = ((Number) val).doubleValue();
+                    if (d > 30.0 && d < 240.0) {
+                        hr = d;
+                    }
+                }
+            }
+        }
+
+        boolean cardioEnabled = mCardioPowerDynamicsEnabledProvider.isCardioPowerDynamicsEnabled(mContext);
+        boolean hasPowerSensor = (mMySensorManager != null && mMySensorManager.getSensor(SensorType.POWER) != null);
+        boolean hasHrSensor = (mMySensorManager != null && mMySensorManager.getSensor(SensorType.HR) != null);
+
+        if (!cardioEnabled || !hasPowerSensor || !hasHrSensor) {
+            if (mLiveHrDriftSensor != null) {
+                mLiveHrDriftSensor.newValue(null);
             }
         }
 
@@ -357,6 +594,9 @@ public class CyclingPowerMetricsDevice extends MyDevice {
                     }
                 }
             }
+            if (mLiveHrDriftSensor != null) {
+                mLiveHrDriftSensor.newValue(null);
+            }
             if (DEBUG) Log.i(TAG, "calculateMetrics(): recording suspended -> skip");
             return;
         }
@@ -366,6 +606,8 @@ public class CyclingPowerMetricsDevice extends MyDevice {
             long pauseDurationMs = (mSuspendedStartMs > 0L) ? (now - mSuspendedStartMs) : 0L;
             if (pauseDurationMs > 30000L) {
                 mPowerWindow30s.clear();
+                mDriftResidualWindow30s.clear();
+                mDriftStateX = null;
             }
             mWasSuspended = false;
             mSuspendedStartMs = 0L;
@@ -462,6 +704,70 @@ public class CyclingPowerMetricsDevice extends MyDevice {
         } else {
             if (mWPrimeBalSensor != null) {
                 mWPrimeBalSensor.newValue(null);
+            }
+        }
+
+        // 7. Update Mean Maximal Power (MMP) duration accumulators & session peaks (REQ-TRK-058)
+        mAccumulator5s.addSample(power);
+        mAccumulator1m.addSample(power);
+        mAccumulator5m.addSample(power);
+        mAccumulator20m.addSample(power);
+
+        if (mPower5sSensor != null) {
+            mPower5sSensor.newValue(mAccumulator5s.getAverage());
+        }
+        if (mPower1mSensor != null) {
+            mPower1mSensor.newValue(mAccumulator1m.getAverage());
+        }
+        if (mPower5mSensor != null) {
+            mPower5mSensor.newValue(mAccumulator5m.getAverage());
+        }
+        if (mPower20mSensor != null) {
+            mPower20mSensor.newValue(mAccumulator20m.getAverage());
+        }
+
+        if (mPowerPeak5sSensor != null) {
+            mPowerPeak5sSensor.newValue(mAccumulator5s.getPeak());
+        }
+        if (mPowerPeak1mSensor != null) {
+            mPowerPeak1mSensor.newValue(mAccumulator1m.getPeak());
+        }
+        if (mPowerPeak5mSensor != null) {
+            mPowerPeak5mSensor.newValue(mAccumulator5m.getPeak());
+        }
+        if (mPowerPeak20mSensor != null) {
+            mPowerPeak20mSensor.newValue(mAccumulator20m.getPeak());
+        }
+
+        // 8. Calculate Live HR Drift (REQ-REV-012 / ATT-3907)
+        if (cardioEnabled && hasPowerSensor && hasHrSensor && hr != null) {
+            DynamicalBaseline baseline = mCardioBaselineProvider.getBaseline(mContext);
+            double tau = (baseline != null && baseline.tau > 0.0) ? baseline.tau : DEFAULT_FALLBACK_TAU;
+            double hr0 = (baseline != null && baseline.hr0 > 0.0) ? baseline.hr0 : DEFAULT_FALLBACK_HR0;
+            double k = (baseline != null && baseline.k > 0.0) ? baseline.k : DEFAULT_FALLBACK_K;
+
+            double dt = 1.0;
+            double alpha = Math.exp(-dt / tau);
+            if (mDriftStateX == null) {
+                mDriftStateX = power;
+            } else {
+                mDriftStateX = alpha * mDriftStateX + (1.0 - alpha) * power;
+            }
+            double hrPred = hr0 + k * mDriftStateX;
+            double residual = hr - hrPred;
+
+            if (mDriftResidualWindow30s.size() == 30) {
+                mDriftResidualWindow30s.pollFirst();
+            }
+            mDriftResidualWindow30s.addLast(residual);
+
+            double sumResidual = 0.0;
+            for (double r : mDriftResidualWindow30s) {
+                sumResidual += r;
+            }
+            double smoothed = sumResidual / (double) mDriftResidualWindow30s.size();
+            if (mLiveHrDriftSensor != null) {
+                mLiveHrDriftSensor.newValue((double) Math.round(smoothed));
             }
         }
     }

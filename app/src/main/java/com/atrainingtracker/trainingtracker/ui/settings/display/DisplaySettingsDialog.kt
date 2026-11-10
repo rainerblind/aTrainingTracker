@@ -77,6 +77,7 @@ fun DisplaySettingsDialog(
             ) {
                 DisplayOptionToggle(
                     label = stringResource(R.string.forcePortrait),
+                    subtitle = stringResource(R.string.forcePortraitSummary),
                     isChecked = currentOptions.contains("forcePortrait"),
                     onCheckedChange = { checked ->
                         currentOptions = if (checked) currentOptions + "forcePortrait" else currentOptions - "forcePortrait"
@@ -84,6 +85,7 @@ fun DisplaySettingsDialog(
                 )
                 DisplayOptionToggle(
                     label = stringResource(R.string.prefsKeepScreenOnTitle),
+                    subtitle = stringResource(R.string.prefsKeepScreenOnSummary),
                     isChecked = currentOptions.contains("keepScreenOn"),
                     onCheckedChange = { checked ->
                         currentOptions = if (checked) currentOptions + "keepScreenOn" else currentOptions - "keepScreenOn"
@@ -91,6 +93,7 @@ fun DisplaySettingsDialog(
                 )
                 DisplayOptionToggle(
                     label = stringResource(R.string.prefsNoUnlockingTitle),
+                    subtitle = stringResource(R.string.prefsNoUnlockingSummary),
                     isChecked = currentOptions.contains("noUnlocking"),
                     onCheckedChange = { checked ->
                         currentOptions = if (checked) currentOptions + "noUnlocking" else currentOptions - "noUnlocking"

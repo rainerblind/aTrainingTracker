@@ -33,6 +33,8 @@ import com.atrainingtracker.trainingtracker.TrainingApplication;
 import com.atrainingtracker.database.DatabaseConstants;
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager;
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries;
+import com.atrainingtracker.trainingtracker.repositories.SportTypesRepository;
+import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository;
 import com.atrainingtracker.trainingtracker.exporter.BaseExporter;
 import com.atrainingtracker.trainingtracker.exporter.ExportInfo;
 import com.atrainingtracker.trainingtracker.exporter.ExportType;
@@ -94,7 +96,7 @@ public abstract class BaseFileWriter extends BaseExporter {
 
 
     protected void getHeaderData(@NonNull ExportInfo exportInfo) {
-        WorkoutSummariesDatabaseManager databaseManager = WorkoutSummariesDatabaseManager.getInstance(mContext);
+        WorkoutSummariesDatabaseManager databaseManager = WorkoutRepository.getInstance(mContext).getWorkoutSummariesDatabaseManager();
         SQLiteDatabase db = databaseManager.getDatabase();
 
         try (Cursor cursor = db.query(WorkoutSummaries.TABLE,
@@ -156,7 +158,7 @@ public abstract class BaseFileWriter extends BaseExporter {
             }
         }
 
-        BSportType bSportType = SportTypeDatabaseManager.getInstance(mContext).getBSportType(sportTypeId);
+        BSportType bSportType = SportTypesRepository.getInstance(mContext).getBSportType(sportTypeId);
         haveBikeCadence = haveCadence & bSportType == BSportType.BIKE;
         haveRunCadence = haveCadence & bSportType == BSportType.RUN;
     }

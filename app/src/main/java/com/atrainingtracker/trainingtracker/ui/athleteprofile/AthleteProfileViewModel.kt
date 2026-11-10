@@ -25,6 +25,7 @@ import com.atrainingtracker.trainingtracker.MyUnits
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.database.AthleteMetricEntry
 import com.atrainingtracker.trainingtracker.database.AthleteMetricType
+import com.atrainingtracker.trainingtracker.database.CardioPowerTrendSample
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
 import com.atrainingtracker.trainingtracker.physiology.PmcDailyPoint
 import com.atrainingtracker.trainingtracker.physiology.PmcSummaryResult
@@ -118,13 +119,19 @@ data class AthleteProfileUiState(
     val filteredHistory: List<AthleteMetricEntry> = emptyList(),
     val isImperial: Boolean = false,
     val enablePmcModel: Boolean = com.atrainingtracker.trainingtracker.settings.TuningPreferencesDefaults.DEFAULT_ENABLE_PMC_MODEL,
-    val enableCriticalPowerModel: Boolean = com.atrainingtracker.trainingtracker.settings.TuningPreferencesDefaults.DEFAULT_ENABLE_CRITICAL_POWER_MODEL
+    val enableCriticalPowerModel: Boolean = com.atrainingtracker.trainingtracker.settings.TuningPreferencesDefaults.DEFAULT_ENABLE_CRITICAL_POWER_MODEL,
+    val enableCardioPowerDynamics: Boolean = com.atrainingtracker.trainingtracker.settings.TuningPreferencesDefaults.DEFAULT_ENABLE_CARDIO_POWER_DYNAMICS,
+    val selectedCardioTrendMetric: CardioTrendMetric = CardioTrendMetric.HR_200W,
+    val selectedCardioTimeRange: MetricsTimeRange = MetricsTimeRange.ALL,
+    val cardioTrendPoints: List<CardioPlotPoint> = emptyList(),
+    val cardioTrendRollingPoints: List<CardioPlotPoint> = emptyList(),
+    val cardioTrendYDomain: Pair<Double, Double> = 110.0 to 170.0
 )
 
 /**
- * ViewModel driving [AthleteProfileScreen] (`REQ-UI-391.5`, `REQ-UI-399.1`, `REQ-UI-401.3`, `REQ-UI-403`).
+ * ViewModel driving [AthleteProfileScreen] (`REQ-UI-391.5`, `REQ-UI-399.1`, `REQ-UI-401.3`, `REQ-UI-403`, `REQ-REV-011`).
  */
-class AthleteProfileViewModel(application: Application) : AndroidViewModel(application) {
+class AthleteProfileViewModel @JvmOverloads constructor(application: Application) : AndroidViewModel(application) {
 
     private val repository = AthleteMetricsRepository.getInstance(application)
     private val settingsDataStore = SettingsDataStore.getInstance(application)
@@ -133,19 +140,30 @@ class AthleteProfileViewModel(application: Application) : AndroidViewModel(appli
     private val _selectedPlotMetric = MutableStateFlow(PlotMetricType.WEIGHT)
     private val _selectedTimeRange = MutableStateFlow(MetricsTimeRange.ALL)
     private val _selectedPmcTimeRange = MutableStateFlow(MetricsTimeRange.SIX_MONTHS)
+    private val _selectedCardioTrendMetric = MutableStateFlow(CardioTrendMetric.HR_200W)
+    private val _selectedCardioTimeRange = MutableStateFlow(MetricsTimeRange.ALL)
     private val _historyFilterMetric = MutableStateFlow<AthleteMetricType?>(null)
     private val _workoutLoadSamples = MutableStateFlow<List<WorkoutTrainingLoadSample>>(emptyList())
+    private val _cardioTrendSamples = MutableStateFlow<List<CardioPowerTrendSample>>(emptyList())
     private val _hrMaxBpm = MutableStateFlow<Int?>(null)
+
+    private val cardioStateFlow = combine(
+        _cardioTrendSamples,
+        _selectedCardioTrendMetric,
+        _selectedCardioTimeRange
+    ) { samples, metric, range ->
+        Triple(samples, metric, range)
+    }
 
     val uiState: StateFlow<AthleteProfileUiState> = combine(
         repository.entriesFlow,
         _selectedPlotMetric,
         combine(_selectedTimeRange, _selectedPmcTimeRange) { tr, pmcTr -> tr to pmcTr },
         _historyFilterMetric,
-        combine(_workoutLoadSamples, tuningDataStore.tuningConfigFlow) { samples, tuning ->
-            samples to tuning
+        combine(_workoutLoadSamples, tuningDataStore.tuningConfigFlow, cardioStateFlow) { samples, tuning, cardio ->
+            Triple(samples, tuning, cardio)
         }
-    ) { entries, rawPlotMetric, (timeRange, pmcTimeRange), rawHistoryFilter, (workoutSamples, tuningConfig) ->
+    ) { entries, rawPlotMetric, (timeRange, pmcTimeRange), rawHistoryFilter, (workoutSamples, tuningConfig, cardioState) ->
         val isImperial = try {
             TrainingApplication.getUnit() == MyUnits.IMPERIAL
         } catch (_: Throwable) {
@@ -203,6 +221,18 @@ class AthleteProfileViewModel(application: Application) : AndroidViewModel(appli
             }
         }
 
+        val enableCardio = tuningConfig.enableCardioPowerDynamics
+        val (cardioSamples, cardioMetric, cardioRange) = cardioState
+        val (cardioPoints, cardioRollingPoints, cardioYDomain) = if (enableCardio && cardioSamples.isNotEmpty()) {
+            val allPts = CardioPowerTrendsPlotMath.convertSamplesToPoints(cardioSamples, cardioMetric)
+            val filteredPts = CardioPowerTrendsPlotMath.filterPointsByTimeRange(allPts, cardioRange, nowMs)
+            val rollingPts = CardioPowerTrendsPlotMath.computeRollingTrend(filteredPts, windowDays = 30)
+            val yDomain = CardioPowerTrendsPlotMath.computeOutlierResilientDomain(filteredPts.map { it.value }, cardioMetric)
+            Triple(filteredPts, rollingPts, yDomain)
+        } else {
+            Triple(emptyList(), emptyList(), CardioPowerTrendsPlotMath.computeOutlierResilientDomain(emptyList(), cardioMetric))
+        }
+
         val filteredHistory = if (historyFilter == null) {
             visibleEntries
         } else {
@@ -227,7 +257,13 @@ class AthleteProfileViewModel(application: Application) : AndroidViewModel(appli
             filteredHistory = filteredHistory,
             isImperial = isImperial,
             enablePmcModel = enablePmc,
-            enableCriticalPowerModel = enableCp
+            enableCriticalPowerModel = enableCp,
+            enableCardioPowerDynamics = enableCardio,
+            selectedCardioTrendMetric = cardioMetric,
+            selectedCardioTimeRange = cardioRange,
+            cardioTrendPoints = cardioPoints,
+            cardioTrendRollingPoints = cardioRollingPoints,
+            cardioTrendYDomain = cardioYDomain
         )
     }.stateIn(
         scope = viewModelScope,
@@ -252,6 +288,27 @@ class AthleteProfileViewModel(application: Application) : AndroidViewModel(appli
             }
             _workoutLoadSamples.value = samples
         }
+        viewModelScope.launch(Dispatchers.IO) {
+            loadCardioTrendSamples()
+        }
+    }
+
+    fun loadCardioTrendSamples() {
+        val samples = try {
+            WorkoutSummariesDatabaseManager.getInstance(getApplication())
+                .getCardioPowerDynamicsFitnessTrendSamples(0.50)
+        } catch (_: Throwable) {
+            emptyList()
+        }
+        _cardioTrendSamples.value = samples
+    }
+
+    fun selectCardioTrendMetric(metric: CardioTrendMetric) {
+        _selectedCardioTrendMetric.value = metric
+    }
+
+    fun selectCardioTimeRange(range: MetricsTimeRange) {
+        _selectedCardioTimeRange.value = range
     }
 
     fun selectPlotMetric(metric: PlotMetricType) {

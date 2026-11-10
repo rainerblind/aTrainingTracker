@@ -158,6 +158,7 @@
     <string name="units_work_kj" translatable="false">kJ</string>
     <string name="units_temperature" translatable="false">°C</string>
     <string name="units_time_basic" translatable="false">s</string>
+    <string name="units_time_ms" translatable="false">ms</string>
     <string name="units_torque" translatable="false">Nm</string>
     <string name="units_none" translatable="false" />
     <string name="units_percent" translatable="false">%</string>
@@ -247,6 +248,8 @@
     <string name="distance_lap_short">dist. lap</string>
     <string name="heart_rate">heart rate</string>
     <string name="heart_rate_short">HR</string>
+    <string name="rr_interval">RR interval</string>
+    <string name="rr_interval_short">RR</string>
     <string name="lap_number">lap number</string>
     <string name="lap_number_short">lap nr</string>
     <string name="line_distance">line distance</string>
@@ -368,8 +371,10 @@
 
     <string name="prefsDisplayTitle">Display</string>
     <string name="prefsDisplaySummary">Configure screen and orientation behavior</string>
-    <string name="prefsKeepScreenOnTitle">keep screen on</string>
-    <string name="prefsNoUnlockingTitle">keep screen unlocked</string>
+    <string name="prefsKeepScreenOnTitle">Keep screen on</string>
+    <string name="prefsKeepScreenOnSummary">Prevent the screen from turning off automatically during active tracking</string>
+    <string name="prefsNoUnlockingTitle">Keep screen unlocked</string>
+    <string name="prefsNoUnlockingSummary">Show the cockpit above the lock screen without requiring PIN or pattern unlock</string>
     <string name="prefZoomDependingOnSpeedTitle">zoom depends on speed</string>
     <string name="prefsUnitsTitle">Units</string>
     <string name="prefsUnitsSummary">metric</string>
@@ -640,6 +645,7 @@
     <string name="do_not_check_again">don\'t check again</string>
     <string name="check_ANT_installation">check ANT installation</string>
     <string name="forcePortrait">Portrait Orientation</string>
+    <string name="forcePortraitSummary">Lock the display to vertical portrait mode and prevent rotation to landscape</string>
     <string name="Display">Display</string>
     <string name="settings_category_savings">Battery Savings</string>
     <string name="settings_category_savings_desc">Extends battery life for longer tracking sessions</string>
@@ -2115,6 +2121,7 @@
     <string name="map_layer_locations">Favorite Locations</string>
     <string name="map_layer_track">Recorded Track</string>
     <string name="map_layer_clusters">Favorite Tracks</string>
+    <string name="map_layer_climbs">Climbs</string>
     <string name="ant_dialog_view_status">View ANT+ Status</string>
     <string name="ant_dialog_dismiss">Got it</string>
 
@@ -2162,7 +2169,7 @@
     <string name="zone_calc_hr_max_label">Maximum Heart Rate (HRmax)</string>
     <string name="zone_calc_hr_rest_label">Resting Heart Rate (HRrest)</string>
     <string name="zone_calc_method_label">Calculation Method</string>
-    <string name="zone_calc_method_max_hr">% HRmax</string>
+    <string name="zone_calc_method_max_hr" formatted="false">% HRmax</string>
     <string name="zone_calc_method_karvonen">Karvonen (HRR)</string>
     <string name="zone_calc_preview_title">Calculated Zones Preview</string>
     <string name="zone_calc_apply_button">Apply</string>
@@ -2566,7 +2573,7 @@
     <string name="drawer_tier_pioneer">★ Pioneer</string>
     <string name="pioneer_badge_label_with_year">★ Pioneer (Since %1$d)</string>
     <string name="pioneer_badge_label">★ Pioneer</string>
-    <string name="pioneer_thank_you_body">Thank you for supporting aTrainingTracker since the early ANT+ days! Unlimited sensors and all future features are permanently unlocked.</string>
+    <string name="pioneer_thank_you_body">Thank you for recording your workouts with an earlier version of aTrainingTracker! Unlimited sensors and all future features are permanently unlocked for you.</string>
     <string name="debug_supporter_override_title">Supporter Tier Override (Debug)</string>
     <string name="debug_supporter_override_subtitle">Simulates license tiers locally without Google Play Billing credentials</string>
 

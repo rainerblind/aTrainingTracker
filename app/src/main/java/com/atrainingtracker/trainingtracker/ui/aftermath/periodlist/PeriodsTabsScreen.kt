@@ -42,6 +42,7 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
+import com.atrainingtracker.trainingtracker.database.hrv.HrvPosture
 import com.atrainingtracker.trainingtracker.ui.theme.LayoutConstants
 import com.atrainingtracker.trainingtracker.ui.theme.TTAlpha
 import com.atrainingtracker.trainingtracker.ui.util.MigrationStatus
@@ -67,7 +68,14 @@ fun PeriodsTabsScreen(
     onToggleSportFilter: (BSportType) -> Unit = {},
     selectedMetric: PeriodBarMetric = PeriodBarMetric.DURATION,
     onSelectMetric: (PeriodBarMetric) -> Unit = {},
-    onDayCellClick: ((PeriodSummary, BSportType, java.time.LocalDate, DailySportActivity?) -> Unit)? = null
+    onDayCellClick: ((PeriodSummary, BSportType, java.time.LocalDate, DailySportActivity?) -> Unit)? = null,
+    hrvTrendSeries: HrvTrendSeries? = null,
+    selectedHrvPosture: HrvPosture = HrvPosture.SUPINE,
+    onSelectHrvPosture: (HrvPosture) -> Unit = {},
+    selectedHrvMetricMode: HrvTrendMetricMode = HrvTrendMetricMode.LN_RMSSD,
+    onSelectHrvMetricMode: (HrvTrendMetricMode) -> Unit = {},
+    showHrvTrainingLoad: Boolean = false,
+    onToggleHrvTrainingLoad: (Boolean) -> Unit = {}
 ) {
     PeriodsTabsScreen(
         groupedPeriods = groupedPeriods,
@@ -84,7 +92,14 @@ fun PeriodsTabsScreen(
         onToggleSportFilter = onToggleSportFilter,
         selectedMetric = selectedMetric,
         onSelectMetric = onSelectMetric,
-        onDayCellClick = onDayCellClick
+        onDayCellClick = onDayCellClick,
+        hrvTrendSeries = hrvTrendSeries,
+        selectedHrvPosture = selectedHrvPosture,
+        onSelectHrvPosture = onSelectHrvPosture,
+        selectedHrvMetricMode = selectedHrvMetricMode,
+        onSelectHrvMetricMode = onSelectHrvMetricMode,
+        showHrvTrainingLoad = showHrvTrainingLoad,
+        onToggleHrvTrainingLoad = onToggleHrvTrainingLoad
     )
 }
 
@@ -105,7 +120,14 @@ fun PeriodsTabsScreen(
     onToggleSportFilter: (BSportType) -> Unit = {},
     selectedMetric: PeriodBarMetric = PeriodBarMetric.DURATION,
     onSelectMetric: (PeriodBarMetric) -> Unit = {},
-    onDayCellClick: ((PeriodSummary, BSportType, java.time.LocalDate, DailySportActivity?) -> Unit)? = null
+    onDayCellClick: ((PeriodSummary, BSportType, java.time.LocalDate, DailySportActivity?) -> Unit)? = null,
+    hrvTrendSeries: HrvTrendSeries? = null,
+    selectedHrvPosture: HrvPosture = HrvPosture.SUPINE,
+    onSelectHrvPosture: (HrvPosture) -> Unit = {},
+    selectedHrvMetricMode: HrvTrendMetricMode = HrvTrendMetricMode.LN_RMSSD,
+    onSelectHrvMetricMode: (HrvTrendMetricMode) -> Unit = {},
+    showHrvTrainingLoad: Boolean = false,
+    onToggleHrvTrainingLoad: (Boolean) -> Unit = {}
 ) {
 
     val scope = rememberCoroutineScope()
@@ -181,6 +203,19 @@ fun PeriodsTabsScreen(
                                     }
                                 }
                             }
+                        }
+
+                        // --- ATT-3557 / REQ-PER-033: Longitudinal HRV Readiness Trend ---
+                        if (hrvTrendSeries != null && hrvTrendSeries.points.isNotEmpty()) {
+                            HrvReadinessTrendCard(
+                                series = hrvTrendSeries,
+                                selectedPosture = selectedHrvPosture,
+                                onSelectPosture = onSelectHrvPosture,
+                                metricMode = selectedHrvMetricMode,
+                                onSelectMetricMode = onSelectHrvMetricMode,
+                                showTrainingLoad = showHrvTrainingLoad,
+                                onToggleTrainingLoad = onToggleHrvTrainingLoad
+                            )
                         }
 
                         PeriodBarGraph(

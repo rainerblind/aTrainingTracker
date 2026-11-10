@@ -71,6 +71,8 @@ class WorkoutRepositoryHistoricalZoneTest {
         mockkStatic(ContextCompat::class)
         every { ContextCompat.registerReceiver(any(), any(), any(), any()) } returns null
 
+        every { mockApplication.applicationContext } returns mockApplication
+
         mockkConstructor(com.atrainingtracker.trainingtracker.exporter.db.StravaUploadDbHelper::class)
         every { anyConstructed<com.atrainingtracker.trainingtracker.exporter.db.StravaUploadDbHelper>().getStravaActivityData(any()) } returns null
 

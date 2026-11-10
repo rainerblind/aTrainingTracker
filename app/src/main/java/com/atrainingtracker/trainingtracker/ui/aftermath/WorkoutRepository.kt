@@ -23,6 +23,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.database.Cursor
 import android.net.Uri
 import android.util.Log
 import androidx.annotation.VisibleForTesting
@@ -36,6 +37,10 @@ import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager
 import com.atrainingtracker.banalservice.sensor.SensorType
 import com.atrainingtracker.trainingtracker.MyHelper
 import com.atrainingtracker.trainingtracker.TrainingApplication
+import com.atrainingtracker.trainingtracker.climbs.ClimbDetector
+import com.atrainingtracker.trainingtracker.climbs.LiveClimbsRepository
+import com.atrainingtracker.trainingtracker.database.CardioPowerDynamicsRecord
+import com.atrainingtracker.trainingtracker.database.ClimbsDatabaseManager
 import com.atrainingtracker.trainingtracker.database.EquipmentDbHelper
 import com.atrainingtracker.trainingtracker.database.ExtremaType
 import com.atrainingtracker.trainingtracker.database.LapsDatabaseManager
@@ -45,6 +50,7 @@ import com.atrainingtracker.trainingtracker.database.WorkoutDeletionHelper
 import com.atrainingtracker.trainingtracker.database.WorkoutPhotoEntry
 import com.atrainingtracker.trainingtracker.database.WorkoutPhotoManager
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
+import com.atrainingtracker.trainingtracker.physiology.PowerHrDynamicsCalculator
 import com.atrainingtracker.trainingtracker.database.WorkoutSamplesDatabaseManager
 import com.atrainingtracker.trainingtracker.database.WorkoutClusterEngine
 import com.atrainingtracker.trainingtracker.database.RouteSource
@@ -107,7 +113,12 @@ import kotlinx.coroutines.sync.withLock
  * Architectural Role: Data access layer with state management.
  * Threading: Most operations are offloaded to [Dispatchers.IO] using a [SupervisorJob].
  */
-class WorkoutRepository private constructor(private val application: Application) : CoroutineScope {
+class WorkoutRepository private constructor(private val context: Context) : CoroutineScope {
+
+    private constructor(application: Application) : this(application as Context)
+
+    private val application get() = context
+    private val app get() = (context as? Application) ?: (context.applicationContext as? Application)
 
     companion object {
         private val TAG = WorkoutRepository::class.java.simpleName
@@ -127,14 +138,17 @@ class WorkoutRepository private constructor(private val application: Application
          *
          * @param application The application context used for initialization.
          */
+        @JvmStatic
         fun getInstance(application: Application): WorkoutRepository {
-            // Double-check locking ensures thread safety and performance.
+            return getInstance(application as Context)
+        }
+
+        @JvmStatic
+        fun getInstance(context: Context): WorkoutRepository {
             return INSTANCE ?: synchronized(this) {
-                val instance = INSTANCE
-                if (instance != null) {
-                    instance
-                } else {
-                    val newInstance = WorkoutRepository(application)
+                INSTANCE ?: run {
+                    val appContext = context.applicationContext ?: context
+                    val newInstance = WorkoutRepository(appContext)
                     INSTANCE = newInstance
                     newInstance
                 }
@@ -187,13 +201,47 @@ class WorkoutRepository private constructor(private val application: Application
     @VisibleForTesting
     internal var deletionHelperInstance: WorkoutDeletionHelper? = null
     private val deletionHelper get() = deletionHelperInstance ?: WorkoutDeletionHelper(application)
-    private val summariesManager by lazy { WorkoutSummariesDatabaseManager.getInstance(application) }
-    private val samplesManager by lazy { WorkoutSamplesDatabaseManager.getInstance(application) }
-    private val equipmentDbHelper by lazy { EquipmentDbHelper.getInstance(application) }
-    private val sportTypeDatabaseManager by lazy { SportTypeDatabaseManager.getInstance(application) }
-    private val exportManager by lazy { ExportManager(application) }
-    private val stravaUploadDbHelper by lazy { StravaUploadDbHelper.getInstance(application) }
-    private val lapsDatabaseManager by lazy { LapsDatabaseManager.getInstance(application) }
+    private val summariesManager get() = WorkoutSummariesDatabaseManager.getInstance(application)
+    private val samplesManager get() = WorkoutSamplesDatabaseManager.getInstance(application)
+    private val equipmentDbHelper get() = EquipmentDbHelper.getInstance(application)
+    private val sportTypeDatabaseManager get() = SportTypeDatabaseManager.getInstance(application)
+    private val exportManager get() = ExportManager(application)
+    private val stravaUploadDbHelper get() = StravaUploadDbHelper.getInstance(application)
+    private val lapsDatabaseManager get() = LapsDatabaseManager.getInstance(application)
+
+    val workoutSummariesDatabaseManager: WorkoutSummariesDatabaseManager get() = summariesManager
+    val workoutSamplesDatabaseManager: WorkoutSamplesDatabaseManager get() = samplesManager
+    val lapsDatabaseManagerInstance: LapsDatabaseManager get() = lapsDatabaseManager
+
+    fun getLaps(workoutId: Long): List<LapData> = lapsDatabaseManager.getLaps(workoutId) ?: emptyList()
+    fun getExtremaPosition(workoutId: Long, sensorType: SensorType, extremaType: ExtremaType): LatLng? =
+        summariesManager.getExtremaPosition(workoutId, sensorType, extremaType)
+    fun getExtremaValue(workoutId: Long, sensorType: SensorType, extremaType: ExtremaType): Double? =
+        summariesManager.getExtremaValue(workoutId, sensorType, extremaType)
+    fun getBaseFileName(workoutId: Long): String? = summariesManager.getBaseFileName(workoutId)
+    fun getWorkoutCursor(workoutId: Long): Cursor? = summariesManager.getWorkoutCursor(workoutId)
+    fun getCursorForAllWorkouts(): Cursor = summariesManager.getCursorForAllWorkouts()
+    fun getOldWorkouts(daysToKeep: Int): List<Long> = summariesManager.getOldWorkouts(daysToKeep)
+    fun deleteWorkoutSummary(workoutId: Long) = summariesManager.deleteWorkout(workoutId)
+    fun deleteWorkoutLaps(workoutId: Long) = lapsDatabaseManager.deleteWorkout(workoutId)
+    fun deleteWorkoutSamples(fileBaseName: String) = samplesManager.deleteWorkout(fileBaseName)
+    fun reassignClusterWorkouts(sourceId: Long, targetId: Long) = summariesManager.reassignClusterWorkouts(sourceId, targetId)
+    fun getUploadToStravaStatus(workoutId: Long): Int {
+        return try {
+            summariesManager.database.query(
+                WorkoutSummariesDatabaseManager.WorkoutSummaries.TABLE,
+                arrayOf(WorkoutSummariesDatabaseManager.WorkoutSummaries.UPLOAD_TO_STRAVA),
+                "${WorkoutSummariesDatabaseManager.WorkoutSummaries.C_ID} = ?",
+                arrayOf(workoutId.toString()),
+                null, null, null
+            ).use { cursor ->
+                if (cursor.moveToFirst()) cursor.getInt(0) else -1
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Could not query uploadToStrava for workout $workoutId", e)
+            -1
+        }
+    }
 
     private val mapper by lazy {
         WorkoutDataMapper(
@@ -250,6 +298,32 @@ class WorkoutRepository private constructor(private val application: Application
 
     val saveFinishedEvent = SingleLiveEvent<Pair<Long, Boolean>>()
     val deleteFinishedEvent = SingleLiveEvent<Pair<Long, Boolean>>()
+
+    /**
+     * Checks if there is an unfinished workout recorded in SQLite (REQ-UI-507.5).
+     */
+    fun hasUnfinishedWorkout(): Boolean = summariesManager.hasUnfinishedWorkout()
+
+    /**
+     * Discards or finishes any unfinished workout in SQLite (REQ-UI-507.5).
+     */
+    fun discardOrFinishUnfinishedWorkout() {
+        summariesManager.discardOrFinishUnfinishedWorkout()
+    }
+
+    /**
+     * Gets aggregate lifetime equipment statistics (REQ-UI-507.5).
+     */
+    fun getEquipmentStats(equipmentId: Long): WorkoutSummariesDatabaseManager.Stats {
+        return summariesManager.getEquipmentStats(equipmentId)
+    }
+
+    /**
+     * Gets aggregate equipment statistics for a specific time period (REQ-UI-507.5).
+     */
+    fun getEquipmentStatsForPeriod(equipmentId: Long, startS: Long, endS: Long): WorkoutSummariesDatabaseManager.Stats {
+        return summariesManager.getEquipmentStatsForPeriod(equipmentId, startS, endS)
+    }
 
 
     /**
@@ -401,7 +475,10 @@ class WorkoutRepository private constructor(private val application: Application
             SensorType.POWER.name,
             SensorType.SPEED_mps.name,
             SensorType.SLOPE.name,
-            SensorType.W_PRIME_BAL.name
+            SensorType.W_PRIME_BAL.name,
+            SensorType.HRV_DFA_A1.name,
+            SensorType.HRV_RMSSD.name,
+            SensorType.HRV_ARTIFACT_RATE.name
         )
         val projection = candidateCols.filter { it in existingColumns }
             .map { quoteSqlIdentifier(it) }
@@ -421,6 +498,9 @@ class WorkoutRepository private constructor(private val application: Application
             val speedIdx = cursor.getColumnIndex(SensorType.SPEED_mps.name)
             val slopeIdx = cursor.getColumnIndex(SensorType.SLOPE.name)
             val wPrimeIdx = cursor.getColumnIndex(SensorType.W_PRIME_BAL.name)
+            val hrvDfaIdx = cursor.getColumnIndex(SensorType.HRV_DFA_A1.name)
+            val hrvRmssdIdx = cursor.getColumnIndex(SensorType.HRV_RMSSD.name)
+            val hrvArtifactIdx = cursor.getColumnIndex(SensorType.HRV_ARTIFACT_RATE.name)
 
             var initialEpochSec: Long? = null
             var sampleIndex = 0L
@@ -446,6 +526,9 @@ class WorkoutRepository private constructor(private val application: Application
                     val speed = if (speedIdx != -1 && !cursor.isNull(speedIdx)) cursor.getDouble(speedIdx) else null
                     val slope = if (slopeIdx != -1 && !cursor.isNull(slopeIdx)) cursor.getDouble(slopeIdx) else null
                     val wPrimeBal = if (wPrimeIdx != -1 && !cursor.isNull(wPrimeIdx)) cursor.getDouble(wPrimeIdx) else null
+                    val hrvDfaA1 = if (hrvDfaIdx != -1 && !cursor.isNull(hrvDfaIdx)) cursor.getDouble(hrvDfaIdx) else null
+                    val hrvRmssd = if (hrvRmssdIdx != -1 && !cursor.isNull(hrvRmssdIdx)) cursor.getDouble(hrvRmssdIdx) else null
+                    val hrvArtifactRate = if (hrvArtifactIdx != -1 && !cursor.isNull(hrvArtifactIdx)) cursor.getDouble(hrvArtifactIdx) else null
 
                     points.add(
                         PathPoint(
@@ -457,7 +540,10 @@ class WorkoutRepository private constructor(private val application: Application
                             power = power,
                             speedMps = speed,
                             slope = slope,
-                            wPrimeBalKj = wPrimeBal
+                            wPrimeBalKj = wPrimeBal,
+                            hrvDfaA1 = hrvDfaA1,
+                            hrvRmssd = hrvRmssd,
+                            hrvArtifactRate = hrvArtifactRate
                         )
                     )
                 }
@@ -499,6 +585,9 @@ class WorkoutRepository private constructor(private val application: Application
             val speedIdx = cursor.getColumnIndex(SensorType.SPEED_mps.name)
             val altIdx = cursor.getColumnIndex(SensorType.ALTITUDE.name)
             val wPrimeIdx = cursor.getColumnIndex(SensorType.W_PRIME_BAL.name)
+            val hrvDfaIdx = cursor.getColumnIndex(SensorType.HRV_DFA_A1.name)
+            val hrvRmssdIdx = cursor.getColumnIndex(SensorType.HRV_RMSSD.name)
+            val hrvArtifactIdx = cursor.getColumnIndex(SensorType.HRV_ARTIFACT_RATE.name)
 
             var initialEpochSec: Long? = null
             var sampleIndex = 0L
@@ -521,8 +610,11 @@ class WorkoutRepository private constructor(private val application: Application
                 val alt = if (altIdx != -1 && !cursor.isNull(altIdx)) cursor.getDouble(altIdx) else null
                 val dist = if (distIdx != -1 && !cursor.isNull(distIdx)) cursor.getDouble(distIdx) else 0.0
                 val wPrimeBal = if (wPrimeIdx != -1 && !cursor.isNull(wPrimeIdx)) cursor.getDouble(wPrimeIdx) else null
+                val hrvDfaA1 = if (hrvDfaIdx != -1 && !cursor.isNull(hrvDfaIdx)) cursor.getDouble(hrvDfaIdx) else null
+                val hrvRmssd = if (hrvRmssdIdx != -1 && !cursor.isNull(hrvRmssdIdx)) cursor.getDouble(hrvRmssdIdx) else null
+                val hrvArtifactRate = if (hrvArtifactIdx != -1 && !cursor.isNull(hrvArtifactIdx)) cursor.getDouble(hrvArtifactIdx) else null
 
-                if (hr != null || power != null || speed != null || alt != null) {
+                if (hr != null || power != null || speed != null || alt != null || hrvDfaA1 != null || hrvRmssd != null) {
                     points.add(
                         PathPoint(
                             distance = dist,
@@ -533,7 +625,10 @@ class WorkoutRepository private constructor(private val application: Application
                             power = power,
                             speedMps = speed,
                             slope = null,
-                            wPrimeBalKj = wPrimeBal
+                            wPrimeBalKj = wPrimeBal,
+                            hrvDfaA1 = hrvDfaA1,
+                            hrvRmssd = hrvRmssd,
+                            hrvArtifactRate = hrvArtifactRate
                         )
                     )
                 }
@@ -825,7 +920,10 @@ class WorkoutRepository private constructor(private val application: Application
             SensorType.POWER.name,
             SensorType.SPEED_mps.name,
             SensorType.SLOPE.name,
-            SensorType.W_PRIME_BAL.name
+            SensorType.W_PRIME_BAL.name,
+            SensorType.HRV_DFA_A1.name,
+            SensorType.HRV_RMSSD.name,
+            SensorType.HRV_ARTIFACT_RATE.name
         )
         for (col in commonCols) {
             if (col in existingColumns) projectionSet.add(col)
@@ -850,6 +948,9 @@ class WorkoutRepository private constructor(private val application: Application
             val speedIdx = cursor.getColumnIndex(SensorType.SPEED_mps.name)
             val slopeIdx = cursor.getColumnIndex(SensorType.SLOPE.name)
             val wPrimeIdx = cursor.getColumnIndex(SensorType.W_PRIME_BAL.name)
+            val hrvDfaIdx = cursor.getColumnIndex(SensorType.HRV_DFA_A1.name)
+            val hrvRmssdIdx = cursor.getColumnIndex(SensorType.HRV_RMSSD.name)
+            val hrvArtifactIdx = cursor.getColumnIndex(SensorType.HRV_ARTIFACT_RATE.name)
 
             var initialEpochSec: Long? = null
             var sampleIndex = 0L
@@ -873,6 +974,9 @@ class WorkoutRepository private constructor(private val application: Application
                 val speed = if (speedIdx != -1 && !cursor.isNull(speedIdx)) cursor.getDouble(speedIdx) else null
                 val slope = if (slopeIdx != -1 && !cursor.isNull(slopeIdx)) cursor.getDouble(slopeIdx) else null
                 val wPrimeBal = if (wPrimeIdx != -1 && !cursor.isNull(wPrimeIdx)) cursor.getDouble(wPrimeIdx) else null
+                val hrvDfaA1 = if (hrvDfaIdx != -1 && !cursor.isNull(hrvDfaIdx)) cursor.getDouble(hrvDfaIdx) else null
+                val hrvRmssd = if (hrvRmssdIdx != -1 && !cursor.isNull(hrvRmssdIdx)) cursor.getDouble(hrvRmssdIdx) else null
+                val hrvArtifactRate = if (hrvArtifactIdx != -1 && !cursor.isNull(hrvArtifactIdx)) cursor.getDouble(hrvArtifactIdx) else null
 
                 for (type in availableTrackTypes) {
                     val (latIdx, lonIdx) = colIndices[type] ?: continue
@@ -887,7 +991,10 @@ class WorkoutRepository private constructor(private val application: Application
                                 power = power,
                                 speedMps = speed,
                                 slope = slope,
-                                wPrimeBalKj = wPrimeBal
+                                wPrimeBalKj = wPrimeBal,
+                                hrvDfaA1 = hrvDfaA1,
+                                hrvRmssd = hrvRmssd,
+                                hrvArtifactRate = hrvArtifactRate
                             )
                         )
                     }
@@ -1020,6 +1127,60 @@ class WorkoutRepository private constructor(private val application: Application
     }
 
     /**
+     * Saves or updates 1st-order dynamical Power-HR parameters for a workout (REQ-REV-009 / ATT-3904).
+     */
+    fun saveCardioPowerDynamics(workoutId: Long, record: CardioPowerDynamicsRecord) {
+        summariesManager.saveCardioPowerDynamics(workoutId, record)
+    }
+
+    /**
+     * Retrieves stored 1st-order dynamical Power-HR parameters for a workout (REQ-REV-009 / ATT-3904).
+     */
+    fun getCardioPowerDynamics(workoutId: Long): CardioPowerDynamicsRecord? {
+        return summariesManager.getCardioPowerDynamics(workoutId)
+    }
+
+    /**
+     * Lazily computes and persists 1st-order dynamical Power-HR parameters for historical workouts
+     * if not already cached in the database (REQ-REV-009 / ATT-3904).
+     */
+    suspend fun getOrComputeCardioPowerDynamics(workoutId: Long): CardioPowerDynamicsRecord? = withContext(Dispatchers.IO) {
+        val cached = summariesManager.getCardioPowerDynamics(workoutId)
+        if (cached != null) return@withContext cached
+
+        val baseFileName = summariesManager.getBaseFileName(workoutId) ?: return@withContext null
+        if (!samplesManager.existsTable(baseFileName)) return@withContext null
+
+        val db = samplesManager.database
+        val tableName = WorkoutSamplesDatabaseManager.getTableName(baseFileName)
+
+        val powerSamples = ArrayList<Double?>()
+        val hrSamples = ArrayList<Double?>()
+
+        try {
+            db.query(tableName, null, null, null, null, null, null).use { cursor ->
+                val powerIdx = cursor.getColumnIndex(SensorType.POWER.name)
+                val hrIdx = cursor.getColumnIndex(SensorType.HR.name)
+                while (cursor.moveToNext()) {
+                    val p = if (powerIdx != -1 && !cursor.isNull(powerIdx)) cursor.getDouble(powerIdx) else null
+                    val hr = if (hrIdx != -1 && !cursor.isNull(hrIdx)) cursor.getDouble(hrIdx) else null
+                    powerSamples.add(p)
+                    hrSamples.add(hr)
+                }
+            }
+        } catch (e: Exception) {
+            Log.w("WorkoutRepository", "Could not query samples for cardio-power lazy backfill: ${e.message}")
+            return@withContext null
+        }
+
+        val calculated = PowerHrDynamicsCalculator.calculate(powerSamples, hrSamples, workoutId = workoutId)
+        if (calculated != null) {
+            summariesManager.saveCardioPowerDynamics(workoutId, calculated)
+        }
+        calculated
+    }
+
+    /**
      * Helper to conditionally add a sensor extremum marker if it has valid spatial data.
      *
      * Implementation: Queries the summary database for the peak value and its associated
@@ -1075,17 +1236,21 @@ class WorkoutRepository private constructor(private val application: Application
     init {
         // --- EVENT REGISTRATION ---
         // Registers receivers for workout state changes and export status updates.
-        val filter = IntentFilter()
-        filter.addAction(TrackerService.WORKOUT_UPDATED_INTENT)
-        filter.addAction(TrackerService.TRACKING_FINISHED_INTENT)
-        LocalBroadcastManager.getInstance(application).registerReceiver(workoutUpdateReceiver, filter)
+        try {
+            val filter = IntentFilter()
+            filter.addAction(TrackerService.WORKOUT_UPDATED_INTENT)
+            filter.addAction(TrackerService.TRACKING_FINISHED_INTENT)
+            LocalBroadcastManager.getInstance(application).registerReceiver(workoutUpdateReceiver, filter)
 
-        val exportFilter = IntentFilter(ExportStatusChangedBroadcaster.EXPORT_STATUS_CHANGED_INTENT)
-        ContextCompat.registerReceiver(application, exportStatusUpdateReceiver, exportFilter, ContextCompat.RECEIVER_NOT_EXPORTED)
+            val exportFilter = IntentFilter(ExportStatusChangedBroadcaster.EXPORT_STATUS_CHANGED_INTENT)
+            ContextCompat.registerReceiver(application, exportStatusUpdateReceiver, exportFilter, ContextCompat.RECEIVER_NOT_EXPORTED)
 
-        reconcilePendingCropRecovery()
+            reconcilePendingCropRecovery()
 
-        if (DEBUG) Log.d(TAG, "WorkoutRepository initialized and receivers registered.")
+            if (DEBUG) Log.d(TAG, "WorkoutRepository initialized and receivers registered.")
+        } catch (e: Throwable) {
+            // Defensive guard for non-Robolectric local unit tests where Android IntentFilter/BroadcastManager is unmocked
+        }
     }
 
     /**
@@ -1632,12 +1797,14 @@ class WorkoutRepository private constructor(private val application: Application
                         val stravaDataMap = stravaUploadDbHelper.getStravaActivityDataForWorkouts(chunkNames)
                         val clusterNamesMap = WorkoutClusterDatabaseManager.getInstance(application).getClusterNamesForIds(chunkClusterIds)
                         val lapsMap = LapsDatabaseManager.getInstance(application).getLapsForWorkouts(chunkIds)
+                        val cardioPowerMap = summariesManager.getCardioPowerDynamicsForWorkouts(chunkIds)
 
                         val batchMetadata = WorkoutDataMapper.BatchMetadata(
                             extrema = extremaList.groupBy { it.workoutId },
                             stravaData = stravaDataMap,
                             clusterNames = clusterNamesMap,
-                            laps = lapsMap
+                            laps = lapsMap,
+                            cardioPowerDynamics = cardioPowerMap
                         )
 
                         // 3. Map the chunk in memory without cursor seeking (ATT-2309 / REQ-STB-018.2)
@@ -1763,7 +1930,7 @@ class WorkoutRepository private constructor(private val application: Application
             }
             val updatedWorkout = _allWorkouts.value.firstOrNull { it.id == workoutId }
             if (updatedWorkout != null) {
-                PeriodsRepository.getInstance(application).onWorkoutFinished(updatedWorkout)
+                app?.let { PeriodsRepository.getInstance(it).onWorkoutFinished(updatedWorkout) }
             }
         }
     }
@@ -2190,7 +2357,8 @@ class WorkoutRepository private constructor(private val application: Application
                             val isNewImportOrFinish = (existing == null || !existing.finished) && freshWorkoutData.finished
                             
                             if (isNewImportOrFinish) {
-                                PeriodsRepository.getInstance(application).onWorkoutFinished(freshWorkoutData)
+                                app?.let { PeriodsRepository.getInstance(it).onWorkoutFinished(freshWorkoutData) }
+                                extractAndPersistClimbsFromWorkout(workoutId)
                             }
 
                             if (isLiveSessionFinish && freshWorkoutData.clusterId != -1L) {
@@ -2215,6 +2383,33 @@ class WorkoutRepository private constructor(private val application: Application
                 dirtyReloadWorkoutIds.remove(workoutId)
             }
         }
+    }
+
+    /**
+     * Extracts qualifying climbs from a finished or imported workout's track points
+     * and persists them to Climbs.db with 50m spatial deduplication (REQ-MAP-064.1).
+     * Refreshes LiveClimbsRepository to enable free-riding live ClimbPro.
+     */
+    suspend fun extractAndPersistClimbsFromWorkout(workoutId: Long): List<Long> = withContext(Dispatchers.IO) {
+        try {
+            val points = getWorkoutTrackPoints(workoutId, TrackType.BEST)
+            if (points.size >= 2) {
+                val detected = ClimbDetector.detectClimbs(points, routeId = null, context = application)
+                if (detected.isNotEmpty()) {
+                    val ids = ClimbsDatabaseManager.getInstance(application)
+                        .insertClimbsWithDeduplicationBatch(detected, thresholdMeters = 50.0f)
+                    try {
+                        LiveClimbsRepository.getInstance(application).refreshClimbs()
+                    } catch (e: Exception) {
+                        Log.w(TAG, "Failed to refresh LiveClimbsRepository after workout climb extraction", e)
+                    }
+                    return@withContext ids
+                }
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to extract and persist climbs for workout $workoutId", e)
+        }
+        emptyList()
     }
 
 
@@ -2292,7 +2487,7 @@ class WorkoutRepository private constructor(private val application: Application
             // --- SURGICAL UPDATES (ATT-346 / ATT-354) ---
             oldWorkout?.let { old ->
                 if (old.sportId != userEditedWorkout.sportId) {
-                    PeriodsRepository.getInstance(application).onWorkoutSportChanged(userEditedWorkout, old)
+                    app?.let { PeriodsRepository.getInstance(it).onWorkoutSportChanged(userEditedWorkout, old) }
                     WorkoutClusterEngine.getInstance(application).onWorkoutSportChanged(userEditedWorkout, old)
                 }
             }
@@ -2341,7 +2536,7 @@ class WorkoutRepository private constructor(private val application: Application
                     }
                     // --- SURGICAL UPDATES (ATT-346 / ATT-354) ---
                     workout?.let { 
-                        PeriodsRepository.getInstance(application).onWorkoutDeleted(it)
+                        app?.let { appInstance -> PeriodsRepository.getInstance(appInstance).onWorkoutDeleted(it) }
                         WorkoutClusterEngine.getInstance(application).onWorkoutDeleted(application, it)
                     }
 

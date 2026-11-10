@@ -606,18 +606,31 @@ class WorkoutClustersViewModel @JvmOverloads constructor(
      */
     fun getStartLocationName(lat: Double, lng: Double): String? = getLocationName(lat, lng)
 
-    // --- SPLIT CLUSTER ACTIONS (REQ-SET-096, ATT-5900) ---
+    // --- SPLIT CLUSTER ACTIONS (REQ-SET-096, ATT-5900, REQ-UI-505) ---
     private var corridorJob: Job? = null
+    private var splitTargetCluster: WorkoutCluster? = null
+    private var splitWorkouts: List<WorkoutData>? = null
 
-    fun openSplitPreview() {
+    fun openSplitPreview(cluster: WorkoutCluster? = null) {
         _isSplitPreviewActive.value = true
-        recalculateSplitCorridors()
+        if (cluster != null) {
+            splitTargetCluster = cluster
+            viewModelScope.launch {
+                val workouts = repository.getWorkoutsForCluster(cluster.id)
+                splitWorkouts = workouts
+                recalculateSplitCorridors()
+            }
+        } else {
+            recalculateSplitCorridors()
+        }
     }
 
     fun closeSplitPreview() {
         corridorJob?.cancel()
         _isSplitPreviewActive.value = false
         _detectedVariants.value = emptyList()
+        splitTargetCluster = null
+        splitWorkouts = null
     }
 
     fun setSplitCorridorThreshold(threshold: Double) {
@@ -627,11 +640,11 @@ class WorkoutClustersViewModel @JvmOverloads constructor(
 
     fun recalculateSplitCorridors() {
         corridorJob?.cancel()
-        val cluster = _selectedCluster.value ?: return
-        val workouts = _clusterWorkouts.value
+        val cluster = splitTargetCluster ?: _selectedCluster.value ?: return
         val threshold = _splitCorridorThreshold.value
 
         corridorJob = viewModelScope.launch(Dispatchers.Default) {
+            val workouts = splitWorkouts ?: _clusterWorkouts.value
             val variants = WorkoutClusterCorridorDetector.detectCorridors(
                 workouts = workouts,
                 baseClusterName = cluster.name,
@@ -645,7 +658,8 @@ class WorkoutClustersViewModel @JvmOverloads constructor(
         variantsToSplit: List<Pair<String, List<WorkoutData>>>,
         renameWorkouts: Boolean
     ) {
-        val cluster = _selectedCluster.value ?: return
+        val cluster = splitTargetCluster ?: _selectedCluster.value ?: return
+        val isListTriggered = (splitTargetCluster != null && _selectedCluster.value == null)
         viewModelScope.launch(ioDispatcher) {
             WorkoutClusterEngine.getInstance(getApplication()).splitCluster(
                 context = getApplication(),
@@ -656,7 +670,11 @@ class WorkoutClustersViewModel @JvmOverloads constructor(
             repository.refreshClusters()
             _isSplitPreviewActive.value = false
             _detectedVariants.value = emptyList()
-            selectClusterById(cluster.id)
+            splitTargetCluster = null
+            splitWorkouts = null
+            if (!isListTriggered) {
+                selectClusterById(cluster.id)
+            }
         }
     }
 }

@@ -20,6 +20,7 @@ package com.atrainingtracker.trainingtracker.ui.segments.segmentlist
 
 import android.app.Application
 import android.content.Context
+import android.util.Log
 import androidx.annotation.StringRes
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.ViewModel
@@ -37,6 +38,7 @@ import com.atrainingtracker.trainingtracker.ui.map.MapRoute
 import com.atrainingtracker.trainingtracker.ui.map.toMapRoute
 import com.atrainingtracker.trainingtracker.ui.util.BaseMappableListViewModel
 import com.atrainingtracker.trainingtracker.ui.util.MappableSortOrder
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -164,9 +166,18 @@ class SegmentListViewModel(
 
     val refreshingSports: StateFlow<Set<BSportType>> = segmentsRepository.refreshingSports
 
+    /**
+     * Refreshes starred segments for the specified [sport] on [viewModelScope].
+     * Catches and logs all non-cancellation exceptions to prevent crashes during pull-to-refresh (REQ-MAP-061.2, ATT-6165).
+     */
     fun onRefresh(sport: BSportType) {
         viewModelScope.launch {
-            segmentsRepository.syncStarredSegments(sport)
+            try {
+                segmentsRepository.syncStarredSegments(sport)
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                Log.e(TAG, "Failed to refresh segments for sport $sport", e)
+            }
         }
     }
 
@@ -203,5 +214,9 @@ class SegmentListViewModel(
             }
             throw IllegalArgumentException("Unknown ViewModel class")
         }
+    }
+
+    companion object {
+        private const val TAG = "SegmentListViewModel"
     }
 }

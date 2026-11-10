@@ -53,7 +53,9 @@ public enum DeviceType {
     CLOCK(SensorType.TIME_TOTAL, BSportType.UNKNOWN, 1),
     BATTERY(SensorType.PHONE_BATTERY, BSportType.UNKNOWN, 1),
     VERTICAL_SPEED_AND_SLOPE(SensorType.VERTICAL_SPEED, BSportType.UNKNOWN, 1),
-    CYCLING_POWER_METRICS(SensorType.POWER_TO_WEIGHT, BSportType.BIKE, 1);   // only last one has ';' rest has ','!
+    CYCLING_POWER_METRICS(SensorType.POWER_TO_WEIGHT, BSportType.BIKE, 1),
+    HRV_METRICS(SensorType.HRV_RMSSD, BSportType.UNKNOWN, 1),
+    BIKE_RADAR(SensorType.RADAR_THREAT_COUNT, BSportType.BIKE, 1);   // only last one has ';' rest has ','!
 
     private final SensorType mainSensorType;
     private final BSportType sportType;
@@ -70,9 +72,9 @@ public enum DeviceType {
             case ANT_PLUS:
                 return new DeviceType[]{HRM, RUN_SPEED, BIKE_SPEED, BIKE_CADENCE, BIKE_SPEED_AND_CADENCE, BIKE_POWER, ENVIRONMENT}; // add ALL?
             case BLUETOOTH_LE:
-                return new DeviceType[]{HRM, RUN_SPEED, BIKE_SPEED, BIKE_CADENCE, BIKE_SPEED_AND_CADENCE, BIKE_POWER};
+                return new DeviceType[]{HRM, RUN_SPEED, BIKE_SPEED, BIKE_CADENCE, BIKE_SPEED_AND_CADENCE, BIKE_POWER, BIKE_RADAR};
             default:
-                return new DeviceType[]{HRM, RUN_SPEED, BIKE_SPEED, BIKE_CADENCE, BIKE_SPEED_AND_CADENCE, BIKE_POWER};
+                return new DeviceType[]{HRM, RUN_SPEED, BIKE_SPEED, BIKE_CADENCE, BIKE_SPEED_AND_CADENCE, BIKE_POWER, BIKE_RADAR};
         }
     }
 
@@ -187,7 +189,14 @@ public enum DeviceType {
 
             // only HR
             case HR:
+            case RR_INTERVAL:
                 deviceTypes.add(DeviceType.HRM);
+                break;
+
+            case HRV_RMSSD:
+            case HRV_DFA_A1:
+            case HRV_ARTIFACT_RATE:
+                deviceTypes.add(DeviceType.HRV_METRICS);
                 break;
 
             // only in Power
@@ -211,6 +220,13 @@ public enum DeviceType {
             case TEMPERATURE_MAX:
             case TEMPERATURE_MIN:
                 deviceTypes.add(DeviceType.ENVIRONMENT);
+                break;
+
+            case RADAR_THREAT_COUNT:
+            case RADAR_CLOSEST_DISTANCE_m:
+            case RADAR_APPROACH_SPEED_mps:
+            case RADAR_VEHICLE_COUNT:
+                deviceTypes.add(DeviceType.BIKE_RADAR);
                 break;
 
         }

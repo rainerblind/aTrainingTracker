@@ -39,7 +39,8 @@ class GeneralMapLayersLocalizationTest {
         "map_layer_segments",
         "map_layer_locations",
         "map_layer_track",
-        "map_layer_clusters"
+        "map_layer_clusters",
+        "map_layer_climbs"
     )
 
     @Test

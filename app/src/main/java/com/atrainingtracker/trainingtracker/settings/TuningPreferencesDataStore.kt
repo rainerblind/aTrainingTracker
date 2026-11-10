@@ -39,6 +39,7 @@ import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
 import com.atrainingtracker.banalservice.BSportType
+import com.atrainingtracker.banalservice.devices.radar.RadarLightMode
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.tracker.TrackerService
 import com.atrainingtracker.trainingtracker.ui.tracking.typography.CockpitFontFamily
@@ -56,6 +57,41 @@ enum class ProfileXAxisDomain {
 }
 
 /**
+ * Radar edge overlay positioning on screen (REQ-TRK-062.5).
+ */
+enum class RadarEdgeSide {
+    LEFT,
+    RIGHT
+}
+
+/**
+ * Radar clear-state behavior when no active threats are detected (REQ-TRK-062.5).
+ */
+enum class RadarClearMode {
+    SLIM_RAIL,
+    BADGE_ONLY,
+    AUTO_HIDE_3S
+}
+
+/**
+ * Radar audio alert mode filtering threat level transitions (REQ-TRK-063.6).
+ */
+enum class RadarAudioAlertMode {
+    ALL_ALERTS,
+    APPROACH_AND_FAST,
+    FAST_ONLY,
+    MUTED
+}
+
+/**
+ * Radar audio output route preference (REQ-TRK-063.6).
+ */
+enum class RadarAudioRoute {
+    SYSTEM_DEFAULT,
+    FORCE_SPEAKER
+}
+
+/**
  * Encapsulates battle-tested factory defaults and safety clamping bounds for advanced tuning.
  */
 object TuningPreferencesDefaults {
@@ -65,6 +101,21 @@ object TuningPreferencesDefaults {
     val COCKPIT_FONT_FAMILY = CockpitFontFamily.SYSTEM_DEFAULT
     val COCKPIT_FONT_WEIGHT = CockpitFontWeight.SEMI_BOLD
     val SENSOR_FIELD_VARIANT = SensorFieldVariant.CLASSIC_SEAMLESS
+    val RADAR_EDGE_SIDE = RadarEdgeSide.RIGHT
+    val RADAR_CLEAR_MODE = RadarClearMode.SLIM_RAIL
+    val RADAR_AUDIO_ALERT_MODE = RadarAudioAlertMode.ALL_ALERTS
+    const val RADAR_ALERT_VOLUME = 90
+    const val RADAR_SPEAKER_BOOST = true
+    val RADAR_AUDIO_ROUTE = RadarAudioRoute.SYSTEM_DEFAULT
+    const val RADAR_HAPTIC_ALERT = true
+    val RADAR_LIGHT_DEFAULT_MODE = RadarLightMode.DAY_FLASH
+    const val RADAR_AUTO_LIGHT_CONTROL = true
+    const val RADAR_PELOTON_AUDIO_SYNC = true
+    const val RADAR_SMART_URBAN_MUTE = false
+    const val RADAR_SPATIAL_AUDIO_ENABLED = true
+    const val RADAR_SPEED_PITCH_MODULATION = true
+    val RADAR_TRAFFIC_ORIENTATION = RadarTrafficOrientation.RIGHT_HAND
+    const val RADAR_LANE_CHANGE_TICK_ENABLED = true
     const val FULL_DIM_FACTOR = 0.25f
     const val MEDIUM_DIM_FACTOR = 0.50f
     const val SLOPE_FLAT_THRESHOLD = 2.0f
@@ -267,6 +318,13 @@ object TuningPreferencesDefaults {
     const val DEFAULT_SHOW_AEROBIC_EFFICIENCY_IN_WORKOUT_SUMMARY = true
     const val DEFAULT_ENABLE_CRITICAL_POWER_MODEL = false
     const val DEFAULT_SHOW_CRITICAL_POWER_IN_WORKOUT_SUMMARY = true
+    const val DEFAULT_ENABLE_CARDIO_POWER_DYNAMICS = false
+    const val DEFAULT_SHOW_CARDIO_POWER_IN_WORKOUT_SUMMARY = true
+
+    const val DEFAULT_DFA_A1_THRESHOLD_T1 = 0.75f
+    const val DEFAULT_DFA_A1_THRESHOLD_T2 = 0.50f
+    const val MIN_DFA_A1_THRESHOLD = 0.20f
+    const val MAX_DFA_A1_THRESHOLD = 1.50f
 }
 
 /**
@@ -340,7 +398,26 @@ data class TuningConfig(
     val enableAerobicEfficiencyModel: Boolean = TuningPreferencesDefaults.DEFAULT_ENABLE_AEROBIC_EFFICIENCY_MODEL,
     val showAerobicEfficiencyInWorkoutSummary: Boolean = TuningPreferencesDefaults.DEFAULT_SHOW_AEROBIC_EFFICIENCY_IN_WORKOUT_SUMMARY,
     val enableCriticalPowerModel: Boolean = TuningPreferencesDefaults.DEFAULT_ENABLE_CRITICAL_POWER_MODEL,
-    val showCriticalPowerInWorkoutSummary: Boolean = TuningPreferencesDefaults.DEFAULT_SHOW_CRITICAL_POWER_IN_WORKOUT_SUMMARY
+    val showCriticalPowerInWorkoutSummary: Boolean = TuningPreferencesDefaults.DEFAULT_SHOW_CRITICAL_POWER_IN_WORKOUT_SUMMARY,
+    val enableCardioPowerDynamics: Boolean = TuningPreferencesDefaults.DEFAULT_ENABLE_CARDIO_POWER_DYNAMICS,
+    val showCardioPowerInWorkoutSummary: Boolean = TuningPreferencesDefaults.DEFAULT_SHOW_CARDIO_POWER_IN_WORKOUT_SUMMARY,
+    val dfaA1ThresholdT1: Float = TuningPreferencesDefaults.DEFAULT_DFA_A1_THRESHOLD_T1,
+    val dfaA1ThresholdT2: Float = TuningPreferencesDefaults.DEFAULT_DFA_A1_THRESHOLD_T2,
+    val radarEdgeSide: RadarEdgeSide = TuningPreferencesDefaults.RADAR_EDGE_SIDE,
+    val radarClearMode: RadarClearMode = TuningPreferencesDefaults.RADAR_CLEAR_MODE,
+    val radarAudioAlertMode: RadarAudioAlertMode = TuningPreferencesDefaults.RADAR_AUDIO_ALERT_MODE,
+    val radarAlertVolume: Int = TuningPreferencesDefaults.RADAR_ALERT_VOLUME,
+    val radarSpeakerBoost: Boolean = TuningPreferencesDefaults.RADAR_SPEAKER_BOOST,
+    val radarAudioRoute: RadarAudioRoute = TuningPreferencesDefaults.RADAR_AUDIO_ROUTE,
+    val radarHapticAlert: Boolean = TuningPreferencesDefaults.RADAR_HAPTIC_ALERT,
+    val radarLightDefaultMode: RadarLightMode = TuningPreferencesDefaults.RADAR_LIGHT_DEFAULT_MODE,
+    val radarAutoLightControl: Boolean = TuningPreferencesDefaults.RADAR_AUTO_LIGHT_CONTROL,
+    val radarPelotonAudioSync: Boolean = TuningPreferencesDefaults.RADAR_PELOTON_AUDIO_SYNC,
+    val radarSmartUrbanMute: Boolean = TuningPreferencesDefaults.RADAR_SMART_URBAN_MUTE,
+    val radarSpatialAudioEnabled: Boolean = TuningPreferencesDefaults.RADAR_SPATIAL_AUDIO_ENABLED,
+    val radarSpeedPitchModulation: Boolean = TuningPreferencesDefaults.RADAR_SPEED_PITCH_MODULATION,
+    val radarTrafficOrientation: RadarTrafficOrientation = TuningPreferencesDefaults.RADAR_TRAFFIC_ORIENTATION,
+    val radarLaneChangeTickEnabled: Boolean = TuningPreferencesDefaults.RADAR_LANE_CHANGE_TICK_ENABLED
 ) {
     val showAntMissingAdapterWarnings: Boolean
         get() = !suppressAntMissingAdapterDialog
@@ -483,6 +560,25 @@ class TuningPreferencesDataStore(private val context: Context) {
         val KEY_SHOW_AEROBIC_EFFICIENCY_IN_WORKOUT_SUMMARY: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_show_aerobic_efficiency_in_workout_summary")
         val KEY_ENABLE_CRITICAL_POWER_MODEL: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_enable_critical_power_model")
         val KEY_SHOW_CRITICAL_POWER_IN_WORKOUT_SUMMARY: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_show_critical_power_in_workout_summary")
+        val KEY_ENABLE_CARDIO_POWER_DYNAMICS: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_enable_cardio_power_dynamics")
+        val KEY_SHOW_CARDIO_POWER_IN_WORKOUT_SUMMARY: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_show_cardio_power_in_workout_summary")
+        val KEY_DFA_A1_THRESHOLD_T1: Preferences.Key<Float> = floatPreferencesKey("tuning_dfa_a1_threshold_t1")
+        val KEY_DFA_A1_THRESHOLD_T2: Preferences.Key<Float> = floatPreferencesKey("tuning_dfa_a1_threshold_t2")
+        val KEY_RADAR_EDGE_SIDE: Preferences.Key<String> = stringPreferencesKey("tuning_radar_edge_side")
+        val KEY_RADAR_CLEAR_MODE: Preferences.Key<String> = stringPreferencesKey("tuning_radar_clear_mode")
+        val KEY_RADAR_AUDIO_ALERT_MODE: Preferences.Key<String> = stringPreferencesKey("tuning_radar_audio_alert_mode")
+        val KEY_RADAR_ALERT_VOLUME: Preferences.Key<Int> = intPreferencesKey("tuning_radar_alert_volume")
+        val KEY_RADAR_SPEAKER_BOOST: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_radar_speaker_boost")
+        val KEY_RADAR_AUDIO_ROUTE: Preferences.Key<String> = stringPreferencesKey("tuning_radar_audio_route")
+        val KEY_RADAR_HAPTIC_ALERT: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_radar_haptic_alert")
+        val KEY_RADAR_LIGHT_DEFAULT_MODE: Preferences.Key<String> = stringPreferencesKey("tuning_radar_light_default_mode")
+        val KEY_RADAR_AUTO_LIGHT_CONTROL: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_radar_auto_light_control")
+        val KEY_RADAR_PELOTON_AUDIO_SYNC: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_radar_peloton_audio_sync")
+        val KEY_RADAR_SMART_URBAN_MUTE: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_radar_smart_urban_mute")
+        val KEY_RADAR_SPATIAL_AUDIO_ENABLED: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_radar_spatial_audio_enabled")
+        val KEY_RADAR_SPEED_PITCH_MODULATION: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_radar_speed_pitch_modulation")
+        val KEY_RADAR_TRAFFIC_ORIENTATION: Preferences.Key<String> = stringPreferencesKey("tuning_radar_traffic_orientation")
+        val KEY_RADAR_LANE_CHANGE_TICK_ENABLED: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_radar_lane_change_tick_enabled")
 
         internal val ALL_KEYS = listOf(
             KEY_ELEVATION_X_AXIS_DOMAIN,
@@ -554,7 +650,26 @@ class TuningPreferencesDataStore(private val context: Context) {
             KEY_ENABLE_AEROBIC_EFFICIENCY_MODEL,
             KEY_SHOW_AEROBIC_EFFICIENCY_IN_WORKOUT_SUMMARY,
             KEY_ENABLE_CRITICAL_POWER_MODEL,
-            KEY_SHOW_CRITICAL_POWER_IN_WORKOUT_SUMMARY
+            KEY_SHOW_CRITICAL_POWER_IN_WORKOUT_SUMMARY,
+            KEY_ENABLE_CARDIO_POWER_DYNAMICS,
+            KEY_SHOW_CARDIO_POWER_IN_WORKOUT_SUMMARY,
+            KEY_DFA_A1_THRESHOLD_T1,
+            KEY_DFA_A1_THRESHOLD_T2,
+            KEY_RADAR_EDGE_SIDE,
+            KEY_RADAR_CLEAR_MODE,
+            KEY_RADAR_AUDIO_ALERT_MODE,
+            KEY_RADAR_ALERT_VOLUME,
+            KEY_RADAR_SPEAKER_BOOST,
+            KEY_RADAR_AUDIO_ROUTE,
+            KEY_RADAR_HAPTIC_ALERT,
+            KEY_RADAR_LIGHT_DEFAULT_MODE,
+            KEY_RADAR_AUTO_LIGHT_CONTROL,
+            KEY_RADAR_PELOTON_AUDIO_SYNC,
+            KEY_RADAR_SMART_URBAN_MUTE,
+            KEY_RADAR_SPATIAL_AUDIO_ENABLED,
+            KEY_RADAR_SPEED_PITCH_MODULATION,
+            KEY_RADAR_TRAFFIC_ORIENTATION,
+            KEY_RADAR_LANE_CHANGE_TICK_ENABLED
         )
 
         /**
@@ -648,6 +763,8 @@ class TuningPreferencesDataStore(private val context: Context) {
                 INSTANCE = instance
             }
         }
+
+        internal fun hasInitializedInstance(): Boolean = INSTANCE != null
     }
 
     private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
@@ -717,6 +834,35 @@ data class AutoPausePreferences(
 
         val rawVariantStr = prefs[KEY_SENSOR_FIELD_VARIANT]
         val sensorFieldVariant = SensorFieldVariant.fromStorage(rawVariantStr)
+
+        val rawRadarEdgeSideStr = prefs[KEY_RADAR_EDGE_SIDE]
+        val radarEdgeSide = safeEnumValueOf(rawRadarEdgeSideStr, TuningPreferencesDefaults.RADAR_EDGE_SIDE)
+
+        val rawRadarClearModeStr = prefs[KEY_RADAR_CLEAR_MODE]
+        val radarClearMode = safeEnumValueOf(rawRadarClearModeStr, TuningPreferencesDefaults.RADAR_CLEAR_MODE)
+
+        val rawAudioAlertModeStr = prefs[KEY_RADAR_AUDIO_ALERT_MODE]
+        val radarAudioAlertMode = safeEnumValueOf(rawAudioAlertModeStr, TuningPreferencesDefaults.RADAR_AUDIO_ALERT_MODE)
+
+        val rawAlertVolume = prefs[KEY_RADAR_ALERT_VOLUME] ?: TuningPreferencesDefaults.RADAR_ALERT_VOLUME
+        val radarAlertVolume = rawAlertVolume.coerceIn(10, 100)
+
+        val radarSpeakerBoost = prefs[KEY_RADAR_SPEAKER_BOOST] ?: TuningPreferencesDefaults.RADAR_SPEAKER_BOOST
+
+        val rawAudioRouteStr = prefs[KEY_RADAR_AUDIO_ROUTE]
+        val radarAudioRoute = safeEnumValueOf(rawAudioRouteStr, TuningPreferencesDefaults.RADAR_AUDIO_ROUTE)
+
+        val radarHapticAlert = prefs[KEY_RADAR_HAPTIC_ALERT] ?: TuningPreferencesDefaults.RADAR_HAPTIC_ALERT
+        val rawLightDefaultModeStr = prefs[KEY_RADAR_LIGHT_DEFAULT_MODE]
+        val radarLightDefaultMode = safeEnumValueOf(rawLightDefaultModeStr, TuningPreferencesDefaults.RADAR_LIGHT_DEFAULT_MODE)
+        val radarAutoLightControl = prefs[KEY_RADAR_AUTO_LIGHT_CONTROL] ?: TuningPreferencesDefaults.RADAR_AUTO_LIGHT_CONTROL
+        val radarPelotonAudioSync = prefs[KEY_RADAR_PELOTON_AUDIO_SYNC] ?: TuningPreferencesDefaults.RADAR_PELOTON_AUDIO_SYNC
+        val radarSmartUrbanMute = prefs[KEY_RADAR_SMART_URBAN_MUTE] ?: TuningPreferencesDefaults.RADAR_SMART_URBAN_MUTE
+        val radarSpatialAudioEnabled = prefs[KEY_RADAR_SPATIAL_AUDIO_ENABLED] ?: TuningPreferencesDefaults.RADAR_SPATIAL_AUDIO_ENABLED
+        val radarSpeedPitchModulation = prefs[KEY_RADAR_SPEED_PITCH_MODULATION] ?: TuningPreferencesDefaults.RADAR_SPEED_PITCH_MODULATION
+        val rawTrafficOrientationStr = prefs[KEY_RADAR_TRAFFIC_ORIENTATION]
+        val radarTrafficOrientation = safeEnumValueOf(rawTrafficOrientationStr, TuningPreferencesDefaults.RADAR_TRAFFIC_ORIENTATION)
+        val radarLaneChangeTickEnabled = prefs[KEY_RADAR_LANE_CHANGE_TICK_ENABLED] ?: TuningPreferencesDefaults.RADAR_LANE_CHANGE_TICK_ENABLED
 
         val rawFontWeightStr = prefs[KEY_COCKPIT_FONT_WEIGHT]
         val cockpitFontWeight = safeEnumValueOf(rawFontWeightStr, TuningPreferencesDefaults.COCKPIT_FONT_WEIGHT)
@@ -916,7 +1062,26 @@ data class AutoPausePreferences(
             enableAerobicEfficiencyModel = prefs[KEY_ENABLE_AEROBIC_EFFICIENCY_MODEL] ?: TuningPreferencesDefaults.DEFAULT_ENABLE_AEROBIC_EFFICIENCY_MODEL,
             showAerobicEfficiencyInWorkoutSummary = prefs[KEY_SHOW_AEROBIC_EFFICIENCY_IN_WORKOUT_SUMMARY] ?: TuningPreferencesDefaults.DEFAULT_SHOW_AEROBIC_EFFICIENCY_IN_WORKOUT_SUMMARY,
             enableCriticalPowerModel = prefs[KEY_ENABLE_CRITICAL_POWER_MODEL] ?: TuningPreferencesDefaults.DEFAULT_ENABLE_CRITICAL_POWER_MODEL,
-            showCriticalPowerInWorkoutSummary = prefs[KEY_SHOW_CRITICAL_POWER_IN_WORKOUT_SUMMARY] ?: TuningPreferencesDefaults.DEFAULT_SHOW_CRITICAL_POWER_IN_WORKOUT_SUMMARY
+            showCriticalPowerInWorkoutSummary = prefs[KEY_SHOW_CRITICAL_POWER_IN_WORKOUT_SUMMARY] ?: TuningPreferencesDefaults.DEFAULT_SHOW_CRITICAL_POWER_IN_WORKOUT_SUMMARY,
+            enableCardioPowerDynamics = prefs[KEY_ENABLE_CARDIO_POWER_DYNAMICS] ?: TuningPreferencesDefaults.DEFAULT_ENABLE_CARDIO_POWER_DYNAMICS,
+            showCardioPowerInWorkoutSummary = prefs[KEY_SHOW_CARDIO_POWER_IN_WORKOUT_SUMMARY] ?: TuningPreferencesDefaults.DEFAULT_SHOW_CARDIO_POWER_IN_WORKOUT_SUMMARY,
+            dfaA1ThresholdT1 = prefs[KEY_DFA_A1_THRESHOLD_T1] ?: TuningPreferencesDefaults.DEFAULT_DFA_A1_THRESHOLD_T1,
+            dfaA1ThresholdT2 = prefs[KEY_DFA_A1_THRESHOLD_T2] ?: TuningPreferencesDefaults.DEFAULT_DFA_A1_THRESHOLD_T2,
+            radarEdgeSide = radarEdgeSide,
+            radarClearMode = radarClearMode,
+            radarAudioAlertMode = radarAudioAlertMode,
+            radarAlertVolume = radarAlertVolume,
+            radarSpeakerBoost = radarSpeakerBoost,
+            radarAudioRoute = radarAudioRoute,
+            radarHapticAlert = radarHapticAlert,
+            radarLightDefaultMode = radarLightDefaultMode,
+            radarAutoLightControl = radarAutoLightControl,
+            radarPelotonAudioSync = radarPelotonAudioSync,
+            radarSmartUrbanMute = radarSmartUrbanMute,
+            radarSpatialAudioEnabled = radarSpatialAudioEnabled,
+            radarSpeedPitchModulation = radarSpeedPitchModulation,
+            radarTrafficOrientation = radarTrafficOrientation,
+            radarLaneChangeTickEnabled = radarLaneChangeTickEnabled
         )
     }
 
@@ -934,6 +1099,16 @@ data class AutoPausePreferences(
 
     val enableCriticalPowerModelFlow: Flow<Boolean> = context.dataStore.data.map { prefs ->
         prefs[KEY_ENABLE_CRITICAL_POWER_MODEL] ?: TuningPreferencesDefaults.DEFAULT_ENABLE_CRITICAL_POWER_MODEL
+    }
+
+    val enableCardioPowerDynamicsFlow: Flow<Boolean> = context.dataStore.data.map { prefs ->
+        prefs[KEY_ENABLE_CARDIO_POWER_DYNAMICS] ?: TuningPreferencesDefaults.DEFAULT_ENABLE_CARDIO_POWER_DYNAMICS
+    }
+
+    suspend fun setEnableCardioPowerDynamics(enabled: Boolean) {
+        context.dataStore.edit { prefs ->
+            prefs[KEY_ENABLE_CARDIO_POWER_DYNAMICS] = enabled
+        }
     }
 
     suspend fun setEnableCogganPowerMetrics(enabled: Boolean) {
@@ -957,6 +1132,49 @@ data class AutoPausePreferences(
     suspend fun setEnableCriticalPowerModel(enabled: Boolean) {
         context.dataStore.edit { prefs ->
             prefs[KEY_ENABLE_CRITICAL_POWER_MODEL] = enabled
+        }
+    }
+
+    val dfaA1ThresholdT1Flow: Flow<Float> = context.dataStore.data.map { prefs ->
+        prefs[KEY_DFA_A1_THRESHOLD_T1] ?: TuningPreferencesDefaults.DEFAULT_DFA_A1_THRESHOLD_T1
+    }
+
+    val dfaA1ThresholdT2Flow: Flow<Float> = context.dataStore.data.map { prefs ->
+        prefs[KEY_DFA_A1_THRESHOLD_T2] ?: TuningPreferencesDefaults.DEFAULT_DFA_A1_THRESHOLD_T2
+    }
+
+    suspend fun setDfaA1ThresholdT1(threshold: Float) {
+        val clamped = threshold.coerceIn(
+            TuningPreferencesDefaults.MIN_DFA_A1_THRESHOLD,
+            TuningPreferencesDefaults.MAX_DFA_A1_THRESHOLD
+        )
+        context.dataStore.edit { prefs ->
+            prefs[KEY_DFA_A1_THRESHOLD_T1] = clamped
+        }
+    }
+
+    suspend fun setDfaA1ThresholdT2(threshold: Float) {
+        val clamped = threshold.coerceIn(
+            TuningPreferencesDefaults.MIN_DFA_A1_THRESHOLD,
+            TuningPreferencesDefaults.MAX_DFA_A1_THRESHOLD
+        )
+        context.dataStore.edit { prefs ->
+            prefs[KEY_DFA_A1_THRESHOLD_T2] = clamped
+        }
+    }
+
+    suspend fun setDfaA1Thresholds(t1: Float, t2: Float) {
+        val clampedT1 = t1.coerceIn(
+            TuningPreferencesDefaults.MIN_DFA_A1_THRESHOLD,
+            TuningPreferencesDefaults.MAX_DFA_A1_THRESHOLD
+        )
+        val clampedT2 = t2.coerceIn(
+            TuningPreferencesDefaults.MIN_DFA_A1_THRESHOLD,
+            TuningPreferencesDefaults.MAX_DFA_A1_THRESHOLD
+        )
+        context.dataStore.edit { prefs ->
+            prefs[KEY_DFA_A1_THRESHOLD_T1] = clampedT1
+            prefs[KEY_DFA_A1_THRESHOLD_T2] = clampedT2
         }
     }
 
@@ -1061,6 +1279,14 @@ data class AutoPausePreferences(
             TuningPreferencesDefaults.MIN_AUTO_PAUSE_OTHER_DEBOUNCE_SEC,
             TuningPreferencesDefaults.MAX_AUTO_PAUSE_OTHER_DEBOUNCE_SEC
         )
+        val clampedDfaA1T1 = config.dfaA1ThresholdT1.coerceIn(
+            TuningPreferencesDefaults.MIN_DFA_A1_THRESHOLD,
+            TuningPreferencesDefaults.MAX_DFA_A1_THRESHOLD
+        )
+        val clampedDfaA1T2 = config.dfaA1ThresholdT2.coerceIn(
+            TuningPreferencesDefaults.MIN_DFA_A1_THRESHOLD,
+            TuningPreferencesDefaults.MAX_DFA_A1_THRESHOLD
+        )
 
         context.dataStore.edit { prefs ->
             prefs[KEY_ELEVATION_X_AXIS_DOMAIN] = config.elevationXAxisDomain.name
@@ -1141,6 +1367,25 @@ data class AutoPausePreferences(
             prefs[KEY_SHOW_AEROBIC_EFFICIENCY_IN_WORKOUT_SUMMARY] = config.showAerobicEfficiencyInWorkoutSummary
             prefs[KEY_ENABLE_CRITICAL_POWER_MODEL] = config.enableCriticalPowerModel
             prefs[KEY_SHOW_CRITICAL_POWER_IN_WORKOUT_SUMMARY] = config.showCriticalPowerInWorkoutSummary
+            prefs[KEY_ENABLE_CARDIO_POWER_DYNAMICS] = config.enableCardioPowerDynamics
+            prefs[KEY_SHOW_CARDIO_POWER_IN_WORKOUT_SUMMARY] = config.showCardioPowerInWorkoutSummary
+            prefs[KEY_DFA_A1_THRESHOLD_T1] = clampedDfaA1T1
+            prefs[KEY_DFA_A1_THRESHOLD_T2] = clampedDfaA1T2
+            prefs[KEY_RADAR_EDGE_SIDE] = config.radarEdgeSide.name
+            prefs[KEY_RADAR_CLEAR_MODE] = config.radarClearMode.name
+            prefs[KEY_RADAR_AUDIO_ALERT_MODE] = config.radarAudioAlertMode.name
+            prefs[KEY_RADAR_ALERT_VOLUME] = config.radarAlertVolume.coerceIn(10, 100)
+            prefs[KEY_RADAR_SPEAKER_BOOST] = config.radarSpeakerBoost
+            prefs[KEY_RADAR_AUDIO_ROUTE] = config.radarAudioRoute.name
+            prefs[KEY_RADAR_HAPTIC_ALERT] = config.radarHapticAlert
+            prefs[KEY_RADAR_LIGHT_DEFAULT_MODE] = config.radarLightDefaultMode.name
+            prefs[KEY_RADAR_AUTO_LIGHT_CONTROL] = config.radarAutoLightControl
+            prefs[KEY_RADAR_PELOTON_AUDIO_SYNC] = config.radarPelotonAudioSync
+            prefs[KEY_RADAR_SMART_URBAN_MUTE] = config.radarSmartUrbanMute
+            prefs[KEY_RADAR_SPATIAL_AUDIO_ENABLED] = config.radarSpatialAudioEnabled
+            prefs[KEY_RADAR_SPEED_PITCH_MODULATION] = config.radarSpeedPitchModulation
+            prefs[KEY_RADAR_TRAFFIC_ORIENTATION] = config.radarTrafficOrientation.name
+            prefs[KEY_RADAR_LANE_CHANGE_TICK_ENABLED] = config.radarLaneChangeTickEnabled
         }
 
         TrainingApplication.setClusterTolEndpoints(clampedClusterTolEndpoints)
@@ -1279,6 +1524,156 @@ data class AutoPausePreferences(
         )
         context.dataStore.edit { prefs ->
             prefs[KEY_TURN_CUE_COUNTDOWN_DISTANCE] = clamped
+        }
+    }
+
+    val radarEdgeSideFlow: Flow<RadarEdgeSide> = context.dataStore.data.map { prefs ->
+        safeEnumValueOf(prefs[KEY_RADAR_EDGE_SIDE], TuningPreferencesDefaults.RADAR_EDGE_SIDE)
+    }
+
+    val radarClearModeFlow: Flow<RadarClearMode> = context.dataStore.data.map { prefs ->
+        safeEnumValueOf(prefs[KEY_RADAR_CLEAR_MODE], TuningPreferencesDefaults.RADAR_CLEAR_MODE)
+    }
+
+    suspend fun updateRadarEdgeSide(side: RadarEdgeSide) {
+        context.dataStore.edit { prefs ->
+            prefs[KEY_RADAR_EDGE_SIDE] = side.name
+        }
+    }
+
+    suspend fun updateRadarClearMode(mode: RadarClearMode) {
+        context.dataStore.edit { prefs ->
+            prefs[KEY_RADAR_CLEAR_MODE] = mode.name
+        }
+    }
+
+    val radarAudioAlertModeFlow: Flow<RadarAudioAlertMode> = context.dataStore.data.map { prefs ->
+        safeEnumValueOf(prefs[KEY_RADAR_AUDIO_ALERT_MODE], TuningPreferencesDefaults.RADAR_AUDIO_ALERT_MODE)
+    }
+
+    val radarAlertVolumeFlow: Flow<Int> = context.dataStore.data.map { prefs ->
+        (prefs[KEY_RADAR_ALERT_VOLUME] ?: TuningPreferencesDefaults.RADAR_ALERT_VOLUME).coerceIn(10, 100)
+    }
+
+    val radarSpeakerBoostFlow: Flow<Boolean> = context.dataStore.data.map { prefs ->
+        prefs[KEY_RADAR_SPEAKER_BOOST] ?: TuningPreferencesDefaults.RADAR_SPEAKER_BOOST
+    }
+
+    val radarAudioRouteFlow: Flow<RadarAudioRoute> = context.dataStore.data.map { prefs ->
+        safeEnumValueOf(prefs[KEY_RADAR_AUDIO_ROUTE], TuningPreferencesDefaults.RADAR_AUDIO_ROUTE)
+    }
+
+    val radarHapticAlertFlow: Flow<Boolean> = context.dataStore.data.map { prefs ->
+        prefs[KEY_RADAR_HAPTIC_ALERT] ?: TuningPreferencesDefaults.RADAR_HAPTIC_ALERT
+    }
+
+    suspend fun updateRadarAudioAlertMode(mode: RadarAudioAlertMode) {
+        context.dataStore.edit { prefs ->
+            prefs[KEY_RADAR_AUDIO_ALERT_MODE] = mode.name
+        }
+    }
+
+    suspend fun updateRadarAlertVolume(volume: Int) {
+        context.dataStore.edit { prefs ->
+            prefs[KEY_RADAR_ALERT_VOLUME] = volume.coerceIn(10, 100)
+        }
+    }
+
+    suspend fun updateRadarSpeakerBoost(boost: Boolean) {
+        context.dataStore.edit { prefs ->
+            prefs[KEY_RADAR_SPEAKER_BOOST] = boost
+        }
+    }
+
+    suspend fun updateRadarAudioRoute(route: RadarAudioRoute) {
+        context.dataStore.edit { prefs ->
+            prefs[KEY_RADAR_AUDIO_ROUTE] = route.name
+        }
+    }
+
+    suspend fun updateRadarHapticAlert(haptic: Boolean) {
+        context.dataStore.edit { prefs ->
+            prefs[KEY_RADAR_HAPTIC_ALERT] = haptic
+        }
+    }
+
+    val radarLightDefaultModeFlow: Flow<RadarLightMode> = context.dataStore.data.map { prefs ->
+        safeEnumValueOf(prefs[KEY_RADAR_LIGHT_DEFAULT_MODE], TuningPreferencesDefaults.RADAR_LIGHT_DEFAULT_MODE)
+    }
+
+    val radarAutoLightControlFlow: Flow<Boolean> = context.dataStore.data.map { prefs ->
+        prefs[KEY_RADAR_AUTO_LIGHT_CONTROL] ?: TuningPreferencesDefaults.RADAR_AUTO_LIGHT_CONTROL
+    }
+
+    suspend fun updateRadarLightDefaultMode(mode: RadarLightMode) {
+        context.dataStore.edit { prefs ->
+            prefs[KEY_RADAR_LIGHT_DEFAULT_MODE] = mode.name
+        }
+    }
+
+    suspend fun updateRadarAutoLightControl(enabled: Boolean) {
+        context.dataStore.edit { prefs ->
+            prefs[KEY_RADAR_AUTO_LIGHT_CONTROL] = enabled
+        }
+    }
+
+    val radarPelotonAudioSyncFlow: Flow<Boolean> = context.dataStore.data.map { prefs ->
+        prefs[KEY_RADAR_PELOTON_AUDIO_SYNC] ?: TuningPreferencesDefaults.RADAR_PELOTON_AUDIO_SYNC
+    }
+
+    val radarSmartUrbanMuteFlow: Flow<Boolean> = context.dataStore.data.map { prefs ->
+        prefs[KEY_RADAR_SMART_URBAN_MUTE] ?: TuningPreferencesDefaults.RADAR_SMART_URBAN_MUTE
+    }
+
+    suspend fun updateRadarPelotonAudioSync(enabled: Boolean) {
+        context.dataStore.edit { prefs ->
+            prefs[KEY_RADAR_PELOTON_AUDIO_SYNC] = enabled
+        }
+    }
+
+    suspend fun updateRadarSmartUrbanMute(enabled: Boolean) {
+        context.dataStore.edit { prefs ->
+            prefs[KEY_RADAR_SMART_URBAN_MUTE] = enabled
+        }
+    }
+
+    val radarSpatialAudioEnabledFlow: Flow<Boolean> = context.dataStore.data.map { prefs ->
+        prefs[KEY_RADAR_SPATIAL_AUDIO_ENABLED] ?: TuningPreferencesDefaults.RADAR_SPATIAL_AUDIO_ENABLED
+    }
+
+    val radarSpeedPitchModulationFlow: Flow<Boolean> = context.dataStore.data.map { prefs ->
+        prefs[KEY_RADAR_SPEED_PITCH_MODULATION] ?: TuningPreferencesDefaults.RADAR_SPEED_PITCH_MODULATION
+    }
+
+    val radarTrafficOrientationFlow: Flow<RadarTrafficOrientation> = context.dataStore.data.map { prefs ->
+        safeEnumValueOf(prefs[KEY_RADAR_TRAFFIC_ORIENTATION], TuningPreferencesDefaults.RADAR_TRAFFIC_ORIENTATION)
+    }
+
+    val radarLaneChangeTickEnabledFlow: Flow<Boolean> = context.dataStore.data.map { prefs ->
+        prefs[KEY_RADAR_LANE_CHANGE_TICK_ENABLED] ?: TuningPreferencesDefaults.RADAR_LANE_CHANGE_TICK_ENABLED
+    }
+
+    suspend fun updateRadarSpatialAudioEnabled(enabled: Boolean) {
+        context.dataStore.edit { prefs ->
+            prefs[KEY_RADAR_SPATIAL_AUDIO_ENABLED] = enabled
+        }
+    }
+
+    suspend fun updateRadarSpeedPitchModulation(enabled: Boolean) {
+        context.dataStore.edit { prefs ->
+            prefs[KEY_RADAR_SPEED_PITCH_MODULATION] = enabled
+        }
+    }
+
+    suspend fun updateRadarTrafficOrientation(orientation: RadarTrafficOrientation) {
+        context.dataStore.edit { prefs ->
+            prefs[KEY_RADAR_TRAFFIC_ORIENTATION] = orientation.name
+        }
+    }
+
+    suspend fun updateRadarLaneChangeTickEnabled(enabled: Boolean) {
+        context.dataStore.edit { prefs ->
+            prefs[KEY_RADAR_LANE_CHANGE_TICK_ENABLED] = enabled
         }
     }
 
