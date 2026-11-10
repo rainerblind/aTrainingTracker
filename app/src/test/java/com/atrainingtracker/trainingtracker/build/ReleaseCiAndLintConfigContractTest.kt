@@ -25,8 +25,8 @@ import java.io.File
 
 /**
  * Validates Release CI test gating, AndroidManifest hygiene, Lint configuration,
- * Detekt static analysis, and CI integrity (REQ-BLD-002, TST-BLD-002, REQ-PRO-042,
- * TST-PRO-042, REQ-PRO-046, TST-PRO-046, REQ-PRO-047, TST-PRO-047, ATT-6175).
+ * Detekt static analysis, Kover code coverage gating, and CI integrity (REQ-BLD-002, TST-BLD-002, REQ-PRO-042,
+ * TST-PRO-042, REQ-PRO-046, TST-PRO-046, REQ-PRO-047, TST-PRO-047, REQ-PRO-048, TST-PRO-048, ATT-6171, ATT-6175).
  */
 class ReleaseCiAndLintConfigContractTest {
 
@@ -321,6 +321,63 @@ class ReleaseCiAndLintConfigContractTest {
         )
         assertTrue(
             "CI workflow must specify detekt report artifact path $reportPath (REQ-PRO-047.4, TST-PRO-047.3)",
+            content.contains(reportPath)
+        )
+    }
+
+    /**
+     * Asserts that root build.gradle and app/build.gradle apply and configure the Kover plugin
+     * with verification threshold rules (REQ-PRO-048.1, REQ-PRO-048.2, TST-PRO-048.1).
+     */
+    @Test
+    fun testBuildGradle_koverPluginAndConfiguration() {
+        val rootBuildContent = findRootBuildGradleFile().readText()
+        val appBuildContent = findBuildGradleFile().readText()
+
+        assertTrue(
+            "Root build.gradle must add Kover plugin classpath (REQ-PRO-048.1, TST-PRO-048.1)",
+            rootBuildContent.contains("org.jetbrains.kotlinx:kover-gradle-plugin")
+        )
+        assertTrue(
+            "app/build.gradle must apply org.jetbrains.kotlinx.kover plugin (REQ-PRO-048.1, TST-PRO-048.1)",
+            appBuildContent.contains("org.jetbrains.kotlinx.kover")
+        )
+        assertTrue(
+            "app/build.gradle must define kover configuration block (REQ-PRO-048.2, TST-PRO-048.1)",
+            appBuildContent.contains("kover {")
+        )
+        assertTrue(
+            "app/build.gradle must configure kover verification minBound threshold (REQ-PRO-048.2, TST-PRO-048.1)",
+            appBuildContent.contains("minBound")
+        )
+    }
+
+    /**
+     * Asserts that CI workflow executes Kover reports & verification and uploads report artifacts
+     * (REQ-PRO-048.3, TST-PRO-048.2).
+     */
+    @Test
+    fun testBranchBuildWorkflow_runsKoverAndUploadsReport() {
+        val content = findCiWorkflowFile().readText()
+        val koverReportStep = ":app:koverXmlReportDebug"
+        val koverVerifyStep = ":app:koverVerifyDebug"
+        val artifactStep = "actions/upload-artifact"
+        val reportPath = "app/build/reports/kover/"
+
+        assertTrue(
+            "CI workflow must execute Kover XML report ($koverReportStep) (REQ-PRO-048.3, TST-PRO-048.2)",
+            content.contains(koverReportStep)
+        )
+        assertTrue(
+            "CI workflow must execute Kover verification ($koverVerifyStep) (REQ-PRO-048.3, TST-PRO-048.2)",
+            content.contains(koverVerifyStep)
+        )
+        assertTrue(
+            "CI workflow must upload kover reports via $artifactStep (REQ-PRO-048.3, TST-PRO-048.2)",
+            content.contains(artifactStep) && content.contains("name: kover-report")
+        )
+        assertTrue(
+            "CI workflow must specify kover report artifact path $reportPath (REQ-PRO-048.3, TST-PRO-048.2)",
             content.contains(reportPath)
         )
     }

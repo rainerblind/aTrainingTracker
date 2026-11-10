@@ -122,6 +122,16 @@ jobs:
           name: detekt-report
           path: app/build/reports/detekt/
 
+      - name: Run Kover Coverage & Verification
+        run: ./gradlew :app:koverXmlReportDebug :app:koverHtmlReportDebug :app:koverVerifyDebug
+
+      - name: Upload Coverage Report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: kover-report
+          path: app/build/reports/kover/
+
       - name: Build debug APK
         run: ./gradlew :app:assembleDebug
 

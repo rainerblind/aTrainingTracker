@@ -1533,3 +1533,22 @@
   • Assert that the workflow contains `./gradlew detekt` and an artifact upload step for detekt reports.
   4. *Clean-Room Targeted Test Suite Execution (`TST-PRO-047.4`)*:
   • Execute targeted unit test suite `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.build.ReleaseCiAndLintConfigContractTest"` and `./gradlew detekt` asserting 100% pass rate.
+
+
+
+### TST-PRO-048: **Kover Code Coverage Measurement & CI Threshold Gating Contract Test Suite** [Verified]
+- **Requirement(s)**: `REQ-PRO-048`
+- **Component**: `build.gradle`, `app/build.gradle`, `.github/workflows/android-branch-build.yml`, `ReleaseCiAndLintConfigContractTest.kt`
+- **Jira**: `ATT-6171`
+- **Test Description**:
+  1. *Build Script Kover Plugin & Configuration Conformance Test (`TST-PRO-048.1`, `ReleaseCiAndLintConfigContractTest.kt`)*:
+  • Read `build.gradle` and `app/build.gradle`.
+  • Assert that the Kover plugin (0.9.1) is applied and configured with XML/HTML reporting and verification rules.
+  2. *CI Workflow Kover Step & Artifact Upload Conformance Test (`TST-PRO-048.2`, `ReleaseCiAndLintConfigContractTest.kt`)*:
+  • Read `.github/workflows/android-branch-build.yml`.
+  • Assert that the workflow contains Kover reporting/verify task execution and artifact upload for coverage reports.
+  3. *Kover Report Generation & Verification Execution Test (`TST-PRO-048.3`, `app/build.gradle`)*:
+  • Execute `./gradlew :app:koverXmlReportDebug :app:koverHtmlReportDebug :app:koverVerifyDebug`.
+  • Assert that XML and HTML reports are produced under `app/build/reports/kover/` and verification threshold rule succeeds.
+  4. *Clean-Room Targeted Test Suite Execution (`TST-PRO-048.4`)*:
+  • Execute targeted unit test suite `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.build.ReleaseCiAndLintConfigContractTest"` asserting 100% pass rate.

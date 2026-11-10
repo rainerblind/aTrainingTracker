@@ -26,6 +26,7 @@ plugins {
     id 'org.jetbrains.kotlin.plugin.serialization'
     id 'kotlin-parcelize'
     id 'io.gitlab.arturbosch.detekt'
+    id 'org.jetbrains.kotlinx.kover'
 }
 
 def getGitHash = providers.exec {
@@ -146,6 +147,24 @@ tasks.withType(io.gitlab.arturbosch.detekt.Detekt).configureEach {
         xml.required.set(true)
         txt.required.set(false)
         sarif.required.set(false)
+    }
+}
+
+kover {
+    reports {
+        filters {
+            excludes {
+                classes(
+                    "*BuildConfig*",
+                    "*ComposableSingletons*"
+                )
+            }
+        }
+        verify {
+            rule {
+                minBound(1)
+            }
+        }
     }
 }
 

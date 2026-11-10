@@ -35,6 +35,7 @@ buildscript {
         classpath "org.jetbrains.kotlin:compose-compiler-gradle-plugin:$compose_compiler_version"
         classpath "org.jetbrains.kotlin:kotlin-serialization:$kotlin_version"
         classpath 'io.gitlab.arturbosch.detekt:detekt-gradle-plugin:1.23.8'
+        classpath 'org.jetbrains.kotlinx:kover-gradle-plugin:0.9.11'
     }
 }
 
