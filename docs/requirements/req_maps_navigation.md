@@ -2102,4 +2102,39 @@
 
 **Invariants**: Zero changes to SQLite database schemas; zero disruption to existing location drill-down tests; backward-compatible JSON serialization in `WorkoutFilterCriteria`.
 
+### REQ-MAP-063: Cross-Surface Centered Material Heart Marker Parity for Known Locations [Verified]
+- **Tests**: `TST-MAP-065` | **Tickets**: `ATT-6320` | **Target Release**: `V5.0.0`
+- **Implementation**: `EditKnownLocationDialog.kt`, `MapContentScope.kt`, `MapUtils.kt`
+- **Rationale**: To achieve visual parity and concentric spatial alignment across all map surfaces displaying Lieblingsorte (Known Locations) per Rule 80 (`docs/coding_standards.md` §1.11), the detail/edit map view and the global map view SHALL render the centered Material heart glyph marker (`createCenteredHeartGlyphMarker`) with a centered anchor (`Offset(0.5f, 0.5f)`), replacing the legacy standing pin (`createHeartPinMarker`):
+1. *Edit/Detail Dialog Map Marker Parity (`EditKnownLocationDialog.kt`, `REQ-MAP-063.1`)*:
+• In `EditKnownLocationDialog.kt` (`LocationMiniMap`), the system SHALL instantiate `createCenteredHeartGlyphMarker` with `heartColor = TTColor.GeofencePin`, `outlineColor = Color.White`, and `alpha = 0.85f`.
+• The `Marker` composable SHALL specify `anchor = Offset(0.5f, 0.5f)` to ensure the glyph sits concentrically in the geofence circle center.
+• In `LocalInspectionMode.current == true` (Compose preview), it SHALL display `Icons.Default.Favorite` (centered in the geofence preview) instead of `R.drawable.my_locations`.
+2. *Global Inspection Map Marker Parity (`MapContentScope.kt`, `REQ-MAP-063.2`)*:
+• In `MapContentScope.kt` (`locationData.forEach`), the system SHALL render each known location using `createCenteredHeartGlyphMarker(context, primaryColor, Color.White, alpha = 0.85f)`.
+• The `Marker` composable SHALL specify `anchor = Offset(0.5f, 0.5f)`, ensuring concentric alignment with the geofence circle.
+3. *Legacy Pin Deprecation & Invariant Preservation (`MapUtils.kt`, `REQ-MAP-063.3`)*:
+• `createHeartPinMarker` in `MapUtils.kt` SHALL be annotated with `@Deprecated` for backwards binary compatibility.
+• All existing geofence circle colors (`TTColor.GeofenceFill`, `TTColor.GeofenceStroke`), click handlers, titles, and dark mode anti-flash overlays MUST remain intact.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new refinement `REQ-MAP-063` refining `REQ-UI-470.2` (*Canonical Material Heart Glyph Marker & Opaque Halo*) and `REQ-MAP-021` (*Map Styling*).
+2. *Historical Origin & Commit Trace*: Ticket `ATT-1816` (`44d51eac`), `ATT-5884` (`ce73d561`), `ATT-6211` (`9e49a75d`).
+3. *Root Reason for Existing Formulation*: The standing pin with heart cutout was an interim marker design inherited from general POIs before `KnownLocationThumbnailMap` introduced the concentric Material heart glyph with opaque halo in ATT-6211.
+4. *Preservation of Core Invariants*: Geofence radius scaling, circle strokes, dark mode contrast, click callbacks, marker titles, and touch targets remain 100% preserved.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* `EditKnownLocationDialog` (`LocationMiniMap`) opened for an existing or new Lieblingsort,
+• *When* the map is displayed,
+• *Then* the marker is rendered as a centered Material heart glyph (`createCenteredHeartGlyphMarker`) with `anchor = Offset(0.5f, 0.5f)` sitting concentrically within the geofence circle.
+• *Given* the global map screen (`MapScreenWithTrack`),
+• *When* the "Lieblingsorte" layer is enabled,
+• *Then* all known location markers render as centered Material heart glyphs with `anchor = Offset(0.5f, 0.5f)`.
+• *Given* `EditKnownLocationDialog` rendered in Compose `@Preview` (`LocalInspectionMode`),
+• *When* inspecting the preview,
+• *Then* `Icons.Default.Favorite` is rendered at the center.
+
+**Invariants**: Zero changes to SQLite database schemas; zero UI regression in existing map tests; binary compatibility preserved for `MapUtils.kt`.
+
+
 

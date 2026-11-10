@@ -20,6 +20,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.ui.geometry.Offset
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.repositories.KnownLocationItem
 import com.google.android.gms.maps.model.LatLng
@@ -428,7 +429,7 @@ internal class MapContentScopeImpl(
         locationData.forEach { data ->
             val loc = data.location
             val markerBitmap = remember(loc.id, primaryColor) {
-                createHeartPinMarker(context, primaryColor, Color.White)
+                createCenteredHeartGlyphMarker(context, primaryColor, Color.White, alpha = 0.85f)
             }
 
             Circle(
@@ -443,6 +444,7 @@ internal class MapContentScopeImpl(
                 state = rememberUpdatedMarkerState(position = loc.latLng),
                 title = loc.name,
                 icon = markerBitmap,
+                anchor = Offset(0.5f, 0.5f),
                 onClick = {
                     data.onClick(loc.id)
                     true

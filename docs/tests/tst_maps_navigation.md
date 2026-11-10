@@ -1095,4 +1095,21 @@
   5. *Targeted Regression Verification Suite (`TST-MAP-064.5`)*:
   • Execute targeted tests across `ui.knownlocations.*`, `ui.aftermath.workoutlist.*`, and `ui.theme.*` asserting 100% pass rate.
 
+### TST-MAP-065: **Cross-Surface Centered Material Heart Marker Parity Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-MAP-063` (`REQ-MAP-063.1`..`REQ-MAP-063.3`)
+- **Component**: `EditKnownLocationDialogTest.kt`, `MapScreenWithTrackTest.kt`, `MapUtils.kt`
+- **Jira**: `ATT-6320` | **Target Release**: `V5.0.0`
+- **Test Description**:
+  1. *EditKnownLocationDialog Concentric Marker & Anchor Verification (`TST-MAP-065.1`, `EditKnownLocationDialogTest.kt`)*:
+  • Verify `LocationMiniMap` creates centered heart glyph marker and sets `anchor = Offset(0.5f, 0.5f)`.
+  2. *MapContentScope Known Locations Concentric Marker & Anchor Verification (`TST-MAP-065.2`, `MapScreenWithTrackTest.kt`)*:
+  • Verify `MapContentScope` uses `createCenteredHeartGlyphMarker` with `anchor = Offset(0.5f, 0.5f)`.
+  3. *Cross-Surface Marker Parity Audit (`TST-MAP-065.3`, `KnownLocationsScreenTest.kt`)*:
+  • Verify thumbnail map, edit dialog map, and global map all share identical centered heart marker geometry.
+  4. *Legacy Marker Deprecation Contract (`TST-MAP-065.4`, `MapUtilsTest.kt`)*:
+  • Verify `createHeartPinMarker` is annotated with `@Deprecated`.
+  5. *Targeted Regression Verification Suite (`TST-MAP-065.5`)*:
+  • Execute targeted tests across `ui.knownlocations.*`, `ui.map.*`, and `ui.theme.*` asserting 100% pass rate.
+
+
 
