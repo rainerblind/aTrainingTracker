@@ -25,12 +25,13 @@ import org.junit.Test
 import java.io.File
 
 /**
- * Build contract test verifying ASPICE SWE.1/2/4/6 audit hardening (REQ-PRO-034, TST-PRO-034, REQ-PRO-043, TST-PRO-043, ATT-5431, ATT-6179):
+ * Build contract test verifying ASPICE SWE.1/2/4/6 audit hardening (REQ-PRO-034, TST-PRO-034, REQ-PRO-043, TST-PRO-043, REQ-PRO-044, TST-PRO-044, ATT-5431, ATT-6179, ATT-6180):
  * 1. docs/architecture.md completeness (layers, 9-domain shard allocation, 3 Mermaid dynamic models, invariants).
  * 2. Authentic component nomenclature code-grounding & absence of drifted placeholders (REQ-PRO-043).
- * 3. Status header standardization across all 9 requirement and test domain shards.
- * 4. Master-to-shard table count parity in docs/requirements.md and docs/tests.md.
- * 5. Skill & rule governance contracts (universal read_file image audit, doc code-grounding, SWE.2 maintenance).
+ * 3. Software interface specifications (SWE.2.BP2) for IF-SWE-01 through IF-SWE-08 (REQ-PRO-044).
+ * 4. Status header standardization across all 9 requirement and test domain shards.
+ * 5. Master-to-shard table count parity in docs/requirements.md and docs/tests.md.
+ * 6. Skill & rule governance contracts (universal read_file image audit, doc code-grounding, SWE.2 maintenance).
  */
 class AspiceSweAuditContractTest {
 
@@ -254,5 +255,44 @@ class AspiceSweAuditContractTest {
         assertTrue("Must document AutoPauseState sub-state delegation", content.contains("AutoPauseState"))
         assertTrue("Must document dbDispatcher", content.contains("dbDispatcher"))
         assertTrue("Must document Dispatchers.IO", content.contains("Dispatchers.IO"))
+    }
+
+    /**
+     * Asserts that software interfaces are formally specified in accordance with ASPICE SWE.2.BP2 (REQ-PRO-044, TST-PRO-044).
+     */
+    @Test
+    fun testArchitectureDocument_softwareInterfaceSpecifications() {
+        val interfacesFile = findRepoRootFile("docs/architecture/interfaces.md")
+        assertTrue("docs/architecture/interfaces.md must exist (REQ-PRO-044.1)", interfacesFile.exists())
+        val interfacesContent = interfacesFile.readText()
+
+        val archFile = findRepoRootFile("docs/architecture.md")
+        val archContent = archFile.readText()
+
+        val interfaceIds = (1..8).map { String.format("IF-SWE-%02d", it) }
+
+        // TST-PRO-044.1: All 8 interface specifications present in interfaces.md
+        for (ifId in interfaceIds) {
+            assertTrue("interfaces.md must specify interface $ifId (TST-PRO-044.1)", interfacesContent.contains(ifId))
+        }
+
+        // TST-PRO-044.2: Mandatory interface attributes present in interfaces.md
+        val mandatoryAttributes = listOf(
+            "Provider",
+            "Consumer",
+            "Operations",
+            "Threading",
+            "Error Handling"
+        )
+        for (attr in mandatoryAttributes) {
+            assertTrue("interfaces.md must document attribute '$attr' (TST-PRO-044.2)", interfacesContent.contains(attr))
+        }
+
+        // TST-PRO-044.3: Architecture document Section 5 integration & matrix
+        assertTrue("architecture.md must contain Section 5 for software interfaces (TST-PRO-044.3)", archContent.contains("5. Software Interface Specifications"))
+        assertTrue("architecture.md must link to interfaces.md (TST-PRO-044.3)", archContent.contains("interfaces.md"))
+        for (ifId in interfaceIds) {
+            assertTrue("architecture.md Section 5 must reference $ifId in the matrix (TST-PRO-044.3)", archContent.contains(ifId))
+        }
     }
 }

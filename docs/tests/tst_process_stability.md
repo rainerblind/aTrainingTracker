@@ -1464,3 +1464,19 @@
   4. *Clean-Room Targeted Test Suite Execution (`TST-PRO-043.4`)*:
   • Execute targeted unit test suite `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.build.AspiceSweAuditContractTest"` asserting 100% pass rate.
 
+### TST-PRO-044: **ASPICE SWE.2 Software Interface Specification Contract Test Suite** [Verified]
+- **Requirement(s)**: `REQ-PRO-044`
+- **Component**: `docs/architecture/interfaces.md`, `docs/architecture.md`, `AspiceSweAuditContractTest.kt`
+- **Jira**: `ATT-6180`
+- **Test Description**:
+  1. *Interface File & Boundary Completeness Test (`TST-PRO-044.1`, `AspiceSweAuditContractTest.kt`)*:
+  • Verify existence of `docs/architecture/interfaces.md`.
+  • Assert that all 8 interface families (`IF-SWE-01` through `IF-SWE-08`) are defined.
+  2. *Mandatory Interface Attribute Completeness Test (`TST-PRO-044.2`, `AspiceSweAuditContractTest.kt`)*:
+  • For every interface `IF-SWE-01`..`IF-SWE-08`, assert the presence of Provider, Consumer, Operations/Payload, Threading/Concurrency, and Error Handling fields.
+  3. *Architecture Document Integration Test (`TST-PRO-044.3`, `AspiceSweAuditContractTest.kt`)*:
+  • Verify `docs/architecture.md` Section 5 contains the interface summary matrix referencing `IF-SWE-01` through `IF-SWE-08`.
+  4. *Clean-Room Targeted Test Suite Execution (`TST-PRO-044.4`)*:
+  • Execute targeted unit test suite `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.build.AspiceSweAuditContractTest"` asserting 100% pass rate.
+
+
