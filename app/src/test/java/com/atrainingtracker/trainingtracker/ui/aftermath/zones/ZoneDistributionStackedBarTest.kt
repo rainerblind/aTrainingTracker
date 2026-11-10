@@ -152,6 +152,14 @@ class ZoneDistributionStackedBarTest {
 
     @Test
     fun testZoneDistributionCards_stackedBarModeOmitsDetailedBreakdownList() {
+        val genericFile = resolve("app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/zones/ZoneDistributionCard.kt")
+        assertTrue("ZoneDistributionCard.kt must exist", genericFile.exists())
+        val genericContent = genericFile.readText()
+        assertTrue(
+            "ZoneDistributionCard must pass showLegend = false to ZoneDistributionStackedBar in STACKED_BAR mode (REQ-UI-387)",
+            Regex("""ZoneDistributionStackedBar\s*\([\s\S]*?showLegend\s*=\s*false""").containsMatchIn(genericContent)
+        )
+
         val cardFiles = listOf(
             "app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/zones/HeartRateZoneDistributionCard.kt",
             "app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/zones/PowerZoneDistributionCard.kt"
@@ -161,8 +169,8 @@ class ZoneDistributionStackedBarTest {
             assertTrue("$relPath must exist", file.exists())
             val content = file.readText()
             assertTrue(
-                "$relPath must pass showLegend = false to ZoneDistributionStackedBar in STACKED_BAR mode (REQ-UI-387)",
-                Regex("""ZoneDistributionStackedBar\s*\([\s\S]*?showLegend\s*=\s*false""").containsMatchIn(content)
+                "$relPath must delegate to generic ZoneDistributionCard",
+                content.contains("ZoneDistributionCard(")
             )
         }
     }

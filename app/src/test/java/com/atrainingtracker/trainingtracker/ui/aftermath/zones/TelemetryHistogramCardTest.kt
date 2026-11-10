@@ -131,7 +131,12 @@ class TelemetryHistogramCardTest {
 
     @Test
     fun testHeartRateZoneDistributionCard_headerAndToggleLayoutContract() {
-        val file = resolveSourceFile("app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/zones/HeartRateZoneDistributionCard.kt")
+        val wrapperFile = resolveSourceFile("app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/zones/HeartRateZoneDistributionCard.kt")
+        val wrapperContent = wrapperFile.readText()
+        assertTrue("HeartRateZoneDistributionCard must delegate to ZoneDistributionCard", wrapperContent.contains("ZoneDistributionCard("))
+        assertTrue("HeartRateZoneDistributionCard must pass R.drawable.ic_heart_rate", wrapperContent.contains("R.drawable.ic_heart_rate"))
+
+        val file = resolveSourceFile("app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/zones/ZoneDistributionCard.kt")
         val content = file.readText()
 
         // Verify Header Row does not contain SingleChoiceSegmentedButtonRow
@@ -166,7 +171,12 @@ class TelemetryHistogramCardTest {
 
     @Test
     fun testPowerZoneDistributionCard_headerAndToggleLayoutContract() {
-        val file = resolveSourceFile("app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/zones/PowerZoneDistributionCard.kt")
+        val wrapperFile = resolveSourceFile("app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/zones/PowerZoneDistributionCard.kt")
+        val wrapperContent = wrapperFile.readText()
+        assertTrue("PowerZoneDistributionCard must delegate to ZoneDistributionCard", wrapperContent.contains("ZoneDistributionCard("))
+        assertTrue("PowerZoneDistributionCard must pass R.drawable.ic_power", wrapperContent.contains("R.drawable.ic_power"))
+
+        val file = resolveSourceFile("app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/zones/ZoneDistributionCard.kt")
         val content = file.readText()
 
         // Verify Header Row does not contain SingleChoiceSegmentedButtonRow

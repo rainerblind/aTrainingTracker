@@ -3,7 +3,7 @@
 **Domain**: `aftermath_reviews`  
 **Prefixes**: `REV`  
 **Scope**: Milestone workout auto-naming, jubilee achievements, Google Play in-app reviews, athlete feedback, and supporter tier promotions.  
-**Total Requirements**: 7
+**Total Requirements**: 8
 
 ---
 
@@ -87,3 +87,32 @@
   • *Given* a workout moved from `currentClusterId` to `newClusterId`,
   • *When* `moveWorkoutToCluster` completes,
   • *Then* both source and target clusters retain their recomputed weighted centroids without being overwritten, and `probableSportId` reflects the post-reassignment workout distribution.
+
+### REQ-REV-008: Generic Zone Distribution Card Architecture & Composable Wrapper Deduplication [Verified]
+- **Tests**: `TST-REV-009` | **Tickets**: `ATT-6044`
+- **Implementation**: `ZoneDistributionCard.kt`, `PowerZoneDistributionCard.kt`, `HeartRateZoneDistributionCard.kt`, `GradeZoneDistributionCard.kt`
+- **Rationale**: The post-workout telemetry analysis screens feature three separate card components (`PowerZoneDistributionCard`, `HeartRateZoneDistributionCard`, `GradeZoneDistributionCard`) that share ~97% identical Compose layout, header styling, chart mode routing (`STACKED_BAR`, `COLUMNS`, `HISTOGRAM`), and segmented button controls (~600 lines total). Unifying these into a single parameterized `ZoneDistributionCard` eliminates ~440 lines of duplicate code while preserving public composable APIs, contract compatibility, and per-card state isolation.
+- **Description**:
+  1. *Generic Composable Architecture*: The system SHALL provide a unified, reusable `@Composable fun ZoneDistributionCard(...)` in `com.atrainingtracker.trainingtracker.ui.aftermath.zones` accepting:
+     a. `distribution: ZoneDistributionData`
+     b. `@DrawableRes iconRes: Int`
+     c. `title: String`
+     d. `unit: String`
+     e. `modifier: Modifier = Modifier`
+     f. `displayMode: ZoneCardDisplayMode? = null`
+     g. `onDisplayModeChange: ((ZoneCardDisplayMode) -> Unit)? = null`
+     h. `showModeSelector: Boolean = true`
+     i. `defaultDisplayMode: ZoneCardDisplayMode = ZoneCardDisplayMode.COLUMNS`
+  2. *Layout & Styling Invariants*:
+     a. Card container SHALL maintain `ElevatedCard` with `RoundedCornerShape(12.dp)` and internal padding `12.dp`.
+     b. Header Row SHALL display `iconRes` (size `18.dp`, tint `MaterialTheme.colorScheme.primary`), `title` (`titleSmall`, bold), flexible spacer, and formatted duration via `ZoneDistributionChartMath.formatZoneDuration(distribution.totalDurationSec)`.
+     c. Chart Body SHALL switch on `effectiveDisplayMode`: `ZoneCardDisplayMode.STACKED_BAR` (`ZoneDistributionStackedBar` with `showLegend = false`), `ZoneCardDisplayMode.COLUMNS` / `ZoneCardDisplayMode.FIVE_ZONES` (`ZoneDistributionColumnChart`), and `ZoneCardDisplayMode.HISTOGRAM` (`TelemetryHistogramChart` with `unit = unit`).
+     d. Mode Switcher SHALL render below the chart using `SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth().height(28.dp))` with `buttonCount = if (hasHistogram) 3 else 2`, gated strictly on `showModeSelector && distribution.entries.isNotEmpty()`. Each `SegmentedButton` SHALL use `icon = {}`, `contentPadding = PaddingValues(horizontal = 6.dp, vertical = 0.dp)`, and single-line `labelSmall` text with `TextOverflow.Ellipsis`.
+  3. *Wrapper Deduplication & Public API Backward Compatibility*:
+     a. `PowerZoneDistributionCard.kt`, `HeartRateZoneDistributionCard.kt`, and `GradeZoneDistributionCard.kt` SHALL remain public composable entry points delegating to `ZoneDistributionCard`.
+     b. Each wrapper composable SHALL encapsulate its own independent state (delegating `displayMode` and `defaultDisplayMode = ZoneCardDisplayMode.COLUMNS` to `ZoneDistributionCard`) ensuring display modes are not cross-contaminated across multiple cards on the same screen.
+     c. Wrapper names and parameter contracts MUST remain 100% backward-compatible with existing callers across `TrackOnMapScreen`, `WorkoutDetailTabbedContent`, and `WorkoutSummary`.
+- **Acceptance Criteria**:
+  • *Given* workout telemetry with heart rate, cycling power, or slope grade distribution data,
+  • *When* rendered in `TrackOnMapScreen`, `WorkoutDetailTabbedContent`, or `WorkoutSummary`,
+  • *Then* `HeartRateZoneDistributionCard`, `PowerZoneDistributionCard`, and `GradeZoneDistributionCard` render identical visual layouts delegating to `ZoneDistributionCard`, supporting independent 2-way/3-way display mode toggles and preserving `showModeSelector` gating.

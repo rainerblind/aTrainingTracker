@@ -99,10 +99,23 @@ class WorkoutSummaryZoneDisplayModeTest {
                 content.contains("showModeSelector: Boolean = true")
             )
             assertTrue(
-                "$rel must gate the mode switcher row on showModeSelector && distribution.entries.isNotEmpty()",
-                content.contains("if (showModeSelector && distribution.entries.isNotEmpty())")
+                "$rel must delegate showModeSelector to ZoneDistributionCard",
+                content.contains("ZoneDistributionCard(") && content.contains("showModeSelector = showModeSelector")
             )
         }
+
+        val genericCandidates = listOf(
+            File("app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/zones/ZoneDistributionCard.kt"),
+            File("src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/zones/ZoneDistributionCard.kt"),
+            File("../app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/zones/ZoneDistributionCard.kt")
+        )
+        val genericFile = genericCandidates.firstOrNull { it.exists() }
+            ?: error("ZoneDistributionCard.kt not found")
+        val genericContent = genericFile.readText()
+        assertTrue(
+            "ZoneDistributionCard must gate the mode switcher row on showModeSelector && distribution.entries.isNotEmpty()",
+            genericContent.contains("if (showModeSelector && distribution.entries.isNotEmpty())")
+        )
     }
 
     @Test
