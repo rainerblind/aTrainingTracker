@@ -3208,6 +3208,42 @@
 
 **Invariants**: Closed-loop route ($d < 150\text{ m}$) apex behavior unmodified; no blocking UI threads; transactional SQLite updates; 100% unit test pass rate.
 
+### REQ-DAT-040: TCX Structured DTO Serialization, Parsing Decoupling & Round-Trip Fidelity [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-DAT-036` | **Tickets**: `ATT-938`
+- **Implementation**: `app/src/main/java/com/atrainingtracker/trainingtracker/tcx/model/`, `app/src/main/java/com/atrainingtracker/trainingtracker/tcx/serializer/`, `app/src/main/java/com/atrainingtracker/trainingtracker/tcx/parser/`, `app/src/main/java/com/atrainingtracker/trainingtracker/exporter/writer/TCXFileWriter.java`, `app/src/main/java/com/atrainingtracker/trainingtracker/migration/parsers/TcxWorkoutParser.kt`
+- **Rationale**: To prevent schema sequence violations, escaping bugs, and silent field drops during XML interchange, the system SHALL introduce structured, immutable Data Transfer Objects (DTOs) for the Garmin TCX schema (`TrainingCenterDatabasev2.xsd`), decoupling XML serialization and parsing from internal SQLite database representations and providing bit-exact round-trip fidelity across workout export and re-import.
+- **Description**:
+  1. *Structured TCX DTO Domain Models (`REQ-DAT-040.1`)*:
+     - The system SHALL define strongly-typed, immutable Kotlin data classes representing the TCX Activity schema (`TcxDocument`, `TcxActivity`, `TcxLap`, `TcxTrackpoint`, `TcxPosition`, `TcxHeartRate`, `TcxExtensions`, `TcxDevice`, `TcxApplication`).
+     - Models SHALL encapsulate all standard TCX elements (`Id`, `Lap`, `Notes`, `Creator`, `Extensions`, `Author`) and Garmin Trackpoint Extension v2 (`TPX`) elements (`Speed`, `RunCadence`, `Watts`).
+  2. *Streaming DTO XML Serializer (`REQ-DAT-040.2`)*:
+     - The system SHALL provide a dedicated streaming XML serializer (`TcxSerializer`) that writes a `TcxDocument` / `TcxActivity` to an `OutputStream` or `Writer`.
+     - The serializer MUST enforce Garmin TCX v2 sequence ordering (`Id` -> `Lap`* -> `Notes`? -> `Creator`? -> `Extensions`? -> `Author`?).
+     - The serializer MUST automatically escape XML reserved characters (`&`, `<`, `>`, `"`, `'`) in workout names, lap notes, and descriptions.
+     - Integer-only constraints for `<Cadence>`, `<Watts>`, and `<RunCadence>` (`REQ-EXP-001`) MUST be strictly enforced.
+  3. *Decoupled DTO XML Parser Bridge (`REQ-DAT-040.3`)*:
+     - The system SHALL provide a streaming parser bridge (`TcxParser`) that constructs `TcxDocument` DTOs from TCX XML input streams using `XmlPullParser`.
+     - `TcxWorkoutParser` SHALL delegate XML ingestion to `TcxParser` and map the resulting DTOs into `ParsedWorkoutData`, preserving existing database persistence pathways in `LegacyImportEngine`.
+     - Proprietary `att:ActivityExtension` / `att:LapExtension` and bracketed name fallback heuristics (`[Name] Description`) MUST be preserved without regression.
+  4. *Bidirectional Round-Trip Fidelity (`REQ-DAT-040.4`)*:
+     - Exporting an activity via `TCXFileWriter` and re-parsing it via `TcxWorkoutParser` SHALL preserve 100% of activity timestamps, workout names, descriptions, lap boundaries, durations, distances, trackpoint coordinates, heart rate, cadence, speed, and power telemetry.
+  5. *Streaming & Memory Safety Invariant (`REQ-DAT-040.5`)*:
+     - TCX serialization and parsing MUST operate in a streaming or batch-friendly fashion, ensuring workouts with 50,000+ trackpoints process without `OutOfMemoryError` or Main Thread blocking.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* a recorded or imported workout with custom name, notes, multiple laps, and power/cadence telemetry,
+• *When* exported to TCX format via `TCXFileWriter`,
+• *Then* the resulting XML validates against Garmin `TrainingCenterDatabasev2.xsd`, with strictly ordered elements, integer watts/cadence values, and escaped XML special characters.
+• *Given* a valid TCX XML file exported by `aTrainingTracker` or third-party platforms (Garmin Connect, Strava),
+• *When* parsed via `TcxWorkoutParser`,
+• *Then* the parser deserializes the XML into structured TCX DTOs and maps them into `ParsedWorkoutData` without loss of metadata or telemetry channels.
+• *Given* an exported TCX activity re-imported via `LegacyImportEngine`,
+• *When* comparing the original workout entities with the re-imported entities,
+• *Then* start time, sport type, active duration, lap count, per-lap metrics, and trackpoint streams match within IEEE floating-point tolerance.
+
+**Invariants**: Zero database schema alterations; zero regression in existing GPX or FIT export/import engines; strict Garmin TCX v2 schema compliance; 100% unit test pass rate.
+
 
 
 

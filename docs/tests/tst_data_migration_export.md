@@ -2080,6 +2080,32 @@
   4. *Tier 1 Targeted Unit Test Regression (`TST-DAT-035.4`)*:
   • Execute targeted test suite (`database.WorkoutCluster*`, `migration.*`, `ui.aftermath.*`, `build.*`) asserting 100% pass rate.
 
+### TST-DAT-036: **TCX Structured DTO Serialization, Parsing Decoupling & Round-Trip Verification Suite** [Verified]
+- **Target Release**: `V5.0.0`
+- **Requirement(s)**: `REQ-DAT-040`
+- **Component**: `TcxDocument.kt`, `TcxSerializer.kt`, `TcxParser.kt`, `TCXFileWriter.java`, `TcxWorkoutParser.kt`, `TCXRoundTripTest.kt`
+- **Jira**: `ATT-938`
+- **Test Description**:
+  1. *TCX DTO Serialization & Schema Compliance Contract Test (`TST-DAT-036.1`, `TcxSerializerTest.kt`)*:
+  • Serialize a complete synthetic `TcxDocument` containing multi-lap data, TPX sensor extensions, and XML special characters (`&`, `<`, `>`, `"`, `'`).
+  • Verify XML structure against Garmin TCX v2 sequence rules (`Id` -> `Lap`* -> `Notes`? -> `Creator`? -> `Extensions`? -> `Author`?).
+  • Verify `<Cadence>`, `<Watts>`, and `<RunCadence>` contain integer values only.
+  2. *TCX DTO Streaming Parser Decoupling Test (`TST-DAT-036.2`, `TcxParserTest.kt`)*:
+  • Parse valid Garmin TCX v2 and legacy `aTrainingTracker` TCX streams into `TcxDocument`.
+  • Verify correct extraction of `att:ActivityExtension`, `att:LapExtension`, and bracketed workout name/description fallbacks.
+  • Assert graceful handling of missing optional elements (no HR, no cadence, no GPS).
+  3. *Bidirectional TCX Export-Import Round-Trip Verification (`TST-DAT-036.3`, `TCXRoundTripTest.kt`)*:
+  • Export synthetic workouts across sport types (Running, Biking) with multiple laps and dense trackpoints to TCX via `TcxSerializer`.
+  • Re-parse the generated TCX via `TcxWorkoutParser` / `TcxParser`.
+  • Assert 1:1 parity for workout name, notes, lap split timestamps, lap statistics, and trackpoint streams.
+  4. *Existing Exporter & Parser Regression Suite (`TST-DAT-036.4`)*:
+  • Run `TCXFileWriterWorkoutNameTest`, `TCXFileWriterLapTest`, and `TcxWorkoutParserTest`.
+  • Verify 100% backward compatibility with existing tests.
+  5. *Tier 1 Targeted Unit Test Regression (`TST-DAT-036.5`)*:
+  • Execute targeted test suite (`--tests "com.atrainingtracker.trainingtracker.tcx.*" --tests "com.atrainingtracker.trainingtracker.exporter.*" --tests "com.atrainingtracker.trainingtracker.migration.*" --tests "com.atrainingtracker.trainingtracker.build.*"`).
+  • Assert 100% pass rate.
+
+
 
 
 
