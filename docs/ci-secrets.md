@@ -61,6 +61,17 @@ On Windows (PowerShell):
 [Convert]::ToBase64String([IO.File]::ReadAllBytes("release.keystore")) | Set-Clipboard
 ```
 
+### Local developer signing configuration (REQ-STP-008)
+
+To comply with ASPICE SUP.8 (Finding B-03), keystore passwords are never stored in working-tree `release.properties`. Passwords resolve dynamically via:
+1. Process environment variables (`KEYSTORE_PASSWORD`, `KEY_ALIAS_PASSWORD`).
+2. Linux OS Keyring (`secret-tool`):
+   ```bash
+   secret-tool store --label="aTrainingTracker Keystore Password" service atrainingtracker account keyStorePassword
+   secret-tool store --label="aTrainingTracker Key Alias Password" service atrainingtracker account keyAliasPassword
+   ```
+3. External config outside working tree: `~/.config/atrainingtracker/release.properties` (`chmod 600`).
+
 ## Verifying the setup
 
 After adding secrets:

@@ -82,18 +82,14 @@ jobs:
       - name: Configure release signing
         env:
           RELEASE_KEYSTORE_BASE64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
-          RELEASE_KEYSTORE_PASSWORD: ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}
           RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
-          RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
         run: |
-          if [ -n "$RELEASE_KEYSTORE_BASE64" ] && [ -n "$RELEASE_KEYSTORE_PASSWORD" ] && [ -n "$RELEASE_KEY_ALIAS" ] && [ -n "$RELEASE_KEY_PASSWORD" ]; then
-            echo "Configuring release signing from repository secrets."
+          if [ -n "$RELEASE_KEYSTORE_BASE64" ] && [ -n "$RELEASE_KEY_ALIAS" ]; then
+            echo "Configuring release keystore and metadata from repository secrets."
             echo "$RELEASE_KEYSTORE_BASE64" | base64 -d > release.keystore
             cat > release.properties <<EOF
           keyStore=release.keystore
-          keyStorePassword=$RELEASE_KEYSTORE_PASSWORD
           keyAlias=$RELEASE_KEY_ALIAS
-          keyAliasPassword=$RELEASE_KEY_PASSWORD
           EOF
           else
             echo "No release signing secrets configured; building unsigned release artifacts."
@@ -106,6 +102,9 @@ jobs:
         run: ./gradlew :app:testDebugUnitTest
 
       - name: Build release APK and AAB
+        env:
+          RELEASE_KEYSTORE_PASSWORD: ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}
+          RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
         run: ./gradlew :app:assembleRelease :app:bundleRelease
 
       - name: Upload release artifacts

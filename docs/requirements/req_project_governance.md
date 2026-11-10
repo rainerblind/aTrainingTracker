@@ -123,4 +123,19 @@
   3. Non-canonical directory creation within `docs/engineering/` (such as `docs/engineering/archive`) SHALL remain strictly prohibited to preserve Rule 67 canonical directory integrity.
   4. An automated build contract test SHALL assert the absence of tracked or filesystem leftovers of `.active_task.json`, `implementation_plan.artifact.md`, and `.artifacts/` in the repository root, and SHALL verify the presence of the required ignore rules in `.gitignore`.
 
+### REQ-STP-008: Externalized Secure Keystore Password Provider Chain [Verified]
+- **Tests**: `TST-STP-008` | **Tickets**: `ATT-6148`
+- **Implementation**: `app/build.gradle`, `.github/workflows/android-release.yml`, `docs/ci-secrets.md`, `.agents/skills/release-manager/SKILL.md`, `ReleaseCiAndLintConfigContractTest.kt`
+- **Rationale**: Storing plaintext keystore and alias passwords inside the working tree (`release.properties`) violates ASPICE SUP.8 (Finding B-03) and poses an operational credential disclosure risk. Decoupling secrets into an externalized, prioritized resolution chain protects developer credentials and complies with repository security governance while keeping release automation intact.
+- **Description**:
+  1. The build system in `app/build.gradle` SHALL NOT read plaintext keystore passwords (`keyStorePassword`, `keyAliasPassword`) from any working-tree properties file (`release.properties`).
+  2. Signing passwords SHALL be resolved dynamically via a prioritized secure provider chain:
+     - Tier 1: Process environment variables (`KEYSTORE_PASSWORD` / `RELEASE_KEYSTORE_PASSWORD`, `KEY_ALIAS_PASSWORD` / `RELEASE_KEY_PASSWORD`).
+     - Tier 2: OS Keyring retrieval via `secret-tool lookup service atrainingtracker account keyStorePassword` / `keyAliasPassword`.
+     - Tier 3: External user configuration file `~/.config/atrainingtracker/release.properties` located strictly outside the project working tree with file permissions `0600`.
+  3. Working-tree configuration (`release.properties`) SHALL be restricted strictly to non-secret metadata (`keyStore` file path, `keyAlias`).
+  4. The CI release workflow (`.github/workflows/android-release.yml`) SHALL supply release signing passwords directly via environment variables to the Gradle execution step, with zero plaintext secret materialization into repository files.
+  5. An automated build contract test SHALL enforce that `app/build.gradle` uses the secure provider chain, that `.github/workflows/android-release.yml` passes env vars rather than writing working-tree passwords, and that any existing workspace `release.properties` contains zero password keys.
+
+
 

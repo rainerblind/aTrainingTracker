@@ -287,16 +287,61 @@ secrets {
     ignoreList.add('^DROPBOX_APP_SECRET$')
 }
 
-def props = new Properties()
-if (rootProject.file("release.properties").exists()) {
-    props.load(new FileInputStream(rootProject.file("release.properties")))
+def resolveSigningSecret(String envVar, String altEnvVar, String keyringAccount, String extKey) {
+    // Tier 1: Process Environment Variables (CI / local override)
+    def envVal = System.getenv(envVar) ?: System.getenv(altEnvVar)
+    if (envVal && !envVal.trim().isEmpty()) {
+        return envVal.trim()
+    }
 
-    android.signingConfigs.release.storeFile rootProject.file(props.keyStore)
-    android.signingConfigs.release.storePassword props.keyStorePassword
-    android.signingConfigs.release.keyAlias props.keyAlias
-    android.signingConfigs.release.keyPassword props.keyAliasPassword
+    // Tier 2: OS Keyring via secret-tool (Linux)
+    try {
+        def proc = ["secret-tool", "lookup", "service", "atrainingtracker", "account", keyringAccount].execute()
+        def sout = new StringBuilder()
+        def serr = new StringBuilder()
+        proc.consumeProcessOutput(sout, serr)
+        proc.waitForOrKill(2000)
+        def keyringVal = sout.toString().trim()
+        if (proc.exitValue() == 0 && !keyringVal.isEmpty()) {
+            return keyringVal
+        }
+    } catch (Exception ignored) {
+        // secret-tool not available or lookup failed
+    }
+
+    // Tier 3: External user config strictly outside working tree (~/.config/atrainingtracker/release.properties)
+    def userHome = System.getProperty("user.home")
+    def extConfigFile = new File(userHome, ".config/atrainingtracker/release.properties")
+    if (extConfigFile.exists() && extConfigFile.isFile()) {
+        def extProps = new Properties()
+        extConfigFile.withInputStream { extProps.load(it) }
+        def extVal = extProps.getProperty(extKey)
+        if (extVal && !extVal.trim().isEmpty()) {
+            return extVal.trim()
+        }
+    }
+
+    return null
+}
+
+def props = new Properties()
+def releasePropsFile = rootProject.file("release.properties")
+if (releasePropsFile.exists()) {
+    releasePropsFile.withInputStream { props.load(it) }
+}
+
+def storePass = resolveSigningSecret("KEYSTORE_PASSWORD", "RELEASE_KEYSTORE_PASSWORD", "keyStorePassword", "keyStorePassword")
+def keyPass = resolveSigningSecret("KEY_ALIAS_PASSWORD", "RELEASE_KEY_PASSWORD", "keyAliasPassword", "keyAliasPassword")
+def storeFilePath = props.getProperty("keyStore")
+def keyAliasStr = props.getProperty("keyAlias")
+
+if (storeFilePath && keyAliasStr && storePass && keyPass) {
+    android.signingConfigs.release.storeFile rootProject.file(storeFilePath)
+    android.signingConfigs.release.storePassword storePass
+    android.signingConfigs.release.keyAlias keyAliasStr
+    android.signingConfigs.release.keyPassword keyPass
 } else {
-    project.logger.info('INFO: Set the values storeFile, storePassword, keyAlias, and keyPassword in release.properties to sign the release.')
+    project.logger.info('INFO: Release signing credentials incomplete or not found (storeFile/keyAlias in release.properties, passwords via env/keyring/~/.config). Disabling release signing.')
     android.buildTypes.release.signingConfig = null
 }
 

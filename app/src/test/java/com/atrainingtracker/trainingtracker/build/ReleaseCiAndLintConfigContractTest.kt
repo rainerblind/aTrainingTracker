@@ -28,7 +28,7 @@ import java.io.File
  * Detekt static analysis, Kover code coverage gating, CI integrity, and instrumented androidTest
  * infrastructure with emulator CI runner (REQ-BLD-002, TST-BLD-002, REQ-PRO-042,
  * TST-PRO-042, REQ-PRO-046, TST-PRO-046, REQ-PRO-047, TST-PRO-047, REQ-PRO-048, TST-PRO-048,
- * REQ-PRO-051, TST-PRO-051, REQ-STP-007, TST-STP-007, ATT-6153, ATT-6171, ATT-6175, ATT-6184).
+ * REQ-PRO-051, TST-PRO-051, REQ-STP-007, TST-STP-007, REQ-STP-008, TST-STP-008, ATT-6148, ATT-6153, ATT-6171, ATT-6175, ATT-6184).
  */
 class ReleaseCiAndLintConfigContractTest {
 
@@ -513,6 +513,78 @@ class ReleaseCiAndLintConfigContractTest {
             assertTrue(
                 ".gitignore must include '$pattern' (REQ-STP-007.2, TST-STP-007.2)",
                 gitignoreContent.lines().any { it.trim() == pattern }
+            )
+        }
+    }
+
+    /**
+     * Asserts that release signing passwords are decoupled from the working tree via the
+     * prioritized provider chain (CI env vars -> secret-tool -> ~/.config/atrainingtracker/release.properties)
+     * and that workspace release.properties contains zero plaintext password keys (REQ-STP-008, TST-STP-008, ATT-6148).
+     */
+    @Test
+    fun testReleaseSigningHygiene_passwordsDecoupledFromWorkingTree() {
+        val buildGradle = findBuildGradleFile()
+        val buildContent = buildGradle.readText()
+
+        // 1. Verify app/build.gradle implements provider chain and avoids reading passwords from workspace release.properties
+        assertTrue(
+            "app/build.gradle must define resolveSigningSecret provider chain (REQ-STP-008.2)",
+            buildContent.contains("def resolveSigningSecret")
+        )
+        assertTrue(
+            "resolveSigningSecret must support process environment variables (REQ-STP-008.2)",
+            buildContent.contains("System.getenv(envVar)")
+        )
+        assertTrue(
+            "resolveSigningSecret must support Linux secret-tool keyring lookup (REQ-STP-008.2)",
+            buildContent.contains("secret-tool") && buildContent.contains("lookup")
+        )
+        assertTrue(
+            "resolveSigningSecret must support external config in ~/.config/atrainingtracker/release.properties (REQ-STP-008.2)",
+            buildContent.contains(".config/atrainingtracker/release.properties")
+        )
+        assertFalse(
+            "app/build.gradle must not read storePassword directly from workspace release.properties (REQ-STP-008.1)",
+            buildContent.contains("props.keyStorePassword")
+        )
+        assertFalse(
+            "app/build.gradle must not read keyPassword directly from workspace release.properties (REQ-STP-008.1)",
+            buildContent.contains("props.keyAliasPassword")
+        )
+
+        // 2. Verify .github/workflows/android-release.yml injects passwords as env vars without writing them to disk
+        val releaseWorkflow = findReleaseWorkflowFile()
+        val workflowContent = releaseWorkflow.readText()
+        assertTrue(
+            "CI release workflow must supply RELEASE_KEYSTORE_PASSWORD as env var (REQ-STP-008.3)",
+            workflowContent.contains("RELEASE_KEYSTORE_PASSWORD: \${{ secrets.RELEASE_KEYSTORE_PASSWORD }}")
+        )
+        assertTrue(
+            "CI release workflow must supply RELEASE_KEY_PASSWORD as env var (REQ-STP-008.3)",
+            workflowContent.contains("RELEASE_KEY_PASSWORD: \${{ secrets.RELEASE_KEY_PASSWORD }}")
+        )
+        assertFalse(
+            "CI release workflow must not write keyStorePassword to release.properties (REQ-STP-008.3)",
+            workflowContent.contains("keyStorePassword=")
+        )
+        assertFalse(
+            "CI release workflow must not write keyAliasPassword to release.properties (REQ-STP-008.3)",
+            workflowContent.contains("keyAliasPassword=")
+        )
+
+        // 3. Verify workspace release.properties (if present) contains zero password keys
+        val repoRoot = findRepoRootDir()
+        val workspaceReleaseProps = File(repoRoot, "release.properties")
+        if (workspaceReleaseProps.exists()) {
+            val propsContent = workspaceReleaseProps.readText()
+            assertFalse(
+                "Workspace release.properties must not contain keyStorePassword (REQ-STP-008.1, TST-STP-008.3)",
+                propsContent.contains("keyStorePassword")
+            )
+            assertFalse(
+                "Workspace release.properties must not contain keyAliasPassword (REQ-STP-008.1, TST-STP-008.3)",
+                propsContent.contains("keyAliasPassword")
             )
         }
     }

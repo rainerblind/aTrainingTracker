@@ -120,15 +120,25 @@ python3 tools/jira_util.py comment <RELEASE_TICKET_KEY> "h4. Release Progress: S
 
 ### Phase 2: Building & Verifying Signed Release Artifacts
 
-1. **Keystore Configuration & Verification**:
-   Ensure `release.properties` exists in the project root (must be ignored by `.gitignore`):
+1. **Keystore Configuration & Verification (REQ-STP-008)**:
+   Workspace `release.properties` must contain strictly non-secret keys (must be ignored by `.gitignore`):
    ```properties
    keyStore=/home/rainer/Dropbox/workspace/keystore
-   keyStorePassword=...
    keyAlias=atrainingtracker
-   keyAliasPassword=...
    ```
-   *Security Invariant*: Never commit `release.properties` or keystore credentials to version control.
+   Signing passwords are resolved via the prioritized provider chain (never stored in workspace `release.properties`):
+   - **Tier 1 (Env Vars)**: `KEYSTORE_PASSWORD` and `KEY_ALIAS_PASSWORD`
+   - **Tier 2 (OS Keyring)**:
+     ```bash
+     secret-tool store --label="aTrainingTracker Keystore Password" service atrainingtracker account keyStorePassword
+     secret-tool store --label="aTrainingTracker Key Alias Password" service atrainingtracker account keyAliasPassword
+     ```
+   - **Tier 3 (User Config)**: `~/.config/atrainingtracker/release.properties` (`chmod 600`):
+     ```properties
+     keyStorePassword=...
+     keyAliasPassword=...
+     ```
+   *Security Invariant*: Never store or commit passwords in the workspace working tree.
 
 2. **Compile Signed App Bundle & Universal APK**:
    Run the release build tasks with bypass sandbox mode:

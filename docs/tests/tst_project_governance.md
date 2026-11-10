@@ -101,4 +101,24 @@
   4. *Build Contract Suite Execution (`TST-STP-007.4`)*:
      • Execute `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.build.*"` asserting 100% pass rate in CI.
 
+### TST-STP-008: Keystore Password Decoupling & Secure Provider Chain Contract Test [Verified]
+- **Requirement(s)**: `REQ-STP-008`
+- **Component**: `app/build.gradle`, `.github/workflows/android-release.yml`, `ReleaseCiAndLintConfigContractTest.kt`
+- **Jira**: `ATT-6148`
+- **Test Description**:
+  1. *Build Signing Configuration Provider Audit (`TST-STP-008.1`)*:
+     • Inspect `app/build.gradle` signing configs.
+     • Assert that keystore and key alias passwords resolve via environment variables, `secret-tool` keyring lookup, and `~/.config/atrainingtracker/release.properties`.
+     • Assert absence of `props.keyStorePassword` and `props.keyAliasPassword` workspace lookups.
+  2. *CI Workflow Secret Exposure Audit (`TST-STP-008.2`)*:
+     • Inspect `.github/workflows/android-release.yml`.
+     • Verify that release signing step injects secrets via environment variables (`KEYSTORE_PASSWORD`, `KEY_ALIAS_PASSWORD`).
+     • Verify zero workflow steps write keystore passwords to a repository `release.properties` file.
+  3. *Workspace Property Hygiene Guard (`TST-STP-008.3`)*:
+     • Inspect repository root `release.properties` if present.
+     • Assert that neither `keyStorePassword` nor `keyAliasPassword` is present in any working-tree properties file.
+  4. *Build Contract Suite Execution (`TST-STP-008.4`)*:
+     • Execute `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.build.*"` asserting 100% pass rate in CI.
+
+
 
