@@ -22,6 +22,7 @@ import android.content.res.Configuration
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
@@ -37,12 +38,17 @@ import com.atrainingtracker.trainingtracker.ui.components.core.BadgeBox
 import com.atrainingtracker.trainingtracker.ui.components.core.withBottomBaselineAlignment
 import com.atrainingtracker.trainingtracker.ui.theme.TTAlpha
 
+/**
+ * Pure UI state-driven composable rendering the workout extrema values section (REQ-UI-506.3).
+ *
+ * Decouples rendering from fallback string resolutions and null filtering during composition.
+ */
 @Composable
 fun WorkoutExtrema(
-    data: ExtremaData,
+    uiState: ExtremaUiState,
     modifier: Modifier = Modifier
 ) {
-    if (data.dataRows.isEmpty()) return
+    if (uiState.rows.isEmpty()) return
 
     Column(
         modifier = modifier
@@ -66,22 +72,13 @@ fun WorkoutExtrema(
                 .fillMaxWidth()
                 .padding(horizontal = 12.dp)
         ) {
-            val rows = data.dataRows.filter { it.hasAnyData() }
-            rows.forEachIndexed { index, row ->
+            uiState.rows.forEachIndexed { index, row ->
                 ExtremaRow(
-                    label = row.sensorLabel,
-                    min = if (row.isMinRelevant) (row.minValue ?: "-") else "-",
-                    avg = row.avgValue ?: "-",
-                    max = row.maxValue ?: "-",
-                    unit = row.unitLabel,
-                    iconResId = row.iconResId,
-                    boldMin = row.boldMin,
-                    boldAvg = row.boldAvg,
-                    boldMax = row.boldMax,
+                    uiState = row,
                     modifier = Modifier.padding(vertical = 6.dp)
                 )
 
-                if (index < rows.size - 1) {
+                if (index < uiState.rows.size - 1) {
                     HorizontalDivider(
                         thickness = 0.5.dp,
                         color = MaterialTheme.colorScheme.outlineVariant,
@@ -91,6 +88,38 @@ fun WorkoutExtrema(
             }
         }
     }
+}
+
+/**
+ * Backward-compatible domain model overload of [WorkoutExtrema] (REQ-UI-506.4).
+ */
+@Composable
+fun WorkoutExtrema(
+    data: ExtremaData,
+    modifier: Modifier = Modifier
+) {
+    val uiState = remember(data) { ExtremaUiState.from(data) }
+    WorkoutExtrema(uiState = uiState, modifier = modifier)
+}
+
+@Composable
+private fun ExtremaRow(
+    uiState: ExtremaRowUiState,
+    modifier: Modifier = Modifier
+) {
+    ExtremaRow(
+        label = uiState.label,
+        min = uiState.min,
+        avg = uiState.avg,
+        max = uiState.max,
+        unit = uiState.unit,
+        modifier = modifier,
+        iconResId = uiState.iconResId,
+        boldMin = uiState.boldMin,
+        boldAvg = uiState.boldAvg,
+        boldMax = uiState.boldMax,
+        isHeader = false
+    )
 }
 
 @Composable
@@ -194,7 +223,28 @@ private fun ExtremaRow(
 
 // --- Previews ---
 
-@Preview(showBackground = true, name = "Core Performance Metrics")
+@Preview(showBackground = true, name = "Core Performance Metrics (UI State)")
+@Composable
+private fun PreviewAllCoreSensorsUiState() {
+    MaterialTheme {
+        WorkoutExtrema(
+            uiState = ExtremaUiState(
+                workoutId = 123L,
+                rows = listOf(
+                    ExtremaRowUiState(label = "Power", unit = "W", min = "-", avg = "215", max = "640", iconResId = R.drawable.ic_power, boldAvg = true, boldMax = true),
+                    ExtremaRowUiState(label = "Heart Rate", unit = "bpm", min = "65", avg = "142", max = "185", iconResId = R.drawable.ic_heart_rate, boldAvg = true, boldMax = true),
+                    ExtremaRowUiState(label = "Speed", unit = "km/h", min = "-", avg = "24.5", max = "52.1", iconResId = R.drawable.ic_speed, boldAvg = true),
+                    ExtremaRowUiState(label = "Pace", unit = "min/km", min = "4:30", avg = "5:12", max = "6:45", iconResId = R.drawable.ic_speed, boldAvg = true),
+                    ExtremaRowUiState(label = "Cadence", unit = "rpm", min = "-", avg = "85", max = "112", iconResId = R.drawable.ic_cadence, boldAvg = true),
+                    ExtremaRowUiState(label = "Altitude", unit = "m", min = "150", avg = "210", max = "410", iconResId = R.drawable.ic_altitude, boldMin = true, boldMax = true),
+                    ExtremaRowUiState(label = "Temp", unit = "°C", min = "18", avg = "22", max = "25", iconResId = R.drawable.ic_temp_max, boldMin = true, boldMax = true)
+                )
+            )
+        )
+    }
+}
+
+@Preview(showBackground = true, name = "Core Performance Metrics (Domain)")
 @Composable
 private fun PreviewAllCoreSensors() {
     MaterialTheme {

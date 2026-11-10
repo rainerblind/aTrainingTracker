@@ -8099,6 +8099,23 @@
   4. *Tier 1 Targeted Unit Test Regression (`TST-UI-505.4`)*:
   • Execute targeted test suite (`ui.clusters.*`, `ui.map.*`, `ui.theme.ThemeColorCentralizationAuditTest`, `ui.components.core.*`, `build.*`) asserting 100% pass rate.
 
+### TST-UI-506: **Decoupled Compose UI State Models & Mapping Verification Suite** [Verified]
+- **Target Release**: `V5.0.0`
+- **Requirement(s)**: `REQ-UI-506`
+- **Component**: `WorkoutLaps.kt`, `LapRowUiState.kt`, `WorkoutSummaryCompact.kt`, `WorkoutCardUiState.kt`, `WorkoutExtrema.kt`, `ExtremaUiState.kt`, `WorkoutUiStateMappingTest.kt`
+- **Jira**: `ATT-936`
+- **Test Description**:
+  1. *LapRowUiState Mapping & Badge Determination Contract Test (`TST-UI-506.1`)*:
+  • Verify in `WorkoutUiStateMappingTest.kt` that `buildLapRowUiStates(...)` accurately computes fastest/slowest lap badges, formatted time, distance, and speed/pace for RUN and non-RUN sports.
+  2. *WorkoutCardUiState Transformation Contract Test (`TST-UI-506.2`)*:
+  • Verify in `WorkoutUiStateMappingTest.kt` that `WorkoutCardUiState.from(...)` formats active time, total distance, speed/pace, and elevation ascent according to athlete unit settings and maps sport type and equipment properly.
+  3. *ExtremaUiState Transformation Contract Test (`TST-UI-506.3`)*:
+  • Verify that `ExtremaUiState.from(...)` maps extrema rows, correctly applies fallback `"-"` strings, respects `isMinRelevant`, and propagates bolding flags.
+  4. *Composable Signature & Backward Compatibility Test (`TST-UI-506.4`)*:
+  • Verify that existing composable callers compile and render without breaking changes.
+  5. *Tier 1 Targeted Unit Test Regression (`TST-UI-506.5`)*:
+  • Execute targeted test suite (`ui.components.workoutlaps.*`, `ui.components.workoutextrema.*`, `ui.aftermath.workoutlist.*`, `ui.theme.ThemeColorCentralizationAuditTest`, `ui.components.core.*`, `build.*`) asserting 100% pass rate.
+
 
 
 

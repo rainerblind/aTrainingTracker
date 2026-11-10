@@ -15123,3 +15123,38 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 
 **Invariants**: `WorkoutClusterEngine.kt` algorithms unmodified; `liteMode(true)` touch isolation preserved; single-path `PathPreviewMap` callers backward-compatible; 100% unit test pass rate.
 
+### REQ-UI-506: Decoupled Compose UI State Models (WorkoutLaps, WorkoutSummaryCard, WorkoutExtrema) [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-UI-506` | **Tickets**: `ATT-936`
+- **Implementation**: `app/src/main/java/com/atrainingtracker/trainingtracker/ui/components/workoutlaps/WorkoutLaps.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/ui/components/workoutlaps/LapRowUiState.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/workoutlist/WorkoutSummaryCompact.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/workoutlist/WorkoutCardUiState.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/ui/components/workoutextrema/WorkoutExtrema.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/ui/components/workoutextrema/ExtremaUiState.kt`
+- **Rationale**: Several core Jetpack Compose composables (`WorkoutLaps.kt`, `WorkoutSummaryCompact.kt`, `WorkoutExtrema.kt`) directly invoke metric formatters and perform math/aggregations inside rendering loops during composition. To eliminate redundant formatting on recomposition, enable pure JVM unit testing without Robolectric harnesses, and simplify `@Preview` authoring, the system SHALL decouple these composables via dedicated, immutable UI state models and pure transformation functions.
+- **Description**:
+  1. *LapRowUiState & WorkoutLaps Decoupling (`REQ-UI-506.1`)*:
+     - The system SHALL introduce an immutable `LapRowUiState` data class encapsulating pre-formatted display strings (`displayName`, `description`, `timeFormatted`, `distanceFormatted`, `speedPaceFormatted`, `badgeEmoji`, `badgeDescription`) and an optional click callback.
+     - `WorkoutLapsHelper` SHALL expose a pure function `buildLapRowUiStates(...)` calculating fastest (`🐇`) and slowest (`🦔`) badges and formatting time, distance, and speed/pace strings outside composition.
+     - `WorkoutLaps.kt` SHALL render rows from `List<LapRowUiState>` without performing metric formatting or min/max calculations inside the composable row loop.
+  2. *WorkoutCardUiState & WorkoutSummaryCompact Decoupling (`REQ-UI-506.2`)*:
+     - The system SHALL introduce an immutable `WorkoutCardUiState` data class encapsulating pre-formatted card metadata (`workoutName`, `sportIconResId`, `sportEquipmentText`, `formattedDateTime`, `activeTimeFormatted`, `distanceFormatted`, `speedPaceFormatted`, `ascentFormatted`, `isFinished`, `contentAlpha`).
+     - A pure mapper function `WorkoutCardUiState.from(...)` SHALL transform `WorkoutData` and formatters into `WorkoutCardUiState`.
+     - `WorkoutSummaryCompact.kt` SHALL support rendering directly from `WorkoutCardUiState`.
+  3. *ExtremaUiState & WorkoutExtrema Decoupling (`REQ-UI-506.3`)*:
+     - The system SHALL introduce immutable `ExtremaRowUiState` and `ExtremaUiState` representing pre-computed extrema display strings (`label`, `min`, `avg`, `max`, `unit`, `iconResId`, bold flags), decoupling null-coalescing and fallback `"-"` logic from `WorkoutExtrema.kt`.
+     - A pure transformation function `ExtremaUiState.from(ExtremaData)` SHALL produce the decoupled state.
+  4. *Composable Signature & Backward Compatibility (`REQ-UI-506.4`)*:
+     - `WorkoutLaps`, `WorkoutSummaryCompact`, and `WorkoutExtrema` SHALL maintain backward-compatible overloads accepting existing domain models so all existing screen callers compile and operate without disruption.
+  5. *Tooling Previews & Pure JVM Testability (`REQ-UI-506.5`)*:
+     - Target composables SHALL provide Jetpack Compose `@Preview` definitions instantiated with static UI state objects without requiring mocked `LocalMetricFormatter` instances. Pure JVM unit tests SHALL assert 100% of the UI state mapping logic.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* a list of `LapData` with distinct average speeds,
+• *When* transformed via `WorkoutLapsHelper.buildLapRowUiStates(...)`,
+• *Then* the fastest lap receives `"🐇"`, the slowest receives `"🦔"`, and all pace, speed, time, and distance strings match canonical formatter outputs.
+• *Given* a `WorkoutData` instance,
+• *When* transformed via `WorkoutCardUiState.from(...)`,
+• *Then* active time, total distance, speed/pace, and elevation ascent are pre-formatted, and sport icon and equipment text are resolved without calling formatters inside `@Composable`.
+• *Given* an `ExtremaData` instance containing null min or max values,
+• *When* converted via `ExtremaUiState.from(...)`,
+• *Then* missing values resolve to `"-"` in the state model rather than within the composable layout.
+
+**Invariants**: 100% visual and functional parity; zero regression across all 9 supported languages; zero breaking changes to existing callers; all contract tests green.
+
