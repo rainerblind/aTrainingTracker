@@ -1694,6 +1694,30 @@
   • Execute targeted unit test suite `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.build.SystemArchitectureDesignContractTest"` asserting 100% pass rate.
 
 
+### TST-TST-004: **Android Emulator Lifecycle Management, Physical-Phone Guardrail, and Two-Tier Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-TST-004`
+- **Component**: `tools/agent_emulator.py`, `tools/fake_gps.py`, `tools/simulate_kill.py`, `tools/replay_workout.py`, `tools/test_agent_emulator.py`
+- **Jira**: `ATT-6506`
+- **Test Description**:
+  1. *ADB Device Table Parsing & Filtering Tests (`TST-TST-004.1`, tools/test_agent_emulator.py)*:
+  • Assert parsing of `adb devices -l` output correctly partitions devices into emulators (`emulator-*`) and physical USB devices.
+  • Assert multi-device resolution prioritizes `emulator-5554` when present.
+  2. *Physical-Phone Protection & Agent Mode Guardrail Tests (`TST-TST-004.2`, tools/test_agent_emulator.py)*:
+  • Assert `resolve_target_device` aborts with `RuntimeError` or `SystemExit` if targeting a physical USB serial when `--agent` or `ATT_AGENT_MODE=1` is set.
+  • Assert explicit `--serial <SERIAL>` overrides default behavior when valid.
+  3. *Emulator Lifecycle & Configuration Command Generation Tests (`TST-TST-004.3`, tools/test_agent_emulator.py)*:
+  • Assert `ensure` constructs proper CLI arguments for `~/Android/Sdk/emulator/emulator -avd <AVD_NAME>`.
+  • Assert boot verification queries `getprop sys.boot_completed`.
+  • Assert window/transition/animator scale zeroing and keyguard dismiss commands.
+  • Assert `configure-app` generates correct `pm grant` and `appops set` commands for `com.atrainingtracker.debug`.
+  4. *Database Seeding & Extraction Pipeline Tests (`TST-TST-004.4`, tools/test_agent_emulator.py)*:
+  • Assert `seed-db` and `sync-from-physical` construct valid `run-as com.atrainingtracker.debug` SQLite extraction and push commands.
+  5. *Governance & Skills Two-Tier Policy Parity Tests (`TST-TST-004.5`, tools/test_agent_emulator.py)*:
+  • Assert `.agents/rules/aspice_governance.md`, `stage5-verification/SKILL.md`, `sprint-planner/SKILL.md`, `ui-designer/SKILL.md`, and `docs/project_protocol.md` mandate `emulator-5554` for Stages 1–5 and physical device for Ceremony 2.
+  6. *Python Standard Library Compliance Test (`TST-TST-004.6`, tools/test_agent_emulator.py)*:
+  • Assert `tools/agent_emulator.py` imports only standard library modules complying with `TST-PRO-005.6`.
+
+
 
 
 

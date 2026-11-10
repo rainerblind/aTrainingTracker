@@ -513,34 +513,13 @@ class HostPreFlightDiagnostics:
             ]
 
     @staticmethod
-    def check_adb(device_serial: Optional[str] = None) -> Tuple[bool, str, List[str], Optional[str]]:
+    def check_adb(device_serial: Optional[str] = None, agent_mode: Optional[bool] = None) -> Tuple[bool, str, List[str], Optional[str]]:
         try:
-            res = subprocess.run(["adb", "devices"], capture_output=True, text=True, check=True)
-            lines = res.stdout.strip().splitlines()
-            online_devices = []
-            unauthorized = []
-            for line in lines[1:]:
-                parts = line.split()
-                if len(parts) >= 2:
-                    if parts[1] == "device":
-                        online_devices.append(parts[0])
-                    elif parts[1] == "unauthorized":
-                        unauthorized.append(parts[0])
-
-            if unauthorized and not online_devices:
-                return False, f"Device {unauthorized[0]} is UNAUTHORIZED", [
-                    "Unlock your phone screen and accept 'Allow USB debugging' prompt",
-                    "Check USB debugging authorization in Developer Options"
-                ], None
-
-            if not online_devices:
-                return False, "No connected Android device found via ADB", [
-                    "Connect your Android test device (e.g. Pixel 10) via USB",
-                    "Enable USB Debugging in Developer Options",
-                    "Verify with: adb devices"
-                ], None
-
-            target = device_serial if (device_serial and device_serial in online_devices) else online_devices[0]
+            try:
+                from agent_emulator import resolve_target_device
+            except ImportError:
+                from tools.agent_emulator import resolve_target_device
+            target = resolve_target_device(device_serial=device_serial, agent_mode=agent_mode)
 
             # Verify mock location appops permission
             appops_res = subprocess.run(
@@ -558,12 +537,12 @@ class HostPreFlightDiagnostics:
         except FileNotFoundError:
             return False, "ADB binary not found in PATH", ["Install Android platform-tools: sudo apt install adb"], None
         except Exception as e:
-            return False, f"ADB query failed: {e}", ["Ensure adb server is running: adb start-server"], None
+            return False, f"ADB target resolution error: {e}", ["Verify ADB connection: adb devices -l"], None
 
     @classmethod
-    def run_all(cls, bus=None, target_device: Optional[str] = None) -> PreFlightReport:
+    def run_all(cls, bus=None, target_device: Optional[str] = None, agent_mode: Optional[bool] = None) -> PreFlightReport:
         bt_ok, bt_msg, bt_adv = cls.check_bluetooth(bus)
-        adb_ok, adb_msg, adb_adv, dev = cls.check_adb(target_device)
+        adb_ok, adb_msg, adb_adv, dev = cls.check_adb(target_device, agent_mode=agent_mode)
         return PreFlightReport(
             bt_ok=bt_ok, bt_message=bt_msg, bt_advice=bt_adv,
             adb_ok=adb_ok, adb_message=adb_msg, adb_advice=adb_adv,
@@ -1133,8 +1112,9 @@ class AdbGpsInjector:
 
     DEFAULT_PROVIDERS = ("gps", "network", "fused")
 
-    def __init__(self, enabled: bool = True, device_serial: Optional[str] = None):
+    def __init__(self, enabled: bool = True, device_serial: Optional[str] = None, agent_mode: Optional[bool] = None):
         self.enabled = enabled
+        self.agent_mode = agent_mode
         self.device_serial = device_serial
         self.is_registered = False
         self.is_killed = False
@@ -1246,18 +1226,17 @@ class AdbGpsInjector:
             self.kill()
         return self.is_killed
 
-    def detect_device(self) -> Optional[str]:
+    def detect_device(self, explicit_serial: Optional[str] = None) -> Optional[str]:
         if not self.enabled:
             return None
         try:
-            res = subprocess.run(["adb", "devices"], capture_output=True, text=True, check=True)
-            lines = res.stdout.strip().splitlines()
-            for line in lines[1:]:
-                parts = line.split()
-                if len(parts) >= 2 and parts[1] == "device":
-                    return parts[0]
-            return None
-        except Exception:
+            try:
+                from agent_emulator import resolve_target_device
+            except ImportError:
+                from tools.agent_emulator import resolve_target_device
+            return resolve_target_device(device_serial=explicit_serial, agent_mode=self.agent_mode)
+        except Exception as e:
+            print(f"[!] Target device resolution note: {e}")
             return None
 
     def setup(self):
@@ -2182,7 +2161,8 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--no-ble", action="store_true", help="Disable BlueZ BLE GATT peripheral advertising")
     parser.add_argument("--no-gps", action="store_true", help="Disable ADB mock GPS coordinate injection")
     parser.add_argument("--cleanup", action="store_true", help="Remove any lingering ADB mock location test providers (gps, network, fused) and exit")
-    parser.add_argument("--device", help="Target ADB device serial number")
+    parser.add_argument("--device", "--serial", dest="device", help="Target ADB device serial number")
+    parser.add_argument("--agent", action="store_true", help="Enforce autonomous agent mode (strictly prohibits targeting physical phone)")
     parser.add_argument("--speed", type=float, default=1.0, help="Initial playback speed multiplier")
     parser.add_argument("--hr-battery", type=int, default=100, help="Initial Heart Rate sensor battery percentage (0-100, default 100)")
     parser.add_argument("--power-battery", type=int, default=100, help="Initial Cycling Power sensor battery percentage (0-100, default 100)")
@@ -2230,7 +2210,7 @@ def main():
 
     # Rule 30 Host Pre-Flight Self-Diagnostics
     print("[*] Running Rule 30 Host Pre-Flight Diagnostics...")
-    report = HostPreFlightDiagnostics.run_all(target_device=args.device)
+    report = HostPreFlightDiagnostics.run_all(target_device=args.device, agent_mode=args.agent)
     if report.bt_ok:
         print(f"  [OK] Bluetooth: {report.bt_message}")
     else:
@@ -2251,7 +2231,7 @@ def main():
     ble_server = BleReplayServer(enabled=not args.no_ble, hr_battery=args.hr_battery, power_battery=args.power_battery)
     ble_server.start()
 
-    gps_injector = AdbGpsInjector(enabled=not args.no_gps, device_serial=target_device)
+    gps_injector = AdbGpsInjector(enabled=not args.no_gps, device_serial=target_device, agent_mode=args.agent)
     gps_injector.setup()
 
     trigger_mgr = ScheduledTriggerManager(

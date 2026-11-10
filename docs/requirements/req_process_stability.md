@@ -2759,6 +2759,50 @@ The workflow SHALL mandate that:
 - **Invariants**: Zero modifications to Android production runtime code in `app/src/main/`; 100% unit test pass rate.
 
 
+### REQ-TST-004: Android Emulator Lifecycle Management, Physical-Phone Guardrail, and Two-Tier Verification Policy [Verified]
+- **Tests**: `TST-TST-004` | **Tickets**: `ATT-6506`
+- **Implementation**: `tools/agent_emulator.py`, `tools/fake_gps.py`, `tools/simulate_kill.py`, `tools/replay_workout.py`, `.agents/rules/aspice_governance.md`, `.agents/skills/stage5-verification/SKILL.md`, `.agents/skills/sprint-planner/SKILL.md`, `.agents/skills/ui-designer/SKILL.md`, `docs/project_protocol.md`
+- **Rationale**: Autonomous agents executing in-sprint testing (Stages 1–5) and simulation scripts must not hijack or disrupt the connected physical daily driver device (Pixel 10), while preserving full-sprint evaluation on physical hardware at Ceremony 2. The developer tools and governance SHALL enforce automated boot, configuration, and data seeding on `emulator-5554` during Phase 2, guard desk simulators against unauthorized physical device access in agent mode, and establish a strict Two-Tier Device Policy across project governance and verification skills (ATT-6506, parent epic ATT-2466, superseding legacy Rule 79 / ATT-5890):
+- **Description**:
+  1. *Autonomous Agent Emulator Lifecycle & Auto-Boot (`REQ-TST-004.1`, tools/agent_emulator.py ensure)*:
+     • The CLI utility `tools/agent_emulator.py` SHALL verify if an Android Emulator instance (`emulator-5554` or any `emulator-*`) is online via ADB.
+     • If inactive, it SHALL launch the preferred AVD (`Pixel_8_Android_15` or fallback `Pixel_7_Android_36`) via `~/Android/Sdk/emulator/emulator`.
+     • It SHALL poll until `sys.boot_completed == 1` (with a configurable timeout).
+     • Upon boot completion, it SHALL dismiss the keyguard (`input keyevent 82`), set system window, transition, and animator scales to `0.0` for deterministic Compose UI execution, and output the active emulator serial (`emulator-5554`).
+  2. *Debug Environment Configuration & Permissions (`REQ-TST-004.2`, tools/agent_emulator.py configure-app)*:
+     • The tool SHALL grant all required runtime permissions on `com.atrainingtracker.debug` (`ACCESS_FINE_LOCATION`, `ACCESS_COARSE_LOCATION`, `POST_NOTIFICATIONS`, `BLUETOOTH_SCAN`, `BLUETOOTH_CONNECT`).
+     • The tool SHALL set mock location appops (`appops set com.atrainingtracker.debug android:mock_location allow`).
+  3. *Golden SQLite Database Seeding & Extraction (`REQ-TST-004.3`, tools/agent_emulator.py seed-db / sync-from-physical)*:
+     • The tool SHALL support pulling a read-only database snapshot from the physical device's debug sandbox via `run-as com.atrainingtracker.debug` without altering or wiping athlete data.
+     • The tool SHALL seed debug SQLite databases (`WorkoutSummaries.db`, `RouteClusters.db`, `KnownLocations.db`, etc.) into `com.atrainingtracker.debug` on the emulator via `run-as`, ensuring realistic map, clustering, and workout UI states.
+  4. *Desk Simulation Tool Physical-Phone Protection Guardrail (`REQ-TST-004.4`)*:
+     • Simulation tools (`tools/fake_gps.py`, `tools/simulate_kill.py`, `tools/replay_workout.py`) SHALL parse ADB devices and prioritize `emulator-*` instances over physical USB devices when multiple devices are attached.
+     • When `--agent` or `ATT_AGENT_MODE=1` is active, tools SHALL abort with an explicit guardrail error if attempting to execute against a non-emulator physical device.
+  5. *Two-Tier Device Policy in ASPICE Governance & Agent Skills (`REQ-TST-004.5`)*:
+     • Governance rules in `.agents/rules/aspice_governance.md` (superseding legacy Rule 79) and agent skills (`stage5-verification/SKILL.md`, `sprint-planner/SKILL.md`, `ui-designer/SKILL.md`, `docs/project_protocol.md`) SHALL mandate targeting `emulator-5554` (`ANDROID_SERIAL=emulator-5554`) for all autonomous in-sprint Stage 1–5 validations.
+     • Ceremony 2 (Sprint Review & Retro) SHALL mandate deploying and evaluating the integrated sprint build on the real physical phone (`Pixel 10`).
+  6. *Preservation of System Invariants (`REQ-TST-004.6`)*:
+     • Zero modifications to production application source code (`app/src/main/` 100% untouched).
+     • Physical phone protected against autonomous agent access in Phase 2.
+     • 100% compliance with Python 3 standard library (`TST-PRO-005.6`).
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Legacy Rule 79 (`ATT-5890`, commit `51f4c3c5d8e4ad76ccd7afa8fc70397a5fb410c1`), which instituted a blanket prohibition against booting local software emulators.
+  2. *Historical Origin & Commit Trace*: Sprint Review finding 3 in `docs/engineering/retros/Sprint_Review_and_Retro_ATT-5890.md` and investigation in `ATT-5811`.
+  3. *Root Reason for Existing Formulation*: An unmanaged, headless QEMU instance (`qemu-system-x86_64-headless`) with software rendering (`swiftshader_indirect`) locked CPU at 92% until killed by the watchdog.
+  4. *Preservation of Core Invariants*: Replaces the unmanaged ban with deterministic, hardware-accelerated lifecycle management via `tools/agent_emulator.py`, boot timeouts, and keyguard/animation controls, ensuring CPU safety while guaranteeing the PO's physical device is shielded during autonomous sprint execution.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* `Pixel_8_Android_15` AVD is available and `tools/agent_emulator.py ensure` is executed,
+  • *When* the emulator boots,
+  • *Then* `sys.boot_completed` reaches 1, animations are set to 0.0, keyguard is unlocked, and `emulator-5554` is confirmed ready.
+  • *Given* both physical phone (`66020DLCR002FL`) and `emulator-5554` are attached,
+  • *When* agent tooling or Stage 5 deployment runs,
+  • *Then* all operations resolve to `emulator-5554` and the physical phone receives zero commands.
+  • *Given* Ceremony 2 (Sprint-End Joint Review),
+  • *When* the integrated sprint build is deployed,
+  • *Then* deployment and evaluation execute on the real physical phone.
+- **Invariants**: Zero runtime changes to `app/src/main/`; 100% unit test pass rate.
+
+
 
 
 
