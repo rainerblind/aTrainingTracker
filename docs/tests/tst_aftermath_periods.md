@@ -533,6 +533,34 @@
   5. *Clean-Room Targeted Regression Execution (`TST-PER-037.5`)*:
   • Execute targeted unit tests `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.map.*" --tests "com.atrainingtracker.trainingtracker.ui.aftermath.*" --tests "com.atrainingtracker.trainingtracker.ui.theme.ThemeColorCentralizationAuditTest"` verifying 100% clean-room test pass rate.
 
+### TST-PER-038: **Morning HRV Readiness Database Persistence, Backup Parity & Per-Posture SWC Baseline Calculator Suite** [Verified]
+- **Requirement(s)**: `REQ-PER-030` (`REQ-PER-030.1`..`REQ-PER-030.5`)
+- **Component**: `HrvReadinessEntryTest.kt`, `HrvReadinessDatabaseManagerTest.kt`, `HrvReadinessCalculatorTest.kt`, `DatabaseSchemaRegistryTest.kt`, `BackupManagerHrvReadinessTest.kt`
+- **Jira**: `ATT-3545`
+- **Test Description**:
+  1. *Schema Creation & DTO Cursor Mapping Symmetry Unit Test (`TST-PER-038.1`, `HrvReadinessEntryTest.kt` / `HrvReadinessDatabaseManagerTest.kt`)*:
+  • Verify `HrvReadiness.db` schema creation (`DB_VERSION = 1`) with all 14 columns, type constraints, and indexes.
+  • Verify symmetric mapping between single-item `fromCursor(Cursor)` and batch `fromCursorBatch(Cursor)` over identical SQLite cursor rows per Rule 20.
+  2. *Transactional Primary-Day Deduplication & Pin Promotion Test (`TST-PER-038.2`, `HrvReadinessDatabaseManagerTest.kt`)*:
+  • Verify that multiple readings on the same `(date_iso, posture)` designate the earliest valid reading as primary (`is_primary_for_day = 1`).
+  • Verify that toggling a manual pin promotes the selected reading to primary and demotes previous readings transactionally.
+  • Verify that deleting the primary reading promotes the next earliest valid reading for that calendar day.
+  3. *DatabaseSchemaRegistry & Backup Integration Parity Test (`TST-PER-038.3`, `DatabaseSchemaRegistryTest.kt` / `BackupManagerHrvReadinessTest.kt`)*:
+  • Verify that `DatabaseSchemaRegistry.getMaxSupportedVersion("HrvReadiness.db")` matches `HrvReadinessDatabaseManager.DB_VERSION` directly per Rule 62.
+  • Verify that `DatabaseConnectionManager.getActiveDatabases(context)` includes `HrvReadiness.db`.
+  • Verify that `.attbackup` export snapshots `HrvReadiness.db` via `VACUUM INTO` and restores it completely intact.
+  4. *Per-Posture Isolation, Artifact Gate & 14-Day Calibration Gate Test (`TST-PER-038.4`, `HrvReadinessCalculatorTest.kt`)*:
+  • Verify complete isolation across `SUPINE`, `SEATED`, and `STANDING` posture baselines.
+  • Verify that readings with `artifact_rate_pct > 5.0%` are excluded from 7-day and 60-day baseline averages.
+  • Verify that $< 14$ baseline days in 60d or $< 3$ days in 7d returns `ReadinessStatus.CALIBRATING` with exact day progress (`"Day X of 14 baseline calibration"`).
+  5. *Bessel-Corrected Sample SD & SWC Corridor Classification Test (`TST-PER-038.5`, `HrvReadinessCalculatorTest.kt`)*:
+  • Verify that $\sigma_{60d}$ evaluates unbiased sample standard deviation with $N-1$ denominator over daily $\ln(\text{rMSSD})$.
+  • Verify SWC corridor calculation $[\mu_{60d} - 0.5\sigma_{60d}, \mu_{60d} + 0.5\sigma_{60d}]$.
+  • Verify threshold classifications: `OPTIMAL` when inside corridor, `FATIGUED_LOW` when below, and `ABOVE_NORMAL` when above.
+  6. *Tier 1 Clean-Room Targeted Regression Execution (`TST-PER-038.6`)*:
+  • Execute targeted unit tests `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.database.hrv.*" --tests "com.atrainingtracker.trainingtracker.migration.*" --tests "com.atrainingtracker.trainingtracker.build.*"` verifying 100% clean-room test pass rate.
+
+
 
 
 

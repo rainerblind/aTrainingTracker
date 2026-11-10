@@ -46,7 +46,9 @@ object DatabaseSchemaRegistry {
         com.atrainingtracker.trainingtracker.database.ElevationCacheDbHelper.DB_NAME to
                 com.atrainingtracker.trainingtracker.database.ElevationCacheDbHelper.DB_VERSION,
         com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodSummariesDatabaseManager.DATABASE_NAME to
-                com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodSummariesDatabaseManager.DB_VERSION
+                com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodSummariesDatabaseManager.DB_VERSION,
+        com.atrainingtracker.trainingtracker.database.hrv.HrvReadinessDbHelper.DB_NAME to
+                com.atrainingtracker.trainingtracker.database.hrv.HrvReadinessDbHelper.DB_VERSION
     )
 
     @JvmStatic
