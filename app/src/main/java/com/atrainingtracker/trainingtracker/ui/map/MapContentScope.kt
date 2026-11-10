@@ -112,8 +112,12 @@ interface MapContentScope {
 
     /**
      * Renders climb highlights along a route or track color-coded by climb category (REQ-UI-298 / ATT-2509).
+     * Optionally accepts [onClimbClick] callback to handle user taps on a climb (REQ-MAP-064.4).
      */
-    fun climbs(climbs: List<Climb>)
+    fun climbs(
+        climbs: List<Climb>,
+        onClimbClick: ((Long) -> Unit)? = null
+    )
 
     /**
      * Renders a density-based heatmap using a Cyan -> Indigo sequential gradient.
@@ -204,7 +208,9 @@ internal class MapContentScopeImpl(
         val path: List<LatLng>,
         val color: Color,
         val zIndex: Float = MapVisualization.CLIMB_Z_INDEX,
-        val width: Float = MapVisualization.CLIMB_WIDTH
+        val width: Float = MapVisualization.CLIMB_WIDTH,
+        val climbId: Long? = null,
+        val onClick: ((Long) -> Unit)? = null
     )
     internal val climbHighlights = mutableStateListOf<ClimbHighlightData>()
 
@@ -407,14 +413,18 @@ internal class MapContentScopeImpl(
             )
         }
 
-        // 6c. Climb Span Highlights (REQ-UI-298 / ATT-2509)
+        // 6c. Climb Span Highlights (REQ-UI-298 / ATT-2509, REQ-MAP-064)
         climbHighlights.forEach { highlight ->
             Polyline(
                 points = highlight.path,
                 color = highlight.color,
                 width = highlight.width,
                 zIndex = highlight.zIndex,
-                jointType = JointType.ROUND
+                jointType = JointType.ROUND,
+                clickable = highlight.onClick != null,
+                onClick = {
+                    highlight.climbId?.let { id -> highlight.onClick?.invoke(id) }
+                }
             )
         }
 
@@ -552,7 +562,7 @@ internal class MapContentScopeImpl(
         }
     }
 
-    override fun climbs(climbs: List<Climb>) {
+    override fun climbs(climbs: List<Climb>, onClimbClick: ((Long) -> Unit)?) {
         climbs.forEach { climb ->
             val points = if (climb.pathPoints.isNotEmpty()) {
                 climb.pathPoints.map { it.latLng }
@@ -561,7 +571,14 @@ internal class MapContentScopeImpl(
             }
             if (points.size >= 2) {
                 val (color, _, _) = getClimbCategoryColors(climb.category)
-                this.climbHighlights.add(ClimbHighlightData(path = points, color = color))
+                this.climbHighlights.add(
+                    ClimbHighlightData(
+                        path = points,
+                        color = color,
+                        climbId = climb.id,
+                        onClick = onClimbClick
+                    )
+                )
             }
         }
     }

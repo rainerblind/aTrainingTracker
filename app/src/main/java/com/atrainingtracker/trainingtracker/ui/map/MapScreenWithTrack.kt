@@ -62,12 +62,15 @@ import androidx.compose.ui.platform.LocalContext
 import com.atrainingtracker.banalservice.sensor.formater.AltitudeFormatter
 import com.atrainingtracker.banalservice.sensor.formater.DistanceFormatter
 import com.atrainingtracker.banalservice.sensor.formater.TimeFormatter
+import com.atrainingtracker.trainingtracker.climbs.ClimbCategory
 import com.atrainingtracker.trainingtracker.database.WorkoutCluster
 import com.atrainingtracker.trainingtracker.database.WorkoutClusterStats
 import com.atrainingtracker.trainingtracker.ui.clusters.ClusterMarkerType
 import com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClusterIdentityRow
 import com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClusterMetadataBlock
 import com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClustersViewModel
+import com.atrainingtracker.trainingtracker.ui.climbs.ClimbDetailSheet
+import com.atrainingtracker.trainingtracker.ui.climbs.getClimbCategoryColors
 import com.atrainingtracker.trainingtracker.ui.components.MetricItem
 import com.atrainingtracker.trainingtracker.ui.components.core.BottomSheetDesign
 import com.atrainingtracker.trainingtracker.ui.map.TrackType
@@ -124,10 +127,11 @@ fun MapScreenWithTrack(
     val allClusters by viewModel.allClusters.collectAsStateWithLifecycle()
     val enabledLayers by viewModel.enabledLayers.collectAsStateWithLifecycle()
 
-    // The ID of the segment/route/location/cluster currently being "peeked"
+    // The ID of the segment/route/location/cluster/climb currently being "peeked"
     var selectedSegmentId by rememberSaveable { mutableStateOf<Long?>(null) }
     var selectedRouteId by rememberSaveable { mutableStateOf<Long?>(null) }
     var selectedClusterId by rememberSaveable { mutableStateOf<Long?>(null) }
+    var selectedClimbId by rememberSaveable { mutableStateOf<Long?>(null) }
     var selectedLocationId by rememberSaveable { mutableStateOf<Long?>(targetLocationId) }
     var editingLocation by remember { mutableStateOf<KnownLocationItem?>(null) }
     var previewRadius by remember { mutableStateOf<Int?>(null) }
@@ -141,6 +145,7 @@ fun MapScreenWithTrack(
             selectedSegmentId = null
             selectedRouteId = null
             selectedClusterId = null
+            selectedClimbId = null
             selectedLocationId = targetLocationId
         }
     }
@@ -317,6 +322,7 @@ fun MapScreenWithTrack(
                         selectedRouteId = null
                         selectedLocationId = null
                         selectedClusterId = null
+                        selectedClimbId = null
                     },
                     modifier = Modifier.fillMaxSize()
                 ) {
@@ -325,6 +331,7 @@ fun MapScreenWithTrack(
                             selectedSegmentId = null
                             selectedRouteId = null
                             selectedClusterId = null
+                            selectedClimbId = null
                             selectedLocationId = id
                         })
                     }
@@ -333,6 +340,7 @@ fun MapScreenWithTrack(
                             selectedRouteId = null
                             selectedLocationId = null
                             selectedClusterId = null
+                            selectedClimbId = null
                             selectedSegmentId = id
                         })
                     }
@@ -341,6 +349,7 @@ fun MapScreenWithTrack(
                             selectedSegmentId = null
                             selectedLocationId = null
                             selectedClusterId = null
+                            selectedClimbId = null
                             selectedRouteId = id
                         })
                     }
@@ -349,7 +358,17 @@ fun MapScreenWithTrack(
                             selectedSegmentId = null
                             selectedRouteId = null
                             selectedLocationId = null
+                            selectedClimbId = null
                             selectedClusterId = id
+                        })
+                    }
+                    if (GeneralMapLayer.CLIMBS in enabledLayers) {
+                        climbs(uiState.climbs, onClimbClick = { id ->
+                            selectedSegmentId = null
+                            selectedRouteId = null
+                            selectedLocationId = null
+                            selectedClusterId = null
+                            selectedClimbId = id
                         })
                     }
                     if (GeneralMapLayer.TRACK in enabledLayers) {
@@ -445,6 +464,10 @@ fun MapScreenWithTrack(
                                     stringResource(R.string.map_layer_clusters),
                                     TTColor.Cluster
                                 )
+                                GeneralMapLayer.CLIMBS -> Pair(
+                                    stringResource(R.string.map_layer_climbs),
+                                    getClimbCategoryColors(ClimbCategory.CAT_1).first
+                                )
                             }
 
                             DropdownMenuItem(
@@ -501,12 +524,24 @@ fun MapScreenWithTrack(
         )
     }
 
+    selectedClimbId?.let { id ->
+        val climb = uiState.climbs.find { it.id == id }
+        if (climb != null) {
+            ClimbDetailSheet(
+                climb = climb,
+                bSportType = uiState.bSportType,
+                onDismiss = { selectedClimbId = null }
+            )
+        }
+    }
+
     // Handle system back button to close the peek
-    BackHandler(enabled = selectedSegmentId != null || selectedRouteId != null || selectedLocationId != null || selectedClusterId != null) {
+    BackHandler(enabled = selectedSegmentId != null || selectedRouteId != null || selectedLocationId != null || selectedClusterId != null || selectedClimbId != null) {
         selectedSegmentId = null
         selectedRouteId = null
         selectedLocationId = null
         selectedClusterId = null
+        selectedClimbId = null
     }
 }
 

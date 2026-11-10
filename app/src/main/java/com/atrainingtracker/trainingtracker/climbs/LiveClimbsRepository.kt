@@ -75,7 +75,11 @@ class LiveClimbsRepository private constructor(
     /**
      * Refreshes the active candidate climbs list based on route context or all stored climbs.
      */
-    suspend fun refreshClimbs(activeRouteId: Long? = routesRepository.activeNavigatedRouteId.value) {
+    suspend fun refreshClimbs() {
+        refreshClimbs(routesRepository.activeNavigatedRouteId.value)
+    }
+
+    suspend fun refreshClimbs(activeRouteId: Long?) {
         val list = if (activeRouteId != null) {
             climbsDb.getClimbsForRoute(activeRouteId)
         } else {

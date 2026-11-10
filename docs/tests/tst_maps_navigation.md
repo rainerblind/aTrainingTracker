@@ -1111,5 +1111,30 @@
   5. *Targeted Regression Verification Suite (`TST-MAP-065.5`)*:
   • Execute targeted tests across `ui.knownlocations.*`, `ui.map.*`, and `ui.theme.*` asserting 100% pass rate.
 
+### TST-MAP-066: **Workout Climb Ingestion, Climbs Database Deduplication & Map Climbs Layer Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-MAP-064` (`REQ-MAP-064.1`..`REQ-MAP-064.4`)
+- **Component**: `WorkoutClimbIngestionTest.kt`, `GeneralMapLayersContractTest.kt`, `MapFragmentWithTrackViewModelTest.kt`, `MapScreenWithTrackTest.kt`, `GeneralMapLayersLocalizationTest.kt`
+- **Jira**: `ATT-2766` | **Target Release**: `V5.0.0`
+- **Test Description**:
+  1. *Post-Workout Climb Ingestion & Deduplication Test (`TST-MAP-066.1`, `WorkoutClimbIngestionTest.kt`)*:
+  • Verify that when `reloadWorkoutData` processes a finished workout, qualifying track points yield detected climbs inserted into `ClimbsDatabaseManager` with `routeId = null`.
+  • Verify that identical or near-identical ascents within 50m are deduplicated via `insertClimbsWithDeduplicationBatch`.
+  • Verify `LiveClimbsRepository.refreshClimbs()` is invoked following climb persistence.
+  2. *GeneralMapLayer Enum & Default Enabled Contract (`TST-MAP-066.2`, `GeneralMapLayersContractTest.kt`)*:
+  • Verify `GeneralMapLayer` enum contains exactly 6 entries including `CLIMBS`.
+  • Verify `GeneralMapLayer.DEFAULT_ENABLED` contains exactly 4 entries and strictly excludes `CLIMBS` and `CLUSTERS`.
+  3. *MapFragmentWithTrackViewModel Climbs Flow & Layer Toggling (`TST-MAP-066.3`, `MapFragmentWithTrackViewModelTest.kt` / `GeneralMapLayersContractTest.kt`)*:
+  • Verify `MapFragmentWithTrackViewModel` exposes `uiState.climbs`.
+  • Verify that when `GeneralMapLayer.CLIMBS` is toggled off, `uiState.climbs` emits `emptyList()`.
+  • Verify that when `GeneralMapLayer.CLIMBS` is enabled, `uiState.climbs` emits stored climbs from `ClimbsDatabaseManager`.
+  4. *MapScreenWithTrack Climbs Layer & ClimbDetailSheet Integration (`TST-MAP-066.4`, `MapScreenWithTrackTest.kt`)*:
+  • Verify layer menu renders the Climbs toggle item with `R.string.map_layer_climbs`.
+  • Verify tapping a climb polyline selects the climb and displays `ClimbDetailSheet`.
+  5. *9-Language Localization Parity Audit (`TST-MAP-066.5`, `GeneralMapLayersLocalizationTest.kt`)*:
+  • Verify `map_layer_climbs` exists and is non-empty across all 9 supported locales.
+  6. *Targeted Regression Verification Suite (`TST-MAP-066.6`)*:
+  • Run targeted tests: `--tests "com.atrainingtracker.trainingtracker.ui.map.*" --tests "com.atrainingtracker.trainingtracker.database.ClimbsDatabaseManagerTest" --tests "com.atrainingtracker.trainingtracker.climbs.*"` asserting 100% pass rate.
+
+
 
 

@@ -36,6 +36,9 @@ import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager
 import com.atrainingtracker.banalservice.sensor.SensorType
 import com.atrainingtracker.trainingtracker.MyHelper
 import com.atrainingtracker.trainingtracker.TrainingApplication
+import com.atrainingtracker.trainingtracker.climbs.ClimbDetector
+import com.atrainingtracker.trainingtracker.climbs.LiveClimbsRepository
+import com.atrainingtracker.trainingtracker.database.ClimbsDatabaseManager
 import com.atrainingtracker.trainingtracker.database.EquipmentDbHelper
 import com.atrainingtracker.trainingtracker.database.ExtremaType
 import com.atrainingtracker.trainingtracker.database.LapsDatabaseManager
@@ -2191,6 +2194,7 @@ class WorkoutRepository private constructor(private val application: Application
                             
                             if (isNewImportOrFinish) {
                                 PeriodsRepository.getInstance(application).onWorkoutFinished(freshWorkoutData)
+                                extractAndPersistClimbsFromWorkout(workoutId)
                             }
 
                             if (isLiveSessionFinish && freshWorkoutData.clusterId != -1L) {
@@ -2215,6 +2219,33 @@ class WorkoutRepository private constructor(private val application: Application
                 dirtyReloadWorkoutIds.remove(workoutId)
             }
         }
+    }
+
+    /**
+     * Extracts qualifying climbs from a finished or imported workout's track points
+     * and persists them to Climbs.db with 50m spatial deduplication (REQ-MAP-064.1).
+     * Refreshes LiveClimbsRepository to enable free-riding live ClimbPro.
+     */
+    suspend fun extractAndPersistClimbsFromWorkout(workoutId: Long): List<Long> = withContext(Dispatchers.IO) {
+        try {
+            val points = getWorkoutTrackPoints(workoutId, TrackType.BEST)
+            if (points.size >= 2) {
+                val detected = ClimbDetector.detectClimbs(points, routeId = null, context = application)
+                if (detected.isNotEmpty()) {
+                    val ids = ClimbsDatabaseManager.getInstance(application)
+                        .insertClimbsWithDeduplicationBatch(detected, thresholdMeters = 50.0f)
+                    try {
+                        LiveClimbsRepository.getInstance(application).refreshClimbs()
+                    } catch (e: Exception) {
+                        Log.w(TAG, "Failed to refresh LiveClimbsRepository after workout climb extraction", e)
+                    }
+                    return@withContext ids
+                }
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to extract and persist climbs for workout $workoutId", e)
+        }
+        emptyList()
     }
 
 

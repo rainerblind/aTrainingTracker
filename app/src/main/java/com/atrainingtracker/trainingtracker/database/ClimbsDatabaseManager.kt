@@ -367,5 +367,10 @@ class ClimbsDatabaseManager(
                 instance ?: ClimbsDatabaseManager(context.applicationContext).also { instance = it }
             }
         }
+
+        fun resetForTesting(newInstance: ClimbsDatabaseManager? = null) {
+            instance?.close()
+            instance = newInstance
+        }
     }
 }

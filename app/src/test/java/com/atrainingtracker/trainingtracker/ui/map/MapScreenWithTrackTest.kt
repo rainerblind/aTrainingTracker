@@ -199,4 +199,26 @@ class MapScreenWithTrackTest {
             content.contains("@Deprecated") && content.contains("fun createHeartPinMarker(")
         )
     }
+
+    @Test
+    fun testMapScreenWithTrack_climbsLayerAndClimbDetailSheetIntegration_TST_MAP_066_4() {
+        val content = resolveSourceFile("app/src/main/java/com/atrainingtracker/trainingtracker/ui/map/MapScreenWithTrack.kt").readText()
+
+        assertTrue(
+            "MapScreenWithTrack must gate climbs layer with GeneralMapLayer.CLIMBS in enabledLayers (REQ-MAP-064.4)",
+            content.contains("if (GeneralMapLayer.CLIMBS in enabledLayers)")
+        )
+        assertTrue(
+            "MapScreenWithTrack must render climbs polylines with onClimbClick callback",
+            content.contains("climbs(uiState.climbs, onClimbClick =")
+        )
+        assertTrue(
+            "MapScreenWithTrack must display ClimbDetailSheet when climb is selected",
+            content.contains("ClimbDetailSheet(")
+        )
+        assertTrue(
+            "MapScreenWithTrack must handle GeneralMapLayer.CLIMBS in layer selection menu with map_layer_climbs string",
+            content.contains("GeneralMapLayer.CLIMBS -> Pair(") && content.contains("stringResource(R.string.map_layer_climbs)")
+        )
+    }
 }

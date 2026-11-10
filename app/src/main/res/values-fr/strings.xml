@@ -1917,6 +1917,7 @@
     <string name="map_layer_locations">Lieux favoris</string>
     <string name="map_layer_track">Trace enregistrée</string>
     <string name="map_layer_clusters">Parcours favoris</string>
+    <string name="map_layer_climbs">Côtes</string>
     <string name="ant_dialog_view_status">Afficher l\'état ANT+</string>
     <string name="ant_dialog_dismiss">Compris</string>
 

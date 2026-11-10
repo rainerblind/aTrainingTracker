@@ -2136,5 +2136,46 @@
 
 **Invariants**: Zero changes to SQLite database schemas; zero UI regression in existing map tests; binary compatibility preserved for `MapUtils.kt`.
 
+### REQ-MAP-064: Workout Climb Ingestion, Spatial Deduplication & Toggleable Map Climbs Layer [Verified]
+- **Tests**: `TST-MAP-066` | **Tickets**: `ATT-2766` | **Target Release**: `V5.0.0`
+- **Implementation**: `WorkoutRepository.kt`, `GeneralMapLayer.kt`, `MapFragmentWithTrackViewModel.kt`, `MapScreenWithTrack.kt`, `MapContentScope.kt`, `LiveClimbsRepository.kt`
+- **Rationale**: Currently, `ClimbsDatabaseManager` (`Climbs.db`) is only populated when importing GPX routes in `RoutesRepository`. Athletes recording free workouts or importing historical workouts/backups have an empty `Climbs.db`, preventing Free-Riding Live ClimbPro (`LiveClimbsRepository`) from operating on conquered terrain. Furthermore, the general map screen (`MapScreenWithTrack`) lacks a toggleable layer to view stored climbs and inspect elevation profiles. The system SHALL extract qualifying climbs from recorded and imported workouts, persist them to `Climbs.db` with 50m spatial deduplication, expose a toggleable `CLIMBS` layer in `GeneralMapLayer`, render climb polylines/markers on `MapScreenWithTrack`, and open `ClimbDetailSheet` on climb tap (ATT-2766, refining `REQ-MAP-027`, `REQ-MAP-055`, and `REQ-UI-322`):
+1. *Post-Workout & Import Climb Extraction (`WorkoutRepository.kt`, `REQ-MAP-064.1`)*:
+• Upon workout completion or import (`isNewImportOrFinish` in `reloadWorkoutData`), the system SHALL retrieve the session's track points via `getWorkoutTrackPoints(workoutId, TrackType.BEST)` on `Dispatchers.IO`.
+• If `points.size >= 2`, the system SHALL detect climbs via `ClimbDetector.detectClimbs(points, routeId = null)`.
+• If qualifying climbs are detected, they SHALL be persisted to `Climbs.db` via `ClimbsDatabaseManager.insertClimbsWithDeduplicationBatch(detectedClimbs, thresholdMeters = 50.0f)`.
+• Following successful insertion, `LiveClimbsRepository.refreshClimbs()` SHALL be invoked to ensure immediate free-riding live ClimbPro awareness.
+2. *General Map Layer Model & Default Preferences (`GeneralMapLayer.kt`, `REQ-MAP-064.2`)*:
+• `enum class GeneralMapLayer` SHALL declare entry `CLIMBS` alongside `ROUTES`, `SEGMENTS`, `KNOWN_LOCATIONS`, `TRACK`, and `CLUSTERS` (total 6 entries).
+• `GeneralMapLayer.DEFAULT_ENABLED` SHALL remain `setOf(ROUTES, SEGMENTS, KNOWN_LOCATIONS, TRACK)`, strictly excluding `CLIMBS` (and `CLUSTERS`) to prevent initial visual clutter.
+• String resource `map_layer_climbs` SHALL maintain 100% parity across all 9 supported locales (values, values-de, values-es, values-fr, values-it, values-ja, values-nl, values-pl, values-pt).
+3. *ViewModel State & Dynamic Layer Gating (`MapFragmentWithTrackViewModel.kt`, `REQ-MAP-064.3`)*:
+• `MapFragmentUIState` SHALL expose `val climbs: List<Climb> = emptyList()`.
+• `MapFragmentWithTrackViewModel` SHALL observe `enabledLayers` and query `ClimbsDatabaseManager.getAllClimbs()` on `Dispatchers.IO` / `defaultDispatcher` when `GeneralMapLayer.CLIMBS in enabledLayers`. When disabled, `climbs` in `uiState` SHALL emit `emptyList()`.
+4. *Map Screen Visual Styling & Tap-to-Inspect Interaction (`MapScreenWithTrack.kt`, `MapContentScope.kt`, `REQ-MAP-064.4`)*:
+• `MapScreenWithTrack` layer menu SHALL render a toggle item for `GeneralMapLayer.CLIMBS` using `stringResource(R.string.map_layer_climbs)`.
+• In `ATrainingTrackerMap`, climb polylines SHALL only be composed when `GeneralMapLayer.CLIMBS in enabledLayers`.
+• Tapping a climb polyline or marker SHALL select the climb and open `ClimbDetailSheet(climb = selectedClimb, onDismiss = { selectedClimb = null })`.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new refinement `REQ-MAP-064` refining `REQ-MAP-027` (*ClimbPro Real-Time Live Climb Cockpit Sheet*), `REQ-MAP-055` (*Climb Engine Optimization*), and `REQ-UI-322` (*General Map Layers*).
+2. *Historical Origin & Commit Trace*: Ticket `ATT-2565` (`c7438e78`, ClimbPro), `ATT-3053` (`cf4ba98b`, ClimbDetailSheet), `ATT-5074` (`3c261ef4`, GeneralMapLayer.CLUSTERS).
+3. *Root Reason for Existing Formulation*: Climbs were originally populated exclusively from GPX route imports in `RoutesRepository`. Free-riding climb awareness was architected in `LiveClimbsRepository` but remained inactive for athletes not using GPX routes.
+4. *Preservation of Core Invariants*: 50m spatial deduplication threshold is strictly preserved; route climb associations (`routeId`) remain intact; existing layer preferences format and non-cluttering defaults (`CLIMBS` excluded from `DEFAULT_ENABLED`) are preserved.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* an athlete finishing or importing a workout containing qualifying ascents,
+• *When* post-workout processing runs in `WorkoutRepository.reloadWorkoutData`,
+• *Then* detected climbs are persisted to `Climbs.db` with 50m start/summit spatial deduplication (`routeId = null`), and `LiveClimbsRepository` refreshes its climb candidates.
+• *Given* the general map screen (`MapScreenWithTrack`),
+• *When* the user enables the `GeneralMapLayer.CLIMBS` layer,
+• *Then* stored climbs from `Climbs.db` are rendered with category-specific colors and tapping any climb opens `ClimbDetailSheet`.
+• *Given* a fresh install or unconfigured map layer preferences,
+• *When* opening `MapScreenWithTrack`,
+• *Then* `GeneralMapLayer.CLIMBS` is disabled by default, preventing initial visual map clutter.
+
+**Invariants**: `Climbs.db` SQLite schema v1 integrity; zero modification to `PathPreviewMap.kt` or `ui/clusters/*` (Lane 3 isolation); 100% test pass rate across full test suite.
+
+
 
 

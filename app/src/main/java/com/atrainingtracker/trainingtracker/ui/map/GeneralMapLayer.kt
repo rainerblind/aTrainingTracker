@@ -27,12 +27,13 @@ enum class GeneralMapLayer {
     SEGMENTS,
     KNOWN_LOCATIONS,
     TRACK,
-    CLUSTERS;
+    CLUSTERS,
+    CLIMBS;
 
     companion object {
         /**
-         * Default enabled layers for fresh installations or unconfigured preferences (REQ-UI-322).
-         * Excludes [CLUSTERS] to prevent visual map clutter until explicitly toggled by the athlete (ATT-5074).
+         * Default enabled layers for fresh installations or unconfigured preferences (REQ-UI-322, REQ-MAP-064).
+         * Excludes [CLUSTERS] and [CLIMBS] to prevent visual map clutter until explicitly toggled by the athlete (ATT-5074, ATT-2766).
          */
         @JvmField
         val DEFAULT_ENABLED: Set<GeneralMapLayer> = setOf(

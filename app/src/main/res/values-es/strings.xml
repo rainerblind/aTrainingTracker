@@ -1918,6 +1918,7 @@
     <string name="map_layer_locations">Ubicaciones favoritas</string>
     <string name="map_layer_track">Track grabado</string>
     <string name="map_layer_clusters">Rutas favoritas</string>
+    <string name="map_layer_climbs">Subidas</string>
     <string name="ant_dialog_view_status">Ver estado de ANT+</string>
     <string name="ant_dialog_dismiss">Entendido</string>
 

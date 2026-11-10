@@ -26,6 +26,8 @@ import androidx.preference.PreferenceManager
 import com.atrainingtracker.util.safeEnumValueOfOrNull
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
+import com.atrainingtracker.trainingtracker.climbs.Climb
+import com.atrainingtracker.trainingtracker.database.ClimbsDatabaseManager
 import com.atrainingtracker.trainingtracker.elevation.ElevationSource
 import com.atrainingtracker.trainingtracker.database.WorkoutClusterRepository
 import com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository
@@ -43,6 +45,7 @@ data class MapFragmentUIState(
     val segments: List<MapSegment> = emptyList(),
     val routes: List<MapRoute> = emptyList(),
     val clusters: List<MapCluster> = emptyList(),
+    val climbs: List<Climb> = emptyList(),
     val knownLocations: List<KnownLocationItem> = emptyList(),
     val markers: List<LocationMarker> = emptyList(),
     val currentTrack: List<LatLng> = emptyList(),
@@ -56,6 +59,7 @@ class MapFragmentWithTrackViewModel @JvmOverloads constructor(
     segmentsRepo: SegmentsRepository? = null,
     routesRepo: RoutesRepository? = null,
     workoutClusterRepo: WorkoutClusterRepository? = null,
+    climbsDbManager: ClimbsDatabaseManager? = null,
     prefs: SharedPreferences? = null,
     private val defaultDispatcher: CoroutineDispatcher = Dispatchers.Default
 ) : AndroidViewModel(application) {
@@ -64,6 +68,7 @@ class MapFragmentWithTrackViewModel @JvmOverloads constructor(
     private val segmentsRepository = segmentsRepo ?: SegmentsRepository.getInstance(application)
     private val routesRepository = routesRepo ?: RoutesRepository.getInstance(application)
     private val workoutClusterRepository = workoutClusterRepo ?: WorkoutClusterRepository.getInstance(application)
+    private val climbsDb = climbsDbManager ?: ClimbsDatabaseManager.getInstance(application)
     private val sharedPreferences = prefs ?: PreferenceManager.getDefaultSharedPreferences(application)
 
     private val _enabledLayers = MutableStateFlow(loadEnabledLayers())
@@ -126,10 +131,19 @@ class MapFragmentWithTrackViewModel @JvmOverloads constructor(
         }
     }.flowOn(defaultDispatcher).distinctUntilChanged()
 
+    private val mapClimbsFlow = enabledLayers.map { layers ->
+        if (GeneralMapLayer.CLIMBS !in layers) {
+            emptyList()
+        } else {
+            climbsDb.getAllClimbs()
+        }
+    }.flowOn(defaultDispatcher).distinctUntilChanged()
+
     private data class StaticMapLayers(
         val segments: List<MapSegment>,
         val routes: List<MapRoute>,
         val clusters: List<MapCluster>,
+        val climbs: List<Climb>,
         val knownLocations: List<KnownLocationItem>
     )
 
@@ -137,8 +151,9 @@ class MapFragmentWithTrackViewModel @JvmOverloads constructor(
         segmentsRepository.allSegmentsWithPath,
         mapRoutesFlow,
         mapClustersFlow,
+        mapClimbsFlow,
         knownLocationsRepository.locationsFlow
-    ) { segments, routes, clusters, knownLocations ->
+    ) { segments, routes, clusters, climbs, knownLocations ->
         StaticMapLayers(
             segments = segments.map { liveSegment ->
                 MapSegment(
@@ -151,6 +166,7 @@ class MapFragmentWithTrackViewModel @JvmOverloads constructor(
             },
             routes = routes,
             clusters = clusters,
+            climbs = climbs,
             knownLocations = knownLocations
         )
     }
@@ -178,6 +194,7 @@ class MapFragmentWithTrackViewModel @JvmOverloads constructor(
             segments = staticLayers.segments,
             routes = staticLayers.routes,
             clusters = staticLayers.clusters,
+            climbs = staticLayers.climbs,
             knownLocations = staticLayers.knownLocations,
             bSportType = bSportType,
             currentTrack = currentTrack,

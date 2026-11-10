@@ -21,6 +21,9 @@ package com.atrainingtracker.trainingtracker.ui.map
 import android.app.Application
 import android.content.SharedPreferences
 import com.atrainingtracker.banalservice.BSportType
+import com.atrainingtracker.trainingtracker.climbs.Climb
+import com.atrainingtracker.trainingtracker.climbs.ClimbCategory
+import com.atrainingtracker.trainingtracker.database.ClimbsDatabaseManager
 import com.atrainingtracker.trainingtracker.database.WorkoutCluster
 import com.atrainingtracker.trainingtracker.database.WorkoutClusterRepository
 import com.atrainingtracker.trainingtracker.elevation.ElevationSource
@@ -109,7 +112,10 @@ class MapFragmentWithTrackViewModelTest {
         clearAllMocks()
     }
 
-    private fun createViewModel(prefs: SharedPreferences? = null): MapFragmentWithTrackViewModel {
+    private fun createViewModel(
+        prefs: SharedPreferences? = null,
+        climbsDbManager: ClimbsDatabaseManager? = null
+    ): MapFragmentWithTrackViewModel {
         return MapFragmentWithTrackViewModel(
             application = mockApplication,
             knownLocationsRepository = mockKnownLocationsRepository,
@@ -117,6 +123,7 @@ class MapFragmentWithTrackViewModelTest {
             segmentsRepo = mockSegmentsRepository,
             routesRepo = mockRoutesRepository,
             workoutClusterRepo = mockWorkoutClusterRepository,
+            climbsDbManager = climbsDbManager,
             prefs = prefs,
             defaultDispatcher = testDispatcher
         )
@@ -160,6 +167,40 @@ class MapFragmentWithTrackViewModelTest {
         assertEquals(200, viewModel.uiState.value.knownLocations[0].radius)
         assertEquals("Park", viewModel.uiState.value.knownLocations[1].name)
         assertEquals(150, viewModel.uiState.value.knownLocations[1].radius)
+    }
+
+    @Test
+    fun testUiState_combinesClimbsFlow() = runTest {
+        val mockClimbsDb = mockk<ClimbsDatabaseManager>(relaxed = true)
+        val sampleClimbs = listOf(
+            Climb(
+                id = 101L,
+                name = "Col du Galibier",
+                startLat = 45.06,
+                startLng = 6.40,
+                endLat = 45.06,
+                endLng = 6.41,
+                distanceMeters = 8500.0,
+                elevationGainMeters = 585.0,
+                avgGradePercent = 6.9,
+                maxGradePercent = 10.1,
+                category = ClimbCategory.CAT_1
+            )
+        )
+        io.mockk.coEvery { mockClimbsDb.getAllClimbs() } returns sampleClimbs
+
+        val mockPrefs = mockk<SharedPreferences>(relaxed = true)
+        every { mockPrefs.getStringSet(MapFragmentWithTrackViewModel.PREF_GENERAL_MAP_ENABLED_LAYERS, null) } returns setOf("CLIMBS")
+
+        val viewModel = createViewModel(prefs = mockPrefs, climbsDbManager = mockClimbsDb)
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            viewModel.uiState.collect()
+        }
+
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertEquals(1, viewModel.uiState.value.climbs.size)
+        assertEquals("Col du Galibier", viewModel.uiState.value.climbs[0].name)
     }
 
     @Test
