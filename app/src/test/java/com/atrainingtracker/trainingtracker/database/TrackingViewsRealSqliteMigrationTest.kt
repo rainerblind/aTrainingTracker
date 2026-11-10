@@ -925,8 +925,12 @@ class TrackingViewsRealSqliteMigrationTest {
             "TrackingViews.db version 18 must be supported",
             com.atrainingtracker.trainingtracker.migration.DatabaseSchemaRegistry.isVersionSupported("TrackingViews.db", 18)
         )
+        assertTrue(
+            "TrackingViews.db version 19 must be supported",
+            com.atrainingtracker.trainingtracker.migration.DatabaseSchemaRegistry.isVersionSupported("TrackingViews.db", 19)
+        )
         assertEquals(
-            18,
+            TrackingViewsDbHelper.DB_VERSION,
             com.atrainingtracker.trainingtracker.migration.DatabaseSchemaRegistry.getMaxSupportedVersion("TrackingViews.db")
         )
 

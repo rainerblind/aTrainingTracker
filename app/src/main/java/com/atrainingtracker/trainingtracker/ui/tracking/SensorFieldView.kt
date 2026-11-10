@@ -354,6 +354,7 @@ fun SensorFieldView(
                     fieldState.pedalBalanceState != null ||
                     fieldState.wPrimeBatteryState != null
                 )
+                val hasActiveVisual = hasActiveBar || fieldState.showGraph
 
                 Column(
                     modifier = Modifier
@@ -362,7 +363,7 @@ fun SensorFieldView(
                     verticalArrangement = Arrangement.Center
                 ) {
                     // Value and Unit Row, centered (REQ-TRK-046, REQ-TRK-046.3 empty-tile fallback)
-                    if (fieldState.showValue || !hasActiveBar) {
+                    if (fieldState.showValue || !hasActiveVisual) {
                         Row(
                             horizontalArrangement = Arrangement.Center,
                             verticalAlignment = Alignment.Bottom,
@@ -423,6 +424,31 @@ fun SensorFieldView(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(horizontal = 4.dp)
+                        )
+                    }
+
+                    // Optional Live Sparkline Graph (REQ-TRK-059, ATT-1294)
+                    if (fieldState.showGraph) {
+                        Spacer(modifier = Modifier.height(4.dp))
+                        val sparklineLineColor = if (fieldState.zoneColor != Color.Transparent && fieldState.zoneDisplayOptions.showTextColor) {
+                            fieldState.zoneColor
+                        } else {
+                            MaterialTheme.colorScheme.primary
+                        }
+                        SensorSparklineView(
+                            samples = fieldState.sparklineSamples,
+                            lineColor = sparklineLineColor,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .then(
+                                    if (!fieldState.showValue) {
+                                        Modifier.weight(1f).padding(horizontal = 4.dp, vertical = 2.dp)
+                                    } else {
+                                        Modifier
+                                            .height(resolveSparklineHeight(fieldState.viewSize, isGraphOnly = false))
+                                            .padding(horizontal = 4.dp)
+                                    }
+                                )
                         )
                     }
                 }

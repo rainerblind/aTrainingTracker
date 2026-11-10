@@ -3,7 +3,7 @@
 **Domain**: `tracking_cockpit`  
 **Prefixes**: `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA`  
 **Scope**: Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle.  
-**Total Tests**: 54
+**Total Tests**: 55
 
 ---
 
@@ -1686,6 +1686,27 @@
   • Verify zero Compose `MutableState` snapshot writes occur inside composition (`Rule 66`).
   5. *Clean-Room Targeted Test Suite Execution (`TST-TRK-058.5`)*:
   • Execute targeted package tests (`com.atrainingtracker.banalservice.devices.*`, `com.atrainingtracker.banalservice.sensor.*`, `com.atrainingtracker.trainingtracker.ui.tracking.*`) asserting 100% pass rate.
+
+### TST-TRK-059: **Live Sparkline Graph Cockpit Tiles & Database Migration Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-TRK-059`
+- **Component**: `TrackingViewsDatabaseManager.java`, `TrackingViewsDbHelper.java`, `SensorFieldView.kt`, `EditSensorFieldDialog.kt`, `LiveSparklineBuffer.kt`, `SensorSparklineView.kt`
+- **Jira**: `ATT-1294`
+- **Test Description**:
+  1. *Database Schema v19 Migration & Default Column Integrity Unit Test (`TST-TRK-059.1`, `TrackingViewsDbMigrationV19Test.kt`)*:
+  • Execute SQLite schema migration from version 18 to 19; assert `ShowGraph` and `GraphHorizonS` columns exist on `ROWS_TABLE` with default values `0` and `300`.
+  • Verify existing user tile layouts in `ROWS_TABLE` remain intact after migration.
+  2. *Numeric Metric Support Gating Unit Test (`TST-TRK-059.2`, `TrackingViewsSparklineSupportTest.kt`)*:
+  • Verify `TrackingViewsDbHelper.isGraphSupported(sensorType)` returns `true` for all numeric metrics (HR, Speed, Cadence, Power, W/kg, NP, IF, Altitude, Ascent, Descent, Slope, Temp, Battery).
+  • Verify `isGraphSupported` returns `false` for string sensors (ACCUMULATED_SENSORS, SENSORS, TIME_OF_DAY), timers (TIME_TOTAL, TIME_ACTIVE, TIME_LAP, LAP_NR), and coordinates (LATITUDE, LONGITUDE).
+  3. *Live Sparkline Buffer & Decimation Unit Test (`TST-TRK-059.3`, `LiveSparklineBufferTest.kt`)*:
+  • Verify fixed-capacity ring buffer sliding and eviction for time horizons 1m (60s), 2m (120s), 5m (300s), 10m (600s), 20m (1200s), and 1h (3600s).
+  • Verify Full Workout ($0\text{s}$) dynamic decimation maintains $\le 300$ samples without unbounded growth during multi-hour workouts.
+  4. *Edit Dialog Selector & Horizon UI Contract Test (`TST-TRK-059.4`, `EditSensorFieldDialogSparklineTest.kt`)*:
+  • Verify `Graph` filter chip in `DisplayElementsSelector` is conditionally displayed based on `isGraphSupported`.
+  • Verify selection of 7 duration horizons and full 9-language localization parity in `strings_cockpit.xml`.
+  5. *Clean-Room Targeted Test Suite Execution (`TST-TRK-059.5`)*:
+  • Execute targeted package tests (`com.atrainingtracker.trainingtracker.database.*`, `com.atrainingtracker.trainingtracker.ui.tracking.*`) asserting 100% pass rate.
+
 
 
 

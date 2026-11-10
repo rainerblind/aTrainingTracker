@@ -39,4 +39,15 @@
 
     <string name="mmp_curve">Krzywa średniej mocy maksymalnej</string>
     <string name="mmp_curve_short">MMP</string>
+
+    <!-- Cockpit Live Sparkline Graph & Time Horizon (REQ-TRK-059, ATT-1294) -->
+    <string name="sensor_field_show_graph">Wykres</string>
+    <string name="sensor_field_graph_horizon">Horyzont czasowy</string>
+    <string name="graph_horizon_1m">1 min</string>
+    <string name="graph_horizon_2m">2 min</string>
+    <string name="graph_horizon_5m">5 min</string>
+    <string name="graph_horizon_10m">10 min</string>
+    <string name="graph_horizon_20m">20 min</string>
+    <string name="graph_horizon_1h">1 godzina</string>
+    <string name="graph_horizon_full">Cały trening</string>
 </resources>

@@ -3,7 +3,7 @@
 **Domain**: `tracking_cockpit`  
 **Prefixes**: `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA`  
 **Scope**: Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle.  
-**Total Requirements**: 84
+**Total Requirements**: 85
 
 ---
 
@@ -3029,6 +3029,50 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 • *Then* the chart plots power on a logarithmic duration axis with callout markers for 5s, 1m, 5m, and 20m, producing zero recomposition churn (`Rule 66`).
 
 **Invariants**: Existing power telemetry (`POWER`, `NP`, `IF`, `WORK_KJ`, `TSS`, `W_PRIME_BAL`) preserved; pause freeze integrity; 100% 9-language translation parity; zero composition snapshot state writes.
+
+### REQ-TRK-059: Configurable Live Sparkline Graph Cockpit Tiles with Selectable Time Horizon Across Numeric SensorTypes [Verified]
+- **Tests**: `TST-TRK-059` | **Tickets**: `ATT-1294`
+- **Implementation**: `TrackingViewsDatabaseManager.java`, `TrackingViewsDbHelper.java`, `SensorFieldView.kt`, `EditSensorFieldDialog.kt`, `LiveSparklineBuffer.kt`, `SensorSparklineView.kt`
+- **Rationale**: Athletes monitoring live telemetry benefit from seeing dynamic temporal trends (whether metric values are rising, steady, or falling) directly within cockpit tiles. Generalizing sparkline visualization across all numeric sensor types with configurable time horizons (1m to Full Workout) enhances tactical pacing without increasing cognitive load or battery drain (ATT-1294, Parent Epic ATT-5908, extending `REQ-TRK-046` and `REQ-UI-436`).
+- **Description**:
+1. *Database Schema v19 Persistence & Migration (`REQ-TRK-059.1`)*:
+• In `TrackingViewsDatabaseManager.java`, the SQLite schema SHALL increment to `DB_VERSION = 19`, introducing integer columns `ShowGraph` (default `0`) and `GraphHorizonS` (default `300` for 5 minutes) to `ROWS_TABLE`.
+• `onUpgrade` from v18 SHALL execute `ALTER TABLE ROWS_TABLE ADD COLUMN ShowGraph INTEGER DEFAULT 0` and `ALTER TABLE ROWS_TABLE ADD COLUMN GraphHorizonS INTEGER DEFAULT 300`, guaranteeing 100% backward compatibility and preserving existing user tile layouts.
+2. *Numeric SensorType Sparkline Eligibility Gating (`REQ-TRK-059.2`)*:
+• `TrackingViewsDbHelper.isGraphSupported(sensorType)` SHALL evaluate to `true` for all numeric continuous and integer metrics (`DOUBLE` / `INTEGER` value types).
+• It SHALL evaluate to `false` for string diagnostics (`ACCUMULATED_SENSORS`, `SENSORS`, `TIME_OF_DAY`), elapsed timers/lap numbers (`TIME_TOTAL`, `TIME_ACTIVE`, `TIME_LAP`, `LAP_NR`), and geographic coordinate pairs (`LATITUDE`, `LONGITUDE`).
+3. *Edit Dialog Presentation & Time Horizon Configuration (`REQ-TRK-059.3`)*:
+• In `EditSensorFieldDialog.kt`, when `isGraphSupported` is true, the `DisplayElementsSelector` SHALL offer a `Graph` filter chip in addition to `Value` and `Bar`.
+• A dedicated `Time Horizon` selector SHALL allow choosing among 7 discrete durations: 1m (60s), 2m (120s), 5m (300s), 10m (600s), 20m (1200s), 1h (3600s), and Full Workout (0s sentinel).
+4. *Live Sparkline Buffer Engine & Bounded Memory (`REQ-TRK-059.4`)*:
+• The system SHALL maintain a lightweight time-series buffer (`LiveSparklineBuffer`) per active graph tile.
+• Fixed horizons (1m–1h) SHALL operate as circular ring buffers of capacity $W$ samples at 1Hz; Full Workout SHALL apply pairwise decimation when buffer size exceeds 300 samples, guaranteeing $O(1)$ sample additions and bounded memory ($\le 1\text{ KB}$ per tile).
+5. *Tile Sparkline Rendering & Composition Hygiene (`REQ-TRK-059.5`)*:
+• `SensorFieldView.kt` SHALL render `SensorSparklineView` below metric values in Value+Graph mode, or full-card in Graph-only mode (`showValue == false && showGraph == true`).
+• Sparkline rendering SHALL adhere strictly to Rule 66 (zero Compose snapshot-state mutations inside composition) and use centralized colors from `MaterialTheme.colorScheme`.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-TRK-059`, extending `REQ-TRK-046` (`ShowValue`/`ShowBar` display elements) and `REQ-UI-436` (Bar-only mode). Targets `TrackingViewsDatabaseManager.java`, `SensorFieldView.kt`, and `EditSensorFieldDialog.kt`.
+2. *Historical Origin & Commit Trace*: `ATT-4841` introduced `SHOW_VALUE` and `SHOW_BAR` in DB v16; `ATT-4927` added sport-dependent bar gating in DB v18.
+3. *Root Reason for Existing Formulation*: Prior tickets focused exclusively on zone gauge bars and pedal balance bars. General continuous time-series sparklines were deferred to live cockpit UX.
+4. *Preservation of Core Invariants*: Existing tile layouts, `showValue`, `showBar`, and view size scaling remain 100% preserved. Database migrations preserve existing user layouts.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* an existing user upgrading from DB schema v18,
+• *When* the database opens,
+• *Then* `onUpgrade` adds `ShowGraph` (default 0) and `GraphHorizonS` (default 300) without data loss or layout corruption.
+• *Given* an athlete configuring a tile with `SensorType.HR` or `SensorType.POWER`,
+• *When* opening `EditSensorFieldDialog`,
+• *Then* `Graph` is selectable and the time horizon selector displays 7 duration options.
+• *Given* an athlete configuring `SensorType.TIME_ACTIVE` or `SensorType.LATITUDE`,
+• *When* opening `EditSensorFieldDialog`,
+• *Then* `Graph` is hidden and `isGraphSupported` returns false.
+• *Given* an active workout tile with `showGraph == true` and 5m horizon,
+• *When* telemetry updates at 1Hz,
+• *Then* `LiveSparklineBuffer` maintains a 300-sample sliding window and `SensorSparklineView` renders the trend line without recomposition churn (`Rule 66`).
+
+**Invariants**: Existing display element flags (`showValue`, `showBar`) and gauge bar rendering preserved; 100% 9-language translation parity in `strings_cockpit.xml`; database upgrade idempotency.
+
 
 
 

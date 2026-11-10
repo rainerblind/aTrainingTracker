@@ -535,8 +535,8 @@ class TrackingViewsDatabaseManagerTest {
     }
 
     @Test
-    fun testDatabaseVersionIs18() {
-        assertEquals(18, TrackingViewsDatabaseManager.TrackingViewsDbHelper.DB_VERSION)
+    fun testDatabaseVersionIs19() {
+        assertEquals(19, TrackingViewsDatabaseManager.TrackingViewsDbHelper.DB_VERSION)
     }
 
     @Test

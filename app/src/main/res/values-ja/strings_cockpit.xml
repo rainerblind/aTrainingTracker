@@ -39,4 +39,15 @@
 
     <string name="mmp_curve">平均最大パワー曲線</string>
     <string name="mmp_curve_short">MMP</string>
+
+    <!-- Cockpit Live Sparkline Graph & Time Horizon (REQ-TRK-059, ATT-1294) -->
+    <string name="sensor_field_show_graph">グラフ</string>
+    <string name="sensor_field_graph_horizon">タイムホライズン</string>
+    <string name="graph_horizon_1m">1分</string>
+    <string name="graph_horizon_2m">2分</string>
+    <string name="graph_horizon_5m">5分</string>
+    <string name="graph_horizon_10m">10分</string>
+    <string name="graph_horizon_20m">20分</string>
+    <string name="graph_horizon_1h">1時間</string>
+    <string name="graph_horizon_full">ワークアウト全体</string>
 </resources>
