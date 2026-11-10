@@ -15,9 +15,9 @@ Living test specifications use multi-line Markdown headings (`### TST-XXX: Title
 | [UI Components & Design System](tests/tst_ui_design_system.md) | Jetpack Compose design system, UI components, typography, dialogs, gestures, and layout contracts. | `UI`, `UNT` | 455 | 455 | 0 |
 | [Engineering Process, Stability & Architecture](tests/tst_process_stability.md) | ASPICE governance, infinite context, crash stability, build architecture, security, and developer tools. | `ARC`, `BLD`, `BUG`, `INT`, `LIV`, `LOG`, `MAN`, `NFR`, `PRO`, `REG`, `SEC`, `STB`, `STR`, `TOOL`, `TST` | 122 | 122 | 0 |
 | [Jubilee Milestones & App Reviews](tests/tst_aftermath_reviews.md) | Milestone workout auto-naming, jubilee achievements, Google Play in-app reviews, athlete feedback, and supporter tier promotions. | `REV` | 13 | 13 | 0 |
-| [Project Governance & Store Presence](tests/tst_project_governance.md) | Store presence, Google Play listings, screenshots, store metadata contract testing, and release governance. | `STP` | 6 | 6 | 0 |
+| [Project Governance & Store Presence](tests/tst_project_governance.md) | Store presence, Google Play listings, screenshots, store metadata contract testing, and release governance. | `STP` | 7 | 7 | 0 |
 
-**Total Living Tests**: 990 across 9 domain shards.
+**Total Living Tests**: 991 across 9 domain shards.
 
 ---
 

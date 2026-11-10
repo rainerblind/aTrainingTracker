@@ -28,7 +28,7 @@ import java.io.File
  * Detekt static analysis, Kover code coverage gating, CI integrity, and instrumented androidTest
  * infrastructure with emulator CI runner (REQ-BLD-002, TST-BLD-002, REQ-PRO-042,
  * TST-PRO-042, REQ-PRO-046, TST-PRO-046, REQ-PRO-047, TST-PRO-047, REQ-PRO-048, TST-PRO-048,
- * REQ-PRO-051, TST-PRO-051, ATT-6171, ATT-6175, ATT-6184).
+ * REQ-PRO-051, TST-PRO-051, REQ-STP-007, TST-STP-007, ATT-6153, ATT-6171, ATT-6175, ATT-6184).
  */
 class ReleaseCiAndLintConfigContractTest {
 
@@ -57,6 +57,12 @@ class ReleaseCiAndLintConfigContractTest {
 
     private fun findLintBaselineFile(): File =
         findRepoRootFile("app/lint-baseline.xml", "lint-baseline.xml")
+
+    private fun findRepoRootDir(): File {
+        val candidates = listOf(File("."), File(".."), File("../.."))
+        return candidates.firstOrNull { File(it, "settings.gradle").exists() }
+            ?: File(".")
+    }
 
     private fun findRootBuildGradleFile(): File =
         listOf(File("build.gradle"), File("../build.gradle")).firstOrNull {
@@ -473,5 +479,41 @@ class ReleaseCiAndLintConfigContractTest {
             "AppSmokeAndroidTest must contain test methods (REQ-PRO-051.2)",
             content.contains("@Test")
         )
+    }
+
+    /**
+     * Asserts that legacy transient process artifacts are excised from the repository root
+     * and that .gitignore explicitly ignores them (REQ-STP-007, TST-STP-007, ATT-6153).
+     */
+    @Test
+    fun testRepositoryHygiene_noStaleProcessArtifactsAndGitignoreCovered() {
+        val repoRoot = findRepoRootDir()
+        val staleArtifacts = listOf(
+            ".active_task.json",
+            "implementation_plan.artifact.md",
+            ".artifacts"
+        )
+        for (stale in staleArtifacts) {
+            val file = File(repoRoot, stale)
+            assertFalse(
+                "Stale process artifact '$stale' must not exist in repository root (REQ-STP-007.1, TST-STP-007.1)",
+                file.exists()
+            )
+        }
+
+        val gitignoreFile = findRepoRootFile(".gitignore", "../.gitignore")
+        val gitignoreContent = gitignoreFile.readText()
+        val requiredPatterns = listOf(
+            ".active_task.json",
+            ".artifacts/",
+            "*.artifact.md",
+            ".reviews/"
+        )
+        for (pattern in requiredPatterns) {
+            assertTrue(
+                ".gitignore must include '$pattern' (REQ-STP-007.2, TST-STP-007.2)",
+                gitignoreContent.lines().any { it.trim() == pattern }
+            )
+        }
     }
 }

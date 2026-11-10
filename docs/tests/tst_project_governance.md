@@ -85,3 +85,20 @@
   4. *JUnit 4 Build Contract Suite (`TST-STP-006.4`)*:
   • Execute `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.build.PromoVideoAssetsContractTest"` asserting 100% pass rate in CI.
 
+### TST-STP-007: Stale Process Artifacts Excision & Gitignore Hygiene Contract Test [Verified]
+- **Requirement(s)**: `REQ-STP-007`
+- **Component**: `.gitignore`, `ReleaseCiAndLintConfigContractTest.kt`, `AspiceSweAuditContractTest.kt`
+- **Jira**: `ATT-6153`
+- **Test Description**:
+  1. *Stale Artifact Absence Audit (`TST-STP-007.1`)*:
+     • Verify that `.active_task.json`, `implementation_plan.artifact.md`, and `.artifacts/` do not exist in the repository root or on disk.
+     • Verify that git tracking contains zero entries for `.active_task.json`, `implementation_plan.artifact.md`, or `.artifacts/`.
+  2. *.gitignore Pattern Enforcement (`TST-STP-007.2`)*:
+     • Inspect `.gitignore` at repository root.
+     • Assert presence of ignore rules for `.active_task.json`, `.artifacts/`, `*.artifact.md`, and `.reviews/`.
+  3. *Canonical Directory Governance Verification (`TST-STP-007.3`)*:
+     • Execute `python3 tools/verify_requirement_governance.py` and verify exit code 0, confirming zero non-canonical directories under `docs/engineering/`.
+  4. *Build Contract Suite Execution (`TST-STP-007.4`)*:
+     • Execute `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.build.*"` asserting 100% pass rate in CI.
+
+
