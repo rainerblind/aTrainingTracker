@@ -128,19 +128,27 @@ object RadarLightController {
         return RadarLightMode.getAvailableModes(_isStvzo.value)
     }
 
+    private fun resolveSafeDataStoreContext(context: Context?): Context? {
+        return try {
+            val appCtx = context?.applicationContext ?: context ?: return null
+            val dir = appCtx.filesDir ?: return null
+            if (dir.path.isEmpty()) null else appCtx
+        } catch (_: Throwable) {
+            null
+        }
+    }
+
     /**
      * Workout start hook (REQ-CON-031.4): turns on tail light if auto-switch is enabled.
      *
-     * Guards against unit test contexts with null `filesDir` to prevent unmocked coroutine crashes.
+     * Guards against unit test contexts with unmocked or stub `filesDir` to prevent coroutine crashes.
      */
     @JvmStatic
     fun onWorkoutStarted(context: Context?) {
-        if (context == null || context.filesDir == null) {
-            return
-        }
+        val appCtx = resolveSafeDataStoreContext(context) ?: return
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                val dataStore = TuningPreferencesDataStore.getInstance(context.applicationContext)
+                val dataStore = TuningPreferencesDataStore.getInstance(appCtx)
                 val config = dataStore.tuningConfigFlow.first()
                 if (config.radarAutoLightControl) {
                     val mode = config.radarLightDefaultMode
@@ -155,16 +163,14 @@ object RadarLightController {
     /**
      * Workout finish/stop hook (REQ-CON-031.4): reverts tail light to OFF if auto-switch is enabled.
      *
-     * Guards against unit test contexts with null `filesDir` to prevent unmocked coroutine crashes.
+     * Guards against unit test contexts with unmocked or stub `filesDir` to prevent coroutine crashes.
      */
     @JvmStatic
     fun onWorkoutStopped(context: Context?) {
-        if (context == null || context.filesDir == null) {
-            return
-        }
+        val appCtx = resolveSafeDataStoreContext(context) ?: return
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                val dataStore = TuningPreferencesDataStore.getInstance(context.applicationContext)
+                val dataStore = TuningPreferencesDataStore.getInstance(appCtx)
                 val config = dataStore.tuningConfigFlow.first()
                 if (config.radarAutoLightControl) {
                     setLightMode(RadarLightMode.OFF)
