@@ -3,7 +3,7 @@
 **Domain**: `process_stability`  
 **Prefixes**: `ARC`, `BLD`, `BUG`, `INT`, `LIV`, `LOG`, `MAN`, `NFR`, `PRO`, `REG`, `SEC`, `STB`, `STR`, `TOOL`, `TST`  
 **Scope**: ASPICE governance, infinite context, crash stability, build architecture, security, and developer tools.  
-**Total Requirements**: 78
+**Total Requirements**: 79
 
 ---
 
@@ -2656,6 +2656,40 @@ The workflow SHALL mandate that:
   • *Given* `SystemContextContractTest.kt`,
   • *When* executed in the unit test suite,
   • *Then* all contract assertions SHALL pass with 100% success.
+- **Invariants**: Zero modifications to Android production runtime code in `app/src/main/`; 100% unit test pass rate.
+
+
+### REQ-PRO-054: System Requirements for Live Tracking with Sensors [Verified]
+- **Tests**: `TST-PRO-054` | **Tickets**: `ATT-6160`
+- **Implementation**: `docs/system/sysreq_live_tracking.md`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/SystemLiveTrackingRequirementsContractTest.kt`
+- **Rationale**: ASPICE 4.0 pre-assessment finding S-02 (SYS.2 BP1-BP3) identified that aTrainingTracker lacks formal system-level requirements (`SYSREQ-*`) specifying the end-to-end behavior of the mobile tracking system with external wireless sensors and GNSS positioning. While individual software classes exist, end-to-end system capabilities—multi-sensor acquisition, exponential backoff reconnection, 1-Hz deterministic sampling, GNSS positioning, foreground execution, power governance, and real-time sensory alerts—are not formally specified independent of software design. Specifying these capabilities in `docs/system/sysreq_live_tracking.md` and verifying code grounding via contract tests closes this ASPICE CL2 gap (ATT-6160, refining `REQ-PRO-043` under Epic `ATT-6142`):
+- **Description**:
+  1. *System Requirements Specification (`REQ-PRO-054.1`, docs/system/sysreq_live_tracking.md)*:
+     • `docs/system/sysreq_live_tracking.md` SHALL specify the authoritative system-level requirements for live endurance tracking:
+       - `SYSREQ-TRK-001` (Multi-Sensor Acquisition & Profile Interoperability): The system SHALL concurrently discover, pair, and acquire real-time telemetry from external BLE GATT profiles (Heart Rate `0x180D`, Cycling Speed & Cadence `0x1816`, Cycling Power `0x1818`, Running Speed & Cadence `0x1814`, Garmin Varia Radar `6a4e3200...`, Battery `0x180F`) and ANT+ sports profiles (`com.dsi.ant.plugins.antplus`).
+       - `SYSREQ-TRK-002` (Automatic Reconnection & Exponential Backoff Resilience): Upon peripheral signal loss during active tracking, the system SHALL automatically attempt reconnection starting with an initial delay of 1,000 ms, exponentially doubling up to a maximum delay of 16,000 ms, with a 3.5 s starvation watchdog on safety-critical radar telemetry, without blocking the 1-Hz tracking pipeline or corrupting recorded session data.
+       - `SYSREQ-TRK-003` (Deterministic 1-Hz Technical Sampling Loop & Time-Series Recording): During active tracking, the system SHALL execute a periodic fixed-rate 1-Hz technical sampling tick, aggregating all latest sensor readings, computing physiological/spatial metrics, and persisting time-series samples to local SQLite storage.
+       - `SYSREQ-TRK-004` (Multi-Source GNSS Acquisition & Position Telemetry): The system SHALL support both hardware GNSS (`LocationManager.GPS_PROVIDER`) and fused location (`FusedLocationProviderClient`) updates, applying accuracy thresholds and geospatial distance accumulation.
+       - `SYSREQ-TRK-005` (Foreground Service Execution & Power Management): The system SHALL execute live tracking inside an Android Foreground Service (`TrackerService`) holding a partial WakeLock (`PowerManager.PARTIAL_WAKE_LOCK`), requesting battery optimization exemptions, and declaring runtime-governed foreground service types (`LOCATION`, `HEALTH`, `CONNECTED_DEVICE`).
+       - `SYSREQ-TRK-006` (Real-Time Sensory Alerts & Cockpit Feedback): The system SHALL surface live metrics, threshold alerts, radar threat visual/audio warnings, and GPS lock state across Compose UI cockpit tiles, notification channels, and acoustic cues.
+     • Each `SYSREQ-TRK-*` entry SHALL document: Requirement ID, Title, Formal Statement (`SHALL`/`MUST`), Rationale, Priority, Verification Method, and Traced Software Components.
+  2. *System Requirements Contract Testing & Code Grounding (`REQ-PRO-054.2`)*:
+     • `SystemLiveTrackingRequirementsContractTest.kt` under `app/src/test/.../build/` SHALL assert:
+       - `docs/system/sysreq_live_tracking.md` exists and contains all 6 `SYSREQ-TRK-*` requirements.
+       - Each requirement specifies non-empty ID, Title, Statement, Rationale, Priority, Verification Method, and Traced Software Components.
+       - Code grounding assertions verifying BLE UUIDs in `BluetoothConstants.java`, reconnect delays in `MyBTLEDevice.java` (`INITIAL_RECONNECT_DELAY_MS = 1000L`, `MAX_RECONNECT_DELAY_MS = 16000L`), radar watchdog in `BTLERadarDevice.java` (`WATCHDOG_TIMEOUT_MS = 3500L`), and 1-Hz loop in `TrackerService.java`.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Net-new requirement `REQ-PRO-054` (*System Requirements for Live Tracking with Sensors*), establishing ASPICE SYS.2 BP1-BP3 baseline under Parent Epic ATT-6142. Targets `docs/system/sysreq_live_tracking.md` and `SystemLiveTrackingRequirementsContractTest.kt`.
+  2. *Historical Origin & Commit Trace*: Independent ASPICE pre-assessment finding S-02 (2026-11-08) and ticket ATT-6160.
+  3. *Root Reason for Existing Formulation*: System previously relied on software architecture without explicit black-box system specifications separating functional/timing expectations from software implementation.
+  4. *Preservation of Core Invariants*: Zero runtime code changes; 1-Hz sampling loop, SQLite persistence, and battery governance remain 100% unaltered.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* `docs/system/sysreq_live_tracking.md`,
+  • *When* inspected,
+  • *Then* it SHALL specify all 6 `SYSREQ-TRK-*` requirements with complete attributes and rationale.
+  • *Given* `SystemLiveTrackingRequirementsContractTest.kt`,
+  • *When* executed in the unit test suite,
+  • *Then* all structural and code-grounding assertions SHALL pass with 100% success.
 - **Invariants**: Zero modifications to Android production runtime code in `app/src/main/`; 100% unit test pass rate.
 
 

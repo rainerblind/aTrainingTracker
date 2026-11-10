@@ -3,7 +3,7 @@
 **Domain**: `process_stability`  
 **Prefixes**: `ARC`, `BLD`, `BUG`, `INT`, `LIV`, `LOG`, `MAN`, `NFR`, `PRO`, `REG`, `SEC`, `STB`, `STR`, `TOOL`, `TST`  
 **Scope**: ASPICE governance, infinite context, crash stability, build architecture, security, and developer tools.  
-**Total Tests**: 107
+**Total Tests**: 108
 
 ---
 
@@ -1639,6 +1639,24 @@
   • Assert that Runkeeper and TrainingPeaks are explicitly tagged as decommissioned.
   3. *Clean-Room Targeted Test Suite Execution (`TST-PRO-053.3`)*:
   • Execute targeted unit test suite `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.build.SystemContextContractTest"` asserting 100% pass rate.
+
+
+### TST-PRO-054: **System Requirements for Live Tracking Contract Test Suite** [Verified]
+- **Requirement(s)**: `REQ-PRO-054`
+- **Component**: `docs/system/sysreq_live_tracking.md`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/SystemLiveTrackingRequirementsContractTest.kt`
+- **Jira**: `ATT-6160`
+- **Test Description**:
+  1. *Specification Structure & SYSREQ Coverage Verification (`TST-PRO-054.1`, `SystemLiveTrackingRequirementsContractTest.kt`)*:
+  • Read `docs/system/sysreq_live_tracking.md`.
+  • Assert that the document exists and contains all 6 requirements (`SYSREQ-TRK-001` through `SYSREQ-TRK-006`).
+  • Assert that each requirement contains non-empty sections for Rationale, Priority, Verification Method, and Traced Software Components.
+  2. *Code Grounding & Timing Constants Verification (`TST-PRO-054.2`, `SystemLiveTrackingRequirementsContractTest.kt`)*:
+  • Assert that BLE GATT profiles defined in `SYSREQ-TRK-001` match UUIDs in `BluetoothConstants.java`.
+  • Assert that reconnection delays in `SYSREQ-TRK-002` match `MyBTLEDevice.INITIAL_RECONNECT_DELAY_MS` (1,000 ms) and `MAX_RECONNECT_DELAY_MS` (16,000 ms).
+  • Assert that radar starvation watchdog matches `BTLERadarDevice.WATCHDOG_TIMEOUT_MS` (3,500 ms).
+  • Assert that 1-Hz technical sampling tick matches `TrackerService` 1,000 ms period.
+  3. *Clean-Room Targeted Test Suite Execution (`TST-PRO-054.3`)*:
+  • Execute targeted unit test suite `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.build.SystemLiveTrackingRequirementsContractTest"` asserting 100% pass rate.
 
 
 
