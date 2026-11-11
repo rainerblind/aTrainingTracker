@@ -312,7 +312,7 @@ fun AdvancedTuningDialog(
             TuningAccordionSection(
                 icon = Icons.Default.MonitorHeart, title = stringResource(R.string.tuning_cat_physiology_models),
                 subtitle = TuningSubtitleFormatter.formatPhysiologyModelsSubtitle(
-                    enableCogganPowerMetrics, enablePmcModel, enableAerobicEfficiencyModel, enableCriticalPowerModel, context
+                    enableCogganPowerMetrics, enablePmcModel, enableAerobicEfficiencyModel, enableCriticalPowerModel, enableCardioPowerDynamics, context
                 ),
                 isExpanded = isSectionExpanded(TuningSection.PHYSIOLOGY_MODELS), onToggle = { toggleSection(TuningSection.PHYSIOLOGY_MODELS) }
             ) {

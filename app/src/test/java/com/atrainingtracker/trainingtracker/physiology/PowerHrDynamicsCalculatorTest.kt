@@ -232,4 +232,65 @@ class PowerHrDynamicsCalculatorTest {
             assertEquals(primitiveResult[i], checkNotNull(listResult[i]), 0.0001)
         }
     }
+
+    @Test
+    fun testFilterWarmUpContinuity() {
+        val tau = 40.0
+        val hr0 = 80.0
+        val k = 0.25
+        val n = 3600
+
+        // In minutes 0-8 (0..479s), athlete warms up at low power (100W)
+        // From minute 8 onward (480..3599s), alternating blocks of 180W and 260W
+        val power = ArrayList<Double?>()
+        val hr = ArrayList<Double?>()
+
+        var x = 100.0
+        val alpha = exp(-1.0 / tau)
+        for (i in 0 until n) {
+            val p = if (i < 480) 100.0 else if ((i / 300) % 2 == 0) 180.0 else 260.0
+            x = alpha * x + (1.0 - alpha) * p
+            power.add(p)
+            hr.add(hr0 + k * x)
+        }
+
+        val result = PowerHrDynamicsCalculator.calculate(power, hr)
+        assertNotNull("Pre-warmed fit should succeed and identify parameters", result)
+        val r = checkNotNull(result)
+        assertEquals(tau, r.tauStart, 6.0)
+        assertEquals(hr0, r.hr0Start, 4.0)
+        assertEquals(k, r.kStart, 0.04)
+        assertTrue("R^2 fresh must be high on clean simulated series", r.r2Start >= 0.85)
+    }
+
+    @Test
+    fun testPhysiologicalPlausibilityGates() {
+        val n = 3600
+        val validPower = List(n) { if ((it / 300) % 2 == 0) 150.0 else 250.0 }
+
+        // 1. Rejection when active pedaling < 900s (e.g. 800s pedaling, rest coasting at 0W)
+        val shortPedalingPower = List(n) { if (it < 800) 200.0 else 0.0 }
+        val validHr = List(n) { 140.0 }
+        assertNull("Must reject when active pedaling < 900s", PowerHrDynamicsCalculator.calculate(shortPedalingPower, validHr))
+
+        // 2. Rejection when k < 0.01 (too flat / negligible response)
+        val flatHr = List(n) { 100.0 + 0.001 * validPower[it] }
+        assertNull("Must reject when k < 0.01", PowerHrDynamicsCalculator.calculate(validPower, flatHr))
+
+        // 3. Rejection when k > 0.45 (unphysiologically steep, e.g. 0.60 bpm/W)
+        val steepHr = List(n) { 60.0 + 0.60 * validPower[it] }
+        assertNull("Must reject when k > 0.45", PowerHrDynamicsCalculator.calculate(validPower, steepHr))
+
+        // 4. Rejection when HR0 < 30 bpm
+        val bradycardiaHr = List(n) { 20.0 + 0.20 * validPower[it] }
+        assertNull("Must reject when HR0 < 30 bpm", PowerHrDynamicsCalculator.calculate(validPower, bradycardiaHr))
+
+        // 5. Rejection when HR0 > 125 bpm
+        val tachycardiaHr = List(n) { 135.0 + 0.20 * validPower[it] }
+        assertNull("Must reject when HR0 > 125 bpm", PowerHrDynamicsCalculator.calculate(validPower, tachycardiaHr))
+
+        // 6. Rejection when R2 < 0.25 (random noise HR uncorrelated with power)
+        val randomHr = List(n) { 100.0 + (it % 73) }
+        assertNull("Must reject when R^2 < 0.25", PowerHrDynamicsCalculator.calculate(validPower, randomHr))
+    }
 }

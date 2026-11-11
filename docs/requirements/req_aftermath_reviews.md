@@ -119,34 +119,46 @@
 
 
 ### REQ-REV-009: 1st-Order Dynamical Power-HR System Identification Engine, 5th Physiological School & In-App Explanation Sheet [Verified]
-- **Tests**: `TST-REV-010` | **Tickets**: `ATT-3904`
-- **Implementation**: `PowerHrDynamicsCalculator.kt`, `WorkoutSummariesDatabaseManager.java`, `WorkoutRepository.kt`, `LegacyImportEngine.kt`, `TrackerService.java`, `TuningPreferencesDataStore.kt`, `PhysiologyModelsSection.kt`, `PowerHrDynamicsInfoDialog.kt`
+- **Tests**: `TST-REV-010` | **Tickets**: `ATT-3904`, `ATT-6722`
+- **Implementation**: `PowerHrDynamicsCalculator.kt`, `WorkoutSummariesDatabaseManager.java`, `WorkoutRepository.kt`, `LegacyImportEngine.kt`, `TrackerService.java`, `TuningPreferencesDataStore.kt`, `PhysiologyModelsSection.kt`, `PowerHrDynamicsInfoDialog.kt`, `AdvancedTuningAccordion.kt`, `TrackOnMapAftermathViewModel.kt`, `WorkoutSummariesViewModel.kt`
 - **Rationale**: Static ratios ($\text{EF} = \text{NP}/\text{Avg HR}$ and $\text{Pw:Hr}$) fail on variable or hilly terrain by ignoring physiological cardiorespiratory response latency ($\tau \approx 25\text{--}45\text{ s}$) and 4th-power NP inflation. A 1st-order Output-Error (OE) dynamical model ($x_k(\tau) = e^{-\Delta t/\tau} x_{k-1}(\tau) + (1 - e^{-\Delta t/\tau}) P_k, \widehat{\text{HR}}_k = \text{HR}_0 + K x_k(\tau)$) extracts terrain-independent physiological parameters: steady-state reference $\text{HR@200W} = \text{HR}_0 + 200 \cdot K$, response lag $\tau$, aerobic gain $K$ (slope $1/K$), and cardiac drift $\Delta\text{HR@200W} = \text{HR@200W}_{\text{end}} - \text{HR@200W}_{\text{start}}$.
 - **Description**:
   1. *Dynamical System Identification Engine*: `PowerHrDynamicsCalculator` SHALL identify 1st-order OE parameters for workouts with $\ge 20\text{ min}$ paired Power and HR streams:
      a. Fresh Calibration Window (active min 8–55 after warm-up): $\tau_{\text{start}}$, $\text{HR0}_{\text{start}}$, $K_{\text{start}}$, $\text{HR@200W}_{\text{start}}$, $R^2_{\text{start}}$, $\text{RMSE}_{\text{start}}$.
      b. End-of-Workout Window (final 45 min active): $\tau_{\text{end}}$, $\text{HR0}_{\text{end}}$, $K_{\text{end}}$, $\text{HR@200W}_{\text{end}}$, $R^2_{\text{end}}$, $\text{RMSE}_{\text{end}}$.
      c. Drift Deltas: $\Delta\text{HR@200W} = \text{HR@200W}_{\text{end}} - \text{HR@200W}_{\text{start}}$, $\Delta\tau = \tau_{\text{end}} - \tau_{\text{start}}$, $\Delta\text{HR}_0 = \text{HR0}_{\text{end}} - \text{HR0}_{\text{start}}$, and predicted fresh HR trajectory $\text{HR}_{\text{fresh}}(t)$.
+     d. Physiological Plausibility & Coupling Gates: `PowerHrDynamicsCalculator` SHALL enforce active pedaling duration $\ge 15\text{ min}$ ($900\text{s}$ with $P > 0$), physiological parameter limits $K \in [0.01, 0.45]\,\text{bpm/W}$, $\text{HR}_0 \in [30, 125]\,\text{bpm}$, and minimum coupling $R^2_{\text{start}} \ge 0.25$ before returning a valid record.
+     e. Filter State Warm-Up: `PowerHrDynamicsCalculator.fitWindow` SHALL pre-warm filter state $x_k(\tau)$ by propagating from $t = 0$ to $\text{startIndex} - 1$ instead of seeding $xBuffer[0] = P[\text{startIndex}]$, eliminating transient distortion from warm-up boundaries.
+     f. Timestamp-Aware $\Delta t$ Support: Window boundaries and ODE simulation SHALL evaluate true timestamp intervals $\Delta t_i = (t_i - t_{i-1}).\text{coerceIn}(1\text{L}, 60\text{L})\text{.toDouble}()$ derived from `TIME_ACTIVE` / `TIME_TOTAL`.
   2. *Three-Way Parity (Live Recording, File Import, Lazy Backfill)*:
      a. Live Recording: `TrackerService` SHALL finalize and persist cardio-power dynamics on workout completion.
      b. File Import: `LegacyImportEngine` SHALL compute and persist cardio-power dynamics for TCX, GPX, and FIT files with paired Power and HR.
-     c. Lazy Backfill: `WorkoutRepository` SHALL lazily compute and cache missing dynamics for historical workouts from `WorkoutSamplesDatabaseManager` without requiring re-import.
+     c. Lazy Backfill & Bounded Background Migration: `WorkoutRepository.getOrComputeCardioPowerDynamics` SHALL execute an indexed projected query (`TIME_ACTIVE_s`, `TIME_TOTAL_s`, `TIME_s`, `POWER`, `HR`) ordered by `_id ASC`, maintain an in-memory `ineligibleCardioPowerWorkoutIds` set to prevent redundant scans of non-qualifying rides, update `WorkoutData` in memory reactively, and provide bounded background backfill (`backfillHistoricalCardioPowerDynamics(limit = 20)`) invoked in `WorkoutSummariesViewModel` when `enableCardioPowerDynamics == true`.
   3. *Database Persistence & Schema Evolution*:
      a. `WorkoutSummariesDatabaseManager.java` (DB v29) SHALL introduce table `cardio_power_dynamics` keyed on `workout_id INTEGER PRIMARY KEY REFERENCES WorkoutSummaries(_id) ON DELETE CASCADE`.
      b. `WorkoutRepository.kt` SHALL expose CRUD operations (`saveCardioPowerDynamics`, `getCardioPowerDynamics`).
-  4. *5th Training School Toggle ("Physiology & Training Models")*:
+  4. *5th Training School Toggle & Accordion Summary*:
      a. `TuningPreferencesDataStore.kt` SHALL expose `enableCardioPowerDynamics: Flow<Boolean>` (key `enable_cardio_power_dynamics`, default: `false` opt-in).
      b. `PhysiologyModelsSection.kt` SHALL render the 5th accordion switch with localized title, subtitle, and an Info button opening the explanation sheet.
+     c. Collapsed Accordion Subtitle: `TuningSubtitleFormatter.formatPhysiologyModelsSubtitle` SHALL include `enableCardioPowerDynamics` and append localized `R.string.cardio_power_domain_label` when active.
   5. *In-App Explanation Dialog & 9-Locale Parity*:
      a. `PowerHrDynamicsInfoDialog.kt` (`AppModalBottomSheet`) SHALL explain the cardiorespiratory time lag $\tau$, $\text{HR@200W}$, cardiac drift $\Delta\text{HR@200W}$, aerobic slope $1/K$, and Fresh Model vs. Actual HR curve interpretation.
      b. All strings SHALL be partitioned into `res/values*/strings_cardio_power.xml` with 100% parity across all 9 supported locales (EN, DE, ES, FR, IT, JA, NL, PL, PT).
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: `REQ-REV-009` (`REQ-REV-009.1`, `REQ-REV-009.2`, `REQ-REV-009.4`), targeting `WorkoutRepository.kt`, `PowerHrDynamicsCalculator.kt`, `AdvancedTuningAccordion.kt`, `TrackOnMapAftermathViewModel.kt`, and `WorkoutSummariesViewModel.kt`.
+  2. *Historical Origin & Commit Trace*: Introduced in `ATT-3904` (commit `1f70fb15`).
+  3. *Root Reason for Existing Formulation*: `getOrComputeCardioPowerDynamics` lacked caller hooks in aftermath viewmodels, leaving pre-existing rides unbackfilled. The solver originally assumed 1-Hz uniform telemetry and seeded at `startIndex` without warm-up propagation.
+  4. *Preservation of Core Invariants*: Bounded execution without UI thread blocking, mathematical ODE stability via $\Delta t \in [1\text{s}, 60\text{s}]$, Java caller compatibility via `@JvmOverloads`, and 100% 9-language translation parity are strictly preserved.
 - **Acceptance Criteria**:
   • *Given* a workout with $\ge 20\text{ min}$ paired Power and HR telemetry,
   • *When* processed via live recording, TCX/GPX/FIT import, or repository lazy backfill,
   • *Then* the 1st-order OE dynamical parameters are identified and persisted in `cardio_power_dynamics`.
+  • *Given* pre-existing historical rides with paired Power and HR,
+  • *When* viewing workout details or when `enableCardioPowerDynamics` is enabled,
+  • *Then* missing dynamics are lazily computed and persisted via projected query, populating summaries and trends without re-import.
   • *Given* Advanced Settings -> *Physiology & Training Models*,
   • *When* viewed,
-  • *Then* the 5th Training School toggle `enableCardioPowerDynamics` is rendered with descriptive summary and Info button triggering `PowerHrDynamicsInfoDialog`.
+  • *Then* the 5th Training School toggle `enableCardioPowerDynamics` is rendered with descriptive summary and Info button triggering `PowerHrDynamicsInfoDialog`, and collapsed summary subtitle includes localized Cardio-Power when enabled.
   • *Given* the 9 supported locales,
   • *When* running `TranslationParityTest`,
   • *Then* all cardio-power string tokens in `strings_cardio_power.xml` exist with 100% parity and valid formatting.

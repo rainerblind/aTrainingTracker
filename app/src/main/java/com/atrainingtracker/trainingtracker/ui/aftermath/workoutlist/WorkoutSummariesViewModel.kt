@@ -92,6 +92,14 @@ class WorkoutSummariesViewModel(application: Application) :
                 _filterCriteria.value = restored
             }
         }
+        val tuningDataStore = com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore.getInstance(application)
+        viewModelScope.launch {
+            tuningDataStore.enableCardioPowerDynamicsFlow.collect { enabled ->
+                if (enabled) {
+                    workoutRepo.backfillHistoricalCardioPowerDynamics(limit = 20)
+                }
+            }
+        }
     }
 
     fun setFilterCriteria(criteria: WorkoutFilterCriteria) {

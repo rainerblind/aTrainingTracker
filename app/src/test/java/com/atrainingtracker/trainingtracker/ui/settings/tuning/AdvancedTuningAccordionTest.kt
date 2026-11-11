@@ -500,6 +500,7 @@ class AdvancedTuningAccordionTest {
         every { mockContext.getString(R.string.tuning_physiology_pmc_short) } returns "Load / Form"
         every { mockContext.getString(R.string.tuning_physiology_ef_short) } returns "EF / Decoupling"
         every { mockContext.getString(R.string.tuning_physiology_cp_short) } returns "CP / W'"
+        every { mockContext.getString(R.string.cardio_power_domain_label) } returns "Cardio-Power"
         every { mockContext.getString(R.string.tuning_physiology_none_enabled) } returns "None enabled"
 
         val defaultSubtitle = TuningSubtitleFormatter.formatPhysiologyModelsSubtitle(
@@ -520,11 +521,32 @@ class AdvancedTuningAccordionTest {
         )
         assertEquals("Coggan, Load / Form, EF / Decoupling, CP / W'", allSubtitle)
 
+        val allFiveSubtitle = TuningSubtitleFormatter.formatPhysiologyModelsSubtitle(
+            enableCogganPowerMetrics = true,
+            enablePmcModel = true,
+            enableAerobicEfficiencyModel = true,
+            enableCriticalPowerModel = true,
+            enableCardioPowerDynamics = true,
+            context = mockContext
+        )
+        assertEquals("Coggan, Load / Form, EF / Decoupling, CP / W', Cardio-Power", allFiveSubtitle)
+
+        val cardioOnlySubtitle = TuningSubtitleFormatter.formatPhysiologyModelsSubtitle(
+            enableCogganPowerMetrics = false,
+            enablePmcModel = false,
+            enableAerobicEfficiencyModel = false,
+            enableCriticalPowerModel = false,
+            enableCardioPowerDynamics = true,
+            context = mockContext
+        )
+        assertEquals("Cardio-Power", cardioOnlySubtitle)
+
         val noneSubtitle = TuningSubtitleFormatter.formatPhysiologyModelsSubtitle(
             enableCogganPowerMetrics = false,
             enablePmcModel = false,
             enableAerobicEfficiencyModel = false,
             enableCriticalPowerModel = false,
+            enableCardioPowerDynamics = false,
             context = mockContext
         )
         assertEquals("None enabled", noneSubtitle)

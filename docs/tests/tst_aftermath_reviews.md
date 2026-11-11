@@ -71,15 +71,19 @@
 
 ### TST-REV-010: **1st-Order Dynamical Power-HR Identification Engine, Persistence, Toggle & 9-Locale Localization Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-REV-009`
-- **Component**: `PowerHrDynamicsCalculator.kt`, `WorkoutSummariesDatabaseManager.java`, `WorkoutRepository.kt`, `LegacyImportEngine.kt`, `PhysiologyModelsSection.kt`, `PowerHrDynamicsInfoDialog.kt`, `res/values*/strings_cardio_power.xml`
-- **Jira**: `ATT-3904`
+- **Component**: `PowerHrDynamicsCalculator.kt`, `WorkoutSummariesDatabaseManager.java`, `WorkoutRepository.kt`, `LegacyImportEngine.kt`, `PhysiologyModelsSection.kt`, `PowerHrDynamicsInfoDialog.kt`, `AdvancedTuningAccordion.kt`, `res/values*/strings_cardio_power.xml`
+- **Jira**: `ATT-3904`, `ATT-6722`
 - **Test Description**:
   1. *Engine Unit Tests (`PowerHrDynamicsCalculatorTest`)*: Verify OE parameter identification on synthetic step-response signals with known $(\tau, \text{HR}_0, K)$, verify window slicing (fresh min 8–55 vs end 45 min), verify rejection of insufficient data (< 20 min or missing stream), and verify drift deltas.
   2. *Database Migration & CRUD Contract Test (`WorkoutSummariesCardioPowerMigrationTest`)*: Verify schema migration from DB v28 to v29 creates table `cardio_power_dynamics`, test single and batch query symmetry, cascade deletion on workout removal, and null-safety.
   3. *Repository & Three-Way Parity Contract Test (`WorkoutRepositoryCardioPowerTest`)*: Verify lazy backfill computes and persists records on demand, verify `LegacyImportEngine` persists dynamics on file import, and verify `TrackerService` finalization parity.
   4. *UI & 5th School Toggle Contract Test (`PhysiologyModelsSectionTest`)*: Verify 5th school toggle binds to DataStore, verifies Info button opens `PowerHrDynamicsInfoDialog`, and verifies UI gating.
   5. *9-Locale Localization Parity Test (`TranslationParityTest`)*: Verify all strings in `strings_cardio_power.xml` across EN, DE, ES, FR, IT, JA, NL, PL, PT with valid linebreaks and matching format specifiers.
-  6. *Tier 1 Targeted Verification Suite*: `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.physiology.*" --tests "com.atrainingtracker.trainingtracker.database.*" --tests "com.atrainingtracker.trainingtracker.ui.settings.tuning.*" --tests "com.atrainingtracker.trainingtracker.build.*"`
+  6. *Filter Warm-Up Continuity Test (`PowerHrDynamicsCalculatorTest`)*: Verify pre-warming filter state $x_k(\tau)$ from $t = 0$ to $\text{startIndex} - 1$ eliminates transient step errors compared to un-warmed seeding with $P[\text{startIndex}]$, and converges to identical steady-state values under continuous constant power.
+  7. *Physiological Plausibility & Gate Enforcement Test (`PowerHrDynamicsCalculatorTest`)*: Verify rejection (returning `null`) when $K < 0.01$ or $K > 0.45$, $\text{HR}_0 < 30$ or $\text{HR}_0 > 125$, $R^2_{\text{start}} < 0.25$, or active pedaling duration ($P > 0$) $< 15\text{ min}$ ($900\text{s}$), and verify acceptance when all physiological parameters lie within bounds.
+  8. *Lazy Backfill Query & Ineligible Cache Test (`WorkoutRepositoryCardioPowerBackfillTest`)*: Verify that `getOrComputeCardioPowerDynamics` executes a projected query (`TIME_ACTIVE`, `TIME_TOTAL`, `TIME`, `POWER`, `HR`) ordered by `_id ASC`, records failed/non-qualifying rides in `ineligibleCardioPowerWorkoutIds` to bypass subsequent SQLite queries, updates in-memory `WorkoutData` on success, and `backfillHistoricalCardioPowerDynamics(limit = 20)` processes at most $N$ eligible historical rides.
+  9. *Accordion Subtitle Formatting Test (`AdvancedTuningAccordionTest`)*: Verify `formatPhysiologyModelsSubtitle` appends localized `R.string.cardio_power_domain_label` when `enableCardioPowerDynamics == true`, preserves existing model labels, and maintains 100% 9-language translation parity.
+  10. *Tier 1 Targeted Verification Suite*: `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.physiology.PowerHrDynamicsCalculatorTest" --tests "com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepositoryCardioPowerBackfillTest" --tests "com.atrainingtracker.trainingtracker.ui.settings.tuning.AdvancedTuningAccordionTest" --tests "com.atrainingtracker.trainingtracker.translation.TranslationParityTest"`
 
 
 ### TST-REV-011: **Cardio-Power Visual Display & Overlay Verification Suite** [Verified]

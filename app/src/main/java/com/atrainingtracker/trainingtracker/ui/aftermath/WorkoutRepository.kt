@@ -1386,6 +1386,7 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
     val allWorkouts: StateFlow<List<WorkoutData>> = _allWorkouts.asStateFlow()
     private val activeReloadWorkoutIds = java.util.concurrent.ConcurrentHashMap.newKeySet<Long>()
     private val dirtyReloadWorkoutIds = java.util.concurrent.ConcurrentHashMap.newKeySet<Long>()
+    internal val ineligibleCardioPowerWorkoutIds: MutableSet<Long> = java.util.concurrent.ConcurrentHashMap.newKeySet()
 
     /**
      * Provides a reactive stream for a specific workout ID.
@@ -2281,42 +2282,130 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
 
     /**
      * Lazily computes and persists 1st-order dynamical Power-HR parameters for historical workouts
-     * if not already cached in the database (REQ-REV-009 / ATT-3904).
+     * if not already cached in the database (REQ-REV-009 / ATT-3904 / ATT-6722).
      */
     suspend fun getOrComputeCardioPowerDynamics(workoutId: Long): CardioPowerDynamicsRecord? = withContext(Dispatchers.IO) {
+        if (ineligibleCardioPowerWorkoutIds.contains(workoutId)) {
+            return@withContext null
+        }
+
         val cached = summariesManager.getCardioPowerDynamics(workoutId)
         if (cached != null) return@withContext cached
 
-        val baseFileName = summariesManager.getBaseFileName(workoutId) ?: return@withContext null
-        if (!samplesManager.existsTable(baseFileName)) return@withContext null
+        val baseFileName = summariesManager.getBaseFileName(workoutId) ?: run {
+            ineligibleCardioPowerWorkoutIds.add(workoutId)
+            return@withContext null
+        }
+        if (!samplesManager.existsTable(baseFileName)) {
+            ineligibleCardioPowerWorkoutIds.add(workoutId)
+            return@withContext null
+        }
 
         val db = samplesManager.database
         val tableName = WorkoutSamplesDatabaseManager.getTableName(baseFileName)
 
         val powerSamples = ArrayList<Double?>()
         val hrSamples = ArrayList<Double?>()
+        val timestampsSec = ArrayList<Long>()
 
         try {
-            db.query(tableName, null, null, null, null, null, null).use { cursor ->
+            val existingColumns = getExistingColumns(db, tableName)
+            if (SensorType.POWER.name !in existingColumns || SensorType.HR.name !in existingColumns) {
+                ineligibleCardioPowerWorkoutIds.add(workoutId)
+                return@withContext null
+            }
+
+            val candidateCols = listOf(
+                android.provider.BaseColumns._ID,
+                SensorType.POWER.name,
+                SensorType.HR.name,
+                SensorType.TIME_ACTIVE.name,
+                SensorType.TIME_TOTAL.name,
+                WorkoutSamplesDatabaseManager.WorkoutSamplesDbHelper.TIME
+            )
+            val projection = candidateCols.filter { it in existingColumns }
+                .map { quoteSqlIdentifier(it) }
+                .toTypedArray()
+
+            db.query(
+                tableName,
+                projection,
+                null,
+                null,
+                null,
+                null,
+                "${quoteSqlIdentifier(android.provider.BaseColumns._ID)} ASC"
+            ).use { cursor ->
                 val powerIdx = cursor.getColumnIndex(SensorType.POWER.name)
                 val hrIdx = cursor.getColumnIndex(SensorType.HR.name)
+                val timeActiveIdx = cursor.getColumnIndex(SensorType.TIME_ACTIVE.name)
+                val timeTotalIdx = cursor.getColumnIndex(SensorType.TIME_TOTAL.name)
+                val timeIdx = cursor.getColumnIndex(WorkoutSamplesDatabaseManager.WorkoutSamplesDbHelper.TIME)
+
+                if (powerIdx == -1 || hrIdx == -1) {
+                    ineligibleCardioPowerWorkoutIds.add(workoutId)
+                    return@withContext null
+                }
+
                 while (cursor.moveToNext()) {
-                    val p = if (powerIdx != -1 && !cursor.isNull(powerIdx)) cursor.getDouble(powerIdx) else null
-                    val hr = if (hrIdx != -1 && !cursor.isNull(hrIdx)) cursor.getDouble(hrIdx) else null
+                    val p = if (!cursor.isNull(powerIdx)) cursor.getDouble(powerIdx) else null
+                    val hr = if (!cursor.isNull(hrIdx)) cursor.getDouble(hrIdx) else null
+                    val tSec: Long = when {
+                        timeActiveIdx != -1 && !cursor.isNull(timeActiveIdx) -> cursor.getLong(timeActiveIdx)
+                        timeTotalIdx != -1 && !cursor.isNull(timeTotalIdx) -> cursor.getLong(timeTotalIdx)
+                        timeIdx != -1 && !cursor.isNull(timeIdx) -> cursor.position.toLong()
+                        else -> cursor.position.toLong()
+                    }
                     powerSamples.add(p)
                     hrSamples.add(hr)
+                    timestampsSec.add(tSec)
                 }
             }
         } catch (e: Exception) {
             Log.w("WorkoutRepository", "Could not query samples for cardio-power lazy backfill: ${e.message}")
+            ineligibleCardioPowerWorkoutIds.add(workoutId)
             return@withContext null
         }
 
-        val calculated = PowerHrDynamicsCalculator.calculate(powerSamples, hrSamples, workoutId = workoutId)
+        val calculated = PowerHrDynamicsCalculator.calculate(
+            powerSamples,
+            hrSamples,
+            workoutId = workoutId,
+            dt = 1.0,
+            timestampsSec = timestampsSec
+        )
         if (calculated != null) {
             summariesManager.saveCardioPowerDynamics(workoutId, calculated)
+            updateWorkoutInMemory(workoutId) { it.copy(cardioPowerDynamics = calculated) }
+        } else {
+            ineligibleCardioPowerWorkoutIds.add(workoutId)
         }
         calculated
+    }
+
+    /**
+     * Executes bounded background backfill for historical qualifying workouts missing cardio-power
+     * dynamics (REQ-REV-009.2c / ATT-6722).
+     *
+     * @param limit Maximum number of qualifying historical workouts to compute per pass (defaults to 20).
+     * @return Number of successfully identified and persisted workout records.
+     */
+    suspend fun backfillHistoricalCardioPowerDynamics(limit: Int = 20): Int = withContext(Dispatchers.IO) {
+        val candidates = _allWorkouts.value.filter { workout ->
+            workout.cardioPowerDynamics == null &&
+                !ineligibleCardioPowerWorkoutIds.contains(workout.id) &&
+                workout.activeTimeSec >= PowerHrDynamicsCalculator.MIN_QUALIFYING_DURATION_SEC
+        }
+
+        var processed = 0
+        for (workout in candidates) {
+            if (processed >= limit) break
+            val result = getOrComputeCardioPowerDynamics(workout.id)
+            if (result != null) {
+                processed++
+            }
+        }
+        processed
     }
 
     /**

@@ -147,6 +147,7 @@ object TuningSubtitleFormatter {
         enablePmcModel: Boolean,
         enableAerobicEfficiencyModel: Boolean,
         enableCriticalPowerModel: Boolean,
+        enableCardioPowerDynamics: Boolean = false,
         context: Context
     ): String {
         val activeModels = buildList {
@@ -154,6 +155,7 @@ object TuningSubtitleFormatter {
             if (enablePmcModel) add(context.getString(R.string.tuning_physiology_pmc_short))
             if (enableAerobicEfficiencyModel) add(context.getString(R.string.tuning_physiology_ef_short))
             if (enableCriticalPowerModel) add(context.getString(R.string.tuning_physiology_cp_short))
+            if (enableCardioPowerDynamics) add(context.getString(R.string.cardio_power_domain_label))
         }
         return if (activeModels.isEmpty()) {
             context.getString(R.string.tuning_physiology_none_enabled)
@@ -161,6 +163,21 @@ object TuningSubtitleFormatter {
             activeModels.joinToString(", ")
         }
     }
+
+    fun formatPhysiologyModelsSubtitle(
+        enableCogganPowerMetrics: Boolean,
+        enablePmcModel: Boolean,
+        enableAerobicEfficiencyModel: Boolean,
+        enableCriticalPowerModel: Boolean,
+        context: Context
+    ): String = formatPhysiologyModelsSubtitle(
+        enableCogganPowerMetrics = enableCogganPowerMetrics,
+        enablePmcModel = enablePmcModel,
+        enableAerobicEfficiencyModel = enableAerobicEfficiencyModel,
+        enableCriticalPowerModel = enableCriticalPowerModel,
+        enableCardioPowerDynamics = false,
+        context = context
+    )
 
     fun formatAftermathSubtitle(
         elevationDomain: ProfileXAxisDomain, telemetryDomain: ProfileXAxisDomain, context: Context,
