@@ -36,6 +36,7 @@ import com.atrainingtracker.banalservice.sensor.formater.DistanceFormatter
 import com.atrainingtracker.banalservice.sensor.formater.SpeedFormatter
 import com.atrainingtracker.banalservice.sensor.formater.TimeFormatter
 import com.atrainingtracker.trainingtracker.routes.GeoUtils
+import com.atrainingtracker.trainingtracker.ui.aftermath.RadarTrafficSummaryFormatter
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
 import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.PolyUtil
@@ -474,6 +475,7 @@ object PhotoTrackOverlayComposer {
         workoutData: WorkoutData
     ) = withContext(Dispatchers.Default) {
         val composed = composeOverlay(context, photo, workoutData)
-        saveAndShare(context, composed, "workout_photo_${workoutData.id}.png")
+        val shareSummaryText = RadarTrafficSummaryFormatter.format(workoutData.radarTrafficSummary, context)
+        saveAndShare(context, composed, "workout_photo_${workoutData.id}.png", shareSummaryText)
     }
 }

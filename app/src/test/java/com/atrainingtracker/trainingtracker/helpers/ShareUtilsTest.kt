@@ -113,5 +113,9 @@ class ShareUtilsTest {
         // Verify auto-scaling text helper integration
         assertTrue("Must call calculateAvailableWatermarkWidth", source.contains("calculateAvailableWatermarkWidth"))
         assertTrue("Must call calculateWatermarkScaledTextSize", source.contains("calculateWatermarkScaledTextSize"))
+
+        // Verify shareText support in saveAndShare and combineWorkoutAndShare (REQ-RAD-007 / ATT-5122)
+        assertTrue("Must support shareText parameter in saveAndShare", source.contains("shareText: String? = null"))
+        assertTrue("Must populate Intent.EXTRA_TEXT when shareText provided", source.contains("Intent.EXTRA_TEXT, shareText"))
     }
 }

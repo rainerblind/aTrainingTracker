@@ -149,4 +149,17 @@
     <string name="radar_high_threat_passes">Adelantamientos de alto riesgo</string>
     <string name="radar_marker_pass_title">Paso de vehículo (%1$s km/h)</string>
     <string name="radar_marker_high_threat_title">Paso de alto riesgo (%1$s km/h)</string>
+
+    <!-- Resumen de tráfico y adelantamientos cercanos de radar Strava/Compartir (ATT-5122 / REQ-RAD-007) -->
+    <string name="radar_strava_summary_title">Resumen de tráfico para Strava</string>
+    <string name="radar_strava_summary_desc">Añadir recuento de adelantamientos y resumen de velocidad a la descripción de Strava</string>
+    <string name="radar_share_summary_title">Compartir resumen de tráfico</string>
+    <string name="radar_share_summary_desc">Incluir recuento de adelantamientos y velocidad en el texto de compartir</string>
+    <string name="radar_summary_header">📡 Radar: %1$d vehículos adelantaron (%2$s/km)</string>
+    <string name="radar_summary_close_passes">⚠️ %1$d adelantamientos cercanos (&lt;1,5m, mín %2$sm)</string>
+    <string name="radar_summary_close_passes_singular">⚠️ 1 adelantamiento cercano (&lt;1,5m, mín %1$sm)</string>
+    <string name="radar_summary_heavy_vehicles">🚛 %1$d vehículos pesados</string>
+    <string name="radar_summary_heavy_vehicles_singular">🚛 1 vehículo pesado</string>
+    <string name="radar_summary_max_speed">🚀 Máx %1$s km/h (+%2$s km/h aproximación)</string>
+    <string name="radar_summary_max_speed_simple">🚀 Máx %1$s km/h</string>
 </resources>

@@ -27,5 +27,8 @@ data class RadarTrafficSummary(
     val vehiclesPerHour: Double = 0.0,
     val maxApproachSpeedMps: Double = 0.0,
     val maxVehicleSpeedMps: Double = 0.0,
-    val highThreatPassCount: Int = 0
+    val highThreatPassCount: Int = 0,
+    val closePassCount: Int = 0,
+    val minPassingDistanceM: Double? = null,
+    val heavyVehicleCount: Int = 0
 )

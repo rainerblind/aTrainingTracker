@@ -149,4 +149,17 @@
     <string name="radar_high_threat_passes">Dépassements à haut risque</string>
     <string name="radar_marker_pass_title">Dépassement de véhicule (%1$s km/h)</string>
     <string name="radar_marker_high_threat_title">Dépassement à haut risque (%1$s km/h)</string>
+
+    <!-- Résumé de circulation radar et dépassements rapprochés Strava/Partage (ATT-5122 / REQ-RAD-007) -->
+    <string name="radar_strava_summary_title">Résumé de trafic Strava</string>
+    <string name="radar_strava_summary_desc">Ajouter le décompte des dépassements et vitesses à la description Strava</string>
+    <string name="radar_share_summary_title">Partager le résumé de trafic</string>
+    <string name="radar_share_summary_desc">Inclure le décompte des dépassements et vitesses dans le texte partagé</string>
+    <string name="radar_summary_header">📡 Radar : %1$d véhicules ont dépassé (%2$s/km)</string>
+    <string name="radar_summary_close_passes">⚠️ %1$d dépassements rapprochés (&lt;1,5m, min %2$sm)</string>
+    <string name="radar_summary_close_passes_singular">⚠️ 1 dépassement rapproché (&lt;1,5m, min %1$sm)</string>
+    <string name="radar_summary_heavy_vehicles">🚛 %1$d poids lourds</string>
+    <string name="radar_summary_heavy_vehicles_singular">🚛 1 poids lourd</string>
+    <string name="radar_summary_max_speed">🚀 Max %1$s km/h (+%2$s km/h approche)</string>
+    <string name="radar_summary_max_speed_simple">🚀 Max %1$s km/h</string>
 </resources>

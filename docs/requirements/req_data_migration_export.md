@@ -3341,6 +3341,35 @@
 
 **Invariants**: FIT Protocol V2.0 conformance; zero regressions in standard FIT fields (Speed, Power, HR, Cadence, GPS).
 
+### REQ-RAD-007: Radar Traffic & Close-Pass Summary in Strava Description & Share Intent [Verified]
+- **Tests**: `TST-RAD-007` | **Tickets**: `ATT-5122`
+- **Implementation**: `RadarTrafficSummaryFormatter.kt`, `StravaUploader.kt`, `ShareUtils.kt`
+- **Rationale**: Cyclists recording rides with rearview radar want to document road traffic safety and motorist overtaking behavior in their Strava activity feeds and social shares without manual copy-pasting. The system SHALL provide an opt-in setting to automatically append a concise, standardized Radar Traffic & Close-Pass Summary to Strava activity descriptions and workout share texts.
+- **Description**:
+  1. *Opt-In Preference & Configuration*: The system SHALL expose an opt-in toggle (`uploadStravaRadarSummary`, default `false`) in Strava settings (`StravaSettingsDialog.kt`, `prefs_strava.xml`) and Radar settings (`RadarSettingsSection.kt`) backed by `SharedPreferences`.
+  2. *Standard Radar Summary Formatter (BLE V1 & ANT+)*: When `uploadStravaRadarSummary` is enabled and a workout contains `RADAR_VEHICLE_COUNT > 0`, the system SHALL generate a concise localized summary line:
+     `📡 Radar: <N> vehicles passed (<density>/km) • 🚀 Max <max_veh_spd> km/h (+<max_approach_spd> km/h approach)`
+  3. *High-Resolution V2 Radar Summary Formatter (Garmin Varia RearVue 820)*: When high-resolution V2 clearance and classification metrics are present (`closePassCount > 0` or `heavyVehicleCount > 0`), the formatter SHALL include close-pass and heavy-vehicle badges:
+     `📡 Radar: <N> vehicles passed (<density>/km) • ⚠️ <M> close passes (<1.5m, min <min_dist>m) • 🚛 <K> heavy vehicles • 🚀 Max <max_veh_spd> km/h`
+  4. *Non-Destructive Description Composition & Idempotency*: `StravaUploader.kt` SHALL append the formatted summary line to existing user notes (`WorkoutSummaries.DESCRIPTION`) separated by a double newline (`\n\n`). If no user notes exist, only the summary line SHALL be set. Re-uploads, duplicate reconciliation flows, and retries SHALL NOT duplicate the summary line (idempotent prefix/containment check).
+  5. *Zero-Vehicle & Non-Radar Suppression*: Workouts recorded without a radar sensor or with `0` vehicle passes SHALL omit the radar summary string entirely.
+  6. *Workout Share Sheet Integration*: `ShareUtils.saveAndShare()` and `WorkoutShareBottomSheet.kt` SHALL support attaching the formatted summary line via `Intent.EXTRA_TEXT` alongside share snapshots.
+  7. *9-Language Localization Parity*: All summary components and toggle labels SHALL be 100% localized across all 9 supported languages (EN, DE, ES, FR, IT, JA, NL, PL, PT).
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* `uploadStravaRadarSummary` is enabled and a workout has `114` vehicle passes recorded via BLE V1 or ANT+ radar,
+• *When* the workout is uploaded to Strava,
+• *Then* `StravaUploader.doUpdate()` appends `📡 Radar: 114 vehicles passed (1.8/km) • 🚀 Max 104 km/h (+68 km/h approach)` to the activity description without altering local or existing user notes.
+• *Given* a workout recorded with 0 vehicle passes or without radar sensor,
+• *When* uploaded to Strava or shared,
+• *Then* zero radar summary text is appended to description or share intent.
+• *Given* a workout already containing a radar summary line in description re-uploaded or updated,
+• *When* `StravaUploader.doUpdate()` executes,
+• *Then* the summary line is not duplicated.
+
+**Invariants**: Zero overwrite or loss of user notes; zero SQLite schema modifications; 100% localization parity across 9 languages.
+
+
 
 
 

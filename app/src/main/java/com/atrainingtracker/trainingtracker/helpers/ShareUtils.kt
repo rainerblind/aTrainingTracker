@@ -129,7 +129,8 @@ suspend fun combineWorkoutAndShare(
     map: Bitmap,
     elevation: Bitmap?,
     analytics: Bitmap? = null,
-    isDark: Boolean = ShareThemeResolver.isNightMode(context)
+    isDark: Boolean = ShareThemeResolver.isNightMode(context),
+    shareText: String? = null
 ) = withContext(Dispatchers.Default) {
     val colors = ShareThemeResolver.resolveColors(isDark)
     val sHeader = header?.let { ensureSoftwareBitmap(it) }
@@ -192,7 +193,7 @@ suspend fun combineWorkoutAndShare(
     // 5. Branding
     drawFooter(context, canvas, totalWidth, currentY, footerHeight, colors)
 
-    saveAndShare(context, combined, "workout_summary.png")
+    saveAndShare(context, combined, "workout_summary.png", shareText)
 }
 
 // --- INTERNAL HELPERS ---
@@ -331,7 +332,12 @@ internal fun drawFooter(
     canvas.drawText(trackedWith, margin + logoSize + 20f, textY, textPaint)
 }
 
-internal suspend fun saveAndShare(context: Context, bitmap: Bitmap, fileName: String) = withContext(Dispatchers.IO) {
+internal suspend fun saveAndShare(
+    context: Context,
+    bitmap: Bitmap,
+    fileName: String,
+    shareText: String? = null
+) = withContext(Dispatchers.IO) {
     val imagesFolder = File(context.cacheDir, "images")
     if (!imagesFolder.exists()) imagesFolder.mkdirs()
 
@@ -342,6 +348,9 @@ internal suspend fun saveAndShare(context: Context, bitmap: Bitmap, fileName: St
     val intent = Intent(Intent.ACTION_SEND).apply {
         type = "image/png"
         putExtra(Intent.EXTRA_STREAM, uri)
+        if (!shareText.isNullOrBlank()) {
+            putExtra(Intent.EXTRA_TEXT, shareText)
+        }
         clipData = ClipData.newRawUri("Summary", uri)
         addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
     }

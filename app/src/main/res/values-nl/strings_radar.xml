@@ -149,4 +149,17 @@
     <string name="radar_high_threat_passes">Inhalingen met hoog risico</string>
     <string name="radar_marker_pass_title">Inhalend voertuig (%1$s km/h)</string>
     <string name="radar_marker_high_threat_title">Inhaling met hoog risico (%1$s km/h)</string>
+
+    <!-- Radarverkeer en dichtbij-inhaal samenvatting Strava/Delen (ATT-5122 / REQ-RAD-007) -->
+    <string name="radar_strava_summary_title">Strava-verkeersoverzicht</string>
+    <string name="radar_strava_summary_desc">Voertuiginhaalacties en snelheidssamenvatting toevoegen aan Strava-activiteitsbeschrijving</string>
+    <string name="radar_share_summary_title">Verkeersoverzicht delen</string>
+    <string name="radar_share_summary_desc">Aantal passerende voertuigen en snelheden toevoegen aan gedeelde tekst</string>
+    <string name="radar_summary_header">📡 Radar: %1$d voertuigen gepasseerd (%2$s/km)</string>
+    <string name="radar_summary_close_passes">⚠️ %1$d krappe inhaalacties (&lt;1,5m, min %2$sm)</string>
+    <string name="radar_summary_close_passes_singular">⚠️ 1 krappe inhaalactie (&lt;1,5m, min %1$sm)</string>
+    <string name="radar_summary_heavy_vehicles">🚛 %1$d zware voertuigen</string>
+    <string name="radar_summary_heavy_vehicles_singular">🚛 1 zwaar voertuig</string>
+    <string name="radar_summary_max_speed">🚀 Max %1$s km/u (+%2$s km/u nadering)</string>
+    <string name="radar_summary_max_speed_simple">🚀 Max %1$s km/u</string>
 </resources>

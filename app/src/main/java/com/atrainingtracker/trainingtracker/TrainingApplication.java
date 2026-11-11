@@ -227,6 +227,7 @@ public class TrainingApplication extends Application {
     private static final String SP_UPLOAD_STRAVA_HR = "uploadStravaHR";
     private static final String SP_UPLOAD_STRAVA_POWER = "uploadStravaPower";
     private static final String SP_UPLOAD_STRAVA_CADENCE = "uploadStravaCadence";
+    private static final String SP_UPLOAD_STRAVA_RADAR_SUMMARY = "uploadStravaRadarSummary";
     //public static final int UPLOAD_PROGRESS_NOTIFICATION_ID       = 3;
 
     // public static final int UPLOAD_RESULT_BASE_NOTIFICATION_ID    = 8;
@@ -1351,6 +1352,14 @@ public class TrainingApplication extends Application {
 
     public static boolean uploadStravaCadence() {
         return cSharedPreferences.getBoolean(SP_UPLOAD_STRAVA_CADENCE, true);
+    }
+
+    public static boolean uploadStravaRadarSummary() {
+        return cSharedPreferences.getBoolean(SP_UPLOAD_STRAVA_RADAR_SUMMARY, false);
+    }
+
+    public static void setUploadStravaRadarSummary(boolean enabled) {
+        cSharedPreferences.edit().putBoolean(SP_UPLOAD_STRAVA_RADAR_SUMMARY, enabled).apply();
     }
 
     @Deprecated

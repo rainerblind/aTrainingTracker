@@ -25,6 +25,7 @@ import com.atrainingtracker.util.safeEnumValueOfOrNull
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.repositories.EquipmentRepository
 import com.atrainingtracker.trainingtracker.repositories.SportTypesRepository
+import com.atrainingtracker.trainingtracker.ui.aftermath.RadarTrafficSummaryFormatter
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
 import com.atrainingtracker.trainingtracker.ui.components.export.ExportStatusRepository
 import com.atrainingtracker.trainingtracker.exporter.BaseExporter
@@ -557,8 +558,22 @@ open class StravaUploader @JvmOverloads constructor(context: Context, internal v
         if (!isDuplicate && !gearId.isNullOrEmpty()) {
             formBuilder.add(GEAR_ID, gearId)
         }
-        if (!description.isNullOrEmpty()) {
-            formBuilder.add(DESCRIPTION, description)
+        var finalDescription = description
+        if (TrainingApplication.uploadStravaRadarSummary()) {
+            val radarSummary = WorkoutRepository.getInstance(mContext).getRadarTrafficSummary(exportInfo.fileBaseName)
+            val formattedRadar = RadarTrafficSummaryFormatter.format(radarSummary, mContext)
+            if (!formattedRadar.isNullOrBlank()) {
+                finalDescription = if (finalDescription.isNullOrBlank()) {
+                    formattedRadar
+                } else if (!finalDescription.contains("📡 Radar:")) {
+                    "$finalDescription\n\n$formattedRadar"
+                } else {
+                    finalDescription
+                }
+            }
+        }
+        if (!finalDescription.isNullOrEmpty()) {
+            formBuilder.add(DESCRIPTION, finalDescription)
         }
         formBuilder.add(TRAINER, trainer.toString())
         formBuilder.add(COMMUTE, commute.toString())

@@ -709,6 +709,16 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
     }
 
     /**
+     * Retrieves post-workout cycling radar traffic statistics for a workout by [fileBaseName] (REQ-RAD-007 / ATT-5122).
+     */
+    fun getRadarTrafficSummary(fileBaseName: String): RadarTrafficSummary? {
+        val exportHeader = getWorkoutExportHeader(fileBaseName)
+        val totalDistanceM = exportHeader?.totalDistance?.toDoubleOrNull() ?: 0.0
+        val activeTimeSec = exportHeader?.totalTime?.toLongOrNull() ?: 0L
+        return computeRadarTrafficSummaryFromSamples(fileBaseName, totalDistanceM, activeTimeSec)
+    }
+
+    /**
      * Retrieves workout export header metadata as a domain DTO (REQ-DAT-042.3).
      */
     fun getWorkoutExportHeader(fileBaseName: String): WorkoutExportHeader? {

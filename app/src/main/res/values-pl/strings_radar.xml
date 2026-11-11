@@ -149,4 +149,17 @@
     <string name="radar_high_threat_passes">Wyprzedzania o wysokim ryzyku</string>
     <string name="radar_marker_pass_title">Wyprzedzenie przez pojazd (%1$s km/h)</string>
     <string name="radar_marker_high_threat_title">Wyprzedzenie o wysokim ryzyku (%1$s km/h)</string>
+
+    <!-- Podsumowanie ruchu i bliskich wyprzedzań radaru Strava/Udostępnianie (ATT-5122 / REQ-RAD-007) -->
+    <string name="radar_strava_summary_title">Podsumowanie ruchu Strava</string>
+    <string name="radar_strava_summary_desc">Dołącz liczbę wyprzedzających pojazdów i prędkości do opisu aktywności Strava</string>
+    <string name="radar_share_summary_title">Udostępnij podsumowanie ruchu</string>
+    <string name="radar_share_summary_desc">Dołącz liczbę pojazdów i prędkości do udostępnianego tekstu</string>
+    <string name="radar_summary_header">📡 Radar: %1$d wyprzedzających pojazdów (%2$s/km)</string>
+    <string name="radar_summary_close_passes">⚠️ %1$d niebezpiecznie bliskich wyprzedzań (&lt;1,5m, min %2$sm)</string>
+    <string name="radar_summary_close_passes_singular">⚠️ 1 niebezpiecznie bliskie wyprzedzanie (&lt;1,5m, min %1$sm)</string>
+    <string name="radar_summary_heavy_vehicles">🚛 %1$d pojazdów ciężarowych</string>
+    <string name="radar_summary_heavy_vehicles_singular">🚛 1 pojazd ciężarowy</string>
+    <string name="radar_summary_max_speed">🚀 Maks %1$s km/h (+%2$s km/h zbliżanie)</string>
+    <string name="radar_summary_max_speed_simple">🚀 Maks %1$s km/h</string>
 </resources>

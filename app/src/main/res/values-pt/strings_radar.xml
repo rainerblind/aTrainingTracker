@@ -149,4 +149,17 @@
     <string name="radar_high_threat_passes">Ultrapassagens de alto risco</string>
     <string name="radar_marker_pass_title">Passagem de veículo (%1$s km/h)</string>
     <string name="radar_marker_high_threat_title">Passagem de alto risco (%1$s km/h)</string>
+
+    <!-- Resumo de tráfego de radar e ultrapassagens próximas Strava/Partilhar (ATT-5122 / REQ-RAD-007) -->
+    <string name="radar_strava_summary_title">Resumo de tráfego Strava</string>
+    <string name="radar_strava_summary_desc">Anexar contagem de ultrapassagens e resumo de velocidade à descrição Strava</string>
+    <string name="radar_share_summary_title">Partilhar resumo de tráfego</string>
+    <string name="radar_share_summary_desc">Incluir contagem de ultrapassagens e velocidade no texto de partilha</string>
+    <string name="radar_summary_header">📡 Radar: %1$d veículos ultrapassaram (%2$s/km)</string>
+    <string name="radar_summary_close_passes">⚠️ %1$d ultrapassagens perigosas (&lt;1,5m, mín %2$sm)</string>
+    <string name="radar_summary_close_passes_singular">⚠️ 1 ultrapassagem perigosa (&lt;1,5m, mín %1$sm)</string>
+    <string name="radar_summary_heavy_vehicles">🚛 %1$d veículos pesados</string>
+    <string name="radar_summary_heavy_vehicles_singular">🚛 1 veículo pesado</string>
+    <string name="radar_summary_max_speed">🚀 Máx %1$s km/h (+%2$s km/h aproximação)</string>
+    <string name="radar_summary_max_speed_simple">🚀 Máx %1$s km/h</string>
 </resources>

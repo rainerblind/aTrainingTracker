@@ -66,6 +66,7 @@ import com.atrainingtracker.banalservice.devices.radar.RadarLightMode
 import com.atrainingtracker.banalservice.devices.radar.RadarScenario
 import com.atrainingtracker.banalservice.devices.radar.RadarStateRepository
 import com.atrainingtracker.banalservice.devices.radar.RadarTrafficSimulator
+import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.audio.radar.RadarAlertManager
 import com.atrainingtracker.trainingtracker.audio.radar.RadarAudioPreviewType
 import com.atrainingtracker.trainingtracker.settings.RadarAudioAlertMode
@@ -781,6 +782,58 @@ fun RadarSettingsSection(
                             coroutineScope.launch {
                                 actualDataStore.updateRadarAutoLightControl(checked)
                             }
+                        }
+                    )
+                }
+            }
+        }
+
+        // Post-Workout Traffic & Strava Export Summary Card (REQ-RAD-007 / ATT-5122)
+        var stravaSummaryEnabled by remember {
+            mutableStateOf(TrainingApplication.uploadStravaRadarSummary())
+        }
+
+        ElevatedCard(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 4.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp)
+            ) {
+                Text(
+                    text = stringResource(R.string.radar_strava_summary_title),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+
+                Spacer(modifier = Modifier.height(6.dp))
+
+                Text(
+                    text = stringResource(R.string.radar_strava_summary_desc),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        text = stringResource(R.string.radar_strava_summary_title),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Switch(
+                        checked = stravaSummaryEnabled,
+                        onCheckedChange = { checked ->
+                            stravaSummaryEnabled = checked
+                            TrainingApplication.setUploadStravaRadarSummary(checked)
                         }
                     )
                 }

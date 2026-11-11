@@ -149,4 +149,17 @@
     <string name="radar_high_threat_passes">高リスク追い越し数</string>
     <string name="radar_marker_pass_title">車両追い越し (%1$s km/h)</string>
     <string name="radar_marker_high_threat_title">高リスク追い越し (%1$s km/h)</string>
+
+    <!-- レーダー交通および接近追越しサマリー Strava/共有 (ATT-5122 / REQ-RAD-007) -->
+    <string name="radar_strava_summary_title">Strava交通サマリー</string>
+    <string name="radar_strava_summary_desc">Stravaアクティビティ説明に車両通過数と速度サマリーを追加</string>
+    <string name="radar_share_summary_title">交通サマリーを共有</string>
+    <string name="radar_share_summary_desc">ワークアウト共有テキストに車両通過数と速度サマリーを含める</string>
+    <string name="radar_summary_header">📡 レーダー: %1$d 台の車両が通過 (%2$s/km)</string>
+    <string name="radar_summary_close_passes">⚠️ %1$d 回の接近通過 (&lt;1.5m、最小 %2$sm)</string>
+    <string name="radar_summary_close_passes_singular">⚠️ 1 回の接近通過 (&lt;1.5m、最小 %1$sm)</string>
+    <string name="radar_summary_heavy_vehicles">🚛 %1$d 台の大型車両</string>
+    <string name="radar_summary_heavy_vehicles_singular">🚛 1 台の大型車両</string>
+    <string name="radar_summary_max_speed">🚀 最高 %1$s km/h (+%2$s km/h 接近)</string>
+    <string name="radar_summary_max_speed_simple">🚀 最高 %1$s km/h</string>
 </resources>

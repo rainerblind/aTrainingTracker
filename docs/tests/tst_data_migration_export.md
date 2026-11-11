@@ -2157,6 +2157,19 @@
   2. *MyBikeTraffic Developer Field Encoding Test*: Assert that `FitFileWriter` defines and serializes developer fields (`radar_current`, `radar_total`, `passing_speed`, `passing_speed_abs`) on `RecordMesg` according to FIT Protocol V2.0 specifications.
   3. *Non-Radar Invariant Test*: Verify workouts without radar data export standard FIT files without developer fields or radar event overhead.
 
+### TST-RAD-007: **Radar Traffic & Close-Pass Strava Description & Share Summary Test** [Verified]
+- **Requirement(s)**: `REQ-RAD-007`
+- **Component**: `RadarTrafficSummaryFormatter.kt`, `StravaUploader.kt`, `ShareUtils.kt`, `RadarTrafficSummaryFormatterTest.kt`, `StravaUploaderRadarSummaryTest.kt`
+- **Jira**: `ATT-5122`
+- **Test Description**:
+  1. *Standard Radar Summary Formatter Test (`RadarTrafficSummaryFormatterTest.kt`)*: Verify that given a `RadarTrafficSummary` with vehicle count, density, and approach speed, `RadarTrafficSummaryFormatter.format()` outputs the standardized single-line string with expected emoji badges and locale number formats across all 9 supported app languages.
+  2. *High-Resolution V2 Close-Pass & Heavy Vehicle Summary Test (`RadarTrafficSummaryFormatterTest.kt`)*: Verify formatting with close-pass counts (`closePassCount > 0`, minimum distance) and heavy vehicle counts (`heavyVehicleCount > 0`), including singular and plural localization rules.
+  3. *Zero-Vehicle & Disabled Preference Suppression Test (`RadarTrafficSummaryFormatterTest.kt`)*: Verify null return when total vehicles is 0 or summary is null.
+  4. *Strava Uploader Description Append & Non-Destructive Update Test (`StravaUploaderRadarSummaryTest.kt`)*: Verify that `StravaUploader.doUpdate()` correctly appends the formatted summary line when `uploadStravaRadarSummary` is enabled, preserves existing user notes without overwriting, and avoids double-appending if the summary line is already present.
+  5. *Workout Share Intent Text Test (`ShareUtilsTest.kt`)*: Verify that `Intent.EXTRA_TEXT` is populated with the formatted radar summary line when sharing a workout.
+  6. *9-Language Translation Parity Audit (`TranslationParityTest.kt`)*: Verify 100% presence and argument-specifier parity for all `radar_summary_*` and `radar_strava_*` strings across all 9 localized `strings_radar.xml` files.
+
+
 
 
 

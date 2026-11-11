@@ -149,4 +149,17 @@
     <string name="radar_high_threat_passes">Gefährliche Überholungen</string>
     <string name="radar_marker_pass_title">Fahrzeugüberholung (%1$s km/h)</string>
     <string name="radar_marker_high_threat_title">Gefährliche Überholung (%1$s km/h)</string>
+
+    <!-- Radar-Verkehr & Nahüberholungs-Zusammenfassung Strava/Teilen (ATT-5122 / REQ-RAD-007) -->
+    <string name="radar_strava_summary_title">Strava-Verkehrsübersicht</string>
+    <string name="radar_strava_summary_desc">Fahrzeugüberholungen und Geschwindigkeitsübersicht an Strava-Aktivitätsbeschreibung anhängen</string>
+    <string name="radar_share_summary_title">Verkehrsübersicht beim Teilen</string>
+    <string name="radar_share_summary_desc">Fahrzeugüberholungen und Geschwindigkeiten im Teilen-Text mitsenden</string>
+    <string name="radar_summary_header">📡 Radar: %1$d Fahrzeuge überholt (%2$s/km)</string>
+    <string name="radar_summary_close_passes">⚠️ %1$d enge Überholungen (&lt;1,5m, min %2$sm)</string>
+    <string name="radar_summary_close_passes_singular">⚠️ 1 enge Überholung (&lt;1,5m, min %1$sm)</string>
+    <string name="radar_summary_heavy_vehicles">🚛 %1$d Schwerlastfahrzeuge</string>
+    <string name="radar_summary_heavy_vehicles_singular">🚛 1 Schwerlastfahrzeug</string>
+    <string name="radar_summary_max_speed">🚀 Max %1$s km/h (+%2$s km/h Annäherung)</string>
+    <string name="radar_summary_max_speed_simple">🚀 Max %1$s km/h</string>
 </resources>
