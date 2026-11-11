@@ -1648,7 +1648,7 @@
 ### TST-PRO-054: **System Requirements for Live Tracking Contract Test Suite** [Verified]
 - **Requirement(s)**: `REQ-PRO-054`
 - **Component**: `docs/system/sysreq_live_tracking.md`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/SystemLiveTrackingRequirementsContractTest.kt`
-- **Jira**: `ATT-6160`
+- **Jira**: `ATT-6160`, `ATT-6739`
 - **Test Description**:
   1. *Specification Structure & SYSREQ Coverage Verification (`TST-PRO-054.1`, `SystemLiveTrackingRequirementsContractTest.kt`)*:
   • Read `docs/system/sysreq_live_tracking.md`.
@@ -1659,6 +1659,7 @@
   • Assert that reconnection delays in `SYSREQ-TRK-002` match `MyBTLEDevice.INITIAL_RECONNECT_DELAY_MS` (1,000 ms) and `MAX_RECONNECT_DELAY_MS` (16,000 ms).
   • Assert that radar starvation watchdog matches `BTLERadarDevice.WATCHDOG_TIMEOUT_MS` (3,500 ms).
   • Assert that 1-Hz technical sampling tick matches `TrackerService` 1,000 ms period.
+  • Assert dynamic `File.exists()` on disk for all backticked `.kt` and `.java` source and test files cited in `docs/system/sysreq_live_tracking.md`.
   3. *Clean-Room Targeted Test Suite Execution (`TST-PRO-054.3`)*:
   • Execute targeted unit test suite `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.build.SystemLiveTrackingRequirementsContractTest"` asserting 100% pass rate.
 

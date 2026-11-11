@@ -33,7 +33,7 @@ These requirements satisfy ASPICE 4.0 **SYS.2 (System Requirements Analysis)** B
   6. *Rear-Facing Radar*: BLE Garmin Varia Radar custom service (`6a4e3200-667b-11e3-949a-0800200c9a66`, characteristic `6a4e3204-667b-11e3-949a-0800200c9a66`) delivering vehicle approach velocities and threat ranges.
 * **Rationale**: Athletes utilize heterogeneous multisport sensor setups (e.g. chest strap, power meter, wheel speed sensor, and rearview radar simultaneously). The system must reliably multiplex telemetry streams.
 * **Priority**: High
-* **Verification Method**: Demonstration & Test (`SystemLiveTrackingRequirementsContractTest`, `BANALServiceTest`, `BluetoothConstants`)
+* **Verification Method**: Demonstration & Test (`SystemLiveTrackingRequirementsContractTest.kt`, `BANALServiceLifecycleTest.kt`, `BANALServiceRepositoryTest.kt`, `BluetoothConstants.java`)
 * **Traced Software Components**: `BANALService.java`, `MyBTLEDevice.java`, `BluetoothConstants.java`, `BTLERadarDevice.java`, `MySensorManager.java`
 
 ### SYSREQ-TRK-002: Automatic Reconnection & Exponential Backoff Resilience
@@ -46,7 +46,7 @@ These requirements satisfy ASPICE 4.0 **SYS.2 (System Requirements Analysis)** B
   5. Automatically re-bind telemetry filters and resume metric updates immediately upon physical peripheral re-establishment.
 * **Rationale**: Wireless RF dropouts (due to athlete distance, terrain obstruction, or body attenuation) are routine during outdoor workouts; recovery must be autonomous and energy-efficient.
 * **Priority**: High
-* **Verification Method**: Test & Analysis (`SystemLiveTrackingRequirementsContractTest`, `MyBTLEDevice`, `BTLERadarDevice`)
+* **Verification Method**: Test & Analysis (`SystemLiveTrackingRequirementsContractTest.kt`, `MyBTLEDevice.java`, `BTLERadarDevice.java`)
 * **Traced Software Components**: `MyBTLEDevice.java`, `BTLERadarDevice.java`, `FilterManager.java`, `BANALService.java`
 
 ### SYSREQ-TRK-003: Deterministic 1-Hz Technical Sampling Loop & Time-Series Recording
@@ -57,19 +57,19 @@ These requirements satisfy ASPICE 4.0 **SYS.2 (System Requirements Analysis)** B
   3. Dispatch time-series data asynchronously to a dedicated database executor thread (`mDbExecutor`), serializing SQLite sample writes into `WorkoutSamples.db` without starving the Android UI main looper or sampling timer.
 * **Rationale**: Accurate sport analytics (power duration curves, normalized power, segment pacing) require a strictly deterministic 1-Hz discrete time-base.
 * **Priority**: High
-* **Verification Method**: Test & Inspection (`SystemLiveTrackingRequirementsContractTest`, `TrackerService.java`, `WorkoutSamplesDatabaseManager.java`)
+* **Verification Method**: Test & Inspection (`SystemLiveTrackingRequirementsContractTest.kt`, `TrackerService.java`, `WorkoutSamplesDatabaseManager.java`)
 * **Traced Software Components**: `TrackerService.java`, `FilterManager.java`, `WorkoutSamplesDatabaseManager.java`
 
 ### SYSREQ-TRK-004: Multi-Source GNSS Acquisition & Position Telemetry
 * **Title**: Multi-Source GNSS Acquisition & Position Telemetry
 * **Statement**: The system SHALL acquire geospatial coordinates and velocity from Android location providers:
   1. Support direct hardware satellite fixes via `LocationManager.GPS_PROVIDER` (raw NMEA and location callbacks) for autonomous and offline operation.
-  2. Support Google Play Services fused location via `SpeedAndLocationDevice_GoogleFused` (`GoogleApiClient` and `LocationListener`) for battery-efficient city tracking.
+  2. Support Google Play Services fused location via `SpeedAndLocationDevice_GoogleFused.java` (`LocationServices.FusedLocationApi` with `GoogleApiClient` and `LocationListener`) for battery-efficient city tracking.
   3. Filter out invalid null-island fixes (`lat = 0.0, lng = 0.0`) and enforce accuracy threshold rejection before distance accumulation and trackpoint recording.
 * **Rationale**: Robust GPS trajectory recording is fundamental to distance calculation, segment matching, elevation profiling, and emergency location awareness.
 * **Priority**: High
-* **Verification Method**: Test (`SystemLiveTrackingRequirementsContractTest`, `SpeedAndLocationDevice_GPS.java`, `SpeedAndLocationDevice_GoogleFused.java`)
-* **Traced Software Components**: `SpeedAndLocationDevice_GPS.java`, `SpeedAndLocationDevice_GoogleFused.java`, `MapViewportHelper.kt`, `TrackerService.java`
+* **Verification Method**: Test (`SystemLiveTrackingRequirementsContractTest.kt`, `SpeedAndLocationDevice_GPS.java`, `SpeedAndLocationDevice_GoogleFused.java`)
+* **Traced Software Components**: `SpeedAndLocationDevice_GPS.java`, `SpeedAndLocationDevice_GoogleFused.java`, `MapDetailViewportMath.kt`, `TrackerService.java`
 
 ### SYSREQ-TRK-005: Background Foreground Service Execution & Power Management
 * **Title**: Background Foreground Service Execution & Power Management
@@ -80,7 +80,7 @@ These requirements satisfy ASPICE 4.0 **SYS.2 (System Requirements Analysis)** B
   4. Provide a direct platform intent flow (`ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS`) requesting system power management whitelisting.
 * **Rationale**: Android aggressively throttles background execution and suspends CPU cores unless a properly typed foreground service and partial WakeLock are active.
 * **Priority**: High
-* **Verification Method**: Test & Static Audit (`SystemLiveTrackingRequirementsContractTest`, `TrackerService.java`, `MergedManifestFgsAuditTest`)
+* **Verification Method**: Test & Static Audit (`SystemLiveTrackingRequirementsContractTest.kt`, `TrackerService.java`, `MergedManifestFgsAuditTest.kt`)
 * **Traced Software Components**: `TrackerService.java`, `TrainingApplication.java`, `AndroidManifest.xml`
 
 ### SYSREQ-TRK-006: Real-Time Sensory Alerts & Cockpit Feedback
@@ -92,8 +92,8 @@ These requirements satisfy ASPICE 4.0 **SYS.2 (System Requirements Analysis)** B
   4. Surface automated GPS fix acquisition, auto-pause/auto-resume status transitions, and sensor battery low-capacity warnings.
 * **Rationale**: Endurance athletes require instant, glanceable, and acoustically distinct status awareness while navigating traffic or maintaining pacing targets.
 * **Priority**: Medium
-* **Verification Method**: Test & Demonstration (`SystemLiveTrackingRequirementsContractTest`, `RadarEdgeOverlay`, `BikeBellAudioSynthesizer`)
-* **Traced Software Components**: `SensorGridScreen.kt`, `RadarEdgeOverlay.kt`, `BikeBellAudioSynthesizer.java`, `RadarAlertManager.kt`, `RadarAudioSynthesizer.kt`
+* **Verification Method**: Test & Demonstration (`SystemLiveTrackingRequirementsContractTest.kt`, `RadarEdgeOverlay.kt`, `BikeBellAudioSynthesizer.kt`, `BikeBellAudioSynthesizerTest.kt`, `NavigationAudioAlertManagerTest.kt`)
+* **Traced Software Components**: `SensorGridScreen.kt`, `RadarEdgeOverlay.kt`, `BikeBellAudioSynthesizer.kt`, `RadarAlertManager.kt`, `RadarAudioSynthesizer.kt`, `NavigationAudioAlertManager.kt`
 
 ---
 
@@ -104,6 +104,6 @@ These requirements satisfy ASPICE 4.0 **SYS.2 (System Requirements Analysis)** B
 | `SYSREQ-TRK-001` | BLE GATT & ANT+ sensor acquisition | `BANALService`, `BluetoothConstants`, `BTLERadarDevice` | `SERVICE_HEART_RATE`, `SERVICE_CYCLING_POWER`, `SERVICE_CYCLING_SPEED_AND_CADENCE`, `SERVICE_RADAR` (`6a4e3200...`) |
 | `SYSREQ-TRK-002` | Exponential backoff reconnect, radar watchdog | `MyBTLEDevice`, `BTLERadarDevice`, `FilterManager` | `INITIAL_RECONNECT_DELAY_MS = 1000L`, `MAX_RECONNECT_DELAY_MS = 16000L`, `WATCHDOG_TIMEOUT_MS = 3500L` |
 | `SYSREQ-TRK-003` | Deterministic 1-Hz sampling loop | `TrackerService`, `WorkoutSamplesDatabaseManager` | `scheduleAtFixedRate(..., 1, TimeUnit.SECONDS)`, `mDbExecutor` |
-| `SYSREQ-TRK-004` | GNSS acquisition & null-island filtering | `SpeedAndLocationDevice_GPS`, `SpeedAndLocationDevice_GoogleFused` | `LocationManager.GPS_PROVIDER`, `GoogleApiClient`, `LocationListener` |
+| `SYSREQ-TRK-004` | GNSS acquisition & null-island filtering | `SpeedAndLocationDevice_GPS`, `SpeedAndLocationDevice_GoogleFused`, `MapDetailViewportMath` | `LocationManager.GPS_PROVIDER`, `GoogleApiClient`, `LocationListener` |
 | `SYSREQ-TRK-005` | Foreground service, WakeLock, power governance | `TrackerService`, `TrainingApplication` | `PowerManager.PARTIAL_WAKE_LOCK`, `FOREGROUND_SERVICE_TYPE_LOCATION`, `FOREGROUND_SERVICE_TYPE_HEALTH` |
-| `SYSREQ-TRK-006` | Cockpit tiles, radar visual/audio warnings | `SensorGridScreen`, `RadarEdgeOverlay`, `RadarAlertManager`, `RadarAudioSynthesizer` | `USAGE_ALARM`, `USAGE_MEDIA`, radar threat levels |
+| `SYSREQ-TRK-006` | Cockpit tiles, radar visual/audio warnings | `SensorGridScreen`, `RadarEdgeOverlay`, `RadarAlertManager`, `RadarAudioSynthesizer`, `BikeBellAudioSynthesizer`, `NavigationAudioAlertManager` | `USAGE_ALARM`, `USAGE_MEDIA`, radar threat levels |

@@ -193,4 +193,41 @@ class SystemLiveTrackingRequirementsContractTest {
         assertTrue("Document must specify Partial WakeLock", content.contains("PowerManager.PARTIAL_WAKE_LOCK"))
         assertTrue("Document must reference battery optimization exemption", content.contains("ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS"))
     }
+
+    /**
+     * Asserts that all backticked .kt, .java, and .xml files referenced in docs/system/sysreq_live_tracking.md
+     * exist on disk in the repository (TST-PRO-054.3, ATT-6739).
+     *
+     * Note: Complies with ATT-6186 SourceTextReadingAuditContractTest by avoiding literal production
+     * source path tokens and operating on the documentation markdown and filesystem traversal.
+     */
+    @Test
+    fun testSysreqLiveTracking_allReferencedCodeFilesExistOnDisk() {
+        val sysreqFile = findRepoRootFile("docs/system/sysreq_live_tracking.md")
+        val content = sysreqFile.readText()
+
+        val filenamePattern = Regex("`([A-Za-z0-9_]+\\.(?:kt|java|xml))`")
+        val referencedFiles = filenamePattern.findAll(content)
+            .map { it.groupValues[1] }
+            .toSet()
+
+        assertTrue("Must reference at least 15 code/resource/test files", referencedFiles.size >= 15)
+
+        val repoRoot = findRepoRootFile("settings.gradle").parentFile ?: File(".")
+        val filesOnDisk = repoRoot.walkTopDown()
+            .filter { file ->
+                val path = file.path
+                val isBuildOutput = path.contains("${File.separator}build${File.separator}") &&
+                    !path.contains("${File.separator}src${File.separator}")
+                !path.contains(".git") && !isBuildOutput
+            }
+            .map { it.name }
+            .toSet()
+
+        val missingFiles = referencedFiles.filter { it !in filesOnDisk }
+        assertTrue(
+            "The following referenced files do not exist in the repository: $missingFiles",
+            missingFiles.isEmpty()
+        )
+    }
 }
