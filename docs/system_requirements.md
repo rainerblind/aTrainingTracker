@@ -50,10 +50,10 @@ See [`docs/system/sysreq_data_exchange.md`](system/sysreq_data_exchange.md) for 
 | `SYSREQ-TRK-003` | Live Tracking | Deterministic 1-Hz Sampling & SQLite Recording | Test / `SystemLiveTrackingRequirementsContractTest` | `TrackerService`, `WorkoutSamplesDatabaseManager` |
 | `SYSREQ-TRK-004` | Live Tracking | Multi-Source GNSS Acquisition & Position Telemetry | Test / `SystemLiveTrackingRequirementsContractTest` | `SpeedAndLocationDevice_GPS`, `SpeedAndLocationDevice_GoogleFused` |
 | `SYSREQ-TRK-005` | Live Tracking | Foreground Service Execution & Power Management | Test / `SystemLiveTrackingRequirementsContractTest` | `TrackerService`, `TrainingApplication` |
-| `SYSREQ-TRK-006` | Live Tracking | Real-Time Sensory Alerts & Cockpit Feedback | Test / `SystemLiveTrackingRequirementsContractTest` | `SensorGridScreen`, `RadarThreatView` |
+| `SYSREQ-TRK-006` | Live Tracking | Real-Time Sensory Alerts & Cockpit Feedback | Test / `SystemLiveTrackingRequirementsContractTest` | `SensorGridScreen`, `RadarEdgeOverlay` |
 | `SYSREQ-DEX-001` | Data Exchange | Multi-Format Telemetry Export Interoperability | Test / `SystemDataExchangeRequirementsContractTest` | `ExportManager`, `FileFormat`, `FitFileWriter` |
 | `SYSREQ-DEX-002` | Data Exchange | Multi-Format Workout Ingestion & Deduplication | Test / `SystemDataExchangeRequirementsContractTest` | `LegacyImportEngine`, `StravaBulkExportImporter` |
 | `SYSREQ-DEX-003` | Data Exchange | Cloud Activity Synchronization & Rate Governance | Test / `SystemDataExchangeRequirementsContractTest` | `StravaUploader`, `StravaEquipmentSyncWorker` |
 | `SYSREQ-DEX-004` | Data Exchange | Cloud Storage Synchronization & Automatic Backup | Test / `SystemDataExchangeRequirementsContractTest` | `DropboxBackupManager`, `GoogleDriveBackupManager` |
 | `SYSREQ-DEX-005` | Data Exchange | Full State Backup & Atomic Recovery Pipeline | Test / `SystemDataExchangeRequirementsContractTest` | `BackupManager`, `SecureZipExtractor` |
-| `SYSREQ-DEX-006` | Data Exchange | Credential Protection & Decommissioned Boundaries | Test / `SystemDataExchangeRequirementsContractTest` | `AuthCredentialsStore`, `backup_rules.xml` |
+| `SYSREQ-DEX-006` | Data Exchange | Credential Protection & Decommissioned Boundaries | Test / `SystemDataExchangeRequirementsContractTest` | `AuthCredentialsStore`, `full_backup_content.xml` |

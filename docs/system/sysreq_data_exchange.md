@@ -85,14 +85,14 @@ These requirements satisfy ASPICE 4.0 **SYS.2 (System Requirements Analysis)** B
 ### SYSREQ-DEX-006: Credential Protection, Security Isolation & Decommissioned Boundaries
 * **Title**: Credential Protection, Security Isolation & Decommissioned Platform Boundaries
 * **Statement**: The system SHALL enforce strict data privacy, credential protection, and interface lifecycle boundaries:
-  1. *Credential Protection*: Sensitive user authentication tokens, OAuth refresh secrets, and cloud credentials stored in `auth_credentials_prefs.xml` SHALL be strictly excluded from `.attbackup` archives and Android Auto Backup (`backup_rules.xml`).
+  1. *Credential Protection*: Sensitive user authentication tokens, OAuth refresh secrets, and cloud credentials stored in `auth_credentials_prefs.xml` SHALL be strictly excluded from `.attbackup` archives and Android Auto Backup (`@xml/full_backup_content`).
   2. *Legacy Credential Purging*: Any legacy credential keys found in default shared preferences SHALL be automatically migrated and purged (`AuthCredentialsStore.migrateLegacyCredentials()`).
   3. *Health Connect Gating*: Integration with Android Health Connect API (`ExerciseSessionRecord`, `HeartRateRecord`) SHALL enforce dynamic runtime user permission consent before transmitting biometric samples.
   4. *Decommissioned Platform Boundaries*: Permanently retired third-party cloud interfaces (Runkeeper HealthGraph API and TrainingPeaks API) SHALL be maintained as inert schema placeholders strictly to preserve historical SQLite database schema integrity and prevent migration regressions.
 * **Rationale**: Exported archives and cloud services must never leak athlete credentials, and deprecated cloud platforms must not trigger runtime communication errors.
 * **Priority**: High
 * **Verification Method**: Static Audit & Test (`SystemDataExchangeRequirementsContractTest`, `BackupManagerCredentialExclusionTest`, `BackupRulesXmlValidationTest`)
-* **Traced Software Components**: `AuthCredentialsStore.kt`, `backup_rules.xml`, `HealthConnectManager.kt`, `WorkoutDataHelper.java`
+* **Traced Software Components**: `AuthCredentialsStore.kt`, `full_backup_content.xml`, `HealthConnectManager.kt`, `WorkoutDataHelper.java`
 
 ---
 

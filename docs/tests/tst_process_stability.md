@@ -1684,7 +1684,7 @@
 ### TST-PRO-056: **System Architectural Design Contract Test Suite** [Verified]
 - **Requirement(s)**: `REQ-PRO-056`
 - **Component**: `docs/system/system_architecture.md`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/SystemArchitectureDesignContractTest.kt`
-- **Jira**: `ATT-6164`
+- **Jira**: `ATT-6164`, `ATT-6741`
 - **Test Description**:
   1. *System Elements & Interfaces Coverage Verification (`TST-PRO-056.1`, `SystemArchitectureDesignContractTest.kt`)*:
   • Read `docs/system/system_architecture.md`.
@@ -1692,10 +1692,16 @@
   • Assert protocol, payload data schema, and timing characteristics are documented for each interface.
   2. *Dynamic Behavior & Mermaid Syntax Verification (`TST-PRO-056.2`, `SystemArchitectureDesignContractTest.kt`)*:
   • Assert that `docs/system/system_architecture.md` contains valid Mermaid `sequenceDiagram` fences for live 1-Hz telemetry acquisition and post-workout cloud export/backup.
-  3. *100% System Requirements Allocation Verification (`TST-PRO-056.3`, `SystemArchitectureDesignContractTest.kt`)*:
+  • Assert that Diagram 4.2 accurately models workout stop from `ControlTrackingScreen` / notification action delegating session finalization and export triggering to `TrackerService` (`mDbExecutor`).
+  3. *100% Bidirectional System Requirements Allocation Verification (`TST-PRO-056.3`, `SystemArchitectureDesignContractTest.kt`)*:
   • Assert that the System Requirements Allocation Table allocates 100% of defined `SYSREQ-TRK-001`..`006` and `SYSREQ-DEX-001`..`006` requirements to system elements.
+  • Assert exact bidirectional set equality (`declaredSysreqs == allocatedSysreqs`) ensuring zero orphan or undeclared `SYSREQ-*` IDs exist.
   4. *Clean-Room Targeted Test Suite Execution (`TST-PRO-056.4`)*:
   • Execute targeted unit test suite `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.build.SystemArchitectureDesignContractTest"` asserting 100% pass rate.
+  5. *Dynamic Production Code Grounding Reflection Verification (`TST-PRO-056.5`, `SystemArchitectureDesignContractTest.kt`)*:
+  • Verify existence of referenced production classes via dynamic reflection (`Class.forName`): `RadarEdgeOverlayKt`, `RadarAlertManager`, `RadarAudioSynthesizer`, `NavigationAudioAlertManager`, `BikeBellAudioSynthesizer`, `SpeedAndLocationDevice_GoogleFused`.
+  • Verify existence of referenced XML resource files via `File.exists()`: `app/src/main/res/xml/full_backup_content.xml`.
+  • Verify referenced application process ID matches `com.atrainingtracker`.
 
 
 ### TST-TST-004: **Android Emulator Lifecycle Management, Physical-Phone Guardrail, and Two-Tier Verification Suite** [Verified]

@@ -2729,34 +2729,35 @@ The workflow SHALL mandate that:
 
 
 ### REQ-PRO-056: System Architectural Design & SYSREQ Allocation [Verified]
-- **Tests**: `TST-PRO-056` | **Tickets**: `ATT-6164`
+- **Tests**: `TST-PRO-056` | **Tickets**: `ATT-6164`, `ATT-6741`
 - **Implementation**: `docs/system/system_architecture.md`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/SystemArchitectureDesignContractTest.kt`
-- **Rationale**: ASPICE 4.0 pre-assessment finding S-05 (SYS.3 BP1-BP6) identified that aTrainingTracker lacks a formal system architectural design establishing the physical boundaries, system elements, interface definitions, dynamic behaviors, and 100% allocation of system requirements across hardware sensors, host Android application, OS platform services, and cloud environments. While software architecture (`docs/architecture.md`) specifies SWE.2 internal classes, the overarching system architecture bridging SYS.2 system requirements to software components was undocumented. Establishing `docs/system/system_architecture.md` and verifying consistency via contract testing closes this ASPICE CL2 gap (ATT-6164, refining `REQ-PRO-043` under Epic `ATT-6142`):
+- **Rationale**: ASPICE 4.0 pre-assessment finding S-05 (SYS.3 BP1-BP6) identified that aTrainingTracker lacks a formal system architectural design establishing the physical boundaries, system elements, interface definitions, dynamic behaviors, and 100% allocation of system requirements across hardware sensors, host Android application, OS platform services, and cloud environments. While software architecture (`docs/architecture.md`) specifies SWE.2 internal classes, the overarching system architecture bridging SYS.2 system requirements to software components was undocumented. Establishing `docs/system/system_architecture.md` and verifying consistency via contract testing closes this ASPICE CL2 gap (ATT-6164, refining `REQ-PRO-043` under Epic `ATT-6142`). ATT-6741 reconciles Section 5 to eliminate 13 orphan SYSREQ IDs, replaces 10 hallucinated classes/constants/entities with grounded code elements, corrects the workout finalization actor in Sequence Diagram 4.2 to `TrackerService` on `mDbExecutor`, and enforces exact bidirectional set equality (`declaredSysreqs == allocatedSysreqs`) in `SystemArchitectureDesignContractTest.kt`:
 - **Description**:
   1. *System Architectural Design Specification (`REQ-PRO-056.1`, docs/system/system_architecture.md)*:
      • `docs/system/system_architecture.md` SHALL define the authoritative system architectural design complying with ASPICE SYS.3:
-       - System Elements Decomposition (`SYS-EL-01` Android Smartphone Host App, `SYS-EL-02` BLE GATT Sensors, `SYS-EL-03` ANT+ Sensors, `SYS-EL-04` Android OS Platform Services, `SYS-EL-05` External Cloud Platforms).
-       - System Interfaces Specification (`SYS-IF-01` BLE GATT Services, `SYS-IF-02` ANT+ Radio IPC, `SYS-IF-03` Android Location Providers, `SYS-IF-04` Android PowerManager/FGS Lifecycle, `SYS-IF-05` Cloud REST APIs, `SYS-IF-06` Android SQLite Storage & VFS) specifying protocol, data formats, and timing/rate bounds.
-       - Dynamic Behavior Sequence Diagrams: Formal Mermaid `sequenceDiagram` models illustrating (a) Live 1-Hz multi-sensor telemetry acquisition loop and (b) Post-workout cloud export and atomic `.attbackup` archiving.
-       - 100% System Requirements Allocation: An exhaustive allocation matrix assigning every defined system requirement (`SYSREQ-TRK-001`..`006`, `SYSREQ-DEX-001`..`006`) to at least one system element.
+       - System Elements Decomposition (`SYS-EL-01` Android Smartphone Host App with process `com.atrainingtracker`, `SYS-EL-02` BLE GATT Sensors, `SYS-EL-03` ANT+ Sensors via `MyANTDevice` subclasses and ANT+ Plugin IPC, `SYS-EL-04` Android OS Platform Services, `SYS-EL-05` External Cloud Platforms).
+       - System Interfaces Specification (`SYS-IF-01` BLE GATT Services, `SYS-IF-02` ANT+ Radio IPC, `SYS-IF-03` Android Location Providers via `GoogleApiClient`/`LocationListener` and `LocationManager`, `SYS-IF-04` Android PowerManager/FGS Lifecycle using `FOREGROUND_SERVICE_TYPE_LOCATION` and `HEALTH`, `SYS-IF-05` Cloud REST APIs, `SYS-IF-06` Android SQLite Storage & VFS with `@xml/full_backup_content`) specifying protocol, data formats, and timing/rate bounds.
+       - Dynamic Behavior Sequence Diagrams: Formal Mermaid `sequenceDiagram` models illustrating (a) Live 1-Hz multi-sensor telemetry acquisition loop and (b) Post-workout cloud export and atomic `.attbackup` archiving where workout stop delegates session finalization and export triggering to `TrackerService` (`mDbExecutor`).
+       - 100% System Requirements Allocation: An exhaustive allocation matrix assigning every defined system requirement (`SYSREQ-TRK-001`..`006`, `SYSREQ-DEX-001`..`006`) to at least one system element with zero orphan or hallucinated SYSREQ IDs.
   2. *System Architecture Contract Testing & Allocation Verification (`REQ-PRO-056.2`)*:
      • `SystemArchitectureDesignContractTest.kt` under `app/src/test/.../build/` SHALL assert:
        - `docs/system/system_architecture.md` exists and contains non-empty definitions for all 5 system elements (`SYS-EL-01` through `SYS-EL-05`) and all 6 system interfaces (`SYS-IF-01` through `SYS-IF-06`).
-       - Valid Mermaid sequence diagrams exist for live tracking and cloud backup flows.
-       - 100% of defined `SYSREQ-TRK-*` and `SYSREQ-DEX-*` requirements are explicitly mapped in the System Requirements Allocation Matrix.
+       - Valid Mermaid sequence diagrams exist for live tracking and cloud backup flows, verifying `TrackerService` / `mDbExecutor` as finalization actor.
+       - Exact bidirectional set equality (`declaredSysreqs == allocatedSysreqs`) ensuring 100% allocation of all 12 defined `SYSREQ-TRK-*` and `SYSREQ-DEX-*` requirements with zero orphan IDs.
+       - Dynamic code grounding verification via reflection (`Class.forName`) and file checks (`File.exists`) for authentic components (`RadarEdgeOverlayKt`, `RadarAlertManager`, `RadarAudioSynthesizer`, `NavigationAudioAlertManager`, `BikeBellAudioSynthesizer`, `SpeedAndLocationDevice_GoogleFused`, `full_backup_content.xml`, process `com.atrainingtracker`).
        - Zero source-text reading of production files complying with ATT-6186.
 - **Requirement Archaeology & Chesterton's Fence Audit**:
   1. *Original Requirement ID & Target*: Net-new requirement `REQ-PRO-056` (*System Architectural Design Specification*), establishing ASPICE SYS.3 baseline under Parent Epic ATT-6142. Targets `docs/system/system_architecture.md` and `SystemArchitectureDesignContractTest.kt`.
-  2. *Historical Origin & Commit Trace*: Independent ASPICE pre-assessment finding S-05 (2026-11-08) and ticket ATT-6164.
-  3. *Root Reason for Existing Formulation*: System evolved directly from user features to software classes without a formal systems engineering architecture layer bridging SYS.2 requirements to SWE.2 software design.
-  4. *Preservation of Core Invariants*: Zero runtime code changes; existing software components, threading models, and service boundaries remain 100% unaltered.
+  2. *Historical Origin & Commit Trace*: Independent ASPICE pre-assessment finding S-05 (2026-11-08), ticket ATT-6164 (commit `7563a9c2`), and ticket ATT-6741.
+  3. *Root Reason for Existing Formulation*: System evolved directly from user features to software classes without a formal systems engineering architecture layer bridging SYS.2 requirements to SWE.2 software design. The initial implementation in ATT-6164 fragmented live tracking into 25 items containing 13 ungrounded orphan IDs (ACQ, PER, ENV) and hallucinated class names, while contract tests only checked unilateral subset containment (`declaredSysreqs <= allocatedSysreqs`).
+  4. *Preservation of Core Invariants*: SYS.3 element decomposition (`SYS-EL-01..05`) and interfaces (`SYS-IF-01..06`) are 100% preserved. All 12 authentic SYS.2 requirements remain allocated with exact bidirectional equality (`declaredSysreqs == allocatedSysreqs`). Zero changes to production runtime code; documentation and contract tests are brought into strict alignment with production reality.
 - **Acceptance Criteria (Given-When-Then)**:
   • *Given* `docs/system/system_architecture.md`,
   • *When* inspected,
-  • *Then* it SHALL document all 5 system elements, 6 system interfaces, dynamic sequence diagrams, and 100% SYSREQ allocation.
+  • *Then* it SHALL document all 5 system elements, 6 system interfaces, dynamic sequence diagrams (with `TrackerService` finalization actor), grounded software symbols, and exact 1:1 allocation of all 12 SYSREQ requirements with zero orphan IDs.
   • *Given* `SystemArchitectureDesignContractTest.kt`,
   • *When* executed in the unit test suite,
-  • *Then* all structural and allocation assertions SHALL pass with 100% success.
+  • *Then* all structural, exact bidirectional set equality (`declaredSysreqs == allocatedSysreqs`), and dynamic code grounding reflection assertions SHALL pass with 100% success.
 - **Invariants**: Zero modifications to Android production runtime code in `app/src/main/`; 100% unit test pass rate.
 
 

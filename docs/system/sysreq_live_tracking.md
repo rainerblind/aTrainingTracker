@@ -64,7 +64,7 @@ These requirements satisfy ASPICE 4.0 **SYS.2 (System Requirements Analysis)** B
 * **Title**: Multi-Source GNSS Acquisition & Position Telemetry
 * **Statement**: The system SHALL acquire geospatial coordinates and velocity from Android location providers:
   1. Support direct hardware satellite fixes via `LocationManager.GPS_PROVIDER` (raw NMEA and location callbacks) for autonomous and offline operation.
-  2. Support Google Play Services fused location via `FusedLocationProviderClient` for battery-efficient city tracking.
+  2. Support Google Play Services fused location via `SpeedAndLocationDevice_GoogleFused` (`GoogleApiClient` and `LocationListener`) for battery-efficient city tracking.
   3. Filter out invalid null-island fixes (`lat = 0.0, lng = 0.0`) and enforce accuracy threshold rejection before distance accumulation and trackpoint recording.
 * **Rationale**: Robust GPS trajectory recording is fundamental to distance calculation, segment matching, elevation profiling, and emergency location awareness.
 * **Priority**: High
@@ -75,7 +75,7 @@ These requirements satisfy ASPICE 4.0 **SYS.2 (System Requirements Analysis)** B
 * **Title**: Background Foreground Service Execution & Power Management
 * **Statement**: The system SHALL maintain continuous, uninterrupted recording when the user turns off the display or switches to another mobile application:
   1. Execute tracking within an Android Foreground Service (`TrackerService`) displaying an ongoing notification with active workout elapsed time and distance.
-  2. Dynamically declare and verify required runtime Foreground Service types (`FOREGROUND_SERVICE_TYPE_LOCATION`, `FOREGROUND_SERVICE_TYPE_HEALTH`, `FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE`) complying with Android 14+ platform security constraints.
+  2. Dynamically declare and verify required runtime Foreground Service types (`FOREGROUND_SERVICE_TYPE_LOCATION`, `FOREGROUND_SERVICE_TYPE_HEALTH`) complying with Android 14+ platform security constraints.
   3. Acquire a partial WakeLock (`PowerManager.PARTIAL_WAKE_LOCK`) on activity start and reliably release the WakeLock upon workout stop, discard, or crash teardown.
   4. Provide a direct platform intent flow (`ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS`) requesting system power management whitelisting.
 * **Rationale**: Android aggressively throttles background execution and suspends CPU cores unless a properly typed foreground service and partial WakeLock are active.
@@ -92,8 +92,8 @@ These requirements satisfy ASPICE 4.0 **SYS.2 (System Requirements Analysis)** B
   4. Surface automated GPS fix acquisition, auto-pause/auto-resume status transitions, and sensor battery low-capacity warnings.
 * **Rationale**: Endurance athletes require instant, glanceable, and acoustically distinct status awareness while navigating traffic or maintaining pacing targets.
 * **Priority**: Medium
-* **Verification Method**: Test & Demonstration (`SystemLiveTrackingRequirementsContractTest`, `RadarThreatView`, `BikeBellAudioSynthesizer`)
-* **Traced Software Components**: `SensorGridScreen.kt`, `RadarThreatView.kt`, `BikeBellAudioSynthesizer.java`, `SoundEngine.java`
+* **Verification Method**: Test & Demonstration (`SystemLiveTrackingRequirementsContractTest`, `RadarEdgeOverlay`, `BikeBellAudioSynthesizer`)
+* **Traced Software Components**: `SensorGridScreen.kt`, `RadarEdgeOverlay.kt`, `BikeBellAudioSynthesizer.java`, `RadarAlertManager.kt`, `RadarAudioSynthesizer.kt`
 
 ---
 
@@ -104,6 +104,6 @@ These requirements satisfy ASPICE 4.0 **SYS.2 (System Requirements Analysis)** B
 | `SYSREQ-TRK-001` | BLE GATT & ANT+ sensor acquisition | `BANALService`, `BluetoothConstants`, `BTLERadarDevice` | `SERVICE_HEART_RATE`, `SERVICE_CYCLING_POWER`, `SERVICE_CYCLING_SPEED_AND_CADENCE`, `SERVICE_RADAR` (`6a4e3200...`) |
 | `SYSREQ-TRK-002` | Exponential backoff reconnect, radar watchdog | `MyBTLEDevice`, `BTLERadarDevice`, `FilterManager` | `INITIAL_RECONNECT_DELAY_MS = 1000L`, `MAX_RECONNECT_DELAY_MS = 16000L`, `WATCHDOG_TIMEOUT_MS = 3500L` |
 | `SYSREQ-TRK-003` | Deterministic 1-Hz sampling loop | `TrackerService`, `WorkoutSamplesDatabaseManager` | `scheduleAtFixedRate(..., 1, TimeUnit.SECONDS)`, `mDbExecutor` |
-| `SYSREQ-TRK-004` | GNSS acquisition & null-island filtering | `SpeedAndLocationDevice_GPS`, `SpeedAndLocationDevice_GoogleFused` | `LocationManager.GPS_PROVIDER`, `FusedLocationProviderClient` |
+| `SYSREQ-TRK-004` | GNSS acquisition & null-island filtering | `SpeedAndLocationDevice_GPS`, `SpeedAndLocationDevice_GoogleFused` | `LocationManager.GPS_PROVIDER`, `GoogleApiClient`, `LocationListener` |
 | `SYSREQ-TRK-005` | Foreground service, WakeLock, power governance | `TrackerService`, `TrainingApplication` | `PowerManager.PARTIAL_WAKE_LOCK`, `FOREGROUND_SERVICE_TYPE_LOCATION`, `FOREGROUND_SERVICE_TYPE_HEALTH` |
-| `SYSREQ-TRK-006` | Cockpit tiles, radar visual/audio warnings | `SensorGridScreen`, `RadarThreatView`, `SoundEngine` | `USAGE_ALARM`, `USAGE_MEDIA`, radar threat levels |
+| `SYSREQ-TRK-006` | Cockpit tiles, radar visual/audio warnings | `SensorGridScreen`, `RadarEdgeOverlay`, `RadarAlertManager`, `RadarAudioSynthesizer` | `USAGE_ALARM`, `USAGE_MEDIA`, radar threat levels |
