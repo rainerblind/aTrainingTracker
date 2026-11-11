@@ -4081,3 +4081,54 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 **Invariants**: 100% V1 backward compatibility; zero SQLite database migrations; overlay rail touch pass-through preserved; 100% 9-language translation parity.
 
+### REQ-TRK-074: Duplicate Location Callback Filtering, Asymmetric Deadband Separation & Stationary Pinning Entry Hysteresis in `SpeedAndLocationDevice` [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-TRK-074` | **Tickets**: `ATT-6682`
+- **Implementation**: `app/src/main/java/com/atrainingtracker/banalservice/devices/SpeedAndLocationDevice.java`, `app/src/test/java/com/atrainingtracker/banalservice/devices/SpeedAndLocationDeviceStationaryJitterTest.kt`
+- **Rationale**: During active athletic tracking (especially on devices using Google Fused Location Provider, `SpeedAndLocationDevice_GoogleFused`), sub-second duplicate/burst callbacks (e.g. 50–150 ms apart with identical coordinates and `speed == 0.0f` from resting phone IMUs) and low-speed movements (e.g. hill climbing $\le 15\text{--}21\text{ km/h}$ where 1-second displacement $\le \text{escapeRadius}$) erroneously triggered stationary anchor pinning (`mIsStationaryPinned = true`), repeatedly overwriting valid moving velocity with `0.0 km/h` and interrupting distance accumulation. The system SHALL ignore sub-interval and duplicate location callbacks, separate the stationary pinning entry threshold (`deadbandRadius`) from the exit escape threshold (`escapeRadius`), and enforce multi-tick entry hysteresis ($\ge 3$ consecutive 1 Hz updates) before transitioning from moving (`!mIsStationaryPinned`) into pinned (`mIsStationaryPinned = true`) state (ATT-6682, amending `REQ-TRK-048.1` and `REQ-TRK-056.1`):
+- **Description**:
+  1. *Sub-Interval & Duplicate Callback Guard (`REQ-TRK-074.1`)*:
+     - In `SpeedAndLocationDevice.onNewLocation()`, when `mPrevLocation != null`:
+       - If $\Delta t_{\text{ms}} = \text{location.getTime()} - \text{mPrevLocation.getTime()} < 250\text{ ms}$, OR if $(\text{rawDelta} == 0.0\text{ m} \land \Delta t_{\text{ms}} < 900\text{ ms})$:
+         `SpeedAndLocationDevice` SHALL ignore the fix and return immediately without updating `mPrevLocation`, without mutating `mIsStationaryPinned`, without zeroing `mSpeed`, and without publishing spurious zero velocity to `mSpeedSensor`.
+  2. *Separation of Entry and Exit Pinning Thresholds (`REQ-TRK-074.2`)*:
+     - The entry candidate condition to begin stationary pinning while moving (`!mIsStationaryPinned`) SHALL be evaluated against `deadbandRadius` ($\max(3.0\text{ m}, 0.6 \times \text{accuracy})$) and NOT against `escapeRadius` ($\max(3.0\text{ m}, 1.5 \times \text{accuracy})$).
+     - The exit condition to unpin while already pinned (`mIsStationaryPinned`) SHALL continue to require `distFromAnchor > deadbandRadius` (with positive Doppler speed or displacement exceeding `escapeRadius`).
+  3. *Stationary Pinning Entry Hysteresis (`REQ-TRK-074.3`)*:
+     - `SpeedAndLocationDevice` SHALL maintain an entry hysteresis streak counter `mStationaryHysteresisCount` (initialized to `0`).
+     - When `mIsStationaryPinned == true`: `mStationaryHysteresisCount` SHALL remain `0`. When unpinning occurs, `mStationaryHysteresisCount` SHALL reset to `0`.
+     - When `mIsStationaryPinned == false` and `mPrevLocation != null`:
+       - If candidate stationary conditions are met:
+         $(\text{isDopplerStationary} \land \text{rawDelta} \le \text{deadbandRadius}) \lor (\neg \text{hasSpeed} \land \text{rawDelta} \le \text{deadbandRadius} \land mSpeed \le \text{SPEED\_ZERO\_THRESHOLD})$:
+         `mStationaryHysteresisCount` SHALL increment by `1`.
+         - If `mStationaryHysteresisCount >= STATIONARY_PINNING_HYSTERESIS_TICKS` (constant $= 3$):
+           The device SHALL transition to `mIsStationaryPinned = true`, set `mStationaryAnchor = location`, set `delta_distance = 0.0`, clamp `speed = 0.0`, and reset `mStationaryHysteresisCount = 0`.
+         - Else (`mStationaryHysteresisCount < 3`):
+           The device SHALL remain in `mIsStationaryPinned = false`, treat the tick as transient movement, compute `delta_distance = rawDelta`, calculate `calcSpeed`, and fall back to geometric speed (`REQ-TRK-056.2`), preventing single-sample zero-speed drops.
+       - Else (when $\text{rawDelta} > \text{deadbandRadius}$ or $\text{rawSpeed} > \text{SPEED\_ZERO\_THRESHOLD}$):
+         `mStationaryHysteresisCount` SHALL reset to `0`, and legitimate movement progression SHALL proceed.
+  4. *Initial Fix Immediate Pinning Invariance (`REQ-TRK-074.4`)*:
+     - When `mPrevLocation == null` (initial fix at session start):
+       If $\text{isDopplerStationary}$ or $\neg \text{hasSpeed}$, `SpeedAndLocationDevice` SHALL immediately initialize `mStationaryAnchor = location` and `mIsStationaryPinned = true` with zero hysteresis delay, preserving start-line stationary jitter suppression (`REQ-TRK-048.1`).
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-TRK-074`, amending `REQ-TRK-048.1` (*Stationary GPS Anchor Pinning & Multi-Provider Deadband Gating*, `ATT-4850`) and `REQ-TRK-056.1` (*Google Fused Location Stationary Doppler Pinning & Motion Escape Bounds*, `ATT-6256`). Targets `SpeedAndLocationDevice.java` and `SpeedAndLocationDeviceStationaryJitterTest.kt`.
+2. *Historical Origin & Commit Trace*: Sprint 2026-44.2 (`ATT-4850`, commit `19175f0a`), Sprint 2026-45.13 (`ATT-6256`, commit `fa5f2791`).
+3. *Root Reason for Existing Formulation (Why was this fence built?)*: `REQ-TRK-048.1` introduced immediate zero Doppler pinning to freeze GPS spiderwebs at traffic stops. `REQ-TRK-056.1` added `rawDelta <= escapeRadius` to avoid pinning when physical phone IMUs were stationary on a desk during fast mock replays. However, using `escapeRadius` (up to 6.0 m) as the entry threshold and allowing single-sample pinning without hysteresis caused low-speed movement ($v \le 15\text{--}21\text{ km/h}$) and sub-second duplicate bursts to falsely pin the device.
+4. *Preservation of Core Invariants (Why is it safe to modify now?)*: Re-routing the entry check to `deadbandRadius`, requiring $N=3$ consecutive stationary ticks before transitioning to `mIsStationaryPinned = true`, filtering sub-second duplicates ($dt < 250\text{ ms}$ or identical coordinates $dt < 900\text{ ms}$), while retaining immediate pinning on the initial startup fix (`mPrevLocation == null`), completely prevents false velocity drops during movement while preserving 100% of stationary red light jitter suppression and start-line stabilization.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* `SpeedAndLocationDevice` in active movement at $v = 8.0\text{ m/s}$ ($28.8\text{ km/h}$),
+• *When* a duplicate location callback arrives $100\text{ ms}$ later with $\text{rawDelta} == 0.0\text{ m}$ and $\text{speed} == 0.0\text{ m/s}$,
+• *Then* `SpeedAndLocationDevice` ignores the duplicate callback, leaves `isStationaryPinned == false`, and preserves the active moving speed.
+• *Given* `SpeedAndLocationDevice` climbing a hill at $3.0\text{ m/s}$ ($10.8\text{ km/h}$, displacement $3.0\text{ m/s} \le \text{escapeRadius}$),
+• *When* a single spurious Doppler zero fix ($\text{speed} == 0.0\text{ m/s}$) arrives,
+• *Then* `SpeedAndLocationDevice` does not pin to stationary anchor, preserves `isStationaryPinned == false`, and maintains continuous speed via geometric fallback.
+• *Given* `SpeedAndLocationDevice` halting at a traffic light,
+• *When* $3$ consecutive $1\text{ Hz}$ updates arrive with $\text{rawDelta} \le \text{deadbandRadius}$ and $\text{isDopplerStationary} == \text{true}$,
+• *Then* on the 3rd update, `SpeedAndLocationDevice` transitions to `isStationaryPinned == true`, anchors coordinates, clamps speed to $0.0\text{ m/s}$, and locks bearing.
+• *Given* session start with initial fix (`mPrevLocation == null`) reporting $\text{speed} == 0.0\text{ m/s}$,
+• *When* `onNewLocation` is invoked,
+• *Then* `SpeedAndLocationDevice` immediately pins to stationary anchor on the 1st fix without waiting for 3 ticks.
+
+**Invariants**: Zero background service IPC regressions; initial fix stationary pinning preserved; 100% test pass rate across `banalservice.devices.*`.

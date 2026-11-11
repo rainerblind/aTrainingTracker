@@ -2254,3 +2254,28 @@
   7. *Clean-Room Targeted Test Suite Execution (`TST-TRK-073.7`)*:
      • `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.tracking.radar.*" --tests "com.atrainingtracker.trainingtracker.ui.aftermath.*" --tests "com.atrainingtracker.trainingtracker.localization.TranslationParityTest"` asserting 100% pass rate.
 
+### TST-TRK-074: **Duplicate Location Filtering, Asymmetric Deadband Separation & Stationary Entry Hysteresis Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-TRK-074` (`REQ-TRK-074.1`..`REQ-TRK-074.4`)
+- **Component**: `SpeedAndLocationDevice.java`, `SpeedAndLocationDeviceStationaryJitterTest.kt`
+- **Jira**: `ATT-6682`
+- **Test Description**:
+  1. *Sub-Interval & Duplicate Callback Rejection Test (`TST-TRK-074.1`, `SpeedAndLocationDeviceStationaryJitterTest.kt`)*:
+     • Fix 1: Movement at $8.0\text{ m/s}$.
+     • Fix 2: 100 ms later, duplicate coordinate fix with $\text{rawDelta} == 0.0\text{ m}$ and $\text{speed} == 0.0\text{ m/s}$.
+     • Verify callback is dropped: `isStationaryPinned` remains `false`, speed sensor value remains $8.0\text{ m/s}$, and distance is uncorrupted.
+  2. *Single-Sample Zero Doppler Suppression on Low-Speed Climb (`TST-TRK-074.2`, `SpeedAndLocationDeviceStationaryJitterTest.kt`)*:
+     • Fix 1: Athlete climbing at $3.0\text{ m/s}$ ($10.8\text{ km/h}$).
+     • Fix 2: 1s later, displacement is $3.0\text{ m}$ ($\le \text{escapeRadius} = 3.75\text{ m}$), but provider reports $\text{speed} == 0.0\text{ m/s}$.
+     • Verify `isStationaryPinned` remains `false`, hysteresis count reaches 1, and speed does not drop to 0.0.
+  3. *3-Tick Consecutive Stationary Entry Hysteresis (`TST-TRK-074.3`, `SpeedAndLocationDeviceStationaryJitterTest.kt`)*:
+     • Fix 1: Moving fix at $8.0\text{ m/s}$.
+     • Fix 2: Halt at stop line (1st stationary tick $\le \text{deadbandRadius}$, speed 0.0 m/s): remains unpinned (`count = 1`).
+     • Fix 3: 2nd stationary tick ($\le \text{deadbandRadius}$, speed 0.0 m/s): remains unpinned (`count = 2`).
+     • Fix 4: 3rd stationary tick ($\le \text{deadbandRadius}$, speed 0.0 m/s): transitions to `isStationaryPinned = true`, anchors coordinates, speed clamps to $0.0\text{ m/s}$, bearing locks.
+  4. *Streak Reset on Movement Resumption Before 3 Ticks (`TST-TRK-074.4`, `SpeedAndLocationDeviceStationaryJitterTest.kt`)*:
+     • 2 stationary ticks followed by movement resumption ($\text{rawDelta} > \text{deadbandRadius}$, $\text{speed} = 5.0\text{ m/s}$).
+     • Verify `mStationaryHysteresisCount` resets to `0` and device never pins.
+  5. *Initial Fix Immediate Pinning Invariance (`TST-TRK-074.5`, `SpeedAndLocationDeviceStationaryJitterTest.kt`)*:
+     • Verify initial fix (`mPrevLocation == null`) with $\text{speed} == 0.0\text{ m/s}$ pins immediately to anchor on tick 1 (`REQ-TRK-074.4`).
+  6. *Targeted Package Regression Execution (`TST-TRK-074.6`)*:
+     • `./gradlew testDebugUnitTest --tests "com.atrainingtracker.banalservice.devices.*"` asserting 100% pass rate.
