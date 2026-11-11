@@ -368,7 +368,7 @@ fun AdvancedTuningDialog(
                         SensorSearchPreferences.reset(context); sensorSearchPrefs = SensorSearchPreferences()
                         applyConfig(TuningConfig())
                         onSettingsChanged?.invoke()
-                        Toast.makeText(context, context.getString(R.string.reset_to_defaults_success), Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, R.string.reset_to_defaults_success, Toast.LENGTH_SHORT).show()
                     }
                 }
             )

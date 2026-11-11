@@ -228,7 +228,7 @@ class ReleaseCiAndLintConfigContractTest {
 
     /**
      * Asserts that app/lint-baseline.xml is pruned and strictly bounded
-     * to <= 546 issues (REQ-PRO-046.4, TST-PRO-046.3).
+     * to <= 239 issues (REQ-PRO-046.4, TST-PRO-046.3, ATT-6728).
      */
     @Test
     fun testLintBaseline_issueCountWithinBound() {
@@ -236,8 +236,25 @@ class ReleaseCiAndLintConfigContractTest {
         val issueCount = Regex("<issue\\b").findAll(content).count()
 
         assertTrue(
-            "app/lint-baseline.xml must be bounded by <= 546 (REQ-PRO-046.4, TST-PRO-046.3). Current: $issueCount",
-            issueCount in 1..546
+            "app/lint-baseline.xml must be bounded by <= 239 (REQ-PRO-046.4, TST-PRO-046.3). Current: $issueCount",
+            issueCount in 0..239
+        )
+    }
+
+    /**
+     * Asserts that app/build.gradle does not downgrade Compose resource or locale lint rules
+     * to warning (REQ-PRO-046.6, TST-PRO-046.5, ATT-6728).
+     */
+    @Test
+    fun testBuildGradle_composeLintRulesNotDowngraded() {
+        val content = findBuildGradleFile().readText()
+        assertFalse(
+            "app/build.gradle must not downgrade NonObservableLocale to warning (REQ-PRO-046.6, TST-PRO-046.5)",
+            content.contains("'NonObservableLocale'")
+        )
+        assertFalse(
+            "app/build.gradle must not downgrade LocalContextGetResourceValueCall to warning (REQ-PRO-046.6, TST-PRO-046.5)",
+            content.contains("'LocalContextGetResourceValueCall'")
         )
     }
 

@@ -39,6 +39,7 @@ import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.graphics.layer.drawLayer
 import androidx.compose.ui.graphics.rememberGraphicsLayer
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -474,6 +475,7 @@ fun RouteClimbsBreakdownSection(
     showHeader: Boolean = true
 ) {
     val formatters = com.atrainingtracker.trainingtracker.ui.util.LocalMetricFormatter.current
+    val currentLocale = LocalConfiguration.current.locales[0]
 
     Column(
         modifier = modifier
@@ -522,7 +524,7 @@ fun RouteClimbsBreakdownSection(
                                 stringResource(R.string.climb_route_counter, index + 1, climbs.size)
                             } else if (climb.name.contains(" @ ")) {
                                 val distFormatted = formatters.distance.format_with_units(climb.distanceMeters)
-                                val gradeFormatted = String.format(java.util.Locale.getDefault(), "%.1f%%", climb.avgGradePercent)
+                                val gradeFormatted = String.format(currentLocale, "%.1f%%", climb.avgGradePercent)
                                 "$climbTitle $distFormatted @ $gradeFormatted"
                             } else {
                                 climb.name

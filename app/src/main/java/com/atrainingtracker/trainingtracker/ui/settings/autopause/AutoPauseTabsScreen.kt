@@ -140,7 +140,7 @@ fun AutoPauseTabsScreen(
                                 viewModel.resetToDefaults(currentSport)
                                 Toast.makeText(
                                     context,
-                                    context.getString(R.string.reset_to_defaults_success),
+                                    R.string.reset_to_defaults_success,
                                     Toast.LENGTH_SHORT
                                 ).show()
                             }

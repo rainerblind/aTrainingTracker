@@ -2455,9 +2455,9 @@ The workflow SHALL mandate that:
 
 
 ### REQ-PRO-046: Android Lint CI Quality Gate & Baseline Burn-down [Verified]
-- **Tests**: `TST-PRO-046` | **Tickets**: `ATT-6173`
+- **Tests**: `TST-PRO-046` | **Tickets**: `ATT-6173, ATT-6728`
 - **Implementation**: `.github/workflows/android-branch-build.yml`, `app/build.gradle`, `app/lint-baseline.xml`, `ReleaseCiAndLintConfigContractTest.kt`
-- **Rationale**: Prior to ATT-6173, Android Lint was omitted from continuous integration (`.github/workflows/`), allowing static analysis defects to enter git branches unchecked. Furthermore, `app/lint-baseline.xml` accepted 607 issues, of which >60% (368 entries) referenced deleted legacy classes, obscuring genuine static issues (Finding C-02). Running `./gradlew :app:lintDebug` in CI, uploading report artifacts, and reducing baseline issues by >= 10% (<= 546) establishes ASPICE SWE.3 static analysis compliance (ATT-6173, refining `REQ-BLD-002` and `REQ-PRO-034` under Epic `ATT-6142`):
+- **Rationale**: Prior to ATT-6173, Android Lint was omitted from continuous integration (`.github/workflows/`), allowing static analysis defects to enter git branches unchecked. Furthermore, `app/lint-baseline.xml` accepted 607 issues, of which >60% (368 entries) referenced deleted legacy classes, obscuring genuine static issues (Finding C-02). Running `./gradlew :app:lintDebug` in CI, uploading report artifacts, ratcheting baseline issues to <= 239 (`issueCount in 0..239`), and enforcing Compose resource and locale rules as errors establishes ASPICE SWE.3 static analysis compliance (ATT-6173, ATT-6728, refining `REQ-BLD-002` and `REQ-PRO-034` under Epic `ATT-6142`):
 - **Description**:
   1. *CI Workflow Lint Gating (`REQ-PRO-046.1`, android-branch-build.yml)*:
      • The continuous integration workflow (`.github/workflows/android-branch-build.yml`) SHALL execute `./gradlew :app:lintDebug` on every push and pull request to gate static analysis regressions.
@@ -2465,25 +2465,27 @@ The workflow SHALL mandate that:
      • The CI workflow SHALL upload HTML and XML lint report artifacts (`app/build/reports/lint-results-debug.*`) via `actions/upload-artifact@v4` so static analysis results are available for triage.
   3. *Build Script Lint Configuration (`REQ-PRO-046.3`, build.gradle)*:
      • `app/build.gradle` `lint { ... }` SHALL specify `abortOnError = true`, `htmlReport = true`, and `xmlReport = true`, while maintaining baseline file linkage and documented suppressions.
-  4. *Lint Baseline Pruning & Cap (`REQ-PRO-046.4`, lint-baseline.xml)*:
-     • `app/lint-baseline.xml` SHALL be pruned of stale references and fixed defects, bounding the total issue count to <= 546 (>= 10% reduction from 607).
+  4. *Lint Baseline Pruning & Ratchet (`REQ-PRO-046.4`, lint-baseline.xml)*:
+     • `app/lint-baseline.xml` SHALL be pruned of stale references and fixed defects, bounding the total issue count to <= 239 (`issueCount in 0..239`), allowing burn-down to 0 without contract failure (ATT-6728).
   5. *Automated Governance Contract (`REQ-PRO-046.5`, ReleaseCiAndLintConfigContractTest.kt)*:
-     • `ReleaseCiAndLintConfigContractTest.kt` SHALL assert that CI workflows execute `lintDebug`, upload lint reports, and maintain the baseline issue count <= 546.
+     • `ReleaseCiAndLintConfigContractTest.kt` SHALL assert that CI workflows execute `lintDebug`, upload lint reports, maintain the baseline issue count within `0..239`, and assert that Compose resource/locale lint rules are not downgraded to warning.
+  6. *Compose Resource & Locale Lint Enforcement (`REQ-PRO-046.6`, build.gradle)*:
+     • `app/build.gradle` SHALL NOT downgrade `NonObservableLocale` and `LocalContextGetResourceValueCall` to `warning`; Compose screens SHALL resolve resources via `stringResource(...)`, `pluralStringResource(...)`, and `LocalConfiguration.current.locales[0]`, and `SafePainterResource.kt` SHALL guard `id <= 0` defensively.
 - **Requirement Archaeology & Chesterton's Fence Audit**:
   1. *Original Requirement ID & Target*: Net-new requirement `REQ-PRO-046` (*Android Lint CI Quality Gate & Baseline Burn-down*), refining `REQ-BLD-002` (*Release CI Gating*) and `REQ-PRO-034` (*SWE.1/2/4/6 Hardening*). Targets `.github/workflows/android-branch-build.yml`, `app/build.gradle`, `app/lint-baseline.xml`, and `ReleaseCiAndLintConfigContractTest.kt`.
-  2. *Historical Origin & Commit Trace*: Independent ASPICE pre-assessment finding C-02 (2026-11-08) and ticket ATT-6173.
-  3. *Root Reason for Existing Formulation*: Baseline was established during AGP upgrade and never maintained in CI; branch builds only ran unit tests.
-  4. *Preservation of Core Invariants*: Existing lint suppressions (`DuplicatePlatformClasses`, `MissingTranslation`, `Range`) and `TranslationParityTest` in `app/build.gradle` remain strictly intact.
+  2. *Historical Origin & Commit Trace*: Independent ASPICE pre-assessment finding C-02 (2026-11-08), ticket ATT-6173 (commit `08a744c1`), and refined in ATT-6728.
+  3. *Root Reason for Existing Formulation*: In ATT-6173, the ceiling was set to `546` (a 10% reduction from 607) as an interim milestone, and Compose rules were temporarily set to `warning` pending screen refactoring.
+  4. *Preservation of Core Invariants*: Existing lint suppressions (`DuplicatePlatformClasses`, `MissingTranslation`, `Range`) and `TranslationParityTest` in `app/build.gradle` remain strictly intact. Ratcheting to `<= 239` and restoring Compose resource rules to `error` strengthens rather than weakens static analysis gating.
 - **Acceptance Criteria (Given-When-Then)**:
   • *Given* `.github/workflows/android-branch-build.yml`,
   • *When* inspected,
   • *Then* it SHALL contain a step executing `lintDebug` and an artifact upload step for lint reports.
   • *Given* `app/build.gradle`,
   • *When* inspected,
-  • *Then* the `lint` block SHALL specify `abortOnError = true`, `htmlReport = true`, and `xmlReport = true`.
+  • *Then* the `lint` block SHALL specify `abortOnError = true`, `htmlReport = true`, and `xmlReport = true`, and SHALL NOT contain `warning 'NonObservableLocale'` or `warning ... 'LocalContextGetResourceValueCall'`.
   • *Given* `app/lint-baseline.xml`,
   • *When* counting `<issue` elements,
-  • *Then* the total count SHALL be <= 546.
+  • *Then* the total count SHALL be within `0..239`.
   • *Given* `ReleaseCiAndLintConfigContractTest.kt`,
   • *When* executed as part of the unit test suite,
   • *Then* all lint and CI governance assertions SHALL pass with 100% success.

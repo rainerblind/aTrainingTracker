@@ -23,6 +23,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
@@ -46,6 +47,7 @@ fun SensorsGpsFilterSection(
     slopeMinSpeed: Float,
     onSlopeMinSpeedChange: (Float) -> Unit
 ) {
+    val currentLocale = LocalConfiguration.current.locales[0]
     Column(
         modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(14.dp)
@@ -75,7 +77,7 @@ fun SensorsGpsFilterSection(
         TuningSliderItem(
             title = stringResource(R.string.tuning_slope_min_speed_title),
             valueText = String.format(
-                Locale.getDefault(),
+                currentLocale,
                 "%.1f m/s (%s)",
                 slopeMinSpeed,
                 SpeedFormatter().format_with_units(slopeMinSpeed.toDouble())

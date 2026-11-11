@@ -38,6 +38,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -252,6 +253,7 @@ private fun StackedBarLegendItem(
     swatchBorder: BorderStroke,
     modifier: Modifier = Modifier
 ) {
+    val currentLocale = LocalConfiguration.current.locales[0]
     val isActive = entry.durationSec > 0L && entry.percentage > 0f
     val textAlpha = if (isActive) 1f else 0.45f
 
@@ -283,7 +285,7 @@ private fun StackedBarLegendItem(
         )
         Spacer(modifier = Modifier.width(2.dp))
         Text(
-            text = String.format(Locale.getDefault(), "(%.0f%%)", entry.percentage),
+            text = String.format(currentLocale, "(%.0f%%)", entry.percentage),
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = textAlpha)
         )

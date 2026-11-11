@@ -36,6 +36,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
@@ -58,6 +59,7 @@ fun ActiveFilterChipsRow(
     modifier: Modifier = Modifier
 ) {
     if (criteria.isEmpty) return
+    val currentLocale = LocalConfiguration.current.locales[0]
 
     ActiveFilterChipsRow(
         criteria = criteria,
@@ -134,6 +136,7 @@ fun ActiveFilterChipsRow(
     modifier: Modifier = Modifier
 ) {
     if (criteria.isEmpty) return
+    val currentLocale = LocalConfiguration.current.locales[0]
 
     LazyRow(
         modifier = modifier
@@ -198,7 +201,7 @@ fun ActiveFilterChipsRow(
             item("month") {
                 val monthName = java.time.Month.of(criteria.month).getDisplayName(
                     java.time.format.TextStyle.SHORT,
-                    Locale.getDefault()
+                    currentLocale
                 )
                 RemovableFilterChip(
                     label = monthName,

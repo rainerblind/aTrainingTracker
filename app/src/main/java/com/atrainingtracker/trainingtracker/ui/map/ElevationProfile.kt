@@ -514,7 +514,14 @@ fun ElevationProfile(
     }
 
     val configuration = LocalConfiguration.current
+    val currentLocale = configuration.locales[0]
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+
+    val climbCategoryLabels = remember {
+        ClimbCategory.entries.associateWith { cat ->
+            getClimbCategoryColors(cat).third
+        }
+    }.mapValues { (_, stringRes) -> stringResource(stringRes) }
 
     Box(modifier = modifier.fillMaxWidth()) {
         val baseCanvasModifier = if (fillParentHeight) {
@@ -769,11 +776,11 @@ fun ElevationProfile(
                         val x = ElevationProfileZoomMath.distanceToCanvasX(currentD, currentStartDist, visibleSpan, width)
                         val label = if (unit == MyUnits.METRIC) {
                             if (visibleSpan < 1500) "${currentD.toInt()}m"
-                            else if (currentD % 1000.0 != 0.0) String.format(Locale.getDefault(), "%.1f", currentD / 1000.0)
+                            else if (currentD % 1000.0 != 0.0) String.format(currentLocale, "%.1f", currentD / 1000.0)
                             else "${(currentD / 1000.0).toInt()}"
                         } else {
                             val miles = currentD / BANALService.METER_PER_MILE
-                            if (miles % 1.0 != 0.0) String.format(Locale.getDefault(), "%.1f", miles)
+                            if (miles % 1.0 != 0.0) String.format(currentLocale, "%.1f", miles)
                             else "${miles.toInt()}"
                         }
                         val lWidth = textPaint.measureText(label)
@@ -827,8 +834,8 @@ fun ElevationProfile(
                             val summitX = ElevationProfileZoomMath.distanceToCanvasX(summitPt.distance, currentStartDist, visibleSpan, width)
                             val summitY = height - (((summitAlt - cachedData.minAlt) / cachedData.altRange).toFloat() * height)
 
-                            val (bgColor, textColor, labelRes) = getClimbCategoryColors(climb.category)
-                            val badgeText = context.getString(labelRes)
+                            val (bgColor, textColor, _) = getClimbCategoryColors(climb.category)
+                            val badgeText = climbCategoryLabels[climb.category] ?: ""
 
                             val badgePaint = Paint().apply {
                                 color = textColor.toArgb()
@@ -1129,6 +1136,7 @@ fun ScrubbingTelemetryBadge(
     powerZoneThresholds: PowerZoneThresholds? = null
 ) {
     val context = LocalContext.current
+    val currentLocale = LocalConfiguration.current.locales[0]
     val effectiveHrThresholds = remember(hrZoneThresholds, bSportType, context) {
         hrZoneThresholds ?: TelemetryZoneMath.loadHeartRateThresholds(context, bSportType)
     }
@@ -1185,7 +1193,7 @@ fun ScrubbingTelemetryBadge(
                 val slopeVal = point.slope
                 val slopeStr = if (slopeVal != null) {
                     val sign = if (slopeVal > 0) "+" else ""
-                    " ($sign${String.format(Locale.getDefault(), "%.1f", slopeVal)}%)"
+                    " ($sign${String.format(currentLocale, "%.1f", slopeVal)}%)"
                 } else ""
                 Text(
                     text = "$altStr$slopeStr",

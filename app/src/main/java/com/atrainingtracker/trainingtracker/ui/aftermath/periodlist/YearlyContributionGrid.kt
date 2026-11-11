@@ -33,6 +33,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
@@ -198,13 +199,15 @@ fun YearlyContributionGrid(
     val density = LocalDensity.current
     val colPitchPx = with(density) { colPitch.toPx() }
 
+    val currentLocale = LocalConfiguration.current.locales[0]
+
     // Month headers
-    val monthOffsets = remember(year, startOffset) {
+    val monthOffsets = remember(year, startOffset, currentLocale) {
         (1..12).map { month ->
             val firstOfMonth = LocalDate.of(year, month, 1)
             val dayIndex = firstOfMonth.dayOfYear - 1
             val col = (dayIndex + startOffset) / 7
-            val label = firstOfMonth.format(DateTimeFormatter.ofPattern("MMM", Locale.getDefault()))
+            val label = firstOfMonth.format(DateTimeFormatter.ofPattern("MMM", currentLocale))
             col to label
         }
     }
@@ -298,7 +301,7 @@ fun YearlyContributionGrid(
                             if (showLabel) {
                                 @Suppress("DEPRECATION")
                                 Text(
-                                    text = day.getDisplayName(TextStyle.NARROW, Locale.getDefault()),
+                                    text = day.getDisplayName(TextStyle.NARROW, currentLocale),
                                     style = MaterialTheme.typography.labelSmall.copy(
                                         fontSize = 9.sp,
                                         lineHeight = 9.sp,
@@ -441,8 +444,8 @@ fun YearlyContributionGrid(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        val formattedDate = remember(selectedDate) {
-                            selectedDate!!.format(DateTimeFormatter.ofPattern("EEE, d. MMM yyyy", Locale.getDefault()))
+                        val formattedDate = remember(selectedDate, currentLocale) {
+                            selectedDate!!.format(DateTimeFormatter.ofPattern("EEE, d. MMM yyyy", currentLocale))
                         }
 
                         Column(modifier = Modifier.weight(1f)) {

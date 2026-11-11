@@ -31,6 +31,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
@@ -149,6 +150,7 @@ private fun ZoneColumnItem(
     barAreaHeight: Dp,
     modifier: Modifier = Modifier
 ) {
+    val currentLocale = LocalConfiguration.current.locales[0]
     val heightFraction = ZoneDistributionChartMath.calculateHeightFraction(entry.durationSec, maxDurationSec)
 
     Column(
@@ -166,7 +168,7 @@ private fun ZoneColumnItem(
             textAlign = TextAlign.Center
         )
         Text(
-            text = String.format(Locale.getDefault(), "%.0f%%", entry.percentage),
+            text = String.format(currentLocale, "%.0f%%", entry.percentage),
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             maxLines = 1,

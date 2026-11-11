@@ -40,6 +40,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -66,6 +67,7 @@ fun TelemetryHistogramChart(
     unit: String,
     modifier: Modifier = Modifier
 ) {
+    val currentLocale = LocalConfiguration.current.locales[0]
     if (histogram == null || histogram.bins.isEmpty()) {
         Box(
             modifier = modifier
@@ -124,7 +126,7 @@ fun TelemetryHistogramChart(
 
                 if (selectedBin != null) {
                     val durationFormatted = ZoneDistributionChartMath.formatZoneDuration(selectedBin.durationSec)
-                    val pctFormatted = String.format(Locale.getDefault(), "%.1f", selectedBin.percentage)
+                    val pctFormatted = String.format(currentLocale, "%.1f", selectedBin.percentage)
                     val readoutColor = if (selectedBin.color == TTColor.Zone7) {
                         MaterialTheme.colorScheme.onSurface
                     } else {

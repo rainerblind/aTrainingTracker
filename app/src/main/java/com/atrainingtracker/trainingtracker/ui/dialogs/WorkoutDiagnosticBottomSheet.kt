@@ -211,7 +211,7 @@ fun WorkoutDiagnosticBottomSheet(
                                     clipboardManager.setText(AnnotatedString(emailBody))
                                     Toast.makeText(
                                         context,
-                                        context.getString(R.string.workout_diagnostic_copied_toast),
+                                        R.string.workout_diagnostic_copied_toast,
                                         Toast.LENGTH_SHORT
                                     ).show()
                                 },

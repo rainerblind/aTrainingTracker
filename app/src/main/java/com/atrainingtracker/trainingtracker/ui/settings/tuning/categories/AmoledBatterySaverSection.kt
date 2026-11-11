@@ -21,6 +21,7 @@ package com.atrainingtracker.trainingtracker.ui.settings.tuning.categories
 import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
@@ -48,6 +49,7 @@ fun AmoledBatterySaverSection(
     downwardDelaySec: Int,
     onDownwardDelayChange: (Int) -> Unit
 ) {
+    val currentLocale = LocalConfiguration.current.locales[0]
     Column(
         modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(14.dp)
@@ -86,7 +88,7 @@ fun AmoledBatterySaverSection(
 
         TuningSliderItem(
             title = stringResource(R.string.tuning_slope_flat_title),
-            valueText = String.format(Locale.getDefault(), "%.1f%%", slopeFlat),
+            valueText = String.format(currentLocale, "%.1f%%", slopeFlat),
             helperText = stringResource(R.string.tuning_slope_flat_desc),
             defaultText = stringResource(R.string.tuning_default_format, "2.0%"),
             value = slopeFlat,
@@ -102,7 +104,7 @@ fun AmoledBatterySaverSection(
 
         TuningSliderItem(
             title = stringResource(R.string.tuning_slope_steep_title),
-            valueText = String.format(Locale.getDefault(), "%.1f%%", slopeSteep),
+            valueText = String.format(currentLocale, "%.1f%%", slopeSteep),
             helperText = stringResource(R.string.tuning_slope_steep_desc),
             defaultText = stringResource(R.string.tuning_default_format, "5.0%"),
             value = slopeSteep,

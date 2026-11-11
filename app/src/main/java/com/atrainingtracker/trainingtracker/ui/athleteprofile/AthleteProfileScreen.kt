@@ -47,6 +47,7 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Calculate
@@ -1387,6 +1388,7 @@ fun PerformanceManagementChartCard(
     onSelectPmcTimeRange: (MetricsTimeRange) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
+    val currentLocale = LocalConfiguration.current.locales[0]
     Card(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
@@ -1429,21 +1431,21 @@ fun PerformanceManagementChartCard(
             ) {
                 PmcStatBadge(
                     label = stringResource(R.string.athlete_profile_pmc_ctl_label),
-                    valueText = String.format(Locale.getDefault(), "%.1f", pmcSummary.currentCtl),
+                    valueText = String.format(currentLocale, "%.1f", pmcSummary.currentCtl),
                     badgeText = null,
                     accentColor = TTColor.PmcCtlBlue,
                     modifier = Modifier.weight(1f)
                 )
                 PmcStatBadge(
                     label = stringResource(R.string.athlete_profile_pmc_atl_label),
-                    valueText = String.format(Locale.getDefault(), "%.1f", pmcSummary.currentAtl),
+                    valueText = String.format(currentLocale, "%.1f", pmcSummary.currentAtl),
                     badgeText = null,
                     accentColor = TTColor.PmcAtlMagenta,
                     modifier = Modifier.weight(1f)
                 )
                 PmcStatBadge(
                     label = stringResource(R.string.athlete_profile_pmc_tsb_label),
-                    valueText = String.format(Locale.getDefault(), "%+.1f", pmcSummary.currentTsb),
+                    valueText = String.format(currentLocale, "%+.1f", pmcSummary.currentTsb),
                     badgeText = tsbZoneText,
                     accentColor = tsbColor,
                     modifier = Modifier.weight(1f)

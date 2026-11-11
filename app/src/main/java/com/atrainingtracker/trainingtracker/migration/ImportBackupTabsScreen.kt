@@ -104,6 +104,7 @@ fun ImportBackupTabsScreen(
     }
 ) {
     val context = LocalContext.current
+    val appContext = context.applicationContext
     val uiState by viewModel.uiState.collectAsState()
     val activeInteraction by viewModel.activeInteraction.collectAsState()
     val queueCount by viewModel.pendingInteractionsCount.collectAsState()
@@ -215,7 +216,7 @@ fun ImportBackupTabsScreen(
             if (validUris.size < uris.size) {
                 Toast.makeText(
                     context,
-                    context.getString(R.string.invalid_workout_file_format, pendingSingleLegacyFormat.uppercase()),
+                    appContext.getString(R.string.invalid_workout_file_format, pendingSingleLegacyFormat.uppercase()),
                     Toast.LENGTH_LONG
                 ).show()
             }
@@ -236,7 +237,7 @@ fun ImportBackupTabsScreen(
             if (validUris.size < uris.size) {
                 Toast.makeText(
                     context,
-                    context.getString(R.string.invalid_workout_file_format, "FIT"),
+                    appContext.getString(R.string.invalid_workout_file_format, "FIT"),
                     Toast.LENGTH_LONG
                 ).show()
             }
@@ -256,7 +257,7 @@ fun ImportBackupTabsScreen(
             } else {
                 Toast.makeText(
                     context,
-                    context.getString(R.string.invalid_workout_file_format, "ZIP"),
+                    appContext.getString(R.string.invalid_workout_file_format, "ZIP"),
                     Toast.LENGTH_LONG
                 ).show()
             }
@@ -1098,6 +1099,7 @@ fun ImportMappingDialog(
     onDismiss: () -> Unit
 ) {
     val context = LocalContext.current
+    val appContext = context.applicationContext
     val localSportTypes = remember { SportTypesRepository.getInstance(context).getSportTypes(null) }
     val localEquipment = remember { EquipmentRepository.getInstance(context).equipmentItems }
 

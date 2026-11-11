@@ -79,6 +79,7 @@ fun RoutesScreen(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
+    val appContext = context.applicationContext
 
     var pendingBatchUris by rememberSaveable { mutableStateOf<ArrayList<Uri>?>(null) }
 
@@ -123,9 +124,9 @@ fun RoutesScreen(
     LaunchedEffect(batchImportResult) {
         batchImportResult?.let { result ->
             val message = when {
-                result.failedCount == 0 -> context.getString(R.string.routes_import_success, result.importedCount)
-                result.importedCount > 0 -> context.getString(R.string.routes_import_partial, result.importedCount, result.failedCount)
-                else -> context.getString(R.string.routes_import_all_failed)
+                result.failedCount == 0 -> appContext.getString(R.string.routes_import_success, result.importedCount)
+                result.importedCount > 0 -> appContext.getString(R.string.routes_import_partial, result.importedCount, result.failedCount)
+                else -> appContext.getString(R.string.routes_import_all_failed)
             }
             snackbarHostState.showSnackbar(message)
             viewModel.clearBatchImportResult()

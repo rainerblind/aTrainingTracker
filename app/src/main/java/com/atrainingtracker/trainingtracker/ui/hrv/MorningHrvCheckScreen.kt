@@ -251,7 +251,7 @@ fun MorningHrvCheckScreen(
                         if (rowId > 0) {
                             Toast.makeText(
                                 context,
-                                context.getString(R.string.morning_hrv_saved_toast),
+                                R.string.morning_hrv_saved_toast,
                                 Toast.LENGTH_SHORT
                             ).show()
                         }
