@@ -444,4 +444,9 @@ class DeviceDataRepository @androidx.annotation.VisibleForTesting internal const
             application.sendBroadcast(intent)
         }
     }
+
+    fun getActiveDeviceIdsForWorkout(workoutId: Long): List<Long> {
+        return com.atrainingtracker.trainingtracker.database.ActiveDevicesDbHelper.getInstance(application)
+            .getDatabaseIdsOfActiveDevices(workoutId)
+    }
 }

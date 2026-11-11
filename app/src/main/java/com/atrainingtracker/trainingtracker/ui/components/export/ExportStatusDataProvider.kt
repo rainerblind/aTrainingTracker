@@ -32,7 +32,7 @@ class ExportStatusDataProvider(private val context: Context) {
      * The central class to collect all data for an ExportType and create the corresponding string for the UI.
      */
     fun createGroupData(fileBaseName: String, exportType: ExportType): ExportStatusGroupData {
-        val allRows = ExportStatusDatabaseManager.getInstance(context).getExportRows(fileBaseName)
+        val allRows = ExportStatusRepository.getInstance(context).getExportRows(fileBaseName)
         val rawRows = allRows.filter { it.type == exportType }
 
         // If this exportType has any activity/rows for this workout, synthesize missing supported formats (e.g. FIT on legacy workouts)

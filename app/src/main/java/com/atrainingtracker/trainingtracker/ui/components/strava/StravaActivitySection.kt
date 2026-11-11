@@ -41,7 +41,7 @@ import com.atrainingtracker.trainingtracker.ui.theme.TTColor
 import com.atrainingtracker.trainingtracker.ui.theme.TTAlpha
 import com.atrainingtracker.banalservice.sensor.formater.TimeFormatter
 import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaHelper
-import com.atrainingtracker.trainingtracker.segments.SegmentsDatabaseManager
+import com.atrainingtracker.trainingtracker.segments.SegmentsRepository
 import com.atrainingtracker.trainingtracker.ui.aftermath.StravaActivity
 import com.atrainingtracker.trainingtracker.ui.aftermath.StravaActivityParser
 import com.atrainingtracker.trainingtracker.ui.aftermath.StravaBestEffort
@@ -64,7 +64,7 @@ fun StravaActivitySection(
 
     val (starredIds, starredNames) = remember {
         try {
-            val summaries = SegmentsDatabaseManager.getInstance(context).allSegmentSummaries
+            val summaries = SegmentsRepository.getInstance(context).allSegmentSummaries
             Pair(
                 summaries.map { it.stravaId }.toSet(),
                 summaries.map { it.name.trim().lowercase() }.toSet()

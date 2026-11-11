@@ -15277,5 +15277,37 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 
 **Invariants**: Decoupled text buffers preserved for in-progress typing; `ActiveFilterChipsRowClearAllContractTest` 100% compliant; Imperial unit parity (`REQ-UI-508`) preserved; 100% clean-room test pass rate.
 
+### REQ-UI-510: Package-Wide Presentation & UI Layer Repository Encapsulation (Phase A Hardening) [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-UI-510` | **Tickets**: `ATT-6697`
+- **Implementation**: `app/src/main/java/com/atrainingtracker/trainingtracker/ui/clusters/WorkoutClustersViewModel.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/ui/tracking/trackingtabs/TrackingTabsViewModel.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/ui/athleteprofile/AthleteProfileViewModel.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/ui/components/strava/StravaActivitySection.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/ui/components/export/ExportStatusDataProvider.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/WorkoutDataMapper.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/ui/map/MapInitialLocationResolver.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/migration/ImportBackupTabsScreen.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/activities/MainActivityWithNavigation.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/editworkout/EditWorkoutViewModel.kt`
+- **Rationale**: Phase A (`ATT-432`) eliminated direct database manager instantiations in four initial presentation entry points, but residual call sites remained across `ui/` and `activities/`. To enforce clean architecture (SWE.2) and prevent database coupling leaks in the presentation layer, all remaining UI and activity call sites SHALL interact exclusively with domain repositories, and `RepositoryUiCleanlinessContractTest` SHALL be expanded into a recursive package-wide architectural guard.
+- **Description**:
+  1. *Presentation Layer DatabaseManager Sweep (`REQ-UI-510.1`)*:
+     - `WorkoutClustersViewModel.kt`, `TrackingTabsViewModel.kt`, `AthleteProfileViewModel.kt`, `StravaActivitySection.kt`, `ExportStatusDataProvider.kt`, `WorkoutDataMapper.kt`, `MapInitialLocationResolver.kt`, `ImportBackupTabsScreen.kt`, `MainActivityWithNavigation.kt`, and `EditWorkoutViewModel.kt` SHALL route all database queries and mutations through domain repositories (`KnownLocationsRepository`, `WorkoutRepository`, `SegmentsRepository`, `ExportStatusRepository`, `EquipmentRepository`, `DeviceDataRepository`, `SportTypesRepository`), completely eliminating direct calls to `*DatabaseManager.getInstance(...)` and `*DbHelper.getInstance(...)`.
+  2. *Domain Repository Presentation Delegation (`REQ-UI-510.2`)*:
+     - Domain repositories SHALL expose all necessary query and mutation delegates:
+       - `KnownLocationsRepository`: `upsertLocationByGeofence`, `updateLocation`, `getMyLocation`
+       - `WorkoutRepository`: `getWorkoutTrainingLoadRecords`, `getCardioPowerDynamicsFitnessTrendSamples`
+       - `SegmentsRepository`: `allSegmentSummaries`
+       - `ExportStatusRepository`: `getExportRows`
+       - `EquipmentRepository`: `equipmentItems`
+       - `DeviceDataRepository`: `getActiveDeviceIdsForWorkout`
+       - `SportTypesRepository`: default sports and sport resolution
+  3. *Package-Wide AST Presentation Cleanliness Contract (`REQ-UI-510.3`)*:
+     - `RepositoryUiCleanlinessContractTest` SHALL recursively inspect all source files under `app/src/main/java/com/atrainingtracker/trainingtracker/ui/` and `app/src/main/java/com/atrainingtracker/trainingtracker/activities/` (excluding `*Repository.kt` and `MapFragmentWithTrackViewModel.kt` reserved for `ATT-6692`).
+     - Zero occurrences of `\b\w*(DatabaseManager|DbHelper)\.getInstance\(` SHALL exist across all scanned presentation classes.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* presentation layer files across `ui/` and `activities/`,
+• *When* audited by `RepositoryUiCleanlinessContractTest`,
+• *Then* zero direct `*DatabaseManager.getInstance` or `*DbHelper.getInstance` invocations exist.
+• *Given* athletes viewing workout clusters, athlete profiles, Strava sections, tracking tabs, or export statuses,
+• *When* loading presentation data,
+• *Then* all metrics, locations, and device records load with 100% data fidelity via repository delegates on `Dispatchers.IO`.
+
+**Invariants**: Zero SQLite schema alterations; all repository I/O dispatched off main thread; 100% test pass rate across UI and ViewModel tests.
+
+
 
 

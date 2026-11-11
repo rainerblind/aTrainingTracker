@@ -65,6 +65,7 @@ import com.atrainingtracker.banalservice.sensor.formater.DistanceFormatter
 import com.atrainingtracker.trainingtracker.database.WorkoutCluster
 import com.atrainingtracker.trainingtracker.database.WorkoutClusterRepository
 import com.atrainingtracker.trainingtracker.database.WorkoutClusterEngine
+import com.atrainingtracker.trainingtracker.repositories.EquipmentRepository
 import com.atrainingtracker.trainingtracker.repositories.SportTypesRepository
 import com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClusterSelectionDialog
 import com.atrainingtracker.trainingtracker.ui.clusters.ClusterTuningContent
@@ -1098,7 +1099,7 @@ fun ImportMappingDialog(
 ) {
     val context = LocalContext.current
     val localSportTypes = remember { SportTypesRepository.getInstance(context).getSportTypes(null) }
-    val localEquipment = remember { com.atrainingtracker.trainingtracker.database.EquipmentDbHelper.getInstance(context).equipmentItems }
+    val localEquipment = remember { EquipmentRepository.getInstance(context).equipmentItems }
 
     val sportMapping = remember {
         mutableStateMapOf<Long, Long>().apply {

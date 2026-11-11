@@ -26,7 +26,7 @@ import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.database.AthleteMetricEntry
 import com.atrainingtracker.trainingtracker.database.AthleteMetricType
 import com.atrainingtracker.trainingtracker.database.CardioPowerTrendSample
-import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
+import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
 import com.atrainingtracker.trainingtracker.physiology.PmcDailyPoint
 import com.atrainingtracker.trainingtracker.physiology.PmcSummaryResult
 import com.atrainingtracker.trainingtracker.physiology.PowerPhysiologyCalculator
@@ -131,7 +131,10 @@ data class AthleteProfileUiState(
 /**
  * ViewModel driving [AthleteProfileScreen] (`REQ-UI-391.5`, `REQ-UI-399.1`, `REQ-UI-401.3`, `REQ-UI-403`, `REQ-REV-011`).
  */
-class AthleteProfileViewModel @JvmOverloads constructor(application: Application) : AndroidViewModel(application) {
+class AthleteProfileViewModel @JvmOverloads constructor(
+    application: Application,
+    private val workoutRepository: WorkoutRepository = WorkoutRepository.getInstance(application)
+) : AndroidViewModel(application) {
 
     private val repository = AthleteMetricsRepository.getInstance(application)
     private val settingsDataStore = SettingsDataStore.getInstance(application)
@@ -282,7 +285,7 @@ class AthleteProfileViewModel @JvmOverloads constructor(application: Application
         }
         viewModelScope.launch(Dispatchers.IO) {
             val samples = try {
-                WorkoutSummariesDatabaseManager.getInstance(getApplication()).getWorkoutTrainingLoadRecords()
+                workoutRepository.getWorkoutTrainingLoadRecords()
             } catch (_: Throwable) {
                 emptyList()
             }
@@ -295,8 +298,7 @@ class AthleteProfileViewModel @JvmOverloads constructor(application: Application
 
     fun loadCardioTrendSamples() {
         val samples = try {
-            WorkoutSummariesDatabaseManager.getInstance(getApplication())
-                .getCardioPowerDynamicsFitnessTrendSamples(0.50)
+            workoutRepository.getCardioPowerDynamicsFitnessTrendSamples(0.50)
         } catch (_: Throwable) {
             emptyList()
         }

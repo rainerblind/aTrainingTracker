@@ -42,7 +42,9 @@ import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.climbs.ClimbDetector
 import com.atrainingtracker.trainingtracker.climbs.LiveClimbsRepository
 import com.atrainingtracker.trainingtracker.database.CardioPowerDynamicsRecord
+import com.atrainingtracker.trainingtracker.database.CardioPowerTrendSample
 import com.atrainingtracker.trainingtracker.database.ClimbsDatabaseManager
+import com.atrainingtracker.trainingtracker.physiology.WorkoutTrainingLoadSample
 import com.atrainingtracker.trainingtracker.database.EquipmentDbHelper
 import com.atrainingtracker.trainingtracker.database.ExtremaType
 import com.atrainingtracker.trainingtracker.database.LapsDatabaseManager
@@ -224,6 +226,10 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
         summariesManager.getExtremaValue(workoutId, sensorType, extremaType)
     fun getBaseFileName(workoutId: Long): String? = summariesManager.getBaseFileName(workoutId)
     fun getOldWorkouts(daysToKeep: Int): List<Long> = summariesManager.getOldWorkouts(daysToKeep)
+    fun getWorkoutTrainingLoadRecords(): List<WorkoutTrainingLoadSample> = summariesManager.workoutTrainingLoadRecords
+    fun getCardioPowerDynamicsFitnessTrendSamples(minR2: Double): List<CardioPowerTrendSample> =
+        summariesManager.getCardioPowerDynamicsFitnessTrendSamples(minR2)
+    val allWorkoutStartLocations: List<LatLng> get() = summariesManager.allWorkoutStartLocations
     fun deleteWorkoutSummary(workoutId: Long) = summariesManager.deleteWorkout(workoutId)
     fun deleteWorkoutLaps(workoutId: Long) = lapsDatabaseManager.deleteWorkout(workoutId)
     fun deleteWorkoutSamples(fileBaseName: String) = samplesManager.deleteWorkout(fileBaseName)

@@ -594,7 +594,7 @@ class WorkoutClustersViewModel @JvmOverloads constructor(
      */
     fun getLocationName(lat: Double, lng: Double): String? {
         return try {
-            val loc = com.atrainingtracker.trainingtracker.database.KnownLocationsDatabaseManager.getInstance(getApplication()).getMyLocation(LatLng(lat, lng))
+            val loc = knownLocationsRepo.getMyLocation(LatLng(lat, lng))
             loc?.name
         } catch (_: Exception) {
             null

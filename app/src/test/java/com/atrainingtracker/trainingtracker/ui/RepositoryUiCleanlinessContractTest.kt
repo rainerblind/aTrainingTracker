@@ -131,4 +131,61 @@ class RepositoryUiCleanlinessContractTest {
             content.contains("workoutRepository: WorkoutRepository")
         )
     }
+
+    @Test
+    fun testPackageWideUiAndActivities_zeroDatabaseManagerGetInstance() {
+        val rootDirs = listOf(
+            resolveFile("src/main/java/com/atrainingtracker/trainingtracker/ui"),
+            resolveFile("src/main/java/com/atrainingtracker/trainingtracker/activities")
+        )
+        val directDbInstantiationPattern = Regex("""\b\w*DatabaseManager\s*\.\s*getInstance\s*\(""")
+        val violations = mutableListOf<String>()
+
+        for (dir in rootDirs) {
+            assertTrue("Directory ${dir.path} must exist", dir.exists())
+            dir.walkTopDown()
+                .filter { it.isFile && (it.extension == "kt" || it.extension == "java") }
+                .filterNot { it.name.endsWith("Repository.kt") || it.name == "MapFragmentWithTrackViewModel.kt" }
+                .forEach { file ->
+                    val content = file.readText()
+                    val matches = directDbInstantiationPattern.findAll(content).map { it.value }.toList()
+                    if (matches.isNotEmpty()) {
+                        violations.add("${file.name}: $matches")
+                    }
+                }
+        }
+
+        assertTrue(
+            "Package-wide scan across ui/ and activities/ must contain zero DatabaseManager.getInstance references (REQ-UI-510.3), found: $violations",
+            violations.isEmpty()
+        )
+    }
+
+    @Test
+    fun testSweepTargetClasses_zeroDatabaseManagerGetInstance() {
+        val targetFiles = listOf(
+            "src/main/java/com/atrainingtracker/trainingtracker/ui/clusters/WorkoutClustersViewModel.kt",
+            "src/main/java/com/atrainingtracker/trainingtracker/ui/tracking/trackingtabs/TrackingTabsViewModel.kt",
+            "src/main/java/com/atrainingtracker/trainingtracker/ui/athleteprofile/AthleteProfileViewModel.kt",
+            "src/main/java/com/atrainingtracker/trainingtracker/ui/components/strava/StravaActivitySection.kt",
+            "src/main/java/com/atrainingtracker/trainingtracker/ui/components/export/ExportStatusDataProvider.kt",
+            "src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/WorkoutDataMapper.kt",
+            "src/main/java/com/atrainingtracker/trainingtracker/ui/map/MapInitialLocationResolver.kt",
+            "src/main/java/com/atrainingtracker/trainingtracker/migration/ImportBackupTabsScreen.kt",
+            "src/main/java/com/atrainingtracker/trainingtracker/activities/MainActivityWithNavigation.kt",
+            "src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/editworkout/EditWorkoutViewModel.kt"
+        )
+        val directDbInstantiationPattern = Regex("""\b\w*(DatabaseManager|DbHelper)\s*\.\s*getInstance\s*\(""")
+
+        for (relPath in targetFiles) {
+            val file = resolveFile(relPath)
+            assertTrue("Target file ${file.path} must exist", file.exists())
+            val content = file.readText()
+            val matches = directDbInstantiationPattern.findAll(content).map { it.value }.toList()
+            assertTrue(
+                "Target file ${file.name} must contain zero DatabaseManager/DbHelper.getInstance references (REQ-UI-510.1), found: $matches",
+                matches.isEmpty()
+            )
+        }
+    }
 }

@@ -46,6 +46,9 @@ class EquipmentRepository internal constructor(private val context: Context) :
     val equipmentList: List<EquipmentDbHelper.EquipmentData>
         get() = equipmentDbHelper.getEquipmentItems() as List<EquipmentDbHelper.EquipmentData>
 
+    val equipmentItems: List<EquipmentDbHelper.EquipmentData>
+        get() = equipmentList
+
     fun getIdFromStravaId(stravaId: String): Long = equipmentDbHelper.getIdFromStravaId(stravaId)
     fun getStravaIdFromId(id: Long): String? = equipmentDbHelper.getStravaIdFromId(id)
     fun addOrUpdateStravaGear(stravaId: String?, name: String, frameType: Int, sportType: String, retired: Boolean): Long =

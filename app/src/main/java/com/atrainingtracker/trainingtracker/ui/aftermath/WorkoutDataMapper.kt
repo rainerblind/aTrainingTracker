@@ -33,12 +33,12 @@ import com.atrainingtracker.trainingtracker.database.CardioPowerDynamicsRecord
 import com.atrainingtracker.trainingtracker.database.EquipmentDbHelper
 import com.atrainingtracker.trainingtracker.database.ExtremaType
 import com.atrainingtracker.trainingtracker.database.KnownLocationsDatabaseManager
-import com.atrainingtracker.trainingtracker.database.LapsDatabaseManager
 import com.atrainingtracker.trainingtracker.database.WorkoutAutoNamingHelper
-import com.atrainingtracker.trainingtracker.database.WorkoutClusterDatabaseManager
+import com.atrainingtracker.trainingtracker.database.WorkoutClusterRepository
 import com.atrainingtracker.trainingtracker.database.WorkoutSource
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries
+import com.atrainingtracker.trainingtracker.repositories.KnownLocationsRepository
 import com.atrainingtracker.trainingtracker.exporter.db.StravaUploadDbHelper
 import com.atrainingtracker.trainingtracker.ui.components.workoutextrema.ExtremaDataRow
 import com.atrainingtracker.trainingtracker.ui.utils.NumericalEncodingUtils
@@ -60,11 +60,8 @@ class WorkoutDataMapper(
     private val sportTypeDatabaseManager: SportTypeDatabaseManager,
     private val equipmentDbHelper: EquipmentDbHelper,
     private val stravaUploadDbHelper: StravaUploadDbHelper,
-    private val knownLocationsDatabaseManager: KnownLocationsDatabaseManager? = try {
-        KnownLocationsDatabaseManager.getInstance(context)
-    } catch (_: Throwable) {
-        null
-    }
+    private val knownLocationsDatabaseManager: KnownLocationsDatabaseManager? = null,
+    private val knownLocationsRepository: KnownLocationsRepository? = null
 ) {
 
     // Define all sensors to check
@@ -112,7 +109,11 @@ class WorkoutDataMapper(
 
         val workoutName = cursor.getString(cursor.getColumnIndexOrThrow(WorkoutSummaries.WORKOUT_NAME))
         val clusterId = cursor.getLong(cursor.getColumnIndexOrThrow(WorkoutSummaries.CLUSTER_ID))
-        val clusterName = WorkoutClusterDatabaseManager.getInstance(context).getClusterNameById(clusterId)
+        val clusterName = try {
+            WorkoutClusterRepository.getInstance(context).getClusterNameById(clusterId)
+        } catch (_: Throwable) {
+            null
+        }
 
         val startLocationName = resolveLocationName(startLatLng)
         val endLocationName = resolveLocationName(endLatLng)
@@ -261,7 +262,11 @@ class WorkoutDataMapper(
             },
 
             exportStatuses = emptyList(), // will be added/merged by the viewModel
-            laps = LapsDatabaseManager.getInstance(context).getLaps(workoutId)
+            laps = try {
+                WorkoutRepository.getInstance(context).getLaps(workoutId)
+            } catch (_: Throwable) {
+                emptyList()
+            }
         )
     }
 
@@ -1112,9 +1117,11 @@ class WorkoutDataMapper(
      */
     private fun resolveLocationName(latLng: LatLng?): String? {
         if (latLng == null) return null
-        val mgr = knownLocationsDatabaseManager ?: return null
         return try {
-            val myLoc = mgr.getMyLocation(latLng) ?: return null
+            val myLoc = knownLocationsDatabaseManager?.getMyLocation(latLng)
+                ?: knownLocationsRepository?.getMyLocation(latLng)
+                ?: try { KnownLocationsRepository.getInstance(context).getMyLocation(latLng) } catch (_: Throwable) { null }
+                ?: return null
             WorkoutAutoNamingHelper.getDisplayName(context, myLoc)
         } catch (_: Throwable) {
             null

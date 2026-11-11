@@ -21,6 +21,7 @@ package com.atrainingtracker.trainingtracker.repositories
 import android.content.Context
 import android.util.Log
 import androidx.annotation.VisibleForTesting
+import com.atrainingtracker.trainingtracker.database.ExtremaType
 import com.atrainingtracker.trainingtracker.database.KnownLocationsDatabaseManager
 import com.atrainingtracker.trainingtracker.database.KnownLocationsGeometryMath
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
@@ -157,8 +158,15 @@ open class KnownLocationsRepository @VisibleForTesting constructor(
         name: String,
         altitude: Double,
         source: ElevationSource
+    ) = updateLocation(id, name, altitude, source, source == ElevationSource.MANUAL_USER)
+
+    open suspend fun updateLocation(
+        id: Long,
+        name: String,
+        altitude: Double,
+        source: ElevationSource,
+        isLocked: Boolean
     ) = withContext(dbDispatcher) {
-        val isLocked = (source == ElevationSource.MANUAL_USER)
         databaseManager.updateLocation(id, name, altitude, source, isLocked)
         loadLocations()
     }
@@ -325,6 +333,25 @@ open class KnownLocationsRepository @VisibleForTesting constructor(
 
     open fun getMyLocation(latLng: LatLng): KnownLocationsDatabaseManager.MyLocation? =
         databaseManager.getMyLocation(latLng)
+
+    open val homeLocation: KnownLocationsDatabaseManager.MyLocation?
+        get() = databaseManager.homeLocation
+
+    open val allLocations: List<KnownLocationsDatabaseManager.MyLocation>
+        get() = databaseManager.allLocations
+
+    open suspend fun upsertLocationByGeofence(
+        latLng: LatLng,
+        altitude: Double,
+        name: String,
+        extremaType: ExtremaType,
+        source: ElevationSource,
+        isLocked: Boolean
+    ): KnownLocationsDatabaseManager.MyLocation? = withContext(dbDispatcher) {
+        val res = databaseManager.upsertLocationByGeofence(latLng, altitude, name, extremaType, source, isLocked)
+        loadLocations()
+        res
+    }
 
     open fun recordWorkoutStart(latLng: LatLng?, altitude: Double? = null) {
         databaseManager.recordWorkoutStart(latLng, altitude)

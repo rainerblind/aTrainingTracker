@@ -8169,6 +8169,25 @@
   4. *Tier 1 Targeted Unit Test Regression Suite (`TST-UI-509.4`)*:
   • Execute targeted UI filter test suite (`ui.common.filters.*`, `ui.aftermath.workoutlist.*`, `ui.clusters.*`, `ui.routes.*`, `ui.segments.*`, `ui.knownlocations.*`, `ui.theme.ThemeColorCentralizationAuditTest`, `ui.components.core.*`, `build.*`) asserting 100% pass rate.
 
+### TST-UI-510: **Package-Wide UI & Presentation Repository Cleanliness Verification Suite** [Verified]
+- **Target Release**: `V5.0.0`
+- **Requirement(s)**: `REQ-UI-510`
+- **Component**: `WorkoutClustersViewModel.kt`, `TrackingTabsViewModel.kt`, `AthleteProfileViewModel.kt`, `StravaActivitySection.kt`, `ExportStatusDataProvider.kt`, `WorkoutDataMapper.kt`, `MapInitialLocationResolver.kt`, `ImportBackupTabsScreen.kt`, `MainActivityWithNavigation.kt`, `EditWorkoutViewModel.kt`, `RepositoryUiCleanlinessContractTest.kt`
+- **Jira**: `ATT-6697`
+- **Test Description**:
+  1. *Package-Wide UI AST Cleanliness Contract Test (`TST-UI-510.1`, `RepositoryUiCleanlinessContractTest.kt`)*:
+  • Recursively scan all Kotlin/Java source files in `app/src/main/java/.../ui/` and `app/src/main/java/.../activities/` (excluding `*Repository.kt` and `MapFragmentWithTrackViewModel.kt` reserved for `ATT-6692`).
+  • Assert zero occurrences of `\b\w*(DatabaseManager|DbHelper)\.getInstance\(`.
+  2. *Targeted Presentation Cleanliness Assertions (`TST-UI-510.2`, `RepositoryUiCleanlinessContractTest.kt`)*:
+  • Verify explicit decoupling across all 8 target classes: `WorkoutClustersViewModel`, `TrackingTabsViewModel`, `AthleteProfileViewModel`, `StravaActivitySection`, `ExportStatusDataProvider`, `WorkoutDataMapper`, `MapInitialLocationResolver`, `ImportBackupTabsScreen`, `MainActivityWithNavigation`, and `EditWorkoutViewModel`.
+  3. *ViewModel & Presentation Unit Regression Test (`TST-UI-510.3`)*:
+  • Run unit test suites for modified ViewModels and presentation helpers (`WorkoutClustersViewModelTest`, `AthleteProfileViewModelTest`, etc.).
+  • Assert 100% functional and numeric parity via domain repositories.
+  4. *Tier 1 Targeted Unit Test Regression (`TST-UI-510.4`)*:
+  • Execute targeted test suite (`--tests "com.atrainingtracker.trainingtracker.ui.RepositoryUiCleanlinessContractTest" --tests "com.atrainingtracker.trainingtracker.ui.clusters.*" --tests "com.atrainingtracker.trainingtracker.ui.athleteprofile.*" --tests "com.atrainingtracker.trainingtracker.ui.tracking.*" --tests "com.atrainingtracker.trainingtracker.activities.*"`).
+  • Assert 100% pass rate.
+
+
 
 
 
