@@ -2760,6 +2760,40 @@ The workflow SHALL mandate that:
   • *Then* all structural, exact bidirectional set equality (`declaredSysreqs == allocatedSysreqs`), and dynamic code grounding reflection assertions SHALL pass with 100% success.
 - **Invariants**: Zero modifications to Android production runtime code in `app/src/main/`; 100% unit test pass rate.
 
+### REQ-PRO-057: Configuration Management Repository Grounding (Master Production Branch, Sprint Milestone Tags, Release Contents & Controlled CI Inventory) [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-PRO-057` | **Tickets**: `ATT-6733`
+- **Implementation**: `docs/management/cm_plan.md`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/ReleaseCiAndLintConfigContractTest.kt`
+- **Rationale**: ASPICE SUP.8 requires strict alignment between the Configuration Management Plan (`docs/management/cm_plan.md`) and authentic repository configuration. Discrepancies regarding branch naming, omission of sprint milestone tags, uncatalogued configuration items, and undefined release contents violate SUP.8.BP1–BP3 (ATT-6733, Epic ATT-6141):
+- **Description**:
+  1. *Production Branch Parity (`REQ-PRO-057.1`)*:
+     - The CM plan SHALL document `master` (`origin/master`) as the sole production release baseline and GitFlow production branch (eliminating speculative references to `main`).
+  2. *Milestone and Release Tagging Nomenclature (`REQ-PRO-057.2`)*:
+     - The CM plan SHALL document the immutable sprint milestone tagging convention `sprint/<SPRINT_NAME>` created at sprint close (Ceremony 2 Step 6), and both release tagging formats (`V<versionName>__<versionCode>` and `V<versionName>`).
+  3. *Controlled Configuration Items Inventory (`REQ-PRO-057.3`)*:
+     - The CI inventory table in `cm_plan.md` SHALL classify and track all repository assets under formal configuration control, specifically including `docs/architecture/*.md` (architecture specifications), `docs/management/*.md` (project management & CM plans), `config/detekt/` (code quality & linter configs), `tools/` (developer & governance automation scripts), and `.agents/` (ASPICE governance rules and modular skills).
+  4. *Formal Release Contents Specification (`REQ-PRO-057.4`)*:
+     - The CM plan SHALL define the explicit release deliverable package consisting of:
+       a) Cryptographically signed production APK.
+       b) Google Play production Android App Bundle (AAB).
+       c) Localized release notes across all 9 supported locales in `docs/store_presence/`.
+       d) Jira `FixVersion` baseline traceability linking all completed tickets.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-PRO-057` extending `REQ-STP-009` (*Configuration Management Plan & Pinned Submodule Baseline*). Targets `docs/management/cm_plan.md` and `ReleaseCiAndLintConfigContractTest.kt`.
+2. *Historical Origin & Commit Trace*: `ATT-6152` (Sprint 2026-45.13) authored initial `cm_plan.md`; Sprint 2026-46.1 review identified branch, tag, and CI inventory discrepancies (`ATT-6733`).
+3. *Root Reason for Existing Formulation*: `cm_plan.md` was drafted using generic modern Git templates that defaulted to `main`, omitting legacy `master` grounding, sprint close tags, and secondary asset folders.
+4. *Preservation of Core Invariants*: Git repository branch structure (`master`, `develop`, `sprint/*`) remains untouched; zero changes to Android runtime code in `app/src/main/`; 100% ASPICE SUP.8 compliance.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* `docs/management/cm_plan.md`,
+• *When* inspected for branch and tagging conventions,
+• *Then* the production release branch is documented as `master` (zero references to `main`) and `sprint/<SPRINT_NAME>` milestone tags are specified.
+• *Given* the Configuration Items inventory and Release Contents sections,
+• *When* audited against the repository,
+• *Then* `docs/architecture/`, `docs/management/`, `config/`, `tools/`, and `.agents/` are listed as controlled CIs, and signed APK, Play Store AAB, `docs/store_presence/` notes, and Jira `FixVersion` are defined as formal release contents.
+
+**Invariants**: Zero Android runtime changes in `app/src/main/`; Git repository remote branches untouched; 100% unit test pass rate.
 
 ### REQ-TST-004: Android Emulator Lifecycle Management, Physical-Phone Guardrail, and Two-Tier Verification Policy [Verified]
 - **Tests**: `TST-TST-004` | **Tickets**: `ATT-6506`

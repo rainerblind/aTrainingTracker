@@ -3,8 +3,8 @@
 **Document Identifier**: `CM-PLAN-ATT`  
 **Standard**: ASPICE 4.0 `SUP.8` (Configuration Management)  
 **Target Release**: `V5.0.0` | **Version**: 1.0.0  
-**Status**: Approved | **Date**: 2026-11-10  
-**Governing Ticket**: [ATT-6152](https://rainerblind.atlassian.net/browse/ATT-6152) | **Requirement**: `REQ-STP-009`  
+**Status**: Approved | **Date**: 2026-11-11  
+**Governing Ticket**: [ATT-6152](https://rainerblind.atlassian.net/browse/ATT-6152), [ATT-6733](https://rainerblind.atlassian.net/browse/ATT-6733) | **Requirement**: `REQ-STP-009`, `REQ-PRO-057`  
 
 ---
 
@@ -25,13 +25,17 @@ All work products subject to formal configuration control are classified as Conf
 
 | CI Category | Target Artifacts | Storage / Tracking Mechanism |
 | :--- | :--- | :--- |
-| **Source Code** | `app/src/main/` (`.kt`, `.java`, `.xml`) | Git (`main`, `develop`, feature branches) |
+| **Source Code** | `app/src/main/` (`.kt`, `.java`, `.xml`) | Git (`master`, `develop`, feature branches) |
 | **Test Suites** | `app/src/test/`, `app/src/androidTest/` | Git (JUnit 4, MockK, Robolectric) |
 | **Build Configuration** | `build.gradle`, `app/build.gradle`, `settings.gradle`, `gradle/` | Git |
-| **System Architecture** | `docs/architecture.md`, `docs/coding_standards.md`, `docs/design_guidelines.md` | Git (Markdown living docs) |
+| **System Architecture** | `docs/architecture.md`, `docs/architecture/*.md`, `docs/coding_standards.md`, `docs/design_guidelines.md` | Git (SWE.2 System Architecture models) |
+| **Management & CM Plans** | `docs/management/*.md` | Git (ASPICE SUP.8 CM Plan & Policies) |
 | **Living Requirements & Tests** | `docs/requirements/`, `docs/tests/`, `docs/requirements.md`, `docs/tests.md` | Git (9 domain shards, synchronized master indexes) |
 | **Engineering Deliverables** | `docs/engineering/analysis/`, `plans/`, `test_specs/`, `walkthroughs/`, `retros/` | Git (Canonical directories per Rule 67) |
 | **Store & Visual Assets** | `docs/store_presence/`, `docs/guide/` | Git (Markdown, verified PNGs/SVGs) |
+| **Code Quality & Linting** | `config/detekt/` | Git (Static analysis & Detekt configuration) |
+| **Tooling & Automation** | `tools/` | Git (Python verification, build & merge locks) |
+| **Governance Rules & Skills** | `.agents/` | Git (ASPICE workflow rules & AI subagent skills) |
 | **Submodule Dependencies** | `ANT-Android-SDKs` | Git Submodule (pinned commit gitlink) |
 | **Process Metrics** | `docs/engineering/metrics/process_metrics.jsonl` | Git (Quantitative PA 4.1/4.2 data) |
 | **CI/CD Automation** | `.github/workflows/*.yml` | Git |
@@ -44,7 +48,7 @@ All work products subject to formal configuration control are classified as Conf
 ## 3. Branching, Tagging & Worktree Strategy (SUP.8.BP3 - Branching & Merging)
 
 ### GitFlow Branch Hierarchy
-1. **`main`**: Production release baseline. Only fast-forward merges from release finish or hotfix branches. Every release commit on `main` is tagged.
+1. **`master`**: Production release baseline (`origin/master`). Only fast-forward merges from release finish or hotfix branches. Every release commit on `master` is tagged.
 2. **`develop`**: Active development integration baseline. Contains all merged sprint increments.
 3. **`sprint/<SPRINT_NAME>`** (e.g. `sprint/2026-46.1`): Active sprint baseline branched from `develop` at Sprint-Start (Ceremony 1). All sprint tickets merge into this branch.
 4. **`feature/<KEY>` / `bugfix/<KEY>`**: Isolated ticket branches. Merged into `sprint/<SPRINT_NAME>` as **strictly one squashed atomic commit** (`git merge --squash feature/<KEY>`) upon Stage 5 Gate approval.
@@ -54,9 +58,17 @@ All work products subject to formal configuration control are classified as Conf
 * Subagents operate in dedicated worktrees (`Workspace: "share"`).
 * Heavy resource operations (compilation, unit tests, branch squashing) are serialized via POSIX `flock` (`/tmp/att_build_merge.lock` via `tools/parallel_sprint_lock.py`).
 
-### Release Tagging Nomenclature
-* Every production release tag on `main` follows the immutable convention:
-  `V<versionName>__<versionCode>` (e.g. `V5.0.0__273`).
+### Milestone & Release Tagging Nomenclature
+* **Sprint Milestone Tags**: At sprint close (Ceremony 2 Step 6), an immutable milestone tag `sprint/<SPRINT_NAME>` (e.g. `sprint/2026-46.1`) is cut on `develop` to baseline all merged sprint increment commits.
+* **Production Release Tags**: Every production release commit on `master` follows the immutable convention:
+  - Dual format: `V<versionName>__<versionCode>` (e.g. `V5.0.0__273`) alongside `V<versionName>` (e.g. `v5.0.0` or `V5.0.0`).
+
+### Formal Release Deliverables Package (SUP.8.BP4 - Release Contents)
+Every formal production release baseline on `master` comprises the following auditable deliverables:
+1. **Signed Production APK**: Cryptographically signed release APK (`app-release.apk`) built against the production keystore.
+2. **Google Play Android App Bundle (AAB)**: Production AAB (`app-release.aab`) verified for Google Play Store publishing.
+3. **9-Language Localized Release Notes**: Multi-locale changelogs maintained under `docs/store_presence/` across all 9 supported languages (EN, DE, ES, FR, IT, JA, NL, PL, PT).
+4. **Jira FixVersion Traceability**: Baseline release traceability in Jira (`FixVersion`) linking all implemented and verified user stories, bugs, and improvements.
 
 ---
 

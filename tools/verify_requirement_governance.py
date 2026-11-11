@@ -93,10 +93,9 @@ def get_git_diff(base_ref="develop", target_paths=None):
             ["git", "merge-base", base_ref, "HEAD"],
             stderr=subprocess.DEVNULL,
         ).decode("utf-8").strip()
-        cmd = ["git", "diff", f"{mb}", "--"] + target_paths
-        diff = subprocess.check_output(cmd, stderr=subprocess.DEVNULL).decode("utf-8")
-        if diff.strip():
-            return diff
+        if mb:
+            cmd = ["git", "diff", f"{mb}", "--"] + target_paths
+            return subprocess.check_output(cmd, stderr=subprocess.DEVNULL).decode("utf-8")
     except Exception:
         pass
 

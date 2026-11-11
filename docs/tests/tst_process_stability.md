@@ -1703,6 +1703,23 @@
   • Verify existence of referenced XML resource files via `File.exists()`: `app/src/main/res/xml/full_backup_content.xml`.
   • Verify referenced application process ID matches `com.atrainingtracker`.
 
+### TST-PRO-057: **Configuration Management Repository Grounding & cm_plan.md Parity Contract Test Suite** [Verified]
+- **Requirement(s)**: `REQ-PRO-057`
+- **Component**: `docs/management/cm_plan.md`, `ReleaseCiAndLintConfigContractTest.kt`
+- **Jira**: `ATT-6733`
+- **Test Description**:
+  1. *Production Branch 'master' Grounding & 'main' Absence Test (`TST-PRO-057.1`, `ReleaseCiAndLintConfigContractTest.kt`)*:
+  • Read `docs/management/cm_plan.md`.
+  • Assert that the production release branch is documented as `master` (matching `origin/master`).
+  • Assert that zero references to `main` as a branch name exist in `cm_plan.md`.
+  2. *Sprint Milestone & Release Tagging Nomenclature Test (`TST-PRO-057.2`, `ReleaseCiAndLintConfigContractTest.kt`)*:
+  • Assert that `docs/management/cm_plan.md` documents `sprint/<SPRINT_NAME>` milestone tags and both `V<versionName>__<versionCode>` and `V<versionName>` release tag formats.
+  3. *Controlled Configuration Items Inventory Completeness Test (`TST-PRO-057.3`, `ReleaseCiAndLintConfigContractTest.kt`)*:
+  • Assert that the CI inventory table lists `docs/architecture/*.md`, `docs/management/*.md`, `config/detekt/`, `tools/`, and `.agents/`.
+  4. *Formal Release Contents Specification Test (`TST-PRO-057.4`, `ReleaseCiAndLintConfigContractTest.kt`)*:
+  • Assert that `docs/management/cm_plan.md` includes a dedicated Release Contents subsection specifying signed APK, Play Store AAB, `docs/store_presence/` localized notes, and Jira FixVersion baseline traceability.
+  5. *Clean-Room Targeted Test Suite Execution (`TST-PRO-057.5`)*:
+  • Execute targeted unit test suite `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.build.ReleaseCiAndLintConfigContractTest"` asserting 100% pass rate.
 
 ### TST-TST-004: **Android Emulator Lifecycle Management, Physical-Phone Guardrail, and Two-Tier Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-TST-004`

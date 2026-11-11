@@ -629,6 +629,50 @@ class ReleaseCiAndLintConfigContractTest {
     }
 
     /**
+     * Asserts that docs/management/cm_plan.md documents 'master' as the production branch (and no 'main' branch),
+     * documents sprint milestone tags 'sprint/<SPRINT_NAME>', dual release tag formats, the complete controlled CI inventory,
+     * and formal release contents (REQ-PRO-057, TST-PRO-057, ATT-6733).
+     */
+    @Test
+    fun testConfigurationManagementPlan_repositoryGroundingAndReleaseContents() {
+        val cmPlanFile = findRepoRootFile("docs/management/cm_plan.md", "../docs/management/cm_plan.md")
+        assertTrue("docs/management/cm_plan.md must exist (REQ-PRO-057)", cmPlanFile.exists())
+        val cmContent = cmPlanFile.readText()
+
+        // Production branch is master; no branch named 'main'
+        assertTrue("CM plan must document 'master' as production release branch (REQ-PRO-057.1)", cmContent.contains("`master`"))
+        assertFalse("CM plan must not refer to 'main' as production branch (REQ-PRO-057.1)", cmContent.contains("`main`"))
+
+        // Sprint milestone tags & dual release tagging
+        assertTrue("CM plan must document sprint milestone tags (REQ-PRO-057.2)", cmContent.contains("sprint/<SPRINT_NAME>"))
+        assertTrue("CM plan must document dual release tag format (REQ-PRO-057.2)", cmContent.contains("V<versionName>__<versionCode>"))
+        assertTrue("CM plan must document simple release tag format (REQ-PRO-057.2)", cmContent.contains("V<versionName>"))
+
+        // Controlled CI inventory table completeness
+        val requiredCIs = listOf(
+            "docs/architecture/*.md",
+            "docs/management/*.md",
+            "config/detekt/",
+            "tools/",
+            ".agents/"
+        )
+        for (ci in requiredCIs) {
+            assertTrue("CM plan CI table must contain '$ci' (REQ-PRO-057.3)", cmContent.contains(ci))
+        }
+
+        // Formal Release Deliverables package
+        val requiredDeliverables = listOf(
+            "Signed Production APK",
+            "Google Play Android App Bundle (AAB)",
+            "docs/store_presence/",
+            "FixVersion"
+        )
+        for (deliv in requiredDeliverables) {
+            assertTrue("CM plan Release Deliverables must contain '$deliv' (REQ-PRO-057.4)", cmContent.contains(deliv))
+        }
+    }
+
+    /**
      * Asserts that docs/management/risk_register.md exists, defines mandatory ASPICE MAN.3.BP5 sections,
      * links all High-exposure risks to Jira remediation tickets, and is integrated into Ceremony 1
      * in .agents/skills/sprint-planner/SKILL.md (REQ-STP-010, TST-STP-010, ATT-6151).
