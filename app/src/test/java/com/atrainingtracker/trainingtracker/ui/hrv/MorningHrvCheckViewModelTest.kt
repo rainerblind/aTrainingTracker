@@ -23,6 +23,7 @@ import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import com.atrainingtracker.banalservice.devices.ProtocolType
 import com.atrainingtracker.banalservice.devices.RrBeatEvent
+import com.atrainingtracker.banalservice.devices.hrv.HrvSignalQualityStatus
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.database.hrv.HrvPosture
 import com.atrainingtracker.trainingtracker.database.hrv.HrvReadinessDatabaseManager
@@ -274,5 +275,37 @@ class MorningHrvCheckViewModelTest {
         assertNotNull("Saved entry must be retrievable from HrvReadinessRepository", savedEntry)
         assertEquals(rowId, savedEntry!!.id)
         assertTrue("Must be marked primary for day", savedEntry.isPrimaryForDay)
+    }
+
+    @Test
+    fun testSignalQualityStatusPopulatedOnCompleteMeasurement() = runTest(testDispatcher) {
+        val viewModel = MorningHrvCheckViewModel(
+            application = application,
+            banalServiceRepository = banalRepository,
+            hrvReadinessRepository = hrvRepository,
+            dispatcher = testDispatcher
+        )
+
+        viewModel.setStabilizationDurationSec(1)
+        viewModel.setDurationSec(2)
+        viewModel.startMeasurement()
+        advanceTimeBy(1001L)
+
+        // Feed 35 valid beats (>= 30 beats)
+        var ts = 1000L
+        for (i in 0 until 35) {
+            val rr = 800.0 + (i % 4) * 10.0
+            ts += rr.toLong()
+            viewModel.handleRrBeat(RrBeatEvent(ts, rr, i, ProtocolType.BLE))
+        }
+
+        advanceTimeBy(3000L)
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertEquals(MorningHrvPhase.COMPLETED, state.phase)
+        assertEquals(HrvSignalQualityStatus.VALID, state.signalQualityStatus)
+        assertNotNull(state.signalQualityResult)
+        assertEquals(35, state.signalQualityResult?.beatCount)
     }
 }

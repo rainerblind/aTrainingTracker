@@ -25,6 +25,8 @@ import com.atrainingtracker.banalservice.devices.ProtocolType
 import com.atrainingtracker.banalservice.devices.RrBeatEvent
 import com.atrainingtracker.banalservice.devices.hrv.DfaCalculator
 import com.atrainingtracker.banalservice.devices.hrv.FilteredRrBeat
+import com.atrainingtracker.banalservice.devices.hrv.HrvSignalQualityAnalyzer
+import com.atrainingtracker.banalservice.devices.hrv.HrvSignalQualityResult
 import com.atrainingtracker.banalservice.devices.hrv.RrArtifactFilter
 import com.atrainingtracker.banalservice.sensor.SensorType
 import com.atrainingtracker.trainingtracker.database.ExtremaType
@@ -239,6 +241,14 @@ object HrvPostWorkoutRecomputer {
             return null
         }
         return sqrt(sumSquaredDiffs / validPairCount.toDouble())
+    }
+
+    /**
+     * Evaluates signal quality over a collection of workout RR beats pursuant to REQ-TRK-067.6.
+     */
+    @JvmStatic
+    fun analyzeSignalQuality(beats: List<FilteredRrBeat>): HrvSignalQualityResult {
+        return HrvSignalQualityAnalyzer.analyzeBeats(beats)
     }
 
     private fun parseTimestampMs(timeStr: String?): Long? {

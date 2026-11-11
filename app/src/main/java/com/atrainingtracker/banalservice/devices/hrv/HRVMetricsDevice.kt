@@ -78,6 +78,10 @@ open class HRVMetricsDevice @JvmOverloads constructor(
     var hasReceivedRrData: Boolean = false
         private set
 
+    @Volatile
+    var signalQualityResult: HrvSignalQualityResult = createDefaultSignalQualityResult()
+        private set
+
     init {
         registerSensors()
         // Rule 51: Constructor state seeding parity with resetSession()
@@ -107,6 +111,15 @@ open class HRVMetricsDevice @JvmOverloads constructor(
     fun resetSession() {
         mBeatQueue.clear()
         hasReceivedRrData = false
+        signalQualityResult = createDefaultSignalQualityResult()
+    }
+
+    private fun createDefaultSignalQualityResult(): HrvSignalQualityResult {
+        return HrvSignalQualityResult(
+            status = HrvSignalQualityStatus.INSUFFICIENT_DATA,
+            details = "Waiting for RR data",
+            beatCount = 0
+        )
     }
 
     @Synchronized
@@ -153,18 +166,30 @@ open class HRVMetricsDevice @JvmOverloads constructor(
         mHrvRmssdSensor.newValue(rmssdValue)
 
         // 3. DFA alpha 1 over 120s window with artifact gate suppression (REQ-TRK-060.4)
+        val alpha1Value: Double?
         if (artifactRate > ARTIFACT_GATE_THRESHOLD_PERCENT) {
             // High artifact rate suppresses DFA alpha 1
             mHrvDfaA1Sensor.newValue(null)
+            alpha1Value = null
         } else {
             val nnIntervals = filteredBeats.map { it.correctedRrMs }.toDoubleArray()
             val alpha1 = DfaCalculator.computeDfaAlpha1(nnIntervals)
             if (alpha1.isFinite() && !alpha1.isNaN()) {
                 mHrvDfaA1Sensor.newValue(alpha1)
+                alpha1Value = alpha1
             } else {
                 mHrvDfaA1Sensor.newValue(null)
+                alpha1Value = null
             }
         }
+
+        // 4. Signal quality analysis (REQ-TRK-067)
+        signalQualityResult = HrvSignalQualityAnalyzer.analyzeBeats(
+            beats = filteredBeats,
+            artifactRatePercent = artifactRate,
+            rmssdMs = rmssdValue,
+            dfaAlpha1 = alpha1Value
+        )
     }
 
     private fun computeBiasFreeRmssd(beats: List<FilteredRrBeat>): Double? {

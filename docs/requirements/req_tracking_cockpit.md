@@ -3600,6 +3600,55 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 **Invariants**: Unconditional `FINISHED = 1` transaction committed before metadata updates (`REQ-TRK-030.1`); 1-Hz write cadence on `mDbExecutor` preserved; zero SQLite schema modifications; zero dropped telemetry samples; 100% unit test pass rate.
 
+### REQ-TRK-067: Firmware-Smoothed & Quantized Synthetic RR Stream Detection (HrvSignalQualityAnalyzer) [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-TRK-067` | **Tickets**: `ATT-6744`
+- **Implementation**: `app/src/main/java/com/atrainingtracker/banalservice/devices/hrv/HrvSignalQualityAnalyzer.kt`, `app/src/main/java/com/atrainingtracker/banalservice/devices/hrv/HrvSignalQualityResult.kt`, `app/src/main/java/com/atrainingtracker/banalservice/devices/HRVMetricsDevice.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/ui/morninghrv/MorningHrvCheckViewModel.kt`, `app/src/main/java/com/atrainingtracker/banalservice/devices/hrv/HrvPostWorkoutRecomputer.kt`
+- **Rationale**: Budget dual-band ECG chest straps (e.g. Magene H64/H303, CooSpo) apply internal moving-average smoothing to beat-to-beat intervals in firmware prior to BLE `0x2A37` transmission, while some optical/budget sensors synthesize stepped RR intervals from integer BPM ($RR = 60000 / \text{BPM}$). Because smoothed intervals lack abrupt spike outliers, the Lipponen & Tarvainen (2019) artifact detector reports 0.0% artifacts (green light) while adjacent interval differences collapse ($rMSSD$ 3–8 ms even at rest) and short-scale variance $F(4)$ is erased, artificially inflating DFA $\alpha_1$ into a smooth Brownian regime (1.40–1.85). In real human physiology, $rMSSD < 10.0\text{ ms}$ and DFA $\alpha_1 > 1.35$ are mutually exclusive (intense sympathetic exercise collapses $\alpha_1 \to 0.50$, never $> 1.35$). The system must detect smoothed and quantized synthetic streams using Turning-Point Ratio ($TPR$), zero-diff rate, and discordance gates without falsely penalizing authentic exercise or resting ECG.
+- **Description**:
+  1. *Stateless Signal Quality Classifier (`REQ-TRK-067.1`)*:
+     - `HrvSignalQualityAnalyzer.kt` SHALL provide a pure, stateless evaluation function analyzing a window of RR intervals and returning structured `HrvSignalQualityResult` (`status: HrvSignalQualityStatus`, `tpr: Double`, `zeroDiffRate: Double`, `rmssdMs: Double`, `dfaAlpha1: Double`, `artifactRate: Double`).
+     - Supported status values SHALL include `VALID`, `INSUFFICIENT_DATA`, `HIGH_ARTIFACTS`, `SMOOTHED_STREAM`, and `QUANTIZED_SYNTHETIC`.
+  2. *Data Sufficiency & Artifact Pre-Gating (`REQ-TRK-067.2`)*:
+     - If the beat sequence contains fewer than 30 beats ($N < 30$), the analyzer SHALL return status `INSUFFICIENT_DATA`.
+     - If the artifact rate exceeds 5.0% ($> 0.05$), the analyzer SHALL return status `HIGH_ARTIFACTS`.
+  3. *Smoothed Stream Detection via Discordance & Turning-Point Ratio (`REQ-TRK-067.3`)*:
+     - The analyzer SHALL flag the window as `SMOOTHED_STREAM` if:
+       a. $rMSSD < 10.0\text{ ms}$ AND DFA $\alpha_1 > 1.35$; OR
+       b. Turning-Point Ratio ($TPR$) of consecutive non-zero differences $\Delta RR_i = RR_i - RR_{i-1}$ satisfies $TPR < 0.20$ alongside DFA $\alpha_1 > 1.30$.
+  4. *Quantized Synthetic RR Detection (`REQ-TRK-067.4`)*:
+     - The analyzer SHALL flag the window as `QUANTIZED_SYNTHETIC` if more than 55% ($> 0.55$) of consecutive beat pairs satisfy $|\Delta RR_i| < 1.0\text{ ms}$ over $\ge 30$ beats.
+  5. *Preservation of Authentic Physiology Invariants (`REQ-TRK-067.5`)*:
+     - Authentic resting ECG ($rMSSD \approx 42\text{ ms}$, $\alpha_1 \approx 1.12$, normal RSA turning points) SHALL evaluate to `VALID`.
+     - Authentic high-intensity exercise ECG ($rMSSD \approx 4.5\text{ ms}$, $\alpha_1 \approx 0.48$) SHALL evaluate to `VALID` and MUST NEVER be falsely flagged as `SMOOTHED_STREAM` or `QUANTIZED_SYNTHETIC`.
+  6. *Engine Telemetry & Service Wiring (`REQ-TRK-067.6`)*:
+     - `HRVMetricsDevice.kt` SHALL expose `@Volatile var signalQualityResult: HrvSignalQualityResult` updated on each 5s evaluation tick, resetting to default state upon `resetSession()` (`Rule 51`/`52`).
+     - `MorningHrvCheckViewModel.kt` SHALL evaluate signal quality at completion of 60s/120s measurements and hold the status in `MorningHrvUiState`.
+     - `HrvPostWorkoutRecomputer.kt` SHALL expose helper evaluation for post-workout RR streams.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* an empirical Magene-style smoothed series ($rMSSD \approx 3\text{--}8\text{ ms}$, $\alpha_1 > 1.35$, or low $TPR < 0.20$ with $\alpha_1 > 1.30$),
+• *When* evaluated by `HrvSignalQualityAnalyzer.analyze(...)`,
+• *Then* `status` equals `SMOOTHED_STREAM`.
+• *Given* a quantized constant-BPM synthetic series derived from $RR = 60000 / \text{integer\_BPM}$ with $>55\%$ $|\Delta RR| < 1.0\text{ ms}$,
+• *When* evaluated by `HrvSignalQualityAnalyzer.analyze(...)`,
+• *Then* `status` equals `QUANTIZED_SYNTHETIC`.
+• *Given* an authentic resting ECG series ($rMSSD \approx 42\text{ ms}$, $\alpha_1 \approx 1.12$),
+• *When* evaluated by `HrvSignalQualityAnalyzer.analyze(...)`,
+• *Then* `status` equals `VALID`.
+• *Given* an authentic high-intensity exercise ECG series ($rMSSD \approx 4.5\text{ ms}$, $\alpha_1 \approx 0.48$),
+• *When* evaluated by `HrvSignalQualityAnalyzer.analyze(...)`,
+• *Then* `status` equals `VALID` (never falsely flagged as smoothed or synthetic).
+• *Given* an RR stream with artifact rate $> 5.0\%$,
+• *When* evaluated by `HrvSignalQualityAnalyzer.analyze(...)`,
+• *Then* `status` equals `HIGH_ARTIFACTS`.
+• *Given* an RR stream with $< 30$ beats,
+• *When* evaluated by `HrvSignalQualityAnalyzer.analyze(...)`,
+• *Then* `status` equals `INSUFFICIENT_DATA`.
+
+**Invariants**: Zero false-positive smoothing flags during authentic intense exercise; Rule 51 (state seeding parity) & Rule 52 (presence gating before RR arrival) preserved in `HRVMetricsDevice`; zero SQLite schema modifications; 100% unit test pass rate.
+
+
 
 
 

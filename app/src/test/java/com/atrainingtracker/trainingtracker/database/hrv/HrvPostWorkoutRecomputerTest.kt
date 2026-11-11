@@ -22,6 +22,7 @@ import android.content.ContentValues
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import com.atrainingtracker.banalservice.devices.hrv.FilteredRrBeat
+import com.atrainingtracker.banalservice.devices.hrv.HrvSignalQualityStatus
 import com.atrainingtracker.banalservice.sensor.SensorType
 import com.atrainingtracker.trainingtracker.database.WorkoutSamplesDatabaseManager
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
@@ -179,5 +180,21 @@ class HrvPostWorkoutRecomputerTest {
 
         val success = HrvPostWorkoutRecomputer.recomputeWorkout(context, workoutId)
         assertFalse("Should return false when workout has zero RR intervals", success)
+    }
+
+    @Test
+    fun testAnalyzeSignalQualityHelper() {
+        val beats = List(40) { index ->
+            FilteredRrBeat(
+                beatTimestampMs = 1000L + index * 800L,
+                rawRrMs = 800.0 + (index % 4) * 10.0,
+                correctedRrMs = 800.0 + (index % 4) * 10.0,
+                artifactFlag = 0
+            )
+        }
+
+        val quality = HrvPostWorkoutRecomputer.analyzeSignalQuality(beats)
+        assertEquals(HrvSignalQualityStatus.VALID, quality.status)
+        assertEquals(40, quality.beatCount)
     }
 }

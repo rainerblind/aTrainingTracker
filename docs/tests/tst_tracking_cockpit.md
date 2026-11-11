@@ -2028,6 +2028,30 @@
   5. *Clean-Room Targeted Test Suite Execution (`TST-TRK-066.5`)*:
   • `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.tracker.*" --tests "com.atrainingtracker.banalservice.*" --tests "com.atrainingtracker.trainingtracker.repositories.*"` asserting 100% pass rate.
 
+### TST-TRK-067: **Firmware-Smoothed & Quantized Synthetic RR Stream Detection Test Suite** [Verified]
+- **Requirement(s)**: `REQ-TRK-067` (`REQ-TRK-067.1`..`REQ-TRK-067.6`)
+- **Component**: `HrvSignalQualityAnalyzer.kt`, `HrvSignalQualityResult.kt`, `HRVMetricsDevice.kt`, `MorningHrvCheckViewModel.kt`, `HrvPostWorkoutRecomputer.kt`
+- **Jira**: `ATT-6744`
+- **Test Description**:
+  1. *Smoothed RR Stream Detection Tests (`TST-TRK-067.1`, `HrvSignalQualityAnalyzerTest.kt`)*:
+  • Verify classification of empirical Magene-style moving-average smoothed series ($rMSSD \approx 3.3\text{--}7.3\text{ ms}$, $\alpha_1 \approx 1.41\text{--}1.81$) as `SMOOTHED_STREAM` via both low-rMSSD/high-a1 discordance gate and low Turning-Point Ratio ($TPR < 0.20$ with $\alpha_1 > 1.30$).
+  2. *Quantized Constant-BPM Stepped Series Tests (`TST-TRK-067.2`, `HrvSignalQualityAnalyzerTest.kt`)*:
+  • Verify classification of stepped constant-BPM series ($RR = 60000 / \text{integer\_BPM}$) where $>55\%$ of consecutive beat differences satisfy $|\Delta RR| < 1.0\text{ ms}$ over $\ge 30$ beats as `QUANTIZED_SYNTHETIC`.
+  3. *Authentic Rest & High-Intensity Exercise Invariant Tests (`TST-TRK-067.3`, `HrvSignalQualityAnalyzerTest.kt`)*:
+  • Verify authentic resting ECG ($rMSSD \approx 42\text{ ms}$, $\alpha_1 \approx 1.12$, normal RSA turning points) evaluates to `VALID`.
+  • Verify authentic high-intensity exercise ECG ($rMSSD \approx 4.5\text{ ms}$, $\alpha_1 \approx 0.48$) evaluates to `VALID` and is never falsely flagged as `SMOOTHED_STREAM` or `QUANTIZED_SYNTHETIC`.
+  4. *Data Sufficiency & Artifact Pre-Gating Tests (`TST-TRK-067.4`, `HrvSignalQualityAnalyzerTest.kt`)*:
+  • Verify $<30$ beats evaluates to `INSUFFICIENT_DATA`.
+  • Verify $>5.0\%$ artifact rate evaluates to `HIGH_ARTIFACTS`.
+  5. *HRVMetricsDevice 5s Tick & Lifecycle Invariant Tests (`TST-TRK-067.5`, `HRVMetricsDeviceTest.kt`)*:
+  • Verify `HRVMetricsDevice` updates `signalQualityResult` on every 5s evaluation tick, reflects `SMOOTHED_STREAM` for smoothed input, and clears to initial default on `resetSession()` adhering to Rules 51 & 52.
+  6. *MorningHrvCheckViewModel & Post-Workout Recomputer Wiring Tests (`TST-TRK-067.6`, `MorningHrvCheckViewModelTest.kt`, `HrvPostWorkoutRecomputerTest.kt`)*:
+  • Verify `MorningHrvCheckViewModel` populates signal quality status into `MorningHrvUiState` upon measurement completion.
+  • Verify `HrvPostWorkoutRecomputer` exposes helper evaluation for full workout RR streams.
+  7. *Clean-Room Targeted Test Suite Execution (`TST-TRK-067.7`)*:
+  • `./gradlew testDebugUnitTest --tests "com.atrainingtracker.banalservice.devices.hrv.*" --tests "com.atrainingtracker.banalservice.devices.*" --tests "com.atrainingtracker.trainingtracker.ui.morninghrv.*"` asserting 100% pass rate.
+
+
 
 
 

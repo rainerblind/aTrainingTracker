@@ -24,6 +24,9 @@ import androidx.lifecycle.viewModelScope
 import com.atrainingtracker.banalservice.devices.RrBeatEvent
 import com.atrainingtracker.banalservice.devices.RrBeatListener
 import com.atrainingtracker.banalservice.devices.hrv.FilteredRrBeat
+import com.atrainingtracker.banalservice.devices.hrv.HrvSignalQualityAnalyzer
+import com.atrainingtracker.banalservice.devices.hrv.HrvSignalQualityResult
+import com.atrainingtracker.banalservice.devices.hrv.HrvSignalQualityStatus
 import com.atrainingtracker.banalservice.devices.hrv.RrArtifactFilter
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.database.hrv.HrvPosture
@@ -70,6 +73,8 @@ data class MorningHrvUiState(
     val beatCount: Int = 0,
     val artifactRatePct: Double? = null,
     val highArtifactWarning: Boolean = false,
+    val signalQualityStatus: HrvSignalQualityStatus = HrvSignalQualityStatus.INSUFFICIENT_DATA,
+    val signalQualityResult: HrvSignalQualityResult? = null,
     val computedEntry: HrvReadinessEntry? = null,
     val readinessResult: HrvReadinessResult? = null,
     val isSaved: Boolean = false,
@@ -164,6 +169,8 @@ class MorningHrvCheckViewModel @JvmOverloads constructor(
                 beatCount = 0,
                 artifactRatePct = null,
                 highArtifactWarning = false,
+                signalQualityStatus = HrvSignalQualityStatus.INSUFFICIENT_DATA,
+                signalQualityResult = null,
                 computedEntry = null,
                 readinessResult = null,
                 isSaved = false,
@@ -212,6 +219,8 @@ class MorningHrvCheckViewModel @JvmOverloads constructor(
                 phase = MorningHrvPhase.READY,
                 remainingSec = 0,
                 beatCount = 0,
+                signalQualityStatus = HrvSignalQualityStatus.INSUFFICIENT_DATA,
+                signalQualityResult = null,
                 errorMessage = null
             )
         }
@@ -277,6 +286,12 @@ class MorningHrvCheckViewModel @JvmOverloads constructor(
         val dateIso = LocalDate.now().toString()
         val timezoneId = ZoneId.systemDefault().id
 
+        val qualityResult = HrvSignalQualityAnalyzer.analyzeBeats(
+            beats = filteredBeats,
+            artifactRatePercent = artifactRate,
+            rmssdMs = rmssdMs
+        )
+
         val entry = HrvReadinessEntry(
             timestampMs = nowMs,
             dateIso = dateIso,
@@ -298,6 +313,8 @@ class MorningHrvCheckViewModel @JvmOverloads constructor(
                 remainingSec = 0,
                 artifactRatePct = artifactRate,
                 highArtifactWarning = isHighArtifact,
+                signalQualityStatus = qualityResult.status,
+                signalQualityResult = qualityResult,
                 computedEntry = entry,
                 isSaved = false
             )

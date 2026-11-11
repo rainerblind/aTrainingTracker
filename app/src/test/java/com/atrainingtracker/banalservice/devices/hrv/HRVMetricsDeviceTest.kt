@@ -76,8 +76,9 @@ class HRVMetricsDeviceTest {
         var currentTime = 1000000L
         val device = TestableHRVMetricsDevice(context, sensorManager, { currentTime })
 
-        // Immediately after constructor, hasReceivedRrData must be false
+        // Immediately after constructor, hasReceivedRrData must be false and quality INSUFFICIENT_DATA
         assertFalse(device.hasReceivedRrData)
+        assertEquals(HrvSignalQualityStatus.INSUFFICIENT_DATA, device.signalQualityResult.status)
 
         // Send a beat
         device.onRrBeat(
@@ -93,6 +94,7 @@ class HRVMetricsDeviceTest {
         // Reset session
         device.resetSession()
         assertFalse(device.hasReceivedRrData)
+        assertEquals(HrvSignalQualityStatus.INSUFFICIENT_DATA, device.signalQualityResult.status)
         device.shutDown()
     }
 
@@ -201,6 +203,34 @@ class HRVMetricsDeviceTest {
         assertTrue(artifactRate!! > 5.0)
         // High artifact rate (> 5%) must suppress DFA alpha 1 (emits null)
         assertNull(dfaAlpha1)
+
+        device.shutDown()
+    }
+
+    @Test
+    fun testSignalQualityResultUpdatedOnCalculateMetrics() {
+        var currentTime = 1000000L
+        val device = TestableHRVMetricsDevice(context, sensorManager, { currentTime })
+
+        // Feed 50 beats of stepped/synthetic intervals (zero differences)
+        for (i in 0 until 50) {
+            val t = currentTime - (50 - i) * 800L
+            val stepVal = (i / 10) * 10.0 // plateaus of 10 identical beats
+            device.onRrBeat(
+                RrBeatEvent(
+                    beatTimestampMs = t,
+                    rrMs = 500.0 + stepVal,
+                    rawCounter = i,
+                    protocol = ProtocolType.BLE
+                )
+            )
+        }
+
+        device.calculateMetrics()
+
+        val quality = device.signalQualityResult
+        assertEquals(HrvSignalQualityStatus.QUANTIZED_SYNTHETIC, quality.status)
+        assertTrue(quality.zeroDiffRate != null && quality.zeroDiffRate > 0.55)
 
         device.shutDown()
     }
