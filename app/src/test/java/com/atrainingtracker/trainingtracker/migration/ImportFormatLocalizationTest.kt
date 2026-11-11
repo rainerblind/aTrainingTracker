@@ -10,10 +10,11 @@
 
 package com.atrainingtracker.trainingtracker.migration
 
+import com.atrainingtracker.testing.LocalizationTestCache
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.io.File
 
 /**
  * Unit test verifying 9-language localization parity and non-empty content
@@ -60,30 +61,15 @@ class ImportFormatLocalizationTest {
         "import_gpx_gdrive_button"
     )
 
-    private fun findFile(relativePath: String): File {
-        val candidates = listOf(
-            File(relativePath),
-            File("app/$relativePath"),
-            File("../$relativePath"),
-            File("../../$relativePath")
-        )
-        return candidates.firstOrNull { it.exists() }
-            ?: error("File not found in candidates: $relativePath")
-    }
-
     @Test
     fun testAllFormatImportStringsExistAndAreNonEmptyAcrossAllNineLocales() {
         for (targetKey in requiredKeys) {
-            val regex = Regex("""<string name="$targetKey">(.*?)</string>""", RegexOption.DOT_MATCHES_ALL)
-
             for (locale in locales) {
-                val file = findFile("src/main/res/$locale/strings.xml")
-                val content = file.readText()
-                val match = regex.find(content)
-
-                assertTrue("Locale '$locale' must define key '$targetKey'", match != null)
-                val value = match!!.groupValues[1].trim()
-                assertFalse("Locale '$locale' key '$targetKey' must not be empty", value.isEmpty())
+                val strings = LocalizationTestCache.getStrings(locale)
+                assertTrue("Locale '$locale' must define key '$targetKey'", strings.containsKey(targetKey))
+                val value = strings[targetKey]?.trim()
+                assertNotNull("Locale '$locale' key '$targetKey' must not be null", value)
+                assertFalse("Locale '$locale' key '$targetKey' must not be empty", value!!.isEmpty())
             }
         }
     }
@@ -92,11 +78,10 @@ class ImportFormatLocalizationTest {
     fun testRemovedGoogleDriveScanStringsAreAbsentAcrossAllNineLocales() {
         for (removedKey in removedKeys) {
             for (locale in locales) {
-                val file = findFile("src/main/res/$locale/strings.xml")
-                val content = file.readText()
+                val strings = LocalizationTestCache.getStrings(locale)
                 assertFalse(
                     "Locale '$locale' must NOT define removed key '$removedKey'",
-                    content.contains("""name="$removedKey"""")
+                    strings.containsKey(removedKey)
                 )
             }
         }

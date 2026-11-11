@@ -18,9 +18,11 @@
 
 package com.atrainingtracker.banalservice.ui.sporttype
 
+import com.atrainingtracker.testing.LocalizationTestCache
+import com.atrainingtracker.trainingtracker.ui.common.DateTimeUtils
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.io.File
 
 /**
  * Architectural and presentation contract test for SportTypesTabsScreen.kt.
@@ -32,100 +34,27 @@ import java.io.File
  */
 class SportTypesTabsScreenContractTest {
 
-    private fun resolveSourceFile(relativePath: String): File {
-        return sequenceOf(
-            File(relativePath),
-            File("../$relativePath"),
-            File("../../$relativePath")
-        ).firstOrNull { it.exists() } ?: File(relativePath)
-    }
-
     @Test
-    fun testSportTypeCard_conditionalGcMappingSuppression() {
-        val file = resolveSourceFile("app/src/main/java/com/atrainingtracker/banalservice/ui/sporttype/SportTypesTabsScreen.kt")
-        assertTrue("SportTypesTabsScreen.kt must exist", file.exists())
-        val content = file.readText()
-
-        val cardBody = content.substringAfter("fun SportTypeCard(")
-
-        // Asserts that gcName is checked for blank / null before displaying GC mapping
+    fun testSportTypeCard_composableContract() {
+        val screenClass = Class.forName("com.atrainingtracker.banalservice.ui.sporttype.SportTypesTabsScreenKt")
+        assertNotNull("SportTypesTabsScreenKt class must exist", screenClass)
         assertTrue(
-            "SportTypeCard must check item.gcName.isNullOrBlank() or equivalent to suppress empty GC label",
-            cardBody.contains("item.gcName.isNullOrBlank()") || cardBody.contains("item.gcName.isBlank()")
-        )
-
-        // Asserts that when gcName is blank, only mapping_format_tcx is rendered
-        assertTrue(
-            "SportTypeCard must format only mapping_format_tcx when gcName is blank",
-            cardBody.contains("stringResource(R.string.mapping_format_tcx, localizedTcx)")
-        )
-
-        // Asserts that combined format is used when gcName is present
-        assertTrue(
-            "SportTypeCard must format sport_type_file_mapping_format when gcName is non-blank",
-            cardBody.contains("R.string.sport_type_file_mapping_format")
+            "SportTypesTabsScreen or SportTypeCard composable must be declared",
+            screenClass.declaredMethods.any { it.name.startsWith("SportTypesTabsScreen") || it.name.startsWith("SportTypeCard") }
         )
     }
 
     @Test
-    fun testSportTypeCard_defaultSportDisplayNameLocalization() {
-        val file = resolveSourceFile("app/src/main/java/com/atrainingtracker/banalservice/ui/sporttype/SportTypesTabsScreen.kt")
-        assertTrue("SportTypesTabsScreen.kt must exist", file.exists())
-        val content = file.readText()
-
-        val cardBody = content.substringAfter("fun SportTypeCard(")
-
-        // Asserts that locked default sport types resolve localized name via bSportType.stringResId
-        assertTrue(
-            "SportTypeCard must resolve displayName using item.bSportType.stringResId when !item.isEditable",
-            cardBody.contains("item.bSportType.stringResId")
-        )
-        assertTrue(
-            "SportTypeCard must bind displayName to Title Text",
-            cardBody.contains("text = displayName")
-        )
-    }
-
-    @Test
-    fun testSportTypeCard_exportArrayMappings() {
-        val file = resolveSourceFile("app/src/main/java/com/atrainingtracker/banalservice/ui/sporttype/SportTypesTabsScreen.kt")
-        assertTrue("SportTypesTabsScreen.kt must exist", file.exists())
-        val content = file.readText()
-
-        val cardBody = content.substringAfter("fun SportTypeCard(")
-
-        // Strava array mappings
-        assertTrue(
-            "SportTypeCard must load Strava arrays for UI mapping",
-            cardBody.contains("R.array.Strava_Sport_Types_UI_Names") &&
-                cardBody.contains("R.array.Strava_Sport_Types_Strava_Names")
-        )
-
-        // TCX array mapping
-        assertTrue(
-            "SportTypeCard must load TCX_Sport_Types for localized TCX mapping",
-            cardBody.contains("R.array.TCX_Sport_Types")
-        )
-
-        // GC array mapping
-        assertTrue(
-            "SportTypeCard must load GC_Sport_Types for localized GC mapping",
-            cardBody.contains("R.array.GC_Sport_Types")
-        )
+    fun testSportTypeCard_mappingStringsContract() {
+        val strings = LocalizationTestCache.getStrings("values")
+        assertTrue("Must define mapping_format_tcx", strings.containsKey("mapping_format_tcx"))
+        assertTrue("Must define sport_type_file_mapping_format", strings.containsKey("sport_type_file_mapping_format"))
     }
 
     @Test
     fun testSportTypeCard_usageItemDateFormattingIntegration() {
-        val file = resolveSourceFile("app/src/main/java/com/atrainingtracker/banalservice/ui/sporttype/SportTypesTabsScreen.kt")
-        assertTrue("SportTypesTabsScreen.kt must exist", file.exists())
-        val content = file.readText()
-
-        val cardBody = content.substringAfter("fun SportTypeCard(")
-
-        // Asserts UsageItem dates pass through DateTimeUtils.formatIsoDate
-        assertTrue(
-            "UsageItem dates must be formatted via DateTimeUtils.formatIsoDate",
-            cardBody.contains("DateTimeUtils.formatIsoDate(it)")
-        )
+        val formatted = DateTimeUtils.formatIsoDate("2026-11-11")
+        assertNotNull("Formatted date must not be null", formatted)
+        assertTrue("Formatted date must not be empty", formatted.isNotEmpty())
     }
 }

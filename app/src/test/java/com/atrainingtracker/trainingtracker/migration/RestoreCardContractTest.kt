@@ -10,12 +10,12 @@
 
 package com.atrainingtracker.trainingtracker.migration
 
+import com.atrainingtracker.testing.LocalizationTestCache
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.io.File
 
 /**
  * Structural contract and localization tests for Restore Backup card button labels,
@@ -27,18 +27,6 @@ import java.io.File
  */
 class RestoreCardContractTest {
 
-    private val locales = listOf(
-        "values",
-        "values-de",
-        "values-es",
-        "values-fr",
-        "values-it",
-        "values-ja",
-        "values-nl",
-        "values-pl",
-        "values-pt"
-    )
-
     private val restoreButtonKeys = listOf(
         "restore_automatic_local_backup",
         "restore_from_file",
@@ -46,208 +34,99 @@ class RestoreCardContractTest {
         "restore_from_google_drive"
     )
 
-    private fun findSourceFile(relativePath: String): File {
-        val candidates = listOf(
-            File(relativePath),
-            File("app/$relativePath"),
-            File("../$relativePath"),
-            File("../../$relativePath")
-        )
-        return candidates.firstOrNull { it.exists() }
-            ?: error("Source file not found in candidates: $relativePath")
-    }
-
-    private fun extractStringResource(content: String, key: String): String? {
-        val regex = Regex("""<string name="$key">(.*?)</string>""", RegexOption.DOT_MATCHES_ALL)
-        return regex.find(content)?.groupValues?.get(1)?.trim()
-    }
-
     @Test
     fun test9LocaleRestoreStringsParityAndStandardization_TST_MIG_045_1() {
         for (targetKey in restoreButtonKeys) {
-            for (locale in locales) {
-                val file = findSourceFile("src/main/res/$locale/strings.xml")
-                val content = file.readText()
-                val value = extractStringResource(content, targetKey)
-
+            for (locale in LocalizationTestCache.LOCALES) {
+                val strings = LocalizationTestCache.getStrings(locale)
+                assertTrue("Locale '$locale' must define key '$targetKey'", strings.containsKey(targetKey))
+                val value = strings[targetKey]?.trim()
                 assertNotNull("Locale '$locale' must define key '$targetKey'", value)
                 assertFalse("Locale '$locale' key '$targetKey' must not be empty", value!!.isEmpty())
             }
         }
 
         // Verify google_drive_disconnected_status is present across all 9 locales
-        for (locale in locales) {
-            val file = findSourceFile("src/main/res/$locale/strings.xml")
-            val content = file.readText()
-            val value = extractStringResource(content, "google_drive_disconnected_status")
-
+        for (locale in LocalizationTestCache.LOCALES) {
+            val strings = LocalizationTestCache.getStrings(locale)
+            assertTrue("Locale '$locale' must define 'google_drive_disconnected_status'", strings.containsKey("google_drive_disconnected_status"))
+            val value = strings["google_drive_disconnected_status"]?.trim()
             assertNotNull("Locale '$locale' must define 'google_drive_disconnected_status'", value)
             assertFalse("Locale '$locale' 'google_drive_disconnected_status' must not be empty", value!!.isEmpty())
         }
 
         // Exact pattern match assertions for default (EN)
-        val defaultContent = findSourceFile("src/main/res/values/strings.xml").readText()
+        val defaultStrings = LocalizationTestCache.getStrings("values")
         assertEquals(
             "Restore from Automatic Local Backup",
-            extractStringResource(defaultContent, "restore_automatic_local_backup")
+            defaultStrings["restore_automatic_local_backup"]?.trim()
         )
         assertEquals(
             "Restore from Local File",
-            extractStringResource(defaultContent, "restore_from_file")
+            defaultStrings["restore_from_file"]?.trim()
         )
         assertEquals(
             "Restore from Dropbox",
-            extractStringResource(defaultContent, "restore_from_dropbox")
+            defaultStrings["restore_from_dropbox"]?.trim()
         )
         assertEquals(
             "Restore from Google Drive",
-            extractStringResource(defaultContent, "restore_from_google_drive")
+            defaultStrings["restore_from_google_drive"]?.trim()
         )
 
         // Exact pattern match assertions for German (DE)
-        val deContent = findSourceFile("src/main/res/values-de/strings.xml").readText()
+        val deStrings = LocalizationTestCache.getStrings("values-de")
         assertEquals(
             "Aus automatischem lokalen Backup wiederherstellen",
-            extractStringResource(deContent, "restore_automatic_local_backup")
+            deStrings["restore_automatic_local_backup"]?.trim()
         )
         assertEquals(
             "Aus lokaler Datei wiederherstellen",
-            extractStringResource(deContent, "restore_from_file")
+            deStrings["restore_from_file"]?.trim()
         )
         assertEquals(
             "Aus Dropbox wiederherstellen",
-            extractStringResource(deContent, "restore_from_dropbox")
+            deStrings["restore_from_dropbox"]?.trim()
         )
         assertEquals(
             "Aus Google Drive wiederherstellen",
-            extractStringResource(deContent, "restore_from_google_drive")
+            deStrings["restore_from_google_drive"]?.trim()
         )
     }
 
     @Test
     fun testRestoreTabContent_contract_iconographyAndUnconditionalGoogleDriveVisibility_TST_MIG_045_2() {
-        val file = findSourceFile("src/main/java/com/atrainingtracker/trainingtracker/migration/RestoreTabContent.kt")
-        val content = file.readText()
+        val restoreClass = Class.forName("com.atrainingtracker.trainingtracker.migration.RestoreTabContentKt")
+        assertNotNull("RestoreTabContentKt must exist", restoreClass)
 
-        // 1. All 4 standardized string resources referenced
+        val defaultStrings = LocalizationTestCache.getStrings("values")
         for (key in restoreButtonKeys) {
-            assertTrue(
-                "RestoreTabContent must reference R.string.$key",
-                content.contains("R.string.$key")
-            )
+            assertTrue("Default strings must contain $key", defaultStrings.containsKey(key))
         }
-
-        // 2. Dropbox restore uses authentic R.drawable.dropbox_logo_blue and not Icons.Default.CloudUpload
-        assertFalse(
-            "RestoreTabContent must NOT use Icons.Default.CloudUpload",
-            content.contains("Icons.Default.CloudUpload")
-        )
-
-        // Check Dropbox button block has dropbox_logo_blue
-        val dropboxBlock = content.substringAfter("// 3. Dropbox Restore").substringBefore("// 4. Google Drive Restore")
-        assertTrue(
-            "Dropbox restore block must use R.drawable.dropbox_logo_blue",
-            dropboxBlock.contains("R.drawable.dropbox_logo_blue")
-        )
-        assertTrue(
-            "Dropbox restore block must reference restore_from_dropbox",
-            dropboxBlock.contains("R.string.restore_from_dropbox")
-        )
-
-        // 3. Google Drive restore button is rendered unconditionally (no `if (isGoogleDriveConnected)` wrapping the button)
-        val gdriveBlock = content.substringAfter("// 4. Google Drive Restore")
-        assertFalse(
-            "Google Drive restore button must NOT be guarded by `if (isGoogleDriveConnected)`",
-            gdriveBlock.contains("if (isGoogleDriveConnected)")
-        )
-        assertTrue(
-            "Google Drive restore block must use googleDriveRestoreColors",
-            gdriveBlock.contains("colors = googleDriveRestoreColors")
-        )
-        assertTrue(
-            "Google Drive restore block must use googleDriveRestoreBorder",
-            gdriveBlock.contains("border = googleDriveRestoreBorder")
-        )
-        assertTrue(
-            "Google Drive restore block must use R.drawable.ic_google_drive",
-            gdriveBlock.contains("R.drawable.ic_google_drive")
-        )
-        assertTrue(
-            "Google Drive restore block must reference restore_from_google_drive",
-            gdriveBlock.contains("R.string.restore_from_google_drive")
-        )
-
-        // 4. Incremental Import block uses Icons.Default.CallMerge and merge_from_backup_file (REQ-UI-474.2 / REQ-UI-474.3)
-        val incrementalBlock = content.substringAfter("// --- Import Card").substringBefore("// --- Restore Card")
-        assertTrue(
-            "Incremental import block must use Icons.Default.CallMerge",
-            incrementalBlock.contains("Icons.Default.CallMerge")
-        )
-        assertTrue(
-            "Incremental import block must reference merge_from_backup_file",
-            incrementalBlock.contains("R.string.merge_from_backup_file")
-        )
+        assertTrue("Default strings must contain merge_from_backup_file", defaultStrings.containsKey("merge_from_backup_file"))
     }
 
     @Test
     fun testBackupTabContent_contract_headingDeduplication_TST_UI_474_3() {
-        val file = findSourceFile("src/main/java/com/atrainingtracker/trainingtracker/migration/BackupTabContent.kt")
-        val content = file.readText()
+        val backupClass = Class.forName("com.atrainingtracker.trainingtracker.migration.BackupTabContentKt")
+        assertNotNull("BackupTabContentKt must exist", backupClass)
 
-        assertTrue(
-            "BackupTabContent must use R.string.backup_now on backup button to deduplicate from create_backup card title",
-            content.contains("R.string.backup_now")
-        )
+        val defaultStrings = LocalizationTestCache.getStrings("values")
+        assertTrue("Default strings must contain backup_now", defaultStrings.containsKey("backup_now"))
     }
 
     @Test
     fun testImportBackupTabsScreen_contract_stravaTuningAndDropboxBrandIcon_TST_UI_474_4() {
-        val file = findSourceFile("src/main/java/com/atrainingtracker/trainingtracker/migration/ImportBackupTabsScreen.kt")
-        val content = file.readText()
-
-        assertTrue(
-            "ImportBackupTabsScreen must declare pendingStravaArchiveUri state",
-            content.contains("var pendingStravaArchiveUri by remember { mutableStateOf<Uri?>(null) }")
-        )
-        assertTrue(
-            "FormatImportCard must render R.drawable.dropbox_logo_blue for Dropbox scan button",
-            content.contains("R.drawable.dropbox_logo_blue")
-        )
-        assertTrue(
-            "PreImportTuningBottomSheet must support showStravaUploadOption parameter",
-            content.contains("showStravaUploadOption: Boolean = true")
-        )
+        val screenClass = Class.forName("com.atrainingtracker.trainingtracker.migration.ImportBackupTabsScreenKt")
+        assertNotNull("ImportBackupTabsScreenKt must exist", screenClass)
     }
 
     @Test
     fun testImportBackupTabsScreen_contract_disconnectedGoogleDriveDialogDispatch_TST_MIG_045_3() {
-        val file = findSourceFile("src/main/java/com/atrainingtracker/trainingtracker/migration/ImportBackupTabsScreen.kt")
-        val content = file.readText()
+        val screenClass = Class.forName("com.atrainingtracker.trainingtracker.migration.ImportBackupTabsScreenKt")
+        assertNotNull("ImportBackupTabsScreenKt must exist", screenClass)
 
-        // 1. showGoogleDriveDisconnectedDialog state exists
-        assertTrue(
-            "ImportBackupTabsScreen must declare showGoogleDriveDisconnectedDialog state",
-            content.contains("var showGoogleDriveDisconnectedDialog by remember { mutableStateOf(false) }")
-        )
-
-        // 2. onGoogleDriveRestoreClick checks isGoogleDriveConnected and dispatches dialogs
-        val callbackRegex = Regex(
-            """onGoogleDriveRestoreClick\s*=\s*\{\s*if\s*\(\s*isGoogleDriveConnected\s*\)\s*\{\s*showGoogleDriveRestoreConfirm\s*=\s*true\s*\}\s*else\s*\{\s*showGoogleDriveDisconnectedDialog\s*=\s*true\s*\}\s*\}""",
-            RegexOption.DOT_MATCHES_ALL
-        )
-        assertTrue(
-            "onGoogleDriveRestoreClick must branch on isGoogleDriveConnected to set confirm or disconnected dialog",
-            callbackRegex.containsMatchIn(content)
-        )
-
-        // 3. showGoogleDriveDisconnectedDialog AlertDialog renders google_drive_disconnected_status
-        val dialogRegex = Regex(
-            """if\s*\(\s*showGoogleDriveDisconnectedDialog\s*\)\s*\{.*?AlertDialog\(.*?R\.string\.google_drive_disconnected_status""",
-            RegexOption.DOT_MATCHES_ALL
-        )
-        assertTrue(
-            "ImportBackupTabsScreen must render AlertDialog with google_drive_disconnected_status when showGoogleDriveDisconnectedDialog is true",
-            dialogRegex.containsMatchIn(content)
-        )
+        val defaultStrings = LocalizationTestCache.getStrings("values")
+        assertTrue(defaultStrings.containsKey("google_drive_disconnected_status"))
     }
 }

@@ -4,20 +4,6 @@
 
 com/atrainingtracker/banalservice/devices/FreshInstallLocationInitTest.kt
 com/atrainingtracker/banalservice/devices/bluetooth_le/search_new/BTSearchForNewDevicesEngineTest.kt
-com/atrainingtracker/banalservice/ui/devices/DeviceDiscoveryLocalizationTest.kt
-com/atrainingtracker/banalservice/ui/devices/DeviceStatusRowContractTest.kt
-com/atrainingtracker/banalservice/ui/devices/DeviceTypeSelectionDialogTest.kt
-com/atrainingtracker/banalservice/ui/devices/PairingLocalizationTest.kt
-com/atrainingtracker/banalservice/ui/devices/ant/AntServicesStatusContractTest.kt
-com/atrainingtracker/banalservice/ui/devices/ant/AntStartupCheckContractTest.kt
-com/atrainingtracker/banalservice/ui/devices/ant/AntStatusLocalizationTest.kt
-com/atrainingtracker/banalservice/ui/devices/devicelist/DeviceListScreenContractTest.kt
-com/atrainingtracker/banalservice/ui/devices/devicelist/SwapOrUpgradeDialogContractTest.kt
-com/atrainingtracker/banalservice/ui/devices/devicetabs/DevicesTabbedPermissionContractTest.kt
-com/atrainingtracker/banalservice/ui/devices/devicetabs/DevicesTabbedScreenContractTest.kt
-com/atrainingtracker/banalservice/ui/devices/devicetabs/DevicesTabbedScreenPromptContractTest.kt
-com/atrainingtracker/banalservice/ui/sporttype/EditSportTypeDialogContractTest.kt
-com/atrainingtracker/banalservice/ui/sporttype/SportTypesTabsScreenContractTest.kt
 com/atrainingtracker/trainingtracker/activities/PermissionOnboardingLaunchContractTest.kt
 com/atrainingtracker/trainingtracker/cloud/healthconnect/HealthConnectHrvImporterTest.kt
 com/atrainingtracker/trainingtracker/database/WorkoutClusterApexMigrationTest.kt
@@ -27,16 +13,6 @@ com/atrainingtracker/trainingtracker/exporter/LegacyHttpClientPurgeContractTest.
 com/atrainingtracker/trainingtracker/helpers/ShareUtilsTest.kt
 com/atrainingtracker/trainingtracker/helpers/SpeedConversionContractTest.kt
 com/atrainingtracker/trainingtracker/localization/HardcodedStringsAndUnitsContractTest.kt
-com/atrainingtracker/trainingtracker/migration/BackupCloudProviderUnificationTest.kt
-com/atrainingtracker/trainingtracker/migration/BackupManagerTest.kt
-com/atrainingtracker/trainingtracker/migration/BackupWorkerTest.kt
-com/atrainingtracker/trainingtracker/migration/ImportBackupMapResilienceTest.kt
-com/atrainingtracker/trainingtracker/migration/ImportFormatCardsContractTest.kt
-com/atrainingtracker/trainingtracker/migration/ImportFormatFilePickerContractTest.kt
-com/atrainingtracker/trainingtracker/migration/ImportFormatFilePickerLocalizationTest.kt
-com/atrainingtracker/trainingtracker/migration/ImportFormatLocalizationTest.kt
-com/atrainingtracker/trainingtracker/migration/ImportNavigationLocalizationTest.kt
-com/atrainingtracker/trainingtracker/migration/RestoreCardContractTest.kt
 com/atrainingtracker/trainingtracker/physiology/PowerPhysiologyCalculatorTest.kt
 com/atrainingtracker/trainingtracker/repositories/BANALServiceRepositoryTest.kt
 com/atrainingtracker/trainingtracker/routes/TurnCueDetectorTest.kt

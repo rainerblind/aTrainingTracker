@@ -92,19 +92,8 @@ internal fun BackupTabContentLayout(
         )
     }
 
-    val cloudButtonTextRes = when {
-        isDropboxConnected && isGoogleDriveConnected -> R.string.create_and_upload_to_both
-        isDropboxConnected -> R.string.create_and_upload_to_dropbox
-        isGoogleDriveConnected -> R.string.create_and_upload_to_google_drive
-        else -> R.string.create_and_upload_to_cloud
-    }
-
-    val automatedBackupSummaryRes = when {
-        isDropboxConnected && isGoogleDriveConnected -> R.string.automated_backups_summary_both
-        isDropboxConnected -> R.string.automated_backups_summary
-        isGoogleDriveConnected -> R.string.automated_backups_summary_google_drive
-        else -> R.string.automated_backups_summary_local_only
-    }
+    val cloudButtonTextRes = resolveCloudButtonTextRes(isDropboxConnected, isGoogleDriveConnected)
+    val automatedBackupSummaryRes = resolveAutomatedBackupSummaryRes(isDropboxConnected, isGoogleDriveConnected)
 
     Column(
         modifier = Modifier
@@ -289,6 +278,20 @@ internal fun BackupTabContentLayout(
             }
         }
     }
+}
+
+fun resolveCloudButtonTextRes(isDropboxConnected: Boolean, isGoogleDriveConnected: Boolean): Int = when {
+    isDropboxConnected && isGoogleDriveConnected -> R.string.create_and_upload_to_both
+    isDropboxConnected -> R.string.create_and_upload_to_dropbox
+    isGoogleDriveConnected -> R.string.create_and_upload_to_google_drive
+    else -> R.string.create_and_upload_to_cloud
+}
+
+fun resolveAutomatedBackupSummaryRes(isDropboxConnected: Boolean, isGoogleDriveConnected: Boolean): Int = when {
+    isDropboxConnected && isGoogleDriveConnected -> R.string.automated_backups_summary_both
+    isDropboxConnected -> R.string.automated_backups_summary
+    isGoogleDriveConnected -> R.string.automated_backups_summary_google_drive
+    else -> R.string.automated_backups_summary_local_only
 }
 
 @Preview(name = "Both Cloud Providers Connected", showBackground = true)
