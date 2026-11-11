@@ -257,4 +257,54 @@ class EditSensorFieldDialogSparklineTest {
             )
         }
     }
+
+    @Test
+    fun testSliderIndexToDurationSeconds_all7Positions() {
+        assertEquals(60, sliderIndexToDurationSeconds(0))
+        assertEquals(120, sliderIndexToDurationSeconds(1))
+        assertEquals(300, sliderIndexToDurationSeconds(2))
+        assertEquals(600, sliderIndexToDurationSeconds(3))
+        assertEquals(1200, sliderIndexToDurationSeconds(4))
+        assertEquals(3600, sliderIndexToDurationSeconds(5))
+        assertEquals(0, sliderIndexToDurationSeconds(6))
+
+        // Clamping out of bounds
+        assertEquals(60, sliderIndexToDurationSeconds(-1))
+        assertEquals(0, sliderIndexToDurationSeconds(10))
+    }
+
+    @Test
+    fun testDurationSecondsToSliderIndex_all7DurationsAndFallback() {
+        assertEquals(0, durationSecondsToSliderIndex(60))
+        assertEquals(1, durationSecondsToSliderIndex(120))
+        assertEquals(2, durationSecondsToSliderIndex(300))
+        assertEquals(3, durationSecondsToSliderIndex(600))
+        assertEquals(4, durationSecondsToSliderIndex(1200))
+        assertEquals(5, durationSecondsToSliderIndex(3600))
+        assertEquals(6, durationSecondsToSliderIndex(0))
+
+        // Unknown fallback defaults to 5m (index 2)
+        assertEquals(2, durationSecondsToSliderIndex(999))
+    }
+
+    @Test
+    fun testAll7Horizons_updateViewModelState() = runTest {
+        val viewModel = EditSensorFieldViewModel(
+            application = application,
+            trackingViewsRepository = trackingViewsRepository,
+            banalServiceRepository = banalServiceRepository,
+            activityType = ActivityType.BIKE_POWER,
+            sensorFieldId = 1L,
+            tabViewId = 10L,
+            rowNr = 1,
+            colNr = 1
+        )
+        viewModel.onShowGraphChanged(true)
+
+        val expectedDurations = listOf(60, 120, 300, 600, 1200, 3600, 0)
+        for (duration in expectedDurations) {
+            viewModel.onGraphHorizonChanged(duration)
+            assertEquals(duration, viewModel.uiState.value.graphHorizonSeconds)
+        }
+    }
 }

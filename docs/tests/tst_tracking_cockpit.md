@@ -1713,7 +1713,7 @@
 ### TST-TRK-059: **Live Sparkline Graph Cockpit Tiles & Database Migration Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-TRK-059`
 - **Component**: `TrackingViewsDatabaseManager.java`, `TrackingViewsDbHelper.java`, `SensorFieldView.kt`, `EditSensorFieldDialog.kt`, `LiveSparklineBuffer.kt`, `SensorSparklineView.kt`, `BANALServiceRepository.kt`, `TrackingViewModel.kt`, `ATrainingTrackerApp.kt`
-- **Jira**: `ATT-1294`, `ATT-6710`, `ATT-6695`
+- **Jira**: `ATT-1294`, `ATT-6710`, `ATT-6695`, `ATT-6690`
 - **Test Description**:
   1. *Database Schema v19 Migration & Default Column Integrity Unit Test (`TST-TRK-059.1`, `TrackingViewsDbMigrationV19Test.kt`)*:
   • Execute SQLite schema migration from version 18 to 19; assert `ShowGraph` and `GraphHorizonS` columns exist on `ROWS_TABLE` with default values `0` and `300`.
@@ -1724,9 +1724,9 @@
   3. *Live Sparkline Buffer & Decimation Unit Test (`TST-TRK-059.3`, `LiveSparklineBufferTest.kt`)*:
   • Verify fixed-capacity ring buffer sliding and eviction for time horizons 1m (60s), 2m (120s), 5m (300s), 10m (600s), 20m (1200s), and 1h (3600s).
   • Verify Full Workout ($0\text{s}$) dynamic decimation maintains $\le 300$ samples without unbounded growth during multi-hour workouts.
-  4. *Edit Dialog Selector & Horizon UI Contract Test (`TST-TRK-059.4`, `EditSensorFieldDialogSparklineTest.kt`)*:
+  4. *Edit Dialog Stepped Slider & Horizon UI Contract Test (`TST-TRK-059.4`, `EditSensorFieldDialogSparklineTest.kt`, `ATT-6690`)*:
   • Verify `Graph` filter chip in `DisplayElementsSelector` is conditionally displayed based on `isGraphSupported`.
-  • Verify selection of 7 duration horizons and full 9-language localization parity in `strings_cockpit.xml`.
+  • Verify stepped `Slider` (`valueRange = 0f..6f`, `steps = 5`) snaps across all 7 durations [60, 120, 300, 600, 1200, 3600, 0] with header active label update and full 9-language localization parity in `strings_cockpit.xml`.
   5. *Clean-Room Targeted Test Suite Execution (`TST-TRK-059.5`)*:
   • Execute targeted package tests (`com.atrainingtracker.trainingtracker.database.*`, `com.atrainingtracker.trainingtracker.ui.tracking.*`) asserting 100% pass rate.
   6. *Singleton Sparkline Buffer Persistence & Lifecycle Test (`TST-TRK-059.6`, `BANALServiceRepositorySparklineTest.kt`, `ATT-6710`)*:

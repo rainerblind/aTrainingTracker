@@ -61,8 +61,39 @@ import com.atrainingtracker.trainingtracker.ui.settings.AthleteWeightDialog
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 import com.atrainingtracker.trainingtracker.ui.theme.safePainterResource
 import com.atrainingtracker.trainingtracker.ui.tracking.getDisplayName
+import kotlin.math.roundToInt
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+
+/**
+ * Discrete duration options for sparkline time horizon selection in the edit dialog (REQ-TRK-059.3, ATT-1294, ATT-6690).
+ */
+val SPARKLINE_HORIZONS = listOf(
+    60 to R.string.graph_horizon_1m,
+    120 to R.string.graph_horizon_2m,
+    300 to R.string.graph_horizon_5m,
+    600 to R.string.graph_horizon_10m,
+    1200 to R.string.graph_horizon_20m,
+    3600 to R.string.graph_horizon_1h,
+    0 to R.string.graph_horizon_full
+)
+
+/**
+ * Maps a duration in seconds to its corresponding discrete slider step index 0..6 (ATT-6690).
+ * Defaults to index 2 (300s / 5m) if unknown.
+ */
+fun durationSecondsToSliderIndex(seconds: Int): Int {
+    val idx = SPARKLINE_HORIZONS.indexOfFirst { it.first == seconds }
+    return if (idx >= 0) idx else 2 // Default to 5 min
+}
+
+/**
+ * Maps a discrete slider step index 0..6 to its duration in seconds (ATT-6690).
+ */
+fun sliderIndexToDurationSeconds(index: Int): Int {
+    val clamped = index.coerceIn(0, SPARKLINE_HORIZONS.lastIndex)
+    return SPARKLINE_HORIZONS[clamped].first
+}
 
 /**
  * Pure search filter helper for matching [SensorType] items in [SensorTypeSelectorSection]
@@ -203,36 +234,55 @@ fun EditSensorFieldDialog(
                 Spacer(Modifier.height(16.dp))
             }
 
-            // --- Sparkline Time Horizon Selection (REQ-TRK-059, ATT-1294) ---
+            // --- Sparkline Time Horizon Selection (REQ-TRK-059.3, ATT-1294, ATT-6690) ---
             if (uiState.isGraphSupported && uiState.showGraph) {
-                Text(
-                    text = stringResource(R.string.sensor_field_graph_horizon),
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                val currentHorizonIndex = durationSecondsToSliderIndex(uiState.graphHorizonSeconds)
+                val activeHorizonLabelResId = SPARKLINE_HORIZONS[currentHorizonIndex].second
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = stringResource(R.string.sensor_field_graph_horizon),
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        text = stringResource(activeHorizonLabelResId),
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+                Spacer(Modifier.height(4.dp))
+                Slider(
+                    value = currentHorizonIndex.toFloat(),
+                    onValueChange = { floatValue ->
+                        val snappedIndex = floatValue.roundToInt().coerceIn(0, SPARKLINE_HORIZONS.lastIndex)
+                        if (snappedIndex != currentHorizonIndex) {
+                            viewModel.onGraphHorizonChanged(sliderIndexToDurationSeconds(snappedIndex))
+                        }
+                    },
+                    valueRange = 0f..6f,
+                    steps = 5,
                     modifier = Modifier.fillMaxWidth()
                 )
-                Spacer(Modifier.height(4.dp))
-                val horizons = listOf(
-                    60 to R.string.graph_horizon_1m,
-                    120 to R.string.graph_horizon_2m,
-                    300 to R.string.graph_horizon_5m,
-                    600 to R.string.graph_horizon_10m,
-                    1200 to R.string.graph_horizon_20m,
-                    3600 to R.string.graph_horizon_1h,
-                    0 to R.string.graph_horizon_full
-                )
-                FlowRow(
+                Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                    horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    horizons.forEach { (durationSeconds, labelResId) ->
-                        FilterChip(
-                            selected = (uiState.graphHorizonSeconds == durationSeconds),
-                            onClick = { viewModel.onGraphHorizonChanged(durationSeconds) },
-                            label = { Text(stringResource(labelResId)) }
-                        )
-                    }
+                    Text(
+                        text = stringResource(R.string.graph_horizon_1m),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.outline
+                    )
+                    Text(
+                        text = stringResource(R.string.graph_horizon_full),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.outline
+                    )
                 }
                 Spacer(Modifier.height(16.dp))
             }

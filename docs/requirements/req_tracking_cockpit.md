@@ -3066,9 +3066,9 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 **Invariants**: Existing power telemetry (`POWER`, `NP`, `IF`, `WORK_KJ`, `TSS`, `W_PRIME_BAL`) preserved; pause freeze integrity; 100% 9-language translation parity; zero composition snapshot state writes.
 
 ### REQ-TRK-059: Configurable Live Sparkline Graph Cockpit Tiles with Selectable Time Horizon Across Numeric SensorTypes [Verified]
-- **Tests**: `TST-TRK-059` | **Tickets**: `ATT-1294`, `ATT-6710`, `ATT-6695`
+- **Tests**: `TST-TRK-059` | **Tickets**: `ATT-1294`, `ATT-6710`, `ATT-6695`, `ATT-6690`
 - **Implementation**: `TrackingViewsDatabaseManager.java`, `TrackingViewsDbHelper.java`, `SensorFieldView.kt`, `EditSensorFieldDialog.kt`, `LiveSparklineBuffer.kt`, `SensorSparklineView.kt`, `BANALServiceRepository.kt`, `TrackingViewModel.kt`, `ATrainingTrackerApp.kt`
-- **Rationale**: Athletes monitoring live telemetry benefit from seeing dynamic temporal trends (whether metric values are rising, steady, or falling) directly within cockpit tiles. Generalizing sparkline visualization across all numeric sensor types with configurable time horizons (1m to Full Workout) enhances tactical pacing without increasing cognitive load or battery drain (ATT-1294, refined by ATT-6710 and ATT-6695, Parent Epic ATT-5908, extending `REQ-TRK-046` and `REQ-UI-436`).
+- **Rationale**: Athletes monitoring live telemetry benefit from seeing dynamic temporal trends (whether metric values are rising, steady, or falling) directly within cockpit tiles. Generalizing sparkline visualization across all numeric sensor types with configurable time horizons (1m to Full Workout) enhances tactical pacing without increasing cognitive load or battery drain (ATT-1294, refined by ATT-6710, ATT-6695, and ATT-6690, Parent Epic ATT-5908, extending `REQ-TRK-046` and `REQ-UI-436`).
 - **Description**:
 1. *Database Schema v19 Persistence & Migration (`REQ-TRK-059.1`)*:
 • In `TrackingViewsDatabaseManager.java`, the SQLite schema SHALL increment to `DB_VERSION = 19`, introducing integer columns `ShowGraph` (default `0`) and `GraphHorizonS` (default `300` for 5 minutes) to `ROWS_TABLE`.
@@ -3076,9 +3076,11 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 2. *Numeric SensorType Sparkline Eligibility Gating (`REQ-TRK-059.2`)*:
 • `TrackingViewsDbHelper.isGraphSupported(sensorType)` SHALL evaluate to `true` for all numeric continuous and integer metrics (`DOUBLE` / `INTEGER` value types).
 • It SHALL evaluate to `false` for string diagnostics (`ACCUMULATED_SENSORS`, `SENSORS`, `TIME_OF_DAY`), elapsed timers/lap numbers (`TIME_TOTAL`, `TIME_ACTIVE`, `TIME_LAP`, `LAP_NR`), and geographic coordinate pairs (`LATITUDE`, `LONGITUDE`).
-3. *Edit Dialog Presentation & Time Horizon Configuration (`REQ-TRK-059.3`)*:
+3. *Edit Dialog Presentation & Stepped Slider Time Horizon Selection (`REQ-TRK-059.3`, refined by `ATT-6690`)*:
 • In `EditSensorFieldDialog.kt`, when `isGraphSupported` is true, the `DisplayElementsSelector` SHALL offer a `Graph` filter chip in addition to `Value` and `Bar`.
-• A dedicated `Time Horizon` selector SHALL allow choosing among 7 discrete durations: 1m (60s), 2m (120s), 5m (300s), 10m (600s), 20m (1200s), 1h (3600s), and Full Workout (0s sentinel).
+• The Time Horizon selector SHALL replace the multi-chip `FlowRow` with an M3 stepped `Slider` (`valueRange = 0f..6f`, `steps = 5`) conforming to Design Guidelines §1.4, allowing selection across the 7 discrete durations: 1m (60s), 2m (120s), 5m (300s), 10m (600s), 20m (1200s), 1h (3600s), and Full Workout (0s sentinel).
+• The section header row SHALL display the localized active duration string (e.g. "5 min" or "Gesamtes Training") aligned to the right in `primary` color.
+• The slider SHALL display min ("1 min") and max ("Full workout") range annotations below the track.
 4. *Live Sparkline Buffer Engine & Bounded Memory (`REQ-TRK-059.4`)*:
 • The system SHALL maintain a lightweight time-series buffer (`LiveSparklineBuffer`) per active graph tile.
 • Fixed horizons (1m–1h) SHALL operate as circular ring buffers of capacity $W$ samples at 1Hz; Full Workout SHALL apply pairwise decimation when buffer size exceeds 300 samples, guaranteeing $O(1)$ sample additions and bounded memory ($\le 1\text{ KB}$ per tile).
@@ -3104,10 +3106,10 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 • String resource `sparkline_axis_now` SHALL maintain 100% 9-language localization parity across all supported locales (`values`, `values-de`, `values-es`, `values-fr`, `values-it`, `values-ja`, `values-nl`, `values-pl`, `values-pt`).
 
 **Requirement Archaeology & Chesterton's Fence Audit**:
-1. *Original Requirement ID & Target*: Net-new requirement `REQ-TRK-059`, extending `REQ-TRK-046` (`ShowValue`/`ShowBar` display elements), `REQ-UI-436` (Bar-only mode), and `REQ-UI-159` (Root BackHandler navigation). Refined by `ATT-6710` (singleton repository persistence in `BANALServiceRepository.kt`) and `ATT-6695` (X-axis time labels `-T`, `-T/2`, `Now` and temporal span tracking in `LiveSparklineBuffer.kt` and `SensorSparklineView.kt`).
-2. *Historical Origin & Commit Trace*: `ATT-4841` introduced `SHOW_VALUE` and `SHOW_BAR` in DB v16; `ATT-4927` added sport-dependent bar gating in DB v18; `ATT-1294` introduced `LiveSparklineBuffer` in `TrackingViewModel`; `ATT-6710` added singleton repository persistence and task preservation; `ATT-6695` added X-axis time labels.
-3. *Root Reason for Existing Formulation*: Prior sparkline implementations prioritized minimal canvas drawing without text layout overhead, leaving athletes unable to determine what temporal duration a filling buffer or decimated Full Workout sparkline represented.
-4. *Preservation of Core Invariants*: Bounded memory ($\le 300$ samples / $\le 1\text{ KB}$ per tile), 1 Hz decimation math, `SensorSparklineView` canvas rendering, zero snapshot state mutations in composition (`Rule 66`), drawer navigation hierarchy, and 100% 9-language translation parity remain strictly preserved.
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-TRK-059`, extending `REQ-TRK-046` (`ShowValue`/`ShowBar` display elements), `REQ-UI-436` (Bar-only mode), and `REQ-UI-159` (Root BackHandler navigation). Refined by `ATT-6710` (singleton repository persistence in `BANALServiceRepository.kt`), `ATT-6695` (X-axis time labels `-T`, `-T/2`, `Now`), and `ATT-6690` (replacing 7-chip `FlowRow` with stepped `Slider` per Design Guidelines §1.4 in `EditSensorFieldDialog.kt`).
+2. *Historical Origin & Commit Trace*: `ATT-4841` introduced `SHOW_VALUE` and `SHOW_BAR` in DB v16; `ATT-4927` added sport-dependent bar gating in DB v18; `ATT-1294` introduced `LiveSparklineBuffer` and `FilterChip` in `EditSensorFieldDialog`; `ATT-6710` added singleton repository persistence and task preservation; `ATT-6695` added X-axis time labels; `ATT-6690` introduced the stepped slider.
+3. *Root Reason for Existing Formulation*: Prior sparkline implementations used `FlowRow` with `FilterChip`s as a fast initial prototype before Design Guidelines §1.4 formalized prohibiting multi-chip rows for scalar sets with $\ge 5$ discrete values.
+4. *Preservation of Core Invariants*: Exactly the same 7 discrete duration horizons (`60s`, `120s`, `300s`, `600s`, `1200s`, `3600s`, `0s`) remain selectable; persistence to `GraphHorizonS` in SQLite remains 100% identical; bounded buffer memory ($\le 300$ samples / $\le 1\text{ KB}$ per tile) and 100% 9-language translation parity remain strictly preserved.
 
 **Acceptance Criteria (Given-When-Then)**:
 • *Given* an existing user upgrading from DB schema v18,
@@ -3119,6 +3121,9 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 • *Given* an athlete configuring `SensorType.TIME_ACTIVE` or `SensorType.LATITUDE`,
 • *When* opening `EditSensorFieldDialog`,
 • *Then* `Graph` is hidden and `isGraphSupported` returns false.
+• *Given* an athlete configuring a graph-enabled tile in `EditSensorFieldDialog`,
+• *When* adjusting the stepped Time Horizon `Slider` across positions 0 through 6,
+• *Then* the active duration label in the header immediately updates to the corresponding localized duration (1m, 2m, 5m, 10m, 20m, 1h, Full Workout), and on saving, the selected duration in seconds is persisted to the database.
 • *Given* an active workout tile with `showGraph == true` and 5m horizon,
 • *When* telemetry updates at 1Hz,
 • *Then* `LiveSparklineBuffer` maintains a 300-sample sliding window and `SensorSparklineView` renders the trend line without recomposition churn (`Rule 66`).
