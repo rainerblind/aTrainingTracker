@@ -184,4 +184,22 @@ class RadarEdgeOverlayTest {
         )
         assertEquals("M", RadarOverlayMath.formatSnoozeBadgeText(state))
     }
+
+    @Test
+    fun buildThreatDescription_formatsStandardThreatCount() {
+        // REQ-TRK-064.2 / TST-TRK-064.2a
+        val desc = RadarOverlayMath.buildThreatDescription(count = 3, isFastApproaching = false)
+        assertEquals("3 threats", desc)
+    }
+
+    @Test
+    fun buildThreatDescription_formatsFastThreatCountWithSnoozeSuffix() {
+        // REQ-TRK-064.2 / TST-TRK-064.2a
+        val desc = RadarOverlayMath.buildThreatDescription(
+            count = 2,
+            isFastApproaching = true,
+            snoozeSuffix = "Radar Audio Muted (15m)"
+        )
+        assertEquals("2 threats (high speed), Radar Audio Muted (15m)", desc)
+    }
 }

@@ -1996,19 +1996,24 @@
 
 ### TST-TRK-064: **1-Tap Radar Audio Snooze, Peloton Sync & Urban Suppression Test Suite** [Verified]
 - **Requirement(s)**: `REQ-TRK-064` (`REQ-TRK-064.1`..`REQ-TRK-064.7`)
-- **Component**: `RadarAlertManager.kt`, `RadarEdgeOverlay.kt`, `RadarLightQuickSwitchSheet.kt`, `RadarState.kt`, `RadarStateRepository.kt`, `TuningPreferencesDataStore.kt`, `RadarSettingsSection.kt`, `strings_radar.xml`
-- **Jira**: `ATT-5119`
+- **Component**: `RadarSnoozeController.kt`, `RadarAlertManager.kt`, `RadarEdgeOverlay.kt`, `RadarLightQuickSwitchSheet.kt`, `RadarState.kt`, `RadarStateRepository.kt`, `BTLERadarDevice.java`, `TuningPreferencesDataStore.kt`, `RadarSettingsSection.kt`, `strings_radar.xml`
+- **Jira**: `ATT-5119`, `ATT-6708`
 - **Test Description**:
-  1. *1-Tap Audio Snooze Gating & Expiration Tests (`TST-TRK-064.1`, `RadarAlertManagerTest.kt`)*:
-  • Verify audio snooze triggers (15m, 30m, Rest of Ride), countdown decrementing, automatic restoration upon timer expiry, and manual resume.
-  2. *Muted Badge Countdown Indicator & Touch Pass-Through Tests (`TST-TRK-064.2`, `RadarEdgeOverlayTest.kt`)*:
-  • Verify top badge pill displays muted indicator and countdown during snooze, unhindered tap response on radar-only devices, and 100% target rail rendering.
-  3. *Handlebar Remote Shifter Snooze Toggle Tests (`TST-TRK-064.3`, `RadarAlertManagerTest.kt`)*:
-  • Verify `RadarAlertManager.toggleRadarAudioSnooze()` alternates between snooze and active audio alerts.
+  1. *Lifecycle-Decoupled Audio Snooze & Resilient Reconnect Tests (`TST-TRK-064.1`, `RadarSnoozeControllerTest.kt`, `RadarAlertManagerTest.kt`)*:
+  • Verify audio snooze triggers (15m, 30m, Fast Only, Rest of Ride), countdown decrementing, automatic restoration upon timer expiry, and manual resume across READY, PAUSED, and TRACKING modes.
+  • Verify snooze state is preserved across transient BLE drops (`disconnectFromGatt`) and reset cleanly upon explicit workout finish.
+  2. *Muted Badge Countdown Indicator, Muted-Bell Icon & Approaching Vehicle Count Tests (`TST-TRK-064.2`, `RadarEdgeOverlayTest.kt`)*:
+  • Verify top badge pill displays muted-bell vector icon and localized countdown indicator alongside (never replacing) approaching vehicle count (`targets.size`).
+  • Verify all threat badge accessibility descriptions format cleanly using localized string resources.
+  3. *Acoustic Chime Gating, Haptics Preservation & Manual Resume Override Tests (`TST-TRK-064.3`, `RadarAlertManagerTest.kt`)*:
+  • Verify `vibrate()` fires on threat transitions even when audio snooze, Peloton sync, or Urban mute is active.
+  • Verify tapping "Resume Audio Alerts" overrides active Peloton sync and Urban mute until the next state transition.
+  • Verify `RadarSnoozeController.toggleRadarAudioSnooze()` alternates between snooze and active audio alerts.
   4. *Peloton Mode Light-Audio Sync Tests (`TST-TRK-064.4`, `RadarAlertManagerTest.kt`)*:
-  • Verify routine `APPROACHING` chimes are suppressed when tail light enters `PELOTON` mode and restored when exiting, while `FAST_APPROACHING` threats continue to sound.
-  5. *Smart Urban Congestion Filter Tests (`TST-TRK-064.5`, `RadarAlertManagerTest.kt`)*:
+  • Verify routine `APPROACHING` chimes are suppressed when tail light enters `PELOTON` mode and restored when exiting, while `FAST_APPROACHING` threats continue to sound and haptics remain active.
+  5. *Resilient Smart Urban Congestion Filter Tests (`TST-TRK-064.5`, `RadarAlertManagerTest.kt`)*:
   • Verify convoy suppression when $\ge 3$ vehicles $< 5\text{ m/s}$ persist for $\ge 30\text{ s}$, exit after $\ge 20\text{ s}$ clear, and immediate high-speed threat alert triggering.
+  • Verify 30s congestion accumulator remains intact when $\ge 3$ vehicles are present and one vehicle passes at $\ge 5.0\text{ m/s}$.
   6. *Settings Persistence & DataStore Parity Tests (`TST-TRK-064.6`, `TuningPreferencesDataStoreTest.kt`)*:
   • Verify preference persistence and defaults for `radarPelotonAudioSync` and `radarSmartUrbanMute`.
   7. *9-Language Localization Parity Test (`TST-TRK-064.7`, `TranslationParityTest.kt`)*:

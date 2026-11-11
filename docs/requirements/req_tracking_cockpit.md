@@ -3574,36 +3574,44 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 **Invariants**: Non-blocking serialized GATT writes (zero collision with threat CCCD); StVZO legal compliance; fail-safe degradation on radar-only hardware; zero SQLite schema modifications; 100% 9-language translation parity.
 
 ### REQ-TRK-064: 1-Tap Radar Audio Snooze, Peloton-Mode Audio Sync & Smart Urban Alert Suppression [Verified]
-- **Tests**: `TST-TRK-064` | **Tickets**: `ATT-5119`
-- **Implementation**: `RadarAlertManager.kt`, `RadarEdgeOverlay.kt`, `RadarLightQuickSwitchSheet.kt`, `RadarState.kt`, `RadarStateRepository.kt`, `TuningPreferencesDataStore.kt`, `RadarSettingsSection.kt`, `strings_radar.xml`
-- **Rationale**: Cyclists riding through city traffic, along busy parallel roads, or in group rides experience severe alert fatigue from continuous radar beeping. Navigating deeply buried menus mid-ride is hazardous, and following riders in peloton formations trigger constant spurious alerts. The system must provide 1-tap temporary audio snooze from the Cockpit overlay badge, automatic audio suppression coupled to tail light Peloton mode, and an automated smart urban convoy filter while preserving 100% active visual rail tracking and high-speed threat alerts (ATT-5119, Parent Epic ATT-1286, extending `REQ-TRK-062`, `REQ-TRK-063`, and `REQ-CON-031`):
-1. *1-Tap Cockpit Audio Snooze (`REQ-TRK-064.1`)*:
-• The system SHALL provide 1-tap quick snooze actions accessible from `RadarEdgeOverlay` and `RadarLightQuickSwitchSheet`: Snooze 15 minutes, Snooze 30 minutes, High-Threat Only, and Mute Rest of Ride. Tapping the radar status badge SHALL display the quick sheet regardless of whether peripheral tail light control is supported.
-2. *Muted Badge Countdown Indicator & Visual Rail Continuity (`REQ-TRK-064.2`)*:
-• While audio is snoozed, `RadarStatusBadgePill` SHALL render a muted indicator with remaining snooze time (`15m`, `30m`) or high-threat icon, and accessibility description formatted via `radar_snooze_active_format`. Audio snooze SHALL strictly preserve 100% active, un-dimmed visual vertical target rail tracking and threat animations.
-3. *Automatic Snooze Expiration & Handlebar Shifter Integration (`REQ-TRK-064.3`)*:
-• The system SHALL automatically restore standard audio alerts upon timer expiration or when the rider taps "Resume Audio Alerts". `RadarAlertManager` SHALL expose a static `toggleRadarAudioSnooze()` API to support remote handlebar/shifter button invocation (`ATT-1288`).
+- **Tests**: `TST-TRK-064` | **Tickets**: `ATT-5119`, `ATT-6708`
+- **Implementation**: `RadarSnoozeController.kt`, `RadarAlertManager.kt`, `RadarEdgeOverlay.kt`, `RadarLightQuickSwitchSheet.kt`, `RadarState.kt`, `RadarStateRepository.kt`, `BTLERadarDevice.java`, `TuningPreferencesDataStore.kt`, `RadarSettingsSection.kt`, `strings_radar.xml`
+- **Rationale**: Cyclists riding through city traffic, along busy parallel roads, or in group rides experience severe alert fatigue from continuous radar beeping. Navigating deeply buried menus mid-ride is hazardous, and following riders in peloton formations trigger constant spurious alerts. The system must provide 1-tap temporary audio snooze from the Cockpit overlay badge, automatic audio suppression coupled to tail light Peloton mode, and an automated smart urban convoy filter while preserving 100% active visual rail tracking, haptic feedback, and high-speed threat alerts (ATT-5119, ATT-6708, Parent Epic ATT-1286, extending `REQ-TRK-062`, `REQ-TRK-063`, and `REQ-CON-031`):
+1. *Lifecycle-Decoupled 1-Tap Cockpit Audio Snooze (`REQ-TRK-064.1`)*:
+• The system SHALL provide 1-tap quick snooze actions accessible from `RadarEdgeOverlay` and `RadarLightQuickSwitchSheet`: Snooze 15 minutes, Snooze 30 minutes, High-Threat Only, and Mute Rest of Ride. Snooze state, ticker countdown, and expiration SHALL be managed by a lifecycle-safe singleton (`RadarSnoozeController`) in `com.atrainingtracker.banalservice.devices.radar`, ensuring snooze and resume operate consistently across `READY`, `PAUSED`, and `TRACKING` states, survive transient BLE disconnects/reconnects without reset to `INACTIVE`, and reset cleanly upon explicit workout finish.
+2. *Approaching Vehicle Count Retention, Muted-Bell Vector Icon & Accessibility Localization (`REQ-TRK-064.2`)*:
+• While audio is snoozed, `RadarStatusBadgePill` SHALL render a dedicated muted-bell vector icon and localized countdown indicator alongside (never replacing) the active approaching vehicle count (`targets.size`). Audio snooze SHALL strictly preserve 100% active, un-dimmed visual vertical target rail tracking and threat animations. All threat badge accessibility descriptions SHALL be localized across all 9 supported locales via `radar_overlay_threats_format` and `radar_overlay_threats_fast_format`.
+3. *Acoustic Chime Gating, Haptics Preservation & Manual Resume Override (`REQ-TRK-064.3`)*:
+• Audio snooze, Peloton light mode sync, and Urban congestion mute SHALL gate only acoustic chime playback while strictly preserving haptic vibrations when `config.haptics` is enabled. Tapping "Resume Audio" SHALL cancel active snooze and provide an explicit manual override of active Peloton sync and Urban congestion auto-mute until the next state transition. `RadarSnoozeController` SHALL expose a static `toggleRadarAudioSnooze()` API to support remote handlebar/shifter button invocation (`ATT-1288`).
 4. *Peloton Light Mode Audio Sync (`REQ-TRK-064.4`)*:
-• When `radarPelotonAudioSync` is enabled in `TuningPreferencesDataStore` (default `true`), switching the radar tail light to `PELOTON` mode (`ATT-5102`) SHALL automatically suppress routine `APPROACHING` and `ALL_CLEAR` chimes, retaining only `FAST_APPROACHING` threats. Reverting from `PELOTON` mode SHALL immediately restore configured audio alerts.
-5. *Smart Urban Congestion Suppression (`REQ-TRK-064.5`)*:
-• When `radarSmartUrbanMute` is enabled (default `false`), `RadarAlertManager` SHALL suppress repetitive `APPROACHING` and `ALL_CLEAR` chimes when $\ge 3$ vehicles approach with relative speed $< 5.0\text{ m/s}$ ($< 18\text{ km/h}$) continuously for $\ge 30\text{ s}$. The system SHALL exit urban suppression once clear or uncongested for $\ge 20\text{ s}$. Any `FAST_APPROACHING` vehicle SHALL immediately sound the urgent threat chime.
+• When `radarPelotonAudioSync` is enabled in `TuningPreferencesDataStore` (default `true`), switching the radar tail light to `PELOTON` mode (`ATT-5102`) SHALL automatically suppress routine `APPROACHING` and `ALL_CLEAR` chimes, retaining only `FAST_APPROACHING` threats and haptic alerts. Reverting from `PELOTON` mode SHALL immediately restore configured audio alerts.
+5. *Resilient Smart Urban Congestion Suppression (`REQ-TRK-064.5`)*:
+• When `radarSmartUrbanMute` is enabled (default `false`), `RadarAlertManager` SHALL suppress repetitive `APPROACHING` and `ALL_CLEAR` chimes when $\ge 3$ vehicles approach with relative speed $< 5.0\text{ m/s}$ ($< 18\text{ km/h}$) continuously for $\ge 30\text{ s}$. The 30s congestion accumulator SHALL remain intact when $\ge 3$ total vehicles are present and at least 2 are slow, even if a single faster vehicle ($\ge 5.0\text{ m/s}$) passes. The system SHALL exit urban suppression once clear or uncongested for $\ge 20\text{ s}$. Any `FAST_APPROACHING` vehicle SHALL immediately sound the urgent threat chime.
 6. *Settings Configuration & DataStore Persistence (`REQ-TRK-064.6`)*:
 • `TuningPreferencesDataStore` SHALL persist `radarPelotonAudioSync` (Boolean, default `true`) and `radarSmartUrbanMute` (Boolean, default `false`), exposed in `RadarSettingsSection.kt`.
 7. *9-Language Localization Parity (`REQ-TRK-064.7`)*:
-• All snooze options, badge text, dialog strings, and settings toggles in `strings_radar.xml` SHALL maintain 100% key and format parity across EN, DE, ES, FR, IT, JA, NL, PL, PT (zero inline emojis).
+• All snooze options, badge text, dialog strings, accessibility threat strings, and settings toggles in `strings_radar.xml` SHALL maintain 100% key and format parity across EN, DE, ES, FR, IT, JA, NL, PL, PT (zero inline emojis).
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: `REQ-TRK-064` (Radar Audio Snooze, Peloton Sync & Urban Suppression), targeting `RadarAlertManager.kt`, `RadarEdgeOverlay.kt`, `RadarLightQuickSwitchSheet.kt`, `TrackingTabsScreen.kt`, and `BTLERadarDevice.java`.
+2. *Historical Origin & Commit Trace*: `ATT-5119` (commit `24a520e5`). Refined under `ATT-6708` to decouple snooze from `TrackerService` lifecycle, decouple audio mute from haptic alerts, preserve approaching vehicle count on the overlay badge, and prevent urban timer resets from passing cars.
+3. *Root Reason for Existing Formulation*: Snooze logic was originally housed in `RadarAlertManager` for convenience alongside chime playback; gating checks were placed at method entry, inadvertently suppressing haptics; `disconnectFromGatt()` cleared snooze state assuming all state was session-bound; badge text replaced vehicle count because a combined layout had not yet been designed.
+4. *Preservation of Core Invariants*: 100% visual target rail continuity preserved; `FAST_APPROACHING` safety chimes and haptics always sound; zero native `AudioTrack` leaks; zero SQLite migrations; 100% 9-language translation parity.
 
 **Acceptance Criteria (Given-When-Then)**:
-• *Given* active cycling tracking with radar audio alerts enabled,
+• *Given* the app is in `READY` or `PAUSED` mode with radar connected,
 • *When* the user taps the radar status badge and selects "Snooze 15 min",
-• *Then* `APPROACHING` chimes are silenced for 15 minutes, the top badge displays remaining time, the vertical visual target rail remains 100% active, and audio alerts automatically resume after 15 minutes.
-• *Given* `radarPelotonAudioSync` enabled,
-• *When* the user or auto-light switches tail light to `PELOTON` mode,
-• *Then* standard `APPROACHING` and `ALL_CLEAR` chimes are suppressed while `FAST_APPROACHING` threats continue to sound.
-• *Given* `radarSmartUrbanMute` enabled and $\ge 3$ vehicles lingering behind at low relative speed for $\ge 30\text{ s}$,
-• *When* additional vehicles join the slow queue,
-• *Then* routine approach chimes are suppressed; when a vehicle approaches at high speed, the urgent threat alert triggers immediately.
+• *Then* `RadarSnoozeController` activates 15m snooze, the badge displays remaining time and a muted bell icon, and the state persists when tracking starts.
+• *Given* active audio snooze or Peloton mode mute with haptics enabled,
+• *When* a vehicle approaches at normal speed,
+• *Then* the audio chime is silenced but haptic vibration triggers normally.
+• *Given* active Peloton or Urban auto-mute,
+• *When* the user taps "Resume Audio Alerts",
+• *Then* audio chimes resume immediately and remain active until the next radar state transition.
+• *Given* audio snooze is active and a vehicle approaches,
+• *Then* `RadarStatusBadgePill` continues to display the approaching vehicle count alongside the muted-bell indicator.
 
-**Invariants**: Visual target rail remains 100% active during audio snooze; `FAST_APPROACHING` high-speed threat safety alerts preserved; zero SQLite schema modifications; 100% 9-language translation parity.
+**Invariants**: Visual target rail remains 100% active during audio snooze; `FAST_APPROACHING` high-speed threat safety alerts preserved; haptic vibrations preserved during audio snooze; zero SQLite schema modifications; 100% 9-language translation parity.
 
 ### REQ-TRK-065: 3D Stereo Lateral-Offset Panning & Approach-Speed Pitch Modulation for Radar Audio [Verified]
 - **Tests**: `TST-TRK-065` | **Tickets**: `ATT-5120`, `ATT-6709`

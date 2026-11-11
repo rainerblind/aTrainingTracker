@@ -72,6 +72,8 @@
     <string name="radar_overlay_disconnected">Radar desconectado</string>
     <string name="radar_overlay_connecting">A ligar ao radar</string>
     <string name="radar_overlay_clear">Caminho livre</string>
+    <string name="radar_overlay_threats_format">%1$d ameaças</string>
+    <string name="radar_overlay_threats_fast_format">%1$d ameaças (alta velocidade)</string>
 
     <!-- Radar Audio & Haptic Alerts (ATT-5086 / REQ-TRK-063) -->
     <string name="radar_alerts_settings_title">Alertas de radar e áudio</string>

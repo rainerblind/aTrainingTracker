@@ -28,9 +28,11 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -41,6 +43,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -57,6 +60,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -122,6 +126,14 @@ object RadarOverlayMath {
             snoozeState.isUrbanMuteActive -> "U"
             else -> "M"
         }
+    }
+
+    /**
+     * Resolves composite threat accessibility description string (REQ-TRK-064.2).
+     */
+    fun buildThreatDescription(count: Int, isFastApproaching: Boolean, snoozeSuffix: String? = null): String {
+        val base = if (isFastApproaching) "$count threats (high speed)" else "$count threats"
+        return if (snoozeSuffix != null) "$base, $snoozeSuffix" else base
     }
 }
 
@@ -274,55 +286,145 @@ private fun RadarStatusBadgePill(
             badgeTextColor = Color.White
         }
         radarState.overallThreatLevel == ThreatLevel.FAST_APPROACHING -> {
-            description = "${radarState.targets.size} threats (high speed)"
+            val baseDesc = stringResource(R.string.radar_overlay_threats_fast_format, radarState.targets.size)
+            description = if (snoozeState.isSnoozed) {
+                val snoozeLabel = when {
+                    snoozeState.mode == RadarAudioSnoozeMode.FAST_ONLY -> stringResource(R.string.radar_snooze_fast_only)
+                    snoozeState.isPelotonSyncActive -> stringResource(R.string.radar_light_mode_peloton)
+                    snoozeState.isUrbanMuteActive -> stringResource(R.string.radar_smart_urban_mute_title)
+                    snoozeBadgeText != null -> snoozeBadgeText
+                    else -> stringResource(R.string.radar_snooze_title)
+                }
+                "$baseDesc, " + stringResource(R.string.radar_snooze_active_format, snoozeLabel)
+            } else {
+                baseDesc
+            }
             badgeColor = TTColor.RadarThreatRed.copy(alpha = pulseAlpha)
             badgeTextColor = Color.White
         }
         else -> {
-            description = "${radarState.targets.size} threats"
+            val baseDesc = stringResource(R.string.radar_overlay_threats_format, radarState.targets.size)
+            description = if (snoozeState.isSnoozed) {
+                val snoozeLabel = when {
+                    snoozeState.mode == RadarAudioSnoozeMode.FAST_ONLY -> stringResource(R.string.radar_snooze_fast_only)
+                    snoozeState.isPelotonSyncActive -> stringResource(R.string.radar_light_mode_peloton)
+                    snoozeState.isUrbanMuteActive -> stringResource(R.string.radar_smart_urban_mute_title)
+                    snoozeBadgeText != null -> snoozeBadgeText
+                    else -> stringResource(R.string.radar_snooze_title)
+                }
+                "$baseDesc, " + stringResource(R.string.radar_snooze_active_format, snoozeLabel)
+            } else {
+                baseDesc
+            }
             badgeColor = TTColor.RadarThreatAmber
             badgeTextColor = Color.Black
         }
     }
 
-    Box(
-        modifier = modifier
+    val hasThreats = radarState.targets.isNotEmpty() || radarState.overallThreatLevel != ThreatLevel.NONE
+    val isSnoozedWithThreats = snoozeState.isSnoozed && hasThreats && !isDisconnectError
+    val badgeModifier = if (isSnoozedWithThreats) {
+        modifier
+            .width(24.dp)
+            .height(34.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .background(badgeColor)
+            .clickable(onClick = onClick)
+            .semantics { this.contentDescription = description }
+            .testTag("RadarStatusBadge")
+    } else {
+        modifier
             .size(24.dp)
             .clip(CircleShape)
             .background(badgeColor)
             .clickable(onClick = onClick)
-            .semantics { contentDescription = description }
-            .testTag("RadarStatusBadge"),
+            .semantics { this.contentDescription = description }
+            .testTag("RadarStatusBadge")
+    }
+
+    Box(
+        modifier = badgeModifier,
         contentAlignment = Alignment.Center
     ) {
-        if (isDisconnectError) {
-            Text(
-                text = "!",
-                color = badgeTextColor,
-                fontSize = 13.sp,
-                fontWeight = FontWeight.Bold
-            )
-        } else if (snoozeState.isSnoozed && radarState.overallThreatLevel != ThreatLevel.FAST_APPROACHING) {
-            Text(
-                text = snoozeBadgeText ?: "M",
-                color = badgeTextColor,
-                fontSize = if ((snoozeBadgeText?.length ?: 0) > 2) 9.sp else 10.sp,
-                fontWeight = FontWeight.Bold
-            )
-        } else if (isClear) {
-            Box(
-                modifier = Modifier
-                    .size(8.dp)
-                    .clip(CircleShape)
-                    .background(Color.White)
-            )
-        } else {
-            Text(
-                text = "${radarState.targets.size}",
-                color = badgeTextColor,
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Bold
-            )
+        when {
+            isDisconnectError -> {
+                Text(
+                    text = "!",
+                    color = badgeTextColor,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+            isSnoozedWithThreats -> {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_radar_bell_muted),
+                            contentDescription = null,
+                            modifier = Modifier.size(8.dp),
+                            tint = badgeTextColor
+                        )
+                        if (snoozeBadgeText != null) {
+                            Text(
+                                text = snoozeBadgeText,
+                                color = badgeTextColor,
+                                fontSize = 7.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                    Text(
+                        text = "${radarState.targets.size}",
+                        color = badgeTextColor,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+            snoozeState.isSnoozed && isClear -> {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_radar_bell_muted),
+                        contentDescription = null,
+                        modifier = Modifier.size(9.dp),
+                        tint = badgeTextColor
+                    )
+                    if (snoozeBadgeText != null) {
+                        Spacer(modifier = Modifier.width(1.dp))
+                        Text(
+                            text = snoozeBadgeText,
+                            color = badgeTextColor,
+                            fontSize = if (snoozeBadgeText.length > 2) 7.sp else 8.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+            }
+            isClear -> {
+                Box(
+                    modifier = Modifier
+                        .size(8.dp)
+                        .clip(CircleShape)
+                        .background(Color.White)
+                )
+            }
+            else -> {
+                Text(
+                    text = "${radarState.targets.size}",
+                    color = badgeTextColor,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
         }
     }
 }

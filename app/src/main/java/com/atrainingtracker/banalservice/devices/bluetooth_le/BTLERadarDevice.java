@@ -312,7 +312,7 @@ public class BTLERadarDevice extends MyBTLEDevice {
                 SystemClock.elapsedRealtime(),
                 RadarLightMode.OFF,
                 false,
-                RadarAudioSnoozeState.INACTIVE
+                RadarStateRepository.getState().getAudioSnoozeState()
         ));
         resetSensorsToClear();
         super.disconnectFromGatt();

@@ -85,6 +85,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 import com.atrainingtracker.trainingtracker.ui.utils.NumericalEncodingUtils;
 import com.atrainingtracker.banalservice.devices.radar.RadarLightController;
+import com.atrainingtracker.banalservice.devices.radar.RadarSnoozeController;
 import com.atrainingtracker.trainingtracker.audio.radar.RadarAlertManager;
 import com.atrainingtracker.trainingtracker.tracker.autopause.AutoPauseConfig;
 import com.atrainingtracker.trainingtracker.tracker.autopause.AutoPauseManager;
@@ -1131,6 +1132,7 @@ public class TrackerService extends Service {
         if (DEBUG) Log.d(TAG, "handleActionStop: initiating foreground-protected async finalization");
 
         RadarLightController.onWorkoutStopped(this);
+        RadarSnoozeController.reset();
 
         cancelTrackerHandle();
         mScheduler.shutdownNow();
@@ -1333,6 +1335,7 @@ public class TrackerService extends Service {
         }
 
         RadarLightController.onWorkoutStopped(this);
+        RadarSnoozeController.reset();
 
         LifecycleUtils.safeUnregisterReceiver(this, mSearchingFinishedReceiver, TAG);
         LifecycleUtils.safeUnregisterReceiver(this, mAltitudeCorrectionReceiver, TAG);
