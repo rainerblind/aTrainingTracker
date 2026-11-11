@@ -866,31 +866,35 @@
 **Invariants**: Zero changes to `HrvReadiness.db` (v1) schema, strict posture isolation, and 100% clean-room test pass rate.
 
 ### REQ-PER-032: Guided Morning Resting HRV Measurement Screen & Waking Protocol [Verified]
-- **Tests**: `TST-PER-040` | **Tickets**: `ATT-3556`
-- **Implementation**: `MorningHrvCheckScreen.kt`, `MorningHrvCheckViewModel.kt`, `HrvReadinessRepository.kt`, `RrArtifactFilter.kt`, `strings_hrv.xml`
+- **Tests**: `TST-PER-040` | **Tickets**: `ATT-3556`, `ATT-6719`
+- **Implementation**: `MorningHrvCheckScreen.kt`, `MorningHrvCheckViewModel.kt`, `HrvReadinessRepository.kt`, `RrArtifactFilter.kt`, `ATrainingTrackerApp.kt`, `strings_hrv.xml`
 - **Rationale**: Accurate morning resting HRV evaluation requires standardized waking conditions (post-voiding, rested posture, normal breathing) without starting a full GPS workout. The system SHALL provide a dedicated Compose UI measurement screen (`MorningHrvCheckScreen`) and ViewModel (`MorningHrvCheckViewModel`) executing a guided waking protocol:
-1. *Standardized Protocol Lifecycle (`REQ-PER-032.1`)*: The measurement state machine SHALL transition through `READY` -> `STABILIZING` -> `MEASURING` -> `COMPLETED`. The stabilization phase SHALL default to 15–30s to allow autonomic balance. The measurement duration SHALL default to 60s (validated per Esco & Flatt 2014) with a selectable 120s extended option.
+1. *Standardized Protocol Lifecycle & UI Ergonomics (`REQ-PER-032.1`)*: The measurement state machine SHALL transition through `READY` -> `STABILIZING` -> `MEASURING` -> `COMPLETED`. The stabilization phase SHALL default to 15–30s to allow autonomic balance. The measurement duration SHALL default to 60s (validated per Esco & Flatt 2014) with a selectable 120s extended option, rendered using Material 3 `SingleChoiceSegmentedButtonRow`. The scrollable column SHALL include `navigationBarsPadding()`, and the screen SHALL be kept awake (`keepScreenOn = true`) during `STABILIZING` and `MEASURING`.
 2. *Posture Stickiness & Standardization (`REQ-PER-032.2`)*: The screen SHALL provide a posture selector for waking cohorts (`SUPINE`, `SEATED`, `STANDING`) and remember the athlete's last-used posture via SharedPreferences (`SP_HRV_LAST_POSTURE = "hrvLastPosture"`) across app sessions to preserve longitudinal baseline consistency.
-3. *Sensor Ingestion & Zero-Workout Invariant (`REQ-PER-032.3`)*: Measurement SHALL ingest raw beat-to-beat intervals via `BANALServiceRepository` without launching `TrackerService` or creating rows in `WorkoutSummaries.db`.
-4. *Post-Hoc Full-Window Centered Filter Invariant (`REQ-PER-032.4`)*: Raw RR intervals buffered during the measurement phase SHALL be processed post hoc upon completion using `RrArtifactFilter.filterBidirectional` (Lipponen & Tarvainen 2019 centered filter) to compute `rmssdMs`, `lnRmssd`, `hrvScore100`, `sdnnMs`, `restingHrBpm`, and `artifactRatePct`. Live rolling metrics SHALL provide real-time UI pacing only and SHALL NOT be used for persistence.
-5. *Persistence, Gating & Baseline Feedback (`REQ-PER-032.5`)*: When user confirms save, the measurement SHALL be persisted into `HrvReadinessRepository` (`HrvReadiness.db`). If `artifactRatePct > 5.0%`, the UI SHALL display a warning indicating potential electrode drying/poor contact. The completion view SHALL display the evaluated `ReadinessStatus` compared against the athlete's per-posture 7d/60d SWC baseline.
+3. *Sensor Ingestion, Cold-Start Discovery & Lifecycle Scoping (`REQ-PER-032.3`)*: Measurement SHALL ingest raw beat-to-beat intervals via `BANALServiceRepository` without launching `TrackerService` or creating rows in `WorkoutSummaries.db`. Upon screen entry and ViewModel initialization, `MorningHrvCheckViewModel` SHALL invoke `startSearchingForPairedDevices()` to discover paired BLE/ANT+ HR sensors immediately on cold launch. The ViewModel SHALL be scoped to `NavBackStackEntry` (`NavRoutes.MORNING_HRV`). Upon clearance (`onCleared()`), it SHALL detach `rrBeatListener` and cancel timers without calling `unbindFromBANALService()` on the shared singleton repository.
+4. *Live Causal Filtering & Post-Hoc Centered Filter Invariant (`REQ-PER-032.4`)*: Raw RR intervals buffered during the measurement phase SHALL be processed post hoc upon completion using `RrArtifactFilter.filterBidirectional` (Lipponen & Tarvainen 2019 centered filter) as the single source of truth for persisted metrics (`rmssdMs`, `lnRmssd`, `hrvScore100`, `sdnnMs`, `restingHrBpm`, and `artifactRatePct`). During `STABILIZING` and `MEASURING`, incoming beats SHALL be evaluated via `RrArtifactFilter.filterLiveCausal` to display a live artifact percentage and trigger a high-artifact warning (> 5.0%) during countdown.
+5. *Persistence, Pre-Save Readiness Preview & Baseline Feedback (`REQ-PER-032.5`)*: When measurement completes, the view SHALL display an in-memory pre-save `ReadinessStatus` calculated via `HrvReadinessCalculator.calculateReadiness(dateIso, posture, existingEntries + entry)` before persistence. When user confirms save, the measurement SHALL be persisted into `HrvReadinessRepository` (`HrvReadiness.db`). If `artifactRatePct > 5.0%`, the UI SHALL display a warning indicating potential electrode drying/poor contact.
+6. *Localization & Theme Token Centralization (`REQ-PER-032.6`)*: All UI strings (error messages, beat count, readiness status labels, metrics formatters, saved button text) SHALL be localized across all 9 supported locales (EN, DE, ES, FR, IT, JA, NL, PL, PT) using locale-aware format specifiers without raw English strings or `Locale.US` hardcoding. All status labels SHALL use semantic theme tokens (`TTColor.ReadinessOnStatus`) without hardcoded `Color.White` literals.
 
 **Requirement Archaeology & Chesterton's Fence Audit**:
-1. *Original Requirement ID & Target*: Net-new requirement `REQ-PER-032` (extending `REQ-PER-030` morning HRV persistence and `REQ-SEN-020` RR interval ingestion). Targets `MorningHrvCheckScreen.kt`, `MorningHrvCheckViewModel.kt`, `HrvReadinessRepository.kt`, `RrArtifactFilter.kt`, and `strings_hrv.xml`.
-2. *Historical Origin & Commit Trace*: Net-new capability introduced in `ATT-3556` under Epic `ATT-3539` (*Heart Rate Variability*).
-3. *Root Reason for Existing Formulation*: Athletes previously had to launch a full workout session to capture RR intervals, cluttering workout summaries with non-exercise data and lacking posture-standardized waking guidance.
-4. *Preservation of Core Invariants*: Zero modifications to workout database schemas; pure Compose UI and Kotlin calculation logic; strict posture isolation in SWC baselines.
+1. *Original Requirement ID & Target*: `REQ-PER-032` (`REQ-PER-032.1`, `REQ-PER-032.3`, `REQ-PER-032.4`, `REQ-PER-032.5`, `REQ-PER-032.6`). Targets `MorningHrvCheckScreen.kt`, `MorningHrvCheckViewModel.kt`, `ATrainingTrackerApp.kt`, and `strings_hrv.xml`.
+2. *Historical Origin & Commit Trace*: Introduced in `ATT-3556` (commit `dc034c08`); refined in `ATT-6719` under Epic `ATT-3539` (*Heart Rate Variability*).
+3. *Root Reason for Existing Formulation*: Passive binding was used to avoid duplicate broadcasts; live artifact filtering was deferred to save CPU; ViewModel was assigned to `activity` out of convenience during navigation setup.
+4. *Preservation of Core Invariants*: Zero workout generation, post-hoc centered filter calculation as single source of truth for persisted metrics, strict posture baseline isolation, 100% 9-language translation parity, and clean-room test pass rate.
 
 **Acceptance Criteria (Given-When-Then)**:
 • *Given* an athlete launching `MorningHrvCheckScreen`,
 • *When* the screen initializes,
-• *Then* it displays the sticky last-used posture (defaulting to `SUPINE`), 60s standard duration, and standardized waking checklist.
+• *Then* it displays the sticky last-used posture (defaulting to `SUPINE`), 60s standard duration in a segmented button row, and standardized waking checklist.
+• *Given* an athlete launching Morning HRV directly after cold app startup,
+• *When* the screen initializes,
+• *Then* `BANALServiceRepository.startSearchingForPairedDevices()` is invoked and the display remains awake throughout stabilization and measurement countdowns.
+• *Given* ectopic beats or poor sensor contact during measurement yielding $> 5.0\%$ artifacts,
+• *When* beats are buffered live,
+• *Then* `filterLiveCausal` updates live artifact percentage and triggers an amber warning during countdown.
 • *Given* an active measurement session reaching 60s,
 • *When* the measurement phase concludes,
-• *Then* `filterBidirectional` evaluates the buffered RR intervals post hoc, computing `rmssdMs`, `lnRmssd`, `hrvScore100`, `sdnnMs`, `restingHrBpm`, and `artifactRatePct`.
-• *Given* an artifact rate of 7.2% (> 5.0%),
-• *When* viewing the measurement summary,
-• *Then* an amber artifact warning is displayed advising the athlete to moisten strap electrodes.
+• *Then* `filterBidirectional` evaluates the buffered RR intervals post hoc, computing `rmssdMs`, `lnRmssd`, `hrvScore100`, `sdnnMs`, `restingHrBpm`, and `artifactRatePct`, and today's evaluated readiness status is previewed in-memory against historical records prior to saving.
 • *Given* user taps "Save Reading",
 • *When* persisted,
 • *Then* the measurement is stored in `HrvReadiness.db` without creating any workout sessions in `WorkoutSummaries.db`.

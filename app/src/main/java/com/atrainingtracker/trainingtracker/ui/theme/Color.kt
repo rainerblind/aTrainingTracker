@@ -383,11 +383,12 @@ object TTColor {
         ThreatLevel.FAST_APPROACHING -> RadarThreatRed
     }
 
-    // Morning HRV Readiness & Guided Measurement Palette (REQ-PER-032, ATT-3556)
+    // Morning HRV Readiness & Guided Measurement Palette (REQ-PER-032, ATT-3556, ATT-6719)
     val ReadinessOptimal = Color(0xFF2E7D32)
     val ReadinessFatigued = Color(0xFFC62828)
     val ReadinessElevated = Color(0xFF1565C0)
     val ReadinessCalibrating = Color(0xFF6A1B9A)
+    val ReadinessOnStatus = Color(0xFFFFFFFF)
     val HeartRateRed = Color(0xFFE53935)
     val ArtifactWarningContainer = Color(0xFFFFF3E0)
     val ArtifactWarningBorder = Color(0xFFFFB74D)

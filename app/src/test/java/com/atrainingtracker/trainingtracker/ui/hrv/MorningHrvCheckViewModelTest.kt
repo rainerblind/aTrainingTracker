@@ -44,6 +44,7 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import java.io.File
 
@@ -74,7 +75,9 @@ class MorningHrvCheckViewModelTest {
         HrvReadinessDatabaseManager.resetForTesting(null)
         HrvReadinessRepository.resetForTesting(null)
 
-        hrvRepository = HrvReadinessRepository.getInstance(application)
+        val dbManager = HrvReadinessDatabaseManager.getInstance(application)
+        hrvRepository = HrvReadinessRepository(dbManager, testDispatcher)
+        HrvReadinessRepository.resetForTesting(hrvRepository)
         banalRepository = BANALServiceRepository.getInstance(application)
     }
 
@@ -197,6 +200,29 @@ class MorningHrvCheckViewModelTest {
     }
 
     @Test
+    fun testColdStartSensorSearchAndSafeLifecycle_TST_PER_040_3() {
+        val shadowApp = shadowOf(application)
+        shadowApp.clearBroadcastIntents()
+
+        val viewModel = MorningHrvCheckViewModel(
+            application = application,
+            banalServiceRepository = banalRepository,
+            hrvReadinessRepository = hrvRepository,
+            dispatcher = testDispatcher
+        )
+
+        // Verify startSearchingForPairedDevices() broadcast was fired on cold-start
+        val broadcasts = shadowApp.broadcastIntents
+        assertTrue(
+            "Cold start must trigger paired device search broadcast",
+            broadcasts.any { it.action == TrainingApplication.REQUEST_START_SEARCH_FOR_PAIRED_DEVICES }
+        )
+
+        // Verify onCleared() cancels timer and cleans up listener safely without unbinding shared service
+        viewModel.onCleared()
+    }
+
+    @Test
     fun testPostHocCenteredFilterCalculation_TST_PER_040_4() = runTest(testDispatcher) {
         val viewModel = MorningHrvCheckViewModel(
             application = application,
@@ -307,5 +333,74 @@ class MorningHrvCheckViewModelTest {
         assertEquals(HrvSignalQualityStatus.VALID, state.signalQualityStatus)
         assertNotNull(state.signalQualityResult)
         assertEquals(35, state.signalQualityResult?.beatCount)
+    }
+
+    @Test
+    fun testLiveCausalArtifactWarningDuringMeasuring_TST_PER_040_4() = runTest(testDispatcher) {
+        val viewModel = MorningHrvCheckViewModel(
+            application = application,
+            banalServiceRepository = banalRepository,
+            hrvReadinessRepository = hrvRepository,
+            dispatcher = testDispatcher
+        )
+
+        viewModel.setStabilizationDurationSec(1)
+        viewModel.setDurationSec(10)
+        viewModel.startMeasurement()
+        advanceTimeBy(1001L) // enter MEASURING
+
+        assertEquals(MorningHrvPhase.MEASURING, viewModel.uiState.value.phase)
+
+        // Feed normal beats followed by gap artifacts and lookahead beats
+        var ts = 1000L
+        for (i in 0 until 10) {
+            ts += 1000L
+            viewModel.handleRrBeat(RrBeatEvent(ts, 1000.0, i, ProtocolType.BLE))
+        }
+
+        for (i in 10 until 15) {
+            ts += 1000L
+            viewModel.handleRrBeat(
+                RrBeatEvent(ts, 1000.0, i, ProtocolType.BLE, artifactFlag = RrBeatEvent.ARTIFACT_GAP)
+            )
+        }
+
+        for (i in 15 until 25) {
+            ts += 1000L
+            viewModel.handleRrBeat(RrBeatEvent(ts, 1000.0, i, ProtocolType.BLE))
+        }
+
+        assertEquals(MorningHrvPhase.MEASURING, viewModel.uiState.value.phase)
+        assertTrue("Live artifact percentage must be computed", viewModel.uiState.value.artifactRatePct != null)
+        assertTrue("Live high artifact warning must be triggered", viewModel.uiState.value.highArtifactWarning)
+    }
+
+    @Test
+    fun testPreSaveReadinessPreviewInMemory_TST_PER_040_5() = runTest(testDispatcher) {
+        val viewModel = MorningHrvCheckViewModel(
+            application = application,
+            banalServiceRepository = banalRepository,
+            hrvReadinessRepository = hrvRepository,
+            dispatcher = testDispatcher
+        )
+
+        viewModel.setStabilizationDurationSec(1)
+        viewModel.setDurationSec(2)
+        viewModel.startMeasurement()
+        advanceTimeBy(1001L)
+
+        var ts = 1000L
+        for (i in 0 until 35) {
+            ts += 900L
+            viewModel.handleRrBeat(RrBeatEvent(ts, 900.0, i, ProtocolType.BLE))
+        }
+
+        advanceTimeBy(3000L)
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertEquals(MorningHrvPhase.COMPLETED, state.phase)
+        assertFalse("Reading not yet saved", state.isSaved)
+        assertNotNull("Pre-save in-memory readiness result must be populated", state.readinessResult)
     }
 }

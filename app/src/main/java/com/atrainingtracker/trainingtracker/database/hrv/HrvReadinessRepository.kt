@@ -20,6 +20,7 @@ package com.atrainingtracker.trainingtracker.database.hrv
 
 import android.content.Context
 import androidx.annotation.VisibleForTesting
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -28,41 +29,42 @@ import kotlinx.coroutines.withContext
  * autonomic readiness calculation (`REQ-PER-030.1`, `REQ-PER-030.4`).
  */
 class HrvReadinessRepository(
-    private val databaseManager: HrvReadinessDatabaseManager
+    private val databaseManager: HrvReadinessDatabaseManager,
+    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
 ) {
 
-    suspend fun insertEntry(entry: HrvReadinessEntry): Long = withContext(Dispatchers.IO) {
+    suspend fun insertEntry(entry: HrvReadinessEntry): Long = withContext(ioDispatcher) {
         databaseManager.insertEntry(entry)
     }
 
-    suspend fun deleteEntry(id: Long): Boolean = withContext(Dispatchers.IO) {
+    suspend fun deleteEntry(id: Long): Boolean = withContext(ioDispatcher) {
         databaseManager.deleteEntry(id)
     }
 
-    suspend fun setPrimaryReading(id: Long, isPrimary: Boolean = true): Boolean = withContext(Dispatchers.IO) {
+    suspend fun setPrimaryReading(id: Long, isPrimary: Boolean = true): Boolean = withContext(ioDispatcher) {
         databaseManager.setPrimaryReading(id, isPrimary)
     }
 
-    suspend fun getEntryById(id: Long): HrvReadinessEntry? = withContext(Dispatchers.IO) {
+    suspend fun getEntryById(id: Long): HrvReadinessEntry? = withContext(ioDispatcher) {
         databaseManager.getEntryById(id)
     }
 
-    suspend fun getEntriesForDate(dateIso: String, posture: HrvPosture): List<HrvReadinessEntry> = withContext(Dispatchers.IO) {
+    suspend fun getEntriesForDate(dateIso: String, posture: HrvPosture): List<HrvReadinessEntry> = withContext(ioDispatcher) {
         databaseManager.getEntriesForDate(dateIso, posture)
     }
 
-    suspend fun getPrimaryEntryForDate(dateIso: String, posture: HrvPosture): HrvReadinessEntry? = withContext(Dispatchers.IO) {
+    suspend fun getPrimaryEntryForDate(dateIso: String, posture: HrvPosture): HrvReadinessEntry? = withContext(ioDispatcher) {
         databaseManager.getPrimaryEntryForDate(dateIso, posture)
     }
 
-    suspend fun getAllEntries(posture: HrvPosture? = null): List<HrvReadinessEntry> = withContext(Dispatchers.IO) {
+    suspend fun getAllEntries(posture: HrvPosture? = null): List<HrvReadinessEntry> = withContext(ioDispatcher) {
         databaseManager.getAllEntries(posture)
     }
 
     suspend fun calculateReadiness(
         targetDateIso: String,
         posture: HrvPosture
-    ): HrvReadinessResult = withContext(Dispatchers.IO) {
+    ): HrvReadinessResult = withContext(ioDispatcher) {
         val entries = databaseManager.getAllEntries(posture)
         HrvReadinessCalculator.calculateReadiness(targetDateIso, posture, entries)
     }

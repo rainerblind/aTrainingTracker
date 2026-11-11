@@ -64,7 +64,15 @@
     <string name="morning_hrv_summary_rmssd">rMSSD: %1$.1f ms</string>
     <string name="morning_hrv_summary_ln_rmssd">ln(rMSSD): %1$.2f</string>
     <string name="morning_hrv_summary_resting_hr">Tętno spoczynkowe: %1$d bpm</string>
+    <string name="morning_hrv_summary_sdnn">SDNN: %1$.1f ms</string>
+    <string name="morning_hrv_summary_artifact_rate">Wskaźnik artefaktów: %1$.1f%%</string>
     <string name="morning_hrv_saved_toast">Zapisano poranny pomiar HRV</string>
+    <string name="morning_hrv_error_no_rr">Nie zarejestrowano interwałów RR. Sprawdź połączenie z czujnikiem tętna.</string>
+    <string name="morning_hrv_beat_count">%1$d uderzeń</string>
+    <string name="morning_hrv_status_optimal">Optymalna gotowość autonomiczna</string>
+    <string name="morning_hrv_status_fatigued_low">Niska gotowość (zmęczenie autonomiczne)</string>
+    <string name="morning_hrv_status_elevated">Podwyższona aktywność przywspółczulna</string>
+    <string name="morning_hrv_btn_saved">Zapisano</string>
 
     <!-- Longitudinal HRV Readiness Trend in Periods Screen (ATT-3557 / REQ-PER-033) -->
     <string name="hrv_readiness_trend_title">Trend gotowości HRV</string>

@@ -64,7 +64,15 @@
     <string name="morning_hrv_summary_rmssd">rMSSD: %1$.1f ms</string>
     <string name="morning_hrv_summary_ln_rmssd">ln(rMSSD): %1$.2f</string>
     <string name="morning_hrv_summary_resting_hr">FC a riposo: %1$d bpm</string>
+    <string name="morning_hrv_summary_sdnn">SDNN: %1$.1f ms</string>
+    <string name="morning_hrv_summary_artifact_rate">Tasso di artefatti: %1$.1f%%</string>
     <string name="morning_hrv_saved_toast">Misurazione mattutina VFC salvata</string>
+    <string name="morning_hrv_error_no_rr">Nessun intervallo RR registrato. Verificare la connessione del sensore di frequenza cardiaca.</string>
+    <string name="morning_hrv_beat_count">%1$d battiti</string>
+    <string name="morning_hrv_status_optimal">Prontezza autonomica ottimale</string>
+    <string name="morning_hrv_status_fatigued_low">Bassa prontezza (affaticamento autonomico)</string>
+    <string name="morning_hrv_status_elevated">Attività parasimpatica elevata</string>
+    <string name="morning_hrv_btn_saved">Salvato</string>
 
     <!-- Longitudinal HRV Readiness Trend in Periods Screen (ATT-3557 / REQ-PER-033) -->
     <string name="hrv_readiness_trend_title">Tendenza prontezza VFC</string>
