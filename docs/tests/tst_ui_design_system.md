@@ -8308,3 +8308,26 @@
   • Execute `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.settings.display.DisplaySettingsTest"`.
   • Assert 100% pass rate.
 
+
+
+### TST-UI-516: **Pioneer Status Banner Voluntary Support Transition Copy Verification Suite** [Verified]
+- **Target Release**: `V5.0.0`
+- **Requirement(s)**: `REQ-UI-516`
+- **Component**: `SupporterComponents.kt`, `SupporterCopyContractTest.kt`, `values*/strings.xml`
+- **Jira**: `ATT-6680`
+- **Test Description**:
+  1. *9-Language Presence & Non-Blank Audit (`TST-UI-516.1`, `SupporterCopyContractTest.kt`)*:
+  • Verify `pioneer_thank_you_body` exists and is non-blank across all 9 locales (`values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`).
+  2. *Hygiene Constraints Audit (`TST-UI-516.2`, `SupporterCopyContractTest.kt`)*:
+  • Verify `pioneer_thank_you_body` contains zero format arguments (`%s`, `%d`), zero decorative emojis (`ATT-5400`), and zero references to "ANT+" (case-insensitive) across all 9 locales.
+  3. *Exact Copy Match Test for German & English (`TST-UI-516.3`, `SupporterCopyContractTest.kt`)*:
+  • Verify exact match for German (`de`) and English (default):
+    - German:
+      `"Danke, dass du bereits mit einer früheren Version von aTrainingTracker deine Trainings aufgezeichnet hast! Unbegrenzte Sensoren und alle zukünftigen Funktionen sind für dich dauerhaft freigeschaltet. Über eine freiwillige finanzielle Unterstützung für die Weiterentwicklung würden wir uns trotzdem sehr freuen."`
+    - English:
+      `"Thank you for recording your workouts with an earlier version of aTrainingTracker! Unlimited sensors and all future features are permanently unlocked for you. Nevertheless, we would still be very happy about voluntary financial support for ongoing development."`
+  4. *Tier 1 Targeted Unit Test Regression Suite (`TST-UI-516.4`)*:
+  • Execute `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.settings.supporter.SupporterCopyContractTest"`.
+  • Assert 100% pass rate.
+
+

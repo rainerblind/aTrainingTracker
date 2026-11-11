@@ -196,12 +196,16 @@ class SupporterCopyContractTest {
         }
 
         assertEquals(
-            "Danke, dass du bereits mit einer früheren Version von aTrainingTracker deine Trainings aufgezeichnet hast! Unbegrenzte Sensoren und alle zukünftigen Funktionen sind für dich dauerhaft freigeschaltet.",
+            "Danke, dass du bereits mit einer früheren Version von aTrainingTracker deine Trainings aufgezeichnet hast! " +
+                "Unbegrenzte Sensoren und alle zukünftigen Funktionen sind für dich dauerhaft freigeschaltet. " +
+                "Über eine freiwillige finanzielle Unterstützung für die Weiterentwicklung würden wir uns trotzdem sehr freuen.",
             unescapeXml(extractStringTagRawContent("de", "pioneer_thank_you_body")!!)
         )
 
         assertEquals(
-            "Thank you for recording your workouts with an earlier version of aTrainingTracker! Unlimited sensors and all future features are permanently unlocked for you.",
+            "Thank you for recording your workouts with an earlier version of aTrainingTracker! " +
+                "Unlimited sensors and all future features are permanently unlocked for you. " +
+                "Nevertheless, we would still be very happy about voluntary financial support for ongoing development.",
             unescapeXml(extractStringTagRawContent("", "pioneer_thank_you_body")!!)
         )
     }

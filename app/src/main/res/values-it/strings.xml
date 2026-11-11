@@ -2378,7 +2378,7 @@
     <string name="drawer_tier_pioneer">★ Pioniere</string>
     <string name="pioneer_badge_label_with_year">★ Pioniere (Dal %1$d)</string>
     <string name="pioneer_badge_label">★ Pioniere</string>
-    <string name="pioneer_thank_you_body">Grazie per aver registrato i tuoi allenamenti con una versione precedente di aTrainingTracker! Sensori illimitati e tutte le funzionalità future sono sbloccati per sempre per te.</string>
+    <string name="pioneer_thank_you_body">Grazie per aver registrato i tuoi allenamenti con una versione precedente di aTrainingTracker! Sensori illimitati e tutte le funzionalità future sono sbloccati per sempre per te. Tuttavia, saremmo comunque molto grati per un supporto finanziario volontario allo sviluppo continuo.</string>
     <string name="debug_supporter_override_title">Forzatura livello sostenitore (Debug)</string>
     <string name="debug_supporter_override_subtitle">Simula i livelli di licenza localmente senza credenziali di Google Play Billing</string>
 

@@ -15510,3 +15510,38 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 
 **Invariants**: Zero changes to preference keys, DataStore persistence, or dialog state logic; 9-language localization parity with zero emojis or format arguments.
 
+
+
+### REQ-UI-516: Pioneer Status Banner Voluntary Support Transition Copy Parity [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-UI-516` | **Tickets**: `ATT-6680`
+- **Implementation**: `SupporterComponents.kt`, `values*/strings.xml` (all 9 locales), `SupporterCopyContractTest.kt`
+- **Rationale**: In `ATT-6290` (`REQ-UI-505`), `pioneer_thank_you_body` on `PioneerStatusBanner` (`SupporterScreen.kt`) was updated to confirm permanent feature and sensor unlock for Pioneer athletes. However, displaying the Supporter subscription plan cards (`Bronze`, `Silver`, `Gold`) directly beneath this banner without explanation causes user confusion as to why plans are shown when their app is already unlocked. The system SHALL append a respectful transition sentence inviting voluntary financial support for ongoing development to `pioneer_thank_you_body` across all 9 supported locales.
+- **Description**:
+  1. *Voluntary Support Transition Sentence (`REQ-UI-516.1`)*:
+     - `pioneer_thank_you_body` SHALL append a polite, non-coercive transition sentence clarifying that voluntary financial contributions for ongoing development remain welcome despite all features being unlocked.
+  2. *9-Language Localization Parity (`REQ-UI-516.2`)*:
+     - The updated copy SHALL be localized across all 9 supported language directories (`values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`).
+  3. *Hygiene & Quality Standards (`REQ-UI-516.3`)*:
+     - Pursuant to `ATT-5400`, `pioneer_thank_you_body` SHALL NOT contain decorative inline Unicode emojis.
+     - The copy SHALL NOT contain formatting specifiers (`%s`, `%d`) or references to "ANT+".
+  4. *Contract Test Validation (`REQ-UI-516.4`)*:
+     - `SupporterCopyContractTest.kt` SHALL validate that `pioneer_thank_you_body` exists in all 9 locales, contains zero emojis/specifiers/"ANT+", and matches the exact German and English canonical copy.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Amends `REQ-UI-505` (*Supporter Screen Pioneer Thank You Banner Copy Parity*, `ATT-6290`). Targets `app/src/main/res/values*/strings.xml` and `SupporterCopyContractTest.kt`.
+2. *Historical Origin & Commit Trace*: `ATT-6290` (`69e96e70`, Sprint 2026-45.6) neutralized legacy "ANT+" references.
+3. *Root Reason for Existing Formulation*: The prior update focused purely on removing protocol bias and thanking users, leaving the visual juxtaposition with paid supporter tiers below unexplained.
+4. *Preservation of Core Invariants*: Unconditional Pioneer feature and sensor unlock is 100% preserved; support remains strictly voluntary; zero inline emojis (`ATT-5400`) and zero format specifiers.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* an athlete with Pioneer status viewing `SupporterScreen`,
+• *When* `PioneerStatusBanner` is rendered above the Supporter plan cards,
+• *Then* `pioneer_thank_you_body` includes the transition sentence inviting voluntary support, contains zero emojis, and has zero format specifiers across all 9 locales.
+• *Given* `SupporterCopyContractTest.kt`,
+• *When* executed,
+• *Then* exact copy assertions for German and English pass with 100%.
+
+**Invariants**: Zero changes to Pioneer entitlement detection or subscription billing logic; 9-language localization parity with zero emojis.
+
+
