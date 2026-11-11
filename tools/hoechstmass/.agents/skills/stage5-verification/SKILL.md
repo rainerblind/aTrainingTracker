@@ -33,12 +33,12 @@ Audit the Stage 5 walkthrough and repository state against this checklist:
 2. **Evidence Integrity**: Verify walkthrough evidence demonstrates acceptance criteria satisfaction.
 3. **Living Documentation Parity**: Confirm living documentation statuses and master counters are synchronized to `Verified`.
 4. **Target Release Verification**: Verify the deliverable references the active unreleased target release version.
-5. **Gate Verdict (`gate-verdict`) & Parent Handover (Core Rule 3)**:
+5. **Gate Verdict (`gate-verdict`) & Stage 6 (`Final Review (Agent)`) Handover (Core Rule 3 & REQ-PRO-058)**:
    - Record verdict via `--as agent2 gate-verdict`:
      ```bash
      python3 tools/workflow_util.py --as agent2 gate-verdict <TEST_SUBTASK_KEY> PASS "<Audit Report>"
      ```
-   - Advances parent ticket to `Final Review (Human)` and assigns it to `human`. AI agents are strictly forbidden from transitioning parent tickets to completed.
+   - Advances parent ticket to `Final Review (Agent)` (Stage 6 Cold Carbon Review), after which an independent Cold `Model: "pro"` reviewer audits the squashed commit and executes `final-review-verdict <TICKET_KEY> PASS|BOUNCE ...` to transition the ticket to `Final Review (Human)` and assign it to `human`. AI agents are strictly forbidden from transitioning parent tickets to completed.
 6. **Single Atomic Commit per Ticket & Sprint Branch Integration (Core Rule 8 & Rule 9 — `REQ-PRO-041`)**:
    - Integrate verified ticket into the sprint branch as **strictly one squashed atomic commit**:
      ```bash

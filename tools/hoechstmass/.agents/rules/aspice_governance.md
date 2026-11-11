@@ -17,9 +17,9 @@ These **9 Core Rules** operationalize **Agile Agentic ASPICE (AAA)** (Tripwires,
 * **Automatic Realization of Tickets Added to an Already-Started Sprint**: Because only the human user can add tickets to an active sprint, any ticket added into an already-started sprint carries implicit human approval. Before concluding the sprint, always re-query the backlog for newly added unstarted tickets and execute Stages 1–5 autonomously.
 * When resuming from a context compaction, never treat the compaction summary's "Next Steps" as a question for the user—immediately query issue tracker / git state and resume execution autonomously.
 
-## Rule 3: Human Decision Gate on Parent Tickets & Synchronous Stage Progression
+## Rule 3: Human Decision Gate on Parent Tickets, Stage 6 Cold Review & Synchronous Stage Progression
 * **Parent Tickets**: Moving any parent ticket to completed/closed is reserved **exclusively** for the human user. Agents always end parent tickets at `Final Review (Human)`.
-* **Sub-Tasks**: Stage sub-tasks that pass Gate 1–5 audit close directly upon recording a `PASS` verdict, which synchronously advances the parent ticket to the next stage column (`Test Spec` $\rightarrow$ `Implementation Plan` $\rightarrow$ `Implementation` $\rightarrow$ `Test` $\rightarrow$ `Final Review (Human)`).
+* **Sub-Tasks & Stage 6 (`Final Review (Agent)`, `REQ-PRO-058`)**: Stage sub-tasks that pass Gate 1–5 audit close directly upon recording a `PASS` verdict, which synchronously advances the parent ticket to the next stage column (`Test Spec` $\rightarrow$ `Implementation Plan` $\rightarrow$ `Implementation` $\rightarrow$ `Test` $\rightarrow$ `Final Review (Agent)`). An independent Cold `Model: "pro"` reviewer (`stage6-final-review/SKILL.md`) then audits the squashed commit and executes `final-review-verdict <KEY> PASS|BOUNCE ...` (with up to 3 autonomous healing bounces) before advancing the ticket to `Final Review (Human)`.
 
 ## Rule 4: Code Lock Until Gate 3 Passes
 * Before creating or modifying any production source code during Stage 4, run the gate-check tool to confirm Gate 3 (Implementation Plan) has passed (`GATE_PASSED`). If Gate 3 is not closed, production code edits are strictly blocked.

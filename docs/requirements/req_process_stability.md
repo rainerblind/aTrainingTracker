@@ -2973,6 +2973,49 @@ The workflow SHALL mandate that:
   • *Then* deployment and evaluation execute on the real physical phone.
 - **Invariants**: Zero runtime changes to `app/src/main/`; 100% unit test pass rate.
 
+### REQ-PRO-058: Stage 6 Cold Carbon Final Review (Agent), 3-Bounce Healing Loop, and Gate 6 Metrics [In Progress]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-PRO-058` | **Tickets**: `ATT-7101`
+- **Implementation**: `tools/jira_util.py`, `tools/sprint_metrics.py`, `tools/hoechstmass/tools/jira_util.py`, `tools/hoechstmass/tools/sprint_metrics.py`, `.agents/skills/stage6-final-review/SKILL.md`, `tools/hoechstmass/.agents/skills/stage6-final-review/SKILL.md`, `.agents/skills/stage5-verification/SKILL.md`, `.agents/skills/sprint-planner/SKILL.md`, `.agents/skills/jira-workflow/SKILL.md`, `.agents/rules/aspice_governance.md`
+- **Rationale**: Persistent Epic-scoped subagent pairs (`pro`/`flash`) executing Stages 1–5 share the iterative conversational context of a ticket, which can create blind spots or tunnel vision. Introducing an orthogonal, zero-context **Stage 6 (`Final Review (Agent)`)** audited by a freshly spawned **Cold `Gemini 4 Carbon` (`Model: "pro"`)** reviewer (with up to 3 autonomous healing bounces back to the original pair before escalating to `Final Review (Human)`) establishes an additional independent Swiss Cheese barrier ($p_6$) and produces a structured Executive Review Summary for the Product Owner prior to Ceremony 2 (ATT-7101, Epic ATT-232):
+- **Description**:
+  1. *Parent Stage Ordering & Stage 5 -> Stage 6 Transition (`REQ-PRO-058.1`, tools/jira_util.py)*:
+     • `PARENT_STAGE_ORDER` SHALL order `"final review (agent)"` immediately after `"test"` and immediately before `"final review (human)"`: `["zu erledigen", "analysis", "test spec", "implementation plan", "implementation", "test", "final review (agent)", "final review (human)"]`.
+     • `STAGE_TO_SKILL_DIR` SHALL map `"final review (agent)"` to `"stage6-final-review"`.
+     • `resolve_desired_parent_stage_for_subtask` SHALL return `"final review (agent)"` when a Stage 5 (`[Test]` / `[Verification]`) subtask completes (`subtask_done=True`).
+     • `transition_issue` SHALL disambiguate `Final Review (Agent)` aliases (`"final review (agent)"`, `"final_review_agent"`, `"agent_review"`, `"stage6"`) from `Final Review (Human)` aliases (`"final review (human)"`, `"final_review_human"`, `"human_review"`, `"final review"`, `"final_review"`, `"human"`), assigning `Final Review (Agent)` tickets to `"agent2"` and assigning `Final Review (Human)` tickets to `"human"`.
+  2. *Composite `final-review-verdict` CLI Command & 3-Bounce Healing (`REQ-PRO-058.2`, tools/jira_util.py)*:
+     • `jira_util.py` (and `tools/hoechstmass/tools/jira_util.py`) SHALL provide `final-review-verdict <PARENT_KEY> PASS|BOUNCE <COMMENT_OR_@FILE> [--bounce-target=implementation|analysis|zu erledigen]`.
+     • On `PASS`: The tool SHALL post a `[ROLE: agent2]` comment tagged with `[FINAL REVIEW (AGENT) — PASS]`, transition the parent ticket from `Final Review (Agent)` to `Final Review (Human)` (via `I.O.`), and assign the parent ticket to `human`.
+     • On `BOUNCE`: The tool SHALL inspect existing parent comments to count prior `[FINAL REVIEW (AGENT) — BOUNCE X/3]` tags (`bounce_count = prior_bounces + 1`).
+       - When `bounce_count <= 3`: It SHALL post `[FINAL REVIEW (AGENT) — BOUNCE {bounce_count}/3]` with the audit report, transition the parent ticket back to the target stage (`Implementation`, `Analysis`, or `Zu erledigen`), and assign the parent ticket to `agent1`.
+       - When `bounce_count > 3`: It SHALL post `[FINAL REVIEW (AGENT) — ESCALATED AFTER 3 BOUNCES]`, transition the parent ticket to `Final Review (Human)`, and assign it to `human`.
+  3. *Stage 6 Cold Reviewer Skill & Retroactive Batch Mode (`REQ-PRO-058.3`, stage6-final-review/SKILL.md & sprint-planner/SKILL.md)*:
+     • `.agents/skills/stage6-final-review/SKILL.md` (and `tools/hoechstmass/.agents/skills/stage6-final-review/SKILL.md`) SHALL define the Cold `Gemini 4 Carbon` (`Model: "pro"`) Reviewer role, the 4-part Cold Audit Checklist (Zero-Context Code vs. Requirement Audit, Unintended Collateral & Regression Audit, Test Authenticity & Edge-Case Audit, Documentation & Hygiene Audit), the structured Executive Review Summary, and the 3-bounce healing loop.
+     • `.agents/skills/sprint-planner/SKILL.md` Ceremony 2 Step 0.5 SHALL support both in-sprint verification and a **Retroactive Cold Review Sweep** that processes any sprint tickets still in `Final Review (Agent)` in Epic-grouped batches (with up to 3 healing bounces) before starting the Human Joint Review of tickets in `Final Review (Human)`.
+  4. *Gate 6 Quantitative Metrics & Swiss Cheese Barrier $p_6$ (`REQ-PRO-058.4`, tools/sprint_metrics.py)*:
+     • `tools/sprint_metrics.py` (and `tools/hoechstmass/tools/sprint_metrics.py`) SHALL parse `[FINAL REVIEW (AGENT) — PASS]` and `[FINAL REVIEW (AGENT) — BOUNCE X/3]` comments on parent issues to compute Gate 6 (`Final Review (Agent)`) total evaluations, first-time passes, bounce counts, FTPR percentage, and empirical defect escape probability `p6_final_review_agent_escape` in the Swiss Cheese multiplicative model.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Net-new requirement `REQ-PRO-058` refining `REQ-PRO-014`, `REQ-PRO-035`, `REQ-PRO-036`, and `REQ-PRO-037`. Targets `tools/jira_util.py`, `tools/sprint_metrics.py`, `.agents/skills/stage6-final-review/SKILL.md`, `.agents/skills/stage5-verification/SKILL.md`, `.agents/skills/sprint-planner/SKILL.md`, `.agents/skills/jira-workflow/SKILL.md`, `.agents/rules/aspice_governance.md`, and `tools/hoechstmass/` mirrors.
+  2. *Historical Origin & Commit Trace*: Evolved from the 5-stage ASPICE workflow (`ATT-670`), Höchstmaß framework & metrics (`ATT-3922`, `ATT-5667`, `ATT-5668`), and Two-Tier Device Policy (`ATT-6506`).
+  3. *Root Reason for Existing Formulation*: Previously only a single post-`Test` review state (`Final Review (Human)`) existed in Jira, so Gate 5 `PASS` transitioned tickets directly to `Final Review (Human)` without an independent cold agent review of the squashed commit.
+  4. *Preservation of Core Invariants*: Rule 3 (Human Decision Gate for `Erledigt`), Rule 8 (1 squashed commit per ticket on `sprint/<SPRINT_NAME>`), `REQ-TST-004` (Two-Tier Device Policy), and Höchstmaß parameterization parity (`TST-PRO-035`, `TST-PRO-036`, `TST-PRO-040.4`) remain 100% preserved.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* a Stage 5 `[Test]` subtask passing Gate 5 via `gate-verdict <SUBTASK_KEY> PASS`,
+  • *When* `advance_parent_on_subtask_progress` executes,
+  • *Then* the parent ticket SHALL transition to `Final Review (Agent)`, remain assigned to `agent2`, and inject `stage6-final-review/SKILL.md`.
+  • *Given* a parent ticket in `Final Review (Agent)`,
+  • *When* `final-review-verdict <PARENT_KEY> PASS` is executed by the Cold Reviewer,
+  • *Then* a `[FINAL REVIEW (AGENT) — PASS]` comment SHALL be posted, the ticket SHALL transition to `Final Review (Human)`, and it SHALL be assigned to `human`.
+  • *Given* a parent ticket in `Final Review (Agent)` with defective implementation,
+  • *When* `final-review-verdict <PARENT_KEY> BOUNCE` is executed,
+  • *Then* bounces `1..3` SHALL tag `[FINAL REVIEW (AGENT) — BOUNCE X/3]`, transition back to the target stage, and assign to `agent1`, whereas exceeding 3 bounces SHALL escalate to `Final Review (Human)` and assign to `human`.
+  • *Given* parent issues with Stage 6 verdict comments in a sprint,
+  • *When* `sprint_metrics.py` parses the sprint,
+  • *Then* `gate_6` FTPR, bounce counts, and `p6_final_review_agent_escape` SHALL be accurately computed and formatted.
+- **Invariants**: Zero modifications to Android production runtime code in `app/src/main/`; Rule 3 (`Erledigt` human-only gate) and `REQ-TST-004` (Two-Tier Device Policy) strictly preserved.
+
+
 
 
 

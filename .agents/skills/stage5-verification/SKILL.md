@@ -1,17 +1,17 @@
 ---
 name: stage5-verification
-description: Executes Stage 5 (Verification, Clean-Room Regression & Walkthrough) of the agile ASPICE lifecycle. Runs the full test suite, performs on-device checks, authors the walkthrough, updates living docs to Verified, integrates verified changes into the sprint branch (Strategy A), and advances the parent ticket to Final Review (Human).
+description: Executes Stage 5 (Verification, Clean-Room Regression & Walkthrough) of the agile ASPICE lifecycle. Runs the full test suite, performs on-device checks, authors the walkthrough, updates living docs to Verified, integrates verified changes into the sprint branch (Strategy A), and advances the parent ticket to Final Review (Agent) for Stage 6 Cold Carbon Review.
 ---
 
 # Skill: stage5-verification
 
 ## Overview
-This skill guides the agent through **Stage 5 (Verification & Release Quality Gate)**. It validates the complete implementation across clean-room regression tests, updates living documents, documents the walkthrough, merges the verified feature branch into the sprint integration branch (`sprint/<sprint_id>`), and transitions the parent ticket to human review.
+This skill guides the agent through **Stage 5 (Verification & Release Quality Gate)**. It validates the complete implementation across clean-room regression tests, updates living documents, documents the walkthrough, merges the verified feature branch into the sprint integration branch (`sprint/<sprint_id>`), and transitions the parent ticket to `Final Review (Agent)` (Stage 6 Cold Carbon Review before `Final Review (Human)`).
 
 ## Subagent Model Pairing ("Zipper Principle" & Epic-Scoped Persistent Ping-Pong — Core Rule 7)
 Reuse the Epic-scoped (or standalone ticket) persistent `TypeName: "self"` subagents via `send_message`:
 - **Doing (`--as agent1`)**: **`subagent_flash`** (`send_message` to the `flash` subagent) — Running Tier 1 targeted unit tests, updating `docs/requirements.md` & `docs/tests.md` to `Verified`, authoring `walkthrough.md`, and submitting Stage 5 via `submit-stage` are deterministic procedural steps.
-- **Gate 5 Review (`--as agent2`)**: **`subagent_pro`** (`send_message` to the `pro` subagent) — Final autonomous "Chief Inspector" before `Final Review (Human)` (Ceremony 2), executing `python3 tools/jira_util.py --as agent2 gate-verdict <SUBTASK_KEY> PASS ...` and squashing `feature/<KEY>` onto `sprint/<SPRINT_NAME>`. Terminate standalone ticket subagents once squashed, or rotate/terminate Epic-scoped subagent pairs after 3 completed tickets (`Rule 62`) or when all sprint tickets in that Epic are complete via `manage_subagents(Action="kill", ConversationIds=[...])`.
+- **Gate 5 Review (`--as agent2`)**: **`subagent_pro`** (`send_message` to the `pro` subagent) — Audits Stage 5 verification evidence, executes `python3 tools/jira_util.py --as agent2 gate-verdict <SUBTASK_KEY> PASS ...` (which advances the parent ticket to `Final Review (Agent)` and injects `stage6-final-review/SKILL.md`), and squashes `feature/<KEY>` onto `sprint/<SPRINT_NAME>`. Keep the persistent `subagent_pro` + `subagent_flash` pair alive until the independent Cold `Gemini 4 Carbon` (`Model: "pro"`) reviewer completes **Stage 6 (`Final Review (Agent)`)** and advances the parent ticket to `Final Review (Human)`, so any Stage 6 bounce (`1/3..3/3`) can be healed immediately. Terminate standalone ticket subagents or rotate Epic-scoped subagent pairs after 3 completed tickets (`Rule 62`) once Stage 6 passes.
 
 ## Key Responsibilities (`subagent_flash` as `agent1` — `flash`)
 1. **Two-Tier Unit Test Execution Strategy (Rule 60 — `ATT-4465`)**:
@@ -58,11 +58,12 @@ Message the ticket's persistent `subagent_pro` (`send_message`) to audit the Sta
 3. **Living Documentation, Dynamic Symbol-vs-Source Sweep & SWE.2 Architecture Parity (`ATT-5431`, `Rule 81` — `ATT-6179`, `ATT-6289`)**: Confirm living documentation in `docs/requirements/` and `docs/tests/` status fields and master index counter tables are synchronized. If the ticket introduced architectural subsystems or requirement prefixes, verify that [`docs/architecture.md`](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/docs/architecture.md) was updated accordingly. Whenever `docs/architecture*.md` or `docs/system/*.md` was created or modified, run an automated symbol-vs-source check confirming every backticked `.kt`/`.java`/`.xml` file and class exists in `app/src/main/` and `SYS.2 <-> SYS.3` IDs match 1:1 (`declared == allocated`).
 4. **Mandatory Lösungsversion (Fix Version/s) Governance Audit**:
    - In accordance with Core Rule 8 ("FixVersion set only upon completion" and sub-tasks never having `fixVersions`), active in-sprint tickets legitimately have Parent `Lösungsversion` as `None` until final acceptance during Joint Review or release. Verify that every Stage 1–5 deliverable references the target release version that `python3 tools/jira_util.py versions` reports as `ACTIVE/UNRELEASED` (never a free-text or invented version — Rule 66, `ATT-4864`) and that sub-tasks have no fix version assigned.
-5. **Gate Verdict (`gate-verdict`) & Parent Handover (Core Rule 3)**:
-   - Record the verdict in a single composite CLI call (which closes the `[Test]` sub-task to `Erledigt`, automatically advances the parent ticket to `Final Review (Human)`, and assigns it to `human`):
+5. **Gate Verdict (`gate-verdict`) & Stage 6 (`Final Review (Agent)`) Handover (Core Rule 3 & REQ-PRO-058)**:
+   - Record the verdict in a single composite CLI call (which closes the `[Test]` sub-task to `Erledigt`, automatically advances the parent ticket to `Final Review (Agent)`, retains `agent2` assignment, and injects `stage6-final-review/SKILL.md`):
      ```bash
      python3 tools/jira_util.py --as agent2 gate-verdict <TEST_SUBTASK_KEY> PASS "<Audit Report>"
      ```
+   - After squashing the ticket commit onto `sprint/<SPRINT_NAME>` (Step 6 below), the Coordinator invokes a freshly spawned **Cold `Gemini 4 Carbon` (`Model: "pro"`)** reviewer (following `stage6-final-review/SKILL.md`) to audit the squashed commit and execute `python3 tools/jira_util.py --as agent2 final-review-verdict <TICKET_KEY> PASS|BOUNCE ...` to advance the parent ticket to `Final Review (Human)`.
    - Note: AI agents are strictly forbidden from transitioning parent tickets to `Erledigt`.
 6. **Single Atomic Commit per Ticket & Continuous Sprint Branch Integration (Core Rule 8 & Rule 9 — `REQ-PRO-041`)**:
    - Each ticket MUST result in **strictly one atomic commit** on `sprint/<SPRINT_NAME>` containing the complete Stage 1–5 deliverables (`analysis`, `test_spec`, `plan`, `walkthrough`), living documentation (`docs/requirements.md`, `docs/tests.md`), production code, and unit tests:

@@ -1799,6 +1799,28 @@
   6. *Python Standard Library Compliance Test (`TST-TST-004.6`, tools/test_agent_emulator.py)*:
   • Assert `tools/agent_emulator.py` imports only standard library modules complying with `TST-PRO-005.6`.
 
+### TST-PRO-058: **Stage 6 Cold Carbon Final Review (Agent), 3-Bounce Healing Loop & Gate 6 Metrics Verification Suite** [In Progress]
+- **Requirement(s)**: `REQ-PRO-058`
+- **Component**: `tools/jira_util.py`, `tools/sprint_metrics.py`, `tools/hoechstmass/tools/jira_util.py`, `tools/hoechstmass/tools/sprint_metrics.py`, `.agents/skills/stage6-final-review/SKILL.md`, `tools/test_jira_epics.py`, `tools/test_sprint_metrics.py`, `HoechstmassCoreFrameworkContractTest.kt`
+- **Jira**: `ATT-7101`
+- **Test Description**:
+  1. *Parent Stage Order & Stage 5 -> Final Review (Agent) Resolution Tests (`TST-PRO-058.1`, tools/test_jira_epics.py)*:
+  • Assert `PARENT_STAGE_ORDER` contains `"final review (agent)"` immediately after `"test"` and immediately before `"final review (human)"`.
+  • Assert `STAGE_TO_SKILL_DIR["final review (agent)"] == "stage6-final-review"`.
+  • Assert `resolve_desired_parent_stage_for_subtask("[Test] Verification", True)` returns `"final review (agent)"`.
+  • Assert `transition_issue` disambiguates `"final review (agent)"` (assigning to `agent2`) from `"final review (human)"` (assigning to `human`).
+  2. *Composite `final-review-verdict` PASS, 3-Bounce Healing & Escalation Tests (`TST-PRO-058.2`, tools/test_jira_epics.py)*:
+  • Assert `final_review_verdict(key, "PASS", ...)` posts `[FINAL REVIEW (AGENT) — PASS]`, transitions to `Final Review (Human)`, and assigns to `human`.
+  • Assert `final_review_verdict(key, "BOUNCE", ...)` increments bounce counter `1/3..3/3`, transitions back to `Implementation` (or `Analysis` / `Zu erledigen`), and assigns to `agent1`.
+  • Assert that a 4th bounce (`bounce_count > 3`) posts `[FINAL REVIEW (AGENT) — ESCALATED AFTER 3 BOUNCES]`, transitions to `Final Review (Human)`, and assigns to `human`.
+  • Assert parity with `tools/hoechstmass/tools/jira_util.py`.
+  3. *Stage 6 Skill & Governance Contract Tests (`TST-PRO-058.3`, HoechstmassCoreFrameworkContractTest.kt)*:
+  • Assert `.agents/skills/stage6-final-review/SKILL.md` and `tools/hoechstmass/.agents/skills/stage6-final-review/SKILL.md` exist, declare `name: stage6-final-review`, and document the 4-part Cold Audit Checklist, Executive Review Summary, and 3-bounce healing loop.
+  4. *Gate 6 Quantitative Metrics & Swiss Cheese $p_6$ Tests (`TST-PRO-058.4`, tools/test_sprint_metrics.py)*:
+  • Assert `parse_final_review_agent_verdicts_from_comments` extracts `PASS` and `BOUNCE` verdicts from `[FINAL REVIEW (AGENT) — ...]` parent ticket comments.
+  • Assert `parse_sprint_gate_metrics` computes `gate_6` (`Final Review (Agent)`) FTPR, bounce count, and `p6_final_review_agent_escape` in `swiss_cheese`.
+
+
 
 
 

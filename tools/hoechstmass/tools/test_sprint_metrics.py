@@ -22,6 +22,7 @@ from sprint_metrics import (
     format_metrics_markdown,
     identify_gate_number,
     load_historical_metrics,
+    parse_final_review_agent_verdicts_from_comments,
     parse_sprint_gate_metrics,
     parse_verdicts_from_comments,
     record_sprint_metrics,
@@ -204,6 +205,56 @@ class TestSprintMetrics(unittest.TestCase):
         self.assertIn("Gate / Stage", md)
         self.assertIn("Empirical Swiss Cheese Multiplicative Defect Reduction", md)
         self.assertIn("Statistical Process Control", md)
+
+    def test_gate6_final_review_agent_metrics(self):
+        # Test parse_final_review_agent_verdicts_from_comments
+        parent_comments_bounce_then_pass = [
+            {"author": {"displayName": "Agent 2 (Reviewer)"}, "body": "[ROLE: agent2]\nStage 6 Final Review (Agent) BOUNCE (1/3): Defect found."},
+            {"author": {"displayName": "Agent 2 (Reviewer)"}, "body": "[ROLE: agent2]\nStage 6 Final Review (Agent) PASS: Clean re-review."},
+        ]
+        self.assertEqual(
+            parse_final_review_agent_verdicts_from_comments(parent_comments_bounce_then_pass),
+            ["BOUNCE", "PASS"]
+        )
+
+        parent_issues = [
+            {
+                "key": "ATT-200",
+                "fields": {
+                    "summary": "Ticket with Stage 6 First-Time Pass",
+                    "status": {"name": "Final Review (Human)"},
+                    "priority": {"name": "Medium"},
+                    "customfield_10016": 2.0,
+                    "comment": {
+                        "comments": [
+                            {"author": {"displayName": "Agent 2"}, "body": "[ROLE: agent2] Stage 6 Final Review (Agent) PASS: Ready."}
+                        ]
+                    },
+                    "subtasks": []
+                }
+            },
+            {
+                "key": "ATT-201",
+                "fields": {
+                    "summary": "Ticket with Stage 6 Bounce then Pass",
+                    "status": {"name": "Final Review (Human)"},
+                    "priority": {"name": "High"},
+                    "customfield_10016": 3.0,
+                    "comment": {
+                        "comments": parent_comments_bounce_then_pass
+                    },
+                    "subtasks": []
+                }
+            }
+        ]
+        metrics = parse_sprint_gate_metrics(parent_issues, {"id": 439, "name": "Sprint 2026-46.2"})
+        g6 = metrics["quality_gates"]["gates"]["gate_6"]
+        self.assertEqual(g6["total_subtasks"], 2)
+        self.assertEqual(g6["passed_first_time"], 1)
+        self.assertEqual(g6["revisions"], 1)
+        self.assertEqual(g6["ftpr_percent"], 50.0)
+        self.assertEqual(g6["escape_rate_p"], 0.5)
+        self.assertEqual(metrics["quality_gates"]["swiss_cheese"]["p6_final_review_agent_escape"], 0.5)
 
 
 if __name__ == "__main__":

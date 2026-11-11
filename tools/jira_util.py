@@ -671,6 +671,7 @@ PARENT_STAGE_ORDER = [
     "implementation plan",
     "implementation",
     "test",
+    "final review (agent)",
     "final review (human)"
 ]
 
@@ -726,6 +727,7 @@ STAGE_TO_SKILL_DIR = {
     "implementation plan": "stage3-impl-plan",
     "implementation": "stage4-implementation",
     "test": "stage5-verification",
+    "final review (agent)": "stage6-final-review",
 }
 
 def inject_stage_context(stage_name_lower, config=None):
@@ -774,22 +776,22 @@ def inject_stage_context(stage_name_lower, config=None):
     except Exception as e:
         print(f"Notice: Could not inject stage context for {skill_dir}: {e}", file=sys.stderr)
 
-def resolve_desired_parent_stage_for_subtask(subtask_summary):
+def resolve_desired_parent_stage_for_subtask(subtask_summary, subtask_done=True):
     s = (subtask_summary or "").strip().lower()
     if re.match(r'^\[analysis\]', s):
-        return "test spec"
+        return "test spec" if subtask_done else "analysis"
     if re.match(r'^\[(req\s*&\s*test\s*spec|req/test\s*spec|test-spec|test\s*spec|specification|spec)\]', s):
-        return "implementation plan"
+        return "implementation plan" if subtask_done else "test spec"
     if re.match(r'^\[(impl-plan|impl\s*plan|implementation\s*plan|design|plan)\]', s):
-        return "implementation"
+        return "implementation" if subtask_done else "implementation plan"
     if re.match(r'^\[(implementation|impl)\]', s):
-        return "test"
+        return "test" if subtask_done else "implementation"
     if re.match(r'^\[(test|verification)\]', s):
-        return "final review (human)"
+        return "final review (agent)" if subtask_done else "test"
     return None
 
 def sync_parent_stage_on_subtask_done(parent_key, subtask_summary, role="agent1", inject_context=True):
-    desired_stage = resolve_desired_parent_stage_for_subtask(subtask_summary)
+    desired_stage = resolve_desired_parent_stage_for_subtask(subtask_summary, True)
     if not desired_stage or not parent_key:
         return
     try:
@@ -857,6 +859,8 @@ def transition_issue(issue_key, status_name, role="agent1", inject_context=True,
     else:
         aliases = {
             "todo": "zu erledigen",
+            "zu erledigen": "zu erledigen",
+            "zurück zum start": "zu erledigen",
             "analysis": "analysis",
             "test_spec": "test spec",
             "test spec": "test spec",
@@ -864,14 +868,26 @@ def transition_issue(issue_key, status_name, role="agent1", inject_context=True,
             "implementation_plan": "implementation plan",
             "implementation plan": "implementation plan",
             "implementation": "implementation",
+            "zurück zur implementierung": "implementation",
             "test": "test",
             "testing": "test",
+            "final_review_agent": "final review (agent)",
+            "final review (agent)": "final review (agent)",
+            "final review agent": "final review (agent)",
+            "agent_review": "final review (agent)",
+            "agent review": "final review (agent)",
+            "stage6": "final review (agent)",
+            "stage 6": "final review (agent)",
             "final_review": "final review (human)",
             "final review": "final review (human)",
+            "final_review_human": "final review (human)",
             "final review (human)": "final review (human)",
+            "final review human": "final review (human)",
             "review": "final review (human)",
             "human": "final review (human)",
             "human_review": "final review (human)",
+            "human review": "final review (human)",
+            "i.o.": "final review (human)",
             "revision": "implementation",
             "rework": "implementation"
         }
@@ -901,8 +917,10 @@ def transition_issue(issue_key, status_name, role="agent1", inject_context=True,
     # Idempotent check if already in target status
     if current_status_lower == normalized_target or (is_subtask and normalized_target == "freigabe" and current_status_lower == "erledigt"):
         print(f"{issue_key} is already in '{current_status_name}'.")
-        if "final review" in current_status_lower and not is_subtask:
+        if current_status_lower == "final review (human)" and not is_subtask:
             assign_issue(issue_key, "human", role=role)
+        elif current_status_lower == "final review (agent)" and not is_subtask:
+            assign_issue(issue_key, "agent2", role=role)
         if is_subtask and (normalized_target == "freigabe" or current_status_lower == "erledigt"):
             sync_parent_stage_on_subtask_done(parent_key, issue_summary, role=role, inject_context=inject_context)
         return
@@ -965,11 +983,13 @@ def transition_issue(issue_key, status_name, role="agent1", inject_context=True,
 
     # Auto-assign based on target workflow stage
     norm_target_lower = target_name.lower()
-    if "final review" in norm_target_lower or ("human" in norm_target_lower and not is_subtask):
+    if norm_target_lower == "final review (agent)":
+        assign_issue(issue_key, "agent2", role=role)
+    elif norm_target_lower == "final review (human)" or ("human" in norm_target_lower and not is_subtask):
         assign_issue(issue_key, "human", role=role)
     elif "überprüfung" in norm_target_lower or "review" in norm_target_lower:
         assign_issue(issue_key, "agent2", role=role)
-    elif "bearbeitung" in norm_target_lower or "progress" in norm_target_lower:
+    elif "bearbeitung" in norm_target_lower or "progress" in norm_target_lower or norm_target_lower in ("implementation", "analysis", "zu erledigen"):
         assign_issue(issue_key, "agent1", role=role)
 
     # Automatic Stage-Skill & Rule Context Injection when parent ticket enters a lifecycle stage
@@ -1256,6 +1276,127 @@ def gate_verdict(subtask_key, verdict_arg, text_or_file, role="agent2"):
         transition_issue(subtask_key, "in_progress", role=auditor_role, inject_context=False)
         assign_issue(subtask_key, "agent1", role=auditor_role)
         print(f"GATE_VERDICT: REVISION recorded on {subtask_key} by {auditor_role} (reassigned to agent1).")
+
+
+FINAL_REVIEW_BOUNCE_RE = re.compile(
+    r"(?:\[FINAL REVIEW \(AGENT\)\s*[—\-]+\s*BOUNCE\s+(\d+)/3\]|Final Review \(Agent\)\s*BOUNCE\s*\(?(\d+)/3\)?)",
+    re.IGNORECASE,
+)
+FINAL_REVIEW_PASS_TAG = "[FINAL REVIEW (AGENT) — PASS]"
+FINAL_REVIEW_ESCALATED_TAG = "[FINAL REVIEW (AGENT) — ESCALATED AFTER 3 BOUNCES]"
+
+
+def count_final_review_bounces(comments):
+    """Counts how many Stage 6 [FINAL REVIEW (AGENT) — BOUNCE X/3] comments exist on a parent issue."""
+    max_bounce = 0
+    count = 0
+    for c in (comments or []):
+        body = c.get("body", "")
+        m = FINAL_REVIEW_BOUNCE_RE.search(body)
+        if m:
+            count += 1
+            num_str = m.group(1) or m.group(2)
+            try:
+                b_num = int(num_str)
+                if b_num > max_bounce:
+                    max_bounce = b_num
+            except (ValueError, TypeError):
+                pass
+    return max(count, max_bounce)
+
+
+def final_review_verdict(parent_key, verdict_arg, text_or_file, bounce_target="implementation", role="agent2", config=None):
+    """
+    REQ-PRO-058.2 / TST-PRO-058.2:
+    Composite Stage 6 ('Final Review (Agent)') verdict command for the Cold Carbon Reviewer (agent2):
+    - PASS: Posts [FINAL REVIEW (AGENT) — PASS], transitions parent ticket from 'Final Review (Agent)'
+      to 'Final Review (Human)' (via 'I.O.'), and assigns to 'human'.
+    - BOUNCE: Counts prior [FINAL REVIEW (AGENT) — BOUNCE X/3] comments on the parent ticket.
+      * If bounce_count <= 3: Posts [FINAL REVIEW (AGENT) — BOUNCE {bounce_count}/3], transitions
+        parent ticket back to bounce_target ('implementation', 'analysis', or 'zu erledigen'),
+        and assigns to 'agent1'.
+      * If bounce_count > 3: Posts [FINAL REVIEW (AGENT) — ESCALATED AFTER 3 BOUNCES], transitions
+        parent ticket to 'Final Review (Human)', and assigns to 'human'.
+    """
+    auditor_role = "agent2"
+    verdict_norm = (verdict_arg or "").strip().upper()
+    if verdict_norm in ("PASS", "I.O.", "IO", "APPROVED", "FREIGABE"):
+        is_pass = True
+    elif verdict_norm in ("BOUNCE", "REVISION", "REWORK", "FAIL", "N.I.O.", "NIO", "REJECT"):
+        is_pass = False
+    else:
+        print(f"Error: Invalid final review verdict '{verdict_arg}'. Expected PASS or BOUNCE.", file=sys.stderr)
+        sys.exit(1)
+
+    if text_or_file.startswith("@") and os.path.exists(text_or_file[1:]):
+        with open(text_or_file[1:], "r", encoding="utf-8") as f:
+            report_text = f.read().strip()
+    else:
+        report_text = (text_or_file or "").strip()
+
+    if config is None:
+        config = get_config()
+
+    issue_url = f"{config['JIRA_URL']}/rest/api/2/issue/{parent_key}?fields=issuetype,status,summary,comment"
+    issue_info = jira_request(issue_url, role=auditor_role)
+    fields_data = issue_info.get("fields", {})
+    if fields_data.get("issuetype", {}).get("subtask", False):
+        print(f"Error: final-review-verdict operates strictly on parent tickets, not sub-task '{parent_key}'.", file=sys.stderr)
+        sys.exit(1)
+
+    current_status = fields_data.get("status", {}).get("name", "").strip().lower()
+    if current_status != "final review (agent)" and current_status in PARENT_STAGE_ORDER:
+        curr_idx = PARENT_STAGE_ORDER.index(current_status)
+        agent_rev_idx = PARENT_STAGE_ORDER.index("final review (agent)")
+        if curr_idx < agent_rev_idx:
+            for step_stage in PARENT_STAGE_ORDER[curr_idx + 1 : agent_rev_idx + 1]:
+                transition_issue(parent_key, step_stage, role=auditor_role, inject_context=False)
+
+    assign_issue(parent_key, auditor_role, role=auditor_role)
+
+    if is_pass:
+        comment_body = report_text if FINAL_REVIEW_PASS_TAG in report_text else f"{FINAL_REVIEW_PASS_TAG}\n\n{report_text}"
+        add_comment(parent_key, comment_body, role=auditor_role)
+        transition_issue(parent_key, "final review (human)", role=auditor_role, inject_context=False)
+        assign_issue(parent_key, "human", role=auditor_role)
+        print(f"FINAL_REVIEW_VERDICT: PASS recorded on {parent_key} by {auditor_role} (moved to Final Review (Human), assigned to human).")
+        return "PASS"
+
+    comments = issue_info.get("comments") or fields_data.get("comment", {}).get("comments", [])
+    prior_bounces = count_final_review_bounces(comments)
+    next_bounce = prior_bounces + 1
+
+    if next_bounce <= 3:
+        bounce_tag = f"[FINAL REVIEW (AGENT) — BOUNCE {next_bounce}/3]"
+        comment_body = report_text if bounce_tag in report_text else f"{bounce_tag}\n\n{report_text}"
+        add_comment(parent_key, comment_body, role=auditor_role)
+
+        norm_bounce_target = (bounce_target or "implementation").strip().lower()
+        if norm_bounce_target in ("impl", "implementation", "zurück zur implementierung"):
+            transition_issue(parent_key, "implementation", role=auditor_role, inject_context=False)
+            resolved_target = "Implementation"
+        elif norm_bounce_target in ("todo", "zu erledigen", "start", "zurück zum start"):
+            transition_issue(parent_key, "zu erledigen", role=auditor_role, inject_context=False)
+            resolved_target = "Zu erledigen"
+        elif norm_bounce_target == "analysis":
+            transition_issue(parent_key, "zu erledigen", role=auditor_role, inject_context=False)
+            transition_issue(parent_key, "analysis", role=auditor_role, inject_context=False)
+            resolved_target = "Analysis"
+        else:
+            transition_issue(parent_key, norm_bounce_target, role=auditor_role, inject_context=False)
+            resolved_target = bounce_target
+
+        assign_issue(parent_key, "agent1", role=auditor_role)
+        print(f"FINAL_REVIEW_VERDICT: BOUNCE {next_bounce}/3 recorded on {parent_key} by {auditor_role} (returned to {resolved_target}, assigned to agent1).")
+        return f"BOUNCE_{next_bounce}"
+    else:
+        comment_body = report_text if FINAL_REVIEW_ESCALATED_TAG in report_text else f"{FINAL_REVIEW_ESCALATED_TAG}\n\n{report_text}"
+        add_comment(parent_key, comment_body, role=auditor_role)
+        transition_issue(parent_key, "final review (human)", role=auditor_role, inject_context=False)
+        assign_issue(parent_key, "human", role=auditor_role)
+        print(f"FINAL_REVIEW_VERDICT: ESCALATED AFTER 3 BOUNCES on {parent_key} by {auditor_role} (moved to Final Review (Human), assigned to human).")
+        return "ESCALATED"
+
 
 def add_comment(issue_key, text, role="agent1"):
     if text.startswith("@") and os.path.exists(text[1:]):
@@ -1889,7 +2030,7 @@ def collect_sprint_metrics_for_id(sprint_id, sprint_name, board_id, role="coordi
     issues = fetch_all_sprint_issues(
         base,
         sprint_id,
-        f"summary,status,issuetype,priority,subtasks,{STORY_POINTS_FIELD}",
+        f"summary,status,issuetype,priority,subtasks,comment,{STORY_POINTS_FIELD}",
         role=role
     )
 
@@ -2036,7 +2177,9 @@ USAGE_TEXT = (
     "  submit-stage PARENT_KEY STAGE TEXT_OR_@FILE [--summary \"...\"]\n"
     "                                                        Create/update stage subtask (1..5) and move to In Überprüfung\n"
     "  gate-verdict SUBTASK_KEY PASS|REVISION TEXT_OR_@FILE  Record agent2 gate verdict, close/advance on PASS or reopen on REVISION\n"
-    "  move KEY <target>                                     Transition issue (todo|in_progress|in_review|freigabe|analysis|test|final review)\n"
+    "  final-review-verdict PARENT_KEY PASS|BOUNCE TEXT_OR_@FILE [--bounce-target=implementation|analysis|zu erledigen]\n"
+    "                                                        Record Stage 6 Cold Carbon review verdict on parent ticket\n"
+    "  move KEY <target>                                     Transition issue (todo|in_progress|in_review|freigabe|analysis|test|final review (agent)|final review (human))\n"
     "  comment KEY TEXT_OR_@FILE                             Add role-attributed comment\n"
     "  update-desc KEY TEXT_OR_@FILE                         Update issue description\n"
     "  update-summary KEY SUMMARY                            Update issue summary\n"
@@ -2099,6 +2242,21 @@ if __name__ == "__main__":
         submit_stage(parent_k, stage_arg, text_arg, summary_override=summ_override, role=active_role)
     elif cmd in ("gate-verdict", "gate_verdict") and len(remaining_argv) == 4:
         gate_verdict(remaining_argv[1], remaining_argv[2], remaining_argv[3], role="agent2")
+    elif cmd in ("final-review-verdict", "final_review_verdict") and len(remaining_argv) >= 4:
+        parent_k = remaining_argv[1]
+        verdict_a = remaining_argv[2]
+        text_a = remaining_argv[3]
+        b_target = "implementation"
+        idx = 4
+        while idx < len(remaining_argv):
+            arg = remaining_argv[idx]
+            if arg.startswith("--bounce-target="):
+                b_target = arg.split("=", 1)[1]
+            elif arg == "--bounce-target" and idx + 1 < len(remaining_argv):
+                b_target = remaining_argv[idx + 1]
+                idx += 1
+            idx += 1
+        final_review_verdict(parent_k, verdict_a, text_a, bounce_target=b_target, role="agent2")
     elif cmd == "versions":
         list_versions(role=active_role)
     elif cmd in ("set-fixversion", "set-fix-version") and len(remaining_argv) == 3:

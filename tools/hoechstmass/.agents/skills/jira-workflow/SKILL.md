@@ -28,6 +28,10 @@ python3 tools/workflow_util.py --as agent1 submit-stage <PARENT_KEY> <STAGE> <TE
 # 2. Record an independent Gate 1-5 audit verdict as agent2 (PASS or REVISION):
 python3 tools/workflow_util.py --as agent2 gate-verdict <SUBTASK_KEY> PASS "<AUDIT_REPORT_OR_@FILE>"
 python3 tools/workflow_util.py --as agent2 gate-verdict <SUBTASK_KEY> REVISION "<AUDIT_REPORT_OR_@FILE>"
+
+# 3. Record Stage 6 ('Final Review (Agent)') Cold Carbon verdict as agent2 (PASS or BOUNCE):
+python3 tools/jira_util.py --as agent2 final-review-verdict <PARENT_KEY> PASS "<EXECUTIVE_SUMMARY_OR_@FILE>"
+python3 tools/jira_util.py --as agent2 final-review-verdict <PARENT_KEY> BOUNCE "<DEFECT_REPORT_OR_@FILE>" --bounce-target=implementation
 ```
 
 ## Common Issue Tracking Commands
