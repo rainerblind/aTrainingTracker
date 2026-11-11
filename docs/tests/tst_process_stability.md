@@ -1487,7 +1487,7 @@
 ### TST-PRO-045: **ASPICE SWE.5 Software Integration Verification Strategy Contract Test Suite** [Verified]
 - **Requirement(s)**: `REQ-PRO-045`
 - **Component**: `docs/architecture/integration_strategy.md`, `docs/architecture.md`, `AspiceSweAuditContractTest.kt`
-- **Jira**: `ATT-6183`
+- **Jira**: `ATT-6183, ATT-6736`
 - **Test Description**:
   1. *Integration Strategy Structural Completeness Test (`TST-PRO-045.1`, `AspiceSweAuditContractTest.kt`)*:
   • Verify existence of `docs/architecture/integration_strategy.md`.

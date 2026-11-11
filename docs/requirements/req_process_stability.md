@@ -2349,32 +2349,32 @@ The workflow SHALL mandate that:
 
 
 ### REQ-PRO-045: ASPICE SWE.5 Software Integration Verification Strategy [Verified]
-- **Tests**: `TST-PRO-045` | **Tickets**: `ATT-6183`
+- **Tests**: `TST-PRO-045` | **Tickets**: `ATT-6183, ATT-6736`
 - **Implementation**: `docs/architecture/integration_strategy.md`, `docs/architecture.md`, `AspiceSweAuditContractTest.kt`
-- **Rationale**: Prior to ATT-6183, aTrainingTracker lacked a formal Software Integration Verification Strategy (ASPICE SWE.5 BP1). Integration verification was informally conflated with unit testing during the Sprint Integration Gate without a documented sequence across architectural interfaces (`IF-SWE-01`..`IF-SWE-08`), defined verification levels, explicit entry/exit criteria, or structured regression tiers (Finding C-09). Formalizing this strategy eliminates integration risk and fulfills ASPICE Level 2 SWE.5 requirements (ATT-6183, refining `REQ-PRO-034` under Epic `ATT-6142`):
+- **Rationale**: Prior to ATT-6183, aTrainingTracker lacked a formal Software Integration Verification Strategy (ASPICE SWE.5 BP1). Integration verification was informally conflated with unit testing during the Sprint Integration Gate without a documented sequence across architectural interfaces (`IF-SWE-01`..`IF-SWE-08`), defined verification levels, explicit entry/exit criteria, or structured regression tiers (Finding C-09). In ATT-6736, the strategy is fully code-grounded to align with the CI API 34 emulator runner, local in-sprint emulator retirement (Rule 79), mandatory real physical phone evaluation during Ceremony 2 Joint Review, authentic test doubles/fakes replacing MockWebServer, proper dbDispatcher attribution to KnownLocationsRepository, authentic TrackOnMapAftermathViewModel, 3,660+ Tier 2 test count, and sprint_bisect.py defect bisection tooling (ATT-6183, ATT-6736, refining `REQ-PRO-034` under Epic `ATT-6142`):
 - **Description**:
   1. *Formal Integration Strategy Document (`REQ-PRO-045.1`, integration_strategy.md)*:
      • The architecture repository SHALL maintain `docs/architecture/integration_strategy.md` defining:
-       - Bottom-up integration sequence across interfaces (`IF-SWE-06` Databases $\to$ `IF-SWE-04`/`03` Hardware & Sensor Ingestion $\to$ `IF-SWE-05` Domain Calculators & Tracking $\to$ `IF-SWE-02`/`07`/`08` Repositories, Exporters & Cloud $\to$ `IF-SWE-01` Jetpack Compose UI).
-       - Three verification levels: Level 1 (JVM/Robolectric Unit & Subsystem), Level 2 (Instrumented Android / Emulator), Level 3 (Physical Hardware & Script Simulators).
+       - Bottom-up integration sequence across interfaces (`IF-SWE-06` Databases $\to$ `IF-SWE-04`/`03` Hardware & Sensor Ingestion $\to$ `IF-SWE-05` Domain Calculators & Tracking $\to$ `IF-SWE-02`/`07`/`08` Repositories, Exporters & Cloud $\to$ `IF-SWE-01` Jetpack Compose UI) with authentic components (`TrackOnMapAftermathViewModel`, authentic test doubles/fakes replacing `MockWebServer`, and proper `dbDispatcher` attribution to `KnownLocationsRepository`).
+       - Three verification levels: Level 1 (JVM/Robolectric Unit & Subsystem), Level 2 (Instrumented Android / CI API 34 Emulator Smoke Gate with local in-sprint emulator retirement under Rule 79), Level 3 (Physical Hardware & Script Simulators, with mandatory real-phone evaluation during Ceremony 2 Joint Review).
        - Formal Entry and Exit criteria for each level and release candidate milestone.
-       - Two-Tier regression selection strategy (Tier 1 targeted package/contract tests per in-sprint ticket; Tier 2 full unit test suite & governance at Sprint Integration Gate) and git bisect defect localization.
+       - Two-Tier regression selection strategy (Tier 1 targeted package/contract tests per in-sprint ticket; Tier 2 full unit test suite of 3,660+ tests & governance at Sprint Integration Gate) and defect bisection workflow using `tools/sprint_bisect.py` exponential milestone probing and Git bisection.
   2. *Architecture Master Summary Integration (`REQ-PRO-045.2`)*:
-     • `docs/architecture.md` Section 6 SHALL integrate a Software Integration Verification Strategy summary linking to `docs/architecture/integration_strategy.md`.
+     • `docs/architecture.md` Section 6 SHALL integrate a Software Integration Verification Strategy summary linking to `docs/architecture/integration_strategy.md`, with authentic component/threading allocations matching code reality.
   3. *Automated Strategy Conformance Contract (`REQ-PRO-045.3`)*:
      • `AspiceSweAuditContractTest.kt` SHALL assert that `docs/architecture/integration_strategy.md` and `docs/architecture.md` Section 6 exist and contain all required sections and interface references.
 - **Requirement Archaeology & Chesterton's Fence Audit**:
-  1. *Original Requirement ID & Target*: Net-new requirement `REQ-PRO-045` (*ASPICE SWE.5 Software Integration Verification Strategy*), refining `REQ-PRO-034` (*SWE.1/2/4/6 Hardening*) and `REQ-PRO-044` (*Software Interface Specification*). Targets `docs/architecture/integration_strategy.md`, `docs/architecture.md`, and `AspiceSweAuditContractTest.kt`.
-  2. *Historical Origin & Commit Trace*: Independent ASPICE pre-assessment finding C-09 (2026-11-08) and ticket ATT-6183.
-  3. *Root Reason for Existing Formulation*: High-level test runs were historically considered sufficient; ASPICE Level 2 mandates an explicit integration strategy.
+  1. *Original Requirement ID & Target*: `REQ-PRO-045` (*ASPICE SWE.5 Software Integration Verification Strategy*), refining `REQ-PRO-034` (*SWE.1/2/4/6 Hardening*) and `REQ-PRO-044` (*Software Interface Specification*). Targets `docs/architecture/integration_strategy.md`, `docs/architecture.md`, and `AspiceSweAuditContractTest.kt`.
+  2. *Historical Origin & Commit Trace*: Independent ASPICE pre-assessment finding C-09 (2026-11-08) and tickets ATT-6183, ATT-6736.
+  3. *Root Reason for Existing Formulation*: ATT-6183 initially authored the SWE.5 integration strategy document. Several component references (`AftermathViewModel`, `MockWebServer`) and test counts were draft placeholders not fully cross-referenced against authentic codebase symbols.
   4. *Preservation of Core Invariants*: Existing SWE.2 interface definitions (`IF-SWE-01`..`IF-SWE-08`), contract tests, and Two-Tier test governance remain 100% preserved.
 - **Acceptance Criteria (Given-When-Then)**:
   • *Given* `docs/architecture/integration_strategy.md`,
   • *When* inspected,
-  • *Then* it SHALL define integration sequence, 3 verification levels, entry/exit criteria, and two-tier regression selection referencing `IF-SWE-01` through `IF-SWE-08`.
+  • *Then* it SHALL define integration sequence, 3 verification levels (Level 2 CI API 34 smoke & Rule 79 local emulator retirement, Level 3 Ceremony 2 real phone), entry/exit criteria, and two-tier regression selection referencing `IF-SWE-01` through `IF-SWE-08`, with authentic test doubles, 3,660+ tests, and `tools/sprint_bisect.py`.
   • *Given* `docs/architecture.md`,
   • *When* inspecting Section 6,
-  • *Then* it SHALL link to `integration_strategy.md` and summarize integration order.
+  • *Then* it SHALL link to `integration_strategy.md` and summarize integration order with code-grounded component allocations.
   • *Given* `AspiceSweAuditContractTest.kt`,
   • *When* executed as part of the unit test suite,
   • *Then* all strategy conformance assertions pass with 100% success.

@@ -10,7 +10,7 @@ Each architectural interface defines its provider, consumer, operations, data sc
 
 | Interface ID | Boundary | Provider Element | Consumer Element | Protocol / Mechanism | Threading Contract |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| `IF-SWE-01` | UI $\to$ ViewModel | ViewModels (`TrackingViewModel`, `AftermathViewModel`) | Jetpack Compose Composables | Unidirectional MVI / `StateFlow` | `Dispatchers.Main` |
+| `IF-SWE-01` | UI $\to$ ViewModel | ViewModels (`TrackingViewModel`, `TrackOnMapAftermathViewModel`) | Jetpack Compose Composables | Unidirectional MVI / `StateFlow` | `Dispatchers.Main` |
 | `IF-SWE-02` | ViewModel $\to$ Repository | Repositories (`WorkoutRepository`, `BANALServiceRepository`) | ViewModels | Asynchronous Coroutines (`suspend fun`) | `Dispatchers.IO` |
 | `IF-SWE-03` | Inter-Service Ingestion | `BANALServiceComm` (Local Binder on `BANALService`) | `TrackerService` | Android Local Binder IPC & Broadcasts | Service Thread / Binder Pool |
 | `IF-SWE-04` | Hardware $\to$ Services | Hardware HAL (BLE Gatt, ANT+ Plugin, Location Provider) | `BANALService`, `TrackerService` | System Callbacks (`onCharacteristicChanged`) | Hardware Callback Thread |
@@ -24,7 +24,7 @@ Each architectural interface defines its provider, consumer, operations, data sc
 ## 2. Detailed Software Interface Specifications
 
 ### 2.1 IF-SWE-01: Presentation Layer UI to ViewModel (Jetpack Compose MVI)
-* **Provider**: Lifecycle ViewModels (`TrackingViewModel`, `ControlTrackingViewModel`, `AftermathViewModel`, `MapFragmentWithTrackViewModel`).
+* **Provider**: Lifecycle ViewModels (`TrackingViewModel`, `ControlTrackingViewModel`, `TrackOnMapAftermathViewModel`, `MapFragmentWithTrackViewModel`).
 * **Consumer**: Declarative Jetpack Compose Composables (`TrackingTabsScreen`, `WorkoutDetailScreen`, `TrackOnMapScreen`).
 * **Operations / Method Signatures**:
   * `val uiState: StateFlow<UiState>`: Observable read-only stream of immutable UI state.
@@ -41,7 +41,7 @@ Each architectural interface defines its provider, consumer, operations, data sc
 
 ### 2.2 IF-SWE-02: ViewModel to Repository Layer
 * **Provider**: Domain Repositories (`WorkoutRepository`, `BANALServiceRepository`, `SportTypesRepository`, `LiveSegmentsRepository`).
-* **Consumer**: ViewModels (`TrackingViewModel`, `EquipmentViewModel`, `AftermathViewModel`).
+* **Consumer**: ViewModels (`TrackingViewModel`, `EquipmentViewModel`, `TrackOnMapAftermathViewModel`).
 * **Operations / Method Signatures**:
   * `suspend fun getWorkout(workoutId: Long): Workout?`: Asynchronous entity query.
   * `suspend fun saveWorkout(workout: Workout): Long`: Transactional mutation.
