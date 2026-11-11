@@ -154,4 +154,28 @@ class HealthConnectSyncTest {
         assertTrue(result.isSuccess)
         coVerify(atLeast = 1) { mockClient.updateRecords(any()) }
     }
+
+    @Test
+    fun testForceManualSyncBypassesGlobalDisabledSetting() = runBlocking {
+        TrainingApplication.setSyncToHealthConnect(false)
+
+        val result = HealthConnectManager.syncWorkout(context, sampleWorkout(), force = true)
+        assertTrue(result.isSuccess)
+        coVerify(atLeast = 1) { mockClient.insertRecords(any()) }
+    }
+
+    @Test
+    fun testRoutePermissionGatingWhenRouteDenied() = runBlocking {
+        TrainingApplication.setSyncToHealthConnect(true)
+
+        // Granted write permissions omit WRITE_EXERCISE_ROUTE
+        val grantedWithoutRoute = HealthConnectManager.REQUIRED_PERMISSIONS.filter {
+            it != "android.permission.health.WRITE_EXERCISE_ROUTE"
+        }.toSet()
+        coEvery { mockPermissionController.getGrantedPermissions() } returns grantedWithoutRoute
+
+        val result = HealthConnectManager.syncWorkout(context, sampleWorkout())
+        assertTrue(result.isSuccess)
+        coVerify(atLeast = 1) { mockClient.insertRecords(any()) }
+    }
 }

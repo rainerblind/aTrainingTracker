@@ -19,15 +19,24 @@
 package com.atrainingtracker.trainingtracker.cloud.healthconnect
 
 import android.content.Context
+import androidx.health.connect.client.records.CyclingPedalingCadenceRecord
 import androidx.health.connect.client.records.DistanceRecord
 import androidx.health.connect.client.records.ElevationGainedRecord
 import androidx.health.connect.client.records.ExerciseRouteResult
 import androidx.health.connect.client.records.ExerciseSessionRecord
+import androidx.health.connect.client.records.HeartRateRecord
+import androidx.health.connect.client.records.StepsCadenceRecord
+import androidx.health.connect.client.records.TotalCaloriesBurnedRecord
 import androidx.test.core.app.ApplicationProvider
 import com.atrainingtracker.banalservice.BSportType
+import com.atrainingtracker.trainingtracker.database.WorkoutSamplesRepository
 import com.atrainingtracker.trainingtracker.database.WorkoutSource
+import com.atrainingtracker.trainingtracker.database.WorkoutTelemetrySample
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
 import com.atrainingtracker.trainingtracker.ui.components.workoutextrema.ExtremaDataRow
+import io.mockk.coEvery
+import io.mockk.mockk
+import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
@@ -60,8 +69,11 @@ class HealthConnectRecordMapperTest {
         trainer: Boolean = false,
         distanceMeters: Double = 10000.0,
         ascentMeters: Long = 150L,
-        calories: Double = 350.0
+        calories: Double = 350.0,
+        totalTimeSec: Long = 2000L
     ): WorkoutData {
+        val testLdt = LocalDateTime.of(2026, 11, 10, 10, 0)
+        val startTime = testLdt.toEpochSecond(java.time.ZoneOffset.UTC)
         return WorkoutData(
             id = 42L,
             finished = true,
@@ -70,10 +82,10 @@ class HealthConnectRecordMapperTest {
             sportId = 1L,
             sportName = "Bike",
             bSportType = bSportType,
-            startTimeS = 1762770000L,
+            startTimeS = startTime,
             formattedDate = "10.11.2026",
             formattedTime = "10:00",
-            localDateTime = LocalDateTime.of(2026, 11, 10, 10, 0),
+            localDateTime = testLdt,
             equipmentName = "Road Bike",
             equipmentId = 10L,
             commute = false,
@@ -86,7 +98,7 @@ class HealthConnectRecordMapperTest {
             totalDistance = distanceMeters,
             maxDisplacement = 5000.0,
             activeTimeSec = 1800L,
-            totalTimeSec = 2000L,
+            totalTimeSec = totalTimeSec,
             avgSpeedMps = 5.0,
             ascentMeters = ascentMeters,
             descentMeters = 140L,
@@ -95,6 +107,7 @@ class HealthConnectRecordMapperTest {
             description = "Test description",
             goal = null,
             method = null,
+            calories = calories.toInt(),
             stravaSportName = "Ride",
             extremaRows = listOf(
                 ExtremaDataRow(
@@ -143,8 +156,9 @@ class HealthConnectRecordMapperTest {
         assertEquals("Morning Ride", record.title)
         assertEquals(ExerciseSessionRecord.EXERCISE_TYPE_BIKING, record.exerciseType)
         assertEquals("workout_2026-11-10-100000", record.metadata.clientRecordId)
-        assertEquals(Instant.ofEpochSecond(1762770000L), record.startTime)
-        assertEquals(Instant.ofEpochSecond(1762770000L + 2000L), record.endTime)
+        val expectedStart = LocalDateTime.of(2026, 11, 10, 10, 0).toInstant(java.time.ZoneOffset.UTC)
+        assertEquals(expectedStart, record.startTime)
+        assertEquals(expectedStart.plusSeconds(2000L), record.endTime)
     }
 
     @Test
@@ -171,5 +185,125 @@ class HealthConnectRecordMapperTest {
 
         val hasElevation = seriesRecords.any { it is ElevationGainedRecord }
         assertEquals(false, hasElevation) // Ascent was 0
+    }
+
+    @Test
+    fun testTypedCaloriesExtractionFromWorkoutData() = runBlocking {
+        val workout = createWorkoutData(calories = 540.0)
+        val (_, seriesRecords) = HealthConnectRecordMapper.extractRecords(context, workout)
+        val calorieRecord = seriesRecords.filterIsInstance<TotalCaloriesBurnedRecord>().firstOrNull()
+
+        assertNotNull(calorieRecord)
+        assertEquals(540.0, calorieRecord!!.energy.inKilocalories, 0.01)
+        assertEquals("workout_2026-11-10-100000_calories", calorieRecord.metadata.clientRecordId)
+    }
+
+    @Test
+    fun testRoutePermissionGatingWhenRouteDenied() = runBlocking {
+        val mockRepo = mockk<WorkoutSamplesRepository>()
+        coEvery { mockRepo.getSamples(any()) } returns listOf(
+            WorkoutTelemetrySample(
+                sampleIdx = 0L,
+                timeString = "2026-11-10 10:00:01",
+                latitude = 48.137,
+                longitude = 11.575,
+                altitude = 520.0
+            )
+        )
+
+        val workout = createWorkoutData(trainer = false)
+
+        // When route permission is granted
+        val (sessionWithRoute, _) = HealthConnectRecordMapper.extractRecords(
+            context = context,
+            workoutData = workout,
+            hasRoutePermission = true,
+            repository = mockRepo
+        )
+        val routeResult = sessionWithRoute.exerciseRouteResult
+        assertTrue(routeResult is ExerciseRouteResult.Data)
+        assertNotNull((routeResult as ExerciseRouteResult.Data).exerciseRoute)
+
+        // When route permission is denied (REQ-SET-101.2)
+        val (sessionWithoutRoute, _) = HealthConnectRecordMapper.extractRecords(
+            context = context,
+            workoutData = workout,
+            hasRoutePermission = false,
+            repository = mockRepo
+        )
+        assertTrue(sessionWithoutRoute.exerciseRouteResult is ExerciseRouteResult.NoData)
+    }
+
+    @Test
+    fun testCadenceSeriesMappingForBikeAndRun() = runBlocking {
+        val mockRepo = mockk<WorkoutSamplesRepository>()
+        coEvery { mockRepo.getSamples(any()) } returns listOf(
+            WorkoutTelemetrySample(
+                sampleIdx = 0L,
+                timeString = "2026-11-10 10:00:01",
+                cadenceRpm = 85.0
+            ),
+            WorkoutTelemetrySample(
+                sampleIdx = 1L,
+                timeString = "2026-11-10 10:00:02",
+                cadenceRpm = 88.0
+            )
+        )
+
+        // Bike workout maps to CyclingPedalingCadenceRecord
+        val bikeWorkout = createWorkoutData(bSportType = BSportType.BIKE)
+        val (_, bikeSeries) = HealthConnectRecordMapper.extractRecords(
+            context = context,
+            workoutData = bikeWorkout,
+            repository = mockRepo
+        )
+        val cyclingCadence = bikeSeries.filterIsInstance<CyclingPedalingCadenceRecord>().firstOrNull()
+        assertNotNull(cyclingCadence)
+        assertEquals(2, cyclingCadence!!.samples.size)
+        assertEquals(85.0, cyclingCadence.samples[0].revolutionsPerMinute, 0.01)
+
+        // Run workout maps to StepsCadenceRecord
+        val runWorkout = createWorkoutData(bSportType = BSportType.RUN)
+        val (_, runSeries) = HealthConnectRecordMapper.extractRecords(
+            context = context,
+            workoutData = runWorkout,
+            repository = mockRepo
+        )
+        val stepsCadence = runSeries.filterIsInstance<StepsCadenceRecord>().firstOrNull()
+        assertNotNull(stepsCadence)
+        assertEquals(2, stepsCadence!!.samples.size)
+        assertEquals(85.0, stepsCadence.samples[0].rate, 0.01)
+    }
+
+    @Test
+    fun testSeriesSampleChunkingAt2000Bound() = runBlocking {
+        val mockRepo = mockk<WorkoutSamplesRepository>()
+        // Generate 4,500 samples across duration
+        val samples = (0 until 4500L).map { idx ->
+            WorkoutTelemetrySample(
+                sampleIdx = idx,
+                timeString = null, // Will use fallbackStartTime.plusSeconds(idx)
+                heartRate = 140
+            )
+        }
+        coEvery { mockRepo.getSamples(any()) } returns samples
+
+        val workout = createWorkoutData(totalTimeSec = 5000L)
+        val (_, seriesRecords) = HealthConnectRecordMapper.extractRecords(
+            context = context,
+            workoutData = workout,
+            repository = mockRepo
+        )
+
+        val hrRecords = seriesRecords.filterIsInstance<HeartRateRecord>()
+        // 4,500 samples chunked into <= 2,000 gives 3 records (2000, 2000, 500)
+        assertEquals(3, hrRecords.size)
+        assertEquals(2000, hrRecords[0].samples.size)
+        assertEquals(2000, hrRecords[1].samples.size)
+        assertEquals(500, hrRecords[2].samples.size)
+
+        assertEquals("workout_2026-11-10-100000_hr_0", hrRecords[0].metadata.clientRecordId)
+        assertEquals("workout_2026-11-10-100000_hr_1", hrRecords[1].metadata.clientRecordId)
+        assertEquals("workout_2026-11-10-100000_hr_2", hrRecords[2].metadata.clientRecordId)
     }
 }

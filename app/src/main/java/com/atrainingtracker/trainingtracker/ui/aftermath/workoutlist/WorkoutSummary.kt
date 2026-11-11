@@ -20,6 +20,7 @@ package com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist
 
 import android.app.Application
 import com.atrainingtracker.trainingtracker.TrainingApplication
+import com.atrainingtracker.trainingtracker.cloud.healthconnect.HealthConnectManager
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -235,7 +236,10 @@ fun WorkoutSummary(
             onClusterClick = onClusterClick,
             onEditWorkout = onEditWorkout,
             onShareWorkout = if (workoutData.headerData.finished) { { showShareModeSheet = true } } else null,
-            onClearRecordingErrors = { coroutineScope.launch { repository.clearRecordingErrors(workoutData.id) } }
+            onClearRecordingErrors = { coroutineScope.launch { repository.clearRecordingErrors(workoutData.id) } },
+            onSyncHealthConnect = if (workoutData.headerData.finished && HealthConnectManager.isAvailable(context)) {
+                { HealthConnectManager.syncWorkoutAsync(context, workoutData, force = true) }
+            } else null
         )
 
         HorizontalDivider(

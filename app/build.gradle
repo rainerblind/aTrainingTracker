@@ -255,8 +255,8 @@ dependencies {
     // Garmin FIT SDK (ATT-1827 / ATT-1117)
     implementation 'com.garmin:fit:21.141.0'
 
-    // Android Health Connect (ATT-3052)
-    implementation 'androidx.health.connect:connect-client:1.1.0-alpha11'
+    // Android Health Connect (ATT-3052, ATT-6711)
+    implementation 'androidx.health.connect:connect-client:1.1.0'
 
     // --- Unit Testing ---
     testImplementation 'junit:junit:4.13.2'

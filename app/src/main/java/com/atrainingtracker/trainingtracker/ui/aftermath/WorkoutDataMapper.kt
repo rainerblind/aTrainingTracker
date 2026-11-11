@@ -224,6 +224,9 @@ class WorkoutDataMapper(
             description = cursor.getString(cursor.getColumnIndexOrThrow(WorkoutSummaries.DESCRIPTION)),
             goal = cursor.getString(cursor.getColumnIndexOrThrow(WorkoutSummaries.GOAL)),
             method = cursor.getString(cursor.getColumnIndexOrThrow(WorkoutSummaries.METHOD)),
+            calories = cursor.getColumnIndex(WorkoutSummaries.CALORIES).takeIf { it >= 0 }?.let {
+                if (cursor.isNull(it)) null else cursor.getInt(it)
+            },
 
             stravaSportName = sportTypeDatabaseManager.getStravaName(sportId),
 
@@ -567,6 +570,7 @@ class WorkoutDataMapper(
         val description: String?,
         val goal: String?,
         val method: String?,
+        val calories: Int? = null,
         val recordingErrors: String? = null
     )
 
@@ -606,6 +610,9 @@ class WorkoutDataMapper(
         val description = cursor.getString(cursor.getColumnIndexOrThrow(WorkoutSummaries.DESCRIPTION))
         val goal = cursor.getString(cursor.getColumnIndexOrThrow(WorkoutSummaries.GOAL))
         val method = cursor.getString(cursor.getColumnIndexOrThrow(WorkoutSummaries.METHOD))
+        val calories = cursor.getColumnIndex(WorkoutSummaries.CALORIES).takeIf { it >= 0 }?.let {
+            if (cursor.isNull(it)) null else cursor.getInt(it)
+        }
         val recordingErrors = cursor.getColumnIndex(WorkoutSummaries.RECORDING_ERRORS).takeIf { it >= 0 }?.let {
             if (cursor.isNull(it)) null else cursor.getString(it)
         }
@@ -643,6 +650,7 @@ class WorkoutDataMapper(
             description = description,
             goal = goal,
             method = method,
+            calories = calories,
             recordingErrors = recordingErrors
         )
     }
@@ -819,6 +827,7 @@ class WorkoutDataMapper(
             description = snapshot.description,
             goal = snapshot.goal,
             method = snapshot.method,
+            calories = snapshot.calories,
 
             stravaSportName = sportInfo?.stravaSportName ?: sportTypeDatabaseManager.getStravaName(snapshot.sportId),
             stravaActivityData = stravaActivityData,

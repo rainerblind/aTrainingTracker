@@ -105,6 +105,7 @@ data class WorkoutData(
     val description: String?,
     val goal: String?,
     val method: String?,
+    val calories: Int? = null,
 
     val stravaSportName: String?,
 

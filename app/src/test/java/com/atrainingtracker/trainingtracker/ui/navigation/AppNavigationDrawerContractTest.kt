@@ -86,6 +86,25 @@ class AppNavigationDrawerContractTest {
     }
 
     /**
+     * TST-SET-103.4: Verify Health Connect drawer item configuration and route resolution.
+     */
+    @Test
+    fun testHealthConnectNavigationDrawerContract() {
+        // Verify R.id.drawer_health_connect resolves to SettingsBottomSheetType.HEALTH_CONNECT
+        assertEquals(SettingsBottomSheetType.HEALTH_CONNECT, NavRoutes.toBottomSheetType(R.id.drawer_health_connect))
+
+        // Verify AppNavigationDrawer groups contain drawer_health_connect under online communities
+        val groups = createDrawerGroups(R.string.tab_start)
+        val onlineCommunitiesGroup = groups.firstOrNull { it.titleRes == R.string.prefsOnlineCommunities }
+        assertNotNull("prefsOnlineCommunities group must exist", onlineCommunitiesGroup)
+        val healthConnectItem = onlineCommunitiesGroup!!.items.firstOrNull { it.id == R.id.drawer_health_connect }
+        assertNotNull("drawer_health_connect item must exist in online communities group", healthConnectItem)
+        assertEquals(R.drawable.ic_health_connect, healthConnectItem!!.iconRes)
+        assertEquals(R.string.health_connect_title, healthConnectItem.titleRes)
+        assertEquals(true, healthConnectItem.tintIcon)
+    }
+
+    /**
      * TST-UI-487.2: Verify units dialog imperial option localization across locales.
      */
     @Test

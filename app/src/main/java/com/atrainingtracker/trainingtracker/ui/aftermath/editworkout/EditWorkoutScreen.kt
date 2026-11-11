@@ -97,6 +97,14 @@ fun EditWorkoutDialog(
     val sportTypes by viewModel.sportTypeNames.observeAsState(emptyList())
     val equipmentNames by viewModel.equipmentNames.observeAsState(emptyList())
 
+    val localContext = androidx.compose.ui.platform.LocalContext.current
+    val isHealthConnectAvailable = remember {
+        com.atrainingtracker.trainingtracker.cloud.healthconnect.HealthConnectManager.isAvailable(localContext)
+    }
+    var syncToHealthConnect by remember {
+        mutableStateOf(TrainingApplication.syncToHealthConnect())
+    }
+
     AppModalBottomSheet(
         title = stringResource(R.string.edit_workout),
         icon = Icons.Default.Edit,
@@ -105,6 +113,15 @@ fun EditWorkoutDialog(
             AppDialogActions.SaveCancel(
                 onSave = {
                     viewModel.saveChanges()
+                    if (isHealthConnectAvailable && syncToHealthConnect) {
+                        workoutData?.let { data ->
+                            com.atrainingtracker.trainingtracker.cloud.healthconnect.HealthConnectManager.syncWorkoutAsync(
+                                localContext.applicationContext,
+                                data,
+                                force = true
+                            )
+                        }
+                    }
                     onDismiss()
                 },
                 onCancel = onDismiss
@@ -328,19 +345,12 @@ fun EditWorkoutDialog(
             }
 
             // 5b. Sync to Health Connect (Conditional on Health Connect availability)
-            val localContext = androidx.compose.ui.platform.LocalContext.current
-            if (com.atrainingtracker.trainingtracker.cloud.healthconnect.HealthConnectManager.isAvailable(localContext)) {
-                var syncToHealthConnect by remember { mutableStateOf(TrainingApplication.syncToHealthConnect()) }
+            if (isHealthConnectAvailable) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Checkbox(
                         checked = syncToHealthConnect,
                         onCheckedChange = { checked ->
                             syncToHealthConnect = checked
-                            if (checked) {
-                                workoutData?.let { data ->
-                                    com.atrainingtracker.trainingtracker.cloud.healthconnect.HealthConnectManager.syncWorkoutAsync(localContext, data)
-                                }
-                            }
                         }
                     )
                     Icon(

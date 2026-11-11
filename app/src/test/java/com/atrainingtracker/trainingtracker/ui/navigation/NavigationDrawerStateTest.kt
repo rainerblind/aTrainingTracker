@@ -125,13 +125,14 @@ class NavigationDrawerStateTest {
         assertEquals(R.drawable.ic_equipment_combined, equipmentItem.iconRes)
         assertEquals(R.string.equipment_management_title, equipmentItem.titleRes)
 
-        // Verify Online Communities ordering: Strava, Dropbox, Google Drive, Export, Backup & Restore (REQ-UI-463.1)
+        // Verify Online Communities ordering: Strava, Dropbox, Google Drive, Health Connect, Export, Backup & Restore (REQ-UI-463.1, REQ-SET-103)
         val onlineIds = onlineGroup.items.map { it.id }
         assertEquals(
             listOf(
                 R.id.drawer_strava,
                 R.id.drawer_dropbox,
                 R.id.drawer_google_drive,
+                R.id.drawer_health_connect,
                 R.id.drawer_export,
                 R.id.drawer_backup_restore
             ),
@@ -186,8 +187,8 @@ class NavigationDrawerStateTest {
         assertEquals("Default visible destination items when secondary groups are collapsed must be 9", 9, defaultVisibleCount)
 
         val allItems = groups.flatMap { it.items.map { item -> item.id } }
-        assertEquals("Navigation drawer must contain 26 total items across 6 groups", 26, allItems.size)
-        assertEquals("All 26 navigation items must have distinct IDs", 26, allItems.toSet().size)
+        assertEquals("Navigation drawer must contain 27 total items across 6 groups", 27, allItems.size)
+        assertEquals("All 27 navigation items must have distinct IDs", 27, allItems.toSet().size)
         org.junit.Assert.assertFalse(
             "drawer_search_settings must be removed from drawer destinations",
             allItems.contains(R.id.drawer_search_settings)

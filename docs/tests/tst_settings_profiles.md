@@ -1069,24 +1069,25 @@
   5. *Tier 1 Targeted BLE Regression Suite (`TST-SET-099.5`)*:
   • Run targeted test suites (`com.atrainingtracker.banalservice.devices.bluetooth_le.*`, `com.atrainingtracker.trainingtracker.build.*`) asserting 100% pass rate.
 
-### TST-SET-100: **Health Connect Client Availability & Permission Verification Suite** [Verified]
+### TST-SET-100: **Health Connect Client Availability & Permission Verification Suite** [Specified]
 - **Requirement(s)**: `REQ-SET-100`
-- **Component**: `HealthConnectManager.kt`, `HealthConnectAvailabilityTest.kt`
-- **Jira**: `ATT-3052`
-- **Status**: Verified
+- **Component**: `HealthConnectManager.kt`, `HealthConnectAvailabilityTest.kt`, `AndroidManifest.xml`
+- **Jira**: `ATT-3052`, `ATT-6711`
+- **Status**: Specified
 - **Test Description**:
   1. *SDK Status Contract Tests (`TST-SET-100.1`)*:
   • Verify `HealthConnectClient.getSdkStatus()` correctly routes `SDK_AVAILABLE`, `SDK_UNAVAILABLE`, and `SDK_UNAVAILABLE_PROVIDER_UPDATE_REQUIRED`.
   2. *Permission Contract & Manifest Verification (`TST-SET-100.2`)*:
-  • Verify required write permissions (`WRITE_EXERCISE`, `WRITE_EXERCISE_ROUTE`, `WRITE_HEART_RATE`, `WRITE_POWER`, `WRITE_SPEED`, `WRITE_DISTANCE`, `WRITE_TOTAL_CALORIES_BURNED`) are declared and checked.
+  • Verify required write permissions (`WRITE_EXERCISE`, `WRITE_EXERCISE_ROUTE`, `WRITE_HEART_RATE`, `WRITE_POWER`, `WRITE_SPEED`, `WRITE_DISTANCE`, `WRITE_ELEVATION_GAINED`, `WRITE_TOTAL_CALORIES_BURNED`, `WRITE_STEPS_CADENCE`, `WRITE_CYCLING_PEDALING_CADENCE`) are declared in `AndroidManifest.xml` and included in `REQUIRED_PERMISSIONS`.
+  • Verify `AndroidManifest.xml` declares `VIEW_PERMISSION_USAGE` activity alias targeting `MainActivityWithNavigation` with `android.permission.START_VIEW_PERMISSION_USAGE` and intent filter for `android.intent.action.VIEW_PERMISSION_USAGE` with category `android.intent.category.HEALTH_PERMISSIONS`.
   3. *Tier 1 Targeted Unit Tests (`TST-SET-100.3`)*:
   • Run targeted test suites (`com.atrainingtracker.trainingtracker.cloud.healthconnect.*`, `com.atrainingtracker.trainingtracker.build.*`) asserting 100% pass rate.
 
-### TST-SET-101: **Exercise Session & Telemetry Record Mapping Unit Test Suite** [Verified]
+### TST-SET-101: **Exercise Session & Telemetry Record Mapping Unit Test Suite** [Specified]
 - **Requirement(s)**: `REQ-SET-101`
-- **Component**: `HealthConnectRecordMapper.kt`, `HealthConnectRecordMapperTest.kt`
-- **Jira**: `ATT-3052`
-- **Status**: Verified
+- **Component**: `HealthConnectRecordMapper.kt`, `HealthConnectRecordMapperTest.kt`, `HealthConnectManager.kt`
+- **Jira**: `ATT-3052`, `ATT-6711`
+- **Status**: Specified
 - **Test Description**:
   1. *Sport Type to Exercise Type Mapping Test (`TST-SET-101.1`)*:
   • Assert `BSportType.BIKE` -> `EXERCISE_TYPE_BIKING`, `BSportType.RUN` -> `EXERCISE_TYPE_RUNNING`, trainer -> `EXERCISE_TYPE_BIKING_STATIONARY`, treadmill -> `EXERCISE_TYPE_RUNNING_TREADMILL`, and unknown -> `EXERCISE_TYPE_OTHER_WORKOUT`.
@@ -1095,8 +1096,15 @@
   • Verify HR samples converted to `HeartRateRecord.Sample` with valid bpm.
   • Verify power samples converted to `PowerRecord.Sample` with Watts.
   • Verify speed, distance, elevation gained, and calories series mapping.
-  3. *Timestamp Boundary Invariant Test (`TST-SET-101.3`)*:
+  • Verify cadence samples converted to `CyclingPedalingCadenceRecord` (cycling) and `StepsCadenceRecord` (running).
+  • Verify route permission gating: When `WRITE_EXERCISE_ROUTE` is not in granted permissions, `ExerciseSessionRecord` is constructed with `exerciseRoute = null` and no `SecurityException` is thrown.
+  3. *Timestamp Boundary & Numerical Calorie Invariant Test (`TST-SET-101.3`)*:
   • Verify all sample timestamps fall strictly within `[session.startTime, session.endTime]`.
+  • Verify `TotalCaloriesBurnedRecord` derives from numerical `WorkoutData.calories` without UI string parsing.
+  4. *IPC Series Sample Chunking Test (`TST-SET-101.4`)*:
+  • Verify series with >2,000 samples are partitioned into chunks containing $\le 2,000$ samples each.
+  5. *Repository Layering Architecture Test (`TST-SET-101.5`)*:
+  • Verify `HealthConnectRecordMapper` accesses samples via `WorkoutSamplesRepository`.
 
 ### TST-SET-102: **Trackless Indoor Workout Export Unit Test Suite** [Verified]
 - **Requirement(s)**: `REQ-SET-102`
@@ -1111,11 +1119,11 @@
   3. *Null Safety & Boundary Guard Test (`TST-SET-102.3`)*:
   • Verify zero NPEs or illegal argument exceptions when processing workouts with missing or partial telemetry channels.
 
-### TST-SET-103: **Health Connect Settings UI & Idempotent Sync Verification Suite** [Verified]
+### TST-SET-103: **Health Connect Settings UI & Idempotent Sync Verification Suite** [Specified]
 - **Requirement(s)**: `REQ-SET-103`
-- **Component**: `HealthConnectSettingsDialog.kt`, `HealthConnectManager.kt`, `HealthConnectSyncTest.kt`, `strings_health_connect.xml`
-- **Jira**: `ATT-3052`
-- **Status**: Verified
+- **Component**: `HealthConnectSettingsDialog.kt`, `HealthConnectManager.kt`, `AppNavigationDrawer.kt`, `NavRoutes.kt`, `WorkoutHeader.kt`, `EditWorkoutScreen.kt`, `HealthConnectSyncTest.kt`, `strings_health_connect.xml`
+- **Jira**: `ATT-3052`, `ATT-6712`, `ATT-6711`
+- **Status**: Specified
 - **Test Description**:
   1. *Settings Toggle State Persistence Test (`TST-SET-103.1`)*:
   • Verify toggle state binds to `TrainingApplication` / `SharedPreferences` preferences.
@@ -1123,6 +1131,12 @@
   • Verify `clientRecordId` generation is deterministic based on workout `fileBaseName` for sessions and sub-records.
   3. *9-Locale Translation Parity Verification (`TST-SET-103.3`)*:
   • Verify 100% parity across `values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/` for all planned strings via `TranslationParityTest`.
+  4. *Navigation Drawer Wiring & Route Mapping Test (`TST-SET-103.4`)*:
+  • Verify `drawer_health_connect` exists in `ids.xml`, is configured in `AppNavigationDrawer.kt` under `prefsOnlineCommunities` with Last Sync timestamp, and maps to `SettingsBottomSheetType.HEALTH_CONNECT` in `NavRoutes.toBottomSheetType()`.
+  5. *Manual Sync & Edit Workout Dialog Lifecycle Test (`TST-SET-103.5`)*:
+  • Verify `WorkoutHeader.onSyncHealthConnect` is wired and invokes `HealthConnectManager.syncWorkout(context, workoutData, force = true)`.
+  • Verify `HealthConnectManager.syncWorkout(..., force = true)` succeeds when global auto-sync is disabled.
+  • Verify `EditWorkoutScreen` does not trigger sync on checkbox toggle, but executes sync upon Save when checked.
 
 
 

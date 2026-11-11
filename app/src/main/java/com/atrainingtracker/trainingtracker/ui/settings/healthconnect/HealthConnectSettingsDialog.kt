@@ -18,6 +18,7 @@
 
 package com.atrainingtracker.trainingtracker.ui.settings.healthconnect
 
+import android.text.format.DateFormat
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -42,6 +43,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -54,8 +56,10 @@ import com.atrainingtracker.trainingtracker.cloud.healthconnect.HealthConnectHrv
 import com.atrainingtracker.trainingtracker.cloud.healthconnect.HealthConnectManager
 import com.atrainingtracker.trainingtracker.ui.components.core.AppBottomSheetContent
 import com.atrainingtracker.trainingtracker.ui.components.core.AppDialogActions
+import com.atrainingtracker.trainingtracker.ui.theme.safePainterResource
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import java.util.Date
 
 /**
  * Settings bottom sheet dialog for configuring Android Health Connect integration (REQ-SET-103).
@@ -74,6 +78,15 @@ fun HealthConnectSettingsDialog(
 
     val isAvailable = remember { HealthConnectManager.isAvailable(context) }
     val sdkStatus = remember { HealthConnectManager.getSdkStatus(context) }
+
+    val lastSyncTimestamp = remember { TrainingApplication.getHealthConnectLastSyncTimestamp() }
+    val lastSyncText = if (lastSyncTimestamp > 0) {
+        val dateStr = DateFormat.getMediumDateFormat(context).format(Date(lastSyncTimestamp))
+        val timeStr = DateFormat.getTimeFormat(context).format(Date(lastSyncTimestamp))
+        stringResource(R.string.google_drive_last_sync, "$dateStr $timeStr")
+    } else {
+        stringResource(R.string.google_drive_never_synced)
+    }
 
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = PermissionController.createRequestPermissionResultContract()
@@ -108,7 +121,8 @@ fun HealthConnectSettingsDialog(
 
     AppBottomSheetContent(
         title = stringResource(R.string.health_connect_title),
-        icon = Icons.Default.Favorite,
+        iconPainter = safePainterResource(id = R.drawable.ic_health_connect, fallback = Icons.Default.Favorite),
+        iconTint = Color.Unspecified,
         onDismissRequest = onDismiss,
         actions = {
             AppDialogActions.SaveCancel(
@@ -156,6 +170,11 @@ fun HealthConnectSettingsDialog(
                         )
                         Text(
                             text = stringResource(R.string.health_connect_sync_summary),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            text = lastSyncText,
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )

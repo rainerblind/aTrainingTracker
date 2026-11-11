@@ -20,6 +20,7 @@ package com.atrainingtracker.trainingtracker.ui.aftermath
 
 import android.app.Application
 import android.content.res.Configuration
+import com.atrainingtracker.trainingtracker.cloud.healthconnect.HealthConnectManager
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitEachGesture
@@ -604,6 +605,9 @@ fun WorkoutDetailTabbedContent(
                     onClusterClick = onClusterClick,
                     onEditWorkout = onEditWorkout?.let { edit -> { edit(workoutData.id) } },
                     onShareWorkout = { showShareModeSheet = true },
+                    onSyncHealthConnect = if (HealthConnectManager.isAvailable(context)) {
+                        { HealthConnectManager.syncWorkoutAsync(context, workoutData, force = true) }
+                    } else null,
                     actions = {
                         headerActions()
                         IconButton(

@@ -35,6 +35,7 @@ import com.atrainingtracker.trainingtracker.database.hrv.HrvPosture
 import com.atrainingtracker.trainingtracker.database.hrv.HrvReadinessDatabaseManager
 import com.atrainingtracker.trainingtracker.database.hrv.HrvReadinessRepository
 import io.mockk.coEvery
+import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.runBlocking
 import org.junit.After
@@ -102,6 +103,13 @@ class HealthConnectHrvImporterTest {
         context.deleteDatabase("HrvReadiness.db")
         HrvReadinessDatabaseManager.resetForTesting(null)
         HrvReadinessRepository.resetForTesting(null)
+    }
+
+    private fun createTestMetadata(id: String, packageName: String): Metadata {
+        val meta = mockk<Metadata>(relaxed = true)
+        every { meta.id } returns id
+        every { meta.dataOrigin } returns DataOrigin(packageName)
+        return meta
     }
 
     /**
@@ -198,18 +206,9 @@ class HealthConnectHrvImporterTest {
         coEvery { mockPermissionController.getGrantedPermissions() } returns HealthConnectManager.HRV_READ_PERMISSIONS
 
         val offset = ZoneOffset.UTC
-        val meta1 = Metadata(
-            id = "rec-hrv-1",
-            dataOrigin = DataOrigin("com.ouraring.oura")
-        )
-        val meta2 = Metadata(
-            id = "rec-hrv-2",
-            dataOrigin = DataOrigin("com.ouraring.oura")
-        )
-        val metaRhr = Metadata(
-            id = "rec-rhr-1",
-            dataOrigin = DataOrigin("com.ouraring.oura")
-        )
+        val meta1 = createTestMetadata("rec-hrv-1", "com.ouraring.oura")
+        val meta2 = createTestMetadata("rec-hrv-2", "com.ouraring.oura")
+        val metaRhr = createTestMetadata("rec-rhr-1", "com.ouraring.oura")
 
         val t1 = LocalDateTime.of(2026, 11, 9, 23, 30).toInstant(offset)
         val t2 = LocalDateTime.of(2026, 11, 10, 4, 30).toInstant(offset)
@@ -308,7 +307,7 @@ class HealthConnectHrvImporterTest {
         coEvery { mockPermissionController.getGrantedPermissions() } returns hrvOnlyPermissions
 
         val offset = ZoneOffset.UTC
-        val meta = Metadata(id = "rec-hrv-only", dataOrigin = DataOrigin("com.ouraring.oura"))
+        val meta = createTestMetadata("rec-hrv-only", "com.ouraring.oura")
         val t1 = LocalDateTime.of(2026, 11, 10, 4, 0).toInstant(offset)
         val hrv = HeartRateVariabilityRmssdRecord(
             time = t1,
@@ -361,8 +360,8 @@ class HealthConnectHrvImporterTest {
         coEvery { mockPermissionController.getGrantedPermissions() } returns HealthConnectManager.HRV_READ_PERMISSIONS
 
         val offset = ZoneOffset.UTC
-        val meta1 = Metadata(id = "page1-hrv", dataOrigin = DataOrigin("com.ouraring.oura"))
-        val meta2 = Metadata(id = "page2-hrv", dataOrigin = DataOrigin("com.ouraring.oura"))
+        val meta1 = createTestMetadata("page1-hrv", "com.ouraring.oura")
+        val meta2 = createTestMetadata("page2-hrv", "com.ouraring.oura")
 
         val t1 = LocalDateTime.of(2026, 11, 10, 2, 0).toInstant(offset)
         val t2 = LocalDateTime.of(2026, 11, 10, 5, 0).toInstant(offset)
@@ -436,7 +435,7 @@ class HealthConnectHrvImporterTest {
         coEvery { mockPermissionController.getGrantedPermissions() } returns HealthConnectManager.HRV_READ_PERMISSIONS
 
         val offset = ZoneOffset.UTC
-        val meta1 = Metadata(id = "midsleep-hrv", dataOrigin = DataOrigin("com.ouraring.oura"))
+        val meta1 = createTestMetadata("midsleep-hrv", "com.ouraring.oura")
         val tEarly = LocalDateTime.of(2026, 11, 10, 3, 0).toInstant(offset)
         val hrvEarly = HeartRateVariabilityRmssdRecord(
             time = tEarly,
@@ -481,7 +480,7 @@ class HealthConnectHrvImporterTest {
         assertEquals(30.0, initialEntry.rmssdMs, 1e-3)
 
         // Morning sync arrives: full night records + RHR = 50
-        val metaLate = Metadata(id = "morning-hrv", dataOrigin = DataOrigin("com.ouraring.oura"))
+        val metaLate = createTestMetadata("morning-hrv", "com.ouraring.oura")
         val tLate = LocalDateTime.of(2026, 11, 10, 7, 0).toInstant(offset)
         val hrvLate = HeartRateVariabilityRmssdRecord(
             time = tLate,
@@ -557,7 +556,7 @@ class HealthConnectHrvImporterTest {
         repository.insertEntry(userPinnedEntry)
 
         val offset = ZoneOffset.UTC
-        val meta = Metadata(id = "hc-hrv", dataOrigin = DataOrigin("com.ouraring.oura"))
+        val meta = createTestMetadata("hc-hrv", "com.ouraring.oura")
         val t = LocalDateTime.of(2026, 11, 10, 6, 0).toInstant(offset)
         val hrv = HeartRateVariabilityRmssdRecord(
             time = t,

@@ -166,6 +166,7 @@ object NavRoutes {
         R.id.drawer_strava -> SettingsBottomSheetType.STRAVA
         R.id.drawer_dropbox -> SettingsBottomSheetType.DROPBOX
         R.id.drawer_google_drive -> SettingsBottomSheetType.GOOGLE_DRIVE
+        R.id.drawer_health_connect -> SettingsBottomSheetType.HEALTH_CONNECT
         R.id.drawer_export -> SettingsBottomSheetType.EXPORT
         R.id.drawer_units -> SettingsBottomSheetType.UNITS
         R.id.drawer_display_settings -> SettingsBottomSheetType.DISPLAY
