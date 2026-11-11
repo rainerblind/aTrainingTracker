@@ -63,9 +63,9 @@
   2. Tapping this button SHALL trigger display of `FirstJubileeCelebrationDialog` with mock milestone data without mutating `SettingsDataStore.has_shown_first_jubilee_prompt`.
 
 ### REQ-REV-006: Map Snapshot Share Pager Stability, Duplicate Header Elimination & Caller State Restoration [Verified]
-- **Tests**: `TST-REV-007` | **Tickets**: `ATT-6322`
+- **Tests**: `TST-REV-007` | **Tickets**: `ATT-6322`, `ATT-6685`
 - **Implementation**: `WorkoutDetailTabbedContent.kt`, `MapDetailLayout.kt`, `TrackOnMapScreen.kt`, `WorkoutSummariesTabbedScreen.kt`
-- **Rationale**: Triggering 'Karten- & Analyse-Snapshot' in `WorkoutShareBottomSheet` must execute seamlessly without freezing the HorizontalPager at 50%, rendering duplicate visible headers under the tab row, or stranding the athlete on the wrong tab or screen after sharing.
+- **Rationale**: Triggering 'Karten- & Analyse-Snapshot' in `WorkoutShareBottomSheet` must execute seamlessly without freezing the HorizontalPager at 50%, rendering duplicate visible headers under the tab row, stranding the athlete on the wrong tab or screen after sharing, or crashing the UI thread with multithreaded access violations during GraphicsLayer rasterization.
 - **Description**:
   1. *Pager Scroll Key Invariant & Programmatic Navigation*: `WorkoutDetailTabbedContent` SHALL NOT include `pagerState.currentPage` in the `LaunchedEffect` key list for programmatic snapshot tab switching (`pendingAutoShare`). The system SHALL use `pagerState.scrollToPage(mapTabIndex)` (instant transition without intermediate animation frames) so the pager coroutine is never cancelled mid-animation or frozen at the 50% midpoint (`Rule 80` / `docs/coding_standards.md` §1.11).
   2. *Origin Tab & Caller Screen Restoration*:
@@ -73,6 +73,21 @@
      b. When opened with `initialAutoShareSnapshot = true` from workout list containers (`WorkoutSummariesTabbedScreen`, `WorkoutSummariesListFragment`, `WorkoutClustersScreen`), `onSnapshotComplete` SHALL be propagated via `TrackOnMapScreen` to automatically dismiss/pop the detail screen, returning the athlete to the origin list view.
   3. *MapDetailLayout Header Slot Offscreen Recording & Duplicate Prevention*: `MapDetailLayout` SHALL accept `showHeader: Boolean = true`. When `showHeader == false`, `MapDetailLayout` SHALL measure and record `header()` into `headerLayer` offscreen without rendering a second visible `WorkoutHeader` in the tab's upper layout column. `WorkoutDetailTabbedContent` SHALL pass `showHeader = false` to prevent duplicate visible header rendering below the tab row.
   4. *Preservation of Bitmap Output & Standalone Layout Invariants*: `headerLayer` in `MapDetailLayout` MUST continue producing a full-fidelity software bitmap for `combineWorkoutAndShare`. All standalone invocations of `MapDetailLayout` with `showHeader = true` MUST retain 100% visual layout parity.
+  5. *UI-Thread GraphicsLayer Rasterization & Safe Share Dispatching Contract (REQ-REV-006.5 / ATT-6685)*:
+     a. In `MapDetailLayout`, invoking `headerLayer.toImageBitmap().asAndroidBitmap()`, `elevationLayer.toImageBitmap().asAndroidBitmap()`, and `analyticsLayer.toImageBitmap().asAndroidBitmap()` inside `onSnapshotReady` MUST execute directly on the Main UI thread (`Dispatchers.Main.immediate` / `Dispatchers.Main`) to prevent multithreaded access violations on Compose's `SnapshotStateObserver`.
+     b. Downstream multi-bitmap composition, canvas assembly, and file persistence (`combineWorkoutAndShare`) SHALL remain offloaded to `Dispatchers.Default` / `Dispatchers.IO`.
+     c. The `onSnapshotReady` coroutine block SHALL encapsulate layer rasterization and share dispatching inside a `try-catch-finally` block ensuring that `isSharing = false` and `onSnapshotComplete?.invoke()` are guaranteed to execute even if an unexpected exception occurs during capture or sharing, preventing permanently stuck sharing states.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Amends `REQ-REV-006` (*Map Snapshot Share Pager Stability, Duplicate Header Elimination & Caller State Restoration*, `ATT-6322`). Targets `MapDetailLayout.kt`.
+2. *Historical Origin & Commit Trace*: Commit `5248ddab8` (`ATT-1890`) introduced `withContext(Dispatchers.Default)` around `toImageBitmap()`; commit `4fb53a57` (`ATT-6322`) introduced offscreen header measurement and recording when `showHeader = false`.
+3. *Root Reason for Existing Formulation*: Background dispatching was originally intended to prevent main-thread stutter during bitmap handling, but Compose's `GraphicsLayer` tree reads require state observation on the main Compose Owner's UI thread; worker thread execution pollutes `SnapshotStateObserver.previousThreadId` and triggers fatal crashes on the next VSync frame.
+4. *Preservation of Core Invariants*: Heavy bitmap stitching, scaling, and disk I/O in `combineWorkoutAndShare` remain 100% isolated on `Dispatchers.Default`; visual snapshot fidelity, offscreen header recording, and sharing sheet triggers remain completely preserved.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* `WorkoutDetailTabbedContent` active with `showHeader = false`,
+• *When* the user triggers *Karten- & Analyse-Snapshot* from the share sheet,
+• *Then* `headerLayer`, `elevationLayer`, and `analyticsLayer` rasterization executes on `Dispatchers.Main` without throwing `IllegalArgumentException` in `SnapshotStateObserver`, `combineWorkoutAndShare` stitches the full snapshot on `Dispatchers.Default`, and upon completion or failure `isSharing` is reset to false.
 
 ### REQ-REV-007: Workout Cluster Reassignment Centroid Integrity & Sport Frequency Synchronization [Verified]
 - **Tests**: `TST-REV-008` | **Tickets**: `ATT-6159`

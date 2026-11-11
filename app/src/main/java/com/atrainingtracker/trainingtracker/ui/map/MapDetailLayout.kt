@@ -338,27 +338,27 @@ fun MapDetailLayout(
                 onMapClick = onMapClick,
                 onSnapshotReady = { mapBitmap ->
                     scope.launch {
-                        val hBmp = if (headerLayer.size.width > 0 && headerLayer.size.height > 0) {
-                            withContext(Dispatchers.Default) {
+                        try {
+                            val hBmp = if (headerLayer.size.width > 0 && headerLayer.size.height > 0) {
                                 headerLayer.toImageBitmap().asAndroidBitmap()
-                            }
-                        } else null
+                            } else null
 
-                        val eBmp = if (elevationLayer.size.width > 0 && elevationLayer.size.height > 0) {
-                            withContext(Dispatchers.Default) {
+                            val eBmp = if (elevationLayer.size.width > 0 && elevationLayer.size.height > 0) {
                                 elevationLayer.toImageBitmap().asAndroidBitmap()
-                            }
-                        } else null
+                            } else null
 
-                        val aBmp = if (analyticsLayer.size.width > 0 && analyticsLayer.size.height > 0) {
-                            withContext(Dispatchers.Default) {
+                            val aBmp = if (analyticsLayer.size.width > 0 && analyticsLayer.size.height > 0) {
                                 analyticsLayer.toImageBitmap().asAndroidBitmap()
-                            }
-                        } else null
+                            } else null
 
-                        combineWorkoutAndShare(context, hBmp, mapBitmap, eBmp, aBmp)
-                        isSharing = false
-                        onSnapshotComplete?.invoke()
+                            combineWorkoutAndShare(context, hBmp, mapBitmap, eBmp, aBmp)
+                        } catch (t: Throwable) {
+                            android.util.Log.e("MapDetailLayout", "Failed to capture or share workout snapshot", t)
+                            android.widget.Toast.makeText(context, R.string.error_sharing_failed, android.widget.Toast.LENGTH_SHORT).show()
+                        } finally {
+                            isSharing = false
+                            onSnapshotComplete?.invoke()
+                        }
                     }
                 },
                 onSnapshotError = {
