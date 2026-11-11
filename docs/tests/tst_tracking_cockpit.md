@@ -1952,19 +1952,19 @@
 
 ### TST-CON-030: **Garmin Varia BLE V2 High-Resolution Radar Stream Test Suite** [Verified]
 - **Requirement(s)**: `REQ-CON-030` (`REQ-CON-030.1`..`REQ-CON-030.7`)
-- **Component**: `BTLERadarDevice.java`, `RadarTarget.kt`, `RadarWindowAggregator.kt`, `RadarTrafficSimulator.kt`, `SensorType.java`, `BluetoothConstants.java`, `strings_radar.xml`
-- **Jira**: `ATT-5095`
+- **Component**: `BTLERadarDevice.java`, `MyBTLEDevice.java`, `DeviceType.java`, `ActivityType.java`, `RadarTarget.kt`, `RadarWindowAggregator.kt`, `RadarTrafficSimulator.kt`, `SensorType.java`, `BluetoothConstants.java`, `strings_radar.xml`
+- **Jira**: `ATT-5095`, `ATT-6706`
 - **Test Description**:
-  1. *V2 Handshake Choreography & MTU Negotiation Tests (`TST-CON-030.1`, `BTLERadarDeviceTest.kt`)*:
-  • Verify request of MTU 247, bonding verification, and serialized GATT handshake execution on peripheral discovery of characteristic `6a4e3204`.
+  1. *V2 Handshake Choreography, MTU Negotiation & Notification Routing Tests (`TST-CON-030.1`, `BTLERadarDeviceTest.kt`, `MyBTLEDeviceTest.kt`)*:
+  • Verify request of MTU 247 enqueued in `mGattQueue`, bonding verification, serialized GATT handshake execution on peripheral discovery of characteristic `6a4e3204`, and end-to-end routing of V2 payloads through `isMeasurementCharacteristic` and `mGattCallback.onCharacteristicChanged`.
   2. *Automatic Legacy Fallback Invariant Tests (`TST-CON-030.2`, `BTLERadarDeviceTest.kt`)*:
-  • Verify immediate fallback to V1 characteristic `6a4e3203` when `6a4e3204` is absent or handshake negotiation times out.
+  • Verify immediate fallback to V1 characteristic `6a4e3203` when `6a4e3204` is absent, when device is unbonded, when handshake negotiation times out, or when CCCD descriptor write fails with non-GATT_SUCCESS status.
   3. *V2 Packet Parsing & Domain Mapping Tests (`TST-CON-030.3`, `BTLERadarDeviceTest.kt`)*:
   • Verify decoding of V2 multi-target packets, checking range up to 175 m (0.1 m resolution), approach speed, signed lateral offset, and vehicle size classification.
   4. *Lateral Passing Clearance & Large Vehicle Aggregation Tests (`TST-CON-030.4`, `RadarWindowAggregatorTest.kt`)*:
   • Verify latching of minimum lateral passing clearance when $y \le 3.0\text{ m}$ and cumulative tracking of large vehicle counts.
-  5. *SensorType Enum & Unit Formatter Tests (`TST-CON-030.5`, `SensorTypeTest.kt`)*:
-  • Verify `RADAR_PASSING_DISTANCE_m` and `RADAR_LARGE_VEHICLE_COUNT` sensor definitions, categories, and formatting parity.
+  5. *SensorType Enum, DeviceType Mapping & Unit Formatter Tests (`TST-CON-030.5`, `SensorTypeTest.kt`, `DeviceTypeTest.kt`)*:
+  • Verify `RADAR_PASSING_DISTANCE_m` and `RADAR_LARGE_VEHICLE_COUNT` sensor definitions, `DeviceType.getSensorDeviceTypes()` mappings to `BIKE_RADAR`, and formatting parity.
   6. *Traffic Simulator V2 Trajectory Tests (`TST-CON-030.6`, `RadarTrafficSimulatorTest.kt`)*:
   • Verify generation of simulated V2 frames with lateral offsets and vehicle classifications.
   7. *9-Language Localization Parity Test (`TST-CON-030.7`, `TranslationParityTest.kt`)*:

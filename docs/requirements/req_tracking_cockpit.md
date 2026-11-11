@@ -3510,23 +3510,31 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 **Invariants**: Guaranteed volume restoration in `finally`/`onDestroy()`; §3.4 warm static replay (zero `track.stop()`); zero main-thread blocking; zero SQLite schema modifications; 100% 9-language translation parity.
 
 ### REQ-CON-030: Garmin Varia BLE V2 High-Resolution Radar Stream & Vehicle Classification [Verified]
-- **Tests**: `TST-CON-030` | **Tickets**: `ATT-5095`
-- **Implementation**: `BTLERadarDevice.java`, `RadarTarget.kt`, `RadarWindowAggregator.kt`, `RadarTrafficSimulator.kt`, `SensorType.java`, `BluetoothConstants.java`, `strings_radar.xml`
-- **Rationale**: Next-generation Garmin Varia radar units (e.g. RearVue 820) introduce a high-resolution 2D BLE telemetry stream on characteristic `6a4e3204-667b-11e3-949a-0800200c9a66` extending radar detection range up to 175 m, providing lateral offset (identifying overtaking trajectory and close passes), and classifying vehicle size (Bikes/Motorcycles vs. Cars vs. Trucks/Busses). The protocol requires LESC bonding, MTU 247 negotiation, and a serialized GATT handshake while enforcing seamless, automatic fallback to legacy V1 characteristic `6a4e3203` on unbonded devices or older hardware (RTL515/516/315/715) without breaking the 3.5s starvation watchdog (ATT-5095, Parent Epic ATT-1286, extending `REQ-CON-028` and `REQ-CON-029`):
+- **Tests**: `TST-CON-030` | **Tickets**: `ATT-5095`, `ATT-6706`
+- **Implementation**: `BTLERadarDevice.java`, `MyBTLEDevice.java`, `DeviceType.java`, `RadarTarget.kt`, `RadarWindowAggregator.kt`, `RadarTrafficSimulator.kt`, `SensorType.java`, `BluetoothConstants.java`, `strings_radar.xml`
+- **Rationale**: Next-generation Garmin Varia radar units (e.g. RearVue 820) introduce a high-resolution 2D BLE telemetry stream on characteristic `6a4e3204-667b-11e3-949a-0800200c9a66` extending radar detection range up to 175 m, providing lateral offset (identifying overtaking trajectory and close passes), and classifying vehicle size (Bikes/Motorcycles vs. Cars vs. Trucks/Busses). The protocol requires LESC bonding, MTU 247 negotiation, and a serialized GATT handshake while enforcing seamless, automatic fallback to legacy V1 characteristic `6a4e3203` on unbonded devices or older hardware (RTL515/516/315/715) without breaking the 3.5s starvation watchdog (ATT-5095, ATT-6706, Parent Epic ATT-1286, extending `REQ-CON-028` and `REQ-CON-029`):
 1. *BLE V2 Handshake Choreography (`REQ-CON-030.1`)*:
-• Upon peripheral connection and service discovery, if characteristic `6a4e3204` is present, `BTLERadarDevice` SHALL verify LESC bonding state, request MTU expansion to 247 bytes, execute the serialized GATT initialization handshake, and enable CCCD indications/notifications on `6a4e3204`.
+• Upon peripheral connection and service discovery, if characteristic `6a4e3204` is present, `BTLERadarDevice` SHALL verify LESC bonding state (`BluetoothDevice.BOND_BONDED`), enqueue an MTU expansion request to 247 bytes (`RequestMtuOp`) in `mGattQueue`, execute the serialized GATT initialization handshake, and enable CCCD indications/notifications on `6a4e3204`.
+• `MyBTLEDevice` SHALL delegate measurement characteristic filtering to an overridable `isMeasurementCharacteristic(UUID)` method, enabling `BTLERadarDevice` to route both V1 (`6a4e3203`) and V2 (`6a4e3204`) telemetry packets to `measurementCharacteristicUpdate()`.
 2. *Automatic Legacy Fallback Invariant (`REQ-CON-030.2`)*:
-• If characteristic `6a4e3204` is absent, or if MTU/handshake negotiation fails or times out within 5.0 seconds, `BTLERadarDevice` SHALL immediately fall back to subscribing to legacy V1 characteristic `6a4e3203`, maintaining 100% backward compatibility with legacy radar devices.
+• If characteristic `6a4e3204` is absent, or if peripheral is not bonded, or if MTU/handshake negotiation or CCCD descriptor write fails (e.g., non-`GATT_SUCCESS`), `BTLERadarDevice` SHALL immediately fall back to subscribing to legacy V1 characteristic `6a4e3203`, maintaining 100% backward compatibility with legacy radar devices.
 3. *High-Resolution V2 Packet Parsing & Domain Mapping (`REQ-CON-030.3`)*:
 • The system SHALL parse multi-target V2 telemetry frames (header `0x01`), decoding `targetId`, range (0–175 m, 0.1 m precision), signed approach speed, lateral offset ($x$, negative = left, positive = right), and vehicle size category (`UNKNOWN_OR_LIGHT`, `CAR`, `TRUCK_OR_BUS`), mapping them into enriched `RadarTarget` domain models.
 4. *Lateral Passing Clearance & Large Vehicle Aggregation (`REQ-CON-030.4`)*:
 • `RadarWindowAggregator` SHALL track minimum lateral passing distance during vehicle overtaking ($y \le 3.0\text{ m}$) and latch `RADAR_PASSING_DISTANCE_m` (in meters) and `RADAR_LARGE_VEHICLE_COUNT` (cumulative count of passed large vehicles) at each 1 Hz tick.
-5. *Scalar Sensor Publishing (`REQ-CON-030.5`)*:
+5. *Scalar Sensor Publishing & DeviceType Registration (`REQ-CON-030.5`)*:
 • `BTLERadarDevice` SHALL register and publish `SensorType.RADAR_PASSING_DISTANCE_m` and `SensorType.RADAR_LARGE_VEHICLE_COUNT` to `MySensorManager` for live cockpit telemetry and storage.
+• `DeviceType.getSensorDeviceTypes()` SHALL map both `RADAR_PASSING_DISTANCE_m` and `RADAR_LARGE_VEHICLE_COUNT` to `DeviceType.BIKE_RADAR`.
 6. *Traffic Simulator V2 Extension (`REQ-CON-030.6`)*:
 • `RadarTrafficSimulator` SHALL generate realistic V2 trajectory scenarios including vehicle size diversity, lane positioning, and close-pass overtaking events.
 7. *9-Language Localization Parity (`REQ-CON-030.7`)*:
 • All sensor names and short labels in `strings_radar.xml` SHALL maintain 100% key and format parity across EN, DE, ES, FR, IT, JA, NL, PL, PT (zero inline emojis).
+
+### Requirement Archaeology & Chesterton's Fence Audit
+1. *Original Requirement ID & Target*: `REQ-CON-030` (Garmin Varia BLE V2 High-Resolution Radar Stream & Vehicle Classification), targeting `MyBTLEDevice.java`, `BTLERadarDevice.java`, `DeviceType.java`, `ActivityType.java`, and `RadarTrafficSimulator.kt`.
+2. *Historical Origin & Commit Trace*: Introduced in `ATT-5095` (commit `524e937d`) establishing BLE V2 packet decoding and window aggregation for 2D radar metrics.
+3. *Root Reason for Existing Formulation*: The initial formulation assumed single-characteristic measurement filtering in `MyBTLEDevice.characteristicUpdate()` and did not serialize `requestMtu(247)` through `mGattQueue` nor verify LESC bonding state, leading to dropped V2 notifications and GATT command collisions.
+4. *Preservation of Core Invariants*: Refining `REQ-CON-030` with `isMeasurementCharacteristic(UUID)` extraction, serialized `RequestMtuOp`, LESC bonding verification, and `DeviceType` registration guarantees 100% backward compatibility for legacy V1 radars (`6a4e3203`), seamless fallback on unbonded/failed handshakes, and full Cockpit UI tile availability without schema migrations.
 
 **Acceptance Criteria (Given-When-Then)**:
 • *Given* a connected Garmin Varia BLE peripheral exposing characteristic `6a4e3204`,

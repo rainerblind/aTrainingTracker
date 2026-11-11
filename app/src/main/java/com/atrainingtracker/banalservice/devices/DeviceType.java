@@ -226,6 +226,8 @@ public enum DeviceType {
             case RADAR_CLOSEST_DISTANCE_m:
             case RADAR_APPROACH_SPEED_mps:
             case RADAR_VEHICLE_COUNT:
+            case RADAR_PASSING_DISTANCE_m:
+            case RADAR_LARGE_VEHICLE_COUNT:
                 deviceTypes.add(DeviceType.BIKE_RADAR);
                 break;
 

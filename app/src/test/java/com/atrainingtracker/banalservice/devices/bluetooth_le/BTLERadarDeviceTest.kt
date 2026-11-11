@@ -398,4 +398,83 @@ class BTLERadarDeviceTest {
         assertEquals(0, radarDevice.getSensor(SensorType.RADAR_THREAT_COUNT).value)
         assertEquals(0.0, radarDevice.getSensor(SensorType.RADAR_APPROACH_SPEED_mps).value)
     }
+
+    @Test
+    fun testIsMeasurementCharacteristic_acceptsBothV1AndV2() {
+        assertTrue(radarDevice.isMeasurementCharacteristicForTesting(BluetoothConstants.UUID_CHARACTERISTIC_RADAR_V1))
+        assertTrue(radarDevice.isMeasurementCharacteristicForTesting(BluetoothConstants.UUID_CHARACTERISTIC_RADAR_V2))
+        assertFalse(radarDevice.isMeasurementCharacteristicForTesting(BluetoothConstants.UUID_CHARACTERISTIC_RADAR_LIGHT_CONTROL))
+        assertFalse(radarDevice.isMeasurementCharacteristicForTesting(BluetoothConstants.UUID_CHARACTERISTIC_BATTERY_LEVEL))
+    }
+
+    @Test
+    fun testConfigureServices_bondedWithV2_enqueuesMtuAndCccd() {
+        val mockGatt = mockk<BluetoothGatt>(relaxed = true)
+        val mockDevice = mockk<android.bluetooth.BluetoothDevice>(relaxed = true)
+        val mockService = mockk<BluetoothGattService>(relaxed = true)
+        val mockV2Char = mockk<BluetoothGattCharacteristic>(relaxed = true)
+        val mockDescriptor = mockk<BluetoothGattDescriptor>(relaxed = true)
+
+        every { mockGatt.device } returns mockDevice
+        every { mockDevice.bondState } returns android.bluetooth.BluetoothDevice.BOND_BONDED
+        every { mockGatt.getService(BluetoothConstants.UUID_SERVICE_RADAR) } returns mockService
+        every { mockGatt.getService(BluetoothConstants.UUID_SERVICE_DEVICE_INFORMATION) } returns null
+        every { mockService.getCharacteristic(BluetoothConstants.UUID_CHARACTERISTIC_RADAR_V2) } returns mockV2Char
+        every { mockService.getCharacteristic(BluetoothConstants.UUID_CHARACTERISTIC_RADAR_LIGHT_CONTROL) } returns null
+        every { mockV2Char.getDescriptor(BluetoothConstants.UUID_CHARACTERISTIC_CLIENT_CONFIG) } returns mockDescriptor
+        every { mockV2Char.properties } returns BluetoothGattCharacteristic.PROPERTY_NOTIFY
+
+        radarDevice.setBluetoothGattForTesting(mockGatt)
+        radarDevice.configureServices(mockGatt)
+
+        assertTrue(radarDevice.isV2Stream)
+        assertTrue(radarDevice.isGattOperationPendingForTesting)
+        val queue = radarDevice.gattQueueForTesting
+        assertEquals(1, queue.size)
+        val op = queue.poll() as MyBTLEDevice.WriteDescriptorOp
+        assertEquals(mockDescriptor, op.descriptor)
+    }
+
+    @Test
+    fun testConfigureServices_unbondedWithV2_fallsBackToV1() {
+        val mockGatt = mockk<BluetoothGatt>(relaxed = true)
+        val mockDevice = mockk<android.bluetooth.BluetoothDevice>(relaxed = true)
+        val mockService = mockk<BluetoothGattService>(relaxed = true)
+        val mockV2Char = mockk<BluetoothGattCharacteristic>(relaxed = true)
+        val mockV1Char = mockk<BluetoothGattCharacteristic>(relaxed = true)
+        val mockDescriptor = mockk<BluetoothGattDescriptor>(relaxed = true)
+
+        every { mockGatt.device } returns mockDevice
+        every { mockDevice.bondState } returns android.bluetooth.BluetoothDevice.BOND_NONE
+        every { mockGatt.getService(BluetoothConstants.UUID_SERVICE_RADAR) } returns mockService
+        every { mockService.getCharacteristic(BluetoothConstants.UUID_CHARACTERISTIC_RADAR_V2) } returns mockV2Char
+        every { mockService.getCharacteristic(BluetoothConstants.UUID_CHARACTERISTIC_RADAR_V1) } returns mockV1Char
+        every { mockV1Char.getDescriptor(BluetoothConstants.UUID_CHARACTERISTIC_CLIENT_CONFIG) } returns mockDescriptor
+
+        radarDevice.configureServices(mockGatt)
+
+        assertFalse(radarDevice.isV2Stream)
+        io.mockk.verify { mockGatt.setCharacteristicNotification(mockV1Char, true) }
+    }
+
+    @Test
+    fun testOnDescriptorWriteCompleted_v2CccdFailure_fallsBackToV1() {
+        val mockGatt = mockk<BluetoothGatt>(relaxed = true)
+        val mockService = mockk<BluetoothGattService>(relaxed = true)
+        val mockV2Char = mockk<BluetoothGattCharacteristic>(relaxed = true)
+        val mockV1Char = mockk<BluetoothGattCharacteristic>(relaxed = true)
+        val mockDescriptor = mockk<BluetoothGattDescriptor>(relaxed = true)
+        val mockV1Desc = mockk<BluetoothGattDescriptor>(relaxed = true)
+
+        every { mockDescriptor.characteristic } returns mockV2Char
+        every { mockV2Char.uuid } returns BluetoothConstants.UUID_CHARACTERISTIC_RADAR_V2
+        every { mockGatt.getService(BluetoothConstants.UUID_SERVICE_RADAR) } returns mockService
+        every { mockService.getCharacteristic(BluetoothConstants.UUID_CHARACTERISTIC_RADAR_V1) } returns mockV1Char
+        every { mockV1Char.getDescriptor(BluetoothConstants.UUID_CHARACTERISTIC_CLIENT_CONFIG) } returns mockV1Desc
+
+        radarDevice.onDescriptorWriteCompletedForTesting(mockGatt, mockDescriptor, BluetoothGatt.GATT_INSUFFICIENT_AUTHENTICATION)
+
+        assertFalse(radarDevice.isV2Stream)
+        io.mockk.verify { mockGatt.setCharacteristicNotification(mockV1Char, true) }
+    }
 }

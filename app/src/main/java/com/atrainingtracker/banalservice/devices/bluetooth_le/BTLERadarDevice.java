@@ -18,6 +18,7 @@
 
 package com.atrainingtracker.banalservice.devices.bluetooth_le;
 
+import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothGatt;
 import android.bluetooth.BluetoothGattCharacteristic;
 import android.bluetooth.BluetoothGattDescriptor;
@@ -26,7 +27,6 @@ import android.content.Context;
 import android.os.SystemClock;
 import android.util.Log;
 
-import androidx.annotation.NonNull;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
@@ -51,6 +51,7 @@ import com.atrainingtracker.banalservice.sensor.SensorType;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.UUID;
 
 /**
  * Bluetooth Low Energy cycling radar protocol driver for Garmin Varia (REQ-CON-028.4).
@@ -137,16 +138,13 @@ public class BTLERadarDevice extends MyBTLEDevice {
         }
 
         BluetoothGattCharacteristic v2Char = btGattService.getCharacteristic(BluetoothConstants.UUID_CHARACTERISTIC_RADAR_V2);
-        if (v2Char != null) {
-            if (DEBUG) Log.i(TAG, "Garmin Varia V2 characteristic 6a4e3204 discovered. Initiating V2 handshake.");
+        BluetoothDevice device = gatt.getDevice();
+        boolean isBonded = (device != null && device.getBondState() == BluetoothDevice.BOND_BONDED);
+
+        if (v2Char != null && isBonded) {
+            if (DEBUG) Log.i(TAG, "Garmin Varia V2 characteristic 6a4e3204 discovered and device is bonded. Initiating V2 handshake.");
             mIsV2Stream = true;
-            try {
-                gatt.requestMtu(247);
-            } catch (SecurityException e) {
-                Log.w(TAG, "Missing BLUETOOTH_CONNECT permission requesting MTU 247", e);
-            } catch (Exception e) {
-                if (DEBUG) Log.w(TAG, "Error requesting MTU 247", e);
-            }
+            enqueueRequestMtu(247);
 
             try {
                 gatt.setCharacteristicNotification(v2Char, true);
@@ -161,6 +159,9 @@ public class BTLERadarDevice extends MyBTLEDevice {
                 enqueueWriteDescriptor(descriptor, val);
             }
         } else {
+            if (v2Char != null && !isBonded) {
+                Log.w(TAG, "Garmin Varia V2 requires LESC bonding, but device is not bonded (bondState=" + (device != null ? device.getBondState() : "null") + "). Falling back to V1.");
+            }
             fallbackToV1(gatt, btGattService);
         }
 
@@ -237,6 +238,30 @@ public class BTLERadarDevice extends MyBTLEDevice {
             }
         } else {
             if (DEBUG) Log.w(TAG, "Neither V2 nor V1 radar characteristics found!");
+        }
+    }
+
+    @Override
+    protected boolean isMeasurementCharacteristic(@NonNull UUID uuid) {
+        return BluetoothConstants.UUID_CHARACTERISTIC_RADAR_V1.equals(uuid) ||
+               BluetoothConstants.UUID_CHARACTERISTIC_RADAR_V2.equals(uuid);
+    }
+
+    @Override
+    @android.annotation.SuppressLint("MissingPermission")
+    protected void onDescriptorWriteCompleted(BluetoothGatt gatt, BluetoothGattDescriptor descriptor, int status) {
+        super.onDescriptorWriteCompleted(gatt, descriptor, status);
+        if (descriptor != null && status != BluetoothGatt.GATT_SUCCESS) {
+            BluetoothGattCharacteristic parentChar = descriptor.getCharacteristic();
+            if (parentChar != null && BluetoothConstants.UUID_CHARACTERISTIC_RADAR_V2.equals(parentChar.getUuid())) {
+                Log.w(TAG, "V2 CCCD write failed with status " + status + "; falling back to V1 stream");
+                if (gatt != null) {
+                    BluetoothGattService service = gatt.getService(BluetoothConstants.UUID_SERVICE_RADAR);
+                    if (service != null) {
+                        fallbackToV1(gatt, service);
+                    }
+                }
+            }
         }
     }
 
@@ -629,5 +654,13 @@ public class BTLERadarDevice extends MyBTLEDevice {
 
     public void onOtherCharacteristicUpdateForTesting(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic) {
         onOtherCharacteristicUpdate(gatt, characteristic);
+    }
+
+    public boolean isMeasurementCharacteristicForTesting(@NonNull UUID uuid) {
+        return isMeasurementCharacteristic(uuid);
+    }
+
+    public void onDescriptorWriteCompletedForTesting(BluetoothGatt gatt, BluetoothGattDescriptor descriptor, int status) {
+        onDescriptorWriteCompleted(gatt, descriptor, status);
     }
 }

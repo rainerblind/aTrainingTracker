@@ -210,4 +210,22 @@ class RadarTrafficSimulatorTest {
         assertNull(RadarTrafficSimulator.activeScenario)
         assertEquals(RadarConnectionState.DISCONNECTED, RadarStateRepository.getState().connectionState)
     }
+
+    @Test
+    fun testGenerateV2Targets_createsSyntheticFramesWithLateralOffsetAndSize() {
+        val targetsSingle = RadarTrafficSimulator.generateV2Targets(count = 1, includeLargeVehicle = false)
+        assertEquals(1, targetsSingle.size)
+        val car = targetsSingle[0]
+        assertEquals(VehicleSizeCategory.CAR, car.vehicleSizeCategory)
+        assertEquals(-2.0f, car.lateralOffsetMeters!!, 0.01f)
+        assertEquals(LaneState.PASSING_LANE, car.laneState)
+
+        val targetsTruck = RadarTrafficSimulator.generateV2Targets(count = 2, includeLargeVehicle = true)
+        assertEquals(2, targetsTruck.size)
+        val truck = targetsTruck[0]
+        assertEquals(VehicleSizeCategory.TRUCK_OR_BUS, truck.vehicleSizeCategory)
+        assertEquals(ThreatLevel.FAST_APPROACHING, truck.threatLevel)
+        assertEquals(-1.4f, truck.lateralOffsetMeters!!, 0.01f)
+        assertEquals(2.6f, truck.vehicleWidthMeters!!, 0.01f)
+    }
 }

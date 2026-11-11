@@ -173,6 +173,30 @@ public abstract class MyBTLEDevice extends MyRemoteDevice {
         }
     }
 
+    public static class RequestMtuOp implements GattOperation {
+        private final int mtu;
+
+        public RequestMtuOp(int mtu) {
+            this.mtu = mtu;
+        }
+
+        public int getMtu() {
+            return mtu;
+        }
+
+        @Override
+        @android.annotation.SuppressLint("MissingPermission")
+        public boolean execute(BluetoothGatt gatt) {
+            if (gatt == null) return false;
+            try {
+                return gatt.requestMtu(mtu);
+            } catch (SecurityException e) {
+                Log.w("MyBTLEDevice", "Missing BLUETOOTH_CONNECT permission requesting MTU", e);
+                return false;
+            }
+        }
+    }
+
     protected final Queue<GattOperation> mGattQueue = new ConcurrentLinkedQueue<>();
     private volatile boolean mGattOperationPending = false;
     private static final long GATT_OP_TIMEOUT_MS = 2500L;
@@ -585,12 +609,20 @@ public abstract class MyBTLEDevice extends MyRemoteDevice {
         @Override
         public void onDescriptorWrite(BluetoothGatt gatt, BluetoothGattDescriptor descriptor, int status) {
             if (DEBUG) Log.i(TAG, "onDescriptorWrite: " + (descriptor != null ? descriptor.getUuid() : "null") + " status: " + status);
+            onDescriptorWriteCompleted(gatt, descriptor, status);
             onGattOperationCompleted();
         }
 
         @Override
         public void onCharacteristicWrite(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic, int status) {
             if (DEBUG) Log.i(TAG, "onCharacteristicWrite: " + (characteristic != null ? characteristic.getUuid() : "null") + " status: " + status);
+            onGattOperationCompleted();
+        }
+
+        @Override
+        public void onMtuChanged(BluetoothGatt gatt, int mtu, int status) {
+            if (DEBUG) Log.i(TAG, "onMtuChanged: mtu=" + mtu + " status=" + status);
+            onMtuConfigurationCompleted(gatt, mtu, status);
             onGattOperationCompleted();
         }
     };
@@ -788,7 +820,7 @@ public abstract class MyBTLEDevice extends MyRemoteDevice {
             return;
         }
 
-        if (BluetoothConstants.getCharacteristicUUID(getDeviceType()).equals(characteristic.getUuid())) {
+        if (isMeasurementCharacteristic(characteristic.getUuid())) {
 
             mHandler.post(new Runnable() {
                 @Override
@@ -814,13 +846,37 @@ public abstract class MyBTLEDevice extends MyRemoteDevice {
         }
     }
 
+    /**
+     * Determines whether the given characteristic UUID represents a primary telemetry
+     * measurement stream for this device type (REQ-CON-030.1).
+     * Subclasses (e.g. {@link BTLERadarDevice}) may override to accept multi-characteristic streams (V1 & V2).
+     */
+    protected boolean isMeasurementCharacteristic(@NonNull UUID uuid) {
+        UUID expected = BluetoothConstants.getCharacteristicUUID(getDeviceType());
+        return expected != null && expected.equals(uuid);
+    }
+
+    public boolean isMeasurementCharacteristicForTesting(@NonNull UUID uuid) {
+        return isMeasurementCharacteristic(uuid);
+    }
+
     protected void onOtherCharacteristicUpdate(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic) {
+    }
+
+    protected void onDescriptorWriteCompleted(BluetoothGatt gatt, BluetoothGattDescriptor descriptor, int status) {
+    }
+
+    protected void onMtuConfigurationCompleted(BluetoothGatt gatt, int mtu, int status) {
     }
 
     public void enqueueGattOperation(GattOperation op) {
         if (op == null || mIsShutDown) return;
         mGattQueue.add(op);
         processNextGattOperation();
+    }
+
+    public void enqueueRequestMtu(int mtu) {
+        enqueueGattOperation(new RequestMtuOp(mtu));
     }
 
     public void enqueueWriteDescriptor(BluetoothGattDescriptor descriptor, byte[] value) {
@@ -889,6 +945,12 @@ public abstract class MyBTLEDevice extends MyRemoteDevice {
 
     public boolean isGattOperationPendingForTesting() {
         return mGattOperationPending;
+    }
+
+    public void setBluetoothGattForTesting(BluetoothGatt gatt) {
+        synchronized (mGattLock) {
+            mBluetoothGatt = gatt;
+        }
     }
 
     protected void readNextCharacteristic() {
