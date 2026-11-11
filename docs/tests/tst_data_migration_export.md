@@ -2084,7 +2084,7 @@
 - **Target Release**: `V5.0.0`
 - **Requirement(s)**: `REQ-DAT-040`
 - **Component**: `TcxDocument.kt`, `TcxSerializer.kt`, `TcxParser.kt`, `TCXFileWriter.java`, `TcxWorkoutParser.kt`, `TCXRoundTripTest.kt`
-- **Jira**: `ATT-938`
+- **Jira**: `ATT-938`, `ATT-6693`
 - **Test Description**:
   1. *TCX DTO Serialization & Schema Compliance Contract Test (`TST-DAT-036.1`, `TcxSerializerTest.kt`)*:
   • Serialize a complete synthetic `TcxDocument` containing multi-lap data, TPX sensor extensions, and XML special characters (`&`, `<`, `>`, `"`, `'`).
@@ -2098,6 +2098,7 @@
   • Export synthetic workouts across sport types (Running, Biking) with multiple laps and dense trackpoints to TCX via `TcxSerializer`.
   • Re-parse the generated TCX via `TcxWorkoutParser` / `TcxParser`.
   • Assert 1:1 parity for workout name, notes, lap split timestamps, lap statistics, and trackpoint streams.
+  • Specifically verify that workouts with custom name and empty description round-trip with workoutNotes as null (no leaking raw bracketed [WorkoutName]), description-only workouts round-trip correctly, laps with custom names preserve empty notes, and short unbracketed third-party notes parse into notes without leaking into name.
   4. *Existing Exporter & Parser Regression Suite (`TST-DAT-036.4`)*:
   • Run `TCXFileWriterWorkoutNameTest`, `TCXFileWriterLapTest`, and `TcxWorkoutParserTest`.
   • Verify 100% backward compatibility with existing tests.
