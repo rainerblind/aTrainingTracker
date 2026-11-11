@@ -150,6 +150,8 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
         private val TAG = WorkoutRepository::class.java.simpleName
         private val DEBUG = TrainingApplication.getDebug(true)
 
+        const val PREF_CLIMBS_WORKOUT_BACKFILL_V1 = "climbs_workout_backfill_v1"
+
         @JvmStatic
         val cropMutex get() = com.atrainingtracker.trainingtracker.domain.crop.CropCoordinator.mutex
 
@@ -2655,6 +2657,7 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
             ContextCompat.registerReceiver(application, exportStatusUpdateReceiver, exportFilter, ContextCompat.RECEIVER_NOT_EXPORTED)
 
             reconcilePendingCropRecovery()
+            triggerHistoricalClimbBackfillIfPending()
 
             if (DEBUG) Log.d(TAG, "WorkoutRepository initialized and receivers registered.")
         } catch (e: Throwable) {
@@ -2692,6 +2695,105 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
                 Log.e(TAG, "Error in reconcilePendingCropRecovery", e)
             }
         }
+
+    /**
+     * Dispatches background backfill of historical outdoor GPS workouts into Climbs.db (REQ-MAP-066.1 / ATT-6691)
+     * if the [PREF_CLIMBS_WORKOUT_BACKFILL_V1] preference flag is not yet marked.
+     *
+     * @return [Job] representing the asynchronous background backfill task.
+     */
+    fun triggerHistoricalClimbBackfillIfPending(): Job = launch(Dispatchers.IO) {
+        try {
+            val prefs = androidx.preference.PreferenceManager.getDefaultSharedPreferences(application)
+            if (!prefs.getBoolean(PREF_CLIMBS_WORKOUT_BACKFILL_V1, false)) {
+                backfillHistoricalClimbs()
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Error checking/triggering historical climb backfill", e)
+        }
+    }
+
+    /**
+     * Executes an idempotent background backfill for historical outdoor GPS workouts (REQ-MAP-066.1 / ATT-6691).
+     * Iterates finished outdoor sessions (Sport in BIKE, RUN, UNKNOWN; trainer = 0/null; non-empty polyline),
+     * extracts qualifying climbs via [ClimbDetector.detectClimbs], and persists them to Climbs.db
+     * with 50m spatial deduplication via [ClimbsDatabaseManager.insertClimbsWithDeduplicationBatch].
+     *
+     * Marks [PREF_CLIMBS_WORKOUT_BACKFILL_V1] as true in SharedPreferences and refreshes [LiveClimbsRepository].
+     *
+     * @return Total count of qualifying climb records persisted during this backfill pass (0 if already completed).
+     */
+    suspend fun backfillHistoricalClimbs(): Int = withContext(Dispatchers.IO) {
+        val prefs = try {
+            androidx.preference.PreferenceManager.getDefaultSharedPreferences(application)
+        } catch (_: Throwable) {
+            null
+        }
+
+        if (prefs?.getBoolean(PREF_CLIMBS_WORKOUT_BACKFILL_V1, false) == true) {
+            return@withContext 0
+        }
+
+        val candidateIds = mutableListOf<Long>()
+        try {
+            val db = summariesManager.database
+            if (db != null && db.isOpen) {
+                val selection = "${WorkoutSummariesDatabaseManager.WorkoutSummaries.FINISHED} = 1 AND " +
+                    "(${WorkoutSummariesDatabaseManager.WorkoutSummaries.TRAINER} IS NULL OR ${WorkoutSummariesDatabaseManager.WorkoutSummaries.TRAINER} = 0) AND " +
+                    "${WorkoutSummariesDatabaseManager.WorkoutSummaries.B_SPORT} IN ('BIKE', 'RUN', 'UNKNOWN') AND " +
+                    "${WorkoutSummariesDatabaseManager.WorkoutSummaries.MAP_POLYLINE} IS NOT NULL AND " +
+                    "${WorkoutSummariesDatabaseManager.WorkoutSummaries.MAP_POLYLINE} != ''"
+
+                db.query(
+                    WorkoutSummariesDatabaseManager.WorkoutSummaries.TABLE,
+                    arrayOf(android.provider.BaseColumns._ID),
+                    selection,
+                    null,
+                    null,
+                    null,
+                    "${android.provider.BaseColumns._ID} ASC"
+                ).use { cursor ->
+                    val idCol = cursor.getColumnIndexOrThrow(android.provider.BaseColumns._ID)
+                    while (cursor.moveToNext()) {
+                        candidateIds.add(cursor.getLong(idCol))
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to query historical workout candidates for climb backfill", e)
+        }
+
+        if (candidateIds.isEmpty() && _allWorkouts.value.isNotEmpty()) {
+            val fallbackCandidates = _allWorkouts.value.filter { w ->
+                w.finished &&
+                    !w.trainer &&
+                    (w.bSportType == BSportType.BIKE || w.bSportType == BSportType.RUN || w.bSportType == BSportType.UNKNOWN) &&
+                    !w.mapPolyline.isNullOrEmpty()
+            }.map { it.id }
+            candidateIds.addAll(fallbackCandidates)
+        }
+
+        var totalClimbsPersisted = 0
+        for (workoutId in candidateIds) {
+            try {
+                val persistedIds = extractAndPersistClimbsFromWorkout(workoutId)
+                totalClimbsPersisted += persistedIds.size
+            } catch (e: Exception) {
+                Log.w(TAG, "Error extracting climbs for historical workout $workoutId", e)
+            }
+        }
+
+        try {
+            prefs?.edit()?.putBoolean(PREF_CLIMBS_WORKOUT_BACKFILL_V1, true)?.apply()
+            if (totalClimbsPersisted > 0) {
+                LiveClimbsRepository.getInstance(application).refreshClimbs()
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to finalize climbs_workout_backfill_v1 preference", e)
+        }
+
+        totalClimbsPersisted
+    }
 
     /**
      * Retrieves lightweight ordered sample points for crop visualization and boundary calculation.

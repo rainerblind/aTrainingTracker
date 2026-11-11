@@ -260,6 +260,7 @@ object MigrationEngine {
 
                 // Move restored directories into production paths
                 val restoredDatabases = File(tempDir, "databases")
+                val climbsDbPresentInArchive = File(restoredDatabases, com.atrainingtracker.trainingtracker.database.ClimbsDbHelper.DATABASE_NAME).exists()
                 if (!restoredDatabases.renameTo(databasesDir)) {
                     restoredDatabases.copyRecursively(databasesDir, overwrite = true)
                 }
@@ -287,6 +288,20 @@ object MigrationEngine {
 
                 // ATT-4023 / REQ-DAT-032.3: Enforce clean re-authentication invariant across application preferences
                 com.atrainingtracker.trainingtracker.security.AuthCredentialsStore.sanitizeAfterRestore(context)
+
+                // REQ-MAP-066.3 / ATT-6691: If Climbs.db was absent from the restored archive, reset climbs_workout_backfill_v1
+                // so historical workouts will be automatically backfilled into Climbs.db upon next launch.
+                if (!climbsDbPresentInArchive) {
+                    try {
+                        androidx.preference.PreferenceManager.getDefaultSharedPreferences(context)
+                            .edit()
+                            .remove(com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository.PREF_CLIMBS_WORKOUT_BACKFILL_V1)
+                            .apply()
+                        Log.i(TAG, "Reset ${com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository.PREF_CLIMBS_WORKOUT_BACKFILL_V1} due to legacy archive restore lacking Climbs.db")
+                    } catch (e: Exception) {
+                        Log.w(TAG, "Failed to reset climbs_workout_backfill_v1 pref after restore", e)
+                    }
+                }
             } catch (swapError: Exception) {
                 Log.e(TAG, "Error during atomic swap, attempting immediate recovery from staging trash", swapError)
                 if (dbTrash.exists()) {

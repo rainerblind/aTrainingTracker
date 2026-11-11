@@ -2214,6 +2214,39 @@
 
 **Invariants**: Zero lost updates; pure immutable state transitions; 100% test pass rate across `LiveSegmentsRepositoryTest`.
 
+### REQ-MAP-066: Historical Workout Climb Backfill & Backup Self-Healing Parity [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-MAP-068` | **Tickets**: `ATT-6691`
+- **Implementation**: `WorkoutRepository.kt`, `ClimbsDatabaseManager.kt`, `DatabaseSchemaRegistry.kt`, `DatabaseConnectionManager.kt`, `MigrationEngine.kt`
+- **Rationale**: Prior to `V5.0.0`, `Climbs.db` did not exist; `ATT-2766` added climb ingestion exclusively for newly recorded or imported workouts. Pursuant to `Rule 80` (*Three-Way Parity: Live + Import + Historical Database Self-Healing*), legacy workouts present in `WorkoutSummaries.db` / `WorkoutSamples.db` and legacy `.attbackup` restores lacking `Climbs.db` leave athletes without climb coverage in `Climbs.db`. Furthermore, `Climbs.db` must participate in schema version tracking and database connection quiescence. The system SHALL execute an idempotent background backfill for historical workouts, register `Climbs.db` in `DatabaseSchemaRegistry` and `DatabaseConnectionManager`, and self-heal on restore of legacy backups:
+1. *One-Time Historical Workout Backfill (`REQ-MAP-066.1`)*:
+• `WorkoutRepository` SHALL inspect `SharedPreferences` for boolean flag `climbs_workout_backfill_v1`.
+• When un-set or false, `WorkoutRepository` SHALL launch an asynchronous background task on `Dispatchers.IO` iterating finished outdoor GPS workouts (`Sport IN ('BIKE', 'RUN', 'UNKNOWN')`, non-trainer, non-empty `mapPolyline`, $\ge 2$ track points).
+• The system SHALL extract qualifying climbs via `ClimbDetector.detectClimbs(points, routeId = null, context = application)` and insert them into `Climbs.db` via `ClimbsDatabaseManager.insertClimbsWithDeduplicationBatch(detected, thresholdMeters = 50.0f)`.
+• Upon completion, `climbs_workout_backfill_v1` SHALL be set to `true` in `SharedPreferences`, and `LiveClimbsRepository.refreshClimbs()` SHALL be invoked. Subsequent calls SHALL be O(1) no-ops.
+2. *Database Registry & Connection Quiescence Parity (`REQ-MAP-066.2`)*:
+• `DatabaseSchemaRegistry` SHALL register `ClimbsDbHelper.DATABASE_NAME` (`Climbs.db`) mapped to version 1 (`ClimbsDbHelper.DATABASE_VERSION`).
+• `DatabaseConnectionManager.getActiveDatabases(context)` SHALL include `ClimbsDatabaseManager.getInstance(context).database`, participating in WAL checkpointing (`checkpointWithRetry`), safe connection shutdown, and VACUUM snapshots.
+• `ClimbsDatabaseManager` SHALL expose `val database: SQLiteDatabase get() = dbHelper.writableDatabase` and `fun getDatabase(): SQLiteDatabase`.
+3. *Backup Restore Self-Healing (`REQ-MAP-066.3`)*:
+• In `MigrationEngine.performFullRestore()`, when restoring an archive where `Climbs.db` was absent from the staged databases directory, the system SHALL clear/reset `climbs_workout_backfill_v1` in restored preferences to trigger automatic historical backfill on next launch.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* an athlete updating from a legacy version with historical outdoor workouts and unset `climbs_workout_backfill_v1`,
+• *When* `WorkoutRepository` initializes,
+• *Then* qualifying climbs are extracted into `Climbs.db` with 50m spatial deduplication, `climbs_workout_backfill_v1` is set to true, and `LiveClimbsRepository.refreshClimbs()` is called.
+• *Given* `climbs_workout_backfill_v1` is true,
+• *When* `WorkoutRepository` starts or backfill is triggered,
+• *Then* zero database scanning occurs and the function returns 0 immediately.
+• *Given* `DatabaseSchemaRegistry` and `DatabaseConnectionManager`,
+• *When* queried,
+• *Then* `Climbs.db` is present in `getSupportedDatabases()` (version 1) and its open SQLite connection is included in `getActiveDatabases(context)`.
+• *Given* an `.attbackup` archive lacking `Climbs.db`,
+• *When* `MigrationEngine.performFullRestore` executes,
+• *Then* `climbs_workout_backfill_v1` is cleared/set to false in preferences so the backfill re-runs upon app restart.
+
+**Invariants**: Zero modification to existing climb detection logic; strictly non-blocking IO startup execution; 50m deduplication threshold preserved; 100% test pass rate.
+
 ### REQ-RAD-006: Aftermath Map Traffic Hotspot Markers [Verified]
 - **Tests**: `TST-RAD-006` | **Tickets**: `ATT-5088`
 - **Implementation**: `WorkoutRepository.kt`, `TrackOnMapAftermathViewModel.kt`, `TrackOnMapScreen.kt`
