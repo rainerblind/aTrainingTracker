@@ -28,7 +28,7 @@ import java.io.File
  * Detekt static analysis, Kover code coverage gating, CI integrity, and instrumented androidTest
  * infrastructure with emulator CI runner (REQ-BLD-002, TST-BLD-002, REQ-PRO-042,
  * TST-PRO-042, REQ-PRO-046, TST-PRO-046, REQ-PRO-047, TST-PRO-047, REQ-PRO-048, TST-PRO-048,
- * REQ-PRO-051, TST-PRO-051, REQ-STP-007, TST-STP-007, REQ-STP-008, TST-STP-008, REQ-STP-009, TST-STP-009, ATT-6148, ATT-6152, ATT-6153, ATT-6171, ATT-6175, ATT-6184).
+ * REQ-PRO-051, TST-PRO-051, REQ-STP-007, TST-STP-007, REQ-STP-008, TST-STP-008, REQ-STP-009, TST-STP-009, ATT-6148, ATT-6152, ATT-6153, ATT-6171, ATT-6175, ATT-6184, ATT-6737).
  */
 class ReleaseCiAndLintConfigContractTest {
 
@@ -454,6 +454,14 @@ class ReleaseCiAndLintConfigContractTest {
             "CI workflow must specify connected test report artifact path $reportPath (REQ-PRO-051.3, TST-PRO-051.2)",
             content.contains(reportPath)
         )
+        assertTrue(
+            "CI workflow must pre-build debug and androidTest APKs prior to emulator startup (REQ-PRO-051.3, TST-PRO-051.2, ATT-6737)",
+            content.contains(":app:assembleDebug :app:assembleDebugAndroidTest")
+        )
+        assertTrue(
+            "CI workflow must configure emulator runner with API 34 and google_apis target (REQ-PRO-051.3, TST-PRO-051.2, ATT-6737)",
+            content.contains("api-level: 34") && content.contains("target: google_apis")
+        )
     }
 
     /**
@@ -478,6 +486,14 @@ class ReleaseCiAndLintConfigContractTest {
         assertTrue(
             "AppSmokeAndroidTest must contain test methods (REQ-PRO-051.2)",
             content.contains("@Test")
+        )
+        assertTrue(
+            "AppSmokeAndroidTest must reference MainActivityWithNavigation (REQ-PRO-051.2, TST-PRO-051.3, ATT-6737)",
+            content.contains("MainActivityWithNavigation")
+        )
+        assertTrue(
+            "AppSmokeAndroidTest must configure GrantPermissionRule for runtime permissions (REQ-PRO-051.2, TST-PRO-051.3, ATT-6737)",
+            content.contains("GrantPermissionRule")
         )
     }
 

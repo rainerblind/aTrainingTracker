@@ -2560,41 +2560,44 @@ The workflow SHALL mandate that:
 
 
 ### REQ-PRO-051: Android Instrumented Test Infrastructure & Emulator CI Execution [Verified]
-- **Tests**: `TST-PRO-051` | **Tickets**: `ATT-6184`
+- **Tests**: `TST-PRO-051` | **Tickets**: `ATT-6184, ATT-6737`
 - **Implementation**: `app/build.gradle`, `.github/workflows/android-branch-build.yml`, `app/src/androidTest/java/com/atrainingtracker/trainingtracker/AppSmokeAndroidTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/ReleaseCiAndLintConfigContractTest.kt`
-- **Rationale**: Prior to ATT-6184, aTrainingTracker lacked an `androidTest` source set, test instrumentation runner, and on-device / emulator CI verification pipeline (ASPICE finding C-10, SWE.5/SWE.6). Although JVM unit tests run via Robolectric, verification of Android OS contracts, permissions, lifecycle transitions, and ART runtime execution requires an instrumented test environment. Establishing standard AndroidJUnitRunner configuration, compatible test dependencies, a basic instrumented smoke test, and an emulator job in GitHub Actions CI fulfills Level 2 integration verification requirements without violating Rule 79 (ATT-6184, refining `REQ-PRO-045` under Epic `ATT-6142`):
+- **Rationale**: Prior to ATT-6184, aTrainingTracker lacked an `androidTest` source set, test instrumentation runner, and on-device / emulator CI verification pipeline (ASPICE finding C-10, SWE.5/SWE.6). In ATT-6737, the instrumented smoke test and CI emulator pipeline are expanded to exercise an end-to-end Activity launch and tracking lifecycle with non-destructive session cleanup, pre-build debug and test APKs before emulator boot, and target Android 14 (API 34) google_apis for foreground service verification without violating Rule 79 (ATT-6184, ATT-6737, refining `REQ-PRO-045` under Epic `ATT-6142`):
 - **Description**:
   1. *Test Instrumentation Runner & Dependency Configuration (`REQ-PRO-051.1`)*:
      • `app/build.gradle` `defaultConfig` SHALL configure `testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"`.
      • `app/build.gradle` SHALL declare standard `androidTestImplementation` dependencies (`androidx.test.ext:junit`, `androidx.test.espresso:espresso-core`, `androidx.test:runner`, `androidx.test:rules`) compatible with existing AndroidX libraries.
   2. *Instrumented Smoke Test Suite (`REQ-PRO-051.2`)*:
-     • The repository SHALL establish `app/src/androidTest/java/com/atrainingtracker/trainingtracker/AppSmokeAndroidTest.kt`.
+     • The repository SHALL establish and maintain `app/src/androidTest/java/com/atrainingtracker/trainingtracker/AppSmokeAndroidTest.kt`.
      • The smoke test SHALL verify the Android application context, target package name (`com.atrainingtracker.debug` or `com.atrainingtracker`), and successful instrumentation bootstrap under `AndroidJUnit4`.
+     • The smoke test SHALL configure runtime permissions via `GrantPermissionRule` (`ACCESS_FINE_LOCATION`, `ACCESS_COARSE_LOCATION`, `POST_NOTIFICATIONS`), launch `MainActivityWithNavigation` via `ActivityScenario` without crashing, exercise a synthetic `READY -> TRACKING -> STOP/DISCARD` lifecycle, and purge synthetic test session data via `WorkoutDeletionHelper` without wiping existing database tables (Core Rule 61).
   3. *GitHub Actions Emulator CI Execution Job (`REQ-PRO-051.3`)*:
-     • `.github/workflows/android-branch-build.yml` SHALL define an emulator test job executing `./gradlew :app:connectedDebugAndroidTest` with hardware acceleration (KVM).
+     • `.github/workflows/android-branch-build.yml` SHALL define an emulator test job that executes a pre-build step `./gradlew :app:assembleDebug :app:assembleDebugAndroidTest` prior to booting `reactivecircus/android-emulator-runner@v2`.
+     • The emulator target SHALL execute on Android 14 (`api-level: 34`, `target: google_apis`, `arch: x86_64`) with hardware acceleration (KVM) executing `./gradlew :app:connectedDebugAndroidTest`.
      • The job SHALL upload test results and log artifacts via `actions/upload-artifact@v4`.
   4. *Build & CI Conformance Contract Testing (`REQ-PRO-051.4`)*:
      • `ReleaseCiAndLintConfigContractTest.kt` SHALL assert that `app/build.gradle` configures `testInstrumentationRunner` and `androidTestImplementation` dependencies.
-     • `ReleaseCiAndLintConfigContractTest.kt` SHALL assert that `.github/workflows/android-branch-build.yml` defines the emulator execution job and artifact archiving.
+     • `ReleaseCiAndLintConfigContractTest.kt` SHALL assert that `.github/workflows/android-branch-build.yml` defines the emulator execution job, pre-build step, API 34 google_apis target, and artifact archiving.
+     • `ReleaseCiAndLintConfigContractTest.kt` SHALL assert that `AppSmokeAndroidTest.kt` references `MainActivityWithNavigation` and `GrantPermissionRule`.
 - **Requirement Archaeology & Chesterton's Fence Audit**:
-  1. *Original Requirement ID & Target*: Net-new requirement `REQ-PRO-051` (*Android Instrumented Test Infrastructure & Emulator CI Execution*), refining `REQ-PRO-045` (*SWE.5 Integration Strategy*). Targets `app/build.gradle`, `.github/workflows/android-branch-build.yml`, `AppSmokeAndroidTest.kt`, `ReleaseCiAndLintConfigContractTest.kt`.
-  2. *Historical Origin & Commit Trace*: Independent ASPICE pre-assessment finding C-10 (2026-11-08) and ticket ATT-6184.
-  3. *Root Reason for Existing Formulation*: The project historically relied exclusively on JVM Robolectric tests for build speed, leaving instrumented ART runtime execution unverified in CI.
-  4. *Preservation of Core Invariants*: JVM unit test suite (`testDebugUnitTest`), Lint, Detekt, and Kover gates remain untouched. Rule 79 is strictly preserved: no local host software emulator boots during development.
+  1. *Original Requirement ID & Target*: `REQ-PRO-051` (*Android Instrumented Test Infrastructure & Emulator CI Execution*), refining `REQ-PRO-045` (*SWE.5 Integration Strategy*). Targets `app/build.gradle`, `.github/workflows/android-branch-build.yml`, `AppSmokeAndroidTest.kt`, `ReleaseCiAndLintConfigContractTest.kt`.
+  2. *Historical Origin & Commit Trace*: Independent ASPICE pre-assessment finding C-10 (2026-11-08) and tickets ATT-6184, ATT-6737.
+  3. *Root Reason for Existing Formulation*: ATT-6184 initially established a minimal package-name smoke assertion and API 30 runner to lay the pipeline foundation without blocking on full activity orchestration.
+  4. *Preservation of Core Invariants*: JVM unit test suite (`testDebugUnitTest`), Lint, Detekt, and Kover gates remain untouched. Rule 79 (zero local host software emulator boots during development) and Rule 61 (non-destructive test data handling) remain strictly preserved.
 - **Acceptance Criteria (Given-When-Then)**:
   • *Given* `app/build.gradle`,
   • *When* inspected,
   • *Then* `defaultConfig` SHALL specify `testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"` and `dependencies` SHALL declare `androidTestImplementation` libraries.
   • *Given* `app/src/androidTest/java/com/atrainingtracker/trainingtracker/AppSmokeAndroidTest.kt`,
   • *When* compiled via `./gradlew compileDebugAndroidTestKotlin`,
-  • *Then* compilation SHALL succeed without errors.
+  • *Then* compilation SHALL succeed without errors, and test definitions SHALL include `MainActivityWithNavigation` launch and permission rules.
   • *Given* `.github/workflows/android-branch-build.yml`,
   • *When* inspected,
-  • *Then* it SHALL declare an emulator execution job running `connectedDebugAndroidTest` and archiving test results.
+  • *Then* it SHALL declare an emulator execution job with pre-build step `:app:assembleDebug :app:assembleDebugAndroidTest`, target API 34 with `google_apis`, run `connectedDebugAndroidTest`, and archive test results.
   • *Given* `ReleaseCiAndLintConfigContractTest.kt`,
   • *When* executed as part of the unit test suite,
-  • *Then* all contract assertions for runner, dependencies, and emulator CI workflow SHALL pass with 100% success.
-- **Invariants**: Zero modifications to Android production runtime code in `app/src/main/`; Rule 79 strictly obeyed (no local host emulator boot); 100% unit test pass rate.
+  • *Then* all contract assertions for runner, dependencies, pre-build step, API 34 target, and emulator CI workflow SHALL pass with 100% success.
+- **Invariants**: Zero modifications to Android production runtime code in `app/src/main/`; Rule 79 strictly obeyed (no local host emulator boot); Rule 61 strictly obeyed (non-destructive database testing); 100% unit test pass rate.
 
 
 ### REQ-PRO-052: Architectural Resource and Timing Budgets Specification [Verified]

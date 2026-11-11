@@ -234,11 +234,14 @@ jobs:
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
 
+      - name: Pre-build debug and test APKs
+        run: ./gradlew :app:assembleDebug :app:assembleDebugAndroidTest
+
       - name: Run instrumented tests on Android emulator
         uses: reactivecircus/android-emulator-runner@v2
         with:
-          api-level: 30
-          target: default
+          api-level: 34
+          target: google_apis
           arch: x86_64
           profile: pixel
           script: ./gradlew :app:connectedDebugAndroidTest
