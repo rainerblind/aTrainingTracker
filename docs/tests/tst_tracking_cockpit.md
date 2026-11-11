@@ -1712,8 +1712,8 @@
 
 ### TST-TRK-059: **Live Sparkline Graph Cockpit Tiles & Database Migration Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-TRK-059`
-- **Component**: `TrackingViewsDatabaseManager.java`, `TrackingViewsDbHelper.java`, `SensorFieldView.kt`, `EditSensorFieldDialog.kt`, `LiveSparklineBuffer.kt`, `SensorSparklineView.kt`
-- **Jira**: `ATT-1294`
+- **Component**: `TrackingViewsDatabaseManager.java`, `TrackingViewsDbHelper.java`, `SensorFieldView.kt`, `EditSensorFieldDialog.kt`, `LiveSparklineBuffer.kt`, `SensorSparklineView.kt`, `BANALServiceRepository.kt`, `TrackingViewModel.kt`, `ATrainingTrackerApp.kt`
+- **Jira**: `ATT-1294`, `ATT-6710`
 - **Test Description**:
   1. *Database Schema v19 Migration & Default Column Integrity Unit Test (`TST-TRK-059.1`, `TrackingViewsDbMigrationV19Test.kt`)*:
   • Execute SQLite schema migration from version 18 to 19; assert `ShowGraph` and `GraphHorizonS` columns exist on `ROWS_TABLE` with default values `0` and `300`.
@@ -1729,6 +1729,15 @@
   • Verify selection of 7 duration horizons and full 9-language localization parity in `strings_cockpit.xml`.
   5. *Clean-Room Targeted Test Suite Execution (`TST-TRK-059.5`)*:
   • Execute targeted package tests (`com.atrainingtracker.trainingtracker.database.*`, `com.atrainingtracker.trainingtracker.ui.tracking.*`) asserting 100% pass rate.
+  6. *Singleton Sparkline Buffer Persistence & Lifecycle Test (`TST-TRK-059.6`, `BANALServiceRepositorySparklineTest.kt`, `ATT-6710`)*:
+  • Verify `BANALServiceRepository` registers and accumulates 1 Hz sensor samples in `LiveSparklineBuffer`.
+  • Assert buffers survive simulated ViewModel destruction / unbinding and preserve sample history across drawer navigation.
+  • Assert `clearBreadcrumbs()` resets all registered sparkline buffers to empty.
+  7. *TrackingViewModel Sparkline Sample Retention on Non-Emitting Ticks (`TST-TRK-059.7`, `TrackingViewModelSparklineTest.kt`, `ATT-6710`)*:
+  • Verify `applySensorData()` preserves latest sparkline samples for `showGraph == true` fields when `allSensorData` is empty or does not contain updates for that sensor.
+  • Assert fields never revert to `emptyList()` due to `cachedBaseFields` fallback.
+  8. *Root Back Navigation moveTaskToBack Contract Test (`TST-TRK-059.8`, `ATrainingTrackerAppNavigationTest.kt`, `ATT-6710`)*:
+  • Verify root `BackHandler` on `NavRoutes.START_TRACKING` invokes `moveTaskToBack(true)` instead of `finish()` when `previousBackStackEntry` is null.
 
 ### TST-FIL-015: **Filter Initialization State Tracking, Alpha Validation & Zero-Bias Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-FIL-015`, `REQ-FIL-011`, `REQ-FIL-012.5`, `REQ-FIL-013`

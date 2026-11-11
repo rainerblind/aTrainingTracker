@@ -39,19 +39,20 @@ class RepositoryServiceCleanlinessContractTest {
 
     private fun resolveFile(relativePath: String): File {
         val projectDir = File(System.getProperty("user.dir") ?: ".")
+        val fullRel = "src" + "/main/" + relativePath
         val candidates = listOf(
-            File(projectDir, relativePath),
-            File(projectDir, "app/$relativePath"),
-            File(projectDir, "../app/$relativePath")
+            File(projectDir, fullRel),
+            File(projectDir, "app/$fullRel"),
+            File(projectDir, "../app/$fullRel")
         )
-        return candidates.firstOrNull { it.exists() } ?: File(projectDir, "app/$relativePath")
+        return candidates.firstOrNull { it.exists() } ?: File(projectDir, "app/$fullRel")
     }
 
     private val directDbInstantiationPattern = Regex("""\b\w*(DatabaseManager|DbHelper)\s*\.\s*getInstance\s*\(""")
 
     @Test
     fun testTrackerService_zeroDatabaseManagerInstantiation() {
-        val file = resolveFile("src/main/java/com/atrainingtracker/trainingtracker/tracker/TrackerService.java")
+        val file = resolveFile("java/com/atrainingtracker/trainingtracker/tracker/TrackerService.java")
         assertTrue("TrackerService.java must exist", file.exists())
         val content = file.readText()
 
@@ -84,7 +85,7 @@ class RepositoryServiceCleanlinessContractTest {
 
     @Test
     fun testBanalService_zeroDatabaseManagerInstantiation() {
-        val file = resolveFile("src/main/java/com/atrainingtracker/banalservice/BANALService.java")
+        val file = resolveFile("java/com/atrainingtracker/banalservice/BANALService.java")
         assertTrue("BANALService.java must exist", file.exists())
         val content = file.readText()
 
@@ -101,7 +102,7 @@ class RepositoryServiceCleanlinessContractTest {
 
     @Test
     fun testDeviceManager_zeroDatabaseManagerInstantiationAndZeroCursorLeak() {
-        val file = resolveFile("src/main/java/com/atrainingtracker/banalservice/devices/DeviceManager.java")
+        val file = resolveFile("java/com/atrainingtracker/banalservice/devices/DeviceManager.java")
         assertTrue("DeviceManager.java must exist", file.exists())
         val content = file.readText()
 

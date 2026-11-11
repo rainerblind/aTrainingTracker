@@ -3066,9 +3066,9 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 **Invariants**: Existing power telemetry (`POWER`, `NP`, `IF`, `WORK_KJ`, `TSS`, `W_PRIME_BAL`) preserved; pause freeze integrity; 100% 9-language translation parity; zero composition snapshot state writes.
 
 ### REQ-TRK-059: Configurable Live Sparkline Graph Cockpit Tiles with Selectable Time Horizon Across Numeric SensorTypes [Verified]
-- **Tests**: `TST-TRK-059` | **Tickets**: `ATT-1294`
-- **Implementation**: `TrackingViewsDatabaseManager.java`, `TrackingViewsDbHelper.java`, `SensorFieldView.kt`, `EditSensorFieldDialog.kt`, `LiveSparklineBuffer.kt`, `SensorSparklineView.kt`
-- **Rationale**: Athletes monitoring live telemetry benefit from seeing dynamic temporal trends (whether metric values are rising, steady, or falling) directly within cockpit tiles. Generalizing sparkline visualization across all numeric sensor types with configurable time horizons (1m to Full Workout) enhances tactical pacing without increasing cognitive load or battery drain (ATT-1294, Parent Epic ATT-5908, extending `REQ-TRK-046` and `REQ-UI-436`).
+- **Tests**: `TST-TRK-059` | **Tickets**: `ATT-1294`, `ATT-6710`
+- **Implementation**: `TrackingViewsDatabaseManager.java`, `TrackingViewsDbHelper.java`, `SensorFieldView.kt`, `EditSensorFieldDialog.kt`, `LiveSparklineBuffer.kt`, `SensorSparklineView.kt`, `BANALServiceRepository.kt`, `TrackingViewModel.kt`, `ATrainingTrackerApp.kt`
+- **Rationale**: Athletes monitoring live telemetry benefit from seeing dynamic temporal trends (whether metric values are rising, steady, or falling) directly within cockpit tiles. Generalizing sparkline visualization across all numeric sensor types with configurable time horizons (1m to Full Workout) enhances tactical pacing without increasing cognitive load or battery drain (ATT-1294, refined by ATT-6710, Parent Epic ATT-5908, extending `REQ-TRK-046` and `REQ-UI-436`).
 - **Description**:
 1. *Database Schema v19 Persistence & Migration (`REQ-TRK-059.1`)*:
 • In `TrackingViewsDatabaseManager.java`, the SQLite schema SHALL increment to `DB_VERSION = 19`, introducing integer columns `ShowGraph` (default `0`) and `GraphHorizonS` (default `300` for 5 minutes) to `ROWS_TABLE`.
@@ -3085,12 +3085,22 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 5. *Tile Sparkline Rendering & Composition Hygiene (`REQ-TRK-059.5`)*:
 • `SensorFieldView.kt` SHALL render `SensorSparklineView` below metric values in Value+Graph mode, or full-card in Graph-only mode (`showValue == false && showGraph == true`).
 • Sparkline rendering SHALL adhere strictly to Rule 66 (zero Compose snapshot-state mutations inside composition) and use centralized colors from `MaterialTheme.colorScheme`.
+6. *Singleton Repository Sparkline Buffer Persistence & Telemetry Ingestion (`REQ-TRK-059.6`, `ATT-6710`)*:
+• `BANALServiceRepository` SHALL centrally maintain active `LiveSparklineBuffer` instances across the singleton application lifecycle.
+• During the 1-Hz observation loop in `startObservingBANALService()`, `BANALServiceRepository` SHALL feed incoming numeric sensor samples into active sparkline buffers.
+• Active sparkline buffers SHALL survive `MainActivityWithNavigation` lifecycle destruction and drawer navigation, resetting only when `clearBreadcrumbs()` is invoked on workout start or reset.
+7. *Non-Emitting Tick Sample Retention in TrackingViewModel (`REQ-TRK-059.7`, `ATT-6710`)*:
+• In `TrackingViewModel.applySensorData()`, all sensor fields configured with `showGraph == true` SHALL retain their latest accumulated buffer samples snapshot from `BANALServiceRepository`.
+• When `allSensorData` is empty or does not contain an update for a sensor in that tick, the field SHALL retain its accumulated buffer samples and SHALL NOT fall back to `emptyList()` from `cachedBaseFields`.
+8. *Root Back Navigation Task Preservation (`REQ-TRK-059.8`, `ATT-6710`)*:
+• In `ATrainingTrackerApp.kt`, the Layer 3 root `BackHandler` (when `currentRoute == NavRoutes.START_TRACKING` and `navController.previousBackStackEntry == null`) SHALL invoke `activity.moveTaskToBack(true)` instead of `activity.finish()`.
+• System Back gesture and button navigation SHALL move the application task to the background without destroying `MainActivityWithNavigation` or clearing its `ViewModelStore`.
 
 **Requirement Archaeology & Chesterton's Fence Audit**:
-1. *Original Requirement ID & Target*: Net-new requirement `REQ-TRK-059`, extending `REQ-TRK-046` (`ShowValue`/`ShowBar` display elements) and `REQ-UI-436` (Bar-only mode). Targets `TrackingViewsDatabaseManager.java`, `SensorFieldView.kt`, and `EditSensorFieldDialog.kt`.
-2. *Historical Origin & Commit Trace*: `ATT-4841` introduced `SHOW_VALUE` and `SHOW_BAR` in DB v16; `ATT-4927` added sport-dependent bar gating in DB v18.
-3. *Root Reason for Existing Formulation*: Prior tickets focused exclusively on zone gauge bars and pedal balance bars. General continuous time-series sparklines were deferred to live cockpit UX.
-4. *Preservation of Core Invariants*: Existing tile layouts, `showValue`, `showBar`, and view size scaling remain 100% preserved. Database migrations preserve existing user layouts.
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-TRK-059`, extending `REQ-TRK-046` (`ShowValue`/`ShowBar` display elements), `REQ-UI-436` (Bar-only mode), and `REQ-UI-159` (Root BackHandler navigation). Refined by `ATT-6710` for singleton repository buffer persistence in `BANALServiceRepository.kt`, sample retention in `TrackingViewModel.kt`, and `moveTaskToBack(true)` in `ATrainingTrackerApp.kt`.
+2. *Historical Origin & Commit Trace*: `ATT-4841` introduced `SHOW_VALUE` and `SHOW_BAR` in DB v16; `ATT-4927` added sport-dependent bar gating in DB v18; `ATT-1294` introduced `LiveSparklineBuffer` in `TrackingViewModel`; `ATT-6710` identified buffer wiping on root `finish()` and `cachedBaseFields` fallback.
+3. *Root Reason for Existing Formulation*: Root `BackHandler` previously called `finish()` as the standard root screen exit default. Sparkline buffers were originally placed inside `TrackingViewModel` for initial UI prototyping without considering Activity recreation or backgrounding.
+4. *Preservation of Core Invariants*: Bounded memory ($\le 300$ samples / $\le 1\text{ KB}$ per tile), 1 Hz decimation math, `SensorSparklineView` canvas rendering, drawer navigation hierarchy, and back-stack behavior on child destinations remain 100% preserved.
 
 **Acceptance Criteria (Given-When-Then)**:
 • *Given* an existing user upgrading from DB schema v18,
@@ -3105,8 +3115,17 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 • *Given* an active workout tile with `showGraph == true` and 5m horizon,
 • *When* telemetry updates at 1Hz,
 • *Then* `LiveSparklineBuffer` maintains a 300-sample sliding window and `SensorSparklineView` renders the trend line without recomposition churn (`Rule 66`).
+• *Given* live sparkline graphs accumulating samples in the Cockpit,
+• *When* the user presses the system Back gesture/button at root `NavRoutes.START_TRACKING`,
+• *Then* `MainActivityWithNavigation` is moved to the background via `moveTaskToBack(true)` without destruction, and returning to the app displays all accumulated sparkline history without reset.
+• *Given* active sparkline buffers with accumulated telemetry samples,
+• *When* navigating across drawer destinations (Workouts, Routes, Sensors) or recreating `TrackingViewModel`,
+• *Then* `BANALServiceRepository` preserves all recorded samples and immediately re-populates the Cockpit tiles upon return.
+• *Given* `cachedBaseFields` in `TrackingViewModel`,
+• *When* `applySensorData()` processes an empty emission or partial sensor update where a graph-enabled sensor is absent,
+• *Then* the field retains its accumulated sparkline samples and never reverts to `emptyList()`.
 
-**Invariants**: Existing display element flags (`showValue`, `showBar`) and gauge bar rendering preserved; 100% 9-language translation parity in `strings_cockpit.xml`; database upgrade idempotency.
+**Invariants**: Existing display element flags (`showValue`, `showBar`) and gauge bar rendering preserved; 100% 9-language translation parity in `strings_cockpit.xml`; database upgrade idempotency; bounded memory ($\le 1\text{ KB}$ per tile).
 
 ### REQ-FIL-015: Filter Initialization State Tracking, Alpha Range Validation & Zero-Bias Elimination [Verified]
 - **Tests**: `app/src/test/java/com/atrainingtracker/banalservice/filters/FilterInitializationAndBoundsTest.kt`, `app/src/test/java/com/atrainingtracker/banalservice/filters/FilterResetAndPreStartTest.kt`

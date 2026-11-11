@@ -257,7 +257,8 @@ fun ATrainingTrackerApp(
             }
             activity.navigateToDrawerItem(R.id.drawer_start_tracking)
         } else {
-            activity.finish()
+            // REQ-TRK-059.8, ATT-6710: Move task to back instead of finish() to preserve Activity and ViewModelStore
+            activity.moveTaskToBack(true)
         }
     }
 

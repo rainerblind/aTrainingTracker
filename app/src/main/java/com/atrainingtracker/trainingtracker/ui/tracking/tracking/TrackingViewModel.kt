@@ -153,9 +153,6 @@ class TrackingViewModel @JvmOverloads constructor(
     private val _pendingAddition = MutableStateFlow<AdditionParams?>(null)
     val pendingAddition = _pendingAddition.asStateFlow()
 
-    // Bounded live sparkline buffer cache keyed by sensorFieldId (REQ-TRK-059.4, ATT-1294)
-    private val sparklineBuffers = mutableMapOf<Long, com.atrainingtracker.trainingtracker.ui.tracking.LiveSparklineBuffer>()
-
     // Screen mode is now local and driven by the parent (ATT-245)
     private val _screenMode = MutableStateFlow(ScreenMode.TRACKING)
     val screenMode: StateFlow<ScreenMode> = _screenMode.asStateFlow()
@@ -546,18 +543,18 @@ class TrackingViewModel @JvmOverloads constructor(
                             )
                         } else null
 
-                        val existingBuffer = sparklineBuffers[config.sensorFieldId]
                         val sparklineSamples = if (config.showGraph) {
-                            val buffer = if (existingBuffer != null && existingBuffer.horizonSeconds == config.graphHorizonSeconds) {
-                                existingBuffer
-                            } else {
-                                val newBuf = com.atrainingtracker.trainingtracker.ui.tracking.LiveSparklineBuffer(config.graphHorizonSeconds)
-                                sparklineBuffers[config.sensorFieldId] = newBuf
-                                newBuf
-                            }
+                            val buffer = banalServiceRepository.registerSparklineBuffer(
+                                sensorFieldId = config.sensorFieldId,
+                                horizonSeconds = config.graphHorizonSeconds,
+                                sensorType = config.sensorType,
+                                filterType = config.filterType,
+                                filterConstant = config.filterConstant,
+                                sourceDeviceName = config.sourceDeviceName
+                            )
                             buffer.getSamples()
                         } else {
-                            sparklineBuffers.remove(config.sensorFieldId)
+                            banalServiceRepository.removeSparklineBuffer(config.sensorFieldId)
                             emptyList()
                         }
 
@@ -711,19 +708,10 @@ class TrackingViewModel @JvmOverloads constructor(
 
                 // 3. Iterate through every field that needs this update.
                 val isBike = (activityType.sportType == BSportType.BIKE)
-                val sparklineSample = numericValue?.toFloat()
                 for (fieldToUpdate in fieldsToUpdate) {
                     val fieldZoneGaugeState = if (fieldToUpdate.showBar) rawZoneGaugeState else null
                     val fieldPedalBalanceState = if (fieldToUpdate.showBar && isBike) newPedalBalanceState else null
                     val fieldWPrimeBatteryState = if (fieldToUpdate.showBar && isBike && isWPrimeBal) newWPrimeBatteryState else null
-
-                    val newSparklineSamples = if (fieldToUpdate.showGraph && sparklineSample != null) {
-                        val buffer = sparklineBuffers.getOrPut(fieldToUpdate.sensorFieldId) {
-                            com.atrainingtracker.trainingtracker.ui.tracking.LiveSparklineBuffer(fieldToUpdate.graphHorizonSeconds)
-                        }
-                        buffer.addSample(sparklineSample)
-                        buffer.getSamples()
-                    } else null
 
                     // Check if this specific instance needs an update to avoid unnecessary changes.
                     if (fieldToUpdate.value != newFormattedValue ||
@@ -731,8 +719,7 @@ class TrackingViewModel @JvmOverloads constructor(
                         fieldToUpdate.zoneDisplayOptions != displayOptions ||
                         fieldToUpdate.zoneGaugeState != fieldZoneGaugeState ||
                         fieldToUpdate.pedalBalanceState != fieldPedalBalanceState ||
-                        (isWPrimeBal && fieldToUpdate.wPrimeBatteryState != fieldWPrimeBatteryState) ||
-                        (newSparklineSamples != null && fieldToUpdate.sparklineSamples != newSparklineSamples)) {
+                        (isWPrimeBal && fieldToUpdate.wPrimeBatteryState != fieldWPrimeBatteryState)) {
                         val index = updatedFields.indexOf(fieldToUpdate)
                         if (index != -1) {
                             updatedFields[index] = fieldToUpdate.copy(
@@ -741,12 +728,24 @@ class TrackingViewModel @JvmOverloads constructor(
                                 zoneDisplayOptions = displayOptions,
                                 zoneGaugeState = fieldZoneGaugeState,
                                 pedalBalanceState = fieldPedalBalanceState,
-                                wPrimeBatteryState = if (isWPrimeBal) fieldWPrimeBatteryState else fieldToUpdate.wPrimeBatteryState,
-                                sparklineSamples = newSparklineSamples ?: fieldToUpdate.sparklineSamples
+                                wPrimeBatteryState = if (isWPrimeBal) fieldWPrimeBatteryState else fieldToUpdate.wPrimeBatteryState
                             )
                             hasChanged = true
                         }
                     }
+                }
+            }
+        }
+
+        // REQ-TRK-059.7, ATT-6710: Unconditionally populate latest sparkline samples from repository
+        // for all fields with showGraph == true, ensuring non-emitting ticks never fall back to emptyList()
+        for (i in updatedFields.indices) {
+            val field = updatedFields[i]
+            if (field.showGraph) {
+                val currentSamples = banalServiceRepository.getSparklineSamples(field.sensorFieldId)
+                if (field.sparklineSamples != currentSamples) {
+                    updatedFields[i] = field.copy(sparklineSamples = currentSamples)
+                    hasChanged = true
                 }
             }
         }

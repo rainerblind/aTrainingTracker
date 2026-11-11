@@ -40,6 +40,7 @@ import com.atrainingtracker.banalservice.devices.RrBeatListener
 import com.atrainingtracker.banalservice.devices.SpeedAndLocationDevice
 import com.atrainingtracker.banalservice.devices.MyDevice
 import com.atrainingtracker.banalservice.filters.FilterData
+import com.atrainingtracker.banalservice.filters.FilterType
 import com.atrainingtracker.banalservice.filters.FilteredSensorData
 import com.atrainingtracker.banalservice.sensor.SensorType
 import com.atrainingtracker.banalservice.tpms.IndirectTpmsEstimator
@@ -47,9 +48,12 @@ import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.TrackingMode
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.ui.WorkoutNavigationEvents
+import com.atrainingtracker.trainingtracker.ui.tracking.LiveSparklineBuffer
 import com.atrainingtracker.trainingtracker.ui.util.SingleLiveEvent
 import com.atrainingtracker.trainingtracker.util.SnapshotChunkedList
 import com.google.android.gms.maps.model.LatLng
+import java.util.Objects
+import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -87,6 +91,21 @@ data class DeviceTelemetry(
 
 
 /**
+ * Registration record for a live sparkline buffer in the singleton repository (REQ-TRK-059.6, ATT-6710).
+ */
+data class SparklineRegistration(
+    val sensorFieldId: Long,
+    val horizonSeconds: Int,
+    val sensorType: SensorType,
+    val filterType: FilterType,
+    val filterConstant: Double,
+    val sourceDeviceName: String?,
+    val configHash: Int,
+    val buffer: LiveSparklineBuffer
+)
+
+
+/**
  * A singleton repository that acts as the single source of truth for all tracking-related data from the sensors.
  * It connects to the BANALService to provide a clean data source for all ViewModels.
  */
@@ -94,6 +113,9 @@ class BANALServiceRepository private constructor(context: Context) {
 
     private val appContext = context.applicationContext
     private val repositoryScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
+
+    // --- Live Cockpit Sparkline Buffers (REQ-TRK-059.6, ATT-6710) ---
+    private val sparklineBuffers = ConcurrentHashMap<Long, SparklineRegistration>()
 
     // --- Service Connection State ---
     private val _serviceBinder = MutableStateFlow<BANALService.BANALServiceComm?>(null)
@@ -385,6 +407,7 @@ class BANALServiceRepository private constructor(context: Context) {
                         // --- FILTERED SENSOR DATA ---
                         val newSensorData = binder.allFilteredSensorData
                         if (newSensorData != null) {
+                            updateSparklineBuffers(newSensorData)
                             _allFilteredSensorData.value = newSensorData
                         }
 
@@ -558,6 +581,81 @@ class BANALServiceRepository private constructor(context: Context) {
         _currentTrack.value = emptyList()
         _currentPathPoints.value = emptyList()
         itpmsEstimator.resetSession()
+        clearSparklineBuffers()
+    }
+
+    /**
+     * Registers or retrieves a singleton-managed LiveSparklineBuffer for a cockpit tile (REQ-TRK-059.6, ATT-6710).
+     */
+    fun registerSparklineBuffer(
+        sensorFieldId: Long,
+        horizonSeconds: Int,
+        sensorType: SensorType,
+        filterType: FilterType,
+        filterConstant: Double,
+        sourceDeviceName: String?
+    ): LiveSparklineBuffer {
+        val configHash = Objects.hash(sensorType, filterType, filterConstant, sourceDeviceName)
+        val existing = sparklineBuffers[sensorFieldId]
+        if (existing != null && existing.horizonSeconds == horizonSeconds && existing.configHash == configHash) {
+            return existing.buffer
+        }
+        val buffer = LiveSparklineBuffer(horizonSeconds)
+        sparklineBuffers[sensorFieldId] = SparklineRegistration(
+            sensorFieldId = sensorFieldId,
+            horizonSeconds = horizonSeconds,
+            sensorType = sensorType,
+            filterType = filterType,
+            filterConstant = filterConstant,
+            sourceDeviceName = sourceDeviceName,
+            configHash = configHash,
+            buffer = buffer
+        )
+        return buffer
+    }
+
+    /**
+     * Removes a sparkline buffer registration when a tile is reconfigured or deleted.
+     */
+    fun removeSparklineBuffer(sensorFieldId: Long) {
+        sparklineBuffers.remove(sensorFieldId)
+    }
+
+    /**
+     * Returns an immutable snapshot list of sparkline samples for a sensorFieldId, or emptyList() if not registered.
+     */
+    fun getSparklineSamples(sensorFieldId: Long): List<Float> {
+        return sparklineBuffers[sensorFieldId]?.buffer?.getSamples() ?: emptyList()
+    }
+
+    /**
+     * Returns the LiveSparklineBuffer instance for a sensorFieldId, if registered.
+     */
+    fun getSparklineBuffer(sensorFieldId: Long): LiveSparklineBuffer? {
+        return sparklineBuffers[sensorFieldId]?.buffer
+    }
+
+    /**
+     * Resets all registered sparkline buffers (REQ-TRK-059.6, ATT-6710).
+     */
+    fun clearSparklineBuffers() {
+        sparklineBuffers.values.forEach { it.buffer.clear() }
+    }
+
+    /**
+     * Feeds incoming filtered sensor data to active sparkline buffers (REQ-TRK-059.6, ATT-6710).
+     */
+    fun updateSparklineBuffers(sensorDataList: List<FilteredSensorData<*>>) {
+        if (sparklineBuffers.isEmpty() || sensorDataList.isEmpty()) return
+        for (sensorData in sensorDataList) {
+            val numericVal = (sensorData.value as? Number)?.toFloat() ?: continue
+            val hash = Objects.hash(sensorData.sensorType, sensorData.filterType, sensorData.filterConstant, sensorData.deviceName)
+            for (reg in sparklineBuffers.values) {
+                if (reg.configHash == hash) {
+                    reg.buffer.addSample(numericVal)
+                }
+            }
+        }
     }
 
     /**
