@@ -931,6 +931,25 @@
   4. *Clean-Room Full Suite Regression Execution*:
   • Execute `python3 -m unittest tools/test_replay_workout.py` and `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions.
 
+### TST-TOOL-007: **Simulated Ground Speed Injection & Defensive AOSP CLI Fallback Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-TOOL-007`
+- **Component**: **Simulated Ground Speed Injection & Defensive AOSP CLI Fallback Verification Suite**
+- **Jira**: ``ATT-6684``
+- **Test Description**:
+  1. *Unit Test: Command Formatting with Speed (`test_build_inject_cmd_with_speed` in `tools/test_replay_workout.py`)*:
+  • Verify `AdbGpsInjector.build_inject_cmd()` formats `--speed {speed_mps:.2f}` when `speed_mps >= 0.0`.
+  2. *Unit Test: Command Formatting Backward Compatibility (`test_build_inject_cmd_without_speed` in `tools/test_replay_workout.py`)*:
+  • Verify `AdbGpsInjector.build_inject_cmd()` preserves standard Android 14+ command syntax without `--speed` when `speed_mps is None` or `speed_mps < 0.0`.
+  3. *Unit Test: Asynchronous Queue Tuple Handling (`test_async_queue_injection_with_speed` in `tools/test_replay_workout.py`)*:
+  • Verify `AdbGpsInjector.inject_location()` queues 4-tuple `(lat, lon, timestamp_ms, speed_mps)` and `_worker_loop` accepts 2-tuples, 3-tuples, and 4-tuples without error.
+  4. *Unit Test: Defensive Auto-Probing Fallback on Unsupported Option (`test_speed_fallback_on_unsupported_option` in `tools/test_replay_workout.py`)*:
+  • Mock ADB subprocess returning `java.lang.IllegalArgumentException: Unknown option: --speed` with exit code 255.
+  • Verify `_supports_speed_flag` transitions to `False`, warning notice is logged once, and retry injection proceeds without `--speed`.
+  5. *Localization Parity Audit*:
+  • Verify developer tooling changes introduce zero missing strings or format specifier mismatches (no Android UI strings affected).
+  6. *Clean-Room Full Suite Regression Execution*:
+  • Execute `python3 -m unittest tools/test_replay_workout.py` asserting 100% test pass rate across all 39+ tests.
+
 ### TST-BLD-001: **R8 Release Build Minification, ProGuard Keep Rules & DEX Obfuscation Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-BLD-001`
 - **Component**: **R8 Release Build Minification, ProGuard Keep Rules & DEX Obfuscation Verification Suite**

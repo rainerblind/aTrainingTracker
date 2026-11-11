@@ -1230,6 +1230,37 @@ The workflow SHALL mandate that:
 
 **Invariants**: Zero production code modifications in `app/src/main`; full backward compatibility with `REQ-TOOL-002`, `REQ-TOOL-003`, `REQ-TOOL-004`; 100% clean-room test pass rate MUST NOT be broken.
 
+### REQ-TOOL-007: Simulated Ground Speed Injection & Defensive AOSP CLI Fallback in `tools/replay_workout.py` [Verified]
+- **Tests**: `tools/replay_workout.py`, `tools/test_replay_workout.py`
+- **Implementation**: Append optional `--speed` flag to `set-test-provider-location` shell commands and forward `speed_mps` through the asynchronous queue with automatic fallback recovery in `AdbGpsInjector`.
+- **Rationale**: The TCX workout replay tool (`tools/replay_workout.py`) SHALL forward parsed or computed ground speed (`speed_mps`) through `AdbGpsInjector.inject_location()`, format `--speed {speed_mps:.2f}` in `build_inject_cmd()`, and defensively handle AOSP CLI environments (`LocationShellCommand.java`) where stock Android rejects `--speed` with `IllegalArgumentException` by transparently disabling `--speed` and retrying without interruption (ATT-6684, extending `REQ-TOOL-002` and `REQ-TOOL-006`):
+1. *Signature & Formatting in `build_inject_cmd()` (`REQ-TOOL-007.1`)*:
+• `AdbGpsInjector.build_inject_cmd(cls, provider: str, lat: float, lon: float, time_ms: int, accuracy: float = 2.5, speed_mps: Optional[float] = None) -> str` SHALL accept an optional `speed_mps` parameter.
+• When `speed_mps is not None` and `speed_mps >= 0.0`, it SHALL append ` --speed {speed_mps:.2f}` to the generated command string.
+• When `speed_mps is None` or `speed_mps < 0.0`, it SHALL generate the command string without `--speed`, preserving exact backward compatibility with stock Android 14+ CLI expectations.
+2. *Asynchronous Queue Payload & Tuple Backward Compatibility (`REQ-TOOL-007.2`)*:
+• `AdbGpsInjector.inject_location()` SHALL queue `(lat, lon, timestamp_ms, speed_mps)`.
+• `_worker_loop()` SHALL handle 2-tuples `(lat, lon)`, 3-tuples `(lat, lon, timestamp_ms)`, and 4-tuples `(lat, lon, timestamp_ms, speed_mps)` gracefully.
+3. *Defensive Auto-Probing & Graceful Fallback (`REQ-TOOL-007.3`)*:
+• `AdbGpsInjector` SHALL maintain `self._supports_speed_flag: Optional[bool] = None`.
+• When `self._supports_speed_flag is not False`, injections SHALL format `--speed`.
+• If an ADB shell command returns exit code 255 with `Unknown option: --speed` in stderr or stdout, `AdbGpsInjector` SHALL set `self._supports_speed_flag = False`, emit a single explanatory notice to console (`[!] Device does not support --speed in set-test-provider-location; falling back to standard injection`), and transparently re-issue the injection commands without `--speed`.
+4. *CLI Argument Control (`REQ-TOOL-007.4`)*:
+• `tools/replay_workout.py` SHALL support `--speed-injection` (default) and `--no-speed-injection` CLI arguments to allow explicit disabling.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* `AdbGpsInjector.build_inject_cmd("gps", 48.1, 11.5, 1700000000000, accuracy=2.5, speed_mps=5.5)`,
+• *When* generating the shell command string,
+• *Then* the returned string equals `"cmd location providers set-test-provider-location gps --location 48.100000,11.500000 --accuracy 2.5 --time 1700000000000 --speed 5.50"`.
+• *Given* `AdbGpsInjector.build_inject_cmd("gps", 48.1, 11.5, 1700000000000, accuracy=2.5, speed_mps=None)`,
+• *When* generating the shell command string without speed,
+• *Then* the returned string equals `"cmd location providers set-test-provider-location gps --location 48.100000,11.500000 --accuracy 2.5 --time 1700000000000"` and does not contain `--speed`.
+• *Given* an active replay session where ADB returns `java.lang.IllegalArgumentException: Unknown option: --speed`,
+• *When* `AdbGpsInjector` processes the response in `_worker_loop`,
+• *Then* `_supports_speed_flag` transitions to `False`, a single warning notice is logged, and subsequent injections omit `--speed` without crashing or dropping locations.
+
+**Invariants**: Zero production code modifications in `app/src/main`; full backward compatibility with all 39 existing unit tests in `tools/test_replay_workout.py`; replay continuity on stock AOSP devices MUST NOT be broken.
+
 ### REQ-BLD-001: R8 Minification, Resource Shrinking and DEX Code Obfuscation with Safe ProGuard Keep Rules [Verified]
 - **Tests**: `app/build.gradle`, `app/proguard-rules.pro`, `ProGuardRulesContractTest.kt`
 - **Implementation**: Enable R8 minification, resource shrinking, and DEX code obfuscation in release builds with safe ProGuard keep rules to satisfy Google Play threshold (>= 25%).

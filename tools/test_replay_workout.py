@@ -617,8 +617,8 @@ class TestAdbGpsInjector(unittest.TestCase):
 
         fix0 = injector._queue.get_nowait()
         fix1 = injector._queue.get_nowait()
-        self.assertEqual(fix0, (48.0, 11.0, 1700000000000))
-        self.assertEqual(fix1, (48.0005, 11.0005, 1700000005000))
+        self.assertEqual(fix0, (48.0, 11.0, 1700000000000, 6.0))
+        self.assertEqual(fix1, (48.0005, 11.0005, 1700000005000, 6.0))
         self.assertEqual(fix1[2] - fix0[2], 5000)
 
         # Verify reset_epoch anchors base_epoch_ms so time_sec offset is preserved
@@ -628,6 +628,79 @@ class TestAdbGpsInjector(unittest.TestCase):
         fix_seek0 = injector._queue.get_nowait()
         fix_seek1 = injector._queue.get_nowait()
         self.assertEqual(fix_seek1[2] - fix_seek0[2], 5000)
+
+    def test_build_inject_cmd_with_speed(self):
+        """TST-TOOL-007.1: Appends --speed {speed_mps:.2f} when speed_mps is provided and >= 0.0."""
+        cmd = AdbGpsInjector.build_inject_cmd("gps", 48.1, 11.5, 1700000000000, accuracy=2.5, speed_mps=5.5)
+        self.assertEqual(
+            cmd,
+            "cmd location providers set-test-provider-location gps --location 48.100000,11.500000 --accuracy 2.5 --time 1700000000000 --speed 5.50"
+        )
+        self.assertIn("--speed 5.50", cmd)
+
+    def test_build_inject_cmd_backward_compatibility(self):
+        """TST-TOOL-007.2: Omits --speed when speed_mps is None or negative, preserving exact Android 14+ syntax."""
+        cmd_none = AdbGpsInjector.build_inject_cmd("gps", 48.1, 11.5, 1700000000000, accuracy=2.5, speed_mps=None)
+        self.assertEqual(
+            cmd_none,
+            "cmd location providers set-test-provider-location gps --location 48.100000,11.500000 --accuracy 2.5 --time 1700000000000"
+        )
+        self.assertNotIn("--speed", cmd_none)
+
+        cmd_neg = AdbGpsInjector.build_inject_cmd("gps", 48.1, 11.5, 1700000000000, accuracy=2.5, speed_mps=-1.0)
+        self.assertNotIn("--speed", cmd_neg)
+
+    def test_async_queue_injection_with_speed(self):
+        """TST-TOOL-007.3: Forwards 4-tuple (lat, lon, timestamp_ms, speed_mps) through async queue."""
+        injector = AdbGpsInjector(enabled=True, device_serial="DEVICE123")
+        injector.is_registered = True
+        injector.base_epoch_ms = 1700000000000
+
+        injector.inject_location(48.123, 11.456, 500.0, 8.25, 90.0, time_sec=2.5)
+        self.assertEqual(injector._queue.qsize(), 1)
+        item = injector._queue.get_nowait()
+        self.assertEqual(item, (48.123, 11.456, 1700000002500, 8.25))
+
+    def test_speed_fallback_on_unsupported_option(self):
+        """TST-TOOL-007.4: Defensively catches 'Unknown option: --speed' from ADB shell, disables speed flag, and retries."""
+        injector = AdbGpsInjector(enabled=True, device_serial="DEVICE123")
+        injector.is_registered = True
+
+        called_cmds = []
+
+        class MockCompletedProcess:
+            def __init__(self, returncode, stdout="", stderr=""):
+                self.returncode = returncode
+                self.stdout = stdout
+                self.stderr = stderr
+
+        def mock_run_adb(args, check=False):
+            called_cmds.append(args)
+            shell_cmd = args[1]
+            if "--speed" in shell_cmd:
+                return MockCompletedProcess(255, "", "java.lang.IllegalArgumentException: Unknown option: --speed\n")
+            else:
+                return MockCompletedProcess(0, "", "")
+
+        injector._run_adb = mock_run_adb
+
+        # Enqueue item with speed
+        injector._queue.put_nowait((48.1, 11.5, 1700000000000, 7.5))
+        injector._queue.put_nowait(None)
+
+        injector._worker_loop()
+
+        self.assertFalse(injector._supports_speed_flag)
+        self.assertEqual(len(called_cmds), 2)
+        self.assertIn("--speed 7.50", called_cmds[0][1])
+        self.assertNotIn("--speed", called_cmds[1][1])
+
+        # Enqueue second item with speed; should skip --speed immediately since _supports_speed_flag is False
+        injector._queue.put_nowait((48.2, 11.6, 1700000001000, 7.5))
+        injector._queue.put_nowait(None)
+        injector._worker_loop()
+        self.assertEqual(len(called_cmds), 3)
+        self.assertNotIn("--speed", called_cmds[2][1])
 
     def test_adb_gps_injector_removes_test_providers_on_pause_stop_and_eof(self):
         """TST-TRK-017.1: Verifies startup cleanup, lazy add-test-provider on PLAYING, and immediate remove-test-provider on PAUSED, STOPPED, kill, and EOF."""
@@ -756,6 +829,17 @@ class TestCliArguments(unittest.TestCase):
         self.assertEqual(args.revive_power_at, 25.0)
         self.assertEqual(args.kill_gps_at, 12.5)
         self.assertEqual(args.revive_gps_at, 22.5)
+
+    def test_speed_injection_cli_arguments(self):
+        parser = build_arg_parser()
+        args_default = parser.parse_args([])
+        self.assertTrue(args_default.speed_injection)
+
+        args_disabled = parser.parse_args(["--no-speed-injection"])
+        self.assertFalse(args_disabled.speed_injection)
+
+        args_enabled = parser.parse_args(["--speed-injection"])
+        self.assertTrue(args_enabled.speed_injection)
 
 
 class TestScheduledTriggerManager(unittest.TestCase):

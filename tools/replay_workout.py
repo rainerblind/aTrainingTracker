@@ -1112,10 +1112,12 @@ class AdbGpsInjector:
 
     DEFAULT_PROVIDERS = ("gps", "network", "fused")
 
-    def __init__(self, enabled: bool = True, device_serial: Optional[str] = None, agent_mode: Optional[bool] = None):
+    def __init__(self, enabled: bool = True, device_serial: Optional[str] = None, agent_mode: Optional[bool] = None, speed_injection: bool = True):
         self.enabled = enabled
         self.agent_mode = agent_mode
         self.device_serial = device_serial
+        self.speed_injection = speed_injection
+        self._supports_speed_flag: Optional[bool] = None
         self.is_registered = False
         self.is_killed = False
         self._is_playing = False
@@ -1275,13 +1277,26 @@ class AdbGpsInjector:
                 if not self.is_registered or self.is_killed:
                     self._queue.task_done()
                     continue
-                if len(item) == 3:
+                speed_to_inject: Optional[float] = None
+                if len(item) == 4:
+                    lat, lon, time_ms, spd = item
+                    if self.speed_injection and (self._supports_speed_flag is not False):
+                        speed_to_inject = spd
+                elif len(item) == 3:
                     lat, lon, time_ms = item
                 else:
                     lat, lon = item
                     time_ms = int(time.time() * 1000)
-                cmds = [self.build_inject_cmd(p, lat, lon, time_ms, accuracy=2.5) for p in self.DEFAULT_PROVIDERS]
-                self._run_adb(["shell", " && ".join(cmds)], check=False)
+                cmds = [self.build_inject_cmd(p, lat, lon, time_ms, accuracy=2.5, speed_mps=speed_to_inject) for p in self.DEFAULT_PROVIDERS]
+                res = self._run_adb(["shell", " && ".join(cmds)], check=False)
+                if res is not None and res.returncode != 0 and speed_to_inject is not None:
+                    err_output = (res.stderr or "") + (res.stdout or "")
+                    if "Unknown option: --speed" in err_output:
+                        if self._supports_speed_flag is not False:
+                            print("[!] Notice: Target device does not support --speed in set-test-provider-location. Falling back to standard location injection.")
+                            self._supports_speed_flag = False
+                        retry_cmds = [self.build_inject_cmd(p, lat, lon, time_ms, accuracy=2.5, speed_mps=None) for p in self.DEFAULT_PROVIDERS]
+                        self._run_adb(["shell", " && ".join(retry_cmds)], check=False)
             self._queue.task_done()
 
     def _run_adb(self, cmd_args: List[str], check: bool = False):
@@ -1291,9 +1306,12 @@ class AdbGpsInjector:
         return subprocess.run(cmd, capture_output=True, text=True, check=check)
 
     @classmethod
-    def build_inject_cmd(cls, provider: str, lat: float, lon: float, time_ms: int, accuracy: float = 2.5) -> str:
+    def build_inject_cmd(cls, provider: str, lat: float, lon: float, time_ms: int, accuracy: float = 2.5, speed_mps: Optional[float] = None) -> str:
         """Constructs Android 14+ compatible location injection shell command string."""
-        return f"cmd location providers set-test-provider-location {provider} --location {lat:.6f},{lon:.6f} --accuracy {accuracy:.1f} --time {time_ms}"
+        cmd = f"cmd location providers set-test-provider-location {provider} --location {lat:.6f},{lon:.6f} --accuracy {accuracy:.1f} --time {time_ms}"
+        if speed_mps is not None and speed_mps >= 0.0:
+            cmd += f" --speed {speed_mps:.2f}"
+        return cmd
 
     def inject_location(self, lat: float, lon: float, ele: float = 0.0, speed_mps: float = 0.0, bearing_deg: float = 0.0, time_sec: Optional[float] = None):
         if not self.enabled or not self.is_registered or self.is_killed:
@@ -1306,7 +1324,7 @@ class AdbGpsInjector:
         try:
             if time_sec is not None:
                 timestamp_ms = self.base_epoch_ms + int(round(time_sec * 1000.0))
-                self._queue.put_nowait((lat, lon, timestamp_ms))
+                self._queue.put_nowait((lat, lon, timestamp_ms, speed_mps))
             else:
                 self._queue.put_nowait((lat, lon))
         except queue.Full:
@@ -2172,6 +2190,7 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--revive-power-at", type=float, help="Automatically revive Cycling Power sensor at given workout elapsed seconds")
     parser.add_argument("--kill-gps-at", type=float, help="Automatically kill GPS location injection at given workout elapsed seconds")
     parser.add_argument("--revive-gps-at", type=float, help="Automatically revive GPS location injection at given workout elapsed seconds")
+    parser.add_argument("--speed-injection", action=argparse.BooleanOptionalAction, default=True, help="Inject recorded/computed speed into ADB mock location providers (default True, falls back automatically on stock AOSP)")
     return parser
 
 
@@ -2231,7 +2250,7 @@ def main():
     ble_server = BleReplayServer(enabled=not args.no_ble, hr_battery=args.hr_battery, power_battery=args.power_battery)
     ble_server.start()
 
-    gps_injector = AdbGpsInjector(enabled=not args.no_gps, device_serial=target_device, agent_mode=args.agent)
+    gps_injector = AdbGpsInjector(enabled=not args.no_gps, device_serial=target_device, agent_mode=args.agent, speed_injection=args.speed_injection)
     gps_injector.setup()
 
     trigger_mgr = ScheduledTriggerManager(
