@@ -48,6 +48,8 @@
     <string name="radar_simulator_stop">Simulation beenden</string>
     <string name="radar_simulator_running">Simulation aktiv</string>
     <string name="radar_simulator_idle">Simulation angehalten</string>
+    <string name="radar_simulator_status">%1$s • %2$d Ziele</string>
+    <string name="radar_simulator_scenario_label">Szenario</string>
     <string name="radar_scenario_single_car">Einzelnes Fahrzeug</string>
     <string name="radar_scenario_single_car_desc">Einzelnes überholendes Fahrzeug mit 12 m/s</string>
     <string name="radar_scenario_convoy">Fahrzeugkolonne</string>
@@ -72,6 +74,8 @@
     <string name="radar_overlay_disconnected">Radar getrennt</string>
     <string name="radar_overlay_connecting">Radar verbindet</string>
     <string name="radar_overlay_clear">Straße frei</string>
+    <string name="radar_overlay_threats_format">%1$d Gefahren</string>
+    <string name="radar_overlay_threats_fast_format">%1$d Gefahren (hohes Tempo)</string>
 
     <!-- Radar Audio & Haptic Alerts (ATT-5086 / REQ-TRK-063) -->
     <string name="radar_alerts_settings_title">Radar-Warnungen &amp; Audio</string>
@@ -85,7 +89,7 @@
     <string name="radar_alert_speaker_boost_desc">Erhöht leise Lautsprecherlautstärke während Warnungen kurzzeitig</string>
     <string name="radar_alert_route_title">Audio-Ausgabe</string>
     <string name="radar_alert_route_default">System / Kopfhörer</string>
-    <string name="radar_alert_route_speaker">Telefon-Lautsprecher erzwingen</string>
+    <string name="radar_alert_route_speaker">Telefon-Lautsprecher</string>
     <string name="radar_alert_haptic_title">Haptische Vibration</string>
     <string name="radar_alert_haptic_desc">Vibrieren bei Annäherung und Bedrohungswechsel</string>
 
@@ -99,6 +103,8 @@
     <string name="radar_light_mode_peloton">Peloton</string>
     <string name="radar_light_auto_switch">Automatisches Trainingslicht</string>
     <string name="radar_light_auto_switch_desc">Schaltet das Rücklicht bei Trainingsbeginn ein und bei Trainingsende aus</string>
+    <string name="radar_smart_light_automation">Intelligente Lichtautomatik</string>
+    <string name="radar_smart_light_automation_desc">Licht an Tageslicht, Tunnel, Dämmerung und Verkehr anpassen</string>
     <string name="radar_light_sheet_title">Radar-Rücklicht</string>
     <string name="radar_light_stvzo_notice">StVZO-Modus (Blinken deaktiviert)</string>
 
@@ -131,4 +137,43 @@
     <string name="radar_preview_slow">Langsam</string>
     <string name="radar_preview_fast">Schnelle Gefahr</string>
     <string name="radar_preview_lane_change">Spurwechsel</string>
+
+    <!-- Advanced Settings / Tuning Accordion Category (ATT-6702 / REQ-UI-512) -->
+    <string name="tuning_cat_cycling_radar">Fahrrad-Radar</string>
+
+    <!-- Post-Workout Traffic Analytics & Map Hotspots (ATT-5088 / REQ-RAD-005 / REQ-RAD-006) -->
+    <string name="radar_traffic_card_title">Radar-Verkehrszusammenfassung</string>
+    <string name="radar_total_vehicles">Überholende Fahrzeuge</string>
+    <string name="radar_traffic_density_km">Dichte (Fzg./km)</string>
+    <string name="radar_traffic_density_hour">Dichte (Fzg./h)</string>
+    <string name="radar_max_closing_speed">Max. Annäherungstempo</string>
+    <string name="radar_max_vehicle_speed">Max. Fahrzeugtempo</string>
+    <string name="radar_high_threat_passes">Gefährliche Überholungen</string>
+    <string name="radar_marker_pass_title">Fahrzeugüberholung (%1$s km/h)</string>
+    <string name="radar_marker_high_threat_title">Gefährliche Überholung (%1$s km/h)</string>
+
+    <!-- Radar-Verkehr & Nahüberholungs-Zusammenfassung Strava/Teilen (ATT-5122 / REQ-RAD-007) -->
+    <string name="radar_strava_summary_title">Strava-Verkehrsübersicht</string>
+    <string name="radar_strava_summary_desc">Fahrzeugüberholungen und Geschwindigkeitsübersicht an Strava-Aktivitätsbeschreibung anhängen</string>
+    <string name="radar_share_summary_title">Verkehrsübersicht beim Teilen</string>
+    <string name="radar_share_summary_desc">Fahrzeugüberholungen und Geschwindigkeiten im Teilen-Text mitsenden</string>
+    <string name="radar_summary_header">📡 Radar: %1$d Fahrzeuge überholt (%2$s/km)</string>
+    <string name="radar_summary_close_passes">⚠️ %1$d enge Überholungen (&lt;1,5m, min %2$sm)</string>
+    <string name="radar_summary_close_passes_singular">⚠️ 1 enge Überholung (&lt;1,5m, min %1$sm)</string>
+    <string name="radar_summary_heavy_vehicles">🚛 %1$d Schwerlastfahrzeuge</string>
+    <string name="radar_summary_heavy_vehicles_singular">🚛 1 Schwerlastfahrzeug</string>
+    <string name="radar_summary_max_speed">🚀 Max %1$s km/h (+%2$s km/h Annäherung)</string>
+    <string name="radar_summary_max_speed_simple">🚀 Max %1$s km/h</string>
+    <string name="radar_close_pass_threshold_title">Warnschwelle für Überholabstand</string>
+    <string name="radar_close_pass_threshold_summary">Hebt überholende Fahrzeuge unter dem Mindestsicherheitsabstand auf der Karte hervor</string>
+    <string name="radar_close_pass_threshold_1_0m">1,0 m (3,3 ft - UK/US)</string>
+    <string name="radar_close_pass_threshold_1_5m">1,5 m (5,0 ft - Innerorts / StVO)</string>
+    <string name="radar_close_pass_threshold_2_0m">2,0 m (6,6 ft - Außerorts / StVO)</string>
+    <string name="radar_marker_close_pass_title">⚠️ Zu dichter Überholvorgang (%1$sm) • %2$s • %3$s km/h</string>
+    <string name="radar_vehicle_size_light">Leichtfahrzeug</string>
+    <string name="radar_vehicle_size_car">PKW</string>
+    <string name="radar_vehicle_size_truck">Schwerlastfahrzeug (LKW/Bus)</string>
+    <string name="radar_min_passing_distance">Min. Seitenabstand</string>
+    <string name="radar_close_pass_warning">⚠️ %1$d gefährlich nahe Überholungen (&lt;%2$sm)</string>
+    <string name="radar_heavy_vehicle_share">Schwerlastanteil</string>
 </resources>

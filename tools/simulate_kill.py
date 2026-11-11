@@ -134,25 +134,21 @@ class TerminalKeyReader:
 class KillSimulatorController:
     """Manages device interactions, process kills, whitelists, and permissions over ADB."""
 
-    def __init__(self, device_serial: Optional[str] = None, package_name: Optional[str] = None):
-        self.device_serial = device_serial or self.detect_device()
+    def __init__(self, device_serial: Optional[str] = None, package_name: Optional[str] = None, agent_mode: Optional[bool] = None):
+        self.agent_mode = agent_mode
+        self.device_serial = self.detect_device(device_serial)
         self.package_name = package_name or self.detect_package()
 
-    def detect_device(self) -> str:
-        """Finds first attached ADB device."""
+    def detect_device(self, explicit_serial: Optional[str] = None) -> str:
+        """Resolves target ADB device enforcing Two-Tier emulator/physical policy (ATT-6506 / REQ-TST-004)."""
         try:
-            res = subprocess.run(["adb", "devices"], capture_output=True, text=True, check=True)
-            lines = res.stdout.strip().splitlines()
-            devices = []
-            for line in lines[1:]:
-                parts = line.split()
-                if len(parts) >= 2 and parts[1] == "device":
-                    devices.append(parts[0])
-            if not devices:
-                raise RuntimeError("No connected Android device found via ADB. Please connect your device via USB.")
-            return devices[0]
+            try:
+                from agent_emulator import resolve_target_device
+            except ImportError:
+                from tools.agent_emulator import resolve_target_device
+            return resolve_target_device(device_serial=explicit_serial, agent_mode=self.agent_mode)
         except Exception as e:
-            raise RuntimeError(f"Failed to query ADB devices: {e}")
+            raise RuntimeError(f"Failed to resolve target ADB device: {e}")
 
     def detect_package(self) -> str:
         """Finds target package installed on device."""
@@ -1271,6 +1267,7 @@ def main():
         description="Process Kill & Exit Reason Simulator for Desk Testing (ATT-2469 / ATT-2079 / ATT-3377)"
     )
     parser.add_argument("--device", "-s", help="Specific ADB device serial (optional)")
+    parser.add_argument("--agent", action="store_true", help="Enforce autonomous agent mode (strictly prohibits targeting physical phone)")
     parser.add_argument("--package", "-p", help="Target package name (default: auto-detected com.atrainingtracker.debug)")
     parser.add_argument("--gui", action="store_true", help="Launch native PyQt6 Desktop GUI (falls back to terminal)")
     parser.add_argument("--web-gui", action="store_true", help="Launch browser Web GUI dashboard")
@@ -1287,7 +1284,7 @@ def main():
     args = parser.parse_args()
 
     try:
-        ctrl = KillSimulatorController(device_serial=args.device, package_name=args.package)
+        ctrl = KillSimulatorController(device_serial=args.device, package_name=args.package, agent_mode=args.agent)
     except Exception as e:
         print(f"\033[1;31mError initializing ADB controller:\033[0m {e}", file=sys.stderr)
         sys.exit(1)

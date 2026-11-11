@@ -137,7 +137,9 @@ fun TelemetryMetricGraph(
     cardioPowerDynamics: CardioPowerDynamicsRecord? = null,
     enableCardioPowerDynamics: Boolean = true,
     showFreshModelOverlay: Boolean? = null,
-    onShowFreshModelOverlayChange: ((Boolean) -> Unit)? = null
+    onShowFreshModelOverlayChange: ((Boolean) -> Unit)? = null,
+    dfaA1ThresholdT1: Float = TuningPreferencesDefaults.DEFAULT_DFA_A1_THRESHOLD_T1,
+    dfaA1ThresholdT2: Float = TuningPreferencesDefaults.DEFAULT_DFA_A1_THRESHOLD_T2
 ) {
     if (pathPoints.isEmpty()) return
 
@@ -155,12 +157,13 @@ fun TelemetryMetricGraph(
     val freshHrTrajectory = remember(pathPoints, cardioPowerDynamics, canRenderFreshModelOverlay) {
         if (canRenderFreshModelOverlay && cardioPowerDynamics != null) {
             val powerSamples = pathPoints.map { it.power?.toDouble() }
+            val timeSecSamples = pathPoints.map { it.timeSec }
             PowerHrDynamicsCalculator.simulateTrajectory(
                 powerSamples = powerSamples,
+                timestampsSec = timeSecSamples,
                 tau = cardioPowerDynamics.tauStart,
                 hr0 = cardioPowerDynamics.hr0Start,
-                k = cardioPowerDynamics.kStart,
-                dt = 1.0
+                k = cardioPowerDynamics.kStart
             )
         } else emptyList()
     }
@@ -220,9 +223,26 @@ fun TelemetryMetricGraph(
     val validValues = remember(rawValues) { rawValues.filterNotNull() }
     if (validValues.isEmpty()) return
 
-    val (dataMin, dataMax) = remember(validValues, metricType, paceCeilingMinKm, unit) {
-        val min = validValues.minOrNull() ?: 0.0
-        val max = validValues.maxOrNull() ?: 1.0
+    val (dataMin, dataMax) = remember(
+        validValues,
+        metricType,
+        paceCeilingMinKm,
+        unit,
+        canRenderFreshModelOverlay,
+        effectiveShowFreshModel,
+        freshHrTrajectory
+    ) {
+        val effectiveValues = if (metricType == TelemetryMetricType.HEART_RATE &&
+            canRenderFreshModelOverlay &&
+            effectiveShowFreshModel &&
+            freshHrTrajectory.isNotEmpty()
+        ) {
+            validValues + freshHrTrajectory.filterNotNull()
+        } else {
+            validValues
+        }
+        val min = effectiveValues.minOrNull() ?: 0.0
+        val max = effectiveValues.maxOrNull() ?: 1.0
         when (metricType) {
             TelemetryMetricType.POWER -> {
                 0.0 to (max * 1.1).coerceAtLeast(50.0)
@@ -285,7 +305,7 @@ fun TelemetryMetricGraph(
         }
     }
 
-    val thresholdDashes = remember(metricType, effectiveHrThresholds, effectivePowerThresholds, dataMin, dataMax) {
+    val thresholdDashes = remember(metricType, effectiveHrThresholds, effectivePowerThresholds, dfaA1ThresholdT1, dfaA1ThresholdT2, dataMin, dataMax) {
         when (metricType) {
             TelemetryMetricType.HEART_RATE -> effectiveHrThresholds?.let {
                 TelemetryZoneMath.calculateThresholdDashes(it.z1Max, it.z2Max, it.z3Max, it.z4Max, dataMin, dataMax)
@@ -293,7 +313,7 @@ fun TelemetryMetricGraph(
             TelemetryMetricType.POWER -> effectivePowerThresholds?.let {
                 TelemetryZoneMath.calculatePowerThresholdDashes(it, dataMin, dataMax)
             } ?: emptyList()
-            TelemetryMetricType.HRV_DFA_A1 -> listOf(0.50, 0.75)
+            TelemetryMetricType.HRV_DFA_A1 -> listOf(dfaA1ThresholdT2.toDouble(), dfaA1ThresholdT1.toDouble())
             else -> emptyList()
         }
     }
@@ -657,10 +677,10 @@ fun TelemetryMetricGraph(
 
             // Draw threshold guide indicators for DFA a1
             if (metricType == TelemetryMetricType.HRV_DFA_A1) {
-                val y075 = valueToY(0.75)
-                val y050 = valueToY(0.50)
-                nativeCanvas.drawText("0.75", 6.dp.toPx(), y075 + 10f, axisTextPaint)
-                nativeCanvas.drawText("0.50", 6.dp.toPx(), y050 + 10f, axisTextPaint)
+                val yT1 = valueToY(dfaA1ThresholdT1.toDouble())
+                val yT2 = valueToY(dfaA1ThresholdT2.toDouble())
+                nativeCanvas.drawText(String.format(Locale.US, "%.2f", dfaA1ThresholdT1), 6.dp.toPx(), yT1 + 10f, axisTextPaint)
+                nativeCanvas.drawText(String.format(Locale.US, "%.2f", dfaA1ThresholdT2), 6.dp.toPx(), yT2 + 10f, axisTextPaint)
             }
 
             // Draw horizontal boundary grid lines

@@ -51,12 +51,14 @@ enum class HrvTrendMetricMode {
 data class HrvTrendPoint(
     val dateIso: String,
     val timestampMs: Long,
-    val rawValue: Double,
+    val rawValue: Double?,
     val mu7d: Double?,
     val swcLower: Double?,
     val swcUpper: Double?,
     val status: ReadinessStatus,
-    val trainingLoad: Double? = null
+    val trainingLoad: Double? = null,
+    val epochDay: Long = try { LocalDate.parse(dateIso).toEpochDay() } catch (_: Exception) { 0L },
+    val notes: String? = null
 )
 
 /**
@@ -131,8 +133,8 @@ object HrvReadinessTrendMath {
             dailyMap[date] = primary
         }
 
-        val sortedDates = dailyMap.keys.sorted()
-        if (sortedDates.isEmpty()) {
+        val sortedHrvDates = dailyMap.keys.sorted()
+        if (sortedHrvDates.isEmpty()) {
             return HrvTrendSeries(
                 posture = activePosture,
                 metricMode = metricMode,
@@ -144,11 +146,18 @@ object HrvReadinessTrendMath {
             )
         }
 
+        val minHrvDate = sortedHrvDates.first()
+        val maxHrvDate = sortedHrvDates.last()
+
+        val allCandidateDates = (dailyMap.keys + dailyTrainingLoads.keys.filter {
+            it in minHrvDate..maxHrvDate
+        }).toSortedSet().toList()
+
         // 3. Compute rolling 7d average and 60d SWC corridor per day
         val points = mutableListOf<HrvTrendPoint>()
         var maxLoad = 0.0
 
-        for (dateStr in sortedDates) {
+        for (dateStr in allCandidateDates) {
             val targetDate = try {
                 LocalDate.parse(dateStr)
             } catch (_: Exception) {
@@ -211,8 +220,13 @@ object HrvReadinessTrendMath {
                 status = ReadinessStatus.CALIBRATING
             }
 
-            val dayEntry = dailyMap[dateStr] ?: continue
-            val rawVal = if (metricMode == HrvTrendMetricMode.LN_RMSSD) dayEntry.lnRmssd else dayEntry.rmssdMs
+            val dayEntry = dailyMap[dateStr]
+            val rawVal = dayEntry?.let {
+                if (metricMode == HrvTrendMetricMode.LN_RMSSD) it.lnRmssd else it.rmssdMs
+            }
+            val timestampMs = dayEntry?.timestampMs
+                ?: (targetDate.atStartOfDay(java.time.ZoneOffset.UTC).toInstant().toEpochMilli())
+
             val load = dailyTrainingLoads[dateStr]
             if (load != null && load > maxLoad) {
                 maxLoad = load
@@ -221,13 +235,15 @@ object HrvReadinessTrendMath {
             points.add(
                 HrvTrendPoint(
                     dateIso = dateStr,
-                    timestampMs = dayEntry.timestampMs,
+                    timestampMs = timestampMs,
                     rawValue = rawVal,
                     mu7d = mu7d,
                     swcLower = swcLower,
                     swcUpper = swcUpper,
                     status = status,
-                    trainingLoad = load
+                    trainingLoad = load,
+                    epochDay = targetDate.toEpochDay(),
+                    notes = dayEntry?.notes
                 )
             )
         }
@@ -255,11 +271,11 @@ object HrvReadinessTrendMath {
         points: List<HrvTrendPoint>,
         metricMode: HrvTrendMetricMode
     ): Pair<Double, Double> {
-        if (points.isEmpty()) {
+        val rawValues = points.mapNotNull { it.rawValue }.sorted()
+        if (rawValues.isEmpty()) {
             return if (metricMode == HrvTrendMetricMode.LN_RMSSD) Pair(2.0, 5.0) else Pair(10.0, 100.0)
         }
 
-        val rawValues = points.map { it.rawValue }.sorted()
         val allValues = mutableListOf<Double>()
         allValues.addAll(rawValues)
         points.forEach { p ->
@@ -292,7 +308,7 @@ object HrvReadinessTrendMath {
     }
 
     /**
-     * Resolves the nearest [HrvTrendPoint] from a touch X coordinate within the chart canvas.
+     * Resolves the nearest [HrvTrendPoint] from a touch X coordinate within the chart canvas using calendar epoch days.
      */
     fun findNearestPoint(
         touchX: Float,
@@ -305,7 +321,12 @@ object HrvReadinessTrendMath {
 
         val clampedX = touchX.coerceIn(leftPad, leftPad + plotW)
         val frac = ((clampedX - leftPad) / plotW).coerceIn(0f, 1f)
-        val index = round(frac * (points.size - 1)).toInt().coerceIn(0, points.size - 1)
-        return points[index]
+
+        val minEpoch = points.first().epochDay
+        val maxEpoch = points.last().epochDay
+        if (maxEpoch == minEpoch) return points.first()
+
+        val targetEpoch = minEpoch + frac * (maxEpoch - minEpoch).toFloat()
+        return points.minByOrNull { kotlin.math.abs(it.epochDay - targetEpoch) }
     }
 }

@@ -162,4 +162,61 @@ class WorkoutDetailsCardioPowerRowTest {
         assertNotNull(record.aerobicSlopeStart)
         assertEquals(1.0 / 0.355, record.aerobicSlopeStart ?: 0.0, 0.01)
     }
+
+    @Test
+    fun testFullWorkoutDetailsCardGatingImmuneToSummaryToggle() {
+        val record = CardioPowerDynamicsRecord(
+            workoutId = 1L,
+            tauStart = 30.0,
+            hr0Start = 90.0,
+            kStart = 0.35,
+            r2Start = 0.85,
+            rmseStart = 3.5
+        )
+
+        fun isCardioPowerCardVisibleInDetails(
+            enableCardioPowerDynamics: Boolean,
+            record: CardioPowerDynamicsRecord?
+        ): Boolean {
+            return enableCardioPowerDynamics && record != null
+        }
+
+        // Card renders in full details when master toggle is enabled, regardless of summary toggle
+        assertTrue(isCardioPowerCardVisibleInDetails(enableCardioPowerDynamics = true, record = record))
+        assertFalse(isCardioPowerCardVisibleInDetails(enableCardioPowerDynamics = false, record = record))
+        assertFalse(isCardioPowerCardVisibleInDetails(enableCardioPowerDynamics = true, record = null))
+    }
+
+    @Test
+    fun testWorkoutDetailsGatingDecoupledWhenInvokedFromTabbedContent() {
+        val record = CardioPowerDynamicsRecord(
+            workoutId = 1L,
+            tauStart = 30.0,
+            hr0Start = 90.0,
+            kStart = 0.35,
+            r2Start = 0.85,
+            rmseStart = 3.5
+        )
+        val data = createDetailsData(cardioPowerDynamics = record)
+
+        // In WorkoutDetailTabbedContent.kt, showCardioPowerInWorkoutSummary is hardcoded to true
+        // so row remains visible when enableCardioPowerDynamics is true, even if tuningConfig.showCardioPowerInWorkoutSummary == false
+        val tuningConfigShowInSummary = false
+        val effectiveShowInDetails = true // Decoupled in WorkoutDetailTabbedContent.kt
+
+        assertTrue(
+            isCardioPowerRowVisible(
+                data = data,
+                enableCardioPowerDynamics = true,
+                showCardioPowerInWorkoutSummary = effectiveShowInDetails
+            )
+        )
+        assertFalse(
+            isCardioPowerRowVisible(
+                data = data,
+                enableCardioPowerDynamics = true,
+                showCardioPowerInWorkoutSummary = tuningConfigShowInSummary
+            )
+        )
+    }
 }

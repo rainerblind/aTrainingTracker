@@ -513,34 +513,13 @@ class HostPreFlightDiagnostics:
             ]
 
     @staticmethod
-    def check_adb(device_serial: Optional[str] = None) -> Tuple[bool, str, List[str], Optional[str]]:
+    def check_adb(device_serial: Optional[str] = None, agent_mode: Optional[bool] = None) -> Tuple[bool, str, List[str], Optional[str]]:
         try:
-            res = subprocess.run(["adb", "devices"], capture_output=True, text=True, check=True)
-            lines = res.stdout.strip().splitlines()
-            online_devices = []
-            unauthorized = []
-            for line in lines[1:]:
-                parts = line.split()
-                if len(parts) >= 2:
-                    if parts[1] == "device":
-                        online_devices.append(parts[0])
-                    elif parts[1] == "unauthorized":
-                        unauthorized.append(parts[0])
-
-            if unauthorized and not online_devices:
-                return False, f"Device {unauthorized[0]} is UNAUTHORIZED", [
-                    "Unlock your phone screen and accept 'Allow USB debugging' prompt",
-                    "Check USB debugging authorization in Developer Options"
-                ], None
-
-            if not online_devices:
-                return False, "No connected Android device found via ADB", [
-                    "Connect your Android test device (e.g. Pixel 10) via USB",
-                    "Enable USB Debugging in Developer Options",
-                    "Verify with: adb devices"
-                ], None
-
-            target = device_serial if (device_serial and device_serial in online_devices) else online_devices[0]
+            try:
+                from agent_emulator import resolve_target_device
+            except ImportError:
+                from tools.agent_emulator import resolve_target_device
+            target = resolve_target_device(device_serial=device_serial, agent_mode=agent_mode)
 
             # Verify mock location appops permission
             appops_res = subprocess.run(
@@ -558,12 +537,12 @@ class HostPreFlightDiagnostics:
         except FileNotFoundError:
             return False, "ADB binary not found in PATH", ["Install Android platform-tools: sudo apt install adb"], None
         except Exception as e:
-            return False, f"ADB query failed: {e}", ["Ensure adb server is running: adb start-server"], None
+            return False, f"ADB target resolution error: {e}", ["Verify ADB connection: adb devices -l"], None
 
     @classmethod
-    def run_all(cls, bus=None, target_device: Optional[str] = None) -> PreFlightReport:
+    def run_all(cls, bus=None, target_device: Optional[str] = None, agent_mode: Optional[bool] = None) -> PreFlightReport:
         bt_ok, bt_msg, bt_adv = cls.check_bluetooth(bus)
-        adb_ok, adb_msg, adb_adv, dev = cls.check_adb(target_device)
+        adb_ok, adb_msg, adb_adv, dev = cls.check_adb(target_device, agent_mode=agent_mode)
         return PreFlightReport(
             bt_ok=bt_ok, bt_message=bt_msg, bt_advice=bt_adv,
             adb_ok=adb_ok, adb_message=adb_msg, adb_advice=adb_adv,
@@ -1133,9 +1112,12 @@ class AdbGpsInjector:
 
     DEFAULT_PROVIDERS = ("gps", "network", "fused")
 
-    def __init__(self, enabled: bool = True, device_serial: Optional[str] = None):
+    def __init__(self, enabled: bool = True, device_serial: Optional[str] = None, agent_mode: Optional[bool] = None, speed_injection: bool = True):
         self.enabled = enabled
+        self.agent_mode = agent_mode
         self.device_serial = device_serial
+        self.speed_injection = speed_injection
+        self._supports_speed_flag: Optional[bool] = None
         self.is_registered = False
         self.is_killed = False
         self._is_playing = False
@@ -1246,18 +1228,17 @@ class AdbGpsInjector:
             self.kill()
         return self.is_killed
 
-    def detect_device(self) -> Optional[str]:
+    def detect_device(self, explicit_serial: Optional[str] = None) -> Optional[str]:
         if not self.enabled:
             return None
         try:
-            res = subprocess.run(["adb", "devices"], capture_output=True, text=True, check=True)
-            lines = res.stdout.strip().splitlines()
-            for line in lines[1:]:
-                parts = line.split()
-                if len(parts) >= 2 and parts[1] == "device":
-                    return parts[0]
-            return None
-        except Exception:
+            try:
+                from agent_emulator import resolve_target_device
+            except ImportError:
+                from tools.agent_emulator import resolve_target_device
+            return resolve_target_device(device_serial=explicit_serial, agent_mode=self.agent_mode)
+        except Exception as e:
+            print(f"[!] Target device resolution note: {e}")
             return None
 
     def setup(self):
@@ -1296,13 +1277,26 @@ class AdbGpsInjector:
                 if not self.is_registered or self.is_killed:
                     self._queue.task_done()
                     continue
-                if len(item) == 3:
+                speed_to_inject: Optional[float] = None
+                if len(item) == 4:
+                    lat, lon, time_ms, spd = item
+                    if self.speed_injection and (self._supports_speed_flag is not False):
+                        speed_to_inject = spd
+                elif len(item) == 3:
                     lat, lon, time_ms = item
                 else:
                     lat, lon = item
                     time_ms = int(time.time() * 1000)
-                cmds = [self.build_inject_cmd(p, lat, lon, time_ms, accuracy=2.5) for p in self.DEFAULT_PROVIDERS]
-                self._run_adb(["shell", " && ".join(cmds)], check=False)
+                cmds = [self.build_inject_cmd(p, lat, lon, time_ms, accuracy=2.5, speed_mps=speed_to_inject) for p in self.DEFAULT_PROVIDERS]
+                res = self._run_adb(["shell", " && ".join(cmds)], check=False)
+                if res is not None and res.returncode != 0 and speed_to_inject is not None:
+                    err_output = (res.stderr or "") + (res.stdout or "")
+                    if "Unknown option: --speed" in err_output:
+                        if self._supports_speed_flag is not False:
+                            print("[!] Notice: Target device does not support --speed in set-test-provider-location. Falling back to standard location injection.")
+                            self._supports_speed_flag = False
+                        retry_cmds = [self.build_inject_cmd(p, lat, lon, time_ms, accuracy=2.5, speed_mps=None) for p in self.DEFAULT_PROVIDERS]
+                        self._run_adb(["shell", " && ".join(retry_cmds)], check=False)
             self._queue.task_done()
 
     def _run_adb(self, cmd_args: List[str], check: bool = False):
@@ -1312,9 +1306,12 @@ class AdbGpsInjector:
         return subprocess.run(cmd, capture_output=True, text=True, check=check)
 
     @classmethod
-    def build_inject_cmd(cls, provider: str, lat: float, lon: float, time_ms: int, accuracy: float = 2.5) -> str:
+    def build_inject_cmd(cls, provider: str, lat: float, lon: float, time_ms: int, accuracy: float = 2.5, speed_mps: Optional[float] = None) -> str:
         """Constructs Android 14+ compatible location injection shell command string."""
-        return f"cmd location providers set-test-provider-location {provider} --location {lat:.6f},{lon:.6f} --accuracy {accuracy:.1f} --time {time_ms}"
+        cmd = f"cmd location providers set-test-provider-location {provider} --location {lat:.6f},{lon:.6f} --accuracy {accuracy:.1f} --time {time_ms}"
+        if speed_mps is not None and speed_mps >= 0.0:
+            cmd += f" --speed {speed_mps:.2f}"
+        return cmd
 
     def inject_location(self, lat: float, lon: float, ele: float = 0.0, speed_mps: float = 0.0, bearing_deg: float = 0.0, time_sec: Optional[float] = None):
         if not self.enabled or not self.is_registered or self.is_killed:
@@ -1327,7 +1324,7 @@ class AdbGpsInjector:
         try:
             if time_sec is not None:
                 timestamp_ms = self.base_epoch_ms + int(round(time_sec * 1000.0))
-                self._queue.put_nowait((lat, lon, timestamp_ms))
+                self._queue.put_nowait((lat, lon, timestamp_ms, speed_mps))
             else:
                 self._queue.put_nowait((lat, lon))
         except queue.Full:
@@ -2182,7 +2179,8 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--no-ble", action="store_true", help="Disable BlueZ BLE GATT peripheral advertising")
     parser.add_argument("--no-gps", action="store_true", help="Disable ADB mock GPS coordinate injection")
     parser.add_argument("--cleanup", action="store_true", help="Remove any lingering ADB mock location test providers (gps, network, fused) and exit")
-    parser.add_argument("--device", help="Target ADB device serial number")
+    parser.add_argument("--device", "--serial", dest="device", help="Target ADB device serial number")
+    parser.add_argument("--agent", action="store_true", help="Enforce autonomous agent mode (strictly prohibits targeting physical phone)")
     parser.add_argument("--speed", type=float, default=1.0, help="Initial playback speed multiplier")
     parser.add_argument("--hr-battery", type=int, default=100, help="Initial Heart Rate sensor battery percentage (0-100, default 100)")
     parser.add_argument("--power-battery", type=int, default=100, help="Initial Cycling Power sensor battery percentage (0-100, default 100)")
@@ -2192,6 +2190,7 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--revive-power-at", type=float, help="Automatically revive Cycling Power sensor at given workout elapsed seconds")
     parser.add_argument("--kill-gps-at", type=float, help="Automatically kill GPS location injection at given workout elapsed seconds")
     parser.add_argument("--revive-gps-at", type=float, help="Automatically revive GPS location injection at given workout elapsed seconds")
+    parser.add_argument("--speed-injection", action=argparse.BooleanOptionalAction, default=True, help="Inject recorded/computed speed into ADB mock location providers (default True, falls back automatically on stock AOSP)")
     return parser
 
 
@@ -2230,7 +2229,7 @@ def main():
 
     # Rule 30 Host Pre-Flight Self-Diagnostics
     print("[*] Running Rule 30 Host Pre-Flight Diagnostics...")
-    report = HostPreFlightDiagnostics.run_all(target_device=args.device)
+    report = HostPreFlightDiagnostics.run_all(target_device=args.device, agent_mode=args.agent)
     if report.bt_ok:
         print(f"  [OK] Bluetooth: {report.bt_message}")
     else:
@@ -2251,7 +2250,7 @@ def main():
     ble_server = BleReplayServer(enabled=not args.no_ble, hr_battery=args.hr_battery, power_battery=args.power_battery)
     ble_server.start()
 
-    gps_injector = AdbGpsInjector(enabled=not args.no_gps, device_serial=target_device)
+    gps_injector = AdbGpsInjector(enabled=not args.no_gps, device_serial=target_device, agent_mode=args.agent, speed_injection=args.speed_injection)
     gps_injector.setup()
 
     trigger_mgr = ScheduledTriggerManager(

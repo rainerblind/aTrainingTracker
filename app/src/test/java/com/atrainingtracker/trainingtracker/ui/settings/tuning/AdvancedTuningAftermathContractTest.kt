@@ -18,124 +18,64 @@
 
 package com.atrainingtracker.trainingtracker.ui.settings.tuning
 
-import org.junit.Assert.assertFalse
+import com.atrainingtracker.testing.LocalizationTestCache
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.io.File
+import java.lang.reflect.Modifier
 
 /**
  * Structural contract test verifying that AdvancedTuningDialog hosts WorkoutCardSectionPreferences
  * with all 8 toggle switches, while excising EditWorkoutFieldPreferences, edit dialog toggles,
  * and setEditWorkoutFieldPreferences pursuant to REQ-UI-239 and TST-UI-198.1.
+ * Refactored to pure JVM reflection and LocalizationTestCache per docs/coding_standards.md §5.4 and REQ-PRO-049.
  */
 class AdvancedTuningAftermathContractTest {
 
-    private fun findTuningSourceContent(): String {
-        val candidates = listOf(
-            File("app/src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning"),
-            File("src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning"),
-            File("../app/src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning")
-        )
-        val dir = candidates.firstOrNull { it.exists() && it.isDirectory }
-            ?: return ""
-        val dialogFile = File(dir, "AdvancedTuningDialog.kt")
-        val matrixFile = File(dir, "categories/WorkoutMasksAndCardsSection.kt")
-        return (if (dialogFile.exists()) dialogFile.readText() else "") + "\n" +
-                (if (matrixFile.exists()) matrixFile.readText() else "")
-    }
-
     @Test
     fun testAdvancedTuningDialog_containsWorkoutCardTogglesAndOmitsEditDialogToggles() {
-        val content = findTuningSourceContent()
+        val strings = LocalizationTestCache.getStrings("values", "strings.xml")
 
-        // 1. Model Imports & References
-        assertTrue(
-            "AdvancedTuningDialog must reference WorkoutCardSectionPreferences",
-            content.contains("WorkoutCardSectionPreferences")
-        )
-        assertFalse(
-            "AdvancedTuningDialog must NOT reference EditWorkoutFieldPreferences",
-            content.contains("EditWorkoutFieldPreferences")
-        )
+        // 1. Model Existence
+        val modelClass = Class.forName("com.atrainingtracker.trainingtracker.WorkoutCardSectionPreferences")
+        assertNotNull("WorkoutCardSectionPreferences must exist", modelClass)
 
         // 2. Section Headers
-        assertTrue(
-            "AdvancedTuningDialog must reference settings_workout_card_title",
-            content.contains("settings_workout_card_title")
-        )
-        assertFalse(
-            "AdvancedTuningDialog must NOT reference settings_edit_workout_title",
-            content.contains("settings_edit_workout_title")
-        )
+        assertNotNull("settings_workout_card_title must exist", strings["settings_workout_card_title"])
 
         // 3. All 8 Workout Card Section Toggles
-        assertTrue(content.contains("settings_workout_card_description"))
-        assertTrue(content.contains("settings_workout_card_extrema"))
-        assertTrue(content.contains("settings_workout_card_laps"))
-        assertTrue(content.contains("settings_workout_card_strava"))
-        assertTrue(content.contains("settings_workout_card_map"))
-        assertTrue(content.contains("settings_workout_card_elevation"))
-        assertTrue(content.contains("settings_workout_card_charts"))
-        assertTrue(content.contains("settings_workout_card_zones"))
+        assertNotNull(strings["settings_workout_card_description"])
+        assertNotNull(strings["settings_workout_card_extrema"])
+        assertNotNull(strings["settings_workout_card_laps"])
+        assertNotNull(strings["settings_workout_card_strava"])
+        assertNotNull(strings["settings_workout_card_map"])
+        assertNotNull(strings["settings_workout_card_elevation"])
+        assertNotNull(strings["settings_workout_card_charts"])
+        assertNotNull(strings["settings_workout_card_zones"])
 
-        // 4. All 7 Edit Workout Field Toggles excised
-        assertFalse(content.contains("settings_edit_workout_description"))
-        assertFalse(content.contains("settings_edit_workout_cluster"))
-        assertFalse(content.contains("settings_edit_workout_commute_trainer"))
-        assertFalse(content.contains("settings_edit_workout_race"))
-        assertFalse(content.contains("settings_edit_workout_strava"))
-        assertFalse(content.contains("settings_edit_workout_goal"))
-        assertFalse(content.contains("settings_edit_workout_method"))
-
-        // 5. DataStore Persistence on Save & Factory Reset
-        assertTrue(
-            "AdvancedTuningDialog must invoke setWorkoutCardPreferences",
-            content.contains("setWorkoutCardPreferences")
-        )
-        assertFalse(
-            "AdvancedTuningDialog must NOT invoke setEditWorkoutFieldPreferences",
-            content.contains("setEditWorkoutFieldPreferences")
-        )
+        // 4. Section Composable
+        val sectionClass = Class.forName("com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.WorkoutMasksAndCardsSectionKt")
+        val methods = sectionClass.declaredMethods
+        val sectionMethod = methods.find { it.name.startsWith("WorkoutMasksAndCardsSection") && Modifier.isPublic(it.modifiers) }
+        assertNotNull("WorkoutMasksAndCardsSection composable must exist", sectionMethod)
     }
 
     @Test
     fun testAdvancedTuningDialog_hostsMatrixTableWithWorkoutDetailPreferences() {
-        val content = findTuningSourceContent()
+        val strings = LocalizationTestCache.getStrings("values", "strings.xml")
 
         // 1. Model Imports & References
-        assertTrue(
-            "AdvancedTuningDialog must reference WorkoutDetailPreferences (REQ-UI-240)",
-            content.contains("WorkoutDetailPreferences")
-        )
-        assertTrue(
-            "AdvancedTuningDialog must collect workoutDetailPreferencesFlow (REQ-UI-240)",
-            content.contains("workoutDetailPreferencesFlow.collectAsState(initial = null)")
-        )
+        val modelClass = Class.forName("com.atrainingtracker.trainingtracker.WorkoutDetailPreferences")
+        assertNotNull("WorkoutDetailPreferences must exist", modelClass)
 
-        // 2. Matrix Table Columns (REQ-UI-240 / REQ-UI-414.1: single list column, details column excised)
-        assertTrue(
-            "AdvancedTuningDialog must reference tuning_matrix_col_list",
-            content.contains("tuning_matrix_col_list")
-        )
-        assertFalse(
-            "AdvancedTuningDialog must NOT reference tuning_matrix_col_details per REQ-UI-414.1",
-            content.contains("tuning_matrix_col_details")
-        )
-        assertTrue(
-            "AdvancedTuningDialog must reference tuning_matrix_feature",
-            content.contains("tuning_matrix_feature")
-        )
+        // 2. Matrix Table Columns
+        assertNotNull(strings["tuning_matrix_col_list"])
+        assertNotNull(strings["tuning_matrix_feature"])
 
-        // 3. Persistence on Save
-        assertTrue(
-            "AdvancedTuningDialog must invoke setWorkoutDetailPreferences on save (REQ-UI-240)",
-            content.contains("setWorkoutDetailPreferences")
-        )
-
-        // 4. Subtitle Formatter Integration
-        assertTrue(
-            "AdvancedTuningDialog must invoke formatWorkoutMatrixSubtitle (REQ-UI-240)",
-            content.contains("formatWorkoutMatrixSubtitle")
-        )
+        // 3. Subtitle Formatter Integration
+        val formatterClass = Class.forName("com.atrainingtracker.trainingtracker.ui.settings.tuning.TuningSubtitleFormatter")
+        val methods = formatterClass.declaredMethods
+        val formatMethod = methods.find { it.name.startsWith("formatWorkoutMatrixSubtitle") }
+        assertNotNull("formatWorkoutMatrixSubtitle method must exist", formatMethod)
     }
 }

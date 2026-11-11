@@ -15277,5 +15277,271 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 
 **Invariants**: Decoupled text buffers preserved for in-progress typing; `ActiveFilterChipsRowClearAllContractTest` 100% compliant; Imperial unit parity (`REQ-UI-508`) preserved; 100% clean-room test pass rate.
 
+### REQ-UI-510: Package-Wide Presentation & UI Layer Repository Encapsulation (Phase A Hardening) [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-UI-510` | **Tickets**: `ATT-6697`
+- **Implementation**: `app/src/main/java/com/atrainingtracker/trainingtracker/ui/clusters/WorkoutClustersViewModel.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/ui/tracking/trackingtabs/TrackingTabsViewModel.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/ui/athleteprofile/AthleteProfileViewModel.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/ui/components/strava/StravaActivitySection.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/ui/components/export/ExportStatusDataProvider.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/WorkoutDataMapper.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/ui/map/MapInitialLocationResolver.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/migration/ImportBackupTabsScreen.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/activities/MainActivityWithNavigation.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/editworkout/EditWorkoutViewModel.kt`
+- **Rationale**: Phase A (`ATT-432`) eliminated direct database manager instantiations in four initial presentation entry points, but residual call sites remained across `ui/` and `activities/`. To enforce clean architecture (SWE.2) and prevent database coupling leaks in the presentation layer, all remaining UI and activity call sites SHALL interact exclusively with domain repositories, and `RepositoryUiCleanlinessContractTest` SHALL be expanded into a recursive package-wide architectural guard.
+- **Description**:
+  1. *Presentation Layer DatabaseManager Sweep (`REQ-UI-510.1`)*:
+     - `WorkoutClustersViewModel.kt`, `TrackingTabsViewModel.kt`, `AthleteProfileViewModel.kt`, `StravaActivitySection.kt`, `ExportStatusDataProvider.kt`, `WorkoutDataMapper.kt`, `MapInitialLocationResolver.kt`, `ImportBackupTabsScreen.kt`, `MainActivityWithNavigation.kt`, and `EditWorkoutViewModel.kt` SHALL route all database queries and mutations through domain repositories (`KnownLocationsRepository`, `WorkoutRepository`, `SegmentsRepository`, `ExportStatusRepository`, `EquipmentRepository`, `DeviceDataRepository`, `SportTypesRepository`), completely eliminating direct calls to `*DatabaseManager.getInstance(...)` and `*DbHelper.getInstance(...)`.
+  2. *Domain Repository Presentation Delegation (`REQ-UI-510.2`)*:
+     - Domain repositories SHALL expose all necessary query and mutation delegates:
+       - `KnownLocationsRepository`: `upsertLocationByGeofence`, `updateLocation`, `getMyLocation`
+       - `WorkoutRepository`: `getWorkoutTrainingLoadRecords`, `getCardioPowerDynamicsFitnessTrendSamples`
+       - `SegmentsRepository`: `allSegmentSummaries`
+       - `ExportStatusRepository`: `getExportRows`
+       - `EquipmentRepository`: `equipmentItems`
+       - `DeviceDataRepository`: `getActiveDeviceIdsForWorkout`
+       - `SportTypesRepository`: default sports and sport resolution
+  3. *Package-Wide AST Presentation Cleanliness Contract (`REQ-UI-510.3`)*:
+     - `RepositoryUiCleanlinessContractTest` SHALL recursively inspect all source files under `app/src/main/java/com/atrainingtracker/trainingtracker/ui/` and `app/src/main/java/com/atrainingtracker/trainingtracker/activities/` (excluding `*Repository.kt` and `MapFragmentWithTrackViewModel.kt` reserved for `ATT-6692`).
+     - Zero occurrences of `\b\w*(DatabaseManager|DbHelper)\.getInstance\(` SHALL exist across all scanned presentation classes.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* presentation layer files across `ui/` and `activities/`,
+• *When* audited by `RepositoryUiCleanlinessContractTest`,
+• *Then* zero direct `*DatabaseManager.getInstance` or `*DbHelper.getInstance` invocations exist.
+• *Given* athletes viewing workout clusters, athlete profiles, Strava sections, tracking tabs, or export statuses,
+• *When* loading presentation data,
+• *Then* all metrics, locations, and device records load with 100% data fidelity via repository delegates on `Dispatchers.IO`.
+
+**Invariants**: Zero SQLite schema alterations; all repository I/O dispatched off main thread; 100% test pass rate across UI and ViewModel tests.
+
+### REQ-UI-511: EquipmentViewModel & Repositories Domain DTO Decoupling and Constructor Modernization [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-UI-511` | **Tickets**: `ATT-6696`
+- **Implementation**: `EquipmentViewModel.kt`, `EquipmentRepository.kt`, `DeviceDataRepository.kt`, `SportTypesRepository.kt`, `WorkoutRepository.kt`
+- **Rationale**: Repositories must not leak inner `*DatabaseManager` DTOs (`NameAndBatteryPercentage`, `SimpleSensorInfo`, `SimpleSportTypeInfo`, `Stats`) into the UI layer. `EquipmentViewModel` must not bypass domain repositories or retain deprecated constructor parameters and legacy delegation shims (`docs/coding_standards.md` §1.12, §2.5, §5.9).
+- **Description**:
+  1. *Domain DTO Return Types (`REQ-UI-511.1`)*:
+     - `DeviceDataRepository`, `SportTypesRepository`, and `WorkoutRepository` SHALL replace leaky `*DatabaseManager` inner DTOs with strongly typed domain models (`CriticalBatteryDevice`, `SimpleSensorInfo`, `SimpleSportTypeInfo`, `WorkoutStatsSummary`).
+  2. *EquipmentRepository Encapsulation (`REQ-UI-511.2`)*:
+     - `EquipmentRepository` SHALL encapsulate equipment CRUD and sport-to-equipment associations, eliminating direct UI dependencies on `EquipmentDbHelper` and `SportTypeEquipmentLinkManager`.
+  3. *EquipmentViewModel Constructor Modernization (`REQ-UI-511.3`)*:
+     - `EquipmentViewModel` SHALL accept domain repositories directly (`EquipmentRepository`, `SportTypesRepository`, `DeviceDataRepository`, `WorkoutRepository`).
+     - The 3 `@Deprecated` database manager parameters (`dbSportHelper`, `dbDevicesHelper`, `dbSummariesManager`) and all 7 `resolve*()` delegation fallbacks SHALL be retired.
+  4. *Clean Architecture Contract (`REQ-UI-511.4`)*:
+     - `RepositoryUiCleanlinessContractTest` SHALL verify zero leaky DatabaseManager DTOs or manager imports in `EquipmentViewModel` and UI callers.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* domain repositories `DeviceDataRepository`, `SportTypesRepository`, and `WorkoutRepository`,
+• *When* queried for battery levels, sensors, sport types, or equipment stats,
+• *Then* they return pure domain models with zero leaky `*DatabaseManager` inner DTOs.
+• *Given* `EquipmentViewModel`,
+• *When* constructed and observed,
+• *Then* it operates exclusively via domain repositories without deprecated database manager parameters or resolve shims.
+
+**Invariants**: Zero functional or numerical regression across equipment screens; thread safety on `Dispatchers.IO` preserved; 100% test pass rate across equipment test harnesses.
+
+
+
+
+
+
+
+### REQ-UI-512: Mounting RadarSettingsSection as TuningAccordionSection in AdvancedTuningScreen and AdvancedTuningDialog [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-UI-512` | **Tickets**: `ATT-6702`
+- **Implementation**: `AdvancedTuningAccordion.kt`, `AdvancedTuningScreen.kt`, `AdvancedTuningDialog.kt`, `RadarSettingsSection.kt`, `strings_radar.xml`
+- **Rationale**: `RadarSettingsSection.kt` (907 LOC) provides comprehensive settings and an interactive simulator for cycling radar, but currently has zero production callers. The system SHALL mount `RadarSettingsSection` as a collapsible `TuningAccordionSection` under Block 2 ("Sensoren & GPS") in both `AdvancedTuningScreen.kt` and `AdvancedTuningDialog.kt`, backed by a dynamic summary subtitle in `AdvancedTuningAccordion.kt` and 100% 9-language localization parity.
+- **Description**:
+  1. *TuningSection Enum Extension (`REQ-UI-512.1`)*:
+     - `TuningSection` in `AdvancedTuningAccordion.kt` SHALL include `CYCLING_RADAR`, positioned in athletic sequence within Block 2 ("Sensoren & GPS") following `SENSORS_GPS`.
+  2. *Dynamic Subtitle Formatter (`REQ-UI-512.2`)*:
+     - `TuningSubtitleFormatter` SHALL provide `formatCyclingRadarSubtitle(...)` reflecting:
+       - Active scenario and running status (`radar_simulator_running`) when `RadarTrafficSimulator.isSimulating` is true.
+       - Concise summary of screen edge side, audio alert mode, and tail light default mode when idle.
+  3. *Accordion Mounting & Collapsed Default (`REQ-UI-512.3`)*:
+     - Both `AdvancedTuningScreen.kt` and `AdvancedTuningDialog.kt` SHALL mount `RadarSettingsSection` wrapped in `TuningAccordionSection` using icon `Icons.Default.Sensors`, title `R.string.tuning_cat_cycling_radar`, and the dynamic subtitle, defaulting to initially collapsed (`expandedSections = emptySet()`) per Design Guidelines §3.
+  4. *Visual Alignment & Padding Hygiene (`REQ-UI-512.4`)*:
+     - Inner `ElevatedCard` containers in `RadarSettingsSection.kt` SHALL use `Modifier.fillMaxWidth().padding(vertical = 4.dp)` without horizontal padding, eliminating double margins inside `TuningAccordionSection`.
+  5. *Modularity Constraint (`REQ-UI-512.5`)*:
+     - All source files in `com.atrainingtracker.trainingtracker.ui.settings.tuning.*` SHALL strictly maintain $< 400$ lines of code (`AdvancedTuningModularityTest`).
+  6. *9-Language Parity (`REQ-UI-512.6`)*:
+     - `tuning_cat_cycling_radar` SHALL be localized across all 9 supported locales (`values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`).
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* default advanced tuning configuration,
+• *When* viewing Expert Settings,
+• *Then* `CYCLING_RADAR` is listed under Block 2 in collapsed state displaying an idle summary subtitle.
+• *Given* `RadarTrafficSimulator` active,
+• *When* collapsed,
+• *Then* the header subtitle displays active scenario and running indicator.
+• *Given* an expanded `CYCLING_RADAR` section,
+• *When* rendered,
+• *Then* cards align flush with sibling accordion bodies without double horizontal inset.
+
+**Invariants**: Zero schema migrations; settings persist immediately to `TuningPreferencesDataStore`; strict $< 400$ LOC limit across `ui/settings/tuning/`.
+
+
+
+### REQ-UI-513: Unified Fitness & Physiology Analytical Hub, Training Drawer Streamlining, and Dedicated Settings Training Zones [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-UI-513` | **Tickets**: `ATT-6720`
+- **Implementation**: `AppNavigationDrawer.kt`, `NavRoutes.kt`, `AthleteProfileScreen.kt`, `PeriodsTabsScreen.kt`, `PeriodsViewModel.kt`, `ZoneSettingsScreen.kt`, `strings.xml` (all 9 locales)
+- **Rationale**: Fragmented athlete analytics across Periods, Morning HRV, and Athlete Profile degrade scannability and confuse static settings with time-series trends. The system SHALL streamline the *Training* drawer group into 4 clean destinations, remove `HrvReadinessTrendCard` from `PeriodsTabsScreen`, consolidate longitudinal fitness and recovery analytics into a 4-tab **Fitness & Physiology** hub with a shared `MetricsTimeRange` X-axis, and restore **Training Zones** as a dedicated top-level destination inside the *Settings* drawer group.
+- **Description**:
+  1. *Training Drawer Streamlining (`REQ-UI-513.1`)*:
+     - The *Training* drawer group (`drawer__training`) in `AppNavigationDrawer.kt` SHALL contain exactly 4 items in sequence:
+       1. Start Tracking (`R.id.drawer_start_tracking`)
+       2. Workouts (`R.id.drawer_workouts`)
+       3. Periods (`R.id.drawer_periods`, strictly calendar volume summaries)
+       4. Fitness & Physiology (`R.id.drawer_athlete_profile`, title `R.string.drawer_fitness_physiology` / `drawer_athlete_profile`)
+     - Standalone `drawer_morning_hrv` SHALL be retired from top-level drawer items.
+  2. *Settings Drawer Training Zones Integration (`REQ-UI-513.2`)*:
+     - The *Settings* drawer group (`drawer__settings`) in `AppNavigationDrawer.kt` SHALL include Training Zones (`R.id.drawer_training_zones`, icon `R.drawable.ic_speed`, title `R.string.prefs_training_zones`), positioned following `drawer_sport_types`.
+     - `isDrawerItemSelected` SHALL recognize `R.id.drawer_training_zones` independently from `R.id.drawer_athlete_profile`, preserving deep-link backward compatibility.
+  3. *Clean Periods Screen Decoupling (`REQ-UI-513.3`)*:
+     - `PeriodsTabsScreen.kt` and `PeriodsViewModel.kt` SHALL strictly display calendar volume aggregations, removing `HrvReadinessTrendCard` and unnecessary `HrvReadinessRepository` loading overhead.
+  4. *Unified Fitness & Physiology Analytical Hub (`REQ-UI-513.4`)*:
+     - `AthleteProfileScreen.kt` (Fitness & Physiology) SHALL host 4 tabs in `PrimaryScrollableTabRow` + `HorizontalPager` with standard fixed header `LayoutConstants.HEADER_TITLE_ROW_HEIGHT` and synchronized `MetricsTimeRange` (`1M | 3M | 6M | 1Y | All`) calendar X-axis:
+       - **Tab 1: Fitness & Fatigue (PMC)**: `CTL / ATL / TSB / ACWR` + Ramp Rate KPI summary tiles and `PerformanceManagementChartCard` (with disabled guidance if PMC is inactive).
+       - **Tab 2: HRV & Readiness**: Primary "Measure Morning HRV" CTA button launching `MorningHrvCheckScreen`, empty-state onboarding card when 0 readings exist in `HrvReadiness.db`, `HrvReadinessTrendCard` (60d posture-isolated SWC corridor + 7d rolling trend + optional Training-Load overlay), and chronological history log of recorded morning HRV entries with delete support.
+       - **Tab 3: Body & Thresholds**: Current KPI summary tiles (`Weight`, `HRrest`, `FTP`, `CP`, `W'`, `W/kg`), `AthleteMetricTimeSeriesChart`, `+` Add Entry action, and filterable History Log.
+       - **Tab 4: Cardio-Power**: Longitudinal `CardioPowerTrendsCard` (`Fresh HR@200W`, Time Constant `τ`, Slope `1/K`), conditionally displayed when `enableCardioPowerDynamics` is true.
+  5. *Dedicated Settings Training Zones Hub (`REQ-UI-513.5`)*:
+     - `NavRoutes.TRAINING_ZONES` SHALL route directly to `ZoneSettingsScreen` in `ZonesSettingsActivity.kt` hosting the 3 zone configuration tabs (`HR Run`, `HR Bike`, `Power Bike`), Zone Calculator dialog, and Zone History dialog.
+  6. *9-Language Localization Parity (`REQ-UI-513.6`)*:
+     - All new and updated string resources (`drawer_fitness_physiology`, tab titles, empty states, button CTAs) SHALL be localized with 100% parity across `values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* the navigation drawer,
+• *When* expanded,
+• *Then* the Training group contains exactly 4 items (`Start Tracking`, `Workouts`, `Periods`, `Fitness & Physiology`) and Settings contains `Training Zones`.
+• *Given* the Periods screen,
+• *When* opened,
+• *Then* it displays only calendar volume bars with zero HRV trend card overhead.
+• *Given* the Fitness & Physiology hub,
+• *When* navigating between tabs,
+• *Then* Tab 1 renders PMC, Tab 2 renders HRV readiness with Morning HRV measurement CTA & log, Tab 3 renders Body & Thresholds, and Tab 4 renders Cardio-Power when enabled.
+• *Given* selecting Training Zones from Settings,
+• *When* opened,
+• *Then* it loads `ZoneSettingsScreen` with the 3 zone tabs, calculator, and history dialogs.
+
+**Archaeology (Chesterton's Fence)**:
+1. *Original Requirement ID & Target*: Amends `REQ-UI-397.1` & `REQ-UI-397.2` (*Consolidated Equipment & Profile/Zones Destinations*, Sprint 2026-42.7, ATT-3851), `REQ-UI-405.1` (*Training Drawer Order*, Sprint 2026-42.7, ATT-3928), and `REQ-PER-033.5` (*HRV Trend in Periods*, Sprint 2026-46.1, ATT-3557).
+2. *Historical Origin & Commit Trace*: Commit `b660ef43` (ATT-3704), commit `8471b409` (ATT-3851), and Sprint 2026-46.1 (ATT-3557).
+3. *Root Reason for Existing Formulation*: Zones were initially grouped with athlete profile as an interim consolidation step; HRV trend card was introduced into Periods to surface early longitudinal recovery data before a dedicated multi-tab physiology hub was architected.
+4. *Preservation of Core Invariants*: All zone calculation and editing capabilities preserved; all historical athlete metric entries and morning HRV records remain 100% accessible; backward-compatible route mappings (`NavRoutes.ATHLETE_PROFILE`, `NavRoutes.TRAINING_ZONES`) maintained.
+
+**Invariants**: DataStore zone persistence preserved; SQLite database tables (`HrvReadiness.db`, `AthleteMetricsDb`) unchanged; navigation deep-links backward-compatible; WCAG AA contrast maintained.
+
+
+
+### REQ-UI-514: Dedicated ANT+ (bike_radar) and Bluetooth LE (bt_bike_radar) Vector Sensor Badges for DeviceType.BIKE_RADAR [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-UI-514` | **Tickets**: `ATT-6699`
+- **Implementation**: `app/src/main/res/drawable/bike_radar.xml`, `app/src/main/res/drawable/bt_bike_radar.xml`, `UIHelper.java`, `DeviceData.kt`, `VectorAssetResolutionContractTest.kt`
+- **Rationale**: When `DeviceType.BIKE_RADAR` devices are discovered or paired over ANT+ or Bluetooth LE, they currently fall back to generic protocol icons (`ant_logo` or `logo_protocol_bluetooth`). The system SHALL provide dedicated, mathematically constructed vector drawables (`bike_radar.xml` and `bt_bike_radar.xml`) following the established design language of the sensor badge family (REQ-UI-375, REQ-UI-442), wire them into `UIHelper` and `DeviceData`, and enforce Rule 37 geometric constraints.
+- **Description**:
+  1. *ANT+ Radar Badge Geometry & Typography (`REQ-UI-514.1` — Rule 37)*:
+     - `app/src/main/res/drawable/bike_radar.xml` SHALL define a `48dp x 48dp` vector drawable with `96x96` viewport.
+     - Background badge SHALL be `#000000` rounded rectangle with corner radius $r=10.0$ (`M 10,0 L 86,0 A 10,10 0 0,1 96,10 ...`).
+     - Foreground SHALL render standard white silhouette cyclist matching `bike_pwr.xml`.
+     - Radar emission motif SHALL render analytical arcs radiating backward behind the cyclist's saddle/seatpost.
+     - Bottom abbreviation label SHALL render bold uppercase `RDR` centered at $y \in [75.5, 90.5]$ with `android:fillType="evenOdd"` for punch-out transparency on glyph `D` and `R`.
+  2. *Bluetooth LE Radar Badge Geometry & Typography (`REQ-UI-514.2` — Rule 37)*:
+     - `app/src/main/res/drawable/bt_bike_radar.xml` SHALL define a `48dp x 48dp` vector drawable with `144x144` viewport.
+     - Background badge SHALL be full-bleed `#0A3D91` rounded rectangle ($r=22.0$) spanning `0..144` (`M 22,0 L 122,0 A 22,22 0 0,1 144,22 ...`).
+     - Cyclist motif SHALL be horizontally centered using `<group android:translateX="18.18">` matching `bt_bike_pwr.xml`.
+     - Top-left quadrant ($x \approx 12..52, y \approx 10..50$) SHALL embed a canonical radar wave mini-icon group `mini_icon_radar`.
+     - Radar emission motif SHALL render analytical arcs radiating backward from the cyclist's seatpost.
+     - Bottom abbreviation label SHALL render bold uppercase `RDR` centered at $y \in [113.25, 135.75]$ with `android:fillType="evenOdd"`.
+  3. *Protocol Icon Resolution (`REQ-UI-514.3`)*:
+     - `UIHelper.getIconId(DeviceType.BIKE_RADAR, Protocol.ANT_PLUS)` and `DeviceData.getIconId(DeviceType.BIKE_RADAR, Protocol.ANT_PLUS)` SHALL return `R.drawable.bike_radar`.
+     - `UIHelper.getIconId(DeviceType.BIKE_RADAR, Protocol.BLUETOOTH_LE)` and `DeviceData.getIconId(DeviceType.BIKE_RADAR, Protocol.BLUETOOTH_LE)` SHALL return `R.drawable.bt_bike_radar`.
+  4. *Rule 37 Vector Quality & Contract Test Coverage (`REQ-UI-514.4`)*:
+     - All `<path>` elements in both radar drawables MUST contain $\le 45$ `L` commands and use analytical curve commands (`A`, `C`, or `Q`).
+     - `VectorAssetResolutionContractTest.kt` SHALL include `bike_radar` and `bt_bike_radar` in DOM validity, color token, Rule 37 complexity, and resolution tests.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Amends `REQ-UI-375` (*Mathematical VectorDrawable Migration*, `ATT-2859`) and `REQ-UI-442` (*Full-Bleed Badge Geometry & Uppercase Labels for Bluetooth LE Sensor Drawables*, `ATT-4956`, `ATT-5201`). Targets `app/src/main/res/drawable/bike_radar.xml`, `app/src/main/res/drawable/bt_bike_radar.xml`, `UIHelper.java`, `DeviceData.kt`, and `VectorAssetResolutionContractTest.kt`.
+2. *Historical Origin & Commit Trace*: `ATT-2859` (`15c74685`, Sprint 2026-42.7) established 96x96 ANT+ sensor vector badges with black rounded rectangle and 3-letter uppercase labels. `ATT-4956` (`be03a5bc14`, Sprint 2026-45.1) and `ATT-5201` (`43de6fd0`, Sprint 2026-45.5) established 144x144 full-bleed BLE badges with official `#0A3D91` color, centered cyclist (`translateX=18.18`), and top-left mini-icons.
+3. *Root Reason for Existing Formulation*: When `DeviceType.BIKE_RADAR` was introduced in `ATT-5083`, dedicated vector drawables were deferred, falling back to generic protocol logos. This creates visual inconsistency in sensor pairing and equipment screens where all other 7 sensor types have dedicated protocol badges.
+4. *Preservation of Core Invariants*: Full-bleed badge geometry `0..144` ($r=22.0$), official `#0A3D91` Bluetooth badge token, `#000000` ANT+ badge token, bold uppercase typography with `evenOdd`, Rule 37 geometric constraints ($\le 45$ `L` commands, analytical curves), and 100% backward compatibility for all existing `DeviceType` icon mappings are strictly preserved.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* `DeviceType.BIKE_RADAR` connected via `Protocol.ANT_PLUS`,
+• *When* querying `UIHelper.getIconId` or `DeviceData.getIconId`,
+• *Then* `R.drawable.bike_radar` is returned.
+• *Given* `DeviceType.BIKE_RADAR` connected via `Protocol.BLUETOOTH_LE`,
+• *When* querying `UIHelper.getIconId` or `DeviceData.getIconId`,
+• *Then* `R.drawable.bt_bike_radar` is returned.
+• *Given* `bike_radar.xml` and `bt_bike_radar.xml`,
+• *When* evaluated by `VectorAssetResolutionContractTest`,
+• *Then* both files parse as valid `<vector>` DOMs, satisfy Rule 37 ($\le 45$ `L` commands per path, analytical curves), conform to color tokens (`#000000` / `#0A3D91`), and render bold `RDR` labels with `evenOdd`.
+
+**Invariants**: Pure UI asset and mapping addition; zero changes to sensor drivers, database schemas, or tracking engine; 100% test pass rate across vector contract tests.
+
+
+
+### REQ-UI-515: Concise Display Settings Toggle Subtitles and Cockpit Theme Description [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-UI-515` | **Tickets**: `ATT-6681`
+- **Implementation**: `DisplaySettingsDialog.kt`, `values*/strings.xml` (all 9 locales), `DisplaySettingsTest.kt`
+- **Rationale**: In `ATT-6282`, descriptive subtitles were added to the display options toggles and cockpit theme in `DisplaySettingsDialog`. On standard mobile displays, multi-line wrapping (up to 3 lines per option) creates visual clutter, introduces orphaned words, and pushes lower controls off-screen. The system SHALL condense `forcePortraitSummary`, `prefsKeepScreenOnSummary`, `prefsNoUnlockingSummary`, and `cockpit_theme_description` across all 9 locales into crisp, single-line descriptions ($\le 55$ characters for toggles, $\le 75$ characters for cockpit theme).
+- **Description**:
+  1. *Concise Toggle Subtitle Length Bound (`REQ-UI-515.1`)*:
+     - `forcePortraitSummary`, `prefsKeepScreenOnSummary`, and `prefsNoUnlockingSummary` SHALL NOT exceed 55 characters in any of the 9 supported locales (`en`, `de`, `es`, `fr`, `it`, `ja`, `nl`, `pl`, `pt`).
+  2. *Cockpit Theme Description Length Bound (`REQ-UI-515.2`)*:
+     - `cockpit_theme_description` SHALL NOT exceed 75 characters in any of the 9 supported locales, eliminating 3-line overflow and orphaned words.
+  3. *9-Language Semantic Parity (`REQ-UI-515.3`)*:
+     - All 9 localized variants SHALL preserve the functional meaning of each toggle without formatting specifiers (`%s`, `%d`), XML-escaped newline entities (`&#10;`), or decorative emojis (`ATT-5400`).
+  4. *Contract Test Validation (`REQ-UI-515.4`)*:
+     - `DisplaySettingsTest.kt` SHALL validate that toggle subtitles do not exceed 55 characters and cockpit theme description does not exceed 75 characters across all 9 locales, while matching the canonical German and English copy.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Amends `REQ-UI-503` (*Display Settings Toggle Subtitles & Capitalization Parity*, `ATT-6282`). Targets `app/src/main/res/values*/strings.xml`, `DisplaySettingsDialog.kt`, and `DisplaySettingsTest.kt`.
+2. *Historical Origin & Commit Trace*: `ATT-6282` (`6753b825`, Sprint 2026-45.6) introduced explanatory subtitles to the display toggles.
+3. *Root Reason for Existing Formulation*: Subtitles were drafted as full explanatory sentences to maximize clarity on fresh installations, but the resulting 2–3 line height caused excessive vertical elongation on standard mobile viewport widths ($\le 412\text{dp}$).
+4. *Preservation of Core Invariants*: Full functional clarity is maintained; preference keys (`forcePortrait`, `keepScreenOn`, `noUnlocking`), zero format specifiers, zero emojis, and sentence capitalization invariants are strictly preserved.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* `DisplaySettingsDialog` rendered on a standard phone viewport (1080px / 360-412dp),
+• *When* inspecting the subtitles for `forcePortrait`, `keepScreenOn`, and `noUnlocking`,
+• *Then* each subtitle renders on a single line without wrapping or orphaned words, and its length is $\le 55$ characters across all 9 locales.
+• *Given* the `cockpit_theme_description` text,
+• *When* rendered across all 9 locales,
+• *Then* its length is $\le 75$ characters and fits within 2 compact lines without orphaned 3rd-line words.
+• *Given* `DisplaySettingsTest.kt`,
+• *When* executed,
+• *Then* length bound assertions and exact copy matches for German and English pass with 100%.
+
+**Invariants**: Zero changes to preference keys, DataStore persistence, or dialog state logic; 9-language localization parity with zero emojis or format arguments.
+
+
+
+### REQ-UI-516: Pioneer Status Banner Voluntary Support Transition Copy Parity [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-UI-516` | **Tickets**: `ATT-6680`
+- **Implementation**: `SupporterComponents.kt`, `values*/strings.xml` (all 9 locales), `SupporterCopyContractTest.kt`
+- **Rationale**: In `ATT-6290` (`REQ-UI-505`), `pioneer_thank_you_body` on `PioneerStatusBanner` (`SupporterScreen.kt`) was updated to confirm permanent feature and sensor unlock for Pioneer athletes. However, displaying the Supporter subscription plan cards (`Bronze`, `Silver`, `Gold`) directly beneath this banner without explanation causes user confusion as to why plans are shown when their app is already unlocked. The system SHALL append a respectful transition sentence inviting voluntary financial support for ongoing development to `pioneer_thank_you_body` across all 9 supported locales.
+- **Description**:
+  1. *Voluntary Support Transition Sentence (`REQ-UI-516.1`)*:
+     - `pioneer_thank_you_body` SHALL append a polite, non-coercive transition sentence clarifying that voluntary financial contributions for ongoing development remain welcome despite all features being unlocked.
+  2. *9-Language Localization Parity (`REQ-UI-516.2`)*:
+     - The updated copy SHALL be localized across all 9 supported language directories (`values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`).
+  3. *Hygiene & Quality Standards (`REQ-UI-516.3`)*:
+     - Pursuant to `ATT-5400`, `pioneer_thank_you_body` SHALL NOT contain decorative inline Unicode emojis.
+     - The copy SHALL NOT contain formatting specifiers (`%s`, `%d`) or references to "ANT+".
+  4. *Contract Test Validation (`REQ-UI-516.4`)*:
+     - `SupporterCopyContractTest.kt` SHALL validate that `pioneer_thank_you_body` exists in all 9 locales, contains zero emojis/specifiers/"ANT+", and matches the exact German and English canonical copy.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Amends `REQ-UI-505` (*Supporter Screen Pioneer Thank You Banner Copy Parity*, `ATT-6290`). Targets `app/src/main/res/values*/strings.xml` and `SupporterCopyContractTest.kt`.
+2. *Historical Origin & Commit Trace*: `ATT-6290` (`69e96e70`, Sprint 2026-45.6) neutralized legacy "ANT+" references.
+3. *Root Reason for Existing Formulation*: The prior update focused purely on removing protocol bias and thanking users, leaving the visual juxtaposition with paid supporter tiers below unexplained.
+4. *Preservation of Core Invariants*: Unconditional Pioneer feature and sensor unlock is 100% preserved; support remains strictly voluntary; zero inline emojis (`ATT-5400`) and zero format specifiers.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* an athlete with Pioneer status viewing `SupporterScreen`,
+• *When* `PioneerStatusBanner` is rendered above the Supporter plan cards,
+• *Then* `pioneer_thank_you_body` includes the transition sentence inviting voluntary support, contains zero emojis, and has zero format specifiers across all 9 locales.
+• *Given* `SupporterCopyContractTest.kt`,
+• *When* executed,
+• *Then* exact copy assertions for German and English pass with 100%.
+
+**Invariants**: Zero changes to Pioneer entitlement detection or subscription billing logic; 9-language localization parity with zero emojis.
 
 

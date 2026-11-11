@@ -23,7 +23,6 @@ import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
 import android.util.Log
-import androidx.compose.ui.layout.LookaheadScope
 import androidx.core.database.sqlite.transaction
 
 class SportTypeEquipmentLinkManager private constructor(context: Context) {

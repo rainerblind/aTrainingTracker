@@ -19,9 +19,8 @@
 package com.atrainingtracker.banalservice.ui.devices.ant
 
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertTrue
+import org.junit.Assert.assertNotNull
 import org.junit.Test
-import java.io.File
 
 /**
  * Contract test verifying cold-start elimination of ANT+ installation checks
@@ -29,42 +28,19 @@ import java.io.File
  */
 class AntStartupCheckContractTest {
 
-    private fun findFile(relativePath: String): File {
-        val candidates = listOf(
-            File(relativePath),
-            File("app/$relativePath"),
-            File("../$relativePath"),
-            File("../../$relativePath")
-        )
-        return candidates.firstOrNull { it.exists() }
-            ?: error("File not found in candidates: $relativePath")
-    }
-
     @Test
     fun testColdStartDoesNotPerformAntInstallationCheck() {
-        val activityFile = findFile("src/main/java/com/atrainingtracker/trainingtracker/activities/MainActivityWithNavigation.kt")
-        assertTrue("MainActivityWithNavigation.kt must exist", activityFile.exists())
+        val activityClass = Class.forName("com.atrainingtracker.trainingtracker.activities.MainActivityWithNavigation")
+        assertNotNull("MainActivityWithNavigation class must exist", activityClass)
 
-        val content = activityFile.readText()
-
-        // Extract onCreate method body roughly
-        val onCreateStart = content.indexOf("override fun onCreate(savedInstanceState: Bundle?)")
-        assertTrue("onCreate must exist in MainActivityWithNavigation.kt", onCreateStart != -1)
-        val onCreateEnd = content.indexOf("private fun observeNavigationEvents()", onCreateStart)
-        assertTrue("observeNavigationEvents must follow onCreate", onCreateEnd != -1)
-
-        val onCreateBody = content.substring(onCreateStart, onCreateEnd)
-
-        // Verify checkANTInstallation is not invoked during onCreate
+        val methodNames = activityClass.declaredMethods.map { it.name }
         assertFalse(
-            "onCreate must not call checkANTInstallation() during cold start",
-            onCreateBody.contains("checkANTInstallation()")
+            "MainActivityWithNavigation must not declare checkANTInstallation()",
+            methodNames.contains("checkANTInstallation")
         )
-
-        // Verify showInstallANTShitDialog is not invoked during onCreate
         assertFalse(
-            "onCreate must not call showInstallANTShitDialog() during cold start",
-            onCreateBody.contains("showInstallANTShitDialog()")
+            "MainActivityWithNavigation must not declare showInstallANTShitDialog()",
+            methodNames.contains("showInstallANTShitDialog")
         )
     }
 }

@@ -236,14 +236,14 @@
     <string name="do_not_check_again">nie sprawdzaj ponownie</string>
     <string name="check_ANT_installation">sprawdź instalację ANT</string>
     <string name="forcePortrait">Orientacja pionowa</string>
-    <string name="forcePortraitSummary">Blokuje ekran w orientacji pionowej i zapobiega automatycznemu obracaniu do poziomu</string>
+    <string name="forcePortraitSummary">Blokuj ekran w orientacji pionowej</string>
     <string name="Display">Ekran</string>
     <string name="settings_category_savings">Oszczędzanie baterii</string>
     <string name="settings_category_savings_desc">Wydłuża czas pracy baterii na dłuższe sesje treningowe</string>
     <string name="prefs_battery_saver_title">Dynamiczne przyciemnianie ekranu</string>
     <string name="prefs_battery_saver_summary">Dynamicznie dostosowuje jasność ekranu na podstawie nachylenia i stref treningowych</string>
     <string name="cockpit_theme_title">Motyw kokpitu (podczas treningu)</string>
-    <string name="cockpit_theme_description">Dotyczy wyłącznie widoków telemetrycznych i sensorów podczas aktywnych treningów. Menu główne i \'Start\' zachowują motyw standardowy.</string>
+    <string name="cockpit_theme_description">Dotyczy tylko widoków telemetrycznych i sensorów treningu.</string>
     <string name="cockpit_theme_system">System</string>
     <string name="cockpit_theme_always_dark">Zawsze ciemny</string>
     <string name="display_brightness_title">Jasność ekranu (podczas treningu)</string>
@@ -1106,9 +1106,9 @@
     <string name="prefsDisplayTitle">Ekran</string>
     <string name="prefsDisplaySummary">Skonfiguruj zachowanie ekranu i orientację</string>
     <string name="prefsKeepScreenOnTitle">Utrzymuj włączony ekran</string>
-    <string name="prefsKeepScreenOnSummary">Zapobiega automatycznemu wyłączaniu ekranu podczas aktywnego rejestrowania</string>
+    <string name="prefsKeepScreenOnSummary">Zapobiegaj uśpieniu podczas rejestrowania</string>
     <string name="prefsNoUnlockingTitle">Utrzymuj odblokowany ekran</string>
-    <string name="prefsNoUnlockingSummary">Wyświetla kokpit nad ekranem blokady bez konieczności wprowadzania kodu PIN lub wzoru</string>
+    <string name="prefsNoUnlockingSummary">Pokaż kokpit bezpośrednio na ekranie blokady</string>
     <string name="prefZoomDependingOnSpeedTitle">zoom zależny od prędkości</string>
     <string name="prefsUnitsTitle">Jednostki</string>
     <string name="prefsUnitsSummary">metryczne</string>
@@ -2034,8 +2034,14 @@
     <string name="athlete_weight_edit">Edytuj</string>
 
     <!-- Dedicated Athlete Profile Screen & Body Metrics History (ATT-3704, ATT-3851, REQ-UI-391, REQ-UI-397) -->
-    <string name="drawer_athlete_profile">Profil i strefy</string>
-    <string name="athlete_profile_title">Profil i strefy</string>
+    <string name="drawer_athlete_profile">Kondycja i fizjologia</string>
+    <string name="athlete_profile_title">Kondycja i fizjologia</string>
+    <string name="drawer_fitness_physiology">Kondycja i fizjologia</string>
+    <string name="fitness_tab_pmc">Kondycja i zmęczenie</string>
+    <string name="fitness_tab_hrv">HRV i gotowość</string>
+    <string name="fitness_tab_body">Ciało i progi</string>
+    <string name="fitness_tab_cardio_power">Cardio-Power</string>
+    <string name="pmc_disabled_guidance">Performance Management Chart jest wyłączony w Ustawieniach zaawansowanych.</string>
     <string name="athlete_profile_tab_profile">Profil</string>
     <string name="athlete_profile_add_entry">Dodaj pomiar</string>
     <string name="athlete_profile_edit_entry">Edytuj pomiar</string>
@@ -2373,7 +2379,7 @@
     <string name="drawer_tier_pioneer">★ Pionier</string>
     <string name="pioneer_badge_label_with_year">★ Pionier (Od %1$d)</string>
     <string name="pioneer_badge_label">★ Pionier</string>
-    <string name="pioneer_thank_you_body">Dziękujemy za rejestrowanie treningów we wcześniejszej wersji aTrainingTracker! Nieograniczona liczba czujników i wszystkie przyszłe funkcje są dla Ciebie trwale odblokowane.</string>
+    <string name="pioneer_thank_you_body">Dziękujemy za rejestrowanie treningów we wcześniejszej wersji aTrainingTracker! Nieograniczona liczba czujników i wszystkie przyszłe funkcje są dla Ciebie trwale odblokowane. Niemniej jednak będziemy bardzo wdzięczni za dobrowolne wsparcie finansowe dla dalszego rozwoju.</string>
     <string name="debug_supporter_override_title">Nadpisanie poziomu wspierającego (Debug)</string>
     <string name="debug_supporter_override_subtitle">Symuluje poziomy licencji lokalnie bez poświadczeń Google Play Billing</string>
 

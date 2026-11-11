@@ -142,8 +142,40 @@ class SystemDataExchangeRequirementsContractTest {
 
         // 4. Security, privacy, and decommissioned platform boundaries
         assertTrue("Must document auth_credentials_prefs exclusion", content.contains("auth_credentials_prefs.xml"))
+        assertTrue("Must document full_backup_content manifest", content.contains("full_backup_content.xml"))
+        assertTrue("Must document data_extraction_rules manifest", content.contains("data_extraction_rules.xml"))
         assertTrue("Must document Health Connect consent", content.contains("Health Connect"))
         assertTrue("Must document Runkeeper as decommissioned", content.contains("Runkeeper"))
         assertTrue("Must document TrainingPeaks as decommissioned", content.contains("TrainingPeaks"))
+    }
+
+    /**
+     * Asserts that all backticked .kt, .java, and .xml files referenced in docs/system/sysreq_data_exchange.md
+     * exist on disk in the repository (excluding runtime-only device prefs auth_credentials_prefs.xml) (ATT-6740).
+     */
+    @Test
+    fun testSysreqDataExchange_allReferencedCodeFilesExistOnDisk() {
+        val sysreqFile = findRepoRootFile("docs/system/sysreq_data_exchange.md")
+        val content = sysreqFile.readText()
+
+        val filenamePattern = Regex("`([A-Za-z0-9_]+\\.(?:kt|java|xml))`")
+        val referencedFiles = filenamePattern.findAll(content)
+            .map { it.groupValues[1] }
+            .toSet()
+            .minus("auth_credentials_prefs.xml")
+
+        assertTrue("Must reference at least 15 code/resource/test files", referencedFiles.size >= 15)
+
+        val repoRoot = findRepoRootFile("settings.gradle").parentFile ?: File(".")
+        val filesOnDisk = repoRoot.walkTopDown()
+            .filter { !it.path.contains(".git") && !it.path.contains(File.separator + "build" + File.separator) }
+            .map { it.name }
+            .toSet()
+
+        val missingFiles = referencedFiles.filter { it !in filesOnDisk }
+        assertTrue(
+            "The following referenced files do not exist in the repository: $missingFiles",
+            missingFiles.isEmpty()
+        )
     }
 }

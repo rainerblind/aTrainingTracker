@@ -365,22 +365,15 @@ class DisplaySettingsTest {
     }
 
     /**
-     * Verifies pursuant to REQ-UI-503 and TST-UI-503 (ATT-6282):
+     * Verifies pursuant to REQ-UI-503, REQ-UI-515, and TST-UI-515 (ATT-6282, ATT-6681):
      * 1. forcePortraitSummary, prefsKeepScreenOnSummary, and prefsNoUnlockingSummary exist across all 9 locales.
      * 2. Zero format specifiers and zero decorative emojis (ATT-5400).
      * 3. prefsKeepScreenOnTitle and prefsNoUnlockingTitle begin with an uppercase letter across all applicable locales.
-     * 4. Exact copy match for German and English summary strings.
+     * 4. Character bounds: toggle summaries <= 55 chars, cockpit_theme_description <= 75 chars across all 9 locales.
+     * 5. Exact copy match for German and English summary and description strings.
      */
     @Test
     fun testDisplayOptionSubtitlesAndCapitalizationParity() {
-        val candidates = listOf(
-            File("src/main/res"),
-            File("app/src/main/res"),
-            File("../app/src/main/res")
-        )
-        val resDir = candidates.firstOrNull { it.exists() && it.isDirectory }
-            ?: error("res directory not found in candidate paths: $candidates")
-
         val supportedLocales = listOf("", "de", "es", "fr", "it", "ja", "nl", "pl", "pt")
         val targetSummaries = listOf(
             "forcePortraitSummary",
@@ -395,21 +388,15 @@ class DisplaySettingsTest {
         val formatArgPattern = Pattern.compile("%(?:\\d+\\$)?[sdfoxXeEgGaA]")
         val emojiPattern = Pattern.compile("[\\x{1F300}-\\x{1F64F}\\x{1F680}-\\x{1F6FF}\\x{2600}-\\x{26FF}\\x{2700}-\\x{27BF}]")
 
-        fun extractString(stringsFile: File, key: String): String? {
-            val content = stringsFile.readText()
-            val regex = Pattern.compile("<string\\s+name=[\"']$key[\"'][^>]*>(.*?)</string>", Pattern.DOTALL)
-            val matcher = regex.matcher(content)
-            return if (matcher.find()) matcher.group(1).trim() else null
+        fun extractString(locale: String, key: String): String? {
+            val dirName = if (locale.isEmpty()) "values" else "values-$locale"
+            return com.atrainingtracker.testing.LocalizationTestCache.getStrings(dirName, "strings.xml")[key]?.trim()
         }
 
         for (locale in supportedLocales) {
-            val dirName = if (locale.isEmpty()) "values" else "values-$locale"
-            val stringsFile = File(resDir, "$dirName/strings.xml")
-            assertTrue("strings.xml must exist for locale '$locale'", stringsFile.exists())
-
-            // 1 & 2: Subtitle presence, non-blank, zero format specifiers, zero emojis
+            // 1 & 2: Subtitle presence, non-blank, zero format specifiers, zero emojis, <= 55 chars
             for (key in targetSummaries) {
-                val rawValue = extractString(stringsFile, key)
+                val rawValue = extractString(locale, key)
                 assertNotNull("Summary key '$key' must exist in locale '$locale'", rawValue)
                 assertFalse("Summary key '$key' must not be blank in locale '$locale'", rawValue!!.isEmpty())
                 assertFalse(
@@ -420,12 +407,33 @@ class DisplaySettingsTest {
                     "Summary key '$key' in locale '$locale' must not contain emojis per ATT-5400 (found '$rawValue')",
                     emojiPattern.matcher(rawValue).find()
                 )
+                assertTrue(
+                    "Summary key '$key' in locale '$locale' must be <= 55 chars (found ${rawValue.length}: '$rawValue')",
+                    rawValue.length <= 55
+                )
             }
+
+            // Cockpit theme description presence, hygiene, and <= 75 chars bound (REQ-UI-515.2)
+            val themeDesc = extractString(locale, "cockpit_theme_description")
+            assertNotNull("Key 'cockpit_theme_description' must exist in locale '$locale'", themeDesc)
+            assertFalse("Key 'cockpit_theme_description' must not be blank in locale '$locale'", themeDesc!!.isEmpty())
+            assertFalse(
+                "Key 'cockpit_theme_description' in locale '$locale' must not contain format specifiers (found '$themeDesc')",
+                formatArgPattern.matcher(themeDesc).find()
+            )
+            assertFalse(
+                "Key 'cockpit_theme_description' in locale '$locale' must not contain emojis per ATT-5400 (found '$themeDesc')",
+                emojiPattern.matcher(themeDesc).find()
+            )
+            assertTrue(
+                "Key 'cockpit_theme_description' in locale '$locale' must be <= 75 chars (found ${themeDesc.length}: '$themeDesc')",
+                themeDesc.length <= 75
+            )
 
             // 3: Titles must start with a capital letter (except Japanese which has no grammatical case)
             if (locale != "ja") {
                 for (titleKey in targetTitles) {
-                    val titleVal = extractString(stringsFile, titleKey)
+                    val titleVal = extractString(locale, titleKey)
                     assertNotNull("Title key '$titleKey' must exist in locale '$locale'", titleVal)
                     val firstChar = titleVal!!.first()
                     assertTrue(
@@ -436,33 +444,39 @@ class DisplaySettingsTest {
             }
         }
 
-        // 4: Exact copy match verification for German and English
-        val deFile = File(resDir, "values-de/strings.xml")
+        // 4 & 5: Exact copy match verification for German and English
         assertEquals(
-            "Sperrt die Anzeige im Hochformat und verhindert automatisches Drehen ins Querformat",
-            extractString(deFile, "forcePortraitSummary")
+            "Anzeige dauerhaft im Hochformat fixieren",
+            extractString("de", "forcePortraitSummary")
         )
         assertEquals(
-            "Verhindert, dass sich das Display während einer Aufzeichnung automatisch abschaltet",
-            extractString(deFile, "prefsKeepScreenOnSummary")
+            "Kein Standby während einer Aufzeichnung",
+            extractString("de", "prefsKeepScreenOnSummary")
         )
         assertEquals(
-            "Zeigt das Cockpit über dem Sperrbildschirm an, sodass beim Aufwecken kein Entsperren nötig ist",
-            extractString(deFile, "prefsNoUnlockingSummary")
+            "Cockpit direkt über dem Sperrbildschirm anzeigen",
+            extractString("de", "prefsNoUnlockingSummary")
+        )
+        assertEquals(
+            "Gilt nur für Telemetrie- und Sensoransichten des aktiven Workouts.",
+            extractString("de", "cockpit_theme_description")
         )
 
-        val enFile = File(resDir, "values/strings.xml")
         assertEquals(
-            "Lock the display to vertical portrait mode and prevent rotation to landscape",
-            extractString(enFile, "forcePortraitSummary")
+            "Lock display to portrait mode",
+            extractString("", "forcePortraitSummary")
         )
         assertEquals(
-            "Prevent the screen from turning off automatically during active tracking",
-            extractString(enFile, "prefsKeepScreenOnSummary")
+            "Prevent standby during active tracking",
+            extractString("", "prefsKeepScreenOnSummary")
         )
         assertEquals(
-            "Show the cockpit above the lock screen without requiring PIN or pattern unlock",
-            extractString(enFile, "prefsNoUnlockingSummary")
+            "Show cockpit directly above the lock screen",
+            extractString("", "prefsNoUnlockingSummary")
+        )
+        assertEquals(
+            "Applies only to telemetry and sensor views during active workouts.",
+            extractString("", "cockpit_theme_description")
         )
     }
 }

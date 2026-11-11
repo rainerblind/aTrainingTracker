@@ -19,14 +19,21 @@
 package com.atrainingtracker.trainingtracker.ui.hrv
 
 import android.app.Application
+import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.atrainingtracker.banalservice.devices.RrBeatEvent
 import com.atrainingtracker.banalservice.devices.RrBeatListener
 import com.atrainingtracker.banalservice.devices.hrv.FilteredRrBeat
+import com.atrainingtracker.banalservice.devices.hrv.HrvSignalQualityAnalyzer
+import com.atrainingtracker.banalservice.devices.hrv.HrvSignalQualityResult
+import com.atrainingtracker.banalservice.devices.hrv.HrvSignalQualityStatus
 import com.atrainingtracker.banalservice.devices.hrv.RrArtifactFilter
+import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.TrainingApplication
+import com.atrainingtracker.trainingtracker.cloud.healthconnect.HealthConnectHrvImporter
 import com.atrainingtracker.trainingtracker.database.hrv.HrvPosture
+import com.atrainingtracker.trainingtracker.database.hrv.HrvReadinessCalculator
 import com.atrainingtracker.trainingtracker.database.hrv.HrvReadinessEntry
 import com.atrainingtracker.trainingtracker.database.hrv.HrvReadinessRepository
 import com.atrainingtracker.trainingtracker.database.hrv.HrvReadinessResult
@@ -70,9 +77,12 @@ data class MorningHrvUiState(
     val beatCount: Int = 0,
     val artifactRatePct: Double? = null,
     val highArtifactWarning: Boolean = false,
+    val signalQualityStatus: HrvSignalQualityStatus = HrvSignalQualityStatus.INSUFFICIENT_DATA,
+    val signalQualityResult: HrvSignalQualityResult? = null,
     val computedEntry: HrvReadinessEntry? = null,
     val readinessResult: HrvReadinessResult? = null,
     val isSaved: Boolean = false,
+    val errorMessageResId: Int? = null,
     val errorMessage: String? = null
 )
 
@@ -114,7 +124,22 @@ class MorningHrvCheckViewModel @JvmOverloads constructor(
         uiState = _uiState.asStateFlow()
 
         banalServiceRepository.bindToBANALService()
+        banalServiceRepository.startSearchingForPairedDevices()
         banalServiceRepository.addRrBeatListener(rrBeatListener)
+
+        if (TrainingApplication.isHealthConnectHrvImportEnabled()) {
+            viewModelScope.launch(Dispatchers.IO) {
+                try {
+                    HealthConnectHrvImporter.importRecentHrv(
+                        context = application,
+                        daysBack = 14,
+                        repository = hrvReadinessRepository
+                    )
+                } catch (e: Exception) {
+                    Log.w("MorningHrvCheckVM", "Background Health Connect HRV refresh failed: ${e.message}")
+                }
+            }
+        }
     }
 
     /**
@@ -164,9 +189,12 @@ class MorningHrvCheckViewModel @JvmOverloads constructor(
                 beatCount = 0,
                 artifactRatePct = null,
                 highArtifactWarning = false,
+                signalQualityStatus = HrvSignalQualityStatus.INSUFFICIENT_DATA,
+                signalQualityResult = null,
                 computedEntry = null,
                 readinessResult = null,
                 isSaved = false,
+                errorMessageResId = null,
                 errorMessage = null
             )
         }
@@ -212,6 +240,9 @@ class MorningHrvCheckViewModel @JvmOverloads constructor(
                 phase = MorningHrvPhase.READY,
                 remainingSec = 0,
                 beatCount = 0,
+                signalQualityStatus = HrvSignalQualityStatus.INSUFFICIENT_DATA,
+                signalQualityResult = null,
+                errorMessageResId = null,
                 errorMessage = null
             )
         }
@@ -232,10 +263,21 @@ class MorningHrvCheckViewModel @JvmOverloads constructor(
 
         if (_uiState.value.phase == MorningHrvPhase.MEASURING) {
             bufferedBeats.add(event)
+            val currentBeats = bufferedBeats.toList()
+            val causalResult = artifactFilter.filterLiveCausal(currentBeats)
+            val (rate, isHigh) = if (causalResult.totalCount > 0) {
+                val pct = causalResult.artifactRatePercent
+                Pair(pct, pct > ARTIFACT_THRESHOLD_PCT)
+            } else {
+                Pair(_uiState.value.artifactRatePct, _uiState.value.highArtifactWarning)
+            }
+
             _uiState.update {
                 it.copy(
                     currentHeartRateBpm = hr,
-                    beatCount = bufferedBeats.size
+                    beatCount = currentBeats.size,
+                    artifactRatePct = rate,
+                    highArtifactWarning = isHigh
                 )
             }
         } else {
@@ -244,14 +286,15 @@ class MorningHrvCheckViewModel @JvmOverloads constructor(
     }
 
     /**
-     * Post-hoc full-window centered filtering and readiness calculation (`REQ-PER-032.4`).
+     * Post-hoc full-window centered filtering and readiness calculation (`REQ-PER-032.4`, `REQ-PER-032.5`).
      */
-    fun completeMeasurement() {
+    suspend fun completeMeasurement() {
         val beats = bufferedBeats.toList()
         if (beats.isEmpty()) {
             _uiState.update {
                 it.copy(
                     phase = MorningHrvPhase.READY,
+                    errorMessageResId = R.string.morning_hrv_error_no_rr,
                     errorMessage = "No RR intervals recorded. Please check heart rate sensor connection."
                 )
             }
@@ -277,6 +320,12 @@ class MorningHrvCheckViewModel @JvmOverloads constructor(
         val dateIso = LocalDate.now().toString()
         val timezoneId = ZoneId.systemDefault().id
 
+        val qualityResult = HrvSignalQualityAnalyzer.analyzeBeats(
+            beats = filteredBeats,
+            artifactRatePercent = artifactRate,
+            rmssdMs = rmssdMs
+        )
+
         val entry = HrvReadinessEntry(
             timestampMs = nowMs,
             dateIso = dateIso,
@@ -292,22 +341,22 @@ class MorningHrvCheckViewModel @JvmOverloads constructor(
             isPrimaryForDay = true
         )
 
+        val existingEntries = hrvReadinessRepository.getAllEntries(entry.posture)
+        val candidateList = existingEntries.filter { it.dateIso != dateIso } + entry
+        val initialResult = HrvReadinessCalculator.calculateReadiness(dateIso, entry.posture, candidateList)
+
         _uiState.update {
             it.copy(
                 phase = MorningHrvPhase.COMPLETED,
                 remainingSec = 0,
                 artifactRatePct = artifactRate,
                 highArtifactWarning = isHighArtifact,
+                signalQualityStatus = qualityResult.status,
+                signalQualityResult = qualityResult,
                 computedEntry = entry,
+                readinessResult = initialResult,
                 isSaved = false
             )
-        }
-
-        viewModelScope.launch(dispatcher) {
-            val initialResult = hrvReadinessRepository.calculateReadiness(dateIso, entry.posture)
-            _uiState.update {
-                it.copy(readinessResult = initialResult)
-            }
         }
     }
 
@@ -329,11 +378,10 @@ class MorningHrvCheckViewModel @JvmOverloads constructor(
         return rowId
     }
 
-    override fun onCleared() {
+    public override fun onCleared() {
         super.onCleared()
         timerJob?.cancel()
         banalServiceRepository.removeRrBeatListener(rrBeatListener)
-        banalServiceRepository.unbindFromBANALService()
     }
 
     companion object {

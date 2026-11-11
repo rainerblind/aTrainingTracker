@@ -18,17 +18,16 @@
 
 package com.atrainingtracker.trainingtracker.ui.aftermath.crop
 
+import com.atrainingtracker.testing.LocalizationTestCache
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import org.w3c.dom.Element
-import java.io.File
-import javax.xml.parsers.DocumentBuilderFactory
 
 /**
  * Localization parity test for Crop Workout string resources (REQ-UI-368, TST-UI-331).
  * Validates presence and non-blank values across all 9 canonical locales:
  * en (default), de, es, fr, it, ja, nl, pl, pt.
+ * Refactored to LocalizationTestCache per docs/coding_standards.md §5.4 and REQ-PRO-049.
  */
 class CropWorkoutLocalizationTest {
 
@@ -47,54 +46,20 @@ class CropWorkoutLocalizationTest {
         "crop_force_reexport"
     )
 
-    private fun findResDir(): File {
-        val candidates = listOf(
-            File("app/src/main/res"),
-            File("src/main/res"),
-            File("../app/src/main/res")
-        )
-        return candidates.firstOrNull { it.exists() && it.isDirectory }
-            ?: error("res directory not found in candidates: $candidates")
-    }
-
-    private fun parseStringResource(file: File, stringName: String): String? {
-        val dbFactory = DocumentBuilderFactory.newInstance()
-        val dBuilder = dbFactory.newDocumentBuilder()
-        val doc = dBuilder.parse(file)
-        doc.documentElement.normalize()
-
-        val stringNodes = doc.getElementsByTagName("string")
-        for (i in 0 until stringNodes.length) {
-            val node = stringNodes.item(i)
-            if (node is Element && node.getAttribute("name") == stringName) {
-                return node.textContent
-            }
-        }
-        return null
-    }
-
     @Test
-    fun testAllCropStringsExistInAll9Locales() {
-        val resDir = findResDir()
-        val missingKeys = mutableListOf<String>()
-
-        for (locale in locales) {
-            val valuesDir = File(resDir, "values$locale")
-            val stringsFile = File(valuesDir, "strings.xml")
-
-            assertTrue("strings.xml does not exist for locale values$locale", stringsFile.exists())
+    fun testCropWorkoutStringsParityAcrossAllLocales() {
+        for (suffix in locales) {
+            val dirName = if (suffix.isEmpty()) "values" else "values$suffix"
+            val strings = LocalizationTestCache.getStrings(dirName, "strings.xml")
 
             for (key in requiredKeys) {
-                val value = parseStringResource(stringsFile, key)
-                if (value.isNullOrBlank()) {
-                    missingKeys.add("values$locale/strings.xml missing key: $key")
-                }
+                val value = strings[key]
+                assertNotNull("Missing key '$key' in $dirName", value)
+                assertTrue(
+                    "Key '$key' in $dirName must not be blank",
+                    value!!.isNotBlank()
+                )
             }
         }
-
-        assertTrue(
-            "Missing or blank localization keys for crop workout:\n" + missingKeys.joinToString("\n"),
-            missingKeys.isEmpty()
-        )
     }
 }

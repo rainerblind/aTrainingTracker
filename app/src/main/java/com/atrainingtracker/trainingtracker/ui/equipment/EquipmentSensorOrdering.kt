@@ -19,9 +19,9 @@
 package com.atrainingtracker.trainingtracker.ui.equipment
 
 import com.atrainingtracker.banalservice.BSportType
-import com.atrainingtracker.banalservice.database.DevicesDatabaseManager
-import com.atrainingtracker.banalservice.database.DevicesDatabaseManager.SimpleSensorInfo
 import com.atrainingtracker.banalservice.devices.DeviceType
+import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceDataRepository
+import com.atrainingtracker.banalservice.ui.devices.devicedata.SimpleSensorInfo
 
 /**
  * Pure domain ordering utility for equipment sensors (REQ-UI-283, TST-UI-243, ATT-2464).
@@ -51,13 +51,13 @@ object EquipmentSensorOrdering {
                 DeviceType.BIKE_SPEED -> 30
                 DeviceType.BIKE_CADENCE -> 40
                 DeviceType.BIKE_RADAR -> 45
-                else -> if (DevicesDatabaseManager.isBikeSensor(deviceType)) {
+                else -> if (DeviceDataRepository.isBikeSensor(deviceType)) {
                     50
                 } else if (deviceType == DeviceType.HRM) {
                     100
                 } else if (deviceType == DeviceType.ENVIRONMENT) {
                     110
-                } else if (DevicesDatabaseManager.isSharedSensor(deviceType)) {
+                } else if (DeviceDataRepository.isSharedSensor(deviceType)) {
                     120
                 } else {
                     200
@@ -65,13 +65,13 @@ object EquipmentSensorOrdering {
             }
             BSportType.RUN -> when (deviceType) {
                 DeviceType.RUN_SPEED -> 10
-                else -> if (DevicesDatabaseManager.isRunSensor(deviceType)) {
+                else -> if (DeviceDataRepository.isRunSensor(deviceType)) {
                     20
                 } else if (deviceType == DeviceType.HRM) {
                     100
                 } else if (deviceType == DeviceType.ENVIRONMENT) {
                     110
-                } else if (DevicesDatabaseManager.isSharedSensor(deviceType)) {
+                } else if (DeviceDataRepository.isSharedSensor(deviceType)) {
                     120
                 } else {
                     200
@@ -105,6 +105,33 @@ object EquipmentSensorOrdering {
             }
 
             s1.id.compareTo(s2.id)
+        }
+    }
+
+    /**
+     * Legacy comparator overload for [com.atrainingtracker.banalservice.database.DevicesDatabaseManager.SimpleSensorInfo].
+     */
+    @JvmStatic
+    fun getLegacyComparator(sportType: BSportType): java.util.Comparator<com.atrainingtracker.banalservice.database.DevicesDatabaseManager.SimpleSensorInfo> {
+        return java.util.Comparator { s1, s2 ->
+            if (s1 == null && s2 == null) return@Comparator 0
+            if (s1 == null) return@Comparator 1
+            if (s2 == null) return@Comparator -1
+
+            val rank1 = getPriorityRank(s1.deviceType, sportType)
+            val rank2 = getPriorityRank(s2.deviceType, sportType)
+            if (rank1 != rank2) {
+                return@Comparator rank1.compareTo(rank2)
+            }
+
+            val name1 = s1.name ?: ""
+            val name2 = s2.name ?: ""
+            val nameCompare = String.CASE_INSENSITIVE_ORDER.compare(name1, name2)
+            if (nameCompare != 0) {
+                return@Comparator nameCompare
+            }
+
+            java.lang.Long.compare(s1.id, s2.id)
         }
     }
 

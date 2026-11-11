@@ -29,6 +29,7 @@ import com.atrainingtracker.banalservice.BANALService
 import com.atrainingtracker.banalservice.database.DevicesDatabaseManager
 import com.atrainingtracker.banalservice.helpers.HavePressureSensor
 import com.atrainingtracker.banalservice.sensor.MySensorManager
+import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceDataRepository
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import io.mockk.clearAllMocks
 import io.mockk.every
@@ -84,6 +85,7 @@ class DeviceManagerLocationInitTest {
 
     @Before
     fun setUp() {
+        DeviceDataRepository.resetForTesting()
         mockkStatic(Log::class)
         every { Log.d(any<String>(), any<String>()) } returns 0
         every { Log.i(any<String>(), any<String>()) } returns 0
@@ -127,6 +129,7 @@ class DeviceManagerLocationInitTest {
 
     @After
     fun tearDown() {
+        DeviceDataRepository.resetForTesting()
         clearAllMocks(answers = false)
     }
 

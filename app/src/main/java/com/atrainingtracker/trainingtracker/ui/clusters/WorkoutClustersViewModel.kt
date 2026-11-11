@@ -29,9 +29,7 @@ import com.atrainingtracker.trainingtracker.database.WorkoutCluster
 import com.atrainingtracker.trainingtracker.database.WorkoutClusterDatabaseManager
 import com.atrainingtracker.trainingtracker.database.WorkoutClusterStats
 import com.atrainingtracker.trainingtracker.database.ClusterCorridorVariant
-import com.atrainingtracker.trainingtracker.database.ColoredPolylinePath
 import com.atrainingtracker.trainingtracker.database.WorkoutClusterCorridorDetector
-import com.atrainingtracker.trainingtracker.database.getVariantColor
 import com.atrainingtracker.util.safeEnumValueOfOrNull
 import com.atrainingtracker.trainingtracker.database.WorkoutClusterEngine
 import com.atrainingtracker.trainingtracker.database.WorkoutClusterRepository
@@ -594,7 +592,7 @@ class WorkoutClustersViewModel @JvmOverloads constructor(
      */
     fun getLocationName(lat: Double, lng: Double): String? {
         return try {
-            val loc = com.atrainingtracker.trainingtracker.database.KnownLocationsDatabaseManager.getInstance(getApplication()).getMyLocation(LatLng(lat, lng))
+            val loc = knownLocationsRepo.getMyLocation(LatLng(lat, lng))
             loc?.name
         } catch (_: Exception) {
             null

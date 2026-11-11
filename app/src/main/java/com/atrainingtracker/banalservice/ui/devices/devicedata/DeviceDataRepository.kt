@@ -25,6 +25,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.ServiceConnection
 import android.os.IBinder
+import android.os.Looper
 import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
@@ -32,10 +33,12 @@ import androidx.lifecycle.map
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BANALService
 import com.atrainingtracker.banalservice.BSportType
+import com.atrainingtracker.banalservice.Protocol
 import com.atrainingtracker.banalservice.database.DevicesDatabaseManager
 import com.atrainingtracker.banalservice.devices.BikePowerSensorsHelper
 import com.atrainingtracker.banalservice.devices.DeviceType
 import com.atrainingtracker.banalservice.ui.devices.devicedata.RawDeviceDataProvider
+import com.atrainingtracker.util.EnumUtils
 import com.atrainingtracker.trainingtracker.MyHelper
 import com.atrainingtracker.trainingtracker.database.EquipmentAndSportTypeDiscoveryManager
 import com.atrainingtracker.trainingtracker.database.EquipmentDbHelper
@@ -55,17 +58,56 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 /**
+ * Pure domain representation of a device with battery percentage and threshold warning (REQ-UI-511.1).
+ */
+data class CriticalBatteryDevice(
+    val name: String,
+    val batteryPercentage: Int,
+    val deviceId: Long
+)
+
+/**
+ * Pure domain representation of a paired remote device for service coordination (REQ-TRK-066.3).
+ */
+data class PairedRemoteDeviceDto(
+    val id: Long,
+    val isPaired: Boolean,
+    val deviceType: DeviceType?,
+    val antDeviceNumber: Int,
+    val btAddress: String?
+)
+
+/**
+ * Pure domain representation of basic remote sensor identification (REQ-UI-511.1).
+ */
+data class SimpleSensorInfo(
+    val id: Long,
+    val name: String,
+    val deviceType: DeviceType? = null
+)
+
+/**
  * A repository that acts as a single source of truth for workout data.
  * It abstracts the data source (database) from the ViewModels.
  */
 
 class DeviceDataRepository @androidx.annotation.VisibleForTesting internal constructor(
-    private val application: Application,
-    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
+    private val application: Context,
+    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
+    mainDispatcher: CoroutineDispatcher = defaultMainDispatcher
 ) {
     companion object {
         private val TAG = DeviceDataRepository::class.java.simpleName
         private val DEBUG = BANALService.getDebug(true)
+
+        private val defaultMainDispatcher: CoroutineDispatcher
+            get() = try {
+                val main = Dispatchers.Main
+                main.isDispatchNeeded(kotlin.coroutines.EmptyCoroutineContext)
+                main
+            } catch (_: Throwable) {
+                Dispatchers.Default
+            }
 
         // The single, volatile instance of the repository.
         // @Volatile guarantees that writes to this field are immediately visible to other threads.
@@ -79,14 +121,21 @@ class DeviceDataRepository @androidx.annotation.VisibleForTesting internal const
          * @return The single instance of DeviceDataRepository.
          */
         fun getInstance(application: Application): DeviceDataRepository {
-            return INSTANCE ?: synchronized(this) {
-                INSTANCE ?: DeviceDataRepository(application).also { INSTANCE = it }
-            }
+            return getInstance(application as Context)
         }
 
         @JvmStatic
         fun getInstance(context: Context): DeviceDataRepository {
-            return getInstance(context.applicationContext as Application)
+            return INSTANCE ?: synchronized(this) {
+                INSTANCE ?: run {
+                    val safeContext = try {
+                        context.applicationContext ?: context
+                    } catch (_: Throwable) {
+                        context
+                    }
+                    DeviceDataRepository(safeContext).also { INSTANCE = it }
+                }
+            }
         }
 
         @androidx.annotation.VisibleForTesting
@@ -102,9 +151,18 @@ class DeviceDataRepository @androidx.annotation.VisibleForTesting internal const
         fun notifyBatteryUpdated(deviceId: Long, percentage: Int) {
             _deviceBatteryUpdates.tryEmit(Pair(deviceId, percentage))
         }
+
+        @JvmStatic
+        fun isBikeSensor(deviceType: DeviceType?): Boolean = DevicesDatabaseManager.isBikeSensor(deviceType)
+
+        @JvmStatic
+        fun isRunSensor(deviceType: DeviceType?): Boolean = DevicesDatabaseManager.isRunSensor(deviceType)
+
+        @JvmStatic
+        fun isSharedSensor(deviceType: DeviceType?): Boolean = DevicesDatabaseManager.isSharedSensor(deviceType)
     }
 
-    private val repositoryScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
+    private val repositoryScope = CoroutineScope(mainDispatcher + SupervisorJob())
 
     @androidx.annotation.VisibleForTesting
     fun cancelScopeForTesting() {
@@ -163,13 +221,16 @@ class DeviceDataRepository @androidx.annotation.VisibleForTesting internal const
 
     fun getDeviceType(deviceId: Long): DeviceType? {
         return allDevices.value?.find { it.id == deviceId }?.deviceType
+            ?: devicesDatabaseManager.getDeviceType(deviceId)
     }
 
     /**
-     * Retrieves devices with battery levels at or below [threshold] (REQ-UI-507.5).
+     * Retrieves devices with battery levels at or below [threshold] (REQ-UI-507.5, REQ-UI-511.1).
      */
-    fun getCriticalBatteryDevices(threshold: Int): List<DevicesDatabaseManager.NameAndBatteryPercentage> {
-        return devicesDatabaseManager.getCriticalBatteryDevices(threshold)
+    fun getCriticalBatteryDevices(threshold: Int): List<CriticalBatteryDevice> {
+        return devicesDatabaseManager.getCriticalBatteryDevices(threshold).map {
+            CriticalBatteryDevice(it.name, it.batteryPercentage, it.deviceId)
+        }
     }
 
     /**
@@ -201,16 +262,20 @@ class DeviceDataRepository @androidx.annotation.VisibleForTesting internal const
     }
 
     /**
-     * Retrieves summary information for all remote sensors (REQ-UI-507.5).
+     * Retrieves summary information for all remote sensors (REQ-UI-507.5, REQ-UI-511.1).
      */
-    val allRemoteSensors: List<DevicesDatabaseManager.SimpleSensorInfo>
-        get() = devicesDatabaseManager.allRemoteSensors
+    val allRemoteSensors: List<SimpleSensorInfo>
+        get() = devicesDatabaseManager.allRemoteSensors.map {
+            SimpleSensorInfo(it.id, it.name, it.deviceType)
+        }
 
     /**
-     * Retrieves summary information for sensors compatible with [sportType] (REQ-UI-507.5).
+     * Retrieves summary information for sensors compatible with [sportType] (REQ-UI-507.5, REQ-UI-511.1).
      */
-    fun getSensorsForSportType(sportType: BSportType): List<DevicesDatabaseManager.SimpleSensorInfo> {
-        return devicesDatabaseManager.getSensorsForSportType(sportType)
+    fun getSensorsForSportType(sportType: BSportType): List<SimpleSensorInfo> {
+        return devicesDatabaseManager.getSensorsForSportType(sportType).map {
+            SimpleSensorInfo(it.id, it.name, it.deviceType)
+        }
     }
 
     /**
@@ -443,5 +508,119 @@ class DeviceDataRepository @androidx.annotation.VisibleForTesting internal const
                 .setPackage(application.getPackageName())
             application.sendBroadcast(intent)
         }
+    }
+
+    fun getActiveDeviceIdsForWorkout(workoutId: Long): List<Long> {
+        return com.atrainingtracker.trainingtracker.database.ActiveDevicesDbHelper.getInstance(application)
+            .getDatabaseIdsOfActiveDevices(workoutId)
+    }
+
+    fun recordActiveDevice(workoutId: Long, deviceId: Long) {
+        com.atrainingtracker.trainingtracker.database.ActiveDevicesDbHelper.getInstance(application)
+            .addActiveDevice(workoutId, deviceId)
+    }
+
+    fun isANTDeviceInDB(deviceType: DeviceType, antDeviceNumber: Int): Boolean =
+        devicesDatabaseManager.isANTDeviceInDB(deviceType, antDeviceNumber)
+
+    fun insertNewAntDeviceIntoDB(
+        deviceType: DeviceType,
+        displayName: String,
+        antDeviceNumber: Int,
+        paired: Boolean,
+        manufacturer: String?,
+        batteryPercentage: Int
+    ): Long = devicesDatabaseManager.insertNewAntDeviceIntoDB(
+        deviceType, displayName, antDeviceNumber, paired, manufacturer, batteryPercentage
+    )
+
+    fun getDeviceId(deviceType: DeviceType, antDeviceNumber: Int): Long =
+        devicesDatabaseManager.getDeviceId(deviceType, antDeviceNumber)
+
+    fun getDeviceId(deviceType: DeviceType, btAddress: String): Long =
+        devicesDatabaseManager.getDeviceId(deviceType, btAddress)
+
+    fun setManufacturerName(deviceId: Long, manufacturer: String?) {
+        devicesDatabaseManager.setManufacturerName(deviceId, manufacturer)
+    }
+
+    fun setBatteryPercentage(deviceId: Long, batteryPercentage: Int) {
+        devicesDatabaseManager.setBatteryPercentage(deviceId, batteryPercentage)
+    }
+
+    fun isBluetoothDeviceInDB(deviceType: DeviceType, btAddress: String): Boolean =
+        devicesDatabaseManager.isBluetoothDeviceInDB(deviceType, btAddress)
+
+    fun insertNewBluetoothDeviceIntoDB(
+        deviceType: DeviceType,
+        btAddress: String,
+        name: String,
+        manufacturer: String?,
+        batteryPercentage: Int,
+        paired: Boolean
+    ): Long = devicesDatabaseManager.insertNewBluetoothDeviceIntoDB(
+        deviceType, btAddress, name, manufacturer, batteryPercentage, paired
+    )
+
+    fun ensureSmartphoneDeviceExists(deviceType: DeviceType, paired: Boolean, name: String) {
+        devicesDatabaseManager.ensureSmartphoneDeviceExists(deviceType, name, paired)
+    }
+
+    fun getSmartphoneDeviceId(deviceType: DeviceType): Long =
+        devicesDatabaseManager.getSmartphoneDeviceId(deviceType)
+
+    fun getSpeedAndLocationGPSDeviceId(): Long =
+        devicesDatabaseManager.speedAndLocationGPSDeviceId
+
+    fun getSpeedAndLocationGoogleFusedDeviceId(): Long =
+        devicesDatabaseManager.speedAndLocationGoogleFusedDeviceId
+
+    fun getProtocol(deviceId: Long): Protocol? =
+        devicesDatabaseManager.getProtocol(deviceId)
+
+    fun getAntDeviceNumber(deviceId: Long): Int =
+        devicesDatabaseManager.getAntDeviceNumber(deviceId)
+
+    fun getBluetoothMACAddress(deviceId: Long): String? =
+        devicesDatabaseManager.getBluetoothMACAddress(deviceId)
+
+    fun getPairedRemoteDevices(protocol: Protocol): List<PairedRemoteDeviceDto> {
+        val db = devicesDatabaseManager.database ?: return emptyList()
+        val list = mutableListOf<PairedRemoteDeviceDto>()
+        try {
+            db.query(
+                DevicesDatabaseManager.DevicesDbHelper.DEVICES,
+                arrayOf(
+                    DevicesDatabaseManager.DevicesDbHelper.C_ID,
+                    DevicesDatabaseManager.DevicesDbHelper.PAIRED,
+                    DevicesDatabaseManager.DevicesDbHelper.DEVICE_TYPE,
+                    DevicesDatabaseManager.DevicesDbHelper.ANT_DEVICE_NUMBER,
+                    DevicesDatabaseManager.DevicesDbHelper.BT_ADDRESS
+                ),
+                "${DevicesDatabaseManager.DevicesDbHelper.PROTOCOL}=?",
+                arrayOf(protocol.name),
+                null, null, null
+            ).use { cursor ->
+                val idCol = cursor.getColumnIndexOrThrow(DevicesDatabaseManager.DevicesDbHelper.C_ID)
+                val pairedCol = cursor.getColumnIndexOrThrow(DevicesDatabaseManager.DevicesDbHelper.PAIRED)
+                val typeCol = cursor.getColumnIndexOrThrow(DevicesDatabaseManager.DevicesDbHelper.DEVICE_TYPE)
+                val antCol = cursor.getColumnIndexOrThrow(DevicesDatabaseManager.DevicesDbHelper.ANT_DEVICE_NUMBER)
+                val btCol = cursor.getColumnIndexOrThrow(DevicesDatabaseManager.DevicesDbHelper.BT_ADDRESS)
+                while (cursor.moveToNext()) {
+                    val id = cursor.getLong(idCol)
+                    val isPaired = cursor.getInt(pairedCol) > 0
+                    val rawType = cursor.getString(typeCol)
+                    val deviceType = EnumUtils.safeValueOfOrNull(
+                        DeviceType::class.java, rawType, "DeviceDataRepository"
+                    )
+                    val antNum = cursor.getInt(antCol)
+                    val btAddr = cursor.getString(btCol)
+                    list.add(PairedRemoteDeviceDto(id, isPaired, deviceType, antNum, btAddr))
+                }
+            }
+        } catch (e: Exception) {
+            Log.e("DeviceDataRepository", "getPairedRemoteDevices failed for $protocol", e)
+        }
+        return list
     }
 }

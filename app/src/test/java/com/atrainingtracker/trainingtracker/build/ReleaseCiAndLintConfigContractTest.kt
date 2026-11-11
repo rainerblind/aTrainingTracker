@@ -28,7 +28,7 @@ import java.io.File
  * Detekt static analysis, Kover code coverage gating, CI integrity, and instrumented androidTest
  * infrastructure with emulator CI runner (REQ-BLD-002, TST-BLD-002, REQ-PRO-042,
  * TST-PRO-042, REQ-PRO-046, TST-PRO-046, REQ-PRO-047, TST-PRO-047, REQ-PRO-048, TST-PRO-048,
- * REQ-PRO-051, TST-PRO-051, REQ-STP-007, TST-STP-007, REQ-STP-008, TST-STP-008, REQ-STP-009, TST-STP-009, ATT-6148, ATT-6152, ATT-6153, ATT-6171, ATT-6175, ATT-6184).
+ * REQ-PRO-051, TST-PRO-051, REQ-STP-007, TST-STP-007, REQ-STP-008, TST-STP-008, REQ-STP-009, TST-STP-009, ATT-6148, ATT-6152, ATT-6153, ATT-6171, ATT-6175, ATT-6184, ATT-6737).
  */
 class ReleaseCiAndLintConfigContractTest {
 
@@ -228,7 +228,7 @@ class ReleaseCiAndLintConfigContractTest {
 
     /**
      * Asserts that app/lint-baseline.xml is pruned and strictly bounded
-     * to <= 546 issues (REQ-PRO-046.4, TST-PRO-046.3).
+     * to <= 239 issues (REQ-PRO-046.4, TST-PRO-046.3, ATT-6728).
      */
     @Test
     fun testLintBaseline_issueCountWithinBound() {
@@ -236,8 +236,25 @@ class ReleaseCiAndLintConfigContractTest {
         val issueCount = Regex("<issue\\b").findAll(content).count()
 
         assertTrue(
-            "app/lint-baseline.xml must be bounded by <= 546 (REQ-PRO-046.4, TST-PRO-046.3). Current: $issueCount",
-            issueCount in 1..546
+            "app/lint-baseline.xml must be bounded by <= 239 (REQ-PRO-046.4, TST-PRO-046.3). Current: $issueCount",
+            issueCount in 0..239
+        )
+    }
+
+    /**
+     * Asserts that app/build.gradle does not downgrade Compose resource or locale lint rules
+     * to warning (REQ-PRO-046.6, TST-PRO-046.5, ATT-6728).
+     */
+    @Test
+    fun testBuildGradle_composeLintRulesNotDowngraded() {
+        val content = findBuildGradleFile().readText()
+        assertFalse(
+            "app/build.gradle must not downgrade NonObservableLocale to warning (REQ-PRO-046.6, TST-PRO-046.5)",
+            content.contains("'NonObservableLocale'")
+        )
+        assertFalse(
+            "app/build.gradle must not downgrade LocalContextGetResourceValueCall to warning (REQ-PRO-046.6, TST-PRO-046.5)",
+            content.contains("'LocalContextGetResourceValueCall'")
         )
     }
 
@@ -289,11 +306,31 @@ class ReleaseCiAndLintConfigContractTest {
             "config/detekt/detekt.yml must configure CyclomaticComplexMethod rule (REQ-PRO-047.2, TST-PRO-047.2)",
             detektConfigContent.contains("CyclomaticComplexMethod:")
         )
+        assertTrue(
+            "config/detekt/detekt.yml must configure FunctionNaming with Composable exemption " +
+                "(REQ-PRO-047.2, TST-PRO-047.1)",
+            detektConfigContent.contains("FunctionNaming:") && detektConfigContent.contains("Composable")
+        )
+        assertTrue(
+            "config/detekt/detekt.yml must configure LongParameterList with Composable exemption " +
+                "(REQ-PRO-047.2, TST-PRO-047.1)",
+            detektConfigContent.contains("LongParameterList:") && detektConfigContent.contains("Composable")
+        )
+        assertTrue(
+            "config/detekt/detekt.yml must configure UnusedPrivateMember with Preview exemption " +
+                "(REQ-PRO-047.2, TST-PRO-047.1)",
+            detektConfigContent.contains("UnusedPrivateMember:") && detektConfigContent.contains("Preview")
+        )
+        assertTrue(
+            "config/detekt/detekt.yml must configure MagicNumber exemptions (REQ-PRO-047.2, TST-PRO-047.1)",
+            detektConfigContent.contains("MagicNumber:") &&
+                detektConfigContent.contains("ignorePropertyDeclaration: true")
+        )
     }
 
     /**
      * Asserts that app/detekt-baseline.xml exists and contains recorded
-     * legacy baseline smells (REQ-PRO-047.3, TST-PRO-047.1).
+     * legacy baseline smells within the ratcheted ceiling bound (REQ-PRO-047.3, TST-PRO-047.1, TST-PRO-047.2).
      */
     @Test
     fun testDetektBaseline_existsAndIsPopulated() {
@@ -306,6 +343,13 @@ class ReleaseCiAndLintConfigContractTest {
         assertTrue(
             "app/detekt-baseline.xml must be populated with legacy baseline smells (REQ-PRO-047.3, TST-PRO-047.1)",
             baselineFile.length() > 1000
+        )
+        val baselineContent = baselineFile.readText()
+        val idCount = Regex("<ID>").findAll(baselineContent).count()
+        assertTrue(
+            "app/detekt-baseline.xml must contain ratcheted issue count <= 9550 (current=$idCount) " +
+                "(REQ-PRO-047.3, TST-PRO-047.2)",
+            idCount in 1..9550
         )
     }
 
@@ -356,7 +400,21 @@ class ReleaseCiAndLintConfigContractTest {
         )
         assertTrue(
             "app/build.gradle must configure kover verification minBound threshold (REQ-PRO-048.2, TST-PRO-048.1)",
-            appBuildContent.contains("minBound")
+            appBuildContent.contains("minBound(35)") || appBuildContent.contains("minValue = 35")
+        )
+        assertTrue(
+            "app/build.gradle must exclude *.R from Kover reports (REQ-PRO-048.2, TST-PRO-048.1)",
+            appBuildContent.contains("\"*.R\"") || appBuildContent.contains("'*.R'")
+        )
+        assertTrue(
+            "app/build.gradle must exclude *Manifest* from Kover reports (REQ-PRO-048.2, TST-PRO-048.1)",
+            appBuildContent.contains("\"*Manifest*\"") || appBuildContent.contains("'*Manifest*'")
+        )
+        assertTrue(
+            "app/build.gradle must configure kover verification threshold for branch coverage " +
+                "(REQ-PRO-048.2, TST-PRO-048.1)",
+            appBuildContent.contains("CoverageUnit.BRANCH") &&
+                (appBuildContent.contains("minValue = 30") || appBuildContent.contains("minBound(30)"))
         )
     }
 
@@ -454,6 +512,14 @@ class ReleaseCiAndLintConfigContractTest {
             "CI workflow must specify connected test report artifact path $reportPath (REQ-PRO-051.3, TST-PRO-051.2)",
             content.contains(reportPath)
         )
+        assertTrue(
+            "CI workflow must pre-build debug and androidTest APKs prior to emulator startup (REQ-PRO-051.3, TST-PRO-051.2, ATT-6737)",
+            content.contains(":app:assembleDebug :app:assembleDebugAndroidTest")
+        )
+        assertTrue(
+            "CI workflow must configure emulator runner with API 34 and google_apis target (REQ-PRO-051.3, TST-PRO-051.2, ATT-6737)",
+            content.contains("api-level: 34") && content.contains("target: google_apis")
+        )
     }
 
     /**
@@ -478,6 +544,14 @@ class ReleaseCiAndLintConfigContractTest {
         assertTrue(
             "AppSmokeAndroidTest must contain test methods (REQ-PRO-051.2)",
             content.contains("@Test")
+        )
+        assertTrue(
+            "AppSmokeAndroidTest must reference MainActivityWithNavigation (REQ-PRO-051.2, TST-PRO-051.3, ATT-6737)",
+            content.contains("MainActivityWithNavigation")
+        )
+        assertTrue(
+            "AppSmokeAndroidTest must configure GrantPermissionRule for runtime permissions (REQ-PRO-051.2, TST-PRO-051.3, ATT-6737)",
+            content.contains("GrantPermissionRule")
         )
     }
 
@@ -626,6 +700,50 @@ class ReleaseCiAndLintConfigContractTest {
             ".gitmodules must not contain floating branch directive for ANT-Android-SDKs (REQ-STP-009.2, TST-STP-009.2)",
             gitmodulesContent.contains("branch =")
         )
+    }
+
+    /**
+     * Asserts that docs/management/cm_plan.md documents 'master' as the production branch (and no 'main' branch),
+     * documents sprint milestone tags 'sprint/<SPRINT_NAME>', dual release tag formats, the complete controlled CI inventory,
+     * and formal release contents (REQ-PRO-057, TST-PRO-057, ATT-6733).
+     */
+    @Test
+    fun testConfigurationManagementPlan_repositoryGroundingAndReleaseContents() {
+        val cmPlanFile = findRepoRootFile("docs/management/cm_plan.md", "../docs/management/cm_plan.md")
+        assertTrue("docs/management/cm_plan.md must exist (REQ-PRO-057)", cmPlanFile.exists())
+        val cmContent = cmPlanFile.readText()
+
+        // Production branch is master; no branch named 'main'
+        assertTrue("CM plan must document 'master' as production release branch (REQ-PRO-057.1)", cmContent.contains("`master`"))
+        assertFalse("CM plan must not refer to 'main' as production branch (REQ-PRO-057.1)", cmContent.contains("`main`"))
+
+        // Sprint milestone tags & dual release tagging
+        assertTrue("CM plan must document sprint milestone tags (REQ-PRO-057.2)", cmContent.contains("sprint/<SPRINT_NAME>"))
+        assertTrue("CM plan must document dual release tag format (REQ-PRO-057.2)", cmContent.contains("V<versionName>__<versionCode>"))
+        assertTrue("CM plan must document simple release tag format (REQ-PRO-057.2)", cmContent.contains("V<versionName>"))
+
+        // Controlled CI inventory table completeness
+        val requiredCIs = listOf(
+            "docs/architecture/*.md",
+            "docs/management/*.md",
+            "config/detekt/",
+            "tools/",
+            ".agents/"
+        )
+        for (ci in requiredCIs) {
+            assertTrue("CM plan CI table must contain '$ci' (REQ-PRO-057.3)", cmContent.contains(ci))
+        }
+
+        // Formal Release Deliverables package
+        val requiredDeliverables = listOf(
+            "Signed Production APK",
+            "Google Play Android App Bundle (AAB)",
+            "docs/store_presence/",
+            "FixVersion"
+        )
+        for (deliv in requiredDeliverables) {
+            assertTrue("CM plan Release Deliverables must contain '$deliv' (REQ-PRO-057.4)", cmContent.contains(deliv))
+        }
     }
 
     /**

@@ -63,7 +63,42 @@ class WorkoutRrDatabaseManagerTest {
         )
 
         assertTrue(DatabaseSchemaRegistry.isVersionSupported(WorkoutRrDbHelper.DB_NAME, 1))
-        assertFalse(DatabaseSchemaRegistry.isVersionSupported(WorkoutRrDbHelper.DB_NAME, 2))
+        assertTrue(DatabaseSchemaRegistry.isVersionSupported(WorkoutRrDbHelper.DB_NAME, 2))
+        assertFalse(DatabaseSchemaRegistry.isVersionSupported(WorkoutRrDbHelper.DB_NAME, 3))
+    }
+
+    @Test
+    fun getMaxBeatIndex_returnsExpectedCounter() {
+        val workoutId = 88L
+        assertEquals(-1, dbManager.getMaxBeatIndex(workoutId))
+
+        dbManager.insertIntervals(listOf(
+            WorkoutRrInterval(workoutId = workoutId, beatIndex = 0, beatTimestampMs = 1000L, rrMs = 800f),
+            WorkoutRrInterval(workoutId = workoutId, beatIndex = 5, beatTimestampMs = 5000L, rrMs = 820f),
+            WorkoutRrInterval(workoutId = workoutId, beatIndex = 3, beatTimestampMs = 3000L, rrMs = 810f)
+        ))
+
+        assertEquals(5, dbManager.getMaxBeatIndex(workoutId))
+    }
+
+    @Test
+    fun uniqueConstraint_replacesDuplicateOnConflict() {
+        val workoutId = 99L
+        dbManager.insertIntervals(listOf(
+            WorkoutRrInterval(workoutId = workoutId, beatIndex = 0, beatTimestampMs = 1000L, rrMs = 800f),
+            WorkoutRrInterval(workoutId = workoutId, beatIndex = 1, beatTimestampMs = 1800L, rrMs = 820f)
+        ))
+
+        // Re-insert beatIndex 1 with new rrMs (should replace, not crash with UNIQUE constraint)
+        dbManager.insertIntervals(listOf(
+            WorkoutRrInterval(workoutId = workoutId, beatIndex = 1, beatTimestampMs = 1850L, rrMs = 850f)
+        ))
+
+        val intervals = dbManager.getIntervalsForWorkout(workoutId)
+        assertEquals(2, intervals.size)
+        val updatedBeat = intervals.first { it.beatIndex == 1 }
+        assertEquals(850f, updatedBeat.rrMs, 0.001f)
+        assertEquals(1850L, updatedBeat.beatTimestampMs)
     }
 
     @Test

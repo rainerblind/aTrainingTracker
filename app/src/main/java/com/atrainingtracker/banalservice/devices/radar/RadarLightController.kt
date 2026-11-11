@@ -22,13 +22,10 @@ import android.content.Context
 import android.util.Log
 import com.atrainingtracker.banalservice.devices.bluetooth_le.BTLERadarDevice
 import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
+import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDefaults
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.launch
 
 /**
  * Central controller coordinating Garmin Varia BLE radar tail light modes (REQ-CON-031).
@@ -41,23 +38,26 @@ object RadarLightController {
 
     private const val TAG = "RadarLightController"
 
-    private var activeRadarDevice: BTLERadarDevice? = null
+    private var activeRadarDevice: RadarLightDeviceClient? = null
 
     private val _currentMode = MutableStateFlow(RadarLightMode.OFF)
+    @get:JvmStatic
     val currentMode: StateFlow<RadarLightMode> = _currentMode.asStateFlow()
 
     private val _isLightControlAvailable = MutableStateFlow(false)
+    @get:JvmStatic
     val isLightControlAvailable: StateFlow<Boolean> = _isLightControlAvailable.asStateFlow()
 
     private val _isStvzo = MutableStateFlow(false)
+    @get:JvmStatic
     val isStvzo: StateFlow<Boolean> = _isStvzo.asStateFlow()
 
     /**
-     * Binds a connected [BTLERadarDevice] peripheral to the controller.
+     * Binds a connected [RadarLightDeviceClient] peripheral (BLE or ANT+) to the controller.
      */
     @JvmStatic
     @JvmOverloads
-    fun registerRadarDevice(device: BTLERadarDevice, lightSupported: Boolean, isStvzo: Boolean = false) {
+    fun registerRadarDevice(device: RadarLightDeviceClient, lightSupported: Boolean, isStvzo: Boolean = false) {
         synchronized(this) {
             activeRadarDevice = device
             _isLightControlAvailable.value = lightSupported
@@ -69,10 +69,10 @@ object RadarLightController {
     }
 
     /**
-     * Unbinds a disconnected [BTLERadarDevice] peripheral.
+     * Unbinds a disconnected [RadarLightDeviceClient] peripheral.
      */
     @JvmStatic
-    fun unregisterRadarDevice(device: BTLERadarDevice) {
+    fun unregisterRadarDevice(device: RadarLightDeviceClient) {
         synchronized(this) {
             if (activeRadarDevice === device) {
                 activeRadarDevice = null
@@ -85,10 +85,34 @@ object RadarLightController {
         Log.i(TAG, "Unregistered radar device")
     }
 
+    private var cachedAutoLightControl: Boolean = TuningPreferencesDefaults.RADAR_AUTO_LIGHT_CONTROL
+    private var cachedLightDefaultMode: RadarLightMode = TuningPreferencesDefaults.RADAR_LIGHT_DEFAULT_MODE
+
+    @JvmStatic
+    fun updateCachedPreferences(autoControl: Boolean, defaultMode: RadarLightMode) {
+        synchronized(this) {
+            cachedAutoLightControl = autoControl
+            cachedLightDefaultMode = defaultMode
+        }
+    }
+
+    /**
+     * Updates active mode confirmed by GATT telemetry/read (REQ-CON-031.1).
+     */
+    @JvmStatic
+    fun updateHardwareLightMode(mode: RadarLightMode) {
+        synchronized(this) {
+            _currentMode.value = mode
+        }
+        val current = RadarStateRepository.getState()
+        RadarStateRepository.updateState(current.copy(lightMode = mode))
+    }
+
     /**
      * Dispatches a light mode command to the active radar peripheral or simulator.
      *
      * Automatically prunes flashing modes under StVZO regulations to [RadarLightMode.SOLID].
+     * Mutates [_currentMode] and [RadarStateRepository] strictly when command dispatch succeeds (REQ-CON-031.2).
      *
      * @param mode Target tail light operating mode.
      * @return `true` if command was dispatched or simulated successfully.
@@ -102,10 +126,6 @@ object RadarLightController {
             mode
         }
 
-        _currentMode.value = targetMode
-        val current = RadarStateRepository.getState()
-        RadarStateRepository.updateState(current.copy(lightMode = targetMode))
-
         val device = synchronized(this) { activeRadarDevice }
         var dispatched = false
         if (device != null && _isLightControlAvailable.value) {
@@ -115,6 +135,12 @@ object RadarLightController {
         if (RadarTrafficSimulator.isSimulating || (device == null && RadarStateRepository.getState().isLightControlSupported)) {
             RadarTrafficSimulator.setSimulatedLightMode(targetMode)
             dispatched = true
+        }
+
+        if (dispatched) {
+            _currentMode.value = targetMode
+            val current = RadarStateRepository.getState()
+            RadarStateRepository.updateState(current.copy(lightMode = targetMode))
         }
 
         return dispatched
@@ -128,71 +154,46 @@ object RadarLightController {
         return RadarLightMode.getAvailableModes(_isStvzo.value)
     }
 
-    private fun isRealFilesDir(dir: java.io.File?): Boolean {
-        return dir != null &&
-            dir.javaClass == java.io.File::class.java &&
-            java.io.File(dir, "datastore").path.isNotEmpty()
-    }
-
-    private fun resolveSafeDataStoreContext(context: Context?): Context? {
-        return try {
-            if (context == null) {
-                null
-            } else if (TuningPreferencesDataStore.hasInitializedInstance()) {
-                context.applicationContext ?: context
-            } else {
-                val appCtx = context.applicationContext ?: context
-                if (isRealFilesDir(context.filesDir) && isRealFilesDir(appCtx.filesDir)) {
-                    appCtx
-                } else {
-                    null
-                }
+    private fun resolveActiveConfig(context: Context?): Pair<Boolean, RadarLightMode> {
+        if (context != null && TuningPreferencesDataStore.hasInitializedInstance()) {
+            try {
+                val cfg = TuningPreferencesDataStore.getInstance(context).getTuningConfig()
+                updateCachedPreferences(cfg.radarAutoLightControl, cfg.radarLightDefaultMode)
+                return Pair(cfg.radarAutoLightControl, cfg.radarLightDefaultMode)
+            } catch (_: Throwable) {
+                // Ignore and use cached
             }
-        } catch (_: Throwable) {
-            null
+        }
+        return synchronized(this) {
+            Pair(cachedAutoLightControl, cachedLightDefaultMode)
         }
     }
 
     /**
      * Workout start hook (REQ-CON-031.4): turns on tail light if auto-switch is enabled.
-     *
-     * Guards against unit test contexts with unmocked or stub `filesDir` to prevent coroutine crashes.
+     * Executes synchronously without unmanaged coroutines or filesDir inspections (Coding Standards §5.5).
      */
     @JvmStatic
-    fun onWorkoutStarted(context: Context?) {
-        val appCtx = resolveSafeDataStoreContext(context) ?: return
-        CoroutineScope(Dispatchers.IO).launch {
-            try {
-                val dataStore = TuningPreferencesDataStore.getInstance(appCtx)
-                val config = dataStore.tuningConfigFlow.first()
-                if (config.radarAutoLightControl) {
-                    val mode = config.radarLightDefaultMode
-                    setLightMode(mode)
-                }
-            } catch (e: Exception) {
-                Log.w(TAG, "Failed to apply auto workout light start mode", e)
-            }
+    @JvmOverloads
+    fun onWorkoutStarted(context: Context? = null) {
+        val (autoControl, defaultMode) = resolveActiveConfig(context)
+        if (autoControl) {
+            setLightMode(defaultMode)
         }
     }
 
     /**
      * Workout finish/stop hook (REQ-CON-031.4): reverts tail light to OFF if auto-switch is enabled.
-     *
-     * Guards against unit test contexts with unmocked or stub `filesDir` to prevent coroutine crashes.
+     * Executes synchronously without unmanaged coroutines or filesDir inspections (Coding Standards §5.5).
      */
     @JvmStatic
-    fun onWorkoutStopped(context: Context?) {
-        val appCtx = resolveSafeDataStoreContext(context) ?: return
-        CoroutineScope(Dispatchers.IO).launch {
-            try {
-                val dataStore = TuningPreferencesDataStore.getInstance(appCtx)
-                val config = dataStore.tuningConfigFlow.first()
-                if (config.radarAutoLightControl) {
-                    setLightMode(RadarLightMode.OFF)
-                }
-            } catch (e: Exception) {
-                Log.w(TAG, "Failed to apply auto workout light stop mode", e)
-            }
+    @JvmOverloads
+    fun onWorkoutStopped(context: Context? = null) {
+        val (autoControl, _) = resolveActiveConfig(context)
+        if (autoControl) {
+            setLightMode(RadarLightMode.OFF)
+            val device = synchronized(this) { activeRadarDevice }
+            device?.disconnectLight()
         }
     }
 
@@ -206,6 +207,10 @@ object RadarLightController {
             _isLightControlAvailable.value = false
             _isStvzo.value = false
             _currentMode.value = RadarLightMode.OFF
+            cachedAutoLightControl = TuningPreferencesDefaults.RADAR_AUTO_LIGHT_CONTROL
+            cachedLightDefaultMode = TuningPreferencesDefaults.RADAR_LIGHT_DEFAULT_MODE
         }
+        val current = RadarStateRepository.getState()
+        RadarStateRepository.updateState(current.copy(isLightControlSupported = false, lightMode = RadarLightMode.OFF))
     }
 }

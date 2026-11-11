@@ -48,6 +48,8 @@
     <string name="radar_simulator_stop">シミュレーション停止</string>
     <string name="radar_simulator_running">シミュレーション実行中</string>
     <string name="radar_simulator_idle">シミュレーション停止中</string>
+    <string name="radar_simulator_status">%1$s • %2$d ターゲット</string>
+    <string name="radar_simulator_scenario_label">シナリオ</string>
     <string name="radar_scenario_single_car">単一車両</string>
     <string name="radar_scenario_single_car_desc">12 m/sで追い越す1台の車両</string>
     <string name="radar_scenario_convoy">車列</string>
@@ -72,6 +74,8 @@
     <string name="radar_overlay_disconnected">レーダー切断</string>
     <string name="radar_overlay_connecting">レーダー接続中</string>
     <string name="radar_overlay_clear">後方クリア</string>
+    <string name="radar_overlay_threats_format">%1$d 件の脅威</string>
+    <string name="radar_overlay_threats_fast_format">%1$d 件の脅威（高速接近）</string>
 
     <!-- Radar Audio & Haptic Alerts (ATT-5086 / REQ-TRK-063) -->
     <string name="radar_alerts_settings_title">レーダー警告と音声</string>
@@ -85,7 +89,7 @@
     <string name="radar_alert_speaker_boost_desc">警告時にスマホの控えめなスピーカー音量を一時的に増幅します</string>
     <string name="radar_alert_route_title">音声出力先</string>
     <string name="radar_alert_route_default">システム / ヘッドホン</string>
-    <string name="radar_alert_route_speaker">スマホのスピーカーを強制</string>
+    <string name="radar_alert_route_speaker">スマホのスピーカー</string>
     <string name="radar_alert_haptic_title">触覚バイブレーション</string>
     <string name="radar_alert_haptic_desc">車両接近および脅威変化時に振動します</string>
 
@@ -99,6 +103,8 @@
     <string name="radar_light_mode_peloton">プロトン</string>
     <string name="radar_light_auto_switch">ワークアウト自動点灯</string>
     <string name="radar_light_auto_switch_desc">ワークアウト開始時に点灯し、終了時に消灯します</string>
+    <string name="radar_smart_light_automation">スマートライト自動化</string>
+    <string name="radar_smart_light_automation_desc">昼光、トンネル、夕暮れ、交通の脅威に合わせてライトを適応</string>
     <string name="radar_light_sheet_title">レーダーテールライト</string>
     <string name="radar_light_stvzo_notice">StVZOモード（点滅無効）</string>
 
@@ -131,4 +137,43 @@
     <string name="radar_preview_slow">低速</string>
     <string name="radar_preview_fast">高速接近</string>
     <string name="radar_preview_lane_change">車線変更</string>
+
+    <!-- Advanced Settings / Tuning Accordion Category (ATT-6702 / REQ-UI-512) -->
+    <string name="tuning_cat_cycling_radar">自転車レーダー</string>
+
+    <!-- Post-Workout Traffic Analytics & Map Hotspots (ATT-5088 / REQ-RAD-005 / REQ-RAD-006) -->
+    <string name="radar_traffic_card_title">レーダートラフィック概要</string>
+    <string name="radar_total_vehicles">追い越し車両数</string>
+    <string name="radar_traffic_density_km">トラフィック密度 (台/km)</string>
+    <string name="radar_traffic_density_hour">トラフィック密度 (台/h)</string>
+    <string name="radar_max_closing_speed">最大接近速度</string>
+    <string name="radar_max_vehicle_speed">最大車両速度</string>
+    <string name="radar_high_threat_passes">高リスク追い越し数</string>
+    <string name="radar_marker_pass_title">車両追い越し (%1$s km/h)</string>
+    <string name="radar_marker_high_threat_title">高リスク追い越し (%1$s km/h)</string>
+
+    <!-- レーダー交通および接近追越しサマリー Strava/共有 (ATT-5122 / REQ-RAD-007) -->
+    <string name="radar_strava_summary_title">Strava交通サマリー</string>
+    <string name="radar_strava_summary_desc">Stravaアクティビティ説明に車両通過数と速度サマリーを追加</string>
+    <string name="radar_share_summary_title">交通サマリーを共有</string>
+    <string name="radar_share_summary_desc">ワークアウト共有テキストに車両通過数と速度サマリーを含める</string>
+    <string name="radar_summary_header">📡 レーダー: %1$d 台の車両が通過 (%2$s/km)</string>
+    <string name="radar_summary_close_passes">⚠️ %1$d 回の接近通過 (&lt;1.5m、最小 %2$sm)</string>
+    <string name="radar_summary_close_passes_singular">⚠️ 1 回の接近通過 (&lt;1.5m、最小 %1$sm)</string>
+    <string name="radar_summary_heavy_vehicles">🚛 %1$d 台の大型車両</string>
+    <string name="radar_summary_heavy_vehicles_singular">🚛 1 台の大型車両</string>
+    <string name="radar_summary_max_speed">🚀 最高 %1$s km/h (+%2$s km/h 接近)</string>
+    <string name="radar_summary_max_speed_simple">🚀 最高 %1$s km/h</string>
+    <string name="radar_close_pass_threshold_title">至近距離追越警告しきい値</string>
+    <string name="radar_close_pass_threshold_summary">最低安全間隔を下回る追越車両をマップ上で強調表示します</string>
+    <string name="radar_close_pass_threshold_1_0m">1.0 m (3.3 ft - UK/US)</string>
+    <string name="radar_close_pass_threshold_1_5m">1.5 m (5.0 ft - 市街地 / StVO)</string>
+    <string name="radar_close_pass_threshold_2_0m">2.0 m (6.6 ft - 郊外 / StVO)</string>
+    <string name="radar_marker_close_pass_title">⚠️ 至近距離通過 (%1$sm) • %2$s • %3$s km/h</string>
+    <string name="radar_vehicle_size_light">小型車両</string>
+    <string name="radar_vehicle_size_car">乗用車</string>
+    <string name="radar_vehicle_size_truck">大型車両 (トラック/バス)</string>
+    <string name="radar_min_passing_distance">最小側方間隔</string>
+    <string name="radar_close_pass_warning">⚠️ %1$d 回の至近距離追越 (&lt;%2$sm)</string>
+    <string name="radar_heavy_vehicle_share">大型車両割合</string>
 </resources>

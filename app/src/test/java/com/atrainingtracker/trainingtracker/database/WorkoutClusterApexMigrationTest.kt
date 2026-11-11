@@ -253,6 +253,125 @@ class WorkoutClusterApexMigrationTest {
     }
 
     /**
+     * TST-DAT-035.1: Verifies workouts with overshoot >= 50m from end (previously skipped by < 50m filter)
+     * are now healed by healLegacyPointToPointApexes via bipolar product (ATT-6686).
+     */
+    @Test
+    fun testHealLegacyPointToPointApexes_healsWorkoutWithOvershootGreaterThan50m() {
+        val workoutId = 2063L
+        val clusterId = 1553L
+
+        val start = LatLng(48.7083, 9.0028)
+        val end = LatLng(48.6570, 9.0640)
+        val forestApex = LatLng(48.6950, 9.0450)
+        // Overshoot point ~85.7m past end
+        val overshootApex = LatLng(48.6565, 9.0648)
+        val distToEnd = WorkoutClusterEngine.distanceBetween(overshootApex, end)
+        assertTrue("Overshoot distance to end must be > 50m to verify bugfix", distToEnd > 50f)
+
+        val points = listOf(
+            start,
+            LatLng(48.7050, 9.0150),
+            LatLng(48.7000, 9.0300),
+            forestApex,
+            LatLng(48.6750, 9.0550),
+            end,
+            overshootApex
+        )
+        val polyline = PolyUtil.encode(points)
+
+        val scanCursor = mockk<Cursor>(relaxed = true)
+        var scanAdvanced = false
+        every { scanCursor.moveToNext() } answers {
+            if (!scanAdvanced) {
+                scanAdvanced = true
+                true
+            } else {
+                false
+            }
+        }
+        every { scanCursor.getColumnIndexOrThrow(WorkoutSummaries.C_ID) } returns 0
+        every { scanCursor.getColumnIndexOrThrow(WorkoutSummaries.CLUSTER_ID) } returns 1
+        every { scanCursor.getColumnIndexOrThrow(WorkoutSummaries.MAP_POLYLINE) } returns 2
+        every { scanCursor.getLong(0) } returns workoutId
+        every { scanCursor.getLong(1) } returns clusterId
+        every { scanCursor.getString(2) } returns polyline
+        every { scanCursor.close() } returns Unit
+
+        every {
+            mockSummariesDb.query(
+                WorkoutSummaries.TABLE,
+                match { it.contains(WorkoutSummaries.MAP_POLYLINE) },
+                any(), any(), any(), any(), any()
+            )
+        } returns scanCursor
+
+        val clusterCursor = mockk<Cursor>(relaxed = true)
+        var clusterAdvanced = false
+        every { clusterCursor.moveToNext() } answers {
+            if (!clusterAdvanced) {
+                clusterAdvanced = true
+                true
+            } else {
+                false
+            }
+        }
+        every { clusterCursor.getColumnIndexOrThrow(WorkoutSummaries.C_ID) } returns 0
+        every { clusterCursor.getColumnIndexOrThrow(WorkoutSummaries.DISTANCE_TOTAL_m) } returns 1
+        every { clusterCursor.getLong(0) } returns workoutId
+        every { clusterCursor.getDouble(1) } returns 7500.0
+        every { clusterCursor.close() } returns Unit
+
+        every {
+            mockSummariesDb.query(
+                WorkoutSummaries.TABLE,
+                match { it.contains(WorkoutSummaries.DISTANCE_TOTAL_m) },
+                "${WorkoutSummaries.CLUSTER_ID} = ?",
+                arrayOf(clusterId.toString()),
+                any(), any(), any()
+            )
+        } returns clusterCursor
+
+        every { mockSummariesManager.getExtremaPosition(workoutId, SensorType.LATITUDE, ExtremaType.START) } returns start
+        every { mockSummariesManager.getExtremaPosition(workoutId, SensorType.LATITUDE, ExtremaType.END) } returns end
+        var apexQueryCount = 0
+        every { mockSummariesManager.getExtremaPosition(workoutId, SensorType.LINE_DISTANCE_m, ExtremaType.MAX) } answers {
+            apexQueryCount++
+            if (apexQueryCount <= 1) overshootApex else forestApex
+        }
+
+        val existingCluster = WorkoutCluster(
+            id = clusterId,
+            name = "Bike2Work",
+            probableSportId = 1L,
+            startLat = start.latitude,
+            startLng = start.longitude,
+            endLat = end.latitude,
+            endLng = end.longitude,
+            maxDispLat = overshootApex.latitude,
+            maxDispLng = overshootApex.longitude,
+            refDistance = 7500.0,
+            hitCount = 1,
+            bSportType = BSportType.RUN
+        )
+        every { mockClusterDb.getClusterById(clusterId) } returns existingCluster
+
+        val healed = clusterEngine.healLegacyPointToPointApexes(mockContext)
+
+        assertEquals(1, healed)
+
+        verify {
+            mockSummariesManager.updateExtremaValue(
+                workoutId,
+                SensorType.LINE_DISTANCE_m,
+                ExtremaType.MAX,
+                any(),
+                match { Math.abs(it.latitude - forestApex.latitude) < 1e-4 && Math.abs(it.longitude - forestApex.longitude) < 1e-4 }
+            )
+        }
+    }
+
+    /**
      * TST-DAT-035.1 Invariant: Closed-loop routes (< 150m) are strictly preserved untouched.
      */
     @Test
@@ -307,7 +426,7 @@ class WorkoutClusterApexMigrationTest {
      */
     @Test
     fun testWorkoutClusterRepository_triggersApexMigrationOnce() = runBlocking {
-        assertEquals("last_apex_repair_v1", WorkoutClusterRepository.SP_KEY_LAST_APEX_REPAIR)
+        assertEquals("last_apex_repair_v2", WorkoutClusterRepository.SP_KEY_LAST_APEX_REPAIR)
 
         val cluster = WorkoutCluster(
             id = 1L,
@@ -336,7 +455,7 @@ class WorkoutClusterApexMigrationTest {
         repo.refreshClusters(forceShowProgress = false, forceCheckIntegrity = false)
 
         verify(exactly = 1) {
-            mockPrefsEditor.putInt(WorkoutClusterRepository.SP_KEY_LAST_APEX_REPAIR, 1)
+            mockPrefsEditor.putInt(WorkoutClusterRepository.SP_KEY_LAST_APEX_REPAIR, 2)
             mockPrefsEditor.apply()
         }
     }

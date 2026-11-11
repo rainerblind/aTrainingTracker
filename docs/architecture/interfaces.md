@@ -10,44 +10,52 @@ Each architectural interface defines its provider, consumer, operations, data sc
 
 | Interface ID | Boundary | Provider Element | Consumer Element | Protocol / Mechanism | Threading Contract |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| `IF-SWE-01` | UI $\to$ ViewModel | ViewModels (`TrackingViewModel`, `AftermathViewModel`) | Jetpack Compose Composables | Unidirectional MVI / `StateFlow` | `Dispatchers.Main` |
+| `IF-SWE-01` | UI $\to$ ViewModel | ViewModels (`TrackingViewModel`, `TrackOnMapAftermathViewModel`) | Jetpack Compose Composables | Unidirectional MVI / `StateFlow` | `Dispatchers.Main` |
 | `IF-SWE-02` | ViewModel $\to$ Repository | Repositories (`WorkoutRepository`, `BANALServiceRepository`) | ViewModels | Asynchronous Coroutines (`suspend fun`) | `Dispatchers.IO` |
 | `IF-SWE-03` | Inter-Service Ingestion | `BANALServiceComm` (Local Binder on `BANALService`) | `TrackerService` | Android Local Binder IPC & Broadcasts | Service Thread / Binder Pool |
 | `IF-SWE-04` | Hardware $\to$ Services | Hardware HAL (BLE Gatt, ANT+ Plugin, Location Provider) | `BANALService`, `TrackerService` | System Callbacks (`onCharacteristicChanged`) | Hardware Callback Thread |
 | `IF-SWE-05` | Service/Repo $\to$ Domain | Domain Calculators (`AutoPauseManager`, `ClimbDetector`) | Services & Repositories | Pure JVM Synchronous Methods | Caller Thread (`Dispatchers.IO`) |
 | `IF-SWE-06` | Service/Repo $\to$ SQLite | Database Managers (`WorkoutSamplesDatabaseManager`) | `TrackerService`, Repositories | SQLite WAL Mode & Synchronized Transactions | `dbDispatcher` / `Dispatchers.IO` |
 | `IF-SWE-07` | Repository $\to$ Exporters | Exporters (`FitFileWriter`, `GPXFileWriter`, `TCXFileWriter`) | `ExportManager`, `WorkoutRepository` | Streaming File Writers & Serializers | `Dispatchers.IO` (WorkManager) |
-| `IF-SWE-08` | Repository $\to$ Cloud APIs | Cloud Endpoints (`StravaUploader`, `HealthConnectManager`, `HealthConnectHrvImporter`) | `ExportManager`, UI Controllers, `HrvReadinessRepository` | REST (OkHttp/Retrofit) & HealthConnectClient | `Dispatchers.IO` (WorkManager) |
+| `IF-SWE-08` | Repository $\to$ Cloud APIs | Cloud Endpoints (`StravaUploader`, `HealthConnectManager`, `HealthConnectHrvImporter`) | `ExportManager`, UI Controllers, `HrvReadinessRepository` | REST (OkHttp) & HealthConnectClient | `Dispatchers.IO` (WorkManager) |
 
 ---
 
 ## 2. Detailed Software Interface Specifications
 
 ### 2.1 IF-SWE-01: Presentation Layer UI to ViewModel (Jetpack Compose MVI)
-* **Provider**: Lifecycle ViewModels (`TrackingViewModel`, `ControlTrackingViewModel`, `AftermathViewModel`, `MapFragmentWithTrackViewModel`).
-* **Consumer**: Declarative Jetpack Compose Composables (`TrackingTabsScreen`, `WorkoutDetailScreen`, `TrackOnMapScreen`).
+* **Provider**: Lifecycle ViewModels (`TrackingViewModel`, `ControlTrackingViewModel`, `TrackOnMapAftermathViewModel`, `MapFragmentWithTrackViewModel`).
+* **Consumer**: Declarative Jetpack Compose Composables (`TrackingTabsScreen`, `TrackOnMapScreen`, `WorkoutSummariesTabbedScreen`).
 * **Operations / Method Signatures**:
-  * `val uiState: StateFlow<UiState>`: Observable read-only stream of immutable UI state.
-  * `fun onAction(action: UiAction)`: Unidirectional event dispatch (e.g. `onStartClick()`, `onPauseClick()`, `onDiscardClick()`).
+  * `val uiState: StateFlow<TrackingScreenState>`: Observable read-only stream of immutable tracking screen state (`TrackingViewModel`).
+  * `val mapState: StateFlow<TrackingMapState>`: Observable stream of tracking map state (`TrackingViewModel`).
+  * `val uiState: StateFlow<AftermathMapUIState>`: Observable stream of workout aftermath map state (`TrackOnMapAftermathViewModel`).
+  * `fun updateScreenMode(mode: ScreenMode)`: Updates display mode between data fields and map (`TrackingViewModel`).
+  * `fun onStartTracking()`: Dispatches workout tracking start action (`ControlTrackingViewModel`).
+  * `fun onPauseTracking()`: Dispatches workout pause action (`ControlTrackingViewModel`).
+  * `fun onResumeTracking()`: Dispatches workout resume action (`ControlTrackingViewModel`).
+  * `fun onStopTracking()`: Dispatches workout stop action (`ControlTrackingViewModel`).
 * **Data Payloads / Schemas**:
-  * Immutable Kotlin data classes (`TrackingUiState`, `AftermathUiState`, `LocationUiState`).
+  * Immutable Kotlin state models (`TrackingScreenState`, `TrackingMapState`, `AftermathMapUIState`, `ScreenMode`).
   * Telemetry primitives formatted via canonical display utilities (`DistanceFormatter`, `AltitudeFormatter`, `SpeedFormatter`).
 * **Concurrency & Threading**:
   * State emission collected on `Dispatchers.Main` via `collectAsStateWithLifecycle()`.
   * ViewModel coroutines operate under `viewModelScope` with cancellation bound to UI lifecycle.
 * **Error Handling & Fault Tolerance**:
-  * Flow exceptions intercepted via `.catch { emit(ErrorState) }`.
+  * Flow exceptions intercepted via `.catch { emit(...) }` or defensive fallbacks.
   * Zero `MutableState` mutations during composition; defensive fallbacks for missing or uninitialized sensors.
 
 ### 2.2 IF-SWE-02: ViewModel to Repository Layer
 * **Provider**: Domain Repositories (`WorkoutRepository`, `BANALServiceRepository`, `SportTypesRepository`, `LiveSegmentsRepository`).
-* **Consumer**: ViewModels (`TrackingViewModel`, `EquipmentViewModel`, `AftermathViewModel`).
+* **Consumer**: ViewModels (`TrackingViewModel`, `ControlTrackingViewModel`, `TrackOnMapAftermathViewModel`, `EquipmentViewModel`).
 * **Operations / Method Signatures**:
-  * `suspend fun getWorkout(workoutId: Long): Workout?`: Asynchronous entity query.
-  * `suspend fun saveWorkout(workout: Workout): Long`: Transactional mutation.
-  * `fun observeTelemetry(): StateFlow<SensorData<*>>`: Hot shared flow of sensor events.
+  * `suspend fun loadWorkout(id: Long)`: Asynchronously loads workout entity into active memory (`WorkoutRepository`).
+  * `fun getWorkoutById(id: Long): Flow<WorkoutData?>`: Reactive stream of workout record and live database updates (`WorkoutRepository`).
+  * `fun saveWorkout(userEditedWorkout: WorkoutData?)`: Transactional update of workout metadata (`WorkoutRepository`).
+  * `fun updateExtremaValue(workoutId: Long, extremaUpdate: ExtremaUpdate)`: Records updated sensor extremum (`WorkoutRepository`).
+  * `val allFilteredSensorData: StateFlow<List<FilteredSensorData<*>>>`: Hot shared flow of live filtered sensor telemetry (`BANALServiceRepository`).
 * **Data Payloads / Schemas**:
-  * Domain DTOs (`Workout`, `SportType`, `LiveSegmentData`, `ExtremaValues`).
+  * Domain DTOs (`WorkoutData`, `LapData`, `ExtremaUpdate`, `ExtremaType`, `SportType`, `FilteredSensorData`).
 * **Concurrency & Threading**:
   * All I/O operations execute under `Dispatchers.IO` using structured concurrency.
 * **Error Handling & Fault Tolerance**:
@@ -58,12 +66,12 @@ Each architectural interface defines its provider, consumer, operations, data sc
 * **Provider**: `BANALServiceComm` (Local Binder exposed by `BANALService`).
 * **Consumer**: `TrackerService`.
 * **Operations / Method Signatures**:
-  * `fun getAllFilteredSensorData(): List<SensorData<*>>`: 1-Hz batch poll of active physical/virtual sensors.
-  * `fun getBestSensorData(type: SensorType): SensorData<*>?`: Priority-resolved single metric query.
+  * `fun getAllFilteredSensorData(): List<FilteredSensorData>`: 1-Hz batch poll of active physical/virtual sensors.
+  * `fun getBestSensorData(sensorType: SensorType): SensorData<?>`: Priority-resolved single metric query.
   * `Intent(RESET_ACCUMULATORS_INTENT)` / `Intent(REQUEST_PAUSE_TRACKING)`: IPC action broadcast signaling.
 * **Data Payloads / Schemas**:
-  * `SensorData<T>` generics holding timestamp, raw value, smoothed value, and sensor address.
-  * Filter configuration models (`FilterData`).
+  * `SensorData<T>` and `FilteredSensorData` holding timestamp, raw value, smoothed value, and sensor address.
+  * Filter configuration models (`FilterData`) and `SensorType` enum tokens.
 * **Concurrency & Threading**:
   * Thread-safe shared memory via synchronized methods and volatile atomic state holders.
 * **Error Handling & Fault Tolerance**:
@@ -90,12 +98,14 @@ Each architectural interface defines its provider, consumer, operations, data sc
 * **Provider**: Pure JVM Domain Calculators (`AutoPauseManager`, `PowerPhysiologyCalculator`, `PowerHrDynamicsCalculator`, `WorkoutClusterEngine`, `ClimbDetector`).
 * **Consumer**: `TrackerService`, `WorkoutRepository`, `LiveSegmentsRepository`.
 * **Operations / Method Signatures**:
-  * `fun evaluateTick(speedMps: Double, timestampMs: Long): AutoPauseTransition`: Evaluates debounce auto-pause.
-  * `fun calculateNormalizedPower(samples: List<Double>): Double`: Computes 30s Coggan rolling weighted power.
-  * `fun calculate(powerSamples: List<Double>, hrSamples: List<Double>, workoutId: Long, dtSec: Double): CardioPowerDynamicsRecord?`: Identifies 1st-order Output-Error dynamical Power-HR parameters and cardiac drift.
-  * `fun findOrCreateCluster(track: Polyline): ClusterResult`: Spatial DBSCAN line matching.
+  * `fun evaluateTick(currentSpeedMps: Double?, currentTimestampMs: Long): AutoPauseTransition`: Evaluates debounce auto-pause (`AutoPauseManager`).
+  * `fun calculateNormalizedPower(powerSamplesWatts: List<Double>, sampleIntervalSec: Double): Double`: Computes 30s Coggan rolling weighted power (`PowerPhysiologyCalculator`).
+  * `fun calculate(powerSamples: List<Double>, hrSamples: List<Double>, workoutId: Long, dtSec: Double): CardioPowerDynamicsRecord?`: Identifies 1st-order Output-Error dynamical Power-HR parameters and cardiac drift (`PowerHrDynamicsCalculator`).
+  * `fun suggestCluster(start: LatLng, end: LatLng, apex: LatLng, distance: Double, candidateSportTypes: Set<BSportType>): WorkoutCluster?`: Spatial route cluster suggestion for completed workout (`WorkoutClusterEngine`).
+  * `fun findApexFromPoints(start: LatLng, points: List<LatLng>, end: LatLng?): LatLng`: Determines furthest apex waypoint from route polyline (`WorkoutClusterEngine`).
+  * `fun detectClimbs(points: List<PathPoint>): List<Climb>`: Detects steep climb segments from workout elevation profile (`ClimbDetector`).
 * **Data Payloads / Schemas**:
-  * Floating-point primitive arrays, coordinate lists (`List<GeoPoint>`), Skiba $W'_{\text{bal}}$ parameters.
+  * `AutoPauseTransition`, `CardioPowerDynamicsRecord`, `WorkoutCluster`, `LatLng`, `PathPoint`, `Climb`, and Skiba $W'_{\text{bal}}$ parameters.
 * **Concurrency & Threading**:
   * Synchronous execution on caller thread; stateless mathematical calculations ensuring strict re-entrancy and thread safety.
 * **Error Handling & Fault Tolerance**:
@@ -103,14 +113,16 @@ Each architectural interface defines its provider, consumer, operations, data sc
   * Post-trim emptiness checks in moving-average and sliding-window accumulators.
 
 ### 2.6 IF-SWE-06: TrackerService & Repositories to Persistence Layer (SQLite)
-* **Provider**: SQLite Database Managers (`WorkoutSamplesDatabaseManager`, `WorkoutSummariesDatabaseManager`, `LapsDatabaseManager`, `ClustersDatabaseManager`).
+* **Provider**: SQLite Database Managers (`WorkoutSamplesDatabaseManager`, `WorkoutSummariesDatabaseManager`, `LapsDatabaseManager`, `WorkoutClusterDatabaseManager`).
 * **Consumer**: `TrackerService`, `WorkoutRepository`, `KnownLocationsRepository`.
 * **Operations / Method Signatures**:
-  * `fun insertSamplesBatch(samples: List<SampleRecord>)`: 1-Hz bulk time-series insert.
-  * `fun updateWorkoutSummary(summary: WorkoutSummary)`: Atomic update of aggregates.
-  * `fun saveCardioPowerDynamics(workoutId: Long, record: CardioPowerDynamicsRecord): Long`: Persists identified dynamical parameters (DB v29 `cardio_power_dynamics`).
+  * `fun recordLiveSample(fileBaseName: String, timestampMs: Long, sampleValues: Map<SensorType, Double>, isAutoPaused: Boolean)`: 1-Hz bulk time-series insert (`WorkoutRepository` / `WorkoutSamplesDatabaseManager`).
+  * `fun createNewTable(workoutName: String, sensorTypes: List<SensorType>)`: Creates dynamic SQLite table for new workout telemetry (`WorkoutSamplesDatabaseManager`).
+  * `fun updateWorkoutData(workoutData: WorkoutData)`: Atomic update of aggregate workout summary record (`WorkoutSummariesDatabaseManager`).
+  * `fun insertCluster(cluster: WorkoutCluster): Long`: Inserts spatial route cluster definition (`WorkoutClusterDatabaseManager`).
+  * `fun saveCardioPowerDynamics(workoutId: Long, record: CardioPowerDynamicsRecord): Long`: Persists identified dynamical parameters (`WorkoutRepository`).
 * **Data Payloads / Schemas**:
-  * Android `ContentValues`, typed SQLite tables, and raw cursor extractions.
+  * Android `ContentValues`, typed SQLite tables, `WorkoutData`, `WorkoutCluster`, `CardioPowerDynamicsRecord`.
 * **Concurrency & Threading**:
   * `KnownLocationsRepository` utilizes dedicated single-threaded `dbDispatcher`.
   * Other database managers route queries via `Dispatchers.IO` using SQLite WAL mode and synchronized transaction blocks.
@@ -119,14 +131,13 @@ Each architectural interface defines its provider, consumer, operations, data sc
   * Non-destructive schema migration (`onUpgrade` parity) preventing table drops or historical telemetry data loss.
 
 ### 2.7 IF-SWE-07: Repository Layer to File Exporters
-* **Provider**: Serializers and File Writers (`FitFileWriter`, `TCXFileWriter`, `GPXFileWriter`).
+* **Provider**: Serializers and File Writers (`FitFileWriter`, `TCXFileWriter`, `GPXFileWriter` extending `BaseFileWriter` / `BaseExporter`).
 * **Consumer**: `ExportManager`, `WorkoutRepository`.
 * **Operations / Method Signatures**:
-  * `fun writeFitFile(workout: Workout, output: OutputStream)`: Streaming binary FIT encoding.
-  * `fun writeTcxFile(workout: Workout, writer: Writer)`: XML TCX serialization.
-  * `fun writeGpxFile(workout: Workout, writer: Writer)`: XML GPX track serialization.
+  * `fun export(exportInfo: ExportInfo): ExportResult`: Executes streaming file generation and serialization (`BaseExporter`).
+  * `suspend fun exportWorkoutTo(workoutId: Long, fileFormat: FileFormat)`: Orchestrates workout export and writer dispatch (`WorkoutRepository`).
 * **Data Payloads / Schemas**:
-  * Structured DTO models, FIT protocol binary structures, XML schema-compliant trees.
+  * `ExportInfo`, `ExportResult`, `FileFormat`, `WorkoutExportHeader`.
 * **Concurrency & Threading**:
   * Executed asynchronously on `Dispatchers.IO` or scheduled background `WorkManager` workers.
 * **Error Handling & Fault Tolerance**:
@@ -136,13 +147,13 @@ Each architectural interface defines its provider, consumer, operations, data sc
 * **Provider**: External Network Clients (`StravaUploader`, `DropboxUploader`, `HealthConnectManager`, `HealthConnectHrvImporter`).
 * **Consumer**: `ExportManager`, `TrainingApplication`, `EditWorkoutScreen`, `HrvReadinessRepository`.
 * **Operations / Method Signatures**:
-  * `suspend fun uploadToStrava(file: File, sportType: SportType): UploadResponse`: REST multipart upload.
-  * `suspend fun syncHealthConnect(workout: Workout, samples: List<Sample>): SyncResult`: Health Connect insertion.
-  * `suspend fun importRecentHrv(context: Context, daysBack: Int): Result<Int>`: Health Connect nocturnal resting HRV ingestion.
+  * `fun export(exportInfo: ExportInfo): ExportResult`: Direct OkHttp REST multipart upload (`StravaUploader`) or Dropbox API v2 export (`DropboxUploader`).
+  * `suspend fun syncWorkout(context: Context, workoutData: WorkoutData): Result<Unit>`: Idempotent session and telemetry sync to Android Health Connect (`HealthConnectManager`).
+  * `suspend fun importRecentHrv(context: Context, daysBack: Int): Result<Int>`: Nocturnal resting HRV and HR ingestion (`HealthConnectHrvImporter`).
 * **Data Payloads / Schemas**:
-  * Multipart form-data bodies, OAuth 2.0 bearer tokens, Health Connect `ExerciseSessionRecord` and series.
+  * `ExportInfo`, `ExportResult`, `WorkoutData`, `HealthConnectClient`.
 * **Concurrency & Threading**:
-  * Asynchronous coroutines executed on `Dispatchers.IO` via OkHttp/Retrofit and AndroidX Health Connect Client.
+  * Asynchronous coroutines executed on `Dispatchers.IO` via OkHttp and AndroidX Health Connect Client.
 * **Error Handling & Fault Tolerance**:
   * Automated token expiration handling and silent token refresh.
   * Exponential backoff retry policies for network failures; Health Connect permission checking prior to invocation.

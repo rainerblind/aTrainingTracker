@@ -68,15 +68,22 @@ data class SensorFieldState(
     // The canonical sensor type for dynamic tuning visibility gating (REQ-UI-409.3).
     val sensorType: SensorType? = null,
 
-    // Per-field element display configuration (REQ-TRK-046, ATT-4841, ATT-1294)
+    // Per-field element display configuration (REQ-TRK-046, ATT-4841, ATT-1294, ATT-6695)
     val showValue: Boolean = true,
     val showBar: Boolean = false,
     val showGraph: Boolean = false,
     val graphHorizonSeconds: Int = 300,
     val sparklineSamples: List<Float> = emptyList(),
+    val sparklineSpanSeconds: Int = 0,
 
     // Proportional horizontal width weight (REQ-UI-437, ATT-4861)
-    val colWeight: Float = 1.0f
+    val colWeight: Float = 1.0f,
+
+    // Gated telemetry warning indicator & configured HRV parameters (REQ-TRK-061.2, REQ-TRK-065.3, ATT-6715, ATT-6745)
+    val isArtifactGated: Boolean = false,
+    val dfaA1ThresholdT1: Float = 0.75f,
+    val dfaA1ThresholdT2: Float = 0.50f,
+    val hrvSignalQualityStatus: com.atrainingtracker.banalservice.devices.hrv.HrvSignalQualityStatus? = null
 )
 
 /**

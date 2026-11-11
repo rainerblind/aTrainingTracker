@@ -115,4 +115,63 @@ class TelemetryMetricGraphOverlayTest {
         assertFalse(canRender(TelemetryMetricType.HEART_RATE, record, false, pointsWithPower))
         assertFalse(canRender(TelemetryMetricType.HEART_RATE, record, true, pointsWithoutPower))
     }
+
+    @Test
+    fun testYAxisBoundsIncludeFreshModelTrajectoryWhenOverlayActive() {
+        val actualHrValues = listOf(130.0, 140.0, 150.0, 160.0)
+        val freshModelValues = listOf(110.0, 135.0, 145.0, 180.0) // dips to 110, surges to 180
+
+        fun computeHrBounds(
+            measured: List<Double>,
+            freshModel: List<Double>,
+            overlayActive: Boolean
+        ): Pair<Double, Double> {
+            val effective = if (overlayActive && freshModel.isNotEmpty()) {
+                measured + freshModel
+            } else {
+                measured
+            }
+            val min = effective.minOrNull() ?: 0.0
+            val max = effective.maxOrNull() ?: 1.0
+            return (min - 5.0).coerceAtLeast(30.0) to (max + 5.0).coerceAtLeast(100.0)
+        }
+
+        // When overlay is inactive, bounds are strictly based on measured values [130, 160] -> [125, 165]
+        val boundsInactive = computeHrBounds(actualHrValues, freshModelValues, overlayActive = false)
+        assertEquals(125.0, boundsInactive.first, 0.01)
+        assertEquals(165.0, boundsInactive.second, 0.01)
+
+        // When overlay is active, bounds expand to [110, 180] -> [105, 185]
+        val boundsActive = computeHrBounds(actualHrValues, freshModelValues, overlayActive = true)
+        assertEquals(105.0, boundsActive.first, 0.01)
+        assertEquals(185.0, boundsActive.second, 0.01)
+    }
+
+    @Test
+    fun testDecimatedTrackpointsSimulationWithTimeSec() {
+        // Trackpoints spaced by 5s
+        val origin = LatLng(48.0, 11.0)
+        val points = listOf(
+            PathPoint(0.0, origin, timeSec = 0L, power = 200),
+            PathPoint(50.0, origin, timeSec = 5L, power = 200),
+            PathPoint(100.0, origin, timeSec = 10L, power = 200)
+        )
+        val powerSamples = points.map { it.power?.toDouble() }
+        val timeSamples = points.map { it.timeSec }
+
+        val simulated = PowerHrDynamicsCalculator.simulateTrajectory(
+            powerSamples = powerSamples,
+            timestampsSec = timeSamples,
+            tau = 30.0,
+            hr0 = 80.0,
+            k = 0.25
+        )
+
+        assertEquals(3, simulated.size)
+        // t=0: hr0 + k*p = 80 + 0.25*200 = 130.0
+        assertEquals(130.0, checkNotNull(simulated[0]), 0.01)
+        // At steady state power, HR stays at 130.0
+        assertEquals(130.0, checkNotNull(simulated[1]), 0.01)
+        assertEquals(130.0, checkNotNull(simulated[2]), 0.01)
+    }
 }

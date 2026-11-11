@@ -20,6 +20,7 @@ package com.atrainingtracker.trainingtracker.ui.aftermath
 
 import android.app.Application
 import android.content.res.Configuration
+import com.atrainingtracker.trainingtracker.cloud.healthconnect.HealthConnectManager
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitEachGesture
@@ -61,6 +62,8 @@ import com.atrainingtracker.trainingtracker.ui.aftermath.photos.WorkoutPhotoStri
 import com.atrainingtracker.trainingtracker.ui.aftermath.splits.LapSplitChartData
 import com.atrainingtracker.trainingtracker.ui.aftermath.splits.LapSplitVisualizerCard
 import com.atrainingtracker.trainingtracker.ui.aftermath.workoutdetail.HrvAlpha1ScatterCard
+import com.atrainingtracker.trainingtracker.ui.aftermath.workoutdetail.HrvDurabilityCard
+import com.atrainingtracker.trainingtracker.ui.aftermath.workoutdetail.HrvThresholdSummaryCard
 import com.atrainingtracker.trainingtracker.ui.aftermath.zones.GradeZoneDistributionCard
 import com.atrainingtracker.trainingtracker.ui.aftermath.zones.HeartRateZoneDistributionCard
 import com.atrainingtracker.trainingtracker.ui.aftermath.zones.HeartRateZoneThresholds
@@ -118,6 +121,10 @@ fun WorkoutDetailTabbedContent(
     onGradeZoneDisplayModeChange: (ZoneCardDisplayMode) -> Unit = {},
     hrZoneThresholds: HeartRateZoneThresholds? = null,
     powerZoneThresholds: PowerZoneThresholds? = null,
+    configuredFtp: Int? = null,
+    configuredHrMax: Int? = null,
+    onUpdateFtp: ((Int) -> Unit)? = null,
+    onCalibrateMader: ((Int?, Int?) -> Unit)? = null,
     useStatusBarsPadding: Boolean,
     onClusterClick: ((Long) -> Unit)?,
     onEditWorkout: ((Long) -> Unit)?,
@@ -256,7 +263,11 @@ fun WorkoutDetailTabbedContent(
         var totalTopChromeHeightPx by remember { mutableIntStateOf(0) }
 
         LaunchedEffect(isLandscape, totalTopChromeHeightPx, headerHeightPx) {
-            val maxCollapse = if (isLandscape) totalTopChromeHeightPx else headerHeightPx
+            val maxCollapse = calculateWorkoutDetailMaxCollapsePx(
+                isLandscape = isLandscape,
+                headerHeightPx = headerHeightPx,
+                totalTopChromeHeightPx = totalTopChromeHeightPx
+            )
             if (maxCollapse > 0) {
                 connection.appBarMaxHeight = maxCollapse
             }
@@ -408,6 +419,12 @@ fun WorkoutDetailTabbedContent(
                                             onSplitLapClick = onSplitLapClick,
                                             onMoveBoundaryClick = onMoveBoundaryClick,
                                             onLapClick = onLapClick,
+                                            hrZoneThresholds = hrZoneThresholds,
+                                            powerZoneThresholds = powerZoneThresholds,
+                                            configuredFtp = configuredFtp,
+                                            configuredHrMax = configuredHrMax,
+                                            onUpdateFtp = onUpdateFtp,
+                                            onCalibrateMader = onCalibrateMader,
                                             onAddPhotos = { uris ->
                                                 coroutineScope.launch {
                                                     uris.forEach { uri ->
@@ -491,6 +508,12 @@ fun WorkoutDetailTabbedContent(
                                                 onSplitLapClick = onSplitLapClick,
                                                 onMoveBoundaryClick = onMoveBoundaryClick,
                                                 onLapClick = onLapClick,
+                                                hrZoneThresholds = hrZoneThresholds,
+                                                powerZoneThresholds = powerZoneThresholds,
+                                                configuredFtp = configuredFtp,
+                                                configuredHrMax = configuredHrMax,
+                                                onUpdateFtp = onUpdateFtp,
+                                                onCalibrateMader = onCalibrateMader,
                                                 onAddPhotos = { uris ->
                                                     coroutineScope.launch {
                                                         uris.forEach { uri ->
@@ -547,6 +570,12 @@ fun WorkoutDetailTabbedContent(
                                     onSplitLapClick = onSplitLapClick,
                                     onMoveBoundaryClick = onMoveBoundaryClick,
                                     onLapClick = onLapClick,
+                                    hrZoneThresholds = hrZoneThresholds,
+                                    powerZoneThresholds = powerZoneThresholds,
+                                    configuredFtp = configuredFtp,
+                                    configuredHrMax = configuredHrMax,
+                                    onUpdateFtp = onUpdateFtp,
+                                    onCalibrateMader = onCalibrateMader,
                                     onAddPhotos = { uris ->
                                         coroutineScope.launch {
                                             uris.forEach { uri ->
@@ -604,6 +633,9 @@ fun WorkoutDetailTabbedContent(
                     onClusterClick = onClusterClick,
                     onEditWorkout = onEditWorkout?.let { edit -> { edit(workoutData.id) } },
                     onShareWorkout = { showShareModeSheet = true },
+                    onSyncHealthConnect = if (HealthConnectManager.isAvailable(context)) {
+                        { HealthConnectManager.syncWorkoutAsync(context, workoutData, force = true) }
+                    } else null,
                     actions = {
                         headerActions()
                         IconButton(
@@ -782,6 +814,12 @@ private fun RenderWorkoutDetailCardSections(
     onHrZoneDisplayModeChange: (ZoneCardDisplayMode) -> Unit,
     onPowerZoneDisplayModeChange: (ZoneCardDisplayMode) -> Unit,
     onGradeZoneDisplayModeChange: (ZoneCardDisplayMode) -> Unit = {},
+    hrZoneThresholds: HeartRateZoneThresholds? = null,
+    powerZoneThresholds: PowerZoneThresholds? = null,
+    configuredFtp: Int? = null,
+    configuredHrMax: Int? = null,
+    onUpdateFtp: ((Int) -> Unit)? = null,
+    onCalibrateMader: ((Int?, Int?) -> Unit)? = null,
     activeScrubPath: List<com.atrainingtracker.trainingtracker.ui.map.PathPoint>? = null,
     photos: List<WorkoutPhotoEntry> = emptyList(),
     onPhotoClick: ((WorkoutPhotoEntry) -> Unit)? = null,
@@ -802,9 +840,25 @@ private fun RenderWorkoutDetailCardSections(
                     enableCriticalPowerModel = tuningConfig.enableCriticalPowerModel,
                     showCriticalPowerInWorkoutSummary = tuningConfig.showCriticalPowerInWorkoutSummary,
                     enableCardioPowerDynamics = tuningConfig.enableCardioPowerDynamics,
-                    showCardioPowerInWorkoutSummary = tuningConfig.showCardioPowerInWorkoutSummary,
+                    showCardioPowerInWorkoutSummary = false,
                     modifier = Modifier.fillMaxWidth()
                 )
+                if (tuningConfig.enableCardioPowerDynamics && workoutData.cardioPowerDynamics != null) {
+                    CardioPowerDynamicsCard(
+                        record = workoutData.cardioPowerDynamics,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 4.dp)
+                    )
+                }
+                if (workoutData.radarTrafficSummary != null) {
+                    RadarTrafficSummaryCard(
+                        summary = workoutData.radarTrafficSummary,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 4.dp)
+                    )
+                }
             }
             WorkoutDetailSectionType.DESCRIPTION -> {
                 WorkoutDescription(
@@ -848,6 +902,32 @@ private fun RenderWorkoutDetailCardSections(
                 if (TelemetryMetricUtils.hasHrvData(activeScrubPath)) {
                     HrvAlpha1ScatterCard(
                         points = activeScrubPath ?: emptyList(),
+                        dfaA1ThresholdT1 = tuningConfig.dfaA1ThresholdT1,
+                        dfaA1ThresholdT2 = tuningConfig.dfaA1ThresholdT2,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 4.dp)
+                    )
+                    val resolvedFtp = configuredFtp ?: powerZoneThresholds?.let { kotlin.math.round(it.z2Max / 0.75).toInt() }
+                    val resolvedHrMax = configuredHrMax ?: hrZoneThresholds?.let { kotlin.math.round(it.z2Max / 0.69).toInt() }
+                    HrvThresholdSummaryCard(
+                        points = activeScrubPath ?: emptyList(),
+                        dfaA1ThresholdT1 = tuningConfig.dfaA1ThresholdT1,
+                        dfaA1ThresholdT2 = tuningConfig.dfaA1ThresholdT2,
+                        configuredFtp = resolvedFtp,
+                        configuredHrMax = resolvedHrMax,
+                        hrZoneThresholds = hrZoneThresholds,
+                        onUpdateFtp = onUpdateFtp,
+                        onCalibrateMader = onCalibrateMader,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 4.dp)
+                    )
+                    HrvDurabilityCard(
+                        points = activeScrubPath ?: emptyList(),
+                        freshBaseline = workoutData.dfaA1FreshBaseline,
+                        lateMean = workoutData.dfaA1LateMean,
+                        durabilityDriftPct = workoutData.dfaA1DurabilityDriftPct,
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 16.dp, vertical = 4.dp)
@@ -922,3 +1002,9 @@ private fun RenderWorkoutDetailCardSections(
         }
     }
 }
+
+internal fun calculateWorkoutDetailMaxCollapsePx(
+    isLandscape: Boolean,
+    headerHeightPx: Int,
+    totalTopChromeHeightPx: Int
+): Int = if (isLandscape) totalTopChromeHeightPx else headerHeightPx

@@ -22,6 +22,7 @@ import android.content.Context
 import android.content.Intent
 import android.util.Log
 import com.atrainingtracker.banalservice.ActivityType
+import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.banalservice.database.DevicesDatabaseManager
 import com.atrainingtracker.banalservice.filters.FilterData
 import com.atrainingtracker.banalservice.filters.FilterType
@@ -59,7 +60,8 @@ data class TrackingViewInfo(
     val showNavigationHints: Boolean = true,
     val elevationProfileScope: ElevationProfileScope = ElevationProfileScope.FULL_ROUTE,
     val elevationProfileLookahead: Int = 2000,
-    val showBikeBell: Boolean = false
+    val showBikeBell: Boolean = false,
+    val showMmpCurve: Boolean = false
 )
 
 /**
@@ -157,7 +159,8 @@ class TrackingViewsRepository private constructor(private val context: Context) 
                 TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_NAVIGATION_HINTS,
                 TrackingViewsDatabaseManager.TrackingViewsDbHelper.ELEVATION_PROFILE_SCOPE,
                 TrackingViewsDatabaseManager.TrackingViewsDbHelper.ELEVATION_PROFILE_LOOKAHEAD,
-                TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_BIKE_BELL
+                TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_BIKE_BELL,
+                TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_MMP_CURVE
             ),
             "${TrackingViewsDatabaseManager.TrackingViewsDbHelper.C_ID}=?",
             arrayOf(tabViewId.toString()),
@@ -182,7 +185,9 @@ class TrackingViewsRepository private constructor(private val context: Context) 
                 val elevationProfileLookahead = if (lookaheadIndex != -1) it.getInt(lookaheadIndex).coerceAtLeast(500) else 2000
                 val bellIndex = it.getColumnIndex(TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_BIKE_BELL)
                 val showBikeBell = if (bellIndex != -1) it.getInt(bellIndex) == 1 else false
-                return TrackingViewInfo(id, name, showMap, showLapButton, showLiveSegments, showElevationProfile, showLiveClimbs, showNavigationHints, elevationProfileScope, elevationProfileLookahead, showBikeBell)
+                val mmpIndex = it.getColumnIndex(TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_MMP_CURVE)
+                val showMmpCurve = if (mmpIndex != -1) it.getInt(mmpIndex) == 1 else false
+                return TrackingViewInfo(id, name, showMap, showLapButton, showLiveSegments, showElevationProfile, showLiveClimbs, showNavigationHints, elevationProfileScope, elevationProfileLookahead, showBikeBell, showMmpCurve)
             }
         }
         return null
@@ -219,7 +224,8 @@ class TrackingViewsRepository private constructor(private val context: Context) 
                 TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_NAVIGATION_HINTS,
                 TrackingViewsDatabaseManager.TrackingViewsDbHelper.ELEVATION_PROFILE_SCOPE,
                 TrackingViewsDatabaseManager.TrackingViewsDbHelper.ELEVATION_PROFILE_LOOKAHEAD,
-                TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_BIKE_BELL
+                TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_BIKE_BELL,
+                TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_MMP_CURVE
             ),
             "${TrackingViewsDatabaseManager.TrackingViewsDbHelper.ACTIVITY_TYPE}=?",
             arrayOf(activityType.name),
@@ -247,8 +253,10 @@ class TrackingViewsRepository private constructor(private val context: Context) 
                     val elevationProfileLookahead = if (lookaheadIndex != -1) it.getInt(lookaheadIndex).coerceAtLeast(500) else 2000
                     val bellIndex = it.getColumnIndex(TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_BIKE_BELL)
                     val showBikeBell = if (bellIndex != -1) it.getInt(bellIndex) == 1 else false
+                    val mmpIndex = it.getColumnIndex(TrackingViewsDatabaseManager.TrackingViewsDbHelper.SHOW_MMP_CURVE)
+                    val showMmpCurve = if (mmpIndex != -1) it.getInt(mmpIndex) == 1 else false
 
-                    viewList.add(TrackingViewInfo(id, name, showMap, showLapButton, showLiveSegments, showElevationProfile, showLiveClimbs, showNavigationHints, elevationProfileScope, elevationProfileLookahead, showBikeBell))
+                    viewList.add(TrackingViewInfo(id, name, showMap, showLapButton, showLiveSegments, showElevationProfile, showLiveClimbs, showNavigationHints, elevationProfileScope, elevationProfileLookahead, showBikeBell, showMmpCurve))
                 } while (it.moveToNext())
             }
         }
@@ -662,6 +670,17 @@ class TrackingViewsRepository private constructor(private val context: Context) 
         }
     }
 
+    suspend fun updateShowMmpCurve(tabViewId: Long, showMmpCurve: Boolean) {
+        withContext(Dispatchers.IO) {
+            viewsDbManager.updateShowMmpCurve(tabViewId, showMmpCurve)
+        }
+
+        // trigger recreation of UI
+        withContext(Dispatchers.Main) {
+            configUpdateTrigger.value++
+        }
+    }
+
     suspend fun updateElevationProfileScope(tabViewId: Long, scope: ElevationProfileScope) {
         withContext(Dispatchers.IO) {
             viewsDbManager.updateElevationProfileScope(tabViewId, scope.dbValue)
@@ -786,6 +805,14 @@ class TrackingViewsRepository private constructor(private val context: Context) 
 
 
     companion object {
+        @JvmStatic
+        fun isBarSupported(sensorType: SensorType?, sportType: BSportType?): Boolean =
+            TrackingViewsDatabaseManager.TrackingViewsDbHelper.isBarSupported(sensorType, sportType)
+
+        @JvmStatic
+        fun isGraphSupported(sensorType: SensorType?, sportType: BSportType? = null): Boolean =
+            TrackingViewsDatabaseManager.TrackingViewsDbHelper.isGraphSupported(sensorType)
+
         @Volatile
         private var INSTANCE: TrackingViewsRepository? = null
 

@@ -110,12 +110,14 @@ object TuningPreferencesDefaults {
     const val RADAR_HAPTIC_ALERT = true
     val RADAR_LIGHT_DEFAULT_MODE = RadarLightMode.DAY_FLASH
     const val RADAR_AUTO_LIGHT_CONTROL = true
+    const val RADAR_SMART_LIGHT_AUTOMATION = false
     const val RADAR_PELOTON_AUDIO_SYNC = true
     const val RADAR_SMART_URBAN_MUTE = false
     const val RADAR_SPATIAL_AUDIO_ENABLED = true
     const val RADAR_SPEED_PITCH_MODULATION = true
     val RADAR_TRAFFIC_ORIENTATION = RadarTrafficOrientation.RIGHT_HAND
     const val RADAR_LANE_CHANGE_TICK_ENABLED = true
+    const val RADAR_CLOSE_PASS_THRESHOLD_M = 1.5f
     const val FULL_DIM_FACTOR = 0.25f
     const val MEDIUM_DIM_FACTOR = 0.50f
     const val SLOPE_FLAT_THRESHOLD = 2.0f
@@ -325,6 +327,11 @@ object TuningPreferencesDefaults {
     const val DEFAULT_DFA_A1_THRESHOLD_T2 = 0.50f
     const val MIN_DFA_A1_THRESHOLD = 0.20f
     const val MAX_DFA_A1_THRESHOLD = 1.50f
+    const val MIN_DFA_A1_THRESHOLD_GAP = 0.05f
+
+    const val DEFAULT_HRV_ARTIFACT_GATE_THRESHOLD_PERCENT = 5.0f
+    const val MIN_HRV_ARTIFACT_GATE_THRESHOLD_PERCENT = 3.0f
+    const val MAX_HRV_ARTIFACT_GATE_THRESHOLD_PERCENT = 5.0f
 }
 
 /**
@@ -403,6 +410,7 @@ data class TuningConfig(
     val showCardioPowerInWorkoutSummary: Boolean = TuningPreferencesDefaults.DEFAULT_SHOW_CARDIO_POWER_IN_WORKOUT_SUMMARY,
     val dfaA1ThresholdT1: Float = TuningPreferencesDefaults.DEFAULT_DFA_A1_THRESHOLD_T1,
     val dfaA1ThresholdT2: Float = TuningPreferencesDefaults.DEFAULT_DFA_A1_THRESHOLD_T2,
+    val hrvArtifactGateThresholdPercent: Float = TuningPreferencesDefaults.DEFAULT_HRV_ARTIFACT_GATE_THRESHOLD_PERCENT,
     val radarEdgeSide: RadarEdgeSide = TuningPreferencesDefaults.RADAR_EDGE_SIDE,
     val radarClearMode: RadarClearMode = TuningPreferencesDefaults.RADAR_CLEAR_MODE,
     val radarAudioAlertMode: RadarAudioAlertMode = TuningPreferencesDefaults.RADAR_AUDIO_ALERT_MODE,
@@ -412,12 +420,14 @@ data class TuningConfig(
     val radarHapticAlert: Boolean = TuningPreferencesDefaults.RADAR_HAPTIC_ALERT,
     val radarLightDefaultMode: RadarLightMode = TuningPreferencesDefaults.RADAR_LIGHT_DEFAULT_MODE,
     val radarAutoLightControl: Boolean = TuningPreferencesDefaults.RADAR_AUTO_LIGHT_CONTROL,
+    val radarSmartLightAutomation: Boolean = TuningPreferencesDefaults.RADAR_SMART_LIGHT_AUTOMATION,
     val radarPelotonAudioSync: Boolean = TuningPreferencesDefaults.RADAR_PELOTON_AUDIO_SYNC,
     val radarSmartUrbanMute: Boolean = TuningPreferencesDefaults.RADAR_SMART_URBAN_MUTE,
     val radarSpatialAudioEnabled: Boolean = TuningPreferencesDefaults.RADAR_SPATIAL_AUDIO_ENABLED,
     val radarSpeedPitchModulation: Boolean = TuningPreferencesDefaults.RADAR_SPEED_PITCH_MODULATION,
     val radarTrafficOrientation: RadarTrafficOrientation = TuningPreferencesDefaults.RADAR_TRAFFIC_ORIENTATION,
-    val radarLaneChangeTickEnabled: Boolean = TuningPreferencesDefaults.RADAR_LANE_CHANGE_TICK_ENABLED
+    val radarLaneChangeTickEnabled: Boolean = TuningPreferencesDefaults.RADAR_LANE_CHANGE_TICK_ENABLED,
+    val radarClosePassThresholdM: Float = TuningPreferencesDefaults.RADAR_CLOSE_PASS_THRESHOLD_M
 ) {
     val showAntMissingAdapterWarnings: Boolean
         get() = !suppressAntMissingAdapterDialog
@@ -564,6 +574,7 @@ class TuningPreferencesDataStore(private val context: Context) {
         val KEY_SHOW_CARDIO_POWER_IN_WORKOUT_SUMMARY: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_show_cardio_power_in_workout_summary")
         val KEY_DFA_A1_THRESHOLD_T1: Preferences.Key<Float> = floatPreferencesKey("tuning_dfa_a1_threshold_t1")
         val KEY_DFA_A1_THRESHOLD_T2: Preferences.Key<Float> = floatPreferencesKey("tuning_dfa_a1_threshold_t2")
+        val KEY_HRV_ARTIFACT_GATE_THRESHOLD_PERCENT: Preferences.Key<Float> = floatPreferencesKey("tuning_hrv_artifact_gate_threshold_percent")
         val KEY_RADAR_EDGE_SIDE: Preferences.Key<String> = stringPreferencesKey("tuning_radar_edge_side")
         val KEY_RADAR_CLEAR_MODE: Preferences.Key<String> = stringPreferencesKey("tuning_radar_clear_mode")
         val KEY_RADAR_AUDIO_ALERT_MODE: Preferences.Key<String> = stringPreferencesKey("tuning_radar_audio_alert_mode")
@@ -573,12 +584,14 @@ class TuningPreferencesDataStore(private val context: Context) {
         val KEY_RADAR_HAPTIC_ALERT: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_radar_haptic_alert")
         val KEY_RADAR_LIGHT_DEFAULT_MODE: Preferences.Key<String> = stringPreferencesKey("tuning_radar_light_default_mode")
         val KEY_RADAR_AUTO_LIGHT_CONTROL: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_radar_auto_light_control")
+        val KEY_RADAR_SMART_LIGHT_AUTOMATION: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_radar_smart_light_automation")
         val KEY_RADAR_PELOTON_AUDIO_SYNC: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_radar_peloton_audio_sync")
         val KEY_RADAR_SMART_URBAN_MUTE: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_radar_smart_urban_mute")
         val KEY_RADAR_SPATIAL_AUDIO_ENABLED: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_radar_spatial_audio_enabled")
         val KEY_RADAR_SPEED_PITCH_MODULATION: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_radar_speed_pitch_modulation")
         val KEY_RADAR_TRAFFIC_ORIENTATION: Preferences.Key<String> = stringPreferencesKey("tuning_radar_traffic_orientation")
         val KEY_RADAR_LANE_CHANGE_TICK_ENABLED: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_radar_lane_change_tick_enabled")
+        val KEY_RADAR_CLOSE_PASS_THRESHOLD: Preferences.Key<Float> = floatPreferencesKey("tuning_radar_close_pass_threshold_m")
 
         internal val ALL_KEYS = listOf(
             KEY_ELEVATION_X_AXIS_DOMAIN,
@@ -664,12 +677,14 @@ class TuningPreferencesDataStore(private val context: Context) {
             KEY_RADAR_HAPTIC_ALERT,
             KEY_RADAR_LIGHT_DEFAULT_MODE,
             KEY_RADAR_AUTO_LIGHT_CONTROL,
+            KEY_RADAR_SMART_LIGHT_AUTOMATION,
             KEY_RADAR_PELOTON_AUDIO_SYNC,
             KEY_RADAR_SMART_URBAN_MUTE,
             KEY_RADAR_SPATIAL_AUDIO_ENABLED,
             KEY_RADAR_SPEED_PITCH_MODULATION,
             KEY_RADAR_TRAFFIC_ORIENTATION,
-            KEY_RADAR_LANE_CHANGE_TICK_ENABLED
+            KEY_RADAR_LANE_CHANGE_TICK_ENABLED,
+            KEY_RADAR_CLOSE_PASS_THRESHOLD
         )
 
         /**
@@ -856,6 +871,7 @@ data class AutoPausePreferences(
         val rawLightDefaultModeStr = prefs[KEY_RADAR_LIGHT_DEFAULT_MODE]
         val radarLightDefaultMode = safeEnumValueOf(rawLightDefaultModeStr, TuningPreferencesDefaults.RADAR_LIGHT_DEFAULT_MODE)
         val radarAutoLightControl = prefs[KEY_RADAR_AUTO_LIGHT_CONTROL] ?: TuningPreferencesDefaults.RADAR_AUTO_LIGHT_CONTROL
+        val radarSmartLightAutomation = prefs[KEY_RADAR_SMART_LIGHT_AUTOMATION] ?: TuningPreferencesDefaults.RADAR_SMART_LIGHT_AUTOMATION
         val radarPelotonAudioSync = prefs[KEY_RADAR_PELOTON_AUDIO_SYNC] ?: TuningPreferencesDefaults.RADAR_PELOTON_AUDIO_SYNC
         val radarSmartUrbanMute = prefs[KEY_RADAR_SMART_URBAN_MUTE] ?: TuningPreferencesDefaults.RADAR_SMART_URBAN_MUTE
         val radarSpatialAudioEnabled = prefs[KEY_RADAR_SPATIAL_AUDIO_ENABLED] ?: TuningPreferencesDefaults.RADAR_SPATIAL_AUDIO_ENABLED
@@ -863,6 +879,7 @@ data class AutoPausePreferences(
         val rawTrafficOrientationStr = prefs[KEY_RADAR_TRAFFIC_ORIENTATION]
         val radarTrafficOrientation = safeEnumValueOf(rawTrafficOrientationStr, TuningPreferencesDefaults.RADAR_TRAFFIC_ORIENTATION)
         val radarLaneChangeTickEnabled = prefs[KEY_RADAR_LANE_CHANGE_TICK_ENABLED] ?: TuningPreferencesDefaults.RADAR_LANE_CHANGE_TICK_ENABLED
+        val radarClosePassThresholdM = prefs[KEY_RADAR_CLOSE_PASS_THRESHOLD] ?: TuningPreferencesDefaults.RADAR_CLOSE_PASS_THRESHOLD_M
 
         val rawFontWeightStr = prefs[KEY_COCKPIT_FONT_WEIGHT]
         val cockpitFontWeight = safeEnumValueOf(rawFontWeightStr, TuningPreferencesDefaults.COCKPIT_FONT_WEIGHT)
@@ -1067,6 +1084,7 @@ data class AutoPausePreferences(
             showCardioPowerInWorkoutSummary = prefs[KEY_SHOW_CARDIO_POWER_IN_WORKOUT_SUMMARY] ?: TuningPreferencesDefaults.DEFAULT_SHOW_CARDIO_POWER_IN_WORKOUT_SUMMARY,
             dfaA1ThresholdT1 = prefs[KEY_DFA_A1_THRESHOLD_T1] ?: TuningPreferencesDefaults.DEFAULT_DFA_A1_THRESHOLD_T1,
             dfaA1ThresholdT2 = prefs[KEY_DFA_A1_THRESHOLD_T2] ?: TuningPreferencesDefaults.DEFAULT_DFA_A1_THRESHOLD_T2,
+            hrvArtifactGateThresholdPercent = prefs[KEY_HRV_ARTIFACT_GATE_THRESHOLD_PERCENT] ?: TuningPreferencesDefaults.DEFAULT_HRV_ARTIFACT_GATE_THRESHOLD_PERCENT,
             radarEdgeSide = radarEdgeSide,
             radarClearMode = radarClearMode,
             radarAudioAlertMode = radarAudioAlertMode,
@@ -1076,12 +1094,14 @@ data class AutoPausePreferences(
             radarHapticAlert = radarHapticAlert,
             radarLightDefaultMode = radarLightDefaultMode,
             radarAutoLightControl = radarAutoLightControl,
+            radarSmartLightAutomation = radarSmartLightAutomation,
             radarPelotonAudioSync = radarPelotonAudioSync,
             radarSmartUrbanMute = radarSmartUrbanMute,
             radarSpatialAudioEnabled = radarSpatialAudioEnabled,
             radarSpeedPitchModulation = radarSpeedPitchModulation,
             radarTrafficOrientation = radarTrafficOrientation,
-            radarLaneChangeTickEnabled = radarLaneChangeTickEnabled
+            radarLaneChangeTickEnabled = radarLaneChangeTickEnabled,
+            radarClosePassThresholdM = radarClosePassThresholdM
         )
     }
 
@@ -1143,35 +1163,60 @@ data class AutoPausePreferences(
         prefs[KEY_DFA_A1_THRESHOLD_T2] ?: TuningPreferencesDefaults.DEFAULT_DFA_A1_THRESHOLD_T2
     }
 
-    suspend fun setDfaA1ThresholdT1(threshold: Float) {
-        val clamped = threshold.coerceIn(
-            TuningPreferencesDefaults.MIN_DFA_A1_THRESHOLD,
-            TuningPreferencesDefaults.MAX_DFA_A1_THRESHOLD
-        )
+    val hrvArtifactGateThresholdPercentFlow: Flow<Float> = context.dataStore.data.map { prefs ->
+        prefs[KEY_HRV_ARTIFACT_GATE_THRESHOLD_PERCENT] ?: TuningPreferencesDefaults.DEFAULT_HRV_ARTIFACT_GATE_THRESHOLD_PERCENT
+    }
+
+    suspend fun setHrvArtifactGateThresholdPercent(percent: Float) {
         context.dataStore.edit { prefs ->
+            val clamped = percent.coerceIn(
+                TuningPreferencesDefaults.MIN_HRV_ARTIFACT_GATE_THRESHOLD_PERCENT,
+                TuningPreferencesDefaults.MAX_HRV_ARTIFACT_GATE_THRESHOLD_PERCENT
+            )
+            prefs[KEY_HRV_ARTIFACT_GATE_THRESHOLD_PERCENT] = clamped
+        }
+    }
+
+    suspend fun setDfaA1ThresholdT1(threshold: Float) {
+        context.dataStore.edit { prefs ->
+            val currentT2 = prefs[KEY_DFA_A1_THRESHOLD_T2] ?: TuningPreferencesDefaults.DEFAULT_DFA_A1_THRESHOLD_T2
+            val minT1 = (currentT2 + TuningPreferencesDefaults.MIN_DFA_A1_THRESHOLD_GAP).coerceAtMost(TuningPreferencesDefaults.MAX_DFA_A1_THRESHOLD)
+            val clamped = threshold.coerceIn(
+                minT1,
+                TuningPreferencesDefaults.MAX_DFA_A1_THRESHOLD
+            )
             prefs[KEY_DFA_A1_THRESHOLD_T1] = clamped
         }
     }
 
     suspend fun setDfaA1ThresholdT2(threshold: Float) {
-        val clamped = threshold.coerceIn(
-            TuningPreferencesDefaults.MIN_DFA_A1_THRESHOLD,
-            TuningPreferencesDefaults.MAX_DFA_A1_THRESHOLD
-        )
         context.dataStore.edit { prefs ->
+            val currentT1 = prefs[KEY_DFA_A1_THRESHOLD_T1] ?: TuningPreferencesDefaults.DEFAULT_DFA_A1_THRESHOLD_T1
+            val maxT2 = (currentT1 - TuningPreferencesDefaults.MIN_DFA_A1_THRESHOLD_GAP).coerceAtLeast(TuningPreferencesDefaults.MIN_DFA_A1_THRESHOLD)
+            val clamped = threshold.coerceIn(
+                TuningPreferencesDefaults.MIN_DFA_A1_THRESHOLD,
+                maxT2
+            )
             prefs[KEY_DFA_A1_THRESHOLD_T2] = clamped
         }
     }
 
     suspend fun setDfaA1Thresholds(t1: Float, t2: Float) {
-        val clampedT1 = t1.coerceIn(
+        var clampedT1 = t1.coerceIn(
             TuningPreferencesDefaults.MIN_DFA_A1_THRESHOLD,
             TuningPreferencesDefaults.MAX_DFA_A1_THRESHOLD
         )
-        val clampedT2 = t2.coerceIn(
+        var clampedT2 = t2.coerceIn(
             TuningPreferencesDefaults.MIN_DFA_A1_THRESHOLD,
             TuningPreferencesDefaults.MAX_DFA_A1_THRESHOLD
         )
+        if (clampedT1 < clampedT2 + TuningPreferencesDefaults.MIN_DFA_A1_THRESHOLD_GAP) {
+            if (clampedT2 + TuningPreferencesDefaults.MIN_DFA_A1_THRESHOLD_GAP <= TuningPreferencesDefaults.MAX_DFA_A1_THRESHOLD) {
+                clampedT1 = clampedT2 + TuningPreferencesDefaults.MIN_DFA_A1_THRESHOLD_GAP
+            } else {
+                clampedT2 = (clampedT1 - TuningPreferencesDefaults.MIN_DFA_A1_THRESHOLD_GAP).coerceAtLeast(TuningPreferencesDefaults.MIN_DFA_A1_THRESHOLD)
+            }
+        }
         context.dataStore.edit { prefs ->
             prefs[KEY_DFA_A1_THRESHOLD_T1] = clampedT1
             prefs[KEY_DFA_A1_THRESHOLD_T2] = clampedT2
@@ -1279,13 +1324,24 @@ data class AutoPausePreferences(
             TuningPreferencesDefaults.MIN_AUTO_PAUSE_OTHER_DEBOUNCE_SEC,
             TuningPreferencesDefaults.MAX_AUTO_PAUSE_OTHER_DEBOUNCE_SEC
         )
-        val clampedDfaA1T1 = config.dfaA1ThresholdT1.coerceIn(
+        var clampedDfaA1T1 = config.dfaA1ThresholdT1.coerceIn(
             TuningPreferencesDefaults.MIN_DFA_A1_THRESHOLD,
             TuningPreferencesDefaults.MAX_DFA_A1_THRESHOLD
         )
-        val clampedDfaA1T2 = config.dfaA1ThresholdT2.coerceIn(
+        var clampedDfaA1T2 = config.dfaA1ThresholdT2.coerceIn(
             TuningPreferencesDefaults.MIN_DFA_A1_THRESHOLD,
             TuningPreferencesDefaults.MAX_DFA_A1_THRESHOLD
+        )
+        if (clampedDfaA1T1 < clampedDfaA1T2 + TuningPreferencesDefaults.MIN_DFA_A1_THRESHOLD_GAP) {
+            if (clampedDfaA1T2 + TuningPreferencesDefaults.MIN_DFA_A1_THRESHOLD_GAP <= TuningPreferencesDefaults.MAX_DFA_A1_THRESHOLD) {
+                clampedDfaA1T1 = clampedDfaA1T2 + TuningPreferencesDefaults.MIN_DFA_A1_THRESHOLD_GAP
+            } else {
+                clampedDfaA1T2 = (clampedDfaA1T1 - TuningPreferencesDefaults.MIN_DFA_A1_THRESHOLD_GAP).coerceAtLeast(TuningPreferencesDefaults.MIN_DFA_A1_THRESHOLD)
+            }
+        }
+        val clampedArtifactGate = config.hrvArtifactGateThresholdPercent.coerceIn(
+            TuningPreferencesDefaults.MIN_HRV_ARTIFACT_GATE_THRESHOLD_PERCENT,
+            TuningPreferencesDefaults.MAX_HRV_ARTIFACT_GATE_THRESHOLD_PERCENT
         )
 
         context.dataStore.edit { prefs ->
@@ -1371,6 +1427,7 @@ data class AutoPausePreferences(
             prefs[KEY_SHOW_CARDIO_POWER_IN_WORKOUT_SUMMARY] = config.showCardioPowerInWorkoutSummary
             prefs[KEY_DFA_A1_THRESHOLD_T1] = clampedDfaA1T1
             prefs[KEY_DFA_A1_THRESHOLD_T2] = clampedDfaA1T2
+            prefs[KEY_HRV_ARTIFACT_GATE_THRESHOLD_PERCENT] = clampedArtifactGate
             prefs[KEY_RADAR_EDGE_SIDE] = config.radarEdgeSide.name
             prefs[KEY_RADAR_CLEAR_MODE] = config.radarClearMode.name
             prefs[KEY_RADAR_AUDIO_ALERT_MODE] = config.radarAudioAlertMode.name
@@ -1380,12 +1437,14 @@ data class AutoPausePreferences(
             prefs[KEY_RADAR_HAPTIC_ALERT] = config.radarHapticAlert
             prefs[KEY_RADAR_LIGHT_DEFAULT_MODE] = config.radarLightDefaultMode.name
             prefs[KEY_RADAR_AUTO_LIGHT_CONTROL] = config.radarAutoLightControl
+            prefs[KEY_RADAR_SMART_LIGHT_AUTOMATION] = config.radarSmartLightAutomation
             prefs[KEY_RADAR_PELOTON_AUDIO_SYNC] = config.radarPelotonAudioSync
             prefs[KEY_RADAR_SMART_URBAN_MUTE] = config.radarSmartUrbanMute
             prefs[KEY_RADAR_SPATIAL_AUDIO_ENABLED] = config.radarSpatialAudioEnabled
             prefs[KEY_RADAR_SPEED_PITCH_MODULATION] = config.radarSpeedPitchModulation
             prefs[KEY_RADAR_TRAFFIC_ORIENTATION] = config.radarTrafficOrientation.name
             prefs[KEY_RADAR_LANE_CHANGE_TICK_ENABLED] = config.radarLaneChangeTickEnabled
+            prefs[KEY_RADAR_CLOSE_PASS_THRESHOLD] = config.radarClosePassThresholdM
         }
 
         TrainingApplication.setClusterTolEndpoints(clampedClusterTolEndpoints)
@@ -1617,6 +1676,16 @@ data class AutoPausePreferences(
         }
     }
 
+    val radarSmartLightAutomationFlow: Flow<Boolean> = context.dataStore.data.map { prefs ->
+        prefs[KEY_RADAR_SMART_LIGHT_AUTOMATION] ?: TuningPreferencesDefaults.RADAR_SMART_LIGHT_AUTOMATION
+    }
+
+    suspend fun updateRadarSmartLightAutomation(enabled: Boolean) {
+        context.dataStore.edit { prefs ->
+            prefs[KEY_RADAR_SMART_LIGHT_AUTOMATION] = enabled
+        }
+    }
+
     val radarPelotonAudioSyncFlow: Flow<Boolean> = context.dataStore.data.map { prefs ->
         prefs[KEY_RADAR_PELOTON_AUDIO_SYNC] ?: TuningPreferencesDefaults.RADAR_PELOTON_AUDIO_SYNC
     }
@@ -1653,6 +1722,10 @@ data class AutoPausePreferences(
         prefs[KEY_RADAR_LANE_CHANGE_TICK_ENABLED] ?: TuningPreferencesDefaults.RADAR_LANE_CHANGE_TICK_ENABLED
     }
 
+    val radarClosePassThresholdFlow: Flow<Float> = context.dataStore.data.map { prefs ->
+        prefs[KEY_RADAR_CLOSE_PASS_THRESHOLD] ?: TuningPreferencesDefaults.RADAR_CLOSE_PASS_THRESHOLD_M
+    }
+
     suspend fun updateRadarSpatialAudioEnabled(enabled: Boolean) {
         context.dataStore.edit { prefs ->
             prefs[KEY_RADAR_SPATIAL_AUDIO_ENABLED] = enabled
@@ -1674,6 +1747,12 @@ data class AutoPausePreferences(
     suspend fun updateRadarLaneChangeTickEnabled(enabled: Boolean) {
         context.dataStore.edit { prefs ->
             prefs[KEY_RADAR_LANE_CHANGE_TICK_ENABLED] = enabled
+        }
+    }
+
+    suspend fun updateRadarClosePassThreshold(thresholdM: Float) {
+        context.dataStore.edit { prefs ->
+            prefs[KEY_RADAR_CLOSE_PASS_THRESHOLD] = thresholdM
         }
     }
 

@@ -18,6 +18,7 @@
 
 package com.atrainingtracker.banalservice.devices.bluetooth_le;
 
+import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothGatt;
 import android.bluetooth.BluetoothGattCharacteristic;
 import android.bluetooth.BluetoothGattDescriptor;
@@ -26,7 +27,6 @@ import android.content.Context;
 import android.os.SystemClock;
 import android.util.Log;
 
-import androidx.annotation.NonNull;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
@@ -41,6 +41,7 @@ import com.atrainingtracker.banalservice.devices.radar.RadarLightMode;
 import com.atrainingtracker.banalservice.devices.radar.RadarState;
 import com.atrainingtracker.banalservice.devices.radar.RadarStateRepository;
 import com.atrainingtracker.banalservice.devices.radar.RadarTarget;
+import com.atrainingtracker.banalservice.devices.radar.RadarTrafficSimulator;
 import com.atrainingtracker.banalservice.devices.radar.RadarWindowAggregator;
 import com.atrainingtracker.banalservice.devices.radar.ThreatLevel;
 import com.atrainingtracker.banalservice.devices.radar.VehicleSizeCategory;
@@ -51,6 +52,8 @@ import com.atrainingtracker.banalservice.sensor.SensorType;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import com.atrainingtracker.banalservice.devices.radar.RadarLightDeviceClient;
+import java.util.UUID;
 
 /**
  * Bluetooth Low Energy cycling radar protocol driver for Garmin Varia (REQ-CON-028.4).
@@ -59,7 +62,7 @@ import java.util.List;
  * publishes high-rate (4–8 Hz) multi-target streams to [RadarStateRepository], maintains a 3.5s
  * fail-safe disconnect watchdog, and latches 1 Hz scalar metrics via [RadarWindowAggregator].
  */
-public class BTLERadarDevice extends MyBTLEDevice {
+public class BTLERadarDevice extends MyBTLEDevice implements RadarLightDeviceClient {
     private static final String TAG = "BTLERadarDevice";
     private static final boolean DEBUG = BANALService.getDebug(false);
 
@@ -77,8 +80,11 @@ public class BTLERadarDevice extends MyBTLEDevice {
     private boolean mIsV2Stream = false;
     private BluetoothGattCharacteristic mLightControlCharacteristic;
     private volatile boolean mIsLightControlSupported = false;
+    private volatile boolean mIsStvzo = false;
+    private volatile String mModelNumber = null;
+    private volatile RadarLightMode mLastConfiguredLightMode = null;
 
-    private final RadarWindowAggregator mWindowAggregator = new RadarWindowAggregator();
+    private RadarWindowAggregator mWindowAggregator = new RadarWindowAggregator();
 
     private final Runnable mWatchdogRunnable = new Runnable() {
         @Override
@@ -94,6 +100,7 @@ public class BTLERadarDevice extends MyBTLEDevice {
                     mIsLightControlSupported,
                     currentState.getAudioSnoozeState()
             ));
+            resetSensorsToClear();
         }
     };
 
@@ -133,16 +140,13 @@ public class BTLERadarDevice extends MyBTLEDevice {
         }
 
         BluetoothGattCharacteristic v2Char = btGattService.getCharacteristic(BluetoothConstants.UUID_CHARACTERISTIC_RADAR_V2);
-        if (v2Char != null) {
-            if (DEBUG) Log.i(TAG, "Garmin Varia V2 characteristic 6a4e3204 discovered. Initiating V2 handshake.");
+        BluetoothDevice device = gatt.getDevice();
+        boolean isBonded = (device != null && device.getBondState() == BluetoothDevice.BOND_BONDED);
+
+        if (v2Char != null && isBonded) {
+            if (DEBUG) Log.i(TAG, "Garmin Varia V2 characteristic 6a4e3204 discovered and device is bonded. Initiating V2 handshake.");
             mIsV2Stream = true;
-            try {
-                gatt.requestMtu(247);
-            } catch (SecurityException e) {
-                Log.w(TAG, "Missing BLUETOOTH_CONNECT permission requesting MTU 247", e);
-            } catch (Exception e) {
-                if (DEBUG) Log.w(TAG, "Error requesting MTU 247", e);
-            }
+            enqueueRequestMtu(247);
 
             try {
                 gatt.setCharacteristicNotification(v2Char, true);
@@ -157,6 +161,9 @@ public class BTLERadarDevice extends MyBTLEDevice {
                 enqueueWriteDescriptor(descriptor, val);
             }
         } else {
+            if (v2Char != null && !isBonded) {
+                Log.w(TAG, "Garmin Varia V2 requires LESC bonding, but device is not bonded (bondState=" + (device != null ? device.getBondState() : "null") + "). Falling back to V1.");
+            }
             fallbackToV1(gatt, btGattService);
         }
 
@@ -166,11 +173,45 @@ public class BTLERadarDevice extends MyBTLEDevice {
             if (DEBUG) Log.i(TAG, "Garmin Varia light control characteristic 6a4e3202 discovered (REQ-CON-031.1).");
             mLightControlCharacteristic = lightChar;
             mIsLightControlSupported = true;
-            RadarLightController.registerRadarDevice(this, true, false);
+            RadarLightController.registerRadarDevice(this, true, mIsStvzo);
+
+            // Subscribe or read initial physical light mode
+            if ((lightChar.getProperties() & (BluetoothGattCharacteristic.PROPERTY_NOTIFY | BluetoothGattCharacteristic.PROPERTY_INDICATE)) != 0) {
+                try {
+                    gatt.setCharacteristicNotification(lightChar, true);
+                    BluetoothGattDescriptor desc = lightChar.getDescriptor(BluetoothConstants.UUID_CHARACTERISTIC_CLIENT_CONFIG);
+                    if (desc != null) {
+                        byte[] val = (lightChar.getProperties() & BluetoothGattCharacteristic.PROPERTY_INDICATE) != 0
+                                ? BluetoothGattDescriptor.ENABLE_INDICATION_VALUE
+                                : BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE;
+                        enqueueWriteDescriptor(desc, val);
+                    }
+                } catch (SecurityException e) {
+                    Log.w(TAG, "Missing BLUETOOTH_CONNECT permission enabling light notifications", e);
+                }
+            } else if ((lightChar.getProperties() & BluetoothGattCharacteristic.PROPERTY_READ) != 0) {
+                enqueueReadCharacteristic(lightChar);
+            }
+
+            // Mid-ride reconnect: re-apply active workout light mode
+            RadarLightMode activeMode = RadarLightController.getCurrentMode().getValue();
+            if (activeMode != RadarLightMode.OFF) {
+                if (DEBUG) Log.i(TAG, "Re-applying active workout light mode upon reconnect: " + activeMode);
+                enqueueWriteCharacteristic(lightChar, new byte[]{activeMode.getCommandByte()});
+            }
         } else {
             mLightControlCharacteristic = null;
             mIsLightControlSupported = false;
             RadarLightController.registerRadarDevice(this, false, false);
+        }
+
+        // Device Information Service discovery for StVZO model number detection (ATT-6707 / REQ-CON-031.1)
+        BluetoothGattService disService = gatt.getService(BluetoothConstants.UUID_SERVICE_DEVICE_INFORMATION);
+        if (disService != null) {
+            BluetoothGattCharacteristic modelChar = disService.getCharacteristic(BluetoothConstants.UUID_CHARACTERISTIC_MODEL_NUMBER);
+            if (modelChar != null) {
+                enqueueReadCharacteristic(modelChar);
+            }
         }
 
         // Chained battery CCCD write (REQ-CON-007, ATT-3312) via queue
@@ -203,6 +244,30 @@ public class BTLERadarDevice extends MyBTLEDevice {
     }
 
     @Override
+    protected boolean isMeasurementCharacteristic(@NonNull UUID uuid) {
+        return BluetoothConstants.UUID_CHARACTERISTIC_RADAR_V1.equals(uuid) ||
+               BluetoothConstants.UUID_CHARACTERISTIC_RADAR_V2.equals(uuid);
+    }
+
+    @Override
+    @android.annotation.SuppressLint("MissingPermission")
+    protected void onDescriptorWriteCompleted(BluetoothGatt gatt, BluetoothGattDescriptor descriptor, int status) {
+        super.onDescriptorWriteCompleted(gatt, descriptor, status);
+        if (descriptor != null && status != BluetoothGatt.GATT_SUCCESS) {
+            BluetoothGattCharacteristic parentChar = descriptor.getCharacteristic();
+            if (parentChar != null && BluetoothConstants.UUID_CHARACTERISTIC_RADAR_V2.equals(parentChar.getUuid())) {
+                Log.w(TAG, "V2 CCCD write failed with status " + status + "; falling back to V1 stream");
+                if (gatt != null) {
+                    BluetoothGattService service = gatt.getService(BluetoothConstants.UUID_SERVICE_RADAR);
+                    if (service != null) {
+                        fallbackToV1(gatt, service);
+                    }
+                }
+            }
+        }
+    }
+
+    @Override
     protected void measurementCharacteristicUpdate(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic) {
         if (characteristic == null || characteristic.getValue() == null) {
             return;
@@ -224,6 +289,9 @@ public class BTLERadarDevice extends MyBTLEDevice {
     }
 
     private void processTargets(List<RadarTarget> targets) {
+        // Hardware preemption (REQ-CON-029.3): physical data preempts simulator immediately
+        RadarTrafficSimulator.INSTANCE.onPhysicalHardwareConnected();
+
         if (mHandler != null) {
             mHandler.removeCallbacks(mWatchdogRunnable);
             mHandler.postDelayed(mWatchdogRunnable, WATCHDOG_TIMEOUT_MS);
@@ -249,7 +317,7 @@ public class BTLERadarDevice extends MyBTLEDevice {
         if (mThreatCountSensor != null) {
             mThreatCountSensor.newValue(snapshot.getThreatCount());
         }
-        if (mClosestDistanceSensor != null && snapshot.getClosestDistanceMeters() != null) {
+        if (mClosestDistanceSensor != null) {
             mClosestDistanceSensor.newValue(snapshot.getClosestDistanceMeters());
         }
         if (mApproachSpeedSensor != null) {
@@ -258,11 +326,41 @@ public class BTLERadarDevice extends MyBTLEDevice {
         if (mVehicleCountSensor != null) {
             mVehicleCountSensor.newValue(snapshot.getVehicleCount());
         }
-        if (mPassingDistanceSensor != null && snapshot.getPassingDistanceMeters() != null) {
+        if (mPassingDistanceSensor != null) {
             mPassingDistanceSensor.newValue(snapshot.getPassingDistanceMeters());
         }
         if (mLargeVehicleCountSensor != null) {
             mLargeVehicleCountSensor.newValue(snapshot.getLargeVehicleCount());
+        }
+    }
+
+    /**
+     * Resets dynamic radar sensors to clear state (0 threats/speed, null distances).
+     */
+    private void resetSensorsToClear() {
+        if (mThreatCountSensor != null) {
+            mThreatCountSensor.newValue(0);
+        }
+        if (mClosestDistanceSensor != null) {
+            mClosestDistanceSensor.newValue(null);
+        }
+        if (mApproachSpeedSensor != null) {
+            mApproachSpeedSensor.newValue(0.0);
+        }
+        if (mPassingDistanceSensor != null) {
+            mPassingDistanceSensor.newValue(null);
+        }
+    }
+
+    @Override
+    protected void onAccumulatorsReset() {
+        super.onAccumulatorsReset();
+        mWindowAggregator.resetSession();
+        if (mVehicleCountSensor != null) {
+            mVehicleCountSensor.newValue(0);
+        }
+        if (mLargeVehicleCountSensor != null) {
+            mLargeVehicleCountSensor.newValue(0);
         }
     }
 
@@ -281,8 +379,9 @@ public class BTLERadarDevice extends MyBTLEDevice {
                 SystemClock.elapsedRealtime(),
                 RadarLightMode.OFF,
                 false,
-                RadarAudioSnoozeState.INACTIVE
+                RadarStateRepository.getState().getAudioSnoozeState()
         ));
+        resetSensorsToClear();
         super.disconnectFromGatt();
     }
 
@@ -313,11 +412,53 @@ public class BTLERadarDevice extends MyBTLEDevice {
             return false;
         }
         enqueueWriteCharacteristic(lightChar, new byte[]{mode.getCommandByte()});
+        mLastConfiguredLightMode = mode;
         return true;
     }
 
     public boolean isLightControlSupported() {
         return mIsLightControlSupported;
+    }
+
+    public boolean isStvzo() {
+        return mIsStvzo;
+    }
+
+    @Nullable
+    public String getModelNumber() {
+        return mModelNumber;
+    }
+
+    public static boolean isStvzoModel(@Nullable String model) {
+        if (model == null) return false;
+        String upper = model.toUpperCase(java.util.Locale.US);
+        return upper.contains("010-03180-10") ||
+               upper.contains("RTL516") ||
+               upper.contains("STVZO") ||
+               upper.contains("RVR316");
+    }
+
+    @Override
+    protected void onOtherCharacteristicUpdate(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic) {
+        if (characteristic == null || characteristic.getUuid() == null) return;
+
+        if (BluetoothConstants.UUID_CHARACTERISTIC_MODEL_NUMBER.equals(characteristic.getUuid())) {
+            String model = characteristic.getStringValue(0);
+            if (model != null) {
+                mModelNumber = model;
+                boolean stvzo = isStvzoModel(model);
+                mIsStvzo = stvzo;
+                if (DEBUG) Log.i(TAG, "Read model number: " + model + " (isStvzo=" + stvzo + ")");
+                RadarLightController.registerRadarDevice(this, mIsLightControlSupported, mIsStvzo);
+            }
+        } else if (BluetoothConstants.UUID_CHARACTERISTIC_RADAR_LIGHT_CONTROL.equals(characteristic.getUuid())) {
+            byte[] val = characteristic.getValue();
+            if (val != null && val.length > 0) {
+                RadarLightMode mode = RadarLightMode.fromCommandByte(val[0]);
+                if (DEBUG) Log.i(TAG, "Read physical tail light mode: " + mode);
+                RadarLightController.updateHardwareLightMode(mode);
+            }
+        }
     }
 
     /**
@@ -500,7 +641,31 @@ public class BTLERadarDevice extends MyBTLEDevice {
         return mWindowAggregator;
     }
 
+    public void setWindowAggregatorForTesting(RadarWindowAggregator aggregator) {
+        mWindowAggregator = aggregator;
+    }
+
     public Runnable getWatchdogRunnableForTesting() {
         return mWatchdogRunnable;
+    }
+
+    public void processTargetsForTesting(List<RadarTarget> targets) {
+        processTargets(targets);
+    }
+
+    public void onAccumulatorsResetForTesting() {
+        onAccumulatorsReset();
+    }
+
+    public void onOtherCharacteristicUpdateForTesting(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic) {
+        onOtherCharacteristicUpdate(gatt, characteristic);
+    }
+
+    public boolean isMeasurementCharacteristicForTesting(@NonNull UUID uuid) {
+        return isMeasurementCharacteristic(uuid);
+    }
+
+    public void onDescriptorWriteCompletedForTesting(BluetoothGatt gatt, BluetoothGattDescriptor descriptor, int status) {
+        onDescriptorWriteCompleted(gatt, descriptor, status);
     }
 }

@@ -24,27 +24,23 @@ import android.util.Log;
 import androidx.annotation.NonNull;
 
 import com.atrainingtracker.trainingtracker.TrainingApplication;
-import com.atrainingtracker.trainingtracker.exporter.db.ExportStatusDatabaseManager;
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository;
-import com.atrainingtracker.trainingtracker.ui.components.export.ExportStatusRepository;
 
 import java.util.List;
 
 import kotlin.Unit;
 import kotlin.jvm.functions.Function1;
 
+/**
+ * Encapsulated deletion helper delegating cascade deletion to {@link WorkoutRepository} (REQ-DAT-042.5).
+ */
 public class WorkoutDeletionHelper {
 
     private static final String TAG = WorkoutDeletionHelper.class.getName();
     private static final boolean DEBUG = TrainingApplication.getDebug(false);
 
     private final Context mContext;
-    private final WorkoutSummariesDatabaseManager mSummariesManager;
-    private final LapsDatabaseManager mLapsManager;
-    private final WorkoutSamplesDatabaseManager mSamplesManager;
-    private final ExportStatusDatabaseManager mExportStatusRepo;
-    private final com.atrainingtracker.trainingtracker.exporter.db.StravaUploadDbHelper mStravaUploadDbHelper;
-    private final com.atrainingtracker.trainingtracker.database.hrv.WorkoutRrRepository mWorkoutRrRepository;
+    private final WorkoutRepository mWorkoutRepository;
 
     /**
      * Constructor for the deletion helper.
@@ -52,124 +48,26 @@ public class WorkoutDeletionHelper {
      * @param context The application context.
      */
     public WorkoutDeletionHelper(@NonNull Context context) {
-        this(
-                context,
-                WorkoutRepository.getInstance(context).getWorkoutSummariesDatabaseManager(),
-                WorkoutRepository.getInstance(context).getLapsDatabaseManagerInstance(),
-                WorkoutRepository.getInstance(context).getWorkoutSamplesDatabaseManager(),
-                ExportStatusRepository.getInstance(context).getDatabaseManager(),
-                ExportStatusRepository.getInstance(context).getStravaHelper(),
-                com.atrainingtracker.trainingtracker.database.hrv.WorkoutRrRepository.getInstance(context)
-        );
+        this(context, WorkoutRepository.getInstance(context));
     }
 
     /**
-     * Testing constructor allowing injection of mock database managers.
+     * Testing constructor allowing injection of mock WorkoutRepository.
      */
     @androidx.annotation.VisibleForTesting
-    public WorkoutDeletionHelper(
-            @NonNull Context context,
-            @NonNull WorkoutSummariesDatabaseManager summariesManager,
-            @NonNull LapsDatabaseManager lapsManager,
-            @NonNull WorkoutSamplesDatabaseManager samplesManager,
-            @NonNull ExportStatusDatabaseManager exportStatusRepo
-    ) {
-        this(
-                context,
-                summariesManager,
-                lapsManager,
-                samplesManager,
-                exportStatusRepo,
-                ExportStatusRepository.getInstance(context).getStravaHelper(),
-                null
-        );
-    }
-
-    @androidx.annotation.VisibleForTesting
-    public WorkoutDeletionHelper(
-            @NonNull Context context,
-            @NonNull WorkoutSummariesDatabaseManager summariesManager,
-            @NonNull LapsDatabaseManager lapsManager,
-            @NonNull WorkoutSamplesDatabaseManager samplesManager,
-            @NonNull ExportStatusDatabaseManager exportStatusRepo,
-            @NonNull com.atrainingtracker.trainingtracker.exporter.db.StravaUploadDbHelper stravaUploadDbHelper
-    ) {
-        this(
-                context,
-                summariesManager,
-                lapsManager,
-                samplesManager,
-                exportStatusRepo,
-                stravaUploadDbHelper,
-                null
-        );
-    }
-
-    @androidx.annotation.VisibleForTesting
-    public WorkoutDeletionHelper(
-            @NonNull Context context,
-            @NonNull WorkoutSummariesDatabaseManager summariesManager,
-            @NonNull LapsDatabaseManager lapsManager,
-            @NonNull WorkoutSamplesDatabaseManager samplesManager,
-            @NonNull ExportStatusDatabaseManager exportStatusRepo,
-            @NonNull com.atrainingtracker.trainingtracker.exporter.db.StravaUploadDbHelper stravaUploadDbHelper,
-            @androidx.annotation.Nullable com.atrainingtracker.trainingtracker.database.hrv.WorkoutRrRepository workoutRrRepository
-    ) {
+    public WorkoutDeletionHelper(@NonNull Context context, @NonNull WorkoutRepository workoutRepository) {
         this.mContext = context.getApplicationContext();
-        this.mSummariesManager = summariesManager;
-        this.mLapsManager = lapsManager;
-        this.mSamplesManager = samplesManager;
-        this.mExportStatusRepo = exportStatusRepo;
-        this.mStravaUploadDbHelper = stravaUploadDbHelper;
-        this.mWorkoutRrRepository = workoutRrRepository;
+        this.mWorkoutRepository = workoutRepository;
     }
 
     /**
-     * Deletes a workout and all its related data across all databases.
-     * This method orchestrates the entire deletion process.
-     *
-     * <p>Forensic sequencing fix (ATT-296): {@code getBaseFileName} must be queried
-     * BEFORE deleting the summary record from SQLite, otherwise {@code fileBaseName}
-     * resolves to null and high-frequency sample tables are permanently orphaned.
+     * Deletes a workout and all its related data across all databases via {@link WorkoutRepository}.
      *
      * @param workoutId The ID of the workout to delete.
-     * @return {@code true} if the workout was found and deletion was attempted, {@code false} otherwise.
+     * @return {@code true} if deletion was attempted and succeeded.
      */
     public boolean deleteWorkout(long workoutId) {
-        String fileBaseName = mSummariesManager.getBaseFileName(workoutId);
-
-        mSummariesManager.deleteWorkout(workoutId);
-        mLapsManager.deleteWorkout(workoutId);
-        if (mWorkoutRrRepository != null) {
-            try {
-                mWorkoutRrRepository.deleteWorkoutBlocking(workoutId);
-            } catch (Throwable t) {
-                Log.w(TAG, "Could not delete workout RR intervals for " + workoutId + ": " + t.getMessage());
-            }
-        }
-
-        if (ExportStatusDatabaseManager.isValidFileBaseName(fileBaseName)) {
-            try {
-                if (mContext != null) {
-                    androidx.work.WorkManager wm = androidx.work.WorkManager.getInstance(mContext);
-                    wm.cancelAllWorkByTag(fileBaseName);
-                    wm.cancelUniqueWork("export_" + fileBaseName);
-                    for (com.atrainingtracker.trainingtracker.exporter.FileFormat format : com.atrainingtracker.trainingtracker.exporter.FileFormat.values()) {
-                        wm.cancelUniqueWork(com.atrainingtracker.trainingtracker.exporter.ExportManager.getUniqueWorkName(fileBaseName, format));
-                    }
-                }
-            } catch (Throwable t) {
-                Log.w(TAG, "Could not cancel WorkManager tasks on deletion for " + fileBaseName + ": " + t.getMessage());
-            }
-
-            mSamplesManager.deleteWorkout(fileBaseName);
-            mExportStatusRepo.deleteWorkout(fileBaseName);
-            if (mStravaUploadDbHelper != null) {
-                mStravaUploadDbHelper.deleteWorkout(fileBaseName);
-            }
-        }
-
-        return true;
+        return mWorkoutRepository.deleteWorkoutCascade(workoutId);
     }
 
     public interface DeletionProgressCallback {
@@ -185,20 +83,7 @@ public class WorkoutDeletionHelper {
      */
     public boolean deleteOldWorkouts(int daysToKeep, DeletionProgressCallback progressCallback) {
         Log.i(TAG, "deleteOldWorkouts(" + daysToKeep + ")");
-        List<Long> oldWorkoutIds = mSummariesManager.getOldWorkouts(daysToKeep);
-        int total = oldWorkoutIds.size();
-        for (int i = 0; i < total; i++) {
-            long workoutId = oldWorkoutIds.get(i);
-            Log.d(TAG, "Deleting workout " + (i + 1) + "/" + total + " with ID: " + workoutId);
-
-            if (progressCallback != null) {
-                progressCallback.onProgress(i + 1, total, workoutId);
-            }
-
-            deleteWorkout(workoutId);
-        }
-
-        return true;
+        return mWorkoutRepository.deleteOldWorkoutsCascade(daysToKeep, progressCallback);
     }
 
     /**
@@ -213,4 +98,3 @@ public class WorkoutDeletionHelper {
         return deleteOldWorkouts(daysToKeep, progressCallback != null ? (current, total, workoutId) -> progressCallback.invoke(workoutId) : null);
     }
 }
-

@@ -3,7 +3,7 @@
 **Document Identifier**: `RISK-REG-ATT`  
 **Standard**: ASPICE 4.0 `MAN.3` (Project Management — `MAN.3.BP5` Define, monitor and adjust project risks)  
 **Target Release**: `V5.0.0` | **Version**: 1.0.0  
-**Status**: Approved | **Last Review Date**: 2026-11-10  
+**Status**: Approved | **Last Review Date**: 2026-11-11  
 **Governing Ticket**: [ATT-6151](https://rainerblind.atlassian.net/browse/ATT-6151) | **Requirement**: `REQ-STP-010` | **Test**: `TST-STP-010`  
 
 ---
@@ -62,6 +62,8 @@ The risk register is reviewed at every Sprint-Start ceremony to capture newly su
 | :--- | :--- | :--- | :--- |
 | **2026-11-10** | **2026-46.1** *(Start)* | Sprint Coordinator / Process Owner | Initial risk register baseline established per ASPICE MAN.3.BP5 (ATT-6151). Initial risks RISK-001 through RISK-006 identified; High-exposure risks linked to remediation tickets. |
 | **2026-11-10** | **2026-46.1** *(Close)* | Sprint Coordinator / Human Reviewer | Ceremony 2 review across 66 realized tickets (`146.0 SP`): `ATT-6148` & `ATT-6152` completed toward `RISK-001`; `RISK-002` manifested as unmounted UI/importer islands (`ATT-6702`, `ATT-6711`, `ATT-6712`) and AI symbol/signature hallucinations in `SWE.2`/`SYS.2`/`SYS.3` docs (`ATT-6727`, `ATT-6732`, `ATT-6738`–`ATT-6741`). Enacted **Rule 81** (mandatory caller-site `grep`, dynamic symbol-vs-source & bidirectional `SYSREQ` equality checks, and Tier 2 `lintDebug`/`detekt` CI parity). |
+| **2026-11-10** | **2026-46.2** *(Start)* | Sprint Coordinator (`ATT-6746`) | Ceremony 1 review across 122 queued sprint tickets (`RISK-001`..`RISK-006` verified; High-exposure `RISK-001` [`E=16`] & `RISK-002` [`E=15`] linked to `ATT-6148`/`ATT-6152` & `ATT-6150`/`ATT-6141` plus active Sprint `2026-46.2` remediations `ATT-6743`, `ATT-6727`–`ATT-6741`, and `ATT-6120`–`ATT-6126`; `RISK-003`/`RISK-004`/`RISK-006` actively mitigated via `ATT-6711`, `ATT-6713`/`ATT-6744`, and `ATT-6716`). |
+| **2026-11-11** | **2026-46.2** *(Close)* | Sprint Coordinator / Human Reviewer (`ATT-6746`) | Ceremony 2 review (`ATT-7101` Stage 6 Cold Carbon Review introduced): `RISK-002` mitigated via mandatory **Rule 5** (`Pros` vs. `Cons / Defects Identified` + *"Would you recommend its approval?"*) in `stage6-final-review/SKILL.md`, which caught 34 tickets with subtle edge-case, concurrency, mathematical, or lifecycle defects before `Final Review (Human)` while passing 49 clean tickets (`92.0 SP`). |
 
 ---
 

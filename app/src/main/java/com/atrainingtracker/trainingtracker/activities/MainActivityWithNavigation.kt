@@ -93,7 +93,6 @@ import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore
 import com.atrainingtracker.banalservice.ui.sporttype.SportTypeListFragment
 import com.atrainingtracker.trainingtracker.MyPreferenceManager
 import com.atrainingtracker.trainingtracker.TrainingApplication
-import com.atrainingtracker.trainingtracker.database.ActiveDevicesDbHelper
 import com.atrainingtracker.trainingtracker.database.MilestoneAutoNamingManager
 import com.atrainingtracker.trainingtracker.dialogs.GPSDisabledDialog
 import com.atrainingtracker.trainingtracker.dialogs.StartOrResumeDialog
@@ -915,13 +914,13 @@ class MainActivityWithNavigation :
     internal fun checkSensorBatteryAfterWorkout(workoutId: Long) {
         lifecycleScope.launch(ioDispatcher) {
             try {
+                val devRepo = DeviceDataRepository.getInstance(applicationContext)
                 val activeDeviceIds = if (workoutId > 0) {
-                    ActiveDevicesDbHelper.getInstance(applicationContext).getDatabaseIdsOfActiveDevices(workoutId)
+                    devRepo.getActiveDeviceIdsForWorkout(workoutId)
                 } else {
                     emptyList()
                 }
 
-                val devRepo = DeviceDataRepository.getInstance(applicationContext)
                 val allCritical = devRepo.getCriticalBatteryDevices(LOW_BATTERY_WARNING_LEVEL)
                 val criticalDevices = if (activeDeviceIds.isNotEmpty()) {
                     allCritical.filter { activeDeviceIds.contains(it.deviceId) }

@@ -55,9 +55,45 @@ STAGE_SKILLS = {
     3: "stage3-impl-plan",
     4: "stage4-implementation",
     5: "stage5-verification",
+    6: "stage6-final-review",
+}
+
+PARENT_STAGE_ORDER = [
+    "zu erledigen",
+    "analysis",
+    "test spec",
+    "implementation plan",
+    "implementation",
+    "test",
+    "final review (agent)",
+    "final review (human)"
+]
+
+STAGE_TO_SKILL_DIR = {
+    "analysis": "stage1-analysis",
+    "test spec": "stage2-req-test-spec",
+    "implementation plan": "stage3-impl-plan",
+    "implementation": "stage4-implementation",
+    "test": "stage5-verification",
+    "final review (agent)": "stage6-final-review",
 }
 
 VALID_ROLES = ["agent1", "agent2", "coordinator", "human"]
+
+
+def resolve_desired_parent_stage_for_subtask(subtask_summary, subtask_done=True):
+    s = (subtask_summary or "").strip().lower()
+    if re.match(r'^\[analysis\]', s):
+        return "test spec" if subtask_done else "analysis"
+    if re.match(r'^\[(req\s*&\s*test\s*spec|req/test\s*spec|test-spec|test\s*spec|specification|spec)\]', s):
+        return "implementation plan" if subtask_done else "test spec"
+    if re.match(r'^\[(impl-plan|impl\s*plan|implementation\s*plan|design|plan)\]', s):
+        return "implementation" if subtask_done else "implementation plan"
+    if re.match(r'^\[(implementation|impl)\]', s):
+        return "test" if subtask_done else "implementation"
+    if re.match(r'^\[(test|verification)\]', s):
+        return "final review (agent)" if subtask_done else "test"
+    return None
 
 
 def load_hoechstmass_config(custom_path=None):
@@ -701,6 +737,94 @@ def gate_verdict(subtask_key, verdict, report_arg, as_role="agent2"):
         print(f"GATE_VERDICT: REVISION recorded on {subtask_key} by {as_role}.")
 
 
+FINAL_REVIEW_BOUNCE_RE = re.compile(
+    r"(?:\[FINAL REVIEW \(AGENT\)\s*[—\-]+\s*BOUNCE\s+(\d+)/3\]|Final Review \(Agent\)\s*BOUNCE\s*\(?(\d+)/3\)?)",
+    re.IGNORECASE,
+)
+FINAL_REVIEW_PASS_TAG = "[FINAL REVIEW (AGENT) — PASS]"
+FINAL_REVIEW_ESCALATED_TAG = "[FINAL REVIEW (AGENT) — ESCALATED AFTER 3 BOUNCES]"
+
+
+def count_final_review_bounces(comments):
+    """Counts how many Stage 6 [FINAL REVIEW (AGENT) — BOUNCE X/3] comments exist on a parent issue."""
+    max_bounce = 0
+    count = 0
+    for c in (comments or []):
+        body = c.get("body", "")
+        m = FINAL_REVIEW_BOUNCE_RE.search(body)
+        if m:
+            count += 1
+            num_str = m.group(1) or m.group(2)
+            try:
+                b_num = int(num_str)
+                if b_num > max_bounce:
+                    max_bounce = b_num
+            except (ValueError, TypeError):
+                pass
+    return max(count, max_bounce)
+
+
+def final_review_verdict(parent_key, verdict_arg, text_or_file, bounce_target="implementation", role="agent2", as_role=None, config=None, h_config=None):
+    """
+    REQ-PRO-058.2 / TST-PRO-058.2:
+    Composite Stage 6 ('Final Review (Agent)') verdict command for the Cold Carbon Reviewer (agent2).
+    """
+    auditor_role = "agent2"
+    verdict_norm = (verdict_arg or "").strip().upper()
+    if verdict_norm in ("PASS", "I.O.", "IO", "APPROVED", "FREIGABE"):
+        is_pass = True
+    elif verdict_norm in ("BOUNCE", "REVISION", "REWORK", "FAIL", "N.I.O.", "NIO", "REJECT"):
+        is_pass = False
+    else:
+        print(f"Error: Invalid final review verdict '{verdict_arg}'. Expected PASS or BOUNCE.", file=sys.stderr)
+        sys.exit(1)
+
+    report_text = read_text_or_file(text_or_file)
+    if config is None:
+        config = load_env_config()
+    if h_config is None:
+        h_config = load_hoechstmass_config()
+
+    issue_url = f"{config.get('JIRA_URL', '')}/rest/api/2/issue/{parent_key}?fields=issuetype,status,summary,comment"
+    issue_info = jira_request(issue_url, role=auditor_role, config=config, h_config=h_config)
+    fields_data = issue_info.get("fields", {})
+    if fields_data.get("issuetype", {}).get("subtask", False):
+        print(f"Error: final-review-verdict operates strictly on parent tickets, not sub-task '{parent_key}'.", file=sys.stderr)
+        sys.exit(1)
+
+    assign_issue(parent_key, auditor_role, as_role=auditor_role)
+
+    if is_pass:
+        comment_body = report_text if FINAL_REVIEW_PASS_TAG in report_text else f"{FINAL_REVIEW_PASS_TAG}\n\n{report_text}"
+        add_comment(parent_key, comment_body, as_role=auditor_role)
+        transition_issue(parent_key, "final review (human)", as_role=auditor_role, config=config, h_config=h_config)
+        assign_issue(parent_key, "human", as_role=auditor_role)
+        print(f"FINAL_REVIEW_VERDICT: PASS recorded on {parent_key} by {auditor_role} (moved to Final Review (Human), assigned to human).")
+        return "PASS"
+
+    comments = issue_info.get("comments") or fields_data.get("comment", {}).get("comments", [])
+    prior_bounces = count_final_review_bounces(comments)
+    next_bounce = prior_bounces + 1
+
+    if next_bounce <= 3:
+        bounce_tag = f"[FINAL REVIEW (AGENT) — BOUNCE {next_bounce}/3]"
+        comment_body = report_text if bounce_tag in report_text else f"{bounce_tag}\n\n{report_text}"
+        add_comment(parent_key, comment_body, as_role=auditor_role)
+        norm_bounce_target = (bounce_target or "implementation").strip().lower()
+        transition_issue(parent_key, norm_bounce_target, as_role=auditor_role, config=config, h_config=h_config)
+        assign_issue(parent_key, "agent1", as_role=auditor_role)
+        print(f"FINAL_REVIEW_VERDICT: BOUNCE {next_bounce}/3 recorded on {parent_key} by {auditor_role} (returned to {bounce_target}, assigned to agent1).")
+        return f"BOUNCE_{next_bounce}"
+    else:
+        comment_body = report_text if FINAL_REVIEW_ESCALATED_TAG in report_text else f"{FINAL_REVIEW_ESCALATED_TAG}\n\n{report_text}"
+        add_comment(parent_key, comment_body, as_role=auditor_role)
+        transition_issue(parent_key, "final review (human)", as_role=auditor_role, config=config, h_config=h_config)
+        assign_issue(parent_key, "human", as_role=auditor_role)
+        print(f"FINAL_REVIEW_VERDICT: ESCALATED AFTER 3 BOUNCES on {parent_key} by {auditor_role} (moved to Final Review (Human), assigned to human).")
+        return "ESCALATED"
+
+
+
 def collect_sprint_metrics_for_id(sprint_id, sprint_name, board_id, as_role="coordinator", config=None, h_config=None):
     if config is None:
         config = load_env_config()
@@ -870,6 +994,21 @@ def main():
             print("Usage: jira_util.py gate-verdict <SUBTASK_KEY> <PASS|REVISION> <REPORT_OR_@FILE>", file=sys.stderr)
             sys.exit(1)
         gate_verdict(args[1], args[2], args[3], as_role=as_role)
+    elif cmd in ("final-review-verdict", "final_review_verdict"):
+        if len(args) < 4:
+            print("Usage: jira_util.py final-review-verdict <PARENT_KEY> <PASS|BOUNCE> <REPORT_OR_@FILE> [--bounce-target=...]", file=sys.stderr)
+            sys.exit(1)
+        b_target = "implementation"
+        idx = 4
+        while idx < len(args):
+            a = args[idx]
+            if a.startswith("--bounce-target="):
+                b_target = a.split("=", 1)[1]
+            elif a == "--bounce-target" and idx + 1 < len(args):
+                b_target = args[idx + 1]
+                idx += 1
+            idx += 1
+        final_review_verdict(args[1], args[2], args[3], bounce_target=b_target, role="agent2")
     elif cmd == "assign":
         if len(args) < 3:
             print("Usage: jira_util.py assign <KEY> <ROLE_OR_ACCOUNT>", file=sys.stderr)

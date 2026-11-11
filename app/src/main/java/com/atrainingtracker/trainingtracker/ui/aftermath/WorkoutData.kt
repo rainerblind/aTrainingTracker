@@ -105,6 +105,7 @@ data class WorkoutData(
     val description: String?,
     val goal: String?,
     val method: String?,
+    val calories: Int? = null,
 
     val stravaSportName: String?,
 
@@ -137,6 +138,10 @@ data class WorkoutData(
     val maxPowerToWeight: Double? = null,
     val variabilityIndex: Double? = null,
     val cardioPowerDynamics: CardioPowerDynamicsRecord? = null,
+    val radarTrafficSummary: RadarTrafficSummary? = null,
+    val dfaA1FreshBaseline: Double? = null,
+    val dfaA1LateMean: Double? = null,
+    val dfaA1DurabilityDriftPct: Double? = null,
 
     // --- 3. Heavy/Live Data ---
     val exportStatuses: List<ExportStatusGroupData> = emptyList(),

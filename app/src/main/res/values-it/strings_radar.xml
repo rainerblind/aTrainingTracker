@@ -48,6 +48,8 @@
     <string name="radar_simulator_stop">Interrompi simulazione</string>
     <string name="radar_simulator_running">Simulazione attiva</string>
     <string name="radar_simulator_idle">Simulazione interrotta</string>
+    <string name="radar_simulator_status">%1$s • %2$d bersagli</string>
+    <string name="radar_simulator_scenario_label">Scenario</string>
     <string name="radar_scenario_single_car">Singolo veicolo</string>
     <string name="radar_scenario_single_car_desc">Un veicolo in sorpasso a 12 m/s</string>
     <string name="radar_scenario_convoy">Convoglio</string>
@@ -72,6 +74,8 @@
     <string name="radar_overlay_disconnected">Radar disconnesso</string>
     <string name="radar_overlay_connecting">Connessione radar</string>
     <string name="radar_overlay_clear">Strada libera</string>
+    <string name="radar_overlay_threats_format">%1$d pericoli</string>
+    <string name="radar_overlay_threats_fast_format">%1$d pericoli (alta velocità)</string>
 
     <!-- Radar Audio & Haptic Alerts (ATT-5086 / REQ-TRK-063) -->
     <string name="radar_alerts_settings_title">Avvisi radar e audio</string>
@@ -85,7 +89,7 @@
     <string name="radar_alert_speaker_boost_desc">Aumenta temporaneamente il volume dell\'altoparlante per gli avvisi</string>
     <string name="radar_alert_route_title">Uscita audio</string>
     <string name="radar_alert_route_default">Sistema / Cuffie</string>
-    <string name="radar_alert_route_speaker">Forza altoparlante telefono</string>
+    <string name="radar_alert_route_speaker">Altoparlante telefono</string>
     <string name="radar_alert_haptic_title">Vibrazione aptica</string>
     <string name="radar_alert_haptic_desc">Vibra all\'avvicinamento di veicoli e ai cambi di minaccia</string>
 
@@ -99,6 +103,8 @@
     <string name="radar_light_mode_peloton">Gruppo</string>
     <string name="radar_light_auto_switch">Luce allenamento automatica</string>
     <string name="radar_light_auto_switch_desc">Accende la luce posteriore all\'avvio dell\'allenamento e la spegne al termine</string>
+    <string name="radar_smart_light_automation">Automazione intelligente luce</string>
+    <string name="radar_smart_light_automation_desc">Adatta la luce a luce diurna, gallerie, crepuscolo e traffico</string>
     <string name="radar_light_sheet_title">Luce posteriore radar</string>
     <string name="radar_light_stvzo_notice">Modalità StVZO (Lampeggio disattivato)</string>
 
@@ -131,4 +137,43 @@
     <string name="radar_preview_slow">Lento</string>
     <string name="radar_preview_fast">Pericolo rapido</string>
     <string name="radar_preview_lane_change">Cambio corsia</string>
+
+    <!-- Advanced Settings / Tuning Accordion Category (ATT-6702 / REQ-UI-512) -->
+    <string name="tuning_cat_cycling_radar">Radar per bici</string>
+
+    <!-- Post-Workout Traffic Analytics & Map Hotspots (ATT-5088 / REQ-RAD-005 / REQ-RAD-006) -->
+    <string name="radar_traffic_card_title">Riepilogo traffico radar</string>
+    <string name="radar_total_vehicles">Veicoli sorpassanti</string>
+    <string name="radar_traffic_density_km">Densità (veic/km)</string>
+    <string name="radar_traffic_density_hour">Densità (veic/h)</string>
+    <string name="radar_max_closing_speed">Velocità max di avvicinamento</string>
+    <string name="radar_max_vehicle_speed">Velocità max del veicolo</string>
+    <string name="radar_high_threat_passes">Sorpassi ad alto rischio</string>
+    <string name="radar_marker_pass_title">Sorpasso veicolo (%1$s km/h)</string>
+    <string name="radar_marker_high_threat_title">Sorpasso ad alto rischio (%1$s km/h)</string>
+
+    <!-- Riepilogo traffico radar e sorpassi ravvicinati Strava/Condivisione (ATT-5122 / REQ-RAD-007) -->
+    <string name="radar_strava_summary_title">Riepilogo traffico Strava</string>
+    <string name="radar_strava_summary_desc">Aggiungi conteggio sorpassi e velocità alla descrizione attività Strava</string>
+    <string name="radar_share_summary_title">Condividi riepilogo traffico</string>
+    <string name="radar_share_summary_desc">Includi conteggio veicoli e velocità nel testo condiviso</string>
+    <string name="radar_summary_header">📡 Radar: %1$d veicoli hanno sorpassato (%2$s/km)</string>
+    <string name="radar_summary_close_passes">⚠️ %1$d sorpassi ravvicinati (&lt;1,5m, min %2$sm)</string>
+    <string name="radar_summary_close_passes_singular">⚠️ 1 sorpasso ravvicinato (&lt;1,5m, min %1$sm)</string>
+    <string name="radar_summary_heavy_vehicles">🚛 %1$d veicoli pesanti</string>
+    <string name="radar_summary_heavy_vehicles_singular">🚛 1 veicolo pesante</string>
+    <string name="radar_summary_max_speed">🚀 Max %1$s km/h (+%2$s km/h avvicinamento)</string>
+    <string name="radar_summary_max_speed_simple">🚀 Max %1$s km/h</string>
+    <string name="radar_close_pass_threshold_title">Soglia sorpasso ravvicinato</string>
+    <string name="radar_close_pass_threshold_summary">Evidenzia i veicoli in sorpasso sotto la distanza minima di sicurezza sulla mappa</string>
+    <string name="radar_close_pass_threshold_1_0m">1,0 m (3,3 ft - UK/US)</string>
+    <string name="radar_close_pass_threshold_1_5m">1,5 m (5,0 ft - Urbano / StVO)</string>
+    <string name="radar_close_pass_threshold_2_0m">2,0 m (6,6 ft - Extraurbano)</string>
+    <string name="radar_marker_close_pass_title">⚠️ Sorpasso ravvicinato (%1$sm) • %2$s • %3$s km/h</string>
+    <string name="radar_vehicle_size_light">Veicolo leggero</string>
+    <string name="radar_vehicle_size_car">Auto</string>
+    <string name="radar_vehicle_size_truck">Mezzo pesante (Camion/Autobus)</string>
+    <string name="radar_min_passing_distance">Distanza minima laterale</string>
+    <string name="radar_close_pass_warning">⚠️ %1$d sorpassi ravvicinati (&lt;%2$sm)</string>
+    <string name="radar_heavy_vehicle_share">Mezzi pesanti</string>
 </resources>

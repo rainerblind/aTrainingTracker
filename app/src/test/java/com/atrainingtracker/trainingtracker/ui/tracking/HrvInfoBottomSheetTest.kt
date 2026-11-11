@@ -74,6 +74,8 @@ class HrvInfoBottomSheetTest {
             "hrv_info_trailing_lag_desc",
             "hrv_info_sensor_recommendation_title",
             "hrv_info_sensor_recommendation_desc",
+            "hrv_info_smoothed_warning_title",
+            "hrv_info_smoothed_warning_desc",
             "hrv_info_zones_title",
             "hrv_info_zones_desc",
             "hrv_info_disclaimer_title",

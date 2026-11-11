@@ -26,6 +26,7 @@ import com.atrainingtracker.trainingtracker.MyPreferenceManager
 import com.atrainingtracker.trainingtracker.database.WorkoutClusterRepository
 import com.atrainingtracker.trainingtracker.database.WorkoutSource
 import com.atrainingtracker.trainingtracker.repositories.KnownLocationsRepository
+import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
 import io.mockk.Runs
@@ -138,6 +139,10 @@ class WorkoutSummariesViewModelFilterTest {
         every { mockWorkoutRepo.allWorkouts } returns allWorkoutsFlow
         every { mockKnownLocationsRepo.locationsFlow } returns MutableStateFlow(emptyList())
         every { mockClusterRepo.allClusters } returns MutableStateFlow(emptyList())
+        val mockTuningDataStore = mockk<TuningPreferencesDataStore>(relaxed = true)
+        every { mockTuningDataStore.enableCardioPowerDynamicsFlow } returns flowOf(false)
+        TuningPreferencesDataStore.setInstanceForTesting(mockTuningDataStore)
+
         WorkoutRepository.resetForTesting(mockWorkoutRepo)
         KnownLocationsRepository.resetForTesting(mockKnownLocationsRepo)
         WorkoutClusterRepository.resetForTesting(mockClusterRepo)
@@ -147,6 +152,7 @@ class WorkoutSummariesViewModelFilterTest {
     fun tearDown() {
         Dispatchers.resetMain()
         ArchTaskExecutor.getInstance().setDelegate(null)
+        TuningPreferencesDataStore.setInstanceForTesting(null)
         WorkoutRepository.resetForTesting(null)
         KnownLocationsRepository.resetForTesting(null)
         WorkoutClusterRepository.resetForTesting(null)

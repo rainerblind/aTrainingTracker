@@ -75,6 +75,7 @@ class HrvReadinessCalculatorTest {
 
         assertEquals("SEATED readings must not leak into SUPINE baseline", 10, supineResult.n60d)
         assertEquals(ReadinessStatus.CALIBRATING, supineResult.status)
+        assertEquals(CalibrationProgressState.BASELINE_60D, supineResult.calibrationState)
         assertEquals(10, supineResult.calibrationDaysCount)
         assertEquals("Day 10 of 14 baseline calibration", supineResult.calibrationProgressMessage)
         assertNull(supineResult.mu60d)
@@ -267,7 +268,24 @@ class HrvReadinessCalculatorTest {
         assertEquals(22, result.n60d)
         assertEquals(2, result.n7d)
         assertEquals(ReadinessStatus.CALIBRATING, result.status)
+        assertEquals(CalibrationProgressState.WEEKLY_7D, result.calibrationState)
         assertEquals("Day 2 of 3 weekly readings", result.calibrationProgressMessage)
         assertNull(result.mu7d)
+    }
+
+    @Test
+    fun calibrationState_transitionsToCompleteWhenCalibrated() {
+        val targetDate = LocalDate.parse("2026-11-10")
+        val entries = mutableListOf<HrvReadinessEntry>()
+
+        for (i in 0 until 14) {
+            val dateStr = targetDate.minusDays(i.toLong()).toString()
+            entries.add(createEntry(dateStr, HrvPosture.SUPINE, 4.0))
+        }
+
+        val result = HrvReadinessCalculator.calculateReadiness("2026-11-10", HrvPosture.SUPINE, entries)
+        assertEquals(CalibrationProgressState.COMPLETE, result.calibrationState)
+        assertEquals(ReadinessStatus.OPTIMAL, result.status)
+        assertEquals("Calibration complete", result.calibrationProgressMessage)
     }
 }

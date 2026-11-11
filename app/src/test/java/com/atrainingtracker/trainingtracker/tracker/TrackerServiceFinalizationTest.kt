@@ -310,17 +310,15 @@ class TrackerServiceFinalizationTest {
         // Act: must not throw despite mBanalService == null, 0s active time, and exceptions in steps 4 & 5
         service.callFinalizeLiveSession()
 
-        // Assert 1: Map and streams were persisted in both DB and WorkoutRepository
+        // Assert 1: Map and streams were persisted via WorkoutRepository
         verify(exactly = 1) {
-            summariesManagerMock.updateMapAndStreams(
+            repositoryMock.updateMapAndStreams(
                 eq(workoutId),
                 match { it.isNotEmpty() },
                 match { it.isNotEmpty() },
                 match { it.isNotEmpty() }
             )
         }
-        verify(exactly = 1) { repositoryMock.setMapPolyline(eq(workoutId), match { it.isNotEmpty() }) }
-        verify(exactly = 1) { repositoryMock.setElevationStreams(eq(workoutId), match { it.isNotEmpty() }, match { it.isNotEmpty() }) }
 
         // Assert 2: Speed passed to resolveIdentity at 0s active time is 0.0 (finite, never NaN/Infinity)
         assertTrue(capturedSpeedSlot.isCaptured)
@@ -329,7 +327,7 @@ class TrackerServiceFinalizationTest {
 
         // Assert 3: Non-finite empty RunningStats (min=+Infinity, max=-Infinity) are never persisted to WorkoutExtrema
         verify(exactly = 0) {
-            summariesManagerMock.updateExtremaValue(
+            repositoryMock.updateExtremaValue(
                 eq(workoutId),
                 eq(SensorType.SPEED_mps),
                 eq(ExtremaType.MIN),
@@ -375,21 +373,20 @@ class TrackerServiceFinalizationTest {
             1
         }
 
+        val repositoryMock = mockk<WorkoutRepository>(relaxed = true)
+        every {
+            repositoryMock.saveAccumulatedSensorTypes(eq(workoutId), any())
+        } throws ConcurrentModificationException("Simulated concurrent sensor registration during stop")
+        setField("mWorkoutRepository", repositoryMock)
+
         val summariesManagerMock = mockk<WorkoutSummariesDatabaseManager>(relaxed = true)
         every { summariesManagerMock.database } returns dbMock
-        every {
-            summariesManagerMock.saveAccumulatedSensorTypes(eq(workoutId), any())
-        } throws ConcurrentModificationException("Simulated concurrent sensor registration during stop")
-
         mockkStatic(WorkoutSummariesDatabaseManager::class)
         every { WorkoutSummariesDatabaseManager.getInstance(any()) } returns summariesManagerMock
 
         val discoveryManagerMock = mockk<EquipmentAndSportTypeDiscoveryManager>(relaxed = true)
         mockkObject(EquipmentAndSportTypeDiscoveryManager.Companion)
         every { EquipmentAndSportTypeDiscoveryManager.getInstance(any()) } returns discoveryManagerMock
-
-        val repositoryMock = mockk<WorkoutRepository>(relaxed = true)
-        setField("mWorkoutRepository", repositoryMock)
 
         val liveSessionMock = mockk<LiveWorkoutSession>(relaxed = true)
         val trackPoints = listOf(LatLng(48.10, 11.50), LatLng(48.11, 11.51))
@@ -415,24 +412,19 @@ class TrackerServiceFinalizationTest {
 
         // Assert 1: FINISHED = 1 transaction committed BEFORE saveAccumulatedSensorTypes threw
         verifyOrder {
-            dbMock.beginTransaction()
-            dbMock.update(eq(WorkoutSummaries.TABLE), any(), eq("${WorkoutSummaries.C_ID}=$workoutId"), isNull())
-            dbMock.setTransactionSuccessful()
-            dbMock.endTransaction()
-            summariesManagerMock.saveAccumulatedSensorTypes(eq(workoutId), any())
+            repositoryMock.markWorkoutFinishedBlocking(workoutId)
+            repositoryMock.saveAccumulatedSensorTypes(eq(workoutId), any())
         }
 
         // Assert 2: Map and streams were still persisted in finalizeLiveSession()
         verify(exactly = 1) {
-            summariesManagerMock.updateMapAndStreams(
+            repositoryMock.updateMapAndStreams(
                 eq(workoutId),
                 match { it.isNotEmpty() },
                 match { it.isNotEmpty() },
                 match { it.isNotEmpty() }
             )
         }
-        verify(exactly = 1) { repositoryMock.setMapPolyline(eq(workoutId), match { it.isNotEmpty() }) }
-        verify(exactly = 1) { repositoryMock.setElevationStreams(eq(workoutId), match { it.isNotEmpty() }, match { it.isNotEmpty() }) }
     }
 
     /**
@@ -810,11 +802,8 @@ class TrackerServiceFinalizationTest {
         every { anyConstructed<Intent>().setPackage(any()) } answers { self as Intent }
         every { anyConstructed<Intent>().putExtra(any(), any<Long>()) } answers { self as Intent }
 
-        val summariesManagerMock = mockk<WorkoutSummariesDatabaseManager>(relaxed = true)
-        val mockDb = mockk<SQLiteDatabase>(relaxed = true)
-        every { summariesManagerMock.database } returns mockDb
-        mockkStatic(WorkoutSummariesDatabaseManager::class)
-        every { WorkoutSummariesDatabaseManager.getInstance(any()) } returns summariesManagerMock
+        val repositoryMock = mockk<WorkoutRepository>(relaxed = true)
+        setField("mWorkoutRepository", repositoryMock)
 
         val snapshot = TrackerService.BanalFinalizationSnapshot(
             4,
@@ -836,19 +825,14 @@ class TrackerServiceFinalizationTest {
         assertEquals(2000.0, service.savedLapDistance ?: 0.0, 1e-6)
         assertEquals(2000.0 / 300.0, service.savedLapSpeed ?: 0.0, 1e-6)
 
-        // Verify accumulated sensors saved from snapshot
+        // Verify accumulated sensors saved from snapshot via repository
         verify(exactly = 1) {
-            summariesManagerMock.saveAccumulatedSensorTypes(workoutId, setOf(SensorType.POWER))
+            repositoryMock.saveAccumulatedSensorTypes(workoutId, setOf(SensorType.POWER))
         }
 
-        // Verify FINISHED = 1 transaction executed
+        // Verify FINISHED = 1 executed via repository
         verify(atLeast = 1) {
-            mockDb.update(
-                eq(WorkoutSummaries.TABLE),
-                any(),
-                eq("${WorkoutSummaries.C_ID}=$workoutId"),
-                isNull()
-            )
+            repositoryMock.markWorkoutFinishedBlocking(workoutId)
         }
     }
 
@@ -879,10 +863,14 @@ class TrackerServiceFinalizationTest {
             executionOrder.add("unbindService")
         }
 
+        com.atrainingtracker.banalservice.devices.radar.RadarTrafficSimulator.start(com.atrainingtracker.banalservice.devices.radar.RadarScenario.SINGLE_CAR)
+        assertTrue(com.atrainingtracker.banalservice.devices.radar.RadarTrafficSimulator.isSimulating)
+
         realService.onDestroy()
 
         realService.finalizationFuture.get(3, java.util.concurrent.TimeUnit.SECONDS)
 
+        assertFalse("RadarTrafficSimulator must be stopped during onDestroy", com.atrainingtracker.banalservice.devices.radar.RadarTrafficSimulator.isSimulating)
         assertTrue("endWorkout must be called during onDestroy", realService.endWorkoutCalled)
         assertEquals("endWorkout must execute before unbindService", listOf("endWorkout", "unbindService"), executionOrder)
         assertTrue("unbindService must be called", realService.unbindServiceCalled)

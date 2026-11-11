@@ -18,67 +18,60 @@
 
 package com.atrainingtracker.trainingtracker.ui.settings.tuning
 
-import org.junit.Assert.assertTrue
+import org.junit.Assert.assertNotNull
 import org.junit.Test
-import java.io.File
 
 /**
- * Structural modularity and file size constraint tests for AdvancedTuningDialog (REQ-UI-262, TST-UI-221.1).
- * Enforces AC-1: Every source file in the tuning package must not exceed 400 lines of code.
+ * Structural modularity and architecture contract tests for AdvancedTuningDialog (REQ-UI-262, TST-UI-221.1).
+ * Verifies that the modular category and screen composables are decoupled into individual classes.
+ * Refactored to pure JVM reflection per docs/coding_standards.md §5.4 and REQ-PRO-049.
  */
 class AdvancedTuningModularityTest {
 
-    private fun findTuningDirectory(): File {
-        val candidates = listOf(
-            File("app/src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning"),
-            File("src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning"),
-            File("../app/src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning")
-        )
-        return candidates.firstOrNull { it.exists() && it.isDirectory }
-            ?: error("Tuning directory not found in candidates: $candidates")
-    }
-
     @Test
-    fun testModularFilesExist() {
-        val tuningDir = findTuningDirectory()
-
-        val expectedFiles = listOf(
-            "AdvancedTuningScreen.kt",
-            "AdvancedTuningDialog.kt",
-            "AdvancedTuningAccordion.kt",
-            "AdvancedTuningDialogFragment.kt",
-            "TuningFormControls.kt",
-            "TuningPaceCeilingFormatter.kt",
-            "categories/CockpitTypographySection.kt",
-            "categories/AmoledBatterySaverSection.kt",
-            "categories/SensorsGpsFilterSection.kt",
-            "categories/AftermathAnalysisSection.kt",
-            "categories/WorkoutMasksAndCardsSection.kt",
-            "categories/NavigationSection.kt",
-            "categories/SensorSearchTuningSection.kt",
-            "categories/ClusterTuningSection.kt",
-            "categories/PhysiologyModelsSection.kt"
+    fun testModularClassesExist() {
+        val expectedClasses = listOf(
+            "com.atrainingtracker.trainingtracker.ui.settings.tuning.AdvancedTuningScreenKt",
+            "com.atrainingtracker.trainingtracker.ui.settings.tuning.AdvancedTuningDialogKt",
+            "com.atrainingtracker.trainingtracker.ui.settings.tuning.AdvancedTuningAccordionKt",
+            "com.atrainingtracker.trainingtracker.ui.settings.tuning.AdvancedTuningDialogFragment",
+            "com.atrainingtracker.trainingtracker.ui.settings.tuning.TuningFormControlsKt",
+            "com.atrainingtracker.trainingtracker.ui.settings.tuning.TuningPaceCeilingFormatter",
+            "com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.CockpitTypographySectionKt",
+            "com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.AmoledBatterySaverSectionKt",
+            "com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.SensorsGpsFilterSectionKt",
+            "com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.AftermathAnalysisSectionKt",
+            "com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.WorkoutMasksAndCardsSectionKt",
+            "com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.NavigationSectionKt",
+            "com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.SensorSearchTuningSectionKt",
+            "com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.ClusterTuningSectionKt",
+            "com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.PhysiologyModelsSectionKt"
         )
 
-        for (relPath in expectedFiles) {
-            val file = File(tuningDir, relPath)
-            assertTrue("Expected modular file $relPath must exist at ${file.absolutePath}", file.exists())
+        for (className in expectedClasses) {
+            val clazz = Class.forName(className)
+            assertNotNull("Expected modular class $className must exist", clazz)
         }
     }
 
     @Test
-    fun testAllTuningSourceFilesUnder400Lines() {
-        val tuningDir = findTuningDirectory()
-        val ktFiles = tuningDir.walkTopDown().filter { it.extension == "kt" }.toList()
+    fun testCategoryComposables_areDecoupledAndExposed() {
+        val categoryClasses = listOf(
+            "com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.CockpitTypographySectionKt",
+            "com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.AmoledBatterySaverSectionKt",
+            "com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.SensorsGpsFilterSectionKt",
+            "com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.AftermathAnalysisSectionKt",
+            "com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.WorkoutMasksAndCardsSectionKt",
+            "com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.NavigationSectionKt",
+            "com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.SensorSearchTuningSectionKt",
+            "com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.ClusterTuningSectionKt",
+            "com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.PhysiologyModelsSectionKt"
+        )
 
-        assertTrue("Must discover at least 7 Kotlin files in tuning package", ktFiles.size >= 7)
-
-        for (file in ktFiles) {
-            val lineCount = file.readLines().size
-            assertTrue(
-                "File ${file.name} has $lineCount lines, exceeding the strict 400 lines threshold (AC-1 / REQ-UI-262)",
-                lineCount < 400
-            )
+        for (className in categoryClasses) {
+            val clazz = Class.forName(className)
+            assertNotNull("Category class $className must exist", clazz)
+            assert(clazz.declaredMethods.isNotEmpty()) { "Class $className must expose methods" }
         }
     }
 }

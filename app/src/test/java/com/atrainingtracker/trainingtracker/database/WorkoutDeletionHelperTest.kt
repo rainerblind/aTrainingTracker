@@ -20,31 +20,24 @@ package com.atrainingtracker.trainingtracker.database
 
 import android.content.Context
 import android.util.Log
-import com.atrainingtracker.trainingtracker.exporter.db.ExportStatusDatabaseManager
+import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkStatic
 import io.mockk.unmockkAll
 import io.mockk.verify
-import io.mockk.verifyOrder
 import org.junit.After
-import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 
 /**
- * Automated unit tests verifying bulk workout deletion, cascade database purge, and
- * forensic fileBaseName sequencing (REQ-DAT-010, TST-DAT-004, ATT-296).
+ * Automated unit tests verifying that WorkoutDeletionHelper delegates to WorkoutRepository (REQ-DAT-042.5).
  */
 class WorkoutDeletionHelperTest {
 
     private val mockContext = mockk<Context>(relaxed = true)
-    private val mockSummariesManager = mockk<WorkoutSummariesDatabaseManager>(relaxed = true)
-    private val mockLapsManager = mockk<LapsDatabaseManager>(relaxed = true)
-    private val mockSamplesManager = mockk<WorkoutSamplesDatabaseManager>(relaxed = true)
-    private val mockExportStatusRepo = mockk<ExportStatusDatabaseManager>(relaxed = true)
-    private val mockStravaUploadDbHelper = mockk<com.atrainingtracker.trainingtracker.exporter.db.StravaUploadDbHelper>(relaxed = true)
+    private val mockWorkoutRepository = mockk<WorkoutRepository>(relaxed = true)
 
     private lateinit var deletionHelper: WorkoutDeletionHelper
 
@@ -58,14 +51,7 @@ class WorkoutDeletionHelperTest {
 
         every { mockContext.applicationContext } returns mockContext
 
-        deletionHelper = WorkoutDeletionHelper(
-            mockContext,
-            mockSummariesManager,
-            mockLapsManager,
-            mockSamplesManager,
-            mockExportStatusRepo,
-            mockStravaUploadDbHelper
-        )
+        deletionHelper = WorkoutDeletionHelper(mockContext, mockWorkoutRepository)
     }
 
     @After
@@ -74,160 +60,45 @@ class WorkoutDeletionHelperTest {
     }
 
     /**
-     * Verifies that getBaseFileName is queried BEFORE deleting the summary record,
-     * ensuring high-frequency sample tables, export statuses, and Strava records are dropped and not orphaned.
+     * Verifies that deleteWorkout delegates to WorkoutRepository.deleteWorkoutCascade.
      */
     @Test
-    fun testDeleteWorkout_queriesBaseFileNameBeforeDroppingSummary_dropsSampleAndExportTables() {
+    fun testDeleteWorkout_delegatesToWorkoutRepositoryCascade() {
         val workoutId = 123L
-        val baseFileName = "2026_09_07_123"
-
-        every { mockSummariesManager.getBaseFileName(workoutId) } returns baseFileName
-        every { mockSummariesManager.deleteWorkout(workoutId) } returns true
+        every { mockWorkoutRepository.deleteWorkoutCascade(workoutId) } returns true
 
         val success = deletionHelper.deleteWorkout(workoutId)
 
         assertTrue("deleteWorkout should return true", success)
-
-        // Verify strict execution ordering: getBaseFileName MUST precede deleteWorkout on summaries manager
-        verifyOrder {
-            mockSummariesManager.getBaseFileName(workoutId)
-            mockSummariesManager.deleteWorkout(workoutId)
-            mockLapsManager.deleteWorkout(workoutId)
-            mockSamplesManager.deleteWorkout(baseFileName)
-            mockExportStatusRepo.deleteWorkout(baseFileName)
-            mockStravaUploadDbHelper.deleteWorkout(baseFileName)
-        }
+        verify(exactly = 1) { mockWorkoutRepository.deleteWorkoutCascade(workoutId) }
     }
 
     /**
-     * Verifies that deleteWorkout handles missing baseFileName gracefully without throwing exceptions.
+     * Verifies that deleteOldWorkouts delegates to WorkoutRepository.deleteOldWorkoutsCascade.
      */
     @Test
-    fun testDeleteWorkout_nullBaseFileName_doesNotCrash() {
-        val workoutId = 456L
+    fun testDeleteOldWorkouts_delegatesToWorkoutRepositoryCascade() {
+        val daysToKeep = 365
+        every { mockWorkoutRepository.deleteOldWorkoutsCascade(eq(daysToKeep), any()) } returns true
 
-        every { mockSummariesManager.getBaseFileName(workoutId) } returns null
-        every { mockSummariesManager.deleteWorkout(workoutId) } returns true
-
-        val success = deletionHelper.deleteWorkout(workoutId)
+        val success = deletionHelper.deleteOldWorkouts(daysToKeep) { }
 
         assertTrue(success)
-        verify { mockSummariesManager.deleteWorkout(workoutId) }
-        verify { mockLapsManager.deleteWorkout(workoutId) }
-        verify(exactly = 0) { mockSamplesManager.deleteWorkout(any()) }
-        verify(exactly = 0) { mockExportStatusRepo.deleteWorkout(any()) }
-        verify(exactly = 0) { mockStravaUploadDbHelper.deleteWorkout(any()) }
+        verify(exactly = 1) { mockWorkoutRepository.deleteOldWorkoutsCascade(eq(daysToKeep), any()) }
     }
 
     /**
-     * Verifies that deleteOldWorkouts queries matching old workout IDs, invokes progressCallback
-     * for each session, and completely purges all related tables.
+     * Verifies that deleteOldWorkouts with DeletionProgressCallback delegates properly.
      */
     @Test
-    fun testDeleteOldWorkouts_iteratesAndPurgesAllMatchingSessions() {
-        val daysToKeep = 365
-        val oldIds = listOf(101L, 102L)
-
-        mockkStatic(WorkoutSummariesDatabaseManager::class)
-        every { WorkoutSummariesDatabaseManager.getInstance(mockContext) } returns mockSummariesManager
-        every { mockSummariesManager.getOldWorkouts(daysToKeep) } returns oldIds
-
-        every { mockSummariesManager.getBaseFileName(101L) } returns "file_101"
-        every { mockSummariesManager.getBaseFileName(102L) } returns "file_102"
-        every { mockSummariesManager.deleteWorkout(any()) } returns true
-
-        val reportedProgressIds = mutableListOf<Long>()
-        val success = deletionHelper.deleteOldWorkouts(daysToKeep) { reportedId ->
-            reportedProgressIds.add(reportedId)
-        }
-
-        assertTrue(success)
-        assertEquals("Both old workout IDs should be reported via progressCallback", listOf(101L, 102L), reportedProgressIds)
-
-        // Verify both workouts were purged across summaries, laps, samples, export status, and Strava DB
-        verify(exactly = 1) { mockSummariesManager.deleteWorkout(101L) }
-        verify(exactly = 1) { mockSummariesManager.deleteWorkout(102L) }
-        verify(exactly = 1) { mockSamplesManager.deleteWorkout("file_101") }
-        verify(exactly = 1) { mockSamplesManager.deleteWorkout("file_102") }
-        verify(exactly = 1) { mockExportStatusRepo.deleteWorkout("file_101") }
-        verify(exactly = 1) { mockExportStatusRepo.deleteWorkout("file_102") }
-        verify(exactly = 1) { mockStravaUploadDbHelper.deleteWorkout("file_101") }
-        verify(exactly = 1) { mockStravaUploadDbHelper.deleteWorkout("file_102") }
-    }
-
-    /**
-     * Verifies that deleteOldWorkouts performs zero deletion operations when no sessions exceed threshold.
-     */
-    @Test
-    fun testDeleteOldWorkouts_emptyOldWorkouts_noDeletions() {
-        val daysToKeep = 365
-
-        mockkStatic(WorkoutSummariesDatabaseManager::class)
-        every { WorkoutSummariesDatabaseManager.getInstance(mockContext) } returns mockSummariesManager
-        every { mockSummariesManager.getOldWorkouts(daysToKeep) } returns emptyList()
-
-        var callbackInvoked = false
-        val success = deletionHelper.deleteOldWorkouts(daysToKeep) {
-            callbackInvoked = true
-        }
-
-        assertTrue(success)
-        assertTrue("Callback should not be invoked when list is empty", !callbackInvoked)
-        verify(exactly = 0) { mockSummariesManager.deleteWorkout(any()) }
-        verify(exactly = 0) { mockSamplesManager.deleteWorkout(any()) }
-    }
-
-    /**
-     * Verifies that deleteOldWorkouts with DeletionProgressCallback reports accurate 1-based index and total.
-     */
-    @Test
-    fun testDeleteOldWorkouts_withDeletionProgressCallback_reportsCurrentAndTotal() {
-        val daysToKeep = 365
-        val oldIds = listOf(201L, 202L, 203L)
-
-        every { mockSummariesManager.getOldWorkouts(daysToKeep) } returns oldIds
-        every { mockSummariesManager.getBaseFileName(any()) } returns "file_x"
-        every { mockSummariesManager.deleteWorkout(any()) } returns true
-
-        val progressReports = mutableListOf<Triple<Int, Int, Long>>()
-        val callback = WorkoutDeletionHelper.DeletionProgressCallback { current, total, workoutId ->
-            progressReports.add(Triple(current, total, workoutId))
-        }
+    fun testDeleteOldWorkouts_withDeletionProgressCallback_delegatesToRepository() {
+        val daysToKeep = 30
+        val callback = WorkoutDeletionHelper.DeletionProgressCallback { _, _, _ -> }
+        every { mockWorkoutRepository.deleteOldWorkoutsCascade(daysToKeep, callback) } returns true
 
         val success = deletionHelper.deleteOldWorkouts(daysToKeep, callback)
 
         assertTrue(success)
-        assertEquals(3, progressReports.size)
-        assertEquals(Triple(1, 3, 201L), progressReports[0])
-        assertEquals(Triple(2, 3, 202L), progressReports[1])
-        assertEquals(Triple(3, 3, 203L), progressReports[2])
-    }
-
-    /**
-     * TST-DAT-024.8: Verifies that deleteWorkout handles null, blank, or "null" fileBaseName safely
-     * without throwing exceptions and cancels active WorkManager tasks for valid base names.
-     */
-    @Test
-    fun testWorkoutDeletionHelper_invalidBaseName_safe_TST_DAT_024_8() {
-        val invalidBaseNames = listOf(null, "", "   ", "null", "NULL")
-
-        for ((index, invalidName) in invalidBaseNames.withIndex()) {
-            val workoutId = 1000L + index
-            every { mockSummariesManager.getBaseFileName(workoutId) } returns invalidName
-            every { mockSummariesManager.deleteWorkout(workoutId) } returns true
-            every { mockLapsManager.deleteWorkout(workoutId) } returns Unit
-
-            // Must complete cleanly without throwing IllegalArgumentException
-            val result = deletionHelper.deleteWorkout(workoutId)
-            assertTrue(result)
-
-            verify(exactly = 1) { mockSummariesManager.deleteWorkout(workoutId) }
-            verify(exactly = 1) { mockLapsManager.deleteWorkout(workoutId) }
-        }
-
-        // Verify zero samples / export repo deletes occurred for invalid names
-        verify(exactly = 0) { mockSamplesManager.deleteWorkout(any()) }
-        verify(exactly = 0) { mockExportStatusRepo.deleteWorkout(any()) }
+        verify(exactly = 1) { mockWorkoutRepository.deleteOldWorkoutsCascade(daysToKeep, callback) }
     }
 }

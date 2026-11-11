@@ -2068,10 +2068,12 @@
 - **Target Release**: `V5.0.0`
 - **Requirement(s)**: `REQ-DAT-039`
 - **Component**: `WorkoutClusterEngine.kt`, `WorkoutClusterRepository.kt`, `LegacyImportEngine.kt`, `WorkoutDataMapper.kt`, `WorkoutClusterApexMigrationTest.kt`
-- **Jira**: `ATT-6319`
+- **Jira**: `ATT-6319`, `ATT-6686`
 - **Test Description**:
-  1. *Database Self-Healing Apex Migration Contract Test (`TST-DAT-035.1`)*:
-  • Verify in `WorkoutClusterApexMigrationTest.kt` that `healLegacyPointToPointApexes()` recomputes degenerated apex coordinates ($P_{\text{apex}} \approx P_{\text{end}}$) for point-to-point routes ($d \ge 150\text{ m}$) while leaving closed-loop routes ($d < 150\text{ m}$) unmodified.
+  1. *Database Self-Healing Apex Migration v2 Contract Test (`TST-DAT-035.1`, `WorkoutClusterApexMigrationTest.kt`)*:
+  • Verify in `WorkoutClusterApexMigrationTest.kt` that `healLegacyPointToPointApexes()` recomputes degenerated apex coordinates ($P_{\text{apex}} \approx P_{\text{end}}$ or delta > 25m) for point-to-point routes ($d \ge 150\text{ m}$) while leaving closed-loop routes ($d < 150\text{ m}$) unmodified.
+  • Verify that workouts with terminal overshoots $\ge 50\text{ m}$ are no longer skipped.
+  • Verify that `SP_KEY_LAST_APEX_REPAIR = "last_apex_repair_v2"` executes when stored value `< 2` and persists `2`.
   • Verify that cluster centroids (`maxDispLat`, `maxDispLng`) are updated to reflect the healed member workout apexes.
   2. *Legacy Import Pipeline Unification Test (`TST-DAT-035.2`)*:
   • Verify in `LegacyImportEngineTest` / `WorkoutClusterApexMigrationTest` that `LegacyImportEngine` calculates apex coordinates via `findApexFromPoints(start, points, end)` and passes `workoutPolyline` to `suggestCluster`.
@@ -2083,26 +2085,30 @@
 ### TST-DAT-036: **TCX Structured DTO Serialization, Parsing Decoupling & Round-Trip Verification Suite** [Verified]
 - **Target Release**: `V5.0.0`
 - **Requirement(s)**: `REQ-DAT-040`
-- **Component**: `TcxDocument.kt`, `TcxSerializer.kt`, `TcxParser.kt`, `TCXFileWriter.java`, `TcxWorkoutParser.kt`, `TCXRoundTripTest.kt`
-- **Jira**: `ATT-938`
+- **Component**: `TcxDocument.kt`, `TcxSerializer.kt`, `TcxParser.kt`, `TCXFileWriter.java`, `TcxWorkoutParser.kt`, `TCXRoundTripTest.kt`, `TcxTrackpointParser.kt`
+- **Jira**: `ATT-938`, `ATT-6693`, `ATT-6694`
 - **Test Description**:
   1. *TCX DTO Serialization & Schema Compliance Contract Test (`TST-DAT-036.1`, `TcxSerializerTest.kt`)*:
   • Serialize a complete synthetic `TcxDocument` containing multi-lap data, TPX sensor extensions, and XML special characters (`&`, `<`, `>`, `"`, `'`).
   • Verify XML structure against Garmin TCX v2 sequence rules (`Id` -> `Lap`* -> `Notes`? -> `Creator`? -> `Extensions`? -> `Author`?).
+  • Verify incremental streaming writer API (`startDocument`, `startActivity`, `startLap`, `writeTrackpoint`, `endLap`, `endActivity`, `endDocument`) yields identical schema-compliant XML without buffering samples in memory.
   • Verify `<Cadence>`, `<Watts>`, and `<RunCadence>` contain integer values only.
   2. *TCX DTO Streaming Parser Decoupling Test (`TST-DAT-036.2`, `TcxParserTest.kt`)*:
   • Parse valid Garmin TCX v2 and legacy `aTrainingTracker` TCX streams into `TcxDocument`.
+  • Verify parsing of `<Courses>`, `<Course>`, and `<CoursePoint>` blocks into strongly typed DTOs.
   • Verify correct extraction of `att:ActivityExtension`, `att:LapExtension`, and bracketed workout name/description fallbacks.
   • Assert graceful handling of missing optional elements (no HR, no cadence, no GPS).
-  3. *Bidirectional TCX Export-Import Round-Trip Verification (`TST-DAT-036.3`, `TCXRoundTripTest.kt`)*:
-  • Export synthetic workouts across sport types (Running, Biking) with multiple laps and dense trackpoints to TCX via `TcxSerializer`.
+  3. *Bidirectional TCX Export-Import Round-Trip Verification (`TST-DAT-036.3`, `TCXRoundTripTest.kt`, `TrackpointXmlParserTest.kt`)*:
+  • Export synthetic workouts across sport types (Running, Biking) with multiple laps and dense trackpoints to TCX via `TcxSerializer` and `TCXFileWriter`.
   • Re-parse the generated TCX via `TcxWorkoutParser` / `TcxParser`.
-  • Assert 1:1 parity for workout name, notes, lap split timestamps, lap statistics, and trackpoint streams.
+  • Assert 1:1 parity for workout name, notes, lap split timestamps, lap statistics, trackpoint streams, courses, and waypoints.
+  • Specifically verify that workouts with custom name and empty description round-trip with workoutNotes as null (no leaking raw bracketed [WorkoutName]), description-only workouts round-trip correctly, laps with custom names preserve empty notes, and short unbracketed third-party notes parse into notes without leaking into name.
+  • Verify `TcxTrackpointParser` backward compatibility when delegating to `TcxParser` across existing course and activity tests (`TrackpointXmlParserTest.kt`).
   4. *Existing Exporter & Parser Regression Suite (`TST-DAT-036.4`)*:
   • Run `TCXFileWriterWorkoutNameTest`, `TCXFileWriterLapTest`, and `TcxWorkoutParserTest`.
   • Verify 100% backward compatibility with existing tests.
   5. *Tier 1 Targeted Unit Test Regression (`TST-DAT-036.5`)*:
-  • Execute targeted test suite (`--tests "com.atrainingtracker.trainingtracker.tcx.*" --tests "com.atrainingtracker.trainingtracker.exporter.*" --tests "com.atrainingtracker.trainingtracker.migration.*" --tests "com.atrainingtracker.trainingtracker.build.*"`).
+  • Execute targeted test suite (`--tests "com.atrainingtracker.trainingtracker.tcx.*" --tests "com.atrainingtracker.trainingtracker.exporter.*" --tests "com.atrainingtracker.trainingtracker.migration.*" --tests "com.atrainingtracker.trainingtracker.routes.*"`).
   • Assert 100% pass rate.
 
 ### TST-DAT-037: **Repository-Only Engine, Exporter & Migration Layer Verification Suite** [Verified]
@@ -2122,6 +2128,55 @@
   4. *Tier 1 Targeted Unit Test Regression (`TST-DAT-037.4`)*:
   • Execute targeted test suite (`--tests "com.atrainingtracker.trainingtracker.database.*" --tests "com.atrainingtracker.trainingtracker.exporter.*" --tests "com.atrainingtracker.trainingtracker.migration.*" --tests "com.atrainingtracker.trainingtracker.tcx.*"`).
   • Assert 100% pass rate.
+
+### TST-DAT-038: **True Repository Encapsulation & SQLite Decoupling Verification Suite** [Verified]
+- **Target Release**: `V5.0.0`
+- **Requirement(s)**: `REQ-DAT-042`
+- **Component**: `WorkoutRepository.kt`, `WorkoutClusterRepository.kt`, `ExportStatusRepository.kt`, `RoutesRepository.kt`, `FitFileWriter.java`, `TCXFileWriter.java`, `BaseFileWriter.java`, `LegacyImportEngine.kt`, `WorkoutDeletionHelper.java`, `StravaUploader.kt`, `WorkoutClusterEngine.kt`, `RepositoryEngineCleanlinessContractTest.kt`
+- **Jira**: `ATT-6698`
+- **Test Description**:
+  1. *Repository Reflection Encapsulation Test (`TST-DAT-038.1`, `RepositoryEngineCleanlinessContractTest.kt`)*:
+  • Reflectively inspect all public and internal methods of `WorkoutRepository`, `WorkoutClusterRepository`, `ExportStatusRepository`, and `RoutesRepository`.
+  • Assert that zero public methods return `android.database.Cursor`, `android.database.sqlite.SQLiteDatabase`, or any `*DatabaseManager` class.
+  2. *Phase B AST Cleanliness & Cursor Import Prohibition Test (`TST-DAT-038.2`, `RepositoryEngineCleanlinessContractTest.kt`)*:
+  • Inspect source AST / import statements of `FitFileWriter.java`, `TCXFileWriter.java`, `BaseFileWriter.java`, `LegacyImportEngine.kt`, `WorkoutDeletionHelper.java`, `StravaUploader.kt`, and `WorkoutClusterEngine.kt`.
+  • Assert zero occurrences of `*DatabaseManager.getInstance(...)` and zero imports of `android.database.Cursor` or `*DatabaseManager`.
+  3. *Memory-Bounded Sample Streaming Exporter Test (`TST-DAT-038.3`)*:
+  • Run `FitFileWriterTest` and `TCXRoundTripTest` on synthetic workouts.
+  • Verify that samples are streamed row-by-row via domain callbacks and that output FIT and TCX files match expected binary/XML outputs bit-for-bit.
+  4. *Transactional Legacy Import Atomicity Test (`TST-DAT-038.4`)*:
+  • Run `LegacyImportEngineTest`.
+  • Verify multi-table atomic persistence of workout summaries, samples, and laps via repository methods, and verify compensatory rollback on simulated I/O errors.
+  5. *Encapsulated Cascade Deletion Parity Test (`TST-DAT-038.5`)*:
+  • Run `WorkoutDeletionHelperTest` and repository deletion tests.
+  • Verify complete cascade deletion (sample table dropped, laps deleted, export status wiped, summaries removed) with identical order and WorkManager cancellation.
+  6. *Tier 1 Targeted Unit Test Regression (`TST-DAT-038.6`)*:
+  • Execute targeted test suite (`--tests "com.atrainingtracker.trainingtracker.ui.RepositoryEngineCleanlinessContractTest" --tests "com.atrainingtracker.trainingtracker.database.*" --tests "com.atrainingtracker.trainingtracker.exporter.*" --tests "com.atrainingtracker.trainingtracker.migration.*" --tests "com.atrainingtracker.trainingtracker.tcx.*"`).
+  • Assert 100% pass rate.
+
+### TST-EXP-042: **Garmin FIT Radar Threat Event & Developer Field Encoding Test** [Verified]
+- **Requirement(s)**: `REQ-EXP-042`
+- **Component**: `FitFileWriter.java`, `FitFileWriterRadarTest.kt`
+- **Jira**: `ATT-5088`
+- **Test Description**:
+  1. *Native FIT Radar Threat Event Test*: Export synthetic workout containing overtaking vehicle passes ($\Delta \text{RADAR\_VEHICLE\_COUNT} > 0$); decode output using Garmin FIT SDK `FitDecoder`; assert emission of `EventMesg` (`Event.RADAR_THREAT_ALERT`, `EventType.MARKER`) with matching threat count, threat level, and approach speed.
+  2. *MyBikeTraffic Developer Field Encoding Test*: Assert that `FitFileWriter` defines and serializes developer fields (`radar_current`, `radar_total`, `passing_speed`, `passing_speed_abs`) on `RecordMesg` according to FIT Protocol V2.0 specifications.
+  3. *Non-Radar Invariant Test*: Verify workouts without radar data export standard FIT files without developer fields or radar event overhead.
+
+### TST-RAD-007: **Radar Traffic & Close-Pass Strava Description & Share Summary Test** [Verified]
+- **Requirement(s)**: `REQ-RAD-007`
+- **Component**: `RadarTrafficSummaryFormatter.kt`, `StravaUploader.kt`, `ShareUtils.kt`, `RadarTrafficSummaryFormatterTest.kt`, `StravaUploaderRadarSummaryTest.kt`
+- **Jira**: `ATT-5122`
+- **Test Description**:
+  1. *Standard Radar Summary Formatter Test (`RadarTrafficSummaryFormatterTest.kt`)*: Verify that given a `RadarTrafficSummary` with vehicle count, density, and approach speed, `RadarTrafficSummaryFormatter.format()` outputs the standardized single-line string with expected emoji badges and locale number formats across all 9 supported app languages.
+  2. *High-Resolution V2 Close-Pass & Heavy Vehicle Summary Test (`RadarTrafficSummaryFormatterTest.kt`)*: Verify formatting with close-pass counts (`closePassCount > 0`, minimum distance) and heavy vehicle counts (`heavyVehicleCount > 0`), including singular and plural localization rules.
+  3. *Zero-Vehicle & Disabled Preference Suppression Test (`RadarTrafficSummaryFormatterTest.kt`)*: Verify null return when total vehicles is 0 or summary is null.
+  4. *Strava Uploader Description Append & Non-Destructive Update Test (`StravaUploaderRadarSummaryTest.kt`)*: Verify that `StravaUploader.doUpdate()` correctly appends the formatted summary line when `uploadStravaRadarSummary` is enabled, preserves existing user notes without overwriting, and avoids double-appending if the summary line is already present.
+  5. *Workout Share Intent Text Test (`ShareUtilsTest.kt`)*: Verify that `Intent.EXTRA_TEXT` is populated with the formatted radar summary line when sharing a workout.
+  6. *9-Language Translation Parity Audit (`TranslationParityTest.kt`)*: Verify 100% presence and argument-specifier parity for all `radar_summary_*` and `radar_strava_*` strings across all 9 localized `strings_radar.xml` files.
+
+
+
 
 
 

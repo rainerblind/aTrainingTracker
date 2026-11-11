@@ -46,8 +46,11 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
+import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.banalservice.sensor.SensorCategory
+import com.atrainingtracker.banalservice.sensor.SensorSubCategory
 import com.atrainingtracker.banalservice.sensor.SensorType
+import com.atrainingtracker.trainingtracker.ui.tracking.TrackingViewsRepository
 import com.atrainingtracker.trainingtracker.MyHelper
 import com.atrainingtracker.trainingtracker.MyUnits
 import com.atrainingtracker.trainingtracker.TrainingApplication
@@ -58,8 +61,39 @@ import com.atrainingtracker.trainingtracker.ui.settings.AthleteWeightDialog
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 import com.atrainingtracker.trainingtracker.ui.theme.safePainterResource
 import com.atrainingtracker.trainingtracker.ui.tracking.getDisplayName
+import kotlin.math.roundToInt
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+
+/**
+ * Discrete duration options for sparkline time horizon selection in the edit dialog (REQ-TRK-059.3, ATT-1294, ATT-6690).
+ */
+val SPARKLINE_HORIZONS = listOf(
+    60 to R.string.graph_horizon_1m,
+    120 to R.string.graph_horizon_2m,
+    300 to R.string.graph_horizon_5m,
+    600 to R.string.graph_horizon_10m,
+    1200 to R.string.graph_horizon_20m,
+    3600 to R.string.graph_horizon_1h,
+    0 to R.string.graph_horizon_full
+)
+
+/**
+ * Maps a duration in seconds to its corresponding discrete slider step index 0..6 (ATT-6690).
+ * Defaults to index 2 (300s / 5m) if unknown.
+ */
+fun durationSecondsToSliderIndex(seconds: Int): Int {
+    val idx = SPARKLINE_HORIZONS.indexOfFirst { it.first == seconds }
+    return if (idx >= 0) idx else 2 // Default to 5 min
+}
+
+/**
+ * Maps a discrete slider step index 0..6 to its duration in seconds (ATT-6690).
+ */
+fun sliderIndexToDurationSeconds(index: Int): Int {
+    val clamped = index.coerceIn(0, SPARKLINE_HORIZONS.lastIndex)
+    return SPARKLINE_HORIZONS[clamped].first
+}
 
 /**
  * Pure search filter helper for matching [SensorType] items in [SensorTypeSelectorSection]
@@ -128,6 +162,7 @@ fun EditSensorFieldDialog(
             SensorTypeSelectorSection(
                 availableSensorTypes = availableSensorTypes,
                 selectedSensorType = uiState.selectedSensorType,
+                sportType = uiState.sportType,
                 onSensorTypeSelected = { newSensorType ->
                     viewModel.onSensorTypeChanged(newSensorType)
                 }
@@ -199,36 +234,55 @@ fun EditSensorFieldDialog(
                 Spacer(Modifier.height(16.dp))
             }
 
-            // --- Sparkline Time Horizon Selection (REQ-TRK-059, ATT-1294) ---
+            // --- Sparkline Time Horizon Selection (REQ-TRK-059.3, ATT-1294, ATT-6690) ---
             if (uiState.isGraphSupported && uiState.showGraph) {
-                Text(
-                    text = stringResource(R.string.sensor_field_graph_horizon),
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                val currentHorizonIndex = durationSecondsToSliderIndex(uiState.graphHorizonSeconds)
+                val activeHorizonLabelResId = SPARKLINE_HORIZONS[currentHorizonIndex].second
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = stringResource(R.string.sensor_field_graph_horizon),
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        text = stringResource(activeHorizonLabelResId),
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+                Spacer(Modifier.height(4.dp))
+                Slider(
+                    value = currentHorizonIndex.toFloat(),
+                    onValueChange = { floatValue ->
+                        val snappedIndex = floatValue.roundToInt().coerceIn(0, SPARKLINE_HORIZONS.lastIndex)
+                        if (snappedIndex != currentHorizonIndex) {
+                            viewModel.onGraphHorizonChanged(sliderIndexToDurationSeconds(snappedIndex))
+                        }
+                    },
+                    valueRange = 0f..6f,
+                    steps = 5,
                     modifier = Modifier.fillMaxWidth()
                 )
-                Spacer(Modifier.height(4.dp))
-                val horizons = listOf(
-                    60 to R.string.graph_horizon_1m,
-                    120 to R.string.graph_horizon_2m,
-                    300 to R.string.graph_horizon_5m,
-                    600 to R.string.graph_horizon_10m,
-                    1200 to R.string.graph_horizon_20m,
-                    3600 to R.string.graph_horizon_1h,
-                    0 to R.string.graph_horizon_full
-                )
-                FlowRow(
+                Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                    horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    horizons.forEach { (durationSeconds, labelResId) ->
-                        FilterChip(
-                            selected = (uiState.graphHorizonSeconds == durationSeconds),
-                            onClick = { viewModel.onGraphHorizonChanged(durationSeconds) },
-                            label = { Text(stringResource(labelResId)) }
-                        )
-                    }
+                    Text(
+                        text = stringResource(R.string.graph_horizon_1m),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.outline
+                    )
+                    Text(
+                        text = stringResource(R.string.graph_horizon_full),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.outline
+                    )
                 }
                 Spacer(Modifier.height(16.dp))
             }
@@ -387,8 +441,18 @@ fun EditSensorFieldDialog(
                 Spacer(Modifier.height(8.dp))
 
                 if (showHrvInfo) {
+                    val tuningFlow = remember(context) {
+                        com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore
+                            .getInstance(context.applicationContext)
+                            .tuningConfigFlow
+                    }
+                    val tuning by tuningFlow.collectAsState(
+                        initial = com.atrainingtracker.trainingtracker.settings.TuningConfig()
+                    )
                     com.atrainingtracker.trainingtracker.ui.tracking.HrvInfoBottomSheet(
-                        onDismissRequest = { showHrvInfo = false }
+                        onDismissRequest = { showHrvInfo = false },
+                        dfaA1ThresholdT1 = tuning.dfaA1ThresholdT1,
+                        dfaA1ThresholdT2 = tuning.dfaA1ThresholdT2
                     )
                 }
             }
@@ -408,7 +472,8 @@ fun EditSensorFieldDialog(
 }
 
 /**
- * Categorized and searchable selector for [SensorType] values inside [EditSensorFieldDialog] (ATT-3852, REQ-UI-395).
+ * Categorized and searchable selector for [SensorType] values inside [EditSensorFieldDialog] (ATT-3852, ATT-6726, REQ-UI-395, REQ-TRK-070.4).
+ * Presents a 2-level accordion hierarchy (direct core metrics top + sub-category cards) and visual Bar/Graph capability badges.
  * Respects `AppModalBottomSheet` scroll constraints (`docs/design_guidelines.md` Section 3 & Section 5.8) by rendering
  * collapsible category accordions inside a non-scrollable [Column].
  */
@@ -418,12 +483,16 @@ fun SensorTypeSelectorSection(
     selectedSensorType: SensorType?,
     onSensorTypeSelected: (SensorType) -> Unit,
     modifier: Modifier = Modifier,
+    sportType: BSportType = BSportType.UNKNOWN,
     initiallyExpanded: Boolean = false
 ) {
     var isPickerExpanded by remember { mutableStateOf(initiallyExpanded) }
     var searchQuery by remember { mutableStateOf("") }
     var expandedCategories by remember(selectedSensorType) {
         mutableStateOf(setOfNotNull(selectedSensorType?.category))
+    }
+    var expandedSubCategories by remember(selectedSensorType) {
+        mutableStateOf(setOfNotNull(selectedSensorType?.subCategory))
     }
 
     Column(modifier = modifier.fillMaxWidth()) {
@@ -463,11 +532,12 @@ fun SensorTypeSelectorSection(
                     }
                     Column(modifier = Modifier.weight(1f)) {
                         val categoryTitle = selectedSensorType?.category?.let { stringResource(it.titleResId) }
+                        val subCategoryTitle = selectedSensorType?.subCategory?.let { stringResource(it.titleResId) }
                         Text(
-                            text = if (categoryTitle != null) {
-                                "${stringResource(R.string.sensor)} • $categoryTitle"
-                            } else {
-                                stringResource(R.string.sensor)
+                            text = when {
+                                categoryTitle != null && subCategoryTitle != null -> "${stringResource(R.string.sensor)} • $categoryTitle • $subCategoryTitle"
+                                categoryTitle != null -> "${stringResource(R.string.sensor)} • $categoryTitle"
+                                else -> stringResource(R.string.sensor)
                             },
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.primary,
@@ -657,81 +727,104 @@ fun SensorTypeSelectorSection(
                                             .fillMaxWidth()
                                             .padding(vertical = 4.dp)
                                     ) {
-                                        categoryItems.forEach { sensorType ->
-                                            val isSelected = sensorType == selectedSensorType
-                                            val unitStr = unitTexts[sensorType].orEmpty()
+                                        val directItems = categoryItems.filter { it.subCategory == null }
+                                        val subCategoryGroups = categoryItems.filter { it.subCategory != null }
+                                            .groupBy { it.subCategory!! }
+
+                                        // 1. Direct core metrics at category top
+                                        directItems.forEach { sensorType ->
+                                            SensorTypeRow(
+                                                sensorType = sensorType,
+                                                isSelected = sensorType == selectedSensorType,
+                                                fullName = fullNames[sensorType].orEmpty(),
+                                                shortName = shortNames[sensorType].orEmpty(),
+                                                unitStr = unitTexts[sensorType].orEmpty(),
+                                                sportType = sportType,
+                                                onSelected = {
+                                                    onSensorTypeSelected(sensorType)
+                                                    isPickerExpanded = false
+                                                    searchQuery = ""
+                                                }
+                                            )
+                                        }
+
+                                        // 2. Sub-categories as collapsible cards
+                                        subCategoryGroups.forEach { (subCategory, subItems) ->
+                                            val isSubExpanded = isSearching || expandedSubCategories.contains(subCategory)
+                                            val containsSubSelected = subItems.any { it == selectedSensorType }
+
                                             Surface(
-                                                color = if (isSelected) {
-                                                    MaterialTheme.colorScheme.secondaryContainer
-                                                } else {
-                                                    MaterialTheme.colorScheme.surfaceContainerLow
-                                                },
+                                                shape = RoundedCornerShape(8.dp),
+                                                color = MaterialTheme.colorScheme.surfaceContainer,
+                                                border = BorderStroke(
+                                                    width = 0.5.dp,
+                                                    color = if (containsSubSelected) {
+                                                        MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
+                                                    } else {
+                                                        MaterialTheme.colorScheme.outlineVariant
+                                                    }
+                                                ),
                                                 modifier = Modifier
                                                     .fillMaxWidth()
-                                                    .clickable {
-                                                        onSensorTypeSelected(sensorType)
-                                                        isPickerExpanded = false
-                                                        searchQuery = ""
-                                                    }
+                                                    .padding(horizontal = 8.dp, vertical = 4.dp)
                                             ) {
-                                                Row(
-                                                    modifier = Modifier
-                                                        .fillMaxWidth()
-                                                        .padding(horizontal = 12.dp, vertical = 8.dp),
-                                                    verticalAlignment = Alignment.CenterVertically,
-                                                    horizontalArrangement = Arrangement.SpaceBetween
-                                                ) {
-                                                    Column(modifier = Modifier.weight(1f)) {
+                                                Column(modifier = Modifier.fillMaxWidth()) {
+                                                    Row(
+                                                        modifier = Modifier
+                                                            .fillMaxWidth()
+                                                            .clickable {
+                                                                expandedSubCategories = if (expandedSubCategories.contains(subCategory)) {
+                                                                    expandedSubCategories - subCategory
+                                                                } else {
+                                                                    expandedSubCategories + subCategory
+                                                                }
+                                                            }
+                                                            .padding(horizontal = 12.dp, vertical = 8.dp),
+                                                        verticalAlignment = Alignment.CenterVertically,
+                                                        horizontalArrangement = Arrangement.SpaceBetween
+                                                    ) {
                                                         Text(
-                                                            text = fullNames[sensorType].orEmpty(),
-                                                            style = MaterialTheme.typography.bodyMedium,
-                                                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                                                            color = if (isSelected) {
-                                                                MaterialTheme.colorScheme.onSecondaryContainer
+                                                            text = "${stringResource(subCategory.titleResId)} (${subItems.size})",
+                                                            style = MaterialTheme.typography.bodySmall,
+                                                            fontWeight = if (containsSubSelected) FontWeight.Bold else FontWeight.SemiBold,
+                                                            color = if (containsSubSelected) {
+                                                                MaterialTheme.colorScheme.primary
                                                             } else {
                                                                 MaterialTheme.colorScheme.onSurface
                                                             },
                                                             maxLines = 1,
-                                                            overflow = TextOverflow.Ellipsis
+                                                            overflow = TextOverflow.Ellipsis,
+                                                            modifier = Modifier.weight(1f)
                                                         )
-                                                        Text(
-                                                            text = shortNames[sensorType].orEmpty(),
-                                                            style = MaterialTheme.typography.labelSmall,
-                                                            color = if (isSelected) {
-                                                                MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.8f)
-                                                            } else {
-                                                                MaterialTheme.colorScheme.onSurfaceVariant
-                                                            },
-                                                            maxLines = 1,
-                                                            overflow = TextOverflow.Ellipsis
+                                                        Icon(
+                                                            imageVector = if (isSubExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                                                            contentDescription = null,
+                                                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                            modifier = Modifier.size(18.dp)
                                                         )
                                                     }
-                                                    Row(
-                                                        verticalAlignment = Alignment.CenterVertically,
-                                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                                    ) {
-                                                        if (unitStr.isNotEmpty()) {
-                                                            Surface(
-                                                                shape = RoundedCornerShape(8.dp),
-                                                                color = MaterialTheme.colorScheme.surfaceVariant
-                                                            ) {
-                                                                Text(
-                                                                    text = unitStr,
-                                                                    style = MaterialTheme.typography.labelSmall,
-                                                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                                                                    maxLines = 1,
-                                                                    softWrap = false
+
+                                                    if (isSubExpanded) {
+                                                        HorizontalDivider(
+                                                            thickness = 0.5.dp,
+                                                            color = MaterialTheme.colorScheme.outlineVariant
+                                                        )
+                                                        Column(modifier = Modifier.fillMaxWidth()) {
+                                                            subItems.forEach { sensorType ->
+                                                                SensorTypeRow(
+                                                                    sensorType = sensorType,
+                                                                    isSelected = sensorType == selectedSensorType,
+                                                                    fullName = fullNames[sensorType].orEmpty(),
+                                                                    shortName = shortNames[sensorType].orEmpty(),
+                                                                    unitStr = unitTexts[sensorType].orEmpty(),
+                                                                    sportType = sportType,
+                                                                    onSelected = {
+                                                                        onSensorTypeSelected(sensorType)
+                                                                        isPickerExpanded = false
+                                                                        searchQuery = ""
+                                                                    }
                                                                 )
                                                             }
-                                                        }
-                                                        if (isSelected) {
-                                                            Icon(
-                                                                imageVector = Icons.Default.Check,
-                                                                contentDescription = null,
-                                                                tint = MaterialTheme.colorScheme.onSecondaryContainer,
-                                                                modifier = Modifier.size(18.dp)
-                                                            )
                                                         }
                                                     }
                                                 }
@@ -742,6 +835,125 @@ fun SensorTypeSelectorSection(
                             }
                         }
                     }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SensorTypeRow(
+    sensorType: SensorType,
+    isSelected: Boolean,
+    fullName: String,
+    shortName: String,
+    unitStr: String,
+    sportType: BSportType,
+    onSelected: () -> Unit
+) {
+    val isBar = TrackingViewsRepository.isBarSupported(sensorType, sportType)
+    val isGraph = TrackingViewsRepository.isGraphSupported(sensorType, sportType)
+
+    Surface(
+        color = if (isSelected) {
+            MaterialTheme.colorScheme.secondaryContainer
+        } else {
+            MaterialTheme.colorScheme.surfaceContainerLow
+        },
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onSelected)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = fullName,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                    color = if (isSelected) {
+                        MaterialTheme.colorScheme.onSecondaryContainer
+                    } else {
+                        MaterialTheme.colorScheme.onSurface
+                    },
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = shortName,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = if (isSelected) {
+                        MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.8f)
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    },
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                if (isBar) {
+                    Surface(
+                        shape = RoundedCornerShape(4.dp),
+                        color = MaterialTheme.colorScheme.surfaceVariant,
+                        border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant)
+                    ) {
+                        Text(
+                            text = stringResource(R.string.sensor_capability_bar),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp),
+                            maxLines = 1,
+                            softWrap = false
+                        )
+                    }
+                }
+                if (isGraph) {
+                    Surface(
+                        shape = RoundedCornerShape(4.dp),
+                        color = MaterialTheme.colorScheme.surfaceVariant,
+                        border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant)
+                    ) {
+                        Text(
+                            text = stringResource(R.string.sensor_capability_graph),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp),
+                            maxLines = 1,
+                            softWrap = false
+                        )
+                    }
+                }
+                if (unitStr.isNotEmpty()) {
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = MaterialTheme.colorScheme.surfaceVariant
+                    ) {
+                        Text(
+                            text = unitStr,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                            maxLines = 1,
+                            softWrap = false
+                        )
+                    }
+                }
+                if (isSelected) {
+                    Icon(
+                        imageVector = Icons.Default.Check,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(18.dp)
+                    )
                 }
             }
         }

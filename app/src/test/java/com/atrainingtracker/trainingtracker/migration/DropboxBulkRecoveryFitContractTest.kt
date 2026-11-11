@@ -15,6 +15,7 @@ import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
 import android.util.Log
 import com.atrainingtracker.trainingtracker.TrainingApplication
+import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries
 import com.dropbox.core.oauth.DbxCredential
@@ -151,21 +152,11 @@ class DropboxBulkRecoveryFitContractTest {
 
     @Test
     fun testPreDownloadDuplicateSkipping_skipsExistingFitWorkouts() {
-        val cursor = mockk<Cursor>(relaxed = true)
-        every { cursor.count } returns 1
-
-        every {
-            mockSqlDb.query(
-                WorkoutSummaries.TABLE,
-                any(),
-                any(),
-                any(),
-                null, null, null
-            )
-        } returns cursor
+        val mockWorkoutRepo = mockk<WorkoutRepository>(relaxed = true)
+        every { mockWorkoutRepo.isWorkoutExisting("2026-05-10_100000", null, null) } returns true
 
         val exists = LegacyImportEngine.isWorkoutExisting(
-            mockSummariesDb,
+            mockWorkoutRepo,
             fileBaseName = "2026-05-10_100000",
             timeStart = null
         )

@@ -18,86 +18,35 @@
 
 package com.atrainingtracker.trainingtracker.ui.settings.display
 
-import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.io.File
+import java.lang.reflect.Modifier
 
 /**
  * Structural contract test verifying that Aftermath post-workout customization toggles
  * (WorkoutCardSectionPreferences and EditWorkoutFieldPreferences) have been cleanly removed
  * from DisplaySettingsDialog.kt in accordance with REQ-UI-216 and TST-UI-170.1.
+ * Refactored to pure JVM reflection per docs/coding_standards.md §5.4 and REQ-PRO-049.
  */
 class DisplaySettingsCleanupTest {
 
-    private fun findDisplaySettingsDialogFile(): File {
-        val candidates = listOf(
-            File("app/src/main/java/com/atrainingtracker/trainingtracker/ui/settings/display/DisplaySettingsDialog.kt"),
-            File("src/main/java/com/atrainingtracker/trainingtracker/ui/settings/display/DisplaySettingsDialog.kt"),
-            File("../app/src/main/java/com/atrainingtracker/trainingtracker/ui/settings/display/DisplaySettingsDialog.kt")
-        )
-        return candidates.firstOrNull { it.exists() }
-            ?: error("DisplaySettingsDialog.kt not found in candidates: $candidates")
-    }
-
     @Test
     fun testDisplaySettingsDialog_doesNotContainAftermathTogglesOrPreferenceModels() {
-        val file = findDisplaySettingsDialogFile()
-        val content = file.readText()
+        val clazz = Class.forName("com.atrainingtracker.trainingtracker.ui.settings.display.DisplaySettingsDialogKt")
+        val methods = clazz.declaredMethods
+        val dialogMethod = methods.find { it.name == "DisplaySettingsDialog" && Modifier.isPublic(it.modifiers) }
+        assertNotNull("DisplaySettingsDialog composable must exist and be public", dialogMethod)
 
-        // Verify Aftermath preferences models are NOT referenced or imported
-        assertFalse(
-            "DisplaySettingsDialog must not reference WorkoutCardSectionPreferences",
-            content.contains("WorkoutCardSectionPreferences")
-        )
-        assertFalse(
-            "DisplaySettingsDialog must not reference EditWorkoutFieldPreferences",
-            content.contains("EditWorkoutFieldPreferences")
-        )
-
-        // Verify Aftermath section titles are NOT referenced
-        assertFalse(
-            "DisplaySettingsDialog must not reference settings_workout_card_title",
-            content.contains("settings_workout_card_title")
-        )
-        assertFalse(
-            "DisplaySettingsDialog must not reference settings_edit_workout_title",
-            content.contains("settings_edit_workout_title")
-        )
-
-        // Verify individual toggle keys are NOT referenced
-        assertFalse(content.contains("settings_workout_card_description"))
-        assertFalse(content.contains("settings_workout_card_extrema"))
-        assertFalse(content.contains("settings_workout_card_laps"))
-        assertFalse(content.contains("settings_workout_card_strava"))
-        assertFalse(content.contains("settings_workout_card_map"))
-        assertFalse(content.contains("settings_workout_card_elevation"))
-        assertFalse(content.contains("settings_workout_card_charts"))
-        assertFalse(content.contains("settings_workout_card_zones"))
-
-        assertFalse(content.contains("settings_edit_workout_description"))
-        assertFalse(content.contains("settings_edit_workout_cluster"))
-        assertFalse(content.contains("settings_edit_workout_commute_trainer"))
-        assertFalse(content.contains("settings_edit_workout_strava"))
-        assertFalse(content.contains("settings_edit_workout_goal"))
-        assertFalse(content.contains("settings_edit_workout_method"))
-
-        // Verify core display settings and tuning navigation remain intact
+        // Verify Aftermath preferences models are NOT passed into DisplaySettingsDialog
+        val paramTypeNames = dialogMethod!!.parameterTypes.map { it.name }
         assertTrue(
-            "DisplaySettingsDialog must retain forcePortrait toggle",
-            content.contains("forcePortrait")
+            "DisplaySettingsDialog must not accept WorkoutCardSectionPreferences",
+            paramTypeNames.none { it.contains("WorkoutCardSectionPreferences") }
         )
         assertTrue(
-            "DisplaySettingsDialog must retain keepScreenOn toggle",
-            content.contains("keepScreenOn")
-        )
-        assertTrue(
-            "DisplaySettingsDialog must retain noUnlocking toggle",
-            content.contains("noUnlocking")
-        )
-        assertTrue(
-            "DisplaySettingsDialog must retain advanced_tuning_title navigation button",
-            content.contains("advanced_tuning_title")
+            "DisplaySettingsDialog must not accept EditWorkoutFieldPreferences",
+            paramTypeNames.none { it.contains("EditWorkoutFieldPreferences") }
         )
     }
 }

@@ -17,7 +17,7 @@ aTrainingTracker specifies formal system requirements (`SYSREQ-*`) separated cle
 
 ---
 
-## 4. Live Tracking with Sensors System Requirements (Summary)
+## 2. Live Tracking with Sensors System Requirements (Summary)
 
 See [`docs/system/sysreq_live_tracking.md`](system/sysreq_live_tracking.md) for full formal specifications:
 * **`SYSREQ-TRK-001`**: Multi-Sensor Telemetry Acquisition & Standard Profile Interoperability (BLE GATT + ANT+).
@@ -29,19 +29,19 @@ See [`docs/system/sysreq_live_tracking.md`](system/sysreq_live_tracking.md) for 
 
 ---
 
-## 5. Data Exchange and Cloud Integration System Requirements (SYSREQ-DEX-001..006)
+## 3. Data Exchange and Cloud Integration System Requirements (SYSREQ-DEX-001..006)
 
 See [`docs/system/sysreq_data_exchange.md`](system/sysreq_data_exchange.md) for full formal specifications:
 * **`SYSREQ-DEX-001`**: Multi-Format Telemetry Export Interoperability (FIT, TCX, GPX, CSV).
-* **`SYSREQ-DEX-002`**: Multi-Format Workout Ingestion & Collision Deduplication.
-* **`SYSREQ-DEX-003`**: Cloud Activity Synchronization & Rate Governance (Strava OAuth2 multipart upload & gear sync).
-* **`SYSREQ-DEX-004`**: Cloud Storage Synchronization & Automatic Backup (Dropbox API v2 & Google Drive REST API v3).
+* **`SYSREQ-DEX-002`**: Multi-Format Workout Ingestion & Collision Deduplication (FIT, TCX, GPX tracks and Strava bulk export `activities.csv` metadata).
+* **`SYSREQ-DEX-003`**: Cloud Activity Synchronization & Rate Governance (Strava OAuth2 multipart upload, gear, routes & segments sync).
+* **`SYSREQ-DEX-004`**: Cloud Storage Synchronization & Automatic Backup (Dropbox API v2 & Google Drive REST API v3 workout & backup sync).
 * **`SYSREQ-DEX-005`**: Full Application State Backup & Atomic Recovery Pipeline (`.attbackup`, 1.5x space check, Zip Slip protection).
-* **`SYSREQ-DEX-006`**: Credential Protection, Security Isolation & Decommissioned Boundaries (`auth_credentials_prefs` exclusion, Health Connect user consent, decommissioned Runkeeper/TrainingPeaks).
+* **`SYSREQ-DEX-006`**: Credential Protection, Security Isolation & Decommissioned Boundaries (`auth_credentials_prefs` exclusion, `full_backup_content.xml`, `data_extraction_rules.xml`, Health Connect HRV consent, decommissioned Runkeeper/TrainingPeaks).
 
 ---
 
-## 6. Complete System Requirements Traceability Matrix
+## 4. Complete System Requirements Traceability Matrix
 
 | Requirement ID | Domain | Title | Verification Method | Traced Software Classes |
 | :--- | :--- | :--- | :--- | :--- |
@@ -50,10 +50,10 @@ See [`docs/system/sysreq_data_exchange.md`](system/sysreq_data_exchange.md) for 
 | `SYSREQ-TRK-003` | Live Tracking | Deterministic 1-Hz Sampling & SQLite Recording | Test / `SystemLiveTrackingRequirementsContractTest` | `TrackerService`, `WorkoutSamplesDatabaseManager` |
 | `SYSREQ-TRK-004` | Live Tracking | Multi-Source GNSS Acquisition & Position Telemetry | Test / `SystemLiveTrackingRequirementsContractTest` | `SpeedAndLocationDevice_GPS`, `SpeedAndLocationDevice_GoogleFused` |
 | `SYSREQ-TRK-005` | Live Tracking | Foreground Service Execution & Power Management | Test / `SystemLiveTrackingRequirementsContractTest` | `TrackerService`, `TrainingApplication` |
-| `SYSREQ-TRK-006` | Live Tracking | Real-Time Sensory Alerts & Cockpit Feedback | Test / `SystemLiveTrackingRequirementsContractTest` | `SensorGridScreen`, `RadarThreatView` |
+| `SYSREQ-TRK-006` | Live Tracking | Real-Time Sensory Alerts & Cockpit Feedback | Test / `SystemLiveTrackingRequirementsContractTest` | `SensorGridScreen`, `RadarEdgeOverlay` |
 | `SYSREQ-DEX-001` | Data Exchange | Multi-Format Telemetry Export Interoperability | Test / `SystemDataExchangeRequirementsContractTest` | `ExportManager`, `FileFormat`, `FitFileWriter` |
-| `SYSREQ-DEX-002` | Data Exchange | Multi-Format Workout Ingestion & Deduplication | Test / `SystemDataExchangeRequirementsContractTest` | `LegacyImportEngine`, `StravaBulkExportImporter` |
-| `SYSREQ-DEX-003` | Data Exchange | Cloud Activity Synchronization & Rate Governance | Test / `SystemDataExchangeRequirementsContractTest` | `StravaUploader`, `StravaEquipmentSyncWorker` |
-| `SYSREQ-DEX-004` | Data Exchange | Cloud Storage Synchronization & Automatic Backup | Test / `SystemDataExchangeRequirementsContractTest` | `DropboxBackupManager`, `GoogleDriveBackupManager` |
+| `SYSREQ-DEX-002` | Data Exchange | Multi-Format Workout Ingestion & Deduplication | Test / `SystemDataExchangeRequirementsContractTest` | `LegacyImportEngine`, `StravaBulkExportImporter`, `StravaCsvParser` |
+| `SYSREQ-DEX-003` | Data Exchange | Cloud Activity Synchronization & Rate Governance | Test / `SystemDataExchangeRequirementsContractTest` | `StravaUploader`, `StravaEquipmentSyncWorker`, `StravaRoutesSyncWorker`, `StravaSegmentsSyncWorker` |
+| `SYSREQ-DEX-004` | Data Exchange | Cloud Storage Synchronization & Automatic Backup | Test / `SystemDataExchangeRequirementsContractTest` | `DropboxBackupManager`, `GoogleDriveBackupManager`, `GoogleDriveUploader` |
 | `SYSREQ-DEX-005` | Data Exchange | Full State Backup & Atomic Recovery Pipeline | Test / `SystemDataExchangeRequirementsContractTest` | `BackupManager`, `SecureZipExtractor` |
-| `SYSREQ-DEX-006` | Data Exchange | Credential Protection & Decommissioned Boundaries | Test / `SystemDataExchangeRequirementsContractTest` | `AuthCredentialsStore`, `backup_rules.xml` |
+| `SYSREQ-DEX-006` | Data Exchange | Credential Protection & Decommissioned Boundaries | Test / `SystemDataExchangeRequirementsContractTest` | `AuthCredentialsStore`, `full_backup_content.xml`, `data_extraction_rules.xml` |

@@ -51,6 +51,10 @@ import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 import android.app.PendingIntent;
 import android.content.pm.PackageManager;
 import com.atrainingtracker.trainingtracker.activities.MainActivityWithNavigation;
+import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceDataRepository;
+import com.atrainingtracker.trainingtracker.repositories.SportTypesRepository;
+import com.atrainingtracker.trainingtracker.repositories.KnownLocationsRepository;
+import com.atrainingtracker.trainingtracker.database.hrv.WorkoutRrRepository;
 import com.atrainingtracker.trainingtracker.database.KnownLocationsDatabaseManager;
 import com.atrainingtracker.trainingtracker.database.MilestoneAutoNamingManager;
 import com.atrainingtracker.trainingtracker.database.WorkoutAutoNamingHelper;
@@ -64,29 +68,25 @@ import com.atrainingtracker.banalservice.sensor.MySensorManager;
 import com.atrainingtracker.banalservice.sensor.SensorData;
 import com.atrainingtracker.banalservice.sensor.SensorType;
 import com.atrainingtracker.banalservice.sensor.SensorValueType;
-import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager;
 import com.atrainingtracker.trainingtracker.database.EquipmentAndSportTypeDiscoveryManager;
 import com.atrainingtracker.trainingtracker.exporter.ExportManager;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
-import com.atrainingtracker.trainingtracker.database.ActiveDevicesDbHelper;
-import com.atrainingtracker.trainingtracker.database.ActiveDevicesDbHelper.ActiveDevices;
-import com.atrainingtracker.trainingtracker.database.LapsDatabaseManager;
 import com.atrainingtracker.trainingtracker.database.ExtremaType;
 import com.atrainingtracker.trainingtracker.database.WorkoutCluster;
 import com.atrainingtracker.trainingtracker.database.WorkoutClusterEngine;
-import com.atrainingtracker.trainingtracker.database.WorkoutSamplesDatabaseManager;
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager;
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries;
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository;
 import com.atrainingtracker.banalservice.devices.RrBeatEvent;
 import com.atrainingtracker.banalservice.devices.RrBeatListener;
 import com.atrainingtracker.trainingtracker.database.hrv.HrvPostWorkoutRecomputer;
-import com.atrainingtracker.trainingtracker.database.hrv.WorkoutRrDatabaseManager;
 import com.atrainingtracker.trainingtracker.database.hrv.WorkoutRrInterval;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 import com.atrainingtracker.trainingtracker.ui.utils.NumericalEncodingUtils;
 import com.atrainingtracker.banalservice.devices.radar.RadarLightController;
+import com.atrainingtracker.banalservice.devices.radar.RadarSnoozeController;
+import com.atrainingtracker.banalservice.devices.radar.RadarTrafficSimulator;
 import com.atrainingtracker.trainingtracker.audio.radar.RadarAlertManager;
 import com.atrainingtracker.trainingtracker.tracker.autopause.AutoPauseConfig;
 import com.atrainingtracker.trainingtracker.tracker.autopause.AutoPauseManager;
@@ -169,6 +169,10 @@ public class TrackerService extends Service {
         SENSORS_TO_TRACK.add(SensorType.LONGITUDE);
         SENSORS_TO_TRACK.add(SensorType.LINE_DISTANCE_m);
         SENSORS_TO_TRACK.add(SensorType.W_PRIME_BAL);
+        SENSORS_TO_TRACK.add(SensorType.RADAR_VEHICLE_COUNT);
+        SENSORS_TO_TRACK.add(SensorType.RADAR_APPROACH_SPEED_mps);
+        SENSORS_TO_TRACK.add(SensorType.RADAR_PASSING_DISTANCE_m);
+        SENSORS_TO_TRACK.add(SensorType.RADAR_LARGE_VEHICLE_COUNT);
     }
     
     public static final String ACTION_STOP = "com.atrainingtracker.trainingtracker.tracker.TrackerService.ACTION_STOP";
@@ -210,25 +214,134 @@ public class TrackerService extends Service {
     private final AtomicInteger mSampleInsertFailureCount = new AtomicInteger(0);
     private android.os.PowerManager.WakeLock wakeLock;
     private TrainingApplication mTrainingApplication;
-    private WorkoutRepository mWorkoutRepository;
+    WorkoutRepository mWorkoutRepository;
+    SportTypesRepository mSportTypesRepository;
+    DeviceDataRepository mDeviceDataRepository;
+    KnownLocationsRepository mKnownLocationsRepository;
+    WorkoutRrRepository mWorkoutRrRepository;
+
+    private Context getSafeContext() {
+        try {
+            Context ctx = getApplicationContext();
+            if (ctx != null) {
+                return ctx;
+            }
+        } catch (Throwable ignored) {
+        }
+        return this;
+    }
+
+    private WorkoutRepository getWorkoutRepository() {
+        if (mWorkoutRepository == null) {
+            mWorkoutRepository = WorkoutRepository.Companion.getInstance(getSafeContext());
+        }
+        return mWorkoutRepository;
+    }
+
+    private SportTypesRepository getSportTypesRepository() {
+        if (mSportTypesRepository == null) {
+            mSportTypesRepository = SportTypesRepository.Companion.getInstance(getSafeContext());
+        }
+        return mSportTypesRepository;
+    }
+
+    private DeviceDataRepository getDeviceDataRepository() {
+        if (mDeviceDataRepository == null) {
+            mDeviceDataRepository = DeviceDataRepository.Companion.getInstance(getSafeContext());
+        }
+        return mDeviceDataRepository;
+    }
+
+    private KnownLocationsRepository getKnownLocationsRepository() {
+        if (mKnownLocationsRepository == null) {
+            mKnownLocationsRepository = KnownLocationsRepository.Companion.getInstance(getSafeContext());
+        }
+        return mKnownLocationsRepository;
+    }
+
+    private WorkoutRrRepository getWorkoutRrRepository() {
+        if (mWorkoutRrRepository == null) {
+            mWorkoutRrRepository = WorkoutRrRepository.Companion.getInstance(getSafeContext());
+        }
+        return mWorkoutRrRepository;
+    }
     private volatile ScheduledFuture mTrackerHandle;
+    private static final int RR_FLUSH_BATCH_THRESHOLD = 100;
+    private long mLastRrFlushTimeMs = 0L;
+    private final Object mRrFlushLock = new Object();
     private final ConcurrentLinkedQueue<WorkoutRrInterval> mLiveRrQueue = new ConcurrentLinkedQueue<>();
     private final AtomicInteger mRrBeatIndexCounter = new AtomicInteger(0);
     private final RrBeatListener mRrBeatListener = new RrBeatListener() {
         @Override
         public void onRrBeat(@NonNull RrBeatEvent event) {
-            int idx = mRrBeatIndexCounter.getAndIncrement();
-            mLiveRrQueue.add(new WorkoutRrInterval(
-                    null,
-                    mWorkoutID,
-                    idx,
-                    event.getBeatTimestampMs(),
-                    (float) event.getRrMs(),
-                    event.getArtifactFlag(),
-                    event.getGapBeats()
-            ));
+            if (mAutoPauseManager.getCurrentState() == AutoPauseState.TRACKING && mWorkoutID > 0) {
+                int idx = mRrBeatIndexCounter.getAndIncrement();
+                mLiveRrQueue.add(new WorkoutRrInterval(
+                        null,
+                        mWorkoutID,
+                        idx,
+                        event.getBeatTimestampMs(),
+                        (float) event.getRrMs(),
+                        event.getArtifactFlag(),
+                        event.getGapBeats()
+                ));
+                if (mLiveRrQueue.size() >= RR_FLUSH_BATCH_THRESHOLD) {
+                    flushLiveRrQueueAsync();
+                }
+            }
         }
     };
+
+    private void maybeFlushLiveRrQueue() {
+        if (mLiveRrQueue.isEmpty() || mWorkoutID <= 0 || mAutoPauseManager.getCurrentState() != AutoPauseState.TRACKING) {
+            return;
+        }
+        long now = System.currentTimeMillis();
+        if (mLiveRrQueue.size() >= RR_FLUSH_BATCH_THRESHOLD || (now - mLastRrFlushTimeMs) >= 30000L) {
+            flushLiveRrQueueAsync();
+        }
+    }
+
+    private void flushLiveRrQueueAsync() {
+        if (mLiveRrQueue.isEmpty() || mWorkoutID <= 0) {
+            return;
+        }
+        mLastRrFlushTimeMs = System.currentTimeMillis();
+        final long workoutId = mWorkoutID;
+        final List<WorkoutRrInterval> batch = new ArrayList<>();
+        WorkoutRrInterval item;
+        while ((item = mLiveRrQueue.poll()) != null) {
+            batch.add(item);
+        }
+        if (!batch.isEmpty()) {
+            java.util.concurrent.ForkJoinPool.commonPool().execute(() -> {
+                synchronized (mRrFlushLock) {
+                    try {
+                        getWorkoutRrRepository().insertIntervalsBlocking(batch);
+                    } catch (Throwable t) {
+                        Log.e(TAG, "Error asynchronously flushing live RR intervals for workout " + workoutId, t);
+                    }
+                }
+            });
+        }
+    }
+
+    private void flushLiveRrQueueSync(long workoutId) {
+        final List<WorkoutRrInterval> batch = new ArrayList<>();
+        WorkoutRrInterval item;
+        while ((item = mLiveRrQueue.poll()) != null) {
+            batch.add(item);
+        }
+        synchronized (mRrFlushLock) {
+            if (!batch.isEmpty()) {
+                try {
+                    getWorkoutRrRepository().insertIntervalsBlocking(batch);
+                } catch (Throwable t) {
+                    Log.e(TAG, "Error synchronously flushing live RR intervals for workout " + workoutId, t);
+                }
+            }
+        }
+    }
 
     /**
      * Returns the cumulative count of sample row insertion failures during the current service
@@ -596,14 +709,11 @@ public class TrackerService extends Service {
                     return;
                 }
 
-                WorkoutSamplesDatabaseManager samplesManager = WorkoutSamplesDatabaseManager.getInstance(TrackerService.this);
-                WorkoutSummariesDatabaseManager summariesManager = WorkoutSummariesDatabaseManager.getInstance(TrackerService.this);
-
                 // 2a. Raw Samples drift/shift correction in explicit atomic SQLite transaction (REQ-CON-017, REQ-TRK-047.2)
-                samplesManager.applyAltitudeDriftCorrection(samplesTable, altitudeCorrection, prevCalTimeMs, currentCalTimeMs);
+                getWorkoutRepository().applyAltitudeDriftCorrection(samplesTable, altitudeCorrection, prevCalTimeMs, currentCalTimeMs);
 
                 // 2b. Summary Extrema and Elevation Stream shift / interpolation (ATT-38, REQ-TRK-047.2)
-                summariesManager.shiftAltitudeData(workoutId, altitudeCorrection, prevCalTimeMs, currentCalTimeMs);
+                getWorkoutRepository().shiftAltitudeData(workoutId, altitudeCorrection, prevCalTimeMs, currentCalTimeMs);
 
                 // 3. Notify UI/Repository to refresh from DB
                 LocalBroadcastManager.getInstance(TrackerService.this).sendBroadcast(new Intent(WORKOUT_UPDATED_INTENT).putExtra(WORKOUT_ID, workoutId));
@@ -650,6 +760,7 @@ public class TrackerService extends Service {
                 if (banalService != null) {
 
                     sampleAndWriteToDb(banalService);
+                    maybeFlushLiveRrQueue();
 
                     // update notification
                     if (DEBUG) Log.i(TAG, "updating notification");
@@ -659,7 +770,7 @@ public class TrackerService extends Service {
                         if (sportTypeId == mCachedSportTypeId && mCachedSportTypeUiName != null) {
                             sportUiName = mCachedSportTypeUiName;
                         } else {
-                            sportUiName = SportTypeDatabaseManager.getInstance(TrackerService.this).getUIName(sportTypeId);
+                            sportUiName = getSportTypesRepository().getUIName(sportTypeId);
                             mCachedSportTypeId = sportTypeId;
                             mCachedSportTypeUiName = sportUiName;
                         }
@@ -760,12 +871,16 @@ public class TrackerService extends Service {
         BANALService.checkOrInitializeLocationDevices();
 
         mTrainingApplication = (TrainingApplication) getApplication();
-        mWorkoutRepository = WorkoutRepository.Companion.getInstance((Application) getApplicationContext());
+        mWorkoutRepository = getWorkoutRepository();
+        mSportTypesRepository = getSportTypesRepository();
+        mDeviceDataRepository = getDeviceDataRepository();
+        mKnownLocationsRepository = getKnownLocationsRepository();
+        mWorkoutRrRepository = getWorkoutRrRepository();
 
         // Background initialization of database to avoid ANR during upgrade
         new Thread(() -> {
             try {
-                WorkoutSummariesDatabaseManager.getInstance(TrackerService.this).getDatabase();
+                getWorkoutRepository().warmUp();
             } catch (Exception e) {
                 Log.e(TAG, "Error initializing WorkoutSummaries database", e);
             }
@@ -887,7 +1002,7 @@ public class TrackerService extends Service {
         }
         mStartType = startType;
         mWorkoutStartLocationRecorded = (startType != StartType.START_NORMAL);
-        if (startType == StartType.START_NORMAL || startType == StartType.RESUME_BY_USER) {
+        if (startType == StartType.START_NORMAL || startType == StartType.RESUME_BY_USER || startType == StartType.RESUME_AUTOMATICALLY) {
             RadarLightController.onWorkoutStarted(this);
         }
         switch (startType) {
@@ -902,7 +1017,7 @@ public class TrackerService extends Service {
                 }
                 // The workout name is just the date+time
                 mBaseFileName = (new SimpleDateFormat("yyyy-MM-dd_HHmmss", Locale.US)).format(new Date());
-                mSamplesTableName = WorkoutSamplesDatabaseManager.getTableName(mBaseFileName);
+                mSamplesTableName = WorkoutRepository.getSamplesTableName(mBaseFileName);
                 mLiveSession = new LiveWorkoutSession(0, IMPORTANT_SENSOR_TYPES);
 
                 final CompletableFuture<Void> initFuture = new CompletableFuture<>();
@@ -916,8 +1031,7 @@ public class TrackerService extends Service {
                         if (mLiveSession != null) {
                             mLiveSession.setWorkoutId(mWorkoutID);
                         }
-                        WorkoutSamplesDatabaseManager.getInstance(TrackerService.this)
-                                .createNewTable(mBaseFileName, Arrays.asList(SensorType.values()));
+                        getWorkoutRepository().createSamplesTable(mBaseFileName, Arrays.asList(SensorType.values()));
                         initFuture.complete(null);
                         notifyTrackingStarted(mWorkoutID);
                     } catch (Throwable t) {
@@ -927,7 +1041,7 @@ public class TrackerService extends Service {
                             String errorJson = mDiagnosticCollector.toJson();
                             if (errorJson != null) {
                                 try {
-                                    WorkoutSummariesDatabaseManager.getInstance(TrackerService.this).updateRecordingErrors(mWorkoutID, errorJson);
+                                    getWorkoutRepository().setRecordingErrors(mWorkoutID, errorJson);
                                 } catch (Throwable ignored) {
                                 }
                             }
@@ -943,7 +1057,8 @@ public class TrackerService extends Service {
                 break;
 
             case RESUME_BY_USER:
-                Log.d(TAG, "resuming by user request");
+            case RESUME_AUTOMATICALLY:
+                Log.d(TAG, "resuming by user request or automatically");
                 mAutoPauseManager.onManualResume(TrainingApplication.isManualPauseLocked());
                 if (mTableInitializationFuture == null || mTableInitializationFuture.isDone()) {
                     mTableInitializationFuture = new CompletableFuture<>();
@@ -1083,6 +1198,8 @@ public class TrackerService extends Service {
         if (DEBUG) Log.d(TAG, "handleActionStop: initiating foreground-protected async finalization");
 
         RadarLightController.onWorkoutStopped(this);
+        RadarSnoozeController.reset();
+        RadarTrafficSimulator.INSTANCE.stop();
 
         cancelTrackerHandle();
         mScheduler.shutdownNow();
@@ -1284,7 +1401,10 @@ public class TrackerService extends Service {
             mRadarAlertManager = null;
         }
 
-        RadarLightController.onWorkoutStopped(this);
+        if (!TrainingApplication.isPaused()) {
+            RadarSnoozeController.reset();
+            RadarTrafficSimulator.INSTANCE.stop();
+        }
 
         LifecycleUtils.safeUnregisterReceiver(this, mSearchingFinishedReceiver, TAG);
         LifecycleUtils.safeUnregisterReceiver(this, mAltitudeCorrectionReceiver, TAG);
@@ -1342,27 +1462,17 @@ public class TrackerService extends Service {
         }
     }
 
-    private static final String[] RESUME_WORKOUT_PROJECTION = new String[] {
-            WorkoutSummariesDatabaseManager.WorkoutSummaries.FILE_BASE_NAME,
-            WorkoutSummariesDatabaseManager.WorkoutSummaries.C_ID,
-            WorkoutSummariesDatabaseManager.WorkoutSummaries.TIME_TOTAL_s,
-            WorkoutSummariesDatabaseManager.WorkoutSummaries.TIME_ACTIVE_s,
-            WorkoutSummariesDatabaseManager.WorkoutSummaries.CALORIES,
-            WorkoutSummariesDatabaseManager.WorkoutSummaries.LAPS,
-            WorkoutSummariesDatabaseManager.WorkoutSummaries.DISTANCE_TOTAL_m
-    };
-
     @VisibleForTesting
-    static final class ResumedWorkoutState {
-        final String baseFileName;
-        final long workoutId;
-        final int timeTotal_s;
-        final int timeActive_s;
-        final int calories;
-        final int lapNr;
-        final double distanceTotal_m;
+    public static final class ResumedWorkoutState {
+        public final String baseFileName;
+        public final long workoutId;
+        public final int timeTotal_s;
+        public final int timeActive_s;
+        public final int calories;
+        public final int lapNr;
+        public final double distanceTotal_m;
 
-        ResumedWorkoutState(@NonNull String baseFileName, long workoutId, int timeTotal_s, int timeActive_s, int calories, int lapNr, double distanceTotal_m) {
+        public ResumedWorkoutState(@NonNull String baseFileName, long workoutId, int timeTotal_s, int timeActive_s, int calories, int lapNr, double distanceTotal_m) {
             this.baseFileName = baseFileName;
             this.workoutId = workoutId;
             this.timeTotal_s = timeTotal_s;
@@ -1385,7 +1495,7 @@ public class TrackerService extends Service {
             return null;
         }
         try {
-            return WorkoutSamplesDatabaseManager.getTableName(baseFileName);
+            return WorkoutRepository.getSamplesTableName(baseFileName);
         } catch (IllegalArgumentException e) {
             Log.e(TAG, "Cannot resolve samples table name for invalid baseFileName: " + baseFileName, e);
             return null;
@@ -1394,38 +1504,10 @@ public class TrackerService extends Service {
 
     @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
     void recreateValuesWhenResuming() {
-        SQLiteDatabase db = WorkoutSummariesDatabaseManager.getInstance(this).getDatabase();
         ResumedWorkoutState state = null;
-
-        try (Cursor cursor = db.query(
-                WorkoutSummariesDatabaseManager.WorkoutSummaries.TABLE,
-                RESUME_WORKOUT_PROJECTION,
-                null,
-                null,
-                null,
-                null,
-                WorkoutSummariesDatabaseManager.WorkoutSummaries.C_ID + " DESC",
-                "1")) {
-
-            if (cursor != null && cursor.moveToFirst()) {
-                int baseFileNameCol = cursor.getColumnIndexOrThrow(WorkoutSummariesDatabaseManager.WorkoutSummaries.FILE_BASE_NAME);
-                int idCol = cursor.getColumnIndexOrThrow(WorkoutSummariesDatabaseManager.WorkoutSummaries.C_ID);
-                int timeTotalCol = cursor.getColumnIndexOrThrow(WorkoutSummariesDatabaseManager.WorkoutSummaries.TIME_TOTAL_s);
-                int timeActiveCol = cursor.getColumnIndexOrThrow(WorkoutSummariesDatabaseManager.WorkoutSummaries.TIME_ACTIVE_s);
-                int caloriesCol = cursor.getColumnIndexOrThrow(WorkoutSummariesDatabaseManager.WorkoutSummaries.CALORIES);
-                int lapsCol = cursor.getColumnIndexOrThrow(WorkoutSummariesDatabaseManager.WorkoutSummaries.LAPS);
-                int distanceCol = cursor.getColumnIndexOrThrow(WorkoutSummariesDatabaseManager.WorkoutSummaries.DISTANCE_TOTAL_m);
-
-                state = new ResumedWorkoutState(
-                        cursor.getString(baseFileNameCol),
-                        cursor.getLong(idCol),
-                        cursor.getInt(timeTotalCol),
-                        cursor.getInt(timeActiveCol),
-                        cursor.getInt(caloriesCol),
-                        cursor.getInt(lapsCol),
-                        cursor.getDouble(distanceCol)
-                );
-            } else {
+        try {
+            state = getWorkoutRepository().getResumedWorkoutState();
+            if (state == null) {
                 Log.w(TAG, "recreateValuesWhenResuming: No workout summary record found to resume.");
                 if (mTableInitializationFuture != null && !mTableInitializationFuture.isDone()) {
                     mTableInitializationFuture.completeExceptionally(
@@ -1459,6 +1541,12 @@ public class TrackerService extends Service {
         mTimeTotal_s = state.timeTotal_s;
         mTimeActive_s = state.timeActive_s;
         mDistanceTotal_m = state.distanceTotal_m;
+        try {
+            int maxBeat = getWorkoutRrRepository().getMaxBeatIndexBlocking(mWorkoutID);
+            mRrBeatIndexCounter.set(maxBeat >= 0 ? maxBeat + 1 : 0);
+        } catch (Throwable t) {
+            Log.e(TAG, "Error restoring RR beat index counter on resume for workout " + mWorkoutID, t);
+        }
 
         if (mSamplesTableName == null) {
             Log.e(TAG, "applyResumedState: Invalid baseFileName (" + mBaseFileName + ") for workoutId=" + mWorkoutID);
@@ -1558,13 +1646,13 @@ public class TrackerService extends Service {
             return;
         }
         try {
-            WorkoutSummariesDatabaseManager summariesManager = WorkoutSummariesDatabaseManager.getInstance(this);
-            if (summariesManager == null) {
+            WorkoutRepository workoutRepository = getWorkoutRepository();
+            if (workoutRepository == null) {
                 return;
             }
 
             // 1. Rehydrate encoded streams with independent per-stream fault isolation
-            WorkoutSummariesDatabaseManager.EncodedStreams encodedStreams = summariesManager.getEncodedStreams(workoutId);
+            WorkoutSummariesDatabaseManager.EncodedStreams encodedStreams = workoutRepository.getEncodedStreams(workoutId);
             if (encodedStreams != null) {
                 List<LatLng> decodedLatLngs = Collections.emptyList();
                 if (encodedStreams.mapPolyline != null && !encodedStreams.mapPolyline.isEmpty()) {
@@ -1601,7 +1689,7 @@ public class TrackerService extends Service {
 
             // 2. Rehydrate per-sensor extrema and running average sample counts
             List<WorkoutSummariesDatabaseManager.ExtremaRecord> extremaRecords =
-                    summariesManager.getExtremaForWorkouts(Collections.singletonList(workoutId));
+                    workoutRepository.getExtremaForWorkouts(Collections.singletonList(workoutId));
             if (extremaRecords != null && !extremaRecords.isEmpty()) {
                 Map<SensorType, Double> minMap = new HashMap<>();
                 Map<SensorType, LatLng> minPosMap = new HashMap<>();
@@ -1797,7 +1885,7 @@ public class TrackerService extends Service {
         if (DEBUG)
             Log.i(TAG, "saveLap: lapNr=" + lapNr + ", lapTime=" + lapTime + ", lapDistance=" + lapDistance + ", averageSpeed=" + averageSpeed);
 
-        LapsDatabaseManager.getInstance(this).saveLap(mWorkoutID, lapNr, lapTime, lapDistance, averageSpeed);
+        getWorkoutRepository().saveLap(mWorkoutID, lapNr, lapTime, lapDistance, averageSpeed);
     }
 
     /**
@@ -1821,7 +1909,7 @@ public class TrackerService extends Service {
             }
         }
 
-        return BANALService.getDefaultSportTypeId();
+        return SportTypesRepository.getDefaultSportTypeId();
     }
 
 
@@ -1831,26 +1919,8 @@ public class TrackerService extends Service {
         if (DEBUG) Log.d(TAG, "createNewWorkout");
 
         long sportTypeId = getSportTypeId();
-
-        ContentValues values = new ContentValues();
-
-        values.put(WorkoutSummaries.GOAL, "");
-        values.put(WorkoutSummaries.METHOD, "");
-        values.put(WorkoutSummaries.GC_DATA, MySensorManager.EMPTY_GC_DATA);
-        values.put(WorkoutSummaries.SPORT_ID, sportTypeId);
-        values.put(WorkoutSummaries.B_SPORT, SportTypeDatabaseManager.getInstance(this).getBSportType(sportTypeId).name());
-        values.put(WorkoutSummaries.WORKOUT_NAME, mBaseFileName);
-        values.put(WorkoutSummaries.FILE_BASE_NAME, mBaseFileName);
-        values.put(WorkoutSummaries.SOURCE, WorkoutSource.TRACKED.name());
-        values.put(WorkoutSummaries.FINISHED, 0);
-
-        WorkoutSummariesDatabaseManager databaseManager = WorkoutSummariesDatabaseManager.getInstance(this);
-        SQLiteDatabase summariesDb = databaseManager.getDatabase();
-        long workoutId = summariesDb.insert(WorkoutSummaries.TABLE, null, values);
-        //}
-        //catch (SQLException e) {
-        //    Log.e(TAG, "Error while writing" + e.toString());
-        //}
+        BSportType bSport = getSportTypesRepository().getBSportType(sportTypeId);
+        long workoutId = getWorkoutRepository().createNewTrackedWorkout(mBaseFileName, sportTypeId, bSport);
 
         ExportManager exportManager = new ExportManager(this);
         exportManager.newWorkout(mBaseFileName);
@@ -1871,21 +1941,12 @@ public class TrackerService extends Service {
         }
 
         long sportTypeId = getSportTypeId();
-
-        // now, that we know the sport and the available sensors, we update the summaries DB
-        ContentValues values = new ContentValues();
-        values.put(WorkoutSummaries.SPORT_ID, sportTypeId);
-        values.put(WorkoutSummaries.B_SPORT, SportTypeDatabaseManager.getInstance(this).getBSportType(sportTypeId).name());
-        values.put(WorkoutSummaries.GC_DATA, banalService.getGCDataString());
+        BSportType bSport = getSportTypesRepository().getBSportType(sportTypeId);
+        String gcData = banalService.getGCDataString();
 
         mTableInitializationFuture.thenAcceptAsync(v -> {
             try {
-                WorkoutSummariesDatabaseManager databaseManager = WorkoutSummariesDatabaseManager.getInstance(TrackerService.this);
-                SQLiteDatabase summariesDb = databaseManager.getDatabase();
-                summariesDb.update(WorkoutSummaries.TABLE,
-                        values,
-                        WorkoutSummaries.C_ID + "=?",
-                        new String[]{Long.toString(mWorkoutID)});
+                getWorkoutRepository().updateWorkoutSportAndGcData(mWorkoutID, sportTypeId, bSport, gcData);
             } catch (Exception e) {
                 Log.e(TAG, "Failed to update summaries DB on searching finished", e);
             }
@@ -1894,18 +1955,11 @@ public class TrackerService extends Service {
 
     private void onUserSelectedSportTypeChanged() {
         long sportTypeId = getSportTypeId();
-        ContentValues values = new ContentValues();
-        values.put(WorkoutSummaries.SPORT_ID, sportTypeId);
-        values.put(WorkoutSummaries.B_SPORT, SportTypeDatabaseManager.getInstance(this).getBSportType(sportTypeId).name());
+        BSportType bSport = getSportTypesRepository().getBSportType(sportTypeId);
 
         mTableInitializationFuture.thenAcceptAsync(v -> {
             try {
-                WorkoutSummariesDatabaseManager databaseManager = WorkoutSummariesDatabaseManager.getInstance(TrackerService.this);
-                SQLiteDatabase summariesDb = databaseManager.getDatabase();
-                summariesDb.update(WorkoutSummaries.TABLE,
-                        values,
-                        WorkoutSummaries.C_ID + "=?",
-                        new String[]{Long.toString(mWorkoutID)});
+                getWorkoutRepository().updateWorkoutSport(mWorkoutID, sportTypeId, bSport);
             } catch (Exception e) {
                 Log.e(TAG, "Failed to update sport type in summaries DB", e);
             }
@@ -1960,67 +2014,30 @@ public class TrackerService extends Service {
             } else {
                 updateActiveSessionDevices(banalService);
             }
-            ActiveDevicesDbHelper activeDevicesDbHelper = ActiveDevicesDbHelper.getInstance(this);
             for (Long deviceDbId : mActiveSessionDeviceIds) {
                 if (deviceDbId != null && deviceDbId >= 0) {
-                    activeDevicesDbHelper.addActiveDevice(mWorkoutID, deviceDbId);
+                    getDeviceDataRepository().recordActiveDevice(mWorkoutID, deviceDbId);
                 }
             }
         } catch (Throwable t) {
             Log.e(TAG, "Error saving active devices during endWorkout", t);
         }
 
-        // Persist raw beat-to-beat RR intervals and trigger centered recompute (REQ-PER-034.1, REQ-PER-034.3)
+        // Persist remaining raw beat-to-beat RR intervals (REQ-PER-034.1, REQ-PER-034.2)
         try {
-            if (!mLiveRrQueue.isEmpty() && mWorkoutID > 0) {
-                List<WorkoutRrInterval> intervalsToSave = new ArrayList<>(mLiveRrQueue);
-                List<WorkoutRrInterval> alignedIntervals = new ArrayList<>(intervalsToSave.size());
-                for (WorkoutRrInterval interval : intervalsToSave) {
-                    alignedIntervals.add(new WorkoutRrInterval(
-                            null,
-                            mWorkoutID,
-                            interval.getBeatIndex(),
-                            interval.getBeatTimestampMs(),
-                            interval.getRrMs(),
-                            interval.getArtifactFlag(),
-                            interval.getGapBeats()
-                    ));
-                }
-                WorkoutRrDatabaseManager.getInstance(this).insertIntervals(alignedIntervals);
-                mLiveRrQueue.clear();
-
-                final long finalWorkoutId = mWorkoutID;
-                final Context appContext = getApplicationContext();
-                java.util.concurrent.ForkJoinPool.commonPool().execute(() -> {
-                    try {
-                        HrvPostWorkoutRecomputer.recomputeWorkoutBlocking(appContext, finalWorkoutId);
-                    } catch (Throwable t) {
-                        Log.e(TAG, "Error in post-workout HRV recompute", t);
-                    }
-                });
+            if (mWorkoutID > 0) {
+                flushLiveRrQueueSync(mWorkoutID);
             }
         } catch (Throwable t) {
             Log.e(TAG, "Error persisting workout RR intervals during endWorkout", t);
         }
 
         try {
-            WorkoutSummariesDatabaseManager summariesDatabaseManager = WorkoutSummariesDatabaseManager.getInstance(this);
-            SQLiteDatabase summariesDb = summariesDatabaseManager.getDatabase();
-
             // 1. Critical state transition: commit FINISHED = 1 first in its own dedicated, minimal transaction (REQ-TRK-030.1)
-            summariesDb.beginTransaction();
             try {
-                ContentValues finishedValues = new ContentValues();
-                finishedValues.put(WorkoutSummaries.FINISHED, 1);
-                summariesDb.update(WorkoutSummaries.TABLE,
-                        finishedValues,
-                        WorkoutSummaries.C_ID + "=" + mWorkoutID,
-                        null);
-                summariesDb.setTransactionSuccessful();
+                getWorkoutRepository().markWorkoutFinishedBlocking(mWorkoutID);
             } catch (Throwable t) {
                 Log.e(TAG, "Error setting FINISHED=1 in summaries table during endWorkout", t);
-            } finally {
-                summariesDb.endTransaction();
             }
 
             // 2. Save the accumulated SensorTypes in an isolated block so failures cannot roll back FINISHED = 1
@@ -2029,7 +2046,7 @@ public class TrackerService extends Service {
                     : (banalService != null ? banalService.getAccumulatedSensorTypeSet() : null);
             if (accumulatedSensors != null) {
                 try {
-                    summariesDatabaseManager.saveAccumulatedSensorTypes(mWorkoutID, accumulatedSensors);
+                    getWorkoutRepository().saveAccumulatedSensorTypes(mWorkoutID, accumulatedSensors);
                 } catch (Throwable t) {
                     Log.e(TAG, "Error saving accumulated sensor types during endWorkout", t);
                 }
@@ -2037,46 +2054,23 @@ public class TrackerService extends Service {
 
             // 3. Update auxiliary summary metadata (GC_DATA, SPORT_ID, B_SPORT) in an isolated block
             try {
-                ContentValues summaryValues = new ContentValues();
                 String gcData = (snapshot != null && snapshot.accumulatedGCDataString != null)
                         ? snapshot.accumulatedGCDataString
                         : (banalService != null ? banalService.getAccumulatedGCDataString() : null);
-                if (gcData != null) {
-                    summaryValues.put(WorkoutSummaries.GC_DATA, gcData);
-                }
 
-                try {
-                    long sportTypeId = (snapshot != null)
-                            ? snapshot.sportTypeId
-                            : getSportTypeId();
-                    summaryValues.put(WorkoutSummaries.SPORT_ID, sportTypeId);
-                    BSportType bSportType = (snapshot != null && snapshot.bSportType != BSportType.UNKNOWN)
-                            ? snapshot.bSportType
-                            : SportTypeDatabaseManager.getInstance(this).getBSportType(sportTypeId);
-                    if (bSportType != null) {
-                        summaryValues.put(WorkoutSummaries.B_SPORT, bSportType.name());
-                    }
-                } catch (Throwable t) {
-                    Log.e(TAG, "Error resolving sport type metadata during endWorkout", t);
-                }
+                long sportTypeId = (snapshot != null)
+                        ? snapshot.sportTypeId
+                        : getSportTypeId();
+                BSportType bSportType = (snapshot != null && snapshot.bSportType != BSportType.UNKNOWN)
+                        ? snapshot.bSportType
+                        : getSportTypesRepository().getBSportType(sportTypeId);
 
-                if (summaryValues.size() > 0) {
-                    summariesDb.beginTransaction();
-                    try {
-                        summariesDb.update(WorkoutSummaries.TABLE,
-                                summaryValues,
-                                WorkoutSummaries.C_ID + "=" + mWorkoutID,
-                                null);
-                        summariesDb.setTransactionSuccessful();
-                    } finally {
-                        summariesDb.endTransaction();
-                    }
-                }
+                getWorkoutRepository().updateWorkoutAuxiliaryMetadata(mWorkoutID, gcData, sportTypeId, bSportType);
             } catch (Throwable t) {
                 Log.e(TAG, "Error updating auxiliary summary metadata during endWorkout", t);
             }
         } catch (Throwable t) {
-            Log.e(TAG, "Error accessing WorkoutSummariesDatabaseManager during endWorkout", t);
+            Log.e(TAG, "Error accessing WorkoutRepository during endWorkout", t);
         }
 
         try {
@@ -2086,6 +2080,25 @@ public class TrackerService extends Service {
             }
         } catch (Throwable t) {
             Log.e(TAG, "Error finalizing live session during endWorkout", t);
+        }
+
+        try {
+            final long finalWorkoutId = mWorkoutID;
+            final Context appContext = getApplicationContext();
+            if (finalWorkoutId > 0) {
+                java.util.concurrent.ForkJoinPool.commonPool().execute(() -> {
+                    try {
+                        boolean recomputed = HrvPostWorkoutRecomputer.recomputeWorkoutBlocking(appContext, finalWorkoutId);
+                        if (recomputed) {
+                            WorkoutRepository.getInstance(appContext).refreshWorkout(finalWorkoutId);
+                        }
+                    } catch (Throwable t) {
+                        Log.e(TAG, "Error in post-workout HRV recompute for workout " + finalWorkoutId, t);
+                    }
+                });
+            }
+        } catch (Throwable t) {
+            Log.e(TAG, "Error scheduling post-workout HRV recompute", t);
         }
 
         try {
@@ -2139,7 +2152,7 @@ public class TrackerService extends Service {
                 for (long deviceDbId : banalService.getDatabaseIdsOfActiveRemoteDevices()) {
                     if (deviceDbId >= 0 && mActiveSessionDeviceIds.add(deviceDbId)) {
                         if (DEBUG) Log.d(TAG, "New active session device detected: " + deviceDbId);
-                        ActiveDevicesDbHelper.getInstance(this).addActiveDevice(mWorkoutID, deviceDbId);
+                        getDeviceDataRepository().recordActiveDevice(mWorkoutID, deviceDbId);
                     }
                 }
             } catch (Throwable t) {
@@ -2179,20 +2192,10 @@ public class TrackerService extends Service {
             final int timeTotal = mTimeTotal_s;
             
             mTableInitializationFuture.thenAcceptAsync(v -> {
-                WorkoutSummariesDatabaseManager summariesManager = WorkoutSummariesDatabaseManager.getInstance(TrackerService.this);
-                SQLiteDatabase summariesDb = summariesManager.getDatabase();
-                
-                ContentValues pausedValues = new ContentValues();
-                pausedValues.put(WorkoutSummaries.TIME_TOTAL_s, timeTotal);
-                
-                summariesDb.beginTransaction();
                 try {
-                    summariesDb.update(WorkoutSummaries.TABLE, pausedValues, WorkoutSummaries.C_ID + "=?", new String[]{String.valueOf(workoutId)});
-                    summariesDb.setTransactionSuccessful();
+                    getWorkoutRepository().updateWorkoutTotalTime(workoutId, timeTotal);
                 } catch (Exception e) {
                     Log.e(TAG, "Error updating total time during pause", e);
-                } finally {
-                    summariesDb.endTransaction();
                 }
                 
                 // Notify UI to refresh the card
@@ -2223,7 +2226,7 @@ public class TrackerService extends Service {
             SensorData<Number> altData = banalService.getBestSensorData(SensorType.ALTITUDE);
             final Double startAlt = (altData != null && altData.getValue() != null) ? altData.getValue().doubleValue() : null;
             mDbExecutor.execute(() -> {
-                KnownLocationsDatabaseManager.getInstance(TrackerService.this).recordWorkoutStart(startPos, startAlt);
+                getKnownLocationsRepository().recordWorkoutStart(startPos, startAlt);
             });
         }
 
@@ -2391,57 +2394,22 @@ public class TrackerService extends Service {
             final String tableName = resolvedTableName;
             final long workoutId = mWorkoutID;
 
-            WorkoutSamplesDatabaseManager samplesManager = WorkoutSamplesDatabaseManager.getInstance(TrackerService.this);
-            WorkoutSummariesDatabaseManager summariesManager = WorkoutSummariesDatabaseManager.getInstance(TrackerService.this);
-            SQLiteDatabase samplesDb = samplesManager.getDatabase();
-            SQLiteDatabase summariesDb = summariesManager.getDatabase();
+            boolean sampleInserted = getWorkoutRepository().recordLiveSample(
+                    mBaseFileName,
+                    workoutId,
+                    samplingValues,
+                    summaryValues,
+                    extremaUpdates,
+                    streamIncrement,
+                    finalSensorName2Type,
+                    (msg, ex) -> logSampleInsertFailure(msg, ex)
+            );
 
-            samplesDb.beginTransaction();
-            summariesDb.beginTransaction();
-            boolean sampleInserted = false;
-            try {
-                // Write Samples
-                try {
-                    samplesDb.insertOrThrow(tableName, null, samplingValues);
-                    sampleInserted = true;
-                } catch (SQLException e) {
-                    sampleInserted = handleMissingColumns(samplesDb, tableName, samplingValues, finalSensorName2Type, e);
+            if (!sampleInserted) {
+                int failureCount = mSampleInsertFailureCount.get();
+                if (failureCount == 0 || shouldLogSampleInsertFailure(failureCount)) {
+                    Log.w(TAG, "Sample insert failed for table " + tableName + " (sampleInsertFailureCount=" + failureCount + "); proceeding with decoupled summary update");
                 }
-
-                if (!sampleInserted) {
-                    int failureCount = mSampleInsertFailureCount.get();
-                    if (failureCount == 0 || shouldLogSampleInsertFailure(failureCount)) {
-                        Log.w(TAG, "Sample insert failed for table " + tableName + " (sampleInsertFailureCount=" + failureCount + "); proceeding with decoupled summary update");
-                    }
-                }
-
-                // Write Extrema
-                for (ExtremaUpdate update : extremaUpdates) {
-                    if (update.count != null) {
-                        summariesManager.updateExtremaValue(summariesDb, workoutId, update.type, update.extrema, update.value, update.pos, update.count);
-                    } else {
-                        summariesManager.updateExtremaValue(summariesDb, workoutId, update.type, update.extrema, update.value, update.pos);
-                    }
-                }
-
-                // Write Summary
-                summariesDb.update(WorkoutSummaries.TABLE, summaryValues, WorkoutSummaries.C_ID + "=?", new String[]{String.valueOf(workoutId)});
-
-                // Write Streams
-                if (streamIncrement != null) {
-                    summariesManager.appendToMapAndStreams(workoutId, streamIncrement.polylineIncrement, streamIncrement.altitudeIncrement, streamIncrement.distanceIncrement);
-                }
-
-                if (sampleInserted) {
-                    samplesDb.setTransactionSuccessful();
-                }
-                summariesDb.setTransactionSuccessful();
-            } catch (Exception e) {
-                logSampleInsertFailure("Error during async DB write for table " + tableName, e);
-                sampleInserted = false;
-            } finally {
-                samplesDb.endTransaction();
-                summariesDb.endTransaction();
             }
 
             // Notify UI
@@ -2630,7 +2598,7 @@ public class TrackerService extends Service {
             String errorJson = mDiagnosticCollector.toJson();
             if (errorJson != null) {
                 try {
-                    WorkoutSummariesDatabaseManager.getInstance(this).updateRecordingErrors(mWorkoutID, errorJson);
+                    getWorkoutRepository().updateRecordingErrors(mWorkoutID, errorJson);
                 } catch (Throwable ignored) {
                 }
             }
@@ -2652,8 +2620,7 @@ public class TrackerService extends Service {
             if (validTable != null) {
                 Log.w(TAG, "Sample table " + tableName + " missing for valid baseFileName " + mBaseFileName + "; recreating table", insertException);
                 try {
-                    WorkoutSamplesDatabaseManager.getInstance(this)
-                            .createNewTable(mBaseFileName, Arrays.asList(SensorType.values()));
+                    getWorkoutRepository().createSamplesTable(mBaseFileName, Arrays.asList(SensorType.values()));
                     tableName = validTable;
                     mSamplesTableName = validTable;
                 } catch (Exception createEx) {
@@ -2710,19 +2677,19 @@ public class TrackerService extends Service {
         }
     }
 
-    private static class ExtremaUpdate {
-        final SensorType type;
-        final ExtremaType extrema;
-        final double value;
-        final LatLng pos;
+    public static class ExtremaUpdate {
+        public final SensorType type;
+        public final ExtremaType extrema;
+        public final double value;
+        public final LatLng pos;
         @Nullable
-        final Integer count;
+        public final Integer count;
 
-        ExtremaUpdate(SensorType type, ExtremaType extrema, double value, LatLng pos) {
+        public ExtremaUpdate(SensorType type, ExtremaType extrema, double value, LatLng pos) {
             this(type, extrema, value, pos, null);
         }
 
-        ExtremaUpdate(SensorType type, ExtremaType extrema, double value, LatLng pos, @Nullable Integer count) {
+        public ExtremaUpdate(SensorType type, ExtremaType extrema, double value, LatLng pos, @Nullable Integer count) {
             this.type = type;
             this.extrema = extrema;
             this.value = value;
@@ -2772,10 +2739,7 @@ public class TrackerService extends Service {
         if (DEBUG) Log.i(TAG, "finalizeLiveSession");
 
         final BANALServiceComm banalService = mBanalService;
-        WorkoutSummariesDatabaseManager summariesManager = WorkoutSummariesDatabaseManager.getInstance(this);
-        WorkoutRepository repository = (mWorkoutRepository != null)
-                ? mWorkoutRepository
-                : WorkoutRepository.Companion.getInstance((Application) getApplicationContext());
+        WorkoutRepository repository = getWorkoutRepository();
 
         // 1. Finalize Map and Streams first so route geometry and profile streams are never lost if downstream steps fail (REQ-TRK-030.4)
         try {
@@ -2791,11 +2755,7 @@ public class TrackerService extends Service {
             List<Double> sampledDistances = mLiveSession.getSampledDistances();
             String altStream = NumericalEncodingUtils.INSTANCE.encodeDoubles(sampledAltitudes != null ? sampledAltitudes : Collections.emptyList());
             String distStream = NumericalEncodingUtils.INSTANCE.encodeDoubles(sampledDistances != null ? sampledDistances : Collections.emptyList());
-            summariesManager.updateMapAndStreams(mWorkoutID, polyline, altStream, distStream);
-            if (repository != null) {
-                repository.setMapPolyline(mWorkoutID, polyline);
-                repository.setElevationStreams(mWorkoutID, altStream, distStream);
-            }
+            repository.updateMapAndStreams(mWorkoutID, polyline, altStream, distStream);
         } catch (Throwable t) {
             Log.e(TAG, "finalizeLiveSession: Error persisting map polyline and elevation/distance streams", t);
             mDiagnosticCollector.record(DiagnosticStage.FINALIZE, t, "Error persisting map polyline and elevation/distance streams");
@@ -2807,13 +2767,13 @@ public class TrackerService extends Service {
             LatLng endPos = mLiveSession.getLastLatLng();
 
             if (startPos != null) {
-                summariesManager.updateExtremaValue(mWorkoutID, SensorType.LATITUDE, ExtremaType.START, startPos.latitude, startPos);
-                summariesManager.updateExtremaValue(mWorkoutID, SensorType.LONGITUDE, ExtremaType.START, startPos.longitude, startPos);
+                repository.updateExtremaValue(mWorkoutID, SensorType.LATITUDE, ExtremaType.START, startPos.latitude, startPos);
+                repository.updateExtremaValue(mWorkoutID, SensorType.LONGITUDE, ExtremaType.START, startPos.longitude, startPos);
             }
 
             if (endPos != null) {
-                summariesManager.updateExtremaValue(mWorkoutID, SensorType.LATITUDE, ExtremaType.END, endPos.latitude, endPos);
-                summariesManager.updateExtremaValue(mWorkoutID, SensorType.LONGITUDE, ExtremaType.END, endPos.longitude, endPos);
+                repository.updateExtremaValue(mWorkoutID, SensorType.LATITUDE, ExtremaType.END, endPos.latitude, endPos);
+                repository.updateExtremaValue(mWorkoutID, SensorType.LONGITUDE, ExtremaType.END, endPos.longitude, endPos);
             }
 
             for (Map.Entry<SensorType, LiveWorkoutSession.RunningStats> entry : mLiveSession.getSensorStats().entrySet()) {
@@ -2823,17 +2783,11 @@ public class TrackerService extends Service {
 
                 // Min
                 if (Double.isFinite(stats.min) && stats.min != Double.MAX_VALUE) {
-                    summariesManager.updateExtremaValue(mWorkoutID, sensor, ExtremaType.MIN, stats.min, stats.minPos);
-                    if (repository != null) {
-                        repository.updateExtremaValue(mWorkoutID, sensor, ExtremaType.MIN, stats.min, stats.minPos);
-                    }
+                    repository.updateExtremaValue(mWorkoutID, sensor, ExtremaType.MIN, stats.min, stats.minPos);
                 }
                 // Max
                 if (Double.isFinite(stats.max) && stats.max != -Double.MAX_VALUE) {
-                    summariesManager.updateExtremaValue(mWorkoutID, sensor, ExtremaType.MAX, stats.max, stats.maxPos);
-                    if (repository != null) {
-                        repository.updateExtremaValue(mWorkoutID, sensor, ExtremaType.MAX, stats.max, stats.maxPos);
-                    }
+                    repository.updateExtremaValue(mWorkoutID, sensor, ExtremaType.MAX, stats.max, stats.maxPos);
                 }
                 // Avg
                 if (IMPORTANT_SENSOR_TYPES.contains(sensor)) {
@@ -2844,17 +2798,11 @@ public class TrackerService extends Service {
                     }
                     if (Double.isFinite(avgValue)) {
                         Integer avgCount = stats.getCount() > 0 ? stats.getCount() : null;
-                        summariesManager.updateExtremaValue(mWorkoutID, sensor, ExtremaType.AVG, avgValue, null, avgCount);
-                        if (repository != null) {
-                            repository.updateExtremaValue(mWorkoutID, sensor, ExtremaType.AVG, avgValue, null);
-                        }
+                        repository.updateExtremaValue(mWorkoutID, sensor, ExtremaType.AVG, avgValue, null, avgCount);
                     }
                 }
                 if (sensor == SensorType.W_PRIME_BAL && stats.count > 0 && Double.isFinite(stats.last)) {
-                    summariesManager.updateExtremaValue(mWorkoutID, sensor, ExtremaType.END, stats.last, endPos);
-                    if (repository != null) {
-                        repository.updateExtremaValue(mWorkoutID, sensor, ExtremaType.END, stats.last, endPos);
-                    }
+                    repository.updateExtremaValue(mWorkoutID, sensor, ExtremaType.END, stats.last, endPos);
                 }
             }
 
@@ -2863,10 +2811,7 @@ public class TrackerService extends Service {
                 List<LatLng> sampledPoints = mLiveSession.getSampledLatLngs();
                 LatLng calculatedApex = WorkoutClusterEngine.getInstance(this).findApexFromPoints(startPos, sampledPoints, endPos);
                 double calculatedMaxDisp = WorkoutClusterEngine.Companion.distanceBetween(startPos, calculatedApex);
-                summariesManager.updateExtremaValue(mWorkoutID, SensorType.LINE_DISTANCE_m, ExtremaType.MAX, calculatedMaxDisp, calculatedApex);
-                if (repository != null) {
-                    repository.updateExtremaValue(mWorkoutID, SensorType.LINE_DISTANCE_m, ExtremaType.MAX, calculatedMaxDisp, calculatedApex);
-                }
+                repository.updateExtremaValue(mWorkoutID, SensorType.LINE_DISTANCE_m, ExtremaType.MAX, calculatedMaxDisp, calculatedApex);
             }
         } catch (Throwable t) {
             Log.e(TAG, "finalizeLiveSession: Error persisting start/end locations and sensor extrema", t);
@@ -2876,27 +2821,11 @@ public class TrackerService extends Service {
         // 3. Calculate and persist Efficiency Factor (EF), Aerobic Decoupling, and Power Training Metrics from recorded samples (REQ-UI-400.2, REQ-MIG-039.4)
         try {
             if (mBaseFileName != null && !mBaseFileName.isEmpty()) {
-                WorkoutSamplesDatabaseManager samplesManager = WorkoutSamplesDatabaseManager.getInstance(this);
-                if (samplesManager.existsTable(mBaseFileName)) {
-                    String tableName = WorkoutSamplesDatabaseManager.getTableName(mBaseFileName);
-                    java.util.List<Double> powerSamples = new java.util.ArrayList<>();
-                    java.util.List<Double> speedSamples = new java.util.ArrayList<>();
-                    java.util.List<Double> hrSamples = new java.util.ArrayList<>();
-                    try (Cursor sampleCursor = samplesManager.getDatabase().query(tableName, null, null, null, null, null, null)) {
-                        if (sampleCursor != null) {
-                            int powerIdx = sampleCursor.getColumnIndex(SensorType.POWER.name());
-                            int speedIdx = sampleCursor.getColumnIndex(SensorType.SPEED_mps.name());
-                            int hrIdx = sampleCursor.getColumnIndex(SensorType.HR.name());
-                            while (sampleCursor.moveToNext()) {
-                                Double p = (powerIdx != -1 && !sampleCursor.isNull(powerIdx)) ? sampleCursor.getDouble(powerIdx) : null;
-                                Double s = (speedIdx != -1 && !sampleCursor.isNull(speedIdx)) ? sampleCursor.getDouble(speedIdx) : null;
-                                Double hr = (hrIdx != -1 && !sampleCursor.isNull(hrIdx)) ? sampleCursor.getDouble(hrIdx) : null;
-                                powerSamples.add(p);
-                                speedSamples.add(s);
-                                hrSamples.add(hr);
-                            }
-                        }
-                    }
+                com.atrainingtracker.trainingtracker.ui.aftermath.PowerSpeedHrSamples samples = repository.getPowerSpeedHrSamples(mBaseFileName);
+                java.util.List<Double> powerSamples = samples.getPowerSamples();
+                java.util.List<Double> speedSamples = samples.getSpeedSamples();
+                java.util.List<Double> hrSamples = samples.getHrSamples();
+                if (!powerSamples.isEmpty() || !speedSamples.isEmpty() || !hrSamples.isEmpty()) {
                     BSportType liveSport = (snapshot != null && snapshot.bSportType != BSportType.UNKNOWN)
                             ? snapshot.bSportType
                             : ((banalService != null && banalService.getBSportType() != null)
@@ -2909,17 +2838,11 @@ public class TrackerService extends Service {
                     SensorType targetSensor = aerobicResult.isPowerBased() ? SensorType.POWER : SensorType.SPEED_mps;
                     if (aerobicResult.getEfficiencyFactor() != null) {
                         double ef = aerobicResult.getEfficiencyFactor();
-                        summariesManager.updateExtremaValue(mWorkoutID, targetSensor, ExtremaType.EFFICIENCY_FACTOR, ef, null);
-                        if (repository != null) {
-                            repository.updateExtremaValue(mWorkoutID, targetSensor, ExtremaType.EFFICIENCY_FACTOR, ef, null);
-                        }
+                        repository.updateExtremaValue(mWorkoutID, targetSensor, ExtremaType.EFFICIENCY_FACTOR, ef, null);
                     }
                     if (aerobicResult.getDecouplingPct() != null) {
                         double dec = aerobicResult.getDecouplingPct();
-                        summariesManager.updateExtremaValue(mWorkoutID, targetSensor, ExtremaType.AEROBIC_DECOUPLING, dec, null);
-                        if (repository != null) {
-                            repository.updateExtremaValue(mWorkoutID, targetSensor, ExtremaType.AEROBIC_DECOUPLING, dec, null);
-                        }
+                        repository.updateExtremaValue(mWorkoutID, targetSensor, ExtremaType.AEROBIC_DECOUPLING, dec, null);
                     }
 
                     // REQ-REV-009.2 (ATT-3904): 1st-order dynamical Power-HR identification
@@ -2928,7 +2851,7 @@ public class TrackerService extends Service {
                                     powerSamples, hrSamples, mWorkoutID, 1.0
                             );
                     if (dynamics != null) {
-                        summariesManager.saveCardioPowerDynamics(mWorkoutID, dynamics);
+                        repository.saveCardioPowerDynamics(mWorkoutID, dynamics);
                     }
 
                     // REQ-MIG-039.4 (ATT-3860 / ATT-3858): Calculate and persist session power training metrics (NP, IF, TSS, Work kJ, W/kg)
@@ -2946,51 +2869,33 @@ public class TrackerService extends Service {
                             );
                     if (powerMetrics.getNormalizedPowerWatts() != null) {
                         double np = powerMetrics.getNormalizedPowerWatts();
-                        summariesManager.updateExtremaValue(mWorkoutID, SensorType.NORMALIZED_POWER, ExtremaType.AVG, np, null);
-                        summariesManager.updateExtremaValue(mWorkoutID, SensorType.NORMALIZED_POWER, ExtremaType.END, np, null);
-                        if (repository != null) {
-                            repository.updateExtremaValue(mWorkoutID, SensorType.NORMALIZED_POWER, ExtremaType.AVG, np, null);
-                        }
+                        repository.updateExtremaValue(mWorkoutID, SensorType.NORMALIZED_POWER, ExtremaType.AVG, np, null);
+                        repository.updateExtremaValue(mWorkoutID, SensorType.NORMALIZED_POWER, ExtremaType.END, np, null);
                     }
                     if (powerMetrics.getIntensityFactor() != null) {
                         double ifVal = powerMetrics.getIntensityFactor();
-                        summariesManager.updateExtremaValue(mWorkoutID, SensorType.INTENSITY_FACTOR, ExtremaType.AVG, ifVal, null);
-                        summariesManager.updateExtremaValue(mWorkoutID, SensorType.INTENSITY_FACTOR, ExtremaType.END, ifVal, null);
-                        if (repository != null) {
-                            repository.updateExtremaValue(mWorkoutID, SensorType.INTENSITY_FACTOR, ExtremaType.AVG, ifVal, null);
-                        }
+                        repository.updateExtremaValue(mWorkoutID, SensorType.INTENSITY_FACTOR, ExtremaType.AVG, ifVal, null);
+                        repository.updateExtremaValue(mWorkoutID, SensorType.INTENSITY_FACTOR, ExtremaType.END, ifVal, null);
                     }
                     if (powerMetrics.getTss() != null) {
                         double tss = powerMetrics.getTss();
-                        summariesManager.updateExtremaValue(mWorkoutID, SensorType.TSS, ExtremaType.AVG, tss, null);
-                        summariesManager.updateExtremaValue(mWorkoutID, SensorType.TSS, ExtremaType.MAX, tss, null);
-                        summariesManager.updateExtremaValue(mWorkoutID, SensorType.TSS, ExtremaType.END, tss, null);
-                        if (repository != null) {
-                            repository.updateExtremaValue(mWorkoutID, SensorType.TSS, ExtremaType.AVG, tss, null);
-                        }
+                        repository.updateExtremaValue(mWorkoutID, SensorType.TSS, ExtremaType.AVG, tss, null);
+                        repository.updateExtremaValue(mWorkoutID, SensorType.TSS, ExtremaType.MAX, tss, null);
+                        repository.updateExtremaValue(mWorkoutID, SensorType.TSS, ExtremaType.END, tss, null);
                     }
                     if (powerMetrics.getWorkKj() != null) {
                         double workKj = powerMetrics.getWorkKj();
-                        summariesManager.updateExtremaValue(mWorkoutID, SensorType.WORK_KJ, ExtremaType.AVG, workKj, null);
-                        summariesManager.updateExtremaValue(mWorkoutID, SensorType.WORK_KJ, ExtremaType.MAX, workKj, null);
-                        summariesManager.updateExtremaValue(mWorkoutID, SensorType.WORK_KJ, ExtremaType.END, workKj, null);
-                        if (repository != null) {
-                            repository.updateExtremaValue(mWorkoutID, SensorType.WORK_KJ, ExtremaType.AVG, workKj, null);
-                        }
+                        repository.updateExtremaValue(mWorkoutID, SensorType.WORK_KJ, ExtremaType.AVG, workKj, null);
+                        repository.updateExtremaValue(mWorkoutID, SensorType.WORK_KJ, ExtremaType.MAX, workKj, null);
+                        repository.updateExtremaValue(mWorkoutID, SensorType.WORK_KJ, ExtremaType.END, workKj, null);
                     }
                     if (powerMetrics.getAvgPowerToWeight() != null) {
                         double avgWPerKg = powerMetrics.getAvgPowerToWeight();
-                        summariesManager.updateExtremaValue(mWorkoutID, SensorType.POWER_TO_WEIGHT, ExtremaType.AVG, avgWPerKg, null);
-                        if (repository != null) {
-                            repository.updateExtremaValue(mWorkoutID, SensorType.POWER_TO_WEIGHT, ExtremaType.AVG, avgWPerKg, null);
-                        }
+                        repository.updateExtremaValue(mWorkoutID, SensorType.POWER_TO_WEIGHT, ExtremaType.AVG, avgWPerKg, null);
                     }
                     if (powerMetrics.getMaxPowerToWeight() != null) {
                         double maxWPerKg = powerMetrics.getMaxPowerToWeight();
-                        summariesManager.updateExtremaValue(mWorkoutID, SensorType.POWER_TO_WEIGHT, ExtremaType.MAX, maxWPerKg, null);
-                        if (repository != null) {
-                            repository.updateExtremaValue(mWorkoutID, SensorType.POWER_TO_WEIGHT, ExtremaType.MAX, maxWPerKg, null);
-                        }
+                        repository.updateExtremaValue(mWorkoutID, SensorType.POWER_TO_WEIGHT, ExtremaType.MAX, maxWPerKg, null);
                     }
                 }
             }
@@ -3026,7 +2931,7 @@ public class TrackerService extends Service {
 
             LatLng startPosRaw = mLiveSession.getStartLatLng();
             LatLng endPosRaw = mLiveSession.getLastLatLng();
-            LatLng maxDispPos = summariesManager.getExtremaPosition(mWorkoutID, SensorType.LINE_DISTANCE_m, ExtremaType.MAX);
+            LatLng maxDispPos = repository.getExtremaPosition(mWorkoutID, SensorType.LINE_DISTANCE_m, ExtremaType.MAX);
 
             if (startPosRaw != null && endPosRaw != null && maxDispPos != null) {
                 WorkoutClusterEngine engine = WorkoutClusterEngine.Companion.getInstance(this);
@@ -3047,33 +2952,31 @@ public class TrackerService extends Service {
                     candidateSports = discoveryManager.getCandidateBSportTypes(banalSportType, getAverageSpeed());
                 }
 
-                LatLng minAltPos = summariesManager.getExtremaPosition(mWorkoutID, SensorType.ALTITUDE, ExtremaType.MIN);
-                LatLng maxAltPos = summariesManager.getExtremaPosition(mWorkoutID, SensorType.ALTITUDE, ExtremaType.MAX);
+                LatLng minAltPos = repository.getExtremaPosition(mWorkoutID, SensorType.ALTITUDE, ExtremaType.MIN);
+                LatLng maxAltPos = repository.getExtremaPosition(mWorkoutID, SensorType.ALTITUDE, ExtremaType.MAX);
                 WorkoutCluster suggestion = engine.suggestCluster(startPosRaw, endPosRaw, maxDispPos, mDistanceTotal_m, null, candidateSports, minAltPos, maxAltPos);
                 if (suggestion != null) {
                     // If hardware confidence is high, we only take the name from the cluster
                     if (identity.isHighConfidence()) {
-                        ContentValues nameValues = new ContentValues();
                         int displayCount = suggestion.getHitCount() + 1;
                         String autoName = WorkoutClusterEngine.formatClusterWorkoutName(this, suggestion.getName(), displayCount, suggestion.getHasCounter());
-                        nameValues.put(WorkoutSummaries.WORKOUT_NAME, autoName);
-                        nameValues.put(WorkoutSummaries.CLUSTER_ID, suggestion.getId());
-                        summariesManager.getDatabase().update(WorkoutSummaries.TABLE, nameValues, WorkoutSummaries.C_ID + "=?", new String[]{String.valueOf(mWorkoutID)});
+                        repository.updateWorkoutName(mWorkoutID, autoName);
+                        repository.updateWorkoutClusterId(mWorkoutID, suggestion.getId());
 
                         // Apply hardware-based identity (Sport, Gear, Strava)
-                        summariesManager.applyInferredIdentity(mWorkoutID, identity);
+                        repository.applyInferredIdentity(mWorkoutID, identity);
                     } else {
                         // Low hardware confidence -> Workout Cluster wins everything and resolves ambiguous sport type
                         engine.assignClusterToWorkout(this, mWorkoutID, suggestion.getId());
                     }
                 } else {
                     // No cluster match -> use hardware identity
-                    summariesManager.applyInferredIdentity(mWorkoutID, identity);
+                    repository.applyInferredIdentity(mWorkoutID, identity);
 
                     // ATT-1398: Intelligent Workout Auto-Naming based on recognized start/destination Lieblingsorte
-                    KnownLocationsDatabaseManager knownLocationsManager = KnownLocationsDatabaseManager.getInstance(this);
-                    KnownLocationsDatabaseManager.MyLocation startLoc = knownLocationsManager.getMyLocation(startPosRaw);
-                    KnownLocationsDatabaseManager.MyLocation endLoc = knownLocationsManager.getMyLocation(endPosRaw);
+                    KnownLocationsRepository knownLocationsRepo = getKnownLocationsRepository();
+                    KnownLocationsDatabaseManager.MyLocation startLoc = knownLocationsRepo.getMyLocation(startPosRaw);
+                    KnownLocationsDatabaseManager.MyLocation endLoc = knownLocationsRepo.getMyLocation(endPosRaw);
                     float endpointDist = engine.distanceBetween(startPosRaw, endPosRaw);
                     BSportType resolvedSport = (identity != null && identity.getBSportType() != null && identity.getBSportType() != BSportType.UNKNOWN)
                         ? identity.getBSportType()
@@ -3087,14 +2990,12 @@ public class TrackerService extends Service {
                         mDistanceTotal_m
                     );
                     if (autoName != null && !autoName.trim().isEmpty()) {
-                        ContentValues nameValues = new ContentValues();
-                        nameValues.put(WorkoutSummaries.WORKOUT_NAME, autoName);
-                        summariesManager.getDatabase().update(WorkoutSummaries.TABLE, nameValues, WorkoutSummaries.C_ID + "=?", new String[]{String.valueOf(mWorkoutID)});
+                        repository.updateWorkoutName(mWorkoutID, autoName);
                     }
                 }
             } else {
                 // No spatial data -> use hardware identity
-                summariesManager.applyInferredIdentity(mWorkoutID, identity);
+                repository.applyInferredIdentity(mWorkoutID, identity);
             }
 
             // 6. Milestone Workout Auto-Naming & First Jubilee Evaluation (ATT-2308 / REQ-REV-001, REQ-REV-002, REQ-REV-004)
@@ -3124,10 +3025,7 @@ public class TrackerService extends Service {
         try {
             String finalErrorJson = mDiagnosticCollector.toJson();
             if (finalErrorJson != null && mWorkoutID > 0) {
-                summariesManager.updateRecordingErrors(mWorkoutID, finalErrorJson);
-                if (repository != null) {
-                    repository.setRecordingErrors(mWorkoutID, finalErrorJson);
-                }
+                repository.updateRecordingErrors(mWorkoutID, finalErrorJson);
             }
         } catch (Throwable t) {
             Log.e(TAG, "finalizeLiveSession: Error persisting diagnostic errors payload", t);
@@ -3137,11 +3035,11 @@ public class TrackerService extends Service {
     @VisibleForTesting
     protected void guessCommuteAndTrainer() {
         if (DEBUG) Log.i(TAG, "guessCommuteAndTrainer");
-        WorkoutSummariesDatabaseManager summariesManager = WorkoutSummariesDatabaseManager.getInstance(this);
+        WorkoutRepository repository = getWorkoutRepository();
 
-        Double distance = summariesManager.getDouble(mWorkoutID, WorkoutSummaries.DISTANCE_TOTAL_m);
-        Double maxLineDistance = summariesManager.getExtremaValue(mWorkoutID, SensorType.LINE_DISTANCE_m, ExtremaType.MAX);
-        Double endLineDistance = summariesManager.getExtremaValue(mWorkoutID, SensorType.LINE_DISTANCE_m, ExtremaType.END);
+        Double distance = repository.getWorkoutDistance(mWorkoutID);
+        Double maxLineDistance = repository.getExtremaValue(mWorkoutID, SensorType.LINE_DISTANCE_m, ExtremaType.MAX);
+        Double endLineDistance = repository.getExtremaValue(mWorkoutID, SensorType.LINE_DISTANCE_m, ExtremaType.END);
 
         boolean commute = false, trainer = false;
         if (maxLineDistance != null) {
@@ -3156,21 +3054,11 @@ public class TrackerService extends Service {
         }
 
         if (commute ^ trainer) {
-            ContentValues values = new ContentValues();
-            values.put(WorkoutSummaries.COMMUTE, commute);
-            values.put(WorkoutSummaries.TRAINER, trainer);
-            summariesManager.getDatabase().update(WorkoutSummaries.TABLE, values, WorkoutSummaries.C_ID + "=?", new String[]{Long.toString(mWorkoutID)});
-
-            WorkoutRepository repository = (mWorkoutRepository != null)
-                    ? mWorkoutRepository
-                    : WorkoutRepository.Companion.getInstance((Application) getApplicationContext());
-            if (repository != null) {
-                repository.setCommuteAndTrainer(mWorkoutID, commute, trainer);
-            }
+            repository.setCommuteAndTrainer(mWorkoutID, commute, trainer);
         }
     }
 
 
-    public enum StartType {START_NORMAL, RESUME_BY_USER, RESUME_SERVICE_RECREATION}
+    public enum StartType {START_NORMAL, RESUME_BY_USER, RESUME_AUTOMATICALLY, RESUME_SERVICE_RECREATION}
 
 }

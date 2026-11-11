@@ -27,7 +27,7 @@ import com.atrainingtracker.util.safeEnumValueOfOrNull
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.climbs.Climb
-import com.atrainingtracker.trainingtracker.database.ClimbsDatabaseManager
+import com.atrainingtracker.trainingtracker.climbs.LiveClimbsRepository
 import com.atrainingtracker.trainingtracker.elevation.ElevationSource
 import com.atrainingtracker.trainingtracker.database.WorkoutClusterRepository
 import com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository
@@ -59,7 +59,7 @@ class MapFragmentWithTrackViewModel @JvmOverloads constructor(
     segmentsRepo: SegmentsRepository? = null,
     routesRepo: RoutesRepository? = null,
     workoutClusterRepo: WorkoutClusterRepository? = null,
-    climbsDbManager: ClimbsDatabaseManager? = null,
+    liveClimbsRepo: LiveClimbsRepository? = null,
     prefs: SharedPreferences? = null,
     private val defaultDispatcher: CoroutineDispatcher = Dispatchers.Default
 ) : AndroidViewModel(application) {
@@ -68,7 +68,7 @@ class MapFragmentWithTrackViewModel @JvmOverloads constructor(
     private val segmentsRepository = segmentsRepo ?: SegmentsRepository.getInstance(application)
     private val routesRepository = routesRepo ?: RoutesRepository.getInstance(application)
     private val workoutClusterRepository = workoutClusterRepo ?: WorkoutClusterRepository.getInstance(application)
-    private val climbsDb = climbsDbManager ?: ClimbsDatabaseManager.getInstance(application)
+    private val liveClimbsRepository = liveClimbsRepo ?: LiveClimbsRepository.getInstance(application)
     private val sharedPreferences = prefs ?: PreferenceManager.getDefaultSharedPreferences(application)
 
     private val _enabledLayers = MutableStateFlow(loadEnabledLayers())
@@ -131,11 +131,11 @@ class MapFragmentWithTrackViewModel @JvmOverloads constructor(
         }
     }.flowOn(defaultDispatcher).distinctUntilChanged()
 
-    private val mapClimbsFlow = enabledLayers.map { layers ->
+    private val mapClimbsFlow = combine(enabledLayers, liveClimbsRepository.allStoredClimbs) { layers, storedClimbs ->
         if (GeneralMapLayer.CLIMBS !in layers) {
             emptyList()
         } else {
-            climbsDb.getAllClimbs()
+            storedClimbs
         }
     }.flowOn(defaultDispatcher).distinctUntilChanged()
 

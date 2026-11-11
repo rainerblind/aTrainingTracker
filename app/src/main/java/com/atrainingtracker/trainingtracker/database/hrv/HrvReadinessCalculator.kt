@@ -22,6 +22,15 @@ import java.time.LocalDate
 import kotlin.math.sqrt
 
 /**
+ * Autonomic baseline calibration progress states for morning resting HRV (`REQ-PER-030.4`).
+ */
+enum class CalibrationProgressState {
+    BASELINE_60D,
+    WEEKLY_7D,
+    COMPLETE
+}
+
+/**
  * Result of evaluating morning HRV autonomic readiness on a specific target date (`REQ-PER-030.4`).
  *
  * @property targetDateIso Date evaluated in `YYYY-MM-DD` format.
@@ -37,6 +46,7 @@ import kotlin.math.sqrt
  * @property calibrationDaysCount Count of baseline days recorded in the 60-day window.
  * @property calibrationProgressMessage Formatted calibration progress indicator.
  * @property todayEntry Primary measurement recorded on [targetDateIso], if present.
+ * @property calibrationState Structured calibration phase indicator for 9-locale UI rendering.
  */
 data class HrvReadinessResult(
     val targetDateIso: String,
@@ -51,7 +61,8 @@ data class HrvReadinessResult(
     val swcUpper: Double?,
     val calibrationDaysCount: Int,
     val calibrationProgressMessage: String,
-    val todayEntry: HrvReadinessEntry?
+    val todayEntry: HrvReadinessEntry?,
+    val calibrationState: CalibrationProgressState = CalibrationProgressState.COMPLETE
 )
 
 /**
@@ -161,14 +172,18 @@ object HrvReadinessCalculator {
 
         val status: ReadinessStatus
         val progressMsg: String
+        val calibrationState: CalibrationProgressState
 
         if (n60d < MIN_60D_DAYS) {
             status = ReadinessStatus.CALIBRATING
+            calibrationState = CalibrationProgressState.BASELINE_60D
             progressMsg = "Day $n60d of $MIN_60D_DAYS baseline calibration"
         } else if (n7d < MIN_7D_DAYS || mu7d == null || swcLower == null || swcUpper == null) {
             status = ReadinessStatus.CALIBRATING
+            calibrationState = CalibrationProgressState.WEEKLY_7D
             progressMsg = "Day $n7d of $MIN_7D_DAYS weekly readings"
         } else {
+            calibrationState = CalibrationProgressState.COMPLETE
             progressMsg = "Calibration complete"
             status = when {
                 mu7d < swcLower -> ReadinessStatus.FATIGUED_LOW
@@ -190,7 +205,8 @@ object HrvReadinessCalculator {
             swcUpper = swcUpper,
             calibrationDaysCount = n60d,
             calibrationProgressMessage = progressMsg,
-            todayEntry = todayEntry
+            todayEntry = todayEntry,
+            calibrationState = calibrationState
         )
     }
 }

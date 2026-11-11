@@ -9,4 +9,7 @@
     <string name="health_connect_sync_manual">Sync to Health Connect</string>
     <string name="health_connect_sync_success">Workout synced to Health Connect</string>
     <string name="health_connect_permissions_needed">Health Connect write permissions are required to sync workout data</string>
+    <string name="health_connect_hrv_import_title">Import Resting HRV from Health Connect</string>
+    <string name="health_connect_hrv_import_summary">Import nocturnal resting HRV and resting heart rate data from wearable devices</string>
+    <string name="health_connect_hrv_permissions_needed">Health Connect read permissions are required to import nocturnal HRV data</string>
 </resources>

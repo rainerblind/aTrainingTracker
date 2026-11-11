@@ -227,6 +227,7 @@ public class TrainingApplication extends Application {
     private static final String SP_UPLOAD_STRAVA_HR = "uploadStravaHR";
     private static final String SP_UPLOAD_STRAVA_POWER = "uploadStravaPower";
     private static final String SP_UPLOAD_STRAVA_CADENCE = "uploadStravaCadence";
+    private static final String SP_UPLOAD_STRAVA_RADAR_SUMMARY = "uploadStravaRadarSummary";
     //public static final int UPLOAD_PROGRESS_NOTIFICATION_ID       = 3;
 
     // public static final int UPLOAD_RESULT_BASE_NOTIFICATION_ID    = 8;
@@ -1353,6 +1354,16 @@ public class TrainingApplication extends Application {
         return cSharedPreferences.getBoolean(SP_UPLOAD_STRAVA_CADENCE, true);
     }
 
+    public static boolean uploadStravaRadarSummary() {
+        return cSharedPreferences != null ? cSharedPreferences.getBoolean(SP_UPLOAD_STRAVA_RADAR_SUMMARY, false) : false;
+    }
+
+    public static void setUploadStravaRadarSummary(boolean enabled) {
+        if (cSharedPreferences != null) {
+            cSharedPreferences.edit().putBoolean(SP_UPLOAD_STRAVA_RADAR_SUMMARY, enabled).apply();
+        }
+    }
+
     @Deprecated
     public static boolean defaultToPrivate() {  // in the past, it was possible to mark activities in Strava as private via the API.  Unfortunately, this is no longer possible.
         return false;
@@ -1910,6 +1921,9 @@ public class TrainingApplication extends Application {
             stopIntent.setAction(TrackerService.ACTION_STOP);
             LifecycleUtils.safeStartService(this, stopIntent, TAG);
         } else {
+            com.atrainingtracker.banalservice.devices.radar.RadarLightController.onWorkoutStopped(this);
+            com.atrainingtracker.banalservice.devices.radar.RadarSnoozeController.reset();
+            com.atrainingtracker.banalservice.devices.radar.RadarTrafficSimulator.INSTANCE.stop();
             stopService(new Intent(this, TrackerService.class));
         }
 

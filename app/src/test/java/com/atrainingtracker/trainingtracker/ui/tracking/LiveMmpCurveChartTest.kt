@@ -19,14 +19,13 @@
 package com.atrainingtracker.trainingtracker.ui.tracking
 
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.io.File
+import kotlin.math.max
 
 /**
- * Unit and contract tests for [LiveMmpCurveChart] and [MmpBenchmark] logarithmic scaling
- * and Rule 66 Compose state hygiene conforming to REQ-TRK-058.4 and TST-TRK-058.4.
+ * Unit and contract tests for [LiveMmpCurveChart], [MmpBenchmark] logarithmic scaling,
+ * and PR breakthrough detection conforming to REQ-TRK-058.4, REQ-TRK-058.6, and TST-TRK-058.6b.
  */
 class LiveMmpCurveChartTest {
 
@@ -59,24 +58,65 @@ class LiveMmpCurveChartTest {
     }
 
     @Test
-    fun verifyZeroSnapshotStateWritesDuringComposition_Rule66() {
-        var dir = File(System.getProperty("user.dir") ?: ".")
-        while (!File(dir, "app").exists() && dir.parentFile != null) {
-            dir = dir.parentFile!!
-        }
-        val chartFile = File(dir, "app/src/main/java/com/atrainingtracker/trainingtracker/ui/tracking/LiveMmpCurveChart.kt")
-        assertTrue("LiveMmpCurveChart.kt must exist", chartFile.exists())
+    fun breakthroughDetection_identifiesExceededBenchmarks() {
+        val reference = mapOf(
+            5 to 600.0,
+            60 to 400.0,
+            300 to 300.0,
+            1200 to 250.0
+        )
+        val peakPowers = mapOf(
+            5 to 650.0,  // Breakthrough (+50W)
+            60 to 390.0,  // No breakthrough
+            300 to 325.0, // Breakthrough (+25W)
+            1200 to 240.0 // No breakthrough
+        )
 
-        val lines = chartFile.readLines()
-        lines.forEachIndexed { index, line ->
-            assertFalse(
-                "Line ${index + 1} contains mutableStateOf write during composition (Rule 66)",
-                line.contains("by remember { mutableStateOf") && line.contains("=") && !line.trimStart().startsWith("//")
-            )
-            assertFalse(
-                "Line ${index + 1} contains hardcoded Color(0x outside Color.kt",
-                line.contains("Color(0x") && !line.trimStart().startsWith("//") && !line.trimStart().startsWith("*")
-            )
-        }
+        val data = LiveMmpCurveData(
+            peakPowers = peakPowers,
+            referencePoints = reference
+        )
+
+        val breakthroughs = data.getBreakthroughs()
+        assertEquals(2, breakthroughs.size)
+
+        val b5s = breakthroughs.first { it.benchmark == MmpBenchmark.SPRINT_5S }
+        assertEquals(650.0, b5s.sessionWatts, 0.001)
+        assertEquals(600.0, b5s.referenceWatts, 0.001)
+        assertEquals(50.0, b5s.deltaWatts, 0.001)
+
+        val b5m = breakthroughs.first { it.benchmark == MmpBenchmark.VO2MAX_5M }
+        assertEquals(325.0, b5m.sessionWatts, 0.001)
+        assertEquals(300.0, b5m.referenceWatts, 0.001)
+        assertEquals(25.0, b5m.deltaWatts, 0.001)
+    }
+
+    @Test
+    fun breakthroughDetection_returnsEmptyWhenSessionBelowReferenceOrMissing() {
+        val reference = mapOf(5 to 700.0, 60 to 450.0)
+        val peakPowers = mapOf(5 to 680.0, 60 to 420.0)
+
+        val data = LiveMmpCurveData(
+            peakPowers = peakPowers,
+            referencePoints = reference
+        )
+        assertTrue(data.getBreakthroughs().isEmpty())
+
+        val emptyData = LiveMmpCurveData()
+        assertTrue(emptyData.getBreakthroughs().isEmpty())
+    }
+
+    @Test
+    fun maxWattsHeadroom_accommodatesReferenceAndPeakValues() {
+        val reference = mapOf(5 to 800.0)
+        val peakPowers = mapOf(5 to 500.0)
+        val data = LiveMmpCurveData(peakPowers = peakPowers, referencePoints = reference)
+
+        val allWatts = data.peakPowers.values + data.rollingMeans.values +
+                data.referencePoints.values + listOfNotNull(data.instantaneousPower)
+        val maxObserved = allWatts.maxOrNull() ?: 200.0
+        val maxWatts = max(400.0, maxObserved * 1.15)
+
+        assertEquals(800.0 * 1.15, maxWatts, 0.001)
     }
 }

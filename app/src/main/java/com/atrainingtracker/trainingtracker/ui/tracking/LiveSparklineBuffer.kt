@@ -36,6 +36,7 @@ class LiveSparklineBuffer(val horizonSeconds: Int = 300) {
     private val lock = Any()
     private val fixedBuffer: ArrayDeque<Float> = if (horizonSeconds > 0) ArrayDeque(horizonSeconds) else ArrayDeque()
     private val fullWorkoutBuffer: ArrayList<Float> = ArrayList(if (horizonSeconds <= 0) MAX_FULL_WORKOUT_SAMPLES + 2 else 0)
+    private var totalElapsedSeconds: Int = 0
 
     /**
      * Appends a new numeric telemetry sample to the buffer.
@@ -44,6 +45,7 @@ class LiveSparklineBuffer(val horizonSeconds: Int = 300) {
      */
     fun addSample(value: Float) {
         synchronized(lock) {
+            totalElapsedSeconds++
             if (horizonSeconds > 0) {
                 if (fixedBuffer.size >= horizonSeconds) {
                     fixedBuffer.removeFirst()
@@ -97,12 +99,28 @@ class LiveSparklineBuffer(val horizonSeconds: Int = 300) {
         }
 
     /**
+     * Elapsed temporal span represented by the buffer in seconds (REQ-TRK-059.9, ATT-6695).
+     *
+     * <p>For fixed horizons, caps at [horizonSeconds] once warmed. For Full Workout mode,
+     * preserves cumulative elapsed duration across repeated pairwise decimations.</p>
+     */
+    val currentSpanSeconds: Int
+        get() = synchronized(lock) {
+            if (horizonSeconds > 0) {
+                minOf(maxOf(0, totalElapsedSeconds - 1), horizonSeconds)
+            } else {
+                maxOf(0, totalElapsedSeconds - 1)
+            }
+        }
+
+    /**
      * Clears all samples in the buffer.
      */
     fun clear() {
         synchronized(lock) {
             fixedBuffer.clear()
             fullWorkoutBuffer.clear()
+            totalElapsedSeconds = 0
         }
     }
 }

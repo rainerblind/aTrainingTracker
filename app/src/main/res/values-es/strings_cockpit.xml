@@ -39,6 +39,8 @@
 
     <string name="mmp_curve">Curva de potencia media máxima</string>
     <string name="mmp_curve_short">MMP</string>
+    <string name="config_tracking__show_mmp_curve">Curva MMP</string>
+    <string name="mmp_breakthrough_pr">¡PR!</string>
 
     <!-- Cockpit Live Sparkline Graph & Time Horizon (REQ-TRK-059, ATT-1294) -->
     <string name="sensor_field_show_graph">Gráfico</string>
@@ -50,4 +52,19 @@
     <string name="graph_horizon_20m">20 min</string>
     <string name="graph_horizon_1h">1 hora</string>
     <string name="graph_horizon_full">Entrenamiento completo</string>
+    <string name="sparkline_axis_now">Ahora</string>
+
+    <!-- 2-Level Sensor Taxonomy & SensorSubCategory (REQ-TRK-070, ATT-6726) -->
+    <string name="sensor_category_elevation">Altitud</string>
+    <string name="sensor_sub_category_power_load">Carga de potencia y trabajo</string>
+    <string name="sensor_sub_category_power_rolling">Promedios móviles</string>
+    <string name="sensor_sub_category_power_peak">Potencia máxima</string>
+    <string name="sensor_sub_category_pedaling_dynamics">Dinámica de pedaleo</string>
+    <string name="sensor_sub_category_hrv_and_drift">VFC y deriva aeróbica</string>
+    <string name="sensor_sub_category_lap_metrics">Métricas de vuelta</string>
+    <string name="sensor_sub_category_radar_safety">Seguridad radar</string>
+    <string name="sensor_sub_category_ambient_temperature">Temperatura ambiente</string>
+    <string name="sensor_sub_category_phone_battery">Batería del smartphone</string>
+    <string name="sensor_capability_bar">Barra</string>
+    <string name="sensor_capability_graph">Gráfico</string>
 </resources>

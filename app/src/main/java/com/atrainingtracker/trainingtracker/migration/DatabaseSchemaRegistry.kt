@@ -50,7 +50,9 @@ object DatabaseSchemaRegistry {
         com.atrainingtracker.trainingtracker.database.hrv.HrvReadinessDbHelper.DB_NAME to
                 com.atrainingtracker.trainingtracker.database.hrv.HrvReadinessDbHelper.DB_VERSION,
         com.atrainingtracker.trainingtracker.database.hrv.WorkoutRrDbHelper.DB_NAME to
-                com.atrainingtracker.trainingtracker.database.hrv.WorkoutRrDbHelper.DB_VERSION
+                com.atrainingtracker.trainingtracker.database.hrv.WorkoutRrDbHelper.DB_VERSION,
+        com.atrainingtracker.trainingtracker.database.ClimbsDbHelper.DATABASE_NAME to
+                com.atrainingtracker.trainingtracker.database.ClimbsDbHelper.DATABASE_VERSION
     )
 
     @JvmStatic

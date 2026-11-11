@@ -18,59 +18,48 @@
 
 package com.atrainingtracker.trainingtracker.ui.settings.cloud
 
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.io.File
+import java.lang.reflect.Modifier
 
 /**
  * Architectural contract test verifying shared cloud component structure,
  * delegation contracts, and multi-provider symmetry (REQ-UI-430, TST-UI-395.3).
+ * Refactored to pure JVM reflection per docs/coding_standards.md §5.4 and REQ-PRO-049.
  */
 class CloudSettingsComponentContractTest {
 
-    private fun resolveSourceFile(relativePath: String): File {
-        val projectDir = File(System.getProperty("user.dir") ?: ".")
-        val candidates = listOf(
-            File(projectDir, "src/main/java/$relativePath"),
-            File(projectDir, "app/src/main/java/$relativePath"),
-            File(projectDir, "../app/src/main/java/$relativePath")
-        )
-        return candidates.firstOrNull { it.exists() }
-            ?: File(projectDir, "app/src/main/java/$relativePath")
-    }
-
     @Test
     fun testCloudComponents_existAndExposeExpectedComposables() {
-        val headerFile = resolveSourceFile("com/atrainingtracker/trainingtracker/ui/settings/cloud/CloudConnectionHeader.kt")
-        assertTrue("CloudConnectionHeader.kt must exist", headerFile.exists())
-        val headerContent = headerFile.readText()
-        assertTrue("Must declare CloudConnectionHeader composable", headerContent.contains("fun CloudConnectionHeader("))
+        val headerClazz = Class.forName("com.atrainingtracker.trainingtracker.ui.settings.cloud.CloudConnectionHeaderKt")
+        val headerMethod = headerClazz.declaredMethods.find { it.name.startsWith("CloudConnectionHeader") && Modifier.isPublic(it.modifiers) }
+        assertNotNull("CloudConnectionHeader composable must exist and be public", headerMethod)
 
-        val contentFile = resolveSourceFile("com/atrainingtracker/trainingtracker/ui/settings/cloud/CloudProviderSettingsContent.kt")
-        assertTrue("CloudProviderSettingsContent.kt must exist", contentFile.exists())
-        val content = contentFile.readText()
-        assertTrue("Must declare CloudProviderSettingsContent composable", content.contains("fun CloudProviderSettingsContent("))
+        val contentClazz = Class.forName("com.atrainingtracker.trainingtracker.ui.settings.cloud.CloudProviderSettingsContentKt")
+        val contentMethod = contentClazz.declaredMethods.find { it.name.startsWith("CloudProviderSettingsContent") && Modifier.isPublic(it.modifiers) }
+        assertNotNull("CloudProviderSettingsContent composable must exist and be public", contentMethod)
     }
 
     @Test
     fun testProviderHeaders_delegateToCloudConnectionHeader() {
-        val dropboxHeader = resolveSourceFile("com/atrainingtracker/trainingtracker/ui/settings/dropbox/DropboxConnectionHeader.kt")
-        assertTrue("DropboxConnectionHeader.kt must exist", dropboxHeader.exists())
-        assertTrue("DropboxConnectionHeader must delegate to CloudConnectionHeader", dropboxHeader.readText().contains("CloudConnectionHeader("))
+        val dropboxClazz = Class.forName("com.atrainingtracker.trainingtracker.ui.settings.dropbox.DropboxConnectionHeaderKt")
+        val dropboxMethod = dropboxClazz.declaredMethods.find { it.name.startsWith("DropboxConnectionHeader") && Modifier.isPublic(it.modifiers) }
+        assertNotNull("DropboxConnectionHeader composable must exist and be public", dropboxMethod)
 
-        val googleDriveHeader = resolveSourceFile("com/atrainingtracker/trainingtracker/ui/settings/googledrive/GoogleDriveConnectionHeader.kt")
-        assertTrue("GoogleDriveConnectionHeader.kt must exist", googleDriveHeader.exists())
-        assertTrue("GoogleDriveConnectionHeader must delegate to CloudConnectionHeader", googleDriveHeader.readText().contains("CloudConnectionHeader("))
+        val gdriveClazz = Class.forName("com.atrainingtracker.trainingtracker.ui.settings.googledrive.GoogleDriveConnectionHeaderKt")
+        val gdriveMethod = gdriveClazz.declaredMethods.find { it.name.startsWith("GoogleDriveConnectionHeader") && Modifier.isPublic(it.modifiers) }
+        assertNotNull("GoogleDriveConnectionHeader composable must exist and be public", gdriveMethod)
     }
 
     @Test
     fun testProviderDialogs_delegateToCloudProviderSettingsContent() {
-        val dropboxDialog = resolveSourceFile("com/atrainingtracker/trainingtracker/ui/settings/dropbox/DropboxSettingsDialog.kt")
-        assertTrue("DropboxSettingsDialog.kt must exist", dropboxDialog.exists())
-        assertTrue("DropboxSettingsDialog must use CloudProviderSettingsContent", dropboxDialog.readText().contains("CloudProviderSettingsContent("))
+        val dropboxDialogClazz = Class.forName("com.atrainingtracker.trainingtracker.ui.settings.dropbox.DropboxSettingsDialogKt")
+        val dropboxDialogMethod = dropboxDialogClazz.declaredMethods.find { it.name.startsWith("DropboxSettingsDialog") && Modifier.isPublic(it.modifiers) }
+        assertNotNull("DropboxSettingsDialog composable must exist and be public", dropboxDialogMethod)
 
-        val googleDriveDialog = resolveSourceFile("com/atrainingtracker/trainingtracker/ui/settings/googledrive/GoogleDriveSettingsDialog.kt")
-        assertTrue("GoogleDriveSettingsDialog.kt must exist", googleDriveDialog.exists())
-        assertTrue("GoogleDriveSettingsDialog must use CloudProviderSettingsContent", googleDriveDialog.readText().contains("CloudProviderSettingsContent("))
+        val gdriveDialogClazz = Class.forName("com.atrainingtracker.trainingtracker.ui.settings.googledrive.GoogleDriveSettingsDialogKt")
+        val gdriveDialogMethod = gdriveDialogClazz.declaredMethods.find { it.name.startsWith("GoogleDriveSettingsDialog") && Modifier.isPublic(it.modifiers) }
+        assertNotNull("GoogleDriveSettingsDialog composable must exist and be public", gdriveDialogMethod)
     }
 }

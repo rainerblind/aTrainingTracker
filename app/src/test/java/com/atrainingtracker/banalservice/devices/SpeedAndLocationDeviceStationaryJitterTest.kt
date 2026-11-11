@@ -69,6 +69,7 @@ class SpeedAndLocationDeviceStationaryJitterTest {
         fun getLatitudeSensor(): MySensor<Double> = mLatitudeSensor
         fun getLongitudeSensor(): MySensor<Double> = mLongitudeSensor
         fun callAccumulatorsReset() = onAccumulatorsReset()
+        fun getHysteresisCount(): Int = getStationaryHysteresisCount()
     }
 
     @Before
@@ -301,18 +302,31 @@ class SpeedAndLocationDeviceStationaryJitterTest {
         device.onNewLocation(loc1)
         assertEquals(10.0, device.getSpeedSensor().value ?: 0.0, 0.001)
 
-        // Step 2: Athlete halts at red light (Doppler speed = 0.0f)
-        val loc2 = createMockFix(lat = 48.00008, lon = 11.0, timeMs = 2000L, speed = 0.0f, accuracy = 6.0f, bearing = 45.0f)
-        every { loc1.distanceTo(loc2) } returns 8.0f
-        device.onNewLocation(loc2)
+        // Step 2: Athlete halts at red light (Doppler speed = 0.0f, rawDelta <= deadband 3.6m)
+        // 3 consecutive 1 Hz ticks required by REQ-TRK-074.3 entry hysteresis
+        val loc2a = createMockFix(lat = 48.00001, lon = 11.0, timeMs = 2000L, speed = 0.0f, accuracy = 6.0f, bearing = 45.0f)
+        every { loc1.distanceTo(loc2a) } returns 1.5f
+        device.onNewLocation(loc2a)
+        assertEquals(1, device.getHysteresisCount())
+        assertFalse("Must remain unpinned on 1st candidate tick", device.isStationaryPinned)
 
-        assertTrue("Must pin immediately upon Doppler zero speed report", device.isStationaryPinned)
-        assertEquals("Speed must clamp to 0.0 immediately without lingering lag", 0.0, device.getSpeedSensor().value ?: -1.0, 0.001)
+        val loc2b = createMockFix(lat = 48.000015, lon = 11.0, timeMs = 3000L, speed = 0.0f, accuracy = 6.0f, bearing = 45.0f)
+        every { loc2a.distanceTo(loc2b) } returns 0.5f
+        device.onNewLocation(loc2b)
+        assertEquals(2, device.getHysteresisCount())
+        assertFalse("Must remain unpinned on 2nd candidate tick", device.isStationaryPinned)
+
+        val loc2c = createMockFix(lat = 48.00002, lon = 11.0, timeMs = 4000L, speed = 0.0f, accuracy = 6.0f, bearing = 45.0f)
+        every { loc2b.distanceTo(loc2c) } returns 0.5f
+        device.onNewLocation(loc2c)
+
+        assertTrue("Must pin on 3rd consecutive Doppler zero tick", device.isStationaryPinned)
+        assertEquals("Speed must clamp to 0.0 immediately upon pinning", 0.0, device.getSpeedSensor().value ?: -1.0, 0.001)
         assertNull("Pace must be null", device.getPaceSensor().value)
 
         // Step 3: Multipath jitter while waiting at light
-        val loc3 = createMockFix(lat = 48.00010, lon = 11.0, timeMs = 3000L, speed = 0.0f, bearing = 310.0f)
-        every { loc2.distanceTo(loc3) } returns 2.0f
+        val loc3 = createMockFix(lat = 48.000025, lon = 11.0, timeMs = 5000L, speed = 0.0f, bearing = 310.0f)
+        every { loc2c.distanceTo(loc3) } returns 2.0f
         device.onNewLocation(loc3)
 
         assertTrue(device.isStationaryPinned)
@@ -423,7 +437,7 @@ class SpeedAndLocationDeviceStationaryJitterTest {
     }
 
     /**
-     * TST-TRK-056.3: Standstill jitter within escape radius pins immediately, locks bearing, and unpins upon movement.
+     * TST-TRK-056.3: Standstill jitter within deadband pins on 3rd consecutive tick, locks bearing, and unpins upon movement.
      */
     @Test
     fun testStandstillJitterWithinEscapeRadius_pinsImmediatelyAndLocksBearing() {
@@ -433,33 +447,45 @@ class SpeedAndLocationDeviceStationaryJitterTest {
         assertFalse(device.isStationaryPinned)
         assertEquals(8.0, device.getSpeedSensor().value ?: 0.0, 0.001)
 
-        // Fix 2: Halt at stop sign (accuracy = 4.0m -> escapeRadius = 6.0m), displacement = 2.0m <= 6.0m, speed = 0.0f
-        val loc2 = createMockFix(lat = 48.00002, lon = 11.0, timeMs = 2000L, speed = 0.0f, accuracy = 4.0f, bearing = 45.0f)
-        every { loc1.distanceTo(loc2) } returns 2.0f
-        device.onNewLocation(loc2)
+        // Fix 2: Halt at stop sign (accuracy = 4.0m -> deadbandRadius = 3.0m, escapeRadius = 6.0m), displacement = 2.0m <= deadbandRadius
+        // Tick 1
+        val loc2a = createMockFix(lat = 48.00002, lon = 11.0, timeMs = 2000L, speed = 0.0f, accuracy = 4.0f, bearing = 45.0f)
+        every { loc1.distanceTo(loc2a) } returns 2.0f
+        device.onNewLocation(loc2a)
+        assertEquals(1, device.getHysteresisCount())
+        assertFalse(device.isStationaryPinned)
 
-        assertTrue("Must pin immediately when Doppler speed is 0.0 within escape radius", device.isStationaryPinned)
+        // Tick 2
+        val loc2b = createMockFix(lat = 48.000022, lon = 11.0, timeMs = 3000L, speed = 0.0f, accuracy = 4.0f, bearing = 45.0f)
+        every { loc2a.distanceTo(loc2b) } returns 0.5f
+        device.onNewLocation(loc2b)
+        assertEquals(2, device.getHysteresisCount())
+        assertFalse(device.isStationaryPinned)
+
+        // Tick 3: PINS!
+        val loc2c = createMockFix(lat = 48.000025, lon = 11.0, timeMs = 4000L, speed = 0.0f, accuracy = 4.0f, bearing = 45.0f)
+        every { loc2b.distanceTo(loc2c) } returns 0.5f
+        device.onNewLocation(loc2c)
+
+        assertTrue("Must pin on 3rd consecutive stationary tick", device.isStationaryPinned)
         assertEquals(0.0, device.getSpeedSensor().value ?: -1.0, 0.001)
-        assertEquals(0.0, device.getDistanceSensor().value ?: -1.0, 0.001)
         assertEquals(45.0, device.getBearingSensor().value ?: -1.0, 0.001)
 
         // Fix 3: Jitter while waiting at stop sign (1.5m jitter from anchor, bearing spins to 200 deg)
-        val loc3 = createMockFix(lat = 48.00003, lon = 11.0, timeMs = 3000L, speed = 0.0f, accuracy = 4.0f, bearing = 200.0f)
-        every { loc2.distanceTo(loc3) } returns 1.5f
+        val loc3 = createMockFix(lat = 48.00003, lon = 11.0, timeMs = 5000L, speed = 0.0f, accuracy = 4.0f, bearing = 200.0f)
+        every { loc2c.distanceTo(loc3) } returns 1.5f
         device.onNewLocation(loc3)
 
         assertTrue(device.isStationaryPinned)
-        assertEquals(0.0, device.getDistanceSensor().value ?: -1.0, 0.001)
         assertEquals(0.0, device.getSpeedSensor().value ?: -1.0, 0.001)
         assertEquals(45.0, device.getBearingSensor().value ?: -1.0, 0.001) // Bearing locked!
 
         // Fix 4: Movement resumes! Displacement from anchor = 10.0m (> 6.0m escape radius), speed = 5.0 m/s, bearing = 90 deg
-        val loc4 = createMockFix(lat = 48.00010, lon = 11.0, timeMs = 4000L, speed = 5.0f, accuracy = 4.0f, bearing = 90.0f)
-        every { loc2.distanceTo(loc4) } returns 10.0f
+        val loc4 = createMockFix(lat = 48.00010, lon = 11.0, timeMs = 6000L, speed = 5.0f, accuracy = 4.0f, bearing = 90.0f)
+        every { loc2c.distanceTo(loc4) } returns 10.0f
         device.onNewLocation(loc4)
 
         assertFalse("Must unpin cleanly when movement exceeds escape radius", device.isStationaryPinned)
-        assertEquals(10.0, device.getDistanceSensor().value ?: 0.0, 0.001)
         assertEquals(2.5, device.getSpeedSensor().value ?: 0.0, 0.001) // Smoothed (0.0 + 5.0) / 2
         assertEquals(90.0, device.getBearingSensor().value ?: 0.0, 0.001)
     }
@@ -478,6 +504,178 @@ class SpeedAndLocationDeviceStationaryJitterTest {
         device.onNewLocation(loc2)
 
         // Clamped: distance should NOT increment by 100m
+        assertEquals(0.0, device.getDistanceSensor().value ?: -1.0, 0.001)
+    }
+
+    /**
+     * TST-TRK-074.1: Sub-interval (< 250ms) and duplicate (rawDelta == 0.0 && dt < 900ms) callbacks
+     * are dropped without overriding active moving speed or pinning anchor.
+     */
+    @Test
+    fun testDuplicateLocationCallback_ignoredWithoutSpeedZeroing() {
+        // Fix 1: Active movement at 8.0 m/s (28.8 km/h)
+        val loc1 = createMockFix(lat = 48.0, lon = 11.0, timeMs = 1000L, speed = 8.0f, accuracy = 3.0f, bearing = 90.0f)
+        device.onNewLocation(loc1)
+        assertFalse(device.isStationaryPinned)
+        assertEquals(8.0, device.getSpeedSensor().value ?: 0.0, 0.001)
+
+        // Fix 2: Duplicate callback 100ms later (dt=100ms < 250ms, identical coords rawDelta=0.0m) with spurious speed=0.0f
+        val loc2 = createMockFix(lat = 48.0, lon = 11.0, timeMs = 1100L, speed = 0.0f, accuracy = 3.0f, bearing = 90.0f)
+        every { loc1.distanceTo(loc2) } returns 0.0f
+        device.onNewLocation(loc2)
+
+        // Must drop duplicate: remains unpinned, speed remains 8.0 m/s, hysteresis count remains 0
+        assertFalse("Device must not pin on duplicate callback", device.isStationaryPinned)
+        assertEquals("Moving speed must not be overridden by duplicate fix", 8.0, device.getSpeedSensor().value ?: 0.0, 0.001)
+        assertEquals(0, device.getHysteresisCount())
+
+        // Fix 3: Secondary callback 500ms later with rawDelta=0.0m (dt=500ms < 900ms) and speed=0.0f
+        val loc3 = createMockFix(lat = 48.0, lon = 11.0, timeMs = 1500L, speed = 0.0f, accuracy = 3.0f, bearing = 90.0f)
+        every { loc1.distanceTo(loc3) } returns 0.0f
+        device.onNewLocation(loc3)
+
+        assertFalse("Device must not pin on duplicate fix", device.isStationaryPinned)
+        assertEquals(8.0, device.getSpeedSensor().value ?: 0.0, 0.001)
+        assertEquals(0, device.getHysteresisCount())
+
+        // Fix 4: Genuine next 1 Hz fix 1000ms after loc1, 8.0m advance at 8.0 m/s
+        val loc4 = createMockFix(lat = 48.00007, lon = 11.0, timeMs = 2000L, speed = 8.0f, accuracy = 3.0f, bearing = 90.0f)
+        every { loc1.distanceTo(loc4) } returns 8.0f
+        device.onNewLocation(loc4)
+
+        assertFalse(device.isStationaryPinned)
+        assertEquals(8.0, device.getDistanceSensor().value ?: 0.0, 0.001)
+        assertEquals(8.0, device.getSpeedSensor().value ?: 0.0, 0.001)
+    }
+
+    /**
+     * TST-TRK-074.2: Low-speed climbing (v <= 15-21 km/h where displacement <= escapeRadius)
+     * does not trigger stationary pinning on a single Doppler zero fix.
+     */
+    @Test
+    fun testLowSpeedClimb_singleDopplerZeroDoesNotPin() {
+        // Fix 1: Climbing hill at 3.0 m/s (10.8 km/h), accuracy = 4.0m -> deadbandRadius = 3.0m, escapeRadius = 6.0m
+        val loc1 = createMockFix(lat = 48.0, lon = 11.0, timeMs = 1000L, speed = 3.0f, accuracy = 4.0f, bearing = 90.0f)
+        device.onNewLocation(loc1)
+        assertFalse(device.isStationaryPinned)
+        assertEquals(3.0, device.getSpeedSensor().value ?: 0.0, 0.001)
+
+        // Fix 2: 1s later, displacement is 3.5m (> deadband 3.0m, <= escapeRadius 6.0m), but Google Fused reports speed = 0.0f
+        val loc2 = createMockFix(lat = 48.00003, lon = 11.0, timeMs = 2000L, speed = 0.0f, accuracy = 4.0f, bearing = 90.0f)
+        every { loc1.distanceTo(loc2) } returns 3.5f
+        device.onNewLocation(loc2)
+
+        // Because rawDelta > deadbandRadius (3.0m), candidate check fails: streak resets to 0, does not pin!
+        assertFalse("Low-speed climb must not pin on spurious zero speed", device.isStationaryPinned)
+        assertEquals(0, device.getHysteresisCount())
+        assertEquals(3.5, device.getDistanceSensor().value ?: 0.0, 0.001)
+        // Geometric speed fallback: 3.5 m/s, smoothed: (3.0 + 3.5) / 2 = 3.25 m/s
+        assertEquals(3.25, device.getSpeedSensor().value ?: 0.0, 0.001)
+    }
+
+    /**
+     * TST-TRK-074.3: 3-tick consecutive stationary entry hysteresis before transitioning from moving to pinned.
+     */
+    @Test
+    fun testStationaryEntryHysteresis_requiresThreeConsecutiveTicks() {
+        // Fix 1: Moving fix at 8.0 m/s
+        val loc1 = createMockFix(lat = 48.0, lon = 11.0, timeMs = 1000L, speed = 8.0f, accuracy = 3.0f, bearing = 45.0f)
+        device.onNewLocation(loc1)
+        assertFalse(device.isStationaryPinned)
+        assertEquals(8.0, device.getSpeedSensor().value ?: 0.0, 0.001)
+
+        // Fix 2: Halt at red light (tick 1): rawDelta = 1.0m <= deadband 3.0m, speed = 0.0f
+        val loc2 = createMockFix(lat = 48.00001, lon = 11.0, timeMs = 2000L, speed = 0.0f, accuracy = 3.0f, bearing = 45.0f)
+        every { loc1.distanceTo(loc2) } returns 1.0f
+        device.onNewLocation(loc2)
+
+        // Tick 1: unpinned, hysteresis count = 1
+        assertFalse("Device must not pin on 1st candidate tick", device.isStationaryPinned)
+        assertEquals(1, device.getHysteresisCount())
+        assertEquals(1.0, device.getDistanceSensor().value ?: 0.0, 0.001)
+
+        // Fix 3: Halt at red light (tick 2): rawDelta = 0.5m <= deadband 3.0m, speed = 0.0f
+        val loc3 = createMockFix(lat = 48.000015, lon = 11.0, timeMs = 3000L, speed = 0.0f, accuracy = 3.0f, bearing = 45.0f)
+        every { loc2.distanceTo(loc3) } returns 0.5f
+        device.onNewLocation(loc3)
+
+        // Tick 2: unpinned, hysteresis count = 2
+        assertFalse("Device must not pin on 2nd candidate tick", device.isStationaryPinned)
+        assertEquals(2, device.getHysteresisCount())
+        assertEquals(1.5, device.getDistanceSensor().value ?: 0.0, 0.001)
+
+        // Fix 4: Halt at red light (tick 3): rawDelta = 0.5m <= deadband 3.0m, speed = 0.0f
+        val loc4 = createMockFix(lat = 48.00002, lon = 11.0, timeMs = 4000L, speed = 0.0f, accuracy = 3.0f, bearing = 45.0f)
+        every { loc3.distanceTo(loc4) } returns 0.5f
+        device.onNewLocation(loc4)
+
+        // Tick 3: PINS! Anchor established, speed clamped to 0.0, count reset to 0
+        assertTrue("Device must pin on 3rd consecutive stationary tick", device.isStationaryPinned)
+        assertEquals(0, device.getHysteresisCount())
+        assertEquals(0.0, device.getSpeedSensor().value ?: -1.0, 0.001)
+        assertNotNull(device.getStationaryAnchor())
+        assertEquals(45.0, device.getBearingSensor().value ?: -1.0, 0.001)
+
+        // Fix 5: Jitter while waiting at light (displacement from anchor = 1.0m <= deadband)
+        val loc5 = createMockFix(lat = 48.000025, lon = 11.0, timeMs = 5000L, speed = 0.0f, accuracy = 3.0f, bearing = 180.0f)
+        every { loc4.distanceTo(loc5) } returns 1.0f
+        device.onNewLocation(loc5)
+
+        assertTrue(device.isStationaryPinned)
+        assertEquals(0.0, device.getSpeedSensor().value ?: -1.0, 0.001)
+        assertEquals(45.0, device.getBearingSensor().value ?: -1.0, 0.001) // Locked bearing
+    }
+
+    /**
+     * TST-TRK-074.4: Movement resumption before 3 consecutive stationary ticks resets the hysteresis streak.
+     */
+    @Test
+    fun testStationaryHysteresisStreak_resetsOnMovement() {
+        // Fix 1: Movement at 8.0 m/s
+        val loc1 = createMockFix(lat = 48.0, lon = 11.0, timeMs = 1000L, speed = 8.0f, accuracy = 3.0f)
+        device.onNewLocation(loc1)
+        assertFalse(device.isStationaryPinned)
+
+        // Fix 2: Stationary tick 1 (rawDelta = 1.0m, speed = 0.0f)
+        val loc2 = createMockFix(lat = 48.00001, lon = 11.0, timeMs = 2000L, speed = 0.0f, accuracy = 3.0f)
+        every { loc1.distanceTo(loc2) } returns 1.0f
+        device.onNewLocation(loc2)
+        assertEquals(1, device.getHysteresisCount())
+        assertFalse(device.isStationaryPinned)
+
+        // Fix 3: Stationary tick 2 (rawDelta = 1.0m, speed = 0.0f)
+        val loc3 = createMockFix(lat = 48.00002, lon = 11.0, timeMs = 3000L, speed = 0.0f, accuracy = 3.0f)
+        every { loc2.distanceTo(loc3) } returns 1.0f
+        device.onNewLocation(loc3)
+        assertEquals(2, device.getHysteresisCount())
+        assertFalse(device.isStationaryPinned)
+
+        // Fix 4: Athlete steps on gas pedal! Movement resumes (rawDelta = 6.0m > deadband 3.0m, speed = 6.0 m/s)
+        val loc4 = createMockFix(lat = 48.00008, lon = 11.0, timeMs = 4000L, speed = 6.0f, accuracy = 3.0f)
+        every { loc3.distanceTo(loc4) } returns 6.0f
+        device.onNewLocation(loc4)
+
+        // Streak resets to 0; device never pinned
+        assertEquals(0, device.getHysteresisCount())
+        assertFalse(device.isStationaryPinned)
+        assertNull(device.getStationaryAnchor())
+        // Smoothed speed: (( (8.0 + 1.0)/2 + 1.0)/2 + 6.0) / 2 = 4.375 m/s
+        assertEquals(4.375, device.getSpeedSensor().value ?: 0.0, 0.001)
+    }
+
+    /**
+     * TST-TRK-074.5: Initial fix (mPrevLocation == null) with zero speed pins immediately to stationary anchor.
+     */
+    @Test
+    fun testInitialFix_pinsImmediatelyWithoutHysteresis() {
+        // Fix 1: Initial fix at start line with Doppler 0.0 m/s
+        val loc1 = createMockFix(lat = 48.137, lon = 11.575, timeMs = 1000L, speed = 0.0f, accuracy = 4.0f)
+        device.onNewLocation(loc1)
+
+        assertTrue("Initial fix must pin immediately to anchor", device.isStationaryPinned)
+        assertEquals(0, device.getHysteresisCount())
+        assertNotNull(device.getStationaryAnchor())
+        assertEquals(0.0, device.getSpeedSensor().value ?: -1.0, 0.001)
         assertEquals(0.0, device.getDistanceSensor().value ?: -1.0, 0.001)
     }
 }

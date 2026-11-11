@@ -108,9 +108,6 @@ android {
         //    strictly enforces complete 9-language translation coverage, format specifiers, and plural consistency in testDebugUnitTest.
         // 3. Range: Suppressed due to historical parameter annotation warnings in legacy calculation routines; targeted for incremental burn-down.
         disable = ['DuplicatePlatformClasses', 'MissingTranslation', 'Range']
-        // 4. NonObservableLocale / LocalContextGetResourceValueCall: Downgraded to warning to prevent CI breakage
-        //    while legacy Compose screens are incrementally refactored (ATT-6173).
-        warning 'NonObservableLocale', 'LocalContextGetResourceValueCall'
         showAll = true
         textReport = true
     }
@@ -156,14 +153,21 @@ kover {
         filters {
             excludes {
                 classes(
-                    "*BuildConfig*",
-                    "*ComposableSingletons*"
+                    '*BuildConfig*',
+                    '*ComposableSingletons*',
+                    '*.R',
+                    '*.R$*',
+                    '*Manifest*'
                 )
             }
         }
         verify {
             rule {
-                minBound(1)
+                minBound(35)
+                bound {
+                    coverageUnits = kotlinx.kover.gradle.plugin.dsl.CoverageUnit.BRANCH
+                    minValue = 30
+                }
             }
         }
     }
@@ -198,6 +202,7 @@ dependencies {
     // --- Legacy & Hardware SDKs ---
     implementation 'com.getpebble:pebblekit:4.0.1'
     implementation files('../ANT-Android-SDKs/ANT+_Android_SDK/API/antpluginlib_3-9-0.aar')
+    implementation files('../ANT-Android-SDKs/ANT_Android_SDK/API/android_antlib_4-16-0.aar')
 
     // --- AndroidX Core & Lifecycle ---
     // ATT-1037: Pinned to 1.15.0 to prevent NoSuchMethodError on Android 14 (API 34).
@@ -251,8 +256,8 @@ dependencies {
     // Garmin FIT SDK (ATT-1827 / ATT-1117)
     implementation 'com.garmin:fit:21.141.0'
 
-    // Android Health Connect (ATT-3052)
-    implementation 'androidx.health.connect:connect-client:1.1.0-alpha11'
+    // Android Health Connect (ATT-3052, ATT-6711)
+    implementation 'androidx.health.connect:connect-client:1.1.0'
 
     // --- Unit Testing ---
     testImplementation 'junit:junit:4.13.2'

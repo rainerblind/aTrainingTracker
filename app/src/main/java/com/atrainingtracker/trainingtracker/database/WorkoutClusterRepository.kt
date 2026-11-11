@@ -138,7 +138,7 @@ class WorkoutClusterRepository internal constructor(
 
     companion object {
         private const val SP_KEY_LAST_BOUNDS_REPAIR = "last_cluster_bounds_repair_v5"
-        const val SP_KEY_LAST_APEX_REPAIR = "last_apex_repair_v1"
+        const val SP_KEY_LAST_APEX_REPAIR = "last_apex_repair_v2"
         @Volatile
         private var instance: WorkoutClusterRepository? = null
 
@@ -186,12 +186,12 @@ class WorkoutClusterRepository internal constructor(
             currentClusters = clusterDb.getAllClusters()
         }
 
-        // 0.1 Point-to-point Apex Self-Healing Migration (REQ-DAT-039, ATT-6319)
+        // 0.1 Point-to-point Apex Self-Healing Migration (REQ-DAT-039, ATT-6319, ATT-6686)
         val lastApexRepair = prefs.getInt(SP_KEY_LAST_APEX_REPAIR, 0)
-        if (lastApexRepair < 1 && currentClusters.isNotEmpty()) {
+        if (lastApexRepair < 2 && currentClusters.isNotEmpty()) {
             val engine = WorkoutClusterEngine.getInstance(context)
             engine.healLegacyPointToPointApexes(context)
-            prefs.edit().putInt(SP_KEY_LAST_APEX_REPAIR, 1).apply()
+            prefs.edit().putInt(SP_KEY_LAST_APEX_REPAIR, 2).apply()
             currentClusters = clusterDb.getAllClusters()
         }
 
@@ -534,7 +534,7 @@ class WorkoutClusterRepository internal constructor(
         return SportTypesRepository.getInstance(context).getBSportType(sportId)
     }
 
-    val databaseManager: WorkoutClusterDatabaseManager get() = clusterDb
+    private val databaseManager: WorkoutClusterDatabaseManager get() = clusterDb
     fun getAllClustersSync(): List<WorkoutCluster> = clusterDb.getAllClusters()
     fun getClusterByIdSync(id: Long): WorkoutCluster? = clusterDb.getClusterById(id)
     fun getClusterByName(name: String): WorkoutCluster? = clusterDb.getClusterByName(name)
@@ -544,5 +544,16 @@ class WorkoutClusterRepository internal constructor(
     fun deleteClusterSync(id: Long) = clusterDb.deleteCluster(id)
     fun deleteAllClustersSync() = clusterDb.deleteAllClusters()
     fun isNameTaken(name: String, excludeId: Long = -1): Boolean = clusterDb.isNameTaken(name, excludeId)
-    fun getDatabase(): android.database.sqlite.SQLiteDatabase = clusterDb.getDatabase()
+
+    fun <T> runInTransaction(block: () -> T): T {
+        val db = clusterDb.getDatabase()
+        db.beginTransaction()
+        return try {
+            val result = block()
+            db.setTransactionSuccessful()
+            result
+        } finally {
+            db.endTransaction()
+        }
+    }
 }

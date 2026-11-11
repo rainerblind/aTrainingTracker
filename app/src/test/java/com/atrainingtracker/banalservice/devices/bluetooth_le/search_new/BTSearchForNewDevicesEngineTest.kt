@@ -39,6 +39,7 @@ import android.os.Looper
 import android.util.Log
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import com.atrainingtracker.banalservice.devices.bluetooth_le.BluetoothConstants
 import com.atrainingtracker.banalservice.database.DevicesDatabaseManager
 import com.atrainingtracker.banalservice.devices.DeviceType
 import io.mockk.every
@@ -90,7 +91,12 @@ class BTSearchForNewDevicesEngineTest {
         fun getBatteryMap(): MutableMap<String, Int> = mBatteryPercentage
         fun getQueueMap(): MutableMap<String, Queue<BluetoothGattCharacteristic>> = mReadCharacteristicQueue
         fun getScanCallback(): ScanCallback = mScanCallback
+        fun getGattCallback(): BluetoothGattCallback = mGattCallback
         fun isScanning(): Boolean = scanning
+
+        public override fun buildScanFilters(deviceType: DeviceType): List<ScanFilter>? {
+            return super.buildScanFilters(deviceType)
+        }
 
         public override fun enqueueCharacteristicIfPresent(
             address: String,
@@ -147,6 +153,8 @@ class BTSearchForNewDevicesEngineTest {
 
         mockkConstructor(ScanFilter.Builder::class)
         every { anyConstructed<ScanFilter.Builder>().setServiceUuid(any()) } answers { self as ScanFilter.Builder }
+        every { anyConstructed<ScanFilter.Builder>().setServiceData(any(), any()) } answers { self as ScanFilter.Builder }
+        every { anyConstructed<ScanFilter.Builder>().setServiceData(any(), any(), any()) } answers { self as ScanFilter.Builder }
         every { anyConstructed<ScanFilter.Builder>().build() } returns mockk(relaxed = true)
 
         mockkConstructor(ScanSettings.Builder::class)
@@ -558,6 +566,133 @@ class BTSearchForNewDevicesEngineTest {
             "AndroidManifest.xml must declare BLUETOOTH_ADMIN with android:maxSdkVersion=\"30\" attribute",
             pattern.containsMatchIn(content)
         )
+    }
+
+    /**
+     * REQ-CON-028.3 / TST-CON-028.7: buildScanFilters for BIKE_RADAR must include both
+     * Service UUID and Service Data filters. Standard devices build single service UUID filter.
+     */
+    @Test
+    fun testBuildScanFilters_radarAndStandardDevices() {
+        val engine = TestSearchEngine(mockContext, DeviceType.BIKE_RADAR, mockCallback)
+
+        val radarFilters = engine.buildScanFilters(DeviceType.BIKE_RADAR)
+        assertNotNull("Radar filters must not be null", radarFilters)
+        assertEquals("Radar must have 2 scan filters (Service UUID + Service Data)", 2, radarFilters!!.size)
+
+        val hrmFilters = engine.buildScanFilters(DeviceType.HRM)
+        assertNotNull("HRM filters must not be null", hrmFilters)
+        assertEquals("HRM must have 1 scan filter", 1, hrmFilters!!.size)
+
+        val noServiceFilters = engine.buildScanFilters(DeviceType.CLOCK)
+        assertTrue("Device type without service UUID returns null filters", noServiceFilters == null)
+    }
+
+    /**
+     * REQ-CON-028.3 / TST-CON-028.7: onServicesDiscovered for BIKE_RADAR must enqueue metadata
+     * characteristics first, and verify UUID_SERVICE_RADAR in readNextCharacteristic when queue empties.
+     */
+    @Test
+    fun testOnServicesDiscovered_bikeRadar_enqueuesMetadataAndFindsDeviceWhenRadarPresent() {
+        val engine = TestSearchEngine(mockContext, DeviceType.BIKE_RADAR, mockCallback)
+        val testAddress = "AA:BB:CC:DD:EE:88"
+
+        val mockGatt = mockk<BluetoothGatt>(relaxed = true)
+        val mockDevice = mockk<BluetoothDevice>(relaxed = true)
+        every { mockGatt.device } returns mockDevice
+        every { mockDevice.address } returns testAddress
+        every { mockDevice.name } returns "Garmin Varia RTL515"
+
+        val mockDeviceInfoService = mockk<BluetoothGattService>(relaxed = true)
+        val mockBatteryService = mockk<BluetoothGattService>(relaxed = true)
+        val mockRadarService = mockk<BluetoothGattService>(relaxed = true)
+
+        val mockMfgChar = mockk<BluetoothGattCharacteristic>(relaxed = true)
+        val mockBatteryChar = mockk<BluetoothGattCharacteristic>(relaxed = true)
+        every { mockMfgChar.uuid } returns BluetoothConstants.UUID_CHARACTERISTIC_MANUFACTURER_NAME
+        every { mockBatteryChar.uuid } returns BluetoothConstants.UUID_CHARACTERISTIC_BATTERY_LEVEL
+
+        every { mockGatt.getService(BluetoothConstants.UUID_SERVICE_DEVICE_INFORMATION) } returns mockDeviceInfoService
+        every { mockDeviceInfoService.getCharacteristic(BluetoothConstants.UUID_CHARACTERISTIC_MANUFACTURER_NAME) } returns mockMfgChar
+
+        every { mockGatt.getService(BluetoothConstants.UUID_SERVICE_BATTERY) } returns mockBatteryService
+        every { mockBatteryService.getCharacteristic(BluetoothConstants.UUID_CHARACTERISTIC_BATTERY_LEVEL) } returns mockBatteryChar
+
+        every { mockGatt.getService(BluetoothConstants.UUID_SERVICE_RADAR) } returns mockRadarService
+        every { mockGatt.readCharacteristic(any()) } returns true
+
+        // Track GATT connection
+        engine.getGattsMap()[testAddress] = mockGatt
+
+        // Act: onServicesDiscovered
+        engine.getGattCallback().onServicesDiscovered(mockGatt, BluetoothGatt.GATT_SUCCESS)
+        drainPostedRunnables()
+
+        // Assert: Metadata characteristics were enqueued in mReadCharacteristicQueue (not bypassed!)
+        val queue = engine.getQueueMap()[testAddress]
+        assertNotNull("Queue must be initialized for address", queue)
+
+        // Drain the queue to simulate reading characteristics
+        queue!!.clear()
+
+        // Empty queue triggers final type check in readNextCharacteristic
+        engine.readNextCharacteristic(testAddress)
+        drainPostedRunnables()
+
+        // Assert: onNewDeviceFound was invoked because radarService was present
+        verify(exactly = 1) {
+            mockCallback.onNewDeviceFound(
+                DeviceType.BIKE_RADAR,
+                testAddress,
+                any(),
+                any(),
+                any()
+            )
+        }
+    }
+
+    /**
+     * REQ-CON-028.3 / TST-CON-028.8: onServicesDiscovered for BIKE_RADAR must NOT invoke
+     * onNewDeviceFound when UUID_SERVICE_RADAR is missing.
+     */
+    @Test
+    fun testOnServicesDiscovered_bikeRadar_missingRadarService_doesNotFindDevice() {
+        val engine = TestSearchEngine(mockContext, DeviceType.BIKE_RADAR, mockCallback)
+        val testAddress = "AA:BB:CC:DD:EE:99"
+
+        val mockGatt = mockk<BluetoothGatt>(relaxed = true)
+        val mockDevice = mockk<BluetoothDevice>(relaxed = true)
+        every { mockGatt.device } returns mockDevice
+        every { mockDevice.address } returns testAddress
+        every { mockDevice.name } returns "Non-Radar BLE Device"
+
+        // Radar service returns null
+        every { mockGatt.getService(BluetoothConstants.UUID_SERVICE_RADAR) } returns null
+        every { mockGatt.readCharacteristic(any()) } returns true
+
+        engine.getGattsMap()[testAddress] = mockGatt
+
+        // Act: onServicesDiscovered
+        engine.getGattCallback().onServicesDiscovered(mockGatt, BluetoothGatt.GATT_SUCCESS)
+        drainPostedRunnables()
+
+        val queue = engine.getQueueMap()[testAddress]
+        queue?.clear()
+
+        // Empty queue triggers check in readNextCharacteristic
+        engine.readNextCharacteristic(testAddress)
+        drainPostedRunnables()
+
+        // Assert: onNewDeviceFound was NOT invoked
+        verify(exactly = 0) {
+            mockCallback.onNewDeviceFound(
+                DeviceType.BIKE_RADAR,
+                testAddress,
+                any(),
+                any(),
+                any()
+            )
+        }
     }
 }
 

@@ -109,4 +109,44 @@ class TelemetryMetricGraphHrvTest {
         // Point 3: valid
         assertTrue(points[3].hrvDfaA1 != null && (points[3].hrvArtifactRate ?: 0.0) <= 5.0)
     }
+
+    @Test
+    fun testTelemetryMetricGraph_configuredThresholdsAndScrubLookup() {
+        // Test custom threshold formatting
+        val customT1 = 0.80f
+        val customT2 = 0.55f
+        val formattedT1 = TelemetryMetricUtils.formatValue(
+            value = customT1.toDouble(),
+            metricType = TelemetryMetricType.HRV_DFA_A1,
+            unit = MyUnits.METRIC,
+            speedFormatter = speedFormatter,
+            paceFormatter = paceFormatter
+        )
+        val formattedT2 = TelemetryMetricUtils.formatValue(
+            value = customT2.toDouble(),
+            metricType = TelemetryMetricType.HRV_DFA_A1,
+            unit = MyUnits.METRIC,
+            speedFormatter = speedFormatter,
+            paceFormatter = paceFormatter
+        )
+        assertEquals("0.80", formattedT1)
+        assertEquals("0.55", formattedT2)
+
+        // Test findNearestPoint with timeDomain = true vs false
+        val gpsPoints = listOf(
+            PathPoint(distance = 0.0, latLng = LatLng(0.0, 0.0), timeSec = 0L, hrvDfaA1 = 0.90),
+            PathPoint(distance = 50.0, latLng = LatLng(0.0, 0.0), timeSec = 10L, hrvDfaA1 = 0.80),
+            PathPoint(distance = 120.0, latLng = LatLng(0.0, 0.0), timeSec = 20L, hrvDfaA1 = 0.70)
+        )
+
+        // When scrubbing in time domain with targetValue = 10.0 (seconds)
+        val nearestTime = TelemetryMetricUtils.findNearestPoint(gpsPoints, 10.0, isTimeDomain = true)
+        assertEquals(10L, nearestTime?.timeSec)
+        assertEquals(0.80, nearestTime?.hrvDfaA1!!, 1e-4)
+
+        // When scrubbing in distance domain with targetValue = 50.0 (meters)
+        val nearestDist = TelemetryMetricUtils.findNearestPoint(gpsPoints, 50.0, isTimeDomain = false)
+        assertEquals(50.0, nearestDist?.distance!!, 1e-4)
+        assertEquals(0.80, nearestDist.hrvDfaA1!!, 1e-4)
+    }
 }

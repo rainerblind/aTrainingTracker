@@ -112,6 +112,64 @@ class WorkoutClusterPointToPointApexTest {
     }
 
     @Test
+    fun testPointToPointRoute_withEndpointOvershoots_selectsDetourApexAndSuppressesOvershoots() {
+        // Sindelfingen start (48.7083, 9.0028) to Schönaich end (48.6570, 9.0640), ~7.3 km
+        val start = LatLng(48.7083, 9.0028)
+        val end = LatLng(48.6570, 9.0640)
+
+        // Detour summit in the forest
+        val forestApex = LatLng(48.6950, 9.0450)
+
+        // Start overshoot (e.g., rider rolled 100m west before recording)
+        val startOvershoot = LatLng(48.7090, 9.0015)
+        // End overshoot (e.g., rider passed 85.7m past final stop coordinate before turning)
+        val endOvershoot = LatLng(48.6565, 9.0648)
+
+        val points = listOf(
+            startOvershoot,
+            start,
+            LatLng(48.7050, 9.0150),
+            forestApex,
+            LatLng(48.6750, 9.0550),
+            end,
+            endOvershoot
+        )
+
+        val resolvedApex = clusterEngine.findApexFromPoints(start, points, end)
+
+        assertEquals("Must select forest detour apex", forestApex.latitude, resolvedApex.latitude, 1e-6)
+        assertEquals("Must select forest detour apex", forestApex.longitude, resolvedApex.longitude, 1e-6)
+        assertNotEquals("Must never select start overshoot", startOvershoot, resolvedApex)
+        assertNotEquals("Must never select end overshoot", endOvershoot, resolvedApex)
+    }
+
+    @Test
+    fun testPointToPointRoute_straightCollinearWithTerminalOvershoot_selectsMidpoint() {
+        // Straight line from West (48.7000, 9.0000) to East (48.7000, 9.1000), ~7.3 km
+        val start = LatLng(48.7000, 9.0000)
+        val end = LatLng(48.7000, 9.1000)
+        val midPoint = LatLng(48.7000, 9.0500)
+        // Terminal overshoot 100m east of end
+        val terminalOvershoot = LatLng(48.7000, 9.1013)
+
+        val points = listOf(
+            start,
+            LatLng(48.7000, 9.0250),
+            midPoint,
+            LatLng(48.7000, 9.0750),
+            end,
+            terminalOvershoot
+        )
+
+        val resolvedApex = clusterEngine.findApexFromPoints(start, points, end)
+
+        // Bipolar product d(start, P) * d(P, end) peaks at midPoint and yields ~0 near end/overshoot
+        assertEquals("Must select midpoint for straight line even with overshoot", midPoint.latitude, resolvedApex.latitude, 1e-6)
+        assertEquals("Must select midpoint for straight line even with overshoot", midPoint.longitude, resolvedApex.longitude, 1e-6)
+        assertNotEquals("Must never select terminal overshoot", terminalOvershoot, resolvedApex)
+    }
+
+    @Test
     fun testClosedLoopCourse_preservesLegacyStartDisplacement100Percent() {
         // Closed loop starting and ending at the same parking lot (d(start, end) < 150m)
         val start = LatLng(48.7000, 9.0000)

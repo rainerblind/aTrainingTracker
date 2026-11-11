@@ -5,7 +5,7 @@ import android.content.Context
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import com.atrainingtracker.R
-import com.atrainingtracker.banalservice.database.DevicesDatabaseManager
+import com.atrainingtracker.banalservice.ui.devices.devicedata.CriticalBatteryDevice
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import io.mockk.*
 import org.junit.Assert.assertEquals
@@ -50,7 +50,7 @@ class SensorBatteryNotificationManagerTest {
 
     @Test
     fun showLowBatteryNotification_singleSensor_postsNotificationWithCorrectIdAndContent() {
-        val device = DevicesDatabaseManager.NameAndBatteryPercentage("Garmin HRM-Pro", 15, 1L)
+        val device = CriticalBatteryDevice("Garmin HRM-Pro", 15, 1L)
 
         val mockNotification = mockk<Notification>(relaxed = true)
         var capturedBuilder: NotificationCompat.Builder? = null
@@ -73,8 +73,8 @@ class SensorBatteryNotificationManagerTest {
     @Test
     fun showLowBatteryNotification_multipleSensors_postsGroupNotification() {
         val devices = listOf(
-            DevicesDatabaseManager.NameAndBatteryPercentage("Garmin HRM-Pro", 15, 1L),
-            DevicesDatabaseManager.NameAndBatteryPercentage("Stages Power", 8, 2L)
+            CriticalBatteryDevice("Garmin HRM-Pro", 15, 1L),
+            CriticalBatteryDevice("Stages Power", 8, 2L)
         )
 
         val mockNotification = mockk<Notification>(relaxed = true)

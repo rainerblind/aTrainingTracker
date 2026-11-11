@@ -8169,8 +8169,165 @@
   4. *Tier 1 Targeted Unit Test Regression Suite (`TST-UI-509.4`)*:
   • Execute targeted UI filter test suite (`ui.common.filters.*`, `ui.aftermath.workoutlist.*`, `ui.clusters.*`, `ui.routes.*`, `ui.segments.*`, `ui.knownlocations.*`, `ui.theme.ThemeColorCentralizationAuditTest`, `ui.components.core.*`, `build.*`) asserting 100% pass rate.
 
+### TST-UI-510: **Package-Wide UI & Presentation Repository Cleanliness Verification Suite** [Verified]
+- **Target Release**: `V5.0.0`
+- **Requirement(s)**: `REQ-UI-510`
+- **Component**: `WorkoutClustersViewModel.kt`, `TrackingTabsViewModel.kt`, `AthleteProfileViewModel.kt`, `StravaActivitySection.kt`, `ExportStatusDataProvider.kt`, `WorkoutDataMapper.kt`, `MapInitialLocationResolver.kt`, `ImportBackupTabsScreen.kt`, `MainActivityWithNavigation.kt`, `EditWorkoutViewModel.kt`, `RepositoryUiCleanlinessContractTest.kt`
+- **Jira**: `ATT-6697`
+- **Test Description**:
+  1. *Package-Wide UI AST Cleanliness Contract Test (`TST-UI-510.1`, `RepositoryUiCleanlinessContractTest.kt`)*:
+  • Recursively scan all Kotlin/Java source files in `app/src/main/java/.../ui/` and `app/src/main/java/.../activities/` (excluding `*Repository.kt` and `MapFragmentWithTrackViewModel.kt` reserved for `ATT-6692`).
+  • Assert zero occurrences of `\b\w*(DatabaseManager|DbHelper)\.getInstance\(`.
+  2. *Targeted Presentation Cleanliness Assertions (`TST-UI-510.2`, `RepositoryUiCleanlinessContractTest.kt`)*:
+  • Verify explicit decoupling across all 8 target classes: `WorkoutClustersViewModel`, `TrackingTabsViewModel`, `AthleteProfileViewModel`, `StravaActivitySection`, `ExportStatusDataProvider`, `WorkoutDataMapper`, `MapInitialLocationResolver`, `ImportBackupTabsScreen`, `MainActivityWithNavigation`, and `EditWorkoutViewModel`.
+  3. *ViewModel & Presentation Unit Regression Test (`TST-UI-510.3`)*:
+  • Run unit test suites for modified ViewModels and presentation helpers (`WorkoutClustersViewModelTest`, `AthleteProfileViewModelTest`, etc.).
+  • Assert 100% functional and numeric parity via domain repositories.
+  4. *Tier 1 Targeted Unit Test Regression (`TST-UI-510.4`)*:
+  • Execute targeted test suite (`--tests "com.atrainingtracker.trainingtracker.ui.RepositoryUiCleanlinessContractTest" --tests "com.atrainingtracker.trainingtracker.ui.clusters.*" --tests "com.atrainingtracker.trainingtracker.ui.athleteprofile.*" --tests "com.atrainingtracker.trainingtracker.ui.tracking.*" --tests "com.atrainingtracker.trainingtracker.activities.*"`).
+  • Assert 100% pass rate.
+
+### TST-UI-511: **EquipmentViewModel & Repositories Domain Decoupling Verification Suite** [Verified]
+- **Target Release**: `V5.0.0`
+- **Requirement(s)**: `REQ-UI-511`
+- **Component**: `EquipmentViewModel.kt`, `EquipmentRepository.kt`, `DeviceDataRepository.kt`, `SportTypesRepository.kt`, `WorkoutRepository.kt`, `RepositoryUiCleanlinessContractTest.kt`
+- **Jira**: `ATT-6696`
+- **Test Description**:
+  1. *Domain DTO Decoupling Contract Test (`TST-UI-511.1`, `RepositoryUiCleanlinessContractTest.kt`)*:
+  • Verify public APIs of `DeviceDataRepository`, `SportTypesRepository`, and `WorkoutRepository` return pure domain DTOs with zero `*DatabaseManager` types.
+  • Verify `EquipmentViewModel.kt` imports zero `*DatabaseManager` or `*DbHelper` classes.
+  2. *EquipmentRepository Encapsulation Test (`TST-UI-511.2`, `EquipmentRepositoryTest.kt` / `EquipmentDbLinkContractTest.kt`)*:
+  • Verify equipment CRUD operations and sport-type associations execute cleanly via `EquipmentRepository`.
+  3. *EquipmentViewModel Modernization & Lifecycle Regression Test (`TST-UI-511.3`, `EquipmentViewModelLifecycleTest.kt`, `EquipmentViewModelMatrixTest.kt`, `EquipmentViewModelRetiredTest.kt`)*:
+  • Verify `EquipmentViewModel` initializes cleanly with repository injection, updating StateFlows for equipment, sport types, and sensor counts with 100% data fidelity.
+  4. *Tier 1 Targeted Unit Test Regression (`TST-UI-511.4`)*:
+  • Execute targeted test suite (`--tests "com.atrainingtracker.trainingtracker.ui.equipment.*" --tests "com.atrainingtracker.trainingtracker.repositories.*" --tests "com.atrainingtracker.banalservice.ui.devices.devicedata.*" --tests "com.atrainingtracker.trainingtracker.ui.RepositoryUiCleanlinessContractTest"`).
+  • Assert 100% pass rate.
 
 
 
+
+
+
+
+
+
+
+### TST-UI-512: **Radar Accordion Section, Dynamic Subtitle & Modularity Verification Suite** [Verified]
+- **Target Release**: `V5.0.0`
+- **Requirement(s)**: `REQ-UI-512`
+- **Component**: `AdvancedTuningAccordion.kt`, `AdvancedTuningScreen.kt`, `AdvancedTuningDialog.kt`, `RadarSettingsSection.kt`, `strings_radar.xml`
+- **Jira**: `ATT-6702`
+- **Test Description**:
+  1. *Radar Accordion Section & Dynamic Subtitle Test (`TST-UI-512.1`, `RadarAccordionSectionTest.kt`)*:
+  • Verify `TuningSection.CYCLING_RADAR` enum presence, ordering in Block 2, and non-null title string resource.
+  • Verify `TuningSubtitleFormatter.formatCyclingRadarSubtitle` produces expected summaries for idle states (edge, alert mode, tail light) and running simulation states.
+  • Verify `RadarSettingsSection` renders stably with `TuningPreferencesDataStore`.
+  2. *Tuning Package File Size Modularity Test (`TST-UI-512.2`, `AdvancedTuningModularityTest.kt`)*:
+  • Verify all `.kt` files in `ui/settings/tuning/` remain strictly $< 400$ lines.
+  3. *9-Language Localization Parity Audit (`TST-UI-512.3`)*:
+  • Assert 100% presence of `tuning_cat_cycling_radar` across all 9 language folders (`values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`).
+  4. *Tier 1 Targeted Unit Test Regression Suite (`TST-UI-512.4`)*:
+  • Execute targeted test suite (`./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.settings.tuning.*"`).
+  • Assert 100% pass rate.
+
+
+
+### TST-UI-513: **Fitness & Physiology Hub, Training Zones Settings & Drawer Navigation Verification Suite** [Verified]
+- **Target Release**: `V5.0.0`
+- **Requirement(s)**: `REQ-UI-513`
+- **Component**: `AppNavigationDrawer.kt`, `NavRoutes.kt`, `AthleteProfileScreen.kt`, `PeriodsTabsScreen.kt`, `ZoneSettingsScreen.kt`, `NavigationDrawerStateTest.kt`, `AppNavigationDrawerTest.kt`
+- **Jira**: `ATT-6720`
+- **Test Description**:
+  1. *Navigation Drawer Structure & Route Resolution Test (`TST-UI-513.1`, `NavigationDrawerStateTest.kt` / `AppNavigationDrawerTest.kt`)*:
+  • Verify Training drawer group has exactly 4 items (`drawer_start_tracking`, `drawer_workouts`, `drawer_periods`, `drawer_athlete_profile`).
+  • Verify `drawer_morning_hrv` is absent from the drawer group items.
+  • Verify Settings drawer group includes `drawer_training_zones` with icon `ic_speed` and title `prefs_training_zones`.
+  • Verify `isDrawerItemSelected` separates `drawer_training_zones` and `drawer_athlete_profile`.
+  2. *Periods Screen Clean Decoupling Test (`TST-UI-513.2`, `PeriodsViewModelTest.kt`)*:
+  • Verify `PeriodsViewModel` operates cleanly without `HrvReadinessRepository` dependencies and `PeriodsTabsScreen` contains zero HRV trend composables.
+  3. *Fitness & Physiology Tab Structure & HRV Hub Test (`TST-UI-513.3`, `AthleteProfileContractAndLocalizationTest.kt` / `FitnessPhysiologyTest.kt`)*:
+  • Verify 4-tab hub structure: PMC, HRV & Readiness, Body & Thresholds, Cardio-Power.
+  • Verify Tab 2 provides Morning HRV measurement CTA and empty state when 0 readings exist.
+  4. *9-Language Localization Parity Audit (`TST-UI-513.4`)*:
+  • Assert 100% presence and parity of all drawer, tab, and empty state strings across all 9 language folders (`values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`).
+  5. *Tier 1 Targeted Unit Test Regression Suite (`TST-UI-513.5`)*:
+  • Execute targeted test suite (`./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.navigation.*" --tests "com.atrainingtracker.trainingtracker.ui.athleteprofile.*" --tests "com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.*"`).
+  • Assert 100% pass rate.
+
+
+
+### TST-UI-514: **Dedicated ANT+ & Bluetooth LE Radar Vector Badge Verification Suite** [Verified]
+- **Target Release**: `V5.0.0`
+- **Requirement(s)**: `REQ-UI-514`
+- **Component**: `app/src/main/res/drawable/bike_radar.xml`, `app/src/main/res/drawable/bt_bike_radar.xml`, `UIHelper.java`, `DeviceData.kt`, `VectorAssetResolutionContractTest.kt`
+- **Jira**: `ATT-6699`
+- **Test Description**:
+  1. *Vector XML Well-Formedness & Rule 37 Geometry Contract Test (`TST-UI-514.1`, `VectorAssetResolutionContractTest.kt`)*:
+  • Verify `bike_radar.xml` (96x96) and `bt_bike_radar.xml` (144x144) exist in `app/src/main/res/drawable/`, parse cleanly as XML `<vector>` documents with `48dp x 48dp` dimensions, and have valid positive viewport bounds.
+  • Verify each `<path>` has $\le 45$ `L` commands and at least one analytical curve command (`A`, `C`, or `Q`), adhering strictly to Rule 37.
+  2. *Color Tokens, Badge Geometry & Uppercase Typography Contract Test (`TST-UI-514.2`, `VectorAssetResolutionContractTest.kt`)*:
+  • Verify `bike_radar.xml` has `#000000` background badge ($r=10$) and white foreground glyphs.
+  • Verify `bt_bike_radar.xml` has full-bleed `#0A3D91` background badge ($0..144$, $r=22.0$) without legacy `#07377F` or 10-unit inset margins.
+  • Verify both drawables use `evenOdd` fillType for bottom `RDR` typography counter punch-outs at expected Y-coordinates ($y \in [75.5, 90.5]$ for ANT+, $y \in [113.25, 135.75]$ for BLE).
+  • Verify `bt_bike_radar.xml` centers cyclist with `translateX="18.18"` and embeds canonical radar mini-icon `mini_icon_radar` in the top-left quadrant.
+  3. *DeviceType.BIKE_RADAR Icon Resolution Contract Test (`TST-UI-514.3`, `VectorAssetResolutionContractTest.kt`)*:
+  • Assert `UIHelper.getIconId(DeviceType.BIKE_RADAR, Protocol.ANT_PLUS) == R.drawable.bike_radar`.
+  • Assert `UIHelper.getIconId(DeviceType.BIKE_RADAR, Protocol.BLUETOOTH_LE) == R.drawable.bt_bike_radar`.
+  • Assert `DeviceData.getIconId(DeviceType.BIKE_RADAR, Protocol.ANT_PLUS) == R.drawable.bike_radar`.
+  • Assert `DeviceData.getIconId(DeviceType.BIKE_RADAR, Protocol.BLUETOOTH_LE) == R.drawable.bt_bike_radar`.
+  4. *Tier 1 Targeted Unit Test Regression Suite (`TST-UI-514.4`)*:
+  • Execute targeted test suite (`./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.resources.VectorAssetResolutionContractTest" --tests "com.atrainingtracker.banalservice.devices.bluetooth_le.*"`).
+  • Assert 100% pass rate.
+
+
+
+### TST-UI-515: **Concise Display Settings Option Subtitles & Length Bound Verification Suite** [Verified]
+- **Target Release**: `V5.0.0`
+- **Requirement(s)**: `REQ-UI-515`
+- **Component**: `DisplaySettingsDialog.kt`, `DisplaySettingsTest.kt`, `values*/strings.xml`
+- **Jira**: `ATT-6681`
+- **Test Description**:
+  1. *Toggle Subtitles Character Bound Test (`TST-UI-515.1`, `DisplaySettingsTest.kt`)*:
+  • Verify `forcePortraitSummary`, `prefsKeepScreenOnSummary`, and `prefsNoUnlockingSummary` exist and are $\le 55$ characters across all 9 supported locales (`values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`).
+  2. *Cockpit Theme Description Character Bound Test (`TST-UI-515.2`, `DisplaySettingsTest.kt`)*:
+  • Verify `cockpit_theme_description` exists and is $\le 75$ characters across all 9 supported locales.
+  3. *Exact Copy Match Test for German & English (`TST-UI-515.3`, `DisplaySettingsTest.kt`)*:
+  • Verify exact match for German (`de`) and English (default):
+    - German:
+      - `forcePortraitSummary`: `"Anzeige dauerhaft im Hochformat fixieren"`
+      - `prefsKeepScreenOnSummary`: `"Kein Standby während einer Aufzeichnung"`
+      - `prefsNoUnlockingSummary`: `"Cockpit direkt über dem Sperrbildschirm anzeigen"`
+    - English:
+      - `forcePortraitSummary`: `"Lock display to portrait mode"`
+      - `prefsKeepScreenOnSummary`: `"Prevent standby during active tracking"`
+      - `prefsNoUnlockingSummary`: `"Show cockpit directly above the lock screen"`
+  4. *Hygiene & Quality Constraints (`TST-UI-515.4`, `DisplaySettingsTest.kt`)*:
+  • Verify zero format specifiers (`%s`, `%d`) and zero emojis across all 9 locales.
+  5. *Tier 1 Targeted Unit Test Regression Suite (`TST-UI-515.5`)*:
+  • Execute `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.settings.display.DisplaySettingsTest"`.
+  • Assert 100% pass rate.
+
+
+
+### TST-UI-516: **Pioneer Status Banner Voluntary Support Transition Copy Verification Suite** [Verified]
+- **Target Release**: `V5.0.0`
+- **Requirement(s)**: `REQ-UI-516`
+- **Component**: `SupporterComponents.kt`, `SupporterCopyContractTest.kt`, `values*/strings.xml`
+- **Jira**: `ATT-6680`
+- **Test Description**:
+  1. *9-Language Presence & Non-Blank Audit (`TST-UI-516.1`, `SupporterCopyContractTest.kt`)*:
+  • Verify `pioneer_thank_you_body` exists and is non-blank across all 9 locales (`values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`).
+  2. *Hygiene Constraints Audit (`TST-UI-516.2`, `SupporterCopyContractTest.kt`)*:
+  • Verify `pioneer_thank_you_body` contains zero format arguments (`%s`, `%d`), zero decorative emojis (`ATT-5400`), and zero references to "ANT+" (case-insensitive) across all 9 locales.
+  3. *Exact Copy Match Test for German & English (`TST-UI-516.3`, `SupporterCopyContractTest.kt`)*:
+  • Verify exact match for German (`de`) and English (default):
+    - German:
+      `"Danke, dass du bereits mit einer früheren Version von aTrainingTracker deine Trainings aufgezeichnet hast! Unbegrenzte Sensoren und alle zukünftigen Funktionen sind für dich dauerhaft freigeschaltet. Über eine freiwillige finanzielle Unterstützung für die Weiterentwicklung würden wir uns trotzdem sehr freuen."`
+    - English:
+      `"Thank you for recording your workouts with an earlier version of aTrainingTracker! Unlimited sensors and all future features are permanently unlocked for you. Nevertheless, we would still be very happy about voluntary financial support for ongoing development."`
+  4. *Tier 1 Targeted Unit Test Regression Suite (`TST-UI-516.4`)*:
+  • Execute `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.settings.supporter.SupporterCopyContractTest"`.
+  • Assert 100% pass rate.
 
 

@@ -18,39 +18,20 @@
 
 package com.atrainingtracker.trainingtracker.ui.settings.tuning
 
-import org.junit.Assert.assertTrue
+import com.atrainingtracker.testing.LocalizationTestCache
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
 import org.junit.Test
-import java.io.File
 
 /**
  * Localization parity and naming contract test for tuning_cat_cockpit_typography (REQ-UI-277, TST-UI-237.2).
  * Verifies that all 9 supported languages include cockpit tile styling in the section title.
+ * Refactored to LocalizationTestCache per docs/coding_standards.md §5.4 and REQ-PRO-049.
  */
 class CockpitTypographyLocalizationTest {
 
-    private fun findResDirectory(): File {
-        val candidates = listOf(
-            File("app/src/main/res"),
-            File("src/main/res"),
-            File("../app/src/main/res")
-        )
-        return candidates.firstOrNull { it.exists() && it.isDirectory }
-            ?: error("res directory not found in candidates: $candidates")
-    }
-
-    private fun extractStringValue(xmlFile: File, stringName: String): String {
-        assertTrue("String XML file must exist: ${xmlFile.absolutePath}", xmlFile.exists())
-        val content = xmlFile.readText()
-        val regex = Regex("""<string\s+name=["']$stringName["'][^>]*>(.*?)</string>""", RegexOption.DOT_MATCHES_ALL)
-        val match = regex.find(content)
-            ?: error("String resource '$stringName' not found in ${xmlFile.path}")
-        return match.groupValues[1]
-    }
-
     @Test
     fun testTuningCatCockpitTypography_containsTileKeywordAcrossAll9Locales() {
-        val resDir = findResDirectory()
-
         val expectations = mapOf(
             "values" to "Cockpit &amp; Tiles",
             "values-de" to "Cockpit &amp; Kacheln",
@@ -64,12 +45,10 @@ class CockpitTypographyLocalizationTest {
         )
 
         for ((folder, expectedValue) in expectations) {
-            val stringsFile = File(resDir, "$folder/strings.xml")
-            val actualValue = extractStringValue(stringsFile, "tuning_cat_cockpit_typography")
-            assertTrue(
-                "Locale $folder should have value '$expectedValue', but found '$actualValue'",
-                actualValue == expectedValue
-            )
+            val strings = LocalizationTestCache.getStrings(folder, "strings.xml")
+            val actualValue = strings["tuning_cat_cockpit_typography"]
+            assertNotNull("tuning_cat_cockpit_typography must exist in $folder", actualValue)
+            assertEquals("Locale $folder mismatch", expectedValue, actualValue)
         }
     }
 }

@@ -96,6 +96,12 @@ class ClimbsDatabaseManager(
 ) {
 
     /**
+     * Direct database handle for connection quiescence, WAL checkpointing, and backups (REQ-MAP-066.2).
+     */
+    val database: SQLiteDatabase
+        get() = dbHelper.writableDatabase
+
+    /**
      * Inserts a climb into the database.
      */
     suspend fun insertClimb(climb: Climb): Long = withContext(dbDispatcher) {

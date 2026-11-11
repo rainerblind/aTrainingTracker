@@ -198,4 +198,70 @@ class TcxParserTest {
         assertEquals("Fast sprint", lap.extensions?.description)
         assertNull(lap.trackpoints.first().position)
     }
+
+    @Test
+    fun testParseCoursesAndCoursePoints() {
+        val xml = """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <TrainingCenterDatabase xmlns="http://www.garmin.com/xmlschemas/TrainingCenterDatabase/v2">
+              <Courses>
+                <Course>
+                  <Name>Alpine Ridge Route</Name>
+                  <Track>
+                    <Trackpoint>
+                      <Time>2026-10-14T08:00:00Z</Time>
+                      <Position>
+                        <LatitudeDegrees>47.500</LatitudeDegrees>
+                        <LongitudeDegrees>11.000</LongitudeDegrees>
+                      </Position>
+                      <AltitudeMeters>800.0</AltitudeMeters>
+                      <DistanceMeters>0.0</DistanceMeters>
+                    </Trackpoint>
+                    <Trackpoint>
+                      <Time>2026-10-14T08:05:00Z</Time>
+                      <Position>
+                        <LatitudeDegrees>47.510</LatitudeDegrees>
+                        <LongitudeDegrees>11.010</LongitudeDegrees>
+                      </Position>
+                      <AltitudeMeters>850.0</AltitudeMeters>
+                      <DistanceMeters>1200.0</DistanceMeters>
+                    </Trackpoint>
+                  </Track>
+                  <CoursePoint>
+                    <Name>Summit Cross</Name>
+                    <Time>2026-10-14T08:05:00Z</Time>
+                    <Position>
+                      <LatitudeDegrees>47.510</LatitudeDegrees>
+                      <LongitudeDegrees>11.010</LongitudeDegrees>
+                    </Position>
+                    <AltitudeMeters>850.0</AltitudeMeters>
+                    <PointType>Summit</PointType>
+                    <Notes>Windy ridge</Notes>
+                  </CoursePoint>
+                  <Notes>Demanding trail with scenic view</Notes>
+                </Course>
+              </Courses>
+            </TrainingCenterDatabase>
+        """.trimIndent()
+
+        val result = TcxParser.parse(xml)
+        assertTrue("Course parse should succeed", result.isSuccess)
+        val doc = result.getOrThrow()
+
+        assertEquals(1, doc.courses.size)
+        val course = doc.courses.first()
+        assertEquals("Alpine Ridge Route", course.name)
+        assertEquals("Demanding trail with scenic view", course.notes)
+        assertEquals(2, course.trackpoints.size)
+        assertEquals(47.500, course.trackpoints[0].position?.latitudeDegrees ?: 0.0, 1e-4)
+
+        assertEquals(1, course.coursePoints.size)
+        val cp = course.coursePoints[0]
+        assertEquals("Summit Cross", cp.name)
+        assertEquals("Summit", cp.pointType)
+        assertEquals("Windy ridge", cp.notes)
+        assertEquals(47.510, cp.position.latitudeDegrees, 1e-4)
+        assertEquals(11.010, cp.position.longitudeDegrees, 1e-4)
+        assertEquals(850.0, cp.altitudeMeters ?: 0.0, 1e-2)
+    }
 }

@@ -33,12 +33,12 @@ import com.atrainingtracker.trainingtracker.database.CardioPowerDynamicsRecord
 import com.atrainingtracker.trainingtracker.database.EquipmentDbHelper
 import com.atrainingtracker.trainingtracker.database.ExtremaType
 import com.atrainingtracker.trainingtracker.database.KnownLocationsDatabaseManager
-import com.atrainingtracker.trainingtracker.database.LapsDatabaseManager
 import com.atrainingtracker.trainingtracker.database.WorkoutAutoNamingHelper
-import com.atrainingtracker.trainingtracker.database.WorkoutClusterDatabaseManager
+import com.atrainingtracker.trainingtracker.database.WorkoutClusterRepository
 import com.atrainingtracker.trainingtracker.database.WorkoutSource
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries
+import com.atrainingtracker.trainingtracker.repositories.KnownLocationsRepository
 import com.atrainingtracker.trainingtracker.exporter.db.StravaUploadDbHelper
 import com.atrainingtracker.trainingtracker.ui.components.workoutextrema.ExtremaDataRow
 import com.atrainingtracker.trainingtracker.ui.utils.NumericalEncodingUtils
@@ -60,11 +60,8 @@ class WorkoutDataMapper(
     private val sportTypeDatabaseManager: SportTypeDatabaseManager,
     private val equipmentDbHelper: EquipmentDbHelper,
     private val stravaUploadDbHelper: StravaUploadDbHelper,
-    private val knownLocationsDatabaseManager: KnownLocationsDatabaseManager? = try {
-        KnownLocationsDatabaseManager.getInstance(context)
-    } catch (_: Throwable) {
-        null
-    }
+    private val knownLocationsDatabaseManager: KnownLocationsDatabaseManager? = null,
+    private val knownLocationsRepository: KnownLocationsRepository? = null
 ) {
 
     // Define all sensors to check
@@ -112,7 +109,11 @@ class WorkoutDataMapper(
 
         val workoutName = cursor.getString(cursor.getColumnIndexOrThrow(WorkoutSummaries.WORKOUT_NAME))
         val clusterId = cursor.getLong(cursor.getColumnIndexOrThrow(WorkoutSummaries.CLUSTER_ID))
-        val clusterName = WorkoutClusterDatabaseManager.getInstance(context).getClusterNameById(clusterId)
+        val clusterName = try {
+            WorkoutClusterRepository.getInstance(context).getClusterNameById(clusterId)
+        } catch (_: Throwable) {
+            null
+        }
 
         val startLocationName = resolveLocationName(startLatLng)
         val endLocationName = resolveLocationName(endLatLng)
@@ -204,6 +205,22 @@ class WorkoutDataMapper(
             maxPowerToWeight = powerSummary.maxPowerToWeight,
             variabilityIndex = powerSummary.variabilityIndex,
             cardioPowerDynamics = workoutSummariesDatabaseManager.getCardioPowerDynamics(workoutId),
+            radarTrafficSummary = resolveRadarTrafficSummary(
+                totalVehiclesVal = workoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.RADAR_VEHICLE_COUNT, ExtremaType.MAX)
+                    ?: workoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.RADAR_VEHICLE_COUNT, ExtremaType.END),
+                maxApproachSpeedVal = workoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.RADAR_APPROACH_SPEED_mps, ExtremaType.MAX),
+                maxVehicleSpeedVal = null,
+                highThreatPassVal = null,
+                totalDistanceM = totalDistance,
+                activeTimeSec = activeTimeSec,
+                riderMaxSpeedMps = workoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.SPEED_mps, ExtremaType.MAX),
+                minPassingDistanceVal = workoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.RADAR_PASSING_DISTANCE_m, ExtremaType.MIN),
+                heavyVehicleCountVal = workoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.RADAR_LARGE_VEHICLE_COUNT, ExtremaType.MAX)
+            ),
+
+            dfaA1FreshBaseline = workoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.HRV_DFA_A1, ExtremaType.DFA_A1_FRESH_BASELINE),
+            dfaA1LateMean = workoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.HRV_DFA_A1, ExtremaType.DFA_A1_LATE_MEAN),
+            dfaA1DurabilityDriftPct = workoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.HRV_DFA_A1, ExtremaType.DFA_A1_DRIFT_PCT),
 
             totalDistance = totalDistance,
             maxDisplacement = maxDisplacement,
@@ -223,6 +240,9 @@ class WorkoutDataMapper(
             description = cursor.getString(cursor.getColumnIndexOrThrow(WorkoutSummaries.DESCRIPTION)),
             goal = cursor.getString(cursor.getColumnIndexOrThrow(WorkoutSummaries.GOAL)),
             method = cursor.getString(cursor.getColumnIndexOrThrow(WorkoutSummaries.METHOD)),
+            calories = cursor.getColumnIndex(WorkoutSummaries.CALORIES).takeIf { it >= 0 }?.let {
+                if (cursor.isNull(it)) null else cursor.getInt(it)
+            },
 
             stravaSportName = sportTypeDatabaseManager.getStravaName(sportId),
 
@@ -261,7 +281,11 @@ class WorkoutDataMapper(
             },
 
             exportStatuses = emptyList(), // will be added/merged by the viewModel
-            laps = LapsDatabaseManager.getInstance(context).getLaps(workoutId)
+            laps = try {
+                WorkoutRepository.getInstance(context).getLaps(workoutId)
+            } catch (_: Throwable) {
+                emptyList()
+            }
         )
     }
 
@@ -500,6 +524,54 @@ class WorkoutDataMapper(
     }
 
     /**
+     * Resolves post-workout cycling rearview radar traffic summary analytics (REQ-RAD-005 / ATT-5088).
+     */
+    internal fun resolveRadarTrafficSummary(
+        totalVehiclesVal: Double?,
+        maxApproachSpeedVal: Double?,
+        maxVehicleSpeedVal: Double?,
+        highThreatPassVal: Double?,
+        totalDistanceM: Double,
+        activeTimeSec: Long,
+        riderMaxSpeedMps: Double? = null,
+        minPassingDistanceVal: Double? = null,
+        closePassCountVal: Int = 0,
+        heavyVehicleCountVal: Double? = null
+    ): RadarTrafficSummary? {
+        val totalVehicles = totalVehiclesVal?.toInt() ?: return null
+        if (totalVehicles <= 0) return null
+
+        val distanceKm = totalDistanceM / 1000.0
+        val vehiclesPerKm = if (distanceKm > 0.0) totalVehicles / distanceKm else 0.0
+        val durationHours = activeTimeSec / 3600.0
+        val vehiclesPerHour = if (durationHours > 0.0) totalVehicles / durationHours else 0.0
+
+        val maxApproachSpeed = maxApproachSpeedVal?.takeIf { it.isFinite() && it >= 0.0 } ?: 0.0
+        val maxVehicleSpeed = if (maxVehicleSpeedVal != null && maxVehicleSpeedVal > 0.0) {
+            maxVehicleSpeedVal
+        } else if (riderMaxSpeedMps != null && riderMaxSpeedMps > 0.0 && maxApproachSpeed > 0.0) {
+            riderMaxSpeedMps + maxApproachSpeed
+        } else {
+            maxApproachSpeed
+        }
+        val highThreatCount = highThreatPassVal?.toInt()?.coerceAtLeast(0) ?: 0
+        val minPassingDist = minPassingDistanceVal?.takeIf { it.isFinite() && it >= 0.0 }
+        val heavyCount = heavyVehicleCountVal?.toInt()?.coerceAtLeast(0) ?: 0
+
+        return RadarTrafficSummary(
+            totalVehicles = totalVehicles,
+            vehiclesPerKm = vehiclesPerKm,
+            vehiclesPerHour = vehiclesPerHour,
+            maxApproachSpeedMps = maxApproachSpeed,
+            maxVehicleSpeedMps = maxVehicleSpeed,
+            highThreatPassCount = highThreatCount,
+            closePassCount = closePassCountVal,
+            minPassingDistanceM = minPassingDist,
+            heavyVehicleCount = heavyCount
+        )
+    }
+
+    /**
      * DTO for batch-loaded metadata (ATT-359).
      */
     data class SportTypeInfo(
@@ -562,6 +634,7 @@ class WorkoutDataMapper(
         val description: String?,
         val goal: String?,
         val method: String?,
+        val calories: Int? = null,
         val recordingErrors: String? = null
     )
 
@@ -601,6 +674,9 @@ class WorkoutDataMapper(
         val description = cursor.getString(cursor.getColumnIndexOrThrow(WorkoutSummaries.DESCRIPTION))
         val goal = cursor.getString(cursor.getColumnIndexOrThrow(WorkoutSummaries.GOAL))
         val method = cursor.getString(cursor.getColumnIndexOrThrow(WorkoutSummaries.METHOD))
+        val calories = cursor.getColumnIndex(WorkoutSummaries.CALORIES).takeIf { it >= 0 }?.let {
+            if (cursor.isNull(it)) null else cursor.getInt(it)
+        }
         val recordingErrors = cursor.getColumnIndex(WorkoutSummaries.RECORDING_ERRORS).takeIf { it >= 0 }?.let {
             if (cursor.isNull(it)) null else cursor.getString(it)
         }
@@ -638,6 +714,7 @@ class WorkoutDataMapper(
             description = description,
             goal = goal,
             method = method,
+            calories = calories,
             recordingErrors = recordingErrors
         )
     }
@@ -795,6 +872,18 @@ class WorkoutDataMapper(
             variabilityIndex = powerSummary.variabilityIndex,
             cardioPowerDynamics = batch.cardioPowerDynamics[snapshot.workoutId]
                 ?: workoutSummariesDatabaseManager.getCardioPowerDynamics(snapshot.workoutId),
+            radarTrafficSummary = resolveRadarTrafficSummary(
+                totalVehiclesVal = getBatchVal(SensorType.RADAR_VEHICLE_COUNT, ExtremaType.MAX)
+                    ?: getBatchVal(SensorType.RADAR_VEHICLE_COUNT, ExtremaType.END),
+                maxApproachSpeedVal = getBatchVal(SensorType.RADAR_APPROACH_SPEED_mps, ExtremaType.MAX),
+                maxVehicleSpeedVal = null,
+                highThreatPassVal = null,
+                totalDistanceM = snapshot.totalDistance,
+                activeTimeSec = snapshot.activeTimeSec,
+                riderMaxSpeedMps = getBatchVal(SensorType.SPEED_mps, ExtremaType.MAX),
+                minPassingDistanceVal = getBatchVal(SensorType.RADAR_PASSING_DISTANCE_m, ExtremaType.MIN),
+                heavyVehicleCountVal = getBatchVal(SensorType.RADAR_LARGE_VEHICLE_COUNT, ExtremaType.MAX)
+            ),
 
             totalDistance = snapshot.totalDistance,
             maxDisplacement = maxDisplacement,
@@ -814,6 +903,7 @@ class WorkoutDataMapper(
             description = snapshot.description,
             goal = snapshot.goal,
             method = snapshot.method,
+            calories = snapshot.calories,
 
             stravaSportName = sportInfo?.stravaSportName ?: sportTypeDatabaseManager.getStravaName(snapshot.sportId),
             stravaActivityData = stravaActivityData,
@@ -1112,9 +1202,11 @@ class WorkoutDataMapper(
      */
     private fun resolveLocationName(latLng: LatLng?): String? {
         if (latLng == null) return null
-        val mgr = knownLocationsDatabaseManager ?: return null
         return try {
-            val myLoc = mgr.getMyLocation(latLng) ?: return null
+            val myLoc = knownLocationsDatabaseManager?.getMyLocation(latLng)
+                ?: knownLocationsRepository?.getMyLocation(latLng)
+                ?: try { KnownLocationsRepository.getInstance(context).getMyLocation(latLng) } catch (_: Throwable) { null }
+                ?: return null
             WorkoutAutoNamingHelper.getDisplayName(context, myLoc)
         } catch (_: Throwable) {
             null

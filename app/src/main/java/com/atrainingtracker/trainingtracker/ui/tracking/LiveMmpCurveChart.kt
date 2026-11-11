@@ -20,9 +20,10 @@ package com.atrainingtracker.trainingtracker.ui.tracking
 
 import android.graphics.Paint
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -32,6 +33,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -41,6 +43,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -52,6 +55,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.atrainingtracker.R
+import com.atrainingtracker.trainingtracker.ui.theme.TTColor
+import kotlin.math.abs
 import kotlin.math.ln
 import kotlin.math.max
 import kotlin.math.roundToInt
@@ -90,30 +95,71 @@ enum class MmpBenchmark(val durationSeconds: Int, val label: String) {
 }
 
 /**
+ * Detail of a personal record breakthrough for an MMP duration benchmark (REQ-TRK-058.6).
+ */
+data class MmpBreakthroughInfo(
+    val benchmark: MmpBenchmark,
+    val sessionWatts: Double,
+    val referenceWatts: Double,
+    val deltaWatts: Double
+)
+
+/**
  * Telemetry model holding real-time Mean Maximal Power (MMP) data for chart presentation.
  *
  * @property rollingMeans Map of benchmark duration in seconds to current rolling average power in Watts.
  * @property peakPowers Map of benchmark duration in seconds to session peak sustained power in Watts.
  * @property instantaneousPower Current 1-second cycling power in Watts.
+ * @property referencePoints Historical personal record benchmarks in Watts (e.g. 5s -> 650W, 60s -> 420W).
  */
 data class LiveMmpCurveData(
     val rollingMeans: Map<Int, Double> = emptyMap(),
     val peakPowers: Map<Int, Double> = emptyMap(),
-    val instantaneousPower: Double? = null
-)
+    val instantaneousPower: Double? = null,
+    val referencePoints: Map<Int, Double> = emptyMap()
+) {
+    /**
+     * Returns benchmark intervals where session peak power exceeds the historical reference PR (REQ-TRK-058.6).
+     */
+    fun getBreakthroughs(): List<MmpBreakthroughInfo> {
+        return MmpBenchmark.ALL.mapNotNull { benchmark ->
+            val sec = benchmark.durationSeconds
+            val peak = peakPowers[sec]
+            val ref = referencePoints[sec]
+            if (peak != null && ref != null && peak > ref) {
+                MmpBreakthroughInfo(
+                    benchmark = benchmark,
+                    sessionWatts = peak,
+                    referenceWatts = ref,
+                    deltaWatts = peak - ref
+                )
+            } else null
+        }
+    }
+}
 
 /**
- * Real-time vector Mean Maximal Power (MMP) curve chart composable (REQ-TRK-058.4).
+ * Real-time vector Mean Maximal Power (MMP) curve chart composable (REQ-TRK-058.4, REQ-TRK-058.6).
  *
  * Renders an interactive logarithmic time scale (1s to 2h) with dynamic vector curve strokes
- * for session peak powers, current rolling duration averages, and prominent benchmark markers
- * (5s, 1m, 5m, 20m). Adheres strictly to Rule 66 (zero snapshot state writes during composition).
+ * for session peak powers, current rolling duration averages, historical PR reference curve,
+ * and transient breakthrough notifications. Adheres strictly to Rule 66 (zero snapshot state writes during composition).
  */
 @Composable
 fun LiveMmpCurveChart(
     curveData: LiveMmpCurveData,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    referencePoints: Map<Int, Double> = emptyMap()
 ) {
+    val effectiveCurveData = remember(curveData, referencePoints) {
+        if (referencePoints.isNotEmpty() && curveData.referencePoints.isEmpty()) {
+            curveData.copy(referencePoints = referencePoints)
+        } else {
+            curveData
+        }
+    }
+    val breakthroughs = remember(effectiveCurveData) { effectiveCurveData.getBreakthroughs() }
+
     Card(
         modifier = modifier
             .fillMaxWidth()
@@ -128,12 +174,36 @@ fun LiveMmpCurveChart(
                 .fillMaxSize()
                 .padding(horizontal = 12.dp, vertical = 8.dp)
         ) {
-            Text(
-                text = stringResource(R.string.mmp_curve),
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = stringResource(R.string.mmp_curve),
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
+                if (breakthroughs.isNotEmpty()) {
+                    val prSummary = breakthroughs.joinToString(" ") { b ->
+                        "${b.benchmark.label} +${b.deltaWatts.roundToInt()}W"
+                    }
+                    Surface(
+                        color = TTColor.Gold.copy(alpha = 0.2f),
+                        shape = RoundedCornerShape(4.dp)
+                    ) {
+                        Text(
+                            text = "${stringResource(R.string.mmp_breakthrough_pr)} $prSummary",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                        )
+                    }
+                }
+            }
 
             Spacer(modifier = Modifier.height(4.dp))
 
@@ -142,7 +212,8 @@ fun LiveMmpCurveChart(
                     .fillMaxSize()
             ) {
                 LiveMmpCurveCanvas(
-                    curveData = curveData,
+                    curveData = effectiveCurveData,
+                    breakthroughs = breakthroughs,
                     modifier = Modifier.fillMaxSize()
                 )
             }
@@ -153,6 +224,7 @@ fun LiveMmpCurveChart(
 @Composable
 private fun LiveMmpCurveCanvas(
     curveData: LiveMmpCurveData,
+    breakthroughs: List<MmpBreakthroughInfo>,
     modifier: Modifier = Modifier
 ) {
     val density = LocalDensity.current
@@ -189,9 +261,9 @@ private fun LiveMmpCurveCanvas(
         val plotWidth = (size.width - leftPadding - rightPadding).coerceAtLeast(1f)
         val plotHeight = (size.height - topPadding - bottomPadding).coerceAtLeast(1f)
 
-        // Determine max power with 15% headroom
+        // Determine max power with 15% headroom including reference points
         val allWatts = curveData.peakPowers.values + curveData.rollingMeans.values +
-                listOfNotNull(curveData.instantaneousPower)
+                curveData.referencePoints.values + listOfNotNull(curveData.instantaneousPower)
         val maxObserved = allWatts.maxOrNull() ?: 200.0
         val maxWatts = max(400.0, maxObserved * 1.15)
 
@@ -240,6 +312,45 @@ private fun LiveMmpCurveCanvas(
         // Map benchmark points for curve drawing
         val benchmarkSeconds = listOf(5, 60, 300, 1200)
 
+        // 0. Historical PR Reference Curve (Dashed)
+        val refPoints = benchmarkSeconds.mapNotNull { sec ->
+            val watts = curveData.referencePoints[sec]
+            if (watts != null && watts > 0.0) {
+                val fracX = MmpBenchmark.durationToLogFraction(sec)
+                val x = leftPadding + fracX * plotWidth
+                val fracY = (watts / maxWatts).toFloat().coerceIn(0f, 1f)
+                val y = topPadding + (1f - fracY) * plotHeight
+                Offset(x, y) to watts
+            } else null
+        }
+
+        if (refPoints.size >= 2) {
+            val refPath = Path().apply {
+                moveTo(refPoints.first().first.x, refPoints.first().first.y)
+                for (i in 1 until refPoints.size) {
+                    lineTo(refPoints[i].first.x, refPoints[i].first.y)
+                }
+            }
+            drawPath(
+                path = refPath,
+                color = outlineColor.copy(alpha = 0.9f),
+                style = Stroke(
+                    width = 1.5.dp.toPx(),
+                    cap = StrokeCap.Round,
+                    join = StrokeJoin.Round,
+                    pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 8f), 0f)
+                )
+            )
+
+            refPoints.forEach { (offset, _) ->
+                drawCircle(
+                    color = outlineColor,
+                    radius = 2.5.dp.toPx(),
+                    center = offset
+                )
+            }
+        }
+
         // 1. Session Peak Power Curve
         val peakPoints = benchmarkSeconds.mapNotNull { sec ->
             val watts = curveData.peakPowers[sec]
@@ -283,10 +394,25 @@ private fun LiveMmpCurveCanvas(
                 style = Stroke(width = 2.5.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round)
             )
 
-            // Draw peak marker pins with Watt labels
+            // Draw peak marker pins with Watt labels and breakthrough highlights
             peakPoints.forEach { (offset, watts) ->
+                val benchmarkSec = benchmarkSeconds.find { sec ->
+                    val fracX = MmpBenchmark.durationToLogFraction(sec)
+                    abs(leftPadding + fracX * plotWidth - offset.x) < 1.0f
+                }
+                val isBreakthrough = breakthroughs.any { it.benchmark.durationSeconds == benchmarkSec }
+
+                if (isBreakthrough) {
+                    // Golden breakthrough halo
+                    drawCircle(
+                        color = TTColor.Gold.copy(alpha = 0.5f),
+                        radius = 7.dp.toPx(),
+                        center = offset
+                    )
+                }
+
                 drawCircle(
-                    color = primaryColor,
+                    color = if (isBreakthrough) TTColor.Gold else primaryColor,
                     radius = 4.dp.toPx(),
                     center = offset
                 )

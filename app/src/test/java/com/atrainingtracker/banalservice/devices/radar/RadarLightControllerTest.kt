@@ -146,6 +146,43 @@ class RadarLightControllerTest {
     }
 
     @Test
+    fun testRadarLightController_gatedStateMutation_whenDispatchFails_stateNotMutated() {
+        // No device connected, simulator inactive
+        assertFalse(RadarLightController.isLightControlAvailable.value)
+        assertFalse(RadarTrafficSimulator.isSimulating)
+
+        val dispatched = RadarLightController.setLightMode(RadarLightMode.DAY_FLASH)
+        assertFalse(dispatched)
+        assertEquals(RadarLightMode.OFF, RadarLightController.currentMode.value)
+        assertEquals(RadarLightMode.OFF, RadarStateRepository.getState().lightMode)
+    }
+
+    @Test
+    fun testRadarLightController_updateHardwareLightMode_reflectsGattRead() {
+        RadarLightController.updateHardwareLightMode(RadarLightMode.PELOTON)
+        assertEquals(RadarLightMode.PELOTON, RadarLightController.currentMode.value)
+        assertEquals(RadarLightMode.PELOTON, RadarStateRepository.getState().lightMode)
+    }
+
+    @Test
+    fun testRadarLightController_synchronousAutoSwitch_startAndStop() {
+        val mockDevice = mockk<BTLERadarDevice>(relaxed = true)
+        every { mockDevice.setLightMode(any()) } returns true
+        RadarLightController.registerRadarDevice(mockDevice, lightSupported = true, isStvzo = false)
+
+        RadarLightController.updateCachedPreferences(autoControl = true, defaultMode = RadarLightMode.DAY_FLASH)
+
+        val mockContext = mockk<Context>(relaxed = true)
+        RadarLightController.onWorkoutStarted(mockContext)
+        assertEquals(RadarLightMode.DAY_FLASH, RadarLightController.currentMode.value)
+        verify { mockDevice.setLightMode(RadarLightMode.DAY_FLASH) }
+
+        RadarLightController.onWorkoutStopped(mockContext)
+        assertEquals(RadarLightMode.OFF, RadarLightController.currentMode.value)
+        verify { mockDevice.setLightMode(RadarLightMode.OFF) }
+    }
+
+    @Test
     fun testRadarLightController_trafficSimulatorIntegration() {
         RadarTrafficSimulator.tick(RadarScenario.SINGLE_CAR, 0L)
         RadarLightController.setLightMode(RadarLightMode.NIGHT_FLASH)
@@ -153,5 +190,21 @@ class RadarLightControllerTest {
         assertEquals(RadarLightMode.NIGHT_FLASH, RadarTrafficSimulator.simulatedLightMode)
         assertEquals(RadarLightMode.NIGHT_FLASH, RadarStateRepository.getState().lightMode)
         assertTrue(RadarStateRepository.getState().isLightControlSupported)
+    }
+
+    @Test
+    fun testRadarLightController_radarLightDeviceClientInterface_supportsAntPlusClient() {
+        val mockClient = mockk<RadarLightDeviceClient>(relaxed = true)
+        every { mockClient.setLightMode(any()) } returns true
+
+        RadarLightController.registerRadarDevice(mockClient, lightSupported = true, isStvzo = false)
+        assertTrue(RadarLightController.isLightControlAvailable.value)
+
+        val dispatched = RadarLightController.setLightMode(RadarLightMode.DAY_FLASH)
+        assertTrue(dispatched)
+        verify { mockClient.setLightMode(RadarLightMode.DAY_FLASH) }
+
+        RadarLightController.unregisterRadarDevice(mockClient)
+        assertFalse(RadarLightController.isLightControlAvailable.value)
     }
 }

@@ -281,9 +281,9 @@
     <string name="prefsDisplayTitle">Scherm</string>
     <string name="prefsDisplaySummary">Scherm- en oriëntatie-instellingen</string>
     <string name="prefsKeepScreenOnTitle">Scherm aanhouden</string>
-    <string name="prefsKeepScreenOnSummary">Voorkomt dat het scherm automatisch uitschakelt tijdens actieve registratie</string>
+    <string name="prefsKeepScreenOnSummary">Geen stand-by tijdens actieve opname</string>
     <string name="prefsNoUnlockingTitle">Scherm ontgrendeld houden</string>
-    <string name="prefsNoUnlockingSummary">Toont de cockpit boven het vergrendelscherm zonder pincode of patroon</string>
+    <string name="prefsNoUnlockingSummary">Cockpit direct boven vergrendelscherm tonen</string>
     <string name="prefZoomDependingOnSpeedTitle">zoom op basis van snelheid</string>
     <string name="prefsUnitsTitle">Eenheden</string>
     <string name="prefsUnitsSummary">metrisch</string>
@@ -500,14 +500,14 @@
     <string name="do_not_check_again">niet meer controleren</string>
     <string name="check_ANT_installation">ANT installatie controleren</string>
     <string name="forcePortrait">Staande oriëntatie</string>
-    <string name="forcePortraitSummary">Vergrendelt het scherm in staande modus en voorkomt automatisch draaien naar liggend</string>
+    <string name="forcePortraitSummary">Scherm vergrendelen in staande modus</string>
     <string name="Display">Scherm</string>
     <string name="settings_category_savings">Batterijbesparing</string>
     <string name="settings_category_savings_desc">Verlengt de batterijduur voor langere trainingssessies</string>
     <string name="prefs_battery_saver_title">Dynamisch scherm dimmen</string>
     <string name="prefs_battery_saver_summary">Past de schermhelderheid dynamisch aan op basis van helling en trainingszones</string>
     <string name="cockpit_theme_title">Cockpitthema (tijdens training)</string>
-    <string name="cockpit_theme_description">Geldt uitsluitend voor de telemetrie- en sensorweergaven tijdens actieve workouts. Het hoofdmenu en \'Start\' behouden het standaardthema.</string>
+    <string name="cockpit_theme_description">Geldt alleen voor telemetrie en sensors van actieve workouts.</string>
     <string name="cockpit_theme_system">Systeem</string>
     <string name="cockpit_theme_always_dark">Altijd donker</string>
     <string name="display_brightness_title">Schermhelderheid (tijdens training)</string>
@@ -2032,8 +2032,14 @@
     <string name="athlete_weight_edit">Bewerken</string>
 
     <!-- Dedicated Athlete Profile Screen & Body Metrics History (ATT-3704, ATT-3851, REQ-UI-391, REQ-UI-397) -->
-    <string name="drawer_athlete_profile">Profiel &amp; zones</string>
-    <string name="athlete_profile_title">Profiel &amp; zones</string>
+    <string name="drawer_athlete_profile">Conditie &amp; fysiologie</string>
+    <string name="athlete_profile_title">Conditie &amp; fysiologie</string>
+    <string name="drawer_fitness_physiology">Conditie &amp; fysiologie</string>
+    <string name="fitness_tab_pmc">Conditie &amp; vermoeidheid</string>
+    <string name="fitness_tab_hrv">HRV &amp; herstel</string>
+    <string name="fitness_tab_body">Lichaam &amp; drempels</string>
+    <string name="fitness_tab_cardio_power">Cardio-Power</string>
+    <string name="pmc_disabled_guidance">Performance Management Chart is uitgeschakeld in Geavanceerde instellingen.</string>
     <string name="athlete_profile_tab_profile">Profiel</string>
     <string name="athlete_profile_add_entry">Meting toevoegen</string>
     <string name="athlete_profile_edit_entry">Meting bewerken</string>
@@ -2371,7 +2377,7 @@
     <string name="drawer_tier_pioneer">★ Pionier</string>
     <string name="pioneer_badge_label_with_year">★ Pionier (Sinds %1$d)</string>
     <string name="pioneer_badge_label">★ Pionier</string>
-    <string name="pioneer_thank_you_body">Bedankt voor het vastleggen van je trainingen met een eerdere versie van aTrainingTracker! Onbeperkte sensoren en alle toekomstige functies zijn permanent voor jou ontgrendeld.</string>
+    <string name="pioneer_thank_you_body">Bedankt voor het vastleggen van je trainingen met een eerdere versie van aTrainingTracker! Onbeperkte sensoren en alle toekomstige functies zijn permanent voor jou ontgrendeld. Desondanks zouden we vrijwillige financiële steun voor de verdere ontwikkeling nog steeds enorm waarderen.</string>
     <string name="debug_supporter_override_title">Supporter-niveau overschrijven (Debug)</string>
     <string name="debug_supporter_override_subtitle">Simuleert licentieniveaus lokaal zonder Google Play Billing inloggegevens</string>
 

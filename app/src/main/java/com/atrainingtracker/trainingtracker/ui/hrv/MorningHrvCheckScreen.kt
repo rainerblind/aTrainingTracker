@@ -31,11 +31,13 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -60,11 +62,15 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -75,6 +81,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -85,7 +93,10 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.atrainingtracker.R
+import com.atrainingtracker.banalservice.devices.hrv.HrvSignalQualityStatus
+import com.atrainingtracker.trainingtracker.database.hrv.CalibrationProgressState
 import com.atrainingtracker.trainingtracker.database.hrv.HrvPosture
+import com.atrainingtracker.trainingtracker.database.hrv.HrvReadinessCalculator
 import com.atrainingtracker.trainingtracker.database.hrv.HrvReadinessEntry
 import com.atrainingtracker.trainingtracker.database.hrv.HrvReadinessResult
 import com.atrainingtracker.trainingtracker.database.hrv.ReadinessStatus
@@ -93,7 +104,6 @@ import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 import com.atrainingtracker.trainingtracker.ui.theme.TTColor
 import com.atrainingtracker.trainingtracker.ui.tracking.HrvInfoBottomSheet
 import kotlinx.coroutines.launch
-import java.util.Locale
 
 /**
  * Screen presenting guided morning resting HRV acquisition protocol (`REQ-PER-032`).
@@ -112,6 +122,15 @@ fun MorningHrvCheckScreen(
     var showInfoSheet by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
     val context = LocalContext.current
+
+    val currentView = LocalView.current
+    val keepAwake = uiState.phase == MorningHrvPhase.STABILIZING || uiState.phase == MorningHrvPhase.MEASURING
+    DisposableEffect(keepAwake) {
+        currentView.keepScreenOn = keepAwake
+        onDispose {
+            currentView.keepScreenOn = false
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -157,12 +176,14 @@ fun MorningHrvCheckScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
+                .navigationBarsPadding()
                 .verticalScroll(rememberScrollState())
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             // Error banner if any
-            if (uiState.errorMessage != null) {
+            val errorText = uiState.errorMessageResId?.let { stringResource(it) } ?: uiState.errorMessage
+            if (errorText != null) {
                 Card(
                     colors = CardDefaults.cardColors(
                         containerColor = MaterialTheme.colorScheme.errorContainer
@@ -171,7 +192,7 @@ fun MorningHrvCheckScreen(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text(
-                        text = uiState.errorMessage ?: "",
+                        text = errorText,
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onErrorContainer,
                         modifier = Modifier.padding(16.dp)
@@ -200,6 +221,14 @@ fun MorningHrvCheckScreen(
                 ArtifactWarningCard(artifactRatePct = uiState.artifactRatePct ?: 0.0)
             }
 
+            // Smoothed / Quantized Signal Warning (REQ-TRK-068.3)
+            if (uiState.phase == MorningHrvPhase.COMPLETED &&
+                (uiState.signalQualityStatus == HrvSignalQualityStatus.SMOOTHED_STREAM ||
+                 uiState.signalQualityStatus == HrvSignalQualityStatus.QUANTIZED_SYNTHETIC)
+            ) {
+                SmoothedSignalWarningCard()
+            }
+
             // 5. Post-Hoc Measurement Results Card
             if (uiState.phase == MorningHrvPhase.COMPLETED && uiState.computedEntry != null) {
                 ReadinessResultCard(
@@ -222,7 +251,7 @@ fun MorningHrvCheckScreen(
                         if (rowId > 0) {
                             Toast.makeText(
                                 context,
-                                context.getString(R.string.morning_hrv_saved_toast),
+                                R.string.morning_hrv_saved_toast,
                                 Toast.LENGTH_SHORT
                             ).show()
                         }
@@ -233,7 +262,10 @@ fun MorningHrvCheckScreen(
     }
 
     if (showInfoSheet) {
-        HrvInfoBottomSheet(onDismissRequest = { showInfoSheet = false })
+        HrvInfoBottomSheet(
+            onDismissRequest = { showInfoSheet = false },
+            signalQualityStatus = uiState.signalQualityStatus
+        )
     }
 }
 
@@ -336,20 +368,32 @@ private fun PostureAndDurationCard(
                 color = MaterialTheme.colorScheme.onSurface
             )
 
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.fillMaxWidth()
+            SingleChoiceSegmentedButtonRow(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(28.dp)
             ) {
-                FilterChip(
-                    selected = selectedDurationSec == MorningHrvCheckViewModel.DURATION_STANDARD_SEC,
-                    onClick = { onDurationSelected(MorningHrvCheckViewModel.DURATION_STANDARD_SEC) },
-                    label = { Text(stringResource(R.string.morning_hrv_duration_60s)) }
+                val durations = listOf(
+                    MorningHrvCheckViewModel.DURATION_STANDARD_SEC to stringResource(R.string.morning_hrv_duration_60s),
+                    MorningHrvCheckViewModel.DURATION_EXTENDED_SEC to stringResource(R.string.morning_hrv_duration_120s)
                 )
-                FilterChip(
-                    selected = selectedDurationSec == MorningHrvCheckViewModel.DURATION_EXTENDED_SEC,
-                    onClick = { onDurationSelected(MorningHrvCheckViewModel.DURATION_EXTENDED_SEC) },
-                    label = { Text(stringResource(R.string.morning_hrv_duration_120s)) }
-                )
+                durations.forEachIndexed { index, (durationSec, label) ->
+                    val selected = selectedDurationSec == durationSec
+                    SegmentedButton(
+                        selected = selected,
+                        onClick = { onDurationSelected(durationSec) },
+                        shape = SegmentedButtonDefaults.itemShape(index = index, count = durations.size),
+                        icon = {},
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
+                    ) {
+                        Text(
+                            text = label,
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+                            maxLines = 1
+                        )
+                    }
+                }
             }
         }
     }
@@ -415,7 +459,7 @@ private fun MeasurementPacingCard(
                         MorningHrvPhase.READY -> MaterialTheme.colorScheme.onSurfaceVariant
                         MorningHrvPhase.STABILIZING -> MaterialTheme.colorScheme.onSecondaryContainer
                         MorningHrvPhase.MEASURING -> MaterialTheme.colorScheme.onPrimaryContainer
-                        MorningHrvPhase.COMPLETED -> Color.White
+                        MorningHrvPhase.COMPLETED -> TTColor.ReadinessOnStatus
                     },
                     modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp)
                 )
@@ -459,7 +503,7 @@ private fun MeasurementPacingCard(
                     )
                     if (uiState.phase == MorningHrvPhase.MEASURING) {
                         Text(
-                            text = "${uiState.beatCount} beats",
+                            text = stringResource(R.string.morning_hrv_beat_count, uiState.beatCount),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -516,6 +560,51 @@ private fun ArtifactWarningCard(
 }
 
 /**
+ * Amber warning banner displayed when completed measurement exhibits firmware smoothing or synthetic quantization (`REQ-TRK-068.3`).
+ */
+@Composable
+private fun SmoothedSignalWarningCard(
+    modifier: Modifier = Modifier
+) {
+    Card(
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = TTColor.ArtifactWarningContainer
+        ),
+        modifier = modifier
+            .fillMaxWidth()
+            .border(1.dp, TTColor.ArtifactWarningBorder, RoundedCornerShape(12.dp))
+            .testTag("morning_hrv_smoothed_warning_card")
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.Top
+        ) {
+            Icon(
+                imageVector = Icons.Default.WarningAmber,
+                contentDescription = null,
+                tint = TTColor.ArtifactWarningTitle,
+                modifier = Modifier.size(24.dp)
+            )
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(
+                    text = stringResource(R.string.morning_hrv_smoothed_warning_title),
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = TTColor.ArtifactWarningTitle
+                )
+                Text(
+                    text = stringResource(R.string.morning_hrv_smoothed_warning_desc),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = TTColor.ArtifactWarningDesc
+                )
+            }
+        }
+    }
+}
+
+/**
  * Result card displaying post-hoc computed resting HRV metrics and SWC readiness classification (`REQ-PER-032.5`).
  */
 @Composable
@@ -547,24 +636,41 @@ private fun ReadinessResultCard(
                 val (statusBg, statusFg, statusText) = when (readinessResult.status) {
                     ReadinessStatus.OPTIMAL -> Triple(
                         TTColor.ReadinessOptimal,
-                        Color.White,
-                        "Optimal Autonomic Readiness"
+                        TTColor.ReadinessOnStatus,
+                        stringResource(R.string.morning_hrv_status_optimal)
                     )
                     ReadinessStatus.FATIGUED_LOW -> Triple(
                         TTColor.ReadinessFatigued,
-                        Color.White,
-                        "Low Readiness (Autonomic Fatigue)"
+                        TTColor.ReadinessOnStatus,
+                        stringResource(R.string.morning_hrv_status_fatigued_low)
                     )
                     ReadinessStatus.ABOVE_NORMAL -> Triple(
                         TTColor.ReadinessElevated,
-                        Color.White,
-                        "Elevated Parasympathetic Activity"
+                        TTColor.ReadinessOnStatus,
+                        stringResource(R.string.morning_hrv_status_elevated)
                     )
-                    ReadinessStatus.CALIBRATING -> Triple(
-                        TTColor.ReadinessCalibrating,
-                        Color.White,
-                        readinessResult.calibrationProgressMessage
-                    )
+                    ReadinessStatus.CALIBRATING -> {
+                        val calibrationText = when (readinessResult.calibrationState) {
+                            CalibrationProgressState.BASELINE_60D -> stringResource(
+                                R.string.morning_hrv_calibration_baseline_progress,
+                                readinessResult.n60d,
+                                HrvReadinessCalculator.MIN_60D_DAYS
+                            )
+                            CalibrationProgressState.WEEKLY_7D -> stringResource(
+                                R.string.morning_hrv_calibration_weekly_progress,
+                                readinessResult.n7d,
+                                HrvReadinessCalculator.MIN_7D_DAYS
+                            )
+                            CalibrationProgressState.COMPLETE -> stringResource(
+                                R.string.morning_hrv_calibration_complete
+                            )
+                        }
+                        Triple(
+                            TTColor.ReadinessCalibrating,
+                            TTColor.ReadinessOnStatus,
+                            calibrationText
+                        )
+                    }
                 }
 
                 Surface(
@@ -603,14 +709,14 @@ private fun ReadinessResultCard(
                 )
                 if (entry.sdnnMs != null) {
                     Text(
-                        text = String.format(Locale.US, "SDNN: %.1f ms", entry.sdnnMs),
+                        text = stringResource(R.string.morning_hrv_summary_sdnn, entry.sdnnMs),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
                 if (entry.artifactRatePct != null) {
                     Text(
-                        text = String.format(Locale.US, "Artifact rate: %.1f%%", entry.artifactRatePct),
+                        text = stringResource(R.string.morning_hrv_summary_artifact_rate, entry.artifactRatePct),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -700,7 +806,7 @@ private fun ActionButtonsSection(
                                 modifier = Modifier.size(18.dp)
                             )
                             Spacer(modifier = Modifier.width(6.dp))
-                            Text("Saved")
+                            Text(stringResource(R.string.morning_hrv_btn_saved))
                         } else {
                             Text(stringResource(R.string.morning_hrv_btn_save))
                         }

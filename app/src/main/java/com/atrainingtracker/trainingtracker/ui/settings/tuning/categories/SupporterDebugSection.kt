@@ -230,7 +230,7 @@ fun SupporterDebugSection() {
                         settingsDataStore.resetGarageNudgeFlags()
                         Toast.makeText(
                             context,
-                            context.getString(R.string.debug_garage_flags_reset_toast),
+                            R.string.debug_garage_flags_reset_toast,
                             Toast.LENGTH_SHORT
                         ).show()
                     }

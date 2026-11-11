@@ -1715,14 +1715,14 @@ d. Step 4 (`OnboardingStep.BATTERY_OPTIMIZATION`): Doze mode background survival
 
 **Invariants**: Workouts not belonging to the cluster MUST NOT be affected; primary cluster retains unselected variants; SQLite transactional atomicity; single-source-of-truth hit count reconciliation; 9-language localization parity.
 
-### REQ-SET-097: Point-to-Point (A->B) Route Corridor Discrimination & Non-Degenerate Elliptical Apex [Verified]
-- **Tests**: `TST-SET-097` | **Tickets**: `ATT-5899`
+### REQ-SET-097: Point-to-Point (A->B) Route Corridor Discrimination & Bipolar Product Apex [Verified]
+- **Tests**: `TST-SET-097` | **Tickets**: `ATT-5899`, `ATT-6686`
 - **Implementation**: `WorkoutClusterEngine.kt`, `TrackerService.java`, `WorkoutClusterCorridorDetector.kt`
-- **Rationale**: On point-to-point (A -> B) routes (e.g. Sindelfingen -> Schönaich commutes), evaluating the spatial apex solely as the point of maximum distance from `start` causes the apex to collapse onto `end` ($apex \approx end$). This degenerates the 20% apex similarity term ($s_3$) into a redundant duplicate of the destination term ($s_2$), rendering `WorkoutClusterEngine` incapable of discriminating parallel route corridors (e.g. eastern forest corridor vs. central city corridor) that share identical endpoints, total distance, and elevation profile. The system SHALL compute non-degenerate elliptical apex coordinates and evaluate mid-corridor polyline deviation for candidate cluster scoring:
-1. *Non-Degenerate Elliptical Apex Calculation (`REQ-SET-097.1`)*:
-   - For all point-to-point routes where $d(\text{start}, \text{end}) \ge 150\text{ m}$, `WorkoutClusterEngine.findApexFromPoints(start, points, end)` SHALL evaluate the elliptical focal distance sum $S(P) = d(\text{start}, P) + d(P, \text{end})$ for each track coordinate $P$.
-   - Let $D = d(\text{start}, \text{end})$. If $\max_P S(P) \ge D + 20\text{ m}$ (indicating non-collinear lateral deflection or curvature), the coordinate $P$ maximizing $S(P)$ SHALL be selected as the apex (`maxDispLat`, `maxDispLng`).
-   - If $\max_P S(P) < D + 20\text{ m}$ (substantially straight collinear path), the track point closest to the 50% cumulative track distance midpoint SHALL be selected, ensuring the apex consistently anchors the mid-corridor rather than collapsing onto `end`.
+- **Rationale**: On point-to-point (A -> B) routes (e.g. Sindelfingen -> Schönaich commutes), evaluating the spatial apex solely as the point of maximum distance from `start` causes the apex to collapse onto `end` ($apex \approx end$). Furthermore, the elliptical focal sum $d(\text{start}, P) + d(P, \text{end})$ mathematically favors longitudinal GPS overshoots near endpoints ($2\delta \gg 2h^2/D$) over lateral mid-corridor curves. The system SHALL maximize the bipolar distance product $d(\text{start}, P) \times d(P, \text{end})$ to eliminate endpoint degeneracy and evaluate mid-corridor polyline deviation for candidate cluster scoring:
+1. *Non-Degenerate Bipolar Product Apex Calculation (`REQ-SET-097.1`)*:
+   - For all point-to-point routes where $d(\text{start}, \text{end}) \ge 150\text{ m}$, `WorkoutClusterEngine.findApexFromPoints(start, points, end)` SHALL evaluate and maximize the bipolar distance product $P(p) = d(\text{start}, p) \times d(p, \text{end})$ across all track coordinates $p$.
+   - Because $P(p) = 0$ at both endpoints ($p = \text{start}$ and $p = \text{end}$), endpoint longitudinal overshoots are mathematically prevented from selection.
+   - On straight collinear routes, the bipolar product naturally peaks at the track midpoint ($D/2$), and on curved detours it peaks at the apex of greatest lateral deviation, anchoring `maxDispLat` and `maxDispLng` along the mid-corridor without secondary distance thresholds or collinear fallback passes.
 2. *Live Tracking Session Synchronization (`REQ-SET-097.2`)*:
    - Upon live session completion, `TrackerService.java` SHALL pass `endPos` into `findApexFromPoints(startPos, points, endPos)` so that newly recorded point-to-point workouts persist the non-degenerate mid-corridor apex in `WorkoutSummaries.MAX_LINE_DISTANCE_LAT` and `LNG`.
 3. *Corridor-Aware Candidate Scoring & Disambiguation (`REQ-SET-097.3`)*:
@@ -1734,10 +1734,10 @@ d. Step 4 (`OnboardingStep.BATTERY_OPTIMIZATION`): Doze mode background survival
 **Acceptance Criteria (Given-When-Then)**:
 • *Given* an A -> B point-to-point route with $d(\text{start}, \text{end}) \ge 150\text{ m}$ and a lateral corridor deflection,
 • *When* `findApexFromPoints(start, points, end)` is invoked,
-• *Then* the selected apex coordinate lies along the mid-corridor of greatest lateral deflection ($S(P) = d(\text{start}, P) + d(P, \text{end})$) and does NOT collapse onto `end`.
-• *Given* a substantially straight A -> B route where $\max S(P) < D + 20\text{ m}$,
+• *Then* the selected apex coordinate maximizes $d(\text{start}, P) \times d(P, \text{end})$ along the mid-corridor and does NOT collapse onto `end` or start/end overshoots.
+• *Given* a substantially straight A -> B route,
 • *When* `findApexFromPoints(start, points, end)` is invoked,
-• *Then* the selected apex coordinate matches the 50% distance midpoint of the track.
+• *Then* the selected apex coordinate peaks at the midpoint of the track ($D/2$).
 • *Given* two parallel candidate clusters between Sindelfingen and Schönaich separated laterally by > 500 m,
 • *When* a new workout along the eastern forest corridor is scored,
 • *Then* `WorkoutClusterEngine.scoreClusters()` evaluates polyline corridor deviation and ranks the eastern corridor cluster first.
@@ -1805,52 +1805,65 @@ d. Step 4 (`OnboardingStep.BATTERY_OPTIMIZATION`): Doze mode background survival
 **Invariants**: Sensor data streaming, configurable search timeout, and scan lifecycle teardown (disconnect, search timeout, and shutdown) remain strictly preserved; zero regression in BLE reconnection backoff.
 
 ### REQ-SET-100: Android Health Connect Client Integration, SDK Status & Permissions [Verified]
-- **Tests**: `TST-SET-100` | **Tickets**: `ATT-3052`
-- **Implementation**: `HealthConnectManager.kt`, `AndroidManifest.xml`
-- **Status**: Verified
+- **Tests**: `TST-SET-100` | **Tickets**: `ATT-3052`, `ATT-6711`
+- **Implementation**: `HealthConnectManager.kt`, `AndroidManifest.xml`, `app/build.gradle`
+- **Status**: Specified
 - **Rationale**: To enable interoperability with external health platforms following Google Fit deprecation, the system SHALL integrate Android Health Connect (`androidx.health.connect:connect-client:1.1.0`) as a first-class health data provider:
 1. *SDK Status Lifecycle (`REQ-SET-100.1`)*:
    - The system SHALL query `HealthConnectClient.getSdkStatus(context)` before initiating any Health Connect operations.
    - If `SDK_AVAILABLE`, Health Connect functionality SHALL be fully active.
    - If `SDK_UNAVAILABLE_PROVIDER_UPDATE_REQUIRED`, the system SHALL prompt the user to update the Health Connect provider via Play Store intent.
    - If `SDK_UNAVAILABLE`, Health Connect UI options SHALL indicate unavailability gracefully without crashes.
-2. *Runtime Health Permissions (`REQ-SET-100.2`)*:
-   - The system SHALL declare write permissions in `AndroidManifest.xml` (`WRITE_EXERCISE`, `WRITE_EXERCISE_ROUTE`, `WRITE_HEART_RATE`, `WRITE_POWER`, `WRITE_SPEED`, `WRITE_DISTANCE`, `WRITE_TOTAL_CALORIES_BURNED`) and support the Health Connect rationale intent (`androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE`).
+2. *Runtime Health Permissions & Android 14+ Manifest Aliases (`REQ-SET-100.2`)*:
+   - The system SHALL declare write permissions in `AndroidManifest.xml` (`WRITE_EXERCISE`, `WRITE_EXERCISE_ROUTE`, `WRITE_HEART_RATE`, `WRITE_POWER`, `WRITE_SPEED`, `WRITE_DISTANCE`, `WRITE_ELEVATION_GAINED`, `WRITE_TOTAL_CALORIES_BURNED`, `WRITE_STEPS_CADENCE`, `WRITE_CYCLING_PEDALING_CADENCE`) and include them in `HealthConnectManager.REQUIRED_PERMISSIONS`.
+   - The system SHALL declare an `<activity-alias>` for `android.intent.action.VIEW_PERMISSION_USAGE` with category `android.intent.category.HEALTH_PERMISSIONS` and permission `android.permission.START_VIEW_PERMISSION_USAGE` targeting `MainActivityWithNavigation`, alongside `androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE`, ensuring full compatibility with Android 14+ Health Connect privacy management.
    - The system SHALL check and request required permissions using `PermissionController.createRequestPermissionResultContract()` before performing workout sync operations.
 
 **Acceptance Criteria (Given-When-Then)**:
 • *Given* an Android device with Health Connect installed and supported,
 • *When* the user accesses Health Connect settings,
 • *Then* `getSdkStatus()` returns `SDK_AVAILABLE` and permission requests are presented via standard Health Connect contracts.
+• *Given* an Android 14+ device,
+• *When* Health Connect privacy controls or permission settings are opened,
+• *Then* the system's `VIEW_PERMISSION_USAGE` activity alias is resolved and displayed with `START_VIEW_PERMISSION_USAGE` protection.
 • *Given* a device without Health Connect support,
 • *When* Health Connect features are accessed,
 • *Then* the system reports unavailability without throwing unhandled exceptions.
 
-**Invariants**: Core tracking loop and local SQLite persistence MUST operate independently of Health Connect availability or permission status.
+**Invariants**: Core tracking loop and local SQLite persistence MUST operate independently of Health Connect availability or permission status. Undeclared permissions must never be requested at runtime.
 
 ### REQ-SET-101: Exercise Session & Telemetry Series Record Mapping [Verified]
-- **Tests**: `TST-SET-101` | **Tickets**: `ATT-3052`
-- **Implementation**: `HealthConnectRecordMapper.kt`, `HealthConnectManager.kt`
-- **Status**: Verified
+- **Tests**: `TST-SET-101` | **Tickets**: `ATT-3052`, `ATT-6711`
+- **Implementation**: `HealthConnectRecordMapper.kt`, `HealthConnectManager.kt`, `WorkoutSamplesRepository.kt`, `WorkoutData.kt`
+- **Status**: Specified
 - **Rationale**: Completed workout metadata and sensor time-series data must map to standardized Health Connect data models:
 1. *Session Metadata Mapping (`REQ-SET-101.1`)*:
    - `BSportType` SHALL map to Health Connect exercise types: `BIKE` -> `EXERCISE_TYPE_BIKING`, `RUN` -> `EXERCISE_TYPE_RUNNING`, trainer/indoor rides -> `EXERCISE_TYPE_BIKING_STATIONARY`, treadmill runs -> `EXERCISE_TYPE_RUNNING_TREADMILL`, and other sports -> `EXERCISE_TYPE_OTHER_WORKOUT`.
    - Start time, end time, duration, and title SHALL populate `ExerciseSessionRecord.Builder`.
-2. *Telemetry Time-Series Conversion (`REQ-SET-101.2`)*:
-   - The system SHALL extract per-second samples from `WorkoutSamplesDatabaseManager` and convert them into corresponding Health Connect series records:
-     - GPS coordinates with timestamps and altitude -> `ExerciseRoute`.
+2. *Telemetry Time-Series Conversion & Route Permission Gating (`REQ-SET-101.2`)*:
+   - The system SHALL extract per-second samples via `WorkoutSamplesRepository` (`ATT-6426`) and convert them into corresponding Health Connect series records:
+     - GPS coordinates with timestamps and altitude -> `ExerciseRoute` (strictly gated on `"android.permission.health.WRITE_EXERCISE_ROUTE" in granted`; if omitted or denied, `exerciseRoute` SHALL be null).
      - Heart rate samples (bpm) -> `HeartRateRecord`.
      - Power samples (Watts) -> `PowerRecord`.
      - Speed samples (m/s) -> `SpeedRecord`.
      - Distance and elevation gained -> `DistanceRecord` and `ElevationGainedRecord`.
-     - Total calories -> `TotalCaloriesBurnedRecord`.
+     - Cadence samples (rpm / spm) -> `CyclingPedalingCadenceRecord` (for cycling) or `StepsCadenceRecord` (for running).
+     - Total calories -> `TotalCaloriesBurnedRecord` derived directly from `WorkoutData.calories` (originating from `WorkoutSummaries.CALORIES`), eliminating UI formatted-string parsing (`Coding Standards §1.3`).
+3. *Binder IPC Series Chunking (`REQ-SET-101.3`)*:
+   - Series records (`HeartRateRecord`, `SpeedRecord`, `PowerRecord`, `DistanceRecord`, `ElevationGainedRecord`, `CyclingPedalingCadenceRecord`, `StepsCadenceRecord`) SHALL be chunked into series records containing $\le 2,000$ samples per record/chunk to prevent Binder IPC `TransactionTooLargeException` on multi-hour recordings.
 
 **Acceptance Criteria (Given-When-Then)**:
-• *Given* a completed outdoor bike workout with GPS and heart rate data,
+• *Given* a completed outdoor bike workout with GPS, HR, and cadence,
 • *When* Health Connect synchronization executes,
-• *Then* an `ExerciseSessionRecord` (type `EXERCISE_TYPE_BIKING`) with associated `ExerciseRoute` and `HeartRateRecord` series is written to Health Connect.
+• *Then* an `ExerciseSessionRecord` (type `EXERCISE_TYPE_BIKING`) with associated `ExerciseRoute`, `HeartRateRecord`, and `CyclingPedalingCadenceRecord` series is written to Health Connect.
+• *Given* an outdoor workout where `WRITE_EXERCISE_ROUTE` is denied,
+• *When* Health Connect synchronization executes,
+• *Then* the session is written with `exerciseRoute = null` without throwing `SecurityException`.
+• *Given* a multi-hour workout with >2,000 continuous samples,
+• *When* records are mapped and written to Health Connect,
+• *Then* series records are partitioned into chunks of $\le 2,000$ samples without Binder transaction overflow.
 
-**Invariants**: All series record timestamps must strictly fall within the exercise session's `[startTime, endTime]` interval.
+**Invariants**: All series record timestamps must strictly fall within the exercise session's `[startTime, endTime]` interval. Calorie extraction MUST be numerical from database models, never scraped from UI presentation strings.
 
 ### REQ-SET-102: Trackless Indoor Workout Health Connect Export Parity [Verified]
 - **Tests**: `TST-SET-102` | **Tickets**: `ATT-3052`
@@ -1870,24 +1883,42 @@ d. Step 4 (`OnboardingStep.BATTERY_OPTIMIZATION`): Doze mode background survival
 **Invariants**: Zero coordinate fabrication or null pointer exceptions for indoor trackless sessions.
 
 ### REQ-SET-103: Health Connect Settings UI, Manual Re-Sync & Write Idempotency [Verified]
-- **Tests**: `TST-SET-103` | **Tickets**: `ATT-3052`
-- **Implementation**: `HealthConnectSettingsDialog.kt`, `WorkoutHeader.kt`, `EditWorkoutScreen.kt`, `HealthConnectManager.kt`
-- **Status**: Verified
+- **Tests**: `TST-SET-103` | **Tickets**: `ATT-3052`, `ATT-6712`, `ATT-6711`
+- **Implementation**: `HealthConnectSettingsDialog.kt`, `AppNavigationDrawer.kt`, `NavRoutes.kt`, `WorkoutHeader.kt`, `WorkoutDetailTabbedContent.kt`, `WorkoutSummary.kt`, `EditWorkoutScreen.kt`, `HealthConnectManager.kt`, `PeriodsViewModel.kt`, `MorningHrvCheckViewModel.kt`
+- **Status**: Specified
 - **Rationale**: Athletes require user-friendly settings controls and deterministic synchronization guarantees:
-1. *Cloud Integrations Settings Toggle (`REQ-SET-103.1`)*:
-   - The system SHALL provide a "Sync with Health Connect" preference toggle in Cloud Integrations settings, prompting for permissions when enabled.
-2. *Automatic & Manual Synchronization (`REQ-SET-103.2`)*:
+1. *Cloud Integrations Settings Toggle & Navigation Drawer Entry (`REQ-SET-103.1`)*:
+   - The navigation drawer SHALL include `drawer_health_connect` (with dedicated vector icon and Last Sync timestamp per `Design Guidelines §3.4`) under `prefsOnlineCommunities`, mapping via `NavRoutes.toBottomSheetType()` to `SettingsBottomSheetType.HEALTH_CONNECT`.
+   - The system SHALL provide a "Sync with Health Connect" preference toggle in `HealthConnectSettingsDialog`, prompting for write permissions when enabled.
+   - The system SHALL provide an "Import Resting HRV from Health Connect" preference toggle in `HealthConnectSettingsDialog`, wired to `isHealthConnectHrvImportEnabled()` and prompting for `HRV_READ_PERMISSIONS` when enabled, triggering an initial 60-day backfill on enable and 14-day refreshes on `PeriodsViewModel` / `MorningHrvCheckViewModel` load.
+2. *Automatic & Manual Synchronization Lifecycle (`REQ-SET-103.2`)*:
    - Completed workouts SHALL automatically synchronize in the background upon workout finalization when enabled.
-   - A manual "Sync to Health Connect" action SHALL be accessible from workout details/edit screens for re-syncing or retroactive sync.
+   - A manual "Sync to Health Connect" action SHALL be wired in `WorkoutHeader` and invoked from `WorkoutDetailTabbedContent` and `WorkoutSummary` with `force = true`, executing even if global auto-sync is disabled.
+   - `EditWorkoutScreen` SHALL display the manual sync checkbox without triggering immediate sync on toggle; sync SHALL execute asynchronously with `force = true` strictly upon clicking Save when checked.
 3. *Idempotent Record Keying (`REQ-SET-103.3`)*:
-   - Records written to Health Connect SHALL define `Metadata(clientRecordId = "workout_${fileBaseName}")` (and corresponding deterministic IDs for series records) to ensure repeated syncs update existing records rather than producing duplicates.
+   - Records written to Health Connect SHALL define `Metadata(clientRecordId = "workout_${fileBaseName}")` (and corresponding deterministic IDs for series records/chunks) to ensure repeated syncs update existing records rather than producing duplicates.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Amends `REQ-SET-100`, `REQ-SET-101`, and `REQ-SET-103` (`REQ-SET-103.1`, `103.2`), targeting `AndroidManifest.xml`, `HealthConnectManager.kt`, `HealthConnectRecordMapper.kt`, `ids.xml`, `AppNavigationDrawer.kt`, `NavRoutes.kt`, `WorkoutHeader.kt`, `WorkoutDetailTabbedContent.kt`, `WorkoutSummary.kt`, and `EditWorkoutScreen.kt`.
+2. *Historical Origin & Commit Trace*: Introduced in `ATT-3052` (commit `3ef15b88`), amended in Sprint `2026-46.2` (`ATT-6712`, `ATT-6711`).
+3. *Root Reason for Existing Formulation*: Originally scoped to workout write export only; `ATT-3052` omitted drawer navigation wiring, elevation and cadence permissions in manifest, Android 14+ aliases, route permission check, series sample chunking, and typed calorie retrieval due to missing `WorkoutData.calories`.
+4. *Preservation of Core Invariants*: Local workout tracking, SQLite persistence, deterministic clientRecordId keying, and existing cloud export pipelines remain 100% untouched.
 
 **Acceptance Criteria (Given-When-Then)**:
+• *Given* an athlete accessing the Navigation Drawer,
+• *When* tapping "Health Connect",
+• *Then* `HealthConnectSettingsDialog` opens with current sync status and Last Sync timestamp.
 • *Given* a workout already synchronized to Health Connect,
 • *When* the user triggers a manual re-sync,
-• *Then* existing records in Health Connect are updated in-place via identical `clientRecordId` without session duplication.
+• *Then* existing records in Health Connect are updated in-place via identical `clientRecordId` without session duplication even if global auto-sync is disabled.
+• *Given* an athlete in `EditWorkoutScreen`,
+• *When* toggling "Sync to Health Connect",
+• *Then* no network sync is fired immediately; sync executes strictly upon Save.
+• *Given* an athlete in `HealthConnectSettingsDialog`,
+• *When* toggling "Import Resting HRV from Health Connect",
+• *Then* `HRV_READ_PERMISSIONS` authorization is requested and an initial 60-day backfill is triggered upon confirmation.
 
-**Invariants**: Re-sync operations must never produce duplicate entries or orphan telemetry series in Health Connect.
+**Invariants**: Re-sync operations must never produce duplicate entries or orphan telemetry series in Health Connect. Zero unprompted background sync operations when disabled.
 
 
 

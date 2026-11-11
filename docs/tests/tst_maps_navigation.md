@@ -1150,6 +1150,48 @@
   4. *Targeted Regression Verification Suite (`TST-MAP-067.4`)*:
   • Run targeted tests: `--tests "com.atrainingtracker.trainingtracker.segments.*"` asserting 100% pass rate.
 
+### TST-MAP-068: **Historical Workout Climb Backfill & Backup Self-Healing Parity Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-MAP-066` (`REQ-MAP-066.1`..`REQ-MAP-066.3`)
+- **Component**: `WorkoutHistoricalClimbBackfillTest.kt`, `ClimbsDatabaseRegistryTest.kt`, `MigrationEngineClimbsRestoreTest.kt`
+- **Jira**: `ATT-6691` | **Target Release**: `V5.0.0`
+- **Test Description**:
+  1. *Historical Workout Climb Backfill & Deduplication Test (`TST-MAP-068.1`, `WorkoutHistoricalClimbBackfillTest.kt`)*:
+  • Verify `WorkoutRepository.backfillHistoricalClimbs()` queries finished outdoor GPS workouts, invokes `ClimbDetector.detectClimbs`, and persists qualifying climbs via `ClimbsDatabaseManager.insertClimbsWithDeduplicationBatch` with 50m spatial threshold.
+  • Verify that upon completion, `climbs_workout_backfill_v1` is marked true in `SharedPreferences` and `LiveClimbsRepository.refreshClimbs()` is invoked.
+  • Verify that when `climbs_workout_backfill_v1` is true, backfill returns 0 immediately as an idempotent no-op.
+  2. *Database Registry & Active Connections Verification (`TST-MAP-068.2`, `ClimbsDatabaseRegistryTest.kt`)*:
+  • Verify `DatabaseSchemaRegistry.getSupportedDatabases()` contains `Climbs.db` mapped to version 1.
+  • Verify `DatabaseConnectionManager.getActiveDatabases(context)` includes `Climbs.db` and PRAGMA wal_checkpoint succeeds via `checkpointWithRetry`.
+  3. *Backup Restore Self-Healing Test (`TST-MAP-068.3`, `MigrationEngineClimbsRestoreTest.kt`)*:
+  • Verify `MigrationEngine.performFullRestore()` detects missing `Climbs.db` in staged databases and clears/resets `climbs_workout_backfill_v1` in restored preferences to re-trigger backfill on next launch.
+  4. *Targeted Regression Verification Suite (`TST-MAP-068.4`)*:
+  • Run targeted tests: `--tests "com.atrainingtracker.trainingtracker.database.Climbs*" --tests "com.atrainingtracker.trainingtracker.migration.Database*" --tests "com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutHistoricalClimbBackfillTest"` asserting 100% pass rate.
+
+### TST-MAP-069: **Reactive Stored Climbs Flow & ViewModel Repository Decoupling Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-MAP-067` (`REQ-MAP-067.1`..`REQ-MAP-067.3`)
+- **Component**: `LiveClimbsRepository.kt`, `MapFragmentWithTrackViewModel.kt`, `LiveClimbsRepositoryTest.kt`, `MapFragmentWithTrackViewModelTest.kt`, `RepositoryUiCleanlinessContractTest.kt`
+- **Jira**: `ATT-6692` | **Target Release**: `V5.0.0`
+- **Test Description**:
+  1. *LiveClimbsRepository Reactive Stored Climbs Flow Test (`TST-MAP-069.1`, `LiveClimbsRepositoryTest.kt`)*:
+  • Verify `LiveClimbsRepository.allStoredClimbs` initializes by querying `ClimbsDatabaseManager.getAllClimbs()` and emits new climbs reactively whenever `refreshClimbs()` is called.
+  2. *MapFragmentWithTrackViewModel Climbs Decoupling & Reactive Update Test (`TST-MAP-069.2`, `MapFragmentWithTrackViewModelTest.kt`)*:
+  • Verify `MapFragmentWithTrackViewModel` combines `enabledLayers` with `LiveClimbsRepository.allStoredClimbs` and updates `uiState.climbs` immediately when new climbs are emitted into `allStoredClimbs` while `GeneralMapLayer.CLIMBS` is enabled.
+  • Verify that when `GeneralMapLayer.CLIMBS` is disabled, `uiState.climbs` emits `emptyList()` even if `allStoredClimbs` updates.
+  3. *Repository UI Cleanliness Contract Test (`TST-MAP-069.3`, `RepositoryUiCleanlinessContractTest.kt`)*:
+  • Verify `MapFragmentWithTrackViewModel` is removed from grandfathered database manager exclusions and satisfies zero direct database manager imports.
+  4. *Targeted Regression Verification Suite (`TST-MAP-069.4`)*:
+  • Run targeted tests: `--tests "com.atrainingtracker.trainingtracker.climbs.*" --tests "com.atrainingtracker.trainingtracker.ui.map.MapFragmentWithTrackViewModel*" --tests "com.atrainingtracker.trainingtracker.ui.RepositoryUiCleanlinessContractTest"` asserting 100% pass rate.
+
+### TST-RAD-006: **Aftermath Map Traffic Hotspot Markers Extraction & Geo-Location Test** [Verified]
+- **Requirement(s)**: `REQ-RAD-006`
+- **Component**: `WorkoutRepository.kt`, `TrackOnMapAftermathViewModel.kt`, `TrackOnMapScreen.kt`, `TrackOnMapAftermathViewModelTest.kt`
+- **Jira**: `ATT-5088`
+- **Test Description**:
+  1. *Pass Event Extraction Contract Test*: Verify `WorkoutRepository.getWorkoutMarkers()` identifies sample points where $\Delta \text{RADAR\_VEHICLE\_COUNT} > 0$ and creates `LocationMarker` instances with valid coordinates and speed metadata.
+  2. *High-Threat Visual Distinction Test*: Verify high-threat passes (`FAST_APPROACHING`) are tagged with distinct threat level metadata for visual differentiation on `TrackOnMapScreen.kt`.
+  3. *Non-Radar Isolation Invariant Test*: Verify workouts without radar samples yield zero traffic hotspot markers and preserve all standard track markers.
+
+
 
 
 

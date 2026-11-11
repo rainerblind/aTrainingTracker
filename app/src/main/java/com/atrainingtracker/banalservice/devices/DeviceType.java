@@ -70,7 +70,7 @@ public enum DeviceType {
     public static DeviceType[] getRemoteDeviceTypes(Protocol protocol) {
         switch (protocol) {
             case ANT_PLUS:
-                return new DeviceType[]{HRM, RUN_SPEED, BIKE_SPEED, BIKE_CADENCE, BIKE_SPEED_AND_CADENCE, BIKE_POWER, ENVIRONMENT}; // add ALL?
+                return new DeviceType[]{HRM, RUN_SPEED, BIKE_SPEED, BIKE_CADENCE, BIKE_SPEED_AND_CADENCE, BIKE_POWER, ENVIRONMENT, BIKE_RADAR}; // add ALL?
             case BLUETOOTH_LE:
                 return new DeviceType[]{HRM, RUN_SPEED, BIKE_SPEED, BIKE_CADENCE, BIKE_SPEED_AND_CADENCE, BIKE_POWER, BIKE_RADAR};
             default:
@@ -226,6 +226,8 @@ public enum DeviceType {
             case RADAR_CLOSEST_DISTANCE_m:
             case RADAR_APPROACH_SPEED_mps:
             case RADAR_VEHICLE_COUNT:
+            case RADAR_PASSING_DISTANCE_m:
+            case RADAR_LARGE_VEHICLE_COUNT:
                 deviceTypes.add(DeviceType.BIKE_RADAR);
                 break;
 

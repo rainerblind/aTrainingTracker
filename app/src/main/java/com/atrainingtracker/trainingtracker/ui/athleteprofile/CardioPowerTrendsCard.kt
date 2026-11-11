@@ -20,6 +20,8 @@ package com.atrainingtracker.trainingtracker.ui.athleteprofile
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -40,15 +42,24 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalViewConfiguration
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -56,6 +67,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.atrainingtracker.R
+import com.atrainingtracker.trainingtracker.ui.map.ChartGestureDisambiguator
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 import com.atrainingtracker.trainingtracker.ui.theme.TTColor
 
@@ -158,6 +170,7 @@ fun CardioPowerTrendsCard(
                 horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 val rangeOptions = listOf(
+                    MetricsTimeRange.ONE_MONTH to stringResource(R.string.athlete_profile_range_1m),
                     MetricsTimeRange.THREE_MONTHS to stringResource(R.string.athlete_profile_range_3m),
                     MetricsTimeRange.SIX_MONTHS to stringResource(R.string.athlete_profile_range_6m),
                     MetricsTimeRange.ONE_YEAR to stringResource(R.string.athlete_profile_range_1y),
@@ -230,15 +243,76 @@ private fun CardioPowerTrendCanvas(
     yDomain: Pair<Double, Double>,
     modifier: Modifier = Modifier
 ) {
+    val touchSlop = LocalViewConfiguration.current.touchSlop
+    var scrubbedPoint by remember { mutableStateOf<CardioPlotPoint?>(null) }
+    var scrubX by remember { mutableFloatStateOf(0f) }
+
+    val currentPointsState by rememberUpdatedState(points)
+
     val pointColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.75f)
     val trendLineColor = TTColor.Zone2
     val gridColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f)
     val labelColor = MaterialTheme.colorScheme.onSurfaceVariant
+    val cursorColor = MaterialTheme.colorScheme.onSurface
+    val scrubHighlightColor = MaterialTheme.colorScheme.primary
 
-    Canvas(modifier = modifier) {
+    Canvas(
+        modifier = modifier.pointerInput(points, metric) {
+            awaitEachGesture {
+                val down = awaitFirstDown(requireUnconsumed = false)
+                var isDragging = false
+                var isVerticalScrolling = false
+
+                val leftPad = 54.dp.toPx()
+                val rightPad = 14.dp.toPx()
+                val plotW = (size.width - leftPad - rightPad).coerceAtLeast(1f)
+
+                val initialPoint = CardioPowerTrendsPlotMath.findNearestPoint(down.position.x, leftPad, plotW, currentPointsState)
+                if (initialPoint != null) {
+                    scrubbedPoint = initialPoint
+                    scrubX = down.position.x
+                }
+
+                while (true) {
+                    val event = awaitPointerEvent()
+                    val pressed = event.changes.filter { it.pressed }
+                    if (pressed.isEmpty()) {
+                        scrubbedPoint = null
+                        break
+                    }
+
+                    if (pressed.size == 1) {
+                        val pointer = pressed[0]
+                        val diffX = pointer.position.x - down.position.x
+                        val diffY = pointer.position.y - down.position.y
+
+                        if (!isDragging && !isVerticalScrolling) {
+                            if (ChartGestureDisambiguator.isDominantVertical(diffX, diffY, touchSlop)) {
+                                isVerticalScrolling = true
+                                scrubbedPoint = null
+                            } else if (ChartGestureDisambiguator.isDominantHorizontal(diffX, diffY, touchSlop)) {
+                                isDragging = true
+                            }
+                        }
+
+                        if (isDragging) {
+                            pointer.consume()
+                            scrubX = pointer.position.x
+                            scrubbedPoint = CardioPowerTrendsPlotMath.findNearestPoint(
+                                pointer.position.x,
+                                leftPad,
+                                plotW,
+                                currentPointsState
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    ) {
         val leftPad = 54.dp.toPx()
         val rightPad = 14.dp.toPx()
-        val topPad = 12.dp.toPx()
+        val topPad = 16.dp.toPx()
         val bottomPad = 24.dp.toPx()
 
         val plotW = (size.width - leftPad - rightPad).coerceAtLeast(1f)
@@ -324,7 +398,7 @@ private fun CardioPowerTrendCanvas(
             )
         }
 
-        // 3. X-axis date ticks (Rule 48 explicit date labels)
+        // 3. X-axis date ticks with intermediate ticks across multi-month spans (Rule 48)
         if (points.size == 1 || minTs == maxTs) {
             val dateStr = CardioPowerTrendsPlotMath.formatAxisDate(minTs, tsSpan)
             val w = textPaint.measureText(dateStr)
@@ -335,20 +409,64 @@ private fun CardioPowerTrendCanvas(
                 textPaint
             )
         } else {
-            val startStr = CardioPowerTrendsPlotMath.formatAxisDate(minTs, tsSpan)
-            val endStr = CardioPowerTrendsPlotMath.formatAxisDate(maxTs, tsSpan)
-            val endW = textPaint.measureText(endStr)
-            drawContext.canvas.nativeCanvas.drawText(
-                startStr,
-                leftPad,
-                size.height - 4.dp.toPx(),
-                textPaint
+            val tickSteps = if (tsSpan > 60L * CardioPowerTrendsPlotMath.MILLIS_PER_DAY) 3 else 2
+            for (k in 0..tickSteps) {
+                val frac = k.toFloat() / tickSteps.toFloat()
+                val tickTs = minTs + (tsSpan * frac).toLong()
+                val x = leftPad + frac * plotW
+                val dateStr = CardioPowerTrendsPlotMath.formatAxisDate(tickTs, tsSpan)
+                val w = textPaint.measureText(dateStr)
+                val drawX = (x - w * 0.5f).coerceIn(leftPad, leftPad + plotW - w)
+                drawContext.canvas.nativeCanvas.drawText(
+                    dateStr,
+                    drawX,
+                    size.height - 4.dp.toPx(),
+                    textPaint
+                )
+            }
+        }
+
+        // 4. Touch Scrubbing Tooltip & Vertical Cursor
+        val activeScrub = scrubbedPoint
+        if (activeScrub != null) {
+            val cursorX = if (maxTs == minTs) {
+                leftPad + plotW * 0.5f
+            } else {
+                leftPad + ((activeScrub.timestampMs - minTs).toDouble() / tsSpan.toDouble()).toFloat() * plotW
+            }
+
+            drawLine(
+                color = cursorColor.copy(alpha = 0.70f),
+                start = Offset(cursorX, topPad),
+                end = Offset(cursorX, topPad + plotH),
+                strokeWidth = 1.5.dp.toPx(),
+                pathEffect = PathEffect.dashPathEffect(floatArrayOf(6f, 4f), 0f)
             )
+
+            val normY = ((activeScrub.value - yMin) / yRange).toFloat().coerceIn(0f, 1f)
+            val cursorY = topPad + plotH * (1f - normY)
+            drawCircle(
+                color = scrubHighlightColor,
+                radius = 5.dp.toPx(),
+                center = Offset(cursorX, cursorY)
+            )
+
+            val dateStr = CardioPowerTrendsPlotMath.formatAxisDate(activeScrub.timestampMs, tsSpan)
+            val valStr = CardioPowerTrendsPlotMath.formatYAxisValue(activeScrub.value, metric)
+            val tooltipText = "$dateStr: $valStr"
+            val tooltipPaint = android.graphics.Paint().apply {
+                isAntiAlias = true
+                color = labelColor.toArgb()
+                textSize = 10.sp.toPx()
+                isFakeBoldText = true
+            }
+            val tooltipW = tooltipPaint.measureText(tooltipText)
+            val tooltipX = (cursorX - tooltipW * 0.5f).coerceIn(leftPad, leftPad + plotW - tooltipW)
             drawContext.canvas.nativeCanvas.drawText(
-                endStr,
-                (leftPad + plotW - endW).coerceAtLeast(leftPad),
-                size.height - 4.dp.toPx(),
-                textPaint
+                tooltipText,
+                tooltipX,
+                topPad - 3.dp.toPx(),
+                tooltipPaint
             )
         }
     }

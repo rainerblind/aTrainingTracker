@@ -43,10 +43,13 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
+import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDefaults
 import com.atrainingtracker.trainingtracker.ui.dialogs.PowerHrDynamicsInfoDialog
 import com.atrainingtracker.trainingtracker.ui.settings.tuning.SubordinateTuningToggleItem
+import com.atrainingtracker.trainingtracker.ui.settings.tuning.TuningSliderItem
 import com.atrainingtracker.trainingtracker.ui.settings.tuning.TuningToggleItem
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
+import java.util.Locale
 
 /**
  * Physiology & Training Models accordion category in Advanced Settings (REQ-UI-403 / REQ-UI-424 / REQ-REV-009).
@@ -82,7 +85,13 @@ fun PhysiologyModelsSection(
     onEnableCardioPowerDynamicsChange: (Boolean) -> Unit = {},
     showCardioPowerInWorkoutSummary: Boolean = true,
     onShowCardioPowerInWorkoutSummaryChange: (Boolean) -> Unit = {},
-    onCardioPowerInfoClick: (() -> Unit)? = null
+    onCardioPowerInfoClick: (() -> Unit)? = null,
+    dfaA1ThresholdT1: Float = TuningPreferencesDefaults.DEFAULT_DFA_A1_THRESHOLD_T1,
+    onDfaA1ThresholdT1Change: (Float) -> Unit = {},
+    dfaA1ThresholdT2: Float = TuningPreferencesDefaults.DEFAULT_DFA_A1_THRESHOLD_T2,
+    onDfaA1ThresholdT2Change: (Float) -> Unit = {},
+    hrvArtifactGateThresholdPercent: Float = TuningPreferencesDefaults.DEFAULT_HRV_ARTIFACT_GATE_THRESHOLD_PERCENT,
+    onHrvArtifactGateThresholdPercentChange: (Float) -> Unit = {}
 ) {
     var showInternalInfoDialog by remember { mutableStateOf(false) }
 
@@ -95,6 +104,9 @@ fun PhysiologyModelsSection(
     val showCpCallback = remember(onShowCriticalPowerInWorkoutSummaryChange) { onShowCriticalPowerInWorkoutSummaryChange }
     val cardioPowerCallback = remember(onEnableCardioPowerDynamicsChange) { onEnableCardioPowerDynamicsChange }
     val showCardioPowerCallback = remember(onShowCardioPowerInWorkoutSummaryChange) { onShowCardioPowerInWorkoutSummaryChange }
+    val dfaT1Callback = remember(onDfaA1ThresholdT1Change) { onDfaA1ThresholdT1Change }
+    val dfaT2Callback = remember(onDfaA1ThresholdT2Change) { onDfaA1ThresholdT2Change }
+    val hrvArtifactGateCallback = remember(onHrvArtifactGateThresholdPercentChange) { onHrvArtifactGateThresholdPercentChange }
 
     Column(
         modifier = Modifier
@@ -201,6 +213,66 @@ fun PhysiologyModelsSection(
                 onCheckedChange = showCardioPowerCallback
             )
         }
+
+        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+
+        // Model 6: HRV DFA a1 Aerobic & Anaerobic Thresholds (REQ-TRK-061.4)
+        TuningSliderItem(
+            title = stringResource(R.string.tuning_dfa_a1_t1_title),
+            valueText = String.format(Locale.US, "%.2f", dfaA1ThresholdT1),
+            helperText = stringResource(R.string.tuning_dfa_a1_t1_desc),
+            defaultText = stringResource(R.string.tuning_dfa_a1_default, TuningPreferencesDefaults.DEFAULT_DFA_A1_THRESHOLD_T1),
+            value = dfaA1ThresholdT1,
+            onValueChange = { newValue ->
+                val rounded = Math.round(newValue * 100f) / 100f
+                val clamped = rounded.coerceIn(
+                    dfaA1ThresholdT2 + TuningPreferencesDefaults.MIN_DFA_A1_THRESHOLD_GAP,
+                    TuningPreferencesDefaults.MAX_DFA_A1_THRESHOLD
+                )
+                dfaT1Callback(clamped)
+            },
+            valueRange = 0.60f..1.20f,
+            steps = 11
+        )
+
+        TuningSliderItem(
+            title = stringResource(R.string.tuning_dfa_a1_t2_title),
+            valueText = String.format(Locale.US, "%.2f", dfaA1ThresholdT2),
+            helperText = stringResource(R.string.tuning_dfa_a1_t2_desc),
+            defaultText = stringResource(R.string.tuning_dfa_a1_default, TuningPreferencesDefaults.DEFAULT_DFA_A1_THRESHOLD_T2),
+            value = dfaA1ThresholdT2,
+            onValueChange = { newValue ->
+                val rounded = Math.round(newValue * 100f) / 100f
+                val clamped = rounded.coerceIn(
+                    TuningPreferencesDefaults.MIN_DFA_A1_THRESHOLD,
+                    dfaA1ThresholdT1 - TuningPreferencesDefaults.MIN_DFA_A1_THRESHOLD_GAP
+                )
+                dfaT2Callback(clamped)
+            },
+            valueRange = 0.30f..0.80f,
+            steps = 9
+        )
+
+        TuningSliderItem(
+            title = stringResource(R.string.tuning_hrv_artifact_gate_title),
+            valueText = String.format(Locale.US, "%.1f%%", hrvArtifactGateThresholdPercent),
+            helperText = stringResource(R.string.tuning_hrv_artifact_gate_desc),
+            defaultText = stringResource(
+                R.string.tuning_hrv_artifact_gate_default,
+                TuningPreferencesDefaults.DEFAULT_HRV_ARTIFACT_GATE_THRESHOLD_PERCENT
+            ),
+            value = hrvArtifactGateThresholdPercent,
+            onValueChange = { newValue ->
+                val rounded = Math.round(newValue * 10f) / 10f
+                val clamped = rounded.coerceIn(
+                    TuningPreferencesDefaults.MIN_HRV_ARTIFACT_GATE_THRESHOLD_PERCENT,
+                    TuningPreferencesDefaults.MAX_HRV_ARTIFACT_GATE_THRESHOLD_PERCENT
+                )
+                hrvArtifactGateCallback(clamped)
+            },
+            valueRange = 3.0f..5.0f,
+            steps = 3
+        )
     }
 
     if (showInternalInfoDialog) {

@@ -33,6 +33,8 @@ import androidx.health.connect.client.records.Record
 import androidx.health.connect.client.records.RestingHeartRateRecord
 import androidx.health.connect.client.records.SpeedRecord
 import androidx.health.connect.client.records.TotalCaloriesBurnedRecord
+import androidx.health.connect.client.records.CyclingPedalingCadenceRecord
+import androidx.health.connect.client.records.StepsCadenceRecord
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
 import kotlinx.coroutines.CoroutineScope
@@ -56,7 +58,9 @@ object HealthConnectManager {
         HealthPermission.getWritePermission(SpeedRecord::class),
         HealthPermission.getWritePermission(DistanceRecord::class),
         HealthPermission.getWritePermission(ElevationGainedRecord::class),
-        HealthPermission.getWritePermission(TotalCaloriesBurnedRecord::class)
+        HealthPermission.getWritePermission(TotalCaloriesBurnedRecord::class),
+        HealthPermission.getWritePermission(CyclingPedalingCadenceRecord::class),
+        HealthPermission.getWritePermission(StepsCadenceRecord::class)
     )
 
     val HRV_READ_PERMISSIONS: Set<String> = setOf(
@@ -123,14 +127,15 @@ object HealthConnectManager {
     }
 
     /**
-     * Checks whether all required Health Connect HRV read permissions are granted (REQ-PER-031.1).
+     * Checks whether required Health Connect HRV read permissions are granted (REQ-PER-031.1).
+     * Gates strictly on HeartRateVariabilityRmssdRecord; RestingHeartRateRecord is optional.
      */
     suspend fun hasHrvReadPermissions(context: Context): Boolean {
         if (!isAvailable(context)) return false
         return try {
             val client = getClient(context)
             val granted = client.permissionController.getGrantedPermissions()
-            HRV_READ_PERMISSIONS.all { it in granted }
+            HealthPermission.getReadPermission(HeartRateVariabilityRmssdRecord::class) in granted
         } catch (e: Exception) {
             Log.w(TAG, "Error checking Health Connect HRV read permissions: ${e.message}")
             false
@@ -141,21 +146,26 @@ object HealthConnectManager {
      * Asynchronously synchronizes a completed workout on [Dispatchers.IO].
      */
     @JvmStatic
-    fun syncWorkoutAsync(context: Context, workoutData: WorkoutData) {
+    @JvmOverloads
+    fun syncWorkoutAsync(context: Context, workoutData: WorkoutData, force: Boolean = false) {
         kotlinx.coroutines.CoroutineScope(Dispatchers.IO).launch {
-            syncWorkout(context, workoutData)
+            syncWorkout(context, workoutData, force)
         }
     }
 
     /**
      * Synchronizes a completed workout and its telemetry series to Android Health Connect.
      * Operates idempotently on [Dispatchers.IO] using clientRecordId deduplication (REQ-SET-103).
+     *
+     * @param force When true, bypasses the global [TrainingApplication.syncToHealthConnect] check
+     *              for explicit manual sync invocations.
      */
     suspend fun syncWorkout(
         context: Context,
-        workoutData: WorkoutData
+        workoutData: WorkoutData,
+        force: Boolean = false
     ): Result<Unit> = withContext(Dispatchers.IO) {
-        if (!TrainingApplication.syncToHealthConnect()) {
+        if (!force && !TrainingApplication.syncToHealthConnect()) {
             return@withContext Result.failure(IllegalStateException("Health Connect sync is disabled in settings"))
         }
         if (!isAvailable(context)) {
@@ -170,7 +180,12 @@ object HealthConnectManager {
                 return@withContext Result.failure(SecurityException("Missing Health Connect exercise write permission"))
             }
 
-            val (sessionRecord, seriesRecords) = HealthConnectRecordMapper.extractRecords(context, workoutData)
+            val hasRoutePermission = "android.permission.health.WRITE_EXERCISE_ROUTE" in granted
+            val (sessionRecord, seriesRecords) = HealthConnectRecordMapper.extractRecords(
+                context = context,
+                workoutData = workoutData,
+                hasRoutePermission = hasRoutePermission
+            )
 
             // Insert or update exercise session
             insertOrUpdateRecords(client, listOf(sessionRecord))
@@ -184,6 +199,8 @@ object HealthConnectManager {
                     is DistanceRecord -> HealthPermission.getWritePermission(DistanceRecord::class) in granted
                     is ElevationGainedRecord -> HealthPermission.getWritePermission(ElevationGainedRecord::class) in granted
                     is TotalCaloriesBurnedRecord -> HealthPermission.getWritePermission(TotalCaloriesBurnedRecord::class) in granted
+                    is CyclingPedalingCadenceRecord -> HealthPermission.getWritePermission(CyclingPedalingCadenceRecord::class) in granted
+                    is StepsCadenceRecord -> HealthPermission.getWritePermission(StepsCadenceRecord::class) in granted
                     else -> true
                 }
             }

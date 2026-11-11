@@ -22,6 +22,8 @@ import com.atrainingtracker.trainingtracker.routes.parsers.stripBomAndLeadingWhi
 import com.atrainingtracker.trainingtracker.tcx.model.TcxActivity
 import com.atrainingtracker.trainingtracker.tcx.model.TcxActivityExtensions
 import com.atrainingtracker.trainingtracker.tcx.model.TcxAuthor
+import com.atrainingtracker.trainingtracker.tcx.model.TcxCourse
+import com.atrainingtracker.trainingtracker.tcx.model.TcxCoursePoint
 import com.atrainingtracker.trainingtracker.tcx.model.TcxCreator
 import com.atrainingtracker.trainingtracker.tcx.model.TcxDocument
 import com.atrainingtracker.trainingtracker.tcx.model.TcxLap
@@ -67,7 +69,24 @@ object TcxParser {
             parser.setInput(safeStream, "UTF-8")
 
             val activities = mutableListOf<TcxActivity>()
+            val courses = mutableListOf<TcxCourse>()
             var author: TcxAuthor? = null
+
+            var inCourse = false
+            var inCoursePoint = false
+            var currentCourseName = ""
+            var currentCourseNotes: String? = null
+            val currentCourseLaps = mutableListOf<TcxLap>()
+            val currentCourseTrackpoints = mutableListOf<TcxTrackpoint>()
+            val currentCoursePoints = mutableListOf<TcxCoursePoint>()
+
+            var cpName: String? = null
+            var cpTime: String? = null
+            var cpLat: Double? = null
+            var cpLng: Double? = null
+            var cpAlt: Double? = null
+            var cpType: String? = null
+            var cpNotes: String? = null
 
             var currentSport = ""
             var currentActivityId = ""
@@ -205,6 +224,24 @@ object TcxParser {
                             "ActivityExtension" -> inAttActivityExtension = true
                             "LapExtension" -> inAttLapExtension = true
                             "TPX" -> inTpx = true
+                            "Course" -> {
+                                inCourse = true
+                                currentCourseName = ""
+                                currentCourseNotes = null
+                                currentCourseLaps.clear()
+                                currentCourseTrackpoints.clear()
+                                currentCoursePoints.clear()
+                            }
+                            "CoursePoint" -> {
+                                inCoursePoint = true
+                                cpName = null
+                                cpTime = null
+                                cpLat = null
+                                cpLng = null
+                                cpAlt = null
+                                cpType = null
+                                cpNotes = null
+                            }
                         }
                     }
 
@@ -223,6 +260,21 @@ object TcxParser {
                                     "RunCadence" -> text.toDoubleOrNull()?.roundToInt()?.let { currentTpRunCadence = it }
                                     "Watts" -> text.toDoubleOrNull()?.roundToInt()?.let { currentTpWatts = it }
                                     "Speed" -> text.toDoubleOrNull()?.let { currentTpSpeed = it }
+                                }
+                            } else if (inCoursePoint) {
+                                when (currentTag) {
+                                    "Name" -> cpName = text
+                                    "Time" -> cpTime = text
+                                    "LatitudeDegrees" -> if (inPosition) cpLat = text.toDoubleOrNull()
+                                    "LongitudeDegrees" -> if (inPosition) cpLng = text.toDoubleOrNull()
+                                    "AltitudeMeters" -> cpAlt = text.toDoubleOrNull()
+                                    "PointType" -> cpType = text
+                                    "Notes" -> cpNotes = text
+                                }
+                            } else if (inCourse && !inLap && !inTrackpoint) {
+                                when (currentTag) {
+                                    "Name" -> if (currentCourseName.isEmpty()) currentCourseName = text
+                                    "Notes" -> currentCourseNotes = text
                                 }
                             } else if (inLap) {
                                 if (inAttLapExtension) {
@@ -325,17 +377,20 @@ object TcxParser {
                                         )
                                     } else null
 
-                                    currentTrackpoints.add(
-                                        TcxTrackpoint(
-                                            time = currentTpTime ?: "",
-                                            position = pos,
-                                            altitudeMeters = currentTpAlt,
-                                            distanceMeters = currentTpDist,
-                                            heartRateBpm = currentTpHr,
-                                            cadence = currentTpCad,
-                                            extensions = ext
-                                        )
+                                    val tp = TcxTrackpoint(
+                                        time = currentTpTime ?: "",
+                                        position = pos,
+                                        altitudeMeters = currentTpAlt,
+                                        distanceMeters = currentTpDist,
+                                        heartRateBpm = currentTpHr,
+                                        cadence = currentTpCad,
+                                        extensions = ext
                                     )
+                                    if (inLap) {
+                                        currentTrackpoints.add(tp)
+                                    } else if (inCourse) {
+                                        currentCourseTrackpoints.add(tp)
+                                    }
                                     inTrackpoint = false
                                 }
                             }
@@ -348,24 +403,58 @@ object TcxParser {
                                         )
                                     } else null
 
-                                    currentLaps.add(
-                                        TcxLap(
-                                            startTime = currentLapStartTime,
-                                            totalTimeSeconds = currentLapTotalTime,
-                                            distanceMeters = currentLapDistance,
-                                            maximumSpeed = currentLapMaxSpeed,
-                                            calories = currentLapCalories,
-                                            averageHeartRateBpm = currentLapAvgHr,
-                                            maximumHeartRateBpm = currentLapMaxHr,
-                                            intensity = currentLapIntensity,
-                                            cadence = currentLapCadence,
-                                            triggerMethod = currentLapTriggerMethod,
-                                            trackpoints = currentTrackpoints.toList(),
-                                            notes = currentLapNotes,
-                                            extensions = lapExt
+                                    val lap = TcxLap(
+                                        startTime = currentLapStartTime,
+                                        totalTimeSeconds = currentLapTotalTime,
+                                        distanceMeters = currentLapDistance,
+                                        maximumSpeed = currentLapMaxSpeed,
+                                        calories = currentLapCalories,
+                                        averageHeartRateBpm = currentLapAvgHr,
+                                        maximumHeartRateBpm = currentLapMaxHr,
+                                        intensity = currentLapIntensity,
+                                        cadence = currentLapCadence,
+                                        triggerMethod = currentLapTriggerMethod,
+                                        trackpoints = currentTrackpoints.toList(),
+                                        notes = currentLapNotes,
+                                        extensions = lapExt
+                                    )
+                                    if (inCourse) {
+                                        currentCourseLaps.add(lap)
+                                    } else {
+                                        currentLaps.add(lap)
+                                    }
+                                    inLap = false
+                                }
+                            }
+                            "CoursePoint" -> {
+                                if (inCoursePoint) {
+                                    if (cpLat != null && cpLng != null) {
+                                        currentCoursePoints.add(
+                                            TcxCoursePoint(
+                                                name = cpName ?: "",
+                                                time = cpTime,
+                                                position = TcxPosition(cpLat!!, cpLng!!),
+                                                altitudeMeters = cpAlt,
+                                                pointType = cpType,
+                                                notes = cpNotes
+                                            )
+                                        )
+                                    }
+                                    inCoursePoint = false
+                                }
+                            }
+                            "Course" -> {
+                                if (inCourse) {
+                                    courses.add(
+                                        TcxCourse(
+                                            name = currentCourseName,
+                                            laps = currentCourseLaps.toList(),
+                                            trackpoints = currentCourseTrackpoints.toList(),
+                                            coursePoints = currentCoursePoints.toList(),
+                                            notes = currentCourseNotes
                                         )
                                     )
-                                    inLap = false
+                                    inCourse = false
                                 }
                             }
                             "Creator" -> {
@@ -428,6 +517,7 @@ object TcxParser {
             Result.success(
                 TcxDocument(
                     activities = activities,
+                    courses = courses,
                     author = author
                 )
             )

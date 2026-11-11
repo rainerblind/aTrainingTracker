@@ -18,17 +18,16 @@
 
 package com.atrainingtracker.trainingtracker.ui.aftermath
 
+import com.atrainingtracker.testing.LocalizationTestCache
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import org.w3c.dom.Element
-import java.io.File
-import javax.xml.parsers.DocumentBuilderFactory
 
 /**
  * Localization parity test for Aftermath profile tuning string resources (REQ-UI-201, TST-UI-155.5).
  * Validates presence and non-blank values across all 9 supported locales:
  * en (default), de, es, fr, it, ja, nl, pl, pt.
+ * Refactored to LocalizationTestCache per docs/coding_standards.md §5.4 and REQ-PRO-049.
  */
 class AftermathTuningLocalizationTest {
 
@@ -48,43 +47,14 @@ class AftermathTuningLocalizationTest {
         "tuning_elevation_smoothing_sigma_desc"
     )
 
-    private fun findResDir(): File {
-        val candidates = listOf(
-            File("app/src/main/res"),
-            File("src/main/res"),
-            File("../app/src/main/res")
-        )
-        return candidates.firstOrNull { it.exists() && it.isDirectory }
-            ?: error("res directory not found in candidates: $candidates")
-    }
-
-    private fun parseStringResource(file: File, stringName: String): String? {
-        val dbFactory = DocumentBuilderFactory.newInstance()
-        val dBuilder = dbFactory.newDocumentBuilder()
-        val doc = dBuilder.parse(file)
-        doc.documentElement.normalize()
-
-        val stringNodes = doc.getElementsByTagName("string")
-        for (i in 0 until stringNodes.length) {
-            val item = stringNodes.item(i)
-            if (item is Element && item.getAttribute("name") == stringName) {
-                return item.textContent
-            }
-        }
-        return null
-    }
-
     @Test
     fun testAftermathTuningStringsParityAcrossAllLocales() {
-        val resDir = findResDir()
-
         for (suffix in locales) {
             val dirName = if (suffix.isEmpty()) "values" else "values$suffix"
-            val stringsFile = File(resDir, "$dirName/strings.xml")
-            assertTrue("Expected strings.xml to exist in $dirName", stringsFile.exists())
+            val strings = LocalizationTestCache.getStrings(dirName, "strings.xml")
 
             for (key in requiredKeys) {
-                val value = parseStringResource(stringsFile, key)
+                val value = strings[key]
                 assertNotNull("Missing key '$key' in $dirName", value)
                 assertTrue(
                     "Key '$key' in $dirName must not be blank",

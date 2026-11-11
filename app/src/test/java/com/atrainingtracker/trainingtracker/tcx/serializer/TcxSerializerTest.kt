@@ -166,4 +166,108 @@ class TcxSerializerTest {
         assertTrue(xml.contains("<VersionMajor>5</VersionMajor>"))
         assertTrue(xml.contains("</TrainingCenterDatabase>"))
     }
+
+    @Test
+    fun testStreamingParityWithBatchSerialization() {
+        val trackpoint = TcxTrackpoint(
+            time = "2026-11-10T08:00:00Z",
+            position = TcxPosition(48.137154, 11.576124),
+            altitudeMeters = 520.5,
+            distanceMeters = 1500.0,
+            heartRateBpm = 145,
+            cadence = 88,
+            extensions = TcxTrackpointExtensions(
+                speed = 3.5,
+                watts = 250,
+                runCadence = 176
+            )
+        )
+
+        val lap = TcxLap(
+            startTime = "2026-11-10T08:00:00Z",
+            totalTimeSeconds = 600.0,
+            distanceMeters = 2000.0,
+            maximumSpeed = 4.2,
+            calories = 120,
+            averageHeartRateBpm = 142,
+            maximumHeartRateBpm = 155,
+            intensity = "Active",
+            cadence = 88,
+            triggerMethod = "Manual",
+            trackpoints = listOf(trackpoint),
+            notes = "[Warmup Lap] Easy & relaxed",
+            extensions = TcxLapExtensions(
+                name = "Warmup Lap",
+                description = "Easy & relaxed"
+            )
+        )
+
+        val activity = TcxActivity(
+            sport = "Biking",
+            id = "2026-11-10T08:00:00Z",
+            laps = listOf(lap),
+            notes = "[Morning Tempo Ride] Good power & rhythm",
+            creator = TcxCreator(
+                name = "Google Pixel 10",
+                unitId = 0L,
+                productId = 1,
+                versionMajor = 5,
+                versionMinor = 0,
+                buildMajor = 500,
+                buildMinor = 0
+            ),
+            extensions = TcxActivityExtensions(
+                customName = "Morning Tempo Ride",
+                customDescription = "Good power & rhythm"
+            )
+        )
+
+        val author = TcxAuthor(
+            name = "aTrainingTracker with barometer",
+            versionMajor = 5,
+            versionMinor = 0,
+            buildMajor = 500,
+            buildMinor = 0,
+            type = "Release",
+            langId = "en",
+            partNumber = "000-00000-00"
+        )
+
+        val document = TcxDocument(
+            activities = listOf(activity),
+            author = author
+        )
+
+        // Batch serialization
+        val batchWriter = StringWriter()
+        TcxSerializer.serialize(document, batchWriter)
+        val batchXml = batchWriter.toString()
+
+        // Incremental streaming serialization
+        val streamWriter = StringWriter()
+        TcxSerializer.startDocument(streamWriter)
+        TcxSerializer.startActivityHeader(activity.sport, activity.id, streamWriter)
+        TcxSerializer.startLapHeader(
+            startTime = lap.startTime,
+            totalTimeSeconds = lap.totalTimeSeconds,
+            distanceMeters = lap.distanceMeters,
+            writer = streamWriter,
+            maximumSpeed = lap.maximumSpeed,
+            calories = lap.calories,
+            averageHeartRateBpm = lap.averageHeartRateBpm,
+            maximumHeartRateBpm = lap.maximumHeartRateBpm,
+            intensity = lap.intensity,
+            cadence = lap.cadence,
+            triggerMethod = lap.triggerMethod
+        )
+        for (tp in lap.trackpoints) {
+            TcxSerializer.writeTrackpoint(tp, streamWriter)
+        }
+        TcxSerializer.endLap(streamWriter, lap.notes, lap.extensions)
+        TcxSerializer.endActivity(streamWriter, activity.notes, activity.creator, activity.extensions)
+        TcxSerializer.endDocument(streamWriter, author)
+        val streamXml = streamWriter.toString()
+
+        assertEquals("Streaming XML must match batch XML exactly", batchXml, streamXml)
+    }
 }

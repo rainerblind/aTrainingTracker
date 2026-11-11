@@ -22,7 +22,15 @@ import android.content.Context
 import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.PermissionController
 import androidx.health.connect.client.permission.HealthPermission
+import androidx.health.connect.client.records.CyclingPedalingCadenceRecord
+import androidx.health.connect.client.records.DistanceRecord
+import androidx.health.connect.client.records.ElevationGainedRecord
 import androidx.health.connect.client.records.ExerciseSessionRecord
+import androidx.health.connect.client.records.HeartRateRecord
+import androidx.health.connect.client.records.PowerRecord
+import androidx.health.connect.client.records.SpeedRecord
+import androidx.health.connect.client.records.StepsCadenceRecord
+import androidx.health.connect.client.records.TotalCaloriesBurnedRecord
 import androidx.test.core.app.ApplicationProvider
 import io.mockk.coEvery
 import io.mockk.mockk
@@ -36,6 +44,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import java.io.File
 
 /**
  * Unit test suite verifying Health Connect SDK availability lifecycle, permission sets,
@@ -83,7 +92,32 @@ class HealthConnectAvailabilityTest {
         val permissions = HealthConnectManager.REQUIRED_PERMISSIONS
         assertTrue(permissions.contains(HealthPermission.getWritePermission(ExerciseSessionRecord::class)))
         assertTrue(permissions.contains("android.permission.health.WRITE_EXERCISE_ROUTE"))
-        assertEquals(8, permissions.size)
+        assertTrue(permissions.contains(HealthPermission.getWritePermission(HeartRateRecord::class)))
+        assertTrue(permissions.contains(HealthPermission.getWritePermission(PowerRecord::class)))
+        assertTrue(permissions.contains(HealthPermission.getWritePermission(SpeedRecord::class)))
+        assertTrue(permissions.contains(HealthPermission.getWritePermission(DistanceRecord::class)))
+        assertTrue(permissions.contains(HealthPermission.getWritePermission(ElevationGainedRecord::class)))
+        assertTrue(permissions.contains(HealthPermission.getWritePermission(TotalCaloriesBurnedRecord::class)))
+        assertTrue(permissions.contains(HealthPermission.getWritePermission(CyclingPedalingCadenceRecord::class)))
+        assertTrue(permissions.contains(HealthPermission.getWritePermission(StepsCadenceRecord::class)))
+        // 9 unique permissions (CyclingPedalingCadenceRecord shares WRITE_EXERCISE with ExerciseSessionRecord)
+        assertEquals(9, permissions.size)
+    }
+
+    @Test
+    fun testManifestPermissionsAndAliasDeclaration() {
+        val candidates = listOf(
+            File("src/main/AndroidManifest.xml"),
+            File("app/src/main/AndroidManifest.xml"),
+            File("../app/src/main/AndroidManifest.xml")
+        )
+        val manifestFile = candidates.firstOrNull { it.exists() }
+            ?: throw IllegalStateException("Could not find AndroidManifest.xml")
+        val manifestContent = manifestFile.readText()
+        assertTrue(manifestContent.contains("android.permission.health.WRITE_ELEVATION_GAINED"))
+        assertTrue(manifestContent.contains("android.permission.health.WRITE_STEPS"))
+        assertTrue(manifestContent.contains("android.intent.action.VIEW_PERMISSION_USAGE"))
+        assertTrue(manifestContent.contains("android.permission.START_VIEW_PERMISSION_USAGE"))
     }
 
     @Test

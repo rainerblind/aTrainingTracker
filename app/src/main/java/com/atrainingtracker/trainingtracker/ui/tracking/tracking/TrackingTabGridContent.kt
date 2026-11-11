@@ -133,6 +133,9 @@ fun TrackingTabGridContent(
             override fun onToggleBikeBell(enabled: Boolean) {
                 viewModel.onUpdateShowBikeBell(enabled)
             }
+            override fun onToggleMmpCurve(enabled: Boolean) {
+                viewModel.onUpdateShowMmpCurve(enabled)
+            }
             override fun onRingBikeBell() {
                 onRingBikeBell()
             }

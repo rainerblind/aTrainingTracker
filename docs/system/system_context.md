@@ -1,9 +1,9 @@
 # System Context and External System Elements Specification
 
-**Document Version**: 1.0.0  
+**Document Version**: 1.1.0  
 **ASPICE Process Areas**: SYS.2 (System Requirements Analysis, BP1), SYS.3 (System Architectural Design)  
 **Requirement Reference**: `REQ-PRO-053` (`REQ-PRO-053.1`, `REQ-PRO-053.2`)  
-**Test Reference**: `TST-PRO-053` (`TST-PRO-053.1`–`TST-PRO-053.3`)  
+**Test Reference**: `TST-PRO-053` (`TST-PRO-053.1`–`TST-PRO-053.4`)  
 **Author**: Antigravity Autonomous Engineering Pair  
 **Status**: Approved & Grounded in Live Source Code  
 
@@ -26,31 +26,34 @@ graph TD
     Athlete["Athlete / User<br/>(Physical User Interaction)"]
 
     subgraph SystemBoundary ["aTrainingTracker Application System Boundary"]
-        AppCore["aTrainingTracker Core Application<br/>(TrackerService, BANALService, Compose UI, SQLite)"]
+        AppCore["aTrainingTracker Core Application<br/>(TrackerService.java, BANALService.java, Compose UI, SQLite)"]
     end
 
     subgraph SensorsDomain ["Domain 1: Sensors & Peripherals"]
-        BleSensors["Bluetooth Low Energy Peripherals<br/>(HRM, CSC, Power, Radar, Battery)"]
+        BleSensors["Bluetooth Low Energy Peripherals<br/>(HRM 0x180D, CSC 0x1816, Power 0x1818, RSC 0x1814, Battery 0x180F, DeviceInfo 0x180A, Radar 6a4e3200)"]
         AntSensors["ANT+ Peripherals & Radio IPC<br/>(HRM, Bike Power, Speed/Cadence)"]
-        OnboardSensors["On-Board Android Hardware Sensors<br/>(Step Counter, Barometer, Accelerometer)"]
+        OnboardSensors["On-Board Android Hardware Sensors<br/>(Barometer Sensor.TYPE_PRESSURE, Proximity Sensor.TYPE_PROXIMITY)"]
     end
 
     subgraph PlatformDomain ["Domain 2: Platform Frameworks"]
-        AndroidOS["Android OS Platform (minSdk 26, targetSdk 37)<br/>(PowerManager WakeLocks, FGS Lifecycles)"]
+        AndroidOS["Android OS Platform (minSdk 26, targetSdk 37 Android 17)<br/>(PowerManager WakeLocks, FGS Lifecycles location|health)"]
         BatteryOpt["Battery Optimization Manager<br/>(ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS)"]
     end
 
     subgraph LocationDomain ["Domain 3: Location & Mapping"]
         GnssProvider["Hardware GNSS Provider<br/>(LocationManager.GPS_PROVIDER)"]
-        FusedLocation["Google Play Services Location<br/>(FusedLocationProviderClient)"]
+        FusedLocation["Google Play Services Location<br/>(SpeedAndLocationDevice_GoogleFused.java, GoogleApiClient)"]
         GoogleMaps["Google Maps Android SDK v2<br/>(Vector Maps & Lite Mode Tile Providers)"]
     end
 
     subgraph CloudDomain ["Domain 4: Cloud Storage & Health Aggregators"]
-        StravaCloud["Strava Cloud API v3<br/>(OAuth2 Telemetry & Route Sync)"]
+        StravaCloud["Strava Cloud API v3<br/>(OAuth2 Telemetry, Routes & Equipment Sync)"]
         DropboxCloud["Dropbox API v2<br/>(OAuth2 Backup & FIT Export)"]
         GDriveCloud["Google Drive REST API v3<br/>(OAuth2 Backup & Recovery)"]
-        HealthConnect["Android Health Connect API<br/>(Exercise & Biometrics Aggregation)"]
+        HealthConnect["Android Health Connect API<br/>(Exercise & Biometrics Export/Import)"]
+        OpenMeteo["Open-Meteo Elevation API<br/>(Digital Elevation Model DEM Queries)"]
+        Firebase["Firebase Crashlytics & Analytics<br/>(Operational Crash Logging & Analytics)"]
+        GooglePlay["Google Play In-App Review & Auth<br/>(play-services-auth, play:review-ktx)"]
         PebbleWatch["PebbleKit Smartwatch SDK<br/>(Pebble Watchapp Display)"]
     end
 
@@ -62,7 +65,7 @@ graph TD
     Athlete -->|"Touch, Gestures, UI Configuration"| AppCore
     AppCore -->|"Visual Feedback, Alerts, Audio Cues"| Athlete
 
-    BleSensors -->|"BLE GATT Notifications (0x180D, 0x1816, 0x1818, Radar)"| AppCore
+    BleSensors -->|"BLE GATT Notifications (0x180D, 0x1816, 0x1818, 0x1814, 0x180F, 0x180A, Radar)"| AppCore
     AntSensors -->|"ANT+ IPC Broadcasts & Socket API"| AppCore
     OnboardSensors -->|"SensorEventListener Telemetry"| AppCore
 
@@ -78,6 +81,10 @@ graph TD
     AppCore -->|"Automated FIT/Database Backups"| DropboxCloud
     AppCore -->|"Database Restore & Cloud Archive"| GDriveCloud
     AppCore -->|"Sync ExerciseSessionRecord"| HealthConnect
+    HealthConnect -->|"Import HRV & Resting Heart Rate"| AppCore
+    AppCore -->|"Query Reference Altitude"| OpenMeteo
+    AppCore -->|"Crash Reporting & Telemetry"| Firebase
+    AppCore -->|"Review Prompt & Google Auth"| GooglePlay
     AppCore -->|"Pebble Dictionary Data Stream"| PebbleWatch
 
     AppCore -.->|"Decommissioned Schema Preserved"| RunkeeperCloud
@@ -89,51 +96,58 @@ graph TD
 ## 3. External System Elements Inventory
 
 ### 3.1 Domain 1: Sensors & Peripherals
-The application interfaces with wireless sports sensors and onboard hardware components via `BANALService` (Bluetooth & ANT+ Network Abstraction Layer):
+The application interfaces with wireless sports sensors and onboard hardware components via `BANALService.java` (Bluetooth & ANT+ Network Abstraction Layer):
 1. **Bluetooth Low Energy (BLE) GATT Profiles**:
    - *Heart Rate Service* (`0x180D`, `SERVICE_HEART_RATE`): Provides real-time heart rate measurement notifications (`0x2A37`) and sensor contact status.
    - *Cycling Speed and Cadence Service* (`0x1816`, `SERVICE_CYCLING_SPEED_AND_CADENCE`): Delivers wheel revolutions, crank revolutions, and timestamp events.
    - *Cycling Power Service* (`0x1818`, `SERVICE_CYCLING_POWER`): Delivers instantaneous power, pedal balance, and torque effectiveness.
    - *Running Speed and Cadence Service* (`0x1814`, `SERVICE_RUNNING_SPEED_AND_CADENCE`): Delivers stride rate, instantaneous speed, and cadence.
    - *Battery Service* (`0x180F`, `SERVICE_BATTERY`): Reports peripheral battery state (`0x2A19`).
-   - *Garmin Varia Radar Service* (`6a4e3200-667b-11e3-949a-0800200c9a66`, `SERVICE_RADAR`): Delivers multi-target vehicle approach velocities and threat levels (`6a4e3204-667b-11e3-949a-0800200c9a66`).
+   - *Device Information Service* (`0x180A`, `SERVICE_DEVICE_INFORMATION`): Provides hardware revision, manufacturer name, and model number metadata queries (`0000180a-0000-1000-8000-00805f9b34fb`).
+   - *Garmin Varia Radar Service* (`6a4e3200-667b-11e3-949a-0800200c9a66`, `SERVICE_RADAR`): Delivers multi-target vehicle approach velocities and threat levels (`6a4e3204-667b-11e3-949a-0800200c9a66`, `CHARACTERISTIC_RADAR_V2` and `6a4e3203-667b-11e3-949a-0800200c9a66`, `CHARACTERISTIC_RADAR_V1`) and bike tail light mode commands (`6a4e3202-667b-11e3-949a-0800200c9a66`, `CHARACTERISTIC_RADAR_LIGHT_CONTROL`).
 2. **ANT+ IPC Services & Radio Socket**:
    - Communicates with ANT+ plugins through external Android packages (`com.dsi.ant.plugins.antplus`, `com.dsi.ant.service.socket`, `com.dsi.ant.usbservice`).
    - Grounded in permissions: `com.dsi.ant.permission.ANT` and `com.dsi.ant.permission.ANT_ADMIN`.
 3. **On-Board Android Hardware Sensors**:
-   - *Step Counter* (`Sensor.TYPE_STEP_COUNTER`): Hardware accumulator for running and walking activities.
-   - *Barometer* (`Sensor.TYPE_PRESSURE`): Atmospheric pressure measurements for high-resolution altitude and grade calculation.
-   - *Accelerometer* (`Sensor.TYPE_ACCELEROMETER`): Movement detection for auto-pause and cadence estimation.
+   - *Barometer* (`Sensor.TYPE_PRESSURE`): Atmospheric pressure measurements for high-resolution altitude and grade calculation (`AltitudeFromPressureDevice.java`, `HavePressureSensor.java`).
+   - *Proximity* (`Sensor.TYPE_PROXIMITY`): Detection of user proximity and pocket state for screen dimming and power conservation during active tracking (`BatterySaverController.kt`).
 
 ### 3.2 Domain 2: Platform Frameworks & Operating System
 The application operates within the Android application sandboxing model:
 1. **Android OS Target Boundaries**:
    - `minSdkVersion`: **26** (Android 8.0 Oreo).
-   - `targetSdkVersion`: **37** (Android 16 Vanilla Ice Cream).
+   - `targetSdkVersion`: **37** (Android 17).
 2. **Execution & Power Governance**:
-   - *Foreground Service Execution*: `TrackerService` executes under `FOREGROUND_SERVICE_TYPE_LOCATION`, `FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE`, and `FOREGROUND_SERVICE_TYPE_HEALTH`.
+   - *Foreground Service Execution*: `TrackerService.java` and `BANALService.java` execute under `FOREGROUND_SERVICE_TYPE_LOCATION` and `FOREGROUND_SERVICE_TYPE_HEALTH` declared via `android:foregroundServiceType="location|health"` in `AndroidManifest.xml`.
    - *Partial WakeLock*: Maintained during active workout recording (`PowerManager.PARTIAL_WAKE_LOCK`) to prevent CPU suspension while the screen is off.
    - *Battery Optimization Exemption*: Requests system battery optimization whitelisting via `Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS`.
 
 ### 3.3 Domain 3: Location & Mapping Services
 1. **Location Providers**:
    - *Hardware GNSS*: Direct satellite navigation fixes via `LocationManager.GPS_PROVIDER`.
-   - *Google Play Services Location*: High-accuracy fused location updates via `FusedLocationProviderClient` (`com.google.android.gms:play-services-location`).
+   - *Google Play Services Location*: High-accuracy fused location updates via `SpeedAndLocationDevice_GoogleFused.java` using `GoogleApiClient` and `LocationServices.FusedLocationApi` (`com.google.android.gms:play-services-location:21.4.0`).
 2. **Map Rendering Infrastructures**:
-   - *Google Maps Android SDK v2*: Full interactive vector map rendering in live tracking and lap analysis screens (`com.google.android.gms:play-services-maps`).
+   - *Google Maps Android SDK v2*: Full interactive vector map rendering in live tracking and lap analysis screens (`com.google.android.gms:play-services-maps:20.0.0`).
    - *Google Maps Lite Mode*: Non-interactive, memory-efficient bitmap tile rendering in scrollable route lists (`PathPreviewMap.kt`, `GoogleMapOptions().liteMode(true)`).
 
 ### 3.4 Domain 4: Cloud Storage & Health Aggregators
 1. **Strava Cloud API v3**:
-   - OAuth2 token exchange and automated activity upload (`StravaUploader.java`).
+   - OAuth2 token exchange and automated activity upload (`StravaUploader.kt`).
    - Gear and equipment bidirectional synchronization (`StravaEquipmentSyncWorker.kt`).
+   - Route and segment caching (`StravaRoutesSyncWorker.kt`, `StravaSegmentsSyncWorker.kt`).
 2. **Dropbox Storage API v2**:
    - OAuth2 storage authorization and automated workout file export (`DropboxUploader.java`, `com.dropbox.core:dropbox-core-sdk:8.0.2`).
 3. **Google Drive REST API v3**:
-   - Cloud backup and automated database recovery (`GoogleDriveUploader.java`, `GoogleDriveClient.kt`).
+   - Cloud backup and automated database recovery (`GoogleDriveUploader.kt`, `GoogleDriveClient.kt`).
 4. **Android Health Connect**:
-   - Local on-device biometrics and exercise aggregation via `androidx.health.connect:connect-client:1.1.0-alpha11` (`ExerciseSessionRecord`, `HeartRateRecord`).
-5. **PebbleKit Android SDK**:
+   - Local on-device biometrics and exercise aggregation via `androidx.health.connect:connect-client:1.1.0-alpha11`. Exports `ExerciseSessionRecord` and `HeartRateRecord` and imports biometric recovery indicators via `android.permission.health.READ_HEART_RATE_VARIABILITY` and `android.permission.health.READ_RESTING_HEART_RATE` (`HealthConnectHrvImporter.kt`).
+5. **Open-Meteo Elevation API**:
+   - Internet Digital Elevation Model (DEM) reference altitude retrieval and spatial cache healing via `https://api.open-meteo.com/v1/elevation` (`ElevationService.kt`, `ElevationCacheDatabaseManager.kt`).
+6. **Firebase Cloud Services**:
+   - Application crash logging and operational stability telemetry via `com.google.firebase:firebase-crashlytics` and `com.google.firebase:firebase-analytics` backed by `com.google.firebase:firebase-bom:34.18.0`.
+7. **Google Play Services Auth & In-App Review**:
+   - User identity token management via `com.google.android.gms:play-services-auth:21.3.0` and native in-app rating flow via `com.google.android.play:review-ktx:2.0.2`.
+8. **PebbleKit Android SDK**:
    - Smartwatch companion app telemetry streaming via `com.getpebble:pebblekit:4.0.1`.
 
 ### 3.5 Domain 5: Decommissioned Legacy Interfaces
@@ -149,7 +163,7 @@ The application operates within the Android application sandboxing model:
 ## 4. Operational Assumptions & Environmental Constraints
 
 1. **Offline-First Resilience**:
-   - The application SHALL operate completely autonomously without active internet connectivity. All telemetry samples, sensor readings, and trackpoints are written directly to local SQLite databases (`WorkoutSamplesDatabaseManager`).
+   - The application SHALL operate completely autonomously without active internet connectivity. All telemetry samples, sensor readings, and trackpoints are written directly to local SQLite databases (`WorkoutSamplesDatabaseManager.java`).
 2. **Sensor Disconnection & Auto-Failover**:
    - When external peripheral signals disconnect during an active workout, the sensor subsystem enters an automatic reconnection retry window (3.5 s) without blocking the 1-Hz tracking pipeline or interrupting data logging.
 3. **Asynchronous Cloud Synchronization**:
@@ -163,5 +177,7 @@ The application operates within the Android application sandboxing model:
 | :--- | :--- | :--- | :--- |
 | System Boundary & Mermaid Diagram | SYS.2 BP1, SYS.3 | `REQ-PRO-053.1` | `SystemContextContractTest.testSystemContext_fileExistsAndContainsMermaidDiagram` |
 | 5 Interface Domains Inventory | SYS.2 BP1, SYS.3 | `REQ-PRO-053.1` | `SystemContextContractTest.testSystemContext_coversAllFiveInterfaceDomains` |
-| Live Code Grounding & Parity | SYS.3, ATT-5431 | `REQ-PRO-053.2` | `SystemContextContractTest.testSystemContext_codeGroundingParity` |
+| Live Code Grounding & Parity | SYS.3, ATT-5431 | `REQ-PRO-053.1`, `REQ-PRO-053.2` | `SystemContextContractTest.testSystemContext_codeGroundingParity` |
+| Dynamic Filesystem Existence | SYS.3, ATT-5431 | `REQ-PRO-053.2` | `SystemContextContractTest.testSystemContext_allReferencedCodeFilesExistOnDisk` |
+| Platform Symbols Grounding | SYS.3, ATT-5431 | `REQ-PRO-053.1`, `REQ-PRO-053.2` | `SystemContextContractTest.testSystemContext_referencedPlatformSymbolsGrounded` |
 | Operational Assumptions | SYS.2 BP1 | `REQ-PRO-053.1` | `SystemContextContractTest.testSystemContext_documentsOperationalAssumptions` |

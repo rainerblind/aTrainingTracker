@@ -23,7 +23,7 @@ import androidx.lifecycle.MutableLiveData
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager
-import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager.SimpleSportTypeInfo
+import com.atrainingtracker.trainingtracker.repositories.SimpleSportTypeInfo
 import com.atrainingtracker.trainingtracker.database.EquipmentAndSportTypeDiscoveryManager
 import com.atrainingtracker.trainingtracker.database.WorkoutCluster
 import com.atrainingtracker.trainingtracker.database.WorkoutClusterEngine
@@ -144,6 +144,9 @@ class EditWorkoutClusteringTest {
         every { mockSportTypeDatabaseManager.getBSportType(100L) } returns BSportType.BIKE
         every { mockSportTypeDatabaseManager.getUIName(150L) } returns "Einkaufen"
         every { mockSportTypeDatabaseManager.getUIName(200L) } returns "Running"
+        every { mockSportTypesRepository.getBSportType(any()) } answers { mockSportTypeDatabaseManager.getBSportType(firstArg()) }
+        every { mockSportTypesRepository.getUIName(any()) } answers { mockSportTypeDatabaseManager.getUIName(firstArg()) }
+        every { mockSportTypesRepository.getStravaName(any()) } answers { mockSportTypeDatabaseManager.getStravaName(firstArg()) }
 
         every { mockSportTypeDatabaseManager.getStravaName(any()) } returns null
         every { mockDiscoveryManager.getEquipmentNamesForSport(any()) } returns emptySet()

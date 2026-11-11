@@ -45,6 +45,12 @@ object PowerHrDynamicsCalculator {
     const val END_WINDOW_DURATION_SEC = 2700     // Final 45 minutes
     const val MIN_WINDOW_DURATION_SEC = 600     // 10 minutes minimum for window fitting
     const val MIN_POWER_VARIANCE = 1.0          // Minimum 1 W^2 active power variance
+    const val MIN_ACTIVE_PEDALING_SEC = 900     // 15 minutes active pedaling (P > 0)
+    const val MIN_R2_START = 0.25               // Minimum fresh coupling coefficient
+    const val MIN_K = 0.01                      // 100 W/bpm upper aerobic limit
+    const val MAX_K = 0.45                      // ~2.2 W/bpm lower aerobic limit
+    const val MIN_HR0 = 30.0                    // Physiological minimum basal HR
+    const val MAX_HR0 = 125.0                   // Physiological maximum basal HR
 
     data class FitResult(
         val tau: Double,
@@ -62,8 +68,9 @@ object PowerHrDynamicsCalculator {
      * @param hrSamples Sequence of instantaneous heart rate readings (bpm).
      * @param workoutId Optional database ID of the workout.
      * @param dt Sampling interval in seconds (defaults to 1.0 s).
+     * @param timestampsSec Optional explicit monotonic sample timestamps in seconds for non-uniform telemetry.
      * @return [CardioPowerDynamicsRecord] with fresh and end window fits, or `null` if qualifying
-     *         criteria are not met (duration < 20 min or missing streams).
+     *         criteria are not met (duration < 20 min, pedaling < 15 min, or non-physiological fits).
      */
     @JvmStatic
     @JvmOverloads
@@ -71,54 +78,84 @@ object PowerHrDynamicsCalculator {
         powerSamples: List<Double?>?,
         hrSamples: List<Double?>?,
         workoutId: Long = 0L,
-        dt: Double = 1.0
+        dt: Double = 1.0,
+        timestampsSec: List<Long>? = null
     ): CardioPowerDynamicsRecord? {
         if (powerSamples == null || hrSamples == null) return null
         val n = min(powerSamples.size, hrSamples.size)
-        if (n < MIN_QUALIFYING_DURATION_SEC) return null
+        if (n < 2) return null
+
+        val effectiveDt = if (timestampsSec != null && timestampsSec.size >= 2) {
+            val lastIdx = min(n, timestampsSec.size) - 1
+            val span = (timestampsSec[lastIdx] - timestampsSec[0]).coerceAtLeast(1L)
+            (span.toDouble() / lastIdx.coerceAtLeast(1)).coerceIn(0.5, 60.0)
+        } else {
+            dt.coerceIn(0.5, 60.0)
+        }
+        val minQualifyingSamples = (MIN_QUALIFYING_DURATION_SEC / effectiveDt).toInt().coerceAtLeast(10)
+        if (n < minQualifyingSamples) return null
 
         // Filter and impute valid paired series
         val cleanPower = DoubleArray(n)
         val cleanHr = DoubleArray(n)
         var validPairs = 0
+        var activePedalingSec = 0.0
         var lastP = 0.0
         var lastHr = 100.0
 
         for (i in 0 until n) {
             val p = powerSamples[i]
             val h = hrSamples[i]
+            val stepDt = if (timestampsSec != null && i > 0 && i < timestampsSec.size) {
+                (timestampsSec[i] - timestampsSec[i - 1]).coerceIn(1L, 60L).toDouble()
+            } else {
+                effectiveDt
+            }
+
             if (p != null && p >= 0.0) lastP = p
             if (h != null && h > 30.0 && h < 240.0) {
                 lastHr = h
                 if (p != null && p >= 0.0) validPairs++
             }
+            if (lastP > 0.0) {
+                activePedalingSec += stepDt
+            }
             cleanPower[i] = lastP
             cleanHr[i] = lastHr
         }
 
-        // Must have sufficient paired telemetry
-        if (validPairs < MIN_QUALIFYING_DURATION_SEC) return null
+        // Must have sufficient paired telemetry and active pedaling
+        if (validPairs < minQualifyingSamples) return null
+        if (activePedalingSec < MIN_ACTIVE_PEDALING_SEC) return null
 
         // 1. Fresh Calibration Window (active minutes 8 to 55, or up to midpoint for shorter rides)
-        val freshStart = FRESH_WINDOW_START_SEC
-        val freshEnd = if (n >= 6000) {
-            FRESH_WINDOW_END_SEC
+        val minWindowSamples = (MIN_WINDOW_DURATION_SEC / effectiveDt).toInt().coerceAtLeast(10)
+        val freshStart = (FRESH_WINDOW_START_SEC / effectiveDt).toInt().coerceIn(0, (n - minWindowSamples).coerceAtLeast(0))
+        val freshEndMax = (FRESH_WINDOW_END_SEC / effectiveDt).toInt()
+        val threshold6000 = (6000 / effectiveDt).toInt()
+        val freshEnd = if (n >= threshold6000) {
+            freshEndMax.coerceAtMost(n)
         } else {
-            min(FRESH_WINDOW_END_SEC, max(freshStart + MIN_WINDOW_DURATION_SEC, n / 2))
+            min(freshEndMax, max(freshStart + minWindowSamples, n / 2)).coerceAtMost(n)
         }
-        val freshFit = fitWindow(cleanPower, cleanHr, freshStart, freshEnd, dt = dt) ?: return null
+        val freshFit = fitWindow(cleanPower, cleanHr, freshStart, freshEnd, dt = effectiveDt) ?: return null
+
+        // Physiological coupling: fresh model must explain at least 25% of HR variance
+        if (freshFit.r2 < MIN_R2_START) return null
 
         // 2. End-of-Workout Window (final 45 min, non-overlapping with fresh window)
         var endFit: FitResult? = null
-        if (n >= 1800) {
-            val endStart = if (n >= 6000) {
-                n - END_WINDOW_DURATION_SEC
+        val endThresholdSamples = (1800 / effectiveDt).toInt()
+        val endDurationSamples = (END_WINDOW_DURATION_SEC / effectiveDt).toInt()
+        if (n >= endThresholdSamples) {
+            val endStart = if (n >= threshold6000) {
+                (n - endDurationSamples).coerceAtLeast(freshEnd)
             } else {
-                max(freshEnd, n - END_WINDOW_DURATION_SEC)
+                max(freshEnd, n - endDurationSamples)
             }
             val endEnd = n
-            if (endEnd - endStart >= MIN_WINDOW_DURATION_SEC) {
-                endFit = fitWindow(cleanPower, cleanHr, endStart, endEnd, dt = dt)
+            if (endEnd - endStart >= minWindowSamples) {
+                endFit = fitWindow(cleanPower, cleanHr, endStart, endEnd, dt = effectiveDt)
             }
         }
 
@@ -157,7 +194,8 @@ object PowerHrDynamicsCalculator {
         dt: Double = 1.0
     ): FitResult? {
         val n = endIndex - startIndex
-        if (n < MIN_WINDOW_DURATION_SEC || startIndex < 0 || endIndex > power.size || endIndex > hr.size) {
+        val minWindowSamples = (MIN_WINDOW_DURATION_SEC / dt.coerceIn(0.5, 60.0)).toInt().coerceAtLeast(10)
+        if (n < minWindowSamples || startIndex < 0 || endIndex > power.size || endIndex > hr.size) {
             return null
         }
 
@@ -200,7 +238,14 @@ object PowerHrDynamicsCalculator {
             val alpha = exp(-dt / tau)
             val oneMinusAlpha = 1.0 - alpha
 
-            xBuffer[0] = power[startIndex]
+            // Pre-warm discrete filter state x_k(tau) from t = 0 to startIndex - 1
+            // eliminating transient step distortion from warm-up boundaries (REQ-REV-009.1e)
+            var xWarm = power[0]
+            for (w in 1 until startIndex) {
+                xWarm = alpha * xWarm + oneMinusAlpha * power[w]
+            }
+            xBuffer[0] = if (startIndex > 0) alpha * xWarm + oneMinusAlpha * power[startIndex] else power[0]
+
             var sumX = xBuffer[0]
             for (i in 1 until n) {
                 xBuffer[i] = alpha * xBuffer[i - 1] + oneMinusAlpha * power[startIndex + i]
@@ -221,8 +266,8 @@ object PowerHrDynamicsCalculator {
             val k = cov / varX
             val hr0 = meanHr - k * meanX
 
-            // Physiological plausibility: mechanical power must positively drive HR
-            if (k <= 0.0) continue
+            // Physiological plausibility: mechanical power must positively drive HR within biological bounds (REQ-REV-009.1d)
+            if (k < MIN_K || k > MAX_K || hr0 < MIN_HR0 || hr0 > MAX_HR0) continue
 
             var rss = 0.0
             for (i in 0 until n) {
@@ -284,6 +329,36 @@ object PowerHrDynamicsCalculator {
     }
 
     /**
+     * Timestamp-aware primitive simulation overload across non-uniform trackpoints (ATT-6723 / REQ-REV-010.3).
+     * Computes step-wise \Delta t_i = (timestampsSec[i] - timestampsSec[i-1]).coerceIn(1L, 60L).toDouble().
+     */
+    @JvmStatic
+    fun simulateTrajectory(
+        power: DoubleArray,
+        timestampsSec: LongArray,
+        tau: Double,
+        hr0: Double,
+        k: Double
+    ): DoubleArray {
+        if (power.isEmpty() || tau <= 0.0) return DoubleArray(0)
+        val n = power.size
+        val result = DoubleArray(n)
+
+        var x = power[0]
+        result[0] = hr0 + k * x
+        for (i in 1 until n) {
+            val dt = if (i < timestampsSec.size) {
+                (timestampsSec[i] - timestampsSec[i - 1]).coerceIn(1L, 60L).toDouble()
+            } else 1.0
+            val alpha = exp(-dt / tau)
+            val oneMinusAlpha = 1.0 - alpha
+            x = alpha * x + oneMinusAlpha * power[i]
+            result[i] = hr0 + k * x
+        }
+        return result
+    }
+
+    /**
      * List-based simulation overload for UI chart overlays (ATT-3905).
      */
     @JvmStatic
@@ -305,6 +380,37 @@ object PowerHrDynamicsCalculator {
         result.add(hr0 + k * x)
 
         for (i in 1 until n) {
+            val p = (powerSamples[i] ?: 0.0).coerceAtLeast(0.0)
+            x = alpha * x + oneMinusAlpha * p
+            result.add(hr0 + k * x)
+        }
+        return result
+    }
+
+    /**
+     * Timestamp-aware simulation overload for UI chart overlays across decimated trackpoints (ATT-6723 / REQ-REV-010.3).
+     * Computes step-wise \Delta t_i = (timestampsSec[i] - timestampsSec[i-1]).coerceIn(1L, 60L).toDouble().
+     */
+    @JvmStatic
+    fun simulateTrajectory(
+        powerSamples: List<Double?>,
+        timestampsSec: List<Long>,
+        tau: Double,
+        hr0: Double,
+        k: Double
+    ): List<Double?> {
+        if (powerSamples.isEmpty() || tau <= 0.0) return emptyList()
+        val n = powerSamples.size
+        val result = ArrayList<Double?>(n)
+        var x = (powerSamples[0] ?: 0.0).coerceAtLeast(0.0)
+        result.add(hr0 + k * x)
+
+        for (i in 1 until n) {
+            val dt = if (i < timestampsSec.size) {
+                (timestampsSec[i] - timestampsSec[i - 1]).coerceIn(1L, 60L).toDouble()
+            } else 1.0
+            val alpha = exp(-dt / tau)
+            val oneMinusAlpha = 1.0 - alpha
             val p = (powerSamples[i] ?: 0.0).coerceAtLeast(0.0)
             x = alpha * x + oneMinusAlpha * p
             result.add(hr0 + k * x)

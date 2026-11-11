@@ -65,6 +65,10 @@ public abstract class SpeedAndLocationDevice extends MyDevice {
     protected double mFilteredLatitude = Double.NaN;
     protected double mFilteredLongitude = Double.NaN;
 
+    // REQ-TRK-074.3: Consecutive stationary candidate updates required before entering stationary pinned state
+    public static final int STATIONARY_PINNING_HYSTERESIS_TICKS = 3;
+    protected int mStationaryHysteresisCount = 0;
+
     protected Handler mWatchdogHandler;
     private final Runnable mInactivityRunnable = new Runnable() {
         @Override
@@ -267,6 +271,7 @@ public abstract class SpeedAndLocationDevice extends MyDevice {
         mIsDecaying = false;
         mStationaryAnchor = null;
         mIsStationaryPinned = false;
+        mStationaryHysteresisCount = 0;
         mFilteredLatitude = Double.NaN;
         mFilteredLongitude = Double.NaN;
         super.shutDown();
@@ -278,6 +283,7 @@ public abstract class SpeedAndLocationDevice extends MyDevice {
         mPrevLocation = null;
         mStationaryAnchor = null;
         mIsStationaryPinned = false;
+        mStationaryHysteresisCount = 0;
         mFilteredLatitude = Double.NaN;
         mFilteredLongitude = Double.NaN;
     }
@@ -296,6 +302,13 @@ public abstract class SpeedAndLocationDevice extends MyDevice {
         return mStationaryAnchor;
     }
 
+    /**
+     * REQ-TRK-074.3: Returns the current consecutive stationary candidate update count.
+     */
+    public synchronized int getStationaryHysteresisCount() {
+        return mStationaryHysteresisCount;
+    }
+
     public void onNewLocation(Location location) {
         if (DEBUG) Log.i(TAG, "onNewLocation()");
 
@@ -306,6 +319,18 @@ public abstract class SpeedAndLocationDevice extends MyDevice {
             if (location.getAccuracy() <= accuracyThreshold) {
                 LocationAvailable();
                 resetWatchdog();
+
+                // REQ-TRK-074.1: Ignore sub-interval (< 250ms) and duplicate fixes (rawDelta == 0.0 && dt < 900ms)
+                if (mPrevLocation != null && location.getTime() > 0 && mPrevLocation.getTime() > 0) {
+                    long dt_ms = location.getTime() - mPrevLocation.getTime();
+                    double rawDelta = mPrevLocation.distanceTo(location);
+                    if (dt_ms >= 0 && (dt_ms < 250 || (rawDelta == 0.0 && dt_ms < 900))) {
+                        if (DEBUG) {
+                            Log.d(TAG, "Ignoring duplicate/sub-interval location: dt=" + dt_ms + "ms, rawDelta=" + rawDelta + "m");
+                        }
+                        return;
+                    }
+                }
 
                 // save the first location, i.e., the start location
                 if (mStartLocation == null) {
@@ -331,6 +356,7 @@ public abstract class SpeedAndLocationDevice extends MyDevice {
 
                 // REQ-TRK-048.1, REQ-TRK-048.2, REQ-TRK-048.4: Anchor pinning, deadband gating, and Doppler zero preservation
                 if (mIsStationaryPinned && mStationaryAnchor != null) {
+                    mStationaryHysteresisCount = 0;
                     float distFromAnchor = mStationaryAnchor.distanceTo(location);
                     boolean shouldUnpin = false;
                     if (distFromAnchor > deadbandRadius) {
@@ -344,6 +370,7 @@ public abstract class SpeedAndLocationDevice extends MyDevice {
                         mIsStationaryPinned = false;
                         delta_distance = distFromAnchor;
                         mStationaryAnchor = null;
+                        mStationaryHysteresisCount = 0;
 
                         // REQ-TRK-041.1: Guard against implausible multipath teleportation spikes (speed > 70.0 m/s = 252 km/h)
                         double calcSpeed = (dt_ms > 0 && dt_ms < 30000) ? (delta_distance / (dt_ms / 1000.0)) : 0.0;
@@ -366,36 +393,59 @@ public abstract class SpeedAndLocationDevice extends MyDevice {
                 } else {
                     double rawDelta = (mPrevLocation != null) ? mPrevLocation.distanceTo(location) : 0.0;
 
-                    // REQ-TRK-056.1 & REQ-TRK-048.1: Only pin on Doppler zero if displacement remains within escape radius
-                    // or if initial location fix (mPrevLocation == null). If rawDelta > escapeRadius, provider Doppler speed is
-                    // damped/suppressed (e.g. Google Fused motionless phone in mock/replay) during active movement.
-                    if (isDopplerStationary && (mPrevLocation == null || rawDelta <= escapeRadius)) {
+                    // REQ-TRK-074.4 & REQ-TRK-048.1: Immediate pinning on initial location fix
+                    if (mPrevLocation == null && (isDopplerStationary || !hasSpeed)) {
                         mStationaryAnchor = location;
                         mIsStationaryPinned = true;
-                        delta_distance = 0.0;
-                        speed = 0.0;
-                    } else if (!hasSpeed && (mPrevLocation == null || (rawDelta <= deadbandRadius && mSpeed <= SPEED_ZERO_THRESHOLD))) {
-                        // REQ-TRK-048.4: Non-Doppler provider stationary; pin anchor
-                        mStationaryAnchor = location;
-                        mIsStationaryPinned = true;
+                        mStationaryHysteresisCount = 0;
                         delta_distance = 0.0;
                         speed = 0.0;
                     } else {
-                        // Legitimate movement
-                        delta_distance = rawDelta;
+                        // REQ-TRK-074.2: Candidate stationary update while moving evaluated against deadbandRadius
+                        boolean isCandidateStationary = (isDopplerStationary && rawDelta <= deadbandRadius)
+                                || (!hasSpeed && rawDelta <= deadbandRadius && mSpeed <= SPEED_ZERO_THRESHOLD);
 
-                        // REQ-TRK-041.1: Guard against implausible multipath teleportation spikes (speed > 70.0 m/s = 252 km/h)
-                        double calcSpeed = (dt_ms > 0 && dt_ms < 30000) ? (delta_distance / (dt_ms / 1000.0)) : 0.0;
-                        if (calcSpeed > 70.0) {
-                            delta_distance = 0.0;
-                            calcSpeed = 0.0;
-                        }
+                        if (isCandidateStationary) {
+                            mStationaryHysteresisCount++;
+                            if (mStationaryHysteresisCount >= STATIONARY_PINNING_HYSTERESIS_TICKS) {
+                                // REQ-TRK-074.3: Enter pinned stationary state upon 3 consecutive low-displacement updates
+                                mStationaryAnchor = location;
+                                mIsStationaryPinned = true;
+                                mStationaryHysteresisCount = 0;
+                                delta_distance = 0.0;
+                                speed = 0.0;
+                            } else {
+                                // Transient candidate tick: treat as movement with geometric fallback, do NOT pin
+                                delta_distance = rawDelta;
+                                double calcSpeed = (dt_ms > 0 && dt_ms < 30000) ? (delta_distance / (dt_ms / 1000.0)) : 0.0;
+                                if (calcSpeed > 70.0) {
+                                    delta_distance = 0.0;
+                                    calcSpeed = 0.0;
+                                }
+                                if (hasSpeed && rawSpeed > SPEED_ZERO_THRESHOLD && (calcSpeed <= 1.0 || rawSpeed >= 0.2 * calcSpeed)) {
+                                    speed = rawSpeed;
+                                } else if (calcSpeed > 0.0 && calcSpeed <= 70.0) {
+                                    speed = Math.min(calcSpeed, mSpeed);
+                                }
+                            }
+                        } else {
+                            // Legitimate movement: reset streak
+                            mStationaryHysteresisCount = 0;
+                            delta_distance = rawDelta;
 
-                        // REQ-TRK-056.2: Fall back to geometric speed if provider reports zero or damped speed (< 0.2 * calcSpeed)
-                        if (hasSpeed && rawSpeed > SPEED_ZERO_THRESHOLD && (calcSpeed <= 1.0 || rawSpeed >= 0.2 * calcSpeed)) {
-                            speed = rawSpeed;
-                        } else if (calcSpeed > 0.0 && calcSpeed <= 70.0) {
-                            speed = calcSpeed;
+                            // REQ-TRK-041.1: Guard against implausible multipath teleportation spikes (speed > 70.0 m/s = 252 km/h)
+                            double calcSpeed = (dt_ms > 0 && dt_ms < 30000) ? (delta_distance / (dt_ms / 1000.0)) : 0.0;
+                            if (calcSpeed > 70.0) {
+                                delta_distance = 0.0;
+                                calcSpeed = 0.0;
+                            }
+
+                            // REQ-TRK-056.2: Fall back to geometric speed if provider reports zero or damped speed (< 0.2 * calcSpeed)
+                            if (hasSpeed && rawSpeed > SPEED_ZERO_THRESHOLD && (calcSpeed <= 1.0 || rawSpeed >= 0.2 * calcSpeed)) {
+                                speed = rawSpeed;
+                            } else if (calcSpeed > 0.0 && calcSpeed <= 70.0) {
+                                speed = calcSpeed;
+                            }
                         }
                     }
                 }

@@ -73,8 +73,11 @@ object TcxWorkoutParser {
             val activity = document.activities.first()
             val sportName = activity.sport
             val workoutName = activity.extensions?.customName?.takeIf { it.isNotBlank() }
-            val workoutNotes = activity.extensions?.customDescription?.takeIf { it.isNotBlank() }
-                ?: activity.notes?.takeIf { it.isNotBlank() }
+            val workoutNotes = if (activity.extensions != null) {
+                activity.extensions.customDescription?.takeIf { it.isNotBlank() }
+            } else {
+                activity.notes?.takeIf { it.isNotBlank() }
+            }
 
             var firstTime: String? = null
             var lastTime: String? = null

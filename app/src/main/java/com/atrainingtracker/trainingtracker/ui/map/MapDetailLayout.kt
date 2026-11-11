@@ -338,27 +338,35 @@ fun MapDetailLayout(
                 onMapClick = onMapClick,
                 onSnapshotReady = { mapBitmap ->
                     scope.launch {
-                        val hBmp = if (headerLayer.size.width > 0 && headerLayer.size.height > 0) {
-                            withContext(Dispatchers.Default) {
-                                headerLayer.toImageBitmap().asAndroidBitmap()
+                        executeSnapshotCaptureAndShare(
+                            captureHeader = {
+                                if (headerLayer.size.width > 0 && headerLayer.size.height > 0) {
+                                    headerLayer.toImageBitmap().asAndroidBitmap()
+                                } else null
+                            },
+                            captureElevation = {
+                                if (elevationLayer.size.width > 0 && elevationLayer.size.height > 0) {
+                                    elevationLayer.toImageBitmap().asAndroidBitmap()
+                                } else null
+                            },
+                            captureAnalytics = {
+                                if (analyticsLayer.size.width > 0 && analyticsLayer.size.height > 0) {
+                                    analyticsLayer.toImageBitmap().asAndroidBitmap()
+                                } else null
+                            },
+                            mapBitmap = mapBitmap,
+                            shareAction = { hBmp, mBmp, eBmp, aBmp ->
+                                combineWorkoutAndShare(context, hBmp, mBmp, eBmp, aBmp)
+                            },
+                            onError = { t ->
+                                android.util.Log.e("MapDetailLayout", "Failed to capture or share workout snapshot", t)
+                                android.widget.Toast.makeText(context, R.string.error_sharing_failed, android.widget.Toast.LENGTH_SHORT).show()
+                            },
+                            onFinally = {
+                                isSharing = false
+                                onSnapshotComplete?.invoke()
                             }
-                        } else null
-
-                        val eBmp = if (elevationLayer.size.width > 0 && elevationLayer.size.height > 0) {
-                            withContext(Dispatchers.Default) {
-                                elevationLayer.toImageBitmap().asAndroidBitmap()
-                            }
-                        } else null
-
-                        val aBmp = if (analyticsLayer.size.width > 0 && analyticsLayer.size.height > 0) {
-                            withContext(Dispatchers.Default) {
-                                analyticsLayer.toImageBitmap().asAndroidBitmap()
-                            }
-                        } else null
-
-                        combineWorkoutAndShare(context, hBmp, mapBitmap, eBmp, aBmp)
-                        isSharing = false
-                        onSnapshotComplete?.invoke()
+                        )
                     }
                 },
                 onSnapshotError = {
@@ -708,7 +716,7 @@ fun MapDetailLayout(
                                             TelemetryMetricUtils.findNearestPoint(
                                                 points = path,
                                                 targetValue = selectedDistance!!,
-                                                isTimeDomain = isTrackless
+                                                isTimeDomain = (activeTelemetryDomain == ProfileXAxisDomain.TIME)
                                             )
                                         } else null
                                         val activeA1 = activePoint?.hrvDfaA1
@@ -731,6 +739,8 @@ fun MapDetailLayout(
                                             onDistanceSelected = { selectedDistance = it },
                                             xAxisDomain = activeTelemetryDomain,
                                             bSportType = bSportType,
+                                            dfaA1ThresholdT1 = tuningConfig.dfaA1ThresholdT1,
+                                            dfaA1ThresholdT2 = tuningConfig.dfaA1ThresholdT2,
                                             zoomScale = profileZoomScale,
                                             startDist = MapDetailViewportMath.fractionToDomain(viewportStartFraction, telemetryTotalSpan, profileZoomScale),
                                             isPanMode = isPanMode,
@@ -756,7 +766,7 @@ fun MapDetailLayout(
                                             TelemetryMetricUtils.findNearestPoint(
                                                 points = path,
                                                 targetValue = selectedDistance!!,
-                                                isTimeDomain = isTrackless
+                                                isTimeDomain = (activeTelemetryDomain == ProfileXAxisDomain.TIME)
                                             )
                                         } else null
                                         val activeRmssd = activePoint?.hrvRmssd
@@ -794,17 +804,6 @@ fun MapDetailLayout(
                                                     alignWithHistogram = true,
                                                     onInteractiveCanvasTouch = onInteractiveCanvasTouch
                                                 )
-                                        )
-                                    }
-
-                                    // DFA a1 vs HR / Power Scatter Card (REQ-PER-035.4)
-                                    if (TelemetryMetricUtils.hasHrvData(path)) {
-                                        Spacer(modifier = Modifier.height(12.dp))
-                                        com.atrainingtracker.trainingtracker.ui.aftermath.workoutdetail.HrvAlpha1ScatterCard(
-                                            points = path,
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .padding(horizontal = 16.dp, vertical = 4.dp)
                                         )
                                     }
                                 }
@@ -1240,4 +1239,30 @@ fun MapDetailLayout(
         )
     }
 }
+}
+
+internal suspend fun executeSnapshotCaptureAndShare(
+    captureHeader: suspend () -> android.graphics.Bitmap?,
+    captureElevation: suspend () -> android.graphics.Bitmap?,
+    captureAnalytics: suspend () -> android.graphics.Bitmap?,
+    mapBitmap: android.graphics.Bitmap,
+    shareAction: suspend (
+        headerBmp: android.graphics.Bitmap?,
+        mapBmp: android.graphics.Bitmap,
+        elevationBmp: android.graphics.Bitmap?,
+        analyticsBmp: android.graphics.Bitmap?
+    ) -> Unit,
+    onError: (Throwable) -> Unit,
+    onFinally: () -> Unit
+) {
+    try {
+        val hBmp = captureHeader()
+        val eBmp = captureElevation()
+        val aBmp = captureAnalytics()
+        shareAction(hBmp, mapBitmap, eBmp, aBmp)
+    } catch (t: Throwable) {
+        onError(t)
+    } finally {
+        onFinally()
+    }
 }

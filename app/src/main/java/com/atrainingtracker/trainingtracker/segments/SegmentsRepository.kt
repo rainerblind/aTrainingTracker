@@ -135,6 +135,9 @@ class SegmentsRepository private constructor(private val context: Context) {
 
     private val segmentsDb get() = SegmentsDatabaseManager.getInstance(context)
 
+    val allSegmentSummaries: List<SegmentSummary>
+        get() = segmentsDb.allSegmentSummaries
+
 
     // Repository scope for background loading
     private val repositoryScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)

@@ -9,4 +9,7 @@
     <string name="health_connect_sync_manual">Health Connect へ同期</string>
     <string name="health_connect_sync_success">ワークアウトを Health Connect に同期しました</string>
     <string name="health_connect_permissions_needed">ワークアウトデータを同期するには Health Connect の書き込み権限が必要です</string>
+    <string name="health_connect_hrv_import_title">Health Connect から安静時 HRV をインポート</string>
+    <string name="health_connect_hrv_import_summary">ウェアラブルデバイスから夜間の安静時 HRV および安静時心拍数データをインポート</string>
+    <string name="health_connect_hrv_permissions_needed">夜間 HRV データをインポートするには Health Connect の読み取り権限が必要です</string>
 </resources>

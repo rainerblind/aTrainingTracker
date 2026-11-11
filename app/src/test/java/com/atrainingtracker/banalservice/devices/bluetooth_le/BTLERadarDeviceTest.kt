@@ -24,6 +24,7 @@ import android.bluetooth.BluetoothGattDescriptor
 import android.bluetooth.BluetoothGattService
 import android.content.Context
 import android.content.pm.PackageManager
+import android.os.Handler
 import android.os.Looper
 import android.util.Log
 import androidx.core.app.ActivityCompat
@@ -34,13 +35,18 @@ import com.atrainingtracker.banalservice.devices.radar.LaneState
 import com.atrainingtracker.banalservice.devices.radar.RadarConnectionState
 import com.atrainingtracker.banalservice.devices.radar.RadarLightController
 import com.atrainingtracker.banalservice.devices.radar.RadarLightMode
+import com.atrainingtracker.banalservice.devices.radar.RadarScenario
 import com.atrainingtracker.banalservice.devices.radar.RadarStateRepository
 import com.atrainingtracker.banalservice.devices.radar.RadarTarget
+import com.atrainingtracker.banalservice.devices.radar.RadarTrafficSimulator
+import com.atrainingtracker.banalservice.devices.radar.RadarWindowAggregator
 import com.atrainingtracker.banalservice.devices.radar.ThreatLevel
 import com.atrainingtracker.banalservice.devices.radar.VehicleSizeCategory
 import com.atrainingtracker.banalservice.sensor.MySensorManager
+import com.atrainingtracker.banalservice.sensor.SensorType
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.mockkConstructor
 import io.mockk.mockkStatic
 import io.mockk.unmockkAll
 import org.junit.After
@@ -103,6 +109,12 @@ class BTLERadarDeviceTest {
         val mockLooper = mockk<Looper>(relaxed = true)
         every { mockContext.mainLooper } returns mockLooper
         mockSensorManager = mockk(relaxed = true)
+
+        mockkConstructor(Handler::class)
+        every { anyConstructed<Handler>().post(any()) } answers { true }
+        every { anyConstructed<Handler>().postDelayed(any(), any()) } answers { true }
+        every { anyConstructed<Handler>().removeCallbacks(any<Runnable>()) } answers { }
+        every { anyConstructed<Handler>().removeCallbacksAndMessages(any()) } answers { }
 
         RadarStateRepository.reset()
         radarDevice = BTLERadarDevice(mockContext, mockSensorManager, 101L, "DC:2C:26:01:02:03")
@@ -295,5 +307,206 @@ class BTLERadarDeviceTest {
         assertFalse(radarDevice.isLightControlSupported)
         val result = radarDevice.setLightMode(RadarLightMode.SOLID)
         assertFalse(result)
+    }
+
+    @Test
+    fun testProcessTargets_propagatesNullDistanceWhenRoadClears() {
+        var currentTimeMs = 1000L
+        radarDevice.setWindowAggregatorForTesting(RadarWindowAggregator(clock = { currentTimeMs }))
+
+        // Approaching target at 15m
+        radarDevice.processTargetsForTesting(listOf(RadarTarget(1, 15f, 5f, ThreatLevel.APPROACHING)))
+        assertEquals(15.0, radarDevice.getSensor(SensorType.RADAR_CLOSEST_DISTANCE_m).value)
+        assertEquals(1, radarDevice.getSensor(SensorType.RADAR_THREAT_COUNT).value)
+        assertEquals(5.0, radarDevice.getSensor(SensorType.RADAR_APPROACH_SPEED_mps).value)
+
+        // Road clears and 1,000 ms rolling window expires
+        currentTimeMs = 2001L
+        radarDevice.processTargetsForTesting(emptyList())
+
+        assertNull("Closest distance sensor must transition to null on clear road",
+            radarDevice.getSensor(SensorType.RADAR_CLOSEST_DISTANCE_m).value)
+        assertEquals(0, radarDevice.getSensor(SensorType.RADAR_THREAT_COUNT).value)
+        assertEquals(0.0, radarDevice.getSensor(SensorType.RADAR_APPROACH_SPEED_mps).value)
+    }
+
+    @Test
+    fun testOnAccumulatorsReset_clearsVehicleCountSensorsAndSession() {
+        // Vehicle approaches and passes (closing to <= 18m and disappearing)
+        radarDevice.processTargetsForTesting(listOf(RadarTarget(1, 12f, 8f, ThreatLevel.APPROACHING)))
+        radarDevice.processTargetsForTesting(emptyList())
+        assertEquals(1, radarDevice.getSensor(SensorType.RADAR_VEHICLE_COUNT).value)
+
+        // Broadcast RESET_ACCUMULATORS_INTENT triggers onAccumulatorsReset
+        radarDevice.onAccumulatorsResetForTesting()
+
+        assertEquals("Vehicle count sensor must reset to 0 on accumulator reset",
+            0, radarDevice.getSensor(SensorType.RADAR_VEHICLE_COUNT).value)
+        assertEquals("Large vehicle count sensor must reset to 0 on accumulator reset",
+            0, radarDevice.getSensor(SensorType.RADAR_LARGE_VEHICLE_COUNT).value)
+        assertEquals(0, radarDevice.windowAggregatorForTesting.getVehicleCount())
+    }
+
+    @Test
+    fun testIsStvzoModel_patternMatching() {
+        assertTrue(BTLERadarDevice.isStvzoModel("010-03180-10"))
+        assertTrue(BTLERadarDevice.isStvzoModel("Garmin Varia RTL516"))
+        assertTrue(BTLERadarDevice.isStvzoModel("Varia Radar StVZO"))
+        assertTrue(BTLERadarDevice.isStvzoModel("RVR316"))
+
+        assertFalse(BTLERadarDevice.isStvzoModel("010-03180-00"))
+        assertFalse(BTLERadarDevice.isStvzoModel("Garmin Varia RTL515"))
+        assertFalse(BTLERadarDevice.isStvzoModel("RVR315"))
+        assertFalse(BTLERadarDevice.isStvzoModel(null))
+        assertFalse(BTLERadarDevice.isStvzoModel(""))
+    }
+
+    @Test
+    fun testOnOtherCharacteristicUpdate_modelNumberDetectsStvzo() {
+        val mockGatt = mockk<BluetoothGatt>(relaxed = true)
+        val mockModelChar = mockk<BluetoothGattCharacteristic>(relaxed = true)
+        every { mockModelChar.uuid } returns BluetoothConstants.UUID_CHARACTERISTIC_MODEL_NUMBER
+        every { mockModelChar.getStringValue(0) } returns "010-03180-10"
+
+        radarDevice.onOtherCharacteristicUpdateForTesting(mockGatt, mockModelChar)
+
+        assertTrue(radarDevice.isStvzo)
+        assertEquals("010-03180-10", radarDevice.modelNumber)
+        assertTrue(RadarLightController.isStvzo.value)
+    }
+
+    @Test
+    fun testOnOtherCharacteristicUpdate_lightControlUpdatesController() {
+        val mockGatt = mockk<BluetoothGatt>(relaxed = true)
+        val mockLightChar = mockk<BluetoothGattCharacteristic>(relaxed = true)
+        every { mockLightChar.uuid } returns BluetoothConstants.UUID_CHARACTERISTIC_RADAR_LIGHT_CONTROL
+        every { mockLightChar.value } returns byteArrayOf(RadarLightMode.SOLID.commandByte)
+
+        radarDevice.onOtherCharacteristicUpdateForTesting(mockGatt, mockLightChar)
+
+        assertEquals(RadarLightMode.SOLID, RadarLightController.currentMode.value)
+        assertEquals(RadarLightMode.SOLID, RadarStateRepository.getState().lightMode)
+    }
+
+    @Test
+    fun testWatchdog_resetsSensorsToClearOnStarvation() {
+        radarDevice.processTargetsForTesting(listOf(RadarTarget(1, 10f, 6f, ThreatLevel.APPROACHING)))
+        assertEquals(10.0, radarDevice.getSensor(SensorType.RADAR_CLOSEST_DISTANCE_m).value)
+        assertEquals(1, radarDevice.getSensor(SensorType.RADAR_THREAT_COUNT).value)
+
+        radarDevice.watchdogRunnableForTesting.run()
+
+        assertNull(radarDevice.getSensor(SensorType.RADAR_CLOSEST_DISTANCE_m).value)
+        assertEquals(0, radarDevice.getSensor(SensorType.RADAR_THREAT_COUNT).value)
+        assertEquals(0.0, radarDevice.getSensor(SensorType.RADAR_APPROACH_SPEED_mps).value)
+    }
+
+    @Test
+    fun testIsMeasurementCharacteristic_acceptsBothV1AndV2() {
+        assertTrue(radarDevice.isMeasurementCharacteristicForTesting(
+            BluetoothConstants.UUID_CHARACTERISTIC_RADAR_V1
+        ))
+        assertTrue(radarDevice.isMeasurementCharacteristicForTesting(
+            BluetoothConstants.UUID_CHARACTERISTIC_RADAR_V2
+        ))
+        assertFalse(radarDevice.isMeasurementCharacteristicForTesting(
+            BluetoothConstants.UUID_CHARACTERISTIC_RADAR_LIGHT_CONTROL
+        ))
+        assertFalse(radarDevice.isMeasurementCharacteristicForTesting(
+            BluetoothConstants.UUID_CHARACTERISTIC_BATTERY_LEVEL
+        ))
+    }
+
+    @Test
+    fun testConfigureServices_bondedWithV2_enqueuesMtuAndCccd() {
+        val mockGatt = mockk<BluetoothGatt>(relaxed = true)
+        val mockDevice = mockk<android.bluetooth.BluetoothDevice>(relaxed = true)
+        val mockService = mockk<BluetoothGattService>(relaxed = true)
+        val mockV2Char = mockk<BluetoothGattCharacteristic>(relaxed = true)
+        val mockDescriptor = mockk<BluetoothGattDescriptor>(relaxed = true)
+
+        every { mockGatt.device } returns mockDevice
+        every { mockDevice.bondState } returns android.bluetooth.BluetoothDevice.BOND_BONDED
+        every { mockGatt.getService(BluetoothConstants.UUID_SERVICE_RADAR) } returns mockService
+        every { mockGatt.getService(BluetoothConstants.UUID_SERVICE_DEVICE_INFORMATION) } returns null
+        every { mockService.getCharacteristic(BluetoothConstants.UUID_CHARACTERISTIC_RADAR_V2) } returns mockV2Char
+        every { mockService.getCharacteristic(BluetoothConstants.UUID_CHARACTERISTIC_RADAR_LIGHT_CONTROL) } returns null
+        every { mockV2Char.getDescriptor(BluetoothConstants.UUID_CHARACTERISTIC_CLIENT_CONFIG) } returns mockDescriptor
+        every { mockV2Char.properties } returns BluetoothGattCharacteristic.PROPERTY_NOTIFY
+
+        radarDevice.setBluetoothGattForTesting(mockGatt)
+        radarDevice.configureServices(mockGatt)
+
+        assertTrue(radarDevice.isV2Stream)
+        assertTrue(radarDevice.isGattOperationPendingForTesting)
+        val queue = radarDevice.gattQueueForTesting
+        assertEquals(1, queue.size)
+        val op = queue.poll() as MyBTLEDevice.WriteDescriptorOp
+        assertEquals(mockDescriptor, op.descriptor)
+    }
+
+    @Test
+    fun testConfigureServices_unbondedWithV2_fallsBackToV1() {
+        val mockGatt = mockk<BluetoothGatt>(relaxed = true)
+        val mockDevice = mockk<android.bluetooth.BluetoothDevice>(relaxed = true)
+        val mockService = mockk<BluetoothGattService>(relaxed = true)
+        val mockV2Char = mockk<BluetoothGattCharacteristic>(relaxed = true)
+        val mockV1Char = mockk<BluetoothGattCharacteristic>(relaxed = true)
+        val mockDescriptor = mockk<BluetoothGattDescriptor>(relaxed = true)
+
+        every { mockGatt.device } returns mockDevice
+        every { mockDevice.bondState } returns android.bluetooth.BluetoothDevice.BOND_NONE
+        every { mockGatt.getService(BluetoothConstants.UUID_SERVICE_RADAR) } returns mockService
+        every { mockService.getCharacteristic(BluetoothConstants.UUID_CHARACTERISTIC_RADAR_V2) } returns mockV2Char
+        every { mockService.getCharacteristic(BluetoothConstants.UUID_CHARACTERISTIC_RADAR_V1) } returns mockV1Char
+        every { mockV1Char.getDescriptor(BluetoothConstants.UUID_CHARACTERISTIC_CLIENT_CONFIG) } returns mockDescriptor
+
+        radarDevice.configureServices(mockGatt)
+
+        assertFalse(radarDevice.isV2Stream)
+        io.mockk.verify { mockGatt.setCharacteristicNotification(mockV1Char, true) }
+    }
+
+    @Test
+    fun testOnDescriptorWriteCompleted_v2CccdFailure_fallsBackToV1() {
+        val mockGatt = mockk<BluetoothGatt>(relaxed = true)
+        val mockService = mockk<BluetoothGattService>(relaxed = true)
+        val mockV2Char = mockk<BluetoothGattCharacteristic>(relaxed = true)
+        val mockV1Char = mockk<BluetoothGattCharacteristic>(relaxed = true)
+        val mockDescriptor = mockk<BluetoothGattDescriptor>(relaxed = true)
+        val mockV1Desc = mockk<BluetoothGattDescriptor>(relaxed = true)
+
+        every { mockDescriptor.characteristic } returns mockV2Char
+        every { mockV2Char.uuid } returns BluetoothConstants.UUID_CHARACTERISTIC_RADAR_V2
+        every { mockGatt.getService(BluetoothConstants.UUID_SERVICE_RADAR) } returns mockService
+        every { mockService.getCharacteristic(BluetoothConstants.UUID_CHARACTERISTIC_RADAR_V1) } returns mockV1Char
+        every { mockV1Char.getDescriptor(BluetoothConstants.UUID_CHARACTERISTIC_CLIENT_CONFIG) } returns mockV1Desc
+
+        radarDevice.onDescriptorWriteCompletedForTesting(
+            mockGatt,
+            mockDescriptor,
+            BluetoothGatt.GATT_INSUFFICIENT_AUTHENTICATION
+        )
+
+        assertFalse(radarDevice.isV2Stream)
+        io.mockk.verify { mockGatt.setCharacteristicNotification(mockV1Char, true) }
+    }
+
+    @Test
+    fun testProcessTargets_haltsActiveRadarTrafficSimulator() {
+        RadarTrafficSimulator.start(RadarScenario.SINGLE_CAR)
+        assertTrue(RadarTrafficSimulator.isSimulating)
+
+        val v1Char = mockk<BluetoothGattCharacteristic>()
+        every { v1Char.uuid } returns BluetoothConstants.UUID_CHARACTERISTIC_RADAR_V1
+        // V1 payload with 1 target (4 bytes: header 0x00, targetId 1, range 60m, speedAndThreat 0x15)
+        every { v1Char.value } returns byteArrayOf(
+            0x00.toByte(), 0x01.toByte(), 60.toByte(), 0x15.toByte()
+        )
+
+        radarDevice.measurementCharacteristicUpdate(mockk(relaxed = true), v1Char)
+
+        // Verifies hardware packet arrival halted simulation immediately (REQ-CON-029.3)
+        assertFalse(RadarTrafficSimulator.isSimulating)
     }
 }

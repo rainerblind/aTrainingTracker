@@ -105,6 +105,9 @@ fun StravaSettingsDialog(
     var uploadCadence by remember {
         mutableStateOf(prefs.getBoolean("uploadStravaCadence", true))
     }
+    var uploadRadarSummary by remember {
+        mutableStateOf(TrainingApplication.uploadStravaRadarSummary())
+    }
     var showDisconnectConfirmation by remember {
         mutableStateOf(false)
     }
@@ -169,6 +172,7 @@ fun StravaSettingsDialog(
                         .putBoolean("uploadStravaHR", uploadHr)
                         .putBoolean("uploadStravaPower", uploadPower)
                         .putBoolean("uploadStravaCadence", uploadCadence)
+                        .putBoolean("uploadStravaRadarSummary", uploadRadarSummary)
                         .apply()
                     StravaSegmentsSyncWorker.schedule(context)
                     StravaRoutesSyncWorker.schedule(context)
@@ -330,6 +334,12 @@ fun StravaSettingsDialog(
                         title = stringResource(R.string.uploadCadence),
                         checked = uploadCadence,
                         onCheckedChange = { uploadCadence = it }
+                    )
+
+                    SelectiveUploadToggleRow(
+                        title = stringResource(R.string.radar_strava_summary_title),
+                        checked = uploadRadarSummary,
+                        onCheckedChange = { uploadRadarSummary = it }
                     )
                 }
             }

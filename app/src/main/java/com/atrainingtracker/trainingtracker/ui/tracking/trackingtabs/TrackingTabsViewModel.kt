@@ -51,7 +51,6 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import com.atrainingtracker.trainingtracker.elevation.ElevationSource
 import com.atrainingtracker.trainingtracker.database.ExtremaType
-import com.atrainingtracker.trainingtracker.database.KnownLocationsDatabaseManager
 import com.atrainingtracker.trainingtracker.location.LocationNameResolver
 
 // helper class to navigate the fragment container after adding or deletion of a tab
@@ -571,15 +570,13 @@ class TrackingTabsViewModel(
         val matched = locationCalibrationStatus.value
         if (matched != null) {
             viewModelScope.launch(Dispatchers.IO) {
-                val db = KnownLocationsDatabaseManager.getInstance(getApplication())
-                db.updateLocation(
+                knownLocationsRepo?.updateLocation(
                     matched.locationId,
                     matched.locationName,
                     referenceAltitudeMeters,
                     ElevationSource.MANUAL_USER,
                     true
                 )
-                knownLocationsRepo?.loadLocations()
             }
         } else if (saveAsKnownLocation) {
             val location = banalServiceRepository.currentLocation.value
@@ -594,8 +591,7 @@ class TrackingTabsViewModel(
                             location.longitude
                         )
                     }
-                    val db = KnownLocationsDatabaseManager.getInstance(getApplication())
-                    db.upsertLocationByGeofence(
+                    knownLocationsRepo?.upsertLocationByGeofence(
                         location,
                         referenceAltitudeMeters,
                         finalName,
@@ -603,7 +599,6 @@ class TrackingTabsViewModel(
                         ElevationSource.MANUAL_USER,
                         true
                     )
-                    knownLocationsRepo?.loadLocations()
                 }
             }
         }

@@ -32,7 +32,10 @@ public enum ExtremaType {
     MAX_LINE_DISTANCE(R.string.max_line_distance),
     END(R.string.end),
     EFFICIENCY_FACTOR(R.string.efficiency_factor_short),
-    AEROBIC_DECOUPLING(R.string.aerobic_decoupling_short);
+    AEROBIC_DECOUPLING(R.string.aerobic_decoupling_short),
+    DFA_A1_FRESH_BASELINE(R.string.hrv_durability_fresh_baseline),
+    DFA_A1_LATE_MEAN(R.string.hrv_durability_late_mean),
+    DFA_A1_DRIFT_PCT(R.string.hrv_durability_drift);
 
     private final int nameId;
 

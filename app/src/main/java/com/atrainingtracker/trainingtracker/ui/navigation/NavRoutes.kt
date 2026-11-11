@@ -44,6 +44,7 @@ object NavRoutes {
     const val WORKOUTS = "workouts"
     const val PERIODS = "periods"
     const val MORNING_HRV = "morning_hrv"
+    const val HRV_TEST = "hrv_test"
     const val MAP = "map"
     const val MAP_PATTERN = "map?locationId={locationId}"
     const val ARG_LOCATION_ID = "locationId"
@@ -166,6 +167,7 @@ object NavRoutes {
         R.id.drawer_strava -> SettingsBottomSheetType.STRAVA
         R.id.drawer_dropbox -> SettingsBottomSheetType.DROPBOX
         R.id.drawer_google_drive -> SettingsBottomSheetType.GOOGLE_DRIVE
+        R.id.drawer_health_connect -> SettingsBottomSheetType.HEALTH_CONNECT
         R.id.drawer_export -> SettingsBottomSheetType.EXPORT
         R.id.drawer_units -> SettingsBottomSheetType.UNITS
         R.id.drawer_display_settings -> SettingsBottomSheetType.DISPLAY

@@ -24,12 +24,16 @@
     <string name="hrv_dfa_a1_short">a1</string>
     <string name="hrv_artifact_rate">Artefaktrate</string>
     <string name="hrv_artifact_rate_short">Art. %</string>
+    <string name="hrv_sdnn">SDNN</string>
+    <string name="hrv_sdnn_short">SDNN</string>
 
     <string name="hrv_info_title">Herzfrequenzvariabilität &amp; Aerobe Schwellen</string>
     <string name="hrv_info_trailing_lag_title">Gleitendes Zeitfenster &amp; Verzögerung</string>
     <string name="hrv_info_trailing_lag_desc">Echtzeit-DFA-a1 wird über ein gleitendes 2-Minuten-Fenster berechnet (alle 5 Sekunden aktualisiert) und rMSSD über 60 Sekunden. Tempoänderungen wirken sich erst nach 1–2 Minuten auf die autonome Telemetrie aus.</string>
     <string name="hrv_info_sensor_recommendation_title">Sensorempfehlung</string>
-    <string name="hrv_info_sensor_recommendation_desc">Präzise Beat-to-Beat-RR-Intervalle erfordern einen angefeuchteten EKG-Brustgurt (wie Polar H10 oder Garmin HRM-Pro). Optische Handgelenkssensoren glätten Intervalle und eignen sich nicht für DFA a1.</string>
+    <string name="hrv_info_sensor_recommendation_desc">Präzise Beat-to-Beat-RR-Intervalle erfordern einen ungeglätteten EKG-Brustgurt (wie Polar H10, Polar H9, Garmin HRM-Dual, HRM-Pro oder HRM-Pro Plus). Optische Handgelenkssensoren und günstige Brustgurte mit Firmware-Glättung (z. B. Magene, CooSpo) verfälschen RR-Intervalle und eignen sich nicht für DFA a1.</string>
+    <string name="hrv_info_smoothed_warning_title">Geglätteter RR-Datenstrom erkannt</string>
+    <string name="hrv_info_smoothed_warning_desc">Ihr aktiver Sensor wendet eine interne Firmware-Glättung oder synthetische Quantisierung auf RR-Intervalle an. DFA a1 und aerobe Schwellenwerte sind verfälscht und unzuverlässig.</string>
     <string name="hrv_info_zones_title">Aerobe Schwellenbereiche</string>
     <string name="hrv_info_zones_desc">DFA a1 &gt; 0,75 kennzeichnet aerobe Grundlagenausdauer (Zone 2). Werte zwischen 0,75 und 0,50 markieren den Schwellenübergang (Zone 3). Werte unter 0,50 signalisieren hohe anaerobe Intensität (Zone 4).</string>
     <string name="hrv_info_disclaimer_title">Medizinischer Hinweis</string>
@@ -42,6 +46,7 @@
     <string name="morning_hrv_posture_supine">Liegend</string>
     <string name="morning_hrv_posture_seated">Sitzend</string>
     <string name="morning_hrv_posture_standing">Stehend</string>
+    <string name="morning_hrv_posture_overnight_wearable">Über Nacht Wearable</string>
     <string name="morning_hrv_duration_label">Dauer</string>
     <string name="morning_hrv_duration_60s">60 s (Standard)</string>
     <string name="morning_hrv_duration_120s">120 s (Erweitert)</string>
@@ -57,10 +62,23 @@
     <string name="morning_hrv_instructions_desc">Direkt nach dem Aufwachen und Entleeren der Blase messen. Ruhig bleiben, normal atmen und nicht sprechen. Haltung beibehalten für verlässliche SWC-Vergleiche.</string>
     <string name="morning_hrv_artifact_warning_title">Hohe Artefaktrate</string>
     <string name="morning_hrv_artifact_warning_desc">Artefaktrate überschreitet 5%% (%1$.1f%%). Bitte Brustgurt-Elektroden anfeuchten und korrekten Sitz prüfen.</string>
+    <string name="morning_hrv_smoothed_warning_title">Geglätteter RR-Datenstrom erkannt</string>
+    <string name="morning_hrv_smoothed_warning_desc">Auf diesem Sensor wurde eine Firmware-Glättung erkannt. Die Schlag-zu-Schlag-Varianz ist künstlich unterdrückt (rMSSD ist künstlich winzig). Wir empfehlen, diese Messung nicht zu speichern, um Ihre Bereitschaftsbasis nicht zu verfälschen.</string>
     <string name="morning_hrv_summary_rmssd">rMSSD: %1$.1f ms</string>
     <string name="morning_hrv_summary_ln_rmssd">ln(rMSSD): %1$.2f</string>
     <string name="morning_hrv_summary_resting_hr">Ruhepuls: %1$d bpm</string>
+    <string name="morning_hrv_summary_sdnn">SDNN: %1$.1f ms</string>
+    <string name="morning_hrv_summary_artifact_rate">Artefaktrate: %1$.1f%%</string>
     <string name="morning_hrv_saved_toast">Morgendlicher HRV-Wert gespeichert</string>
+    <string name="morning_hrv_error_no_rr">Keine RR-Intervalle aufgezeichnet. Bitte Verbindung zum Herzfrequenzsensor prüfen.</string>
+    <string name="morning_hrv_beat_count">%1$d Schläge</string>
+    <string name="morning_hrv_status_optimal">Optimale autonome Bereitschaft</string>
+    <string name="morning_hrv_status_fatigued_low">Geringe Bereitschaft (Autonome Ermüdung)</string>
+    <string name="morning_hrv_status_elevated">Erhöhte parasympathische Aktivität</string>
+    <string name="morning_hrv_calibration_baseline_progress">Tag %1$d von %2$d Basis-Kalibrierung</string>
+    <string name="morning_hrv_calibration_weekly_progress">Tag %1$d von %2$d wöchentlichen Messungen</string>
+    <string name="morning_hrv_calibration_complete">Kalibrierung abgeschlossen</string>
+    <string name="morning_hrv_btn_saved">Gespeichert</string>
 
     <!-- Longitudinal HRV Readiness Trend in Periods Screen (ATT-3557 / REQ-PER-033) -->
     <string name="hrv_readiness_trend_title">HRV-Bereitschaftstrend</string>
@@ -77,9 +95,136 @@
     <string name="hrv_scatter_card_subtitle">a1 vs. Herzfrequenz &amp; Radleistung</string>
     <string name="hrv_scatter_aerobic_threshold">Aerobe Schwelle (a1 = 0,75)</string>
     <string name="hrv_scatter_anaerobic_threshold">Anaerobe Schwelle (a1 = 0,50)</string>
+    <string name="hrv_scatter_aerobic_threshold_fmt">Aerobe Schwelle (a1 = %1$.2f)</string>
+    <string name="hrv_scatter_anaerobic_threshold_fmt">Anaerobe Schwelle (a1 = %1$.2f)</string>
     <string name="hrv_scatter_toggle_hr">Herzfrequenz</string>
     <string name="hrv_scatter_toggle_power">Leistung</string>
+    <string name="hrv_scatter_toggle_pace">Pace</string>
+    <string name="hrv_scatter_smoothed_warning_title">Geglätteter Sensordatenstrom</string>
+    <string name="hrv_scatter_smoothed_warning_desc">Aufgezeichnete RR-Intervalle weisen Firmware-Glättung oder synthetische Quantisierung auf. Schwellenwertschätzungen (a1 = 0,75 / 0,50) können verzerrt sein.</string>
     <string name="hrv_scatter_artifact_suppressed">Intervalle mit hohen Artefakten (&gt;5%%) unterdrückt</string>
     <string name="hrv_scatter_no_data">Keine HRV-Daten für diese Trainingseinheit verfügbar</string>
     <string name="hrv_chart_artifact_gap_label">Artefaktlücke</string>
+
+    <!-- DFA a1 Threshold Tuning & Dynamic Zones (ATT-6715 / REQ-TRK-061) -->
+    <string name="tuning_dfa_a1_t1_title">DFA a1 Aerobe Schwelle (T1)</string>
+    <string name="tuning_dfa_a1_t1_desc">Schwelle zwischen aerober Basis (Zone 2) und Übergang (Zone 3). Höher = fraktaler / aerober.</string>
+    <string name="tuning_dfa_a1_t2_title">DFA a1 Anaerobe Schwelle (T2)</string>
+    <string name="tuning_dfa_a1_t2_desc">Schwelle zwischen Übergang (Zone 3) und anaerober Intensität (Zone 4). Höher = fraktaler / aerober.</string>
+    <string name="tuning_dfa_a1_default">Standard: %1$.2f (Invariante: T1 \u2265 T2 + 0.05)</string>
+    <string name="hrv_info_zones_desc_fmt">DFA a1 &gt; %1$.2f kennzeichnet aerobe Grundlagenausdauer (Zone 2). Werte zwischen %1$.2f und %2$.2f markieren den Schwellenübergang (Zone 3). Werte unter %2$.2f signalisieren hohe anaerobe Intensität (Zone 4).</string>
+
+    <!-- Configurable Artifact Gate Threshold (ATT-6714 / REQ-TRK-060.4) -->
+    <string name="tuning_hrv_artifact_gate_title">HRV-Artefaktgrenze</string>
+    <string name="tuning_hrv_artifact_gate_desc" formatted="false">Maximale Artefaktrate im Zeitfenster, bevor DFA a1 unterdrückt wird. Bereich: 3,0% bis 5,0%.</string>
+    <string name="tuning_hrv_artifact_gate_default">Standard: %1$.1f%%</string>
+
+    <!-- Morning HRV CTA & Onboarding in Fitness & Physiology (ATT-6720 / REQ-UI-513) -->
+    <string name="hrv_measure_morning_cta">Morgendliche HRV messen</string>
+    <string name="hrv_empty_onboarding_title">Verfolge deine Erholung mit der morgendlichen HRV</string>
+    <string name="hrv_empty_onboarding_desc">Führe eine kurze 60–120s Messung mit einem Herzfrequenzgurt durch, um deine autonome Baseline und deinen Erholungskorridor aufzubauen.</string>
+    <string name="hrv_delete_entry_title">HRV-Messung löschen</string>
+    <string name="hrv_delete_entry_confirm">Möchtest du diese morgendliche HRV-Messung wirklich löschen?</string>
+    <string name="hrv_history_title">Morgendliche HRV-Historie</string>
+
+    <!-- Lag-Aligned, Confidence-Gated HRVT1/HRVT2 Thresholds (ATT-3554 / REQ-PER-036) -->
+    <string name="hrv_threshold_card_title">DFA-a1-Schwellenwertschätzungen (HRVT1 / HRVT2)</string>
+    <string name="hrv_threshold_card_subtitle">Verzögerungsbereinigte, konfidenzgeprüfte physiologische Schwellenwerte</string>
+    <string name="hrv_threshold_hrvt1_label">Aerobe Schwelle (HRVT1)</string>
+    <string name="hrv_threshold_hrvt2_label">Anaerobe Schwelle (HRVT2)</string>
+    <string name="hrv_threshold_confidence_high">Hohe Konfidenz</string>
+    <string name="hrv_threshold_confidence_medium">Mittlere Konfidenz</string>
+    <string name="hrv_threshold_confidence_low">Geringe Konfidenz</string>
+    <string name="hrv_threshold_insufficient_span">Unzureichende Spannweite</string>
+    <string name="hrv_threshold_provenance_free">Freies Training (10–60 Min. Erholungsfenster)</string>
+    <string name="hrv_threshold_provenance_step">Geführter Stufentest</string>
+    <string name="hrv_threshold_provenance_ramp">Geführter kontinuierlicher Rampentest (MRT-bereinigt)</string>
+    <string name="hrv_threshold_stat_r2">R²: %1$.2f</string>
+    <string name="hrv_threshold_stat_neff">N: %1$d Min.</string>
+    <string name="hrv_threshold_stat_neff_steps">N: %1$d Stufen</string>
+    <string name="hrv_threshold_stat_artifact">Mittlere Artefaktrate: %1$.1f%%</string>
+    <string name="hrv_threshold_diag_steady">Gleichmäßige Ausdauer: DFA a1 blieb über der Schwellenspanne</string>
+    <string name="hrv_threshold_diag_high_artifact">Hohe RR-Artefaktrate (%1$.1f%% &gt; 5.0%%)</string>
+    <string name="hrv_threshold_diag_short_duration">Unzureichende Übergangsdauer (N = %1$d &lt; %2$d)</string>
+    <string name="hrv_threshold_diag_low_r2">Geringe lineare Korrelation (R² = %1$.2f &lt; %2$.2f)</string>
+    <string name="hrv_threshold_no_estimate">--</string>
+    <string name="hrv_threshold_informative_only">Nur zur Information; von Zonenaktualisierungen ausgeschlossen</string>
+
+    <!-- Guided DFA a1 Ramp/Step Test Screen (ATT-4969 / REQ-TRK-071) -->
+    <string name="hrv_test_title">Geführter DFA a1 Schwellentest</string>
+    <string name="hrv_test_subtitle">Aerobes &amp; Anaerobes Schwellenprotokoll</string>
+    <string name="hrv_test_protocol_label">Protokolltyp</string>
+    <string name="hrv_test_protocol_step">Progressiver Stufentest</string>
+    <string name="hrv_test_protocol_ramp">Kontinuierlicher Rampentest</string>
+    <string name="hrv_test_sport_label">Sportart</string>
+    <string name="hrv_test_sport_cycling">Radfahren (Watt)</string>
+    <string name="hrv_test_sport_running">Laufen (Tempo / Pace)</string>
+    <string name="hrv_test_step_duration_label">Stufendauer</string>
+    <string name="hrv_test_step_duration_4min">4 Min. (Empfohlen)</string>
+    <string name="hrv_test_step_duration_3min">3 Min. (Minimum)</string>
+    <string name="hrv_test_start_load_label">Startbelastung</string>
+    <string name="hrv_test_increment_label">Stufensteigerung</string>
+    <string name="hrv_test_warmup_label">Aufwärmdauer</string>
+    <string name="hrv_test_warmup_desc">10 Minuten gleichmäßiges Aufwärmen vor den Teststufen</string>
+    <string name="hrv_test_preflight_title">Vorflug-Sensorkontrolle</string>
+    <string name="hrv_test_preflight_checking">EKG-RR-Stream &amp; Signalqualität werden überprüft…</string>
+    <string name="hrv_test_preflight_pass" formatted="false">Hohe Sensorqualität (Artefakte ≤ 3,0 %)</string>
+    <string name="hrv_test_preflight_warning" formatted="false">Mäßige Sensorqualität (Artefakte 3,0–5,0 %)</string>
+    <string name="hrv_test_preflight_fail" formatted="false">Sensor ungeeignet (Artefakte &gt; 5,0 % oder keine RR-Daten)</string>
+    <string name="hrv_test_preflight_no_sensor">Kein Herzfrequenzsensor verbunden. Bitte verbinden Sie einen EKG-Brustgurt.</string>
+    <string name="hrv_test_phase_warmup">Aufwärmen</string>
+    <string name="hrv_test_phase_step">Stufe %1$d</string>
+    <string name="hrv_test_phase_ramp">Rampe</string>
+    <string name="hrv_test_phase_cooldown">Auslaufen / Abwärmen</string>
+    <string name="hrv_test_target_power">Ziel: %1$d W</string>
+    <string name="hrv_test_target_pace">Ziel: %1$s</string>
+    <string name="hrv_test_time_remaining">Verbleibende Zeit: %1$s</string>
+    <string name="hrv_test_live_a1">Live-a1: %1$.2f</string>
+    <string name="hrv_test_live_artifacts">Artefakte: %1$.1f%%</string>
+    <string name="hrv_test_early_complete_title">Schwellen erfasst!</string>
+    <string name="hrv_test_early_complete_desc">DFA a1 ist unter 0,45 gefallen. Sowohl HRVT1 als auch HRVT2 sind erfasst. Sie können nun ohne Ausbelastung zum Abwärmen übergehen.</string>
+    <string name="hrv_test_btn_start">Test starten</string>
+    <string name="hrv_test_btn_finish">Test beenden</string>
+    <string name="hrv_test_btn_cooldown">Abwärmen beginnen</string>
+    <string name="hrv_test_btn_cancel">Test abbrechen</string>
+
+    <!-- Training Zone Comparison & Multi-Session Consensus (ATT-3555 / REQ-PER-037) -->
+    <string name="hrv_zone_comparison_title">Trainingszonen-Vergleich</string>
+    <string name="hrv_zone_comparison_subtitle">Vergleich mit konfigurierten Coggan-Leistungs- &amp; HF-Zonen</string>
+    <string name="hrv_zone_comparison_power_header">Radleistung (Coggan)</string>
+    <string name="hrv_zone_comparison_hrvt1_power_delta">HRVT1 vs. Z2 Max (%1$s W)</string>
+    <string name="hrv_zone_comparison_hrvt2_power_delta">HRVT2 vs. FTP (%1$s W)</string>
+    <string name="hrv_zone_comparison_configured_ftp">Konfigurierte FTP: %1$d W</string>
+    <string name="hrv_zone_comparison_hr_header">Herzfrequenz-Zonen</string>
+    <string name="hrv_zone_comparison_hrvt1_hr_delta">HRVT1 vs. Z2 Max (%1$s bpm)</string>
+    <string name="hrv_zone_comparison_hrvt2_hr_delta">HRVT2 vs. Z4 Max (%1$s bpm)</string>
+    <string name="hrv_zone_comparison_hrvt1_pct_hrmax">HRVT1: %1$d%% HFmax</string>
+    <string name="hrv_zone_comparison_hrvt2_pct_hrmax">HRVT2: %1$d%% HFmax</string>
+    <string name="hrv_zone_comparison_hr_tooltip" formatted="false">HF-Zonen in den Einstellungen basieren auf HFmax. Bei trainierten Sportlern liegt die aerobe Schwelle HRVT1 typischerweise bei 75–82% HFmax. Submaximale HRV-Schwellen erfassen HFmax nicht und können HF-Zonen nicht überschreiben.</string>
+    <string name="hrv_consensus_badge_unlocked">Konsens freigegeben</string>
+    <string name="hrv_consensus_badge_locked">Konsens gesperrt</string>
+    <string name="hrv_consensus_reason_guided_high">Geführtes Testprotokoll mit hoher Konfidenz verifiziert.</string>
+    <string name="hrv_consensus_reason_multi_session">Mehrfachsitzungs-Konsens verifiziert (%1$d Sitzungen innerhalb von ±10 W).</string>
+    <string name="hrv_consensus_reason_insufficient_sessions">Erfordert geführten Test mit hoher Konfidenz oder ≥3 übereinstimmende Sitzungen innerhalb von 30 Tagen.</string>
+    <string name="hrv_consensus_reason_spread_too_high">Neuere Schätzungen weichen um mehr als ±10 W voneinander ab.</string>
+    <string name="hrv_zone_comparison_btn_update_power">Leistungszonen aktualisieren</string>
+    <string name="hrv_zone_comparison_dialog_title">Leistungszonen aktualisieren (FTP)</string>
+    <string name="hrv_zone_comparison_dialog_body">Konfigurierte FTP von %1$d W auf %2$d W aktualisieren?\n\nProtokoll: %3$s\nAnpassung: %4$s\n\nAchtung: Die DFA-α1-Schwelle (HRVT2/RCP) kann 3–5%% über dem 60-minütigen MLSS liegen, wenn sie in einem Rampentest ermittelt wurde.</string>
+    <string name="hrv_zone_comparison_dialog_confirm">FTP aktualisieren</string>
+    <string name="hrv_zone_comparison_dialog_cancel">Abbrechen</string>
+    <string name="hrv_zone_comparison_forward_mader">Stoffwechselmodell kalibrieren</string>
+
+    <!-- Autonomic Durability & Drift (ATT-4970 / REQ-PER-038) -->
+    <string name="hrv_durability_title">Autonome Belastungsverträglichkeit</string>
+    <string name="hrv_durability_subtitle">DFA-α1-Drift &amp; aerobe Belastbarkeit (Rogers et al. 2021)</string>
+    <string name="hrv_durability_fresh_baseline">Frische Basislinie (15–45 Min.)</string>
+    <string name="hrv_durability_late_mean">Spätes Segment (>60 Min.)</string>
+    <string name="hrv_durability_drift">Autonome Drift (Δα1)</string>
+    <string name="hrv_durability_drift_fmt">%1$+.1f%%</string>
+    <string name="hrv_durability_insufficient_data">Unzureichende Daten mit angeglichener Intensität (&lt;10 Min.)</string>
+    <string name="hrv_durability_matched_intensity">Angeglichene Intensität: %1$d W (±10%%)</string>
+    <string name="hrv_durability_matched_speed">Angeglichene Geschwindigkeit: %1$s (±10%%)</string>
+    <string name="hrv_durability_trajectory_title">15-Minuten-Abschnittsverlauf</string>
+    <string name="hrv_durability_slice_label">%1$d–%2$d Min.</string>
+    <string name="hrv_durability_description">Vergleicht DFA α1 in der frischen Basislinie (15–45 Min.) mit späteren Einheitenabschnitten (>60 Min.) bei angeglichener Belastung zur Quantifizierung von autonomer Ermüdung und vagaler Resistenz.</string>
 </resources>

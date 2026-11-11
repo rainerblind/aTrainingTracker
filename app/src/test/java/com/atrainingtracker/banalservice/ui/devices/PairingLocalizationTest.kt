@@ -18,10 +18,11 @@
 
 package com.atrainingtracker.banalservice.ui.devices
 
+import com.atrainingtracker.testing.LocalizationTestCache
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.io.File
 
 /**
  * Unit test verifying 9-language localization parity and non-empty content
@@ -48,32 +49,16 @@ class PairingLocalizationTest {
         "devices_pair_protocol_ble"
     )
 
-    private fun findFile(relativePath: String): File {
-        val candidates = listOf(
-            File(relativePath),
-            File("app/$relativePath"),
-            File("../$relativePath"),
-            File("../../$relativePath")
-        )
-        return candidates.firstOrNull { it.exists() }
-            ?: error("File not found in candidates: $relativePath")
-    }
-
     @Test
     fun testPairingStringsExistInAllNineLocales() {
         for (targetKey in targetKeys) {
-            val regex = Regex("""<string name="$targetKey">(.*?)</string>""", RegexOption.DOT_MATCHES_ALL)
-
             for (locale in locales) {
-                val file = findFile("src/main/res/$locale/strings.xml")
-                assertTrue("strings.xml does not exist for $locale", file.exists())
+                val strings = LocalizationTestCache.getStrings(locale)
+                assertTrue("Target string key '$targetKey' missing in $locale", strings.containsKey(targetKey))
 
-                val content = file.readText()
-                val match = regex.find(content)
-                assertTrue("Target string key '$targetKey' missing in $locale", match != null)
-
-                val text = match!!.groupValues[1].trim()
-                assertFalse("Target string key '$targetKey' is empty in $locale", text.isEmpty())
+                val text = strings[targetKey]?.trim()
+                assertNotNull("Target string key '$targetKey' must not be null in $locale", text)
+                assertFalse("Target string key '$targetKey' is empty in $locale", text!!.isEmpty())
             }
         }
     }

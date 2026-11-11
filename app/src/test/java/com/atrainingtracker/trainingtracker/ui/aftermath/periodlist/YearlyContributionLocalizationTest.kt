@@ -18,13 +18,14 @@
 
 package com.atrainingtracker.trainingtracker.ui.aftermath.periodlist
 
+import com.atrainingtracker.testing.LocalizationTestCache
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.io.File
-import javax.xml.parsers.DocumentBuilderFactory
 
 /**
  * TST-PER-031.6: 9-Language Localization Parity Audit for Yearly Contribution Grids (REQ-PER-025.7).
+ * Refactored to LocalizationTestCache per docs/coding_standards.md §5.4 and REQ-PRO-049.
  */
 class YearlyContributionLocalizationTest {
 
@@ -47,32 +48,12 @@ class YearlyContributionLocalizationTest {
 
     @Test
     fun testYearlyContributionStringsExistAcrossAll9Locales() {
-        var baseDir = File(System.getProperty("user.dir") ?: ".")
-        while (!File(baseDir, "app").exists() && baseDir.parentFile != null) {
-            baseDir = baseDir.parentFile!!
-        }
-        val resDir = File(baseDir, "app/src/main/res")
-
-        val docBuilder = DocumentBuilderFactory.newInstance().newDocumentBuilder()
-
         for (locale in supportedLocales) {
-            val stringsFile = File(resDir, "$locale/strings.xml")
-            assertTrue("strings.xml must exist for locale $locale", stringsFile.exists())
-
-            val doc = docBuilder.parse(stringsFile)
-            val stringNodes = doc.getElementsByTagName("string")
-            val stringKeys = mutableSetOf<String>()
-
-            for (i in 0 until stringNodes.length) {
-                val node = stringNodes.item(i)
-                val nameAttr = node.attributes.getNamedItem("name")?.nodeValue
-                if (nameAttr != null) {
-                    stringKeys.add(nameAttr)
-                }
-            }
-
+            val strings = LocalizationTestCache.getStrings(locale, "strings.xml")
             for (key in requiredKeys) {
-                assertTrue("Locale '$locale' must contain string key '$key'", stringKeys.contains(key))
+                val value = strings[key]
+                assertNotNull("String key $key must exist in locale $locale", value)
+                assertTrue("String key $key must not be blank in locale $locale", value!!.isNotBlank())
             }
         }
     }

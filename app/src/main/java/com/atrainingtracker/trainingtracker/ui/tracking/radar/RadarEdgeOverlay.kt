@@ -18,6 +18,7 @@
 
 package com.atrainingtracker.trainingtracker.ui.tracking.radar
 
+import android.content.res.Configuration
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -28,20 +29,25 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -57,21 +63,28 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.atrainingtracker.R
+import com.atrainingtracker.banalservice.devices.radar.LaneState
 import com.atrainingtracker.banalservice.devices.radar.RadarAudioSnoozeMode
 import com.atrainingtracker.banalservice.devices.radar.RadarAudioSnoozeState
 import com.atrainingtracker.banalservice.devices.radar.RadarConnectionState
 import com.atrainingtracker.banalservice.devices.radar.RadarState
+import com.atrainingtracker.banalservice.devices.radar.RadarTarget
 import com.atrainingtracker.banalservice.devices.radar.ThreatLevel
+import com.atrainingtracker.banalservice.devices.radar.VehicleSizeCategory
 import com.atrainingtracker.trainingtracker.settings.RadarClearMode
 import com.atrainingtracker.trainingtracker.settings.RadarEdgeSide
+import com.atrainingtracker.trainingtracker.settings.RadarTrafficOrientation
+import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 import com.atrainingtracker.trainingtracker.ui.theme.TTColor
 import kotlinx.coroutines.delay
 import kotlin.math.roundToInt
@@ -81,15 +94,58 @@ import kotlin.math.roundToInt
  */
 object RadarOverlayMath {
     const val MAX_RADAR_RANGE_METERS = 140.0f
+    const val MAX_RADAR_RANGE_V2_METERS = 175.0f
 
     /**
-     * Normalizes a target distance (0..140m) to a vertical coordinate fraction (0.0..1.0),
-     * where 0.0 corresponds to max range (top of rail, farthest vehicle)
-     * and 1.0 corresponds to 0m range (bottom of rail, closest vehicle / cyclist).
+     * Resolves dynamic maximum rail range in meters: 175m for V2 radar or distant targets, 140m otherwise.
+     */
+    fun resolveRailMaxRange(radarState: RadarState): Float {
+        val hasDistantOrV2 = radarState.targets.any {
+            it.rangeMeters > MAX_RADAR_RANGE_METERS ||
+            it.vehicleSizeCategory != VehicleSizeCategory.UNKNOWN_OR_LIGHT ||
+            it.lateralOffsetMeters != null
+        }
+        return if (hasDistantOrV2) MAX_RADAR_RANGE_V2_METERS else MAX_RADAR_RANGE_METERS
+    }
+
+    /**
+     * Normalizes a target distance (0..maxRange) to a vertical coordinate fraction (0.0..1.0),
+     * where 1.0 corresponds to max range (bottom of rail, farthest vehicle)
+     * and 0.0 corresponds to 0m range (top of rail, closest vehicle / cyclist).
+     *
+     * Approaching vehicles enter at the bottom of the rail and travel upward toward the cyclist.
      */
     fun normalizeRadarRange(rangeMeters: Float, maxRangeMeters: Float = MAX_RADAR_RANGE_METERS): Float {
-        if (maxRangeMeters <= 0f) return 1.0f
-        return (1.0f - (rangeMeters / maxRangeMeters)).coerceIn(0.0f, 1.0f)
+        if (maxRangeMeters <= 0f) return 0.0f
+        return (rangeMeters / maxRangeMeters).coerceIn(0.0f, 1.0f)
+    }
+
+    /**
+     * Translates target lateral deviation into horizontal dp displacement across [-maxOffsetDp, +maxOffsetDp].
+     * Respects [RadarTrafficOrientation] (RHT vs LHT).
+     */
+    fun calculateHorizontalOffsetDp(
+        target: RadarTarget,
+        trafficOrientation: RadarTrafficOrientation = RadarTrafficOrientation.RIGHT_HAND,
+        maxOffsetDp: Float = 6.0f
+    ): Float {
+        val rawOffset = target.lateralOffsetMeters
+        val offsetDp = if (rawOffset != null) {
+            val clampedM = rawOffset.coerceIn(-3.0f, 3.0f)
+            (clampedM / 3.0f) * maxOffsetDp
+        } else {
+            when (target.laneState) {
+                LaneState.PASSING_LANE -> -4.0f
+                LaneState.CHANGING_LANE -> -2.0f
+                LaneState.IN_RIDER_LANE, LaneState.UNKNOWN -> 0.0f
+            }
+        }
+
+        return if (trafficOrientation == RadarTrafficOrientation.LEFT_HAND) {
+            -offsetDp
+        } else {
+            offsetDp
+        }
     }
 
     /**
@@ -123,6 +179,25 @@ object RadarOverlayMath {
             else -> "M"
         }
     }
+
+    /**
+     * Resolves composite threat accessibility description string (REQ-TRK-064.2).
+     */
+    fun buildThreatDescription(
+        count: Int,
+        isFastApproaching: Boolean,
+        snoozeSuffix: String? = null,
+        formatBase: String? = null
+    ): String {
+        val base = if (formatBase != null) {
+            String.format(formatBase, count)
+        } else if (isFastApproaching) {
+            "$count threats (high speed)"
+        } else {
+            "$count threats"
+        }
+        return if (snoozeSuffix != null) "$base, $snoozeSuffix" else base
+    }
 }
 
 /**
@@ -135,20 +210,26 @@ object RadarOverlayMath {
  * - Fail-safe disconnect: Displays an amber hazard badge and NEVER displays green "All Clear" when
  *   in [RadarConnectionState.DISCONNECTED_ERROR] (REQ-TRK-062.4).
  */
+@Suppress("LongMethod")
 @Composable
 fun RadarEdgeOverlay(
     radarState: RadarState,
-    edgeSide: RadarEdgeSide,
-    clearMode: RadarClearMode,
+    edgeSide: RadarEdgeSide = RadarEdgeSide.RIGHT,
+    clearMode: RadarClearMode = RadarClearMode.SLIM_RAIL,
+    trafficOrientation: RadarTrafficOrientation = RadarTrafficOrientation.RIGHT_HAND,
     modifier: Modifier = Modifier,
-    onBadgeClick: () -> Unit = {}
+    onBadgeClick: () -> Unit = {},
+    onReconnectClick: (() -> Unit)? = null
 ) {
     val hasActiveThreats = radarState.targets.isNotEmpty() || radarState.overallThreatLevel != ThreatLevel.NONE
     val isConnected = radarState.connectionState == RadarConnectionState.CONNECTED
     val isClear = isConnected && !hasActiveThreats
     val isDisconnectError = RadarOverlayMath.isFailSafeDisconnect(radarState.connectionState)
+    val has2DData = radarState.targets.any {
+        it.lateralOffsetMeters != null || it.vehicleSizeCategory != VehicleSizeCategory.UNKNOWN_OR_LIGHT
+    }
 
-    // Auto-hide timer for AUTO_HIDE_3S mode
+    // Auto-hide timer for AUTO_HIDE_3S mode (rail only)
     var isAutoHideActive by remember { mutableStateOf(false) }
     LaunchedEffect(isClear, clearMode) {
         if (clearMode == RadarClearMode.AUTO_HIDE_3S && isClear) {
@@ -159,42 +240,55 @@ fun RadarEdgeOverlay(
         }
     }
 
-    val overlayAlpha by animateFloatAsState(
+    val railAlpha by animateFloatAsState(
         targetValue = if (isAutoHideActive) 0f else 1f,
         animationSpec = tween(durationMillis = 300),
-        label = "radarOverlayAlpha"
+        label = "radarRailAlpha"
     )
 
-    // Pulsing animation for FAST_APPROACHING red alert
-    val infiniteTransition = rememberInfiniteTransition(label = "pulse")
-    val pulseAlpha by infiniteTransition.animateFloat(
-        initialValue = 0.4f,
-        targetValue = 0.95f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(350, easing = LinearEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "fastApproachingPulse"
-    )
+    // Pulsing animation for FAST_APPROACHING red alert (only composed when fast threats active)
+    val pulseAlpha = if (radarState.overallThreatLevel == ThreatLevel.FAST_APPROACHING) {
+        val infiniteTransition = rememberInfiniteTransition(label = "pulse")
+        val alpha by infiniteTransition.animateFloat(
+            initialValue = 0.4f,
+            targetValue = 0.95f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(350, easing = LinearEasing),
+                repeatMode = RepeatMode.Reverse
+            ),
+            label = "fastApproachingPulse"
+        )
+        alpha
+    } else {
+        1.0f
+    }
 
-    // Outer container: width 24dp, fillMaxHeight, zero pointer capture
+    val containerWidth = if (has2DData) 30.dp else 24.dp
+
+    // Outer container: fillMaxHeight, zero pointer capture
     Column(
         modifier = modifier
-            .width(24.dp)
+            .width(containerWidth)
             .fillMaxHeight()
-            .alpha(overlayAlpha)
+            .navigationBarsPadding()
             .testTag("RadarEdgeOverlay"),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Spacer(modifier = Modifier.height(8.dp))
 
-        // Top Status Badge Pill (only clickable element in the overlay)
+        // Top Status Badge Pill (only clickable element in the overlay, permanently visible)
         RadarStatusBadgePill(
             radarState = radarState,
             isClear = isClear,
             isDisconnectError = isDisconnectError,
             pulseAlpha = pulseAlpha,
-            onClick = onBadgeClick
+            onClick = {
+                if (isDisconnectError && onReconnectClick != null) {
+                    onReconnectClick()
+                } else {
+                    onBadgeClick()
+                }
+            }
         )
 
         Spacer(modifier = Modifier.height(6.dp))
@@ -207,7 +301,7 @@ fun RadarEdgeOverlay(
             else -> true // SLIM_RAIL or AUTO_HIDE_3S before timeout
         }
 
-        if (showRail) {
+        if (showRail && railAlpha > 0f) {
             RadarVerticalRail(
                 radarState = radarState,
                 hasActiveThreats = hasActiveThreats,
@@ -215,9 +309,12 @@ fun RadarEdgeOverlay(
                 isDisconnectError = isDisconnectError,
                 clearMode = clearMode,
                 pulseAlpha = pulseAlpha,
+                edgeSide = edgeSide,
+                trafficOrientation = trafficOrientation,
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(1f)
+                    .alpha(railAlpha)
                     .padding(bottom = 12.dp)
             )
         } else {
@@ -274,55 +371,151 @@ private fun RadarStatusBadgePill(
             badgeTextColor = Color.White
         }
         radarState.overallThreatLevel == ThreatLevel.FAST_APPROACHING -> {
-            description = "${radarState.targets.size} threats (high speed)"
+            val baseDesc = stringResource(R.string.radar_overlay_threats_fast_format, radarState.targets.size)
+            description = if (snoozeState.isSnoozed) {
+                val snoozeLabel = when {
+                    snoozeState.mode == RadarAudioSnoozeMode.FAST_ONLY ->
+                        stringResource(R.string.radar_snooze_fast_only)
+                    snoozeState.isPelotonSyncActive ->
+                        stringResource(R.string.radar_light_mode_peloton)
+                    snoozeState.isUrbanMuteActive ->
+                        stringResource(R.string.radar_smart_urban_mute_title)
+                    snoozeBadgeText != null -> snoozeBadgeText
+                    else -> stringResource(R.string.radar_snooze_title)
+                }
+                "$baseDesc, " + stringResource(R.string.radar_snooze_active_format, snoozeLabel)
+            } else {
+                baseDesc
+            }
             badgeColor = TTColor.RadarThreatRed.copy(alpha = pulseAlpha)
             badgeTextColor = Color.White
         }
         else -> {
-            description = "${radarState.targets.size} threats"
+            val baseDesc = stringResource(R.string.radar_overlay_threats_format, radarState.targets.size)
+            description = if (snoozeState.isSnoozed) {
+                val snoozeLabel = when {
+                    snoozeState.mode == RadarAudioSnoozeMode.FAST_ONLY ->
+                        stringResource(R.string.radar_snooze_fast_only)
+                    snoozeState.isPelotonSyncActive ->
+                        stringResource(R.string.radar_light_mode_peloton)
+                    snoozeState.isUrbanMuteActive ->
+                        stringResource(R.string.radar_smart_urban_mute_title)
+                    snoozeBadgeText != null -> snoozeBadgeText
+                    else -> stringResource(R.string.radar_snooze_title)
+                }
+                "$baseDesc, " + stringResource(R.string.radar_snooze_active_format, snoozeLabel)
+            } else {
+                baseDesc
+            }
             badgeColor = TTColor.RadarThreatAmber
             badgeTextColor = Color.Black
         }
     }
 
-    Box(
-        modifier = modifier
+    val hasThreats = radarState.targets.isNotEmpty() || radarState.overallThreatLevel != ThreatLevel.NONE
+    val isSnoozedWithThreats = snoozeState.isSnoozed && hasThreats && !isDisconnectError
+    val badgeModifier = if (isSnoozedWithThreats) {
+        modifier
+            .width(24.dp)
+            .height(34.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .background(badgeColor)
+            .clickable(onClick = onClick)
+            .semantics { this.contentDescription = description }
+            .testTag("RadarStatusBadge")
+    } else {
+        modifier
             .size(24.dp)
             .clip(CircleShape)
             .background(badgeColor)
             .clickable(onClick = onClick)
-            .semantics { contentDescription = description }
-            .testTag("RadarStatusBadge"),
+            .semantics { this.contentDescription = description }
+            .testTag("RadarStatusBadge")
+    }
+
+    Box(
+        modifier = badgeModifier,
         contentAlignment = Alignment.Center
     ) {
-        if (isDisconnectError) {
-            Text(
-                text = "!",
-                color = badgeTextColor,
-                fontSize = 13.sp,
-                fontWeight = FontWeight.Bold
-            )
-        } else if (snoozeState.isSnoozed && radarState.overallThreatLevel != ThreatLevel.FAST_APPROACHING) {
-            Text(
-                text = snoozeBadgeText ?: "M",
-                color = badgeTextColor,
-                fontSize = if ((snoozeBadgeText?.length ?: 0) > 2) 9.sp else 10.sp,
-                fontWeight = FontWeight.Bold
-            )
-        } else if (isClear) {
-            Box(
-                modifier = Modifier
-                    .size(8.dp)
-                    .clip(CircleShape)
-                    .background(Color.White)
-            )
-        } else {
-            Text(
-                text = "${radarState.targets.size}",
-                color = badgeTextColor,
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Bold
-            )
+        when {
+            isDisconnectError -> {
+                Icon(
+                    painter = painterResource(R.drawable.ic_device_not_available),
+                    contentDescription = stringResource(R.string.radar_overlay_disconnected),
+                    modifier = Modifier.size(16.dp),
+                    tint = badgeTextColor
+                )
+            }
+            isSnoozedWithThreats -> {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_radar_bell_muted),
+                            contentDescription = null,
+                            modifier = Modifier.size(8.dp),
+                            tint = badgeTextColor
+                        )
+                        if (snoozeBadgeText != null) {
+                            Text(
+                                text = snoozeBadgeText,
+                                color = badgeTextColor,
+                                fontSize = 7.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                    Text(
+                        text = "${radarState.targets.size}",
+                        color = badgeTextColor,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+            snoozeState.isSnoozed && isClear -> {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_radar_bell_muted),
+                        contentDescription = null,
+                        modifier = Modifier.size(9.dp),
+                        tint = badgeTextColor
+                    )
+                    if (snoozeBadgeText != null) {
+                        Spacer(modifier = Modifier.width(1.dp))
+                        Text(
+                            text = snoozeBadgeText,
+                            color = badgeTextColor,
+                            fontSize = if (snoozeBadgeText.length > 2) 7.sp else 8.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+            }
+            isClear -> {
+                Icon(
+                    painter = painterResource(R.drawable.ic_device_available),
+                    contentDescription = stringResource(R.string.radar_overlay_clear),
+                    modifier = Modifier.size(14.dp),
+                    tint = Color.White
+                )
+            }
+            else -> {
+                Text(
+                    text = "${radarState.targets.size}",
+                    color = badgeTextColor,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
         }
     }
 }
@@ -330,6 +523,7 @@ private fun RadarStatusBadgePill(
 /**
  * Vertical rail track displaying approaching target dots (REQ-TRK-062.1).
  */
+@Suppress("LongMethod")
 @Composable
 private fun RadarVerticalRail(
     radarState: RadarState,
@@ -338,16 +532,33 @@ private fun RadarVerticalRail(
     isDisconnectError: Boolean,
     clearMode: RadarClearMode,
     pulseAlpha: Float,
+    edgeSide: RadarEdgeSide = RadarEdgeSide.RIGHT,
+    trafficOrientation: RadarTrafficOrientation = RadarTrafficOrientation.RIGHT_HAND,
     modifier: Modifier = Modifier
 ) {
     val isSlimRail = isClear && clearMode == RadarClearMode.SLIM_RAIL
-    val trackWidth = if (isSlimRail) 4.dp else 22.dp
+    val has2DData = radarState.targets.any {
+        it.lateralOffsetMeters != null || it.vehicleSizeCategory != VehicleSizeCategory.UNKNOWN_OR_LIGHT
+    }
+    val trackWidth = when {
+        isSlimRail -> 4.dp
+        has2DData -> 28.dp
+        else -> 22.dp
+    }
 
     val trackColor = when {
         isDisconnectError -> TTColor.RadarRailTrack
         isClear -> TTColor.RadarClearGreen.copy(alpha = 0.25f)
-        radarState.overallThreatLevel == ThreatLevel.FAST_APPROACHING -> TTColor.RadarThreatRed.copy(alpha = 0.35f * pulseAlpha)
+        radarState.overallThreatLevel == ThreatLevel.FAST_APPROACHING -> {
+            TTColor.RadarThreatRed.copy(alpha = 0.35f * pulseAlpha)
+        }
         else -> TTColor.RadarThreatAmber.copy(alpha = 0.25f)
+    }
+
+    val railShape = if (edgeSide == RadarEdgeSide.LEFT) {
+        RoundedCornerShape(topEnd = 8.dp, bottomEnd = 8.dp)
+    } else {
+        RoundedCornerShape(topStart = 8.dp, bottomStart = 8.dp)
     }
 
     Box(
@@ -359,30 +570,40 @@ private fun RadarVerticalRail(
             modifier = Modifier
                 .width(trackWidth)
                 .fillMaxHeight()
-                .clip(RoundedCornerShape(8.dp))
+                .clip(railShape)
                 .background(trackColor)
                 .border(
                     width = 1.dp,
                     color = if (isSlimRail) Color.Transparent else TTColor.RadarRailTrackBorder,
-                    shape = RoundedCornerShape(8.dp)
+                    shape = railShape
                 )
         )
 
         // Target dots inside usable travel height
         if (hasActiveThreats) {
+            val contentWidth = if (has2DData) 28.dp else 22.dp
+            val maxRangeMeters = RadarOverlayMath.resolveRailMaxRange(radarState)
+
             BoxWithConstraints(
                 modifier = Modifier
-                    .width(22.dp)
+                    .width(contentWidth)
                     .fillMaxHeight()
                     .padding(vertical = 4.dp)
             ) {
                 val usableHeightPx = constraints.maxHeight.toFloat()
-                val dotSizePx = with(LocalDensity.current) { 14.dp.toPx() }
-                val travelHeightPx = (usableHeightPx - dotSizePx).coerceAtLeast(0f)
 
                 radarState.targets.forEach { target ->
                     key(target.targetId) {
-                        val normalizedY = RadarOverlayMath.normalizeRadarRange(target.rangeMeters)
+                        val (targetWidthDp, targetHeightDp, targetShape) = when (target.vehicleSizeCategory) {
+                            VehicleSizeCategory.UNKNOWN_OR_LIGHT -> Triple(10.dp, 10.dp, CircleShape)
+                            VehicleSizeCategory.CAR -> Triple(14.dp, 14.dp, CircleShape)
+                            VehicleSizeCategory.TRUCK_OR_BUS -> Triple(20.dp, 12.dp, RoundedCornerShape(4.dp))
+                        }
+
+                        val targetHeightPx = with(LocalDensity.current) { targetHeightDp.toPx() }
+                        val travelHeightPx = (usableHeightPx - targetHeightPx).coerceAtLeast(0f)
+
+                        val normalizedY = RadarOverlayMath.normalizeRadarRange(target.rangeMeters, maxRangeMeters)
                         val animatedFraction by animateFloatAsState(
                             targetValue = normalizedY,
                             animationSpec = tween(durationMillis = 150, easing = LinearEasing),
@@ -390,20 +611,137 @@ private fun RadarVerticalRail(
                         )
 
                         val yOffsetPx = (animatedFraction * travelHeightPx).roundToInt()
+                        val xOffsetDp = RadarOverlayMath.calculateHorizontalOffsetDp(target, trafficOrientation)
+                        val xOffsetPx = with(LocalDensity.current) { xOffsetDp.dp.toPx() }.roundToInt()
                         val dotColor = RadarOverlayMath.resolveThreatColor(target.threatLevel)
+
+                        val vehicleDesc = when (target.vehicleSizeCategory) {
+                            VehicleSizeCategory.TRUCK_OR_BUS -> stringResource(R.string.radar_vehicle_size_truck)
+                            VehicleSizeCategory.CAR -> stringResource(R.string.radar_vehicle_size_car)
+                            VehicleSizeCategory.UNKNOWN_OR_LIGHT -> null
+                        }
 
                         Box(
                             modifier = Modifier
                                 .align(Alignment.TopCenter)
-                                .offset { IntOffset(x = 0, y = yOffsetPx) }
-                                .size(14.dp)
-                                .clip(CircleShape)
+                                .offset { IntOffset(x = xOffsetPx, y = yOffsetPx) }
+                                .size(width = targetWidthDp, height = targetHeightDp)
+                                .clip(targetShape)
                                 .background(dotColor)
-                                .border(1.5.dp, Color.White, CircleShape)
+                                .border(1.5.dp, Color.White, targetShape)
+                                .semantics {
+                                    if (vehicleDesc != null) {
+                                        contentDescription = "$vehicleDesc, ${target.rangeMeters.roundToInt()}m"
+                                    }
+                                }
                         )
                     }
                 }
             }
+        }
+    }
+}
+
+@Preview(name = "Radar Edge Overlay - Clear Light", showBackground = true)
+@Composable
+private fun PreviewRadarEdgeOverlayClearLight() {
+    ATrainingTrackerTheme {
+        Surface {
+            RadarEdgeOverlay(
+                radarState = RadarState(
+                    connectionState = RadarConnectionState.CONNECTED,
+                    overallThreatLevel = ThreatLevel.NONE,
+                    targets = emptyList()
+                ),
+                edgeSide = RadarEdgeSide.RIGHT,
+                clearMode = RadarClearMode.SLIM_RAIL,
+                modifier = Modifier.height(400.dp)
+            )
+        }
+    }
+}
+
+@Preview(
+    name = "Radar Edge Overlay - Approaching Dark",
+    uiMode = Configuration.UI_MODE_NIGHT_YES,
+    showBackground = true
+)
+@Composable
+private fun PreviewRadarEdgeOverlayApproachingDark() {
+    ATrainingTrackerTheme(darkTheme = true) {
+        Surface {
+            RadarEdgeOverlay(
+                radarState = RadarState(
+                    connectionState = RadarConnectionState.CONNECTED,
+                    overallThreatLevel = ThreatLevel.APPROACHING,
+                    targets = listOf(
+                        RadarTarget(
+                            targetId = 1,
+                            rangeMeters = 80f,
+                            approachSpeedMps = 10f,
+                            threatLevel = ThreatLevel.APPROACHING
+                        ),
+                        RadarTarget(
+                            targetId = 2,
+                            rangeMeters = 30f,
+                            approachSpeedMps = 12f,
+                            threatLevel = ThreatLevel.APPROACHING
+                        )
+                    )
+                ),
+                edgeSide = RadarEdgeSide.RIGHT,
+                clearMode = RadarClearMode.SLIM_RAIL,
+                modifier = Modifier.height(400.dp)
+            )
+        }
+    }
+}
+
+@Preview(
+    name = "Radar Edge Overlay - Fast Threat AMOLED",
+    uiMode = Configuration.UI_MODE_NIGHT_YES,
+    showBackground = true
+)
+@Composable
+private fun PreviewRadarEdgeOverlayFastThreatAmoled() {
+    ATrainingTrackerTheme(darkTheme = true) {
+        Surface(color = Color.Black) {
+            RadarEdgeOverlay(
+                radarState = RadarState(
+                    connectionState = RadarConnectionState.CONNECTED,
+                    overallThreatLevel = ThreatLevel.FAST_APPROACHING,
+                    targets = listOf(
+                        RadarTarget(
+                            targetId = 1,
+                            rangeMeters = 40f,
+                            approachSpeedMps = 22f,
+                            threatLevel = ThreatLevel.FAST_APPROACHING
+                        )
+                    )
+                ),
+                edgeSide = RadarEdgeSide.RIGHT,
+                clearMode = RadarClearMode.SLIM_RAIL,
+                modifier = Modifier.height(400.dp)
+            )
+        }
+    }
+}
+
+@Preview(name = "Radar Edge Overlay - Disconnected", showBackground = true)
+@Composable
+private fun PreviewRadarEdgeOverlayDisconnected() {
+    ATrainingTrackerTheme {
+        Surface {
+            RadarEdgeOverlay(
+                radarState = RadarState(
+                    connectionState = RadarConnectionState.DISCONNECTED_ERROR,
+                    overallThreatLevel = ThreatLevel.NONE,
+                    targets = emptyList()
+                ),
+                edgeSide = RadarEdgeSide.RIGHT,
+                clearMode = RadarClearMode.SLIM_RAIL,
+                modifier = Modifier.height(400.dp)
+            )
         }
     }
 }

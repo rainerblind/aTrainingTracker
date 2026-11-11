@@ -312,5 +312,120 @@ class TestHoechstmassEpicParity(unittest.TestCase):
         self.assertIn("not an Epic (issue type is 'Story')", err.getvalue())
 
 
+class TestStage6FinalReview(unittest.TestCase):
+    """TST-PRO-058.1 & TST-PRO-058.2: Stage 6 Final Review (Agent) state machine, disambiguated transitions, and 3-bounce healing."""
+
+    def test_parent_stage_order_and_skill_dir_mapping(self):
+        for mod in [root_jira, hm_jira]:
+            order = mod.PARENT_STAGE_ORDER
+            self.assertIn("final review (agent)", order)
+            self.assertIn("final review (human)", order)
+            idx_test = order.index("test")
+            idx_agent = order.index("final review (agent)")
+            idx_human = order.index("final review (human)")
+            self.assertTrue(idx_test < idx_agent < idx_human)
+            self.assertEqual(mod.STAGE_TO_SKILL_DIR.get("final review (agent)"), "stage6-final-review")
+            self.assertEqual(
+                mod.resolve_desired_parent_stage_for_subtask("[Test] Stage 5 Verification", True),
+                "final review (agent)"
+            )
+
+    @patch("jira_util.inject_stage_context")
+    @patch("jira_util.assign_issue")
+    @patch("jira_util.jira_request")
+    def test_transition_issue_disambiguates_agent_vs_human_final_review(self, mock_req, mock_assign, mock_inject):
+        # 1. Transition to Final Review (Agent) -> assigns to agent2
+        mock_req.side_effect = [
+            {"key": "ATT-7101", "fields": {"issuetype": {"name": "Verbesserung", "subtask": False}, "status": {"name": "Test"}}},
+            {
+                "transitions": [
+                    {"id": "6", "name": "Test abgeschlossen", "to": {"name": "Final Review (Agent)"}},
+                    {"id": "9", "name": "I.O.", "to": {"name": "Final Review (Human)"}},
+                ]
+            },
+            None,
+        ]
+        out = io.StringIO()
+        with patch("sys.stdout", out):
+            root_jira.transition_issue("ATT-7101", "final review (agent)", role="agent2")
+        mock_assign.assert_called_once_with("ATT-7101", "agent2", role="agent2")
+
+        # 2. Transition to Final Review (Human) -> assigns to human
+        mock_assign.reset_mock()
+        mock_req.side_effect = [
+            {"key": "ATT-7101", "fields": {"issuetype": {"name": "Verbesserung", "subtask": False}, "status": {"name": "Final Review (Agent)"}}},
+            {
+                "transitions": [
+                    {"id": "6", "name": "Test abgeschlossen", "to": {"name": "Final Review (Agent)"}},
+                    {"id": "9", "name": "I.O.", "to": {"name": "Final Review (Human)"}},
+                ]
+            },
+            None,
+        ]
+        with patch("sys.stdout", out):
+            root_jira.transition_issue("ATT-7101", "final review (human)", role="agent2")
+        mock_assign.assert_called_once_with("ATT-7101", "human", role="agent2")
+
+    def test_count_final_review_bounces(self):
+        comments = [
+            {"body": "[ROLE: agent2] Stage 6 Final Review (Agent) BOUNCE (1/3): Defect A."},
+            {"body": "[ROLE: agent1] Fixed Defect A."},
+            {"body": "[ROLE: agent2] [FINAL REVIEW (AGENT) — BOUNCE 2/3]\nDefect B."},
+            {"body": "[ROLE: agent2] [FINAL REVIEW (AGENT) — PASS]\nClean."},
+        ]
+        self.assertEqual(root_jira.count_final_review_bounces(comments), 2)
+        self.assertEqual(hm_jira.count_final_review_bounces(comments), 2)
+
+    @patch("jira_util.assign_issue")
+    @patch("jira_util.transition_issue")
+    @patch("jira_util.add_comment")
+    @patch("jira_util.jira_request")
+    def test_final_review_verdict_pass_and_bounce_and_escalation(
+        self, mock_req, mock_add_comment, mock_transition, mock_assign
+    ):
+        # Case 1: PASS -> transitions to Final Review (Human)
+        mock_req.return_value = {
+            "key": "ATT-7101",
+            "fields": {
+                "issuetype": {"name": "Verbesserung", "subtask": False},
+                "status": {"name": "Final Review (Agent)"},
+                "comment": {"comments": []},
+            },
+        }
+        res_pass = root_jira.final_review_verdict("ATT-7101", "PASS", "All criteria satisfied.", role="agent2")
+        self.assertEqual(res_pass, "PASS")
+        mock_transition.assert_called_with("ATT-7101", "final review (human)", role="agent2", inject_context=False)
+
+        # Case 2: BOUNCE (1/3) -> transitions to implementation
+        mock_transition.reset_mock()
+        res_b1 = root_jira.final_review_verdict(
+            "ATT-7101", "BOUNCE", "Missing test case.", bounce_target="implementation", role="agent2"
+        )
+        self.assertEqual(res_b1, "BOUNCE_1")
+        mock_transition.assert_called_with("ATT-7101", "implementation", role="agent2", inject_context=False)
+
+        # Case 3: 4th BOUNCE (> 3) -> ESCALATED to Final Review (Human)
+        mock_transition.reset_mock()
+        mock_req.return_value = {
+            "key": "ATT-7101",
+            "fields": {
+                "issuetype": {"name": "Verbesserung", "subtask": False},
+                "status": {"name": "Final Review (Agent)"},
+                "comment": {
+                    "comments": [
+                        {"body": "[FINAL REVIEW (AGENT) — BOUNCE 1/3]\nFirst"},
+                        {"body": "[FINAL REVIEW (AGENT) — BOUNCE 2/3]\nSecond"},
+                        {"body": "[FINAL REVIEW (AGENT) — BOUNCE 3/3]\nThird"},
+                    ]
+                },
+            },
+        }
+        res_esc = root_jira.final_review_verdict(
+            "ATT-7101", "BOUNCE", "Still failing on 4th attempt.", bounce_target="implementation", role="agent2"
+        )
+        self.assertEqual(res_esc, "ESCALATED")
+        mock_transition.assert_called_with("ATT-7101", "final review (human)", role="agent2", inject_context=False)
+
+
 if __name__ == "__main__":
     unittest.main()

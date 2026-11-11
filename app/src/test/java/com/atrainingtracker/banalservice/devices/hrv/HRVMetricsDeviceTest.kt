@@ -50,10 +50,22 @@ class HRVMetricsDeviceTest {
         context: Context,
         sensorManager: MySensorManager,
         timeProvider: TimeProvider? = null,
-        artifactFilter: RrArtifactFilter = RrArtifactFilter()
-    ) : HRVMetricsDevice(context, sensorManager, timeProvider, artifactFilter, startScheduler = false) {
+        artifactFilter: RrArtifactFilter = RrArtifactFilter(),
+        artifactGateThresholdPercent: Double? = null
+    ) : HRVMetricsDevice(
+        context,
+        sensorManager,
+        timeProvider,
+        artifactFilter,
+        startScheduler = false,
+        artifactGateThresholdPercent = artifactGateThresholdPercent
+    ) {
         override fun notifySensorsChanged() {
             // no-op in unit tests to eliminate Intent constructor mocking
+        }
+
+        public override fun onAccumulatorsReset() {
+            super.onAccumulatorsReset()
         }
     }
 
@@ -76,8 +88,9 @@ class HRVMetricsDeviceTest {
         var currentTime = 1000000L
         val device = TestableHRVMetricsDevice(context, sensorManager, { currentTime })
 
-        // Immediately after constructor, hasReceivedRrData must be false
+        // Immediately after constructor, hasReceivedRrData must be false and quality INSUFFICIENT_DATA
         assertFalse(device.hasReceivedRrData)
+        assertEquals(HrvSignalQualityStatus.INSUFFICIENT_DATA, device.signalQualityResult.status)
 
         // Send a beat
         device.onRrBeat(
@@ -93,6 +106,7 @@ class HRVMetricsDeviceTest {
         // Reset session
         device.resetSession()
         assertFalse(device.hasReceivedRrData)
+        assertEquals(HrvSignalQualityStatus.INSUFFICIENT_DATA, device.signalQualityResult.status)
         device.shutDown()
     }
 
@@ -203,5 +217,149 @@ class HRVMetricsDeviceTest {
         assertNull(dfaAlpha1)
 
         device.shutDown()
+    }
+
+    @Test
+    fun testSignalQualityResultUpdatedOnCalculateMetrics() {
+        var currentTime = 1000000L
+        val device = TestableHRVMetricsDevice(context, sensorManager, { currentTime })
+
+        // Feed 50 beats of stepped/synthetic intervals (zero differences)
+        for (i in 0 until 50) {
+            val t = currentTime - (50 - i) * 800L
+            val stepVal = (i / 10) * 10.0 // plateaus of 10 identical beats
+            device.onRrBeat(
+                RrBeatEvent(
+                    beatTimestampMs = t,
+                    rrMs = 500.0 + stepVal,
+                    rawCounter = i,
+                    protocol = ProtocolType.BLE
+                )
+            )
+        }
+
+        device.calculateMetrics()
+
+        val quality = device.signalQualityResult
+        assertEquals(HrvSignalQualityStatus.QUANTIZED_SYNTHETIC, quality.status)
+        assertTrue(quality.zeroDiffRate != null && quality.zeroDiffRate > 0.55)
+
+        device.shutDown()
+    }
+
+    @Test
+    fun testStaleMetricsClearedOnQueueDrain() {
+        var currentTime = 1000000L
+        val device = TestableHRVMetricsDevice(context, sensorManager, { currentTime })
+
+        // Feed 30 clean beats (within 24 seconds, well inside the 60s/120s window)
+        for (i in 0 until 30) {
+            val t = currentTime - (30 - i) * 800L
+            device.onRrBeat(
+                RrBeatEvent(
+                    beatTimestampMs = t,
+                    rrMs = 800.0 + (i % 2) * 20.0,
+                    rawCounter = i,
+                    protocol = ProtocolType.BLE
+                )
+            )
+        }
+
+        device.calculateMetrics()
+        // Sensors should have non-null metrics
+        assertTrue("rMSSD must be non-null", device.getHrvRmssdSensor().sensorData.value != null)
+        assertTrue("Artifact rate must be non-null", device.getHrvArtifactRateSensor().sensorData.value != null)
+
+        // Advance clock by 150 seconds (> 120s rolling window) to simulate queue drain on strap disconnect
+        currentTime += 150_000L
+        device.calculateMetrics()
+
+        // All stale telemetry sensors must be cleared to null ("--")
+        assertNull("rMSSD must clear to null on queue drain", device.getHrvRmssdSensor().sensorData.value)
+        assertNull("DFA alpha 1 must clear to null on queue drain", device.getHrvDfaA1Sensor().sensorData.value)
+        assertNull("Artifact rate must clear to null on queue drain", device.getHrvArtifactRateSensor().sensorData.value)
+
+        device.shutDown()
+    }
+
+    @Test
+    fun testOnAccumulatorsResetInvokesResetSession() {
+        var currentTime = 1000000L
+        val device = TestableHRVMetricsDevice(context, sensorManager, { currentTime })
+
+        // Feed RR beat to initialize telemetry state
+        device.onRrBeat(
+            RrBeatEvent(
+                beatTimestampMs = currentTime,
+                rrMs = 800.0,
+                rawCounter = 1,
+                protocol = ProtocolType.BLE
+            )
+        )
+        assertTrue(device.hasReceivedRrData)
+
+        // Trigger onAccumulatorsReset() as called by BANALService.RESET_ACCUMULATORS_INTENT
+        device.onAccumulatorsReset()
+
+        assertFalse("hasReceivedRrData must be false after accumulator reset", device.hasReceivedRrData)
+        assertEquals(HrvSignalQualityStatus.INSUFFICIENT_DATA, device.signalQualityResult.status)
+
+        device.shutDown()
+    }
+
+    @Test
+    fun testConfigurableArtifactGateThreshold() {
+        var currentTime = 1000000L
+
+        // Device A: gate threshold configured to 3.5%
+        val deviceA = TestableHRVMetricsDevice(
+            context = context,
+            sensorManager = sensorManager,
+            timeProvider = { currentTime },
+            artifactGateThresholdPercent = 3.5
+        )
+
+        // Device B: gate threshold configured to 5.0% (default)
+        val deviceB = TestableHRVMetricsDevice(
+            context = context,
+            sensorManager = sensorManager,
+            timeProvider = { currentTime },
+            artifactGateThresholdPercent = 5.0
+        )
+
+        // Feed 100 beats with 4 spaced-out RF gap artifacts (4.21% artifact rate over 95 causal evaluated beats)
+        // Rate 4.21% is > 3.5% (Device A: suppressed) and <= 5.0% (Device B: not suppressed)
+        for (i in 0 until 100) {
+            val t = currentTime - (100 - i) * 800L
+            val isGap = i == 20 || i == 40 || i == 60 || i == 80
+            val event = RrBeatEvent(
+                beatTimestampMs = t,
+                rrMs = 800.0 + 30.0 * Math.sin(2.0 * Math.PI * i / 10.0),
+                rawCounter = i,
+                protocol = ProtocolType.BLE,
+                artifactFlag = if (isGap) RrBeatEvent.ARTIFACT_GAP else RrBeatEvent.ARTIFACT_NORMAL,
+                gapBeats = 0
+            )
+            deviceA.onRrBeat(event)
+            deviceB.onRrBeat(event)
+        }
+
+        deviceA.calculateMetrics()
+        deviceB.calculateMetrics()
+
+        val artifactRateA = deviceA.getHrvArtifactRateSensor().sensorData.value
+        val artifactRateB = deviceB.getHrvArtifactRateSensor().sensorData.value
+        assertTrue(artifactRateA != null)
+        assertTrue(artifactRateB != null)
+        assertEquals(artifactRateA!!, artifactRateB!!, 0.001)
+
+        // For deviceA (threshold 3.5%), 4.0% > 3.5% -> suppressed (null)
+        assertNull("Device A must suppress DFA alpha 1 when artifact rate exceeds 3.5%", deviceA.getHrvDfaA1Sensor().sensorData.value)
+
+        // For deviceB (threshold 5.0%), 4.0% <= 5.0% -> computed (non-null)
+        assertTrue("Device B must evaluate DFA alpha 1 when artifact rate is within 5.0%", deviceB.getHrvDfaA1Sensor().sensorData.value != null)
+
+        deviceA.shutDown()
+        deviceB.shutDown()
     }
 }

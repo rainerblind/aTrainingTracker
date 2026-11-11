@@ -25,6 +25,11 @@ from jira_util import (
     close_epic,
     paged_jql_search,
     transition_issue,
+    PARENT_STAGE_ORDER,
+    STAGE_TO_SKILL_DIR,
+    resolve_desired_parent_stage_for_subtask,
+    count_final_review_bounces,
+    final_review_verdict,
 )
 from verify_requirement_governance import (
     load_config,
@@ -173,6 +178,36 @@ class TestEpicCommands(unittest.TestCase):
                     transition_issue("PROJ-100", "erledigt", as_role="agent1", allow_epic_close=False)
             self.assertEqual(cm.exception.code, 1)
             self.assertIn("strictly prohibited for AI agents", err.getvalue())
+
+    def test_stage6_final_review_state_and_bounce_logic(self):
+        from unittest.mock import patch
+        self.assertIn("final review (agent)", PARENT_STAGE_ORDER)
+        self.assertEqual(STAGE_TO_SKILL_DIR.get("final review (agent)"), "stage6-final-review")
+        self.assertEqual(
+            resolve_desired_parent_stage_for_subtask("[Test] Verification", True),
+            "final review (agent)"
+        )
+        comments = [
+            {"body": "[ROLE: agent2] Stage 6 Final Review (Agent) BOUNCE (1/3): Defect 1"},
+            {"body": "[ROLE: agent2] [FINAL REVIEW (AGENT) — BOUNCE 2/3]\nDefect 2"},
+        ]
+        self.assertEqual(count_final_review_bounces(comments), 2)
+
+        with patch("jira_util.jira_request") as mock_req, \
+             patch("jira_util.assign_issue"), \
+             patch("jira_util.add_comment"), \
+             patch("jira_util.transition_issue") as mock_trans:
+            mock_req.return_value = {
+                "key": "PROJ-101",
+                "fields": {
+                    "issuetype": {"name": "Story", "subtask": False},
+                    "status": {"name": "Final Review (Agent)"},
+                    "comment": {"comments": comments},
+                },
+            }
+            res = final_review_verdict("PROJ-101", "BOUNCE", "Defect 3", bounce_target="implementation", as_role="agent2")
+            self.assertEqual(res, "BOUNCE_3")
+            mock_trans.assert_called()
 
 
 class TestHoechstmassFlock(unittest.TestCase):

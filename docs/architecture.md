@@ -31,7 +31,7 @@ graph TD
     subgraph Data_Layer["4. Data Layer & Reactive Repositories"]
         WorkoutRepo["WorkoutRepository & Flow Data Sources"]
         BANALRepo["BANALServiceRepository (Shared StateFlows)"]
-        SettingsRepo["TuningPreferencesDataStore & UserPreferences"]
+        SettingsRepo["TuningPreferencesDataStore & SettingsDataStore"]
     end
 
     subgraph Persistence_Layer["5. Persistence & Cloud Layer"]
@@ -85,15 +85,15 @@ All system requirements across the 9 living domain shards are allocated directly
 
 | Domain Shard | Requirement Prefix Families | Allocated Architectural Components | Primary Responsibilities |
 | :--- | :--- | :--- | :--- |
-| **Tracking & Live Sensor Cockpit** | `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA` | `BANALService`, `TrackerService`, `ProxySensor`, `MySensorManager`, `AutoPauseManager`, `CyclingPowerMetricsDevice`, `SlidingWindowPowerAccumulator`, `LiveMmpCurveChart` | ANT+/BLE telemetry ingestion, sensor fusion, auto-pause debounce, 1-Hz sample recording, live MMP curve & duration benchmarks. |
-| **Post-Workout Analytics & Periods** | `PER`, `PERF` | `WorkoutRepository`, `PowerPhysiologyCalculator`, `ZoneDistributionCalculator`, `PeriodsRepository`, `HrvReadinessRepository`, `HrvReadinessDatabaseManager`, `HrvReadinessCalculator`, `HealthConnectHrvImporter`, `MorningHrvCheckViewModel`, `HrvReadinessTrendMath`, `HrvReadinessTrendCard`, `HrvReadinessTrendChart`, `WorkoutRrRepository`, `WorkoutRrDatabaseManager`, `HrvPostWorkoutRecomputer` | Physiological computation (NP, TSS), 5/7 power zone distributions, period statistics & trend filters, morning HRV readiness persistence & per-posture SWC baseline analytics, nocturnal Health Connect HRV ingestion, guided morning resting HRV protocol, longitudinal HRV readiness trend charts in Periods screen, lossless workout RR intervals persistence and centered post-workout HRV recomputation. |
+| **Tracking & Live Sensor Cockpit** | `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA` | `BANALService`, `TrackerService`, `ProxySensor`, `MySensorManager`, `AutoPauseManager`, `CyclingPowerMetricsDevice`, `SlidingWindowPowerAccumulator`, `LiveMmpCurveChart`, `HRVMetricsDevice`, `RrArtifactFilter`, `DfaCalculator`, `HrvSignalQualityAnalyzer` | ANT+/BLE telemetry ingestion, sensor fusion, auto-pause debounce, 1-Hz sample recording, live MMP curve & duration benchmarks, real-time HRV metric calculation, artifact filtering & firmware smoothing/synthetic signal quality analysis. |
+| **Post-Workout Analytics & Periods** | `PER`, `PERF` | `WorkoutRepository`, `PowerPhysiologyCalculator`, `ZoneDistributionCalculator`, `PeriodsRepository`, `HrvReadinessRepository`, `HrvReadinessDatabaseManager`, `HrvReadinessCalculator`, `HealthConnectHrvImporter`, `MorningHrvCheckViewModel`, `HrvReadinessTrendMath`, `HrvReadinessTrendCard`, `HrvReadinessTrendChart`, `WorkoutRrRepository`, `WorkoutRrDatabaseManager`, `HrvPostWorkoutRecomputer`, `PowerHrDynamicsCalculator`, `PowerHrDynamicsInfoDialog` | Physiological computation (NP, TSS), 5/7 power zone distributions, period statistics & trend filters, morning HRV readiness persistence & per-posture SWC baseline analytics, nocturnal Health Connect HRV ingestion, guided morning resting HRV protocol, longitudinal HRV readiness trend charts in Periods screen, lossless workout RR intervals persistence and centered post-workout HRV recomputation, 1st-order dynamical Power-HR system identification & explanation sheet. |
 | **Maps, Polylines & Navigation** | `GEO`, `MAP`, `NAV`, `ROU` | `ClimbDetector`, `PolylineProgressTracker`, `MapFragmentWithTrackViewModel`, `ATrainingTrackerMap` | Web Mercator tile rendering, polyline compression, climb categorization, live segment gate matching. |
 | **Persistence, Migration & Cloud Export** | `DAT`, `EXP`, `EXT`, `MIG` | `WorkoutSamplesDatabaseManager`, `WorkoutSummariesDatabaseManager`, `WorkoutRrDatabaseManager`, `HrvReadinessDatabaseManager`, `FitFileWriter`, `GPXFileWriter`, `TCXFileWriter`, `StravaUploader`, `GoogleDriveBackupManager` | Time-series SQLite storage, workout RR intervals storage, morning HRV readiness SQLite storage, schema migration, Strava OAuth/upload retry, FIT/TCX/GPX serialization with native Garmin FIT HrvMesg export/import. |
-| **Settings, Profiles & Localization** | `LOC`, `MON`, `PRI`, `SET` | `TuningPreferencesDataStore`, `EquipmentDatabaseManager`, `PrivacyZoneManager`, `BillingManager`, `ProFeatureManager`, `HealthConnectManager`, `HealthConnectRecordMapper`, `SensorQuotaReconciliationManager` | DataStore persistence, 9-locale string parity, sensor quotas, monetization, vehicle equipment, Health Connect sync & record mapping, GPS obfuscation. |
-| **UI Components & Design System** | `UI`, `UNT` | Jetpack Compose theme (`TTTheme`), `MetricItem`, `ElevationProfile`, `CustomLineChart`, `AppModalBottomSheet`, `WorkoutPhotoStrip`, `WorkoutTimePhotoPickerSheet`, `MorningHrvCheckScreen` | High-contrast AMOLED theming, responsive landscape layouts, chart scrubbing, reusable Compose components, chronological workout photo selection, guided morning resting HRV acquisition. |
+| **Settings, Profiles & Localization** | `LOC`, `MON`, `PRI`, `SET` | `TuningPreferencesDataStore`, `EquipmentDbHelper`, `EquipmentRepository`, `ProFeatureManager`, `SupporterTier`, `GarageLeagueDetector`, `HealthConnectManager`, `HealthConnectRecordMapper`, `SensorQuotaReconciliationManager` | DataStore persistence, 9-locale string parity, sensor quotas, monetization, vehicle equipment, Health Connect sync & record mapping. |
+| **UI Components & Design System** | `UI`, `UNT` | Jetpack Compose theme (`ATrainingTrackerTheme`), `MetricItem`, `ElevationProfile`, `TelemetryMetricGraph`, `AppModalBottomSheet`, `WorkoutPhotoStrip`, `WorkoutTimePhotoPickerSheet`, `MorningHrvCheckScreen` | High-contrast AMOLED theming, responsive landscape layouts, chart scrubbing, reusable Compose components, chronological workout photo selection, guided morning resting HRV acquisition. |
 | **Engineering Process & Stability** | `ARC`, `BLD`, `BUG`, `INT`, `LIV`, `LOG`, `MAN`, `NFR`, `PRO`, `REG`, `SEC`, `STB`, `STR`, `TOOL`, `TST` | ASPICE Dual-Agent Quality Gates, `jira_util.py`, `verify_requirement_governance.py`, ProGuard rules | CI/CD build hygiene, Chesterton's fence archaeology, crash resilience, process kill simulation. |
-| **Jubilee Milestones & App Reviews** | `REV` | `MilestoneAutoNamingManager`, `FirstJubileeCelebrationDialog`, `FirstJubileeActionHelper`, `PowerHrDynamicsCalculator`, `PowerHrDynamicsInfoDialog` | Milestone counting, achievement celebration, Google Play in-app review prompting, 1st-order dynamical Power-HR system identification & explanation sheet. |
-| **Project Governance & Store Presence** | `STP` | `StoreMetadataContractTest`, Google Play assets, screenshots | Google Play store presence parity, localized descriptions, automated metadata validation. |
+| **Jubilee Milestones & App Reviews** | `REV` | `MilestoneAutoNamingManager`, `FirstJubileeCelebrationDialog`, `FirstJubileeActionHelper` | Milestone counting, achievement celebration, Google Play in-app review prompting. |
+| **Project Governance & Store Presence** | `STP` | `PlayStoreListingContractTest`, Google Play assets, screenshots | Google Play store presence parity, localized descriptions, automated metadata validation. |
 
 ---
 
@@ -213,23 +213,23 @@ To prevent UI jank, thread contention, and Android SQLite database lock errors, 
 - **Google Fused Priority Over GPS**: In `MySensorManager`, `DeviceType.SPEED_AND_LOCATION_GOOGLE_FUSED` strictly precedes `DeviceType.SPEED_AND_LOCATION_GPS` across `SPEED_PRIORITY`, `ALTITUDE_PRIORITY`, and `LOCATION_PRIORITY`. While dedicated physical wheel/footpod sensors (`RUN_SPEED`, `BIKE_SPEED`, `BIKE_POWER`) and barometric pressure sensors (`ALTITUDE_FROM_PRESSURE`) retain absolute precedence, Google Fused Location Provider delivers faster time-to-first-fix and greater trajectory stability than raw GPS when location-derived speed, distance, altitude, or coordinates are utilized.
 - **Fresh Installation Default Pairing & De-Googled Fallback**: On fresh database initialization (`DevicesDatabaseManager.DevicesDbHelper.addLocationDevicesToDb`), Google Play Services availability is evaluated via `GooglePlayServicesUtil.isGooglePlayServicesAvailable(mContext) == ConnectionResult.SUCCESS`. If available, `SPEED_AND_LOCATION_GOOGLE_FUSED` is paired by default (`PAIRED = true`) and raw GPS is left unpaired (`PAIRED = false`). On de-Googled environments where Play Services is absent or unresolvable, the system deterministically falls back to pairing raw GPS (`PAIRED = true`). Existing installations and database upgrades preserve the athlete's persisted sensor pairing configuration without modification.
 
-### 4.9 Resource and Timing Budgets (SWE.2.BP4, `REQ-PRO-052`)
+### 4.9 Resource and Timing Budgets (SWE.2.BP4, `REQ-PRO-052`, `REQ-NFR-003`..`REQ-NFR-014`)
 In accordance with **ASPICE SWE.2 Base Practice 4 (Describe resource and timing budgets)**, the system establishes quantified resource consumption limits and latency budgets across runtime-critical subsystems to guarantee responsiveness, prevent thread starvation, and ensure all-day battery efficiency during multi-hour endurance sessions:
 
-| Subsystem Domain | Critical Component | Resource / Timing Metric | Budget Ceiling | Allocation Rationale & Non-Functional Trace (ATT-6139) |
+| Subsystem Domain | Critical Component | Resource / Timing Metric | Budget Ceiling | Allocation Rationale & Non-Functional Trace (REQ-NFR-*, ATT-6139) |
 | :--- | :--- | :--- | :--- | :--- |
-| **Tracking Core** | `TrackerService` | Periodic Tick Execution Latency | < 50 ms | 1000 ms periodic cycle (`scheduleAtFixedRate`) on background thread; guarantees 950 ms idle headroom. |
-| **Tracking Core** | `TrackerService` | CPU Consumption | < 5% single-core | Mid-tier reference device; prevents CPU throttle and heat buildup. |
-| **Tracking Core** | `TrackerService` | Dedicated Heap Footprint | < 40 MB | Prevents GC churn and OutOfMemoryError during 12+ hour recordings. |
-| **Tracking Core** | `TrackerService` | Battery Consumption | < 5%/h | Background recording with screen off, active GPS, and BLE/ANT+ sensors. |
-| **Sensor Layer** | `BANALService` / `ProxySensor` | Sensor Dispatch Latency | < 25 ms | Time from hardware event ingestion to listener notification across registered sensors. |
-| **Sensor Layer** | `BANALService` / `ProxySensor` | Connection Failover Window | 3.5 s | Maximum timeout before initiating automatic failover or sensor reconnection. |
-| **Sensor Layer** | `BANALService` | Power Management | Bound to Tracking | `PARTIAL_WAKE_LOCK` strictly acquired only during `TRACKING` and released immediately on `STOP`. |
-| **Persistence** | `WorkoutSamplesDatabaseManager` | SQLite Sample Write Latency | < 30 ms | Unbuffered per-second sample insertion; strictly executed off main thread on `Dispatchers.IO` / `dbDispatcher`. |
-| **Persistence** | `WorkoutSamplesDatabaseManager` | Storage Growth Rate | ~360 KB/h | At 1-Hz telemetry recording (~100 bytes/sample); ~3.6 MB for a 10-hour endurance activity. |
-| **Cockpit & UI** | `SensorGridScreen` | UI Frame Rendering Time | < 16.6 ms (60 FPS) | Compose telemetry grid recomposition bound to 16.6 ms budget without dropped frames. |
-| **Cockpit & UI** | `ATrainingTrackerMap` | Map Polyline Update Latency | < 30 ms | Latency to update path geometry on live map canvas upon receiving location updates. |
-| **Cockpit & UI** | `TrackingTabsViewModel` | Telemetry StateFlow Emission | 1 Hz (conflated) | Prevents recomposition churn on live cockpit tabs during high-frequency sensor updates. |
+| **Tracking Core** | `TrackerService` | Periodic Tick Execution Latency | < 50 ms | `REQ-NFR-003`: 1000 ms periodic cycle (`scheduleAtFixedRate`) on background thread; guarantees 950 ms idle headroom. |
+| **Tracking Core** | `TrackerService` | CPU Consumption | < 5% single-core | `REQ-NFR-004`: Mid-tier reference device; prevents CPU throttle and heat buildup. |
+| **Tracking Core** | `TrackerService` | Dedicated Heap Footprint | < 40 MB | `REQ-NFR-005`: Prevents GC churn and OutOfMemoryError during 12+ hour recordings. |
+| **Tracking Core** | `TrackerService` | Battery Consumption | < 5%/h | `REQ-NFR-006`: Background recording with screen off, active GPS, and BLE/ANT+ sensors. |
+| **Sensor Layer** | `BANALService` / `ProxySensor` | Sensor Dispatch Latency | < 25 ms | `REQ-NFR-007`: Time from hardware event ingestion to listener notification across registered sensors. |
+| **Sensor Layer** | `BANALService` / `ProxySensor` | Connection Failover Window | 3.5 s | `REQ-NFR-008`: Maximum timeout before initiating automatic failover or sensor reconnection. |
+| **Tracking Core** | `TrackerService` | Power Management (WakeLock) | Bound to Tracking | `REQ-NFR-009`, `REQ-TRK-003`: `PARTIAL_WAKE_LOCK` (`aTrainingTracker:TrackingLock`) strictly acquired only during `TRACKING` and released immediately on `STOP` (`TrackerService.java:842-857`). |
+| **Persistence** | `WorkoutSamplesDatabaseManager` | SQLite Sample Write Latency | < 30 ms | `REQ-NFR-010`: Live 1-Hz sample insertion; strictly executed off main thread via `TrackerService`'s `mScheduler` / `mDbExecutor` (`Dispatchers.IO` for repository/import writes; `dbDispatcher` strictly for `KnownLocationsRepository`). |
+| **Persistence** | `WorkoutSamplesDatabaseManager` | Storage Growth Rate | ~360 KB/h | `REQ-NFR-011`: At 1-Hz telemetry recording (~100 bytes/sample); ~3.6 MB for a 10-hour endurance activity. |
+| **Cockpit & UI** | `SensorGridScreen` | UI Frame Rendering Time | < 16.6 ms (60 FPS) | `REQ-NFR-012`: Compose telemetry grid recomposition bound to 16.6 ms budget without dropped frames. |
+| **Cockpit & UI** | `ATrainingTrackerMap` | Map Polyline Update Latency | < 30 ms | `REQ-NFR-013`: Latency to update path geometry on live map canvas upon receiving location updates. |
+| **Cockpit & UI** | `TrackingTabsViewModel` | Telemetry StateFlow Emission | 1 Hz (conflated) | `REQ-NFR-014`: Prevents recomposition churn on live cockpit tabs during high-frequency sensor updates. |
 
 ---
 
@@ -241,14 +241,14 @@ In accordance with **ASPICE SWE.2 Base Practice 2 (Specify interfaces of softwar
 
 | Interface ID | Boundary | Provider Element | Consumer Element | Protocol / Mechanism | Threading Contract |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| `IF-SWE-01` | UI $\to$ ViewModel | ViewModels (`TrackingViewModel`, `AftermathViewModel`) | Jetpack Compose Composables | Unidirectional MVI / `StateFlow` | `Dispatchers.Main` |
+| `IF-SWE-01` | UI $\to$ ViewModel | ViewModels (`TrackingViewModel`, `TrackOnMapAftermathViewModel`) | Jetpack Compose Composables | Unidirectional MVI / `StateFlow` | `Dispatchers.Main` |
 | `IF-SWE-02` | ViewModel $\to$ Repository | Repositories (`WorkoutRepository`, `BANALServiceRepository`) | ViewModels | Asynchronous Coroutines (`suspend fun`) | `Dispatchers.IO` |
 | `IF-SWE-03` | Inter-Service Ingestion | `BANALServiceComm` (Local Binder on `BANALService`) | `TrackerService` | Android Local Binder IPC & Broadcasts | Service Thread / Binder Pool |
 | `IF-SWE-04` | Hardware $\to$ Services | Hardware HAL (BLE Gatt, ANT+ Plugin, Location Provider) | `BANALService`, `TrackerService` | System Callbacks (`onCharacteristicChanged`) | Hardware Callback Thread |
 | `IF-SWE-05` | Service/Repo $\to$ Domain | Domain Calculators (`AutoPauseManager`, `ClimbDetector`) | Services & Repositories | Pure JVM Synchronous Methods | Caller Thread (`Dispatchers.IO`) |
 | `IF-SWE-06` | Service/Repo $\to$ SQLite | Database Managers (`WorkoutSamplesDatabaseManager`) | `TrackerService`, Repositories | SQLite WAL Mode & Synchronized Transactions | `dbDispatcher` / `Dispatchers.IO` |
 | `IF-SWE-07` | Repository $\to$ Exporters | Exporters (`FitFileWriter`, `GPXFileWriter`, `TCXFileWriter`) | `ExportManager`, `WorkoutRepository` | Streaming File Writers & Serializers | `Dispatchers.IO` (WorkManager) |
-| `IF-SWE-08` | Repository $\to$ Cloud APIs | Cloud Endpoints (`StravaUploader`, `HealthConnectManager`, `HealthConnectHrvImporter`) | `ExportManager`, UI Controllers, `HrvReadinessRepository` | REST (OkHttp/Retrofit) & HealthConnectClient | `Dispatchers.IO` (WorkManager) |
+| `IF-SWE-08` | Repository $\to$ Cloud APIs | Cloud Endpoints (`StravaUploader`, `HealthConnectManager`, `HealthConnectHrvImporter`) | `ExportManager`, UI Controllers, `HrvReadinessRepository` | REST (OkHttp) & HealthConnectClient | `Dispatchers.IO` (WorkManager) |
 
 For comprehensive operation signatures, payload schemas, concurrency rules, and fault-tolerance protocols, see the authoritative specification in [`docs/architecture/interfaces.md`](architecture/interfaces.md).
 
@@ -264,13 +264,13 @@ Software components are integrated bottom-up to validate database persistence an
 
 | Sequence Step | Integration Step ID | Architectural Interface | Subsystems Integrated | Verification Level | Mocked vs. Real Boundary |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| Step 1 | `INT-SWE-06` | `IF-SWE-06` | Persistence & SQLite Managers | Level 1 & 2 | Real SQLite with temp/in-memory DB; WAL serialized via `dbDispatcher` |
+| Step 1 | `INT-SWE-06` | `IF-SWE-06` | Persistence & SQLite Managers | Level 1 & 2 | Real SQLite with temp/in-memory DB; WAL serialized via `dbDispatcher` (`KnownLocationsRepository`) / single-thread executor |
 | Step 2 | `INT-SWE-04` | `IF-SWE-04` | Hardware HAL to Services | Level 1 & 3 | Mocked hardware via fake GPS & BLE simulators; real service listeners |
 | Step 3 | `INT-SWE-03` | `IF-SWE-03` | TrackerService $\leftrightarrow$ BANALService | Level 1 & 2 | Real Android Binder IPC test harness; stubbed sensor streams |
 | Step 4 | `INT-SWE-05` | `IF-SWE-05` | Domain Calculators & Engines | Level 1 | Pure JVM mathematical models with synthetic time-series fixtures |
 | Step 5 | `INT-SWE-02` | `IF-SWE-02` | ViewModel to Repository Layer | Level 1 | Real repositories with test SQLite / fake DataStore; real coroutine scopes |
 | Step 6 | `INT-SWE-07` | `IF-SWE-07` | Repositories to File Exporters | Level 1 | Real streaming binary/XML writers; mock storage volume |
-| Step 7 | `INT-SWE-08` | `IF-SWE-08` | Repositories to Cloud & Health Connect | Level 1 | MockWebServer for REST endpoints; test doubles for HealthConnectClient |
+| Step 7 | `INT-SWE-08` | `IF-SWE-08` | Repositories to Cloud & Health Connect | Level 1 | Authentic test doubles and repository fakes for REST endpoints; test doubles for HealthConnectClient |
 | Step 8 | `INT-SWE-01` | `IF-SWE-01` | UI Composables to ViewModels | Level 1 & 2 | Jetpack Compose MVI with Robolectric Compose test rule |
 
 For complete verification level definitions, entry/exit criteria, two-tier regression selection, and defect bisection workflows, see [`docs/architecture/integration_strategy.md`](architecture/integration_strategy.md).

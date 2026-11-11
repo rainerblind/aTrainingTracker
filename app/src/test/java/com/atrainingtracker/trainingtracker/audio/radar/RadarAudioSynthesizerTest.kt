@@ -132,4 +132,41 @@ class RadarAudioSynthesizerTest {
         verify(atLeast = 1) { mockTrack.flush() }
         verify(atLeast = 1) { mockTrack.release() }
     }
+
+    @Test
+    fun isHeadphonesOrBluetoothConnected_detectsConnectedHeadphones() {
+        val mockAudioManager = mockk<AudioManager>(relaxed = true)
+        val mockHeadphones = mockk<AudioDeviceInfo> {
+            every { type } returns AudioDeviceInfo.TYPE_BLUETOOTH_A2DP
+        }
+        val mockSpeaker = mockk<AudioDeviceInfo> {
+            every { type } returns AudioDeviceInfo.TYPE_BUILTIN_SPEAKER
+        }
+
+        every { mockAudioManager.getDevices(AudioManager.GET_DEVICES_OUTPUTS) } returns arrayOf(mockHeadphones, mockSpeaker)
+        val synthWithHeadphones = RadarAudioSynthesizer(audioManager = mockAudioManager, audioTrackFactory = { mockk(relaxed = true) })
+        assertTrue("Must detect connected Bluetooth A2DP headphones", synthWithHeadphones.isHeadphonesOrBluetoothConnected())
+        synthWithHeadphones.close()
+
+        every { mockAudioManager.getDevices(AudioManager.GET_DEVICES_OUTPUTS) } returns arrayOf(mockSpeaker)
+        val synthSpeakerOnly = RadarAudioSynthesizer(audioManager = mockAudioManager, audioTrackFactory = { mockk(relaxed = true) })
+        org.junit.Assert.assertFalse("Must return false when only built-in speaker is present", synthSpeakerOnly.isHeadphonesOrBluetoothConnected())
+        synthSpeakerOnly.close()
+    }
+
+    @Test
+    fun playTrack_setsEffectiveVolumeWithoutCallingDeprecatedSetStereoVolume() {
+        val mockTrack = mockk<AudioTrack>(relaxed = true)
+        val synthesizer = RadarAudioSynthesizer(audioTrackFactory = { mockTrack })
+
+        // Asymmetric stereo gains (1.0f vs 0.2f)
+        synthesizer.playApproach(0.8f, RadarAudioRoute.SYSTEM_DEFAULT, leftGain = 1.0f, rightGain = 0.2f)
+
+        // Verifies non-deprecated setVolume is called with effective volume (0.8f)
+        verify { mockTrack.setVolume(0.8f) }
+        @Suppress("DEPRECATION")
+        verify(exactly = 0) { mockTrack.setStereoVolume(any(), any()) }
+
+        synthesizer.close()
+    }
 }

@@ -17,11 +17,12 @@ package com.atrainingtracker.trainingtracker.ui.equipment
 
 import android.app.Application
 import com.atrainingtracker.banalservice.BSportType
-import com.atrainingtracker.banalservice.database.DevicesDatabaseManager
-import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager
+import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceDataRepository
 import com.atrainingtracker.trainingtracker.database.EquipmentDbHelper
-import com.atrainingtracker.trainingtracker.database.SportTypeEquipmentLinkManager
-import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
+import com.atrainingtracker.trainingtracker.repositories.EquipmentRepository
+import com.atrainingtracker.trainingtracker.repositories.SportTypesRepository
+import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
+import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutStatsSummary
 import com.atrainingtracker.trainingtracker.ui.components.stats.StatsData
 import io.mockk.*
 import kotlinx.coroutines.Dispatchers
@@ -36,7 +37,7 @@ import org.junit.Test
 
 /**
  * Unit tests verifying EquipmentViewModel handles EquipmentItem.isRetired
- * during loadEquipment, updateEquipment, and toggleRetired (REQ-UI-158, TST-UI-111, ATT-1118).
+ * during loadEquipment, updateEquipment, and toggleRetired (REQ-UI-158, TST-UI-111, ATT-1118, REQ-UI-511).
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class EquipmentViewModelRetiredTest {
@@ -44,11 +45,10 @@ class EquipmentViewModelRetiredTest {
     private val testDispatcher = StandardTestDispatcher()
 
     private lateinit var mockApplication: Application
-    private lateinit var mockDbHelper: EquipmentDbHelper
-    private lateinit var mockLinksHelper: SportTypeEquipmentLinkManager
-    private lateinit var mockSportTypeManager: SportTypeDatabaseManager
-    private lateinit var mockDevicesManager: DevicesDatabaseManager
-    private lateinit var mockSummariesManager: WorkoutSummariesDatabaseManager
+    private lateinit var mockEquipmentRepo: EquipmentRepository
+    private lateinit var mockSportRepo: SportTypesRepository
+    private lateinit var mockDeviceRepo: DeviceDataRepository
+    private lateinit var mockWorkoutRepo: WorkoutRepository
     private lateinit var mockPrefs: android.content.SharedPreferences
 
     @Before
@@ -66,13 +66,12 @@ class EquipmentViewModelRetiredTest {
         setStaticField(com.atrainingtracker.trainingtracker.TrainingApplication::class.java, "cSharedPreferences", mockPrefs)
 
         mockApplication = mockk(relaxed = true)
-        mockDbHelper = mockk(relaxed = true)
-        mockLinksHelper = mockk(relaxed = true)
-        mockSportTypeManager = mockk(relaxed = true)
-        mockDevicesManager = mockk(relaxed = true)
-        mockSummariesManager = mockk(relaxed = true)
+        mockEquipmentRepo = mockk(relaxed = true)
+        mockSportRepo = mockk(relaxed = true)
+        mockDeviceRepo = mockk(relaxed = true)
+        mockWorkoutRepo = mockk(relaxed = true)
 
-        every { mockSummariesManager.getEquipmentStats(any()) } returns WorkoutSummariesDatabaseManager.Stats()
+        every { mockWorkoutRepo.getEquipmentStats(any()) } returns WorkoutStatsSummary()
     }
 
     @After
@@ -95,11 +94,10 @@ class EquipmentViewModelRetiredTest {
         return EquipmentViewModel(
             application = mockApplication,
             ioDispatcher = testDispatcher,
-            dbEquipmentHelper = mockDbHelper,
-            dbLinksHelper = mockLinksHelper,
-            dbSportHelper = mockSportTypeManager,
-            dbDevicesHelper = mockDevicesManager,
-            dbSummariesManager = mockSummariesManager
+            equipmentRepository = mockEquipmentRepo,
+            sportTypesRepository = mockSportRepo,
+            deviceDataRepository = mockDeviceRepo,
+            workoutRepository = mockWorkoutRepo
         )
     }
 
@@ -113,11 +111,11 @@ class EquipmentViewModelRetiredTest {
         )
 
         every {
-            mockDbHelper.getEquipmentItems(BSportType.BIKE)
+            mockEquipmentRepo.getEquipmentItems(BSportType.BIKE)
         } returns listOf(activeBikeData, retiredBikeData)
 
         every {
-            mockDbHelper.getEquipmentItems(BSportType.RUN)
+            mockEquipmentRepo.getEquipmentItems(BSportType.RUN)
         } returns emptyList()
 
         val viewModel = createViewModel()
@@ -151,14 +149,14 @@ class EquipmentViewModelRetiredTest {
         )
 
         every {
-            mockDbHelper.updateEquipment(42L, "My Specialized", 1, listOf(101L), true)
+            mockEquipmentRepo.updateEquipment(42L, "My Specialized", 1, listOf(101L), true)
         } just Runs
 
         viewModel.updateEquipment(itemToUpdate)
         testDispatcher.scheduler.advanceUntilIdle()
 
         verify {
-            mockDbHelper.updateEquipment(42L, "My Specialized", 1, listOf(101L), true)
+            mockEquipmentRepo.updateEquipment(42L, "My Specialized", 1, listOf(101L), true)
         }
     }
 
@@ -183,14 +181,14 @@ class EquipmentViewModelRetiredTest {
         )
 
         every {
-            mockDbHelper.setEquipmentRetired(10L, true)
+            mockEquipmentRepo.setEquipmentRetired(10L, true)
         } just Runs
 
         viewModel.toggleRetired(activeItem)
         testDispatcher.scheduler.advanceUntilIdle()
 
         verify {
-            mockDbHelper.setEquipmentRetired(10L, true)
+            mockEquipmentRepo.setEquipmentRetired(10L, true)
         }
     }
 

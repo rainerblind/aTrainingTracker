@@ -24,12 +24,16 @@
     <string name="hrv_dfa_a1_short">a1</string>
     <string name="hrv_artifact_rate">Artefactpercentage</string>
     <string name="hrv_artifact_rate_short">Art. %</string>
+    <string name="hrv_sdnn">SDNN</string>
+    <string name="hrv_sdnn_short">SDNN</string>
 
     <string name="hrv_info_title">Hartslagvariabiliteit &amp; aerobe drempels</string>
     <string name="hrv_info_trailing_lag_title">Glijdend venster &amp; tempovertraging</string>
     <string name="hrv_info_trailing_lag_desc">Realtime DFA a1 wordt berekend over een glijdend venster van 2 minuten (elke 5 seconden bijgewerkt) en rMSSD over 60 seconden. Tempowijzigingen zijn pas na 1–2 minuten zichtbaar in de autonome telemetrie.</string>
     <string name="hrv_info_sensor_recommendation_title">Sensoraanbevelingen</string>
-    <string name="hrv_info_sensor_recommendation_desc">Nauwkeurige beat-to-beat RR-intervallen vereisen een bevochtigde ECG-borstband (zoals Polar H10 of Garmin HRM-Pro). Optische polssensoren vlakken intervallen af en zijn ongeschikt voor DFA a1.</string>
+    <string name="hrv_info_sensor_recommendation_desc">Nauwkeurige beat-to-beat RR-intervallen vereisen een niet-afgevlakte ECG-borstband (zoals Polar H10, Polar H9, Garmin HRM-Dual, HRM-Pro of HRM-Pro Plus). Optische polssensoren en budgetborstbanden met firmware-afvlakking (bijv. Magene, CooSpo) vervormen intervallen en zijn ongeschikt voor DFA a1.</string>
+    <string name="hrv_info_smoothed_warning_title">Afgevlakte RR-stroom gedetecteerd</string>
+    <string name="hrv_info_smoothed_warning_desc">Je actieve sensor past interne firmware-afvlakking of synthetische kwantisatie toe op RR-intervallen. Realtime DFA a1 en aerobe drempelindicaties zijn onbetrouwbaar.</string>
     <string name="hrv_info_zones_title">Aerobe drempelzones</string>
     <string name="hrv_info_zones_desc">DFA a1 &gt; 0,75 duidt op een aëroob uithoudingsvermogen (Zone 2). Waarden tussen 0,75 en 0,50 weerspiegelen de drempelovergang (Zone 3). Waarden onder 0,50 duiden op hoge anaërobe intensiteit (Zone 4).</string>
     <string name="hrv_info_disclaimer_title">Medische disclaimer</string>
@@ -42,6 +46,7 @@
     <string name="morning_hrv_posture_supine">Liggend</string>
     <string name="morning_hrv_posture_seated">Zittend</string>
     <string name="morning_hrv_posture_standing">Staand</string>
+    <string name="morning_hrv_posture_overnight_wearable">Nacht-wearable</string>
     <string name="morning_hrv_duration_label">Duur</string>
     <string name="morning_hrv_duration_60s">60 s (Standaard)</string>
     <string name="morning_hrv_duration_120s">120 s (Uitgebreid)</string>
@@ -57,10 +62,23 @@
     <string name="morning_hrv_instructions_desc">Meet direct na het ontwaken en legen van de blaas. Blijf stil liggen en adem rustig zonder te spreken. Behoud dezelfde houding voor betrouwbare SWC-vergelijkingen.</string>
     <string name="morning_hrv_artifact_warning_title">Hoog artefactpercentage</string>
     <string name="morning_hrv_artifact_warning_desc">Artefactpercentage overschrijdt 5%% (%1$.1f%%). Bevochtig de elektroden van de borstband en controleer de pasvorm.</string>
+    <string name="morning_hrv_smoothed_warning_title">Afgevlakte RR-stroom gedetecteerd</string>
+    <string name="morning_hrv_smoothed_warning_desc">Er is firmware-afvlakking gedetecteerd op deze sensor. Beat-to-beat variantie wordt kunstmatig onderdrukt (rMSSD is kunstmatig laag). We raden aan deze meting niet op te slaan om je herstelbasislijn niet te verstoren.</string>
     <string name="morning_hrv_summary_rmssd">rMSSD: %1$.1f ms</string>
     <string name="morning_hrv_summary_ln_rmssd">ln(rMSSD): %1$.2f</string>
     <string name="morning_hrv_summary_resting_hr">Rusthartslag: %1$d bpm</string>
+    <string name="morning_hrv_summary_sdnn">SDNN: %1$.1f ms</string>
+    <string name="morning_hrv_summary_artifact_rate">Artefactpercentage: %1$.1f%%</string>
     <string name="morning_hrv_saved_toast">Ochtend HRV-meting opgeslagen</string>
+    <string name="morning_hrv_error_no_rr">Geen RR-intervallen geregistreerd. Controleer de verbinding van de hartslagsensor.</string>
+    <string name="morning_hrv_beat_count">%1$d slagen</string>
+    <string name="morning_hrv_status_optimal">Optimale autonome gereedheid</string>
+    <string name="morning_hrv_status_fatigued_low">Lage gereedheid (autonome vermoeidheid)</string>
+    <string name="morning_hrv_status_elevated">Verhoogde parasympathische activiteit</string>
+    <string name="morning_hrv_calibration_baseline_progress">Dag %1$d van %2$d basiskalibratie</string>
+    <string name="morning_hrv_calibration_weekly_progress">Dag %1$d van %2$d wekelijkse metingen</string>
+    <string name="morning_hrv_calibration_complete">Kalibratie voltooid</string>
+    <string name="morning_hrv_btn_saved">Opgeslagen</string>
 
     <!-- Longitudinal HRV Readiness Trend in Periods Screen (ATT-3557 / REQ-PER-033) -->
     <string name="hrv_readiness_trend_title">HRV-gereedheidstrend</string>
@@ -77,9 +95,136 @@
     <string name="hrv_scatter_card_subtitle">a1 vs. hartslag &amp; fietsvermogen</string>
     <string name="hrv_scatter_aerobic_threshold">Aërobe drempel (a1 = 0,75)</string>
     <string name="hrv_scatter_anaerobic_threshold">Anaërobe drempel (a1 = 0,50)</string>
+    <string name="hrv_scatter_aerobic_threshold_fmt">Aërobe drempel (a1 = %1$.2f)</string>
+    <string name="hrv_scatter_anaerobic_threshold_fmt">Anaërobe drempel (a1 = %1$.2f)</string>
     <string name="hrv_scatter_toggle_hr">Hartslag</string>
     <string name="hrv_scatter_toggle_power">Vermogen</string>
+    <string name="hrv_scatter_toggle_pace">Tempo</string>
+    <string name="hrv_scatter_smoothed_warning_title">Afgevlakte sensorstroom</string>
+    <string name="hrv_scatter_smoothed_warning_desc">Opgenomen RR-intervallen vertonen firmware-afvlakking of synthetische kwantisatie. Aerobe drempelschattingen (a1 = 0,75 / 0,50) kunnen vervormd zijn.</string>
     <string name="hrv_scatter_artifact_suppressed">Intervallen met hoge artefacten (&gt;5%%) onderdrukt</string>
     <string name="hrv_scatter_no_data">Geen HRV-gegevens beschikbaar voor deze training</string>
     <string name="hrv_chart_artifact_gap_label">Artefactkloof</string>
+
+    <!-- DFA a1 Threshold Tuning & Dynamic Zones (ATT-6715 / REQ-TRK-061) -->
+    <string name="tuning_dfa_a1_t1_title">DFA a1 Aërobe Drempel (T1)</string>
+    <string name="tuning_dfa_a1_t1_desc">Drempel tussen aërobe basis (Zone 2) en overgang (Zone 3). Hoger = meer fractaal / aëroob.</string>
+    <string name="tuning_dfa_a1_t2_title">DFA a1 Anaërobe Drempel (T2)</string>
+    <string name="tuning_dfa_a1_t2_desc">Drempel tussen overgang (Zone 3) en anaërobe intensiteit (Zone 4). Hoger = meer fractaal / aëroob.</string>
+    <string name="tuning_dfa_a1_default">Standaard: %1$.2f (Invariant: T1 \u2265 T2 + 0.05)</string>
+    <string name="hrv_info_zones_desc_fmt">DFA a1 &gt; %1$.2f duidt op een aëroob uithoudingsvermogen (Zone 2). Waarden tussen %1$.2f en %2$.2f weerspiegelen de drempelovergang (Zone 3). Waarden onder %2$.2f duiden op hoge anaërobe intensiteit (Zone 4).</string>
+
+    <!-- Configurable Artifact Gate Threshold (ATT-6714 / REQ-TRK-060.4) -->
+    <string name="tuning_hrv_artifact_gate_title">HRV-artefactdrempel</string>
+    <string name="tuning_hrv_artifact_gate_desc" formatted="false">Maximaal artefactpercentage in venster voordat DFA a1 wordt onderdrukt. Bereik: 3,0% tot 5,0%.</string>
+    <string name="tuning_hrv_artifact_gate_default">Standaard: %1$.1f%%</string>
+
+    <!-- Morning HRV CTA & Onboarding in Fitness & Physiology (ATT-6720 / REQ-UI-513) -->
+    <string name="hrv_measure_morning_cta">Ochtend-HRV meten</string>
+    <string name="hrv_empty_onboarding_title">Volg je herstel met ochtend-HRV</string>
+    <string name="hrv_empty_onboarding_desc">Voer een snelle ochtendmeting van 60–120s uit met een hartslagband om je autonome basislijn en herstelcorridor op te bouwen.</string>
+    <string name="hrv_delete_entry_title">HRV-meting verwijderen</string>
+    <string name="hrv_delete_entry_confirm">Weet je zeker dat je deze ochtend-HRV-meting wilt verwijderen?</string>
+    <string name="hrv_history_title">Geschiedenis ochtend-HRV</string>
+
+    <!-- Lag-Aligned, Confidence-Gated HRVT1/HRVT2 Thresholds (ATT-3554 / REQ-PER-036) -->
+    <string name="hrv_threshold_card_title">DFA a1-drempelwaardeschattingen (HRVT1 / HRVT2)</string>
+    <string name="hrv_threshold_card_subtitle">Vertragingsgecorrigeerde, betrouwbaarheidsgevalideerde fysiologische drempels</string>
+    <string name="hrv_threshold_hrvt1_label">Aërobe drempel (HRVT1)</string>
+    <string name="hrv_threshold_hrvt2_label">Anaërobe drempel (HRVT2)</string>
+    <string name="hrv_threshold_confidence_high">Hoge betrouwbaarheid</string>
+    <string name="hrv_threshold_confidence_medium">Gemiddelde betrouwbaarheid</string>
+    <string name="hrv_threshold_confidence_low">Lage betrouwbaarheid</string>
+    <string name="hrv_threshold_insufficient_span">Onvoldoende bereik</string>
+    <string name="hrv_threshold_provenance_free">Vrije training (10–60 min vers venster)</string>
+    <string name="hrv_threshold_provenance_step">Geleide stappentest</string>
+    <string name="hrv_threshold_provenance_ramp">Geleide continue helling (MRT-aangepast)</string>
+    <string name="hrv_threshold_stat_r2">R²: %1$.2f</string>
+    <string name="hrv_threshold_stat_neff">N: %1$d min</string>
+    <string name="hrv_threshold_stat_neff_steps">N: %1$d stappen</string>
+    <string name="hrv_threshold_stat_artifact">Gemiddelde artefacten: %1$.1f%%</string>
+    <string name="hrv_threshold_diag_steady">Gelijkmatig duurvermogen: DFA a1 bleef boven het drempelbereik</string>
+    <string name="hrv_threshold_diag_high_artifact">Hoge RR-artefactgraad (%1$.1f%% &gt; 5.0%%)</string>
+    <string name="hrv_threshold_diag_short_duration">Onvoldoende overgangsduur (N = %1$d &lt; %2$d)</string>
+    <string name="hrv_threshold_diag_low_r2">Lage lineaire correlatie (R² = %1$.2f &lt; %2$.2f)</string>
+    <string name="hrv_threshold_no_estimate">--</string>
+    <string name="hrv_threshold_informative_only">Alleen ter informatie; uitgesloten van zone-updates</string>
+
+    <!-- Guided DFA a1 Ramp/Step Test Screen (ATT-4969 / REQ-TRK-071) -->
+    <string name="hrv_test_title">Begeleide DFA a1-drempeltest</string>
+    <string name="hrv_test_subtitle">Aëroob &amp; anaëroob drempelprotocol</string>
+    <string name="hrv_test_protocol_label">Protocoltype</string>
+    <string name="hrv_test_protocol_step">Progressieve stappentest</string>
+    <string name="hrv_test_protocol_ramp">Continue hellingtest</string>
+    <string name="hrv_test_sport_label">Sport</string>
+    <string name="hrv_test_sport_cycling">Fietsen (Watt)</string>
+    <string name="hrv_test_sport_running">Hardlopen (Snelheid / Tempo)</string>
+    <string name="hrv_test_step_duration_label">Stapduur</string>
+    <string name="hrv_test_step_duration_4min">4 min (Aanbevolen)</string>
+    <string name="hrv_test_step_duration_3min">3 min (Minimum)</string>
+    <string name="hrv_test_start_load_label">Startbelasting</string>
+    <string name="hrv_test_increment_label">Stapverhoging</string>
+    <string name="hrv_test_warmup_label">Duur warming-up</string>
+    <string name="hrv_test_warmup_desc">10 minuten gelijkmatige warming-up voor de protocolstappen</string>
+    <string name="hrv_test_preflight_title">Sensorcontrole vooraf</string>
+    <string name="hrv_test_preflight_checking">ECG RR-stroom &amp; signaalkwaliteit verifiëren…</string>
+    <string name="hrv_test_preflight_pass" formatted="false">Hoge sensorkwaliteit (Artefacten ≤ 3,0%)</string>
+    <string name="hrv_test_preflight_warning" formatted="false">Matige sensorkwaliteit (Artefacten 3,0–5,0%)</string>
+    <string name="hrv_test_preflight_fail" formatted="false">Sensor ongeschikt (Artefacten &gt; 5,0% of geen RR-gegevens)</string>
+    <string name="hrv_test_preflight_no_sensor">Geen hartslagsensor verbonden. Verbind een ECG-borstband.</string>
+    <string name="hrv_test_phase_warmup">Warming-up</string>
+    <string name="hrv_test_phase_step">Stap %1$d</string>
+    <string name="hrv_test_phase_ramp">Helling</string>
+    <string name="hrv_test_phase_cooldown">Cooling-down</string>
+    <string name="hrv_test_target_power">Doel: %1$d W</string>
+    <string name="hrv_test_target_pace">Doel: %1$s</string>
+    <string name="hrv_test_time_remaining">Resterende tijd: %1$s</string>
+    <string name="hrv_test_live_a1">Live a1: %1$.2f</string>
+    <string name="hrv_test_live_artifacts">Artefacten: %1$.1f%%</string>
+    <string name="hrv_test_early_complete_title">Drempels vastgelegd!</string>
+    <string name="hrv_test_early_complete_desc">DFA a1 is onder 0,45 gedaald. Zowel HRVT1 als HRVT2 zijn vastgelegd. U kunt nu overgaan op cooling-down zonder tot uitputting te gaan.</string>
+    <string name="hrv_test_btn_start">Test starten</string>
+    <string name="hrv_test_btn_finish">Test voltooien</string>
+    <string name="hrv_test_btn_cooldown">Start cooling-down</string>
+    <string name="hrv_test_btn_cancel">Test annuleren</string>
+
+    <!-- Training Zone Comparison & Multi-Session Consensus (ATT-3555 / REQ-PER-037) -->
+    <string name="hrv_zone_comparison_title">Trainingszones vergelijken</string>
+    <string name="hrv_zone_comparison_subtitle">Vergelijking met geconfigureerde Coggan-vermogens- &amp; HF-zones</string>
+    <string name="hrv_zone_comparison_power_header">Fietsvermogen (Coggan)</string>
+    <string name="hrv_zone_comparison_hrvt1_power_delta">HRVT1 vs. Z2 Max (%1$s W)</string>
+    <string name="hrv_zone_comparison_hrvt2_power_delta">HRVT2 vs. FTP (%1$s W)</string>
+    <string name="hrv_zone_comparison_configured_ftp">Geconfigureerde FTP: %1$d W</string>
+    <string name="hrv_zone_comparison_hr_header">Hartslagzones</string>
+    <string name="hrv_zone_comparison_hrvt1_hr_delta">HRVT1 vs. Z2 Max (%1$s bpm)</string>
+    <string name="hrv_zone_comparison_hrvt2_hr_delta">HRVT2 vs. Z4 Max (%1$s bpm)</string>
+    <string name="hrv_zone_comparison_hrvt1_pct_hrmax">HRVT1: %1$d%% HFmax</string>
+    <string name="hrv_zone_comparison_hrvt2_pct_hrmax">HRVT2: %1$d%% HFmax</string>
+    <string name="hrv_zone_comparison_hr_tooltip" formatted="false">Hartslagzones in Instellingen zijn verankerd aan HFmax. Bij getrainde atleten ligt de aerobe drempel HRVT1 typisch rond 75–82% HFmax. Submaximale HRV-drempels observeren HFmax niet en kunnen hartslagzones niet overschrijven.</string>
+    <string name="hrv_consensus_badge_unlocked">Consensus ontgrendeld</string>
+    <string name="hrv_consensus_badge_locked">Consensus vergrendeld</string>
+    <string name="hrv_consensus_reason_guided_high">Begeleid testprotocol met hoge betrouwbaarheid geverifieerd.</string>
+    <string name="hrv_consensus_reason_multi_session">Multisessie-consensus geverifieerd (%1$d sessies binnen ±10 W).</string>
+    <string name="hrv_consensus_reason_insufficient_sessions">Vereist een begeleide test met hoge betrouwbaarheid of ≥3 consistente sessies binnen 30 dagen.</string>
+    <string name="hrv_consensus_reason_spread_too_high">Recente sessieschattingen wijken meer dan ±10 W af.</string>
+    <string name="hrv_zone_comparison_btn_update_power">Vermogenszones bijwerken</string>
+    <string name="hrv_zone_comparison_dialog_title">Vermogenszones bijwerken (FTP)</string>
+    <string name="hrv_zone_comparison_dialog_body">Geconfigureerde FTP bijwerken van %1$d W naar %2$d W?\n\nProtocol: %3$s\nAanpassing: %4$s\n\nLet op: De DFA α1-drempel (HRVT2/RCP) kan 3–5%% boven de 60-minuten MLSS liggen bij een ramptest.</string>
+    <string name="hrv_zone_comparison_dialog_confirm">FTP bijwerken</string>
+    <string name="hrv_zone_comparison_dialog_cancel">Annuleren</string>
+    <string name="hrv_zone_comparison_forward_mader">Metabool model kalibreren</string>
+
+    <!-- Autonomic Durability & Drift (ATT-4970 / REQ-PER-038) -->
+    <string name="hrv_durability_title">Autonome belastbaarheid</string>
+    <string name="hrv_durability_subtitle">DFA α1-drift &amp; aerobe duurzaamheid (Rogers et al. 2021)</string>
+    <string name="hrv_durability_fresh_baseline">Frisse basislijn (15–45 min)</string>
+    <string name="hrv_durability_late_mean">Laat segment (>60 min)</string>
+    <string name="hrv_durability_drift">Autonome drift (Δα1)</string>
+    <string name="hrv_durability_drift_fmt">%1$+.1f%%</string>
+    <string name="hrv_durability_insufficient_data">Onvoldoende gegevens met gelijke intensiteit (&lt;10 min)</string>
+    <string name="hrv_durability_matched_intensity">Gelijke intensiteit: %1$d W (±10%%)</string>
+    <string name="hrv_durability_matched_speed">Gelijke snelheid: %1$s (±10%%)</string>
+    <string name="hrv_durability_trajectory_title">15-minuten segmentverloop</string>
+    <string name="hrv_durability_slice_label">%1$d–%2$d min</string>
+    <string name="hrv_durability_description">Vergelijkt DFA α1 in de frisse basislijn (15–45 min) met latere trainingssegmenten (>60 min) bij gelijke intensiteit om autonome vermoeidheid en vagale weerstand te kwantificeren.</string>
 </resources>

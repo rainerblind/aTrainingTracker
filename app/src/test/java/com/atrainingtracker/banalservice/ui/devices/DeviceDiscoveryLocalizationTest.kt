@@ -18,10 +18,11 @@
 
 package com.atrainingtracker.banalservice.ui.devices
 
+import com.atrainingtracker.testing.LocalizationTestCache
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.io.File
 
 /**
  * Unit test verifying 9-language localization parity and non-empty content
@@ -29,60 +30,24 @@ import java.io.File
  */
 class DeviceDiscoveryLocalizationTest {
 
-    private val locales = listOf(
-        "values",
-        "values-de",
-        "values-es",
-        "values-fr",
-        "values-it",
-        "values-ja",
-        "values-nl",
-        "values-pl",
-        "values-pt"
-    )
-
     private val targetKeys = listOf(
         "devices_newly_discovered_badge",
         "devices_new_sensor_discovered"
     )
 
-    private fun findFile(relativePath: String): File {
-        val candidates = listOf(
-            File(relativePath),
-            File("app/$relativePath"),
-            File("../$relativePath"),
-            File("../../$relativePath")
-        )
-        return candidates.firstOrNull { it.exists() }
-            ?: error("File not found in candidates: $relativePath")
-    }
-
     @Test
     fun verifyLocalizationKeysExistInAllLocales() {
-        for (locale in locales) {
-            val stringsFile = findFile("src/main/res/$locale/strings.xml")
-            assertTrue("strings.xml must exist for locale $locale", stringsFile.exists())
-
-            val content = stringsFile.readText()
+        for (locale in LocalizationTestCache.LOCALES) {
+            val strings = LocalizationTestCache.getStrings(locale)
 
             for (key in targetKeys) {
-                val pattern = """<string\s+name="$key"[^>]*>(.*?)</string>""".toRegex(RegexOption.DOT_MATCHES_ALL)
-                val match = pattern.find(content)
-
-                assertTrue(
-                    "Key '$key' must exist in src/main/res/$locale/strings.xml",
-                    match != null
-                )
-
-                val value = match!!.groupValues[1].trim()
-                assertFalse(
-                    "Key '$key' must not be empty in src/main/res/$locale/strings.xml",
-                    value.isEmpty()
-                )
+                val value = strings[key]
+                assertNotNull("Key '$key' must exist in locale $locale", value)
+                assertFalse("Key '$key' must not be empty in locale $locale", value!!.trim().isEmpty())
 
                 if (key == "devices_new_sensor_discovered") {
                     assertTrue(
-                        "Key '$key' must contain '%1\$s' placeholder in src/main/res/$locale/strings.xml, found '$value'",
+                        "Key '$key' must contain '%1\$s' placeholder in locale $locale, found '$value'",
                         value.contains("%1\$s") || value.contains("%s")
                     )
                 }

@@ -18,12 +18,11 @@
 
 package com.atrainingtracker.trainingtracker.migration
 
+import com.atrainingtracker.testing.LocalizationTestCache
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.io.File
-import java.util.regex.Pattern
 
 /**
  * Audit tests verifying 100% 9-language localization parity for file picker strings (ATT-2622 / REQ-UI-294 / TST-UI-254).
@@ -47,15 +46,10 @@ class ImportFormatFilePickerLocalizationTest {
         val stringKey = "invalid_workout_file_format"
 
         for (locale in locales) {
-            val file = File("src/main/res/$locale/strings.xml")
-            assertTrue("Locale file $file must exist", file.exists())
-            val content = file.readText()
+            val strings = LocalizationTestCache.getStrings(locale)
+            assertTrue("String key '$stringKey' must exist in locale $locale", strings.containsKey(stringKey))
 
-            val pattern = Pattern.compile("<string name=\"$stringKey\">(.*?)</string>")
-            val matcher = pattern.matcher(content)
-            assertTrue("String key '$stringKey' must exist in locale $locale", matcher.find())
-
-            val value = matcher.group(1)
+            val value = strings[stringKey]
             assertNotNull("String value for '$stringKey' in $locale must not be null", value)
             assertTrue("String value for '$stringKey' in $locale must not be blank", value!!.isNotBlank())
 

@@ -107,20 +107,13 @@ class FitFileWriterHrvTest {
         every { SportTypeDatabaseManager.getInstance(any()) } returns mockSportTypeDb
         every { mockSportTypeDb.getBSportType(any()) } returns BSportType.RUN
 
-        mockkObject(WorkoutRepository.Companion)
-        val mockRepo = mockk<WorkoutRepository>(relaxed = true)
-        every { WorkoutRepository.getInstance(any()) } returns mockRepo
-        every { mockRepo.workoutSummariesDatabaseManager } returns mockSummariesDb
-        every { mockRepo.workoutSamplesDatabaseManager } returns mockSamplesDb
-        every { mockRepo.lapsDatabaseManagerInstance } returns mockLapsDb
-        every { mockRepo.getLaps(any()) } returns emptyList()
-
         mockRrDb = mockk(relaxed = true)
         WorkoutRrDatabaseManager.resetForTesting(mockRrDb)
     }
 
     @After
     fun tearDown() {
+        WorkoutRepository.resetForTesting(null)
         WorkoutRrDatabaseManager.resetForTesting(null)
         unmockkAll()
         tempDir.deleteRecursively()

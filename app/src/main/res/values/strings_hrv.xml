@@ -24,12 +24,16 @@
     <string name="hrv_dfa_a1_short">a1</string>
     <string name="hrv_artifact_rate">Artifact rate</string>
     <string name="hrv_artifact_rate_short">Art. %</string>
+    <string name="hrv_sdnn">SDNN</string>
+    <string name="hrv_sdnn_short">SDNN</string>
 
     <string name="hrv_info_title">Heart Rate Variability &amp; Aerobic Thresholds</string>
     <string name="hrv_info_trailing_lag_title">Rolling Window &amp; Pacing Lag</string>
     <string name="hrv_info_trailing_lag_desc">Real-time DFA a1 is calculated over a rolling 2-minute window (updated every 5 seconds) and rMSSD over 60 seconds. Rapid pacing changes take 1–2 minutes to manifest in autonomic telemetry.</string>
     <string name="hrv_info_sensor_recommendation_title">Sensor Recommendations</string>
-    <string name="hrv_info_sensor_recommendation_desc">Accurate beat-to-beat RR intervals require a moistened ECG chest strap (such as Polar H10 or Garmin HRM-Pro). Optical wrist sensors smooth interval timings and are unsuitable for DFA a1.</string>
+    <string name="hrv_info_sensor_recommendation_desc">Accurate beat-to-beat RR intervals require an unsmoothed ECG chest strap (such as Polar H10, Polar H9, Garmin HRM-Dual, HRM-Pro, or HRM-Pro Plus). Optical wrist sensors and budget chest straps with firmware moving-average smoothing (e.g. Magene, CooSpo) distort RR intervals and are unsuitable for DFA a1.</string>
+    <string name="hrv_info_smoothed_warning_title">Smoothed RR Stream Detected</string>
+    <string name="hrv_info_smoothed_warning_desc">Your active sensor applies internal firmware smoothing or synthetic stepping to RR intervals. Real-time DFA a1 and aerobic threshold guidance are distorted and unreliable.</string>
     <string name="hrv_info_zones_title">Aerobic Threshold Zones</string>
     <string name="hrv_info_zones_desc">DFA a1 &gt; 0.75 indicates aerobic endurance pacing (Zone 2). Values between 0.75 and 0.50 reflect the aerobic-anaerobic threshold transition (Zone 3). Values below 0.50 indicate high anaerobic intensity (Zone 4).</string>
     <string name="hrv_info_disclaimer_title">Medical Disclaimer</string>
@@ -42,6 +46,7 @@
     <string name="morning_hrv_posture_supine">Supine</string>
     <string name="morning_hrv_posture_seated">Seated</string>
     <string name="morning_hrv_posture_standing">Standing</string>
+    <string name="morning_hrv_posture_overnight_wearable">Overnight Wearable</string>
     <string name="morning_hrv_duration_label">Duration</string>
     <string name="morning_hrv_duration_60s">60s (Standard)</string>
     <string name="morning_hrv_duration_120s">120s (Extended)</string>
@@ -57,10 +62,23 @@
     <string name="morning_hrv_instructions_desc">Measure upon waking after bladder voiding. Remain still and breathe normally without speaking. Maintain posture consistency for reliable SWC baseline comparisons.</string>
     <string name="morning_hrv_artifact_warning_title">High Artifact Rate</string>
     <string name="morning_hrv_artifact_warning_desc">Artifact rate exceeds 5%% (%1$.1f%%). Ensure your ECG chest strap electrodes are well moistened and firmly positioned.</string>
+    <string name="morning_hrv_smoothed_warning_title">Smoothed RR Stream Detected</string>
+    <string name="morning_hrv_smoothed_warning_desc">Firmware smoothing was detected on this sensor. Beat-to-beat variance is artificially suppressed (rMSSD is artificially tiny). We recommend not saving this reading to avoid corrupting your readiness baseline.</string>
     <string name="morning_hrv_summary_rmssd">rMSSD: %1$.1f ms</string>
     <string name="morning_hrv_summary_ln_rmssd">ln(rMSSD): %1$.2f</string>
     <string name="morning_hrv_summary_resting_hr">Resting HR: %1$d bpm</string>
+    <string name="morning_hrv_summary_sdnn">SDNN: %1$.1f ms</string>
+    <string name="morning_hrv_summary_artifact_rate">Artifact rate: %1$.1f%%</string>
     <string name="morning_hrv_saved_toast">Morning HRV reading saved</string>
+    <string name="morning_hrv_error_no_rr">No RR intervals recorded. Please check heart rate sensor connection.</string>
+    <string name="morning_hrv_beat_count">%1$d beats</string>
+    <string name="morning_hrv_status_optimal">Optimal Autonomic Readiness</string>
+    <string name="morning_hrv_status_fatigued_low">Low Readiness (Autonomic Fatigue)</string>
+    <string name="morning_hrv_status_elevated">Elevated Parasympathetic Activity</string>
+    <string name="morning_hrv_calibration_baseline_progress">Day %1$d of %2$d baseline calibration</string>
+    <string name="morning_hrv_calibration_weekly_progress">Day %1$d of %2$d weekly readings</string>
+    <string name="morning_hrv_calibration_complete">Calibration complete</string>
+    <string name="morning_hrv_btn_saved">Saved</string>
 
     <!-- Longitudinal HRV Readiness Trend in Periods Screen (ATT-3557 / REQ-PER-033) -->
     <string name="hrv_readiness_trend_title">HRV Readiness Trend</string>
@@ -77,9 +95,136 @@
     <string name="hrv_scatter_card_subtitle">a1 vs. Heart Rate &amp; Cycling Power</string>
     <string name="hrv_scatter_aerobic_threshold">Aerobic Threshold (a1 = 0.75)</string>
     <string name="hrv_scatter_anaerobic_threshold">Anaerobic Threshold (a1 = 0.50)</string>
+    <string name="hrv_scatter_aerobic_threshold_fmt">Aerobic Threshold (a1 = %1$.2f)</string>
+    <string name="hrv_scatter_anaerobic_threshold_fmt">Anaerobic Threshold (a1 = %1$.2f)</string>
     <string name="hrv_scatter_toggle_hr">Heart Rate</string>
     <string name="hrv_scatter_toggle_power">Power</string>
+    <string name="hrv_scatter_toggle_pace">Pace</string>
+    <string name="hrv_scatter_smoothed_warning_title">Smoothed Sensor Stream</string>
+    <string name="hrv_scatter_smoothed_warning_desc">Recorded RR intervals exhibit firmware smoothing or synthetic quantization. Aerobic threshold estimates (a1 = 0.75 / 0.50) may be distorted.</string>
     <string name="hrv_scatter_artifact_suppressed">High-artifact intervals (&gt;5%%) suppressed</string>
     <string name="hrv_scatter_no_data">No HRV data available for this workout</string>
     <string name="hrv_chart_artifact_gap_label">Artifact Gap</string>
+
+    <!-- DFA a1 Threshold Tuning & Dynamic Zones (ATT-6715 / REQ-TRK-061) -->
+    <string name="tuning_dfa_a1_t1_title">DFA a1 Aerobic Threshold (T1)</string>
+    <string name="tuning_dfa_a1_t1_desc">Threshold separating aerobic base (Zone 2) from transition (Zone 3). Higher = more fractal / aerobic.</string>
+    <string name="tuning_dfa_a1_t2_title">DFA a1 Anaerobic Threshold (T2)</string>
+    <string name="tuning_dfa_a1_t2_desc">Threshold separating transition (Zone 3) from anaerobic intensity (Zone 4). Higher = more fractal / aerobic.</string>
+    <string name="tuning_dfa_a1_default">Default: %1$.2f (Invariant: T1 \u2265 T2 + 0.05)</string>
+    <string name="hrv_info_zones_desc_fmt">DFA a1 &gt; %1$.2f indicates aerobic endurance pacing (Zone 2). Values between %1$.2f and %2$.2f reflect the aerobic-anaerobic threshold transition (Zone 3). Values below %2$.2f indicate high anaerobic intensity (Zone 4).</string>
+
+    <!-- Configurable Artifact Gate Threshold (ATT-6714 / REQ-TRK-060.4) -->
+    <string name="tuning_hrv_artifact_gate_title">HRV Artifact Gate Threshold</string>
+    <string name="tuning_hrv_artifact_gate_desc" formatted="false">Maximum window artifact rate before DFA a1 calculation is suppressed. Range: 3.0% to 5.0%.</string>
+    <string name="tuning_hrv_artifact_gate_default">Default: %1$.1f%%</string>
+
+    <!-- Morning HRV CTA & Onboarding in Fitness & Physiology (ATT-6720 / REQ-UI-513) -->
+    <string name="hrv_measure_morning_cta">Measure Morning HRV</string>
+    <string name="hrv_empty_onboarding_title">Track Your Recovery with Morning HRV</string>
+    <string name="hrv_empty_onboarding_desc">Perform a quick 60–120s morning measurement using an ECG chest strap to establish your autonomic baseline and readiness corridor.</string>
+    <string name="hrv_delete_entry_title">Delete HRV Reading</string>
+    <string name="hrv_delete_entry_confirm">Are you sure you want to delete this morning HRV reading?</string>
+    <string name="hrv_history_title">Morning HRV History</string>
+
+    <!-- Lag-Aligned, Confidence-Gated HRVT1/HRVT2 Thresholds (ATT-3554 / REQ-PER-036) -->
+    <string name="hrv_threshold_card_title">DFA a1 Threshold Estimates (HRVT1 / HRVT2)</string>
+    <string name="hrv_threshold_card_subtitle">Lag-aligned, confidence-gated physiological thresholds</string>
+    <string name="hrv_threshold_hrvt1_label">Aerobic Threshold (HRVT1)</string>
+    <string name="hrv_threshold_hrvt2_label">Anaerobic Threshold (HRVT2)</string>
+    <string name="hrv_threshold_confidence_high">High Confidence</string>
+    <string name="hrv_threshold_confidence_medium">Medium Confidence</string>
+    <string name="hrv_threshold_confidence_low">Low Confidence</string>
+    <string name="hrv_threshold_insufficient_span">Insufficient Span</string>
+    <string name="hrv_threshold_provenance_free">Free Workout (10–60 min fresh window)</string>
+    <string name="hrv_threshold_provenance_step">Guided Step Test</string>
+    <string name="hrv_threshold_provenance_ramp">Guided Continuous Ramp (MRT-adjusted)</string>
+    <string name="hrv_threshold_stat_r2">R²: %1$.2f</string>
+    <string name="hrv_threshold_stat_neff">N: %1$d min</string>
+    <string name="hrv_threshold_stat_neff_steps">N: %1$d steps</string>
+    <string name="hrv_threshold_stat_artifact">Mean artifact: %1$.1f%%</string>
+    <string name="hrv_threshold_diag_steady">Steady endurance: DFA a1 stayed above threshold span</string>
+    <string name="hrv_threshold_diag_high_artifact">High RR artifact rate (%1$.1f%% &gt; 5.0%%)</string>
+    <string name="hrv_threshold_diag_short_duration">Insufficient transition duration (N = %1$d &lt; %2$d)</string>
+    <string name="hrv_threshold_diag_low_r2">Low linear correlation (R² = %1$.2f &lt; %2$.2f)</string>
+    <string name="hrv_threshold_no_estimate">--</string>
+    <string name="hrv_threshold_informative_only">Informational only; excluded from zone updates</string>
+
+    <!-- Guided DFA a1 Ramp/Step Test Screen (ATT-4969 / REQ-TRK-071) -->
+    <string name="hrv_test_title">Guided DFA a1 Threshold Test</string>
+    <string name="hrv_test_subtitle">Aerobic &amp; Anaerobic Threshold Protocol</string>
+    <string name="hrv_test_protocol_label">Protocol Type</string>
+    <string name="hrv_test_protocol_step">Progressive Step Test</string>
+    <string name="hrv_test_protocol_ramp">Continuous Ramp Test</string>
+    <string name="hrv_test_sport_label">Sport</string>
+    <string name="hrv_test_sport_cycling">Cycling (Watts)</string>
+    <string name="hrv_test_sport_running">Running (Speed / Pace)</string>
+    <string name="hrv_test_step_duration_label">Step Duration</string>
+    <string name="hrv_test_step_duration_4min">4 min (Recommended)</string>
+    <string name="hrv_test_step_duration_3min">3 min (Minimum)</string>
+    <string name="hrv_test_start_load_label">Starting Target</string>
+    <string name="hrv_test_increment_label">Step Increment</string>
+    <string name="hrv_test_warmup_label">Warm-up Duration</string>
+    <string name="hrv_test_warmup_desc">10-minute steady warm-up before protocol steps</string>
+    <string name="hrv_test_preflight_title">Pre-Flight Sensor Check</string>
+    <string name="hrv_test_preflight_checking">Verifying ECG RR stream &amp; signal quality…</string>
+    <string name="hrv_test_preflight_pass" formatted="false">Sensor Quality High (Artifacts ≤ 3.0%)</string>
+    <string name="hrv_test_preflight_warning" formatted="false">Sensor Quality Moderate (Artifacts 3.0–5.0%)</string>
+    <string name="hrv_test_preflight_fail" formatted="false">Sensor Unsuitable (Artifacts &gt; 5.0% or no RR data)</string>
+    <string name="hrv_test_preflight_no_sensor">No heart rate sensor connected. Please connect an ECG chest strap.</string>
+    <string name="hrv_test_phase_warmup">Warm-up</string>
+    <string name="hrv_test_phase_step">Step %1$d</string>
+    <string name="hrv_test_phase_ramp">Ramp</string>
+    <string name="hrv_test_phase_cooldown">Cool-down</string>
+    <string name="hrv_test_target_power">Target: %1$d W</string>
+    <string name="hrv_test_target_pace">Target: %1$s</string>
+    <string name="hrv_test_time_remaining">Time Remaining: %1$s</string>
+    <string name="hrv_test_live_a1">Live a1: %1$.2f</string>
+    <string name="hrv_test_live_artifacts">Artifacts: %1$.1f%%</string>
+    <string name="hrv_test_early_complete_title">Thresholds Captured!</string>
+    <string name="hrv_test_early_complete_desc">DFA a1 has dropped below 0.45. Both HRVT1 and HRVT2 are captured. You can now transition to cool-down without riding to exhaustion.</string>
+    <string name="hrv_test_btn_start">Start Test</string>
+    <string name="hrv_test_btn_finish">Finish Test</string>
+    <string name="hrv_test_btn_cooldown">Begin Cool-down</string>
+    <string name="hrv_test_btn_cancel">Cancel Test</string>
+
+    <!-- Training Zone Comparison & Multi-Session Consensus (ATT-3555 / REQ-PER-037) -->
+    <string name="hrv_zone_comparison_title">Training Zone Comparison</string>
+    <string name="hrv_zone_comparison_subtitle">Comparison against configured Coggan Power &amp; HR Zones</string>
+    <string name="hrv_zone_comparison_power_header">Cycling Power (Coggan)</string>
+    <string name="hrv_zone_comparison_hrvt1_power_delta">HRVT1 vs. Z2 Max (%1$s W)</string>
+    <string name="hrv_zone_comparison_hrvt2_power_delta">HRVT2 vs. FTP (%1$s W)</string>
+    <string name="hrv_zone_comparison_configured_ftp">Configured FTP: %1$d W</string>
+    <string name="hrv_zone_comparison_hr_header">Heart Rate Zones</string>
+    <string name="hrv_zone_comparison_hrvt1_hr_delta">HRVT1 vs. Z2 Max (%1$s bpm)</string>
+    <string name="hrv_zone_comparison_hrvt2_hr_delta">HRVT2 vs. Z4 Max (%1$s bpm)</string>
+    <string name="hrv_zone_comparison_hrvt1_pct_hrmax">HRVT1: %1$d%% HRmax</string>
+    <string name="hrv_zone_comparison_hrvt2_pct_hrmax">HRVT2: %1$d%% HRmax</string>
+    <string name="hrv_zone_comparison_hr_tooltip" formatted="false">Heart Rate zones in Settings are anchored to HRmax. In trained athletes, aerobic threshold HRVT1 typically occurs at 75–82% HRmax. Submaximal HRV thresholds do not observe HRmax and cannot overwrite HR zones.</string>
+    <string name="hrv_consensus_badge_unlocked">Consensus Unlocked</string>
+    <string name="hrv_consensus_badge_locked">Consensus Locked</string>
+    <string name="hrv_consensus_reason_guided_high">High-confidence guided test protocol verified.</string>
+    <string name="hrv_consensus_reason_multi_session">Multi-session consensus verified (%1$d sessions within ±10 W).</string>
+    <string name="hrv_consensus_reason_insufficient_sessions">Requires a High-Confidence Guided Test or ≥3 consistent sessions within 30 days.</string>
+    <string name="hrv_consensus_reason_spread_too_high">Recent session estimates vary by more than ±10 W.</string>
+    <string name="hrv_zone_comparison_btn_update_power">Update Power Zones</string>
+    <string name="hrv_zone_comparison_dialog_title">Update Power Zones (FTP)</string>
+    <string name="hrv_zone_comparison_dialog_body">Update configured FTP from %1$d W to %2$d W?\n\nProtocol: %3$s\nAdjustment: %4$s\n\nCaution: DFA α1 threshold (HRVT2/RCP) may sit 3–5%% above 60-minute MLSS if measured during a ramp test.</string>
+    <string name="hrv_zone_comparison_dialog_confirm">Update FTP</string>
+    <string name="hrv_zone_comparison_dialog_cancel">Cancel</string>
+    <string name="hrv_zone_comparison_forward_mader">Calibrate Metabolic Model</string>
+
+    <!-- Autonomic Durability & Drift (ATT-4970 / REQ-PER-038) -->
+    <string name="hrv_durability_title">Autonomic Durability</string>
+    <string name="hrv_durability_subtitle">DFA α1 Drift &amp; Aerobic Durability (Rogers et al. 2021)</string>
+    <string name="hrv_durability_fresh_baseline">Fresh Baseline (15–45m)</string>
+    <string name="hrv_durability_late_mean">Late Segment (>60m)</string>
+    <string name="hrv_durability_drift">Autonomic Drift (Δα1)</string>
+    <string name="hrv_durability_drift_fmt">%1$+.1f%%</string>
+    <string name="hrv_durability_insufficient_data">Insufficient matched-intensity data (&lt;10 min)</string>
+    <string name="hrv_durability_matched_intensity">Matched Intensity: %1$d W (±10%%)</string>
+    <string name="hrv_durability_matched_speed">Matched Speed: %1$s (±10%%)</string>
+    <string name="hrv_durability_trajectory_title">15-Minute Slice Trajectory</string>
+    <string name="hrv_durability_slice_label">%1$d–%2$dm</string>
+    <string name="hrv_durability_description">Compares DFA α1 during the fresh baseline (15–45 min) against late-workout segments (>60 min) at matched workload to quantify autonomic fatigue and vagal withdrawal resistance.</string>
 </resources>

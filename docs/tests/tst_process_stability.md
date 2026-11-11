@@ -931,6 +931,25 @@
   4. *Clean-Room Full Suite Regression Execution*:
   • Execute `python3 -m unittest tools/test_replay_workout.py` and `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions.
 
+### TST-TOOL-007: **Simulated Ground Speed Injection & Defensive AOSP CLI Fallback Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-TOOL-007`
+- **Component**: **Simulated Ground Speed Injection & Defensive AOSP CLI Fallback Verification Suite**
+- **Jira**: ``ATT-6684``
+- **Test Description**:
+  1. *Unit Test: Command Formatting with Speed (`test_build_inject_cmd_with_speed` in `tools/test_replay_workout.py`)*:
+  • Verify `AdbGpsInjector.build_inject_cmd()` formats `--speed {speed_mps:.2f}` when `speed_mps >= 0.0`.
+  2. *Unit Test: Command Formatting Backward Compatibility (`test_build_inject_cmd_without_speed` in `tools/test_replay_workout.py`)*:
+  • Verify `AdbGpsInjector.build_inject_cmd()` preserves standard Android 14+ command syntax without `--speed` when `speed_mps is None` or `speed_mps < 0.0`.
+  3. *Unit Test: Asynchronous Queue Tuple Handling (`test_async_queue_injection_with_speed` in `tools/test_replay_workout.py`)*:
+  • Verify `AdbGpsInjector.inject_location()` queues 4-tuple `(lat, lon, timestamp_ms, speed_mps)` and `_worker_loop` accepts 2-tuples, 3-tuples, and 4-tuples without error.
+  4. *Unit Test: Defensive Auto-Probing Fallback on Unsupported Option (`test_speed_fallback_on_unsupported_option` in `tools/test_replay_workout.py`)*:
+  • Mock ADB subprocess returning `java.lang.IllegalArgumentException: Unknown option: --speed` with exit code 255.
+  • Verify `_supports_speed_flag` transitions to `False`, warning notice is logged once, and retry injection proceeds without `--speed`.
+  5. *Localization Parity Audit*:
+  • Verify developer tooling changes introduce zero missing strings or format specifier mismatches (no Android UI strings affected).
+  6. *Clean-Room Full Suite Regression Execution*:
+  • Execute `python3 -m unittest tools/test_replay_workout.py` asserting 100% test pass rate across all 39+ tests.
+
 ### TST-BLD-001: **R8 Release Build Minification, ProGuard Keep Rules & DEX Obfuscation Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-BLD-001`
 - **Component**: **R8 Release Build Minification, ProGuard Keep Rules & DEX Obfuscation Verification Suite**
@@ -1417,22 +1436,26 @@
 
 ### TST-PRO-041: **Parallel Sprint Execution Protocol for Disjoint Epics, Flock Serialization & Partitioned Localization Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-PRO-041`
-- **Component**: `.agents/rules/aspice_governance.md`, `.agents/skills/{jira-workflow,stage4-implementation,stage5-verification,sprint-planner}/SKILL.md`, `tools/run_serialized.sh`, `tools/jira_util.py`, `app/src/test/java/com/atrainingtracker/trainingtracker/localization/TranslationParityTest.kt`
-- **Jira**: `ATT-5914`
+- **Component**: `.agents/rules/aspice_governance.md`, `.agents/skills/{jira-workflow,stage4-implementation,stage5-verification,sprint-planner}/SKILL.md`, `tools/run_serialized.sh`, `tools/parallel_sprint_lock.py`, `tools/jira_util.py`, `tools/verify_requirement_governance.py`, `tools/test_verify_requirement_governance.py`, `app/src/test/java/com/atrainingtracker/trainingtracker/localization/TranslationParityTest.kt`
+- **Jira**: `ATT-5914`, `ATT-6743`
 - **Test Description**:
   1. *Subagent Worktree Isolation & Disjoint Epic Guardrail (`TST-PRO-041.1`)*:
-  • Verify `Workspace: "share"` subagent pairs execute in independent worktrees without branch or working-tree collisions.
+  • Verify `Workspace: "share"` subagent pairs execute in independent worktrees without branch or working-tree collisions across up to 3 concurrent lanes (`concurrency = 3`).
   • Verify governance enforces strict disjoint Parent Epic constraint (rejecting parallel execution within the same Epic).
-  2. *POSIX Flock Build & Merge Mutual Exclusion (`TST-PRO-041.2`, `test_flock_serialization.py`)*:
+  2. *POSIX Flock Build, Device & Merge Mutual Exclusion (`TST-PRO-041.2`, `test_flock_serialization.py`)*:
   • Simulate concurrent processes competing for `/tmp/att_build_merge.lock`.
-  • Verify mutual exclusion: exactly one process holds the lock at a time, subsequent processes queue deterministically, and lock releases reliably upon completion or failure.
+  • Verify mutual exclusion: exactly one process holds the lock at a time for heavy Gradle tests, `installDebug` / `adb` commands, and Stage 5 squash merges. Subsequent processes queue deterministically, and lock releases reliably upon completion or failure.
   3. *Dynamic Multi-File String Discovery & Parity Test Suite (`TST-PRO-041.3`, `TranslationParityTest.kt`)*:
   • Verify `TranslationParityTest.kt` dynamically scans all `strings*.xml` across `res/values*/`.
   • Assert partitioned domain string files (`strings_<domain>.xml`) maintain 100% key and placeholder parity across all 9 supported locales.
   4. *Rebase-then-Recalculate Living Docs Governance (`TST-PRO-041.4`)*:
   • Verify `recalculate_master_index_tables()` under merge lock after rebase maintains 100% parity across living doc tables with zero Git merge conflicts.
-  5. *Clean-Room Governance & Verification Execution (`TST-PRO-041.5`)*:
-  • Execute `python3 tools/verify_requirement_governance.py` (exit 0) and `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.localization.TranslationParityTest"`.
+  5. *Deterministic Python Governance Tripwires Verification Suite (`TST-PRO-041.5`, `test_verify_requirement_governance.py`)*:
+  • Verify Composable Island Check: newly added non-preview, non-private `@Composable` declarations without production call sites in `app/src/main/` trigger exit code 1.
+  • Verify Repository Encapsulation Guard: non-private methods or properties in `*Repository.kt` or `*Repository.java` exposing `*DatabaseManager`, `*DbHelper`, `SQLiteDatabase`, or `Cursor` trigger exit code 1.
+  • Verify Architecture & System Spec Grounding & SYSREQ Guard: non-existent backticked source files or `SYSREQ-*` set mismatches trigger exit code 1.
+  6. *Clean-Room Governance & Verification Execution (`TST-PRO-041.6`)*:
+  • Execute `python3 tools/verify_requirement_governance.py` (exit 0) and `python3 tools/test_verify_requirement_governance.py`.
 
 ### TST-PRO-042: **CI Configuration Integrity & Stale Travis Artifacts Contract Test Suite** [Verified]
 - **Requirement(s)**: `REQ-PRO-042`
@@ -1452,22 +1475,24 @@
 
 ### TST-PRO-043: **SWE.2 Architecture Conformance & Code-Grounding Contract Test Suite** [Verified]
 - **Requirement(s)**: `REQ-PRO-043`
-- **Component**: `docs/architecture.md`, `AspiceSweAuditContractTest.kt`
-- **Jira**: `ATT-6179`
+- **Component**: `docs/architecture.md`, `docs/architecture/interfaces.md`, `AspiceSweAuditContractTest.kt`
+- **Jira**: `ATT-6179, ATT-6727`
 - **Test Description**:
   1. *Authentic Component Presence Test (`TST-PRO-043.1`, `AspiceSweAuditContractTest.kt`)*:
-  • Verify `docs/architecture.md` contains authentic class names: `WorkoutClusterEngine`, `GPXFileWriter`, `TCXFileWriter`, `WorkoutSamplesDatabaseManager`, and `MilestoneAutoNamingManager`.
-  2. *Drifted Component Absence Test (`TST-PRO-043.2`, `AspiceSweAuditContractTest.kt`)*:
-  • Verify `docs/architecture.md` does not contain `RouteLearningEngine`, `GpxExporter`, `TcxExporter`, `WorkoutSamplesDb`, `MilestoneDetector`, or `InAppReviewManager`.
+  • Verify `docs/architecture.md` contains authentic class names: `WorkoutClusterEngine`, `GPXFileWriter`, `TCXFileWriter`, `WorkoutSamplesDatabaseManager`, `MilestoneAutoNamingManager`, `FirstJubileeActionHelper`, `SettingsDataStore`, `EquipmentDbHelper`, `EquipmentRepository`, `ProFeatureManager`, `ATrainingTrackerTheme`, `TelemetryMetricGraph`, and `PlayStoreListingContractTest`.
+  2. *Drifted Component Blacklist Absence Test (`TST-PRO-043.2`, `AspiceSweAuditContractTest.kt`)*:
+  • Verify `docs/architecture.md` and `docs/architecture/interfaces.md` do not contain any of the 14 drifted placeholders: `RouteLearningEngine`, `GpxExporter`, `TcxExporter`, `WorkoutSamplesDb`, `MilestoneDetector`, `InAppReviewManager`, `UserPreferences`, `EquipmentDatabaseManager`, `PrivacyZoneManager`, `BillingManager`, `TTTheme`, `CustomLineChart`, `ElevationPoint`, `StoreMetadataContractTest`.
   3. *Tracking State Machine & Dispatcher Conformance Test (`TST-PRO-043.3`, `AspiceSweAuditContractTest.kt`)*:
   • Verify `docs/architecture.md` specifies `TrackingMode` states (`IDLE`, `READY`, `TRACKING`, `PAUSED`) and retains required threading tokens (`dbDispatcher`, `Dispatchers.Main`, `Dispatchers.IO`).
-  4. *Clean-Room Targeted Test Suite Execution (`TST-PRO-043.4`)*:
+  4. *Dynamic Component Existence & Architecture Conformance Contract (`TST-PRO-043.4`, `AspiceSweAuditContractTest.kt`)*:
+  • Extract all backticked software component symbols from `docs/architecture.md` Section 2 allocation table and `docs/architecture/interfaces.md`, filter against a strict framework SDK allow-list, and assert that every project component symbol exists in `app/src/main/` or `tools/`.
+  5. *Clean-Room Targeted Test Suite Execution (`TST-PRO-043.5`)*:
   • Execute targeted unit test suite `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.build.AspiceSweAuditContractTest"` asserting 100% pass rate.
 
 ### TST-PRO-044: **ASPICE SWE.2 Software Interface Specification Contract Test Suite** [Verified]
 - **Requirement(s)**: `REQ-PRO-044`
 - **Component**: `docs/architecture/interfaces.md`, `docs/architecture.md`, `AspiceSweAuditContractTest.kt`
-- **Jira**: `ATT-6180`
+- **Jira**: `ATT-6180, ATT-6732`
 - **Test Description**:
   1. *Interface File & Boundary Completeness Test (`TST-PRO-044.1`, `AspiceSweAuditContractTest.kt`)*:
   • Verify existence of `docs/architecture/interfaces.md`.
@@ -1475,15 +1500,18 @@
   2. *Mandatory Interface Attribute Completeness Test (`TST-PRO-044.2`, `AspiceSweAuditContractTest.kt`)*:
   • For every interface `IF-SWE-01`..`IF-SWE-08`, assert the presence of Provider, Consumer, Operations/Payload, Threading/Concurrency, and Error Handling fields.
   3. *Architecture Document Integration Test (`TST-PRO-044.3`, `AspiceSweAuditContractTest.kt`)*:
-  • Verify `docs/architecture.md` Section 5 contains the interface summary matrix referencing `IF-SWE-01` through `IF-SWE-08`.
-  4. *Clean-Room Targeted Test Suite Execution (`TST-PRO-044.4`)*:
+  • Verify `docs/architecture.md` Section 5 contains the interface summary matrix referencing `IF-SWE-01` through `IF-SWE-08` and authentic components (`TrackOnMapAftermathViewModel`, `REST (OkHttp) & HealthConnectClient`).
+  4. *Dynamic Method & Type Grounding Conformance Test (`TST-PRO-044.4`, `AspiceSweAuditContractTest.kt`)*:
+  • Extract documented `fun <name>(` declarations and backticked component/DTO types from `docs/architecture/interfaces.md`.
+  • Assert that all extracted method names and non-framework types resolve to real source declarations in `app/src/main/`.
+  5. *Clean-Room Targeted Test Suite Execution (`TST-PRO-044.5`)*:
   • Execute targeted unit test suite `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.build.AspiceSweAuditContractTest"` asserting 100% pass rate.
 
 
 ### TST-PRO-045: **ASPICE SWE.5 Software Integration Verification Strategy Contract Test Suite** [Verified]
 - **Requirement(s)**: `REQ-PRO-045`
 - **Component**: `docs/architecture/integration_strategy.md`, `docs/architecture.md`, `AspiceSweAuditContractTest.kt`
-- **Jira**: `ATT-6183`
+- **Jira**: `ATT-6183, ATT-6736`
 - **Test Description**:
   1. *Integration Strategy Structural Completeness Test (`TST-PRO-045.1`, `AspiceSweAuditContractTest.kt`)*:
   • Verify existence of `docs/architecture/integration_strategy.md`.
@@ -1500,7 +1528,7 @@
 ### TST-PRO-046: **Android Lint CI Quality Gate & Baseline Burn-down Contract Test Suite** [Verified]
 - **Requirement(s)**: `REQ-PRO-046`
 - **Component**: `.github/workflows/android-branch-build.yml`, `app/build.gradle`, `app/lint-baseline.xml`, `ReleaseCiAndLintConfigContractTest.kt`
-- **Jira**: `ATT-6173`
+- **Jira**: `ATT-6173, ATT-6728`
 - **Test Description**:
   1. *CI Workflow Lint Step & Artifact Upload Conformance Test (`TST-PRO-046.1`, `ReleaseCiAndLintConfigContractTest.kt`)*:
   • Read `.github/workflows/android-branch-build.yml`.
@@ -1511,20 +1539,27 @@
   • Assert that the `lint` block specifies `abortOnError = true`, `htmlReport = true`, and `xmlReport = true`.
   3. *Lint Baseline Upper Bound & Issue Count Test (`TST-PRO-046.3`, `ReleaseCiAndLintConfigContractTest.kt`)*:
   • Parse `app/lint-baseline.xml`.
-  • Count `<issue` XML elements and assert the total count is <= 546.
-  4. *Clean-Room Targeted Test Suite Execution (`TST-PRO-046.4`)*:
+  • Count `<issue` XML elements and assert the total count is in `0..239` (ATT-6728).
+  4. *Compose Lint Rules Enforcement Test (`TST-PRO-046.5`, `ReleaseCiAndLintConfigContractTest.kt`)*:
+  • Read `app/build.gradle`.
+  • Assert that `NonObservableLocale` and `LocalContextGetResourceValueCall` are not downgraded to warning (ATT-6728).
+  5. *Clean-Room Targeted Test Suite Execution (`TST-PRO-046.4`)*:
   • Execute targeted unit test suite `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.build.ReleaseCiAndLintConfigContractTest"` asserting 100% pass rate.
+  6. *Android Lint Execution Cleanliness Test (`TST-PRO-046.6`)*:
+  • Execute `./gradlew :app:lintDebug` and assert 0 errors.
 
 
 
 ### TST-PRO-047: **Detekt Static Analysis & Complexity Governance Contract Test Suite** [Verified]
 - **Requirement(s)**: `REQ-PRO-047`
 - **Component**: `build.gradle`, `app/build.gradle`, `config/detekt/detekt.yml`, `app/detekt-baseline.xml`, `.github/workflows/android-branch-build.yml`, `ReleaseCiAndLintConfigContractTest.kt`
-- **Jira**: `ATT-6175`
+- **Jira**: `ATT-6175`, `ATT-6729`
 - **Test Description**:
-  1. *Build Script Detekt Plugin & Configuration Conformance Test (`TST-PRO-047.1`, `ReleaseCiAndLintConfigContractTest.kt`)*:
-  • Read `build.gradle` and `app/build.gradle`.
+  1. *Build Script Detekt Plugin, Configuration & Baseline Ceiling Conformance Test (`TST-PRO-047.1`, `ReleaseCiAndLintConfigContractTest.kt`)*:
+  • Read `build.gradle`, `app/build.gradle`, and `config/detekt/detekt.yml`.
   • Assert that the detekt plugin is applied and configured with `config/detekt/detekt.yml` and `app/detekt-baseline.xml`.
+  • Assert that `config/detekt/detekt.yml` contains Jetpack Compose exemptions (`ignoreAnnotated: ['Composable']`, `ignoreAnnotated: ['Preview']`).
+  • Parse `app/detekt-baseline.xml` and assert total `<ID>` issue count is strictly `<= 9550`.
   2. *Detekt Rules Configuration Conformance Test (`TST-PRO-047.2`, `ReleaseCiAndLintConfigContractTest.kt`)*:
   • Read `config/detekt/detekt.yml`.
   • Assert that complexity rules (`LargeClass`, `LongMethod`, and `CyclomaticComplexMethod`) are present with active thresholds.
@@ -1532,86 +1567,96 @@
   • Read `.github/workflows/android-branch-build.yml`.
   • Assert that the workflow contains `./gradlew detekt` and an artifact upload step for detekt reports.
   4. *Clean-Room Targeted Test Suite Execution (`TST-PRO-047.4`)*:
-  • Execute targeted unit test suite `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.build.ReleaseCiAndLintConfigContractTest"` and `./gradlew detekt` asserting 100% pass rate.
+  • Execute targeted unit test suite `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.build.ReleaseCiAndLintConfigContractTest"` and `./gradlew :app:detekt` asserting 100% pass rate.
 
 
 
 ### TST-PRO-048: **Kover Code Coverage Measurement & CI Threshold Gating Contract Test Suite** [Verified]
 - **Requirement(s)**: `REQ-PRO-048`
 - **Component**: `build.gradle`, `app/build.gradle`, `.github/workflows/android-branch-build.yml`, `ReleaseCiAndLintConfigContractTest.kt`
-- **Jira**: `ATT-6171`
+- **Jira**: `ATT-6171`, `ATT-6730`
 - **Test Description**:
   1. *Build Script Kover Plugin & Configuration Conformance Test (`TST-PRO-048.1`, `ReleaseCiAndLintConfigContractTest.kt`)*:
   • Read `build.gradle` and `app/build.gradle`.
-  • Assert that the Kover plugin (0.9.1) is applied and configured with XML/HTML reporting and verification rules.
+  • Assert that the Kover plugin (0.9.11) is applied and configured with XML/HTML reporting, generated class exclusions (`*.R`, `*Manifest*`), and dual verification threshold rules (`CoverageUnit.LINE` and `CoverageUnit.BRANCH`).
   2. *CI Workflow Kover Step & Artifact Upload Conformance Test (`TST-PRO-048.2`, `ReleaseCiAndLintConfigContractTest.kt`)*:
   • Read `.github/workflows/android-branch-build.yml`.
   • Assert that the workflow contains Kover reporting/verify task execution and artifact upload for coverage reports.
   3. *Kover Report Generation & Verification Execution Test (`TST-PRO-048.3`, `app/build.gradle`)*:
   • Execute `./gradlew :app:koverXmlReportDebug :app:koverHtmlReportDebug :app:koverVerifyDebug`.
-  • Assert that XML and HTML reports are produced under `app/build/reports/kover/` and verification threshold rule succeeds.
+  • Assert that XML and HTML reports are produced under `app/build/reports/kover/` and verification threshold rules succeed against calibrated baseline bounds (LINE >= 35%, BRANCH >= 30%).
   4. *Clean-Room Targeted Test Suite Execution (`TST-PRO-048.4`)*:
   • Execute targeted unit test suite `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.build.ReleaseCiAndLintConfigContractTest"` asserting 100% pass rate.
 
 
 
-### TST-PRO-049: **Source-Text Reading Test Audit Suite** [Verified]
+### TST-PRO-049: **Source-Text Reading Test Audit Suite** [Draft]
 - **Requirement(s)**: `REQ-PRO-049`
 - **Component**: `app/src/test/java/com/atrainingtracker/trainingtracker/build/SourceTextReadingAuditContractTest.kt`, `app/source-reading-baseline.txt`, `docs/coding_standards.md` §5.4
-- **Jira**: `ATT-6186`
+- **Jira**: `ATT-6186`, `ATT-6731`, `ATT-6569`, `ATT-6568`, `ATT-6567`, `ATT-6566`
 - **Test Description**:
   1. *Audit Scanner Execution & Baseline Conformance Test (`TST-PRO-049.1`, `SourceTextReadingAuditContractTest.kt`)*:
-  • Recursively scan all `.java` and `.kt` test files in `app/src/test/java/`.
-  • Assert that zero tests outside the allow-list read `app/src/main/` production source files.
+  • Recursively scan all `.java` and `.kt` test files in `app/src/test/java/` using expanded reader detection (`readText`, `readLines`, `readString`, `useLines`, `bufferedReader`) targeting `app/src/main/`.
+  • Assert that zero tests outside the approved allow-list (`LEGITIMATE_GOVERNANCE_GUARDS` + baseline) read `app/src/main/` production source files.
   2. *Governance Guard Exception Validation Test (`TST-PRO-049.2`, `SourceTextReadingAuditContractTest.kt`)*:
-  • Assert that all 13 legitimate architectural governance contract tests are registered in the allow-list.
-  3. *Tripwire Violation Detection Test (`TST-PRO-049.3`, `SourceTextReadingAuditContractTest.kt`)*:
-  • Validate that unallow-listed test files containing `.readText()` targeting `src/main/` trigger a test failure.
-  4. *Clean-Room Targeted Test Suite Execution (`TST-PRO-049.4`)*:
+  • Assert that exactly 22 approved architectural governance guards are registered in `LEGITIMATE_GOVERNANCE_GUARDS`.
+  • Assert that each guard ends with `Test.kt` or `Cache.kt` and exists on disk in `app/src/test/java`.
+  3. *Legacy Baseline Ratchet & Stale-Entry Detection Test (`TST-PRO-049.3`, `SourceTextReadingAuditContractTest.kt`)*:
+  • Assert that `(baseline - detectedReaders).isEmpty()`, guaranteeing zero stale entries remain in the baseline when legacy tests are phased out.
+  • Assert that `baseline.size <= 181`, enforcing a monotonic non-increasing ceiling on legacy debt (ratcheted down from 211 by removing 30 tests across `ui.aftermath` in ATT-6566).
+  4. *Ratcheting Tripwire Violation Detection Test (`TST-PRO-049.4`, `SourceTextReadingAuditContractTest.kt`)*:
+  • Validate that a synthetic unallow-listed reader triggers an assertion failure.
+  5. *Clean-Room Targeted Test Suite Execution (`TST-PRO-049.5`)*:
   • Execute targeted unit test suite `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.build.SourceTextReadingAuditContractTest"` asserting 100% pass rate.
 
 
 ### TST-PRO-050: **Automated Architecture Conformance Test Suite** [Verified]
 - **Requirement(s)**: `REQ-PRO-050`
 - **Component**: `app/src/test/java/com/atrainingtracker/trainingtracker/build/ArchitectureConformanceContractTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/SourceTextReadingAuditContractTest.kt`, `docs/architecture.md`
-- **Jira**: `ATT-6182`
+- **Jira**: `ATT-6182`, `ATT-6734`
 - **Test Description**:
-  1. *UI Layer DatabaseManager Isolation Test (`TST-PRO-050.1`, `ArchitectureConformanceContractTest.kt`)*:
-  • Recursively scan all `.java` and `.kt` source files in `app/src/main/java/**/ui/`.
-  • Assert that zero classes outside the recorded baseline import or reference `*DatabaseManager` or `*DbHelper`.
-  2. *Domain Calculation Layer Purity Test (`TST-PRO-050.2`, `ArchitectureConformanceContractTest.kt`)*:
-  • Recursively scan all files in domain calculation packages.
-  • Assert that zero classes reference Android UI frameworks or SQLite persistence classes.
+  1. *UI Layer DatabaseManager Isolation & Downward Ratchet Test (`TST-PRO-050.1`, `ArchitectureConformanceContractTest.kt`)*:
+  • Recursively scan all `.java` and `.kt` source files in both `trainingtracker/ui/` and `banalservice/ui/` after stripping block and line comments.
+  • Assert that zero classes outside the 23-caller ratcheted baseline import or reference `*DatabaseManager` or `*DbHelper`.
+  • Assert that `(baseline - detectedCallers).isEmpty()` and `detectedCallers.size <= 23`.
+  2. *Domain & Scientific Calculation Layer Purity Test (`TST-PRO-050.2`, `ArchitectureConformanceContractTest.kt`)*:
+  • Recursively scan all files in `domain/` and `physiology/` calculation packages.
+  • Assert that zero classes reference Android UI frameworks or raw SQLite `*DatabaseManager` / `*DbHelper` classes.
   3. *Ratcheting Tripwire Violation Detection Test (`TST-PRO-050.3`, `ArchitectureConformanceContractTest.kt`)*:
-  • Validate that synthetic unallow-listed UI database references or domain UI imports trigger assertion failures.
+  • Validate that synthetic unallow-listed UI database references, domain UI imports, or upward database Compose imports trigger assertion failures.
   4. *Clean-Room Targeted Test Suite Execution (`TST-PRO-050.4`)*:
   • Execute targeted unit test suite `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.build.ArchitectureConformanceContractTest"` asserting 100% pass rate and confirm `ArchitectureConformanceContractTest` is registered in `LEGITIMATE_GOVERNANCE_GUARDS`.
+  5. *Database Layer Upward Import Prohibition Test (`TST-PRO-050.5`, `ArchitectureConformanceContractTest.kt`)*:
+  • Recursively scan all `.java` and `.kt` files in `database/` packages (`trainingtracker/database`, `banalservice/database`, `database`).
+  • Assert that zero persistence classes import `androidx.compose.*` or presentation UI screens/composables.
 
 
 ### TST-PRO-051: **Android Instrumented Test Infrastructure & Emulator CI Contract Test Suite** [Verified]
 - **Requirement(s)**: `REQ-PRO-051`
 - **Component**: `app/build.gradle`, `.github/workflows/android-branch-build.yml`, `app/src/androidTest/java/com/atrainingtracker/trainingtracker/AppSmokeAndroidTest.kt`, `ReleaseCiAndLintConfigContractTest.kt`
-- **Jira**: `ATT-6184`
+- **Jira**: `ATT-6184, ATT-6737`
 - **Test Description**:
   1. *Build Script Instrumentation Runner & Dependency Conformance Test (`TST-PRO-051.1`, `ReleaseCiAndLintConfigContractTest.kt`)*:
   • Read `app/build.gradle`.
   • Assert that `testInstrumentationRunner` is configured as `"androidx.test.runner.AndroidJUnitRunner"`.
-  • Assert that `androidTestImplementation` dependencies for `androidx.test.ext:junit`, `androidx.test.espresso:espresso-core`, and `androidx.test:runner` are present.
-  2. *CI Workflow Emulator Job & Artifact Upload Conformance Test (`TST-PRO-051.2`, `ReleaseCiAndLintConfigContractTest.kt`)*:
+  • Assert that `androidTestImplementation` dependencies for `androidx.test.ext:junit`, `androidx.test.espresso:espresso-core`, `androidx.test:runner`, and `androidx.test:rules` are present.
+  2. *CI Workflow Pre-Build Step, API 34 Target & Artifact Upload Conformance Test (`TST-PRO-051.2`, `ReleaseCiAndLintConfigContractTest.kt`)*:
   • Read `.github/workflows/android-branch-build.yml`.
-  • Assert that the workflow contains an emulator job executing `connectedDebugAndroidTest` (or `:app:connectedDebugAndroidTest`).
-  • Assert that the workflow uploads instrumented test results via `actions/upload-artifact`.
-  3. *AndroidTest Compilation & Smoke Test Existence Verification (`TST-PRO-051.3`)*:
+  • Assert that the workflow contains a pre-build step executing `:app:assembleDebug :app:assembleDebugAndroidTest` prior to launching the emulator runner.
+  • Assert that the workflow configures `reactivecircus/android-emulator-runner@v2` targeting `api-level: 34`, `target: google_apis`, and `arch: x86_64`.
+  • Assert that the workflow executes `connectedDebugAndroidTest` and uploads instrumented test results via `actions/upload-artifact`.
+  3. *AndroidTest Compilation & Smoke Test Lifecycle Verification (`TST-PRO-051.3`)*:
   • Verify existence of `app/src/androidTest/java/com/atrainingtracker/trainingtracker/AppSmokeAndroidTest.kt`.
-  • Execute `./gradlew compileDebugAndroidTestKotlin` and assert successful compilation without errors.
+  • Verify that `AppSmokeAndroidTest.kt` references `MainActivityWithNavigation`, `GrantPermissionRule`, and synthetic tracking start/stop with `WorkoutDeletionHelper`.
+  • Execute `./gradlew compileDebugAndroidTestKotlin :app:assembleDebug :app:assembleDebugAndroidTest` and assert successful compilation without errors.
   4. *Clean-Room Targeted Test Suite Execution (`TST-PRO-051.4`)*:
   • Execute targeted unit test suite `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.build.ReleaseCiAndLintConfigContractTest"` asserting 100% pass rate.
 
 
 ### TST-PRO-052: **Architectural Resource and Timing Budgets Contract Test Suite** [Verified]
-- **Requirement(s)**: `REQ-PRO-052`
+- **Requirement(s)**: `REQ-PRO-052`, `REQ-NFR-003`..`REQ-NFR-014`
 - **Component**: `docs/architecture.md`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/ArchitectureConformanceContractTest.kt`
-- **Jira**: `ATT-6181`
+- **Jira**: `ATT-6181`, `ATT-6735`
 - **Test Description**:
   1. *Architecture Section 4.9 Structural & Sectional Conformance Test (`TST-PRO-052.1`, `ArchitectureConformanceContractTest.kt`)*:
   • Read `docs/architecture.md`.
@@ -1619,32 +1664,43 @@
   • Assert that all 4 critical subsystem domains (`TrackerService`, `BANALService`, `WorkoutSamplesDatabaseManager`, and Cockpit UI/Map) are documented.
   2. *Quantitative Threshold Verification Test (`TST-PRO-052.2`, `ArchitectureConformanceContractTest.kt`)*:
   • Assert that Section 4.9 specifies numeric bounds for CPU, heap memory, latency, battery drain, and disk growth.
-  3. *Clean-Room Targeted Test Suite Execution (`TST-PRO-052.3`)*:
+  3. *WakeLock Attribution & Threading Conformance Test (`TST-PRO-052.3`, `ArchitectureConformanceContractTest.kt`)*:
+  • Assert that `PARTIAL_WAKE_LOCK` (`aTrainingTracker:TrackingLock`) is attributed to `TrackerService` under Tracking Core domain.
+  • Assert that `BANALService` has zero WakeLock attribution.
+  • Assert that 1-Hz database write threading references `TrackerService`'s `mScheduler` / `mDbExecutor`.
+  4. *Non-Functional Requirement Link Conformance Test (`TST-PRO-052.4`, `ArchitectureConformanceContractTest.kt`)*:
+  • Assert that every budget row in Section 4.9 links to its concrete `REQ-NFR-003` through `REQ-NFR-014` identifier.
+  5. *Clean-Room Targeted Test Suite Execution (`TST-PRO-052.5`)*:
   • Execute targeted unit test suite `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.build.ArchitectureConformanceContractTest"` asserting 100% pass rate.
 
 
 ### TST-PRO-053: **System Context Specification and Code-Grounding Contract Test Suite** [Verified]
 - **Requirement(s)**: `REQ-PRO-053`
 - **Component**: `docs/system/system_context.md`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/SystemContextContractTest.kt`
-- **Jira**: `ATT-6158`
+- **Jira**: `ATT-6158`, `ATT-6738`
 - **Test Description**:
   1. *System Context Structural & Diagram Verification (`TST-PRO-053.1`, `SystemContextContractTest.kt`)*:
   • Read `docs/system/system_context.md`.
   • Assert that the document exists and contains a valid Mermaid diagram (`flowchart` or `graph`).
   • Assert that all 5 interface domains (Sensors, Platform, Location/Maps, Cloud/Health, Decommissioned) are documented.
   2. *External Elements & Source Grounding Verification (`TST-PRO-053.2`, `SystemContextContractTest.kt`)*:
-  • Assert that BLE GATT profiles defined in `docs/system/system_context.md` match UUIDs in `BluetoothConstants.java`.
-  • Assert that ANT+ IPC services match package declarations in `AndroidManifest.xml`.
-  • Assert that cloud SDK dependencies match entries in `app/build.gradle`.
+  • Assert that BLE GATT profiles defined in `docs/system/system_context.md` match UUIDs in `BluetoothConstants.java` (including `0x180A`, Varia V1, Light Control).
+  • Assert that hardware sensors match `Sensor.TYPE_PRESSURE` and `Sensor.TYPE_PROXIMITY`.
+  • Assert that FGS execution types match `location|health` in `AndroidManifest.xml` and `TrackerService.java`.
+  • Assert that targetSdk 37 is labeled as Android 17.
+  • Assert that cloud SDK dependencies match entries in `app/build.gradle` (Dropbox, PebbleKit, Health Connect, Open-Meteo, Firebase BOM, Google Play Auth/Review).
   • Assert that Runkeeper and TrainingPeaks are explicitly tagged as decommissioned.
-  3. *Clean-Room Targeted Test Suite Execution (`TST-PRO-053.3`)*:
+  3. *Dynamic Filesystem & Symbol Grounding Verification (`TST-PRO-053.3`, `SystemContextContractTest.kt`)*:
+  • Dynamically extract all backticked `.kt`, `.java`, `.xml` filenames and verify 100% exist on disk in the repository.
+  • Dynamically extract all `Sensor.TYPE_*` and `FOREGROUND_SERVICE_TYPE_*` tokens and verify they match authentic production code.
+  4. *Clean-Room Targeted Test Suite Execution (`TST-PRO-053.4`)*:
   • Execute targeted unit test suite `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.build.SystemContextContractTest"` asserting 100% pass rate.
 
 
 ### TST-PRO-054: **System Requirements for Live Tracking Contract Test Suite** [Verified]
 - **Requirement(s)**: `REQ-PRO-054`
 - **Component**: `docs/system/sysreq_live_tracking.md`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/SystemLiveTrackingRequirementsContractTest.kt`
-- **Jira**: `ATT-6160`
+- **Jira**: `ATT-6160`, `ATT-6739`
 - **Test Description**:
   1. *Specification Structure & SYSREQ Coverage Verification (`TST-PRO-054.1`, `SystemLiveTrackingRequirementsContractTest.kt`)*:
   • Read `docs/system/sysreq_live_tracking.md`.
@@ -1655,32 +1711,35 @@
   • Assert that reconnection delays in `SYSREQ-TRK-002` match `MyBTLEDevice.INITIAL_RECONNECT_DELAY_MS` (1,000 ms) and `MAX_RECONNECT_DELAY_MS` (16,000 ms).
   • Assert that radar starvation watchdog matches `BTLERadarDevice.WATCHDOG_TIMEOUT_MS` (3,500 ms).
   • Assert that 1-Hz technical sampling tick matches `TrackerService` 1,000 ms period.
+  • Assert dynamic `File.exists()` on disk for all backticked `.kt` and `.java` source and test files cited in `docs/system/sysreq_live_tracking.md`.
   3. *Clean-Room Targeted Test Suite Execution (`TST-PRO-054.3`)*:
   • Execute targeted unit test suite `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.build.SystemLiveTrackingRequirementsContractTest"` asserting 100% pass rate.
 
 
 ### TST-PRO-055: **System Requirements for Data Exchange Contract Test Suite** [Verified]
 - **Requirement(s)**: `REQ-PRO-055`
-- **Component**: `docs/system/sysreq_data_exchange.md`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/SystemDataExchangeRequirementsContractTest.kt`
-- **Jira**: `ATT-6161`
+- **Component**: `docs/system/sysreq_data_exchange.md`, `docs/system_requirements.md`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/SystemDataExchangeRequirementsContractTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/SystemRequirementsSpecificationContractTest.kt`
+- **Jira**: `ATT-6161`, `ATT-6740`
 - **Test Description**:
-  1. *Specification Structure & SYSREQ Coverage Verification (`TST-PRO-055.1`, `SystemDataExchangeRequirementsContractTest.kt`)*:
-  • Read `docs/system/sysreq_data_exchange.md`.
-  • Assert that the document exists and contains all 6 requirements (`SYSREQ-DEX-001` through `SYSREQ-DEX-006`).
+  1. *Specification Structure & SYSREQ Coverage Verification (`TST-PRO-055.1`, `SystemDataExchangeRequirementsContractTest.kt` & `SystemRequirementsSpecificationContractTest.kt`)*:
+  • Read `docs/system/sysreq_data_exchange.md` and `docs/system_requirements.md`.
+  • Assert that `sysreq_data_exchange.md` exists and contains all 6 requirements (`SYSREQ-DEX-001` through `SYSREQ-DEX-006`).
   • Assert that each requirement contains non-empty sections for Rationale, Priority, Verification Method, and Traced Software Components.
-  2. *Code Grounding & Data Exchange Verification (`TST-PRO-055.2`, `SystemDataExchangeRequirementsContractTest.kt`)*:
+  • Assert that `docs/system_requirements.md` defines sequential section headings 1 through 4.
+  2. *Code Grounding, Filename Verification & Data Exchange Verification (`TST-PRO-055.2`, `SystemDataExchangeRequirementsContractTest.kt`)*:
   • Assert that export formats in `SYSREQ-DEX-001` match `FileFormat` enum entries (`FIT`, `TCX`, `GPX`, `CSV`).
   • Assert that backup archive constants in `SYSREQ-DEX-005` match `BackupManager.BACKUP_FILENAME` (`"aTrainingTracker_backup.attbackup"`).
-  • Assert that credential exclusions in `SYSREQ-DEX-006` match `auth_credentials_prefs.xml`.
+  • Assert that credential exclusions in `SYSREQ-DEX-006` match `auth_credentials_prefs.xml` and Android Auto Backup XMLs `full_backup_content.xml` and `data_extraction_rules.xml`.
   • Assert that Runkeeper and TrainingPeaks are explicitly demarcated as decommissioned.
+  • Assert dynamic `File.exists()` on disk for all cited source, resource, and test files (`FitFileWriterTest.kt`, `TCXRoundTripTest.kt`, `LegacyImportEngine.kt`, `WorkoutDataMapper.kt`, `StravaUploader.kt`, `GoogleDriveUploader.kt`, `StravaHelper.kt`, `StravaUploadDbHelper.java`, `DatabaseConnectionManager.kt`, `DatabaseSchemaRegistry.kt`, `WorkoutSummariesDatabaseManager.java`, `full_backup_content.xml`, `data_extraction_rules.xml`).
   3. *Clean-Room Targeted Test Suite Execution (`TST-PRO-055.3`)*:
-  • Execute targeted unit test suite `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.build.SystemDataExchangeRequirementsContractTest"` asserting 100% pass rate.
+  • Execute targeted unit test suite `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.build.SystemDataExchangeRequirementsContractTest" --tests "com.atrainingtracker.trainingtracker.build.SystemRequirementsSpecificationContractTest"` asserting 100% pass rate.
 
 
 ### TST-PRO-056: **System Architectural Design Contract Test Suite** [Verified]
 - **Requirement(s)**: `REQ-PRO-056`
 - **Component**: `docs/system/system_architecture.md`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/SystemArchitectureDesignContractTest.kt`
-- **Jira**: `ATT-6164`
+- **Jira**: `ATT-6164`, `ATT-6741`
 - **Test Description**:
   1. *System Elements & Interfaces Coverage Verification (`TST-PRO-056.1`, `SystemArchitectureDesignContractTest.kt`)*:
   • Read `docs/system/system_architecture.md`.
@@ -1688,10 +1747,79 @@
   • Assert protocol, payload data schema, and timing characteristics are documented for each interface.
   2. *Dynamic Behavior & Mermaid Syntax Verification (`TST-PRO-056.2`, `SystemArchitectureDesignContractTest.kt`)*:
   • Assert that `docs/system/system_architecture.md` contains valid Mermaid `sequenceDiagram` fences for live 1-Hz telemetry acquisition and post-workout cloud export/backup.
-  3. *100% System Requirements Allocation Verification (`TST-PRO-056.3`, `SystemArchitectureDesignContractTest.kt`)*:
+  • Assert that Diagram 4.2 accurately models workout stop from `ControlTrackingScreen` / notification action delegating session finalization and export triggering to `TrackerService` (`mDbExecutor`).
+  3. *100% Bidirectional System Requirements Allocation Verification (`TST-PRO-056.3`, `SystemArchitectureDesignContractTest.kt`)*:
   • Assert that the System Requirements Allocation Table allocates 100% of defined `SYSREQ-TRK-001`..`006` and `SYSREQ-DEX-001`..`006` requirements to system elements.
+  • Assert exact bidirectional set equality (`declaredSysreqs == allocatedSysreqs`) ensuring zero orphan or undeclared `SYSREQ-*` IDs exist.
   4. *Clean-Room Targeted Test Suite Execution (`TST-PRO-056.4`)*:
   • Execute targeted unit test suite `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.build.SystemArchitectureDesignContractTest"` asserting 100% pass rate.
+  5. *Dynamic Production Code Grounding Reflection Verification (`TST-PRO-056.5`, `SystemArchitectureDesignContractTest.kt`)*:
+  • Verify existence of referenced production classes via dynamic reflection (`Class.forName`): `RadarEdgeOverlayKt`, `RadarAlertManager`, `RadarAudioSynthesizer`, `NavigationAudioAlertManager`, `BikeBellAudioSynthesizer`, `SpeedAndLocationDevice_GoogleFused`.
+  • Verify existence of referenced XML resource files via `File.exists()`: `app/src/main/res/xml/full_backup_content.xml`.
+  • Verify referenced application process ID matches `com.atrainingtracker`.
+
+### TST-PRO-057: **Configuration Management Repository Grounding & cm_plan.md Parity Contract Test Suite** [Verified]
+- **Requirement(s)**: `REQ-PRO-057`
+- **Component**: `docs/management/cm_plan.md`, `ReleaseCiAndLintConfigContractTest.kt`
+- **Jira**: `ATT-6733`
+- **Test Description**:
+  1. *Production Branch 'master' Grounding & 'main' Absence Test (`TST-PRO-057.1`, `ReleaseCiAndLintConfigContractTest.kt`)*:
+  • Read `docs/management/cm_plan.md`.
+  • Assert that the production release branch is documented as `master` (matching `origin/master`).
+  • Assert that zero references to `main` as a branch name exist in `cm_plan.md`.
+  2. *Sprint Milestone & Release Tagging Nomenclature Test (`TST-PRO-057.2`, `ReleaseCiAndLintConfigContractTest.kt`)*:
+  • Assert that `docs/management/cm_plan.md` documents `sprint/<SPRINT_NAME>` milestone tags and both `V<versionName>__<versionCode>` and `V<versionName>` release tag formats.
+  3. *Controlled Configuration Items Inventory Completeness Test (`TST-PRO-057.3`, `ReleaseCiAndLintConfigContractTest.kt`)*:
+  • Assert that the CI inventory table lists `docs/architecture/*.md`, `docs/management/*.md`, `config/detekt/`, `tools/`, and `.agents/`.
+  4. *Formal Release Contents Specification Test (`TST-PRO-057.4`, `ReleaseCiAndLintConfigContractTest.kt`)*:
+  • Assert that `docs/management/cm_plan.md` includes a dedicated Release Contents subsection specifying signed APK, Play Store AAB, `docs/store_presence/` localized notes, and Jira FixVersion baseline traceability.
+  5. *Clean-Room Targeted Test Suite Execution (`TST-PRO-057.5`)*:
+  • Execute targeted unit test suite `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.build.ReleaseCiAndLintConfigContractTest"` asserting 100% pass rate.
+
+### TST-TST-004: **Android Emulator Lifecycle Management, Physical-Phone Guardrail, and Two-Tier Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-TST-004`
+- **Component**: `tools/agent_emulator.py`, `tools/fake_gps.py`, `tools/simulate_kill.py`, `tools/replay_workout.py`, `tools/test_agent_emulator.py`
+- **Jira**: `ATT-6506`
+- **Test Description**:
+  1. *ADB Device Table Parsing & Filtering Tests (`TST-TST-004.1`, tools/test_agent_emulator.py)*:
+  • Assert parsing of `adb devices -l` output correctly partitions devices into emulators (`emulator-*`) and physical USB devices.
+  • Assert multi-device resolution prioritizes `emulator-5554` when present.
+  2. *Physical-Phone Protection & Agent Mode Guardrail Tests (`TST-TST-004.2`, tools/test_agent_emulator.py)*:
+  • Assert `resolve_target_device` aborts with `RuntimeError` or `SystemExit` if targeting a physical USB serial when `--agent` or `ATT_AGENT_MODE=1` is set.
+  • Assert explicit `--serial <SERIAL>` overrides default behavior when valid.
+  3. *Emulator Lifecycle & Configuration Command Generation Tests (`TST-TST-004.3`, tools/test_agent_emulator.py)*:
+  • Assert `ensure` constructs proper CLI arguments for `~/Android/Sdk/emulator/emulator -avd <AVD_NAME>`.
+  • Assert boot verification queries `getprop sys.boot_completed`.
+  • Assert window/transition/animator scale zeroing and keyguard dismiss commands.
+  • Assert `configure-app` generates correct `pm grant` and `appops set` commands for `com.atrainingtracker.debug`.
+  4. *Database Seeding & Extraction Pipeline Tests (`TST-TST-004.4`, tools/test_agent_emulator.py)*:
+  • Assert `seed-db` and `sync-from-physical` construct valid `run-as com.atrainingtracker.debug` SQLite extraction and push commands.
+  5. *Governance & Skills Two-Tier Policy Parity Tests (`TST-TST-004.5`, tools/test_agent_emulator.py)*:
+  • Assert `.agents/rules/aspice_governance.md`, `stage5-verification/SKILL.md`, `sprint-planner/SKILL.md`, `ui-designer/SKILL.md`, and `docs/project_protocol.md` mandate `emulator-5554` for Stages 1–5 and physical device for Ceremony 2.
+  6. *Python Standard Library Compliance Test (`TST-TST-004.6`, tools/test_agent_emulator.py)*:
+  • Assert `tools/agent_emulator.py` imports only standard library modules complying with `TST-PRO-005.6`.
+
+### TST-PRO-058: **Stage 6 Cold Carbon Final Review (Agent), 3-Bounce Healing Loop & Gate 6 Metrics Verification Suite** [In Progress]
+- **Requirement(s)**: `REQ-PRO-058`
+- **Component**: `tools/jira_util.py`, `tools/sprint_metrics.py`, `tools/hoechstmass/tools/jira_util.py`, `tools/hoechstmass/tools/sprint_metrics.py`, `.agents/skills/stage6-final-review/SKILL.md`, `tools/test_jira_epics.py`, `tools/test_sprint_metrics.py`, `HoechstmassCoreFrameworkContractTest.kt`
+- **Jira**: `ATT-7101`
+- **Test Description**:
+  1. *Parent Stage Order & Stage 5 -> Final Review (Agent) Resolution Tests (`TST-PRO-058.1`, tools/test_jira_epics.py)*:
+  • Assert `PARENT_STAGE_ORDER` contains `"final review (agent)"` immediately after `"test"` and immediately before `"final review (human)"`.
+  • Assert `STAGE_TO_SKILL_DIR["final review (agent)"] == "stage6-final-review"`.
+  • Assert `resolve_desired_parent_stage_for_subtask("[Test] Verification", True)` returns `"final review (agent)"`.
+  • Assert `transition_issue` disambiguates `"final review (agent)"` (assigning to `agent2`) from `"final review (human)"` (assigning to `human`).
+  2. *Composite `final-review-verdict` PASS, 3-Bounce Healing & Escalation Tests (`TST-PRO-058.2`, tools/test_jira_epics.py)*:
+  • Assert `final_review_verdict(key, "PASS", ...)` posts `[FINAL REVIEW (AGENT) — PASS]`, transitions to `Final Review (Human)`, and assigns to `human`.
+  • Assert `final_review_verdict(key, "BOUNCE", ...)` increments bounce counter `1/3..3/3`, transitions back to `Implementation` (or `Analysis` / `Zu erledigen`), and assigns to `agent1`.
+  • Assert that a 4th bounce (`bounce_count > 3`) posts `[FINAL REVIEW (AGENT) — ESCALATED AFTER 3 BOUNCES]`, transitions to `Final Review (Human)`, and assigns to `human`.
+  • Assert parity with `tools/hoechstmass/tools/jira_util.py`.
+  3. *Stage 6 Skill & Governance Contract Tests (`TST-PRO-058.3`, HoechstmassCoreFrameworkContractTest.kt)*:
+  • Assert `.agents/skills/stage6-final-review/SKILL.md` and `tools/hoechstmass/.agents/skills/stage6-final-review/SKILL.md` exist, declare `name: stage6-final-review`, and document the 4-part Cold Audit Checklist, Executive Review Summary, and 3-bounce healing loop.
+  4. *Gate 6 Quantitative Metrics & Swiss Cheese $p_6$ Tests (`TST-PRO-058.4`, tools/test_sprint_metrics.py)*:
+  • Assert `parse_final_review_agent_verdicts_from_comments` extracts `PASS` and `BOUNCE` verdicts from `[FINAL REVIEW (AGENT) — ...]` parent ticket comments.
+  • Assert `parse_sprint_gate_metrics` computes `gate_6` (`Final Review (Agent)`) FTPR, bounce count, and `p6_final_review_agent_escape` in `swiss_cheese`.
+
 
 
 

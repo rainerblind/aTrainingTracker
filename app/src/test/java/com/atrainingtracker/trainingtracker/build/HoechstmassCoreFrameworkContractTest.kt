@@ -183,6 +183,7 @@ class HoechstmassCoreFrameworkContractTest {
             "stage3-impl-plan",
             "stage4-implementation",
             "stage5-verification",
+            "stage6-final-review",
             "sprint-planner",
             "jira-workflow",
             "regression-bisect",
@@ -196,6 +197,9 @@ class HoechstmassCoreFrameworkContractTest {
             assertTrue("Skill $skillName/SKILL.md must not be empty", skillFile.length() > 200L)
             val content = skillFile.readText()
             assertTrue("Skill $skillName must declare its name in frontmatter", content.contains("name: $skillName"))
+
+            val rootSkillFile = findRepoRootFile(".agents/skills/$skillName/SKILL.md")
+            assertTrue("Root Skill .agents/skills/$skillName/SKILL.md must exist", rootSkillFile.exists())
         }
 
         val expectedTemplates = listOf(

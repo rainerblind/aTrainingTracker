@@ -102,6 +102,7 @@ fun DevicesTabbedScreen(
     var showAntStatusSheet by remember { mutableStateOf(false) }
 
     val context = LocalContext.current
+    val appContext = context.applicationContext
     val checkHasBluetoothScan = {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             ContextCompat.checkSelfPermission(
@@ -181,7 +182,7 @@ fun DevicesTabbedScreen(
             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
             availableListState.animateScrollToItem(0)
             snackbarHostState.showSnackbar(
-                message = context.getString(R.string.devices_new_sensor_discovered, deviceName),
+                message = appContext.getString(R.string.devices_new_sensor_discovered, deviceName),
                 duration = SnackbarDuration.Short
             )
         }

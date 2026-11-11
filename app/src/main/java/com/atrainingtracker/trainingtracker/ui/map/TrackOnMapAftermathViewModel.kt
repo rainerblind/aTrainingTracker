@@ -33,6 +33,7 @@ import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
 import com.atrainingtracker.trainingtracker.ui.utils.NumericalEncodingUtils
 import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.PolyUtil
+import com.atrainingtracker.trainingtracker.physiology.PowerHrDynamicsCalculator
 import com.atrainingtracker.trainingtracker.ui.aftermath.zones.HeartRateZoneThresholds
 import com.atrainingtracker.trainingtracker.ui.aftermath.zones.PowerZoneThresholds
 import com.atrainingtracker.trainingtracker.ui.aftermath.zones.ZoneDistributionData
@@ -291,6 +292,11 @@ class TrackOnMapAftermathViewModel @JvmOverloads constructor(
                     hrThresholds = hrThresholds,
                     powerThresholds = powerThresholds
                 )
+            }
+
+            // --- PHASE 8: Lazy Cardio-Power Dynamics Resolution (REQ-REV-009 / ATT-6722) ---
+            if (workoutData.cardioPowerDynamics == null && workoutData.activeTimeSec >= PowerHrDynamicsCalculator.MIN_QUALIFYING_DURATION_SEC) {
+                workoutRepository.getOrComputeCardioPowerDynamics(workoutId)
             }
         }
     }

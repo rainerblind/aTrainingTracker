@@ -63,9 +63,9 @@
   2. Tapping this button SHALL trigger display of `FirstJubileeCelebrationDialog` with mock milestone data without mutating `SettingsDataStore.has_shown_first_jubilee_prompt`.
 
 ### REQ-REV-006: Map Snapshot Share Pager Stability, Duplicate Header Elimination & Caller State Restoration [Verified]
-- **Tests**: `TST-REV-007` | **Tickets**: `ATT-6322`
+- **Tests**: `TST-REV-007` | **Tickets**: `ATT-6322`, `ATT-6685`
 - **Implementation**: `WorkoutDetailTabbedContent.kt`, `MapDetailLayout.kt`, `TrackOnMapScreen.kt`, `WorkoutSummariesTabbedScreen.kt`
-- **Rationale**: Triggering 'Karten- & Analyse-Snapshot' in `WorkoutShareBottomSheet` must execute seamlessly without freezing the HorizontalPager at 50%, rendering duplicate visible headers under the tab row, or stranding the athlete on the wrong tab or screen after sharing.
+- **Rationale**: Triggering 'Karten- & Analyse-Snapshot' in `WorkoutShareBottomSheet` must execute seamlessly without freezing the HorizontalPager at 50%, rendering duplicate visible headers under the tab row, stranding the athlete on the wrong tab or screen after sharing, or crashing the UI thread with multithreaded access violations during GraphicsLayer rasterization.
 - **Description**:
   1. *Pager Scroll Key Invariant & Programmatic Navigation*: `WorkoutDetailTabbedContent` SHALL NOT include `pagerState.currentPage` in the `LaunchedEffect` key list for programmatic snapshot tab switching (`pendingAutoShare`). The system SHALL use `pagerState.scrollToPage(mapTabIndex)` (instant transition without intermediate animation frames) so the pager coroutine is never cancelled mid-animation or frozen at the 50% midpoint (`Rule 80` / `docs/coding_standards.md` §1.11).
   2. *Origin Tab & Caller Screen Restoration*:
@@ -73,6 +73,21 @@
      b. When opened with `initialAutoShareSnapshot = true` from workout list containers (`WorkoutSummariesTabbedScreen`, `WorkoutSummariesListFragment`, `WorkoutClustersScreen`), `onSnapshotComplete` SHALL be propagated via `TrackOnMapScreen` to automatically dismiss/pop the detail screen, returning the athlete to the origin list view.
   3. *MapDetailLayout Header Slot Offscreen Recording & Duplicate Prevention*: `MapDetailLayout` SHALL accept `showHeader: Boolean = true`. When `showHeader == false`, `MapDetailLayout` SHALL measure and record `header()` into `headerLayer` offscreen without rendering a second visible `WorkoutHeader` in the tab's upper layout column. `WorkoutDetailTabbedContent` SHALL pass `showHeader = false` to prevent duplicate visible header rendering below the tab row.
   4. *Preservation of Bitmap Output & Standalone Layout Invariants*: `headerLayer` in `MapDetailLayout` MUST continue producing a full-fidelity software bitmap for `combineWorkoutAndShare`. All standalone invocations of `MapDetailLayout` with `showHeader = true` MUST retain 100% visual layout parity.
+  5. *UI-Thread GraphicsLayer Rasterization & Safe Share Dispatching Contract (REQ-REV-006.5 / ATT-6685)*:
+     a. In `MapDetailLayout`, invoking `headerLayer.toImageBitmap().asAndroidBitmap()`, `elevationLayer.toImageBitmap().asAndroidBitmap()`, and `analyticsLayer.toImageBitmap().asAndroidBitmap()` inside `onSnapshotReady` MUST execute directly on the Main UI thread (`Dispatchers.Main.immediate` / `Dispatchers.Main`) to prevent multithreaded access violations on Compose's `SnapshotStateObserver`.
+     b. Downstream multi-bitmap composition, canvas assembly, and file persistence (`combineWorkoutAndShare`) SHALL remain offloaded to `Dispatchers.Default` / `Dispatchers.IO`.
+     c. The `onSnapshotReady` coroutine block SHALL encapsulate layer rasterization and share dispatching inside a `try-catch-finally` block ensuring that `isSharing = false` and `onSnapshotComplete?.invoke()` are guaranteed to execute even if an unexpected exception occurs during capture or sharing, preventing permanently stuck sharing states.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Amends `REQ-REV-006` (*Map Snapshot Share Pager Stability, Duplicate Header Elimination & Caller State Restoration*, `ATT-6322`). Targets `MapDetailLayout.kt`.
+2. *Historical Origin & Commit Trace*: Commit `5248ddab8` (`ATT-1890`) introduced `withContext(Dispatchers.Default)` around `toImageBitmap()`; commit `4fb53a57` (`ATT-6322`) introduced offscreen header measurement and recording when `showHeader = false`.
+3. *Root Reason for Existing Formulation*: Background dispatching was originally intended to prevent main-thread stutter during bitmap handling, but Compose's `GraphicsLayer` tree reads require state observation on the main Compose Owner's UI thread; worker thread execution pollutes `SnapshotStateObserver.previousThreadId` and triggers fatal crashes on the next VSync frame.
+4. *Preservation of Core Invariants*: Heavy bitmap stitching, scaling, and disk I/O in `combineWorkoutAndShare` remain 100% isolated on `Dispatchers.Default`; visual snapshot fidelity, offscreen header recording, and sharing sheet triggers remain completely preserved.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* `WorkoutDetailTabbedContent` active with `showHeader = false`,
+• *When* the user triggers *Karten- & Analyse-Snapshot* from the share sheet,
+• *Then* `headerLayer`, `elevationLayer`, and `analyticsLayer` rasterization executes on `Dispatchers.Main` without throwing `IllegalArgumentException` in `SnapshotStateObserver`, `combineWorkoutAndShare` stitches the full snapshot on `Dispatchers.Default`, and upon completion or failure `isSharing` is reset to false.
 
 ### REQ-REV-007: Workout Cluster Reassignment Centroid Integrity & Sport Frequency Synchronization [Verified]
 - **Tests**: `TST-REV-008` | **Tickets**: `ATT-6159`
@@ -119,125 +134,179 @@
 
 
 ### REQ-REV-009: 1st-Order Dynamical Power-HR System Identification Engine, 5th Physiological School & In-App Explanation Sheet [Verified]
-- **Tests**: `TST-REV-010` | **Tickets**: `ATT-3904`
-- **Implementation**: `PowerHrDynamicsCalculator.kt`, `WorkoutSummariesDatabaseManager.java`, `WorkoutRepository.kt`, `LegacyImportEngine.kt`, `TrackerService.java`, `TuningPreferencesDataStore.kt`, `PhysiologyModelsSection.kt`, `PowerHrDynamicsInfoDialog.kt`
+- **Tests**: `TST-REV-010` | **Tickets**: `ATT-3904`, `ATT-6722`
+- **Implementation**: `PowerHrDynamicsCalculator.kt`, `WorkoutSummariesDatabaseManager.java`, `WorkoutRepository.kt`, `LegacyImportEngine.kt`, `TrackerService.java`, `TuningPreferencesDataStore.kt`, `PhysiologyModelsSection.kt`, `PowerHrDynamicsInfoDialog.kt`, `AdvancedTuningAccordion.kt`, `TrackOnMapAftermathViewModel.kt`, `WorkoutSummariesViewModel.kt`
 - **Rationale**: Static ratios ($\text{EF} = \text{NP}/\text{Avg HR}$ and $\text{Pw:Hr}$) fail on variable or hilly terrain by ignoring physiological cardiorespiratory response latency ($\tau \approx 25\text{--}45\text{ s}$) and 4th-power NP inflation. A 1st-order Output-Error (OE) dynamical model ($x_k(\tau) = e^{-\Delta t/\tau} x_{k-1}(\tau) + (1 - e^{-\Delta t/\tau}) P_k, \widehat{\text{HR}}_k = \text{HR}_0 + K x_k(\tau)$) extracts terrain-independent physiological parameters: steady-state reference $\text{HR@200W} = \text{HR}_0 + 200 \cdot K$, response lag $\tau$, aerobic gain $K$ (slope $1/K$), and cardiac drift $\Delta\text{HR@200W} = \text{HR@200W}_{\text{end}} - \text{HR@200W}_{\text{start}}$.
 - **Description**:
   1. *Dynamical System Identification Engine*: `PowerHrDynamicsCalculator` SHALL identify 1st-order OE parameters for workouts with $\ge 20\text{ min}$ paired Power and HR streams:
      a. Fresh Calibration Window (active min 8–55 after warm-up): $\tau_{\text{start}}$, $\text{HR0}_{\text{start}}$, $K_{\text{start}}$, $\text{HR@200W}_{\text{start}}$, $R^2_{\text{start}}$, $\text{RMSE}_{\text{start}}$.
      b. End-of-Workout Window (final 45 min active): $\tau_{\text{end}}$, $\text{HR0}_{\text{end}}$, $K_{\text{end}}$, $\text{HR@200W}_{\text{end}}$, $R^2_{\text{end}}$, $\text{RMSE}_{\text{end}}$.
      c. Drift Deltas: $\Delta\text{HR@200W} = \text{HR@200W}_{\text{end}} - \text{HR@200W}_{\text{start}}$, $\Delta\tau = \tau_{\text{end}} - \tau_{\text{start}}$, $\Delta\text{HR}_0 = \text{HR0}_{\text{end}} - \text{HR0}_{\text{start}}$, and predicted fresh HR trajectory $\text{HR}_{\text{fresh}}(t)$.
+     d. Physiological Plausibility & Coupling Gates: `PowerHrDynamicsCalculator` SHALL enforce active pedaling duration $\ge 15\text{ min}$ ($900\text{s}$ with $P > 0$), physiological parameter limits $K \in [0.01, 0.45]\,\text{bpm/W}$, $\text{HR}_0 \in [30, 125]\,\text{bpm}$, and minimum coupling $R^2_{\text{start}} \ge 0.25$ before returning a valid record.
+     e. Filter State Warm-Up: `PowerHrDynamicsCalculator.fitWindow` SHALL pre-warm filter state $x_k(\tau)$ by propagating from $t = 0$ to $\text{startIndex} - 1$ instead of seeding $xBuffer[0] = P[\text{startIndex}]$, eliminating transient distortion from warm-up boundaries.
+     f. Timestamp-Aware $\Delta t$ Support: Window boundaries and ODE simulation SHALL evaluate true timestamp intervals $\Delta t_i = (t_i - t_{i-1}).\text{coerceIn}(1\text{L}, 60\text{L})\text{.toDouble}()$ derived from `TIME_ACTIVE` / `TIME_TOTAL`.
   2. *Three-Way Parity (Live Recording, File Import, Lazy Backfill)*:
      a. Live Recording: `TrackerService` SHALL finalize and persist cardio-power dynamics on workout completion.
      b. File Import: `LegacyImportEngine` SHALL compute and persist cardio-power dynamics for TCX, GPX, and FIT files with paired Power and HR.
-     c. Lazy Backfill: `WorkoutRepository` SHALL lazily compute and cache missing dynamics for historical workouts from `WorkoutSamplesDatabaseManager` without requiring re-import.
+     c. Lazy Backfill & Bounded Background Migration: `WorkoutRepository.getOrComputeCardioPowerDynamics` SHALL execute an indexed projected query (`TIME_ACTIVE_s`, `TIME_TOTAL_s`, `TIME_s`, `POWER`, `HR`) ordered by `_id ASC`, maintain an in-memory `ineligibleCardioPowerWorkoutIds` set to prevent redundant scans of non-qualifying rides, update `WorkoutData` in memory reactively, and provide bounded background backfill (`backfillHistoricalCardioPowerDynamics(limit = 20)`) invoked in `WorkoutSummariesViewModel` when `enableCardioPowerDynamics == true`.
   3. *Database Persistence & Schema Evolution*:
      a. `WorkoutSummariesDatabaseManager.java` (DB v29) SHALL introduce table `cardio_power_dynamics` keyed on `workout_id INTEGER PRIMARY KEY REFERENCES WorkoutSummaries(_id) ON DELETE CASCADE`.
      b. `WorkoutRepository.kt` SHALL expose CRUD operations (`saveCardioPowerDynamics`, `getCardioPowerDynamics`).
-  4. *5th Training School Toggle ("Physiology & Training Models")*:
+  4. *5th Training School Toggle & Accordion Summary*:
      a. `TuningPreferencesDataStore.kt` SHALL expose `enableCardioPowerDynamics: Flow<Boolean>` (key `enable_cardio_power_dynamics`, default: `false` opt-in).
      b. `PhysiologyModelsSection.kt` SHALL render the 5th accordion switch with localized title, subtitle, and an Info button opening the explanation sheet.
+     c. Collapsed Accordion Subtitle: `TuningSubtitleFormatter.formatPhysiologyModelsSubtitle` SHALL include `enableCardioPowerDynamics` and append localized `R.string.cardio_power_domain_label` when active.
   5. *In-App Explanation Dialog & 9-Locale Parity*:
      a. `PowerHrDynamicsInfoDialog.kt` (`AppModalBottomSheet`) SHALL explain the cardiorespiratory time lag $\tau$, $\text{HR@200W}$, cardiac drift $\Delta\text{HR@200W}$, aerobic slope $1/K$, and Fresh Model vs. Actual HR curve interpretation.
      b. All strings SHALL be partitioned into `res/values*/strings_cardio_power.xml` with 100% parity across all 9 supported locales (EN, DE, ES, FR, IT, JA, NL, PL, PT).
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: `REQ-REV-009` (`REQ-REV-009.1`, `REQ-REV-009.2`, `REQ-REV-009.4`), targeting `WorkoutRepository.kt`, `PowerHrDynamicsCalculator.kt`, `AdvancedTuningAccordion.kt`, `TrackOnMapAftermathViewModel.kt`, and `WorkoutSummariesViewModel.kt`.
+  2. *Historical Origin & Commit Trace*: Introduced in `ATT-3904` (commit `1f70fb15`).
+  3. *Root Reason for Existing Formulation*: `getOrComputeCardioPowerDynamics` lacked caller hooks in aftermath viewmodels, leaving pre-existing rides unbackfilled. The solver originally assumed 1-Hz uniform telemetry and seeded at `startIndex` without warm-up propagation.
+  4. *Preservation of Core Invariants*: Bounded execution without UI thread blocking, mathematical ODE stability via $\Delta t \in [1\text{s}, 60\text{s}]$, Java caller compatibility via `@JvmOverloads`, and 100% 9-language translation parity are strictly preserved.
 - **Acceptance Criteria**:
   • *Given* a workout with $\ge 20\text{ min}$ paired Power and HR telemetry,
   • *When* processed via live recording, TCX/GPX/FIT import, or repository lazy backfill,
   • *Then* the 1st-order OE dynamical parameters are identified and persisted in `cardio_power_dynamics`.
+  • *Given* pre-existing historical rides with paired Power and HR,
+  • *When* viewing workout details or when `enableCardioPowerDynamics` is enabled,
+  • *Then* missing dynamics are lazily computed and persisted via projected query, populating summaries and trends without re-import.
   • *Given* Advanced Settings -> *Physiology & Training Models*,
   • *When* viewed,
-  • *Then* the 5th Training School toggle `enableCardioPowerDynamics` is rendered with descriptive summary and Info button triggering `PowerHrDynamicsInfoDialog`.
+  • *Then* the 5th Training School toggle `enableCardioPowerDynamics` is rendered with descriptive summary and Info button triggering `PowerHrDynamicsInfoDialog`, and collapsed summary subtitle includes localized Cardio-Power when enabled.
   • *Given* the 9 supported locales,
   • *When* running `TranslationParityTest`,
   • *Then* all cardio-power string tokens in `strings_cardio_power.xml` exist with 100% parity and valid formatting.
 
 ### REQ-REV-010: Cardio-Power Dynamics Details Row & Fresh Model HR Graph Overlay [Verified]
-- **Tests**: `TST-REV-011` | **Tickets**: `ATT-3905`
-- **Implementation**: `WorkoutDataMapper.kt`, `WorkoutDetailsData.kt`, `WorkoutDetails.kt`, `CardioPowerDynamicsCard.kt`, `TelemetryMetricGraph.kt`, `WorkoutSummary.kt`, `TrackOnMapScreen.kt`
+- **Tests**: `TST-REV-011` | **Tickets**: `ATT-3905`, `ATT-6723`
+- **Implementation**: `WorkoutDataMapper.kt`, `WorkoutDetailsData.kt`, `WorkoutDetails.kt`, `CardioPowerDynamicsCard.kt`, `TelemetryMetricGraph.kt`, `WorkoutSummary.kt`, `WorkoutDetailTabbedContent.kt`, `PowerHrDynamicsCalculator.kt`, `TrackOnMapScreen.kt`
 - **Rationale**: Having identified 1st-order dynamical Power-HR parameters in `ATT-3904`, athletes require visual presentation in workout details and interactive telemetry charts to evaluate submaximal aerobic economy, lag response, and cardiac drift fatigue.
 - **Description**:
   1. *Hydration & Domain Mapping*: `WorkoutDataMapper.kt` SHALL hydrate `CardioPowerDynamicsRecord?` into `WorkoutData` and `WorkoutDetailsData` from database persistence.
-  2. *Canonical Single-Line Grouped Row*: In `WorkoutDetails.kt`, `CardioPowerDynamicsRow` SHALL adhere strictly to design guidelines §5.10 (`AltitudeRow` pattern):
-     a. Left domain header column with category label, `4.dp` spacer, and `24.dp` domain icon (`ic_cardio_load`).
-     b. Single horizontal row of 3 `MetricItem`s: $\text{HR@200W}$ (Start $\rightarrow$ End bpm + drift), $\tau$ (Start $\rightarrow$ End s + $\Delta\tau$), and $1/K$ (W/bpm + $R^2$). Multi-row stacking and `FlowRow` pill clouds are strictly prohibited.
+  2. *Canonical Single-Line Grouped Row & Full Details Card*:
+     a. In `WorkoutDetails.kt`, `CardioPowerDynamicsRow` SHALL adhere strictly to design guidelines §5.10 (`AltitudeRow` pattern) with left domain header column and single horizontal row of 3 `MetricItem`s.
+     b. Multi-row stacking and `FlowRow` pill clouds are strictly prohibited.
      c. Rows SHALL be separated with `HorizontalDivider(thickness = 0.5.dp)` and `padding(vertical = 4.dp)`.
+     d. In `WorkoutDetailTabbedContent.kt`, `CardioPowerDynamicsCard` SHALL render under `WorkoutDetailSectionType.DETAILS` whenever `enableCardioPowerDynamics == true` and `workoutData.cardioPowerDynamics != null`, independent of `showCardioPowerInWorkoutSummary`.
   3. *Fresh Model vs. Actual HR Graph Overlay*:
      a. `TelemetryMetricGraph.kt` SHALL expose a "Fresh HR Model" toggle chip.
      b. When enabled, Canvas overlay SHALL draw predicted fresh HR trajectory $\text{HR}_{\text{fresh}}(t)$ as a dashed cyan curve (`TTColor.Zone2`), shade the cardiac drift gap where $\text{HR}_{\text{actual}} > \text{HR}_{\text{fresh}}$, and tint the calibration window (min 8–55).
-  4. *Progressive Disclosure Gating*:
-     a. Visual elements SHALL render only when `enableCardioPowerDynamics` is enabled, `cardioPowerDynamics != null`, and (in summary cards) `showCardioPowerInWorkoutSummary` is enabled. Workouts $< 20\text{ min}$ or lacking dynamics SHALL cleanly omit the row with zero visual artifact.
+     c. `PowerHrDynamicsCalculator.kt` and `TelemetryMetricGraph.kt` SHALL simulate trajectory using step-wise timestamp deltas $\Delta t_i = (timeSec_i - timeSec_{i-1}).\text{coerceIn}(1\text{L}, 60\text{L})\text{.toDouble}()$ across decimated track points.
+     d. When the overlay is active, the Y-axis `(dataMin, dataMax)` for `HEART_RATE` SHALL include non-null values of `freshHrTrajectory` to prevent canvas boundary clipping.
+  4. *Progressive Disclosure Gating & Setting Isolation*:
+     a. Visual elements SHALL render only when `enableCardioPowerDynamics` is enabled and `cardioPowerDynamics != null`. Workouts $< 20\text{ min}$ or lacking dynamics SHALL cleanly omit the row with zero visual artifact.
+     b. The subordinate `showCardioPowerInWorkoutSummary` preference SHALL gate compact workout list cards (`WorkoutSummary.kt`) only, without suppressing display in full Workout Details (`WorkoutDetailTabbedContent.kt`).
   5. *Localization Parity*: All newly introduced UI strings SHALL reside in `res/values*/strings_cardio_power.xml` with 100% parity across all 9 supported locales (EN, DE, ES, FR, IT, JA, NL, PL, PT).
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: `REQ-REV-010` (`REQ-REV-010.2`, `REQ-REV-010.3`, `REQ-REV-010.4`), targeting `WorkoutDetailTabbedContent.kt`, `PowerHrDynamicsCalculator.kt`, and `TelemetryMetricGraph.kt`.
+  2. *Historical Origin & Commit Trace*: Introduced in `ATT-3905` (commit `1b33fcba`).
+  3. *Root Reason for Existing Formulation*: `CardioPowerDynamicsCard` was created but inadvertently uncalled in `WorkoutDetailTabbedContent.kt`, and `showCardioPowerInWorkoutSummary` was improperly passed into full details. Trajectory simulation used scalar `dt = 1.0` without considering decimation, and Y-axis limits evaluated measured HR only.
+  4. *Preservation of Core Invariants*: §5.10 compact row compliance in `WorkoutDetails.kt`, summary gating on `WorkoutSummary.kt`, mathematical ODE stability via $\Delta t \in [1\text{s}, 60\text{s}]$ coercion, and 100% 9-language translation parity are strictly preserved.
 - **Acceptance Criteria**:
   • *Given* a workout with valid `cardioPowerDynamics` and `enableCardioPowerDynamics == true`,
   • *When* viewing `WorkoutDetails`,
   • *Then* `CardioPowerDynamicsRow` renders a single horizontal row of 3 `MetricItem`s with domain icon conforming to §5.10.
-  • *Given* `TelemetryMetricGraph` with paired Power+HR telemetry,
+  • *Given* `enableCardioPowerDynamics == true` and `workoutData.cardioPowerDynamics != null`,
+  • *When* viewing full Workout Details (`WorkoutDetailTabbedContent.kt`),
+  • *Then* `CardioPowerDynamicsCard` renders with `PowerHrDynamicsInfoDialog` info action, regardless of `showCardioPowerInWorkoutSummary`.
+  • *Given* `TelemetryMetricGraph` with paired Power+HR telemetry and decimated track points ($\Delta t > 1\text{s}$),
   • *When* "Fresh HR Model" chip is toggled on,
-  • *Then* $\text{HR}_{\text{fresh}}(t)$ renders as a dashed cyan overlay with shaded cardiac drift gap.
+  • *Then* $\text{HR}_{\text{fresh}}(t)$ renders as a dashed cyan overlay with true step time response and fits cleanly within Y-axis bounds without clipping.
   • *Given* `enableCardioPowerDynamics == false` or workout $< 20\text{ min}$,
   • *When* rendered,
   • *Then* the row and overlay are omitted with zero visual artifact, and `TranslationParityTest` passes across all 9 locales.
 
 ### REQ-REV-011: Cardio-Power Longitudinal Fitness Trends in Athlete Profile [Verified]
-- **Tests**: `TST-REV-012` | **Tickets**: `ATT-3906`
+- **Tests**: `TST-REV-012` | **Tickets**: `ATT-3906`, `ATT-6724`
 - **Implementation**: `WorkoutSummariesDatabaseManager.java`, `AthleteProfileViewModel.kt`, `AthleteProfileScreen.kt`, `CardioPowerTrendsCard.kt`
 - **Rationale**: While single-workout details display acute parameters, monitoring aerobic fitness adaptations across weeks and months requires longitudinal trend plotting of fresh model parameters ($\text{HR@200W}$, $\tau$, $1/K$) for qualified workouts without requiring maximal exhaustion tests.
 - **Description**:
-  1. *Database Trend Ingestion*: `WorkoutSummariesDatabaseManager.java` SHALL provide a time-series query joining `cardio_power_dynamics` and `WorkoutSummaries` filtered by model quality $R^2 \ge 0.50$ and sorted ascending by workout start timestamp.
-  2. *Cardio-Power Trends Card in Athlete Profile*:
-     a. `AthleteProfileScreen.kt` SHALL render a dedicated `CardioPowerTrendsCard` in the Athlete Profile view when `enableCardioPowerDynamics == true`.
+  1. *Database Trend Ingestion & Local Timezone Parsing*: `WorkoutSummariesDatabaseManager.java` SHALL provide a time-series query joining `cardio_power_dynamics` and `WorkoutSummaries` filtered by model quality $R^2 \ge 0.50$ and sorted ascending by workout start timestamp. Querying `w.timeStart` SHALL be parsed in Java via `SimpleDateFormat("yyyy-MM-dd HH:mm:ss")` in the device local timezone (`TimeZone.getDefault()`) to match `WorkoutDataMapper`.
+  2. *Cardio-Power Trends Card in Athlete Profile & Hub Parity*:
+     a. `AthleteProfileScreen.kt` SHALL render a dedicated `CardioPowerTrendsCard` in the Athlete Profile view (or dedicated Cardio-Power hub tab per ATT-6720) when `enableCardioPowerDynamics == true`.
      b. The card SHALL provide single-line non-wrapping metric selector pills for $\text{HR@200W}$, Time Constant $\tau$, and Slope $1/K$.
-     c. The card SHALL provide time range selector pills (3M, 6M, 1Y, All).
+     c. The card SHALL provide time range selector pills (1M, 3M, 6M, 1Y, All) with localized label `athlete_profile_range_1m`.
      d. The card header SHALL provide an `(i)` info action opening `PowerHrDynamicsInfoDialog`.
-  3. *Canvas Trend Rendering & Rule 48 Compliance*:
-     a. Canvas SHALL plot individual workout scatter points and a 30-day rolling trend curve.
-     b. Canvas SHALL render explicit X-axis date labels (`"dd.MM."` / `"MMM yy"`) and Y-axis scale markers (`"bpm"`, `"s"`, `"W/bpm"`).
+  3. *Canvas Trend Rendering, Touch Scrubbing & Rule 48 Compliance*:
+     a. Canvas SHALL plot individual workout scatter points and a 30-day moving average rolling trend curve. The 30-day rolling trend SHALL be computed over the entire chronological series prior to time-range filtering, preserving rolling average continuity at window boundaries without left-edge truncation bias.
+     b. Canvas SHALL render explicit X-axis date labels (`"dd.MM."` / `"MMM yy"`) including intermediate date ticks across multi-month spans, and Y-axis scale markers (`"bpm"`, `"s"`, `"W/bpm"`).
      c. Y-axis scaling SHALL apply interquartile range (IQR) domain clamping for $N \ge 4$ to resist noisy outlier compression.
-     d. The card SHALL display semantic direction subtitles ($\text{HR@200W}$: *"Lower = Better Aerobic Economy"*; $\tau$: *"Lower = Faster HR Kinetics"*; $1/K$: *"Higher = More Watts per bpm"*).
-  4. *Parallel Sprint Isolation & Localization*:
-     a. UI changes SHALL be restricted strictly to `AthleteProfileScreen.kt` / `AthleteProfileViewModel.kt` with zero modification to `PeriodsScreen.kt`.
-     b. All newly introduced UI strings SHALL reside in `res/values*/strings_cardio_power.xml` with 100% parity across all 9 supported locales (EN, DE, ES, FR, IT, JA, NL, PL, PT) with zero inline emojis.
+     d. The card SHALL support horizontal touch scrubbing using `ChartGestureDisambiguator` (discriminating horizontal scrubbing from vertical scrolling), rendering a vertical dashed cursor and interactive value/date tooltip.
+     e. The card SHALL display semantic direction subtitles ($\text{HR@200W}$: *"Lower = Better Aerobic Economy"*; $\tau$: *"Lower = Faster HR Kinetics"*; $1/K$: *"Higher = More Watts per bpm"*).
+  4. *Reactive Ingestion & Parallel Sprint Isolation*:
+     a. `AthleteProfileViewModel.kt` SHALL reactively collect `workoutRepository.allWorkouts` to refresh `cardioTrendSamples` and `workoutLoadSamples` dynamically when workouts finish, import, backfill, or delete.
+     b. UI changes SHALL be restricted strictly to `CardioPowerTrendsCard.kt` / `AthleteProfileViewModel.kt` with zero modification to `PeriodsScreen.kt`.
+     c. All newly introduced UI strings SHALL reside in `res/values*/strings_cardio_power.xml` with 100% parity across all 9 supported locales (EN, DE, ES, FR, IT, JA, NL, PL, PT) with zero inline emojis.
+
+### Requirement Archaeology & Chesterton's Fence Audit
+* `Original Requirement ID & Target`: `REQ-REV-011` (*Cardio-Power Longitudinal Fitness Trends in Athlete Profile*), targeting `WorkoutSummariesDatabaseManager.java`, `AthleteProfileViewModel.kt`, and `CardioPowerTrendsCard.kt`.
+* `Historical Origin & Commit Trace`: Added in `ATT-3906` (commit `178589a7`, Sprint 2026-46.1).
+* `Root Reason for Existing Formulation`: Preliminary implementation in ATT-3906 prioritized core 1st-order visualization with 3M/6M/1Y/All ranges and static initial loading. Slicing before rolling average was an implementation oversight, and `strftime('%s')` was adopted as a quick epoch conversion without accounting for local timezone offsets.
+* `Preservation of Core Invariants`: Model fit threshold ($R^2 \ge 0.50$), Tukey IQR domain clamping, 30-day moving window width, metric selector behavior, and 9-locale translation parity are fully preserved while eliminating boundary truncation and UTC drift.
+
 - **Acceptance Criteria**:
   • *Given* workouts with valid cardio-power dynamics ($R^2 \ge 0.50$) and `enableCardioPowerDynamics == true`,
   • *When* navigating to Athlete Profile,
   • *Then* `CardioPowerTrendsCard` renders scatter points, 30-day trend curve, Rule 48 explicit axis markers, and metric direction subtitle.
   • *Given* `CardioPowerTrendsCard`,
-  • *When* selecting metric pills ($\text{HR@200W}$, $\tau$, $1/K$) or time range pills (3M, 6M, 1Y, All),
+  • *When* selecting metric pills ($\text{HR@200W}$, $\tau$, $1/K$) or time range pills (1M, 3M, 6M, 1Y, All),
   • *Then* the chart updates scale, points, and direction notes reactively without crashing or recomposition leaks.
+  • *Given* switching between 1M, 3M, 6M, 1Y, and All time ranges,
+  • *When* inspecting points at window boundaries,
+  • *Then* 30-day rolling average values remain identical because rolling trends are computed prior to range slicing.
+  • *Given* newly recorded, imported, or deleted workouts,
+  • *When* `workoutRepository.allWorkouts` emits updates,
+  • *Then* `CardioPowerTrendsCard` refreshes trend points and rolling curves reactively without requiring app restart.
+  • *Given* `CardioPowerTrendsCard`,
+  • *When* performing horizontal drag gestures,
+  • *Then* `ChartGestureDisambiguator` tracks horizontal touch scrubbing, showing a vertical cursor line and date/value tooltip while allowing parent vertical scrolling.
   • *Given* zero qualifying rides or `enableCardioPowerDynamics == false`,
   • *When* viewing Athlete Profile,
   • *Then* an empty state message or clean card omission is rendered without UI distortion, and `TranslationParityTest` passes across 9 locales.
 
 ### REQ-REV-012: Real-Time Live HR Drift Metric & Tracking Cockpit Integration [Verified]
-- **Tests**: `TST-REV-013` | **Tickets**: `ATT-3907`
-- **Implementation**: `SensorType.java`, `CyclingPowerMetricsDevice.java`, `SignedIntegerFormatter.java`, `TrackingViewModel.kt`, `SensorFieldState.kt`, `EditSensorFieldViewModel.kt`, `res/values*/strings_cardio_power.xml`
+- **Tests**: `TST-REV-013` | **Tickets**: `ATT-3907`, `ATT-6725`
+- **Implementation**: `SensorType.java`, `CyclingPowerMetricsDevice.java`, `ActivityType.java`, `SignedIntegerFormatter.java`, `TrackingViewModel.kt`, `SensorFieldState.kt`, `EditSensorFieldViewModel.kt`, `res/values*/strings_cardio_power.xml`
 - **Rationale**: During live endurance cycling, cardiac drift ($\text{HR}_{\text{actual}}(t) - \text{HR}_{\text{fresh\_model}}(t)$) provides immediate, power-normalized feedback on autonomic decoupling, thermal stress, and dehydration. Static ratios fail on variable terrain due to cardiorespiratory response latency ($\tau \approx 25\text{--}45\text{ s}$). The system SHALL compute real-time lag-compensated cardiac drift at 1 Hz in `CyclingPowerMetricsDevice.java`, publish `SensorType.LIVE_HR_DRIFT`, and integrate it into the customizable tracking cockpit with semantic color-coding.
 - **Description**:
-  1. *Sensor Definition (`SensorType.java`)*:
+  1. *Sensor Definition & Sport Scoping (`SensorType.java`, `ActivityType.java`)*:
      a. `LIVE_HR_DRIFT` SHALL be defined under `SensorCategory.HEART_RATE_AND_ENERGY` with `fullNameId = R.string.live_hr_drift`, `shortNameId = R.string.live_hr_drift_short`, `unitId = R.string.units_heart_rate`, `SensorValueType.INTEGER`, `filteringPossible = true`, and formatted via `SignedIntegerFormatter`.
      b. `getIconResId()` SHALL return `R.drawable.ic_heart_rate`.
-  2. *Real-Time Lag-Compensated Computation (`CyclingPowerMetricsDevice.java`)*:
+     c. `LIVE_HR_DRIFT` SHALL be scoped strictly to power-capable `ActivityType`s (`BIKE_POWER`) in `ActivityType.getSensorTypeArray()`, preventing clutter in non-power running, walking, or generic sports.
+  2. *Real-Time Lag-Compensated Computation & Session Caching (`CyclingPowerMetricsDevice.java`)*:
      a. `LIVE_HR_DRIFT` computation SHALL be gated by `enableCardioPowerDynamics == true` and simultaneous active presence of both `SensorType.POWER` and `SensorType.HR`. If power or heart rate is absent or unlinked, `mLiveHrDriftSensor` SHALL publish `null` (Rule 52).
-     b. Baseline Model Seeding: Prior to accumulating qualifying in-ride data, baseline parameters $(\tau, \text{HR}_0, K)$ SHALL be resolved from the athlete's recent rolling qualified rides ($R^2 \ge 0.50$, fallback default: $\tau = 40.0\text{ s}$, $\text{HR}_0 = 90.0\text{ bpm}$, $K = 0.20\text{ bpm/W}$).
+     b. Baseline Model Seeding & Session Caching: In `resetSession()`, initial baseline parameters $(\tau, \text{HR}_0, K)$ SHALL be resolved from the athlete's 30-day rolling average of qualified rides ($R^2 \ge 0.50$, fallback default: $\tau = 40.0\text{ s}$, $\text{HR}_0 = 90.0\text{ bpm}$, $K = 0.20\text{ bpm/W}$) and cached together with `enableCardioPowerDynamics`. Zero SQLite queries or blocking DataStore reads SHALL execute on the 1-Hz `calculateMetrics()` loop.
      c. Discrete State Propagation & Residual: At 1 Hz during active tracking ($P(t) \ge 0\text{ W}$, $\text{HR}(t) > 0$), propagate discrete state $x_k = \alpha x_{k-1} + (1-\alpha) P_k$ where $\alpha = \exp(-1.0/\tau)$, calculate model prediction $\widehat{\text{HR}}_k = \text{HR}_0 + K x_k$, and compute instantaneous residual $\text{drift}_k = \text{HR}_k - \widehat{\text{HR}}_k$.
-     d. Growing Warm-Up Window (Rule 40): The published drift value SHALL be smoothed over a 30-sample rolling FIFO window, computing the average over available samples ($1 \le k < 30$) during warm-up to prevent initial blank `"--"` delays.
-     e. Pause Handling & Lifecycle Parity (Rule 51): Session reset (`resetSession()`) and constructor SHALL reset state accumulators. Long pauses (> 30s) flush the residual smoothing window.
+     d. In-Ride Fresh Model Calibration: During active tracking between minutes 8 and 25 (post warm-up), buffer active 1-Hz paired $(P_k, \text{HR}_k)$ readings. When $\ge 600\text{ s}$ of qualifying active samples are accumulated, fit the in-ride Output-Error model via `PowerHrDynamicsCalculator.fitWindow()`. If the fit achieves $R^2 \ge 0.50$, update the live session baseline $(\tau, \text{HR}_0, K)$ to today's fresh physiology.
+     e. Growing Warm-Up Window (Rule 40): The published drift value SHALL be smoothed over a 30-sample rolling FIFO window, computing the average over available samples ($1 \le k < 30$) during warm-up to prevent initial blank `"--"` delays.
+     f. Pause Handling & Lifecycle Parity (Rule 51): Session reset (`resetSession()`) and constructor SHALL reset state accumulators. Long pauses (> 30s) flush the residual smoothing window.
   3. *Tracking Cockpit Grid Integration*:
      a. `SensorType.LIVE_HR_DRIFT` SHALL be selectable in any grid cell across tracking cockpit views (`SensorFieldState.kt`, `EditSensorFieldViewModel.kt`).
-     b. In `TrackingViewModel.kt`, drift values SHALL be color-coded for intuitive feedback: $\le +3\text{ bpm}$ (neutral/green `TTColor.Zone2`), $+4\dots+8\text{ bpm}$ (moderate decoupling `TTColor.Zone3`), $\ge +9\text{ bpm}$ (elevated fatigue `TTColor.Zone4`), with negative drift $\le -4\text{ bpm}$ indicated gracefully.
+     b. In `TrackingViewModel.kt`, drift values SHALL be color-coded for intuitive feedback: $\le +5.0\text{ bpm}$ (neutral/green `TTColor.Zone2`), $+5.0 < \text{drift} \le +10.0\text{ bpm}$ (moderate decoupling `TTColor.Zone3`), $> +10.0\text{ bpm}$ (elevated fatigue `TTColor.Zone4`), with negative drift indicated gracefully.
   4. *Localization Parity*:
      a. String tokens `live_hr_drift` and `live_hr_drift_short` SHALL be maintained in `res/values*/strings_cardio_power.xml` with 100% parity across all 9 supported locales (EN, DE, ES, FR, IT, JA, NL, PL, PT) with zero inline emojis.
+
+### Requirement Archaeology & Chesterton's Fence Audit
+* `Original Requirement ID & Target`: `REQ-REV-012` (*Real-Time Live HR Drift Metric & Tracking Cockpit Integration*), targeting `CyclingPowerMetricsDevice.java`, `ActivityType.java`, and `TrackingViewModel.kt`.
+* `Historical Origin & Commit Trace`: Added in `ATT-3907` (commit `11197f2b`, Sprint 2026-46.1).
+* `Root Reason for Existing Formulation`: Initial prototype queried providers synchronously on every tick for quick verification, appended the sensor to all activity types, and used preliminary $+3/+8\text{ bpm}$ zone cutoffs before field validation.
+* `Preservation of Core Invariants`: 1st-order discrete lag compensation ($x_k = \alpha x_{k-1} + (1-\alpha)P_k$, $\widehat{\text{HR}}_k = \text{HR}_0 + K x_k$), 30s rolling smoothing, and null safety on absent sensors are fully preserved while eliminating 1-Hz thread I/O blocking.
+
 - **Acceptance Criteria**:
   • *Given* active Power and HR sensor streams and `enableCardioPowerDynamics == true`,
   • *When* cycling power fluctuates during tracking,
-  • *Then* `CyclingPowerMetricsDevice` propagates 1st-order state $x_k$ and publishes `LIVE_HR_DRIFT` at 1 Hz with signed integer format (e.g. `+5 bpm`) without initial 30s blank delay.
+  • *Then* `CyclingPowerMetricsDevice` propagates 1st-order state $x_k$ and publishes `LIVE_HR_DRIFT` at 1 Hz with zero SQLite queries on the 1-Hz loop.
+  • *Given* a workout reaching minute 25 with sufficient dynamic power coupling,
+  • *When* `PowerHrDynamicsCalculator.fitWindow()` returns $R^2 \ge 0.50$,
+  • *Then* the live session baseline adapts to today's fresh parameters.
   • *Given* non-power workouts or disconnected HR straps,
   • *When* tracking is active,
   • *Then* `LIVE_HR_DRIFT` emits `null` (`"--"`) with zero phantom database records or crashes.
   • *Given* a custom tracking grid cell configured with `LIVE_HR_DRIFT`,
-  • *When* live drift crosses $+4\text{ bpm}$ and $+9\text{ bpm}$ thresholds,
+  • *When* live drift crosses $+5\text{ bpm}$ and $+10\text{ bpm}$ thresholds,
   • *Then* the cockpit cell renders appropriate semantic accent colors reactively.
-  • *Given* the 9 supported locales,
-  • *When* running `TranslationParityTest`,
-  • *Then* all new string resources in `strings_cardio_power.xml` exist with 100% parity and matching format specifiers.
+  • *Given* `ActivityType.getSensorTypeArray()`,
+  • *When* inspected for `RUN_SPEED_AND_CADENCE` or `GENERIC_HR`,
+  • *Then* `LIVE_HR_DRIFT` is absent, appearing only for `BIKE_POWER`.
 

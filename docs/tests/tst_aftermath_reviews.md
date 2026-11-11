@@ -46,8 +46,8 @@
 ### TST-REV-007: **Map Snapshot Share Pager Stability, Header Deduplication & Navigation Restoration Contract Test** [Verified]
 - **Requirement(s)**: `REQ-REV-006`
 - **Component**: `WorkoutDetailTabbedContent.kt`, `MapDetailLayout.kt`, `TrackOnMapScreen.kt`, `WorkoutSummariesTabbedScreen.kt`, `WorkoutShareBottomSheetContractTest.kt`
-- **Jira**: `ATT-6322`
-- **Test Description**: 1. Verify `WorkoutDetailTabbedContent.kt` does not pass `pagerState.currentPage` to `LaunchedEffect(pendingAutoShare, mapTabIndex)` and invokes `scrollToPage(mapTabIndex)`. 2. Verify `WorkoutDetailTabbedContent` captures `originPageIndex` and restores it on snapshot completion. 3. Verify `TrackOnMapScreen` propagates `onSnapshotComplete` and list containers (`WorkoutSummariesTabbedScreen`, `WorkoutSummariesListFragment`, `WorkoutClustersScreen`) wire it to dismiss the detail screen when `initialAutoShareSnapshot == true`. 4. Verify `MapDetailLayout` supports `showHeader: Boolean = true`, records `headerLayer` offscreen when `showHeader == false`, and `WorkoutDetailTabbedContent` passes `showHeader = false`.
+- **Jira**: `ATT-6322`, `ATT-6685`
+- **Test Description**: 1. Verify `WorkoutDetailTabbedContent.kt` does not pass `pagerState.currentPage` to `LaunchedEffect(pendingAutoShare, mapTabIndex)` and invokes `scrollToPage(mapTabIndex)`. 2. Verify `WorkoutDetailTabbedContent` captures `originPageIndex` and restores it on snapshot completion. 3. Verify `TrackOnMapScreen` propagates `onSnapshotComplete` and list containers (`WorkoutSummariesTabbedScreen`, `WorkoutSummariesListFragment`, `WorkoutClustersScreen`) wire it to dismiss the detail screen when `initialAutoShareSnapshot == true`. 4. Verify `MapDetailLayout` supports `showHeader: Boolean = true`, records `headerLayer` offscreen when `showHeader == false`, and `WorkoutDetailTabbedContent` passes `showHeader = false`. 5. *UI-Thread GraphicsLayer Rasterization & Try-Finally Cleanup Contract Test (TST-REV-007.5 / ATT-6685)*: Verify in `MapDetailLayout.kt` that `headerLayer.toImageBitmap()`, `elevationLayer.toImageBitmap()`, and `analyticsLayer.toImageBitmap()` are executed directly on the UI dispatcher without `withContext(Dispatchers.Default)`, that downstream `combineWorkoutAndShare` executes safely, and that `onSnapshotReady` encapsulates execution in a `try-catch-finally` block ensuring `isSharing` is reset to `false` and `onSnapshotComplete?.invoke()` is called under all execution paths.
 
 ### TST-REV-008: **Workout Cluster Reassignment Centroid Integrity & Sport Frequency Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-REV-007`
@@ -71,48 +71,57 @@
 
 ### TST-REV-010: **1st-Order Dynamical Power-HR Identification Engine, Persistence, Toggle & 9-Locale Localization Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-REV-009`
-- **Component**: `PowerHrDynamicsCalculator.kt`, `WorkoutSummariesDatabaseManager.java`, `WorkoutRepository.kt`, `LegacyImportEngine.kt`, `PhysiologyModelsSection.kt`, `PowerHrDynamicsInfoDialog.kt`, `res/values*/strings_cardio_power.xml`
-- **Jira**: `ATT-3904`
+- **Component**: `PowerHrDynamicsCalculator.kt`, `WorkoutSummariesDatabaseManager.java`, `WorkoutRepository.kt`, `LegacyImportEngine.kt`, `PhysiologyModelsSection.kt`, `PowerHrDynamicsInfoDialog.kt`, `AdvancedTuningAccordion.kt`, `res/values*/strings_cardio_power.xml`
+- **Jira**: `ATT-3904`, `ATT-6722`
 - **Test Description**:
   1. *Engine Unit Tests (`PowerHrDynamicsCalculatorTest`)*: Verify OE parameter identification on synthetic step-response signals with known $(\tau, \text{HR}_0, K)$, verify window slicing (fresh min 8–55 vs end 45 min), verify rejection of insufficient data (< 20 min or missing stream), and verify drift deltas.
   2. *Database Migration & CRUD Contract Test (`WorkoutSummariesCardioPowerMigrationTest`)*: Verify schema migration from DB v28 to v29 creates table `cardio_power_dynamics`, test single and batch query symmetry, cascade deletion on workout removal, and null-safety.
   3. *Repository & Three-Way Parity Contract Test (`WorkoutRepositoryCardioPowerTest`)*: Verify lazy backfill computes and persists records on demand, verify `LegacyImportEngine` persists dynamics on file import, and verify `TrackerService` finalization parity.
   4. *UI & 5th School Toggle Contract Test (`PhysiologyModelsSectionTest`)*: Verify 5th school toggle binds to DataStore, verifies Info button opens `PowerHrDynamicsInfoDialog`, and verifies UI gating.
   5. *9-Locale Localization Parity Test (`TranslationParityTest`)*: Verify all strings in `strings_cardio_power.xml` across EN, DE, ES, FR, IT, JA, NL, PL, PT with valid linebreaks and matching format specifiers.
-  6. *Tier 1 Targeted Verification Suite*: `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.physiology.*" --tests "com.atrainingtracker.trainingtracker.database.*" --tests "com.atrainingtracker.trainingtracker.ui.settings.tuning.*" --tests "com.atrainingtracker.trainingtracker.build.*"`
+  6. *Filter Warm-Up Continuity Test (`PowerHrDynamicsCalculatorTest`)*: Verify pre-warming filter state $x_k(\tau)$ from $t = 0$ to $\text{startIndex} - 1$ eliminates transient step errors compared to un-warmed seeding with $P[\text{startIndex}]$, and converges to identical steady-state values under continuous constant power.
+  7. *Physiological Plausibility & Gate Enforcement Test (`PowerHrDynamicsCalculatorTest`)*: Verify rejection (returning `null`) when $K < 0.01$ or $K > 0.45$, $\text{HR}_0 < 30$ or $\text{HR}_0 > 125$, $R^2_{\text{start}} < 0.25$, or active pedaling duration ($P > 0$) $< 15\text{ min}$ ($900\text{s}$), and verify acceptance when all physiological parameters lie within bounds.
+  8. *Lazy Backfill Query & Ineligible Cache Test (`WorkoutRepositoryCardioPowerBackfillTest`)*: Verify that `getOrComputeCardioPowerDynamics` executes a projected query (`TIME_ACTIVE`, `TIME_TOTAL`, `TIME`, `POWER`, `HR`) ordered by `_id ASC`, records failed/non-qualifying rides in `ineligibleCardioPowerWorkoutIds` to bypass subsequent SQLite queries, updates in-memory `WorkoutData` on success, and `backfillHistoricalCardioPowerDynamics(limit = 20)` processes at most $N$ eligible historical rides.
+  9. *Accordion Subtitle Formatting Test (`AdvancedTuningAccordionTest`)*: Verify `formatPhysiologyModelsSubtitle` appends localized `R.string.cardio_power_domain_label` when `enableCardioPowerDynamics == true`, preserves existing model labels, and maintains 100% 9-language translation parity.
+  10. *Tier 1 Targeted Verification Suite*: `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.physiology.PowerHrDynamicsCalculatorTest" --tests "com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepositoryCardioPowerBackfillTest" --tests "com.atrainingtracker.trainingtracker.ui.settings.tuning.AdvancedTuningAccordionTest" --tests "com.atrainingtracker.trainingtracker.translation.TranslationParityTest"`
 
 
 ### TST-REV-011: **Cardio-Power Visual Display & Overlay Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-REV-010`
-- **Component**: `WorkoutDataMapper.kt`, `WorkoutDetailsData.kt`, `WorkoutDetails.kt`, `CardioPowerDynamicsCard.kt`, `TelemetryMetricGraph.kt`, `WorkoutSummary.kt`, `TrackOnMapScreen.kt`
-- **Jira**: `ATT-3905`
+- **Component**: `WorkoutDataMapper.kt`, `WorkoutDetailsData.kt`, `WorkoutDetails.kt`, `CardioPowerDynamicsCard.kt`, `TelemetryMetricGraph.kt`, `WorkoutSummary.kt`, `WorkoutDetailTabbedContent.kt`, `PowerHrDynamicsCalculator.kt`, `TrackOnMapScreen.kt`
+- **Jira**: `ATT-3905`, `ATT-6723`
 - **Test Description**:
   1. *Data Hydration Test (`WorkoutDataMapperTest`)*: Verify mapper hydrates `CardioPowerDynamicsRecord` into `WorkoutData` and `WorkoutDetailsData`.
   2. *Grouped Metric Row Layout & §5.10 Compliance Test (`WorkoutDetailsCardioPowerRowTest`)*: Verify `CardioPowerDynamicsRow` conforms strictly to §5.10 (single `Row`, 3 `MetricItem`s, zero multi-row wrapping, proper divider padding, clean null suppression).
   3. *Telemetry Graph Fresh Model Overlay Test (`TelemetryMetricGraphOverlayTest`)*: Verify toggle chip state management, trajectory simulation sampling, dashed curve drawing parameters, and drift shading bounds.
   4. *Settings Gating & Visibility Test (`WorkoutDetailsVisibilityTest`)*: Verify row visibility honors `enableCardioPowerDynamics`, `showCardioPowerInWorkoutSummary`, and data presence.
-  5. *9-Locale Localization Parity Test (`TranslationParityTest`)*: Verify all new cardio-power UI tokens in `strings_cardio_power.xml` across EN, DE, ES, FR, IT, JA, NL, PL, PT.
+  5. *Decimated Step $\Delta t$ Trajectory Simulation Test (`PowerHrDynamicsCalculatorTest`)*: Verify simulation with non-uniform step timestamps ($dt \in [1, 60]\text{ s}$) maintains true exponential response kinetics without decimation-induced phase lag.
+  6. *Y-Axis Bounds Fresh Model Inclusion Test (`TelemetryMetricGraphOverlayTest`)*: Verify that `(dataMin, dataMax)` for `HEART_RATE` dynamically includes `freshHrTrajectory` non-null values when overlay is active to prevent boundary clamping.
+  7. *Workout Details CardioPowerDynamicsCard Presence & Decoupled Gating Test (`WorkoutDetailsCardioPowerRowTest`)*: Verify `CardioPowerDynamicsCard` renders in full Workout Details when `enableCardioPowerDynamics == true` even if `showCardioPowerInWorkoutSummary == false`.
+  8. *9-Locale Localization Parity Test (`TranslationParityTest`)*: Verify all new cardio-power UI tokens in `strings_cardio_power.xml` across EN, DE, ES, FR, IT, JA, NL, PL, PT.
 
 ### TST-REV-012: **Cardio-Power Longitudinal Fitness Trends Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-REV-011`
 - **Component**: `WorkoutSummariesDatabaseManager.java`, `AthleteProfileViewModel.kt`, `AthleteProfileScreen.kt`, `CardioPowerTrendsCard.kt`
-- **Jira**: `ATT-3906`
+- **Jira**: `ATT-3906`, `ATT-6724`
 - **Test Description**:
-  1. *Database Trend Query Test (`WorkoutSummariesCardioPowerTrendTest`)*: Verify `getCardioPowerDynamicsFitnessTrendSamples` returns samples with $R^2 \ge 0.50$ sorted ascending by workout start timestamp and excludes lower-fit workouts.
-  2. *ViewModel Reactive State Test (`AthleteProfileViewModelCardioPowerTest`)*: Verify `AthleteProfileViewModel` properly filters samples by selected timeframe, toggles active metric type, and respects `enableCardioPowerDynamics` gating.
+  1. *Database Trend Query & Timezone Test (`WorkoutSummariesCardioPowerTrendTest`)*: Verify `getCardioPowerDynamicsFitnessTrendSamples` parses timestamps using `SimpleDateFormat` in the local device timezone and returns samples with $R^2 \ge 0.50$ sorted ascending.
+  2. *ViewModel Rolling Trend & Reactive Reload Test (`AthleteProfileViewModelCardioPowerTest`)*: Verify `AthleteProfileViewModel` computes the 30-day moving average on full history prior to range slicing (preserving boundary rolling values across 1M, 3M, 6M, 1Y, All), and triggers reactive reload when `workoutRepository.allWorkouts` emits updates.
   3. *Canvas Plot Math & Rule 48 Audit Test (`CardioPowerTrendsPlotMathTest`)*: Verify IQR domain clamping, date labeling, Y-axis scale value formatting, and rolling 30-day average calculations.
-  4. *UI Component Contract Test (`CardioPowerTrendsCardTest`)*: Verify header info icon interaction, metric/range selector pill clicks, empty-state message rendering, and layout stability.
-  5. *9-Locale Localization Parity Test (`TranslationParityTest`)*: Verify all new cardio-power trend string tokens in `strings_cardio_power.xml` across EN, DE, ES, FR, IT, JA, NL, PL, PT.
+  4. *UI Component Contract & Touch Scrubbing Test (`CardioPowerTrendsCardTest`)*: Verify header info icon interaction, 5-pill range selector (`1M`, `3M`, `6M`, `1Y`, `All`), intermediate X-axis date tick rendering, and touch scrubbing (`ChartGestureDisambiguator`) with cursor and tooltip.
+  5. *9-Locale Localization Parity Test (`TranslationParityTest`)*: Verify `athlete_profile_range_1m` and all cardio-power trend string tokens across EN, DE, ES, FR, IT, JA, NL, PL, PT.
 
 ### TST-REV-013: **Real-Time Live HR Drift & Cockpit Telemetry Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-REV-012`
-- **Component**: `CyclingPowerMetricsDevice.java`, `SensorType.java`, `SignedIntegerFormatter.java`, `TrackingViewModel.kt`, `SensorFieldState.kt`, `res/values*/strings_cardio_power.xml`
-- **Jira**: `ATT-3907`
+- **Component**: `CyclingPowerMetricsDevice.java`, `SensorType.java`, `ActivityType.java`, `SignedIntegerFormatter.java`, `TrackingViewModel.kt`, `SensorFieldState.kt`, `res/values*/strings_cardio_power.xml`
+- **Jira**: `ATT-3907`, `ATT-6725`
 - **Test Description**:
   1. *Real-Time Filter & Propagation Unit Test (`CyclingPowerMetricsDeviceLiveHrDriftTest`)*: Verify 1st-order discrete-time state propagation ($x_k = \alpha x_{k-1} + (1-\alpha) P_k$), lag compensation on step workloads, 30s growing-window residual calculation, and signed integer emission.
-  2. *Sensor-Presence Gating & Governance Test (`LiveHrDriftGatingTest`)*: Verify Rule 51 constructor parity and `resetSession()`, Rule 52 gating requiring both `POWER` and `HR` sensors, null suppression when unlinked or when `enableCardioPowerDynamics == false`, and long pause flush (> 30s).
-  3. *Formatter & SensorType Registration Test (`SignedIntegerFormatterTest`)*: Verify `SignedIntegerFormatter` formats positive integers with `+` prefix (e.g. `+5`), zero as `0`, negative as `-3`, and handles nulls gracefully. Verify `SensorType.LIVE_HR_DRIFT` category, units, parcelable, and icon.
-  4. *Cockpit Grid & Semantic Color State Test (`TrackingViewModelLiveDriftTest`)*: Verify `TrackingViewModel` maps drift ranges ($\le +3$, $+4\dots+8$, $\ge +9$) to correct semantic zone colors, and verify cell formatting in `SensorFieldState`.
-  5. *9-Locale Localization Parity Test (`TranslationParityTest`)*: Verify `live_hr_drift` and `live_hr_drift_short` in `strings_cardio_power.xml` across EN, DE, ES, FR, IT, JA, NL, PL, PT.
+  2. *Zero-Query Loop & 30-Day Seed Contract Test (`CyclingPowerMetricsDeviceLiveHrDriftTest`)*: Verify that `calculateMetrics()` performs zero SQLite queries and zero blocking DataStore reads; verify 30-day rolling baseline resolution and session caching in `resetSession()`.
+  3. *In-Ride Minute 8–25 Calibration Test (`CyclingPowerMetricsDeviceLiveHrDriftTest`)*: Verify buffering of active 1-Hz `(Power, HR)` pairs during minutes 8–25 and dynamic baseline update via `PowerHrDynamicsCalculator.fitWindow()` when $R^2 \ge 0.50$.
+  4. *Sensor-Presence Gating & Sport Scoping Test (`LiveHrDriftGatingTest`)*: Verify Rule 51 constructor parity and `resetSession()`, Rule 52 gating requiring both `POWER` and `HR` sensors, null suppression when unlinked or when `enableCardioPowerDynamics == false`, long pause flush (> 30s), and scoping to `ActivityType.BIKE_POWER` only.
+  5. *Formatter & SensorType Registration Test (`SignedIntegerFormatterTest`)*: Verify `SignedIntegerFormatter` formats positive integers with `+` prefix (e.g. `+5`), zero as `0`, negative as `-3`, and handles nulls gracefully. Verify `SensorType.LIVE_HR_DRIFT` category, units, parcelable, and icon.
+  6. *Cockpit Grid & Semantic Color State Test (`TrackingViewModelLiveDriftTest`)*: Verify `TrackingViewModel` maps drift ranges ($\le +5.0\text{ bpm}$ Zone 2, $+5.0 < \text{drift} \le +10.0\text{ bpm}$ Zone 3, $> +10.0\text{ bpm}$ Zone 4) to correct semantic zone colors, and verify cell formatting in `SensorFieldState`.
+  7. *9-Locale Localization Parity Test (`TranslationParityTest`)*: Verify `live_hr_drift` and `live_hr_drift_short` in `strings_cardio_power.xml` across EN, DE, ES, FR, IT, JA, NL, PL, PT.
 
 

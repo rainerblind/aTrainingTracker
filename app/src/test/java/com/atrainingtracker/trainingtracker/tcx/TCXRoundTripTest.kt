@@ -46,6 +46,7 @@ import io.mockk.unmockkAll
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -332,5 +333,224 @@ class TCXRoundTripTest {
         assertTrue(workoutData.foundSensors.contains(SensorType.CADENCE))
         assertTrue(workoutData.foundSensors.contains(SensorType.POWER))
         assertTrue(workoutData.foundSensors.contains(SensorType.SPEED_mps))
+    }
+
+    @Test
+    fun testNameOnlyRoundTripPreservesNullWorkoutNotes() {
+        val tp = TcxTrackpoint(
+            time = "2026-11-10T10:00:00Z",
+            position = TcxPosition(48.137, 11.576),
+            altitudeMeters = 500.0,
+            distanceMeters = 1000.0,
+            heartRateBpm = 140,
+            cadence = 85,
+            extensions = null
+        )
+        val lap = TcxLap(
+            startTime = "2026-11-10T10:00:00Z",
+            totalTimeSeconds = 300.0,
+            distanceMeters = 1000.0,
+            maximumSpeed = 5.0,
+            calories = 100,
+            averageHeartRateBpm = 140,
+            maximumHeartRateBpm = 150,
+            intensity = "Active",
+            cadence = 85,
+            triggerMethod = "Manual",
+            trackpoints = listOf(tp),
+            notes = null,
+            extensions = null
+        )
+        // Name only: customName is set, customDescription is null, notes is bracketed "[Morning Tempo]"
+        val activity = TcxActivity(
+            sport = "Biking",
+            id = "2026-11-10T10:00:00Z",
+            laps = listOf(lap),
+            notes = "[Morning Tempo]",
+            creator = null,
+            extensions = TcxActivityExtensions(
+                customName = "Morning Tempo",
+                customDescription = null
+            )
+        )
+        val doc = TcxDocument(activities = listOf(activity), author = null)
+
+        val outputStream = ByteArrayOutputStream()
+        TcxSerializer.serialize(doc, outputStream)
+
+        val parsedResult = TcxWorkoutParser.parse(ByteArrayInputStream(outputStream.toByteArray()), mockContext)
+        assertTrue("TcxWorkoutParser should succeed", parsedResult.isSuccess)
+        val workoutData = parsedResult.getOrThrow()
+
+        assertEquals("Morning Tempo", workoutData.workoutName)
+        assertNull("workoutNotes must be null and must not leak bracketed name [Morning Tempo]", workoutData.workoutNotes)
+    }
+
+    @Test
+    fun testDescriptionOnlyRoundTripPreservesWorkoutNotes() {
+        val tp = TcxTrackpoint(
+            time = "2026-11-10T10:00:00Z",
+            position = TcxPosition(48.137, 11.576),
+            altitudeMeters = 500.0,
+            distanceMeters = 1000.0,
+            heartRateBpm = 140,
+            cadence = 85,
+            extensions = null
+        )
+        val lap = TcxLap(
+            startTime = "2026-11-10T10:00:00Z",
+            totalTimeSeconds = 300.0,
+            distanceMeters = 1000.0,
+            maximumSpeed = 5.0,
+            calories = 100,
+            averageHeartRateBpm = 140,
+            maximumHeartRateBpm = 150,
+            intensity = "Active",
+            cadence = 85,
+            triggerMethod = "Manual",
+            trackpoints = listOf(tp),
+            notes = null,
+            extensions = null
+        )
+        // Description only: customName is null, customDescription is set, notes is the raw description
+        val activity = TcxActivity(
+            sport = "Biking",
+            id = "2026-11-10T10:00:00Z",
+            laps = listOf(lap),
+            notes = "Felt great and steady",
+            creator = null,
+            extensions = TcxActivityExtensions(
+                customName = null,
+                customDescription = "Felt great and steady"
+            )
+        )
+        val doc = TcxDocument(activities = listOf(activity), author = null)
+
+        val outputStream = ByteArrayOutputStream()
+        TcxSerializer.serialize(doc, outputStream)
+
+        val parsedResult = TcxWorkoutParser.parse(ByteArrayInputStream(outputStream.toByteArray()), mockContext)
+        assertTrue("TcxWorkoutParser should succeed", parsedResult.isSuccess)
+        val workoutData = parsedResult.getOrThrow()
+
+        assertNull("workoutName must be null", workoutData.workoutName)
+        assertEquals("Felt great and steady", workoutData.workoutNotes)
+    }
+
+    @Test
+    fun testMultiLapCustomLapNamePreservesEmptyLapNotes() {
+        val tp1 = TcxTrackpoint(
+            time = "2026-11-10T10:00:00Z",
+            position = TcxPosition(48.137, 11.576),
+            altitudeMeters = 500.0,
+            distanceMeters = 1000.0,
+            heartRateBpm = 140,
+            cadence = 85,
+            extensions = null
+        )
+        val tp2 = TcxTrackpoint(
+            time = "2026-11-10T10:05:00Z",
+            position = TcxPosition(48.140, 11.580),
+            altitudeMeters = 505.0,
+            distanceMeters = 2000.0,
+            heartRateBpm = 150,
+            cadence = 90,
+            extensions = null
+        )
+        val lap0 = TcxLap(
+            startTime = "2026-11-10T10:00:00Z",
+            totalTimeSeconds = 300.0,
+            distanceMeters = 1000.0,
+            maximumSpeed = 5.0,
+            calories = 100,
+            averageHeartRateBpm = 140,
+            maximumHeartRateBpm = 150,
+            intensity = "Active",
+            cadence = 85,
+            triggerMethod = "Manual",
+            trackpoints = listOf(tp1),
+            notes = "[Sprint 1]",
+            extensions = TcxLapExtensions(
+                name = "Sprint 1",
+                description = null
+            )
+        )
+        val lap1 = TcxLap(
+            startTime = "2026-11-10T10:05:00Z",
+            totalTimeSeconds = 300.0,
+            distanceMeters = 1000.0,
+            maximumSpeed = 4.0,
+            calories = 80,
+            averageHeartRateBpm = 125,
+            maximumHeartRateBpm = 135,
+            intensity = "Resting",
+            cadence = 75,
+            triggerMethod = "Manual",
+            trackpoints = listOf(tp2),
+            notes = "[Recovery 1] Slow spin",
+            extensions = TcxLapExtensions(
+                name = "Recovery 1",
+                description = "Slow spin"
+            )
+        )
+        val activity = TcxActivity(
+            sport = "Biking",
+            id = "2026-11-10T10:00:00Z",
+            laps = listOf(lap0, lap1),
+            notes = null,
+            creator = null,
+            extensions = null
+        )
+        val doc = TcxDocument(activities = listOf(activity), author = null)
+
+        val outputStream = ByteArrayOutputStream()
+        TcxSerializer.serialize(doc, outputStream)
+
+        val parsedResult = TcxWorkoutParser.parse(ByteArrayInputStream(outputStream.toByteArray()), mockContext)
+        assertTrue("TcxWorkoutParser should succeed", parsedResult.isSuccess)
+        val workoutData = parsedResult.getOrThrow()
+
+        assertEquals(2, workoutData.parsedLaps.size)
+        assertEquals("Sprint 1", workoutData.parsedLaps[0].name)
+        assertNull("Lap 0 description must be null", workoutData.parsedLaps[0].description)
+        assertEquals("Recovery 1", workoutData.parsedLaps[1].name)
+        assertEquals("Slow spin", workoutData.parsedLaps[1].description)
+    }
+
+    @Test
+    fun testLegacyThirdPartyUnbracketedNotes() {
+        val rawTcx = """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <TrainingCenterDatabase xmlns="http://www.garmin.com/xmlschemas/TrainingCenterDatabase/v2">
+              <Activities>
+                <Activity Sport="Biking">
+                  <Id>2026-11-10T10:00:00Z</Id>
+                  <Lap StartTime="2026-11-10T10:00:00Z">
+                    <TotalTimeSeconds>300.0</TotalTimeSeconds>
+                    <DistanceMeters>1000.0</DistanceMeters>
+                    <Track>
+                      <Trackpoint>
+                        <Time>2026-11-10T10:00:00Z</Time>
+                        <Position>
+                          <LatitudeDegrees>48.137</LatitudeDegrees>
+                          <LongitudeDegrees>11.576</LongitudeDegrees>
+                        </Position>
+                        <AltitudeMeters>500.0</AltitudeMeters>
+                        <DistanceMeters>1000.0</DistanceMeters>
+                      </Trackpoint>
+                    </Track>
+                  </Lap>
+                  <Notes>Legacy third-party unbracketed notes</Notes>
+                </Activity>
+              </Activities>
+            </TrainingCenterDatabase>
+        """.trimIndent()
+
+        val parsedResult = TcxWorkoutParser.parse(ByteArrayInputStream(rawTcx.toByteArray(StandardCharsets.UTF_8)), mockContext)
+        assertTrue("TcxWorkoutParser should succeed on third-party TCX", parsedResult.isSuccess)
+        val workoutData = parsedResult.getOrThrow()
+
+        assertNull("workoutName must be null for unbracketed single-line notes", workoutData.workoutName)
+        assertEquals("Legacy third-party unbracketed notes", workoutData.workoutNotes)
     }
 }

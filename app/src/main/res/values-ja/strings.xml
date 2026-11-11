@@ -281,9 +281,9 @@
     <string name="prefsDisplayTitle">表示</string>
     <string name="prefsDisplaySummary">画面と向きの設定</string>
     <string name="prefsKeepScreenOnTitle">画面を常時点灯</string>
-    <string name="prefsKeepScreenOnSummary">アクティブな記録中に画面が自動的に消灯するのを防ぎます</string>
+    <string name="prefsKeepScreenOnSummary">記録中の自動スリープを防止します</string>
     <string name="prefsNoUnlockingTitle">ロック解除を維持</string>
-    <string name="prefsNoUnlockingSummary">ロック画面の上にコックピットを表示し、PINやパターンの入力を不要にします</string>
+    <string name="prefsNoUnlockingSummary">ロック画面の上にコックピットを表示</string>
     <string name="prefZoomDependingOnSpeedTitle">速度に応じてズーム</string>
     <string name="prefsUnitsTitle">単位</string>
     <string name="prefsUnitsSummary">メートル法</string>
@@ -498,14 +498,14 @@
     <string name="do_not_check_again">再確認しない</string>
     <string name="check_ANT_installation">ANTのインストール状況を確認</string>
     <string name="forcePortrait">縦向き固定</string>
-    <string name="forcePortraitSummary">画面を縦向きに固定し、横向きへの自動回転を防止します</string>
+    <string name="forcePortraitSummary">画面を縦向きに固定します</string>
     <string name="Display">画面</string>
     <string name="settings_category_savings">バッテリー節約</string>
     <string name="settings_category_savings_desc">バッテリー駆動時間を延ばし、より長時間のトラッキングを可能にします</string>
     <string name="prefs_battery_saver_title">動的画面減光</string>
     <string name="prefs_battery_saver_summary">勾配とトレーニングゾーンに基づいて画面の明るさを動的に調整します</string>
     <string name="cockpit_theme_title">コックピットテーマ（ワークアウト中）</string>
-    <string name="cockpit_theme_description">アクティブなワークアウト中のテレメトリとセンサー画面にのみ適用されます。メインメニューと「スタート」は標準テーマのままです。</string>
+    <string name="cockpit_theme_description">アクティブなワークアウトのテレメトリ画面にのみ適用されます。</string>
     <string name="cockpit_theme_system">システム</string>
     <string name="cockpit_theme_always_dark">常にダーク</string>
     <string name="display_brightness_title">画面の明るさ（ワークアウト中）</string>
@@ -2012,8 +2012,14 @@
     <string name="athlete_weight_edit">編集</string>
 
     <!-- Dedicated Athlete Profile Screen & Body Metrics History (ATT-3704, ATT-3851, REQ-UI-391, REQ-UI-397) -->
-    <string name="drawer_athlete_profile">プロフィールとゾーン</string>
-    <string name="athlete_profile_title">プロフィールとゾーン</string>
+    <string name="drawer_athlete_profile">フィットネスと生理学</string>
+    <string name="athlete_profile_title">フィットネスと生理学</string>
+    <string name="drawer_fitness_physiology">フィットネスと生理学</string>
+    <string name="fitness_tab_pmc">フィットネスと疲労</string>
+    <string name="fitness_tab_hrv">HRVとレディネス</string>
+    <string name="fitness_tab_body">身体と閾値</string>
+    <string name="fitness_tab_cardio_power">カーディオ・パワー</string>
+    <string name="pmc_disabled_guidance">エキスパート設定でパフォーマンス管理チャートが無効になっています。</string>
     <string name="athlete_profile_tab_profile">プロフィール</string>
     <string name="athlete_profile_add_entry">測定値を追加</string>
     <string name="athlete_profile_edit_entry">測定値を編集</string>
@@ -2351,7 +2357,7 @@
     <string name="drawer_tier_pioneer">★ パイオニア</string>
     <string name="pioneer_badge_label_with_year">★ パイオニア（%1$d年より）</string>
     <string name="pioneer_badge_label">★ パイオニア</string>
-    <string name="pioneer_thank_you_body">以前のバージョンのaTrainingTrackerでワークアウトを記録していただきありがとうございます！無制限のセンサー接続と今後の全機能が永続的にアンロックされています。</string>
+    <string name="pioneer_thank_you_body">以前のバージョンのaTrainingTrackerでワークアウトを記録していただきありがとうございます！無制限のセンサー接続と今後の全機能が永続的にアンロックされています。それでも、今後の継続的な開発に向けた自発的なご支援をいただければ大変嬉しく存じます。</string>
     <string name="debug_supporter_override_title">サポーターティア上書き（デバッグ）</string>
     <string name="debug_supporter_override_subtitle">Google Play Billing認証情報なしでローカルにライセンス層をシミュレート</string>
 

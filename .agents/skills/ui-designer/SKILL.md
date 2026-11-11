@@ -46,3 +46,5 @@ Agent tweaks padding, typography, colors, layout
 4. **Visual Variant Diffing**:
    - When proposing design choices to the user, present distinct variants side-by-side (e.g. *Variant A: Compact Pill* vs. *Variant B: Outlined Card*).
    - Enable rapid human decision-making with zero latency.
+5. **On-Device Prototyping & Emulator Policy (`ATT-6506` / `REQ-TST-004`)**:
+   - When visual validation requires live on-device execution rather than `@Preview`, autonomous agents MUST target `emulator-5554` (`python3 tools/agent_emulator.py ensure` and `ANDROID_SERIAL=emulator-5554 ./gradlew installDebug`), strictly protecting the user's connected physical phone from unprompted UI deployments.

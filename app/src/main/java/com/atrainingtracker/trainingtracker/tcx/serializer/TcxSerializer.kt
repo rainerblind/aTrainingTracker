@@ -19,7 +19,10 @@
 package com.atrainingtracker.trainingtracker.tcx.serializer
 
 import com.atrainingtracker.trainingtracker.tcx.model.TcxActivity
+import com.atrainingtracker.trainingtracker.tcx.model.TcxActivityExtensions
 import com.atrainingtracker.trainingtracker.tcx.model.TcxAuthor
+import com.atrainingtracker.trainingtracker.tcx.model.TcxCourse
+import com.atrainingtracker.trainingtracker.tcx.model.TcxCoursePoint
 import com.atrainingtracker.trainingtracker.tcx.model.TcxCreator
 import com.atrainingtracker.trainingtracker.tcx.model.TcxDocument
 import com.atrainingtracker.trainingtracker.tcx.model.TcxLap
@@ -75,11 +78,20 @@ object TcxSerializer {
      */
     fun serialize(document: TcxDocument, writer: Writer) {
         writer.write(TCX_SCHEMA_HEADER)
-        writer.write("  <Activities>\n")
-        for (activity in document.activities) {
-            writeActivity(activity, writer)
+        if (document.activities.isNotEmpty() || document.courses.isEmpty()) {
+            writer.write("  <Activities>\n")
+            for (activity in document.activities) {
+                writeActivity(activity, writer)
+            }
+            writer.write("  </Activities>\n")
         }
-        writer.write("  </Activities>\n")
+        if (document.courses.isNotEmpty()) {
+            writer.write("  <Courses>\n")
+            for (course in document.courses) {
+                writeCourse(course, writer)
+            }
+            writer.write("  </Courses>\n")
+        }
         document.author?.let { author ->
             writeAuthor(author, writer)
         }
@@ -87,26 +99,130 @@ object TcxSerializer {
     }
 
     /**
-     * Serializes an individual [TcxActivity] within the `<Activities>` block.
+     * Starts streaming TCX document header and opening `<Activities>` container.
      */
-    fun writeActivity(activity: TcxActivity, writer: Writer) {
-        writer.write("    <Activity Sport=\"${escapeXml(activity.sport)}\">\n")
-        writer.write("      <Id>${escapeXml(activity.id)}</Id>\n")
+    @JvmStatic
+    fun startDocument(writer: Writer) {
+        writer.write(TCX_SCHEMA_HEADER)
+        writer.write("  <Activities>\n")
+    }
 
-        for (lap in activity.laps) {
-            writeLap(lap, writer)
+    /**
+     * Writes opening `<Activity>` element with sport and ID.
+     */
+    @JvmStatic
+    fun startActivityHeader(sport: String, id: String, writer: Writer) {
+        writer.write("    <Activity Sport=\"${escapeXml(sport)}\">\n")
+        writer.write("      <Id>${escapeXml(id)}</Id>\n")
+    }
+
+    /**
+     * Writes opening `<Lap>` element with mandatory and optional telemetry headers up to opening `<Track>`.
+     */
+    @JvmStatic
+    @JvmOverloads
+    fun startLapHeader(
+        startTime: String,
+        totalTimeSeconds: Double,
+        distanceMeters: Double,
+        writer: Writer,
+        maximumSpeed: Double? = null,
+        calories: Int? = null,
+        averageHeartRateBpm: Int? = null,
+        maximumHeartRateBpm: Int? = null,
+        intensity: String? = null,
+        cadence: Int? = null,
+        triggerMethod: String? = null
+    ) {
+        writer.write("      <Lap StartTime=\"${escapeXml(startTime)}\">\n")
+        writer.write("        <TotalTimeSeconds>$totalTimeSeconds</TotalTimeSeconds>\n")
+        writer.write("        <DistanceMeters>$distanceMeters</DistanceMeters>\n")
+
+        maximumSpeed?.let {
+            writer.write("        <MaximumSpeed>$it</MaximumSpeed>\n")
+        }
+        calories?.let {
+            writer.write("        <Calories>$it</Calories>\n")
+        }
+        averageHeartRateBpm?.let {
+            writer.write("        <AverageHeartRateBpm xsi:type=\"HeartRateInBeatsPerMinute_t\">\n")
+            writer.write("          <Value>$it</Value>\n")
+            writer.write("        </AverageHeartRateBpm>\n")
+        }
+        maximumHeartRateBpm?.let {
+            writer.write("        <MaximumHeartRateBpm xsi:type=\"HeartRateInBeatsPerMinute_t\">\n")
+            writer.write("          <Value>$it</Value>\n")
+            writer.write("        </MaximumHeartRateBpm>\n")
+        }
+        intensity?.let {
+            writer.write("        <Intensity>${escapeXml(it)}</Intensity>\n")
+        }
+        cadence?.let {
+            writer.write("        <Cadence>$it</Cadence>\n")
+        }
+        triggerMethod?.let {
+            writer.write("        <TriggerMethod>${escapeXml(it)}</TriggerMethod>\n")
         }
 
-        // Schema sequence: Notes? -> Creator? -> Extensions?
-        activity.notes?.takeIf { it.isNotBlank() }?.let { notes ->
-            writer.write("      <Notes>${escapeXml(notes)}</Notes>\n")
+        writer.write("        <Track>\n")
+    }
+
+    /**
+     * Closes `<Track>`, writes lap notes and extensions, and closes `</Lap>`.
+     */
+    @JvmStatic
+    @JvmOverloads
+    fun endLap(
+        writer: Writer,
+        notes: String? = null,
+        extensions: TcxLapExtensions? = null
+    ) {
+        writer.write("        </Track>\n")
+
+        notes?.takeIf { it.isNotBlank() }?.let { n ->
+            writer.write("        <Notes>${escapeXml(n)}</Notes>\n")
         }
 
-        activity.creator?.let { creator ->
-            writeCreator(creator, writer)
+        extensions?.let { ext ->
+            val hasName = !ext.name.isNullOrBlank()
+            val hasDesc = !ext.description.isNullOrBlank()
+            if (hasName || hasDesc) {
+                writer.write("        <Extensions>\n")
+                writer.write("          <att:LapExtension xmlns:att=\"$EXT_NAMESPACE_ATT\">\n")
+                if (hasName) {
+                    writer.write("            <att:Name>${escapeXml(ext.name)}</att:Name>\n")
+                }
+                if (hasDesc) {
+                    writer.write("            <att:Description>${escapeXml(ext.description)}</att:Description>\n")
+                }
+                writer.write("          </att:LapExtension>\n")
+                writer.write("        </Extensions>\n")
+            }
         }
 
-        activity.extensions?.let { ext ->
+        writer.write("      </Lap>\n")
+    }
+
+    /**
+     * Writes activity notes, creator, extensions, and closes `</Activity>`.
+     */
+    @JvmStatic
+    @JvmOverloads
+    fun endActivity(
+        writer: Writer,
+        notes: String? = null,
+        creator: TcxCreator? = null,
+        extensions: TcxActivityExtensions? = null
+    ) {
+        notes?.takeIf { it.isNotBlank() }?.let { n ->
+            writer.write("      <Notes>${escapeXml(n)}</Notes>\n")
+        }
+
+        creator?.let { c ->
+            writeCreator(c, writer)
+        }
+
+        extensions?.let { ext ->
             val hasName = !ext.customName.isNullOrBlank()
             val hasDesc = !ext.customDescription.isNullOrBlank()
             if (hasName || hasDesc) {
@@ -127,68 +243,100 @@ object TcxSerializer {
     }
 
     /**
+     * Closes `</Activities>`, writes author metadata, and closes `</TrainingCenterDatabase>`.
+     */
+    @JvmStatic
+    @JvmOverloads
+    fun endDocument(writer: Writer, author: TcxAuthor? = null) {
+        writer.write("  </Activities>\n")
+        author?.let { a ->
+            writeAuthor(a, writer)
+        }
+        writer.write("</TrainingCenterDatabase>\n")
+    }
+
+    /**
+     * Serializes an individual [TcxActivity] within the `<Activities>` block.
+     */
+    fun writeActivity(activity: TcxActivity, writer: Writer) {
+        startActivityHeader(activity.sport, activity.id, writer)
+        for (lap in activity.laps) {
+            writeLap(lap, writer)
+        }
+        endActivity(writer, activity.notes, activity.creator, activity.extensions)
+    }
+
+    /**
      * Serializes an individual [TcxLap] within an activity.
      */
     fun writeLap(lap: TcxLap, writer: Writer) {
-        writer.write("      <Lap StartTime=\"${escapeXml(lap.startTime)}\">\n")
-        writer.write("        <TotalTimeSeconds>${lap.totalTimeSeconds}</TotalTimeSeconds>\n")
-        writer.write("        <DistanceMeters>${lap.distanceMeters}</DistanceMeters>\n")
-
-        lap.maximumSpeed?.let {
-            writer.write("        <MaximumSpeed>$it</MaximumSpeed>\n")
-        }
-        lap.calories?.let {
-            writer.write("        <Calories>$it</Calories>\n")
-        }
-        lap.averageHeartRateBpm?.let {
-            writer.write("        <AverageHeartRateBpm xsi:type=\"HeartRateInBeatsPerMinute_t\">\n")
-            writer.write("          <Value>$it</Value>\n")
-            writer.write("        </AverageHeartRateBpm>\n")
-        }
-        lap.maximumHeartRateBpm?.let {
-            writer.write("        <MaximumHeartRateBpm xsi:type=\"HeartRateInBeatsPerMinute_t\">\n")
-            writer.write("          <Value>$it</Value>\n")
-            writer.write("        </MaximumHeartRateBpm>\n")
-        }
-        lap.intensity?.let {
-            writer.write("        <Intensity>${escapeXml(it)}</Intensity>\n")
-        }
-        lap.cadence?.let {
-            writer.write("        <Cadence>$it</Cadence>\n")
-        }
-        lap.triggerMethod?.let {
-            writer.write("        <TriggerMethod>${escapeXml(it)}</TriggerMethod>\n")
-        }
-
-        writer.write("        <Track>\n")
+        startLapHeader(
+            startTime = lap.startTime,
+            totalTimeSeconds = lap.totalTimeSeconds,
+            distanceMeters = lap.distanceMeters,
+            writer = writer,
+            maximumSpeed = lap.maximumSpeed,
+            calories = lap.calories,
+            averageHeartRateBpm = lap.averageHeartRateBpm,
+            maximumHeartRateBpm = lap.maximumHeartRateBpm,
+            intensity = lap.intensity,
+            cadence = lap.cadence,
+            triggerMethod = lap.triggerMethod
+        )
         for (tp in lap.trackpoints) {
             writeTrackpoint(tp, writer)
         }
-        writer.write("        </Track>\n")
+        endLap(writer, lap.notes, lap.extensions)
+    }
 
-        // Schema sequence: Notes? -> Extensions?
-        lap.notes?.takeIf { it.isNotBlank() }?.let { notes ->
-            writer.write("        <Notes>${escapeXml(notes)}</Notes>\n")
+    /**
+     * Serializes an individual [TcxCourse] within the `<Courses>` block.
+     */
+    fun writeCourse(course: TcxCourse, writer: Writer) {
+        writer.write("    <Course>\n")
+        writer.write("      <Name>${escapeXml(course.name)}</Name>\n")
+        for (lap in course.laps) {
+            writeLap(lap, writer)
         }
-
-        lap.extensions?.let { ext ->
-            val hasName = !ext.name.isNullOrBlank()
-            val hasDesc = !ext.description.isNullOrBlank()
-            if (hasName || hasDesc) {
-                writer.write("        <Extensions>\n")
-                writer.write("          <att:LapExtension xmlns:att=\"$EXT_NAMESPACE_ATT\">\n")
-                if (hasName) {
-                    writer.write("            <att:Name>${escapeXml(ext.name)}</att:Name>\n")
-                }
-                if (hasDesc) {
-                    writer.write("            <att:Description>${escapeXml(ext.description)}</att:Description>\n")
-                }
-                writer.write("          </att:LapExtension>\n")
-                writer.write("        </Extensions>\n")
+        if (course.trackpoints.isNotEmpty()) {
+            writer.write("      <Track>\n")
+            for (tp in course.trackpoints) {
+                writeTrackpoint(tp, writer)
             }
+            writer.write("      </Track>\n")
         }
+        for (cp in course.coursePoints) {
+            writeCoursePoint(cp, writer)
+        }
+        course.notes?.takeIf { it.isNotBlank() }?.let { n ->
+            writer.write("      <Notes>${escapeXml(n)}</Notes>\n")
+        }
+        writer.write("    </Course>\n")
+    }
 
-        writer.write("      </Lap>\n")
+    /**
+     * Serializes an individual [TcxCoursePoint] within a course.
+     */
+    fun writeCoursePoint(cp: TcxCoursePoint, writer: Writer) {
+        writer.write("      <CoursePoint>\n")
+        writer.write("        <Name>${escapeXml(cp.name)}</Name>\n")
+        cp.time?.takeIf { it.isNotBlank() }?.let { t ->
+            writer.write("        <Time>${escapeXml(t)}</Time>\n")
+        }
+        writer.write("        <Position>\n")
+        writer.write("          <LatitudeDegrees>${cp.position.latitudeDegrees}</LatitudeDegrees>\n")
+        writer.write("          <LongitudeDegrees>${cp.position.longitudeDegrees}</LongitudeDegrees>\n")
+        writer.write("        </Position>\n")
+        cp.altitudeMeters?.let { alt ->
+            writer.write("        <AltitudeMeters>$alt</AltitudeMeters>\n")
+        }
+        cp.pointType?.takeIf { it.isNotBlank() }?.let { pt ->
+            writer.write("        <PointType>${escapeXml(pt)}</PointType>\n")
+        }
+        cp.notes?.takeIf { it.isNotBlank() }?.let { n ->
+            writer.write("        <Notes>${escapeXml(n)}</Notes>\n")
+        }
+        writer.write("      </CoursePoint>\n")
     }
 
     /**

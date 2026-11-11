@@ -19,21 +19,16 @@
 package com.atrainingtracker.trainingtracker.exporter.writer;
 
 import android.content.Context;
-import android.database.Cursor;
-import android.database.CursorIndexOutOfBoundsException;
-import android.database.sqlite.SQLiteDatabase;
 import android.os.Build;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
 
 import com.atrainingtracker.banalservice.BSportType;
-import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 import com.atrainingtracker.database.DatabaseConstants;
-import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager;
-import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries;
 import com.atrainingtracker.trainingtracker.repositories.SportTypesRepository;
+import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutExportHeader;
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository;
 import com.atrainingtracker.trainingtracker.exporter.BaseExporter;
 import com.atrainingtracker.trainingtracker.exporter.ExportInfo;
@@ -95,46 +90,34 @@ public abstract class BaseFileWriter extends BaseExporter {
     }
 
 
-    protected void getHeaderData(@NonNull ExportInfo exportInfo) {
-        WorkoutSummariesDatabaseManager databaseManager = WorkoutRepository.getInstance(mContext).getWorkoutSummariesDatabaseManager();
-        SQLiteDatabase db = databaseManager.getDatabase();
+    protected WorkoutExportHeader exportHeader;
 
-        try (Cursor cursor = db.query(WorkoutSummaries.TABLE,
-                null,
-                WorkoutSummaries.FILE_BASE_NAME + "=?",
-                new String[]{exportInfo.getFileBaseName()},
-                null,
-                null,
-                null)) {
-            if (cursor != null && cursor.moveToFirst()) {
-                // get the data for the header
-                startTime = myGet(cursor, WorkoutSummaries.TIME_START, "");
-                totalTime = myGet(cursor, WorkoutSummaries.TIME_TOTAL_s, "0");
-                data = myGet(cursor, WorkoutSummaries.GC_DATA, "--------");
-                goal = myGet(cursor, WorkoutSummaries.GOAL, "");
-                method = myGet(cursor, WorkoutSummaries.METHOD, "");
-                totalDistance = myGet(cursor, WorkoutSummaries.DISTANCE_TOTAL_m, "0");
-                description = myGet(cursor, WorkoutSummaries.DESCRIPTION, "");
-                workoutName = myGet(cursor, WorkoutSummaries.WORKOUT_NAME, "");
-                int idIdx = cursor.getColumnIndex(WorkoutSummaries.C_ID);
-                workoutID = idIdx >= 0 ? cursor.getLong(idIdx) : DatabaseConstants.INVALID_ID;
-                int sportIdx = cursor.getColumnIndex(WorkoutSummaries.SPORT_ID);
-                sportTypeId = sportIdx >= 0 ? cursor.getLong(sportIdx) : DatabaseConstants.INVALID_ID;
-                int trainerIdx = cursor.getColumnIndex(WorkoutSummaries.TRAINER);
-                indoorTrainerSession = trainerIdx >= 0 && cursor.getInt(trainerIdx) > 0;
-            } else {
-                startTime = "";
-                totalTime = "0";
-                data = "--------";
-                goal = "";
-                method = "";
-                totalDistance = "0";
-                description = "";
-                workoutName = "";
-                workoutID = DatabaseConstants.INVALID_ID;
-                sportTypeId = DatabaseConstants.INVALID_ID;
-                indoorTrainerSession = false;
-            }
+    protected void getHeaderData(@NonNull ExportInfo exportInfo) {
+        exportHeader = WorkoutRepository.getInstance(mContext).getWorkoutExportHeader(exportInfo.getFileBaseName());
+        if (exportHeader != null) {
+            startTime = exportHeader.getStartTime();
+            totalTime = exportHeader.getTotalTime();
+            data = exportHeader.getData();
+            goal = exportHeader.getGoal();
+            method = exportHeader.getMethod();
+            totalDistance = exportHeader.getTotalDistance();
+            description = exportHeader.getDescription();
+            workoutName = exportHeader.getWorkoutName();
+            workoutID = exportHeader.getWorkoutId();
+            sportTypeId = exportHeader.getSportTypeId();
+            indoorTrainerSession = exportHeader.getIndoorTrainerSession();
+        } else {
+            startTime = "";
+            totalTime = "0";
+            data = "--------";
+            goal = "";
+            method = "";
+            totalDistance = "0";
+            description = "";
+            workoutName = "";
+            workoutID = DatabaseConstants.INVALID_ID;
+            sportTypeId = DatabaseConstants.INVALID_ID;
+            indoorTrainerSession = false;
         }
 
         haveDistance = data.indexOf('D') > 0;
@@ -161,18 +144,5 @@ public abstract class BaseFileWriter extends BaseExporter {
         BSportType bSportType = SportTypesRepository.getInstance(mContext).getBSportType(sportTypeId);
         haveBikeCadence = haveCadence & bSportType == BSportType.BIKE;
         haveRunCadence = haveCadence & bSportType == BSportType.RUN;
-    }
-
-    protected String myGet(@NonNull Cursor cursor, String name, String defaultValue) {
-        String defVal = defaultValue;
-        try {
-            defVal = cursor.getString(cursor.getColumnIndexOrThrow(name));
-        } catch (CursorIndexOutOfBoundsException e) {
-            Log.e(TAG, e.toString());
-        }
-        if (defVal == null || defVal.isEmpty()) {
-            defVal = defaultValue;
-        }
-        return defVal;
     }
 }

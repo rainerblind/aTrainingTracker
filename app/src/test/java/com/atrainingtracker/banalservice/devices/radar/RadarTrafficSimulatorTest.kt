@@ -18,6 +18,9 @@
 
 package com.atrainingtracker.banalservice.devices.radar
 
+import io.mockk.mockk
+import io.mockk.unmockkAll
+import io.mockk.verify
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
@@ -209,5 +212,77 @@ class RadarTrafficSimulatorTest {
         assertFalse(RadarTrafficSimulator.isSimulating)
         assertNull(RadarTrafficSimulator.activeScenario)
         assertEquals(RadarConnectionState.DISCONNECTED, RadarStateRepository.getState().connectionState)
+    }
+
+    @Test
+    fun testGenerateV2Targets_createsSyntheticFramesWithLateralOffsetAndSize() {
+        val targetsSingle = RadarTrafficSimulator.generateV2Targets(count = 1, includeLargeVehicle = false)
+        assertEquals(1, targetsSingle.size)
+        val car = targetsSingle[0]
+        assertEquals(VehicleSizeCategory.CAR, car.vehicleSizeCategory)
+        assertEquals(-2.0f, car.lateralOffsetMeters!!, 0.01f)
+        assertEquals(LaneState.PASSING_LANE, car.laneState)
+
+        val targetsTruck = RadarTrafficSimulator.generateV2Targets(count = 2, includeLargeVehicle = true)
+        assertEquals(2, targetsTruck.size)
+        val truck = targetsTruck[0]
+        assertEquals(VehicleSizeCategory.TRUCK_OR_BUS, truck.vehicleSizeCategory)
+        assertEquals(ThreatLevel.FAST_APPROACHING, truck.threatLevel)
+        assertEquals(-1.4f, truck.lateralOffsetMeters!!, 0.01f)
+        assertEquals(2.6f, truck.vehicleWidthMeters!!, 0.01f)
+    }
+
+    @Test
+    fun testIsSimulatingFlow_reactiveTransitions() = runTest {
+        val testDispatcher = StandardTestDispatcher(testScheduler)
+        val testScope = TestScope(testDispatcher)
+
+        assertFalse(RadarTrafficSimulator.isSimulatingFlow.value)
+
+        RadarTrafficSimulator.start(
+            scenario = RadarScenario.SINGLE_CAR,
+            scope = testScope,
+            tickIntervalMs = 125L
+        )
+
+        assertTrue(RadarTrafficSimulator.isSimulatingFlow.value)
+
+        RadarTrafficSimulator.stop()
+        assertFalse(RadarTrafficSimulator.isSimulatingFlow.value)
+    }
+
+    @Test
+    fun testOnPhysicalHardwareConnected_preemptsImmediately() = runTest {
+        val testDispatcher = StandardTestDispatcher(testScheduler)
+        val testScope = TestScope(testDispatcher)
+
+        RadarTrafficSimulator.start(
+            scenario = RadarScenario.SINGLE_CAR,
+            scope = testScope,
+            tickIntervalMs = 125L
+        )
+        testScope.runCurrent()
+        assertTrue(RadarTrafficSimulator.isSimulating)
+
+        RadarTrafficSimulator.onPhysicalHardwareConnected()
+        assertFalse(RadarTrafficSimulator.isSimulating)
+        assertFalse(RadarTrafficSimulator.isSimulatingFlow.value)
+        assertNull(RadarTrafficSimulator.activeScenario)
+        assertEquals(RadarConnectionState.DISCONNECTED, RadarStateRepository.getState().connectionState)
+    }
+
+    @Test
+    fun testTick_updatesSimulatedRadarDeviceWhenPresent() {
+        val mockDevice = mockk<SimulatedRadarDevice>(relaxed = true)
+        RadarTrafficSimulator.simulatedDevice = mockDevice
+
+        try {
+            val aggregator = RadarWindowAggregator()
+            RadarTrafficSimulator.tick(RadarScenario.SINGLE_CAR, 0L, aggregator)
+
+            verify(exactly = 1) { mockDevice.updateMetrics(any()) }
+        } finally {
+            RadarTrafficSimulator.simulatedDevice = null
+        }
     }
 }

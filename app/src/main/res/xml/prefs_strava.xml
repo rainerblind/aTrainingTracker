@@ -122,6 +122,12 @@
             android:key="uploadStravaCadence"
             android:title="@string/uploadCadence"
             android:layout="@layout/preference_slim"/>
+        <CheckBoxPreference
+            android:defaultValue="false"
+            android:key="uploadStravaRadarSummary"
+            android:title="@string/radar_strava_summary_title"
+            android:summary="@string/radar_strava_summary_desc"
+            android:layout="@layout/preference_slim"/>
     </PreferenceCategory>
 
 </PreferenceScreen>

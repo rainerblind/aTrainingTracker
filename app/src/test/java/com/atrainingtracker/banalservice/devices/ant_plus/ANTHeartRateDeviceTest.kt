@@ -19,6 +19,7 @@
 package com.atrainingtracker.banalservice.devices.ant_plus
 
 import android.content.Context
+import android.os.SystemClock
 import android.util.Log
 import androidx.core.content.ContextCompat
 import com.atrainingtracker.banalservice.database.DevicesDatabaseManager
@@ -34,6 +35,7 @@ import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import java.math.BigDecimal
@@ -55,6 +57,9 @@ class ANTHeartRateDeviceTest {
         every { Log.i(any<String>(), any<String>()) } returns 0
         every { Log.w(any<String>(), any<String>()) } returns 0
         every { Log.e(any<String>(), any<String>()) } returns 0
+
+        mockkStatic(SystemClock::class)
+        every { SystemClock.elapsedRealtime() } returns 100_000L
 
         mockkStatic(ContextCompat::class)
         every { ContextCompat.registerReceiver(any(), any(), any(), any()) } returns null
@@ -115,7 +120,7 @@ class ANTHeartRateDeviceTest {
         assertEquals(ProtocolType.ANT_PLUS, receivedEvents[0].protocol)
         assertEquals(0, receivedEvents[0].gapBeats)
         assertEquals(RrBeatEvent.ARTIFACT_NORMAL, receivedEvents[0].artifactFlag)
-        assertEquals(100_800L, receivedEvents[0].beatTimestampMs)
+        assertTrue("Beat timestamp must be UTC epoch milliseconds", receivedEvents[0].beatTimestampMs >= 1_000_000_000_000L)
         assertNotNull(device.rrIntervalSensor)
         assertEquals(800, device.rrIntervalSensor?.value)
 
@@ -190,5 +195,78 @@ class ANTHeartRateDeviceTest {
 
         device.parseHeartRateData(101_000L, 0, 5L, BigDecimal("1.000"), DataState.ZERO_DETECTED)
         assertNull(device.heartRateSensor.value)
+    }
+
+    /**
+     * TST-TRK-069.1: UTC epoch translation with fallback to System.currentTimeMillis().
+     */
+    @Test
+    fun testEstTimestampUtcEpochConversion() {
+        val device = createDevice()
+        val now = System.currentTimeMillis()
+        val converted = device.convertEstTimestampToUtcEpochMs(100_500L)
+        // SystemClock is mocked to 100_000L, so 100_500L gives now + 500ms
+        assertTrue("Converted timestamp should be approximately now + 500ms", Math.abs(converted - (now + 500L)) < 100L)
+
+        // Non-positive fallback
+        val fallback = device.convertEstTimestampToUtcEpochMs(0L)
+        assertTrue("Fallback timestamp should be approximately now", Math.abs(fallback - now) < 50L)
+
+        // Pre-converted epoch timestamp passthrough (>= 1e12 ms)
+        val epochTimestamp = 1_700_000_123_456L
+        assertEquals(epochTimestamp, device.convertEstTimestampToUtcEpochMs(epochTimestamp))
+    }
+
+    /**
+     * TST-TRK-069.2: unregisterSensors() resets mRrIntervalSensor to null, allowing clean re-registration on reconnect.
+     */
+    @Test
+    fun testSensorReRegistrationOnReconnect() {
+        val device = createDevice()
+        // Connect and receive 2 beats
+        device.parseHeartRateData(100_000L, 70, 10L, BigDecimal("1.000"), DataState.LIVE_DATA)
+        device.parseHeartRateData(100_800L, 72, 11L, BigDecimal("1.800"), DataState.LIVE_DATA)
+        assertNotNull("mRrIntervalSensor must be non-null after first beat", device.rrIntervalSensor)
+
+        // Mid-ride disconnect
+        device.unregisterSensors()
+        assertNull("mRrIntervalSensor must be reset to null in unregisterSensors()", device.rrIntervalSensor)
+
+        // Reconnect: initial baseline and next beat
+        device.parseHeartRateData(105_000L, 75, 20L, BigDecimal("5.000"), DataState.LIVE_DATA)
+        device.parseHeartRateData(105_850L, 75, 21L, BigDecimal("5.850"), DataState.LIVE_DATA)
+        assertNotNull("mRrIntervalSensor must be re-registered upon reconnect", device.rrIntervalSensor)
+        assertEquals(850, device.rrIntervalSensor?.value)
+    }
+
+    /**
+     * TST-TRK-069.1: ZERO_DETECTED resets beat continuity trackers so reconnecting strap starts fresh.
+     */
+    @Test
+    fun testZeroDetectedResetsContinuity() {
+        val device = createDevice()
+        val receivedEvents = mutableListOf<RrBeatEvent>()
+        device.addRrBeatListener { receivedEvents.add(it) }
+
+        // Initial connection
+        device.parseHeartRateData(100_000L, 70, 10L, BigDecimal("1.000"), DataState.LIVE_DATA)
+        device.parseHeartRateData(100_800L, 70, 11L, BigDecimal("1.800"), DataState.LIVE_DATA)
+        assertEquals(1, receivedEvents.size)
+
+        // Contact lost
+        device.parseHeartRateData(101_000L, 0, 11L, BigDecimal("1.800"), DataState.ZERO_DETECTED)
+        assertNull(device.heartRateSensor.value)
+
+        // Contact restored with big jump in counter (e.g. 5 minutes later, strap re-worn)
+        receivedEvents.clear()
+        device.parseHeartRateData(400_000L, 80, 200L, BigDecimal("20.000"), DataState.LIVE_DATA)
+        // Must be treated as baseline packet, NOT a massive 189-beat GAP!
+        assertEquals(0, receivedEvents.size)
+
+        // Next beat normal
+        device.parseHeartRateData(400_800L, 80, 201L, BigDecimal("20.800"), DataState.LIVE_DATA)
+        assertEquals(1, receivedEvents.size)
+        assertEquals(RrBeatEvent.ARTIFACT_NORMAL, receivedEvents[0].artifactFlag)
+        assertEquals(0, receivedEvents[0].gapBeats)
     }
 }

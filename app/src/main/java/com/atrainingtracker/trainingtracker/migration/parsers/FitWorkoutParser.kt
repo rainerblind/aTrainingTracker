@@ -103,13 +103,45 @@ object FitWorkoutParser {
             val rawLaps = mutableListOf<LapMesg>()
             val rawRecords = mutableListOf<RecordMesg>()
             val rawHrvs = mutableListOf<HrvMesg>()
+            val extractedRrIntervals = mutableListOf<Double>()
+            val extractedRrBeats = mutableListOf<FitRrBeat>()
+            var currentAnchorTimestampMs: Long = 0L
 
             val broadcaster = MesgBroadcaster(decode)
-            broadcaster.addListener(FileIdMesgListener { rawFileIds.add(it) })
-            broadcaster.addListener(SessionMesgListener { rawSessions.add(it) })
+            broadcaster.addListener(FileIdMesgListener {
+                rawFileIds.add(it)
+                val created = it.timeCreated?.date?.time
+                if (created != null && created > 0L && currentAnchorTimestampMs == 0L) {
+                    currentAnchorTimestampMs = created
+                }
+            })
+            broadcaster.addListener(SessionMesgListener {
+                rawSessions.add(it)
+                val start = it.startTime?.date?.time
+                if (start != null && start > 0L && currentAnchorTimestampMs == 0L) {
+                    currentAnchorTimestampMs = start
+                }
+            })
             broadcaster.addListener(LapMesgListener { rawLaps.add(it) })
-            broadcaster.addListener(RecordMesgListener { rawRecords.add(it) })
-            broadcaster.addListener(HrvMesgListener { rawHrvs.add(it) })
+            broadcaster.addListener(RecordMesgListener {
+                rawRecords.add(it)
+                val ts = it.timestamp?.date?.time
+                if (ts != null && ts > 0L) {
+                    currentAnchorTimestampMs = ts
+                }
+            })
+            broadcaster.addListener(HrvMesgListener { hrvMesg ->
+                rawHrvs.add(hrvMesg)
+                val numTime = hrvMesg.numTime
+                for (i in 0 until numTime) {
+                    val tSec = hrvMesg.getTime(i)
+                    if (tSec != null && tSec > 0f && tSec < 10f) {
+                        val rrMs = tSec.toDouble() * 1000.0
+                        extractedRrIntervals.add(rrMs)
+                        extractedRrBeats.add(FitRrBeat(rrMs = rrMs, anchorTimestampMs = currentAnchorTimestampMs))
+                    }
+                }
+            })
 
             val readSuccess = try {
                 java.io.ByteArrayInputStream(bytes).use { bais ->
@@ -305,17 +337,6 @@ object FitWorkoutParser {
                 }
             }
 
-            val extractedRrIntervals = mutableListOf<Double>()
-            for (hrvMesg in rawHrvs) {
-                val numTime = hrvMesg.numTime
-                for (i in 0 until numTime) {
-                    val tSec = hrvMesg.getTime(i)
-                    if (tSec != null && tSec > 0f && tSec < 10f) {
-                        extractedRrIntervals.add(tSec.toDouble() * 1000.0)
-                    }
-                }
-            }
-
             Result.success(
                 ParsedWorkoutData(
                     workoutName = null,
@@ -339,7 +360,8 @@ object FitWorkoutParser {
                     sessionIntensityFactor = sessionIf,
                     sessionTss = sessionTss,
                     sessionWorkKj = sessionWorkKj,
-                    rawRrIntervals = extractedRrIntervals
+                    rawRrIntervals = extractedRrIntervals,
+                    parsedRrBeats = extractedRrBeats
                 )
             )
         } catch (e: Exception) {

@@ -19,6 +19,7 @@
 package com.atrainingtracker.banalservice.devices.ant_plus;
 
 import android.content.Context;
+import android.os.SystemClock;
 import android.util.Log;
 
 import androidx.annotation.Nullable;
@@ -59,7 +60,7 @@ public class ANTHeartRateDevice extends MyANTDevice implements RrBeatSource {
     private final List<RrBeatListener> mRrBeatListeners = new CopyOnWriteArrayList<>();
     private long mPrevHeartBeatCount = -1L;
     private BigDecimal mPrevHeartBeatEventTime = null;
-    private long mLastBeatTimestampMs = 0L;
+    private double mLastBeatTimestampMs = 0.0;
 
     /**
      * Constructor
@@ -142,6 +143,29 @@ public class ANTHeartRateDevice extends MyANTDevice implements RrBeatSource {
     }
 
     /**
+     * Converts ANT+ PCC estTimestamp (monotonic SystemClock.elapsedRealtime ms since boot)
+     * to UTC Unix epoch milliseconds (System.currentTimeMillis()).
+     */
+    public long convertEstTimestampToUtcEpochMs(long estTimestamp) {
+        if (estTimestamp <= 0L) {
+            return System.currentTimeMillis();
+        }
+        if (estTimestamp >= 1_000_000_000_000L) {
+            return estTimestamp;
+        }
+        try {
+            long elapsedBoot = SystemClock.elapsedRealtime();
+            if (elapsedBoot > 0L) {
+                long epochOffset = System.currentTimeMillis() - elapsedBoot;
+                return epochOffset + estTimestamp;
+            }
+        } catch (Throwable t) {
+            // Graceful fallback for unmocked pure JVM tests
+        }
+        return System.currentTimeMillis();
+    }
+
+    /**
      * Processes incoming ANT+ heart rate and beat timing data.
      * Enforces the strict beat-count continuity rule (deltaC == 1) and flags RF multi-beat gaps (deltaC >= 2).
      */
@@ -158,6 +182,9 @@ public class ANTHeartRateDevice extends MyANTDevice implements RrBeatSource {
             mHeartRateSensor.newValue(computedHeartRate);
         } else if (dataState == DataState.ZERO_DETECTED) {
             mHeartRateSensor.newValue(null);
+            mPrevHeartBeatCount = -1L;
+            mPrevHeartBeatEventTime = null;
+            mLastBeatTimestampMs = 0.0;
             return;
         } else {
             return;
@@ -167,13 +194,21 @@ public class ANTHeartRateDevice extends MyANTDevice implements RrBeatSource {
             return;
         }
 
-        long beatTimestampMs = (estTimestamp > 0) ? estTimestamp : System.currentTimeMillis();
+        long packetArrivalUtcMs = convertEstTimestampToUtcEpochMs(estTimestamp);
 
         if (mPrevHeartBeatCount == -1L) {
             // Baseline reference packet
             mPrevHeartBeatCount = heartBeatCount;
             mPrevHeartBeatEventTime = heartBeatEventTime;
-            mLastBeatTimestampMs = beatTimestampMs;
+            mLastBeatTimestampMs = packetArrivalUtcMs;
+            return;
+        }
+
+        // Guard against dropout / strap disconnect > 64s
+        if (mLastBeatTimestampMs > 0.0 && (packetArrivalUtcMs - mLastBeatTimestampMs) > 64_000L) {
+            mPrevHeartBeatCount = heartBeatCount;
+            mPrevHeartBeatEventTime = heartBeatEventTime;
+            mLastBeatTimestampMs = packetArrivalUtcMs;
             return;
         }
 
@@ -193,7 +228,6 @@ public class ANTHeartRateDevice extends MyANTDevice implements RrBeatSource {
 
         mPrevHeartBeatCount = heartBeatCount;
         mPrevHeartBeatEventTime = heartBeatEventTime;
-        mLastBeatTimestampMs = beatTimestampMs;
 
         if (deltaC == 1) {
             // Strict single beat continuity
@@ -205,6 +239,17 @@ public class ANTHeartRateDevice extends MyANTDevice implements RrBeatSource {
                 addAndRegisterSensor(mRrIntervalSensor);
             }
             mRrIntervalSensor.newValue((int) roundedRrMs);
+
+            double candidateTimestampMs = mLastBeatTimestampMs + rrMs;
+            double drift = Math.abs(packetArrivalUtcMs - candidateTimestampMs);
+            long beatTimestampMs;
+            if (drift > 2000.0) {
+                beatTimestampMs = packetArrivalUtcMs;
+                mLastBeatTimestampMs = packetArrivalUtcMs;
+            } else {
+                beatTimestampMs = Math.round(candidateTimestampMs);
+                mLastBeatTimestampMs = candidateTimestampMs;
+            }
 
             dispatchRrBeat(new RrBeatEvent(
                     beatTimestampMs,
@@ -218,6 +263,9 @@ public class ANTHeartRateDevice extends MyANTDevice implements RrBeatSource {
             // deltaC >= 2: Multi-beat RF packet loss
             int gapBeats = (int) (deltaC - 1);
             double avgRrMs = (totalDeltaMs > 0 && deltaC > 0) ? (totalDeltaMs / deltaC) : 1000.0;
+
+            long beatTimestampMs = packetArrivalUtcMs;
+            mLastBeatTimestampMs = packetArrivalUtcMs;
 
             // Do NOT emit summed delta to mRrIntervalSensor (prevents false bradycardia spike)
             dispatchRrBeat(new RrBeatEvent(
@@ -241,7 +289,8 @@ public class ANTHeartRateDevice extends MyANTDevice implements RrBeatSource {
         super.unregisterSensors();
         mPrevHeartBeatCount = -1L;
         mPrevHeartBeatEventTime = null;
-        mLastBeatTimestampMs = 0L;
+        mLastBeatTimestampMs = 0.0;
+        mRrIntervalSensor = null;
     }
 
     @Override
@@ -249,7 +298,8 @@ public class ANTHeartRateDevice extends MyANTDevice implements RrBeatSource {
         super.shutDown();
         mPrevHeartBeatCount = -1L;
         mPrevHeartBeatEventTime = null;
-        mLastBeatTimestampMs = 0L;
+        mLastBeatTimestampMs = 0.0;
+        mRrIntervalSensor = null;
         mRrBeatListeners.clear();
     }
 }

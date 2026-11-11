@@ -11,7 +11,7 @@
 
 ## 1. Scope & Operational Context
 
-This document establishes the formal, black-box system requirements (`SYSREQ-DEX-*`) for data exchange, telemetry export/import, cloud services integration, and disaster recovery in **aTrainingTracker**.
+This document establishes the formal, black-box system requirements (`SYSREQ-DEX-001` through `SYSREQ-DEX-006`) for data exchange, telemetry export/import, cloud services integration, and disaster recovery in **aTrainingTracker**.
 
 These requirements satisfy ASPICE 4.0 **SYS.2 (System Requirements Analysis)** Base Practices:
 * **SYS.2 BP1**: *Specify system requirements* – Define functional, non-functional, security, and interface data requirements.
@@ -32,19 +32,20 @@ These requirements satisfy ASPICE 4.0 **SYS.2 (System Requirements Analysis)** B
   5. The export pipeline SHALL enforce canonical distance (`DistanceFormatter`), elevation (`AltitudeFormatter`), and speed/pace formatting across all export serialization paths.
 * **Rationale**: Athletes require vendor-neutral mobility of their training data across desktop software (GoldenCheetah), third-party ecosystems, and long-term offline archives.
 * **Priority**: High
-* **Verification Method**: Test & Demonstration (`SystemDataExchangeRequirementsContractTest`, `FitExportTest`, `TCXExportTest`)
+* **Verification Method**: Test & Demonstration (`SystemDataExchangeRequirementsContractTest`, `FitFileWriterTest.kt`, `TCXRoundTripTest.kt`)
 * **Traced Software Components**: `ExportManager.java`, `FileFormat.java`, `FitFileWriter.java`, `TCXFileWriter.java`, `GPXFileWriter.java`, `CSVFileWriter.java`
 
 ### SYSREQ-DEX-002: Multi-Format Workout Ingestion & Collision Deduplication
 * **Title**: Multi-Format Workout Ingestion & Collision Deduplication
-* **Statement**: The system SHALL ingest historical workout recordings in standard formats (FIT, TCX, GPX, CSV):
-  1. Parse trackpoints, lap markers, sensor telemetry, and workout metadata into the application SQLite database (`WorkoutSummaries.db`, `WorkoutSamples.db`).
-  2. Perform collision detection and deduplication against existing sessions based on start timestamp, duration, and trajectory spatial bounding box to prevent duplicate workout entries.
-  3. Support batch import workflows (e.g. Strava bulk export archive ingestion) with non-blocking background execution.
+* **Statement**: The system SHALL ingest historical workout recordings in standard formats (FIT, TCX, GPX) and bulk export metadata (CSV):
+  1. Parse discrete workout trackpoints, lap markers, sensor telemetry, and workout metadata from FIT, TCX, and GPX files into the application SQLite database (`WorkoutSummaries.db`, `WorkoutSamples.db`) via dedicated parsers (`FitWorkoutParser.kt`, `GpxWorkoutParser.kt`, `TcxWorkoutParser.kt`).
+  2. Parse athlete activity metadata from bulk export `activities.csv` manifests via `StravaCsvParser.kt`.
+  3. Perform collision detection and deduplication against existing sessions based on start timestamp, duration, and trajectory spatial bounding box to prevent duplicate workout entries.
+  4. Support batch import workflows (e.g. Strava bulk export archive ingestion) with non-blocking background execution (`LegacyImportEngine.kt`, `StravaBulkExportImporter.kt`).
 * **Rationale**: Athletes switching from other devices or platforms must be able to restore historical training logs without creating duplicated entries.
 * **Priority**: High
-* **Verification Method**: Test (`SystemDataExchangeRequirementsContractTest`, `LegacyImportEngine`, `StravaBulkExportImporter`)
-* **Traced Software Components**: `LegacyImportEngine.java`, `StravaBulkExportImporter.kt`, `WorkoutDataMapper.java`, `WorkoutSamplesDatabaseManager.java`
+* **Verification Method**: Test (`SystemDataExchangeRequirementsContractTest`, `LegacyImportEngine.kt`, `StravaBulkExportImporter.kt`)
+* **Traced Software Components**: `LegacyImportEngine.kt`, `StravaBulkExportImporter.kt`, `WorkoutDataMapper.kt`, `WorkoutSamplesDatabaseManager.java`, `StravaCsvParser.kt`
 
 ### SYSREQ-DEX-003: Cloud Activity Synchronization & Rate Governance
 * **Title**: Cloud Activity Synchronization & Rate Governance (Strava)
@@ -53,21 +54,22 @@ These requirements satisfy ASPICE 4.0 **SYS.2 (System Requirements Analysis)** B
   2. Perform asynchronous multipart workout file uploads (`/api/v3/uploads`) with background status polling and upload success confirmation.
   3. Enforce Strava API rate limit compliance (15-minute and 24-hour request windows) to prevent API throttling or quota exhaustion.
   4. Synchronize athlete equipment (bikes, shoes) and auto-assign gear to matched workout activity types (`StravaEquipmentSyncWorker.kt`).
-* **Rationale**: Social sharing and cloud analytics on platforms like Strava are primary use cases for endurance athletes.
+  5. Synchronize athlete routes (`StravaRoutesSyncWorker.kt`) and starred segments (`StravaSegmentsSyncWorker.kt`) via background workers.
+* **Rationale**: Social sharing, route exploration, and cloud analytics on platforms like Strava are primary use cases for endurance athletes.
 * **Priority**: High
-* **Verification Method**: Test & Analysis (`SystemDataExchangeRequirementsContractTest`, `StravaUploader`, `StravaEquipmentSyncWorker`)
-* **Traced Software Components**: `StravaUploader.java`, `StravaUploadHelper.kt`, `StravaEquipmentSyncWorker.kt`, `AuthCredentialsStore.kt`
+* **Verification Method**: Test & Analysis (`SystemDataExchangeRequirementsContractTest`, `StravaUploader.kt`, `StravaEquipmentSyncWorker.kt`, `StravaRoutesSyncWorker.kt`, `StravaSegmentsSyncWorker.kt`)
+* **Traced Software Components**: `StravaUploader.kt`, `StravaHelper.kt`, `StravaUploadDbHelper.java`, `StravaEquipmentSyncWorker.kt`, `StravaRoutesSyncWorker.kt`, `StravaSegmentsSyncWorker.kt`, `AuthCredentialsStore.kt`
 
 ### SYSREQ-DEX-004: Cloud Storage Synchronization & Automatic Backup
 * **Title**: Cloud Storage Synchronization & Automatic Backup (Dropbox & Google Drive)
 * **Statement**: The system SHALL support automated and manual cloud archiving of completed workout files and full database backups:
   1. *Dropbox Integration*: Integrate Dropbox API v2 (`com.dropbox.core:dropbox-core-sdk:8.0.2`, `DropboxUploader.java`) with OAuth2 PKCE authorization, uploading workout files to user-configured subfolders and periodic `.attbackup` archives to `/Backups/`.
-  2. *Google Drive Integration*: Integrate Google Drive REST API v3 (`GoogleDriveUploader.java`, `GoogleDriveClient.kt`) with Google Sign-In authorization, synchronizing application backups to `aTrainingTracker/Backups/`.
+  2. *Google Drive Integration*: Integrate Google Drive REST API v3 (`GoogleDriveUploader.kt`, `GoogleDriveClient.kt`) with Google Sign-In authorization, uploading workout files and synchronizing application backups to `aTrainingTracker/Backups/` (`GoogleDriveBackupManager.kt`).
   3. Cloud synchronization tasks SHALL execute within background `WorkManager` workers, automatically retrying upon transient network dropouts without impeding the live tracking engine.
 * **Rationale**: Seamless off-device cloud replication protects athletes against hardware loss, phone damage, or accidental database corruption.
 * **Priority**: High
-* **Verification Method**: Test (`SystemDataExchangeRequirementsContractTest`, `DropboxBackupManager`, `GoogleDriveBackupManager`)
-* **Traced Software Components**: `DropboxUploader.java`, `DropboxBackupManager.kt`, `GoogleDriveUploader.java`, `GoogleDriveBackupManager.kt`, `BackupWorker.kt`
+* **Verification Method**: Test (`SystemDataExchangeRequirementsContractTest`, `DropboxBackupManager.kt`, `GoogleDriveBackupManager.kt`)
+* **Traced Software Components**: `DropboxUploader.java`, `DropboxBackupManager.kt`, `GoogleDriveUploader.kt`, `GoogleDriveBackupManager.kt`, `GoogleDriveClient.kt`, `BackupWorker.kt`
 
 ### SYSREQ-DEX-005: Full Application State Backup & Atomic Recovery Pipeline
 * **Title**: Full Application State Backup & Atomic Recovery Pipeline (`.attbackup`)
@@ -80,19 +82,19 @@ These requirements satisfy ASPICE 4.0 **SYS.2 (System Requirements Analysis)** B
 * **Rationale**: Total disaster recovery and phone-to-phone migration require an airtight, atomic snapshot of all local athlete history.
 * **Priority**: High
 * **Verification Method**: Test (`SystemDataExchangeRequirementsContractTest`, `BackupManagerTest`, `BackupImportSecurityTest`)
-* **Traced Software Components**: `BackupManager.kt`, `SecureZipExtractor.kt`, `BackupRestoreViewModel.kt`, `DatabaseHelper.java`
+* **Traced Software Components**: `BackupManager.kt`, `SecureZipExtractor.kt`, `BackupRestoreViewModel.kt`, `DatabaseConnectionManager.kt`, `DatabaseSchemaRegistry.kt`
 
 ### SYSREQ-DEX-006: Credential Protection, Security Isolation & Decommissioned Boundaries
 * **Title**: Credential Protection, Security Isolation & Decommissioned Platform Boundaries
 * **Statement**: The system SHALL enforce strict data privacy, credential protection, and interface lifecycle boundaries:
-  1. *Credential Protection*: Sensitive user authentication tokens, OAuth refresh secrets, and cloud credentials stored in `auth_credentials_prefs.xml` SHALL be strictly excluded from `.attbackup` archives and Android Auto Backup (`backup_rules.xml`).
+  1. *Credential Protection*: Sensitive user authentication tokens, OAuth refresh secrets, and cloud credentials stored in `auth_credentials_prefs.xml` SHALL be strictly excluded from `.attbackup` archives and Android Auto Backup (`@xml/full_backup_content`, `full_backup_content.xml`, and `data_extraction_rules.xml`).
   2. *Legacy Credential Purging*: Any legacy credential keys found in default shared preferences SHALL be automatically migrated and purged (`AuthCredentialsStore.migrateLegacyCredentials()`).
-  3. *Health Connect Gating*: Integration with Android Health Connect API (`ExerciseSessionRecord`, `HeartRateRecord`) SHALL enforce dynamic runtime user permission consent before transmitting biometric samples.
+  3. *Health Connect Gating*: Integration with Android Health Connect API (`ExerciseSessionRecord`, `HeartRateRecord`) and HRV/RHR biometric ingestion (`HealthConnectHrvImporter.kt`) SHALL enforce dynamic runtime user permission consent before transmitting or reading samples.
   4. *Decommissioned Platform Boundaries*: Permanently retired third-party cloud interfaces (Runkeeper HealthGraph API and TrainingPeaks API) SHALL be maintained as inert schema placeholders strictly to preserve historical SQLite database schema integrity and prevent migration regressions.
 * **Rationale**: Exported archives and cloud services must never leak athlete credentials, and deprecated cloud platforms must not trigger runtime communication errors.
 * **Priority**: High
 * **Verification Method**: Static Audit & Test (`SystemDataExchangeRequirementsContractTest`, `BackupManagerCredentialExclusionTest`, `BackupRulesXmlValidationTest`)
-* **Traced Software Components**: `AuthCredentialsStore.kt`, `backup_rules.xml`, `HealthConnectManager.kt`, `WorkoutDataHelper.java`
+* **Traced Software Components**: `AuthCredentialsStore.kt`, `full_backup_content.xml`, `data_extraction_rules.xml`, `HealthConnectManager.kt`, `HealthConnectHrvImporter.kt`, `WorkoutSummariesDatabaseManager.java`
 
 ---
 
@@ -101,8 +103,8 @@ These requirements satisfy ASPICE 4.0 **SYS.2 (System Requirements Analysis)** B
 | System Requirement | Primary Capabilities | Traced Software Classes | Grounded Constants / Parameters |
 | :--- | :--- | :--- | :--- |
 | `SYSREQ-DEX-001` | Multi-format telemetry export (FIT, TCX, GPX, CSV) | `ExportManager`, `FileFormat`, `FitFileWriter` | `FileFormat.FIT` (`.fit`), `FileFormat.TCX` (`.tcx`), `FileFormat.GPX` (`.gpx`), `FileFormat.CSV` (`.csv`) |
-| `SYSREQ-DEX-002` | Multi-format workout ingestion & deduplication | `LegacyImportEngine`, `StravaBulkExportImporter` | Timestamp and bounding box deduplication, FIT/TCX/GPX/CSV parsers |
-| `SYSREQ-DEX-003` | Strava OAuth2 activity sync & rate governance | `StravaUploader`, `StravaEquipmentSyncWorker` | `/api/v3/uploads`, `strava.${applicationId}`, rate limit backoff |
-| `SYSREQ-DEX-004` | Dropbox & Google Drive cloud backup sync | `DropboxBackupManager`, `GoogleDriveBackupManager` | `/Backups/`, `aTrainingTracker/Backups/`, `dropbox-core-sdk:8.0.2` |
+| `SYSREQ-DEX-002` | Multi-format workout ingestion & deduplication | `LegacyImportEngine`, `StravaBulkExportImporter`, `StravaCsvParser` | Timestamp and bounding box deduplication, FIT/TCX/GPX track parsers, Strava `activities.csv` manifest parser |
+| `SYSREQ-DEX-003` | Strava OAuth2 activity, route & segment sync | `StravaUploader`, `StravaEquipmentSyncWorker`, `StravaRoutesSyncWorker`, `StravaSegmentsSyncWorker` | `/api/v3/uploads`, `strava.${applicationId}`, rate limit backoff |
+| `SYSREQ-DEX-004` | Dropbox & Google Drive cloud backup & workout sync | `DropboxBackupManager`, `GoogleDriveBackupManager`, `GoogleDriveUploader` | `/Backups/`, `aTrainingTracker/Backups/`, `dropbox-core-sdk:8.0.2` |
 | `SYSREQ-DEX-005` | Full state `.attbackup` atomic archiving & Zip Slip defense | `BackupManager`, `SecureZipExtractor` | `BACKUP_FILENAME = "aTrainingTracker_backup.attbackup"`, 1.5x space check, WAL flush |
-| `SYSREQ-DEX-006` | Credential exclusion, Health Connect, decommissioned services | `AuthCredentialsStore`, `backup_rules.xml` | Exclusion of `auth_credentials_prefs.xml`, Runkeeper & TrainingPeaks inert demarcation |
+| `SYSREQ-DEX-006` | Credential exclusion, Health Connect, decommissioned services | `AuthCredentialsStore`, `full_backup_content.xml`, `data_extraction_rules.xml`, `HealthConnectHrvImporter` | Exclusion of `auth_credentials_prefs.xml`, Health Connect HRV consent, Runkeeper & TrainingPeaks inert demarcation |

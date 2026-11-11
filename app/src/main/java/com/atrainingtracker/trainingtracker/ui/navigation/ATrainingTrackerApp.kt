@@ -257,7 +257,8 @@ fun ATrainingTrackerApp(
             }
             activity.navigateToDrawerItem(R.id.drawer_start_tracking)
         } else {
-            activity.finish()
+            // REQ-TRK-059.8, ATT-6710: Move task to back instead of finish() to preserve Activity and ViewModelStore
+            activity.moveTaskToBack(true)
         }
     }
 
@@ -577,14 +578,18 @@ fun ATrainingTrackerApp(
                     ZoneSettingsScreen(
                         initialTab = initialTab,
                         promptReason = promptReason,
-                        onFinish = { navController.popBackStack() }
+                        onFinish = { navController.popBackStack() },
+                        onOpenDrawer = { activity.openDrawer() }
                     )
                 }
 
                 composable(NavRoutes.ATHLETE_PROFILE) {
                     val athleteProfileViewModel: com.atrainingtracker.trainingtracker.ui.athleteprofile.AthleteProfileViewModel = viewModel(activity)
                     com.atrainingtracker.trainingtracker.ui.athleteprofile.AthleteProfileScreen(
-                        viewModel = athleteProfileViewModel
+                        viewModel = athleteProfileViewModel,
+                        onOpenDrawer = { activity.openDrawer() },
+                        onNavigateToMorningHrv = { navController.navigate(NavRoutes.MORNING_HRV) },
+                        onNavigateToHrvTest = { navController.navigate(NavRoutes.HRV_TEST) }
                     )
                 }
 
@@ -643,9 +648,17 @@ fun ATrainingTrackerApp(
                 }
 
                 composable(NavRoutes.MORNING_HRV) {
-                    val morningHrvViewModel: com.atrainingtracker.trainingtracker.ui.hrv.MorningHrvCheckViewModel = viewModel(activity)
+                    val morningHrvViewModel: com.atrainingtracker.trainingtracker.ui.hrv.MorningHrvCheckViewModel = viewModel()
                     com.atrainingtracker.trainingtracker.ui.hrv.MorningHrvCheckScreen(
                         viewModel = morningHrvViewModel,
+                        onNavigateBack = { navController.popBackStack() }
+                    )
+                }
+
+                composable(NavRoutes.HRV_TEST) {
+                    val hrvRampTestViewModel: com.atrainingtracker.trainingtracker.ui.hrv.HrvRampTestViewModel = viewModel()
+                    com.atrainingtracker.trainingtracker.ui.hrv.HrvRampTestScreen(
+                        viewModel = hrvRampTestViewModel,
                         onNavigateBack = { navController.popBackStack() }
                     )
                 }

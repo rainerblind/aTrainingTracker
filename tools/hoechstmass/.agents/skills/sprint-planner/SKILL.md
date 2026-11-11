@@ -39,8 +39,14 @@ This skill acts as the **Agile Sprint Facilitator & Scrum Master**. It orchestra
 ---
 
 ## Ceremony 2: Sprint-End & Joint Review
+0. **Stage 6 (`Final Review (Agent)`) Verification & Retroactive Cold Review Sweep (`REQ-PRO-058`)**:
+   - Query whether any sprint tickets remain in `Final Review (Agent)`:
+     ```bash
+     python3 tools/jira_util.py search "sprint = <SPRINT_ID> AND status = 'Final Review (Agent)' ORDER BY rank ASC"
+     ```
+   - If any tickets are still in `Final Review (Agent)`, run the Stage 6 Cold `Model: "pro"` Audit (`stage6-final-review/SKILL.md`) in Epic-grouped batches and execute `final-review-verdict <KEY> PASS|BOUNCE ...` (with up to 3 healing bounces) until all completed tickets are in `Final Review (Human)`.
 1. **Full Integration Verification**:
-   - Execute the complete test suite and requirement governance check across the integrated sprint branch.
+   - Execute the complete test suite and requirement governance check across the integrated sprint branch. Specify `Two-Tier Device Policy` (`REQ-TST-004`): `emulator-5554` for autonomous Stages 1–6 and physical phone (`Pixel 10`) for Ceremony 2.
 2. **Ticket-by-Ticket Acceptance (`Rule 68` & `Rule 79`)**:
    - Present each completed ticket in `Final Review (Human)` strictly one-by-one in rank order with its walkthrough summary, code diff review, and proactive recommendation.
    - Complete all preparatory tool calls (`set-fixversion` for Ticket $N-1$, `read_file` / `git show` for Ticket $N$) **before** emitting the presentation response for Ticket $N$, and include **zero tool calls** in the presentation message itself so the turn terminates immediately and waits for the user's verdict.

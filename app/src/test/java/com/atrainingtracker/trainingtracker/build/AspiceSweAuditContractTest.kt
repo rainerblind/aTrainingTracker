@@ -221,6 +221,7 @@ class AspiceSweAuditContractTest {
     fun testArchitectureDocument_authenticComponentNomenclature() {
         val archFile = findRepoRootFile("docs/architecture.md")
         val content = archFile.readText()
+        val interfacesContent = findRepoRootFile("docs/architecture/interfaces.md").readText()
 
         // TST-PRO-043.1: Authentic class presence
         val authenticComponents = listOf(
@@ -229,23 +230,43 @@ class AspiceSweAuditContractTest {
             "TCXFileWriter",
             "WorkoutSamplesDatabaseManager",
             "MilestoneAutoNamingManager",
-            "FirstJubileeActionHelper"
+            "FirstJubileeActionHelper",
+            "SettingsDataStore",
+            "EquipmentDbHelper",
+            "EquipmentRepository",
+            "ProFeatureManager",
+            "SupporterTier",
+            "GarageLeagueDetector",
+            "ATrainingTrackerTheme",
+            "TelemetryMetricGraph",
+            "PathPoint",
+            "PlayStoreListingContractTest"
         )
         for (comp in authenticComponents) {
-            assertTrue("docs/architecture.md must reference authentic component '$comp' (REQ-PRO-043.1)", content.contains(comp))
+            val foundInDocs = content.contains(comp) || interfacesContent.contains(comp)
+            assertTrue("Architecture docs must reference authentic component '$comp' (REQ-PRO-043.1)", foundInDocs)
         }
 
-        // TST-PRO-043.2: Drifted placeholder absence
+        // TST-PRO-043.2: Drifted placeholder absence (all 14 drifted tokens)
         val driftedComponents = listOf(
             "RouteLearningEngine",
             "GpxExporter",
             "TcxExporter",
             "WorkoutSamplesDb",
             "MilestoneDetector",
-            "InAppReviewManager"
+            "InAppReviewManager",
+            "UserPreferences",
+            "EquipmentDatabaseManager",
+            "PrivacyZoneManager",
+            "BillingManager",
+            "TTTheme",
+            "CustomLineChart",
+            "ElevationPoint",
+            "StoreMetadataContractTest"
         )
         for (drift in driftedComponents) {
             assertFalse("docs/architecture.md must not reference drifted placeholder '$drift' (REQ-PRO-043.1)", content.contains(drift))
+            assertFalse("docs/architecture/interfaces.md must not reference drifted placeholder '$drift' (REQ-PRO-043.1)", interfacesContent.contains(drift))
         }
 
         // TST-PRO-043.3: Tracking state machine & dispatcher conformance
@@ -256,6 +277,97 @@ class AspiceSweAuditContractTest {
         assertTrue("Must document AutoPauseState sub-state delegation", content.contains("AutoPauseState"))
         assertTrue("Must document dbDispatcher", content.contains("dbDispatcher"))
         assertTrue("Must document Dispatchers.IO", content.contains("Dispatchers.IO"))
+    }
+
+    /**
+     * Dynamically verifies that every software component allocated in docs/architecture.md and specified in
+     * docs/architecture/interfaces.md actually exists in production source code, tools, or test suite (REQ-PRO-043.5, TST-PRO-043.4).
+     */
+    @Test
+    fun testArchitectureDocuments_allAllocatedAndSpecifiedComponentsExistInCodebase() {
+        val archFile = findRepoRootFile("docs/architecture.md")
+        val archText = archFile.readText()
+        val interfacesFile = findRepoRootFile("docs/architecture/interfaces.md")
+        val interfacesText = interfacesFile.readText()
+
+        // 1. Extract allocated components from docs/architecture.md Section 2 table
+        val section2TableRegex = Regex("""## 2\. Requirement Allocation to Architecture.*?\| :--- \| :--- \| :--- \| :--- \|(.*?)\n---""", RegexOption.DOT_MATCHES_ALL)
+        val tableMatch = section2TableRegex.find(archText)
+            ?: throw IllegalStateException("Failed to locate Section 2 Requirement Allocation table in docs/architecture.md")
+        val tableBody = tableMatch.groupValues[1]
+        val backtickRegex = Regex("""`([^`]+)`""")
+
+        val allocatedComponents = mutableSetOf<String>()
+        tableBody.lines().map { it.trim() }.filter { it.startsWith("|") }.forEach { row ->
+            val cols = row.split("|").map { it.trim() }.filter { it.isNotEmpty() }
+            if (cols.size >= 3) {
+                val compCol = cols[2]
+                backtickRegex.findAll(compCol).forEach { m ->
+                    allocatedComponents.add(m.groupValues[1])
+                }
+            }
+        }
+        assertTrue("Must extract allocated components from Section 2 table", allocatedComponents.size >= 50)
+
+        // 2. Extract types from interfaces.md Provider, Consumer, and Data Payloads lines
+        val interfaceTypes = mutableSetOf<String>()
+        val typePattern = Regex("""`([A-Z][a-zA-Z0-9_]+)`""")
+        interfacesText.lineSequence().forEach { line ->
+            val trimmed = line.trim()
+            if (trimmed.startsWith("* **Provider**:") ||
+                trimmed.startsWith("* **Consumer**:") ||
+                trimmed.startsWith("* **Data Payloads / Schemas**:")
+            ) {
+                typePattern.findAll(trimmed).forEach { match ->
+                    interfaceTypes.add(match.groupValues[1])
+                }
+            }
+        }
+
+        // 3. Framework / SDK / Standard allowlist (not declared within project repo)
+        val frameworkAllowlist = setOf(
+            "Context", "File", "Location", "LocationListener", "BluetoothGattCallback",
+            "AntPluginPcc", "IPluginAccessResultReceiver", "OutputStream", "Writer",
+            "HealthConnectClient", "ExerciseSessionRecord", "ContentValues", "StateFlow",
+            "Flow", "Intent", "Result", "Double", "Long", "Int", "Boolean", "Float",
+            "String", "List", "Map", "Set", "Pair", "Unit", "WorkManager", "NavHost",
+            "LatLng", "ProGuard", "OkHttpClient"
+        )
+
+        // 4. Index codebase files and declared symbols
+        val srcMainDir = findRepoRootFile("app/src/main")
+        val srcTestDir = findRepoRootFile("app/src/test")
+        val toolsDir = findRepoRootFile("tools")
+
+        val mainSources = srcMainDir.walkTopDown().filter { it.isFile && (it.extension == "kt" || it.extension == "java") }.toList()
+        val testSources = srcTestDir.walkTopDown().filter { it.isFile && (it.extension == "kt" || it.extension == "java") }.toList()
+        val toolFiles = toolsDir.listFiles { f -> f.isFile }?.toList() ?: emptyList()
+
+        val allBasenames = (mainSources + testSources + toolFiles).map { it.name }.toSet()
+        val allNamesNoExt = (mainSources + testSources + toolFiles).map { it.nameWithoutExtension }.toSet()
+
+        val allSourceTexts = mainSources.map { it.readText() }
+
+        val componentsToValidate = (allocatedComponents + interfaceTypes).filterNot { frameworkAllowlist.contains(it) }.toSet()
+        assertTrue("Must have project components to validate", componentsToValidate.isNotEmpty())
+
+        val ungroundedComponents = mutableListOf<String>()
+        for (comp in componentsToValidate) {
+            if (allBasenames.contains(comp) || allNamesNoExt.contains(comp)) {
+                continue
+            }
+            // Check if declared as class, interface, enum class, object, typealias, or fun in main source files
+            val declRegex = Regex("""\b(class|interface|enum\s+class|enum|object|typealias|fun)\s+$comp\b""")
+            val isDeclared = allSourceTexts.any { declRegex.containsMatchIn(it) }
+            if (!isDeclared) {
+                ungroundedComponents.add(comp)
+            }
+        }
+
+        assertTrue(
+            "All software components referenced in docs/architecture.md and docs/architecture/interfaces.md must exist in the codebase. Ungrounded: $ungroundedComponents",
+            ungroundedComponents.isEmpty()
+        )
     }
 
     /**
@@ -295,6 +407,104 @@ class AspiceSweAuditContractTest {
         for (ifId in interfaceIds) {
             assertTrue("architecture.md Section 5 must reference $ifId in the matrix (TST-PRO-044.3)", archContent.contains(ifId))
         }
+    }
+
+    /**
+     * Asserts that all documented interface methods, classes, and DTOs in interfaces.md are 100% grounded in real production code (REQ-PRO-044.3, TST-PRO-044.4).
+     */
+    @Test
+    fun testArchitectureDocument_softwareInterfaceGrounding() {
+        val interfacesFile = findRepoRootFile("docs/architecture/interfaces.md")
+        val interfacesContent = interfacesFile.readText()
+        val archFile = findRepoRootFile("docs/architecture.md")
+        val archContent = archFile.readText()
+
+        // 1. Negative tripwires: No Retrofit, no hallucinated classes/DTOs
+        assertFalse("interfaces.md must not reference Retrofit (REQ-PRO-044)", interfacesContent.contains("Retrofit"))
+        assertFalse("architecture.md must not reference Retrofit (REQ-PRO-044)", archContent.contains("Retrofit"))
+        val forbiddenTokens = listOf(
+            "ClustersDatabaseManager",
+            "TrackingUiState",
+            "AftermathUiState",
+            "LocationUiState",
+            "ExtremaValues",
+            "WorkoutDetailScreen"
+        )
+        for (token in forbiddenTokens) {
+            assertFalse("interfaces.md must not contain hallucinated symbol '$token'", interfacesContent.contains(token))
+        }
+        assertFalse(
+            "interfaces.md must not contain standalone AftermathViewModel (use TrackOnMapAftermathViewModel)",
+            Regex("""\bAftermathViewModel\b""").containsMatchIn(interfacesContent)
+        )
+        assertFalse(
+            "architecture.md must not contain standalone AftermathViewModel (use TrackOnMapAftermathViewModel)",
+            Regex("""\bAftermathViewModel\b""").containsMatchIn(archContent)
+        )
+
+        // 2. Index all source files in app/src/main
+        val srcMainDir = findRepoRootFile("app/src/main")
+        val sourceFiles = srcMainDir.walkTopDown().filter { it.isFile && (it.extension == "kt" || it.extension == "java") }.toList()
+        assertTrue("app/src/main must contain production source files", sourceFiles.isNotEmpty())
+        val allSources = sourceFiles.map { it.readText() }
+
+        // 3. Dynamic Method Extraction: fun <name>(
+        val methodPattern = Regex("""\bfun\s+([a-zA-Z0-9_]+)\s*\(""")
+        val extractedMethods = methodPattern.findAll(interfacesContent).map { it.groupValues[1] }.toSet()
+        assertTrue("Must extract documented interface methods from interfaces.md", extractedMethods.isNotEmpty())
+
+        val ungroundedMethods = mutableListOf<String>()
+        for (methodName in extractedMethods) {
+            val methodRegex = Regex("""\b(fun\s+$methodName\s*[\(<]|(public|protected|private|static)\s+[\w<>,\s\[\]]+\s+$methodName\s*\()""")
+            val found = allSources.any { methodRegex.containsMatchIn(it) }
+            if (!found) {
+                ungroundedMethods.add(methodName)
+            }
+        }
+        assertTrue(
+            "All documented interface methods must exist in app/src/main/. Ungrounded: $ungroundedMethods",
+            ungroundedMethods.isEmpty()
+        )
+
+        // 4. Dynamic Component/DTO Type Extraction from Provider, Consumer, and Data Payloads lines
+        val typePattern = Regex("""`([A-Z][a-zA-Z0-9_]+)`""")
+        val frameworkAllowlist = setOf(
+            "Context", "File", "Location", "LocationListener", "BluetoothGattCallback",
+            "AntPluginPcc", "IPluginAccessResultReceiver", "OutputStream", "Writer",
+            "HealthConnectClient", "ExerciseSessionRecord", "ContentValues", "StateFlow",
+            "Flow", "Intent", "Result", "Double", "Long", "Int", "Boolean", "Float",
+            "String", "List", "Map", "Set", "Pair", "Unit"
+        )
+
+        val extractedTypes = mutableSetOf<String>()
+        interfacesContent.lineSequence().forEach { line ->
+            val trimmed = line.trim()
+            if (trimmed.startsWith("* **Provider**:") ||
+                trimmed.startsWith("* **Consumer**:") ||
+                trimmed.startsWith("* **Data Payloads / Schemas**:")
+            ) {
+                typePattern.findAll(trimmed).forEach { match ->
+                    val typeName = match.groupValues[1]
+                    if (!frameworkAllowlist.contains(typeName)) {
+                        extractedTypes.add(typeName)
+                    }
+                }
+            }
+        }
+        assertTrue("Must extract component and DTO types from interfaces.md", extractedTypes.isNotEmpty())
+
+        val ungroundedTypes = mutableListOf<String>()
+        for (typeName in extractedTypes) {
+            val typeRegex = Regex("""\b(class|interface|enum\s+class|object|typealias|fun)\s+$typeName\b""")
+            val found = allSources.any { typeRegex.containsMatchIn(it) }
+            if (!found) {
+                ungroundedTypes.add(typeName)
+            }
+        }
+        assertTrue(
+            "All documented component and DTO types must exist in app/src/main/. Ungrounded: $ungroundedTypes",
+            ungroundedTypes.isEmpty()
+        )
     }
 
     /**

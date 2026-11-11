@@ -44,7 +44,7 @@ import com.atrainingtracker.banalservice.sensor.MySensorManager;
 import com.atrainingtracker.banalservice.sensor.ProxySensor;
 import com.atrainingtracker.banalservice.sensor.SensorData;
 import com.atrainingtracker.banalservice.sensor.SensorType;
-import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager;
+import com.atrainingtracker.trainingtracker.repositories.SportTypesRepository;
 import com.atrainingtracker.banalservice.filters.FilterData;
 import com.atrainingtracker.banalservice.filters.FilterManager;
 import com.atrainingtracker.banalservice.filters.FilteredSensorData;
@@ -148,10 +148,31 @@ public class BANALService
     public static final String URI_ANT_USB_SERVICE = "com.dsi.ant.usbservice";
 
     public static final int INIT_LAP_NR = 1;
+    private static volatile Context cServiceContext;
     private static volatile DeviceManager cDeviceManager;
     private static volatile MySensorManager cSensorManager;
     private static volatile FilterManager cFilterManager;
     protected volatile ActivityType mActivityTypeMax = ActivityType.getDefaultActivityType();
+
+    @Nullable
+    public static Context getServiceContext() {
+        return cServiceContext;
+    }
+
+    @Nullable
+    public static MySensorManager getSensorManager() {
+        return cSensorManager;
+    }
+
+    @VisibleForTesting
+    public static void setSensorManagerForTesting(@Nullable MySensorManager sensorManager) {
+        cSensorManager = sensorManager;
+    }
+
+    @VisibleForTesting
+    public static void setServiceContextForTesting(@Nullable Context context) {
+        cServiceContext = context;
+    }
 
     /***********************************************************************************************/
 
@@ -175,7 +196,7 @@ public class BANALService
     private volatile boolean mHaveUserSelectedSportType = false;
 
     public static long getDefaultSportTypeId() {
-        return SportTypeDatabaseManager.getDefaultSportTypeId();
+        return SportTypesRepository.getDefaultSportTypeId();
     }
 
     public static boolean isANTPluginServiceInstalled(Context context) {
@@ -349,18 +370,26 @@ public class BANALService
         }
     }
 
+    private SportTypesRepository mSportTypesRepository;
+    private SportTypesRepository getSportTypesRepository() {
+        if (mSportTypesRepository == null) {
+            mSportTypesRepository = SportTypesRepository.Companion.getInstance(this);
+        }
+        return mSportTypesRepository;
+    }
+
     public BSportType getUserSelectedBSportType() {
-        return mHaveUserSelectedSportType ? SportTypeDatabaseManager.getInstance(this).getBSportType(mUserSelectedSportTypeId) : null;
+        return mHaveUserSelectedSportType ? getSportTypesRepository().getBSportType(mUserSelectedSportTypeId) : null;
     }
 
     private void setUserSelectedBSportType(BSportType bSportType) {
-        setUserSelectedSportTypeId(SportTypeDatabaseManager.getSportTypeId(bSportType));
+        setUserSelectedSportTypeId(SportTypesRepository.getSportTypeId(bSportType));
     }
 
     @NonNull
     public BSportType getBSportType() {
         if (mHaveUserSelectedSportType) {
-            return SportTypeDatabaseManager.getInstance(this).getBSportType(mUserSelectedSportTypeId);
+            return getSportTypesRepository().getBSportType(mUserSelectedSportTypeId);
         } else {
             DeviceManager deviceManager = cDeviceManager;
             return deviceManager != null ? deviceManager.getSportType() : BSportType.UNKNOWN;
@@ -373,7 +402,7 @@ public class BANALService
         } else {
             DeviceManager deviceManager = cDeviceManager;
             BSportType sportType = deviceManager != null ? deviceManager.getSportType() : BSportType.UNKNOWN;
-            return SportTypeDatabaseManager.getSportTypeId(sportType);
+            return SportTypesRepository.getSportTypeId(sportType);
         }
     }
 
@@ -383,11 +412,11 @@ public class BANALService
         } else {
             DeviceManager deviceManager = cDeviceManager;
             BSportType sportType = deviceManager != null ? deviceManager.getSportType() : BSportType.UNKNOWN;
-            List<Long> sportTypeIds = SportTypeDatabaseManager.getInstance(this).getSportTypesIdList(sportType, avgSpd);
+            List<Long> sportTypeIds = getSportTypesRepository().getSportTypesIdList(sportType, avgSpd);
             if (sportTypeIds != null && !sportTypeIds.isEmpty()) {
                 return sportTypeIds.get(0);
             }
-            return SportTypeDatabaseManager.getDefaultSportTypeId();
+            return SportTypesRepository.getDefaultSportTypeId();
         }
     }
 
@@ -577,6 +606,7 @@ public class BANALService
         super.onCreate();
         if (DEBUG) Log.d(TAG, "onCreate");
 
+        cServiceContext = this.getApplicationContext();
         cSensorManager = new MySensorManager(this);
         cDeviceManager = new DeviceManager(this, cSensorManager);
         cFilterManager = new FilterManager(this, cDeviceManager, cSensorManager);
@@ -614,6 +644,7 @@ public class BANALService
         cDeviceManager = null;
         cSensorManager = null;
         cFilterManager = null;
+        cServiceContext = null;
 
         LifecycleUtils.safeUnregisterReceiver(this, mNewLapReceiver, TAG);
         LifecycleUtils.safeUnregisterReceiver(this, mStartSearchForPairedDevices, TAG);

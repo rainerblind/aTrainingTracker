@@ -51,6 +51,9 @@ class LiveClimbsRepository private constructor(
     private val _allClimbs = MutableStateFlow<List<Climb>>(emptyList())
     val allClimbs: StateFlow<List<Climb>> = _allClimbs.asStateFlow()
 
+    private val _allStoredClimbs = MutableStateFlow<List<Climb>>(emptyList())
+    val allStoredClimbs: StateFlow<List<Climb>> = _allStoredClimbs.asStateFlow()
+
     private var activeClimbStartTimeMs: Long = 0L
 
     init {
@@ -80,10 +83,13 @@ class LiveClimbsRepository private constructor(
     }
 
     suspend fun refreshClimbs(activeRouteId: Long?) {
+        val stored = climbsDb.getAllClimbs()
+        _allStoredClimbs.value = stored
+
         val list = if (activeRouteId != null) {
             climbsDb.getClimbsForRoute(activeRouteId)
         } else {
-            climbsDb.getAllClimbs()
+            stored
         }
         _allClimbs.value = list
     }

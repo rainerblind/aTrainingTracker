@@ -43,6 +43,13 @@ class WorkoutRrRepository private constructor(
     fun deleteWorkoutBlocking(workoutId: Long): Int =
         databaseManager.deleteWorkout(workoutId)
 
+    fun getMaxBeatIndexBlocking(workoutId: Long): Int =
+        databaseManager.getMaxBeatIndex(workoutId)
+
+    suspend fun getMaxBeatIndex(workoutId: Long): Int = withContext(Dispatchers.IO) {
+        databaseManager.getMaxBeatIndex(workoutId)
+    }
+
     suspend fun insertIntervals(intervals: List<WorkoutRrInterval>): Int = withContext(Dispatchers.IO) {
         databaseManager.insertIntervals(intervals)
     }
@@ -69,7 +76,11 @@ class WorkoutRrRepository private constructor(
 
         @JvmStatic
         fun getInstance(context: Context): WorkoutRrRepository {
-            val appContext = context.applicationContext ?: context
+            val appContext = try {
+                context.applicationContext ?: context
+            } catch (_: Throwable) {
+                context
+            }
             return instance ?: synchronized(this) {
                 instance ?: WorkoutRrRepository {
                     WorkoutRrDatabaseManager.getInstance(appContext)

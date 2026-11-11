@@ -372,9 +372,9 @@
     <string name="prefsDisplayTitle">Display</string>
     <string name="prefsDisplaySummary">Configure screen and orientation behavior</string>
     <string name="prefsKeepScreenOnTitle">Keep screen on</string>
-    <string name="prefsKeepScreenOnSummary">Prevent the screen from turning off automatically during active tracking</string>
+    <string name="prefsKeepScreenOnSummary">Prevent standby during active tracking</string>
     <string name="prefsNoUnlockingTitle">Keep screen unlocked</string>
-    <string name="prefsNoUnlockingSummary">Show the cockpit above the lock screen without requiring PIN or pattern unlock</string>
+    <string name="prefsNoUnlockingSummary">Show cockpit directly above the lock screen</string>
     <string name="prefZoomDependingOnSpeedTitle">zoom depends on speed</string>
     <string name="prefsUnitsTitle">Units</string>
     <string name="prefsUnitsSummary">metric</string>
@@ -645,14 +645,14 @@
     <string name="do_not_check_again">don\'t check again</string>
     <string name="check_ANT_installation">check ANT installation</string>
     <string name="forcePortrait">Portrait Orientation</string>
-    <string name="forcePortraitSummary">Lock the display to vertical portrait mode and prevent rotation to landscape</string>
+    <string name="forcePortraitSummary">Lock display to portrait mode</string>
     <string name="Display">Display</string>
     <string name="settings_category_savings">Battery Savings</string>
     <string name="settings_category_savings_desc">Extends battery life for longer tracking sessions</string>
     <string name="prefs_battery_saver_title">Dynamic Display Dimming</string>
     <string name="prefs_battery_saver_summary">Dynamically adjusts screen brightness based on grade and training zones</string>
     <string name="cockpit_theme_title">Cockpit Theme (During Workout)</string>
-    <string name="cockpit_theme_description">Applies exclusively to telemetry and sensor views during active workouts. The main menu and \'Start\' keep the standard theme.</string>
+    <string name="cockpit_theme_description">Applies only to telemetry and sensor views during active workouts.</string>
     <string name="cockpit_theme_system">System</string>
     <string name="cockpit_theme_always_dark">Always Dark</string>
     <string name="display_brightness_title">Display Brightness (During Workout)</string>
@@ -2234,8 +2234,14 @@
     <string name="athlete_weight_edit">Edit</string>
 
     <!-- Dedicated Athlete Profile Screen & Body Metrics History (ATT-3704, ATT-3851, REQ-UI-391, REQ-UI-397) -->
-    <string name="drawer_athlete_profile">Profile &amp; Zones</string>
-    <string name="athlete_profile_title">Profile &amp; Zones</string>
+    <string name="drawer_athlete_profile">Fitness &amp; Physiology</string>
+    <string name="athlete_profile_title">Fitness &amp; Physiology</string>
+    <string name="drawer_fitness_physiology">Fitness &amp; Physiology</string>
+    <string name="fitness_tab_pmc">Fitness &amp; Fatigue</string>
+    <string name="fitness_tab_hrv">HRV &amp; Readiness</string>
+    <string name="fitness_tab_body">Body &amp; Thresholds</string>
+    <string name="fitness_tab_cardio_power">Cardio-Power</string>
+    <string name="pmc_disabled_guidance">Performance Management Chart is disabled in Expert Settings.</string>
     <string name="athlete_profile_tab_profile">Profile</string>
     <string name="athlete_profile_add_entry">Add Measurement</string>
     <string name="athlete_profile_edit_entry">Edit Measurement</string>
@@ -2573,7 +2579,7 @@
     <string name="drawer_tier_pioneer">★ Pioneer</string>
     <string name="pioneer_badge_label_with_year">★ Pioneer (Since %1$d)</string>
     <string name="pioneer_badge_label">★ Pioneer</string>
-    <string name="pioneer_thank_you_body">Thank you for recording your workouts with an earlier version of aTrainingTracker! Unlimited sensors and all future features are permanently unlocked for you.</string>
+    <string name="pioneer_thank_you_body">Thank you for recording your workouts with an earlier version of aTrainingTracker! Unlimited sensors and all future features are permanently unlocked for you. Nevertheless, we would still be very happy about voluntary financial support for ongoing development.</string>
     <string name="debug_supporter_override_title">Supporter Tier Override (Debug)</string>
     <string name="debug_supporter_override_subtitle">Simulates license tiers locally without Google Play Billing credentials</string>
 

@@ -30,6 +30,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -53,6 +54,8 @@ fun PeriodsScreen(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
+    val appContext = context.applicationContext
+    val currentLocale = LocalConfiguration.current.locales[0]
 
     val isPlayAvailable = remember(context) {
         GoogleApiAvailability.getInstance().isGooglePlayServicesAvailable(context) == ConnectionResult.SUCCESS
@@ -71,11 +74,6 @@ fun PeriodsScreen(
     val selectedMetric by viewModel.selectedMetric.collectAsStateWithLifecycle()
     val groups = viewModel.groups
 
-    val hrvTrendSeries by viewModel.hrvReadinessTrendState.collectAsStateWithLifecycle()
-    val selectedHrvPosture by viewModel.selectedHrvPosture.collectAsStateWithLifecycle()
-    val selectedHrvMetricMode by viewModel.selectedHrvMetricMode.collectAsStateWithLifecycle()
-    val showHrvTrainingLoad by viewModel.showTrainingLoad.collectAsStateWithLifecycle()
-
     val peekedWorkoutDataWithTrack by viewModel.peekedWorkoutDataWithTrack.collectAsStateWithLifecycle()
 
     var editedWorkoutId by rememberSaveable { mutableStateOf<Long?>(null) }
@@ -89,17 +87,17 @@ fun PeriodsScreen(
     val handleStartWorkoutList: (PeriodSummary, BSportType?, Long?) -> Unit = onStartWorkoutList ?: { periodSummary, bSportType, scrollToWorkoutId ->
         val secondaryTitle = if (bSportType != null) {
             val count = periodSummary.sportStats[bSportType]?.count ?: 0
-            val workoutsCountString = context.resources.getQuantityString(
+            val workoutsCountString = appContext.resources.getQuantityString(
                 R.plurals.workout_periods__workouts,
                 count,
                 count
             )
-            "${context.getString(bSportType.stringResId)} ($workoutsCountString)"
+            "${appContext.getString(bSportType.stringResId)} ($workoutsCountString)"
         } else {
             periodSummary.sportStats.entries
                 .filter { it.value.count > 0 }
                 .joinToString(", ") { (sport, stats) ->
-                    "${stats.count} ${context.getString(sport.stringResId)}"
+                    "${stats.count} ${appContext.getString(sport.stringResId)}"
                 }
         }
 
@@ -126,8 +124,8 @@ fun PeriodsScreen(
         if (activity != null && activity.count > 0) {
             val dayStartS = date.atStartOfDay(java.time.ZoneId.systemDefault()).toEpochSecond()
             val dayEndS = date.atTime(23, 59, 59).atZone(java.time.ZoneId.systemDefault()).toEpochSecond()
-            val dateTitle = date.format(java.time.format.DateTimeFormatter.ofPattern("EEE, d. MMM yyyy", java.util.Locale.getDefault()))
-            val sportName = context.getString(sport.stringResId)
+            val dateTitle = date.format(java.time.format.DateTimeFormatter.ofPattern("EEE, d. MMM yyyy", currentLocale))
+            val sportName = appContext.getString(sport.stringResId)
             val firstWorkoutId = activity.workoutIds.firstOrNull()
 
             val fragment = WorkoutSummariesListFragment.newInstance(
@@ -180,14 +178,7 @@ fun PeriodsScreen(
                 onToggleSportFilter = { viewModel.toggleSportFilter(it) },
                 selectedMetric = selectedMetric,
                 onSelectMetric = { viewModel.selectMetric(it) },
-                onDayCellClick = handleDayClick,
-                hrvTrendSeries = hrvTrendSeries,
-                selectedHrvPosture = selectedHrvPosture,
-                onSelectHrvPosture = { viewModel.selectHrvPosture(it) },
-                selectedHrvMetricMode = selectedHrvMetricMode,
-                onSelectHrvMetricMode = { viewModel.selectHrvMetricMode(it) },
-                showHrvTrainingLoad = showHrvTrainingLoad,
-                onToggleHrvTrainingLoad = { viewModel.toggleShowTrainingLoad(it) }
+                onDayCellClick = handleDayClick
             )
         }
     }

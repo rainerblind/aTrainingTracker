@@ -26,7 +26,7 @@ import org.junit.Before
 import org.junit.Test
 
 /**
- * Unit test suite verifying 1 Hz window latching, Rule 1.8 constructor parity,
+ * Unit test suite verifying 1,000 ms rolling window latching, Rule 1.8 constructor parity,
  * and passing vehicle counting hysteresis in RadarWindowAggregator (TST-CON-028.3, REQ-CON-028.5).
  */
 class RadarWindowAggregatorTest {
@@ -60,34 +60,93 @@ class RadarWindowAggregatorTest {
 
     @Test
     fun testWindowAggregator_latchesPeakSpeedAndMinDistanceOverWindow() {
+        var simulatedTime = 1000L
+        val agg = RadarWindowAggregator { simulatedTime }
+
         // High-rate frame 1
-        aggregator.onTargetsUpdated(listOf(
+        agg.onTargetsUpdated(listOf(
             RadarTarget(1, 70f, 5f, ThreatLevel.APPROACHING)
         ))
 
         // High-rate frame 2 (closer, faster)
-        aggregator.onTargetsUpdated(listOf(
+        agg.onTargetsUpdated(listOf(
             RadarTarget(1, 45f, 9f, ThreatLevel.APPROACHING),
             RadarTarget(2, 85f, 4f, ThreatLevel.APPROACHING)
         ))
 
         // High-rate frame 3 (closer, slower)
-        aggregator.onTargetsUpdated(listOf(
+        agg.onTargetsUpdated(listOf(
             RadarTarget(1, 30f, 7f, ThreatLevel.APPROACHING),
             RadarTarget(2, 60f, 5f, ThreatLevel.APPROACHING)
         ))
 
         // 1 Hz sample tick
-        val tick1 = aggregator.sampleAndResetWindow()
+        val tick1 = agg.sampleAndResetWindow()
         assertEquals(2, tick1.threatCount)
         assertEquals(30.0, tick1.closestDistanceMeters!!, 0.001)
         assertEquals(9.0, tick1.approachSpeedMps, 0.001)
 
         // Consecutive 1 Hz tick without incoming frames should reset window
-        val tick2 = aggregator.sampleAndResetWindow()
+        simulatedTime += 1001L
+        val tick2 = agg.sampleAndResetWindow()
         assertEquals(0, tick2.threatCount)
         assertNull(tick2.closestDistanceMeters)
         assertEquals(0.0, tick2.approachSpeedMps, 0.001)
+    }
+
+    @Test
+    fun testRollingWindow_retainsBurstsAcrossSubSecondPacketsUntilOneSecondDecay() {
+        var currentTime = 1000L
+        val agg = RadarWindowAggregator { currentTime }
+
+        // Packet 1 at t = 1000ms: passing car at 4.2m, 14.5 m/s
+        agg.onTargetsUpdated(listOf(
+            RadarTarget(1, 4.2f, 14.5f, ThreatLevel.APPROACHING)
+        ))
+
+        // Intermediate clear packet 2 at t = 1125ms (125ms later, 8 Hz rate)
+        currentTime = 1125L
+        agg.onTargetsUpdated(emptyList())
+
+        // Sample at t = 1125ms: car metrics MUST be preserved by the 1,000 ms rolling window!
+        val snap1125 = agg.sampleAndResetWindow()
+        assertEquals("Peak threat count must be preserved across intermediate clear packet", 1, snap1125.threatCount)
+        assertEquals(4.2, snap1125.closestDistanceMeters!!, 0.001)
+        assertEquals(14.5, snap1125.approachSpeedMps, 0.001)
+
+        // Intermediate clear packet 3 at t = 1500ms (500ms after burst, 1 Hz DB poll tick)
+        currentTime = 1500L
+        agg.onTargetsUpdated(emptyList())
+        val snap1500 = agg.sampleAndResetWindow()
+        assertEquals("1 Hz DB poll at +500ms must still capture the passing vehicle", 1, snap1500.threatCount)
+        assertEquals(4.2, snap1500.closestDistanceMeters!!, 0.001)
+        assertEquals(14.5, snap1500.approachSpeedMps, 0.001)
+
+        // Road clear expires after full 1,000 ms window: at t = 2001ms
+        currentTime = 2001L
+        agg.onTargetsUpdated(emptyList())
+        val snap2001 = agg.sampleAndResetWindow()
+        assertEquals("Threat count must decay to 0 after 1,000 ms window expires", 0, snap2001.threatCount)
+        assertNull("Closest distance must transition to null after road clears", snap2001.closestDistanceMeters)
+        assertEquals("Approach speed must decay to 0.0 after road clears", 0.0, snap2001.approachSpeedMps, 0.001)
+    }
+
+    @Test
+    fun testResetSession_clearsBufferedFramesImmediately() {
+        var currentTime = 1000L
+        val agg = RadarWindowAggregator { currentTime }
+
+        agg.onTargetsUpdated(listOf(
+            RadarTarget(1, 15f, 10f, ThreatLevel.APPROACHING)
+        ))
+        assertEquals(1, agg.sampleAndResetWindow().threatCount)
+
+        agg.resetSession()
+        val postReset = agg.sampleAndResetWindow()
+        assertEquals(0, postReset.threatCount)
+        assertNull(postReset.closestDistanceMeters)
+        assertEquals(0.0, postReset.approachSpeedMps, 0.001)
+        assertEquals(0, agg.getVehicleCount())
     }
 
     @Test
@@ -114,10 +173,12 @@ class RadarWindowAggregatorTest {
 
     @Test
     fun testPassingDistanceAndLargeVehicleCount_latchesLateralClearanceAndIncrementsLargeVehicleCount() {
-        assertEquals(0, aggregator.getLargeVehicleCount())
+        var simulatedTime = 1000L
+        val agg = RadarWindowAggregator { simulatedTime }
+        assertEquals(0, agg.getLargeVehicleCount())
 
         // 1. Large truck approaches and passes at 1.35m lateral clearance (y <= 3.0m)
-        aggregator.onTargetsUpdated(listOf(
+        agg.onTargetsUpdated(listOf(
             RadarTarget(
                 targetId = 1,
                 rangeMeters = 50f,
@@ -127,7 +188,7 @@ class RadarWindowAggregatorTest {
                 vehicleSizeCategory = VehicleSizeCategory.TRUCK_OR_BUS
             )
         ))
-        aggregator.onTargetsUpdated(listOf(
+        agg.onTargetsUpdated(listOf(
             RadarTarget(
                 targetId = 1,
                 rangeMeters = 2.5f,
@@ -137,7 +198,7 @@ class RadarWindowAggregatorTest {
                 vehicleSizeCategory = VehicleSizeCategory.TRUCK_OR_BUS
             )
         ))
-        aggregator.onTargetsUpdated(listOf(
+        agg.onTargetsUpdated(listOf(
             RadarTarget(
                 targetId = 1,
                 rangeMeters = 1.5f,
@@ -149,16 +210,17 @@ class RadarWindowAggregatorTest {
         ))
 
         // 1 Hz sample tick must latch minimum passing clearance observed during pass (1.35m)
-        val tick1 = aggregator.sampleAndResetWindow()
+        val tick1 = agg.sampleAndResetWindow()
         assertEquals(1.35, tick1.passingDistanceMeters!!, 0.001)
 
         // Target finishes passing and exits radar tracking field
-        aggregator.onTargetsUpdated(emptyList())
-        assertEquals(1, aggregator.getVehicleCount())
-        assertEquals(1, aggregator.getLargeVehicleCount())
+        agg.onTargetsUpdated(emptyList())
+        assertEquals(1, agg.getVehicleCount())
+        assertEquals(1, agg.getLargeVehicleCount())
 
         // 2. Standard car approaches and passes at 2.1m lateral clearance
-        aggregator.onTargetsUpdated(listOf(
+        simulatedTime += 1500L
+        agg.onTargetsUpdated(listOf(
             RadarTarget(
                 targetId = 2,
                 rangeMeters = 2.0f,
@@ -168,11 +230,11 @@ class RadarWindowAggregatorTest {
                 vehicleSizeCategory = VehicleSizeCategory.CAR
             )
         ))
-        val tick2 = aggregator.sampleAndResetWindow()
+        val tick2 = agg.sampleAndResetWindow()
         assertEquals(2.1, tick2.passingDistanceMeters!!, 0.001)
 
-        aggregator.onTargetsUpdated(emptyList())
-        assertEquals(2, aggregator.getVehicleCount())
-        assertEquals("Car must not increment large vehicle count", 1, aggregator.getLargeVehicleCount())
+        agg.onTargetsUpdated(emptyList())
+        assertEquals(2, agg.getVehicleCount())
+        assertEquals("Car must not increment large vehicle count", 1, agg.getLargeVehicleCount())
     }
 }

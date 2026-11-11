@@ -197,6 +197,20 @@ public class DevicesDatabaseManager {
         }
     }
 
+    public boolean haveHeartRateDevice() {
+        if (DEBUG) Log.i(TAG, "haveHeartRateDevice");
+
+        try (Cursor cursor = getDatabase().query(DevicesDbHelper.DEVICES,
+                new String[]{DevicesDbHelper.C_ID},
+                DevicesDbHelper.DEVICE_TYPE + "=?",
+                new String[]{DeviceType.HRM.name()},
+                null,
+                null,
+                null)) {
+            return cursor != null && cursor.getCount() > 0;
+        }
+    }
+
     public long getDeviceId(DeviceType deviceType, int antDeviceNumber) {
         if (DEBUG) Log.d(TAG, "getDeviceId");
 
@@ -857,7 +871,7 @@ public class DevicesDatabaseManager {
             }
         }
 
-        sensors.sort(com.atrainingtracker.trainingtracker.ui.equipment.EquipmentSensorOrdering.getComparator(sportType));
+        sensors.sort(com.atrainingtracker.trainingtracker.ui.equipment.EquipmentSensorOrdering.getLegacyComparator(sportType));
 
         return sensors;
     }

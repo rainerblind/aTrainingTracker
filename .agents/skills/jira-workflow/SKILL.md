@@ -30,10 +30,17 @@ python3 tools/jira_util.py --as agent1 submit-stage <PARENT_KEY> <STAGE> <TEXT_O
 # 2. Record an independent Gate 1-5 audit verdict as agent2 (PASS or REVISION):
 #    Executed directly by the reviewing persistent subagent (subagent_flash or subagent_pro).
 #    Atomically assigns subtask to agent2, posts role-attributed audit comment, and either:
-#    - PASS: moves subtask via 'freigabe' to Erledigt, advances parent ticket to next stage, and injects next stage SKILL.md!
+#    - PASS: moves subtask via 'freigabe' to Erledigt, advances parent ticket to next stage (Stage 5 -> Final Review (Agent)), and injects next stage SKILL.md!
 #    - REVISION: moves subtask back to In Bearbeitung and reassigns to agent1.
 python3 tools/jira_util.py --as agent2 gate-verdict <SUBTASK_KEY> PASS "<AUDIT_REPORT_OR_@FILE>"
 python3 tools/jira_util.py --as agent2 gate-verdict <SUBTASK_KEY> REVISION "<AUDIT_REPORT_OR_@FILE>"
+
+# 3. Record Stage 6 ('Final Review (Agent)') Cold Carbon verdict as agent2 (PASS or BOUNCE):
+#    Executed by an independent Cold Model='pro' reviewer on the parent ticket in Final Review (Agent):
+#    - PASS: posts [FINAL REVIEW (AGENT) — PASS], transitions parent to Final Review (Human), assigns to human.
+#    - BOUNCE: posts [FINAL REVIEW (AGENT) — BOUNCE X/3] (up to 3 bounces), transitions parent back to implementation|analysis|zu erledigen, assigns to agent1 (escalates to Final Review (Human) after 3 bounces).
+python3 tools/jira_util.py --as agent2 final-review-verdict <PARENT_KEY> PASS "<EXECUTIVE_SUMMARY_OR_@FILE>"
+python3 tools/jira_util.py --as agent2 final-review-verdict <PARENT_KEY> BOUNCE "<DEFECT_REPORT_OR_@FILE>" --bounce-target=implementation
 ```
 
 ## Other Common CLI Commands

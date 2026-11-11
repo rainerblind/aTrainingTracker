@@ -25,16 +25,18 @@ import java.io.File
 
 /**
  * System Architectural Design Contract Test (ASPICE SYS.3 BP1-BP6,
- * REQ-PRO-056, TST-PRO-056, ATT-6164).
+ * REQ-PRO-056, TST-PRO-056, ATT-6164, ATT-6741).
  *
  * Enforces:
  * 1. docs/system/system_architecture.md exists and is structurally complete (TST-PRO-056.1).
  * 2. 5 System Elements (SYS-EL-01..05) and 6 System Interfaces (SYS-IF-01..06) are formally specified.
- * 3. Dynamic sequence diagrams (Mermaid sequenceDiagram) model 1-Hz sampling and cloud sync (TST-PRO-056.2).
- * 4. 100% System Requirements Allocation Matrix covers all SYSREQ-* items across acquisition, tracking,
- *    peripherals, environment, and data exchange (TST-PRO-056.3).
- * 5. Full cross-check against docs/system_requirements.md and docs/system/sysreq_data_exchange.md.
- * 6. Compliance with ATT-6186: zero source-text reading of production files.
+ * 3. Dynamic sequence diagrams (Mermaid sequenceDiagram) model 1-Hz sampling and cloud sync,
+ *    verifying TrackerService/mDbExecutor asynchronous workout finalization (TST-PRO-056.2).
+ * 4. 100% System Requirements Allocation Matrix covers all 12 SYSREQ-* items across tracking and data exchange (TST-PRO-056.3).
+ * 5. Full cross-check against docs/system_requirements.md asserting exact bidirectional set equality
+ *    (declaredSysreqs == allocatedSysreqs) with zero orphan IDs (TST-PRO-056.3).
+ * 6. Dynamic reflection verification of authentic production code symbols and resource files (TST-PRO-056.5).
+ * 7. Compliance with ATT-6186: zero source-text reading of production files.
  */
 class SystemArchitectureDesignContractTest {
 
@@ -132,10 +134,13 @@ class SystemArchitectureDesignContractTest {
         assertTrue("Must model Cloud Synchronization Pipeline", content.contains("Post-Workout Cloud Synchronization & Backup Pipeline"))
         assertTrue("Sequence must model Strava upload", content.contains("Strava"))
         assertTrue("Sequence must model backup creation", content.contains(".attbackup"))
+        assertTrue("Sequence must model ControlTrackingScreen", content.contains("ControlTrackingScreen"))
+        assertTrue("Sequence must model TrackerService on mDbExecutor for finalization", content.contains("TrackerService (mDbExecutor)") || (content.contains("TrackerService") && content.contains("mDbExecutor")))
+        assertTrue("Sequence must model ExportManager auto-export", content.contains("ExportManager"))
     }
 
     /**
-     * Asserts 100% allocation of all 24 system requirements across all 5 domains (TST-PRO-056.3).
+     * Asserts 100% allocation of all 12 system requirements across both domains (TST-PRO-056.3).
      */
     @Test
     fun testSystemArchitecture_100PercentSysreqAllocationMatrix() {
@@ -143,31 +148,13 @@ class SystemArchitectureDesignContractTest {
 
         assertTrue("Must declare Section 5 Allocation Matrix", content.contains("## 5. System Requirements Allocation Matrix"))
 
-        // 1. Domain 1: Acquisition (SYSREQ-ACQ-001..005)
-        for (i in 1..5) {
-            val acqId = "SYSREQ-ACQ-%03d".format(i)
-            assertTrue("Allocation matrix must include $acqId", content.contains(acqId))
-        }
-
-        // 2. Domain 2: Tracking (SYSREQ-TRK-001..006)
+        // 1. Domain 1: Tracking (SYSREQ-TRK-001..006)
         for (i in 1..6) {
             val trkId = "SYSREQ-TRK-%03d".format(i)
             assertTrue("Allocation matrix must include $trkId", content.contains(trkId))
         }
 
-        // 3. Domain 3: Peripherals (SYSREQ-PER-001..005)
-        for (i in 1..5) {
-            val perId = "SYSREQ-PER-%03d".format(i)
-            assertTrue("Allocation matrix must include $perId", content.contains(perId))
-        }
-
-        // 4. Domain 4: Environment (SYSREQ-ENV-001..003)
-        for (i in 1..3) {
-            val envId = "SYSREQ-ENV-%03d".format(i)
-            assertTrue("Allocation matrix must include $envId", content.contains(envId))
-        }
-
-        // 5. Domain 5: Data Exchange (SYSREQ-DEX-001..006)
+        // 2. Domain 2: Data Exchange (SYSREQ-DEX-001..006)
         for (i in 1..6) {
             val dexId = "SYSREQ-DEX-%03d".format(i)
             assertTrue("Allocation matrix must include $dexId", content.contains(dexId))
@@ -175,22 +162,85 @@ class SystemArchitectureDesignContractTest {
     }
 
     /**
-     * Asserts cross-check parity: every SYSREQ in docs/system_requirements.md is 100% allocated (TST-PRO-056.3).
+     * Asserts exact bidirectional parity: every SYSREQ in docs/system_requirements.md is 100% allocated,
+     * and every allocated SYSREQ in docs/system/system_architecture.md exists in SYS.2 (zero orphan IDs) (TST-PRO-056.3).
      */
     @Test
     fun testSystemArchitecture_crossChecksSystemRequirementsSpec() {
         val sysreqContent = findRepoRootFile("docs/system_requirements.md").readText()
         val archContent = findRepoRootFile("docs/system/system_architecture.md").readText()
 
-        // Extract all SYSREQ-TRK-xxx and SYSREQ-DEX-xxx mentioned in docs/system_requirements.md
+        // Extract all SYSREQ-* mentioned in docs/system_requirements.md
         val regex = Regex("SYSREQ-[A-Z]+-\\d{3}")
         val declaredSysreqs = regex.findAll(sysreqContent).map { it.value }.toSet()
 
-        assertTrue("Must detect at least 12 requirements in docs/system_requirements.md", declaredSysreqs.size >= 12)
+        assertEquals("Must declare exactly 12 requirements in docs/system_requirements.md", 12, declaredSysreqs.size)
 
-        for (reqId in declaredSysreqs) {
-            assertTrue("system_architecture.md must allocate $reqId from system_requirements.md", archContent.contains(reqId))
+        // Extract all SYSREQ-* allocated in Section 5 of docs/system/system_architecture.md
+        val section5Start = archContent.indexOf("## 5. System Requirements Allocation Matrix")
+        assertTrue("Section 5 must exist in system_architecture.md", section5Start >= 0)
+        val section5End = archContent.indexOf("## 6.", section5Start).let { if (it == -1) archContent.length else it }
+        val section5Content = archContent.substring(section5Start, section5End)
+        val allocatedSysreqs = regex.findAll(section5Content).map { it.value }.toSet()
+
+        assertEquals(
+            "System architecture Section 5 must allocate exactly the declared system requirements (no orphan or missing IDs)",
+            declaredSysreqs,
+            allocatedSysreqs
+        )
+    }
+
+    /**
+     * Asserts authentic code grounding: verifies existence of production classes via reflection
+     * and XML resources via File.exists, while asserting absence of hallucinated symbols (TST-PRO-056.5).
+     */
+    @Test
+    fun testSystemArchitecture_productionCodeGrounding() {
+        val archContent = findRepoRootFile("docs/system/system_architecture.md").readText()
+
+        // 1. Assert absence of 10 hallucinated symbols and outdated process name
+        val hallucinatedSymbols = listOf(
+            "HeartRateData",
+            "PowerData",
+            "BatteryLevelData",
+            "AntPlusManager",
+            "RadarThreatView",
+            "SoundEngine",
+            "FusedLocationProviderClient",
+            "LocationCallback",
+            "FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE",
+            "backup_rules.xml",
+            "com.atrainingtracker.trainingtracker"
+        )
+        for (symbol in hallucinatedSymbols) {
+            assertTrue("system_architecture.md must not reference hallucinated symbol '$symbol'", !archContent.contains(symbol))
         }
+
+        // 2. Dynamic reflection verification of grounded classes without reading source text (ATT-6186)
+        val authenticClasses = listOf(
+            "com.atrainingtracker.trainingtracker.ui.tracking.radar.RadarEdgeOverlayKt",
+            "com.atrainingtracker.trainingtracker.audio.radar.RadarAlertManager",
+            "com.atrainingtracker.trainingtracker.audio.radar.RadarAudioSynthesizer",
+            "com.atrainingtracker.trainingtracker.routes.NavigationAudioAlertManager",
+            "com.atrainingtracker.trainingtracker.audio.BikeBellAudioSynthesizer",
+            "com.atrainingtracker.banalservice.devices.SpeedAndLocationDevice_GoogleFused",
+            "com.atrainingtracker.banalservice.devices.SpeedAndLocationDevice_GPS",
+            "com.atrainingtracker.trainingtracker.notifications.SensorBatteryNotificationManager"
+        )
+        for (className in authenticClasses) {
+            try {
+                Class.forName(className)
+            } catch (e: ClassNotFoundException) {
+                throw AssertionError("Required grounded production class $className must exist on classpath", e)
+            }
+        }
+
+        // 3. Verify real backup configuration XML resource file exists
+        val backupXml = findRepoRootFile(listOf("app", "src", "main", "res", "xml", "full_backup_content.xml").joinToString(File.separator))
+        assertTrue("full_backup_content.xml must exist in res/xml/", backupXml.exists())
+
+        // 4. Verify application process name
+        assertTrue("system_architecture.md must document authentic application process com.atrainingtracker", archContent.contains("com.atrainingtracker"))
     }
 
     /**

@@ -27,12 +27,18 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ElevatedCard
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
@@ -40,6 +46,7 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -49,7 +56,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.devices.radar.RadarLightController
@@ -57,6 +66,7 @@ import com.atrainingtracker.banalservice.devices.radar.RadarLightMode
 import com.atrainingtracker.banalservice.devices.radar.RadarScenario
 import com.atrainingtracker.banalservice.devices.radar.RadarStateRepository
 import com.atrainingtracker.banalservice.devices.radar.RadarTrafficSimulator
+import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.audio.radar.RadarAlertManager
 import com.atrainingtracker.trainingtracker.audio.radar.RadarAudioPreviewType
 import com.atrainingtracker.trainingtracker.settings.RadarAudioAlertMode
@@ -72,7 +82,8 @@ import kotlin.math.roundToInt
 /**
  * Settings and preview composable for cycling radar edge overlay and traffic simulator (REQ-TRK-062.5, REQ-CON-029.4).
  */
-@OptIn(ExperimentalLayoutApi::class)
+@OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
+@Suppress("LongMethod")
 @Composable
 fun RadarSettingsSection(
     modifier: Modifier = Modifier,
@@ -88,7 +99,13 @@ fun RadarSettingsSection(
 
     var selectedScenario by remember { mutableStateOf(RadarScenario.SINGLE_CAR) }
     val radarState by RadarStateRepository.radarState.collectAsState()
-    val isRunning = RadarTrafficSimulator.isSimulating
+    val isRunning by RadarTrafficSimulator.isSimulatingFlow.collectAsState()
+
+    DisposableEffect(Unit) {
+        onDispose {
+            RadarAlertManager.releasePreviewSynthesizer()
+        }
+    }
 
     Column(
         modifier = modifier.fillMaxWidth(),
@@ -98,7 +115,7 @@ fun RadarSettingsSection(
         ElevatedCard(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 4.dp)
+                .padding(vertical = 4.dp)
         ) {
             Column(
                 modifier = Modifier
@@ -218,7 +235,7 @@ fun RadarSettingsSection(
         ElevatedCard(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 4.dp)
+                .padding(vertical = 4.dp)
         ) {
             Column(
                 modifier = Modifier
@@ -363,7 +380,13 @@ fun RadarSettingsSection(
                         },
                         shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2)
                     ) {
-                        Text(text = stringResource(R.string.radar_alert_route_default))
+                        Text(
+                            text = stringResource(R.string.radar_alert_route_default),
+                            maxLines = 1,
+                            softWrap = false,
+                            overflow = TextOverflow.Ellipsis,
+                            style = MaterialTheme.typography.labelMedium
+                        )
                     }
 
                     SegmentedButton(
@@ -375,7 +398,13 @@ fun RadarSettingsSection(
                         },
                         shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2)
                     ) {
-                        Text(text = stringResource(R.string.radar_alert_route_speaker))
+                        Text(
+                            text = stringResource(R.string.radar_alert_route_speaker),
+                            maxLines = 1,
+                            softWrap = false,
+                            overflow = TextOverflow.Ellipsis,
+                            style = MaterialTheme.typography.labelMedium
+                        )
                     }
                 }
 
@@ -570,33 +599,17 @@ fun RadarSettingsSection(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Approach-Speed Pitch Modulation Toggle (REQ-TRK-065.2)
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column(modifier = Modifier.weight(1f).padding(end = 16.dp)) {
-                        Text(
-                            text = stringResource(R.string.radar_speed_pitch_title),
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        Text(
-                            text = stringResource(R.string.radar_speed_pitch_desc),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                    Switch(
-                        checked = tuningConfig.radarSpeedPitchModulation,
-                        onCheckedChange = { checked ->
-                            coroutineScope.launch {
-                                actualDataStore.updateRadarSpeedPitchModulation(checked)
-                            }
+                // Approach-Speed Pitch Modulation Subordinate Toggle (REQ-TRK-065.2)
+                SubordinateTuningToggleItem(
+                    title = stringResource(R.string.radar_speed_pitch_title),
+                    isChecked = tuningConfig.radarSpeedPitchModulation,
+                    onCheckedChange = { checked ->
+                        coroutineScope.launch {
+                            actualDataStore.updateRadarSpeedPitchModulation(checked)
                         }
-                    )
-                }
+                    },
+                    modifier = Modifier.padding(top = 2.dp, bottom = 4.dp)
+                )
 
                 Spacer(modifier = Modifier.height(16.dp))
 
@@ -614,8 +627,7 @@ fun RadarSettingsSection(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
-                    FilterChip(
-                        selected = false,
+                    AssistChip(
                         onClick = {
                             RadarAlertManager.playAudioPreview(context, RadarAudioPreviewType.CENTERED, tuningConfig)
                         },
@@ -626,8 +638,7 @@ fun RadarSettingsSection(
                             )
                         }
                     )
-                    FilterChip(
-                        selected = false,
+                    AssistChip(
                         onClick = {
                             RadarAlertManager.playAudioPreview(context, RadarAudioPreviewType.PASSING, tuningConfig)
                         },
@@ -638,8 +649,7 @@ fun RadarSettingsSection(
                             )
                         }
                     )
-                    FilterChip(
-                        selected = false,
+                    AssistChip(
                         onClick = {
                             RadarAlertManager.playAudioPreview(context, RadarAudioPreviewType.SLOW, tuningConfig)
                         },
@@ -650,8 +660,7 @@ fun RadarSettingsSection(
                             )
                         }
                     )
-                    FilterChip(
-                        selected = false,
+                    AssistChip(
                         onClick = {
                             RadarAlertManager.playAudioPreview(context, RadarAudioPreviewType.FAST, tuningConfig)
                         },
@@ -662,8 +671,7 @@ fun RadarSettingsSection(
                             )
                         }
                     )
-                    FilterChip(
-                        selected = false,
+                    AssistChip(
                         onClick = {
                             RadarAlertManager.playAudioPreview(context, RadarAudioPreviewType.LANE_CHANGE, tuningConfig)
                         },
@@ -682,7 +690,7 @@ fun RadarSettingsSection(
         ElevatedCard(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 4.dp)
+                .padding(vertical = 4.dp)
         ) {
             Column(
                 modifier = Modifier
@@ -706,28 +714,45 @@ fun RadarSettingsSection(
 
                 Spacer(modifier = Modifier.height(6.dp))
 
+                var lightModeExpanded by remember { mutableStateOf(false) }
                 val availableModes = RadarLightController.getAvailableModes()
-                FlowRow(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
+
+                ExposedDropdownMenuBox(
+                    expanded = lightModeExpanded,
+                    onExpandedChange = { lightModeExpanded = !lightModeExpanded },
+                    modifier = Modifier.fillMaxWidth().testTag("RadarLightDefaultModeDropdown")
                 ) {
-                    availableModes.forEach { mode ->
-                        FilterChip(
-                            selected = tuningConfig.radarLightDefaultMode == mode,
-                            onClick = {
-                                coroutineScope.launch {
-                                    actualDataStore.updateRadarLightDefaultMode(mode)
-                                }
-                                RadarLightController.setLightMode(mode)
-                            },
-                            label = {
-                                Text(
-                                    text = stringResource(mode.titleResId),
-                                    style = MaterialTheme.typography.labelMedium
-                                )
-                            }
-                        )
+                    OutlinedTextField(
+                        value = stringResource(tuningConfig.radarLightDefaultMode.titleResId),
+                        onValueChange = {},
+                        readOnly = true,
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = lightModeExpanded) },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .menuAnchor(),
+                        textStyle = MaterialTheme.typography.bodyLarge
+                    )
+                    ExposedDropdownMenu(
+                        expanded = lightModeExpanded,
+                        onDismissRequest = { lightModeExpanded = false }
+                    ) {
+                        availableModes.forEach { mode ->
+                            DropdownMenuItem(
+                                text = {
+                                    Text(
+                                        text = stringResource(mode.titleResId),
+                                        style = MaterialTheme.typography.bodyMedium
+                                    )
+                                },
+                                onClick = {
+                                    coroutineScope.launch {
+                                        actualDataStore.updateRadarLightDefaultMode(mode)
+                                    }
+                                    lightModeExpanded = false
+                                },
+                                modifier = Modifier.testTag("RadarLightModeItem_${mode.name}")
+                            )
+                        }
                     }
                 }
 
@@ -760,6 +785,148 @@ fun RadarSettingsSection(
                         }
                     )
                 }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Smart Environmental & Traffic Light Automation (REQ-CON-034.6 / ATT-5104)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f).padding(end = 16.dp)) {
+                        Text(
+                            text = stringResource(R.string.radar_smart_light_automation),
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = stringResource(R.string.radar_smart_light_automation_desc),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Switch(
+                        checked = tuningConfig.radarSmartLightAutomation,
+                        onCheckedChange = { checked ->
+                            coroutineScope.launch {
+                                actualDataStore.updateRadarSmartLightAutomation(checked)
+                            }
+                        }
+                    )
+                }
+            }
+        }
+
+        // Close-Pass Hazard Threshold Card (REQ-TRK-073.4 / ATT-5096)
+        ElevatedCard(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 4.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp)
+            ) {
+                Text(
+                    text = stringResource(R.string.radar_close_pass_threshold_title),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+
+                Spacer(modifier = Modifier.height(6.dp))
+
+                Text(
+                    text = stringResource(R.string.radar_close_pass_threshold_summary),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                val thresholdPresets = listOf(1.0f, 1.5f, 2.0f)
+                val thresholdLabels = listOf(
+                    R.string.radar_close_pass_threshold_1_0m,
+                    R.string.radar_close_pass_threshold_1_5m,
+                    R.string.radar_close_pass_threshold_2_0m
+                )
+
+                SingleChoiceSegmentedButtonRow(
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    thresholdPresets.forEachIndexed { index, threshold ->
+                        SegmentedButton(
+                            selected = kotlin.math.abs(tuningConfig.radarClosePassThresholdM - threshold) < 0.01f,
+                            onClick = {
+                                coroutineScope.launch {
+                                    actualDataStore.updateRadarClosePassThreshold(threshold)
+                                }
+                            },
+                            shape = SegmentedButtonDefaults.itemShape(index = index, count = thresholdPresets.size)
+                        ) {
+                            Text(
+                                text = stringResource(thresholdLabels[index]),
+                                style = MaterialTheme.typography.labelMedium,
+                                maxLines = 1,
+                                softWrap = false,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        // Post-Workout Traffic & Strava Export Summary Card (REQ-RAD-007 / ATT-5122)
+        var stravaSummaryEnabled by remember {
+            mutableStateOf(TrainingApplication.uploadStravaRadarSummary())
+        }
+
+        ElevatedCard(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 4.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp)
+            ) {
+                Text(
+                    text = stringResource(R.string.radar_strava_summary_title),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+
+                Spacer(modifier = Modifier.height(6.dp))
+
+                Text(
+                    text = stringResource(R.string.radar_strava_summary_desc),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        text = stringResource(R.string.radar_strava_summary_title),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Switch(
+                        checked = stravaSummaryEnabled,
+                        onCheckedChange = { checked ->
+                            stravaSummaryEnabled = checked
+                            TrainingApplication.setUploadStravaRadarSummary(checked)
+                        }
+                    )
+                }
             }
         }
 
@@ -767,7 +934,7 @@ fun RadarSettingsSection(
         ElevatedCard(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 4.dp)
+                .padding(vertical = 4.dp)
         ) {
         Column(
             modifier = Modifier
@@ -790,28 +957,51 @@ fun RadarSettingsSection(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Scenario selection chips
-            FlowRow(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
+            var scenarioExpanded by remember { mutableStateOf(false) }
+
+            // Scenario selection dropdown (Design Guidelines §1.3: >4 options -> ExposedDropdownMenuBox)
+            ExposedDropdownMenuBox(
+                expanded = scenarioExpanded,
+                onExpandedChange = { scenarioExpanded = !scenarioExpanded },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("RadarSimulatorScenarioDropdown")
             ) {
-                RadarScenario.values().forEach { scenario ->
-                    FilterChip(
-                        selected = selectedScenario == scenario,
-                        onClick = {
-                            selectedScenario = scenario
-                            if (isRunning) {
-                                RadarTrafficSimulator.start(scenario)
-                            }
-                        },
-                        label = {
-                            Text(
-                                text = getScenarioTitle(scenario),
-                                style = MaterialTheme.typography.labelMedium
-                            )
-                        }
-                    )
+                OutlinedTextField(
+                    value = getScenarioTitle(selectedScenario),
+                    onValueChange = {},
+                    readOnly = true,
+                    label = { Text(stringResource(R.string.radar_simulator_scenario_label)) },
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = scenarioExpanded) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .menuAnchor(),
+                    textStyle = MaterialTheme.typography.bodyLarge
+                )
+                ExposedDropdownMenu(
+                    expanded = scenarioExpanded,
+                    onDismissRequest = { scenarioExpanded = false }
+                ) {
+                    RadarScenario.values().forEach { scenario ->
+                        DropdownMenuItem(
+                            text = {
+                                Text(
+                                    text = getScenarioTitle(scenario),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            },
+                            onClick = {
+                                selectedScenario = scenario
+                                if (isRunning) {
+                                    RadarTrafficSimulator.start(scenario)
+                                }
+                                scenarioExpanded = false
+                            },
+                            modifier = Modifier.testTag("RadarScenarioItem_${scenario.name}")
+                        )
+                    }
                 }
             }
 
@@ -849,7 +1039,11 @@ fun RadarSettingsSection(
 
                     if (isRunning) {
                         Text(
-                            text = "${radarState.connectionState} • ${radarState.targets.size} targets",
+                            text = stringResource(
+                                R.string.radar_simulator_status,
+                                radarState.connectionState.name,
+                                radarState.targets.size
+                            ),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )

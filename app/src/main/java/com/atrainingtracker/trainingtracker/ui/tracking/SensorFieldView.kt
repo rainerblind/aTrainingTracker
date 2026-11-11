@@ -34,12 +34,14 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.SwapHoriz
+import androidx.compose.material.icons.filled.WarningAmber
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -56,6 +58,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.compositeOver
@@ -382,6 +385,18 @@ fun SensorFieldView(
                             verticalAlignment = Alignment.Bottom,
                             modifier = Modifier.fillMaxWidth()
                         ) {
+                            if (fieldState.isArtifactGated) {
+                                Icon(
+                                    imageVector = Icons.Default.WarningAmber,
+                                    contentDescription = stringResource(R.string.hrv_artifact_rate),
+                                    tint = MaterialTheme.colorScheme.error,
+                                    modifier = Modifier
+                                        .size(18.dp)
+                                        .padding(end = 4.dp, bottom = 4.dp)
+                                        .align(Alignment.CenterVertically)
+                                        .testTag("sensor_field_artifact_warning_icon")
+                                )
+                            }
                             Text(
                                 text = fieldState.value,
                                 style = valueStyle,
@@ -450,12 +465,16 @@ fun SensorFieldView(
                         }
                         SensorSparklineView(
                             samples = fieldState.sparklineSamples,
+                            spanSeconds = fieldState.sparklineSpanSeconds,
                             lineColor = sparklineLineColor,
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .then(
                                     if (!fieldState.showValue) {
-                                        Modifier.weight(1f).padding(horizontal = 4.dp, vertical = 2.dp)
+                                        Modifier
+                                            .heightIn(min = resolveSparklineHeight(fieldState.viewSize, isGraphOnly = true))
+                                            .weight(1f)
+                                            .padding(horizontal = 4.dp, vertical = 2.dp)
                                     } else {
                                         Modifier
                                             .height(resolveSparklineHeight(fieldState.viewSize, isGraphOnly = false))
@@ -510,7 +529,12 @@ fun SensorFieldView(
     }
 
     if (showHrvInfoSheet) {
-        HrvInfoBottomSheet(onDismissRequest = { showHrvInfoSheet = false })
+        HrvInfoBottomSheet(
+            onDismissRequest = { showHrvInfoSheet = false },
+            signalQualityStatus = fieldState.hrvSignalQualityStatus,
+            dfaA1ThresholdT1 = fieldState.dfaA1ThresholdT1,
+            dfaA1ThresholdT2 = fieldState.dfaA1ThresholdT2
+        )
     }
 }
 

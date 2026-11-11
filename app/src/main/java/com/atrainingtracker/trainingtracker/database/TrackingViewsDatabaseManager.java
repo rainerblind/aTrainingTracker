@@ -501,6 +501,10 @@ public class TrackingViewsDatabaseManager {
         updateBoolean(viewId, TrackingViewsDbHelper.SHOW_BIKE_BELL, showBikeBell);
     }
 
+    public void updateShowMmpCurve(long viewId, boolean showMmpCurve) {
+        updateBoolean(viewId, TrackingViewsDbHelper.SHOW_MMP_CURVE, showMmpCurve);
+    }
+
     public void updateElevationProfileScope(long viewId, int scope) {
         ContentValues values = new ContentValues();
         values.put(TrackingViewsDbHelper.ELEVATION_PROFILE_SCOPE, scope);
@@ -866,6 +870,7 @@ public class TrackingViewsDatabaseManager {
         values.put(TrackingViewsDbHelper.ELEVATION_PROFILE_SCOPE, 0);
         values.put(TrackingViewsDbHelper.ELEVATION_PROFILE_LOOKAHEAD, 2000);
         values.put(TrackingViewsDbHelper.SHOW_BIKE_BELL, 0);
+        values.put(TrackingViewsDbHelper.SHOW_MMP_CURVE, 0);
 
         db.insert(TrackingViewsDbHelper.VIEWS_TABLE, null, values);
     }
@@ -1186,7 +1191,8 @@ public class TrackingViewsDatabaseManager {
         // public static final int DB_VERSION = 16; // upgraded to version 16 at 01.11.2026: Adding ShowValue and ShowBar columns to LayoutRowsTable (ATT-4841)
         // public static final int DB_VERSION = 17; // upgraded to version 17 at 01.11.2026: Adding ColWeight column to LayoutRowsTable (ATT-4861)
         // public static final int DB_VERSION = 18; // upgraded to version 18 at 01.11.2026: Sport-dependent bar gating & upgrade migration (ATT-4927)
-        public static final int DB_VERSION = 19; // upgraded to version 19 at 10.11.2026: Configurable live sparkline graph tiles & time horizon (ATT-1294)
+        // public static final int DB_VERSION = 19; // upgraded to version 19 at 10.11.2026: Configurable live sparkline graph tiles & time horizon (ATT-1294)
+        public static final int DB_VERSION = 20; // upgraded to version 20 at 11.11.2026: Adding Live MMP Curve to Cockpit tracking layouts (ATT-6688)
         public static final String VIEWS_TABLE = "ViewsTable";                // the table for the different 'tabs'
         public static final String ROWS_TABLE = "LayoutRowsTable";            // the table for the sensor fields within each tab
         public static final String SECTION_DIVIDERS_TABLE = "SectionDividersTable"; // new in version 14 (ATT-4055)
@@ -1241,6 +1247,8 @@ public class TrackingViewsDatabaseManager {
         public static final String ELEVATION_PROFILE_LOOKAHEAD = "ElevationProfileLookahead";
         // new in V15 -> Show Bike Bell (ATT-4281)
         public static final String SHOW_BIKE_BELL = "ShowBikeBell";
+        // new in V20 -> Show MMP Curve (ATT-6688)
+        public static final String SHOW_MMP_CURVE = "ShowMmpCurve";
 
         @Deprecated
         protected static final String CREATE_VIEWS_TABLE_V1 = "create table " + VIEWS_TABLE + " ("
@@ -1370,6 +1378,27 @@ public class TrackingViewsDatabaseManager {
                 + ELEVATION_PROFILE_LOOKAHEAD + " int, "
                 + SHOW_BIKE_BELL + " int)";
 
+        protected static final String CREATE_VIEWS_TABLE_V20 = "create table " + VIEWS_TABLE + " ("
+                + C_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
+                + ACTIVITY_TYPE + " text, "
+                + NAME + " text, "
+                + LAYOUT_NR + " int, "
+                + NEXT_POSITION + " int, "
+                + SHOW_LAP_BUTTON + " int, "
+                + SHOW_MAP + " int, "
+                + FULL_SCREEN + " int, "
+                + SYSTEM_SETTING + " int, "
+                + DAY + " int, "
+                + NIGHT + " int, "
+                + SHOW_LIVE_SEGMENTS + " int, "
+                + SHOW_ELEVATION_PROFILE + " int, "
+                + SHOW_LIVE_CLIMBS + " int, "
+                + SHOW_NAVIGATION_HINTS + " int, "
+                + ELEVATION_PROFILE_SCOPE + " int, "
+                + ELEVATION_PROFILE_LOOKAHEAD + " int, "
+                + SHOW_BIKE_BELL + " int, "
+                + SHOW_MMP_CURVE + " int DEFAULT 0)";
+
         @Deprecated
         protected static final String CREATE_LAYOUTS_TABLE_V3 = "create table " + ROWS_TABLE + " ("
                 + ROW_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
@@ -1493,11 +1522,11 @@ public class TrackingViewsDatabaseManager {
 
         @Override
         public void onCreate(@NonNull SQLiteDatabase db) {
-            db.execSQL(CREATE_VIEWS_TABLE_V15);
+            db.execSQL(CREATE_VIEWS_TABLE_V20);
             db.execSQL(CREATE_LAYOUTS_TABLE_V19);
             db.execSQL(CREATE_SECTION_DIVIDERS_TABLE_V14);
 
-            if (DEBUG) Log.d(TAG, "onCreated sql: " + CREATE_VIEWS_TABLE_V15);
+            if (DEBUG) Log.d(TAG, "onCreated sql: " + CREATE_VIEWS_TABLE_V20);
             if (DEBUG) Log.d(TAG, "onCreated sql: " + CREATE_LAYOUTS_TABLE_V19);
             if (DEBUG) Log.d(TAG, "onCreated sql: " + CREATE_SECTION_DIVIDERS_TABLE_V14);
 
@@ -1657,6 +1686,7 @@ public class TrackingViewsDatabaseManager {
             values.put(ELEVATION_PROFILE_SCOPE, 0);
             values.put(ELEVATION_PROFILE_LOOKAHEAD, 2000);
             values.put(SHOW_BIKE_BELL, showBikeBell ? 1 : 0);
+            values.put(SHOW_MMP_CURVE, 0);
             newViewId = db.insert(VIEWS_TABLE, null, values);
 
             for (RowData rowData : rowDataList) {
@@ -2119,6 +2149,32 @@ public class TrackingViewsDatabaseManager {
                     } finally {
                         db.endTransaction();
                     }
+                }
+            }
+
+            if (oldVersion < 20 && (newVersion >= 20 || newVersion == 0)) {
+                Log.i(TAG, "Upgrading database to version 20: Adding ShowMmpCurve column to ViewsTable (ATT-6688)");
+                db.beginTransaction();
+                try {
+                    boolean columnExists = false;
+                    try (Cursor cursor = db.rawQuery("PRAGMA table_info(" + VIEWS_TABLE + ")", null)) {
+                        if (cursor != null) {
+                            int nameIndex = cursor.getColumnIndex("name");
+                            while (cursor.moveToNext()) {
+                                if (SHOW_MMP_CURVE.equalsIgnoreCase(cursor.getString(nameIndex))) {
+                                    columnExists = true;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    if (!columnExists) {
+                        addColumn(db, VIEWS_TABLE, SHOW_MMP_CURVE, "int DEFAULT 0");
+                    }
+                    db.execSQL("UPDATE " + VIEWS_TABLE + " SET " + SHOW_MMP_CURVE + " = 0 WHERE " + SHOW_MMP_CURVE + " IS NULL;");
+                    db.setTransactionSuccessful();
+                } finally {
+                    db.endTransaction();
                 }
             }
         }

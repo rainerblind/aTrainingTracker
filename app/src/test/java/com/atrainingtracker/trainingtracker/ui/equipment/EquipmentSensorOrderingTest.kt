@@ -19,7 +19,7 @@
 package com.atrainingtracker.trainingtracker.ui.equipment
 
 import com.atrainingtracker.banalservice.BSportType
-import com.atrainingtracker.banalservice.database.DevicesDatabaseManager.SimpleSensorInfo
+import com.atrainingtracker.banalservice.ui.devices.devicedata.SimpleSensorInfo
 import com.atrainingtracker.banalservice.devices.DeviceType
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue

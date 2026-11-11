@@ -224,26 +224,22 @@ class AdbController:
 
     DEFAULT_PROVIDERS = ("gps", "network", "fused")
 
-    def __init__(self, device_serial: Optional[str] = None, providers: Optional[List[str]] = None):
-        self.device_serial = device_serial or self.detect_device()
+    def __init__(self, device_serial: Optional[str] = None, providers: Optional[List[str]] = None, agent_mode: Optional[bool] = None):
+        self.agent_mode = agent_mode
+        self.device_serial = self.detect_device(device_serial)
         self.providers = list(providers or self.DEFAULT_PROVIDERS)
         self.is_provider_registered = False
 
-    def detect_device(self) -> str:
-        """Finds first attached ADB device."""
+    def detect_device(self, explicit_serial: Optional[str] = None) -> str:
+        """Resolves target ADB device enforcing Two-Tier emulator/physical policy (ATT-6506 / REQ-TST-004)."""
         try:
-            res = subprocess.run(["adb", "devices"], capture_output=True, text=True, check=True)
-            lines = res.stdout.strip().splitlines()
-            devices = []
-            for line in lines[1:]:
-                parts = line.split()
-                if len(parts) >= 2 and parts[1] == "device":
-                    devices.append(parts[0])
-            if not devices:
-                raise RuntimeError("No connected Android device found via ADB. Please connect your Pixel 10 via USB.")
-            return devices[0]
+            try:
+                from agent_emulator import resolve_target_device
+            except ImportError:
+                from tools.agent_emulator import resolve_target_device
+            return resolve_target_device(device_serial=explicit_serial, agent_mode=self.agent_mode)
         except Exception as e:
-            raise RuntimeError(f"Failed to query ADB devices: {e}")
+            raise RuntimeError(f"Failed to resolve target ADB device: {e}")
 
     def run_adb(self, cmd_args: List[str], check: bool = True) -> subprocess.CompletedProcess:
         """Executes adb command on target device."""
@@ -639,9 +635,16 @@ def main():
     )
     parser.add_argument(
         "--device",
+        "--serial",
+        dest="device",
         type=str,
         default=None,
-        help="Target ADB device serial (defaults to auto-detected connected device)"
+        help="Target ADB device serial (defaults to auto-detected connected device respecting policy)"
+    )
+    parser.add_argument(
+        "--agent",
+        action="store_true",
+        help="Enforce autonomous agent mode (strictly prohibits targeting physical phone)"
     )
     parser.add_argument(
         "--tick",
@@ -660,7 +663,7 @@ def main():
         route_name, points = get_sample_route(args.sample)
 
     engine = GpxSimulationEngine(route_name, points, base_speed_kmh=args.speed)
-    adb = AdbController(device_serial=args.device)
+    adb = AdbController(device_serial=args.device, agent_mode=args.agent)
 
     run_interactive_simulation(engine, adb, tick_rate_sec=args.tick)
 

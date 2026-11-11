@@ -25,6 +25,8 @@ import android.location.LocationManager
 import androidx.core.content.ContextCompat
 import com.atrainingtracker.trainingtracker.database.KnownLocationsDatabaseManager
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
+import com.atrainingtracker.trainingtracker.repositories.KnownLocationsRepository
+import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
 import com.google.android.gms.maps.model.LatLng
 
 /**
@@ -62,8 +64,11 @@ object MapInitialLocationResolver {
 
         // 3. Designated Home Base known location
         try {
-            val db = knownLocationsDb ?: KnownLocationsDatabaseManager.getInstance(context)
-            val home = db.homeLocation
+            val home = if (knownLocationsDb != null) {
+                knownLocationsDb.homeLocation
+            } else {
+                KnownLocationsRepository.getInstance(context).homeLocation
+            }
             if (home != null && isValidCoordinate(home.latLng)) {
                 return home.latLng
             }
@@ -72,8 +77,11 @@ object MapInitialLocationResolver {
 
         // 4. Most visited known location
         try {
-            val db = knownLocationsDb ?: KnownLocationsDatabaseManager.getInstance(context)
-            val allLocations = db.allLocations
+            val allLocations = if (knownLocationsDb != null) {
+                knownLocationsDb.allLocations
+            } else {
+                KnownLocationsRepository.getInstance(context).allLocations
+            }
             val mostVisited = allLocations.filter { isValidCoordinate(it.latLng) }.maxByOrNull { it.hitCount }
             if (mostVisited != null) {
                 return mostVisited.latLng
@@ -83,8 +91,11 @@ object MapInitialLocationResolver {
 
         // 5. Most recent workout start location
         try {
-            val db = workoutSummariesDb ?: WorkoutSummariesDatabaseManager.getInstance(context)
-            val starts = db.allWorkoutStartLocations
+            val starts = if (workoutSummariesDb != null) {
+                workoutSummariesDb.allWorkoutStartLocations
+            } else {
+                WorkoutRepository.getInstance(context).allWorkoutStartLocations
+            }
             val lastStart = starts.lastOrNull { isValidCoordinate(it) }
             if (lastStart != null) {
                 return lastStart

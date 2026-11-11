@@ -48,6 +48,8 @@
     <string name="radar_simulator_stop">Zatrzymaj symulację</string>
     <string name="radar_simulator_running">Symulacja aktywna</string>
     <string name="radar_simulator_idle">Symulacja zatrzymana</string>
+    <string name="radar_simulator_status">%1$s • %2$d celów</string>
+    <string name="radar_simulator_scenario_label">Scenariusz</string>
     <string name="radar_scenario_single_car">Pojedynczy pojazd</string>
     <string name="radar_scenario_single_car_desc">Pojedynczy pojazd wyprzedzający z prędkością 12 m/s</string>
     <string name="radar_scenario_convoy">Kolumna pojazdów</string>
@@ -72,6 +74,8 @@
     <string name="radar_overlay_disconnected">Radar rozłączony</string>
     <string name="radar_overlay_connecting">Łączenie radaru</string>
     <string name="radar_overlay_clear">Droga wolna</string>
+    <string name="radar_overlay_threats_format">%1$d zagrożeń</string>
+    <string name="radar_overlay_threats_fast_format">%1$d zagrożeń (wysoka prędkość)</string>
 
     <!-- Radar Audio & Haptic Alerts (ATT-5086 / REQ-TRK-063) -->
     <string name="radar_alerts_settings_title">Alerty radaru i dźwięk</string>
@@ -85,7 +89,7 @@
     <string name="radar_alert_speaker_boost_desc">Tymczasowo zwiększa cichy głośnik telefonu podczas alertów</string>
     <string name="radar_alert_route_title">Wyjście audio</string>
     <string name="radar_alert_route_default">System / Słuchawki</string>
-    <string name="radar_alert_route_speaker">Wymuś głośnik telefonu</string>
+    <string name="radar_alert_route_speaker">Głośnik telefonu</string>
     <string name="radar_alert_haptic_title">Wibracje haptyczne</string>
     <string name="radar_alert_haptic_desc">Wibruj przy zbliżaniu się pojazdów i zmianie poziomu zagrożenia</string>
 
@@ -99,6 +103,8 @@
     <string name="radar_light_mode_peloton">Peleton</string>
     <string name="radar_light_auto_switch">Automatyczne światło treningowe</string>
     <string name="radar_light_auto_switch_desc">Włącza tylne światło na początku treningu i wyłącza na końcu</string>
+    <string name="radar_smart_light_automation">Inteligentna automatyzacja oświetlenia</string>
+    <string name="radar_smart_light_automation_desc">Dostosuj światło do dnia, tuneli, zmierzchu i ruchu drogowego</string>
     <string name="radar_light_sheet_title">Tylne światło radaru</string>
     <string name="radar_light_stvzo_notice">Tryb StVZO (Miganie wyłączone)</string>
 
@@ -131,4 +137,43 @@
     <string name="radar_preview_slow">Powoli</string>
     <string name="radar_preview_fast">Szybkie zagrożenie</string>
     <string name="radar_preview_lane_change">Zmiana pasa</string>
+
+    <!-- Advanced Settings / Tuning Accordion Category (ATT-6702 / REQ-UI-512) -->
+    <string name="tuning_cat_cycling_radar">Radar rowerowy</string>
+
+    <!-- Post-Workout Traffic Analytics & Map Hotspots (ATT-5088 / REQ-RAD-005 / REQ-RAD-006) -->
+    <string name="radar_traffic_card_title">Podsumowanie ruchu radarowego</string>
+    <string name="radar_total_vehicles">Wyprzedzające pojazdy</string>
+    <string name="radar_traffic_density_km">Gęstość (poj./km)</string>
+    <string name="radar_traffic_density_hour">Gęstość (poj./h)</string>
+    <string name="radar_max_closing_speed">Maks. prędkość zbliżania</string>
+    <string name="radar_max_vehicle_speed">Maks. prędkość pojazdu</string>
+    <string name="radar_high_threat_passes">Wyprzedzania o wysokim ryzyku</string>
+    <string name="radar_marker_pass_title">Wyprzedzenie przez pojazd (%1$s km/h)</string>
+    <string name="radar_marker_high_threat_title">Wyprzedzenie o wysokim ryzyku (%1$s km/h)</string>
+
+    <!-- Podsumowanie ruchu i bliskich wyprzedzań radaru Strava/Udostępnianie (ATT-5122 / REQ-RAD-007) -->
+    <string name="radar_strava_summary_title">Podsumowanie ruchu Strava</string>
+    <string name="radar_strava_summary_desc">Dołącz liczbę wyprzedzających pojazdów i prędkości do opisu aktywności Strava</string>
+    <string name="radar_share_summary_title">Udostępnij podsumowanie ruchu</string>
+    <string name="radar_share_summary_desc">Dołącz liczbę pojazdów i prędkości do udostępnianego tekstu</string>
+    <string name="radar_summary_header">📡 Radar: %1$d wyprzedzających pojazdów (%2$s/km)</string>
+    <string name="radar_summary_close_passes">⚠️ %1$d niebezpiecznie bliskich wyprzedzań (&lt;1,5m, min %2$sm)</string>
+    <string name="radar_summary_close_passes_singular">⚠️ 1 niebezpiecznie bliskie wyprzedzanie (&lt;1,5m, min %1$sm)</string>
+    <string name="radar_summary_heavy_vehicles">🚛 %1$d pojazdów ciężarowych</string>
+    <string name="radar_summary_heavy_vehicles_singular">🚛 1 pojazd ciężarowy</string>
+    <string name="radar_summary_max_speed">🚀 Maks %1$s km/h (+%2$s km/h zbliżanie)</string>
+    <string name="radar_summary_max_speed_simple">🚀 Maks %1$s km/h</string>
+    <string name="radar_close_pass_threshold_title">Próg ostrzegania o bliskim wyprzedzaniu</string>
+    <string name="radar_close_pass_threshold_summary">Wyróżnia wyprzedzające pojazdy poniżej minimalnego bezpiecznego odstępu na mapie</string>
+    <string name="radar_close_pass_threshold_1_0m">1,0 m (3,3 ft - UK/US)</string>
+    <string name="radar_close_pass_threshold_1_5m">1,5 m (5,0 ft - Teren zabudowany)</string>
+    <string name="radar_close_pass_threshold_2_0m">2,0 m (6,6 ft - Teren niezabudowany)</string>
+    <string name="radar_marker_close_pass_title">⚠️ Bliskie wyprzedzanie (%1$sm) • %2$s • %3$s km/h</string>
+    <string name="radar_vehicle_size_light">Lekki pojazd</string>
+    <string name="radar_vehicle_size_car">Samochód</string>
+    <string name="radar_vehicle_size_truck">Pojazd ciężarowy (Ciężarówka/Autobus)</string>
+    <string name="radar_min_passing_distance">Min. odstęp boczny</string>
+    <string name="radar_close_pass_warning">⚠️ %1$d bliskich wyprzedzań (&lt;%2$sm)</string>
+    <string name="radar_heavy_vehicle_share">Pojazdy ciężarowe</string>
 </resources>

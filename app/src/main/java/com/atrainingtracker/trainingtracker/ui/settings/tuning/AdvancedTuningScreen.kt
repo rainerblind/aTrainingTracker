@@ -33,6 +33,7 @@ import androidx.compose.material.icons.filled.MonitorHeart
 import androidx.compose.material.icons.filled.Navigation
 import androidx.compose.material.icons.filled.RestartAlt
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Sensors
 import androidx.compose.material.icons.filled.TextFields
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -53,6 +54,7 @@ import com.atrainingtracker.trainingtracker.settings.TuningConfig
 import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore
 import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDefaults
 import com.atrainingtracker.trainingtracker.ui.components.core.AppDialogActions
+import com.atrainingtracker.trainingtracker.ui.settings.radar.RadarSettingsSection
 import com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.AftermathAnalysisSection
 import com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.AmoledBatterySaverSection
 import com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.ClusterTuningSection
@@ -106,6 +108,7 @@ fun AdvancedTuningScreen(
     var enableAerobicEfficiencyModel by remember { mutableStateOf(TuningPreferencesDefaults.DEFAULT_ENABLE_AEROBIC_EFFICIENCY_MODEL) }; var showAerobicEfficiencyInWorkoutSummary by remember { mutableStateOf(TuningPreferencesDefaults.DEFAULT_SHOW_AEROBIC_EFFICIENCY_IN_WORKOUT_SUMMARY) }
     var enableCriticalPowerModel by remember { mutableStateOf(TuningPreferencesDefaults.DEFAULT_ENABLE_CRITICAL_POWER_MODEL) }; var showCriticalPowerInWorkoutSummary by remember { mutableStateOf(TuningPreferencesDefaults.DEFAULT_SHOW_CRITICAL_POWER_IN_WORKOUT_SUMMARY) }
     var enableCardioPowerDynamics by remember { mutableStateOf(TuningPreferencesDefaults.DEFAULT_ENABLE_CARDIO_POWER_DYNAMICS) }; var showCardioPowerInWorkoutSummary by remember { mutableStateOf(TuningPreferencesDefaults.DEFAULT_SHOW_CARDIO_POWER_IN_WORKOUT_SUMMARY) }
+    var dfaA1ThresholdT1 by remember { mutableFloatStateOf(TuningPreferencesDefaults.DEFAULT_DFA_A1_THRESHOLD_T1) }; var dfaA1ThresholdT2 by remember { mutableFloatStateOf(TuningPreferencesDefaults.DEFAULT_DFA_A1_THRESHOLD_T2) }; var hrvArtifactGateThresholdPercent by remember { mutableFloatStateOf(TuningPreferencesDefaults.DEFAULT_HRV_ARTIFACT_GATE_THRESHOLD_PERCENT) }
     var sensorSearchPrefs by remember { mutableStateOf(SensorSearchPreferences.load(context)) }
 
     var workoutCardPrefs by remember { mutableStateOf(WorkoutCardSectionPreferences()) }; var isAftermathPrefsInitialized by remember { mutableStateOf(false) }
@@ -118,18 +121,9 @@ fun AdvancedTuningScreen(
         expandedSections = if (expandedSections.contains(section.name)) expandedSections - section.name else expandedSections + section.name
     }
 
-    LaunchedEffect(persistedWorkoutCardPrefs) {
-        val cardPrefs = persistedWorkoutCardPrefs
-        if (!isAftermathPrefsInitialized && cardPrefs != null) { workoutCardPrefs = cardPrefs; isAftermathPrefsInitialized = true }
-    }
-    LaunchedEffect(persistedWorkoutDetailPrefs) {
-        val detailPrefs = persistedWorkoutDetailPrefs
-        if (!isDetailPrefsInitialized && detailPrefs != null) { workoutDetailPrefs = detailPrefs; isDetailPrefsInitialized = true }
-    }
-    LaunchedEffect(persistedWorkoutSectionsOrder) {
-        val order = persistedWorkoutSectionsOrder
-        if (!isSectionsOrderInitialized && order != null) { workoutSectionsOrder = order; isSectionsOrderInitialized = true }
-    }
+    LaunchedEffect(persistedWorkoutCardPrefs) { persistedWorkoutCardPrefs?.let { if (!isAftermathPrefsInitialized) { workoutCardPrefs = it; isAftermathPrefsInitialized = true } } }
+    LaunchedEffect(persistedWorkoutDetailPrefs) { persistedWorkoutDetailPrefs?.let { if (!isDetailPrefsInitialized) { workoutDetailPrefs = it; isDetailPrefsInitialized = true } } }
+    LaunchedEffect(persistedWorkoutSectionsOrder) { persistedWorkoutSectionsOrder?.let { if (!isSectionsOrderInitialized) { workoutSectionsOrder = it; isSectionsOrderInitialized = true } } }
     LaunchedEffect(Unit) { tuningDataStore.purgeLegacyMapCameraPreferences() }
 
     fun applyConfig(config: TuningConfig) {
@@ -153,8 +147,15 @@ fun AdvancedTuningScreen(
         enableAerobicEfficiencyModel = config.enableAerobicEfficiencyModel; showAerobicEfficiencyInWorkoutSummary = config.showAerobicEfficiencyInWorkoutSummary
         enableCriticalPowerModel = config.enableCriticalPowerModel; showCriticalPowerInWorkoutSummary = config.showCriticalPowerInWorkoutSummary
         enableCardioPowerDynamics = config.enableCardioPowerDynamics; showCardioPowerInWorkoutSummary = config.showCardioPowerInWorkoutSummary
+        dfaA1ThresholdT1 = config.dfaA1ThresholdT1; dfaA1ThresholdT2 = config.dfaA1ThresholdT2; hrvArtifactGateThresholdPercent = config.hrvArtifactGateThresholdPercent
     }
-    LaunchedEffect(persistedConfig) { applyConfig(persistedConfig) }
+    var isInitialized by rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect(persistedConfig) {
+        if (!isInitialized) {
+            applyConfig(persistedConfig)
+            isInitialized = true
+        }
+    }
 
     fun onResetToDefaults() {
         scope.launch {
@@ -165,7 +166,7 @@ fun AdvancedTuningScreen(
             SensorSearchPreferences.reset(context); sensorSearchPrefs = SensorSearchPreferences()
             applyConfig(TuningConfig())
             onSettingsChanged?.invoke()
-            Toast.makeText(context, context.getString(R.string.reset_to_defaults_success), Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, R.string.reset_to_defaults_success, Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -190,7 +191,9 @@ fun AdvancedTuningScreen(
             enableCogganPowerMetrics = enableCogganPowerMetrics, showCogganPowerInWorkoutSummary = showCogganPowerInWorkoutSummary, enablePmcModel = enablePmcModel,
             enableAerobicEfficiencyModel = enableAerobicEfficiencyModel, showAerobicEfficiencyInWorkoutSummary = showAerobicEfficiencyInWorkoutSummary,
             enableCriticalPowerModel = enableCriticalPowerModel, showCriticalPowerInWorkoutSummary = showCriticalPowerInWorkoutSummary,
-            enableCardioPowerDynamics = enableCardioPowerDynamics, showCardioPowerInWorkoutSummary = showCardioPowerInWorkoutSummary
+            enableCardioPowerDynamics = enableCardioPowerDynamics, showCardioPowerInWorkoutSummary = showCardioPowerInWorkoutSummary,
+            dfaA1ThresholdT1 = dfaA1ThresholdT1, dfaA1ThresholdT2 = dfaA1ThresholdT2,
+            hrvArtifactGateThresholdPercent = hrvArtifactGateThresholdPercent
         )
         scope.launch {
             tuningDataStore.saveTuningConfig(newConfig)
@@ -205,14 +208,10 @@ fun AdvancedTuningScreen(
             TopAppBar(
                 title = { Text(text = stringResource(R.string.advanced_tuning_title)) },
                 navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.cancel))
-                    }
+                    IconButton(onClick = onNavigateBack) { Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.cancel)) }
                 },
                 actions = {
-                    IconButton(onClick = { onResetToDefaults() }) {
-                        Icon(imageVector = Icons.Default.RestartAlt, contentDescription = stringResource(R.string.reset_to_defaults))
-                    }
+                    IconButton(onClick = { onResetToDefaults() }) { Icon(imageVector = Icons.Default.RestartAlt, contentDescription = stringResource(R.string.reset_to_defaults)) }
                 }
             )
         },
@@ -304,19 +303,34 @@ fun AdvancedTuningScreen(
                 isExpanded = isSectionExpanded(TuningSection.SENSORS_GPS), onToggle = { toggleSection(TuningSection.SENSORS_GPS) }
             ) {
                 SensorsGpsFilterSection(
-                    gpsAccuracy = gpsAccuracy,
-                    onGpsAccuracyChange = { gpsAccuracy = it },
-                    altitudeWindowSec = altitudeWindowSec,
-                    onAltitudeWindowChange = { altitudeWindowSec = it },
-                    slopeMinSpeed = slopeMinSpeed,
-                    onSlopeMinSpeedChange = { slopeMinSpeed = it }
+                    gpsAccuracy = gpsAccuracy, onGpsAccuracyChange = { gpsAccuracy = it },
+                    altitudeWindowSec = altitudeWindowSec, onAltitudeWindowChange = { altitudeWindowSec = it },
+                    slopeMinSpeed = slopeMinSpeed, onSlopeMinSpeedChange = { slopeMinSpeed = it }
                 )
+            }
+
+            // Section 6: Fahrrad-Radar & Simulator (REQ-UI-512, ATT-6702)
+            val isRadarSimRunning by com.atrainingtracker.banalservice.devices.radar.RadarTrafficSimulator.isSimulatingFlow.collectAsState()
+            val activeRadarScenario = com.atrainingtracker.banalservice.devices.radar.RadarTrafficSimulator.activeScenario
+            TuningAccordionSection(
+                icon = Icons.Default.Sensors, title = stringResource(R.string.tuning_cat_cycling_radar),
+                subtitle = TuningSubtitleFormatter.formatCyclingRadarSubtitle(
+                    edgeSide = persistedConfig.radarEdgeSide,
+                    alertMode = persistedConfig.radarAudioAlertMode,
+                    lightMode = persistedConfig.radarLightDefaultMode,
+                    isRunning = isRadarSimRunning,
+                    scenario = activeRadarScenario,
+                    context = context
+                ),
+                isExpanded = isSectionExpanded(TuningSection.CYCLING_RADAR), onToggle = { toggleSection(TuningSection.CYCLING_RADAR) }
+            ) {
+                RadarSettingsSection(tuningDataStore = tuningDataStore)
             }
 
             // Block 3: Analyse & Modelle (ATT-5670 / REQ-UI-463)
             TuningGroupSubheader(R.string.tuning_group_analysis_models)
 
-            // Section 6: Workout-Masken & Detailkarten
+            // Section 7: Workout-Masken & Detailkarten
             TuningAccordionSection(
                 icon = Icons.AutoMirrored.Filled.ViewList, title = stringResource(R.string.tuning_cat_workout_masks_cards),
                 subtitle = TuningSubtitleFormatter.formatWorkoutMatrixSubtitle(workoutCardPrefs, workoutDetailPrefs, context),
@@ -329,7 +343,7 @@ fun AdvancedTuningScreen(
                 )
             }
 
-            // Section 7: Aftermath & Analyse
+            // Section 8: Aftermath & Analyse
             TuningAccordionSection(
                 icon = Icons.AutoMirrored.Filled.ShowChart, title = stringResource(R.string.tuning_cat_aftermath),
                 subtitle = TuningSubtitleFormatter.formatAftermathSubtitle(elevationXAxisDomain, telemetryXAxisDomain, context, elevationSmoothingSigmaMeters),
@@ -344,11 +358,11 @@ fun AdvancedTuningScreen(
                 )
             }
 
-            // Section 8: Physiologie & Trainingsmodelle (REQ-UI-403)
+            // Section 9: Physiologie & Trainingsmodelle (REQ-UI-403)
             TuningAccordionSection(
                 icon = Icons.Default.MonitorHeart, title = stringResource(R.string.tuning_cat_physiology_models),
                 subtitle = TuningSubtitleFormatter.formatPhysiologyModelsSubtitle(
-                    enableCogganPowerMetrics, enablePmcModel, enableAerobicEfficiencyModel, enableCriticalPowerModel, context
+                    enableCogganPowerMetrics, enablePmcModel, enableAerobicEfficiencyModel, enableCriticalPowerModel, enableCardioPowerDynamics, context
                 ),
                 isExpanded = isSectionExpanded(TuningSection.PHYSIOLOGY_MODELS), onToggle = { toggleSection(TuningSection.PHYSIOLOGY_MODELS) }
             ) {
@@ -361,11 +375,13 @@ fun AdvancedTuningScreen(
                     enableCriticalPowerModel = enableCriticalPowerModel, onEnableCriticalPowerModelChange = { enableCriticalPowerModel = it },
                     showCriticalPowerInWorkoutSummary = showCriticalPowerInWorkoutSummary, onShowCriticalPowerInWorkoutSummaryChange = { showCriticalPowerInWorkoutSummary = it },
                     enableCardioPowerDynamics = enableCardioPowerDynamics, onEnableCardioPowerDynamicsChange = { enableCardioPowerDynamics = it },
-                    showCardioPowerInWorkoutSummary = showCardioPowerInWorkoutSummary, onShowCardioPowerInWorkoutSummaryChange = { showCardioPowerInWorkoutSummary = it }
+                    showCardioPowerInWorkoutSummary = showCardioPowerInWorkoutSummary, onShowCardioPowerInWorkoutSummaryChange = { showCardioPowerInWorkoutSummary = it },
+                    dfaA1ThresholdT1 = dfaA1ThresholdT1, onDfaA1ThresholdT1Change = { dfaA1ThresholdT1 = it }, dfaA1ThresholdT2 = dfaA1ThresholdT2, onDfaA1ThresholdT2Change = { dfaA1ThresholdT2 = it },
+                    hrvArtifactGateThresholdPercent = hrvArtifactGateThresholdPercent, onHrvArtifactGateThresholdPercentChange = { hrvArtifactGateThresholdPercent = it }
                 )
             }
 
-            // Section 9: Routen- & Workout-Clustering
+            // Section 10: Routen- & Workout-Clustering
             val isImperial = TrainingApplication.getUnit() == MyUnits.IMPERIAL
             TuningAccordionSection(
                 icon = Icons.Default.Hub, title = stringResource(R.string.tuning_cat_route_clustering),

@@ -18,25 +18,19 @@
 
 package com.atrainingtracker.trainingtracker.exporter.uploader
 
-import android.content.ContentValues
 import android.content.Context
-import android.database.Cursor
 import android.util.Log
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.util.safeEnumValueOfOrNull
-import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager
 import com.atrainingtracker.trainingtracker.TrainingApplication
-import com.atrainingtracker.trainingtracker.database.EquipmentDbHelper
-import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
 import com.atrainingtracker.trainingtracker.repositories.EquipmentRepository
 import com.atrainingtracker.trainingtracker.repositories.SportTypesRepository
+import com.atrainingtracker.trainingtracker.ui.aftermath.RadarTrafficSummaryFormatter
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
 import com.atrainingtracker.trainingtracker.ui.components.export.ExportStatusRepository
 import com.atrainingtracker.trainingtracker.exporter.BaseExporter
 import com.atrainingtracker.trainingtracker.exporter.ExportInfo
-import com.atrainingtracker.trainingtracker.exporter.db.StravaUploadDbHelper
 import com.atrainingtracker.trainingtracker.onlinecommunities.strava.StravaHelper
-import com.atrainingtracker.trainingtracker.segments.SegmentsDatabaseManager
 import com.atrainingtracker.trainingtracker.segments.SegmentsRepository
 import com.atrainingtracker.trainingtracker.ui.aftermath.StravaActivityParser
 import okhttp3.FormBody
@@ -423,46 +417,28 @@ open class StravaUploader @JvmOverloads constructor(context: Context, internal v
             return ExportResult(true, false, "Update skipped: No Activity ID")  // no retry
         }
 
-        // Get Summary from DB
-        val dbManager = WorkoutRepository.getInstance(mContext).workoutSummariesDatabaseManager
-        val db = dbManager.database
-        val cursor = db.query(
-            WorkoutSummariesDatabaseManager.WorkoutSummaries.TABLE, null,
-            "${WorkoutSummariesDatabaseManager.WorkoutSummaries.FILE_BASE_NAME}=?",
-            arrayOf(exportInfo.fileBaseName), null, null, null
-        )
-
-        if (!cursor.moveToFirst()) {
+        // Get Summary from WorkoutRepository (REQ-DAT-042.3)
+        val summaryData = WorkoutRepository.getInstance(mContext).getWorkoutSummaryUpdateData(exportInfo.fileBaseName)
+        if (summaryData == null) {
             Log.w(TAG, "doUpdate failed: Could not find workout summary for ${exportInfo.fileBaseName}")
-            cursor.close()
             return ExportResult(false, false, "Could not find workout summary")  // not retry
         }
 
-        val sportId = cursor.getLong(cursor.getColumnIndexOrThrow(WorkoutSummariesDatabaseManager.WorkoutSummaries.SPORT_ID))
+        val sportId = summaryData.sportId
         val sportName = SportTypesRepository.getInstance(mContext).getStravaName(sportId)
         
         if (sportName == null) {
             Log.i(TAG, "doUpdate skipped: Sport mapping set to 'No upload' (sportId=$sportId)")
-            cursor.close()
             return ExportResult(true, false, "Update skipped: Sport mapping set to 'No upload'")
         }
 
-        val name = myGetStringFromCursor(cursor, WorkoutSummariesDatabaseManager.WorkoutSummaries.WORKOUT_NAME)
-        val description = myGetStringFromCursor(cursor, WorkoutSummariesDatabaseManager.WorkoutSummaries.DESCRIPTION)
-        val trainer = myGetBooleanFromCursor(cursor, WorkoutSummariesDatabaseManager.WorkoutSummaries.TRAINER)
-        val commute = myGetBooleanFromCursor(cursor, WorkoutSummariesDatabaseManager.WorkoutSummaries.COMMUTE)
-        val race = myGetBooleanFromCursor(cursor, WorkoutSummariesDatabaseManager.WorkoutSummaries.RACE)
-        val bSportString = myGetStringFromCursor(cursor, WorkoutSummariesDatabaseManager.WorkoutSummaries.B_SPORT)
-        val bSportType = safeEnumValueOfOrNull<BSportType>(bSportString, TAG)
-            ?: SportTypesRepository.getInstance(mContext).getBSportType(sportId)
-
-        val eqIndex = cursor.getColumnIndex(WorkoutSummariesDatabaseManager.WorkoutSummaries.EQUIPMENT_ID)
-        val gearId: String? = if (!cursor.isNull(eqIndex)) {
-            val eqId = cursor.getLong(eqIndex)
-            getGearId(eqId)
-        } else null
-
-        cursor.close()
+        val name = summaryData.workoutName
+        val description = summaryData.description
+        val trainer = summaryData.trainer
+        val commute = summaryData.commute
+        val race = summaryData.race
+        val bSportType = summaryData.bSportType
+        val gearId: String? = summaryData.equipmentId?.let { getGearId(it) }
 
 
         // First of all, we have to update the sport type.  Thereby, query Strava several times to make sure that the sport type is correct.
@@ -504,16 +480,14 @@ open class StravaUploader @JvmOverloads constructor(context: Context, internal v
 
         // ATT-902 / ATT-1105 / ATT-1114: If duplicate, reconcile with Strava metadata:
         if (isDuplicate && activityJSON != null) {
-            val updateValues = ContentValues()
+            var updateName: String? = null
+            var updateEquipmentId: Long? = null
+            var updateSportId: Long? = null
 
             // 1. Name evaluation (ATT-902 / ATT-1105 / REQ-EXP-008):
-            // - If Strava title is a default auto-generated name (e.g. "Radfahrt am Morgen", "Lauf am Abend ⛅"):
-            //   Keep the local name generated by the app (cluster name or TCX name); do not overwrite.
-            // - If Strava title is a custom name (not a Strava default):
-            //   Enrich local database with the custom Strava title.
             val stravaName = activityJSON.optString(NAME)
             if (!stravaName.isNullOrBlank() && !isDefaultStravaName(stravaName)) {
-                updateValues.put(WorkoutSummariesDatabaseManager.WorkoutSummaries.WORKOUT_NAME, stravaName)
+                updateName = stravaName
                 if (DEBUG) Log.i(TAG, "Enriched local workout name from custom Strava title: '$stravaName'")
             } else if (isDefaultStravaName(stravaName)) {
                 if (DEBUG) Log.i(TAG, "Preserving local app workout name because Strava title is default: '$stravaName'")
@@ -546,7 +520,7 @@ open class StravaUploader @JvmOverloads constructor(context: Context, internal v
                     }
                 }
                 if (localEquipmentId > 0) {
-                    updateValues.put(WorkoutSummariesDatabaseManager.WorkoutSummaries.EQUIPMENT_ID, localEquipmentId)
+                    updateEquipmentId = localEquipmentId
                     if (DEBUG) Log.i(TAG, "Enriched local workout equipmentId: $localEquipmentId from Strava gear: $stravaGearId")
                 }
             }
@@ -558,19 +532,17 @@ open class StravaUploader @JvmOverloads constructor(context: Context, internal v
                 val sportTypeDb = SportTypesRepository.getInstance(mContext)
                 val localSportId = sportTypeDb.getSportTypeIdFromStravaName(stravaSportType)
                 if (localSportId > 0) {
-                    updateValues.put(WorkoutSummariesDatabaseManager.WorkoutSummaries.SPORT_ID, localSportId)
+                    updateSportId = localSportId
                     if (DEBUG) Log.i(TAG, "Enriched local workout sportId: $localSportId from Strava sportType: $stravaSportType")
                 }
             }
 
-            if (updateValues.size() > 0) {
-                db.update(
-                    WorkoutSummariesDatabaseManager.WorkoutSummaries.TABLE,
-                    updateValues,
-                    "${WorkoutSummariesDatabaseManager.WorkoutSummaries.FILE_BASE_NAME}=?",
-                    arrayOf(exportInfo.fileBaseName)
-                )
-            }
+            WorkoutRepository.getInstance(mContext).enrichWorkoutFromStrava(
+                exportInfo.fileBaseName,
+                updateName,
+                updateEquipmentId,
+                updateSportId
+            )
         }
 
         // Now, that we are pretty sure that the sport type is correct, we can continue to update all other fields.
@@ -586,8 +558,22 @@ open class StravaUploader @JvmOverloads constructor(context: Context, internal v
         if (!isDuplicate && !gearId.isNullOrEmpty()) {
             formBuilder.add(GEAR_ID, gearId)
         }
-        if (!description.isNullOrEmpty()) {
-            formBuilder.add(DESCRIPTION, description)
+        var finalDescription = description
+        if (TrainingApplication.uploadStravaRadarSummary()) {
+            val radarSummary = WorkoutRepository.getInstance(mContext).getRadarTrafficSummary(exportInfo.fileBaseName)
+            val formattedRadar = RadarTrafficSummaryFormatter.format(radarSummary, mContext)
+            if (!formattedRadar.isNullOrBlank()) {
+                finalDescription = if (finalDescription.isNullOrBlank()) {
+                    formattedRadar
+                } else if (!finalDescription.contains("📡 Radar:")) {
+                    "$finalDescription\n\n$formattedRadar"
+                } else {
+                    finalDescription
+                }
+            }
+        }
+        if (!finalDescription.isNullOrEmpty()) {
+            formBuilder.add(DESCRIPTION, finalDescription)
         }
         formBuilder.add(TRAINER, trainer.toString())
         formBuilder.add(COMMUTE, commute.toString())
@@ -743,61 +729,13 @@ open class StravaUploader @JvmOverloads constructor(context: Context, internal v
     )
 
     internal open fun getWorkoutMetadataForDuplicateCheck(fileBaseName: String): WorkoutDuplicateCheckMetadata {
-        val dbManager = WorkoutRepository.getInstance(mContext).workoutSummariesDatabaseManager
-        return try {
-            val projection = arrayOf(
-                WorkoutSummariesDatabaseManager.WorkoutSummaries.TIME_START,
-                WorkoutSummariesDatabaseManager.WorkoutSummaries.B_SPORT,
-                WorkoutSummariesDatabaseManager.WorkoutSummaries.SPORT_ID,
-                WorkoutSummariesDatabaseManager.WorkoutSummaries.TIME_TOTAL_s,
-                WorkoutSummariesDatabaseManager.WorkoutSummaries.TIME_ACTIVE_s
-            )
-            val cursor = dbManager.database.query(
-                WorkoutSummariesDatabaseManager.WorkoutSummaries.TABLE,
-                projection,
-                "${WorkoutSummariesDatabaseManager.WorkoutSummaries.FILE_BASE_NAME}=?",
-                arrayOf(fileBaseName),
-                null, null, null
-            )
-            var timeStartStr: String? = null
-            var bSportType: BSportType? = null
-            var durationSeconds: Long? = null
-
-            cursor.use {
-                if (it.moveToFirst()) {
-                    val startIdx = it.getColumnIndex(WorkoutSummariesDatabaseManager.WorkoutSummaries.TIME_START)
-                    if (startIdx != -1 && !it.isNull(startIdx)) {
-                        timeStartStr = it.getString(startIdx)
-                    }
-
-                    val sportIdx = it.getColumnIndex(WorkoutSummariesDatabaseManager.WorkoutSummaries.B_SPORT)
-                    val sportStr = if (sportIdx != -1 && !it.isNull(sportIdx)) it.getString(sportIdx) else null
-                    val sportIdIdx = it.getColumnIndex(WorkoutSummariesDatabaseManager.WorkoutSummaries.SPORT_ID)
-                    val sportId = if (sportIdIdx != -1 && !it.isNull(sportIdIdx)) it.getLong(sportIdIdx) else null
-
-                    bSportType = safeEnumValueOfOrNull<BSportType>(sportStr, TAG)
-                        ?: if (sportId != null) SportTypesRepository.getInstance(mContext).getBSportType(sportId) else null
-
-                    val totalTimeIdx = it.getColumnIndex(WorkoutSummariesDatabaseManager.WorkoutSummaries.TIME_TOTAL_s)
-                    val activeTimeIdx = it.getColumnIndex(WorkoutSummariesDatabaseManager.WorkoutSummaries.TIME_ACTIVE_s)
-                    val totalTime = if (totalTimeIdx != -1 && !it.isNull(totalTimeIdx)) it.getLong(totalTimeIdx) else null
-                    val activeTime = if (activeTimeIdx != -1 && !it.isNull(activeTimeIdx)) it.getLong(activeTimeIdx) else null
-
-                    durationSeconds = when {
-                        totalTime != null && totalTime > 0L -> totalTime
-                        activeTime != null && activeTime > 0L -> activeTime
-                        else -> null
-                    }
-                }
-            }
-
-            val startEpoch = parseTimeToEpochSeconds(timeStartStr ?: fileBaseName)
-            WorkoutDuplicateCheckMetadata(startEpoch, bSportType, durationSeconds)
-        } catch (e: Exception) {
-            Log.w(TAG, "Failed to query workout metadata for duplicate check for $fileBaseName", e)
-            val startEpoch = parseTimeToEpochSeconds(fileBaseName)
-            WorkoutDuplicateCheckMetadata(startEpoch, null, null)
-        }
+        val meta = WorkoutRepository.getInstance(mContext).getWorkoutDuplicateCheckMetadata(fileBaseName)
+        val startEpoch = meta.startEpochSeconds ?: parseTimeToEpochSeconds(meta.timeStartStr ?: fileBaseName)
+        return WorkoutDuplicateCheckMetadata(
+            startEpochSeconds = startEpoch,
+            bSportType = meta.bSportType,
+            durationSeconds = meta.durationSeconds
+        )
     }
 
     internal open fun getWorkoutStartEpochSeconds(fileBaseName: String): Long? {
@@ -949,21 +887,9 @@ open class StravaUploader @JvmOverloads constructor(context: Context, internal v
         return closestActivity
     }
 
-    // Helper to replace "myGetStringFromCursor"
-    override fun myGetStringFromCursor(cursor: Cursor, columnName: String): String? {
-        val index = cursor.getColumnIndex(columnName)
-        return if (index != -1 && !cursor.isNull(index)) cursor.getString(index) else null
-    }
-
-    // Helper to replace "myGetBooleanFromCursor"
-    override fun myGetBooleanFromCursor(cursor: Cursor, columnName: String): Boolean {
-        val index = cursor.getColumnIndex(columnName)
-        return if (index != -1 && !cursor.isNull(index)) cursor.getInt(index) == 1 else false
-    }
-
     /**
      * Inspects segment efforts in Strava activity JSON feedback and updates personal best (PR)
-     * times in [SegmentsDatabaseManager] and [SegmentsRepository] for any achieved PR or KOM.
+     * times in [SegmentsRepository] for any achieved PR or KOM.
      *
      * @param activityJson The detailed activity JSON returned by Strava.
      */

@@ -30,6 +30,7 @@
     <item name="drawer_strava" type="id" />
     <item name="drawer_dropbox" type="id" />
     <item name="drawer_google_drive" type="id" />
+    <item name="drawer_health_connect" type="id" />
     <item name="drawer_export" type="id" />
 
     <!-- Settings -->

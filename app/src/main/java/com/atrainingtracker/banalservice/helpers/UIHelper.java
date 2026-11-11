@@ -43,6 +43,8 @@ public class UIHelper {
                         return R.drawable.bike_pwr;
                     case RUN_SPEED:
                         return R.drawable.run_spd;
+                    case BIKE_RADAR:
+                        return R.drawable.bike_radar;
                     case ENVIRONMENT:
                         return R.drawable.temp;
                 }
@@ -58,6 +60,8 @@ public class UIHelper {
                         return R.drawable.bt_bike_speed_and_cadence;
                     case BIKE_POWER:
                         return R.drawable.bt_bike_pwr;
+                    case BIKE_RADAR:
+                        return R.drawable.bt_bike_radar;
                     case RUN_SPEED:
                         return R.drawable.bt_run;
                 }

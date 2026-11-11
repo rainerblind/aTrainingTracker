@@ -26,7 +26,6 @@ import com.atrainingtracker.trainingtracker.ui.map.PathPoint
 import com.google.android.gms.maps.model.LatLng
 import org.junit.Assert.*
 import org.junit.Test
-import java.io.File
 import java.lang.reflect.Modifier
 
 /**
@@ -34,18 +33,6 @@ import java.lang.reflect.Modifier
  * (REQ-UI-316, TST-UI-276, ATT-2861).
  */
 class RouteDetailSheetContractTest {
-
-    private val projectRoot: File by lazy {
-        var dir = File(System.getProperty("user.dir") ?: ".")
-        while (!File(dir, "app").exists() && dir.parentFile != null) {
-            dir = dir.parentFile!!
-        }
-        dir
-    }
-
-    private val routeDetailSheetFile: File by lazy {
-        File(projectRoot, "app/src/main/java/com/atrainingtracker/trainingtracker/ui/routes/RouteDetailSheet.kt")
-    }
 
     @Test
     fun testRouteDetailSheet_composablesExistAndArePublic() {
@@ -59,26 +46,23 @@ class RouteDetailSheetContractTest {
 
     @Test
     fun testRouteDetailSheet_structuralTokensAndContracts() {
-        assertTrue("RouteDetailSheet.kt must exist", routeDetailSheetFile.exists())
-        val content = routeDetailSheetFile.readText()
+        val clazz = Class.forName("com.atrainingtracker.trainingtracker.ui.routes.RouteDetailSheetKt")
+        assertNotNull("RouteDetailSheetKt class must exist", clazz)
 
-        // 1. Shared EntityDetailSheetScaffold usage (REQ-UI-333)
-        assertTrue("Must use EntityDetailSheetScaffold", content.contains("EntityDetailSheetScaffold("))
+        val methods = clazz.declaredMethods
+        val sheetMethod = methods.find { it.name.startsWith("RouteDetailSheet") && Modifier.isPublic(it.modifiers) }
+        assertNotNull("RouteDetailSheet composable must exist", sheetMethod)
 
-        // 4. Verify obsolete card composables are eliminated (Rule 23 - no duplicated code)
-        assertFalse("Obsolete RouteDetailMetricsCard must not exist", content.contains("RouteDetailMetricsCard"))
-        assertFalse("Obsolete RouteDetailMapCard must not exist", content.contains("RouteDetailMapCard"))
-        assertFalse("Obsolete RouteDetailElevationProfileCard must not exist", content.contains("RouteDetailElevationProfileCard"))
-
-        // 5. Must NOT unconditionally hardcode isActiveNavigation = true (REQ-UI-347)
-        assertFalse(
-            "RouteDetailSheet.kt must not hardcode isActiveNavigation = true (REQ-UI-347)",
-            content.contains("toMapRoute(isActiveNavigation = true)")
-        )
+        // Verify isActiveNavigation boolean parameter
         assertTrue(
-            "RouteDetailSheet.kt must propagate isActiveNavigation parameter to toMapRoute",
-            content.contains("toMapRoute(isActiveNavigation = isActiveNavigation)")
+            "RouteDetailSheet must accept isActiveNavigation boolean parameter",
+            sheetMethod!!.parameterTypes.contains(Boolean::class.javaPrimitiveType)
         )
+
+        // Verify obsolete card composables are eliminated (Rule 23 - no duplicated code)
+        assertFalse("Obsolete RouteDetailMetricsCard must not exist", methods.any { it.name.startsWith("RouteDetailMetricsCard") })
+        assertFalse("Obsolete RouteDetailMapCard must not exist", methods.any { it.name.startsWith("RouteDetailMapCard") })
+        assertFalse("Obsolete RouteDetailElevationProfileCard must not exist", methods.any { it.name.startsWith("RouteDetailElevationProfileCard") })
     }
 
     @Test

@@ -26,7 +26,21 @@ STAGE_MAP = {
     3: {"prefix": "[impl-plan]", "name": "Impl-Plan (Gate 3)"},
     4: {"prefix": "[implementation]", "name": "Implementation (Gate 4)"},
     5: {"prefix": "[test]", "name": "Test (Gate 5)"},
+    6: {"prefix": "[final review (agent)]", "name": "Final Review (Agent) (Gate 6)"},
 }
+
+FINAL_REVIEW_BOUNCE_RE = re.compile(
+    r"(?:\[FINAL REVIEW \(AGENT\)\s*[—\-]+\s*BOUNCE\s+(\d+)/3\]|Final Review \(Agent\)\s*BOUNCE\s*\(?(\d+)/3\)?)",
+    re.IGNORECASE,
+)
+FINAL_REVIEW_PASS_RE = re.compile(
+    r"(?:\[FINAL REVIEW \(AGENT\)\s*[—\-]+\s*PASS\]|Final Review \(Agent\)\s*PASS)",
+    re.IGNORECASE,
+)
+FINAL_REVIEW_ESCALATED_RE = re.compile(
+    r"(?:\[FINAL REVIEW \(AGENT\)\s*[—\-]+\s*ESCALATED|Final Review \(Agent\)\s*ESCALATED)",
+    re.IGNORECASE,
+)
 
 DEFAULT_METRICS_PATH = "docs/engineering/metrics/process_metrics.jsonl"
 
@@ -34,10 +48,29 @@ DEFAULT_METRICS_PATH = "docs/engineering/metrics/process_metrics.jsonl"
 def identify_gate_number(summary):
     """Determines Gate number (1..5) from subtask summary prefix."""
     s_lower = summary.lower()
-    for g, data in STAGE_MAP.items():
+    for g in range(1, 6):
+        data = STAGE_MAP[g]
         if data["prefix"] in s_lower:
             return g
     return None
+
+
+def parse_final_review_agent_verdicts_from_comments(comments):
+    """
+    REQ-PRO-058.4 / TST-PRO-058.4:
+    Parses Stage 6 ('Final Review (Agent)') verdicts from parent issue comments.
+    Returns list of verdict strings: ['PASS'], ['BOUNCE', 'PASS'], ['BOUNCE', 'BOUNCE', 'BOUNCE', 'ESCALATED'], etc.
+    """
+    verdicts = []
+    for c in (comments or []):
+        body = c.get("body", "")
+        if FINAL_REVIEW_BOUNCE_RE.search(body):
+            verdicts.append("BOUNCE")
+        elif FINAL_REVIEW_ESCALATED_RE.search(body):
+            verdicts.append("ESCALATED")
+        elif FINAL_REVIEW_PASS_RE.search(body):
+            verdicts.append("PASS")
+    return verdicts
 
 
 def parse_verdicts_from_comments(comments):
@@ -89,14 +122,14 @@ def parse_sprint_gate_metrics(parent_issues, sprint_info):
 
     # Gate statistics containers
     gate_data = {
-        g: {"total": 0, "passed_first_time": 0, "revisions": 0}
-        for g in range(1, 6)
+        g: {"total": 0, "passed_first_time": 0, "revisions": 0, "bounces": 0}
+        for g in range(1, 7)
     }
 
     for issue in parent_issues:
         fields = issue.get("fields", {})
         status_name = fields.get("status", {}).get("name", "").lower()
-        is_completed = status_name in ("erledigt", "closed", "done", "final review (human)", "final review")
+        is_completed = status_name in ("erledigt", "closed", "done", "final review (human)", "final review (agent)", "final review")
 
         if is_completed:
             completed_tickets += 1
@@ -117,6 +150,18 @@ def parse_sprint_gate_metrics(parent_issues, sprint_info):
             risk_counts[priority_name] += 1
         else:
             risk_counts["Medium"] += 1
+
+        # Inspect parent comments for Stage 6 ('Final Review (Agent)') verdicts
+        parent_comments = issue.get("comments", []) or fields.get("comment", {}).get("comments", [])
+        fr_verdicts = parse_final_review_agent_verdicts_from_comments(parent_comments)
+        if fr_verdicts:
+            gate_data[6]["total"] += 1
+            bounce_cnt = sum(1 for v in fr_verdicts if v in ("BOUNCE", "ESCALATED"))
+            gate_data[6]["bounces"] += bounce_cnt
+            if fr_verdicts[0] == "PASS":
+                gate_data[6]["passed_first_time"] += 1
+            else:
+                gate_data[6]["revisions"] += 1
 
         # Inspect subtasks
         subtasks = fields.get("subtasks", [])
@@ -143,9 +188,9 @@ def parse_sprint_gate_metrics(parent_issues, sprint_info):
             else:
                 gate_data[g_num]["revisions"] += 1
 
-    # 2. Compute FTPR and Swiss Cheese Layer Escape Rates (p1..p5)
-    total_evaluated_subtasks = sum(d["total"] for d in gate_data.values())
-    total_passed_first_time = sum(d["passed_first_time"] for d in gate_data.values())
+    # 2. Compute FTPR and Swiss Cheese Layer Escape Rates (p1..p6)
+    total_evaluated_subtasks = sum(gate_data[g]["total"] for g in range(1, 6))
+    total_passed_first_time = sum(gate_data[g]["passed_first_time"] for g in range(1, 6))
 
     overall_ftpr = (
         round((total_passed_first_time / total_evaluated_subtasks) * 100.0, 1)
@@ -172,10 +217,29 @@ def parse_sprint_gate_metrics(parent_issues, sprint_info):
             "escape_rate_p": escape_rate,
         }
 
-    # Cumulative Swiss Cheese escape probability: product of (p1 * p2 * p3 * p4 * p5)
-    # If a layer has 0 revisions in the sample, substitute a nominal baseline (e.g. 0.05) or keep actual
+    # Gate 6: Stage 6 ('Final Review (Agent)') Cold Carbon Review
+    tot6 = gate_data[6]["total"]
+    pft6 = gate_data[6]["passed_first_time"]
+    rev6 = gate_data[6]["revisions"]
+    bounces6 = gate_data[6]["bounces"]
+    ftpr6 = round((pft6 / tot6) * 100.0, 1) if tot6 > 0 else 100.0
+    escape_rate6 = round(1.0 - (ftpr6 / 100.0), 4)
+    gates_summary["gate_6"] = {
+        "name": STAGE_MAP[6]["name"],
+        "total_subtasks": tot6,
+        "total_tickets": tot6,
+        "passed_first_time": pft6,
+        "revisions": rev6,
+        "bounces": bounces6,
+        "ftpr_percent": ftpr6,
+        "escape_rate_p": escape_rate6,
+    }
+
+    # Cumulative Swiss Cheese escape probability: product of (p1 * p2 * p3 * p4 * p5 [* p6])
+    # If a layer has 0 revisions in the sample, substitute a nominal baseline (e.g. 0.02)
     cumulative_escape_prob = 1.0
-    for p in p_layers:
+    active_p_layers = list(p_layers) + ([escape_rate6] if tot6 > 0 else [])
+    for p in active_p_layers:
         effective_p = p if p > 0 else 0.02  # nominal minimum barrier leakage
         cumulative_escape_prob *= effective_p
     cumulative_escape_prob = float(f"{cumulative_escape_prob:.2e}")
@@ -208,6 +272,7 @@ def parse_sprint_gate_metrics(parent_issues, sprint_info):
                 "p3_impl_plan_escape": p_layers[2],
                 "p4_implementation_escape": p_layers[3],
                 "p5_test_verification_escape": p_layers[4],
+                "p6_final_review_agent_escape": escape_rate6,
                 "theoretical_cumulative_escape_prob": cumulative_escape_prob,
             },
             "human_acceptance_rate_percent": human_acceptance_rate,
@@ -367,18 +432,22 @@ def format_metrics_markdown(metrics, spc=None):
         "|| Gate / Stage || Sub-tasks || 1st-Time Pass || Revisions || FTPR % || Defect Escape Rate (p) ||",
     ]
 
-    for g in range(1, 6):
-        info = gates.get(f"gate_{g}", {})
+    for g in range(1, 7):
+        info = gates.get(f"gate_{g}")
+        if not info and g == 6:
+            continue
+        info = info or {}
         lines.append(
             f"| {info.get('name', f'Gate {g}')} | {info.get('total_subtasks', 0)} | "
             f"{info.get('passed_first_time', 0)} | {info.get('revisions', 0)} | "
             f"*{info.get('ftpr_percent', 100.0)}%* | {info.get('escape_rate_p', 0.0)} |"
         )
 
+    p6_str = f", p6={sc.get('p6_final_review_agent_escape')}" if "p6_final_review_agent_escape" in sc else ""
     lines.extend([
         "",
         "h3. 2. Empirical Swiss Cheese Multiplicative Defect Reduction (Reason Model)",
-        f"* *Empirical Escape Rates*: p1={sc.get('p1_analysis_escape')}, p2={sc.get('p2_req_test_spec_escape')}, p3={sc.get('p3_impl_plan_escape')}, p4={sc.get('p4_implementation_escape')}, p5={sc.get('p5_test_verification_escape')}",
+        f"* *Empirical Escape Rates*: p1={sc.get('p1_analysis_escape')}, p2={sc.get('p2_req_test_spec_escape')}, p3={sc.get('p3_impl_plan_escape')}, p4={sc.get('p4_implementation_escape')}, p5={sc.get('p5_test_verification_escape')}{p6_str}",
         f"* *Theoretical Cumulative Defect Escape Probability*: P(escaped defect) = {sc.get('theoretical_cumulative_escape_prob')}",
     ])
 

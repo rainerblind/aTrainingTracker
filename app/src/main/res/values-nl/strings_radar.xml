@@ -48,6 +48,8 @@
     <string name="radar_simulator_stop">Simulatie stoppen</string>
     <string name="radar_simulator_running">Simulatie actief</string>
     <string name="radar_simulator_idle">Simulatie gestopt</string>
+    <string name="radar_simulator_status">%1$s • %2$d doelen</string>
+    <string name="radar_simulator_scenario_label">Scenario</string>
     <string name="radar_scenario_single_car">Enkele auto</string>
     <string name="radar_scenario_single_car_desc">Enkele inhalende auto met 12 m/s</string>
     <string name="radar_scenario_convoy">Konvooi</string>
@@ -72,6 +74,8 @@
     <string name="radar_overlay_disconnected">Radar verbroken</string>
     <string name="radar_overlay_connecting">Radar verbinden</string>
     <string name="radar_overlay_clear">Weg vrij</string>
+    <string name="radar_overlay_threats_format">%1$d gevaren</string>
+    <string name="radar_overlay_threats_fast_format">%1$d gevaren (hoge snelheid)</string>
 
     <!-- Radar Audio & Haptic Alerts (ATT-5086 / REQ-TRK-063) -->
     <string name="radar_alerts_settings_title">Radarwaarschuwingen en audio</string>
@@ -85,7 +89,7 @@
     <string name="radar_alert_speaker_boost_desc">Verhoogt stil luidsprekervolume tijdelijk tijdens waarschuwingen</string>
     <string name="radar_alert_route_title">Audio-uitvoer</string>
     <string name="radar_alert_route_default">Systeem / Hoofdtelefoon</string>
-    <string name="radar_alert_route_speaker">Telefoonluidspreker forceren</string>
+    <string name="radar_alert_route_speaker">Telefoonluidspreker</string>
     <string name="radar_alert_haptic_title">Haptische trilling</string>
     <string name="radar_alert_haptic_desc">Trillen bij naderende voertuigen en dreigingsovergangen</string>
 
@@ -99,6 +103,8 @@
     <string name="radar_light_mode_peloton">Peloton</string>
     <string name="radar_light_auto_switch">Automatische trainingsverlichting</string>
     <string name="radar_light_auto_switch_desc">Schakelt achterlicht in bij start training en uit bij einde</string>
+    <string name="radar_smart_light_automation">Slimme lichtautomatisering</string>
+    <string name="radar_smart_light_automation_desc">Pas licht aan bij daglicht, tunnels, schemering en verkeer</string>
     <string name="radar_light_sheet_title">Radar-achterlicht</string>
     <string name="radar_light_stvzo_notice">StVZO-modus (Knipperen uitgeschakeld)</string>
 
@@ -131,4 +137,43 @@
     <string name="radar_preview_slow">Langzaam</string>
     <string name="radar_preview_fast">Snelle dreiging</string>
     <string name="radar_preview_lane_change">Rijstrookwissel</string>
+
+    <!-- Advanced Settings / Tuning Accordion Category (ATT-6702 / REQ-UI-512) -->
+    <string name="tuning_cat_cycling_radar">Fietsradar</string>
+
+    <!-- Post-Workout Traffic Analytics & Map Hotspots (ATT-5088 / REQ-RAD-005 / REQ-RAD-006) -->
+    <string name="radar_traffic_card_title">Radar verkeersoverzicht</string>
+    <string name="radar_total_vehicles">Inhalende voertuigen</string>
+    <string name="radar_traffic_density_km">Dichtheid (vtg/km)</string>
+    <string name="radar_traffic_density_hour">Dichtheid (vtg/u)</string>
+    <string name="radar_max_closing_speed">Max. naderingssnelheid</string>
+    <string name="radar_max_vehicle_speed">Max. voertuigsnelheid</string>
+    <string name="radar_high_threat_passes">Inhalingen met hoog risico</string>
+    <string name="radar_marker_pass_title">Inhalend voertuig (%1$s km/h)</string>
+    <string name="radar_marker_high_threat_title">Inhaling met hoog risico (%1$s km/h)</string>
+
+    <!-- Radarverkeer en dichtbij-inhaal samenvatting Strava/Delen (ATT-5122 / REQ-RAD-007) -->
+    <string name="radar_strava_summary_title">Strava-verkeersoverzicht</string>
+    <string name="radar_strava_summary_desc">Voertuiginhaalacties en snelheidssamenvatting toevoegen aan Strava-activiteitsbeschrijving</string>
+    <string name="radar_share_summary_title">Verkeersoverzicht delen</string>
+    <string name="radar_share_summary_desc">Aantal passerende voertuigen en snelheden toevoegen aan gedeelde tekst</string>
+    <string name="radar_summary_header">📡 Radar: %1$d voertuigen gepasseerd (%2$s/km)</string>
+    <string name="radar_summary_close_passes">⚠️ %1$d krappe inhaalacties (&lt;1,5m, min %2$sm)</string>
+    <string name="radar_summary_close_passes_singular">⚠️ 1 krappe inhaalactie (&lt;1,5m, min %1$sm)</string>
+    <string name="radar_summary_heavy_vehicles">🚛 %1$d zware voertuigen</string>
+    <string name="radar_summary_heavy_vehicles_singular">🚛 1 zwaar voertuig</string>
+    <string name="radar_summary_max_speed">🚀 Max %1$s km/u (+%2$s km/u nadering)</string>
+    <string name="radar_summary_max_speed_simple">🚀 Max %1$s km/u</string>
+    <string name="radar_close_pass_threshold_title">Waarschuwingsdrempel inhaaldrempel</string>
+    <string name="radar_close_pass_threshold_summary">Markeert inhalende voertuigen onder de minimale veiligheidsafstand op de kaart</string>
+    <string name="radar_close_pass_threshold_1_0m">1,0 m (3,3 ft - UK/US)</string>
+    <string name="radar_close_pass_threshold_1_5m">1,5 m (5,0 ft - Binnen bebouwde kom)</string>
+    <string name="radar_close_pass_threshold_2_0m">2,0 m (6,6 ft - Buiten bebouwde kom)</string>
+    <string name="radar_marker_close_pass_title">⚠️ Krappe inhaalactie (%1$sm) • %2$s • %3$s km/u</string>
+    <string name="radar_vehicle_size_light">Licht voertuig</string>
+    <string name="radar_vehicle_size_car">Auto</string>
+    <string name="radar_vehicle_size_truck">Vrachtwagen / Bus</string>
+    <string name="radar_min_passing_distance">Min. inhaaldistancie</string>
+    <string name="radar_close_pass_warning">⚠️ %1$d krappe inhaalacties (&lt;%2$sm)</string>
+    <string name="radar_heavy_vehicle_share">Zwaar verkeer</string>
 </resources>

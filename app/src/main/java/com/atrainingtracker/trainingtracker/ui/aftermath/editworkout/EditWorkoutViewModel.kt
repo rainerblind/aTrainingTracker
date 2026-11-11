@@ -26,7 +26,7 @@ import androidx.lifecycle.*
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager
-import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager.SimpleSportTypeInfo
+import com.atrainingtracker.trainingtracker.repositories.SimpleSportTypeInfo
 import com.atrainingtracker.trainingtracker.database.EquipmentAndSportTypeDiscoveryManager
 import com.atrainingtracker.trainingtracker.database.EquipmentDbHelper.EquipmentData
 import com.atrainingtracker.trainingtracker.database.WorkoutCluster
@@ -52,7 +52,6 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
     private val repository = WorkoutRepository.getInstance(application)
     private val equipmentRepository = EquipmentRepository.getInstance(application)
     private val sportTypesRepository = SportTypesRepository.getInstance(application)
-    private val sportTypeDatabaseManager = SportTypeDatabaseManager.getInstance(application)
     private val discoveryManager = EquipmentAndSportTypeDiscoveryManager.getInstance(application)
     private val prefManager = com.atrainingtracker.trainingtracker.MyPreferenceManager(application)
 
@@ -203,7 +202,7 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
         val newSportId = simpleSportTypeInfo?.id ?: -1
 
         val previousBSportType = currentBSportType
-        val newBSportType = sportTypeDatabaseManager.getBSportType(newSportId)
+        val newBSportType = sportTypesRepository.getBSportType(newSportId)
         currentBSportType = newBSportType
         suggestedSportTypeName = newSportName
 
@@ -235,7 +234,7 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
             targetEquipmentId = -1L
         }
 
-        val stravaSportName = sportTypeDatabaseManager.getStravaName(newSportId)
+        val stravaSportName = sportTypesRepository.getStravaName(newSportId)
 
         _workoutData.update { current ->
             current?.copy(
@@ -421,7 +420,7 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
                 // Tier 1 & 2: Dedicated hardware sensors (REQ-SET-030)
                 discoveryManager.getLinkedSportTypeIds(workout.id).isNotEmpty() -> {
                     val linkedSportIds = discoveryManager.getLinkedSportTypeIds(workout.id)
-                    linkedSportIds.mapNotNull { sportTypeDatabaseManager.getBSportType(it) }.toSet()
+                    linkedSportIds.mapNotNull { sportTypesRepository.getBSportType(it) }.toSet()
                 }
                 // User explicitly selected/changed the sport in the editor UI
                 userManuallyChangedSport && workout.bSportType != BSportType.UNKNOWN -> {
@@ -463,7 +462,7 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
             )
         }
         // Sync secondary UI states
-        suggestedSportTypeName = sportTypeDatabaseManager.getUIName(cluster.probableSportId)
+        suggestedSportTypeName = sportTypesRepository.getUIName(cluster.probableSportId)
         currentBSportType = cluster.bSportType
 
         // ATT-388: Persist the new cluster identity immediately
@@ -506,11 +505,11 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
     }
 
     fun getSportName(sportId: Long): String {
-        return sportTypeDatabaseManager.getUIName(sportId)
+        return sportTypesRepository.getUIName(sportId)
     }
 
     fun getBSportType(sportId: Long): BSportType {
-        return sportTypeDatabaseManager.getBSportType(sportId)
+        return sportTypesRepository.getBSportType(sportId)
     }
 }
 

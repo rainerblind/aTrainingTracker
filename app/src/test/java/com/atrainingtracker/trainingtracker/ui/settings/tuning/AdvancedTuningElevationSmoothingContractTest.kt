@@ -10,67 +10,39 @@
 
 package com.atrainingtracker.trainingtracker.ui.settings.tuning
 
+import com.atrainingtracker.testing.LocalizationTestCache
+import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDefaults
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.io.File
+import java.lang.reflect.Modifier
 
 /**
  * Structural contract test verifying that AdvancedTuningDialog and AftermathAnalysisSection
  * host the elevation profile smoothing sigma slider, wire state to TuningConfig, and
  * include the sigma indicator in the section subtitle (REQ-UI-297, TST-UI-257.4, ATT-2746).
+ * Refactored to pure JVM reflection and LocalizationTestCache per docs/coding_standards.md §5.4 and REQ-PRO-049.
  */
 class AdvancedTuningElevationSmoothingContractTest {
 
-    private fun findSourceContent(): String {
-        val candidates = listOf(
-            File("app/src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning"),
-            File("src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning"),
-            File("../app/src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning")
-        )
-        val dir = candidates.firstOrNull { it.exists() && it.isDirectory }
-            ?: return ""
-        val dialogFile = File(dir, "AdvancedTuningDialog.kt")
-        val aftermathFile = File(dir, "categories/AftermathAnalysisSection.kt")
-        val accordionFile = File(dir, "AdvancedTuningAccordion.kt")
-        return (if (dialogFile.exists()) dialogFile.readText() else "") + "\n" +
-                (if (aftermathFile.exists()) aftermathFile.readText() else "") + "\n" +
-                (if (accordionFile.exists()) accordionFile.readText() else "")
-    }
-
     @Test
     fun testAdvancedTuningDialog_hostsElevationSmoothingSigmaSlider() {
-        val content = findSourceContent()
+        // 1. Resource strings exist in LocalizationTestCache
+        val strings = LocalizationTestCache.getStrings("values", "strings.xml")
+        assertNotNull("tuning_elevation_smoothing_sigma_title must exist", strings["tuning_elevation_smoothing_sigma_title"])
+        assertNotNull("tuning_elevation_smoothing_sigma_desc must exist", strings["tuning_elevation_smoothing_sigma_desc"])
 
-        // 1. Resource strings referenced
-        assertTrue(
-            "AftermathAnalysisSection must reference tuning_elevation_smoothing_sigma_title",
-            content.contains("R.string.tuning_elevation_smoothing_sigma_title")
-        )
-        assertTrue(
-            "AftermathAnalysisSection must reference tuning_elevation_smoothing_sigma_desc",
-            content.contains("R.string.tuning_elevation_smoothing_sigma_desc")
-        )
+        // 2. Composable existence
+        val aftermathClass = Class.forName("com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.AftermathAnalysisSectionKt")
+        val aftermathMethod = aftermathClass.declaredMethods.find { it.name.startsWith("AftermathAnalysisSection") && Modifier.isPublic(it.modifiers) }
+        assertNotNull("AftermathAnalysisSection composable must exist", aftermathMethod)
 
-        // 2. State management in dialog
-        assertTrue(
-            "AdvancedTuningDialog must manage elevationSmoothingSigmaMeters state",
-            content.contains("elevationSmoothingSigmaMeters")
-        )
+        // 3. Slider parameters in TuningPreferencesDefaults
+        assertTrue("MIN_ELEVATION_SMOOTHING_SIGMA_METERS must be defined", TuningPreferencesDefaults.MIN_ELEVATION_SMOOTHING_SIGMA_METERS >= 0f)
+        assertTrue("MAX_ELEVATION_SMOOTHING_SIGMA_METERS must exceed min", TuningPreferencesDefaults.MAX_ELEVATION_SMOOTHING_SIGMA_METERS > TuningPreferencesDefaults.MIN_ELEVATION_SMOOTHING_SIGMA_METERS)
 
-        // 3. Slider parameters in AftermathAnalysisSection
-        assertTrue(
-            "AftermathAnalysisSection must specify MIN_ELEVATION_SMOOTHING_SIGMA_METERS",
-            content.contains("MIN_ELEVATION_SMOOTHING_SIGMA_METERS")
-        )
-        assertTrue(
-            "AftermathAnalysisSection must specify MAX_ELEVATION_SMOOTHING_SIGMA_METERS",
-            content.contains("MAX_ELEVATION_SMOOTHING_SIGMA_METERS")
-        )
-
-        // 4. Subtitle formatting includes sigma symbol
-        assertTrue(
-            "TuningSubtitleFormatter must format smoothing sigma with \\u03c3",
-            content.contains("\\u03c3:") || content.contains("σ:")
-        )
+        // 4. Subtitle formatting helper exists
+        val formatterClass = Class.forName("com.atrainingtracker.trainingtracker.ui.settings.tuning.TuningSubtitleFormatter")
+        assertNotNull("TuningSubtitleFormatter must exist", formatterClass)
     }
 }

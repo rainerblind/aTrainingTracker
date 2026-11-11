@@ -84,6 +84,7 @@ import com.atrainingtracker.trainingtracker.database.WorkoutPhotoManager
 import com.atrainingtracker.trainingtracker.database.WorkoutPhotoManager.TimeFilteredPhoto
 import com.atrainingtracker.trainingtracker.helpers.PhotoTrackOverlayComposer
 import com.atrainingtracker.trainingtracker.helpers.saveAndShare
+import com.atrainingtracker.trainingtracker.ui.aftermath.RadarTrafficSummaryFormatter
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
 import com.atrainingtracker.trainingtracker.ui.components.core.AppModalBottomSheet
 import kotlinx.coroutines.Dispatchers
@@ -312,7 +313,8 @@ fun WorkoutShareBottomSheet(
                         val bitmapToShare = composedBitmap ?: return@Button
                         scope.launch {
                             isSharing = true
-                            saveAndShare(context, bitmapToShare, "workout_photo_${workoutData.id}.png")
+                            val shareSummaryText = RadarTrafficSummaryFormatter.format(workoutData.radarTrafficSummary, context)
+                            saveAndShare(context, bitmapToShare, "workout_photo_${workoutData.id}.png", shareSummaryText)
                             isSharing = false
                             onDismissRequest()
                         }

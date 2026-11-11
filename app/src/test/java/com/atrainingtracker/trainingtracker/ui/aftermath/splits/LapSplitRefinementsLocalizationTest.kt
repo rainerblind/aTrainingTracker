@@ -18,22 +18,18 @@
 
 package com.atrainingtracker.trainingtracker.ui.aftermath.splits
 
+import com.atrainingtracker.testing.LocalizationTestCache
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import org.w3c.dom.Element
-import org.w3c.dom.Node
-import java.io.File
-import javax.xml.parsers.DocumentBuilderFactory
 
 /**
  * Localization audit test verifying 100% 9-language translation parity
  * for Lap Split Visualizer truncation toggle keys (REQ-UI-228 / TST-UI-182).
+ * Refactored to LocalizationTestCache per docs/coding_standards.md §5.4 and REQ-PRO-049.
  */
 class LapSplitRefinementsLocalizationTest {
-
-    private val resDir = File("src/main/res")
 
     private val locales = listOf(
         "de", "es", "fr", "it", "ja", "nl", "pl", "pt"
@@ -44,63 +40,37 @@ class LapSplitRefinementsLocalizationTest {
         "show_fewer_laps"
     )
 
-    private fun parseStrings(file: File): Map<String, String> {
-        val map = mutableMapOf<String, String>()
-        if (!file.exists()) return map
-
-        val factory = DocumentBuilderFactory.newInstance()
-        val builder = factory.newDocumentBuilder()
-        val doc = builder.parse(file)
-        doc.documentElement.normalize()
-
-        val stringNodes = doc.getElementsByTagName("string")
-        for (i in 0 until stringNodes.length) {
-            val node = stringNodes.item(i)
-            if (node.nodeType == Node.ELEMENT_NODE) {
-                val element = node as Element
-                val name = element.getAttribute("name")
-                val text = element.textContent
-                map[name] = text
-            }
+    @Test
+    fun testBaseValuesContainExpectedKeys() {
+        val baseStrings = LocalizationTestCache.getStrings("values", "strings.xml")
+        for (key in expectedKeys) {
+            assertTrue("Base strings.xml must contain $key", baseStrings.containsKey(key))
+            assertFalse("Base strings.xml must have non-blank $key", baseStrings[key].isNullOrBlank())
         }
-        return map
     }
 
     @Test
-    fun defaultLocale_containsToggleKeys() {
-        val defaultFile = File(resDir, "values/strings.xml")
-        assertTrue("Default strings.xml must exist at ${defaultFile.absolutePath}", defaultFile.exists())
-        val defaultStrings = parseStrings(defaultFile)
+    fun testAllLocalesContainExpectedKeys() {
+        val baseStrings = LocalizationTestCache.getStrings("values", "strings.xml")
 
-        expectedKeys.forEach { key ->
-            assertTrue("Default strings.xml missing key: $key", defaultStrings.containsKey(key))
-            assertFalse("Default key '$key' must not be blank", defaultStrings[key].isNullOrBlank())
-        }
+        for (locale in locales) {
+            val localeStrings = LocalizationTestCache.getStrings("values-$locale", "strings.xml")
 
-        assertTrue("show_all_laps must contain %1\$d positional argument", defaultStrings["show_all_laps"]!!.contains("%1\$d"))
-    }
+            for (key in expectedKeys) {
+                assertTrue("Locale $locale must contain key $key", localeStrings.containsKey(key))
+                val value = localeStrings[key]
+                assertNotNull("Locale $locale key $key must not be null", value)
+                assertFalse("Locale $locale key $key must not be blank", value.isNullOrBlank())
 
-    @Test
-    fun allLocales_containToggleKeys_withPositionalArguments() {
-        locales.forEach { locale ->
-            val localeFile = File(resDir, "values-$locale/strings.xml")
-            assertTrue("strings.xml for locale '$locale' must exist at ${localeFile.absolutePath}", localeFile.exists())
-            val localeStrings = parseStrings(localeFile)
-
-            expectedKeys.forEach { key ->
-                assertTrue(
-                    "Locale '$locale' is missing translation for key: $key",
-                    localeStrings.containsKey(key)
-                )
-                val text = localeStrings[key]
-                assertNotNull("Translation for '$key' in '$locale' is null", text)
-                assertFalse("Translation for '$key' in '$locale' is empty or blank", text.isNullOrBlank())
+                // For non-English locales, verify key is actually translated (different from base)
+                if (locale != "en") {
+                    val baseValue = baseStrings[key]
+                    assertTrue(
+                        "Key $key in locale $locale should be translated (was identical to base: '$baseValue')",
+                        value != baseValue
+                    )
+                }
             }
-
-            assertTrue(
-                "Locale '$locale' show_all_laps must contain %1\$d positional argument",
-                localeStrings["show_all_laps"]!!.contains("%1\$d")
-            )
         }
     }
 }

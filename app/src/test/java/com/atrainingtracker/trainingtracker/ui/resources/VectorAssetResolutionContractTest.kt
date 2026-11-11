@@ -50,12 +50,14 @@ class VectorAssetResolutionContractTest {
         "hr",
         "run_spd",
         "temp",
+        "bike_radar",
         "bt_bike_cad",
         "bt_bike_pwr",
         "bt_bike_spd",
         "bt_bike_speed_and_cadence",
         "bt_hr",
-        "bt_run"
+        "bt_run",
+        "bt_bike_radar"
     )
 
     private val purgedOnlyRasterNames = listOf(
@@ -165,7 +167,7 @@ class VectorAssetResolutionContractTest {
             )
         }
 
-        val antBadges = listOf("bike_cad", "bike_pwr", "bike_spd", "bike_speed_and_cadence", "hr", "run_spd", "temp")
+        val antBadges = listOf("bike_cad", "bike_pwr", "bike_spd", "bike_speed_and_cadence", "hr", "run_spd", "temp", "bike_radar")
         for (badge in antBadges) {
             val xml = File(drawableDir, "$badge.xml").readText().uppercase()
             assertTrue("$badge.xml must have black badge background (#000000)", xml.contains("#000000"))
@@ -173,7 +175,7 @@ class VectorAssetResolutionContractTest {
             assertTrue("$badge.xml must use evenOdd fillType for counter-holes", xml.contains("EVENODD"))
         }
 
-        val bleBadges = listOf("bt_bike_cad", "bt_bike_pwr", "bt_bike_spd", "bt_bike_speed_and_cadence", "bt_hr", "bt_run")
+        val bleBadges = listOf("bt_bike_cad", "bt_bike_pwr", "bt_bike_spd", "bt_bike_speed_and_cadence", "bt_hr", "bt_run", "bt_bike_radar")
         for (badge in bleBadges) {
             val xml = File(drawableDir, "$badge.xml").readText().uppercase()
             assertTrue("$badge.xml must have official Bluetooth badge background (#0A3D91)", xml.contains("#0A3D91"))
@@ -189,7 +191,7 @@ class VectorAssetResolutionContractTest {
     @Test
     fun testBtleSensorBadgesAreFullBleedAndRetainNavyColor() {
         val drawableDir = File(resolveResDir(), "drawable")
-        val bleBadges = listOf("bt_bike_cad", "bt_bike_pwr", "bt_bike_spd", "bt_bike_speed_and_cadence", "bt_hr", "bt_run")
+        val bleBadges = listOf("bt_bike_cad", "bt_bike_pwr", "bt_bike_spd", "bt_bike_speed_and_cadence", "bt_hr", "bt_run", "bt_bike_radar")
 
         for (badge in bleBadges) {
             val xml = File(drawableDir, "$badge.xml").readText()
@@ -207,7 +209,7 @@ class VectorAssetResolutionContractTest {
     @Test
     fun testBtleSensorBadgesContainBoldUppercaseLabelsWithEvenOdd() {
         val drawableDir = File(resolveResDir(), "drawable")
-        val bleBadges = listOf("bt_bike_cad", "bt_bike_pwr", "bt_bike_spd", "bt_bike_speed_and_cadence", "bt_hr", "bt_run")
+        val bleBadges = listOf("bt_bike_cad", "bt_bike_pwr", "bt_bike_spd", "bt_bike_speed_and_cadence", "bt_hr", "bt_run", "bt_bike_radar")
 
         for (badge in bleBadges) {
             val xml = File(drawableDir, "$badge.xml").readText()
@@ -236,6 +238,9 @@ class VectorAssetResolutionContractTest {
 
         val runXml = File(drawableDir, "bt_run.xml").readText()
         assertTrue("bt_run must render uppercase SPD at y >= 113.25", runXml.contains("113.25") && runXml.contains("135.75"))
+
+        val radarXml = File(drawableDir, "bt_bike_radar.xml").readText()
+        assertTrue("bt_bike_radar must render uppercase RDR at y >= 113.25", radarXml.contains("113.25") && radarXml.contains("135.75"))
     }
 
     /**
@@ -251,7 +256,7 @@ class VectorAssetResolutionContractTest {
         val lineCmdRegex = Regex("""\bL\b""")
         val curveCmdRegex = Regex("""[ACQacq]""")
 
-        val bikeBadges = listOf("bt_bike_pwr", "bt_bike_spd", "bt_bike_cad", "bt_bike_speed_and_cadence")
+        val bikeBadges = listOf("bt_bike_pwr", "bt_bike_spd", "bt_bike_cad", "bt_bike_speed_and_cadence", "bt_bike_radar")
         for (badge in bikeBadges) {
             val xml = File(drawableDir, "$badge.xml").readText()
             assertTrue("$badge.xml must horizontally center cyclist with translateX=18.18", xml.contains("translateX=\"18.18\""))
@@ -273,6 +278,9 @@ class VectorAssetResolutionContractTest {
 
         val scXml = File(drawableDir, "bt_bike_speed_and_cadence.xml").readText()
         assertTrue("bt_bike_speed_and_cadence must embed canonical dual mini-icons in top-left", scXml.contains("mini_icon_spd") && scXml.contains("mini_icon_cad"))
+
+        val radarXml = File(drawableDir, "bt_bike_radar.xml").readText()
+        assertTrue("bt_bike_radar must embed canonical radar mini-icon in top-left", radarXml.contains("mini_icon_radar") && radarXml.contains("M 480,720"))
 
         val allBle = bikeBadges + listOf("bt_hr", "bt_run")
         for (badge in allBle) {
@@ -338,6 +346,7 @@ class VectorAssetResolutionContractTest {
         assertEquals(R.drawable.bike_speed_and_cadence, UIHelper.getIconId(DeviceType.BIKE_SPEED_AND_CADENCE, Protocol.ANT_PLUS))
         assertEquals(R.drawable.bike_pwr, UIHelper.getIconId(DeviceType.BIKE_POWER, Protocol.ANT_PLUS))
         assertEquals(R.drawable.run_spd, UIHelper.getIconId(DeviceType.RUN_SPEED, Protocol.ANT_PLUS))
+        assertEquals(R.drawable.bike_radar, UIHelper.getIconId(DeviceType.BIKE_RADAR, Protocol.ANT_PLUS))
         assertEquals(R.drawable.temp, UIHelper.getIconId(DeviceType.ENVIRONMENT, Protocol.ANT_PLUS))
 
         assertEquals(R.drawable.bt_hr, UIHelper.getIconId(DeviceType.HRM, Protocol.BLUETOOTH_LE))
@@ -345,7 +354,11 @@ class VectorAssetResolutionContractTest {
         assertEquals(R.drawable.bt_bike_cad, UIHelper.getIconId(DeviceType.BIKE_CADENCE, Protocol.BLUETOOTH_LE))
         assertEquals(R.drawable.bt_bike_speed_and_cadence, UIHelper.getIconId(DeviceType.BIKE_SPEED_AND_CADENCE, Protocol.BLUETOOTH_LE))
         assertEquals(R.drawable.bt_bike_pwr, UIHelper.getIconId(DeviceType.BIKE_POWER, Protocol.BLUETOOTH_LE))
+        assertEquals(R.drawable.bt_bike_radar, UIHelper.getIconId(DeviceType.BIKE_RADAR, Protocol.BLUETOOTH_LE))
         assertEquals(R.drawable.bt_run, UIHelper.getIconId(DeviceType.RUN_SPEED, Protocol.BLUETOOTH_LE))
+
+        assertEquals(R.drawable.bike_radar, com.atrainingtracker.banalservice.ui.devices.devicedata.getIconId(DeviceType.BIKE_RADAR, Protocol.ANT_PLUS))
+        assertEquals(R.drawable.bt_bike_radar, com.atrainingtracker.banalservice.ui.devices.devicedata.getIconId(DeviceType.BIKE_RADAR, Protocol.BLUETOOTH_LE))
     }
 
     /**

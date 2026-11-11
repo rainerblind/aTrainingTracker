@@ -36,7 +36,7 @@ class WorkoutRrDbHelper(context: Context) :
 
     companion object {
         const val DB_NAME = "WorkoutRr.db"
-        const val DB_VERSION = 1
+        const val DB_VERSION = 2
 
         const val TABLE_WORKOUT_RR = "workout_rr_intervals"
 
@@ -60,8 +60,8 @@ class WorkoutRrDbHelper(context: Context) :
             );
         """
 
-        const val CREATE_INDEX_WORKOUT_BEAT = """
-            CREATE INDEX IF NOT EXISTS idx_workout_rr_workout_beat
+        const val CREATE_UNIQUE_INDEX_WORKOUT_BEAT = """
+            CREATE UNIQUE INDEX IF NOT EXISTS idx_workout_rr_workout_beat
             ON $TABLE_WORKOUT_RR ($COLUMN_WORKOUT_ID, $COLUMN_BEAT_INDEX);
         """
 
@@ -73,11 +73,23 @@ class WorkoutRrDbHelper(context: Context) :
 
     override fun onCreate(db: SQLiteDatabase) {
         db.execSQL(CREATE_TABLE_WORKOUT_RR)
-        db.execSQL(CREATE_INDEX_WORKOUT_BEAT)
+        db.execSQL(CREATE_UNIQUE_INDEX_WORKOUT_BEAT)
         db.execSQL(CREATE_INDEX_WORKOUT_TS)
     }
 
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
-        // V1 Initial creation. Schema parity guaranteed per Rule 64.
+        if (oldVersion < 2) {
+            // Deduplicate any accidental duplicate (workout_id, beat_index) before creating unique index
+            db.execSQL("""
+                DELETE FROM $TABLE_WORKOUT_RR 
+                WHERE $COLUMN_ID NOT IN (
+                    SELECT MIN($COLUMN_ID) 
+                    FROM $TABLE_WORKOUT_RR 
+                    GROUP BY $COLUMN_WORKOUT_ID, $COLUMN_BEAT_INDEX
+                );
+            """.trimIndent())
+            db.execSQL("DROP INDEX IF EXISTS idx_workout_rr_workout_beat;")
+            db.execSQL(CREATE_UNIQUE_INDEX_WORKOUT_BEAT)
+        }
     }
 }

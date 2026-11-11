@@ -122,10 +122,13 @@ public class SpeedAndLocationDevice_GPS extends SpeedAndLocationDevice
     }
 
     @Override
-    public void onProviderEnabled(String provider) {
+    public synchronized void onProviderEnabled(String provider) {
         if (DEBUG) Log.d(TAG, "onProviderEnabled: " + provider);
         if (LocationManager.GPS_PROVIDER.equals(provider)) {
             if (DEBUG) Log.d(TAG, "GPS location provider enabled");
+            if (mUpdatesRegistered) {
+                return;
+            }
             if (mLocationManager != null) {
                 try {
                     if (mLocationManager.getProvider(LocationManager.GPS_PROVIDER) != null) {

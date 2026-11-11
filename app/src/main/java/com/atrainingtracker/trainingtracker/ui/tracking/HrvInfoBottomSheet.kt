@@ -42,10 +42,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
+import com.atrainingtracker.banalservice.devices.hrv.HrvSignalQualityStatus
 import com.atrainingtracker.trainingtracker.ui.components.core.AppModalBottomSheet
+import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 
 /**
  * Educational and medical guidance sheet for Heart Rate Variability (HRV) metrics and aerobic threshold pacing
@@ -55,6 +59,9 @@ import com.atrainingtracker.trainingtracker.ui.components.core.AppModalBottomShe
 @Composable
 fun HrvInfoBottomSheet(
     onDismissRequest: () -> Unit,
+    signalQualityStatus: HrvSignalQualityStatus? = null,
+    dfaA1ThresholdT1: Float = 0.75f,
+    dfaA1ThresholdT2: Float = 0.50f,
     modifier: Modifier = Modifier
 ) {
     AppModalBottomSheet(
@@ -69,6 +76,18 @@ fun HrvInfoBottomSheet(
                 .padding(horizontal = 16.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
+            if (signalQualityStatus == HrvSignalQualityStatus.SMOOTHED_STREAM ||
+                signalQualityStatus == HrvSignalQualityStatus.QUANTIZED_SYNTHETIC
+            ) {
+                HrvInfoSectionCard(
+                    icon = Icons.Default.WarningAmber,
+                    title = stringResource(R.string.hrv_info_smoothed_warning_title),
+                    description = stringResource(R.string.hrv_info_smoothed_warning_desc),
+                    isWarning = true,
+                    modifier = Modifier.testTag("hrv_info_smoothed_warning_card")
+                )
+            }
+
             HrvInfoSectionCard(
                 icon = Icons.Default.Info,
                 title = stringResource(R.string.hrv_info_trailing_lag_title),
@@ -84,7 +103,7 @@ fun HrvInfoBottomSheet(
             HrvInfoSectionCard(
                 icon = Icons.Default.Info,
                 title = stringResource(R.string.hrv_info_zones_title),
-                description = stringResource(R.string.hrv_info_zones_desc)
+                description = stringResource(R.string.hrv_info_zones_desc_fmt, dfaA1ThresholdT1, dfaA1ThresholdT2)
             )
 
             HrvInfoSectionCard(
@@ -166,5 +185,42 @@ private fun HrvInfoSectionCard(
                 color = if (isWarning) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
+    }
+}
+
+@Preview(name = "Light Mode", showBackground = true)
+@Composable
+private fun HrvInfoBottomSheetLightPreview() {
+    ATrainingTrackerTheme {
+        HrvInfoBottomSheet(
+            onDismissRequest = {},
+            dfaA1ThresholdT1 = 0.75f,
+            dfaA1ThresholdT2 = 0.50f
+        )
+    }
+}
+
+@Preview(name = "Dark Mode", uiMode = android.content.res.Configuration.UI_MODE_NIGHT_YES, showBackground = true)
+@Composable
+private fun HrvInfoBottomSheetDarkPreview() {
+    ATrainingTrackerTheme(darkTheme = true) {
+        HrvInfoBottomSheet(
+            onDismissRequest = {},
+            signalQualityStatus = HrvSignalQualityStatus.SMOOTHED_STREAM,
+            dfaA1ThresholdT1 = 0.80f,
+            dfaA1ThresholdT2 = 0.55f
+        )
+    }
+}
+
+@Preview(name = "AMOLED Mode", uiMode = android.content.res.Configuration.UI_MODE_NIGHT_YES, showBackground = true)
+@Composable
+private fun HrvInfoBottomSheetAmoledPreview() {
+    ATrainingTrackerTheme(darkTheme = true, amoled = true) {
+        HrvInfoBottomSheet(
+            onDismissRequest = {},
+            dfaA1ThresholdT1 = 0.75f,
+            dfaA1ThresholdT2 = 0.50f
+        )
     }
 }

@@ -26,7 +26,7 @@ import androidx.annotation.VisibleForTesting
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import com.atrainingtracker.R
-import com.atrainingtracker.banalservice.database.DevicesDatabaseManager
+import com.atrainingtracker.banalservice.ui.devices.devicedata.CriticalBatteryDevice
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.activities.MainActivityWithNavigation
 
@@ -60,7 +60,7 @@ class SensorBatteryNotificationManager @VisibleForTesting constructor(
      * @param criticalDevices List of devices actively used in the workout with battery <= 20%.
      */
     @android.annotation.SuppressLint("MissingPermission")
-    fun showLowBatteryNotification(criticalDevices: List<DevicesDatabaseManager.NameAndBatteryPercentage>) {
+    fun showLowBatteryNotification(criticalDevices: List<CriticalBatteryDevice>) {
         if (criticalDevices.isEmpty()) return
 
         try {

@@ -21,6 +21,7 @@ package com.atrainingtracker.trainingtracker.ui.components.stats
 import com.atrainingtracker.banalservice.sensor.formater.DistanceFormatter
 import com.atrainingtracker.banalservice.sensor.formater.TimeFormatter
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.Stats
+import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutStatsSummary
 
 data class StatsData(
     val primaryTitle: String,
@@ -39,7 +40,7 @@ data class StatsData(
         fun fromDatabase(
             primaryTitle: String,
             secondaryTitle: String,
-            stats: Stats,
+            stats: WorkoutStatsSummary,
             sportTypeId: Long? = null,
             equipmentId: Long? = null,
             startTimeS: Long? = null,
@@ -57,6 +58,33 @@ data class StatsData(
                 // Pass the filters through
                 filterSportTypeId = sportTypeId,
                 filterEquipmentId = equipmentId,
+                startTimeS = startTimeS,
+                endTimeS = endTimeS
+            )
+        }
+
+        fun fromDatabase(
+            primaryTitle: String,
+            secondaryTitle: String,
+            stats: Stats,
+            sportTypeId: Long? = null,
+            equipmentId: Long? = null,
+            startTimeS: Long? = null,
+            endTimeS: Long? = null
+        ): StatsData {
+            return fromDatabase(
+                primaryTitle = primaryTitle,
+                secondaryTitle = secondaryTitle,
+                stats = WorkoutStatsSummary(
+                    totalDistanceM = stats.totalDistanceM,
+                    totalActiveTimeS = stats.totalActiveTimeS,
+                    totalAscentM = stats.totalAscentM,
+                    firstUsage = stats.firstUsage,
+                    lastUsage = stats.lastUsage,
+                    count = stats.count
+                ),
+                sportTypeId = sportTypeId,
+                equipmentId = equipmentId,
                 startTimeS = startTimeS,
                 endTimeS = endTimeS
             )

@@ -39,6 +39,8 @@
 
     <string name="mmp_curve">Mean Maximal Power-curve</string>
     <string name="mmp_curve_short">MMP</string>
+    <string name="config_tracking__show_mmp_curve">MMP-curve</string>
+    <string name="mmp_breakthrough_pr">PR!</string>
 
     <!-- Cockpit Live Sparkline Graph & Time Horizon (REQ-TRK-059, ATT-1294) -->
     <string name="sensor_field_show_graph">Grafiek</string>
@@ -50,4 +52,19 @@
     <string name="graph_horizon_20m">20 min</string>
     <string name="graph_horizon_1h">1 uur</string>
     <string name="graph_horizon_full">Volledige training</string>
+    <string name="sparkline_axis_now">Nu</string>
+
+    <!-- 2-Level Sensor Taxonomy & SensorSubCategory (REQ-TRK-070, ATT-6726) -->
+    <string name="sensor_category_elevation">Hoogte</string>
+    <string name="sensor_sub_category_power_load">Vermogensbelasting &amp; arbeid</string>
+    <string name="sensor_sub_category_power_rolling">Voortschrijdende gemiddelden</string>
+    <string name="sensor_sub_category_power_peak">Piekvermogen</string>
+    <string name="sensor_sub_category_pedaling_dynamics">Trapefficiëntie &amp; dynamiek</string>
+    <string name="sensor_sub_category_hrv_and_drift">HRV &amp; aerobe drift</string>
+    <string name="sensor_sub_category_lap_metrics">Rondestatistieken</string>
+    <string name="sensor_sub_category_radar_safety">Radarveiligheid</string>
+    <string name="sensor_sub_category_ambient_temperature">Omgevingstemperatuur</string>
+    <string name="sensor_sub_category_phone_battery">Smartphone batterij</string>
+    <string name="sensor_capability_bar">Balk</string>
+    <string name="sensor_capability_graph">Grafiek</string>
 </resources>

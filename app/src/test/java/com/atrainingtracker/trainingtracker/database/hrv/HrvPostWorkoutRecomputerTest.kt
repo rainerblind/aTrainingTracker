@@ -22,7 +22,9 @@ import android.content.ContentValues
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import com.atrainingtracker.banalservice.devices.hrv.FilteredRrBeat
+import com.atrainingtracker.banalservice.devices.hrv.HrvSignalQualityStatus
 import com.atrainingtracker.banalservice.sensor.SensorType
+import com.atrainingtracker.trainingtracker.database.ExtremaType
 import com.atrainingtracker.trainingtracker.database.WorkoutSamplesDatabaseManager
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries
@@ -179,5 +181,142 @@ class HrvPostWorkoutRecomputerTest {
 
         val success = HrvPostWorkoutRecomputer.recomputeWorkout(context, workoutId)
         assertFalse("Should return false when workout has zero RR intervals", success)
+    }
+
+    @Test
+    fun testAnalyzeSignalQualityHelper() {
+        val beats = List(40) { index ->
+            FilteredRrBeat(
+                beatTimestampMs = 1000L + index * 800L,
+                rawRrMs = 800.0 + (index % 4) * 10.0,
+                correctedRrMs = 800.0 + (index % 4) * 10.0,
+                artifactFlag = 0
+            )
+        }
+
+        val quality = HrvPostWorkoutRecomputer.analyzeSignalQuality(beats)
+        assertEquals(HrvSignalQualityStatus.VALID, quality.status)
+        assertEquals(40, quality.beatCount)
+    }
+
+    @Test
+    fun computeSessionSdnn_returnsNullWhenInsufficientBeatsOrHighArtifactRate() {
+        assertNull("Empty beats must return null", HrvPostWorkoutRecomputer.computeSessionSdnn(emptyList()))
+        assertNull(
+            "Single beat must return null",
+            HrvPostWorkoutRecomputer.computeSessionSdnn(
+                listOf(FilteredRrBeat(1000L, 800.0, 800.0, 0, false))
+            )
+        )
+
+        // 100 beats with 6 artifacts (6% > 5% gate threshold)
+        val beatsWithHighArtifacts = List(100) { idx ->
+            FilteredRrBeat(
+                beatTimestampMs = 1000L + idx * 800L,
+                rawRrMs = 800.0,
+                correctedRrMs = 800.0,
+                artifactFlag = if (idx < 6) 1 else 0,
+                isArtifact = idx < 6
+            )
+        }
+        assertNull(
+            "Artifact rate > 5% must gate SDNN computation to null",
+            HrvPostWorkoutRecomputer.computeSessionSdnn(beatsWithHighArtifacts)
+        )
+    }
+
+    @Test
+    fun computeSessionSdnn_calculatesUnbiasedSampleStandardDeviation() {
+        // 5 valid non-artifact beats: [800, 820, 810, 830, 840]
+        // mean = 820.0
+        // sum squared deviations = (-20)^2 + 0^2 + (-10)^2 + 10^2 + 20^2 = 400 + 0 + 100 + 100 + 400 = 1000.0
+        // Bessel's sample variance = 1000 / (5 - 1) = 250.0
+        // expected SDNN = sqrt(250.0) ~= 15.811388
+        val beats = listOf(
+            FilteredRrBeat(1000L, 800.0, 800.0, 0, false),
+            FilteredRrBeat(1800L, 820.0, 820.0, 0, false),
+            FilteredRrBeat(2620L, 810.0, 810.0, 0, false),
+            FilteredRrBeat(3430L, 830.0, 830.0, 0, false),
+            FilteredRrBeat(4260L, 840.0, 840.0, 0, false)
+        )
+
+        val sdnn = HrvPostWorkoutRecomputer.computeSessionSdnn(beats)
+        assertNotNull("SDNN must not be null for valid beats", sdnn)
+        assertEquals(kotlin.math.sqrt(250.0), sdnn!!, 0.001)
+    }
+
+    @Test
+    fun recomputeWorkout_uses5sGrid_stepLatchesMetricsAndPersistsSessionSdnn() = runBlocking {
+        val baseFileName = "2026-11-10_140000"
+        val workoutId = createWorkout(baseFileName)
+
+        samplesDbManager.createNewTable(baseFileName, java.util.Arrays.asList(*SensorType.values()))
+
+        val startTs = 1_700_000_000_000L
+        val samplesDb = samplesDbManager.database
+        val tableName = WorkoutSamplesDatabaseManager.getTableName(baseFileName)
+        val sdf = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.US).apply {
+            timeZone = java.util.TimeZone.getTimeZone("UTC")
+        }
+
+        samplesDb.beginTransaction()
+        try {
+            for (sec in 0 until 60) {
+                val cv = ContentValues().apply {
+                    put("time", sdf.format(java.util.Date(startTs + sec * 1000L)))
+                    put(SensorType.HR.name, 75.0)
+                }
+                samplesDb.insert(tableName, null, cv)
+            }
+            samplesDb.setTransactionSuccessful()
+        } finally {
+            samplesDb.endTransaction()
+        }
+
+        val rrList = mutableListOf<WorkoutRrInterval>()
+        var beatTs = startTs - 5000L
+        for (idx in 0 until 80) {
+            val rr = 800f + (idx % 3) * 20f
+            rrList.add(
+                WorkoutRrInterval(
+                    workoutId = workoutId,
+                    beatIndex = idx,
+                    beatTimestampMs = beatTs,
+                    rrMs = rr,
+                    artifactFlag = 0,
+                    gapBeats = 0
+                )
+            )
+            beatTs += rr.toLong()
+        }
+        WorkoutRrRepository.getInstance(context).insertIntervals(rrList)
+
+        val success = HrvPostWorkoutRecomputer.recomputeWorkout(context, workoutId)
+        assertTrue("Recomputation must succeed", success)
+
+        // Verify session SDNN persisted in WorkoutSummaries.db
+        val extremaRecords = summariesDbManager.getExtremaForWorkouts(listOf(workoutId))
+        val sdnnRecord = extremaRecords.find { it.sensorType == SensorType.HRV_SDNN && it.extremaType == ExtremaType.AVG }
+        assertNotNull("Session SDNN extrema record must be persisted", sdnnRecord)
+        assertTrue("Session SDNN value must be > 0", sdnnRecord!!.value > 0.0)
+
+        // Verify step-latching: consecutive intermediate 1-Hz samples within a 5s block share the same rMSSD
+        val rmssdValues = mutableListOf<Double>()
+        samplesDb.query(
+            tableName,
+            arrayOf(SensorType.HRV_RMSSD.name),
+            null, null, null, null,
+            "${WorkoutSamplesDatabaseManager.WorkoutSamplesDbHelper.C_ID} ASC"
+        ).use { cursor ->
+            val col = cursor.getColumnIndexOrThrow(SensorType.HRV_RMSSD.name)
+            while (cursor.moveToNext()) {
+                if (!cursor.isNull(col)) {
+                    rmssdValues.add(cursor.getDouble(col))
+                }
+            }
+        }
+        assertTrue("Must have non-empty rMSSD samples", rmssdValues.size >= 5)
+        // Check that sample 0 and sample 1 (within first 5s) share identical latched value
+        assertEquals("Sample 1 must latch value from sample 0 on 5s grid", rmssdValues[0], rmssdValues[1], 0.0001)
     }
 }

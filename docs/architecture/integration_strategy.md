@@ -43,14 +43,14 @@ graph BT
 
 | Step ID | Target Boundary | Interface ID | Provider Element | Consumer Element | Mocked vs. Real Boundary | Verification Focus |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| `INT-SWE-06` | Step 1: Persistence | `IF-SWE-06` | Database Managers (`WorkoutSamplesDatabaseManager`) | `TrackerService`, Repositories | Real SQLite engine (in-memory or temp DB); disk I/O serialized via `dbDispatcher` | WAL concurrency, schema migration `onUpgrade`, batch insertion throughput |
+| `INT-SWE-06` | Step 1: Persistence | `IF-SWE-06` | Database Managers (`WorkoutSamplesDatabaseManager`, `KnownLocationsDatabaseManager`) | `TrackerService`, Repositories | Real SQLite engine (in-memory or temp DB); disk I/O serialized via single-thread executor or `dbDispatcher` (`KnownLocationsRepository`) / `Dispatchers.IO` | WAL concurrency, schema migration `onUpgrade`, batch insertion throughput |
 | `INT-SWE-04` | Step 2: Hardware HAL | `IF-SWE-04` | HAL (BLE Gatt, ANT+ Plugin, Location Provider) | `BANALService`, `TrackerService` | Mocked hardware using fake GPS, BLE HR/Power simulators; real service listeners | Reconnection state machine, packet parsing, sensor drop-out debounce |
 | `INT-SWE-03` | Step 3: Inter-Service | `IF-SWE-03` | `BANALServiceComm` (Local Binder) | `TrackerService` | Real Android Service Binder IPC harness; stubbed sensor streams | Connection arbitration, IPC broadcast delivery, null-safety during unbind |
 | `INT-SWE-05` | Step 4: Domain Calculators | `IF-SWE-05` | Domain Calculators (`AutoPauseManager`, `ClimbDetector`) | Services & Repositories | Real pure JVM mathematical models; synthetic time-series input fixtures | Rolling-window math (NP/TSS), climb detection, auto-pause debounce |
 | `INT-SWE-02` | Step 5: Repositories | `IF-SWE-02` | Repositories (`WorkoutRepository`, `BANALServiceRepository`) | ViewModels | Real repositories with test SQLite / fake DataStore; real coroutine scopes | Reactive Flow emissions, query caching, background dispatcher switching |
 | `INT-SWE-07` | Step 6: Exporters | `IF-SWE-07` | Exporters (`FitFileWriter`, `GPXFileWriter`, `TCXFileWriter`) | `ExportManager`, Repositories | Real file streaming writers; mock storage volume | Byte-stream conformance, XML schema validity, cancellation recovery |
-| `INT-SWE-08` | Step 7: Cloud APIs | `IF-SWE-08` | Cloud Endpoints (`StravaUploader`, `HealthConnectManager`, `HealthConnectHrvImporter`) | `ExportManager`, UI Controllers, `HrvReadinessRepository` | MockWebServer for REST; test doubles for `HealthConnectClient` | OAuth token refresh, JSON/Record mapping, exponential backoff retry, nocturnal HRV aggregation |
-| `INT-SWE-01` | Step 8: UI & Compose | `IF-SWE-01` | ViewModels (`TrackingViewModel`, `AftermathViewModel`) | Jetpack Compose Composables | Real ViewModels with mock repositories or Robolectric Compose test rule | MVI action dispatch, state hoisting, recomposition hygiene, dialog flows |
+| `INT-SWE-08` | Step 7: Cloud APIs | `IF-SWE-08` | Cloud Endpoints (`StravaUploader`, `HealthConnectManager`, `HealthConnectHrvImporter`) | `ExportManager`, UI Controllers, `HrvReadinessRepository` | Authentic test doubles and repository fakes for REST endpoints; test doubles for `HealthConnectClient` | OAuth token refresh, JSON/Record mapping, exponential backoff retry, nocturnal HRV aggregation |
+| `INT-SWE-01` | Step 8: UI & Compose | `IF-SWE-01` | ViewModels (`TrackingViewModel`, `TrackOnMapAftermathViewModel`) | Jetpack Compose Composables | Real ViewModels with mock repositories or Robolectric Compose test rule | MVI action dispatch, state hoisting, recomposition hygiene, dialog flows |
 
 ---
 
@@ -66,18 +66,24 @@ Verification is partitioned across three hierarchical environments:
 * **Turnaround Time**: 10–30 seconds for targeted suites; ~2–3 minutes for complete test suite.
 * **Execution Rule**: Fast gate executed on every commit and branch review.
 
-### Level 2: Instrumented Android & Emulator Integration
-* **Execution Environment**: Android Emulator (x86_64 system image, API 33/34) or headless Android container.
+### Level 2: Instrumented Android & CI Emulator Smoke Integration
+* **Execution Environment**:
+  * **CI Smoke Gate**: GitHub Actions `emulator-test` job running on Android 14 (`api-level: 34`, `target: google_apis`, `arch: x86_64`) matching `.github/workflows/android-branch-build.yml` (ATT-6737). The job pre-builds debug and test APKs (`./gradlew :app:assembleDebug :app:assembleDebugAndroidTest`) and executes `:app:connectedDebugAndroidTest` on `reactivecircus/android-emulator-runner@v2` with hardware acceleration (KVM).
+  * **Autonomous In-Sprint Policy (Rule 79)**: Local software emulator is retired during in-sprint development. Local verification relies on JVM unit tests, Robolectric Compose tests, living documentation, and Gradle Tier 2 lint/detekt gates.
 * **Scope**:
+  * Real ART runtime execution and `AppSmokeAndroidTest.kt` activity launch (`MainActivityWithNavigation`).
   * Real SQLite transaction concurrency and multi-threaded WAL locks.
-  * Foreground service lifecycle (`location|health`) during system configuration changes and low-memory pressure.
-  * Android Navigation component transitions across Compose NavHost destinations.
-* **Turnaround Time**: 5–15 minutes.
-* **Execution Rule**: Executed at Sprint Integration Gate prior to release tags.
+  * Foreground service lifecycle (`location|health`) during system configuration changes and low-memory pressure under Android 14 FGS security enforcement.
+  * Non-destructive synthetic tracking session lifecycle (`READY -> TRACKING -> STOP/DISCARD`) with cleanup via `WorkoutDeletionHelper`.
+* **Turnaround Time**: 5–15 minutes (CI pipeline).
+* **Execution Rule**: Executed automatically on every pull request / branch push in GitHub Actions CI prior to sprint integration.
 
-### Level 3: Physical Hardware & Desk Simulators
-* **Execution Environment**: Physical Android test devices connected via ADB with external hardware and desktop script simulators.
+### Level 3: Physical Hardware, Simulators & Full-Sprint Device Review
+* **Execution Environment**:
+  * **Ceremony 2 Full-Sprint Joint Review**: Mandatory deployment and human-in-the-loop verification of the integrated `sprint/<SPRINT_NAME>` build on the **real physical phone** (Pixel 10, Android 16) prior to release tagging.
+  * **Per-Ticket Peripheral Simulators**: Physical Android test devices connected via ADB with external hardware and desktop script simulators (`tools/`).
 * **Scope**:
+  * Full end-to-end athlete experience and visual verification on physical device hardware.
   * Peripheral telemetry ingestion using Python desktop simulators:
     * `tools/ble_hr_simulator.py`: Emulates BLE Heart Rate Service (0x180D).
     * `tools/ble_power_simulator.py`: Emulates Cycling Power Service (0x1818).
@@ -85,7 +91,7 @@ Verification is partitioned across three hierarchical environments:
     * `tools/replay_workout.py`: Replays recorded workouts to stress GPS and sensor pipelines.
     * `tools/simulate_kill.py`: Simulates OS process kill during active tracking to verify crash recovery.
   * Real Bluetooth Low Energy and ANT+ physical sensor pairing (Polar H10, Garmin HRM, Power meters).
-* **Execution Rule**: Stage 5 verification for hardware/sensor tickets and pre-release QA.
+* **Execution Rule**: Mandatory on-device evaluation during Ceremony 2 Joint Review; simulator verification during Stage 5 for sensor/hardware tickets.
 
 ---
 
@@ -120,11 +126,21 @@ Verification is partitioned across three hierarchical environments:
 2. **Tier 2 (Sprint Integration Gate)**:
    * Executed at the conclusion of every sprint phase under lock:
      `python3 tools/parallel_sprint_lock.py ./gradlew testDebugUnitTest --max-workers=2`
-   * Runs all 1200+ tests across the entire codebase without filters.
+   * Runs all 3,660+ tests across the entire codebase without filters.
 
 ### Defect Bisection Workflow
-* When an unexpected regression is identified across integrated subsystems, the defect is localized using Git bisection:
-  1. Identify last known good commit and current failing commit.
-  2. Initiate bisection: `git bisect start <bad_commit> <good_commit>`.
-  3. Execute automated test script: `git bisect run ./gradlew testDebugUnitTest --tests "<regressed_test>"`.
-  4. Perform Chesterton's Fence archaeology on the identified culprit commit prior to formulating a fix.
+* When an unexpected regression is identified across integrated subsystems, the defect is localized using Git bisection and automated sprint milestone tooling:
+  1. **Exponential Sprint Milestone Bisection (`tools/sprint_bisect.py`)**:
+     * For regressions spanning multiple sprints, `tools/sprint_bisect.py` (`regression-bisect` skill) automates exponential backward probing (`1, 2, 4, 8, 16...` sprints back) to establish regression boundaries in $O(\log N)$ evaluations:
+       ```bash
+       python3 tools/sprint_bisect.py probes
+       python3 tools/sprint_bisect.py deploy-probe <N>
+       ```
+  2. **Commit-Level Git Bisection**:
+     * Once bounded between two sprint milestones (good and bad commits):
+       ```bash
+       python3 tools/sprint_bisect.py bisect-start <bad_commit> <good_commit>
+       git bisect run ./gradlew testDebugUnitTest --tests "<regressed_test>"
+       ```
+  3. **Culprit Commit Analysis**:
+     * Run `python3 tools/sprint_bisect.py analyze <commit>` to perform Chesterton's Fence forensic analysis on the culprit commit prior to formulating a fix.

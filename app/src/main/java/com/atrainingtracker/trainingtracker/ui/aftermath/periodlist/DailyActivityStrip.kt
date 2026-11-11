@@ -31,6 +31,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
@@ -134,6 +135,7 @@ fun DailyActivityStrip(
     activeMetric: PeriodBarMetric = PeriodBarMetric.DURATION,
     onDayClick: (LocalDate, DailySportActivity?) -> Unit = { _, _ -> }
 ) {
+    val currentLocale = LocalConfiguration.current.locales[0]
     val dates = remember(startDate, endDate) {
         generateDateSequence(startDate, endDate)
     }
@@ -243,7 +245,7 @@ fun DailyActivityStrip(
                 ) {
                     Column {
                         Text(
-                            text = selectedDate!!.format(DateTimeFormatter.ofPattern("EEEE, d. MMMM yyyy", Locale.getDefault())),
+                            text = selectedDate!!.format(DateTimeFormatter.ofPattern("EEEE, d. MMMM yyyy", currentLocale)),
                             style = MaterialTheme.typography.labelMedium,
                             fontWeight = FontWeight.Bold
                         )
@@ -299,7 +301,8 @@ private fun WeekDayColumn(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val dayInitial = date.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.getDefault()).take(2)
+    val currentLocale = LocalConfiguration.current.locales[0]
+    val dayInitial = date.dayOfWeek.getDisplayName(TextStyle.SHORT, currentLocale).take(2)
     val dayNumber = date.dayOfMonth.toString()
 
     Column(

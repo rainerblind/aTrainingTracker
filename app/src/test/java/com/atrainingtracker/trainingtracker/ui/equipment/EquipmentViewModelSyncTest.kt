@@ -20,12 +20,11 @@ package com.atrainingtracker.trainingtracker.ui.equipment
 
 import android.app.Application
 import com.atrainingtracker.banalservice.BSportType
-import com.atrainingtracker.banalservice.database.DevicesDatabaseManager
-import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager
-import com.atrainingtracker.trainingtracker.database.EquipmentDbHelper
-import com.atrainingtracker.trainingtracker.database.SportTypeEquipmentLinkManager
-import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
+import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceDataRepository
 import com.atrainingtracker.trainingtracker.repositories.EquipmentRepository
+import com.atrainingtracker.trainingtracker.repositories.SportTypesRepository
+import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
+import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutStatsSummary
 import io.mockk.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -39,7 +38,7 @@ import org.junit.Test
 
 /**
  * Unit verification suite for EquipmentViewModel bi-directional reactivity
- * upon external EquipmentRepository link change notifications (REQ-UI-257, TST-UI-216.4).
+ * upon external EquipmentRepository link change notifications (REQ-UI-257, TST-UI-216.4, REQ-UI-511).
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class EquipmentViewModelSyncTest {
@@ -47,11 +46,10 @@ class EquipmentViewModelSyncTest {
     private val testDispatcher = StandardTestDispatcher()
 
     private lateinit var mockApplication: Application
-    private lateinit var mockDbHelper: EquipmentDbHelper
-    private lateinit var mockLinksHelper: SportTypeEquipmentLinkManager
-    private lateinit var mockSportTypeManager: SportTypeDatabaseManager
-    private lateinit var mockDevicesManager: DevicesDatabaseManager
-    private lateinit var mockSummariesManager: WorkoutSummariesDatabaseManager
+    private lateinit var mockEquipmentRepo: EquipmentRepository
+    private lateinit var mockSportRepo: SportTypesRepository
+    private lateinit var mockDeviceRepo: DeviceDataRepository
+    private lateinit var mockWorkoutRepo: WorkoutRepository
     private lateinit var mockPrefs: android.content.SharedPreferences
 
     @Before
@@ -69,15 +67,14 @@ class EquipmentViewModelSyncTest {
         setStaticField(com.atrainingtracker.trainingtracker.TrainingApplication::class.java, "cSharedPreferences", mockPrefs)
 
         mockApplication = mockk(relaxed = true)
-        mockDbHelper = mockk(relaxed = true)
-        mockLinksHelper = mockk(relaxed = true)
-        mockSportTypeManager = mockk(relaxed = true)
-        mockDevicesManager = mockk(relaxed = true)
-        mockSummariesManager = mockk(relaxed = true)
+        mockEquipmentRepo = mockk(relaxed = true)
+        mockSportRepo = mockk(relaxed = true)
+        mockDeviceRepo = mockk(relaxed = true)
+        mockWorkoutRepo = mockk(relaxed = true)
 
-        every { mockSummariesManager.getEquipmentStats(any()) } returns WorkoutSummariesDatabaseManager.Stats()
-        every { mockDbHelper.getEquipmentItems(any<BSportType>()) } returns emptyList()
-        every { mockDevicesManager.allRemoteSensors } returns emptyList()
+        every { mockWorkoutRepo.getEquipmentStats(any()) } returns WorkoutStatsSummary()
+        every { mockEquipmentRepo.getEquipmentItems(any<BSportType>()) } returns emptyList()
+        every { mockDeviceRepo.allRemoteSensors } returns emptyList()
     }
 
     @After
@@ -101,11 +98,10 @@ class EquipmentViewModelSyncTest {
         return EquipmentViewModel(
             application = mockApplication,
             ioDispatcher = testDispatcher,
-            dbEquipmentHelper = mockDbHelper,
-            dbLinksHelper = mockLinksHelper,
-            dbSportHelper = mockSportTypeManager,
-            dbDevicesHelper = mockDevicesManager,
-            dbSummariesManager = mockSummariesManager,
+            equipmentRepository = mockEquipmentRepo,
+            sportTypesRepository = mockSportRepo,
+            deviceDataRepository = mockDeviceRepo,
+            workoutRepository = mockWorkoutRepo,
             syncStatusFlow = MutableStateFlow(false)
         )
     }
@@ -120,15 +116,15 @@ class EquipmentViewModelSyncTest {
         testDispatcher.scheduler.advanceUntilIdle()
 
         // Verify initial load occurred
-        verify(atLeast = 1) { mockDbHelper.getEquipmentItems(BSportType.BIKE) }
+        verify(atLeast = 1) { mockEquipmentRepo.getEquipmentItems(BSportType.BIKE) }
 
-        clearMocks(mockDbHelper, answers = false)
+        clearMocks(mockEquipmentRepo, answers = false)
 
         // Act: External event (e.g. from sensor settings) triggers notification
         EquipmentRepository.notifyEquipmentLinksChanged(42L)
         testDispatcher.scheduler.advanceUntilIdle()
 
         // Assert: loadEquipment was re-triggered
-        verify(atLeast = 1) { mockDbHelper.getEquipmentItems(BSportType.BIKE) }
+        verify(atLeast = 1) { mockEquipmentRepo.getEquipmentItems(BSportType.BIKE) }
     }
 }

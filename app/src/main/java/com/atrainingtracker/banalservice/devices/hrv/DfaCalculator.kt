@@ -19,6 +19,7 @@
 package com.atrainingtracker.banalservice.devices.hrv
 
 import kotlin.math.log10
+import kotlin.math.max
 import kotlin.math.sqrt
 
 /**
@@ -69,33 +70,32 @@ object DfaCalculator {
             integratedProfile[i] = runningSum
         }
 
-        // 2. Compute fluctuation F(n) for each box size n in [minBox..maxBox]
+        // 2. Compute fluctuation F(n) for each box size n in [minBox..maxBox] with 50% overlap (NeuroKit2 0.2.10)
         val logN = ArrayList<Double>()
         val logF = ArrayList<Double>()
 
         for (boxSize in minBox..maxBox) {
-            val k = nPoints / boxSize
-            if (k < 1) continue
+            val step = max(1, boxSize / 2)
+            var totalVar = 0.0
+            var count = 0
 
-            var totalSquaredResiduals = 0.0
-            val totalSegments = 2 * k
-
-            // Forward segments
-            for (segment in 0 until k) {
-                val start = segment * boxSize
-                totalSquaredResiduals += computeSegmentSquaredResiduals(integratedProfile, start, boxSize)
+            var start = 0
+            while (start < nPoints - boxSize) {
+                val rss = computeSegmentSquaredResiduals(integratedProfile, start, boxSize)
+                val v = rss / boxSize
+                if (v > 1e-8) {
+                    totalVar += v
+                    count++
+                }
+                start += step
             }
 
-            // Backward segments (from the tail)
-            for (segment in 0 until k) {
-                val start = nPoints - (segment + 1) * boxSize
-                totalSquaredResiduals += computeSegmentSquaredResiduals(integratedProfile, start, boxSize)
-            }
-
-            val fn = sqrt(totalSquaredResiduals / (totalSegments * boxSize))
-            if (fn > 0.0) {
-                logN.add(log10(boxSize.toDouble()))
-                logF.add(log10(fn))
+            if (count > 0) {
+                val fn = sqrt(totalVar / count)
+                if (fn > 0.0) {
+                    logN.add(log10(boxSize.toDouble()))
+                    logF.add(log10(fn))
+                }
             }
         }
 

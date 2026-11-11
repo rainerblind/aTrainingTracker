@@ -85,6 +85,12 @@ class AthleteProfileContractAndLocalizationTest {
         )
         val requiredKeys = listOf(
             "drawer_athlete_profile",
+            "drawer_fitness_physiology",
+            "fitness_tab_pmc",
+            "fitness_tab_hrv",
+            "fitness_tab_body",
+            "fitness_tab_cardio_power",
+            "pmc_disabled_guidance",
             "athlete_profile_title",
             "athlete_profile_tab_profile",
             "athlete_profile_add_entry",
@@ -247,22 +253,34 @@ class AthleteProfileContractAndLocalizationTest {
             source.contains(".statusBarsPadding()")
         )
         assertTrue(
-            "AthleteProfileContent must host PrimaryScrollableTabRow and HorizontalPager for Profile & Zones tabs",
+            "AthleteProfileContent must host PrimaryScrollableTabRow and HorizontalPager for Fitness & Physiology hub tabs (REQ-UI-513.4)",
             source.contains("PrimaryScrollableTabRow(") && source.contains("HorizontalPager(")
         )
         assertTrue(
-            "AthleteProfileContent must include all 4 tab titles (Profile, HR Run, HR Bike, Power Bike)",
-            source.contains("R.string.athlete_profile_tab_profile") &&
-                source.contains("R.string.tab_hr_run") &&
-                source.contains("R.string.tab_hr_bike") &&
-                source.contains("R.string.tab_pwr_bike")
+            "AthleteProfileContent must include all 4 analytical hub tab titles (PMC, HRV, Body, Cardio-Power) (REQ-UI-513.4)",
+            source.contains("R.string.fitness_tab_pmc") &&
+                source.contains("R.string.fitness_tab_hrv") &&
+                source.contains("R.string.fitness_tab_body") &&
+                source.contains("R.string.fitness_tab_cardio_power")
         )
         assertTrue(
-            "AthleteProfileContent must embed ZoneProfileTabContent for HR_RUN, HR_BIKE, and PWR_BIKE",
-            source.contains("ZoneProfileTabContent(") &&
-                source.contains("ZoneType.HR_RUN") &&
-                source.contains("ZoneType.HR_BIKE") &&
-                source.contains("ZoneType.PWR_BIKE")
+            "AthleteProfileContent must embed HrvReadinessTrendCard and Morning HRV measurement CTA (REQ-UI-513.4)",
+            source.contains("HrvReadinessTrendCard(") &&
+                source.contains("R.string.hrv_measure_morning_cta") &&
+                source.contains("R.string.hrv_empty_onboarding_title")
+        )
+        val zonesFile = File(
+            resolveModuleRoot(),
+            "src/main/java/com/atrainingtracker/trainingtracker/activities/ZonesSettingsActivity.kt"
+        )
+        assertTrue("ZonesSettingsActivity.kt must exist", zonesFile.exists())
+        val zonesSource = zonesFile.readText()
+        assertTrue(
+            "ZoneSettingsScreen must embed ZoneProfileTabContent for HR_RUN, HR_BIKE, and PWR_BIKE (REQ-UI-513.5)",
+            zonesSource.contains("ZoneProfileTabContent(") &&
+                zonesSource.contains("ZoneType.HR_RUN") &&
+                zonesSource.contains("ZoneType.HR_BIKE") &&
+                zonesSource.contains("ZoneType.PWR_BIKE")
         )
         assertTrue(
             "AthleteProfileScreen.kt must render PerformanceManagementChartCard and PerformanceManagementChartCanvas (REQ-UI-401.3)",
@@ -344,6 +362,42 @@ class AthleteProfileContractAndLocalizationTest {
             MetricsTimeRange.SIX_MONTHS,
             defaultUiState.selectedPmcTimeRange
         )
+    }
+
+    @Test
+    fun `all 9 locales contain Morning HRV and empty state strings in strings_hrv (REQ-UI-513_6)`() {
+        val locales = listOf(
+            "values",
+            "values-de",
+            "values-es",
+            "values-fr",
+            "values-it",
+            "values-ja",
+            "values-nl",
+            "values-pl",
+            "values-pt"
+        )
+        val requiredHrvKeys = listOf(
+            "hrv_measure_morning_cta",
+            "hrv_empty_onboarding_title",
+            "hrv_empty_onboarding_desc",
+            "hrv_delete_entry_title",
+            "hrv_delete_entry_confirm",
+            "hrv_history_title"
+        )
+
+        val root = resolveModuleRoot()
+        for (locale in locales) {
+            val file = File(root, "src/main/res/$locale/strings_hrv.xml")
+            assertTrue("Missing strings_hrv.xml for $locale", file.exists())
+            val content = file.readText()
+            for (key in requiredHrvKeys) {
+                assertTrue(
+                    "Missing string key '$key' in $locale/strings_hrv.xml",
+                    content.contains("""name="$key"""")
+                )
+            }
+        }
     }
 }
 

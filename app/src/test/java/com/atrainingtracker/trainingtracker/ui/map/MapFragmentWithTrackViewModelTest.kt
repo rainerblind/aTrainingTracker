@@ -23,7 +23,7 @@ import android.content.SharedPreferences
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.climbs.Climb
 import com.atrainingtracker.trainingtracker.climbs.ClimbCategory
-import com.atrainingtracker.trainingtracker.database.ClimbsDatabaseManager
+import com.atrainingtracker.trainingtracker.climbs.LiveClimbsRepository
 import com.atrainingtracker.trainingtracker.database.WorkoutCluster
 import com.atrainingtracker.trainingtracker.database.WorkoutClusterRepository
 import com.atrainingtracker.trainingtracker.elevation.ElevationSource
@@ -76,6 +76,7 @@ class MapFragmentWithTrackViewModelTest {
     private lateinit var mockSegmentsRepository: SegmentsRepository
     private lateinit var mockRoutesRepository: RoutesRepository
     private lateinit var mockWorkoutClusterRepository: WorkoutClusterRepository
+    private lateinit var mockLiveClimbsRepo: LiveClimbsRepository
 
     private val fakeLocationsFlow = MutableStateFlow<List<KnownLocationItem>>(emptyList())
     private val fakeSportTypeFlow = MutableStateFlow(BSportType.UNKNOWN)
@@ -84,6 +85,7 @@ class MapFragmentWithTrackViewModelTest {
     private val fakeActiveNavigatedRouteIdFlow = MutableStateFlow<Long?>(null)
     private val fakeClustersFlow = MutableStateFlow<List<WorkoutCluster>>(emptyList())
     private val fakeClusterStatsFlow = MutableStateFlow<Map<Long, WorkoutClusterStats>>(emptyMap())
+    private val fakeStoredClimbsFlow = MutableStateFlow<List<Climb>>(emptyList())
 
     @Before
     fun setUp() {
@@ -94,6 +96,7 @@ class MapFragmentWithTrackViewModelTest {
         mockSegmentsRepository = mockk(relaxed = true)
         mockRoutesRepository = mockk(relaxed = true)
         mockWorkoutClusterRepository = mockk(relaxed = true)
+        mockLiveClimbsRepo = mockk(relaxed = true)
 
         every { mockKnownLocationsRepository.locationsFlow } returns fakeLocationsFlow
         every { mockBanalRepository.bSportType } returns fakeSportTypeFlow
@@ -104,6 +107,7 @@ class MapFragmentWithTrackViewModelTest {
         every { mockRoutesRepository.activeNavigatedRouteId } returns fakeActiveNavigatedRouteIdFlow
         every { mockWorkoutClusterRepository.allClusters } returns fakeClustersFlow
         every { mockWorkoutClusterRepository.clusterStats } returns fakeClusterStatsFlow
+        every { mockLiveClimbsRepo.allStoredClimbs } returns fakeStoredClimbsFlow
     }
 
     @After
@@ -114,7 +118,7 @@ class MapFragmentWithTrackViewModelTest {
 
     private fun createViewModel(
         prefs: SharedPreferences? = null,
-        climbsDbManager: ClimbsDatabaseManager? = null
+        liveClimbsRepo: LiveClimbsRepository? = mockLiveClimbsRepo
     ): MapFragmentWithTrackViewModel {
         return MapFragmentWithTrackViewModel(
             application = mockApplication,
@@ -123,7 +127,7 @@ class MapFragmentWithTrackViewModelTest {
             segmentsRepo = mockSegmentsRepository,
             routesRepo = mockRoutesRepository,
             workoutClusterRepo = mockWorkoutClusterRepository,
-            climbsDbManager = climbsDbManager,
+            liveClimbsRepo = liveClimbsRepo,
             prefs = prefs,
             defaultDispatcher = testDispatcher
         )
@@ -171,7 +175,6 @@ class MapFragmentWithTrackViewModelTest {
 
     @Test
     fun testUiState_combinesClimbsFlow() = runTest {
-        val mockClimbsDb = mockk<ClimbsDatabaseManager>(relaxed = true)
         val sampleClimbs = listOf(
             Climb(
                 id = 101L,
@@ -187,12 +190,12 @@ class MapFragmentWithTrackViewModelTest {
                 category = ClimbCategory.CAT_1
             )
         )
-        io.mockk.coEvery { mockClimbsDb.getAllClimbs() } returns sampleClimbs
+        fakeStoredClimbsFlow.value = sampleClimbs
 
         val mockPrefs = mockk<SharedPreferences>(relaxed = true)
         every { mockPrefs.getStringSet(MapFragmentWithTrackViewModel.PREF_GENERAL_MAP_ENABLED_LAYERS, null) } returns setOf("CLIMBS")
 
-        val viewModel = createViewModel(prefs = mockPrefs, climbsDbManager = mockClimbsDb)
+        val viewModel = createViewModel(prefs = mockPrefs, liveClimbsRepo = mockLiveClimbsRepo)
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
             viewModel.uiState.collect()
         }
@@ -201,6 +204,44 @@ class MapFragmentWithTrackViewModelTest {
 
         assertEquals(1, viewModel.uiState.value.climbs.size)
         assertEquals("Col du Galibier", viewModel.uiState.value.climbs[0].name)
+    }
+
+    @Test
+    fun testUiState_climbsFlowUpdatesReactively_whenAllStoredClimbsChanges() = runTest {
+        val climb1 = Climb(
+            id = 101L,
+            name = "Col du Galibier",
+            startLat = 45.06,
+            startLng = 6.40,
+            endLat = 45.06,
+            endLng = 6.41,
+            distanceMeters = 8500.0,
+            elevationGainMeters = 585.0,
+            avgGradePercent = 6.9,
+            maxGradePercent = 10.1,
+            category = ClimbCategory.CAT_1
+        )
+        fakeStoredClimbsFlow.value = listOf(climb1)
+
+        val mockPrefs = mockk<SharedPreferences>(relaxed = true)
+        every { mockPrefs.getStringSet(MapFragmentWithTrackViewModel.PREF_GENERAL_MAP_ENABLED_LAYERS, null) } returns setOf("CLIMBS")
+
+        val viewModel = createViewModel(prefs = mockPrefs, liveClimbsRepo = mockLiveClimbsRepo)
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            viewModel.uiState.collect()
+        }
+
+        testDispatcher.scheduler.advanceUntilIdle()
+        assertEquals(1, viewModel.uiState.value.climbs.size)
+
+        // Dynamically emit new climb into LiveClimbsRepository.allStoredClimbs
+        val climb2 = climb1.copy(id = 102L, name = "Alpe d'Huez")
+        fakeStoredClimbsFlow.value = listOf(climb1, climb2)
+
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertEquals("uiState.climbs must update reactively without layer toggling (REQ-MAP-067.2)", 2, viewModel.uiState.value.climbs.size)
+        assertEquals("Alpe d'Huez", viewModel.uiState.value.climbs[1].name)
     }
 
     @Test

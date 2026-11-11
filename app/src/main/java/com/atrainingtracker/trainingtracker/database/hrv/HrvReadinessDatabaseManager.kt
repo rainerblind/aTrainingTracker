@@ -145,15 +145,50 @@ class HrvReadinessDatabaseManager private constructor(context: Context) {
             val cv = entry.toContentValues()
             val rowId = db.insert(HrvReadinessDbHelper.TABLE_HRV_READINESS, null, cv)
             if (rowId > 0) {
+                val isPinned = entry.isPrimaryForDay && (entry.artifactRatePct == null || entry.artifactRatePct <= MAX_VALID_ARTIFACT_RATE_PCT)
                 recomputePrimaryForDayInternal(
                     db = db,
                     dateIso = entry.dateIso,
                     posture = entry.posture,
-                    pinnedId = if (entry.isPrimaryForDay) rowId else null
+                    pinnedId = if (isPinned) rowId else null
                 )
             }
             db.setTransactionSuccessful()
             return rowId
+        } finally {
+            db.endTransaction()
+        }
+    }
+
+    /**
+     * Updates an existing [entry] in `HrvReadiness.db` identified by [entry.id] (`REQ-PER-031.4`).
+     * Transactionally recomputes `is_primary_for_day` for its `(date_iso, posture)`.
+     */
+    @Synchronized
+    fun updateEntry(entry: HrvReadinessEntry): Boolean {
+        if (entry.id <= 0) return false
+        val db = database
+        db.beginTransaction()
+        try {
+            val cv = entry.toContentValues()
+            val rows = db.update(
+                HrvReadinessDbHelper.TABLE_HRV_READINESS,
+                cv,
+                "${HrvReadinessDbHelper.COLUMN_ID} = ?",
+                arrayOf(entry.id.toString())
+            )
+            if (rows > 0) {
+                val isPinned = entry.isPrimaryForDay &&
+                    (entry.artifactRatePct == null || entry.artifactRatePct <= MAX_VALID_ARTIFACT_RATE_PCT)
+                recomputePrimaryForDayInternal(
+                    db = db,
+                    dateIso = entry.dateIso,
+                    posture = entry.posture,
+                    pinnedId = if (isPinned) entry.id else null
+                )
+            }
+            db.setTransactionSuccessful()
+            return rows > 0
         } finally {
             db.endTransaction()
         }
@@ -194,6 +229,9 @@ class HrvReadinessDatabaseManager private constructor(context: Context) {
     @Synchronized
     fun setPrimaryReading(id: Long, isPrimary: Boolean = true): Boolean {
         val existing = getEntryById(id) ?: return false
+        if (isPrimary && existing.artifactRatePct != null && existing.artifactRatePct > MAX_VALID_ARTIFACT_RATE_PCT) {
+            return false
+        }
         val db = database
         db.beginTransaction()
         try {
@@ -246,15 +284,26 @@ class HrvReadinessDatabaseManager private constructor(context: Context) {
         pinnedId: Long?
     ) {
         if (pinnedId != null) {
-            db.execSQL(
-                """
-                UPDATE ${HrvReadinessDbHelper.TABLE_HRV_READINESS}
-                SET ${HrvReadinessDbHelper.COLUMN_IS_PRIMARY_FOR_DAY} = CASE WHEN ${HrvReadinessDbHelper.COLUMN_ID} = ? THEN 1 ELSE 0 END
-                WHERE ${HrvReadinessDbHelper.COLUMN_DATE_ISO} = ? AND ${HrvReadinessDbHelper.COLUMN_POSTURE} = ?
-                """,
-                arrayOf(pinnedId.toString(), dateIso, posture.name)
-            )
-            return
+            val checkQuery = """
+                SELECT 1 FROM ${HrvReadinessDbHelper.TABLE_HRV_READINESS}
+                WHERE ${HrvReadinessDbHelper.COLUMN_ID} = ?
+                  AND (${HrvReadinessDbHelper.COLUMN_ARTIFACT_RATE_PCT} IS NULL OR ${HrvReadinessDbHelper.COLUMN_ARTIFACT_RATE_PCT} <= ?)
+            """
+            var isValidPin = false
+            db.rawQuery(checkQuery, arrayOf(pinnedId.toString(), MAX_VALID_ARTIFACT_RATE_PCT.toString())).use { cursor ->
+                isValidPin = cursor.moveToFirst()
+            }
+            if (isValidPin) {
+                db.execSQL(
+                    """
+                    UPDATE ${HrvReadinessDbHelper.TABLE_HRV_READINESS}
+                    SET ${HrvReadinessDbHelper.COLUMN_IS_PRIMARY_FOR_DAY} = CASE WHEN ${HrvReadinessDbHelper.COLUMN_ID} = ? THEN 1 ELSE 0 END
+                    WHERE ${HrvReadinessDbHelper.COLUMN_DATE_ISO} = ? AND ${HrvReadinessDbHelper.COLUMN_POSTURE} = ?
+                    """,
+                    arrayOf(pinnedId.toString(), dateIso, posture.name)
+                )
+                return
+            }
         }
 
         // Query all valid readings for (dateIso, posture) ordered by is_primary_for_day DESC, timestamp_ms ASC

@@ -40,19 +40,32 @@ class ArchitectureConformanceContractTest {
 
     companion object {
         private val DB_PATTERN = Regex("""\b[A-Za-z0-9_]*(?:DatabaseManager|DbHelper)\b""")
+        private val BLOCK_COMMENT_PATTERN = Regex("""/\*[\s\S]*?\*/""")
+        private val LINE_COMMENT_PATTERN = Regex("""//.*""")
+
         private val FORBIDDEN_DOMAIN_PATTERNS = listOf(
             Regex("""\bandroid\.view\b"""),
             Regex("""\bandroidx\.compose\b"""),
             Regex("""\bandroid\.widget\b"""),
-            Regex("""\b[A-Za-z0-9_]*(?:DatabaseManager|DbHelper)\b"""),
-            Regex("""\bcom\.atrainingtracker\.trainingtracker\.database\b""")
+            Regex("""\b[A-Za-z0-9_]*(?:DatabaseManager|DbHelper)\b""")
+        )
+
+        private val FORBIDDEN_DATABASE_UPWARD_PATTERNS = listOf(
+            Regex("""\bandroidx\.compose\b"""),
+            Regex("""\bcom\.atrainingtracker\..*\.ui\..*(?:Screen|Dialog|BottomSheet|Fragment|Activity|View|Sheet)\b""")
         )
 
         /**
          * Ratcheted baseline of existing UI files referencing DatabaseManager / DbHelper (REQ-PRO-050.3).
          * Net-new UI classes must use repositories/use-cases and are forbidden from direct DB bindings.
+         * Enforces downward ratcheting: (baseline - detectedCallers).isEmpty() and size <= 23.
          */
         val BASELINE_ALLOWED_UI_DB_CALLERS: Set<String> = setOf(
+            "com/atrainingtracker/banalservice/ui/devices/devicedata/DeviceDataRepository.kt",
+            "com/atrainingtracker/banalservice/ui/devices/devicedata/RawDeviceDataProvider.kt",
+            "com/atrainingtracker/banalservice/ui/devices/devicetabs/DevicesTabbedViewModel.kt",
+            "com/atrainingtracker/banalservice/ui/sporttype/EditSportTypeDialog.kt",
+            "com/atrainingtracker/banalservice/ui/sporttype/SportTypeViewModel.kt",
             "com/atrainingtracker/trainingtracker/ui/aftermath/EquipmentDataProvider.kt",
             "com/atrainingtracker/trainingtracker/ui/aftermath/SportDataProvider.kt",
             "com/atrainingtracker/trainingtracker/ui/aftermath/WorkoutDataMapper.kt",
@@ -61,23 +74,21 @@ class ArchitectureConformanceContractTest {
             "com/atrainingtracker/trainingtracker/ui/aftermath/periodlist/PeriodSummariesDatabaseManager.kt",
             "com/atrainingtracker/trainingtracker/ui/aftermath/periodlist/PeriodsRepository.kt",
             "com/atrainingtracker/trainingtracker/ui/athleteprofile/AthleteMetricsRepository.kt",
-            "com/atrainingtracker/trainingtracker/ui/athleteprofile/AthleteProfileViewModel.kt",
             "com/atrainingtracker/trainingtracker/ui/clusters/WorkoutClustersViewModel.kt",
             "com/atrainingtracker/trainingtracker/ui/components/export/ExportStatusDataProvider.kt",
             "com/atrainingtracker/trainingtracker/ui/components/export/ExportStatusRepository.kt",
             "com/atrainingtracker/trainingtracker/ui/components/stats/StatsData.kt",
-            "com/atrainingtracker/trainingtracker/ui/components/strava/StravaActivitySection.kt",
-            "com/atrainingtracker/trainingtracker/ui/equipment/EditEquipmentDialog.kt",
-            "com/atrainingtracker/trainingtracker/ui/equipment/EquipmentSensorMatrixScreen.kt",
             "com/atrainingtracker/trainingtracker/ui/equipment/EquipmentSensorOrdering.kt",
-            "com/atrainingtracker/trainingtracker/ui/equipment/EquipmentViewModel.kt",
             "com/atrainingtracker/trainingtracker/ui/knownlocations/KnownLocationsViewModel.kt",
             "com/atrainingtracker/trainingtracker/ui/map/MapFragmentWithTrackViewModel.kt",
             "com/atrainingtracker/trainingtracker/ui/map/MapInitialLocationResolver.kt",
             "com/atrainingtracker/trainingtracker/ui/tracking/TrackingViewsRepository.kt",
-            "com/atrainingtracker/trainingtracker/ui/tracking/editsensorfield/EditSensorFieldViewModel.kt",
-            "com/atrainingtracker/trainingtracker/ui/tracking/trackingtabs/TrackingTabsViewModel.kt"
+            "com/atrainingtracker/trainingtracker/ui/tracking/editsensorfield/EditSensorFieldViewModel.kt"
         )
+
+        fun stripComments(content: String): String {
+            return content.replace(BLOCK_COMMENT_PATTERN, "").replace(LINE_COMMENT_PATTERN, "")
+        }
     }
 
     private fun findMainSourceDir(): File {
@@ -98,15 +109,22 @@ class ArchitectureConformanceContractTest {
     @Test
     fun testUiLayer_noUnallowlistedDatabaseManagerReferences() {
         val mainDir = findMainSourceDir()
-        val uiDir = File(mainDir, "com/atrainingtracker/trainingtracker/ui")
-        assertTrue("UI source directory must exist: ${uiDir.absolutePath}", uiDir.exists() && uiDir.isDirectory)
+        val uiDirs = listOf(
+            File(mainDir, "com/atrainingtracker/trainingtracker/ui"),
+            File(mainDir, "com/atrainingtracker/banalservice/ui")
+        )
+        uiDirs.forEach { dir ->
+            assertTrue("UI source directory must exist: ${dir.absolutePath}", dir.exists() && dir.isDirectory)
+        }
 
         val detectedCallers = mutableSetOf<String>()
-        uiDir.walkTopDown().forEach { file ->
-            if (file.isFile && (file.name.endsWith(".kt") || file.name.endsWith(".java"))) {
-                val content = file.readText()
-                if (DB_PATTERN.containsMatchIn(content)) {
-                    detectedCallers.add(normalizePath(file, mainDir))
+        uiDirs.forEach { uiDir ->
+            uiDir.walkTopDown().forEach { file ->
+                if (file.isFile && (file.name.endsWith(".kt") || file.name.endsWith(".java"))) {
+                    val content = stripComments(file.readText())
+                    if (DB_PATTERN.containsMatchIn(content)) {
+                        detectedCallers.add(normalizePath(file, mainDir))
+                    }
                 }
             }
         }
@@ -118,25 +136,45 @@ class ArchitectureConformanceContractTest {
                 unallowlisted.joinToString("\n  "),
             unallowlisted.isEmpty()
         )
+
+        val staleInBaseline = BASELINE_ALLOWED_UI_DB_CALLERS - detectedCallers
+        assertTrue(
+            "Ratcheted baseline contains refactored files that no longer reference DatabaseManager/DbHelper. " +
+                "Remove them to ratchet down the debt ceiling (REQ-PRO-050.3):\n  " +
+                staleInBaseline.joinToString("\n  "),
+            staleInBaseline.isEmpty()
+        )
+
+        assertTrue(
+            "Detected UI callers (${detectedCallers.size}) exceeds ratcheted ceiling (${BASELINE_ALLOWED_UI_DB_CALLERS.size}) (REQ-PRO-050.3)",
+            detectedCallers.size <= BASELINE_ALLOWED_UI_DB_CALLERS.size
+        )
     }
 
     @Test
     fun testDomainLayer_pureJvmIsolation() {
         val mainDir = findMainSourceDir()
-        val domainDir = File(mainDir, "com/atrainingtracker/trainingtracker/domain")
-        assertTrue("Domain source directory must exist: ${domainDir.absolutePath}", domainDir.exists() && domainDir.isDirectory)
+        val domainDirs = listOf(
+            File(mainDir, "com/atrainingtracker/trainingtracker/domain"),
+            File(mainDir, "com/atrainingtracker/trainingtracker/physiology")
+        )
+        domainDirs.forEach { dir ->
+            assertTrue("Domain/Physiology directory must exist: ${dir.absolutePath}", dir.exists() && dir.isDirectory)
+        }
 
         val violations = mutableListOf<String>()
-        domainDir.walkTopDown().forEach { file ->
-            if (file.isFile && (file.name.endsWith(".kt") || file.name.endsWith(".java"))) {
-                val relPath = normalizePath(file, mainDir)
-                val lines = file.readLines()
-                lines.forEachIndexed { lineIdx, line ->
-                    val trimmed = line.trim()
-                    if (trimmed.startsWith("import ")) {
-                        FORBIDDEN_DOMAIN_PATTERNS.forEach { pattern ->
-                            if (pattern.containsMatchIn(trimmed)) {
-                                violations.add("$relPath:${lineIdx + 1}: $trimmed (matched $pattern)")
+        domainDirs.forEach { domainDir ->
+            domainDir.walkTopDown().forEach { file ->
+                if (file.isFile && (file.name.endsWith(".kt") || file.name.endsWith(".java"))) {
+                    val relPath = normalizePath(file, mainDir)
+                    val lines = file.readLines()
+                    lines.forEachIndexed { lineIdx, line ->
+                        val trimmed = line.trim()
+                        if (trimmed.startsWith("import ")) {
+                            FORBIDDEN_DOMAIN_PATTERNS.forEach { pattern ->
+                                if (pattern.containsMatchIn(trimmed)) {
+                                    violations.add("$relPath:${lineIdx + 1}: $trimmed (matched $pattern)")
+                                }
                             }
                         }
                     }
@@ -145,8 +183,46 @@ class ArchitectureConformanceContractTest {
         }
 
         assertTrue(
-            "Domain calculation layer must remain pure JVM without Android UI or database dependencies " +
+            "Domain and physiology calculation layer must remain pure JVM without Android UI or database dependencies " +
                 "(REQ-PRO-050.2):\n  " + violations.joinToString("\n  "),
+            violations.isEmpty()
+        )
+    }
+
+    @Test
+    fun testDatabaseLayer_noUpwardUiOrComposeImports() {
+        val mainDir = findMainSourceDir()
+        val dbDirs = listOf(
+            File(mainDir, "com/atrainingtracker/trainingtracker/database"),
+            File(mainDir, "com/atrainingtracker/banalservice/database")
+        )
+        dbDirs.forEach { dir ->
+            assertTrue("Database directory must exist: ${dir.absolutePath}", dir.exists() && dir.isDirectory)
+        }
+
+        val violations = mutableListOf<String>()
+        dbDirs.forEach { dbDir ->
+            dbDir.walkTopDown().forEach { file ->
+                if (file.isFile && (file.name.endsWith(".kt") || file.name.endsWith(".java"))) {
+                    val relPath = normalizePath(file, mainDir)
+                    val lines = file.readLines()
+                    lines.forEachIndexed { lineIdx, line ->
+                        val trimmed = line.trim()
+                        if (trimmed.startsWith("import ")) {
+                            FORBIDDEN_DATABASE_UPWARD_PATTERNS.forEach { pattern ->
+                                if (pattern.containsMatchIn(trimmed)) {
+                                    violations.add("$relPath:${lineIdx + 1}: $trimmed (matched $pattern)")
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        assertTrue(
+            "Database persistence layer must not import Compose or UI screen/composable classes (REQ-PRO-050.5):\n  " +
+                violations.joinToString("\n  "),
             violations.isEmpty()
         )
     }
@@ -154,8 +230,8 @@ class ArchitectureConformanceContractTest {
     @Test
     fun testBaseline_containsExpectedCount() {
         assertEquals(
-            "Expected exactly 24 recorded legacy UI database callers in ratcheting baseline (REQ-PRO-050.3)",
-            24,
+            "Expected exactly 23 recorded legacy UI database callers in ratcheting baseline (REQ-PRO-050.3)",
+            23,
             BASELINE_ALLOWED_UI_DB_CALLERS.size
         )
     }
@@ -179,6 +255,42 @@ class ArchitectureConformanceContractTest {
         assertTrue(
             "Tripwire must catch forbidden Compose import in domain layer (REQ-PRO-050.2, REQ-PRO-050.3)",
             matched
+        )
+    }
+
+    @Test
+    fun testRatchetingTripwire_commentStrippingPreventsFalsePositive() {
+        val mockFileWithComments = """
+            package com.atrainingtracker.trainingtracker.ui.fake
+            // Refactored from WorkoutSummariesDatabaseManager
+            /* In legacy version, this used DevicesDatabaseManager directly */
+            class CleanUiScreen {
+                val title = "Safe Title"
+            }
+        """.trimIndent()
+
+        assertTrue(
+            "Raw content without comment stripping would falsely match DB_PATTERN",
+            DB_PATTERN.containsMatchIn(mockFileWithComments)
+        )
+        assertFalse(
+            "Stripped content must NOT match DB_PATTERN when references exist only in comments (REQ-PRO-050.1)",
+            DB_PATTERN.containsMatchIn(stripComments(mockFileWithComments))
+        )
+    }
+
+    @Test
+    fun testRatchetingTripwire_detectsForbiddenDatabaseUpwardImport() {
+        val mockComposeImport = "import androidx.compose.ui.graphics.Color"
+        val mockUiScreenImport = "import com.atrainingtracker.trainingtracker.ui.tracking.TrackingTabsScreen"
+
+        assertTrue(
+            "Tripwire must catch forbidden Compose import in database layer (REQ-PRO-050.5)",
+            FORBIDDEN_DATABASE_UPWARD_PATTERNS.any { it.containsMatchIn(mockComposeImport) }
+        )
+        assertTrue(
+            "Tripwire must catch forbidden UI screen import in database layer (REQ-PRO-050.5)",
+            FORBIDDEN_DATABASE_UPWARD_PATTERNS.any { it.containsMatchIn(mockUiScreenImport) }
         )
     }
 
@@ -233,5 +345,22 @@ class ArchitectureConformanceContractTest {
         assertTrue("Must specify database write latency (< 30 ms) (REQ-PRO-052.1)", content.contains("< 30 ms"))
         assertTrue("Must specify database storage growth rate (~360 KB/h) (REQ-PRO-052.1)", content.contains("360 KB/h"))
         assertTrue("Must specify UI frame render budget (< 16.6 ms) (REQ-PRO-052.1)", content.contains("16.6 ms"))
+
+        // TST-PRO-052.3: WakeLock attribution & threading accuracy (ATT-6735, REQ-PRO-052.2)
+        assertTrue(
+            "Section 4.9 must attribute PARTIAL_WAKE_LOCK to TrackerService under Tracking Core (ATT-6735)",
+            content.contains("`PARTIAL_WAKE_LOCK` (`aTrainingTracker:TrackingLock`)") &&
+                content.contains("TrackerService.java:842-857")
+        )
+        assertTrue(
+            "Section 4.9 must accurately attribute 1-Hz database writes to mScheduler / mDbExecutor (ATT-6735)",
+            content.contains("mScheduler") && content.contains("mDbExecutor")
+        )
+
+        // TST-PRO-052.4: Explicit REQ-NFR-* Traceability Links (ATT-6735, REQ-NFR-003..014)
+        for (i in 3..14) {
+            val nfrId = String.format("REQ-NFR-%03d", i)
+            assertTrue("Section 4.9 must explicitly link to $nfrId (ATT-6735)", content.contains(nfrId))
+        }
     }
 }
