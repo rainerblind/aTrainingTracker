@@ -11,7 +11,7 @@
 
 ## 1. Scope & Operational Context
 
-This document establishes the formal, black-box system requirements (`SYSREQ-TRK-*`) for endurance sports tracking in **aTrainingTracker**. It defines the end-to-end system capabilities encompassing wireless sensor telemetry acquisition, connection resilience, deterministic sampling, GNSS positioning, foreground power management, and real-time sensory feedback.
+This document establishes the formal, black-box system requirements (`SYSREQ-TRK-001` through `SYSREQ-TRK-006`) for endurance sports tracking in **aTrainingTracker**. It defines the end-to-end system capabilities encompassing wireless sensor telemetry acquisition, connection resilience, deterministic sampling, GNSS positioning, foreground power management, and real-time sensory feedback.
 
 These requirements satisfy ASPICE 4.0 **SYS.2 (System Requirements Analysis)** Base Practices:
 * **SYS.2 BP1**: *Specify system requirements* – Define functional, non-functional, timing, and interface requirements.

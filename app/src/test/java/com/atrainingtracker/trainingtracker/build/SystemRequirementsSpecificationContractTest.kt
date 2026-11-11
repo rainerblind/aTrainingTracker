@@ -45,7 +45,7 @@ class SystemRequirementsSpecificationContractTest {
     }
 
     /**
-     * Asserts docs/system_requirements.md exists and contains Section 5 for Data Exchange (TST-PRO-055.1).
+     * Asserts docs/system_requirements.md exists and contains Section 3 for Data Exchange (TST-PRO-055.1).
      */
     @Test
     fun testSystemRequirements_containsDataExchangeSection() {
@@ -53,7 +53,7 @@ class SystemRequirementsSpecificationContractTest {
         assertTrue("docs/system_requirements.md must exist", sysreqFile.exists())
 
         val content = sysreqFile.readText()
-        assertTrue("Must declare Section 5 for Data Exchange and Cloud Integration", content.contains("## 5. Data Exchange and Cloud Integration System Requirements"))
+        assertTrue("Must declare Section 3 for Data Exchange and Cloud Integration", content.contains("## 3. Data Exchange and Cloud Integration System Requirements"))
 
         val expectedRequirements = listOf(
             "SYSREQ-DEX-001",
@@ -76,7 +76,7 @@ class SystemRequirementsSpecificationContractTest {
     fun testSystemRequirements_traceabilityMatrixComplete() {
         val content = findRepoRootFile("docs/system_requirements.md").readText()
 
-        assertTrue("Must include Section 6 Complete Traceability Matrix", content.contains("## 6. Complete System Requirements Traceability Matrix"))
+        assertTrue("Must include Section 4 Complete Traceability Matrix", content.contains("## 4. Complete System Requirements Traceability Matrix"))
 
         // Check Live Tracking (SYSREQ-TRK)
         for (i in 1..6) {
@@ -89,6 +89,41 @@ class SystemRequirementsSpecificationContractTest {
             val dexId = "SYSREQ-DEX-%03d".format(i)
             assertTrue("Traceability matrix must include $dexId", content.contains(dexId))
         }
+    }
+
+    /**
+     * Asserts docs/system_requirements.md specifies sequential section numbering 1..4 (ATT-6740).
+     */
+    @Test
+    fun testSystemRequirements_sequentialSectionNumbering() {
+        val content = findRepoRootFile("docs/system_requirements.md").readText()
+
+        assertTrue("Must declare Section 1 Overview", content.contains("## 1. System Requirements Overview & Architecture"))
+        assertTrue("Must declare Section 2 Live Tracking", content.contains("## 2. Live Tracking with Sensors System Requirements (Summary)"))
+        assertTrue("Must declare Section 3 Data Exchange", content.contains("## 3. Data Exchange and Cloud Integration System Requirements (SYSREQ-DEX-001..006)"))
+        assertTrue("Must declare Section 4 Complete Matrix", content.contains("## 4. Complete System Requirements Traceability Matrix"))
+    }
+
+    /**
+     * Asserts that all backticked code/xml files referenced in docs/system_requirements.md exist on disk (ATT-6740).
+     */
+    @Test
+    fun testSystemRequirements_allReferencedFilesExistOnDisk() {
+        val content = findRepoRootFile("docs/system_requirements.md").readText()
+        val filenamePattern = Regex("`([A-Za-z0-9_]+\\.(?:kt|java|xml))`")
+        val referencedFiles = filenamePattern.findAll(content)
+            .map { it.groupValues[1] }
+            .toSet()
+            .minus("auth_credentials_prefs.xml")
+
+        val repoRoot = findRepoRootFile("settings.gradle").parentFile ?: File(".")
+        val filesOnDisk = repoRoot.walkTopDown()
+            .filter { !it.path.contains(".git") && !it.path.contains(File.separator + "build" + File.separator) }
+            .map { it.name }
+            .toSet()
+
+        val missingFiles = referencedFiles.filter { it !in filesOnDisk }
+        assertTrue("Referenced files must exist on disk: $missingFiles", missingFiles.isEmpty())
     }
 
     /**

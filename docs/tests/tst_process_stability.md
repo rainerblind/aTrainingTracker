@@ -1665,20 +1665,22 @@
 
 ### TST-PRO-055: **System Requirements for Data Exchange Contract Test Suite** [Verified]
 - **Requirement(s)**: `REQ-PRO-055`
-- **Component**: `docs/system/sysreq_data_exchange.md`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/SystemDataExchangeRequirementsContractTest.kt`
-- **Jira**: `ATT-6161`
+- **Component**: `docs/system/sysreq_data_exchange.md`, `docs/system_requirements.md`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/SystemDataExchangeRequirementsContractTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/SystemRequirementsSpecificationContractTest.kt`
+- **Jira**: `ATT-6161`, `ATT-6740`
 - **Test Description**:
-  1. *Specification Structure & SYSREQ Coverage Verification (`TST-PRO-055.1`, `SystemDataExchangeRequirementsContractTest.kt`)*:
-  • Read `docs/system/sysreq_data_exchange.md`.
-  • Assert that the document exists and contains all 6 requirements (`SYSREQ-DEX-001` through `SYSREQ-DEX-006`).
+  1. *Specification Structure & SYSREQ Coverage Verification (`TST-PRO-055.1`, `SystemDataExchangeRequirementsContractTest.kt` & `SystemRequirementsSpecificationContractTest.kt`)*:
+  • Read `docs/system/sysreq_data_exchange.md` and `docs/system_requirements.md`.
+  • Assert that `sysreq_data_exchange.md` exists and contains all 6 requirements (`SYSREQ-DEX-001` through `SYSREQ-DEX-006`).
   • Assert that each requirement contains non-empty sections for Rationale, Priority, Verification Method, and Traced Software Components.
-  2. *Code Grounding & Data Exchange Verification (`TST-PRO-055.2`, `SystemDataExchangeRequirementsContractTest.kt`)*:
+  • Assert that `docs/system_requirements.md` defines sequential section headings 1 through 4.
+  2. *Code Grounding, Filename Verification & Data Exchange Verification (`TST-PRO-055.2`, `SystemDataExchangeRequirementsContractTest.kt`)*:
   • Assert that export formats in `SYSREQ-DEX-001` match `FileFormat` enum entries (`FIT`, `TCX`, `GPX`, `CSV`).
   • Assert that backup archive constants in `SYSREQ-DEX-005` match `BackupManager.BACKUP_FILENAME` (`"aTrainingTracker_backup.attbackup"`).
-  • Assert that credential exclusions in `SYSREQ-DEX-006` match `auth_credentials_prefs.xml`.
+  • Assert that credential exclusions in `SYSREQ-DEX-006` match `auth_credentials_prefs.xml` and Android Auto Backup XMLs `full_backup_content.xml` and `data_extraction_rules.xml`.
   • Assert that Runkeeper and TrainingPeaks are explicitly demarcated as decommissioned.
+  • Assert dynamic `File.exists()` on disk for all cited source, resource, and test files (`FitFileWriterTest.kt`, `TCXRoundTripTest.kt`, `LegacyImportEngine.kt`, `WorkoutDataMapper.kt`, `StravaUploader.kt`, `GoogleDriveUploader.kt`, `StravaHelper.kt`, `StravaUploadDbHelper.java`, `DatabaseConnectionManager.kt`, `DatabaseSchemaRegistry.kt`, `WorkoutSummariesDatabaseManager.java`, `full_backup_content.xml`, `data_extraction_rules.xml`).
   3. *Clean-Room Targeted Test Suite Execution (`TST-PRO-055.3`)*:
-  • Execute targeted unit test suite `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.build.SystemDataExchangeRequirementsContractTest"` asserting 100% pass rate.
+  • Execute targeted unit test suite `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.build.SystemDataExchangeRequirementsContractTest" --tests "com.atrainingtracker.trainingtracker.build.SystemRequirementsSpecificationContractTest"` asserting 100% pass rate.
 
 
 ### TST-PRO-056: **System Architectural Design Contract Test Suite** [Verified]
