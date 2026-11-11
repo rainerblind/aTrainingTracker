@@ -18,12 +18,17 @@
 
 package com.atrainingtracker.trainingtracker.ui.tracking.radar
 
+import com.atrainingtracker.banalservice.devices.radar.LaneState
 import com.atrainingtracker.banalservice.devices.radar.RadarAudioSnoozeMode
 import com.atrainingtracker.banalservice.devices.radar.RadarAudioSnoozeState
 import com.atrainingtracker.banalservice.devices.radar.RadarConnectionState
+import com.atrainingtracker.banalservice.devices.radar.RadarState
+import com.atrainingtracker.banalservice.devices.radar.RadarTarget
 import com.atrainingtracker.banalservice.devices.radar.ThreatLevel
+import com.atrainingtracker.banalservice.devices.radar.VehicleSizeCategory
 import com.atrainingtracker.trainingtracker.settings.RadarClearMode
 import com.atrainingtracker.trainingtracker.settings.RadarEdgeSide
+import com.atrainingtracker.trainingtracker.settings.RadarTrafficOrientation
 import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDefaults
 import com.atrainingtracker.trainingtracker.ui.theme.TTColor
 import org.junit.Assert.assertEquals
@@ -246,5 +251,84 @@ class RadarEdgeOverlayTest {
         clickAction()
         assertTrue(reconnectCalled)
         assertFalse(normalClickCalled)
+    }
+
+    @Test
+    fun resolveRailMaxRange_returnsExpectedBoundaries() {
+        // TST-TRK-073.1: Standard V1 targets use 140m
+        val v1State = RadarState(
+            targets = listOf(
+                RadarTarget(targetId = 1, rangeMeters = 80f, approachSpeedMps = 10f)
+            )
+        )
+        assertEquals(140.0f, RadarOverlayMath.resolveRailMaxRange(v1State), 0.01f)
+
+        // Distant target (> 140m) scales to 175m
+        val distantState = RadarState(
+            targets = listOf(
+                RadarTarget(targetId = 1, rangeMeters = 160f, approachSpeedMps = 15f)
+            )
+        )
+        assertEquals(175.0f, RadarOverlayMath.resolveRailMaxRange(distantState), 0.01f)
+
+        // V2 target with vehicle size scales to 175m
+        val v2SizeState = RadarState(
+            targets = listOf(
+                RadarTarget(targetId = 1, rangeMeters = 70f, approachSpeedMps = 10f, vehicleSizeCategory = VehicleSizeCategory.TRUCK_OR_BUS)
+            )
+        )
+        assertEquals(175.0f, RadarOverlayMath.resolveRailMaxRange(v2SizeState), 0.01f)
+
+        // V2 target with lateral offset scales to 175m
+        val v2LateralState = RadarState(
+            targets = listOf(
+                RadarTarget(targetId = 1, rangeMeters = 70f, approachSpeedMps = 10f, lateralOffsetMeters = -1.5f)
+            )
+        )
+        assertEquals(175.0f, RadarOverlayMath.resolveRailMaxRange(v2LateralState), 0.01f)
+    }
+
+    @Test
+    fun calculateHorizontalOffsetDp_respectsOrientationAndOffsets() {
+        // TST-TRK-073.3: In RHT, negative lateral offset maps to negative (leftward) dp offset
+        val rhtPassingTarget = RadarTarget(
+            targetId = 1,
+            rangeMeters = 50f,
+            approachSpeedMps = 15f,
+            lateralOffsetMeters = -1.5f // 1.5m left -> -3.0 dp
+        )
+        val rhtOffset = RadarOverlayMath.calculateHorizontalOffsetDp(rhtPassingTarget, RadarTrafficOrientation.RIGHT_HAND)
+        assertEquals(-3.0f, rhtOffset, 0.01f)
+
+        // In LHT, same physical scenario inverts sign (passes on rider's right)
+        val lhtOffset = RadarOverlayMath.calculateHorizontalOffsetDp(rhtPassingTarget, RadarTrafficOrientation.LEFT_HAND)
+        assertEquals(3.0f, lhtOffset, 0.01f)
+
+        // Clamping check: >= 3.0m clamps to maxOffsetDp (6.0 dp)
+        val farLeftTarget = RadarTarget(
+            targetId = 2,
+            rangeMeters = 50f,
+            approachSpeedMps = 15f,
+            lateralOffsetMeters = -5.0f
+        )
+        assertEquals(-6.0f, RadarOverlayMath.calculateHorizontalOffsetDp(farLeftTarget, RadarTrafficOrientation.RIGHT_HAND), 0.01f)
+
+        // Fallback to LaneState when lateralOffsetMeters is null
+        val laneStatePassingTarget = RadarTarget(
+            targetId = 3,
+            rangeMeters = 50f,
+            approachSpeedMps = 15f,
+            laneState = LaneState.PASSING_LANE
+        )
+        assertEquals(-4.0f, RadarOverlayMath.calculateHorizontalOffsetDp(laneStatePassingTarget, RadarTrafficOrientation.RIGHT_HAND), 0.01f)
+        assertEquals(4.0f, RadarOverlayMath.calculateHorizontalOffsetDp(laneStatePassingTarget, RadarTrafficOrientation.LEFT_HAND), 0.01f)
+
+        val laneStateSameTarget = RadarTarget(
+            targetId = 4,
+            rangeMeters = 50f,
+            approachSpeedMps = 15f,
+            laneState = LaneState.IN_RIDER_LANE
+        )
+        assertEquals(0.0f, RadarOverlayMath.calculateHorizontalOffsetDp(laneStateSameTarget, RadarTrafficOrientation.RIGHT_HAND), 0.01f)
     }
 }

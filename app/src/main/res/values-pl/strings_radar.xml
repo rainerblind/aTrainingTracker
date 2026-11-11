@@ -162,4 +162,16 @@
     <string name="radar_summary_heavy_vehicles_singular">🚛 1 pojazd ciężarowy</string>
     <string name="radar_summary_max_speed">🚀 Maks %1$s km/h (+%2$s km/h zbliżanie)</string>
     <string name="radar_summary_max_speed_simple">🚀 Maks %1$s km/h</string>
+    <string name="radar_close_pass_threshold_title">Próg ostrzegania o bliskim wyprzedzaniu</string>
+    <string name="radar_close_pass_threshold_summary">Wyróżnia wyprzedzające pojazdy poniżej minimalnego bezpiecznego odstępu na mapie</string>
+    <string name="radar_close_pass_threshold_1_0m">1,0 m (3,3 ft - UK/US)</string>
+    <string name="radar_close_pass_threshold_1_5m">1,5 m (5,0 ft - Teren zabudowany)</string>
+    <string name="radar_close_pass_threshold_2_0m">2,0 m (6,6 ft - Teren niezabudowany)</string>
+    <string name="radar_marker_close_pass_title">⚠️ Bliskie wyprzedzanie (%1$sm) • %2$s • %3$s km/h</string>
+    <string name="radar_vehicle_size_light">Lekki pojazd</string>
+    <string name="radar_vehicle_size_car">Samochód</string>
+    <string name="radar_vehicle_size_truck">Pojazd ciężarowy (Ciężarówka/Autobus)</string>
+    <string name="radar_min_passing_distance">Min. odstęp boczny</string>
+    <string name="radar_close_pass_warning">⚠️ %1$d bliskich wyprzedzań (&lt;%2$sm)</string>
+    <string name="radar_heavy_vehicle_share">Pojazdy ciężarowe</string>
 </resources>

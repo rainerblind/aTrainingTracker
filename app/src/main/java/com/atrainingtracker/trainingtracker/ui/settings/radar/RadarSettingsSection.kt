@@ -788,6 +788,66 @@ fun RadarSettingsSection(
             }
         }
 
+        // Close-Pass Hazard Threshold Card (REQ-TRK-073.4 / ATT-5096)
+        ElevatedCard(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 4.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp)
+            ) {
+                Text(
+                    text = stringResource(R.string.radar_close_pass_threshold_title),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+
+                Spacer(modifier = Modifier.height(6.dp))
+
+                Text(
+                    text = stringResource(R.string.radar_close_pass_threshold_summary),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                val thresholdPresets = listOf(1.0f, 1.5f, 2.0f)
+                val thresholdLabels = listOf(
+                    R.string.radar_close_pass_threshold_1_0m,
+                    R.string.radar_close_pass_threshold_1_5m,
+                    R.string.radar_close_pass_threshold_2_0m
+                )
+
+                SingleChoiceSegmentedButtonRow(
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    thresholdPresets.forEachIndexed { index, threshold ->
+                        SegmentedButton(
+                            selected = kotlin.math.abs(tuningConfig.radarClosePassThresholdM - threshold) < 0.01f,
+                            onClick = {
+                                coroutineScope.launch {
+                                    actualDataStore.updateRadarClosePassThreshold(threshold)
+                                }
+                            },
+                            shape = SegmentedButtonDefaults.itemShape(index = index, count = thresholdPresets.size)
+                        ) {
+                            Text(
+                                text = stringResource(thresholdLabels[index]),
+                                style = MaterialTheme.typography.labelMedium,
+                                maxLines = 1,
+                                softWrap = false,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
         // Post-Workout Traffic & Strava Export Summary Card (REQ-RAD-007 / ATT-5122)
         var stravaSummaryEnabled by remember {
             mutableStateOf(TrainingApplication.uploadStravaRadarSummary())

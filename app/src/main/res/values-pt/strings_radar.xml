@@ -162,4 +162,16 @@
     <string name="radar_summary_heavy_vehicles_singular">🚛 1 veículo pesado</string>
     <string name="radar_summary_max_speed">🚀 Máx %1$s km/h (+%2$s km/h aproximação)</string>
     <string name="radar_summary_max_speed_simple">🚀 Máx %1$s km/h</string>
+    <string name="radar_close_pass_threshold_title">Limite de aviso de ultrapassagem</string>
+    <string name="radar_close_pass_threshold_summary">Destaca veículos a ultrapassar abaixo da distância mínima de segurança no mapa</string>
+    <string name="radar_close_pass_threshold_1_0m">1,0 m (3,3 ft - UK/US)</string>
+    <string name="radar_close_pass_threshold_1_5m">1,5 m (5,0 ft - Urbano / StVO)</string>
+    <string name="radar_close_pass_threshold_2_0m">2,0 m (6,6 ft - Fora de localidades)</string>
+    <string name="radar_marker_close_pass_title">⚠️ Ultrapassagem perigosa (%1$sm) • %2$s • %3$s km/h</string>
+    <string name="radar_vehicle_size_light">Veículo ligeiro</string>
+    <string name="radar_vehicle_size_car">Carro</string>
+    <string name="radar_vehicle_size_truck">Veículo pesado (Camião/Autocarro)</string>
+    <string name="radar_min_passing_distance">Afastamento mínimo</string>
+    <string name="radar_close_pass_warning">⚠️ %1$d ultrapassagens perigosas (&lt;%2$sm)</string>
+    <string name="radar_heavy_vehicle_share">Veículos pesados</string>
 </resources>

@@ -4046,3 +4046,38 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 • *Then* each step is evaluated strictly over $[t_{\text{end},j} - 120\text{ s}, t_{\text{end},j}]$ with zero bleed into subsequent steps, and high confidence is emitted only if $R^2 \ge 0.70$, artifact rate $\le 3.0\%$, and $\ge 5$ valid steps are present.
 
 **Invariants**: Zero background service sampling regressions; zero SQLite schema modifications; Section 5.8 Composable navigation safety; 100% clean-room test pass rate across all 9 locales.
+
+### REQ-TRK-073: Live 2D Lane-Offset & Vehicle Sizing Radar Edge Overlay [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-TRK-073` | **Tickets**: `ATT-5096`
+- **Implementation**: `app/src/main/java/com/atrainingtracker/trainingtracker/ui/tracking/radar/RadarEdgeOverlay.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/ui/settings/radar/RadarSettingsSection.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/TrackOnMapScreen.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/RadarTrafficSummaryCard.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/exporter/writer/FitFileWriter.java`
+- **Rationale**: Following BLE V2 high-resolution radar decoding (ATT-5095 / Garmin Varia RearVue 820), the system receives 2D spatial telemetry (lateral offset, vehicle classification, lane trajectory, passing clearance). Athletes need real-time visual distinction between vehicle sizes (cars vs trucks) and lateral lane-change status on the live Cockpit vertical edge overlay, alongside configurable close-pass (< 1.5 m) safety thresholds, aftermath map hazard markers, summary card metrics, and FIT developer fields.
+- **Description**:
+  1. *Dynamic 175m Rail Scaling (`REQ-TRK-073.1`)*: The vertical radar rail SHALL dynamically scale its maximum detection range to 175.0 m when connected to a V2-capable radar or when any tracked target distance exceeds 140.0 m, falling back to 140.0 m for standard V1 and ANT+ radar streams.
+  2. *Vehicle Size Category Geometry (`REQ-TRK-073.2`)*: `RadarEdgeOverlay.kt` SHALL render target indicators according to `VehicleSizeCategory`:
+     - `UNKNOWN_OR_LIGHT`: Compact circular dot (10.dp).
+     - `CAR`: Standard circular marker (14.dp).
+     - `TRUCK_OR_BUS`: Elongated pill badge (20.dp width x 12.dp height, rounded 6.dp) with high-contrast border and inner vehicle icon/glyph.
+  3. *Lateral Lane Offset Mapping (`REQ-TRK-073.3`)*: The vertical rail track SHALL expand usable width (28.dp) and map `target.lateralOffsetMeters` (or `target.laneState`) to horizontal translation ($x \in [-6\text{dp}, +6\text{dp}]$), adjusted for `radarTrafficOrientation` (Right-Hand Traffic vs. Left-Hand Traffic). When vehicle has pulled into the passing lane, the target indicator SHALL visually shift away from the rider centerline.
+  4. *Configurable Close-Pass Safety Threshold (`REQ-TRK-073.4`)*: `TuningPreferencesDataStore` SHALL persist `radarClosePassThresholdM` (Float, default `1.5f`), exposed in `RadarSettingsSection.kt` with selectable presets:
+     - `1.0 m` (3 ft, UK/US standard)
+     - `1.5 m` (StVO § 5 Abs. 4 Innerorts / Urban standard)
+     - `2.0 m` (StVO § 5 Abs. 4 Außerorts / Rural standard)
+  5. *Post-Workout Close-Pass Hazard Map Layer (`REQ-TRK-073.5`)*: `WorkoutRepository.getWorkoutMarkers()` SHALL inspect `sample.radarPassingDistanceM` upon vehicle pass intervals ($\Delta \text{RADAR\_VEHICLE\_COUNT} > 0$). If passing distance is less than the configured close-pass threshold, a dedicated Close-Pass Hazard `LocationMarker` (hazard icon) SHALL be placed along the polyline on `TrackOnMapScreen.kt` with tooltip detailing clearance distance, vehicle size, and speed.
+  6. *Aftermath Summary Card Clearance Metrics (`REQ-TRK-073.6`)*: `RadarTrafficSummaryCard.kt` SHALL display Minimum Passing Distance, Close-Pass Count (with warning badge when $> 0$), and Large Vehicle Count / Share when V2 telemetry is present.
+  7. *FIT Protocol V2.0 Developer Fields (`REQ-TRK-073.7`)*: `FitFileWriter.java` SHALL define and serialize developer fields for `passing_distance` (uint16, scale 100, "m") and `large_vehicle_count` (uint16, scale 1, "vehicles") on `RecordMesg`.
+  8. *9-Language Localization Parity (`REQ-TRK-073.8`)*: All close-pass settings, map marker titles, and summary card labels SHALL maintain 100% parity across EN, DE, ES, FR, IT, JA, NL, PL, PT.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* an active V2 radar stream with a `TRUCK_OR_BUS` target at 160m `IN_RIDER_LANE` and a `CAR` target at 50m `PASSING_LANE`,
+• *When* `RadarEdgeOverlay` renders,
+• *Then* the rail scales to 175m, the 160m target is drawn as an elongated heavy-vehicle pill in the center/rider rail position, and the 50m target is drawn as a standard car circle shifted laterally into the passing lane.
+• *Given* a completed ride with a vehicle pass recorded at 1.12m passing clearance and close-pass threshold set to 1.50m,
+• *When* `TrackOnMapScreen.kt` and `RadarTrafficSummaryCard.kt` render,
+• *Then* a close-pass hazard marker is positioned at the exact pass GPS coordinate, and the summary card displays 1 close pass (<1.5m, min 1.12m).
+• *Given* a legacy V1 or ANT+ radar without 2D telemetry,
+• *When* the overlay or summary renders,
+• *Then* targets render as standard centered circular dots up to 140m with zero regressions or layout distortion.
+
+**Invariants**: 100% V1 backward compatibility; zero SQLite database migrations; overlay rail touch pass-through preserved; 100% 9-language translation parity.
+

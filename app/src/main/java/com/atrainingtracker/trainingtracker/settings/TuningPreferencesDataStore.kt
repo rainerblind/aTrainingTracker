@@ -116,6 +116,7 @@ object TuningPreferencesDefaults {
     const val RADAR_SPEED_PITCH_MODULATION = true
     val RADAR_TRAFFIC_ORIENTATION = RadarTrafficOrientation.RIGHT_HAND
     const val RADAR_LANE_CHANGE_TICK_ENABLED = true
+    const val RADAR_CLOSE_PASS_THRESHOLD_M = 1.5f
     const val FULL_DIM_FACTOR = 0.25f
     const val MEDIUM_DIM_FACTOR = 0.50f
     const val SLOPE_FLAT_THRESHOLD = 2.0f
@@ -423,7 +424,8 @@ data class TuningConfig(
     val radarSpatialAudioEnabled: Boolean = TuningPreferencesDefaults.RADAR_SPATIAL_AUDIO_ENABLED,
     val radarSpeedPitchModulation: Boolean = TuningPreferencesDefaults.RADAR_SPEED_PITCH_MODULATION,
     val radarTrafficOrientation: RadarTrafficOrientation = TuningPreferencesDefaults.RADAR_TRAFFIC_ORIENTATION,
-    val radarLaneChangeTickEnabled: Boolean = TuningPreferencesDefaults.RADAR_LANE_CHANGE_TICK_ENABLED
+    val radarLaneChangeTickEnabled: Boolean = TuningPreferencesDefaults.RADAR_LANE_CHANGE_TICK_ENABLED,
+    val radarClosePassThresholdM: Float = TuningPreferencesDefaults.RADAR_CLOSE_PASS_THRESHOLD_M
 ) {
     val showAntMissingAdapterWarnings: Boolean
         get() = !suppressAntMissingAdapterDialog
@@ -586,6 +588,7 @@ class TuningPreferencesDataStore(private val context: Context) {
         val KEY_RADAR_SPEED_PITCH_MODULATION: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_radar_speed_pitch_modulation")
         val KEY_RADAR_TRAFFIC_ORIENTATION: Preferences.Key<String> = stringPreferencesKey("tuning_radar_traffic_orientation")
         val KEY_RADAR_LANE_CHANGE_TICK_ENABLED: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_radar_lane_change_tick_enabled")
+        val KEY_RADAR_CLOSE_PASS_THRESHOLD: Preferences.Key<Float> = floatPreferencesKey("tuning_radar_close_pass_threshold_m")
 
         internal val ALL_KEYS = listOf(
             KEY_ELEVATION_X_AXIS_DOMAIN,
@@ -676,7 +679,8 @@ class TuningPreferencesDataStore(private val context: Context) {
             KEY_RADAR_SPATIAL_AUDIO_ENABLED,
             KEY_RADAR_SPEED_PITCH_MODULATION,
             KEY_RADAR_TRAFFIC_ORIENTATION,
-            KEY_RADAR_LANE_CHANGE_TICK_ENABLED
+            KEY_RADAR_LANE_CHANGE_TICK_ENABLED,
+            KEY_RADAR_CLOSE_PASS_THRESHOLD
         )
 
         /**
@@ -870,6 +874,7 @@ data class AutoPausePreferences(
         val rawTrafficOrientationStr = prefs[KEY_RADAR_TRAFFIC_ORIENTATION]
         val radarTrafficOrientation = safeEnumValueOf(rawTrafficOrientationStr, TuningPreferencesDefaults.RADAR_TRAFFIC_ORIENTATION)
         val radarLaneChangeTickEnabled = prefs[KEY_RADAR_LANE_CHANGE_TICK_ENABLED] ?: TuningPreferencesDefaults.RADAR_LANE_CHANGE_TICK_ENABLED
+        val radarClosePassThresholdM = prefs[KEY_RADAR_CLOSE_PASS_THRESHOLD] ?: TuningPreferencesDefaults.RADAR_CLOSE_PASS_THRESHOLD_M
 
         val rawFontWeightStr = prefs[KEY_COCKPIT_FONT_WEIGHT]
         val cockpitFontWeight = safeEnumValueOf(rawFontWeightStr, TuningPreferencesDefaults.COCKPIT_FONT_WEIGHT)
@@ -1089,7 +1094,8 @@ data class AutoPausePreferences(
             radarSpatialAudioEnabled = radarSpatialAudioEnabled,
             radarSpeedPitchModulation = radarSpeedPitchModulation,
             radarTrafficOrientation = radarTrafficOrientation,
-            radarLaneChangeTickEnabled = radarLaneChangeTickEnabled
+            radarLaneChangeTickEnabled = radarLaneChangeTickEnabled,
+            radarClosePassThresholdM = radarClosePassThresholdM
         )
     }
 
@@ -1431,6 +1437,7 @@ data class AutoPausePreferences(
             prefs[KEY_RADAR_SPEED_PITCH_MODULATION] = config.radarSpeedPitchModulation
             prefs[KEY_RADAR_TRAFFIC_ORIENTATION] = config.radarTrafficOrientation.name
             prefs[KEY_RADAR_LANE_CHANGE_TICK_ENABLED] = config.radarLaneChangeTickEnabled
+            prefs[KEY_RADAR_CLOSE_PASS_THRESHOLD] = config.radarClosePassThresholdM
         }
 
         TrainingApplication.setClusterTolEndpoints(clampedClusterTolEndpoints)
@@ -1698,6 +1705,10 @@ data class AutoPausePreferences(
         prefs[KEY_RADAR_LANE_CHANGE_TICK_ENABLED] ?: TuningPreferencesDefaults.RADAR_LANE_CHANGE_TICK_ENABLED
     }
 
+    val radarClosePassThresholdFlow: Flow<Float> = context.dataStore.data.map { prefs ->
+        prefs[KEY_RADAR_CLOSE_PASS_THRESHOLD] ?: TuningPreferencesDefaults.RADAR_CLOSE_PASS_THRESHOLD_M
+    }
+
     suspend fun updateRadarSpatialAudioEnabled(enabled: Boolean) {
         context.dataStore.edit { prefs ->
             prefs[KEY_RADAR_SPATIAL_AUDIO_ENABLED] = enabled
@@ -1719,6 +1730,12 @@ data class AutoPausePreferences(
     suspend fun updateRadarLaneChangeTickEnabled(enabled: Boolean) {
         context.dataStore.edit { prefs ->
             prefs[KEY_RADAR_LANE_CHANGE_TICK_ENABLED] = enabled
+        }
+    }
+
+    suspend fun updateRadarClosePassThreshold(thresholdM: Float) {
+        context.dataStore.edit { prefs ->
+            prefs[KEY_RADAR_CLOSE_PASS_THRESHOLD] = thresholdM
         }
     }
 

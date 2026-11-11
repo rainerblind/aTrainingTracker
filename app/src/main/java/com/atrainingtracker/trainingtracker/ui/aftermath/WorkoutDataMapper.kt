@@ -213,7 +213,9 @@ class WorkoutDataMapper(
                 highThreatPassVal = null,
                 totalDistanceM = totalDistance,
                 activeTimeSec = activeTimeSec,
-                riderMaxSpeedMps = workoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.SPEED_mps, ExtremaType.MAX)
+                riderMaxSpeedMps = workoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.SPEED_mps, ExtremaType.MAX),
+                minPassingDistanceVal = workoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.RADAR_PASSING_DISTANCE_m, ExtremaType.MIN),
+                heavyVehicleCountVal = workoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.RADAR_LARGE_VEHICLE_COUNT, ExtremaType.MAX)
             ),
 
             dfaA1FreshBaseline = workoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.HRV_DFA_A1, ExtremaType.DFA_A1_FRESH_BASELINE),
@@ -531,7 +533,10 @@ class WorkoutDataMapper(
         highThreatPassVal: Double?,
         totalDistanceM: Double,
         activeTimeSec: Long,
-        riderMaxSpeedMps: Double? = null
+        riderMaxSpeedMps: Double? = null,
+        minPassingDistanceVal: Double? = null,
+        closePassCountVal: Int = 0,
+        heavyVehicleCountVal: Double? = null
     ): RadarTrafficSummary? {
         val totalVehicles = totalVehiclesVal?.toInt() ?: return null
         if (totalVehicles <= 0) return null
@@ -550,6 +555,8 @@ class WorkoutDataMapper(
             maxApproachSpeed
         }
         val highThreatCount = highThreatPassVal?.toInt()?.coerceAtLeast(0) ?: 0
+        val minPassingDist = minPassingDistanceVal?.takeIf { it.isFinite() && it >= 0.0 }
+        val heavyCount = heavyVehicleCountVal?.toInt()?.coerceAtLeast(0) ?: 0
 
         return RadarTrafficSummary(
             totalVehicles = totalVehicles,
@@ -557,7 +564,10 @@ class WorkoutDataMapper(
             vehiclesPerHour = vehiclesPerHour,
             maxApproachSpeedMps = maxApproachSpeed,
             maxVehicleSpeedMps = maxVehicleSpeed,
-            highThreatPassCount = highThreatCount
+            highThreatPassCount = highThreatCount,
+            closePassCount = closePassCountVal,
+            minPassingDistanceM = minPassingDist,
+            heavyVehicleCount = heavyCount
         )
     }
 
@@ -870,7 +880,9 @@ class WorkoutDataMapper(
                 highThreatPassVal = null,
                 totalDistanceM = snapshot.totalDistance,
                 activeTimeSec = snapshot.activeTimeSec,
-                riderMaxSpeedMps = getBatchVal(SensorType.SPEED_mps, ExtremaType.MAX)
+                riderMaxSpeedMps = getBatchVal(SensorType.SPEED_mps, ExtremaType.MAX),
+                minPassingDistanceVal = getBatchVal(SensorType.RADAR_PASSING_DISTANCE_m, ExtremaType.MIN),
+                heavyVehicleCountVal = getBatchVal(SensorType.RADAR_LARGE_VEHICLE_COUNT, ExtremaType.MAX)
             ),
 
             totalDistance = snapshot.totalDistance,

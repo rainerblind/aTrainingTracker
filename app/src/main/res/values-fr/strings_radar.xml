@@ -162,4 +162,16 @@
     <string name="radar_summary_heavy_vehicles_singular">🚛 1 poids lourd</string>
     <string name="radar_summary_max_speed">🚀 Max %1$s km/h (+%2$s km/h approche)</string>
     <string name="radar_summary_max_speed_simple">🚀 Max %1$s km/h</string>
+    <string name="radar_close_pass_threshold_title">Seuil de dépassement serré</string>
+    <string name="radar_close_pass_threshold_summary">Met en évidence les véhicules dépassant sous la distance de sécurité minimale sur la carte</string>
+    <string name="radar_close_pass_threshold_1_0m">1,0 m (3,3 ft - UK/US)</string>
+    <string name="radar_close_pass_threshold_1_5m">1,5 m (5,0 ft - Urbain / StVO)</string>
+    <string name="radar_close_pass_threshold_2_0m">2,0 m (6,6 ft - Hors agglomération)</string>
+    <string name="radar_marker_close_pass_title">⚠️ Dépassement serré (%1$sm) • %2$s • %3$s km/h</string>
+    <string name="radar_vehicle_size_light">Véhicule léger</string>
+    <string name="radar_vehicle_size_car">Voiture</string>
+    <string name="radar_vehicle_size_truck">Poids lourd (Camion/Bus)</string>
+    <string name="radar_min_passing_distance">Écartement minimal</string>
+    <string name="radar_close_pass_warning">⚠️ %1$d dépassements serrés (&lt;%2$sm)</string>
+    <string name="radar_heavy_vehicle_share">Poids lourds</string>
 </resources>

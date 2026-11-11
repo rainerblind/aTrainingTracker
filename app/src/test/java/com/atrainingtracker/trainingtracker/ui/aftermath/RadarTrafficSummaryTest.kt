@@ -129,4 +129,27 @@ class RadarTrafficSummaryTest {
         assertEquals(0.0, result.vehiclesPerHour, 0.001)
         assertEquals(10.0, result.maxApproachSpeedMps, 0.001)
     }
+
+    @Test
+    fun resolveRadarTrafficSummary_mapsPassingClearanceAndHeavyVehiclesAccurately() {
+        // TST-TRK-073.4 / TST-TRK-073.7: Min clearance, close passes, heavy vehicles
+        val result = mapper.resolveRadarTrafficSummary(
+            totalVehiclesVal = 15.0,
+            maxApproachSpeedVal = 14.0,
+            maxVehicleSpeedVal = null,
+            highThreatPassVal = 2.0,
+            totalDistanceM = 30000.0,
+            activeTimeSec = 3600,
+            riderMaxSpeedMps = 8.0,
+            minPassingDistanceVal = 1.15,
+            closePassCountVal = 2,
+            heavyVehicleCountVal = 4.0
+        )
+
+        assertNotNull(result)
+        assertEquals(15, result!!.totalVehicles)
+        assertEquals(1.15, result.minPassingDistanceM!!, 0.001)
+        assertEquals(2, result.closePassCount)
+        assertEquals(4, result.heavyVehicleCount)
+    }
 }

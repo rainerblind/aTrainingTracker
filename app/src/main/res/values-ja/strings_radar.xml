@@ -162,4 +162,16 @@
     <string name="radar_summary_heavy_vehicles_singular">🚛 1 台の大型車両</string>
     <string name="radar_summary_max_speed">🚀 最高 %1$s km/h (+%2$s km/h 接近)</string>
     <string name="radar_summary_max_speed_simple">🚀 最高 %1$s km/h</string>
+    <string name="radar_close_pass_threshold_title">至近距離追越警告しきい値</string>
+    <string name="radar_close_pass_threshold_summary">最低安全間隔を下回る追越車両をマップ上で強調表示します</string>
+    <string name="radar_close_pass_threshold_1_0m">1.0 m (3.3 ft - UK/US)</string>
+    <string name="radar_close_pass_threshold_1_5m">1.5 m (5.0 ft - 市街地 / StVO)</string>
+    <string name="radar_close_pass_threshold_2_0m">2.0 m (6.6 ft - 郊外 / StVO)</string>
+    <string name="radar_marker_close_pass_title">⚠️ 至近距離通過 (%1$sm) • %2$s • %3$s km/h</string>
+    <string name="radar_vehicle_size_light">小型車両</string>
+    <string name="radar_vehicle_size_car">乗用車</string>
+    <string name="radar_vehicle_size_truck">大型車両 (トラック/バス)</string>
+    <string name="radar_min_passing_distance">最小側方間隔</string>
+    <string name="radar_close_pass_warning">⚠️ %1$d 回の至近距離追越 (&lt;%2$sm)</string>
+    <string name="radar_heavy_vehicle_share">大型車両割合</string>
 </resources>

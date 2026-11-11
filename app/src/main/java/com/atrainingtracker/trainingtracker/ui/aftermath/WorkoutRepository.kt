@@ -39,6 +39,7 @@ import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager
 import com.atrainingtracker.banalservice.sensor.SensorType
 import com.atrainingtracker.banalservice.sensor.SensorValueType
 import java.util.Locale
+import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore
 import com.atrainingtracker.trainingtracker.tracker.TrackerService
 import com.atrainingtracker.trainingtracker.tracker.LiveWorkoutSession
 import com.atrainingtracker.trainingtracker.MyHelper
@@ -586,6 +587,8 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
                 val radarClosestDistIdx = col(SensorType.RADAR_CLOSEST_DISTANCE_m.name)
                 val radarApproachSpdIdx = col(SensorType.RADAR_APPROACH_SPEED_mps.name)
                 val radarVehCountIdx = col(SensorType.RADAR_VEHICLE_COUNT.name)
+                val radarPassingDistIdx = col(SensorType.RADAR_PASSING_DISTANCE_m.name)
+                val radarLargeVehCountIdx = col(SensorType.RADAR_LARGE_VEHICLE_COUNT.name)
 
                 fun getDoubleOrNull(idx: Int): Double? =
                     if (idx >= 0 && !cursor.isNull(idx)) {
@@ -622,7 +625,9 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
                         radarThreatCount = getIntOrNull(radarThreatCountIdx),
                         radarClosestDistanceM = getDoubleOrNull(radarClosestDistIdx),
                         radarApproachSpeedMps = getDoubleOrNull(radarApproachSpdIdx),
-                        radarVehicleCount = getIntOrNull(radarVehCountIdx)
+                        radarVehicleCount = getIntOrNull(radarVehCountIdx),
+                        radarPassingDistanceM = getDoubleOrNull(radarPassingDistIdx),
+                        radarLargeVehicleCount = getIntOrNull(radarLargeVehCountIdx)
                     )
                     consumer.accept(record)
                 }
@@ -635,26 +640,41 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
     }
 
     /**
-     * Computes post-workout cycling radar traffic statistics from recorded sample points (REQ-RAD-005).
+     * Computes post-workout cycling radar traffic statistics from recorded sample points (REQ-RAD-005, REQ-TRK-073.4).
      */
     fun computeRadarTrafficSummaryFromSamples(
         fileBaseName: String,
         totalDistanceM: Double,
-        activeTimeSec: Long
+        activeTimeSec: Long,
+        closePassThresholdM: Float = 1.5f
     ): RadarTrafficSummary? {
         var hasRadar = false
         var maxVehicles = 0
         var maxApproachSpeed = 0.0
         var maxAbsoluteSpeed = 0.0
         var highThreatCount = 0
+        var minPassingDist: Double? = null
+        var closePasses = 0
+        var maxLargeVehicles = 0
 
         try {
             streamSamples(fileBaseName) { sample ->
-                if (sample.radarVehicleCount != null || sample.radarThreatCount != null) {
+                if (sample.radarVehicleCount != null || sample.radarThreatCount != null || sample.radarPassingDistanceM != null) {
                     hasRadar = true
                 }
                 sample.radarVehicleCount?.let { count ->
                     if (count > maxVehicles) maxVehicles = count
+                }
+                sample.radarLargeVehicleCount?.let { count ->
+                    if (count > maxLargeVehicles) maxLargeVehicles = count
+                }
+                sample.radarPassingDistanceM?.let { passDist ->
+                    if (minPassingDist == null || passDist < minPassingDist!!) {
+                        minPassingDist = passDist
+                    }
+                    if (passDist < closePassThresholdM) {
+                        closePasses++
+                    }
                 }
                 sample.radarApproachSpeedMps?.let { appSpd ->
                     if (appSpd > maxApproachSpeed) maxApproachSpeed = appSpd
@@ -685,7 +705,10 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
             vehiclesPerHour = vehiclesPerHour,
             maxApproachSpeedMps = maxApproachSpeed,
             maxVehicleSpeedMps = if (maxAbsoluteSpeed > 0.0) maxAbsoluteSpeed else maxApproachSpeed,
-            highThreatPassCount = highThreatCount
+            highThreatPassCount = highThreatCount,
+            closePassCount = closePasses,
+            minPassingDistanceM = minPassingDist,
+            heavyVehicleCount = maxLargeVehicles
         )
     }
 
@@ -715,7 +738,12 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
         val exportHeader = getWorkoutExportHeader(fileBaseName)
         val totalDistanceM = exportHeader?.totalDistance?.toDoubleOrNull() ?: 0.0
         val activeTimeSec = exportHeader?.totalTime?.toLongOrNull() ?: 0L
-        return computeRadarTrafficSummaryFromSamples(fileBaseName, totalDistanceM, activeTimeSec)
+        val closePassThresholdM = try {
+            TuningPreferencesDataStore.getInstance(context).getTuningConfig().radarClosePassThresholdM
+        } catch (_: Throwable) {
+            1.5f
+        }
+        return computeRadarTrafficSummaryFromSamples(fileBaseName, totalDistanceM, activeTimeSec, closePassThresholdM)
     }
 
     /**
@@ -2336,12 +2364,17 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
             }
         }
 
-        // 4. Radar Vehicle Pass Markers (REQ-RAD-006 / ATT-5088)
+        // 4. Radar Vehicle Pass Markers (REQ-RAD-006 / ATT-5088, REQ-TRK-073.4)
         val radarSummary = workoutData.radarTrafficSummary
         val fileBaseName = workoutData.fileBaseName
         if (radarSummary != null && radarSummary.totalVehicles > 0 && !fileBaseName.isNullOrBlank()) {
             try {
                 var prevVehicles = 0
+                val closePassThresholdM = try {
+                    TuningPreferencesDataStore.getInstance(context).getTuningConfig().radarClosePassThresholdM
+                } catch (_: Throwable) {
+                    1.5f
+                }
                 streamSamples(fileBaseName) { sample ->
                     val vehCount = sample.radarVehicleCount
                     if (vehCount != null && vehCount > prevVehicles) {
@@ -2350,11 +2383,29 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
                         val lng = sample.longitude
                         if (lat != null && lng != null && GeoUtils.isValidGpsCoordinate(lat, lng)) {
                             val appSpdKph = (sample.radarApproachSpeedMps ?: 0.0) * 3.6
+                            val passDistM = sample.radarPassingDistanceM
+                            val isClosePass = passDistM != null && passDistM < closePassThresholdM
                             val isHighThreat = (sample.radarThreatCount ?: 0) >= 2 || appSpdKph >= 25.0
-                            val title = if (isHighThreat) {
-                                application.getString(R.string.radar_marker_high_threat_title, String.format(Locale.getDefault(), "%.1f", appSpdKph))
-                            } else {
-                                application.getString(R.string.radar_marker_pass_title, String.format(Locale.getDefault(), "%.1f", appSpdKph))
+                            val title = when {
+                                isClosePass -> {
+                                    val vehDesc = if ((sample.radarLargeVehicleCount ?: 0) > 0) {
+                                        application.getString(R.string.radar_vehicle_size_truck)
+                                    } else {
+                                        application.getString(R.string.radar_vehicle_size_car)
+                                    }
+                                    application.getString(
+                                        R.string.radar_marker_close_pass_title,
+                                        String.format(Locale.getDefault(), "%.1f", passDistM),
+                                        vehDesc,
+                                        String.format(Locale.getDefault(), "%.1f", appSpdKph)
+                                    )
+                                }
+                                isHighThreat -> {
+                                    application.getString(R.string.radar_marker_high_threat_title, String.format(Locale.getDefault(), "%.1f", appSpdKph))
+                                }
+                                else -> {
+                                    application.getString(R.string.radar_marker_pass_title, String.format(Locale.getDefault(), "%.1f", appSpdKph))
+                                }
                             }
                             markerList.add(
                                 LocationMarker(

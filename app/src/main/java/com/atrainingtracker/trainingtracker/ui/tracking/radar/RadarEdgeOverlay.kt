@@ -73,14 +73,17 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.atrainingtracker.R
+import com.atrainingtracker.banalservice.devices.radar.LaneState
 import com.atrainingtracker.banalservice.devices.radar.RadarAudioSnoozeMode
 import com.atrainingtracker.banalservice.devices.radar.RadarAudioSnoozeState
 import com.atrainingtracker.banalservice.devices.radar.RadarConnectionState
 import com.atrainingtracker.banalservice.devices.radar.RadarState
 import com.atrainingtracker.banalservice.devices.radar.RadarTarget
 import com.atrainingtracker.banalservice.devices.radar.ThreatLevel
+import com.atrainingtracker.banalservice.devices.radar.VehicleSizeCategory
 import com.atrainingtracker.trainingtracker.settings.RadarClearMode
 import com.atrainingtracker.trainingtracker.settings.RadarEdgeSide
+import com.atrainingtracker.trainingtracker.settings.RadarTrafficOrientation
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 import com.atrainingtracker.trainingtracker.ui.theme.TTColor
 import kotlinx.coroutines.delay
@@ -91,9 +94,22 @@ import kotlin.math.roundToInt
  */
 object RadarOverlayMath {
     const val MAX_RADAR_RANGE_METERS = 140.0f
+    const val MAX_RADAR_RANGE_V2_METERS = 175.0f
 
     /**
-     * Normalizes a target distance (0..140m) to a vertical coordinate fraction (0.0..1.0),
+     * Resolves dynamic maximum rail range in meters: 175m for V2 radar or distant targets, 140m otherwise.
+     */
+    fun resolveRailMaxRange(radarState: RadarState): Float {
+        val hasDistantOrV2 = radarState.targets.any {
+            it.rangeMeters > MAX_RADAR_RANGE_METERS ||
+            it.vehicleSizeCategory != VehicleSizeCategory.UNKNOWN_OR_LIGHT ||
+            it.lateralOffsetMeters != null
+        }
+        return if (hasDistantOrV2) MAX_RADAR_RANGE_V2_METERS else MAX_RADAR_RANGE_METERS
+    }
+
+    /**
+     * Normalizes a target distance (0..maxRange) to a vertical coordinate fraction (0.0..1.0),
      * where 1.0 corresponds to max range (bottom of rail, farthest vehicle)
      * and 0.0 corresponds to 0m range (top of rail, closest vehicle / cyclist).
      *
@@ -102,6 +118,34 @@ object RadarOverlayMath {
     fun normalizeRadarRange(rangeMeters: Float, maxRangeMeters: Float = MAX_RADAR_RANGE_METERS): Float {
         if (maxRangeMeters <= 0f) return 0.0f
         return (rangeMeters / maxRangeMeters).coerceIn(0.0f, 1.0f)
+    }
+
+    /**
+     * Translates target lateral deviation into horizontal dp displacement across [-maxOffsetDp, +maxOffsetDp].
+     * Respects [RadarTrafficOrientation] (RHT vs LHT).
+     */
+    fun calculateHorizontalOffsetDp(
+        target: RadarTarget,
+        trafficOrientation: RadarTrafficOrientation = RadarTrafficOrientation.RIGHT_HAND,
+        maxOffsetDp: Float = 6.0f
+    ): Float {
+        val rawOffset = target.lateralOffsetMeters
+        val offsetDp = if (rawOffset != null) {
+            val clampedM = rawOffset.coerceIn(-3.0f, 3.0f)
+            (clampedM / 3.0f) * maxOffsetDp
+        } else {
+            when (target.laneState) {
+                LaneState.PASSING_LANE -> -4.0f
+                LaneState.CHANGING_LANE -> -2.0f
+                LaneState.IN_RIDER_LANE, LaneState.UNKNOWN -> 0.0f
+            }
+        }
+
+        return if (trafficOrientation == RadarTrafficOrientation.LEFT_HAND) {
+            -offsetDp
+        } else {
+            offsetDp
+        }
     }
 
     /**
@@ -172,6 +216,7 @@ fun RadarEdgeOverlay(
     radarState: RadarState,
     edgeSide: RadarEdgeSide = RadarEdgeSide.RIGHT,
     clearMode: RadarClearMode = RadarClearMode.SLIM_RAIL,
+    trafficOrientation: RadarTrafficOrientation = RadarTrafficOrientation.RIGHT_HAND,
     modifier: Modifier = Modifier,
     onBadgeClick: () -> Unit = {},
     onReconnectClick: (() -> Unit)? = null
@@ -180,6 +225,9 @@ fun RadarEdgeOverlay(
     val isConnected = radarState.connectionState == RadarConnectionState.CONNECTED
     val isClear = isConnected && !hasActiveThreats
     val isDisconnectError = RadarOverlayMath.isFailSafeDisconnect(radarState.connectionState)
+    val has2DData = radarState.targets.any {
+        it.lateralOffsetMeters != null || it.vehicleSizeCategory != VehicleSizeCategory.UNKNOWN_OR_LIGHT
+    }
 
     // Auto-hide timer for AUTO_HIDE_3S mode (rail only)
     var isAutoHideActive by remember { mutableStateOf(false) }
@@ -215,10 +263,12 @@ fun RadarEdgeOverlay(
         1.0f
     }
 
-    // Outer container: width 24dp, fillMaxHeight, zero pointer capture
+    val containerWidth = if (has2DData) 30.dp else 24.dp
+
+    // Outer container: fillMaxHeight, zero pointer capture
     Column(
         modifier = modifier
-            .width(24.dp)
+            .width(containerWidth)
             .fillMaxHeight()
             .navigationBarsPadding()
             .testTag("RadarEdgeOverlay"),
@@ -260,6 +310,7 @@ fun RadarEdgeOverlay(
                 clearMode = clearMode,
                 pulseAlpha = pulseAlpha,
                 edgeSide = edgeSide,
+                trafficOrientation = trafficOrientation,
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(1f)
@@ -482,10 +533,18 @@ private fun RadarVerticalRail(
     clearMode: RadarClearMode,
     pulseAlpha: Float,
     edgeSide: RadarEdgeSide = RadarEdgeSide.RIGHT,
+    trafficOrientation: RadarTrafficOrientation = RadarTrafficOrientation.RIGHT_HAND,
     modifier: Modifier = Modifier
 ) {
     val isSlimRail = isClear && clearMode == RadarClearMode.SLIM_RAIL
-    val trackWidth = if (isSlimRail) 4.dp else 22.dp
+    val has2DData = radarState.targets.any {
+        it.lateralOffsetMeters != null || it.vehicleSizeCategory != VehicleSizeCategory.UNKNOWN_OR_LIGHT
+    }
+    val trackWidth = when {
+        isSlimRail -> 4.dp
+        has2DData -> 28.dp
+        else -> 22.dp
+    }
 
     val trackColor = when {
         isDisconnectError -> TTColor.RadarRailTrack
@@ -522,19 +581,29 @@ private fun RadarVerticalRail(
 
         // Target dots inside usable travel height
         if (hasActiveThreats) {
+            val contentWidth = if (has2DData) 28.dp else 22.dp
+            val maxRangeMeters = RadarOverlayMath.resolveRailMaxRange(radarState)
+
             BoxWithConstraints(
                 modifier = Modifier
-                    .width(22.dp)
+                    .width(contentWidth)
                     .fillMaxHeight()
                     .padding(vertical = 4.dp)
             ) {
                 val usableHeightPx = constraints.maxHeight.toFloat()
-                val dotSizePx = with(LocalDensity.current) { 14.dp.toPx() }
-                val travelHeightPx = (usableHeightPx - dotSizePx).coerceAtLeast(0f)
 
                 radarState.targets.forEach { target ->
                     key(target.targetId) {
-                        val normalizedY = RadarOverlayMath.normalizeRadarRange(target.rangeMeters)
+                        val (targetWidthDp, targetHeightDp, targetShape) = when (target.vehicleSizeCategory) {
+                            VehicleSizeCategory.UNKNOWN_OR_LIGHT -> Triple(10.dp, 10.dp, CircleShape)
+                            VehicleSizeCategory.CAR -> Triple(14.dp, 14.dp, CircleShape)
+                            VehicleSizeCategory.TRUCK_OR_BUS -> Triple(20.dp, 12.dp, RoundedCornerShape(4.dp))
+                        }
+
+                        val targetHeightPx = with(LocalDensity.current) { targetHeightDp.toPx() }
+                        val travelHeightPx = (usableHeightPx - targetHeightPx).coerceAtLeast(0f)
+
+                        val normalizedY = RadarOverlayMath.normalizeRadarRange(target.rangeMeters, maxRangeMeters)
                         val animatedFraction by animateFloatAsState(
                             targetValue = normalizedY,
                             animationSpec = tween(durationMillis = 150, easing = LinearEasing),
@@ -542,16 +611,29 @@ private fun RadarVerticalRail(
                         )
 
                         val yOffsetPx = (animatedFraction * travelHeightPx).roundToInt()
+                        val xOffsetDp = RadarOverlayMath.calculateHorizontalOffsetDp(target, trafficOrientation)
+                        val xOffsetPx = with(LocalDensity.current) { xOffsetDp.dp.toPx() }.roundToInt()
                         val dotColor = RadarOverlayMath.resolveThreatColor(target.threatLevel)
+
+                        val vehicleDesc = when (target.vehicleSizeCategory) {
+                            VehicleSizeCategory.TRUCK_OR_BUS -> stringResource(R.string.radar_vehicle_size_truck)
+                            VehicleSizeCategory.CAR -> stringResource(R.string.radar_vehicle_size_car)
+                            VehicleSizeCategory.UNKNOWN_OR_LIGHT -> null
+                        }
 
                         Box(
                             modifier = Modifier
                                 .align(Alignment.TopCenter)
-                                .offset { IntOffset(x = 0, y = yOffsetPx) }
-                                .size(14.dp)
-                                .clip(CircleShape)
+                                .offset { IntOffset(x = xOffsetPx, y = yOffsetPx) }
+                                .size(width = targetWidthDp, height = targetHeightDp)
+                                .clip(targetShape)
                                 .background(dotColor)
-                                .border(1.5.dp, Color.White, CircleShape)
+                                .border(1.5.dp, Color.White, targetShape)
+                                .semantics {
+                                    if (vehicleDesc != null) {
+                                        contentDescription = "$vehicleDesc, ${target.rangeMeters.roundToInt()}m"
+                                    }
+                                }
                         )
                     }
                 }

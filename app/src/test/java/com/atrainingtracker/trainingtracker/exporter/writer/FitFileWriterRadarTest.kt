@@ -221,7 +221,9 @@ class FitFileWriterRadarTest {
             SensorType.RADAR_THREAT_COUNT.name,
             SensorType.RADAR_CLOSEST_DISTANCE_m.name,
             SensorType.RADAR_APPROACH_SPEED_mps.name,
-            SensorType.RADAR_VEHICLE_COUNT.name
+            SensorType.RADAR_VEHICLE_COUNT.name,
+            SensorType.RADAR_PASSING_DISTANCE_m.name,
+            SensorType.RADAR_LARGE_VEHICLE_COUNT.name
         )
 
         every { cursor.columnNames } returns allColumns.toTypedArray()
@@ -301,7 +303,9 @@ class FitFileWriterRadarTest {
                 SensorType.SPEED_mps.name to 7.0,
                 SensorType.RADAR_VEHICLE_COUNT.name to 1,
                 SensorType.RADAR_THREAT_COUNT.name to 1,
-                SensorType.RADAR_APPROACH_SPEED_mps.name to 5.0
+                SensorType.RADAR_APPROACH_SPEED_mps.name to 5.0,
+                SensorType.RADAR_PASSING_DISTANCE_m.name to 1.8,
+                SensorType.RADAR_LARGE_VEHICLE_COUNT.name to 0
             ),
             mapOf(
                 // Vehicle 2 passed at 20 m/s closing speed (high threat)
@@ -312,7 +316,9 @@ class FitFileWriterRadarTest {
                 SensorType.SPEED_mps.name to 7.0,
                 SensorType.RADAR_VEHICLE_COUNT.name to 2,
                 SensorType.RADAR_THREAT_COUNT.name to 2,
-                SensorType.RADAR_APPROACH_SPEED_mps.name to 20.0
+                SensorType.RADAR_APPROACH_SPEED_mps.name to 20.0,
+                SensorType.RADAR_PASSING_DISTANCE_m.name to 1.2,
+                SensorType.RADAR_LARGE_VEHICLE_COUNT.name to 1
             )
         )
         val samplesCursor = createMockSamplesCursor(sampleList)
@@ -337,7 +343,9 @@ class FitFileWriterRadarTest {
                         speedMps = (s[SensorType.SPEED_mps.name] as? Number)?.toDouble(),
                         radarThreatCount = (s[SensorType.RADAR_THREAT_COUNT.name] as? Number)?.toInt(),
                         radarApproachSpeedMps = (s[SensorType.RADAR_APPROACH_SPEED_mps.name] as? Number)?.toDouble(),
-                        radarVehicleCount = (s[SensorType.RADAR_VEHICLE_COUNT.name] as? Number)?.toInt()
+                        radarVehicleCount = (s[SensorType.RADAR_VEHICLE_COUNT.name] as? Number)?.toInt(),
+                        radarPassingDistanceM = (s[SensorType.RADAR_PASSING_DISTANCE_m.name] as? Number)?.toDouble(),
+                        radarLargeVehicleCount = (s[SensorType.RADAR_LARGE_VEHICLE_COUNT.name] as? Number)?.toInt()
                     )
                 )
             }
@@ -378,13 +386,15 @@ class FitFileWriterRadarTest {
         assertEquals(1, devIds.size)
         assertEquals(0.toShort(), devIds[0].developerDataIndex)
 
-        // 2. Verify Field Descriptions (radar_current, radar_total, passing_speed, passing_speed_abs)
-        assertEquals(4, devFieldDescs.size)
+        // 2. Verify Field Descriptions (radar_current, radar_total, passing_speed, passing_speed_abs, passing_distance, large_vehicle_count)
+        assertEquals(6, devFieldDescs.size)
         val fieldNames = devFieldDescs.map { it.getFieldName(0) }
         assertTrue(fieldNames.contains("radar_current"))
         assertTrue(fieldNames.contains("radar_total"))
         assertTrue(fieldNames.contains("passing_speed"))
         assertTrue(fieldNames.contains("passing_speed_abs"))
+        assertTrue(fieldNames.contains("passing_distance"))
+        assertTrue(fieldNames.contains("large_vehicle_count"))
 
         // 3. Verify Radar Threat Alert Events (2 pass events: 0->1 and 1->2)
         assertEquals(2, events.size)
@@ -407,11 +417,19 @@ class FitFileWriterRadarTest {
         assertNotNull(rec2DevFields[1]) // radar_total
         assertNotNull(rec2DevFields[2]) // passing_speed
         assertNotNull(rec2DevFields[3]) // passing_speed_abs
+        assertNotNull(rec2DevFields[4]) // passing_distance
+        assertNotNull(rec2DevFields[5]) // large_vehicle_count
 
         assertEquals(1, (rec2DevFields[0]?.value as Number).toInt())
         assertEquals(1, (rec2DevFields[1]?.value as Number).toInt())
         assertEquals(5.0, (rec2DevFields[2]?.value as Number).toDouble(), 0.05)
         assertEquals(12.0, (rec2DevFields[3]?.value as Number).toDouble(), 0.05) // 7.0 rider + 5.0 approach = 12.0
+        assertEquals(1.8, (rec2DevFields[4]?.value as Number).toDouble(), 0.05)
+        assertEquals(0, (rec2DevFields[5]?.value as Number).toInt())
+
+        val rec3DevFields = records[2].developerFields.associateBy { it.num }
+        assertEquals(1.2, (rec3DevFields[4]?.value as Number).toDouble(), 0.05)
+        assertEquals(1, (rec3DevFields[5]?.value as Number).toInt())
     }
 
     @Test

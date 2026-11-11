@@ -2226,3 +2226,31 @@
      • Verify 100% presence and parity of all test screen string keys in `strings_hrv.xml` across all 9 locales: `values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`.
   7. *Clean-Room Targeted Test Suite Execution (`TST-TRK-072.7`)*:
      • `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.hrv.*" --tests "com.atrainingtracker.trainingtracker.localization.TranslationParityTest"` asserting 100% pass rate.
+
+### TST-TRK-073: **Live 2D Lane-Offset & Vehicle Sizing Radar Edge Overlay Test Suite** [Verified]
+- **Requirement(s)**: `REQ-TRK-073` (`REQ-TRK-073.1`..`REQ-TRK-073.8`)
+- **Component**: `RadarEdgeOverlay.kt`, `RadarEdgeOverlayTest.kt`, `RadarSettingsSection.kt`, `WorkoutRepository.kt`, `TrackOnMapScreen.kt`, `FitFileWriter.java`
+- **Jira**: `ATT-5096`
+- **Test Description**:
+  1. *Dynamic 175m Rail Scaling & Sizing Kinematics Tests (`TST-TRK-073.1`, `RadarEdgeOverlayTest.kt`)*:
+     • Verify `RadarOverlayMath.resolveRailMaxRange()` returns 175.0m when targets exceed 140.0m or V2 telemetry is present, and 140.0m for legacy V1.
+     • Verify `RadarOverlayMath.normalizeRadarRange()` correctly normalizes 175m range inputs to [0.0, 1.0].
+     • Verify target indicator geometry and test tag resolution across `UNKNOWN_OR_LIGHT` (compact dot), `CAR` (standard circle), and `TRUCK_OR_BUS` (elongated pill).
+  2. *Lateral Lane Offset Translation & Traffic Orientation Tests (`TST-TRK-073.2`, `RadarEdgeOverlayTest.kt`)*:
+     • Verify `RadarOverlayMath.calculateHorizontalOffset()` translates signed lateral offset meters to horizontal pixel offset within [-6.dp, +6.dp].
+     • Verify inversion of lateral offset direction under `RadarTrafficOrientation.LEFT_HAND` vs. `RIGHT_HAND`.
+  3. *TuningPreferencesDataStore Close-Pass Threshold Tests (`TST-TRK-073.3`, `TuningPreferencesDataStoreTest.kt`)*:
+     • Verify default threshold value is 1.5f meters.
+     • Verify persistence and flow updates for presets 1.0f, 1.5f, and 2.0f meters.
+  4. *Aftermath Close-Pass Hazard Marker Generation Tests (`TST-TRK-073.4`, `WorkoutRepositoryTest.kt`)*:
+     • Stream sample intervals with vehicle passes and verify `WorkoutRepository.getWorkoutMarkers()` emits a close-pass hazard `LocationMarker` with custom hazard icon when `radarPassingDistanceM < threshold`.
+     • Verify marker title includes passing clearance distance, vehicle type, and speed.
+     • Verify vehicle passes with clearance $\ge \text{threshold}$ emit standard pass markers.
+  5. *FIT Protocol V2.0 Developer Fields Serialization Tests (`TST-TRK-073.5`, `FitFileWriterRadarTest.kt`)*:
+     • Export synthetic workout with V2 passing distance and large vehicle count; decode with Garmin FIT SDK `FitDecoder`.
+     • Assert developer field 4 (`passing_distance`) and developer field 5 (`large_vehicle_count`) are defined and written to `RecordMesg`.
+  6. *9-Language Localization & Format Parity Audit (`TST-TRK-073.6`, `TranslationParityTest.kt`)*:
+     • Verify 100% presence and argument-specifier parity for all new close-pass settings, map marker titles, and summary labels across all 9 localized `strings_radar.xml` files.
+  7. *Clean-Room Targeted Test Suite Execution (`TST-TRK-073.7`)*:
+     • `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.tracking.radar.*" --tests "com.atrainingtracker.trainingtracker.ui.aftermath.*" --tests "com.atrainingtracker.trainingtracker.localization.TranslationParityTest"` asserting 100% pass rate.
+

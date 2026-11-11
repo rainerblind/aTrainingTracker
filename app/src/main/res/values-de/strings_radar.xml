@@ -162,4 +162,16 @@
     <string name="radar_summary_heavy_vehicles_singular">🚛 1 Schwerlastfahrzeug</string>
     <string name="radar_summary_max_speed">🚀 Max %1$s km/h (+%2$s km/h Annäherung)</string>
     <string name="radar_summary_max_speed_simple">🚀 Max %1$s km/h</string>
+    <string name="radar_close_pass_threshold_title">Warnschwelle für Überholabstand</string>
+    <string name="radar_close_pass_threshold_summary">Hebt überholende Fahrzeuge unter dem Mindestsicherheitsabstand auf der Karte hervor</string>
+    <string name="radar_close_pass_threshold_1_0m">1,0 m (3,3 ft - UK/US)</string>
+    <string name="radar_close_pass_threshold_1_5m">1,5 m (5,0 ft - Innerorts / StVO)</string>
+    <string name="radar_close_pass_threshold_2_0m">2,0 m (6,6 ft - Außerorts / StVO)</string>
+    <string name="radar_marker_close_pass_title">⚠️ Zu dichter Überholvorgang (%1$sm) • %2$s • %3$s km/h</string>
+    <string name="radar_vehicle_size_light">Leichtfahrzeug</string>
+    <string name="radar_vehicle_size_car">PKW</string>
+    <string name="radar_vehicle_size_truck">Schwerlastfahrzeug (LKW/Bus)</string>
+    <string name="radar_min_passing_distance">Min. Seitenabstand</string>
+    <string name="radar_close_pass_warning">⚠️ %1$d gefährlich nahe Überholungen (&lt;%2$sm)</string>
+    <string name="radar_heavy_vehicle_share">Schwerlastanteil</string>
 </resources>

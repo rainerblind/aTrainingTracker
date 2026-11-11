@@ -61,7 +61,9 @@ data class WorkoutSampleRecord(
     val radarThreatCount: Int? = null,
     val radarClosestDistanceM: Double? = null,
     val radarApproachSpeedMps: Double? = null,
-    val radarVehicleCount: Int? = null
+    val radarVehicleCount: Int? = null,
+    val radarPassingDistanceM: Double? = null,
+    val radarLargeVehicleCount: Int? = null
 )
 
 /**

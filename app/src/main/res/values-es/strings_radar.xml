@@ -162,4 +162,16 @@
     <string name="radar_summary_heavy_vehicles_singular">🚛 1 vehículo pesado</string>
     <string name="radar_summary_max_speed">🚀 Máx %1$s km/h (+%2$s km/h aproximación)</string>
     <string name="radar_summary_max_speed_simple">🚀 Máx %1$s km/h</string>
+    <string name="radar_close_pass_threshold_title">Umbral de adelantamiento peligroso</string>
+    <string name="radar_close_pass_threshold_summary">Resalta vehículos adelantando por debajo de la distancia mínima de seguridad en el mapa</string>
+    <string name="radar_close_pass_threshold_1_0m">1,0 m (3,3 ft - UK/US)</string>
+    <string name="radar_close_pass_threshold_1_5m">1,5 m (5,0 ft - Urbano / StVO)</string>
+    <string name="radar_close_pass_threshold_2_0m">2,0 m (6,6 ft - Rural / StVO)</string>
+    <string name="radar_marker_close_pass_title">⚠️ Adelantamiento peligroso (%1$sm) • %2$s • %3$s km/h</string>
+    <string name="radar_vehicle_size_light">Vehículo ligero</string>
+    <string name="radar_vehicle_size_car">Coche</string>
+    <string name="radar_vehicle_size_truck">Vehículo pesado (Camión/Autobús)</string>
+    <string name="radar_min_passing_distance">Separación mínima</string>
+    <string name="radar_close_pass_warning">⚠️ %1$d adelantamientos peligrosos (&lt;%2$sm)</string>
+    <string name="radar_heavy_vehicle_share">Vehículos pesados</string>
 </resources>

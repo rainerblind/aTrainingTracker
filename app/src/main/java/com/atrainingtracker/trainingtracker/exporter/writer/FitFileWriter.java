@@ -226,6 +226,8 @@ public class FitFileWriter extends BaseFileWriter {
             FieldDescriptionMesg radarTotalDesc = null;
             FieldDescriptionMesg passingSpeedDesc = null;
             FieldDescriptionMesg passingSpeedAbsDesc = null;
+            FieldDescriptionMesg passingDistDesc = null;
+            FieldDescriptionMesg largeVehCountDesc = null;
 
             if (haveRadar) {
                 devDataIdMesg = new DeveloperDataIdMesg();
@@ -277,6 +279,24 @@ public class FitFileWriter extends BaseFileWriter {
                 passingSpeedAbsDesc.setScale((short) 100);
                 passingSpeedAbsDesc.setUnits(0, "m/s");
                 encoder.write(passingSpeedAbsDesc);
+
+                passingDistDesc = new FieldDescriptionMesg();
+                passingDistDesc.setDeveloperDataIndex((short) 0);
+                passingDistDesc.setFieldDefinitionNumber((short) 4);
+                passingDistDesc.setFitBaseTypeId((short) Fit.BASE_TYPE_UINT16);
+                passingDistDesc.setFieldName(0, "passing_distance");
+                passingDistDesc.setScale((short) 100);
+                passingDistDesc.setUnits(0, "m");
+                encoder.write(passingDistDesc);
+
+                largeVehCountDesc = new FieldDescriptionMesg();
+                largeVehCountDesc.setDeveloperDataIndex((short) 0);
+                largeVehCountDesc.setFieldDefinitionNumber((short) 5);
+                largeVehCountDesc.setFitBaseTypeId((short) Fit.BASE_TYPE_UINT16);
+                largeVehCountDesc.setFieldName(0, "large_vehicle_count");
+                largeVehCountDesc.setScale((short) 1);
+                largeVehCountDesc.setUnits(0, "vehicles");
+                encoder.write(largeVehCountDesc);
             }
 
             final boolean finalHaveRadar = haveRadar;
@@ -285,6 +305,8 @@ public class FitFileWriter extends BaseFileWriter {
             final FieldDescriptionMesg finalRadarTotalDesc = radarTotalDesc;
             final FieldDescriptionMesg finalPassingSpeedDesc = passingSpeedDesc;
             final FieldDescriptionMesg finalPassingSpeedAbsDesc = passingSpeedAbsDesc;
+            final FieldDescriptionMesg finalPassingDistDesc = passingDistDesc;
+            final FieldDescriptionMesg finalLargeVehCountDesc = largeVehCountDesc;
             final int[] prevVehCount = new int[]{0};
 
             try {
@@ -450,6 +472,16 @@ public class FitFileWriter extends BaseFileWriter {
                                 f.setValue(sample.getSpeedMps() + sample.getRadarApproachSpeedMps());
                                 record.addDeveloperField(f);
                             }
+                        }
+                        if (sample.getRadarPassingDistanceM() != null && finalPassingDistDesc != null) {
+                            DeveloperField f = new DeveloperField(finalPassingDistDesc, finalDevDataIdMesg);
+                            f.setValue(sample.getRadarPassingDistanceM());
+                            record.addDeveloperField(f);
+                        }
+                        if (sample.getRadarLargeVehicleCount() != null && finalLargeVehCountDesc != null) {
+                            DeveloperField f = new DeveloperField(finalLargeVehCountDesc, finalDevDataIdMesg);
+                            f.setValue(sample.getRadarLargeVehicleCount());
+                            record.addDeveloperField(f);
                         }
                     }
 

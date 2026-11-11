@@ -145,6 +145,42 @@ fun RadarTrafficSummaryCard(
                     modifier = Modifier.weight(1f)
                 )
             }
+
+            // Row 3: Clearance & Vehicle Sizes (REQ-TRK-073.7 / ATT-5096)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                val minClearanceStr = summary.minPassingDistanceM?.let {
+                    String.format(Locale.getDefault(), "%.1f m", it)
+                } ?: "-"
+                MetricItem(
+                    iconRes = null,
+                    label = stringResource(R.string.radar_min_passing_distance),
+                    value = minClearanceStr,
+                    layout = MetricLayout.VERTICAL,
+                    modifier = Modifier.weight(1f)
+                )
+                val closePassStr = if (summary.closePassCount > 0) {
+                    "⚠️ ${summary.closePassCount}"
+                } else {
+                    "0"
+                }
+                MetricItem(
+                    iconRes = null,
+                    label = stringResource(R.string.radar_close_pass_threshold_title),
+                    value = closePassStr,
+                    layout = MetricLayout.VERTICAL,
+                    modifier = Modifier.weight(1f)
+                )
+                MetricItem(
+                    iconRes = null,
+                    label = stringResource(R.string.radar_heavy_vehicle_share),
+                    value = summary.heavyVehicleCount.toString(),
+                    layout = MetricLayout.VERTICAL,
+                    modifier = Modifier.weight(1f)
+                )
+            }
         }
     }
 }

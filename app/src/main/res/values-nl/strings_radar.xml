@@ -162,4 +162,16 @@
     <string name="radar_summary_heavy_vehicles_singular">🚛 1 zwaar voertuig</string>
     <string name="radar_summary_max_speed">🚀 Max %1$s km/u (+%2$s km/u nadering)</string>
     <string name="radar_summary_max_speed_simple">🚀 Max %1$s km/u</string>
+    <string name="radar_close_pass_threshold_title">Waarschuwingsdrempel inhaaldrempel</string>
+    <string name="radar_close_pass_threshold_summary">Markeert inhalende voertuigen onder de minimale veiligheidsafstand op de kaart</string>
+    <string name="radar_close_pass_threshold_1_0m">1,0 m (3,3 ft - UK/US)</string>
+    <string name="radar_close_pass_threshold_1_5m">1,5 m (5,0 ft - Binnen bebouwde kom)</string>
+    <string name="radar_close_pass_threshold_2_0m">2,0 m (6,6 ft - Buiten bebouwde kom)</string>
+    <string name="radar_marker_close_pass_title">⚠️ Krappe inhaalactie (%1$sm) • %2$s • %3$s km/u</string>
+    <string name="radar_vehicle_size_light">Licht voertuig</string>
+    <string name="radar_vehicle_size_car">Auto</string>
+    <string name="radar_vehicle_size_truck">Vrachtwagen / Bus</string>
+    <string name="radar_min_passing_distance">Min. inhaaldistancie</string>
+    <string name="radar_close_pass_warning">⚠️ %1$d krappe inhaalacties (&lt;%2$sm)</string>
+    <string name="radar_heavy_vehicle_share">Zwaar verkeer</string>
 </resources>
