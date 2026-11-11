@@ -16,6 +16,7 @@ import android.database.sqlite.SQLiteDatabase
 import android.util.Log
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.TrainingApplication
+import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries
 import com.dropbox.core.v2.files.FileMetadata
@@ -47,6 +48,7 @@ class LegacyImportEngineDeduplicationTest {
 
     private lateinit var mockSummariesDb: WorkoutSummariesDatabaseManager
     private lateinit var mockSqlDb: SQLiteDatabase
+    private lateinit var repo: WorkoutRepository
 
     @Before
     fun setUp() {
@@ -66,10 +68,20 @@ class LegacyImportEngineDeduplicationTest {
         mockSqlDb = mockk(relaxed = true)
         mockSummariesDb = mockk(relaxed = true)
         every { mockSummariesDb.database } returns mockSqlDb
+
+        val mockContext = mockk<Context>(relaxed = true)
+        mockkStatic(WorkoutSummariesDatabaseManager::class)
+        every { WorkoutSummariesDatabaseManager.getInstance(any()) } returns mockSummariesDb
+
+        val constructor = WorkoutRepository::class.java.getDeclaredConstructor(Context::class.java)
+        constructor.isAccessible = true
+        repo = constructor.newInstance(mockContext)
+        WorkoutRepository.resetForTesting(repo)
     }
 
     @After
     fun tearDown() {
+        WorkoutRepository.resetForTesting(null)
         unmockkAll()
     }
 
@@ -92,7 +104,7 @@ class LegacyImportEngineDeduplicationTest {
         } returns mockCursor
 
         val exists = LegacyImportEngine.isWorkoutExisting(
-            mockSummariesDb,
+            repo,
             fileBaseName = "2024_05_10_14_30_00",
             timeStart = null
         )
@@ -113,7 +125,7 @@ class LegacyImportEngineDeduplicationTest {
         } returns mockCursor
 
         val exists = LegacyImportEngine.isWorkoutExisting(
-            mockSummariesDb,
+            repo,
             fileBaseName = "2024_05_10_14_30_00",
             timeStart = null
         )
@@ -143,7 +155,7 @@ class LegacyImportEngineDeduplicationTest {
         val timeStart = "2024-05-10 14:30:00"
 
         val exists = LegacyImportEngine.isWorkoutExisting(
-            mockSummariesDb,
+            repo,
             fileBaseName = fileBaseName,
             timeStart = timeStart
         )
@@ -182,7 +194,7 @@ class LegacyImportEngineDeduplicationTest {
         val sport = BSportType.BIKE
 
         val exists = LegacyImportEngine.isWorkoutExisting(
-            mockSummariesDb,
+            repo,
             fileBaseName = fileBaseName,
             timeStart = timeStart,
             bSportType = sport

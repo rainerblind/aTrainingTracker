@@ -19,23 +19,18 @@
 package com.atrainingtracker.trainingtracker.exporter.writer;
 
 import android.content.Context;
-import android.database.Cursor;
-import android.database.sqlite.SQLiteDatabase;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
 
 import com.atrainingtracker.banalservice.BANALService;
 import com.atrainingtracker.banalservice.sensor.SensorType;
-import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager;
 import com.atrainingtracker.banalservice.helpers.HavePressureSensor;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
-import com.atrainingtracker.trainingtracker.database.LapsDatabaseManager;
-import com.atrainingtracker.trainingtracker.database.WorkoutSamplesDatabaseManager;
-import com.atrainingtracker.trainingtracker.database.WorkoutSamplesDatabaseManager.WorkoutSamplesDbHelper;
 import com.atrainingtracker.trainingtracker.exporter.ExportInfo;
 import com.atrainingtracker.trainingtracker.repositories.SportTypesRepository;
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository;
+import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutSampleRecord;
 import com.atrainingtracker.trainingtracker.tcx.model.TcxActivity;
 import com.atrainingtracker.trainingtracker.tcx.model.TcxActivityExtensions;
 import com.atrainingtracker.trainingtracker.tcx.model.TcxAuthor;
@@ -164,144 +159,135 @@ public class TCXFileWriter extends BaseFileWriter {
             }
 
             List<TcxLap> tcxLaps = new ArrayList<>();
-            List<TcxTrackpoint> currentTrackpoints = new ArrayList<>();
-            String currentLapStartTime = null;
-            String totalTime = "0";
-            String totalDistance = "0";
+            final List<TcxTrackpoint>[] currentTrackpointsHolder = new List[]{new ArrayList<>()};
+            final String[] currentLapStartTime = new String[]{null};
+            final String[] totalTime = new String[]{"0"};
+            final String[] totalDistance = new String[]{"0"};
+            final long[] prevLineLap = new long[]{BANALService.INIT_LAP_NR - 1};
+            final double[] latitude = new double[]{0.0};
+            final double[] longitude = new double[]{0.0};
 
-            SQLiteDatabase db = WorkoutRepository.getInstance(mContext).getWorkoutSamplesDatabaseManager().getDatabase();
-            try (Cursor cursor = db.query(WorkoutSamplesDatabaseManager.getTableName(exportInfo.getFileBaseName()),
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null)) {
+            WorkoutRepository.getInstance(mContext).streamSamples(exportInfo.getFileBaseName(), sample -> {
+                if (isCancelled()) {
+                    throw new CancellationException("TCX export cancelled at start of loop iteration");
+                }
 
-                double latitude = 0.0;
-                double longitude = 0.0;
-                double latitudeOld;
-                double longitudeOld;
-
-                long prevLineLap = BANALService.INIT_LAP_NR - 1;
-
-                while (cursor != null && cursor.moveToNext()) {
-                    if (isCancelled()) {
-                        throw new CancellationException("TCX export cancelled at start of loop iteration");
+                int lap = sample.getLapNr();
+                if (prevLineLap[0] != lap) { // new lap
+                    if (prevLineLap[0] != BANALService.INIT_LAP_NR - 1) { // finish previous lap
+                        tcxLaps.add(buildLap(prevLineLap[0], currentLapStartTime[0], totalTime[0], totalDistance[0], currentTrackpointsHolder[0], lapDataMap));
+                        currentTrackpointsHolder[0] = new ArrayList<>();
                     }
 
-                    int lap = cursor.getInt(cursor.getColumnIndexOrThrow(SensorType.LAP_NR.name()));
-                    if (prevLineLap != lap) { // new lap
-                        if (prevLineLap != BANALService.INIT_LAP_NR - 1) { // finish previous lap
-                            tcxLaps.add(buildLap(prevLineLap, currentLapStartTime, totalTime, totalDistance, currentTrackpoints, lapDataMap));
-                            currentTrackpoints = new ArrayList<>();
-                        }
-
-                        // get the lap data
-                        LapData lapData = lapDataMap.get((long) lap);
-                        if (lapData != null) {
-                            totalTime = String.valueOf(lapData.getTimeTotalS());
-                            totalDistance = String.valueOf(lapData.getDistanceTotalM());
+                    // get the lap data
+                    LapData lapData = lapDataMap.get((long) lap);
+                    if (lapData != null) {
+                        totalTime[0] = String.valueOf(lapData.getTimeTotalS());
+                        totalDistance[0] = String.valueOf(lapData.getDistanceTotalM());
+                    } else {
+                        LapData fetchedLap = WorkoutRepository.getInstance(mContext).getLap(workoutID, (long) lap);
+                        if (fetchedLap != null) {
+                            totalTime[0] = String.valueOf(fetchedLap.getTimeTotalS());
+                            totalDistance[0] = String.valueOf(fetchedLap.getDistanceTotalM());
                         } else {
-                            SQLiteDatabase lapDb = WorkoutRepository.getInstance(mContext).getLapsDatabaseManagerInstance().getDatabase();
-                            try (Cursor lapCursor = lapDb.query(LapsDatabaseManager.Laps.TABLE,
-                                    null,
-                                    LapsDatabaseManager.Laps.WORKOUT_ID + "=? AND " + LapsDatabaseManager.Laps.LAP_NR + "=?",
-                                    new String[]{workoutID + "", lap + ""},
-                                    null,
-                                    null,
-                                    null)) {
-                                if (lapCursor.moveToFirst()) {
-                                    totalTime = myGet(lapCursor, LapsDatabaseManager.Laps.TIME_TOTAL_s, "0");
-                                    totalDistance = myGet(lapCursor, LapsDatabaseManager.Laps.DISTANCE_TOTAL_m, "0");
-                                } else {
-                                    totalTime = "0";
-                                    totalDistance = "0";
-                                }
-                            }
-                        }
-
-                        currentLapStartTime = dbTime2XMLTime(cursor.getString(cursor.getColumnIndexOrThrow(WorkoutSamplesDbHelper.TIME)));
-                    }
-                    prevLineLap = lap;
-
-                    String tpTime = dbTime2XMLTime(cursor.getString(cursor.getColumnIndexOrThrow(WorkoutSamplesDbHelper.TIME)));
-
-                    TcxPosition position = null;
-                    // we do not write location data when it was a (indoor) trainer session
-                    if (!indoorTrainerSession && haveGeo && dataValid(cursor, SensorType.LATITUDE.name()) && dataValid(cursor, SensorType.LONGITUDE.name())) {
-                        latitudeOld = latitude;
-                        longitudeOld = longitude;
-                        latitude = cursor.getDouble(cursor.getColumnIndexOrThrow(SensorType.LATITUDE.name()));
-                        longitude = cursor.getDouble(cursor.getColumnIndexOrThrow(SensorType.LONGITUDE.name()));
-
-                        if (!(WRITE_ONLY_ON_NEW_GEO_DATA && latitude == latitudeOld && longitude == longitudeOld)) {
-                            position = new TcxPosition(latitude, longitude);
+                            totalTime[0] = "0";
+                            totalDistance[0] = "0";
                         }
                     }
 
-                    Double altitude = null;
-                    if (haveAltitude && dataValid(cursor, SensorType.ALTITUDE.name())) {
-                        double alt = cursor.getDouble(cursor.getColumnIndexOrThrow(SensorType.ALTITUDE.name()));
-                        if (alt >= -500.0 && alt <= 9000.0) {
-                            altitude = alt;
+                    if (sample.getTime() != null) {
+                        try {
+                            currentLapStartTime[0] = dbTime2XMLTime(sample.getTime());
+                        } catch (ParseException e) {
+                            currentLapStartTime[0] = "";
                         }
                     }
+                }
+                prevLineLap[0] = lap;
 
-                    Double distance = null;
-                    if (haveDistance && dataValid(cursor, SensorType.DISTANCE_m.name())) {
-                        distance = cursor.getDouble(cursor.getColumnIndexOrThrow(SensorType.DISTANCE_m.name()));
-                    }
-
-                    Integer hrVal = null;
-                    if (haveHR && dataValid(cursor, SensorType.HR.name())) {
-                        hrVal = cursor.getInt(cursor.getColumnIndexOrThrow(SensorType.HR.name()));
-                    }
-
-                    Integer cadenceVal = null;
-                    if (haveBikeCadence && dataValid(cursor, SensorType.CADENCE.name())) {
-                        cadenceVal = (int) Math.round(cursor.getDouble(cursor.getColumnIndexOrThrow(SensorType.CADENCE.name())));
-                    }
-
-                    Double speedVal = null;
-                    Integer powerVal = null;
-                    Integer runCadenceVal = null;
-
-                    if (haveSpeed && dataValid(cursor, SensorType.SPEED_mps.name())) {
-                        speedVal = cursor.getDouble(cursor.getColumnIndexOrThrow(SensorType.SPEED_mps.name()));
-                    }
-
-                    if (havePower && dataValid(cursor, SensorType.POWER.name())) {
-                        powerVal = (int) Math.round(cursor.getDouble(cursor.getColumnIndexOrThrow(SensorType.POWER.name())));
-                    }
-
-                    if (haveRunCadence && dataValid(cursor, SensorType.CADENCE.name())) {
-                        runCadenceVal = (int) Math.round(cursor.getDouble(cursor.getColumnIndexOrThrow(SensorType.CADENCE.name())));
-                    }
-
-                    TcxTrackpointExtensions tpExt = (speedVal != null || powerVal != null || runCadenceVal != null)
-                            ? new TcxTrackpointExtensions(speedVal, powerVal, runCadenceVal)
-                            : null;
-
-                    currentTrackpoints.add(new TcxTrackpoint(
-                            tpTime,
-                            position,
-                            altitude,
-                            distance,
-                            hrVal,
-                            cadenceVal,
-                            tpExt
-                    ));
-
-                    if (isCancelled()) {
-                        throw new CancellationException("TCX export cancelled post-I/O");
+                String tpTime = "";
+                if (sample.getTime() != null) {
+                    try {
+                        tpTime = dbTime2XMLTime(sample.getTime());
+                    } catch (ParseException e) {
+                        tpTime = "";
                     }
                 }
 
-                if (prevLineLap != BANALService.INIT_LAP_NR - 1) {
-                    tcxLaps.add(buildLap(prevLineLap, currentLapStartTime, totalTime, totalDistance, currentTrackpoints, lapDataMap));
+                TcxPosition position = null;
+                // we do not write location data when it was a (indoor) trainer session
+                if (!indoorTrainerSession && haveGeo && sample.getLatitude() != null && sample.getLongitude() != null) {
+                    double latitudeOld = latitude[0];
+                    double longitudeOld = longitude[0];
+                    latitude[0] = sample.getLatitude();
+                    longitude[0] = sample.getLongitude();
+
+                    if (!(WRITE_ONLY_ON_NEW_GEO_DATA && latitude[0] == latitudeOld && longitude[0] == longitudeOld)) {
+                        position = new TcxPosition(latitude[0], longitude[0]);
+                    }
                 }
-            } // close cursor try
+
+                Double altitude = null;
+                if (haveAltitude && sample.getAltitude() != null) {
+                    double alt = sample.getAltitude();
+                    if (alt >= -500.0 && alt <= 9000.0) {
+                        altitude = alt;
+                    }
+                }
+
+                Double distance = null;
+                if (haveDistance && sample.getDistanceM() != null) {
+                    distance = sample.getDistanceM();
+                }
+
+                Integer hrVal = null;
+                if (haveHR && sample.getHr() != null) {
+                    hrVal = sample.getHr();
+                }
+
+                Integer cadenceVal = null;
+                if (haveBikeCadence && sample.getCadence() != null) {
+                    cadenceVal = (int) Math.round(sample.getCadence());
+                }
+
+                Double speedVal = null;
+                Integer powerVal = null;
+                Integer runCadenceVal = null;
+
+                if (haveSpeed && sample.getSpeedMps() != null) {
+                    speedVal = sample.getSpeedMps();
+                }
+
+                if (havePower && sample.getPower() != null) {
+                    powerVal = (int) Math.round(sample.getPower());
+                }
+
+                if (haveRunCadence && sample.getCadence() != null) {
+                    runCadenceVal = (int) Math.round(sample.getCadence());
+                }
+
+                TcxTrackpointExtensions tpExt = (speedVal != null || powerVal != null || runCadenceVal != null)
+                        ? new TcxTrackpointExtensions(speedVal, powerVal, runCadenceVal)
+                        : null;
+
+                currentTrackpointsHolder[0].add(new TcxTrackpoint(
+                        tpTime,
+                        position,
+                        altitude,
+                        distance,
+                        hrVal,
+                        cadenceVal,
+                        tpExt
+                ));
+
+                if (isCancelled()) {
+                    throw new CancellationException("TCX export cancelled post-I/O");
+                }
+            });
+
+            if (prevLineLap[0] != BANALService.INIT_LAP_NR - 1) {
+                tcxLaps.add(buildLap(prevLineLap[0], currentLapStartTime[0], totalTime[0], totalDistance[0], currentTrackpointsHolder[0], lapDataMap));
+            }
 
             String activityWorkoutName = (workoutName != null && !workoutName.trim().isEmpty() && !workoutName.equals(exportInfo.getFileBaseName()))
                     ? workoutName.trim() : null;

@@ -2123,6 +2123,32 @@
   • Execute targeted test suite (`--tests "com.atrainingtracker.trainingtracker.database.*" --tests "com.atrainingtracker.trainingtracker.exporter.*" --tests "com.atrainingtracker.trainingtracker.migration.*" --tests "com.atrainingtracker.trainingtracker.tcx.*"`).
   • Assert 100% pass rate.
 
+### TST-DAT-038: **True Repository Encapsulation & SQLite Decoupling Verification Suite** [Verified]
+- **Target Release**: `V5.0.0`
+- **Requirement(s)**: `REQ-DAT-042`
+- **Component**: `WorkoutRepository.kt`, `WorkoutClusterRepository.kt`, `ExportStatusRepository.kt`, `RoutesRepository.kt`, `FitFileWriter.java`, `TCXFileWriter.java`, `BaseFileWriter.java`, `LegacyImportEngine.kt`, `WorkoutDeletionHelper.java`, `StravaUploader.kt`, `WorkoutClusterEngine.kt`, `RepositoryEngineCleanlinessContractTest.kt`
+- **Jira**: `ATT-6698`
+- **Test Description**:
+  1. *Repository Reflection Encapsulation Test (`TST-DAT-038.1`, `RepositoryEngineCleanlinessContractTest.kt`)*:
+  • Reflectively inspect all public and internal methods of `WorkoutRepository`, `WorkoutClusterRepository`, `ExportStatusRepository`, and `RoutesRepository`.
+  • Assert that zero public methods return `android.database.Cursor`, `android.database.sqlite.SQLiteDatabase`, or any `*DatabaseManager` class.
+  2. *Phase B AST Cleanliness & Cursor Import Prohibition Test (`TST-DAT-038.2`, `RepositoryEngineCleanlinessContractTest.kt`)*:
+  • Inspect source AST / import statements of `FitFileWriter.java`, `TCXFileWriter.java`, `BaseFileWriter.java`, `LegacyImportEngine.kt`, `WorkoutDeletionHelper.java`, `StravaUploader.kt`, and `WorkoutClusterEngine.kt`.
+  • Assert zero occurrences of `*DatabaseManager.getInstance(...)` and zero imports of `android.database.Cursor` or `*DatabaseManager`.
+  3. *Memory-Bounded Sample Streaming Exporter Test (`TST-DAT-038.3`)*:
+  • Run `FitFileWriterTest` and `TCXRoundTripTest` on synthetic workouts.
+  • Verify that samples are streamed row-by-row via domain callbacks and that output FIT and TCX files match expected binary/XML outputs bit-for-bit.
+  4. *Transactional Legacy Import Atomicity Test (`TST-DAT-038.4`)*:
+  • Run `LegacyImportEngineTest`.
+  • Verify multi-table atomic persistence of workout summaries, samples, and laps via repository methods, and verify compensatory rollback on simulated I/O errors.
+  5. *Encapsulated Cascade Deletion Parity Test (`TST-DAT-038.5`)*:
+  • Run `WorkoutDeletionHelperTest` and repository deletion tests.
+  • Verify complete cascade deletion (sample table dropped, laps deleted, export status wiped, summaries removed) with identical order and WorkManager cancellation.
+  6. *Tier 1 Targeted Unit Test Regression (`TST-DAT-038.6`)*:
+  • Execute targeted test suite (`--tests "com.atrainingtracker.trainingtracker.ui.RepositoryEngineCleanlinessContractTest" --tests "com.atrainingtracker.trainingtracker.database.*" --tests "com.atrainingtracker.trainingtracker.exporter.*" --tests "com.atrainingtracker.trainingtracker.migration.*" --tests "com.atrainingtracker.trainingtracker.tcx.*"`).
+  • Assert 100% pass rate.
+
+
 
 
 

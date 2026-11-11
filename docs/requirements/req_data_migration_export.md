@@ -3276,6 +3276,44 @@
 
 **Invariants**: Phase C (`TrackerService`, `BANALService`) strictly untouched; zero SQLite schema alterations; 100% unit test pass rate.
 
+### REQ-DAT-042: True Repository Encapsulation & SQLite Backdoor Elimination (Phase B Hardening) [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-DAT-038` | **Tickets**: `ATT-6698`
+- **Implementation**: `app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/WorkoutRepository.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/database/WorkoutClusterRepository.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/ui/components/export/ExportStatusRepository.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/repositories/RoutesRepository.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/exporter/writer/FitFileWriter.java`, `app/src/main/java/com/atrainingtracker/trainingtracker/exporter/writer/TCXFileWriter.java`, `app/src/main/java/com/atrainingtracker/trainingtracker/exporter/writer/BaseFileWriter.java`, `app/src/main/java/com/atrainingtracker/trainingtracker/migration/LegacyImportEngine.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/database/WorkoutDeletionHelper.java`, `app/src/main/java/com/atrainingtracker/trainingtracker/exporter/uploader/StravaUploader.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/database/WorkoutClusterEngine.kt`
+- **Rationale**: While ATT-6426 decoupled background engines from direct `*DatabaseManager.getInstance()` calls, repositories introduced public and internal backdoor getters exposing raw database managers, SQLiteDatabase handles, and Cursors. This violates SWE.2 encapsulation and coding standards §2.5. Low-level persistence details, table definitions, and Cursor lifecycle must be strictly encapsulated inside domain repositories.
+- **Description**:
+  1. *Elimination of Repository Backdoor Getters (`REQ-DAT-042.1`)*:
+     - `WorkoutRepository`, `WorkoutClusterRepository`, `ExportStatusRepository`, and `RoutesRepository` SHALL make all internal database managers, database open helpers, `SQLiteDatabase` references, and raw `Cursor` getters `private`. Zero public or internal backdoor getters (`workoutSummariesDatabaseManager`, `workoutSamplesDatabaseManager`, `lapsDatabaseManagerInstance`, `getWorkoutCursor`, `getCursorForAllWorkouts`, `databaseManager`, `stravaHelper`, `getDatabase`) SHALL be exposed to engine, exporter, or UI consumers.
+  2. *Encapsulated Sample Streaming API for Exporters (`REQ-DAT-042.2`)*:
+     - `WorkoutRepository` SHALL provide a memory-bounded streaming API (e.g. `streamSamples(fileBaseName: String, consumer: SampleConsumer)`) allowing `FitFileWriter` and `TCXFileWriter` to iterate over high-frequency workout point records without loading or materializing entire sample point sets into JVM heap memory ($O(1)$ memory overhead).
+  3. *Encapsulated Exporter & Uploader Domain Queries (`REQ-DAT-042.3`)*:
+     - `WorkoutRepository` SHALL provide strongly-typed domain DTO getters for export header extraction (`BaseFileWriter`), Strava upload duplicate verification metadata (`StravaUploader`), and lap summaries (`FitFileWriter`, `TCXFileWriter`), eliminating raw `Cursor` projections and SQLite column lookups in exporter layers.
+  4. *Transactional Batch Encapsulation for LegacyImportEngine (`REQ-DAT-042.4`)*:
+     - `WorkoutRepository` and `ExportStatusRepository` SHALL encapsulate all multi-table insert and update operations required during GPX/TCX file imports (workout summaries, lap insertions, dynamic sample table creation and bulk insertion) within repository-managed transactional boundaries (`beginTransaction`/`endTransaction`) on `Dispatchers.IO`, ensuring full atomicity and thread safety.
+  5. *Encapsulated Cascade Deletion Orchestration (`REQ-DAT-042.5`)*:
+     - Multi-table workout cascade deletion (samples table drop, laps purge, export status cleanup, climb links, summaries deletion) SHALL be fully encapsulated within `WorkoutRepository.deleteWorkoutCascade()` and `WorkoutRepository.deleteOldWorkoutsCascade()`, deprecating and removing external database manager injections in `WorkoutDeletionHelper`.
+  6. *Architectural AST and Reflection Governance Contract (`REQ-DAT-042.6`)*:
+     - `RepositoryEngineCleanlinessContractTest` SHALL enforce:
+       (a) Zero `android.database.Cursor`, `android.database.sqlite.SQLiteDatabase`, or `*DatabaseManager` imports across Phase B target callers (`FitFileWriter`, `TCXFileWriter`, `BaseFileWriter`, `LegacyImportEngine`, `WorkoutDeletionHelper`, `StravaUploader`, `WorkoutClusterEngine`).
+       (b) Reflection inspection of domain repositories verifying that no public methods return `Cursor`, `SQLiteDatabase`, or `*DatabaseManager` instances.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* domain repositories `WorkoutRepository`, `WorkoutClusterRepository`, `ExportStatusRepository`, and `RoutesRepository`,
+• *When* inspecting public and internal member declarations via reflection and AST,
+• *Then* zero public getters or methods return `Cursor`, `SQLiteDatabase`, or `*DatabaseManager` types.
+• *Given* high-frequency recorded workouts with up to 20,000+ sample points,
+• *When* exported to FIT or TCX via `FitFileWriter` and `TCXFileWriter`,
+• *Then* samples are streamed via encapsulated repository callbacks with $O(1)$ heap memory overhead and 100% bitwise export fidelity.
+• *Given* a multi-sport TCX/GPX backup archive,
+• *When* imported via `LegacyImportEngine`,
+• *Then* multi-table sample and summary batch operations persist atomically via repository transaction methods without leaking `SQLiteDatabase` handles.
+• *Given* single or batch workout deletion requests,
+• *When* triggered through `WorkoutRepository` cascade methods,
+• *Then* all associated sample tables, laps, climbs, and export statuses are cleaned up symmetrically in correct dependency order.
+
+**Invariants**: Phase C (`TrackerService`, `BANALService`) strictly untouched; zero SQLite schema alterations; 100% test pass rate across all existing exporter, migration, and repository unit tests.
+
+
 
 
 

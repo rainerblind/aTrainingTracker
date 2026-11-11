@@ -534,7 +534,7 @@ class WorkoutClusterRepository internal constructor(
         return SportTypesRepository.getInstance(context).getBSportType(sportId)
     }
 
-    val databaseManager: WorkoutClusterDatabaseManager get() = clusterDb
+    private val databaseManager: WorkoutClusterDatabaseManager get() = clusterDb
     fun getAllClustersSync(): List<WorkoutCluster> = clusterDb.getAllClusters()
     fun getClusterByIdSync(id: Long): WorkoutCluster? = clusterDb.getClusterById(id)
     fun getClusterByName(name: String): WorkoutCluster? = clusterDb.getClusterByName(name)
@@ -544,5 +544,16 @@ class WorkoutClusterRepository internal constructor(
     fun deleteClusterSync(id: Long) = clusterDb.deleteCluster(id)
     fun deleteAllClustersSync() = clusterDb.deleteAllClusters()
     fun isNameTaken(name: String, excludeId: Long = -1): Boolean = clusterDb.isNameTaken(name, excludeId)
-    fun getDatabase(): android.database.sqlite.SQLiteDatabase = clusterDb.getDatabase()
+
+    fun <T> runInTransaction(block: () -> T): T {
+        val db = clusterDb.getDatabase()
+        db.beginTransaction()
+        return try {
+            val result = block()
+            db.setTransactionSuccessful()
+            result
+        } finally {
+            db.endTransaction()
+        }
+    }
 }

@@ -46,9 +46,6 @@ class ExportStatusRepository private constructor(private val context: Context) {
     private val stravaUploadDbHelper get() =
         com.atrainingtracker.trainingtracker.exporter.db.StravaUploadDbHelper.getInstance(appContext ?: context)
 
-    val databaseManager: ExportStatusDatabaseManager get() = dbManager
-    val stravaHelper: com.atrainingtracker.trainingtracker.exporter.db.StravaUploadDbHelper get() = stravaUploadDbHelper
-
     fun getExportRows(fileBaseName: String): List<ExportStatusDatabaseManager.ExportRow> = dbManager.getExportRows(fileBaseName)
     fun deleteExportWorkout(fileBaseName: String) {
         dbManager.deleteWorkout(fileBaseName)

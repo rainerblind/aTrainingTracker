@@ -202,4 +202,14 @@ public class GPXFileWriter extends BaseFileWriter {
         return new ExportResult(true, false, "Successfully exported to GPX File");
     }
 
+    private String myGet(@NonNull Cursor cursor, String name, String defaultValue) {
+        String defVal = defaultValue;
+        try {
+            defVal = cursor.getString(cursor.getColumnIndexOrThrow(name));
+        } catch (android.database.CursorIndexOutOfBoundsException e) {
+            Log.e(TAG, "database mismatch on column " + name, e);
+        }
+        return defVal;
+    }
+
 }

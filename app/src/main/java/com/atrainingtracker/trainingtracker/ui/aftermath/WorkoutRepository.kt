@@ -20,6 +20,7 @@ package com.atrainingtracker.trainingtracker.ui.aftermath
 
 import android.app.Application
 import android.content.BroadcastReceiver
+import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
@@ -33,6 +34,7 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.Observer
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import com.atrainingtracker.R
+import com.atrainingtracker.database.DatabaseConstants
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager
 import com.atrainingtracker.banalservice.sensor.SensorType
 import com.atrainingtracker.trainingtracker.MyHelper
@@ -56,17 +58,21 @@ import com.atrainingtracker.trainingtracker.database.WorkoutClusterEngine
 import com.atrainingtracker.trainingtracker.database.RouteSource
 import com.atrainingtracker.trainingtracker.database.RouteSummary
 import com.atrainingtracker.trainingtracker.database.EquipmentAndSportTypeDiscoveryManager
+import com.atrainingtracker.trainingtracker.database.hrv.WorkoutRrRepository
+import com.atrainingtracker.trainingtracker.exporter.db.ExportStatusDatabaseManager
 import com.atrainingtracker.trainingtracker.exporter.db.StravaUploadDbHelper
 import com.atrainingtracker.trainingtracker.exporter.ExportManager
 import com.atrainingtracker.trainingtracker.exporter.ExportStatusChangedBroadcaster
 import com.atrainingtracker.trainingtracker.exporter.ExportType
 import com.atrainingtracker.trainingtracker.exporter.FileFormat
 import com.atrainingtracker.trainingtracker.repositories.RoutesRepository
+import com.atrainingtracker.trainingtracker.repositories.SportTypesRepository
 import com.atrainingtracker.trainingtracker.routes.GeoUtils
 import com.atrainingtracker.trainingtracker.tracker.TrackerService
 import com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodsRepository
 import com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutDeletionNotificationManager
 import com.atrainingtracker.trainingtracker.ui.components.export.ExportStatusDataProvider
+import com.atrainingtracker.trainingtracker.ui.components.export.ExportStatusRepository
 import com.atrainingtracker.trainingtracker.ui.components.export.ExportStatusGroupData
 import com.atrainingtracker.trainingtracker.ui.map.LocationMarker
 import com.atrainingtracker.trainingtracker.ui.map.PathPoint
@@ -75,6 +81,7 @@ import com.atrainingtracker.trainingtracker.ui.map.createSensorMarker
 import com.atrainingtracker.trainingtracker.ui.map.TelemetryZoneMath
 import com.atrainingtracker.trainingtracker.ui.theme.TTColor
 import com.atrainingtracker.banalservice.BSportType
+import com.atrainingtracker.trainingtracker.database.ClusterWorkoutCandidateDto
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStore
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper
 import com.atrainingtracker.trainingtracker.ui.aftermath.zones.HeartRateZoneThresholds
@@ -209,18 +216,13 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
     private val stravaUploadDbHelper get() = StravaUploadDbHelper.getInstance(application)
     private val lapsDatabaseManager get() = LapsDatabaseManager.getInstance(application)
 
-    val workoutSummariesDatabaseManager: WorkoutSummariesDatabaseManager get() = summariesManager
-    val workoutSamplesDatabaseManager: WorkoutSamplesDatabaseManager get() = samplesManager
-    val lapsDatabaseManagerInstance: LapsDatabaseManager get() = lapsDatabaseManager
-
     fun getLaps(workoutId: Long): List<LapData> = lapsDatabaseManager.getLaps(workoutId) ?: emptyList()
+    fun getLap(workoutId: Long, lapNr: Long): LapData? = getLaps(workoutId).find { it.lapNr == lapNr }
     fun getExtremaPosition(workoutId: Long, sensorType: SensorType, extremaType: ExtremaType): LatLng? =
         summariesManager.getExtremaPosition(workoutId, sensorType, extremaType)
     fun getExtremaValue(workoutId: Long, sensorType: SensorType, extremaType: ExtremaType): Double? =
         summariesManager.getExtremaValue(workoutId, sensorType, extremaType)
     fun getBaseFileName(workoutId: Long): String? = summariesManager.getBaseFileName(workoutId)
-    fun getWorkoutCursor(workoutId: Long): Cursor? = summariesManager.getWorkoutCursor(workoutId)
-    fun getCursorForAllWorkouts(): Cursor = summariesManager.getCursorForAllWorkouts()
     fun getOldWorkouts(daysToKeep: Int): List<Long> = summariesManager.getOldWorkouts(daysToKeep)
     fun deleteWorkoutSummary(workoutId: Long) = summariesManager.deleteWorkout(workoutId)
     fun deleteWorkoutLaps(workoutId: Long) = lapsDatabaseManager.deleteWorkout(workoutId)
@@ -240,6 +242,818 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
         } catch (e: Exception) {
             Log.w(TAG, "Could not query uploadToStrava for workout $workoutId", e)
             -1
+        }
+    }
+
+    /**
+     * Memory-bounded streaming callback for sample export (REQ-DAT-042.2).
+     */
+    fun streamSamples(fileBaseName: String, consumer: SampleConsumer) {
+        val tableName = WorkoutSamplesDatabaseManager.getTableName(fileBaseName)
+        try {
+            samplesManager.database.query(tableName, null, null, null, null, null, null).use { cursor ->
+                if (cursor == null) return
+
+                fun col(name: String): Int = try {
+                    cursor.getColumnIndexOrThrow(name)
+                } catch (e: Exception) {
+                    cursor.getColumnIndex(name)
+                }
+
+                val timeIdx = col(WorkoutSamplesDatabaseManager.WorkoutSamplesDbHelper.TIME)
+                val lapIdx = col(SensorType.LAP_NR.name)
+                val latIdx = col(SensorType.LATITUDE.name)
+                val lngIdx = col(SensorType.LONGITUDE.name)
+                val altIdx = col(SensorType.ALTITUDE.name)
+                val distIdx = col(SensorType.DISTANCE_m.name)
+                val spdIdx = col(SensorType.SPEED_mps.name)
+                val hrIdx = col(SensorType.HR.name)
+                val cadIdx = col(SensorType.CADENCE.name)
+                val pwrIdx = col(SensorType.POWER.name)
+                val tempIdx = col(SensorType.TEMPERATURE.name)
+
+                fun getDoubleOrNull(idx: Int): Double? =
+                    if (idx >= 0 && !cursor.isNull(idx)) {
+                        try { cursor.getDouble(idx) } catch (e: Exception) { null }
+                    } else null
+
+                fun getIntOrNull(idx: Int): Int? =
+                    if (idx >= 0 && !cursor.isNull(idx)) {
+                        try { cursor.getInt(idx) } catch (e: Exception) { null }
+                    } else null
+
+                while (cursor.moveToNext()) {
+                    val rawLap = if (lapIdx >= 0) {
+                        try { cursor.getInt(lapIdx) } catch (e: Exception) { 1 }
+                    } else 1
+                    val lapVal = if (rawLap > 0) rawLap else 1
+
+                    val timeVal = if (timeIdx >= 0) {
+                        try { cursor.getString(timeIdx) } catch (e: Exception) { null }
+                    } else null
+
+                    val record = WorkoutSampleRecord(
+                        time = timeVal,
+                        lapNr = lapVal,
+                        latitude = getDoubleOrNull(latIdx),
+                        longitude = getDoubleOrNull(lngIdx),
+                        altitude = getDoubleOrNull(altIdx),
+                        distanceM = getDoubleOrNull(distIdx),
+                        speedMps = getDoubleOrNull(spdIdx),
+                        hr = getIntOrNull(hrIdx),
+                        cadence = getDoubleOrNull(cadIdx),
+                        power = getDoubleOrNull(pwrIdx),
+                        temperature = getDoubleOrNull(tempIdx)
+                    )
+                    consumer.accept(record)
+                }
+            }
+        } catch (e: Exception) {
+            if (e is java.util.concurrent.CancellationException) throw e
+            Log.w(TAG, "streamSamples failed for $fileBaseName", e)
+            throw e
+        }
+    }
+
+    /**
+     * Retrieves workout export header metadata as a domain DTO (REQ-DAT-042.3).
+     */
+    fun getWorkoutExportHeader(fileBaseName: String): WorkoutExportHeader? {
+        try {
+            summariesManager.database.query(
+                WorkoutSummariesDatabaseManager.WorkoutSummaries.TABLE,
+                null,
+                "${WorkoutSummariesDatabaseManager.WorkoutSummaries.FILE_BASE_NAME}=?",
+                arrayOf(fileBaseName),
+                null, null, null
+            ).use { cursor ->
+                if (cursor == null || !cursor.moveToFirst()) return null
+
+                fun col(name: String): Int = try {
+                    cursor.getColumnIndexOrThrow(name)
+                } catch (e: Exception) {
+                    cursor.getColumnIndex(name)
+                }
+
+                fun myGet(name: String, defaultVal: String): String {
+                    val idx = col(name)
+                    return if (idx >= 0 && !cursor.isNull(idx)) cursor.getString(idx) else defaultVal
+                }
+
+                val idIdx = col(WorkoutSummariesDatabaseManager.WorkoutSummaries.C_ID)
+                val sportIdx = col(WorkoutSummariesDatabaseManager.WorkoutSummaries.SPORT_ID)
+                val trainerIdx = col(WorkoutSummariesDatabaseManager.WorkoutSummaries.TRAINER)
+                val calIdx = col(WorkoutSummariesDatabaseManager.WorkoutSummaries.CALORIES)
+                val ascIdx = col(WorkoutSummariesDatabaseManager.WorkoutSummaries.ASCENDING)
+                val descIdx = col(WorkoutSummariesDatabaseManager.WorkoutSummaries.DESCENDING)
+                val spdIdx = col(WorkoutSummariesDatabaseManager.WorkoutSummaries.SPEED_AVERAGE_mps)
+
+                return WorkoutExportHeader(
+                    workoutId = if (idIdx >= 0 && !cursor.isNull(idIdx)) cursor.getLong(idIdx) else DatabaseConstants.INVALID_ID,
+                    fileBaseName = fileBaseName,
+                    startTime = myGet(WorkoutSummariesDatabaseManager.WorkoutSummaries.TIME_START, ""),
+                    totalTime = myGet(WorkoutSummariesDatabaseManager.WorkoutSummaries.TIME_TOTAL_s, "0"),
+                    data = myGet(WorkoutSummariesDatabaseManager.WorkoutSummaries.GC_DATA, "--------"),
+                    goal = myGet(WorkoutSummariesDatabaseManager.WorkoutSummaries.GOAL, ""),
+                    method = myGet(WorkoutSummariesDatabaseManager.WorkoutSummaries.METHOD, ""),
+                    totalDistance = myGet(WorkoutSummariesDatabaseManager.WorkoutSummaries.DISTANCE_TOTAL_m, "0"),
+                    description = myGet(WorkoutSummariesDatabaseManager.WorkoutSummaries.DESCRIPTION, ""),
+                    workoutName = myGet(WorkoutSummariesDatabaseManager.WorkoutSummaries.WORKOUT_NAME, ""),
+                    sportTypeId = if (sportIdx >= 0 && !cursor.isNull(sportIdx)) cursor.getLong(sportIdx) else DatabaseConstants.INVALID_ID,
+                    indoorTrainerSession = trainerIdx >= 0 && !cursor.isNull(trainerIdx) && cursor.getInt(trainerIdx) > 0,
+                    calories = if (calIdx >= 0 && !cursor.isNull(calIdx)) cursor.getInt(calIdx) else null,
+                    totalAscent = if (ascIdx >= 0 && !cursor.isNull(ascIdx)) cursor.getInt(ascIdx) else null,
+                    totalDescent = if (descIdx >= 0 && !cursor.isNull(descIdx)) cursor.getInt(descIdx) else null,
+                    avgSpeedMps = if (spdIdx >= 0 && !cursor.isNull(spdIdx)) cursor.getDouble(spdIdx) else null
+                )
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "getWorkoutExportHeader failed for $fileBaseName", e)
+            return null
+        }
+    }
+
+    /**
+     * Retrieves workout metadata for Strava update payload (REQ-DAT-042.3).
+     */
+    fun getWorkoutSummaryUpdateData(fileBaseName: String): WorkoutSummaryUpdateData? {
+        try {
+            summariesManager.database.query(
+                WorkoutSummariesDatabaseManager.WorkoutSummaries.TABLE,
+                null,
+                "${WorkoutSummariesDatabaseManager.WorkoutSummaries.FILE_BASE_NAME}=?",
+                arrayOf(fileBaseName),
+                null, null, null
+            ).use { cursor ->
+                if (cursor == null || !cursor.moveToFirst()) return null
+
+                fun col(name: String): Int = try {
+                    cursor.getColumnIndexOrThrow(name)
+                } catch (e: Exception) {
+                    cursor.getColumnIndex(name)
+                }
+
+                val sportId = cursor.getLong(col(WorkoutSummariesDatabaseManager.WorkoutSummaries.SPORT_ID))
+                val nameIdx = col(WorkoutSummariesDatabaseManager.WorkoutSummaries.WORKOUT_NAME)
+                val descIdx = col(WorkoutSummariesDatabaseManager.WorkoutSummaries.DESCRIPTION)
+                val trainerIdx = col(WorkoutSummariesDatabaseManager.WorkoutSummaries.TRAINER)
+                val commuteIdx = col(WorkoutSummariesDatabaseManager.WorkoutSummaries.COMMUTE)
+                val raceIdx = col(WorkoutSummariesDatabaseManager.WorkoutSummaries.RACE)
+                val bSportIdx = col(WorkoutSummariesDatabaseManager.WorkoutSummaries.B_SPORT)
+                val eqIdx = col(WorkoutSummariesDatabaseManager.WorkoutSummaries.EQUIPMENT_ID)
+
+                val name = if (nameIdx >= 0 && !cursor.isNull(nameIdx)) cursor.getString(nameIdx) else ""
+                val desc = if (descIdx >= 0 && !cursor.isNull(descIdx)) cursor.getString(descIdx) else ""
+                val trainer = trainerIdx >= 0 && !cursor.isNull(trainerIdx) && cursor.getInt(trainerIdx) > 0
+                val commute = commuteIdx >= 0 && !cursor.isNull(commuteIdx) && cursor.getInt(commuteIdx) > 0
+                val race = raceIdx >= 0 && !cursor.isNull(raceIdx) && cursor.getInt(raceIdx) > 0
+                val bSportString = if (bSportIdx >= 0 && !cursor.isNull(bSportIdx)) cursor.getString(bSportIdx) else ""
+                val bSportType = try {
+                    BSportType.valueOf(bSportString)
+                } catch (e: Exception) {
+                    SportTypesRepository.getInstance(application).getBSportType(sportId)
+                }
+                val eqId = if (eqIdx >= 0 && !cursor.isNull(eqIdx)) cursor.getLong(eqIdx) else null
+
+                return WorkoutSummaryUpdateData(
+                    sportId = sportId,
+                    workoutName = name,
+                    description = desc,
+                    trainer = trainer,
+                    commute = commute,
+                    race = race,
+                    bSportString = bSportString,
+                    bSportType = bSportType,
+                    equipmentId = eqId
+                )
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "getWorkoutSummaryUpdateData failed for $fileBaseName", e)
+            return null
+        }
+    }
+
+    /**
+     * Retrieves duplicate check metadata for Strava duplicate evaluation (REQ-DAT-042.3).
+     */
+    fun getWorkoutDuplicateCheckMetadata(fileBaseName: String): WorkoutDuplicateMetadata {
+        try {
+            val projection = arrayOf(
+                WorkoutSummariesDatabaseManager.WorkoutSummaries.TIME_START,
+                WorkoutSummariesDatabaseManager.WorkoutSummaries.B_SPORT,
+                WorkoutSummariesDatabaseManager.WorkoutSummaries.SPORT_ID,
+                WorkoutSummariesDatabaseManager.WorkoutSummaries.TIME_TOTAL_s,
+                WorkoutSummariesDatabaseManager.WorkoutSummaries.TIME_ACTIVE_s
+            )
+            summariesManager.database.query(
+                WorkoutSummariesDatabaseManager.WorkoutSummaries.TABLE,
+                projection,
+                "${WorkoutSummariesDatabaseManager.WorkoutSummaries.FILE_BASE_NAME}=?",
+                arrayOf(fileBaseName),
+                null, null, null
+            ).use { cursor ->
+                if (cursor != null && cursor.moveToFirst()) {
+                    fun col(name: String): Int = try {
+                        cursor.getColumnIndexOrThrow(name)
+                    } catch (e: Exception) {
+                        cursor.getColumnIndex(name)
+                    }
+
+                    val startIdx = col(WorkoutSummariesDatabaseManager.WorkoutSummaries.TIME_START)
+                    val timeStartStr = if (startIdx >= 0 && !cursor.isNull(startIdx)) cursor.getString(startIdx) else null
+                    val startEpochSeconds = timeStartStr?.let {
+                        try {
+                            val fmt = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.US)
+                            fmt.timeZone = java.util.TimeZone.getTimeZone("UTC")
+                            fmt.parse(it)?.time?.div(1000L)
+                        } catch (e: Exception) {
+                            null
+                        }
+                    }
+
+                    val bSportIdx = col(WorkoutSummariesDatabaseManager.WorkoutSummaries.B_SPORT)
+                    val sportIdIdx = col(WorkoutSummariesDatabaseManager.WorkoutSummaries.SPORT_ID)
+                    val bSportStr = if (bSportIdx >= 0 && !cursor.isNull(bSportIdx)) cursor.getString(bSportIdx) else null
+                    val sportId = if (sportIdIdx >= 0 && !cursor.isNull(sportIdIdx)) cursor.getLong(sportIdIdx) else -1L
+
+                    val bSportType = try {
+                        if (bSportStr != null) BSportType.valueOf(bSportStr) else null
+                    } catch (e: Exception) {
+                        null
+                    } ?: SportTypesRepository.getInstance(application).getBSportType(sportId)
+
+                    val activeIdx = col(WorkoutSummariesDatabaseManager.WorkoutSummaries.TIME_ACTIVE_s)
+                    val totalIdx = col(WorkoutSummariesDatabaseManager.WorkoutSummaries.TIME_TOTAL_s)
+                    val activeTime = if (activeIdx >= 0 && !cursor.isNull(activeIdx)) cursor.getLong(activeIdx) else null
+                    val totalTime = if (totalIdx >= 0 && !cursor.isNull(totalIdx)) cursor.getLong(totalIdx) else null
+                    val duration = activeTime?.takeIf { it > 0 } ?: totalTime
+
+                    return WorkoutDuplicateMetadata(
+                        timeStartStr = timeStartStr,
+                        startEpochSeconds = startEpochSeconds,
+                        bSportType = bSportType,
+                        durationSeconds = duration
+                    )
+                }
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "getWorkoutDuplicateCheckMetadata failed for $fileBaseName", e)
+        }
+        return WorkoutDuplicateMetadata(null, null, null, null)
+    }
+
+    /**
+     * Executes cascade deletion of a workout across all persistence tables (REQ-DAT-042.5).
+     */
+    fun deleteWorkoutCascade(workoutId: Long): Boolean {
+        val fileBaseName = summariesManager.getBaseFileName(workoutId)
+
+        summariesManager.deleteWorkout(workoutId)
+        lapsDatabaseManager.deleteWorkout(workoutId)
+        try {
+            WorkoutRrRepository.getInstance(application).deleteWorkoutBlocking(workoutId)
+        } catch (t: Throwable) {
+            Log.w(TAG, "Could not delete workout RR intervals for $workoutId: ${t.message}")
+        }
+
+        if (!fileBaseName.isNullOrEmpty() && ExportStatusDatabaseManager.isValidFileBaseName(fileBaseName)) {
+            try {
+                val wm = androidx.work.WorkManager.getInstance(application)
+                wm.cancelAllWorkByTag(fileBaseName)
+                wm.cancelUniqueWork("export_$fileBaseName")
+                for (format in com.atrainingtracker.trainingtracker.exporter.FileFormat.values()) {
+                    wm.cancelUniqueWork(ExportManager.getUniqueWorkName(fileBaseName, format))
+                }
+            } catch (t: Throwable) {
+                Log.w(TAG, "Could not cancel WorkManager tasks on deletion for $fileBaseName: ${t.message}")
+            }
+
+            samplesManager.deleteWorkout(fileBaseName)
+            ExportStatusRepository.getInstance(application).deleteExportWorkout(fileBaseName)
+            try {
+                stravaUploadDbHelper.deleteWorkout(fileBaseName)
+            } catch (t: Throwable) {
+                Log.w(TAG, "Could not delete strava record for $fileBaseName: ${t.message}")
+            }
+        }
+        return true
+    }
+
+    /**
+     * Bulk deletes old workouts with progress tracking (REQ-DAT-042.5).
+     */
+    fun deleteOldWorkoutsCascade(
+        daysToKeep: Int,
+        progressCallback: WorkoutDeletionHelper.DeletionProgressCallback? = null
+    ): Boolean {
+        val oldWorkoutIds = summariesManager.getOldWorkouts(daysToKeep)
+        val total = oldWorkoutIds.size
+        for (i in 0 until total) {
+            val workoutId = oldWorkoutIds[i]
+            progressCallback?.onProgress(i + 1, total, workoutId)
+            deleteWorkout(workoutId)
+        }
+        return true
+    }
+
+    /**
+     * Checks if a workout exists by file base name or start time (REQ-DAT-042.4).
+     */
+    fun isWorkoutExisting(
+        fileBaseName: String,
+        timeStart: String? = null,
+        bSportType: BSportType? = null
+    ): Boolean {
+        if (timeStart.isNullOrBlank()) {
+            return summariesManager.database.query(
+                WorkoutSummariesDatabaseManager.WorkoutSummaries.TABLE,
+                arrayOf(WorkoutSummariesDatabaseManager.WorkoutSummaries.C_ID),
+                "${WorkoutSummariesDatabaseManager.WorkoutSummaries.FILE_BASE_NAME} = ? COLLATE NOCASE",
+                arrayOf(fileBaseName),
+                null, null, null
+            ).use { it.count > 0 }
+        }
+
+        val selection = if (bSportType != null && bSportType != BSportType.UNKNOWN) {
+            "${WorkoutSummariesDatabaseManager.WorkoutSummaries.FILE_BASE_NAME} = ? COLLATE NOCASE OR " +
+                    "${WorkoutSummariesDatabaseManager.WorkoutSummaries.TIME_START} = ? OR " +
+                    "(${WorkoutSummariesDatabaseManager.WorkoutSummaries.B_SPORT} = ? AND ${WorkoutSummariesDatabaseManager.WorkoutSummaries.TIME_START} IS NOT NULL AND ABS(strftime('%s', ${WorkoutSummariesDatabaseManager.WorkoutSummaries.TIME_START}) - strftime('%s', ?)) <= 180)"
+        } else {
+            "${WorkoutSummariesDatabaseManager.WorkoutSummaries.FILE_BASE_NAME} = ? COLLATE NOCASE OR " +
+                    "${WorkoutSummariesDatabaseManager.WorkoutSummaries.TIME_START} = ? OR " +
+                    "(${WorkoutSummariesDatabaseManager.WorkoutSummaries.TIME_START} IS NOT NULL AND ABS(strftime('%s', ${WorkoutSummariesDatabaseManager.WorkoutSummaries.TIME_START}) - strftime('%s', ?)) <= 180)"
+        }
+
+        val selectionArgs = if (bSportType != null && bSportType != BSportType.UNKNOWN) {
+            arrayOf(fileBaseName, timeStart, bSportType.name, timeStart)
+        } else {
+            arrayOf(fileBaseName, timeStart, timeStart)
+        }
+
+        return summariesManager.database.query(
+            WorkoutSummariesDatabaseManager.WorkoutSummaries.TABLE,
+            arrayOf(WorkoutSummariesDatabaseManager.WorkoutSummaries.C_ID),
+            selection,
+            selectionArgs,
+            null, null, null
+        ).use { it.count > 0 }
+    }
+
+    fun getWorkoutIdByBaseFileName(fileBaseName: String): Long {
+        return summariesManager.database.query(
+            WorkoutSummariesDatabaseManager.WorkoutSummaries.TABLE,
+            arrayOf(WorkoutSummariesDatabaseManager.WorkoutSummaries.C_ID),
+            "${WorkoutSummariesDatabaseManager.WorkoutSummaries.FILE_BASE_NAME} = ? COLLATE NOCASE",
+            arrayOf(fileBaseName),
+            null, null, null
+        ).use { if (it.moveToFirst()) it.getLong(0) else -1L }
+    }
+
+    fun insertWorkoutSummary(values: ContentValues): Long {
+        return summariesManager.database.insert(WorkoutSummariesDatabaseManager.WorkoutSummaries.TABLE, null, values)
+    }
+
+    fun insertImportedWorkout(
+        fileBaseName: String,
+        workoutName: String,
+        timeStart: String,
+        sportId: Long,
+        bSportType: BSportType,
+        equipmentId: Long,
+        workoutNotes: String?,
+        goal: String?,
+        isCommute: Boolean,
+        source: String,
+        uploadToStrava: Boolean
+    ): Long {
+        val summaryValues = ContentValues().apply {
+            put(WorkoutSummariesDatabaseManager.WorkoutSummaries.FILE_BASE_NAME, fileBaseName)
+            put(WorkoutSummariesDatabaseManager.WorkoutSummaries.WORKOUT_NAME, workoutName)
+            put(WorkoutSummariesDatabaseManager.WorkoutSummaries.TIME_START, timeStart)
+            put(WorkoutSummariesDatabaseManager.WorkoutSummaries.SPORT_ID, sportId)
+            put(WorkoutSummariesDatabaseManager.WorkoutSummaries.B_SPORT, bSportType.name)
+            put(WorkoutSummariesDatabaseManager.WorkoutSummaries.EQUIPMENT_ID, if (equipmentId > 0) equipmentId else -1L)
+            if (!workoutNotes.isNullOrBlank()) {
+                put(WorkoutSummariesDatabaseManager.WorkoutSummaries.DESCRIPTION, workoutNotes.trim())
+            }
+            if (!goal.isNullOrBlank()) {
+                put(WorkoutSummariesDatabaseManager.WorkoutSummaries.GOAL, goal.trim())
+            }
+            if (isCommute) {
+                put(WorkoutSummariesDatabaseManager.WorkoutSummaries.COMMUTE, 1)
+            }
+            put(WorkoutSummariesDatabaseManager.WorkoutSummaries.FINISHED, 1)
+            put(WorkoutSummariesDatabaseManager.WorkoutSummaries.SOURCE, source)
+            put(WorkoutSummariesDatabaseManager.WorkoutSummaries.UPLOAD_TO_STRAVA, if (uploadToStrava) 1 else 0)
+        }
+        return summariesManager.database.insert(WorkoutSummariesDatabaseManager.WorkoutSummaries.TABLE, null, summaryValues)
+    }
+
+    fun updateImportedWorkoutStats(
+        workoutId: Long,
+        totalDistance: Double,
+        activeTime: Int,
+        totalTime: Int,
+        avgSpeed: Double,
+        calories: Int?,
+        workoutNotes: String?,
+        workoutName: String?,
+        bSportType: BSportType,
+        lapCount: Int,
+        gcData: String,
+        ascending: Int?,
+        descending: Int?,
+        polyline: String,
+        altitudeStream: String?,
+        distanceStream: String?,
+        minLat: Double?,
+        minLng: Double?,
+        maxLat: Double?,
+        maxLng: Double?
+    ): Int {
+        val values = ContentValues().apply {
+            put(WorkoutSummariesDatabaseManager.WorkoutSummaries.DISTANCE_TOTAL_m, totalDistance)
+            put(WorkoutSummariesDatabaseManager.WorkoutSummaries.TIME_ACTIVE_s, activeTime)
+            put(WorkoutSummariesDatabaseManager.WorkoutSummaries.TIME_TOTAL_s, totalTime)
+            if (activeTime > 0) {
+                put(WorkoutSummariesDatabaseManager.WorkoutSummaries.SPEED_AVERAGE_mps, avgSpeed)
+            }
+            if (calories != null && calories > 0) {
+                put(WorkoutSummariesDatabaseManager.WorkoutSummaries.CALORIES, calories)
+            }
+            if (!workoutNotes.isNullOrBlank()) {
+                put(WorkoutSummariesDatabaseManager.WorkoutSummaries.DESCRIPTION, workoutNotes.trim())
+            }
+            if (!workoutName.isNullOrBlank()) {
+                put(WorkoutSummariesDatabaseManager.WorkoutSummaries.WORKOUT_NAME, workoutName.trim())
+            }
+            put(WorkoutSummariesDatabaseManager.WorkoutSummaries.B_SPORT, bSportType.name)
+            put(WorkoutSummariesDatabaseManager.WorkoutSummaries.LAPS, lapCount)
+            put(WorkoutSummariesDatabaseManager.WorkoutSummaries.GC_DATA, gcData)
+            if (ascending != null) {
+                put(WorkoutSummariesDatabaseManager.WorkoutSummaries.ASCENDING, ascending)
+            }
+            if (descending != null) {
+                put(WorkoutSummariesDatabaseManager.WorkoutSummaries.DESCENDING, descending)
+            }
+            put(WorkoutSummariesDatabaseManager.WorkoutSummaries.MAP_POLYLINE, polyline)
+            if (!altitudeStream.isNullOrBlank()) {
+                put(WorkoutSummariesDatabaseManager.WorkoutSummaries.ALTITUDE_STREAM, altitudeStream)
+            }
+            if (!distanceStream.isNullOrBlank()) {
+                put(WorkoutSummariesDatabaseManager.WorkoutSummaries.DISTANCE_STREAM, distanceStream)
+            }
+            if (minLat != null && minLng != null && maxLat != null && maxLng != null) {
+                put(WorkoutSummariesDatabaseManager.WorkoutSummaries.BOUND_MIN_LAT, minLat)
+                put(WorkoutSummariesDatabaseManager.WorkoutSummaries.BOUND_MIN_LNG, minLng)
+                put(WorkoutSummariesDatabaseManager.WorkoutSummaries.BOUND_MAX_LAT, maxLat)
+                put(WorkoutSummariesDatabaseManager.WorkoutSummaries.BOUND_MAX_LNG, maxLng)
+            }
+            put("extremumValuesCalculated", 1)
+        }
+        return updateWorkoutSummary(workoutId, values)
+    }
+
+    fun updateWorkoutSummary(workoutId: Long, values: ContentValues): Int {
+        return summariesManager.database.update(
+            WorkoutSummariesDatabaseManager.WorkoutSummaries.TABLE,
+            values,
+            "${WorkoutSummariesDatabaseManager.WorkoutSummaries.C_ID} = ?",
+            arrayOf(workoutId.toString())
+        )
+    }
+
+    fun updateWorkoutSummary(fileBaseName: String, values: ContentValues): Int {
+        return summariesManager.database.update(
+            WorkoutSummariesDatabaseManager.WorkoutSummaries.TABLE,
+            values,
+            "${WorkoutSummariesDatabaseManager.WorkoutSummaries.FILE_BASE_NAME}=?",
+            arrayOf(fileBaseName)
+        )
+    }
+
+    /**
+     * Enriches local workout summary with Strava cloud metadata (REQ-EXP-008/009 / REQ-DAT-042.3).
+     */
+    fun enrichWorkoutFromStrava(
+        fileBaseName: String,
+        workoutName: String? = null,
+        equipmentId: Long? = null,
+        sportId: Long? = null
+    ) {
+        val values = ContentValues()
+        if (workoutName != null) {
+            values.put(WorkoutSummariesDatabaseManager.WorkoutSummaries.WORKOUT_NAME, workoutName)
+        }
+        if (equipmentId != null && equipmentId > 0) {
+            values.put(WorkoutSummariesDatabaseManager.WorkoutSummaries.EQUIPMENT_ID, equipmentId)
+        }
+        if (sportId != null && sportId > 0) {
+            values.put(WorkoutSummariesDatabaseManager.WorkoutSummaries.SPORT_ID, sportId)
+        }
+        if (values.size() > 0) {
+            updateWorkoutSummary(fileBaseName, values)
+        }
+    }
+
+    fun insertWorkoutSamplesBatch(
+        baseFileName: String,
+        sensorTypes: List<SensorType>,
+        bufferedSamples: List<ContentValues>
+    ) {
+        samplesManager.createNewTable(baseFileName, sensorTypes)
+        val targetDb = samplesManager.database
+        val tableName = WorkoutSamplesDatabaseManager.getTableName(baseFileName)
+        targetDb.beginTransaction()
+        try {
+            bufferedSamples.forEach { sampleValues ->
+                val rowId = targetDb.insert(tableName, null, sampleValues)
+                require(rowId >= 0) { "Failed to insert sample into $tableName" }
+            }
+            targetDb.setTransactionSuccessful()
+        } finally {
+            targetDb.endTransaction()
+        }
+    }
+
+    fun saveLap(
+        workoutId: Long,
+        lapNr: Long,
+        startTime: String?,
+        duration: Int,
+        distance: Double,
+        avgSpeed: Double,
+        name: String? = null,
+        description: String? = null
+    ) {
+        if (name != null || description != null) {
+            lapsDatabaseManager.saveLap(workoutId, lapNr, startTime, duration, distance, avgSpeed, name, description)
+        } else {
+            lapsDatabaseManager.saveLap(workoutId, lapNr, startTime, duration, distance, avgSpeed)
+        }
+    }
+
+    fun calculateAndSaveExtrema(
+        workoutId: Long,
+        baseFileName: String,
+        minAltPos: LatLng? = null,
+        maxAltPos: LatLng? = null
+    ) {
+        val sensorsToCalculate = listOf(
+            SensorType.HR, SensorType.CADENCE, SensorType.POWER, SensorType.SPEED_mps,
+            SensorType.ALTITUDE, SensorType.TEMPERATURE
+        )
+        val extremaTypes = listOf(ExtremaType.MIN, ExtremaType.MAX, ExtremaType.AVG)
+
+        sensorsToCalculate.forEach { sensor ->
+            extremaTypes.forEach { type ->
+                val value = samplesManager.calcExtremaValue(summariesManager, baseFileName, type, sensor)
+                if (value != null && !value.isNaN()) {
+                    val pos = if (sensor == SensorType.ALTITUDE) {
+                        when (type) {
+                            ExtremaType.MIN -> minAltPos
+                            ExtremaType.MAX -> maxAltPos
+                            else -> null
+                        }
+                    } else null
+                    summariesManager.updateExtremaValue(workoutId, sensor, type, value, pos)
+                }
+            }
+        }
+    }
+
+    fun updateSpatialExtrema(
+        workoutId: Long,
+        start: LatLng,
+        end: LatLng,
+        apex: LatLng,
+        maxDisp: Double
+    ) {
+        summariesManager.updateExtremaValue(workoutId, SensorType.LATITUDE, ExtremaType.START, start.latitude, start)
+        summariesManager.updateExtremaValue(workoutId, SensorType.LONGITUDE, ExtremaType.START, start.longitude, start)
+        summariesManager.updateExtremaValue(workoutId, SensorType.LATITUDE, ExtremaType.END, end.latitude, end)
+        summariesManager.updateExtremaValue(workoutId, SensorType.LONGITUDE, ExtremaType.END, end.longitude, end)
+        summariesManager.updateExtremaValue(workoutId, SensorType.LINE_DISTANCE_m, ExtremaType.MAX, maxDisp, apex)
+    }
+
+    fun getPowerSpeedHrSamples(baseFileName: String): PowerSpeedHrSamples {
+        val powerSamples = mutableListOf<Double?>()
+        val speedSamples = mutableListOf<Double?>()
+        val hrSamples = mutableListOf<Double?>()
+        if (!samplesManager.existsTable(baseFileName)) {
+            return PowerSpeedHrSamples(emptyList(), emptyList(), emptyList())
+        }
+        val tableName = WorkoutSamplesDatabaseManager.getTableName(baseFileName)
+        try {
+            samplesManager.database.query(tableName, null, null, null, null, null, null).use { cursor ->
+                if (cursor != null) {
+                    val powerIdx = cursor.getColumnIndex(SensorType.POWER.name)
+                    val speedIdx = cursor.getColumnIndex(SensorType.SPEED_mps.name)
+                    val hrIdx = cursor.getColumnIndex(SensorType.HR.name)
+                    while (cursor.moveToNext()) {
+                        val p = if (powerIdx != -1 && !cursor.isNull(powerIdx)) cursor.getDouble(powerIdx) else null
+                        val s = if (speedIdx != -1 && !cursor.isNull(speedIdx)) cursor.getDouble(speedIdx) else null
+                        val hr = if (hrIdx != -1 && !cursor.isNull(hrIdx)) cursor.getDouble(hrIdx) else null
+                        powerSamples.add(p)
+                        speedSamples.add(s)
+                        hrSamples.add(hr)
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "getPowerSpeedHrSamples failed for $baseFileName", e)
+        }
+        return PowerSpeedHrSamples(powerSamples, speedSamples, hrSamples)
+    }
+
+    fun executeCompensatoryImportCleanup(baseFileName: String, workoutId: Long) {
+        try {
+            samplesManager.deleteWorkout(baseFileName)
+        } catch (t: Throwable) {
+            Log.e(TAG, "Compensatory cleanup failed to delete samples table for $baseFileName", t)
+        }
+        try {
+            if (workoutId > 0) {
+                summariesManager.deleteWorkout(workoutId)
+            }
+        } catch (t: Throwable) {
+            Log.e(TAG, "Compensatory cleanup failed to delete summary row for $workoutId", t)
+        }
+    }
+
+    fun getWorkoutClusterId(workoutId: Long): Long {
+        return summariesManager.getLong(workoutId, WorkoutSummariesDatabaseManager.WorkoutSummaries.CLUSTER_ID) ?: -1L
+    }
+
+    fun setWorkoutClusterId(workoutId: Long, clusterId: Long) {
+        val values = ContentValues().apply {
+            put(WorkoutSummariesDatabaseManager.WorkoutSummaries.CLUSTER_ID, clusterId)
+        }
+        updateWorkoutSummary(workoutId, values)
+    }
+
+    fun getWorkoutSportId(workoutId: Long): Long {
+        return summariesManager.getLong(workoutId, WorkoutSummariesDatabaseManager.WorkoutSummaries.SPORT_ID) ?: -1L
+    }
+
+    fun getWorkoutStartTime(workoutId: Long): String? {
+        return summariesManager.getString(workoutId, WorkoutSummariesDatabaseManager.WorkoutSummaries.TIME_START)
+    }
+
+    fun updateWorkoutSport(workoutId: Long, sportId: Long, bSportType: BSportType) {
+        val updateVals = ContentValues().apply {
+            put(WorkoutSummariesDatabaseManager.WorkoutSummaries.SPORT_ID, sportId)
+            put(WorkoutSummariesDatabaseManager.WorkoutSummaries.B_SPORT, bSportType.name)
+        }
+        updateWorkoutSummary(workoutId, updateVals)
+    }
+
+    fun updateWorkoutName(workoutId: Long, name: String) {
+        val updateVals = ContentValues().apply {
+            put(WorkoutSummariesDatabaseManager.WorkoutSummaries.WORKOUT_NAME, name)
+        }
+        updateWorkoutSummary(workoutId, updateVals)
+    }
+
+    fun getWorkoutBounds(workoutId: Long): Map<String, Double> {
+        val map = mutableMapOf<String, Double>()
+        summariesManager.getDouble(workoutId, WorkoutSummariesDatabaseManager.WorkoutSummaries.BOUND_MIN_LAT)?.let { map[WorkoutSummariesDatabaseManager.WorkoutSummaries.BOUND_MIN_LAT] = it }
+        summariesManager.getDouble(workoutId, WorkoutSummariesDatabaseManager.WorkoutSummaries.BOUND_MIN_LNG)?.let { map[WorkoutSummariesDatabaseManager.WorkoutSummaries.BOUND_MIN_LNG] = it }
+        summariesManager.getDouble(workoutId, WorkoutSummariesDatabaseManager.WorkoutSummaries.BOUND_MAX_LAT)?.let { map[WorkoutSummariesDatabaseManager.WorkoutSummaries.BOUND_MAX_LAT] = it }
+        summariesManager.getDouble(workoutId, WorkoutSummariesDatabaseManager.WorkoutSummaries.BOUND_MAX_LNG)?.let { map[WorkoutSummariesDatabaseManager.WorkoutSummaries.BOUND_MAX_LNG] = it }
+        return map
+    }
+
+    fun forEachWorkoutAsc(block: (ClusterWorkoutCandidateDto) -> Unit) {
+        summariesManager.getCursorForAllWorkoutsAsc()?.use { cursor ->
+            while (cursor.moveToNext()) {
+                val candidate = ClusterWorkoutCandidateDto.fromCursor(cursor)
+                block(candidate)
+            }
+        }
+    }
+
+    fun forEachWorkoutAscWithProgress(block: (candidate: ClusterWorkoutCandidateDto, count: Int, total: Int) -> Unit) {
+        summariesManager.getCursorForAllWorkoutsAsc()?.use { cursor ->
+            val total = cursor.count
+            var count = 0
+            while (cursor.moveToNext()) {
+                count++
+                val candidate = ClusterWorkoutCandidateDto.fromCursor(cursor)
+                block(candidate, count, total)
+            }
+        }
+    }
+
+    fun getWorkoutName(workoutId: Long): String? =
+        summariesManager.getString(workoutId, WorkoutSummariesDatabaseManager.WorkoutSummaries.WORKOUT_NAME)
+
+    fun getWorkoutFileBaseName(workoutId: Long): String? =
+        summariesManager.getString(workoutId, WorkoutSummariesDatabaseManager.WorkoutSummaries.FILE_BASE_NAME)
+
+    fun getWorkoutCountForCluster(clusterId: Long): Int =
+        summariesManager.getWorkoutCountForCluster(clusterId)
+
+    fun getWorkoutCountsForAllClusters(): Map<Long, Int> =
+        summariesManager.workoutCountsForAllClusters
+
+    fun getWorkoutPolyline(workoutId: Long): String? =
+        summariesManager.getString(workoutId, WorkoutSummariesDatabaseManager.WorkoutSummaries.MAP_POLYLINE)
+
+    fun getWorkoutSportString(workoutId: Long): String? =
+        summariesManager.getString(workoutId, WorkoutSummariesDatabaseManager.WorkoutSummaries.B_SPORT)
+
+    fun getWorkoutAvgSpeed(workoutId: Long): Double? =
+        summariesManager.getDouble(workoutId, WorkoutSummariesDatabaseManager.WorkoutSummaries.SPEED_AVERAGE_mps)
+
+    fun getWorkoutDistance(workoutId: Long): Double? =
+        summariesManager.getDouble(workoutId, WorkoutSummariesDatabaseManager.WorkoutSummaries.DISTANCE_TOTAL_m)
+
+    fun applyInferredIdentity(workoutId: Long, identity: EquipmentAndSportTypeDiscoveryManager.InferredIdentity) =
+        summariesManager.applyInferredIdentity(workoutId, identity)
+
+    fun getMostFrequentSportIdForCluster(clusterId: Long): Long =
+        summariesManager.getMostFrequentSportIdForCluster(clusterId)
+
+    fun forEachWorkoutBoundsForCluster(clusterId: Long, block: (com.atrainingtracker.trainingtracker.database.WorkoutBoundsDto) -> Unit) {
+        summariesManager.database.query(
+            WorkoutSummariesDatabaseManager.WorkoutSummaries.TABLE,
+            arrayOf(
+                WorkoutSummariesDatabaseManager.WorkoutSummaries.C_ID,
+                WorkoutSummariesDatabaseManager.WorkoutSummaries.TIME_ACTIVE_s,
+                WorkoutSummariesDatabaseManager.WorkoutSummaries.BOUND_MIN_LAT,
+                WorkoutSummariesDatabaseManager.WorkoutSummaries.BOUND_MIN_LNG,
+                WorkoutSummariesDatabaseManager.WorkoutSummaries.BOUND_MAX_LAT,
+                WorkoutSummariesDatabaseManager.WorkoutSummaries.BOUND_MAX_LNG
+            ),
+            "${WorkoutSummariesDatabaseManager.WorkoutSummaries.CLUSTER_ID} = ?",
+            arrayOf(clusterId.toString()),
+            null, null, null
+        )?.use { c ->
+            while (c.moveToNext()) {
+                block(com.atrainingtracker.trainingtracker.database.WorkoutBoundsDto.fromCursor(c))
+            }
+        }
+    }
+
+    fun forEachWorkoutPolylineCandidate(block: (com.atrainingtracker.trainingtracker.database.WorkoutPolylineCandidateDto) -> Unit) {
+        val selection = "${WorkoutSummariesDatabaseManager.WorkoutSummaries.MAP_POLYLINE} IS NOT NULL AND ${WorkoutSummariesDatabaseManager.WorkoutSummaries.MAP_POLYLINE} != ''"
+        val projection = arrayOf(
+            WorkoutSummariesDatabaseManager.WorkoutSummaries.C_ID,
+            WorkoutSummariesDatabaseManager.WorkoutSummaries.CLUSTER_ID,
+            WorkoutSummariesDatabaseManager.WorkoutSummaries.MAP_POLYLINE
+        )
+        summariesManager.database.query(
+            WorkoutSummariesDatabaseManager.WorkoutSummaries.TABLE,
+            projection, selection, null, null, null, null
+        )?.use { cursor ->
+            while (cursor.moveToNext()) {
+                block(com.atrainingtracker.trainingtracker.database.WorkoutPolylineCandidateDto.fromCursor(cursor))
+            }
+        }
+    }
+
+    fun forEachWorkoutDistanceCandidateForCluster(clusterId: Long, block: (com.atrainingtracker.trainingtracker.database.WorkoutDistanceCandidateDto) -> Unit) {
+        summariesManager.database.query(
+            WorkoutSummariesDatabaseManager.WorkoutSummaries.TABLE,
+            arrayOf(
+                WorkoutSummariesDatabaseManager.WorkoutSummaries.C_ID,
+                WorkoutSummariesDatabaseManager.WorkoutSummaries.DISTANCE_TOTAL_m
+            ),
+            "${WorkoutSummariesDatabaseManager.WorkoutSummaries.CLUSTER_ID} = ?",
+            arrayOf(clusterId.toString()),
+            null, null, null
+        )?.use { cursor ->
+            while (cursor.moveToNext()) {
+                block(com.atrainingtracker.trainingtracker.database.WorkoutDistanceCandidateDto.fromCursor(cursor))
+            }
+        }
+    }
+
+    fun forEachRemainingWorkoutForClusterDesc(clusterId: Long, block: (ClusterWorkoutCandidateDto) -> Unit) {
+        summariesManager.database.query(
+            WorkoutSummariesDatabaseManager.WorkoutSummaries.TABLE,
+            null,
+            "${WorkoutSummariesDatabaseManager.WorkoutSummaries.CLUSTER_ID} = ?",
+            arrayOf(clusterId.toString()),
+            null, null,
+            "${WorkoutSummariesDatabaseManager.WorkoutSummaries.TIME_START} DESC"
+        )?.use { cursor ->
+            while (cursor.moveToNext()) {
+                block(ClusterWorkoutCandidateDto.fromCursor(cursor))
+            }
+        }
+    }
+
+    fun <T> runInTransaction(block: () -> T): T {
+        val db = summariesManager.database
+        db.beginTransaction()
+        return try {
+            val result = block()
+            db.setTransactionSuccessful()
+            result
+        } finally {
+            db.endTransaction()
         }
     }
 
@@ -1942,6 +2756,7 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
      * row in the [WorkoutData.extremaRows] list to ensure the UI reflects the change immediately.
      */
     fun updateExtremaValue(workoutId: Long, sensorType: SensorType, extremaType: ExtremaType, value: Double, position: LatLng? = null) {
+        summariesManager.updateExtremaValue(workoutId, sensorType, extremaType, value, position)
         val formattedValue = sensorType.myFormatter.format(value)
         updateWorkoutInMemory(workoutId) { workout ->
             var updated = workout

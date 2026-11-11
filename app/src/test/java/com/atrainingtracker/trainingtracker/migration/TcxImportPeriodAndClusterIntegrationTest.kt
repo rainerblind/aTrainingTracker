@@ -169,9 +169,24 @@ class TcxImportPeriodAndClusterIntegrationTest {
 
         mockWorkoutRepo = mockk(relaxed = true)
         every { mockWorkoutRepo.allWorkouts } returns kotlinx.coroutines.flow.MutableStateFlow(emptyList())
-        every { mockWorkoutRepo.workoutSummariesDatabaseManager } returns mockSummariesDb
-        every { mockWorkoutRepo.workoutSamplesDatabaseManager } returns mockSamplesDb
-        every { mockWorkoutRepo.lapsDatabaseManagerInstance } returns mockLapsDb
+        every { mockWorkoutRepo.getWorkoutIdByBaseFileName(any()) } returns -1L
+        every { mockWorkoutRepo.getWorkoutClusterId(any()) } returns -1L
+        every { mockWorkoutRepo.getWorkoutSportId(any()) } returns -1L
+        every { mockWorkoutRepo.isWorkoutExisting(any(), any(), any()) } returns false
+        every { mockWorkoutRepo.isWorkoutExisting(any()) } returns false
+        every { mockWorkoutRepo.insertImportedWorkout(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) } answers {
+            mockSqlDb.insert(WorkoutSummaries.TABLE, null, ContentValues())
+            101L
+        }
+        every { mockWorkoutRepo.updateImportedWorkoutStats(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) } answers {
+            val wId = firstArg<Long>()
+            val bSport = arg<BSportType>(8)
+            val cv = ContentValues().apply {
+                put(WorkoutSummaries.B_SPORT, bSport.name)
+            }
+            mockSqlDb.update(WorkoutSummaries.TABLE, cv, "${WorkoutSummaries.C_ID}=?", arrayOf(wId.toString()))
+            1
+        }
         WorkoutRepository.resetForTesting(mockWorkoutRepo)
 
         mockClusterRepo = mockk(relaxed = true)

@@ -165,10 +165,6 @@ class RepositoryEngineCleanlinessContractTest {
             "WorkoutDeletionHelper.java must route through WorkoutRepository",
             content.contains("WorkoutRepository.getInstance")
         )
-        assertTrue(
-            "WorkoutDeletionHelper.java must route through ExportStatusRepository",
-            content.contains("ExportStatusRepository.getInstance")
-        )
     }
 
     @Test
@@ -181,6 +177,75 @@ class RepositoryEngineCleanlinessContractTest {
         assertTrue(
             "BackupManager.kt must contain zero DatabaseManager/DbHelper getInstance references, found: $matches",
             matches.isEmpty()
+        )
+    }
+
+    @Test
+    fun testTST_DAT_038_1_repositoryReflection_zeroPublicDatabaseBackdoors() {
+        val repoClasses = listOf(
+            com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository::class.java,
+            com.atrainingtracker.trainingtracker.database.WorkoutClusterRepository::class.java,
+            com.atrainingtracker.trainingtracker.ui.components.export.ExportStatusRepository::class.java,
+            com.atrainingtracker.trainingtracker.repositories.RoutesRepository::class.java
+        )
+
+        val violations = mutableListOf<String>()
+
+        for (clazz in repoClasses) {
+            for (method in clazz.methods) {
+                if (method.declaringClass == java.lang.Object::class.java) continue
+                if (method.isSynthetic || method.name.startsWith("access$")) continue
+                if (!java.lang.reflect.Modifier.isPublic(method.modifiers)) continue
+
+                val returnType = method.returnType
+                val returnTypeName = returnType.name
+
+                if (returnTypeName == "android.database.Cursor" ||
+                    returnTypeName == "android.database.sqlite.SQLiteDatabase" ||
+                    returnTypeName.endsWith("DatabaseManager") ||
+                    returnTypeName.endsWith("DbHelper")
+                ) {
+                    violations.add("${clazz.simpleName}.${method.name}() returns $returnTypeName")
+                }
+            }
+        }
+
+        assertTrue(
+            "Repositories must expose zero public methods returning Cursor, SQLiteDatabase, *DatabaseManager, or *DbHelper (REQ-DAT-042.1, TST-DAT-038.1), found violations: $violations",
+            violations.isEmpty()
+        )
+    }
+
+    @Test
+    fun testTST_DAT_038_2_phaseBEngines_zeroProhibitedDatabaseImports() {
+        val filesToCheck = listOf(
+            "src/main/java/com/atrainingtracker/trainingtracker/exporter/writer/FitFileWriter.java",
+            "src/main/java/com/atrainingtracker/trainingtracker/exporter/writer/TCXFileWriter.java",
+            "src/main/java/com/atrainingtracker/trainingtracker/exporter/writer/BaseFileWriter.java",
+            "src/main/java/com/atrainingtracker/trainingtracker/migration/LegacyImportEngine.kt",
+            "src/main/java/com/atrainingtracker/trainingtracker/database/WorkoutDeletionHelper.java",
+            "src/main/java/com/atrainingtracker/trainingtracker/exporter/uploader/StravaUploader.kt",
+            "src/main/java/com/atrainingtracker/trainingtracker/database/WorkoutClusterEngine.kt"
+        )
+
+        val prohibitedImportPattern = Regex("""^import\s+.*(android\.database\.Cursor|android\.database\.sqlite\.SQLiteDatabase|\b\w*DatabaseManager\b|\b\w*DbHelper\b)""", RegexOption.MULTILINE)
+
+        val violations = mutableListOf<String>()
+
+        for (relativePath in filesToCheck) {
+            val file = resolveFile(relativePath)
+            assertTrue("File $relativePath must exist", file.exists())
+            val content = file.readText()
+
+            val matches = prohibitedImportPattern.findAll(content).map { it.value.trim() }.toList()
+            if (matches.isNotEmpty()) {
+                violations.add("${file.name}: $matches")
+            }
+        }
+
+        assertTrue(
+            "Phase B engines must contain zero imports of Cursor, SQLiteDatabase, *DatabaseManager, or *DbHelper (REQ-DAT-042.6, TST-DAT-038.2), violations: $violations",
+            violations.isEmpty()
         )
     }
 }
