@@ -15,38 +15,10 @@
 
 package com.atrainingtracker.trainingtracker.database
 
-import androidx.compose.ui.graphics.Color
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
-import com.atrainingtracker.trainingtracker.ui.map.MappablePath
-import com.atrainingtracker.trainingtracker.ui.map.MapVisualization
-import com.atrainingtracker.trainingtracker.ui.map.PathPoint
-import com.atrainingtracker.trainingtracker.ui.theme.TTColor
 import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.PolyUtil
-
-/**
- * High-contrast color palette used to visually distinguish detected sub-corridors on preview maps (REQ-SET-096.3).
- */
-val CLUSTER_VARIANT_PALETTE = TTColor.ClusterVariantPalette
-
-fun getVariantColor(index: Int): Color = TTColor.ClusterVariantPalette[index % TTColor.ClusterVariantPalette.size]
-
-/**
- * Lightweight [MappablePath] implementation used to render color-coded sub-corridor tracks (REQ-SET-096.3).
- */
-data class ColoredPolylinePath(
-    override val id: Long,
-    override val bSportType: BSportType = BSportType.UNKNOWN,
-    override val latLngs: List<LatLng>,
-    override val color: Color,
-    override val width: Float = MapVisualization.TRACK_WIDTH,
-    override val zIndex: Float = MapVisualization.TRACK_BASE_Z_INDEX + 5f,
-    override val overlayZIndex: Float? = null,
-    override val pattern: List<com.google.android.gms.maps.model.PatternItem>? = null,
-    override val onClick: ((Long) -> Unit)? = null,
-    override val path: List<PathPoint> = emptyList()
-) : MappablePath
 
 /**
  * Data model representing a detected route sub-corridor variant (REQ-SET-096.2, ATT-5900).

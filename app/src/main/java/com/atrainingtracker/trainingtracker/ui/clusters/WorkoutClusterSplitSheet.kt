@@ -34,7 +34,6 @@ import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.sensor.formater.DistanceFormatter
 import com.atrainingtracker.trainingtracker.database.WorkoutCluster
-import com.atrainingtracker.trainingtracker.database.getVariantColor
 import com.atrainingtracker.trainingtracker.ui.components.core.AppDialogActions
 import com.atrainingtracker.trainingtracker.ui.components.core.AppModalBottomSheet
 import com.atrainingtracker.trainingtracker.ui.map.PathPreviewMap

@@ -1578,18 +1578,22 @@
 ### TST-PRO-050: **Automated Architecture Conformance Test Suite** [Verified]
 - **Requirement(s)**: `REQ-PRO-050`
 - **Component**: `app/src/test/java/com/atrainingtracker/trainingtracker/build/ArchitectureConformanceContractTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/SourceTextReadingAuditContractTest.kt`, `docs/architecture.md`
-- **Jira**: `ATT-6182`
+- **Jira**: `ATT-6182`, `ATT-6734`
 - **Test Description**:
-  1. *UI Layer DatabaseManager Isolation Test (`TST-PRO-050.1`, `ArchitectureConformanceContractTest.kt`)*:
-  • Recursively scan all `.java` and `.kt` source files in `app/src/main/java/**/ui/`.
-  • Assert that zero classes outside the recorded baseline import or reference `*DatabaseManager` or `*DbHelper`.
-  2. *Domain Calculation Layer Purity Test (`TST-PRO-050.2`, `ArchitectureConformanceContractTest.kt`)*:
-  • Recursively scan all files in domain calculation packages.
-  • Assert that zero classes reference Android UI frameworks or SQLite persistence classes.
+  1. *UI Layer DatabaseManager Isolation & Downward Ratchet Test (`TST-PRO-050.1`, `ArchitectureConformanceContractTest.kt`)*:
+  • Recursively scan all `.java` and `.kt` source files in both `trainingtracker/ui/` and `banalservice/ui/` after stripping block and line comments.
+  • Assert that zero classes outside the 23-caller ratcheted baseline import or reference `*DatabaseManager` or `*DbHelper`.
+  • Assert that `(baseline - detectedCallers).isEmpty()` and `detectedCallers.size <= 23`.
+  2. *Domain & Scientific Calculation Layer Purity Test (`TST-PRO-050.2`, `ArchitectureConformanceContractTest.kt`)*:
+  • Recursively scan all files in `domain/` and `physiology/` calculation packages.
+  • Assert that zero classes reference Android UI frameworks or raw SQLite `*DatabaseManager` / `*DbHelper` classes.
   3. *Ratcheting Tripwire Violation Detection Test (`TST-PRO-050.3`, `ArchitectureConformanceContractTest.kt`)*:
-  • Validate that synthetic unallow-listed UI database references or domain UI imports trigger assertion failures.
+  • Validate that synthetic unallow-listed UI database references, domain UI imports, or upward database Compose imports trigger assertion failures.
   4. *Clean-Room Targeted Test Suite Execution (`TST-PRO-050.4`)*:
   • Execute targeted unit test suite `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.build.ArchitectureConformanceContractTest"` asserting 100% pass rate and confirm `ArchitectureConformanceContractTest` is registered in `LEGITIMATE_GOVERNANCE_GUARDS`.
+  5. *Database Layer Upward Import Prohibition Test (`TST-PRO-050.5`, `ArchitectureConformanceContractTest.kt`)*:
+  • Recursively scan all `.java` and `.kt` files in `database/` packages (`trainingtracker/database`, `banalservice/database`, `database`).
+  • Assert that zero persistence classes import `androidx.compose.*` or presentation UI screens/composables.
 
 
 ### TST-PRO-051: **Android Instrumented Test Infrastructure & Emulator CI Contract Test Suite** [Verified]

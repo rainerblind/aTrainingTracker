@@ -2598,30 +2598,36 @@ The workflow SHALL mandate that:
 
 
 ### REQ-PRO-050: Automated Architecture Conformance Testing [Verified]
-- **Tests**: `TST-PRO-050` | **Tickets**: `ATT-6182`
+- **Tests**: `TST-PRO-050` | **Tickets**: `ATT-6182`, `ATT-6734`
 - **Implementation**: `app/src/test/java/com/atrainingtracker/trainingtracker/build/ArchitectureConformanceContractTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/SourceTextReadingAuditContractTest.kt`, `docs/architecture.md`
-- **Rationale**: ASPICE pre-assessment finding C-08 identified that layering rules defined in `docs/architecture.md` lack automated CI test enforcement, allowing architectural drift (such as direct UI-to-DatabaseManager bindings) to accumulate unnoticed. Introducing `ArchitectureConformanceAuditTest` enforces layer boundaries and dependency directions (Presentation -> Domain -> Services -> Data -> Persistence) while ratcheting down existing baseline debt and maintaining pure domain logic isolation (ATT-6182, refining `REQ-PRO-034` under Epic `ATT-6142`):
+- **Rationale**: ASPICE pre-assessment finding C-08 identified that layering rules defined in `docs/architecture.md` lack automated CI test enforcement, allowing architectural drift (such as direct UI-to-DatabaseManager bindings) to accumulate unnoticed. Introducing `ArchitectureConformanceAuditTest` enforces layer boundaries and dependency directions (Presentation -> Domain -> Services -> Data -> Persistence) while ratcheting down existing baseline debt and maintaining pure domain logic isolation (ATT-6182, ATT-6734, refining `REQ-PRO-034` under Epic `ATT-6142`):
 - **Description**:
   1. *UI Layer Isolation & DatabaseManager Ban (`REQ-PRO-050.1`)*:
-     • Pure Compose UI screens and ViewModels in `ui/` SHALL NOT directly import or reference raw SQLite `*DatabaseManager` or `*DbHelper` classes, except for those explicitly captured in an approved ratcheted baseline set.
-  2. *Domain Calculation Layer Purity (`REQ-PRO-050.2`)*:
-     • Domain calculators and mathematical calculation engines in `domain/` SHALL NOT import Android UI frameworks (`android.view`, `androidx.compose`, `android.widget`) or database persistence classes, maintaining pure JVM domain isolation.
-  3. *Ratcheted Architecture Baseline & Tripwire (`REQ-PRO-050.3`)*:
-     • The architecture test suite SHALL isolate existing baseline violations in a recorded baseline set, failing deterministically if any new, unallow-listed layer violation is introduced.
+     • Pure Compose UI screens and ViewModels across both `com/atrainingtracker/trainingtracker/ui/` and `com/atrainingtracker/banalservice/ui/` SHALL NOT directly import or reference raw SQLite `*DatabaseManager` or `*DbHelper` classes, except for those explicitly captured in the approved ratcheted baseline set (strictly capped at 23 callers).
+     • The scanner SHALL strip block (`/* ... */`) and line (`// ...`) comments before `DB_PATTERN` matching to eliminate comment false positives.
+  2. *Domain & Scientific Calculation Layer Purity (`REQ-PRO-050.2`)*:
+     • Domain calculators and mathematical engines in `domain/` and `physiology/` SHALL NOT import Android UI frameworks (`android.view`, `androidx.compose`, `android.widget`) or database manager singletons, maintaining pure JVM domain isolation.
+  3. *Ratcheted Architecture Baseline & Downward Enforcement (`REQ-PRO-050.3`)*:
+     • The architecture test suite SHALL isolate existing baseline violations in a recorded baseline set (23 callers: 18 in `trainingtracker/ui` + 5 in `banalservice/ui`), enforcing that `(baseline - detectedCallers).isEmpty()` and `detectedCallers.size <= 23` so refactored callers can never be reintroduced.
   4. *Architectural Governance Registration (`REQ-PRO-050.4`)*:
      • The architecture conformance test SHALL be registered as a legitimate governance contract test in `SourceTextReadingAuditContractTest` (`LEGITIMATE_GOVERNANCE_GUARDS`) per `docs/coding_standards.md` §5.4.
+  5. *Database Layer Upward Import Prohibition (`REQ-PRO-050.5`)*:
+     • Persistence classes in `database/` packages (`trainingtracker/database`, `banalservice/database`, `database`) SHALL NOT import `androidx.compose.*` or presentation UI screens/composables.
 - **Requirement Archaeology & Chesterton's Fence Audit**:
   1. *Original Requirement ID & Target*: Net-new requirement `REQ-PRO-050` (*Automated Architecture Conformance Testing*), refining `REQ-PRO-034` (*SWE.1/2/4/6 Hardening*). Targets `ArchitectureConformanceAuditTest.kt`, `SourceTextReadingAuditContractTest.kt`.
-  2. *Historical Origin & Commit Trace*: Independent ASPICE pre-assessment finding C-08 (2026-11-08) and ticket ATT-6182.
-  3. *Root Reason for Existing Formulation*: Project historically relied on written architectural documentation without automated CI tripwires, leading to unpoliced layering drift.
-  4. *Preservation of Core Invariants*: Existing UI and background services continue uninterrupted; baseline allow-list prevents false positives.
+  2. *Historical Origin & Commit Trace*: Independent ASPICE pre-assessment finding C-08 (2026-11-08), ticket ATT-6182, and refinement ticket ATT-6734.
+  3. *Root Reason for Existing Formulation*: ATT-6182 provisionally targeted primary `ui/` and `domain/` directories with a static count of 24. It omitted `banalservice/ui/` and `physiology/`, did not strip comments, lacked downward ratcheting enforcement, and left `database/` unguarded against upward Compose imports. ATT-6734 expands coverage to `physiology/` and `banalservice/ui/`, strips comments, ratchets baseline down to 23 callers, and forbids upward database imports.
+  4. *Preservation of Core Invariants*: Ratcheting baseline down from 24 to 23 and expanding coverage protects SWE.2 architectural layering without breaking existing production behavior.
 - **Acceptance Criteria (Given-When-Then)**:
-  • *Given* `app/src/main/java/**/ui/`,
+  • *Given* `app/src/main/java/**/ui/` and `app/src/main/java/**/banalservice/ui/`,
+  • *When* `ArchitectureConformanceAuditTest` executes with comment stripping,
+  • *Then* zero unallow-listed classes SHALL import or reference `*DatabaseManager` / `*DbHelper`, and detected callers SHALL match the 23-caller ratcheted baseline with zero stale allowlist entries.
+  • *Given* `domain/` and `physiology/` engines,
   • *When* `ArchitectureConformanceAuditTest` executes,
-  • *Then* zero unallow-listed classes SHALL import or reference `*DatabaseManager` / `*DbHelper`.
-  • *Given* `app/src/main/java/**/domain/`,
+  • *Then* zero calculation engines SHALL reference Android UI or database manager singletons.
+  • *Given* all `database/` packages,
   • *When* `ArchitectureConformanceAuditTest` executes,
-  • *Then* zero domain calculation engines SHALL reference Android UI or SQLite persistence classes.
+  • *Then* zero persistence classes SHALL import `androidx.compose.*` or UI screens.
   • *Given* a new, unallow-listed layering violation,
   • *When* `ArchitectureConformanceAuditTest` runs,
   • *Then* the test SHALL fail deterministically.
