@@ -129,26 +129,40 @@ object HealthConnectHrvImporter {
         try {
             val client = clientOverride ?: HealthConnectManager.getClient(context)
 
-            // Query HeartRateVariabilityRmssdRecord
-            val hrvRequest = ReadRecordsRequest(
-                recordType = HeartRateVariabilityRmssdRecord::class,
-                timeRangeFilter = TimeRangeFilter.between(startTime, endTime)
-            )
-            val hrvResponse = client.readRecords(hrvRequest)
-            val hrvRecords = hrvResponse.records
+            // Query HeartRateVariabilityRmssdRecord with pageToken pagination (REQ-PER-031.2)
+            val hrvRecords = mutableListOf<HeartRateVariabilityRmssdRecord>()
+            var hrvPageToken: String? = null
+            do {
+                val hrvRequest = ReadRecordsRequest(
+                    recordType = HeartRateVariabilityRmssdRecord::class,
+                    timeRangeFilter = TimeRangeFilter.between(startTime, endTime),
+                    pageToken = hrvPageToken
+                )
+                val hrvResponse = client.readRecords(hrvRequest)
+                hrvRecords.addAll(hrvResponse.records)
+                hrvPageToken = hrvResponse.pageToken
+            } while (hrvPageToken != null)
 
             if (hrvRecords.isEmpty()) {
                 Log.d(TAG, "No Health Connect HeartRateVariabilityRmssdRecord entries found in range")
                 return@withContext Result.success(0)
             }
 
-            // Query RestingHeartRateRecord
+            // Query RestingHeartRateRecord with pageToken pagination (REQ-PER-031.2)
             val rhrRecords = try {
-                val rhrRequest = ReadRecordsRequest(
-                    recordType = RestingHeartRateRecord::class,
-                    timeRangeFilter = TimeRangeFilter.between(startTime, endTime)
-                )
-                client.readRecords(rhrRequest).records
+                val records = mutableListOf<RestingHeartRateRecord>()
+                var rhrPageToken: String? = null
+                do {
+                    val rhrRequest = ReadRecordsRequest(
+                        recordType = RestingHeartRateRecord::class,
+                        timeRangeFilter = TimeRangeFilter.between(startTime, endTime),
+                        pageToken = rhrPageToken
+                    )
+                    val rhrResponse = client.readRecords(rhrRequest)
+                    records.addAll(rhrResponse.records)
+                    rhrPageToken = rhrResponse.pageToken
+                } while (rhrPageToken != null)
+                records
             } catch (e: Exception) {
                 Log.w(TAG, "Could not read RestingHeartRateRecord from Health Connect: ${e.message}")
                 emptyList()
@@ -173,12 +187,8 @@ object HealthConnectHrvImporter {
             var insertedCount = 0
 
             for ((dateIso, dateRecords) in hrvByDate) {
-                // Deduplication check: do not duplicate rows or overwrite existing entries
+                // Deduplication & in-place update check (REQ-PER-031.4)
                 val existingEntries = repository.getEntriesForDate(dateIso, HrvPosture.OVERNIGHT_WEARABLE)
-                if (existingEntries.isNotEmpty()) {
-                    Log.d(TAG, "Entry for $dateIso (${HrvPosture.OVERNIGHT_WEARABLE}) already exists; skipping")
-                    continue
-                }
 
                 val rmssdValues = dateRecords.map { it.heartRateVariabilityMillis }
                 val agg = computeLogNormalRmssd(rmssdValues) ?: continue
@@ -203,6 +213,40 @@ object HealthConnectHrvImporter {
                 val pkgName = firstRecord.metadata.dataOrigin.packageName
                 val recId = firstRecord.metadata.id
                 val notes = if (recId.isNotBlank()) "HealthConnect:$pkgName:$recId" else "HealthConnect:$pkgName"
+
+                if (existingEntries.isNotEmpty()) {
+                    val existing = existingEntries.first()
+                    // Never overwrite user-pinned entries (non-HealthConnect provenance)
+                    val isHealthConnectProvenance = existing.notes?.startsWith("HealthConnect") == true
+                    if (!isHealthConnectProvenance) {
+                        Log.d(TAG, "Entry for $dateIso is user-pinned/custom; skipping automated update")
+                        continue
+                    }
+
+                    // In-place update if newer nocturnal samples arrived or RHR was updated from zero
+                    val hasNewerSamples = maxTs > existing.timestampMs
+                    val hasNewRhr = existing.restingHrBpm == 0 && restingHrBpm > 0
+
+                    if (hasNewerSamples || hasNewRhr) {
+                        val effectiveRhr = if (restingHrBpm > 0) restingHrBpm else existing.restingHrBpm
+                        val updatedEntry = existing.copy(
+                            timestampMs = if (hasNewerSamples) timestampMs else existing.timestampMs,
+                            timezoneId = tzId,
+                            restingHrBpm = effectiveRhr,
+                            rmssdMs = if (hasNewerSamples) rmssdMs else existing.rmssdMs,
+                            lnRmssd = if (hasNewerSamples) lnRmssd else existing.lnRmssd,
+                            hrvScore100 = if (hasNewerSamples) hrvScore100 else existing.hrvScore100,
+                            durationSec = if (hasNewerSamples) durationSec else existing.durationSec,
+                            notes = notes
+                        )
+                        repository.updateEntry(updatedEntry)
+                        Log.d(TAG, "Updated in-place nocturnal entry for $dateIso (${HrvPosture.OVERNIGHT_WEARABLE})")
+                        insertedCount++
+                    } else {
+                        Log.d(TAG, "Entry for $dateIso (${HrvPosture.OVERNIGHT_WEARABLE}) up-to-date; skipping")
+                    }
+                    continue
+                }
 
                 val entry = HrvReadinessEntry(
                     timestampMs = timestampMs,

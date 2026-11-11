@@ -410,4 +410,49 @@ class HrvReadinessDatabaseManagerTest {
         assertTrue("Valid reading must retain primary status", manager.getEntryById(validId)!!.isPrimaryForDay)
         assertFalse("Noisy reading must not displace valid reading as primary", manager.getEntryById(noisyId)!!.isPrimaryForDay)
     }
+
+    @Test
+    fun updateEntry_updatesValuesAndMaintainsPrimary() {
+        val id = manager.insertEntry(
+            HrvReadinessEntry(
+                timestampMs = 1731210000000L,
+                dateIso = "2026-11-10",
+                timezoneId = "UTC",
+                restingHrBpm = 0,
+                rmssdMs = 45.0,
+                lnRmssd = 3.806,
+                hrvScore100 = 76.12,
+                durationSec = 180,
+                posture = HrvPosture.OVERNIGHT_WEARABLE,
+                isPrimaryForDay = true,
+                notes = "HealthConnect:com.ouraring.oura:1"
+            )
+        )
+        val initial = manager.getEntryById(id)
+        assertNotNull(initial)
+        assertEquals(0, initial!!.restingHrBpm)
+
+        val updated = initial.copy(
+            timestampMs = 1731220000000L,
+            restingHrBpm = 52,
+            rmssdMs = 50.0,
+            lnRmssd = 3.912,
+            hrvScore100 = 78.24,
+            durationSec = 28800,
+            notes = "HealthConnect:com.ouraring.oura:2"
+        )
+        val success = manager.updateEntry(updated)
+        assertTrue(success)
+
+        val retrieved = manager.getEntryById(id)
+        assertNotNull(retrieved)
+        assertEquals(1731220000000L, retrieved!!.timestampMs)
+        assertEquals(52, retrieved.restingHrBpm)
+        assertEquals(50.0, retrieved.rmssdMs, 1e-4)
+        assertEquals(3.912, retrieved.lnRmssd, 1e-4)
+        assertEquals(78.24, retrieved.hrvScore100, 1e-4)
+        assertEquals(28800, retrieved.durationSec)
+        assertTrue(retrieved.isPrimaryForDay)
+        assertEquals("HealthConnect:com.ouraring.oura:2", retrieved.notes)
+    }
 }

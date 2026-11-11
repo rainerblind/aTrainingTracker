@@ -9,4 +9,7 @@
     <string name="health_connect_sync_manual">Zu Health Connect synchronisieren</string>
     <string name="health_connect_sync_success">Training mit Health Connect synchronisiert</string>
     <string name="health_connect_permissions_needed">Health Connect-Schreibberechtigungen sind erforderlich, um Trainingsdaten zu synchronisieren</string>
+    <string name="health_connect_hrv_import_title">Ruhe-HRV aus Health Connect importieren</string>
+    <string name="health_connect_hrv_import_summary">Nächtliche Ruhe-HRV- und Ruhepulsdaten von Wearables importieren</string>
+    <string name="health_connect_hrv_permissions_needed">Health Connect-Leseberechtigungen sind erforderlich, um nächtliche HRV-Daten zu importieren</string>
 </resources>

@@ -46,6 +46,7 @@
     <string name="morning_hrv_posture_supine">Supino</string>
     <string name="morning_hrv_posture_seated">Seduto</string>
     <string name="morning_hrv_posture_standing">In piedi</string>
+    <string name="morning_hrv_posture_overnight_wearable">Wearable notturno</string>
     <string name="morning_hrv_duration_label">Durata</string>
     <string name="morning_hrv_duration_60s">60 s (Standard)</string>
     <string name="morning_hrv_duration_120s">120 s (Esteso)</string>

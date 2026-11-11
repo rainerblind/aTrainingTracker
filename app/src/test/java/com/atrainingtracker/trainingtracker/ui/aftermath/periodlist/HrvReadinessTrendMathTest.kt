@@ -275,4 +275,33 @@ class HrvReadinessTrendMathTest {
         val pEnd = HrvReadinessTrendMath.findNearestPoint(leftPad + 160f, leftPad, plotW, points)
         assertEquals("2026-11-05", pEnd?.dateIso)
     }
+
+    @Test
+    fun testNotesPreservedInTrendPointsAndProvenanceBadgeParsing() {
+        val entryWithNotes = createEntry(
+            id = 10L,
+            dateIso = "2026-11-01",
+            posture = HrvPosture.OVERNIGHT_WEARABLE
+        ).copy(notes = "HealthConnect:com.ouraring.oura:12345")
+
+        val series = HrvReadinessTrendMath.calculateTrendSeries(
+            entries = listOf(entryWithNotes),
+            selectedPosture = HrvPosture.OVERNIGHT_WEARABLE,
+            metricMode = HrvTrendMetricMode.LN_RMSSD,
+            dailyTrainingLoads = emptyMap()
+        )
+
+        assertEquals(1, series.points.size)
+        assertEquals("HealthConnect:com.ouraring.oura:12345", series.points[0].notes)
+
+        // Test parseProvenanceBadge (REQ-PER-033.1)
+        assertEquals("Health Connect (Oura)", parseProvenanceBadge("HealthConnect:com.ouraring.oura:12345"))
+        assertEquals("Health Connect (Fitbit)", parseProvenanceBadge("HealthConnect:com.fitbit.FitbitMobile"))
+        assertEquals("Health Connect (Whoop)", parseProvenanceBadge("HealthConnect:com.whoop.client"))
+        assertEquals("Health Connect (Garmin)", parseProvenanceBadge("HealthConnect:com.garmin.android.apps.connectmobile"))
+        assertEquals("Health Connect (Samsung Health)", parseProvenanceBadge("HealthConnect:com.sec.android.app.shealth"))
+        assertEquals("Health Connect (Google Fit)", parseProvenanceBadge("HealthConnect:com.google.android.apps.fitness"))
+        assertEquals("Health Connect", parseProvenanceBadge("HealthConnect"))
+        assertEquals("Health Connect", parseProvenanceBadge(null))
+    }
 }

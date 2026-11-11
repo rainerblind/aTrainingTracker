@@ -19,6 +19,7 @@
 package com.atrainingtracker.trainingtracker.ui.aftermath.periodlist
 
 import android.graphics.Paint
+import androidx.annotation.VisibleForTesting
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
@@ -130,12 +131,31 @@ fun HrvReadinessTrendCard(
                         HrvPosture.SUPINE -> stringResource(R.string.morning_hrv_posture_supine)
                         HrvPosture.SEATED -> stringResource(R.string.morning_hrv_posture_seated)
                         HrvPosture.STANDING -> stringResource(R.string.morning_hrv_posture_standing)
+                        HrvPosture.OVERNIGHT_WEARABLE -> stringResource(R.string.morning_hrv_posture_overnight_wearable)
                         else -> posture.name
                     }
                     FilterChip(
                         selected = isSelected,
                         onClick = { onSelectPosture(posture) },
                         label = { Text(postureLabel, style = MaterialTheme.typography.labelMedium) }
+                    )
+                }
+            }
+
+            // Provenance Badge for Overnight Wearable (REQ-PER-033.1)
+            if (selectedPosture == HrvPosture.OVERNIGHT_WEARABLE) {
+                val latestNote = series.points.lastOrNull { it.notes != null }?.notes
+                val badgeText = parseProvenanceBadge(latestNote)
+                Surface(
+                    color = MaterialTheme.colorScheme.secondaryContainer,
+                    shape = RoundedCornerShape(4.dp),
+                    modifier = Modifier.padding(top = 4.dp, bottom = 2.dp)
+                ) {
+                    Text(
+                        text = badgeText,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer,
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                     )
                 }
             }
@@ -196,6 +216,7 @@ fun HrvReadinessTrendCard(
                     HrvPosture.SUPINE -> stringResource(R.string.morning_hrv_posture_supine)
                     HrvPosture.SEATED -> stringResource(R.string.morning_hrv_posture_seated)
                     HrvPosture.STANDING -> stringResource(R.string.morning_hrv_posture_standing)
+                    HrvPosture.OVERNIGHT_WEARABLE -> stringResource(R.string.morning_hrv_posture_overnight_wearable)
                     else -> selectedPosture.name
                 }
                 Box(
@@ -690,4 +711,33 @@ private fun HrvReadinessTrendCardDarkPreview() {
             onToggleTrainingLoad = {}
         )
     }
+}
+
+/**
+ * Parses source provenance badge text from notes string (`REQ-PER-033.1`).
+ */
+@VisibleForTesting
+internal fun parseProvenanceBadge(notes: String?): String {
+    if (notes == null || !notes.startsWith("HealthConnect", ignoreCase = true)) return "Health Connect"
+    val parts = notes.split(":")
+    if (parts.size >= 2) {
+        val pkg = parts[1].lowercase()
+        val appName = when {
+            pkg.contains("oura") -> "Oura"
+            pkg.contains("fitbit") -> "Fitbit"
+            pkg.contains("whoop") -> "Whoop"
+            pkg.contains("garmin") -> "Garmin"
+            pkg.contains("shealth") || pkg.contains("samsung") -> "Samsung Health"
+            pkg.contains("fitness") || pkg.contains("google") -> "Google Fit"
+            pkg.contains("withings") -> "Withings"
+            pkg.contains("polar") -> "Polar"
+            pkg.contains("coros") -> "Coros"
+            else -> {
+                val lastPart = pkg.substringAfterLast('.')
+                if (lastPart.isNotBlank()) lastPart.replaceFirstChar { it.uppercase() } else ""
+            }
+        }
+        return if (appName.isNotBlank()) "Health Connect ($appName)" else "Health Connect"
+    }
+    return "Health Connect"
 }

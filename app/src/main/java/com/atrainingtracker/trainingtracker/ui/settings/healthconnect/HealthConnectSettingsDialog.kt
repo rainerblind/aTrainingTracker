@@ -29,6 +29,7 @@ import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -37,6 +38,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -44,11 +46,16 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.health.connect.client.PermissionController
+import androidx.health.connect.client.permission.HealthPermission
+import androidx.health.connect.client.records.HeartRateVariabilityRmssdRecord
 import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.TrainingApplication
+import com.atrainingtracker.trainingtracker.cloud.healthconnect.HealthConnectHrvImporter
 import com.atrainingtracker.trainingtracker.cloud.healthconnect.HealthConnectManager
 import com.atrainingtracker.trainingtracker.ui.components.core.AppBottomSheetContent
 import com.atrainingtracker.trainingtracker.ui.components.core.AppDialogActions
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 /**
  * Settings bottom sheet dialog for configuring Android Health Connect integration (REQ-SET-103).
@@ -60,6 +67,10 @@ fun HealthConnectSettingsDialog(
     val context = LocalContext.current
     var syncEnabled by remember { mutableStateOf(TrainingApplication.syncToHealthConnect()) }
     var hasPermissions by remember { mutableStateOf(false) }
+
+    var hrvImportEnabled by remember { mutableStateOf(TrainingApplication.isHealthConnectHrvImportEnabled()) }
+    var hasHrvPermissions by remember { mutableStateOf(false) }
+    val coroutineScope = rememberCoroutineScope()
 
     val isAvailable = remember { HealthConnectManager.isAvailable(context) }
     val sdkStatus = remember { HealthConnectManager.getSdkStatus(context) }
@@ -73,9 +84,25 @@ fun HealthConnectSettingsDialog(
         }
     }
 
+    val hrvPermissionLauncher = rememberLauncherForActivityResult(
+        contract = PermissionController.createRequestPermissionResultContract()
+    ) { granted ->
+        hasHrvPermissions = HealthPermission.getReadPermission(HeartRateVariabilityRmssdRecord::class) in granted
+        if (!hasHrvPermissions) {
+            hrvImportEnabled = false
+            TrainingApplication.setHealthConnectHrvImportEnabled(false)
+        } else if (hrvImportEnabled) {
+            TrainingApplication.setHealthConnectHrvImportEnabled(true)
+            coroutineScope.launch(Dispatchers.IO) {
+                HealthConnectHrvImporter.importRecentHrv(context.applicationContext, daysBack = 60)
+            }
+        }
+    }
+
     LaunchedEffect(Unit) {
         if (isAvailable) {
             hasPermissions = HealthConnectManager.hasAllPermissions(context)
+            hasHrvPermissions = HealthConnectManager.hasHrvReadPermissions(context)
         }
     }
 
@@ -87,6 +114,7 @@ fun HealthConnectSettingsDialog(
             AppDialogActions.SaveCancel(
                 onSave = {
                     TrainingApplication.setSyncToHealthConnect(syncEnabled && isAvailable)
+                    TrainingApplication.setHealthConnectHrvImportEnabled(hrvImportEnabled && isAvailable)
                     onDismiss()
                 },
                 onCancel = onDismiss,
@@ -156,6 +184,62 @@ fun HealthConnectSettingsDialog(
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Text(stringResource(R.string.health_connect_sync_title))
+                    }
+                }
+
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = stringResource(R.string.health_connect_hrv_import_title),
+                            style = MaterialTheme.typography.titleMedium
+                        )
+                        Text(
+                            text = stringResource(R.string.health_connect_hrv_import_summary),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Switch(
+                        checked = hrvImportEnabled,
+                        onCheckedChange = { checked ->
+                            hrvImportEnabled = checked
+                            if (checked) {
+                                if (!hasHrvPermissions) {
+                                    hrvPermissionLauncher.launch(HealthConnectManager.HRV_READ_PERMISSIONS)
+                                } else {
+                                    TrainingApplication.setHealthConnectHrvImportEnabled(true)
+                                    coroutineScope.launch(Dispatchers.IO) {
+                                        HealthConnectHrvImporter.importRecentHrv(
+                                            context = context.applicationContext,
+                                            daysBack = 60
+                                        )
+                                    }
+                                }
+                            } else {
+                                TrainingApplication.setHealthConnectHrvImportEnabled(false)
+                            }
+                        }
+                    )
+                }
+
+                if (hrvImportEnabled && !hasHrvPermissions) {
+                    Text(
+                        text = stringResource(R.string.health_connect_hrv_permissions_needed),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                    Button(
+                        onClick = {
+                            hrvPermissionLauncher.launch(HealthConnectManager.HRV_READ_PERMISSIONS)
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(stringResource(R.string.health_connect_hrv_import_title))
                     }
                 }
             }

@@ -234,10 +234,12 @@ class HealthConnectHrvImporterTest {
             metadata = metaRhr
         )
 
-        val mockHrvResponse = mockk<ReadRecordsResponse<HeartRateVariabilityRmssdRecord>>()
-        val mockRhrResponse = mockk<ReadRecordsResponse<RestingHeartRateRecord>>()
+        val mockHrvResponse = mockk<ReadRecordsResponse<HeartRateVariabilityRmssdRecord>>(relaxed = true)
+        val mockRhrResponse = mockk<ReadRecordsResponse<RestingHeartRateRecord>>(relaxed = true)
         coEvery { mockHrvResponse.records } returns listOf(hrv1, hrv2)
+        coEvery { mockHrvResponse.pageToken } returns null
         coEvery { mockRhrResponse.records } returns listOf(rhr)
+        coEvery { mockRhrResponse.pageToken } returns null
 
         coEvery {
             mockClient.readRecords(match<ReadRecordsRequest<HeartRateVariabilityRmssdRecord>> {
@@ -293,5 +295,309 @@ class HealthConnectHrvImporterTest {
         assertEquals(HrvPosture.OVERNIGHT_WEARABLE, HrvPosture.fromNameOrNull("overnight_hc"))
         assertEquals(HrvPosture.SUPINE, HrvPosture.fromNameOrNull("SUPINE"))
         assertNull(HrvPosture.fromNameOrNull("UNKNOWN_POSTURE"))
+    }
+
+    /**
+     * TST-PER-039.1: Relaxation of RHR permission requirement.
+     */
+    @Test
+    fun testPermissionRelaxation_whenHrvGrantedWithoutRhr_succeeds() = runBlocking {
+        TrainingApplication.setHealthConnectHrvImportEnabled(true)
+        HealthConnectManager.sdkStatusOverride = HealthConnectClient.SDK_AVAILABLE
+        val hrvOnlyPermissions = setOf(HealthPermission.getReadPermission(HeartRateVariabilityRmssdRecord::class))
+        coEvery { mockPermissionController.getGrantedPermissions() } returns hrvOnlyPermissions
+
+        val offset = ZoneOffset.UTC
+        val meta = Metadata(id = "rec-hrv-only", dataOrigin = DataOrigin("com.ouraring.oura"))
+        val t1 = LocalDateTime.of(2026, 11, 10, 4, 0).toInstant(offset)
+        val hrv = HeartRateVariabilityRmssdRecord(
+            time = t1,
+            zoneOffset = offset,
+            heartRateVariabilityMillis = 42.0,
+            metadata = meta
+        )
+
+        val mockHrvResp = mockk<ReadRecordsResponse<HeartRateVariabilityRmssdRecord>>(relaxed = true)
+        coEvery { mockHrvResp.records } returns listOf(hrv)
+        coEvery { mockHrvResp.pageToken } returns null
+        coEvery {
+            mockClient.readRecords(match<ReadRecordsRequest<HeartRateVariabilityRmssdRecord>> {
+                it.recordType == HeartRateVariabilityRmssdRecord::class
+            })
+        } returns mockHrvResp
+
+        coEvery {
+            mockClient.readRecords(match<ReadRecordsRequest<RestingHeartRateRecord>> {
+                it.recordType == RestingHeartRateRecord::class
+            })
+        } throws SecurityException("Missing READ_RESTING_HEART_RATE")
+
+        val start = LocalDateTime.of(2026, 11, 9, 18, 0).toInstant(offset)
+        val end = LocalDateTime.of(2026, 11, 10, 12, 0).toInstant(offset)
+
+        val result = HealthConnectHrvImporter.importHrvRange(
+            context,
+            start,
+            end,
+            repository = repository,
+            clientOverride = mockClient
+        )
+        assertTrue(result.isSuccess)
+        assertEquals(1, result.getOrNull())
+
+        val entry = repository.getPrimaryEntryForDate("2026-11-10", HrvPosture.OVERNIGHT_WEARABLE)
+        assertNotNull(entry)
+        assertEquals(42.0, entry!!.rmssdMs, 1e-3)
+        assertEquals(0, entry.restingHrBpm)
+    }
+
+    /**
+     * TST-PER-039.2: PageToken pagination loop consuming multiple pages.
+     */
+    @Test
+    fun testPageTokenPaginationLoop_multiplePages_aggregatesAllRecords() = runBlocking {
+        TrainingApplication.setHealthConnectHrvImportEnabled(true)
+        HealthConnectManager.sdkStatusOverride = HealthConnectClient.SDK_AVAILABLE
+        coEvery { mockPermissionController.getGrantedPermissions() } returns HealthConnectManager.HRV_READ_PERMISSIONS
+
+        val offset = ZoneOffset.UTC
+        val meta1 = Metadata(id = "page1-hrv", dataOrigin = DataOrigin("com.ouraring.oura"))
+        val meta2 = Metadata(id = "page2-hrv", dataOrigin = DataOrigin("com.ouraring.oura"))
+
+        val t1 = LocalDateTime.of(2026, 11, 10, 2, 0).toInstant(offset)
+        val t2 = LocalDateTime.of(2026, 11, 10, 5, 0).toInstant(offset)
+
+        val hrv1 = HeartRateVariabilityRmssdRecord(
+            time = t1,
+            zoneOffset = offset,
+            heartRateVariabilityMillis = 30.0,
+            metadata = meta1
+        )
+        val hrv2 = HeartRateVariabilityRmssdRecord(
+            time = t2,
+            zoneOffset = offset,
+            heartRateVariabilityMillis = 50.0,
+            metadata = meta2
+        )
+
+        val page1Resp = mockk<ReadRecordsResponse<HeartRateVariabilityRmssdRecord>>(relaxed = true)
+        val page2Resp = mockk<ReadRecordsResponse<HeartRateVariabilityRmssdRecord>>(relaxed = true)
+        coEvery { page1Resp.records } returns listOf(hrv1)
+        coEvery { page1Resp.pageToken } returns "token-page-2"
+        coEvery { page2Resp.records } returns listOf(hrv2)
+        coEvery { page2Resp.pageToken } returns null
+
+        coEvery {
+            mockClient.readRecords(match<ReadRecordsRequest<HeartRateVariabilityRmssdRecord>> {
+                it.recordType == HeartRateVariabilityRmssdRecord::class && it.pageToken == null
+            })
+        } returns page1Resp
+
+        coEvery {
+            mockClient.readRecords(match<ReadRecordsRequest<HeartRateVariabilityRmssdRecord>> {
+                it.recordType == HeartRateVariabilityRmssdRecord::class && it.pageToken == "token-page-2"
+            })
+        } returns page2Resp
+
+        val rhrResp = mockk<ReadRecordsResponse<RestingHeartRateRecord>>(relaxed = true)
+        coEvery { rhrResp.records } returns emptyList()
+        coEvery { rhrResp.pageToken } returns null
+        coEvery {
+            mockClient.readRecords(match<ReadRecordsRequest<RestingHeartRateRecord>> {
+                it.recordType == RestingHeartRateRecord::class
+            })
+        } returns rhrResp
+
+        val start = LocalDateTime.of(2026, 11, 9, 18, 0).toInstant(offset)
+        val end = LocalDateTime.of(2026, 11, 10, 12, 0).toInstant(offset)
+
+        val result = HealthConnectHrvImporter.importHrvRange(
+            context,
+            start,
+            end,
+            repository = repository,
+            clientOverride = mockClient
+        )
+        assertTrue(result.isSuccess)
+        assertEquals(1, result.getOrNull())
+
+        val entry = repository.getPrimaryEntryForDate("2026-11-10", HrvPosture.OVERNIGHT_WEARABLE)
+        assertNotNull(entry)
+        assertEquals(38.73, entry!!.rmssdMs, 0.05)
+    }
+
+    /**
+     * TST-PER-039.3: In-place nocturnal updates when newer samples or non-zero RHR arrive.
+     */
+    @Test
+    fun testInPlaceNocturnalUpdate_whenNewerSamplesOrNonZeroRhrArrive_updatesExistingRow() = runBlocking {
+        TrainingApplication.setHealthConnectHrvImportEnabled(true)
+        HealthConnectManager.sdkStatusOverride = HealthConnectClient.SDK_AVAILABLE
+        coEvery { mockPermissionController.getGrantedPermissions() } returns HealthConnectManager.HRV_READ_PERMISSIONS
+
+        val offset = ZoneOffset.UTC
+        val meta1 = Metadata(id = "midsleep-hrv", dataOrigin = DataOrigin("com.ouraring.oura"))
+        val tEarly = LocalDateTime.of(2026, 11, 10, 3, 0).toInstant(offset)
+        val hrvEarly = HeartRateVariabilityRmssdRecord(
+            time = tEarly,
+            zoneOffset = offset,
+            heartRateVariabilityMillis = 30.0,
+            metadata = meta1
+        )
+
+        val earlyHrvResp = mockk<ReadRecordsResponse<HeartRateVariabilityRmssdRecord>>(relaxed = true)
+        coEvery { earlyHrvResp.records } returns listOf(hrvEarly)
+        coEvery { earlyHrvResp.pageToken } returns null
+        coEvery {
+            mockClient.readRecords(match<ReadRecordsRequest<HeartRateVariabilityRmssdRecord>> {
+                it.recordType == HeartRateVariabilityRmssdRecord::class
+            })
+        } returns earlyHrvResp
+
+        val emptyRhrResp = mockk<ReadRecordsResponse<RestingHeartRateRecord>>(relaxed = true)
+        coEvery { emptyRhrResp.records } returns emptyList()
+        coEvery { emptyRhrResp.pageToken } returns null
+        coEvery {
+            mockClient.readRecords(match<ReadRecordsRequest<RestingHeartRateRecord>> {
+                it.recordType == RestingHeartRateRecord::class
+            })
+        } returns emptyRhrResp
+
+        val start = LocalDateTime.of(2026, 11, 9, 18, 0).toInstant(offset)
+        val end = LocalDateTime.of(2026, 11, 10, 12, 0).toInstant(offset)
+
+        // Mid-sleep import: inserts initial row with restingHrBpm = 0
+        val r1 = HealthConnectHrvImporter.importHrvRange(
+            context,
+            start,
+            end,
+            repository = repository,
+            clientOverride = mockClient
+        )
+        assertEquals(1, r1.getOrNull())
+        val initialEntry = repository.getPrimaryEntryForDate("2026-11-10", HrvPosture.OVERNIGHT_WEARABLE)
+        assertNotNull(initialEntry)
+        assertEquals(0, initialEntry!!.restingHrBpm)
+        assertEquals(30.0, initialEntry.rmssdMs, 1e-3)
+
+        // Morning sync arrives: full night records + RHR = 50
+        val metaLate = Metadata(id = "morning-hrv", dataOrigin = DataOrigin("com.ouraring.oura"))
+        val tLate = LocalDateTime.of(2026, 11, 10, 7, 0).toInstant(offset)
+        val hrvLate = HeartRateVariabilityRmssdRecord(
+            time = tLate,
+            zoneOffset = offset,
+            heartRateVariabilityMillis = 50.0,
+            metadata = metaLate
+        )
+
+        val lateHrvResp = mockk<ReadRecordsResponse<HeartRateVariabilityRmssdRecord>>(relaxed = true)
+        coEvery { lateHrvResp.records } returns listOf(hrvEarly, hrvLate)
+        coEvery { lateHrvResp.pageToken } returns null
+        coEvery {
+            mockClient.readRecords(match<ReadRecordsRequest<HeartRateVariabilityRmssdRecord>> {
+                it.recordType == HeartRateVariabilityRmssdRecord::class
+            })
+        } returns lateHrvResp
+
+        val fullRhr = RestingHeartRateRecord(
+            time = tLate,
+            zoneOffset = offset,
+            beatsPerMinute = 50L,
+            metadata = metaLate
+        )
+        val fullRhrResp = mockk<ReadRecordsResponse<RestingHeartRateRecord>>(relaxed = true)
+        coEvery { fullRhrResp.records } returns listOf(fullRhr)
+        coEvery { fullRhrResp.pageToken } returns null
+        coEvery {
+            mockClient.readRecords(match<ReadRecordsRequest<RestingHeartRateRecord>> {
+                it.recordType == RestingHeartRateRecord::class
+            })
+        } returns fullRhrResp
+
+        val r2 = HealthConnectHrvImporter.importHrvRange(
+            context,
+            start,
+            end,
+            repository = repository,
+            clientOverride = mockClient
+        )
+        assertEquals(1, r2.getOrNull())
+
+        val allEntries = repository.getAllEntries(HrvPosture.OVERNIGHT_WEARABLE)
+        assertEquals(1, allEntries.size)
+        val updatedEntry = allEntries.first()
+        assertEquals(initialEntry.id, updatedEntry.id)
+        assertEquals(50, updatedEntry.restingHrBpm)
+        assertEquals(38.73, updatedEntry.rmssdMs, 0.05)
+        assertEquals(tLate.toEpochMilli(), updatedEntry.timestampMs)
+    }
+
+    /**
+     * TST-PER-039.3: User-pinned readings are never overwritten.
+     */
+    @Test
+    fun testInPlaceNocturnalUpdate_userPinnedEntry_neverOverwritten() = runBlocking {
+        TrainingApplication.setHealthConnectHrvImportEnabled(true)
+        HealthConnectManager.sdkStatusOverride = HealthConnectClient.SDK_AVAILABLE
+        coEvery { mockPermissionController.getGrantedPermissions() } returns HealthConnectManager.HRV_READ_PERMISSIONS
+
+        val userPinnedEntry = com.atrainingtracker.trainingtracker.database.hrv.HrvReadinessEntry(
+            timestampMs = 1731210000000L,
+            dateIso = "2026-11-10",
+            timezoneId = "UTC",
+            restingHrBpm = 48,
+            rmssdMs = 65.0,
+            lnRmssd = 4.174,
+            hrvScore100 = 83.48,
+            durationSec = 180,
+            posture = HrvPosture.OVERNIGHT_WEARABLE,
+            isPrimaryForDay = true,
+            notes = "UserManualNote"
+        )
+        repository.insertEntry(userPinnedEntry)
+
+        val offset = ZoneOffset.UTC
+        val meta = Metadata(id = "hc-hrv", dataOrigin = DataOrigin("com.ouraring.oura"))
+        val t = LocalDateTime.of(2026, 11, 10, 6, 0).toInstant(offset)
+        val hrv = HeartRateVariabilityRmssdRecord(
+            time = t,
+            zoneOffset = offset,
+            heartRateVariabilityMillis = 40.0,
+            metadata = meta
+        )
+        val mockHrvResp = mockk<ReadRecordsResponse<HeartRateVariabilityRmssdRecord>>(relaxed = true)
+        coEvery { mockHrvResp.records } returns listOf(hrv)
+        coEvery { mockHrvResp.pageToken } returns null
+        coEvery {
+            mockClient.readRecords(match<ReadRecordsRequest<HeartRateVariabilityRmssdRecord>> {
+                it.recordType == HeartRateVariabilityRmssdRecord::class
+            })
+        } returns mockHrvResp
+
+        val rhrResp = mockk<ReadRecordsResponse<RestingHeartRateRecord>>(relaxed = true)
+        coEvery { rhrResp.records } returns emptyList()
+        coEvery { rhrResp.pageToken } returns null
+        coEvery {
+            mockClient.readRecords(match<ReadRecordsRequest<RestingHeartRateRecord>> {
+                it.recordType == RestingHeartRateRecord::class
+            })
+        } returns rhrResp
+
+        val start = LocalDateTime.of(2026, 11, 9, 18, 0).toInstant(offset)
+        val end = LocalDateTime.of(2026, 11, 10, 12, 0).toInstant(offset)
+
+        val result = HealthConnectHrvImporter.importHrvRange(
+            context,
+            start,
+            end,
+            repository = repository,
+            clientOverride = mockClient
+        )
+        assertEquals(0, result.getOrNull())
+
+        val entry = repository.getPrimaryEntryForDate("2026-11-10", HrvPosture.OVERNIGHT_WEARABLE)
+        assertNotNull(entry)
+        assertEquals("UserManualNote", entry!!.notes)
+        assertEquals(65.0, entry.rmssdMs, 1e-4)
     }
 }

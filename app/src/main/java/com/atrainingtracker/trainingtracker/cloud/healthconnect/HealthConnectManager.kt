@@ -123,14 +123,15 @@ object HealthConnectManager {
     }
 
     /**
-     * Checks whether all required Health Connect HRV read permissions are granted (REQ-PER-031.1).
+     * Checks whether required Health Connect HRV read permissions are granted (REQ-PER-031.1).
+     * Gates strictly on HeartRateVariabilityRmssdRecord; RestingHeartRateRecord is optional.
      */
     suspend fun hasHrvReadPermissions(context: Context): Boolean {
         if (!isAvailable(context)) return false
         return try {
             val client = getClient(context)
             val granted = client.permissionController.getGrantedPermissions()
-            HRV_READ_PERMISSIONS.all { it in granted }
+            HealthPermission.getReadPermission(HeartRateVariabilityRmssdRecord::class) in granted
         } catch (e: Exception) {
             Log.w(TAG, "Error checking Health Connect HRV read permissions: ${e.message}")
             false

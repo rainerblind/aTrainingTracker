@@ -46,6 +46,7 @@
     <string name="morning_hrv_posture_supine">仰向け</string>
     <string name="morning_hrv_posture_seated">座位</string>
     <string name="morning_hrv_posture_standing">立位</string>
+    <string name="morning_hrv_posture_overnight_wearable">夜間ウェアラブル</string>
     <string name="morning_hrv_duration_label">測定時間</string>
     <string name="morning_hrv_duration_60s">60秒（標準）</string>
     <string name="morning_hrv_duration_120s">120秒（延長）</string>

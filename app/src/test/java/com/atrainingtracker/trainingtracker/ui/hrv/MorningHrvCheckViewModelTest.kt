@@ -30,6 +30,13 @@ import com.atrainingtracker.trainingtracker.database.hrv.HrvReadinessDatabaseMan
 import com.atrainingtracker.trainingtracker.database.hrv.HrvReadinessDbHelper
 import com.atrainingtracker.trainingtracker.database.hrv.HrvReadinessRepository
 import com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository
+import io.mockk.coEvery
+import io.mockk.coVerify
+import io.mockk.every
+import io.mockk.mockkObject
+import io.mockk.mockkStatic
+import io.mockk.unmockkObject
+import io.mockk.unmockkStatic
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -402,5 +409,34 @@ class MorningHrvCheckViewModelTest {
         assertEquals(MorningHrvPhase.COMPLETED, state.phase)
         assertFalse("Reading not yet saved", state.isSaved)
         assertNotNull("Pre-save in-memory readiness result must be populated", state.readinessResult)
+    }
+
+    @Test
+    fun testInit_whenHealthConnectHrvImportEnabled_triggersBackgroundSync() = runTest {
+        mockkObject(com.atrainingtracker.trainingtracker.cloud.healthconnect.HealthConnectHrvImporter)
+        mockkStatic(TrainingApplication::class)
+        every { TrainingApplication.isHealthConnectHrvImportEnabled() } returns true
+        coEvery {
+            com.atrainingtracker.trainingtracker.cloud.healthconnect.HealthConnectHrvImporter.importRecentHrv(
+                any(), any(), any(), any()
+            )
+        } returns Result.success(0)
+
+        val viewModel = MorningHrvCheckViewModel(
+            application = application,
+            banalServiceRepository = banalRepository,
+            hrvReadinessRepository = hrvRepository,
+            dispatcher = testDispatcher
+        )
+        advanceUntilIdle()
+
+        coVerify {
+            com.atrainingtracker.trainingtracker.cloud.healthconnect.HealthConnectHrvImporter.importRecentHrv(
+                any(), eq(14), any(), any()
+            )
+        }
+
+        unmockkStatic(TrainingApplication::class)
+        unmockkObject(com.atrainingtracker.trainingtracker.cloud.healthconnect.HealthConnectHrvImporter)
     }
 }

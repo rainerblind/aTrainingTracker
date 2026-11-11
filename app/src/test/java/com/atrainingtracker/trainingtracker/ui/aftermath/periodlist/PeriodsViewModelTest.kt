@@ -19,6 +19,8 @@ import android.app.Application
 import android.util.Log
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.MyPreferenceManager
+import com.atrainingtracker.trainingtracker.TrainingApplication
+import com.atrainingtracker.trainingtracker.cloud.healthconnect.HealthConnectHrvImporter
 import com.atrainingtracker.trainingtracker.database.hrv.HrvPosture
 import com.atrainingtracker.trainingtracker.database.hrv.HrvReadinessEntry
 import com.atrainingtracker.trainingtracker.database.hrv.HrvReadinessRepository
@@ -777,5 +779,24 @@ class PeriodsViewModelTest {
 
         // Verified: Trend reactively recomputed and hydrated training load!
         assertEquals(85.0, viewModel.hrvReadinessTrendState.value?.maxTrainingLoad ?: 0.0, 0.01)
+    }
+
+    @Test
+    fun testRefreshHrvTrend_whenHealthConnectHrvImportEnabled_invokesImporter() = runTest(testDispatcher) {
+        mockkObject(HealthConnectHrvImporter)
+        mockkStatic(TrainingApplication::class)
+        every { TrainingApplication.isHealthConnectHrvImportEnabled() } returns true
+        coEvery { HealthConnectHrvImporter.importRecentHrv(any(), any(), any(), any()) } returns Result.success(0)
+
+        val viewModel = createViewModel()
+        testScheduler.advanceUntilIdle()
+
+        viewModel.refreshHrvTrend()
+        testScheduler.advanceUntilIdle()
+
+        coVerify { HealthConnectHrvImporter.importRecentHrv(any(), eq(14), any(), any()) }
+
+        unmockkStatic(TrainingApplication::class)
+        unmockkObject(HealthConnectHrvImporter)
     }
 }

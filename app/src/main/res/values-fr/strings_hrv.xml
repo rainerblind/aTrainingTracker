@@ -46,6 +46,7 @@
     <string name="morning_hrv_posture_supine">Couché</string>
     <string name="morning_hrv_posture_seated">Assis</string>
     <string name="morning_hrv_posture_standing">Debout</string>
+    <string name="morning_hrv_posture_overnight_wearable">Wearable de nuit</string>
     <string name="morning_hrv_duration_label">Durée</string>
     <string name="morning_hrv_duration_60s">60 s (Standard)</string>
     <string name="morning_hrv_duration_120s">120 s (Étendu)</string>

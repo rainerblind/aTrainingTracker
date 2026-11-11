@@ -1869,25 +1869,35 @@ d. Step 4 (`OnboardingStep.BATTERY_OPTIMIZATION`): Doze mode background survival
 
 **Invariants**: Zero coordinate fabrication or null pointer exceptions for indoor trackless sessions.
 
-### REQ-SET-103: Health Connect Settings UI, Manual Re-Sync & Write Idempotency [Verified]
-- **Tests**: `TST-SET-103` | **Tickets**: `ATT-3052`
-- **Implementation**: `HealthConnectSettingsDialog.kt`, `WorkoutHeader.kt`, `EditWorkoutScreen.kt`, `HealthConnectManager.kt`
-- **Status**: Verified
+### REQ-SET-103: Health Connect Settings UI, Manual Re-Sync & Write Idempotency [Specified]
+- **Tests**: `TST-SET-103` | **Tickets**: `ATT-3052`, `ATT-6712`
+- **Implementation**: `HealthConnectSettingsDialog.kt`, `WorkoutHeader.kt`, `EditWorkoutScreen.kt`, `HealthConnectManager.kt`, `PeriodsViewModel.kt`, `MorningHrvCheckViewModel.kt`
+- **Status**: Specified
 - **Rationale**: Athletes require user-friendly settings controls and deterministic synchronization guarantees:
 1. *Cloud Integrations Settings Toggle (`REQ-SET-103.1`)*:
-   - The system SHALL provide a "Sync with Health Connect" preference toggle in Cloud Integrations settings, prompting for permissions when enabled.
+   - The system SHALL provide a "Sync with Health Connect" preference toggle in Cloud Integrations settings, prompting for write permissions when enabled.
+   - The system SHALL provide an "Import Resting HRV from Health Connect" preference toggle in `HealthConnectSettingsDialog`, wired to `isHealthConnectHrvImportEnabled()` and prompting for `HRV_READ_PERMISSIONS` when enabled, triggering an initial 60-day backfill on enable and 14-day refreshes on `PeriodsViewModel` / `MorningHrvCheckViewModel` load.
 2. *Automatic & Manual Synchronization (`REQ-SET-103.2`)*:
    - Completed workouts SHALL automatically synchronize in the background upon workout finalization when enabled.
    - A manual "Sync to Health Connect" action SHALL be accessible from workout details/edit screens for re-syncing or retroactive sync.
 3. *Idempotent Record Keying (`REQ-SET-103.3`)*:
    - Records written to Health Connect SHALL define `Metadata(clientRecordId = "workout_${fileBaseName}")` (and corresponding deterministic IDs for series records) to ensure repeated syncs update existing records rather than producing duplicates.
 
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Amends `REQ-SET-103` (`REQ-SET-103.1`), targeting `HealthConnectSettingsDialog.kt`, `HealthConnectManager.kt`, `PeriodsViewModel.kt`, and `MorningHrvCheckViewModel.kt`.
+2. *Historical Origin & Commit Trace*: Introduced in `ATT-3052`, refined in Sprint `2026-46.2` (`ATT-6712`).
+3. *Root Reason for Existing Formulation*: Originally scoped to workout write export only; HRV ingestion was added in ATT-4981 without wiring into the dialog UI.
+4. *Preservation of Core Invariants*: Existing workout export sync behavior, deterministic clientRecordId keying, and write idempotency remain 100% untouched.
+
 **Acceptance Criteria (Given-When-Then)**:
 • *Given* a workout already synchronized to Health Connect,
 • *When* the user triggers a manual re-sync,
 • *Then* existing records in Health Connect are updated in-place via identical `clientRecordId` without session duplication.
+• *Given* an athlete in `HealthConnectSettingsDialog`,
+• *When* toggling "Import Resting HRV from Health Connect",
+• *Then* `HRV_READ_PERMISSIONS` authorization is requested and an initial 60-day backfill is triggered upon confirmation.
 
-**Invariants**: Re-sync operations must never produce duplicate entries or orphan telemetry series in Health Connect.
+**Invariants**: Re-sync operations must never produce duplicate entries or orphan telemetry series in Health Connect. Zero unprompted background sync operations when disabled.
 
 
 

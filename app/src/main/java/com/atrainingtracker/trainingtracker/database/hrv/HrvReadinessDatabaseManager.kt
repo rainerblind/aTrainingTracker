@@ -161,6 +161,40 @@ class HrvReadinessDatabaseManager private constructor(context: Context) {
     }
 
     /**
+     * Updates an existing [entry] in `HrvReadiness.db` identified by [entry.id] (`REQ-PER-031.4`).
+     * Transactionally recomputes `is_primary_for_day` for its `(date_iso, posture)`.
+     */
+    @Synchronized
+    fun updateEntry(entry: HrvReadinessEntry): Boolean {
+        if (entry.id <= 0) return false
+        val db = database
+        db.beginTransaction()
+        try {
+            val cv = entry.toContentValues()
+            val rows = db.update(
+                HrvReadinessDbHelper.TABLE_HRV_READINESS,
+                cv,
+                "${HrvReadinessDbHelper.COLUMN_ID} = ?",
+                arrayOf(entry.id.toString())
+            )
+            if (rows > 0) {
+                val isPinned = entry.isPrimaryForDay &&
+                    (entry.artifactRatePct == null || entry.artifactRatePct <= MAX_VALID_ARTIFACT_RATE_PCT)
+                recomputePrimaryForDayInternal(
+                    db = db,
+                    dateIso = entry.dateIso,
+                    posture = entry.posture,
+                    pinnedId = if (isPinned) entry.id else null
+                )
+            }
+            db.setTransactionSuccessful()
+            return rows > 0
+        } finally {
+            db.endTransaction()
+        }
+    }
+
+    /**
      * Deletes the entry with [id] and recomputes the primary flag for its `(date_iso, posture)`.
      */
     @Synchronized

@@ -31,6 +31,8 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.*
+import com.atrainingtracker.trainingtracker.TrainingApplication
+import com.atrainingtracker.trainingtracker.cloud.healthconnect.HealthConnectHrvImporter
 import com.atrainingtracker.trainingtracker.database.hrv.HrvPosture
 import com.atrainingtracker.trainingtracker.database.hrv.HrvReadinessRepository
 import com.atrainingtracker.util.safeEnumValueOfOrNull
@@ -425,6 +427,18 @@ class PeriodsViewModel @JvmOverloads constructor(
 
     fun refreshHrvTrend() {
         viewModelScope.launch(ioDispatcher) {
+            if (TrainingApplication.isHealthConnectHrvImportEnabled()) {
+                try {
+                    HealthConnectHrvImporter.importRecentHrv(
+                        context = getApplication(),
+                        daysBack = 14,
+                        repository = hrvReadinessRepo
+                    )
+                } catch (e: Exception) {
+                    android.util.Log.w("PeriodsViewModel", "Background Health Connect HRV refresh failed: ${e.message}")
+                }
+            }
+
             val entries = hrvReadinessRepo.getAllEntries()
             if (entries.isEmpty()) {
                 _hrvReadinessTrendState.value = null

@@ -9,4 +9,7 @@
     <string name="health_connect_sync_manual">Synchroniseren naar Health Connect</string>
     <string name="health_connect_sync_success">Training gesynchroniseerd met Health Connect</string>
     <string name="health_connect_permissions_needed">Health Connect-schrijfrechten zijn vereist om trainingsgegevens te synchroniseren</string>
+    <string name="health_connect_hrv_import_title">Rust-HRV importeren uit Health Connect</string>
+    <string name="health_connect_hrv_import_summary">Importeer nachtelijke rust-HRV en rusthartslaggegevens van wearables</string>
+    <string name="health_connect_hrv_permissions_needed">Health Connect-leesrechten zijn vereist om nachtelijke HRV-gegevens te importeren</string>
 </resources>

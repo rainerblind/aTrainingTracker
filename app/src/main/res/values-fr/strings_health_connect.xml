@@ -9,4 +9,7 @@
     <string name="health_connect_sync_manual">Synchroniser vers Health Connect</string>
     <string name="health_connect_sync_success">Entraînement synchronisé avec Health Connect</string>
     <string name="health_connect_permissions_needed">Les autorisations d\'écriture Health Connect sont requises pour synchroniser les données d\'entraînement</string>
+    <string name="health_connect_hrv_import_title">Importer la VRC au repos depuis Health Connect</string>
+    <string name="health_connect_hrv_import_summary">Importer les données nocturnes de VRC au repos et de fréquence cardiaque au repos des appareils portables</string>
+    <string name="health_connect_hrv_permissions_needed">Les autorisations de lecture Health Connect sont requises pour importer les données de VRC nocturne</string>
 </resources>

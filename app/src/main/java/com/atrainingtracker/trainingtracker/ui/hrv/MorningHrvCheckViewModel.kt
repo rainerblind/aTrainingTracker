@@ -19,6 +19,7 @@
 package com.atrainingtracker.trainingtracker.ui.hrv
 
 import android.app.Application
+import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.atrainingtracker.banalservice.devices.RrBeatEvent
@@ -30,6 +31,7 @@ import com.atrainingtracker.banalservice.devices.hrv.HrvSignalQualityStatus
 import com.atrainingtracker.banalservice.devices.hrv.RrArtifactFilter
 import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.TrainingApplication
+import com.atrainingtracker.trainingtracker.cloud.healthconnect.HealthConnectHrvImporter
 import com.atrainingtracker.trainingtracker.database.hrv.HrvPosture
 import com.atrainingtracker.trainingtracker.database.hrv.HrvReadinessCalculator
 import com.atrainingtracker.trainingtracker.database.hrv.HrvReadinessEntry
@@ -124,6 +126,20 @@ class MorningHrvCheckViewModel @JvmOverloads constructor(
         banalServiceRepository.bindToBANALService()
         banalServiceRepository.startSearchingForPairedDevices()
         banalServiceRepository.addRrBeatListener(rrBeatListener)
+
+        if (TrainingApplication.isHealthConnectHrvImportEnabled()) {
+            viewModelScope.launch(Dispatchers.IO) {
+                try {
+                    HealthConnectHrvImporter.importRecentHrv(
+                        context = application,
+                        daysBack = 14,
+                        repository = hrvReadinessRepository
+                    )
+                } catch (e: Exception) {
+                    Log.w("MorningHrvCheckVM", "Background Health Connect HRV refresh failed: ${e.message}")
+                }
+            }
+        }
     }
 
     /**

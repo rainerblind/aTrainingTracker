@@ -57,7 +57,8 @@ data class HrvTrendPoint(
     val swcUpper: Double?,
     val status: ReadinessStatus,
     val trainingLoad: Double? = null,
-    val epochDay: Long = try { LocalDate.parse(dateIso).toEpochDay() } catch (_: Exception) { 0L }
+    val epochDay: Long = try { LocalDate.parse(dateIso).toEpochDay() } catch (_: Exception) { 0L },
+    val notes: String? = null
 )
 
 /**
@@ -241,7 +242,8 @@ object HrvReadinessTrendMath {
                     swcUpper = swcUpper,
                     status = status,
                     trainingLoad = load,
-                    epochDay = targetDate.toEpochDay()
+                    epochDay = targetDate.toEpochDay(),
+                    notes = dayEntry?.notes
                 )
             )
         }

@@ -38,6 +38,10 @@ class HrvReadinessRepository(
         databaseManager.insertEntry(entry)
     }
 
+    suspend fun updateEntry(entry: HrvReadinessEntry): Boolean = withContext(ioDispatcher) {
+        databaseManager.updateEntry(entry)
+    }
+
     suspend fun deleteEntry(id: Long): Boolean = withContext(ioDispatcher) {
         databaseManager.deleteEntry(id)
     }
