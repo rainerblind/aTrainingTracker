@@ -38,6 +38,14 @@ object ClimbDetector {
     private const val DEFAULT_MAX_DIP_DESCENT_METERS = 15.0
     private const val DEFAULT_MAX_DIP_DISTANCE_METERS = 150.0
 
+    // Physical plausibility and spike guard thresholds (REQ-CLM-009.1)
+    private const val MAX_STEP_ALT_DELTA_METERS = 25.0
+    private const val MAX_STEP_GRADE_PERCENT = 45.0
+    private const val MAX_PLAUSIBLE_AVG_GRADE_PERCENT = 25.0
+    private const val MAX_PLAUSIBLE_MAX_GRADE_PERCENT = 45.0
+    private const val CALIBRATION_SNAP_DROP_METERS = 35.0
+    private const val CALIBRATION_SNAP_DISTANCE_METERS = 50.0
+
     /**
      * Detects qualifying climbs from a list of sequential route [points].
      *
@@ -82,6 +90,13 @@ object ClimbDetector {
                 val deltaAlt = currentAlt - prevAlt
                 val deltaDist = validPoints[j].distance - validPoints[j - 1].distance
 
+                // Non-physical vertical step jump: |deltaAlt| > 25.0m within short distance (<= 50m) or sustained gradient > 45% over >= 10m
+                if ((deltaDist <= CALIBRATION_SNAP_DISTANCE_METERS && kotlin.math.abs(deltaAlt) > MAX_STEP_ALT_DELTA_METERS) ||
+                    (deltaDist >= 10.0 && (deltaAlt / deltaDist) * 100.0 > MAX_STEP_GRADE_PERCENT)
+                ) {
+                    break
+                }
+
                 if (currentAlt > maxAlt) {
                     // New peak reached within climb
                     maxAlt = currentAlt
@@ -108,11 +123,21 @@ object ClimbDetector {
             val gain = validPoints[peakIdx].altitude!! - validPoints[startIdx].altitude!!
             val avgGrade = if (dist > 0) (gain / dist) * 100.0 else 0.0
 
-            if (dist >= minLengthMeters && gain >= minGainMeters && avgGrade >= minGradePercent) {
-                climbs.add(createClimb(validPoints, startIdx, peakIdx, routeId, context))
-                // Resume scanning after the climb summit
-                i = peakIdx
-            } else if (gain >= minGainMeters && dist >= minLengthMeters) {
+            val hasCalibrationSnap = hasPostSummitCalibrationSnap(validPoints, peakIdx)
+
+            if (dist >= minLengthMeters && gain >= minGainMeters && avgGrade >= minGradePercent &&
+                avgGrade <= MAX_PLAUSIBLE_AVG_GRADE_PERCENT && !hasCalibrationSnap
+            ) {
+                val candidateClimb = createClimb(validPoints, startIdx, peakIdx, routeId, context)
+                if (candidateClimb.maxGradePercent <= MAX_PLAUSIBLE_MAX_GRADE_PERCENT) {
+                    climbs.add(candidateClimb)
+                    i = peakIdx
+                } else {
+                    i = maxOf(i + 1, peakIdx)
+                }
+            } else if (gain >= minGainMeters && dist >= minLengthMeters &&
+                avgGrade <= MAX_PLAUSIBLE_AVG_GRADE_PERCENT && !hasCalibrationSnap
+            ) {
                 // Total ascent had enough gain and length, but overall average grade was diluted below minGradePercent.
                 // Search for an embedded steep climb within [startIdx, peakIdx] by trimming gentle boundaries.
                 var s = startIdx
@@ -129,14 +154,21 @@ object ClimbDetector {
                 val subGain = validPoints[e].altitude!! - validPoints[s].altitude!!
                 val subGrade = if (subDist > 0) (subGain / subDist) * 100.0 else 0.0
 
-                if (subDist >= minLengthMeters && subGain >= minGainMeters && subGrade >= minGradePercent) {
-                    climbs.add(createClimb(validPoints, s, e, routeId, context))
-                    i = e
+                if (subDist >= minLengthMeters && subGain >= minGainMeters && subGrade >= minGradePercent &&
+                    subGrade <= MAX_PLAUSIBLE_AVG_GRADE_PERCENT
+                ) {
+                    val candidateClimb = createClimb(validPoints, s, e, routeId, context)
+                    if (candidateClimb.maxGradePercent <= MAX_PLAUSIBLE_MAX_GRADE_PERCENT) {
+                        climbs.add(candidateClimb)
+                        i = e
+                    } else {
+                        i = maxOf(i + 1, peakIdx)
+                    }
                 } else {
                     i = maxOf(i + 1, peakIdx)
                 }
             } else {
-                // Insufficient bump (gain < minGainMeters or dist < minLengthMeters)
+                // Insufficient bump (gain < minGainMeters or dist < minLengthMeters) or implausible spike
                 i = maxOf(i + 1, peakIdx)
             }
         }
@@ -222,5 +254,26 @@ object ClimbDetector {
             }
         }
         return max(maxGrade, 0.0)
+    }
+
+    /**
+     * Checks if a climb peak is a false calibration snap where altitude collapses catastrophically
+     * immediately post-summit (> 35m drop within < 50m distance).
+     */
+    private fun hasPostSummitCalibrationSnap(points: List<PathPoint>, peakIdx: Int): Boolean {
+        if (peakIdx >= points.size - 1) return false
+        val peakAlt = points[peakIdx].altitude ?: return false
+        val peakDist = points[peakIdx].distance
+        var k = peakIdx + 1
+        while (k < points.size) {
+            val distAfter = points[k].distance - peakDist
+            if (distAfter > CALIBRATION_SNAP_DISTANCE_METERS) break
+            val altAfter = points[k].altitude ?: break
+            if (peakAlt - altAfter > CALIBRATION_SNAP_DROP_METERS) {
+                return true
+            }
+            k++
+        }
+        return false
     }
 }

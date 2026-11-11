@@ -1205,6 +1205,21 @@
   4. *Targeted Regression Verification Suite (`TST-CLM-008.4`)*:
   • Run targeted tests: `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.climbs.*"` asserting 100% pass rate.
 
+### TST-CLM-009: **Climb Detection Spike Guards, DEM Ground-Truth Cross-Validation & Corrupted Climbs Self-Healing Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-CLM-009` (`REQ-CLM-009.1`..`REQ-CLM-009.3`)
+- **Component**: `ClimbDetector.kt`, `WorkoutRepository.kt`, `ClimbDetectorTest.kt`, `WorkoutClimbIngestionTest.kt`, `WorkoutHistoricalClimbBackfillTest.kt`
+- **Jira**: `ATT-7159` | **Target Release**: `V5.0.0`
+- **Test Description**:
+  1. *Altitude Step Discontinuity & Extreme Gradient Rejection Test (`TST-CLM-009.1`, `ClimbDetectorTest.kt`)*:
+  • Verify that tracks containing single-step vertical jumps ($|\Delta\text{alt}| > 25\text{ m}$), average grade $> 25\%$, or post-peak calibration snaps ($> 35\text{ m}$ drop in $< 50\text{ m}$) yield zero detected climbs.
+  2. *Barometer Thermal Drift DEM Ground-Truth Cross-Validation Test (`TST-CLM-009.2`, `WorkoutClimbIngestionTest.kt`)*:
+  • Verify that candidate workout climbs where barometric ascent exceeds DEM ground-truth gain by $> \max(\text{demGain} \times 1.6 + 18.0, \text{demGain} + 35.0)$ or where DEM grade $< 2.2\%$ are rejected from `Climbs.db`.
+  3. *Climbs.db v2 Cleanup Migration Test (`TST-CLM-009.3`, `WorkoutHistoricalClimbBackfillTest.kt`)*:
+  • Verify that `cleanupCorruptedWorkoutClimbs()` purges corrupted `route_id IS NULL` climbs (`avgGrade > 25%`), sets `climbs_workout_cleanup_v2` to true, and refreshes `LiveClimbsRepository`.
+  4. *Targeted Regression Verification Suite (`TST-CLM-009.4`)*:
+  • Run targeted tests: `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.climbs.*" --tests "com.atrainingtracker.trainingtracker.ui.aftermath.*"` asserting 100% pass rate.
+
+
 
 
 
