@@ -1630,18 +1630,23 @@
 ### TST-PRO-053: **System Context Specification and Code-Grounding Contract Test Suite** [Verified]
 - **Requirement(s)**: `REQ-PRO-053`
 - **Component**: `docs/system/system_context.md`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/SystemContextContractTest.kt`
-- **Jira**: `ATT-6158`
+- **Jira**: `ATT-6158`, `ATT-6738`
 - **Test Description**:
   1. *System Context Structural & Diagram Verification (`TST-PRO-053.1`, `SystemContextContractTest.kt`)*:
   • Read `docs/system/system_context.md`.
   • Assert that the document exists and contains a valid Mermaid diagram (`flowchart` or `graph`).
   • Assert that all 5 interface domains (Sensors, Platform, Location/Maps, Cloud/Health, Decommissioned) are documented.
   2. *External Elements & Source Grounding Verification (`TST-PRO-053.2`, `SystemContextContractTest.kt`)*:
-  • Assert that BLE GATT profiles defined in `docs/system/system_context.md` match UUIDs in `BluetoothConstants.java`.
-  • Assert that ANT+ IPC services match package declarations in `AndroidManifest.xml`.
-  • Assert that cloud SDK dependencies match entries in `app/build.gradle`.
+  • Assert that BLE GATT profiles defined in `docs/system/system_context.md` match UUIDs in `BluetoothConstants.java` (including `0x180A`, Varia V1, Light Control).
+  • Assert that hardware sensors match `Sensor.TYPE_PRESSURE` and `Sensor.TYPE_PROXIMITY`.
+  • Assert that FGS execution types match `location|health` in `AndroidManifest.xml` and `TrackerService.java`.
+  • Assert that targetSdk 37 is labeled as Android 17.
+  • Assert that cloud SDK dependencies match entries in `app/build.gradle` (Dropbox, PebbleKit, Health Connect, Open-Meteo, Firebase BOM, Google Play Auth/Review).
   • Assert that Runkeeper and TrainingPeaks are explicitly tagged as decommissioned.
-  3. *Clean-Room Targeted Test Suite Execution (`TST-PRO-053.3`)*:
+  3. *Dynamic Filesystem & Symbol Grounding Verification (`TST-PRO-053.3`, `SystemContextContractTest.kt`)*:
+  • Dynamically extract all backticked `.kt`, `.java`, `.xml` filenames and verify 100% exist on disk in the repository.
+  • Dynamically extract all `Sensor.TYPE_*` and `FOREGROUND_SERVICE_TYPE_*` tokens and verify they match authentic production code.
+  4. *Clean-Room Targeted Test Suite Execution (`TST-PRO-053.4`)*:
   • Execute targeted unit test suite `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.build.SystemContextContractTest"` asserting 100% pass rate.
 
 

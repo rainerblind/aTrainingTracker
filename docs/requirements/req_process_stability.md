@@ -2627,17 +2627,17 @@ The workflow SHALL mandate that:
 
 
 ### REQ-PRO-053: System Context and External Interfaces Specification [Verified]
-- **Tests**: `TST-PRO-053` | **Tickets**: `ATT-6158`
+- **Tests**: `TST-PRO-053` | **Tickets**: `ATT-6158`, `ATT-6738`
 - **Implementation**: `docs/system/system_context.md`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/SystemContextContractTest.kt`
-- **Rationale**: ASPICE 4.0 pre-assessment finding S-01 (SYS.2 BP1, SYS.3) identified that aTrainingTracker lacks a formal system-level context boundary specification. While the application interfaces with multiple hardware sensors (BLE/ANT+), platform services (GNSS, PowerManager, Foreground Services), mapping SDKs, and third-party cloud services (Strava, Dropbox, Google Drive, Health Connect, PebbleKit), these external dependencies and their operational boundaries were previously implicit in code. Establishing an authoritative system context in `docs/system/system_context.md` and verifying code grounding via contract tests closes this ASPICE CL2 gap (ATT-6158, refining `REQ-PRO-043` under Epic `ATT-6142`):
+- **Rationale**: ASPICE 4.0 pre-assessment finding S-01 (SYS.2 BP1, SYS.3) identified that aTrainingTracker lacks a formal system-level context boundary specification. While the application interfaces with multiple hardware sensors (BLE/ANT+), platform services (GNSS, PowerManager, Foreground Services), mapping SDKs, and third-party cloud services (Strava, Dropbox, Google Drive, Health Connect, PebbleKit), these external dependencies and their operational boundaries were previously implicit in code. Establishing an authoritative system context in `docs/system/system_context.md` and verifying code grounding via contract tests closes this ASPICE CL2 gap (ATT-6158, ATT-6738, refining `REQ-PRO-043` under Epic `ATT-6142`):
 - **Description**:
   1. *System Context Boundary & External Elements Architecture (`REQ-PRO-053.1`, docs/system/system_context.md)*:
      • `docs/system/system_context.md` SHALL define the authoritative system boundary, interface taxonomy, and operational assumptions:
        - Mermaid Context Diagram illustrating interactions between the Athlete, aTrainingTracker Application, Hardware Sensors (BLE/ANT+), Android OS Platform Services, Location/Mapping Services, and Remote Cloud Platforms.
-       - Sensors & Peripherals Domain: Standard BLE GATT services (Heart Rate `0x180D`, Cycling Speed & Cadence `0x1816`, Cycling Power `0x1818`, Running Speed & Cadence `0x1814`, Battery `0x180F`, Garmin Varia Radar `6a4e3200...`), ANT+ IPC services (`com.dsi.ant.plugins.antplus`, `com.dsi.ant.service.socket`), and built-in sensors (Step Counter, Barometer, Accelerometer).
-       - Platform Frameworks Domain: Android OS (minSdk 26, targetSdk 37), PowerManager WakeLocks, Foreground Service execution policies, and Battery Optimization exemptions.
-       - Location & Mapping Domain: Android GNSS hardware provider (`LocationManager.GPS_PROVIDER`), Google Play Services Location (`FusedLocationProviderClient`), and Google Maps SDK v2.
-       - Cloud Storage & Health Aggregators Domain: Strava OAuth2 API, Dropbox Core SDK v2 (8.0.2), Google Drive REST API v3, Health Connect API (1.1.0-alpha11), and PebbleKit watchapp (4.0.1).
+       - Sensors & Peripherals Domain: Standard BLE GATT services (Heart Rate `0x180D`, Cycling Speed & Cadence `0x1816`, Cycling Power `0x1818`, Running Speed & Cadence `0x1814`, Battery `0x180F`, Device Info `0x180A`, Garmin Varia Radar `6a4e3200...`, `6a4e3202...`, `6a4e3203...`, `6a4e3204...`), ANT+ IPC services (`com.dsi.ant.plugins.antplus`, `com.dsi.ant.service.socket`), and built-in sensors (Barometer `Sensor.TYPE_PRESSURE`, Proximity `Sensor.TYPE_PROXIMITY`).
+       - Platform Frameworks Domain: Android OS (minSdk 26, targetSdk 37 Android 17), PowerManager WakeLocks, Foreground Service execution policies (`FOREGROUND_SERVICE_TYPE_LOCATION`, `FOREGROUND_SERVICE_TYPE_HEALTH`), and Battery Optimization exemptions.
+       - Location & Mapping Domain: Android GNSS hardware provider (`LocationManager.GPS_PROVIDER`), Google Play Services Location (`SpeedAndLocationDevice_GoogleFused.java`, `GoogleApiClient` / `LocationServices.FusedLocationApi`), and Google Maps SDK v2 (`com.google.android.gms:play-services-maps`).
+       - Cloud Storage & Health Aggregators Domain: Strava OAuth2 API (`StravaUploader.kt`), Dropbox Core SDK v2 (8.0.2), Google Drive REST API v3 (`GoogleDriveUploader.kt`), Health Connect API (1.1.0-alpha11, `READ_HEART_RATE_VARIABILITY`, `READ_RESTING_HEART_RATE`), Open-Meteo Elevation API (`ElevationService.kt`), Firebase Crashlytics & Analytics (`firebase-bom:34.18.0`), Google Play Auth & In-App Review (`play-services-auth:21.3.0`, `play:review-ktx:2.0.2`), and PebbleKit watchapp (4.0.1).
        - Decommissioned Legacy Interfaces Domain: Explicit demarcation of Runkeeper and TrainingPeaks as permanently decommissioned platforms retained strictly in database schemas for legacy schema stability.
        - Operational Assumptions: Offline-first tracking resilience, sensor reconnect failover, and asynchronous cloud synchronization.
   2. *System Context Contract Testing & Code Grounding (`REQ-PRO-053.2`)*:
@@ -2645,10 +2645,12 @@ The workflow SHALL mandate that:
        - `docs/system/system_context.md` exists and contains a valid Mermaid system context diagram (`flowchart` or `graph`).
        - All 5 external element domains are documented with structured subsections.
        - Code grounding assertions verifying BLE UUID constants in `BluetoothConstants.java`, ANT+ packages in `AndroidManifest.xml`, cloud SDK dependencies in `build.gradle`, and decommissioned tags.
+       - Dynamic filesystem existence asserting 100% of referenced `.kt`, `.java`, and `.xml` code files exist on disk.
+       - Platform symbol grounding verifying cited `Sensor.TYPE_*` and `FOREGROUND_SERVICE_TYPE_*` constants match authentic production code.
 - **Requirement Archaeology & Chesterton's Fence Audit**:
   1. *Original Requirement ID & Target*: Net-new requirement `REQ-PRO-053` (*System Context and External Interfaces Specification*), establishing ASPICE SYS.2/SYS.3 baseline under Parent Epic ATT-6142. Targets `docs/system/system_context.md` and `SystemContextContractTest.kt`.
-  2. *Historical Origin & Commit Trace*: Independent ASPICE pre-assessment finding S-01 (2026-11-08) and ticket ATT-6158.
-  3. *Root Reason for Existing Formulation*: Project grew as an Android application without a formal systems engineering process, leaving external interface contracts implicit in code.
+  2. *Historical Origin & Commit Trace*: Independent ASPICE pre-assessment finding S-01 (2026-11-08), ticket ATT-6158, and ATT-6738.
+  3. *Root Reason for Existing Formulation*: Initial draft established the 5-domain boundary but included speculative sensor constants (`Sensor.TYPE_STEP_COUNTER`, `Sensor.TYPE_ACCELEROMETER`), mislabeled Android API 37, and stale `.java` file extensions from legacy documentation.
   4. *Preservation of Core Invariants*: Zero production runtime code changes; offline-first storage and existing network upload logic remain 100% unaltered.
 - **Acceptance Criteria (Given-When-Then)**:
   • *Given* `docs/system/system_context.md`,
