@@ -1715,14 +1715,14 @@ d. Step 4 (`OnboardingStep.BATTERY_OPTIMIZATION`): Doze mode background survival
 
 **Invariants**: Workouts not belonging to the cluster MUST NOT be affected; primary cluster retains unselected variants; SQLite transactional atomicity; single-source-of-truth hit count reconciliation; 9-language localization parity.
 
-### REQ-SET-097: Point-to-Point (A->B) Route Corridor Discrimination & Non-Degenerate Elliptical Apex [Verified]
-- **Tests**: `TST-SET-097` | **Tickets**: `ATT-5899`
+### REQ-SET-097: Point-to-Point (A->B) Route Corridor Discrimination & Bipolar Product Apex [Verified]
+- **Tests**: `TST-SET-097` | **Tickets**: `ATT-5899`, `ATT-6686`
 - **Implementation**: `WorkoutClusterEngine.kt`, `TrackerService.java`, `WorkoutClusterCorridorDetector.kt`
-- **Rationale**: On point-to-point (A -> B) routes (e.g. Sindelfingen -> Schönaich commutes), evaluating the spatial apex solely as the point of maximum distance from `start` causes the apex to collapse onto `end` ($apex \approx end$). This degenerates the 20% apex similarity term ($s_3$) into a redundant duplicate of the destination term ($s_2$), rendering `WorkoutClusterEngine` incapable of discriminating parallel route corridors (e.g. eastern forest corridor vs. central city corridor) that share identical endpoints, total distance, and elevation profile. The system SHALL compute non-degenerate elliptical apex coordinates and evaluate mid-corridor polyline deviation for candidate cluster scoring:
-1. *Non-Degenerate Elliptical Apex Calculation (`REQ-SET-097.1`)*:
-   - For all point-to-point routes where $d(\text{start}, \text{end}) \ge 150\text{ m}$, `WorkoutClusterEngine.findApexFromPoints(start, points, end)` SHALL evaluate the elliptical focal distance sum $S(P) = d(\text{start}, P) + d(P, \text{end})$ for each track coordinate $P$.
-   - Let $D = d(\text{start}, \text{end})$. If $\max_P S(P) \ge D + 20\text{ m}$ (indicating non-collinear lateral deflection or curvature), the coordinate $P$ maximizing $S(P)$ SHALL be selected as the apex (`maxDispLat`, `maxDispLng`).
-   - If $\max_P S(P) < D + 20\text{ m}$ (substantially straight collinear path), the track point closest to the 50% cumulative track distance midpoint SHALL be selected, ensuring the apex consistently anchors the mid-corridor rather than collapsing onto `end`.
+- **Rationale**: On point-to-point (A -> B) routes (e.g. Sindelfingen -> Schönaich commutes), evaluating the spatial apex solely as the point of maximum distance from `start` causes the apex to collapse onto `end` ($apex \approx end$). Furthermore, the elliptical focal sum $d(\text{start}, P) + d(P, \text{end})$ mathematically favors longitudinal GPS overshoots near endpoints ($2\delta \gg 2h^2/D$) over lateral mid-corridor curves. The system SHALL maximize the bipolar distance product $d(\text{start}, P) \times d(P, \text{end})$ to eliminate endpoint degeneracy and evaluate mid-corridor polyline deviation for candidate cluster scoring:
+1. *Non-Degenerate Bipolar Product Apex Calculation (`REQ-SET-097.1`)*:
+   - For all point-to-point routes where $d(\text{start}, \text{end}) \ge 150\text{ m}$, `WorkoutClusterEngine.findApexFromPoints(start, points, end)` SHALL evaluate and maximize the bipolar distance product $P(p) = d(\text{start}, p) \times d(p, \text{end})$ across all track coordinates $p$.
+   - Because $P(p) = 0$ at both endpoints ($p = \text{start}$ and $p = \text{end}$), endpoint longitudinal overshoots are mathematically prevented from selection.
+   - On straight collinear routes, the bipolar product naturally peaks at the track midpoint ($D/2$), and on curved detours it peaks at the apex of greatest lateral deviation, anchoring `maxDispLat` and `maxDispLng` along the mid-corridor without secondary distance thresholds or collinear fallback passes.
 2. *Live Tracking Session Synchronization (`REQ-SET-097.2`)*:
    - Upon live session completion, `TrackerService.java` SHALL pass `endPos` into `findApexFromPoints(startPos, points, endPos)` so that newly recorded point-to-point workouts persist the non-degenerate mid-corridor apex in `WorkoutSummaries.MAX_LINE_DISTANCE_LAT` and `LNG`.
 3. *Corridor-Aware Candidate Scoring & Disambiguation (`REQ-SET-097.3`)*:
@@ -1734,10 +1734,10 @@ d. Step 4 (`OnboardingStep.BATTERY_OPTIMIZATION`): Doze mode background survival
 **Acceptance Criteria (Given-When-Then)**:
 • *Given* an A -> B point-to-point route with $d(\text{start}, \text{end}) \ge 150\text{ m}$ and a lateral corridor deflection,
 • *When* `findApexFromPoints(start, points, end)` is invoked,
-• *Then* the selected apex coordinate lies along the mid-corridor of greatest lateral deflection ($S(P) = d(\text{start}, P) + d(P, \text{end})$) and does NOT collapse onto `end`.
-• *Given* a substantially straight A -> B route where $\max S(P) < D + 20\text{ m}$,
+• *Then* the selected apex coordinate maximizes $d(\text{start}, P) \times d(P, \text{end})$ along the mid-corridor and does NOT collapse onto `end` or start/end overshoots.
+• *Given* a substantially straight A -> B route,
 • *When* `findApexFromPoints(start, points, end)` is invoked,
-• *Then* the selected apex coordinate matches the 50% distance midpoint of the track.
+• *Then* the selected apex coordinate peaks at the midpoint of the track ($D/2$).
 • *Given* two parallel candidate clusters between Sindelfingen and Schönaich separated laterally by > 500 m,
 • *When* a new workout along the eastern forest corridor is scored,
 • *Then* `WorkoutClusterEngine.scoreClusters()` evaluates polyline corridor deviation and ranks the eastern corridor cluster first.

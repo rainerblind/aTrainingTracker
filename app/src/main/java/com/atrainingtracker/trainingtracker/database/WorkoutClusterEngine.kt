@@ -311,10 +311,10 @@ class WorkoutClusterEngine private constructor(context: Context) {
      * Identifies the coordinate among the given points that defines the route's spatial apex (REQ-SET-063, REQ-SET-097).
      *
      * - For point-to-point routes (end != null and distanceBetween(start, end) >= 150m):
-     *   Maximizes the elliptical focal distance sum S(P) = d(start, P) + d(P, end).
-     *   If max S(P) < d(start, end) + 20m (indicating a substantially collinear straight path),
-     *   selects the track point closest to the 50% cumulative track distance midpoint to prevent
-     *   apex=end degeneracy.
+     *   Maximizes the bipolar product P(p) = d(start, p) * d(p, end) (REQ-SET-097.1, ATT-6686).
+     *   At both endpoints (p = start or p = end), the product is 0, mathematically preventing
+     *   longitudinal overshoots from winning. On straight A->B routes it peaks at the exact
+     *   midpoint (D/2), and on curved detours it peaks at the true detour apex.
      * - For closed-loop routes (end == null or distanceBetween(start, end) < 150m):
      *   Maximizes geodesic distance from start alone (since for closed loops A ≈ B,
      *   d(start, P) + d(P, end) ≡ 2 * d(start, P)), preserving legacy behavior 100%.
@@ -341,43 +341,20 @@ class WorkoutClusterEngine private constructor(context: Context) {
             return apex
         }
 
-        // Point-to-point (A -> B) route: evaluate elliptical focal distance sum
-        var maxEllipticalSum = -1.0
-        var ellipticalApex = points.first()
+        // Point-to-point (A -> B) route: evaluate bipolar distance product d(start, P) * d(P, end)
+        var maxBipolarProduct = -1.0
+        var bipolarApex = points.first()
         for (pt in points) {
             val dStart = distanceBetween(start, pt).toDouble()
-            val dEnd = distanceBetween(end!!, pt).toDouble()
-            val sum = dStart + dEnd
-            if (sum > maxEllipticalSum) {
-                maxEllipticalSum = sum
-                ellipticalApex = pt
+            val dEnd = distanceBetween(end, pt).toDouble()
+            val product = dStart * dEnd
+            if (product > maxBipolarProduct) {
+                maxBipolarProduct = product
+                bipolarApex = pt
             }
         }
 
-        // If the path has significant lateral deflection (>= direct distance + 20m), return the apex
-        if (maxEllipticalSum >= directEndDist + 20.0) {
-            return ellipticalApex
-        }
-
-        // Substantially straight / collinear path: pick point closest to 50% cumulative track length
-        val cumDistances = DoubleArray(points.size)
-        for (i in 0 until points.size - 1) {
-            cumDistances[i + 1] = cumDistances[i] + distanceBetween(points[i], points[i + 1])
-        }
-        val totalLength = cumDistances.last()
-        if (totalLength <= 0.0) return points.first()
-
-        val targetMidpoint = totalLength * 0.5
-        var bestIdx = 0
-        var minDiff = Double.MAX_VALUE
-        for (i in points.indices) {
-            val diff = Math.abs(cumDistances[i] - targetMidpoint)
-            if (diff < minDiff) {
-                minDiff = diff
-                bestIdx = i
-            }
-        }
-        return points[bestIdx]
+        return bipolarApex
     }
 
     fun onWorkoutFinished(context: Context, w: WorkoutData) {
@@ -524,8 +501,8 @@ class WorkoutClusterEngine private constructor(context: Context) {
     }
 
     /**
-     * One-time self-healing migration to recompute non-degenerate elliptical apex coordinates
-     * for existing point-to-point (A->B) routes and update cluster centroids (REQ-DAT-039, ATT-6319).
+     * One-time self-healing migration to recompute non-degenerate apex coordinates
+     * for existing point-to-point (A->B) routes and update cluster centroids (REQ-DAT-039, ATT-6319, ATT-6686).
      *
      * @return Number of healed workout apex records.
      */
@@ -549,27 +526,24 @@ class WorkoutClusterEngine private constructor(context: Context) {
                     if (directDist < 150f) return@forEachWorkoutPolylineCandidate
 
                     val recordedApex = workoutRepo.getExtremaPosition(workoutId, SensorType.LINE_DISTANCE_m, ExtremaType.MAX)
-                    val distToEnd = if (recordedApex != null) distanceBetween(recordedApex, end) else 0f
 
-                    // A->B workout with degenerate apex (collapsed onto end or missing)
-                    if (recordedApex == null || distToEnd < 50f) {
-                        val points = PolyUtil.decode(polyline)
-                        if (points.isNotEmpty()) {
-                            val trueApex = findApexFromPoints(start, points, end)
-                            val trueDisp = distanceBetween(start, trueApex).toDouble()
+                    // A->B workout: evaluate bipolar product true apex without premature distance-to-end skip filter (ATT-6686)
+                    val points = PolyUtil.decode(polyline)
+                    if (points.isNotEmpty()) {
+                        val trueApex = findApexFromPoints(start, points, end)
+                        val trueDisp = distanceBetween(start, trueApex).toDouble()
 
-                            if (recordedApex == null || distanceBetween(recordedApex, trueApex) > 10f) {
-                                workoutRepo.updateExtremaValue(
-                                    workoutId,
-                                    SensorType.LINE_DISTANCE_m,
-                                    ExtremaType.MAX,
-                                    trueDisp,
-                                    trueApex
-                                )
-                                healedCount++
-                                if (clusterId > 0L) {
-                                    affectedClusterIds.add(clusterId)
-                                }
+                        if (recordedApex == null || distanceBetween(recordedApex, trueApex) > 25f) {
+                            workoutRepo.updateExtremaValue(
+                                workoutId,
+                                SensorType.LINE_DISTANCE_m,
+                                ExtremaType.MAX,
+                                trueDisp,
+                                trueApex
+                            )
+                            healedCount++
+                            if (clusterId > 0L) {
+                                affectedClusterIds.add(clusterId)
                             }
                         }
                     }

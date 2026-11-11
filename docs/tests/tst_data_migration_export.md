@@ -2068,10 +2068,12 @@
 - **Target Release**: `V5.0.0`
 - **Requirement(s)**: `REQ-DAT-039`
 - **Component**: `WorkoutClusterEngine.kt`, `WorkoutClusterRepository.kt`, `LegacyImportEngine.kt`, `WorkoutDataMapper.kt`, `WorkoutClusterApexMigrationTest.kt`
-- **Jira**: `ATT-6319`
+- **Jira**: `ATT-6319`, `ATT-6686`
 - **Test Description**:
-  1. *Database Self-Healing Apex Migration Contract Test (`TST-DAT-035.1`)*:
-  • Verify in `WorkoutClusterApexMigrationTest.kt` that `healLegacyPointToPointApexes()` recomputes degenerated apex coordinates ($P_{\text{apex}} \approx P_{\text{end}}$) for point-to-point routes ($d \ge 150\text{ m}$) while leaving closed-loop routes ($d < 150\text{ m}$) unmodified.
+  1. *Database Self-Healing Apex Migration v2 Contract Test (`TST-DAT-035.1`, `WorkoutClusterApexMigrationTest.kt`)*:
+  • Verify in `WorkoutClusterApexMigrationTest.kt` that `healLegacyPointToPointApexes()` recomputes degenerated apex coordinates ($P_{\text{apex}} \approx P_{\text{end}}$ or delta > 25m) for point-to-point routes ($d \ge 150\text{ m}$) while leaving closed-loop routes ($d < 150\text{ m}$) unmodified.
+  • Verify that workouts with terminal overshoots $\ge 50\text{ m}$ are no longer skipped.
+  • Verify that `SP_KEY_LAST_APEX_REPAIR = "last_apex_repair_v2"` executes when stored value `< 2` and persists `2`.
   • Verify that cluster centroids (`maxDispLat`, `maxDispLng`) are updated to reflect the healed member workout apexes.
   2. *Legacy Import Pipeline Unification Test (`TST-DAT-035.2`)*:
   • Verify in `LegacyImportEngineTest` / `WorkoutClusterApexMigrationTest` that `LegacyImportEngine` calculates apex coordinates via `findApexFromPoints(start, points, end)` and passes `workoutPolyline` to `suggestCluster`.

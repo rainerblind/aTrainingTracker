@@ -138,7 +138,7 @@ class WorkoutClusterRepository internal constructor(
 
     companion object {
         private const val SP_KEY_LAST_BOUNDS_REPAIR = "last_cluster_bounds_repair_v5"
-        const val SP_KEY_LAST_APEX_REPAIR = "last_apex_repair_v1"
+        const val SP_KEY_LAST_APEX_REPAIR = "last_apex_repair_v2"
         @Volatile
         private var instance: WorkoutClusterRepository? = null
 
@@ -186,12 +186,12 @@ class WorkoutClusterRepository internal constructor(
             currentClusters = clusterDb.getAllClusters()
         }
 
-        // 0.1 Point-to-point Apex Self-Healing Migration (REQ-DAT-039, ATT-6319)
+        // 0.1 Point-to-point Apex Self-Healing Migration (REQ-DAT-039, ATT-6319, ATT-6686)
         val lastApexRepair = prefs.getInt(SP_KEY_LAST_APEX_REPAIR, 0)
-        if (lastApexRepair < 1 && currentClusters.isNotEmpty()) {
+        if (lastApexRepair < 2 && currentClusters.isNotEmpty()) {
             val engine = WorkoutClusterEngine.getInstance(context)
             engine.healLegacyPointToPointApexes(context)
-            prefs.edit().putInt(SP_KEY_LAST_APEX_REPAIR, 1).apply()
+            prefs.edit().putInt(SP_KEY_LAST_APEX_REPAIR, 2).apply()
             currentClusters = clusterDb.getAllClusters()
         }
 
