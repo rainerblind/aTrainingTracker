@@ -104,4 +104,12 @@
     <string name="hrv_scatter_artifact_suppressed">Intervalli con artefatti elevati (&gt;5%%) soppressi</string>
     <string name="hrv_scatter_no_data">Nessun dato VFC disponibile per questo allenamento</string>
     <string name="hrv_chart_artifact_gap_label">Intervallo artefatti</string>
+
+    <!-- DFA a1 Threshold Tuning & Dynamic Zones (ATT-6715 / REQ-TRK-061) -->
+    <string name="tuning_dfa_a1_t1_title">Soglia aerobica DFA a1 (T1)</string>
+    <string name="tuning_dfa_a1_t1_desc">Soglia che separa la base aerobica (Zona 2) dalla transizione (Zona 3). Più alto = più frattale / aerobico.</string>
+    <string name="tuning_dfa_a1_t2_title">Soglia anaerobica DFA a1 (T2)</string>
+    <string name="tuning_dfa_a1_t2_desc">Soglia che separa la transizione (Zona 3) dall\'intensità anaerobica (Zona 4). Più alto = più frattale / aerobico.</string>
+    <string name="tuning_dfa_a1_default">Predefinito: %1$.2f (Invariante: T1 \u2265 T2 + 0.05)</string>
+    <string name="hrv_info_zones_desc_fmt">DFA a1 &gt; %1$.2f indica andatura di resistenza aerobica (Zona 2). Valori tra %1$.2f e %2$.2f riflettono la transizione di soglia (Zona 3). Valori inferiori a %2$.2f indicano elevata intensità anaerobica (Zona 4).</string>
 </resources>

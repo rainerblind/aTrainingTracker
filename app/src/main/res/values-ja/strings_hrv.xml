@@ -104,4 +104,12 @@
     <string name="hrv_scatter_artifact_suppressed">アーティファクト率5%%超の区間を除外</string>
     <string name="hrv_scatter_no_data">このトレーニングのHRVデータはありません</string>
     <string name="hrv_chart_artifact_gap_label">アーティファクトギャップ</string>
+
+    <!-- DFA a1 Threshold Tuning & Dynamic Zones (ATT-6715 / REQ-TRK-061) -->
+    <string name="tuning_dfa_a1_t1_title">DFA a1 有酸素閾値 (T1)</string>
+    <string name="tuning_dfa_a1_t1_desc">有酸素ベース（ゾーン2）と移行期（ゾーン3）を分ける閾値。高いほどフラクタル／有酸素。</string>
+    <string name="tuning_dfa_a1_t2_title">DFA a1 無酸素閾値 (T2)</string>
+    <string name="tuning_dfa_a1_t2_desc">移行期（ゾーン3）と高強度無酸素（ゾーン4）を分ける閾値。高いほどフラクタル／有酸素。</string>
+    <string name="tuning_dfa_a1_default">デフォルト: %1$.2f (不変条件: T1 \u2265 T2 + 0.05)</string>
+    <string name="hrv_info_zones_desc_fmt">DFA a1 &gt; %1$.2fは有酸素持久力ペース（ゾーン2）を示します。%1$.2f〜%2$.2fは閾値移行期（ゾーン3）を反映します。%2$.2f未満は高強度の無酸素運動（ゾーン4）を示します。</string>
 </resources>

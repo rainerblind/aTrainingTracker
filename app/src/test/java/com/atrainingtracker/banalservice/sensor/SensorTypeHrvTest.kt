@@ -43,6 +43,11 @@ class SensorTypeHrvTest {
 
         val deviceTypes = DeviceType.getDeviceTypeList(rmssd)
         assertTrue(deviceTypes.contains(DeviceType.HRV_METRICS))
+
+        // REQ-TRK-061.2: SensorType.HRV_RMSSD uses IntegerFormatter (0 ms)
+        assertTrue("HRV_RMSSD must use IntegerFormatter", rmssd.myFormatter is com.atrainingtracker.banalservice.sensor.formater.IntegerFormatter)
+        assertEquals("42", (rmssd.myFormatter as com.atrainingtracker.banalservice.sensor.formater.MyFormatter<Number>).format(42.4))
+        assertEquals("0", (rmssd.myFormatter as com.atrainingtracker.banalservice.sensor.formater.MyFormatter<Number>).format(0.0))
     }
 
     @Test

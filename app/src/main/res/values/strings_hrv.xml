@@ -104,4 +104,12 @@
     <string name="hrv_scatter_artifact_suppressed">High-artifact intervals (&gt;5%%) suppressed</string>
     <string name="hrv_scatter_no_data">No HRV data available for this workout</string>
     <string name="hrv_chart_artifact_gap_label">Artifact Gap</string>
+
+    <!-- DFA a1 Threshold Tuning & Dynamic Zones (ATT-6715 / REQ-TRK-061) -->
+    <string name="tuning_dfa_a1_t1_title">DFA a1 Aerobic Threshold (T1)</string>
+    <string name="tuning_dfa_a1_t1_desc">Threshold separating aerobic base (Zone 2) from transition (Zone 3). Higher = more fractal / aerobic.</string>
+    <string name="tuning_dfa_a1_t2_title">DFA a1 Anaerobic Threshold (T2)</string>
+    <string name="tuning_dfa_a1_t2_desc">Threshold separating transition (Zone 3) from anaerobic intensity (Zone 4). Higher = more fractal / aerobic.</string>
+    <string name="tuning_dfa_a1_default">Default: %1$.2f (Invariant: T1 \u2265 T2 + 0.05)</string>
+    <string name="hrv_info_zones_desc_fmt">DFA a1 &gt; %1$.2f indicates aerobic endurance pacing (Zone 2). Values between %1$.2f and %2$.2f reflect the aerobic-anaerobic threshold transition (Zone 3). Values below %2$.2f indicate high anaerobic intensity (Zone 4).</string>
 </resources>

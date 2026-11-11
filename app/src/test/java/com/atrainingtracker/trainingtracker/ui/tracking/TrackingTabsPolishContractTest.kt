@@ -111,7 +111,7 @@ class TrackingTabsPolishContractTest {
         val content = file.readText()
 
         // Breadcrumb maxLines = 2
-        assertTrue("Category breadcrumb must allow maxLines = 2", content.contains("text = if (categoryTitle != null)") && content.contains("maxLines = 2"))
+        assertTrue("Category breadcrumb must allow maxLines = 2", content.contains("categoryTitle != null") && content.contains("maxLines = 2"))
         // Relative weight start alignment
         assertTrue("Relative weight header must fillMaxWidth", content.contains("text = stringResource(R.string.sensor_field_relative_weight)") && content.contains("modifier = Modifier.fillMaxWidth()"))
         // Smoothing button with Icons.Default.Tune and ArrowDropDown

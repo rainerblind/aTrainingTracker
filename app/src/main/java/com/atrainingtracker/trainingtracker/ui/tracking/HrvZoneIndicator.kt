@@ -54,4 +54,48 @@ object HrvZoneIndicator {
             else -> TTColor.Zone4
         }
     }
+
+    /**
+     * Computes the [ZoneGaugeState] for DFA alpha 1 metrics based on active thresholds [t1] and [t2] (REQ-TRK-061.3).
+     *
+     * Maps to a 5-zone HR gauge bar with:
+     * - Zone 2 (Aerobic Base, alpha1 > t1): activeZoneIndex = 2
+     * - Zone 3 (Threshold Transition, t2 <= alpha1 <= t1): activeZoneIndex = 3
+     * - Zone 4 (Anaerobic / High Intensity, alpha1 < t2): activeZoneIndex = 4
+     * - Returns null if [alpha1] is null, NaN, non-finite, or negative.
+     */
+    fun calculateZoneGaugeState(
+        alpha1: Double?,
+        t1: Float = TuningPreferencesDefaults.DEFAULT_DFA_A1_THRESHOLD_T1,
+        t2: Float = TuningPreferencesDefaults.DEFAULT_DFA_A1_THRESHOLD_T2
+    ): ZoneGaugeState? {
+        if (alpha1 == null || alpha1.isNaN() || alpha1.isInfinite() || alpha1 < 0.0) {
+            return null
+        }
+        val activeZoneIndex = when {
+            alpha1 > t1 -> 2
+            alpha1 >= t2 -> 3
+            else -> 4
+        }
+        val needleFraction = when {
+            alpha1 > t1 -> {
+                val norm = ((alpha1.toFloat() - t1) / (1.2f - t1).coerceAtLeast(0.1f)).coerceIn(0f, 1f)
+                0.40f - norm * 0.20f
+            }
+            alpha1 >= t2 -> {
+                val norm = ((alpha1.toFloat() - t2) / (t1 - t2).coerceAtLeast(0.05f)).coerceIn(0f, 1f)
+                0.60f - norm * 0.20f
+            }
+            else -> {
+                val norm = ((alpha1.toFloat() - 0.20f) / (t2 - 0.20f).coerceAtLeast(0.05f)).coerceIn(0f, 1f)
+                0.85f - norm * 0.25f
+            }
+        }.coerceIn(0.05f, 0.95f)
+
+        return ZoneGaugeState(
+            segmentColors = ZoneGaugeMath.HR_SEGMENT_COLORS,
+            needleFraction = needleFraction,
+            activeZoneIndex = activeZoneIndex
+        )
+    }
 }

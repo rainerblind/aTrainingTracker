@@ -77,7 +77,10 @@ data class SensorFieldState(
     val sparklineSpanSeconds: Int = 0,
 
     // Proportional horizontal width weight (REQ-UI-437, ATT-4861)
-    val colWeight: Float = 1.0f
+    val colWeight: Float = 1.0f,
+
+    // Gated telemetry warning indicator (REQ-TRK-061.2, ATT-6715)
+    val isArtifactGated: Boolean = false
 )
 
 /**

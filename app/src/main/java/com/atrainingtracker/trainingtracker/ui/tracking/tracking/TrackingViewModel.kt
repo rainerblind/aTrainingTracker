@@ -65,6 +65,7 @@ import com.atrainingtracker.trainingtracker.ui.tracking.TrackingViewsRepository
 import com.atrainingtracker.trainingtracker.ui.tracking.SectionDividerInfo
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
 import com.atrainingtracker.trainingtracker.ui.tracking.LiveMmpCurveData
+import com.atrainingtracker.trainingtracker.ui.tracking.HrvZoneIndicator
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -248,6 +249,7 @@ class TrackingViewModel @JvmOverloads constructor(
     )
 
     private var cachedPowerBenchmarks: Map<Int, Double> = emptyMap()
+    private var latestArtifactRate: Double? = null
 
     init {
         loadHistoricalPowerBenchmarks()
@@ -581,7 +583,14 @@ class TrackingViewModel @JvmOverloads constructor(
                             "--"
                         }
 
-                        val initialZoneGauge = if (config.showBar) calculateZoneGaugeState(zoneType, null) else null
+                        val initialZoneGauge = if (config.showBar) {
+                            if (config.sensorType == SensorType.HRV_DFA_A1) {
+                                val tuning = _tuningConfig.value
+                                HrvZoneIndicator.calculateZoneGaugeState(null, tuning.dfaA1ThresholdT1, tuning.dfaA1ThresholdT2)
+                            } else {
+                                calculateZoneGaugeState(zoneType, null)
+                            }
+                        } else null
                         val initialPedalBalance = if (config.showBar && isBike) initialPedalBalanceState else null
                         val initialWPrimeState = if (config.showBar && isBike && config.sensorType == SensorType.W_PRIME_BAL) {
                             WPrimeBatteryMath.calculateBatteryState(
@@ -737,6 +746,21 @@ class TrackingViewModel @JvmOverloads constructor(
             // 2. Find all fields that match this hash.
             val fieldsToUpdate = fieldsByHash[uniqueHash]
 
+            if (sensorData.sensorType == SensorType.HRV_ARTIFACT_RATE) {
+                val rate = (sensorData.value as? Number)?.toDouble()
+                latestArtifactRate = rate
+                val isGated = (rate ?: 0.0) > 5.0
+                for (i in updatedFields.indices) {
+                    val f = updatedFields[i]
+                    if (f.sensorType == SensorType.HRV_DFA_A1 && (f.value == "--" || f.value == "--.--")) {
+                        if (f.isArtifactGated != isGated) {
+                            updatedFields[i] = f.copy(isArtifactGated = isGated)
+                            hasChanged = true
+                        }
+                    }
+                }
+            }
+
             if (fieldsToUpdate != null) {
                 val isPedalBalance = (sensorData.sensorType == SensorType.PEDAL_POWER_BALANCE)
                 val newPedalBalanceState = if (isPedalBalance) {
@@ -751,7 +775,15 @@ class TrackingViewModel @JvmOverloads constructor(
                 val zoneType = getZoneType(sensorData.sensorType, activityType.sportType)
                 val displayOptions = zoneType?.let { zoneDisplayOptionsMap[it] } ?: ZoneDisplayOptions()
                 val numericValue = (sensorData.value as? Number)?.toDouble()
-                val rawZoneGaugeState = calculateZoneGaugeState(zoneType, numericValue)
+
+                val isDfaA1 = (sensorData.sensorType == SensorType.HRV_DFA_A1)
+                val rawZoneGaugeState = if (isDfaA1) {
+                    val tuning = _tuningConfig.value
+                    HrvZoneIndicator.calculateZoneGaugeState(numericValue, tuning.dfaA1ThresholdT1, tuning.dfaA1ThresholdT2)
+                } else {
+                    calculateZoneGaugeState(zoneType, numericValue)
+                }
+                val isArtifactGated = isDfaA1 && numericValue == null && ((latestArtifactRate ?: 0.0) > 5.0)
 
                 val isWPrimeBal = (sensorData.sensorType == SensorType.W_PRIME_BAL)
                 val newWPrimeBatteryState = if (isWPrimeBal) {
@@ -775,6 +807,7 @@ class TrackingViewModel @JvmOverloads constructor(
                     val fieldZoneGaugeState = if (fieldToUpdate.showBar) rawZoneGaugeState else null
                     val fieldPedalBalanceState = if (fieldToUpdate.showBar && isBike) newPedalBalanceState else null
                     val fieldWPrimeBatteryState = if (fieldToUpdate.showBar && isBike && isWPrimeBal) newWPrimeBatteryState else null
+                    val newIsArtifactGated = if (isDfaA1) isArtifactGated else fieldToUpdate.isArtifactGated
 
                     // Check if this specific instance needs an update to avoid unnecessary changes.
                     if (fieldToUpdate.value != newFormattedValue ||
@@ -782,6 +815,7 @@ class TrackingViewModel @JvmOverloads constructor(
                         fieldToUpdate.zoneDisplayOptions != displayOptions ||
                         fieldToUpdate.zoneGaugeState != fieldZoneGaugeState ||
                         fieldToUpdate.pedalBalanceState != fieldPedalBalanceState ||
+                        fieldToUpdate.isArtifactGated != newIsArtifactGated ||
                         (isWPrimeBal && fieldToUpdate.wPrimeBatteryState != fieldWPrimeBatteryState)) {
                         val index = updatedFields.indexOf(fieldToUpdate)
                         if (index != -1) {
@@ -791,6 +825,7 @@ class TrackingViewModel @JvmOverloads constructor(
                                 zoneDisplayOptions = displayOptions,
                                 zoneGaugeState = fieldZoneGaugeState,
                                 pedalBalanceState = fieldPedalBalanceState,
+                                isArtifactGated = newIsArtifactGated,
                                 wPrimeBatteryState = if (isWPrimeBal) fieldWPrimeBatteryState else fieldToUpdate.wPrimeBatteryState
                             )
                             hasChanged = true
@@ -922,7 +957,8 @@ class TrackingViewModel @JvmOverloads constructor(
      */
     private fun getZoneType(sensorType: SensorType, sportType: BSportType): SettingsDataStore.ZoneType? {
         return when (sensorType) {
-            SensorType.HR -> when (sportType) {
+            SensorType.HR,
+            SensorType.HRV_DFA_A1 -> when (sportType) {
                 BSportType.RUN -> SettingsDataStore.ZoneType.HR_RUN
                 BSportType.BIKE -> SettingsDataStore.ZoneType.HR_BIKE
                 else -> null

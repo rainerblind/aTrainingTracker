@@ -104,4 +104,12 @@
     <string name="hrv_scatter_artifact_suppressed">Intervalles à forts artéfacts (&gt;5%%) supprimés</string>
     <string name="hrv_scatter_no_data">Aucune donnée VRC disponible pour cet entraînement</string>
     <string name="hrv_chart_artifact_gap_label">Interruption d\'artéfact</string>
+
+    <!-- DFA a1 Threshold Tuning & Dynamic Zones (ATT-6715 / REQ-TRK-061) -->
+    <string name="tuning_dfa_a1_t1_title">Seuil aérobie DFA a1 (T1)</string>
+    <string name="tuning_dfa_a1_t1_desc">Seuil séparant l\'endurance aérobie (Zone 2) de la transition (Zone 3). Plus élevé = plus fractal / aérobie.</string>
+    <string name="tuning_dfa_a1_t2_title">Seuil anaérobie DFA a1 (T2)</string>
+    <string name="tuning_dfa_a1_t2_desc">Seuil séparant la transition (Zone 3) de l\'intensité anaérobie (Zone 4). Plus élevé = plus fractal / aérobie.</string>
+    <string name="tuning_dfa_a1_default">Par défaut : %1$.2f (Invariant : T1 \u2265 T2 + 0.05)</string>
+    <string name="hrv_info_zones_desc_fmt">DFA a1 &gt; %1$.2f indique une endurance aérobie fondamentale (Zone 2). Les valeurs entre %1$.2f et %2$.2f marquent la transition vers le seuil anaérobie (Zone 3). Les valeurs inférieures à %2$.2f signalent une forte intensité anaérobie (Zone 4).</string>
 </resources>

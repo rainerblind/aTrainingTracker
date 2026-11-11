@@ -104,4 +104,12 @@
     <string name="hrv_scatter_artifact_suppressed">Przedziały o wysokich artefaktach (&gt;5%%) pominięte</string>
     <string name="hrv_scatter_no_data">Brak danych HRV dla tego treningu</string>
     <string name="hrv_chart_artifact_gap_label">Luka artefaktów</string>
+
+    <!-- DFA a1 Threshold Tuning & Dynamic Zones (ATT-6715 / REQ-TRK-061) -->
+    <string name="tuning_dfa_a1_t1_title">Próg tlenowy DFA a1 (T1)</string>
+    <string name="tuning_dfa_a1_t1_desc">Próg oddzielający bazę tlenową (Strefa 2) od strefy przejściowej (Strefa 3). Wyższy = bardziej fraktalny / tlenowy.</string>
+    <string name="tuning_dfa_a1_t2_title">Próg beztlenowy DFA a1 (T2)</string>
+    <string name="tuning_dfa_a1_t2_desc">Próg oddzielający strefę przejściową (Strefa 3) od intensywności beztlenowej (Strefa 4). Wyższy = bardziej fraktalny / tlenowy.</string>
+    <string name="tuning_dfa_a1_default">Domyślny: %1$.2f (Niezmiennik: T1 \u2265 T2 + 0.05)</string>
+    <string name="hrv_info_zones_desc_fmt">DFA a1 &gt; %1$.2f wskazuje na tempo tlenowe wytrzymałościowe (Strefa 2). Wartości od %1$.2f do %2$.2f odzwierciedlają przejście progowe (Strefa 3). Wartości poniżej %2$.2f wskazują na wysoką intensywność beztlenową (Strefa 4).</string>
 </resources>

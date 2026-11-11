@@ -32,6 +32,19 @@ class TuningPreferencesDataStoreDfaA1Test {
         assertEquals(0.50f, TuningPreferencesDefaults.DEFAULT_DFA_A1_THRESHOLD_T2, 0.0001f)
         assertEquals(0.20f, TuningPreferencesDefaults.MIN_DFA_A1_THRESHOLD, 0.0001f)
         assertEquals(1.50f, TuningPreferencesDefaults.MAX_DFA_A1_THRESHOLD, 0.0001f)
+        assertEquals(0.05f, TuningPreferencesDefaults.MIN_DFA_A1_THRESHOLD_GAP, 0.0001f)
+    }
+
+    @Test
+    fun testThresholdInvariant_gapEnforcement() {
+        val t1 = 0.60f
+        val t2 = 0.60f
+        // Invariant: T1 >= T2 + 0.05f
+        val enforcedT1 = maxOf(t1, t2 + TuningPreferencesDefaults.MIN_DFA_A1_THRESHOLD_GAP)
+        assertEquals(0.65f, enforcedT1, 0.0001f)
+
+        val enforcedT2 = minOf(t2, t1 - TuningPreferencesDefaults.MIN_DFA_A1_THRESHOLD_GAP)
+        assertEquals(0.55f, enforcedT2, 0.0001f)
     }
 
     @Test

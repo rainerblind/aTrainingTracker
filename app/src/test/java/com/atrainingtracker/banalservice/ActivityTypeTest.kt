@@ -44,6 +44,9 @@ class ActivityTypeTest {
             assertTrue("${activity.name} must contain HRV_RMSSD", sensors.contains(SensorType.HRV_RMSSD))
             assertTrue("${activity.name} must contain RR_INTERVAL", sensors.contains(SensorType.RR_INTERVAL))
             assertTrue("${activity.name} must contain HRV_ARTIFACT_RATE", sensors.contains(SensorType.HRV_ARTIFACT_RATE))
+            assertTrue("${activity.name} must contain HRV_SDNN", sensors.contains(SensorType.HRV_SDNN))
+            assertTrue("${activity.name} must contain PHONE_BATTERY", sensors.contains(SensorType.PHONE_BATTERY))
+            assertTrue("${activity.name} must contain BATTERY_REMAINING_TIME", sensors.contains(SensorType.BATTERY_REMAINING_TIME))
         }
     }
 

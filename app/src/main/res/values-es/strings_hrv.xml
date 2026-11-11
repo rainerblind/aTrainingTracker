@@ -104,4 +104,12 @@
     <string name="hrv_scatter_artifact_suppressed">Intervalos con artefactos altos (&gt;5%%) suprimidos</string>
     <string name="hrv_scatter_no_data">No hay datos de VFC disponibles para este entrenamiento</string>
     <string name="hrv_chart_artifact_gap_label">Brecha de artefactos</string>
+
+    <!-- DFA a1 Threshold Tuning & Dynamic Zones (ATT-6715 / REQ-TRK-061) -->
+    <string name="tuning_dfa_a1_t1_title">Umbral aeróbico DFA a1 (T1)</string>
+    <string name="tuning_dfa_a1_t1_desc">Umbral que separa la base aeróbica (Zona 2) de la transición (Zona 3). Mayor = más fractal / aeróbico.</string>
+    <string name="tuning_dfa_a1_t2_title">Umbral anaeróbico DFA a1 (T2)</string>
+    <string name="tuning_dfa_a1_t2_desc">Umbral que separa la transición (Zona 3) de la intensidad anaeróbica (Zona 4). Mayor = más fractal / aeróbico.</string>
+    <string name="tuning_dfa_a1_default">Predeterminado: %1$.2f (Invariante: T1 \u2265 T2 + 0.05)</string>
+    <string name="hrv_info_zones_desc_fmt">DFA a1 &gt; %1$.2f indica ritmo de resistencia aeróbica (Zona 2). Valores entre %1$.2f y %2$.2f reflejan la transición hacia el umbral anaeróbico (Zona 3). Valores por debajo de %2$.2f indican alta intensidad anaeróbica (Zona 4).</string>
 </resources>

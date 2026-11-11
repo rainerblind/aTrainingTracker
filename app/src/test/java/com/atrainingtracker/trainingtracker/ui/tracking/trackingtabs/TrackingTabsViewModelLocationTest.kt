@@ -28,6 +28,7 @@ import com.atrainingtracker.banalservice.ActivityType
 import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceDataRepository
 import com.atrainingtracker.trainingtracker.TrackingMode
 import com.atrainingtracker.trainingtracker.TrainingApplication
+import com.atrainingtracker.trainingtracker.database.ExtremaType
 import com.atrainingtracker.trainingtracker.database.KnownLocationsDatabaseManager
 import com.atrainingtracker.trainingtracker.elevation.ElevationSource
 import com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository
@@ -455,9 +456,9 @@ class TrackingTabsViewModelLocationTest {
         viewModel.calibrateAltitude(referenceAltitudeMeters = 1215.0)
         testScheduler.advanceUntilIdle()
 
-        // Verify database update on existing ID
-        verify(exactly = 1) {
-            mockKnownLocationsDbManager.updateLocation(
+        // Verify repository update on existing ID
+        coVerify(exactly = 1) {
+            mockKnownLocationsRepo.updateLocation(
                 42L,
                 "Gipfel",
                 1215.0,
@@ -465,7 +466,6 @@ class TrackingTabsViewModelLocationTest {
                 true
             )
         }
-        coVerify(atLeast = 1) { mockKnownLocationsRepo.loadLocations() }
         verify { mockBanalRepo.calibrateAltimeter(1215.0) }
 
         job.cancel()
@@ -483,8 +483,25 @@ class TrackingTabsViewModelLocationTest {
         viewModel.calibrateAltitude(referenceAltitudeMeters = 650.0, saveAsKnownLocation = false)
         testScheduler.advanceUntilIdle()
 
-        verify(exactly = 0) { mockKnownLocationsDbManager.updateLocation(any(), any(), any(), any(), any()) }
-        verify(exactly = 0) { mockKnownLocationsDbManager.upsertLocationByGeofence(any(), any(), any(), any(), any(), any()) }
+        coVerify(exactly = 0) {
+            mockKnownLocationsRepo.updateLocation(
+                any<Long>(),
+                any<String>(),
+                any<Double>(),
+                any<ElevationSource>(),
+                any<Boolean>()
+            )
+        }
+        coVerify(exactly = 0) {
+            mockKnownLocationsRepo.upsertLocationByGeofence(
+                any<LatLng>(),
+                any<Double>(),
+                any<String>(),
+                any<ExtremaType>(),
+                any<ElevationSource>(),
+                any<Boolean>()
+            )
+        }
         verify { mockBanalRepo.calibrateAltimeter(650.0) }
     }
 }

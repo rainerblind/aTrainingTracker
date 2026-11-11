@@ -1835,29 +1835,29 @@
 
 ### TST-TRK-061: **Live HRV Telemetry, Category Partitioning & Aerobic Threshold Guidance Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-TRK-061` (`REQ-TRK-061.1`..`REQ-TRK-061.5`)
-- **Component**: `SensorType.java`, `ActivityType.java`, `DfaA1Formatter.java`, `SensorFieldView.kt`, `TrackingViewModel.kt`, `TuningPreferencesDataStore.kt`, `HrvInfoBottomSheet.kt`, `strings_hrv.xml`
-- **Jira**: `ATT-3542`
+- **Component**: `SensorType.java`, `ActivityType.java`, `DfaA1Formatter.java`, `SensorFieldView.kt`, `SensorFieldState.kt`, `TrackingViewModel.kt`, `TuningPreferencesDataStore.kt`, `HrvInfoBottomSheet.kt`, `strings_hrv.xml`
+- **Jira**: `ATT-3542`, `ATT-6715`
 - **Test Description**:
-  1. *Sensor Category & Selector Exposure Contract Tests (`TST-TRK-061.1`, `SensorCategoryAndSelectorContractTest.kt`, `ActivityTypeTest.kt`)*:
-  • Verify `HRV_DFA_A1` and `HRV_RMSSD` belong to `SensorCategory.HEART_RATE_AND_ENERGY`.
-  • Verify `RR_INTERVAL` and `HRV_ARTIFACT_RATE` belong to `SensorCategory.SYSTEM_ENVIRONMENT_AND_DIAGNOSTICS`.
-  • Verify all 4 HRV sensor types are present in `ActivityType.getSensorTypeArray()` for HR/running/cycling activities.
-  • Verify full contract audit across all 56 sensor constants.
-  2. *DfaA1Formatter Unit Tests (`TST-TRK-061.2`, `DfaA1FormatterTest.kt`)*:
-  • Verify 2 decimal place formatting (`0.00`) for valid continuous ratio values.
-  • Verify `--.--` formatting for null, negative, NaN, or artifact-suppressed inputs.
-  3. *Tracking HRV Semantic Zone Indicator Unit Tests (`TST-TRK-061.3`, `TrackingHrvZoneIndicatorTest.kt`, `ThemeColorCentralizationAuditTest.kt`)*:
+  1. *Sensor Category & Profile Gating Contract Tests (`TST-TRK-061.1`, `SensorCategoryAndSelectorContractTest.kt`, `ActivityTypeTest.kt`)*:
+  • Verify `HRV_DFA_A1`, `HRV_RMSSD`, and `HRV_SDNN` belong to `HEART_RATE_AND_ENERGY`.
+  • Verify HRV sensor types are omitted from `ActivityType.getSensorTypeArray()` when activity profile lacks `SensorType.HR` and no HR device is paired.
+  • Verify HRV sensors are exposed when `SensorType.HR` is present or paired.
+  2. *DfaA1Formatter & RMSSD Integer Formatter Tests (`TST-TRK-061.2`, `DfaA1FormatterTest.kt`, `SensorTypeHrvTest.kt`)*:
+  • Verify 2 decimal place formatting (`0.00`) for continuous ratio values.
+  • Verify `SensorType.HRV_RMSSD` uses `IntegerFormatter` emitting `0 ms`.
+  • Verify `isArtifactGated: Boolean` triggers warning icon alongside `--.--` in `SensorFieldViewTest.kt`.
+  3. *Tracking HRV Semantic Zone Indicator & ZoneDisplayOptions Tests (`TST-TRK-061.3`, `TrackingHrvZoneIndicatorTest.kt`, `TrackingViewModelTest.kt`)*:
   • Verify $\alpha_1 > \alpha_{1,\text{T1}}$ resolves to `TTColor.Zone2` (Green).
   • Verify $\alpha_{1,\text{T2}} \le \alpha_1 \le \alpha_{1,\text{T1}}$ resolves to `TTColor.Zone3` (Orange).
   • Verify $\alpha_1 < \alpha_{1,\text{T2}}$ resolves to `TTColor.Zone4` (Red).
-  • Verify artifact rate $> 5.0\%$ or uninitialized state resolves to neutral/outline.
-  • Enforce Rule 71: assert zero hardcoded hex literals in Compose UI files.
-  4. *TuningPreferencesDataStore Threshold Configuration Unit Tests (`TST-TRK-061.4`, `TuningPreferencesDataStoreTest.kt`)*:
+  • Verify `HRV_DFA_A1` inherits HR `ZoneDisplayOptions` (background, left/right bar, gauge).
+  4. *TuningPreferencesDataStore Threshold Configuration & Invariant Tests (`TST-TRK-061.4`, `TuningPreferencesDataStoreTest.kt`)*:
   • Verify default values $\alpha_{1,\text{T1}} = 0.75f$ and $\alpha_{1,\text{T2}} = 0.50f$.
-  • Verify custom threshold persistence and validation bounds ($0.20 \le \alpha_{1,\text{T2}} < \alpha_{1,\text{T1}} \le 1.50$).
-  5. *HrvInfoBottomSheet & 9-Language Localization Audit (`TST-TRK-061.5`, `HrvInfoBottomSheetTest.kt`, `TranslationParityTest.kt`)*:
-  • Enforce Rule 72: verify zero nested `verticalScroll` inside `AppModalBottomSheet`.
-  • Verify 100% 9-language translation parity in `strings_hrv.xml` across EN, DE, ES, FR, IT, JA, NL, PL, PT.
+  • Verify invariant enforcement: setting $T_1$ or $T_2$ enforces $T_1 \ge T_2 + 0.05f$.
+  5. *HrvInfoBottomSheet Dynamic Thresholds & 9-Language Localization Audit (`TST-TRK-061.5`, `HrvInfoBottomSheetTest.kt`, `TranslationParityTest.kt`)*:
+  • Verify dynamic display of configured $T_1 / T_2$ thresholds.
+  • Verify Light, Dark, and AMOLED `@Preview` composables.
+  • Verify 100% 9-language translation parity in `strings_hrv.xml`.
   6. *Clean-Room Targeted Test Suite Execution (`TST-TRK-061.6`)*:
   • Execute targeted package tests asserting 100% pass rate.
 

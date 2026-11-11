@@ -51,6 +51,27 @@ class SensorFieldZoneDisplayTest {
         assertTrue(state.zoneDisplayOptions.showLeftBar)
         assertFalse(state.zoneDisplayOptions.showRightBar)
         assertFalse(state.zoneDisplayOptions.showTextColor)
+        assertFalse("isArtifactGated must default to false", state.isArtifactGated)
+    }
+
+    @Test
+    fun sensorFieldState_isArtifactGated_defaultsToFalseAndPreservesExplicitTrue() {
+        val defaultState = SensorFieldState(
+            configHash = 1,
+            sensorFieldId = 10,
+            rowNr = 0,
+            colNr = 0,
+            viewSize = ViewSize.NORMAL,
+            label = "DFA a1",
+            filterDescription = "",
+            value = "--.--",
+            units = "",
+            zoneColor = Color.Transparent
+        )
+        assertFalse("isArtifactGated must default to false", defaultState.isArtifactGated)
+
+        val gatedState = defaultState.copy(isArtifactGated = true)
+        assertTrue("isArtifactGated = true must be preserved", gatedState.isArtifactGated)
     }
 
     @Test

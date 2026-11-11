@@ -97,4 +97,36 @@ class TrackingHrvZoneIndicatorTest {
         val colorAnaerobicSmoothed = HrvZoneIndicator.calculateZoneColor(0.40, isSmoothedStream = true)
         assertEquals(defaultColor, colorAnaerobicSmoothed)
     }
+
+    @Test
+    fun testCalculateZoneGaugeState_aerobicBase_mapsToZone2() {
+        val state = HrvZoneIndicator.calculateZoneGaugeState(0.85)
+        org.junit.Assert.assertNotNull(state)
+        assertEquals(2, state?.activeZoneIndex)
+        assertEquals(ZoneGaugeMath.HR_SEGMENT_COLORS, state?.segmentColors)
+        org.junit.Assert.assertTrue((state?.needleFraction ?: 0f) in 0.1f..0.5f)
+    }
+
+    @Test
+    fun testCalculateZoneGaugeState_thresholdTransition_mapsToZone3() {
+        val state = HrvZoneIndicator.calculateZoneGaugeState(0.65)
+        org.junit.Assert.assertNotNull(state)
+        assertEquals(3, state?.activeZoneIndex)
+        org.junit.Assert.assertTrue((state?.needleFraction ?: 0f) in 0.35f..0.65f)
+    }
+
+    @Test
+    fun testCalculateZoneGaugeState_highIntensity_mapsToZone4() {
+        val state = HrvZoneIndicator.calculateZoneGaugeState(0.40)
+        org.junit.Assert.assertNotNull(state)
+        assertEquals(4, state?.activeZoneIndex)
+        org.junit.Assert.assertTrue((state?.needleFraction ?: 0f) in 0.6f..0.95f)
+    }
+
+    @Test
+    fun testCalculateZoneGaugeState_nullOrInvalid_returnsNull() {
+        org.junit.Assert.assertNull(HrvZoneIndicator.calculateZoneGaugeState(null))
+        org.junit.Assert.assertNull(HrvZoneIndicator.calculateZoneGaugeState(Double.NaN))
+        org.junit.Assert.assertNull(HrvZoneIndicator.calculateZoneGaugeState(-0.1))
+    }
 }

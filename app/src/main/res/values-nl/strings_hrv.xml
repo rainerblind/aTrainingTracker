@@ -104,4 +104,12 @@
     <string name="hrv_scatter_artifact_suppressed">Intervallen met hoge artefacten (&gt;5%%) onderdrukt</string>
     <string name="hrv_scatter_no_data">Geen HRV-gegevens beschikbaar voor deze training</string>
     <string name="hrv_chart_artifact_gap_label">Artefactkloof</string>
+
+    <!-- DFA a1 Threshold Tuning & Dynamic Zones (ATT-6715 / REQ-TRK-061) -->
+    <string name="tuning_dfa_a1_t1_title">DFA a1 Aërobe Drempel (T1)</string>
+    <string name="tuning_dfa_a1_t1_desc">Drempel tussen aërobe basis (Zone 2) en overgang (Zone 3). Hoger = meer fractaal / aëroob.</string>
+    <string name="tuning_dfa_a1_t2_title">DFA a1 Anaërobe Drempel (T2)</string>
+    <string name="tuning_dfa_a1_t2_desc">Drempel tussen overgang (Zone 3) en anaërobe intensiteit (Zone 4). Hoger = meer fractaal / aëroob.</string>
+    <string name="tuning_dfa_a1_default">Standaard: %1$.2f (Invariant: T1 \u2265 T2 + 0.05)</string>
+    <string name="hrv_info_zones_desc_fmt">DFA a1 &gt; %1$.2f duidt op een aëroob uithoudingsvermogen (Zone 2). Waarden tussen %1$.2f en %2$.2f weerspiegelen de drempelovergang (Zone 3). Waarden onder %2$.2f duiden op hoge anaërobe intensiteit (Zone 4).</string>
 </resources>

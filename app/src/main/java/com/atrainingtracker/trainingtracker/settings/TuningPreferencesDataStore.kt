@@ -325,6 +325,7 @@ object TuningPreferencesDefaults {
     const val DEFAULT_DFA_A1_THRESHOLD_T2 = 0.50f
     const val MIN_DFA_A1_THRESHOLD = 0.20f
     const val MAX_DFA_A1_THRESHOLD = 1.50f
+    const val MIN_DFA_A1_THRESHOLD_GAP = 0.05f
 }
 
 /**
@@ -1144,34 +1145,45 @@ data class AutoPausePreferences(
     }
 
     suspend fun setDfaA1ThresholdT1(threshold: Float) {
-        val clamped = threshold.coerceIn(
-            TuningPreferencesDefaults.MIN_DFA_A1_THRESHOLD,
-            TuningPreferencesDefaults.MAX_DFA_A1_THRESHOLD
-        )
         context.dataStore.edit { prefs ->
+            val currentT2 = prefs[KEY_DFA_A1_THRESHOLD_T2] ?: TuningPreferencesDefaults.DEFAULT_DFA_A1_THRESHOLD_T2
+            val minT1 = (currentT2 + TuningPreferencesDefaults.MIN_DFA_A1_THRESHOLD_GAP).coerceAtMost(TuningPreferencesDefaults.MAX_DFA_A1_THRESHOLD)
+            val clamped = threshold.coerceIn(
+                minT1,
+                TuningPreferencesDefaults.MAX_DFA_A1_THRESHOLD
+            )
             prefs[KEY_DFA_A1_THRESHOLD_T1] = clamped
         }
     }
 
     suspend fun setDfaA1ThresholdT2(threshold: Float) {
-        val clamped = threshold.coerceIn(
-            TuningPreferencesDefaults.MIN_DFA_A1_THRESHOLD,
-            TuningPreferencesDefaults.MAX_DFA_A1_THRESHOLD
-        )
         context.dataStore.edit { prefs ->
+            val currentT1 = prefs[KEY_DFA_A1_THRESHOLD_T1] ?: TuningPreferencesDefaults.DEFAULT_DFA_A1_THRESHOLD_T1
+            val maxT2 = (currentT1 - TuningPreferencesDefaults.MIN_DFA_A1_THRESHOLD_GAP).coerceAtLeast(TuningPreferencesDefaults.MIN_DFA_A1_THRESHOLD)
+            val clamped = threshold.coerceIn(
+                TuningPreferencesDefaults.MIN_DFA_A1_THRESHOLD,
+                maxT2
+            )
             prefs[KEY_DFA_A1_THRESHOLD_T2] = clamped
         }
     }
 
     suspend fun setDfaA1Thresholds(t1: Float, t2: Float) {
-        val clampedT1 = t1.coerceIn(
+        var clampedT1 = t1.coerceIn(
             TuningPreferencesDefaults.MIN_DFA_A1_THRESHOLD,
             TuningPreferencesDefaults.MAX_DFA_A1_THRESHOLD
         )
-        val clampedT2 = t2.coerceIn(
+        var clampedT2 = t2.coerceIn(
             TuningPreferencesDefaults.MIN_DFA_A1_THRESHOLD,
             TuningPreferencesDefaults.MAX_DFA_A1_THRESHOLD
         )
+        if (clampedT1 < clampedT2 + TuningPreferencesDefaults.MIN_DFA_A1_THRESHOLD_GAP) {
+            if (clampedT2 + TuningPreferencesDefaults.MIN_DFA_A1_THRESHOLD_GAP <= TuningPreferencesDefaults.MAX_DFA_A1_THRESHOLD) {
+                clampedT1 = clampedT2 + TuningPreferencesDefaults.MIN_DFA_A1_THRESHOLD_GAP
+            } else {
+                clampedT2 = (clampedT1 - TuningPreferencesDefaults.MIN_DFA_A1_THRESHOLD_GAP).coerceAtLeast(TuningPreferencesDefaults.MIN_DFA_A1_THRESHOLD)
+            }
+        }
         context.dataStore.edit { prefs ->
             prefs[KEY_DFA_A1_THRESHOLD_T1] = clampedT1
             prefs[KEY_DFA_A1_THRESHOLD_T2] = clampedT2
@@ -1279,14 +1291,21 @@ data class AutoPausePreferences(
             TuningPreferencesDefaults.MIN_AUTO_PAUSE_OTHER_DEBOUNCE_SEC,
             TuningPreferencesDefaults.MAX_AUTO_PAUSE_OTHER_DEBOUNCE_SEC
         )
-        val clampedDfaA1T1 = config.dfaA1ThresholdT1.coerceIn(
+        var clampedDfaA1T1 = config.dfaA1ThresholdT1.coerceIn(
             TuningPreferencesDefaults.MIN_DFA_A1_THRESHOLD,
             TuningPreferencesDefaults.MAX_DFA_A1_THRESHOLD
         )
-        val clampedDfaA1T2 = config.dfaA1ThresholdT2.coerceIn(
+        var clampedDfaA1T2 = config.dfaA1ThresholdT2.coerceIn(
             TuningPreferencesDefaults.MIN_DFA_A1_THRESHOLD,
             TuningPreferencesDefaults.MAX_DFA_A1_THRESHOLD
         )
+        if (clampedDfaA1T1 < clampedDfaA1T2 + TuningPreferencesDefaults.MIN_DFA_A1_THRESHOLD_GAP) {
+            if (clampedDfaA1T2 + TuningPreferencesDefaults.MIN_DFA_A1_THRESHOLD_GAP <= TuningPreferencesDefaults.MAX_DFA_A1_THRESHOLD) {
+                clampedDfaA1T1 = clampedDfaA1T2 + TuningPreferencesDefaults.MIN_DFA_A1_THRESHOLD_GAP
+            } else {
+                clampedDfaA1T2 = (clampedDfaA1T1 - TuningPreferencesDefaults.MIN_DFA_A1_THRESHOLD_GAP).coerceAtLeast(TuningPreferencesDefaults.MIN_DFA_A1_THRESHOLD)
+            }
+        }
 
         context.dataStore.edit { prefs ->
             prefs[KEY_ELEVATION_X_AXIS_DOMAIN] = config.elevationXAxisDomain.name

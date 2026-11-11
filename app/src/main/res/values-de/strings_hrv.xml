@@ -104,4 +104,12 @@
     <string name="hrv_scatter_artifact_suppressed">Intervalle mit hohen Artefakten (&gt;5%%) unterdrückt</string>
     <string name="hrv_scatter_no_data">Keine HRV-Daten für diese Trainingseinheit verfügbar</string>
     <string name="hrv_chart_artifact_gap_label">Artefaktlücke</string>
+
+    <!-- DFA a1 Threshold Tuning & Dynamic Zones (ATT-6715 / REQ-TRK-061) -->
+    <string name="tuning_dfa_a1_t1_title">DFA a1 Aerobe Schwelle (T1)</string>
+    <string name="tuning_dfa_a1_t1_desc">Schwelle zwischen aerober Basis (Zone 2) und Übergang (Zone 3). Höher = fraktaler / aerober.</string>
+    <string name="tuning_dfa_a1_t2_title">DFA a1 Anaerobe Schwelle (T2)</string>
+    <string name="tuning_dfa_a1_t2_desc">Schwelle zwischen Übergang (Zone 3) und anaerober Intensität (Zone 4). Höher = fraktaler / aerober.</string>
+    <string name="tuning_dfa_a1_default">Standard: %1$.2f (Invariante: T1 \u2265 T2 + 0.05)</string>
+    <string name="hrv_info_zones_desc_fmt">DFA a1 &gt; %1$.2f kennzeichnet aerobe Grundlagenausdauer (Zone 2). Werte zwischen %1$.2f und %2$.2f markieren den Schwellenübergang (Zone 3). Werte unter %2$.2f signalisieren hohe anaerobe Intensität (Zone 4).</string>
 </resources>
