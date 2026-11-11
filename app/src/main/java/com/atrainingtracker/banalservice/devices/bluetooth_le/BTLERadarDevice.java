@@ -78,7 +78,7 @@ public class BTLERadarDevice extends MyBTLEDevice {
     private BluetoothGattCharacteristic mLightControlCharacteristic;
     private volatile boolean mIsLightControlSupported = false;
 
-    private final RadarWindowAggregator mWindowAggregator = new RadarWindowAggregator();
+    private RadarWindowAggregator mWindowAggregator = new RadarWindowAggregator();
 
     private final Runnable mWatchdogRunnable = new Runnable() {
         @Override
@@ -94,6 +94,7 @@ public class BTLERadarDevice extends MyBTLEDevice {
                     mIsLightControlSupported,
                     currentState.getAudioSnoozeState()
             ));
+            resetSensorsToClear();
         }
     };
 
@@ -249,7 +250,7 @@ public class BTLERadarDevice extends MyBTLEDevice {
         if (mThreatCountSensor != null) {
             mThreatCountSensor.newValue(snapshot.getThreatCount());
         }
-        if (mClosestDistanceSensor != null && snapshot.getClosestDistanceMeters() != null) {
+        if (mClosestDistanceSensor != null) {
             mClosestDistanceSensor.newValue(snapshot.getClosestDistanceMeters());
         }
         if (mApproachSpeedSensor != null) {
@@ -258,11 +259,41 @@ public class BTLERadarDevice extends MyBTLEDevice {
         if (mVehicleCountSensor != null) {
             mVehicleCountSensor.newValue(snapshot.getVehicleCount());
         }
-        if (mPassingDistanceSensor != null && snapshot.getPassingDistanceMeters() != null) {
+        if (mPassingDistanceSensor != null) {
             mPassingDistanceSensor.newValue(snapshot.getPassingDistanceMeters());
         }
         if (mLargeVehicleCountSensor != null) {
             mLargeVehicleCountSensor.newValue(snapshot.getLargeVehicleCount());
+        }
+    }
+
+    /**
+     * Resets dynamic radar sensors to clear state (0 threats/speed, null distances).
+     */
+    private void resetSensorsToClear() {
+        if (mThreatCountSensor != null) {
+            mThreatCountSensor.newValue(0);
+        }
+        if (mClosestDistanceSensor != null) {
+            mClosestDistanceSensor.newValue(null);
+        }
+        if (mApproachSpeedSensor != null) {
+            mApproachSpeedSensor.newValue(0.0);
+        }
+        if (mPassingDistanceSensor != null) {
+            mPassingDistanceSensor.newValue(null);
+        }
+    }
+
+    @Override
+    protected void onAccumulatorsReset() {
+        super.onAccumulatorsReset();
+        mWindowAggregator.resetSession();
+        if (mVehicleCountSensor != null) {
+            mVehicleCountSensor.newValue(0);
+        }
+        if (mLargeVehicleCountSensor != null) {
+            mLargeVehicleCountSensor.newValue(0);
         }
     }
 
@@ -283,6 +314,7 @@ public class BTLERadarDevice extends MyBTLEDevice {
                 false,
                 RadarAudioSnoozeState.INACTIVE
         ));
+        resetSensorsToClear();
         super.disconnectFromGatt();
     }
 
@@ -500,7 +532,19 @@ public class BTLERadarDevice extends MyBTLEDevice {
         return mWindowAggregator;
     }
 
+    public void setWindowAggregatorForTesting(RadarWindowAggregator aggregator) {
+        mWindowAggregator = aggregator;
+    }
+
     public Runnable getWatchdogRunnableForTesting() {
         return mWatchdogRunnable;
+    }
+
+    public void processTargetsForTesting(List<RadarTarget> targets) {
+        processTargets(targets);
+    }
+
+    public void onAccumulatorsResetForTesting() {
+        onAccumulatorsReset();
     }
 }

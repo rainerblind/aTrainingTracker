@@ -1865,7 +1865,7 @@
 ### TST-CON-028: **BLE Cycling Radar Protocol Driver, Serialized GATT Queue, Latch Aggregator & Parity Test Suite** [Verified]
 - **Requirement(s)**: `REQ-CON-028` (`REQ-CON-028.1`..`REQ-CON-028.6`)
 - **Component**: `DeviceType.java`, `SensorType.java`, `ActivityType.java`, `BluetoothConstants.java`, `MyBTLEDevice.java`, `BTSearchForNewDevicesEngine.java`, `BTLERadarDevice.java`, `RadarStateRepository.kt`, `RadarWindowAggregator.kt`, `EquipmentSensorOrdering.kt`, `strings_radar.xml`
-- **Jira**: `ATT-5083`
+- **Jira**: `ATT-5083`, `ATT-6700`
 - **Test Description**:
   1. *Serialized GATT Operation Queue Unit Tests (`TST-CON-028.1`, `MyBTLEDeviceQueueTest.kt`)*:
   • Verify sequential FIFO execution of CCCD descriptor writes and characteristic read/write requests without race conditions.
@@ -1874,9 +1874,11 @@
   • Verify header `byte[0]` demuxing cleanly isolates threat triplets (`1 + 3*N` bytes) while ignoring heartbeat and sector amplitude frames.
   • Verify accurate conversion of target distance, closing speed, and threat level into immutable `RadarTarget` instances.
   • Verify that 3.5 seconds of packet starvation triggers transition to `DISCONNECTED_ERROR`.
-  3. *1 Hz Window Aggregator & Vehicle Counter Hysteresis Unit Tests (`TST-CON-028.3`, `RadarWindowAggregatorTest.kt`)*:
-  • Verify 1-second retention of peak threat count, max approach speed, and closest vehicle distance between 1 Hz polling ticks.
+  3. *1 Hz Window Aggregator & Vehicle Counter Hysteresis Unit Tests (`TST-CON-028.3`, `RadarWindowAggregatorTest.kt`, `BTLERadarDeviceTest.kt`)*:
+  • Verify 1,000 ms rolling latch window retention across 8 Hz bursts followed by clear frames: metrics are retained for 1,000 ms before decaying.
+  • Verify transition to `null` for `closestDistanceMeters` and `passingDistanceMeters` when road clears, asserting that `mClosestDistanceSensor.getValue()` returns `null` (cockpit `--` display).
   • Verify overtaking vehicle counter increments once per passed vehicle using target-ID lifecycle and closing-range hysteresis.
+  • Verify `BANALService.RESET_ACCUMULATORS_INTENT` triggers `onAccumulatorsReset()`, resetting `mWindowAggregator.resetSession()` and vehicle count sensors to 0.
   4. *DeviceType, SensorType & Database Parity Unit Tests (`TST-CON-028.4`, `DeviceTypeTest.kt`, `SensorTypeTest.kt`, `WorkoutSamplesDatabaseManagerTest.kt`)*:
   • Verify `DeviceType.BIKE_RADAR` correctly registers under `BSportType.BIKE` and is identified by `DevicesDatabaseManager.isBikeSensor()`.
   • Verify `SensorType.RADAR_*` dynamic column creation and extrema registration with zero SQLite schema migrations (`DB_VERSION` unchanged).

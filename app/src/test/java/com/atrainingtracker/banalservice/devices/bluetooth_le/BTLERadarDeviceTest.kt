@@ -24,6 +24,7 @@ import android.bluetooth.BluetoothGattDescriptor
 import android.bluetooth.BluetoothGattService
 import android.content.Context
 import android.content.pm.PackageManager
+import android.os.Handler
 import android.os.Looper
 import android.util.Log
 import androidx.core.app.ActivityCompat
@@ -36,11 +37,14 @@ import com.atrainingtracker.banalservice.devices.radar.RadarLightController
 import com.atrainingtracker.banalservice.devices.radar.RadarLightMode
 import com.atrainingtracker.banalservice.devices.radar.RadarStateRepository
 import com.atrainingtracker.banalservice.devices.radar.RadarTarget
+import com.atrainingtracker.banalservice.devices.radar.RadarWindowAggregator
 import com.atrainingtracker.banalservice.devices.radar.ThreatLevel
 import com.atrainingtracker.banalservice.devices.radar.VehicleSizeCategory
 import com.atrainingtracker.banalservice.sensor.MySensorManager
+import com.atrainingtracker.banalservice.sensor.SensorType
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.mockkConstructor
 import io.mockk.mockkStatic
 import io.mockk.unmockkAll
 import org.junit.After
@@ -103,6 +107,12 @@ class BTLERadarDeviceTest {
         val mockLooper = mockk<Looper>(relaxed = true)
         every { mockContext.mainLooper } returns mockLooper
         mockSensorManager = mockk(relaxed = true)
+
+        mockkConstructor(Handler::class)
+        every { anyConstructed<Handler>().post(any()) } answers { true }
+        every { anyConstructed<Handler>().postDelayed(any(), any()) } answers { true }
+        every { anyConstructed<Handler>().removeCallbacks(any<Runnable>()) } answers { }
+        every { anyConstructed<Handler>().removeCallbacksAndMessages(any()) } answers { }
 
         RadarStateRepository.reset()
         radarDevice = BTLERadarDevice(mockContext, mockSensorManager, 101L, "DC:2C:26:01:02:03")
@@ -295,5 +305,56 @@ class BTLERadarDeviceTest {
         assertFalse(radarDevice.isLightControlSupported)
         val result = radarDevice.setLightMode(RadarLightMode.SOLID)
         assertFalse(result)
+    }
+
+    @Test
+    fun testProcessTargets_propagatesNullDistanceWhenRoadClears() {
+        var currentTimeMs = 1000L
+        radarDevice.setWindowAggregatorForTesting(RadarWindowAggregator(clock = { currentTimeMs }))
+
+        // Approaching target at 15m
+        radarDevice.processTargetsForTesting(listOf(RadarTarget(1, 15f, 5f, ThreatLevel.APPROACHING)))
+        assertEquals(15.0, radarDevice.getSensor(SensorType.RADAR_CLOSEST_DISTANCE_m).value)
+        assertEquals(1, radarDevice.getSensor(SensorType.RADAR_THREAT_COUNT).value)
+        assertEquals(5.0, radarDevice.getSensor(SensorType.RADAR_APPROACH_SPEED_mps).value)
+
+        // Road clears and 1,000 ms rolling window expires
+        currentTimeMs = 2001L
+        radarDevice.processTargetsForTesting(emptyList())
+
+        assertNull("Closest distance sensor must transition to null on clear road",
+            radarDevice.getSensor(SensorType.RADAR_CLOSEST_DISTANCE_m).value)
+        assertEquals(0, radarDevice.getSensor(SensorType.RADAR_THREAT_COUNT).value)
+        assertEquals(0.0, radarDevice.getSensor(SensorType.RADAR_APPROACH_SPEED_mps).value)
+    }
+
+    @Test
+    fun testOnAccumulatorsReset_clearsVehicleCountSensorsAndSession() {
+        // Vehicle approaches and passes (closing to <= 18m and disappearing)
+        radarDevice.processTargetsForTesting(listOf(RadarTarget(1, 12f, 8f, ThreatLevel.APPROACHING)))
+        radarDevice.processTargetsForTesting(emptyList())
+        assertEquals(1, radarDevice.getSensor(SensorType.RADAR_VEHICLE_COUNT).value)
+
+        // Broadcast RESET_ACCUMULATORS_INTENT triggers onAccumulatorsReset
+        radarDevice.onAccumulatorsResetForTesting()
+
+        assertEquals("Vehicle count sensor must reset to 0 on accumulator reset",
+            0, radarDevice.getSensor(SensorType.RADAR_VEHICLE_COUNT).value)
+        assertEquals("Large vehicle count sensor must reset to 0 on accumulator reset",
+            0, radarDevice.getSensor(SensorType.RADAR_LARGE_VEHICLE_COUNT).value)
+        assertEquals(0, radarDevice.windowAggregatorForTesting.getVehicleCount())
+    }
+
+    @Test
+    fun testWatchdog_resetsSensorsToClearOnStarvation() {
+        radarDevice.processTargetsForTesting(listOf(RadarTarget(1, 10f, 6f, ThreatLevel.APPROACHING)))
+        assertEquals(10.0, radarDevice.getSensor(SensorType.RADAR_CLOSEST_DISTANCE_m).value)
+        assertEquals(1, radarDevice.getSensor(SensorType.RADAR_THREAT_COUNT).value)
+
+        radarDevice.watchdogRunnableForTesting.run()
+
+        assertNull(radarDevice.getSensor(SensorType.RADAR_CLOSEST_DISTANCE_m).value)
+        assertEquals(0, radarDevice.getSensor(SensorType.RADAR_THREAT_COUNT).value)
+        assertEquals(0.0, radarDevice.getSensor(SensorType.RADAR_APPROACH_SPEED_mps).value)
     }
 }

@@ -18,8 +18,11 @@
 
 package com.atrainingtracker.banalservice.devices.radar
 
+import android.os.SystemClock
+
 /**
- * Snapshot of 1 Hz aggregated radar telemetry suitable for scalar sensor publishing and DB sampling (REQ-CON-028.5, REQ-CON-030.4).
+ * Snapshot of 1 Hz aggregated radar telemetry suitable for scalar sensor publishing and DB sampling
+ * (REQ-CON-028.5, REQ-CON-030.4).
  */
 data class RadarLatchedSnapshot @JvmOverloads constructor(
     val threatCount: Int,
@@ -31,22 +34,25 @@ data class RadarLatchedSnapshot @JvmOverloads constructor(
 )
 
 /**
- * 1 Hz window aggregator and vehicle overtaking counter with hysteresis (REQ-CON-028.5, REQ-CON-030.4).
+ * 1 Hz rolling window aggregator and vehicle overtaking counter with hysteresis (REQ-CON-028.5, REQ-CON-030.4).
  *
- * Aggregates high-frequency (4–8 Hz) target frames into 1 Hz peak threat count, max approach speed,
- * minimum distance latches, minimum lateral passing clearance, and large vehicle count to ensure
- * passing vehicles are not missed between 1 Hz DB poll ticks.
+ * Aggregates high-frequency (4–8 Hz) target frames into a 1,000 ms rolling latch window capturing
+ * peak threat count, max approach speed, minimum closest distance, minimum lateral passing clearance,
+ * and large vehicle count so transient sub-second passes are preserved for 1 Hz DB poll ticks.
  *
  * Adheres to Rule 1.8: Constructor state initialization parity with [resetSession].
  */
-class RadarWindowAggregator {
+class RadarWindowAggregator @JvmOverloads constructor(
+    private val clock: () -> Long = { System.nanoTime() / 1_000_000L }
+) {
 
     private val lock = Any()
 
-    private var currentWindowMaxThreats: Int = 0
-    private var currentWindowMinDistance: Double? = null
-    private var currentWindowMaxSpeed: Double = 0.0
-    private var currentWindowMinPassingDistance: Double? = null
+    private data class TimedFrame(
+        val timestampMs: Long,
+        val targets: List<RadarTarget>
+    )
+    private val frameBuffer = ArrayDeque<TimedFrame>()
 
     private var cumulativeVehicleCount: Int = 0
     private var cumulativeLargeVehicleCount: Int = 0
@@ -72,10 +78,7 @@ class RadarWindowAggregator {
      */
     fun resetSession() {
         synchronized(lock) {
-            currentWindowMaxThreats = 0
-            currentWindowMinDistance = null
-            currentWindowMaxSpeed = 0.0
-            currentWindowMinPassingDistance = null
+            frameBuffer.clear()
             cumulativeVehicleCount = 0
             cumulativeLargeVehicleCount = 0
             activeTargetInfo.clear()
@@ -86,31 +89,25 @@ class RadarWindowAggregator {
     /**
      * Consumes an incoming high-rate radar target frame (4–8 Hz).
      */
-    fun onTargetsUpdated(targets: List<RadarTarget>) {
+    @JvmOverloads
+    fun onTargetsUpdated(
+        targets: List<RadarTarget>,
+        nowMs: Long = clock()
+    ) {
         synchronized(lock) {
             hasReceivedData = true
+            pruneExpiredFrames(nowMs)
+            frameBuffer.addLast(TimedFrame(nowMs, targets))
 
             val approachingTargets = targets.filter { it.threatLevel != ThreatLevel.NONE }
-            val count = approachingTargets.size
-            if (count > currentWindowMaxThreats) {
-                currentWindowMaxThreats = count
-            }
-
             for (target in approachingTargets) {
-                val dist = target.rangeMeters.toDouble()
-                if (currentWindowMinDistance == null || dist < currentWindowMinDistance!!) {
-                    currentWindowMinDistance = dist
-                }
-                val speed = target.approachSpeedMps.toDouble()
-                if (speed > currentWindowMaxSpeed) {
-                    currentWindowMaxSpeed = speed
-                }
-
                 // Update hysteresis tracking for vehicle overtaking and lateral passing clearance
                 val info = activeTargetInfo.getOrPut(target.targetId) {
                     TrackedTargetInfo(
                         minRange = target.rangeMeters,
-                        minPassingLateral = if (target.rangeMeters <= CLOSE_PASS_LONGITUDINAL_THRESHOLD_METERS && target.lateralOffsetMeters != null) {
+                        minPassingLateral = if (target.rangeMeters <= CLOSE_PASS_LONGITUDINAL_THRESHOLD_METERS &&
+                            target.lateralOffsetMeters != null
+                        ) {
                             Math.abs(target.lateralOffsetMeters.toDouble())
                         } else null,
                         vehicleSizeCategory = target.vehicleSizeCategory
@@ -124,13 +121,12 @@ class RadarWindowAggregator {
                 }
 
                 // Track lateral passing clearance during close passing window (y <= 3.0m)
-                if (target.rangeMeters <= CLOSE_PASS_LONGITUDINAL_THRESHOLD_METERS && target.lateralOffsetMeters != null) {
+                if (target.rangeMeters <= CLOSE_PASS_LONGITUDINAL_THRESHOLD_METERS &&
+                    target.lateralOffsetMeters != null
+                ) {
                     val lat = Math.abs(target.lateralOffsetMeters.toDouble())
                     if (info.minPassingLateral == null || lat < info.minPassingLateral!!) {
                         info.minPassingLateral = lat
-                    }
-                    if (currentWindowMinPassingDistance == null || lat < currentWindowMinPassingDistance!!) {
-                        currentWindowMinPassingDistance = lat
                     }
                 }
             }
@@ -155,26 +151,52 @@ class RadarWindowAggregator {
     }
 
     /**
-     * Samples and latches the current 1 Hz window metrics, then resets the window accumulator for the next tick.
+     * Samples and latches the current 1,000 ms rolling window metrics.
+     * Prunes expired frames older than [WINDOW_DURATION_MS] (1,000 ms).
      */
-    fun sampleAndResetWindow(): RadarLatchedSnapshot {
+    @JvmOverloads
+    fun sampleAndResetWindow(nowMs: Long = clock()): RadarLatchedSnapshot {
         synchronized(lock) {
-            val snapshot = RadarLatchedSnapshot(
-                threatCount = currentWindowMaxThreats,
-                closestDistanceMeters = currentWindowMinDistance,
-                approachSpeedMps = currentWindowMaxSpeed,
+            pruneExpiredFrames(nowMs)
+
+            var maxThreats = 0
+            var minDistance: Double? = null
+            var maxSpeed = 0.0
+            var minPassingDistance: Double? = null
+
+            for (frame in frameBuffer) {
+                val approaching = frame.targets.filter { it.threatLevel != ThreatLevel.NONE }
+                if (approaching.size > maxThreats) {
+                    maxThreats = approaching.size
+                }
+                for (target in approaching) {
+                    val dist = target.rangeMeters.toDouble()
+                    if (minDistance == null || dist < minDistance) {
+                        minDistance = dist
+                    }
+                    val speed = target.approachSpeedMps.toDouble()
+                    if (speed > maxSpeed) {
+                        maxSpeed = speed
+                    }
+                    if (target.rangeMeters <= CLOSE_PASS_LONGITUDINAL_THRESHOLD_METERS &&
+                        target.lateralOffsetMeters != null
+                    ) {
+                        val lat = Math.abs(target.lateralOffsetMeters.toDouble())
+                        if (minPassingDistance == null || lat < minPassingDistance) {
+                            minPassingDistance = lat
+                        }
+                    }
+                }
+            }
+
+            return RadarLatchedSnapshot(
+                threatCount = maxThreats,
+                closestDistanceMeters = minDistance,
+                approachSpeedMps = maxSpeed,
                 vehicleCount = cumulativeVehicleCount,
-                passingDistanceMeters = currentWindowMinPassingDistance,
+                passingDistanceMeters = minPassingDistance,
                 largeVehicleCount = cumulativeLargeVehicleCount
             )
-
-            // Reset 1 Hz latches for next window
-            currentWindowMaxThreats = 0
-            currentWindowMinDistance = null
-            currentWindowMaxSpeed = 0.0
-            currentWindowMinPassingDistance = null
-
-            return snapshot
         }
     }
 
@@ -190,7 +212,17 @@ class RadarWindowAggregator {
         }
     }
 
+    private fun pruneExpiredFrames(nowMs: Long) {
+        val cutoff = nowMs - WINDOW_DURATION_MS
+        while (frameBuffer.isNotEmpty() && frameBuffer.first().timestampMs < cutoff) {
+            frameBuffer.removeFirst()
+        }
+    }
+
     companion object {
+        /** Sliding window duration for metric latching (1,000 ms). */
+        const val WINDOW_DURATION_MS = 1000L
+
         /** Distance threshold under which a closing vehicle is classified as an overtaken vehicle upon exit. */
         const val PASSING_THRESHOLD_METERS = 18.0f
 
