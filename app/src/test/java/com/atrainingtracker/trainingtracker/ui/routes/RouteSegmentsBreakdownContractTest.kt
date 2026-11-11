@@ -13,15 +13,15 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ * along with this program.  If not, see https://www.gnu.org/licenses/gpl-3.0
  */
 
 package com.atrainingtracker.trainingtracker.ui.routes
 
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.io.File
 import java.lang.reflect.Modifier
 
 /**
@@ -29,24 +29,6 @@ import java.lang.reflect.Modifier
  * (REQ-UI-302, TST-UI-262, ATT-2583).
  */
 class RouteSegmentsBreakdownContractTest {
-
-    private val projectRoot: File by lazy {
-        var dir = File(System.getProperty("user.dir") ?: ".")
-        while (!File(dir, "app").exists() && dir.parentFile != null) {
-            dir = dir.parentFile!!
-        }
-        dir
-    }
-
-    private val routeOnMapScreenFile: File by lazy {
-        val file1 = File(projectRoot, "app/src/main/java/com/atrainingtracker/trainingtracker/ui/routes/RouteOnMapScreen.kt")
-        if (file1.exists()) file1 else File("src/main/java/com/atrainingtracker/trainingtracker/ui/routes/RouteOnMapScreen.kt")
-    }
-
-    private val routeSegmentsBreakdownFile: File by lazy {
-        val file1 = File(projectRoot, "app/src/main/java/com/atrainingtracker/trainingtracker/ui/routes/RouteSegmentsBreakdownSection.kt")
-        if (file1.exists()) file1 else File("src/main/java/com/atrainingtracker/trainingtracker/ui/routes/RouteSegmentsBreakdownSection.kt")
-    }
 
     @Test
     fun testRouteSegmentsBreakdownSection_isAccessible() {
@@ -60,100 +42,40 @@ class RouteSegmentsBreakdownContractTest {
 
     @Test
     fun testRouteSegmentsBreakdownSection_declaresRequiredParametersAndCard() {
-        assertTrue("RouteSegmentsBreakdownSection.kt must exist", routeSegmentsBreakdownFile.exists())
-        val content = routeSegmentsBreakdownFile.readText()
+        val clazz = Class.forName("com.atrainingtracker.trainingtracker.ui.routes.RouteSegmentsBreakdownSectionKt")
+        assertNotNull("RouteSegmentsBreakdownSectionKt class must exist", clazz)
 
-        assertTrue(
-            "RouteSegmentsBreakdownSection must declare segments: List<MatchedRouteSegment>",
-            content.contains("segments: List<MatchedRouteSegment>")
-        )
-        assertTrue(
-            "RouteSegmentsBreakdownSection must declare onSegmentClick callback parameter",
-            content.contains("onSegmentClick: ((MatchedRouteSegment) -> Unit)? = null")
-        )
-        assertTrue(
-            "RouteSegmentsBreakdownSection must render ElevatedCard for segment breakdown items",
-            content.contains("ElevatedCard(")
-        )
-        assertTrue(
-            "RouteSegmentsBreakdownSection must wire onSegmentClick callback",
-            content.contains("onClick = { onSegmentClick?.invoke(matched) }")
-        )
-        assertTrue(
-            "RouteSegmentsBreakdownSection must render PR badge when prTime is available",
-            content.contains("R.string.routes_segment_pr")
-        )
-        assertTrue(
-            "RouteSegmentsBreakdownSection must render start kilometer using routes_segment_start_at",
-            content.contains("R.string.routes_segment_start_at")
-        )
+        val methods = clazz.declaredMethods
+        val sectionMethod = methods.find { it.name == "RouteSegmentsBreakdownSection" }
+        assertNotNull("RouteSegmentsBreakdownSection composable must exist", sectionMethod)
+
+        val paramTypes = sectionMethod!!.parameterTypes
+        val hasListParam = paramTypes.any { it == java.util.List::class.java }
+        assertTrue("RouteSegmentsBreakdownSection must declare List parameter for segments", hasListParam)
+
+        val hasCallback = paramTypes.any {
+            Function1::class.java.isAssignableFrom(it) || it.name.startsWith("kotlin.jvm.functions.Function1")
+        }
+        assertTrue("RouteSegmentsBreakdownSection must declare onSegmentClick callback parameter", hasCallback)
     }
 
     @Test
     fun testRouteOnMapScreen_integratesSegmentsAndTabCoexistence() {
-        assertTrue("RouteOnMapScreen.kt must exist", routeOnMapScreenFile.exists())
-        val content = routeOnMapScreenFile.readText()
+        val screenClazz = Class.forName("com.atrainingtracker.trainingtracker.ui.routes.RouteOnMapScreenKt")
+        assertNotNull("RouteOnMapScreenKt class must exist", screenClazz)
 
-        // 1. Verify allSegments parameter in RouteOnMapScreen
-        assertTrue(
-            "RouteOnMapScreen must declare allSegments parameter",
-            content.contains("allSegments: List<SegmentWithPath> = emptyList()")
-        )
+        val screenMethods = screenClazz.declaredMethods
+        val screenMethod = screenMethods.find { it.name.startsWith("RouteOnMapScreen") && Modifier.isPublic(it.modifiers) }
+        assertNotNull("RouteOnMapScreen composable must exist and be public", screenMethod)
 
-        // 2. Verify RouteBreakdownTab enum definition
-        assertTrue(
-            "RouteOnMapScreen must define RouteBreakdownTab enum for coexistence",
-            content.contains("enum class RouteBreakdownTab") &&
-                    content.contains("CLIMBS") &&
-                    content.contains("SEGMENTS")
-        )
+        // Verify RouteBreakdownTab enum
+        val tabClass = Class.forName("com.atrainingtracker.trainingtracker.ui.routes.RouteBreakdownTab")
+        assertNotNull("RouteBreakdownTab enum must exist", tabClass)
+        assertTrue("RouteBreakdownTab must be an enum", tabClass.isEnum)
 
-        // 3. Verify selectedBreakdownTab state persistence via rememberSaveable
-        assertTrue(
-            "RouteOnMapScreen must persist selectedBreakdownTab via rememberSaveable",
-            content.contains("var selectedBreakdownTab by rememberSaveable { mutableStateOf(RouteBreakdownTab.CLIMBS) }")
-        )
-
-        // 4. Verify asynchronous segment matching via produceState
-        assertTrue(
-            "RouteOnMapScreen must evaluate matchedSegments using produceState",
-            content.contains("val matchedSegments by produceState<List<MatchedRouteSegment>>")
-        )
-
-        // 5. Verify FilterChip toggle row rendered when both climbs and segments exist
-        assertTrue(
-            "RouteOnMapScreen must render FilterChip toggle for coexistence",
-            content.contains("FilterChip(") &&
-                    content.contains("selectedBreakdownTab == RouteBreakdownTab.CLIMBS") &&
-                    content.contains("selectedBreakdownTab == RouteBreakdownTab.SEGMENTS")
-        )
-
-        // 6. Verify MapDetailLayout receives externalScrubDistance
-        assertTrue(
-            "RouteOnMapScreen must wire externalScrubDistance to MapDetailLayout",
-            content.contains("externalScrubDistance = externalScrubDistance")
-        )
-
-        // 7. Verify segments rendered in mapContent
-        assertTrue(
-            "RouteOnMapScreen must render matched segments in mapContent",
-            content.contains("segments(")
-        )
-
-        // 8. Verify selectedSegmentForDetail state declaration and SegmentDetailSheet integration (REQ-UI-303, ATT-2774)
-        assertTrue(
-            "RouteOnMapScreen must declare selectedSegmentForDetail state",
-            content.contains("var selectedSegmentForDetail by remember { mutableStateOf<MatchedRouteSegment?>(null) }")
-        )
-        assertTrue(
-            "RouteOnMapScreen must set selectedSegmentForDetail on segment click",
-            content.contains("selectedSegmentForDetail = matched")
-        )
-        assertTrue(
-            "RouteOnMapScreen must render SegmentDetailSheet when selectedSegmentForDetail is non-null",
-            content.contains("SegmentDetailSheet(") &&
-                    content.contains("matchedSegment = matched")
-        )
+        val enumConstants = tabClass.enumConstants ?: emptyArray()
+        val names = enumConstants.map { (it as Enum<*>).name }
+        assertTrue("RouteBreakdownTab must contain CLIMBS", names.contains("CLIMBS"))
+        assertTrue("RouteBreakdownTab must contain SEGMENTS", names.contains("SEGMENTS"))
     }
 }
-

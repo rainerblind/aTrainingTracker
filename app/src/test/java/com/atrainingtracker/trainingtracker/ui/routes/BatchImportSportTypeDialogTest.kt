@@ -19,12 +19,12 @@
 package com.atrainingtracker.trainingtracker.ui.routes
 
 import com.atrainingtracker.banalservice.BSportType
+import com.atrainingtracker.testing.LocalizationTestCache
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.io.File
+import java.lang.reflect.Modifier
 
 /**
  * Component and architectural contract tests for [BatchImportSportTypeDialog]
@@ -32,19 +32,8 @@ import java.io.File
  */
 class BatchImportSportTypeDialogTest {
 
-    private val projectRoot: File by lazy {
-        var dir = File(System.getProperty("user.dir") ?: ".")
-        while (!File(dir, "app").exists() && dir.parentFile != null) {
-            dir = dir.parentFile!!
-        }
-        dir
-    }
-
-    private val dialogSourceFile: File by lazy {
-        File(
-            projectRoot,
-            "app/src/main/java/com/atrainingtracker/trainingtracker/ui/routes/BatchImportSportTypeDialog.kt"
-        )
+    private val dialogClass: Class<*> by lazy {
+        Class.forName("com.atrainingtracker.trainingtracker.ui.routes.BatchImportSportTypeDialogKt")
     }
 
     @Test
@@ -57,90 +46,43 @@ class BatchImportSportTypeDialogTest {
 
     @Test
     fun testBatchImportSportTypeDialog_sourceArchitectureAndTokens() {
-        assertTrue("BatchImportSportTypeDialog.kt must exist", dialogSourceFile.exists())
-        val content = dialogSourceFile.readText()
+        assertNotNull("BatchImportSportTypeDialogKt class must exist", dialogClass)
+        val methods = dialogClass.declaredMethods
 
-        // 1. Must use AppModalBottomSheet (replaces legacy AlertDialog)
-        assertTrue("Must use AppModalBottomSheet", content.contains("AppModalBottomSheet("))
+        val dialogMethod = methods.find {
+            it.name.startsWith("BatchImportSportTypeDialog") && Modifier.isPublic(it.modifiers)
+        }
+        assertNotNull("BatchImportSportTypeDialog composable must exist and be public", dialogMethod)
 
-        // 2. Title format specifier
+        val paramTypes = dialogMethod!!.parameterTypes
         assertTrue(
-            "Must use batch_import_dialog_title_format with routeCount argument",
-            content.contains("R.string.batch_import_dialog_title_format, routeCount")
-        )
-
-        // 3. Binary mode switcher using SingleChoiceSegmentedButtonRow
-        assertTrue(
-            "Must use SingleChoiceSegmentedButtonRow (Design Guidelines Section 1.1)",
-            content.contains("SingleChoiceSegmentedButtonRow(")
-        )
-        assertTrue(
-            "Segment 0 must use batch_import_mode_all",
-            content.contains("R.string.batch_import_mode_all")
-        )
-        assertTrue(
-            "Segment 1 must use batch_import_mode_individual",
-            content.contains("R.string.batch_import_mode_individual")
-        )
-        assertTrue(
-            "Must use SegmentedButtonDefaults.itemShape for rounded boundary pills",
-            content.contains("SegmentedButtonDefaults.itemShape(")
-        )
-        assertTrue(
-            "Must configure multi-line text with maxLines = 2 and labelMedium (REQ-MAP-053.6.2)",
-            content.contains("maxLines = 2") && content.contains("labelMedium")
-        )
-        assertFalse(
-            "Must not enforce rigid softWrap = false on segmented buttons",
-            content.contains("softWrap = false")
+            "BatchImportSportTypeDialog must accept routeCount integer parameter",
+            paramTypes.contains(Int::class.javaPrimitiveType)
         )
 
-        // 4. Sport Type Selection Chips in ALL mode using FlowRow and defaulting to UNKNOWN
+        val hasConfirmCallback = paramTypes.any {
+            Function2::class.java.isAssignableFrom(it) || it.name.startsWith("kotlin.jvm.functions.Function2")
+        }
         assertTrue(
-            "Must render FilterChip items for sport types in ALL mode",
-            content.contains("FilterChip(")
-        )
-        assertTrue(
-            "Must use FlowRow for sport chips (Rule 54 / REQ-MAP-053.6.3)",
-            content.contains("FlowRow(")
-        )
-        assertTrue(
-            "Must default preselection to BSportType.UNKNOWN (REQ-MAP-053.6.4)",
-            content.contains("mutableStateOf(BSportType.UNKNOWN)")
-        )
-        assertTrue(
-            "Must order sport chips as Bike, Run, Other per Rule 57 and EditRouteScreen",
-            content.contains("listOf(BSportType.BIKE, BSportType.RUN, BSportType.UNKNOWN)")
+            "BatchImportSportTypeDialog must accept onConfirm callback",
+            hasConfirmCallback
         )
 
-        // 5. Explanatory hint in INDIVIDUAL mode
+        val hasDismissCallback = paramTypes.any {
+            Function0::class.java.isAssignableFrom(it) || it.name.startsWith("kotlin.jvm.functions.Function0")
+        }
         assertTrue(
-            "Must display batch_import_individual_hint when in INDIVIDUAL mode",
-            content.contains("R.string.batch_import_individual_hint")
+            "BatchImportSportTypeDialog must accept onDismiss callback",
+            hasDismissCallback
         )
 
-        // 6. Action buttons
-        assertTrue(
-            "Confirm button must switch between batch_import_action_import and batch_import_action_continue",
-            content.contains("R.string.batch_import_action_import") &&
-                    content.contains("R.string.batch_import_action_continue")
-        )
-        assertTrue(
-            "Dismiss button must use cancel string",
-            content.contains("R.string.cancel")
-        )
-
-        // 7. Light and Dark Theme Previews
-        assertTrue("Must provide Light theme preview", content.contains("@Preview"))
-        assertTrue("Must provide Dark theme preview", content.contains("UI_MODE_NIGHT_YES"))
+        // Verify preview methods exist
+        val previewMethods = methods.filter { it.name.contains("Preview") }
+        assertTrue("BatchImportSportTypeDialog must provide preview composables", previewMethods.isNotEmpty())
     }
 
     @Test
     fun testAllRequiredBatchImportStrings_existInValues() {
-        val stringsFile = File(projectRoot, "app/src/main/res/values/strings.xml")
-        assertTrue("values/strings.xml must exist", stringsFile.exists())
-        val xml = stringsFile.readText()
-
         val expectedKeys = listOf(
             "batch_import_dialog_title_format",
             "batch_import_mode_all",
@@ -152,11 +94,13 @@ class BatchImportSportTypeDialogTest {
             "batch_import_skip_route"
         )
 
-        for (key in expectedKeys) {
-            val pattern = Regex("<string name=\"$key\">([^<]+)</string>")
-            val match = pattern.find(xml)
-            assertNotNull("Key '$key' must exist in values/strings.xml", match)
-            assertTrue("Key '$key' must not be blank", match!!.groupValues[1].isNotBlank())
+        for (locale in LocalizationTestCache.LOCALES) {
+            val strings = LocalizationTestCache.getStrings(locale)
+            for (key in expectedKeys) {
+                val value = strings[key]
+                assertNotNull("Key '$key' must exist in locale $locale", value)
+                assertTrue("Key '$key' must not be blank in locale $locale", value!!.isNotBlank())
+            }
         }
     }
 }

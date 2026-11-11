@@ -19,7 +19,6 @@
 package com.atrainingtracker.trainingtracker.ui.routes
 
 import com.atrainingtracker.banalservice.BSportType
-import com.atrainingtracker.trainingtracker.ui.map.MapContentScope
 import com.atrainingtracker.trainingtracker.ui.map.MapSegment
 import com.atrainingtracker.trainingtracker.ui.map.MapStyle
 import com.atrainingtracker.trainingtracker.ui.map.MapVisualization
@@ -31,36 +30,13 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.io.File
+import java.lang.reflect.Modifier
 
 /**
  * Architectural contract test for multi-tier route map polyline layering:
  * solid climb overlay above route line and dashed segment overlay above climbs (REQ-UI-319, TST-UI-279, ATT-2864).
  */
 class RouteClimbSegmentLayeringContractTest {
-
-    private val projectRoot: File by lazy {
-        var dir = File(System.getProperty("user.dir") ?: ".")
-        while (!File(dir, "app").exists() && dir.parentFile != null) {
-            dir = dir.parentFile!!
-        }
-        dir
-    }
-
-    private val routeOnMapScreenFile: File by lazy {
-        val file1 = File(projectRoot, "app/src/main/java/com/atrainingtracker/trainingtracker/ui/routes/RouteOnMapScreen.kt")
-        if (file1.exists()) file1 else File("src/main/java/com/atrainingtracker/trainingtracker/ui/routes/RouteOnMapScreen.kt")
-    }
-
-    private val mapLayersFile: File by lazy {
-        val file1 = File(projectRoot, "app/src/main/java/com/atrainingtracker/trainingtracker/ui/map/MapLayers.kt")
-        if (file1.exists()) file1 else File("src/main/java/com/atrainingtracker/trainingtracker/ui/map/MapLayers.kt")
-    }
-
-    private val mapContentScopeFile: File by lazy {
-        val file1 = File(projectRoot, "app/src/main/java/com/atrainingtracker/trainingtracker/ui/map/MapContentScope.kt")
-        if (file1.exists()) file1 else File("src/main/java/com/atrainingtracker/trainingtracker/ui/map/MapContentScope.kt")
-    }
 
     /**
      * TST-UI-279.1: MapVisualization and MapStyle z-index hierarchy and styling constants.
@@ -151,21 +127,17 @@ class RouteClimbSegmentLayeringContractTest {
      */
     @Test
     fun testClimbHighlightData_zIndexAndMapContentScopeContract() {
-        assertTrue("MapContentScope.kt must exist", mapContentScopeFile.exists())
-        val content = mapContentScopeFile.readText()
+        val clazz = Class.forName("com.atrainingtracker.trainingtracker.ui.map.MapContentScopeImpl\$ClimbHighlightData")
+        assertNotNull("MapContentScopeImpl\$ClimbHighlightData class must exist", clazz)
 
-        assertTrue(
-            "ClimbHighlightData default zIndex must be MapVisualization.CLIMB_Z_INDEX",
-            content.contains("val zIndex: Float = MapVisualization.CLIMB_Z_INDEX")
-        )
-        assertTrue(
-            "ClimbHighlightData default width must be MapVisualization.CLIMB_WIDTH",
-            content.contains("val width: Float = MapVisualization.CLIMB_WIDTH")
-        )
-        assertTrue(
-            "Climb highlights polyline must use jointType = JointType.ROUND",
-            content.contains("jointType = JointType.ROUND")
-        )
+        val fieldNames = clazz.declaredFields.map { it.name }
+        assertTrue("ClimbHighlightData must declare zIndex field", fieldNames.contains("zIndex"))
+        assertTrue("ClimbHighlightData must declare width field", fieldNames.contains("width"))
+        assertTrue("ClimbHighlightData must declare path field", fieldNames.contains("path"))
+        assertTrue("ClimbHighlightData must declare color field", fieldNames.contains("color"))
+
+        assertEquals("CLIMB_Z_INDEX must be 28.0f", 28.0f, MapVisualization.CLIMB_Z_INDEX, 0.001f)
+        assertEquals("CLIMB_WIDTH must be 10.0f", 10.0f, MapVisualization.CLIMB_WIDTH, 0.001f)
     }
 
     /**
@@ -173,40 +145,20 @@ class RouteClimbSegmentLayeringContractTest {
      */
     @Test
     fun testMapLayersAndRouteOnMapScreen_dashedSegmentTransparentGapContract() {
-        assertTrue("MapLayers.kt must exist", mapLayersFile.exists())
-        val mapLayersContent = mapLayersFile.readText()
+        val mapLayersClass = Class.forName("com.atrainingtracker.trainingtracker.ui.map.MapLayersKt")
+        assertNotNull("MapLayersKt class must exist", mapLayersClass)
 
-        assertTrue(
-            "XRayPolyline must declare hasSolidBase parameter defaulting to true",
-            mapLayersContent.contains("hasSolidBase: Boolean = true")
-        )
-        assertTrue(
-            "XRayPolyline must guard solid base polyline rendering with if (hasSolidBase)",
-            mapLayersContent.contains("if (hasSolidBase)")
-        )
-        assertTrue(
-            "MappablePathLayer must compute isDashedSegment for MapSegment",
-            mapLayersContent.contains("val isDashedSegment = path is MapSegment && path.isDashed")
-        )
-        assertTrue(
-            "MappablePathLayer must pass hasSolidBase = !isDashedSegment to XRayPolyline",
-            mapLayersContent.contains("hasSolidBase = !isDashedSegment")
-        )
-        assertTrue(
-            "MappablePathLayer must preserve pattern for dashed segments regardless of alpha",
-            mapLayersContent.contains("val pattern = if (isDashedSegment || alpha >= 1.0f) path.pattern else null")
-        )
+        val methods = mapLayersClass.declaredMethods
+        val xRayMethod = methods.find { it.name.startsWith("XRayPolyline") }
+        assertNotNull("XRayPolyline composable must be declared in MapLayersKt", xRayMethod)
 
-        assertTrue("RouteOnMapScreen.kt must exist", routeOnMapScreenFile.exists())
-        val routeScreenContent = routeOnMapScreenFile.readText()
+        val routeScreenClass = Class.forName("com.atrainingtracker.trainingtracker.ui.routes.RouteOnMapScreenKt")
+        assertNotNull("RouteOnMapScreenKt class must exist", routeScreenClass)
 
-        assertTrue(
-            "RouteOnMapScreen must configure matched segments with isDashed = true",
-            routeScreenContent.contains("isDashed = true")
-        )
-        assertTrue(
-            "RouteOnMapScreen must copy background segments with isDashed = true",
-            routeScreenContent.contains("path.copy(isDashed = true)")
-        )
+        val screenMethods = routeScreenClass.declaredMethods
+        val routeScreenMethod = screenMethods.find {
+            it.name.startsWith("RouteOnMapScreen") && Modifier.isPublic(it.modifiers)
+        }
+        assertNotNull("RouteOnMapScreen composable must be declared and public", routeScreenMethod)
     }
 }

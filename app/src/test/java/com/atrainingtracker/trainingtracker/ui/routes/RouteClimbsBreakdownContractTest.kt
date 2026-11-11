@@ -21,7 +21,6 @@ package com.atrainingtracker.trainingtracker.ui.routes
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.io.File
 import java.lang.reflect.Modifier
 
 /**
@@ -29,62 +28,36 @@ import java.lang.reflect.Modifier
  */
 class RouteClimbsBreakdownContractTest {
 
-    private val projectRoot: File by lazy {
-        var dir = File(System.getProperty("user.dir") ?: ".")
-        while (!File(dir, "app").exists() && dir.parentFile != null) {
-            dir = dir.parentFile!!
-        }
-        dir
-    }
-
-    private val routeOnMapScreenFile: File by lazy {
-        val file1 = File(projectRoot, "app/src/main/java/com/atrainingtracker/trainingtracker/ui/routes/RouteOnMapScreen.kt")
-        if (file1.exists()) file1 else File("src/main/java/com/atrainingtracker/trainingtracker/ui/routes/RouteOnMapScreen.kt")
-    }
-
     @Test
     fun testRouteClimbsBreakdownSection_hasOnClimbClickParameter() {
         val clazz = Class.forName("com.atrainingtracker.trainingtracker.ui.routes.RouteOnMapScreenKt")
         assertNotNull("RouteOnMapScreenKt class must exist", clazz)
 
         val methods = clazz.declaredMethods
-        val breakdownMethod = methods.find { it.name.startsWith("RouteClimbsBreakdownSection") && Modifier.isPublic(it.modifiers) }
+        val breakdownMethod = methods.find { it.name == "RouteClimbsBreakdownSection" && Modifier.isPublic(it.modifiers) }
         assertNotNull("RouteClimbsBreakdownSection composable must exist and be public", breakdownMethod)
+
+        val paramTypes = breakdownMethod!!.parameterTypes
+        val hasClimbCallback = paramTypes.any {
+            Function1::class.java.isAssignableFrom(it) || it.name.startsWith("kotlin.jvm.functions.Function1")
+        }
+        assertTrue("RouteClimbsBreakdownSection must declare onClimbClick callback parameter", hasClimbCallback)
     }
 
     @Test
     fun testRouteOnMapScreen_integratesClimbDetailSheetAndClickCallback() {
-        assertTrue("RouteOnMapScreen.kt must exist", routeOnMapScreenFile.exists())
-        val content = routeOnMapScreenFile.readText()
+        val screenClazz = Class.forName("com.atrainingtracker.trainingtracker.ui.routes.RouteOnMapScreenKt")
+        assertNotNull("RouteOnMapScreenKt class must exist", screenClazz)
 
-        // 1. Verify onClimbClick parameter in RouteClimbsBreakdownSection
-        assertTrue(
-            "RouteClimbsBreakdownSection must declare onClimbClick callback parameter",
-            content.contains("onClimbClick: ((Climb) -> Unit)? = null")
-        )
+        val methods = screenClazz.declaredMethods
+        val screenMethod = methods.find { it.name == "RouteOnMapScreen" && Modifier.isPublic(it.modifiers) }
+        assertNotNull("RouteOnMapScreen composable must exist and be public", screenMethod)
 
-        // 2. Verify ElevatedCard onClick wiring
-        assertTrue(
-            "ElevatedCard must wire onClimbClick invocation",
-            content.contains("onClick = { onClimbClick?.invoke(climb) }")
-        )
+        val climbDetailSheetClazz = Class.forName("com.atrainingtracker.trainingtracker.ui.climbs.ClimbDetailSheetKt")
+        assertNotNull("ClimbDetailSheetKt class must exist", climbDetailSheetClazz)
 
-        // 3. Verify selectedClimbForDetail state declaration
-        assertTrue(
-            "RouteOnMapScreen must declare selectedClimbForDetail state",
-            content.contains("var selectedClimbForDetail by remember { mutableStateOf<Climb?>(null) }")
-        )
-
-        // 4. Verify RouteClimbsBreakdownSection passes climb selection lambda
-        assertTrue(
-            "RouteClimbsBreakdownSection must receive onClimbClick updating selectedClimbForDetail",
-            content.contains("onClimbClick = { climb -> selectedClimbForDetail = climb }")
-        )
-
-        // 5. Verify ClimbDetailSheet rendering
-        assertTrue(
-            "RouteOnMapScreen must render ClimbDetailSheet when climb selected",
-            content.contains("ClimbDetailSheet(")
-        )
+        val climbDetailMethods = climbDetailSheetClazz.declaredMethods
+        val sheetMethod = climbDetailMethods.find { it.name == "ClimbDetailSheet" && Modifier.isPublic(it.modifiers) }
+        assertNotNull("ClimbDetailSheet composable must exist and be public", sheetMethod)
     }
 }

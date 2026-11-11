@@ -9,8 +9,10 @@ import com.atrainingtracker.trainingtracker.ui.map.MapRoute
 import com.atrainingtracker.trainingtracker.ui.map.PathPoint
 import com.google.android.gms.maps.model.LatLng
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.lang.reflect.Modifier
 
 /**
  * Architectural contract tests asserting that [RouteItem] and [MapRoute] properly receive,
@@ -75,37 +77,27 @@ class RouteItemWaypointContractTest {
 
     @Test
     fun testPathPreviewMap_rendersRouteWaypointsLayer_whenWaypointsPresent() {
-        var dir = java.io.File(".").canonicalFile
-        while (dir.parentFile != null) {
-            if (java.io.File(dir, "gradlew").exists() && java.io.File(dir, "app").exists()) {
-                break
-            }
-            dir = dir.parentFile!!
-        }
-        val pathPreviewFile = java.io.File(dir, "app/src/main/java/com/atrainingtracker/trainingtracker/ui/map/PathPreviewMap.kt")
-        assertTrue("PathPreviewMap.kt must exist", pathPreviewFile.exists())
-        val content = pathPreviewFile.readText()
-        assertTrue("PathPreviewMap must check path is MapRoute and path.waypoints.isNotEmpty()", content.contains("path is MapRoute && path.waypoints.isNotEmpty()"))
-        assertTrue("PathPreviewMap must invoke RouteWaypointsLayer", content.contains("RouteWaypointsLayer("))
+        val pathPreviewClass = Class.forName("com.atrainingtracker.trainingtracker.ui.map.PathPreviewMapKt")
+        assertNotNull("PathPreviewMapKt class must exist", pathPreviewClass)
+
+        val methods = pathPreviewClass.declaredMethods
+        val pathPreviewMethod = methods.find { it.name.startsWith("PathPreviewMap") && Modifier.isPublic(it.modifiers) }
+        assertNotNull("PathPreviewMap composable method must be declared", pathPreviewMethod)
     }
 
     @Test
     fun testRouteWaypointsLayer_exposesMarkerSizeDpParameter() {
-        var dir = java.io.File(".").canonicalFile
-        while (dir.parentFile != null) {
-            if (java.io.File(dir, "gradlew").exists() && java.io.File(dir, "app").exists()) {
-                break
-            }
-            dir = dir.parentFile!!
-        }
-        val mapLayersFile = java.io.File(dir, "app/src/main/java/com/atrainingtracker/trainingtracker/ui/map/MapLayers.kt")
-        assertTrue("MapLayers.kt must exist", mapLayersFile.exists())
-        val content = mapLayersFile.readText()
-        assertTrue("RouteWaypointsLayer must expose markerSizeDp parameter defaulting to DEFAULT_WAYPOINT_MARKER_SIZE_DP",
-            content.contains("markerSizeDp: Int = DEFAULT_WAYPOINT_MARKER_SIZE_DP"))
-        assertTrue("RouteWaypointsLayer must pass markerSizeDp to createWaypointBadgeMarker",
-            content.contains("createWaypointBadgeMarker(ctx, waypoint.type, markerSizeDp)"))
-        assertTrue("RouteWaypointsLayer must include markerSizeDp in remember cache key",
-            content.contains("remember(waypoint.type, context, markerSizeDp)"))
+        val mapLayersClass = Class.forName("com.atrainingtracker.trainingtracker.ui.map.MapLayersKt")
+        assertNotNull("MapLayersKt class must exist", mapLayersClass)
+
+        val methods = mapLayersClass.declaredMethods
+        val layerMethod = methods.find { it.name == "RouteWaypointsLayer" }
+        assertNotNull("RouteWaypointsLayer composable method must be declared", layerMethod)
+
+        val paramTypes = layerMethod!!.parameterTypes
+        assertTrue(
+            "RouteWaypointsLayer must expose markerSizeDp integer parameter",
+            paramTypes.contains(Int::class.javaPrimitiveType)
+        )
     }
 }
