@@ -146,6 +146,78 @@
 - **Rationale**: The system SHALL detect "Not Moving" events via IMU variance and coordinate clustering to prevent stationary "Drunkard's Walk" artifacts.
 - **Description**: Stationary Pinning.
 
+### REQ-NFR-003: Periodic Tick Latency Budget [Planned]
+- **Tests**: `TST-PRO-052`
+- **Implementation**: `TrackerService.java`, `docs/architecture.md` §4.9
+- **Rationale**: `TrackerService` periodic tick execution latency SHALL NOT exceed 50 ms per 1000 ms cycle (`scheduleAtFixedRate`) on background thread, guaranteeing >= 950 ms idle headroom.
+- **Description**: Periodic Tick Latency Budget.
+
+### REQ-NFR-004: CPU Consumption Ceiling [Planned]
+- **Tests**: `TST-PRO-052`
+- **Implementation**: `TrackerService.java`, `docs/architecture.md` §4.9
+- **Rationale**: `TrackerService` background tracking CPU consumption SHALL NOT exceed 5% of a single core on mid-tier reference hardware, preventing thermal throttling and CPU starvation.
+- **Description**: CPU Consumption Ceiling.
+
+### REQ-NFR-005: Dedicated Heap Footprint Ceiling [Planned]
+- **Tests**: `TST-PRO-052`
+- **Implementation**: `TrackerService.java`, `docs/architecture.md` §4.9
+- **Rationale**: `TrackerService` dedicated heap allocation SHALL NOT exceed 40 MB, preventing GC pressure and OutOfMemoryError during 12+ hour endurance recordings.
+- **Description**: Dedicated Heap Footprint Ceiling.
+
+### REQ-NFR-006: Background Battery Drain Ceiling [Planned]
+- **Tests**: `TST-PRO-052`
+- **Implementation**: `TrackerService.java`, `docs/architecture.md` §4.9
+- **Rationale**: Total background battery consumption during active recording with screen off, active GNSS, and connected BLE/ANT+ sensors SHALL NOT exceed 5%/h.
+- **Description**: Background Battery Drain Ceiling.
+
+### REQ-NFR-007: Sensor Dispatch Latency Budget [Planned]
+- **Tests**: `TST-PRO-052`
+- **Implementation**: `BANALService.java`, `ProxySensor.java`, `docs/architecture.md` §4.9
+- **Rationale**: Sensor ingestion dispatch latency from hardware event receipt to subscriber notification across registered sensors SHALL NOT exceed 25 ms.
+- **Description**: Sensor Dispatch Latency Budget.
+
+### REQ-NFR-008: Sensor Connection Failover Timeout [Planned]
+- **Tests**: `TST-PRO-052`
+- **Implementation**: `BANALService.java`, `ProxySensor.java`, `docs/architecture.md` §4.9
+- **Rationale**: The sensor reconnection and failover window upon signal dropout SHALL NOT exceed 3.5 s before initiating automatic reconnection or source failover.
+- **Description**: Sensor Connection Failover Timeout.
+
+### REQ-NFR-009: Tracking WakeLock Bounding [Planned]
+- **Tests**: `TST-PRO-052`
+- **Implementation**: `TrackerService.java`, `docs/architecture.md` §4.9
+- **Rationale**: `PowerManager.PARTIAL_WAKE_LOCK` (`aTrainingTracker:TrackingLock`) SHALL be acquired solely by `TrackerService` upon tracking start and MUST be released immediately upon tracking stop.
+- **Description**: Tracking WakeLock Bounding.
+
+### REQ-NFR-010: Database Sample Write Latency Budget [Planned]
+- **Tests**: `TST-PRO-052`
+- **Implementation**: `TrackerService.java`, `WorkoutSamplesDatabaseManager.java`, `docs/architecture.md` §4.9
+- **Rationale**: Live 1-Hz sample insertion latency in `WorkoutSamplesDatabaseManager` SHALL NOT exceed 30 ms and MUST execute strictly off the main thread via `TrackerService`'s `mScheduler` / `mDbExecutor`.
+- **Description**: Database Sample Write Latency Budget.
+
+### REQ-NFR-011: Telemetry Storage Growth Rate Ceiling [Planned]
+- **Tests**: `TST-PRO-052`
+- **Implementation**: `WorkoutSamplesDatabaseManager.java`, `docs/architecture.md` §4.9
+- **Rationale**: Workout samples SQLite storage growth rate SHALL NOT exceed ~360 KB/h at 1-Hz telemetry recording (~100 bytes/sample, ~3.6 MB for a 10-hour activity).
+- **Description**: Telemetry Storage Growth Rate Ceiling.
+
+### REQ-NFR-012: Cockpit Frame Render Budget [Planned]
+- **Tests**: `TST-PRO-052`
+- **Implementation**: `SensorGridScreen.kt`, `docs/architecture.md` §4.9
+- **Rationale**: Live cockpit telemetry frame recomposition and rendering in `SensorGridScreen` SHALL NOT exceed 16.6 ms per frame (sustaining 60 FPS without dropped frames).
+- **Description**: Cockpit Frame Render Budget.
+
+### REQ-NFR-013: Map Polyline Update Latency Budget [Planned]
+- **Tests**: `TST-PRO-052`
+- **Implementation**: `ATrainingTrackerMap.kt`, `docs/architecture.md` §4.9
+- **Rationale**: Dynamic polyline path geometry update latency on the live map canvas upon receiving location updates SHALL NOT exceed 30 ms.
+- **Description**: Map Polyline Update Latency Budget.
+
+### REQ-NFR-014: Cockpit Telemetry Emission Rate Throttling [Planned]
+- **Tests**: `TST-PRO-052`
+- **Implementation**: `TrackingTabsViewModel.kt`, `docs/architecture.md` §4.9
+- **Rationale**: Telemetry StateFlow emissions from `TrackingTabsViewModel` to cockpit tabs SHALL be conflated to 1 Hz, preventing UI recomposition churn during high-frequency sensor updates.
+- **Description**: Cockpit Telemetry Emission Rate Throttling.
+
 ### REQ-PRO-012: Project Protocol Hardening [Verified]
 - **Tests**: `TST-STR-017`
 - **Implementation**: `project_protocol.md`
@@ -2601,28 +2673,30 @@ The workflow SHALL mandate that:
 
 
 ### REQ-PRO-052: Architectural Resource and Timing Budgets Specification [Verified]
-- **Tests**: `TST-PRO-052` | **Tickets**: `ATT-6181`
+- **Tests**: `TST-PRO-052` | **Tickets**: `ATT-6181`, `ATT-6735`
 - **Implementation**: `docs/architecture.md`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/ArchitectureConformanceContractTest.kt`
-- **Rationale**: Prior to ATT-6181, `docs/architecture.md` lacked explicit CPU, memory, battery, disk growth, and timing budgets for runtime-critical subsystems, specifying only 1 Hz sampling and 3.5 s sensor failover (ASPICE finding C-07, SWE.2 BP4). Without documented resource budgets, runtime resource consumption is accidental rather than engineered, risking background thread starvation, UI jank, and battery drain during multi-hour endurance sessions. Defining quantified budgets in Section 4.9 and enforcing their existence via contract testing fulfills SWE.2 BP4 and links architecture to non-functional performance requirements (ATT-6181, refining `REQ-PRO-043` under Epic `ATT-6142`):
+- **Rationale**: Prior to ATT-6181, `docs/architecture.md` lacked explicit CPU, memory, battery, disk growth, and timing budgets for runtime-critical subsystems, specifying only 1 Hz sampling and 3.5 s sensor failover (ASPICE finding C-07, SWE.2 BP4). Without documented resource budgets, runtime resource consumption is accidental rather than engineered, risking background thread starvation, UI jank, and battery drain during multi-hour endurance sessions. Defining quantified budgets in Section 4.9, attributing them truthfully to production code components/threads, establishing bidirectional traceability to `REQ-NFR-*` IDs, and enforcing their existence via contract testing fulfills SWE.2 BP4 and links architecture to non-functional performance requirements (ATT-6181, ATT-6735, refining `REQ-PRO-043` under Epic `ATT-6142`):
 - **Description**:
   1. *Resource & Timing Budget Specification in Architecture (`REQ-PRO-052.1`, docs/architecture.md §4.9)*:
      • `docs/architecture.md` Section 4.9 SHALL define a comprehensive resource and timing budget specification matrix covering:
-       - `TrackerService`: CPU consumption (< 5% single-core on reference mid-tier device), memory footprint (< 40 MB heap), tick latency budget (< 50 ms per 1000 ms periodic tick), and background battery drain (< 5%/h with screen off and GPS/sensors active).
-       - Sensor Ingestion (`BANALService` / `ProxySensor`): Dispatch latency (< 25 ms event-to-subscriber), failover timeout (3.5 s reconnection window), and partial wake-lock acquisition strictly bounded to active tracking states.
-       - SQLite Persistence (`WorkoutSamplesDatabaseManager`): Sample insertion latency (< 30 ms on `Dispatchers.IO`), zero main-thread database I/O, and disk storage growth ceiling (~360 KB/h at 1-Hz sampling).
+       - `TrackerService`: CPU consumption (< 5% single-core on reference mid-tier device), memory footprint (< 40 MB heap), tick latency budget (< 50 ms per 1000 ms periodic tick on `mScheduler`), background battery drain (< 5%/h with screen off and GPS/sensors active), and partial wake-lock acquisition (`aTrainingTracker:TrackingLock`) strictly bounded to active tracking states (`TrackerService.java:842-857`).
+       - Sensor Ingestion (`BANALService` / `ProxySensor`): Dispatch latency (< 25 ms event-to-subscriber) and failover timeout (3.5 s reconnection window).
+       - SQLite Persistence (`WorkoutSamplesDatabaseManager`): Live 1-Hz sample insertion latency (< 30 ms executed off-main-thread on `TrackerService`'s `mScheduler` / `mDbExecutor`; `Dispatchers.IO` reserved for repository/import writes, and `dbDispatcher` strictly belonging to `KnownLocationsRepository`), zero main-thread database I/O, and disk storage growth ceiling (~360 KB/h at 1-Hz sampling).
        - Cockpit UI & Map Rendering (`SensorGridScreen` / `ATrainingTrackerMap`): UI frame rendering budget (< 16.6 ms per frame / 60 FPS), map polyline render update latency (< 30 ms), and conflated 1-Hz UI telemetry StateFlow emission.
+       - Non-Functional Requirement Traceability: Each of the 12 budget rows SHALL link directly to concrete `REQ-NFR-003` through `REQ-NFR-014` identifiers.
   2. *Architectural Budget Conformance Contract Testing (`REQ-PRO-052.2`)*:
      • `ArchitectureConformanceContractTest.kt` SHALL assert that `docs/architecture.md` contains Section 4.9 defining resource and timing budgets across all 4 critical subsystem domains (Tracking, Sensors, Database, UI/Map).
      • The test SHALL verify that documented metrics specify numeric thresholds for CPU, heap memory, latency, battery drain, and disk growth.
+     • The test SHALL verify that `PARTIAL_WAKE_LOCK` is attributed to `TrackerService` and not `BANALService`, that 1-Hz database write threading references `mScheduler` / `mDbExecutor`, and that each row links to concrete `REQ-NFR-003`..`REQ-NFR-014` IDs.
 - **Requirement Archaeology & Chesterton's Fence Audit**:
   1. *Original Requirement ID & Target*: Net-new requirement `REQ-PRO-052` (*Architectural Resource and Timing Budgets Specification*), refining `REQ-PRO-043` (*SWE.2 Architecture Conformance*). Targets `docs/architecture.md` and `ArchitectureConformanceContractTest.kt`.
-  2. *Historical Origin & Commit Trace*: Independent ASPICE pre-assessment finding C-07 (2026-11-08) and ticket ATT-6181.
-  3. *Root Reason for Existing Formulation*: Project architecture historically focused on component layering and functional flow diagrams without documented performance ceilings or resource bounds.
-  4. *Preservation of Core Invariants*: Existing threading models (`Dispatchers.Main` / `Dispatchers.IO`), 1-Hz sampling loops, 3.5 s sensor failover, and 100% unit test pass rate remain strictly preserved.
+  2. *Historical Origin & Commit Trace*: Independent ASPICE pre-assessment finding C-07 (2026-11-08), ticket ATT-6181, and alignment ticket ATT-6735.
+  3. *Root Reason for Existing Formulation*: Project architecture historically lacked quantified budgets (ATT-6181). During initial drafting, WakeLock was provisionally grouped under `BANALService` and database threading conflated repository conventions (`Dispatchers.IO` / `dbDispatcher`), while concrete `REQ-NFR-*` linking was postponed pending backlog ticket ATT-6139. ATT-6735 remedies these code misattributions to truthfully reflect `TrackerService` implementation and links `REQ-NFR-003`..`014`.
+  4. *Preservation of Core Invariants*: Existing threading models (`TrackerService` `mScheduler` / `mDbExecutor`, repository coroutines), 1-Hz sampling loops, 3.5 s sensor failover, and 100% unit test pass rate remain strictly preserved without Android production runtime code changes.
 - **Acceptance Criteria (Given-When-Then)**:
   • *Given* `docs/architecture.md`,
   • *When* Section 4.9 is inspected,
-  • *Then* it SHALL document explicit resource and timing budgets for `TrackerService`, `BANALService`, `WorkoutSamplesDatabaseManager`, and Cockpit UI/Map.
+  • *Then* it SHALL document explicit resource and timing budgets for `TrackerService`, `BANALService`, `WorkoutSamplesDatabaseManager`, and Cockpit UI/Map, attributing WakeLock to `TrackerService` and 1-Hz DB writes to `mScheduler` / `mDbExecutor`, and linking each row to `REQ-NFR-003`..`REQ-NFR-014`.
   • *Given* `ArchitectureConformanceContractTest.kt`,
   • *When* executed in the unit test suite,
   • *Then* `testArchitectureDoc_definesResourceAndTimingBudgets` SHALL pass with 100% success.

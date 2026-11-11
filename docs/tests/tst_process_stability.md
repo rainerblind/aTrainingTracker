@@ -1615,9 +1615,9 @@
 
 
 ### TST-PRO-052: **Architectural Resource and Timing Budgets Contract Test Suite** [Verified]
-- **Requirement(s)**: `REQ-PRO-052`
+- **Requirement(s)**: `REQ-PRO-052`, `REQ-NFR-003`..`REQ-NFR-014`
 - **Component**: `docs/architecture.md`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/ArchitectureConformanceContractTest.kt`
-- **Jira**: `ATT-6181`
+- **Jira**: `ATT-6181`, `ATT-6735`
 - **Test Description**:
   1. *Architecture Section 4.9 Structural & Sectional Conformance Test (`TST-PRO-052.1`, `ArchitectureConformanceContractTest.kt`)*:
   • Read `docs/architecture.md`.
@@ -1625,7 +1625,13 @@
   • Assert that all 4 critical subsystem domains (`TrackerService`, `BANALService`, `WorkoutSamplesDatabaseManager`, and Cockpit UI/Map) are documented.
   2. *Quantitative Threshold Verification Test (`TST-PRO-052.2`, `ArchitectureConformanceContractTest.kt`)*:
   • Assert that Section 4.9 specifies numeric bounds for CPU, heap memory, latency, battery drain, and disk growth.
-  3. *Clean-Room Targeted Test Suite Execution (`TST-PRO-052.3`)*:
+  3. *WakeLock Attribution & Threading Conformance Test (`TST-PRO-052.3`, `ArchitectureConformanceContractTest.kt`)*:
+  • Assert that `PARTIAL_WAKE_LOCK` (`aTrainingTracker:TrackingLock`) is attributed to `TrackerService` under Tracking Core domain.
+  • Assert that `BANALService` has zero WakeLock attribution.
+  • Assert that 1-Hz database write threading references `TrackerService`'s `mScheduler` / `mDbExecutor`.
+  4. *Non-Functional Requirement Link Conformance Test (`TST-PRO-052.4`, `ArchitectureConformanceContractTest.kt`)*:
+  • Assert that every budget row in Section 4.9 links to its concrete `REQ-NFR-003` through `REQ-NFR-014` identifier.
+  5. *Clean-Room Targeted Test Suite Execution (`TST-PRO-052.5`)*:
   • Execute targeted unit test suite `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.build.ArchitectureConformanceContractTest"` asserting 100% pass rate.
 
 

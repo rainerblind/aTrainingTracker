@@ -233,5 +233,22 @@ class ArchitectureConformanceContractTest {
         assertTrue("Must specify database write latency (< 30 ms) (REQ-PRO-052.1)", content.contains("< 30 ms"))
         assertTrue("Must specify database storage growth rate (~360 KB/h) (REQ-PRO-052.1)", content.contains("360 KB/h"))
         assertTrue("Must specify UI frame render budget (< 16.6 ms) (REQ-PRO-052.1)", content.contains("16.6 ms"))
+
+        // TST-PRO-052.3: WakeLock attribution & threading accuracy (ATT-6735, REQ-PRO-052.2)
+        assertTrue(
+            "Section 4.9 must attribute PARTIAL_WAKE_LOCK to TrackerService under Tracking Core (ATT-6735)",
+            content.contains("`PARTIAL_WAKE_LOCK` (`aTrainingTracker:TrackingLock`)") &&
+                content.contains("TrackerService.java:842-857")
+        )
+        assertTrue(
+            "Section 4.9 must accurately attribute 1-Hz database writes to mScheduler / mDbExecutor (ATT-6735)",
+            content.contains("mScheduler") && content.contains("mDbExecutor")
+        )
+
+        // TST-PRO-052.4: Explicit REQ-NFR-* Traceability Links (ATT-6735, REQ-NFR-003..014)
+        for (i in 3..14) {
+            val nfrId = String.format("REQ-NFR-%03d", i)
+            assertTrue("Section 4.9 must explicitly link to $nfrId (ATT-6735)", content.contains(nfrId))
+        }
     }
 }
