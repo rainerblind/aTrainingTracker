@@ -75,6 +75,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -85,6 +86,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.atrainingtracker.R
+import com.atrainingtracker.banalservice.devices.hrv.HrvSignalQualityStatus
 import com.atrainingtracker.trainingtracker.database.hrv.HrvPosture
 import com.atrainingtracker.trainingtracker.database.hrv.HrvReadinessEntry
 import com.atrainingtracker.trainingtracker.database.hrv.HrvReadinessResult
@@ -200,6 +202,14 @@ fun MorningHrvCheckScreen(
                 ArtifactWarningCard(artifactRatePct = uiState.artifactRatePct ?: 0.0)
             }
 
+            // Smoothed / Quantized Signal Warning (REQ-TRK-068.3)
+            if (uiState.phase == MorningHrvPhase.COMPLETED &&
+                (uiState.signalQualityStatus == HrvSignalQualityStatus.SMOOTHED_STREAM ||
+                 uiState.signalQualityStatus == HrvSignalQualityStatus.QUANTIZED_SYNTHETIC)
+            ) {
+                SmoothedSignalWarningCard()
+            }
+
             // 5. Post-Hoc Measurement Results Card
             if (uiState.phase == MorningHrvPhase.COMPLETED && uiState.computedEntry != null) {
                 ReadinessResultCard(
@@ -233,7 +243,10 @@ fun MorningHrvCheckScreen(
     }
 
     if (showInfoSheet) {
-        HrvInfoBottomSheet(onDismissRequest = { showInfoSheet = false })
+        HrvInfoBottomSheet(
+            onDismissRequest = { showInfoSheet = false },
+            signalQualityStatus = uiState.signalQualityStatus
+        )
     }
 }
 
@@ -507,6 +520,51 @@ private fun ArtifactWarningCard(
                 )
                 Text(
                     text = stringResource(R.string.morning_hrv_artifact_warning_desc, artifactRatePct),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = TTColor.ArtifactWarningDesc
+                )
+            }
+        }
+    }
+}
+
+/**
+ * Amber warning banner displayed when completed measurement exhibits firmware smoothing or synthetic quantization (`REQ-TRK-068.3`).
+ */
+@Composable
+private fun SmoothedSignalWarningCard(
+    modifier: Modifier = Modifier
+) {
+    Card(
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = TTColor.ArtifactWarningContainer
+        ),
+        modifier = modifier
+            .fillMaxWidth()
+            .border(1.dp, TTColor.ArtifactWarningBorder, RoundedCornerShape(12.dp))
+            .testTag("morning_hrv_smoothed_warning_card")
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.Top
+        ) {
+            Icon(
+                imageVector = Icons.Default.WarningAmber,
+                contentDescription = null,
+                tint = TTColor.ArtifactWarningTitle,
+                modifier = Modifier.size(24.dp)
+            )
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(
+                    text = stringResource(R.string.morning_hrv_smoothed_warning_title),
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = TTColor.ArtifactWarningTitle
+                )
+                Text(
+                    text = stringResource(R.string.morning_hrv_smoothed_warning_desc),
                     style = MaterialTheme.typography.bodySmall,
                     color = TTColor.ArtifactWarningDesc
                 )

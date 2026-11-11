@@ -2051,6 +2051,28 @@
   7. *Clean-Room Targeted Test Suite Execution (`TST-TRK-067.7`)*:
   • `./gradlew testDebugUnitTest --tests "com.atrainingtracker.banalservice.devices.hrv.*" --tests "com.atrainingtracker.banalservice.devices.*" --tests "com.atrainingtracker.trainingtracker.ui.morninghrv.*"` asserting 100% pass rate.
 
+### TST-TRK-068: **Smoothed RR Stream Warnings & Sensor Compatibility Guidance Test Suite** [Verified]
+- **Requirement(s)**: `REQ-TRK-068` (`REQ-TRK-068.1`..`REQ-TRK-068.6`)
+- **Component**: `HrvInfoBottomSheet.kt`, `MorningHrvCheckScreen.kt`, `HrvAlpha1ScatterCard.kt`, `HrvZoneIndicator.kt`, `TrackingViewModel.kt`, `strings_hrv.xml`
+- **Jira**: `ATT-6745`
+- **Test Description**:
+  1. *HrvInfoBottomSheet Sensor Recommendation & Top Warning Banner Tests (`TST-TRK-068.1`, `HrvInfoBottomSheetTest.kt`)*:
+  • Verify updated sensor recommendation text displays Polar H10/H9, Garmin HRM-Dual/Pro as recommended and optical/Magene/CooSpo as unsuitable.
+  • Verify top warning banner renders conditionally when `signalQualityStatus` is `SMOOTHED_STREAM` or `QUANTIZED_SYNTHETIC`, and is hidden when `VALID`.
+  2. *Cockpit DFA a1 Zone 2 Suppression Tests (`TST-TRK-068.2`, `HrvZoneIndicatorTest.kt`, `TrackingViewModelHrvTest.kt`)*:
+  • Verify `HrvZoneIndicator.calculateZoneColor` and `TrackingViewModel` suppress green Zone 2 color when `isSmoothedStream` is true.
+  • Verify valid unsmoothed streams maintain normal `TTColor.Zone2` rendering.
+  3. *MorningHrvCheckScreen Smoothed Signal Warning Card Tests (`TST-TRK-068.3`, `MorningHrvCheckScreenTest.kt`)*:
+  • Verify `SmoothedSignalWarningCard` renders when `uiState.signalQualityStatus` is `SMOOTHED_STREAM` or `QUANTIZED_SYNTHETIC`.
+  • Verify independent co-existence with `highArtifactWarning`.
+  4. *HrvAlpha1ScatterCard Warning Banner Tests (`TST-TRK-068.4`, `HrvAlpha1ScatterCardTest.kt`)*:
+  • Verify inline warning banner renders when `isSmoothedStream == true` and is hidden when false.
+  5. *9-Language Translation Parity Test (`TST-TRK-068.5`, `TranslationParityTest.kt`)*:
+  • Verify 100% key and format parity across `strings_hrv.xml` in all 9 supported locales (`values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`).
+  6. *Clean-Room Targeted Test Suite Execution (`TST-TRK-068.6`)*:
+  • `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.hrv.*" --tests "com.atrainingtracker.trainingtracker.ui.cockpit.*" --tests "com.atrainingtracker.trainingtracker.localization.TranslationParityTest"` asserting 100% pass rate.
+
+
 
 
 

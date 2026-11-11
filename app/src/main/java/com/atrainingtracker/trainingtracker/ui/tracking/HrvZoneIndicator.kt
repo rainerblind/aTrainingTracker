@@ -33,14 +33,18 @@ object HrvZoneIndicator {
      * - Aerobic Base (alpha1 > t1): [TTColor.Zone2] (Green)
      * - Threshold Transition (t2 <= alpha1 <= t1): [TTColor.Zone3] (Orange / Tempo)
      * - High Intensity / Anaerobic (alpha1 < t2): [TTColor.Zone4] (Red)
-     * - Null / Negative / NaN / Gated: [defaultColor] ([Color.Transparent])
+     * - Null / Negative / NaN / Gated / Smoothed: [defaultColor] ([Color.Transparent])
      */
     fun calculateZoneColor(
         alpha1: Double?,
         t1: Float = TuningPreferencesDefaults.DEFAULT_DFA_A1_THRESHOLD_T1,
         t2: Float = TuningPreferencesDefaults.DEFAULT_DFA_A1_THRESHOLD_T2,
-        defaultColor: Color = Color.Transparent
+        defaultColor: Color = Color.Transparent,
+        isSmoothedStream: Boolean = false
     ): Color {
+        if (isSmoothedStream) {
+            return defaultColor
+        }
         if (alpha1 == null || alpha1.isNaN() || alpha1.isInfinite() || alpha1 < 0.0) {
             return defaultColor
         }

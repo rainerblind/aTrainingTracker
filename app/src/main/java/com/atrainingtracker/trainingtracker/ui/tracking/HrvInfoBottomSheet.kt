@@ -42,9 +42,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
+import com.atrainingtracker.banalservice.devices.hrv.HrvSignalQualityStatus
 import com.atrainingtracker.trainingtracker.ui.components.core.AppModalBottomSheet
 
 /**
@@ -55,6 +57,7 @@ import com.atrainingtracker.trainingtracker.ui.components.core.AppModalBottomShe
 @Composable
 fun HrvInfoBottomSheet(
     onDismissRequest: () -> Unit,
+    signalQualityStatus: HrvSignalQualityStatus? = null,
     modifier: Modifier = Modifier
 ) {
     AppModalBottomSheet(
@@ -69,6 +72,18 @@ fun HrvInfoBottomSheet(
                 .padding(horizontal = 16.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
+            if (signalQualityStatus == HrvSignalQualityStatus.SMOOTHED_STREAM ||
+                signalQualityStatus == HrvSignalQualityStatus.QUANTIZED_SYNTHETIC
+            ) {
+                HrvInfoSectionCard(
+                    icon = Icons.Default.WarningAmber,
+                    title = stringResource(R.string.hrv_info_smoothed_warning_title),
+                    description = stringResource(R.string.hrv_info_smoothed_warning_desc),
+                    isWarning = true,
+                    modifier = Modifier.testTag("hrv_info_smoothed_warning_card")
+                )
+            }
+
             HrvInfoSectionCard(
                 icon = Icons.Default.Info,
                 title = stringResource(R.string.hrv_info_trailing_lag_title),

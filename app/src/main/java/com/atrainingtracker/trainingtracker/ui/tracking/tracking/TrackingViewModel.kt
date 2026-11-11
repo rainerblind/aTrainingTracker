@@ -764,11 +764,16 @@ class TrackingViewModel @JvmOverloads constructor(
             val currentValue = sensorData.value
             val alpha1 = if (currentValue is Number) currentValue.toDouble() else null
             val config = _tuningConfig.value
+            val isSmoothed = com.atrainingtracker.banalservice.BANALService.getDeviceManager()?.hrvMetricsDevice?.signalQualityResult?.let {
+                it.status == com.atrainingtracker.banalservice.devices.hrv.HrvSignalQualityStatus.SMOOTHED_STREAM ||
+                it.status == com.atrainingtracker.banalservice.devices.hrv.HrvSignalQualityStatus.QUANTIZED_SYNTHETIC
+            } ?: false
             return com.atrainingtracker.trainingtracker.ui.tracking.HrvZoneIndicator.calculateZoneColor(
                 alpha1 = alpha1,
                 t1 = config.dfaA1ThresholdT1,
                 t2 = config.dfaA1ThresholdT2,
-                defaultColor = defaultZoneColor
+                defaultColor = defaultZoneColor,
+                isSmoothedStream = isSmoothed
             )
         }
 

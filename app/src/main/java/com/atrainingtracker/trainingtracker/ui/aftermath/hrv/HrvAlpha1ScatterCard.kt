@@ -25,10 +25,12 @@ import com.atrainingtracker.trainingtracker.ui.map.PathPoint
 @Composable
 fun HrvAlpha1ScatterCard(
     points: List<PathPoint>,
+    isSmoothedStream: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     com.atrainingtracker.trainingtracker.ui.aftermath.workoutdetail.HrvAlpha1ScatterCard(
         points = points,
+        isSmoothedStream = isSmoothedStream,
         modifier = modifier
     )
 }

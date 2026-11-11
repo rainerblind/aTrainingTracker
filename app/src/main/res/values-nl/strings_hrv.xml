@@ -29,7 +29,9 @@
     <string name="hrv_info_trailing_lag_title">Glijdend venster &amp; tempovertraging</string>
     <string name="hrv_info_trailing_lag_desc">Realtime DFA a1 wordt berekend over een glijdend venster van 2 minuten (elke 5 seconden bijgewerkt) en rMSSD over 60 seconden. Tempowijzigingen zijn pas na 1–2 minuten zichtbaar in de autonome telemetrie.</string>
     <string name="hrv_info_sensor_recommendation_title">Sensoraanbevelingen</string>
-    <string name="hrv_info_sensor_recommendation_desc">Nauwkeurige beat-to-beat RR-intervallen vereisen een bevochtigde ECG-borstband (zoals Polar H10 of Garmin HRM-Pro). Optische polssensoren vlakken intervallen af en zijn ongeschikt voor DFA a1.</string>
+    <string name="hrv_info_sensor_recommendation_desc">Nauwkeurige beat-to-beat RR-intervallen vereisen een niet-afgevlakte ECG-borstband (zoals Polar H10, Polar H9, Garmin HRM-Dual, HRM-Pro of HRM-Pro Plus). Optische polssensoren en budgetborstbanden met firmware-afvlakking (bijv. Magene, CooSpo) vervormen intervallen en zijn ongeschikt voor DFA a1.</string>
+    <string name="hrv_info_smoothed_warning_title">Afgevlakte RR-stroom gedetecteerd</string>
+    <string name="hrv_info_smoothed_warning_desc">Je actieve sensor past interne firmware-afvlakking of synthetische kwantisatie toe op RR-intervallen. Realtime DFA a1 en aerobe drempelindicaties zijn onbetrouwbaar.</string>
     <string name="hrv_info_zones_title">Aerobe drempelzones</string>
     <string name="hrv_info_zones_desc">DFA a1 &gt; 0,75 duidt op een aëroob uithoudingsvermogen (Zone 2). Waarden tussen 0,75 en 0,50 weerspiegelen de drempelovergang (Zone 3). Waarden onder 0,50 duiden op hoge anaërobe intensiteit (Zone 4).</string>
     <string name="hrv_info_disclaimer_title">Medische disclaimer</string>
@@ -57,6 +59,8 @@
     <string name="morning_hrv_instructions_desc">Meet direct na het ontwaken en legen van de blaas. Blijf stil liggen en adem rustig zonder te spreken. Behoud dezelfde houding voor betrouwbare SWC-vergelijkingen.</string>
     <string name="morning_hrv_artifact_warning_title">Hoog artefactpercentage</string>
     <string name="morning_hrv_artifact_warning_desc">Artefactpercentage overschrijdt 5%% (%1$.1f%%). Bevochtig de elektroden van de borstband en controleer de pasvorm.</string>
+    <string name="morning_hrv_smoothed_warning_title">Afgevlakte RR-stroom gedetecteerd</string>
+    <string name="morning_hrv_smoothed_warning_desc">Er is firmware-afvlakking gedetecteerd op deze sensor. Beat-to-beat variantie wordt kunstmatig onderdrukt (rMSSD is kunstmatig laag). We raden aan deze meting niet op te slaan om je herstelbasislijn niet te verstoren.</string>
     <string name="morning_hrv_summary_rmssd">rMSSD: %1$.1f ms</string>
     <string name="morning_hrv_summary_ln_rmssd">ln(rMSSD): %1$.2f</string>
     <string name="morning_hrv_summary_resting_hr">Rusthartslag: %1$d bpm</string>
@@ -79,6 +83,8 @@
     <string name="hrv_scatter_anaerobic_threshold">Anaërobe drempel (a1 = 0,50)</string>
     <string name="hrv_scatter_toggle_hr">Hartslag</string>
     <string name="hrv_scatter_toggle_power">Vermogen</string>
+    <string name="hrv_scatter_smoothed_warning_title">Afgevlakte sensorstroom</string>
+    <string name="hrv_scatter_smoothed_warning_desc">Opgenomen RR-intervallen vertonen firmware-afvlakking of synthetische kwantisatie. Aerobe drempelschattingen (a1 = 0,75 / 0,50) kunnen vervormd zijn.</string>
     <string name="hrv_scatter_artifact_suppressed">Intervallen met hoge artefacten (&gt;5%%) onderdrukt</string>
     <string name="hrv_scatter_no_data">Geen HRV-gegevens beschikbaar voor deze training</string>
     <string name="hrv_chart_artifact_gap_label">Artefactkloof</string>

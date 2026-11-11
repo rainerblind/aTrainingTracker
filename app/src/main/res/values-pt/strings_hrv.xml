@@ -29,7 +29,9 @@
     <string name="hrv_info_trailing_lag_title">Janela deslizante e atraso de ritmo</string>
     <string name="hrv_info_trailing_lag_desc">O DFA a1 em tempo real é calculado sobre uma janela deslizante de 2 minutos (atualizada a cada 5 segundos) e o rMSSD sobre 60 segundos. Mudanças de ritmo levam de 1 a 2 minutos para se refletir na telemetria autonômica.</string>
     <string name="hrv_info_sensor_recommendation_title">Recomendações de sensores</string>
-    <string name="hrv_info_sensor_recommendation_desc">Intervalos RR precisos batimento a batimento exigem uma cinta peitoral de ECG humedecida (como Polar H10 ou Garmin HRM-Pro). Sensores ópticos de pulso suavizam intervalos e são inadequados para DFA a1.</string>
+    <string name="hrv_info_sensor_recommendation_desc">Intervalos RR precisos batimento a batimento exigem uma cinta peitoral de ECG sem suavização (como Polar H10, Polar H9, Garmin HRM-Dual, HRM-Pro ou HRM-Pro Plus). Sensores ópticos de pulso e cintas económicas com suavização por firmware (ex. Magene, CooSpo) distorcem intervalos e são inadequadas para DFA a1.</string>
+    <string name="hrv_info_smoothed_warning_title">Fluxo RR suavizado detetado</string>
+    <string name="hrv_info_smoothed_warning_desc">O sensor ativo aplica suavização interna por firmware ou quantização sintética aos intervalos RR. O DFA a1 e as orientações de limiar aeróbio são imprecisos e não confiáveis.</string>
     <string name="hrv_info_zones_title">Zonas de limiar aeróbio</string>
     <string name="hrv_info_zones_desc">DFA a1 &gt; 0,75 indica ritmo de resistência aeróbia (Zona 2). Valores entre 0,75 e 0,50 refletem a transição de limiar (Zona 3). Valores abaixo de 0,50 indicam alta intensidade anaeróbia (Zona 4).</string>
     <string name="hrv_info_disclaimer_title">Aviso médico</string>
@@ -57,6 +59,8 @@
     <string name="morning_hrv_instructions_desc">Meça ao acordar após esvaziar a bexiga. Permaneça imóvel e respire normalmente sem falar. Mantenha a mesma postura para comparações basais confiáveis.</string>
     <string name="morning_hrv_artifact_warning_title">Alta taxa de artefatos</string>
     <string name="morning_hrv_artifact_warning_desc">A taxa de artefatos excede 5%% (%1$.1f%%). Umedeça os eletrodos da cinta peitoral e verifique o ajuste.</string>
+    <string name="morning_hrv_smoothed_warning_title">Fluxo RR suavizado detetado</string>
+    <string name="morning_hrv_smoothed_warning_desc">Foi detetada suavização por firmware neste sensor. A variância batimento a batimento é artificialmente suprimida (rMSSD artificialmente baixo). Recomendamos não guardar esta leitura para não corromper a sua linha de base de recuperação.</string>
     <string name="morning_hrv_summary_rmssd">rMSSD: %1$.1f ms</string>
     <string name="morning_hrv_summary_ln_rmssd">ln(rMSSD): %1$.2f</string>
     <string name="morning_hrv_summary_resting_hr">FC em repouso: %1$d bpm</string>
@@ -79,6 +83,8 @@
     <string name="hrv_scatter_anaerobic_threshold">Limiar anaeróbio (a1 = 0,50)</string>
     <string name="hrv_scatter_toggle_hr">Frequência cardíaca</string>
     <string name="hrv_scatter_toggle_power">Potência</string>
+    <string name="hrv_scatter_smoothed_warning_title">Fluxo de sensor suavizado</string>
+    <string name="hrv_scatter_smoothed_warning_desc">Os intervalos RR gravados exibem suavização por firmware ou quantização sintética. As estimativas de limiar aeróbio (a1 = 0,75 / 0,50) podem estar distorcidas.</string>
     <string name="hrv_scatter_artifact_suppressed">Intervalos com altos artefatos (&gt;5%%) suprimidos</string>
     <string name="hrv_scatter_no_data">Nenhum dado de VFC disponível para este treino</string>
     <string name="hrv_chart_artifact_gap_label">Intervalo de artefatos</string>

@@ -18,6 +18,7 @@
 
 package com.atrainingtracker.trainingtracker.ui.aftermath.workoutdetail
 
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -28,11 +29,14 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.WarningAmber
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -65,6 +69,7 @@ import java.util.Locale
 @Composable
 fun HrvAlpha1ScatterCard(
     points: List<PathPoint>,
+    isSmoothedStream: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     val hasHr = remember(points) {
@@ -122,6 +127,44 @@ fun HrvAlpha1ScatterCard(
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                }
+            }
+
+            // Smoothed Sensor Stream Warning Banner (REQ-TRK-068.4)
+            if (isSmoothedStream) {
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = TTColor.ArtifactWarningContainer,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .border(1.dp, TTColor.ArtifactWarningBorder, RoundedCornerShape(8.dp))
+                        .testTag("hrv_scatter_smoothed_warning_banner")
+                ) {
+                    Row(
+                        modifier = Modifier.padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.WarningAmber,
+                            contentDescription = null,
+                            tint = TTColor.ArtifactWarningTitle,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                            Text(
+                                text = stringResource(R.string.hrv_scatter_smoothed_warning_title),
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = TTColor.ArtifactWarningTitle
+                            )
+                            Text(
+                                text = stringResource(R.string.hrv_scatter_smoothed_warning_desc),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = TTColor.ArtifactWarningDesc
+                            )
+                        }
+                    }
                 }
             }
 

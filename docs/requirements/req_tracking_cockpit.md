@@ -3648,6 +3648,47 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 **Invariants**: Zero false-positive smoothing flags during authentic intense exercise; Rule 51 (state seeding parity) & Rule 52 (presence gating before RR arrival) preserved in `HRVMetricsDevice`; zero SQLite schema modifications; 100% unit test pass rate.
 
+### REQ-TRK-068: Smoothed RR Stream Warnings & Sensor Compatibility Guidance across Presentation Surfaces [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-TRK-068` | **Tickets**: `ATT-6745`
+- **Implementation**: `app/src/main/java/com/atrainingtracker/trainingtracker/ui/hrv/HrvInfoBottomSheet.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/ui/hrv/MorningHrvCheckScreen.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/ui/hrv/HrvAlpha1ScatterCard.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/ui/cockpit/HrvZoneIndicator.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/viewmodel/TrackingViewModel.kt`, `app/src/main/res/values*/strings_hrv.xml`
+- **Rationale**: When athletes pair budget ECG chest straps applying firmware moving-average smoothing (e.g. Magene H64/H303, CooSpo) or synthetic stepped RR streams, the outlier filter reports 0.0% artifacts while DFA $\alpha_1$ is falsely inflated into an easy aerobic Zone 2 (> 1.40) and $rMSSD$ collapses. Without explicit UI warnings, athletes pacing live efforts receive deceptive guidance, morning readiness baselines ($SWC$) are polluted with artificially low $rMSSD$, and athletes are unaware their sensor hardware is unsuitable for aerobic threshold estimation. The presentation layer must surface prominent cautionary warnings across all 4 touchpoints and provide clear sensor hardware recommendations with 9-language parity.
+- **Description**:
+  1. *HrvInfoBottomSheet Sensor Recommendation Modernization (`REQ-TRK-068.1`)*:
+     - `HrvInfoBottomSheet.kt` and `strings_hrv.xml` (`hrv_info_sensor_recommendation_desc`) SHALL explicitly distinguish recommended unsmoothed ECG straps (Polar H10, Polar H9, Garmin HRM-Dual, HRM-Pro, HRM-Pro Plus) from unsuitable sensors (optical wrist sensors, Magene, CooSpo firmware-smoothed straps).
+  2. *Live Cockpit Smoothed Stream Warning & Zone Suppression (`REQ-TRK-068.2`)*:
+     - `HrvInfoBottomSheet.kt` SHALL render a top warning banner when the active device `signalQualityStatus` is `SMOOTHED_STREAM` or `QUANTIZED_SYNTHETIC`.
+     - `HrvZoneIndicator.kt` and `TrackingViewModel.kt` SHALL suppress/caution the green aerobic Zone 2 indicator when `isSmoothedStream` is true, replacing misleading green feedback with a neutral warning state.
+  3. *Morning HRV Check Smoothed Warning Card (`REQ-TRK-068.3`)*:
+     - `MorningHrvCheckScreen.kt` SHALL render a dedicated `SmoothedSignalWarningCard` when measurement completion yields `signalQualityStatus == SMOOTHED_STREAM` or `QUANTIZED_SYNTHETIC`, cautioning the athlete that firmware smoothing suppresses $rMSSD$ and advising against saving into longitudinal readiness baselines.
+  4. *Post-Workout DFA Alpha 1 Scatter Warning Banner (`REQ-TRK-068.4`)*:
+     - `HrvAlpha1ScatterCard.kt` SHALL render an inline warning banner when workout RR intervals were detected as firmware-smoothed or synthetic (`isSmoothedStream == true`), indicating that $\alpha_1 = 0.75$ ($HRVT_1$) and $\alpha_1 = 0.50$ ($HRVT_2$) threshold estimates are uncalibrated.
+  5. *9-Language Localization Parity (`REQ-TRK-068.5`)*:
+     - All user-facing strings across warnings and sensor recommendations SHALL maintain 100% parity across all 9 canonical locales (`values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`).
+  6. *Presentation Invariants & Theme Parity (`REQ-TRK-068.6`)*:
+     - Warning banners SHALL use centralized `TTColor.ArtifactWarning*` / `TTColor.Warning` theme tokens (Rule 71).
+     - Standard zone pacing on valid unsmoothed streams and independent $> 5\%$ artifact warning cards SHALL continue to function without regression.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* `HrvInfoBottomSheet`,
+• *When* the sensor recommendation section is rendered,
+• *Then* it explicitly lists Polar H10/H9 and Garmin HRM-Dual/Pro as recommended, and optical sensors and Magene/CooSpo smoothed straps as unsuitable.
+• *Given* `HRVMetricsDevice.signalQualityResult.status == SMOOTHED_STREAM`,
+• *When* opening `HrvInfoBottomSheet` or viewing live DFA $\alpha_1$ cockpit tile,
+• *Then* `HrvInfoBottomSheet` displays a top warning banner and the cockpit suppresses the green Zone 2 indicator.
+• *Given* `MorningHrvCheckViewModel` completes with `signalQualityStatus == SMOOTHED_STREAM` or `QUANTIZED_SYNTHETIC`,
+• *When* rendering `MorningHrvCheckScreen`,
+• *Then* a dedicated `SmoothedSignalWarningCard` is displayed above the readiness actions.
+• *Given* a workout session with smoothed RR intervals,
+• *When* `HrvAlpha1ScatterCard` is displayed,
+• *Then* an inline warning banner informs the user that threshold estimates are uncalibrated due to sensor smoothing.
+• *Given* all 9 supported locales,
+• *When* checking `strings_hrv.xml`,
+• *Then* all new warning and recommendation strings have 100% key and format-specifier parity.
+
+**Invariants**: Independent $> 5\%$ artifact warnings preserved; Rule 71 theme tokens enforced; Rule 72 modal sheet scrolling safety maintained; zero SQLite schema modifications; 100% unit test pass rate.
+
+
 
 
 

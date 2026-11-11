@@ -29,7 +29,9 @@
     <string name="hrv_info_trailing_lag_title">Rolling Window &amp; Pacing Lag</string>
     <string name="hrv_info_trailing_lag_desc">Real-time DFA a1 is calculated over a rolling 2-minute window (updated every 5 seconds) and rMSSD over 60 seconds. Rapid pacing changes take 1–2 minutes to manifest in autonomic telemetry.</string>
     <string name="hrv_info_sensor_recommendation_title">Sensor Recommendations</string>
-    <string name="hrv_info_sensor_recommendation_desc">Accurate beat-to-beat RR intervals require a moistened ECG chest strap (such as Polar H10 or Garmin HRM-Pro). Optical wrist sensors smooth interval timings and are unsuitable for DFA a1.</string>
+    <string name="hrv_info_sensor_recommendation_desc">Accurate beat-to-beat RR intervals require an unsmoothed ECG chest strap (such as Polar H10, Polar H9, Garmin HRM-Dual, HRM-Pro, or HRM-Pro Plus). Optical wrist sensors and budget chest straps with firmware moving-average smoothing (e.g. Magene, CooSpo) distort RR intervals and are unsuitable for DFA a1.</string>
+    <string name="hrv_info_smoothed_warning_title">Smoothed RR Stream Detected</string>
+    <string name="hrv_info_smoothed_warning_desc">Your active sensor applies internal firmware smoothing or synthetic stepping to RR intervals. Real-time DFA a1 and aerobic threshold guidance are distorted and unreliable.</string>
     <string name="hrv_info_zones_title">Aerobic Threshold Zones</string>
     <string name="hrv_info_zones_desc">DFA a1 &gt; 0.75 indicates aerobic endurance pacing (Zone 2). Values between 0.75 and 0.50 reflect the aerobic-anaerobic threshold transition (Zone 3). Values below 0.50 indicate high anaerobic intensity (Zone 4).</string>
     <string name="hrv_info_disclaimer_title">Medical Disclaimer</string>
@@ -57,6 +59,8 @@
     <string name="morning_hrv_instructions_desc">Measure upon waking after bladder voiding. Remain still and breathe normally without speaking. Maintain posture consistency for reliable SWC baseline comparisons.</string>
     <string name="morning_hrv_artifact_warning_title">High Artifact Rate</string>
     <string name="morning_hrv_artifact_warning_desc">Artifact rate exceeds 5%% (%1$.1f%%). Ensure your ECG chest strap electrodes are well moistened and firmly positioned.</string>
+    <string name="morning_hrv_smoothed_warning_title">Smoothed RR Stream Detected</string>
+    <string name="morning_hrv_smoothed_warning_desc">Firmware smoothing was detected on this sensor. Beat-to-beat variance is artificially suppressed (rMSSD is artificially tiny). We recommend not saving this reading to avoid corrupting your readiness baseline.</string>
     <string name="morning_hrv_summary_rmssd">rMSSD: %1$.1f ms</string>
     <string name="morning_hrv_summary_ln_rmssd">ln(rMSSD): %1$.2f</string>
     <string name="morning_hrv_summary_resting_hr">Resting HR: %1$d bpm</string>
@@ -79,6 +83,8 @@
     <string name="hrv_scatter_anaerobic_threshold">Anaerobic Threshold (a1 = 0.50)</string>
     <string name="hrv_scatter_toggle_hr">Heart Rate</string>
     <string name="hrv_scatter_toggle_power">Power</string>
+    <string name="hrv_scatter_smoothed_warning_title">Smoothed Sensor Stream</string>
+    <string name="hrv_scatter_smoothed_warning_desc">Recorded RR intervals exhibit firmware smoothing or synthetic quantization. Aerobic threshold estimates (a1 = 0.75 / 0.50) may be distorted.</string>
     <string name="hrv_scatter_artifact_suppressed">High-artifact intervals (&gt;5%%) suppressed</string>
     <string name="hrv_scatter_no_data">No HRV data available for this workout</string>
     <string name="hrv_chart_artifact_gap_label">Artifact Gap</string>

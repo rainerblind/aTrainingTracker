@@ -29,7 +29,9 @@
     <string name="hrv_info_trailing_lag_title">ローリングウィンドウとペーシング遅延</string>
     <string name="hrv_info_trailing_lag_desc">リアルタイムDFA a1は2分間のローリングウィンドウ（5秒毎更新）、rMSSDは60秒間で計算されます。ペース変化が自律神経テレメトリに反映されるまで1〜2分かかります。</string>
     <string name="hrv_info_sensor_recommendation_title">推奨センサー</string>
-    <string name="hrv_info_sensor_recommendation_desc">正確な拍動間RR間隔の測定には、湿らせたECG心拍計チェストストラップ（Polar H10やGarmin HRM-Proなど）が必要です。光学式手首心拍計は間隔を平滑化するためDFA a1には適していません。</string>
+    <string name="hrv_info_sensor_recommendation_desc">正確な拍動間RR間隔の測定には、平滑化されていないECG心拍計チェストストラップ（Polar H10、Polar H9、Garmin HRM-Dual、HRM-Pro、HRM-Pro Plusなど）が必要です。光学式手首心拍計やファームウェアで平滑化を行う安価なチェストストラップ（Magene、CooSpoなど）は間隔を歪めるためDFA a1には適していません。</string>
+    <string name="hrv_info_smoothed_warning_title">平滑化されたRRストリームを検出</string>
+    <string name="hrv_info_smoothed_warning_desc">接続中のセンサーがファームウェアによるRR間隔の平滑化または合成ステップを行っています。リアルタイムのDFA a1および有酸素閾値ガイダンスは不正確です。</string>
     <string name="hrv_info_zones_title">有酸素閾値ゾーン</string>
     <string name="hrv_info_zones_desc">DFA a1 &gt; 0.75は有酸素持久力ペース（ゾーン2）を示します。0.75〜0.50は閾値移行期（ゾーン3）を反映します。0.50未満は高強度の無酸素運動（ゾーン4）を示します。</string>
     <string name="hrv_info_disclaimer_title">医療上の免責事項</string>
@@ -57,6 +59,8 @@
     <string name="morning_hrv_instructions_desc">起床後、排尿を済ませてから測定してください。会話を控え、静かに自然な呼吸を保ちます。正確なSWC比較のため常に同じ姿勢を維持してください。</string>
     <string name="morning_hrv_artifact_warning_title">高いアーチファクト率</string>
     <string name="morning_hrv_artifact_warning_desc">アーチファクト率が5%%を超えています（%1$.1f%%）。胸部心拍ストラップの電極を十分に湿らせ、しっかりと装着してください。</string>
+    <string name="morning_hrv_smoothed_warning_title">平滑化されたRRストリームを検出</string>
+    <string name="morning_hrv_smoothed_warning_desc">このセンサーでファームウェアによる平滑化が検出されました。拍動間の変動が人工的に抑制されています（rMSSDが極端に低値になります）。レディネスのベースラインを歪めないよう、この測定値は保存しないことを推奨します。</string>
     <string name="morning_hrv_summary_rmssd">rMSSD: %1$.1f ms</string>
     <string name="morning_hrv_summary_ln_rmssd">ln(rMSSD): %1$.2f</string>
     <string name="morning_hrv_summary_resting_hr">安静時心拍数: %1$d bpm</string>
@@ -79,6 +83,8 @@
     <string name="hrv_scatter_anaerobic_threshold">無酸素閾値 (a1 = 0.50)</string>
     <string name="hrv_scatter_toggle_hr">心拍数</string>
     <string name="hrv_scatter_toggle_power">パワー</string>
+    <string name="hrv_scatter_smoothed_warning_title">平滑化されたセンサーストリーム</string>
+    <string name="hrv_scatter_smoothed_warning_desc">記録されたRR間隔にファームウェアによる平滑化または合成量子化が確認されました。有酸素閾値の推定値（a1 = 0.75 / 0.50）が歪んでいる可能性があります。</string>
     <string name="hrv_scatter_artifact_suppressed">アーティファクト率5%%超の区間を除外</string>
     <string name="hrv_scatter_no_data">このトレーニングのHRVデータはありません</string>
     <string name="hrv_chart_artifact_gap_label">アーティファクトギャップ</string>

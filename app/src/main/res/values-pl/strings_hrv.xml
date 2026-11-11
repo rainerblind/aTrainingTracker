@@ -29,7 +29,9 @@
     <string name="hrv_info_trailing_lag_title">Kroczące okno czasowe i opóźnienie tempa</string>
     <string name="hrv_info_trailing_lag_desc">DFA a1 w czasie rzeczywistym oblicza się w kroczącym oknie 2-minutowym (aktualizowanym co 5 sekund), a rMSSD w oknie 60 sekund. Zmiany tempa wymagają 1–2 minut, aby odzwierciedlić się w telemetrii autonomicznej.</string>
     <string name="hrv_info_sensor_recommendation_title">Rekomendacje dotyczące czujników</string>
-    <string name="hrv_info_sensor_recommendation_desc">Dokładne interwały RR między uderzeniami serca wymagają nawilżonego paska piersiowego EKG (np. Polar H10 lub Garmin HRM-Pro). Optyczne czujniki nadgarstkowe wygładzają interwały i nie nadają się do DFA a1.</string>
+    <string name="hrv_info_sensor_recommendation_desc">Dokładne interwały RR między uderzeniami serca wymagają niewygładzanego paska piersiowego EKG (np. Polar H10, Polar H9, Garmin HRM-Dual, HRM-Pro lub HRM-Pro Plus). Optyczne czujniki nadgarstkowe i tanie paski piersiowe z wygładzaniem w oprogramowaniu układowym (np. Magene, CooSpo) zniekształcają interwały i nie nadają się do DFA a1.</string>
+    <string name="hrv_info_smoothed_warning_title">Wykryto wygładzony strumień RR</string>
+    <string name="hrv_info_smoothed_warning_desc">Twój aktywny czujnik stosuje wewnętrzne wygładzanie oprogramowania układowego lub syntetyczną kwantyzację interwałów RR. DFA a1 i wskazania progu tlenowego są niewiarygodne.</string>
     <string name="hrv_info_zones_title">Strefy progu tlenowego</string>
     <string name="hrv_info_zones_desc">DFA a1 &gt; 0,75 wskazuje na tempo tlenowe wytrzymałościowe (Strefa 2). Wartości od 0,75 do 0,50 odzwierciedlają przejście progowe (Strefa 3). Wartości poniżej 0,50 wskazują na wysoką intensywność beztlenową (Strefa 4).</string>
     <string name="hrv_info_disclaimer_title">Zastrzeżenie medyczne</string>
@@ -57,6 +59,8 @@
     <string name="morning_hrv_instructions_desc">Wykonaj pomiar po przebudzeniu i opróżnieniu pęcherza. Pozostań w bezruchu i oddychaj normalnie bez mówienia. Zachowaj stałą postawę dla wiarygodnych porównań SWC.</string>
     <string name="morning_hrv_artifact_warning_title">Wysoki odsetek artefaktów</string>
     <string name="morning_hrv_artifact_warning_desc">Odsetek artefaktów przekracza 5%% (%1$.1f%%). Zwilż elektrody pasa piersiowego i sprawdź jego dopasowanie.</string>
+    <string name="morning_hrv_smoothed_warning_title">Wykryto wygładzony strumień RR</string>
+    <string name="morning_hrv_smoothed_warning_desc">W tym czujniku wykryto wygładzanie oprogramowania układowego. Zmienność między uderzeniami jest sztucznie stłumiona (rMSSD jest sztucznie zaniżone). Zalecamy niezapisywanie tego pomiaru, aby nie zaburzyć linii bazowej gotowości.</string>
     <string name="morning_hrv_summary_rmssd">rMSSD: %1$.1f ms</string>
     <string name="morning_hrv_summary_ln_rmssd">ln(rMSSD): %1$.2f</string>
     <string name="morning_hrv_summary_resting_hr">Tętno spoczynkowe: %1$d bpm</string>
@@ -79,6 +83,8 @@
     <string name="hrv_scatter_anaerobic_threshold">Próg beztlenowy (a1 = 0,50)</string>
     <string name="hrv_scatter_toggle_hr">Tętno</string>
     <string name="hrv_scatter_toggle_power">Moc</string>
+    <string name="hrv_scatter_smoothed_warning_title">Wygładzony strumień czujnika</string>
+    <string name="hrv_scatter_smoothed_warning_desc">Zarejestrowane interwały RR wykazują wygładzanie oprogramowania układowego lub syntetyczną kwantyzację. Oszacowania progów tlenowych (a1 = 0.75 / 0.50) mogą być zniekształcone.</string>
     <string name="hrv_scatter_artifact_suppressed">Przedziały o wysokich artefaktach (&gt;5%%) pominięte</string>
     <string name="hrv_scatter_no_data">Brak danych HRV dla tego treningu</string>
     <string name="hrv_chart_artifact_gap_label">Luka artefaktów</string>
