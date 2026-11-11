@@ -24,8 +24,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.location.LocationManager;
-import android.database.Cursor;
-import android.database.sqlite.SQLiteDatabase;
 import android.util.Log;
 
 import com.atrainingtracker.R;
@@ -60,8 +58,8 @@ import com.atrainingtracker.banalservice.sensor.MyAccumulatorSensor;
 import com.atrainingtracker.banalservice.sensor.MySensor;
 import com.atrainingtracker.banalservice.sensor.MySensorManager;
 import com.atrainingtracker.banalservice.sensor.SensorType;
-import com.atrainingtracker.banalservice.database.DevicesDatabaseManager;
-import com.atrainingtracker.banalservice.database.DevicesDatabaseManager.DevicesDbHelper;
+import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceDataRepository;
+import com.atrainingtracker.banalservice.ui.devices.devicedata.PairedRemoteDeviceDto;
 import com.atrainingtracker.banalservice.helpers.HavePressureSensor;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 import com.atrainingtracker.trainingtracker.TrackingMode;
@@ -113,7 +111,8 @@ public class DeviceManager {
     protected final List<Long> mNewlyFoundDevices = new CopyOnWriteArrayList<>();
     protected volatile ANTSearchForNewDevicesEngineMultiDeviceSearch mAntAsyncSearchEngine = null;
     protected volatile BTSearchForNewDevicesEngine mBTSearchForNewDevicesEngine = null;
-    private final DevicesDatabaseManager mDevicesDatabaseManager;
+    private final DeviceDataRepository mDeviceDataRepository;
+    private final Object mDeviceDbLock = new Object();
     private final BroadcastReceiver mStopSearchingForNewDevicesReceiver = new BroadcastReceiver() {
         public void onReceive(Context context, Intent intent) {
             if (DEBUG) Log.d(TAG, "Received StopSearchingForNewDevices Broadcast");
@@ -207,27 +206,27 @@ public class DeviceManager {
             boolean isNew = false;
             boolean isWorkoutActive = false;
 
-            synchronized (mDevicesDatabaseManager) {
+            synchronized (mDeviceDbLock) {
                 isWorkoutActive = (TrainingApplication.getTrackingMode() == TrackingMode.TRACKING);
-                if (!mDevicesDatabaseManager.isANTDeviceInDB(deviceType, deviceFound.getAntDeviceNumber())) { // not yet known
+                if (!mDeviceDataRepository.isANTDeviceInDB(deviceType, deviceFound.getAntDeviceNumber())) { // not yet known
                     if (DEBUG)
                         Log.d(TAG, "device is not yet in the database, so we have to add it to the database");
 
-                    deviceId = mDevicesDatabaseManager.insertNewAntDeviceIntoDB(deviceType, deviceFound.getDeviceDisplayName(), deviceFound.getAntDeviceNumber(), true, manufacturer, batteryPercentage);
+                    deviceId = mDeviceDataRepository.insertNewAntDeviceIntoDB(deviceType, deviceFound.getDeviceDisplayName(), deviceFound.getAntDeviceNumber(), true, manufacturer, batteryPercentage);
                     isNew = true;
                 } else {
                     if (DEBUG)
                         Log.i(TAG, "Device already in database, so we do not add it to the database");
-                    deviceId = mDevicesDatabaseManager.getDeviceId(deviceType, deviceFound.getAntDeviceNumber());
+                    deviceId = mDeviceDataRepository.getDeviceId(deviceType, deviceFound.getAntDeviceNumber());
 
                     if (manufacturer != null) {
                         if (DEBUG) Log.i(TAG, "wow, we got a manufacturer: " + manufacturer);
-                        mDevicesDatabaseManager.setManufacturerName(deviceId, manufacturer);
+                        mDeviceDataRepository.setManufacturerName(deviceId, manufacturer);
                     }
 
                     if (batteryPercentage >= 0) {
                         if (DEBUG) Log.i(TAG, "wow, we got a battery percentage: " + batteryPercentage);
-                        mDevicesDatabaseManager.setBatteryPercentage(deviceId, batteryPercentage);
+                        mDeviceDataRepository.setBatteryPercentage(deviceId, batteryPercentage);
                     }
                 }
 
@@ -264,16 +263,16 @@ public class DeviceManager {
             boolean isNew = false;
             boolean isWorkoutActive = false;
 
-            synchronized (mDevicesDatabaseManager) {
+            synchronized (mDeviceDbLock) {
                 isWorkoutActive = (TrainingApplication.getTrackingMode() == TrackingMode.TRACKING);
-                if (!mDevicesDatabaseManager.isBluetoothDeviceInDB(deviceType, BluetoothMACAddress)) {
+                if (!mDeviceDataRepository.isBluetoothDeviceInDB(deviceType, BluetoothMACAddress)) {
                     if (DEBUG) Log.d(TAG, "device is not yet in the database, so we have to add it");
 
-                    deviceId = mDevicesDatabaseManager.insertNewBluetoothDeviceIntoDB(deviceType, BluetoothMACAddress, name, manufacturer, batteryPercentage, true);
+                    deviceId = mDeviceDataRepository.insertNewBluetoothDeviceIntoDB(deviceType, BluetoothMACAddress, name, manufacturer, batteryPercentage, true);
                     isNew = true;
                 } else {
                     if (DEBUG) Log.d(TAG, "Device already in database, so we do not add it");
-                    deviceId = mDevicesDatabaseManager.getDeviceId(deviceType, BluetoothMACAddress);
+                    deviceId = mDeviceDataRepository.getDeviceId(deviceType, BluetoothMACAddress);
                 }
 
                 if (deviceId > 0) {
@@ -326,17 +325,21 @@ public class DeviceManager {
      * Constructor
      **/
     public DeviceManager(BANALService banalService, MySensorManager mySensorManager) {
+        this(banalService, mySensorManager, DeviceDataRepository.Companion.getInstance(banalService));
+    }
+
+    public DeviceManager(BANALService banalService, MySensorManager mySensorManager, DeviceDataRepository deviceDataRepository) {
         mContext = banalService;
         mBanalService = banalService;
-
-        mDevicesDatabaseManager = DevicesDatabaseManager.getInstance(mContext);
+        mDeviceDataRepository = deviceDataRepository != null ? deviceDataRepository : DeviceDataRepository.Companion.getInstance(mContext);
         
         // ATT-353: Eager registration of the pressure sensor to ensure ID resolution works 
         // on the very first run (Breaks the circular dependency).
         mHavePressureSensor = HavePressureSensor.havePressureSensor(mContext);
         if (mHavePressureSensor) {
-            mDevicesDatabaseManager.ensureSmartphoneDeviceExists(
+            mDeviceDataRepository.ensureSmartphoneDeviceExists(
                     DeviceType.ALTITUDE_FROM_PRESSURE,
+                    true,
                     getStringSafely(R.string.devices_altitude_from_pressure, "Barometer")
             );
         }
@@ -349,27 +352,26 @@ public class DeviceManager {
         }
         mBatteryDevice = new BatteryDevice(mContext, mSensorManager);
         
-        long altitudePressureId = mDevicesDatabaseManager.getSmartphoneDeviceId(DeviceType.ALTITUDE_FROM_PRESSURE);
-        if (mHavePressureSensor && mDevicesDatabaseManager.isPaired(altitudePressureId)) {
+        long altitudePressureId = mDeviceDataRepository.getSmartphoneDeviceId(DeviceType.ALTITUDE_FROM_PRESSURE);
+        if (mHavePressureSensor && mDeviceDataRepository.isPaired(altitudePressureId)) {
             mAltitudeFromPressureDevice = new AltitudeFromPressureDevice(mContext, mSensorManager);
         }
 
-        mDevicesDatabaseManager.ensureSmartphoneDeviceExists(
+        mDeviceDataRepository.ensureSmartphoneDeviceExists(
                 DeviceType.ALTITUDE_FROM_POSITION,
-                getStringSafely(R.string.devices_altitude_from_position, "GPS Altitude"),
-                false
+                false,
+                getStringSafely(R.string.devices_altitude_from_position, "GPS Altitude")
         );
-        long altitudePositionId = mDevicesDatabaseManager.getSmartphoneDeviceId(DeviceType.ALTITUDE_FROM_POSITION);
-        if (mDevicesDatabaseManager.isPaired(altitudePositionId)) {
+        long altitudePositionId = mDeviceDataRepository.getSmartphoneDeviceId(DeviceType.ALTITUDE_FROM_POSITION);
+        if (mDeviceDataRepository.isPaired(altitudePositionId)) {
             mAltitudeFromPositionDevice = new AltitudeFromPositionDevice(mContext, mSensorManager);
         }
 
         // create the location devices when they are paired.
-        DevicesDatabaseManager devicesDatabaseManager = DevicesDatabaseManager.getInstance(mContext);
         LocationManager locationManager = (LocationManager) mContext.getSystemService(Context.LOCATION_SERVICE);
 
-        long gpsDeviceId = devicesDatabaseManager.getSpeedAndLocationGPSDeviceId();
-        if (devicesDatabaseManager.isPaired(gpsDeviceId)
+        long gpsDeviceId = mDeviceDataRepository.getSpeedAndLocationGPSDeviceId();
+        if (mDeviceDataRepository.isPaired(gpsDeviceId)
                 && TrainingApplication.havePermission(Manifest.permission.ACCESS_FINE_LOCATION)) {
             if (isProviderAvailableSafely(locationManager, LocationManager.GPS_PROVIDER)) {
                 if (DEBUG) Log.i(TAG, "creating GPS location device");
@@ -383,8 +385,8 @@ public class DeviceManager {
             }
         }
 
-        long fusedDeviceId = devicesDatabaseManager.getSpeedAndLocationGoogleFusedDeviceId();
-        if(devicesDatabaseManager.isPaired(fusedDeviceId)
+        long fusedDeviceId = mDeviceDataRepository.getSpeedAndLocationGoogleFusedDeviceId();
+        if(mDeviceDataRepository.isPaired(fusedDeviceId)
                 && TrainingApplication.havePermission(Manifest.permission.ACCESS_FINE_LOCATION)
                 && GooglePlayServicesUtil.isGooglePlayServicesAvailable(mContext) == ConnectionResult.SUCCESS) {
             if (DEBUG) Log.i(TAG, "creating google fused location device");
@@ -470,11 +472,10 @@ public class DeviceManager {
      * has now been granted, or re-registers update listeners if already instantiated (REQ-PRI-004, ATT-2357, REQ-TRK-017, ATT-3045).
      */
     public synchronized void checkOrInitializeLocationDevices() {
-        DevicesDatabaseManager devicesDatabaseManager = DevicesDatabaseManager.getInstance(mContext);
         LocationManager locationManager = (LocationManager) mContext.getSystemService(Context.LOCATION_SERVICE);
 
-        long gpsDeviceId = devicesDatabaseManager.getSpeedAndLocationGPSDeviceId();
-        if (devicesDatabaseManager.isPaired(gpsDeviceId)
+        long gpsDeviceId = mDeviceDataRepository.getSpeedAndLocationGPSDeviceId();
+        if (mDeviceDataRepository.isPaired(gpsDeviceId)
                 && TrainingApplication.havePermission(Manifest.permission.ACCESS_FINE_LOCATION)) {
             if (mSpeedAndLocationDevice_GPS == null) {
                 if (isProviderAvailableSafely(locationManager, LocationManager.GPS_PROVIDER)) {
@@ -492,8 +493,8 @@ public class DeviceManager {
             }
         }
 
-        long fusedDeviceId = devicesDatabaseManager.getSpeedAndLocationGoogleFusedDeviceId();
-        if (devicesDatabaseManager.isPaired(fusedDeviceId)
+        long fusedDeviceId = mDeviceDataRepository.getSpeedAndLocationGoogleFusedDeviceId();
+        if (mDeviceDataRepository.isPaired(fusedDeviceId)
                 && TrainingApplication.havePermission(Manifest.permission.ACCESS_FINE_LOCATION)
                 && GooglePlayServicesUtil.isGooglePlayServicesAvailable(mContext) == ConnectionResult.SUCCESS) {
             if (mSpeedAndLocationDevice_GoogleFused == null) {
@@ -564,10 +565,9 @@ public class DeviceManager {
 
     private void pairingChanged(long deviceId, boolean paired) {
         // first, check for the location devices.
-        DevicesDatabaseManager devicesDatabaseManager = DevicesDatabaseManager.getInstance(mContext);
         LocationManager locationManager = (LocationManager) mContext.getSystemService(Context.LOCATION_SERVICE);
 
-        long gpsDeviceId = devicesDatabaseManager.getSpeedAndLocationGPSDeviceId();
+        long gpsDeviceId = mDeviceDataRepository.getSpeedAndLocationGPSDeviceId();
         if (deviceId == gpsDeviceId) {
             if (paired && mSpeedAndLocationDevice_GPS == null // paired and not yet there -> create (if we have the permission)
                     && TrainingApplication.havePermission(Manifest.permission.ACCESS_FINE_LOCATION)) {
@@ -588,7 +588,7 @@ public class DeviceManager {
             return;
         }
 
-        long fusedDeviceId = devicesDatabaseManager.getSpeedAndLocationGoogleFusedDeviceId();
+        long fusedDeviceId = mDeviceDataRepository.getSpeedAndLocationGoogleFusedDeviceId();
         if (deviceId == fusedDeviceId) {
             if (paired && mSpeedAndLocationDevice_GoogleFused == null // if it does not exist
                     && TrainingApplication.havePermission(Manifest.permission.ACCESS_FINE_LOCATION)) { // and we have the permission to do so
@@ -607,7 +607,7 @@ public class DeviceManager {
             return;
         }
 
-        long altitudePressureId = devicesDatabaseManager.getSmartphoneDeviceId(DeviceType.ALTITUDE_FROM_PRESSURE);
+        long altitudePressureId = mDeviceDataRepository.getSmartphoneDeviceId(DeviceType.ALTITUDE_FROM_PRESSURE);
         if (deviceId == altitudePressureId) {
             if (paired && mAltitudeFromPressureDevice == null) {
                 mAltitudeFromPressureDevice = new AltitudeFromPressureDevice(mContext, mSensorManager);
@@ -618,7 +618,7 @@ public class DeviceManager {
             return;
         }
 
-        long altitudePositionId = devicesDatabaseManager.getSmartphoneDeviceId(DeviceType.ALTITUDE_FROM_POSITION);
+        long altitudePositionId = mDeviceDataRepository.getSmartphoneDeviceId(DeviceType.ALTITUDE_FROM_POSITION);
         if (deviceId == altitudePositionId) {
             if (paired && mAltitudeFromPositionDevice == null) {
                 mAltitudeFromPositionDevice = new AltitudeFromPositionDevice(mContext, mSensorManager);
@@ -1124,19 +1124,21 @@ public class DeviceManager {
 
     // TODO: code is very similar to createPairedRemoteDevices, so the code might be merged?
     protected MyRemoteDevice createRemoteDevice(long deviceId) {
-        Protocol protocol = mDevicesDatabaseManager.getProtocol(deviceId);
-        DeviceType deviceType = mDevicesDatabaseManager.getDeviceType(deviceId);
+        Protocol protocol = mDeviceDataRepository.getProtocol(deviceId);
+        DeviceType deviceType = mDeviceDataRepository.getDeviceType(deviceId);
         MyRemoteDevice myRemoteDevice = null;
 
-        switch (protocol) {
-            case ANT_PLUS:
-                int antDeviceNumber = mDevicesDatabaseManager.getAntDeviceNumber(deviceId);
-                myRemoteDevice = createNewANTDevice(deviceId, deviceType, antDeviceNumber);
-                break;
-            case BLUETOOTH_LE:
-                String address = mDevicesDatabaseManager.getBluetoothMACAddress(deviceId);
-                myRemoteDevice = createNewBluetoothLEDevice(deviceId, deviceType, address);
-                break;
+        if (protocol != null) {
+            switch (protocol) {
+                case ANT_PLUS:
+                    int antDeviceNumber = mDeviceDataRepository.getAntDeviceNumber(deviceId);
+                    myRemoteDevice = createNewANTDevice(deviceId, deviceType, antDeviceNumber);
+                    break;
+                case BLUETOOTH_LE:
+                    String address = mDeviceDataRepository.getBluetoothMACAddress(deviceId);
+                    myRemoteDevice = createNewBluetoothLEDevice(deviceId, deviceType, address);
+                    break;
+            }
         }
 
         return myRemoteDevice;
@@ -1145,53 +1147,40 @@ public class DeviceManager {
     public void createPairedRemoteDevices(Protocol protocol) {
         if (DEBUG) Log.d(TAG, "createPairedRemoteDevices()");
 
-        SQLiteDatabase db = mDevicesDatabaseManager.getDatabase();
-
-        try (Cursor cursor = db.query(DevicesDbHelper.DEVICES,
-                new String[]{DevicesDbHelper.C_ID, DevicesDbHelper.PAIRED, DevicesDbHelper.DEVICE_TYPE, DevicesDbHelper.ANT_DEVICE_NUMBER, DevicesDbHelper.BT_ADDRESS},
-                DevicesDbHelper.PROTOCOL + "=?",
-                new String[]{protocol.name()},
-                null,
-                null,
-                null)) {
-            if (cursor == null) {
-                return;
-            }
-            while (cursor.moveToNext()) {
-                if (cursor.getInt(cursor.getColumnIndexOrThrow(DevicesDbHelper.PAIRED)) > 0) {
-
-                    if (isFreeTierQuotaRestricted() && mMyRemoteDevices.size() >= com.atrainingtracker.trainingtracker.monetization.SensorQuotaReconciliationManager.MAX_FREE_PAIRED_DEVICES) {
-                        Log.i(TAG, "createPairedRemoteDevices(): Free tier sensor quota reached (" + mMyRemoteDevices.size() + "), clamping connection");
-                        break;
-                    }
-
-                    long deviceID = cursor.getLong(cursor.getColumnIndexOrThrow(DevicesDbHelper.C_ID));
-                    if (mMyRemoteDevices.containsKey(deviceID)) {
-                        if (DEBUG) Log.i(TAG, "device with ID " + deviceID + " is already created");
-                        continue;
-                    }
-                    if (DEBUG) Log.d(TAG, "create new device with ID: " + deviceID);
-
-                    DeviceType deviceType = EnumUtils.safeValueOfOrNull(DeviceType.class, cursor.getString(cursor.getColumnIndexOrThrow(DevicesDbHelper.DEVICE_TYPE)), TAG);
-                    if (deviceType == null) {
-                        Log.w(TAG, "Skipping paired device with invalid DeviceType at ID: " + deviceID);
-                        continue;
-                    }
-
-                    switch (protocol) {
-                        case ANT_PLUS:
-                            int antDeviceNumber = cursor.getInt(cursor.getColumnIndexOrThrow(DevicesDbHelper.ANT_DEVICE_NUMBER));
-                            createNewANTDevice(deviceID, deviceType, antDeviceNumber);
-                            break;
-
-                        case BLUETOOTH_LE:
-                            String address = cursor.getString(cursor.getColumnIndexOrThrow(DevicesDbHelper.BT_ADDRESS));
-                            createNewBluetoothLEDevice(deviceID, deviceType, address);
-                            break;
-                    }
-                } else {
-                    if (DEBUG) Log.d(TAG, "createPairedDevices(): ignoring unpaired device");
+        List<PairedRemoteDeviceDto> pairedDevices = mDeviceDataRepository.getPairedRemoteDevices(protocol);
+        for (PairedRemoteDeviceDto device : pairedDevices) {
+            if (device.isPaired()) {
+                if (isFreeTierQuotaRestricted() && mMyRemoteDevices.size() >= com.atrainingtracker.trainingtracker.monetization.SensorQuotaReconciliationManager.MAX_FREE_PAIRED_DEVICES) {
+                    Log.i(TAG, "createPairedRemoteDevices(): Free tier sensor quota reached (" + mMyRemoteDevices.size() + "), clamping connection");
+                    break;
                 }
+
+                long deviceID = device.getId();
+                if (mMyRemoteDevices.containsKey(deviceID)) {
+                    if (DEBUG) Log.i(TAG, "device with ID " + deviceID + " is already created");
+                    continue;
+                }
+                if (DEBUG) Log.d(TAG, "create new device with ID: " + deviceID);
+
+                DeviceType deviceType = device.getDeviceType();
+                if (deviceType == null) {
+                    Log.w(TAG, "Skipping paired device with invalid DeviceType at ID: " + deviceID);
+                    continue;
+                }
+
+                switch (protocol) {
+                    case ANT_PLUS:
+                        int antDeviceNumber = device.getAntDeviceNumber();
+                        createNewANTDevice(deviceID, deviceType, antDeviceNumber);
+                        break;
+
+                    case BLUETOOTH_LE:
+                        String address = device.getBtAddress();
+                        createNewBluetoothLEDevice(deviceID, deviceType, address);
+                        break;
+                }
+            } else {
+                if (DEBUG) Log.d(TAG, "createPairedDevices(): ignoring unpaired device");
             }
         }
 

@@ -69,7 +69,11 @@ class WorkoutRrRepository private constructor(
 
         @JvmStatic
         fun getInstance(context: Context): WorkoutRrRepository {
-            val appContext = context.applicationContext ?: context
+            val appContext = try {
+                context.applicationContext ?: context
+            } catch (_: Throwable) {
+                context
+            }
             return instance ?: synchronized(this) {
                 instance ?: WorkoutRrRepository {
                     WorkoutRrDatabaseManager.getInstance(appContext)

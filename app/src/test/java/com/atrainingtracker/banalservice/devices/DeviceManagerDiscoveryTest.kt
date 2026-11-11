@@ -30,6 +30,7 @@ import com.atrainingtracker.banalservice.BANALService
 import com.atrainingtracker.banalservice.database.DevicesDatabaseManager
 import com.atrainingtracker.banalservice.helpers.HavePressureSensor
 import com.atrainingtracker.banalservice.sensor.MySensorManager
+import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceDataRepository
 import com.atrainingtracker.trainingtracker.TrackingMode
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.dsi.ant.plugins.antplus.pcc.AntPlusBikePowerPcc
@@ -58,6 +59,7 @@ class DeviceManagerDiscoveryTest {
 
     @Before
     fun setUp() {
+        DeviceDataRepository.resetForTesting()
         DeviceManager.cMyRemoteDeviceCurrentlySearchingFor = null
         intentLongExtras.clear()
 
@@ -130,6 +132,7 @@ class DeviceManagerDiscoveryTest {
 
     @After
     fun tearDown() {
+        DeviceDataRepository.resetForTesting()
         DeviceManager.cMyRemoteDeviceCurrentlySearchingFor = null
         try {
             unmockkAll()

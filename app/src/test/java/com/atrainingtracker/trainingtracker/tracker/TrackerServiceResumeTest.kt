@@ -733,16 +733,22 @@ class TrackerServiceResumeTest {
         val encodedAlt = NumericalEncodingUtils.encodeDoubles(listOf(500.0, 510.0))
         val encodedDist = NumericalEncodingUtils.encodeDoubles(listOf(0.0, 1000.0))
 
+        val repositoryMock = mockk<WorkoutRepository>(relaxed = true)
+        val repoField = TrackerService::class.java.getDeclaredField("mWorkoutRepository").apply { isAccessible = true }
+        repoField.set(service, repositoryMock)
+
+        every { repositoryMock.getEncodedStreams(workoutId) } returns EncodedStreams(encodedPoly, encodedAlt, encodedDist)
+        every { repositoryMock.getExtremaForWorkouts(listOf(workoutId)) } returns listOf(
+            ExtremaRecord(workoutId, SensorType.HR, ExtremaType.MIN, 110.0, p1, null),
+            ExtremaRecord(workoutId, SensorType.HR, ExtremaType.MAX, 160.0, p2, null),
+            ExtremaRecord(workoutId, SensorType.HR, ExtremaType.AVG, 140.0, null, 10)
+        )
         every { mockDbManager.getEncodedStreams(workoutId) } returns EncodedStreams(encodedPoly, encodedAlt, encodedDist)
         every { mockDbManager.getExtremaForWorkouts(listOf(workoutId)) } returns listOf(
             ExtremaRecord(workoutId, SensorType.HR, ExtremaType.MIN, 110.0, p1, null),
             ExtremaRecord(workoutId, SensorType.HR, ExtremaType.MAX, 160.0, p2, null),
             ExtremaRecord(workoutId, SensorType.HR, ExtremaType.AVG, 140.0, null, 10)
         )
-
-        val repositoryMock = mockk<WorkoutRepository>(relaxed = true)
-        val repoField = TrackerService::class.java.getDeclaredField("mWorkoutRepository").apply { isAccessible = true }
-        repoField.set(service, repositoryMock)
 
         val state = TrackerService.ResumedWorkoutState(
             "2026-10-18_120000",
@@ -771,12 +777,12 @@ class TrackerServiceResumeTest {
         // 3. Finalize session upon stop
         service.callFinalizeLiveSession()
 
-        // 4. Verify combined polyline & streams persisted
+        // 4. Verify combined polyline & streams persisted via WorkoutRepository (REQ-TRK-066.1)
         val polySlot = slot<String>()
         val altSlot = slot<String>()
         val distSlot = slot<String>()
         verify(exactly = 1) {
-            mockDbManager.updateMapAndStreams(
+            repositoryMock.updateMapAndStreams(
                 eq(workoutId),
                 capture(polySlot),
                 capture(altSlot),
@@ -791,12 +797,11 @@ class TrackerServiceResumeTest {
         assertEquals(listOf(0.0, 1000.0, 1500.0), NumericalEncodingUtils.decodeDoubles(distSlot.captured))
 
         // 5. Verify START is p1, END is p3, HR MIN is still 110.0 at p1, HR MAX is 180.0 at p3, HR AVG is 160.0 with count 20
-        verify { mockDbManager.updateExtremaValue(eq(workoutId), eq(SensorType.LATITUDE), eq(ExtremaType.START), eq(p1.latitude), any()) }
-        verify { mockDbManager.updateExtremaValue(eq(workoutId), eq(SensorType.LATITUDE), eq(ExtremaType.END), eq(p3.latitude), any()) }
-        verify { mockDbManager.updateExtremaValue(eq(workoutId), eq(SensorType.HR), eq(ExtremaType.MIN), eq(110.0), any()) }
-        verify { mockDbManager.updateExtremaValue(eq(workoutId), eq(SensorType.HR), eq(ExtremaType.MAX), eq(180.0), eq(p3)) }
-        verify { mockDbManager.updateExtremaValue(eq(workoutId), eq(SensorType.HR), eq(ExtremaType.AVG), eq(160.0), isNull(), eq(20)) }
-        verify { repositoryMock.setMapPolyline(eq(workoutId), eq(polySlot.captured)) }
+        verify { repositoryMock.updateExtremaValue(eq(workoutId), eq(SensorType.LATITUDE), eq(ExtremaType.START), eq(p1.latitude), any()) }
+        verify { repositoryMock.updateExtremaValue(eq(workoutId), eq(SensorType.LATITUDE), eq(ExtremaType.END), eq(p3.latitude), any()) }
+        verify { repositoryMock.updateExtremaValue(eq(workoutId), eq(SensorType.HR), eq(ExtremaType.MIN), eq(110.0), any()) }
+        verify { repositoryMock.updateExtremaValue(eq(workoutId), eq(SensorType.HR), eq(ExtremaType.MAX), eq(180.0), eq(p3)) }
+        verify { repositoryMock.updateExtremaValue(eq(workoutId), eq(SensorType.HR), eq(ExtremaType.AVG), eq(160.0), isNull(), eq(20)) }
     }
 
     @Test

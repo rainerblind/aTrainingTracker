@@ -31,6 +31,7 @@ import com.atrainingtracker.banalservice.Protocol
 import com.atrainingtracker.banalservice.database.DevicesDatabaseManager
 import com.atrainingtracker.banalservice.helpers.HavePressureSensor
 import com.atrainingtracker.banalservice.sensor.MySensorManager
+import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceDataRepository
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import io.mockk.*
 import org.junit.After
@@ -108,19 +109,14 @@ class DeviceManagerTeardownTest {
     }
 
     /**
-     * TST-TRK-039.4: createPairedRemoteDevices safely handles null cursor and closes valid cursor (REQ-TRK-039.5).
+     * TST-TRK-039.4: createPairedRemoteDevices queries paired remote devices via DeviceDataRepository (REQ-TRK-039.5, REQ-TRK-066.3).
      */
     @Test
-    fun testCreatePairedRemoteDevices_closesCursorDeterministically() {
-        val mockDb = mockk<SQLiteDatabase>(relaxed = true)
-        every { mockDevicesDbManager.database } returns mockDb
-        val mockCursor = mockk<Cursor>(relaxed = true)
-        every { mockCursor.moveToNext() } returns false
-        every { mockDb.query(any(), any(), any(), any(), any(), any(), any()) } returns mockCursor
-
-        val deviceManager = DeviceManager(mockBanalService, mockSensorManager)
+    fun testCreatePairedRemoteDevices_delegatesToRepository() {
+        val mockRepo = mockk<DeviceDataRepository>(relaxed = true)
+        val deviceManager = DeviceManager(mockBanalService, mockSensorManager, mockRepo)
         deviceManager.createPairedRemoteDevices(Protocol.BLUETOOTH_LE)
 
-        verify(exactly = 1) { mockCursor.close() }
+        verify(exactly = 1) { mockRepo.getPairedRemoteDevices(Protocol.BLUETOOTH_LE) }
     }
 }

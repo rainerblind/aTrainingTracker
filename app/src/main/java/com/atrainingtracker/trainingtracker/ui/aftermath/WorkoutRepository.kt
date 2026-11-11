@@ -37,6 +37,9 @@ import com.atrainingtracker.R
 import com.atrainingtracker.database.DatabaseConstants
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager
 import com.atrainingtracker.banalservice.sensor.SensorType
+import com.atrainingtracker.banalservice.sensor.SensorValueType
+import com.atrainingtracker.trainingtracker.tracker.TrackerService
+import com.atrainingtracker.trainingtracker.tracker.LiveWorkoutSession
 import com.atrainingtracker.trainingtracker.MyHelper
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.climbs.ClimbDetector
@@ -70,7 +73,7 @@ import com.atrainingtracker.trainingtracker.exporter.FileFormat
 import com.atrainingtracker.trainingtracker.repositories.RoutesRepository
 import com.atrainingtracker.trainingtracker.repositories.SportTypesRepository
 import com.atrainingtracker.trainingtracker.routes.GeoUtils
-import com.atrainingtracker.trainingtracker.tracker.TrackerService
+import com.atrainingtracker.trainingtracker.database.WorkoutSource
 import com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodsRepository
 import com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutDeletionNotificationManager
 import com.atrainingtracker.trainingtracker.ui.components.export.ExportStatusDataProvider
@@ -168,7 +171,7 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
         fun getInstance(context: Context): WorkoutRepository {
             return INSTANCE ?: synchronized(this) {
                 INSTANCE ?: run {
-                    val appContext = context.applicationContext ?: context
+                    val appContext = try { context.applicationContext ?: context } catch (_: Throwable) { context }
                     val newInstance = WorkoutRepository(appContext)
                     INSTANCE = newInstance
                     newInstance
@@ -213,6 +216,10 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
          */
         @JvmStatic
         internal fun quoteSqlIdentifier(col: String): String = "\"${col.replace("\"", "\"\"")}\""
+
+        @JvmStatic
+        fun getSamplesTableName(baseFileName: String): String =
+            WorkoutSamplesDatabaseManager.getTableName(baseFileName)
     }
 
     private val job = SupervisorJob()
@@ -246,6 +253,289 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
     fun deleteWorkoutLaps(workoutId: Long) = lapsDatabaseManager.deleteWorkout(workoutId)
     fun deleteWorkoutSamples(fileBaseName: String) = samplesManager.deleteWorkout(fileBaseName)
     fun reassignClusterWorkouts(sourceId: Long, targetId: Long) = summariesManager.reassignClusterWorkouts(sourceId, targetId)
+
+    fun createNewTrackedWorkout(baseFileName: String, sportTypeId: Long, bSportType: com.atrainingtracker.banalservice.BSportType): Long {
+        val values = ContentValues().apply {
+            put(WorkoutSummariesDatabaseManager.WorkoutSummaries.GOAL, "")
+            put(WorkoutSummariesDatabaseManager.WorkoutSummaries.METHOD, "")
+            put(WorkoutSummariesDatabaseManager.WorkoutSummaries.GC_DATA, com.atrainingtracker.banalservice.sensor.MySensorManager.EMPTY_GC_DATA)
+            put(WorkoutSummariesDatabaseManager.WorkoutSummaries.SPORT_ID, sportTypeId)
+            put(WorkoutSummariesDatabaseManager.WorkoutSummaries.B_SPORT, bSportType.name)
+            put(WorkoutSummariesDatabaseManager.WorkoutSummaries.WORKOUT_NAME, baseFileName)
+            put(WorkoutSummariesDatabaseManager.WorkoutSummaries.FILE_BASE_NAME, baseFileName)
+            put(WorkoutSummariesDatabaseManager.WorkoutSummaries.SOURCE, WorkoutSource.TRACKED.name)
+            put(WorkoutSummariesDatabaseManager.WorkoutSummaries.FINISHED, 0)
+        }
+        return insertWorkoutSummary(values)
+    }
+
+    fun updateWorkoutSportAndGcData(workoutId: Long, sportTypeId: Long, bSportType: com.atrainingtracker.banalservice.BSportType, gcData: String?) {
+        val values = ContentValues().apply {
+            put(WorkoutSummariesDatabaseManager.WorkoutSummaries.SPORT_ID, sportTypeId)
+            put(WorkoutSummariesDatabaseManager.WorkoutSummaries.B_SPORT, bSportType.name)
+            if (gcData != null) {
+                put(WorkoutSummariesDatabaseManager.WorkoutSummaries.GC_DATA, gcData)
+            }
+        }
+        updateWorkoutSummary(workoutId, values)
+    }
+
+    fun updateWorkoutTotalTime(workoutId: Long, timeTotal_s: Int) {
+        val values = ContentValues().apply {
+            put(WorkoutSummariesDatabaseManager.WorkoutSummaries.TIME_TOTAL_s, timeTotal_s)
+        }
+        updateWorkoutSummary(workoutId, values)
+    }
+
+    fun updateWorkoutAuxiliaryMetadata(workoutId: Long, gcData: String?, sportTypeId: Long?, bSportType: com.atrainingtracker.banalservice.BSportType?) {
+        val values = ContentValues()
+        if (gcData != null) {
+            values.put(WorkoutSummariesDatabaseManager.WorkoutSummaries.GC_DATA, gcData)
+        }
+        if (sportTypeId != null && sportTypeId > 0) {
+            values.put(WorkoutSummariesDatabaseManager.WorkoutSummaries.SPORT_ID, sportTypeId)
+        }
+        if (bSportType != null && bSportType != com.atrainingtracker.banalservice.BSportType.UNKNOWN) {
+            values.put(WorkoutSummariesDatabaseManager.WorkoutSummaries.B_SPORT, bSportType.name)
+        }
+        if (values.size() > 0) {
+            updateWorkoutSummary(workoutId, values)
+        }
+    }
+
+    fun createSamplesTable(baseFileName: String, sensorTypes: List<SensorType> = listOf(*SensorType.values())) {
+        samplesManager.createNewTable(baseFileName, sensorTypes)
+    }
+
+    fun existsSamplesTable(baseFileName: String): Boolean = samplesManager.existsTable(baseFileName)
+
+    fun applyAltitudeDriftCorrection(samplesTable: String, altitudeCorrection: Double, prevCalTimeMs: Long, currentCalTimeMs: Long) {
+        samplesManager.applyAltitudeDriftCorrection(samplesTable, altitudeCorrection, prevCalTimeMs, currentCalTimeMs)
+    }
+
+    fun shiftAltitudeData(workoutId: Long, altitudeCorrection: Double, prevCalTimeMs: Long, currentCalTimeMs: Long) {
+        summariesManager.shiftAltitudeData(workoutId, altitudeCorrection, prevCalTimeMs, currentCalTimeMs)
+    }
+
+    fun getEncodedStreams(workoutId: Long): WorkoutSummariesDatabaseManager.EncodedStreams? =
+        summariesManager.getEncodedStreams(workoutId)
+
+    fun getExtremaForWorkouts(workoutIds: List<Long>): List<WorkoutSummariesDatabaseManager.ExtremaRecord> =
+        summariesManager.getExtremaForWorkouts(workoutIds)
+
+    fun saveAccumulatedSensorTypes(workoutId: Long, sensorTypes: Set<SensorType>) {
+        summariesManager.saveAccumulatedSensorTypes(workoutId, sensorTypes)
+    }
+
+    fun saveLap(workoutId: Long, lapNr: Long, lapTime: Int, lapDistance: Double, averageSpeed: Double) {
+        lapsDatabaseManager.saveLap(workoutId, lapNr, lapTime, lapDistance, averageSpeed)
+    }
+
+    fun updateMapAndStreams(workoutId: Long, polyline: String?, altitudeStream: String?, distanceStream: String?) {
+        summariesManager.updateMapAndStreams(workoutId, polyline, altitudeStream, distanceStream)
+        if (polyline != null) {
+            setMapPolyline(workoutId, polyline)
+        }
+        if (altitudeStream != null && distanceStream != null) {
+            setElevationStreams(workoutId, altitudeStream, distanceStream)
+        }
+    }
+
+    fun updateWorkoutClusterId(workoutId: Long, clusterId: Long) {
+        val values = ContentValues().apply {
+            put(WorkoutSummariesDatabaseManager.WorkoutSummaries.CLUSTER_ID, clusterId)
+        }
+        updateWorkoutSummary(workoutId, values)
+    }
+
+    fun updateRecordingErrors(workoutId: Long, errorJson: String?) {
+        if (errorJson != null) {
+            summariesManager.updateRecordingErrors(workoutId, errorJson)
+        }
+        setRecordingErrors(workoutId, errorJson)
+    }
+
+    fun markWorkoutFinishedBlocking(workoutId: Long) {
+        summariesManager.setWorkoutFinished(workoutId)
+    }
+
+    fun warmUp() {
+        summariesManager.database
+    }
+
+    fun getResumedWorkoutState(): TrackerService.ResumedWorkoutState? {
+        val projection = arrayOf(
+            WorkoutSummariesDatabaseManager.WorkoutSummaries.FILE_BASE_NAME,
+            WorkoutSummariesDatabaseManager.WorkoutSummaries.C_ID,
+            WorkoutSummariesDatabaseManager.WorkoutSummaries.TIME_TOTAL_s,
+            WorkoutSummariesDatabaseManager.WorkoutSummaries.TIME_ACTIVE_s,
+            WorkoutSummariesDatabaseManager.WorkoutSummaries.CALORIES,
+            WorkoutSummariesDatabaseManager.WorkoutSummaries.LAPS,
+            WorkoutSummariesDatabaseManager.WorkoutSummaries.DISTANCE_TOTAL_m
+        )
+        summariesManager.database.query(
+            WorkoutSummariesDatabaseManager.WorkoutSummaries.TABLE,
+            projection,
+            null, null, null, null,
+            "${WorkoutSummariesDatabaseManager.WorkoutSummaries.C_ID} DESC",
+            "1"
+        ).use { cursor ->
+            if (cursor != null && cursor.moveToFirst()) {
+                val baseFileNameCol = cursor.getColumnIndexOrThrow(WorkoutSummariesDatabaseManager.WorkoutSummaries.FILE_BASE_NAME)
+                val idCol = cursor.getColumnIndexOrThrow(WorkoutSummariesDatabaseManager.WorkoutSummaries.C_ID)
+                val timeTotalCol = cursor.getColumnIndexOrThrow(WorkoutSummariesDatabaseManager.WorkoutSummaries.TIME_TOTAL_s)
+                val timeActiveCol = cursor.getColumnIndexOrThrow(WorkoutSummariesDatabaseManager.WorkoutSummaries.TIME_ACTIVE_s)
+                val caloriesCol = cursor.getColumnIndexOrThrow(WorkoutSummariesDatabaseManager.WorkoutSummaries.CALORIES)
+                val lapsCol = cursor.getColumnIndexOrThrow(WorkoutSummariesDatabaseManager.WorkoutSummaries.LAPS)
+                val distanceCol = cursor.getColumnIndexOrThrow(WorkoutSummariesDatabaseManager.WorkoutSummaries.DISTANCE_TOTAL_m)
+
+                return TrackerService.ResumedWorkoutState(
+                    cursor.getString(baseFileNameCol) ?: "",
+                    cursor.getLong(idCol),
+                    cursor.getInt(timeTotalCol),
+                    cursor.getInt(timeActiveCol),
+                    cursor.getInt(caloriesCol),
+                    cursor.getInt(lapsCol),
+                    cursor.getDouble(distanceCol)
+                )
+            }
+        }
+        return null
+    }
+
+    fun interface LiveSampleFailureCallback {
+        fun onFailure(message: String, exception: Exception?)
+    }
+
+    @JvmOverloads
+    fun recordLiveSample(
+        baseFileName: String,
+        workoutId: Long,
+        samplingValues: ContentValues,
+        summaryValues: ContentValues,
+        extremaUpdates: List<TrackerService.ExtremaUpdate>,
+        streamIncrement: LiveWorkoutSession.StreamIncrement?,
+        name2Type: Map<String, SensorValueType>?,
+        onSampleFailure: LiveSampleFailureCallback? = null
+    ): Boolean {
+        val samplesDb = samplesManager.database ?: return false
+        val summariesDb = summariesManager.database ?: return false
+        val tableName = getSamplesTableName(baseFileName)
+
+        samplesDb.beginTransaction()
+        summariesDb.beginTransaction()
+        var sampleInserted = false
+        try {
+            try {
+                samplesDb.insertOrThrow(tableName, null, samplingValues)
+                sampleInserted = true
+            } catch (e: android.database.SQLException) {
+                sampleInserted = handleMissingColumns(samplesDb, tableName, samplingValues, name2Type, e, baseFileName, onSampleFailure)
+            }
+
+            for (update in extremaUpdates) {
+                if (update.count != null) {
+                    summariesManager.updateExtremaValue(summariesDb, workoutId, update.type, update.extrema, update.value, update.pos, update.count)
+                } else {
+                    summariesManager.updateExtremaValue(summariesDb, workoutId, update.type, update.extrema, update.value, update.pos)
+                }
+            }
+
+            summariesDb.update(WorkoutSummariesDatabaseManager.WorkoutSummaries.TABLE, summaryValues, "${WorkoutSummariesDatabaseManager.WorkoutSummaries.C_ID}=?", arrayOf(workoutId.toString()))
+
+            if (streamIncrement != null) {
+                summariesManager.appendToMapAndStreams(workoutId, streamIncrement.polylineIncrement, streamIncrement.altitudeIncrement, streamIncrement.distanceIncrement)
+            }
+
+            if (sampleInserted) {
+                samplesDb.setTransactionSuccessful()
+            }
+            summariesDb.setTransactionSuccessful()
+            return sampleInserted
+        } catch (e: Exception) {
+            onSampleFailure?.onFailure("Error during async DB write for table $tableName", e)
+            return false
+        } finally {
+            samplesDb.endTransaction()
+            summariesDb.endTransaction()
+        }
+    }
+
+    @JvmOverloads
+    fun handleMissingColumns(
+        samplesDb: android.database.sqlite.SQLiteDatabase,
+        tableName: String,
+        values: ContentValues,
+        name2Type: Map<String, SensorValueType>?,
+        insertException: android.database.SQLException?,
+        baseFileName: String,
+        onSampleFailure: LiveSampleFailureCallback? = null
+    ): Boolean {
+        val errMsg = insertException?.message
+        var currentTable = tableName
+        if (errMsg != null && errMsg.contains("no such table")) {
+            val validTable = try { getSamplesTableName(baseFileName) } catch (_: Exception) { null }
+            if (validTable != null) {
+                try {
+                    samplesManager.createNewTable(baseFileName, listOf(*SensorType.values()))
+                    currentTable = validTable
+                } catch (createEx: Exception) {
+                    onSampleFailure?.onFailure("Failed to self-heal missing sample table $validTable", createEx)
+                    return false
+                }
+            } else {
+                onSampleFailure?.onFailure("Unrecoverable SQLite error: sample table $currentTable does not exist and baseFileName ($baseFileName) is invalid", insertException)
+                return false
+            }
+        } else if (errMsg != null && !errMsg.contains("no such column") && !errMsg.contains("has no column named")) {
+            onSampleFailure?.onFailure("Unrecoverable SQLite error inserting sample into table $currentTable", insertException)
+            return false
+        }
+
+        val existingColumns = mutableSetOf<String>()
+        try {
+            samplesDb.rawQuery("PRAGMA table_info($currentTable)", null).use { cursor ->
+                val nameCol = cursor.getColumnIndex("name")
+                if (nameCol != -1) {
+                    while (cursor.moveToNext()) {
+                        existingColumns.add(cursor.getString(nameCol))
+                    }
+                }
+            }
+        } catch (_: Exception) {}
+
+        if (existingColumns.isEmpty()) {
+            try {
+                samplesDb.query(currentTable, null, null, null, null, null, null, "1").use { cursor ->
+                    cursor?.columnNames?.let { existingColumns.addAll(it) }
+                }
+            } catch (_: Exception) {}
+        }
+
+        try {
+            for (key in values.keySet()) {
+                val queryKey = if (key.startsWith("\"") && key.endsWith("\"") && key.length >= 2) {
+                    key.substring(1, key.length - 1).replace("\"\"", "\"")
+                } else key
+                if (!existingColumns.contains(queryKey)) {
+                    val valueType = name2Type?.get(key)
+                    val type = when (valueType) {
+                        SensorValueType.INTEGER -> "int"
+                        SensorValueType.DOUBLE -> "double"
+                        else -> "text"
+                    }
+                    val quotedColumn = "\"${queryKey.replace("\"", "\"\"")}\""
+                    samplesDb.execSQL("ALTER TABLE $currentTable ADD COLUMN $quotedColumn $type null;")
+                    existingColumns.add(queryKey)
+                }
+            }
+            samplesDb.insertOrThrow(currentTable, null, values)
+            return true
+        } catch (e: Exception) {
+            onSampleFailure?.onFailure("Failed to fix schema or insert after schema fix for table $currentTable", e)
+            return false
+        }
+    }
     fun getUploadToStravaStatus(workoutId: Long): Int {
         return try {
             summariesManager.database.query(
@@ -931,6 +1221,7 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
             put(WorkoutSummariesDatabaseManager.WorkoutSummaries.WORKOUT_NAME, name)
         }
         updateWorkoutSummary(workoutId, updateVals)
+        setWorkoutName(workoutId, name)
     }
 
     fun getWorkoutBounds(workoutId: Long): Map<String, Double> {
@@ -2737,6 +3028,11 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
      * Updates the commute and trainer flags for a workout in memory.
      */
     fun setCommuteAndTrainer(workoutId: Long, commute: Boolean, trainer: Boolean) {
+        val values = ContentValues().apply {
+            put(WorkoutSummariesDatabaseManager.WorkoutSummaries.COMMUTE, commute)
+            put(WorkoutSummariesDatabaseManager.WorkoutSummaries.TRAINER, trainer)
+        }
+        updateWorkoutSummary(workoutId, values)
         updateWorkoutInMemory(workoutId) { it.copy(commute = commute, trainer = trainer) }
     }
 
@@ -2789,8 +3085,60 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
      * Implementation: Updates both the flat [WorkoutData] fields and the specific
      * row in the [WorkoutData.extremaRows] list to ensure the UI reflects the change immediately.
      */
-    fun updateExtremaValue(workoutId: Long, sensorType: SensorType, extremaType: ExtremaType, value: Double, position: LatLng? = null) {
+    fun updateExtremaValue(
+        workoutId: Long,
+        sensorType: SensorType,
+        extremaType: ExtremaType,
+        value: Double,
+        position: LatLng? = null
+    ) {
         summariesManager.updateExtremaValue(workoutId, sensorType, extremaType, value, position)
+        val formattedValue = sensorType.myFormatter.format(value)
+        updateWorkoutInMemory(workoutId) { workout ->
+            var updated = workout
+
+            // 1. Update specific raw fields
+            when (sensorType) {
+                SensorType.LINE_DISTANCE_m -> if (extremaType == ExtremaType.MAX) updated = updated.copy(maxDisplacement = value)
+                SensorType.ALTITUDE -> {
+                    when (extremaType) {
+                        ExtremaType.MIN -> updated = updated.copy(minAltitude = value)
+                        ExtremaType.MAX -> updated = updated.copy(maxAltitude = value)
+                        else -> {}
+                    }
+                }
+                else -> {}
+            }
+
+            // 2. Update the ExtremaDataRow in the list
+            val sensorLabel = application.getString(sensorType.shortNameId)
+            val updatedRows = updated.extremaRows.map { row ->
+                if (row.sensorLabel == sensorLabel) {
+                    when (extremaType) {
+                        ExtremaType.MIN -> row.copy(minValue = formattedValue, minLatLng = position)
+                        ExtremaType.AVG -> row.copy(avgValue = formattedValue)
+                        ExtremaType.MAX -> row.copy(maxValue = formattedValue, maxLatLng = position)
+                        else -> row
+                    }
+                } else row
+            }
+            updated.copy(extremaRows = updatedRows)
+        }
+    }
+
+    fun updateExtremaValue(
+        workoutId: Long,
+        sensorType: SensorType,
+        extremaType: ExtremaType,
+        value: Double,
+        position: LatLng?,
+        count: Int?
+    ) {
+        if (count != null) {
+            summariesManager.updateExtremaValue(workoutId, sensorType, extremaType, value, position, count)
+        } else {
+            summariesManager.updateExtremaValue(workoutId, sensorType, extremaType, value, position)
+        }
         val formattedValue = sensorType.myFormatter.format(value)
         updateWorkoutInMemory(workoutId) { workout ->
             var updated = workout

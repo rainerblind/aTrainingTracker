@@ -2012,6 +2012,23 @@
   7. *Clean-Room Targeted Test Suite Execution (`TST-TRK-065.7`)*:
   • Execute targeted package tests asserting 100% pass rate.
 
+### TST-TRK-066: **Repository-Only Live Recording Service Database Access Layer Test Suite (Phase C)** [Verified]
+- **Requirement(s)**: `REQ-TRK-066` (`REQ-TRK-066.1`..`REQ-TRK-066.5`)
+- **Component**: `TrackerService.java`, `BANALService.java`, `DeviceManager.java`, `WorkoutRepository.kt`, `SportTypesRepository.kt`, `DeviceDataRepository.kt`, `PairedRemoteDeviceDto.kt`
+- **Jira**: `ATT-6427`
+- **Test Description**:
+  1. *AST DatabaseManager Prohibition Contract Test (`TST-TRK-066.1`, `RepositoryServiceCleanlinessContractTest.kt`)*:
+  • Verify via AST and reflection inspection that zero direct `*DatabaseManager.getInstance()` or `*DbHelper.getInstance()` calls exist in `TrackerService.java`, `BANALService.java`, and `DeviceManager.java`.
+  2. *PairedRemoteDeviceDto & DeviceDataRepository Remote Query Unit Test (`TST-TRK-066.2`, `DeviceDataRepositoryTest.kt`)*:
+  • Verify `DeviceDataRepository.getPairedRemoteDevices(protocol)` extracts paired ANT+ and Bluetooth LE devices correctly into `PairedRemoteDeviceDto` with zero raw Cursors leaked to callers.
+  3. *TrackerService Repository Delegation & Lifecycle Unit Tests (`TST-TRK-066.3`, `TrackerServiceResumeTest.kt`, `TrackerServiceFinalizationTest.kt`)*:
+  • Verify workout start, 1-Hz sample recording, lap persistence, crash-resume, and unconditional `FINISHED = 1` finalization execute identically through repository delegates.
+  4. *BANALService Sport Type Delegation Unit Test (`TST-TRK-066.4`, `BANALServiceLifecycleTest.kt`)*:
+  • Verify sport type lookup, default sport type ID, and sport type lists in `BANALService` delegate to `SportTypesRepository`.
+  5. *Clean-Room Targeted Test Suite Execution (`TST-TRK-066.5`)*:
+  • `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.tracker.*" --tests "com.atrainingtracker.banalservice.*" --tests "com.atrainingtracker.trainingtracker.repositories.*"` asserting 100% pass rate.
+
+
 
 
 

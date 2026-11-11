@@ -331,8 +331,8 @@ open class KnownLocationsRepository @VisibleForTesting constructor(
         repositoryScope.cancel()
     }
 
-    open fun getMyLocation(latLng: LatLng): KnownLocationsDatabaseManager.MyLocation? =
-        databaseManager.getMyLocation(latLng)
+    open fun getMyLocation(latLng: LatLng?): KnownLocationsDatabaseManager.MyLocation? =
+        if (latLng != null) databaseManager.getMyLocation(latLng) else null
 
     open val homeLocation: KnownLocationsDatabaseManager.MyLocation?
         get() = databaseManager.homeLocation
@@ -366,9 +366,14 @@ open class KnownLocationsRepository @VisibleForTesting constructor(
         @JvmStatic
         fun getInstance(context: Context): KnownLocationsRepository {
             return INSTANCE ?: synchronized(this) {
+                val safeContext = try {
+                    context.applicationContext ?: context
+                } catch (_: Throwable) {
+                    context
+                }
                 INSTANCE ?: KnownLocationsRepository(
-                    context = context.applicationContext,
-                    databaseManager = KnownLocationsDatabaseManager.getInstance(context.applicationContext)
+                    context = safeContext,
+                    databaseManager = KnownLocationsDatabaseManager.getInstance(safeContext)
                 ).also { INSTANCE = it }
             }
         }

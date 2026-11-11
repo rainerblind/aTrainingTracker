@@ -3566,6 +3566,41 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 **Invariants**: Warm `MODE_STATIC` replay latency preserved without AudioFlinger port teardown; zero volume reduction on phone speaker; zero SQLite schema modifications; 100% 9-language translation parity.
 
+### REQ-TRK-066: Repository-Only Live Recording Service Database Access Layer (Phase C) [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-TRK-066` | **Tickets**: `ATT-6427`
+- **Implementation**: `app/src/main/java/com/atrainingtracker/trainingtracker/tracker/TrackerService.java`, `app/src/main/java/com/atrainingtracker/banalservice/BANALService.java`, `app/src/main/java/com/atrainingtracker/banalservice/devices/DeviceManager.java`, `app/src/main/java/com/atrainingtracker/trainingtracker/repositories/WorkoutRepository.kt`, `app/src/main/java/com/atrainingtracker/banalservice/repositories/SportTypesRepository.kt`, `app/src/main/java/com/atrainingtracker/banalservice/repositories/DeviceDataRepository.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/database/KnownLocationsRepository.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/database/hrv/WorkoutRrRepository.kt`
+- **Rationale**: Direct instantiation of SQLite database manager singletons (`*DatabaseManager.getInstance()`) and raw `Cursor` queries within foreground services (`TrackerService`, `BANALService`) and hardware coordinators (`DeviceManager`) violate SWE.2 Clean Architecture boundaries, couple service lifecycles to low-level SQLite helpers, and impede automated unit testing. All persistence operations across Phase C live recording components SHALL route through domain repositories, and raw `Cursor` extractions for paired devices SHALL be encapsulated behind domain DTOs (`PairedRemoteDeviceDto`).
+- **Description**:
+  1. *TrackerService Persistence Decoupling (`REQ-TRK-066.1`)*:
+     - `TrackerService.java` SHALL eliminate all direct calls to `WorkoutSummariesDatabaseManager`, `WorkoutSamplesDatabaseManager`, `LapsDatabaseManager`, `SportTypeDatabaseManager`, `ActiveDevicesDbHelper`, `WorkoutRrDatabaseManager`, and `KnownLocationsDatabaseManager`.
+     - All session initialization, crash-resume rehydration, lap persistence, 1-Hz sample recording, extrema updates, error logging, active device binding, and session finalization SHALL route through `WorkoutRepository`, `SportTypesRepository`, `DeviceDataRepository`, `KnownLocationsRepository`, and `WorkoutRrRepository`.
+  2. *BANALService Sport Type Decoupling (`REQ-TRK-066.2`)*:
+     - `BANALService.java` SHALL eliminate all direct calls to `SportTypeDatabaseManager.getInstance(...)`.
+     - Sport type identifier resolution, UI names, default sport type lookups, and active sport type lists SHALL route through `SportTypesRepository`.
+  3. *DeviceManager Decoupling & PairedRemoteDeviceDto (`REQ-TRK-066.3`)*:
+     - `DeviceManager.java` SHALL eliminate all direct calls to `DevicesDatabaseManager.getInstance(...)` and raw SQLite queries on `DevicesDbHelper.DEVICES`.
+     - `DeviceDataRepository` SHALL expose `getPairedRemoteDevices(protocol)` returning a list of strongly-typed `PairedRemoteDeviceDto` instances, encapsulating device ID, protocol, device type, ANT device number, and Bluetooth MAC address with zero leaky Cursors or SQLite handles.
+  4. *High-Frequency Execution & Invariant Preservation (`REQ-TRK-066.4`)*:
+     - High-frequency 1-Hz sample recording delegates in `WorkoutRepository` SHALL execute on `TrackerService.mDbExecutor` with zero thread contention or dropped samples.
+     - Core system invariants SHALL remain strictly preserved: unconditional `FINISHED = 1` commitment in a minimal transaction (`REQ-TRK-030.1`), mid-workout PRAGMA table info schema discovery (`REQ-TRK-026.4` / `REQ-TRK-051.1`), and bit-exact crash resume (`REQ-TRK-031.3`).
+  5. *Zero Backdoor Getters & Service Architecture Cleanliness (`REQ-TRK-066.5`)*:
+     - Domain repositories SHALL NOT expose public or internal `get*DatabaseManager()`, `get*DbHelper()`, `SQLiteDatabase`, or raw `Cursor` getters to service callers (adhering to coding standards §2.5).
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* `TrackerService.java`, `BANALService.java`, and `DeviceManager.java`,
+• *When* auditing source code and AST references,
+• *Then* zero occurrences of `*DatabaseManager.getInstance(...)` or `*DbHelper.getInstance(...)` exist across all Phase C service files.
+• *Given* `DeviceManager.createPairedRemoteDevices(...)`,
+• *When* querying paired ANT+ or Bluetooth LE devices,
+• *Then* `DeviceDataRepository.getPairedRemoteDevices(protocol)` returns typed `PairedRemoteDeviceDto` objects with zero direct `Cursor` access.
+• *Given* an active workout recording session,
+• *When* 1-Hz telemetry samples are captured, laps are saved, or a crash-resume occurs,
+• *Then* all summary, sample, and lap persistence operate bit-exact and functionally identical to previous database manager behavior.
+
+**Invariants**: Unconditional `FINISHED = 1` transaction committed before metadata updates (`REQ-TRK-030.1`); 1-Hz write cadence on `mDbExecutor` preserved; zero SQLite schema modifications; zero dropped telemetry samples; 100% unit test pass rate.
+
+
 
 
 

@@ -85,6 +85,12 @@ class SportTypesRepository private constructor(private val context: Context) :
             SimpleSportTypeInfo(it.id, it.name, it.bSportType)
         }
 
+    /**
+     * Resolves sport type IDs matching sport type and average speed (REQ-TRK-066.2).
+     */
+    fun getSportTypesIdList(sportType: BSportType, avgSpd: Double): List<Long>? =
+        sportTypeDatabaseManager.getSportTypesIdList(sportType, avgSpd)
+
     companion object {
         private val TAG = "SportTypesRepository"
         private val DEBUG = TrainingApplication.getDebug(true)
@@ -109,7 +115,11 @@ class SportTypesRepository private constructor(private val context: Context) :
         fun getInstance(context: Context): SportTypesRepository {
             return INSTANCE ?: synchronized(this) {
                 INSTANCE ?: run {
-                    val appContext = context.applicationContext ?: context
+                    val appContext = try {
+                        context.applicationContext ?: context
+                    } catch (_: Throwable) {
+                        context
+                    }
                     SportTypesRepository(appContext).also { INSTANCE = it }
                 }
             }
@@ -120,6 +130,12 @@ class SportTypesRepository private constructor(private val context: Context) :
          */
         @JvmStatic
         fun getSportTypeId(bSportType: BSportType): Long = SportTypeDatabaseManager.getSportTypeId(bSportType)
+
+        /**
+         * Resolves default sport type ID (REQ-TRK-066.2).
+         */
+        @JvmStatic
+        fun getDefaultSportTypeId(): Long = SportTypeDatabaseManager.getDefaultSportTypeId()
 
         @androidx.annotation.VisibleForTesting
         fun resetForTesting(newInstance: SportTypesRepository? = null) {
