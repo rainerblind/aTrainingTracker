@@ -382,4 +382,18 @@ class LiveClimbsRepositoryTest {
         assertEquals(LiveClimbStatus.FINISHED, finished!!.status)
         assertNull("lastSegmentIndex must reset to null on climb finish", finished.lastSegmentIndex)
     }
+
+    @Test
+    fun testAllStoredClimbs_emitsStoredClimbs_andUpdatesOnRefresh() = runTest(testDispatcher) {
+        coEvery { mockClimbsDb.getAllClimbs() } returns listOf(sampleClimb)
+        repository.refreshClimbs(null)
+
+        assertEquals(listOf(sampleClimb), repository.allStoredClimbs.value)
+
+        val updatedClimbs = listOf(sampleClimb, sampleClimb.copy(id = 2L, name = "Climb 2"))
+        coEvery { mockClimbsDb.getAllClimbs() } returns updatedClimbs
+
+        repository.refreshClimbs(null)
+        assertEquals(updatedClimbs, repository.allStoredClimbs.value)
+    }
 }

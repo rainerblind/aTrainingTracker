@@ -2247,6 +2247,35 @@
 
 **Invariants**: Zero modification to existing climb detection logic; strictly non-blocking IO startup execution; 50m deduplication threshold preserved; 100% test pass rate.
 
+### REQ-MAP-067: Reactive Stored Climbs Flow & ViewModel Repository Decoupling [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-MAP-069` | **Tickets**: `ATT-6692`
+- **Implementation**: `LiveClimbsRepository.kt`, `MapFragmentWithTrackViewModel.kt`, `RepositoryUiCleanlinessContractTest.kt`
+- **Rationale**: In `ATT-2766`, `MapFragmentWithTrackViewModel.kt` injected `ClimbsDatabaseManager` directly and implemented `mapClimbsFlow` by mapping exclusively over `enabledLayers`. This introduced two defects: (1) newly stored climbs (from GPX imports, workout finishes, or backfill) did not render on `MapScreenWithTrack` while `CLIMBS` was already toggled ON until manually toggled off and back on; (2) direct database access from a ViewModel violated clean architecture layering (`ATT-432`). The system SHALL expose reactive `allStoredClimbs` on `LiveClimbsRepository`, combine it with `enabledLayers` in `MapFragmentWithTrackViewModel`, and decouple `MapFragmentWithTrackViewModel` from `ClimbsDatabaseManager`:
+1. *Reactive Stored Climbs StateFlow (`REQ-MAP-067.1`)*:
+• `LiveClimbsRepository` SHALL expose `val allStoredClimbs: StateFlow<List<Climb>>`.
+• Upon initialization and whenever `refreshClimbs()` is invoked, `LiveClimbsRepository` SHALL query all stored climbs from `ClimbsDatabaseManager.getAllClimbs()` on `Dispatchers.IO` and emit them to `_allStoredClimbs`.
+2. *ViewModel Repository Decoupling & Reactive Layer Combination (`REQ-MAP-067.2`)*:
+• `MapFragmentWithTrackViewModel` SHALL inject `LiveClimbsRepository` instead of `ClimbsDatabaseManager`.
+• Direct references, imports, and calls to `ClimbsDatabaseManager` in `MapFragmentWithTrackViewModel` SHALL be removed.
+• `mapClimbsFlow` SHALL combine `enabledLayers` and `liveClimbsRepository.allStoredClimbs`. When `GeneralMapLayer.CLIMBS in enabledLayers`, it SHALL emit the live stored climbs list; when disabled, it SHALL emit `emptyList()`.
+3. *Architectural Cleanliness Enforcement (`REQ-MAP-067.3`)*:
+• `RepositoryUiCleanlinessContractTest` SHALL remove `MapFragmentWithTrackViewModel` from the grandfathered database access exclusion list.
+• All ViewModels in `ui/map/` MUST satisfy zero direct database manager imports.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* `MapScreenWithTrack` with `GeneralMapLayer.CLIMBS` enabled,
+• *When* new climbs are inserted into `Climbs.db` and `refreshClimbs()` is invoked,
+• *Then* `uiState.climbs` emits the updated climb list immediately without manual layer toggling.
+• *Given* `MapFragmentWithTrackViewModel`,
+• *When* inspected via compile-time reflection and `RepositoryUiCleanlinessContractTest`,
+• *Then* zero references or imports of `ClimbsDatabaseManager` exist.
+• *Given* `GeneralMapLayer.CLIMBS` is disabled,
+• *When* `allStoredClimbs` updates,
+• *Then* `uiState.climbs` continues to emit `emptyList()`, preventing unnecessary map recomposition.
+
+**Invariants**: Route-filtered live tracking state in `LiveClimbsRepository.allClimbs` preserved; zero direct database manager imports in `ui/map/` ViewModels; 100% test pass rate.
+
 ### REQ-RAD-006: Aftermath Map Traffic Hotspot Markers [Verified]
 - **Tests**: `TST-RAD-006` | **Tickets**: `ATT-5088`
 - **Implementation**: `WorkoutRepository.kt`, `TrackOnMapAftermathViewModel.kt`, `TrackOnMapScreen.kt`

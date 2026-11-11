@@ -23,7 +23,7 @@ import android.content.SharedPreferences
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.climbs.Climb
 import com.atrainingtracker.trainingtracker.climbs.ClimbCategory
-import com.atrainingtracker.trainingtracker.database.ClimbsDatabaseManager
+import com.atrainingtracker.trainingtracker.climbs.LiveClimbsRepository
 import com.atrainingtracker.trainingtracker.database.WorkoutCluster
 import com.atrainingtracker.trainingtracker.database.WorkoutClusterRepository
 import com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository
@@ -66,7 +66,7 @@ class GeneralMapLayersContractTest {
     private lateinit var mockSegmentsRepository: SegmentsRepository
     private lateinit var mockRoutesRepository: RoutesRepository
     private lateinit var mockWorkoutClusterRepository: WorkoutClusterRepository
-    private lateinit var mockClimbsDatabaseManager: ClimbsDatabaseManager
+    private lateinit var mockLiveClimbsRepo: LiveClimbsRepository
     private lateinit var mockPrefs: SharedPreferences
     private lateinit var mockEditor: SharedPreferences.Editor
 
@@ -79,7 +79,7 @@ class GeneralMapLayersContractTest {
         mockSegmentsRepository = mockk(relaxed = true)
         mockRoutesRepository = mockk(relaxed = true)
         mockWorkoutClusterRepository = mockk(relaxed = true)
-        mockClimbsDatabaseManager = mockk(relaxed = true)
+        mockLiveClimbsRepo = mockk(relaxed = true)
         mockPrefs = mockk(relaxed = true)
         mockEditor = mockk(relaxed = true)
 
@@ -92,7 +92,7 @@ class GeneralMapLayersContractTest {
         every { mockRoutesRepository.activeNavigatedRouteId } returns MutableStateFlow(null)
         every { mockWorkoutClusterRepository.allClusters } returns MutableStateFlow(emptyList())
         every { mockWorkoutClusterRepository.clusterStats } returns MutableStateFlow(emptyMap())
-        coEvery { mockClimbsDatabaseManager.getAllClimbs() } returns emptyList()
+        every { mockLiveClimbsRepo.allStoredClimbs } returns MutableStateFlow(emptyList())
 
         every { mockPrefs.edit() } returns mockEditor
         every { mockEditor.putStringSet(any(), any()) } returns mockEditor
@@ -112,7 +112,7 @@ class GeneralMapLayersContractTest {
             segmentsRepo = mockSegmentsRepository,
             routesRepo = mockRoutesRepository,
             workoutClusterRepo = mockWorkoutClusterRepository,
-            climbsDbManager = mockClimbsDatabaseManager,
+            liveClimbsRepo = mockLiveClimbsRepo,
             prefs = prefs,
             defaultDispatcher = testDispatcher
         )
@@ -293,7 +293,7 @@ class GeneralMapLayersContractTest {
             maxGradePercent = 11.5,
             category = ClimbCategory.CAT_1
         )
-        coEvery { mockClimbsDatabaseManager.getAllClimbs() } returns listOf(testClimb)
+        every { mockLiveClimbsRepo.allStoredClimbs } returns MutableStateFlow(listOf(testClimb))
         every { mockPrefs.getStringSet(MapFragmentWithTrackViewModel.PREF_GENERAL_MAP_ENABLED_LAYERS, null) } returns null
 
         val viewModel = createViewModel()

@@ -208,7 +208,7 @@ class RepositoryUiCleanlinessContractTest {
             assertTrue("Directory ${dir.path} must exist", dir.exists())
             dir.walkTopDown()
                 .filter { it.isFile && (it.extension == "kt" || it.extension == "java") }
-                .filterNot { it.name.endsWith("Repository.kt") || it.name == "MapFragmentWithTrackViewModel.kt" }
+                .filterNot { it.name.endsWith("Repository.kt") }
                 .forEach { file ->
                     val content = file.readText()
                     val matches = directDbInstantiationPattern.findAll(content).map { it.value }.toList()
