@@ -72,6 +72,9 @@
     <string name="morning_hrv_status_optimal">Optymalna gotowość autonomiczna</string>
     <string name="morning_hrv_status_fatigued_low">Niska gotowość (zmęczenie autonomiczne)</string>
     <string name="morning_hrv_status_elevated">Podwyższona aktywność przywspółczulna</string>
+    <string name="morning_hrv_calibration_baseline_progress">Dzień %1$d z %2$d kalibracji bazowej</string>
+    <string name="morning_hrv_calibration_weekly_progress">Dzień %1$d z %2$d pomiarów tygodniowych</string>
+    <string name="morning_hrv_calibration_complete">Kalibracja zakończona</string>
     <string name="morning_hrv_btn_saved">Zapisano</string>
 
     <!-- Longitudinal HRV Readiness Trend in Periods Screen (ATT-3557 / REQ-PER-033) -->

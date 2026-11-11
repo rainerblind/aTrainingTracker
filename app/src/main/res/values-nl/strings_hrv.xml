@@ -72,6 +72,9 @@
     <string name="morning_hrv_status_optimal">Optimale autonome gereedheid</string>
     <string name="morning_hrv_status_fatigued_low">Lage gereedheid (autonome vermoeidheid)</string>
     <string name="morning_hrv_status_elevated">Verhoogde parasympathische activiteit</string>
+    <string name="morning_hrv_calibration_baseline_progress">Dag %1$d van %2$d basiskalibratie</string>
+    <string name="morning_hrv_calibration_weekly_progress">Dag %1$d van %2$d wekelijkse metingen</string>
+    <string name="morning_hrv_calibration_complete">Kalibratie voltooid</string>
     <string name="morning_hrv_btn_saved">Opgeslagen</string>
 
     <!-- Longitudinal HRV Readiness Trend in Periods Screen (ATT-3557 / REQ-PER-033) -->

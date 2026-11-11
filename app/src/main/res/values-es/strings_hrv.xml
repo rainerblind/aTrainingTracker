@@ -72,6 +72,9 @@
     <string name="morning_hrv_status_optimal">Preparación autonómica óptima</string>
     <string name="morning_hrv_status_fatigued_low">Baja preparación (fatiga autonómica)</string>
     <string name="morning_hrv_status_elevated">Actividad parasimpática elevada</string>
+    <string name="morning_hrv_calibration_baseline_progress">Día %1$d de %2$d de calibración de referencia</string>
+    <string name="morning_hrv_calibration_weekly_progress">Día %1$d de %2$d lecturas semanales</string>
+    <string name="morning_hrv_calibration_complete">Calibración completa</string>
     <string name="morning_hrv_btn_saved">Guardado</string>
 
     <!-- Longitudinal HRV Readiness Trend in Periods Screen (ATT-3557 / REQ-PER-033) -->

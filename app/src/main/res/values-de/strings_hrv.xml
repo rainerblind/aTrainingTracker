@@ -72,6 +72,9 @@
     <string name="morning_hrv_status_optimal">Optimale autonome Bereitschaft</string>
     <string name="morning_hrv_status_fatigued_low">Geringe Bereitschaft (Autonome Ermüdung)</string>
     <string name="morning_hrv_status_elevated">Erhöhte parasympathische Aktivität</string>
+    <string name="morning_hrv_calibration_baseline_progress">Tag %1$d von %2$d Basis-Kalibrierung</string>
+    <string name="morning_hrv_calibration_weekly_progress">Tag %1$d von %2$d wöchentlichen Messungen</string>
+    <string name="morning_hrv_calibration_complete">Kalibrierung abgeschlossen</string>
     <string name="morning_hrv_btn_saved">Gespeichert</string>
 
     <!-- Longitudinal HRV Readiness Trend in Periods Screen (ATT-3557 / REQ-PER-033) -->

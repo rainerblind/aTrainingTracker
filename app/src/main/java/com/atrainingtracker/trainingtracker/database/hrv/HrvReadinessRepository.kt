@@ -23,6 +23,7 @@ import androidx.annotation.VisibleForTesting
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import java.time.LocalDate
 
 /**
  * Repository coordinating morning HRV readiness database persistence and Smallest Worthwhile Change (SWC)
@@ -65,7 +66,9 @@ class HrvReadinessRepository(
         targetDateIso: String,
         posture: HrvPosture
     ): HrvReadinessResult = withContext(ioDispatcher) {
-        val entries = databaseManager.getAllEntries(posture)
+        val targetDate = LocalDate.parse(targetDateIso)
+        val dMinus59Iso = targetDate.minusDays(59).toString()
+        val entries = databaseManager.getPrimaryEntriesInWindow(posture, dMinus59Iso, targetDateIso)
         HrvReadinessCalculator.calculateReadiness(targetDateIso, posture, entries)
     }
 

@@ -300,7 +300,7 @@ class MorningHrvCheckViewModelTest {
         val savedEntry = hrvRepository.getEntryById(rowId)
         assertNotNull("Saved entry must be retrievable from HrvReadinessRepository", savedEntry)
         assertEquals(rowId, savedEntry!!.id)
-        assertTrue("Must be marked primary for day", savedEntry.isPrimaryForDay)
+        assertFalse("High artifact reading (> 5.0%) must NOT be marked primary for day", savedEntry.isPrimaryForDay)
     }
 
     @Test

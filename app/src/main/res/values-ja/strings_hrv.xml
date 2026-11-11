@@ -72,6 +72,9 @@
     <string name="morning_hrv_status_optimal">最適な自律神経準備状態</string>
     <string name="morning_hrv_status_fatigued_low">低い準備状態（自律神経の疲労）</string>
     <string name="morning_hrv_status_elevated">副交感神経活動の上昇</string>
+    <string name="morning_hrv_calibration_baseline_progress">ベースライン調整 %1$d日目 / %2$d日</string>
+    <string name="morning_hrv_calibration_weekly_progress">週間測定 %1$d日目 / %2$d日</string>
+    <string name="morning_hrv_calibration_complete">調整完了</string>
     <string name="morning_hrv_btn_saved">保存済み</string>
 
     <!-- Longitudinal HRV Readiness Trend in Periods Screen (ATT-3557 / REQ-PER-033) -->

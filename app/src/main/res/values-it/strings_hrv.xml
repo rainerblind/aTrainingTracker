@@ -72,6 +72,9 @@
     <string name="morning_hrv_status_optimal">Prontezza autonomica ottimale</string>
     <string name="morning_hrv_status_fatigued_low">Bassa prontezza (affaticamento autonomico)</string>
     <string name="morning_hrv_status_elevated">Attività parasimpatica elevata</string>
+    <string name="morning_hrv_calibration_baseline_progress">Giorno %1$d di %2$d di calibrazione di base</string>
+    <string name="morning_hrv_calibration_weekly_progress">Giorno %1$d di %2$d misurazioni settimanali</string>
+    <string name="morning_hrv_calibration_complete">Calibrazione completata</string>
     <string name="morning_hrv_btn_saved">Salvato</string>
 
     <!-- Longitudinal HRV Readiness Trend in Periods Screen (ATT-3557 / REQ-PER-033) -->

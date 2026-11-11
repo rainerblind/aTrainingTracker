@@ -94,7 +94,9 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.devices.hrv.HrvSignalQualityStatus
+import com.atrainingtracker.trainingtracker.database.hrv.CalibrationProgressState
 import com.atrainingtracker.trainingtracker.database.hrv.HrvPosture
+import com.atrainingtracker.trainingtracker.database.hrv.HrvReadinessCalculator
 import com.atrainingtracker.trainingtracker.database.hrv.HrvReadinessEntry
 import com.atrainingtracker.trainingtracker.database.hrv.HrvReadinessResult
 import com.atrainingtracker.trainingtracker.database.hrv.ReadinessStatus
@@ -647,11 +649,28 @@ private fun ReadinessResultCard(
                         TTColor.ReadinessOnStatus,
                         stringResource(R.string.morning_hrv_status_elevated)
                     )
-                    ReadinessStatus.CALIBRATING -> Triple(
-                        TTColor.ReadinessCalibrating,
-                        TTColor.ReadinessOnStatus,
-                        readinessResult.calibrationProgressMessage
-                    )
+                    ReadinessStatus.CALIBRATING -> {
+                        val calibrationText = when (readinessResult.calibrationState) {
+                            CalibrationProgressState.BASELINE_60D -> stringResource(
+                                R.string.morning_hrv_calibration_baseline_progress,
+                                readinessResult.n60d,
+                                HrvReadinessCalculator.MIN_60D_DAYS
+                            )
+                            CalibrationProgressState.WEEKLY_7D -> stringResource(
+                                R.string.morning_hrv_calibration_weekly_progress,
+                                readinessResult.n7d,
+                                HrvReadinessCalculator.MIN_7D_DAYS
+                            )
+                            CalibrationProgressState.COMPLETE -> stringResource(
+                                R.string.morning_hrv_calibration_complete
+                            )
+                        }
+                        Triple(
+                            TTColor.ReadinessCalibrating,
+                            TTColor.ReadinessOnStatus,
+                            calibrationText
+                        )
+                    }
                 }
 
                 Surface(
