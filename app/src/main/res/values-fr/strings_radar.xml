@@ -103,6 +103,8 @@
     <string name="radar_light_mode_peloton">Peloton</string>
     <string name="radar_light_auto_switch">Éclairage d\'entraînement automatique</string>
     <string name="radar_light_auto_switch_desc">Allume le feu arrière au début de l\'entraînement et l\'éteint à la fin</string>
+    <string name="radar_smart_light_automation">Automatisation intelligente de l\'éclairage</string>
+    <string name="radar_smart_light_automation_desc">Adapte l\'éclairage au jour, aux tunnels, au crépuscule et au trafic</string>
     <string name="radar_light_sheet_title">Feu arrière radar</string>
     <string name="radar_light_stvzo_notice">Mode StVZO (Clignotement désactivé)</string>
 

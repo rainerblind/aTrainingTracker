@@ -103,6 +103,8 @@
     <string name="radar_light_mode_peloton">Peloton</string>
     <string name="radar_light_auto_switch">Auto Workout Light</string>
     <string name="radar_light_auto_switch_desc">Turn tail light on at workout start and off at finish</string>
+    <string name="radar_smart_light_automation">Smart Light Automation</string>
+    <string name="radar_smart_light_automation_desc">Adapt light to daylight, tunnels, dusk, and traffic threats</string>
     <string name="radar_light_sheet_title">Radar Tail Light</string>
     <string name="radar_light_stvzo_notice">StVZO Mode (Flashing disabled)</string>
 

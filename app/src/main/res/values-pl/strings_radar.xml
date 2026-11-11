@@ -103,6 +103,8 @@
     <string name="radar_light_mode_peloton">Peleton</string>
     <string name="radar_light_auto_switch">Automatyczne światło treningowe</string>
     <string name="radar_light_auto_switch_desc">Włącza tylne światło na początku treningu i wyłącza na końcu</string>
+    <string name="radar_smart_light_automation">Inteligentna automatyzacja oświetlenia</string>
+    <string name="radar_smart_light_automation_desc">Dostosuj światło do dnia, tuneli, zmierzchu i ruchu drogowego</string>
     <string name="radar_light_sheet_title">Tylne światło radaru</string>
     <string name="radar_light_stvzo_notice">Tryb StVZO (Miganie wyłączone)</string>
 

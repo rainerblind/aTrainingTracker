@@ -103,6 +103,8 @@
     <string name="radar_light_mode_peloton">Gruppo</string>
     <string name="radar_light_auto_switch">Luce allenamento automatica</string>
     <string name="radar_light_auto_switch_desc">Accende la luce posteriore all\'avvio dell\'allenamento e la spegne al termine</string>
+    <string name="radar_smart_light_automation">Automazione intelligente luce</string>
+    <string name="radar_smart_light_automation_desc">Adatta la luce a luce diurna, gallerie, crepuscolo e traffico</string>
     <string name="radar_light_sheet_title">Luce posteriore radar</string>
     <string name="radar_light_stvzo_notice">Modalità StVZO (Lampeggio disattivato)</string>
 

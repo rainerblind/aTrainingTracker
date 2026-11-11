@@ -3707,6 +3707,48 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 **Invariants**: Predefined Network slot 1 isolation; non-blocking asynchronous ACK transmission; zero database migrations or duplicate device rows; radar target telemetry and starvation watchdog independence; seamless UI parity across BLE and ANT+.
 
+### REQ-CON-034: Environmental & Traffic-Adaptive Smart Tail Light Mode Automation [Verified]
+- **Tests**: `TST-CON-034` | **Tickets**: `ATT-5104`, `ATT-7145`
+- **Implementation**: `SmartRadarLightEngine.kt`, `SolarElevationCalculator.kt`, `RadarLightController.kt`, `RadarLightMode.kt`, `RadarStateRepository.kt`, `TuningPreferencesDataStore.kt`, `RadarSettingsSection.kt`, `strings_radar.xml`
+- **Rationale**: Cyclists need their radar tail light to adapt dynamically to lighting conditions (daylight, tunnels, dusk, night) and approaching traffic threats without manual distraction. At night, lights must alert drivers without blinding them (anti-glare cap preventing 100 lm flash), while tunnels demand rapid activation (< 2s) from daytime modes. Ambient sensors on smartphones in jersey pockets or with screens turned off experience total darkness and must not falsely trigger tunnel modes. The system must establish a robust smart lighting engine utilizing pocket/screen-off sensor gating, astronomical solar elevation fallback, 3-stage threat escalation, and $\ge 1.5\text{ s}$ command rate-limiting (ATT-5104, Parent Epic ATT-1286, extending `REQ-CON-031`, `REQ-CON-032`, and `REQ-CON-033`):
+1. *Sensor Gating & Pocket/Screen-Off Protection (`REQ-CON-034.1`)*:
+• Ambient illuminance from `Sensor.TYPE_LIGHT` SHALL be processed ONLY when `PowerManager.isInteractive` is `true` (screen ON) AND `Sensor.TYPE_PROXIMITY` indicates `FAR` (or unoccluded).
+• When the screen is OFF or proximity indicates `NEAR` (e.g. phone stowed in a jersey pocket or bag), ambient light values SHALL be ignored, and environmental profile determination SHALL fall back to astronomical solar elevation.
+2. *Astronomical Solar Elevation Fallback (`REQ-CON-034.2`)*:
+• `SolarElevationCalculator` SHALL compute the solar elevation angle $\alpha$ based on current GPS coordinates (`LATITUDE`, `LONGITUDE`) and epoch timestamp.
+• The system SHALL classify solar elevation as `DAY` when $\alpha \ge -3.0^\circ$ and `DUSK_NIGHT` when $\alpha < -3.0^\circ$.
+3. *Fast Tunnel Detection & Illuminance Hysteresis (`REQ-CON-034.3`)*:
+• When sensor gating permits, a sudden drop in illuminance from $> 1000\text{ lx}$ to $< 50\text{ lx}$ sustained for $\ge 1.5\text{ s}$ SHALL immediately trigger tunnel mode (`SOLID` or `NIGHT_FLASH`), activating within $2\text{ s}$.
+• Recovery back to daytime profile SHALL require illuminance $> 300\text{ lx}$ sustained for a $10\text{ s}$ hysteresis window.
+4. *3-Stage Threat Escalation Matrix & Strict Anti-Glare Cap (`REQ-CON-034.4`)*:
+• *Night / Dusk Profile*:
+  - Stage 0 (No threat / `NONE`): `PELOTON` (8 lm, non-dazzling).
+  - Stage 1 (Normal approach / `APPROACHING`): `SOLID` (25 lm).
+  - Stage 2 (High threat / `FAST_APPROACHING` or vehicle `IN_RIDER_LANE` with low clearance): `NIGHT_FLASH` (40 lm, strictly capped; `DAY_FLASH` 100 lm is strictly prohibited at night to prevent blinding approaching motorists).
+• *Daytime Profile*:
+  - Stage 0: `OFF` (or `PELOTON`).
+  - Stage 1: `SOLID` or `DAY_FLASH`.
+  - Stage 2: `DAY_FLASH` (100 lm).
+5. *Command Rate-Limiting & Post-Pass Cooldown Hysteresis (`REQ-CON-034.5`)*:
+• Dispatched mode transitions via `RadarLightController` SHALL enforce a minimum interval of $\ge 1.5\text{ s}$ between hardware writes to protect BLE and ANT+ message queues.
+• Following threat de-escalation back to `NONE`, the engine SHALL enforce a $3\text{--}5\text{ s}$ cooldown hysteresis before stepping down to Stage 0.
+6. *Settings Preference & 9-Language Localization Parity (`REQ-CON-034.6`)*:
+• A preference `radarSmartLightAutomation` (`Boolean`, default `false`) SHALL be persisted in `TuningPreferencesDataStore`.
+• A settings toggle SHALL be rendered in `RadarSettingsSection.kt` with 100% localization parity across EN, DE, ES, FR, IT, JA, NL, PL, PT.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* Smart Tail Light Automation enabled during daytime,
+• *When* ambient light drops from $3000\text{ lx}$ to $20\text{ lx}$ while screen is ON and proximity is FAR (tunnel entry),
+• *Then* `SmartRadarLightEngine` switches the tail light to tunnel mode within $2\text{ s}$, and recovers to daytime mode $10\text{ s}$ after exiting into sunlight.
+• *Given* the phone stowed in a dark jersey pocket ($0\text{ lx}$) during daytime ($\alpha \ge -3.0^\circ$),
+• *When* proximity is NEAR or screen is OFF,
+• *Then* `SmartRadarLightEngine` ignores the $0\text{ lx}$ reading and maintains the daytime lighting profile.
+• *Given* the Night/Dusk profile active at Stage 0 (`PELOTON`),
+• *When* a fast-approaching vehicle is detected (`FAST_APPROACHING`),
+• *Then* the light escalates to `NIGHT_FLASH` (40 lm) and never to `DAY_FLASH` (100 lm), enforcing a $\ge 1.5\text{ s}$ interval between mode changes.
+
+**Invariants**: Strict night anti-glare cap; pocket and screen-off false trigger immunity; $\ge 1.5\text{ s}$ command rate-limiting; StVZO mode pruning compliance; zero SQLite migrations.
+
 ### REQ-TRK-064: 1-Tap Radar Audio Snooze, Peloton-Mode Audio Sync & Smart Urban Alert Suppression [Verified]
 - **Tests**: `TST-TRK-064` | **Tickets**: `ATT-5119`, `ATT-6708`
 - **Implementation**: `RadarSnoozeController.kt`, `RadarAlertManager.kt`, `RadarEdgeOverlay.kt`, `RadarLightQuickSwitchSheet.kt`, `RadarState.kt`, `RadarStateRepository.kt`, `BTLERadarDevice.java`, `TuningPreferencesDataStore.kt`, `RadarSettingsSection.kt`, `strings_radar.xml`

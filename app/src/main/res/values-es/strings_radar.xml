@@ -103,6 +103,8 @@
     <string name="radar_light_mode_peloton">Pelotón</string>
     <string name="radar_light_auto_switch">Luz de entrenamiento automática</string>
     <string name="radar_light_auto_switch_desc">Enciende la luz trasera al iniciar el entrenamiento y la apaga al finalizar</string>
+    <string name="radar_smart_light_automation">Automatización inteligente de luz</string>
+    <string name="radar_smart_light_automation_desc">Adapta la luz a la luz diurna, túneles, anochecer y tráfico</string>
     <string name="radar_light_sheet_title">Luz trasera radar</string>
     <string name="radar_light_stvzo_notice">Modo StVZO (Parpadeo desactivado)</string>
 

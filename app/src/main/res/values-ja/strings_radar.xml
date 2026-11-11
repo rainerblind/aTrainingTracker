@@ -103,6 +103,8 @@
     <string name="radar_light_mode_peloton">プロトン</string>
     <string name="radar_light_auto_switch">ワークアウト自動点灯</string>
     <string name="radar_light_auto_switch_desc">ワークアウト開始時に点灯し、終了時に消灯します</string>
+    <string name="radar_smart_light_automation">スマートライト自動化</string>
+    <string name="radar_smart_light_automation_desc">昼光、トンネル、夕暮れ、交通の脅威に合わせてライトを適応</string>
     <string name="radar_light_sheet_title">レーダーテールライト</string>
     <string name="radar_light_stvzo_notice">StVZOモード（点滅無効）</string>
 

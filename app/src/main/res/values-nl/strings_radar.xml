@@ -103,6 +103,8 @@
     <string name="radar_light_mode_peloton">Peloton</string>
     <string name="radar_light_auto_switch">Automatische trainingsverlichting</string>
     <string name="radar_light_auto_switch_desc">Schakelt achterlicht in bij start training en uit bij einde</string>
+    <string name="radar_smart_light_automation">Slimme lichtautomatisering</string>
+    <string name="radar_smart_light_automation_desc">Pas licht aan bij daglicht, tunnels, schemering en verkeer</string>
     <string name="radar_light_sheet_title">Radar-achterlicht</string>
     <string name="radar_light_stvzo_notice">StVZO-modus (Knipperen uitgeschakeld)</string>
 

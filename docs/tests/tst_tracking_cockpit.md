@@ -2070,6 +2070,30 @@
   5. *Fail-Safe Isolation & Radar Telemetry Non-Interference Tests (`TST-CON-033.5`, `ANTBikeRadarDeviceTest.kt`)*:
   • Verify that companion light channel drop or timeout leaves ANT+ radar target tracking (Pages `0x30`/`0x31`) completely unaffected.
 
+### TST-CON-034: **Environmental & Traffic-Adaptive Smart Tail Light Automation Test Suite** [Verified]
+- **Requirement(s)**: `REQ-CON-034` (`REQ-CON-034.1`..`REQ-CON-034.6`)
+- **Component**: `SmartRadarLightEngine.kt`, `SolarElevationCalculator.kt`, `RadarLightController.kt`, `RadarLightMode.kt`, `RadarStateRepository.kt`, `TuningPreferencesDataStore.kt`, `RadarSettingsSection.kt`, `strings_radar.xml`
+- **Jira**: `ATT-5104`, `ATT-7145`
+- **Test Description**:
+  1. *Pocket Occlusion & Screen-Off Gating Tests (`TST-CON-034.1`, `SmartRadarLightEngineTest.kt`)*:
+  • Verify that $0\text{ lx}$ illuminance is ignored when screen is OFF (`isInteractive == false`) or proximity is `NEAR`.
+  • Verify that solar elevation determines environmental profile when ambient sensor is gated.
+  2. *Solar Elevation Calculation Tests (`TST-CON-034.2`, `SolarElevationCalculatorTest.kt`)*:
+  • Verify solar elevation angle calculation across noon, sunset, civil twilight ($-3^\circ$), and midnight.
+  • Verify classification into `DAY` vs. `DUSK_NIGHT`.
+  3. *Tunnel Entry & Exit Hysteresis Tests (`TST-CON-034.3`, `SmartRadarLightEngineTest.kt`)*:
+  • Verify sudden illuminance drop triggers tunnel mode within $2\text{ s}$.
+  • Verify $10\text{ s}$ recovery hysteresis before returning to daytime mode upon illuminance recovery.
+  4. *3-Stage Threat Escalation & Anti-Glare Cap Tests (`TST-CON-034.4`, `SmartRadarLightEngineTest.kt`)*:
+  • Verify night escalation: `PELOTON` (Stage 0) $\rightarrow$ `SOLID` (Stage 1) $\rightarrow$ `NIGHT_FLASH` (Stage 2).
+  • Assert `DAY_FLASH` is strictly never emitted during night/dusk profile.
+  5. *Command Rate-Limiting & Post-Pass Cooldown Tests (`TST-CON-034.5`, `SmartRadarLightEngineTest.kt`)*:
+  • Verify mode command dispatch is rate-limited to at most one call per $\ge 1.5\text{ s}$.
+  • Verify $3\text{--}5\text{ s}$ post-threat cooldown before returning to Stage 0.
+  6. *Settings & 9-Language Localization Parity Tests (`TST-CON-034.6`, `TranslationParityTest.kt`)*:
+  • Verify `radarSmartLightAutomation` DataStore persistence and UI toggle rendering.
+  • Verify 100% key parity and matching specifiers across all 9 locales in `strings_radar.xml`.
+
 ### TST-TRK-064: **1-Tap Radar Audio Snooze, Peloton Sync & Urban Suppression Test Suite** [Verified]
 - **Requirement(s)**: `REQ-TRK-064` (`REQ-TRK-064.1`..`REQ-TRK-064.7`)
 - **Component**: `RadarSnoozeController.kt`, `RadarAlertManager.kt`, `RadarEdgeOverlay.kt`, `RadarLightQuickSwitchSheet.kt`, `RadarState.kt`, `RadarStateRepository.kt`, `BTLERadarDevice.java`, `TuningPreferencesDataStore.kt`, `RadarSettingsSection.kt`, `strings_radar.xml`

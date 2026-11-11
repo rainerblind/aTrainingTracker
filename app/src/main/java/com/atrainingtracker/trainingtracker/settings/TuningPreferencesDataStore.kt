@@ -110,6 +110,7 @@ object TuningPreferencesDefaults {
     const val RADAR_HAPTIC_ALERT = true
     val RADAR_LIGHT_DEFAULT_MODE = RadarLightMode.DAY_FLASH
     const val RADAR_AUTO_LIGHT_CONTROL = true
+    const val RADAR_SMART_LIGHT_AUTOMATION = false
     const val RADAR_PELOTON_AUDIO_SYNC = true
     const val RADAR_SMART_URBAN_MUTE = false
     const val RADAR_SPATIAL_AUDIO_ENABLED = true
@@ -419,6 +420,7 @@ data class TuningConfig(
     val radarHapticAlert: Boolean = TuningPreferencesDefaults.RADAR_HAPTIC_ALERT,
     val radarLightDefaultMode: RadarLightMode = TuningPreferencesDefaults.RADAR_LIGHT_DEFAULT_MODE,
     val radarAutoLightControl: Boolean = TuningPreferencesDefaults.RADAR_AUTO_LIGHT_CONTROL,
+    val radarSmartLightAutomation: Boolean = TuningPreferencesDefaults.RADAR_SMART_LIGHT_AUTOMATION,
     val radarPelotonAudioSync: Boolean = TuningPreferencesDefaults.RADAR_PELOTON_AUDIO_SYNC,
     val radarSmartUrbanMute: Boolean = TuningPreferencesDefaults.RADAR_SMART_URBAN_MUTE,
     val radarSpatialAudioEnabled: Boolean = TuningPreferencesDefaults.RADAR_SPATIAL_AUDIO_ENABLED,
@@ -582,6 +584,7 @@ class TuningPreferencesDataStore(private val context: Context) {
         val KEY_RADAR_HAPTIC_ALERT: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_radar_haptic_alert")
         val KEY_RADAR_LIGHT_DEFAULT_MODE: Preferences.Key<String> = stringPreferencesKey("tuning_radar_light_default_mode")
         val KEY_RADAR_AUTO_LIGHT_CONTROL: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_radar_auto_light_control")
+        val KEY_RADAR_SMART_LIGHT_AUTOMATION: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_radar_smart_light_automation")
         val KEY_RADAR_PELOTON_AUDIO_SYNC: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_radar_peloton_audio_sync")
         val KEY_RADAR_SMART_URBAN_MUTE: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_radar_smart_urban_mute")
         val KEY_RADAR_SPATIAL_AUDIO_ENABLED: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_radar_spatial_audio_enabled")
@@ -674,6 +677,7 @@ class TuningPreferencesDataStore(private val context: Context) {
             KEY_RADAR_HAPTIC_ALERT,
             KEY_RADAR_LIGHT_DEFAULT_MODE,
             KEY_RADAR_AUTO_LIGHT_CONTROL,
+            KEY_RADAR_SMART_LIGHT_AUTOMATION,
             KEY_RADAR_PELOTON_AUDIO_SYNC,
             KEY_RADAR_SMART_URBAN_MUTE,
             KEY_RADAR_SPATIAL_AUDIO_ENABLED,
@@ -867,6 +871,7 @@ data class AutoPausePreferences(
         val rawLightDefaultModeStr = prefs[KEY_RADAR_LIGHT_DEFAULT_MODE]
         val radarLightDefaultMode = safeEnumValueOf(rawLightDefaultModeStr, TuningPreferencesDefaults.RADAR_LIGHT_DEFAULT_MODE)
         val radarAutoLightControl = prefs[KEY_RADAR_AUTO_LIGHT_CONTROL] ?: TuningPreferencesDefaults.RADAR_AUTO_LIGHT_CONTROL
+        val radarSmartLightAutomation = prefs[KEY_RADAR_SMART_LIGHT_AUTOMATION] ?: TuningPreferencesDefaults.RADAR_SMART_LIGHT_AUTOMATION
         val radarPelotonAudioSync = prefs[KEY_RADAR_PELOTON_AUDIO_SYNC] ?: TuningPreferencesDefaults.RADAR_PELOTON_AUDIO_SYNC
         val radarSmartUrbanMute = prefs[KEY_RADAR_SMART_URBAN_MUTE] ?: TuningPreferencesDefaults.RADAR_SMART_URBAN_MUTE
         val radarSpatialAudioEnabled = prefs[KEY_RADAR_SPATIAL_AUDIO_ENABLED] ?: TuningPreferencesDefaults.RADAR_SPATIAL_AUDIO_ENABLED
@@ -1089,6 +1094,7 @@ data class AutoPausePreferences(
             radarHapticAlert = radarHapticAlert,
             radarLightDefaultMode = radarLightDefaultMode,
             radarAutoLightControl = radarAutoLightControl,
+            radarSmartLightAutomation = radarSmartLightAutomation,
             radarPelotonAudioSync = radarPelotonAudioSync,
             radarSmartUrbanMute = radarSmartUrbanMute,
             radarSpatialAudioEnabled = radarSpatialAudioEnabled,
@@ -1431,6 +1437,7 @@ data class AutoPausePreferences(
             prefs[KEY_RADAR_HAPTIC_ALERT] = config.radarHapticAlert
             prefs[KEY_RADAR_LIGHT_DEFAULT_MODE] = config.radarLightDefaultMode.name
             prefs[KEY_RADAR_AUTO_LIGHT_CONTROL] = config.radarAutoLightControl
+            prefs[KEY_RADAR_SMART_LIGHT_AUTOMATION] = config.radarSmartLightAutomation
             prefs[KEY_RADAR_PELOTON_AUDIO_SYNC] = config.radarPelotonAudioSync
             prefs[KEY_RADAR_SMART_URBAN_MUTE] = config.radarSmartUrbanMute
             prefs[KEY_RADAR_SPATIAL_AUDIO_ENABLED] = config.radarSpatialAudioEnabled
@@ -1666,6 +1673,16 @@ data class AutoPausePreferences(
     suspend fun updateRadarAutoLightControl(enabled: Boolean) {
         context.dataStore.edit { prefs ->
             prefs[KEY_RADAR_AUTO_LIGHT_CONTROL] = enabled
+        }
+    }
+
+    val radarSmartLightAutomationFlow: Flow<Boolean> = context.dataStore.data.map { prefs ->
+        prefs[KEY_RADAR_SMART_LIGHT_AUTOMATION] ?: TuningPreferencesDefaults.RADAR_SMART_LIGHT_AUTOMATION
+    }
+
+    suspend fun updateRadarSmartLightAutomation(enabled: Boolean) {
+        context.dataStore.edit { prefs ->
+            prefs[KEY_RADAR_SMART_LIGHT_AUTOMATION] = enabled
         }
     }
 

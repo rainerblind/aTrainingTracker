@@ -103,6 +103,8 @@
     <string name="radar_light_mode_peloton">Peloton</string>
     <string name="radar_light_auto_switch">Automatisches Trainingslicht</string>
     <string name="radar_light_auto_switch_desc">Schaltet das Rücklicht bei Trainingsbeginn ein und bei Trainingsende aus</string>
+    <string name="radar_smart_light_automation">Intelligente Lichtautomatik</string>
+    <string name="radar_smart_light_automation_desc">Licht an Tageslicht, Tunnel, Dämmerung und Verkehr anpassen</string>
     <string name="radar_light_sheet_title">Radar-Rücklicht</string>
     <string name="radar_light_stvzo_notice">StVZO-Modus (Blinken deaktiviert)</string>
 
