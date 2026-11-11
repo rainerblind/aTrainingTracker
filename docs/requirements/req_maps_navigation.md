@@ -2296,6 +2296,41 @@
 
 **Invariants**: Exact GPS trackpoint correlation; zero extraneous markers on non-radar sessions.
 
+### REQ-CLM-008: Live Climb Detection Movement-Bearing Gating & Cache Reconciliation [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-CLM-008` | **Tickets**: `ATT-7160`
+- **Implementation**: `LiveClimbsRepository.kt`
+- **Rationale**: When stationary or indoors (`Nicht gestartet` / `IDLE`), `banalRepository.currentBearing` is null. Previously, `LiveClimbsRepository` substituted `0.0°` (due North), causing stored climbs within 250m whose initial segment pointed North (315°..45°) to falsely trigger `LiveClimbStatus.APPROACHING` and display `LiveClimbSheet`. The system SHALL require a non-null movement bearing before matching approaching climbs, preserve active tracking during mid-climb pauses, and reconcile `_activeLiveClimb` on database refresh:
+1. *Movement-Bearing Gating (`REQ-CLM-008.1`)*:
+• `LiveClimbsRepository.updateTracking(location: LatLng, bearing: Double?)` SHALL accept a nullable movement bearing, eliminating synthetic `?: 0.0` North fallback.
+• In candidate climb scanning (`LiveClimbStatus.APPROACHING`), when `currentLive == null` or finished, the system SHALL evaluate initial segment heading difference (`bearingDiff <= 45.0`) only when `bearing != null`.
+• When `bearing == null`, candidate evaluation SHALL NOT match new climbs, and `_activeLiveClimb` SHALL remain null.
+2. *Mid-Climb Pause Progress Retention (`REQ-CLM-008.2`)*:
+• When an athlete is already in `LiveClimbStatus.ON_CLIMB` or actively `LiveClimbStatus.APPROACHING`, receiving `bearing == null` (such as a temporary stop on a steep ascent or pause at traffic light) SHALL NOT cancel or clear the active climb.
+• Progress evaluation SHALL continue using orthogonal polyline projection via `PolylineProgressTracker.projectLocation` and distance-to-summit checks.
+3. *Active Climb Cache Reconciliation on Database Refresh (`REQ-CLM-008.3`)*:
+• In `LiveClimbsRepository.refreshClimbs(activeRouteId: Long?)`, after reloading `_allClimbs` (from route climbs or `ClimbsDatabaseManager.getAllClimbs()`), the system SHALL verify whether `_activeLiveClimb.value?.climb?.id` is still present in the updated `_allClimbs.value`.
+• If the active climb ID is absent from `_allClimbs.value` (e.g. deleted or filtered out by a route change), `LiveClimbsRepository` SHALL immediately clear `_activeLiveClimb.value = null`.
+
+### Requirement Archaeology & Chesterton's Fence Audit
+1. *Original Requirement ID & Target*: Amends `REQ-MAP-027` (Section 3: Live Climb Tracking Engine) in `LiveClimbsRepository.kt`.
+2. *Historical Origin & Commit Trace*: Commit `045e14d4` (`ATT-1281`, sprint `2026-40.14`).
+3. *Root Reason for Existing Formulation*: Elvis fallback `?: 0.0` was introduced to satisfy non-null `Double` parameter in `updateTracking`, assuming GPS bearing would always accompany GPS fix.
+4. *Preservation of Core Invariants*: Spatial thresholds (approach 250m, start gate 30m, summit gate 35m) and heading divergence limit (45°) remain strictly preserved.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* an athlete is stationary (`banalRepository.currentBearing.value == null`) near a climb start (< 250m) heading North (18°),
+• *When* `banalRepository.currentLocation` emits a GPS fix,
+• *Then* `LiveClimbsRepository` does not substitute `0.0°` and `_activeLiveClimb.value` remains `null`.
+• *Given* an athlete actively on a climb (`LiveClimbStatus.ON_CLIMB`) who pauses mid-ascent (`currentBearing == null`),
+• *When* a stationary GPS fix arrives on the climb polyline,
+• *Then* `ON_CLIMB` progress remains latched and is not cleared.
+• *Given* `_activeLiveClimb` references a climb ID that was deleted or filtered out of `_allClimbs`,
+• *When* `refreshClimbs()` runs,
+• *Then* `_activeLiveClimb.value` is immediately reset to `null`.
+
+**Invariants**: Zero false approaching triggers while stationary; zero drop of active climbs during mid-ascent pauses; 100% test pass rate across `LiveClimbsRepositoryTest`.
+
 
 
 

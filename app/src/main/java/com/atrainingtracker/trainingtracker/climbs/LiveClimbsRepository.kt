@@ -68,7 +68,7 @@ class LiveClimbsRepository private constructor(
         scope.launch {
             banalRepository.currentLocation.collect { location ->
                 if (location != null) {
-                    val bearing = banalRepository.currentBearing.value ?: 0.0
+                    val bearing = banalRepository.currentBearing.value
                     updateTracking(location, bearing)
                 }
             }
@@ -92,12 +92,17 @@ class LiveClimbsRepository private constructor(
             stored
         }
         _allClimbs.value = list
+
+        val active = _activeLiveClimb.value
+        if (active != null && list.none { it.id == active.climb.id }) {
+            _activeLiveClimb.value = null
+        }
     }
 
     /**
-     * Updates live climb tracking telemetry based on athlete's current [location] and [bearing].
+     * Updates live climb tracking telemetry based on athlete's current [location] and optional [bearing].
      */
-    fun updateTracking(location: LatLng, bearing: Double) {
+    fun updateTracking(location: LatLng, bearing: Double? = null) {
         val candidates = _allClimbs.value
         if (candidates.isEmpty()) {
             _activeLiveClimb.value = null
@@ -120,6 +125,12 @@ class LiveClimbsRepository private constructor(
             } else {
                 return
             }
+        }
+
+        // When stationary or indoors without a valid movement vector, do not match new approaching climbs
+        if (bearing == null) {
+            _activeLiveClimb.value = null
+            return
         }
 
         // Otherwise scan candidates for approaching or starting climb
@@ -176,7 +187,7 @@ class LiveClimbsRepository private constructor(
     private fun evaluateClimbProgress(
         current: LiveClimbData,
         location: LatLng,
-        bearing: Double
+        bearing: Double?
     ): LiveClimbData? {
         val climb = current.climb
         val results = FloatArray(1)

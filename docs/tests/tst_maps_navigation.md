@@ -1191,6 +1191,21 @@
   2. *High-Threat Visual Distinction Test*: Verify high-threat passes (`FAST_APPROACHING`) are tagged with distinct threat level metadata for visual differentiation on `TrackOnMapScreen.kt`.
   3. *Non-Radar Isolation Invariant Test*: Verify workouts without radar samples yield zero traffic hotspot markers and preserve all standard track markers.
 
+### TST-CLM-008: **Live Climb Detection Movement-Bearing Gating & Cache Reconciliation Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-CLM-008` (`REQ-CLM-008.1`..`REQ-CLM-008.3`)
+- **Component**: `LiveClimbsRepository.kt`, `LiveClimbsRepositoryTest.kt`
+- **Jira**: `ATT-7160` | **Target Release**: `V5.0.0`
+- **Test Description**:
+  1. *Stationary Null-Bearing Candidate Rejection Test (`TST-CLM-008.1`, `LiveClimbsRepositoryTest.kt`)*:
+  • Verify that when `updateTracking` is invoked with `bearing = null`, a candidate climb within 250m whose initial segment points North (0°) is NOT activated as `APPROACHING` and `_activeLiveClimb.value` remains `null`.
+  2. *Mid-Climb Pause Progress Preservation Test (`TST-CLM-008.2`, `LiveClimbsRepositoryTest.kt`)*:
+  • Verify that when `updateTracking` is invoked with `bearing = null` while `_activeLiveClimb` is `ON_CLIMB`, the climb status remains `ON_CLIMB` and orthogonal polyline projection progress is accurately updated.
+  3. *Stale Active Climb Cleared on Refresh Test (`TST-CLM-008.3`, `LiveClimbsRepositoryTest.kt`)*:
+  • Verify that when `refreshClimbs()` reloads climbs and the currently active climb ID is no longer present in `_allClimbs`, `_activeLiveClimb.value` is reset to `null`.
+  4. *Targeted Regression Verification Suite (`TST-CLM-008.4`)*:
+  • Run targeted tests: `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.climbs.*"` asserting 100% pass rate.
+
+
 
 
 
