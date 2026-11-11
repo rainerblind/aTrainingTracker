@@ -382,8 +382,8 @@ def list_sprint_issues(role="agent1"):
     sprint_id = active_sprint["id"]
     print(f"Active Sprint: {active_sprint['name']}")
 
-    # 3. Get issues
-    issues = jira_request(f"{config['JIRA_URL']}/rest/agile/1.0/sprint/{sprint_id}/issue?fields=summary,status,issuetype,fixVersions,{STORY_POINTS_FIELD}", role=role)["issues"]
+    # 3. Get issues (paginated)
+    issues = fetch_all_sprint_issues(config['JIRA_URL'], sprint_id, f"summary,status,issuetype,fixVersions,{STORY_POINTS_FIELD}", role=role)
     total_sp = 0.0
     unestimated = 0
     for i in issues:
