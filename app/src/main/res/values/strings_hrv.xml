@@ -24,6 +24,8 @@
     <string name="hrv_dfa_a1_short">a1</string>
     <string name="hrv_artifact_rate">Artifact rate</string>
     <string name="hrv_artifact_rate_short">Art. %</string>
+    <string name="hrv_sdnn">SDNN</string>
+    <string name="hrv_sdnn_short">SDNN</string>
 
     <string name="hrv_info_title">Heart Rate Variability &amp; Aerobic Thresholds</string>
     <string name="hrv_info_trailing_lag_title">Rolling Window &amp; Pacing Lag</string>

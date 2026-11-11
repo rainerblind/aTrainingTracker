@@ -122,6 +122,7 @@ public enum SensorType
     HRV_RMSSD(SensorCategory.HEART_RATE_AND_ENERGY, SensorSubCategory.HRV_AND_DRIFT, R.string.hrv_rmssd, R.string.hrv_rmssd_short, R.string.units_time_ms, SensorValueType.DOUBLE, new DefaultNumberFormatter(), true),
     HRV_DFA_A1(SensorCategory.HEART_RATE_AND_ENERGY, SensorSubCategory.HRV_AND_DRIFT, R.string.hrv_dfa_a1, R.string.hrv_dfa_a1_short, R.string.units_none, SensorValueType.DOUBLE, new DfaA1Formatter(), true),
     HRV_ARTIFACT_RATE(SensorCategory.HEART_RATE_AND_ENERGY, SensorSubCategory.HRV_AND_DRIFT, R.string.hrv_artifact_rate, R.string.hrv_artifact_rate_short, R.string.units_percent, SensorValueType.DOUBLE, new DefaultNumberFormatter(), true),
+    HRV_SDNN(SensorCategory.HEART_RATE_AND_ENERGY, SensorSubCategory.HRV_AND_DRIFT, R.string.hrv_sdnn, R.string.hrv_sdnn_short, R.string.units_time_ms, SensorValueType.DOUBLE, new DefaultNumberFormatter(), true),
     RADAR_THREAT_COUNT(SensorCategory.SYSTEM_ENVIRONMENT_AND_DIAGNOSTICS, SensorSubCategory.RADAR_SAFETY, R.string.radar_threat_count, R.string.radar_threat_count_short, R.string.units_none, SensorValueType.INTEGER, new IntegerFormatter(), false),
     RADAR_CLOSEST_DISTANCE_m(SensorCategory.SYSTEM_ENVIRONMENT_AND_DIAGNOSTICS, SensorSubCategory.RADAR_SAFETY, R.string.radar_closest_distance, R.string.radar_closest_distance_short, R.string.units_distance_basic, SensorValueType.DOUBLE, new DistanceFormatter(), false),
     RADAR_APPROACH_SPEED_mps(SensorCategory.SYSTEM_ENVIRONMENT_AND_DIAGNOSTICS, SensorSubCategory.RADAR_SAFETY, R.string.radar_approach_speed, R.string.radar_approach_speed_short, R.string.units_speed_basic, SensorValueType.DOUBLE, new SpeedFormatter(), false),
@@ -197,7 +198,7 @@ public enum SensorType
             case DISTANCE_m -> R.drawable.ic_distance;
             case SPEED_mps -> R.drawable.ic_speed;
             case CADENCE -> R.drawable.ic_cadence;
-            case HR, RR_INTERVAL, HRV_RMSSD, HRV_DFA_A1, HRV_ARTIFACT_RATE, LIVE_HR_DRIFT -> R.drawable.ic_heart_rate;
+            case HR, RR_INTERVAL, HRV_RMSSD, HRV_DFA_A1, HRV_ARTIFACT_RATE, HRV_SDNN, LIVE_HR_DRIFT -> R.drawable.ic_heart_rate;
             case POWER, POWER_TO_WEIGHT, NORMALIZED_POWER, INTENSITY_FACTOR, WORK_KJ, TSS, W_PRIME_BAL,
                  POWER_5S, POWER_1M, POWER_5M, POWER_20M,
                  POWER_PEAK_5S, POWER_PEAK_1M, POWER_PEAK_5M, POWER_PEAK_20M -> R.drawable.ic_power;

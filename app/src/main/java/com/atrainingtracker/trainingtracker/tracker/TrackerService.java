@@ -261,23 +261,82 @@ public class TrackerService extends Service {
         return mWorkoutRrRepository;
     }
     private volatile ScheduledFuture mTrackerHandle;
+    private static final int RR_FLUSH_BATCH_THRESHOLD = 100;
+    private long mLastRrFlushTimeMs = 0L;
+    private final Object mRrFlushLock = new Object();
     private final ConcurrentLinkedQueue<WorkoutRrInterval> mLiveRrQueue = new ConcurrentLinkedQueue<>();
     private final AtomicInteger mRrBeatIndexCounter = new AtomicInteger(0);
     private final RrBeatListener mRrBeatListener = new RrBeatListener() {
         @Override
         public void onRrBeat(@NonNull RrBeatEvent event) {
-            int idx = mRrBeatIndexCounter.getAndIncrement();
-            mLiveRrQueue.add(new WorkoutRrInterval(
-                    null,
-                    mWorkoutID,
-                    idx,
-                    event.getBeatTimestampMs(),
-                    (float) event.getRrMs(),
-                    event.getArtifactFlag(),
-                    event.getGapBeats()
-            ));
+            if (mAutoPauseManager.getCurrentState() == AutoPauseState.TRACKING && mWorkoutID > 0) {
+                int idx = mRrBeatIndexCounter.getAndIncrement();
+                mLiveRrQueue.add(new WorkoutRrInterval(
+                        null,
+                        mWorkoutID,
+                        idx,
+                        event.getBeatTimestampMs(),
+                        (float) event.getRrMs(),
+                        event.getArtifactFlag(),
+                        event.getGapBeats()
+                ));
+                if (mLiveRrQueue.size() >= RR_FLUSH_BATCH_THRESHOLD) {
+                    flushLiveRrQueueAsync();
+                }
+            }
         }
     };
+
+    private void maybeFlushLiveRrQueue() {
+        if (mLiveRrQueue.isEmpty() || mWorkoutID <= 0 || mAutoPauseManager.getCurrentState() != AutoPauseState.TRACKING) {
+            return;
+        }
+        long now = System.currentTimeMillis();
+        if (mLiveRrQueue.size() >= RR_FLUSH_BATCH_THRESHOLD || (now - mLastRrFlushTimeMs) >= 30000L) {
+            flushLiveRrQueueAsync();
+        }
+    }
+
+    private void flushLiveRrQueueAsync() {
+        if (mLiveRrQueue.isEmpty() || mWorkoutID <= 0) {
+            return;
+        }
+        mLastRrFlushTimeMs = System.currentTimeMillis();
+        final long workoutId = mWorkoutID;
+        final List<WorkoutRrInterval> batch = new ArrayList<>();
+        WorkoutRrInterval item;
+        while ((item = mLiveRrQueue.poll()) != null) {
+            batch.add(item);
+        }
+        if (!batch.isEmpty()) {
+            java.util.concurrent.ForkJoinPool.commonPool().execute(() -> {
+                synchronized (mRrFlushLock) {
+                    try {
+                        getWorkoutRrRepository().insertIntervalsBlocking(batch);
+                    } catch (Throwable t) {
+                        Log.e(TAG, "Error asynchronously flushing live RR intervals for workout " + workoutId, t);
+                    }
+                }
+            });
+        }
+    }
+
+    private void flushLiveRrQueueSync(long workoutId) {
+        final List<WorkoutRrInterval> batch = new ArrayList<>();
+        WorkoutRrInterval item;
+        while ((item = mLiveRrQueue.poll()) != null) {
+            batch.add(item);
+        }
+        if (!batch.isEmpty()) {
+            synchronized (mRrFlushLock) {
+                try {
+                    getWorkoutRrRepository().insertIntervalsBlocking(batch);
+                } catch (Throwable t) {
+                    Log.e(TAG, "Error synchronously flushing live RR intervals for workout " + workoutId, t);
+                }
+            }
+        }
+    }
 
     /**
      * Returns the cumulative count of sample row insertion failures during the current service
@@ -696,6 +755,7 @@ public class TrackerService extends Service {
                 if (banalService != null) {
 
                     sampleAndWriteToDb(banalService);
+                    maybeFlushLiveRrQueue();
 
                     // update notification
                     if (DEBUG) Log.i(TAG, "updating notification");
@@ -1472,6 +1532,12 @@ public class TrackerService extends Service {
         mTimeTotal_s = state.timeTotal_s;
         mTimeActive_s = state.timeActive_s;
         mDistanceTotal_m = state.distanceTotal_m;
+        try {
+            int maxBeat = getWorkoutRrRepository().getMaxBeatIndexBlocking(mWorkoutID);
+            mRrBeatIndexCounter.set(maxBeat >= 0 ? maxBeat + 1 : 0);
+        } catch (Throwable t) {
+            Log.e(TAG, "Error restoring RR beat index counter on resume for workout " + mWorkoutID, t);
+        }
 
         if (mSamplesTableName == null) {
             Log.e(TAG, "applyResumedState: Invalid baseFileName (" + mBaseFileName + ") for workoutId=" + mWorkoutID);
@@ -1948,34 +2014,10 @@ public class TrackerService extends Service {
             Log.e(TAG, "Error saving active devices during endWorkout", t);
         }
 
-        // Persist raw beat-to-beat RR intervals and trigger centered recompute (REQ-PER-034.1, REQ-PER-034.3)
+        // Persist remaining raw beat-to-beat RR intervals (REQ-PER-034.1, REQ-PER-034.2)
         try {
-            if (!mLiveRrQueue.isEmpty() && mWorkoutID > 0) {
-                List<WorkoutRrInterval> intervalsToSave = new ArrayList<>(mLiveRrQueue);
-                List<WorkoutRrInterval> alignedIntervals = new ArrayList<>(intervalsToSave.size());
-                for (WorkoutRrInterval interval : intervalsToSave) {
-                    alignedIntervals.add(new WorkoutRrInterval(
-                            null,
-                            mWorkoutID,
-                            interval.getBeatIndex(),
-                            interval.getBeatTimestampMs(),
-                            interval.getRrMs(),
-                            interval.getArtifactFlag(),
-                            interval.getGapBeats()
-                    ));
-                }
-                getWorkoutRrRepository().insertIntervalsBlocking(alignedIntervals);
-                mLiveRrQueue.clear();
-
-                final long finalWorkoutId = mWorkoutID;
-                final Context appContext = getApplicationContext();
-                java.util.concurrent.ForkJoinPool.commonPool().execute(() -> {
-                    try {
-                        HrvPostWorkoutRecomputer.recomputeWorkoutBlocking(appContext, finalWorkoutId);
-                    } catch (Throwable t) {
-                        Log.e(TAG, "Error in post-workout HRV recompute", t);
-                    }
-                });
+            if (mWorkoutID > 0) {
+                flushLiveRrQueueSync(mWorkoutID);
             }
         } catch (Throwable t) {
             Log.e(TAG, "Error persisting workout RR intervals during endWorkout", t);
@@ -2029,6 +2071,25 @@ public class TrackerService extends Service {
             }
         } catch (Throwable t) {
             Log.e(TAG, "Error finalizing live session during endWorkout", t);
+        }
+
+        try {
+            final long finalWorkoutId = mWorkoutID;
+            final Context appContext = getApplicationContext();
+            if (finalWorkoutId > 0) {
+                java.util.concurrent.ForkJoinPool.commonPool().execute(() -> {
+                    try {
+                        boolean recomputed = HrvPostWorkoutRecomputer.recomputeWorkoutBlocking(appContext, finalWorkoutId);
+                        if (recomputed) {
+                            WorkoutRepository.getInstance(appContext).refreshWorkout(finalWorkoutId);
+                        }
+                    } catch (Throwable t) {
+                        Log.e(TAG, "Error in post-workout HRV recompute for workout " + finalWorkoutId, t);
+                    }
+                });
+            }
+        } catch (Throwable t) {
+            Log.e(TAG, "Error scheduling post-workout HRV recompute", t);
         }
 
         try {

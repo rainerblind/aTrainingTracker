@@ -63,7 +63,8 @@ class SensorTypeHrvTest {
     @Test
     fun testHrvArtifactRateProperties() {
         val artifactRate = SensorType.HRV_ARTIFACT_RATE
-        assertEquals(SensorCategory.SYSTEM_ENVIRONMENT_AND_DIAGNOSTICS, artifactRate.category)
+        assertEquals(SensorCategory.HEART_RATE_AND_ENERGY, artifactRate.category)
+        assertEquals(SensorSubCategory.HRV_AND_DRIFT, artifactRate.subCategory)
         assertEquals(SensorValueType.DOUBLE, artifactRate.sensorValueType)
         assertEquals(R.string.hrv_artifact_rate, artifactRate.fullNameId)
         assertEquals(R.string.hrv_artifact_rate_short, artifactRate.shortNameId)
@@ -73,5 +74,18 @@ class SensorTypeHrvTest {
 
         val deviceTypes = DeviceType.getDeviceTypeList(artifactRate)
         assertTrue(deviceTypes.contains(DeviceType.HRV_METRICS))
+    }
+
+    @Test
+    fun testHrvSdnnProperties() {
+        val sdnn = SensorType.HRV_SDNN
+        assertEquals(SensorCategory.HEART_RATE_AND_ENERGY, sdnn.category)
+        assertEquals(SensorSubCategory.HRV_AND_DRIFT, sdnn.subCategory)
+        assertEquals(SensorValueType.DOUBLE, sdnn.sensorValueType)
+        assertEquals(R.string.hrv_sdnn, sdnn.fullNameId)
+        assertEquals(R.string.hrv_sdnn_short, sdnn.shortNameId)
+        assertEquals(R.string.units_time_ms, sdnn.unitId)
+        assertEquals(R.drawable.ic_heart_rate, sdnn.iconResId)
+        assertTrue(sdnn.filteringPossible)
     }
 }

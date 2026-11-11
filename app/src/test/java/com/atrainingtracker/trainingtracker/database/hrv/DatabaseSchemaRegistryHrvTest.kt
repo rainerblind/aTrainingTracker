@@ -61,4 +61,19 @@ class DatabaseSchemaRegistryHrvTest {
 
         assertTrue("DatabaseConnectionManager.getActiveDatabases() must include HrvReadiness.db", found)
     }
+
+    @Test
+    fun databaseSchemaRegistry_referencesWorkoutRrDbVersionDirectly_Rule62() {
+        val supportedVersion = DatabaseSchemaRegistry.getMaxSupportedVersion(WorkoutRrDbHelper.DB_NAME)
+        assertNotNull("WorkoutRr.db must be registered in DatabaseSchemaRegistry", supportedVersion)
+        assertEquals(
+            "DatabaseSchemaRegistry must match WorkoutRrDbHelper.DB_VERSION directly (Rule 62)",
+            WorkoutRrDbHelper.DB_VERSION,
+            supportedVersion
+        )
+
+        assertTrue(DatabaseSchemaRegistry.isVersionSupported(WorkoutRrDbHelper.DB_NAME, 1))
+        assertTrue(DatabaseSchemaRegistry.isVersionSupported(WorkoutRrDbHelper.DB_NAME, 2))
+        assertFalse(DatabaseSchemaRegistry.isVersionSupported(WorkoutRrDbHelper.DB_NAME, 3))
+    }
 }

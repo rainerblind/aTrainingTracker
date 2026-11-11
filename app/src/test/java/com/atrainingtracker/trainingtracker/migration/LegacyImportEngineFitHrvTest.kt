@@ -20,6 +20,7 @@ package com.atrainingtracker.trainingtracker.migration
 
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
+import com.atrainingtracker.trainingtracker.database.hrv.RrBeatTimestampReconstructor
 import com.atrainingtracker.trainingtracker.migration.parsers.FitWorkoutParser
 import com.garmin.fit.*
 import org.junit.After
@@ -134,5 +135,79 @@ class LegacyImportEngineFitHrvTest {
         assertTrue(parseResult.isSuccess)
         val parsed = parseResult.getOrThrow()
         assertTrue("Parsed RR intervals must be empty", parsed.rawRrIntervals.isEmpty())
+    }
+
+    @Test
+    fun parseFitWithInterleavedHrvMesg_preservesMonotonicAnchors_andAvoidsDriftCollapse() {
+        val fitFile = File(tempDir, "multi_minute_activity_with_hrv.fit")
+        val encoder = FileEncoder(fitFile, Fit.ProtocolVersion.V2_0)
+
+        val baseTs = 1696327200000L // start time
+        val durationSeconds = 60 // 1-minute test with 60 records and interleaved HRVs
+
+        val fileId = FileIdMesg()
+        fileId.type = com.garmin.fit.File.ACTIVITY
+        fileId.manufacturer = Manufacturer.GARMIN
+        fileId.timeCreated = DateTime(Date(baseTs))
+        encoder.write(fileId)
+
+        for (sec in 0 until durationSeconds) {
+            val rec = RecordMesg()
+            rec.timestamp = DateTime(Date(baseTs + sec * 1000L))
+            rec.heartRate = 75.toShort()
+            encoder.write(rec)
+
+            val hrv = HrvMesg()
+            // ~1.2 beats per second (800ms intervals)
+            hrv.setTime(0, 0.800f)
+            encoder.write(hrv)
+        }
+
+        val session = SessionMesg()
+        session.timestamp = DateTime(Date(baseTs + durationSeconds * 1000L))
+        session.startTime = DateTime(Date(baseTs))
+        session.totalElapsedTime = durationSeconds.toFloat()
+        session.sport = Sport.RUNNING
+        session.subSport = SubSport.GENERIC
+        encoder.write(session)
+
+        val activity = ActivityMesg()
+        activity.timestamp = DateTime(Date(baseTs + durationSeconds * 1000L))
+        activity.numSessions = 1
+        encoder.write(activity)
+
+        encoder.close()
+
+        val parseResult = FitWorkoutParser.parse(fitFile, context)
+        assertTrue("Parsing FIT file must succeed", parseResult.isSuccess)
+
+        val parsed = parseResult.getOrThrow()
+        assertEquals("Should extract 60 parsed RR beats", 60, parsed.parsedRrBeats.size)
+
+        // Verify anchors are not all identical to baseTs
+        val firstAnchor = parsed.parsedRrBeats.first().anchorTimestampMs
+        val lastAnchor = parsed.parsedRrBeats.last().anchorTimestampMs
+        assertEquals("First anchor should match session start", baseTs, firstAnchor)
+        assertEquals("Last anchor should match sec 59 record", baseTs + 59000L, lastAnchor)
+
+        // Run through RrBeatTimestampReconstructor as LegacyImportEngine does
+        val reconstructor = RrBeatTimestampReconstructor(initialAnchorMs = baseTs)
+        val reconstructedTimestamps: List<Long> = parsed.parsedRrBeats.map { beat ->
+            val anchor = if (beat.anchorTimestampMs > 0) beat.anchorTimestampMs else baseTs
+            reconstructor.reconstruct(anchor, beat.rrMs).beatTimestampMs
+        }
+
+        // Verify timestamps are monotonic and span the full duration (NOT collapsed to first 2 seconds)
+        for (i in 0 until reconstructedTimestamps.size - 1) {
+            assertTrue(
+                "Timestamps must be non-decreasing: t[${i}] <= t[${i + 1}]",
+                reconstructedTimestamps[i] <= reconstructedTimestamps[i + 1]
+            )
+        }
+        val totalSpanMs = reconstructedTimestamps.last() - reconstructedTimestamps.first()
+        assertTrue(
+            "Total beat span must span across the workout duration (~48s), got ${totalSpanMs}ms",
+            totalSpanMs > 40000L
+        )
     }
 }

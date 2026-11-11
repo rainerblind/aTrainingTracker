@@ -835,19 +835,26 @@ object LegacyImportEngine {
                 sessionWorkKj = parsedWorkout.sessionWorkKj
             )
 
-            if (parsedWorkout.rawRrIntervals.isNotEmpty() && workoutId > 0) {
+            val hasBeats = (parsedWorkout.parsedRrBeats.isNotEmpty() || parsedWorkout.rawRrIntervals.isNotEmpty())
+            if (hasBeats && workoutId > 0) {
                 try {
                     val startMs = parseTimeToMs(firstTime)
                     val reconstructor = com.atrainingtracker.trainingtracker.database.hrv.RrBeatTimestampReconstructor(startMs)
-                    val rrEntities = ArrayList<com.atrainingtracker.trainingtracker.database.hrv.WorkoutRrInterval>(parsedWorkout.rawRrIntervals.size)
-                    for ((idx, rrMs) in parsedWorkout.rawRrIntervals.withIndex()) {
-                        val beat = reconstructor.reconstruct(startMs, rrMs)
+                    val beatsToProcess = if (parsedWorkout.parsedRrBeats.isNotEmpty()) {
+                        parsedWorkout.parsedRrBeats
+                    } else {
+                        parsedWorkout.rawRrIntervals.map { com.atrainingtracker.trainingtracker.migration.parsers.FitRrBeat(it, startMs) }
+                    }
+                    val rrEntities = ArrayList<com.atrainingtracker.trainingtracker.database.hrv.WorkoutRrInterval>(beatsToProcess.size)
+                    for ((idx, beatInfo) in beatsToProcess.withIndex()) {
+                        val anchorMs = if (beatInfo.anchorTimestampMs > 0L) beatInfo.anchorTimestampMs else startMs
+                        val beat = reconstructor.reconstruct(anchorMs, beatInfo.rrMs)
                         rrEntities.add(
                             com.atrainingtracker.trainingtracker.database.hrv.WorkoutRrInterval(
                                 workoutId = workoutId,
                                 beatIndex = idx,
                                 beatTimestampMs = beat.beatTimestampMs,
-                                rrMs = rrMs.toFloat(),
+                                rrMs = beatInfo.rrMs.toFloat(),
                                 artifactFlag = beat.artifactFlag,
                                 gapBeats = beat.gapBeats
                             )

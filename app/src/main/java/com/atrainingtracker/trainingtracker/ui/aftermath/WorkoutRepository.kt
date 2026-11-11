@@ -3606,6 +3606,15 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
     }
 
     /**
+     * Dispatches an asynchronous reload of in-memory workout data for the specified workout ID (REQ-PER-034.3).
+     */
+    fun refreshWorkout(workoutId: Long) {
+        launch {
+            reloadWorkoutData(workoutId)
+        }
+    }
+
+    /**
      * Public accessor to force a reload of a single workout from the database.
      *
      * Implementation: Uses a conflated reload pipeline (REQ-STB-018.1). If a reload for [workoutId]

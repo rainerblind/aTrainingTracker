@@ -33,6 +33,7 @@ import com.atrainingtracker.trainingtracker.database.ExtremaType
 import com.atrainingtracker.trainingtracker.database.WorkoutSamplesDatabaseManager
 import com.atrainingtracker.trainingtracker.database.WorkoutSamplesDatabaseManager.WorkoutSamplesDbHelper
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
+import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
@@ -72,8 +73,8 @@ object HrvPostWorkoutRecomputer {
             val summariesDbManager = WorkoutSummariesDatabaseManager.getInstance(context)
             val baseFileName = summariesDbManager.getBaseFileName(workoutId) ?: return@withContext false
 
-            val rrDbManager = WorkoutRrDatabaseManager.getInstance(context)
-            val intervals = rrDbManager.getIntervalsForWorkout(workoutId)
+            val rrRepository = WorkoutRrRepository.getInstance(context)
+            val intervals = rrRepository.getIntervalsForWorkout(workoutId)
             if (intervals.isEmpty() || intervals.size < 10) {
                 return@withContext false
             }
@@ -94,6 +95,8 @@ object HrvPostWorkoutRecomputer {
             val artifactFilter = RrArtifactFilter()
             val filterResult = artifactFilter.filterBidirectionalBeats(beats)
             val filteredBeats = filterResult.beats
+            val sortedBeats = filteredBeats.sortedBy { it.beatTimestampMs }
+            val totalBeats = sortedBeats.size
 
             val samplesDbManager = WorkoutSamplesDatabaseManager.getInstance(context)
             val samplesDb = samplesDbManager.database
@@ -139,30 +142,84 @@ object HrvPostWorkoutRecomputer {
                 """.trimIndent()
                 val stmt = samplesDb.compileStatement(updateSql)
 
+                var dfaLeft = 0
+                var dfaRight = 0
+                var rmssdLeft = 0
+                var rmssdRight = 0
+
+                var lastGridTimeMs: Long? = null
+                var cachedDfaAlpha1: Double? = null
+                var cachedRmssd: Double? = null
+                var cachedArtifactRate: Double = 0.0
+
                 for (row in sampleRows) {
                     val t = row.timestampMs
 
-                    // 1. Artifact rate & DFA alpha 1 in centered window [t - 60s, t + 60s]
-                    val dfaMinTs = t - WINDOW_DFA_HALF_MS
-                    val dfaMaxTs = t + WINDOW_DFA_HALF_MS
-                    val dfaBeats = filteredBeats.filter { it.beatTimestampMs in dfaMinTs..dfaMaxTs }
+                    // Evaluate metrics on 5s grid (REQ-PER-034.3)
+                    val shouldEvaluate = (lastGridTimeMs == null || (t - lastGridTimeMs!! >= 5000L))
+                    if (shouldEvaluate) {
+                        lastGridTimeMs = t
 
-                    val artifactCount = dfaBeats.count { it.isArtifact }
-                    val artifactRate = if (dfaBeats.isNotEmpty()) {
-                        (artifactCount.toDouble() / dfaBeats.size) * 100.0
-                    } else 0.0
+                        // 1. Artifact rate & DFA alpha 1 in centered window [t - 60s, t + 60s]
+                        val dfaMinTs = t - WINDOW_DFA_HALF_MS
+                        val dfaMaxTs = t + WINDOW_DFA_HALF_MS
 
-                    val dfaAlpha1: Double? = if (artifactRate <= ARTIFACT_GATE_THRESHOLD_PERCENT && dfaBeats.size >= MIN_DFA_BEATS) {
-                        val nnIntervals = dfaBeats.map { it.correctedRrMs }.toDoubleArray()
-                        val calculated = DfaCalculator.computeDfaAlpha1(nnIntervals)
-                        if (calculated.isFinite() && !calculated.isNaN()) calculated else null
-                    } else null
+                        if (dfaLeft > 0 && dfaLeft <= totalBeats && (dfaLeft == totalBeats || sortedBeats[dfaLeft].beatTimestampMs > dfaMinTs)) {
+                            if (dfaMinTs < sortedBeats[dfaLeft - 1].beatTimestampMs) {
+                                dfaLeft = 0
+                                dfaRight = 0
+                            }
+                        }
+                        while (dfaLeft < totalBeats && sortedBeats[dfaLeft].beatTimestampMs < dfaMinTs) {
+                            dfaLeft++
+                        }
+                        if (dfaRight < dfaLeft) {
+                            dfaRight = dfaLeft
+                        }
+                        while (dfaRight < totalBeats && sortedBeats[dfaRight].beatTimestampMs <= dfaMaxTs) {
+                            dfaRight++
+                        }
 
-                    // 2. Bias-free rMSSD in centered window [t - 30s, t + 30s]
-                    val rmssdMinTs = t - WINDOW_RMSSD_HALF_MS
-                    val rmssdMaxTs = t + WINDOW_RMSSD_HALF_MS
-                    val rmssdBeats = filteredBeats.filter { it.beatTimestampMs in rmssdMinTs..rmssdMaxTs }
-                    val rmssd = computeBiasFreeRmssd(rmssdBeats)
+                        val dfaBeats = sortedBeats.subList(dfaLeft, dfaRight)
+                        val artifactCount = dfaBeats.count { it.isArtifact }
+                        cachedArtifactRate = if (dfaBeats.isNotEmpty()) {
+                            (artifactCount.toDouble() / dfaBeats.size) * 100.0
+                        } else 0.0
+
+                        cachedDfaAlpha1 = if (cachedArtifactRate <= ARTIFACT_GATE_THRESHOLD_PERCENT && dfaBeats.size >= MIN_DFA_BEATS) {
+                            val nnIntervals = dfaBeats.map { it.correctedRrMs }.toDoubleArray()
+                            val calculated = DfaCalculator.computeDfaAlpha1(nnIntervals)
+                            if (calculated.isFinite() && !calculated.isNaN()) calculated else null
+                        } else null
+
+                        // 2. Bias-free rMSSD in centered window [t - 30s, t + 30s]
+                        val rmssdMinTs = t - WINDOW_RMSSD_HALF_MS
+                        val rmssdMaxTs = t + WINDOW_RMSSD_HALF_MS
+
+                        if (rmssdLeft > 0 && rmssdLeft <= totalBeats && (rmssdLeft == totalBeats || sortedBeats[rmssdLeft].beatTimestampMs > rmssdMinTs)) {
+                            if (rmssdMinTs < sortedBeats[rmssdLeft - 1].beatTimestampMs) {
+                                rmssdLeft = 0
+                                rmssdRight = 0
+                            }
+                        }
+                        while (rmssdLeft < totalBeats && sortedBeats[rmssdLeft].beatTimestampMs < rmssdMinTs) {
+                            rmssdLeft++
+                        }
+                        if (rmssdRight < rmssdLeft) {
+                            rmssdRight = rmssdLeft
+                        }
+                        while (rmssdRight < totalBeats && sortedBeats[rmssdRight].beatTimestampMs <= rmssdMaxTs) {
+                            rmssdRight++
+                        }
+
+                        val rmssdBeats = sortedBeats.subList(rmssdLeft, rmssdRight)
+                        cachedRmssd = computeBiasFreeRmssd(rmssdBeats)
+                    }
+
+                    // Step-latch values to intermediate 1-Hz trackpoint rows
+                    val dfaAlpha1 = cachedDfaAlpha1
+                    val rmssd = cachedRmssd
+                    val artifactRate = cachedArtifactRate
 
                     if (dfaAlpha1 != null) {
                         stmt.bindDouble(1, dfaAlpha1)
@@ -208,9 +265,19 @@ object HrvPostWorkoutRecomputer {
                     summariesDbManager.updateExtremaValue(summariesDb, workoutId, SensorType.HRV_DFA_A1, ExtremaType.MAX, maxDfa, null)
                     summariesDbManager.updateExtremaValue(summariesDb, workoutId, SensorType.HRV_DFA_A1, ExtremaType.AVG, avgDfa, null)
                 }
+                val sessionSdnn = computeSessionSdnn(sortedBeats)
+                if (sessionSdnn != null) {
+                    summariesDbManager.updateExtremaValue(summariesDb, workoutId, SensorType.HRV_SDNN, ExtremaType.AVG, sessionSdnn, null)
+                }
                 summariesDb.setTransactionSuccessful()
             } finally {
                 summariesDb.endTransaction()
+            }
+
+            try {
+                WorkoutRepository.getInstance(context).refreshWorkout(workoutId)
+            } catch (t: Throwable) {
+                Log.w(TAG, "Could not refresh WorkoutRepository after HRV recomputation: ${t.message}")
             }
 
             Log.i(TAG, "Recomputed centered HRV streams for workout $workoutId ($baseFileName): ${dfaValues.size} DFA, ${rmssdValues.size} rMSSD samples")
@@ -219,6 +286,32 @@ object HrvPostWorkoutRecomputer {
             Log.e(TAG, "Error recomputing centered HRV streams for workout $workoutId: ${t.message}", t)
             return@withContext false
         }
+    }
+
+    /**
+     * Computes unbiased whole-session SDNN across valid non-artifact beats pursuant to REQ-PER-034.3.
+     * Requires at least 2 valid beats and overall artifact rate <= 5.0%.
+     */
+    @JvmStatic
+    fun computeSessionSdnn(beats: List<FilteredRrBeat>): Double? {
+        if (beats.isEmpty()) return null
+        val artifactCount = beats.count { it.isArtifact }
+        val artifactRate = (artifactCount.toDouble() / beats.size) * 100.0
+        if (artifactRate > ARTIFACT_GATE_THRESHOLD_PERCENT) {
+            return null
+        }
+        val validBeats = beats.filter { !it.isArtifact }
+        if (validBeats.size < 2) {
+            return null
+        }
+        val mean = validBeats.map { it.correctedRrMs }.average()
+        var sumSquaredDiffs = 0.0
+        for (beat in validBeats) {
+            val diff = beat.correctedRrMs - mean
+            sumSquaredDiffs += diff * diff
+        }
+        val sdnn = sqrt(sumSquaredDiffs / (validBeats.size - 1).toDouble())
+        return if (sdnn.isFinite() && !sdnn.isNaN()) sdnn else null
     }
 
     /**

@@ -56,5 +56,15 @@ data class ParsedWorkoutData(
     val sessionIntensityFactor: Double? = null,
     val sessionTss: Double? = null,
     val sessionWorkKj: Double? = null,
-    val rawRrIntervals: List<Double> = emptyList()
+    val rawRrIntervals: List<Double> = emptyList(),
+    val parsedRrBeats: List<FitRrBeat> = emptyList()
+)
+
+/**
+ * Encapsulates a parsed RR interval paired with its chronologically interleaved
+ * FIT RecordMesg or SessionMesg reference timestamp anchor (REQ-PER-034.5, ATT-6716).
+ */
+data class FitRrBeat(
+    val rrMs: Double,
+    val anchorTimestampMs: Long
 )

@@ -937,34 +937,32 @@
 **Invariants**: Zero schema changes to `PeriodSummaries.db` or `HrvReadiness.db`, strict posture segregation in baseline math, 100% clean-room test pass rate.
 
 ### REQ-PER-034: Lossless WorkoutRrIntervals Persistence, Centered Recompute & Garmin FIT HrvMesg [Verified]
-- **Tests**: `TST-PER-042` | **Tickets**: `ATT-3543`
-- **Implementation**: `WorkoutRrDatabaseManager.kt`, `WorkoutRrInterval.kt`, `HrvPostWorkoutRecomputer.kt`, `FitFileWriter.java`, `FitWorkoutParser.kt`, `LegacyImportEngine.kt`, `TrackerService.java`
+- **Tests**: `TST-PER-042` | **Tickets**: `ATT-3543`, `ATT-6716`
+- **Implementation**: `WorkoutRrDatabaseManager.kt`, `WorkoutRrDbHelper.kt`, `WorkoutRrRepository.kt`, `WorkoutRrInterval.kt`, `HrvPostWorkoutRecomputer.kt`, `FitFileWriter.java`, `FitWorkoutParser.kt`, `LegacyImportEngine.kt`, `TrackerService.java`
 - **Rationale**: Live tracking calculates HRV metrics (DFA $\alpha_1$, $\text{rMSSD}$) using causal trailing windows with ~60s delay and discards raw beat-to-beat intervals upon session completion. Persisting raw beat intervals enables centered-window recomputation to eliminate phase lag and supports bidirectional Garmin FIT `HrvMesg` interoperability. The system SHALL support lossless RR persistence, centered recomputation, and FIT export/import:
-1. *Lossless RR Persistence (`REQ-PER-034.1`)*: The system SHALL persist raw beat-to-beat intervals into `WorkoutRr.db` table `workout_rr_intervals` (`workout_id: Long`, `beat_index: Int`, `beat_timestamp_ms: Long`, `rr_ms: Float`, `artifact_flag: Boolean`, `gap_beats: Int`). Access SHALL be encapsulated in `WorkoutRrDatabaseManager`, registered in `DatabaseSchemaRegistry`, and cascaded on session deletion via `WorkoutDeletionHelper`.
-2. *Monotonic Timestamp Reconstruction (`REQ-PER-034.2`)*: Live beats buffered from `RrBeatListener` in `TrackerService` SHALL accumulate timestamps monotonically as $t_k = t_{k-1} + \text{round}(\text{rr\_ms}_k)$ with wall-clock drift resynchronization when $|t_{\text{pkt}} - t_{\text{beat}}| > 2000\text{ ms}$, ensuring exact UTC epoch alignment with `WorkoutSamples`.
-3. *Lag-Free Centered-Window Recomputation (`REQ-PER-034.3`)*: Upon workout finalization or FIT import, `HrvPostWorkoutRecomputer` SHALL evaluate centered-window DFA $\alpha_1$ ($t \pm 60\text{s}$) and $\text{rMSSD}$ ($t \pm 30\text{s}$) via `RrArtifactFilter.filterBidirectional`, updating `WorkoutSamples` and `WorkoutSummaries` session extrema.
+1. *Lossless RR Persistence & Schema Integrity (`REQ-PER-034.1`)*: The system SHALL persist raw beat-to-beat intervals into `WorkoutRr.db` table `workout_rr_intervals` (`workout_id: Long`, `beat_index: Int`, `beat_timestamp_ms: Long`, `rr_ms: Float`, `artifact_flag: Int`, `gap_beats: Int`). The database schema SHALL enforce a `UNIQUE(workout_id, beat_index)` constraint with a v2 migration in `WorkoutRrDbHelper`, and data access SHALL be routed through `WorkoutRrRepository` and `WorkoutRrDatabaseManager`, registered in `DatabaseSchemaRegistry`, and cascaded on session deletion via `WorkoutDeletionHelper`.
+2. *Incremental Batched Flushing & Monotonic Reconstruction (`REQ-PER-034.2`)*: Live beats from `RrBeatListener` in `TrackerService` SHALL accumulate timestamps monotonically as $t_k = t_{k-1} + \text{round}(\text{rr\_ms}_k)$ with wall-clock drift resynchronization when $|t_{\text{pkt}} - t_{\text{beat}}| > 2000\text{ ms}$. Ingestion SHALL be strictly gated by `mStatus == STATUS.TRACKING && mWorkoutID > 0`, ignoring pre-start and paused beats. Buffered beats SHALL be flushed incrementally in batched SQLite transactions every 30–60s or upon reaching 100 beats, and `mRrBeatIndexCounter` SHALL restore to `MAX(beat_index) + 1` upon workout resume.
+3. *Two-Pointer 5s Grid Recomputation & Session SDNN (`REQ-PER-034.3`)*: Upon workout finalization or FIT import, `HrvPostWorkoutRecomputer` SHALL evaluate centered-window DFA $\alpha_1$ ($t \pm 60\text{s}$, $\le 5\%$ artifact gate) and $\text{rMSSD}$ ($t \pm 30\text{s}$) using an $O(N)$ two-pointer sliding window evaluated on a 5s grid (latching values to intermediate 1-Hz trackpoints) via `RrArtifactFilter.filterBidirectionalBeats`. It SHALL compute unbiased session `SDNN` across valid non-artifact intervals ($N \ge 2$) and update `WorkoutSummaries` extrema. Recomputation SHALL sequence strictly after `endWorkout()` summary finalization and dispatch `WorkoutRepository.refreshWorkout(workoutId)`.
 4. *Garmin FIT Export Interleaving (`REQ-PER-034.4`)*: `FitFileWriter` SHALL write standard Garmin FIT `HrvMesg` records (packing up to 5 intervals in seconds) interleaved with `RecordMesg` trackpoints when RR data exists. Workouts without RR data SHALL omit `HrvMesg`.
-5. *Garmin FIT Import & Timestamp Reconstruction (`REQ-PER-034.5`)*: `FitWorkoutParser` and `LegacyImportEngine` SHALL extract `HrvMesg` intervals, reconstruct timestamps anchored to session start UTC with pause resync, persist beats into `WorkoutRr.db`, and trigger post-workout recomputation.
+5. *Garmin FIT Import & Interleaved Anchor Reconstruction (`REQ-PER-034.5`)*: `FitWorkoutParser` SHALL preserve chronological `RecordMesg` timestamp anchors associated with parsed `HrvMesg` intervals (`FitRrBeat(rrMs, anchorTimestampMs)`). `LegacyImportEngine` SHALL pass active anchor timestamps to `RrBeatTimestampReconstructor.reconstruct(anchorMs, rrMs)` to prevent false drift resets, reconstruct monotonic timestamps with real pause resync, persist beats into `WorkoutRr.db`, and trigger post-workout recomputation.
 6. *Non-HRV Workout Invariant & Asynchronous Execution (`REQ-PER-034.6`)*: Non-HRV workouts SHALL incur zero persistence overhead (0 rows, 0 `HrvMesg`). Recomputation SHALL execute asynchronously on `Dispatchers.IO` without delaying UI finalization or completion intents.
 
 **Requirement Archaeology & Chesterton's Fence Audit**:
-1. *Original Requirement ID & Target*: Net-new requirement `REQ-PER-034` (extending live RR ingestion `REQ-TRA-018`, workout samples `REQ-TRA-002`, and FIT export/import `REQ-EXP-001`). Targets `WorkoutRrDatabaseManager.kt`, `WorkoutRrInterval.kt`, `HrvPostWorkoutRecomputer.kt`, `FitFileWriter.java`, `FitWorkoutParser.kt`, `LegacyImportEngine.kt`, and `TrackerService.java`.
-2. *Historical Origin & Commit Trace*: Net-new capability introduced in `ATT-3543` under Epic `ATT-3539` (*Heart Rate Variability*).
-3. *Root Reason for Existing Formulation*: Previously, raw beat-to-beat intervals were discarded at the end of tracking; live 1-Hz sample tables could not store high-frequency intervals, preventing centered post-workout signal recomputation and FIT HRV export.
-4. *Preservation of Core Invariants*: Existing `WorkoutSamples` 1-Hz cadence and non-HRV workout flows remain 100% untouched; zero performance impact for non-HRV workouts; asynchronous non-blocking execution.
+1. *Original Requirement ID & Target*: Amends `REQ-PER-034` (`REQ-PER-034.1`, `REQ-PER-034.2`, `REQ-PER-034.3`, `REQ-PER-034.5`), targeting `FitWorkoutParser.kt`, `LegacyImportEngine.kt`, `TrackerService.java`, `HrvPostWorkoutRecomputer.kt`, `WorkoutRrDbHelper.kt`, and `WorkoutRrRepository.kt`.
+2. *Historical Origin & Commit Trace*: Introduced in Sprint `2026-46.1` (`ATT-3543`, commit `cb0d4fb7`).
+3. *Root Reason for Existing Formulation*: Initial ATT-3543 prototype used a 2-second synthetic FIT test fixture that masked the constant `startMs` drift collapse; live recording deferred flushing to `endWorkout()` in RAM; recomputation re-filtered the entire beat array at 1 Hz, creating quadratic slowdown on multi-hour workouts.
+4. *Preservation of Core Invariants*: 120s centered DFA $\alpha_1$ (with $\le 5\%$ artifact gate) and 60s centered rMSSD math remain strictly intact; 5s grid decimation exactly aligns with `ATT-3543` Scope §2; database upgrade to v2 strictly preserves existing recorded intervals without data loss; non-HRV workouts continue to incur zero overhead.
 
 **Acceptance Criteria (Given-When-Then)**:
-• *Given* a workout recorded with a BLE/ANT+ RR sensor stream,
-• *When* the workout is completed and finalized,
-• *Then* raw beats are persisted in `WorkoutRr.db` and centered-window HRV metrics are recomputed and populated in `WorkoutSamples`.
-• *Given* a workout with persisted RR intervals,
-• *When* exported to Garmin FIT and imported into another instance,
-• *Then* `HrvMesg` intervals are preserved losslessly and post-workout HRV streams recompute identically.
-• *Given* a workout recorded without an RR sensor,
-• *When* saved or exported to FIT,
-• *Then* zero rows are inserted into `workout_rr_intervals` and zero `HrvMesg` messages are written.
-
-**Invariants**: Raw RR interval values preserved losslessly unmodified alongside artifact flags, monotonic beat timestamps strictly anchored in UTC epoch milliseconds, zero overhead and 100% backward compatibility for non-HRV workouts.
+• *Given* a multi-minute Garmin FIT file with interleaved `HrvMesg` records and pauses,
+• *When* imported via `LegacyImportEngine`,
+• *Then* beat timestamps accumulate monotonically across the session with pause resync, and centered-window DFA $\alpha_1$ / rMSSD are populated without collapsing into the first 2 seconds.
+• *Given* an active workout recording with an RR sensor stream,
+• *When* tracking progresses or the workout is paused/resumed,
+• *Then* beats are flushed incrementally to `WorkoutRr.db` in batched transactions, non-tracking beats are ignored, and `mRrBeatIndexCounter` resumes without collisions.
+• *Given* a completed workout with persisted RR intervals,
+• *When* `HrvPostWorkoutRecomputer` runs,
+• *Then* metrics evaluate via an $O(N)$ two-pointer sliding window on a 5s grid, session SDNN is saved in `WorkoutSummaries`, and `WorkoutRepository.refreshWorkout` is dispatched.
 
 ### REQ-PER-035: Interactive Workout Details DFA a1/rMSSD Charts & a1 Scatter Plot [Verified]
 - **Tests**: `TST-PER-043` | **Tickets**: `ATT-3544`, `ATT-6717`

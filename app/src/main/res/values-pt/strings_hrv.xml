@@ -24,6 +24,8 @@
     <string name="hrv_dfa_a1_short">a1</string>
     <string name="hrv_artifact_rate">Taxa de artefactos</string>
     <string name="hrv_artifact_rate_short">Art. %</string>
+    <string name="hrv_sdnn">SDNN</string>
+    <string name="hrv_sdnn_short">SDNN</string>
 
     <string name="hrv_info_title">Variabilidade da frequência cardíaca e limiares aeróbios</string>
     <string name="hrv_info_trailing_lag_title">Janela deslizante e atraso de ritmo</string>

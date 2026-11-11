@@ -67,7 +67,7 @@ class WorkoutRrDatabaseManager private constructor(context: Context) {
         db.beginTransaction()
         try {
             val sql = """
-                INSERT INTO ${WorkoutRrDbHelper.TABLE_WORKOUT_RR} (
+                INSERT OR REPLACE INTO ${WorkoutRrDbHelper.TABLE_WORKOUT_RR} (
                     ${WorkoutRrDbHelper.COLUMN_WORKOUT_ID},
                     ${WorkoutRrDbHelper.COLUMN_BEAT_INDEX},
                     ${WorkoutRrDbHelper.COLUMN_BEAT_TIMESTAMP_MS},
@@ -124,6 +124,25 @@ class WorkoutRrDatabaseManager private constructor(context: Context) {
             arrayOf(workoutId.toString())
         )
         return cursor.use { it.moveToFirst() }
+    }
+
+    /**
+     * Returns the maximum beat index for the workout, or -1 if no beats exist.
+     */
+    @Synchronized
+    fun getMaxBeatIndex(workoutId: Long): Int {
+        val db = database
+        val cursor = db.rawQuery(
+            "SELECT MAX(${WorkoutRrDbHelper.COLUMN_BEAT_INDEX}) FROM ${WorkoutRrDbHelper.TABLE_WORKOUT_RR} WHERE ${WorkoutRrDbHelper.COLUMN_WORKOUT_ID} = ?",
+            arrayOf(workoutId.toString())
+        )
+        return cursor.use {
+            if (it.moveToFirst() && !it.isNull(0)) {
+                it.getInt(0)
+            } else {
+                -1
+            }
+        }
     }
 
     /**

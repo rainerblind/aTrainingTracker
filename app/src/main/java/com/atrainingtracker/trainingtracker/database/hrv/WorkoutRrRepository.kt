@@ -43,6 +43,13 @@ class WorkoutRrRepository private constructor(
     fun deleteWorkoutBlocking(workoutId: Long): Int =
         databaseManager.deleteWorkout(workoutId)
 
+    fun getMaxBeatIndexBlocking(workoutId: Long): Int =
+        databaseManager.getMaxBeatIndex(workoutId)
+
+    suspend fun getMaxBeatIndex(workoutId: Long): Int = withContext(Dispatchers.IO) {
+        databaseManager.getMaxBeatIndex(workoutId)
+    }
+
     suspend fun insertIntervals(intervals: List<WorkoutRrInterval>): Int = withContext(Dispatchers.IO) {
         databaseManager.insertIntervals(intervals)
     }

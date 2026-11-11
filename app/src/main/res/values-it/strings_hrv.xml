@@ -24,6 +24,8 @@
     <string name="hrv_dfa_a1_short">a1</string>
     <string name="hrv_artifact_rate">Tasso di artefatti</string>
     <string name="hrv_artifact_rate_short">Art. %</string>
+    <string name="hrv_sdnn">SDNN</string>
+    <string name="hrv_sdnn_short">SDNN</string>
 
     <string name="hrv_info_title">Variabilità della frequenza cardiaca e soglie aerobiche</string>
     <string name="hrv_info_trailing_lag_title">Finestra mobile e ritardo di andatura</string>

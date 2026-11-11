@@ -24,6 +24,8 @@
     <string name="hrv_dfa_a1_short">a1</string>
     <string name="hrv_artifact_rate">アーチファクト率</string>
     <string name="hrv_artifact_rate_short">Art. %</string>
+    <string name="hrv_sdnn">SDNN</string>
+    <string name="hrv_sdnn_short">SDNN</string>
 
     <string name="hrv_info_title">心拍変動（HRV）と有酸素閾値</string>
     <string name="hrv_info_trailing_lag_title">ローリングウィンドウとペーシング遅延</string>
