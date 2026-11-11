@@ -96,13 +96,13 @@
 ### TST-REV-012: **Cardio-Power Longitudinal Fitness Trends Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-REV-011`
 - **Component**: `WorkoutSummariesDatabaseManager.java`, `AthleteProfileViewModel.kt`, `AthleteProfileScreen.kt`, `CardioPowerTrendsCard.kt`
-- **Jira**: `ATT-3906`
+- **Jira**: `ATT-3906`, `ATT-6724`
 - **Test Description**:
-  1. *Database Trend Query Test (`WorkoutSummariesCardioPowerTrendTest`)*: Verify `getCardioPowerDynamicsFitnessTrendSamples` returns samples with $R^2 \ge 0.50$ sorted ascending by workout start timestamp and excludes lower-fit workouts.
-  2. *ViewModel Reactive State Test (`AthleteProfileViewModelCardioPowerTest`)*: Verify `AthleteProfileViewModel` properly filters samples by selected timeframe, toggles active metric type, and respects `enableCardioPowerDynamics` gating.
+  1. *Database Trend Query & Timezone Test (`WorkoutSummariesCardioPowerTrendTest`)*: Verify `getCardioPowerDynamicsFitnessTrendSamples` parses timestamps using `SimpleDateFormat` in the local device timezone and returns samples with $R^2 \ge 0.50$ sorted ascending.
+  2. *ViewModel Rolling Trend & Reactive Reload Test (`AthleteProfileViewModelCardioPowerTest`)*: Verify `AthleteProfileViewModel` computes the 30-day moving average on full history prior to range slicing (preserving boundary rolling values across 1M, 3M, 6M, 1Y, All), and triggers reactive reload when `workoutRepository.allWorkouts` emits updates.
   3. *Canvas Plot Math & Rule 48 Audit Test (`CardioPowerTrendsPlotMathTest`)*: Verify IQR domain clamping, date labeling, Y-axis scale value formatting, and rolling 30-day average calculations.
-  4. *UI Component Contract Test (`CardioPowerTrendsCardTest`)*: Verify header info icon interaction, metric/range selector pill clicks, empty-state message rendering, and layout stability.
-  5. *9-Locale Localization Parity Test (`TranslationParityTest`)*: Verify all new cardio-power trend string tokens in `strings_cardio_power.xml` across EN, DE, ES, FR, IT, JA, NL, PL, PT.
+  4. *UI Component Contract & Touch Scrubbing Test (`CardioPowerTrendsCardTest`)*: Verify header info icon interaction, 5-pill range selector (`1M`, `3M`, `6M`, `1Y`, `All`), intermediate X-axis date tick rendering, and touch scrubbing (`ChartGestureDisambiguator`) with cursor and tooltip.
+  5. *9-Locale Localization Parity Test (`TranslationParityTest`)*: Verify `athlete_profile_range_1m` and all cardio-power trend string tokens across EN, DE, ES, FR, IT, JA, NL, PL, PT.
 
 ### TST-REV-013: **Real-Time Live HR Drift & Cockpit Telemetry Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-REV-012`

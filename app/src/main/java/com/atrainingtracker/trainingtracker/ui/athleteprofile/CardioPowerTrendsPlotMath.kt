@@ -184,4 +184,28 @@ object CardioPowerTrendsPlotMath {
         val sdf = SimpleDateFormat(pattern, Locale.getDefault())
         return sdf.format(Date(timestampMs))
     }
+
+    /**
+     * Resolves the nearest [CardioPlotPoint] from a touch X coordinate within the chart canvas.
+     */
+    fun findNearestPoint(
+        touchX: Float,
+        leftPad: Float,
+        plotW: Float,
+        points: List<CardioPlotPoint>
+    ): CardioPlotPoint? {
+        if (points.isEmpty() || plotW <= 0f) return null
+        if (points.size == 1) return points.first()
+
+        val minTs = points.first().timestampMs
+        val maxTs = points.last().timestampMs
+        val tsSpan = (maxTs - minTs).coerceAtLeast(1L)
+        if (tsSpan <= 1L) return points.first()
+
+        val clampedX = touchX.coerceIn(leftPad, leftPad + plotW)
+        val frac = ((clampedX - leftPad) / plotW).coerceIn(0f, 1f)
+        val targetTs = minTs + (frac * tsSpan).toLong()
+
+        return points.minByOrNull { kotlin.math.abs(it.timestampMs - targetTs) }
+    }
 }

@@ -34,6 +34,7 @@ import com.atrainingtracker.trainingtracker.physiology.WorkoutTrainingLoadSample
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStore
 import com.atrainingtracker.trainingtracker.settings.TuningConfig
 import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -133,7 +134,8 @@ data class AthleteProfileUiState(
  */
 class AthleteProfileViewModel @JvmOverloads constructor(
     application: Application,
-    private val workoutRepository: WorkoutRepository = WorkoutRepository.getInstance(application)
+    private val workoutRepository: WorkoutRepository = WorkoutRepository.getInstance(application),
+    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
 ) : AndroidViewModel(application) {
 
     private val repository = AthleteMetricsRepository.getInstance(application)
@@ -228,8 +230,9 @@ class AthleteProfileViewModel @JvmOverloads constructor(
         val (cardioSamples, cardioMetric, cardioRange) = cardioState
         val (cardioPoints, cardioRollingPoints, cardioYDomain) = if (enableCardio && cardioSamples.isNotEmpty()) {
             val allPts = CardioPowerTrendsPlotMath.convertSamplesToPoints(cardioSamples, cardioMetric)
+            val allRollingPts = CardioPowerTrendsPlotMath.computeRollingTrend(allPts, windowDays = 30)
             val filteredPts = CardioPowerTrendsPlotMath.filterPointsByTimeRange(allPts, cardioRange, nowMs)
-            val rollingPts = CardioPowerTrendsPlotMath.computeRollingTrend(filteredPts, windowDays = 30)
+            val rollingPts = CardioPowerTrendsPlotMath.filterPointsByTimeRange(allRollingPts, cardioRange, nowMs)
             val yDomain = CardioPowerTrendsPlotMath.computeOutlierResilientDomain(filteredPts.map { it.value }, cardioMetric)
             Triple(filteredPts, rollingPts, yDomain)
         } else {
@@ -283,16 +286,16 @@ class AthleteProfileViewModel @JvmOverloads constructor(
                 _hrMaxBpm.value = hrMax
             }
         }
-        viewModelScope.launch(Dispatchers.IO) {
-            val samples = try {
-                workoutRepository.getWorkoutTrainingLoadRecords()
-            } catch (_: Throwable) {
-                emptyList()
+        viewModelScope.launch(ioDispatcher) {
+            workoutRepository.allWorkouts.collect {
+                loadCardioTrendSamples()
+                val samples = try {
+                    workoutRepository.getWorkoutTrainingLoadRecords()
+                } catch (_: Throwable) {
+                    emptyList()
+                }
+                _workoutLoadSamples.value = samples
             }
-            _workoutLoadSamples.value = samples
-        }
-        viewModelScope.launch(Dispatchers.IO) {
-            loadCardioTrendSamples()
         }
     }
 

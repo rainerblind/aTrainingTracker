@@ -179,31 +179,49 @@
   • *Then* the row and overlay are omitted with zero visual artifact, and `TranslationParityTest` passes across all 9 locales.
 
 ### REQ-REV-011: Cardio-Power Longitudinal Fitness Trends in Athlete Profile [Verified]
-- **Tests**: `TST-REV-012` | **Tickets**: `ATT-3906`
+- **Tests**: `TST-REV-012` | **Tickets**: `ATT-3906`, `ATT-6724`
 - **Implementation**: `WorkoutSummariesDatabaseManager.java`, `AthleteProfileViewModel.kt`, `AthleteProfileScreen.kt`, `CardioPowerTrendsCard.kt`
 - **Rationale**: While single-workout details display acute parameters, monitoring aerobic fitness adaptations across weeks and months requires longitudinal trend plotting of fresh model parameters ($\text{HR@200W}$, $\tau$, $1/K$) for qualified workouts without requiring maximal exhaustion tests.
 - **Description**:
-  1. *Database Trend Ingestion*: `WorkoutSummariesDatabaseManager.java` SHALL provide a time-series query joining `cardio_power_dynamics` and `WorkoutSummaries` filtered by model quality $R^2 \ge 0.50$ and sorted ascending by workout start timestamp.
-  2. *Cardio-Power Trends Card in Athlete Profile*:
-     a. `AthleteProfileScreen.kt` SHALL render a dedicated `CardioPowerTrendsCard` in the Athlete Profile view when `enableCardioPowerDynamics == true`.
+  1. *Database Trend Ingestion & Local Timezone Parsing*: `WorkoutSummariesDatabaseManager.java` SHALL provide a time-series query joining `cardio_power_dynamics` and `WorkoutSummaries` filtered by model quality $R^2 \ge 0.50$ and sorted ascending by workout start timestamp. Querying `w.timeStart` SHALL be parsed in Java via `SimpleDateFormat("yyyy-MM-dd HH:mm:ss")` in the device local timezone (`TimeZone.getDefault()`) to match `WorkoutDataMapper`.
+  2. *Cardio-Power Trends Card in Athlete Profile & Hub Parity*:
+     a. `AthleteProfileScreen.kt` SHALL render a dedicated `CardioPowerTrendsCard` in the Athlete Profile view (or dedicated Cardio-Power hub tab per ATT-6720) when `enableCardioPowerDynamics == true`.
      b. The card SHALL provide single-line non-wrapping metric selector pills for $\text{HR@200W}$, Time Constant $\tau$, and Slope $1/K$.
-     c. The card SHALL provide time range selector pills (3M, 6M, 1Y, All).
+     c. The card SHALL provide time range selector pills (1M, 3M, 6M, 1Y, All) with localized label `athlete_profile_range_1m`.
      d. The card header SHALL provide an `(i)` info action opening `PowerHrDynamicsInfoDialog`.
-  3. *Canvas Trend Rendering & Rule 48 Compliance*:
-     a. Canvas SHALL plot individual workout scatter points and a 30-day rolling trend curve.
-     b. Canvas SHALL render explicit X-axis date labels (`"dd.MM."` / `"MMM yy"`) and Y-axis scale markers (`"bpm"`, `"s"`, `"W/bpm"`).
+  3. *Canvas Trend Rendering, Touch Scrubbing & Rule 48 Compliance*:
+     a. Canvas SHALL plot individual workout scatter points and a 30-day moving average rolling trend curve. The 30-day rolling trend SHALL be computed over the entire chronological series prior to time-range filtering, preserving rolling average continuity at window boundaries without left-edge truncation bias.
+     b. Canvas SHALL render explicit X-axis date labels (`"dd.MM."` / `"MMM yy"`) including intermediate date ticks across multi-month spans, and Y-axis scale markers (`"bpm"`, `"s"`, `"W/bpm"`).
      c. Y-axis scaling SHALL apply interquartile range (IQR) domain clamping for $N \ge 4$ to resist noisy outlier compression.
-     d. The card SHALL display semantic direction subtitles ($\text{HR@200W}$: *"Lower = Better Aerobic Economy"*; $\tau$: *"Lower = Faster HR Kinetics"*; $1/K$: *"Higher = More Watts per bpm"*).
-  4. *Parallel Sprint Isolation & Localization*:
-     a. UI changes SHALL be restricted strictly to `AthleteProfileScreen.kt` / `AthleteProfileViewModel.kt` with zero modification to `PeriodsScreen.kt`.
-     b. All newly introduced UI strings SHALL reside in `res/values*/strings_cardio_power.xml` with 100% parity across all 9 supported locales (EN, DE, ES, FR, IT, JA, NL, PL, PT) with zero inline emojis.
+     d. The card SHALL support horizontal touch scrubbing using `ChartGestureDisambiguator` (discriminating horizontal scrubbing from vertical scrolling), rendering a vertical dashed cursor and interactive value/date tooltip.
+     e. The card SHALL display semantic direction subtitles ($\text{HR@200W}$: *"Lower = Better Aerobic Economy"*; $\tau$: *"Lower = Faster HR Kinetics"*; $1/K$: *"Higher = More Watts per bpm"*).
+  4. *Reactive Ingestion & Parallel Sprint Isolation*:
+     a. `AthleteProfileViewModel.kt` SHALL reactively collect `workoutRepository.allWorkouts` to refresh `cardioTrendSamples` and `workoutLoadSamples` dynamically when workouts finish, import, backfill, or delete.
+     b. UI changes SHALL be restricted strictly to `CardioPowerTrendsCard.kt` / `AthleteProfileViewModel.kt` with zero modification to `PeriodsScreen.kt`.
+     c. All newly introduced UI strings SHALL reside in `res/values*/strings_cardio_power.xml` with 100% parity across all 9 supported locales (EN, DE, ES, FR, IT, JA, NL, PL, PT) with zero inline emojis.
+
+### Requirement Archaeology & Chesterton's Fence Audit
+* `Original Requirement ID & Target`: `REQ-REV-011` (*Cardio-Power Longitudinal Fitness Trends in Athlete Profile*), targeting `WorkoutSummariesDatabaseManager.java`, `AthleteProfileViewModel.kt`, and `CardioPowerTrendsCard.kt`.
+* `Historical Origin & Commit Trace`: Added in `ATT-3906` (commit `178589a7`, Sprint 2026-46.1).
+* `Root Reason for Existing Formulation`: Preliminary implementation in ATT-3906 prioritized core 1st-order visualization with 3M/6M/1Y/All ranges and static initial loading. Slicing before rolling average was an implementation oversight, and `strftime('%s')` was adopted as a quick epoch conversion without accounting for local timezone offsets.
+* `Preservation of Core Invariants`: Model fit threshold ($R^2 \ge 0.50$), Tukey IQR domain clamping, 30-day moving window width, metric selector behavior, and 9-locale translation parity are fully preserved while eliminating boundary truncation and UTC drift.
+
 - **Acceptance Criteria**:
   • *Given* workouts with valid cardio-power dynamics ($R^2 \ge 0.50$) and `enableCardioPowerDynamics == true`,
   • *When* navigating to Athlete Profile,
   • *Then* `CardioPowerTrendsCard` renders scatter points, 30-day trend curve, Rule 48 explicit axis markers, and metric direction subtitle.
   • *Given* `CardioPowerTrendsCard`,
-  • *When* selecting metric pills ($\text{HR@200W}$, $\tau$, $1/K$) or time range pills (3M, 6M, 1Y, All),
+  • *When* selecting metric pills ($\text{HR@200W}$, $\tau$, $1/K$) or time range pills (1M, 3M, 6M, 1Y, All),
   • *Then* the chart updates scale, points, and direction notes reactively without crashing or recomposition leaks.
+  • *Given* switching between 1M, 3M, 6M, 1Y, and All time ranges,
+  • *When* inspecting points at window boundaries,
+  • *Then* 30-day rolling average values remain identical because rolling trends are computed prior to range slicing.
+  • *Given* newly recorded, imported, or deleted workouts,
+  • *When* `workoutRepository.allWorkouts` emits updates,
+  • *Then* `CardioPowerTrendsCard` refreshes trend points and rolling curves reactively without requiring app restart.
+  • *Given* `CardioPowerTrendsCard`,
+  • *When* performing horizontal drag gestures,
+  • *Then* `ChartGestureDisambiguator` tracks horizontal touch scrubbing, showing a vertical cursor line and date/value tooltip while allowing parent vertical scrolling.
   • *Given* zero qualifying rides or `enableCardioPowerDynamics == false`,
   • *When* viewing Athlete Profile,
   • *Then* an empty state message or clean card omission is rendered without UI distortion, and `TranslationParityTest` passes across 9 locales.

@@ -44,13 +44,17 @@ import com.google.maps.android.PolyUtil;
 
 import org.jetbrains.annotations.NotNull;
 
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.TimeZone;
 
 /**
  * Orchestrates all persistent storage operations for high-level workout session metadata.
@@ -1978,18 +1982,32 @@ public class WorkoutSummariesDatabaseManager {
         }
 
         String sql = "SELECT w." + WorkoutSummaries.C_ID + " AS workout_id, "
-                + "CAST(strftime('%s', w." + WorkoutSummaries.TIME_START + ") AS INTEGER) * 1000 AS start_ms, "
+                + "w." + WorkoutSummaries.TIME_START + " AS time_start_str, "
                 + "cpd.* "
                 + "FROM " + WorkoutSummaries.TABLE_CARDIO_POWER_DYNAMICS + " cpd "
                 + "INNER JOIN " + WorkoutSummaries.TABLE + " w ON w." + WorkoutSummaries.C_ID + " = cpd." + WorkoutSummaries.CPD_WORKOUT_ID + " "
                 + "WHERE cpd." + WorkoutSummaries.CPD_R2_START + " >= ? "
-                + "ORDER BY start_ms ASC";
+                + "ORDER BY w." + WorkoutSummaries.TIME_START + " ASC";
+
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.ROOT);
+        sdf.setTimeZone(TimeZone.getDefault());
 
         String[] selectionArgs = new String[]{String.valueOf(minR2)};
         try (Cursor cursor = db.rawQuery(sql, selectionArgs)) {
             while (cursor != null && cursor.moveToNext()) {
                 long workoutId = cursor.getLong(cursor.getColumnIndexOrThrow("workout_id"));
-                long startMs = cursor.getLong(cursor.getColumnIndexOrThrow("start_ms"));
+                String timeStartStr = cursor.getString(cursor.getColumnIndexOrThrow("time_start_str"));
+                long startMs = 0L;
+                if (timeStartStr != null && !timeStartStr.trim().isEmpty()) {
+                    try {
+                        Date d = sdf.parse(timeStartStr);
+                        if (d != null) {
+                            startMs = d.getTime();
+                        }
+                    } catch (Exception e) {
+                        Log.e(TAG, "Error parsing time_start: " + timeStartStr, e);
+                    }
+                }
                 CardioPowerDynamicsRecord record = parseCardioPowerDynamicsRecord(cursor, workoutId);
                 samples.add(new CardioPowerTrendSample(workoutId, startMs, record));
             }

@@ -99,6 +99,9 @@ class CardioPowerTrendsPlotMathTest {
 
         val allPoints = listOf(pOld, pMid, pRecent)
 
+        val filtered1M = CardioPowerTrendsPlotMath.filterPointsByTimeRange(allPoints, MetricsTimeRange.ONE_MONTH, nowMs)
+        assertEquals(listOf(pRecent), filtered1M)
+
         val filtered3M = CardioPowerTrendsPlotMath.filterPointsByTimeRange(allPoints, MetricsTimeRange.THREE_MONTHS, nowMs)
         assertEquals(listOf(pMid, pRecent), filtered3M)
 
@@ -107,6 +110,34 @@ class CardioPowerTrendsPlotMathTest {
 
         val filteredAll = CardioPowerTrendsPlotMath.filterPointsByTimeRange(allPoints, MetricsTimeRange.ALL, nowMs)
         assertEquals(allPoints, filteredAll)
+    }
+
+    @Test
+    fun testFindNearestPoint_resolvesAccurately() {
+        val baseMs = 1700000000000L
+        val dayMs = CardioPowerTrendsPlotMath.MILLIS_PER_DAY
+        val p1 = CardioPlotPoint(baseMs, 150.0, 1L)
+        val p2 = CardioPlotPoint(baseMs + 20 * dayMs, 140.0, 2L)
+        val p3 = CardioPlotPoint(baseMs + 100 * dayMs, 130.0, 3L)
+        val points = listOf(p1, p2, p3)
+
+        val leftPad = 50f
+        val plotW = 500f
+
+        // Touch near start -> p1
+        val nearStart = CardioPowerTrendsPlotMath.findNearestPoint(55f, leftPad, plotW, points)
+        assertEquals(p1, nearStart)
+
+        // Touch near 20% (day 20) -> p2
+        val near20Pct = CardioPowerTrendsPlotMath.findNearestPoint(leftPad + 0.20f * plotW, leftPad, plotW, points)
+        assertEquals(p2, near20Pct)
+
+        // Touch near 95% -> p3
+        val nearEnd = CardioPowerTrendsPlotMath.findNearestPoint(leftPad + 0.95f * plotW, leftPad, plotW, points)
+        assertEquals(p3, nearEnd)
+
+        // Empty list returns null
+        assertEquals(null, CardioPowerTrendsPlotMath.findNearestPoint(100f, leftPad, plotW, emptyList()))
     }
 
     @Test

@@ -87,7 +87,7 @@ class WorkoutSummariesCardioPowerTrendTest {
         }
 
         every { mockCursor.getColumnIndexOrThrow("workout_id") } returns 0
-        every { mockCursor.getColumnIndexOrThrow("start_ms") } returns 1
+        every { mockCursor.getColumnIndexOrThrow("time_start_str") } returns 1
         every { mockCursor.getColumnIndexOrThrow(WorkoutSummaries.CPD_TAU_START) } returns 2
         every { mockCursor.getColumnIndexOrThrow(WorkoutSummaries.CPD_HR0_START) } returns 3
         every { mockCursor.getColumnIndexOrThrow(WorkoutSummaries.CPD_K_START) } returns 4
@@ -103,8 +103,13 @@ class WorkoutSummariesCardioPowerTrendTest {
         every { mockCursor.getColumnIndexOrThrow(WorkoutSummaries.CPD_DELTA_HR200) } returns 14
         every { mockCursor.getColumnIndexOrThrow(WorkoutSummaries.CPD_DELTA_HR0) } returns 15
 
+        val dateStr = "2026-06-15 14:30:00"
+        val expectedMs = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.ROOT).apply {
+            timeZone = java.util.TimeZone.getDefault()
+        }.parse(dateStr)!!.time
+
         every { mockCursor.getLong(0) } returns 42L
-        every { mockCursor.getLong(1) } returns 1700000000000L
+        every { mockCursor.getString(1) } returns dateStr
         every { mockCursor.getDouble(2) } returns 32.5
         every { mockCursor.getDouble(3) } returns 65.0
         every { mockCursor.getDouble(4) } returns 0.20
@@ -127,7 +132,7 @@ class WorkoutSummariesCardioPowerTrendTest {
         assertEquals(1, samples.size)
         val sample = samples[0]
         assertEquals(42L, sample.workoutId)
-        assertEquals(1700000000000L, sample.timestampMs)
+        assertEquals(expectedMs, sample.timestampMs)
         assertEquals(145.0, sample.record.hr200Start, 0.001)
         assertEquals(32.5, sample.record.tauStart, 0.001)
         assertEquals(0.20, sample.record.kStart, 0.001)
@@ -135,7 +140,7 @@ class WorkoutSummariesCardioPowerTrendTest {
 
         assertTrue(sqlSlot.captured.contains("cardio_power_dynamics"))
         assertTrue(sqlSlot.captured.contains(WorkoutSummaries.CPD_R2_START + " >= ?"))
-        assertTrue(sqlSlot.captured.contains("ORDER BY start_ms ASC"))
+        assertTrue(sqlSlot.captured.contains("ORDER BY w." + WorkoutSummaries.TIME_START + " ASC"))
         assertEquals("0.5", argsSlot.captured[0])
     }
 

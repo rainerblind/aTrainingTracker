@@ -131,7 +131,7 @@ class AthleteProfileViewModelCardioPowerTest {
 
         every { mockDb.getCardioPowerDynamicsFitnessTrendSamples(0.50) } returns samples
 
-        val viewModel = AthleteProfileViewModel(mockApplication)
+        val viewModel = AthleteProfileViewModel(mockApplication, ioDispatcher = testDispatcher)
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
             viewModel.uiState.collect()
         }
@@ -167,5 +167,102 @@ class AthleteProfileViewModelCardioPowerTest {
         advanceUntilIdle()
         assertEquals(MetricsTimeRange.THREE_MONTHS, viewModel.uiState.value.selectedCardioTimeRange)
         assertEquals(3, viewModel.uiState.value.cardioTrendPoints.size)
+    }
+
+    @Test
+    fun testRollingTrend_preservesBoundaryPreSlicing() = runTest(testDispatcher) {
+        val now = System.currentTimeMillis()
+        val day = 86_400_000L
+
+        val sampleRecord = CardioPowerDynamicsRecord(
+            workoutId = 1L,
+            tauStart = 30.0,
+            hr0Start = 70.0,
+            kStart = 0.25,
+            hr200Start = 150.0,
+            r2Start = 0.85,
+            rmseStart = 2.5
+        )
+
+        // Workout 1: 40 days ago (value 150)
+        // Workout 2: 20 days ago (value 140) -> 30d window includes w1 & w2 -> avg = 145.0
+        // Workout 3: now (value 130) -> 30d window includes w2 & w3 -> avg = 135.0
+        val samples = listOf(
+            CardioPowerTrendSample(workoutId = 1L, timestampMs = now - 40 * day, record = sampleRecord.copy(workoutId = 1L, hr200Start = 150.0)),
+            CardioPowerTrendSample(workoutId = 2L, timestampMs = now - 20 * day, record = sampleRecord.copy(workoutId = 2L, hr200Start = 140.0)),
+            CardioPowerTrendSample(workoutId = 3L, timestampMs = now, record = sampleRecord.copy(workoutId = 3L, hr200Start = 130.0))
+        )
+
+        every { mockDb.getCardioPowerDynamicsFitnessTrendSamples(0.50) } returns samples
+
+        val viewModel = AthleteProfileViewModel(mockApplication, ioDispatcher = testDispatcher)
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            viewModel.uiState.collect()
+        }
+        advanceUntilIdle()
+
+        // In ALL range, all 3 points are present
+        val allState = viewModel.uiState.value
+        assertEquals(3, allState.cardioTrendPoints.size)
+        assertEquals(3, allState.cardioTrendRollingPoints.size)
+        assertEquals(145.0, allState.cardioTrendRollingPoints[1].value, 0.001)
+
+        // Switch to ONE_MONTH (30 days)
+        viewModel.selectCardioTimeRange(MetricsTimeRange.ONE_MONTH)
+        advanceUntilIdle()
+
+        val oneMonthState = viewModel.uiState.value
+        // Only workouts within 30 days are visible (workout 2 and workout 3)
+        assertEquals(2, oneMonthState.cardioTrendPoints.size)
+        assertEquals(2, oneMonthState.cardioTrendRollingPoints.size)
+        // Boundary check: Point at 20 days ago STILL has rolling value 145.0 (computed prior to slicing)
+        assertEquals(145.0, oneMonthState.cardioTrendRollingPoints[0].value, 0.001)
+        assertEquals(135.0, oneMonthState.cardioTrendRollingPoints[1].value, 0.001)
+    }
+
+    @Test
+    fun testReactiveRefresh_onWorkoutsChange() = runTest(testDispatcher) {
+        val now = System.currentTimeMillis()
+        val day = 86_400_000L
+
+        val initialRecord = CardioPowerDynamicsRecord(
+            workoutId = 1L,
+            tauStart = 30.0,
+            hr0Start = 70.0,
+            kStart = 0.25,
+            hr200Start = 150.0,
+            r2Start = 0.85,
+            rmseStart = 2.5
+        )
+
+        val initialSamples = listOf(
+            CardioPowerTrendSample(workoutId = 1L, timestampMs = now - 10 * day, record = initialRecord)
+        )
+        val updatedSamples = listOf(
+            CardioPowerTrendSample(workoutId = 1L, timestampMs = now - 10 * day, record = initialRecord),
+            CardioPowerTrendSample(workoutId = 2L, timestampMs = now, record = initialRecord.copy(workoutId = 2L, hr200Start = 142.0))
+        )
+
+        val mockWorkoutRepo = mockk<com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository>(relaxed = true)
+        val allWorkoutsFlow = MutableStateFlow<List<com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData>>(emptyList())
+        every { mockWorkoutRepo.allWorkouts } returns allWorkoutsFlow
+        every { mockWorkoutRepo.getWorkoutTrainingLoadRecords() } returns emptyList()
+        every { mockWorkoutRepo.getCardioPowerDynamicsFitnessTrendSamples(0.50) } returnsMany listOf(initialSamples, updatedSamples)
+
+        val viewModel = AthleteProfileViewModel(mockApplication, mockWorkoutRepo, ioDispatcher = testDispatcher)
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            viewModel.uiState.collect()
+        }
+        advanceUntilIdle()
+
+        assertEquals(1, viewModel.uiState.value.cardioTrendPoints.size)
+
+        // Trigger emission on allWorkouts flow (e.g. workout finished or imported)
+        allWorkoutsFlow.value = listOf(mockk(relaxed = true))
+        advanceUntilIdle()
+
+        // uiState reactively updates to reflect the new samples
+        assertEquals(2, viewModel.uiState.value.cardioTrendPoints.size)
+        assertEquals(142.0, viewModel.uiState.value.cardioTrendPoints[1].value, 0.001)
     }
 }
