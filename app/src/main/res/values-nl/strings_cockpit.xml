@@ -39,6 +39,8 @@
 
     <string name="mmp_curve">Mean Maximal Power-curve</string>
     <string name="mmp_curve_short">MMP</string>
+    <string name="config_tracking__show_mmp_curve">MMP-curve</string>
+    <string name="mmp_breakthrough_pr">PR!</string>
 
     <!-- Cockpit Live Sparkline Graph & Time Horizon (REQ-TRK-059, ATT-1294) -->
     <string name="sensor_field_show_graph">Grafiek</string>

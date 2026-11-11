@@ -72,6 +72,8 @@ import androidx.compose.material.icons.filled.ShowChart
 import androidx.compose.material.icons.filled.Terrain
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.TrendingUp
+import com.atrainingtracker.trainingtracker.ui.tracking.LiveMmpCurveChart
 import androidx.compose.material.icons.filled.HorizontalSplit
 import androidx.compose.material.icons.filled.Title
 import androidx.compose.material.icons.filled.Delete
@@ -198,6 +200,7 @@ interface TabToggleActions {
     fun onToggleNavigationHints(enabled: Boolean) {}
     fun onToggleLapButton(enabled: Boolean) {}
     fun onToggleBikeBell(enabled: Boolean) {}
+    fun onToggleMmpCurve(enabled: Boolean) {}
     fun onRingBikeBell() {}
 
     companion object {
@@ -502,6 +505,19 @@ fun SensorGridScreen(
                                             currentDistance = resolvedProfile.markerDistance,
                                             climbs = resolvedProfile.climbs,
                                             showEmptyState = true,
+                                            modifier = Modifier.fillMaxWidth()
+                                        )
+                                    }
+                                }
+
+                                if (state.showMmpCurve) {
+                                    Surface(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(top = 8.dp)
+                                    ) {
+                                        LiveMmpCurveChart(
+                                            curveData = state.mmpCurveData,
                                             modifier = Modifier.fillMaxWidth()
                                         )
                                     }
@@ -873,6 +889,13 @@ fun SensorGridScreen(
                         icon = Icons.Default.Notifications,
                         modifier = Modifier.fillMaxWidth()
                     )
+                    SpatialCockpitToggleCard(
+                        title = stringResource(R.string.config_tracking__show_mmp_curve),
+                        isActive = state.showMmpCurve,
+                        onToggle = { tabToggleActions.onToggleMmpCurve(it) },
+                        icon = Icons.Default.TrendingUp,
+                        modifier = Modifier.fillMaxWidth()
+                    )
                 }
             }
         } else {
@@ -947,6 +970,20 @@ fun SensorGridScreen(
                                 currentDistance = resolvedProfile.markerDistance,
                                 climbs = resolvedProfile.climbs,
                                 showEmptyState = true,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
+                    }
+
+                    if (state.showMmpCurve) {
+                        val fabBottomClearance = if (!isLandscape && (state.showBikeBell || state.showLapButton) && screenMode != ScreenMode.CONFIGURATION) 68.dp else 0.dp
+                        Surface(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(top = 8.dp, bottom = fabBottomClearance)
+                        ) {
+                            LiveMmpCurveChart(
+                                curveData = state.mmpCurveData,
                                 modifier = Modifier.fillMaxWidth()
                             )
                         }

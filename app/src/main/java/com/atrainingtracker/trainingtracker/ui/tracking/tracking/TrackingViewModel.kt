@@ -63,6 +63,8 @@ import com.atrainingtracker.trainingtracker.ui.tracking.WPrimeBatteryMath
 import com.atrainingtracker.trainingtracker.ui.tracking.WPrimeBatteryState
 import com.atrainingtracker.trainingtracker.ui.tracking.TrackingViewsRepository
 import com.atrainingtracker.trainingtracker.ui.tracking.SectionDividerInfo
+import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
+import com.atrainingtracker.trainingtracker.ui.tracking.LiveMmpCurveData
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -96,12 +98,15 @@ data class TrackingScreenState(
     val showNavigationHints: Boolean = true,
     val showLapButton: Boolean = true,
     val showBikeBell: Boolean = false,
+    val showMmpCurve: Boolean = false,
     val elevationProfileScope: ElevationProfileScope = ElevationProfileScope.FULL_ROUTE,
     val elevationProfileLookahead: Int = 2000,
     val fields: List<SensorFieldState> = emptyList(),
     val sectionDividers: List<SectionDividerInfo> = emptyList(),
     val tuningConfig: TuningConfig = TuningConfig(),
     val pathPoints: List<com.atrainingtracker.trainingtracker.ui.map.PathPoint> = emptyList(),
+    val mmpCurveData: LiveMmpCurveData = LiveMmpCurveData(),
+    val mmpReferencePoints: Map<Int, Double> = emptyMap(),
     val mapState: TrackingMapState = TrackingMapState(showMap = showMap),
     
     // Map specific state (backward-compatible)
@@ -129,7 +134,8 @@ class TrackingViewModel @JvmOverloads constructor(
     val liveSegmentsRepository: LiveSegmentsRepository,
     val routesRepository: RoutesRepository,
     private val viewId: Long,
-    private val defaultDispatcher: CoroutineDispatcher = Dispatchers.Default
+    private val defaultDispatcher: CoroutineDispatcher = Dispatchers.Default,
+    private val workoutRepository: WorkoutRepository = WorkoutRepository.getInstance(application)
 ) : ViewModel() {
 
     // --- The StateFlow to hold and expose the UI state ---
@@ -241,7 +247,10 @@ class TrackingViewModel @JvmOverloads constructor(
         Color(ContextCompat.getColor(application, R.color.zone_7))
     )
 
+    private var cachedPowerBenchmarks: Map<Int, Double> = emptyMap()
+
     init {
+        loadHistoricalPowerBenchmarks()
         observeTuningConfig()
         observeZoneDisplayOptions()
         observeWPrimeKj()
@@ -251,6 +260,16 @@ class TrackingViewModel @JvmOverloads constructor(
         observeElevationPathPoints()
         loadActivityType()
         observeTrackingMode()
+    }
+
+    private fun loadHistoricalPowerBenchmarks() {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                cachedPowerBenchmarks = workoutRepository.getHistoricalPowerBenchmarks()
+            } catch (_: Throwable) {
+                // Keep default empty map in isolated test environments
+            }
+        }
     }
 
     /**
@@ -629,7 +648,13 @@ class TrackingViewModel @JvmOverloads constructor(
                 // --- Step 3: Package into TrackingScreenState reusing the decoupled mapState ---
                 val currentMap = _mapState.value
                 val showElevation = viewInfo?.showElevationProfile ?: false
+                val showMmp = viewInfo?.showMmpCurve ?: false
                 val currentPoints = if (showElevation) _uiState.value.pathPoints else emptyList()
+                val mmpData = if (showMmp) {
+                    extractMmpCurveData(allSensorData, cachedPowerBenchmarks)
+                } else {
+                    LiveMmpCurveData(referencePoints = cachedPowerBenchmarks)
+                }
                 TrackingScreenState(
                     fields = finalFields,
                     sectionDividers = sectionDividers,
@@ -641,9 +666,12 @@ class TrackingViewModel @JvmOverloads constructor(
                     showNavigationHints = viewInfo?.showNavigationHints ?: true,
                     showLapButton = viewInfo?.showLapButton ?: true,
                     showBikeBell = viewInfo?.showBikeBell ?: false,
+                    showMmpCurve = showMmp,
                     elevationProfileScope = viewInfo?.elevationProfileScope ?: ElevationProfileScope.FULL_ROUTE,
                     elevationProfileLookahead = viewInfo?.elevationProfileLookahead ?: 2000,
                     pathPoints = currentPoints,
+                    mmpCurveData = mmpData,
+                    mmpReferencePoints = cachedPowerBenchmarks,
                     mapState = currentMap,
                     zoomFocus = currentMap.zoomFocus,
                     userSpeed = currentMap.userSpeed,
@@ -1013,6 +1041,48 @@ class TrackingViewModel @JvmOverloads constructor(
         viewModelScope.launch {
             trackingViewsRepository.updateShowBikeBell(viewId, show)
         }
+    }
+
+    fun onUpdateShowMmpCurve(show: Boolean) {
+        viewModelScope.launch {
+            trackingViewsRepository.updateShowMmpCurve(viewId, show)
+        }
+    }
+
+    /**
+     * Extracts benchmark rolling power averages, session peaks, and instantaneous power
+     * from live telemetry for [LiveMmpCurveData] presentation (REQ-TRK-058.6).
+     */
+    fun extractMmpCurveData(
+        allSensorData: List<FilteredSensorData<*>>,
+        referencePoints: Map<Int, Double> = cachedPowerBenchmarks
+    ): LiveMmpCurveData {
+        val rolling = mutableMapOf<Int, Double>()
+        val peaks = mutableMapOf<Int, Double>()
+        var instant: Double? = null
+
+        for (data in allSensorData) {
+            val num = (data.value as? Number)?.toDouble() ?: continue
+            when (data.sensorType) {
+                SensorType.POWER -> if (instant == null) instant = num
+                SensorType.POWER_5S -> rolling[5] = num
+                SensorType.POWER_1M -> rolling[60] = num
+                SensorType.POWER_5M -> rolling[300] = num
+                SensorType.POWER_20M -> rolling[1200] = num
+                SensorType.POWER_PEAK_5S -> peaks[5] = num
+                SensorType.POWER_PEAK_1M -> peaks[60] = num
+                SensorType.POWER_PEAK_5M -> peaks[300] = num
+                SensorType.POWER_PEAK_20M -> peaks[1200] = num
+                else -> {}
+            }
+        }
+
+        return LiveMmpCurveData(
+            rollingMeans = rolling,
+            peakPowers = peaks,
+            instantaneousPower = instant,
+            referencePoints = referencePoints
+        )
     }
 
     fun onSetSectionDivider(rowNr: Int, title: String?) {

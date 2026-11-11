@@ -787,6 +787,44 @@ public class WorkoutSummariesDatabaseManager {
      * Retrieves the peak value using an explicit database connection.
      */
     @Nullable
+    /**
+     * Retrieves the athlete's historical peak power PR benchmarks (5s, 1m, 5m, 20m) across all past workouts (REQ-TRK-058.6).
+     *
+     * @return Map of duration in seconds (5, 60, 300, 1200) to historical peak power in Watts.
+     */
+    @NonNull
+    public Map<Integer, Double> getHistoricalPowerBenchmarks() {
+        Map<Integer, Double> benchmarks = new HashMap<>();
+        String sql = "SELECT " + WorkoutSummaries.SENSOR_TYPE + ", MAX(" + WorkoutSummaries.VALUE + ") AS max_val "
+                + "FROM " + WorkoutSummaries.TABLE_EXTREMA_VALUES + " "
+                + "WHERE " + WorkoutSummaries.SENSOR_TYPE + " IN ('POWER_PEAK_5S', 'POWER_PEAK_1M', 'POWER_PEAK_5M', 'POWER_PEAK_20M') "
+                + "GROUP BY " + WorkoutSummaries.SENSOR_TYPE;
+        try (Cursor cursor = getDatabase().rawQuery(sql, null)) {
+            if (cursor != null) {
+                int typeIdx = cursor.getColumnIndex(WorkoutSummaries.SENSOR_TYPE);
+                int valIdx = cursor.getColumnIndex("max_val");
+                while (cursor.moveToNext()) {
+                    String sensorTypeStr = cursor.getString(typeIdx);
+                    double val = cursor.getDouble(valIdx);
+                    if (val > 0.0) {
+                        if (SensorType.POWER_PEAK_5S.name().equals(sensorTypeStr)) {
+                            benchmarks.put(5, val);
+                        } else if (SensorType.POWER_PEAK_1M.name().equals(sensorTypeStr)) {
+                            benchmarks.put(60, val);
+                        } else if (SensorType.POWER_PEAK_5M.name().equals(sensorTypeStr)) {
+                            benchmarks.put(300, val);
+                        } else if (SensorType.POWER_PEAK_20M.name().equals(sensorTypeStr)) {
+                            benchmarks.put(1200, val);
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to load historical power benchmarks", e);
+        }
+        return benchmarks;
+    }
+
     public Double getExtremaValue(SQLiteDatabase db, long workoutId, @NonNull SensorType sensorType, @NonNull ExtremaType extremaType) {
         Double extremaValue = null;
 

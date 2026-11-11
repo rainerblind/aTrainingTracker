@@ -1687,8 +1687,8 @@
 
 ### TST-TRK-058: **Live Mean Maximal Power (MMP) & Rolling/Peak Duration Test Suite** [Verified]
 - **Requirement(s)**: `REQ-TRK-058`
-- **Component**: `CyclingPowerMetricsDevice.java`, `SlidingWindowPowerAccumulator.kt`, `SensorType.java`, `LiveMmpCurveChart.kt`
-- **Jira**: `ATT-1298`
+- **Component**: `CyclingPowerMetricsDevice.java`, `SlidingWindowPowerAccumulator.kt`, `SensorType.java`, `LiveMmpCurveChart.kt`, `SensorGridScreen.kt`, `TrackingViewModel.kt`, `TrackingViewsDatabaseManager.java`, `TrackingViewsRepository.kt`
+- **Jira**: `ATT-1298`, `ATT-6688`
 - **Test Description**:
   1. *Sliding Window Accumulator & Growing Window Unit Test (`TST-TRK-058.1`, `SlidingWindowPowerAccumulatorTest.kt`)*:
   • Verify $O(1)$ ring-buffer sliding window accumulator computes correct sum and average across 5s, 60s, 300s, and 1200s windows.
@@ -1709,6 +1709,10 @@
   • Verify zero Compose `MutableState` snapshot writes occur inside composition (`Rule 66`).
   5. *Clean-Room Targeted Test Suite Execution (`TST-TRK-058.5`)*:
   • Execute targeted package tests (`com.atrainingtracker.banalservice.devices.*`, `com.atrainingtracker.banalservice.sensor.*`, `com.atrainingtracker.trainingtracker.ui.tracking.*`) asserting 100% pass rate.
+  6. *Cockpit Layout Integration, PR Reference Curve & Semantic Test Suite (`TST-TRK-058.6`, `TrackingViewsDbMigrationV20Test.kt`, `LiveMmpCurveChartTest.kt`, `TrackingViewModelMmpTest.kt`, `ATT-6688`)*:
+  • Verify SQLite schema migration from version 19 to 20 adds `ShowMmpCurve` column to `VIEWS_TABLE` with default 0.
+  • Verify `LiveMmpCurveChartTest.kt` validates logarithmic duration mapping, reference curve overlay, breakthrough callout pin assertions, and state immutability without source-text `File.readLines()` grepping (`Rule 5.4`).
+  • Verify `TrackingViewModel` aggregates 1-Hz MMP rolling means, session peaks, and instantaneous power into `LiveMmpCurveData` and detects breakthrough events when session peaks exceed reference benchmarks.
 
 ### TST-TRK-059: **Live Sparkline Graph Cockpit Tiles & Database Migration Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-TRK-059`

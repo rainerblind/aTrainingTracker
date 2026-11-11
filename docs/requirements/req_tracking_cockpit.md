@@ -3021,8 +3021,8 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 **Invariants**: True mountain climbs track without attenuation; IPC contract (`ALTITUDE_CORRECTION_INTENT`) payload and $|\Delta h| \le 500\text{ m}$ guard preserved; database updates remain atomic.
 
 ### REQ-TRK-058: Live Mean Maximal Power (MMP) Accumulators, Benchmark Durations (5s, 1m, 5m, 20m) & Cockpit MMP Curve Chart [Verified]
-- **Tests**: `TST-TRK-058` | **Tickets**: `ATT-1298`
-- **Implementation**: `CyclingPowerMetricsDevice.java`, `SlidingWindowPowerAccumulator.kt`, `SensorType.java`, `LiveMmpCurveChart.kt`
+- **Tests**: `TST-TRK-058` | **Tickets**: `ATT-1298`, `ATT-6688`
+- **Implementation**: `CyclingPowerMetricsDevice.java`, `SlidingWindowPowerAccumulator.kt`, `SensorType.java`, `LiveMmpCurveChart.kt`, `SensorGridScreen.kt`, `TrackingViewModel.kt`, `TrackingViewsDatabaseManager.java`, `TrackingViewsRepository.kt`
 - **Rationale**: Cyclists evaluating high-intensity efforts require real-time pacing feedback and Mean Maximal Power (MMP) benchmarking during active sessions. Calculating rolling means and session peak powers for benchmark durations (5s, 1m, 5m, 20m) and rendering an interactive logarithmic MMP vector curve in the cockpit provides live tactical feedback without degrading CPU or battery performance (ATT-1298, Parent Epic ATT-5908, extending `REQ-TRK-019`, `REQ-TRK-020`, `REQ-TRK-021`, and `REQ-TRK-023`).
 - **Description**:
 1. *O(1) Circular Sliding-Window Benchmark Accumulators (`REQ-TRK-058.1`)*:
@@ -3039,14 +3039,26 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 5. *Pause Lifecycle Invariant & Session Reset Parity (`REQ-TRK-058.5`)*:
 • During recording suspension (`isSuspended`), accumulators and peak tracking SHALL freeze without accumulating zero-watt samples or corrupting running sums.
 • In accordance with Rule 51, `resetSession()` SHALL clear all accumulators, ring buffers, and session peak registers to ensure clean-state parity across workout boundaries.
+6. *Cockpit Layout Integration, PR Reference Curve & Breakthrough Notifications (`REQ-TRK-058.6`, `ATT-6688`)*:
+• `TrackingViewsDbHelper.java` (`VIEWS_TABLE`) SHALL support `ShowMmpCurve` integer column (default 0), migrating database schema to DB version 20 via `onUpgrade`.
+• `TrackingViewInfo` and `TrackingViewsRepository` SHALL expose `showMmpCurve: Boolean` and persist user configuration changes.
+• In `SensorGridScreen.kt`, the Cockpit tab configuration screen SHALL provide a `SpatialCockpitToggleCard` for toggling the MMP curve chart (`config_tracking__showMmpCurve`).
+• In `SensorGridScreen.kt` during tracking, when `showMmpCurve == true`, `LiveMmpCurveChart` SHALL render below or alongside cockpit telemetry, streaming `LiveMmpCurveData` from `TrackingViewModel.kt`.
+• `TrackingViewModel.kt` SHALL extract rolling means (`POWER_5S`, `POWER_1M`, `POWER_5M`, `POWER_20M`), session peaks (`POWER_PEAK_5S`, `POWER_PEAK_1M`, `POWER_PEAK_5M`, `POWER_PEAK_20M`), and instantaneous power from `allSensorData` at 1Hz to populate `LiveMmpCurveData`.
+• `LiveMmpCurveChart.kt` SHALL support rendering an optional historical all-time/season PR benchmark reference curve (`referencePoints: Map<Int, Double>`), drawing a dashed reference polyline and pins.
+• When live session peak power at any benchmark duration (`5s`, `1m`, `5m`, `20m`) exceeds the historical reference benchmark, `LiveMmpCurveChart.kt` SHALL render a transient breakthrough notification badge highlighting the new PR.
+• `LiveMmpCurveChartTest.kt` SHALL verify Compose state hygiene and logarithmic curve mathematics using semantic unit and Compose contract assertions without `File.readLines()` source-text grepping (`Rule 5.4`).
 
 **Requirement Archaeology & Chesterton's Fence Audit**:
-1. *Original Requirement ID & Target*: Net-new requirement `REQ-TRK-058`, extending `REQ-TRK-019` (W/kg), `REQ-TRK-020` (NP/IF), `REQ-TRK-021` (Work/TSS), and `REQ-TRK-023` (Warm-Up Window). Targets `CyclingPowerMetricsDevice.java`, `SensorType.java`, `LiveMmpCurveChart.kt`, and `strings*.xml`.
-2. *Historical Origin & Commit Trace*: `ATT-1289` (commit `5eee662f`), `ATT-1290` (commit `4fe4996c`), `ATT-1291`, and `ATT-3778` established baseline power metric architecture.
-3. *Root Reason for Existing Formulation*: Prior tickets implemented Coggan summary metrics and $W'_{\text{bal}}$; real-time benchmark durations and live MMP curves were scoped for Epic `ATT-5908`.
-4. *Preservation of Core Invariants*: 1-Hz sampling rate (`REQ-TRK-007`), pause suspension, Rule 40 growing window, Rule 52 sensor-presence gating, and non-blocking main-thread performance are strictly preserved.
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-TRK-058`, extending `REQ-TRK-019` (W/kg), `REQ-TRK-020` (NP/IF), `REQ-TRK-021` (Work/TSS), and `REQ-TRK-023` (Warm-Up Window). Refined by `ATT-6688` (Cockpit layout integration, PR reference curve overlay, breakthrough notifications, and semantic test replacement). Targets `CyclingPowerMetricsDevice.java`, `SensorType.java`, `LiveMmpCurveChart.kt`, `SensorGridScreen.kt`, `TrackingViewModel.kt`, `TrackingViewsDbHelper.java`, and `strings*.xml`.
+2. *Historical Origin & Commit Trace*: `ATT-1289` (commit `5eee662f`), `ATT-1290` (commit `4fe4996c`), `ATT-1291`, `ATT-3778`, `ATT-1298`, and `ATT-6688`.
+3. *Root Reason for Existing Formulation*: Prior tickets implemented Coggan summary metrics and $W'_{\text{bal}}$; real-time benchmark durations and live MMP curves were scoped for Epic `ATT-5908`. `ATT-1298` created the standalone chart composable and math, deferring end-to-end Cockpit layout integration and PR benchmark overlays.
+4. *Preservation of Core Invariants*: 1-Hz sampling rate (`REQ-TRK-007`), pause suspension, Rule 40 growing window, Rule 52 sensor-presence gating, zero Compose snapshot state writes during composition (`Rule 66`), and non-blocking main-thread performance are strictly preserved.
 
 **Acceptance Criteria (Given-When-Then)**:
+• *Given* an existing user upgrading from DB schema v19,
+• *When* the database opens,
+• *Then* `onUpgrade` adds `ShowMmpCurve` (default 0) without data loss or layout corruption.
 • *Given* an active cycling workout with incoming power samples at 1Hz,
 • *When* the first 5 seconds elapse with power [200, 250, 300, 350, 400] W,
 • *Then* `POWER_5S` emits rolling mean 300 W, and `POWER_PEAK_5S` tracks 300 W.
@@ -3062,6 +3074,12 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 • *Given* the live MMP curve chart rendered in the cockpit,
 • *When* composing or updating live telemetry,
 • *Then* the chart plots power on a logarithmic duration axis with callout markers for 5s, 1m, 5m, and 20m, producing zero recomposition churn (`Rule 66`).
+• *Given* a Cockpit tab configured with `showMmpCurve == true`,
+• *When* tracking with active cycling power telemetry,
+• *Then* `LiveMmpCurveChart` renders session rolling means, session peak curve, and historical benchmark reference curve, and highlights breakthroughs when session peak exceeds historical benchmark.
+• *Given* `LiveMmpCurveChartTest.kt`,
+• *When* unit tests execute,
+• *Then* logarithmic scaling, benchmark duration calculations, and state hygiene are verified semantically without `File.readLines()` source grepping (`Rule 5.4`).
 
 **Invariants**: Existing power telemetry (`POWER`, `NP`, `IF`, `WORK_KJ`, `TSS`, `W_PRIME_BAL`) preserved; pause freeze integrity; 100% 9-language translation parity; zero composition snapshot state writes.
 

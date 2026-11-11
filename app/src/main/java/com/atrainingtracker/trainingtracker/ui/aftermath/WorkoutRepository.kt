@@ -243,6 +243,8 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
         summariesManager.getExtremaPosition(workoutId, sensorType, extremaType)
     fun getExtremaValue(workoutId: Long, sensorType: SensorType, extremaType: ExtremaType): Double? =
         summariesManager.getExtremaValue(workoutId, sensorType, extremaType)
+    fun getHistoricalPowerBenchmarks(): Map<Int, Double> =
+        summariesManager.historicalPowerBenchmarks
     fun getBaseFileName(workoutId: Long): String? = summariesManager.getBaseFileName(workoutId)
     fun getOldWorkouts(daysToKeep: Int): List<Long> = summariesManager.getOldWorkouts(daysToKeep)
     fun getWorkoutTrainingLoadRecords(): List<WorkoutTrainingLoadSample> = summariesManager.workoutTrainingLoadRecords
