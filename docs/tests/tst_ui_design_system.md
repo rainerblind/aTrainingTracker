@@ -8279,4 +8279,32 @@
   4. *Tier 1 Targeted Unit Test Regression Suite (`TST-UI-514.4`)*:
   • Execute targeted test suite (`./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.resources.VectorAssetResolutionContractTest" --tests "com.atrainingtracker.banalservice.devices.bluetooth_le.*"`).
   • Assert 100% pass rate.
+
+
+
+### TST-UI-515: **Concise Display Settings Option Subtitles & Length Bound Verification Suite** [Verified]
+- **Target Release**: `V5.0.0`
+- **Requirement(s)**: `REQ-UI-515`
+- **Component**: `DisplaySettingsDialog.kt`, `DisplaySettingsTest.kt`, `values*/strings.xml`
+- **Jira**: `ATT-6681`
+- **Test Description**:
+  1. *Toggle Subtitles Character Bound Test (`TST-UI-515.1`, `DisplaySettingsTest.kt`)*:
+  • Verify `forcePortraitSummary`, `prefsKeepScreenOnSummary`, and `prefsNoUnlockingSummary` exist and are $\le 55$ characters across all 9 supported locales (`values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`).
+  2. *Cockpit Theme Description Character Bound Test (`TST-UI-515.2`, `DisplaySettingsTest.kt`)*:
+  • Verify `cockpit_theme_description` exists and is $\le 75$ characters across all 9 supported locales.
+  3. *Exact Copy Match Test for German & English (`TST-UI-515.3`, `DisplaySettingsTest.kt`)*:
+  • Verify exact match for German (`de`) and English (default):
+    - German:
+      - `forcePortraitSummary`: `"Anzeige dauerhaft im Hochformat fixieren"`
+      - `prefsKeepScreenOnSummary`: `"Kein Standby während einer Aufzeichnung"`
+      - `prefsNoUnlockingSummary`: `"Cockpit direkt über dem Sperrbildschirm anzeigen"`
+    - English:
+      - `forcePortraitSummary`: `"Lock display to portrait mode"`
+      - `prefsKeepScreenOnSummary`: `"Prevent standby during active tracking"`
+      - `prefsNoUnlockingSummary`: `"Show cockpit directly above the lock screen"`
+  4. *Hygiene & Quality Constraints (`TST-UI-515.4`, `DisplaySettingsTest.kt`)*:
+  • Verify zero format specifiers (`%s`, `%d`) and zero emojis across all 9 locales.
+  5. *Tier 1 Targeted Unit Test Regression Suite (`TST-UI-515.5`)*:
+  • Execute `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.settings.display.DisplaySettingsTest"`.
   • Assert 100% pass rate.
+

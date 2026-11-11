@@ -15473,3 +15473,40 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 • *Then* both files parse as valid `<vector>` DOMs, satisfy Rule 37 ($\le 45$ `L` commands per path, analytical curves), conform to color tokens (`#000000` / `#0A3D91`), and render bold `RDR` labels with `evenOdd`.
 
 **Invariants**: Pure UI asset and mapping addition; zero changes to sensor drivers, database schemas, or tracking engine; 100% test pass rate across vector contract tests.
+
+
+
+### REQ-UI-515: Concise Display Settings Toggle Subtitles and Cockpit Theme Description [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-UI-515` | **Tickets**: `ATT-6681`
+- **Implementation**: `DisplaySettingsDialog.kt`, `values*/strings.xml` (all 9 locales), `DisplaySettingsTest.kt`
+- **Rationale**: In `ATT-6282`, descriptive subtitles were added to the display options toggles and cockpit theme in `DisplaySettingsDialog`. On standard mobile displays, multi-line wrapping (up to 3 lines per option) creates visual clutter, introduces orphaned words, and pushes lower controls off-screen. The system SHALL condense `forcePortraitSummary`, `prefsKeepScreenOnSummary`, `prefsNoUnlockingSummary`, and `cockpit_theme_description` across all 9 locales into crisp, single-line descriptions ($\le 55$ characters for toggles, $\le 75$ characters for cockpit theme).
+- **Description**:
+  1. *Concise Toggle Subtitle Length Bound (`REQ-UI-515.1`)*:
+     - `forcePortraitSummary`, `prefsKeepScreenOnSummary`, and `prefsNoUnlockingSummary` SHALL NOT exceed 55 characters in any of the 9 supported locales (`en`, `de`, `es`, `fr`, `it`, `ja`, `nl`, `pl`, `pt`).
+  2. *Cockpit Theme Description Length Bound (`REQ-UI-515.2`)*:
+     - `cockpit_theme_description` SHALL NOT exceed 75 characters in any of the 9 supported locales, eliminating 3-line overflow and orphaned words.
+  3. *9-Language Semantic Parity (`REQ-UI-515.3`)*:
+     - All 9 localized variants SHALL preserve the functional meaning of each toggle without formatting specifiers (`%s`, `%d`), XML-escaped newline entities (`&#10;`), or decorative emojis (`ATT-5400`).
+  4. *Contract Test Validation (`REQ-UI-515.4`)*:
+     - `DisplaySettingsTest.kt` SHALL validate that toggle subtitles do not exceed 55 characters and cockpit theme description does not exceed 75 characters across all 9 locales, while matching the canonical German and English copy.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Amends `REQ-UI-503` (*Display Settings Toggle Subtitles & Capitalization Parity*, `ATT-6282`). Targets `app/src/main/res/values*/strings.xml`, `DisplaySettingsDialog.kt`, and `DisplaySettingsTest.kt`.
+2. *Historical Origin & Commit Trace*: `ATT-6282` (`6753b825`, Sprint 2026-45.6) introduced explanatory subtitles to the display toggles.
+3. *Root Reason for Existing Formulation*: Subtitles were drafted as full explanatory sentences to maximize clarity on fresh installations, but the resulting 2–3 line height caused excessive vertical elongation on standard mobile viewport widths ($\le 412\text{dp}$).
+4. *Preservation of Core Invariants*: Full functional clarity is maintained; preference keys (`forcePortrait`, `keepScreenOn`, `noUnlocking`), zero format specifiers, zero emojis, and sentence capitalization invariants are strictly preserved.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* `DisplaySettingsDialog` rendered on a standard phone viewport (1080px / 360-412dp),
+• *When* inspecting the subtitles for `forcePortrait`, `keepScreenOn`, and `noUnlocking`,
+• *Then* each subtitle renders on a single line without wrapping or orphaned words, and its length is $\le 55$ characters across all 9 locales.
+• *Given* the `cockpit_theme_description` text,
+• *When* rendered across all 9 locales,
+• *Then* its length is $\le 75$ characters and fits within 2 compact lines without orphaned 3rd-line words.
+• *Given* `DisplaySettingsTest.kt`,
+• *When* executed,
+• *Then* length bound assertions and exact copy matches for German and English pass with 100%.
+
+**Invariants**: Zero changes to preference keys, DataStore persistence, or dialog state logic; 9-language localization parity with zero emojis or format arguments.
+
