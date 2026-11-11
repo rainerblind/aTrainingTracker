@@ -284,6 +284,36 @@ object PowerHrDynamicsCalculator {
     }
 
     /**
+     * Timestamp-aware primitive simulation overload across non-uniform trackpoints (ATT-6723 / REQ-REV-010.3).
+     * Computes step-wise \Delta t_i = (timestampsSec[i] - timestampsSec[i-1]).coerceIn(1L, 60L).toDouble().
+     */
+    @JvmStatic
+    fun simulateTrajectory(
+        power: DoubleArray,
+        timestampsSec: LongArray,
+        tau: Double,
+        hr0: Double,
+        k: Double
+    ): DoubleArray {
+        if (power.isEmpty() || tau <= 0.0) return DoubleArray(0)
+        val n = power.size
+        val result = DoubleArray(n)
+
+        var x = power[0]
+        result[0] = hr0 + k * x
+        for (i in 1 until n) {
+            val dt = if (i < timestampsSec.size) {
+                (timestampsSec[i] - timestampsSec[i - 1]).coerceIn(1L, 60L).toDouble()
+            } else 1.0
+            val alpha = exp(-dt / tau)
+            val oneMinusAlpha = 1.0 - alpha
+            x = alpha * x + oneMinusAlpha * power[i]
+            result[i] = hr0 + k * x
+        }
+        return result
+    }
+
+    /**
      * List-based simulation overload for UI chart overlays (ATT-3905).
      */
     @JvmStatic
@@ -305,6 +335,37 @@ object PowerHrDynamicsCalculator {
         result.add(hr0 + k * x)
 
         for (i in 1 until n) {
+            val p = (powerSamples[i] ?: 0.0).coerceAtLeast(0.0)
+            x = alpha * x + oneMinusAlpha * p
+            result.add(hr0 + k * x)
+        }
+        return result
+    }
+
+    /**
+     * Timestamp-aware simulation overload for UI chart overlays across decimated trackpoints (ATT-6723 / REQ-REV-010.3).
+     * Computes step-wise \Delta t_i = (timestampsSec[i] - timestampsSec[i-1]).coerceIn(1L, 60L).toDouble().
+     */
+    @JvmStatic
+    fun simulateTrajectory(
+        powerSamples: List<Double?>,
+        timestampsSec: List<Long>,
+        tau: Double,
+        hr0: Double,
+        k: Double
+    ): List<Double?> {
+        if (powerSamples.isEmpty() || tau <= 0.0) return emptyList()
+        val n = powerSamples.size
+        val result = ArrayList<Double?>(n)
+        var x = (powerSamples[0] ?: 0.0).coerceAtLeast(0.0)
+        result.add(hr0 + k * x)
+
+        for (i in 1 until n) {
+            val dt = if (i < timestampsSec.size) {
+                (timestampsSec[i] - timestampsSec[i - 1]).coerceIn(1L, 60L).toDouble()
+            } else 1.0
+            val alpha = exp(-dt / tau)
+            val oneMinusAlpha = 1.0 - alpha
             val p = (powerSamples[i] ?: 0.0).coerceAtLeast(0.0)
             x = alpha * x + oneMinusAlpha * p
             result.add(hr0 + k * x)

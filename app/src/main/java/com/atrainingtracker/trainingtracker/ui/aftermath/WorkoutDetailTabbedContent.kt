@@ -802,9 +802,17 @@ private fun RenderWorkoutDetailCardSections(
                     enableCriticalPowerModel = tuningConfig.enableCriticalPowerModel,
                     showCriticalPowerInWorkoutSummary = tuningConfig.showCriticalPowerInWorkoutSummary,
                     enableCardioPowerDynamics = tuningConfig.enableCardioPowerDynamics,
-                    showCardioPowerInWorkoutSummary = tuningConfig.showCardioPowerInWorkoutSummary,
+                    showCardioPowerInWorkoutSummary = true,
                     modifier = Modifier.fillMaxWidth()
                 )
+                if (tuningConfig.enableCardioPowerDynamics && workoutData.cardioPowerDynamics != null) {
+                    CardioPowerDynamicsCard(
+                        record = workoutData.cardioPowerDynamics,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 4.dp)
+                    )
+                }
             }
             WorkoutDetailSectionType.DESCRIPTION -> {
                 WorkoutDescription(

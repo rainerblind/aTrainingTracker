@@ -152,28 +152,40 @@
   • *Then* all cardio-power string tokens in `strings_cardio_power.xml` exist with 100% parity and valid formatting.
 
 ### REQ-REV-010: Cardio-Power Dynamics Details Row & Fresh Model HR Graph Overlay [Verified]
-- **Tests**: `TST-REV-011` | **Tickets**: `ATT-3905`
-- **Implementation**: `WorkoutDataMapper.kt`, `WorkoutDetailsData.kt`, `WorkoutDetails.kt`, `CardioPowerDynamicsCard.kt`, `TelemetryMetricGraph.kt`, `WorkoutSummary.kt`, `TrackOnMapScreen.kt`
+- **Tests**: `TST-REV-011` | **Tickets**: `ATT-3905`, `ATT-6723`
+- **Implementation**: `WorkoutDataMapper.kt`, `WorkoutDetailsData.kt`, `WorkoutDetails.kt`, `CardioPowerDynamicsCard.kt`, `TelemetryMetricGraph.kt`, `WorkoutSummary.kt`, `WorkoutDetailTabbedContent.kt`, `PowerHrDynamicsCalculator.kt`, `TrackOnMapScreen.kt`
 - **Rationale**: Having identified 1st-order dynamical Power-HR parameters in `ATT-3904`, athletes require visual presentation in workout details and interactive telemetry charts to evaluate submaximal aerobic economy, lag response, and cardiac drift fatigue.
 - **Description**:
   1. *Hydration & Domain Mapping*: `WorkoutDataMapper.kt` SHALL hydrate `CardioPowerDynamicsRecord?` into `WorkoutData` and `WorkoutDetailsData` from database persistence.
-  2. *Canonical Single-Line Grouped Row*: In `WorkoutDetails.kt`, `CardioPowerDynamicsRow` SHALL adhere strictly to design guidelines §5.10 (`AltitudeRow` pattern):
-     a. Left domain header column with category label, `4.dp` spacer, and `24.dp` domain icon (`ic_cardio_load`).
-     b. Single horizontal row of 3 `MetricItem`s: $\text{HR@200W}$ (Start $\rightarrow$ End bpm + drift), $\tau$ (Start $\rightarrow$ End s + $\Delta\tau$), and $1/K$ (W/bpm + $R^2$). Multi-row stacking and `FlowRow` pill clouds are strictly prohibited.
+  2. *Canonical Single-Line Grouped Row & Full Details Card*:
+     a. In `WorkoutDetails.kt`, `CardioPowerDynamicsRow` SHALL adhere strictly to design guidelines §5.10 (`AltitudeRow` pattern) with left domain header column and single horizontal row of 3 `MetricItem`s.
+     b. Multi-row stacking and `FlowRow` pill clouds are strictly prohibited.
      c. Rows SHALL be separated with `HorizontalDivider(thickness = 0.5.dp)` and `padding(vertical = 4.dp)`.
+     d. In `WorkoutDetailTabbedContent.kt`, `CardioPowerDynamicsCard` SHALL render under `WorkoutDetailSectionType.DETAILS` whenever `enableCardioPowerDynamics == true` and `workoutData.cardioPowerDynamics != null`, independent of `showCardioPowerInWorkoutSummary`.
   3. *Fresh Model vs. Actual HR Graph Overlay*:
      a. `TelemetryMetricGraph.kt` SHALL expose a "Fresh HR Model" toggle chip.
      b. When enabled, Canvas overlay SHALL draw predicted fresh HR trajectory $\text{HR}_{\text{fresh}}(t)$ as a dashed cyan curve (`TTColor.Zone2`), shade the cardiac drift gap where $\text{HR}_{\text{actual}} > \text{HR}_{\text{fresh}}$, and tint the calibration window (min 8–55).
-  4. *Progressive Disclosure Gating*:
-     a. Visual elements SHALL render only when `enableCardioPowerDynamics` is enabled, `cardioPowerDynamics != null`, and (in summary cards) `showCardioPowerInWorkoutSummary` is enabled. Workouts $< 20\text{ min}$ or lacking dynamics SHALL cleanly omit the row with zero visual artifact.
+     c. `PowerHrDynamicsCalculator.kt` and `TelemetryMetricGraph.kt` SHALL simulate trajectory using step-wise timestamp deltas $\Delta t_i = (timeSec_i - timeSec_{i-1}).\text{coerceIn}(1\text{L}, 60\text{L})\text{.toDouble}()$ across decimated track points.
+     d. When the overlay is active, the Y-axis `(dataMin, dataMax)` for `HEART_RATE` SHALL include non-null values of `freshHrTrajectory` to prevent canvas boundary clipping.
+  4. *Progressive Disclosure Gating & Setting Isolation*:
+     a. Visual elements SHALL render only when `enableCardioPowerDynamics` is enabled and `cardioPowerDynamics != null`. Workouts $< 20\text{ min}$ or lacking dynamics SHALL cleanly omit the row with zero visual artifact.
+     b. The subordinate `showCardioPowerInWorkoutSummary` preference SHALL gate compact workout list cards (`WorkoutSummary.kt`) only, without suppressing display in full Workout Details (`WorkoutDetailTabbedContent.kt`).
   5. *Localization Parity*: All newly introduced UI strings SHALL reside in `res/values*/strings_cardio_power.xml` with 100% parity across all 9 supported locales (EN, DE, ES, FR, IT, JA, NL, PL, PT).
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: `REQ-REV-010` (`REQ-REV-010.2`, `REQ-REV-010.3`, `REQ-REV-010.4`), targeting `WorkoutDetailTabbedContent.kt`, `PowerHrDynamicsCalculator.kt`, and `TelemetryMetricGraph.kt`.
+  2. *Historical Origin & Commit Trace*: Introduced in `ATT-3905` (commit `1b33fcba`).
+  3. *Root Reason for Existing Formulation*: `CardioPowerDynamicsCard` was created but inadvertently uncalled in `WorkoutDetailTabbedContent.kt`, and `showCardioPowerInWorkoutSummary` was improperly passed into full details. Trajectory simulation used scalar `dt = 1.0` without considering decimation, and Y-axis limits evaluated measured HR only.
+  4. *Preservation of Core Invariants*: §5.10 compact row compliance in `WorkoutDetails.kt`, summary gating on `WorkoutSummary.kt`, mathematical ODE stability via $\Delta t \in [1\text{s}, 60\text{s}]$ coercion, and 100% 9-language translation parity are strictly preserved.
 - **Acceptance Criteria**:
   • *Given* a workout with valid `cardioPowerDynamics` and `enableCardioPowerDynamics == true`,
   • *When* viewing `WorkoutDetails`,
   • *Then* `CardioPowerDynamicsRow` renders a single horizontal row of 3 `MetricItem`s with domain icon conforming to §5.10.
-  • *Given* `TelemetryMetricGraph` with paired Power+HR telemetry,
+  • *Given* `enableCardioPowerDynamics == true` and `workoutData.cardioPowerDynamics != null`,
+  • *When* viewing full Workout Details (`WorkoutDetailTabbedContent.kt`),
+  • *Then* `CardioPowerDynamicsCard` renders with `PowerHrDynamicsInfoDialog` info action, regardless of `showCardioPowerInWorkoutSummary`.
+  • *Given* `TelemetryMetricGraph` with paired Power+HR telemetry and decimated track points ($\Delta t > 1\text{s}$),
   • *When* "Fresh HR Model" chip is toggled on,
-  • *Then* $\text{HR}_{\text{fresh}}(t)$ renders as a dashed cyan overlay with shaded cardiac drift gap.
+  • *Then* $\text{HR}_{\text{fresh}}(t)$ renders as a dashed cyan overlay with true step time response and fits cleanly within Y-axis bounds without clipping.
   • *Given* `enableCardioPowerDynamics == false` or workout $< 20\text{ min}$,
   • *When* rendered,
   • *Then* the row and overlay are omitted with zero visual artifact, and `TranslationParityTest` passes across all 9 locales.

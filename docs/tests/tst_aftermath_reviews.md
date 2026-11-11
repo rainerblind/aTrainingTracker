@@ -84,14 +84,17 @@
 
 ### TST-REV-011: **Cardio-Power Visual Display & Overlay Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-REV-010`
-- **Component**: `WorkoutDataMapper.kt`, `WorkoutDetailsData.kt`, `WorkoutDetails.kt`, `CardioPowerDynamicsCard.kt`, `TelemetryMetricGraph.kt`, `WorkoutSummary.kt`, `TrackOnMapScreen.kt`
-- **Jira**: `ATT-3905`
+- **Component**: `WorkoutDataMapper.kt`, `WorkoutDetailsData.kt`, `WorkoutDetails.kt`, `CardioPowerDynamicsCard.kt`, `TelemetryMetricGraph.kt`, `WorkoutSummary.kt`, `WorkoutDetailTabbedContent.kt`, `PowerHrDynamicsCalculator.kt`, `TrackOnMapScreen.kt`
+- **Jira**: `ATT-3905`, `ATT-6723`
 - **Test Description**:
   1. *Data Hydration Test (`WorkoutDataMapperTest`)*: Verify mapper hydrates `CardioPowerDynamicsRecord` into `WorkoutData` and `WorkoutDetailsData`.
   2. *Grouped Metric Row Layout & §5.10 Compliance Test (`WorkoutDetailsCardioPowerRowTest`)*: Verify `CardioPowerDynamicsRow` conforms strictly to §5.10 (single `Row`, 3 `MetricItem`s, zero multi-row wrapping, proper divider padding, clean null suppression).
   3. *Telemetry Graph Fresh Model Overlay Test (`TelemetryMetricGraphOverlayTest`)*: Verify toggle chip state management, trajectory simulation sampling, dashed curve drawing parameters, and drift shading bounds.
   4. *Settings Gating & Visibility Test (`WorkoutDetailsVisibilityTest`)*: Verify row visibility honors `enableCardioPowerDynamics`, `showCardioPowerInWorkoutSummary`, and data presence.
-  5. *9-Locale Localization Parity Test (`TranslationParityTest`)*: Verify all new cardio-power UI tokens in `strings_cardio_power.xml` across EN, DE, ES, FR, IT, JA, NL, PL, PT.
+  5. *Decimated Step $\Delta t$ Trajectory Simulation Test (`PowerHrDynamicsCalculatorTest`)*: Verify simulation with non-uniform step timestamps ($dt \in [1, 60]\text{ s}$) maintains true exponential response kinetics without decimation-induced phase lag.
+  6. *Y-Axis Bounds Fresh Model Inclusion Test (`TelemetryMetricGraphOverlayTest`)*: Verify that `(dataMin, dataMax)` for `HEART_RATE` dynamically includes `freshHrTrajectory` non-null values when overlay is active to prevent boundary clamping.
+  7. *Workout Details CardioPowerDynamicsCard Presence & Decoupled Gating Test (`WorkoutDetailsCardioPowerRowTest`)*: Verify `CardioPowerDynamicsCard` renders in full Workout Details when `enableCardioPowerDynamics == true` even if `showCardioPowerInWorkoutSummary == false`.
+  8. *9-Locale Localization Parity Test (`TranslationParityTest`)*: Verify all new cardio-power UI tokens in `strings_cardio_power.xml` across EN, DE, ES, FR, IT, JA, NL, PL, PT.
 
 ### TST-REV-012: **Cardio-Power Longitudinal Fitness Trends Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-REV-011`

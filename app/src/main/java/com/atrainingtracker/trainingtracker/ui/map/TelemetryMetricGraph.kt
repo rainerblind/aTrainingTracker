@@ -155,12 +155,13 @@ fun TelemetryMetricGraph(
     val freshHrTrajectory = remember(pathPoints, cardioPowerDynamics, canRenderFreshModelOverlay) {
         if (canRenderFreshModelOverlay && cardioPowerDynamics != null) {
             val powerSamples = pathPoints.map { it.power?.toDouble() }
+            val timeSecSamples = pathPoints.map { it.timeSec }
             PowerHrDynamicsCalculator.simulateTrajectory(
                 powerSamples = powerSamples,
+                timestampsSec = timeSecSamples,
                 tau = cardioPowerDynamics.tauStart,
                 hr0 = cardioPowerDynamics.hr0Start,
-                k = cardioPowerDynamics.kStart,
-                dt = 1.0
+                k = cardioPowerDynamics.kStart
             )
         } else emptyList()
     }
@@ -220,9 +221,26 @@ fun TelemetryMetricGraph(
     val validValues = remember(rawValues) { rawValues.filterNotNull() }
     if (validValues.isEmpty()) return
 
-    val (dataMin, dataMax) = remember(validValues, metricType, paceCeilingMinKm, unit) {
-        val min = validValues.minOrNull() ?: 0.0
-        val max = validValues.maxOrNull() ?: 1.0
+    val (dataMin, dataMax) = remember(
+        validValues,
+        metricType,
+        paceCeilingMinKm,
+        unit,
+        canRenderFreshModelOverlay,
+        effectiveShowFreshModel,
+        freshHrTrajectory
+    ) {
+        val effectiveValues = if (metricType == TelemetryMetricType.HEART_RATE &&
+            canRenderFreshModelOverlay &&
+            effectiveShowFreshModel &&
+            freshHrTrajectory.isNotEmpty()
+        ) {
+            validValues + freshHrTrajectory.filterNotNull()
+        } else {
+            validValues
+        }
+        val min = effectiveValues.minOrNull() ?: 0.0
+        val max = effectiveValues.maxOrNull() ?: 1.0
         when (metricType) {
             TelemetryMetricType.POWER -> {
                 0.0 to (max * 1.1).coerceAtLeast(50.0)

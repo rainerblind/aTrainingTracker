@@ -142,4 +142,94 @@ class PowerHrDynamicsCalculatorTest {
         assertTrue("HR must rise toward target", trajectory[1] > 110.0)
         assertTrue("HR must rise further at steady 200W", trajectory[2] > trajectory[1])
     }
+
+    @Test
+    fun testTimestampAwareTrajectorySimulationMatchesContinuousTimeModel() {
+        val tau = 30.0
+        val hr0 = 70.0
+        val k = 0.30
+
+        // 1-Hz baseline over 60 seconds of 200W step
+        val power1Hz = List(61) { 200.0 }
+        val time1Hz = (0L..60L).toList()
+        val traj1Hz = PowerHrDynamicsCalculator.simulateTrajectory(
+            powerSamples = power1Hz,
+            timestampsSec = time1Hz,
+            tau = tau,
+            hr0 = hr0,
+            k = k
+        )
+
+        // Decimated 5-second sampling: 0, 5, 10, ..., 60s
+        val power5s = List(13) { 200.0 }
+        val time5s = (0..12).map { (it * 5).toLong() }
+        val traj5s = PowerHrDynamicsCalculator.simulateTrajectory(
+            powerSamples = power5s,
+            timestampsSec = time5s,
+            tau = tau,
+            hr0 = hr0,
+            k = k
+        )
+
+        // At each 5s sample, decimated result should match 1Hz result closely
+        for (i in time5s.indices) {
+            val tSec = time5s[i].toInt()
+            val expectedHr = traj1Hz[tSec] ?: 0.0
+            val actualHr = traj5s[i] ?: 0.0
+            assertEquals("Decimated step at t=${tSec}s must match 1Hz simulation", expectedHr, actualHr, 0.05)
+        }
+    }
+
+    @Test
+    fun testTimestampAwareSimulationClampsIntervals() {
+        val tau = 20.0
+        val hr0 = 80.0
+        val k = 0.25
+
+        // Timestamps with gap > 60s and non-increasing timestamps <= 0s
+        val power = listOf(100.0, 200.0, 200.0)
+        val timestamps = listOf(100L, 100L, 300L) // dt[1]=0s (coerced to 1s), dt[2]=200s (coerced to 60s)
+        val traj = PowerHrDynamicsCalculator.simulateTrajectory(
+            powerSamples = power,
+            timestampsSec = timestamps,
+            tau = tau,
+            hr0 = hr0,
+            k = k
+        )
+
+        assertEquals(3, traj.size)
+        assertNotNull(traj[0])
+        assertNotNull(traj[1])
+        assertNotNull(traj[2])
+    }
+
+    @Test
+    fun testTimestampAwareDoubleArrayOverload() {
+        val power = doubleArrayOf(150.0, 250.0, 300.0)
+        val timestamps = longArrayOf(10L, 15L, 25L)
+        val tau = 25.0
+        val hr0 = 75.0
+        val k = 0.20
+
+        val primitiveResult = PowerHrDynamicsCalculator.simulateTrajectory(
+            power = power,
+            timestampsSec = timestamps,
+            tau = tau,
+            hr0 = hr0,
+            k = k
+        )
+
+        val listResult = PowerHrDynamicsCalculator.simulateTrajectory(
+            powerSamples = power.toList(),
+            timestampsSec = timestamps.toList(),
+            tau = tau,
+            hr0 = hr0,
+            k = k
+        )
+
+        assertEquals(primitiveResult.size, listResult.size)
+        for (i in primitiveResult.indices) {
+            assertEquals(primitiveResult[i], checkNotNull(listResult[i]), 0.0001)
+        }
+    }
 }
