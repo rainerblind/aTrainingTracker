@@ -95,7 +95,7 @@ class HrvReadinessTrendMathTest {
         assertEquals(1, series.points.size)
         val point = series.points.first()
         assertEquals("2026-11-01", point.dateIso)
-        assertEquals(4.09, point.rawValue, 0.001)
+        assertEquals(4.09, point.rawValue!!, 0.001)
         assertEquals(ReadinessStatus.CALIBRATING, point.status)
     }
 
@@ -218,5 +218,61 @@ class HrvReadinessTrendMathTest {
         // Near end (leftPad + 200f = 240f) -> point 2
         val p2 = HrvReadinessTrendMath.findNearestPoint(235f, leftPad, plotW, points)
         assertEquals("2026-11-03", p2?.dateIso)
+    }
+
+    @Test
+    fun testCalculateTrendSeries_preservesNonHrvWorkoutDaysWithNullRawValueAndLoad() {
+        val entries = listOf(
+            createEntry(id = 1, dateIso = "2026-11-01", lnRmssd = 4.0),
+            createEntry(id = 2, dateIso = "2026-11-03", lnRmssd = 4.2)
+        )
+        val loads = mapOf(
+            "2026-11-02" to 95.0 // Non-HRV workout day in between
+        )
+
+        val series = HrvReadinessTrendMath.calculateTrendSeries(
+            entries = entries,
+            selectedPosture = HrvPosture.SUPINE,
+            metricMode = HrvTrendMetricMode.LN_RMSSD,
+            dailyTrainingLoads = loads
+        )
+
+        assertEquals(3, series.points.size)
+        // Day 1: HRV reading
+        assertEquals("2026-11-01", series.points[0].dateIso)
+        assertEquals(4.0, series.points[0].rawValue!!, 0.001)
+        assertNull(series.points[0].trainingLoad)
+
+        // Day 2: Workout only, rawValue is null, load is 95.0
+        assertEquals("2026-11-02", series.points[1].dateIso)
+        assertNull(series.points[1].rawValue)
+        assertEquals(95.0, series.points[1].trainingLoad!!, 0.01)
+
+        // Day 3: HRV reading
+        assertEquals("2026-11-03", series.points[2].dateIso)
+        assertEquals(4.2, series.points[2].rawValue!!, 0.001)
+        assertNull(series.points[2].trainingLoad)
+
+        assertEquals(95.0, series.maxTrainingLoad, 0.01)
+    }
+
+    @Test
+    fun testFindNearestPoint_calendarEpochDayProjectionWithMultiDayGaps() {
+        // Multi-day gap: Nov 01 (day 0) and Nov 05 (day 4) -> 4 day span
+        val points = listOf(
+            HrvTrendPoint("2026-11-01", 1L, 4.0, null, null, null, ReadinessStatus.CALIBRATING),
+            HrvTrendPoint("2026-11-05", 2L, 4.2, null, null, null, ReadinessStatus.CALIBRATING)
+        )
+
+        val leftPad = 40f
+        val plotW = 200f
+
+        // Touch at 20% along width: targetEpoch = 0 + 0.2 * 4 = 0.8 -> closer to day 0 (dist 0.8) than day 4 (dist 3.2)
+        val pStart = HrvReadinessTrendMath.findNearestPoint(leftPad + 40f, leftPad, plotW, points)
+        assertEquals("2026-11-01", pStart?.dateIso)
+
+        // Touch at 80% along width: targetEpoch = 0 + 0.8 * 4 = 3.2 -> closer to day 4 (dist 0.8) than day 0 (dist 3.2)
+        val pEnd = HrvReadinessTrendMath.findNearestPoint(leftPad + 160f, leftPad, plotW, points)
+        assertEquals("2026-11-05", pEnd?.dateIso)
     }
 }

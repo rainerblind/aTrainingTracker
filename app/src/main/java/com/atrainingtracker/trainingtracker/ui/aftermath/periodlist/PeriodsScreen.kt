@@ -36,6 +36,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
+import com.atrainingtracker.trainingtracker.database.hrv.HrvPosture
 import com.atrainingtracker.trainingtracker.ui.aftermath.editworkout.EditWorkoutScreen
 import com.atrainingtracker.trainingtracker.ui.aftermath.editworkout.EditWorkoutViewModel
 import com.atrainingtracker.trainingtracker.ui.aftermath.editworkout.EditWorkoutViewModelFactory
@@ -182,7 +183,7 @@ fun PeriodsScreen(
                 onSelectMetric = { viewModel.selectMetric(it) },
                 onDayCellClick = handleDayClick,
                 hrvTrendSeries = hrvTrendSeries,
-                selectedHrvPosture = selectedHrvPosture,
+                selectedHrvPosture = selectedHrvPosture ?: (hrvTrendSeries?.posture ?: HrvPosture.SUPINE),
                 onSelectHrvPosture = { viewModel.selectHrvPosture(it) },
                 selectedHrvMetricMode = selectedHrvMetricMode,
                 onSelectHrvMetricMode = { viewModel.selectHrvMetricMode(it) },

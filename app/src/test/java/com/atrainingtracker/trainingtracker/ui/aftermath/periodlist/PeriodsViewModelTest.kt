@@ -686,4 +686,96 @@ class PeriodsViewModelTest {
         assertEquals(HrvTrendMetricMode.RMSSD, viewModel.selectedHrvMetricMode.value)
         assertTrue(viewModel.showTrainingLoad.value)
     }
+
+    @Test
+    fun testHrvReadinessTrend_defaultsToMostFrequentPostureInsteadOfEagerSupine() = runTest(testDispatcher) {
+        val supineEntry = HrvReadinessEntry(
+            id = 1L,
+            timestampMs = 1730419200000L,
+            dateIso = "2026-11-01",
+            timezoneId = "UTC",
+            restingHrBpm = 55,
+            rmssdMs = 50.0,
+            lnRmssd = 3.91,
+            hrvScore100 = 78.2,
+            durationSec = 60,
+            posture = HrvPosture.SUPINE,
+            isPrimaryForDay = true
+        )
+        val seatedEntry1 = HrvReadinessEntry(
+            id = 2L,
+            timestampMs = 1730505600000L,
+            dateIso = "2026-11-02",
+            timezoneId = "UTC",
+            restingHrBpm = 58,
+            rmssdMs = 52.0,
+            lnRmssd = 3.95,
+            hrvScore100 = 79.0,
+            durationSec = 60,
+            posture = HrvPosture.SEATED,
+            isPrimaryForDay = true
+        )
+        val seatedEntry2 = HrvReadinessEntry(
+            id = 3L,
+            timestampMs = 1730592000000L,
+            dateIso = "2026-11-03",
+            timezoneId = "UTC",
+            restingHrBpm = 57,
+            rmssdMs = 54.0,
+            lnRmssd = 3.99,
+            hrvScore100 = 79.8,
+            durationSec = 60,
+            posture = HrvPosture.SEATED,
+            isPrimaryForDay = true
+        )
+        // 2 SEATED entries vs 1 SUPINE entry: SEATED must be chosen as default!
+        coEvery { mockHrvRepo.getAllEntries(any()) } returns listOf(supineEntry, seatedEntry1, seatedEntry2)
+
+        val viewModel = createViewModel()
+        viewModel.refreshHrvTrend()
+        testScheduler.advanceUntilIdle()
+
+        assertEquals(HrvPosture.SEATED, viewModel.selectedHrvPosture.value)
+        assertEquals(HrvPosture.SEATED, viewModel.hrvReadinessTrendState.value?.posture)
+    }
+
+    @Test
+    fun testHrvReadinessTrend_reactivelyCollectsWorkoutsFromRepository() = runTest(testDispatcher) {
+        val hrvEntry = HrvReadinessEntry(
+            id = 1L,
+            timestampMs = 1730419200000L,
+            dateIso = "2026-11-01",
+            timezoneId = "UTC",
+            restingHrBpm = 55,
+            rmssdMs = 50.0,
+            lnRmssd = 3.91,
+            hrvScore100 = 78.2,
+            durationSec = 60,
+            posture = HrvPosture.SUPINE,
+            isPrimaryForDay = true
+        )
+        coEvery { mockHrvRepo.getAllEntries(any()) } returns listOf(hrvEntry)
+
+        val workoutsFlow = MutableStateFlow<List<WorkoutData>>(emptyList())
+        every { mockWorkoutRepo.allWorkouts } returns workoutsFlow
+
+        val viewModel = createViewModel()
+        testScheduler.advanceUntilIdle()
+
+        // Initially 0 load
+        assertEquals(0.0, viewModel.hrvReadinessTrendState.value?.maxTrainingLoad ?: 0.0, 0.01)
+
+        // Asynchronously emit hydrated workout data
+        val workout = mockk<WorkoutData>(relaxed = true) {
+            every { id } returns 101L
+            every { startTimeS } returns 1793523600L // 2026-11-01
+            every { activeTimeSec } returns 3600L
+            every { tss } returns 85.0
+        }
+        workoutsFlow.value = listOf(workout)
+        testScheduler.advanceUntilIdle()
+
+        // Verified: Trend reactively recomputed and hydrated training load!
+        assertEquals(85.0, viewModel.hrvReadinessTrendState.value?.maxTrainingLoad ?: 0.0, 0.01)
+    }
 }

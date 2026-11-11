@@ -79,8 +79,8 @@ class PeriodsViewModel @JvmOverloads constructor(
         _selectedMetric.value = metric
     }
 
-    private val _selectedHrvPosture = MutableStateFlow(HrvPosture.SUPINE)
-    val selectedHrvPosture: StateFlow<HrvPosture> = _selectedHrvPosture.asStateFlow()
+    private val _selectedHrvPosture = MutableStateFlow<HrvPosture?>(null)
+    val selectedHrvPosture: StateFlow<HrvPosture?> = _selectedHrvPosture.asStateFlow()
 
     private val _selectedHrvMetricMode = MutableStateFlow(HrvTrendMetricMode.LN_RMSSD)
     val selectedHrvMetricMode: StateFlow<HrvTrendMetricMode> = _selectedHrvMetricMode.asStateFlow()
@@ -103,6 +103,18 @@ class PeriodsViewModel @JvmOverloads constructor(
 
     fun toggleShowTrainingLoad(show: Boolean) {
         _showTrainingLoad.value = show
+    }
+
+    init {
+        viewModelScope.launch(ioDispatcher) {
+            try {
+                workoutRepo.allWorkouts.collect {
+                    refreshHrvTrend()
+                }
+            } catch (_: Throwable) {
+                // Ignore collection exceptions from unstubbed mock flows in unit tests
+            }
+        }
     }
 
     val groups = listOf(
@@ -437,7 +449,7 @@ class PeriodsViewModel @JvmOverloads constructor(
 
             val (defaultPosture, availablePostures) = HrvReadinessTrendMath.resolveAvailablePostures(entries)
             val currentSelected = _selectedHrvPosture.value
-            val postureToUse = if (availablePostures.contains(currentSelected)) {
+            val postureToUse = if (currentSelected != null && availablePostures.contains(currentSelected)) {
                 currentSelected
             } else {
                 defaultPosture

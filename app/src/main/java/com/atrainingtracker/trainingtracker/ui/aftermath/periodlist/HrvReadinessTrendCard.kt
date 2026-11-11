@@ -55,6 +55,8 @@ import com.atrainingtracker.trainingtracker.database.hrv.ReadinessStatus
 import com.atrainingtracker.trainingtracker.ui.map.ChartGestureDisambiguator
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 import com.atrainingtracker.trainingtracker.ui.theme.TTColor
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 import java.util.Locale
 import kotlin.math.max
 
@@ -147,27 +149,29 @@ fun HrvReadinessTrendCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 // Metric Selector (ln(rMSSD) vs rMSSD)
-                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    FilterChip(
-                        selected = metricMode == HrvTrendMetricMode.LN_RMSSD,
-                        onClick = { onSelectMetricMode(HrvTrendMetricMode.LN_RMSSD) },
-                        label = {
+                SingleChoiceSegmentedButtonRow(
+                    modifier = Modifier.height(28.dp)
+                ) {
+                    HrvTrendMetricMode.values().forEachIndexed { index, mode ->
+                        val label = when (mode) {
+                            HrvTrendMetricMode.LN_RMSSD -> stringResource(R.string.hrv_readiness_metric_ln_rmssd)
+                            HrvTrendMetricMode.RMSSD -> stringResource(R.string.hrv_readiness_metric_rmssd)
+                        }
+                        SegmentedButton(
+                            selected = metricMode == mode,
+                            onClick = { onSelectMetricMode(mode) },
+                            shape = SegmentedButtonDefaults.itemShape(index = index, count = 2),
+                            icon = {},
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
+                        ) {
                             Text(
-                                stringResource(R.string.hrv_readiness_metric_ln_rmssd),
-                                style = MaterialTheme.typography.labelSmall
+                                text = label,
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = if (metricMode == mode) FontWeight.Bold else FontWeight.Medium,
+                                maxLines = 1
                             )
                         }
-                    )
-                    FilterChip(
-                        selected = metricMode == HrvTrendMetricMode.RMSSD,
-                        onClick = { onSelectMetricMode(HrvTrendMetricMode.RMSSD) },
-                        label = {
-                            Text(
-                                stringResource(R.string.hrv_readiness_metric_rmssd),
-                                style = MaterialTheme.typography.labelSmall
-                            )
-                        }
-                    )
+                    }
                 }
 
                 // Training Load Toggle
@@ -291,11 +295,12 @@ fun HrvReadinessTrendCanvas(
     val currentPointsState by rememberUpdatedState(points)
     val gridColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f)
     val labelColor = MaterialTheme.colorScheme.onSurfaceVariant
-    val rollingCurveColor = MaterialTheme.colorScheme.primary
     val swcCorridorColor = TTColor.ReadinessOptimal.copy(alpha = 0.15f)
     val swcBoundaryColor = TTColor.ReadinessOptimal.copy(alpha = 0.60f)
     val trainingLoadBarColor = TTColor.PmcAtlMagenta.copy(alpha = 0.30f)
     val cursorColor = MaterialTheme.colorScheme.onSurface
+    val tooltipBgColor = MaterialTheme.colorScheme.inverseSurface
+    val tooltipTextColor = MaterialTheme.colorScheme.inverseOnSurface
 
     Canvas(
         modifier = modifier.pointerInput(series.posture, series.metricMode) {
@@ -363,14 +368,18 @@ fun HrvReadinessTrendCanvas(
         val yMax = series.yMax
         val ySpan = (yMax - yMin).coerceAtLeast(0.01)
 
+        val minEpoch = points.first().epochDay
+        val maxEpoch = points.last().epochDay
+        val epochSpan = (maxEpoch - minEpoch).coerceAtLeast(1L).toFloat()
+
         fun valueToY(v: Double): Float {
             val norm = ((v - yMin) / ySpan).coerceIn(0.0, 1.0).toFloat()
             return topPad + plotH * (1f - norm)
         }
 
-        fun indexToX(i: Int): Float {
-            if (points.size <= 1) return leftPad + plotW * 0.5f
-            val frac = i.toFloat() / (points.size - 1).toFloat()
+        fun epochToX(epochDay: Long): Float {
+            if (points.size <= 1 || maxEpoch == minEpoch) return leftPad + plotW * 0.5f
+            val frac = ((epochDay - minEpoch).toFloat() / epochSpan).coerceIn(0f, 1f)
             return leftPad + plotW * frac
         }
 
@@ -382,6 +391,7 @@ fun HrvReadinessTrendCanvas(
         }
 
         val gridSteps = 3
+        val locale = Locale.getDefault()
         for (i in 0..gridSteps) {
             val frac = i.toFloat() / gridSteps.toFloat()
             val y = topPad + plotH * (1f - frac)
@@ -395,9 +405,9 @@ fun HrvReadinessTrendCanvas(
             )
 
             val label = if (series.metricMode == HrvTrendMetricMode.LN_RMSSD) {
-                String.format(Locale.US, "%.1f", v)
+                String.format(locale, "%.1f", v)
             } else {
-                String.format(Locale.US, "%.0f", v)
+                String.format(locale, "%.0f", v)
             }
             drawContext.canvas.nativeCanvas.drawText(label, 4.dp.toPx(), y + 4.dp.toPx(), textPaint)
         }
@@ -405,28 +415,35 @@ fun HrvReadinessTrendCanvas(
         // 2. Optional Training Load Bars in Background (Rule 69 rounded top, sharp bottom)
         if (showTrainingLoad && series.maxTrainingLoad > 0.0) {
             val maxLoad = series.maxTrainingLoad
-            val barW = (plotW / points.size.toFloat() * 0.6f).coerceIn(3.dp.toPx(), 14.dp.toPx())
-            points.forEachIndexed { i, p ->
+            val totalDays = (maxEpoch - minEpoch + 1).coerceAtLeast(1L)
+            val barW = (plotW / totalDays.toFloat() * 0.6f).coerceIn(3.dp.toPx(), 14.dp.toPx())
+            points.forEach { p ->
                 val load = p.trainingLoad
                 if (load != null && load > 0.0) {
                     val barH = (load / maxLoad * (plotH * 0.45f)).toFloat().coerceAtLeast(2.dp.toPx())
-                    val barX = indexToX(i) - barW * 0.5f
+                    val barX = epochToX(p.epochDay) - barW * 0.5f
                     val barY = topPad + plotH - barH
 
-                    drawRoundRect(
-                        color = trainingLoadBarColor,
-                        topLeft = Offset(barX, barY),
-                        size = Size(barW, barH),
-                        cornerRadius = CornerRadius(2.dp.toPx(), 2.dp.toPx())
-                    )
+                    val barPath = Path().apply {
+                        addRoundRect(
+                            androidx.compose.ui.geometry.RoundRect(
+                                rect = androidx.compose.ui.geometry.Rect(barX, barY, barX + barW, topPad + plotH),
+                                topLeft = CornerRadius(2.dp.toPx(), 2.dp.toPx()),
+                                topRight = CornerRadius(2.dp.toPx(), 2.dp.toPx()),
+                                bottomLeft = CornerRadius.Zero,
+                                bottomRight = CornerRadius.Zero
+                            )
+                        )
+                    }
+                    drawPath(barPath, color = trainingLoadBarColor)
                 }
             }
         }
 
         // 3. Shaded 60-Day SWC Corridor
-        val corridorPoints = points.mapIndexedNotNull { i, p ->
+        val corridorPoints = points.mapNotNull { p ->
             if (p.swcLower != null && p.swcUpper != null) {
-                Triple(indexToX(i), valueToY(p.swcLower), valueToY(p.swcUpper))
+                Triple(epochToX(p.epochDay), valueToY(p.swcLower), valueToY(p.swcUpper))
             } else {
                 null
             }
@@ -468,33 +485,36 @@ fun HrvReadinessTrendCanvas(
             )
         }
 
-        // 4. Continuous 7-Day Rolling Average Line
-        val rollingPoints = points.mapIndexedNotNull { i, p ->
-            p.mu7d?.let { Pair(indexToX(i), valueToY(it)) }
+        // 4. Status-Colored 7-Day Rolling Average Line
+        val rollingPoints = points.mapNotNull { p ->
+            p.mu7d?.let { Pair(p, Offset(epochToX(p.epochDay), valueToY(it))) }
         }
 
         if (rollingPoints.size >= 2) {
-            val rollingPath = Path().apply {
-                moveTo(rollingPoints.first().first, rollingPoints.first().second)
-                for (pt in rollingPoints) {
-                    lineTo(pt.first, pt.second)
+            for (k in 0 until rollingPoints.size - 1) {
+                val (p1, offset1) = rollingPoints[k]
+                val (p2, offset2) = rollingPoints[k + 1]
+                val segmentColor = when (p2.status) {
+                    ReadinessStatus.OPTIMAL -> TTColor.ReadinessOptimal
+                    ReadinessStatus.FATIGUED_LOW -> TTColor.ReadinessFatigued
+                    ReadinessStatus.ABOVE_NORMAL -> TTColor.ReadinessElevated
+                    ReadinessStatus.CALIBRATING -> TTColor.ReadinessCalibrating
                 }
-            }
-            drawPath(
-                rollingPath,
-                color = rollingCurveColor,
-                style = Stroke(
-                    width = 2.5.dp.toPx(),
-                    cap = StrokeCap.Round,
-                    join = StrokeJoin.Round
+                drawLine(
+                    color = segmentColor,
+                    start = offset1,
+                    end = offset2,
+                    strokeWidth = 2.5.dp.toPx(),
+                    cap = StrokeCap.Round
                 )
-            )
+            }
         }
 
         // 5. Daily Scatter Points (Color-coded by ReadinessStatus)
-        points.forEachIndexed { i, p ->
-            val ptX = indexToX(i)
-            val ptY = valueToY(p.rawValue)
+        points.forEach { p ->
+            val raw = p.rawValue ?: return@forEach
+            val ptX = epochToX(p.epochDay)
+            val ptY = valueToY(raw)
             val ptColor = when (p.status) {
                 ReadinessStatus.OPTIMAL -> TTColor.ReadinessOptimal
                 ReadinessStatus.FATIGUED_LOW -> TTColor.ReadinessFatigued
@@ -518,10 +538,15 @@ fun HrvReadinessTrendCanvas(
 
         // 6. X-Axis Date Markers (Rule 48)
         val dateStep = max(1, points.size / 4)
+        val dateFormatter = DateTimeFormatter.ofPattern("d MMM", locale)
         for (i in points.indices step dateStep) {
-            val x = indexToX(i)
-            val dIso = points[i].dateIso
-            val shortDate = if (dIso.length >= 10) dIso.substring(5) else dIso
+            val p = points[i]
+            val x = epochToX(p.epochDay)
+            val shortDate = try {
+                LocalDate.parse(p.dateIso).format(dateFormatter)
+            } catch (_: Exception) {
+                if (p.dateIso.length >= 10) p.dateIso.substring(5) else p.dateIso
+            }
             drawContext.canvas.nativeCanvas.drawText(
                 shortDate,
                 x - 14.dp.toPx(),
@@ -533,8 +558,7 @@ fun HrvReadinessTrendCanvas(
         // 7. Touch Scrubbing Tooltip & Vertical Cursor
         val activeScrub = scrubbedPoint
         if (activeScrub != null) {
-            val ptIdx = points.indexOf(activeScrub)
-            val cursorX = if (ptIdx >= 0) indexToX(ptIdx) else scrubX.coerceIn(leftPad, leftPad + plotW)
+            val cursorX = epochToX(activeScrub.epochDay)
 
             drawLine(
                 color = cursorColor.copy(alpha = 0.70f),
@@ -544,30 +568,43 @@ fun HrvReadinessTrendCanvas(
                 pathEffect = PathEffect.dashPathEffect(floatArrayOf(6f, 4f), 0f)
             )
 
-            val valStr = if (series.metricMode == HrvTrendMetricMode.LN_RMSSD) {
-                String.format(Locale.US, "%.2f", activeScrub.rawValue)
-            } else {
-                String.format(Locale.US, "%.1f ms", activeScrub.rawValue)
+            val formattedDate = try {
+                LocalDate.parse(activeScrub.dateIso).format(DateTimeFormatter.ofPattern("d MMM", locale))
+            } catch (_: Exception) {
+                activeScrub.dateIso
             }
 
-            val swcStr = if (activeScrub.swcLower != null && activeScrub.swcUpper != null) {
-                String.format(Locale.US, " [SWC: %.2f – %.2f]", activeScrub.swcLower, activeScrub.swcUpper)
+            val tooltipText = if (activeScrub.rawValue != null) {
+                val valStr = if (series.metricMode == HrvTrendMetricMode.LN_RMSSD) {
+                    String.format(locale, "%.2f", activeScrub.rawValue)
+                } else {
+                    String.format(locale, "%.1f ms", activeScrub.rawValue)
+                }
+                val swcStr = if (activeScrub.swcLower != null && activeScrub.swcUpper != null) {
+                    String.format(locale, " [SWC: %.2f – %.2f]", activeScrub.swcLower, activeScrub.swcUpper)
+                } else {
+                    ""
+                }
+                "$formattedDate: $valStr$swcStr"
             } else {
-                ""
+                val loadStr = if (activeScrub.trainingLoad != null && activeScrub.trainingLoad > 0.0) {
+                    String.format(locale, "Load: %.0f", activeScrub.trainingLoad)
+                } else {
+                    ""
+                }
+                if (loadStr.isNotEmpty()) "$formattedDate: $loadStr" else formattedDate
             }
-
-            val tooltipText = "${activeScrub.dateIso}: $valStr$swcStr"
 
             val tooltipPaint = Paint().apply {
                 isAntiAlias = true
-                color = Color.White.toArgb()
+                color = tooltipTextColor.toArgb()
                 textSize = 10.sp.toPx()
                 isFakeBoldText = true
             }
 
             val bgPaint = Paint().apply {
                 isAntiAlias = true
-                color = Color.Black.copy(alpha = 0.85f).toArgb()
+                color = tooltipBgColor.toArgb()
             }
 
             val textW = tooltipPaint.measureText(tooltipText)
