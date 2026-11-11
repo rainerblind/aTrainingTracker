@@ -126,4 +126,27 @@
     <string name="hrv_delete_entry_title">Delete HRV Reading</string>
     <string name="hrv_delete_entry_confirm">Are you sure you want to delete this morning HRV reading?</string>
     <string name="hrv_history_title">Morning HRV History</string>
+
+    <!-- Lag-Aligned, Confidence-Gated HRVT1/HRVT2 Thresholds (ATT-3554 / REQ-PER-036) -->
+    <string name="hrv_threshold_card_title">DFA a1 Threshold Estimates (HRVT1 / HRVT2)</string>
+    <string name="hrv_threshold_card_subtitle">Lag-aligned, confidence-gated physiological thresholds</string>
+    <string name="hrv_threshold_hrvt1_label">Aerobic Threshold (HRVT1)</string>
+    <string name="hrv_threshold_hrvt2_label">Anaerobic Threshold (HRVT2)</string>
+    <string name="hrv_threshold_confidence_high">High Confidence</string>
+    <string name="hrv_threshold_confidence_medium">Medium Confidence</string>
+    <string name="hrv_threshold_confidence_low">Low Confidence</string>
+    <string name="hrv_threshold_insufficient_span">Insufficient Span</string>
+    <string name="hrv_threshold_provenance_free">Free Workout (10–60 min fresh window)</string>
+    <string name="hrv_threshold_provenance_step">Guided Step Test</string>
+    <string name="hrv_threshold_provenance_ramp">Guided Continuous Ramp (MRT-adjusted)</string>
+    <string name="hrv_threshold_stat_r2">R²: %1$.2f</string>
+    <string name="hrv_threshold_stat_neff">N: %1$d min</string>
+    <string name="hrv_threshold_stat_neff_steps">N: %1$d steps</string>
+    <string name="hrv_threshold_stat_artifact">Mean artifact: %1$.1f%%</string>
+    <string name="hrv_threshold_diag_steady">Steady endurance: DFA a1 stayed above threshold span</string>
+    <string name="hrv_threshold_diag_high_artifact">High RR artifact rate (%1$.1f%% &gt; 5.0%%)</string>
+    <string name="hrv_threshold_diag_short_duration">Insufficient transition duration (N = %1$d &lt; %2$d)</string>
+    <string name="hrv_threshold_diag_low_r2">Low linear correlation (R² = %1$.2f &lt; %2$.2f)</string>
+    <string name="hrv_threshold_no_estimate">--</string>
+    <string name="hrv_threshold_informative_only">Informational only; excluded from zone updates</string>
 </resources>

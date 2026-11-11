@@ -126,4 +126,27 @@
     <string name="hrv_delete_entry_title">Usuń odczyt HRV</string>
     <string name="hrv_delete_entry_confirm">Czy na pewno chcesz usunąć ten poranny odczyt HRV?</string>
     <string name="hrv_history_title">Historia porannego HRV</string>
+
+    <!-- Lag-Aligned, Confidence-Gated HRVT1/HRVT2 Thresholds (ATT-3554 / REQ-PER-036) -->
+    <string name="hrv_threshold_card_title">Szacunki progów DFA a1 (HRVT1 / HRVT2)</string>
+    <string name="hrv_threshold_card_subtitle">Fizjologiczne wartości progowe skorygowane o opóźnienie z oceną ufności</string>
+    <string name="hrv_threshold_hrvt1_label">Próg tlenowy (HRVT1)</string>
+    <string name="hrv_threshold_hrvt2_label">Próg beztlenowy (HRVT2)</string>
+    <string name="hrv_threshold_confidence_high">Wysoka ufność</string>
+    <string name="hrv_threshold_confidence_medium">Średnia ufność</string>
+    <string name="hrv_threshold_confidence_low">Niska ufność</string>
+    <string name="hrv_threshold_insufficient_span">Niewystarczający zakres</string>
+    <string name="hrv_threshold_provenance_free">Trening swobodny (okno 10–60 min)</string>
+    <string name="hrv_threshold_provenance_step">Test stopniowany z przewodnikiem</string>
+    <string name="hrv_threshold_provenance_ramp">Ciągła rampa z przewodnikiem (skorygowana o MRT)</string>
+    <string name="hrv_threshold_stat_r2">R²: %1$.2f</string>
+    <string name="hrv_threshold_stat_neff">N: %1$d min</string>
+    <string name="hrv_threshold_stat_neff_steps">N: %1$d stopni</string>
+    <string name="hrv_threshold_stat_artifact">Średni odsetek artefaktów: %1$.1f%%</string>
+    <string name="hrv_threshold_diag_steady">Stała wytrzymałość: DFA a1 utrzymało się powyżej zakresu progowego</string>
+    <string name="hrv_threshold_diag_high_artifact">Wysoki odsetek artefaktów RR (%1$.1f%% &gt; 5.0%%)</string>
+    <string name="hrv_threshold_diag_short_duration">Niewystarczający czas trwania przejścia (N = %1$d &lt; %2$d)</string>
+    <string name="hrv_threshold_diag_low_r2">Niska korelacja liniowa (R² = %1$.2f &lt; %2$.2f)</string>
+    <string name="hrv_threshold_no_estimate">--</string>
+    <string name="hrv_threshold_informative_only">Tylko informacyjnie; wykluczone z aktualizacji stref</string>
 </resources>

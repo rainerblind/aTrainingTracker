@@ -126,4 +126,27 @@
     <string name="hrv_delete_entry_title">Supprimer la mesure VRC</string>
     <string name="hrv_delete_entry_confirm">Voulez-vous vraiment supprimer cette mesure de VRC matinale ?</string>
     <string name="hrv_history_title">Historique VRC matinale</string>
+
+    <!-- Lag-Aligned, Confidence-Gated HRVT1/HRVT2 Thresholds (ATT-3554 / REQ-PER-036) -->
+    <string name="hrv_threshold_card_title">Estimations des seuils DFA a1 (HRVT1 / HRVT2)</string>
+    <string name="hrv_threshold_card_subtitle">Seuils physiologiques avec compensation de latence et indice de confiance</string>
+    <string name="hrv_threshold_hrvt1_label">Seuil aérobie (HRVT1)</string>
+    <string name="hrv_threshold_hrvt2_label">Seuil anaérobie (HRVT2)</string>
+    <string name="hrv_threshold_confidence_high">Confiance élevée</string>
+    <string name="hrv_threshold_confidence_medium">Confiance moyenne</string>
+    <string name="hrv_threshold_confidence_low">Faible confiance</string>
+    <string name="hrv_threshold_insufficient_span">Plage insuffisante</string>
+    <string name="hrv_threshold_provenance_free">Entraînement libre (fenêtre fraîche 10–60 min)</string>
+    <string name="hrv_threshold_provenance_step">Test par paliers guidé</string>
+    <string name="hrv_threshold_provenance_ramp">Rampe continue guidée (ajustée MRT)</string>
+    <string name="hrv_threshold_stat_r2">R²: %1$.2f</string>
+    <string name="hrv_threshold_stat_neff">N: %1$d min</string>
+    <string name="hrv_threshold_stat_neff_steps">N: %1$d paliers</string>
+    <string name="hrv_threshold_stat_artifact">Taux d\'artefacts moyen : %1$.1f%%</string>
+    <string name="hrv_threshold_diag_steady">Endurance stable : DFA a1 est resté au-dessus de la plage seuil</string>
+    <string name="hrv_threshold_diag_high_artifact">Taux élevé d\'artefacts RR (%1$.1f%% &gt; 5.0%%)</string>
+    <string name="hrv_threshold_diag_short_duration">Durée de transition insuffisante (N = %1$d &lt; %2$d)</string>
+    <string name="hrv_threshold_diag_low_r2">Faible corrélation linéaire (R² = %1$.2f &lt; %2$.2f)</string>
+    <string name="hrv_threshold_no_estimate">--</string>
+    <string name="hrv_threshold_informative_only">À titre informatif uniquement ; exclu de la mise à jour des zones</string>
 </resources>

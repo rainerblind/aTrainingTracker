@@ -3,7 +3,7 @@
 **Domain**: `aftermath_periods`  
 **Prefixes**: `PER`, `PERF`  
 **Scope**: Post-workout analytics, period statistics, zone distributions, graphs and visual scrubbers.  
-**Total Tests**: 42
+**Total Tests**: 43
 
 ---
 
@@ -695,6 +695,36 @@
   • Execute targeted unit tests `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.map.*" --tests "com.atrainingtracker.trainingtracker.ui.aftermath.*" --tests "com.atrainingtracker.trainingtracker.localization.TranslationParityTest" --tests "com.atrainingtracker.trainingtracker.ui.theme.ThemeColorCentralizationAuditTest" --tests "com.atrainingtracker.trainingtracker.build.*"` verifying 100% clean-room test pass rate.
   7. *Deduplicated Rendering & Wrapper Cleanliness (`TST-PER-043.7`)*:
   • Verify canonical invocation in `WorkoutDetailTabbedContent.kt`, removal from `MapDetailLayout.kt`, and zero references to `ui.aftermath.hrv.*`.
+
+### TST-PER-044: **Confidence-Gated HRVT1/HRVT2 Threshold Estimation & Summary Card Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-PER-036` (`REQ-PER-036.1`..`REQ-PER-036.6`)
+- **Component**: `HrvThresholdEstimatorTest.kt`, `HrvThresholdSummaryCardTest.kt`, `TranslationParityTest`
+- **Jira**: `ATT-3554`
+- **Test Description**:
+  1. *Fresh-Window Telemetry Filtering Test (`TST-PER-044.1`, `HrvThresholdEstimatorTest.kt`)*:
+  • Verify `HrvThresholdEstimator` ignores samples before $t = 600\text{ s}$ and after $t = 3600\text{ s}$ for free workouts.
+  • Verify samples with artifact rate $> 5.0\%$ or $\alpha_1$ outside $[0.35, 1.15]$ are discarded.
+  2. *Decimated Grid Decorrelation & R² Calculation Test (`TST-PER-044.2`, `HrvThresholdEstimatorTest.kt`)*:
+  • Verify samples are decimated into 60s window averages ($N_{\text{eff}} = \lfloor K / 12 \rfloor$).
+  • Verify $R^2$ is computed against decimated points rather than 5s raw points, preventing autocorrelation bias.
+  • Verify continuous ramp Mean Response Time correction ($\tau_{\text{MRT}} = 45\text{ s}$) shifts timestamps accurately.
+  3. *Independent Span Gating & Extrapolation Prevention Test (`TST-PER-044.3`, `HrvThresholdEstimatorTest.kt`)*:
+  • Verify session with $\alpha_1 \in [0.60, 1.05]$ emits valid $HRVT_1$ and returns $HRVT_2 = \text{null}$ with diagnostic reason `INSUFFICIENT_SPAN`.
+  • Verify session with $\alpha_1 \in [0.45, 0.60]$ emits valid $HRVT_2$ and returns $HRVT_1 = \text{null}$ with diagnostic reason `INSUFFICIENT_SPAN`.
+  • Verify out-of-span linear extrapolation is strictly prevented.
+  4. *Three-Tier Confidence Classification & Diagnostic Reasons Test (`TST-PER-044.4`, `HrvThresholdEstimatorTest.kt`)*:
+  • Verify `HIGH` confidence assignment when span met, $R^2 \ge 0.70$, artifact rate $\le 3\%$, and $N_{\text{eff}} \ge 10$.
+  • Verify `MEDIUM` confidence assignment when span met, $R^2 \ge 0.55$, artifact rate $\le 5\%$, and $N_{\text{eff}} \ge 8$.
+  • Verify `LOW` confidence assignment when $R^2 < 0.55$, artifact rate $> 5\%$, or $N_{\text{eff}} < 8$, with accurate localized diagnostic messages.
+  5. *HrvThresholdSummaryCard Compose Rendering Test (`TST-PER-044.5`, `HrvThresholdSummaryCardTest.kt`)*:
+  • Verify card displays estimated $HRVT_1$ and $HRVT_2$ values with appropriate units (bpm, W, min/km).
+  • Verify protocol provenance badge (`FREE_WORKOUT`, `GUIDED_STEP`, `GUIDED_RAMP`) and confidence chip rendering.
+  • Verify graceful omission when workout lacks HRV data.
+  6. *9-Language Localization Parity Test (`TST-PER-044.6`, `TranslationParityTest`)*:
+  • Verify all new strings in `strings_hrv.xml` exist across all 9 language directories with identical XML keys, parameter specifiers, and literal `\n` linebreaks.
+  7. *Tier 1 Clean-Room Targeted Regression Execution (`TST-PER-044.7`)*:
+  • Execute targeted unit tests `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.aftermath.workoutdetail.*" --tests "com.atrainingtracker.trainingtracker.localization.TranslationParityTest" --tests "com.atrainingtracker.trainingtracker.build.*"` verifying 100% clean-room test pass rate.
+
 
 
 

@@ -3,7 +3,7 @@
 **Domain**: `aftermath_periods`  
 **Prefixes**: `PER`, `PERF`  
 **Scope**: Post-workout analytics, period statistics, zone distributions, graphs and visual scrubbers.  
-**Total Requirements**: 33
+**Total Requirements**: 34
 
 ---
 
@@ -993,6 +993,34 @@
 • *Then* HRV graphs and the scatter card are gracefully omitted without error or blank cards.
 
 **Invariants**: Pixel-perfect vertical alignment with `startPadding = 50.dp`, non-interpolated artifact gap rendering, zero UI presentation for non-HRV sessions, 100% 9-language localization parity.
+
+### REQ-PER-036: Confidence-Gated HRVT1/HRVT2 Threshold Estimation & Summary Card [Verified]
+- **Tests**: `TST-PER-044` | **Tickets**: `ATT-3554`
+- **Implementation**: `HrvThresholdEstimator.kt`, `HrvThresholdSummaryCard.kt`, `WorkoutDetailTabbedContent.kt`, `strings_hrv.xml`
+- **Rationale**: While `HrvAlpha1ScatterCard` (`REQ-PER-035`) renders unconstrained scatter points across the entire workout, athletes require physiologically validated aerobic ($HRVT_1$, $\alpha_1 = 0.75$) and anaerobic ($HRVT_2$, $\alpha_1 = 0.50$) threshold estimates with lag compensation, fresh-window fatigue bounding, decimated-grid statistical validity, and explicit quality confidence classification. The system SHALL support confidence-gated threshold estimation and presentation:
+1. *Fresh-Window Telemetry Selection (`REQ-PER-036.1`)*: For free progression workouts, `HrvThresholdEstimator` SHALL restrict threshold regression strictly to active elapsed time $t \in [600, 3600]\text{ s}$ (`10–60 min`), excluding the initial 10-minute warm-up, paused intervals, late-workout cardiac fatigue drift ($>60\text{ min}$), and samples where artifact rate exceeds $5.0\%$. For workouts containing a guided step or continuous ramp test (`ATT-4969`), `HrvThresholdEstimator` SHALL evaluate the post-warmup monotonic test stage.
+2. *Decimated Grid Regression & Serial Decorrelation (`REQ-PER-036.2`)*: To prevent artificial $R^2$ inflation and serial autocorrelation from 5-second samples, regression and goodness-of-fit $R^2$ SHALL be computed on decimated 60-second window averages ($N_{\text{eff}} = \lfloor K / 12 \rfloor$) for free progression and continuous ramps, or discrete step averages for guided step tests. For continuous ramps, a Mean Response Time lag compensation of $\tau_{\text{MRT}} = 45\text{ s}$ SHALL be subtracted from observed step/intensity timestamps before threshold mapping.
+3. *Independent Span Gating for $HRVT_1$ and $HRVT_2$ (`REQ-PER-036.3`)*: $HRVT_1$ ($\alpha_{1,\text{T1}} = 0.75$) regression requires decimated samples spanning both $\ge 0.85$ and $\le 0.65$. $HRVT_2$ ($\alpha_{1,\text{T2}} = 0.50$) regression requires decimated samples spanning both $\ge 0.60$ and $\le 0.45$. If only one threshold's span criteria are met, that threshold SHALL be emitted independently while the other threshold SHALL evaluate to `null` (`INSUFFICIENT_SPAN`), strictly prohibiting out-of-span linear extrapolation.
+4. *Unified Three-Tier Confidence Classification (`REQ-PER-036.4`)*:
+   - `HIGH`: Threshold span satisfied, $R^2 \ge 0.70$ on decimated grid, mean artifact rate $\le 3.0\%$, and $N_{\text{eff}} \ge 10$ decimated points ($\ge 10\text{ min}$) or $\ge 5$ valid steps for `GUIDED_STEP`.
+   - `MEDIUM`: Threshold span satisfied, $R^2 \ge 0.55$ on decimated grid, mean artifact rate $\le 5.0\%$, and $N_{\text{eff}} \ge 8$ decimated points ($\ge 8\text{ min}$) or $\ge 4$ valid steps for `GUIDED_STEP`.
+   - `LOW` / `INSUFFICIENT_SPAN`: Sessions failing `MEDIUM` criteria; classified as informational-only with explicit diagnostic reasoning (e.g., steady endurance ride, high artifact rate, insufficient duration, low correlation) and excluded from automated zone updating.
+5. *Presentation via `HrvThresholdSummaryCard` (`REQ-PER-036.5`)*: The card SHALL be rendered in `WorkoutDetailTabbedContent.kt` under `WorkoutDetailSectionType.ZONES`. The card SHALL display estimated $HRVT_1$ and $HRVT_2$ values (Heart Rate in bpm, Steady-State Power in Watts, Pace formatted via `PaceFormatter`), protocol provenance badge, confidence badge, statistical summary ($R^2$, $N_{\text{eff}}$, mean artifact %), and diagnostic explanations for suppressed/unestimated thresholds.
+6. *9-Language Localization & Graceful Omission (`REQ-PER-036.6`)*: All badge labels, diagnostic reasons, and metric headers SHALL support 100% localization parity across all 9 supported locales. For non-HRV sessions or workouts with zero valid HRV trackpoints, `HrvThresholdSummaryCard` SHALL be completely omitted with zero layout shifts.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* a workout where centered-window DFA $\alpha_1$ spans from 1.05 down to 0.60 (crossing $HRVT_1 = 0.75$, but failing to reach 0.45),
+• *When* `HrvThresholdEstimator` evaluates the session,
+• *Then* it emits a valid $HRVT_1$ estimate and returns $HRVT_2 = \text{null}$ (`INSUFFICIENT_SPAN`) rather than extrapolating $HRVT_2$ outside the observed range.
+• *Given* a multi-hour endurance workout exceeding 60 minutes with late-session cardiac drift,
+• *When* `HrvThresholdEstimator` runs,
+• *Then* regression is strictly evaluated over active elapsed time $t \in [600, 3600]\text{ s}$, preventing downward threshold corruption from late-ride fatigue.
+• *Given* a workout rendered in Workout Details,
+• *When* `HrvThresholdSummaryCard` is displayed,
+• *Then* it renders the confidence badge (`HIGH`, `MEDIUM`, `LOW`, or `INSUFFICIENT_SPAN`), protocol badge, $R^2$, $N_{\text{eff}}$, artifact %, and localized diagnostic reasons across all 9 locales.
+
+**Invariants**: Zero out-of-span linear extrapolation; 60s decimation decorrelation; 100% 9-language localization parity; zero card rendering for non-HRV workouts.
+
 
 
 

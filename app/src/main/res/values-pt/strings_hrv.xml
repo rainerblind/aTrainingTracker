@@ -126,4 +126,27 @@
     <string name="hrv_delete_entry_title">Eliminar leitura de VFC</string>
     <string name="hrv_delete_entry_confirm">Tem a certeza de que deseja eliminar esta leitura de VFC matinal?</string>
     <string name="hrv_history_title">Histórico de VFC matinal</string>
+
+    <!-- Lag-Aligned, Confidence-Gated HRVT1/HRVT2 Thresholds (ATT-3554 / REQ-PER-036) -->
+    <string name="hrv_threshold_card_title">Estimativas de limiar DFA a1 (HRVT1 / HRVT2)</string>
+    <string name="hrv_threshold_card_subtitle">Limiares fisiológicos ajustados por atraso e validados por confiança</string>
+    <string name="hrv_threshold_hrvt1_label">Limiar aeróbio (HRVT1)</string>
+    <string name="hrv_threshold_hrvt2_label">Limiar anaeróbio (HRVT2)</string>
+    <string name="hrv_threshold_confidence_high">Alta confiança</string>
+    <string name="hrv_threshold_confidence_medium">Média confiança</string>
+    <string name="hrv_threshold_confidence_low">Baixa confiança</string>
+    <string name="hrv_threshold_insufficient_span">Alcance insuficiente</string>
+    <string name="hrv_threshold_provenance_free">Treino livre (janela fresca de 10–60 min)</string>
+    <string name="hrv_threshold_provenance_step">Teste em degraus guiado</string>
+    <string name="hrv_threshold_provenance_ramp">Rampa contínua guiada (ajustada por MRT)</string>
+    <string name="hrv_threshold_stat_r2">R²: %1$.2f</string>
+    <string name="hrv_threshold_stat_neff">N: %1$d min</string>
+    <string name="hrv_threshold_stat_neff_steps">N: %1$d degraus</string>
+    <string name="hrv_threshold_stat_artifact">Artefatos médios: %1$.1f%%</string>
+    <string name="hrv_threshold_diag_steady">Resistência constante: DFA a1 permaneceu acima da faixa de limiar</string>
+    <string name="hrv_threshold_diag_high_artifact">Alta taxa de artefatos RR (%1$.1f%% &gt; 5.0%%)</string>
+    <string name="hrv_threshold_diag_short_duration">Duração de transição insuficiente (N = %1$d &lt; %2$d)</string>
+    <string name="hrv_threshold_diag_low_r2">Baixa correlação linear (R² = %1$.2f &lt; %2$.2f)</string>
+    <string name="hrv_threshold_no_estimate">--</string>
+    <string name="hrv_threshold_informative_only">Apenas informativo; excluído das atualizações de zona</string>
 </resources>

@@ -126,4 +126,27 @@
     <string name="hrv_delete_entry_title">HRV測定値を削除</string>
     <string name="hrv_delete_entry_confirm">この朝のHRV測定値を削除してもよろしいですか？</string>
     <string name="hrv_history_title">朝のHRV履歴</string>
+
+    <!-- Lag-Aligned, Confidence-Gated HRVT1/HRVT2 Thresholds (ATT-3554 / REQ-PER-036) -->
+    <string name="hrv_threshold_card_title">DFA a1閾値推定（HRVT1 / HRVT2）</string>
+    <string name="hrv_threshold_card_subtitle">遅延補正・信頼性検証済み生理的閾値</string>
+    <string name="hrv_threshold_hrvt1_label">有酸素性作業閾値（HRVT1）</string>
+    <string name="hrv_threshold_hrvt2_label">無酸素性作業閾値（HRVT2）</string>
+    <string name="hrv_threshold_confidence_high">高い信頼性</string>
+    <string name="hrv_threshold_confidence_medium">中程度の信頼性</string>
+    <string name="hrv_threshold_confidence_low">低い信頼性</string>
+    <string name="hrv_threshold_insufficient_span">スパン不足</string>
+    <string name="hrv_threshold_provenance_free">自由トレーニング（10〜60分フレッシュ区間）</string>
+    <string name="hrv_threshold_provenance_step">ガイド付きステップテスト</string>
+    <string name="hrv_threshold_provenance_ramp">ガイド付き連続ランプ（MRT補正済み）</string>
+    <string name="hrv_threshold_stat_r2">R²: %1$.2f</string>
+    <string name="hrv_threshold_stat_neff">N: %1$d分</string>
+    <string name="hrv_threshold_stat_neff_steps">N: %1$dステップ</string>
+    <string name="hrv_threshold_stat_artifact">平均アーティファクト率: %1$.1f%%</string>
+    <string name="hrv_threshold_diag_steady">一定の持久運動: DFA a1が閾値範囲を上回り続けました</string>
+    <string name="hrv_threshold_diag_high_artifact">高いRRアーティファクト率（%1$.1f%% &gt; 5.0%%）</string>
+    <string name="hrv_threshold_diag_short_duration">遷移時間が不十分です（N = %1$d &lt; %2$d）</string>
+    <string name="hrv_threshold_diag_low_r2">低い線形相関（R² = %1$.2f &lt; %2$.2f）</string>
+    <string name="hrv_threshold_no_estimate">--</string>
+    <string name="hrv_threshold_informative_only">参考情報のみ；ゾーン更新から除外されます</string>
 </resources>

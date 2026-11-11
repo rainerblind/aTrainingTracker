@@ -126,4 +126,27 @@
     <string name="hrv_delete_entry_title">HRV-Messung löschen</string>
     <string name="hrv_delete_entry_confirm">Möchtest du diese morgendliche HRV-Messung wirklich löschen?</string>
     <string name="hrv_history_title">Morgendliche HRV-Historie</string>
+
+    <!-- Lag-Aligned, Confidence-Gated HRVT1/HRVT2 Thresholds (ATT-3554 / REQ-PER-036) -->
+    <string name="hrv_threshold_card_title">DFA-a1-Schwellenwertschätzungen (HRVT1 / HRVT2)</string>
+    <string name="hrv_threshold_card_subtitle">Verzögerungsbereinigte, konfidenzgeprüfte physiologische Schwellenwerte</string>
+    <string name="hrv_threshold_hrvt1_label">Aerobe Schwelle (HRVT1)</string>
+    <string name="hrv_threshold_hrvt2_label">Anaerobe Schwelle (HRVT2)</string>
+    <string name="hrv_threshold_confidence_high">Hohe Konfidenz</string>
+    <string name="hrv_threshold_confidence_medium">Mittlere Konfidenz</string>
+    <string name="hrv_threshold_confidence_low">Geringe Konfidenz</string>
+    <string name="hrv_threshold_insufficient_span">Unzureichende Spannweite</string>
+    <string name="hrv_threshold_provenance_free">Freies Training (10–60 Min. Erholungsfenster)</string>
+    <string name="hrv_threshold_provenance_step">Geführter Stufentest</string>
+    <string name="hrv_threshold_provenance_ramp">Geführter kontinuierlicher Rampentest (MRT-bereinigt)</string>
+    <string name="hrv_threshold_stat_r2">R²: %1$.2f</string>
+    <string name="hrv_threshold_stat_neff">N: %1$d Min.</string>
+    <string name="hrv_threshold_stat_neff_steps">N: %1$d Stufen</string>
+    <string name="hrv_threshold_stat_artifact">Mittlere Artefaktrate: %1$.1f%%</string>
+    <string name="hrv_threshold_diag_steady">Gleichmäßige Ausdauer: DFA a1 blieb über der Schwellenspanne</string>
+    <string name="hrv_threshold_diag_high_artifact">Hohe RR-Artefaktrate (%1$.1f%% &gt; 5.0%%)</string>
+    <string name="hrv_threshold_diag_short_duration">Unzureichende Übergangsdauer (N = %1$d &lt; %2$d)</string>
+    <string name="hrv_threshold_diag_low_r2">Geringe lineare Korrelation (R² = %1$.2f &lt; %2$.2f)</string>
+    <string name="hrv_threshold_no_estimate">--</string>
+    <string name="hrv_threshold_informative_only">Nur zur Information; von Zonenaktualisierungen ausgeschlossen</string>
 </resources>
