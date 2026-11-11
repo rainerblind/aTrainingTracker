@@ -11,7 +11,7 @@ This skill guides the agent through **Stage 5 (Verification & Release Quality Ga
 ## Subagent Model Pairing ("Zipper Principle" & Epic-Scoped Persistent Ping-Pong — Core Rule 7)
 Reuse the Epic-scoped (or standalone ticket) persistent `TypeName: "self"` subagents via `send_message`:
 - **Doing (`--as agent1`)**: **`subagent_flash`** (`send_message` to the `flash` subagent) — Running Tier 1 targeted unit tests, updating `docs/requirements.md` & `docs/tests.md` to `Verified`, authoring `walkthrough.md`, and submitting Stage 5 via `submit-stage` are deterministic procedural steps.
-- **Gate 5 Review (`--as agent2`)**: **`subagent_pro`** (`send_message` to the `pro` subagent) — Audits Stage 5 verification evidence, executes `python3 tools/jira_util.py --as agent2 gate-verdict <SUBTASK_KEY> PASS ...` (which advances the parent ticket to `Final Review (Agent)` and injects `stage6-final-review/SKILL.md`), and squashes `feature/<KEY>` onto `sprint/<SPRINT_NAME>`. Keep the persistent `subagent_pro` + `subagent_flash` pair alive until the independent Cold `Gemini 4 Carbon` (`Model: "pro"`) reviewer completes **Stage 6 (`Final Review (Agent)`)** and advances the parent ticket to `Final Review (Human)`, so any Stage 6 bounce (`1/3..3/3`) can be healed immediately. Terminate standalone ticket subagents or rotate Epic-scoped subagent pairs after 3 completed tickets (`Rule 62`) once Stage 6 passes.
+- **Gate 5 Review (`--as agent2`)**: **`subagent_pro`** (`send_message` to the `pro` subagent) — Audits Stage 5 verification evidence, executes `python3 tools/jira_util.py --as agent2 gate-verdict <SUBTASK_KEY> PASS ...` (which advances the parent ticket to `Final Review (Agent)` and injects `stage6-final-review/SKILL.md`), and squashes `feature/<KEY>` onto `sprint/<SPRINT_NAME>` (via `python3 tools/parallel_sprint_lock.py --merge-ticket ...` under flock). Keep the persistent `subagent_pro` + `subagent_flash` pair alive until the independent Cold `Gemini 4 Carbon` (`Model: "pro"`) reviewer completes **Stage 6 (`Final Review (Agent)`)** and advances the parent ticket to `Final Review (Human)`, so any Stage 6 bounce (`1/3..3/3`) can be healed immediately. Terminate standalone ticket subagents or rotate Epic-scoped subagent pairs after 3 completed tickets (`Rule 62`) once Stage 6 passes.
 
 ## Key Responsibilities (`subagent_flash` as `agent1` — `flash`)
 1. **Two-Tier Unit Test Execution Strategy (Rule 60 — `ATT-4465`)**:
@@ -75,20 +75,9 @@ Message the ticket's persistent `subagent_pro` (`send_message`) to audit the Sta
      git commit -m "<KEY>: <Concise Ticket Summary>"
      git branch -D feature/<KEY>
      ```
-   - **Parallel Sprint Execution Merge Protocol (`REQ-PRO-041.2`, `REQ-PRO-041.4`)**: When parallel sprint execution is active, serialize git rebase, living docs recalculation, and squash-merging under POSIX `flock` (`/tmp/att_build_merge.lock`):
+   - **Parallel Sprint Execution Merge Protocol (`REQ-PRO-041.2`, `REQ-PRO-041.4`)**: When parallel sprint execution is active across multiple worktrees, execute the deterministic `--merge-ticket` subcommand under POSIX `flock` (`/tmp/att_build_merge.lock`), which automatically guards submodule symlinks, rebases against the local `sprint/<SPRINT_NAME>` branch, recalculates living doc master indexes (`--sync-indexes`), fast-forwards the main repository without branch checkout collisions, and deletes the feature branch:
      ```bash
-     python3 tools/parallel_sprint_lock.py bash -c '
-       git add -A && git commit -m "<KEY>: <Concise Ticket Summary>" || true
-       git fetch origin
-       git rebase origin/sprint/<SPRINT_NAME>
-       python3 tools/verify_requirement_governance.py --sync-indexes
-       git add docs/requirements.md docs/tests.md
-       git commit --amend --no-edit || true
-       git checkout sprint/<SPRINT_NAME>
-       git merge --squash feature/<KEY>
-       git commit -m "<KEY>: <Concise Ticket Summary>"
-       git branch -D feature/<KEY>
-     '
+     python3 tools/parallel_sprint_lock.py --merge-ticket <KEY> --sprint sprint/<SPRINT_NAME> --summary "<KEY>: <Concise Ticket Summary>"
      ```
 
 ## Deliverable Template

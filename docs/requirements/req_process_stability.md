@@ -2308,42 +2308,45 @@ The workflow SHALL mandate that:
 **Invariants**: Human Decision Gate on standard sprint tickets (`Feature`, `Bug`, `Verbesserung`) remains inviolable; zero changes to Android runtime code in `app/src/main/`.
 
 ### REQ-PRO-041: Parallel Sprint Execution Protocol for Disjoint Epics ('Workspace: share' Worktrees, Conflict-Free Strings/Docs & Flock Build/Merge Serialization) [Verified]
-- **Tests**: `TST-PRO-041` | **Tickets**: `ATT-5914`, `ATT-6743`
+- **Tests**: `TST-PRO-041` | **Tickets**: `ATT-5914`, `ATT-6743`, `ATT-7025`
 - **Implementation**: `.agents/rules/aspice_governance.md`, `.agents/skills/jira-workflow/SKILL.md`, `.agents/skills/stage4-implementation/SKILL.md`, `.agents/skills/stage5-verification/SKILL.md`, `.agents/skills/sprint-planner/SKILL.md`, `tools/run_serialized.sh`, `tools/parallel_sprint_lock.py`, `tools/jira_util.py`, `tools/hoechstmass/tools/jira_util.py`, `tools/verify_requirement_governance.py`, `app/src/test/java/com/atrainingtracker/trainingtracker/localization/TranslationParityTest.kt`
-- **Rationale**: Eliminate the throughput bottleneck of single-ticket sequential Phase 2 execution by enabling concurrent execution of up to 3 tickets belonging to disjoint Parent Epics. Resolves git branch collisions, strings.xml EOF append conflicts, living doc counter merge races, and Gradle test contention through worktree isolation, domain-partitioned strings, POSIX file locking, and rebase-then-recalculate sync (ATT-5914, extending `REQ-PRO-014`, `REQ-PRO-015`, `REQ-PRO-024`, and `REQ-PRO-025`; calibrated to concurrency=3 per ATT-6289 / ATT-6743):
+- **Rationale**: Eliminate the throughput bottleneck of single-ticket sequential Phase 2 execution by enabling concurrent execution of up to 3 tickets belonging to disjoint Parent Epics. Resolves git branch collisions, strings.xml EOF append conflicts, living doc counter merge races, and Gradle test contention through worktree isolation, domain-partitioned strings, POSIX file locking, and rebase-then-recalculate sync (ATT-5914, extending `REQ-PRO-014`, `REQ-PRO-015`, `REQ-PRO-024`, and `REQ-PRO-025`; calibrated to concurrency=3 per ATT-6289 / ATT-6743; hardened with detached HEAD protocol and deterministic `--merge-ticket` subcommand per ATT-7025):
 1. *Subagent Worktree Isolation (`REQ-PRO-041.1`, Workspace: "share")*:
 • Coordinator SHALL orchestrate parallel sprint ticket execution using `invoke_subagent(..., Workspace="share")` for persistent subagent pairs.
-• Each subagent pair SHALL operate in an isolated Git worktree linked to the primary repository, possessing independent working directories, `HEAD` pointers, and index states.
+• Each subagent pair SHALL operate in an isolated Git worktree linked to the primary repository, possessing independent working directories, `HEAD` pointers, and index states. Subagents in an Epic pair SHALL operate on **detached `HEAD`** (`git checkout --detach sprint/<SPRINT_NAME>`) in a single shared Epic worktree directory to eliminate split-brain divergence and branch checkout collisions.
 • Concurrency is strictly bounded: at most 3 concurrent tickets, and ONLY tickets belonging to disjoint Parent Epics (zero package, screen, or living-doc shard overlap). Parallel execution of tickets within the same Epic remains prohibited.
 2. *POSIX File Lock Mutual Exclusion (`REQ-PRO-041.2`, flock)*:
 • Tooling and governance SHALL provide a serialized execution wrapper using POSIX `flock` (exclusive lock on `/tmp/att_build_merge.lock`) for:
   a) Heavy Gradle test execution (`./gradlew testDebugUnitTest`).
   b) Physical device deployment and ADB verification (`./gradlew installDebug && adb ...`).
-  c) Stage 5 Git squash-merging and branch deletion on `sprint/<SPRINT_NAME>`.
+  c) Stage 5 Git squash-merging, living doc synchronization, fast-forwarding the main worktree, and branch cleanup on local `sprint/<SPRINT_NAME>` via `python3 tools/parallel_sprint_lock.py --merge-ticket <KEY> --sprint sprint/<SPRINT_NAME> --summary "<KEY>: <Summary>"`.
 • Stages 1–3 (Analysis, Test Spec, Impl Plan) and Stage 4 code authoring SHALL proceed 100% concurrently without lock contention.
 3. *Domain-Scoped Localization Partitioning (`REQ-PRO-041.3`, strings_<domain>.xml)*:
 • String additions for independent domain features SHALL support creation and editing of domain-partitioned files: `res/values*/strings_<domain>.xml` (e.g. `strings_process.xml`, `strings_cockpit.xml`) across all 9 supported locales.
 • `TranslationParityTest.kt` SHALL dynamically discover all XML files matching `strings*.xml` across each `values*/` directory, guaranteeing 100% translation parity, placeholder format safety, and missing key detection across partitioned string files.
 4. *Deterministic Living Documentation Synchronization (`REQ-PRO-041.4`, Rebase-then-Recalculate)*:
-• Living documentation master index updates (`recalculate_master_index_tables()` / `python3 tools/jira_util.py recalc-docs`) for parallel tickets SHALL be serialized under the merge lock during Stage 5.
-• Subagents SHALL fetch/rebase against latest `sprint/<SPRINT_NAME>` before recalculating and committing living documentation counters, preventing Git merge conflicts on `docs/requirements.md` and `docs/tests.md`.
+• Living documentation master index updates (`recalculate_master_index_tables()` / `python3 tools/jira_util.py recalc-docs` / `verify_requirement_governance.py --sync-indexes`) for parallel tickets SHALL be serialized under the merge lock during Stage 5 inside `--merge-ticket`.
+• `--merge-ticket` SHALL rebase the ticket against local `sprint/<SPRINT_NAME>` and recalculate living documentation indexes before creating the squashed atomic commit, preventing Git merge conflicts on `docs/requirements.md` and `docs/tests.md`.
 
 **Requirement Archaeology & Chesterton's Fence Audit**:
-1. *Original Requirement ID & Target*: `REQ-PRO-041` (`REQ-PRO-041.1`, `REQ-PRO-041.2`). Targets `.agents/rules/aspice_governance.md`, `.agents/skills/`, tooling, and living documentation synchronization.
-2. *Historical Origin & Commit Trace*: Commit `d002a9bd` (`ATT-5914`, Sprint 2026-45.2); calibrated during Sprint 2026-46.1 retrospective (`ATT-6289` / `Rule 81`, `ATT-6743`).
-3. *Root Reason for Existing Formulation*: Concurrency was conservatively capped at 2 to validate 'Workspace: share' worktree isolation and avoid host CPU/memory starvation while proving POSIX flock build/merge serialization.
-4. *Preservation of Core Invariants*: Bumping concurrency to 3 across strictly disjoint Parent Epics preserves worktree isolation, POSIX flock mutual exclusion on Gradle, adb, and merge, zero cross-epic file collisions, and 100% human gate governance.
+1. *Original Requirement ID & Target*: `REQ-PRO-041` (`REQ-PRO-041.1`, `REQ-PRO-041.2`, `REQ-PRO-041.4`). Targets `.agents/rules/aspice_governance.md`, `.agents/skills/`, tooling, and living documentation synchronization.
+2. *Historical Origin & Commit Trace*: Commit `d002a9bd` (`ATT-5914`, Sprint 2026-45.2); calibrated during Sprint 2026-46.1 retrospective (`ATT-6289` / `Rule 81`, `ATT-6743`); hardened against multi-pair split brain and branch collisions in Sprint 2026-46.3 (`ATT-7025`).
+3. *Root Reason for Existing Formulation*: Concurrency was conservatively capped at 2 and Stage 5 rebase assumed remote tracking branch (`origin/sprint/...`) and single-repo checkout (`git checkout sprint/...`), which failed in multi-worktree topologies.
+4. *Preservation of Core Invariants*: Bumping concurrency to 3 across strictly disjoint Parent Epics, enforcing detached HEAD pair alignment, POSIX flock mutual exclusion on Gradle, adb, and `--merge-ticket`, zero cross-epic file collisions, and 100% human gate governance are strictly preserved.
 
 **Acceptance Criteria (Given-When-Then)**:
 • *Given* up to three tickets from disjoint Epics in an active sprint,
 • *When* dispatched concurrently by Coordinator using `Workspace: "share"`,
-• *Then* all subagent pairs operate in isolated worktrees without Git branch conflicts.
+• *Then* all subagent pairs operate in isolated worktrees on detached `HEAD` without Git branch conflicts.
 • *Given* concurrent test execution, device installations, or Stage 5 squash-merges,
 • *When* executing under `flock /tmp/att_build_merge.lock`,
 • *Then* heavy operations serialize cleanly without worker collision or merge races.
 • *Given* localized strings added in `strings_<domain>.xml`,
 • *When* `TranslationParityTest.kt` executes,
 • *Then* it discovers all partitioned string files across 9 locales and enforces 100% parity.
+• *Given* a subagent worktree ready for Stage 5 integration,
+• *When* `parallel_sprint_lock.py --merge-ticket <KEY>` runs under lock,
+• *Then* it rebases onto local `sprint/<SPRINT_NAME>`, updates living docs, fast-forwards the main repository worktree, and deletes `feature/<KEY>` without checkout collision.
 
 **Invariants**: Human Decision Gate (`REQ-PRO-016`) remains inviolable; max 3 concurrent tickets across strictly disjoint Epics; zero Android runtime changes in `app/src/main/java/`.
 

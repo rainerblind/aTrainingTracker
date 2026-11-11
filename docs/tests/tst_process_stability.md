@@ -1436,15 +1436,16 @@
 
 ### TST-PRO-041: **Parallel Sprint Execution Protocol for Disjoint Epics, Flock Serialization & Partitioned Localization Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-PRO-041`
-- **Component**: `.agents/rules/aspice_governance.md`, `.agents/skills/{jira-workflow,stage4-implementation,stage5-verification,sprint-planner}/SKILL.md`, `tools/run_serialized.sh`, `tools/parallel_sprint_lock.py`, `tools/jira_util.py`, `tools/verify_requirement_governance.py`, `tools/test_verify_requirement_governance.py`, `app/src/test/java/com/atrainingtracker/trainingtracker/localization/TranslationParityTest.kt`
-- **Jira**: `ATT-5914`, `ATT-6743`
+- **Component**: `.agents/rules/aspice_governance.md`, `.agents/skills/{jira-workflow,stage4-implementation,stage5-verification,sprint-planner}/SKILL.md`, `tools/run_serialized.sh`, `tools/parallel_sprint_lock.py`, `tools/jira_util.py`, `tools/verify_requirement_governance.py`, `tools/test_verify_requirement_governance.py`, `tools/test_flock_serialization.py`, `app/src/test/java/com/atrainingtracker/trainingtracker/localization/TranslationParityTest.kt`
+- **Jira**: `ATT-5914`, `ATT-6743`, `ATT-7025`
 - **Test Description**:
   1. *Subagent Worktree Isolation & Disjoint Epic Guardrail (`TST-PRO-041.1`)*:
   • Verify `Workspace: "share"` subagent pairs execute in independent worktrees without branch or working-tree collisions across up to 3 concurrent lanes (`concurrency = 3`).
   • Verify governance enforces strict disjoint Parent Epic constraint (rejecting parallel execution within the same Epic).
-  2. *POSIX Flock Build, Device & Merge Mutual Exclusion (`TST-PRO-041.2`, `test_flock_serialization.py`)*:
+  2. *POSIX Flock Build, Device & Deterministic Merge Mutual Exclusion (`TST-PRO-041.2`, `test_flock_serialization.py`)*:
   • Simulate concurrent processes competing for `/tmp/att_build_merge.lock`.
   • Verify mutual exclusion: exactly one process holds the lock at a time for heavy Gradle tests, `installDebug` / `adb` commands, and Stage 5 squash merges. Subsequent processes queue deterministically, and lock releases reliably upon completion or failure.
+  • Verify multi-worktree `--merge-ticket` execution (`test_merge_ticket_multi_worktree_success`, `test_merge_ticket_concurrent_worktrees_serialization`): changes rebase cleanly onto local `sprint/<SPRINT_NAME>`, living doc indexes synchronize, the main worktree fast-forwards to the new commit, and feature branches are cleanly deleted without checkout collisions.
   3. *Dynamic Multi-File String Discovery & Parity Test Suite (`TST-PRO-041.3`, `TranslationParityTest.kt`)*:
   • Verify `TranslationParityTest.kt` dynamically scans all `strings*.xml` across `res/values*/`.
   • Assert partitioned domain string files (`strings_<domain>.xml`) maintain 100% key and placeholder parity across all 9 supported locales.
