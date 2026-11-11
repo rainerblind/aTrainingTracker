@@ -85,6 +85,7 @@ class AdvancedTuningScreenTest {
         val batteryIndex = content.indexOf("TuningSection.BATTERY_SAVER")
         val searchIndex = content.indexOf("TuningSection.SENSOR_SEARCH")
         val sensorsIndex = content.indexOf("TuningSection.SENSORS_GPS")
+        val radarIndex = content.indexOf("TuningSection.CYCLING_RADAR")
         val workoutMasksIndex = content.indexOf("TuningSection.WORKOUT_MASKS_CARDS")
         val aftermathIndex = content.indexOf("TuningSection.AFTERMATH_ANALYSIS")
         val physiologyIndex = content.indexOf("TuningSection.PHYSIOLOGY_MODELS")
@@ -95,6 +96,7 @@ class AdvancedTuningScreenTest {
         assertTrue("Battery Saver must exist", batteryIndex >= 0)
         assertTrue("Sensor Search must exist", searchIndex >= 0)
         assertTrue("Sensors GPS must exist", sensorsIndex >= 0)
+        assertTrue("Cycling Radar must exist", radarIndex >= 0)
         assertTrue("Workout Masks must exist", workoutMasksIndex >= 0)
         assertTrue("Aftermath Analysis must exist", aftermathIndex >= 0)
         assertTrue("Physiology Models must exist", physiologyIndex >= 0)
@@ -109,9 +111,10 @@ class AdvancedTuningScreenTest {
         assertTrue("Battery Saver must precede Block 2 header", batteryIndex < block2Header)
         assertTrue("Block 2 header precedes Sensor Search", block2Header < searchIndex)
         assertTrue("Sensor Search must precede Sensors GPS", searchIndex < sensorsIndex)
+        assertTrue("Sensors GPS must precede Cycling Radar", sensorsIndex < radarIndex)
+        assertTrue("Cycling Radar must precede Block 3 header", radarIndex < block3Header)
 
         // Block 3 sequence
-        assertTrue("Sensors GPS must precede Block 3 header", sensorsIndex < block3Header)
         assertTrue("Block 3 header precedes Workout Masks", block3Header < workoutMasksIndex)
         assertTrue("Workout Masks must precede Aftermath Analysis", workoutMasksIndex < aftermathIndex)
         assertTrue("Aftermath Analysis must precede Physiology Models", aftermathIndex < physiologyIndex)

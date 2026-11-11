@@ -48,7 +48,6 @@
 
 ---
 
-## 4. Requirement Archaeology & Chesterton's Fence Audit
 ### Requirement Archaeology & Chesterton's Fence Audit
 * **Original Requirement ID & Target**: `REQ-PER-032` (`REQ-PER-032.1`, `REQ-PER-032.3`, `REQ-PER-032.5`), targeting `MorningHrvCheckScreen.kt`, `MorningHrvCheckViewModel.kt`, and `ATrainingTrackerApp.kt`.
 * **Historical Origin & Commit Trace**: Introduced in `ATT-3556` (commit `dc034c08`).

@@ -131,4 +131,7 @@
     <string name="radar_preview_slow">Lent</string>
     <string name="radar_preview_fast">Menace rapide</string>
     <string name="radar_preview_lane_change">Changement de voie</string>
+
+    <!-- Advanced Settings / Tuning Accordion Category (ATT-6702 / REQ-UI-512) -->
+    <string name="tuning_cat_cycling_radar">Radar cycliste</string>
 </resources>

@@ -131,4 +131,7 @@
     <string name="radar_preview_slow">Powoli</string>
     <string name="radar_preview_fast">Szybkie zagrożenie</string>
     <string name="radar_preview_lane_change">Zmiana pasa</string>
+
+    <!-- Advanced Settings / Tuning Accordion Category (ATT-6702 / REQ-UI-512) -->
+    <string name="tuning_cat_cycling_radar">Radar rowerowy</string>
 </resources>

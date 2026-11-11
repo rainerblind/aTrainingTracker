@@ -15338,3 +15338,38 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 
 
 
+
+
+### REQ-UI-512: Mounting RadarSettingsSection as TuningAccordionSection in AdvancedTuningScreen and AdvancedTuningDialog [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-UI-512` | **Tickets**: `ATT-6702`
+- **Implementation**: `AdvancedTuningAccordion.kt`, `AdvancedTuningScreen.kt`, `AdvancedTuningDialog.kt`, `RadarSettingsSection.kt`, `strings_radar.xml`
+- **Rationale**: `RadarSettingsSection.kt` (907 LOC) provides comprehensive settings and an interactive simulator for cycling radar, but currently has zero production callers. The system SHALL mount `RadarSettingsSection` as a collapsible `TuningAccordionSection` under Block 2 ("Sensoren & GPS") in both `AdvancedTuningScreen.kt` and `AdvancedTuningDialog.kt`, backed by a dynamic summary subtitle in `AdvancedTuningAccordion.kt` and 100% 9-language localization parity.
+- **Description**:
+  1. *TuningSection Enum Extension (`REQ-UI-512.1`)*:
+     - `TuningSection` in `AdvancedTuningAccordion.kt` SHALL include `CYCLING_RADAR`, positioned in athletic sequence within Block 2 ("Sensoren & GPS") following `SENSORS_GPS`.
+  2. *Dynamic Subtitle Formatter (`REQ-UI-512.2`)*:
+     - `TuningSubtitleFormatter` SHALL provide `formatCyclingRadarSubtitle(...)` reflecting:
+       - Active scenario and running status (`radar_simulator_running`) when `RadarTrafficSimulator.isSimulating` is true.
+       - Concise summary of screen edge side, audio alert mode, and tail light default mode when idle.
+  3. *Accordion Mounting & Collapsed Default (`REQ-UI-512.3`)*:
+     - Both `AdvancedTuningScreen.kt` and `AdvancedTuningDialog.kt` SHALL mount `RadarSettingsSection` wrapped in `TuningAccordionSection` using icon `Icons.Default.Sensors`, title `R.string.tuning_cat_cycling_radar`, and the dynamic subtitle, defaulting to initially collapsed (`expandedSections = emptySet()`) per Design Guidelines §3.
+  4. *Visual Alignment & Padding Hygiene (`REQ-UI-512.4`)*:
+     - Inner `ElevatedCard` containers in `RadarSettingsSection.kt` SHALL use `Modifier.fillMaxWidth().padding(vertical = 4.dp)` without horizontal padding, eliminating double margins inside `TuningAccordionSection`.
+  5. *Modularity Constraint (`REQ-UI-512.5`)*:
+     - All source files in `com.atrainingtracker.trainingtracker.ui.settings.tuning.*` SHALL strictly maintain $< 400$ lines of code (`AdvancedTuningModularityTest`).
+  6. *9-Language Parity (`REQ-UI-512.6`)*:
+     - `tuning_cat_cycling_radar` SHALL be localized across all 9 supported locales (`values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`).
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* default advanced tuning configuration,
+• *When* viewing Expert Settings,
+• *Then* `CYCLING_RADAR` is listed under Block 2 in collapsed state displaying an idle summary subtitle.
+• *Given* `RadarTrafficSimulator` active,
+• *When* collapsed,
+• *Then* the header subtitle displays active scenario and running indicator.
+• *Given* an expanded `CYCLING_RADAR` section,
+• *When* rendered,
+• *Then* cards align flush with sibling accordion bodies without double horizontal inset.
+
+**Invariants**: Zero schema migrations; settings persist immediately to `TuningPreferencesDataStore`; strict $< 400$ LOC limit across `ui/settings/tuning/`.

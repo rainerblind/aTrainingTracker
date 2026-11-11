@@ -30,6 +30,7 @@ import androidx.compose.material.icons.filled.MonitorHeart
 import androidx.compose.material.icons.filled.Navigation
 import androidx.compose.material.icons.filled.RestartAlt
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Sensors
 import androidx.compose.material.icons.filled.TextFields
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.Warning
@@ -52,6 +53,7 @@ import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore
 import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDefaults
 import com.atrainingtracker.trainingtracker.ui.components.core.AppBottomSheetContent
 import com.atrainingtracker.trainingtracker.ui.components.core.AppDialogActions
+import com.atrainingtracker.trainingtracker.ui.settings.radar.RadarSettingsSection
 import com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.AftermathAnalysisSection
 import com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.AmoledBatterySaverSection
 import com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.ClusterTuningSection
@@ -268,13 +270,19 @@ fun AdvancedTuningDialog(
                 isExpanded = isSectionExpanded(TuningSection.SENSORS_GPS), onToggle = { toggleSection(TuningSection.SENSORS_GPS) }
             ) {
                 SensorsGpsFilterSection(
-                    gpsAccuracy = gpsAccuracy,
-                    onGpsAccuracyChange = { gpsAccuracy = it },
-                    altitudeWindowSec = altitudeWindowSec,
-                    onAltitudeWindowChange = { altitudeWindowSec = it },
-                    slopeMinSpeed = slopeMinSpeed,
-                    onSlopeMinSpeedChange = { slopeMinSpeed = it }
+                    gpsAccuracy = gpsAccuracy, onGpsAccuracyChange = { gpsAccuracy = it },
+                    altitudeWindowSec = altitudeWindowSec, onAltitudeWindowChange = { altitudeWindowSec = it },
+                    slopeMinSpeed = slopeMinSpeed, onSlopeMinSpeedChange = { slopeMinSpeed = it }
                 )
+            }
+
+            // Section 6: Fahrrad-Radar & Simulator (REQ-UI-512, ATT-6702)
+            TuningAccordionSection(
+                icon = Icons.Default.Sensors, title = stringResource(R.string.tuning_cat_cycling_radar),
+                subtitle = TuningSubtitleFormatter.formatCyclingRadarSubtitle(persistedConfig, context),
+                isExpanded = isSectionExpanded(TuningSection.CYCLING_RADAR), onToggle = { toggleSection(TuningSection.CYCLING_RADAR) }
+            ) {
+                RadarSettingsSection(tuningDataStore = tuningDataStore)
             }
 
             // Block 3: Analyse & Modelle (ATT-5670 / REQ-UI-463)

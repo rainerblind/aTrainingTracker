@@ -131,4 +131,7 @@
     <string name="radar_preview_slow">Lento</string>
     <string name="radar_preview_fast">Pericolo rapido</string>
     <string name="radar_preview_lane_change">Cambio corsia</string>
+
+    <!-- Advanced Settings / Tuning Accordion Category (ATT-6702 / REQ-UI-512) -->
+    <string name="tuning_cat_cycling_radar">Radar per bici</string>
 </resources>

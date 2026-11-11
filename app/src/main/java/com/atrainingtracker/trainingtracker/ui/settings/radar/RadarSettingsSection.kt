@@ -98,7 +98,7 @@ fun RadarSettingsSection(
         ElevatedCard(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 4.dp)
+                .padding(vertical = 4.dp)
         ) {
             Column(
                 modifier = Modifier
@@ -218,7 +218,7 @@ fun RadarSettingsSection(
         ElevatedCard(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 4.dp)
+                .padding(vertical = 4.dp)
         ) {
             Column(
                 modifier = Modifier
@@ -682,7 +682,7 @@ fun RadarSettingsSection(
         ElevatedCard(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 4.dp)
+                .padding(vertical = 4.dp)
         ) {
             Column(
                 modifier = Modifier
@@ -767,7 +767,7 @@ fun RadarSettingsSection(
         ElevatedCard(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 4.dp)
+                .padding(vertical = 4.dp)
         ) {
         Column(
             modifier = Modifier

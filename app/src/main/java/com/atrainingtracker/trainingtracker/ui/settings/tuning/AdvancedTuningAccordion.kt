@@ -19,10 +19,7 @@
 package com.atrainingtracker.trainingtracker.ui.settings.tuning
 
 import android.content.Context
-import com.atrainingtracker.banalservice.BANALService
-import com.atrainingtracker.banalservice.sensor.formater.DistanceFormatter
 import androidx.annotation.StringRes
-import androidx.compose.ui.res.stringResource
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.expandVertically
@@ -40,13 +37,22 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
+import com.atrainingtracker.banalservice.BANALService
+import com.atrainingtracker.banalservice.devices.radar.RadarLightMode
+import com.atrainingtracker.banalservice.devices.radar.RadarScenario
+import com.atrainingtracker.banalservice.devices.radar.RadarTrafficSimulator
+import com.atrainingtracker.banalservice.sensor.formater.DistanceFormatter
 import com.atrainingtracker.trainingtracker.EditWorkoutFieldPreferences
 import com.atrainingtracker.trainingtracker.WorkoutCardSectionPreferences
 import com.atrainingtracker.trainingtracker.WorkoutDetailPreferences
 import com.atrainingtracker.trainingtracker.settings.ProfileXAxisDomain
+import com.atrainingtracker.trainingtracker.settings.RadarAudioAlertMode
+import com.atrainingtracker.trainingtracker.settings.RadarEdgeSide
+import com.atrainingtracker.trainingtracker.settings.TuningConfig
 import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDefaults
 import com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldVariant
 import com.atrainingtracker.trainingtracker.ui.tracking.typography.CockpitFontFamily
@@ -61,8 +67,9 @@ enum class TuningSection {
     NAVIGATION,
     COCKPIT_TYPOGRAPHY,
     BATTERY_SAVER,
-    SENSORS_GPS,
     SENSOR_SEARCH,
+    SENSORS_GPS,
+    CYCLING_RADAR,
     WORKOUT_MASKS_CARDS,
     PHYSIOLOGY_MODELS,
     ROUTE_CLUSTERING,
@@ -77,30 +84,18 @@ object TuningSubtitleFormatter {
 
     fun formatCockpitSubtitle(
         family: CockpitFontFamily, weight: CockpitFontWeight, variant: SensorFieldVariant, context: Context
-    ): String {
-        val familyName = context.getString(family.getDisplayNameRes())
-        val weightName = context.getString(weight.getDisplayNameRes())
-        val variantName = context.getString(variant.titleResId)
-        return "$familyName, $weightName · $variantName"
-    }
+    ): String = "${context.getString(family.getDisplayNameRes())}, ${context.getString(weight.getDisplayNameRes())} · ${context.getString(variant.titleResId)}"
 
     @Deprecated("Use formatCockpitSubtitle(family, weight, variant, context)")
-    fun formatCockpitSubtitle(family: CockpitFontFamily, weight: CockpitFontWeight, context: Context): String {
-        val familyName = context.getString(family.getDisplayNameRes())
-        val weightName = context.getString(weight.getDisplayNameRes())
-        return "$familyName, $weightName"
-    }
+    fun formatCockpitSubtitle(family: CockpitFontFamily, weight: CockpitFontWeight, context: Context): String =
+        "${context.getString(family.getDisplayNameRes())}, ${context.getString(weight.getDisplayNameRes())}"
 
     fun formatBatterySaverSubtitle(
         fullDim: Float, mediumDim: Float, flatSlope: Float, steepSlope: Float, context: Context? = null
     ): String {
-        val fullPercent = (fullDim * 100).roundToInt()
-        val mediumPercent = (mediumDim * 100).roundToInt()
-        val flatStr = String.format(Locale.getDefault(), "%.1f%%", flatSlope)
-        val steepStr = String.format(Locale.getDefault(), "%.1f%%", steepSlope)
         val flatLabel = context?.getString(R.string.tuning_battery_saver_flat_short) ?: "Flat"
         val steepLabel = context?.getString(R.string.tuning_battery_saver_steep_short) ?: "Steep"
-        return "$fullPercent% / $mediumPercent%, $flatLabel: $flatStr, $steepLabel: $steepStr"
+        return "${(fullDim * 100).roundToInt()}% / ${(mediumDim * 100).roundToInt()}%, $flatLabel: ${String.format(Locale.getDefault(), "%.1f%%", flatSlope)}, $steepLabel: ${String.format(Locale.getDefault(), "%.1f%%", steepSlope)}"
     }
 
     fun formatNavigationSubtitle(
@@ -108,47 +103,30 @@ object TuningSubtitleFormatter {
         dismissSec: Int = TuningPreferencesDefaults.DEFAULT_NAVIGATION_CUE_DISMISS_DURATION_SEC,
         context: Context? = null
     ): String {
-        val effectiveDismiss = if (dismissSec in TuningPreferencesDefaults.NAVIGATION_CUE_DISMISS_OPTIONS) {
-            dismissSec
-        } else {
-            TuningPreferencesDefaults.DEFAULT_NAVIGATION_CUE_DISMISS_DURATION_SEC
-        }
-        val dismissStr = "${effectiveDismiss}s"
-        val radiusStr = DistanceFormatter().format_with_units((radiusKm * 1000f).toDouble())
-        return "$dismissStr, $radiusStr"
+        val effectiveDismiss = if (dismissSec in TuningPreferencesDefaults.NAVIGATION_CUE_DISMISS_OPTIONS) dismissSec else TuningPreferencesDefaults.DEFAULT_NAVIGATION_CUE_DISMISS_DURATION_SEC
+        return "${effectiveDismiss}s, ${DistanceFormatter().format_with_units((radiusKm * 1000f).toDouble())}"
     }
 
     fun formatSensorsGpsSubtitle(
         gpsAccuracy: Float, altitudeWindowSec: Int, slopeMinSpeed: Float, context: Context? = null
     ): String {
-        val gpsMeters = gpsAccuracy.roundToInt()
-        val speedStr = String.format(Locale.getDefault(), "%.1f m/s", slopeMinSpeed)
         val altLabel = context?.getString(R.string.tuning_sensors_alt_short) ?: "Alt"
         val speedLabel = context?.getString(R.string.tuning_sensors_speed_short) ?: "Speed"
-        return "GPS: ${gpsMeters}m, $altLabel: ${altitudeWindowSec}s, $speedLabel: $speedStr"
+        return "GPS: ${gpsAccuracy.roundToInt()}m, $altLabel: ${altitudeWindowSec}s, $speedLabel: ${String.format(Locale.getDefault(), "%.1f m/s", slopeMinSpeed)}"
     }
 
     fun formatSensorSearchSubtitle(
         numberOfSearchTries: Int, startSearchWhenAppStarts: Boolean, startSearchWhenResumeFromPaused: Boolean,
         startSearchWhenUserChangesSport: Boolean, startSearchWhenTrackingStarts: Boolean, context: Context
     ): String {
-        val anyAutoSearch = startSearchWhenAppStarts || startSearchWhenResumeFromPaused ||
-                startSearchWhenUserChangesSport || startSearchWhenTrackingStarts
-        val autoSearchStatus = if (anyAutoSearch) {
-            context.getString(R.string.tuning_sensor_search_active)
-        } else {
-            context.getString(R.string.tuning_sensor_search_disabled)
-        }
+        val anyAutoSearch = startSearchWhenAppStarts || startSearchWhenResumeFromPaused || startSearchWhenUserChangesSport || startSearchWhenTrackingStarts
+        val autoSearchStatus = context.getString(if (anyAutoSearch) R.string.tuning_sensor_search_active else R.string.tuning_sensor_search_disabled)
         return context.getString(R.string.tuning_sensor_search_subtitle, numberOfSearchTries, autoSearchStatus)
     }
 
     fun formatPhysiologyModelsSubtitle(
-        enableCogganPowerMetrics: Boolean,
-        enablePmcModel: Boolean,
-        enableAerobicEfficiencyModel: Boolean,
-        enableCriticalPowerModel: Boolean,
-        enableCardioPowerDynamics: Boolean = false,
-        context: Context
+        enableCogganPowerMetrics: Boolean, enablePmcModel: Boolean, enableAerobicEfficiencyModel: Boolean,
+        enableCriticalPowerModel: Boolean, enableCardioPowerDynamics: Boolean = false, context: Context
     ): String {
         val activeModels = buildList {
             if (enableCogganPowerMetrics) add(context.getString(R.string.tuning_physiology_coggan_short))
@@ -157,80 +135,39 @@ object TuningSubtitleFormatter {
             if (enableCriticalPowerModel) add(context.getString(R.string.tuning_physiology_cp_short))
             if (enableCardioPowerDynamics) add(context.getString(R.string.cardio_power_domain_label))
         }
-        return if (activeModels.isEmpty()) {
-            context.getString(R.string.tuning_physiology_none_enabled)
-        } else {
-            activeModels.joinToString(", ")
-        }
+        return activeModels.ifEmpty { listOf(context.getString(R.string.tuning_physiology_none_enabled)) }.joinToString(", ")
     }
 
     fun formatPhysiologyModelsSubtitle(
-        enableCogganPowerMetrics: Boolean,
-        enablePmcModel: Boolean,
-        enableAerobicEfficiencyModel: Boolean,
-        enableCriticalPowerModel: Boolean,
-        context: Context
-    ): String = formatPhysiologyModelsSubtitle(
-        enableCogganPowerMetrics = enableCogganPowerMetrics,
-        enablePmcModel = enablePmcModel,
-        enableAerobicEfficiencyModel = enableAerobicEfficiencyModel,
-        enableCriticalPowerModel = enableCriticalPowerModel,
-        enableCardioPowerDynamics = false,
-        context = context
-    )
+        enableCogganPowerMetrics: Boolean, enablePmcModel: Boolean, enableAerobicEfficiencyModel: Boolean,
+        enableCriticalPowerModel: Boolean, context: Context
+    ): String = formatPhysiologyModelsSubtitle(enableCogganPowerMetrics, enablePmcModel, enableAerobicEfficiencyModel, enableCriticalPowerModel, false, context)
 
     fun formatAftermathSubtitle(
         elevationDomain: ProfileXAxisDomain, telemetryDomain: ProfileXAxisDomain, context: Context,
         smoothingSigma: Float = TuningPreferencesDefaults.DEFAULT_ELEVATION_SMOOTHING_SIGMA_METERS
     ): String {
-        val elevStr = if (elevationDomain == ProfileXAxisDomain.DISTANCE) {
-            context.getString(R.string.tuning_profile_x_axis_distance)
-        } else {
-            context.getString(R.string.tuning_profile_x_axis_time)
-        }
-        val telemStr = if (telemetryDomain == ProfileXAxisDomain.DISTANCE) {
-            context.getString(R.string.tuning_profile_x_axis_distance)
-        } else {
-            context.getString(R.string.tuning_profile_x_axis_time)
-        }
-        val elevPrefix = context.getString(R.string.tuning_profile_x_axis_title)
-        val telemPrefix = context.getString(R.string.tuning_telemetry_x_axis_title)
-        return "$elevPrefix: $elevStr | $telemPrefix: $telemStr | \u03c3: ${smoothingSigma.roundToInt()}m"
+        val elevStr = context.getString(if (elevationDomain == ProfileXAxisDomain.DISTANCE) R.string.tuning_profile_x_axis_distance else R.string.tuning_profile_x_axis_time)
+        val telemStr = context.getString(if (telemetryDomain == ProfileXAxisDomain.DISTANCE) R.string.tuning_profile_x_axis_distance else R.string.tuning_profile_x_axis_time)
+        return "${context.getString(R.string.tuning_profile_x_axis_title)}: $elevStr | ${context.getString(R.string.tuning_telemetry_x_axis_title)}: $telemStr | \u03c3: ${smoothingSigma.roundToInt()}m"
     }
 
     @Deprecated("Use formatAftermathSubtitle(elevationDomain, telemetryDomain, context)")
     fun formatAftermathSubtitle(domain: ProfileXAxisDomain, context: Context): String {
-        val domainName = if (domain == ProfileXAxisDomain.DISTANCE) {
-            context.getString(R.string.tuning_profile_x_axis_distance)
-        } else {
-            context.getString(R.string.tuning_profile_x_axis_time)
-        }
-        val prefix = context.getString(R.string.tuning_profile_x_axis_title)
-        return "$prefix: $domainName"
+        val domainName = context.getString(if (domain == ProfileXAxisDomain.DISTANCE) R.string.tuning_profile_x_axis_distance else R.string.tuning_profile_x_axis_time)
+        return "${context.getString(R.string.tuning_profile_x_axis_title)}: $domainName"
     }
 
     fun formatWorkoutMatrixSubtitle(
         cardPrefs: WorkoutCardSectionPreferences, detailPrefs: WorkoutDetailPreferences, context: Context
     ): String {
-        val listCount = listOf(
-            cardPrefs.showDescription, cardPrefs.showExtrema, cardPrefs.showLaps, cardPrefs.showStrava,
-            cardPrefs.showMapPreview, cardPrefs.showElevationProfile, cardPrefs.showTelemetryCharts, cardPrefs.showZoneAnalysis
-        ).count { it }
-
-        val detailCount = listOf(
-            detailPrefs.showDescription, detailPrefs.showExtrema, detailPrefs.showLaps, detailPrefs.showStrava,
-            detailPrefs.showMap, detailPrefs.showElevationProfile, detailPrefs.showTelemetryCharts, detailPrefs.showZoneAnalysis
-        ).count { it }
-
+        val listCount = listOf(cardPrefs.showDescription, cardPrefs.showExtrema, cardPrefs.showLaps, cardPrefs.showStrava, cardPrefs.showMapPreview, cardPrefs.showElevationProfile, cardPrefs.showTelemetryCharts, cardPrefs.showZoneAnalysis).count { it }
+        val detailCount = listOf(detailPrefs.showDescription, detailPrefs.showExtrema, detailPrefs.showLaps, detailPrefs.showStrava, detailPrefs.showMap, detailPrefs.showElevationProfile, detailPrefs.showTelemetryCharts, detailPrefs.showZoneAnalysis).count { it }
         return context.getString(R.string.tuning_summary_matrix_format, listCount, detailCount)
     }
 
     fun formatWorkoutMasksSubtitle(cardPrefs: WorkoutCardSectionPreferences, context: Context): String {
-        val activeCards = listOf(
-            cardPrefs.showDescription, cardPrefs.showExtrema, cardPrefs.showLaps, cardPrefs.showStrava,
-            cardPrefs.showMapPreview, cardPrefs.showElevationProfile, cardPrefs.showTelemetryCharts, cardPrefs.showZoneAnalysis
-        ).count { it }
-
+        val activeCards = listOf(cardPrefs.showDescription, cardPrefs.showExtrema, cardPrefs.showLaps, cardPrefs.showStrava, cardPrefs.showMapPreview, cardPrefs.showElevationProfile, cardPrefs.showTelemetryCharts, cardPrefs.showZoneAnalysis).count { it }
         return context.getString(R.string.tuning_summary_masks_cards_format, activeCards)
     }
 
@@ -244,54 +181,75 @@ object TuningSubtitleFormatter {
         useSportTypeForClustering: Boolean, useAltitudePosForClustering: Boolean, isImperial: Boolean, context: Context
     ): String {
         val locale = Locale.getDefault()
-        val endLabel = context.getString(R.string.tuning_cluster_end_short)
-        val apexLabel = context.getString(R.string.tuning_cluster_apex_short)
-        val distLabel = context.getString(R.string.tuning_cluster_dist_short)
-        val altLabel = context.getString(R.string.tuning_cluster_alt_short)
-
-        fun formatTolerance(meters: Float): String {
-            return if (isImperial) {
-                val distUnit = context.getString(R.string.units_distance_imperial)
-                val multiplier = (1.0 / BANALService.METER_PER_MILE).toFloat()
-                String.format(locale, "%.3f%s", meters * multiplier, distUnit)
-            } else {
-                if (meters <= 1000f) {
-                    val mUnit = context.getString(R.string.units_distance_basic)
-                    "${meters.roundToInt()} $mUnit"
-                } else {
-                    val distUnit = context.getString(R.string.units_distance_metric)
-                    String.format(locale, "%.3f%s", meters * 0.001f, distUnit)
-                }
-            }
+        fun formatTolerance(meters: Float): String = if (isImperial) {
+            String.format(locale, "%.3f%s", meters * (1.0 / BANALService.METER_PER_MILE).toFloat(), context.getString(R.string.units_distance_imperial))
+        } else if (meters <= 1000f) {
+            "${meters.roundToInt()} ${context.getString(R.string.units_distance_basic)}"
+        } else {
+            String.format(locale, "%.3f%s", meters * 0.001f, context.getString(R.string.units_distance_metric))
         }
-
         val endStr = formatTolerance(endpointTolerance)
         val apexStr = formatTolerance(apexTolerance)
         val distPctStr = "${(distanceTolerance * 100).roundToInt()}%"
-
         return if (useAltitudePosForClustering) {
-            val altStr = formatTolerance(altitudePositionTolerance)
-            "$endLabel: $endStr · $apexLabel: $apexStr · $distLabel: $distPctStr · $altLabel: $altStr"
+            "${context.getString(R.string.tuning_cluster_end_short)}: $endStr · ${context.getString(R.string.tuning_cluster_apex_short)}: $apexStr · ${context.getString(R.string.tuning_cluster_dist_short)}: $distPctStr · ${context.getString(R.string.tuning_cluster_alt_short)}: ${formatTolerance(altitudePositionTolerance)}"
         } else {
-            "$endLabel: $endStr · $apexLabel: $apexStr · $distLabel: $distPctStr"
+            "${context.getString(R.string.tuning_cluster_end_short)}: $endStr · ${context.getString(R.string.tuning_cluster_apex_short)}: $apexStr · ${context.getString(R.string.tuning_cluster_dist_short)}: $distPctStr"
         }
     }
 
-    /**
-     * Formats live active Auto-Pause threshold and debounce values for the collapsible accordion header (REQ-SET-080.6).
-     */
     fun formatAutoPauseSubtitle(
-        speedThreshold: Int,
-        speedUnit: String,
-        debounceSec: Int,
-        resumeDebounceSec: Int,
+        speedThreshold: Int, speedUnit: String, debounceSec: Int, resumeDebounceSec: Int, context: Context
+    ): String = context.getString(
+        R.string.tuning_auto_pause_subtitle_format,
+        context.getString(R.string.tuning_speed_value_format, speedThreshold, speedUnit),
+        context.getString(R.string.tuning_seconds_value_format, debounceSec),
+        context.getString(R.string.tuning_seconds_value_format, resumeDebounceSec)
+    )
+
+    /**
+     * Formats live active Radar edge, alert mode, tail light mode, and traffic simulator status (REQ-UI-512, ATT-6702).
+     */
+    fun formatCyclingRadarSubtitle(
+        edgeSide: RadarEdgeSide,
+        alertMode: RadarAudioAlertMode,
+        lightMode: RadarLightMode,
+        isRunning: Boolean = RadarTrafficSimulator.isSimulating,
+        scenario: RadarScenario? = RadarTrafficSimulator.activeScenario,
         context: Context
     ): String {
-        val speedStr = context.getString(R.string.tuning_speed_value_format, speedThreshold, speedUnit)
-        val pauseStr = context.getString(R.string.tuning_seconds_value_format, debounceSec)
-        val resumeStr = context.getString(R.string.tuning_seconds_value_format, resumeDebounceSec)
-        return context.getString(R.string.tuning_auto_pause_subtitle_format, speedStr, pauseStr, resumeStr)
+        return if (isRunning) {
+            val scenarioName = when (scenario) {
+                RadarScenario.SINGLE_CAR -> context.getString(R.string.radar_scenario_single_car)
+                RadarScenario.CONVOY -> context.getString(R.string.radar_scenario_convoy)
+                RadarScenario.HIGH_SPEED -> context.getString(R.string.radar_scenario_high_speed)
+                RadarScenario.DISCONNECT_RECONNECT -> context.getString(R.string.radar_scenario_disconnect)
+                RadarScenario.COUNTRY_ROAD_LOOP -> context.getString(R.string.radar_scenario_country_road)
+                null -> ""
+            }
+            val runningLabel = context.getString(R.string.radar_simulator_running)
+            if (scenarioName.isNotEmpty()) "$runningLabel • $scenarioName" else runningLabel
+        } else {
+            val edgeStr = context.getString(if (edgeSide == RadarEdgeSide.LEFT) R.string.radar_overlay_edge_left else R.string.radar_overlay_edge_right)
+            val alertStr = when (alertMode) {
+                RadarAudioAlertMode.ALL_ALERTS -> context.getString(R.string.radar_alert_mode_all)
+                RadarAudioAlertMode.APPROACH_AND_FAST -> context.getString(R.string.radar_alert_mode_approach_fast)
+                RadarAudioAlertMode.FAST_ONLY -> context.getString(R.string.radar_alert_mode_fast_only)
+                RadarAudioAlertMode.MUTED -> context.getString(R.string.radar_alert_mode_muted)
+            }
+            "$edgeStr · $alertStr · ${context.getString(lightMode.titleResId)}"
+        }
     }
+
+    fun formatCyclingRadarSubtitle(config: TuningConfig, context: Context): String =
+        formatCyclingRadarSubtitle(
+            edgeSide = config.radarEdgeSide,
+            alertMode = config.radarAudioAlertMode,
+            lightMode = config.radarLightDefaultMode,
+            isRunning = RadarTrafficSimulator.isSimulating,
+            scenario = RadarTrafficSimulator.activeScenario,
+            context = context
+        )
 }
 
 /**
@@ -321,7 +279,6 @@ fun TuningAccordionSection(
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
-            // Header Row (Clickable)
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -330,7 +287,6 @@ fun TuningAccordionSection(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(14.dp)
             ) {
-                // Category Leading Icon
                 Icon(
                     imageVector = icon,
                     contentDescription = null,
@@ -338,7 +294,6 @@ fun TuningAccordionSection(
                     modifier = Modifier.size(24.dp)
                 )
 
-                // Title & Subtitle Column
                 Column(
                     modifier = Modifier.weight(1f),
                     verticalArrangement = Arrangement.spacedBy(2.dp)
@@ -356,7 +311,6 @@ fun TuningAccordionSection(
                     )
                 }
 
-                // Trailing Animated Chevron
                 Icon(
                     imageVector = Icons.Default.ExpandMore,
                     contentDescription = null,
@@ -367,7 +321,6 @@ fun TuningAccordionSection(
                 )
             }
 
-            // Animated Collapsible Content
             AnimatedVisibility(
                 visible = isExpanded,
                 enter = expandVertically(),
@@ -405,4 +358,3 @@ fun TuningGroupSubheader(
             .padding(horizontal = 4.dp, vertical = 4.dp)
     )
 }
-

@@ -8211,3 +8211,22 @@
 
 
 
+
+
+### TST-UI-512: **Radar Accordion Section, Dynamic Subtitle & Modularity Verification Suite** [Verified]
+- **Target Release**: `V5.0.0`
+- **Requirement(s)**: `REQ-UI-512`
+- **Component**: `AdvancedTuningAccordion.kt`, `AdvancedTuningScreen.kt`, `AdvancedTuningDialog.kt`, `RadarSettingsSection.kt`, `strings_radar.xml`
+- **Jira**: `ATT-6702`
+- **Test Description**:
+  1. *Radar Accordion Section & Dynamic Subtitle Test (`TST-UI-512.1`, `RadarAccordionSectionTest.kt`)*:
+  • Verify `TuningSection.CYCLING_RADAR` enum presence, ordering in Block 2, and non-null title string resource.
+  • Verify `TuningSubtitleFormatter.formatCyclingRadarSubtitle` produces expected summaries for idle states (edge, alert mode, tail light) and running simulation states.
+  • Verify `RadarSettingsSection` renders stably with `TuningPreferencesDataStore`.
+  2. *Tuning Package File Size Modularity Test (`TST-UI-512.2`, `AdvancedTuningModularityTest.kt`)*:
+  • Verify all `.kt` files in `ui/settings/tuning/` remain strictly $< 400$ lines.
+  3. *9-Language Localization Parity Audit (`TST-UI-512.3`)*:
+  • Assert 100% presence of `tuning_cat_cycling_radar` across all 9 language folders (`values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`).
+  4. *Tier 1 Targeted Unit Test Regression Suite (`TST-UI-512.4`)*:
+  • Execute targeted test suite (`./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.settings.tuning.*"`).
+  • Assert 100% pass rate.
