@@ -2383,40 +2383,40 @@ The workflow SHALL mandate that:
 - **Invariants**: All existing SWE.2 contract assertions in `AspiceSweAuditContractTest` remain satisfied; zero changes to production code in `app/src/main/`.
 
 ### REQ-PRO-044: ASPICE SWE.2 Software Interface Specification (IF-SWE-01..IF-SWE-08) [Verified]
-- **Tests**: `TST-PRO-044` | **Tickets**: `ATT-6180`
+- **Tests**: `TST-PRO-044` | **Tickets**: `ATT-6180, ATT-6732`
 - **Implementation**: `docs/architecture/interfaces.md`, `docs/architecture.md`, `AspiceSweAuditContractTest.kt`
-- **Rationale**: While `docs/architecture.md` defines high-level architectural subsystems and dynamic models (SWE.2 BP1, BP3, BP4), it lacks formal software interface specifications (SWE.2 BP2). Defining operations, data schemas, threading contracts, and error protocols across all 8 architectural boundaries (`IF-SWE-01` through `IF-SWE-08`) eliminates integration ambiguity (Finding C-06) and fulfills ASPICE Level 2 requirements (ATT-6180, refining `REQ-PRO-034` under Epic `ATT-6142`):
+- **Rationale**: While `docs/architecture.md` defines high-level architectural subsystems and dynamic models (SWE.2 BP1, BP3, BP4), it lacks formal software interface specifications (SWE.2 BP2). Defining operations, data schemas, threading contracts, and error protocols across all 8 architectural boundaries (`IF-SWE-01` through `IF-SWE-08`) eliminates integration ambiguity (Finding C-06) and fulfills ASPICE Level 2 requirements (ATT-6180, refining `REQ-PRO-034` under Epic `ATT-6142`). In ATT-6732, all interface definitions are code-grounded against `app/src/main/` to eliminate hallucinated methods, synthetic DTOs/classes, and false Retrofit dependency claims:
 - **Description**:
   1. *Formal Interface Specification Document (`REQ-PRO-044.1`, interfaces.md)*:
-     • The architecture repository SHALL maintain `docs/architecture/interfaces.md` specifying all 8 software interface families:
-       - `IF-SWE-01`: UI to ViewModel (Compose MVI, immutable StateFlow, Action events, Main thread).
-       - `IF-SWE-02`: ViewModel to Repository (Suspend coroutines, StateFlow streams, IO thread).
+     • The architecture repository SHALL maintain `docs/architecture/interfaces.md` specifying all 8 software interface families with 100% code-grounded declarations matching `app/src/main/`:
+       - `IF-SWE-01`: UI to ViewModel (Compose MVI, immutable StateFlow (`TrackingScreenState`, `TrackingMapState`, `AftermathMapUIState`), Action events / methods (`updateScreenMode`, `onStartTracking`, `onPauseTracking`), Main thread).
+       - `IF-SWE-02`: ViewModel to Repository (Suspend coroutines, StateFlow streams (`WorkoutData?`, `StateFlow<List<WorkoutData>>`, `BANALServiceRepository.allFilteredSensorData`), IO thread).
        - `IF-SWE-03`: TrackerService to BANALService (Local Binder BANALServiceComm, IPC broadcast intents, Null-safety guards).
        - `IF-SWE-04`: Hardware to Services (BLE BluetoothGattCallback, ANT+ AntPluginPcc, Fused Location / GPS LocationListener).
-       - `IF-SWE-05`: Services/Repos to Domain Engines (Pure JVM calculations, AutoPause, Skiba W'bal, DBSCAN Clustering, Climbs).
-       - `IF-SWE-06`: TrackerService to SQLite Databases (1-Hz time-series batch insertion, WAL mode, transaction isolation).
-       - `IF-SWE-07`: Repository to Exporters (FIT streaming binary writer, XML GPX/TCX serializers, Dispatchers.IO).
-       - `IF-SWE-08`: Repository to Cloud APIs & Health Connect (Retrofit Strava REST, Dropbox SDK, Health Connect Client).
+       - `IF-SWE-05`: Services/Repos to Domain Engines (Pure JVM calculations, `AutoPauseManager.evaluateTick`, `PowerPhysiologyCalculator.calculateNormalizedPower`, `PowerHrDynamicsCalculator.calculate`, `WorkoutClusterEngine.suggestCluster` / `findApexFromPoints`).
+       - `IF-SWE-06`: TrackerService to SQLite Databases (1-Hz time-series batch insertion, WAL mode, transaction isolation, `WorkoutSamplesDatabaseManager`, `WorkoutSummariesDatabaseManager`, `WorkoutClusterDatabaseManager`, `WorkoutRepository.recordLiveSample`).
+       - `IF-SWE-07`: Repository to Exporters (`FitFileWriter`, `TCXFileWriter`, `GPXFileWriter` extending `BaseFileWriter`/`BaseExporter` via `export(exportInfo: ExportInfo)`).
+       - `IF-SWE-08`: Repository to Cloud APIs & Health Connect (OkHttp Strava REST multipart, Dropbox SDK `DropboxUploader`, `HealthConnectManager.syncWorkout`, `HealthConnectHrvImporter.importRecentHrv`).
      • Each interface specification SHALL define: Interface ID, Provider, Consumer, Operation / Method Signatures, Data Schema / Payloads, Concurrency / Threading Rules, and Error Handling / Fallback Protocols.
   2. *Architecture Master Summary Integration (`REQ-PRO-044.2`)*:
-     • `docs/architecture.md` Section 5 SHALL integrate an Interface Specification Matrix referencing `IF-SWE-01` through `IF-SWE-08` and linking to `docs/architecture/interfaces.md`.
+     • `docs/architecture.md` Section 5 SHALL integrate an Interface Specification Matrix referencing `IF-SWE-01` through `IF-SWE-08` and linking to `docs/architecture/interfaces.md`, with authentic component names (`TrackOnMapAftermathViewModel`) and dependency reality (`REST (OkHttp) & HealthConnectClient`).
   3. *Automated Interface Conformance Contract (`REQ-PRO-044.3`)*:
-     • `AspiceSweAuditContractTest.kt` SHALL assert that `docs/architecture/interfaces.md` and `docs/architecture.md` define and document all 8 interface identifiers (`IF-SWE-01` through `IF-SWE-08`) with mandatory contract attributes (Provider, Consumer, Threading, Error Handling).
+     • `AspiceSweAuditContractTest.kt` SHALL assert that `docs/architecture/interfaces.md` and `docs/architecture.md` define and document all 8 interface identifiers (`IF-SWE-01` through `IF-SWE-08`) with mandatory contract attributes (Provider, Consumer, Threading, Error Handling), and SHALL dynamically verify that interface methods (`fun <name>(`) and component/DTO types resolve to real source declarations in `app/src/main/` (allowing standard framework types).
 - **Requirement Archaeology & Chesterton's Fence Audit**:
-  1. *Original Requirement ID & Target*: Net-new requirement `REQ-PRO-044` (*ASPICE SWE.2 Software Interface Specification*), refining `REQ-PRO-034` (*SWE.1/2/4/6 Hardening*) and `REQ-PRO-043` (*Architecture Resynchronization*). Targets `docs/architecture/interfaces.md`, `docs/architecture.md`, and `AspiceSweAuditContractTest.kt`.
-  2. *Historical Origin & Commit Trace*: Independent ASPICE pre-assessment finding C-06 (2026-11-08) flagged absent interface definitions for inter-subsystem arrows in architecture diagrams.
-  3. *Root Reason for Existing Formulation*: Architectural diagrams were initially prioritized for high-level block understanding; interface contracts remained implicit in source code signatures.
-  4. *Preservation of Core Invariants*: Existing SWE.2 base practices (`BP.1`, `BP.3`, `BP.4`, `BP.5`), Mermaid dynamic diagrams, 9-domain allocation table, and 100% build contract test pass rate remain preserved.
+  1. *Original Requirement ID & Target*: `REQ-PRO-044` (*ASPICE SWE.2 Software Interface Specification IF-SWE-01..IF-SWE-08*), refining `REQ-PRO-034` (*SWE.1/2/4/6 Hardening*) under Epic `ATT-6142`. Targets `docs/architecture/interfaces.md`, `docs/architecture.md` Section 5, and `AspiceSweAuditContractTest.kt`.
+  2. *Historical Origin & Commit Trace*: Introduced in Sprint 2026-46.1 under ticket ATT-6180 to address ASPICE pre-assessment finding C-06 (*absent software interface definitions for inter-subsystem boundaries*); updated under ATT-6732 to eliminate hallucinated signatures and false Retrofit claim.
+  3. *Root Reason for Existing Formulation*: ATT-6180 drafted initial specifications based on conceptual abstractions rather than direct AST extraction from live sources, inadvertently generating synthetic method names (`findOrCreateCluster`, `writeFitFile`), placeholder DTOs (`WorkoutDetailScreen`, `ClustersDatabaseManager`), and assuming a standard Android Retrofit stack.
+  4. *Preservation of Core Invariants*: Correcting interface specifications preserves all SWE.2 architectural boundaries, Mermaid diagrams, subsystem allocations, and 100% test pass rate while eliminating specification drift and guaranteeing zero production runtime bytecode changes.
 - **Acceptance Criteria (Given-When-Then)**:
   • *Given* `docs/architecture/interfaces.md`,
-  • *When* validated against SWE.2 BP2 criteria,
-  • *Then* all 8 interface families (`IF-SWE-01` through `IF-SWE-08`) SHALL be fully specified with operations, schemas, threading, and error protocols.
+  • *When* validated against SWE.2 BP2 criteria and code grounding,
+  • *Then* all 8 interface families (`IF-SWE-01` through `IF-SWE-08`) SHALL be fully specified with operations, schemas, threading, and error protocols matching authentic classes, DTOs, and method signatures in `app/src/main/`, with zero references to `Retrofit`.
   • *Given* `docs/architecture.md`,
   • *When* inspected,
-  • *Then* Section 5 SHALL contain an interface matrix referencing all 8 interfaces.
+  • *Then* Section 5 SHALL contain an interface matrix referencing all 8 interfaces with authentic components (`TrackOnMapAftermathViewModel`, `REST (OkHttp) & HealthConnectClient`).
   • *Given* `AspiceSweAuditContractTest.kt`,
   • *When* executed as part of the unit test suite,
-  • *Then* interface contract assertions SHALL pass with 100% success.
+  • *Then* interface contract assertions SHALL dynamically verify that interface methods (`fun <name>(`) and component/DTO types exist in `app/src/main/` (allowing framework types), passing with 100% success.
 - **Invariants**: Zero modifications to Android production code in `app/src/main/`; existing SWE.2 contract assertions remain satisfied.
 
 

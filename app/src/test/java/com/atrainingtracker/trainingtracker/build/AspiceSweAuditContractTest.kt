@@ -298,6 +298,104 @@ class AspiceSweAuditContractTest {
     }
 
     /**
+     * Asserts that all documented interface methods, classes, and DTOs in interfaces.md are 100% grounded in real production code (REQ-PRO-044.3, TST-PRO-044.4).
+     */
+    @Test
+    fun testArchitectureDocument_softwareInterfaceGrounding() {
+        val interfacesFile = findRepoRootFile("docs/architecture/interfaces.md")
+        val interfacesContent = interfacesFile.readText()
+        val archFile = findRepoRootFile("docs/architecture.md")
+        val archContent = archFile.readText()
+
+        // 1. Negative tripwires: No Retrofit, no hallucinated classes/DTOs
+        assertFalse("interfaces.md must not reference Retrofit (REQ-PRO-044)", interfacesContent.contains("Retrofit"))
+        assertFalse("architecture.md must not reference Retrofit (REQ-PRO-044)", archContent.contains("Retrofit"))
+        val forbiddenTokens = listOf(
+            "ClustersDatabaseManager",
+            "TrackingUiState",
+            "AftermathUiState",
+            "LocationUiState",
+            "ExtremaValues",
+            "WorkoutDetailScreen"
+        )
+        for (token in forbiddenTokens) {
+            assertFalse("interfaces.md must not contain hallucinated symbol '$token'", interfacesContent.contains(token))
+        }
+        assertFalse(
+            "interfaces.md must not contain standalone AftermathViewModel (use TrackOnMapAftermathViewModel)",
+            Regex("""\bAftermathViewModel\b""").containsMatchIn(interfacesContent)
+        )
+        assertFalse(
+            "architecture.md must not contain standalone AftermathViewModel (use TrackOnMapAftermathViewModel)",
+            Regex("""\bAftermathViewModel\b""").containsMatchIn(archContent)
+        )
+
+        // 2. Index all source files in app/src/main
+        val srcMainDir = findRepoRootFile("app/src/main")
+        val sourceFiles = srcMainDir.walkTopDown().filter { it.isFile && (it.extension == "kt" || it.extension == "java") }.toList()
+        assertTrue("app/src/main must contain production source files", sourceFiles.isNotEmpty())
+        val allSources = sourceFiles.map { it.readText() }
+
+        // 3. Dynamic Method Extraction: fun <name>(
+        val methodPattern = Regex("""\bfun\s+([a-zA-Z0-9_]+)\s*\(""")
+        val extractedMethods = methodPattern.findAll(interfacesContent).map { it.groupValues[1] }.toSet()
+        assertTrue("Must extract documented interface methods from interfaces.md", extractedMethods.isNotEmpty())
+
+        val ungroundedMethods = mutableListOf<String>()
+        for (methodName in extractedMethods) {
+            val methodRegex = Regex("""\b(fun\s+$methodName\s*[\(<]|(public|protected|private|static)\s+[\w<>,\s\[\]]+\s+$methodName\s*\()""")
+            val found = allSources.any { methodRegex.containsMatchIn(it) }
+            if (!found) {
+                ungroundedMethods.add(methodName)
+            }
+        }
+        assertTrue(
+            "All documented interface methods must exist in app/src/main/. Ungrounded: $ungroundedMethods",
+            ungroundedMethods.isEmpty()
+        )
+
+        // 4. Dynamic Component/DTO Type Extraction from Provider, Consumer, and Data Payloads lines
+        val typePattern = Regex("""`([A-Z][a-zA-Z0-9_]+)`""")
+        val frameworkAllowlist = setOf(
+            "Context", "File", "Location", "LocationListener", "BluetoothGattCallback",
+            "AntPluginPcc", "IPluginAccessResultReceiver", "OutputStream", "Writer",
+            "HealthConnectClient", "ExerciseSessionRecord", "ContentValues", "StateFlow",
+            "Flow", "Intent", "Result", "Double", "Long", "Int", "Boolean", "Float",
+            "String", "List", "Map", "Set", "Pair", "Unit"
+        )
+
+        val extractedTypes = mutableSetOf<String>()
+        interfacesContent.lineSequence().forEach { line ->
+            val trimmed = line.trim()
+            if (trimmed.startsWith("* **Provider**:") ||
+                trimmed.startsWith("* **Consumer**:") ||
+                trimmed.startsWith("* **Data Payloads / Schemas**:")
+            ) {
+                typePattern.findAll(trimmed).forEach { match ->
+                    val typeName = match.groupValues[1]
+                    if (!frameworkAllowlist.contains(typeName)) {
+                        extractedTypes.add(typeName)
+                    }
+                }
+            }
+        }
+        assertTrue("Must extract component and DTO types from interfaces.md", extractedTypes.isNotEmpty())
+
+        val ungroundedTypes = mutableListOf<String>()
+        for (typeName in extractedTypes) {
+            val typeRegex = Regex("""\b(class|interface|enum\s+class|object|typealias|fun)\s+$typeName\b""")
+            val found = allSources.any { typeRegex.containsMatchIn(it) }
+            if (!found) {
+                ungroundedTypes.add(typeName)
+            }
+        }
+        assertTrue(
+            "All documented component and DTO types must exist in app/src/main/. Ungrounded: $ungroundedTypes",
+            ungroundedTypes.isEmpty()
+        )
+    }
+
+    /**
      * Asserts that the software integration verification strategy is formally specified in accordance with ASPICE SWE.5.BP1 (REQ-PRO-045, TST-PRO-045).
      */
     @Test

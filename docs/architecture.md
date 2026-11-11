@@ -241,14 +241,14 @@ In accordance with **ASPICE SWE.2 Base Practice 2 (Specify interfaces of softwar
 
 | Interface ID | Boundary | Provider Element | Consumer Element | Protocol / Mechanism | Threading Contract |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| `IF-SWE-01` | UI $\to$ ViewModel | ViewModels (`TrackingViewModel`, `AftermathViewModel`) | Jetpack Compose Composables | Unidirectional MVI / `StateFlow` | `Dispatchers.Main` |
+| `IF-SWE-01` | UI $\to$ ViewModel | ViewModels (`TrackingViewModel`, `TrackOnMapAftermathViewModel`) | Jetpack Compose Composables | Unidirectional MVI / `StateFlow` | `Dispatchers.Main` |
 | `IF-SWE-02` | ViewModel $\to$ Repository | Repositories (`WorkoutRepository`, `BANALServiceRepository`) | ViewModels | Asynchronous Coroutines (`suspend fun`) | `Dispatchers.IO` |
 | `IF-SWE-03` | Inter-Service Ingestion | `BANALServiceComm` (Local Binder on `BANALService`) | `TrackerService` | Android Local Binder IPC & Broadcasts | Service Thread / Binder Pool |
 | `IF-SWE-04` | Hardware $\to$ Services | Hardware HAL (BLE Gatt, ANT+ Plugin, Location Provider) | `BANALService`, `TrackerService` | System Callbacks (`onCharacteristicChanged`) | Hardware Callback Thread |
 | `IF-SWE-05` | Service/Repo $\to$ Domain | Domain Calculators (`AutoPauseManager`, `ClimbDetector`) | Services & Repositories | Pure JVM Synchronous Methods | Caller Thread (`Dispatchers.IO`) |
 | `IF-SWE-06` | Service/Repo $\to$ SQLite | Database Managers (`WorkoutSamplesDatabaseManager`) | `TrackerService`, Repositories | SQLite WAL Mode & Synchronized Transactions | `dbDispatcher` / `Dispatchers.IO` |
 | `IF-SWE-07` | Repository $\to$ Exporters | Exporters (`FitFileWriter`, `GPXFileWriter`, `TCXFileWriter`) | `ExportManager`, `WorkoutRepository` | Streaming File Writers & Serializers | `Dispatchers.IO` (WorkManager) |
-| `IF-SWE-08` | Repository $\to$ Cloud APIs | Cloud Endpoints (`StravaUploader`, `HealthConnectManager`, `HealthConnectHrvImporter`) | `ExportManager`, UI Controllers, `HrvReadinessRepository` | REST (OkHttp/Retrofit) & HealthConnectClient | `Dispatchers.IO` (WorkManager) |
+| `IF-SWE-08` | Repository $\to$ Cloud APIs | Cloud Endpoints (`StravaUploader`, `HealthConnectManager`, `HealthConnectHrvImporter`) | `ExportManager`, UI Controllers, `HrvReadinessRepository` | REST (OkHttp) & HealthConnectClient | `Dispatchers.IO` (WorkManager) |
 
 For comprehensive operation signatures, payload schemas, concurrency rules, and fault-tolerance protocols, see the authoritative specification in [`docs/architecture/interfaces.md`](architecture/interfaces.md).
 
