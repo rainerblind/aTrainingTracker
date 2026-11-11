@@ -87,7 +87,7 @@
     <string name="radar_alert_speaker_boost_desc">Substitui temporariamente o volume baixo do alto-falante em alertas</string>
     <string name="radar_alert_route_title">Saída de áudio</string>
     <string name="radar_alert_route_default">Sistema / Fones de ouvido</string>
-    <string name="radar_alert_route_speaker">Forçar alto-falante do celular</string>
+    <string name="radar_alert_route_speaker">Alto-falante do celular</string>
     <string name="radar_alert_haptic_title">Vibração tátil</string>
     <string name="radar_alert_haptic_desc">Vibrar na aproximação de veículos e mudanças de ameaça</string>
 

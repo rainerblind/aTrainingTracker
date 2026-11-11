@@ -87,7 +87,7 @@
     <string name="radar_alert_speaker_boost_desc">警告時にスマホの控えめなスピーカー音量を一時的に増幅します</string>
     <string name="radar_alert_route_title">音声出力先</string>
     <string name="radar_alert_route_default">システム / ヘッドホン</string>
-    <string name="radar_alert_route_speaker">スマホのスピーカーを強制</string>
+    <string name="radar_alert_route_speaker">スマホのスピーカー</string>
     <string name="radar_alert_haptic_title">触覚バイブレーション</string>
     <string name="radar_alert_haptic_desc">車両接近および脅威変化時に振動します</string>
 

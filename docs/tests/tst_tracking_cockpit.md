@@ -1930,23 +1930,28 @@
 ### TST-TRK-063: **Radar Audio Chime and Haptic Alert Engine Test Suite** [Verified]
 - **Requirement(s)**: `REQ-TRK-063` (`REQ-TRK-063.1`..`REQ-TRK-063.7`)
 - **Component**: `RadarAlertManager.kt`, `RadarAudioSynthesizer.kt`, `TrackerService.kt`, `TuningPreferencesDataStore.kt`, `RadarSettingsSection.kt`, `strings_radar.xml`
-- **Jira**: `ATT-5086`, `ATT-6709`
+- **Jira**: `ATT-5086`, `ATT-6709`, `ATT-6705`
 - **Test Description**:
   1. *Threat Transition & Debounce Unit Tests (`TST-TRK-063.1`, `RadarAlertManagerTest.kt`)*:
   • Verify audio chime and vibration triggers on `NONE -> APPROACHING`, escalation to `FAST_APPROACHING`, all-clear `-> NONE`, and disconnect `-> DISCONNECTED_ERROR`. Verify debouncing prevents repeated chimes on continuous 8 Hz range telemetry.
+  • Verify `FAST_APPROACHING` escalation occurring within `< 800 ms` of initial approach is NOT debounced, immediately triggers the fast-threat chime and vibration, and debounced non-escalating frames do not mutate `lastThreatLevel`.
   • Verify `FAST_APPROACHING` escalation selects the target with highest approach speed to drive alert pitch and spatial panning when multiple targets exist.
   2. *PCM Audio Synthesis & MODE_STATIC Replay Tests (`TST-TRK-063.2`, `RadarAudioSynthesizerTest.kt`)*:
   • Verify multi-tone PCM wave generation (non-empty byte arrays, 16-bit signed PCM within [-1.0, 1.0]), `USAGE_MEDIA` AudioAttributes, and warm `MODE_STATIC` replay (`pause()`, `playbackHeadPosition = 0`, `play()`).
   3. *Independent Volume Boost & Safe Restoration Tests (`TST-TRK-063.3`, `RadarAlertManagerTest.kt`)*:
-  • Verify saving everyday stream volume, boosting hardware volume during chime playback with `flags = 0`, and guaranteed auto-restoration in `finally` and service `onDestroy()`.
+  • Verify saving everyday stream volume, boosting hardware volume during chime playback with `flags = 0`, and guaranteed auto-restoration in `finally`, on `stop()`, and service `onDestroy()`.
+  • Verify speaker boost activates when audio routes to `SYSTEM_DEFAULT` and no external wired/Bluetooth headphones are connected (`isHeadphonesOrBluetoothConnected() == false`).
+  • Verify `stop()` removes pending `restoreRunnable` callbacks on the handler.
   4. *Transient Audio Ducking Tests (`TST-TRK-063.4`, `RadarAlertManagerTest.kt`)*:
   • Verify `AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK` request before playback and immediate abandonment on chime completion.
   5. *Audio Device Routing Tests (`TST-TRK-063.5`, `RadarAudioSynthesizerTest.kt`)*:
   • Verify `AudioTrack.setPreferredDevice()` sets `TYPE_BUILTIN_SPEAKER` when forced, and `null` for system default / connected headphones.
-  6. *TuningPreferencesDataStore Alert Preferences Tests (`TST-TRK-063.6`, `TuningPreferencesDataStoreTest.kt`)*:
+  6. *TuningPreferencesDataStore Alert Preferences & Reactive Caching Tests (`TST-TRK-063.6`, `TuningPreferencesDataStoreTest.kt`, `RadarAlertManagerTest.kt`)*:
   • Verify defaults and DataStore persistence for alert mode, volume, speaker boost, audio route, and haptic vibration.
-  7. *9-Language Localization Parity Test (`TST-TRK-063.7`, `TranslationParityTest.kt`)*:
+  • Verify `RadarAlertManager` collects `tuningConfigFlow` reactively and caches configuration without per-frame DataStore queries on 8 Hz telemetry.
+  7. *9-Language Localization Parity & Compact Segmented Controls (`TST-TRK-063.7`, `TranslationParityTest.kt`)*:
   • Verify 100% key and format parity across `strings_radar.xml` in all 9 supported locales (`values`, `values-de`, `values-es`, `values-fr`, `values-it`, `values-ja`, `values-nl`, `values-pl`, `values-pt`).
+  • Verify compact phrasing and single-line rendering enforcement on `SegmentedButton` labels across all 9 locales.
   8. *Clean-Room Targeted Test Suite Execution (`TST-TRK-063.8`)*:
   • Execute targeted package tests (`com.atrainingtracker.trainingtracker.audio.radar.*`, `com.atrainingtracker.trainingtracker.settings.*`, `com.atrainingtracker.trainingtracker.build.*`) asserting 100% pass rate.
 

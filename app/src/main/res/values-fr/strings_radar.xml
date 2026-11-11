@@ -87,7 +87,7 @@
     <string name="radar_alert_speaker_boost_desc">Augmente temporairement le haut-parleur pendant les alertes</string>
     <string name="radar_alert_route_title">Sortie audio</string>
     <string name="radar_alert_route_default">Système / Casque</string>
-    <string name="radar_alert_route_speaker">Forcer le haut-parleur</string>
+    <string name="radar_alert_route_speaker">Haut-parleur</string>
     <string name="radar_alert_haptic_title">Vibration haptique</string>
     <string name="radar_alert_haptic_desc">Vibrer à l\'approche d\'un véhicule et lors des alertes</string>
 

@@ -87,7 +87,7 @@
     <string name="radar_alert_speaker_boost_desc">Aumenta temporaneamente il volume dell\'altoparlante per gli avvisi</string>
     <string name="radar_alert_route_title">Uscita audio</string>
     <string name="radar_alert_route_default">Sistema / Cuffie</string>
-    <string name="radar_alert_route_speaker">Forza altoparlante telefono</string>
+    <string name="radar_alert_route_speaker">Altoparlante telefono</string>
     <string name="radar_alert_haptic_title">Vibrazione aptica</string>
     <string name="radar_alert_haptic_desc">Vibra all\'avvicinamento di veicoli e ai cambi di minaccia</string>
 

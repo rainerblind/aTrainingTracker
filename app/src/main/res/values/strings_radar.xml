@@ -87,7 +87,7 @@
     <string name="radar_alert_speaker_boost_desc">Temporarily overrides quiet phone speaker during alerts</string>
     <string name="radar_alert_route_title">Audio Output Route</string>
     <string name="radar_alert_route_default">System / Headphones</string>
-    <string name="radar_alert_route_speaker">Force Phone Speaker</string>
+    <string name="radar_alert_route_speaker">Phone Speaker</string>
     <string name="radar_alert_haptic_title">Haptic Vibration</string>
     <string name="radar_alert_haptic_desc">Vibrate on vehicle approach and threat transitions</string>
 

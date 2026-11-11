@@ -87,7 +87,7 @@
     <string name="radar_alert_speaker_boost_desc">Anula temporalmente el volumen bajo del altavoz en alertas</string>
     <string name="radar_alert_route_title">Ruta de salida de audio</string>
     <string name="radar_alert_route_default">Sistema / Auriculares</string>
-    <string name="radar_alert_route_speaker">Forzar altavoz del teléfono</string>
+    <string name="radar_alert_route_speaker">Altavoz del teléfono</string>
     <string name="radar_alert_haptic_title">Vibración háptica</string>
     <string name="radar_alert_haptic_desc">Vibrar en aproximación de vehículos y cambios de amenaza</string>
 

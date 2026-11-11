@@ -192,6 +192,25 @@ class RadarAlertManager @JvmOverloads constructor(
         }
     }
 
+    @Volatile
+    private var cachedConfig: TuningPreferencesConfigSnapshot = loadConfigSnapshot()
+
+    private var configJob: Job? = null
+
+    init {
+        actualDataStore?.let { store ->
+            configJob = coroutineScope.launch {
+                try {
+                    store.tuningConfigFlow.collect { cfg ->
+                        cachedConfig = mapConfigSnapshot(cfg)
+                    }
+                } catch (t: Throwable) {
+                    Log.w(TAG, "Error collecting tuningConfigFlow", t)
+                }
+            }
+        }
+    }
+
     private val audioManager: AudioManager? = audioManager
         ?: (context.getSystemService(Context.AUDIO_SERVICE) as? AudioManager)
 
@@ -266,6 +285,7 @@ class RadarAlertManager @JvmOverloads constructor(
             if (activeInstance === this) activeInstance = null
             observationJob?.cancel()
             observationJob = null
+            handler?.removeCallbacks(restoreRunnable)
             restoreSpeakerVolumeLocked()
             abandonAudioFocusLocked()
             laneTrackStates.clear()
@@ -445,21 +465,8 @@ class RadarAlertManager @JvmOverloads constructor(
                 return
             }
 
-            // Hysteresis / debouncing: prevent alert flutter on rapid oscillations
-            if (now - lastAlertTimestampMs < DEBOUNCE_COOLDOWN_MS) {
-                lastThreatLevel = currentThreat
-                return
-            }
-
-            // 2. Initial approach alert (NONE -> APPROACHING or FAST_APPROACHING)
-            if (lastThreatLevel == ThreatLevel.NONE && currentThreat == ThreatLevel.APPROACHING) {
-                lastAlertTimestampMs = now
-                lastThreatLevel = currentThreat
-                triggerApproachAlert(primaryTarget, config)
-                return
-            }
-
-            // 3. High-speed escalation alert (ANY -> FAST_APPROACHING)
+            // 2. High-speed escalation alert (ANY -> FAST_APPROACHING)
+            // Safety-critical high-speed escalation bypasses routine debouncing (REQ-TRK-063.1, ATT-6705)
             if (currentThreat == ThreatLevel.FAST_APPROACHING && lastThreatLevel != ThreatLevel.FAST_APPROACHING) {
                 lastAlertTimestampMs = now
                 lastThreatLevel = currentThreat
@@ -468,6 +475,20 @@ class RadarAlertManager @JvmOverloads constructor(
                     .maxByOrNull { it.approachSpeedMps }
                     ?: primaryTarget
                 triggerFastThreatAlert(fastTarget, config)
+                return
+            }
+
+            // Hysteresis / debouncing: prevent alert flutter on rapid oscillations
+            // Suppressed frames must NEVER advance lastThreatLevel without emitting transition alert (REQ-TRK-063.1, ATT-6705)
+            if (now - lastAlertTimestampMs < DEBOUNCE_COOLDOWN_MS) {
+                return
+            }
+
+            // 3. Initial approach alert (NONE -> APPROACHING)
+            if (lastThreatLevel == ThreatLevel.NONE && currentThreat == ThreatLevel.APPROACHING) {
+                lastAlertTimestampMs = now
+                lastThreatLevel = currentThreat
+                triggerApproachAlert(primaryTarget, config)
                 return
             }
 
@@ -495,37 +516,48 @@ class RadarAlertManager @JvmOverloads constructor(
     }
 
     private fun getCurrentConfig(): TuningPreferencesConfigSnapshot {
+        return cachedConfig
+    }
+
+    private fun loadConfigSnapshot(): TuningPreferencesConfigSnapshot {
         val store = actualDataStore
         return if (store != null) {
-            val cfg = store.getTuningConfig()
-            TuningPreferencesConfigSnapshot(
-                alertMode = cfg.radarAudioAlertMode,
-                volumePercent = cfg.radarAlertVolume,
-                speakerBoost = cfg.radarSpeakerBoost,
-                route = cfg.radarAudioRoute,
-                haptics = cfg.radarHapticAlert,
-                pelotonAudioSync = cfg.radarPelotonAudioSync,
-                smartUrbanMute = cfg.radarSmartUrbanMute,
-                spatialAudioEnabled = cfg.radarSpatialAudioEnabled,
-                speedPitchModulation = cfg.radarSpeedPitchModulation,
-                trafficOrientation = cfg.radarTrafficOrientation,
-                laneChangeTickEnabled = cfg.radarLaneChangeTickEnabled
-            )
+            mapConfigSnapshot(store.getTuningConfig())
         } else {
-            TuningPreferencesConfigSnapshot(
-                alertMode = TuningPreferencesDefaults.RADAR_AUDIO_ALERT_MODE,
-                volumePercent = TuningPreferencesDefaults.RADAR_ALERT_VOLUME,
-                speakerBoost = TuningPreferencesDefaults.RADAR_SPEAKER_BOOST,
-                route = TuningPreferencesDefaults.RADAR_AUDIO_ROUTE,
-                haptics = TuningPreferencesDefaults.RADAR_HAPTIC_ALERT,
-                pelotonAudioSync = TuningPreferencesDefaults.RADAR_PELOTON_AUDIO_SYNC,
-                smartUrbanMute = TuningPreferencesDefaults.RADAR_SMART_URBAN_MUTE,
-                spatialAudioEnabled = TuningPreferencesDefaults.RADAR_SPATIAL_AUDIO_ENABLED,
-                speedPitchModulation = TuningPreferencesDefaults.RADAR_SPEED_PITCH_MODULATION,
-                trafficOrientation = TuningPreferencesDefaults.RADAR_TRAFFIC_ORIENTATION,
-                laneChangeTickEnabled = TuningPreferencesDefaults.RADAR_LANE_CHANGE_TICK_ENABLED
-            )
+            defaultConfigSnapshot()
         }
+    }
+
+    private fun mapConfigSnapshot(cfg: TuningConfig): TuningPreferencesConfigSnapshot {
+        return TuningPreferencesConfigSnapshot(
+            alertMode = cfg.radarAudioAlertMode,
+            volumePercent = cfg.radarAlertVolume,
+            speakerBoost = cfg.radarSpeakerBoost,
+            route = cfg.radarAudioRoute,
+            haptics = cfg.radarHapticAlert,
+            pelotonAudioSync = cfg.radarPelotonAudioSync,
+            smartUrbanMute = cfg.radarSmartUrbanMute,
+            spatialAudioEnabled = cfg.radarSpatialAudioEnabled,
+            speedPitchModulation = cfg.radarSpeedPitchModulation,
+            trafficOrientation = cfg.radarTrafficOrientation,
+            laneChangeTickEnabled = cfg.radarLaneChangeTickEnabled
+        )
+    }
+
+    private fun defaultConfigSnapshot(): TuningPreferencesConfigSnapshot {
+        return TuningPreferencesConfigSnapshot(
+            alertMode = TuningPreferencesDefaults.RADAR_AUDIO_ALERT_MODE,
+            volumePercent = TuningPreferencesDefaults.RADAR_ALERT_VOLUME,
+            speakerBoost = TuningPreferencesDefaults.RADAR_SPEAKER_BOOST,
+            route = TuningPreferencesDefaults.RADAR_AUDIO_ROUTE,
+            haptics = TuningPreferencesDefaults.RADAR_HAPTIC_ALERT,
+            pelotonAudioSync = TuningPreferencesDefaults.RADAR_PELOTON_AUDIO_SYNC,
+            smartUrbanMute = TuningPreferencesDefaults.RADAR_SMART_URBAN_MUTE,
+            spatialAudioEnabled = TuningPreferencesDefaults.RADAR_SPATIAL_AUDIO_ENABLED,
+            speedPitchModulation = TuningPreferencesDefaults.RADAR_SPEED_PITCH_MODULATION,
+            trafficOrientation = TuningPreferencesDefaults.RADAR_TRAFFIC_ORIENTATION,
+            laneChangeTickEnabled = TuningPreferencesDefaults.RADAR_LANE_CHANGE_TICK_ENABLED
+        )
     }
 
     private fun triggerApproachAlert(primaryTarget: RadarTarget?, config: TuningPreferencesConfigSnapshot) {
@@ -622,7 +654,9 @@ class RadarAlertManager @JvmOverloads constructor(
     private fun playChime(config: TuningPreferencesConfigSnapshot, chimeAction: (Float, RadarAudioRoute) -> Unit) {
         try {
             requestTransientDuckingLocked()
-            if (config.speakerBoost && config.route == RadarAudioRoute.FORCE_SPEAKER) {
+            val isSpeaker = config.route == RadarAudioRoute.FORCE_SPEAKER ||
+                (config.route == RadarAudioRoute.SYSTEM_DEFAULT && !synthesizer.isHeadphonesOrBluetoothConnected())
+            if (config.speakerBoost && isSpeaker) {
                 boostSpeakerVolumeLocked(config.volumePercent)
             }
             handler?.removeCallbacks(restoreRunnable)
@@ -750,6 +784,8 @@ class RadarAlertManager @JvmOverloads constructor(
             isReleased = true
             if (activeInstance === this) activeInstance = null
             stop()
+            configJob?.cancel()
+            configJob = null
             synthesizer.close()
             coroutineScope.cancel()
         }

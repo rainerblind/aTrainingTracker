@@ -87,7 +87,7 @@
     <string name="radar_alert_speaker_boost_desc">Erhöht leise Lautsprecherlautstärke während Warnungen kurzzeitig</string>
     <string name="radar_alert_route_title">Audio-Ausgabe</string>
     <string name="radar_alert_route_default">System / Kopfhörer</string>
-    <string name="radar_alert_route_speaker">Telefon-Lautsprecher erzwingen</string>
+    <string name="radar_alert_route_speaker">Telefon-Lautsprecher</string>
     <string name="radar_alert_haptic_title">Haptische Vibration</string>
     <string name="radar_alert_haptic_desc">Vibrieren bei Annäherung und Bedrohungswechsel</string>
 

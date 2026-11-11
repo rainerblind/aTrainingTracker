@@ -58,6 +58,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.devices.radar.RadarLightController
@@ -377,7 +378,13 @@ fun RadarSettingsSection(
                         },
                         shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2)
                     ) {
-                        Text(text = stringResource(R.string.radar_alert_route_default))
+                        Text(
+                            text = stringResource(R.string.radar_alert_route_default),
+                            maxLines = 1,
+                            softWrap = false,
+                            overflow = TextOverflow.Ellipsis,
+                            style = MaterialTheme.typography.labelMedium
+                        )
                     }
 
                     SegmentedButton(
@@ -389,7 +396,13 @@ fun RadarSettingsSection(
                         },
                         shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2)
                     ) {
-                        Text(text = stringResource(R.string.radar_alert_route_speaker))
+                        Text(
+                            text = stringResource(R.string.radar_alert_route_speaker),
+                            maxLines = 1,
+                            softWrap = false,
+                            overflow = TextOverflow.Ellipsis,
+                            style = MaterialTheme.typography.labelMedium
+                        )
                     }
                 }
 

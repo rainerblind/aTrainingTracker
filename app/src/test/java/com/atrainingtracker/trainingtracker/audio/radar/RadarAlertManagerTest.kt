@@ -40,7 +40,9 @@ import io.mockk.mockk
 import io.mockk.slot
 import io.mockk.verify
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.advanceUntilIdle
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -136,6 +138,28 @@ class RadarAlertManagerTest {
         mockCurrentTimeMs += 1000L
         manager.onRadarStateUpdated(state2)
 
+        verify(exactly = 1) { mockSynthesizer.playFastThreat(any(), any()) }
+
+        manager.release()
+    }
+
+    @Test
+    fun onRadarStateUpdated_fastApproachEscalationWithinDebounceCooldown_triggersFastThreatChime() {
+        val manager = createManager()
+        val state1 = RadarState(connectionState = RadarConnectionState.CONNECTED, overallThreatLevel = ThreatLevel.NONE)
+        val state2 = RadarState(connectionState = RadarConnectionState.CONNECTED, overallThreatLevel = ThreatLevel.APPROACHING)
+        val state3 = RadarState(connectionState = RadarConnectionState.CONNECTED, overallThreatLevel = ThreatLevel.FAST_APPROACHING)
+
+        manager.onRadarStateUpdated(state1)
+        mockCurrentTimeMs += 1000L
+        manager.onRadarStateUpdated(state2)
+        verify(exactly = 1) { mockSynthesizer.playApproach(any(), any()) }
+
+        // Escalation occurs only 250ms later (< 800ms debounce cooldown)
+        mockCurrentTimeMs += 250L
+        manager.onRadarStateUpdated(state3)
+
+        // Safety invariant (REQ-TRK-063.1, ATT-6705): FAST_APPROACHING must NEVER be suppressed by routine debounce
         verify(exactly = 1) { mockSynthesizer.playFastThreat(any(), any()) }
 
         manager.release()
@@ -250,6 +274,88 @@ class RadarAlertManagerTest {
         runnableSlot.captured.run()
 
         // Restores to original volume (3)
+        verify { mockAudioManager.setStreamVolume(AudioManager.STREAM_MUSIC, 3, 0) }
+
+        manager.release()
+    }
+
+    @Test
+    fun speakerBoost_onSystemDefaultWithoutHeadphones_boostsVolumeAndRestoresAfterwards() {
+        every { mockSynthesizer.isHeadphonesOrBluetoothConnected() } returns false
+        currentConfig = currentConfig.copy(
+            radarAudioRoute = RadarAudioRoute.SYSTEM_DEFAULT,
+            radarSpeakerBoost = true,
+            radarAlertVolume = 90
+        )
+        val runnableSlot = slot<Runnable>()
+        every { mockHandler.postDelayed(capture(runnableSlot), any()) } returns true
+
+        val manager = createManager()
+        val state1 = RadarState(connectionState = RadarConnectionState.CONNECTED, overallThreatLevel = ThreatLevel.NONE)
+        val state2 = RadarState(connectionState = RadarConnectionState.CONNECTED, overallThreatLevel = ThreatLevel.APPROACHING)
+
+        manager.onRadarStateUpdated(state1)
+        manager.onRadarStateUpdated(state2)
+
+        // 90% of 15 max volume = ~14
+        verify { mockAudioManager.setStreamVolume(AudioManager.STREAM_MUSIC, 14, 0) }
+
+        // Execute scheduled restore runnable
+        runnableSlot.captured.run()
+
+        // Restores to original volume (3)
+        verify { mockAudioManager.setStreamVolume(AudioManager.STREAM_MUSIC, 3, 0) }
+
+        manager.release()
+    }
+
+    @Test
+    fun speakerBoost_onSystemDefaultWithHeadphones_doesNotBoostSpeakerVolume() {
+        every { mockSynthesizer.isHeadphonesOrBluetoothConnected() } returns true
+        currentConfig = currentConfig.copy(
+            radarAudioRoute = RadarAudioRoute.SYSTEM_DEFAULT,
+            radarSpeakerBoost = true,
+            radarAlertVolume = 90
+        )
+
+        val manager = createManager()
+        val state1 = RadarState(connectionState = RadarConnectionState.CONNECTED, overallThreatLevel = ThreatLevel.NONE)
+        val state2 = RadarState(connectionState = RadarConnectionState.CONNECTED, overallThreatLevel = ThreatLevel.APPROACHING)
+
+        manager.onRadarStateUpdated(state1)
+        manager.onRadarStateUpdated(state2)
+
+        // Must not boost phone speaker when headphones are connected on SYSTEM_DEFAULT
+        verify(exactly = 0) { mockAudioManager.setStreamVolume(AudioManager.STREAM_MUSIC, 14, any()) }
+
+        manager.release()
+    }
+
+    @Test
+    fun stop_cleansUpPendingVolumeRestoreRunnableAndRestoresVolume() {
+        currentConfig = currentConfig.copy(
+            radarAudioRoute = RadarAudioRoute.FORCE_SPEAKER,
+            radarSpeakerBoost = true,
+            radarAlertVolume = 90
+        )
+        val runnableSlot = slot<Runnable>()
+        every { mockHandler.postDelayed(capture(runnableSlot), any()) } returns true
+
+        val manager = createManager()
+        val state1 = RadarState(connectionState = RadarConnectionState.CONNECTED, overallThreatLevel = ThreatLevel.NONE)
+        val state2 = RadarState(connectionState = RadarConnectionState.CONNECTED, overallThreatLevel = ThreatLevel.APPROACHING)
+
+        manager.onRadarStateUpdated(state1)
+        manager.onRadarStateUpdated(state2)
+
+        // Volume was boosted
+        verify { mockAudioManager.setStreamVolume(AudioManager.STREAM_MUSIC, 14, 0) }
+
+        // Stop manager before runnable fires
+        manager.stop()
+
+        // Must remove pending runnable and restore volume immediately (REQ-TRK-063.3, REQ-TRK-063.6)
+        verify { mockHandler.removeCallbacks(runnableSlot.captured) }
         verify { mockAudioManager.setStreamVolume(AudioManager.STREAM_MUSIC, 3, 0) }
 
         manager.release()
@@ -881,5 +987,33 @@ class RadarAlertManagerTest {
     fun releasePreviewSynthesizer_releasesPreviewSynthesizerCleanly() {
         // Calling releasePreviewSynthesizer when not initialized shouldn't throw
         RadarAlertManager.releasePreviewSynthesizer()
+    }
+
+    @Test
+    fun reactiveConfigCaching_updatesConfigFromFlowWithoutSynchronousPerFrameQueries() {
+        val configFlow = MutableStateFlow(currentConfig)
+        every { mockDataStore.tuningConfigFlow } returns configFlow
+
+        val manager = createManager()
+
+        // Initial config alert mode is ALL_ALERTS
+        val state1 = RadarState(connectionState = RadarConnectionState.CONNECTED, overallThreatLevel = ThreatLevel.NONE)
+        val state2 = RadarState(connectionState = RadarConnectionState.CONNECTED, overallThreatLevel = ThreatLevel.APPROACHING)
+        manager.onRadarStateUpdated(state1)
+        manager.onRadarStateUpdated(state2)
+        verify(exactly = 1) { mockSynthesizer.playApproach(any(), any()) }
+
+        // Update flow to MUTED
+        configFlow.value = currentConfig.copy(radarAudioAlertMode = RadarAudioAlertMode.MUTED)
+        testScope.advanceUntilIdle()
+
+        mockCurrentTimeMs += 1000L
+        val state3 = RadarState(connectionState = RadarConnectionState.CONNECTED, overallThreatLevel = ThreatLevel.FAST_APPROACHING)
+        manager.onRadarStateUpdated(state3)
+
+        // Muted mode must be respected from cache
+        verify(exactly = 0) { mockSynthesizer.playFastThreat(any(), any()) }
+
+        manager.release()
     }
 }

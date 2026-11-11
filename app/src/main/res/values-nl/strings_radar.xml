@@ -87,7 +87,7 @@
     <string name="radar_alert_speaker_boost_desc">Verhoogt stil luidsprekervolume tijdelijk tijdens waarschuwingen</string>
     <string name="radar_alert_route_title">Audio-uitvoer</string>
     <string name="radar_alert_route_default">Systeem / Hoofdtelefoon</string>
-    <string name="radar_alert_route_speaker">Telefoonluidspreker forceren</string>
+    <string name="radar_alert_route_speaker">Telefoonluidspreker</string>
     <string name="radar_alert_haptic_title">Haptische trilling</string>
     <string name="radar_alert_haptic_desc">Trillen bij naderende voertuigen en dreigingsovergangen</string>
 

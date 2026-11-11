@@ -87,7 +87,7 @@
     <string name="radar_alert_speaker_boost_desc">Tymczasowo zwiększa cichy głośnik telefonu podczas alertów</string>
     <string name="radar_alert_route_title">Wyjście audio</string>
     <string name="radar_alert_route_default">System / Słuchawki</string>
-    <string name="radar_alert_route_speaker">Wymuś głośnik telefonu</string>
+    <string name="radar_alert_route_speaker">Głośnik telefonu</string>
     <string name="radar_alert_haptic_title">Wibracje haptyczne</string>
     <string name="radar_alert_haptic_desc">Wibruj przy zbliżaniu się pojazdów i zmianie poziomu zagrożenia</string>
 
