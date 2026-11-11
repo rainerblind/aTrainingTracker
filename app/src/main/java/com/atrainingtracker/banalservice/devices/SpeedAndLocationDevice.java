@@ -425,7 +425,7 @@ public abstract class SpeedAndLocationDevice extends MyDevice {
                                 if (hasSpeed && rawSpeed > SPEED_ZERO_THRESHOLD && (calcSpeed <= 1.0 || rawSpeed >= 0.2 * calcSpeed)) {
                                     speed = rawSpeed;
                                 } else if (calcSpeed > 0.0 && calcSpeed <= 70.0) {
-                                    speed = calcSpeed;
+                                    speed = Math.min(calcSpeed, mSpeed);
                                 }
                             }
                         } else {

@@ -441,8 +441,18 @@ fun EditSensorFieldDialog(
                 Spacer(Modifier.height(8.dp))
 
                 if (showHrvInfo) {
+                    val tuningFlow = remember(context) {
+                        com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore
+                            .getInstance(context.applicationContext)
+                            .tuningConfigFlow
+                    }
+                    val tuning by tuningFlow.collectAsState(
+                        initial = com.atrainingtracker.trainingtracker.settings.TuningConfig()
+                    )
                     com.atrainingtracker.trainingtracker.ui.tracking.HrvInfoBottomSheet(
-                        onDismissRequest = { showHrvInfo = false }
+                        onDismissRequest = { showHrvInfo = false },
+                        dfaA1ThresholdT1 = tuning.dfaA1ThresholdT1,
+                        dfaA1ThresholdT2 = tuning.dfaA1ThresholdT2
                     )
                 }
             }

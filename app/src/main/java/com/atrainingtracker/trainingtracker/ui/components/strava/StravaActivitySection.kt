@@ -62,17 +62,23 @@ fun StravaActivitySection(
         StravaActivityParser.parse(rawActivityJson)
     } ?: return
 
-    val (starredIds, starredNames) = remember {
-        try {
-            val summaries = SegmentsRepository.getInstance(context).allSegmentSummaries
-            Pair(
-                summaries.map { it.stravaId }.toSet(),
-                summaries.map { it.name.trim().lowercase() }.toSet()
-            )
-        } catch (e: Exception) {
-            Pair(emptySet<Long>(), emptySet<String>())
+    val starredState = androidx.compose.runtime.produceState(
+        initialValue = Pair(emptySet<Long>(), emptySet<String>()),
+        key1 = context
+    ) {
+        value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            try {
+                val summaries = SegmentsRepository.getInstance(context).allSegmentSummaries
+                Pair(
+                    summaries.map { it.stravaId }.toSet(),
+                    summaries.map { it.name.trim().lowercase() }.toSet()
+                )
+            } catch (e: Exception) {
+                Pair(emptySet<Long>(), emptySet<String>())
+            }
         }
     }
+    val (starredIds, starredNames) = starredState.value
 
     Column(
         modifier = modifier

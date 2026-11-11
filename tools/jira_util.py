@@ -1012,24 +1012,25 @@ def auto_verify_living_docs_on_stage5(parent_key, repo_root=None):
     if repo_root is None:
         repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 
+    status_words = r"(?:Planned|Specified|In\s+Progress|Draft)"
     trailing_planned_re = re.compile(
-        r"\|\s*(?:Status:\s*)?Planned(?:\s*\([^)]*\))?\s*\|(\s*)$",
+        r"\|\s*(?:Status:\s*)?" + status_words + r"(?:\s*\([^)]*\))?\s*\|(\s*)$",
         re.IGNORECASE,
     )
     inline_planned_key_re = re.compile(
-        r"(?:Status:\s*)?Planned\s*\(\s*" + re.escape(parent_key) + r"\s*\)",
+        r"(?:Status:\s*)?" + status_words + r"\s*\(\s*" + re.escape(parent_key) + r"\s*\)",
         re.IGNORECASE,
     )
     heading_planned_key_re = re.compile(
-        r"^(#{2,4}\s*(?:REQ|TST)-[A-Z0-9_-]+:.*?\[)(?:Status:\s*)?Planned\s*\(\s*" + re.escape(parent_key) + r"\s*\)(\])",
+        r"^(#{2,4}\s*(?:REQ|TST)-[A-Z0-9_.-]+:.*?\[)(?:Status:\s*)?" + status_words + r"\s*\(\s*" + re.escape(parent_key) + r"\s*\)(\])",
         re.IGNORECASE,
     )
     heading_planned_gen_re = re.compile(
-        r"^(#{2,4}\s*(?:REQ|TST)-[A-Z0-9_-]+:.*?\[)(?:Status:\s*)?Planned(\])",
+        r"^(#{2,4}\s*(?:REQ|TST)-[A-Z0-9_.-]+:.*?\[)(?:Status:\s*)?" + status_words + r"(\])",
         re.IGNORECASE,
     )
     bullet_planned_key_re = re.compile(
-        r"(\*\*(?:Status|Verification Status)\*\*:\s*)(?:Status:\s*)?Planned\s*\(\s*" + re.escape(parent_key) + r"\s*\)",
+        r"(\*\*(?:Status|Verification Status)\*\*:\s*)(?:Status:\s*)?" + status_words + r"\s*\(\s*" + re.escape(parent_key) + r"\s*\)",
         re.IGNORECASE,
     )
 

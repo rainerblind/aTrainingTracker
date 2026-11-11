@@ -430,8 +430,15 @@ fun HrvThresholdSummaryCard(
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(16.dp)
                     )
+                    val minMedN = if (protocolType == HrvProtocolType.GUIDED_STEP) 4 else 8
+                    val diagnosticText = when (diagnosticRes) {
+                        R.string.hrv_threshold_diag_high_artifact -> stringResource(diagnosticRes, estimate.meanArtifactRate)
+                        R.string.hrv_threshold_diag_short_duration -> stringResource(diagnosticRes, estimate.effectiveSampleSize, minMedN)
+                        R.string.hrv_threshold_diag_low_r2 -> stringResource(diagnosticRes, estimate.rSquared ?: 0.0, 0.55)
+                        else -> stringResource(diagnosticRes)
+                    }
                     Text(
-                        text = stringResource(diagnosticRes),
+                        text = diagnosticText,
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )

@@ -1804,7 +1804,7 @@ d. Step 4 (`OnboardingStep.BATTERY_OPTIMIZATION`): Doze mode background survival
 
 **Invariants**: Sensor data streaming, configurable search timeout, and scan lifecycle teardown (disconnect, search timeout, and shutdown) remain strictly preserved; zero regression in BLE reconnection backoff.
 
-### REQ-SET-100: Android Health Connect Client Integration, SDK Status & Permissions [Specified]
+### REQ-SET-100: Android Health Connect Client Integration, SDK Status & Permissions [Verified]
 - **Tests**: `TST-SET-100` | **Tickets**: `ATT-3052`, `ATT-6711`
 - **Implementation**: `HealthConnectManager.kt`, `AndroidManifest.xml`, `app/build.gradle`
 - **Status**: Specified
@@ -1832,7 +1832,7 @@ d. Step 4 (`OnboardingStep.BATTERY_OPTIMIZATION`): Doze mode background survival
 
 **Invariants**: Core tracking loop and local SQLite persistence MUST operate independently of Health Connect availability or permission status. Undeclared permissions must never be requested at runtime.
 
-### REQ-SET-101: Exercise Session & Telemetry Series Record Mapping [Specified]
+### REQ-SET-101: Exercise Session & Telemetry Series Record Mapping [Verified]
 - **Tests**: `TST-SET-101` | **Tickets**: `ATT-3052`, `ATT-6711`
 - **Implementation**: `HealthConnectRecordMapper.kt`, `HealthConnectManager.kt`, `WorkoutSamplesRepository.kt`, `WorkoutData.kt`
 - **Status**: Specified
@@ -1882,7 +1882,7 @@ d. Step 4 (`OnboardingStep.BATTERY_OPTIMIZATION`): Doze mode background survival
 
 **Invariants**: Zero coordinate fabrication or null pointer exceptions for indoor trackless sessions.
 
-### REQ-SET-103: Health Connect Settings UI, Manual Re-Sync & Write Idempotency [Specified]
+### REQ-SET-103: Health Connect Settings UI, Manual Re-Sync & Write Idempotency [Verified]
 - **Tests**: `TST-SET-103` | **Tickets**: `ATT-3052`, `ATT-6712`, `ATT-6711`
 - **Implementation**: `HealthConnectSettingsDialog.kt`, `AppNavigationDrawer.kt`, `NavRoutes.kt`, `WorkoutHeader.kt`, `WorkoutDetailTabbedContent.kt`, `WorkoutSummary.kt`, `EditWorkoutScreen.kt`, `HealthConnectManager.kt`, `PeriodsViewModel.kt`, `MorningHrvCheckViewModel.kt`
 - **Status**: Specified

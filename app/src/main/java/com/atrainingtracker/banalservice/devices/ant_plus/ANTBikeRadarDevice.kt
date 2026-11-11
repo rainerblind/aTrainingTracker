@@ -401,6 +401,7 @@ class ANTBikeRadarDevice(
 
     public override fun onAccumulatorsReset() {
         super.onAccumulatorsReset()
+        windowAggregator.resetSession()
         if (::vehicleCountSensor.isInitialized) {
             vehicleCountSensor.newValue(0)
         }
@@ -472,7 +473,7 @@ class ANTBikeRadarDevice(
         }
         antService = null
         resetSensorsToClear()
-        unregisterSensors()
+        super.shutDown()
     }
 
     @Suppress("TooGenericExceptionCaught")

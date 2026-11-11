@@ -149,7 +149,13 @@ fun AdvancedTuningScreen(
         enableCardioPowerDynamics = config.enableCardioPowerDynamics; showCardioPowerInWorkoutSummary = config.showCardioPowerInWorkoutSummary
         dfaA1ThresholdT1 = config.dfaA1ThresholdT1; dfaA1ThresholdT2 = config.dfaA1ThresholdT2; hrvArtifactGateThresholdPercent = config.hrvArtifactGateThresholdPercent
     }
-    LaunchedEffect(persistedConfig) { applyConfig(persistedConfig) }
+    var isInitialized by rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect(persistedConfig) {
+        if (!isInitialized) {
+            applyConfig(persistedConfig)
+            isInitialized = true
+        }
+    }
 
     fun onResetToDefaults() {
         scope.launch {
@@ -304,9 +310,18 @@ fun AdvancedTuningScreen(
             }
 
             // Section 6: Fahrrad-Radar & Simulator (REQ-UI-512, ATT-6702)
+            val isRadarSimRunning by com.atrainingtracker.banalservice.devices.radar.RadarTrafficSimulator.isSimulatingFlow.collectAsState()
+            val activeRadarScenario = com.atrainingtracker.banalservice.devices.radar.RadarTrafficSimulator.activeScenario
             TuningAccordionSection(
                 icon = Icons.Default.Sensors, title = stringResource(R.string.tuning_cat_cycling_radar),
-                subtitle = TuningSubtitleFormatter.formatCyclingRadarSubtitle(persistedConfig, context),
+                subtitle = TuningSubtitleFormatter.formatCyclingRadarSubtitle(
+                    edgeSide = persistedConfig.radarEdgeSide,
+                    alertMode = persistedConfig.radarAudioAlertMode,
+                    lightMode = persistedConfig.radarLightDefaultMode,
+                    isRunning = isRadarSimRunning,
+                    scenario = activeRadarScenario,
+                    context = context
+                ),
                 isExpanded = isSectionExpanded(TuningSection.CYCLING_RADAR), onToggle = { toggleSection(TuningSection.CYCLING_RADAR) }
             ) {
                 RadarSettingsSection(tuningDataStore = tuningDataStore)

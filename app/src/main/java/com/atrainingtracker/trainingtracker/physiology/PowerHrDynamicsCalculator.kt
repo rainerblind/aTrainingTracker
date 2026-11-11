@@ -83,7 +83,17 @@ object PowerHrDynamicsCalculator {
     ): CardioPowerDynamicsRecord? {
         if (powerSamples == null || hrSamples == null) return null
         val n = min(powerSamples.size, hrSamples.size)
-        if (n < MIN_QUALIFYING_DURATION_SEC) return null
+        if (n < 2) return null
+
+        val effectiveDt = if (timestampsSec != null && timestampsSec.size >= 2) {
+            val lastIdx = min(n, timestampsSec.size) - 1
+            val span = (timestampsSec[lastIdx] - timestampsSec[0]).coerceAtLeast(1L)
+            (span.toDouble() / lastIdx.coerceAtLeast(1)).coerceIn(0.5, 60.0)
+        } else {
+            dt.coerceIn(0.5, 60.0)
+        }
+        val minQualifyingSamples = (MIN_QUALIFYING_DURATION_SEC / effectiveDt).toInt().coerceAtLeast(10)
+        if (n < minQualifyingSamples) return null
 
         // Filter and impute valid paired series
         val cleanPower = DoubleArray(n)
@@ -99,7 +109,7 @@ object PowerHrDynamicsCalculator {
             val stepDt = if (timestampsSec != null && i > 0 && i < timestampsSec.size) {
                 (timestampsSec[i] - timestampsSec[i - 1]).coerceIn(1L, 60L).toDouble()
             } else {
-                dt
+                effectiveDt
             }
 
             if (p != null && p >= 0.0) lastP = p
@@ -115,32 +125,37 @@ object PowerHrDynamicsCalculator {
         }
 
         // Must have sufficient paired telemetry and active pedaling
-        if (validPairs < MIN_QUALIFYING_DURATION_SEC) return null
+        if (validPairs < minQualifyingSamples) return null
         if (activePedalingSec < MIN_ACTIVE_PEDALING_SEC) return null
 
         // 1. Fresh Calibration Window (active minutes 8 to 55, or up to midpoint for shorter rides)
-        val freshStart = FRESH_WINDOW_START_SEC
-        val freshEnd = if (n >= 6000) {
-            FRESH_WINDOW_END_SEC
+        val minWindowSamples = (MIN_WINDOW_DURATION_SEC / effectiveDt).toInt().coerceAtLeast(10)
+        val freshStart = (FRESH_WINDOW_START_SEC / effectiveDt).toInt().coerceIn(0, (n - minWindowSamples).coerceAtLeast(0))
+        val freshEndMax = (FRESH_WINDOW_END_SEC / effectiveDt).toInt()
+        val threshold6000 = (6000 / effectiveDt).toInt()
+        val freshEnd = if (n >= threshold6000) {
+            freshEndMax.coerceAtMost(n)
         } else {
-            min(FRESH_WINDOW_END_SEC, max(freshStart + MIN_WINDOW_DURATION_SEC, n / 2))
+            min(freshEndMax, max(freshStart + minWindowSamples, n / 2)).coerceAtMost(n)
         }
-        val freshFit = fitWindow(cleanPower, cleanHr, freshStart, freshEnd, dt = dt) ?: return null
+        val freshFit = fitWindow(cleanPower, cleanHr, freshStart, freshEnd, dt = effectiveDt) ?: return null
 
         // Physiological coupling: fresh model must explain at least 25% of HR variance
         if (freshFit.r2 < MIN_R2_START) return null
 
         // 2. End-of-Workout Window (final 45 min, non-overlapping with fresh window)
         var endFit: FitResult? = null
-        if (n >= 1800) {
-            val endStart = if (n >= 6000) {
-                n - END_WINDOW_DURATION_SEC
+        val endThresholdSamples = (1800 / effectiveDt).toInt()
+        val endDurationSamples = (END_WINDOW_DURATION_SEC / effectiveDt).toInt()
+        if (n >= endThresholdSamples) {
+            val endStart = if (n >= threshold6000) {
+                (n - endDurationSamples).coerceAtLeast(freshEnd)
             } else {
-                max(freshEnd, n - END_WINDOW_DURATION_SEC)
+                max(freshEnd, n - endDurationSamples)
             }
             val endEnd = n
-            if (endEnd - endStart >= MIN_WINDOW_DURATION_SEC) {
-                endFit = fitWindow(cleanPower, cleanHr, endStart, endEnd, dt = dt)
+            if (endEnd - endStart >= minWindowSamples) {
+                endFit = fitWindow(cleanPower, cleanHr, endStart, endEnd, dt = effectiveDt)
             }
         }
 
@@ -179,7 +194,8 @@ object PowerHrDynamicsCalculator {
         dt: Double = 1.0
     ): FitResult? {
         val n = endIndex - startIndex
-        if (n < MIN_WINDOW_DURATION_SEC || startIndex < 0 || endIndex > power.size || endIndex > hr.size) {
+        val minWindowSamples = (MIN_WINDOW_DURATION_SEC / dt.coerceIn(0.5, 60.0)).toInt().coerceAtLeast(10)
+        if (n < minWindowSamples || startIndex < 0 || endIndex > power.size || endIndex > hr.size) {
             return null
         }
 

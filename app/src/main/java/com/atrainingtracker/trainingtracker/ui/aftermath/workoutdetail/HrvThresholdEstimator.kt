@@ -229,7 +229,8 @@ object HrvThresholdEstimator {
                 )
             }
 
-            val rawIntensity = if (abs(slope) > 1e-6) (target - intercept) / slope else null
+            val expectedNegativeSlope = slope < -1e-6
+            val rawIntensity = if (expectedNegativeSlope) (target - intercept) / slope else null
             val intensityValid = rawIntensity?.let { isIntensityPlausible(it, mode) } == true
             val intensity = if (intensityValid) rawIntensity else null
 

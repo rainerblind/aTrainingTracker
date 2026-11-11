@@ -279,7 +279,9 @@ object HrvPostWorkoutRecomputer {
 
             // 4. Compute and persist Autonomic Durability & Drift (REQ-PER-038, ATT-4970)
             try {
-                val trackPoints = WorkoutRepository.getInstance(context).getWorkoutTrackPoints(workoutId, TrackType.BEST)
+                val repo = WorkoutRepository.getInstance(context)
+                val trackPoints = repo.getWorkoutTrackPoints(workoutId, TrackType.BEST)
+                    .ifEmpty { repo.getWorkoutTelemetryPoints(workoutId) }
                 if (trackPoints.isNotEmpty()) {
                     val durability = HrvDurabilityCalculator.calculateDurability(trackPoints)
                     if (durability.status == HrvDurabilityStatus.VALID) {

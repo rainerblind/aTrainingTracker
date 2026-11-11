@@ -64,10 +64,15 @@ public class ANTSearchForNewDevicesEngineMultiDeviceSearch
     protected AntService mRadarAntService;
     protected AntChannel mRadarAntChannel;
     protected boolean mIsRadarServiceBound = false;
+    protected volatile boolean mIsRadarSearchActive = false;
+    protected final java.util.Set<Integer> mDiscoveredRadarDeviceNumbers = java.util.Collections.synchronizedSet(new java.util.HashSet<>());
 
     private final ServiceConnection mRadarServiceConnection = new ServiceConnection() {
         @Override
         public void onServiceConnected(ComponentName name, IBinder service) {
+            if (!mIsRadarSearchActive) {
+                return;
+            }
             try {
                 mRadarAntService = new AntService(service);
                 AntChannelProvider provider = mRadarAntService.getChannelProvider();
@@ -85,7 +90,7 @@ public class ANTSearchForNewDevicesEngineMultiDeviceSearch
                             BroadcastDataMessage msg = new BroadcastDataMessage(messageParcel);
                             if (msg.hasExtendedData() && msg.getExtendedData().hasChannelId()) {
                                 int deviceNumber = msg.getExtendedData().getChannelId().getDeviceNumber();
-                                if (deviceNumber > 0) {
+                                if (deviceNumber > 0 && mDiscoveredRadarDeviceNumbers.add(deviceNumber)) {
                                     mCallbackInterface.onNewDeviceFound(
                                             DeviceType.BIKE_RADAR,
                                             deviceNumber,
@@ -150,13 +155,17 @@ public class ANTSearchForNewDevicesEngineMultiDeviceSearch
     }
 
     private void startRadarAsyncSearch() {
+        mIsRadarSearchActive = true;
+        mDiscoveredRadarDeviceNumbers.clear();
         try {
             mIsRadarServiceBound = AntService.bindService(mContext, mRadarServiceConnection);
             if (!mIsRadarServiceBound) {
+                mIsRadarSearchActive = false;
                 Log.w(TAG, "AntService.bindService returned false for radar search");
                 mCallbackInterface.onSearchStopped();
             }
         } catch (Exception e) {
+            mIsRadarSearchActive = false;
             Log.e(TAG, "Error binding AntService for radar search", e);
             mCallbackInterface.onSearchStopped();
         }
@@ -164,6 +173,8 @@ public class ANTSearchForNewDevicesEngineMultiDeviceSearch
 
     @Override
     public void stopAsyncSearch() {
+        mIsRadarSearchActive = false;
+        mDiscoveredRadarDeviceNumbers.clear();
         if (mMultiDeviceSearch != null) {
             mMultiDeviceSearch.close();
         }

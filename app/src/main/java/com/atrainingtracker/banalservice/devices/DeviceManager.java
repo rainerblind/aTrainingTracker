@@ -574,40 +574,42 @@ public class DeviceManager {
 
         long gpsDeviceId = mDeviceDataRepository.getSpeedAndLocationGPSDeviceId();
         if (deviceId == gpsDeviceId) {
-            if (paired && mSpeedAndLocationDevice_GPS == null // paired and not yet there -> create (if we have the permission)
-                    && TrainingApplication.havePermission(Manifest.permission.ACCESS_FINE_LOCATION)) {
-                if (isProviderAvailableSafely(locationManager, LocationManager.GPS_PROVIDER)) {
-                    try {
-                        mSpeedAndLocationDevice_GPS = new SpeedAndLocationDevice_GPS(mContext, mSensorManager);
-                    } catch (Exception e) {
-                        Log.w(TAG, "Could not create GPS location device on pairing change: " + e.getMessage());
+            if (paired) {
+                if (mSpeedAndLocationDevice_GPS == null // paired and not yet there -> create (if we have the permission)
+                        && TrainingApplication.havePermission(Manifest.permission.ACCESS_FINE_LOCATION)) {
+                    if (isProviderAvailableSafely(locationManager, LocationManager.GPS_PROVIDER)) {
+                        try {
+                            mSpeedAndLocationDevice_GPS = new SpeedAndLocationDevice_GPS(mContext, mSensorManager);
+                        } catch (Exception e) {
+                            Log.w(TAG, "Could not create GPS location device on pairing change: " + e.getMessage());
+                        }
                     }
+                } else if (mSpeedAndLocationDevice_GPS != null) {
+                    mSpeedAndLocationDevice_GPS.checkOrReRegisterLocationUpdates();
                 }
-            }
-            else {                                           // destroy
-                if (mSpeedAndLocationDevice_GPS != null) {   // if it exists
-                    mSpeedAndLocationDevice_GPS.shutDown();
-                    mSpeedAndLocationDevice_GPS = null;
-                }
+            } else if (mSpeedAndLocationDevice_GPS != null) { // destroy if unpaired and exists
+                mSpeedAndLocationDevice_GPS.shutDown();
+                mSpeedAndLocationDevice_GPS = null;
             }
             return;
         }
 
         long fusedDeviceId = mDeviceDataRepository.getSpeedAndLocationGoogleFusedDeviceId();
         if (deviceId == fusedDeviceId) {
-            if (paired && mSpeedAndLocationDevice_GoogleFused == null // if it does not exist
-                    && TrainingApplication.havePermission(Manifest.permission.ACCESS_FINE_LOCATION)) { // and we have the permission to do so
-                try {
-                    mSpeedAndLocationDevice_GoogleFused = new SpeedAndLocationDevice_GoogleFused(mContext, mSensorManager);
-                } catch (Exception e) {
-                    Log.w(TAG, "Could not create Google Fused location device on pairing change: " + e.getMessage());
+            if (paired) {
+                if (mSpeedAndLocationDevice_GoogleFused == null // if it does not exist
+                        && TrainingApplication.havePermission(Manifest.permission.ACCESS_FINE_LOCATION)) { // and we have the permission to do so
+                    try {
+                        mSpeedAndLocationDevice_GoogleFused = new SpeedAndLocationDevice_GoogleFused(mContext, mSensorManager);
+                    } catch (Exception e) {
+                        Log.w(TAG, "Could not create Google Fused location device on pairing change: " + e.getMessage());
+                    }
+                } else if (mSpeedAndLocationDevice_GoogleFused != null) {
+                    mSpeedAndLocationDevice_GoogleFused.checkOrReRegisterLocationUpdates();
                 }
-            }
-            else {                                           // destroy
-                if (mSpeedAndLocationDevice_GoogleFused != null) {   // if it exists
-                    mSpeedAndLocationDevice_GoogleFused.shutDown();
-                    mSpeedAndLocationDevice_GoogleFused = null;
-                }
+            } else if (mSpeedAndLocationDevice_GoogleFused != null) { // destroy if unpaired and exists
+                mSpeedAndLocationDevice_GoogleFused.shutDown();
+                mSpeedAndLocationDevice_GoogleFused = null;
             }
             return;
         }

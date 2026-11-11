@@ -1070,7 +1070,7 @@
   5. *Tier 1 Targeted BLE Regression Suite (`TST-SET-099.5`)*:
   • Run targeted test suites (`com.atrainingtracker.banalservice.devices.bluetooth_le.*`, `com.atrainingtracker.trainingtracker.build.*`) asserting 100% pass rate.
 
-### TST-SET-100: **Health Connect Client Availability & Permission Verification Suite** [Specified]
+### TST-SET-100: **Health Connect Client Availability & Permission Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-SET-100`
 - **Component**: `HealthConnectManager.kt`, `HealthConnectAvailabilityTest.kt`, `AndroidManifest.xml`
 - **Jira**: `ATT-3052`, `ATT-6711`
@@ -1084,7 +1084,7 @@
   3. *Tier 1 Targeted Unit Tests (`TST-SET-100.3`)*:
   • Run targeted test suites (`com.atrainingtracker.trainingtracker.cloud.healthconnect.*`, `com.atrainingtracker.trainingtracker.build.*`) asserting 100% pass rate.
 
-### TST-SET-101: **Exercise Session & Telemetry Record Mapping Unit Test Suite** [Specified]
+### TST-SET-101: **Exercise Session & Telemetry Record Mapping Unit Test Suite** [Verified]
 - **Requirement(s)**: `REQ-SET-101`
 - **Component**: `HealthConnectRecordMapper.kt`, `HealthConnectRecordMapperTest.kt`, `HealthConnectManager.kt`
 - **Jira**: `ATT-3052`, `ATT-6711`
@@ -1120,7 +1120,7 @@
   3. *Null Safety & Boundary Guard Test (`TST-SET-102.3`)*:
   • Verify zero NPEs or illegal argument exceptions when processing workouts with missing or partial telemetry channels.
 
-### TST-SET-103: **Health Connect Settings UI & Idempotent Sync Verification Suite** [Specified]
+### TST-SET-103: **Health Connect Settings UI & Idempotent Sync Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-SET-103`
 - **Component**: `HealthConnectSettingsDialog.kt`, `HealthConnectManager.kt`, `AppNavigationDrawer.kt`, `NavRoutes.kt`, `WorkoutHeader.kt`, `EditWorkoutScreen.kt`, `HealthConnectSyncTest.kt`, `strings_health_connect.xml`
 - **Jira**: `ATT-3052`, `ATT-6712`, `ATT-6711`

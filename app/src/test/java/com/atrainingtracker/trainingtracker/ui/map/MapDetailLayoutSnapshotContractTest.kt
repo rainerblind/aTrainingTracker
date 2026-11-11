@@ -18,88 +18,82 @@
 
 package com.atrainingtracker.trainingtracker.ui.map
 
-import org.junit.Assert.assertFalse
+import android.graphics.Bitmap
+import io.mockk.mockk
+import kotlinx.coroutines.runBlocking
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.io.File
 
 /**
- * Contract tests verifying UI-thread GraphicsLayer rasterization and exception-safe snapshot cleanup
- * in MapDetailLayout (REQ-REV-006.5 / TST-REV-007.5 / ATT-6685).
+ * Behavioral contract tests verifying caller-thread GraphicsLayer rasterization and exception-safe
+ * snapshot cleanup in MapDetailLayout (REQ-REV-006.5 / TST-REV-007.5 / ATT-6685).
  */
 class MapDetailLayoutSnapshotContractTest {
 
-    private fun findSourceFile(relativePath: String): File {
-        val rootDir = File(".").canonicalFile
-        val candidate = File(rootDir, relativePath)
-        if (candidate.exists()) return candidate
-        val appCandidate = File(rootDir, "app/$relativePath")
-        if (appCandidate.exists()) return appCandidate
-        val parentCandidate = File(rootDir, "../$relativePath")
-        if (parentCandidate.exists()) return parentCandidate
-        val parentAppCandidate = File(rootDir, "../app/$relativePath")
-        if (parentAppCandidate.exists()) return parentAppCandidate
-        throw IllegalArgumentException("Source file not found: $relativePath from ${rootDir.absolutePath}")
+    @Test
+    fun testMapDetailLayout_onSnapshotReady_rasterizesOnCallerThreadWithoutDefaultDispatcher_TST_REV_007_5() = runBlocking {
+        val callerThread = Thread.currentThread()
+        val headerBmp = mockk<Bitmap>(relaxed = true)
+        val mapBmp = mockk<Bitmap>(relaxed = true)
+        val elevationBmp = mockk<Bitmap>(relaxed = true)
+        val analyticsBmp = mockk<Bitmap>(relaxed = true)
+
+        var headerCaptureThread: Thread? = null
+        var elevationCaptureThread: Thread? = null
+        var analyticsCaptureThread: Thread? = null
+        var sharedBitmaps: List<Bitmap?>? = null
+        var errorCaught: Throwable? = null
+        var finallyInvoked = false
+
+        executeSnapshotCaptureAndShare(
+            captureHeader = {
+                headerCaptureThread = Thread.currentThread()
+                headerBmp
+            },
+            captureElevation = {
+                elevationCaptureThread = Thread.currentThread()
+                elevationBmp
+            },
+            captureAnalytics = {
+                analyticsCaptureThread = Thread.currentThread()
+                analyticsBmp
+            },
+            mapBitmap = mapBmp,
+            shareAction = { h, m, e, a ->
+                sharedBitmaps = listOf(h, m, e, a)
+            },
+            onError = { errorCaught = it },
+            onFinally = { finallyInvoked = true }
+        )
+
+        assertSame("Header layer must rasterize on caller coroutine thread without switching to Dispatchers.Default", callerThread, headerCaptureThread)
+        assertSame("Elevation layer must rasterize on caller coroutine thread", callerThread, elevationCaptureThread)
+        assertSame("Analytics layer must rasterize on caller coroutine thread", callerThread, analyticsCaptureThread)
+        assertEquals(listOf(headerBmp, mapBmp, elevationBmp, analyticsBmp), sharedBitmaps)
+        assertEquals(null, errorCaught)
+        assertTrue("onFinally must always execute to reset isSharing and invoke onSnapshotComplete", finallyInvoked)
     }
 
     @Test
-    fun testMapDetailLayout_onSnapshotReady_rasterizesOnMainThreadWithoutDefaultDispatcher_TST_REV_007_5() {
-        val mapLayoutFile = findSourceFile("src/main/java/com/atrainingtracker/trainingtracker/ui/map/MapDetailLayout.kt")
-        assertTrue("MapDetailLayout.kt must exist", mapLayoutFile.exists())
+    fun testMapDetailLayout_onSnapshotReady_whenRasterizationThrows_invokesErrorAndFinally_TST_REV_007_5() = runBlocking {
+        val mapBmp = mockk<Bitmap>(relaxed = true)
+        var errorCaught: Throwable? = null
+        var finallyInvoked = false
 
-        val source = mapLayoutFile.readText()
-
-        // Extract the onSnapshotReady block
-        val startIndex = source.indexOf("onSnapshotReady = {")
-        assertTrue("onSnapshotReady callback must be declared in MapDetailLayout.kt", startIndex != -1)
-
-        val endIndex = source.indexOf("onSnapshotError = {", startIndex)
-        assertTrue("onSnapshotError must follow onSnapshotReady", endIndex != -1)
-
-        val onSnapshotReadyBlock = source.substring(startIndex, endIndex)
-
-        // 1. Invariant: GraphicsLayer.toImageBitmap() must NOT be wrapped in withContext(Dispatchers.Default)
-        assertFalse(
-            "onSnapshotReady must NOT execute toImageBitmap() inside withContext(Dispatchers.Default) " +
-                "to prevent multithreaded SnapshotStateObserver crash (REQ-REV-006.5)",
-            onSnapshotReadyBlock.contains("withContext(Dispatchers.Default)")
+        executeSnapshotCaptureAndShare(
+            captureHeader = { throw IllegalStateException("HardwareBitmap rasterization failure") },
+            captureElevation = { null },
+            captureAnalytics = { null },
+            mapBitmap = mapBmp,
+            shareAction = { _, _, _, _ -> },
+            onError = { errorCaught = it },
+            onFinally = { finallyInvoked = true }
         )
 
-        // 2. Layer rasterization calls must be present
-        assertTrue(
-            "onSnapshotReady must rasterize headerLayer directly",
-            onSnapshotReadyBlock.contains("headerLayer.toImageBitmap().asAndroidBitmap()")
-        )
-        assertTrue(
-            "onSnapshotReady must rasterize elevationLayer directly",
-            onSnapshotReadyBlock.contains("elevationLayer.toImageBitmap().asAndroidBitmap()")
-        )
-        assertTrue(
-            "onSnapshotReady must rasterize analyticsLayer directly",
-            onSnapshotReadyBlock.contains("analyticsLayer.toImageBitmap().asAndroidBitmap()")
-        )
-
-        // 3. Robust lifecycle cleanup: try-catch-finally wrapping
-        assertTrue(
-            "onSnapshotReady must contain try block",
-            onSnapshotReadyBlock.contains("try {")
-        )
-        assertTrue(
-            "onSnapshotReady must contain catch block handling Throwable and showing Toast",
-            onSnapshotReadyBlock.contains("catch (t: Throwable)") &&
-                onSnapshotReadyBlock.contains("R.string.error_sharing_failed")
-        )
-        assertTrue(
-            "onSnapshotReady must contain finally block resetting isSharing and notifying onSnapshotComplete",
-            onSnapshotReadyBlock.contains("finally {") &&
-                onSnapshotReadyBlock.contains("isSharing = false") &&
-                onSnapshotReadyBlock.contains("onSnapshotComplete?.invoke()")
-        )
-
-        // 4. Downstream stitching invocation
-        assertTrue(
-            "onSnapshotReady must invoke combineWorkoutAndShare with rasterized bitmaps",
-            onSnapshotReadyBlock.contains("combineWorkoutAndShare(context, hBmp, mapBitmap, eBmp, aBmp)")
-        )
+        assertNotNull("Exception must be caught and routed to onError", errorCaught)
+        assertTrue("onFinally must still execute when captureHeader throws", finallyInvoked)
     }
 }

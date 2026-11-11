@@ -2028,7 +2028,7 @@ public class WorkoutSummariesDatabaseManager {
                 + "ORDER BY w." + WorkoutSummaries.TIME_START + " ASC";
 
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.ROOT);
-        sdf.setTimeZone(TimeZone.getDefault());
+        sdf.setTimeZone(TimeZone.getTimeZone("UTC"));
 
         String[] selectionArgs = new String[]{String.valueOf(minR2)};
         try (Cursor cursor = db.rawQuery(sql, selectionArgs)) {

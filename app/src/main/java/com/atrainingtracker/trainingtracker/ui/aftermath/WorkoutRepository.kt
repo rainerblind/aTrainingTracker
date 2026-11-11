@@ -386,7 +386,7 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
             "${WorkoutSummariesDatabaseManager.WorkoutSummaries.C_ID} DESC",
             "1"
         ).use { cursor ->
-            if (cursor != null && cursor.moveToFirst()) {
+            if (cursor.moveToFirst()) {
                 val baseFileNameCol = cursor.getColumnIndexOrThrow(WorkoutSummariesDatabaseManager.WorkoutSummaries.FILE_BASE_NAME)
                 val idCol = cursor.getColumnIndexOrThrow(WorkoutSummariesDatabaseManager.WorkoutSummaries.C_ID)
                 val timeTotalCol = cursor.getColumnIndexOrThrow(WorkoutSummariesDatabaseManager.WorkoutSummaries.TIME_TOTAL_s)
@@ -429,41 +429,44 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
         val tableName = getSamplesTableName(baseFileName)
 
         samplesDb.beginTransaction()
-        summariesDb.beginTransaction()
-        var sampleInserted = false
         try {
+            summariesDb.beginTransaction()
             try {
-                samplesDb.insertOrThrow(tableName, null, samplingValues)
-                sampleInserted = true
-            } catch (e: android.database.SQLException) {
-                sampleInserted = handleMissingColumns(samplesDb, tableName, samplingValues, name2Type, e, baseFileName, onSampleFailure)
-            }
-
-            for (update in extremaUpdates) {
-                if (update.count != null) {
-                    summariesManager.updateExtremaValue(summariesDb, workoutId, update.type, update.extrema, update.value, update.pos, update.count)
-                } else {
-                    summariesManager.updateExtremaValue(summariesDb, workoutId, update.type, update.extrema, update.value, update.pos)
+                var sampleInserted = false
+                try {
+                    samplesDb.insertOrThrow(tableName, null, samplingValues)
+                    sampleInserted = true
+                } catch (e: android.database.SQLException) {
+                    sampleInserted = handleMissingColumns(samplesDb, tableName, samplingValues, name2Type, e, baseFileName, onSampleFailure)
                 }
-            }
 
-            summariesDb.update(WorkoutSummariesDatabaseManager.WorkoutSummaries.TABLE, summaryValues, "${WorkoutSummariesDatabaseManager.WorkoutSummaries.C_ID}=?", arrayOf(workoutId.toString()))
+                for (update in extremaUpdates) {
+                    if (update.count != null) {
+                        summariesManager.updateExtremaValue(summariesDb, workoutId, update.type, update.extrema, update.value, update.pos, update.count)
+                    } else {
+                        summariesManager.updateExtremaValue(summariesDb, workoutId, update.type, update.extrema, update.value, update.pos)
+                    }
+                }
 
-            if (streamIncrement != null) {
-                summariesManager.appendToMapAndStreams(workoutId, streamIncrement.polylineIncrement, streamIncrement.altitudeIncrement, streamIncrement.distanceIncrement)
-            }
+                summariesDb.update(WorkoutSummariesDatabaseManager.WorkoutSummaries.TABLE, summaryValues, "${WorkoutSummariesDatabaseManager.WorkoutSummaries.C_ID}=?", arrayOf(workoutId.toString()))
 
-            if (sampleInserted) {
-                samplesDb.setTransactionSuccessful()
+                if (streamIncrement != null) {
+                    summariesManager.appendToMapAndStreams(workoutId, streamIncrement.polylineIncrement, streamIncrement.altitudeIncrement, streamIncrement.distanceIncrement)
+                }
+
+                if (sampleInserted) {
+                    samplesDb.setTransactionSuccessful()
+                }
+                summariesDb.setTransactionSuccessful()
+                return sampleInserted
+            } finally {
+                summariesDb.endTransaction()
             }
-            summariesDb.setTransactionSuccessful()
-            return sampleInserted
         } catch (e: Exception) {
             onSampleFailure?.onFailure("Error during async DB write for table $tableName", e)
             return false
         } finally {
             samplesDb.endTransaction()
-            summariesDb.endTransaction()
         }
     }
 
@@ -760,7 +763,7 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
                 arrayOf(fileBaseName),
                 null, null, null
             ).use { cursor ->
-                if (cursor == null || !cursor.moveToFirst()) return null
+                if (!cursor.moveToFirst()) return null
 
                 fun col(name: String): Int = try {
                     cursor.getColumnIndexOrThrow(name)
@@ -770,7 +773,11 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
 
                 fun myGet(name: String, defaultVal: String): String {
                     val idx = col(name)
-                    return if (idx >= 0 && !cursor.isNull(idx)) cursor.getString(idx) else defaultVal
+                    if (idx >= 0 && !cursor.isNull(idx)) {
+                        val v = cursor.getString(idx)
+                        if (!v.isNullOrEmpty()) return v
+                    }
+                    return defaultVal
                 }
 
                 val idIdx = col(WorkoutSummariesDatabaseManager.WorkoutSummaries.C_ID)
@@ -818,7 +825,7 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
                 arrayOf(fileBaseName),
                 null, null, null
             ).use { cursor ->
-                if (cursor == null || !cursor.moveToFirst()) return null
+                if (!cursor.moveToFirst()) return null
 
                 fun col(name: String): Int = try {
                     cursor.getColumnIndexOrThrow(name)
@@ -826,7 +833,8 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
                     cursor.getColumnIndex(name)
                 }
 
-                val sportId = cursor.getLong(col(WorkoutSummariesDatabaseManager.WorkoutSummaries.SPORT_ID))
+                val sportIdx = col(WorkoutSummariesDatabaseManager.WorkoutSummaries.SPORT_ID)
+                val sportId = if (sportIdx >= 0 && !cursor.isNull(sportIdx)) cursor.getLong(sportIdx) else DatabaseConstants.INVALID_ID
                 val nameIdx = col(WorkoutSummariesDatabaseManager.WorkoutSummaries.WORKOUT_NAME)
                 val descIdx = col(WorkoutSummariesDatabaseManager.WorkoutSummaries.DESCRIPTION)
                 val trainerIdx = col(WorkoutSummariesDatabaseManager.WorkoutSummaries.TRAINER)
@@ -885,7 +893,7 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
                 arrayOf(fileBaseName),
                 null, null, null
             ).use { cursor ->
-                if (cursor != null && cursor.moveToFirst()) {
+                if (cursor.moveToFirst()) {
                     fun col(name: String): Int = try {
                         cursor.getColumnIndexOrThrow(name)
                     } catch (e: Exception) {
@@ -919,7 +927,7 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
                     val totalIdx = col(WorkoutSummariesDatabaseManager.WorkoutSummaries.TIME_TOTAL_s)
                     val activeTime = if (activeIdx >= 0 && !cursor.isNull(activeIdx)) cursor.getLong(activeIdx) else null
                     val totalTime = if (totalIdx >= 0 && !cursor.isNull(totalIdx)) cursor.getLong(totalIdx) else null
-                    val duration = activeTime?.takeIf { it > 0 } ?: totalTime
+                    val duration = totalTime?.takeIf { it > 0 } ?: activeTime
 
                     return WorkoutDuplicateMetadata(
                         timeStartStr = timeStartStr,

@@ -32,4 +32,9 @@ interface RadarLightDeviceClient {
      * @return `true` if the command was successfully queued/transmitted.
      */
     fun setLightMode(mode: RadarLightMode): Boolean
+
+    /**
+     * Releases light network association when a workout ends (e.g. ANT+ Page 0x20 Disconnect Command).
+     */
+    fun disconnectLight() {}
 }

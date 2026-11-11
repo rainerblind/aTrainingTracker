@@ -841,7 +841,7 @@
 
 **Invariants**: Zero changes to existing workout/sensor databases, pure Kotlin calculation logic, and 100% clean-room test pass rate.
 
-### REQ-PER-031: Android Health Connect Morning and Overnight Resting HRV Ingestion [Specified]
+### REQ-PER-031: Android Health Connect Morning and Overnight Resting HRV Ingestion [Verified]
 - **Tests**: `TST-PER-039` | **Tickets**: `ATT-4981`, `ATT-6712`
 - **Implementation**: `HealthConnectHrvImporter.kt`, `HealthConnectManager.kt`, `HrvPosture.kt`, `HrvReadinessRepository.kt`, `HealthConnectSettingsDialog.kt`, `AndroidManifest.xml`
 - **Rationale**: Passive overnight wearable monitoring (smart rings, smartwatches) provides continuous nocturnal resting HRV and resting heart rate data via Android Health Connect. To allow athletes to utilize nocturnal biometric tracking without contaminating waking spot-check baselines, the system SHALL ingest nocturnal `HeartRateVariabilityRmssdRecord` and `RestingHeartRateRecord` into `HrvReadinessRepository` under an isolated `OVERNIGHT_WEARABLE` cohort:
@@ -906,7 +906,7 @@
 
 **Invariants**: Zero workout generation, post-hoc centered filter calculation, 100% clean-room test pass rate.
 
-### REQ-PER-033: Longitudinal HRV Readiness Trend, Posture-Matched 60-Day SWC Corridor & Training Load Overlay [Specified]
+### REQ-PER-033: Longitudinal HRV Readiness Trend, Posture-Matched 60-Day SWC Corridor & Training Load Overlay [Verified]
 - **Tests**: `TST-PER-041` | **Tickets**: `ATT-3557`, `ATT-6721`, `ATT-6712`
 - **Implementation**: `HrvReadinessTrendCard.kt`, `HrvReadinessTrendMath.kt`, `PeriodsScreen.kt`, `PeriodsTabsScreen.kt`, `PeriodsViewModel.kt`, `strings_hrv.xml`
 - **Rationale**: Athletes tracking daily morning resting HRV require longitudinal visualization within the `PeriodsScreen` analytical hub to observe autonomic nervous system adaptation and recovery across days, weeks, and months in relation to training load (*Plews et al. 2013*). The system SHALL render an interactive longitudinal HRV trend visualization:
@@ -1094,7 +1094,7 @@
 **Invariants**: Pure mathematical comparison and non-destructive UI action; Power-only anchor updates with explicit confirmation; HR zones strictly informational; 100% 9-language localization parity.
 
 
-### REQ-PER-038: Model DFA a1 Autonomic Durability, Drift & Iso-Intensity Bins Across Multi-Hour Workouts [Specified]
+### REQ-PER-038: Model DFA a1 Autonomic Durability, Drift & Iso-Intensity Bins Across Multi-Hour Workouts [Verified]
 - **Target Release**: `V5.0.0`
 - **Tests**: `TST-PER-046` | **Tickets**: `ATT-4970`
 - **Implementation**: `HrvDurabilityCalculator.kt`, `HrvDurabilityResult.kt`, `ExtremaType.java`, `HrvPostWorkoutRecomputer.kt`, `WorkoutData.kt`, `WorkoutDataMapper.kt`, `HrvDurabilityCard.kt`, `WorkoutDetailTabbedContent.kt`, `strings_hrv.xml`

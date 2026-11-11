@@ -601,23 +601,21 @@ class DeviceDataRepository @androidx.annotation.VisibleForTesting internal const
                 arrayOf(protocol.name),
                 null, null, null
             ).use { cursor ->
-                if (cursor != null) {
-                    val idCol = cursor.getColumnIndexOrThrow(DevicesDatabaseManager.DevicesDbHelper.C_ID)
-                    val pairedCol = cursor.getColumnIndexOrThrow(DevicesDatabaseManager.DevicesDbHelper.PAIRED)
-                    val typeCol = cursor.getColumnIndexOrThrow(DevicesDatabaseManager.DevicesDbHelper.DEVICE_TYPE)
-                    val antCol = cursor.getColumnIndexOrThrow(DevicesDatabaseManager.DevicesDbHelper.ANT_DEVICE_NUMBER)
-                    val btCol = cursor.getColumnIndexOrThrow(DevicesDatabaseManager.DevicesDbHelper.BT_ADDRESS)
-                    while (cursor.moveToNext()) {
-                        val id = cursor.getLong(idCol)
-                        val isPaired = cursor.getInt(pairedCol) > 0
-                        val rawType = cursor.getString(typeCol)
-                        val deviceType = EnumUtils.safeValueOfOrNull(
-                            DeviceType::class.java, rawType, "DeviceDataRepository"
-                        )
-                        val antNum = cursor.getInt(antCol)
-                        val btAddr = cursor.getString(btCol)
-                        list.add(PairedRemoteDeviceDto(id, isPaired, deviceType, antNum, btAddr))
-                    }
+                val idCol = cursor.getColumnIndexOrThrow(DevicesDatabaseManager.DevicesDbHelper.C_ID)
+                val pairedCol = cursor.getColumnIndexOrThrow(DevicesDatabaseManager.DevicesDbHelper.PAIRED)
+                val typeCol = cursor.getColumnIndexOrThrow(DevicesDatabaseManager.DevicesDbHelper.DEVICE_TYPE)
+                val antCol = cursor.getColumnIndexOrThrow(DevicesDatabaseManager.DevicesDbHelper.ANT_DEVICE_NUMBER)
+                val btCol = cursor.getColumnIndexOrThrow(DevicesDatabaseManager.DevicesDbHelper.BT_ADDRESS)
+                while (cursor.moveToNext()) {
+                    val id = cursor.getLong(idCol)
+                    val isPaired = cursor.getInt(pairedCol) > 0
+                    val rawType = cursor.getString(typeCol)
+                    val deviceType = EnumUtils.safeValueOfOrNull(
+                        DeviceType::class.java, rawType, "DeviceDataRepository"
+                    )
+                    val antNum = cursor.getInt(antCol)
+                    val btAddr = cursor.getString(btCol)
+                    list.add(PairedRemoteDeviceDto(id, isPaired, deviceType, antNum, btAddr))
                 }
             }
         } catch (e: Exception) {

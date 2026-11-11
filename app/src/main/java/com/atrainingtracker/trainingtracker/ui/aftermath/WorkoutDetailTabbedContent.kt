@@ -263,7 +263,11 @@ fun WorkoutDetailTabbedContent(
         var totalTopChromeHeightPx by remember { mutableIntStateOf(0) }
 
         LaunchedEffect(isLandscape, totalTopChromeHeightPx, headerHeightPx) {
-            val maxCollapse = if (isLandscape) totalTopChromeHeightPx else headerHeightPx
+            val maxCollapse = calculateWorkoutDetailMaxCollapsePx(
+                isLandscape = isLandscape,
+                headerHeightPx = headerHeightPx,
+                totalTopChromeHeightPx = totalTopChromeHeightPx
+            )
             if (maxCollapse > 0) {
                 connection.appBarMaxHeight = maxCollapse
             }
@@ -836,7 +840,7 @@ private fun RenderWorkoutDetailCardSections(
                     enableCriticalPowerModel = tuningConfig.enableCriticalPowerModel,
                     showCriticalPowerInWorkoutSummary = tuningConfig.showCriticalPowerInWorkoutSummary,
                     enableCardioPowerDynamics = tuningConfig.enableCardioPowerDynamics,
-                    showCardioPowerInWorkoutSummary = true,
+                    showCardioPowerInWorkoutSummary = false,
                     modifier = Modifier.fillMaxWidth()
                 )
                 if (tuningConfig.enableCardioPowerDynamics && workoutData.cardioPowerDynamics != null) {
@@ -998,3 +1002,9 @@ private fun RenderWorkoutDetailCardSections(
         }
     }
 }
+
+internal fun calculateWorkoutDetailMaxCollapsePx(
+    isLandscape: Boolean,
+    headerHeightPx: Int,
+    totalTopChromeHeightPx: Int
+): Int = if (isLandscape) totalTopChromeHeightPx else headerHeightPx

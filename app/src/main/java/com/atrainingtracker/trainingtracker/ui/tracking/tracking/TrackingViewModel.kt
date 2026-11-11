@@ -620,6 +620,7 @@ class TrackingViewModel @JvmOverloads constructor(
                             0
                         }
 
+                        val currentTuning = _tuningConfig.value
                         SensorFieldState(
                             configHash = uniqueHash,
                             sensorFieldId = config.sensorFieldId,
@@ -642,7 +643,9 @@ class TrackingViewModel @JvmOverloads constructor(
                             graphHorizonSeconds = config.graphHorizonSeconds,
                             sparklineSamples = sparklineSamples,
                             sparklineSpanSeconds = sparklineSpanSeconds,
-                            colWeight = config.colWeight
+                            colWeight = config.colWeight,
+                            dfaA1ThresholdT1 = currentTuning.dfaA1ThresholdT1,
+                            dfaA1ThresholdT2 = currentTuning.dfaA1ThresholdT2
                         )
                     }
                     cachedConfigs = configs
@@ -749,7 +752,8 @@ class TrackingViewModel @JvmOverloads constructor(
             if (sensorData.sensorType == SensorType.HRV_ARTIFACT_RATE) {
                 val rate = (sensorData.value as? Number)?.toDouble()
                 latestArtifactRate = rate
-                val isGated = (rate ?: 0.0) > 5.0
+                val gateThreshold = _tuningConfig.value.hrvArtifactGateThresholdPercent.toDouble()
+                val isGated = (rate ?: 0.0) > gateThreshold
                 for (i in updatedFields.indices) {
                     val f = updatedFields[i]
                     if (f.sensorType == SensorType.HRV_DFA_A1 && (f.value == "--" || f.value == "--.--")) {
@@ -777,13 +781,13 @@ class TrackingViewModel @JvmOverloads constructor(
                 val numericValue = (sensorData.value as? Number)?.toDouble()
 
                 val isDfaA1 = (sensorData.sensorType == SensorType.HRV_DFA_A1)
+                val tuning = _tuningConfig.value
                 val rawZoneGaugeState = if (isDfaA1) {
-                    val tuning = _tuningConfig.value
                     HrvZoneIndicator.calculateZoneGaugeState(numericValue, tuning.dfaA1ThresholdT1, tuning.dfaA1ThresholdT2)
                 } else {
                     calculateZoneGaugeState(zoneType, numericValue)
                 }
-                val isArtifactGated = isDfaA1 && numericValue == null && ((latestArtifactRate ?: 0.0) > 5.0)
+                val isArtifactGated = isDfaA1 && numericValue == null && ((latestArtifactRate ?: 0.0) > tuning.hrvArtifactGateThresholdPercent.toDouble())
 
                 val isWPrimeBal = (sensorData.sensorType == SensorType.W_PRIME_BAL)
                 val newWPrimeBatteryState = if (isWPrimeBal) {
@@ -816,6 +820,8 @@ class TrackingViewModel @JvmOverloads constructor(
                         fieldToUpdate.zoneGaugeState != fieldZoneGaugeState ||
                         fieldToUpdate.pedalBalanceState != fieldPedalBalanceState ||
                         fieldToUpdate.isArtifactGated != newIsArtifactGated ||
+                        fieldToUpdate.dfaA1ThresholdT1 != tuning.dfaA1ThresholdT1 ||
+                        fieldToUpdate.dfaA1ThresholdT2 != tuning.dfaA1ThresholdT2 ||
                         (isWPrimeBal && fieldToUpdate.wPrimeBatteryState != fieldWPrimeBatteryState)) {
                         val index = updatedFields.indexOf(fieldToUpdate)
                         if (index != -1) {
@@ -826,6 +832,8 @@ class TrackingViewModel @JvmOverloads constructor(
                                 zoneGaugeState = fieldZoneGaugeState,
                                 pedalBalanceState = fieldPedalBalanceState,
                                 isArtifactGated = newIsArtifactGated,
+                                dfaA1ThresholdT1 = tuning.dfaA1ThresholdT1,
+                                dfaA1ThresholdT2 = tuning.dfaA1ThresholdT2,
                                 wPrimeBatteryState = if (isWPrimeBal) fieldWPrimeBatteryState else fieldToUpdate.wPrimeBatteryState
                             )
                             hasChanged = true

@@ -221,7 +221,7 @@ fun createDrawerGroups(startTrackingTitleRes: Int): List<DrawerGroup> {
                 DrawerItemConfig(R.id.drawer_strava, R.drawable.logo_square_strava, R.string.Strava, tintIcon = false),
                 DrawerItemConfig(R.id.drawer_dropbox, R.drawable.dropbox_logo_blue, R.string.Dropbox, tintIcon = false),
                 DrawerItemConfig(R.id.drawer_google_drive, R.drawable.ic_google_drive, R.string.google_drive, tintIcon = false),
-                DrawerItemConfig(R.id.drawer_health_connect, R.drawable.ic_health_connect, R.string.health_connect_title),
+                DrawerItemConfig(R.id.drawer_health_connect, R.drawable.ic_health_connect, R.string.health_connect_title, tintIcon = false),
                 DrawerItemConfig(R.id.drawer_export, R.drawable.ic_upload, R.string.prefsExportTitle),
                 DrawerItemConfig(R.id.drawer_backup_restore, R.drawable.ic_save_to_disc, R.string.import_backup)
             )

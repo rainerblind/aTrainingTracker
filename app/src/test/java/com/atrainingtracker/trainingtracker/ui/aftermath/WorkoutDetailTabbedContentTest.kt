@@ -59,12 +59,18 @@ class WorkoutDetailTabbedContentTest {
         val tabRowHeightPx = 48
         val totalTopChromeHeightPx = headerHeightPx + tabRowHeightPx
 
-        val isLandscape = true
-        val maxCollapseLandscape = if (isLandscape) totalTopChromeHeightPx else headerHeightPx
+        val maxCollapseLandscape = calculateWorkoutDetailMaxCollapsePx(
+            isLandscape = true,
+            headerHeightPx = headerHeightPx,
+            totalTopChromeHeightPx = totalTopChromeHeightPx
+        )
         assertEquals(totalTopChromeHeightPx, maxCollapseLandscape)
 
-        val isPortrait = false
-        val maxCollapsePortrait = if (isPortrait) totalTopChromeHeightPx else headerHeightPx
+        val maxCollapsePortrait = calculateWorkoutDetailMaxCollapsePx(
+            isLandscape = false,
+            headerHeightPx = headerHeightPx,
+            totalTopChromeHeightPx = totalTopChromeHeightPx
+        )
         assertEquals(headerHeightPx, maxCollapsePortrait)
     }
 

@@ -529,7 +529,12 @@ fun SensorFieldView(
     }
 
     if (showHrvInfoSheet) {
-        HrvInfoBottomSheet(onDismissRequest = { showHrvInfoSheet = false })
+        HrvInfoBottomSheet(
+            onDismissRequest = { showHrvInfoSheet = false },
+            signalQualityStatus = fieldState.hrvSignalQualityStatus,
+            dfaA1ThresholdT1 = fieldState.dfaA1ThresholdT1,
+            dfaA1ThresholdT2 = fieldState.dfaA1ThresholdT2
+        )
     }
 }
 

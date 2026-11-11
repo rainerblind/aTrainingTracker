@@ -192,6 +192,8 @@ object RadarLightController {
         val (autoControl, _) = resolveActiveConfig(context)
         if (autoControl) {
             setLightMode(RadarLightMode.OFF)
+            val device = synchronized(this) { activeRadarDevice }
+            device?.disconnectLight()
         }
     }
 

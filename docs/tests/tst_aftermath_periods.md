@@ -779,7 +779,7 @@
   • Verify all 18 zone comparison and consensus gating string keys exist with 100% parity across all 9 `strings_hrv.xml` files.
  (ATT-3555: [Verbesserung] Compare estimated HRVT1/HRVT2 against configured training zones with multi-session consensus and anchor-based updates (ZoneCalculationMath))
 
-### TST-PER-046: **DFA a1 Autonomic Durability, Drift & Iso-Intensity Bins Verification Suite** [Specified]
+### TST-PER-046: **DFA a1 Autonomic Durability, Drift & Iso-Intensity Bins Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-PER-038` (`REQ-PER-038.1`..`REQ-PER-038.6`)
 - **Component**: `HrvDurabilityCalculatorTest.kt`, `HrvDurabilityCardTest.kt`, `HrvPostWorkoutRecomputerTest.kt`, `WorkoutDataMapperTest.kt`, `TranslationParityTest`
 - **Jira**: `ATT-4970`

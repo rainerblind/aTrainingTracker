@@ -79,8 +79,11 @@ data class SensorFieldState(
     // Proportional horizontal width weight (REQ-UI-437, ATT-4861)
     val colWeight: Float = 1.0f,
 
-    // Gated telemetry warning indicator (REQ-TRK-061.2, ATT-6715)
-    val isArtifactGated: Boolean = false
+    // Gated telemetry warning indicator & configured HRV parameters (REQ-TRK-061.2, REQ-TRK-065.3, ATT-6715, ATT-6745)
+    val isArtifactGated: Boolean = false,
+    val dfaA1ThresholdT1: Float = 0.75f,
+    val dfaA1ThresholdT2: Float = 0.50f,
+    val hrvSignalQualityStatus: com.atrainingtracker.banalservice.devices.hrv.HrvSignalQualityStatus? = null
 )
 
 /**

@@ -92,9 +92,10 @@ object TcxTrackpointParser {
             val activity = document.activities.first()
             data.sport = activity.sport
             data.name = activity.extensions?.customName
-            data.notes = activity.notes ?: activity.extensions?.customDescription
+            data.notes = activity.extensions?.customDescription ?: stripBracketedPrefix(activity.notes, data.name)
 
             for ((lapIndex, lap) in activity.laps.withIndex()) {
+                val lapName = lap.extensions?.name
                 val rawLap = RawLap(
                     lapNr = lapIndex.toLong(),
                     startTime = lap.startTime.takeIf { it.isNotBlank() },
@@ -103,8 +104,8 @@ object TcxTrackpointParser {
                     maxSpeed = lap.maximumSpeed,
                     calories = lap.calories,
                     avgHeartRate = lap.averageHeartRateBpm,
-                    name = lap.extensions?.name,
-                    description = lap.extensions?.description ?: lap.notes,
+                    name = lapName,
+                    description = lap.extensions?.description ?: stripBracketedPrefix(lap.notes, lapName),
                     trackpoints = lap.trackpoints.map { toRawTrackpoint(it) }.toMutableList()
                 )
                 data.laps.add(rawLap)
@@ -112,6 +113,17 @@ object TcxTrackpointParser {
         }
 
         return Result.success(data)
+    }
+
+    private fun stripBracketedPrefix(notes: String?, name: String?): String? {
+        val raw = notes?.trim()?.takeIf { it.isNotEmpty() } ?: return null
+        if (!name.isNullOrBlank()) {
+            val prefix = "[${name.trim()}]"
+            if (raw.startsWith(prefix)) {
+                return raw.removePrefix(prefix).trim().takeIf { it.isNotEmpty() }
+            }
+        }
+        return raw
     }
 
     private fun toRawTrackpoint(tp: TcxTrackpoint): RawTrackpoint {
@@ -122,7 +134,7 @@ object TcxTrackpointParser {
             distanceMeters = tp.distanceMeters,
             time = tp.time.takeIf { it.isNotBlank() },
             hr = tp.heartRateBpm,
-            cadence = tp.cadence,
+            cadence = tp.cadence ?: tp.extensions?.runCadence,
             power = tp.extensions?.watts,
             speedMps = tp.extensions?.speed
         )

@@ -169,6 +169,10 @@ public class TrackerService extends Service {
         SENSORS_TO_TRACK.add(SensorType.LONGITUDE);
         SENSORS_TO_TRACK.add(SensorType.LINE_DISTANCE_m);
         SENSORS_TO_TRACK.add(SensorType.W_PRIME_BAL);
+        SENSORS_TO_TRACK.add(SensorType.RADAR_VEHICLE_COUNT);
+        SENSORS_TO_TRACK.add(SensorType.RADAR_APPROACH_SPEED_mps);
+        SENSORS_TO_TRACK.add(SensorType.RADAR_PASSING_DISTANCE_m);
+        SENSORS_TO_TRACK.add(SensorType.RADAR_LARGE_VEHICLE_COUNT);
     }
     
     public static final String ACTION_STOP = "com.atrainingtracker.trainingtracker.tracker.TrackerService.ACTION_STOP";
@@ -328,8 +332,8 @@ public class TrackerService extends Service {
         while ((item = mLiveRrQueue.poll()) != null) {
             batch.add(item);
         }
-        if (!batch.isEmpty()) {
-            synchronized (mRrFlushLock) {
+        synchronized (mRrFlushLock) {
+            if (!batch.isEmpty()) {
                 try {
                     getWorkoutRrRepository().insertIntervalsBlocking(batch);
                 } catch (Throwable t) {
@@ -1397,8 +1401,10 @@ public class TrackerService extends Service {
             mRadarAlertManager = null;
         }
 
-        RadarSnoozeController.reset();
-        RadarTrafficSimulator.INSTANCE.stop();
+        if (!TrainingApplication.isPaused()) {
+            RadarSnoozeController.reset();
+            RadarTrafficSimulator.INSTANCE.stop();
+        }
 
         LifecycleUtils.safeUnregisterReceiver(this, mSearchingFinishedReceiver, TAG);
         LifecycleUtils.safeUnregisterReceiver(this, mAltitudeCorrectionReceiver, TAG);

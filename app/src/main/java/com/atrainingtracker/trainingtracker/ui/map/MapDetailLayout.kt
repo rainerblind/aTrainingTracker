@@ -338,27 +338,35 @@ fun MapDetailLayout(
                 onMapClick = onMapClick,
                 onSnapshotReady = { mapBitmap ->
                     scope.launch {
-                        try {
-                            val hBmp = if (headerLayer.size.width > 0 && headerLayer.size.height > 0) {
-                                headerLayer.toImageBitmap().asAndroidBitmap()
-                            } else null
-
-                            val eBmp = if (elevationLayer.size.width > 0 && elevationLayer.size.height > 0) {
-                                elevationLayer.toImageBitmap().asAndroidBitmap()
-                            } else null
-
-                            val aBmp = if (analyticsLayer.size.width > 0 && analyticsLayer.size.height > 0) {
-                                analyticsLayer.toImageBitmap().asAndroidBitmap()
-                            } else null
-
-                            combineWorkoutAndShare(context, hBmp, mapBitmap, eBmp, aBmp)
-                        } catch (t: Throwable) {
-                            android.util.Log.e("MapDetailLayout", "Failed to capture or share workout snapshot", t)
-                            android.widget.Toast.makeText(context, R.string.error_sharing_failed, android.widget.Toast.LENGTH_SHORT).show()
-                        } finally {
-                            isSharing = false
-                            onSnapshotComplete?.invoke()
-                        }
+                        executeSnapshotCaptureAndShare(
+                            captureHeader = {
+                                if (headerLayer.size.width > 0 && headerLayer.size.height > 0) {
+                                    headerLayer.toImageBitmap().asAndroidBitmap()
+                                } else null
+                            },
+                            captureElevation = {
+                                if (elevationLayer.size.width > 0 && elevationLayer.size.height > 0) {
+                                    elevationLayer.toImageBitmap().asAndroidBitmap()
+                                } else null
+                            },
+                            captureAnalytics = {
+                                if (analyticsLayer.size.width > 0 && analyticsLayer.size.height > 0) {
+                                    analyticsLayer.toImageBitmap().asAndroidBitmap()
+                                } else null
+                            },
+                            mapBitmap = mapBitmap,
+                            shareAction = { hBmp, mBmp, eBmp, aBmp ->
+                                combineWorkoutAndShare(context, hBmp, mBmp, eBmp, aBmp)
+                            },
+                            onError = { t ->
+                                android.util.Log.e("MapDetailLayout", "Failed to capture or share workout snapshot", t)
+                                android.widget.Toast.makeText(context, R.string.error_sharing_failed, android.widget.Toast.LENGTH_SHORT).show()
+                            },
+                            onFinally = {
+                                isSharing = false
+                                onSnapshotComplete?.invoke()
+                            }
+                        )
                     }
                 },
                 onSnapshotError = {
@@ -1231,4 +1239,30 @@ fun MapDetailLayout(
         )
     }
 }
+}
+
+internal suspend fun executeSnapshotCaptureAndShare(
+    captureHeader: suspend () -> android.graphics.Bitmap?,
+    captureElevation: suspend () -> android.graphics.Bitmap?,
+    captureAnalytics: suspend () -> android.graphics.Bitmap?,
+    mapBitmap: android.graphics.Bitmap,
+    shareAction: suspend (
+        headerBmp: android.graphics.Bitmap?,
+        mapBmp: android.graphics.Bitmap,
+        elevationBmp: android.graphics.Bitmap?,
+        analyticsBmp: android.graphics.Bitmap?
+    ) -> Unit,
+    onError: (Throwable) -> Unit,
+    onFinally: () -> Unit
+) {
+    try {
+        val hBmp = captureHeader()
+        val eBmp = captureElevation()
+        val aBmp = captureAnalytics()
+        shareAction(hBmp, mapBitmap, eBmp, aBmp)
+    } catch (t: Throwable) {
+        onError(t)
+    } finally {
+        onFinally()
+    }
 }

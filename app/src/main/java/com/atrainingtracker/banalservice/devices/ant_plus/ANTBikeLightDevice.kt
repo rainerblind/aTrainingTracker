@@ -107,6 +107,9 @@ class ANTBikeLightDevice(
     var sequenceNumber: Int = 0
         internal set
 
+    var triedWildcardFallback: Boolean = false
+        internal set
+
     private val channelEventHandler = object : IAntChannelEventHandler {
         override fun onReceiveMessage(messageType: MessageFromAntType, messageParcel: AntMessageParcel) {
             when (messageType) {
@@ -115,6 +118,11 @@ class ANTBikeLightDevice(
                     val broadcastMessage = BroadcastDataMessage(messageParcel)
                     decodeBroadcastData(broadcastMessage.payload)
                 }
+                MessageFromAntType.CHANNEL_EVENT -> {
+                    if (!isAssociated && antDeviceNumber != 0 && !triedWildcardFallback) {
+                        fallbackToWildcardSearch()
+                    }
+                }
                 else -> {}
             }
         }
@@ -122,6 +130,18 @@ class ANTBikeLightDevice(
         override fun onChannelDeath() {
             if (DEBUG) Log.w(TAG, "ANT+ Bike Light channel died")
             stop()
+        }
+    }
+
+    fun fallbackToWildcardSearch() {
+        val channel = antChannel ?: return
+        triedWildcardFallback = true
+        try {
+            channel.setChannelId(ChannelId(0, BIKE_LIGHT_DEVICE_TYPE, 0))
+            channel.open()
+            if (DEBUG) Log.i(TAG, "ANT+ Bike Light fallback to wildcard (deviceNumber=0) search")
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed wildcard fallback on ANT+ Bike Light channel", e)
         }
     }
 
@@ -332,6 +352,16 @@ class ANTBikeLightDevice(
             return sendConnectCommand()
         }
         return sendLightSettingsCommand(mode)
+    }
+
+    override fun disconnectLight() {
+        if (isAssociated && lightIndex > 0) {
+            try {
+                sendDisconnectCommand()
+            } catch (e: Exception) {
+                Log.w(TAG, "Error sending disconnect command on workout stop", e)
+            }
+        }
     }
 
     fun mapModeToAntByte(mode: RadarLightMode): Byte {

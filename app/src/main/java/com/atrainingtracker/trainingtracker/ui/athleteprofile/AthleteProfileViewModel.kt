@@ -427,12 +427,14 @@ class AthleteProfileViewModel @JvmOverloads constructor(
     }
 
     fun loadCardioTrendSamples() {
-        val samples = try {
-            workoutRepository.getCardioPowerDynamicsFitnessTrendSamples(0.50)
-        } catch (_: Throwable) {
-            emptyList()
+        viewModelScope.launch(ioDispatcher) {
+            val samples = try {
+                workoutRepository.getCardioPowerDynamicsFitnessTrendSamples(0.50)
+            } catch (_: Throwable) {
+                emptyList()
+            }
+            _cardioTrendSamples.value = samples
         }
-        _cardioTrendSamples.value = samples
     }
 
     fun selectCardioTrendMetric(metric: CardioTrendMetric) {
