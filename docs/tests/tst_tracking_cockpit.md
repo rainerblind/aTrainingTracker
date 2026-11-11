@@ -2072,6 +2072,27 @@
   6. *Clean-Room Targeted Test Suite Execution (`TST-TRK-068.6`)*:
   • `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.hrv.*" --tests "com.atrainingtracker.trainingtracker.ui.cockpit.*" --tests "com.atrainingtracker.trainingtracker.localization.TranslationParityTest"` asserting 100% pass rate.
 
+### TST-TRK-069: **ANT+ UTC Epoch Timestamping, Reconnection Sensor Registration & BLE Bundled Drift Guard Test Suite** [Verified]
+- **Requirement(s)**: `REQ-TRK-069` (`REQ-TRK-069.1`..`REQ-TRK-069.4`)
+- **Component**: `ANTHeartRateDevice.java`, `BTLEHeartRateDevice.java`, `HRVMetricsDevice.kt`
+- **Jira**: `ATT-6713`
+- **Test Description**:
+  1. *ANT+ estTimestamp UTC Epoch Conversion Unit Tests (`TST-TRK-069.1`, `ANTHeartRateDeviceTest.kt`)*:
+  • Verify `estTimestamp > 0` is converted via `System.currentTimeMillis() - SystemClock.elapsedRealtime() + estTimestamp`, yielding valid UTC epoch timestamp matching current wall-clock.
+  • Verify fallback to `System.currentTimeMillis()` when `estTimestamp <= 0` or after connection reset.
+  2. *Driver Reconnection Sensor Re-Registration Unit Tests (`TST-TRK-069.2`, `ANTHeartRateDeviceTest.kt`, `BTLEHeartRateDeviceTest.kt`)*:
+  • Verify `unregisterSensors()` resets `mRrIntervalSensor` to `null` in both `ANTHeartRateDevice` and `BTLEHeartRateDevice`.
+  • Verify subsequent call to `registerSensors()` successfully re-instantiates and registers `mRrIntervalSensor` via `addAndRegisterSensor`.
+  3. *BLE Bundled RR Backward Anchoring & Sub-ms Precision Unit Tests (`TST-TRK-069.3`, `BTLEHeartRateDeviceTest.kt`)*:
+  • Verify bundled packets with $K > 1$ beats anchor the newest beat to `packetArrivalMs` and back-date prior beats without shifting into the future.
+  • Verify 60-minute simulated session (3600 beats) with double precision accumulation maintains cumulative clock drift $< 2000\text{ ms}$ with zero false `ARTIFACT_GAP` events.
+  4. *End-to-End ANT+ & HRVMetricsDevice Integration Regression Tests (`TST-TRK-069.4`, `ANTHeartRateDeviceHrvMetricsTest.kt`)*:
+  • Wire `ANTHeartRateDevice` to `HRVMetricsDevice` and stream synthetic ANT+ packets.
+  • Verify beats are not evicted by `HRVMetricsDevice.pruneOldBeats()` and valid real-time `rMSSD` and `DFA a1` are produced.
+  5. *Clean-Room Targeted Test Suite Execution (`TST-TRK-069.5`)*:
+  • `./gradlew testDebugUnitTest --tests "com.atrainingtracker.banalservice.devices.ANTHeartRateDeviceTest" --tests "com.atrainingtracker.banalservice.devices.BTLEHeartRateDeviceTest" --tests "com.atrainingtracker.banalservice.devices.hrv.*"` asserting 100% pass rate.
+
+
 
 
 

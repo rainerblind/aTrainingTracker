@@ -3688,6 +3688,46 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 **Invariants**: Independent $> 5\%$ artifact warnings preserved; Rule 71 theme tokens enforced; Rule 72 modal sheet scrolling safety maintained; zero SQLite schema modifications; 100% unit test pass rate.
 
+### REQ-TRK-069: ANT+ UTC Epoch Timestamping, Reconnection Sensor Registration & BLE Bundled Drift Guard [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-TRK-069` | **Tickets**: `ATT-6713`
+- **Implementation**: `app/src/main/java/com/atrainingtracker/banalservice/devices/ANTHeartRateDevice.java`, `app/src/main/java/com/atrainingtracker/banalservice/devices/BTLEHeartRateDevice.java`, `app/src/main/java/com/atrainingtracker/banalservice/devices/hrv/HRVMetricsDevice.kt`
+- **Rationale**: Real-time HRV metrics (`rMSSD`, `DFA a1`) and lossless `WorkoutRrIntervals` persistence require accurate UTC Unix epoch timestamps across hardware acquisition interfaces. Under `ATT-3540`/`ATT-6742`, ANT+ `estTimestamp` was passed as raw boot-relative time (`SystemClock.elapsedRealtime()`), causing immediate eviction in `HRVMetricsDevice.pruneOldBeats()` and near-1970 timestamp corruption. Additionally, `unregisterSensors()` in both ANT+ and BLE drivers failed to clear `mRrIntervalSensor`, preventing sensor re-registration upon device reconnection. Finally, BLE bundled RR packets anchored the first beat instead of the newest beat and accumulated integer millisecond rounding errors, triggering spurious `ARTIFACT_GAP` drift events after 30–40 min. Hardware drivers must convert ANT+ timestamps to UTC epoch ms, reset sensor handles on disconnect, anchor bundled BLE packets to arrival time, and accumulate timestamps with sub-millisecond precision.
+- **Description**:
+  1. *ANT+ estTimestamp UTC Epoch Conversion (`REQ-TRK-069.1`)*:
+     - `ANTHeartRateDevice.java` SHALL convert `estTimestamp` from boot-relative monotonic time to UTC epoch milliseconds: `epochOffset = System.currentTimeMillis() - SystemClock.elapsedRealtime()`, setting `beatTimestampMs = (estTimestamp > 0) ? (epochOffset + estTimestamp) : System.currentTimeMillis()`.
+     - When `estTimestamp <= 0` or upon gap recovery / `DataState.ZERO_DETECTED`, `beatTimestampMs` SHALL fall back safely to `System.currentTimeMillis()`.
+     - ANT+ beats delivered to `HRVMetricsDevice` SHALL survive `pruneOldBeats(now)` evaluation over the 120s sliding window without spurious eviction.
+  2. *Driver Reconnection Sensor Re-Registration (`REQ-TRK-069.2`)*:
+     - `ANTHeartRateDevice.unregisterSensors()` and `BTLEHeartRateDevice.unregisterSensors()` SHALL set `mRrIntervalSensor = null`.
+     - On sensor reconnection and subsequent `registerSensors()` execution, `mRrIntervalSensor` SHALL be newly instantiated and registered with `addAndRegisterSensor`, ensuring continuous RR beat streaming after reconnect.
+  3. *BLE Bundled RR Backward Anchoring & Sub-ms Drift Guard (`REQ-TRK-069.3`)*:
+     - In `BTLEHeartRateDevice.java`, when receiving bundled RR packets ($K > 1$), the most recent beat ($K$) SHALL be anchored to `packetArrivalMs`, and prior beats ($1 \dots K-1$) SHALL be back-calculated in reverse: `t_{k-1} = t_k - RR_k`.
+     - Continuous timestamp accumulation SHALL maintain floating-point (`double`) precision to prevent integer round-off drift accumulation, guaranteeing that drift against phone arrival clock remains $< 2000\text{ ms}$ over $\ge 60\text{ min}$ of continuous streaming without packet loss.
+  4. *End-to-End ANT+ & BLE Integration Integrity (`REQ-TRK-069.4`)*:
+     - Integration tests wiring `ANTHeartRateDevice` into `HRVMetricsDevice` SHALL verify that valid ANT+ beat streams compute non-zero `rMSSD` and valid `DFA a1` in real-time.
+     - Core invariants (`deltaC == 1` continuity guard, `ARTIFACT_GAP` on packet drop, optical sensor fallback `flag = 0x00`) SHALL remain 100% preserved.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* `ANTHeartRateDevice` receiving an RR event with `estTimestamp > 0`,
+• *When* calculating `beatTimestampMs`,
+• *Then* `beatTimestampMs` equals `(System.currentTimeMillis() - SystemClock.elapsedRealtime()) + estTimestamp` within $\pm 50\text{ ms}$ of `System.currentTimeMillis()`.
+• *Given* `ANTHeartRateDevice` connected to `HRVMetricsDevice`,
+• *When* continuous ANT+ beats are streamed over 120 seconds,
+• *Then* `HRVMetricsDevice.pruneOldBeats()` retains all active window beats and computes valid real-time `rMSSD` and `DFA a1`.
+• *Given* `ANTHeartRateDevice` or `BTLEHeartRateDevice`,
+• *When* `unregisterSensors()` is called followed by `registerSensors()`,
+• *Then* `mRrIntervalSensor` is not null and is active in `MyDevice`.
+• *Given* `BTLEHeartRateDevice` receiving a bundled packet of 3 RR intervals at `t = 10000 ms` with intervals [800 ms, 810 ms, 820 ms],
+• *When* timestamps are computed,
+• *Then* Beat 3 has timestamp `10000 ms`, Beat 2 has `9180 ms`, and Beat 1 has `8370 ms`.
+• *Given* `BTLEHeartRateDevice` running a continuous 60-minute session (3600 beats) without packet loss,
+• *When* tracking cumulative drift against arrival time,
+• *Then* $|t_{\text{cumulative}} - t_{\text{arrival}}| < 2000\text{ ms}$ and zero false `ARTIFACT_GAP` events are emitted.
+
+**Invariants**: `deltaC == 1` ANT+ continuity check preserved; `ARTIFACT_GAP` emitted on genuine packet drop; 1-Hz HR display unaffected; optical sensor fallback intact; zero SQLite schema modifications; 100% unit test pass rate.
+
+
 
 
 

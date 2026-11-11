@@ -254,4 +254,104 @@ class BTLEHeartRateDeviceTest {
         // State remains valid and uncorrupted
         assertEquals(75, device.heartRateSensor.value)
     }
+
+    /**
+     * TST-TRK-069.3: Initial bundled RR packet anchors newest beat to packetArrivalMs and back-dates prior beats.
+     */
+    @Test
+    fun testInitialBundledBeatsBackwardAnchoring() {
+        val device = createDevice()
+        val receivedEvents = mutableListOf<RrBeatEvent>()
+        device.addRrBeatListener { receivedEvents.add(it) }
+
+        // Initial packet arriving at 10_000L with 3 bundled intervals:
+        // raw1 = 1024 (1000.0ms, 0x0400 LE: 0x00, 0x04)
+        // raw2 = 512 (500.0ms, 0x0200 LE: 0x00, 0x02)
+        // raw3 = 256 (250.0ms, 0x0100 LE: 0x00, 0x01)
+        val packet = byteArrayOf(
+            0x10.toByte(), 75.toByte(),
+            0x00.toByte(), 0x04.toByte(),
+            0x00.toByte(), 0x02.toByte(),
+            0x00.toByte(), 0x01.toByte()
+        )
+        device.parseHeartRateMeasurement(packet, 10_000L)
+
+        assertEquals(3, receivedEvents.size)
+        // Beat 2 (newest) anchored to packetArrivalMs = 10_000L
+        assertEquals(250.0, receivedEvents[2].rrMs, 0.01)
+        assertEquals(10_000L, receivedEvents[2].beatTimestampMs)
+
+        // Beat 1 back-calculated: 10_000 - 250 = 9_750L
+        assertEquals(500.0, receivedEvents[1].rrMs, 0.01)
+        assertEquals(9_750L, receivedEvents[1].beatTimestampMs)
+
+        // Beat 0 back-calculated: 9_750 - 500 = 9_250L
+        assertEquals(1000.0, receivedEvents[0].rrMs, 0.01)
+        assertEquals(9_250L, receivedEvents[0].beatTimestampMs)
+
+        // All beats should be marked normal with 0 gap beats
+        for (event in receivedEvents) {
+            assertEquals(0, event.gapBeats)
+            assertEquals(RrBeatEvent.ARTIFACT_NORMAL, event.artifactFlag)
+        }
+    }
+
+    /**
+     * TST-TRK-069.2: unregisterSensors() resets mRrIntervalSensor to null, allowing clean re-registration on reconnect.
+     */
+    @Test
+    fun testReconnectReRegistersRrIntervalSensor() {
+        val device = createDevice()
+        val packet = byteArrayOf(0x10.toByte(), 60.toByte(), 0x00.toByte(), 0x04.toByte())
+
+        // Initial connect
+        device.parseHeartRateMeasurement(packet, 100_000L)
+        assertNotNull("mRrIntervalSensor must be non-null after first RR packet", device.rrIntervalSensor)
+
+        // Mid-ride disconnect
+        device.unregisterSensors()
+        assertNull("mRrIntervalSensor must be reset to null in unregisterSensors()", device.rrIntervalSensor)
+
+        // Reconnect
+        device.parseHeartRateMeasurement(packet, 105_000L)
+        assertNotNull("mRrIntervalSensor must be re-registered upon reconnect", device.rrIntervalSensor)
+        assertEquals(1000, device.rrIntervalSensor?.value)
+    }
+
+    /**
+     * TST-TRK-069.3: Continuous double precision accumulation prevents Math.round quantization drift across 3600 beats.
+     */
+    @Test
+    fun testContinuousDoublePrecisionDriftBounding_3600Beats() {
+        val device = createDevice()
+        val receivedEvents = mutableListOf<RrBeatEvent>()
+        device.addRrBeatListener { receivedEvents.add(it) }
+
+        // raw = 819 -> 819 * 1000.0 / 1024.0 = 799.8046875 ms
+        // Math.round(799.8046875) = 800 ms (+0.1953 ms/beat error if rounded!)
+        val rawRr = 819
+        val rawByte0 = (rawRr and 0xFF).toByte()
+        val rawByte1 = ((rawRr shr 8) and 0xFF).toByte()
+        val packet = byteArrayOf(0x10.toByte(), 75.toByte(), rawByte0, rawByte1)
+
+        val beatDurationMs = 819 * 1000.0 / 1024.0
+        var arrivalMs = 100_000.0
+
+        // Stream 3600 beats (~48 minutes of riding)
+        for (i in 0 until 3600) {
+            device.parseHeartRateMeasurement(packet, Math.round(arrivalMs))
+            arrivalMs += beatDurationMs
+        }
+
+        assertEquals(3600, receivedEvents.size)
+
+        // Zero ARTIFACT_GAP events must be emitted (no fake gap from integer drift!)
+        val gapEvents = receivedEvents.filter { it.artifactFlag == RrBeatEvent.ARTIFACT_GAP }
+        assertEquals("Zero false ARTIFACT_GAP events should occur over 3600 beats", 0, gapEvents.size)
+
+        // Cumulative drift must be strictly bounded (< 5 ms)
+        val lastEvent = receivedEvents.last()
+        val expectedTimestamp = Math.round(100_000.0 + (3599 * beatDurationMs))
+        assertEquals(expectedTimestamp, lastEvent.beatTimestampMs)
+    }
 }
