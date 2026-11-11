@@ -2347,17 +2347,25 @@ The workflow SHALL mandate that:
 - **Invariants**: Active GitHub Actions workflows in `.github/workflows/` remain authoritative and unchanged; zero impact on Android runtime code or APK packaging.
 
 ### REQ-PRO-043: SWE.2 Architecture & Authentic Codebase Resynchronization [Verified]
-- **Tests**: `TST-PRO-043` | **Tickets**: `ATT-6179`
-- **Implementation**: `docs/architecture.md`, `AspiceSweAuditContractTest.kt`
-- **Rationale**: `docs/architecture.md` (authored under `ATT-5431` for ASPICE SWE.2 compliance) exhibits architectural drift against production code by naming non-existent placeholder components (`RouteLearningEngine`, `GpxExporter`, `TcxExporter`, `WorkoutSamplesDb`, `MilestoneDetector`, `InAppReviewManager`), misrepresenting the tracking state machine (`TrackingMode`), and generalizing database dispatcher usage. Resynchronizing architecture specifications with authentic code guarantees ASPICE SWE.2 software architectural design conformance (ATT-6179, refining `REQ-PRO-034` under Epic `ATT-6142`):
+- **Tests**: `TST-PRO-043` | **Tickets**: `ATT-6179, ATT-6727`
+- **Implementation**: `docs/architecture.md`, `docs/architecture/interfaces.md`, `AspiceSweAuditContractTest.kt`
+- **Rationale**: `docs/architecture.md` (authored under `ATT-5431` for ASPICE SWE.2 compliance) exhibits architectural drift against production code by naming non-existent placeholder components (`RouteLearningEngine`, `GpxExporter`, `TcxExporter`, `WorkoutSamplesDb`, `MilestoneDetector`, `InAppReviewManager`, `UserPreferences`, `EquipmentDatabaseManager`, `PrivacyZoneManager`, `BillingManager`, `TTTheme`, `CustomLineChart`, `ElevationPoint`, `StoreMetadataContractTest`), misrepresenting the tracking state machine (`TrackingMode`), and generalizing database dispatcher usage. Resynchronizing architecture specifications with authentic code and enforcing dynamic component existence guarantees ASPICE SWE.2 software architectural design conformance (ATT-6179, ATT-6727, refining `REQ-PRO-034` under Epic `ATT-6142`):
 - **Description**:
   1. *Component Nomenclature Code-Grounding (`REQ-PRO-043.1`)*:
-     • `docs/architecture.md` SHALL reference authentic production classes across diagrams, layers, and requirement allocations:
+     • `docs/architecture.md` and `docs/architecture/interfaces.md` SHALL reference authentic production classes across diagrams, layers, and requirement allocations:
        - `WorkoutClusterEngine` (replacing `RouteLearningEngine`).
        - `GPXFileWriter` and `TCXFileWriter` (replacing `GpxExporter` / `TcxExporter`).
        - `WorkoutSamplesDatabaseManager` (replacing `WorkoutSamplesDb`).
        - `MilestoneAutoNamingManager` and `FirstJubileeActionHelper` (replacing `MilestoneDetector` / `InAppReviewManager`).
-     • Obsolete and fictitious component names SHALL be permanently removed.
+       - `SettingsDataStore` (replacing `UserPreferences`).
+       - `EquipmentDbHelper` and `EquipmentRepository` (replacing `EquipmentDatabaseManager`).
+       - `ProFeatureManager`, `SupporterTier`, and `GarageLeagueDetector` (replacing `BillingManager`).
+       - `ATrainingTrackerTheme` (replacing `TTTheme`).
+       - `TelemetryMetricGraph` and `ElevationProfile` (replacing `CustomLineChart`).
+       - `PathPoint` (replacing `ElevationPoint`).
+       - `PlayStoreListingContractTest` (replacing `StoreMetadataContractTest`).
+     • Fictitious placeholder components such as `PrivacyZoneManager` ("GPS obfuscation") SHALL be permanently excised.
+     • `PowerHrDynamicsCalculator` and `PowerHrDynamicsInfoDialog` SHALL be allocated to Post-Workout Analytics (`PER`, `PERF`) rather than Jubilee Milestones (`REV`).
   2. *Tracking Lifecycle State Machine Conformance (`REQ-PRO-043.2`)*:
      • Section 3.1 `stateDiagram-v2` in `docs/architecture.md` SHALL accurately model the top-level states of `TrackingMode` (`IDLE`, `READY`, `TRACKING`, `PAUSED`) and session lifecycle transitions (start, pause, resume, finish/save).
      • Sub-state transitions such as auto-pause SHALL be documented as delegated to `AutoPauseManager` / `AutoPauseState`.
@@ -2365,21 +2373,23 @@ The workflow SHALL mandate that:
      • Section 4.1 in `docs/architecture.md` SHALL accurately document threading boundaries: `KnownLocationsRepository` utilizing a dedicated single-threaded `dbDispatcher`, while `WorkoutRepository` and other managers leverage `Dispatchers.IO` with SQLite WAL mode and transaction locks.
   4. *Automated Architecture Conformance Contract (`REQ-PRO-043.4`)*:
      • `AspiceSweAuditContractTest.kt` SHALL assert the presence of authentic component names and assert the absence of drifted placeholder names in `docs/architecture.md`.
+  5. *Dynamic Component Existence & Architecture Conformance Contract (`REQ-PRO-043.5`)*:
+     • `AspiceSweAuditContractTest.kt` SHALL dynamically parse allocated and specified component symbols in `docs/architecture.md` and `docs/architecture/interfaces.md`, filter through a strict external SDK/framework allow-list, and assert that every project component symbol resolves to an authentic declaration in `app/src/main/` or `tools/`.
 - **Requirement Archaeology & Chesterton's Fence Audit**:
-  1. *Original Requirement ID & Target*: Net-new requirement `REQ-PRO-043` (*SWE.2 Architecture & Codebase Resynchronization*), refining `REQ-PRO-034` (*ASPICE SWE.1/2/4/6 Hardening*). Targets `docs/architecture.md` and `AspiceSweAuditContractTest.kt`.
-  2. *Historical Origin & Commit Trace*: Commit `053531cb` (`ATT-5431`) authored initial `docs/architecture.md` using temporary component placeholders.
-  3. *Root Reason for Existing Formulation*: Drafted rapidly during early ASPICE assessment before rigorous code-grounding rules were established.
+  1. *Original Requirement ID & Target*: Net-new requirement `REQ-PRO-043` (*SWE.2 Architecture & Codebase Resynchronization*), refining `REQ-PRO-034` (*ASPICE SWE.1/2/4/6 Hardening*). Targets `docs/architecture.md`, `docs/architecture/interfaces.md`, and `AspiceSweAuditContractTest.kt`.
+  2. *Historical Origin & Commit Trace*: Commit `053531cb` (`ATT-5431`) authored initial `docs/architecture.md` using temporary component placeholders. Ticket `ATT-6179` resolved the initial 6 placeholders. Ticket `ATT-6727` completes the sweep of 8 secondary drifted symbols and adds dynamic continuous conformance assertions.
+  3. *Root Reason for Existing Formulation*: Drafted rapidly during early ASPICE assessment before automated symbol-extraction contracts were established.
   4. *Preservation of Core Invariants*: ASPICE SWE.2 base practices (`BP.1`–`BP.5`), Mermaid dynamic models, 9-domain allocation table, and 100% build contract test pass rate remain preserved.
 - **Acceptance Criteria (Given-When-Then)**:
-  • *Given* `docs/architecture.md`,
-  • *When* scanning component names across all sections and diagrams,
-  • *Then* `WorkoutClusterEngine`, `GPXFileWriter`, `TCXFileWriter`, `WorkoutSamplesDatabaseManager`, and `MilestoneAutoNamingManager` SHALL be present, and `RouteLearningEngine`, `GpxExporter`, `TcxExporter`, `WorkoutSamplesDb`, `MilestoneDetector`, and `InAppReviewManager` SHALL NOT exist.
+  • *Given* `docs/architecture.md` and `docs/architecture/interfaces.md`,
+  • *When* scanning component names across all sections, tables, and diagrams,
+  • *Then* `WorkoutClusterEngine`, `GPXFileWriter`, `TCXFileWriter`, `WorkoutSamplesDatabaseManager`, `MilestoneAutoNamingManager`, `FirstJubileeActionHelper`, `SettingsDataStore`, `EquipmentDbHelper`, `EquipmentRepository`, `ProFeatureManager`, `ATrainingTrackerTheme`, `TelemetryMetricGraph`, `PathPoint`, and `PlayStoreListingContractTest` SHALL be present, and `RouteLearningEngine`, `GpxExporter`, `TcxExporter`, `WorkoutSamplesDb`, `MilestoneDetector`, `InAppReviewManager`, `UserPreferences`, `EquipmentDatabaseManager`, `PrivacyZoneManager`, `BillingManager`, `TTTheme`, `CustomLineChart`, `ElevationPoint`, and `StoreMetadataContractTest` SHALL NOT exist.
   • *Given* Section 3.1 in `docs/architecture.md`,
   • *When* inspecting `stateDiagram-v2`,
   • *Then* it SHALL model authentic `TrackingMode` states (`IDLE`, `READY`, `TRACKING`, `PAUSED`).
   • *Given* `AspiceSweAuditContractTest.kt`,
   • *When* executed as part of the unit test suite,
-  • *Then* architecture conformance assertions SHALL pass with 100% success.
+  • *Then* static blacklist assertions and dynamic component existence assertions SHALL pass with 100% success.
 - **Invariants**: All existing SWE.2 contract assertions in `AspiceSweAuditContractTest` remain satisfied; zero changes to production code in `app/src/main/`.
 
 ### REQ-PRO-044: ASPICE SWE.2 Software Interface Specification (IF-SWE-01..IF-SWE-08) [Verified]

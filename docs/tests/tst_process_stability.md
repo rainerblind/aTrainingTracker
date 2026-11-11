@@ -1456,16 +1456,18 @@
 
 ### TST-PRO-043: **SWE.2 Architecture Conformance & Code-Grounding Contract Test Suite** [Verified]
 - **Requirement(s)**: `REQ-PRO-043`
-- **Component**: `docs/architecture.md`, `AspiceSweAuditContractTest.kt`
-- **Jira**: `ATT-6179`
+- **Component**: `docs/architecture.md`, `docs/architecture/interfaces.md`, `AspiceSweAuditContractTest.kt`
+- **Jira**: `ATT-6179, ATT-6727`
 - **Test Description**:
   1. *Authentic Component Presence Test (`TST-PRO-043.1`, `AspiceSweAuditContractTest.kt`)*:
-  • Verify `docs/architecture.md` contains authentic class names: `WorkoutClusterEngine`, `GPXFileWriter`, `TCXFileWriter`, `WorkoutSamplesDatabaseManager`, and `MilestoneAutoNamingManager`.
-  2. *Drifted Component Absence Test (`TST-PRO-043.2`, `AspiceSweAuditContractTest.kt`)*:
-  • Verify `docs/architecture.md` does not contain `RouteLearningEngine`, `GpxExporter`, `TcxExporter`, `WorkoutSamplesDb`, `MilestoneDetector`, or `InAppReviewManager`.
+  • Verify `docs/architecture.md` contains authentic class names: `WorkoutClusterEngine`, `GPXFileWriter`, `TCXFileWriter`, `WorkoutSamplesDatabaseManager`, `MilestoneAutoNamingManager`, `FirstJubileeActionHelper`, `SettingsDataStore`, `EquipmentDbHelper`, `EquipmentRepository`, `ProFeatureManager`, `ATrainingTrackerTheme`, `TelemetryMetricGraph`, and `PlayStoreListingContractTest`.
+  2. *Drifted Component Blacklist Absence Test (`TST-PRO-043.2`, `AspiceSweAuditContractTest.kt`)*:
+  • Verify `docs/architecture.md` and `docs/architecture/interfaces.md` do not contain any of the 14 drifted placeholders: `RouteLearningEngine`, `GpxExporter`, `TcxExporter`, `WorkoutSamplesDb`, `MilestoneDetector`, `InAppReviewManager`, `UserPreferences`, `EquipmentDatabaseManager`, `PrivacyZoneManager`, `BillingManager`, `TTTheme`, `CustomLineChart`, `ElevationPoint`, `StoreMetadataContractTest`.
   3. *Tracking State Machine & Dispatcher Conformance Test (`TST-PRO-043.3`, `AspiceSweAuditContractTest.kt`)*:
   • Verify `docs/architecture.md` specifies `TrackingMode` states (`IDLE`, `READY`, `TRACKING`, `PAUSED`) and retains required threading tokens (`dbDispatcher`, `Dispatchers.Main`, `Dispatchers.IO`).
-  4. *Clean-Room Targeted Test Suite Execution (`TST-PRO-043.4`)*:
+  4. *Dynamic Component Existence & Architecture Conformance Contract (`TST-PRO-043.4`, `AspiceSweAuditContractTest.kt`)*:
+  • Extract all backticked software component symbols from `docs/architecture.md` Section 2 allocation table and `docs/architecture/interfaces.md`, filter against a strict framework SDK allow-list, and assert that every project component symbol exists in `app/src/main/` or `tools/`.
+  5. *Clean-Room Targeted Test Suite Execution (`TST-PRO-043.5`)*:
   • Execute targeted unit test suite `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.build.AspiceSweAuditContractTest"` asserting 100% pass rate.
 
 ### TST-PRO-044: **ASPICE SWE.2 Software Interface Specification Contract Test Suite** [Verified]

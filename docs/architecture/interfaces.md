@@ -103,9 +103,9 @@ Each architectural interface defines its provider, consumer, operations, data sc
   * `fun calculate(powerSamples: List<Double>, hrSamples: List<Double>, workoutId: Long, dtSec: Double): CardioPowerDynamicsRecord?`: Identifies 1st-order Output-Error dynamical Power-HR parameters and cardiac drift (`PowerHrDynamicsCalculator`).
   * `fun suggestCluster(start: LatLng, end: LatLng, apex: LatLng, distance: Double, candidateSportTypes: Set<BSportType>): WorkoutCluster?`: Spatial route cluster suggestion for completed workout (`WorkoutClusterEngine`).
   * `fun findApexFromPoints(start: LatLng, points: List<LatLng>, end: LatLng?): LatLng`: Determines furthest apex waypoint from route polyline (`WorkoutClusterEngine`).
-  * `fun detectClimbs(points: List<ElevationPoint>): List<Climb>`: Detects steep climb segments from workout elevation profile (`ClimbDetector`).
+  * `fun detectClimbs(points: List<PathPoint>): List<Climb>`: Detects steep climb segments from workout elevation profile (`ClimbDetector`).
 * **Data Payloads / Schemas**:
-  * `AutoPauseTransition`, `CardioPowerDynamicsRecord`, `WorkoutCluster`, `LatLng`, `ElevationPoint`, `Climb`, and Skiba $W'_{\text{bal}}$ parameters.
+  * `AutoPauseTransition`, `CardioPowerDynamicsRecord`, `WorkoutCluster`, `LatLng`, `PathPoint`, `Climb`, and Skiba $W'_{\text{bal}}$ parameters.
 * **Concurrency & Threading**:
   * Synchronous execution on caller thread; stateless mathematical calculations ensuring strict re-entrancy and thread safety.
 * **Error Handling & Fault Tolerance**:
