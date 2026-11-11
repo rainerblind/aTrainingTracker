@@ -112,4 +112,9 @@
     <string name="tuning_dfa_a1_t2_desc">Threshold separating transition (Zone 3) from anaerobic intensity (Zone 4). Higher = more fractal / aerobic.</string>
     <string name="tuning_dfa_a1_default">Default: %1$.2f (Invariant: T1 \u2265 T2 + 0.05)</string>
     <string name="hrv_info_zones_desc_fmt">DFA a1 &gt; %1$.2f indicates aerobic endurance pacing (Zone 2). Values between %1$.2f and %2$.2f reflect the aerobic-anaerobic threshold transition (Zone 3). Values below %2$.2f indicate high anaerobic intensity (Zone 4).</string>
+
+    <!-- Configurable Artifact Gate Threshold (ATT-6714 / REQ-TRK-060.4) -->
+    <string name="tuning_hrv_artifact_gate_title">HRV Artifact Gate Threshold</string>
+    <string name="tuning_hrv_artifact_gate_desc" formatted="false">Maximum window artifact rate before DFA a1 calculation is suppressed. Range: 3.0% to 5.0%.</string>
+    <string name="tuning_hrv_artifact_gate_default">Default: %1$.1f%%</string>
 </resources>

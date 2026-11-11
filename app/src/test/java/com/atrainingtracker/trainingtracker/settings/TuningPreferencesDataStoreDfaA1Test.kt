@@ -33,6 +33,9 @@ class TuningPreferencesDataStoreDfaA1Test {
         assertEquals(0.20f, TuningPreferencesDefaults.MIN_DFA_A1_THRESHOLD, 0.0001f)
         assertEquals(1.50f, TuningPreferencesDefaults.MAX_DFA_A1_THRESHOLD, 0.0001f)
         assertEquals(0.05f, TuningPreferencesDefaults.MIN_DFA_A1_THRESHOLD_GAP, 0.0001f)
+        assertEquals(5.0f, TuningPreferencesDefaults.DEFAULT_HRV_ARTIFACT_GATE_THRESHOLD_PERCENT, 0.0001f)
+        assertEquals(3.0f, TuningPreferencesDefaults.MIN_HRV_ARTIFACT_GATE_THRESHOLD_PERCENT, 0.0001f)
+        assertEquals(5.0f, TuningPreferencesDefaults.MAX_HRV_ARTIFACT_GATE_THRESHOLD_PERCENT, 0.0001f)
     }
 
     @Test
@@ -52,13 +55,19 @@ class TuningPreferencesDataStoreDfaA1Test {
         val config = TuningConfig()
         assertEquals(0.75f, config.dfaA1ThresholdT1, 0.0001f)
         assertEquals(0.50f, config.dfaA1ThresholdT2, 0.0001f)
+        assertEquals(5.0f, config.hrvArtifactGateThresholdPercent, 0.0001f)
     }
 
     @Test
     fun testTuningConfig_customValues() {
-        val config = TuningConfig(dfaA1ThresholdT1 = 0.80f, dfaA1ThresholdT2 = 0.55f)
+        val config = TuningConfig(
+            dfaA1ThresholdT1 = 0.80f,
+            dfaA1ThresholdT2 = 0.55f,
+            hrvArtifactGateThresholdPercent = 4.0f
+        )
         assertEquals(0.80f, config.dfaA1ThresholdT1, 0.0001f)
         assertEquals(0.55f, config.dfaA1ThresholdT2, 0.0001f)
+        assertEquals(4.0f, config.hrvArtifactGateThresholdPercent, 0.0001f)
     }
 
     @Test
@@ -79,5 +88,22 @@ class TuningPreferencesDataStoreDfaA1Test {
         assertEquals(0.20f, belowMin, 0.0001f)
         assertEquals(1.50f, aboveMax, 0.0001f)
         assertEquals(0.65f, withinRange, 0.0001f)
+
+        val belowMinArtifactGate = 1.0f.coerceIn(
+            TuningPreferencesDefaults.MIN_HRV_ARTIFACT_GATE_THRESHOLD_PERCENT,
+            TuningPreferencesDefaults.MAX_HRV_ARTIFACT_GATE_THRESHOLD_PERCENT
+        )
+        val aboveMaxArtifactGate = 7.0f.coerceIn(
+            TuningPreferencesDefaults.MIN_HRV_ARTIFACT_GATE_THRESHOLD_PERCENT,
+            TuningPreferencesDefaults.MAX_HRV_ARTIFACT_GATE_THRESHOLD_PERCENT
+        )
+        val withinRangeArtifactGate = 4.2f.coerceIn(
+            TuningPreferencesDefaults.MIN_HRV_ARTIFACT_GATE_THRESHOLD_PERCENT,
+            TuningPreferencesDefaults.MAX_HRV_ARTIFACT_GATE_THRESHOLD_PERCENT
+        )
+
+        assertEquals(3.0f, belowMinArtifactGate, 0.0001f)
+        assertEquals(5.0f, aboveMaxArtifactGate, 0.0001f)
+        assertEquals(4.2f, withinRangeArtifactGate, 0.0001f)
     }
 }

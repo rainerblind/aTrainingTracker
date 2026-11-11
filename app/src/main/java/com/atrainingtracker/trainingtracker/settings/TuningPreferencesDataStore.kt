@@ -326,6 +326,10 @@ object TuningPreferencesDefaults {
     const val MIN_DFA_A1_THRESHOLD = 0.20f
     const val MAX_DFA_A1_THRESHOLD = 1.50f
     const val MIN_DFA_A1_THRESHOLD_GAP = 0.05f
+
+    const val DEFAULT_HRV_ARTIFACT_GATE_THRESHOLD_PERCENT = 5.0f
+    const val MIN_HRV_ARTIFACT_GATE_THRESHOLD_PERCENT = 3.0f
+    const val MAX_HRV_ARTIFACT_GATE_THRESHOLD_PERCENT = 5.0f
 }
 
 /**
@@ -404,6 +408,7 @@ data class TuningConfig(
     val showCardioPowerInWorkoutSummary: Boolean = TuningPreferencesDefaults.DEFAULT_SHOW_CARDIO_POWER_IN_WORKOUT_SUMMARY,
     val dfaA1ThresholdT1: Float = TuningPreferencesDefaults.DEFAULT_DFA_A1_THRESHOLD_T1,
     val dfaA1ThresholdT2: Float = TuningPreferencesDefaults.DEFAULT_DFA_A1_THRESHOLD_T2,
+    val hrvArtifactGateThresholdPercent: Float = TuningPreferencesDefaults.DEFAULT_HRV_ARTIFACT_GATE_THRESHOLD_PERCENT,
     val radarEdgeSide: RadarEdgeSide = TuningPreferencesDefaults.RADAR_EDGE_SIDE,
     val radarClearMode: RadarClearMode = TuningPreferencesDefaults.RADAR_CLEAR_MODE,
     val radarAudioAlertMode: RadarAudioAlertMode = TuningPreferencesDefaults.RADAR_AUDIO_ALERT_MODE,
@@ -565,6 +570,7 @@ class TuningPreferencesDataStore(private val context: Context) {
         val KEY_SHOW_CARDIO_POWER_IN_WORKOUT_SUMMARY: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_show_cardio_power_in_workout_summary")
         val KEY_DFA_A1_THRESHOLD_T1: Preferences.Key<Float> = floatPreferencesKey("tuning_dfa_a1_threshold_t1")
         val KEY_DFA_A1_THRESHOLD_T2: Preferences.Key<Float> = floatPreferencesKey("tuning_dfa_a1_threshold_t2")
+        val KEY_HRV_ARTIFACT_GATE_THRESHOLD_PERCENT: Preferences.Key<Float> = floatPreferencesKey("tuning_hrv_artifact_gate_threshold_percent")
         val KEY_RADAR_EDGE_SIDE: Preferences.Key<String> = stringPreferencesKey("tuning_radar_edge_side")
         val KEY_RADAR_CLEAR_MODE: Preferences.Key<String> = stringPreferencesKey("tuning_radar_clear_mode")
         val KEY_RADAR_AUDIO_ALERT_MODE: Preferences.Key<String> = stringPreferencesKey("tuning_radar_audio_alert_mode")
@@ -1068,6 +1074,7 @@ data class AutoPausePreferences(
             showCardioPowerInWorkoutSummary = prefs[KEY_SHOW_CARDIO_POWER_IN_WORKOUT_SUMMARY] ?: TuningPreferencesDefaults.DEFAULT_SHOW_CARDIO_POWER_IN_WORKOUT_SUMMARY,
             dfaA1ThresholdT1 = prefs[KEY_DFA_A1_THRESHOLD_T1] ?: TuningPreferencesDefaults.DEFAULT_DFA_A1_THRESHOLD_T1,
             dfaA1ThresholdT2 = prefs[KEY_DFA_A1_THRESHOLD_T2] ?: TuningPreferencesDefaults.DEFAULT_DFA_A1_THRESHOLD_T2,
+            hrvArtifactGateThresholdPercent = prefs[KEY_HRV_ARTIFACT_GATE_THRESHOLD_PERCENT] ?: TuningPreferencesDefaults.DEFAULT_HRV_ARTIFACT_GATE_THRESHOLD_PERCENT,
             radarEdgeSide = radarEdgeSide,
             radarClearMode = radarClearMode,
             radarAudioAlertMode = radarAudioAlertMode,
@@ -1142,6 +1149,20 @@ data class AutoPausePreferences(
 
     val dfaA1ThresholdT2Flow: Flow<Float> = context.dataStore.data.map { prefs ->
         prefs[KEY_DFA_A1_THRESHOLD_T2] ?: TuningPreferencesDefaults.DEFAULT_DFA_A1_THRESHOLD_T2
+    }
+
+    val hrvArtifactGateThresholdPercentFlow: Flow<Float> = context.dataStore.data.map { prefs ->
+        prefs[KEY_HRV_ARTIFACT_GATE_THRESHOLD_PERCENT] ?: TuningPreferencesDefaults.DEFAULT_HRV_ARTIFACT_GATE_THRESHOLD_PERCENT
+    }
+
+    suspend fun setHrvArtifactGateThresholdPercent(percent: Float) {
+        context.dataStore.edit { prefs ->
+            val clamped = percent.coerceIn(
+                TuningPreferencesDefaults.MIN_HRV_ARTIFACT_GATE_THRESHOLD_PERCENT,
+                TuningPreferencesDefaults.MAX_HRV_ARTIFACT_GATE_THRESHOLD_PERCENT
+            )
+            prefs[KEY_HRV_ARTIFACT_GATE_THRESHOLD_PERCENT] = clamped
+        }
     }
 
     suspend fun setDfaA1ThresholdT1(threshold: Float) {
@@ -1306,6 +1327,10 @@ data class AutoPausePreferences(
                 clampedDfaA1T2 = (clampedDfaA1T1 - TuningPreferencesDefaults.MIN_DFA_A1_THRESHOLD_GAP).coerceAtLeast(TuningPreferencesDefaults.MIN_DFA_A1_THRESHOLD)
             }
         }
+        val clampedArtifactGate = config.hrvArtifactGateThresholdPercent.coerceIn(
+            TuningPreferencesDefaults.MIN_HRV_ARTIFACT_GATE_THRESHOLD_PERCENT,
+            TuningPreferencesDefaults.MAX_HRV_ARTIFACT_GATE_THRESHOLD_PERCENT
+        )
 
         context.dataStore.edit { prefs ->
             prefs[KEY_ELEVATION_X_AXIS_DOMAIN] = config.elevationXAxisDomain.name
@@ -1390,6 +1415,7 @@ data class AutoPausePreferences(
             prefs[KEY_SHOW_CARDIO_POWER_IN_WORKOUT_SUMMARY] = config.showCardioPowerInWorkoutSummary
             prefs[KEY_DFA_A1_THRESHOLD_T1] = clampedDfaA1T1
             prefs[KEY_DFA_A1_THRESHOLD_T2] = clampedDfaA1T2
+            prefs[KEY_HRV_ARTIFACT_GATE_THRESHOLD_PERCENT] = clampedArtifactGate
             prefs[KEY_RADAR_EDGE_SIDE] = config.radarEdgeSide.name
             prefs[KEY_RADAR_CLEAR_MODE] = config.radarClearMode.name
             prefs[KEY_RADAR_AUDIO_ALERT_MODE] = config.radarAudioAlertMode.name

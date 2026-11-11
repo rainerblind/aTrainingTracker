@@ -112,4 +112,9 @@
     <string name="tuning_dfa_a1_t2_desc">移行期（ゾーン3）と高強度無酸素（ゾーン4）を分ける閾値。高いほどフラクタル／有酸素。</string>
     <string name="tuning_dfa_a1_default">デフォルト: %1$.2f (不変条件: T1 \u2265 T2 + 0.05)</string>
     <string name="hrv_info_zones_desc_fmt">DFA a1 &gt; %1$.2fは有酸素持久力ペース（ゾーン2）を示します。%1$.2f〜%2$.2fは閾値移行期（ゾーン3）を反映します。%2$.2f未満は高強度の無酸素運動（ゾーン4）を示します。</string>
+
+    <!-- Configurable Artifact Gate Threshold (ATT-6714 / REQ-TRK-060.4) -->
+    <string name="tuning_hrv_artifact_gate_title">HRVアーティファクト閾値</string>
+    <string name="tuning_hrv_artifact_gate_desc" formatted="false">DFA a1の計算を抑制するウィンドウ内の最大アーティファクト率。範囲：3.0%〜5.0%。</string>
+    <string name="tuning_hrv_artifact_gate_default">デフォルト：%1$.1f%%</string>
 </resources>

@@ -89,7 +89,9 @@ fun PhysiologyModelsSection(
     dfaA1ThresholdT1: Float = TuningPreferencesDefaults.DEFAULT_DFA_A1_THRESHOLD_T1,
     onDfaA1ThresholdT1Change: (Float) -> Unit = {},
     dfaA1ThresholdT2: Float = TuningPreferencesDefaults.DEFAULT_DFA_A1_THRESHOLD_T2,
-    onDfaA1ThresholdT2Change: (Float) -> Unit = {}
+    onDfaA1ThresholdT2Change: (Float) -> Unit = {},
+    hrvArtifactGateThresholdPercent: Float = TuningPreferencesDefaults.DEFAULT_HRV_ARTIFACT_GATE_THRESHOLD_PERCENT,
+    onHrvArtifactGateThresholdPercentChange: (Float) -> Unit = {}
 ) {
     var showInternalInfoDialog by remember { mutableStateOf(false) }
 
@@ -104,6 +106,7 @@ fun PhysiologyModelsSection(
     val showCardioPowerCallback = remember(onShowCardioPowerInWorkoutSummaryChange) { onShowCardioPowerInWorkoutSummaryChange }
     val dfaT1Callback = remember(onDfaA1ThresholdT1Change) { onDfaA1ThresholdT1Change }
     val dfaT2Callback = remember(onDfaA1ThresholdT2Change) { onDfaA1ThresholdT2Change }
+    val hrvArtifactGateCallback = remember(onHrvArtifactGateThresholdPercentChange) { onHrvArtifactGateThresholdPercentChange }
 
     Column(
         modifier = Modifier
@@ -248,6 +251,27 @@ fun PhysiologyModelsSection(
             },
             valueRange = 0.30f..0.80f,
             steps = 9
+        )
+
+        TuningSliderItem(
+            title = stringResource(R.string.tuning_hrv_artifact_gate_title),
+            valueText = String.format(Locale.US, "%.1f%%", hrvArtifactGateThresholdPercent),
+            helperText = stringResource(R.string.tuning_hrv_artifact_gate_desc),
+            defaultText = stringResource(
+                R.string.tuning_hrv_artifact_gate_default,
+                TuningPreferencesDefaults.DEFAULT_HRV_ARTIFACT_GATE_THRESHOLD_PERCENT
+            ),
+            value = hrvArtifactGateThresholdPercent,
+            onValueChange = { newValue ->
+                val rounded = Math.round(newValue * 10f) / 10f
+                val clamped = rounded.coerceIn(
+                    TuningPreferencesDefaults.MIN_HRV_ARTIFACT_GATE_THRESHOLD_PERCENT,
+                    TuningPreferencesDefaults.MAX_HRV_ARTIFACT_GATE_THRESHOLD_PERCENT
+                )
+                hrvArtifactGateCallback(clamped)
+            },
+            valueRange = 3.0f..5.0f,
+            steps = 3
         )
     }
 

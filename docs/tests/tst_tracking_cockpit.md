@@ -1809,28 +1809,33 @@
 
 ### TST-TRK-060: **Lipponen Artifact Correction, Real-Time HRV Engine & NeuroKit2 Golden Parity Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-TRK-060` (`REQ-TRK-060.1`..`REQ-TRK-060.6`)
-- **Component**: `SensorType.java`, `RrArtifactFilter.kt`, `DfaCalculator.kt`, `HRVMetricsDevice.kt`, `DeviceType.java`, `DeviceManager.java`, `strings_hrv.xml`
-- **Jira**: `ATT-3541`
+- **Component**: `SensorType.java`, `RrArtifactFilter.kt`, `DfaCalculator.kt`, `HRVMetricsDevice.kt`, `TuningPreferencesDataStore.kt`, `PhysiologyModelsSection.kt`, `DeviceType.java`, `DeviceManager.java`, `strings_hrv.xml`
+- **Jira**: `ATT-3541`, `ATT-6714`
 - **Test Description**:
   1. *SensorType & 9-Language Localization Audit (`TST-TRK-060.1`, `SensorTypeHrvTest.kt`, `TranslationParityTest.kt`)*:
   • Verify `SensorType.HRV_RMSSD`, `SensorType.HRV_DFA_A1`, `SensorType.HRV_ARTIFACT_RATE` registered under `SensorCategory.HEART_RATE_AND_ENERGY`.
   • Verify 100% 9-language translation parity in partitioned `strings_hrv.xml` across EN, DE, ES, FR, IT, JA, NL, PL, PT.
-  2. *RrArtifactFilter Mode A & Mode B Unit Tests (`TST-TRK-060.2`, `RrArtifactFilterTest.kt`)*:
-  • Mode A causal streaming: 5-beat lookahead + 90-beat trailing quartile window accurately detects ectopic pairs, short beats, and long beats.
+  2. *RrArtifactFilter Split/Merge & Live Causal Unit Tests (`TST-TRK-060.2`, `RrArtifactFilterTest.kt`)*:
+  • Mode A causal streaming: 5-beat lookahead + 90-beat trailing quartile window accurately detects ectopic pairs, short beats, and long beats, returning `FilterResult`.
   • Mode B centered window: 91-beat bidirectional centered window produces symmetric Kubios-grade corrected NN series.
+  • Missed beat splitting: Abnormal long beats split into $k = \max(2, \text{round}(rr / med))$ equal intervals of duration $rr / k$.
+  • Extra short beat merging: Abnormal short beats merge with adjacent short intervals ($rr_1 + rr_2$).
+  • Gap expansion: `ARTIFACT_GAP` events expand $gapBeats$ into $gapBeats + 1$ equal median intervals.
   3. *Rolling rMSSD Engine & Artifact Exclusion Unit Tests (`TST-TRK-060.3`, `HRVMetricsDeviceTest.kt`)*:
   • Verify 60s sliding window $rMSSD$ calculation.
   • Verify consecutive beat differences $(i, i+1)$ exclude artifact-adjacent pairs where beat $i$ or $i+1$ is flagged, eliminating downward bias.
   • Verify minimum sample size guard ($\ge 10$ valid pairs).
-  4. *DFA Calculator & Artifact Suppression Gate Unit Tests (`TST-TRK-060.4`, `DfaCalculatorTest.kt`)*:
-  • Verify 120s DFA $\alpha_1$ calculation across scales $n \in [4, 16]$.
-  • Verify artifact rate gate: suppresses $\alpha_1$ emission (`null`) when window artifact rate $> 5.0\%$.
-  5. *HRVMetricsDevice Lifecycle & Rule 51/52 Contract Tests (`TST-TRK-060.5`, `HRVMetricsDeviceTest.kt`)*:
+  4. *DFA Calculator, 50% Overlap & Configurable Artifact Gate Tests (`TST-TRK-060.4`, `DfaCalculatorTest.kt`, `TuningPreferencesDataStoreTest.kt`)*:
+  • Verify 120s DFA $\alpha_1$ calculation across scales $n \in [4, 16]$ with 50% overlap (`step = boxSize / 2`, matching NeuroKit2 0.2.10 `overlap=True`).
+  • Verify configurable artifact gate: user preference in `TuningPreferencesDataStore` (3.0%..5.0%, default 5.0%) suppresses $\alpha_1$ emission (`null`) when window artifact rate exceeds threshold.
+  5. *HRVMetricsDevice Lifecycle, Stale Clearance & Reset Tests (`TST-TRK-060.5`, `HRVMetricsDeviceTest.kt`)*:
   • Verify Rule 51 constructor state parity with `resetSession()`.
   • Verify Rule 52 physical sensor presence gating (zero phantom sensor rows when HR strap is absent).
+  • Verify stale telemetry clearance: emits `null` to RMSSD, DFA a1, and artifact rate sensors when `mBeatQueue` drains after disconnect.
+  • Verify `onAccumulatorsReset()` invokes `resetSession()`, resetting queues and default signal quality.
   6. *NeuroKit2 0.2.10 Pinned Golden Oracle Parity (`TST-TRK-060.6`, `HrvGoldenOracleTest.kt`)*:
   • Assert $rMSSD$ matches NeuroKit2 benchmark vectors within $|\Delta rMSSD| \le 0.5\text{ ms}$.
-  • Assert DFA $\alpha_1$ matches NeuroKit2 benchmark vectors within $|\Delta\alpha_1| \le 0.02$ on clean/pre-corrected series and $|\Delta\alpha_1| \le 0.03$ end-to-end.
+  • Assert DFA $\alpha_1$ matches NeuroKit2 0.2.10 benchmark vectors within $|\Delta\alpha_1| \le 0.02$ across 4 physiological reference regimes: White noise ($\approx 0.50$), Threshold ($\approx 0.75$), Pink noise ($\approx 1.00$), and Aerobic ($\approx 1.25\text{--}1.50$), and within $|\Delta\alpha_1| \le 0.03$ end-to-end.
 
 
 ### TST-TRK-061: **Live HRV Telemetry, Category Partitioning & Aerobic Threshold Guidance Verification Suite** [Verified]

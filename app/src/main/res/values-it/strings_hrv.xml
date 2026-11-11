@@ -112,4 +112,9 @@
     <string name="tuning_dfa_a1_t2_desc">Soglia che separa la transizione (Zona 3) dall\'intensità anaerobica (Zona 4). Più alto = più frattale / aerobico.</string>
     <string name="tuning_dfa_a1_default">Predefinito: %1$.2f (Invariante: T1 \u2265 T2 + 0.05)</string>
     <string name="hrv_info_zones_desc_fmt">DFA a1 &gt; %1$.2f indica andatura di resistenza aerobica (Zona 2). Valori tra %1$.2f e %2$.2f riflettono la transizione di soglia (Zona 3). Valori inferiori a %2$.2f indicano elevata intensità anaerobica (Zona 4).</string>
+
+    <!-- Configurable Artifact Gate Threshold (ATT-6714 / REQ-TRK-060.4) -->
+    <string name="tuning_hrv_artifact_gate_title">Soglia filtro artefatti HRV</string>
+    <string name="tuning_hrv_artifact_gate_desc" formatted="false">Tasso massimo di artefatti nella finestra prima della soppressione di DFA a1. Intervallo: da 3,0% a 5,0%.</string>
+    <string name="tuning_hrv_artifact_gate_default">Predefinito: %1$.1f%%</string>
 </resources>

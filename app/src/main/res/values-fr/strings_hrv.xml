@@ -112,4 +112,9 @@
     <string name="tuning_dfa_a1_t2_desc">Seuil séparant la transition (Zone 3) de l\'intensité anaérobie (Zone 4). Plus élevé = plus fractal / aérobie.</string>
     <string name="tuning_dfa_a1_default">Par défaut : %1$.2f (Invariant : T1 \u2265 T2 + 0.05)</string>
     <string name="hrv_info_zones_desc_fmt">DFA a1 &gt; %1$.2f indique une endurance aérobie fondamentale (Zone 2). Les valeurs entre %1$.2f et %2$.2f marquent la transition vers le seuil anaérobie (Zone 3). Les valeurs inférieures à %2$.2f signalent une forte intensité anaérobie (Zone 4).</string>
+
+    <!-- Configurable Artifact Gate Threshold (ATT-6714 / REQ-TRK-060.4) -->
+    <string name="tuning_hrv_artifact_gate_title">Seuil de filtre d\'artefacts VFC</string>
+    <string name="tuning_hrv_artifact_gate_desc" formatted="false">Taux maximal d\'artefacts dans la fenêtre avant la suppression du calcul DFA a1. Plage : 3,0 % à 5,0 %.</string>
+    <string name="tuning_hrv_artifact_gate_default">Par défaut : %1$.1f%%</string>
 </resources>

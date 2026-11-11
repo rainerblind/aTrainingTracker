@@ -3266,49 +3266,62 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 **Invariants**: Backward compatibility for HR-only sensors; zero GATT crashes; mathematical precision of RR intervals; clean-room test pass rate.
 
 ### REQ-TRK-060: Lipponen & Tarvainen RR Artifact Correction, Real-Time HRV Engine & NeuroKit2 Golden Parity [Verified]
-- **Tests**: `TST-TRK-060` | **Tickets**: `ATT-3541`
-- **Implementation**: `SensorType.java`, `RrArtifactFilter.kt`, `DfaCalculator.kt`, `HRVMetricsDevice.kt`, `DeviceType.java`, `DeviceManager.java`, `strings_hrv.xml`
-- **Rationale**: Athletic autonomic guidance requires Kubios-grade Beat-to-Beat HRV telemetry ($rMSSD$, DFA $\alpha_1$). Sensor artifacts (ectopic beats, missed triggers, RF dropouts) corrupt raw intervals. Downward interpolation bias distorts $rMSSD$ while artifact-adjacent noise breaks fractal DFA scaling. The system SHALL provide causal Mode A (live) and centered Mode B (post-hoc) Lipponen & Tarvainen (2019) artifact filters, artifact pair-exclusion for $rMSSD$, 120s DFA $\alpha_1$ scaling ($n \in [4, 16]$), and automated golden validation against pinned NeuroKit2 0.2.10 (ATT-3541, Parent Epic ATT-3539, extending `REQ-CON-027` and `REQ-TRK-019`):
+- **Tests**: `TST-TRK-060` | **Tickets**: `ATT-3541`, `ATT-6714`
+- **Implementation**: `SensorType.java`, `RrArtifactFilter.kt`, `DfaCalculator.kt`, `HRVMetricsDevice.kt`, `TuningPreferencesDataStore.kt`, `PhysiologyModelsSection.kt`, `DeviceType.java`, `DeviceManager.java`, `strings_hrv.xml`
+- **Rationale**: Athletic autonomic guidance requires Kubios-grade Beat-to-Beat HRV telemetry ($rMSSD$, DFA $\alpha_1$). Sensor artifacts (ectopic beats, missed triggers, RF dropouts) corrupt raw intervals. Downward interpolation bias distorts $rMSSD$ while artifact-adjacent noise breaks fractal DFA scaling. The system SHALL provide causal Mode A (live) and centered Mode B (post-hoc) Lipponen & Tarvainen (2019) artifact filters, artifact pair-exclusion for $rMSSD$, 120s DFA $\alpha_1$ scaling ($n \in [4, 16]$), and automated golden validation against pinned NeuroKit2 0.2.10 (ATT-3541, ATT-6714, Parent Epic ATT-3539, extending `REQ-CON-027` and `REQ-TRK-019`):
 1. *HRV SensorTypes & Domain Localization Partitioning (`REQ-TRK-060.1`)*:
 • The system SHALL activate `SensorType.HRV_RMSSD` (ms, `DOUBLE`), `SensorType.HRV_DFA_A1` (`DOUBLE`), and `SensorType.HRV_ARTIFACT_RATE` (`%`, `DOUBLE`) in category `HEART_RATE_AND_ENERGY`.
 • String definitions SHALL be partitioned into `res/values*/strings_hrv.xml` across all 9 locales (`REQ-PRO-041.3`).
-2. *Lipponen & Tarvainen 2019 Artifact Filter (`REQ-TRK-060.2`)*:
+2. *Lipponen & Tarvainen 2019 Artifact Filter & Split/Merge Alignment (`REQ-TRK-060.2`)*:
 • `RrArtifactFilter` SHALL implement the quartile subspace algorithm ($c_1 = c_2 = 5.2$):
-  - Mode A (Live Causal Streaming): 5-beat look-ahead buffer + 90-beat trailing quartile window.
+  - Mode A (Live Causal Streaming): 5-beat look-ahead buffer + 90-beat trailing quartile window, returning `FilterResult` (with `beats`, `artifactCount`, `totalCount`, and `artifactRatePercent`).
   - Mode B (Post-Hoc Centered): 91-beat symmetric centered window for post-workout recomputation and morning checks.
+• Artifact beat series SHALL preserve cumulative beat-index and temporal continuity:
+  - Missed beats ($rr > med + th_2$ or $dRR > th_1 \land mRR > th_2$) SHALL be split into $k = \max(2, \text{round}(rr / med))$ equal intervals of duration $rr / k$.
+  - Extra short beats ($rr < med - th_2$ or $dRR < -th_1 \land mRR < -th_2$) SHALL be merged with adjacent short intervals ($rr_1 + rr_2$).
+  - RF Gaps (`ARTIFACT_GAP`) SHALL expand $gapBeats$ into $gapBeats + 1$ equal median intervals.
 3. *Bias-Free Rolling rMSSD Engine (`REQ-TRK-060.3`)*:
 • `HRVMetricsDevice` SHALL compute $rMSSD$ over a 60s sliding window.
 • Successive interval differences $(i, i+1)$ SHALL exclude artifact-adjacent pairs where beat $i$ or $i+1$ is flagged. Requires $\ge 10$ valid pairs.
-4. *120s Rolling DFA $\alpha_1$ Calculator & Artifact Gate (`REQ-TRK-060.4`)*:
-• Every 5 seconds, `DfaCalculator` SHALL evaluate DFA $\alpha_1$ across scale range $n \in [4, 16]$ on the corrected/interpolated 120s NN window.
-• If window artifact rate $> 5.0\%$, the system SHALL suppress $\alpha_1$ emission (`null`).
-5. *Virtual Device Lifecycle & State Invariants (`REQ-TRK-060.5`)*:
-• `HRVMetricsDevice` SHALL implement `RrBeatListener`.
+4. *120s Rolling DFA $\alpha_1$ Calculator & Configurable Artifact Gate (`REQ-TRK-060.4`)*:
+• Every 5 seconds, `DfaCalculator` SHALL evaluate DFA $\alpha_1$ across scale range $n \in [4, 16]$ on the corrected/interpolated 120s NN window using 50% overlapping windows (`step = boxSize / 2`, matching pinned NeuroKit2 0.2.10 `overlap=True`).
+• The window artifact suppression threshold SHALL be user configurable between 3.0% and 5.0% (default 5.0%) via `TuningPreferencesDataStore`.
+• If window artifact rate exceeds the configured threshold, the system SHALL suppress $\alpha_1$ emission (`null`).
+5. *Virtual Device Lifecycle, Causal Pipeline & State Invariants (`REQ-TRK-060.5`)*:
+• `HRVMetricsDevice` SHALL implement `RrBeatListener` and evaluate live telemetry causally via `artifactFilter.filterLiveCausal(allBeats)`.
 • Constructors SHALL seed identical baseline state as `resetSession()` (`Rule 51`).
 • Telemetry publication to `MySensor` SHALL remain gated until physical RR packets are received (`Rule 52`).
+• When `mBeatQueue` drains after sensor disconnection or window expiry, `calculateMetrics()` SHALL clear `mHrvRmssdSensor`, `mHrvDfaA1Sensor`, and `mHrvArtifactRateSensor` to `null` (`"--"`), preventing frozen stale telemetry rows.
+• `HRVMetricsDevice` SHALL override `onAccumulatorsReset()` to invoke `resetSession()`, clearing state on `BANALService.RESET_ACCUMULATORS_INTENT`.
 6. *NeuroKit2 0.2.10 Golden Oracle Parity (`REQ-TRK-060.6`)*:
 • Automated unit tests SHALL verify:
   - $rMSSD$ matches NeuroKit2 within $|\Delta rMSSD| \le 0.5\text{ ms}$.
-  - DFA $\alpha_1$ matches NeuroKit2 within $|\Delta\alpha_1| \le 0.02$ on clean/pre-corrected windows and $|\Delta\alpha_1| \le 0.03$ end-to-end.
+  - DFA $\alpha_1$ matches NeuroKit2 0.2.10 within $|\Delta\alpha_1| \le 0.02$ on clean/pre-corrected series across 4 physiological and benchmark regimes: White noise ($\approx 0.50$), Threshold ($\approx 0.75$), Pink noise ($\approx 1.00$), and Aerobic ($\approx 1.25\text{--}1.50$), and within $|\Delta\alpha_1| \le 0.03$ end-to-end.
 
 **Requirement Archaeology & Chesterton's Fence Audit**:
-1. *Original Requirement ID & Target*: Net-new requirement `REQ-TRK-060`, extending `REQ-CON-027` (*RR Acquisition*) and `REQ-TRK-019` (*Virtual Metric Devices*). Targets `RrArtifactFilter.kt`, `HRVMetricsDevice.kt`, `SensorType.java`, and `DeviceManager.java`.
-2. *Historical Origin & Commit Trace*: `ATT-3540` (`98df60c9`) added lossless RR streaming; `ATT-1450` / `ATT-4283` established stateful virtual device patterns (`CyclingPowerMetricsDevice.java`).
-3. *Root Reason for Existing Formulation*: Prior app versions lacked RR acquisition and high-frequency physiological signal processing.
-4. *Preservation of Core Invariants*: Sensor-presence gating prevents phantom HRV rows when heart rate strap is not paired (`Rule 52`); constructor baseline parity with `resetSession()` (`Rule 51`); 100% clean-room test pass rate.
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-TRK-060`, extending `REQ-CON-027` (*RR Acquisition*) and `REQ-TRK-019` (*Virtual Metric Devices*). Targets `RrArtifactFilter.kt`, `HRVMetricsDevice.kt`, `DfaCalculator.kt`, `TuningPreferencesDataStore.kt`, `SensorType.java`, and `DeviceManager.java`.
+2. *Historical Origin & Commit Trace*: `ATT-3540` (`98df60c9`) added lossless RR streaming; `ATT-3541` (`9b6a12df`) introduced Lipponen filter & DFA calculator; `ATT-6714` refined beat split/merge math, aligned DFA windowing with NeuroKit2 50% overlap, added stale sensor clearing on disconnect, and exposed configurable artifact gate threshold.
+3. *Root Reason for Existing Formulation*: 1-for-1 artifact substitution in ATT-3541 distorted cumulative beat indices and time axes; `DfaCalculator` used non-overlapping segments from Kubios literature; `HRVMetricsDevice` called bidirectional filter instead of causal filter and omitted `null` emission on queue drain.
+4. *Preservation of Core Invariants*: Sensor-presence gating prevents phantom HRV rows when heart rate strap is not paired (`Rule 52`); constructor baseline parity with `resetSession()` (`Rule 51`); 100% clean-room test pass rate; zero main thread blocking.
 
 **Acceptance Criteria (Given-When-Then)**:
 • *Given* an RR stream with ectopic, missed, or short beats,
 • *When* filtered by `RrArtifactFilter`,
-• *Then* artifacts are correctly classified and corrected series generated.
-• *Given* an RR stream containing artifact beats,
-• *When* $rMSSD$ computes,
-• *Then* artifact-adjacent differences are excluded, preventing downward interpolation bias.
-• *Given* synthetic and benchmark RR recordings,
-• *When* evaluated by `DfaCalculator`,
-• *Then* output matches NeuroKit2 within $|\Delta\alpha_1| \le 0.02$.
-• *Given* a 120s window with $>5\%$ artifact beats,
-• *When* evaluated,
+• *Then* missed beats are split into $k = \max(2, \text{round}(rr/med))$ equal intervals, extra short beats merge with adjacent beats, and RF gaps expand by $gapBeats + 1$.
+• *Given* live beat arrivals,
+• *When* `HRVMetricsDevice.calculateMetrics()` executes,
+• *Then* it evaluates beats causally via `filterLiveCausal()`.
+• *Given* synthetic and benchmark RR recordings across white noise, threshold, pink noise, and aerobic regimes,
+• *When* evaluated by `DfaCalculator` with 50% overlap,
+• *Then* output matches NeuroKit2 0.2.10 within $|\Delta\alpha_1| \le 0.02$.
+• *Given* an active HR strap that disconnects and rolling window expires,
+• *When* `calculateMetrics()` runs with an empty queue,
+• *Then* `HRV_RMSSD`, `HRV_DFA_A1`, and `HRV_ARTIFACT_RATE` clear to `null` (`"--"`).
+• *Given* a workout accumulator reset (`RESET_ACCUMULATORS_INTENT`),
+• *When* triggered,
+• *Then* `HRVMetricsDevice.resetSession()` clears all rolling queues and resets signal quality to default.
+• *Given* a configured artifact gate threshold between 3.0% and 5.0%,
+• *When* window artifact rate exceeds this threshold,
 • *Then* `HRV_DFA_A1` emits `null`.
 • *Given* a session with no connected RR sensor,
 • *When* tracking runs,

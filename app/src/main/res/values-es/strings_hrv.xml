@@ -112,4 +112,9 @@
     <string name="tuning_dfa_a1_t2_desc">Umbral que separa la transición (Zona 3) de la intensidad anaeróbica (Zona 4). Mayor = más fractal / aeróbico.</string>
     <string name="tuning_dfa_a1_default">Predeterminado: %1$.2f (Invariante: T1 \u2265 T2 + 0.05)</string>
     <string name="hrv_info_zones_desc_fmt">DFA a1 &gt; %1$.2f indica ritmo de resistencia aeróbica (Zona 2). Valores entre %1$.2f y %2$.2f reflejan la transición hacia el umbral anaeróbico (Zona 3). Valores por debajo de %2$.2f indican alta intensidad anaeróbica (Zona 4).</string>
+
+    <!-- Configurable Artifact Gate Threshold (ATT-6714 / REQ-TRK-060.4) -->
+    <string name="tuning_hrv_artifact_gate_title">Umbral de artefactos HRV</string>
+    <string name="tuning_hrv_artifact_gate_desc" formatted="false">Tasa máxima de artefactos en ventana antes de suprimir DFA a1. Rango: 3.0% a 5.0%.</string>
+    <string name="tuning_hrv_artifact_gate_default">Predeterminado: %1$.1f%%</string>
 </resources>

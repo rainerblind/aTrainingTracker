@@ -112,4 +112,9 @@
     <string name="tuning_dfa_a1_t2_desc">Schwelle zwischen Übergang (Zone 3) und anaerober Intensität (Zone 4). Höher = fraktaler / aerober.</string>
     <string name="tuning_dfa_a1_default">Standard: %1$.2f (Invariante: T1 \u2265 T2 + 0.05)</string>
     <string name="hrv_info_zones_desc_fmt">DFA a1 &gt; %1$.2f kennzeichnet aerobe Grundlagenausdauer (Zone 2). Werte zwischen %1$.2f und %2$.2f markieren den Schwellenübergang (Zone 3). Werte unter %2$.2f signalisieren hohe anaerobe Intensität (Zone 4).</string>
+
+    <!-- Configurable Artifact Gate Threshold (ATT-6714 / REQ-TRK-060.4) -->
+    <string name="tuning_hrv_artifact_gate_title">HRV-Artefaktgrenze</string>
+    <string name="tuning_hrv_artifact_gate_desc" formatted="false">Maximale Artefaktrate im Zeitfenster, bevor DFA a1 unterdrückt wird. Bereich: 3,0% bis 5,0%.</string>
+    <string name="tuning_hrv_artifact_gate_default">Standard: %1$.1f%%</string>
 </resources>

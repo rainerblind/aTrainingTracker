@@ -248,10 +248,9 @@ class MorningHrvCheckViewModel @JvmOverloads constructor(
         if (_uiState.value.phase == MorningHrvPhase.MEASURING) {
             bufferedBeats.add(event)
             val currentBeats = bufferedBeats.toList()
-            val causalFiltered = artifactFilter.filterLiveCausal(currentBeats)
-            val (rate, isHigh) = if (causalFiltered.isNotEmpty()) {
-                val artCount = causalFiltered.count { it.isArtifact }
-                val pct = (artCount.toDouble() / causalFiltered.size.toDouble()) * 100.0
+            val causalResult = artifactFilter.filterLiveCausal(currentBeats)
+            val (rate, isHigh) = if (causalResult.totalCount > 0) {
+                val pct = causalResult.artifactRatePercent
                 Pair(pct, pct > ARTIFACT_THRESHOLD_PCT)
             } else {
                 Pair(_uiState.value.artifactRatePct, _uiState.value.highArtifactWarning)

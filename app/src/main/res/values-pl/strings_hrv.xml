@@ -112,4 +112,9 @@
     <string name="tuning_dfa_a1_t2_desc">Próg oddzielający strefę przejściową (Strefa 3) od intensywności beztlenowej (Strefa 4). Wyższy = bardziej fraktalny / tlenowy.</string>
     <string name="tuning_dfa_a1_default">Domyślny: %1$.2f (Niezmiennik: T1 \u2265 T2 + 0.05)</string>
     <string name="hrv_info_zones_desc_fmt">DFA a1 &gt; %1$.2f wskazuje na tempo tlenowe wytrzymałościowe (Strefa 2). Wartości od %1$.2f do %2$.2f odzwierciedlają przejście progowe (Strefa 3). Wartości poniżej %2$.2f wskazują na wysoką intensywność beztlenową (Strefa 4).</string>
+
+    <!-- Configurable Artifact Gate Threshold (ATT-6714 / REQ-TRK-060.4) -->
+    <string name="tuning_hrv_artifact_gate_title">Próg artefaktów HRV</string>
+    <string name="tuning_hrv_artifact_gate_desc" formatted="false">Maksymalny odsetek artefaktów w oknie przed stłumieniem DFA a1. Zakres: 3,0% do 5,0%.</string>
+    <string name="tuning_hrv_artifact_gate_default">Domyślnie: %1$.1f%%</string>
 </resources>

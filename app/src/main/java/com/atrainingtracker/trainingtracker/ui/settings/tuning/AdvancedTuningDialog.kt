@@ -109,6 +109,7 @@ fun AdvancedTuningDialog(
     var enableCardioPowerDynamics by remember { mutableStateOf(TuningPreferencesDefaults.DEFAULT_ENABLE_CARDIO_POWER_DYNAMICS) }; var showCardioPowerInWorkoutSummary by remember { mutableStateOf(TuningPreferencesDefaults.DEFAULT_SHOW_CARDIO_POWER_IN_WORKOUT_SUMMARY) }
     var dfaA1ThresholdT1 by remember { mutableFloatStateOf(TuningPreferencesDefaults.DEFAULT_DFA_A1_THRESHOLD_T1) }
     var dfaA1ThresholdT2 by remember { mutableFloatStateOf(TuningPreferencesDefaults.DEFAULT_DFA_A1_THRESHOLD_T2) }
+    var hrvArtifactGateThresholdPercent by remember { mutableFloatStateOf(TuningPreferencesDefaults.DEFAULT_HRV_ARTIFACT_GATE_THRESHOLD_PERCENT) }
     var sensorSearchPrefs by remember { mutableStateOf(SensorSearchPreferences.load(context)) }
 
     var workoutCardPrefs by remember { mutableStateOf(WorkoutCardSectionPreferences()) }; var isAftermathPrefsInitialized by remember { mutableStateOf(false) }
@@ -157,6 +158,7 @@ fun AdvancedTuningDialog(
         enableCriticalPowerModel = config.enableCriticalPowerModel; showCriticalPowerInWorkoutSummary = config.showCriticalPowerInWorkoutSummary
         enableCardioPowerDynamics = config.enableCardioPowerDynamics; showCardioPowerInWorkoutSummary = config.showCardioPowerInWorkoutSummary
         dfaA1ThresholdT1 = config.dfaA1ThresholdT1; dfaA1ThresholdT2 = config.dfaA1ThresholdT2
+        hrvArtifactGateThresholdPercent = config.hrvArtifactGateThresholdPercent
     }
 
     LaunchedEffect(persistedConfig) { applyConfig(persistedConfig) }
@@ -183,7 +185,8 @@ fun AdvancedTuningDialog(
                         enableAerobicEfficiencyModel = enableAerobicEfficiencyModel, showAerobicEfficiencyInWorkoutSummary = showAerobicEfficiencyInWorkoutSummary,
                         enableCriticalPowerModel = enableCriticalPowerModel, showCriticalPowerInWorkoutSummary = showCriticalPowerInWorkoutSummary,
                         enableCardioPowerDynamics = enableCardioPowerDynamics, showCardioPowerInWorkoutSummary = showCardioPowerInWorkoutSummary,
-                        dfaA1ThresholdT1 = dfaA1ThresholdT1, dfaA1ThresholdT2 = dfaA1ThresholdT2
+                        dfaA1ThresholdT1 = dfaA1ThresholdT1, dfaA1ThresholdT2 = dfaA1ThresholdT2,
+                        hrvArtifactGateThresholdPercent = hrvArtifactGateThresholdPercent
                     )
                     scope.launch {
                         tuningDataStore.saveTuningConfig(newConfig)
@@ -339,7 +342,9 @@ fun AdvancedTuningDialog(
                     enableCardioPowerDynamics = enableCardioPowerDynamics, onEnableCardioPowerDynamicsChange = { enableCardioPowerDynamics = it },
                     showCardioPowerInWorkoutSummary = showCardioPowerInWorkoutSummary, onShowCardioPowerInWorkoutSummaryChange = { showCardioPowerInWorkoutSummary = it },
                     dfaA1ThresholdT1 = dfaA1ThresholdT1, onDfaA1ThresholdT1Change = { dfaA1ThresholdT1 = it },
-                    dfaA1ThresholdT2 = dfaA1ThresholdT2, onDfaA1ThresholdT2Change = { dfaA1ThresholdT2 = it }
+                    dfaA1ThresholdT2 = dfaA1ThresholdT2, onDfaA1ThresholdT2Change = { dfaA1ThresholdT2 = it },
+                    hrvArtifactGateThresholdPercent = hrvArtifactGateThresholdPercent,
+                    onHrvArtifactGateThresholdPercentChange = { hrvArtifactGateThresholdPercent = it }
                 )
             }
 

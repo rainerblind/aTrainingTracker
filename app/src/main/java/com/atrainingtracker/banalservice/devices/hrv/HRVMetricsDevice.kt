@@ -26,6 +26,7 @@ import com.atrainingtracker.banalservice.devices.RrBeatListener
 import com.atrainingtracker.banalservice.sensor.MySensor
 import com.atrainingtracker.banalservice.sensor.MySensorManager
 import com.atrainingtracker.banalservice.sensor.SensorType
+import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore
 import java.util.ArrayDeque
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
@@ -50,7 +51,8 @@ open class HRVMetricsDevice @JvmOverloads constructor(
     mySensorManager: MySensorManager,
     timeProvider: TimeProvider? = null,
     private val artifactFilter: RrArtifactFilter = RrArtifactFilter(),
-    startScheduler: Boolean = true
+    startScheduler: Boolean = true,
+    var artifactGateThresholdPercent: Double? = null
 ) : MyDevice(context, mySensorManager, DeviceType.HRV_METRICS), RrBeatListener {
 
     fun interface TimeProvider {
@@ -137,10 +139,15 @@ open class HRVMetricsDevice @JvmOverloads constructor(
         }
     }
 
+    override fun onAccumulatorsReset() {
+        super.onAccumulatorsReset()
+        resetSession()
+    }
+
     @Synchronized
     fun calculateMetrics() {
         // Rule 52: Zero telemetry rows emitted before physical RR data arrives
-        if (!hasReceivedRrData || mBeatQueue.isEmpty()) {
+        if (!hasReceivedRrData) {
             return
         }
 
@@ -148,11 +155,15 @@ open class HRVMetricsDevice @JvmOverloads constructor(
         pruneOldBeats(now)
 
         if (mBeatQueue.isEmpty()) {
+            mHrvRmssdSensor.newValue(null)
+            mHrvDfaA1Sensor.newValue(null)
+            mHrvArtifactRateSensor.newValue(null)
+            signalQualityResult = createDefaultSignalQualityResult()
             return
         }
 
         val allBeats = mBeatQueue.toList()
-        val filterResult = artifactFilter.filterBidirectionalBeats(allBeats)
+        val filterResult = artifactFilter.filterLiveCausal(allBeats)
         val filteredBeats = filterResult.beats
 
         // 1. Artifact rate over 120s window
@@ -167,7 +178,8 @@ open class HRVMetricsDevice @JvmOverloads constructor(
 
         // 3. DFA alpha 1 over 120s window with artifact gate suppression (REQ-TRK-060.4)
         val alpha1Value: Double?
-        if (artifactRate > ARTIFACT_GATE_THRESHOLD_PERCENT) {
+        val effectiveGateThreshold = getEffectiveArtifactGateThreshold()
+        if (artifactRate > effectiveGateThreshold) {
             // High artifact rate suppresses DFA alpha 1
             mHrvDfaA1Sensor.newValue(null)
             alpha1Value = null
@@ -190,6 +202,19 @@ open class HRVMetricsDevice @JvmOverloads constructor(
             rmssdMs = rmssdValue,
             dfaAlpha1 = alpha1Value
         )
+    }
+
+    private fun getEffectiveArtifactGateThreshold(): Double {
+        artifactGateThresholdPercent?.let { return it }
+        return try {
+            if (TuningPreferencesDataStore.hasInitializedInstance()) {
+                TuningPreferencesDataStore.getInstance(mContext).getTuningConfig().hrvArtifactGateThresholdPercent.toDouble()
+            } else {
+                ARTIFACT_GATE_THRESHOLD_PERCENT
+            }
+        } catch (_: Exception) {
+            ARTIFACT_GATE_THRESHOLD_PERCENT
+        }
     }
 
     private fun computeBiasFreeRmssd(beats: List<FilteredRrBeat>): Double? {

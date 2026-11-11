@@ -112,4 +112,9 @@
     <string name="tuning_dfa_a1_t2_desc">Drempel tussen overgang (Zone 3) en anaërobe intensiteit (Zone 4). Hoger = meer fractaal / aëroob.</string>
     <string name="tuning_dfa_a1_default">Standaard: %1$.2f (Invariant: T1 \u2265 T2 + 0.05)</string>
     <string name="hrv_info_zones_desc_fmt">DFA a1 &gt; %1$.2f duidt op een aëroob uithoudingsvermogen (Zone 2). Waarden tussen %1$.2f en %2$.2f weerspiegelen de drempelovergang (Zone 3). Waarden onder %2$.2f duiden op hoge anaërobe intensiteit (Zone 4).</string>
+
+    <!-- Configurable Artifact Gate Threshold (ATT-6714 / REQ-TRK-060.4) -->
+    <string name="tuning_hrv_artifact_gate_title">HRV-artefactdrempel</string>
+    <string name="tuning_hrv_artifact_gate_desc" formatted="false">Maximaal artefactpercentage in venster voordat DFA a1 wordt onderdrukt. Bereik: 3,0% tot 5,0%.</string>
+    <string name="tuning_hrv_artifact_gate_default">Standaard: %1$.1f%%</string>
 </resources>
