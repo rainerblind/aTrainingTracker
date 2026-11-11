@@ -629,6 +629,13 @@ class BANALServiceRepository private constructor(context: Context) {
     }
 
     /**
+     * Returns the elapsed temporal span in seconds for a sensorFieldId, or 0 if not registered (REQ-TRK-059.9, ATT-6695).
+     */
+    fun getSparklineSpanSeconds(sensorFieldId: Long): Int {
+        return sparklineBuffers[sensorFieldId]?.buffer?.currentSpanSeconds ?: 0
+    }
+
+    /**
      * Returns the LiveSparklineBuffer instance for a sensorFieldId, if registered.
      */
     fun getSparklineBuffer(sensorFieldId: Long): LiveSparklineBuffer? {

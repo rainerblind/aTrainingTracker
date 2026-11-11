@@ -450,6 +450,7 @@ fun SensorFieldView(
                         }
                         SensorSparklineView(
                             samples = fieldState.sparklineSamples,
+                            spanSeconds = fieldState.sparklineSpanSeconds,
                             lineColor = sparklineLineColor,
                             modifier = Modifier
                                 .fillMaxWidth()

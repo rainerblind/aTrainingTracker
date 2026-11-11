@@ -557,6 +557,11 @@ class TrackingViewModel @JvmOverloads constructor(
                             banalServiceRepository.removeSparklineBuffer(config.sensorFieldId)
                             emptyList()
                         }
+                        val sparklineSpanSeconds = if (config.showGraph) {
+                            banalServiceRepository.getSparklineSpanSeconds(config.sensorFieldId)
+                        } else {
+                            0
+                        }
 
                         SensorFieldState(
                             configHash = uniqueHash,
@@ -579,6 +584,7 @@ class TrackingViewModel @JvmOverloads constructor(
                             showGraph = config.showGraph,
                             graphHorizonSeconds = config.graphHorizonSeconds,
                             sparklineSamples = sparklineSamples,
+                            sparklineSpanSeconds = sparklineSpanSeconds,
                             colWeight = config.colWeight
                         )
                     }
@@ -737,14 +743,18 @@ class TrackingViewModel @JvmOverloads constructor(
             }
         }
 
-        // REQ-TRK-059.7, ATT-6710: Unconditionally populate latest sparkline samples from repository
-        // for all fields with showGraph == true, ensuring non-emitting ticks never fall back to emptyList()
+        // REQ-TRK-059.7, ATT-6710, REQ-TRK-059.9, ATT-6695: Unconditionally populate latest sparkline samples
+        // and span seconds from repository for all fields with showGraph == true, ensuring non-emitting ticks never fall back to emptyList()
         for (i in updatedFields.indices) {
             val field = updatedFields[i]
             if (field.showGraph) {
                 val currentSamples = banalServiceRepository.getSparklineSamples(field.sensorFieldId)
-                if (field.sparklineSamples != currentSamples) {
-                    updatedFields[i] = field.copy(sparklineSamples = currentSamples)
+                val currentSpan = banalServiceRepository.getSparklineSpanSeconds(field.sensorFieldId)
+                if (field.sparklineSamples != currentSamples || field.sparklineSpanSeconds != currentSpan) {
+                    updatedFields[i] = field.copy(
+                        sparklineSamples = currentSamples,
+                        sparklineSpanSeconds = currentSpan
+                    )
                     hasChanged = true
                 }
             }

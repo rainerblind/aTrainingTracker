@@ -1713,7 +1713,7 @@
 ### TST-TRK-059: **Live Sparkline Graph Cockpit Tiles & Database Migration Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-TRK-059`
 - **Component**: `TrackingViewsDatabaseManager.java`, `TrackingViewsDbHelper.java`, `SensorFieldView.kt`, `EditSensorFieldDialog.kt`, `LiveSparklineBuffer.kt`, `SensorSparklineView.kt`, `BANALServiceRepository.kt`, `TrackingViewModel.kt`, `ATrainingTrackerApp.kt`
-- **Jira**: `ATT-1294`, `ATT-6710`
+- **Jira**: `ATT-1294`, `ATT-6710`, `ATT-6695`
 - **Test Description**:
   1. *Database Schema v19 Migration & Default Column Integrity Unit Test (`TST-TRK-059.1`, `TrackingViewsDbMigrationV19Test.kt`)*:
   • Execute SQLite schema migration from version 18 to 19; assert `ShowGraph` and `GraphHorizonS` columns exist on `ROWS_TABLE` with default values `0` and `300`.
@@ -1738,6 +1738,10 @@
   • Assert fields never revert to `emptyList()` due to `cachedBaseFields` fallback.
   8. *Root Back Navigation moveTaskToBack Contract Test (`TST-TRK-059.8`, `ATrainingTrackerAppNavigationTest.kt`, `ATT-6710`)*:
   • Verify root `BackHandler` on `NavRoutes.START_TRACKING` invokes `moveTaskToBack(true)` instead of `finish()` when `previousBackStackEntry` is null.
+  9. *Glanceable X-Axis Time Labels, Span Tracking & 9-Locale Parity Test (`TST-TRK-059.9`, `LiveSparklineBufferSpanTest.kt`, `SensorSparklineViewTest.kt`, `ATT-6695`)*:
+  • Verify LiveSparklineBuffer tracks totalElapsedSeconds and exposes currentSpanSeconds capped on fixed horizons (e.g. 300s) and uncapped across pairwise decimation in Full Workout mode.
+  • Verify formatSparklineTimeOffset formats sub-hour (-M:SS) and multi-hour (-H:MM:SS) relative timestamps.
+  • Verify TranslationParityTest confirms 100% 9-language localization parity for sparkline_axis_now in strings_cockpit.xml.
 
 ### TST-FIL-015: **Filter Initialization State Tracking, Alpha Validation & Zero-Bias Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-FIL-015`, `REQ-FIL-011`, `REQ-FIL-012.5`, `REQ-FIL-013`

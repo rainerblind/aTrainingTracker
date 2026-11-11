@@ -3066,9 +3066,9 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 **Invariants**: Existing power telemetry (`POWER`, `NP`, `IF`, `WORK_KJ`, `TSS`, `W_PRIME_BAL`) preserved; pause freeze integrity; 100% 9-language translation parity; zero composition snapshot state writes.
 
 ### REQ-TRK-059: Configurable Live Sparkline Graph Cockpit Tiles with Selectable Time Horizon Across Numeric SensorTypes [Verified]
-- **Tests**: `TST-TRK-059` | **Tickets**: `ATT-1294`, `ATT-6710`
+- **Tests**: `TST-TRK-059` | **Tickets**: `ATT-1294`, `ATT-6710`, `ATT-6695`
 - **Implementation**: `TrackingViewsDatabaseManager.java`, `TrackingViewsDbHelper.java`, `SensorFieldView.kt`, `EditSensorFieldDialog.kt`, `LiveSparklineBuffer.kt`, `SensorSparklineView.kt`, `BANALServiceRepository.kt`, `TrackingViewModel.kt`, `ATrainingTrackerApp.kt`
-- **Rationale**: Athletes monitoring live telemetry benefit from seeing dynamic temporal trends (whether metric values are rising, steady, or falling) directly within cockpit tiles. Generalizing sparkline visualization across all numeric sensor types with configurable time horizons (1m to Full Workout) enhances tactical pacing without increasing cognitive load or battery drain (ATT-1294, refined by ATT-6710, Parent Epic ATT-5908, extending `REQ-TRK-046` and `REQ-UI-436`).
+- **Rationale**: Athletes monitoring live telemetry benefit from seeing dynamic temporal trends (whether metric values are rising, steady, or falling) directly within cockpit tiles. Generalizing sparkline visualization across all numeric sensor types with configurable time horizons (1m to Full Workout) enhances tactical pacing without increasing cognitive load or battery drain (ATT-1294, refined by ATT-6710 and ATT-6695, Parent Epic ATT-5908, extending `REQ-TRK-046` and `REQ-UI-436`).
 - **Description**:
 1. *Database Schema v19 Persistence & Migration (`REQ-TRK-059.1`)*:
 • In `TrackingViewsDatabaseManager.java`, the SQLite schema SHALL increment to `DB_VERSION = 19`, introducing integer columns `ShowGraph` (default `0`) and `GraphHorizonS` (default `300` for 5 minutes) to `ROWS_TABLE`.
@@ -3095,12 +3095,19 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 8. *Root Back Navigation Task Preservation (`REQ-TRK-059.8`, `ATT-6710`)*:
 • In `ATrainingTrackerApp.kt`, the Layer 3 root `BackHandler` (when `currentRoute == NavRoutes.START_TRACKING` and `navController.previousBackStackEntry == null`) SHALL invoke `activity.moveTaskToBack(true)` instead of `activity.finish()`.
 • System Back gesture and button navigation SHALL move the application task to the background without destroying `MainActivityWithNavigation` or clearing its `ViewModelStore`.
+9. *Glanceable X-Axis Time Labels & Temporal Span Tracking (`REQ-TRK-059.9`, `ATT-6695`)*:
+• In `LiveSparklineBuffer.kt`, the buffer SHALL maintain cumulative elapsed telemetry seconds (`totalElapsedSeconds`) incremented on each 1-Hz `addSample()` call and reset to `0` in `clear()`.
+• `LiveSparklineBuffer` SHALL expose `currentSpanSeconds: Int`, evaluating to `minOf(maxOf(0, totalElapsedSeconds - 1), horizonSeconds)` for fixed horizons (`horizonSeconds > 0`) and `maxOf(0, totalElapsedSeconds - 1)` for Full Workout (`horizonSeconds <= 0`), preserving true elapsed time across multi-hour decimation.
+• In `SensorFieldState.kt`, `SensorFieldState` SHALL include `sparklineSpanSeconds: Int = 0`, populated in `TrackingViewModel` via `BANALServiceRepository.getSparklineSpanSeconds(sensorFieldId)`.
+• In `SensorSparklineView.kt`, the composable SHALL render a compact single-line X-axis label row below the polyline canvas displaying Left (`-T`), Middle (`-T/2`), and Right (`sparkline_axis_now`: `Jetzt` / `Now`).
+• Relative time offsets SHALL format via pure helper `formatSparklineTimeOffset(seconds: Int)` as `-M:SS` for $T < 3600\text{ s}$ and `-H:MM:SS` for $T \ge 3600\text{ s}$.
+• String resource `sparkline_axis_now` SHALL maintain 100% 9-language localization parity across all supported locales (`values`, `values-de`, `values-es`, `values-fr`, `values-it`, `values-ja`, `values-nl`, `values-pl`, `values-pt`).
 
 **Requirement Archaeology & Chesterton's Fence Audit**:
-1. *Original Requirement ID & Target*: Net-new requirement `REQ-TRK-059`, extending `REQ-TRK-046` (`ShowValue`/`ShowBar` display elements), `REQ-UI-436` (Bar-only mode), and `REQ-UI-159` (Root BackHandler navigation). Refined by `ATT-6710` for singleton repository buffer persistence in `BANALServiceRepository.kt`, sample retention in `TrackingViewModel.kt`, and `moveTaskToBack(true)` in `ATrainingTrackerApp.kt`.
-2. *Historical Origin & Commit Trace*: `ATT-4841` introduced `SHOW_VALUE` and `SHOW_BAR` in DB v16; `ATT-4927` added sport-dependent bar gating in DB v18; `ATT-1294` introduced `LiveSparklineBuffer` in `TrackingViewModel`; `ATT-6710` identified buffer wiping on root `finish()` and `cachedBaseFields` fallback.
-3. *Root Reason for Existing Formulation*: Root `BackHandler` previously called `finish()` as the standard root screen exit default. Sparkline buffers were originally placed inside `TrackingViewModel` for initial UI prototyping without considering Activity recreation or backgrounding.
-4. *Preservation of Core Invariants*: Bounded memory ($\le 300$ samples / $\le 1\text{ KB}$ per tile), 1 Hz decimation math, `SensorSparklineView` canvas rendering, drawer navigation hierarchy, and back-stack behavior on child destinations remain 100% preserved.
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-TRK-059`, extending `REQ-TRK-046` (`ShowValue`/`ShowBar` display elements), `REQ-UI-436` (Bar-only mode), and `REQ-UI-159` (Root BackHandler navigation). Refined by `ATT-6710` (singleton repository persistence in `BANALServiceRepository.kt`) and `ATT-6695` (X-axis time labels `-T`, `-T/2`, `Now` and temporal span tracking in `LiveSparklineBuffer.kt` and `SensorSparklineView.kt`).
+2. *Historical Origin & Commit Trace*: `ATT-4841` introduced `SHOW_VALUE` and `SHOW_BAR` in DB v16; `ATT-4927` added sport-dependent bar gating in DB v18; `ATT-1294` introduced `LiveSparklineBuffer` in `TrackingViewModel`; `ATT-6710` added singleton repository persistence and task preservation; `ATT-6695` added X-axis time labels.
+3. *Root Reason for Existing Formulation*: Prior sparkline implementations prioritized minimal canvas drawing without text layout overhead, leaving athletes unable to determine what temporal duration a filling buffer or decimated Full Workout sparkline represented.
+4. *Preservation of Core Invariants*: Bounded memory ($\le 300$ samples / $\le 1\text{ KB}$ per tile), 1 Hz decimation math, `SensorSparklineView` canvas rendering, zero snapshot state mutations in composition (`Rule 66`), drawer navigation hierarchy, and 100% 9-language translation parity remain strictly preserved.
 
 **Acceptance Criteria (Given-When-Then)**:
 • *Given* an existing user upgrading from DB schema v18,
@@ -3124,6 +3131,12 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 • *Given* `cachedBaseFields` in `TrackingViewModel`,
 • *When* `applySensorData()` processes an empty emission or partial sensor update where a graph-enabled sensor is absent,
 • *Then* the field retains its accumulated sparkline samples and never reverts to `emptyList()`.
+• *Given* a Cockpit tile configured with `showGraph == true` and 5m (300s) horizon,
+• *When* 80 seconds of telemetry have elapsed,
+• *Then* the X-axis labels display `-1:20` (Left), `-0:40` (Middle), and localized `Jetzt`/`Now` (Right), and cap at `-5:00` (Left) and `-2:30` (Middle) once $\ge 300\text{ s}$ have elapsed.
+• *Given* a Cockpit tile configured with `Full Workout` (0s horizon) after 835 seconds of riding,
+• *When* rendered in `SensorSparklineView`,
+• *Then* `LiveSparklineBuffer.currentSpanSeconds` preserves 834s despite decimation, rendering `-13:54` (or `-13:55`) Left and `-6:57` Middle with `Jetzt`/`Now` Right.
 
 **Invariants**: Existing display element flags (`showValue`, `showBar`) and gauge bar rendering preserved; 100% 9-language translation parity in `strings_cockpit.xml`; database upgrade idempotency; bounded memory ($\le 1\text{ KB}$ per tile).
 

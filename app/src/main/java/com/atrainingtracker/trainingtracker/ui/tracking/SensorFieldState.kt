@@ -68,12 +68,13 @@ data class SensorFieldState(
     // The canonical sensor type for dynamic tuning visibility gating (REQ-UI-409.3).
     val sensorType: SensorType? = null,
 
-    // Per-field element display configuration (REQ-TRK-046, ATT-4841, ATT-1294)
+    // Per-field element display configuration (REQ-TRK-046, ATT-4841, ATT-1294, ATT-6695)
     val showValue: Boolean = true,
     val showBar: Boolean = false,
     val showGraph: Boolean = false,
     val graphHorizonSeconds: Int = 300,
     val sparklineSamples: List<Float> = emptyList(),
+    val sparklineSpanSeconds: Int = 0,
 
     // Proportional horizontal width weight (REQ-UI-437, ATT-4861)
     val colWeight: Float = 1.0f

@@ -50,6 +50,7 @@
     <string name="graph_horizon_20m">20 Min.</string>
     <string name="graph_horizon_1h">1 Stunde</string>
     <string name="graph_horizon_full">Gesamtes Training</string>
+    <string name="sparkline_axis_now">Jetzt</string>
 
     <!-- 2-Level Sensor Taxonomy & SensorSubCategory (REQ-TRK-070, ATT-6726) -->
     <string name="sensor_category_elevation">Höhe</string>
