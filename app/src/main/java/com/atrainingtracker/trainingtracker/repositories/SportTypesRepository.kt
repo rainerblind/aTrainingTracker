@@ -29,6 +29,15 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlin.getValue
 
+/**
+ * Domain representation of basic sport type identification and mapping (REQ-UI-511.1).
+ */
+data class SimpleSportTypeInfo(
+    val id: Long,
+    val name: String,
+    val bSportType: BSportType
+)
+
 class SportTypesRepository private constructor(private val context: Context) :
     CoroutineScope {
 
@@ -38,8 +47,10 @@ class SportTypesRepository private constructor(private val context: Context) :
 
     private val sportTypeDatabaseManager get() = SportTypeDatabaseManager.getInstance(context)
 
-    val sportTypesList: List<SportTypeDatabaseManager.SimpleSportTypeInfo>
-        get() = sportTypeDatabaseManager.getSportTypes(BSportType.UNKNOWN)
+    val sportTypesList: List<SimpleSportTypeInfo>
+        get() = sportTypeDatabaseManager.getSportTypes(BSportType.UNKNOWN).map {
+            SimpleSportTypeInfo(it.id, it.name, it.bSportType)
+        }
 
     /**
      * Resolves localized UI display name for sport type id (REQ-UI-507.5).
@@ -67,10 +78,12 @@ class SportTypesRepository private constructor(private val context: Context) :
     fun getSportTypeIdFromStravaName(stravaName: String?): Long = sportTypeDatabaseManager.getSportTypeIdFromStravaName(stravaName)
 
     /**
-     * Resolves list of sport types matching [bSportType] (or all if null) (REQ-UI-507.5).
+     * Resolves list of sport types matching [bSportType] (or all if null) (REQ-UI-507.5, REQ-UI-511.1).
      */
-    fun getSportTypes(bSportType: BSportType?): List<SportTypeDatabaseManager.SimpleSportTypeInfo> =
-        sportTypeDatabaseManager.getSportTypes(bSportType)
+    fun getSportTypes(bSportType: BSportType?): List<SimpleSportTypeInfo> =
+        sportTypeDatabaseManager.getSportTypes(bSportType).map {
+            SimpleSportTypeInfo(it.id, it.name, it.bSportType)
+        }
 
     companion object {
         private val TAG = "SportTypesRepository"

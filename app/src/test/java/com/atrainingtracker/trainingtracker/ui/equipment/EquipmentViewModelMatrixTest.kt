@@ -20,12 +20,13 @@ package com.atrainingtracker.trainingtracker.ui.equipment
 
 import android.app.Application
 import com.atrainingtracker.banalservice.BSportType
-import com.atrainingtracker.banalservice.database.DevicesDatabaseManager
-import com.atrainingtracker.banalservice.database.DevicesDatabaseManager.SimpleSensorInfo
-import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager
+import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceDataRepository
+import com.atrainingtracker.banalservice.ui.devices.devicedata.SimpleSensorInfo
 import com.atrainingtracker.trainingtracker.database.EquipmentDbHelper
-import com.atrainingtracker.trainingtracker.database.SportTypeEquipmentLinkManager
-import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
+import com.atrainingtracker.trainingtracker.repositories.EquipmentRepository
+import com.atrainingtracker.trainingtracker.repositories.SportTypesRepository
+import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
+import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutStatsSummary
 import io.mockk.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -40,7 +41,7 @@ import org.junit.Test
 
 /**
  * Unit verification suite for EquipmentViewModel matrix state flow and sensor link operations
- * (REQ-UI-256, TST-UI-215, ATT-2126).
+ * (REQ-UI-256, TST-UI-215, ATT-2126, REQ-UI-511).
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class EquipmentViewModelMatrixTest {
@@ -48,11 +49,10 @@ class EquipmentViewModelMatrixTest {
     private val testDispatcher = StandardTestDispatcher()
 
     private lateinit var mockApplication: Application
-    private lateinit var mockDbHelper: EquipmentDbHelper
-    private lateinit var mockLinksHelper: SportTypeEquipmentLinkManager
-    private lateinit var mockSportTypeManager: SportTypeDatabaseManager
-    private lateinit var mockDevicesManager: DevicesDatabaseManager
-    private lateinit var mockSummariesManager: WorkoutSummariesDatabaseManager
+    private lateinit var mockEquipmentRepo: EquipmentRepository
+    private lateinit var mockSportRepo: SportTypesRepository
+    private lateinit var mockDeviceRepo: DeviceDataRepository
+    private lateinit var mockWorkoutRepo: WorkoutRepository
     private lateinit var mockPrefs: android.content.SharedPreferences
 
     @Before
@@ -70,13 +70,12 @@ class EquipmentViewModelMatrixTest {
         setStaticField(com.atrainingtracker.trainingtracker.TrainingApplication::class.java, "cSharedPreferences", mockPrefs)
 
         mockApplication = mockk(relaxed = true)
-        mockDbHelper = mockk(relaxed = true)
-        mockLinksHelper = mockk(relaxed = true)
-        mockSportTypeManager = mockk(relaxed = true)
-        mockDevicesManager = mockk(relaxed = true)
-        mockSummariesManager = mockk(relaxed = true)
+        mockEquipmentRepo = mockk(relaxed = true)
+        mockSportRepo = mockk(relaxed = true)
+        mockDeviceRepo = mockk(relaxed = true)
+        mockWorkoutRepo = mockk(relaxed = true)
 
-        every { mockSummariesManager.getEquipmentStats(any()) } returns WorkoutSummariesDatabaseManager.Stats()
+        every { mockWorkoutRepo.getEquipmentStats(any()) } returns WorkoutStatsSummary()
     }
 
     @After
@@ -99,11 +98,10 @@ class EquipmentViewModelMatrixTest {
         return EquipmentViewModel(
             application = mockApplication,
             ioDispatcher = testDispatcher,
-            dbEquipmentHelper = mockDbHelper,
-            dbLinksHelper = mockLinksHelper,
-            dbSportHelper = mockSportTypeManager,
-            dbDevicesHelper = mockDevicesManager,
-            dbSummariesManager = mockSummariesManager,
+            equipmentRepository = mockEquipmentRepo,
+            sportTypesRepository = mockSportRepo,
+            deviceDataRepository = mockDeviceRepo,
+            workoutRepository = mockWorkoutRepo,
             syncStatusFlow = MutableStateFlow(false)
         )
     }
@@ -115,8 +113,8 @@ class EquipmentViewModelMatrixTest {
             SimpleSensorInfo(20L, "Stages Power Meter"),
             SimpleSensorInfo(30L, "Wahoo SPEED")
         )
-        every { mockDevicesManager.allRemoteSensors } returns sensors
-        every { mockDbHelper.getEquipmentItems(any<BSportType>()) } returns emptyList()
+        every { mockDeviceRepo.allRemoteSensors } returns sensors
+        every { mockEquipmentRepo.getEquipmentItems(any<BSportType>()) } returns emptyList()
 
         val viewModel = createViewModel()
         assertEquals(0, viewModel.allRemoteSensors.value.size)
@@ -137,8 +135,8 @@ class EquipmentViewModelMatrixTest {
             SimpleSensorInfo(30L, "Stryd Footpod", com.atrainingtracker.banalservice.devices.DeviceType.RUN_SPEED),
             SimpleSensorInfo(40L, "Tempe", com.atrainingtracker.banalservice.devices.DeviceType.ENVIRONMENT)
         )
-        every { mockDevicesManager.allRemoteSensors } returns sensors
-        every { mockDbHelper.getEquipmentItems(any<BSportType>()) } returns emptyList()
+        every { mockDeviceRepo.allRemoteSensors } returns sensors
+        every { mockEquipmentRepo.getEquipmentItems(any<BSportType>()) } returns emptyList()
 
         val viewModel = createViewModel()
         testDispatcher.scheduler.advanceUntilIdle()
@@ -157,10 +155,10 @@ class EquipmentViewModelMatrixTest {
         val bike = EquipmentDbHelper.EquipmentData(
             1L, "Trek Emonda", BSportType.BIKE, 3, null, null, false
         )
-        every { mockDbHelper.getEquipmentItems(BSportType.BIKE) } returns listOf(bike)
-        every { mockDbHelper.getEquipmentItems(BSportType.RUN) } returns emptyList()
-        every { mockDbHelper.getDeviceIdsForEquipment(1L) } returns listOf(10L) andThen listOf(10L, 20L)
-        every { mockDevicesManager.allRemoteSensors } returns listOf(
+        every { mockEquipmentRepo.getEquipmentItems(BSportType.BIKE) } returns listOf(bike)
+        every { mockEquipmentRepo.getEquipmentItems(BSportType.RUN) } returns emptyList()
+        every { mockEquipmentRepo.getDeviceIdsForEquipment(1L) } returns listOf(10L) andThen listOf(10L, 20L)
+        every { mockDeviceRepo.allRemoteSensors } returns listOf(
             SimpleSensorInfo(10L, "HRM"),
             SimpleSensorInfo(20L, "Power")
         )
@@ -175,17 +173,17 @@ class EquipmentViewModelMatrixTest {
         viewModel.setSensorLink(1L, 20L, true)
         testDispatcher.scheduler.advanceUntilIdle()
 
-        verify(exactly = 1) { mockDbHelper.setDeviceLink(1L, 20L, true) }
+        verify(exactly = 1) { mockEquipmentRepo.setDeviceLink(1L, 20L, true) }
         // Verify loadEquipment was triggered and updated state
         assertEquals(1, viewModel.bikes.value.size)
         assertEquals(listOf(10L, 20L), viewModel.bikes.value[0].linkedDeviceIds)
 
         // Toggle sensor 10 to false (unlink)
-        every { mockDbHelper.getDeviceIdsForEquipment(1L) } returns listOf(20L)
+        every { mockEquipmentRepo.getDeviceIdsForEquipment(1L) } returns listOf(20L)
         viewModel.setSensorLink(1L, 10L, false)
         testDispatcher.scheduler.advanceUntilIdle()
 
-        verify(exactly = 1) { mockDbHelper.setDeviceLink(1L, 10L, false) }
+        verify(exactly = 1) { mockEquipmentRepo.setDeviceLink(1L, 10L, false) }
         assertEquals(listOf(20L), viewModel.bikes.value[0].linkedDeviceIds)
     }
 }

@@ -15308,6 +15308,33 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 
 **Invariants**: Zero SQLite schema alterations; all repository I/O dispatched off main thread; 100% test pass rate across UI and ViewModel tests.
 
+### REQ-UI-511: EquipmentViewModel & Repositories Domain DTO Decoupling and Constructor Modernization [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-UI-511` | **Tickets**: `ATT-6696`
+- **Implementation**: `EquipmentViewModel.kt`, `EquipmentRepository.kt`, `DeviceDataRepository.kt`, `SportTypesRepository.kt`, `WorkoutRepository.kt`
+- **Rationale**: Repositories must not leak inner `*DatabaseManager` DTOs (`NameAndBatteryPercentage`, `SimpleSensorInfo`, `SimpleSportTypeInfo`, `Stats`) into the UI layer. `EquipmentViewModel` must not bypass domain repositories or retain deprecated constructor parameters and legacy delegation shims (`docs/coding_standards.md` §1.12, §2.5, §5.9).
+- **Description**:
+  1. *Domain DTO Return Types (`REQ-UI-511.1`)*:
+     - `DeviceDataRepository`, `SportTypesRepository`, and `WorkoutRepository` SHALL replace leaky `*DatabaseManager` inner DTOs with strongly typed domain models (`CriticalBatteryDevice`, `SimpleSensorInfo`, `SimpleSportTypeInfo`, `WorkoutStatsSummary`).
+  2. *EquipmentRepository Encapsulation (`REQ-UI-511.2`)*:
+     - `EquipmentRepository` SHALL encapsulate equipment CRUD and sport-to-equipment associations, eliminating direct UI dependencies on `EquipmentDbHelper` and `SportTypeEquipmentLinkManager`.
+  3. *EquipmentViewModel Constructor Modernization (`REQ-UI-511.3`)*:
+     - `EquipmentViewModel` SHALL accept domain repositories directly (`EquipmentRepository`, `SportTypesRepository`, `DeviceDataRepository`, `WorkoutRepository`).
+     - The 3 `@Deprecated` database manager parameters (`dbSportHelper`, `dbDevicesHelper`, `dbSummariesManager`) and all 7 `resolve*()` delegation fallbacks SHALL be retired.
+  4. *Clean Architecture Contract (`REQ-UI-511.4`)*:
+     - `RepositoryUiCleanlinessContractTest` SHALL verify zero leaky DatabaseManager DTOs or manager imports in `EquipmentViewModel` and UI callers.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* domain repositories `DeviceDataRepository`, `SportTypesRepository`, and `WorkoutRepository`,
+• *When* queried for battery levels, sensors, sport types, or equipment stats,
+• *Then* they return pure domain models with zero leaky `*DatabaseManager` inner DTOs.
+• *Given* `EquipmentViewModel`,
+• *When* constructed and observed,
+• *Then* it operates exclusively via domain repositories without deprecated database manager parameters or resolve shims.
+
+**Invariants**: Zero functional or numerical regression across equipment screens; thread safety on `Dispatchers.IO` preserved; 100% test pass rate across equipment test harnesses.
+
+
 
 
 

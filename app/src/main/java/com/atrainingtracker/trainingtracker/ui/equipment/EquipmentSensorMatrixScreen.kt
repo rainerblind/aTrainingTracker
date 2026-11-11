@@ -44,8 +44,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
-import com.atrainingtracker.banalservice.database.DevicesDatabaseManager
-import com.atrainingtracker.banalservice.database.DevicesDatabaseManager.SimpleSensorInfo
+import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceDataRepository
+import com.atrainingtracker.banalservice.ui.devices.devicedata.SimpleSensorInfo
 import com.atrainingtracker.trainingtracker.ui.components.EmptyStatePlaceholder
 import com.atrainingtracker.trainingtracker.ui.components.FastScrollableBox
 
@@ -90,7 +90,7 @@ fun EquipmentSensorMatrixScreen(
     } else {
         EquipmentSensorOrdering.sortSensors(
             sensors.filter {
-                DevicesDatabaseManager.isBikeSensor(it.deviceType) || DevicesDatabaseManager.isSharedSensor(it.deviceType)
+                DeviceDataRepository.isBikeSensor(it.deviceType) || DeviceDataRepository.isSharedSensor(it.deviceType)
             },
             BSportType.BIKE
         )
@@ -101,7 +101,7 @@ fun EquipmentSensorMatrixScreen(
     } else {
         EquipmentSensorOrdering.sortSensors(
             sensors.filter {
-                DevicesDatabaseManager.isRunSensor(it.deviceType) || DevicesDatabaseManager.isSharedSensor(it.deviceType)
+                DeviceDataRepository.isRunSensor(it.deviceType) || DeviceDataRepository.isSharedSensor(it.deviceType)
             },
             BSportType.RUN
         )

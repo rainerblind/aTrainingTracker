@@ -857,7 +857,7 @@ public class DevicesDatabaseManager {
             }
         }
 
-        sensors.sort(com.atrainingtracker.trainingtracker.ui.equipment.EquipmentSensorOrdering.getComparator(sportType));
+        sensors.sort(com.atrainingtracker.trainingtracker.ui.equipment.EquipmentSensorOrdering.getLegacyComparator(sportType));
 
         return sensors;
     }

@@ -21,8 +21,10 @@ package com.atrainingtracker.trainingtracker.repositories
 import android.app.Application
 import android.content.Context
 import android.util.Log
+import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.database.EquipmentDbHelper
+import com.atrainingtracker.trainingtracker.database.SportTypeEquipmentLinkManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -34,24 +36,56 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 
-class EquipmentRepository internal constructor(private val context: Context) :
-    CoroutineScope {
-
+open class EquipmentRepository internal constructor(
+    private val context: Context,
+    private val dbHelper: EquipmentDbHelper? = null,
+    private val linkManager: SportTypeEquipmentLinkManager? = null
+) : CoroutineScope {
 
     private val job = SupervisorJob()
     override val coroutineContext = Dispatchers.Main + job
 
-    private val equipmentDbHelper get() = EquipmentDbHelper.getInstance(context)
+    private val equipmentDbHelper get() = dbHelper ?: EquipmentDbHelper.getInstance(context)
+    private val linksHelper get() = linkManager ?: SportTypeEquipmentLinkManager.getInstance(context)
 
-    val equipmentList: List<EquipmentDbHelper.EquipmentData>
+    open val equipmentList: List<EquipmentDbHelper.EquipmentData>
         get() = equipmentDbHelper.getEquipmentItems() as List<EquipmentDbHelper.EquipmentData>
 
-    val equipmentItems: List<EquipmentDbHelper.EquipmentData>
+    open val equipmentItems: List<EquipmentDbHelper.EquipmentData>
         get() = equipmentList
 
-    fun getIdFromStravaId(stravaId: String): Long = equipmentDbHelper.getIdFromStravaId(stravaId)
-    fun getStravaIdFromId(id: Long): String? = equipmentDbHelper.getStravaIdFromId(id)
-    fun addOrUpdateStravaGear(stravaId: String?, name: String, frameType: Int, sportType: String, retired: Boolean): Long =
+    open fun getEquipmentItems(sportType: BSportType): List<EquipmentDbHelper.EquipmentData> =
+        equipmentDbHelper.getEquipmentItems(sportType)
+
+    open fun getDeviceIdsForEquipment(equipmentId: Long): List<Long> =
+        equipmentDbHelper.getDeviceIdsForEquipment(equipmentId)
+
+    open fun getSportTypeIdsForEquipment(equipmentId: Long): List<Long> =
+        linksHelper.getSportTypeIdsForEquipment(equipmentId)
+
+    open fun setDeviceLink(equipmentId: Long, sensorId: Long, isLinked: Boolean) =
+        equipmentDbHelper.setDeviceLink(equipmentId, sensorId, isLinked)
+
+    open fun updateEquipment(id: Long, name: String, frameType: Int, linkedDeviceIds: List<Long>, isRetired: Boolean) =
+        equipmentDbHelper.updateEquipment(id, name, frameType, linkedDeviceIds, isRetired)
+
+    open fun updateLinksForEquipment(equipmentId: Long, linkedSportTypeIds: List<Long>) =
+        linksHelper.updateLinksForEquipment(equipmentId, linkedSportTypeIds)
+
+    open fun setEquipmentRetired(equipmentId: Long, isRetired: Boolean) =
+        equipmentDbHelper.setEquipmentRetired(equipmentId, isRetired)
+
+    open fun addEquipment(name: String, frameType: Int, linkedDeviceIds: List<Long>): Long =
+        equipmentDbHelper.addEquipment(name, frameType, linkedDeviceIds)
+
+    open fun deleteEquipment(equipmentId: Long) {
+        equipmentDbHelper.deleteEquipment(equipmentId)
+        linksHelper.updateLinksForEquipment(equipmentId, emptyList())
+    }
+
+    open fun getIdFromStravaId(stravaId: String): Long = equipmentDbHelper.getIdFromStravaId(stravaId)
+    open fun getStravaIdFromId(id: Long): String? = equipmentDbHelper.getStravaIdFromId(id)
+    open fun addOrUpdateStravaGear(stravaId: String?, name: String, frameType: Int, sportType: String, retired: Boolean): Long =
         equipmentDbHelper.addOrUpdateStravaGear(stravaId, name, frameType, sportType, retired)
 
     companion object {

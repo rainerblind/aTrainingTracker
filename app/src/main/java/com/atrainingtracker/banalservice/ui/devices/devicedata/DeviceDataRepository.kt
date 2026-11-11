@@ -55,6 +55,24 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 /**
+ * Pure domain representation of a device with battery percentage and threshold warning (REQ-UI-511.1).
+ */
+data class CriticalBatteryDevice(
+    val name: String,
+    val batteryPercentage: Int,
+    val deviceId: Long
+)
+
+/**
+ * Pure domain representation of basic remote sensor identification (REQ-UI-511.1).
+ */
+data class SimpleSensorInfo(
+    val id: Long,
+    val name: String,
+    val deviceType: DeviceType? = null
+)
+
+/**
  * A repository that acts as a single source of truth for workout data.
  * It abstracts the data source (database) from the ViewModels.
  */
@@ -102,6 +120,15 @@ class DeviceDataRepository @androidx.annotation.VisibleForTesting internal const
         fun notifyBatteryUpdated(deviceId: Long, percentage: Int) {
             _deviceBatteryUpdates.tryEmit(Pair(deviceId, percentage))
         }
+
+        @JvmStatic
+        fun isBikeSensor(deviceType: DeviceType?): Boolean = DevicesDatabaseManager.isBikeSensor(deviceType)
+
+        @JvmStatic
+        fun isRunSensor(deviceType: DeviceType?): Boolean = DevicesDatabaseManager.isRunSensor(deviceType)
+
+        @JvmStatic
+        fun isSharedSensor(deviceType: DeviceType?): Boolean = DevicesDatabaseManager.isSharedSensor(deviceType)
     }
 
     private val repositoryScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
@@ -166,10 +193,12 @@ class DeviceDataRepository @androidx.annotation.VisibleForTesting internal const
     }
 
     /**
-     * Retrieves devices with battery levels at or below [threshold] (REQ-UI-507.5).
+     * Retrieves devices with battery levels at or below [threshold] (REQ-UI-507.5, REQ-UI-511.1).
      */
-    fun getCriticalBatteryDevices(threshold: Int): List<DevicesDatabaseManager.NameAndBatteryPercentage> {
-        return devicesDatabaseManager.getCriticalBatteryDevices(threshold)
+    fun getCriticalBatteryDevices(threshold: Int): List<CriticalBatteryDevice> {
+        return devicesDatabaseManager.getCriticalBatteryDevices(threshold).map {
+            CriticalBatteryDevice(it.name, it.batteryPercentage, it.deviceId)
+        }
     }
 
     /**
@@ -201,16 +230,20 @@ class DeviceDataRepository @androidx.annotation.VisibleForTesting internal const
     }
 
     /**
-     * Retrieves summary information for all remote sensors (REQ-UI-507.5).
+     * Retrieves summary information for all remote sensors (REQ-UI-507.5, REQ-UI-511.1).
      */
-    val allRemoteSensors: List<DevicesDatabaseManager.SimpleSensorInfo>
-        get() = devicesDatabaseManager.allRemoteSensors
+    val allRemoteSensors: List<SimpleSensorInfo>
+        get() = devicesDatabaseManager.allRemoteSensors.map {
+            SimpleSensorInfo(it.id, it.name, it.deviceType)
+        }
 
     /**
-     * Retrieves summary information for sensors compatible with [sportType] (REQ-UI-507.5).
+     * Retrieves summary information for sensors compatible with [sportType] (REQ-UI-507.5, REQ-UI-511.1).
      */
-    fun getSensorsForSportType(sportType: BSportType): List<DevicesDatabaseManager.SimpleSensorInfo> {
-        return devicesDatabaseManager.getSensorsForSportType(sportType)
+    fun getSensorsForSportType(sportType: BSportType): List<SimpleSensorInfo> {
+        return devicesDatabaseManager.getSensorsForSportType(sportType).map {
+            SimpleSensorInfo(it.id, it.name, it.deviceType)
+        }
     }
 
     /**

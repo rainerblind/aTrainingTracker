@@ -8187,6 +8187,24 @@
   • Execute targeted test suite (`--tests "com.atrainingtracker.trainingtracker.ui.RepositoryUiCleanlinessContractTest" --tests "com.atrainingtracker.trainingtracker.ui.clusters.*" --tests "com.atrainingtracker.trainingtracker.ui.athleteprofile.*" --tests "com.atrainingtracker.trainingtracker.ui.tracking.*" --tests "com.atrainingtracker.trainingtracker.activities.*"`).
   • Assert 100% pass rate.
 
+### TST-UI-511: **EquipmentViewModel & Repositories Domain Decoupling Verification Suite** [Verified]
+- **Target Release**: `V5.0.0`
+- **Requirement(s)**: `REQ-UI-511`
+- **Component**: `EquipmentViewModel.kt`, `EquipmentRepository.kt`, `DeviceDataRepository.kt`, `SportTypesRepository.kt`, `WorkoutRepository.kt`, `RepositoryUiCleanlinessContractTest.kt`
+- **Jira**: `ATT-6696`
+- **Test Description**:
+  1. *Domain DTO Decoupling Contract Test (`TST-UI-511.1`, `RepositoryUiCleanlinessContractTest.kt`)*:
+  • Verify public APIs of `DeviceDataRepository`, `SportTypesRepository`, and `WorkoutRepository` return pure domain DTOs with zero `*DatabaseManager` types.
+  • Verify `EquipmentViewModel.kt` imports zero `*DatabaseManager` or `*DbHelper` classes.
+  2. *EquipmentRepository Encapsulation Test (`TST-UI-511.2`, `EquipmentRepositoryTest.kt` / `EquipmentDbLinkContractTest.kt`)*:
+  • Verify equipment CRUD operations and sport-type associations execute cleanly via `EquipmentRepository`.
+  3. *EquipmentViewModel Modernization & Lifecycle Regression Test (`TST-UI-511.3`, `EquipmentViewModelLifecycleTest.kt`, `EquipmentViewModelMatrixTest.kt`, `EquipmentViewModelRetiredTest.kt`)*:
+  • Verify `EquipmentViewModel` initializes cleanly with repository injection, updating StateFlows for equipment, sport types, and sensor counts with 100% data fidelity.
+  4. *Tier 1 Targeted Unit Test Regression (`TST-UI-511.4`)*:
+  • Execute targeted test suite (`--tests "com.atrainingtracker.trainingtracker.ui.equipment.*" --tests "com.atrainingtracker.trainingtracker.repositories.*" --tests "com.atrainingtracker.banalservice.ui.devices.devicedata.*" --tests "com.atrainingtracker.trainingtracker.ui.RepositoryUiCleanlinessContractTest"`).
+  • Assert 100% pass rate.
+
+
 
 
 

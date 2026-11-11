@@ -49,16 +49,16 @@ class EditEquipmentDialogContractTest {
             content.contains("compatibleSensors")
         )
 
-        // 2. Must filter using DevicesDatabaseManager helper methods
+        // 2. Must filter using repository helper methods (REQ-UI-511)
         assertTrue(
             "Must check isBikeSensor and isSharedSensor for bikes",
-            content.contains("DevicesDatabaseManager.isBikeSensor") &&
-            content.contains("DevicesDatabaseManager.isSharedSensor")
+            (content.contains("DeviceDataRepository.isBikeSensor") || content.contains("DevicesDatabaseManager.isBikeSensor")) &&
+            (content.contains("DeviceDataRepository.isSharedSensor") || content.contains("DevicesDatabaseManager.isSharedSensor"))
         )
 
         assertTrue(
             "Must check isRunSensor and isSharedSensor for shoes",
-            content.contains("DevicesDatabaseManager.isRunSensor")
+            content.contains("DeviceDataRepository.isRunSensor") || content.contains("DevicesDatabaseManager.isRunSensor")
         )
 
         // 3. MultiSelectSensorSpinner must receive compatibleSensors

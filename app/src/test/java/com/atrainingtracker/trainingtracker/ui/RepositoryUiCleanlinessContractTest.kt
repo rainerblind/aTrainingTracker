@@ -115,8 +115,28 @@ class RepositoryUiCleanlinessContractTest {
         val content = file.readText()
 
         assertFalse(
-            "EquipmentViewModel.kt must not call DatabaseManager.getInstance (REQ-UI-507.3)",
-            content.contains("DatabaseManager.getInstance")
+            "EquipmentViewModel.kt must not contain DatabaseManager imports or calls (REQ-UI-507.3, REQ-UI-511.3)",
+            content.contains("DatabaseManager")
+        )
+        assertFalse(
+            "EquipmentViewModel.kt must not contain DbHelper imports or calls (REQ-UI-511.3)",
+            content.contains("DbHelper")
+        )
+        assertFalse(
+            "EquipmentViewModel.kt must not contain deprecated dbSportHelper (REQ-UI-511.3)",
+            content.contains("dbSportHelper")
+        )
+        assertFalse(
+            "EquipmentViewModel.kt must not contain deprecated dbDevicesHelper (REQ-UI-511.3)",
+            content.contains("dbDevicesHelper")
+        )
+        assertFalse(
+            "EquipmentViewModel.kt must not contain deprecated dbSummariesManager (REQ-UI-511.3)",
+            content.contains("dbSummariesManager")
+        )
+        assertTrue(
+            "EquipmentViewModel.kt must support EquipmentRepository injection (REQ-UI-511.3)",
+            content.contains("equipmentRepository: EquipmentRepository")
         )
         assertTrue(
             "EquipmentViewModel.kt must support SportTypesRepository injection",
@@ -129,6 +149,49 @@ class RepositoryUiCleanlinessContractTest {
         assertTrue(
             "EquipmentViewModel.kt must support WorkoutRepository injection",
             content.contains("workoutRepository: WorkoutRepository")
+        )
+    }
+
+    @Test
+    fun testRepositories_returnPureDomainDtos() {
+        val devRepoFile = resolveFile("src/main/java/com/atrainingtracker/banalservice/ui/devices/devicedata/DeviceDataRepository.kt")
+        assertTrue("DeviceDataRepository.kt must exist", devRepoFile.exists())
+        val devRepoContent = devRepoFile.readText()
+        assertTrue(
+            "DeviceDataRepository must return List<CriticalBatteryDevice> (REQ-UI-511.1)",
+            devRepoContent.contains("fun getCriticalBatteryDevices(threshold: Int): List<CriticalBatteryDevice>")
+        )
+        assertTrue(
+            "DeviceDataRepository.allRemoteSensors must return List<SimpleSensorInfo> (REQ-UI-511.1)",
+            devRepoContent.contains("val allRemoteSensors: List<SimpleSensorInfo>")
+        )
+        assertTrue(
+            "DeviceDataRepository.getSensorsForSportType must return List<SimpleSensorInfo> (REQ-UI-511.1)",
+            devRepoContent.contains("fun getSensorsForSportType(sportType: BSportType): List<SimpleSensorInfo>")
+        )
+
+        val sportRepoFile = resolveFile("src/main/java/com/atrainingtracker/trainingtracker/repositories/SportTypesRepository.kt")
+        assertTrue("SportTypesRepository.kt must exist", sportRepoFile.exists())
+        val sportRepoContent = sportRepoFile.readText()
+        assertTrue(
+            "SportTypesRepository.sportTypesList must return List<SimpleSportTypeInfo> (REQ-UI-511.1)",
+            sportRepoContent.contains("val sportTypesList: List<SimpleSportTypeInfo>")
+        )
+        assertTrue(
+            "SportTypesRepository.getSportTypes must return List<SimpleSportTypeInfo> (REQ-UI-511.1)",
+            sportRepoContent.contains("fun getSportTypes(bSportType: BSportType?): List<SimpleSportTypeInfo>")
+        )
+
+        val workoutRepoFile = resolveFile("src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/WorkoutRepository.kt")
+        assertTrue("WorkoutRepository.kt must exist", workoutRepoFile.exists())
+        val workoutRepoContent = workoutRepoFile.readText()
+        assertTrue(
+            "WorkoutRepository.getEquipmentStats must return WorkoutStatsSummary (REQ-UI-511.1)",
+            workoutRepoContent.contains("fun getEquipmentStats(equipmentId: Long): WorkoutStatsSummary")
+        )
+        assertTrue(
+            "WorkoutRepository.getEquipmentStatsForPeriod must return WorkoutStatsSummary (REQ-UI-511.1)",
+            workoutRepoContent.contains("fun getEquipmentStatsForPeriod(equipmentId: Long, startS: Long, endS: Long): WorkoutStatsSummary")
         )
     }
 

@@ -28,7 +28,7 @@ import androidx.arch.core.executor.TaskExecutor
 import androidx.core.app.NotificationManagerCompat
 import androidx.lifecycle.SavedStateHandle
 import com.atrainingtracker.R
-import com.atrainingtracker.banalservice.database.DevicesDatabaseManager
+import com.atrainingtracker.banalservice.ui.devices.devicedata.CriticalBatteryDevice
 import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceDataRepository
 import com.atrainingtracker.banalservice.ui.devices.devicelist.BatteryFilter
 import com.atrainingtracker.banalservice.ui.devices.devicelist.DeviceFilterCriteria
@@ -133,7 +133,7 @@ class NotificationDeepLinkTest {
         }
 
         val devices = listOf(
-            DevicesDatabaseManager.NameAndBatteryPercentage("Polar H10", 10, 101L)
+            CriticalBatteryDevice("Polar H10", 10, 101L)
         )
         manager.showLowBatteryNotification(devices)
 

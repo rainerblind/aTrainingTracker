@@ -29,8 +29,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.atrainingtracker.banalservice.database.DevicesDatabaseManager
-import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager
+import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceDataRepository
+import com.atrainingtracker.banalservice.ui.devices.devicedata.SimpleSensorInfo
+import com.atrainingtracker.trainingtracker.repositories.SimpleSportTypeInfo
 import com.atrainingtracker.trainingtracker.ui.components.stats.StatsData
 import com.atrainingtracker.R
 import androidx.compose.ui.graphics.Color
@@ -40,14 +41,14 @@ import com.atrainingtracker.trainingtracker.ui.components.core.AppDialogActions
 import com.atrainingtracker.trainingtracker.ui.components.core.AppModalBottomSheet
 
 /**
- * Modernized bottom sheet dialog for configuring equipment (bikes, shoes, sensors, sport links) (REQ-UI-149, TST-UI-102).
+ * Modernized bottom sheet dialog for configuring equipment (bikes, shoes, sensors, sport links) (REQ-UI-149, TST-UI-102, REQ-UI-511).
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EditEquipmentDialog(
     item: EquipmentItem,
-    availableSensors: List<DevicesDatabaseManager.SimpleSensorInfo>,
-    availableSportTypes: List<SportTypeDatabaseManager.SimpleSportTypeInfo>,
+    availableSensors: List<SimpleSensorInfo>,
+    availableSportTypes: List<SimpleSportTypeInfo>,
     onConfirm: (EquipmentItem) -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -122,9 +123,9 @@ fun EditEquipmentDialog(
                     if (sensor.deviceType == null) {
                         true
                     } else if (isBike) {
-                        DevicesDatabaseManager.isBikeSensor(sensor.deviceType) || DevicesDatabaseManager.isSharedSensor(sensor.deviceType)
+                        DeviceDataRepository.isBikeSensor(sensor.deviceType) || DeviceDataRepository.isSharedSensor(sensor.deviceType)
                     } else {
-                        DevicesDatabaseManager.isRunSensor(sensor.deviceType) || DevicesDatabaseManager.isSharedSensor(sensor.deviceType)
+                        DeviceDataRepository.isRunSensor(sensor.deviceType) || DeviceDataRepository.isSharedSensor(sensor.deviceType)
                     }
                 }
                 EquipmentSensorOrdering.sortSensors(filtered, sportType)
@@ -168,7 +169,7 @@ fun EditEquipmentDialog(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MultiSelectSportTypeSpinner(
-    allSportTypes: List<SportTypeDatabaseManager.SimpleSportTypeInfo>,
+    allSportTypes: List<SimpleSportTypeInfo>,
     selectedIds: Set<Long>,
     onToggleSportType: (Long) -> Unit
 ) {
@@ -217,7 +218,7 @@ fun MultiSelectSportTypeSpinner(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MultiSelectSensorSpinner(
-    allSensors: List<DevicesDatabaseManager.SimpleSensorInfo>,
+    allSensors: List<SimpleSensorInfo>,
     selectedIds: Set<Long>,
     onToggleSensor: (Long) -> Unit
 ) {
@@ -297,12 +298,12 @@ private fun PreviewEditEquipmentDialog() {
             onDismiss = {},
             onConfirm = {},
             availableSensors = listOf(
-                DevicesDatabaseManager.SimpleSensorInfo(1, "Garmin HRM"),
-                DevicesDatabaseManager.SimpleSensorInfo(2, "Wahoo Speed"),
-                DevicesDatabaseManager.SimpleSensorInfo(3, "Stages Power"),
-                DevicesDatabaseManager.SimpleSensorInfo(4, "Polar H10")
+                SimpleSensorInfo(1, "Garmin HRM"),
+                SimpleSensorInfo(2, "Wahoo Speed"),
+                SimpleSensorInfo(3, "Stages Power"),
+                SimpleSensorInfo(4, "Polar H10")
             ),
-            availableSportTypes = emptyList<SportTypeDatabaseManager.SimpleSportTypeInfo>()
+            availableSportTypes = emptyList<SimpleSportTypeInfo>()
         )
     }
 }

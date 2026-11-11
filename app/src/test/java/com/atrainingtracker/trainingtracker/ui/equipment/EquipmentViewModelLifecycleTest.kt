@@ -17,11 +17,12 @@ package com.atrainingtracker.trainingtracker.ui.equipment
 
 import android.app.Application
 import com.atrainingtracker.banalservice.BSportType
-import com.atrainingtracker.banalservice.database.DevicesDatabaseManager
-import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager
+import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceDataRepository
 import com.atrainingtracker.trainingtracker.database.EquipmentDbHelper
-import com.atrainingtracker.trainingtracker.database.SportTypeEquipmentLinkManager
-import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
+import com.atrainingtracker.trainingtracker.repositories.EquipmentRepository
+import com.atrainingtracker.trainingtracker.repositories.SportTypesRepository
+import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
+import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutStatsSummary
 import io.mockk.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -35,7 +36,7 @@ import org.junit.Before
 import org.junit.Test
 
 /**
- * Unit verification suite for EquipmentViewModel lifecycle behavior (REQ-UI-160, TST-UI-112, ATT-1309):
+ * Unit verification suite for EquipmentViewModel lifecycle behavior (REQ-UI-160, TST-UI-112, ATT-1309, REQ-UI-511):
  * 1. Automated self-initialization upon construction (populates bikes and shoes).
  * 2. Reactive falling-edge observation of syncStatusFlow (true -> false reloads).
  * 3. Cold-start redundancy suppression (initial false does not duplicate queries).
@@ -47,11 +48,10 @@ class EquipmentViewModelLifecycleTest {
     private val testDispatcher = StandardTestDispatcher()
 
     private lateinit var mockApplication: Application
-    private lateinit var mockDbHelper: EquipmentDbHelper
-    private lateinit var mockLinksHelper: SportTypeEquipmentLinkManager
-    private lateinit var mockSportTypeManager: SportTypeDatabaseManager
-    private lateinit var mockDevicesManager: DevicesDatabaseManager
-    private lateinit var mockSummariesManager: WorkoutSummariesDatabaseManager
+    private lateinit var mockEquipmentRepo: EquipmentRepository
+    private lateinit var mockSportRepo: SportTypesRepository
+    private lateinit var mockDeviceRepo: DeviceDataRepository
+    private lateinit var mockWorkoutRepo: WorkoutRepository
     private lateinit var mockPrefs: android.content.SharedPreferences
 
     @Before
@@ -69,13 +69,12 @@ class EquipmentViewModelLifecycleTest {
         setStaticField(com.atrainingtracker.trainingtracker.TrainingApplication::class.java, "cSharedPreferences", mockPrefs)
 
         mockApplication = mockk(relaxed = true)
-        mockDbHelper = mockk(relaxed = true)
-        mockLinksHelper = mockk(relaxed = true)
-        mockSportTypeManager = mockk(relaxed = true)
-        mockDevicesManager = mockk(relaxed = true)
-        mockSummariesManager = mockk(relaxed = true)
+        mockEquipmentRepo = mockk(relaxed = true)
+        mockSportRepo = mockk(relaxed = true)
+        mockDeviceRepo = mockk(relaxed = true)
+        mockWorkoutRepo = mockk(relaxed = true)
 
-        every { mockSummariesManager.getEquipmentStats(any()) } returns WorkoutSummariesDatabaseManager.Stats()
+        every { mockWorkoutRepo.getEquipmentStats(any()) } returns WorkoutStatsSummary()
     }
 
     @After
@@ -98,11 +97,10 @@ class EquipmentViewModelLifecycleTest {
         return EquipmentViewModel(
             application = mockApplication,
             ioDispatcher = testDispatcher,
-            dbEquipmentHelper = mockDbHelper,
-            dbLinksHelper = mockLinksHelper,
-            dbSportHelper = mockSportTypeManager,
-            dbDevicesHelper = mockDevicesManager,
-            dbSummariesManager = mockSummariesManager,
+            equipmentRepository = mockEquipmentRepo,
+            sportTypesRepository = mockSportRepo,
+            deviceDataRepository = mockDeviceRepo,
+            workoutRepository = mockWorkoutRepo,
             syncStatusFlow = syncFlow
         )
     }
@@ -116,8 +114,8 @@ class EquipmentViewModelLifecycleTest {
             2L, "Nike Pegasus", BSportType.RUN, 1, "Nike", "n1", false
         )
 
-        every { mockDbHelper.getEquipmentItems(BSportType.BIKE) } returns listOf(bike)
-        every { mockDbHelper.getEquipmentItems(BSportType.RUN) } returns listOf(shoe)
+        every { mockEquipmentRepo.getEquipmentItems(BSportType.BIKE) } returns listOf(bike)
+        every { mockEquipmentRepo.getEquipmentItems(BSportType.RUN) } returns listOf(shoe)
 
         val viewModel = createViewModel()
 
@@ -134,53 +132,53 @@ class EquipmentViewModelLifecycleTest {
         assertEquals(1, viewModel.shoes.value.size)
         assertEquals("Nike Pegasus", viewModel.shoes.value[0].name)
 
-        verify(exactly = 1) { mockDbHelper.getEquipmentItems(BSportType.BIKE) }
-        verify(exactly = 1) { mockDbHelper.getEquipmentItems(BSportType.RUN) }
+        verify(exactly = 1) { mockEquipmentRepo.getEquipmentItems(BSportType.BIKE) }
+        verify(exactly = 1) { mockEquipmentRepo.getEquipmentItems(BSportType.RUN) }
     }
 
     @Test
     fun testObserveSyncStatus_reloadsOnFallingEdge() {
         val syncFlow = MutableStateFlow(false)
-        every { mockDbHelper.getEquipmentItems(any<BSportType>()) } returns emptyList()
+        every { mockEquipmentRepo.getEquipmentItems(any<BSportType>()) } returns emptyList()
 
         val viewModel = createViewModel(syncFlow)
         testDispatcher.scheduler.advanceUntilIdle()
 
         // 1 initial query from init
-        verify(exactly = 1) { mockDbHelper.getEquipmentItems(BSportType.BIKE) }
+        verify(exactly = 1) { mockEquipmentRepo.getEquipmentItems(BSportType.BIKE) }
 
         // Transition: false -> true (sync in progress)
         syncFlow.value = true
         testDispatcher.scheduler.advanceUntilIdle()
 
         // Query count MUST NOT increment while sync is running
-        verify(exactly = 1) { mockDbHelper.getEquipmentItems(BSportType.BIKE) }
+        verify(exactly = 1) { mockEquipmentRepo.getEquipmentItems(BSportType.BIKE) }
 
         // Transition: true -> false (falling edge: sync finished)
         syncFlow.value = false
         testDispatcher.scheduler.advanceUntilIdle()
 
         // Query count MUST increment by 1 (reloaded due to sync completion)
-        verify(exactly = 2) { mockDbHelper.getEquipmentItems(BSportType.BIKE) }
-        verify(exactly = 2) { mockDbHelper.getEquipmentItems(BSportType.RUN) }
+        verify(exactly = 2) { mockEquipmentRepo.getEquipmentItems(BSportType.BIKE) }
+        verify(exactly = 2) { mockEquipmentRepo.getEquipmentItems(BSportType.RUN) }
     }
 
     @Test
     fun testObserveSyncStatus_suppressesColdStartRedundancy() {
         val syncFlow = MutableStateFlow(false)
-        every { mockDbHelper.getEquipmentItems(any<BSportType>()) } returns emptyList()
+        every { mockEquipmentRepo.getEquipmentItems(any<BSportType>()) } returns emptyList()
 
         val viewModel = createViewModel(syncFlow)
         testDispatcher.scheduler.advanceUntilIdle()
 
         // Initial emission of false must NOT trigger a second redundant reload
-        verify(exactly = 1) { mockDbHelper.getEquipmentItems(BSportType.BIKE) }
-        verify(exactly = 1) { mockDbHelper.getEquipmentItems(BSportType.RUN) }
+        verify(exactly = 1) { mockEquipmentRepo.getEquipmentItems(BSportType.BIKE) }
+        verify(exactly = 1) { mockEquipmentRepo.getEquipmentItems(BSportType.RUN) }
     }
 
     @Test
     fun testLoadEquipment_cancelsPreviousPendingJob() {
-        every { mockDbHelper.getEquipmentItems(any<BSportType>()) } returns emptyList()
+        every { mockEquipmentRepo.getEquipmentItems(any<BSportType>()) } returns emptyList()
 
         val viewModel = createViewModel()
 

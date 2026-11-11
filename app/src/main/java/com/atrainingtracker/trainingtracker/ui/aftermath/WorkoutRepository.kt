@@ -111,6 +111,18 @@ import kotlinx.coroutines.sync.withLock
 
 
 /**
+ * Domain representation of aggregated workout statistics for an equipment item or period (REQ-UI-511.1).
+ */
+data class WorkoutStatsSummary(
+    val totalDistanceM: Double = 0.0,
+    val totalActiveTimeS: Long = 0L,
+    val totalAscentM: Int = 0,
+    val firstUsage: String? = null,
+    val lastUsage: String? = null,
+    val count: Int = 0
+)
+
+/**
  * Acts as the centralized data hub and single source of truth for all workout-related history.
  *
  * This repository orchestrates the flow of data between the persistent SQLite databases
@@ -1132,17 +1144,33 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
     }
 
     /**
-     * Gets aggregate lifetime equipment statistics (REQ-UI-507.5).
+     * Gets aggregate lifetime equipment statistics (REQ-UI-507.5, REQ-UI-511.1).
      */
-    fun getEquipmentStats(equipmentId: Long): WorkoutSummariesDatabaseManager.Stats {
-        return summariesManager.getEquipmentStats(equipmentId)
+    fun getEquipmentStats(equipmentId: Long): WorkoutStatsSummary {
+        val s = summariesManager.getEquipmentStats(equipmentId)
+        return WorkoutStatsSummary(
+            totalDistanceM = s.totalDistanceM,
+            totalActiveTimeS = s.totalActiveTimeS,
+            totalAscentM = s.totalAscentM,
+            firstUsage = s.firstUsage,
+            lastUsage = s.lastUsage,
+            count = s.count
+        )
     }
 
     /**
-     * Gets aggregate equipment statistics for a specific time period (REQ-UI-507.5).
+     * Gets aggregate equipment statistics for a specific time period (REQ-UI-507.5, REQ-UI-511.1).
      */
-    fun getEquipmentStatsForPeriod(equipmentId: Long, startS: Long, endS: Long): WorkoutSummariesDatabaseManager.Stats {
-        return summariesManager.getEquipmentStatsForPeriod(equipmentId, startS, endS)
+    fun getEquipmentStatsForPeriod(equipmentId: Long, startS: Long, endS: Long): WorkoutStatsSummary {
+        val s = summariesManager.getEquipmentStatsForPeriod(equipmentId, startS, endS)
+        return WorkoutStatsSummary(
+            totalDistanceM = s.totalDistanceM,
+            totalActiveTimeS = s.totalActiveTimeS,
+            totalAscentM = s.totalAscentM,
+            firstUsage = s.firstUsage,
+            lastUsage = s.lastUsage,
+            count = s.count
+        )
     }
 
 
