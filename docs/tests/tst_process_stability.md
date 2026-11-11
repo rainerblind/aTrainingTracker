@@ -1527,11 +1527,13 @@
 ### TST-PRO-047: **Detekt Static Analysis & Complexity Governance Contract Test Suite** [Verified]
 - **Requirement(s)**: `REQ-PRO-047`
 - **Component**: `build.gradle`, `app/build.gradle`, `config/detekt/detekt.yml`, `app/detekt-baseline.xml`, `.github/workflows/android-branch-build.yml`, `ReleaseCiAndLintConfigContractTest.kt`
-- **Jira**: `ATT-6175`
+- **Jira**: `ATT-6175`, `ATT-6729`
 - **Test Description**:
-  1. *Build Script Detekt Plugin & Configuration Conformance Test (`TST-PRO-047.1`, `ReleaseCiAndLintConfigContractTest.kt`)*:
-  • Read `build.gradle` and `app/build.gradle`.
+  1. *Build Script Detekt Plugin, Configuration & Baseline Ceiling Conformance Test (`TST-PRO-047.1`, `ReleaseCiAndLintConfigContractTest.kt`)*:
+  • Read `build.gradle`, `app/build.gradle`, and `config/detekt/detekt.yml`.
   • Assert that the detekt plugin is applied and configured with `config/detekt/detekt.yml` and `app/detekt-baseline.xml`.
+  • Assert that `config/detekt/detekt.yml` contains Jetpack Compose exemptions (`ignoreAnnotated: ['Composable']`, `ignoreAnnotated: ['Preview']`).
+  • Parse `app/detekt-baseline.xml` and assert total `<ID>` issue count is strictly `<= 9550`.
   2. *Detekt Rules Configuration Conformance Test (`TST-PRO-047.2`, `ReleaseCiAndLintConfigContractTest.kt`)*:
   • Read `config/detekt/detekt.yml`.
   • Assert that complexity rules (`LargeClass`, `LongMethod`, and `CyclomaticComplexMethod`) are present with active thresholds.
@@ -1539,7 +1541,7 @@
   • Read `.github/workflows/android-branch-build.yml`.
   • Assert that the workflow contains `./gradlew detekt` and an artifact upload step for detekt reports.
   4. *Clean-Room Targeted Test Suite Execution (`TST-PRO-047.4`)*:
-  • Execute targeted unit test suite `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.build.ReleaseCiAndLintConfigContractTest"` and `./gradlew detekt` asserting 100% pass rate.
+  • Execute targeted unit test suite `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.build.ReleaseCiAndLintConfigContractTest"` and `./gradlew :app:detekt` asserting 100% pass rate.
 
 
 

@@ -2,6 +2,13 @@ build:
   maxIssues: 0
   excludeCorrectable: false
 
+naming:
+  active: true
+  FunctionNaming:
+    active: true
+    ignoreAnnotated:
+      - "Composable"
+
 complexity:
   active: true
   CyclomaticComplexMethod:
@@ -11,14 +18,14 @@ complexity:
     ignoreSimpleWhenEntries: true
     ignoreNestingFunctions: false
     nestingFunctions:
-      - 'also'
-      - 'apply'
-      - 'forEach'
-      - 'isNotNull'
-      - 'let'
-      - 'run'
-      - 'use'
-      - 'with'
+      - "also"
+      - "apply"
+      - "forEach"
+      - "isNotNull"
+      - "let"
+      - "run"
+      - "use"
+      - "with"
   LargeClass:
     active: true
     threshold: 800
@@ -31,6 +38,8 @@ complexity:
     constructorThreshold: 10
     ignoreDefaultParameters: true
     ignoreDataClasses: true
+    ignoreAnnotated:
+      - "Composable"
   TooManyFunctions:
     active: true
     thresholdInFiles: 30
@@ -41,3 +50,15 @@ complexity:
     ignoreDeprecated: true
     ignorePrivate: true
     ignoreOverridden: true
+
+style:
+  active: true
+  UnusedPrivateMember:
+    active: true
+    ignoreAnnotated:
+      - "Preview"
+  MagicNumber:
+    active: true
+    ignorePropertyDeclaration: true
+    ignoreCompanionObjectPropertyDeclaration: true
+    ignoreAnnotation: true

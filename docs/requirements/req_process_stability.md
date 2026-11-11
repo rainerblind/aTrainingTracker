@@ -2492,38 +2492,38 @@ The workflow SHALL mandate that:
 
 
 ### REQ-PRO-047: Detekt Static Analysis & Complexity Governance [Verified]
-- **Tests**: `TST-PRO-047` | **Tickets**: `ATT-6175`
+- **Tests**: `TST-PRO-047` | **Tickets**: `ATT-6175`, `ATT-6729`
 - **Implementation**: `build.gradle`, `app/build.gradle`, `config/detekt/detekt.yml`, `app/detekt-baseline.xml`, `.github/workflows/android-branch-build.yml`, `ReleaseCiAndLintConfigContractTest.kt`
-- **Rationale**: ASPICE pre-assessment finding C-03 flagged that aTrainingTracker lacks Kotlin AST static code analysis and complexity/size boundaries. Over 15 source files exceed 1,200 lines of code without automated guardrails preventing further degradation. Introducing detekt into continuous integration (`.github/workflows/android-branch-build.yml`) with a curated configuration (`config/detekt/detekt.yml`), an initial baseline (`app/detekt-baseline.xml`), and strict complexity bounds (`LargeClass` <= 800, `LongMethod` <= 60, `CyclomaticComplexMethod` <= 15) enforces ASPICE SWE.3 static verification for all future development (ATT-6175, refining `REQ-PRO-034` under Epic `ATT-6142`):
+- **Rationale**: ASPICE pre-assessment finding C-03 flagged that aTrainingTracker lacks Kotlin AST static code analysis and complexity/size boundaries. Over 15 source files exceed 1,200 lines of code without automated guardrails preventing further degradation. Introducing detekt into continuous integration (`.github/workflows/android-branch-build.yml`) with a curated configuration (`config/detekt/detekt.yml`), an initial baseline (`app/detekt-baseline.xml`), and strict complexity bounds (`LargeClass` <= 800, `LongMethod` <= 60, `CyclomaticComplexMethod` <= 15) enforces ASPICE SWE.3 static verification. Adding official Jetpack Compose exemptions and ratcheting the baseline ceiling down protects idiomatic Compose screens while eliminating hundreds of false positives (ATT-6175, ATT-6729, refining `REQ-PRO-034` under Epic `ATT-6142`):
 - **Description**:
   1. *Detekt Gradle Plugin Integration (`REQ-PRO-047.1`)*:
      • Root `build.gradle` and `app/build.gradle` SHALL configure and apply `io.gitlab.arturbosch.detekt:1.23.8` ensuring compatibility with Gradle 9.6.0 and Kotlin 2.4.10.
-  2. *Complexity & Size Governance Rules (`REQ-PRO-047.2`)*:
-     • `config/detekt/detekt.yml` SHALL configure active complexity and size rules (`LargeClass` threshold <= 800 LOC, `LongMethod` threshold <= 60 LOC, `CyclomaticComplexMethod` threshold <= 15).
-  3. *Baseline Debt Isolation (`REQ-PRO-047.3`)*:
-     • `app/detekt-baseline.xml` SHALL isolate legacy complexity debt, ensuring `./gradlew detekt` passes with 0 unbaselined errors.
+  2. *Complexity, Style & Jetpack Compose Governance Rules (`REQ-PRO-047.2`)*:
+     • `config/detekt/detekt.yml` SHALL configure active complexity and size rules (`LargeClass` threshold <= 800 LOC, `LongMethod` threshold <= 60 LOC, `CyclomaticComplexMethod` threshold <= 15) and official Jetpack Compose exemptions (`FunctionNaming` with `ignoreAnnotated: ['Composable']`, `LongParameterList` with `ignoreAnnotated: ['Composable']`, `UnusedPrivateMember` with `ignoreAnnotated: ['Preview']`, and `MagicNumber` property/annotation/enum exemptions).
+  3. *Ratcheted Baseline Debt Ceiling (`REQ-PRO-047.3`)*:
+     • `app/detekt-baseline.xml` SHALL isolate legacy complexity debt with an explicit non-increasing ceiling bound (`issueCount <= 9550`), ensuring `./gradlew :app:detekt` passes with 0 unbaselined errors.
   4. *CI Branch Workflow Gating (`REQ-PRO-047.4`)*:
-     • Continuous integration workflow (`.github/workflows/android-branch-build.yml`) SHALL execute `./gradlew detekt` and upload HTML/XML reports via `actions/upload-artifact@v4`.
-  5. *Automated Governance Contract (`REQ-PRO-047.5`)*:
-     • `ReleaseCiAndLintConfigContractTest.kt` SHALL assert Detekt plugin application, configuration path, baseline linkage, and CI workflow steps.
+     • Continuous integration workflow (`.github/workflows/android-branch-build.yml`) SHALL execute `./gradlew :app:detekt` and upload HTML/XML reports via `actions/upload-artifact@v4`.
+  5. *Automated Governance Contract & Tier 2 Parity (`REQ-PRO-047.5`)*:
+     • `ReleaseCiAndLintConfigContractTest.kt` SHALL assert Detekt plugin application, configuration path, Compose exemptions, and baseline ceiling ratcheting (`issueCount <= 9550`); Tier 2 Sprint Integration Gate SHALL enforce `./gradlew :app:lintDebug :app:detekt` pass with 0 unbaselined issues.
 - **Requirement Archaeology & Chesterton's Fence Audit**:
-  1. *Original Requirement ID & Target*: Net-new requirement `REQ-PRO-047` (*Detekt Static Analysis & Complexity Governance*), refining `REQ-PRO-034` (*SWE.1/2/4/6 Hardening*). Targets `build.gradle`, `app/build.gradle`, `config/detekt/detekt.yml`, `app/detekt-baseline.xml`, `.github/workflows/android-branch-build.yml`, and `ReleaseCiAndLintConfigContractTest.kt`.
-  2. *Historical Origin & Commit Trace*: Independent ASPICE pre-assessment finding C-03 (2026-11-08) and ticket ATT-6175.
-  3. *Root Reason for Existing Formulation*: Project historically relied on standard unit tests and manual reviews; static Kotlin AST complexity metrics were never automated.
-  4. *Preservation of Core Invariants*: Existing Android Lint, unit tests, and CI branch build steps remain intact.
+  1. *Original Requirement ID & Target*: `REQ-PRO-047` (`REQ-PRO-047.1`–`REQ-PRO-047.5`), refining `REQ-PRO-034` (*SWE.1/2/4/6 Hardening*). Targets `build.gradle`, `app/build.gradle`, `config/detekt/detekt.yml`, `app/detekt-baseline.xml`, `.github/workflows/android-branch-build.yml`, and `ReleaseCiAndLintConfigContractTest.kt`.
+  2. *Historical Origin & Commit Trace*: Independent ASPICE pre-assessment finding C-03 (2026-11-08), ticket ATT-6175 (`V5.0.0`, Sprint 2026-46.1), and refined in ATT-6729.
+  3. *Root Reason for Existing Formulation*: ATT-6175 bootstrapped Detekt with default rules to establish initial CI pipeline execution, deferring domain-specific Jetpack Compose annotation suppressors and baseline ceiling limits.
+  4. *Preservation of Core Invariants*: AST complexity limits (`LargeClass <= 800`, `LongMethod <= 60`, `CyclomaticComplexMethod <= 15`) remain active and enforced; non-Compose production code remains strictly governed by standard naming and member usage rules.
 - **Acceptance Criteria (Given-When-Then)**:
-  • *Given* `app/build.gradle` and root `build.gradle`,
-  • *When* inspected,
-  • *Then* the Detekt plugin (1.23.8) SHALL be configured with baseline file `app/detekt-baseline.xml` and config file `config/detekt/detekt.yml`.
   • *Given* `config/detekt/detekt.yml`,
   • *When* inspected,
-  • *Then* `LargeClass`, `LongMethod`, and `CyclomaticComplexMethod` complexity rules SHALL be configured with bounded thresholds.
-  • *Given* `.github/workflows/android-branch-build.yml`,
-  • *When* inspected,
-  • *Then* it SHALL contain a step executing `detekt` and an artifact upload step for detekt reports.
+  • *Then* official Compose exemptions (`FunctionNaming > ignoreAnnotated: ['Composable']`, `LongParameterList > ignoreAnnotated: ['Composable']`, `UnusedPrivateMember > ignoreAnnotated: ['Preview']`, and `MagicNumber` exemptions) SHALL be active.
+  • *Given* `app/detekt-baseline.xml`,
+  • *When* counting `<ID>` elements,
+  • *Then* the count SHALL be strictly bounded to `<= 9550`.
   • *Given* `ReleaseCiAndLintConfigContractTest.kt`,
   • *When* executed as part of the unit test suite,
-  • *Then* all Detekt governance assertions SHALL pass with 100% success.
+  • *Then* all Detekt governance assertions (including Compose exemptions and ratcheted baseline ceiling <= 9550) SHALL pass with 100% success.
+  • *Given* the codebase,
+  • *When* executing `./gradlew :app:detekt`,
+  • *Then* it SHALL complete with 0 unbaselined issues and zero build errors.
 - **Invariants**: Zero runtime code changes; 100% unit test pass rate; zero build failure on existing source files.
 
 

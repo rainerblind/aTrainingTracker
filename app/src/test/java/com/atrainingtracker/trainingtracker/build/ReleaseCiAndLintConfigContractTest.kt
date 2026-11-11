@@ -289,11 +289,31 @@ class ReleaseCiAndLintConfigContractTest {
             "config/detekt/detekt.yml must configure CyclomaticComplexMethod rule (REQ-PRO-047.2, TST-PRO-047.2)",
             detektConfigContent.contains("CyclomaticComplexMethod:")
         )
+        assertTrue(
+            "config/detekt/detekt.yml must configure FunctionNaming with Composable exemption " +
+                "(REQ-PRO-047.2, TST-PRO-047.1)",
+            detektConfigContent.contains("FunctionNaming:") && detektConfigContent.contains("Composable")
+        )
+        assertTrue(
+            "config/detekt/detekt.yml must configure LongParameterList with Composable exemption " +
+                "(REQ-PRO-047.2, TST-PRO-047.1)",
+            detektConfigContent.contains("LongParameterList:") && detektConfigContent.contains("Composable")
+        )
+        assertTrue(
+            "config/detekt/detekt.yml must configure UnusedPrivateMember with Preview exemption " +
+                "(REQ-PRO-047.2, TST-PRO-047.1)",
+            detektConfigContent.contains("UnusedPrivateMember:") && detektConfigContent.contains("Preview")
+        )
+        assertTrue(
+            "config/detekt/detekt.yml must configure MagicNumber exemptions (REQ-PRO-047.2, TST-PRO-047.1)",
+            detektConfigContent.contains("MagicNumber:") &&
+                detektConfigContent.contains("ignorePropertyDeclaration: true")
+        )
     }
 
     /**
      * Asserts that app/detekt-baseline.xml exists and contains recorded
-     * legacy baseline smells (REQ-PRO-047.3, TST-PRO-047.1).
+     * legacy baseline smells within the ratcheted ceiling bound (REQ-PRO-047.3, TST-PRO-047.1, TST-PRO-047.2).
      */
     @Test
     fun testDetektBaseline_existsAndIsPopulated() {
@@ -306,6 +326,13 @@ class ReleaseCiAndLintConfigContractTest {
         assertTrue(
             "app/detekt-baseline.xml must be populated with legacy baseline smells (REQ-PRO-047.3, TST-PRO-047.1)",
             baselineFile.length() > 1000
+        )
+        val baselineContent = baselineFile.readText()
+        val idCount = Regex("<ID>").findAll(baselineContent).count()
+        assertTrue(
+            "app/detekt-baseline.xml must contain ratcheted issue count <= 9550 (current=$idCount) " +
+                "(REQ-PRO-047.3, TST-PRO-047.2)",
+            idCount in 1..9550
         )
     }
 
@@ -367,7 +394,8 @@ class ReleaseCiAndLintConfigContractTest {
             appBuildContent.contains("\"*Manifest*\"") || appBuildContent.contains("'*Manifest*'")
         )
         assertTrue(
-            "app/build.gradle must configure kover verification threshold for branch coverage (REQ-PRO-048.2, TST-PRO-048.1)",
+            "app/build.gradle must configure kover verification threshold for branch coverage " +
+                "(REQ-PRO-048.2, TST-PRO-048.1)",
             appBuildContent.contains("CoverageUnit.BRANCH") &&
                 (appBuildContent.contains("minValue = 30") || appBuildContent.contains("minBound(30)"))
         )
