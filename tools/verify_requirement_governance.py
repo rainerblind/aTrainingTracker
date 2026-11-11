@@ -438,12 +438,364 @@ def recalculate_master_index_tables(repo_root=None):
     return recalculated
 
 
-def verify_governance(deliverable_text=None, diff_text=None, base_ref="develop"):
+ALLOWLIST_COMPOSABLES = {
+    "Theme",
+    "ATrainingTrackerTheme",
+    "TrainingTrackerTheme",
+}
+
+GRANDFATHERED_UNGROUNDED_SYMBOLS = {
+    "backup_rules.xml",
+    "BikeBellAudioSynthesizer.java",
+    "MapViewportHelper.kt",
+    "SoundEngine.java",
+    "RadarThreatView.kt",
+    "StravaUploader.java",
+    "GoogleDriveUploader.java",
+    "auth_credentials_prefs.xml",
+    "WorkoutDataHelper.java",
+    "WorkoutDataMapper.java",
+    "LegacyImportEngine.java",
+    "StravaUploadHelper.kt",
+    "DatabaseHelper.java",
+}
+
+GRANDFATHERED_SYSREQS = {
+    "SYSREQ-PER-001",
+    "SYSREQ-PER-002",
+    "SYSREQ-PER-003",
+    "SYSREQ-PER-004",
+    "SYSREQ-PER-005",
+    "SYSREQ-ACQ-001",
+    "SYSREQ-ACQ-002",
+    "SYSREQ-ACQ-003",
+    "SYSREQ-ACQ-004",
+    "SYSREQ-ACQ-005",
+    "SYSREQ-ENV-001",
+    "SYSREQ-ENV-002",
+    "SYSREQ-ENV-003",
+}
+
+
+def find_composable_callers(func_name, search_dir, exclude_file=None):
+    """
+    Searches search_dir (e.g. app/src/main) for production callers of func_name.
+    Excludes the declaration itself and callers located inside @Preview functions.
+    """
+    callers = []
+    if not os.path.isdir(search_dir):
+        return callers
+
+    call_pattern = re.compile(rf"\b{re.escape(func_name)}\s*\(")
+    decl_pattern = re.compile(rf"\bfun\s+(?:<[^>]+>\s+)?{re.escape(func_name)}\b")
+
+    for root, _, files in os.walk(search_dir):
+        for f in files:
+            if not (f.endswith(".kt") or f.endswith(".java")):
+                continue
+            fp = os.path.join(root, f)
+            is_same_file = bool(exclude_file and os.path.normpath(fp) == os.path.normpath(exclude_file))
+
+            try:
+                with open(fp, "r", encoding="utf-8", errors="ignore") as fh:
+                    content = fh.read()
+            except Exception:
+                continue
+
+            if not call_pattern.search(content):
+                continue
+
+            lines = content.splitlines()
+            in_preview = False
+            brace_depth = 0
+            saw_open_brace = False
+            pending_preview = False
+
+            for idx, line in enumerate(lines, 1):
+                stripped = line.strip()
+
+                if re.search(r"@(Preview|PreviewLightDark|DevicePreview|PreviewScreenSizes|PreviewParameter)\b", stripped):
+                    pending_preview = True
+
+                if re.search(r"\bfun\s+[A-Za-z0-9_]+\s*\(", stripped):
+                    if pending_preview or "preview" in stripped.lower():
+                        in_preview = True
+                        brace_depth = 0
+                        saw_open_brace = False
+                    pending_preview = False
+
+                if in_preview:
+                    open_count = line.count("{")
+                    close_count = line.count("}")
+                    if open_count > 0:
+                        saw_open_brace = True
+                    brace_depth += open_count - close_count
+                    if saw_open_brace and brace_depth <= 0:
+                        in_preview = False
+                    continue
+
+                if call_pattern.search(line):
+                    if is_same_file and decl_pattern.search(line):
+                        continue
+                    if stripped.startswith("//") or stripped.startswith("*"):
+                        continue
+                    callers.append(f"{fp}:{idx}")
+                    break
+        if callers:
+            break
+    return callers
+
+
+def extract_added_composables(diff_text):
+    """
+    Extracts newly added non-preview, non-private @Composable function names and file paths from a git diff.
+    Returns list of (func_name, file_path).
+    """
+    added_composables = []
+    current_file = None
+    file_lines = {}
+
+    for line in diff_text.splitlines():
+        if line.startswith("+++ b/"):
+            current_file = line[6:].strip()
+            if current_file.startswith("app/src/main/") and current_file.endswith(".kt"):
+                file_lines.setdefault(current_file, [])
+        elif current_file and current_file.startswith("app/src/main/") and current_file.endswith(".kt"):
+            file_lines[current_file].append(line)
+
+    for fp, lines in file_lines.items():
+        pending_preview = False
+        pending_composable = False
+        for line in lines:
+            if not line.startswith("+") or line.startswith("+++"):
+                if line.startswith(" ") and not line.strip().startswith("@"):
+                    pending_preview = False
+                    pending_composable = False
+                continue
+
+            stripped = line[1:].strip()
+            if not stripped:
+                continue
+
+            if re.search(r"@(Preview|PreviewLightDark|DevicePreview|PreviewScreenSizes|PreviewParameter)\b", stripped):
+                pending_preview = True
+
+            if "@Composable" in stripped:
+                pending_composable = True
+
+            m_fun = re.search(r"\bfun\s+(?:<[^>]+>\s+)?([A-Za-z0-9_]+)\s*\(", stripped)
+            if m_fun:
+                func_name = m_fun.group(1)
+                is_private = bool(re.search(r"\bprivate\s+fun\b", stripped))
+                is_preview = pending_preview or bool(re.search(r"@(Preview|PreviewLightDark|DevicePreview)\b", stripped)) or func_name.endswith("Preview")
+                is_composable = pending_composable or ("@Composable" in stripped)
+
+                if is_composable and not is_preview and not is_private:
+                    if func_name not in ALLOWLIST_COMPOSABLES:
+                        added_composables.append((func_name, fp))
+
+                pending_preview = False
+                pending_composable = False
+
+    return added_composables
+
+
+def verify_composable_islands(diff_text=None, repo_root=None, base_ref="develop"):
+    """
+    Zero-Caller @Composable Island Check (Rule 81 / REQ-PRO-041.5).
+    Detects newly added non-@Preview, non-private @Composable declarations in modified
+    app/src/main/**/*.kt files and verifies at least one production call site exists in app/src/main/.
+    """
+    if repo_root is None:
+        repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+
+    if diff_text is None:
+        diff_text = get_git_diff(base_ref=base_ref, target_paths=["app/src/main/"])
+
+    if not diff_text or not diff_text.strip():
+        return True, ["PASS: Zero Composable islands detected (no modified UI files)."]
+
+    added_composables = extract_added_composables(diff_text)
+    if not added_composables:
+        return True, ["PASS: Zero unmounted Composable islands detected in git diff."]
+
+    main_dir = os.path.join(repo_root, "app/src/main")
+    errors = []
+    checked_count = 0
+
+    for func_name, decl_fp in added_composables:
+        checked_count += 1
+        full_decl_path = os.path.join(repo_root, decl_fp) if not os.path.isabs(decl_fp) else decl_fp
+        callers = find_composable_callers(func_name, main_dir, exclude_file=full_decl_path)
+        if not callers:
+            errors.append(
+                f"Zero-caller @Composable island detected: '{func_name}' in {decl_fp} "
+                f"has zero production call sites in app/src/main/ (only preview or uncalled)."
+            )
+
+    if errors:
+        return False, errors
+    return True, [f"PASS: Verified {checked_count} newly added @Composable component(s) have valid production callers."]
+
+
+def verify_repository_encapsulation(diff_text=None, repo_root=None, base_ref="develop"):
+    """
+    Repository Encapsulation Guard (Rule 81 / coding_standards.md Sec 2.5 / REQ-PRO-041.5).
+    Rejects any non-private method or property exposing *DatabaseManager, *DbHelper,
+    SQLiteDatabase, or Cursor in modified/added *Repository.kt and *Repository.java files.
+    """
+    if diff_text is None:
+        diff_text = get_git_diff(base_ref=base_ref, target_paths=["app/src/main/"])
+
+    if not diff_text or not diff_text.strip():
+        return True, ["PASS: Zero repository encapsulation violations detected."]
+
+    current_file = None
+    errors = []
+    prohibited_types_re = r"\b(?:[A-Za-z0-9_]*DatabaseManager|[A-Za-z0-9_]*DbHelper|SQLiteDatabase|Cursor)\b"
+
+    for line in diff_text.splitlines():
+        if line.startswith("+++ b/"):
+            current_file = line[6:].strip()
+            continue
+        if not current_file or not (current_file.endswith("Repository.kt") or current_file.endswith("Repository.java")):
+            continue
+        if not line.startswith("+") or line.startswith("+++"):
+            continue
+
+        stripped = line[1:].strip()
+        if not stripped or stripped.startswith("//") or stripped.startswith("*") or stripped.startswith("/*") or stripped.startswith("import "):
+            continue
+
+        if stripped.startswith("private ") or " private val " in stripped or " private var " in stripped or " private fun " in stripped:
+            continue
+
+        is_fun_returning_prohibited = re.search(
+            rf"\bfun\s+[A-Za-z0-9_]+\s*\([^)]*\)\s*:\s*.*?" + prohibited_types_re, stripped
+        )
+        is_prop_with_prohibited = re.search(
+            rf"\b(?:val|var)\s+[A-Za-z0-9_]+\s*:\s*.*?" + prohibited_types_re, stripped
+        )
+        is_getter_name = re.search(
+            r"\bfun\s+get[A-Za-z0-9_]*(?:DatabaseManager|DbHelper|Database|Cursor)\s*\(", stripped
+        )
+        is_java_prohibited = re.search(
+            rf"(?:public|protected)?\s+" + prohibited_types_re + r"\s+(?:get[A-Za-z0-9_]*|[A-Za-z0-9_]+)\s*\(", stripped
+        )
+
+        if is_fun_returning_prohibited or is_prop_with_prohibited or is_getter_name or is_java_prohibited:
+            errors.append(
+                f"Repository encapsulation violation in {current_file}: "
+                f"Non-private member '{stripped}' exposes SQLite/DatabaseManager internals."
+            )
+
+    if errors:
+        return False, errors
+    return True, ["PASS: Repository encapsulation verified (zero leaky DatabaseManager/Cursor members)."]
+
+
+def verify_architecture_and_system_specs(diff_text=None, repo_root=None, base_ref="develop"):
+    """
+    Architecture & System Spec Grounding & SYSREQ Bidirectional Equality Guard (Rule 81 / REQ-PRO-041.5).
+    Verifies that every backticked source file in modified architecture/system markdown files exists
+    in the repository and that declared SYSREQ-* IDs match allocated IDs.
+    """
+    if repo_root is None:
+        repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+
+    if diff_text is None:
+        diff_text = get_git_diff(
+            base_ref=base_ref,
+            target_paths=["docs/architecture.md", "docs/architecture/", "docs/system/"],
+        )
+
+    if not diff_text or not diff_text.strip():
+        return True, ["PASS: Zero architecture or system specification modifications detected."]
+
+    errors = []
+    current_file = None
+    sysreq_files_modified = False
+
+    # Index existing filenames in repository for fast basename lookup
+    all_repo_basenames = set()
+    for root, _, files in os.walk(repo_root):
+        if ".git" in root:
+            continue
+        for f in files:
+            all_repo_basenames.add(f)
+
+    for line in diff_text.splitlines():
+        if line.startswith("+++ b/"):
+            current_file = line[6:].strip()
+            if current_file.startswith("docs/system"):
+                sysreq_files_modified = True
+            continue
+
+        if not current_file or not (current_file.startswith("docs/architecture") or current_file.startswith("docs/system")):
+            continue
+
+        if not line.startswith("+") or line.startswith("+++"):
+            continue
+
+        # Extract backticked filenames
+        ticks = re.findall(r"`([^`\n]+\.(?:kt|java|xml))`", line[1:])
+        for t in ticks:
+            if t in GRANDFATHERED_UNGROUNDED_SYMBOLS:
+                continue
+            direct_path = os.path.join(repo_root, t)
+            base_name = os.path.basename(t)
+            if not os.path.isfile(direct_path) and base_name not in all_repo_basenames:
+                errors.append(
+                    f"Ungrounded architecture/system symbol in {current_file}: "
+                    f"'{t}' does not resolve to an authentic file in the repository."
+                )
+
+    if sysreq_files_modified:
+        declared_ids = set()
+        sysreq_dir = os.path.join(repo_root, "docs/system")
+        if os.path.isdir(sysreq_dir):
+            for fn in os.listdir(sysreq_dir):
+                if fn.startswith("sysreq_") and fn.endswith(".md"):
+                    with open(os.path.join(sysreq_dir, fn), "r", encoding="utf-8") as fh:
+                        for m in re.finditer(r"SYSREQ-[A-Z0-9_-]+", fh.read()):
+                            clean_id = m.group(0).rstrip("-_")
+                            if clean_id != "SYSREQ-XXX":
+                                declared_ids.add(clean_id)
+
+        allocated_ids = set()
+        sys_arch_fp = os.path.join(repo_root, "docs/system/system_architecture.md")
+        if os.path.isfile(sys_arch_fp):
+            with open(sys_arch_fp, "r", encoding="utf-8") as fh:
+                for m in re.finditer(r"SYSREQ-[A-Z0-9_-]+", fh.read()):
+                    clean_id = m.group(0).rstrip("-_")
+                    if clean_id != "SYSREQ-XXX":
+                        allocated_ids.add(clean_id)
+
+        missing_allocation = declared_ids - allocated_ids
+        missing_declaration = (allocated_ids - declared_ids) - GRANDFATHERED_SYSREQS
+
+        if missing_allocation:
+            errors.append(
+                f"SYSREQ allocation mismatch: {', '.join(sorted(missing_allocation))} "
+                f"declared in docs/system/sysreq_*.md but missing from allocation in docs/system/system_architecture.md."
+            )
+        if missing_declaration:
+            errors.append(
+                f"SYSREQ declaration mismatch: {', '.join(sorted(missing_declaration))} "
+                f"allocated in docs/system/system_architecture.md but missing declaration in docs/system/sysreq_*.md."
+            )
+
+    if errors:
+        return False, errors
+    return True, ["PASS: Architecture & system specification code-grounding and SYSREQ parity verified."]
+
+
+def verify_governance(deliverable_text=None, diff_text=None, base_ref="develop", skip_tripwires=False):
     """
     Main governance validation entrypoint.
-    If diff_text is not provided, extracts diff of docs/requirements.md against base_ref.
-    Checks whether existing requirements were modified.
-    If yes, enforces archaeology validation on deliverable_text.
+    Enforces engineering directory structure, master table parity, Rule 81 deterministic tripwires
+    (composable islands, repository encapsulation, architecture/system spec grounding), and
+    Chesterton's Fence archaeology on modified requirements.
     Returns (success: bool, diagnostics: list[str]).
     """
     diagnostics = []
@@ -458,6 +810,25 @@ def verify_governance(deliverable_text=None, diff_text=None, base_ref="develop")
         diagnostics.extend([f"ERROR: {e}" for e in parity_errors])
         return False, diagnostics
     diagnostics.append("PASS: Living documentation master tables match all 9 domain shards with 100% parity.")
+
+    if not skip_tripwires:
+        islands_ok, islands_diag = verify_composable_islands(diff_text=diff_text, base_ref=base_ref)
+        if not islands_ok:
+            diagnostics.extend([f"ERROR: {e}" for e in islands_diag])
+            return False, diagnostics
+        diagnostics.extend(islands_diag)
+
+        repo_ok, repo_diag = verify_repository_encapsulation(diff_text=diff_text, base_ref=base_ref)
+        if not repo_ok:
+            diagnostics.extend([f"ERROR: {e}" for e in repo_diag])
+            return False, diagnostics
+        diagnostics.extend(repo_diag)
+
+        specs_ok, specs_diag = verify_architecture_and_system_specs(diff_text=diff_text, base_ref=base_ref)
+        if not specs_ok:
+            diagnostics.extend([f"ERROR: {e}" for e in specs_diag])
+            return False, diagnostics
+        diagnostics.extend(specs_diag)
 
     if diff_text is None:
         diff_text = get_git_diff(base_ref=base_ref)
@@ -530,6 +901,26 @@ def main():
         action="store_true",
         help="Validate the archaeology section template directly without diff checks.",
     )
+    parser.add_argument(
+        "--check-composable-islands",
+        action="store_true",
+        help="Run zero-caller Composable island check only.",
+    )
+    parser.add_argument(
+        "--check-repo-encapsulation",
+        action="store_true",
+        help="Run repository encapsulation guard check only.",
+    )
+    parser.add_argument(
+        "--check-specs",
+        action="store_true",
+        help="Run architecture and system spec grounding & SYSREQ parity check only.",
+    )
+    parser.add_argument(
+        "--skip-tripwires",
+        action="store_true",
+        help="Skip the 3 deterministic Python tripwires.",
+    )
 
     args = parser.parse_args()
 
@@ -542,6 +933,32 @@ def main():
             sys.exit(1)
         print("PASS: Master index tables successfully synchronized with 100% parity.")
         sys.exit(0)
+
+    diff_content = None
+    if args.diff_file:
+        if not os.path.exists(args.diff_file):
+            print(f"Error: File {args.diff_file} not found.", file=sys.stderr)
+            sys.exit(1)
+        with open(args.diff_file, "r", encoding="utf-8") as f:
+            diff_content = f.read()
+
+    if args.check_composable_islands:
+        ok, diag = verify_composable_islands(diff_text=diff_content, base_ref=args.base_ref)
+        for msg in diag:
+            print(msg, file=sys.stderr if not ok else sys.stdout)
+        sys.exit(0 if ok else 1)
+
+    if args.check_repo_encapsulation:
+        ok, diag = verify_repository_encapsulation(diff_text=diff_content, base_ref=args.base_ref)
+        for msg in diag:
+            print(msg, file=sys.stderr if not ok else sys.stdout)
+        sys.exit(0 if ok else 1)
+
+    if args.check_specs:
+        ok, diag = verify_architecture_and_system_specs(diff_text=diff_content, base_ref=args.base_ref)
+        for msg in diag:
+            print(msg, file=sys.stderr if not ok else sys.stdout)
+        sys.exit(0 if ok else 1)
 
     text_content = ""
     if args.text_file:
@@ -577,14 +994,6 @@ def main():
         except Exception:
             pass
 
-    diff_content = None
-    if args.diff_file:
-        if not os.path.exists(args.diff_file):
-            print(f"Error: File {args.diff_file} not found.", file=sys.stderr)
-            sys.exit(1)
-        with open(args.diff_file, "r", encoding="utf-8") as f:
-            diff_content = f.read()
-
     if args.check_text_only:
         valid, errors = validate_archaeology_section(text_content)
         if valid:
@@ -600,6 +1009,7 @@ def main():
         deliverable_text=text_content,
         diff_text=diff_content,
         base_ref=args.base_ref,
+        skip_tripwires=args.skip_tripwires,
     )
 
     for msg in diagnostics:

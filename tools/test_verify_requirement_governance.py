@@ -24,6 +24,9 @@ from tools.verify_requirement_governance import (
     parse_diff_requirements,
     validate_archaeology_section,
     verify_governance,
+    verify_composable_islands,
+    verify_repository_encapsulation,
+    verify_architecture_and_system_specs,
 )
 
 
@@ -229,6 +232,211 @@ diff --git a/docs/requirements/req_tracking_cockpit.md b/docs/requirements/req_t
                 content = f.read()
             self.assertIn("### REQ-PRO-028: Living Documentation Sharding [Verified]", content)
             self.assertIn("- **Status**: Verified", content)
+
+    def test_scenario_8_composable_islands_detection(self):
+        """Scenario 8: Deterministic Composable island detection (Rule 81 / REQ-PRO-041.5)."""
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            main_dir = os.path.join(tmpdir, "app", "src", "main", "java", "com", "test")
+            os.makedirs(main_dir, exist_ok=True)
+
+            # File with caller
+            caller_file = os.path.join(main_dir, "MainActivity.kt")
+            with open(caller_file, "w", encoding="utf-8") as f:
+                f.write(
+                    "package com.test\n"
+                    "fun setContent() {\n"
+                    "    MountedComponent()\n"
+                    "}\n"
+                )
+
+            # 1. Unmounted island composable fails
+            diff_unmounted = """
+diff --git a/app/src/main/java/com/test/UnmountedComponent.kt b/app/src/main/java/com/test/UnmountedComponent.kt
+new file mode 100644
+--- /dev/null
++++ b/app/src/main/java/com/test/UnmountedComponent.kt
+@@ -0,0 +1,8 @@
++package com.test
++import androidx.compose.runtime.Composable
++@Composable
++fun UnmountedComponent() {
++}
++"""
+            ok, diag = verify_composable_islands(diff_text=diff_unmounted, repo_root=tmpdir)
+            self.assertFalse(ok)
+            self.assertTrue(any("UnmountedComponent" in d for d in diag))
+
+            # 2. Mounted composable with production caller passes
+            diff_mounted = """
+diff --git a/app/src/main/java/com/test/MountedComponent.kt b/app/src/main/java/com/test/MountedComponent.kt
+new file mode 100644
+--- /dev/null
++++ b/app/src/main/java/com/test/MountedComponent.kt
+@@ -0,0 +1,8 @@
++package com.test
++import androidx.compose.runtime.Composable
++@Composable
++fun MountedComponent() {
++}
++"""
+            ok_m, diag_m = verify_composable_islands(diff_text=diff_mounted, repo_root=tmpdir)
+            self.assertTrue(ok_m, f"Expected mounted composable to pass, diag: {diag_m}")
+
+            # 3. Preview and private composables are ignored and pass cleanly
+            diff_ignored = """
+diff --git a/app/src/main/java/com/test/PreviewComponent.kt b/app/src/main/java/com/test/PreviewComponent.kt
+new file mode 100644
+--- /dev/null
++++ b/app/src/main/java/com/test/PreviewComponent.kt
+@@ -0,0 +1,12 @@
++package com.test
++import androidx.compose.ui.tooling.preview.Preview
++@Preview
++@Composable
++fun PreviewComponent() {
++}
++@Composable
++private fun PrivateHelper() {
++}
++"""
+            ok_i, diag_i = verify_composable_islands(diff_text=diff_ignored, repo_root=tmpdir)
+            self.assertTrue(ok_i)
+
+            # 4. Allowlisted theme composables pass
+            diff_theme = """
+diff --git a/app/src/main/java/com/test/Theme.kt b/app/src/main/java/com/test/Theme.kt
+new file mode 100644
+--- /dev/null
++++ b/app/src/main/java/com/test/Theme.kt
+@@ -0,0 +1,6 @@
++package com.test
++@Composable
++fun ATrainingTrackerTheme() {
++}
++"""
+            ok_t, diag_t = verify_composable_islands(diff_text=diff_theme, repo_root=tmpdir)
+            self.assertTrue(ok_t)
+
+    def test_scenario_9_repository_encapsulation_guard(self):
+        """Scenario 9: Repository encapsulation guard rejects SQLite/DatabaseManager leaks (Rule 81 / REQ-PRO-041.5)."""
+        # Leaky public DatabaseManager property
+        diff_leaky_prop = """
+diff --git a/app/src/main/java/com/test/WorkoutRepository.kt b/app/src/main/java/com/test/WorkoutRepository.kt
+--- a/app/src/main/java/com/test/WorkoutRepository.kt
++++ b/app/src/main/java/com/test/WorkoutRepository.kt
+@@ -10,3 +10,4 @@
++    val dbManager: WorkoutDatabaseManager = WorkoutDatabaseManager.getInstance(context)
+"""
+        ok_p, diag_p = verify_repository_encapsulation(diff_text=diff_leaky_prop)
+        self.assertFalse(ok_p)
+        self.assertTrue(any("WorkoutDatabaseManager" in d or "Repository encapsulation violation" in d for d in diag_p))
+
+        # Leaky public getter method returning DatabaseManager or Cursor
+        diff_leaky_getter = """
+diff --git a/app/src/main/java/com/test/EquipmentRepository.kt b/app/src/main/java/com/test/EquipmentRepository.kt
+--- a/app/src/main/java/com/test/EquipmentRepository.kt
++++ b/app/src/main/java/com/test/EquipmentRepository.kt
+@@ -10,3 +10,4 @@
++    fun getDatabaseManager(): EquipmentDatabaseManager = dbManager
++    fun queryRawCursor(): Cursor? = null
+"""
+        ok_g, diag_g = verify_repository_encapsulation(diff_text=diff_leaky_getter)
+        self.assertFalse(ok_g)
+        self.assertTrue(len(diag_g) >= 2)
+
+        # Private database helper and domain model returns pass cleanly
+        diff_clean_repo = """
+diff --git a/app/src/main/java/com/test/SafeRepository.kt b/app/src/main/java/com/test/SafeRepository.kt
+--- a/app/src/main/java/com/test/SafeRepository.kt
++++ b/app/src/main/java/com/test/SafeRepository.kt
+@@ -10,3 +10,4 @@
++    private val dbHelper: EquipmentDbHelper = EquipmentDbHelper.getInstance(context)
++    fun getEquipment(id: Long): String? = null
+"""
+        ok_c, diag_c = verify_repository_encapsulation(diff_text=diff_clean_repo)
+        self.assertTrue(ok_c)
+
+    def test_scenario_10_architecture_and_system_specs_grounding(self):
+        """Scenario 10: Architecture & system spec code-grounding and SYSREQ parity (Rule 81 / REQ-PRO-041.5)."""
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            arch_dir = os.path.join(tmpdir, "docs", "architecture")
+            sys_dir = os.path.join(tmpdir, "docs", "system")
+            app_dir = os.path.join(tmpdir, "app", "src", "main", "java")
+            os.makedirs(arch_dir, exist_ok=True)
+            os.makedirs(sys_dir, exist_ok=True)
+            os.makedirs(app_dir, exist_ok=True)
+
+            # Existing source file
+            with open(os.path.join(app_dir, "RealClass.kt"), "w", encoding="utf-8") as f:
+                f.write("class RealClass\n")
+
+            # Ungrounded symbol in diff
+            diff_ungrounded = """
+diff --git a/docs/architecture/spec.md b/docs/architecture/spec.md
+new file mode 100644
+--- /dev/null
++++ b/docs/architecture/spec.md
+@@ -0,0 +1,3 @@
++# Spec
++See `FakeNonExistentClass.kt` for details.
++"""
+            ok_u, diag_u = verify_architecture_and_system_specs(diff_text=diff_ungrounded, repo_root=tmpdir)
+            self.assertFalse(ok_u)
+            self.assertTrue(any("FakeNonExistentClass.kt" in d for d in diag_u))
+
+            # Grounded authentic symbol passes
+            diff_grounded = """
+diff --git a/docs/architecture/spec.md b/docs/architecture/spec.md
+new file mode 100644
+--- /dev/null
++++ b/docs/architecture/spec.md
+@@ -0,0 +1,3 @@
++# Spec
++See `RealClass.kt` for details.
++"""
+            ok_g, diag_g = verify_architecture_and_system_specs(diff_text=diff_grounded, repo_root=tmpdir)
+            self.assertTrue(ok_g)
+
+            # SYSREQ allocation mismatch: declared in sysreq_test.md but missing from system_architecture.md
+            with open(os.path.join(sys_dir, "sysreq_test.md"), "w", encoding="utf-8") as f:
+                f.write("### SYSREQ-TEST-001: Test Requirement\n")
+            with open(os.path.join(sys_dir, "system_architecture.md"), "w", encoding="utf-8") as f:
+                f.write("# Architecture\nAllocated: SYSREQ-OTHER-001\n")
+
+            diff_sysreq = """
+diff --git a/docs/system/sysreq_test.md b/docs/system/sysreq_test.md
+new file mode 100644
+--- /dev/null
++++ b/docs/system/sysreq_test.md
+@@ -0,0 +1,2 @@
++### SYSREQ-TEST-001: Test
++"""
+            ok_s, diag_s = verify_architecture_and_system_specs(diff_text=diff_sysreq, repo_root=tmpdir)
+            self.assertFalse(ok_s)
+            self.assertTrue(any("SYSREQ allocation mismatch" in d or "SYSREQ declaration mismatch" in d for d in diag_s))
+
+    def test_scenario_11_verify_governance_full_integration(self):
+        """Scenario 11: verify_governance integrates all 3 tripwires with deterministic exit codes."""
+        diff_clean = """
+diff --git a/docs/requirements/req_process_stability.md b/docs/requirements/req_process_stability.md
+--- a/docs/requirements/req_process_stability.md
++++ b/docs/requirements/req_process_stability.md
+@@ -10,3 +10,3 @@
+-### REQ-PRO-041: Parallel Sprint [Verified]
++### REQ-PRO-041: Parallel Sprint Execution Protocol [Verified]
+"""
+        success, diag = verify_governance(
+            deliverable_text=self.valid_archaeology_markdown,
+            diff_text=diff_clean,
+        )
+        self.assertTrue(success)
+        self.assertTrue(any("Composable islands detected" in d for d in diag))
+        self.assertTrue(any("Repository encapsulation verified" in d for d in diag))
+        self.assertTrue(any("Architecture & system specification" in d for d in diag))
 
 
 if __name__ == "__main__":
