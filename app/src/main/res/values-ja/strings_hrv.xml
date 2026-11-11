@@ -92,8 +92,11 @@
     <string name="hrv_scatter_card_subtitle">a1 vs 心拍数・サイクリングパワー</string>
     <string name="hrv_scatter_aerobic_threshold">有酸素閾値 (a1 = 0.75)</string>
     <string name="hrv_scatter_anaerobic_threshold">無酸素閾値 (a1 = 0.50)</string>
+    <string name="hrv_scatter_aerobic_threshold_fmt">有酸素閾値 (a1 = %1$.2f)</string>
+    <string name="hrv_scatter_anaerobic_threshold_fmt">無酸素閾値 (a1 = %1$.2f)</string>
     <string name="hrv_scatter_toggle_hr">心拍数</string>
     <string name="hrv_scatter_toggle_power">パワー</string>
+    <string name="hrv_scatter_toggle_pace">ペース</string>
     <string name="hrv_scatter_smoothed_warning_title">平滑化されたセンサーストリーム</string>
     <string name="hrv_scatter_smoothed_warning_desc">記録されたRR間隔にファームウェアによる平滑化または合成量子化が確認されました。有酸素閾値の推定値（a1 = 0.75 / 0.50）が歪んでいる可能性があります。</string>
     <string name="hrv_scatter_artifact_suppressed">アーティファクト率5%%超の区間を除外</string>

@@ -1,5 +1,5 @@
 # aTrainingTracker Source-Text Reading Test Baseline Debt (REQ-PRO-049.3, ATT-6186, ATT-6731)
-# Total baseline legacy source-text-reading tests: 276
+# Total baseline legacy source-text-reading tests: 275
 # Downstream phase-out tickets: ATT-6564 .. ATT-6569
 
 com/atrainingtracker/banalservice/devices/FreshInstallLocationInitTest.kt
@@ -231,7 +231,6 @@ com/atrainingtracker/trainingtracker/ui/theme/DarkThemeVisualContractTest.kt
 com/atrainingtracker/trainingtracker/ui/theme/SafePainterResourceContractTest.kt
 com/atrainingtracker/trainingtracker/ui/tracking/BikePowerCockpitDefaultsAndGatingTest.kt
 com/atrainingtracker/trainingtracker/ui/tracking/HrvInfoBottomSheetTest.kt
-com/atrainingtracker/trainingtracker/ui/tracking/LiveMmpCurveChartTest.kt
 com/atrainingtracker/trainingtracker/ui/tracking/SensorFieldStyleContractTest.kt
 com/atrainingtracker/trainingtracker/ui/tracking/SensorFieldViewGestureContractTest.kt
 com/atrainingtracker/trainingtracker/ui/tracking/SensorFieldViewGraphOnlyLayoutTest.kt

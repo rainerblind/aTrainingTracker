@@ -667,7 +667,7 @@
 ### TST-PER-043: **Interactive DFA a1/rMSSD Charts & a1 Scatter Plot Suite** [Verified]
 - **Requirement(s)**: `REQ-PER-035` (`REQ-PER-035.1`..`REQ-PER-035.6`)
 - **Component**: `TelemetryMetricGraphHrvTest.kt`, `HrvAlpha1ScatterChartTest.kt`, `HrvPathPointEnrichmentTest.kt`, `ThemeColorCentralizationAuditTest`, `TranslationParityTest`
-- **Jira**: `ATT-3544`
+- **Jira**: `ATT-3544`, `ATT-6717`
 - **Test Description**:
   1. *PathPoint HRV Enrichment Unit Test (`TST-PER-043.1`, `HrvPathPointEnrichmentTest.kt`)*:
   • Verify `WorkoutRepository` enriches `PathPoint` instances with `hrvDfaA1`, `hrvRmssd`, and `hrvArtifactRate` from `WorkoutSamples.db`.
@@ -675,20 +675,22 @@
   2. *TelemetryMetricGraph DFA a1 & rMSSD Tracks (`TST-PER-043.2`, `TelemetryMetricGraphHrvTest.kt`)*:
   • Verify `TelemetryMetricGraph` renders continuous paths for `TelemetryMetricType.HRV_DFA_A1` and `TelemetryMetricType.HRV_RMSSD`.
   • Verify horizontal plot bounds (`startPadding = 50.dp`) match `ElevationProfile` and other telemetry graphs per Rule 64.
-  • Verify dashed horizontal threshold lines at $\alpha_1 = 0.75$ and $\alpha_1 = 0.50$ when `metricType == HRV_DFA_A1`.
+  • Verify dashed horizontal threshold lines and Y-axis labels at athlete-configured `dfaA1ThresholdT1` and `dfaA1ThresholdT2` (defaulting to 0.75 and 0.50) when `metricType == HRV_DFA_A1`.
   • Verify Y-axis clamped within $[0.2, 1.4]$ for DFA $\alpha_1$.
   3. *Artifact Gap & Non-Interpolation Hatching Test (`TST-PER-043.3`, `TelemetryMetricGraphHrvTest.kt`)*:
   • Verify path breaks and does NOT draw continuous line segments across dropouts where `hrvArtifactRate > 5.0%` or `hrvDfaA1 == null`.
   • Verify hatched background path overlay is rendered across artifact-suppressed regions.
   4. *HrvAlpha1ScatterChart Dynamics & Regression Line Test (`TST-PER-043.4`, `HrvAlpha1ScatterChartTest.kt`)*:
-  • Verify scatter points are plotted for $(\text{HR}, \alpha_1)$ and $(\text{Power}, \alpha_1)$ strictly within valid transition domain $\alpha_1 \in [0.35, 1.15]$ and artifact rate $\le 5\%$.
-  • Verify ordinary least squares linear regression slope ($m$) and intercept ($b$) calculation with threshold intersection estimates.
+  • Verify scatter points are plotted for $(\text{HR}, \alpha_1)$, $(\text{Power}, \alpha_1)$, and $(\text{Pace}, \alpha_1)$ strictly within valid transition domain $\alpha_1 \in [0.35, 1.15]$ and artifact rate $\le 5\%$ with 5-second sample decimation.
+  • Verify ordinary least squares linear regression slope ($m$) and intercept ($b$) calculation with athlete-configured threshold intersection estimates.
   • Verify graceful fallback/empty state when zero valid points exist.
   5. *9-Language Localization & Color Centralization Audit (`TST-PER-043.5`)*:
   • Execute `TranslationParityTest` verifying all 9 locales match with 100% parity for new `strings_hrv.xml` keys.
   • Execute `ThemeColorCentralizationAuditTest` verifying all chart and card colors use centralized `TTColor` tokens.
   6. *Tier 1 Clean-Room Targeted Regression Execution (`TST-PER-043.6`)*:
   • Execute targeted unit tests `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.map.*" --tests "com.atrainingtracker.trainingtracker.ui.aftermath.*" --tests "com.atrainingtracker.trainingtracker.localization.TranslationParityTest" --tests "com.atrainingtracker.trainingtracker.ui.theme.ThemeColorCentralizationAuditTest" --tests "com.atrainingtracker.trainingtracker.build.*"` verifying 100% clean-room test pass rate.
+  7. *Deduplicated Rendering & Wrapper Cleanliness (`TST-PER-043.7`)*:
+  • Verify canonical invocation in `WorkoutDetailTabbedContent.kt`, removal from `MapDetailLayout.kt`, and zero references to `ui.aftermath.hrv.*`.
 
 
 

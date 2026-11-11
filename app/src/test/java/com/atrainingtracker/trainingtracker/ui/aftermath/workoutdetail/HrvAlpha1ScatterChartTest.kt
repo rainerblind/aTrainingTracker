@@ -87,4 +87,58 @@ class HrvAlpha1ScatterChartTest {
         val singlePointResult = HrvScatterMath.calculateLinearRegression(listOf(filteredHr[0]))
         assertNull(singlePointResult)
     }
+
+    @Test
+    fun testHrvAlpha1Scatter_fiveSecondDecimation() {
+        val points1Hz = (0L..20L).map { sec ->
+            PathPoint(
+                distance = sec * 3.0,
+                latLng = LatLng(0.0, 0.0),
+                timeSec = sec,
+                hr = 130 + sec.toInt(),
+                speedMps = 3.0,
+                hrvDfaA1 = 0.85 - sec * 0.01,
+                hrvArtifactRate = 0.0
+            )
+        }
+
+        val decimatedHr = HrvScatterMath.filterScatterPoints(points1Hz, HrvScatterIntensityMode.HEART_RATE)
+        // With timestamps 0..20, keeping 0, 5, 10, 15, 20 -> 5 points
+        assertEquals(5, decimatedHr.size)
+        assertEquals(0L, decimatedHr[0].timeSec)
+        assertEquals(5L, decimatedHr[1].timeSec)
+        assertEquals(10L, decimatedHr[2].timeSec)
+        assertEquals(15L, decimatedHr[3].timeSec)
+        assertEquals(20L, decimatedHr[4].timeSec)
+    }
+
+    @Test
+    fun testHrvAlpha1Scatter_paceIntensityModeAndConfiguredThresholds() {
+        // Speed in m/s: 2.5 m/s (~6:40 min/km = 0.40 s/m), 3.0 m/s (~5:33 min/km = 0.333 s/m),
+        // 3.5 m/s (~4:45 min/km = 0.286 s/m), 4.0 m/s (~4:10 min/km = 0.25 s/m)
+        val runningPoints = listOf(
+            PathPoint(distance = 100.0, latLng = LatLng(0.0, 0.0), timeSec = 0L, speedMps = 2.5, hrvDfaA1 = 0.95, hrvArtifactRate = 0.0),
+            PathPoint(distance = 200.0, latLng = LatLng(0.0, 0.0), timeSec = 10L, speedMps = 3.0, hrvDfaA1 = 0.82, hrvArtifactRate = 0.5),
+            PathPoint(distance = 300.0, latLng = LatLng(0.0, 0.0), timeSec = 20L, speedMps = 3.5, hrvDfaA1 = 0.70, hrvArtifactRate = 1.0),
+            PathPoint(distance = 400.0, latLng = LatLng(0.0, 0.0), timeSec = 30L, speedMps = 4.0, hrvDfaA1 = 0.55, hrvArtifactRate = 0.2),
+            // Below minimum running threshold speed (< 0.55 m/s)
+            PathPoint(distance = 500.0, latLng = LatLng(0.0, 0.0), timeSec = 40L, speedMps = 0.4, hrvDfaA1 = 0.75, hrvArtifactRate = 0.0)
+        )
+
+        val filteredPace = HrvScatterMath.filterScatterPoints(runningPoints, HrvScatterIntensityMode.PACE)
+        assertEquals(4, filteredPace.size)
+        assertEquals(1.0 / 2.5, filteredPace[0].intensity, 1e-4)
+        assertEquals(1.0 / 4.0, filteredPace[3].intensity, 1e-4)
+
+        // Test custom configured thresholds T1 = 0.80, T2 = 0.60
+        val customRegression = HrvScatterMath.calculateLinearRegression(filteredPace, t1 = 0.80, t2 = 0.60)
+        assertNotNull(customRegression)
+        // With X = s/m: higher s/m is slower (lower intensity) -> higher a1 -> positive slope
+        assertTrue("Slope must be positive when intensity is pace s/m", customRegression!!.slope > 0.0)
+        assertNotNull(customRegression.intensityAtT1)
+        assertNotNull(customRegression.intensityAtT2)
+        assertEquals(customRegression.intensityAtT1, customRegression.intensityAt075)
+        assertEquals(customRegression.intensityAtT2, customRegression.intensityAt050)
+        assertTrue("T1 pace must be slower (larger s/m) than T2 pace", customRegression.intensityAtT1!! > customRegression.intensityAtT2!!)
+    }
 }

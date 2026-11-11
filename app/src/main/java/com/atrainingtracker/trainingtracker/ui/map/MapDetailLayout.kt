@@ -708,7 +708,7 @@ fun MapDetailLayout(
                                             TelemetryMetricUtils.findNearestPoint(
                                                 points = path,
                                                 targetValue = selectedDistance!!,
-                                                isTimeDomain = isTrackless
+                                                isTimeDomain = (activeTelemetryDomain == ProfileXAxisDomain.TIME)
                                             )
                                         } else null
                                         val activeA1 = activePoint?.hrvDfaA1
@@ -731,6 +731,8 @@ fun MapDetailLayout(
                                             onDistanceSelected = { selectedDistance = it },
                                             xAxisDomain = activeTelemetryDomain,
                                             bSportType = bSportType,
+                                            dfaA1ThresholdT1 = tuningConfig.dfaA1ThresholdT1,
+                                            dfaA1ThresholdT2 = tuningConfig.dfaA1ThresholdT2,
                                             zoomScale = profileZoomScale,
                                             startDist = MapDetailViewportMath.fractionToDomain(viewportStartFraction, telemetryTotalSpan, profileZoomScale),
                                             isPanMode = isPanMode,
@@ -756,7 +758,7 @@ fun MapDetailLayout(
                                             TelemetryMetricUtils.findNearestPoint(
                                                 points = path,
                                                 targetValue = selectedDistance!!,
-                                                isTimeDomain = isTrackless
+                                                isTimeDomain = (activeTelemetryDomain == ProfileXAxisDomain.TIME)
                                             )
                                         } else null
                                         val activeRmssd = activePoint?.hrvRmssd
@@ -794,17 +796,6 @@ fun MapDetailLayout(
                                                     alignWithHistogram = true,
                                                     onInteractiveCanvasTouch = onInteractiveCanvasTouch
                                                 )
-                                        )
-                                    }
-
-                                    // DFA a1 vs HR / Power Scatter Card (REQ-PER-035.4)
-                                    if (TelemetryMetricUtils.hasHrvData(path)) {
-                                        Spacer(modifier = Modifier.height(12.dp))
-                                        com.atrainingtracker.trainingtracker.ui.aftermath.workoutdetail.HrvAlpha1ScatterCard(
-                                            points = path,
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .padding(horizontal = 16.dp, vertical = 4.dp)
                                         )
                                     }
                                 }

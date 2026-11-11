@@ -92,8 +92,11 @@
     <string name="hrv_scatter_card_subtitle">a1 vs. Herzfrequenz &amp; Radleistung</string>
     <string name="hrv_scatter_aerobic_threshold">Aerobe Schwelle (a1 = 0,75)</string>
     <string name="hrv_scatter_anaerobic_threshold">Anaerobe Schwelle (a1 = 0,50)</string>
+    <string name="hrv_scatter_aerobic_threshold_fmt">Aerobe Schwelle (a1 = %1$.2f)</string>
+    <string name="hrv_scatter_anaerobic_threshold_fmt">Anaerobe Schwelle (a1 = %1$.2f)</string>
     <string name="hrv_scatter_toggle_hr">Herzfrequenz</string>
     <string name="hrv_scatter_toggle_power">Leistung</string>
+    <string name="hrv_scatter_toggle_pace">Pace</string>
     <string name="hrv_scatter_smoothed_warning_title">Geglätteter Sensordatenstrom</string>
     <string name="hrv_scatter_smoothed_warning_desc">Aufgezeichnete RR-Intervalle weisen Firmware-Glättung oder synthetische Quantisierung auf. Schwellenwertschätzungen (a1 = 0,75 / 0,50) können verzerrt sein.</string>
     <string name="hrv_scatter_artifact_suppressed">Intervalle mit hohen Artefakten (&gt;5%%) unterdrückt</string>

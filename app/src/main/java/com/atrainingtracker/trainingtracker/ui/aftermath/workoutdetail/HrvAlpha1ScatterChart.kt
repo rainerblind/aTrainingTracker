@@ -41,6 +41,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
+import com.atrainingtracker.banalservice.sensor.formater.PaceFormatter
+import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDefaults
 import com.atrainingtracker.trainingtracker.ui.map.PathPoint
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 import com.atrainingtracker.trainingtracker.ui.theme.TTColor
@@ -54,7 +56,8 @@ import kotlin.math.abs
  */
 enum class HrvScatterIntensityMode {
     HEART_RATE,
-    POWER
+    POWER,
+    PACE
 }
 
 /**
@@ -75,7 +78,9 @@ data class HrvScatterRegression(
     val intercept: Double,
     val rSquared: Double,
     val intensityAt075: Double?,
-    val intensityAt050: Double?
+    val intensityAt050: Double?,
+    val intensityAtT1: Double? = intensityAt075,
+    val intensityAtT2: Double? = intensityAt050
 )
 
 /**
@@ -89,31 +94,49 @@ object HrvScatterMath {
 
     /**
      * Filters track points strictly within valid physiological transition bounds
-     * (alpha1 in [0.35, 1.15], artifact rate <= 5.0%, non-null intensity).
+     * (alpha1 in [0.35, 1.15], artifact rate <= 5.0%, non-null intensity)
+     * and decimates samples to 5s steps when chronological timestamps are present.
      */
     fun filterScatterPoints(
         points: List<PathPoint>,
         mode: HrvScatterIntensityMode
     ): List<HrvScatterPoint> {
-        return points.mapNotNull { pt ->
-            val a1 = pt.hrvDfaA1 ?: return@mapNotNull null
-            if (a1 < MIN_ALPHA1 || a1 > MAX_ALPHA1) return@mapNotNull null
+        val hasTimestamps = points.size >= 2 && points.any { it.timeSec > 0L }
+        var lastTimeSec: Long? = null
+        val result = mutableListOf<HrvScatterPoint>()
+
+        for (pt in points) {
+            val a1 = pt.hrvDfaA1 ?: continue
+            if (a1 < MIN_ALPHA1 || a1 > MAX_ALPHA1) continue
             val artifact = pt.hrvArtifactRate
-            if (artifact != null && artifact > MAX_ARTIFACT_RATE) return@mapNotNull null
+            if (artifact != null && artifact > MAX_ARTIFACT_RATE) continue
 
             val intensity = when (mode) {
                 HrvScatterIntensityMode.HEART_RATE -> pt.hr?.takeIf { it > 0 }?.toDouble()
                 HrvScatterIntensityMode.POWER -> pt.power?.takeIf { it > 0 }?.toDouble()
-            } ?: return@mapNotNull null
+                HrvScatterIntensityMode.PACE -> pt.speedMps?.takeIf { it >= 0.55 }?.let { 1.0 / it }
+            } ?: continue
 
-            HrvScatterPoint(intensity = intensity, alpha1 = a1, timeSec = pt.timeSec)
+            if (hasTimestamps) {
+                if (lastTimeSec != null && pt.timeSec - lastTimeSec < 5L && pt.timeSec >= lastTimeSec) {
+                    continue
+                }
+                lastTimeSec = pt.timeSec
+            }
+
+            result.add(HrvScatterPoint(intensity = intensity, alpha1 = a1, timeSec = pt.timeSec))
         }
+        return result
     }
 
     /**
      * Computes Ordinary Least Squares (OLS) linear regression and threshold crossing estimates.
      */
-    fun calculateLinearRegression(points: List<HrvScatterPoint>): HrvScatterRegression? {
+    fun calculateLinearRegression(
+        points: List<HrvScatterPoint>,
+        t1: Double = 0.75,
+        t2: Double = 0.50
+    ): HrvScatterRegression? {
         if (points.size < 2) return null
 
         val n = points.size.toDouble()
@@ -140,15 +163,17 @@ object HrvScatterMath {
             ((ssXy * ssXy) / (ssXx * ssYy)).coerceIn(0.0, 1.0)
         } else 0.0
 
-        val intensity075 = if (abs(slope) > 1e-6) (0.75 - intercept) / slope else null
-        val intensity050 = if (abs(slope) > 1e-6) (0.50 - intercept) / slope else null
+        val intensityT1 = if (abs(slope) > 1e-6) (t1 - intercept) / slope else null
+        val intensityT2 = if (abs(slope) > 1e-6) (t2 - intercept) / slope else null
 
         return HrvScatterRegression(
             slope = slope,
             intercept = intercept,
             rSquared = rSquared,
-            intensityAt075 = intensity075,
-            intensityAt050 = intensity050
+            intensityAt075 = intensityT1,
+            intensityAt050 = intensityT2,
+            intensityAtT1 = intensityT1,
+            intensityAtT2 = intensityT2
         )
     }
 }
@@ -161,14 +186,16 @@ object HrvScatterMath {
 fun HrvAlpha1ScatterChart(
     points: List<PathPoint>,
     intensityMode: HrvScatterIntensityMode = HrvScatterIntensityMode.HEART_RATE,
+    t1: Float = TuningPreferencesDefaults.DEFAULT_DFA_A1_THRESHOLD_T1,
+    t2: Float = TuningPreferencesDefaults.DEFAULT_DFA_A1_THRESHOLD_T2,
     modifier: Modifier = Modifier
 ) {
     val scatterPoints = remember(points, intensityMode) {
         HrvScatterMath.filterScatterPoints(points, intensityMode)
     }
 
-    val regression = remember(scatterPoints) {
-        HrvScatterMath.calculateLinearRegression(scatterPoints)
+    val regression = remember(scatterPoints, t1, t2) {
+        HrvScatterMath.calculateLinearRegression(scatterPoints, t1.toDouble(), t2.toDouble())
     }
 
     val colorScheme = MaterialTheme.colorScheme
@@ -215,6 +242,7 @@ fun HrvAlpha1ScatterChart(
 
     val minAlpha1 = 0.30
     val maxAlpha1 = 1.20
+    val paceFormatter = remember { PaceFormatter() }
 
     Canvas(
         modifier = modifier
@@ -242,32 +270,32 @@ fun HrvAlpha1ScatterChart(
 
         val nativeCanvas = drawContext.canvas.nativeCanvas
 
-        // 1. Draw horizontal threshold lines (0.75 and 0.50)
+        // 1. Draw horizontal threshold lines (t1 and t2)
         val dashEffect = PathEffect.dashPathEffect(floatArrayOf(6.dp.toPx(), 4.dp.toPx()), 0f)
-        val y075 = alpha1ToY(0.75)
-        val y050 = alpha1ToY(0.50)
+        val yT1 = alpha1ToY(t1.toDouble())
+        val yT2 = alpha1ToY(t2.toDouble())
 
-        // Threshold 0.75 line (Aerobic / T1)
+        // Threshold T1 line (Aerobic / T1)
         drawLine(
             color = TTColor.Zone2.copy(alpha = 0.45f),
-            start = Offset(startPaddingPx, y075),
-            end = Offset(startPaddingPx + chartWidthPx, y075),
+            start = Offset(startPaddingPx, yT1),
+            end = Offset(startPaddingPx + chartWidthPx, yT1),
             strokeWidth = 1.5.dp.toPx(),
             pathEffect = dashEffect
         )
 
-        // Threshold 0.50 line (Anaerobic / T2)
+        // Threshold T2 line (Anaerobic / T2)
         drawLine(
             color = TTColor.Zone4.copy(alpha = 0.45f),
-            start = Offset(startPaddingPx, y050),
-            end = Offset(startPaddingPx + chartWidthPx, y050),
+            start = Offset(startPaddingPx, yT2),
+            end = Offset(startPaddingPx + chartWidthPx, yT2),
             strokeWidth = 1.5.dp.toPx(),
             pathEffect = dashEffect
         )
 
         // Draw threshold labels on Y-axis
-        nativeCanvas.drawText("0.75", 6.dp.toPx(), y075 + 8f, thresholdLabelPaint)
-        nativeCanvas.drawText("0.50", 6.dp.toPx(), y050 + 8f, thresholdLabelPaint)
+        nativeCanvas.drawText(String.format(Locale.US, "%.2f", t1), 6.dp.toPx(), yT1 + 8f, thresholdLabelPaint)
+        nativeCanvas.drawText(String.format(Locale.US, "%.2f", t2), 6.dp.toPx(), yT2 + 8f, thresholdLabelPaint)
 
         // 2. Draw border lines
         drawLine(
@@ -284,9 +312,16 @@ fun HrvAlpha1ScatterChart(
         )
 
         // 3. Draw X-axis labels
-        val unitLabel = if (intensityMode == HrvScatterIntensityMode.HEART_RATE) "bpm" else "W"
-        val minXLabel = "${minIntensity.toInt()} $unitLabel"
-        val maxXLabel = "${maxIntensity.toInt()} $unitLabel"
+        val minXLabel = when (intensityMode) {
+            HrvScatterIntensityMode.HEART_RATE -> "${minIntensity.toInt()} bpm"
+            HrvScatterIntensityMode.POWER -> "${minIntensity.toInt()} W"
+            HrvScatterIntensityMode.PACE -> paceFormatter.format_with_units(minIntensity)
+        }
+        val maxXLabel = when (intensityMode) {
+            HrvScatterIntensityMode.HEART_RATE -> "${maxIntensity.toInt()} bpm"
+            HrvScatterIntensityMode.POWER -> "${maxIntensity.toInt()} W"
+            HrvScatterIntensityMode.PACE -> paceFormatter.format_with_units(maxIntensity)
+        }
         val maxXLabelWidth = axisTextPaint.measureText(maxXLabel)
 
         nativeCanvas.drawText(minXLabel, startPaddingPx, size.height - 4.dp.toPx(), axisTextPaint)
@@ -314,26 +349,26 @@ fun HrvAlpha1ScatterChart(
                 )
 
                 // Optional vertical threshold guides
-                regression.intensityAt075?.let { int075 ->
-                    if (int075 in minIntensity..maxIntensity) {
-                        val x075 = intensityToX(int075)
+                regression.intensityAtT1?.let { intT1 ->
+                    if (intT1 in minIntensity..maxIntensity) {
+                        val xT1 = intensityToX(intT1)
                         drawLine(
                             color = TTColor.Zone2.copy(alpha = 0.35f),
-                            start = Offset(x075, y075),
-                            end = Offset(x075, topPaddingPx + chartHeightPx),
+                            start = Offset(xT1, yT1),
+                            end = Offset(xT1, topPaddingPx + chartHeightPx),
                             strokeWidth = 1.dp.toPx(),
                             pathEffect = dashEffect
                         )
                     }
                 }
 
-                regression.intensityAt050?.let { int050 ->
-                    if (int050 in minIntensity..maxIntensity) {
-                        val x050 = intensityToX(int050)
+                regression.intensityAtT2?.let { intT2 ->
+                    if (intT2 in minIntensity..maxIntensity) {
+                        val xT2 = intensityToX(intT2)
                         drawLine(
                             color = TTColor.Zone4.copy(alpha = 0.35f),
-                            start = Offset(x050, y050),
-                            end = Offset(x050, topPaddingPx + chartHeightPx),
+                            start = Offset(xT2, yT2),
+                            end = Offset(xT2, topPaddingPx + chartHeightPx),
                             strokeWidth = 1.dp.toPx(),
                             pathEffect = dashEffect
                         )

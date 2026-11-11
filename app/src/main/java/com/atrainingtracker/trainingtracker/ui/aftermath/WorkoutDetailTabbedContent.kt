@@ -856,6 +856,8 @@ private fun RenderWorkoutDetailCardSections(
                 if (TelemetryMetricUtils.hasHrvData(activeScrubPath)) {
                     HrvAlpha1ScatterCard(
                         points = activeScrubPath ?: emptyList(),
+                        dfaA1ThresholdT1 = tuningConfig.dfaA1ThresholdT1,
+                        dfaA1ThresholdT2 = tuningConfig.dfaA1ThresholdT2,
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 16.dp, vertical = 4.dp)

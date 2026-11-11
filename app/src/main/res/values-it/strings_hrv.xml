@@ -92,8 +92,11 @@
     <string name="hrv_scatter_card_subtitle">a1 vs. frequenza cardiaca e potenza</string>
     <string name="hrv_scatter_aerobic_threshold">Soglia aerobica (a1 = 0,75)</string>
     <string name="hrv_scatter_anaerobic_threshold">Soglia anaerobica (a1 = 0,50)</string>
+    <string name="hrv_scatter_aerobic_threshold_fmt">Soglia aerobica (a1 = %1$.2f)</string>
+    <string name="hrv_scatter_anaerobic_threshold_fmt">Soglia anaerobica (a1 = %1$.2f)</string>
     <string name="hrv_scatter_toggle_hr">Frequenza cardiaca</string>
     <string name="hrv_scatter_toggle_power">Potenza</string>
+    <string name="hrv_scatter_toggle_pace">Passo</string>
     <string name="hrv_scatter_smoothed_warning_title">Flusso sensore approssimato</string>
     <string name="hrv_scatter_smoothed_warning_desc">Gli intervalli RR registrati mostrano smoothing firmware o quantizzazione sintetica. Le stime di soglia aerobica (a1 = 0,75 / 0,50) potrebbero essere distorte.</string>
     <string name="hrv_scatter_artifact_suppressed">Intervalli con artefatti elevati (&gt;5%%) soppressi</string>

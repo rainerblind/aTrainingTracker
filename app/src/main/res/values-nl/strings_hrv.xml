@@ -92,8 +92,11 @@
     <string name="hrv_scatter_card_subtitle">a1 vs. hartslag &amp; fietsvermogen</string>
     <string name="hrv_scatter_aerobic_threshold">Aërobe drempel (a1 = 0,75)</string>
     <string name="hrv_scatter_anaerobic_threshold">Anaërobe drempel (a1 = 0,50)</string>
+    <string name="hrv_scatter_aerobic_threshold_fmt">Aërobe drempel (a1 = %1$.2f)</string>
+    <string name="hrv_scatter_anaerobic_threshold_fmt">Anaërobe drempel (a1 = %1$.2f)</string>
     <string name="hrv_scatter_toggle_hr">Hartslag</string>
     <string name="hrv_scatter_toggle_power">Vermogen</string>
+    <string name="hrv_scatter_toggle_pace">Tempo</string>
     <string name="hrv_scatter_smoothed_warning_title">Afgevlakte sensorstroom</string>
     <string name="hrv_scatter_smoothed_warning_desc">Opgenomen RR-intervallen vertonen firmware-afvlakking of synthetische kwantisatie. Aerobe drempelschattingen (a1 = 0,75 / 0,50) kunnen vervormd zijn.</string>
     <string name="hrv_scatter_artifact_suppressed">Intervallen met hoge artefacten (&gt;5%%) onderdrukt</string>

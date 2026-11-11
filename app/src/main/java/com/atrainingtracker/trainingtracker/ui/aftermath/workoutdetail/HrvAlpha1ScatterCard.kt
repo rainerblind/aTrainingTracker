@@ -32,10 +32,12 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.WarningAmber
 import androidx.compose.material3.ElevatedCard
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -53,6 +55,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
+import com.atrainingtracker.banalservice.sensor.formater.PaceFormatter
+import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDefaults
 import com.atrainingtracker.trainingtracker.ui.components.MetricItem
 import com.atrainingtracker.trainingtracker.ui.components.MetricLayout
 import com.atrainingtracker.trainingtracker.ui.map.PathPoint
@@ -70,6 +74,8 @@ import java.util.Locale
 fun HrvAlpha1ScatterCard(
     points: List<PathPoint>,
     isSmoothedStream: Boolean = false,
+    dfaA1ThresholdT1: Float = TuningPreferencesDefaults.DEFAULT_DFA_A1_THRESHOLD_T1,
+    dfaA1ThresholdT2: Float = TuningPreferencesDefaults.DEFAULT_DFA_A1_THRESHOLD_T2,
     modifier: Modifier = Modifier
 ) {
     val hasHr = remember(points) {
@@ -78,17 +84,40 @@ fun HrvAlpha1ScatterCard(
     val hasPower = remember(points) {
         points.any { it.power != null && it.power > 0 }
     }
-
-    var selectedMode by rememberSaveable {
-        mutableStateOf(if (hasPower) HrvScatterIntensityMode.POWER else HrvScatterIntensityMode.HEART_RATE)
+    val hasPace = remember(points) {
+        points.any { it.speedMps != null && it.speedMps >= 0.55 }
     }
 
-    val scatterPoints = remember(points, selectedMode) {
-        HrvScatterMath.filterScatterPoints(points, selectedMode)
+    val availableModes = remember(hasHr, hasPower, hasPace) {
+        listOfNotNull(
+            if (hasHr) HrvScatterIntensityMode.HEART_RATE else null,
+            if (hasPower) HrvScatterIntensityMode.POWER else null,
+            if (hasPace) HrvScatterIntensityMode.PACE else null
+        )
     }
 
-    val regression = remember(scatterPoints) {
-        HrvScatterMath.calculateLinearRegression(scatterPoints)
+    var selectedMode by rememberSaveable(hasHr, hasPower, hasPace) {
+        mutableStateOf(
+            when {
+                hasPower -> HrvScatterIntensityMode.POWER
+                hasPace -> HrvScatterIntensityMode.PACE
+                else -> HrvScatterIntensityMode.HEART_RATE
+            }
+        )
+    }
+
+    val effectiveMode = if (selectedMode in availableModes) {
+        selectedMode
+    } else {
+        availableModes.firstOrNull() ?: selectedMode
+    }
+
+    val scatterPoints = remember(points, effectiveMode) {
+        HrvScatterMath.filterScatterPoints(points, effectiveMode)
+    }
+
+    val regression = remember(scatterPoints, dfaA1ThresholdT1, dfaA1ThresholdT2) {
+        HrvScatterMath.calculateLinearRegression(scatterPoints, dfaA1ThresholdT1.toDouble(), dfaA1ThresholdT2.toDouble())
     }
 
     ElevatedCard(
@@ -168,35 +197,79 @@ fun HrvAlpha1ScatterCard(
                 }
             }
 
-            // Mode Selector Chips (HR vs Power)
-            if (hasHr && hasPower) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+            // Mode Selector Segmented Buttons (HR, Power, Pace) (REQ-PER-035.4)
+            if (availableModes.size > 1) {
+                SingleChoiceSegmentedButtonRow(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(32.dp)
+                        .testTag("hrv_scatter_mode_segmented_buttons")
                 ) {
-                    FilterChip(
-                        selected = selectedMode == HrvScatterIntensityMode.HEART_RATE,
-                        onClick = { selectedMode = HrvScatterIntensityMode.HEART_RATE },
-                        label = { Text(stringResource(R.string.hrv_scatter_toggle_hr)) },
-                        modifier = Modifier.testTag("hrv_scatter_mode_hr_chip")
-                    )
-                    FilterChip(
-                        selected = selectedMode == HrvScatterIntensityMode.POWER,
-                        onClick = { selectedMode = HrvScatterIntensityMode.POWER },
-                        label = { Text(stringResource(R.string.hrv_scatter_toggle_power)) },
-                        modifier = Modifier.testTag("hrv_scatter_mode_power_chip")
-                    )
+                    availableModes.forEachIndexed { index, mode ->
+                        val label = when (mode) {
+                            HrvScatterIntensityMode.HEART_RATE -> stringResource(R.string.hrv_scatter_toggle_hr)
+                            HrvScatterIntensityMode.POWER -> stringResource(R.string.hrv_scatter_toggle_power)
+                            HrvScatterIntensityMode.PACE -> stringResource(R.string.hrv_scatter_toggle_pace)
+                        }
+                        val tag = when (mode) {
+                            HrvScatterIntensityMode.HEART_RATE -> "hrv_scatter_mode_hr_chip"
+                            HrvScatterIntensityMode.POWER -> "hrv_scatter_mode_power_chip"
+                            HrvScatterIntensityMode.PACE -> "hrv_scatter_mode_pace_chip"
+                        }
+                        SegmentedButton(
+                            selected = effectiveMode == mode,
+                            onClick = { selectedMode = mode },
+                            shape = SegmentedButtonDefaults.itemShape(index = index, count = availableModes.size),
+                            icon = {},
+                            modifier = Modifier.testTag(tag)
+                        ) {
+                            Text(
+                                text = label,
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = if (effectiveMode == mode) FontWeight.Bold else FontWeight.Medium
+                            )
+                        }
+                    }
                 }
             }
 
             // Regression & Threshold Metrics Grid
-            val unitStr = if (selectedMode == HrvScatterIntensityMode.HEART_RATE) "bpm" else "W"
-            val t1Val = regression?.intensityAt075?.takeIf { it in 30.0..600.0 }
-            val t2Val = regression?.intensityAt050?.takeIf { it in 30.0..600.0 }
+            val paceFormatter = remember { PaceFormatter() }
+            val unitStr = when (effectiveMode) {
+                HrvScatterIntensityMode.HEART_RATE -> "bpm"
+                HrvScatterIntensityMode.POWER -> "W"
+                HrvScatterIntensityMode.PACE -> ""
+            }
+            val t1Val = regression?.intensityAtT1?.takeIf {
+                when (effectiveMode) {
+                    HrvScatterIntensityMode.PACE -> it in 0.05..2.0
+                    else -> it in 30.0..600.0
+                }
+            }
+            val t2Val = regression?.intensityAtT2?.takeIf {
+                when (effectiveMode) {
+                    HrvScatterIntensityMode.PACE -> it in 0.05..2.0
+                    else -> it in 30.0..600.0
+                }
+            }
             val r2Val = regression?.rSquared
 
-            val t1Formatted = if (t1Val != null) "${t1Val.toInt()} $unitStr" else "--"
-            val t2Formatted = if (t2Val != null) "${t2Val.toInt()} $unitStr" else "--"
+            val t1Formatted = if (t1Val != null) {
+                if (effectiveMode == HrvScatterIntensityMode.PACE) {
+                    paceFormatter.format_with_units(t1Val)
+                } else {
+                    "${t1Val.toInt()} $unitStr"
+                }
+            } else "--"
+
+            val t2Formatted = if (t2Val != null) {
+                if (effectiveMode == HrvScatterIntensityMode.PACE) {
+                    paceFormatter.format_with_units(t2Val)
+                } else {
+                    "${t2Val.toInt()} $unitStr"
+                }
+            } else "--"
+
             val r2Formatted = if (r2Val != null) String.format(Locale.US, "%.2f", r2Val) else "--"
 
             Row(
@@ -205,14 +278,14 @@ fun HrvAlpha1ScatterCard(
             ) {
                 MetricItem(
                     iconRes = null,
-                    label = stringResource(R.string.hrv_scatter_aerobic_threshold),
+                    label = stringResource(R.string.hrv_scatter_aerobic_threshold_fmt, dfaA1ThresholdT1),
                     value = t1Formatted,
                     layout = MetricLayout.VERTICAL,
                     modifier = Modifier.weight(1f)
                 )
                 MetricItem(
                     iconRes = null,
-                    label = stringResource(R.string.hrv_scatter_anaerobic_threshold),
+                    label = stringResource(R.string.hrv_scatter_anaerobic_threshold_fmt, dfaA1ThresholdT2),
                     value = t2Formatted,
                     layout = MetricLayout.VERTICAL,
                     modifier = Modifier.weight(1f)
@@ -234,7 +307,9 @@ fun HrvAlpha1ScatterCard(
             // Scatter Chart
             HrvAlpha1ScatterChart(
                 points = points,
-                intensityMode = selectedMode,
+                intensityMode = effectiveMode,
+                t1 = dfaA1ThresholdT1,
+                t2 = dfaA1ThresholdT2,
                 modifier = Modifier.fillMaxWidth()
             )
 

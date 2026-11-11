@@ -92,8 +92,11 @@
     <string name="hrv_scatter_card_subtitle">a1 vs fréquence cardiaque et puissance</string>
     <string name="hrv_scatter_aerobic_threshold">Seuil aérobie (a1 = 0,75)</string>
     <string name="hrv_scatter_anaerobic_threshold">Seuil anaérobie (a1 = 0,50)</string>
+    <string name="hrv_scatter_aerobic_threshold_fmt">Seuil aérobie (a1 = %1$.2f)</string>
+    <string name="hrv_scatter_anaerobic_threshold_fmt">Seuil anaérobie (a1 = %1$.2f)</string>
     <string name="hrv_scatter_toggle_hr">Fréquence cardiaque</string>
     <string name="hrv_scatter_toggle_power">Puissance</string>
+    <string name="hrv_scatter_toggle_pace">Allure</string>
     <string name="hrv_scatter_smoothed_warning_title">Flux de capteur lissé</string>
     <string name="hrv_scatter_smoothed_warning_desc">Les intervalles RR enregistrés présentent un lissage par micrologiciel ou une quantification synthétique. Les estimations de seuils (a1 = 0,75 / 0,50) peuvent être faussées.</string>
     <string name="hrv_scatter_artifact_suppressed">Intervalles à forts artéfacts (&gt;5%%) supprimés</string>
