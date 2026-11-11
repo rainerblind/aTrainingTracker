@@ -187,4 +187,30 @@
     <string name="hrv_test_btn_finish">Test beenden</string>
     <string name="hrv_test_btn_cooldown">Abwärmen beginnen</string>
     <string name="hrv_test_btn_cancel">Test abbrechen</string>
+
+    <!-- Training Zone Comparison & Multi-Session Consensus (ATT-3555 / REQ-PER-037) -->
+    <string name="hrv_zone_comparison_title">Trainingszonen-Vergleich</string>
+    <string name="hrv_zone_comparison_subtitle">Vergleich mit konfigurierten Coggan-Leistungs- &amp; HF-Zonen</string>
+    <string name="hrv_zone_comparison_power_header">Radleistung (Coggan)</string>
+    <string name="hrv_zone_comparison_hrvt1_power_delta">HRVT1 vs. Z2 Max (%1$s W)</string>
+    <string name="hrv_zone_comparison_hrvt2_power_delta">HRVT2 vs. FTP (%1$s W)</string>
+    <string name="hrv_zone_comparison_configured_ftp">Konfigurierte FTP: %1$d W</string>
+    <string name="hrv_zone_comparison_hr_header">Herzfrequenz-Zonen</string>
+    <string name="hrv_zone_comparison_hrvt1_hr_delta">HRVT1 vs. Z2 Max (%1$s bpm)</string>
+    <string name="hrv_zone_comparison_hrvt2_hr_delta">HRVT2 vs. Z4 Max (%1$s bpm)</string>
+    <string name="hrv_zone_comparison_hrvt1_pct_hrmax">HRVT1: %1$d%% HFmax</string>
+    <string name="hrv_zone_comparison_hrvt2_pct_hrmax">HRVT2: %1$d%% HFmax</string>
+    <string name="hrv_zone_comparison_hr_tooltip" formatted="false">HF-Zonen in den Einstellungen basieren auf HFmax. Bei trainierten Sportlern liegt die aerobe Schwelle HRVT1 typischerweise bei 75–82% HFmax. Submaximale HRV-Schwellen erfassen HFmax nicht und können HF-Zonen nicht überschreiben.</string>
+    <string name="hrv_consensus_badge_unlocked">Konsens freigegeben</string>
+    <string name="hrv_consensus_badge_locked">Konsens gesperrt</string>
+    <string name="hrv_consensus_reason_guided_high">Geführtes Testprotokoll mit hoher Konfidenz verifiziert.</string>
+    <string name="hrv_consensus_reason_multi_session">Mehrfachsitzungs-Konsens verifiziert (%1$d Sitzungen innerhalb von ±10 W).</string>
+    <string name="hrv_consensus_reason_insufficient_sessions">Erfordert geführten Test mit hoher Konfidenz oder ≥3 übereinstimmende Sitzungen innerhalb von 30 Tagen.</string>
+    <string name="hrv_consensus_reason_spread_too_high">Neuere Schätzungen weichen um mehr als ±10 W voneinander ab.</string>
+    <string name="hrv_zone_comparison_btn_update_power">Leistungszonen aktualisieren</string>
+    <string name="hrv_zone_comparison_dialog_title">Leistungszonen aktualisieren (FTP)</string>
+    <string name="hrv_zone_comparison_dialog_body">Konfigurierte FTP von %1$d W auf %2$d W aktualisieren?\n\nProtokoll: %3$s\nAnpassung: %4$s\n\nAchtung: Die DFA-α1-Schwelle (HRVT2/RCP) kann 3–5%% über dem 60-minütigen MLSS liegen, wenn sie in einem Rampentest ermittelt wurde.</string>
+    <string name="hrv_zone_comparison_dialog_confirm">FTP aktualisieren</string>
+    <string name="hrv_zone_comparison_dialog_cancel">Abbrechen</string>
+    <string name="hrv_zone_comparison_forward_mader">Stoffwechselmodell kalibrieren</string>
 </resources>

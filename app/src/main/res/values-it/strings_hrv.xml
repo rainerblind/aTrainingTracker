@@ -187,4 +187,30 @@
     <string name="hrv_test_btn_finish">Termina test</string>
     <string name="hrv_test_btn_cooldown">Inizia defaticamento</string>
     <string name="hrv_test_btn_cancel">Annulla test</string>
+
+    <!-- Training Zone Comparison & Multi-Session Consensus (ATT-3555 / REQ-PER-037) -->
+    <string name="hrv_zone_comparison_title">Confronto zone di allenamento</string>
+    <string name="hrv_zone_comparison_subtitle">Confronto con zone di potenza Coggan e FC configurate</string>
+    <string name="hrv_zone_comparison_power_header">Potenza ciclistica (Coggan)</string>
+    <string name="hrv_zone_comparison_hrvt1_power_delta">HRVT1 vs Z2 Max (%1$s W)</string>
+    <string name="hrv_zone_comparison_hrvt2_power_delta">HRVT2 vs FTP (%1$s W)</string>
+    <string name="hrv_zone_comparison_configured_ftp">FTP configurata: %1$d W</string>
+    <string name="hrv_zone_comparison_hr_header">Zone di frequenza cardiaca</string>
+    <string name="hrv_zone_comparison_hrvt1_hr_delta">HRVT1 vs Z2 Max (%1$s bpm)</string>
+    <string name="hrv_zone_comparison_hrvt2_hr_delta">HRVT2 vs Z4 Max (%1$s bpm)</string>
+    <string name="hrv_zone_comparison_hrvt1_pct_hrmax">HRVT1: %1$d%% FCmax</string>
+    <string name="hrv_zone_comparison_hrvt2_pct_hrmax">HRVT2: %1$d%% FCmax</string>
+    <string name="hrv_zone_comparison_hr_tooltip" formatted="false">Le zone FC nelle Impostazioni sono ancorate alla FCmax. Negli atleti allenati, la soglia aerobica HRVT1 si colloca in genere al 75–82% FCmax. Le soglie HRV sottomassimali non osservano la FCmax e non possono sovrascrivere le zone FC.</string>
+    <string name="hrv_consensus_badge_unlocked">Consenso sbloccato</string>
+    <string name="hrv_consensus_badge_locked">Consenso bloccato</string>
+    <string name="hrv_consensus_reason_guided_high">Protocollo di test guidato ad alta confidenza verificato.</string>
+    <string name="hrv_consensus_reason_multi_session">Consenso multisessione verificato (%1$d sessioni entro ±10 W).</string>
+    <string name="hrv_consensus_reason_insufficient_sessions">Richiede test guidato ad alta confidenza o ≥3 sessioni concordanti entro 30 giorni.</string>
+    <string name="hrv_consensus_reason_spread_too_high">Le stime delle sessioni recenti variano di oltre ±10 W.</string>
+    <string name="hrv_zone_comparison_btn_update_power">Aggiorna zone di potenza</string>
+    <string name="hrv_zone_comparison_dialog_title">Aggiorna zone di potenza (FTP)</string>
+    <string name="hrv_zone_comparison_dialog_body">Aggiornare FTP configurata da %1$d W a %2$d W?\n\nProtocollo: %3$s\nRegolazione: %4$s\n\nAttenzione: La soglia DFA α1 (HRVT2/RCP) può trovarsi 3–5%% sopra la MLSS a 60 min se misurata in un test a rampa.</string>
+    <string name="hrv_zone_comparison_dialog_confirm">Aggiorna FTP</string>
+    <string name="hrv_zone_comparison_dialog_cancel">Annulla</string>
+    <string name="hrv_zone_comparison_forward_mader">Calibra modello metabolico</string>
 </resources>

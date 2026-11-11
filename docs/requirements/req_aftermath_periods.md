@@ -3,7 +3,7 @@
 **Domain**: `aftermath_periods`  
 **Prefixes**: `PER`, `PERF`  
 **Scope**: Post-workout analytics, period statistics, zone distributions, graphs and visual scrubbers.  
-**Total Requirements**: 34
+**Total Requirements**: 35
 
 ---
 
@@ -1041,11 +1041,54 @@
 **Invariants**: Zero SQLite schema migration; 100% 9-language localization parity; zero overhead or UI display for non-radar rides.
 
 
+### REQ-PER-037: HRV Threshold Training Zone Comparison, Multi-Session Consensus Gating & Anchor-Based Power Zone Updates [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-PER-045` | **Tickets**: `ATT-3555`
+- **Implementation**: `HrvZoneComparisonMath.kt`, `HrvZoneComparisonResult.kt`, `HrvThresholdSummaryCard.kt`, `ZoneCalculationMath.kt`, `strings_hrv.xml`
+- **Rationale**: While `REQ-PER-036` (`ATT-3554`) produces confidence-gated physiological threshold estimates ($HRVT_1$ and $HRVT_2$) and `REQ-TRK-072` (`ATT-4969`) introduces guided step/ramp tests, athletes currently lack contextual comparison against their configured training zones (`ZoneCalculationMath.kt`). Moreover, updating athletic training zones requires strict physiological safeguards: power zones can be updated from threshold estimates with user confirmation, but only when verified via a `Confidence.HIGH` guided test or a 30-day multi-session consensus ($M \ge 3$ agreeing within $\pm 10\text{ W}$), whereas heart rate zones remain purely informational comparisons because submaximal thresholds cannot observe $HR_{\max}$ and legacy HR zones are anchored to $HR_{\max}$. The system SHALL support training zone comparison, multi-session consensus gating, and anchor-based power zone updates:
+- **Description**:
+  1. *Power Zone Delta & Coggan Anchor Comparison (`REQ-PER-037.1`)*:
+     - The system SHALL compare estimated $HRVT_1$ steady-state power ($P_{\text{HRVT1,ss}}$) against the Coggan Zone 2 aerobic ceiling (`z2Max = round(0.75 * ftp)`), computing $\Delta P_{\text{T1}} = P_{\text{HRVT1,ss}} - z2Max$.
+     - The system SHALL compare estimated $HRVT_2$ steady-state power ($P_{\text{HRVT2,ss}}$) against configured Functional Threshold Power (`100% FTP`), computing $\Delta P_{\text{T2}} = P_{\text{HRVT2,ss}} - FTP$.
+     - If either threshold is unavailable or unestimated (`INSUFFICIENT_SPAN`), its respective power delta SHALL be omitted.
+  2. *Informational Heart Rate Comparison & Non-Overwrite Invariant (`REQ-PER-037.2`)*:
+     - The system SHALL compare estimated $HRVT_1$ heart rate ($\text{HR}_{\text{HRVT1}}$) against configured Heart Rate `z2Max`, computing $\Delta \text{HR}_{\text{T1}} = \text{HR}_{\text{HRVT1}} - z2Max$, and expressing $\text{HR}_{\text{HRVT1}}$ as a percentage of $HR_{\max}$ ($\% HR_{\max} = \text{round}(100 \times \text{HR}_{\text{HRVT1}} / HR_{\max})$).
+     - The system SHALL compare estimated $HRVT_2$ heart rate ($\text{HR}_{\text{HRVT2}}$) against configured Heart Rate `z4Max`, computing $\Delta \text{HR}_{\text{T2}} = \text{HR}_{\text{HRVT2}} - z4Max$, and expressing $\text{HR}_{\text{HRVT2}}$ as $\% HR_{\max}$.
+     - Heart rate comparisons SHALL be strictly informational and accompanied by an explanatory tooltip/hint clarifying that physiological $HRVT_1$ typically occurs at $75\text{--}82\% HR_{\max}$ in trained athletes, and existing HR zones in Settings are anchored to $HR_{\max}$. Under no circumstances SHALL the system automatically overwrite Heart Rate zones or $HR_{\max}$.
+  3. *Multi-Session Consensus & Guided Test Gating (`REQ-PER-037.3`)*:
+     - Automated or one-tap updating of Power Zones (`FTP`) SHALL be gated by a consensus evaluator (`HrvZoneComparisonMath.evaluateConsensusGate`).
+     - Gating condition for UNLOCKED:
+       - Condition A (Guided Test): The session is a `Confidence.HIGH` Guided Step or Continuous Ramp Test (`ATT-4969`), OR
+       - Condition B (Multi-Session Consensus): At least $M \ge 3$ recent workouts within the past 30 days have `Confidence.HIGH` or `Confidence.MEDIUM` threshold estimates whose $HRVT_2$ power values agree within a range of $\le 10\text{ W}$ ($\max(P) - \min(P) \le 10\text{ W}$ across the qualifying sessions), with the suggested FTP calculated as the statistical median of these session estimates.
+     - Single unverified free workouts, workouts with `Confidence.LOW`, workouts with insufficient duration/span, or disparate sessions ($> 10\text{ W}$ spread) SHALL evaluate to `LOCKED`.
+  4. *Zone Comparison Section in `HrvThresholdSummaryCard` (`REQ-PER-037.4`)*:
+     - `HrvThresholdSummaryCard` SHALL display a dedicated Training Zones Comparison section beneath threshold metrics when configured zones are present.
+     - The section SHALL render power and HR comparison delta chips, consensus status badge (`LOCKED` or `UNLOCKED`), and an "Update Power Zones" action button.
+     - When locked, the button SHALL be disabled with an inline diagnostic reason (e.g., *"Requires High-Confidence Guided Test or 3 agreeing sessions within 30 days"*).
+  5. *User-Confirmed Power Zone Update Flow (`REQ-PER-037.5`)*:
+     - When unlocked, tapping "Update Power Zones" SHALL launch an explicit modal confirmation dialog.
+     - The confirmation dialog SHALL display the target new FTP value, protocol provenance (`3-min Step`, `Continuous Ramp`, or `Multi-Session Median`), ramp slope & MRT adjustment if applicable, and an explicit MLSS cautionary advisory noting that VT2/RCP may sit 3–5% above 60-minute MLSS.
+     - Upon explicit athlete confirmation, the system SHALL update `SettingsDataStore.setFtp(newFtp)` and recalculate `calculateCogganPowerZones(newFtp)`.
+  6. *Cross-Epic Mader-Heck Calibration Forwarding & Localization Parity (`REQ-PER-037.6`)*:
+     - The card SHALL provide an action link forwarding the validated $(P_{\text{HRVT1}}, P_{\text{HRVT2}})$ anchor pair into `MaderCalibrationDialog` (`ATT-4799`).
+     - All delta labels, consensus badges, dialog texts, tooltips, and explanatory messages SHALL maintain 100% localization parity across all 9 supported locales in `strings_hrv.xml`.
+ (ATT-3555: [Verbesserung] Compare estimated HRVT1/HRVT2 against configured training zones with multi-session consensus and anchor-based updates (ZoneCalculationMath))
 
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-PER-037` (*HRV Threshold Training Zone Comparison, Multi-Session Consensus Gating & Anchor-Based Power Zone Updates*), extending `REQ-PER-036` (confidence-gated thresholds) and integrating with `REQ-UI-373` (`ZoneCalculationMath.kt`). Targets `HrvZoneComparisonMath.kt`, `HrvThresholdSummaryCard.kt`, `SettingsDataStore.kt`, and `strings_hrv.xml`.
+2. *Historical Origin & Commit Trace*: Conceived in Epic `ATT-3539` (*Heart Rate Variability*); companion to `ATT-3554` (commit `5deec7cd`) and `ATT-4969` (commit `424580a2`).
+3. *Root Reason for Existing Formulation*: `ZoneCalculationMath` previously supported only manual calculator entry without automated physiological anchor feedback. Directly overwriting FTP from a single noisy free workout risks distorting training zones, while modifying HR zones from submaximal thresholds is physiologically invalid because $HR_{\max}$ cannot be observed without exhaustive testing.
+4. *Preservation of Core Invariants*: Integer monotonicity ($Z_n \ge Z_{n-1} + 1$) and 2500 W ceiling in `ZoneCalculationMath` strictly preserved; HR zones remain anchored strictly to $HR_{\max}$; no automated overwrites occur without explicit athlete confirmation dialog; 100% 9-language localization parity maintained.
 
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* a workout with estimated $HRVT_1 = 146\text{ bpm} / 215\text{ W}$ and $HRVT_2 = 172\text{ bpm} / 285\text{ W}$, and configured $\text{FTP} = 280\text{ W}$ (`z2Max = 210 W`) and HR `z2Max = 142 bpm`, `z4Max = 170 bpm`,
+• *When* `HrvThresholdSummaryCard` is displayed,
+• *Then* it shows the deltas against `z2Max` ($+4\text{ bpm}$, $+5\text{ W}$) and against $\text{FTP}$ / HR `z4Max` ($+2\text{ bpm}$, $+5\text{ W vs. FTP}$).
+• *Given* a single `Confidence.MEDIUM` free-ride estimate (where fewer than $M = 3$ consistent sessions exist within 30 days and the workout is not a `Confidence.HIGH` Guided Step/Ramp Test),
+• *When* displayed on `HrvThresholdSummaryCard`,
+• *Then* Power and HR comparison deltas are shown informationally, the "Update Power Zones" button is disabled/locked with an explanatory reason, and HR zones are never overwritten.
+• *Given* an unlocked consensus state (e.g. `Confidence.HIGH` Guided Test or 3 agreeing sessions within $\pm 10\text{ W}$),
+• *When* the athlete taps "Update Power Zones",
+• *Then* a confirmation dialog appears showing target FTP, protocol provenance, ramp slope & MRT adjustment, and an MLSS warning; upon user confirmation, FTP is saved to settings and power zones are updated.
 
-
-
-
-
-
+**Invariants**: Pure mathematical comparison and non-destructive UI action; Power-only anchor updates with explicit confirmation; HR zones strictly informational; 100% 9-language localization parity.

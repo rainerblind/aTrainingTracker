@@ -108,4 +108,79 @@ class HrvThresholdSummaryCardTest {
             assertTrue("Key '$key' must exist in values/strings_hrv.xml", defaultContent.contains("name=\"$key\""))
         }
     }
+
+    @Test
+    fun `all zone comparison and consensus string keys exist across canonical resources (TST-PER-045_7)`() {
+        val requiredZoneKeys = listOf(
+            "hrv_zone_comparison_title",
+            "hrv_zone_comparison_subtitle",
+            "hrv_zone_comparison_power_header",
+            "hrv_zone_comparison_hrvt1_power_delta",
+            "hrv_zone_comparison_hrvt2_power_delta",
+            "hrv_zone_comparison_configured_ftp",
+            "hrv_zone_comparison_hr_header",
+            "hrv_zone_comparison_hrvt1_hr_delta",
+            "hrv_zone_comparison_hrvt2_hr_delta",
+            "hrv_zone_comparison_hrvt1_pct_hrmax",
+            "hrv_zone_comparison_hrvt2_pct_hrmax",
+            "hrv_zone_comparison_hr_tooltip",
+            "hrv_consensus_badge_unlocked",
+            "hrv_consensus_badge_locked",
+            "hrv_consensus_reason_guided_high",
+            "hrv_consensus_reason_multi_session",
+            "hrv_consensus_reason_insufficient_sessions",
+            "hrv_consensus_reason_spread_too_high",
+            "hrv_zone_comparison_btn_update_power",
+            "hrv_zone_comparison_dialog_title",
+            "hrv_zone_comparison_dialog_body",
+            "hrv_zone_comparison_dialog_confirm",
+            "hrv_zone_comparison_dialog_cancel",
+            "hrv_zone_comparison_forward_mader"
+        )
+
+        val defaultFile = findFile("src/main/res/values/strings_hrv.xml")
+        assertTrue("Default strings_hrv.xml must exist", defaultFile.exists())
+        val defaultContent = defaultFile.readText()
+
+        for (key in requiredZoneKeys) {
+            assertTrue("Key '$key' must exist in values/strings_hrv.xml", defaultContent.contains("name=\"$key\""))
+        }
+    }
+
+    @Test
+    fun `HrvThresholdSummaryCard exposes Zone Comparison and Consensus test tags (REQ-PER-037_4)`() {
+        val cardFile = findFile("src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/workoutdetail/HrvThresholdSummaryCard.kt")
+        assertTrue("HrvThresholdSummaryCard.kt must exist", cardFile.exists())
+        val source = cardFile.readText()
+
+        val expectedTags = listOf(
+            "hrv_threshold_summary_card",
+            "hrv_zone_comparison_section",
+            "hrv_power_delta_t1",
+            "hrv_power_delta_t2",
+            "hrv_hr_delta_t1",
+            "hrv_hr_delta_t2",
+            "hrv_consensus_badge",
+            "hrv_btn_update_power_zones",
+            "hrv_power_zone_confirm_dialog",
+            "hrv_btn_dialog_confirm",
+            "hrv_btn_dialog_cancel"
+        )
+
+        for (tag in expectedTags) {
+            assertTrue("HrvThresholdSummaryCard must contain test tag '$tag'", source.contains("\"$tag\""))
+        }
+    }
+
+    @Test
+    fun `WorkoutDetailTabbedContent wires configuredFtp, configuredHrMax and callbacks (Rule 81)`() {
+        val contentFile = findFile("src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/WorkoutDetailTabbedContent.kt")
+        assertTrue("WorkoutDetailTabbedContent.kt must exist", contentFile.exists())
+        val source = contentFile.readText()
+
+        assertTrue("Must wire configuredFtp", source.contains("configuredFtp = resolvedFtp"))
+        assertTrue("Must wire configuredHrMax", source.contains("configuredHrMax = resolvedHrMax"))
+        assertTrue("Must wire onUpdateFtp", source.contains("onUpdateFtp = onUpdateFtp"))
+        assertTrue("Must wire onCalibrateMader", source.contains("onCalibrateMader = onCalibrateMader"))
+    }
 }

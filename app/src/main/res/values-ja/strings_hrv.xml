@@ -187,4 +187,30 @@
     <string name="hrv_test_btn_finish">テスト終了</string>
     <string name="hrv_test_btn_cooldown">クールダウン開始</string>
     <string name="hrv_test_btn_cancel">テストをキャンセル</string>
+
+    <!-- Training Zone Comparison & Multi-Session Consensus (ATT-3555 / REQ-PER-037) -->
+    <string name="hrv_zone_comparison_title">トレーニングゾーン比較</string>
+    <string name="hrv_zone_comparison_subtitle">設定されたコガンパワーおよび心拍ゾーンとの比較</string>
+    <string name="hrv_zone_comparison_power_header">サイクリングパワー (コガン)</string>
+    <string name="hrv_zone_comparison_hrvt1_power_delta">HRVT1 vs. Z2最大 (%1$s W)</string>
+    <string name="hrv_zone_comparison_hrvt2_power_delta">HRVT2 vs. FTP (%1$s W)</string>
+    <string name="hrv_zone_comparison_configured_ftp">設定されたFTP: %1$d W</string>
+    <string name="hrv_zone_comparison_hr_header">心拍数ゾーン</string>
+    <string name="hrv_zone_comparison_hrvt1_hr_delta">HRVT1 vs. Z2最大 (%1$s bpm)</string>
+    <string name="hrv_zone_comparison_hrvt2_hr_delta">HRVT2 vs. Z4最大 (%1$s bpm)</string>
+    <string name="hrv_zone_comparison_hrvt1_pct_hrmax">HRVT1: %1$d%% 最大心拍数</string>
+    <string name="hrv_zone_comparison_hrvt2_pct_hrmax">HRVT2: %1$d%% 最大心拍数</string>
+    <string name="hrv_zone_comparison_hr_tooltip" formatted="false">設定の心拍ゾーンは最大心拍数に基づいています。訓練されたアスリートでは有酸素閾値HRVT1は通常最大心拍数の75〜82%で発生します。最大下HRV閾値では最大心拍数を観測できないため、心拍ゾーンを上書きすることはできません。</string>
+    <string name="hrv_consensus_badge_unlocked">合意ロック解除</string>
+    <string name="hrv_consensus_badge_locked">合意ロック中</string>
+    <string name="hrv_consensus_reason_guided_high">高信頼度のガイド付きテストプロトコルが検証されました。</string>
+    <string name="hrv_consensus_reason_multi_session">複数セッションの合意が検証されました (±10 W以内のセッション %1$d 回)。</string>
+    <string name="hrv_consensus_reason_insufficient_sessions">高信頼度のガイド付きテスト、または30日以内に3回以上の一致するセッションが必要です。</string>
+    <string name="hrv_consensus_reason_spread_too_high">最近のセッション推定値の差が±10 Wを超えています。</string>
+    <string name="hrv_zone_comparison_btn_update_power">パワーゾーンを更新</string>
+    <string name="hrv_zone_comparison_dialog_title">パワーゾーン (FTP) の更新</string>
+    <string name="hrv_zone_comparison_dialog_body">設定されたFTPを %1$d W から %2$d W に更新しますか？\n\nプロトコル: %3$s\n補正: %4$s\n\n注意: ランプテストで測定された場合、DFA α1閾値 (HRVT2/RCP) は60分MLSSより3〜5%%高く出ることがあります。</string>
+    <string name="hrv_zone_comparison_dialog_confirm">FTPを更新</string>
+    <string name="hrv_zone_comparison_dialog_cancel">キャンセル</string>
+    <string name="hrv_zone_comparison_forward_mader">代謝モデルを較正</string>
 </resources>

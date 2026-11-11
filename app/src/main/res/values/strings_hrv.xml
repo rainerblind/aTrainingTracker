@@ -187,4 +187,30 @@
     <string name="hrv_test_btn_finish">Finish Test</string>
     <string name="hrv_test_btn_cooldown">Begin Cool-down</string>
     <string name="hrv_test_btn_cancel">Cancel Test</string>
+
+    <!-- Training Zone Comparison & Multi-Session Consensus (ATT-3555 / REQ-PER-037) -->
+    <string name="hrv_zone_comparison_title">Training Zone Comparison</string>
+    <string name="hrv_zone_comparison_subtitle">Comparison against configured Coggan Power &amp; HR Zones</string>
+    <string name="hrv_zone_comparison_power_header">Cycling Power (Coggan)</string>
+    <string name="hrv_zone_comparison_hrvt1_power_delta">HRVT1 vs. Z2 Max (%1$s W)</string>
+    <string name="hrv_zone_comparison_hrvt2_power_delta">HRVT2 vs. FTP (%1$s W)</string>
+    <string name="hrv_zone_comparison_configured_ftp">Configured FTP: %1$d W</string>
+    <string name="hrv_zone_comparison_hr_header">Heart Rate Zones</string>
+    <string name="hrv_zone_comparison_hrvt1_hr_delta">HRVT1 vs. Z2 Max (%1$s bpm)</string>
+    <string name="hrv_zone_comparison_hrvt2_hr_delta">HRVT2 vs. Z4 Max (%1$s bpm)</string>
+    <string name="hrv_zone_comparison_hrvt1_pct_hrmax">HRVT1: %1$d%% HRmax</string>
+    <string name="hrv_zone_comparison_hrvt2_pct_hrmax">HRVT2: %1$d%% HRmax</string>
+    <string name="hrv_zone_comparison_hr_tooltip" formatted="false">Heart Rate zones in Settings are anchored to HRmax. In trained athletes, aerobic threshold HRVT1 typically occurs at 75–82% HRmax. Submaximal HRV thresholds do not observe HRmax and cannot overwrite HR zones.</string>
+    <string name="hrv_consensus_badge_unlocked">Consensus Unlocked</string>
+    <string name="hrv_consensus_badge_locked">Consensus Locked</string>
+    <string name="hrv_consensus_reason_guided_high">High-confidence guided test protocol verified.</string>
+    <string name="hrv_consensus_reason_multi_session">Multi-session consensus verified (%1$d sessions within ±10 W).</string>
+    <string name="hrv_consensus_reason_insufficient_sessions">Requires a High-Confidence Guided Test or ≥3 consistent sessions within 30 days.</string>
+    <string name="hrv_consensus_reason_spread_too_high">Recent session estimates vary by more than ±10 W.</string>
+    <string name="hrv_zone_comparison_btn_update_power">Update Power Zones</string>
+    <string name="hrv_zone_comparison_dialog_title">Update Power Zones (FTP)</string>
+    <string name="hrv_zone_comparison_dialog_body">Update configured FTP from %1$d W to %2$d W?\n\nProtocol: %3$s\nAdjustment: %4$s\n\nCaution: DFA α1 threshold (HRVT2/RCP) may sit 3–5%% above 60-minute MLSS if measured during a ramp test.</string>
+    <string name="hrv_zone_comparison_dialog_confirm">Update FTP</string>
+    <string name="hrv_zone_comparison_dialog_cancel">Cancel</string>
+    <string name="hrv_zone_comparison_forward_mader">Calibrate Metabolic Model</string>
 </resources>

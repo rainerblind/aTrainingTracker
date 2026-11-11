@@ -120,6 +120,10 @@ fun WorkoutDetailTabbedContent(
     onGradeZoneDisplayModeChange: (ZoneCardDisplayMode) -> Unit = {},
     hrZoneThresholds: HeartRateZoneThresholds? = null,
     powerZoneThresholds: PowerZoneThresholds? = null,
+    configuredFtp: Int? = null,
+    configuredHrMax: Int? = null,
+    onUpdateFtp: ((Int) -> Unit)? = null,
+    onCalibrateMader: ((Int?, Int?) -> Unit)? = null,
     useStatusBarsPadding: Boolean,
     onClusterClick: ((Long) -> Unit)?,
     onEditWorkout: ((Long) -> Unit)?,
@@ -410,6 +414,12 @@ fun WorkoutDetailTabbedContent(
                                             onSplitLapClick = onSplitLapClick,
                                             onMoveBoundaryClick = onMoveBoundaryClick,
                                             onLapClick = onLapClick,
+                                            hrZoneThresholds = hrZoneThresholds,
+                                            powerZoneThresholds = powerZoneThresholds,
+                                            configuredFtp = configuredFtp,
+                                            configuredHrMax = configuredHrMax,
+                                            onUpdateFtp = onUpdateFtp,
+                                            onCalibrateMader = onCalibrateMader,
                                             onAddPhotos = { uris ->
                                                 coroutineScope.launch {
                                                     uris.forEach { uri ->
@@ -493,6 +503,12 @@ fun WorkoutDetailTabbedContent(
                                                 onSplitLapClick = onSplitLapClick,
                                                 onMoveBoundaryClick = onMoveBoundaryClick,
                                                 onLapClick = onLapClick,
+                                                hrZoneThresholds = hrZoneThresholds,
+                                                powerZoneThresholds = powerZoneThresholds,
+                                                configuredFtp = configuredFtp,
+                                                configuredHrMax = configuredHrMax,
+                                                onUpdateFtp = onUpdateFtp,
+                                                onCalibrateMader = onCalibrateMader,
                                                 onAddPhotos = { uris ->
                                                     coroutineScope.launch {
                                                         uris.forEach { uri ->
@@ -549,6 +565,12 @@ fun WorkoutDetailTabbedContent(
                                     onSplitLapClick = onSplitLapClick,
                                     onMoveBoundaryClick = onMoveBoundaryClick,
                                     onLapClick = onLapClick,
+                                    hrZoneThresholds = hrZoneThresholds,
+                                    powerZoneThresholds = powerZoneThresholds,
+                                    configuredFtp = configuredFtp,
+                                    configuredHrMax = configuredHrMax,
+                                    onUpdateFtp = onUpdateFtp,
+                                    onCalibrateMader = onCalibrateMader,
                                     onAddPhotos = { uris ->
                                         coroutineScope.launch {
                                             uris.forEach { uri ->
@@ -787,6 +809,12 @@ private fun RenderWorkoutDetailCardSections(
     onHrZoneDisplayModeChange: (ZoneCardDisplayMode) -> Unit,
     onPowerZoneDisplayModeChange: (ZoneCardDisplayMode) -> Unit,
     onGradeZoneDisplayModeChange: (ZoneCardDisplayMode) -> Unit = {},
+    hrZoneThresholds: HeartRateZoneThresholds? = null,
+    powerZoneThresholds: PowerZoneThresholds? = null,
+    configuredFtp: Int? = null,
+    configuredHrMax: Int? = null,
+    onUpdateFtp: ((Int) -> Unit)? = null,
+    onCalibrateMader: ((Int?, Int?) -> Unit)? = null,
     activeScrubPath: List<com.atrainingtracker.trainingtracker.ui.map.PathPoint>? = null,
     photos: List<WorkoutPhotoEntry> = emptyList(),
     onPhotoClick: ((WorkoutPhotoEntry) -> Unit)? = null,
@@ -875,10 +903,17 @@ private fun RenderWorkoutDetailCardSections(
                             .fillMaxWidth()
                             .padding(horizontal = 16.dp, vertical = 4.dp)
                     )
+                    val resolvedFtp = configuredFtp ?: powerZoneThresholds?.let { kotlin.math.round(it.z2Max / 0.75).toInt() }
+                    val resolvedHrMax = configuredHrMax ?: hrZoneThresholds?.let { kotlin.math.round(it.z2Max / 0.69).toInt() }
                     HrvThresholdSummaryCard(
                         points = activeScrubPath ?: emptyList(),
                         dfaA1ThresholdT1 = tuningConfig.dfaA1ThresholdT1,
                         dfaA1ThresholdT2 = tuningConfig.dfaA1ThresholdT2,
+                        configuredFtp = resolvedFtp,
+                        configuredHrMax = resolvedHrMax,
+                        hrZoneThresholds = hrZoneThresholds,
+                        onUpdateFtp = onUpdateFtp,
+                        onCalibrateMader = onCalibrateMader,
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 16.dp, vertical = 4.dp)

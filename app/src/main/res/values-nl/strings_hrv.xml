@@ -187,4 +187,30 @@
     <string name="hrv_test_btn_finish">Test voltooien</string>
     <string name="hrv_test_btn_cooldown">Start cooling-down</string>
     <string name="hrv_test_btn_cancel">Test annuleren</string>
+
+    <!-- Training Zone Comparison & Multi-Session Consensus (ATT-3555 / REQ-PER-037) -->
+    <string name="hrv_zone_comparison_title">Trainingszones vergelijken</string>
+    <string name="hrv_zone_comparison_subtitle">Vergelijking met geconfigureerde Coggan-vermogens- &amp; HF-zones</string>
+    <string name="hrv_zone_comparison_power_header">Fietsvermogen (Coggan)</string>
+    <string name="hrv_zone_comparison_hrvt1_power_delta">HRVT1 vs. Z2 Max (%1$s W)</string>
+    <string name="hrv_zone_comparison_hrvt2_power_delta">HRVT2 vs. FTP (%1$s W)</string>
+    <string name="hrv_zone_comparison_configured_ftp">Geconfigureerde FTP: %1$d W</string>
+    <string name="hrv_zone_comparison_hr_header">Hartslagzones</string>
+    <string name="hrv_zone_comparison_hrvt1_hr_delta">HRVT1 vs. Z2 Max (%1$s bpm)</string>
+    <string name="hrv_zone_comparison_hrvt2_hr_delta">HRVT2 vs. Z4 Max (%1$s bpm)</string>
+    <string name="hrv_zone_comparison_hrvt1_pct_hrmax">HRVT1: %1$d%% HFmax</string>
+    <string name="hrv_zone_comparison_hrvt2_pct_hrmax">HRVT2: %1$d%% HFmax</string>
+    <string name="hrv_zone_comparison_hr_tooltip" formatted="false">Hartslagzones in Instellingen zijn verankerd aan HFmax. Bij getrainde atleten ligt de aerobe drempel HRVT1 typisch rond 75–82% HFmax. Submaximale HRV-drempels observeren HFmax niet en kunnen hartslagzones niet overschrijven.</string>
+    <string name="hrv_consensus_badge_unlocked">Consensus ontgrendeld</string>
+    <string name="hrv_consensus_badge_locked">Consensus vergrendeld</string>
+    <string name="hrv_consensus_reason_guided_high">Begeleid testprotocol met hoge betrouwbaarheid geverifieerd.</string>
+    <string name="hrv_consensus_reason_multi_session">Multisessie-consensus geverifieerd (%1$d sessies binnen ±10 W).</string>
+    <string name="hrv_consensus_reason_insufficient_sessions">Vereist een begeleide test met hoge betrouwbaarheid of ≥3 consistente sessies binnen 30 dagen.</string>
+    <string name="hrv_consensus_reason_spread_too_high">Recente sessieschattingen wijken meer dan ±10 W af.</string>
+    <string name="hrv_zone_comparison_btn_update_power">Vermogenszones bijwerken</string>
+    <string name="hrv_zone_comparison_dialog_title">Vermogenszones bijwerken (FTP)</string>
+    <string name="hrv_zone_comparison_dialog_body">Geconfigureerde FTP bijwerken van %1$d W naar %2$d W?\n\nProtocol: %3$s\nAanpassing: %4$s\n\nLet op: De DFA α1-drempel (HRVT2/RCP) kan 3–5%% boven de 60-minuten MLSS liggen bij een ramptest.</string>
+    <string name="hrv_zone_comparison_dialog_confirm">FTP bijwerken</string>
+    <string name="hrv_zone_comparison_dialog_cancel">Annuleren</string>
+    <string name="hrv_zone_comparison_forward_mader">Metabool model kalibreren</string>
 </resources>

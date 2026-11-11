@@ -3,7 +3,7 @@
 **Domain**: `aftermath_periods`  
 **Prefixes**: `PER`, `PERF`  
 **Scope**: Post-workout analytics, period statistics, zone distributions, graphs and visual scrubbers.  
-**Total Tests**: 43
+**Total Tests**: 44
 
 ---
 
@@ -748,3 +748,33 @@
 
 
 
+
+### TST-PER-045: **HRV Threshold Training Zone Comparison, Consensus Gating & Power Zone Update Suite** [Verified]
+- **Requirement(s)**: `REQ-PER-037` (`REQ-PER-037.1`..`REQ-PER-037.6`)
+- **Component**: `HrvZoneComparisonMathTest.kt`, `HrvThresholdSummaryCardTest.kt`, `TranslationParityTest`
+- **Jira**: `ATT-3555`
+- **Test Description**:
+  1. *Power Zone Delta & Ceiling Calculation Test (`TST-PER-045.1`, `HrvZoneComparisonMathTest.kt`)*:
+  • Verify `HrvZoneComparisonMath` computes $\Delta P_{\text{T1}} = P_{\text{HRVT1,ss}} - z2Max$ where $z2Max = \text{round}(0.75 \times FTP)$.
+  • Verify $\Delta P_{\text{T2}} = P_{\text{HRVT2,ss}} - FTP$ against configured Functional Threshold Power.
+  • Verify delta fields evaluate to `null` gracefully when threshold estimates are absent or unestimated (`INSUFFICIENT_SPAN`).
+  2. *Informational Heart Rate Comparison & Non-Overwrite Invariant Test (`TST-PER-045.2`, `HrvZoneComparisonMathTest.kt`)*:
+  • Verify $\Delta \text{HR}_{\text{T1}} = \text{HR}_{\text{HRVT1}} - z2Max$ and $\% HR_{\max} = \text{round}(100 \times \text{HR}_{\text{HRVT1}} / HR_{\max})$ calculation.
+  • Verify $\Delta \text{HR}_{\text{T2}} = \text{HR}_{\text{HRVT2}} - z4Max$ and $\% HR_{\max}$ calculation.
+  • Verify heart rate comparisons produce zero mutations or suggestions to overwrite $HR_{\max}$ or configured HR zones.
+  3. *Multi-Session Consensus & Guided Test Gating Logic Test (`TST-PER-045.3`, `HrvZoneComparisonMathTest.kt`)*:
+  • Verify consensus gate unlocks (`ConsensusGateStatus.UNLOCKED`) when session protocol is `GUIDED_STEP` or `GUIDED_RAMP` with `Confidence.HIGH`.
+  • Verify consensus gate unlocks when $M \ge 3$ recent sessions (within 30 days) with `HIGH` or `MEDIUM` confidence have $HRVT_2$ power values within $\pm 10\text{ W}$ ($\max(P) - \min(P) \le 10\text{ W}$).
+  • Verify consensus gate locks (`ConsensusGateStatus.LOCKED`) for single free workouts, sessions with `Confidence.LOW`, sessions $> 30$ days old, or sessions with spread $> 10\text{ W}$.
+  4. *Median FTP Consensus Aggregation Test (`TST-PER-045.4`, `HrvZoneComparisonMathTest.kt`)*:
+  • Verify suggested FTP is computed as the statistical median of qualifying sessions (e.g. median of $\{278\text{ W}, 280\text{ W}, 284\text{ W}\} = 280\text{ W}$).
+  5. *UI Rendering of Zone Comparison Section & Delta Badges (`TST-PER-045.5`, `HrvThresholdSummaryCardTest.kt`)*:
+  • Verify `HrvThresholdSummaryCard` renders Training Zone Comparison section when configured zones exist.
+  • Verify power and HR delta chips display formatted $+/-$ deltas and $\% HR_{\max}$ values.
+  • Verify "Update Power Zones" button is enabled when unlocked and disabled with explanatory lock reason when locked.
+  6. *Confirmation Dialog & SettingsDataStore FTP Update Test (`TST-PER-045.6`, `HrvThresholdSummaryCardTest.kt`)*:
+  • Verify clicking "Update Power Zones" launches confirmation dialog displaying target FTP, protocol provenance, ramp slope & MRT adjustment, and MLSS warning.
+  • Verify confirming updates `SettingsDataStore.setFtp` and triggers Coggan power zone recalculation while leaving HR zones untouched.
+  7. *9-Language Localization Parity Test (`TST-PER-045.7`, `TranslationParityTest`)*:
+  • Verify all 18 zone comparison and consensus gating string keys exist with 100% parity across all 9 `strings_hrv.xml` files.
+ (ATT-3555: [Verbesserung] Compare estimated HRVT1/HRVT2 against configured training zones with multi-session consensus and anchor-based updates (ZoneCalculationMath))

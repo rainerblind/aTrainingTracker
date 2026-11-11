@@ -32,16 +32,21 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Timeline
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.WarningAmber
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -58,18 +63,24 @@ import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.sensor.formater.PaceFormatter
 import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDefaults
+import com.atrainingtracker.trainingtracker.ui.aftermath.zones.HeartRateZoneThresholds
 import com.atrainingtracker.trainingtracker.ui.components.MetricItem
 import com.atrainingtracker.trainingtracker.ui.components.MetricLayout
 import com.atrainingtracker.trainingtracker.ui.map.PathPoint
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 import com.atrainingtracker.trainingtracker.ui.theme.TTColor
+import com.atrainingtracker.trainingtracker.zones.ConsensusGateStatus
+import com.atrainingtracker.trainingtracker.zones.HrvSessionThreshold
+import com.atrainingtracker.trainingtracker.zones.HrvZoneComparisonMath
 import com.google.android.gms.maps.model.LatLng
 import java.util.Locale
+import kotlin.math.roundToInt
 
 /**
  * Workout Details card displaying lag-aligned, confidence-gated physiological thresholds
  * (HRVT1 aerobic, HRVT2 anaerobic) derived from centered post-workout DFA alpha 1 telemetry
- * pursuant to REQ-PER-036, Rule 23, and Rule 81.
+ * and comparing them against configured Coggan Power and Heart Rate training zones
+ * pursuant to REQ-PER-036, REQ-PER-037, Rule 23, and Rule 81.
  */
 @Composable
 fun HrvThresholdSummaryCard(
@@ -77,6 +88,12 @@ fun HrvThresholdSummaryCard(
     protocolType: HrvProtocolType = HrvProtocolType.FREE_WORKOUT,
     dfaA1ThresholdT1: Float = TuningPreferencesDefaults.DEFAULT_DFA_A1_THRESHOLD_T1,
     dfaA1ThresholdT2: Float = TuningPreferencesDefaults.DEFAULT_DFA_A1_THRESHOLD_T2,
+    configuredFtp: Int? = null,
+    configuredHrMax: Int? = null,
+    hrZoneThresholds: HeartRateZoneThresholds? = null,
+    recentSessions: List<HrvSessionThreshold> = emptyList(),
+    onUpdateFtp: ((newFtp: Int) -> Unit)? = null,
+    onCalibrateMader: ((pT1: Int?, pT2: Int?) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     // Graceful omission for workouts without valid HRV data (REQ-PER-036.6)
@@ -124,6 +141,61 @@ fun HrvThresholdSummaryCard(
             dfaA1ThresholdT2 = dfaA1ThresholdT2.toDouble()
         )
     }
+
+    // Power thresholds evaluation for Zone Comparison
+    val powerEstimate = remember(points, protocolType, dfaA1ThresholdT1, dfaA1ThresholdT2, hasPower) {
+        if (hasPower) {
+            if (effectiveMode == HrvScatterIntensityMode.POWER) estimate else {
+                HrvThresholdEstimator.estimateThresholds(
+                    points = points,
+                    mode = HrvScatterIntensityMode.POWER,
+                    protocolType = protocolType,
+                    dfaA1ThresholdT1 = dfaA1ThresholdT1.toDouble(),
+                    dfaA1ThresholdT2 = dfaA1ThresholdT2.toDouble()
+                )
+            }
+        } else null
+    }
+
+    // Heart rate thresholds evaluation for Zone Comparison
+    val hrEstimate = remember(points, protocolType, dfaA1ThresholdT1, dfaA1ThresholdT2, hasHr) {
+        if (hasHr) {
+            if (effectiveMode == HrvScatterIntensityMode.HEART_RATE) estimate else {
+                HrvThresholdEstimator.estimateThresholds(
+                    points = points,
+                    mode = HrvScatterIntensityMode.HEART_RATE,
+                    protocolType = protocolType,
+                    dfaA1ThresholdT1 = dfaA1ThresholdT1.toDouble(),
+                    dfaA1ThresholdT2 = dfaA1ThresholdT2.toDouble()
+                )
+            }
+        } else null
+    }
+
+    val comparison = remember(
+        powerEstimate,
+        hrEstimate,
+        configuredFtp,
+        configuredHrMax,
+        hrZoneThresholds,
+        recentSessions,
+        protocolType
+    ) {
+        HrvZoneComparisonMath.computeComparison(
+            hrvt1Watts = powerEstimate?.hrvt1?.intensity,
+            hrvt2Watts = powerEstimate?.hrvt2?.intensity,
+            configuredFtp = configuredFtp,
+            hrvt1Bpm = hrEstimate?.hrvt1?.intensity,
+            hrvt2Bpm = hrEstimate?.hrvt2?.intensity,
+            configuredHrMax = configuredHrMax,
+            hrZoneThresholds = hrZoneThresholds,
+            currentProtocol = protocolType,
+            currentConfidence = powerEstimate?.overallConfidence ?: estimate.overallConfidence,
+            recentSessions = recentSessions
+        )
+    }
+
+    var showConfirmDialog by rememberSaveable { mutableStateOf(false) }
 
     val paceFormatter = remember { PaceFormatter() }
 
@@ -373,7 +445,314 @@ fun HrvThresholdSummaryCard(
                     color = MaterialTheme.colorScheme.outline
                 )
             }
+
+            // Training Zone Comparison & Multi-Session Consensus Section (REQ-PER-037)
+            val hasZoneData = (configuredFtp != null && configuredFtp > 0) || (configuredHrMax != null && configuredHrMax > 0)
+            if (hasZoneData) {
+                HorizontalDivider()
+
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("hrv_zone_comparison_section"),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    // Section Title Row
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Tune,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = stringResource(R.string.hrv_zone_comparison_title),
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = stringResource(R.string.hrv_zone_comparison_subtitle),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+
+                    // Power Zone Delta Comparison
+                    if (configuredFtp != null && configuredFtp > 0) {
+                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = stringResource(R.string.hrv_zone_comparison_power_header),
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                                Text(
+                                    text = stringResource(R.string.hrv_zone_comparison_configured_ftp, configuredFtp),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                comparison.powerT1Delta?.let { delta ->
+                                    val sign = if (delta.deltaWatts >= 0) "+${delta.deltaWatts}" else "${delta.deltaWatts}"
+                                    Surface(
+                                        shape = RoundedCornerShape(6.dp),
+                                        color = MaterialTheme.colorScheme.surfaceVariant,
+                                        modifier = Modifier.testTag("hrv_power_delta_t1")
+                                    ) {
+                                        Text(
+                                            text = stringResource(R.string.hrv_zone_comparison_hrvt1_power_delta, sign),
+                                            style = MaterialTheme.typography.labelSmall,
+                                            fontWeight = FontWeight.Medium,
+                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                        )
+                                    }
+                                }
+                                comparison.powerT2Delta?.let { delta ->
+                                    val sign = if (delta.deltaWatts >= 0) "+${delta.deltaWatts}" else "${delta.deltaWatts}"
+                                    Surface(
+                                        shape = RoundedCornerShape(6.dp),
+                                        color = MaterialTheme.colorScheme.surfaceVariant,
+                                        modifier = Modifier.testTag("hrv_power_delta_t2")
+                                    ) {
+                                        Text(
+                                            text = stringResource(R.string.hrv_zone_comparison_hrvt2_power_delta, sign),
+                                            style = MaterialTheme.typography.labelSmall,
+                                            fontWeight = FontWeight.Medium,
+                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // Heart Rate Zone Informational Comparison
+                    if (configuredHrMax != null && configuredHrMax > 0) {
+                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Text(
+                                text = stringResource(R.string.hrv_zone_comparison_hr_header),
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                comparison.hrT1Delta?.let { delta ->
+                                    val sign = if (delta.deltaBpm >= 0) "+${delta.deltaBpm}" else "${delta.deltaBpm}"
+                                    Surface(
+                                        shape = RoundedCornerShape(6.dp),
+                                        color = MaterialTheme.colorScheme.surfaceVariant,
+                                        modifier = Modifier.testTag("hrv_hr_delta_t1")
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                        ) {
+                                            Text(
+                                                text = stringResource(R.string.hrv_zone_comparison_hrvt1_hr_delta, sign),
+                                                style = MaterialTheme.typography.labelSmall,
+                                                fontWeight = FontWeight.Medium
+                                            )
+                                            Text(
+                                                text = "(${stringResource(R.string.hrv_zone_comparison_hrvt1_pct_hrmax, delta.percentHrMax.roundToInt())})",
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        }
+                                    }
+                                }
+                                comparison.hrT2Delta?.let { delta ->
+                                    val sign = if (delta.deltaBpm >= 0) "+${delta.deltaBpm}" else "${delta.deltaBpm}"
+                                    Surface(
+                                        shape = RoundedCornerShape(6.dp),
+                                        color = MaterialTheme.colorScheme.surfaceVariant,
+                                        modifier = Modifier.testTag("hrv_hr_delta_t2")
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                        ) {
+                                            Text(
+                                                text = stringResource(R.string.hrv_zone_comparison_hrvt2_hr_delta, sign),
+                                                style = MaterialTheme.typography.labelSmall,
+                                                fontWeight = FontWeight.Medium
+                                            )
+                                            Text(
+                                                text = "(${stringResource(R.string.hrv_zone_comparison_hrvt2_pct_hrmax, delta.percentHrMax.roundToInt())})",
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+
+                            // Tooltip for HR informational invariant
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(top = 2.dp),
+                                verticalAlignment = Alignment.Top,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Info,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(14.dp)
+                                )
+                                Text(
+                                    text = stringResource(R.string.hrv_zone_comparison_hr_tooltip),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+
+                    // Consensus Status Indicator Row
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        val isUnlocked = comparison.consensusGate.status == ConsensusGateStatus.UNLOCKED
+                        val badgeBg = if (isUnlocked) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant
+                        val badgeFg = if (isUnlocked) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
+                        val badgeText = if (isUnlocked) stringResource(R.string.hrv_consensus_badge_unlocked) else stringResource(R.string.hrv_consensus_badge_locked)
+
+                        Surface(
+                            shape = RoundedCornerShape(6.dp),
+                            color = badgeBg,
+                            modifier = Modifier.testTag("hrv_consensus_badge")
+                        ) {
+                            Text(
+                                text = badgeText,
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = badgeFg,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                            )
+                        }
+
+                        val reasonText = if (comparison.consensusGate.reasonParam != null) {
+                            stringResource(comparison.consensusGate.reasonResId, comparison.consensusGate.reasonParam)
+                        } else {
+                            stringResource(comparison.consensusGate.reasonResId)
+                        }
+                        Text(
+                            text = reasonText,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+
+                    // Action Buttons Row
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        val isUnlocked = comparison.consensusGate.status == ConsensusGateStatus.UNLOCKED
+                        val suggestedFtp = comparison.consensusGate.suggestedFtp
+                        Button(
+                            onClick = { showConfirmDialog = true },
+                            enabled = isUnlocked && suggestedFtp != null && onUpdateFtp != null,
+                            modifier = Modifier
+                                .weight(1f)
+                                .testTag("hrv_btn_update_power_zones")
+                        ) {
+                            Text(stringResource(R.string.hrv_zone_comparison_btn_update_power))
+                        }
+
+                        val pT1 = powerEstimate?.hrvt1?.intensity?.roundToInt()
+                        val pT2 = powerEstimate?.hrvt2?.intensity?.roundToInt()
+                        if (onCalibrateMader != null && (pT1 != null || pT2 != null)) {
+                            OutlinedButton(
+                                onClick = { onCalibrateMader(pT1, pT2) },
+                                modifier = Modifier.testTag("hrv_btn_calibrate_mader")
+                            ) {
+                                Text(stringResource(R.string.hrv_zone_comparison_forward_mader))
+                            }
+                        }
+                    }
+                }
+            }
         }
+    }
+
+    // Modal Confirmation Dialog for Updating Power Zones (REQ-PER-037.5)
+    if (showConfirmDialog && comparison.consensusGate.suggestedFtp != null) {
+        val targetFtp = comparison.consensusGate.suggestedFtp
+        val oldFtp = configuredFtp ?: 0
+        val protocolStr = when (protocolType) {
+            HrvProtocolType.GUIDED_STEP -> stringResource(R.string.hrv_test_protocol_step)
+            HrvProtocolType.GUIDED_RAMP -> stringResource(R.string.hrv_test_protocol_ramp)
+            HrvProtocolType.FREE_WORKOUT -> stringResource(R.string.hrv_threshold_provenance_free)
+        }
+        val adjustmentStr = when (protocolType) {
+            HrvProtocolType.GUIDED_RAMP -> "MRT (-45 s)"
+            HrvProtocolType.GUIDED_STEP -> "Step Steady-State"
+            HrvProtocolType.FREE_WORKOUT -> "Consensus Median"
+        }
+
+        AlertDialog(
+            onDismissRequest = { showConfirmDialog = false },
+            title = {
+                Text(stringResource(R.string.hrv_zone_comparison_dialog_title))
+            },
+            text = {
+                Text(
+                    text = stringResource(
+                        R.string.hrv_zone_comparison_dialog_body,
+                        oldFtp,
+                        targetFtp,
+                        protocolStr,
+                        adjustmentStr
+                    )
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        onUpdateFtp?.invoke(targetFtp)
+                        showConfirmDialog = false
+                    },
+                    modifier = Modifier.testTag("hrv_btn_dialog_confirm")
+                ) {
+                    Text(stringResource(R.string.hrv_zone_comparison_dialog_confirm))
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { showConfirmDialog = false },
+                    modifier = Modifier.testTag("hrv_btn_dialog_cancel")
+                ) {
+                    Text(stringResource(R.string.hrv_zone_comparison_dialog_cancel))
+                }
+            },
+            modifier = Modifier.testTag("hrv_power_zone_confirm_dialog")
+        )
     }
 }
 
@@ -405,6 +784,10 @@ private fun HrvThresholdSummaryCardPreview() {
                 hrvArtifactRate = 1.5
             )
         )
-        HrvThresholdSummaryCard(points = dummyPoints)
+        HrvThresholdSummaryCard(
+            points = dummyPoints,
+            configuredFtp = 250,
+            configuredHrMax = 190
+        )
     }
 }
