@@ -18,12 +18,27 @@
 
 package com.atrainingtracker.banalservice.devices.ant_plus.search_new;
 
+import android.content.ComponentName;
 import android.content.Context;
+import android.content.ServiceConnection;
+import android.os.IBinder;
 import android.util.Log;
 
 import com.atrainingtracker.banalservice.BANALService;
 import com.atrainingtracker.banalservice.devices.DeviceType;
 import com.atrainingtracker.banalservice.devices.SearchForNewDevicesInterface;
+import com.atrainingtracker.banalservice.devices.ant_plus.AntChannelHelper;
+import com.dsi.ant.AntService;
+import com.dsi.ant.channel.AntChannel;
+import com.dsi.ant.channel.AntChannelProvider;
+import com.dsi.ant.channel.IAntChannelEventHandler;
+import com.dsi.ant.message.ChannelId;
+import com.dsi.ant.message.ChannelType;
+import com.dsi.ant.message.LibConfig;
+import com.dsi.ant.message.LowPrioritySearchTimeout;
+import com.dsi.ant.message.fromant.BroadcastDataMessage;
+import com.dsi.ant.message.fromant.MessageFromAntType;
+import com.dsi.ant.message.ipc.AntMessageParcel;
 import com.dsi.ant.plugins.antplus.pcc.MultiDeviceSearch;
 import com.dsi.ant.plugins.antplus.pcc.MultiDeviceSearch.RssiSupport;
 import com.dsi.ant.plugins.antplus.pcc.defines.RequestAccessResult;
@@ -46,6 +61,65 @@ public class ANTSearchForNewDevicesEngineMultiDeviceSearch
     protected List<MyANTAsyncSearchDevice> mFoundDevices = new LinkedList<MyANTAsyncSearchDevice>();
     private final IANTAsyncSearchEngineInterface mCallbackInterface;
 
+    protected AntService mRadarAntService;
+    protected AntChannel mRadarAntChannel;
+    protected boolean mIsRadarServiceBound = false;
+
+    private final ServiceConnection mRadarServiceConnection = new ServiceConnection() {
+        @Override
+        public void onServiceConnected(ComponentName name, IBinder service) {
+            try {
+                mRadarAntService = new AntService(service);
+                AntChannelProvider provider = mRadarAntService.getChannelProvider();
+                mRadarAntChannel = AntChannelHelper.acquireAntPlusChannel(mContext, provider);
+                mRadarAntChannel.assign(ChannelType.BIDIRECTIONAL_SLAVE);
+                mRadarAntChannel.setChannelId(new ChannelId(0, AntChannelHelper.BIKE_RADAR_DEVICE_TYPE, 0));
+                mRadarAntChannel.setPeriod(AntChannelHelper.BIKE_RADAR_CHANNEL_PERIOD);
+                mRadarAntChannel.setRfFrequency(AntChannelHelper.BIKE_RADAR_RF_FREQUENCY);
+                mRadarAntChannel.setAdapterWideLibConfig(new LibConfig(true, true, false));
+                mRadarAntChannel.setSearchTimeout(LowPrioritySearchTimeout.TWENTY_FIVE_SECONDS);
+                mRadarAntChannel.setChannelEventHandler(new IAntChannelEventHandler() {
+                    @Override
+                    public void onReceiveMessage(MessageFromAntType messageType, AntMessageParcel messageParcel) {
+                        if (messageType == MessageFromAntType.BROADCAST_DATA || messageType == MessageFromAntType.ACKNOWLEDGED_DATA) {
+                            BroadcastDataMessage msg = new BroadcastDataMessage(messageParcel);
+                            if (msg.hasExtendedData() && msg.getExtendedData().hasChannelId()) {
+                                int deviceNumber = msg.getExtendedData().getChannelId().getDeviceNumber();
+                                if (deviceNumber > 0) {
+                                    mCallbackInterface.onNewDeviceFound(
+                                            DeviceType.BIKE_RADAR,
+                                            deviceNumber,
+                                            "ANT+ Radar " + deviceNumber,
+                                            true,
+                                            null,
+                                            -1
+                                    );
+                                }
+                            }
+                        }
+                    }
+
+                    @Override
+                    public void onChannelDeath() {
+                        mCallbackInterface.onSearchStopped();
+                    }
+                });
+                mRadarAntChannel.open();
+                if (DEBUG) Log.i(TAG, "Wildcard ANT+ Radar scan channel opened");
+            } catch (Exception e) {
+                Log.e(TAG, "Failed to start ANT+ radar async search", e);
+                mCallbackInterface.onSearchStopped();
+            }
+        }
+
+        @Override
+        public void onServiceDisconnected(ComponentName name) {
+            mRadarAntService = null;
+            mRadarAntChannel = null;
+            mCallbackInterface.onSearchStopped();
+        }
+    };
+
     public ANTSearchForNewDevicesEngineMultiDeviceSearch(Context context, DeviceType deviceType, IANTAsyncSearchEngineInterface callbackInterface) {
         mContext = context;
         mDeviceType = deviceType;
@@ -58,6 +132,11 @@ public class ANTSearchForNewDevicesEngineMultiDeviceSearch
 
     @Override
     public void startAsyncSearch() {
+        if (mDeviceType == DeviceType.BIKE_RADAR) {
+            startRadarAsyncSearch();
+            return;
+        }
+
         com.dsi.ant.plugins.antplus.pcc.defines.DeviceType antDeviceType = DeviceType.getAntPluginDeviceType(mDeviceType);
 
         if (antDeviceType == null) {
@@ -70,6 +149,19 @@ public class ANTSearchForNewDevicesEngineMultiDeviceSearch
         mMultiDeviceSearch = new MultiDeviceSearch(mContext, devices, new MyMultiDeviceSearchCallback());
     }
 
+    private void startRadarAsyncSearch() {
+        try {
+            mIsRadarServiceBound = AntService.bindService(mContext, mRadarServiceConnection);
+            if (!mIsRadarServiceBound) {
+                Log.w(TAG, "AntService.bindService returned false for radar search");
+                mCallbackInterface.onSearchStopped();
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error binding AntService for radar search", e);
+            mCallbackInterface.onSearchStopped();
+        }
+    }
+
     @Override
     public void stopAsyncSearch() {
         if (mMultiDeviceSearch != null) {
@@ -79,6 +171,23 @@ public class ANTSearchForNewDevicesEngineMultiDeviceSearch
         for (MyANTAsyncSearchDevice myANTAsyncSearchDevice : mFoundDevices) {
             myANTAsyncSearchDevice.shutDown();
         }
+
+        if (mRadarAntChannel != null) {
+            try {
+                mRadarAntChannel.close();
+                mRadarAntChannel.release();
+            } catch (Exception ignored) {
+            }
+            mRadarAntChannel = null;
+        }
+        if (mIsRadarServiceBound) {
+            try {
+                mContext.unbindService(mRadarServiceConnection);
+            } catch (Exception ignored) {
+            }
+            mIsRadarServiceBound = false;
+        }
+        mRadarAntService = null;
     }
 
     protected void myOnDeviceFound(MultiDeviceSearchResult deviceFound) {
@@ -134,6 +243,9 @@ public class ANTSearchForNewDevicesEngineMultiDeviceSearch
         void onSearchStopped();
 
         void onNewDeviceFound(DeviceType deviceType, MultiDeviceSearchResult mDeviceFound, boolean pairingRecommendation, String manufacturer, int batteryPercentage);
+
+        default void onNewDeviceFound(DeviceType deviceType, int antDeviceNumber, String deviceDisplayName, boolean pairingRecommendation, String manufacturer, int batteryPercentage) {
+        }
     }
 
     protected class MyMultiDeviceSearchCallback implements MultiDeviceSearch.SearchCallbacks {

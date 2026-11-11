@@ -3639,6 +3639,39 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 3. *Root Reason for Existing Formulation*: Rapid initial prototype hardcoded `isStvzo = false` pending physical hardware arrival, placed auto-switch teardown in `onDestroy()` without differentiating Pause from Stop, and reused live quick-switch logic in Settings.
 4. *Preservation of Core Invariants*: StVZO regulatory compliance; non-blocking GATT FIFO queueing; safety illumination during stops; zero MockK crashes in unit tests; 100% 9-language localization parity.
 
+### REQ-CON-032: ANT+ Cycling Rearview Radar Profile (Device Type 0x28) Acquisition & Target Demuxing [Verified]
+- **Tests**: `TST-CON-032` | **Tickets**: `ATT-5084`, `ATT-7108`
+- **Implementation**: `ANTBikeRadarDevice.java`, `ANTSearchForNewDevicesEngineMultiDeviceSearch.java`, `DeviceManager.java`, `DeviceType.java`, `RadarStateRepository.kt`, `RadarState.kt`, `RadarTarget.kt`, `app/build.gradle`
+- **Rationale**: Legacy cycling rearview radars (Garmin Varia RTL500, RTL510) and multiple third-party radars (Sigma RECO 80/81 LINK, Bryton Gardia R300L, Magene L508, Trek CarBack) transmit target telemetry over the standardized ANT+ Bike Radar profile (Device Type 40 / 0x28). Since `antpluginlib_3-9-0.aar` predates Device Type 40 and omits it from PCC drivers and `MultiDeviceSearch`, the system must link low-level `android_antlib_4-16-0.aar`, acquire an ANT slave channel on predefined network slot 1 (`ANT_PLUS`), decode Data Pages 0x30/0x31/0x01/0x50/0x51/0x52, and route demuxed multi-target frames into the unified `RadarStateRepository` and `RadarWindowAggregator` pipeline (ATT-5084, Parent Epic ATT-1286, extending `REQ-CON-001`, `REQ-CON-004`, and `REQ-CON-028`):
+1. *SDK Dependency & Predefined ANT+ Network Channel Acquisition (`REQ-CON-032.1`)*:
+• The application build configuration SHALL link `android_antlib_4-16-0.aar` alongside `antpluginlib_3-9-0.aar`. When initializing an ANT+ radar connection, `ANTBikeRadarDevice` SHALL bind `AntService` and acquire a channel via `AntChannelProvider` on Predefined Network slot 1 (`ANT_PLUS`), avoiding raw network key rejection or RF 57 frequency bounds rejection by `Android_ANTRadioService`.
+2. *Slave Channel Parameters & RF Kinematics (`REQ-CON-032.2`)*:
+• `ANTBikeRadarDevice` SHALL configure the acquired channel with Channel Type `ChannelType.BIDIRECTIONAL_SLAVE`, Device Type `40` (`0x28`), Transmission Type `0` (wildcard pairing or paired transmission type), RF Frequency `57` (2457 MHz), and Channel Period `4084` counts (~8.02 Hz broadcast rate).
+3. *Data Page 0x30 & 0x31 Multi-Target Bit Demuxing (`REQ-CON-032.3`)*:
+• Upon receiving ANT broadcast event frames, `ANTBikeRadarDevice` SHALL unpack multi-target payload pages:
+  - Data Page `0x30`: Targets 1–4 (Target IDs 0–3).
+  - Data Page `0x31`: Targets 5–8 (Target IDs 4–7).
+  For each target index $i \in [0..3]$ within the page, 2-bit Threat Level SHALL be extracted as `(byte1 >> (i * 2)) & 0x03`, 2-bit Threat Side SHALL be extracted as `(byte2 >> (i * 2)) & 0x03`, 6-bit Range SHALL be extracted from bytes 3–5 (`((ranges >> (i * 6)) & 0x3F) * 3.125f` meters, range 0..196.875 m), and 4-bit Closing Speed SHALL be extracted from bytes 6–7 (`((speeds >> (i * 4)) & 0x0F) * 3.04f` m/s, range 0..45.6 m/s). Valid targets (Threat Level > 0 and Range > 0) SHALL be assembled into immutable `RadarTarget` entities and published via `RadarStateRepository.updateState()`.
+4. *Data Page 0x01 System State & Common Pages 0x50/0x51/0x52 Telemetry (`REQ-CON-032.4`)*:
+• `ANTBikeRadarDevice` SHALL decode Data Page `0x01` (Radar System Status: 0 = Normal, 1 = Limited, 2 = Error) and map errors to `RadarThreatLevel.DISCONNECTED_ERROR` when indicated. Common pages `0x50` (Manufacturer ID), `0x51` (Model & HW Revision), and `0x52` (Battery Status & Operating Time) SHALL be decoded to update device metadata and battery status without throwing exceptions on unrecognized sub-pages.
+5. *Wildcard Discovery & Device Pairing Integration (`REQ-CON-032.5`)*:
+• `DeviceType.getRemoteDeviceTypes(Protocol.ANT_PLUS)` SHALL include `DeviceType.BIKE_RADAR`. `ANTSearchForNewDevicesEngineMultiDeviceSearch` SHALL open a wildcard `AntChannel` scan (`DeviceNumber = 0`, `DeviceType = 40`, `TransType = 0`) on Predefined Network slot 1 with `LibConfig` enabled (extended device number and RSSI) when searching for `DeviceType.BIKE_RADAR` or `DeviceType.ALL`, reporting discovered radar peripherals to `DeviceManager`.
+6. *Starvation Watchdog & Hardware Preemption (`REQ-CON-032.6`)*:
+• `ANTBikeRadarDevice` SHALL maintain a 3.5s starvation watchdog timer. If no valid ANT broadcast frame is received within 3.5 seconds, the state SHALL transition to disconnected error (`RadarState.DISCONNECTED_ERROR`), resetting active scalar sensor telemetry to clear state. Reception of valid ANT+ radar frames SHALL call `RadarTrafficSimulator.onPhysicalHardwareConnected()` to preempt any active simulation.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* `android_antlib_4-16-0.aar` linked and an ANT+-capable device,
+• *When* the user pairs and connects an ANT+ bike radar unit (Device Type 40),
+• *Then* `ANTBikeRadarDevice` acquires an `AntChannel` on Predefined Network slot 1 with RF 57 and period 4084 counts without service exceptions.
+• *Given* raw ANT+ broadcast payloads for Page 0x30 (Targets 1–4) and Page 0x31 (Targets 5–8),
+• *When* decoded by `ANTBikeRadarDevice`,
+• *Then* target ranges (scaled by 3.125 m), closing speeds (scaled by 3.04 m/s), threat levels, and threat sides for up to 8 targets are unpacked accurately into `RadarTarget` records and emitted to `RadarStateRepository`.
+• *Given* an active ANT+ radar connection,
+• *When* broadcast packets cease for $\ge 3.5\text{ s}$,
+• *Then* the system transitions to disconnected state and clears active threat overlays.
+
+**Invariants**: Predefined Network Slot 1 isolation; coexistence with legacy `antpluginlib_3-9-0.aar` PCC devices (HR, Speed, Cadence, Power); non-blocking background AIDL message handling; fail-safe 3.5s disconnect watchdog; zero SQLite schema migrations; 100% test pass rate.
+
 ### REQ-TRK-064: 1-Tap Radar Audio Snooze, Peloton-Mode Audio Sync & Smart Urban Alert Suppression [Verified]
 - **Tests**: `TST-TRK-064` | **Tickets**: `ATT-5119`, `ATT-6708`
 - **Implementation**: `RadarSnoozeController.kt`, `RadarAlertManager.kt`, `RadarEdgeOverlay.kt`, `RadarLightQuickSwitchSheet.kt`, `RadarState.kt`, `RadarStateRepository.kt`, `BTLERadarDevice.java`, `TuningPreferencesDataStore.kt`, `RadarSettingsSection.kt`, `strings_radar.xml`

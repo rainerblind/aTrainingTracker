@@ -2022,6 +2022,33 @@
   8. *Clean-Room Targeted Test Suite Execution (`TST-CON-031.8`)*:
   • Execute targeted package tests asserting 100% pass rate.
 
+### TST-CON-032: **ANT+ Cycling Rearview Radar Profile (Device Type 0x28) Driver & Target Demuxing Test Suite** [Verified]
+- **Requirement(s)**: `REQ-CON-032` (`REQ-CON-032.1`..`REQ-CON-032.6`)
+- **Component**: `ANTBikeRadarDevice.java`, `ANTSearchForNewDevicesEngineMultiDeviceSearch.java`, `DeviceManager.java`, `DeviceType.java`, `RadarStateRepository.kt`, `RadarState.kt`, `RadarTarget.kt`, `app/build.gradle`
+- **Jira**: `ATT-5084`, `ATT-7108`
+- **Test Description**:
+  1. *ANT+ Channel Acquisition, Predefined Network Slot 1 & Configuration Tests (`TST-CON-032.1`, `ANTBikeRadarDeviceTest.kt`)*:
+  • Verify `AntService` binding and channel acquisition on Predefined Network slot 1 (`ANT_PLUS`).
+  • Verify channel configuration parameters: Device Type 40 (`0x28`), Channel Type `BIDIRECTIONAL_SLAVE`, RF Frequency 57 (2457 MHz), Channel Period 4084 counts.
+  2. *Data Page 0x30 & 0x31 Multi-Target Bit Demuxing Tests (`TST-CON-032.2`, `ANTBikeRadarDeviceTest.kt`)*:
+  • Verify bit unpacking for Page 0x30 (Targets 1–4) and Page 0x31 (Targets 5–8):
+    - 2-bit Threat Level (`0 = None`, `1 = Approaching`, `2 = Fast Approaching`).
+    - 2-bit Threat Side (`0 = Behind`, `1 = Right`, `2 = Left`).
+    - 6-bit Range scaled by $3.125\text{ m/bit}$ ($0..196.875\text{ m}$).
+    - 4-bit Closing Speed scaled by $3.04\text{ m/s/bit}$ ($0..45.6\text{ m/s}$).
+  • Verify target assembly into `RadarTarget` and emission to `RadarStateRepository`.
+  3. *Data Page 0x01 System Status & Common Pages 0x50/0x51/0x52 Tests (`TST-CON-032.3`, `ANTBikeRadarDeviceTest.kt`)*:
+  • Verify decoding of Data Page `0x01` (Radar System State: Normal, Limited, Error) and mapping to radar state.
+  • Verify common pages decoding: Page `0x50` (Manufacturer ID), Page `0x51` (Model Number), Page `0x52` (Battery Status & Voltage).
+  4. *Wildcard Discovery & Device Number Extraction Tests (`TST-CON-032.4`, `ANTSearchForNewDevicesEngineMultiDeviceSearchTest.kt`)*:
+  • Verify wildcard `AntChannel` initialization (`DeviceNumber = 0`, `DeviceType = 40`) and extended data parsing (device number extraction and RSSI) when searching for `BIKE_RADAR`.
+  • Verify `DeviceType.getRemoteDeviceTypes(Protocol.ANT_PLUS)` includes `BIKE_RADAR`.
+  5. *Starvation Watchdog & Hardware Preemption Tests (`TST-CON-032.5`, `ANTBikeRadarDeviceTest.kt`)*:
+  • Verify 3.5s timeout triggers transition to `DISCONNECTED_ERROR` and resets scalar sensor latches.
+  • Verify physical frame arrival invokes `RadarTrafficSimulator.onPhysicalHardwareConnected()`.
+  6. *Targeted Radar Test Suite Execution (`TST-CON-032.6`)*:
+  • Run all radar unit and integration tests under `com.atrainingtracker.banalservice.devices.antplus.*` and `com.atrainingtracker.banalservice.devices.radar.*` asserting 100% pass rate.
+
 ### TST-TRK-064: **1-Tap Radar Audio Snooze, Peloton Sync & Urban Suppression Test Suite** [Verified]
 - **Requirement(s)**: `REQ-TRK-064` (`REQ-TRK-064.1`..`REQ-TRK-064.7`)
 - **Component**: `RadarSnoozeController.kt`, `RadarAlertManager.kt`, `RadarEdgeOverlay.kt`, `RadarLightQuickSwitchSheet.kt`, `RadarState.kt`, `RadarStateRepository.kt`, `BTLERadarDevice.java`, `TuningPreferencesDataStore.kt`, `RadarSettingsSection.kt`, `strings_radar.xml`

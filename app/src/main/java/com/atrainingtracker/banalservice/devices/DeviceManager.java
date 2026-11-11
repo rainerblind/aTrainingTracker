@@ -199,8 +199,13 @@ public class DeviceManager {
         }
 
         public void onNewDeviceFound(DeviceType deviceType, MultiDeviceSearch.MultiDeviceSearchResult deviceFound, boolean pairingRecommendation, String manufacturer, int batteryPercentage) {
+            onNewDeviceFound(deviceType, deviceFound.getAntDeviceNumber(), deviceFound.getDeviceDisplayName(), pairingRecommendation, manufacturer, batteryPercentage);
+        }
+
+        @Override
+        public void onNewDeviceFound(DeviceType deviceType, int antDeviceNumber, String deviceDisplayName, boolean pairingRecommendation, String manufacturer, int batteryPercentage) {
             if (DEBUG)
-                Log.d(TAG, "onNewANTDeviceFound: " + deviceType.name() + ", Ant Nr:" + deviceFound.getAntDeviceNumber());
+                Log.d(TAG, "onNewANTDeviceFound: " + deviceType.name() + ", Ant Nr:" + antDeviceNumber);
 
             long deviceId = -1;
             boolean isNew = false;
@@ -208,16 +213,16 @@ public class DeviceManager {
 
             synchronized (mDeviceDbLock) {
                 isWorkoutActive = (TrainingApplication.getTrackingMode() == TrackingMode.TRACKING);
-                if (!mDeviceDataRepository.isANTDeviceInDB(deviceType, deviceFound.getAntDeviceNumber())) { // not yet known
+                if (!mDeviceDataRepository.isANTDeviceInDB(deviceType, antDeviceNumber)) { // not yet known
                     if (DEBUG)
                         Log.d(TAG, "device is not yet in the database, so we have to add it to the database");
 
-                    deviceId = mDeviceDataRepository.insertNewAntDeviceIntoDB(deviceType, deviceFound.getDeviceDisplayName(), deviceFound.getAntDeviceNumber(), true, manufacturer, batteryPercentage);
+                    deviceId = mDeviceDataRepository.insertNewAntDeviceIntoDB(deviceType, deviceDisplayName, antDeviceNumber, true, manufacturer, batteryPercentage);
                     isNew = true;
                 } else {
                     if (DEBUG)
                         Log.i(TAG, "Device already in database, so we do not add it to the database");
-                    deviceId = mDeviceDataRepository.getDeviceId(deviceType, deviceFound.getAntDeviceNumber());
+                    deviceId = mDeviceDataRepository.getDeviceId(deviceType, antDeviceNumber);
 
                     if (manufacturer != null) {
                         if (DEBUG) Log.i(TAG, "wow, we got a manufacturer: " + manufacturer);
@@ -233,7 +238,7 @@ public class DeviceManager {
                 if (deviceId > 0) {
                     mNewlyFoundDevices.add(deviceId);
                 } else {
-                    Log.w(TAG, "Failed to insert or locate ANT device in DB: " + deviceFound.getAntDeviceNumber());
+                    Log.w(TAG, "Failed to insert or locate ANT device in DB: " + antDeviceNumber);
                 }
             }
 
@@ -994,6 +999,7 @@ public class DeviceManager {
         }
 
         MyANTDevice myANTDevice = null;
+        MyRemoteDevice myRemoteDevice = null;
 
         switch (deviceType) {
             case HRM:
@@ -1028,28 +1034,33 @@ public class DeviceManager {
                 if (DEBUG) Log.d(TAG, "create new ENVIRONMENT device");
                 myANTDevice = new ANTEnvironmentDevice(mContext, mSensorManager, deviceID, antDeviceNumber);
                 break;
+            case BIKE_RADAR:
+                if (DEBUG) Log.d(TAG, "create new BIKE RADAR device");
+                myRemoteDevice = new com.atrainingtracker.banalservice.devices.ant_plus.ANTBikeRadarDevice(mContext, mSensorManager, deviceID, antDeviceNumber);
+                break;
             default:
                 if (DEBUG) Log.d(TAG, "ANT device not supported");
         }
 
-        if (myANTDevice != null) {
-            if (myANTDevice instanceof RrBeatSource) {
+        MyRemoteDevice deviceToRegister = myANTDevice != null ? myANTDevice : myRemoteDevice;
+        if (deviceToRegister != null) {
+            if (deviceToRegister instanceof RrBeatSource) {
                 if (mHrvMetricsDevice != null) {
-                    ((RrBeatSource) myANTDevice).addRrBeatListener(mHrvMetricsDevice);
+                    ((RrBeatSource) deviceToRegister).addRrBeatListener(mHrvMetricsDevice);
                 }
                 for (RrBeatListener listener : mRrBeatListeners) {
-                    ((RrBeatSource) myANTDevice).addRrBeatListener(listener);
+                    ((RrBeatSource) deviceToRegister).addRrBeatListener(listener);
                 }
             }
-            MyRemoteDevice existing = mMyRemoteDevices.putIfAbsent(deviceID, myANTDevice);
+            MyRemoteDevice existing = mMyRemoteDevices.putIfAbsent(deviceID, deviceToRegister);
             if (existing != null) {
-                myANTDevice.shutDown();
+                deviceToRegister.shutDown();
                 return null;
             }
-            mSearchQueue.addFirst(myANTDevice);
+            mSearchQueue.addFirst(deviceToRegister);
         }
 
-        return myANTDevice;
+        return deviceToRegister;
     }
 
     public MyRemoteDevice createNewBluetoothLEDevice(long deviceID, DeviceType deviceType, String address) {

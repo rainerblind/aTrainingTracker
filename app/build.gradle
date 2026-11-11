@@ -202,6 +202,7 @@ dependencies {
     // --- Legacy & Hardware SDKs ---
     implementation 'com.getpebble:pebblekit:4.0.1'
     implementation files('../ANT-Android-SDKs/ANT+_Android_SDK/API/antpluginlib_3-9-0.aar')
+    implementation files('../ANT-Android-SDKs/ANT_Android_SDK/API/android_antlib_4-16-0.aar')
 
     // --- AndroidX Core & Lifecycle ---
     // ATT-1037: Pinned to 1.15.0 to prevent NoSuchMethodError on Android 14 (API 34).
