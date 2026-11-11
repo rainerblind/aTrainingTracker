@@ -18,13 +18,14 @@
 
 package com.atrainingtracker.trainingtracker.ui.settings.tuning
 
+import com.atrainingtracker.testing.LocalizationTestCache
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
+import org.junit.Assert.assertNotNull
 import org.junit.Test
-import java.io.File
 
 /**
  * Localization parity tests for the Zone Card Display Mode setting title across all 9 supported locales (TST-UI-335.11, REQ-UI-372.8).
+ * Refactored to LocalizationTestCache per docs/coding_standards.md §5.4 and REQ-PRO-049.
  */
 class ZoneCardDisplayModeLocalizationTest {
 
@@ -40,32 +41,12 @@ class ZoneCardDisplayModeLocalizationTest {
         "values-pt" to "Modo de exibição dos cartões de zonas"
     )
 
-    private fun findResDirectory(): File {
-        val candidates = listOf(
-            File("app/src/main/res"),
-            File("src/main/res"),
-            File("../app/src/main/res")
-        )
-        return candidates.firstOrNull { it.exists() && it.isDirectory }
-            ?: error("res directory not found in candidates: $candidates")
-    }
-
     @Test
     fun testZoneCardDisplayModeTitlePresentInAllNineLocales() {
-        val resDir = findResDirectory()
-        val regex = Regex("""<string\s+name="settings_zone_card_display_mode_title">(.*?)</string>""")
-
         for ((folder, expectedText) in expectedTranslations) {
-            val stringsFile = File(resDir, "$folder/strings.xml")
-            assertTrue("strings.xml must exist for locale $folder", stringsFile.exists())
-
-            val content = stringsFile.readText()
-            val match = regex.find(content)
-            assertTrue(
-                "settings_zone_card_display_mode_title missing in $folder/strings.xml",
-                match != null
-            )
-            val extractedText = match!!.groupValues[1]
+            val strings = LocalizationTestCache.getStrings(folder, "strings.xml")
+            val extractedText = strings["settings_zone_card_display_mode_title"]
+            assertNotNull("settings_zone_card_display_mode_title missing in $folder/strings.xml", extractedText)
             assertEquals(
                 "Translation mismatch in $folder/strings.xml",
                 expectedText,

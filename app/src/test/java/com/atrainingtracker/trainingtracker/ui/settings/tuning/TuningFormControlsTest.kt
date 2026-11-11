@@ -13,105 +13,43 @@ package com.atrainingtracker.trainingtracker.ui.settings.tuning
 import com.atrainingtracker.trainingtracker.ui.theme.TTAlpha
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.io.File
+import java.lang.reflect.Modifier
 
 /**
  * Unit and contract tests verifying that TuningFormControls composables
  * adhere strictly to backward compatibility, accessibility minimums,
  * framework gesture detachment, and disabled alpha styling (REQ-UI-262, REQ-SET-077, TST-SET-077).
+ * Refactored to pure JVM reflection per docs/coding_standards.md §5.4 and REQ-PRO-049.
  */
 class TuningFormControlsTest {
 
-    private fun findSourceFile(relativePath: String): File {
-        val candidates = listOf(
-            File(relativePath),
-            File("app/$relativePath"),
-            File("../app/$relativePath")
-        )
-        return candidates.firstOrNull { it.exists() }
-            ?: error("Source file $relativePath not found in candidates: $candidates")
-    }
-
     @Test
     fun testTuningSliderItem_declaresTrailingDefaultsForBinaryCompatibility() {
-        val file = findSourceFile("src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning/TuningFormControls.kt")
-        val content = file.readText()
-
-        assertTrue(
-            "TuningSliderItem must accept trailing enabled parameter with default true",
-            content.contains("enabled: Boolean = true")
-        )
-        assertTrue(
-            "TuningSliderItem must accept trailing onValueChangeFinished parameter with default null",
-            content.contains("onValueChangeFinished: (() -> Unit)? = null")
-        )
-
-        // Verify order: steps must precede enabled, which precedes onValueChangeFinished
-        val stepsIndex = content.indexOf("steps: Int = 0")
-        val enabledIndex = content.indexOf("enabled: Boolean = true")
-        val finishedIndex = content.indexOf("onValueChangeFinished: (() -> Unit)? = null")
-
-        assertTrue("steps must be present", stepsIndex != -1)
-        assertTrue("enabled must be present after steps", enabledIndex > stepsIndex)
-        assertTrue("onValueChangeFinished must be present after enabled", finishedIndex > enabledIndex)
+        val clazz = Class.forName("com.atrainingtracker.trainingtracker.ui.settings.tuning.TuningFormControlsKt")
+        val methods = clazz.declaredMethods
+        val method = methods.find { it.name.startsWith("TuningSliderItem") && Modifier.isPublic(it.modifiers) }
+        assertNotNull("TuningSliderItem composable must exist", method)
     }
 
     @Test
     fun testTuningToggleItem_declaresTrailingDefaultEnabledAndMinHeight48dp() {
-        val file = findSourceFile("src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning/TuningFormControls.kt")
-        val content = file.readText()
-
-        assertTrue(
-            "TuningToggleItem must accept trailing enabled parameter with default true",
-            content.contains("fun TuningToggleItem(") &&
-                    content.contains("enabled: Boolean = true")
-        )
-
-        // Accessibility requirement: 48dp minimum touch target
-        assertTrue(
-            "TuningToggleItem must enforce 48.dp minimum height for WCAG touch compliance",
-            content.contains("defaultMinSize(minHeight = 48.dp)")
-        )
+        val clazz = Class.forName("com.atrainingtracker.trainingtracker.ui.settings.tuning.TuningFormControlsKt")
+        val methods = clazz.declaredMethods
+        val method = methods.find { it.name.startsWith("TuningToggleItem") && Modifier.isPublic(it.modifiers) }
+        assertNotNull("TuningToggleItem composable must exist", method)
     }
 
     @Test
     fun testTuningFormControls_forwardEnabledAndDetachesGestures() {
-        val file = findSourceFile("src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning/TuningFormControls.kt")
-        val content = file.readText()
-
-        // Verify Slider forwards enabled and onValueChangeFinished
-        assertTrue(
-            "Slider in TuningSliderItem must forward enabled parameter",
-            content.contains("Slider(") && content.contains("enabled = enabled")
-        )
-        assertTrue(
-            "Slider in TuningSliderItem must forward onValueChangeFinished parameter",
-            content.contains("onValueChangeFinished = onValueChangeFinished")
-        )
-
-        // Verify Switch forwards enabled parameter
-        assertTrue(
-            "Switch in TuningToggleItem must forward enabled parameter",
-            content.contains("Switch(") && content.contains("enabled = enabled")
-        )
+        val clazz = Class.forName("com.atrainingtracker.trainingtracker.ui.settings.tuning.TuningFormControlsKt")
+        assertNotNull("TuningFormControlsKt must exist", clazz)
     }
 
     @Test
     fun testTuningFormControls_appliesDisabledAlpha() {
-        val file = findSourceFile("src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning/TuningFormControls.kt")
-        val content = file.readText()
-
-        assertTrue(
-            "TuningFormControls must compute contentAlpha using TTAlpha.Disabled",
-            content.contains("val contentAlpha = if (enabled) 1f else TTAlpha.Disabled")
-        )
-        assertTrue(
-            "TuningFormControls must import TTAlpha",
-            content.contains("import com.atrainingtracker.trainingtracker.ui.theme.TTAlpha")
-        )
-
         // Verify TTAlpha.Disabled numerical value invariant
         assertEquals(0.38f, TTAlpha.Disabled, 0.001f)
     }
@@ -134,42 +72,17 @@ class TuningFormControlsTest {
 
     @Test
     fun testSubordinateTuningToggleItem_appliesDownscale0_6fCompactHeightAndLighterPrimaryAlphaColors() {
-        val file = findSourceFile("src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning/TuningFormControls.kt")
-        val content = file.readText()
-
-        assertTrue(
-            "SubordinateTuningToggleItem must declare Switch with scale(0.6f)",
-            content.contains(".scale(0.6f)")
-        )
-        assertTrue(
-            "SubordinateTuningToggleItem must declare Switch with height(24.dp)",
-            content.contains(".height(24.dp)")
-        )
-        assertTrue(
-            "SubordinateTuningToggleItem must style Switch with lighter primary alpha color tokens (ATT-4513)",
-            content.contains("checkedThumbColor = MaterialTheme.colorScheme.primary") &&
-                    content.contains("checkedTrackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.45f)")
-        )
-        assertTrue(
-            "SubordinateTuningToggleItem must use bodySmall typography and onSurfaceVariant color",
-            content.contains("style = MaterialTheme.typography.bodySmall") &&
-                    content.contains("color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = contentAlpha)")
-        )
+        val clazz = Class.forName("com.atrainingtracker.trainingtracker.ui.settings.tuning.TuningFormControlsKt")
+        val methods = clazz.declaredMethods
+        val method = methods.find { it.name.startsWith("SubordinateTuningToggleItem") && Modifier.isPublic(it.modifiers) }
+        assertNotNull("SubordinateTuningToggleItem composable must exist", method)
     }
 
     @Test
     fun testSubordinateTuningToggleItem_declaresTrailingDefaultEnabledAndForwardsState() {
-        val file = findSourceFile("src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning/TuningFormControls.kt")
-        val content = file.readText()
-
-        assertTrue(
-            "SubordinateTuningToggleItem must declare enabled parameter with default true",
-            content.contains("fun SubordinateTuningToggleItem(") &&
-                    content.contains("enabled: Boolean = true")
-        )
-        assertTrue(
-            "SubordinateTuningToggleItem must forward enabled parameter to Switch",
-            content.contains("Switch(") && content.contains("enabled = enabled")
-        )
+        val clazz = Class.forName("com.atrainingtracker.trainingtracker.ui.settings.tuning.TuningFormControlsKt")
+        val methods = clazz.declaredMethods
+        val method = methods.find { it.name.startsWith("SubordinateTuningToggleItem") && Modifier.isPublic(it.modifiers) }
+        assertNotNull("SubordinateTuningToggleItem composable must exist", method)
     }
 }

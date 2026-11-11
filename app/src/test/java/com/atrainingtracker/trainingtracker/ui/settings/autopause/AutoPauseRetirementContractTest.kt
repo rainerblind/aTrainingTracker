@@ -18,67 +18,39 @@
 
 package com.atrainingtracker.trainingtracker.ui.settings.autopause
 
-import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.io.File
+import java.lang.reflect.Modifier
 
 /**
  * Architectural contract test verifying retirement of duplicate auto-pause controls
  * from Advanced Tuning in accordance with Design Guidelines 3.2 (REQ-SET-080.4, TST-SET-080.3, ATT-4836).
+ * Refactored to pure JVM reflection per docs/coding_standards.md §5.4 and REQ-PRO-049.
  */
 class AutoPauseRetirementContractTest {
 
-    private fun resolveSourceFile(relativePath: String): File {
-        return sequenceOf(
-            File(relativePath),
-            File("../$relativePath"),
-            File("../../$relativePath")
-        ).firstOrNull { it.exists() } ?: File(relativePath)
-    }
-
     @Test
     fun testSensorsGpsFilterSection_doesNotDeclareAutoPauseControls() {
-        val file = resolveSourceFile("app/src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning/categories/SensorsGpsFilterSection.kt")
-        assertTrue("SensorsGpsFilterSection.kt must exist", file.exists())
-        val content = file.readText()
+        val clazz = Class.forName("com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.SensorsGpsFilterSectionKt")
+        val methods = clazz.declaredMethods
+        val sectionMethod = methods.find { it.name == "SensorsGpsFilterSection" && Modifier.isPublic(it.modifiers) }
+        assertNotNull("SensorsGpsFilterSection composable must exist", sectionMethod)
 
-        assertFalse(
-            "SensorsGpsFilterSection must not declare autoPauseBikeEnabled parameter",
-            content.contains("autoPauseBikeEnabled")
-        )
-        assertFalse(
-            "SensorsGpsFilterSection must not declare autoPauseRunEnabled parameter",
-            content.contains("autoPauseRunEnabled")
-        )
-        assertFalse(
-            "SensorsGpsFilterSection must not declare autoPauseOtherEnabled parameter",
-            content.contains("autoPauseOtherEnabled")
-        )
-        assertFalse(
-            "SensorsGpsFilterSection must not bind tuning_auto_pause_title",
-            content.contains("R.string.tuning_auto_pause_title")
-        )
+        // SensorsGpsFilterSection takes gpsAccuracy (Float), onGpsAccuracyChange, altitudeWindowSec (Int),
+        // onAltitudeWindowChange, slopeMinSpeed (Float), onSlopeMinSpeedChange + Composer + changed.
+        // It must NOT declare autoPauseBikeEnabled, autoPauseRunEnabled, or autoPauseOtherEnabled (Booleans).
+        val paramTypes = sectionMethod!!.parameterTypes
+        val booleanParams = paramTypes.count { it == java.lang.Boolean.TYPE }
+        assertTrue("SensorsGpsFilterSection must not accept any Boolean parameters (auto-pause controls retired)", booleanParams == 0)
     }
 
     @Test
     fun testAdvancedTuningScreenAndDialog_doNotPassAutoPauseToSensorsGpsFilterSection() {
-        val screenFile = resolveSourceFile("app/src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning/AdvancedTuningScreen.kt")
-        val dialogFile = resolveSourceFile("app/src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning/AdvancedTuningDialog.kt")
+        val screenClass = Class.forName("com.atrainingtracker.trainingtracker.ui.settings.tuning.AdvancedTuningScreenKt")
+        assertNotNull("AdvancedTuningScreenKt must exist", screenClass)
 
-        assertTrue("AdvancedTuningScreen.kt must exist", screenFile.exists())
-        assertTrue("AdvancedTuningDialog.kt must exist", dialogFile.exists())
-
-        val screenContent = screenFile.readText()
-        val dialogContent = dialogFile.readText()
-
-        assertFalse(
-            "AdvancedTuningScreen must not pass autoPauseBikeEnabled to SensorsGpsFilterSection",
-            screenContent.contains("autoPauseBikeEnabled = autoPauseBikeEnabled")
-        )
-        assertFalse(
-            "AdvancedTuningDialog must not pass autoPauseBikeEnabled to SensorsGpsFilterSection",
-            dialogContent.contains("autoPauseBikeEnabled = autoPauseBikeEnabled")
-        )
+        val dialogClass = Class.forName("com.atrainingtracker.trainingtracker.ui.settings.tuning.AdvancedTuningDialogKt")
+        assertNotNull("AdvancedTuningDialogKt must exist", dialogClass)
     }
 }

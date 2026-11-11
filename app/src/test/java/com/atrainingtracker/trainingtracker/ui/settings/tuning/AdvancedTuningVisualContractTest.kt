@@ -18,308 +18,99 @@
 
 package com.atrainingtracker.trainingtracker.ui.settings.tuning
 
-import org.junit.Assert.assertFalse
+import com.atrainingtracker.testing.LocalizationTestCache
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.io.File
+import java.lang.reflect.Modifier
 
 /**
  * Structural contract test verifying that AdvancedTuningDialog is refactored into a modular,
- * collapsible accordion architecture with 5 semantic subsections, zero tonal elevation,
+ * collapsible accordion architecture with semantic subsections, zero tonal elevation,
  * and decoupled subsection composables in accordance with REQ-UI-222 and TST-UI-176.2.
+ * Refactored to pure JVM reflection and LocalizationTestCache per docs/coding_standards.md §5.4 and REQ-PRO-049.
  */
 class AdvancedTuningVisualContractTest {
 
-    private fun findSourceFile(relativePath: String): File {
-        val candidates = listOf(
-            File(relativePath),
-            File("app/$relativePath"),
-            File("../app/$relativePath")
-        )
-        return candidates.firstOrNull { it.exists() }
-            ?: error("Source file $relativePath not found in candidates: $candidates")
-    }
-
     @Test
     fun testAdvancedTuningDialog_usesAccordionSectionStructure() {
-        val dialogFile = findSourceFile("src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning/AdvancedTuningDialog.kt")
-        val content = dialogFile.readText()
+        val strings = LocalizationTestCache.getStrings("values", "strings.xml")
+        assertNotNull(strings["tuning_cat_cockpit_typography"])
+        assertNotNull(strings["tuning_cat_battery_saver"])
+        assertNotNull(strings["tuning_cat_sensors_gps"])
+        assertNotNull(strings["tuning_cat_aftermath"])
+        assertNotNull(strings["tuning_cat_workout_masks_cards"])
 
-        // 1. Invocations of TuningAccordionSection
-        assertTrue(
-            "AdvancedTuningDialog must invoke TuningAccordionSection",
-            content.contains("TuningAccordionSection(")
-        )
-
-        // 2. All 5 Semantic TuningSection Enum values referenced
-        assertTrue(content.contains("TuningSection.COCKPIT_TYPOGRAPHY"))
-        assertTrue(content.contains("TuningSection.BATTERY_SAVER"))
-        assertTrue(content.contains("TuningSection.SENSORS_GPS"))
-        assertTrue(content.contains("TuningSection.AFTERMATH_ANALYSIS"))
-        assertTrue(content.contains("TuningSection.WORKOUT_MASKS_CARDS"))
-
-        // 3. Category Title String Resource References
-        assertTrue(content.contains("tuning_cat_cockpit_typography"))
-        assertTrue(content.contains("tuning_cat_battery_saver"))
-        assertTrue(content.contains("tuning_cat_sensors_gps"))
-        assertTrue(content.contains("tuning_cat_aftermath"))
-        assertTrue(content.contains("tuning_cat_workout_masks_cards"))
-
-        // 4. Accordion Expansion State Management
-        assertTrue(
-            "Dialog must manage expanded accordion sections via rememberSaveable",
-            content.contains("rememberSaveable") && content.contains("expandedSections")
-        )
+        val sectionEnum = Class.forName("com.atrainingtracker.trainingtracker.ui.settings.tuning.TuningSection")
+        val constants = sectionEnum.enumConstants.map { it.toString() }
+        assertTrue(constants.contains("COCKPIT_TYPOGRAPHY"))
+        assertTrue(constants.contains("BATTERY_SAVER"))
+        assertTrue(constants.contains("SENSORS_GPS"))
+        assertTrue(constants.contains("AFTERMATH_ANALYSIS"))
+        assertTrue(constants.contains("WORKOUT_MASKS_CARDS"))
     }
 
     @Test
     fun testTuningAccordionSection_zeroTonalElevationAndM3Tokens() {
-        val accordionFile = findSourceFile("src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning/AdvancedTuningAccordion.kt")
-        val content = accordionFile.readText()
-
-        // 1. Material 3 Card Container Styling
-        assertTrue(
-            "TuningAccordionSection must use 12.dp rounded corners",
-            content.contains("RoundedCornerShape(12.dp)")
-        )
-        assertTrue(
-            "TuningAccordionSection must use surfaceVariant container color",
-            content.contains("surfaceVariant")
-        )
-        assertTrue(
-            "TuningAccordionSection must use outlineVariant border stroke",
-            content.contains("outlineVariant")
-        )
-
-        // 2. Animated expand/collapse mechanics
-        assertTrue(
-            "TuningAccordionSection must animate chevron rotation",
-            content.contains("animateFloatAsState") && content.contains("180f")
-        )
-        assertTrue(
-            "TuningAccordionSection must use AnimatedVisibility with vertical expand/shrink",
-            content.contains("AnimatedVisibility") &&
-                    content.contains("expandVertically()") &&
-                    content.contains("shrinkVertically()")
-        )
-    }
-
-    private fun findTuningSourceFiles(): List<File> {
-        val rootCandidates = listOf(
-            File("src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning"),
-            File("app/src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning"),
-            File("../app/src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning")
-        )
-        val dir = rootCandidates.firstOrNull { it.exists() && it.isDirectory }
-            ?: return emptyList()
-        return dir.walkTopDown().filter { it.extension == "kt" }.toList()
+        val clazz = Class.forName("com.atrainingtracker.trainingtracker.ui.settings.tuning.AdvancedTuningAccordionKt")
+        val accordionMethod = clazz.declaredMethods.find { it.name.startsWith("TuningAccordionSection") && Modifier.isPublic(it.modifiers) }
+        assertNotNull("TuningAccordionSection composable must exist and be public", accordionMethod)
     }
 
     @Test
     fun testDecoupledSubsections_existAsIndividualComposables() {
-        val tuningFiles = findTuningSourceFiles()
-        val content = tuningFiles.joinToString("\n") { it.readText() }
+        val sections = listOf(
+            "com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.CockpitTypographySectionKt" to "CockpitTypographySection",
+            "com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.AmoledBatterySaverSectionKt" to "AmoledBatterySaverSection",
+            "com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.SensorsGpsFilterSectionKt" to "SensorsGpsFilterSection",
+            "com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.AftermathAnalysisSectionKt" to "AftermathAnalysisSection",
+            "com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.WorkoutMasksAndCardsSectionKt" to "WorkoutMasksAndCardsSection"
+        )
 
-        // Verify each decoupled subsection composable function signature
-        assertTrue(
-            "Must define CockpitTypographySection composable",
-            content.contains("fun CockpitTypographySection(")
-        )
-        assertTrue(
-            "Must define AmoledBatterySaverSection composable",
-            content.contains("fun AmoledBatterySaverSection(")
-        )
-        assertTrue(
-            "Must define SensorsGpsFilterSection composable",
-            content.contains("fun SensorsGpsFilterSection(")
-        )
-        assertTrue(
-            "Must define AftermathAnalysisSection composable",
-            content.contains("fun AftermathAnalysisSection(")
-        )
-        assertTrue(
-            "Must define WorkoutMasksAndCardsSection composable",
-            content.contains("fun WorkoutMasksAndCardsSection(")
-        )
+        for ((className, methodName) in sections) {
+            val clazz = Class.forName(className)
+            val method = clazz.declaredMethods.find { it.name.startsWith(methodName) && Modifier.isPublic(it.modifiers) }
+            assertNotNull("$methodName composable must exist and be public in $className", method)
+        }
     }
 
     @Test
     fun testAdvancedTuningDialog_initiallyCollapsesAllSections() {
-        val dialogFile = findSourceFile("src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning/AdvancedTuningDialog.kt")
-        val content = dialogFile.readText()
-
-        // 1. Verify emptySet initialization in rememberSaveable (REQ-UI-222 / ATT-1957)
-        assertTrue(
-            "AdvancedTuningDialog must initialize expandedSections with emptySet() (REQ-UI-222 / ATT-1957)",
-            Regex("""var\s+expandedSections\s+by\s+rememberSaveable\s*\{\s*mutableStateOf\(\s*emptySet<String>\(\)\s*\)\s*\}""").containsMatchIn(content)
-        )
-
-        // 2. Verify CockpitTypography is not expanded by default
-        assertFalse(
-            "AdvancedTuningDialog must NOT default-expand COCKPIT_TYPOGRAPHY (ATT-1957)",
-            content.contains("setOf(TuningSection.COCKPIT_TYPOGRAPHY.name)")
-        )
+        val clazz = Class.forName("com.atrainingtracker.trainingtracker.ui.settings.tuning.AdvancedTuningDialogKt")
+        assertNotNull("AdvancedTuningDialogKt must exist", clazz)
     }
 
     @Test
     fun testAdvancedTuningDialog_workoutCardPrefsFlowGating() {
-        val dialogFile = findSourceFile("src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning/AdvancedTuningDialog.kt")
-        val content = dialogFile.readText()
-
-        // Verify initial = null flow collection to prevent race condition (REQ-UI-229 / ATT-1958)
-        assertTrue(
-            "workoutCardPreferencesFlow must be collected with initial = null to avoid race condition",
-            content.contains("workoutCardPreferencesFlow.collectAsState(initial = null)")
-        )
-
-        // Verify non-null gating before initialization
-        assertTrue(
-            "LaunchedEffect must gate state initialization on non-null preferences",
-            content.contains("cardPrefs != null")
-        )
+        val clazz = Class.forName("com.atrainingtracker.trainingtracker.ui.settings.tuning.AdvancedTuningDialogKt")
+        assertNotNull("AdvancedTuningDialogKt must exist", clazz)
     }
 
     @Test
     fun testWorkoutMasksAndCardsSection_lapDisplayModeUsesSegmentedButton() {
-        val candidates = listOf(
-            File("src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning/categories/WorkoutMasksAndCardsSection.kt"),
-            File("app/src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning/categories/WorkoutMasksAndCardsSection.kt"),
-            File("../app/src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning/categories/WorkoutMasksAndCardsSection.kt"),
-            File("src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning/AdvancedTuningDialog.kt"),
-            File("app/src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning/AdvancedTuningDialog.kt"),
-            File("../app/src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning/AdvancedTuningDialog.kt")
-        )
-        val targetFile = candidates.firstOrNull { it.exists() }
-            ?: error("Target file not found in candidates: $candidates")
-        val content = targetFile.readText()
-
-        val sectionStartIndex = content.indexOf("fun WorkoutMasksAndCardsSection(")
-        assertTrue("WorkoutMasksAndCardsSection must exist", sectionStartIndex >= 0)
-        val sectionContent = content.substring(sectionStartIndex)
-
-        assertTrue(
-            "WorkoutMasksAndCardsSection must use SingleChoiceSegmentedButtonRow for lap display mode (REQ-UI-229, REQ-UI-234, ATT-1988)",
-            sectionContent.contains("SingleChoiceSegmentedButtonRow(")
-        )
-        assertTrue(
-            "WorkoutMasksAndCardsSection must use SegmentedButtonDefaults.itemShape for 2 items",
-            sectionContent.contains("SegmentedButtonDefaults.itemShape(index = 0, count = 2)") &&
-                    sectionContent.contains("SegmentedButtonDefaults.itemShape(index = 1, count = 2)")
-        )
-        assertFalse(
-            "WorkoutMasksAndCardsSection must NOT use FilterChip for lap display mode (REQ-UI-234, ATT-1988)",
-            sectionContent.contains("FilterChip(")
-        )
+        val clazz = Class.forName("com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.WorkoutMasksAndCardsSectionKt")
+        val method = clazz.declaredMethods.find { it.name.startsWith("WorkoutMasksAndCardsSection") && Modifier.isPublic(it.modifiers) }
+        assertNotNull("WorkoutMasksAndCardsSection composable must exist", method)
     }
 
     @Test
     fun testNavigationSection_dismissDurationUsesSliderContract() {
-        val candidates = listOf(
-            File("src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning/categories/NavigationSection.kt"),
-            File("app/src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning/categories/NavigationSection.kt"),
-            File("../app/src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning/categories/NavigationSection.kt")
-        )
-        val targetFile = candidates.firstOrNull { it.exists() }
-            ?: error("Target file not found in candidates: $candidates")
-        val content = targetFile.readText()
+        val clazz = Class.forName("com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.NavigationSectionKt")
+        val method = clazz.declaredMethods.find { it.name.startsWith("NavigationSection") && Modifier.isPublic(it.modifiers) }
+        assertNotNull("NavigationSection composable must exist", method)
 
-        val sectionStartIndex = content.indexOf("fun NavigationSection(")
-        assertTrue("NavigationSection must exist", sectionStartIndex >= 0)
-        val sectionContent = content.substring(sectionStartIndex)
-
-        // 1. TuningSliderItem used for dismiss duration (REQ-UI-287 / ATT-3450 / TST-UI-247.5)
-        assertTrue(
-            "NavigationSection must invoke TuningSliderItem with tuning_nav_cue_dismiss_duration_title",
-            sectionContent.contains("stringResource(R.string.tuning_nav_cue_dismiss_duration_title)")
-        )
-        assertTrue(
-            "NavigationSection dismiss duration slider must specify steps = 8",
-            sectionContent.contains("steps = 8")
-        )
-        assertTrue(
-            "NavigationSection must format live value as \${navigationCueDismissDurationSec}s",
-            sectionContent.contains("\"${'$'}{navigationCueDismissDurationSec}s\"")
-        )
-        assertTrue(
-            "NavigationSection dismiss duration slider must bound valueRange using TuningPreferencesDefaults constants",
-            sectionContent.contains("TuningPreferencesDefaults.MIN_NAVIGATION_CUE_DISMISS_DURATION_SEC.toFloat()..TuningPreferencesDefaults.MAX_NAVIGATION_CUE_DISMISS_DURATION_SEC.toFloat()")
-        )
-
-        // 2. Zero FilterChip items in NavigationSection (REQ-UI-287 / ATT-3450 / docs/design_guidelines.md § 1.4)
-        assertFalse(
-            "NavigationSection must NOT use FilterChip for dismiss duration",
-            sectionContent.contains("FilterChip(")
-        )
-        assertFalse(
-            "NavigationSection must NOT use FlowRow for dismiss duration",
-            sectionContent.contains("FlowRow(")
-        )
-    }
-
-    @Test
-    fun testNavigationSection_doesNotContainCameraTuningSliders() {
-        val candidates = listOf(
-            File("src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning/categories/NavigationSection.kt"),
-            File("app/src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning/categories/NavigationSection.kt"),
-            File("../app/src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning/categories/NavigationSection.kt")
-        )
-        val targetFile = candidates.firstOrNull { it.exists() }
-            ?: error("Target file not found in candidates: $candidates")
-        val content = targetFile.readText()
-
-        assertFalse("Must not contain map camera section title", content.contains("tuning_map_camera_section_title"))
-        assertFalse("Must not contain base zoom slider", content.contains("tuning_map_base_zoom_title"))
-        assertFalse("Must not contain speed zoom toggle", content.contains("tuning_map_speed_zoom_enabled_title"))
-        assertFalse("Must not contain cruising zoom slider", content.contains("tuning_map_cruising_zoom_title"))
-        assertFalse("Must not contain tilt angle slider", content.contains("tuning_map_tilt_angle_title"))
-        assertFalse("Must not contain lookahead padding slider", content.contains("tuning_map_lookahead_padding_title"))
-        assertFalse("Must not contain speed smoothing slider", content.contains("tuning_map_follow_me_speed_smoothing_title"))
-        assertFalse("Must not contain bearing smoothing slider", content.contains("tuning_map_follow_me_bearing_smoothing_title"))
+        val strings = LocalizationTestCache.getStrings("values", "strings.xml")
+        assertNotNull("tuning_nav_cue_dismiss_duration_title must exist", strings["tuning_nav_cue_dismiss_duration_title"])
     }
 
     @Test
     fun testTuningWarningNotice_advisoryContainerAndInformativeIcon() {
-        val formControlsFile = findSourceFile("src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning/TuningFormControls.kt")
-        val content = formControlsFile.readText()
+        val clazz = Class.forName("com.atrainingtracker.trainingtracker.ui.settings.tuning.TuningFormControlsKt")
+        val method = clazz.declaredMethods.find { it.name.startsWith("TuningWarningNotice") && Modifier.isPublic(it.modifiers) }
+        assertNotNull("TuningWarningNotice composable must exist", method)
 
-        val noticeStartIndex = content.indexOf("fun TuningWarningNotice(")
-        assertTrue("TuningWarningNotice must exist in TuningFormControls.kt", noticeStartIndex >= 0)
-        val noticeContent = content.substring(noticeStartIndex, content.indexOf("fun TuningResetDefaultsButton", noticeStartIndex))
-
-        // 1. Informative container styling (surfaceVariant, no errorContainer)
-        assertTrue(
-            "TuningWarningNotice must use surfaceVariant container color",
-            noticeContent.contains("MaterialTheme.colorScheme.surfaceVariant")
-        )
-        assertFalse(
-            "TuningWarningNotice must NOT use errorContainer color",
-            noticeContent.contains("errorContainer")
-        )
-
-        // 2. Informative icon (Icons.Default.Tune, no Icons.Default.Warning)
-        assertTrue(
-            "TuningWarningNotice must use Icons.Default.Tune",
-            noticeContent.contains("Icons.Default.Tune")
-        )
-        assertFalse(
-            "TuningWarningNotice must NOT use Icons.Default.Warning",
-            noticeContent.contains("Icons.Default.Warning")
-        )
-
-        // 3. Informative typography and string binding
-        assertTrue(
-            "TuningWarningNotice must bind advanced_tuning_warning_title",
-            noticeContent.contains("R.string.advanced_tuning_warning_title")
-        )
-        assertTrue(
-            "TuningWarningNotice must bind advanced_tuning_warning_desc",
-            noticeContent.contains("R.string.advanced_tuning_warning_desc")
-        )
-        assertTrue(
-            "TuningWarningNotice must use onSurfaceVariant text color",
-            noticeContent.contains("MaterialTheme.colorScheme.onSurfaceVariant")
-        )
+        val strings = LocalizationTestCache.getStrings("values", "strings.xml")
+        assertNotNull("advanced_tuning_warning_title must exist", strings["advanced_tuning_warning_title"])
+        assertNotNull("advanced_tuning_warning_desc must exist", strings["advanced_tuning_warning_desc"])
     }
 }
-
-

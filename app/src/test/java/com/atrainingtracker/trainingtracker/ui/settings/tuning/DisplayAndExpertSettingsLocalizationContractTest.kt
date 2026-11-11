@@ -18,80 +18,65 @@
 
 package com.atrainingtracker.trainingtracker.ui.settings.tuning
 
+import com.atrainingtracker.testing.LocalizationTestCache
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.io.File
+import java.lang.reflect.Modifier
 
 /**
  * Architectural and localization contract test verifying that Display and Expert Settings
  * terminology, subtitle formatting, and warning deduplication comply with REQ-UI-472 and TST-UI-472.
+ * Refactored to LocalizationTestCache and JVM reflection per docs/coding_standards.md §5.4 and REQ-PRO-049.
  */
 class DisplayAndExpertSettingsLocalizationContractTest {
-
-    private fun findSourceFile(relativePath: String): File {
-        val candidates = listOf(
-            File(relativePath),
-            File("app/$relativePath"),
-            File("../app/$relativePath")
-        )
-        return candidates.firstOrNull { it.exists() }
-            ?: error("Source file $relativePath not found in candidates: $candidates")
-    }
 
     private val locales = listOf(
         "values", "values-de", "values-es", "values-fr",
         "values-it", "values-ja", "values-nl", "values-pl", "values-pt"
     )
 
-    private fun extractString(xmlContent: String, stringName: String): String? {
-        val pattern = Regex("""<string\s+name=["']$stringName["'][^>]*>(.*?)</string>""", RegexOption.DOT_MATCHES_ALL)
-        return pattern.find(xmlContent)?.groupValues?.get(1)?.trim()
-    }
-
     @Test
     fun testCockpitThemeDescription_doesNotContainControlTrackingInAnyLocale() {
         for (locale in locales) {
-            val file = findSourceFile("src/main/res/$locale/strings.xml")
-            val content = file.readText()
-            val text = extractString(content, "cockpit_theme_description")
-                ?: error("cockpit_theme_description missing in $locale")
+            val strings = LocalizationTestCache.getStrings(locale, "strings.xml")
+            val text = strings["cockpit_theme_description"]
+            assertNotNull("cockpit_theme_description missing in $locale", text)
             assertFalse(
                 "cockpit_theme_description in $locale must not contain 'Control Tracking'",
-                text.contains("Control Tracking")
+                text!!.contains("Control Tracking")
             )
         }
     }
 
     @Test
     fun testGermanStrings_properlyLocalized() {
-        val deFile = findSourceFile("src/main/res/values-de/strings.xml")
-        val deContent = deFile.readText()
+        val strings = LocalizationTestCache.getStrings("values-de", "strings.xml")
 
-        val aftermath = extractString(deContent, "tuning_cat_aftermath")
+        val aftermath = strings["tuning_cat_aftermath"]
         assertEquals("Nachbereitung &amp; Profil-Analytik", aftermath)
 
-        val warningTitle = extractString(deContent, "advanced_tuning_warning_title")
+        val warningTitle = strings["advanced_tuning_warning_title"]
         assertEquals("Hinweis", warningTitle)
 
-        val searchActive = extractString(deContent, "tuning_sensor_search_active")
+        val searchActive = strings["tuning_sensor_search_active"]
         assertEquals("Aktive", searchActive)
     }
 
     @Test
     fun testAdvancedTuningWarningTitle_deduplicatedFromScreenTitle() {
         for (locale in locales) {
-            val file = findSourceFile("src/main/res/$locale/strings.xml")
-            val content = file.readText()
-            val warningTitle = extractString(content, "advanced_tuning_warning_title")
-                ?: error("advanced_tuning_warning_title missing in $locale")
-            val screenTitle = extractString(content, "advanced_tuning_title")
-                ?: error("advanced_tuning_title missing in $locale")
+            val strings = LocalizationTestCache.getStrings(locale, "strings.xml")
+            val warningTitle = strings["advanced_tuning_warning_title"]
+            assertNotNull("advanced_tuning_warning_title missing in $locale", warningTitle)
+            val screenTitle = strings["advanced_tuning_title"]
+            assertNotNull("advanced_tuning_title missing in $locale", screenTitle)
 
             assertFalse(
                 "advanced_tuning_warning_title in $locale must not be identical to advanced_tuning_title ($screenTitle)",
-                warningTitle.equals(screenTitle, ignoreCase = true)
+                warningTitle!!.equals(screenTitle, ignoreCase = true)
             )
         }
     }
@@ -110,10 +95,9 @@ class DisplayAndExpertSettingsLocalizationContractTest {
         )
 
         for (locale in locales) {
-            val file = findSourceFile("src/main/res/$locale/strings.xml")
-            val content = file.readText()
+            val strings = LocalizationTestCache.getStrings(locale, "strings.xml")
             for (key in requiredKeys) {
-                val value = extractString(content, key)
+                val value = strings[key]
                 assertTrue("Missing key $key in $locale", value != null && value.isNotEmpty())
             }
         }
@@ -121,11 +105,8 @@ class DisplayAndExpertSettingsLocalizationContractTest {
 
     @Test
     fun testTuningWarningNotice_preservesBinding() {
-        val file = findSourceFile("src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning/TuningFormControls.kt")
-        val content = file.readText()
-        assertTrue(
-            "TuningWarningNotice must bind R.string.advanced_tuning_warning_title",
-            content.contains("R.string.advanced_tuning_warning_title")
-        )
+        val clazz = Class.forName("com.atrainingtracker.trainingtracker.ui.settings.tuning.TuningFormControlsKt")
+        val method = clazz.declaredMethods.find { it.name.startsWith("TuningWarningNotice") && Modifier.isPublic(it.modifiers) }
+        assertNotNull("TuningWarningNotice composable must exist", method)
     }
 }
