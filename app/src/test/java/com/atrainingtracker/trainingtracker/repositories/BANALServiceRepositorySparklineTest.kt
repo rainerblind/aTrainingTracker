@@ -18,13 +18,18 @@
 
 package com.atrainingtracker.trainingtracker.repositories
 
+import android.content.BroadcastReceiver
 import android.content.Context
+import android.content.Intent
 import android.util.Log
 import androidx.arch.core.executor.ArchTaskExecutor
 import androidx.arch.core.executor.TaskExecutor
+import com.atrainingtracker.banalservice.BANALService
 import com.atrainingtracker.banalservice.filters.FilterType
 import com.atrainingtracker.banalservice.filters.FilteredSensorData
 import com.atrainingtracker.banalservice.sensor.SensorType
+import com.atrainingtracker.trainingtracker.TrackingMode
+import com.atrainingtracker.trainingtracker.TrainingApplication
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkStatic
@@ -191,5 +196,55 @@ class BANALServiceRepositorySparklineTest {
         repository.removeSparklineBuffer(fieldId)
 
         assertEquals(emptyList<Float>(), repository.getSparklineSamples(fieldId))
+    }
+
+    @Test
+    fun testResetAccumulatorsBroadcast_clearsSparklineBuffers() {
+        val fieldId = 505L
+        val buffer = repository.registerSparklineBuffer(
+            sensorFieldId = fieldId,
+            horizonSeconds = 300,
+            sensorType = SensorType.HR,
+            filterType = FilterType.INSTANTANEOUS,
+            filterConstant = 0.0,
+            sourceDeviceName = null
+        )
+        buffer.addSample(150f)
+        assertEquals(1, repository.getSparklineSamples(fieldId).size)
+
+        val receiverField = BANALServiceRepository::class.java.getDeclaredField("resetAccumulatorsReceiver")
+        receiverField.isAccessible = true
+        val receiver = receiverField.get(repository) as BroadcastReceiver
+        receiver.onReceive(mockContext, Intent(BANALService.RESET_ACCUMULATORS_INTENT))
+
+        assertEquals("RESET_ACCUMULATORS_INTENT must clear sparkline buffers", 0, repository.getSparklineSamples(fieldId).size)
+    }
+
+    @Test
+    fun testTrackingModeTransition_readyToTracking_clearsSparklineBuffers() {
+        val fieldId = 606L
+        val buffer = repository.registerSparklineBuffer(
+            sensorFieldId = fieldId,
+            horizonSeconds = 300,
+            sensorType = SensorType.POWER,
+            filterType = FilterType.INSTANTANEOUS,
+            filterConstant = 0.0,
+            sourceDeviceName = null
+        )
+        buffer.addSample(220f)
+        assertEquals(1, repository.getSparklineSamples(fieldId).size)
+
+        mockkStatic(TrainingApplication::class)
+        every { TrainingApplication.wasAutoPaused() } returns false
+        every { TrainingApplication.getTrackingMode() } returns TrackingMode.TRACKING
+
+        val receiverField = BANALServiceRepository::class.java.getDeclaredField("trackingModeReceiver")
+        receiverField.isAccessible = true
+        val receiver = receiverField.get(repository) as BroadcastReceiver
+        val mockIntent = mockk<Intent>(relaxed = true)
+        every { mockIntent.getBooleanExtra(any(), any()) } returns false
+        receiver.onReceive(mockContext, mockIntent)
+
+        assertEquals("Transition READY -> TRACKING must clear sparkline buffers", 0, repository.getSparklineSamples(fieldId).size)
     }
 }

@@ -222,6 +222,7 @@ class BANALServiceRepository private constructor(context: Context) {
                 ?: TrainingApplication.wasAutoPaused()
             _wasAutoPaused.value = wasAuto
 
+            val previousMode = _trackingMode.value
             val newTrackingMode = TrainingApplication.getTrackingMode()
             if (_trackingMode.value != newTrackingMode) {
                 _trackingMode.postValue(newTrackingMode)
@@ -229,6 +230,17 @@ class BANALServiceRepository private constructor(context: Context) {
             if (newTrackingMode == TrackingMode.READY) {
                 clearBreadcrumbs()
             }
+            if (previousMode == TrackingMode.READY && newTrackingMode == TrackingMode.TRACKING) {
+                clearSparklineBuffers()
+            }
+        }
+    }
+
+    // Listens for accumulator resets (REQ-TRK-059.10, ATT-6689)
+    private val resetAccumulatorsReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (DEBUG) Log.i(TAG, "resetAccumulatorsReceiver onReceive -> clearSparklineBuffers()")
+            clearSparklineBuffers()
         }
     }
 
@@ -305,6 +317,11 @@ class BANALServiceRepository private constructor(context: Context) {
         registerInternalReceiver(
             altitudeCorrectionReceiver,
             IntentFilter(com.atrainingtracker.banalservice.devices.AltitudeFromPressureDevice.ALTITUDE_CORRECTION_INTENT)
+        )
+
+        registerInternalReceiver(
+            resetAccumulatorsReceiver,
+            IntentFilter(BANALService.RESET_ACCUMULATORS_INTENT)
         )
 
         // Start the long-lived observation loop that reacts to the binder state.

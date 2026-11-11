@@ -34,6 +34,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -456,7 +457,10 @@ fun SensorFieldView(
                                 .fillMaxWidth()
                                 .then(
                                     if (!fieldState.showValue) {
-                                        Modifier.weight(1f).padding(horizontal = 4.dp, vertical = 2.dp)
+                                        Modifier
+                                            .heightIn(min = resolveSparklineHeight(fieldState.viewSize, isGraphOnly = true))
+                                            .weight(1f)
+                                            .padding(horizontal = 4.dp, vertical = 2.dp)
                                     } else {
                                         Modifier
                                             .height(resolveSparklineHeight(fieldState.viewSize, isGraphOnly = false))

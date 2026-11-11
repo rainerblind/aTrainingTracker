@@ -3066,7 +3066,7 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 **Invariants**: Existing power telemetry (`POWER`, `NP`, `IF`, `WORK_KJ`, `TSS`, `W_PRIME_BAL`) preserved; pause freeze integrity; 100% 9-language translation parity; zero composition snapshot state writes.
 
 ### REQ-TRK-059: Configurable Live Sparkline Graph Cockpit Tiles with Selectable Time Horizon Across Numeric SensorTypes [Verified]
-- **Tests**: `TST-TRK-059` | **Tickets**: `ATT-1294`, `ATT-6710`, `ATT-6695`, `ATT-6690`
+- **Tests**: `TST-TRK-059` | **Tickets**: `ATT-1294`, `ATT-6710`, `ATT-6695`, `ATT-6690`, `ATT-6689`
 - **Implementation**: `TrackingViewsDatabaseManager.java`, `TrackingViewsDbHelper.java`, `SensorFieldView.kt`, `EditSensorFieldDialog.kt`, `LiveSparklineBuffer.kt`, `SensorSparklineView.kt`, `BANALServiceRepository.kt`, `TrackingViewModel.kt`, `ATrainingTrackerApp.kt`
 - **Rationale**: Athletes monitoring live telemetry benefit from seeing dynamic temporal trends (whether metric values are rising, steady, or falling) directly within cockpit tiles. Generalizing sparkline visualization across all numeric sensor types with configurable time horizons (1m to Full Workout) enhances tactical pacing without increasing cognitive load or battery drain (ATT-1294, refined by ATT-6710, ATT-6695, and ATT-6690, Parent Epic ATT-5908, extending `REQ-TRK-046` and `REQ-UI-436`).
 - **Description**:
@@ -3104,11 +3104,15 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 • In `SensorSparklineView.kt`, the composable SHALL render a compact single-line X-axis label row below the polyline canvas displaying Left (`-T`), Middle (`-T/2`), and Right (`sparkline_axis_now`: `Jetzt` / `Now`).
 • Relative time offsets SHALL format via pure helper `formatSparklineTimeOffset(seconds: Int)` as `-M:SS` for $T < 3600\text{ s}$ and `-H:MM:SS` for $T \ge 3600\text{ s}$.
 • String resource `sparkline_axis_now` SHALL maintain 100% 9-language localization parity across all supported locales (`values`, `values-de`, `values-es`, `values-fr`, `values-it`, `values-ja`, `values-nl`, `values-pl`, `values-pt`).
+10. *Graph-Only Tile Intrinsic Height Constraint & Session Sparkline Reset (`REQ-TRK-059.10`, `ATT-6689`)*:
+• In `SensorFieldView.kt`, when `showValue == false && showGraph == true` (Graph-only tile), the sparkline composable SHALL be constrained with `Modifier.heightIn(min = resolveSparklineHeight(fieldState.viewSize, isGraphOnly = true)).weight(1f)`, guaranteeing non-zero measured height matching `resolveSparklineHeight(fieldState.viewSize, isGraphOnly = true)` within `IntrinsicSize.Min` packed rows (such as `SensorGridScreen.kt:1054`) and preventing 0px canvas collapse.
+• In `BANALServiceRepository.kt`, the repository SHALL clear all active `LiveSparklineBuffer` instances via `clearSparklineBuffers()` upon receiving `BANALService.RESET_ACCUMULATORS_INTENT` and upon transition from `TrackingMode.READY` to `TrackingMode.TRACKING`, guaranteeing that 1-Hz samples accumulated while idling in `READY` or across session accumulator resets do not bleed into workout recordings.
+• In `TrackingViewModel.kt`, the ViewModel SHALL expose `fun clearSparklineBuffers()`, invoke `banalServiceRepository.clearSparklineBuffers()`, immediately clear sparkline samples and spans in `_uiState`, and observe tracking state transitions (`READY -> TRACKING`) to trigger buffer clearing.
 
 **Requirement Archaeology & Chesterton's Fence Audit**:
-1. *Original Requirement ID & Target*: Net-new requirement `REQ-TRK-059`, extending `REQ-TRK-046` (`ShowValue`/`ShowBar` display elements), `REQ-UI-436` (Bar-only mode), and `REQ-UI-159` (Root BackHandler navigation). Refined by `ATT-6710` (singleton repository persistence in `BANALServiceRepository.kt`), `ATT-6695` (X-axis time labels `-T`, `-T/2`, `Now`), and `ATT-6690` (replacing 7-chip `FlowRow` with stepped `Slider` per Design Guidelines §1.4 in `EditSensorFieldDialog.kt`).
-2. *Historical Origin & Commit Trace*: `ATT-4841` introduced `SHOW_VALUE` and `SHOW_BAR` in DB v16; `ATT-4927` added sport-dependent bar gating in DB v18; `ATT-1294` introduced `LiveSparklineBuffer` and `FilterChip` in `EditSensorFieldDialog`; `ATT-6710` added singleton repository persistence and task preservation; `ATT-6695` added X-axis time labels; `ATT-6690` introduced the stepped slider.
-3. *Root Reason for Existing Formulation*: Prior sparkline implementations used `FlowRow` with `FilterChip`s as a fast initial prototype before Design Guidelines §1.4 formalized prohibiting multi-chip rows for scalar sets with $\ge 5$ discrete values.
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-TRK-059`, extending `REQ-TRK-046` (`ShowValue`/`ShowBar` display elements), `REQ-UI-436` (Bar-only mode), and `REQ-UI-159` (Root BackHandler navigation). Refined by `ATT-6710` (singleton repository persistence in `BANALServiceRepository.kt`), `ATT-6695` (X-axis time labels `-T`, `-T/2`, `Now`), `ATT-6690` (replacing 7-chip `FlowRow` with stepped `Slider` per Design Guidelines §1.4 in `EditSensorFieldDialog.kt`), and `ATT-6689` (Graph-only tile intrinsic height constraint in `SensorFieldView.kt` and workout start/reset buffer clearance in `BANALServiceRepository.kt` and `TrackingViewModel.kt`).
+2. *Historical Origin & Commit Trace*: `ATT-4841` introduced `SHOW_VALUE` and `SHOW_BAR` in DB v16; `ATT-4927` added sport-dependent bar gating in DB v18; `ATT-1294` introduced `LiveSparklineBuffer` and `FilterChip` in `EditSensorFieldDialog`; `ATT-6710` added singleton repository persistence and task preservation; `ATT-6695` added X-axis time labels; `ATT-6690` introduced the stepped slider; `ATT-6689` fixed Graph-only `0px` collapse in `IntrinsicSize.Min` rows and session reset bleed.
+3. *Root Reason for Existing Formulation*: `ATT-1294` applied `Modifier.weight(1f)` for Graph-only mode under the assumption that the tile would expand to fill available height, overlooking `SensorGridScreen.kt:1054` where rows are wrapped in `IntrinsicSize.Min` causing `Canvas` (min intrinsic height `0.dp`) to collapse to `0px`. Additionally, `ATT-6710` cleared buffers only on entering `TrackingMode.READY`, allowing pre-start samples during `READY` to bleed into `TRACKING`.
 4. *Preservation of Core Invariants*: Exactly the same 7 discrete duration horizons (`60s`, `120s`, `300s`, `600s`, `1200s`, `3600s`, `0s`) remain selectable; persistence to `GraphHorizonS` in SQLite remains 100% identical; bounded buffer memory ($\le 300$ samples / $\le 1\text{ KB}$ per tile) and 100% 9-language translation parity remain strictly preserved.
 
 **Acceptance Criteria (Given-When-Then)**:
@@ -3142,6 +3146,12 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 • *Given* a Cockpit tile configured with `Full Workout` (0s horizon) after 835 seconds of riding,
 • *When* rendered in `SensorSparklineView`,
 • *Then* `LiveSparklineBuffer.currentSpanSeconds` preserves 834s despite decimation, rendering `-13:54` (or `-13:55`) Left and `-6:57` Middle with `Jetzt`/`Now` Right.
+• *Given* a Cockpit tile configured with `showValue == false`, `showBar == false`, and `showGraph == true` placed inside a multi-tile row wrapped in `IntrinsicSize.Min`,
+• *When* the row is composed and measured,
+• *Then* `SensorFieldView` measures a non-zero height equal to or greater than `resolveSparklineHeight(viewSize, isGraphOnly = true)`, preventing 0px canvas collapse and rendering the sparkline trend polyline and X-axis labels.
+• *Given* active sparkline buffers accumulating samples while waiting in `TrackingMode.READY`,
+• *When* the user taps Start tracking (transitioning `TrackingMode.READY -> TRACKING`) or `RESET_ACCUMULATORS_INTENT` is broadcast,
+• *Then* `clearSparklineBuffers()` resets all registered sparkline buffers to empty, ensuring pre-start samples do not bleed into the recorded workout.
 
 **Invariants**: Existing display element flags (`showValue`, `showBar`) and gauge bar rendering preserved; 100% 9-language translation parity in `strings_cockpit.xml`; database upgrade idempotency; bounded memory ($\le 1\text{ KB}$ per tile).
 

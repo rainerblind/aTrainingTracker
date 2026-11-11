@@ -1742,6 +1742,10 @@
   • Verify LiveSparklineBuffer tracks totalElapsedSeconds and exposes currentSpanSeconds capped on fixed horizons (e.g. 300s) and uncapped across pairwise decimation in Full Workout mode.
   • Verify formatSparklineTimeOffset formats sub-hour (-M:SS) and multi-hour (-H:MM:SS) relative timestamps.
   • Verify TranslationParityTest confirms 100% 9-language localization parity for sparkline_axis_now in strings_cockpit.xml.
+  10. *Graph-Only Intrinsic Height Layout & Workout Reset Verification (`TST-TRK-059.10`, `SensorFieldViewGraphOnlyLayoutTest.kt`, `BANALServiceRepositorySparklineTest.kt`, `TrackingViewModelSparklineTest.kt`, `ATT-6689`)*:
+  • Verify SensorFieldView when showValue = false, showBar = false, showGraph = true inside Row(Modifier.height(IntrinsicSize.Min)) measures non-zero height matching resolveSparklineHeight(viewSize, isGraphOnly = true) across SMALL, NORMAL, LARGE, and XLARGE ViewSizes.
+  • Verify BANALServiceRepository resets all registered sparkline buffers upon receiving BANALService.RESET_ACCUMULATORS_INTENT and upon transition from TrackingMode.READY to TrackingMode.TRACKING.
+  • Verify TrackingViewModel clears active sparkline samples and span seconds upon workout reset.
 
 ### TST-FIL-015: **Filter Initialization State Tracking, Alpha Validation & Zero-Bias Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-FIL-015`, `REQ-FIL-011`, `REQ-FIL-012.5`, `REQ-FIL-013`

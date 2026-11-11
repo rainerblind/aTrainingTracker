@@ -32,8 +32,10 @@ import com.atrainingtracker.trainingtracker.ui.tracking.TrackingViewsRepository
 import com.atrainingtracker.trainingtracker.ui.tracking.ViewSize
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.verify
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -195,5 +197,41 @@ class TrackingViewModelSparklineTest {
         val result = invokeApplySensorData(listOf(hrField, powerField), listOf(hrSensorData))
         val updatedPowerField = result.first { it.sensorFieldId == powerFieldId }
         assertEquals("Unmatched field on partial tick must retain accumulated sparkline samples", powerSamples, updatedPowerField.sparklineSamples)
+    }
+
+    @Test
+    fun testClearSparklineBuffers_delegatesToRepositoryAndClearsUiState() {
+        val fieldId = 3001L
+        val configHash = Objects.hash(SensorType.HR, FilterType.INSTANTANEOUS, 0.0, null)
+        val field = SensorFieldState(
+            configHash = configHash,
+            sensorFieldId = fieldId,
+            rowNr = 0,
+            colNr = 0,
+            viewSize = ViewSize.NORMAL,
+            label = "Heart Rate",
+            filterDescription = "None",
+            value = "140",
+            units = "bpm",
+            zoneColor = Color.Red,
+            showGraph = true,
+            graphHorizonSeconds = 300,
+            sparklineSamples = listOf(140f, 142f, 145f),
+            sparklineSpanSeconds = 45
+        )
+
+        // Inject initial field into uiState via reflection
+        val uiStateField = TrackingViewModel::class.java.getDeclaredField("_uiState")
+        uiStateField.isAccessible = true
+        @Suppress("UNCHECKED_CAST")
+        val mutableUiState = uiStateField.get(viewModel) as kotlinx.coroutines.flow.MutableStateFlow<TrackingScreenState>
+        mutableUiState.value = TrackingScreenState(fields = listOf(field))
+
+        viewModel.clearSparklineBuffers()
+
+        verify { banalServiceRepo.clearSparklineBuffers() }
+        val clearedField = viewModel.uiState.value.fields.first { it.sensorFieldId == fieldId }
+        assertTrue("Sparkline samples must be empty after clearSparklineBuffers()", clearedField.sparklineSamples.isEmpty())
+        assertEquals("Sparkline span seconds must be 0 after clearSparklineBuffers()", 0, clearedField.sparklineSpanSeconds)
     }
 }

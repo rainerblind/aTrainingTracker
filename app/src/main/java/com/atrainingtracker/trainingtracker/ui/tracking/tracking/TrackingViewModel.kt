@@ -24,6 +24,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.asFlow
 import androidx.lifecycle.viewModelScope
 import androidx.preference.PreferenceManager
 import com.atrainingtracker.R
@@ -33,6 +34,7 @@ import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.banalservice.filters.FilteredSensorData
 import com.atrainingtracker.banalservice.sensor.SensorType
 import com.atrainingtracker.trainingtracker.MyHelper
+import com.atrainingtracker.trainingtracker.TrackingMode
 import com.atrainingtracker.trainingtracker.repositories.RoutesRepository
 import com.atrainingtracker.trainingtracker.segments.LiveSegment
 import com.atrainingtracker.trainingtracker.segments.LiveSegmentStatus
@@ -248,6 +250,33 @@ class TrackingViewModel @JvmOverloads constructor(
         loadSensorFieldStates()
         observeElevationPathPoints()
         loadActivityType()
+        observeTrackingMode()
+    }
+
+    /**
+     * Observes tracking mode transitions from the repository to clear sparkline buffers
+     * when transitioning from READY to TRACKING (REQ-TRK-059.10, ATT-6689).
+     */
+    private fun observeTrackingMode() {
+        val modeLiveData = try {
+            banalServiceRepository.trackingMode
+        } catch (_: Throwable) {
+            null
+        } ?: return
+
+        viewModelScope.launch {
+            var previousMode: TrackingMode? = null
+            try {
+                modeLiveData.asFlow().collect { mode ->
+                    if (previousMode == TrackingMode.READY && mode == TrackingMode.TRACKING) {
+                        clearSparklineBuffers()
+                    }
+                    previousMode = mode
+                }
+            } catch (_: Throwable) {
+                // Ignore cancellation or test environment errors
+            }
+        }
     }
 
     /**
@@ -762,6 +791,27 @@ class TrackingViewModel @JvmOverloads constructor(
 
         // Only return a new list if something actually changed to avoid unnecessary recompositions
         return if (hasChanged) updatedFields else currentFields
+    }
+
+    /**
+     * Clears all registered sparkline buffers in the singleton repository and resets
+     * the sparkline samples and span seconds in the UI state (REQ-TRK-059.10, ATT-6689).
+     */
+    fun clearSparklineBuffers() {
+        banalServiceRepository.clearSparklineBuffers()
+        _uiState.update { currentState ->
+            val updatedFields = currentState.fields.map { field ->
+                if (field.showGraph) {
+                    field.copy(
+                        sparklineSamples = emptyList(),
+                        sparklineSpanSeconds = 0
+                    )
+                } else {
+                    field
+                }
+            }
+            currentState.copy(fields = updatedFields)
+        }
     }
 
     // Helper function for zone color calculation
