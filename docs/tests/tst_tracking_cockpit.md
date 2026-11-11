@@ -1974,19 +1974,19 @@
 
 ### TST-CON-031: **BLE Radar Tail Light Mode Control Test Suite** [Verified]
 - **Requirement(s)**: `REQ-CON-031` (`REQ-CON-031.1`..`REQ-CON-031.7`)
-- **Component**: `BTLERadarDevice.java`, `RadarLightController.kt`, `RadarLightMode.kt`, `RadarEdgeOverlay.kt`, `RadarSettingsSection.kt`, `TuningPreferencesDataStore.kt`, `TrackerService.java`, `strings_radar.xml`
-- **Jira**: `ATT-5102`
+- **Component**: `BTLERadarDevice.java`, `RadarLightController.kt`, `RadarLightMode.kt`, `RadarEdgeOverlay.kt`, `RadarSettingsSection.kt`, `TuningPreferencesDataStore.kt`, `TrackerService.java`, `RadarLightQuickSwitchSheet.kt`, `strings_radar.xml`
+- **Jira**: `ATT-5102`, `ATT-6707`
 - **Test Description**:
-  1. *Light Characteristic Discovery & Queue Routing Tests (`TST-CON-031.1`, `BTLERadarDeviceTest.kt`)*:
-  • Verify discovery of characteristic `6a4e3202` and validation that light mode writes are queued via `enqueueWriteCharacteristic` without blocking radar measurement notifications.
-  2. *Mode Command Encoding & StVZO Pruning Tests (`TST-CON-031.2`, `RadarLightControllerTest.kt`)*:
-  • Verify encoding of light mode commands into raw GATT byte arrays (`OFF`, `DAY_FLASH`, `NIGHT_FLASH`, `SOLID`, `PELOTON`) and verify flashing mode pruning when StVZO hardware is indicated.
+  1. *Light Characteristic Discovery, Model Number Query & Queue Routing Tests (`TST-CON-031.1`, `BTLERadarDeviceTest.kt`)*:
+  • Verify discovery of characteristic `6a4e3202`, read of Device Information `0x2A24` (Model Number string), StVZO detection (`isStvzo = true` for `010-03180-10`, `RTL516`), initial read of `6a4e3202` on connect, active light mode re-dispatch on mid-ride reconnect, and serialized write queueing.
+  2. *Mode Command Encoding, StVZO Pruning & Gated Mutation Tests (`TST-CON-031.2`, `RadarLightControllerTest.kt`)*:
+  • Verify encoding of light mode commands into raw GATT byte arrays (`OFF`, `DAY_FLASH`, `NIGHT_FLASH`, `SOLID`, `PELOTON`), flashing mode pruning under StVZO, and verification that `_currentMode` and `RadarStateRepository` mutate strictly when `dispatched == true`.
   3. *Cockpit Quick-Switch Sheet UI & State Tests (`TST-CON-031.3`, `RadarLightQuickSwitchSheetTest.kt`)*:
-  • Verify modal sheet rendering upon badge tap, active mode indication, selection callback invocation, and non-interactive badge behavior on devices lacking light characteristic.
-  4. *Workout Lifecycle Auto-Switch Automation Tests (`TST-CON-031.4`, `RadarLightControllerTest.kt`)*:
-  • Verify automatic transmission of workout light command on tracker start and off command on tracker stop when `radarAutoLightControl` is enabled.
-  5. *Settings Persistence & Config Parity Tests (`TST-CON-031.5`, `TuningPreferencesDataStoreTest.kt`)*:
-  • Verify preference persistence for `radarLightDefaultMode` and `radarAutoLightControl` in DataStore.
+  • Verify modal sheet rendering upon badge tap, active mode indication, selection callback invocation, non-interactive badge behavior on devices lacking light characteristic, styling using `MaterialTheme.colorScheme.outline`, and `@Preview` coverage.
+  4. *Workout Lifecycle Auto-Switch Automation & Pause Safety Tests (`TST-CON-031.4`, `RadarLightControllerTest.kt`, `TrackerServiceTest.kt`)*:
+  • Verify automatic transmission of workout light command on tracker start/resume (`START_NORMAL`, `RESUME_BY_USER`, `RESUME_AUTOMATICALLY`), preservation of tail light illumination across workout pause, and synchronous dispatch of `OFF` on explicit stop (`handleActionStop`) before `BANALService` unbinds without MockK `context.filesDir` crashes.
+  5. *Settings Persistence & Config Parity Tests (`TST-CON-031.5`, `TuningPreferencesDataStoreTest.kt`, `RadarSettingsSectionTest.kt`)*:
+  • Verify preference persistence for `radarLightDefaultMode` and `radarAutoLightControl` in DataStore, compliant selector UI in `RadarSettingsSection`, and absence of live GATT writes when updating idle preferences.
   6. *Traffic Simulator Light State Tests (`TST-CON-031.6`, `RadarTrafficSimulatorTest.kt`)*:
   • Verify light command handling and simulated state reflections in `RadarTrafficSimulator`.
   7. *9-Language Localization Parity Test (`TST-CON-031.7`, `TranslationParityTest.kt`)*:

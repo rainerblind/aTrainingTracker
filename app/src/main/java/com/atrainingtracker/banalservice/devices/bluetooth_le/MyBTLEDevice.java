@@ -809,10 +809,12 @@ public abstract class MyBTLEDevice extends MyRemoteDevice {
             mBatteryCharacteristic = characteristic;
             mHandler.removeCallbacks(mBatteryReadRunnable);
             mHandler.postDelayed(mBatteryReadRunnable, READ_BATTERY_PERCENTAGE_PERIOD);
+        } else {
+            onOtherCharacteristicUpdate(gatt, characteristic);
         }
-        // else {
-        //	Log.d(TAG, "TODO: implement characteristicUpdate for other services");
-        // }
+    }
+
+    protected void onOtherCharacteristicUpdate(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic) {
     }
 
     public void enqueueGattOperation(GattOperation op) {

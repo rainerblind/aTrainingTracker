@@ -346,6 +346,47 @@ class BTLERadarDeviceTest {
     }
 
     @Test
+    fun testIsStvzoModel_patternMatching() {
+        assertTrue(BTLERadarDevice.isStvzoModel("010-03180-10"))
+        assertTrue(BTLERadarDevice.isStvzoModel("Garmin Varia RTL516"))
+        assertTrue(BTLERadarDevice.isStvzoModel("Varia Radar StVZO"))
+        assertTrue(BTLERadarDevice.isStvzoModel("RVR316"))
+
+        assertFalse(BTLERadarDevice.isStvzoModel("010-03180-00"))
+        assertFalse(BTLERadarDevice.isStvzoModel("Garmin Varia RTL515"))
+        assertFalse(BTLERadarDevice.isStvzoModel("RVR315"))
+        assertFalse(BTLERadarDevice.isStvzoModel(null))
+        assertFalse(BTLERadarDevice.isStvzoModel(""))
+    }
+
+    @Test
+    fun testOnOtherCharacteristicUpdate_modelNumberDetectsStvzo() {
+        val mockGatt = mockk<BluetoothGatt>(relaxed = true)
+        val mockModelChar = mockk<BluetoothGattCharacteristic>(relaxed = true)
+        every { mockModelChar.uuid } returns BluetoothConstants.UUID_CHARACTERISTIC_MODEL_NUMBER
+        every { mockModelChar.getStringValue(0) } returns "010-03180-10"
+
+        radarDevice.onOtherCharacteristicUpdateForTesting(mockGatt, mockModelChar)
+
+        assertTrue(radarDevice.isStvzo)
+        assertEquals("010-03180-10", radarDevice.modelNumber)
+        assertTrue(RadarLightController.isStvzo.value)
+    }
+
+    @Test
+    fun testOnOtherCharacteristicUpdate_lightControlUpdatesController() {
+        val mockGatt = mockk<BluetoothGatt>(relaxed = true)
+        val mockLightChar = mockk<BluetoothGattCharacteristic>(relaxed = true)
+        every { mockLightChar.uuid } returns BluetoothConstants.UUID_CHARACTERISTIC_RADAR_LIGHT_CONTROL
+        every { mockLightChar.value } returns byteArrayOf(RadarLightMode.SOLID.commandByte)
+
+        radarDevice.onOtherCharacteristicUpdateForTesting(mockGatt, mockLightChar)
+
+        assertEquals(RadarLightMode.SOLID, RadarLightController.currentMode.value)
+        assertEquals(RadarLightMode.SOLID, RadarStateRepository.getState().lightMode)
+    }
+
+    @Test
     fun testWatchdog_resetsSensorsToClearOnStarvation() {
         radarDevice.processTargetsForTesting(listOf(RadarTarget(1, 10f, 6f, ThreatLevel.APPROACHING)))
         assertEquals(10.0, radarDevice.getSensor(SensorType.RADAR_CLOSEST_DISTANCE_m).value)

@@ -30,10 +30,15 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ElevatedCard
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
@@ -51,6 +56,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
@@ -74,7 +80,7 @@ import kotlin.math.roundToInt
 /**
  * Settings and preview composable for cycling radar edge overlay and traffic simulator (REQ-TRK-062.5, REQ-CON-029.4).
  */
-@OptIn(ExperimentalLayoutApi::class)
+@OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun RadarSettingsSection(
     modifier: Modifier = Modifier,
@@ -693,28 +699,45 @@ fun RadarSettingsSection(
 
                 Spacer(modifier = Modifier.height(6.dp))
 
+                var lightModeExpanded by remember { mutableStateOf(false) }
                 val availableModes = RadarLightController.getAvailableModes()
-                FlowRow(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
+
+                ExposedDropdownMenuBox(
+                    expanded = lightModeExpanded,
+                    onExpandedChange = { lightModeExpanded = !lightModeExpanded },
+                    modifier = Modifier.fillMaxWidth().testTag("RadarLightDefaultModeDropdown")
                 ) {
-                    availableModes.forEach { mode ->
-                        FilterChip(
-                            selected = tuningConfig.radarLightDefaultMode == mode,
-                            onClick = {
-                                coroutineScope.launch {
-                                    actualDataStore.updateRadarLightDefaultMode(mode)
-                                }
-                                RadarLightController.setLightMode(mode)
-                            },
-                            label = {
-                                Text(
-                                    text = stringResource(mode.titleResId),
-                                    style = MaterialTheme.typography.labelMedium
-                                )
-                            }
-                        )
+                    OutlinedTextField(
+                        value = stringResource(tuningConfig.radarLightDefaultMode.titleResId),
+                        onValueChange = {},
+                        readOnly = true,
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = lightModeExpanded) },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .menuAnchor(),
+                        textStyle = MaterialTheme.typography.bodyLarge
+                    )
+                    ExposedDropdownMenu(
+                        expanded = lightModeExpanded,
+                        onDismissRequest = { lightModeExpanded = false }
+                    ) {
+                        availableModes.forEach { mode ->
+                            DropdownMenuItem(
+                                text = {
+                                    Text(
+                                        text = stringResource(mode.titleResId),
+                                        style = MaterialTheme.typography.bodyMedium
+                                    )
+                                },
+                                onClick = {
+                                    coroutineScope.launch {
+                                        actualDataStore.updateRadarLightDefaultMode(mode)
+                                    }
+                                    lightModeExpanded = false
+                                },
+                                modifier = Modifier.testTag("RadarLightModeItem_${mode.name}")
+                            )
+                        }
                     }
                 }
 

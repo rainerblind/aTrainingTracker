@@ -77,6 +77,9 @@ public class BTLERadarDevice extends MyBTLEDevice {
     private boolean mIsV2Stream = false;
     private BluetoothGattCharacteristic mLightControlCharacteristic;
     private volatile boolean mIsLightControlSupported = false;
+    private volatile boolean mIsStvzo = false;
+    private volatile String mModelNumber = null;
+    private volatile RadarLightMode mLastConfiguredLightMode = null;
 
     private RadarWindowAggregator mWindowAggregator = new RadarWindowAggregator();
 
@@ -167,11 +170,45 @@ public class BTLERadarDevice extends MyBTLEDevice {
             if (DEBUG) Log.i(TAG, "Garmin Varia light control characteristic 6a4e3202 discovered (REQ-CON-031.1).");
             mLightControlCharacteristic = lightChar;
             mIsLightControlSupported = true;
-            RadarLightController.registerRadarDevice(this, true, false);
+            RadarLightController.registerRadarDevice(this, true, mIsStvzo);
+
+            // Subscribe or read initial physical light mode
+            if ((lightChar.getProperties() & (BluetoothGattCharacteristic.PROPERTY_NOTIFY | BluetoothGattCharacteristic.PROPERTY_INDICATE)) != 0) {
+                try {
+                    gatt.setCharacteristicNotification(lightChar, true);
+                    BluetoothGattDescriptor desc = lightChar.getDescriptor(BluetoothConstants.UUID_CHARACTERISTIC_CLIENT_CONFIG);
+                    if (desc != null) {
+                        byte[] val = (lightChar.getProperties() & BluetoothGattCharacteristic.PROPERTY_INDICATE) != 0
+                                ? BluetoothGattDescriptor.ENABLE_INDICATION_VALUE
+                                : BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE;
+                        enqueueWriteDescriptor(desc, val);
+                    }
+                } catch (SecurityException e) {
+                    Log.w(TAG, "Missing BLUETOOTH_CONNECT permission enabling light notifications", e);
+                }
+            } else if ((lightChar.getProperties() & BluetoothGattCharacteristic.PROPERTY_READ) != 0) {
+                enqueueReadCharacteristic(lightChar);
+            }
+
+            // Mid-ride reconnect: re-apply active workout light mode
+            RadarLightMode activeMode = RadarLightController.getCurrentMode().getValue();
+            if (activeMode != RadarLightMode.OFF) {
+                if (DEBUG) Log.i(TAG, "Re-applying active workout light mode upon reconnect: " + activeMode);
+                enqueueWriteCharacteristic(lightChar, new byte[]{activeMode.getCommandByte()});
+            }
         } else {
             mLightControlCharacteristic = null;
             mIsLightControlSupported = false;
             RadarLightController.registerRadarDevice(this, false, false);
+        }
+
+        // Device Information Service discovery for StVZO model number detection (ATT-6707 / REQ-CON-031.1)
+        BluetoothGattService disService = gatt.getService(BluetoothConstants.UUID_SERVICE_DEVICE_INFORMATION);
+        if (disService != null) {
+            BluetoothGattCharacteristic modelChar = disService.getCharacteristic(BluetoothConstants.UUID_CHARACTERISTIC_MODEL_NUMBER);
+            if (modelChar != null) {
+                enqueueReadCharacteristic(modelChar);
+            }
         }
 
         // Chained battery CCCD write (REQ-CON-007, ATT-3312) via queue
@@ -345,11 +382,53 @@ public class BTLERadarDevice extends MyBTLEDevice {
             return false;
         }
         enqueueWriteCharacteristic(lightChar, new byte[]{mode.getCommandByte()});
+        mLastConfiguredLightMode = mode;
         return true;
     }
 
     public boolean isLightControlSupported() {
         return mIsLightControlSupported;
+    }
+
+    public boolean isStvzo() {
+        return mIsStvzo;
+    }
+
+    @Nullable
+    public String getModelNumber() {
+        return mModelNumber;
+    }
+
+    public static boolean isStvzoModel(@Nullable String model) {
+        if (model == null) return false;
+        String upper = model.toUpperCase(java.util.Locale.US);
+        return upper.contains("010-03180-10") ||
+               upper.contains("RTL516") ||
+               upper.contains("STVZO") ||
+               upper.contains("RVR316");
+    }
+
+    @Override
+    protected void onOtherCharacteristicUpdate(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic) {
+        if (characteristic == null || characteristic.getUuid() == null) return;
+
+        if (BluetoothConstants.UUID_CHARACTERISTIC_MODEL_NUMBER.equals(characteristic.getUuid())) {
+            String model = characteristic.getStringValue(0);
+            if (model != null) {
+                mModelNumber = model;
+                boolean stvzo = isStvzoModel(model);
+                mIsStvzo = stvzo;
+                if (DEBUG) Log.i(TAG, "Read model number: " + model + " (isStvzo=" + stvzo + ")");
+                RadarLightController.registerRadarDevice(this, mIsLightControlSupported, mIsStvzo);
+            }
+        } else if (BluetoothConstants.UUID_CHARACTERISTIC_RADAR_LIGHT_CONTROL.equals(characteristic.getUuid())) {
+            byte[] val = characteristic.getValue();
+            if (val != null && val.length > 0) {
+                RadarLightMode mode = RadarLightMode.fromCommandByte(val[0]);
+                if (DEBUG) Log.i(TAG, "Read physical tail light mode: " + mode);
+                RadarLightController.updateHardwareLightMode(mode);
+            }
+        }
     }
 
     /**
@@ -546,5 +625,9 @@ public class BTLERadarDevice extends MyBTLEDevice {
 
     public void onAccumulatorsResetForTesting() {
         onAccumulatorsReset();
+    }
+
+    public void onOtherCharacteristicUpdateForTesting(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic) {
+        onOtherCharacteristicUpdate(gatt, characteristic);
     }
 }

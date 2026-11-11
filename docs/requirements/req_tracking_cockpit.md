@@ -3542,19 +3542,19 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 **Invariants**: Guaranteed legacy V1 fallback; 3.5s packet starvation watchdog preservation; non-blocking serialized GATT operations; thread safety across 4–8 Hz updates and 1 Hz latching; 100% 9-language translation parity.
 
 ### REQ-CON-031: BLE Radar Tail Light Mode Control & Workout Auto-Switch [Verified]
-- **Tests**: `TST-CON-031` | **Tickets**: `ATT-5102`
-- **Implementation**: `BTLERadarDevice.java`, `RadarLightController.kt`, `RadarLightMode.kt`, `RadarEdgeOverlay.kt`, `RadarSettingsSection.kt`, `TuningPreferencesDataStore.kt`, `TrackerService.java`, `strings_radar.xml`
-- **Rationale**: Garmin Varia radar tail lights (e.g. RearVue 820) expose a dedicated BLE light control characteristic `6a4e3202-667b-11e3-949a-0800200c9a66` on service `6a4e3200-667b-11e3-949a-0800200c9a66`. Cyclists require on-the-fly handlebar switching of tail light modes without reaching behind the saddle, coupled with automated workout start/finish lighting control to preserve peripheral battery and prevent riding without active lighting (ATT-5102, Parent Epic ATT-1286, extending `REQ-CON-028`, `REQ-CON-029`, and `REQ-CON-030`):
-1. *BLE Light Control Discovery & Serialized Queue Routing (`REQ-CON-031.1`)*:
-• Upon service discovery on `BTLERadarDevice`, if characteristic `6a4e3202` is present, the device SHALL register light control capabilities and route mode write commands via `MyBTLEDevice.enqueueWriteCharacteristic(...)` into the serialized GATT FIFO queue without delaying radar threat telemetry or 3.5s watchdog processing.
-2. *Tail Light Mode Command Mapping & StVZO Capability Pruning (`REQ-CON-031.2`)*:
-• The system SHALL support `RadarLightMode` states (`OFF`, `DAY_FLASH`, `NIGHT_FLASH`, `SOLID`, `PELOTON`). When connected to StVZO-certified hardware, flashing modes (`DAY_FLASH`, `NIGHT_FLASH`, `PELOTON`) SHALL be pruned automatically from user selection, exposing only legal steady modes (`SOLID`, `OFF`).
+- **Tests**: `TST-CON-031` | **Tickets**: `ATT-5102`, `ATT-6707`
+- **Implementation**: `BTLERadarDevice.java`, `RadarLightController.kt`, `RadarLightMode.kt`, `RadarEdgeOverlay.kt`, `RadarSettingsSection.kt`, `TuningPreferencesDataStore.kt`, `TrackerService.java`, `RadarLightQuickSwitchSheet.kt`, `strings_radar.xml`
+- **Rationale**: Garmin Varia radar tail lights (e.g. RearVue 820) expose a dedicated BLE light control characteristic `6a4e3202-667b-11e3-949a-0800200c9a66` on service `6a4e3200-667b-11e3-949a-0800200c9a66`. Cyclists require on-the-fly handlebar switching of tail light modes without reaching behind the saddle, coupled with automated workout start/finish lighting control to preserve peripheral battery and prevent riding without active lighting (ATT-5102, ATT-6707, Parent Epic ATT-1286, extending `REQ-CON-028`, `REQ-CON-029`, and `REQ-CON-030`):
+1. *BLE Light Control Discovery, StVZO Detection & Serialized Queue Routing (`REQ-CON-031.1`)*:
+• Upon service discovery on `BTLERadarDevice`, if characteristic `6a4e3202` is present, the device SHALL register light control capabilities and route mode write commands via `MyBTLEDevice.enqueueWriteCharacteristic(...)` into the serialized GATT FIFO queue without delaying radar threat telemetry or 3.5s watchdog processing. The device SHALL discover Device Information service `0x180A` and read `0x2A24` (Model Number string); if the model string corresponds to StVZO hardware (e.g. `010-03180-10`, `RTL516`), `isStvzo` SHALL be set to `true`. On connect or reconnect, `BTLERadarDevice` SHALL read/subscribe `6a4e3202` to reflect physical light state and re-apply the active workout light mode upon mid-ride reconnect.
+2. *Tail Light Mode Command Mapping, StVZO Capability Pruning & Gated Mutation (`REQ-CON-031.2`)*:
+• The system SHALL support `RadarLightMode` states (`OFF`, `DAY_FLASH`, `NIGHT_FLASH`, `SOLID`, `PELOTON`). When connected to StVZO-certified hardware, flashing modes (`DAY_FLASH`, `NIGHT_FLASH`, `PELOTON`) SHALL be pruned automatically from user selection, exposing only legal steady modes (`SOLID`, `OFF`). `RadarLightController.setLightMode()` SHALL mutate `_currentMode` and `RadarStateRepository` strictly when `dispatched == true` (or confirmed by GATT).
 3. *Cockpit Quick-Switch Bottom Sheet (`REQ-CON-031.3`)*:
-• Tapping the radar status badge in `RadarEdgeOverlay` SHALL display a modal quick-switch bottom sheet presenting available light modes with live state indication; on radar devices without light control characteristic `6a4e3202`, the badge SHALL remain non-interactive without error.
-4. *Workout Lifecycle Auto-Switch Automation (`REQ-CON-031.4`)*:
-• When `radarAutoLightControl` is enabled in `TuningPreferencesDataStore`, `TrackerService` SHALL command `RadarLightMode.DAY_FLASH` (or `SOLID` under StVZO) upon workout start/resume and revert to `RadarLightMode.OFF` upon workout stop/finish.
+• Tapping the radar status badge in `RadarEdgeOverlay` SHALL display a modal quick-switch bottom sheet presenting available light modes with live state indication; on radar devices without light control characteristic `6a4e3202`, the badge SHALL remain non-interactive without error. Inactive mode indicators SHALL use `MaterialTheme.colorScheme.outline` (avoiding hardcoded `Color.Gray`), accompanied by Light, Dark, and StVZO `@Preview` composables.
+4. *Workout Lifecycle Auto-Switch Automation & Safety Pause Preservation (`REQ-CON-031.4`)*:
+• When `radarAutoLightControl` is enabled in `TuningPreferencesDataStore`, `TrackerService` SHALL command the configured default light mode upon workout start/resume (`START_NORMAL`, `RESUME_BY_USER`, and `RESUME_AUTOMATICALLY`). During workout **Pause**, the system SHALL strictly preserve active tail light illumination and NEVER extinguish the rear safety light. On explicit workout finish (`handleActionStop`), `TrackerService` SHALL command `RadarLightMode.OFF` synchronously *before* unbinding `BANALService`. `RadarLightController` SHALL use synchronously cached preferences without spawning unstructured background coroutines or accessing `context.filesDir` (Coding Standards §5.5).
 5. *Settings Configuration & DataStore Persistence (`REQ-CON-031.5`)*:
-• `RadarSettingsSection.kt` SHALL expose tail light controls, default mode selection, and the workout auto-switch toggle, backed by `TuningPreferencesDataStore.kt`.
+• `RadarSettingsSection.kt` SHALL expose tail light controls, default mode selection, and the workout auto-switch toggle, backed by `TuningPreferencesDataStore.kt`. The default light mode selector SHALL use a compliant single-selection dialog/menu (replacing the anti-pattern 5-chip `FlowRow`), and editing preferences while idle SHALL update DataStore without dispatching live peripheral writes.
 6. *Traffic Simulator Light State Emulation (`REQ-CON-031.6`)*:
 • `RadarTrafficSimulator` SHALL emulate tail light command reception and state transitions for UI testing without physical peripheral hardware.
 7. *9-Language Localization Parity (`REQ-CON-031.7`)*:
@@ -3564,14 +3564,23 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 • *Given* a connected Garmin Varia BLE peripheral exposing characteristic `6a4e3202`,
 • *When* the cyclist taps the radar status badge in `RadarEdgeOverlay` and selects "Day Flash",
 • *Then* `BTLERadarDevice` enqueues the light mode write to `6a4e3202` without interrupting radar telemetry streaming.
-• *Given* a legacy radar unit without `6a4e3202` (e.g. RVR315),
+• *Given* an StVZO-certified Garmin Varia unit (`0x2A24` Model Number e.g. `010-03180-10`),
 • *When* connected,
-• *Then* light quick-switch and tail light settings card are hidden or disabled without degrading radar detection.
-• *Given* `radarAutoLightControl` is enabled,
-• *When* the user starts a workout in `TrackerService`,
-• *Then* `RadarLightController` automatically transmits the configured active light mode command.
+• *Then* `RadarLightController.isStvzo` becomes `true` and only `SOLID` and `OFF` are presented in UI selectors.
+• *Given* an active workout with `radarAutoLightControl` enabled and tail light illuminated,
+• *When* the workout is paused (e.g. at a traffic light),
+• *Then* the rear safety light remains illuminated in its active mode.
+• *Given* an active workout with `radarAutoLightControl` enabled,
+• *When* the workout is explicitly stopped via `handleActionStop`,
+• *Then* `RadarLightMode.OFF` is dispatched synchronously before `BANALService` unbinds.
 
-**Invariants**: Non-blocking serialized GATT writes (zero collision with threat CCCD); StVZO legal compliance; fail-safe degradation on radar-only hardware; zero SQLite schema modifications; 100% 9-language translation parity.
+**Invariants**: Non-blocking serialized GATT writes (zero collision with threat CCCD); StVZO legal compliance; safety illumination during stops; fail-safe degradation on radar-only hardware; zero SQLite schema modifications; zero MockK crashes in unit tests; 100% 9-language translation parity.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: `REQ-CON-031` (BLE Radar Tail Light Mode Control & Workout Auto-Switch), targeting `BTLERadarDevice.java`, `RadarLightController.kt`, `TrackerService.java`, `RadarSettingsSection.kt`, and `RadarLightQuickSwitchSheet.kt`.
+2. *Historical Origin & Commit Trace*: Introduced in Sprint 2026-46.1 via `ATT-5102` (commit `3532c253`).
+3. *Root Reason for Existing Formulation*: Rapid initial prototype hardcoded `isStvzo = false` pending physical hardware arrival, placed auto-switch teardown in `onDestroy()` without differentiating Pause from Stop, and reused live quick-switch logic in Settings.
+4. *Preservation of Core Invariants*: StVZO regulatory compliance; non-blocking GATT FIFO queueing; safety illumination during stops; zero MockK crashes in unit tests; 100% 9-language localization parity.
 
 ### REQ-TRK-064: 1-Tap Radar Audio Snooze, Peloton-Mode Audio Sync & Smart Urban Alert Suppression [Verified]
 - **Tests**: `TST-TRK-064` | **Tickets**: `ATT-5119`, `ATT-6708`

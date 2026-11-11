@@ -997,7 +997,7 @@ public class TrackerService extends Service {
         }
         mStartType = startType;
         mWorkoutStartLocationRecorded = (startType != StartType.START_NORMAL);
-        if (startType == StartType.START_NORMAL || startType == StartType.RESUME_BY_USER) {
+        if (startType == StartType.START_NORMAL || startType == StartType.RESUME_BY_USER || startType == StartType.RESUME_AUTOMATICALLY) {
             RadarLightController.onWorkoutStarted(this);
         }
         switch (startType) {
@@ -1052,7 +1052,8 @@ public class TrackerService extends Service {
                 break;
 
             case RESUME_BY_USER:
-                Log.d(TAG, "resuming by user request");
+            case RESUME_AUTOMATICALLY:
+                Log.d(TAG, "resuming by user request or automatically");
                 mAutoPauseManager.onManualResume(TrainingApplication.isManualPauseLocked());
                 if (mTableInitializationFuture == null || mTableInitializationFuture.isDone()) {
                     mTableInitializationFuture = new CompletableFuture<>();
@@ -1394,7 +1395,6 @@ public class TrackerService extends Service {
             mRadarAlertManager = null;
         }
 
-        RadarLightController.onWorkoutStopped(this);
         RadarSnoozeController.reset();
 
         LifecycleUtils.safeUnregisterReceiver(this, mSearchingFinishedReceiver, TAG);
@@ -3050,6 +3050,6 @@ public class TrackerService extends Service {
     }
 
 
-    public enum StartType {START_NORMAL, RESUME_BY_USER, RESUME_SERVICE_RECREATION}
+    public enum StartType {START_NORMAL, RESUME_BY_USER, RESUME_AUTOMATICALLY, RESUME_SERVICE_RECREATION}
 
 }

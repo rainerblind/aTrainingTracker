@@ -37,6 +37,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -46,6 +47,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.devices.radar.RadarAudioSnoozeMode
@@ -85,124 +87,90 @@ fun RadarLightQuickSwitchSheet(
         onDismissRequest = onDismiss,
         modifier = modifier.testTag("RadarLightQuickSwitchSheet")
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            if (isLightControlSupported) {
-                if (isStvzo) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(TTColor.RadarDisconnectedAmber.copy(alpha = 0.15f))
-                            .padding(horizontal = 12.dp, vertical = 8.dp)
-                    ) {
-                        Text(
-                            text = stringResource(R.string.radar_light_stvzo_notice),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurface,
-                            fontWeight = FontWeight.Medium
-                        )
-                    }
-                    Spacer(modifier = Modifier.height(4.dp))
-                }
+        RadarLightQuickSwitchSheetContent(
+            currentMode = currentMode,
+            availableModes = availableModes,
+            isStvzo = isStvzo,
+            isLightControlSupported = isLightControlSupported,
+            snoozeState = snoozeState,
+            onModeSelected = onModeSelected,
+            onSnoozeSelected = onSnoozeSelected,
+            onResumeAudio = onResumeAudio,
+            onDismiss = onDismiss
+        )
+    }
+}
 
-                availableModes.forEach { mode ->
-                    val isSelected = mode == currentMode
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(8.dp))
-                            .clickable { onModeSelected(mode) }
-                            .padding(horizontal = 12.dp, vertical = 10.dp)
-                            .testTag("RadarLightMode_${mode.name}"),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        val dotColor = when (mode) {
-                            RadarLightMode.OFF -> Color.Gray
-                            RadarLightMode.SOLID -> TTColor.RadarThreatRed
-                            RadarLightMode.DAY_FLASH -> TTColor.RadarThreatAmber
-                            RadarLightMode.NIGHT_FLASH -> TTColor.RadarThreatAmber.copy(alpha = 0.7f)
-                            RadarLightMode.PELOTON -> TTColor.RadarThreatRed.copy(alpha = 0.5f)
-                        }
-                        Box(
-                            modifier = Modifier
-                                .size(10.dp)
-                                .clip(CircleShape)
-                                .background(dotColor)
-                        )
-
-                        Spacer(modifier = Modifier.width(12.dp))
-
-                        Text(
-                            text = stringResource(mode.titleResId),
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurface,
-                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                            modifier = Modifier.weight(1f)
-                        )
-
-                        RadioButton(
-                            selected = isSelected,
-                            onClick = { onModeSelected(mode) }
-                        )
-                    }
-                }
-
-                HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-            }
-
-            // Audio Snooze Section (REQ-TRK-064.1)
-            Text(
-                text = stringResource(R.string.radar_snooze_title),
-                style = MaterialTheme.typography.titleSmall,
-                color = MaterialTheme.colorScheme.primary,
-                fontWeight = FontWeight.SemiBold,
-                modifier = Modifier.padding(start = 4.dp, top = 4.dp)
-            )
-
-            if (snoozeState.isSnoozed) {
-                Button(
-                    onClick = {
-                        onResumeAudio()
-                        onDismiss()
-                    },
+/**
+ * Visual content for [RadarLightQuickSwitchSheet] (REQ-CON-031.3).
+ */
+@Composable
+fun RadarLightQuickSwitchSheetContent(
+    currentMode: RadarLightMode,
+    availableModes: List<RadarLightMode>,
+    isStvzo: Boolean,
+    isLightControlSupported: Boolean = true,
+    snoozeState: RadarAudioSnoozeState = RadarAudioSnoozeState.INACTIVE,
+    onModeSelected: (RadarLightMode) -> Unit,
+    onSnoozeSelected: (RadarAudioSnoozeMode) -> Unit = {},
+    onResumeAudio: () -> Unit = {},
+    onDismiss: () -> Unit = {},
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        if (isLightControlSupported) {
+            if (isStvzo) {
+                Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(vertical = 4.dp)
-                        .testTag("RadarSnooze_Resume")
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(TTColor.RadarDisconnectedAmber.copy(alpha = 0.15f))
+                        .padding(horizontal = 12.dp, vertical = 8.dp)
                 ) {
-                    Text(text = stringResource(R.string.radar_snooze_resume))
+                    Text(
+                        text = stringResource(R.string.radar_light_stvzo_notice),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        fontWeight = FontWeight.Medium
+                    )
                 }
+                Spacer(modifier = Modifier.height(4.dp))
             }
 
-            // Snooze Options
-            val snoozeOptions = listOf(
-                Pair(RadarAudioSnoozeMode.SNOOZE_15M, R.string.radar_snooze_15m),
-                Pair(RadarAudioSnoozeMode.SNOOZE_30M, R.string.radar_snooze_30m),
-                Pair(RadarAudioSnoozeMode.FAST_ONLY, R.string.radar_snooze_fast_only),
-                Pair(RadarAudioSnoozeMode.REST_OF_RIDE, R.string.radar_snooze_rest_of_ride)
-            )
-
-            snoozeOptions.forEach { (mode, stringResId) ->
-                val isSelected = snoozeState.isSnoozed && snoozeState.mode == mode
+            availableModes.forEach { mode ->
+                val isSelected = mode == currentMode
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(8.dp))
-                        .clickable {
-                            onSnoozeSelected(mode)
-                            onDismiss()
-                        }
+                        .clickable { onModeSelected(mode) }
                         .padding(horizontal = 12.dp, vertical = 10.dp)
-                        .testTag("RadarSnooze_${mode.name}"),
+                        .testTag("RadarLightMode_${mode.name}"),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
+                    val dotColor = when (mode) {
+                        RadarLightMode.OFF -> MaterialTheme.colorScheme.outline
+                        RadarLightMode.SOLID -> TTColor.RadarThreatRed
+                        RadarLightMode.DAY_FLASH -> TTColor.RadarThreatAmber
+                        RadarLightMode.NIGHT_FLASH -> TTColor.RadarThreatAmber.copy(alpha = 0.7f)
+                        RadarLightMode.PELOTON -> TTColor.RadarThreatRed.copy(alpha = 0.5f)
+                    }
+                    Box(
+                        modifier = Modifier
+                            .size(10.dp)
+                            .clip(CircleShape)
+                            .background(dotColor)
+                    )
+
+                    Spacer(modifier = Modifier.width(12.dp))
+
                     Text(
-                        text = stringResource(stringResId),
+                        text = stringResource(mode.titleResId),
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurface,
                         fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
@@ -211,15 +179,126 @@ fun RadarLightQuickSwitchSheet(
 
                     RadioButton(
                         selected = isSelected,
-                        onClick = {
-                            onSnoozeSelected(mode)
-                            onDismiss()
-                        }
+                        onClick = { onModeSelected(mode) }
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+        }
+
+        // Audio Snooze Section (REQ-TRK-064.1)
+        Text(
+            text = stringResource(R.string.radar_snooze_title),
+            style = MaterialTheme.typography.titleSmall,
+            color = MaterialTheme.colorScheme.primary,
+            fontWeight = FontWeight.SemiBold,
+            modifier = Modifier.padding(start = 4.dp, top = 4.dp)
+        )
+
+        if (snoozeState.isSnoozed) {
+            Button(
+                onClick = {
+                    onResumeAudio()
+                    onDismiss()
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 4.dp)
+                    .testTag("RadarSnooze_Resume")
+            ) {
+                Text(text = stringResource(R.string.radar_snooze_resume))
+            }
+        }
+
+        // Snooze Options
+        val snoozeOptions = listOf(
+            Pair(RadarAudioSnoozeMode.SNOOZE_15M, R.string.radar_snooze_15m),
+            Pair(RadarAudioSnoozeMode.SNOOZE_30M, R.string.radar_snooze_30m),
+            Pair(RadarAudioSnoozeMode.FAST_ONLY, R.string.radar_snooze_fast_only),
+            Pair(RadarAudioSnoozeMode.REST_OF_RIDE, R.string.radar_snooze_rest_of_ride)
+        )
+
+        snoozeOptions.forEach { (mode, stringResId) ->
+            val isSelected = snoozeState.isSnoozed && snoozeState.mode == mode
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(8.dp))
+                    .clickable {
+                        onSnoozeSelected(mode)
+                        onDismiss()
+                    }
+                    .padding(horizontal = 12.dp, vertical = 10.dp)
+                    .testTag("RadarSnooze_${mode.name}"),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = stringResource(stringResId),
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                    modifier = Modifier.weight(1f)
+                )
+
+                RadioButton(
+                    selected = isSelected,
+                    onClick = {
+                        onSnoozeSelected(mode)
+                        onDismiss()
+                    }
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+    }
+}
+
+@Preview(name = "RadarLightQuickSwitchSheet - Light", showBackground = true)
+@Composable
+fun RadarLightQuickSwitchSheetPreviewLight() {
+    MaterialTheme {
+        Surface {
+            RadarLightQuickSwitchSheetContent(
+                currentMode = RadarLightMode.DAY_FLASH,
+                availableModes = RadarLightMode.getAvailableModes(false),
+                isStvzo = false,
+                isLightControlSupported = true,
+                onModeSelected = {}
+            )
+        }
+    }
+}
+
+@Preview(name = "RadarLightQuickSwitchSheet - Dark", uiMode = android.content.res.Configuration.UI_MODE_NIGHT_YES, showBackground = true)
+@Composable
+fun RadarLightQuickSwitchSheetPreviewDark() {
+    MaterialTheme {
+        Surface {
+            RadarLightQuickSwitchSheetContent(
+                currentMode = RadarLightMode.SOLID,
+                availableModes = RadarLightMode.getAvailableModes(false),
+                isStvzo = false,
+                isLightControlSupported = true,
+                onModeSelected = {}
+            )
+        }
+    }
+}
+
+@Preview(name = "RadarLightQuickSwitchSheet - StVZO", showBackground = true)
+@Composable
+fun RadarLightQuickSwitchSheetPreviewStvzo() {
+    MaterialTheme {
+        Surface {
+            RadarLightQuickSwitchSheetContent(
+                currentMode = RadarLightMode.SOLID,
+                availableModes = RadarLightMode.getAvailableModes(true),
+                isStvzo = true,
+                isLightControlSupported = true,
+                onModeSelected = {}
+            )
         }
     }
 }
