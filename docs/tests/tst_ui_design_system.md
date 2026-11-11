@@ -8254,3 +8254,29 @@
   5. *Tier 1 Targeted Unit Test Regression Suite (`TST-UI-513.5`)*:
   • Execute targeted test suite (`./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.navigation.*" --tests "com.atrainingtracker.trainingtracker.ui.athleteprofile.*" --tests "com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.*"`).
   • Assert 100% pass rate.
+
+
+
+### TST-UI-514: **Dedicated ANT+ & Bluetooth LE Radar Vector Badge Verification Suite** [Verified]
+- **Target Release**: `V5.0.0`
+- **Requirement(s)**: `REQ-UI-514`
+- **Component**: `app/src/main/res/drawable/bike_radar.xml`, `app/src/main/res/drawable/bt_bike_radar.xml`, `UIHelper.java`, `DeviceData.kt`, `VectorAssetResolutionContractTest.kt`
+- **Jira**: `ATT-6699`
+- **Test Description**:
+  1. *Vector XML Well-Formedness & Rule 37 Geometry Contract Test (`TST-UI-514.1`, `VectorAssetResolutionContractTest.kt`)*:
+  • Verify `bike_radar.xml` (96x96) and `bt_bike_radar.xml` (144x144) exist in `app/src/main/res/drawable/`, parse cleanly as XML `<vector>` documents with `48dp x 48dp` dimensions, and have valid positive viewport bounds.
+  • Verify each `<path>` has $\le 45$ `L` commands and at least one analytical curve command (`A`, `C`, or `Q`), adhering strictly to Rule 37.
+  2. *Color Tokens, Badge Geometry & Uppercase Typography Contract Test (`TST-UI-514.2`, `VectorAssetResolutionContractTest.kt`)*:
+  • Verify `bike_radar.xml` has `#000000` background badge ($r=10$) and white foreground glyphs.
+  • Verify `bt_bike_radar.xml` has full-bleed `#0A3D91` background badge ($0..144$, $r=22.0$) without legacy `#07377F` or 10-unit inset margins.
+  • Verify both drawables use `evenOdd` fillType for bottom `RDR` typography counter punch-outs at expected Y-coordinates ($y \in [75.5, 90.5]$ for ANT+, $y \in [113.25, 135.75]$ for BLE).
+  • Verify `bt_bike_radar.xml` centers cyclist with `translateX="18.18"` and embeds canonical radar mini-icon `mini_icon_radar` in the top-left quadrant.
+  3. *DeviceType.BIKE_RADAR Icon Resolution Contract Test (`TST-UI-514.3`, `VectorAssetResolutionContractTest.kt`)*:
+  • Assert `UIHelper.getIconId(DeviceType.BIKE_RADAR, Protocol.ANT_PLUS) == R.drawable.bike_radar`.
+  • Assert `UIHelper.getIconId(DeviceType.BIKE_RADAR, Protocol.BLUETOOTH_LE) == R.drawable.bt_bike_radar`.
+  • Assert `DeviceData.getIconId(DeviceType.BIKE_RADAR, Protocol.ANT_PLUS) == R.drawable.bike_radar`.
+  • Assert `DeviceData.getIconId(DeviceType.BIKE_RADAR, Protocol.BLUETOOTH_LE) == R.drawable.bt_bike_radar`.
+  4. *Tier 1 Targeted Unit Test Regression Suite (`TST-UI-514.4`)*:
+  • Execute targeted test suite (`./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.resources.VectorAssetResolutionContractTest" --tests "com.atrainingtracker.banalservice.devices.bluetooth_le.*"`).
+  • Assert 100% pass rate.
+  • Assert 100% pass rate.

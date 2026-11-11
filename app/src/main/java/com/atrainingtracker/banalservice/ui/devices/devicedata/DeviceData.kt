@@ -251,6 +251,7 @@ fun getIconId(deviceType: DeviceType, protocol: Protocol): Int {
                 DeviceType.BIKE_SPEED_AND_CADENCE -> R.drawable.bike_speed_and_cadence
                 DeviceType.BIKE_POWER -> R.drawable.bike_pwr
                 DeviceType.RUN_SPEED -> R.drawable.run_spd
+                DeviceType.BIKE_RADAR -> R.drawable.bike_radar
                 DeviceType.ENVIRONMENT -> R.drawable.temp
                 else -> protocol.iconId
             }
@@ -262,6 +263,7 @@ fun getIconId(deviceType: DeviceType, protocol: Protocol): Int {
             DeviceType.BIKE_CADENCE -> R.drawable.bt_bike_cad
             DeviceType.BIKE_SPEED_AND_CADENCE -> R.drawable.bt_bike_speed_and_cadence
             DeviceType.BIKE_POWER -> R.drawable.bt_bike_pwr
+            DeviceType.BIKE_RADAR -> R.drawable.bt_bike_radar
             DeviceType.RUN_SPEED -> R.drawable.bt_run
             else -> protocol.iconId
         }

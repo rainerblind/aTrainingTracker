@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ~ aTrainingTracker (ANT+ BTLE)
+  ~ Copyright (c) 2011 - 2026 Rainer Blind <rainer.blind@gmail.com>
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ Dedicated ANT+ Bike Radar vector logo (ATT-6699 / REQ-UI-513 / Rule 37).
+  -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="48dp"
+    android:height="48dp"
+    android:viewportWidth="96.0"
+    android:viewportHeight="96.0">
+    <path
+        android:fillColor="#000000"
+        android:pathData="M 10.00,0.00 L 86.00,0.00 A 10.00,10.00 0 0,1 96.00,10.00 L 96.00,86.00 A 10.00,10.00 0 0,1 86.00,96.00 L 10.00,96.00 A 10.00,10.00 0 0,1 0.00,86.00 L 0.00,10.00 A 10.00,10.00 0 0,1 10.00,0.00 Z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:fillType="evenOdd"
+        android:pathData="M 12.00,51.50 A 12.50,12.50 0 1,1 37.00,51.50 A 12.50,12.50 0 1,1 12.00,51.50 Z M 15.80,51.50 A 8.70,8.70 0 1,0 33.20,51.50 A 8.70,8.70 0 1,0 15.80,51.50 Z M 53.50,51.50 A 12.50,12.50 0 1,1 78.50,51.50 A 12.50,12.50 0 1,1 53.50,51.50 Z M 57.30,51.50 A 8.70,8.70 0 1,0 74.70,51.50 A 8.70,8.70 0 1,0 57.30,51.50 Z M 59.80,14.00 A 5.20,5.20 0 1,1 70.20,14.00 A 5.20,5.20 0 1,1 59.80,14.00 Z" />
+    <path
+        android:pathData="M 72.5,29.0 L 63.0,29.0 L 53.5,21.5 L 40.5,31.0 L 50.8,40.0 L 43.2,60.5"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="4.6"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="2.8"
+        android:strokeLineCap="round"
+        android:pathData="M 30.5,23.5 A 8.5,8.5 0 0,0 30.5,38.5 M 26.5,18.0 A 14.5,14.5 0 0,0 26.5,44.0 M 22.5,12.5 A 20.5,20.5 0 0,0 22.5,49.5" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:fillType="evenOdd"
+        android:pathData="M 16.20,75.5 L 30.70,75.5 A 3.8,3.8 0 0,1 34.50,79.3 L 34.50,81.2 A 3.2,3.2 0 0,1 31.70,84.4 A 3.0,3.0 0 0,1 34.40,87.4 L 34.40,90.5 L 29.40,90.5 L 29.40,87.5 A 1.5,1.5 0 0,0 27.90,86.0 L 21.20,86.0 L 21.20,90.5 L 16.20,90.5 Z M 21.20,79.0 L 28.70,79.0 A 1.4,1.4 0 0,1 30.10,80.4 L 30.10,81.2 A 1.4,1.4 0 0,1 28.70,82.6 L 21.20,82.6 Z M 38.50,75.5 L 53.00,75.5 A 4.5,4.5 0 0,1 57.50,80.0 L 57.50,86.0 A 4.5,4.5 0 0,1 53.00,90.5 L 38.50,90.5 Z M 43.50,79.2 L 50.70,79.2 A 1.8,1.8 0 0,1 52.50,81.0 L 52.50,85.0 A 1.8,1.8 0 0,1 50.70,86.8 L 43.50,86.8 Z M 61.50,75.5 L 76.00,75.5 A 3.8,3.8 0 0,1 79.80,79.3 L 79.80,81.2 A 3.2,3.2 0 0,1 77.00,84.4 A 3.0,3.0 0 0,1 79.70,87.4 L 79.70,90.5 L 74.70,90.5 L 74.70,87.5 A 1.5,1.5 0 0,0 73.20,86.0 L 66.50,86.0 L 66.50,90.5 L 61.50,90.5 Z M 66.50,79.0 L 74.00,79.0 A 1.4,1.4 0 0,1 75.40,80.4 L 75.40,81.2 A 1.4,1.4 0 0,1 74.00,82.6 L 66.50,82.6 Z" />
+</vector>

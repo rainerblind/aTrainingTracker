@@ -15426,3 +15426,50 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 4. *Preservation of Core Invariants*: All zone calculation and editing capabilities preserved; all historical athlete metric entries and morning HRV records remain 100% accessible; backward-compatible route mappings (`NavRoutes.ATHLETE_PROFILE`, `NavRoutes.TRAINING_ZONES`) maintained.
 
 **Invariants**: DataStore zone persistence preserved; SQLite database tables (`HrvReadiness.db`, `AthleteMetricsDb`) unchanged; navigation deep-links backward-compatible; WCAG AA contrast maintained.
+
+
+
+### REQ-UI-514: Dedicated ANT+ (bike_radar) and Bluetooth LE (bt_bike_radar) Vector Sensor Badges for DeviceType.BIKE_RADAR [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-UI-514` | **Tickets**: `ATT-6699`
+- **Implementation**: `app/src/main/res/drawable/bike_radar.xml`, `app/src/main/res/drawable/bt_bike_radar.xml`, `UIHelper.java`, `DeviceData.kt`, `VectorAssetResolutionContractTest.kt`
+- **Rationale**: When `DeviceType.BIKE_RADAR` devices are discovered or paired over ANT+ or Bluetooth LE, they currently fall back to generic protocol icons (`ant_logo` or `logo_protocol_bluetooth`). The system SHALL provide dedicated, mathematically constructed vector drawables (`bike_radar.xml` and `bt_bike_radar.xml`) following the established design language of the sensor badge family (REQ-UI-375, REQ-UI-442), wire them into `UIHelper` and `DeviceData`, and enforce Rule 37 geometric constraints.
+- **Description**:
+  1. *ANT+ Radar Badge Geometry & Typography (`REQ-UI-514.1` — Rule 37)*:
+     - `app/src/main/res/drawable/bike_radar.xml` SHALL define a `48dp x 48dp` vector drawable with `96x96` viewport.
+     - Background badge SHALL be `#000000` rounded rectangle with corner radius $r=10.0$ (`M 10,0 L 86,0 A 10,10 0 0,1 96,10 ...`).
+     - Foreground SHALL render standard white silhouette cyclist matching `bike_pwr.xml`.
+     - Radar emission motif SHALL render analytical arcs radiating backward behind the cyclist's saddle/seatpost.
+     - Bottom abbreviation label SHALL render bold uppercase `RDR` centered at $y \in [75.5, 90.5]$ with `android:fillType="evenOdd"` for punch-out transparency on glyph `D` and `R`.
+  2. *Bluetooth LE Radar Badge Geometry & Typography (`REQ-UI-514.2` — Rule 37)*:
+     - `app/src/main/res/drawable/bt_bike_radar.xml` SHALL define a `48dp x 48dp` vector drawable with `144x144` viewport.
+     - Background badge SHALL be full-bleed `#0A3D91` rounded rectangle ($r=22.0$) spanning `0..144` (`M 22,0 L 122,0 A 22,22 0 0,1 144,22 ...`).
+     - Cyclist motif SHALL be horizontally centered using `<group android:translateX="18.18">` matching `bt_bike_pwr.xml`.
+     - Top-left quadrant ($x \approx 12..52, y \approx 10..50$) SHALL embed a canonical radar wave mini-icon group `mini_icon_radar`.
+     - Radar emission motif SHALL render analytical arcs radiating backward from the cyclist's seatpost.
+     - Bottom abbreviation label SHALL render bold uppercase `RDR` centered at $y \in [113.25, 135.75]$ with `android:fillType="evenOdd"`.
+  3. *Protocol Icon Resolution (`REQ-UI-514.3`)*:
+     - `UIHelper.getIconId(DeviceType.BIKE_RADAR, Protocol.ANT_PLUS)` and `DeviceData.getIconId(DeviceType.BIKE_RADAR, Protocol.ANT_PLUS)` SHALL return `R.drawable.bike_radar`.
+     - `UIHelper.getIconId(DeviceType.BIKE_RADAR, Protocol.BLUETOOTH_LE)` and `DeviceData.getIconId(DeviceType.BIKE_RADAR, Protocol.BLUETOOTH_LE)` SHALL return `R.drawable.bt_bike_radar`.
+  4. *Rule 37 Vector Quality & Contract Test Coverage (`REQ-UI-514.4`)*:
+     - All `<path>` elements in both radar drawables MUST contain $\le 45$ `L` commands and use analytical curve commands (`A`, `C`, or `Q`).
+     - `VectorAssetResolutionContractTest.kt` SHALL include `bike_radar` and `bt_bike_radar` in DOM validity, color token, Rule 37 complexity, and resolution tests.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Amends `REQ-UI-375` (*Mathematical VectorDrawable Migration*, `ATT-2859`) and `REQ-UI-442` (*Full-Bleed Badge Geometry & Uppercase Labels for Bluetooth LE Sensor Drawables*, `ATT-4956`, `ATT-5201`). Targets `app/src/main/res/drawable/bike_radar.xml`, `app/src/main/res/drawable/bt_bike_radar.xml`, `UIHelper.java`, `DeviceData.kt`, and `VectorAssetResolutionContractTest.kt`.
+2. *Historical Origin & Commit Trace*: `ATT-2859` (`15c74685`, Sprint 2026-42.7) established 96x96 ANT+ sensor vector badges with black rounded rectangle and 3-letter uppercase labels. `ATT-4956` (`be03a5bc14`, Sprint 2026-45.1) and `ATT-5201` (`43de6fd0`, Sprint 2026-45.5) established 144x144 full-bleed BLE badges with official `#0A3D91` color, centered cyclist (`translateX=18.18`), and top-left mini-icons.
+3. *Root Reason for Existing Formulation*: When `DeviceType.BIKE_RADAR` was introduced in `ATT-5083`, dedicated vector drawables were deferred, falling back to generic protocol logos. This creates visual inconsistency in sensor pairing and equipment screens where all other 7 sensor types have dedicated protocol badges.
+4. *Preservation of Core Invariants*: Full-bleed badge geometry `0..144` ($r=22.0$), official `#0A3D91` Bluetooth badge token, `#000000` ANT+ badge token, bold uppercase typography with `evenOdd`, Rule 37 geometric constraints ($\le 45$ `L` commands, analytical curves), and 100% backward compatibility for all existing `DeviceType` icon mappings are strictly preserved.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* `DeviceType.BIKE_RADAR` connected via `Protocol.ANT_PLUS`,
+• *When* querying `UIHelper.getIconId` or `DeviceData.getIconId`,
+• *Then* `R.drawable.bike_radar` is returned.
+• *Given* `DeviceType.BIKE_RADAR` connected via `Protocol.BLUETOOTH_LE`,
+• *When* querying `UIHelper.getIconId` or `DeviceData.getIconId`,
+• *Then* `R.drawable.bt_bike_radar` is returned.
+• *Given* `bike_radar.xml` and `bt_bike_radar.xml`,
+• *When* evaluated by `VectorAssetResolutionContractTest`,
+• *Then* both files parse as valid `<vector>` DOMs, satisfy Rule 37 ($\le 45$ `L` commands per path, analytical curves), conform to color tokens (`#000000` / `#0A3D91`), and render bold `RDR` labels with `evenOdd`.
+
+**Invariants**: Pure UI asset and mapping addition; zero changes to sensor drivers, database schemas, or tracking engine; 100% test pass rate across vector contract tests.
