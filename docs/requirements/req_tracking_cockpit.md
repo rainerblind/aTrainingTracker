@@ -3727,6 +3727,81 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 **Invariants**: `deltaC == 1` ANT+ continuity check preserved; `ARTIFACT_GAP` emitted on genuine packet drop; 1-Hz HR display unaffected; optical sensor fallback intact; zero SQLite schema modifications; 100% unit test pass rate.
 
+### REQ-TRK-070: 2-Level Sensor Hierarchy (SensorSubCategory), Unified HRV/Radar Groups & Complete ActivityType Sensor Mapping [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-TRK-070` | **Tickets**: `ATT-6726`
+- **Implementation**: `app/src/main/java/com/atrainingtracker/banalservice/sensor/SensorCategory.java`, `app/src/main/java/com/atrainingtracker/banalservice/sensor/SensorSubCategory.java`, `app/src/main/java/com/atrainingtracker/banalservice/sensor/SensorType.java`, `app/src/main/java/com/atrainingtracker/banalservice/ActivityType.java`, `app/src/main/java/com/atrainingtracker/trainingtracker/ui/tracking/editsensorfield/EditSensorFieldDialog.kt`
+- **Rationale**: Since `ATT-3852` introduced the 7-category accordion in `EditSensorFieldDialog.kt` (`REQ-UI-395`), telemetry metrics have grown from 43 to 63 constants (50 cockpit-selectable), creating significant UX and architectural friction: `POWER_AND_PEDALING` contains 22 flat metrics, and `SYSTEM_ENVIRONMENT_AND_DIAGNOSTICS` contains 16 mixed metrics; HRV metrics are fragmented across Heart Rate (`HRV_DFA_A1`, `HRV_RMSSD`) and System Diagnostics (`RR_INTERVAL`, `HRV_ARTIFACT_RATE`); `CADENCE` is stranded under a running icon in cycling; `ELEVATION_AND_NAVIGATION` mentions navigation without selectable navigational coordinates; 10 telemetry metrics (8 power duration metrics `POWER_5S..20M`, `POWER_PEAK_5S..20M` and 2 radar v2 metrics `RADAR_PASSING_DISTANCE_m`, `RADAR_LARGE_VEHICLE_COUNT`) are missing from `ActivityType.getSensorTypeArray()`; `CALORIES` is commented out across 3 profiles; and athletes have no visual indicators in the picker for Bar (`isBarSupported`) or Graph (`isGraphSupported`) capabilities. The system must establish a 2-level taxonomy (`SensorCategory` and `SensorSubCategory`), wire all missing telemetry into `ActivityType`, and provide a 2-level accordion with capability badges in `EditSensorFieldDialog.kt`.
+- **Description**:
+  1. *Authoritative 6-Group Top-Level Category Taxonomy (`REQ-TRK-070.1`)*:
+     - `com.atrainingtracker.banalservice.sensor.SensorCategory` SHALL define exactly 6 top-level categories:
+       1. `POWER_AND_PEDALING` (`R.string.sensor_category_power_and_pedaling`, `R.drawable.ic_power`)
+       2. `HEART_RATE_AND_ENERGY` (`R.string.sensor_category_heart_rate_and_energy`, `R.drawable.ic_heart_rate`): unifies all 5 HRV metrics (`HRV_DFA_A1`, `HRV_RMSSD`, `RR_INTERVAL`, `HRV_ARTIFACT_RATE`, `LIVE_HR_DRIFT`), heart rate (`HR`), and energy (`CALORIES`).
+       3. `SPEED_PACE_AND_DISTANCE` (`R.string.sensor_category_speed_pace_and_distance`, `R.drawable.ic_speed`): merges `CADENCE` and `STRIDES`, eliminating stranded cadence.
+       4. `TIME_AND_LAPS` (`R.string.sensor_category_time_and_laps`, `R.drawable.ic_time_active`)
+       5. `ELEVATION` (`R.string.sensor_category_elevation`, `R.drawable.ic_altitude`): renamed from `ELEVATION_AND_NAVIGATION`.
+       6. `SYSTEM_ENVIRONMENT_AND_DIAGNOSTICS` (`R.string.sensor_category_system_environment_and_diagnostics`, `R.drawable.ic_battery_full`): radar safety, battery, ambient temperature, and system diagnostics.
+     - Legacy enums `CADENCE_AND_RUNNING` and `ELEVATION_AND_NAVIGATION` SHALL be eliminated.
+  2. *SensorSubCategory Hierarchy & SensorType Mapping (`REQ-TRK-070.2`)*:
+     - `com.atrainingtracker.banalservice.sensor.SensorSubCategory` SHALL define 9 sub-categories with localized title resource IDs (`getTitleResId()`):
+       1. `POWER_LOAD` (`R.string.sensor_sub_category_power_load`): `NORMALIZED_POWER`, `POWER_TO_WEIGHT`, `INTENSITY_FACTOR`, `TSS`, `WORK_KJ`
+       2. `POWER_ROLLING` (`R.string.sensor_sub_category_power_rolling`): `POWER_5S`, `POWER_1M`, `POWER_5M`, `POWER_20M`
+       3. `POWER_PEAK` (`R.string.sensor_sub_category_power_peak`): `POWER_PEAK_5S`, `POWER_PEAK_1M`, `POWER_PEAK_5M`, `POWER_PEAK_20M`
+       4. `PEDALING_DYNAMICS` (`R.string.sensor_sub_category_pedaling_dynamics`): `TORQUE`, `PEDAL_POWER_BALANCE`, `PEDAL_SMOOTHNESS`, `PEDAL_SMOOTHNESS_L`, `PEDAL_SMOOTHNESS_R`, `TORQUE_EFFECTIVENESS_L`, `TORQUE_EFFECTIVENESS_R`
+       5. `HRV_AND_DRIFT` (`R.string.sensor_sub_category_hrv_and_drift`): `HRV_DFA_A1`, `HRV_RMSSD`, `RR_INTERVAL`, `HRV_ARTIFACT_RATE`, `LIVE_HR_DRIFT`
+       6. `LAP_METRICS` (`R.string.sensor_sub_category_lap_metrics`): `TIME_LAP`, `DISTANCE_m_LAP`, `LAP_NR`
+       7. `RADAR_SAFETY` (`R.string.sensor_sub_category_radar_safety`): `RADAR_THREAT_COUNT`, `RADAR_CLOSEST_RANGE_m`, `RADAR_APPROACH_SPEED_mps`, `RADAR_THREAT_SEVERITY`, `RADAR_PASSING_DISTANCE_m`, `RADAR_LARGE_VEHICLE_COUNT`
+       8. `AMBIENT_TEMPERATURE` (`R.string.sensor_sub_category_ambient_temperature`): `TEMPERATURE`, `TEMPERATURE_MIN`, `TEMPERATURE_MAX`
+       9. `PHONE_BATTERY_GROUP` (`R.string.sensor_sub_category_phone_battery`): `PHONE_BATTERY`, `BATTERY_REMAINING_TIME`
+     - `SensorType` SHALL expose `@Nullable public SensorSubCategory getSubCategory()`.
+     - Direct core metrics (`POWER`, `W_PRIME_BAL`, `HR`, `CALORIES`, `SPEED_mps`, `PACE_spm`, `DISTANCE_m`, `CADENCE`, `STRIDES`, `TIME_ACTIVE`, `TIME_TOTAL`, `TIME_OF_DAY`, `ALTITUDE`, `ASCENT`, `DESCENT`, `SLOPE`, `VERTICAL_SPEED`, `BEARING`, `LINE_DISTANCE_m`, `LATITUDE`, `LONGITUDE`, `ACCURACY`, `SENSORS`, `ACCUMULATED_SENSORS`) SHALL return `null` for `getSubCategory()`.
+     - All 63 `SensorType` constants SHALL map to their designated `SensorCategory` and `@Nullable SensorSubCategory`.
+  3. *ActivityType Sensor Telemetry Wiring & Priority Athletic Ordering (`REQ-TRK-070.3`)*:
+     - `ActivityType.getSensorTypeArray()` SHALL wire all 8 missing Power Duration metrics (`POWER_5S`, `POWER_1M`, `POWER_5M`, `POWER_20M`, `POWER_PEAK_5S`, `POWER_PEAK_1M`, `POWER_PEAK_5M`, `POWER_PEAK_20M`) into `BIKE_POWER`, achieving 100% parity with `CyclingPowerMetricsDevice.java`.
+     - `ActivityType.getSensorTypeArray()` SHALL wire both Radar V2 metrics (`RADAR_PASSING_DISTANCE_m`, `RADAR_LARGE_VEHICLE_COUNT`) into cycling profiles (`BSportType.BIKE`). Radar metrics SHALL NOT be included in running or non-cycling profiles.
+     - `CALORIES` SHALL be uncommented and enabled across all sports profiles where previously disabled.
+     - Metrics within `getSensorTypeArray()` SHALL be ordered by athletic priority: primary immediate telemetry (Power, HR, Speed, Cadence) precedes calculated load metrics, duration benchmarks, pedaling dynamics, and diagnostic metadata.
+  4. *2-Level Nested Accordion Selector & Capability Badging in EditSensorFieldDialog (`REQ-TRK-070.4`)*:
+     - `EditSensorFieldDialog.kt` (`SensorTypeSelectorSection`) SHALL present a 2-level accordion hierarchy:
+       - 6 top-level `SensorCategory` accordion headers.
+       - Inside each expanded category, direct core metrics (`subCategory == null`) SHALL be rendered immediately at the top for instant 1-tap selection.
+       - Sub-category items SHALL be grouped into collapsible `SensorSubCategory` accordion cards.
+       - Upon opening the dialog or changing selection, the active `SensorType`'s parent `SensorCategory` and child `SensorSubCategory` (if present) SHALL be automatically expanded.
+       - When the athlete enters a search query, matching categories and sub-categories SHALL expand automatically.
+       - Each sensor type item row SHALL display compact capability badges:
+         - A "Bar" badge if `TrackingViewsDbHelper.isBarSupported(sensorType, activityType)` is true.
+         - A "Graph" badge if `TrackingViewsDbHelper.isGraphSupported(sensorType)` is true.
+     - Strict preservation of `AppModalBottomSheet` scroll safety (Section 5.8): all accordions and rows SHALL render within standard `Column` layouts without nested scroll containers.
+  5. *9-Language Localization Parity (`REQ-TRK-070.5`)*:
+     - All category and sub-category title string resources (`sensor_category_*`, `sensor_sub_category_*`) SHALL achieve 100% parity across all 9 application locales: English (`values/`), German (`values-de/`), Spanish (`values-es/`), French (`values-fr/`), Italian (`values-it/`), Japanese (`values-ja/`), Dutch (`values-nl/`), Polish (`values-pl/`), and Portuguese (`values-pt/`).
+     - Capability badges SHALL provide localized accessibility descriptions and labels.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: `REQ-UI-395` (*Categorized & Searchable SensorType Selector in EditSensorFieldDialog*), targeting `SensorCategory.java`, `SensorType.java`, `ActivityType.java`, and `EditSensorFieldDialog.kt`.
+2. *Historical Origin & Commit Trace*: Introduced in `ATT-3852` (commit `14292b35206`), refined in `ATT-3542` (`REQ-TRK-061`) and `ATT-5879`.
+3. *Root Reason for Existing Formulation*: 7 flat categories were created for 43 metrics. As metrics grew to 63 (with 50 cockpit-selectable), `POWER_AND_PEDALING` expanded to 22 flat metrics and `SYSTEM_ENVIRONMENT_AND_DIAGNOSTICS` expanded to 16 mixed metrics; HRV was split across HR and Diagnostics; Cadence sat stranded in a running-focused category; and 10 telemetry metrics were omitted from `ActivityType.getSensorTypeArray`.
+4. *Preservation of Core Invariants*: All 63 `SensorType` enum identifiers and integer IDs remain unchanged. Persistence schema in `ROWS_TABLE` stores `sensorType.name()`, preserving backward compatibility. Section 5.8 bottom-sheet scroll safety (no nested scrollable containers) is strictly maintained. 9-language translation parity across all new and existing category/sub-category string keys is preserved.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* `SensorCategory.values()` and `SensorSubCategory.values()`,
+• *When* evaluated by unit tests,
+• *Then* exactly 6 top-level categories and 9 sub-categories exist, and all 63 `SensorType` constants map to valid categories and expected sub-categories (or null for direct core metrics).
+• *Given* `ActivityType.BIKE_POWER`,
+• *When* `getSensorTypeArray()` is inspected,
+• *Then* all 8 Power Duration metrics (`POWER_5S..20M`, `POWER_PEAK_5S..20M`) are present and match `CyclingPowerMetricsDevice.java`.
+• *Given* `ActivityType` profiles for cycling and non-cycling sports,
+• *When* `getSensorTypeArray()` is evaluated,
+• *Then* Radar metrics (including `RADAR_PASSING_DISTANCE_m` and `RADAR_LARGE_VEHICLE_COUNT`) are present only in cycling profiles, and `CALORIES` is present across active profiles.
+• *Given* `EditSensorFieldDialog.kt`,
+• *When* the selector is opened with a selected sensor having a sub-category,
+• *Then* its category and sub-category are auto-expanded, direct metrics appear at the category top, and capability badges ("Bar", "Graph") are visible matching `TrackingViewsDbHelper`.
+• *Given* all 9 locale directories,
+• *When* audited by localization parity tests,
+• *Then* 100% of category and sub-category title strings exist without missing translations or malformed format tokens.
+
+**Invariants**: All 63 `SensorType` enum names and ordinals preserved; zero SQLite schema modifications; Section 5.8 bottom sheet scroll safety preserved; 100% unit and localization test pass rate.
+
+
 
 
 

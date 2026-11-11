@@ -22,6 +22,7 @@ import android.content.Context
 import android.content.Intent
 import android.util.Log
 import com.atrainingtracker.banalservice.ActivityType
+import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.banalservice.database.DevicesDatabaseManager
 import com.atrainingtracker.banalservice.filters.FilterData
 import com.atrainingtracker.banalservice.filters.FilterType
@@ -786,6 +787,14 @@ class TrackingViewsRepository private constructor(private val context: Context) 
 
 
     companion object {
+        @JvmStatic
+        fun isBarSupported(sensorType: SensorType?, sportType: BSportType?): Boolean =
+            TrackingViewsDatabaseManager.TrackingViewsDbHelper.isBarSupported(sensorType, sportType)
+
+        @JvmStatic
+        fun isGraphSupported(sensorType: SensorType?, sportType: BSportType? = null): Boolean =
+            TrackingViewsDatabaseManager.TrackingViewsDbHelper.isGraphSupported(sensorType)
+
         @Volatile
         private var INSTANCE: TrackingViewsRepository? = null
 

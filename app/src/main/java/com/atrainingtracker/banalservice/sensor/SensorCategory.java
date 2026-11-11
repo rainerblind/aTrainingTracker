@@ -27,33 +27,29 @@ import androidx.annotation.StringRes;
 import com.atrainingtracker.R;
 
 /**
- * Authoritative domain categorization for {@link SensorType} telemetry metrics (ATT-3852, REQ-UI-395).
- * Groups all 43 {@link SensorType} values into 7 semantic training categories for structured
+ * Authoritative top-level domain categorization for {@link SensorType} telemetry metrics (ATT-3852, ATT-6726, REQ-TRK-070.1).
+ * Groups all 63 {@link SensorType} values into 6 semantic training categories for structured
  * selection and filtering in {@code EditSensorFieldDialog}.
  */
 public enum SensorCategory {
-    TIME_AND_LAPS(
-            R.string.sensor_category_time_and_laps,
-            R.drawable.ic_time_active
-    ),
-    SPEED_PACE_AND_DISTANCE(
-            R.string.sensor_category_speed_pace_and_distance,
-            R.drawable.ic_speed
-    ),
-    CADENCE_AND_RUNNING(
-            R.string.sensor_category_cadence_and_running,
-            R.drawable.ic_cadence
+    POWER_AND_PEDALING(
+            R.string.sensor_category_power_and_pedaling,
+            R.drawable.ic_power
     ),
     HEART_RATE_AND_ENERGY(
             R.string.sensor_category_heart_rate_and_energy,
             R.drawable.ic_heart_rate
     ),
-    POWER_AND_PEDALING(
-            R.string.sensor_category_power_and_pedaling,
-            R.drawable.ic_power
+    SPEED_PACE_AND_DISTANCE(
+            R.string.sensor_category_speed_pace_and_distance,
+            R.drawable.ic_speed
     ),
-    ELEVATION_AND_NAVIGATION(
-            R.string.sensor_category_elevation_and_navigation,
+    TIME_AND_LAPS(
+            R.string.sensor_category_time_and_laps,
+            R.drawable.ic_time_active
+    ),
+    ELEVATION(
+            R.string.sensor_category_elevation,
             R.drawable.ic_altitude
     ),
     SYSTEM_ENVIRONMENT_AND_DIAGNOSTICS(

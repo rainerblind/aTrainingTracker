@@ -2092,6 +2092,34 @@
   5. *Clean-Room Targeted Test Suite Execution (`TST-TRK-069.5`)*:
   • `./gradlew testDebugUnitTest --tests "com.atrainingtracker.banalservice.devices.ANTHeartRateDeviceTest" --tests "com.atrainingtracker.banalservice.devices.BTLEHeartRateDeviceTest" --tests "com.atrainingtracker.banalservice.devices.hrv.*"` asserting 100% pass rate.
 
+### TST-TRK-070: **2-Level Sensor Hierarchy (SensorSubCategory), Unified HRV/Radar Groups & Complete ActivityType Sensor Mapping Test Suite** [Verified]
+- **Requirement(s)**: `REQ-TRK-070` (`REQ-TRK-070.1`..`REQ-TRK-070.5`)
+- **Component**: `SensorCategory.java`, `SensorSubCategory.java`, `SensorType.java`, `ActivityType.java`, `EditSensorFieldDialog.kt`
+- **Jira**: `ATT-6726`
+- **Test Description**:
+  1. *2-Level Sensor Taxonomy & SensorType Category/SubCategory Parity Test (`TST-TRK-070.1`, `SensorCategorySubCategoryTest.kt` / `SensorCategoryAndSelectorContractTest.kt`)*:
+  • Verify `SensorCategory` defines exactly 6 enum constants (`POWER_AND_PEDALING`, `HEART_RATE_AND_ENERGY`, `SPEED_PACE_AND_DISTANCE`, `TIME_AND_LAPS`, `ELEVATION`, `SYSTEM_ENVIRONMENT_AND_DIAGNOSTICS`).
+  • Verify `SensorSubCategory` defines exactly 9 enum constants (`POWER_LOAD`, `POWER_ROLLING`, `POWER_PEAK`, `PEDALING_DYNAMICS`, `HRV_AND_DRIFT`, `LAP_METRICS`, `RADAR_SAFETY`, `AMBIENT_TEMPERATURE`, `PHONE_BATTERY_GROUP`).
+  • Verify all 63 `SensorType` constants map to non-null categories and expected `@Nullable SensorSubCategory` (null for direct core metrics; assigned sub-category for grouped secondary metrics).
+  • Verify all 5 HRV metrics (`HRV_DFA_A1`, `HRV_RMSSD`, `RR_INTERVAL`, `HRV_ARTIFACT_RATE`, `LIVE_HR_DRIFT`) reside in `HEART_RATE_AND_ENERGY` with sub-category `HRV_AND_DRIFT`.
+  • Verify `CADENCE` and `STRIDES` reside in `SPEED_PACE_AND_DISTANCE`.
+  2. *ActivityType Sensor Telemetry Mapping & Athletic Ordering Contract Test (`TST-TRK-070.2`, `ActivityTypeSensorMappingTest.kt` / `ActivityTypeTest.kt`)*:
+  • Verify `ActivityType.BIKE_POWER.getSensorTypeArray()` contains all 8 Power Duration metrics (`POWER_5S..20M`, `POWER_PEAK_5S..20M`) with 100% parity against `CyclingPowerMetricsDevice.java`.
+  • Verify `ActivityType.getSensorTypeArray()` includes `RADAR_PASSING_DISTANCE_m` and `RADAR_LARGE_VEHICLE_COUNT` for `BSportType.BIKE` and strictly excludes radar metrics from running and non-cycling profiles.
+  • Verify `CALORIES` is included across active sports profiles.
+  • Verify primary athletic ordering puts instant telemetry (Power, HR, Speed, Cadence) before load metrics, benchmarks, and balance.
+  3. *EditSensorFieldDialog 2-Level Grouping, Auto-Expansion & Capability Badges Test (`TST-TRK-070.3`, `EditSensorFieldDialogTest.kt` / `SensorTypeSearchFilterTest.kt`)*:
+  • Verify direct metrics are grouped at category top and sub-categories are partitioned into nested expandable cards.
+  • Verify selected sensor type auto-expands its category and sub-category.
+  • Verify `TrackingViewsDbHelper.isBarSupported(sensorType, activityType)` and `isGraphSupported(sensorType)` correctly drive "Bar" and "Graph" capability badge rendering.
+  • Verify Section 5.8 bottom-sheet scroll safety (zero nested scroll containers).
+  4. *9-Language Localization & Format Specifier Parity Test (`TST-TRK-070.4`, `SensorHierarchyLocalizationTest.kt`)*:
+  • Verify 100% presence and parity of all category and sub-category title strings across all 9 locales: `values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`.
+  • Verify zero format specifier mismatches and zero illegal collapsed linebreaks.
+  5. *Clean-Room Targeted Regression Suite Execution (`TST-TRK-070.5`)*:
+  • `./gradlew testDebugUnitTest --tests "com.atrainingtracker.banalservice.sensor.*" --tests "com.atrainingtracker.banalservice.ActivityTypeTest" --tests "com.atrainingtracker.trainingtracker.ui.tracking.editsensorfield.*"` asserting 100% pass rate.
+
+
 
 
 

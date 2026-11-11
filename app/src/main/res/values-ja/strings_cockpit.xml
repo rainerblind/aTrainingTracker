@@ -50,4 +50,18 @@
     <string name="graph_horizon_20m">20分</string>
     <string name="graph_horizon_1h">1時間</string>
     <string name="graph_horizon_full">ワークアウト全体</string>
+
+    <!-- 2-Level Sensor Taxonomy & SensorSubCategory (REQ-TRK-070, ATT-6726) -->
+    <string name="sensor_category_elevation">標高</string>
+    <string name="sensor_sub_category_power_load">パワー負荷・作業量</string>
+    <string name="sensor_sub_category_power_rolling">移動平均</string>
+    <string name="sensor_sub_category_power_peak">ピークパワー</string>
+    <string name="sensor_sub_category_pedaling_dynamics">ペダリングダイナミクス</string>
+    <string name="sensor_sub_category_hrv_and_drift">HRV・有酸素ドリフト</string>
+    <string name="sensor_sub_category_lap_metrics">ラップ指標</string>
+    <string name="sensor_sub_category_radar_safety">レーダー安全性</string>
+    <string name="sensor_sub_category_ambient_temperature">周囲温度</string>
+    <string name="sensor_sub_category_phone_battery">スマートフォンバッテリー</string>
+    <string name="sensor_capability_bar">バー</string>
+    <string name="sensor_capability_graph">グラフ</string>
 </resources>

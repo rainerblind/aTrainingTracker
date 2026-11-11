@@ -76,118 +76,126 @@ public enum ActivityType {
         switch (activityType) {
             case GENERIC_HR:
                 sensors = new SensorType[]{
+                        SensorType.HR,
+                        SensorType.CALORIES,
+                        SensorType.SPEED_mps,
+                        SensorType.PACE_spm,
+                        SensorType.DISTANCE_m,
                         SensorType.ALTITUDE,
                         SensorType.ASCENT,
                         SensorType.DESCENT,
                         SensorType.VERTICAL_SPEED,
                         SensorType.SLOPE,
-                        // SensorType.CALORIES,
-                        SensorType.HR,
-                        SensorType.DISTANCE_m,
-                        SensorType.PACE_spm,
-                        SensorType.SPEED_mps,
-                        SensorType.TIME_OF_DAY,
                         SensorType.TIME_ACTIVE,
                         SensorType.TIME_TOTAL,
-                        SensorType.LAP_NR,
+                        SensorType.TIME_OF_DAY,
                         SensorType.TIME_LAP,
-                        SensorType.DISTANCE_m_LAP};
+                        SensorType.DISTANCE_m_LAP,
+                        SensorType.LAP_NR};
                 break;
 
             case RUN_SPEED_AND_CADENCE:
                 sensors = new SensorType[]{
+                        SensorType.HR,
+                        SensorType.CALORIES,
+                        SensorType.SPEED_mps,
+                        SensorType.PACE_spm,
+                        SensorType.DISTANCE_m,
+                        SensorType.CADENCE,
+                        SensorType.STRIDES,
                         SensorType.ALTITUDE,
                         SensorType.ASCENT,
                         SensorType.DESCENT,
                         SensorType.VERTICAL_SPEED,
                         SensorType.SLOPE,
-                        SensorType.HR,
-                        SensorType.CADENCE,
-                        SensorType.CALORIES,
-                        SensorType.DISTANCE_m,
-                        SensorType.PACE_spm,
-                        SensorType.SPEED_mps,
-                        SensorType.STRIDES,
-                        SensorType.TIME_OF_DAY,
                         SensorType.TIME_ACTIVE,
                         SensorType.TIME_TOTAL,
-                        SensorType.LAP_NR,
+                        SensorType.TIME_OF_DAY,
                         SensorType.TIME_LAP,
-                        SensorType.DISTANCE_m_LAP};
+                        SensorType.DISTANCE_m_LAP,
+                        SensorType.LAP_NR};
                 break;
 
             case BIKE_SPEED_AND_CADENCE:
                 sensors = new SensorType[]{
+                        SensorType.SPEED_mps,
+                        SensorType.CADENCE,
+                        SensorType.HR,
+                        SensorType.CALORIES,
+                        SensorType.DISTANCE_m,
                         SensorType.ALTITUDE,
                         SensorType.ASCENT,
                         SensorType.DESCENT,
                         SensorType.VERTICAL_SPEED,
                         SensorType.SLOPE,
-                        SensorType.HR,
-                        SensorType.CADENCE,
-                        // SensorType.CALORIES,
-                        SensorType.DISTANCE_m,
-                        // SensorType.PACE_spm,
-                        SensorType.SPEED_mps,
-                        SensorType.TIME_OF_DAY,
                         SensorType.TIME_ACTIVE,
                         SensorType.TIME_TOTAL,
-                        SensorType.LAP_NR,
+                        SensorType.TIME_OF_DAY,
                         SensorType.TIME_LAP,
-                        SensorType.DISTANCE_m_LAP};
+                        SensorType.DISTANCE_m_LAP,
+                        SensorType.LAP_NR};
                 break;
 
             case BIKE_POWER:
                 sensors = new SensorType[]{
+                        SensorType.POWER,
+                        SensorType.HR,
+                        SensorType.SPEED_mps,
+                        SensorType.CADENCE,
+                        SensorType.CALORIES,
+                        SensorType.NORMALIZED_POWER,
+                        SensorType.POWER_TO_WEIGHT,
+                        SensorType.INTENSITY_FACTOR,
+                        SensorType.TSS,
+                        SensorType.WORK_KJ,
+                        SensorType.W_PRIME_BAL,
+                        SensorType.POWER_5S,
+                        SensorType.POWER_1M,
+                        SensorType.POWER_5M,
+                        SensorType.POWER_20M,
+                        SensorType.POWER_PEAK_5S,
+                        SensorType.POWER_PEAK_1M,
+                        SensorType.POWER_PEAK_5M,
+                        SensorType.POWER_PEAK_20M,
+                        SensorType.TORQUE,
+                        SensorType.PEDAL_POWER_BALANCE,
+                        SensorType.PEDAL_SMOOTHNESS,
+                        SensorType.PEDAL_SMOOTHNESS_L,
+                        SensorType.PEDAL_SMOOTHNESS_R,
+                        SensorType.TORQUE_EFFECTIVENESS_L,
+                        SensorType.TORQUE_EFFECTIVENESS_R,
+                        SensorType.DISTANCE_m,
                         SensorType.ALTITUDE,
                         SensorType.ASCENT,
                         SensorType.DESCENT,
                         SensorType.VERTICAL_SPEED,
                         SensorType.SLOPE,
-                        SensorType.HR,
-                        SensorType.CADENCE,
-                        // SensorType.CALORIES,
-                        // SensorType.PACE_spm,
-                        SensorType.PEDAL_POWER_BALANCE,
-                        SensorType.PEDAL_SMOOTHNESS_L,
-                        SensorType.PEDAL_SMOOTHNESS_R,
-                        SensorType.PEDAL_SMOOTHNESS,
-                        SensorType.POWER,
-                        SensorType.POWER_TO_WEIGHT,
-                        SensorType.NORMALIZED_POWER,
-                        SensorType.INTENSITY_FACTOR,
-                        SensorType.WORK_KJ,
-                        SensorType.TSS,
-                        SensorType.W_PRIME_BAL,
-                        SensorType.DISTANCE_m,
-                        SensorType.SPEED_mps,
-                        SensorType.TIME_OF_DAY,
                         SensorType.TIME_ACTIVE,
                         SensorType.TIME_TOTAL,
-                        SensorType.TORQUE,
-                        SensorType.TORQUE_EFFECTIVENESS_L,
-                        SensorType.TORQUE_EFFECTIVENESS_R,
-                        SensorType.LAP_NR,
+                        SensorType.TIME_OF_DAY,
                         SensorType.TIME_LAP,
-                        SensorType.DISTANCE_m_LAP};
+                        SensorType.DISTANCE_m_LAP,
+                        SensorType.LAP_NR};
                 break;
 
             default:
                 sensors = new SensorType[]{
+                        SensorType.HR,
+                        SensorType.CALORIES,
+                        SensorType.SPEED_mps,
+                        SensorType.PACE_spm,
+                        SensorType.DISTANCE_m,
                         SensorType.ALTITUDE,
                         SensorType.ASCENT,
                         SensorType.DESCENT,
                         SensorType.VERTICAL_SPEED,
                         SensorType.SLOPE,
-                        SensorType.DISTANCE_m,
-                        SensorType.PACE_spm,
-                        SensorType.SPEED_mps,
-                        SensorType.TIME_OF_DAY,
                         SensorType.TIME_ACTIVE,
                         SensorType.TIME_TOTAL,
-                        SensorType.LAP_NR,
+                        SensorType.TIME_OF_DAY,
                         SensorType.TIME_LAP,
-                        SensorType.DISTANCE_m_LAP};
+                        SensorType.DISTANCE_m_LAP,
+                        SensorType.LAP_NR};
                 break;
         }
 
@@ -198,18 +206,24 @@ public enum ActivityType {
             sensors[sensors.length - 1] = SensorType.TEMPERATURE_MAX;
         }
 
-        sensors = Arrays.copyOf(sensors, sensors.length + 11);
-        sensors[sensors.length - 11] = SensorType.PHONE_BATTERY;
-        sensors[sensors.length - 10] = SensorType.BATTERY_REMAINING_TIME;
-        sensors[sensors.length - 9] = SensorType.HRV_DFA_A1;
-        sensors[sensors.length - 8] = SensorType.HRV_RMSSD;
-        sensors[sensors.length - 7] = SensorType.RR_INTERVAL;
-        sensors[sensors.length - 6] = SensorType.HRV_ARTIFACT_RATE;
-        sensors[sensors.length - 5] = SensorType.RADAR_THREAT_COUNT;
-        sensors[sensors.length - 4] = SensorType.RADAR_CLOSEST_DISTANCE_m;
-        sensors[sensors.length - 3] = SensorType.RADAR_APPROACH_SPEED_mps;
-        sensors[sensors.length - 2] = SensorType.RADAR_VEHICLE_COUNT;
+        sensors = Arrays.copyOf(sensors, sensors.length + 7);
+        sensors[sensors.length - 7] = SensorType.PHONE_BATTERY;
+        sensors[sensors.length - 6] = SensorType.BATTERY_REMAINING_TIME;
+        sensors[sensors.length - 5] = SensorType.HRV_DFA_A1;
+        sensors[sensors.length - 4] = SensorType.HRV_RMSSD;
+        sensors[sensors.length - 3] = SensorType.RR_INTERVAL;
+        sensors[sensors.length - 2] = SensorType.HRV_ARTIFACT_RATE;
         sensors[sensors.length - 1] = SensorType.LIVE_HR_DRIFT;
+
+        if (activityType != null && activityType.getSportType() == BSportType.BIKE) {
+            sensors = Arrays.copyOf(sensors, sensors.length + 6);
+            sensors[sensors.length - 6] = SensorType.RADAR_THREAT_COUNT;
+            sensors[sensors.length - 5] = SensorType.RADAR_CLOSEST_DISTANCE_m;
+            sensors[sensors.length - 4] = SensorType.RADAR_APPROACH_SPEED_mps;
+            sensors[sensors.length - 3] = SensorType.RADAR_VEHICLE_COUNT;
+            sensors[sensors.length - 2] = SensorType.RADAR_PASSING_DISTANCE_m;
+            sensors[sensors.length - 1] = SensorType.RADAR_LARGE_VEHICLE_COUNT;
+        }
 
         return sensors;
     }
