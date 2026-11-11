@@ -356,7 +356,20 @@ class ReleaseCiAndLintConfigContractTest {
         )
         assertTrue(
             "app/build.gradle must configure kover verification minBound threshold (REQ-PRO-048.2, TST-PRO-048.1)",
-            appBuildContent.contains("minBound")
+            appBuildContent.contains("minBound(35)") || appBuildContent.contains("minValue = 35")
+        )
+        assertTrue(
+            "app/build.gradle must exclude *.R from Kover reports (REQ-PRO-048.2, TST-PRO-048.1)",
+            appBuildContent.contains("\"*.R\"") || appBuildContent.contains("'*.R'")
+        )
+        assertTrue(
+            "app/build.gradle must exclude *Manifest* from Kover reports (REQ-PRO-048.2, TST-PRO-048.1)",
+            appBuildContent.contains("\"*Manifest*\"") || appBuildContent.contains("'*Manifest*'")
+        )
+        assertTrue(
+            "app/build.gradle must configure kover verification threshold for branch coverage (REQ-PRO-048.2, TST-PRO-048.1)",
+            appBuildContent.contains("CoverageUnit.BRANCH") &&
+                (appBuildContent.contains("minValue = 30") || appBuildContent.contains("minBound(30)"))
         )
     }
 

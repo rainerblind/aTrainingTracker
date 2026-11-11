@@ -2529,36 +2529,36 @@ The workflow SHALL mandate that:
 
 
 ### REQ-PRO-048: Kover Code Coverage Measurement & CI Threshold Gating [Verified]
-- **Tests**: `TST-PRO-048` | **Tickets**: `ATT-6171`
+- **Tests**: `TST-PRO-048` | **Tickets**: `ATT-6171`, `ATT-6730`
 - **Implementation**: `build.gradle`, `app/build.gradle`, `.github/workflows/android-branch-build.yml`, `ReleaseCiAndLintConfigContractTest.kt`
-- **Rationale**: ASPICE pre-assessment finding C-01 flagged that aTrainingTracker lacks code coverage measurement and threshold enforcement (SWE.4 BP verification criteria). Currently, unit tests execute in CI via `./gradlew :app:testDebugUnitTest`, but neither line nor branch coverage is measured, reported, or gated. Introducing JetBrains Kotlinx Kover 0.9.1 into Gradle and CI with an objective baseline threshold and artifact archiving establishes automated coverage verification (ATT-6171, refining `REQ-PRO-034` under Epic `ATT-6142`):
+- **Rationale**: ASPICE pre-assessment finding C-01 flagged that aTrainingTracker lacks code coverage measurement and threshold enforcement (SWE.4 BP verification criteria). Currently, unit tests execute in CI via `./gradlew :app:testDebugUnitTest`, but neither line nor branch coverage is measured, reported, or gated. Introducing JetBrains Kotlinx Kover into Gradle and CI with an objective baseline threshold and artifact archiving establishes automated coverage verification (ATT-6171, ATT-6730, refining `REQ-PRO-034` under Epic `ATT-6142`):
 - **Description**:
   1. *Kover Gradle Plugin Integration (`REQ-PRO-048.1`)*:
-     • Root `build.gradle` and `app/build.gradle` SHALL configure and apply `org.jetbrains.kotlinx.kover:0.9.1` ensuring compatibility with Gradle 9.6.0 and Kotlin 2.4.10.
+     • Root `build.gradle` and `app/build.gradle` SHALL configure and apply `org.jetbrains.kotlinx.kover:0.9.11` ensuring compatibility with Gradle 9.6.0 and Kotlin 2.4.10.
   2. *Report & Verification Configuration (`REQ-PRO-048.2`)*:
-     • `app/build.gradle` SHALL configure the Kover DSL for debug unit tests with HTML and XML report generation, class exclusions for generated code (BuildConfig, Compose singletons), and a verification threshold rule (`koverVerifyDebug`) enforcing baseline coverage boundaries.
+     • `app/build.gradle` SHALL configure the Kover DSL for debug unit tests with HTML and XML report generation, class exclusions for generated code (`*BuildConfig*`, `*ComposableSingletons*`, `*.R`, `*.R$*`, `*Manifest*`), and verification threshold rules (`koverVerifyDebug`) enforcing measured baseline coverage boundaries for both line coverage (`CoverageUnit.LINE` $\ge 35\%$) and branch coverage (`CoverageUnit.BRANCH` $\ge 30\%$).
   3. *CI Branch Workflow Gating (`REQ-PRO-048.3`)*:
      • Continuous integration workflow (`.github/workflows/android-branch-build.yml`) SHALL execute Kover report generation and verification tasks (`./gradlew :app:koverXmlReportDebug :app:koverHtmlReportDebug :app:koverVerifyDebug`), and upload coverage reports via `actions/upload-artifact@v4`.
   4. *Automated Governance Contract (`REQ-PRO-048.4`)*:
-     • `ReleaseCiAndLintConfigContractTest.kt` SHALL assert Kover plugin application in build scripts, report/verify configuration, and CI workflow execution steps.
+     • `ReleaseCiAndLintConfigContractTest.kt` SHALL assert Kover plugin application in build scripts, report/verify configuration (including generated class exclusions and explicit line/branch threshold bounds), and CI workflow execution steps.
 - **Requirement Archaeology & Chesterton's Fence Audit**:
-  1. *Original Requirement ID & Target*: Net-new requirement `REQ-PRO-048` (*Kover Code Coverage Measurement & CI Threshold Gating*), refining `REQ-PRO-034` (*SWE.1/2/4/6 Hardening*). Targets `build.gradle`, `app/build.gradle`, `.github/workflows/android-branch-build.yml`, and `ReleaseCiAndLintConfigContractTest.kt`.
-  2. *Historical Origin & Commit Trace*: Independent ASPICE pre-assessment finding C-01 (2026-11-08) and ticket ATT-6171.
-  3. *Root Reason for Existing Formulation*: Project historically relied on qualitative unit test pass/fail; coverage metrics were never automated.
-  4. *Preservation of Core Invariants*: Existing Android Lint, Detekt, unit tests, and CI branch build steps remain intact.
+  1. *Original Requirement ID & Target*: `REQ-PRO-048` (`REQ-PRO-048.1`–`REQ-PRO-048.4`), refining `REQ-PRO-034` (*SWE.1/2/4/6 Hardening*). Targets `build.gradle`, `app/build.gradle`, `.github/workflows/android-branch-build.yml`, and `ReleaseCiAndLintConfigContractTest.kt`.
+  2. *Historical Origin & Commit Trace*: Independent ASPICE pre-assessment finding C-01 (2026-11-08), ticket ATT-6171 (`V5.0.0`, Sprint 2026-46.1), and refined in ATT-6730.
+  3. *Root Reason for Existing Formulation*: ATT-6171 validated the Kover Gradle task graph via `--dry-run` to avoid full test execution overhead during initial plugin bootstrap, leaving `minBound(1)` as an uncalibrated placeholder without branch threshold or complete Android generated exclusions.
+  4. *Preservation of Core Invariants*: Calibrating bounds to authentic baseline metrics (35% LINE, 30% BRANCH) activates real SWE.4 gating while guaranteeing zero build disruption on the verified sprint codebase.
 - **Acceptance Criteria (Given-When-Then)**:
-  • *Given* `build.gradle` and `app/build.gradle`,
-  • *When* inspected,
-  • *Then* Kover plugin (0.9.1) SHALL be configured and applied with XML/HTML reporting and verification rules.
-  • *Given* debug unit test execution,
-  • *When* running Kover tasks,
-  • *Then* line/branch coverage reports SHALL be produced and verified against the baseline boundary without build failure.
+  • *Given* `app/build.gradle` excluding `*BuildConfig*`, `*ComposableSingletons*`, `*.R`, `*.R$*`, and `*Manifest*`,
+  • *When* `:app:koverXmlReportDebug` executes across the test suite,
+  • *Then* authentic project-wide LINE and BRANCH coverage percentages SHALL be recorded and documented.
+  • *Given* the measured LINE and BRANCH coverage percentages,
+  • *When* `kover.reports.verify` in `app/build.gradle` and `ReleaseCiAndLintConfigContractTest` are evaluated,
+  • *Then* `app/build.gradle` SHALL enforce explicit `CoverageUnit.LINE` (minBound 35) and `CoverageUnit.BRANCH` (minBound 30) thresholds strictly exceeding 1%, and `./gradlew :app:koverVerifyDebug` SHALL pass cleanly.
   • *Given* `.github/workflows/android-branch-build.yml`,
   • *When* inspected,
   • *Then* it SHALL contain Kover report/verify steps and artifact upload for coverage reports.
   • *Given* `ReleaseCiAndLintConfigContractTest.kt`,
   • *When* executed as part of the unit test suite,
-  • *Then* all Kover governance assertions SHALL pass with 100% success.
+  • *Then* all Kover governance assertions (including expanded exclusions and dual line/branch bounds) SHALL pass with 100% success.
 - **Invariants**: Zero runtime code changes; 100% unit test pass rate; zero build failure on existing source files.
 
 

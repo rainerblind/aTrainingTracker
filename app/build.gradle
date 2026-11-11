@@ -156,14 +156,21 @@ kover {
         filters {
             excludes {
                 classes(
-                    "*BuildConfig*",
-                    "*ComposableSingletons*"
+                    '*BuildConfig*',
+                    '*ComposableSingletons*',
+                    '*.R',
+                    '*.R$*',
+                    '*Manifest*'
                 )
             }
         }
         verify {
             rule {
-                minBound(1)
+                minBound(35)
+                bound {
+                    coverageUnits = kotlinx.kover.gradle.plugin.dsl.CoverageUnit.BRANCH
+                    minValue = 30
+                }
             }
         }
     }
