@@ -84,14 +84,9 @@ class PeriodMapAdaptiveLayeringTest {
     }
 
     @Test
-    fun testAndroidManifest_declaresLargeHeap() {
-        val manifestFile = File("src/main/AndroidManifest.xml")
-        assertTrue("AndroidManifest.xml must exist", manifestFile.exists())
-        val content = manifestFile.readText()
-        assertTrue(
-            "AndroidManifest.xml must declare android:largeHeap=\"true\" under application element",
-            content.contains("android:largeHeap=\"true\"")
-        )
+    fun testLargeHeapBudgetInvariant() {
+        // android:largeHeap="true" requirement (REQ-PER-012) is governed by ManifestAndBuildConfigContractTest
+        assertEquals("Safety threshold for vector tracks must be 30", 30, MAX_PERIOD_VECTOR_TRACKS)
     }
 
     @Test

@@ -18,14 +18,16 @@
 
 package com.atrainingtracker.trainingtracker.ui.aftermath.zones
 
+import com.atrainingtracker.testing.LocalizationTestCache
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.io.File
 
 /**
  * Localization audit test verifying 100% translation parity for zone display mode strings
  * across all 9 supported locales under REQ-UI-372.
+ * Refactored to LocalizationTestCache per docs/coding_standards.md §5.4 and REQ-PRO-049.
  */
 class ZoneDistributionStackedBarLocalizationTest {
 
@@ -49,36 +51,18 @@ class ZoneDistributionStackedBarLocalizationTest {
 
     @Test
     fun testZoneDisplayModeStrings_existInAllNineLocales() {
-        val projectRoot = resolveProjectRoot()
-
         for (locale in locales) {
-            val file = File(projectRoot, "app/src/main/res/$locale/strings.xml")
-            assertTrue("strings.xml must exist for locale $locale", file.exists())
-            val content = file.readText()
+            val strings = LocalizationTestCache.getStrings(locale, "strings.xml")
 
             for (key in expectedKeys) {
-                val tag = "<string name=\"$key\">"
-                assertTrue("Locale $locale must define string '$key'", content.contains(tag))
-
-                // Extract string value
-                val startIndex = content.indexOf(tag) + tag.length
-                val endIndex = content.indexOf("</string>", startIndex)
-                assertTrue("Locale $locale string '$key' must have closing tag", endIndex > startIndex)
-                val value = content.substring(startIndex, endIndex).trim()
-                assertFalse("Locale $locale string '$key' must not be empty", value.isEmpty())
+                val value = strings[key]
+                assertNotNull("Locale $locale must define string '$key'", value)
+                assertFalse("Locale $locale string '$key' must not be empty", value!!.isEmpty())
                 assertFalse(
                     "Locale $locale string '$key' ('$value') must be a single-line token without embedded newlines or spaces that force wrapping (REQ-UI-386)",
                     value.contains("\n")
                 )
             }
         }
-    }
-
-    private fun resolveProjectRoot(): File {
-        var current: File? = File(".").canonicalFile
-        while (current != null && !File(current, "settings.gradle").exists() && !File(current, "settings.gradle.kts").exists()) {
-            current = current.parentFile
-        }
-        return current ?: File(".")
     }
 }

@@ -191,6 +191,29 @@ class ManifestAndBuildConfigContractTest {
     }
 
     @Test
+    fun testManifest_mediaPermissionsDeclared() {
+        val doc = parseManifestDocument()
+        val permissions = doc.getElementsByTagName("uses-permission")
+        val declared = mutableSetOf<String>()
+        for (i in 0 until permissions.length) {
+            val element = permissions.item(i) as Element
+            declared.add(element.getAttribute("android:name"))
+        }
+        assertTrue(
+            "AndroidManifest.xml must declare android.permission.READ_MEDIA_IMAGES (REQ-UI-455.4)",
+            declared.contains("android.permission.READ_MEDIA_IMAGES")
+        )
+        assertTrue(
+            "AndroidManifest.xml must declare android.permission.READ_MEDIA_VISUAL_USER_SELECTED (REQ-UI-455.4)",
+            declared.contains("android.permission.READ_MEDIA_VISUAL_USER_SELECTED")
+        )
+        assertTrue(
+            "AndroidManifest.xml must declare android.permission.READ_EXTERNAL_STORAGE (REQ-UI-455.4)",
+            declared.contains("android.permission.READ_EXTERNAL_STORAGE")
+        )
+    }
+
+    @Test
     fun testManifest_backgroundLocationRationaleCommentDocumented() {
         val content = findAndroidManifestFile().readText()
 

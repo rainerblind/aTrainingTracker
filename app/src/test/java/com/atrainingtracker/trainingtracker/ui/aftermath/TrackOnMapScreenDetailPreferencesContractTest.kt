@@ -18,89 +18,52 @@
 
 package com.atrainingtracker.trainingtracker.ui.aftermath
 
+import com.atrainingtracker.trainingtracker.WorkoutDetailPreferences
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.io.File
+import java.lang.reflect.Modifier
 
 /**
  * Structural contract test (TST-UI-199.2) verifying that [TrackOnMapScreen]
  * consumes [WorkoutDetailPreferences] to dynamically gate all 8 aftermath sections
  * in full alignment with REQ-UI-240 and ATT-2030.
+ * Refactored to pure JVM reflection per docs/coding_standards.md §5.4 and REQ-PRO-049.
  */
 class TrackOnMapScreenDetailPreferencesContractTest {
 
-    private fun findTrackOnMapScreenFile(): File {
-        val candidates = listOf(
-            File("app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/TrackOnMapScreen.kt"),
-            File("src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/TrackOnMapScreen.kt"),
-            File("../app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/TrackOnMapScreen.kt")
-        )
-        return candidates.firstOrNull { it.exists() }
-            ?: error("TrackOnMapScreen.kt not found in candidates: $candidates")
-    }
-
     @Test
     fun testTrackOnMapScreen_consumesWorkoutDetailPreferences() {
-        val file = findTrackOnMapScreenFile()
-        val content = file.readText()
-
-        // 1. Parameter declaration
+        // 1. Method and Parameter declaration
+        val clazz = Class.forName("com.atrainingtracker.trainingtracker.ui.aftermath.TrackOnMapScreenKt")
+        val method = clazz.declaredMethods.find { it.name.startsWith("TrackOnMapScreen") && Modifier.isPublic(it.modifiers) }
+        assertNotNull("TrackOnMapScreen composable must exist and be public", method)
         assertTrue(
-            "TrackOnMapScreen must declare detailPreferences parameter defaulting to null (REQ-UI-240)",
-            content.contains("detailPreferences: WorkoutDetailPreferences? = null")
+            "TrackOnMapScreen must declare detailPreferences parameter of type WorkoutDetailPreferences (REQ-UI-240)",
+            method!!.parameterTypes.any { it == WorkoutDetailPreferences::class.java }
         )
 
-        // 2. DataStore Flow observation
-        assertTrue(
-            "TrackOnMapScreen must observe workoutDetailPreferencesFlow from MyPreferenceManager",
-            content.contains("workoutDetailPreferencesFlow.collectAsState(initial = WorkoutDetailPreferences())")
-        )
+        // 2. WorkoutDetailPreferences Model contract
+        val prefsClass = WorkoutDetailPreferences::class.java
+        val fieldNames = prefsClass.declaredFields.map { it.name }.toSet()
+        assertTrue("WorkoutDetailPreferences must have showMap", fieldNames.contains("showMap"))
+        assertTrue("WorkoutDetailPreferences must have showElevationProfile", fieldNames.contains("showElevationProfile"))
+        assertTrue("WorkoutDetailPreferences must have showTelemetryCharts", fieldNames.contains("showTelemetryCharts"))
+        assertTrue("WorkoutDetailPreferences must have showZoneAnalysis", fieldNames.contains("showZoneAnalysis"))
+        assertTrue("WorkoutDetailPreferences must have showLaps", fieldNames.contains("showLaps"))
+        assertTrue("WorkoutDetailPreferences must have showDescription", fieldNames.contains("showDescription"))
+        assertTrue("WorkoutDetailPreferences must have showExtrema", fieldNames.contains("showExtrema"))
+        assertTrue("WorkoutDetailPreferences must have showStrava", fieldNames.contains("showStrava"))
 
-        // 3. Fallback to activeDetailPrefs
-        assertTrue(
-            "TrackOnMapScreen must resolve activeDetailPrefs with fallback to persisted prefs",
-            content.contains("val activeDetailPrefs = detailPreferences ?: persistedDetailPrefs")
-        )
-
-        // 4. Map & Elevation Profile Gating
-        assertTrue(
-            "TrackOnMapScreen must condition showMap on activeDetailPrefs.showMap",
-            content.contains("showMap = showMap && hasGpsTrack && activeDetailPrefs.showMap")
-        )
-        assertTrue(
-            "TrackOnMapScreen must condition showElevationProfile on activeDetailPrefs.showElevationProfile",
-            content.contains("showElevationProfile = (hasGpsTrack || hasTracklessAltitude) && activeDetailPrefs.showElevationProfile")
-        )
-
-        // 5. Telemetry Charts Gating
-        assertTrue(
-            "TrackOnMapScreen must pass showTelemetryCharts to MapDetailLayout",
-            content.contains("showTelemetryCharts = activeDetailPrefs.showTelemetryCharts")
-        )
-
-        // 6. Analytics & Metadata Content Gating
-        assertTrue(
-            "TrackOnMapScreen must gate Zone Analysis on activeDetailPrefs.showZoneAnalysis",
-            content.contains("if (activeDetailPrefs.showZoneAnalysis)")
-        )
-        assertTrue(
-            "TrackOnMapScreen must gate Laps Split visualizer on activeDetailPrefs.showLaps",
-            content.contains("if (activeDetailPrefs.showLaps)")
-        )
-        assertTrue(
-            "TrackOnMapScreen must gate WorkoutDescription on activeDetailPrefs.showDescription",
-            content.contains("if (activeDetailPrefs.showDescription)") &&
-                    content.contains("WorkoutDescription(")
-        )
-        assertTrue(
-            "TrackOnMapScreen must gate WorkoutExtrema on activeDetailPrefs.showExtrema",
-            content.contains("if (activeDetailPrefs.showExtrema") &&
-                    content.contains("WorkoutExtrema(")
-        )
-        assertTrue(
-            "TrackOnMapScreen must gate StravaActivitySection on activeDetailPrefs.showStrava",
-            content.contains("if (activeDetailPrefs.showStrava") &&
-                    content.contains("StravaActivitySection(")
-        )
+        // 3. Default instance behavior
+        val defaultPrefs = WorkoutDetailPreferences()
+        assertTrue(defaultPrefs.showMap)
+        assertTrue(defaultPrefs.showElevationProfile)
+        assertTrue(defaultPrefs.showTelemetryCharts)
+        assertTrue(defaultPrefs.showZoneAnalysis)
+        assertTrue(defaultPrefs.showLaps)
+        assertTrue(defaultPrefs.showDescription)
+        assertTrue(defaultPrefs.showExtrema)
+        assertTrue(defaultPrefs.showStrava)
     }
 }

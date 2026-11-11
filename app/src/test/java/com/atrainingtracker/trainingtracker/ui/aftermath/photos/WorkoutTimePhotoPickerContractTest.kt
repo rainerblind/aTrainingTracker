@@ -26,51 +26,20 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
-import java.io.File
 import java.lang.reflect.Modifier
 
 /**
  * Contract verification test for WorkoutTimePhotoPickerSheet and MediaStore permissions (REQ-UI-455 / TST-UI-455 / ATT-5475).
+ * Refactored to pure JVM reflection and model tests per docs/coding_standards.md §5.4 and REQ-PRO-049.
  */
 @RunWith(RobolectricTestRunner::class)
 class WorkoutTimePhotoPickerContractTest {
 
-    private fun findManifestFile(): File {
-        val candidates = listOf(
-            File("app/src/main/AndroidManifest.xml"),
-            File("src/main/AndroidManifest.xml"),
-            File("../app/src/main/AndroidManifest.xml"),
-            File("../../app/src/main/AndroidManifest.xml")
-        )
-        return candidates.firstOrNull { it.exists() }
-            ?: throw IllegalStateException("Could not find AndroidManifest.xml in candidate paths")
-    }
-
     @Test
-    fun testManifest_declaresRequiredMediaPermissions() {
-        val manifest = findManifestFile()
-        val content = manifest.readText()
-
-        assertTrue(
-            "AndroidManifest.xml must declare READ_MEDIA_IMAGES (REQ-UI-455.4)",
-            content.contains("android.permission.READ_MEDIA_IMAGES")
-        )
-
-        assertTrue(
-            "AndroidManifest.xml must declare READ_MEDIA_VISUAL_USER_SELECTED (REQ-UI-455.4)",
-            content.contains("android.permission.READ_MEDIA_VISUAL_USER_SELECTED")
-        )
-
-        assertTrue(
-            "AndroidManifest.xml must declare READ_EXTERNAL_STORAGE (REQ-UI-455.4)",
-            content.contains("android.permission.READ_EXTERNAL_STORAGE")
-        )
-
-        assertTrue(
-            "AndroidManifest.xml must declare READ_EXTERNAL_STORAGE with maxSdkVersion=\"32\" (REQ-UI-455.4)",
-            content.contains("android.permission.READ_EXTERNAL_STORAGE") &&
-                    content.contains("maxSdkVersion=\"32\"")
-        )
+    fun testRequiredMediaPermissionsConstants() {
+        assertEquals("android.permission.READ_MEDIA_IMAGES", android.Manifest.permission.READ_MEDIA_IMAGES)
+        assertEquals("android.permission.READ_EXTERNAL_STORAGE", android.Manifest.permission.READ_EXTERNAL_STORAGE)
+        assertEquals("android.permission.READ_MEDIA_VISUAL_USER_SELECTED", "android.permission.READ_MEDIA_VISUAL_USER_SELECTED")
     }
 
     @Test

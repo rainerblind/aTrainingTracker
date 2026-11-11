@@ -16,6 +16,7 @@
 package com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist
 
 import com.atrainingtracker.banalservice.BSportType
+import com.atrainingtracker.testing.LocalizationTestCache
 import com.atrainingtracker.trainingtracker.TrackingMode
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
@@ -24,10 +25,7 @@ import org.junit.After
 import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
-import org.w3c.dom.Element
-import java.io.File
 import java.time.LocalDateTime
-import javax.xml.parsers.DocumentBuilderFactory
 
 /**
  * Automated unit test suite verifying mark-as-finished capability,
@@ -89,33 +87,6 @@ class WorkoutMarkFinishedTest {
         )
     }
 
-    private fun findResDirectory(): File {
-        val candidates = listOf(
-            File("src/main/res"),
-            File("app/src/main/res"),
-            File("../app/src/main/res")
-        )
-        return candidates.firstOrNull { it.exists() && it.isDirectory }
-            ?: error("res directory not found in candidate paths: $candidates")
-    }
-
-    private fun parseStringsFile(file: File): Map<String, String> {
-        val map = mutableMapOf<String, String>()
-        if (!file.exists()) return map
-
-        val factory = DocumentBuilderFactory.newInstance()
-        val builder = factory.newDocumentBuilder()
-        val doc = builder.parse(file)
-        val stringNodes = doc.getElementsByTagName("string")
-
-        for (i in 0 until stringNodes.length) {
-            val element = stringNodes.item(i) as Element
-            val name = element.getAttribute("name")
-            val text = element.textContent
-            map[name] = text
-        }
-        return map
-    }
 
     @Test
     fun testUnfinishedWorkout_whenIdle_canBeMarkedFinished_andHasLowAlphaAndDisabledExportMenu() {
@@ -209,14 +180,9 @@ class WorkoutMarkFinishedTest {
 
     @Test
     fun testMarkAsFinishedStringExistsAcrossAll9Locales() {
-        val resDir = findResDirectory()
-
         for (locale in supportedLocales) {
             val valuesDir = if (locale.isEmpty()) "values" else "values-$locale"
-            val stringsFile = File(resDir, "$valuesDir/strings.xml")
-            assertTrue("File $stringsFile must exist", stringsFile.exists())
-
-            val strings = parseStringsFile(stringsFile)
+            val strings = LocalizationTestCache.getStrings(valuesDir, "strings.xml")
             assertTrue(
                 "Key 'mark_as_finished' must exist in $valuesDir/strings.xml",
                 strings.containsKey("mark_as_finished")
@@ -229,16 +195,15 @@ class WorkoutMarkFinishedTest {
 
     @Test
     fun testMarkAsFinishedTranslationsAreDistinctAndLocalized() {
-        val resDir = findResDirectory()
-        val enStrings = parseStringsFile(File(resDir, "values/strings.xml"))
-        val deStrings = parseStringsFile(File(resDir, "values-de/strings.xml"))
-        val esStrings = parseStringsFile(File(resDir, "values-es/strings.xml"))
-        val frStrings = parseStringsFile(File(resDir, "values-fr/strings.xml"))
-        val itStrings = parseStringsFile(File(resDir, "values-it/strings.xml"))
-        val jaStrings = parseStringsFile(File(resDir, "values-ja/strings.xml"))
-        val nlStrings = parseStringsFile(File(resDir, "values-nl/strings.xml"))
-        val plStrings = parseStringsFile(File(resDir, "values-pl/strings.xml"))
-        val ptStrings = parseStringsFile(File(resDir, "values-pt/strings.xml"))
+        val enStrings = LocalizationTestCache.getStrings("values", "strings.xml")
+        val deStrings = LocalizationTestCache.getStrings("values-de", "strings.xml")
+        val esStrings = LocalizationTestCache.getStrings("values-es", "strings.xml")
+        val frStrings = LocalizationTestCache.getStrings("values-fr", "strings.xml")
+        val itStrings = LocalizationTestCache.getStrings("values-it", "strings.xml")
+        val jaStrings = LocalizationTestCache.getStrings("values-ja", "strings.xml")
+        val nlStrings = LocalizationTestCache.getStrings("values-nl", "strings.xml")
+        val plStrings = LocalizationTestCache.getStrings("values-pl", "strings.xml")
+        val ptStrings = LocalizationTestCache.getStrings("values-pt", "strings.xml")
 
         assertEquals("Mark as finished", enStrings["mark_as_finished"])
         assertEquals("Als abgeschlossen markieren", deStrings["mark_as_finished"])
