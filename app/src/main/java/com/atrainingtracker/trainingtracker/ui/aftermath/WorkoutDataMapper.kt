@@ -216,6 +216,10 @@ class WorkoutDataMapper(
                 riderMaxSpeedMps = workoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.SPEED_mps, ExtremaType.MAX)
             ),
 
+            dfaA1FreshBaseline = workoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.HRV_DFA_A1, ExtremaType.DFA_A1_FRESH_BASELINE),
+            dfaA1LateMean = workoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.HRV_DFA_A1, ExtremaType.DFA_A1_LATE_MEAN),
+            dfaA1DurabilityDriftPct = workoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.HRV_DFA_A1, ExtremaType.DFA_A1_DRIFT_PCT),
+
             totalDistance = totalDistance,
             maxDisplacement = maxDisplacement,
             activeTimeSec = activeTimeSec,

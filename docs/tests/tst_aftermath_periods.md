@@ -778,3 +778,33 @@
   7. *9-Language Localization Parity Test (`TST-PER-045.7`, `TranslationParityTest`)*:
   • Verify all 18 zone comparison and consensus gating string keys exist with 100% parity across all 9 `strings_hrv.xml` files.
  (ATT-3555: [Verbesserung] Compare estimated HRVT1/HRVT2 against configured training zones with multi-session consensus and anchor-based updates (ZoneCalculationMath))
+
+### TST-PER-046: **DFA a1 Autonomic Durability, Drift & Iso-Intensity Bins Verification Suite** [Specified]
+- **Requirement(s)**: `REQ-PER-038` (`REQ-PER-038.1`..`REQ-PER-038.6`)
+- **Component**: `HrvDurabilityCalculatorTest.kt`, `HrvDurabilityCardTest.kt`, `HrvPostWorkoutRecomputerTest.kt`, `WorkoutDataMapperTest.kt`, `TranslationParityTest`
+- **Jira**: `ATT-4970`
+- **Test Description**:
+  1. *Fresh Baseline & Late Segment Window Selection Test (`TST-PER-046.1`, `HrvDurabilityCalculatorTest.kt`)*:
+  • Verify fresh baseline window strictly bounds samples to $t \in [900, 2700]\text{ s}$ (`15–45 min`).
+  • Verify late fatigue segment strictly bounds samples to $t > 3600\text{ s}$ (`> 60 min`).
+  • Verify artifact rate gate excludes samples with artifact rate $> 5.0\%$.
+  2. *Iso-Intensity Matched-Power & Pace Bin Filtering Test (`TST-PER-046.2`, `HrvDurabilityCalculatorTest.kt`)*:
+  • Verify median reference intensity ($P_{\text{ref}}$ or $v_{\text{ref}}$) computation over the fresh baseline.
+  • Verify sample filtering strictly matches $[0.90 \cdot I_{\text{ref}}, 1.10 \cdot I_{\text{ref}}]$.
+  • Verify autonomic efficiency ratio normalization: $\alpha_{1,\text{norm}} = \alpha_1 / (I / I_{\text{ref}})$.
+  3. *Autonomic Durability Drift & 10-Minute Minimum Guard Test (`TST-PER-046.3`, `HrvDurabilityCalculatorTest.kt`)*:
+  • Verify drift calculation: $\Delta\alpha_{1,\%} = ((\overline{\alpha}_{1,\text{late}} - \overline{\alpha}_{1,\text{fresh}}) / \overline{\alpha}_{1,\text{fresh}}) \times 100\%$.
+  • Verify returning `null` / `INSUFFICIENT_MATCHED_DATA` when fresh baseline matched data is $< 600\text{ s}$ (120 samples).
+  • Verify returning `null` / `INSUFFICIENT_MATCHED_DATA` when late segment matched data is $< 600\text{ s}$ (120 samples).
+  4. *15-Minute Slice Trajectory Aggregation Test (`TST-PER-046.4`, `HrvDurabilityCalculatorTest.kt`)*:
+  • Verify mean normalized $\alpha_1$ is aggregated for each 15-minute slice (`15–30m`, `30–45m`, `45–60m`, etc.).
+  • Verify slices with zero valid matched points evaluate to null.
+  5. *ExtremaType Dynamic Persistence & WorkoutData Mapping Test (`TST-PER-046.5`, `WorkoutDataMapperTest.kt`)*:
+  • Verify `ExtremaType.DFA_A1_FRESH_BASELINE`, `DFA_A1_LATE_MEAN`, and `DFA_A1_DRIFT_PCT` can be inserted and queried from `WorkoutSummaries.TABLE_EXTREMA_VALUES` with zero SQLite schema migration.
+  • Verify `WorkoutDataMapper` maps extrema values to `WorkoutData.dfaA1FreshBaseline`, `dfaA1LateMean`, and `dfaA1DurabilityDriftPct`.
+  6. *UI Rendering of HrvDurabilityCard & Graceful Omission Test (`TST-PER-046.6`, `HrvDurabilityCardTest.kt`)*:
+  • Verify `HrvDurabilityCard` renders fresh baseline, late mean, drift percentage, and slice trajectory when metrics exist.
+  • Verify `HrvDurabilityCard` is omitted completely for non-HRV workouts or when durability metrics are absent.
+  7. *9-Language Localization Parity Test (`TST-PER-046.7`, `TranslationParityTest`)*:
+  • Verify all 11 durability string keys exist with 100% parity across all 9 `strings_hrv.xml` files with matching formatting tokens.
+  (ATT-4970: [Feature] Model DFA a1 autonomic durability and drift across multi-hour workouts (paired with ATT-4842 Heart Efficiency))

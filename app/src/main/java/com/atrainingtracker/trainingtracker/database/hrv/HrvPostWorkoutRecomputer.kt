@@ -34,6 +34,9 @@ import com.atrainingtracker.trainingtracker.database.WorkoutSamplesDatabaseManag
 import com.atrainingtracker.trainingtracker.database.WorkoutSamplesDatabaseManager.WorkoutSamplesDbHelper
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
+import com.atrainingtracker.trainingtracker.ui.aftermath.workoutdetail.HrvDurabilityCalculator
+import com.atrainingtracker.trainingtracker.ui.aftermath.workoutdetail.HrvDurabilityStatus
+import com.atrainingtracker.trainingtracker.ui.map.TrackType
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
@@ -272,6 +275,27 @@ object HrvPostWorkoutRecomputer {
                 summariesDb.setTransactionSuccessful()
             } finally {
                 summariesDb.endTransaction()
+            }
+
+            // 4. Compute and persist Autonomic Durability & Drift (REQ-PER-038, ATT-4970)
+            try {
+                val trackPoints = WorkoutRepository.getInstance(context).getWorkoutTrackPoints(workoutId, TrackType.BEST)
+                if (trackPoints.isNotEmpty()) {
+                    val durability = HrvDurabilityCalculator.calculateDurability(trackPoints)
+                    if (durability.status == HrvDurabilityStatus.VALID) {
+                        durability.freshBaselineMean?.let {
+                            summariesDbManager.updateExtremaValue(workoutId, SensorType.HRV_DFA_A1, ExtremaType.DFA_A1_FRESH_BASELINE, it, null)
+                        }
+                        durability.lateMean?.let {
+                            summariesDbManager.updateExtremaValue(workoutId, SensorType.HRV_DFA_A1, ExtremaType.DFA_A1_LATE_MEAN, it, null)
+                        }
+                        durability.durabilityDriftPct?.let {
+                            summariesDbManager.updateExtremaValue(workoutId, SensorType.HRV_DFA_A1, ExtremaType.DFA_A1_DRIFT_PCT, it, null)
+                        }
+                    }
+                }
+            } catch (t: Throwable) {
+                Log.w(TAG, "Autonomic durability calculation skipped or failed: ${t.message}")
             }
 
             try {

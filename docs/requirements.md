@@ -8,7 +8,7 @@ Living requirements use multi-line Markdown headings (`### REQ-XXX: Title [Statu
 | Domain Shard | Scope & Functional Areas | Prefixes | Total | Verified | Planned / Open |
 | :--- | :--- | :--- | :---: | :---: | :---: |
 | [Tracking & Live Sensor Cockpit](requirements/req_tracking_cockpit.md) | Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle. | `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA` | 123 | 119 | 4 |
-| [Post-Workout Analytics & Periods](requirements/req_aftermath_periods.md) | Post-workout analytics, period statistics, zone distributions, graphs and visual scrubbers. | `PER`, `PERF` | 38 | 36 | 2 |
+| [Post-Workout Analytics & Periods](requirements/req_aftermath_periods.md) | Post-workout analytics, period statistics, zone distributions, graphs and visual scrubbers. | `PER`, `PERF` | 39 | 36 | 3 |
 | [Maps, Polylines & Navigation](requirements/req_maps_navigation.md) | Map rendering, polylines, navigation overlays, GPX track follow-me, and routing. | `GEO`, `MAP`, `NAV`, `ROU` | 68 | 68 | 0 |
 | [Persistence, Migration & Cloud Export](requirements/req_data_migration_export.md) | Database schema, backup/restore, migration pipelines, Strava/cloud upload, FIT/GPX export. | `DAT`, `EXP`, `EXT`, `MIG` | 130 | 130 | 0 |
 | [Settings, Profiles & Localization](requirements/req_settings_profiles.md) | Athlete settings, bike/sensor profiles, privacy zones, data stores, monetization, and 9-locale parity. | `LOC`, `MON`, `PRI`, `SET` | 102 | 99 | 3 |
@@ -18,9 +18,9 @@ Living requirements use multi-line Markdown headings (`### REQ-XXX: Title [Statu
 | [Project Governance & Store Presence](requirements/req_project_governance.md) | Store presence, Google Play listings, screenshots, store metadata contract testing, and release governance. | `STP` | 10 | 10 | 0 |
 
 <<<<<<< HEAD
-**Total Living Requirements**: 1036 across 9 domain shards.
+**Total Living Requirements**: 1037 across 9 domain shards.
 =======
-**Total Living Requirements**: 1036 across 9 domain shards.
+**Total Living Requirements**: 1037 across 9 domain shards.
 >>>>>>> 6df28c69 (ATT-6684: tools/replay_workout.py: Compute and pass --speed to set-test-provider-location during workout simulation)
 
 ---

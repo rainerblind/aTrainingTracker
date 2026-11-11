@@ -213,4 +213,18 @@
     <string name="hrv_zone_comparison_dialog_confirm">FTP aktualisieren</string>
     <string name="hrv_zone_comparison_dialog_cancel">Abbrechen</string>
     <string name="hrv_zone_comparison_forward_mader">Stoffwechselmodell kalibrieren</string>
+
+    <!-- Autonomic Durability & Drift (ATT-4970 / REQ-PER-038) -->
+    <string name="hrv_durability_title">Autonome Belastungsverträglichkeit</string>
+    <string name="hrv_durability_subtitle">DFA-α1-Drift &amp; aerobe Belastbarkeit (Rogers et al. 2021)</string>
+    <string name="hrv_durability_fresh_baseline">Frische Basislinie (15–45 Min.)</string>
+    <string name="hrv_durability_late_mean">Spätes Segment (>60 Min.)</string>
+    <string name="hrv_durability_drift">Autonome Drift (Δα1)</string>
+    <string name="hrv_durability_drift_fmt">%1$+.1f%%</string>
+    <string name="hrv_durability_insufficient_data">Unzureichende Daten mit angeglichener Intensität (&lt;10 Min.)</string>
+    <string name="hrv_durability_matched_intensity">Angeglichene Intensität: %1$d W (±10%%)</string>
+    <string name="hrv_durability_matched_speed">Angeglichene Geschwindigkeit: %1$s (±10%%)</string>
+    <string name="hrv_durability_trajectory_title">15-Minuten-Abschnittsverlauf</string>
+    <string name="hrv_durability_slice_label">%1$d–%2$d Min.</string>
+    <string name="hrv_durability_description">Vergleicht DFA α1 in der frischen Basislinie (15–45 Min.) mit späteren Einheitenabschnitten (>60 Min.) bei angeglichener Belastung zur Quantifizierung von autonomer Ermüdung und vagaler Resistenz.</string>
 </resources>

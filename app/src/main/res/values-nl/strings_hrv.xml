@@ -213,4 +213,18 @@
     <string name="hrv_zone_comparison_dialog_confirm">FTP bijwerken</string>
     <string name="hrv_zone_comparison_dialog_cancel">Annuleren</string>
     <string name="hrv_zone_comparison_forward_mader">Metabool model kalibreren</string>
+
+    <!-- Autonomic Durability & Drift (ATT-4970 / REQ-PER-038) -->
+    <string name="hrv_durability_title">Autonome belastbaarheid</string>
+    <string name="hrv_durability_subtitle">DFA α1-drift &amp; aerobe duurzaamheid (Rogers et al. 2021)</string>
+    <string name="hrv_durability_fresh_baseline">Frisse basislijn (15–45 min)</string>
+    <string name="hrv_durability_late_mean">Laat segment (>60 min)</string>
+    <string name="hrv_durability_drift">Autonome drift (Δα1)</string>
+    <string name="hrv_durability_drift_fmt">%1$+.1f%%</string>
+    <string name="hrv_durability_insufficient_data">Onvoldoende gegevens met gelijke intensiteit (&lt;10 min)</string>
+    <string name="hrv_durability_matched_intensity">Gelijke intensiteit: %1$d W (±10%%)</string>
+    <string name="hrv_durability_matched_speed">Gelijke snelheid: %1$s (±10%%)</string>
+    <string name="hrv_durability_trajectory_title">15-minuten segmentverloop</string>
+    <string name="hrv_durability_slice_label">%1$d–%2$d min</string>
+    <string name="hrv_durability_description">Vergelijkt DFA α1 in de frisse basislijn (15–45 min) met latere trainingssegmenten (>60 min) bij gelijke intensiteit om autonome vermoeidheid en vagale weerstand te kwantificeren.</string>
 </resources>

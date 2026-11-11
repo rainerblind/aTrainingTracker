@@ -213,4 +213,18 @@
     <string name="hrv_zone_comparison_dialog_confirm">Actualizar FTP</string>
     <string name="hrv_zone_comparison_dialog_cancel">Cancelar</string>
     <string name="hrv_zone_comparison_forward_mader">Calibrar modelo metabólico</string>
+
+    <!-- Autonomic Durability & Drift (ATT-4970 / REQ-PER-038) -->
+    <string name="hrv_durability_title">Durabilidad autonómica</string>
+    <string name="hrv_durability_subtitle">Deriva de DFA α1 y durabilidad aeróbica (Rogers et al. 2021)</string>
+    <string name="hrv_durability_fresh_baseline">Línea base fresca (15–45 min)</string>
+    <string name="hrv_durability_late_mean">Segmento tardío (>60 min)</string>
+    <string name="hrv_durability_drift">Deriva autonómica (Δα1)</string>
+    <string name="hrv_durability_drift_fmt">%1$+.1f%%</string>
+    <string name="hrv_durability_insufficient_data">Datos de intensidad coincidente insuficientes (&lt;10 min)</string>
+    <string name="hrv_durability_matched_intensity">Intensidad coincidente: %1$d W (±10%%)</string>
+    <string name="hrv_durability_matched_speed">Velocidad coincidente: %1$s (±10%%)</string>
+    <string name="hrv_durability_trajectory_title">Trayectoria de tramos de 15 minutos</string>
+    <string name="hrv_durability_slice_label">%1$d–%2$d min</string>
+    <string name="hrv_durability_description">Compara DFA α1 de la línea base fresca (15–45 min) con tramos posteriores (>60 min) a intensidad coincidente para cuantificar fatiga autonómica y resistencia vagal.</string>
 </resources>

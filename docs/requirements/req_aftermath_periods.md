@@ -1092,3 +1092,48 @@
 • *Then* a confirmation dialog appears showing target FTP, protocol provenance, ramp slope & MRT adjustment, and an MLSS warning; upon user confirmation, FTP is saved to settings and power zones are updated.
 
 **Invariants**: Pure mathematical comparison and non-destructive UI action; Power-only anchor updates with explicit confirmation; HR zones strictly informational; 100% 9-language localization parity.
+
+
+### REQ-PER-038: Model DFA a1 Autonomic Durability, Drift & Iso-Intensity Bins Across Multi-Hour Workouts [Specified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-PER-046` | **Tickets**: `ATT-4970`
+- **Implementation**: `HrvDurabilityCalculator.kt`, `HrvDurabilityResult.kt`, `ExtremaType.java`, `HrvPostWorkoutRecomputer.kt`, `WorkoutData.kt`, `WorkoutDataMapper.kt`, `HrvDurabilityCard.kt`, `WorkoutDetailTabbedContent.kt`, `strings_hrv.xml`
+- **Rationale**: During multi-hour endurance workouts ($\ge 90\text{ min}$), `DFA a1` progressively declines at a given external workload due to autonomic fatigue, vagal withdrawal, and cardiovascular drift (*Rogers et al. 2021; Gronwald et al. 2021*). While `REQ-PER-036` truncates threshold estimation at 60 minutes to prevent fatigue distortion, quantifying the rate of `DFA a1` decline at matched intensity provides an actionable Autonomic Durability metric ($\Delta\alpha_{1,\%}$) that complements cardiovascular stroke-volume Heart Efficiency drift ($\Delta C_{\text{O}_2}\%$) in `ATT-4842`. The system SHALL compute, persist, and visualize autonomic durability:
+- **Description**:
+  1. *Fresh Baseline & Late Segment Partitioning (`REQ-PER-038.1`)*:
+     - The fresh baseline window SHALL span elapsed workout time $t \in [900, 2700]\text{ s}$ (`15–45 min`), excluding warm-up stabilization and early transients.
+     - The late fatigue segment SHALL evaluate all valid elapsed workout time $t > 3600\text{ s}$ (`> 60 min`).
+     - Telemetry samples SHALL be evaluated from valid 5s-stepped centered-window trackpoints where `HRV_ARTIFACT_RATE <= 5.0%`.
+  2. *Iso-Intensity Matched-Power & Matched-Pace Binning (`REQ-PER-038.2`)*:
+     - The system SHALL determine the athlete's median aerobic reference intensity during the fresh baseline: reference power $P_{\text{ref}}$ (for cycling / power workouts) or reference speed $v_{\text{ref}}$ (for running / non-power workouts).
+     - The system SHALL filter both the fresh baseline ($15\text{--}45\text{ min}$) and the late segment ($> 60\text{ min}$) to samples falling strictly within the iso-intensity band $[0.90 \cdot I_{\text{ref}}, 1.10 \cdot I_{\text{ref}}]$.
+     - Minor intra-bin workload variations SHALL be normalized via the autonomic efficiency ratio $\alpha_{1,\text{norm}} = \alpha_1 / (I / I_{\text{ref}})$.
+  3. *Autonomic Durability Drift Calculation & Minimum Data Guard (`REQ-PER-038.3`)*:
+     - Autonomic Durability Drift SHALL be calculated as:
+       $$\Delta\alpha_{1,\%} = \frac{\overline{\alpha}_{1,\text{late,norm}} - \overline{\alpha}_{1,\text{fresh,norm}}}{\overline{\alpha}_{1,\text{fresh,norm}}} \times 100\%$$
+     - The system SHALL require at least 10 minutes (600 s / 120 5s trackpoints) of valid matched-intensity data in both the fresh baseline and the late segment. If either window has $< 10\text{ min}$ of matched data, the calculator SHALL return `null` / `INSUFFICIENT_MATCHED_DATA`.
+  4. *15-Minute Slice Trajectory Analysis (`REQ-PER-038.4`)*:
+     - The calculator SHALL aggregate mean normalized $\alpha_1$ across consecutive 15-minute workout slices (`15–30m`, `30–45m`, `45–60m`, `60–75m`, `75–90m`, ...) where valid matched samples exist, detailing the progressive autonomic fatigue curve.
+  5. *Zero-Schema-Migration Extrema Persistence (`REQ-PER-038.5`)*:
+     - `ExtremaType` SHALL define `DFA_A1_FRESH_BASELINE`, `DFA_A1_LATE_MEAN`, and `DFA_A1_DRIFT_PCT`.
+     - Upon post-workout centered HRV recomputation, `HrvPostWorkoutRecomputer` SHALL evaluate `HrvDurabilityCalculator` and persist non-null results into `WorkoutSummaries.TABLE_EXTREMA_VALUES` via `WorkoutSummariesDatabaseManager.updateExtremaValue` without SQLite schema version bump.
+     - `WorkoutData` and `WorkoutDataMapper` SHALL expose `dfaA1FreshBaseline: Double?`, `dfaA1LateMean: Double?`, and `dfaA1DurabilityDriftPct: Double?`.
+  6. *Presentation via `HrvDurabilityCard` & Localization Parity (`REQ-PER-038.6`)*:
+     - `HrvDurabilityCard` SHALL render in `WorkoutDetailTabbedContent.kt` under `WorkoutDetailSectionType.ZONES` when autonomic durability metrics exist.
+     - The card SHALL display fresh baseline $\alpha_1$, late mean $\alpha_1$, drift percentage $\Delta\alpha_1\%$, matched workload range, and 15-minute slice trajectory.
+     - For non-HRV workouts or workouts $< 60\text{ min}$, the card SHALL be gracefully omitted with zero layout shift.
+     - All labels and status diagnostics SHALL maintain 100% localization parity across all 9 supported locales in `strings_hrv.xml`.
+  (ATT-4970: [Feature] Model DFA a1 autonomic durability and drift across multi-hour workouts (paired with ATT-4842 Heart Efficiency))
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* an endurance workout lasting $\ge 90\text{ min}$ with valid centered-window DFA $\alpha_1$ and steady cycling power,
+• *When* `HrvPostWorkoutRecomputer` processes the workout,
+• *Then* `HrvDurabilityCalculator` establishes $P_{\text{ref}}$ over `15–45 min`, matches $\pm 10\%$ power windows in fresh and $>60\text{ min}$ segments, and emits $\Delta\alpha_{1,\%}$, fresh baseline mean, and late mean.
+• *Given* a workout with $< 10\text{ min}$ of matched-intensity data in the late segment,
+• *When* `HrvDurabilityCalculator` executes,
+• *Then* it returns `null` (`INSUFFICIENT_MATCHED_DATA`) and preserves null in summary extrema.
+• *Given* a completed workout displayed in Workout Details,
+• *When* `WorkoutDetailTabbedContent` renders,
+• *Then* `HrvDurabilityCard` displays the durability drift percentage and 15-minute slice trajectory in the user's active locale across all 9 supported languages.
+
+**Invariants**: Zero SQLite schema migration; strict 10-minute matched data guard; 100% 9-language localization parity; graceful omission for non-HRV or short workouts.

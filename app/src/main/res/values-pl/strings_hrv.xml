@@ -213,4 +213,18 @@
     <string name="hrv_zone_comparison_dialog_confirm">Aktualizuj FTP</string>
     <string name="hrv_zone_comparison_dialog_cancel">Anuluj</string>
     <string name="hrv_zone_comparison_forward_mader">Kalibruj model metaboliczny</string>
+
+    <!-- Autonomic Durability & Drift (ATT-4970 / REQ-PER-038) -->
+    <string name="hrv_durability_title">Trwałość autonomiczna</string>
+    <string name="hrv_durability_subtitle">Dryf DFA α1 i wydolność tlenowa (Rogers et al. 2021)</string>
+    <string name="hrv_durability_fresh_baseline">Świeża linia bazowa (15–45 min)</string>
+    <string name="hrv_durability_late_mean">Późny segment (>60 min)</string>
+    <string name="hrv_durability_drift">Dryf autonomiczny (Δα1)</string>
+    <string name="hrv_durability_drift_fmt">%1$+.1f%%</string>
+    <string name="hrv_durability_insufficient_data">Niewystarczająca ilość danych o dopasowanej intensywności (&lt;10 min)</string>
+    <string name="hrv_durability_matched_intensity">Dopasowana intensywność: %1$d W (±10%%)</string>
+    <string name="hrv_durability_matched_speed">Dopasowana prędkość: %1$s (±10%%)</string>
+    <string name="hrv_durability_trajectory_title">Trajektoria 15-minutowych wycinków</string>
+    <string name="hrv_durability_slice_label">%1$d–%2$d min</string>
+    <string name="hrv_durability_description">Porównuje DFA α1 ze świeżej linii bazowej (15–45 min) z późnymi segmentami (>60 min) przy dopasowanej intensywności w celu oceny zmęczenia autonomicznego i odporności na spadek napięcia nerwu błędnego.</string>
 </resources>

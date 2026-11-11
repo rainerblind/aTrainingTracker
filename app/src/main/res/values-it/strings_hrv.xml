@@ -213,4 +213,18 @@
     <string name="hrv_zone_comparison_dialog_confirm">Aggiorna FTP</string>
     <string name="hrv_zone_comparison_dialog_cancel">Annulla</string>
     <string name="hrv_zone_comparison_forward_mader">Calibra modello metabolico</string>
+
+    <!-- Autonomic Durability & Drift (ATT-4970 / REQ-PER-038) -->
+    <string name="hrv_durability_title">Durabilità autonomica</string>
+    <string name="hrv_durability_subtitle">Deriva DFA α1 &amp; durabilità aerobica (Rogers et al. 2021)</string>
+    <string name="hrv_durability_fresh_baseline">Baseline fresca (15–45 min)</string>
+    <string name="hrv_durability_late_mean">Segmento avanzato (>60 min)</string>
+    <string name="hrv_durability_drift">Deriva autonomica (Δα1)</string>
+    <string name="hrv_durability_drift_fmt">%1$+.1f%%</string>
+    <string name="hrv_durability_insufficient_data">Dati a intensità corrispondente insufficienti (&lt;10 min)</string>
+    <string name="hrv_durability_matched_intensity">Intensità corrispondente: %1$d W (±10%%)</string>
+    <string name="hrv_durability_matched_speed">Velocità corrispondente: %1$s (±10%%)</string>
+    <string name="hrv_durability_trajectory_title">Traiettoria intervalli di 15 min</string>
+    <string name="hrv_durability_slice_label">%1$d–%2$d min</string>
+    <string name="hrv_durability_description">Confronta DFA α1 della baseline fresca (15–45 min) con i segmenti avanzati (>60 min) a carico corrispondente per quantificare fatica autonomica e resistenza al ritiro vagale.</string>
 </resources>

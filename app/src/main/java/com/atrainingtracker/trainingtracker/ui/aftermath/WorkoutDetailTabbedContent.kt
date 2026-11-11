@@ -62,6 +62,7 @@ import com.atrainingtracker.trainingtracker.ui.aftermath.photos.WorkoutPhotoStri
 import com.atrainingtracker.trainingtracker.ui.aftermath.splits.LapSplitChartData
 import com.atrainingtracker.trainingtracker.ui.aftermath.splits.LapSplitVisualizerCard
 import com.atrainingtracker.trainingtracker.ui.aftermath.workoutdetail.HrvAlpha1ScatterCard
+import com.atrainingtracker.trainingtracker.ui.aftermath.workoutdetail.HrvDurabilityCard
 import com.atrainingtracker.trainingtracker.ui.aftermath.workoutdetail.HrvThresholdSummaryCard
 import com.atrainingtracker.trainingtracker.ui.aftermath.zones.GradeZoneDistributionCard
 import com.atrainingtracker.trainingtracker.ui.aftermath.zones.HeartRateZoneDistributionCard
@@ -914,6 +915,15 @@ private fun RenderWorkoutDetailCardSections(
                         hrZoneThresholds = hrZoneThresholds,
                         onUpdateFtp = onUpdateFtp,
                         onCalibrateMader = onCalibrateMader,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 4.dp)
+                    )
+                    HrvDurabilityCard(
+                        points = activeScrubPath ?: emptyList(),
+                        freshBaseline = workoutData.dfaA1FreshBaseline,
+                        lateMean = workoutData.dfaA1LateMean,
+                        durabilityDriftPct = workoutData.dfaA1DurabilityDriftPct,
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 16.dp, vertical = 4.dp)

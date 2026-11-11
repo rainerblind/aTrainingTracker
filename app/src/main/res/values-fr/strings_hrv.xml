@@ -213,4 +213,18 @@
     <string name="hrv_zone_comparison_dialog_confirm">Mettre à jour FTP</string>
     <string name="hrv_zone_comparison_dialog_cancel">Annuler</string>
     <string name="hrv_zone_comparison_forward_mader">Calibrer le modèle métabolique</string>
+
+    <!-- Autonomic Durability & Drift (ATT-4970 / REQ-PER-038) -->
+    <string name="hrv_durability_title">Durabilité autonomique</string>
+    <string name="hrv_durability_subtitle">Dérive DFA α1 &amp; endurance aérobie (Rogers et al. 2021)</string>
+    <string name="hrv_durability_fresh_baseline">Ligne de base fraîche (15–45 min)</string>
+    <string name="hrv_durability_late_mean">Segment tardif (>60 min)</string>
+    <string name="hrv_durability_drift">Dérive autonomique (Δα1)</string>
+    <string name="hrv_durability_drift_fmt">%1$+.1f%%</string>
+    <string name="hrv_durability_insufficient_data">Données à intensité appariée insuffisantes (&lt;10 min)</string>
+    <string name="hrv_durability_matched_intensity">Intensité appariée : %1$d W (±10%%)</string>
+    <string name="hrv_durability_matched_speed">Vitesse appariée : %1$s (±10%%)</string>
+    <string name="hrv_durability_trajectory_title">Trajectoire par tranches de 15 min</string>
+    <string name="hrv_durability_slice_label">%1$d–%2$d min</string>
+    <string name="hrv_durability_description">Compare DFA α1 de la ligne de base fraîche (15–45 min) aux segments tardifs (>60 min) à intensité appariée pour quantifier la fatigue autonomique et la résistance au retrait vagal.</string>
 </resources>
