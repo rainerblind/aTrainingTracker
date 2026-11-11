@@ -54,6 +54,24 @@ class RadarSpatialAudioMathTest {
         )
         assertEquals(1.0f, nullGains.first, 0.001f)
         assertEquals(1.0f, nullGains.second, 0.001f)
+
+        // System Default route without headphones (REQ-TRK-065.1, ATT-6709)
+        val noHeadphonesGains = RadarSpatialAudioMath.computeStereoGains(
+            lateralOffsetMeters = -2.0f,
+            route = RadarAudioRoute.SYSTEM_DEFAULT,
+            hasHeadphones = false
+        )
+        assertEquals(1.0f, noHeadphonesGains.first, 0.001f)
+        assertEquals(1.0f, noHeadphonesGains.second, 0.001f)
+
+        // System Default route WITH headphones enables stereo panning
+        val withHeadphonesGains = RadarSpatialAudioMath.computeStereoGains(
+            lateralOffsetMeters = -2.0f,
+            route = RadarAudioRoute.SYSTEM_DEFAULT,
+            hasHeadphones = true
+        )
+        assertEquals(1.0f, withHeadphonesGains.first, 0.001f)
+        assertEquals(0.20f, withHeadphonesGains.second, 0.001f)
     }
 
     @Test

@@ -95,6 +95,7 @@ class RadarAlertManager @JvmOverloads constructor(
         const val URBAN_CONGESTION_DURATION_MS: Long = 30_000L
         const val URBAN_CLEAR_DURATION_MS: Long = 20_000L
         const val URBAN_SPEED_THRESHOLD_MPS: Float = 5.0f
+        const val LANE_CHANGE_COOLDOWN_MS: Long = 3000L
 
         @Volatile
         @JvmStatic
@@ -103,6 +104,19 @@ class RadarAlertManager @JvmOverloads constructor(
 
         @Volatile
         private var previewSynthesizer: RadarAudioSynthesizer? = null
+
+        @JvmStatic
+        fun releasePreviewSynthesizer() {
+            synchronized(RadarAlertManager::class.java) {
+                try {
+                    previewSynthesizer?.close()
+                } catch (t: Throwable) {
+                    Log.w(TAG, "Failed to release preview synthesizer", t)
+                } finally {
+                    previewSynthesizer = null
+                }
+            }
+        }
 
         @JvmStatic
         fun toggleRadarAudioSnooze() {
@@ -137,8 +151,9 @@ class RadarAlertManager @JvmOverloads constructor(
                     RadarAudioPreviewType.CENTERED -> synth.playApproach(vol, route)
                     RadarAudioPreviewType.PASSING -> {
                         val offset = if (config.radarTrafficOrientation == RadarTrafficOrientation.RIGHT_HAND) -2.0f else 2.0f
+                        val hasHeadphones = synth.isHeadphonesOrBluetoothConnected()
                         val (leftGain, rightGain) = RadarSpatialAudioMath.computeStereoGains(
-                            offset, config.radarTrafficOrientation, true, route
+                            offset, config.radarTrafficOrientation, true, route, hasHeadphones
                         )
                         synth.playApproach(vol, route, leftGain, rightGain, 1.0f)
                     }
@@ -152,8 +167,9 @@ class RadarAlertManager @JvmOverloads constructor(
                     }
                     RadarAudioPreviewType.LANE_CHANGE -> {
                         val offset = if (config.radarTrafficOrientation == RadarTrafficOrientation.RIGHT_HAND) -2.0f else 2.0f
+                        val hasHeadphones = synth.isHeadphonesOrBluetoothConnected()
                         val (leftGain, rightGain) = RadarSpatialAudioMath.computeStereoGains(
-                            offset, config.radarTrafficOrientation, true, route
+                            offset, config.radarTrafficOrientation, true, route, hasHeadphones
                         )
                         synth.playLaneChangeTick(vol * 0.7f, route, leftGain, rightGain)
                     }
@@ -207,8 +223,12 @@ class RadarAlertManager @JvmOverloads constructor(
     private var urbanClearStartTimeMs: Long? = null
 
     // Spatial target tracking state (REQ-TRK-065.3)
-    private var lastTrackedTargetId: Int? = null
-    private var lastTrackedTargetOffset: Float? = null
+    data class LaneTrackState(
+        var previousOffsetMeters: Float?,
+        var lastTickTimestampMs: Long = 0L,
+        var hasTriggeredTick: Boolean = false
+    )
+    private val laneTrackStates = mutableMapOf<Int, LaneTrackState>()
 
     // Volume boost management
     private var savedStreamVolume: Int? = null
@@ -222,6 +242,7 @@ class RadarAlertManager @JvmOverloads constructor(
         synchronized(lock) {
             restoreSpeakerVolumeLocked()
             abandonAudioFocusLocked()
+            laneTrackStates.clear()
         }
     }
 
@@ -253,6 +274,7 @@ class RadarAlertManager @JvmOverloads constructor(
             observationJob = null
             restoreSpeakerVolumeLocked()
             abandonAudioFocusLocked()
+            laneTrackStates.clear()
         }
     }
 
@@ -311,8 +333,9 @@ class RadarAlertManager @JvmOverloads constructor(
                 }
                 RadarAudioPreviewType.PASSING -> {
                     val offset = if (config.trafficOrientation == RadarTrafficOrientation.RIGHT_HAND) -2.0f else 2.0f
+                    val hasHeadphones = synthesizer.isHeadphonesOrBluetoothConnected()
                     val (leftGain, rightGain) = RadarSpatialAudioMath.computeStereoGains(
-                        offset, config.trafficOrientation, true, config.route
+                        offset, config.trafficOrientation, true, config.route, hasHeadphones
                     )
                     playChime(config) { vol, route ->
                         synthesizer.playApproach(vol, route, leftGain, rightGain, 1.0f)
@@ -332,8 +355,9 @@ class RadarAlertManager @JvmOverloads constructor(
                 }
                 RadarAudioPreviewType.LANE_CHANGE -> {
                     val offset = if (config.trafficOrientation == RadarTrafficOrientation.RIGHT_HAND) -2.0f else 2.0f
+                    val hasHeadphones = synthesizer.isHeadphonesOrBluetoothConnected()
                     val (leftGain, rightGain) = RadarSpatialAudioMath.computeStereoGains(
-                        offset, config.trafficOrientation, true, config.route
+                        offset, config.trafficOrientation, true, config.route, hasHeadphones
                     )
                     playChime(config) { vol, route ->
                         synthesizer.playLaneChangeTick(vol * 0.7f, route, leftGain, rightGain)
@@ -452,15 +476,34 @@ class RadarAlertManager @JvmOverloads constructor(
                 ?: state.targets.minByOrNull { it.rangeMeters }
 
             // Check lane-change transition for spatial tick cue (REQ-TRK-065.3)
-            val primaryOffset = primaryTarget?.lateralOffsetMeters
-            val isSameTarget = primaryTarget != null && (lastTrackedTargetId == null || lastTrackedTargetId == primaryTarget.targetId)
-            if (isSameTarget && config.laneChangeTickEnabled && !isRoutineAlertSuppressed() && config.alertMode != RadarAudioAlertMode.MUTED) {
-                if (RadarSpatialAudioMath.isLaneChangeToSafePassing(lastTrackedTargetOffset, primaryOffset, config.trafficOrientation)) {
-                    triggerLaneChangeTick(primaryOffset, config)
+            val activeTargetIds = state.targets.map { it.targetId }.toSet()
+            laneTrackStates.keys.retainAll(activeTargetIds)
+
+            if (config.laneChangeTickEnabled && !isRoutineAlertSuppressed() && config.alertMode != RadarAudioAlertMode.MUTED) {
+                for (target in state.targets) {
+                    val offset = target.lateralOffsetMeters ?: continue
+                    val trackState = laneTrackStates.getOrPut(target.targetId) {
+                        LaneTrackState(previousOffsetMeters = offset)
+                    }
+                    if (!trackState.hasTriggeredTick && (now - trackState.lastTickTimestampMs >= LANE_CHANGE_COOLDOWN_MS)) {
+                        if (RadarSpatialAudioMath.isLaneChangeToSafePassing(trackState.previousOffsetMeters, offset, config.trafficOrientation)) {
+                            trackState.hasTriggeredTick = true
+                            trackState.lastTickTimestampMs = now
+                            triggerLaneChangeTick(offset, config)
+                        }
+                    } else if (kotlin.math.abs(offset) < RadarSpatialAudioMath.IN_LANE_THRESHOLD_METERS) {
+                        trackState.hasTriggeredTick = false
+                    }
+                    trackState.previousOffsetMeters = offset
+                }
+            } else {
+                for (target in state.targets) {
+                    target.lateralOffsetMeters?.let { offset ->
+                        laneTrackStates.getOrPut(target.targetId) { LaneTrackState(previousOffsetMeters = offset) }
+                            .previousOffsetMeters = offset
+                    }
                 }
             }
-            lastTrackedTargetId = primaryTarget?.targetId
-            lastTrackedTargetOffset = primaryOffset
 
             // 1. Disconnect warning transition (CONNECTED -> DISCONNECTED_ERROR)
             if (lastConnectionState == RadarConnectionState.CONNECTED && currentConn == RadarConnectionState.DISCONNECTED_ERROR) {
@@ -494,7 +537,11 @@ class RadarAlertManager @JvmOverloads constructor(
             if (currentThreat == ThreatLevel.FAST_APPROACHING && lastThreatLevel != ThreatLevel.FAST_APPROACHING) {
                 lastAlertTimestampMs = now
                 lastThreatLevel = currentThreat
-                triggerFastThreatAlert(primaryTarget, config)
+                val fastTarget = state.targets
+                    .filter { it.threatLevel == ThreatLevel.FAST_APPROACHING }
+                    .maxByOrNull { it.approachSpeedMps }
+                    ?: primaryTarget
+                triggerFastThreatAlert(fastTarget, config)
                 return
             }
 
@@ -563,11 +610,13 @@ class RadarAlertManager @JvmOverloads constructor(
             vibrate(VibrationPattern.APPROACH)
         }
         if (config.alertMode == RadarAudioAlertMode.ALL_ALERTS || config.alertMode == RadarAudioAlertMode.APPROACH_AND_FAST) {
+            val hasHeadphones = synthesizer.isHeadphonesOrBluetoothConnected()
             val (leftGain, rightGain) = RadarSpatialAudioMath.computeStereoGains(
                 primaryTarget?.lateralOffsetMeters,
                 config.trafficOrientation,
                 config.spatialAudioEnabled,
-                config.route
+                config.route,
+                hasHeadphones
             )
             val pitch = RadarSpatialAudioMath.computeSpeedPitch(
                 primaryTarget?.approachSpeedMps,
@@ -583,20 +632,22 @@ class RadarAlertManager @JvmOverloads constructor(
         }
     }
 
-    private fun triggerFastThreatAlert(primaryTarget: RadarTarget?, config: TuningPreferencesConfigSnapshot) {
+    private fun triggerFastThreatAlert(fastTarget: RadarTarget?, config: TuningPreferencesConfigSnapshot) {
         if (isFastThreatAlertSuppressed()) return
         if (config.haptics) {
             vibrate(VibrationPattern.FAST_THREAT)
         }
         if (config.alertMode != RadarAudioAlertMode.MUTED) {
+            val hasHeadphones = synthesizer.isHeadphonesOrBluetoothConnected()
             val (leftGain, rightGain) = RadarSpatialAudioMath.computeStereoGains(
-                primaryTarget?.lateralOffsetMeters,
+                fastTarget?.lateralOffsetMeters,
                 config.trafficOrientation,
                 config.spatialAudioEnabled,
-                config.route
+                config.route,
+                hasHeadphones
             )
             val pitch = RadarSpatialAudioMath.computeSpeedPitch(
-                primaryTarget?.approachSpeedMps,
+                fastTarget?.approachSpeedMps,
                 config.speedPitchModulation
             )
             playChime(config) { vol, route ->
@@ -610,11 +661,13 @@ class RadarAlertManager @JvmOverloads constructor(
     }
 
     private fun triggerLaneChangeTick(lateralOffsetMeters: Float?, config: TuningPreferencesConfigSnapshot) {
+        val hasHeadphones = synthesizer.isHeadphonesOrBluetoothConnected()
         val (leftGain, rightGain) = RadarSpatialAudioMath.computeStereoGains(
             lateralOffsetMeters,
             config.trafficOrientation,
             config.spatialAudioEnabled,
-            config.route
+            config.route,
+            hasHeadphones
         )
         playChime(config) { vol, route ->
             synthesizer.playLaneChangeTick(vol * 0.7f, route, leftGain, rightGain)

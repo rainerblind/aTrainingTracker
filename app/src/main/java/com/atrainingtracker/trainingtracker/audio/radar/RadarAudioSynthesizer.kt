@@ -63,6 +63,20 @@ class RadarAudioSynthesizer(
         const val FREQ_DISCONNECT_2: Double = 1750.0
         const val FREQ_LANE_TICK: Double = 2400.0
 
+        /** External audio output device types representing headphones, headsets, or external Bluetooth/USB audio. */
+        val EXTERNAL_DEVICE_TYPES: Set<Int> = setOf(
+            AudioDeviceInfo.TYPE_BLUETOOTH_A2DP,
+            AudioDeviceInfo.TYPE_BLUETOOTH_SCO,
+            AudioDeviceInfo.TYPE_BLE_HEADSET,
+            AudioDeviceInfo.TYPE_BLE_SPEAKER,
+            AudioDeviceInfo.TYPE_BLE_BROADCAST,
+            AudioDeviceInfo.TYPE_WIRED_HEADSET,
+            AudioDeviceInfo.TYPE_WIRED_HEADPHONES,
+            AudioDeviceInfo.TYPE_USB_HEADSET,
+            AudioDeviceInfo.TYPE_USB_DEVICE,
+            AudioDeviceInfo.TYPE_HEARING_AID
+        )
+
         const val TAU_ATTACK: Double = 0.002 // 2 ms attack smoothing
 
         /**
@@ -284,6 +298,20 @@ class RadarAudioSynthesizer(
     }
 
     /**
+     * Checks whether connected audio output routing includes external headphones, headsets, or Bluetooth audio.
+     */
+    fun isHeadphonesOrBluetoothConnected(): Boolean {
+        val am = audioManager ?: return false
+        return try {
+            val devices = am.getDevices(AudioManager.GET_DEVICES_OUTPUTS)
+            devices?.any { it.type in EXTERNAL_DEVICE_TYPES } == true
+        } catch (t: Throwable) {
+            Log.w(TAG, "Failed to query audio output devices", t)
+            false
+        }
+    }
+
+    /**
      * Applies preferred audio device routing ([RadarAudioRoute.FORCE_SPEAKER] vs [RadarAudioRoute.SYSTEM_DEFAULT]).
      */
     fun applyAudioRoute(track: AudioTrack?, route: RadarAudioRoute) {
@@ -319,11 +347,8 @@ class RadarAudioSynthesizer(
                 val clamped = volume.coerceIn(0.0f, 1.0f)
                 val finalLeft = (clamped * leftGain.coerceIn(0.0f, 1.0f)).coerceIn(0.0f, 1.0f)
                 val finalRight = (clamped * rightGain.coerceIn(0.0f, 1.0f)).coerceIn(0.0f, 1.0f)
-                if (finalLeft == finalRight) {
-                    track.setVolume(finalLeft)
-                } else {
-                    track.setStereoVolume(finalLeft, finalRight)
-                }
+                val effectiveVolume = maxOf(finalLeft, finalRight)
+                track.setVolume(effectiveVolume)
 
                 val clampedPitch = pitch.coerceIn(0.5f, 2.0f)
                 try {

@@ -40,22 +40,29 @@ object RadarSpatialAudioMath {
      * Computes left and right stereo gains [Pair(leftGain, rightGain)] from vehicle lateral offset (REQ-TRK-065.1).
      *
      * Invariants:
-     * - If spatial audio is disabled, or [route] is [RadarAudioRoute.FORCE_SPEAKER], or [lateralOffsetMeters] is null,
-     *   returns centered stereo [Pair(1.0f, 1.0f)] to preserve maximum phone speaker volume (TST-TRK-065.4).
+     * - If spatial audio is disabled, or [route] is [RadarAudioRoute.FORCE_SPEAKER], or [route] is
+     *   [RadarAudioRoute.SYSTEM_DEFAULT] without connected headphones ([hasHeadphones] is false), or
+     *   [lateralOffsetMeters] is null, returns centered stereo [Pair(1.0f, 1.0f)] to preserve maximum
+     *   phone speaker volume (TST-TRK-065.4).
      * - When in-lane (|x| < 1.0m), returns centered stereo [Pair(1.0f, 1.0f)].
      * - When in passing lane (|x| >= 1.5m):
      *   - In Right-Hand Traffic (RHT), vehicle overtaking on left (x <= -1.5m) pans to left ear: [Pair(1.0f, 0.20f)].
      *   - In Left-Hand Traffic (LHT), vehicle overtaking on right (x >= 1.5m) pans to right ear: [Pair(0.20f, 1.0f)].
-     *   - Opposite passing side pans to the opposite ear.
+     *   - Physical lateral offset directly maps negative values to left channel and positive values to right channel.
      * - Smooth linear attenuation between 1.0m and 1.5m.
      */
     fun computeStereoGains(
         lateralOffsetMeters: Float?,
         trafficOrientation: RadarTrafficOrientation = RadarTrafficOrientation.RIGHT_HAND,
         isSpatialAudioEnabled: Boolean = true,
-        route: RadarAudioRoute = RadarAudioRoute.SYSTEM_DEFAULT
+        route: RadarAudioRoute = RadarAudioRoute.SYSTEM_DEFAULT,
+        hasHeadphones: Boolean = true
     ): Pair<Float, Float> {
-        if (!isSpatialAudioEnabled || route == RadarAudioRoute.FORCE_SPEAKER || lateralOffsetMeters == null) {
+        if (!isSpatialAudioEnabled ||
+            route == RadarAudioRoute.FORCE_SPEAKER ||
+            (!hasHeadphones && route == RadarAudioRoute.SYSTEM_DEFAULT) ||
+            lateralOffsetMeters == null
+        ) {
             return Pair(1.0f, 1.0f)
         }
 

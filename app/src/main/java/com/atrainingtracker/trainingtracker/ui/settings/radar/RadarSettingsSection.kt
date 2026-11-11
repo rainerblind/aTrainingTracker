@@ -27,6 +27,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ElevatedCard
@@ -40,6 +41,7 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -89,6 +91,12 @@ fun RadarSettingsSection(
     var selectedScenario by remember { mutableStateOf(RadarScenario.SINGLE_CAR) }
     val radarState by RadarStateRepository.radarState.collectAsState()
     val isRunning = RadarTrafficSimulator.isSimulating
+
+    DisposableEffect(Unit) {
+        onDispose {
+            RadarAlertManager.releasePreviewSynthesizer()
+        }
+    }
 
     Column(
         modifier = modifier.fillMaxWidth(),
@@ -570,33 +578,17 @@ fun RadarSettingsSection(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Approach-Speed Pitch Modulation Toggle (REQ-TRK-065.2)
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column(modifier = Modifier.weight(1f).padding(end = 16.dp)) {
-                        Text(
-                            text = stringResource(R.string.radar_speed_pitch_title),
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        Text(
-                            text = stringResource(R.string.radar_speed_pitch_desc),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                    Switch(
-                        checked = tuningConfig.radarSpeedPitchModulation,
-                        onCheckedChange = { checked ->
-                            coroutineScope.launch {
-                                actualDataStore.updateRadarSpeedPitchModulation(checked)
-                            }
+                // Approach-Speed Pitch Modulation Subordinate Toggle (REQ-TRK-065.2)
+                SubordinateTuningToggleItem(
+                    title = stringResource(R.string.radar_speed_pitch_title),
+                    isChecked = tuningConfig.radarSpeedPitchModulation,
+                    onCheckedChange = { checked ->
+                        coroutineScope.launch {
+                            actualDataStore.updateRadarSpeedPitchModulation(checked)
                         }
-                    )
-                }
+                    },
+                    modifier = Modifier.padding(top = 2.dp, bottom = 4.dp)
+                )
 
                 Spacer(modifier = Modifier.height(16.dp))
 
@@ -614,8 +606,7 @@ fun RadarSettingsSection(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
-                    FilterChip(
-                        selected = false,
+                    AssistChip(
                         onClick = {
                             RadarAlertManager.playAudioPreview(context, RadarAudioPreviewType.CENTERED, tuningConfig)
                         },
@@ -626,8 +617,7 @@ fun RadarSettingsSection(
                             )
                         }
                     )
-                    FilterChip(
-                        selected = false,
+                    AssistChip(
                         onClick = {
                             RadarAlertManager.playAudioPreview(context, RadarAudioPreviewType.PASSING, tuningConfig)
                         },
@@ -638,8 +628,7 @@ fun RadarSettingsSection(
                             )
                         }
                     )
-                    FilterChip(
-                        selected = false,
+                    AssistChip(
                         onClick = {
                             RadarAlertManager.playAudioPreview(context, RadarAudioPreviewType.SLOW, tuningConfig)
                         },
@@ -650,8 +639,7 @@ fun RadarSettingsSection(
                             )
                         }
                     )
-                    FilterChip(
-                        selected = false,
+                    AssistChip(
                         onClick = {
                             RadarAlertManager.playAudioPreview(context, RadarAudioPreviewType.FAST, tuningConfig)
                         },
@@ -662,8 +650,7 @@ fun RadarSettingsSection(
                             )
                         }
                     )
-                    FilterChip(
-                        selected = false,
+                    AssistChip(
                         onClick = {
                             RadarAlertManager.playAudioPreview(context, RadarAudioPreviewType.LANE_CHANGE, tuningConfig)
                         },

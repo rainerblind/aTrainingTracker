@@ -3478,11 +3478,11 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 **Invariants**: Touch pass-through; zero false green; zero SQLite schema modifications; 100% 9-language translation parity.
 
 ### REQ-TRK-063: Radar Audio Chime and Haptic Alert Engine [Verified]
-- **Tests**: `TST-TRK-063` | **Tickets**: `ATT-5086`
+- **Tests**: `TST-TRK-063` | **Tickets**: `ATT-5086`, `ATT-6709`
 - **Implementation**: `RadarAlertManager.kt`, `RadarAudioSynthesizer.kt`, `TrackerService.kt`, `TuningPreferencesDataStore.kt`, `RadarSettingsSection.kt`, `strings_radar.xml`
 - **Rationale**: Cyclists operating in traffic require eyes-free situational awareness through audible and tactile cues that cut through outdoor wind and road noise. `RadarAlertManager` observes `RadarStateRepository.radarState` during active tracking in `TrackerService` (including foreground and screen-off execution), synthesizing distinct PCM audio chimes via `AudioTrack` (`USAGE_MEDIA`, `MODE_STATIC` warm replay) and triggering `VibrationEffect` patterns on threat level transitions (`APPROACHING`, `FAST_APPROACHING`, `ALL_CLEAR`, `DISCONNECTED_ERROR`). The alert engine must support independent radar alert volume, transient background media audio ducking (`AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK`), temporary hardware phone-speaker volume boost with guaranteed auto-restore, and configurable audio routing to connected headphones or forced phone speaker output (`AudioTrack.setPreferredDevice()`) without switching `AudioManager` into telephony communication mode (ATT-5086, Parent Epic ATT-1286, extending `REQ-CON-028` and `REQ-TRK-062`):
-1. *Threat Transition Alerts & Debouncing (`REQ-TRK-063.1`)*:
-• The system SHALL emit distinct acoustic chimes and vibration patterns on threat transitions: double ascending chime for initial approach (`NONE -> APPROACHING`), urgent triple high-pitch chime for high-speed threat (`-> FAST_APPROACHING`), soft single chime for all-clear (`APPROACHING/FAST -> NONE`), and descending warning chime with long vibration for disconnect (`-> DISCONNECTED_ERROR`). State transitions SHALL be debounced to prevent alert spamming during continuous 4–8 Hz telemetry updates.
+1. *Threat Transition Alerts, Target Selection & Debouncing (`REQ-TRK-063.1`)*:
+• The system SHALL emit distinct acoustic chimes and vibration patterns on threat transitions: double ascending chime for initial approach (`NONE -> APPROACHING`), urgent triple high-pitch chime for high-speed threat (`-> FAST_APPROACHING`), soft single chime for all-clear (`APPROACHING/FAST -> NONE`), and descending warning chime with long vibration for disconnect (`-> DISCONNECTED_ERROR`). When multiple approaching targets exist during high-speed threat escalation, the system SHALL select the `FAST_APPROACHING` target with highest approach speed to drive alert pitch and spatial panning. State transitions SHALL be debounced to prevent alert spamming during continuous 4–8 Hz telemetry updates.
 2. *AudioTrack USAGE_MEDIA Synthesis & Warm MODE_STATIC Replay (`REQ-TRK-063.2`)*:
 • `RadarAudioSynthesizer` SHALL synthesize low-latency multi-tone PCM audio (2.2–3.2 kHz harmonics) via `AudioTrack` configured with `AudioAttributes.USAGE_MEDIA` (never sonification). Persistent static tracks SHALL use warm replay (`pause()` + `playbackHeadPosition = 0` + `play()`), strictly prohibiting `track.stop()` prior to replay.
 3. *Independent Volume & Speaker Override Hardware Boost (`REQ-TRK-063.3`)*:
@@ -3606,25 +3606,31 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 **Invariants**: Visual target rail remains 100% active during audio snooze; `FAST_APPROACHING` high-speed threat safety alerts preserved; zero SQLite schema modifications; 100% 9-language translation parity.
 
 ### REQ-TRK-065: 3D Stereo Lateral-Offset Panning & Approach-Speed Pitch Modulation for Radar Audio [Verified]
-- **Tests**: `TST-TRK-065` | **Tickets**: `ATT-5120`
+- **Tests**: `TST-TRK-065` | **Tickets**: `ATT-5120`, `ATT-6709`
 - **Implementation**: `RadarSpatialAudioMath.kt`, `RadarAlertManager.kt`, `RadarAudioSynthesizer.kt`, `TuningPreferencesDataStore.kt`, `RadarSettingsSection.kt`, `strings_radar.xml`
 - **Rationale**: Standard mono radar beeps only signal vehicle proximity, requiring cyclists with headphones to divert their gaze from the roadway to assess whether an approaching vehicle is directly behind them or has pulled into the passing lane, and how rapidly it is closing. By decoding BLE V2 lateral lane offset $x$ and approach speed $v_{\text{rel}}$, the system delivers intuitive 3D spatial audio panning and speed-adaptive pitch modulation directly over stereo and bone-conduction headphones without compromising visual rail tracking or maximum phone speaker output (ATT-5120, Parent Epic ATT-1286, extending `REQ-TRK-063` and `REQ-CON-030`):
-1. *Stereo Lateral-Offset Panning (`REQ-TRK-065.1`)*:
+1. *Stereo Lateral-Offset Panning & Speaker Gain Collapsing (`REQ-TRK-065.1`)*:
 • When stereo audio output is active and `RadarTarget.lateralOffsetMeters` ($x$) is available from the BLE V2 stream (`6a4e3204`), the system SHALL compute left and right channel gains `(leftGain, rightGain)` according to lateral offset $x$ and configured traffic orientation:
   - In-Lane ($|x| < 1.0\text{ m}$): Centered stereo `(1.0, 1.0)`.
   - Passing Lane ($|x| \ge 1.5\text{ m}$): Panned toward the overtaking ear `(1.0, 0.20)` for Right-Hand Traffic (left ear) or `(0.20, 1.0)` for Left-Hand Traffic (right ear).
   - Linear transition attenuation between $1.0\text{ m}$ and $1.5\text{ m}$.
-  - When `route == FORCE_SPEAKER` or 3D spatial audio is disabled, stereo gains SHALL collapse to centered `(1.0, 1.0)`.
+  - When `route == FORCE_SPEAKER`, or 3D spatial audio is disabled, or `route == SYSTEM_DEFAULT` when no external headphones/Bluetooth audio devices are connected, stereo gains SHALL collapse to centered `(1.0, 1.0)` to preserve maximum phone speaker loudness.
 2. *Approach-Speed Pitch & Tempo Modulation (`REQ-TRK-065.2`)*:
 • When `radarSpeedPitchModulation` is enabled (default `true`), the system SHALL scale playback pitch and tempo linearly across relative approach speeds $3.0\text{ m/s} \le v_{\text{rel}} \le 30.0\text{ m/s}$ ($11\text{--}108\text{ km/h}$) to pitch range `0.95x .. 1.35x` using `AudioTrack.setPlaybackParams()` without rebuilding static PCM buffers.
-3. *Lane-Change Confirmation Spatial Cue (`REQ-TRK-065.3`)*:
-• When `radarLaneChangeTickEnabled` is enabled (default `true`), transitioning a tracked vehicle from `IN_RIDER_LANE` ($|x| < 1.0\text{ m}$) to `CHANGING_LANE_SAFE` ($|x| \ge 1.5\text{ m}$) SHALL emit a subtle directional spatial tick cue in the overtaking ear.
+3. *Lane-Change Confirmation Spatial Cue & Multi-Target Hysteresis (`REQ-TRK-065.3`)*:
+• When `radarLaneChangeTickEnabled` is enabled (default `true`), transitioning a tracked vehicle from `IN_RIDER_LANE` ($|x| < 1.0\text{ m}$) to `CHANGING_LANE_SAFE` ($|x| \ge 1.5\text{ m}$) SHALL emit a subtle directional spatial tick cue in the overtaking ear. `RadarAlertManager` SHALL track per-target `LaneTrackState` across multi-car convoys with spatial boundary hysteresis and a 3,000 ms per-target cooldown, pruning departed target IDs to prevent 8 Hz jitter fluttering.
 4. *DataStore Persistence & Traffic Orientation Configuration (`REQ-TRK-065.4`)*:
 • `TuningPreferencesDataStore` SHALL persist `radarSpatialAudioEnabled` (Boolean, default `true`), `radarSpeedPitchModulation` (Boolean, default `true`), `radarTrafficOrientation` (String/enum `RIGHT_HAND`/`LEFT_HAND`, default `RIGHT_HAND`), and `radarLaneChangeTickEnabled` (Boolean, default `true`), exposed in `RadarSettingsSection.kt`.
-5. *Interactive Audio Preview Controls (`REQ-TRK-065.5`)*:
-• `RadarSettingsSection.kt` SHALL provide interactive audio preview buttons (Centered In-Lane, Passing Lane, Slow Approach, Fast Approach, Lane Change Tick) for eyes-free auditory verification in indoor settings.
+5. *Interactive Audio Preview Controls & Lifecycle Management (`REQ-TRK-065.5`)*:
+• `RadarSettingsSection.kt` SHALL provide interactive audio preview controls (Centered In-Lane, Passing Lane, Slow Approach, Fast Approach, Lane Change Tick) rendered as `AssistChip` action buttons per Design Guidelines §1.2. `RadarAlertManager` SHALL expose `releasePreviewSynthesizer()` invoked via `DisposableEffect` on Settings disposal to release native `AudioTrack` resources. Subordinate settings nested under spatial audio SHALL render as `SubordinateTuningToggleItem` per Design Guidelines §3.3. Deprecated `setStereoVolume()` on mono tracks SHALL be replaced with non-deprecated `setVolume()`.
 6. *9-Language Localization Parity (`REQ-TRK-065.6`)*:
 • All spatial audio toggles, traffic orientation labels, and audio preview buttons in `strings_radar.xml` SHALL maintain 100% key and format parity across EN, DE, ES, FR, IT, JA, NL, PL, PT (zero inline emojis).
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: `REQ-TRK-063` (Radar Alert Engine) and `REQ-TRK-065` (Spatial Audio & Speed Pitch Modulation), extending `REQ-CON-028` and `REQ-CON-030`. Targets `RadarSpatialAudioMath.kt`, `RadarAlertManager.kt`, `RadarAudioSynthesizer.kt`, and `RadarSettingsSection.kt`.
+2. *Historical Origin & Commit Trace*: `ATT-5120` introduced spatial audio panning and pitch modulation in commit `28fb9956`; `ATT-5086` introduced the core alert manager in commit `85790a1b`; `ATT-6709` refines speaker gain collapse on `SYSTEM_DEFAULT`, `FAST_APPROACHING` kinematics selection, multi-car lane tracking with cooldown, and `AudioTrack` cleanup.
+3. *Root Reason for Existing Formulation*: `FORCE_SPEAKER` was the only explicit phone speaker route initially anticipated, leaving `SYSTEM_DEFAULT` without headphones subject to stereo attenuation. Closest-target selection was used uniformly for simplicity without considering multi-vehicle fast-threat scenarios. Stateless `FilterChip`s and `Switch` rows were used before Design Guidelines §1.2 and §3.3 standardized subordinate and action patterns.
+4. *Preservation of Core Invariants*: Full phone speaker volume preserved; zero regression on headphone stereo panning; 100% 9-language translation parity; zero native `AudioTrack` resource leaks.
 
 **Acceptance Criteria (Given-When-Then)**:
 • *Given* 3D spatial audio enabled and Right-Hand Traffic configured,
@@ -3633,11 +3639,17 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 • *Given* speed-adaptive pitch modulation enabled,
 • *When* a vehicle approaches at $25.0\text{ m/s}$ ($90\text{ km/h}$) versus $5.0\text{ m/s}$ ($18\text{ km/h}$),
 • *Then* the alert chime playback pitch scales from `~1.0x` to `~1.28x`.
-• *Given* `route == FORCE_SPEAKER`,
+• *Given* `route == FORCE_SPEAKER` or `route == SYSTEM_DEFAULT` without headphones connected,
 • *When* a passing vehicle triggers an alert,
 • *Then* stereo gains remain centered `(1.0, 1.0)` to preserve full phone speaker volume.
+• *Given* multiple approaching targets including a slow trailing car and a fast approaching threat,
+• *When* escalating to `FAST_APPROACHING`,
+• *Then* `RadarAlertManager` selects the kinematics of the `FAST_APPROACHING` target to drive alert pitch and panning.
+• *Given* `RadarSettingsSection` leaving composition,
+• *When* disposed,
+• *Then* `RadarAlertManager.releasePreviewSynthesizer()` is invoked releasing native `AudioTrack`s.
 
-**Invariants**: Warm `MODE_STATIC` replay latency preserved without AudioFlinger port teardown; zero volume reduction on phone speaker; zero SQLite schema modifications; 100% 9-language translation parity.
+**Invariants**: Warm `MODE_STATIC` replay latency preserved without AudioFlinger port teardown; zero volume reduction on phone speaker; zero SQLite schema modifications; 100% 9-language translation parity; zero native resource leaks.
 
 ### REQ-TRK-066: Repository-Only Live Recording Service Database Access Layer (Phase C) [Verified]
 - **Target Release**: `V5.0.0`

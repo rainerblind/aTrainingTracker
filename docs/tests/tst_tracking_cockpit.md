@@ -1930,10 +1930,11 @@
 ### TST-TRK-063: **Radar Audio Chime and Haptic Alert Engine Test Suite** [Verified]
 - **Requirement(s)**: `REQ-TRK-063` (`REQ-TRK-063.1`..`REQ-TRK-063.7`)
 - **Component**: `RadarAlertManager.kt`, `RadarAudioSynthesizer.kt`, `TrackerService.kt`, `TuningPreferencesDataStore.kt`, `RadarSettingsSection.kt`, `strings_radar.xml`
-- **Jira**: `ATT-5086`
+- **Jira**: `ATT-5086`, `ATT-6709`
 - **Test Description**:
   1. *Threat Transition & Debounce Unit Tests (`TST-TRK-063.1`, `RadarAlertManagerTest.kt`)*:
   • Verify audio chime and vibration triggers on `NONE -> APPROACHING`, escalation to `FAST_APPROACHING`, all-clear `-> NONE`, and disconnect `-> DISCONNECTED_ERROR`. Verify debouncing prevents repeated chimes on continuous 8 Hz range telemetry.
+  • Verify `FAST_APPROACHING` escalation selects the target with highest approach speed to drive alert pitch and spatial panning when multiple targets exist.
   2. *PCM Audio Synthesis & MODE_STATIC Replay Tests (`TST-TRK-063.2`, `RadarAudioSynthesizerTest.kt`)*:
   • Verify multi-tone PCM wave generation (non-empty byte arrays, 16-bit signed PCM within [-1.0, 1.0]), `USAGE_MEDIA` AudioAttributes, and warm `MODE_STATIC` replay (`pause()`, `playbackHeadPosition = 0`, `play()`).
   3. *Independent Volume Boost & Safe Restoration Tests (`TST-TRK-063.3`, `RadarAlertManagerTest.kt`)*:
@@ -2018,16 +2019,19 @@
 ### TST-TRK-065: **3D Stereo Panning & Approach-Speed Pitch Modulation Test Suite** [Verified]
 - **Requirement(s)**: `REQ-TRK-065` (`REQ-TRK-065.1`..`REQ-TRK-065.6`)
 - **Component**: `RadarSpatialAudioMath.kt`, `RadarAlertManager.kt`, `RadarAudioSynthesizer.kt`, `TuningPreferencesDataStore.kt`, `RadarSettingsSection.kt`, `strings_radar.xml`
-- **Jira**: `ATT-5120`
+- **Jira**: `ATT-5120`, `ATT-6709`
 - **Test Description**:
   1. *Stereo Lateral Gain Computation Tests (`TST-TRK-065.1`, `RadarSpatialAudioMathTest.kt`)*:
   • Verify stereo gain calculation `(leftGain, rightGain)` for in-lane ($|x| < 1.0\text{ m}$), safe passing ($|x| \ge 1.5\text{ m}$), intermediate linear interpolation, and traffic orientation (RHT vs. LHT).
+  • Verify stereo gains collapse to centered `(1.0, 1.0)` on `SYSTEM_DEFAULT` when `hasHeadphones` is false.
   2. *Speed-to-Pitch Linear Mapping Tests (`TST-TRK-065.2`, `RadarSpatialAudioMathTest.kt`)*:
   • Verify linear mapping from approach velocity ($3.0\text{--}30.0\text{ m/s}$) to pitch factors ($0.95x\text{--}1.35x$) and boundary clamping.
   3. *Lane-Change Confirmation Spatial Cue Tests (`TST-TRK-065.3`, `RadarAlertManagerTest.kt`)*:
-  • Verify spatial tick chime emission when primary target transitions from in-lane to safe passing lane and suppression when disabled.
-  4. *Force Speaker Fallback Invariant Tests (`TST-TRK-065.4`, `RadarAlertManagerTest.kt`)*:
-  • Verify stereo gains collapse to centered `(1.0, 1.0)` when audio route is `FORCE_SPEAKER` regardless of lateral target offset.
+  • Verify spatial tick chime emission when tracked target transitions from in-lane to safe passing lane and suppression when disabled.
+  • Verify multi-car convoy per-target `LaneTrackState` tracking with spatial hysteresis and 3,000 ms per-target cooldown, asserting departed targets are pruned.
+  4. *Speaker Fallback & Lifecycle Invariant Tests (`TST-TRK-065.4`, `RadarAlertManagerTest.kt`, `RadarAudioSynthesizerTest.kt`)*:
+  • Verify stereo gains collapse to centered `(1.0, 1.0)` when audio route is `FORCE_SPEAKER` or `SYSTEM_DEFAULT` without headphones.
+  • Verify `releasePreviewSynthesizer()` closes and unsets active `AudioTrack`s without leakage.
   5. *Preferences Persistence & DataStore Parity Tests (`TST-TRK-065.5`, `TuningConfigTest.kt`)*:
   • Verify DataStore keys, default values, and serialization for `radarSpatialAudioEnabled`, `radarSpeedPitchModulation`, `radarTrafficOrientation`, and `radarLaneChangeTickEnabled`.
   6. *9-Language Localization Parity Test (`TST-TRK-065.6`, `TranslationParityTest.kt`)*:
