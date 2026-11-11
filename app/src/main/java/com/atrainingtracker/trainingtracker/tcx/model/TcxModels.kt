@@ -23,9 +23,36 @@ package com.atrainingtracker.trainingtracker.tcx.model
  *
  * Part of REQ-DAT-040 (TCX Structured DTO Serialization, Parsing Decoupling & Round-Trip Fidelity).
  */
-data class TcxDocument(
+data class TcxDocument @JvmOverloads constructor(
     val activities: List<TcxActivity> = emptyList(),
+    val courses: List<TcxCourse> = emptyList(),
     val author: TcxAuthor? = null
+) {
+    // Secondary constructor for Java compatibility: (activities, author)
+    constructor(activities: List<TcxActivity>, author: TcxAuthor?) : this(activities, emptyList(), author)
+}
+
+/**
+ * An individual TCX Course element (<Course> inside <Courses>).
+ */
+data class TcxCourse(
+    val name: String,
+    val laps: List<TcxLap> = emptyList(),
+    val trackpoints: List<TcxTrackpoint> = emptyList(),
+    val coursePoints: List<TcxCoursePoint> = emptyList(),
+    val notes: String? = null
+)
+
+/**
+ * An individual TCX CoursePoint element (<CoursePoint> inside <Course>).
+ */
+data class TcxCoursePoint(
+    val name: String,
+    val time: String? = null,
+    val position: TcxPosition,
+    val altitudeMeters: Double? = null,
+    val pointType: String? = null,
+    val notes: String? = null
 )
 
 /**

@@ -2083,27 +2083,30 @@
 ### TST-DAT-036: **TCX Structured DTO Serialization, Parsing Decoupling & Round-Trip Verification Suite** [Verified]
 - **Target Release**: `V5.0.0`
 - **Requirement(s)**: `REQ-DAT-040`
-- **Component**: `TcxDocument.kt`, `TcxSerializer.kt`, `TcxParser.kt`, `TCXFileWriter.java`, `TcxWorkoutParser.kt`, `TCXRoundTripTest.kt`
-- **Jira**: `ATT-938`, `ATT-6693`
+- **Component**: `TcxDocument.kt`, `TcxSerializer.kt`, `TcxParser.kt`, `TCXFileWriter.java`, `TcxWorkoutParser.kt`, `TCXRoundTripTest.kt`, `TcxTrackpointParser.kt`
+- **Jira**: `ATT-938`, `ATT-6693`, `ATT-6694`
 - **Test Description**:
   1. *TCX DTO Serialization & Schema Compliance Contract Test (`TST-DAT-036.1`, `TcxSerializerTest.kt`)*:
   • Serialize a complete synthetic `TcxDocument` containing multi-lap data, TPX sensor extensions, and XML special characters (`&`, `<`, `>`, `"`, `'`).
   • Verify XML structure against Garmin TCX v2 sequence rules (`Id` -> `Lap`* -> `Notes`? -> `Creator`? -> `Extensions`? -> `Author`?).
+  • Verify incremental streaming writer API (`startDocument`, `startActivity`, `startLap`, `writeTrackpoint`, `endLap`, `endActivity`, `endDocument`) yields identical schema-compliant XML without buffering samples in memory.
   • Verify `<Cadence>`, `<Watts>`, and `<RunCadence>` contain integer values only.
   2. *TCX DTO Streaming Parser Decoupling Test (`TST-DAT-036.2`, `TcxParserTest.kt`)*:
   • Parse valid Garmin TCX v2 and legacy `aTrainingTracker` TCX streams into `TcxDocument`.
+  • Verify parsing of `<Courses>`, `<Course>`, and `<CoursePoint>` blocks into strongly typed DTOs.
   • Verify correct extraction of `att:ActivityExtension`, `att:LapExtension`, and bracketed workout name/description fallbacks.
   • Assert graceful handling of missing optional elements (no HR, no cadence, no GPS).
-  3. *Bidirectional TCX Export-Import Round-Trip Verification (`TST-DAT-036.3`, `TCXRoundTripTest.kt`)*:
-  • Export synthetic workouts across sport types (Running, Biking) with multiple laps and dense trackpoints to TCX via `TcxSerializer`.
+  3. *Bidirectional TCX Export-Import Round-Trip Verification (`TST-DAT-036.3`, `TCXRoundTripTest.kt`, `TrackpointXmlParserTest.kt`)*:
+  • Export synthetic workouts across sport types (Running, Biking) with multiple laps and dense trackpoints to TCX via `TcxSerializer` and `TCXFileWriter`.
   • Re-parse the generated TCX via `TcxWorkoutParser` / `TcxParser`.
-  • Assert 1:1 parity for workout name, notes, lap split timestamps, lap statistics, and trackpoint streams.
+  • Assert 1:1 parity for workout name, notes, lap split timestamps, lap statistics, trackpoint streams, courses, and waypoints.
   • Specifically verify that workouts with custom name and empty description round-trip with workoutNotes as null (no leaking raw bracketed [WorkoutName]), description-only workouts round-trip correctly, laps with custom names preserve empty notes, and short unbracketed third-party notes parse into notes without leaking into name.
+  • Verify `TcxTrackpointParser` backward compatibility when delegating to `TcxParser` across existing course and activity tests (`TrackpointXmlParserTest.kt`).
   4. *Existing Exporter & Parser Regression Suite (`TST-DAT-036.4`)*:
   • Run `TCXFileWriterWorkoutNameTest`, `TCXFileWriterLapTest`, and `TcxWorkoutParserTest`.
   • Verify 100% backward compatibility with existing tests.
   5. *Tier 1 Targeted Unit Test Regression (`TST-DAT-036.5`)*:
-  • Execute targeted test suite (`--tests "com.atrainingtracker.trainingtracker.tcx.*" --tests "com.atrainingtracker.trainingtracker.exporter.*" --tests "com.atrainingtracker.trainingtracker.migration.*" --tests "com.atrainingtracker.trainingtracker.build.*"`).
+  • Execute targeted test suite (`--tests "com.atrainingtracker.trainingtracker.tcx.*" --tests "com.atrainingtracker.trainingtracker.exporter.*" --tests "com.atrainingtracker.trainingtracker.migration.*" --tests "com.atrainingtracker.trainingtracker.routes.*"`).
   • Assert 100% pass rate.
 
 ### TST-DAT-037: **Repository-Only Engine, Exporter & Migration Layer Verification Suite** [Verified]

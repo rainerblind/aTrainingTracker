@@ -1933,7 +1933,7 @@
 1. *Shared XML Trackpoint Domain DTOs (`TrackpointXmlParser.kt`)*:
 • The system SHALL provide immutable domain data transfer objects: `RawTrackpoint(lat: Double, lng: Double, altitude: Double? = null, distanceMeters: Double? = null, time: String? = null, hr: Int? = null, cadence: Int? = null, power: Int? = null, speedMps: Double? = null, temperature: Double? = null)`, `RawCoursePoint(name: String, lat: Double, lng: Double, altitude: Double? = null, type: String? = null, notes: String? = null, time: String? = null)`, `RawLap(lapNr: Long, startTime: String? = null, totalTimeSeconds: Double? = null, distanceMeters: Double? = null, maxSpeed: Double? = null, calories: Int? = null, avgHeartRate: Int? = null, name: String? = null, description: String? = null, trackpoints: List<RawTrackpoint> = emptyList())`, `ParsedTcxData(name: String? = null, notes: String? = null, sport: String? = null, laps: List<RawLap> = emptyList(), coursePoints: List<RawCoursePoint> = emptyList())`, and `ParsedGpxData(name: String? = null, description: String? = null, sport: String? = null, laps: List<RawLap> = emptyList(), waypoints: List<RawCoursePoint> = emptyList())`.
 2. *Streaming TCX Parser (`TcxTrackpointParser`)*:
-• The system SHALL implement pure Java/Kotlin streaming pull parsing (`org.xmlpull.v1.XmlPullParserFactory`) in `TcxTrackpointParser.parse(inputStream: InputStream): ParsedTcxData`.
+• The system SHALL delegate TCX streaming pull parsing in `TcxTrackpointParser.parse(inputStream: InputStream): ParsedTcxData` directly to canonical `TcxParser.parse(inputStream)`, mapping parsed `TcxDocument` activities and courses into `ParsedTcxData` to eliminate duplicate XML state-machine logic (Rule 36 DRY).
 • The parser SHALL handle both Garmin Activity documents (`<Activity>`) and Garmin Course documents (`<Course>`), extracting all trackpoints (`<Trackpoint>`), positions (`<LatitudeDegrees>`, `<LongitudeDegrees>`), altitude (`<AltitudeMeters>`), cumulative distance (`<DistanceMeters>`), time (`<Time>`), telemetry (`<HeartRateBpm>`, `<Cadence>`, `<RunCadence>`, `<Watts>`, `<Speed>`), lap boundaries (`<Lap>`), and course points (`<CoursePoint>`).
 3. *Streaming GPX Parser (`GpxTrackpointParser`)*:
 • The system SHALL implement pure Java/Kotlin streaming pull parsing in `GpxTrackpointParser.parse(inputStream: InputStream): ParsedGpxData`.
@@ -3210,26 +3210,27 @@
 
 ### REQ-DAT-040: TCX Structured DTO Serialization, Parsing Decoupling & Round-Trip Fidelity [Verified]
 - **Target Release**: `V5.0.0`
-- **Tests**: `TST-DAT-036` | **Tickets**: `ATT-938`, `ATT-6693`
-- **Implementation**: `app/src/main/java/com/atrainingtracker/trainingtracker/tcx/model/`, `app/src/main/java/com/atrainingtracker/trainingtracker/tcx/serializer/`, `app/src/main/java/com/atrainingtracker/trainingtracker/tcx/parser/`, `app/src/main/java/com/atrainingtracker/trainingtracker/exporter/writer/TCXFileWriter.java`, `app/src/main/java/com/atrainingtracker/trainingtracker/migration/parsers/TcxWorkoutParser.kt`
+- **Tests**: `TST-DAT-036` | **Tickets**: `ATT-938`, `ATT-6693`, `ATT-6694`
+- **Implementation**: `app/src/main/java/com/atrainingtracker/trainingtracker/tcx/model/`, `app/src/main/java/com/atrainingtracker/trainingtracker/tcx/serializer/`, `app/src/main/java/com/atrainingtracker/trainingtracker/tcx/parser/`, `app/src/main/java/com/atrainingtracker/trainingtracker/exporter/writer/TCXFileWriter.java`, `app/src/main/java/com/atrainingtracker/trainingtracker/migration/parsers/TcxWorkoutParser.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/routes/parsers/TcxTrackpointParser.kt`
 - **Rationale**: To prevent schema sequence violations, escaping bugs, and silent field drops during XML interchange, the system SHALL introduce structured, immutable Data Transfer Objects (DTOs) for the Garmin TCX schema (`TrainingCenterDatabasev2.xsd`), decoupling XML serialization and parsing from internal SQLite database representations and providing bit-exact round-trip fidelity across workout export and re-import.
 - **Description**:
   1. *Structured TCX DTO Domain Models (`REQ-DAT-040.1`)*:
-     - The system SHALL define strongly-typed, immutable Kotlin data classes representing the TCX Activity schema (`TcxDocument`, `TcxActivity`, `TcxLap`, `TcxTrackpoint`, `TcxPosition`, `TcxHeartRate`, `TcxExtensions`, `TcxDevice`, `TcxApplication`).
-     - Models SHALL encapsulate all standard TCX elements (`Id`, `Lap`, `Notes`, `Creator`, `Extensions`, `Author`) and Garmin Trackpoint Extension v2 (`TPX`) elements (`Speed`, `RunCadence`, `Watts`).
+     - The system SHALL define strongly-typed, immutable Kotlin data classes representing the TCX Activity and Course schemas (`TcxDocument`, `TcxActivity`, `TcxLap`, `TcxTrackpoint`, `TcxPosition`, `TcxHeartRate`, `TcxExtensions`, `TcxDevice`, `TcxAuthor`, `TcxCourse`, `TcxCoursePoint`).
+     - Models SHALL encapsulate all standard TCX elements (`Id`, `Lap`, `Notes`, `Creator`, `Extensions`, `Author`), Course elements (`Courses`, `Course`, `CoursePoint`), and Garmin Trackpoint Extension v2 (`TPX`) elements (`Speed`, `RunCadence`, `Watts`).
   2. *Streaming DTO XML Serializer (`REQ-DAT-040.2`)*:
-     - The system SHALL provide a dedicated streaming XML serializer (`TcxSerializer`) that writes a `TcxDocument` / `TcxActivity` to an `OutputStream` or `Writer`.
+     - The system SHALL provide a dedicated XML serializer (`TcxSerializer`) supporting both full-document serialization and an incremental streaming writer API (`startDocument`, `startActivity`, `startLap`, `writeTrackpoint`, `endLap`, `endActivity`, `endDocument`) allowing trackpoint emission directly to `Writer` with $O(1)$ memory consumption.
      - The serializer MUST enforce Garmin TCX v2 sequence ordering (`Id` -> `Lap`* -> `Notes`? -> `Creator`? -> `Extensions`? -> `Author`?).
      - The serializer MUST automatically escape XML reserved characters (`&`, `<`, `>`, `"`, `'`) in workout names, lap notes, and descriptions.
      - Integer-only constraints for `<Cadence>`, `<Watts>`, and `<RunCadence>` (`REQ-EXP-001`) MUST be strictly enforced.
-  3. *Decoupled DTO XML Parser Bridge (`REQ-DAT-040.3`)*:
-     - The system SHALL provide a streaming parser bridge (`TcxParser`) that constructs `TcxDocument` DTOs from TCX XML input streams using `XmlPullParser`.
+  3. *Decoupled DTO XML Parser Bridge & Parser Unification (`REQ-DAT-040.3`)*:
+     - The system SHALL provide a streaming parser bridge (`TcxParser`) that constructs `TcxDocument` DTOs from TCX XML input streams using `XmlPullParser`, supporting both Activities and Courses (`Course`, `CoursePoint`).
      - `TcxWorkoutParser` SHALL delegate XML ingestion to `TcxParser` and map the resulting DTOs into `ParsedWorkoutData`, preserving existing database persistence pathways in `LegacyImportEngine`.
+     - `TcxTrackpointParser` SHALL delegate TCX stream parsing to `TcxParser` and map parsed activities and courses into `ParsedTcxData`, consolidating duplicate `XmlPullParser` state-machine loops (Rule 36 DRY).
      - Proprietary `att:ActivityExtension` / `att:LapExtension` and bracketed name fallback heuristics (`[Name] Description`) MUST be preserved without regression. When extensions are present (`activity.extensions != null`), `TcxWorkoutParser` SHALL resolve `workoutNotes` strictly from `activity.extensions.customDescription` and SHALL NOT fall back to raw `activity.notes`, preventing bracketed workout names from corrupting workout notes.
   4. *Bidirectional Round-Trip Fidelity (`REQ-DAT-040.4`)*:
      - Exporting an activity via `TCXFileWriter` and re-parsing it via `TcxWorkoutParser` SHALL preserve 100% of activity timestamps, workout names, descriptions, lap boundaries, durations, distances, trackpoint coordinates, heart rate, cadence, speed, and power telemetry. Specifically, activities with a custom name and null/blank description SHALL round-trip with `workoutNotes` remaining null.
   5. *Streaming & Memory Safety Invariant (`REQ-DAT-040.5`)*:
-     - TCX serialization and parsing MUST operate in a streaming or batch-friendly fashion, ensuring workouts with 50,000+ trackpoints process without `OutOfMemoryError` or Main Thread blocking.
+     - TCX serialization and parsing MUST operate in a streaming or batch-friendly fashion, ensuring workouts with 50,000+ trackpoints process without `OutOfMemoryError` or Main Thread blocking, and `TCXFileWriter` serializes trackpoints incrementally via `TcxSerializer` streaming API with $O(1)$ heap overhead.
 
 **Acceptance Criteria (Given-When-Then)**:
 • *Given* a recorded or imported workout with custom name, notes, multiple laps, and power/cadence telemetry,

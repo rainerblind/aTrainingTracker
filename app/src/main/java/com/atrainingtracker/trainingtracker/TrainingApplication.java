@@ -1355,11 +1355,13 @@ public class TrainingApplication extends Application {
     }
 
     public static boolean uploadStravaRadarSummary() {
-        return cSharedPreferences.getBoolean(SP_UPLOAD_STRAVA_RADAR_SUMMARY, false);
+        return cSharedPreferences != null ? cSharedPreferences.getBoolean(SP_UPLOAD_STRAVA_RADAR_SUMMARY, false) : false;
     }
 
     public static void setUploadStravaRadarSummary(boolean enabled) {
-        cSharedPreferences.edit().putBoolean(SP_UPLOAD_STRAVA_RADAR_SUMMARY, enabled).apply();
+        if (cSharedPreferences != null) {
+            cSharedPreferences.edit().putBoolean(SP_UPLOAD_STRAVA_RADAR_SUMMARY, enabled).apply();
+        }
     }
 
     @Deprecated

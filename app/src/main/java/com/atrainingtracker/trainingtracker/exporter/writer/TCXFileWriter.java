@@ -158,137 +158,6 @@ public class TCXFileWriter extends BaseFileWriter {
                 lapDataMap.put(lapData.getLapNr(), lapData);
             }
 
-            List<TcxLap> tcxLaps = new ArrayList<>();
-            final List<TcxTrackpoint>[] currentTrackpointsHolder = new List[]{new ArrayList<>()};
-            final String[] currentLapStartTime = new String[]{null};
-            final String[] totalTime = new String[]{"0"};
-            final String[] totalDistance = new String[]{"0"};
-            final long[] prevLineLap = new long[]{BANALService.INIT_LAP_NR - 1};
-            final double[] latitude = new double[]{0.0};
-            final double[] longitude = new double[]{0.0};
-
-            WorkoutRepository.getInstance(mContext).streamSamples(exportInfo.getFileBaseName(), sample -> {
-                if (isCancelled()) {
-                    throw new CancellationException("TCX export cancelled at start of loop iteration");
-                }
-
-                int lap = sample.getLapNr();
-                if (prevLineLap[0] != lap) { // new lap
-                    if (prevLineLap[0] != BANALService.INIT_LAP_NR - 1) { // finish previous lap
-                        tcxLaps.add(buildLap(prevLineLap[0], currentLapStartTime[0], totalTime[0], totalDistance[0], currentTrackpointsHolder[0], lapDataMap));
-                        currentTrackpointsHolder[0] = new ArrayList<>();
-                    }
-
-                    // get the lap data
-                    LapData lapData = lapDataMap.get((long) lap);
-                    if (lapData != null) {
-                        totalTime[0] = String.valueOf(lapData.getTimeTotalS());
-                        totalDistance[0] = String.valueOf(lapData.getDistanceTotalM());
-                    } else {
-                        LapData fetchedLap = WorkoutRepository.getInstance(mContext).getLap(workoutID, (long) lap);
-                        if (fetchedLap != null) {
-                            totalTime[0] = String.valueOf(fetchedLap.getTimeTotalS());
-                            totalDistance[0] = String.valueOf(fetchedLap.getDistanceTotalM());
-                        } else {
-                            totalTime[0] = "0";
-                            totalDistance[0] = "0";
-                        }
-                    }
-
-                    if (sample.getTime() != null) {
-                        try {
-                            currentLapStartTime[0] = dbTime2XMLTime(sample.getTime());
-                        } catch (ParseException e) {
-                            currentLapStartTime[0] = "";
-                        }
-                    }
-                }
-                prevLineLap[0] = lap;
-
-                String tpTime = "";
-                if (sample.getTime() != null) {
-                    try {
-                        tpTime = dbTime2XMLTime(sample.getTime());
-                    } catch (ParseException e) {
-                        tpTime = "";
-                    }
-                }
-
-                TcxPosition position = null;
-                // we do not write location data when it was a (indoor) trainer session
-                if (!indoorTrainerSession && haveGeo && sample.getLatitude() != null && sample.getLongitude() != null) {
-                    double latitudeOld = latitude[0];
-                    double longitudeOld = longitude[0];
-                    latitude[0] = sample.getLatitude();
-                    longitude[0] = sample.getLongitude();
-
-                    if (!(WRITE_ONLY_ON_NEW_GEO_DATA && latitude[0] == latitudeOld && longitude[0] == longitudeOld)) {
-                        position = new TcxPosition(latitude[0], longitude[0]);
-                    }
-                }
-
-                Double altitude = null;
-                if (haveAltitude && sample.getAltitude() != null) {
-                    double alt = sample.getAltitude();
-                    if (alt >= -500.0 && alt <= 9000.0) {
-                        altitude = alt;
-                    }
-                }
-
-                Double distance = null;
-                if (haveDistance && sample.getDistanceM() != null) {
-                    distance = sample.getDistanceM();
-                }
-
-                Integer hrVal = null;
-                if (haveHR && sample.getHr() != null) {
-                    hrVal = sample.getHr();
-                }
-
-                Integer cadenceVal = null;
-                if (haveBikeCadence && sample.getCadence() != null) {
-                    cadenceVal = (int) Math.round(sample.getCadence());
-                }
-
-                Double speedVal = null;
-                Integer powerVal = null;
-                Integer runCadenceVal = null;
-
-                if (haveSpeed && sample.getSpeedMps() != null) {
-                    speedVal = sample.getSpeedMps();
-                }
-
-                if (havePower && sample.getPower() != null) {
-                    powerVal = (int) Math.round(sample.getPower());
-                }
-
-                if (haveRunCadence && sample.getCadence() != null) {
-                    runCadenceVal = (int) Math.round(sample.getCadence());
-                }
-
-                TcxTrackpointExtensions tpExt = (speedVal != null || powerVal != null || runCadenceVal != null)
-                        ? new TcxTrackpointExtensions(speedVal, powerVal, runCadenceVal)
-                        : null;
-
-                currentTrackpointsHolder[0].add(new TcxTrackpoint(
-                        tpTime,
-                        position,
-                        altitude,
-                        distance,
-                        hrVal,
-                        cadenceVal,
-                        tpExt
-                ));
-
-                if (isCancelled()) {
-                    throw new CancellationException("TCX export cancelled post-I/O");
-                }
-            });
-
-            if (prevLineLap[0] != BANALService.INIT_LAP_NR - 1) {
-                tcxLaps.add(buildLap(prevLineLap[0], currentLapStartTime[0], totalTime[0], totalDistance[0], currentTrackpointsHolder[0], lapDataMap));
-            }
-
             String activityWorkoutName = (workoutName != null && !workoutName.trim().isEmpty() && !workoutName.equals(exportInfo.getFileBaseName()))
                     ? workoutName.trim() : null;
             String activityDesc = (description != null && !description.trim().isEmpty())
@@ -334,27 +203,179 @@ public class TCXFileWriter extends BaseFileWriter {
                     GARMIN_AUTHOR_PART_NUMBER
             );
 
-            TcxActivity activity = new TcxActivity(
-                    SportTypesRepository.getInstance(mContext).getTcxName(sportTypeId),
-                    dbTime2XMLTime(startTime),
-                    tcxLaps,
-                    activityNotes,
-                    creator,
-                    actExt
-            );
-
-            TcxDocument document = new TcxDocument(
-                    Collections.singletonList(activity),
-                    author
-            );
-
             try (BufferedWriter bufferedWriter = getBufferedWriter(exportInfo.getShortPath())) {
-                TcxSerializer.INSTANCE.serialize(document, bufferedWriter);
+                TcxSerializer.startDocument(bufferedWriter);
+                String tcxSport = SportTypesRepository.getInstance(mContext).getTcxName(sportTypeId);
+                String actId = dbTime2XMLTime(startTime);
+                TcxSerializer.startActivityHeader(tcxSport, actId, bufferedWriter);
+
+                final long[] prevLineLap = new long[]{BANALService.INIT_LAP_NR - 1};
+                final String[] currentLapNotes = new String[]{null};
+                final TcxLapExtensions[] currentLapExt = new TcxLapExtensions[]{null};
+                final double[] latitude = new double[]{0.0};
+                final double[] longitude = new double[]{0.0};
+
+                WorkoutRepository.getInstance(mContext).streamSamples(exportInfo.getFileBaseName(), sample -> {
+                    if (isCancelled()) {
+                        throw new CancellationException("TCX export cancelled at start of loop iteration");
+                    }
+
+                    try {
+                        int lap = sample.getLapNr();
+                        if (prevLineLap[0] != lap) { // new lap
+                            if (prevLineLap[0] != BANALService.INIT_LAP_NR - 1) { // finish previous lap
+                                TcxSerializer.endLap(bufferedWriter, currentLapNotes[0], currentLapExt[0]);
+                            }
+
+                            // get the lap data
+                            LapData lapData = lapDataMap.get((long) lap);
+                            if (lapData == null) {
+                                lapData = WorkoutRepository.getInstance(mContext).getLap(workoutID, (long) lap);
+                            }
+
+                            double lapTotalTime = lapData != null ? lapData.getTimeTotalS() : 0.0;
+                            double lapTotalDist = lapData != null ? lapData.getDistanceTotalM() : 0.0;
+
+                            String lapStartTime = "";
+                            if (sample.getTime() != null) {
+                                try {
+                                    lapStartTime = dbTime2XMLTime(sample.getTime());
+                                } catch (ParseException e) {
+                                    lapStartTime = "";
+                                }
+                            }
+
+                            currentLapNotes[0] = null;
+                            currentLapExt[0] = null;
+                            if (lapData != null) {
+                                String name = lapData.getName();
+                                String desc = lapData.getDescription();
+                                boolean hasName = name != null && !name.trim().isEmpty();
+                                boolean hasDesc = desc != null && !desc.trim().isEmpty();
+
+                                if (hasName || hasDesc) {
+                                    if (hasName && hasDesc) {
+                                        currentLapNotes[0] = "[" + name.trim() + "] " + desc.trim();
+                                    } else if (hasName) {
+                                        currentLapNotes[0] = "[" + name.trim() + "]";
+                                    } else {
+                                        currentLapNotes[0] = desc.trim();
+                                    }
+                                    currentLapExt[0] = new TcxLapExtensions(hasName ? name.trim() : null, hasDesc ? desc.trim() : null);
+                                }
+                            }
+
+                            TcxSerializer.startLapHeader(lapStartTime, lapTotalTime, lapTotalDist, bufferedWriter,
+                                    null, null, null, null, null, null, null);
+                        }
+                        prevLineLap[0] = lap;
+
+                        String tpTime = "";
+                        if (sample.getTime() != null) {
+                            try {
+                                tpTime = dbTime2XMLTime(sample.getTime());
+                            } catch (ParseException e) {
+                                tpTime = "";
+                            }
+                        }
+
+                        TcxPosition position = null;
+                        // we do not write location data when it was a (indoor) trainer session
+                        if (!indoorTrainerSession && haveGeo && sample.getLatitude() != null && sample.getLongitude() != null) {
+                            double latitudeOld = latitude[0];
+                            double longitudeOld = longitude[0];
+                            latitude[0] = sample.getLatitude();
+                            longitude[0] = sample.getLongitude();
+
+                            if (!(WRITE_ONLY_ON_NEW_GEO_DATA && latitude[0] == latitudeOld && longitude[0] == longitudeOld)) {
+                                position = new TcxPosition(latitude[0], longitude[0]);
+                            }
+                        }
+
+                        Double altitude = null;
+                        if (haveAltitude && sample.getAltitude() != null) {
+                            double alt = sample.getAltitude();
+                            if (alt >= -500.0 && alt <= 9000.0) {
+                                altitude = alt;
+                            }
+                        }
+
+                        Double distance = null;
+                        if (haveDistance && sample.getDistanceM() != null) {
+                            distance = sample.getDistanceM();
+                        }
+
+                        Integer hrVal = null;
+                        if (haveHR && sample.getHr() != null) {
+                            hrVal = sample.getHr();
+                        }
+
+                        Integer cadenceVal = null;
+                        if (haveBikeCadence && sample.getCadence() != null) {
+                            cadenceVal = (int) Math.round(sample.getCadence());
+                        }
+
+                        Double speedVal = null;
+                        Integer powerVal = null;
+                        Integer runCadenceVal = null;
+
+                        if (haveSpeed && sample.getSpeedMps() != null) {
+                            speedVal = sample.getSpeedMps();
+                        }
+
+                        if (havePower && sample.getPower() != null) {
+                            powerVal = (int) Math.round(sample.getPower());
+                        }
+
+                        if (haveRunCadence && sample.getCadence() != null) {
+                            runCadenceVal = (int) Math.round(sample.getCadence());
+                        }
+
+                        TcxTrackpointExtensions tpExt = (speedVal != null || powerVal != null || runCadenceVal != null)
+                                ? new TcxTrackpointExtensions(speedVal, powerVal, runCadenceVal)
+                                : null;
+
+                        TcxSerializer.INSTANCE.writeTrackpoint(new TcxTrackpoint(
+                                tpTime,
+                                position,
+                                altitude,
+                                distance,
+                                hrVal,
+                                cadenceVal,
+                                tpExt
+                        ), bufferedWriter);
+
+                        if (isCancelled()) {
+                            throw new CancellationException("TCX export cancelled post-I/O");
+                        }
+                    } catch (CancellationException e) {
+                        throw e;
+                    } catch (Exception e) {
+                        throw new RuntimeException(e);
+                    }
+                });
+
+                if (prevLineLap[0] != BANALService.INIT_LAP_NR - 1) {
+                    TcxSerializer.endLap(bufferedWriter, currentLapNotes[0], currentLapExt[0]);
+                }
+
+                TcxSerializer.endActivity(bufferedWriter, activityNotes, creator, actExt);
+                TcxSerializer.endDocument(bufferedWriter, author);
+                bufferedWriter.flush();
             }
 
         } catch (CancellationException e) {
             deleteOutputFileSafely(exportInfo);
             throw e;
+        } catch (Exception e) {
+            deleteOutputFileSafely(exportInfo);
+            if (e.getCause() instanceof IOException) {
+                throw (IOException) e.getCause();
+            } else if (e instanceof IOException) {
+                throw (IOException) e;
+            } else {
+                throw new IOException("Failed to export TCX", e);
+            }
         }
 
         return new ExportResult(true, false, "Successfully exported to TCX File");
