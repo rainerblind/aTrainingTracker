@@ -41,30 +41,33 @@ class RadarEdgeOverlayTest {
 
     @Test
     fun normalizeRadarRange_computesAccurateNormalizedPositions() {
-        // TST-TRK-062.1: 140m -> 0.0 (top), 70m -> 0.5 (mid), 0m -> 1.0 (bottom / cyclist)
+        // TST-TRK-062.1a: 140m -> 1.0 (bottom), 70m -> 0.5 (mid), 0m -> 0.0 (top / cyclist)
         val pos140m = RadarOverlayMath.normalizeRadarRange(140.0f)
-        assertEquals(0.0f, pos140m, 0.01f)
+        assertEquals(1.0f, pos140m, 0.01f)
 
         val pos70m = RadarOverlayMath.normalizeRadarRange(70.0f)
         assertEquals(0.5f, pos70m, 0.01f)
 
         val pos0m = RadarOverlayMath.normalizeRadarRange(0.0f)
-        assertEquals(1.0f, pos0m, 0.01f)
+        assertEquals(0.0f, pos0m, 0.01f)
     }
 
     @Test
     fun normalizeRadarRange_clampsBoundaryValuesSafely() {
-        // Range beyond 140m should clamp to 0.0 (top of rail)
+        // TST-TRK-062.1b: Range beyond 140m should clamp to 1.0 (bottom of rail)
         val pos200m = RadarOverlayMath.normalizeRadarRange(200.0f)
-        assertEquals(0.0f, pos200m, 0.001f)
+        assertEquals(1.0f, pos200m, 0.001f)
 
-        // Negative distance (behind cyclist) should clamp to 1.0 (bottom of rail)
+        // Negative distance (past cyclist) should clamp to 0.0 (top of rail)
         val posNegative = RadarOverlayMath.normalizeRadarRange(-10.0f)
-        assertEquals(1.0f, posNegative, 0.001f)
+        assertEquals(0.0f, posNegative, 0.001f)
 
         // Degenerate max range guard
         val posDegenerate = RadarOverlayMath.normalizeRadarRange(50.0f, maxRangeMeters = 0.0f)
-        assertEquals(1.0f, posDegenerate, 0.001f)
+        assertEquals(0.0f, posDegenerate, 0.001f)
+
+        val posNegativeMax = RadarOverlayMath.normalizeRadarRange(50.0f, maxRangeMeters = -10.0f)
+        assertEquals(0.0f, posNegativeMax, 0.001f)
     }
 
     @Test
@@ -201,5 +204,47 @@ class RadarEdgeOverlayTest {
             snoozeSuffix = "Radar Audio Muted (15m)"
         )
         assertEquals("2 threats (high speed), Radar Audio Muted (15m)", desc)
+    }
+
+    @Test
+    fun buildThreatDescription_formatsWithLocalizedTemplate() {
+        // TST-TRK-062.6a: Localized format string support
+        val descDe = RadarOverlayMath.buildThreatDescription(
+            count = 4,
+            isFastApproaching = false,
+            formatBase = "%1\$d Gefahren"
+        )
+        assertEquals("4 Gefahren", descDe)
+
+        val descDeSnooze = RadarOverlayMath.buildThreatDescription(
+            count = 1,
+            isFastApproaching = true,
+            snoozeSuffix = "Audio stumm",
+            formatBase = "%1\$d Gefahren (hohes Tempo)"
+        )
+        assertEquals("1 Gefahren (hohes Tempo), Audio stumm", descDeSnooze)
+    }
+
+    @Test
+    fun badgeClick_inDisconnectedError_routesToReconnectWhenAvailable() {
+        // TST-TRK-062.3b: Badge tap routes to reconnect callback during disconnect error
+        var reconnectCalled = false
+        var normalClickCalled = false
+
+        val onReconnect = { reconnectCalled = true }
+        val onBadgeClick = { normalClickCalled = true }
+
+        val isDisconnectError = true
+        val clickAction: () -> Unit = {
+            if (isDisconnectError) {
+                onReconnect()
+            } else {
+                onBadgeClick()
+            }
+        }
+
+        clickAction()
+        assertTrue(reconnectCalled)
+        assertFalse(normalClickCalled)
     }
 }

@@ -1069,8 +1069,21 @@ fun TrackingTabsScreen(
                             onBadgeClick = {
                                 showRadarLightQuickSwitch = true
                             },
+                            onReconnectClick = {
+                                context.sendBroadcast(
+                                    Intent(TrainingApplication.REQUEST_START_SEARCH_FOR_PAIRED_DEVICES).apply {
+                                        `package` = context.packageName
+                                    }
+                                )
+                            },
                             modifier = Modifier
-                                .align(if (tuningConfig.radarEdgeSide == RadarEdgeSide.LEFT) Alignment.CenterStart else Alignment.CenterEnd)
+                                .align(
+                                    if (tuningConfig.radarEdgeSide == RadarEdgeSide.LEFT) {
+                                        Alignment.CenterStart
+                                    } else {
+                                        Alignment.CenterEnd
+                                    }
+                                )
                                 .fillMaxHeight()
                                 .zIndex(1.2f)
                         )
