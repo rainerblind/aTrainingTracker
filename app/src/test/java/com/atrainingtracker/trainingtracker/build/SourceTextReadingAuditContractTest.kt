@@ -27,7 +27,7 @@ import java.io.File
 /**
  * Architectural audit test enforcing prohibition of source-text reading tests
  * while exempting legitimate system architectural governance contract tests
- * (REQ-PRO-049, TST-PRO-049, docs/coding_standards.md §5.4, ATT-6186).
+ * (REQ-PRO-049, TST-PRO-049, docs/coding_standards.md §5.4, ATT-6186, ATT-6731).
  */
 class SourceTextReadingAuditContractTest {
 
@@ -50,7 +50,15 @@ class SourceTextReadingAuditContractTest {
             "com/atrainingtracker/trainingtracker/tracker/MergedManifestFgsAuditTest.kt",
             "com/atrainingtracker/trainingtracker/resources/NotificationIconContractTest.kt",
             "com/atrainingtracker/trainingtracker/routes/TurnDirectionIconContractTest.kt",
-            "com/atrainingtracker/trainingtracker/build/ArchitectureConformanceContractTest.kt"
+            "com/atrainingtracker/trainingtracker/build/ArchitectureConformanceContractTest.kt",
+            "com/atrainingtracker/testing/LocalizationTestCache.kt",
+            "com/atrainingtracker/trainingtracker/localization/TranslationParityTest.kt",
+            "com/atrainingtracker/trainingtracker/ui/theme/ThemeColorCentralizationAuditTest.kt",
+            "com/atrainingtracker/trainingtracker/ui/RepositoryEngineCleanlinessContractTest.kt",
+            "com/atrainingtracker/trainingtracker/ui/RepositoryUiCleanlinessContractTest.kt",
+            "com/atrainingtracker/trainingtracker/ui/GlobalDeleteContextMenuAuditTest.kt",
+            "com/atrainingtracker/trainingtracker/ui/EditIconConsistencyTest.kt",
+            "com/atrainingtracker/trainingtracker/build/AspiceSweAuditContractTest.kt"
         )
     }
 
@@ -93,7 +101,9 @@ class SourceTextReadingAuditContractTest {
                 val content = file.readText()
                 val hasReadInvocation = content.contains("readText") ||
                     content.contains("readLines") ||
-                    content.contains("readString")
+                    content.contains("readString") ||
+                    content.contains("useLines") ||
+                    content.contains("bufferedReader")
                 if (hasReadInvocation && content.contains("src/main")) {
                     val relativePath = file.relativeTo(testDir).invariantSeparatorsPath
                     readers.add(relativePath)
@@ -122,24 +132,44 @@ class SourceTextReadingAuditContractTest {
     @Test
     fun testGovernanceGuards_allExplicitlyAllowed() {
         assertEquals(
-            "Expected exactly 14 approved architectural governance guards (REQ-PRO-049.2, REQ-PRO-050.4)",
-            14,
+            "Expected exactly 22 approved architectural governance guards (REQ-PRO-049.2, REQ-PRO-050.4)",
+            22,
             LEGITIMATE_GOVERNANCE_GUARDS.size
         )
+        val testDir = findTestDir()
         LEGITIMATE_GOVERNANCE_GUARDS.forEach { guard ->
             assertTrue(
-                "Governance guard $guard must end with Test.kt",
-                guard.endsWith("Test.kt")
+                "Governance guard $guard must end with Test.kt or Cache.kt",
+                guard.endsWith("Test.kt") || guard.endsWith("Cache.kt")
+            )
+            val guardFile = File(testDir, guard)
+            assertTrue(
+                "Governance guard $guard must exist on disk at ${guardFile.path}",
+                guardFile.exists()
             )
         }
     }
 
     @Test
     fun testBaseline_containsOnlyExpectedLegacyCount() {
+        val testDir = findTestDir()
+        val detectedReaders = scanTestSourceFiles(testDir)
         val baseline = loadBaselineLegacyReaders()
+
+        val staleBaselineEntries = baseline - detectedReaders
+        assertTrue(
+            "Baseline contains stale entries that no longer read source files (REQ-PRO-049.3): " +
+                staleBaselineEntries.joinToString("\n  "),
+            staleBaselineEntries.isEmpty()
+        )
+
+        assertTrue(
+            "Baseline legacy source-reading tests debt must not exceed ratcheted ceiling of 276 (REQ-PRO-049.3): current=${baseline.size}",
+            baseline.size <= 276
+        )
         assertEquals(
             "Baseline legacy source-reading tests debt must match recorded count (REQ-PRO-049.3)",
-            280,
+            276,
             baseline.size
         )
     }

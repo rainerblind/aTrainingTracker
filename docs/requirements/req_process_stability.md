@@ -2564,34 +2564,37 @@ The workflow SHALL mandate that:
 
 
 ### REQ-PRO-049: Source-Text Reading Test Prohibition & Audit Governance [Verified]
-- **Tests**: `TST-PRO-049` | **Tickets**: `ATT-6186`
+- **Tests**: `TST-PRO-049` | **Tickets**: `ATT-6186`, `ATT-6731`
 - **Implementation**: `app/src/test/java/com/atrainingtracker/trainingtracker/build/SourceTextReadingAuditContractTest.kt`, `app/source-reading-baseline.txt`, `docs/coding_standards.md` §5.4
-- **Rationale**: ASPICE pre-assessment finding C-12 flagged that ~290 test files read production source code (`.readText()`, `Files.readString()`) to grep for literals or tokens instead of verifying runtime behavior. This violates `docs/coding_standards.md` §5.4 (prohibiting UI literal source-grep). To establish ASPICE SWE.4 unit verification criteria without destabilizing existing builds, an automated audit test with a ratcheting baseline must be introduced to block new violations while preserving legitimate system architectural governance guards (ATT-6186, refining `REQ-PRO-034` under Epic `ATT-6142`):
+- **Rationale**: ASPICE pre-assessment finding C-12 flagged that ~290 test files read production source code (`.readText()`, `Files.readString()`) to grep for literals or tokens instead of verifying runtime behavior. This violates `docs/coding_standards.md` §5.4 (prohibiting UI literal source-grep). To establish ASPICE SWE.4 unit verification criteria without destabilizing existing builds, an automated audit test with a ratcheting baseline must be introduced to block new violations while preserving legitimate system architectural governance guards (ATT-6186, ATT-6731, refining `REQ-PRO-034` under Epic `ATT-6142`):
 - **Description**:
   1. *Source Text Reading Audit Test (`REQ-PRO-049.1`)*:
-     • An automated architectural audit test (`SourceTextReadingAuditTest`) SHALL scan all unit test files in `app/src/test/java/` and detect any read invocations (`.readText()`, `readLines()`, `Files.readString()`) targeting `app/src/main/` production source files.
+     • An automated architectural audit test (`SourceTextReadingAuditContractTest`) SHALL scan all unit test files in `app/src/test/java/` and detect any read invocations (`.readText()`, `readLines()`, `readString()`, `useLines()`, `bufferedReader()`) targeting `app/src/main/` production source files.
   2. *Governance Guard Allow-List (`REQ-PRO-049.2`)*:
-     • The audit test SHALL maintain an explicit allow-list for legitimate system policy and architectural governance contract tests (including `TryWithResourcesCursorAuditTest`, `ManifestSecurityContractTest`, `TranslationParityTest`, `ReleaseCiAndLintConfigContractTest`).
-  3. *Legacy Baseline Debt Isolation (`REQ-PRO-049.3`)*:
-     • The audit test SHALL isolate existing legacy source-reading tests (280 files) in a baseline set, failing deterministically if any new or unallow-listed test reads `app/src/main/` production code.
-  4. *Structured Inventory by Package (`REQ-PRO-049.4`)*:
-     • A structured baseline inventory categorized by domain and package SHALL be documented in the living documentation to guide incremental phase-out across follow-up tickets.
+     • The audit test SHALL maintain an explicit allow-list for legitimate system policy and architectural governance contract tests, strictly capped at 22 approved guards (including `TryWithResourcesCursorAuditTest`, `ManifestAndBuildConfigContractTest`, `ReleaseCiAndLintConfigContractTest`, `DeadCodeEliminationContractTest`, `ExceptionHandlingHygieneTest`, `BackupRulesXmlValidationTest`, `FileProviderHardeningContractTest`, `LogcatPrivacySecurityTest`, `MergedManifestFgsAuditTest`, `NotificationIconContractTest`, `TurnDirectionIconContractTest`, `ArchitectureConformanceContractTest`, `SafeEnumDeserializationAuditTest`, `LifecycleServiceReceiverSafetyAuditTest`, `TranslationParityTest`, `LocalizationTestCache`, `ThemeColorCentralizationAuditTest`, `RepositoryEngineCleanlinessContractTest`, `RepositoryUiCleanlinessContractTest`, `GlobalDeleteContextMenuAuditTest`, `EditIconConsistencyTest`, `AspiceSweAuditContractTest`).
+  3. *Legacy Baseline Debt Isolation & Ratcheted Ceiling (`REQ-PRO-049.3`)*:
+     • The audit test SHALL isolate existing legacy source-reading tests in `app/source-reading-baseline.txt` with a ratcheted ceiling (`baseline.size <= 276`), enforcing `(baseline - detectedReaders).isEmpty()` to prevent stale entries and failing deterministically if any new or unallow-listed test reads `app/src/main/` production code.
+  4. *Structured Inventory & Downstream Complexity Guardrails (`REQ-PRO-049.4`)*:
+     • A structured baseline inventory categorized by domain and package SHALL be documented in the living documentation, tracking remaining legacy debt (276 entries) and bounding downstream cleanup batches (e.g., decoupling `ui.components` from ATT-6569) to comply with `REQ-PRO-029` story point and complexity limits.
 - **Requirement Archaeology & Chesterton's Fence Audit**:
-  1. *Original Requirement ID & Target*: Net-new requirement `REQ-PRO-049` (*Source-Text Reading Test Prohibition & Audit Governance*), refining `REQ-PRO-034` (*SWE.1/2/4/6 Hardening*). Targets `SourceTextReadingAuditTest.kt` and `coding_standards.md` §5.4.
-  2. *Historical Origin & Commit Trace*: Independent ASPICE pre-assessment finding C-12 (2026-11-08) and ticket ATT-6186.
-  3. *Root Reason for Existing Formulation*: Project historically lacked behavioral testing infrastructure, leading to static grep assertions as an interim refactoring verification shortcut.
-  4. *Preservation of Core Invariants*: Existing legitimate governance contract tests remain fully supported without false positive failures.
+  1. *Original Requirement ID & Target*: `REQ-PRO-049` (`REQ-PRO-049.1`–`REQ-PRO-049.4`), refining `REQ-PRO-034` (*SWE.1/2/4/6 Hardening*). Targets `SourceTextReadingAuditContractTest.kt` and `app/source-reading-baseline.txt`.
+  2. *Historical Origin & Commit Trace*: Independent ASPICE pre-assessment finding C-12 (2026-11-08), ticket ATT-6186 (`c91e62b6`), and refined in ATT-6731.
+  3. *Root Reason for Existing Formulation*: Baseline originally captured all tests accessing `src/main` without discriminating single-file UI grep tests from repository-wide architectural scanners, setting an exact count (280) before ratcheting mechanisms were standardized.
+  4. *Preservation of Core Invariants*: Promoting governance guards to `LEGITIMATE_GOVERNANCE_GUARDS` guarantees that essential system invariants (Rule 34, 9-locale parity, database decoupling, theme centralization) are preserved and never deleted by downstream cleanup tickets. Enforcing `(baseline - detectedReaders).isEmpty()` prevents stale debt accumulation.
 - **Acceptance Criteria (Given-When-Then)**:
   • *Given* `app/src/test/java/`,
-  • *When* `SourceTextReadingAuditTest` executes,
+  • *When* `SourceTextReadingAuditContractTest` executes,
   • *Then* zero unallow-listed tests SHALL read `app/src/main/` source code.
   • *Given* approved architectural contract tests,
   • *When* inspected,
-  • *Then* they SHALL be present in the audit allow-list.
-  • *Given* a new, unallow-listed test reading `src/main/`,
+  • *Then* exactly 22 legitimate governance guards SHALL be present in `LEGITIMATE_GOVERNANCE_GUARDS`, each ending with `Test.kt` or `Cache.kt` and existing on disk.
+  • *Given* `app/source-reading-baseline.txt`,
+  • *When* compared against detected legacy readers,
+  • *Then* `(baseline - detectedReaders).isEmpty()` SHALL hold and `baseline.size <= 276`.
+  • *Given* a new, unallow-listed test reading `src/main/` (or stream reading via `useLines`/`bufferedReader`),
   • *When* the audit test runs,
   • *Then* the test SHALL fail deterministically.
-  • *Given* `SourceTextReadingAuditTest`,
+  • *Given* `SourceTextReadingAuditContractTest`,
   • *When* executed as part of the unit test suite,
   • *Then* it SHALL pass with 100% success.
 - **Invariants**: Zero runtime code changes; 100% unit test pass rate; zero build failure on existing source files.

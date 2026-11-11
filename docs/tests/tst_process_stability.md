@@ -1565,16 +1565,20 @@
 ### TST-PRO-049: **Source-Text Reading Test Audit Suite** [Verified]
 - **Requirement(s)**: `REQ-PRO-049`
 - **Component**: `app/src/test/java/com/atrainingtracker/trainingtracker/build/SourceTextReadingAuditContractTest.kt`, `app/source-reading-baseline.txt`, `docs/coding_standards.md` §5.4
-- **Jira**: `ATT-6186`
+- **Jira**: `ATT-6186`, `ATT-6731`
 - **Test Description**:
   1. *Audit Scanner Execution & Baseline Conformance Test (`TST-PRO-049.1`, `SourceTextReadingAuditContractTest.kt`)*:
-  • Recursively scan all `.java` and `.kt` test files in `app/src/test/java/`.
-  • Assert that zero tests outside the allow-list read `app/src/main/` production source files.
+  • Recursively scan all `.java` and `.kt` test files in `app/src/test/java/` using expanded reader detection (`readText`, `readLines`, `readString`, `useLines`, `bufferedReader`) targeting `app/src/main/`.
+  • Assert that zero tests outside the approved allow-list (`LEGITIMATE_GOVERNANCE_GUARDS` + baseline) read `app/src/main/` production source files.
   2. *Governance Guard Exception Validation Test (`TST-PRO-049.2`, `SourceTextReadingAuditContractTest.kt`)*:
-  • Assert that all 13 legitimate architectural governance contract tests are registered in the allow-list.
-  3. *Tripwire Violation Detection Test (`TST-PRO-049.3`, `SourceTextReadingAuditContractTest.kt`)*:
-  • Validate that unallow-listed test files containing `.readText()` targeting `src/main/` trigger a test failure.
-  4. *Clean-Room Targeted Test Suite Execution (`TST-PRO-049.4`)*:
+  • Assert that exactly 22 approved architectural governance guards are registered in `LEGITIMATE_GOVERNANCE_GUARDS`.
+  • Assert that each guard ends with `Test.kt` or `Cache.kt` and exists on disk in `app/src/test/java`.
+  3. *Legacy Baseline Ratchet & Stale-Entry Detection Test (`TST-PRO-049.3`, `SourceTextReadingAuditContractTest.kt`)*:
+  • Assert that `(baseline - detectedReaders).isEmpty()`, guaranteeing zero stale entries remain in the baseline when legacy tests are phased out.
+  • Assert that `baseline.size <= 276`, enforcing a monotonic non-increasing ceiling on legacy debt.
+  4. *Ratcheting Tripwire Violation Detection Test (`TST-PRO-049.4`, `SourceTextReadingAuditContractTest.kt`)*:
+  • Validate that a synthetic unallow-listed reader triggers an assertion failure.
+  5. *Clean-Room Targeted Test Suite Execution (`TST-PRO-049.5`)*:
   • Execute targeted unit test suite `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.build.SourceTextReadingAuditContractTest"` asserting 100% pass rate.
 
 
