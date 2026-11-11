@@ -3383,17 +3383,20 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 
 ### REQ-CON-028: BLE Cycling Radar Protocol Driver, Serialized GATT Queue, Scalar Telemetry & Bike Equipment Integration [Verified]
-- **Tests**: `TST-CON-028` | **Tickets**: `ATT-5083`, `ATT-6700`
+- **Tests**: `TST-CON-028` | **Tickets**: `ATT-5083`, `ATT-6700`, `ATT-6701`
 - **Implementation**: `DeviceType.java`, `SensorType.java`, `ActivityType.java`, `BluetoothConstants.java`, `MyBTLEDevice.java`, `BTSearchForNewDevicesEngine.java`, `BTLERadarDevice.java`, `RadarStateRepository.kt`, `RadarWindowAggregator.kt`, `EquipmentSensorOrdering.kt`, `strings_radar.xml`
-- **Rationale**: Cyclists operating in traffic require real-time rearward situational awareness. To integrate Garmin Varia cycling radar units (RearVue 820, RTL515, RCT715) into *aTrainingTracker*, BANALService requires a dedicated `DeviceType.BIKE_RADAR` and `BTLERadarDevice` protocol driver. Because radars interleave threat packets with heartbeat/sector frames on characteristic `6a4e3203` and require sequential CCCD configuration, `MyBTLEDevice` requires a serialized GATT operation queue. High-frequency (4–8 Hz) multi-target streams must feed reactive UI via `RadarStateRepository` (`StateFlow<RadarState>`) with a 3.5s fail-safe disconnect watchdog, while Cockpit and `TrackerService` require 1 Hz scalar metrics (`RADAR_THREAT_COUNT`, `RADAR_CLOSEST_DISTANCE_m`, `RADAR_APPROACH_SPEED_mps`, `RADAR_VEHICLE_COUNT`) via a 1,000 ms rolling window aggregator with zero SQLite schema migrations and full 9-language localization parity (ATT-5083, ATT-6700, Parent Epic ATT-1286, extending `REQ-CON-002`, `REQ-CON-014`, and `REQ-CON-020`):
+- **Rationale**: Cyclists operating in traffic require real-time rearward situational awareness. To integrate Garmin Varia cycling radar units (RearVue 820, RTL515, RCT715) into *aTrainingTracker*, BANALService requires a dedicated `DeviceType.BIKE_RADAR` and `BTLERadarDevice` protocol driver. Because radars interleave threat packets with heartbeat/sector frames on characteristic `6a4e3203` and require sequential CCCD configuration, `MyBTLEDevice` requires a serialized GATT operation queue. High-frequency (4–8 Hz) multi-target streams must feed reactive UI via `RadarStateRepository` (`StateFlow<RadarState>`) with a 3.5s fail-safe disconnect watchdog, while Cockpit and `TrackerService` require 1 Hz scalar metrics (`RADAR_THREAT_COUNT`, `RADAR_CLOSEST_DISTANCE_m`, `RADAR_APPROACH_SPEED_mps`, `RADAR_VEHICLE_COUNT`) via a 1,000 ms rolling window aggregator with zero SQLite schema migrations and full 9-language localization parity (ATT-5083, ATT-6700, ATT-6701, Parent Epic ATT-1286, extending `REQ-CON-002`, `REQ-CON-014`, and `REQ-CON-020`):
 1. *DeviceType.BIKE_RADAR & Equipment Matrix (`REQ-CON-028.1`)*:
 • The system SHALL define `DeviceType.BIKE_RADAR` associated with `BSportType.BIKE` and main sensor `SensorType.RADAR_THREAT_COUNT`.
 • `DevicesDatabaseManager.isBikeSensor()` SHALL classify `BIKE_RADAR` as a bike sensor, automatically integrating it into `EquipmentSensorMatrixScreen` and bike equipment profiles.
 2. *Serialized GATT Operation Queue in MyBTLEDevice (`REQ-CON-028.2`)*:
 • `MyBTLEDevice` SHALL serialize GATT operations (CCCD descriptor writes, characteristic reads, and control-point writes) via a thread-safe FIFO queue.
-• The system SHALL advance to the next queued GATT operation only upon receiving `onDescriptorWrite`, `onCharacteristicRead`, or `onCharacteristicWrite` callback confirmation, preventing dropped commands during multi-characteristic setup.
+• The system SHALL route all characteristic reads (including initial and periodic battery reads) through `mGattQueue` via `enqueueReadCharacteristic`, ensuring zero concurrent unqueued GATT operations.
+• The system SHALL advance to the next queued GATT operation only upon receiving `onDescriptorWrite`, `onCharacteristicRead`, or `onCharacteristicWrite` callback confirmation, preventing dropped commands during multi-characteristic setup and eliminating split-brain queue races between `onCharacteristicRead` and inflight writes.
 3. *Resilient BLE Radar Peripheral Discovery (`REQ-CON-028.3`)*:
 • `BTSearchForNewDevicesEngine` SHALL match Garmin Varia Radar service `6a4e3200-667b-11e3-949a-0800200c9a66` across primary advertisement UUIDs, scan response records, and post-connect service discovery.
+• In `onServicesDiscovered`, the discovery engine SHALL follow the unified peripheral flow by enqueuing Device Information and Battery Level metadata characteristics first, and validating the presence of `UUID_SERVICE_RADAR` in `readNextCharacteristic(address)` upon queue completion before invoking `newDeviceFound(address)`.
+• Dead scan-record matching helpers (`matchesScanRecord`) SHALL be eliminated in compliance with dead-code prevention rules.
 4. *BTLERadarDevice V1 Threat Decoding & Reactive Repository (`REQ-CON-028.4`)*:
 • `BTLERadarDevice` SHALL subscribe to V1 characteristic `6a4e3203-667b-11e3-949a-0800200c9a66`, inspect header `byte[0]` to demux threat packets (`1 + 3*N` bytes) from heartbeat and sector packets, and decode valid targets into immutable `RadarTarget` records (`targetId`, `rangeMeters`, `approachSpeedMps`, `threatLevel`).
 • Target updates SHALL be published to `RadarStateRepository` (`StateFlow<RadarState>`) at 4–8 Hz.
@@ -3410,9 +3413,9 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 **Requirement Archaeology & Chesterton's Fence Audit**:
 1. *Original Requirement ID & Target*: Net-new requirement `REQ-CON-028`, extending `REQ-CON-002` (*Bluetooth LE Sensor Support*), `REQ-CON-014` (*GATT Packet Resilience*), and `REQ-CON-020` (*GATT Queue Integrity*). Targets `DeviceType.java`, `SensorType.java`, `MyBTLEDevice.java`, `BTSearchForNewDevicesEngine.java`, `BTLERadarDevice.java`, `RadarWindowAggregator.kt`.
-2. *Historical Origin & Commit Trace*: `ATT-1485` (`REQ-CON-014`) established safe BLE payload parsing; `ATT-3312` introduced chained battery CCCD writes; `ATT-3540` established multi-sensor push architecture; `ATT-6700` refined 1,000 ms rolling latch window, road-clear null distance reset, and workout-start accumulator reset.
-3. *Root Reason for Existing Formulation*: Existing BLE devices relied on single-characteristic notifications or ad-hoc descriptor writes. Multi-target radar requires sequential CCCD setup, packet demuxing, and dual-rate (reactive 8 Hz vs. persisted 1 Hz) handling. Defensive non-null sensor guards in `BTLERadarDevice` inadvertently prevented clearing stale distance values when the road cleared, and per-packet reset prematurely cleared latched metrics before 1 Hz polling ticks.
-4. *Preservation of Core Invariants*: Existing BLE sensors (HRM, Power, Speed, Cadence) remain completely unaffected; zero SQLite schema migrations; 100% 9-language translation parity; vehicle counting hysteresis and Rule 1.8 constructor parity preserved.
+2. *Historical Origin & Commit Trace*: `ATT-1485` (`REQ-CON-014`) established safe BLE payload parsing; `ATT-3312` introduced chained battery CCCD writes; `ATT-3540` established multi-sensor push architecture; `ATT-6700` refined 1,000 ms rolling latch window, road-clear null distance reset, and workout-start accumulator reset; `ATT-6701` unified `MyBTLEDevice` GATT read queue and aligned `BTSearchForNewDevicesEngine` discovery.
+3. *Root Reason for Existing Formulation*: Existing BLE devices relied on single-characteristic notifications or ad-hoc descriptor writes. Multi-target radar requires sequential CCCD setup, packet demuxing, and dual-rate (reactive 8 Hz vs. persisted 1 Hz) handling. In ATT-5083, `mGattQueue` was added for descriptor and control-point writes but legacy battery reads remained on `mReadCharacteristicQueue` with direct GATT calls. Similarly, an early-return guard was placed in `onServicesDiscovered` before metadata reads, and `matchesScanRecord` was added without callers.
+4. *Preservation of Core Invariants*: Existing BLE sensors (HRM, Power, Speed, Cadence) remain completely unaffected; zero SQLite schema migrations; 100% 9-language translation parity; vehicle counting hysteresis and Rule 1.8 constructor parity preserved. Unifying reads into `mGattQueue` and verifying radar service at the end of discovery preserves strict FIFO serialization without dropped callbacks, while ensuring Device Information and Battery Level are read consistently across all peripheral types.
 
 **Acceptance Criteria (Given-When-Then)**:
 • *Given* a BLE radar streaming interleaved threat, heartbeat, and sector packets on `6a4e3203`,
@@ -3430,6 +3433,12 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 • *Given* a disconnected or out-of-range radar,
 • *When* 3.5 seconds elapse without valid packets,
 • *Then* `RadarStateRepository` transitions to `DISCONNECTED_ERROR`.
+• *Given* a peripheral discovery session for `DeviceType.BIKE_RADAR` in `BTSearchForNewDevicesEngine`,
+• *When* services are discovered,
+• *Then* Device Information and Battery Level characteristics are enqueued first, and `UUID_SERVICE_RADAR` is verified upon queue completion before invoking `newDeviceFound`.
+• *Given* a connected BLE device running periodic battery reads via `mBatteryReadRunnable` while a GATT descriptor write is queued,
+• *When* the battery read is requested,
+• *Then* it is enqueued on `mGattQueue` via `enqueueReadCharacteristic` and executes strictly after preceding GATT operations without releasing `mGattOperationPending` prematurely.
 
 **Invariants**: Existing BLE sensors unaffected; zero schema migrations; 100% 9-language translation parity; Rule 1.8 constructor baseline state parity.
 

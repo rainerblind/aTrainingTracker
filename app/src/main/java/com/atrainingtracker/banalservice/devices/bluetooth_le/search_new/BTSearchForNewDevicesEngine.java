@@ -93,7 +93,7 @@ public class BTSearchForNewDevicesEngine
     private final IBTSearchForNewDevicesEngineInterface mCallbackInterface;
     // callback to get the manufacturer and battery percentage
     // also check whether this is a bike speed, bike cadence, or combined speed and cadence device
-    private final BluetoothGattCallback mGattCallback = new BluetoothGattCallback() {
+    /* package */ final BluetoothGattCallback mGattCallback = new BluetoothGattCallback() {
         @Override
         public void onConnectionStateChange(final BluetoothGatt gatt, int status, int newState) {
             if (DEBUG)
@@ -127,13 +127,6 @@ public class BTSearchForNewDevicesEngine
                 @Override
                 public void run() {
                     String address = gatt.getDevice().getAddress();
-                    if (getDeviceType() == DeviceType.BIKE_RADAR) {
-                        BluetoothGattService radarService = gatt.getService(BluetoothConstants.UUID_SERVICE_RADAR);
-                        if (radarService == null) {
-                            if (DEBUG) Log.i(TAG, "Device does not provide Radar service, skipping");
-                            return;
-                        }
-                    }
                     mReadCharacteristicQueue.put(address, new LinkedList<BluetoothGattCharacteristic>());
 
                     enqueueCharacteristicIfPresent(address,
@@ -396,20 +389,7 @@ public class BTSearchForNewDevicesEngine
 
             scanning = true;
 
-            List<ScanFilter> filters = null;
-            UUID serviceUuid = BluetoothConstants.getServiceUUID(getDeviceType());
-            if (serviceUuid != null) {
-                if (getDeviceType() == DeviceType.BIKE_RADAR) {
-                    filters = java.util.Arrays.asList(
-                            new ScanFilter.Builder().setServiceUuid(new ParcelUuid(serviceUuid)).build(),
-                            new ScanFilter.Builder().setServiceData(new ParcelUuid(serviceUuid), null).build()
-                    );
-                } else {
-                    filters = Collections.singletonList(new ScanFilter.Builder()
-                            .setServiceUuid(new ParcelUuid(serviceUuid))
-                            .build());
-                }
-            }
+            List<ScanFilter> filters = buildScanFilters(getDeviceType());
 
             ScanSettings settings = new ScanSettings.Builder()
                     .setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY)
@@ -505,11 +485,16 @@ public class BTSearchForNewDevicesEngine
         // queue is empty => everything is read => inform the callback that a device was found
         // except for the case that it is a bike device.  In this case, we have to check the type
         else if (mDeviceType == DeviceType.BIKE_CADENCE || mDeviceType == DeviceType.BIKE_SPEED || mDeviceType == DeviceType.BIKE_SPEED_AND_CADENCE
-                || mDeviceType == DeviceType.BIKE_POWER) {
+                || mDeviceType == DeviceType.BIKE_POWER || mDeviceType == DeviceType.BIKE_RADAR) {
             // the device will be found somewhere else (when reading the csc feature)
             if (mDeviceType == DeviceType.BIKE_POWER) {
                 BluetoothGattService powerService = gatt.getService(BluetoothConstants.getServiceUUID(DeviceType.BIKE_POWER));
                 if (powerService != null) {
+                    newDeviceFound(address);
+                }
+            } else if (mDeviceType == DeviceType.BIKE_RADAR) {
+                BluetoothGattService radarService = gatt.getService(BluetoothConstants.UUID_SERVICE_RADAR);
+                if (radarService != null) {
                     newDeviceFound(address);
                 }
             }
@@ -519,20 +504,22 @@ public class BTSearchForNewDevicesEngine
     }
 
     /**
-     * Resiliently matches ScanRecord service UUIDs or service data against target UUID (REQ-CON-028.3).
+     * Constructs Bluetooth LE scan filters scoped to the target device type (REQ-CON-028.3).
      */
-    public static boolean matchesScanRecord(ScanResult result, UUID targetServiceUuid) {
-        if (result == null || targetServiceUuid == null) return false;
-        android.bluetooth.le.ScanRecord record = result.getScanRecord();
-        if (record == null) return false;
-        ParcelUuid targetParcelUuid = new ParcelUuid(targetServiceUuid);
-        if (record.getServiceUuids() != null && record.getServiceUuids().contains(targetParcelUuid)) {
-            return true;
+    protected List<ScanFilter> buildScanFilters(DeviceType deviceType) {
+        UUID serviceUuid = BluetoothConstants.getServiceUUID(deviceType);
+        if (serviceUuid == null) {
+            return null;
         }
-        if (record.getServiceData() != null && record.getServiceData().containsKey(targetParcelUuid)) {
-            return true;
+        if (deviceType == DeviceType.BIKE_RADAR) {
+            return java.util.Arrays.asList(
+                    new ScanFilter.Builder().setServiceUuid(new ParcelUuid(serviceUuid)).build(),
+                    new ScanFilter.Builder().setServiceData(new ParcelUuid(serviceUuid), null).build()
+            );
         }
-        return false;
+        return Collections.singletonList(new ScanFilter.Builder()
+                .setServiceUuid(new ParcelUuid(serviceUuid))
+                .build());
     }
 
     public interface IBTSearchForNewDevicesEngineInterface {

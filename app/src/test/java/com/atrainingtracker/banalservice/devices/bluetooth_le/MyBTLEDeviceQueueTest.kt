@@ -34,6 +34,7 @@ import com.atrainingtracker.banalservice.devices.DeviceType
 import com.atrainingtracker.banalservice.sensor.MySensorManager
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.mockkConstructor
 import io.mockk.mockkStatic
 import io.mockk.unmockkAll
 import org.junit.After
@@ -66,6 +67,24 @@ class MyBTLEDeviceQueueTest {
         fun setMockGatt(gatt: BluetoothGatt, handler: Handler) {
             mBluetoothGatt = gatt
             mHandler = handler
+        }
+
+        fun getLegacyQueue(): java.util.Queue<BluetoothGattCharacteristic> = mReadCharacteristicQueue
+
+        fun setBatteryCharacteristic(char: BluetoothGattCharacteristic?) {
+            val field = MyBTLEDevice::class.java.getDeclaredField("mBatteryCharacteristic")
+            field.isAccessible = true
+            field.set(this, char)
+        }
+
+        fun getBatteryReadRunnable(): Runnable {
+            val field = MyBTLEDevice::class.java.getDeclaredField("mBatteryReadRunnable")
+            field.isAccessible = true
+            return field.get(this) as Runnable
+        }
+
+        public override fun readNextCharacteristic() {
+            super.readNextCharacteristic()
         }
     }
 
@@ -102,6 +121,24 @@ class MyBTLEDeviceQueueTest {
         mockkStatic(DevicesDatabaseManager::class)
         val mockDevicesDbManager = mockk<DevicesDatabaseManager>(relaxed = true)
         every { DevicesDatabaseManager.getInstance(any()) } returns mockDevicesDbManager
+
+        mockkConstructor(android.content.Intent::class)
+        every { anyConstructed<android.content.Intent>().setPackage(any()) } answers { self as android.content.Intent }
+        every { anyConstructed<android.content.Intent>().putExtra(any<String>(), any<String>()) } answers { self as android.content.Intent }
+        every { anyConstructed<android.content.Intent>().putExtra(any<String>(), any<Int>()) } answers { self as android.content.Intent }
+        every { anyConstructed<android.content.Intent>().putExtra(any<String>(), any<Long>()) } answers { self as android.content.Intent }
+        every { anyConstructed<android.content.Intent>().putExtra(any<String>(), any<Boolean>()) } answers { self as android.content.Intent }
+        every { anyConstructed<android.content.Intent>().putExtra(any<String>(), any<java.io.Serializable>()) } answers { self as android.content.Intent }
+
+        mockkConstructor(BluetoothGattCharacteristic::class)
+        every { anyConstructed<BluetoothGattCharacteristic>().setValue(any<ByteArray>()) } returns true
+        every { anyConstructed<BluetoothGattCharacteristic>().value } returns byteArrayOf()
+        every { anyConstructed<BluetoothGattCharacteristic>().getValue() } returns byteArrayOf()
+        every { anyConstructed<BluetoothGattCharacteristic>().uuid } returns BluetoothConstants.UUID_CHARACTERISTIC_BATTERY_LEVEL
+        every { anyConstructed<BluetoothGattCharacteristic>().getUuid() } returns BluetoothConstants.UUID_CHARACTERISTIC_BATTERY_LEVEL
+        every { anyConstructed<BluetoothGattCharacteristic>().getIntValue(any(), any()) } returns 85
+        every { anyConstructed<BluetoothGattCharacteristic>().properties } returns BluetoothGattCharacteristic.PROPERTY_NOTIFY
+        every { anyConstructed<BluetoothGattCharacteristic>().permissions } returns 0
 
         mockkStatic(Looper::class)
         val mockLooper = mockk<Looper>(relaxed = true)
@@ -160,5 +197,79 @@ class MyBTLEDeviceQueueTest {
 
         assertEquals("Queue must be empty after disconnect", 0, testDevice.gattQueueForTesting.size)
         assertFalse("Pending flag must be false after disconnect", testDevice.isGattOperationPendingForTesting)
+    }
+
+    /**
+     * REQ-CON-028.2 / TST-CON-028.1: Verify characteristic read operation serializes strictly
+     * behind an in-flight descriptor write via mGattQueue without split-brain collision.
+     */
+    @Test
+    fun testQueue_characteristicReadSerializesWithDescriptorWrite() {
+        val desc = mockk<BluetoothGattDescriptor>(relaxed = true)
+        val char = mockk<BluetoothGattCharacteristic>(relaxed = true)
+
+        every { mockGatt.writeDescriptor(any()) } returns true
+        every { mockGatt.readCharacteristic(any()) } returns true
+
+        // Enqueue write descriptor first, then read characteristic
+        testDevice.enqueueWriteDescriptor(desc, byteArrayOf(0x01, 0x00))
+        testDevice.enqueueReadCharacteristic(char)
+
+        assertTrue("First operation must be active pending", testDevice.isGattOperationPendingForTesting)
+        assertEquals("Second operation must wait in queue", 1, testDevice.gattQueueForTesting.size)
+        assertTrue(testDevice.gattQueueForTesting.peek() is MyBTLEDevice.ReadCharacteristicOp)
+
+        // Simulate descriptor write completion callback
+        testDevice.gattCallbackForTesting.onDescriptorWrite(mockGatt, desc, BluetoothGatt.GATT_SUCCESS)
+
+        // Second operation is now active and queue is empty
+        assertTrue("Read operation must now be pending", testDevice.isGattOperationPendingForTesting)
+        assertEquals(0, testDevice.gattQueueForTesting.size)
+
+        // Simulate characteristic read completion callback
+        testDevice.gattCallbackForTesting.onCharacteristicRead(mockGatt, char, BluetoothGatt.GATT_SUCCESS)
+
+        assertFalse("GATT operation must not be pending after read completes", testDevice.isGattOperationPendingForTesting)
+        assertEquals(0, testDevice.gattQueueForTesting.size)
+    }
+
+    /**
+     * REQ-CON-028.2 / TST-CON-028.1: Verify mBatteryReadRunnable routes through enqueueReadCharacteristic
+     * rather than adding directly to mReadCharacteristicQueue outside mGattQueue.
+     */
+    @Test
+    fun testBatteryReadRunnable_enqueuesViaGattQueue() {
+        val batteryChar = mockk<BluetoothGattCharacteristic>(relaxed = true)
+        every { mockGatt.readCharacteristic(any()) } returns true
+
+        testDevice.setBatteryCharacteristic(batteryChar)
+        val runnable = testDevice.getBatteryReadRunnable()
+
+        runnable.run()
+
+        // Should have enqueued read operation into mGattQueue and initiated execution
+        assertTrue("mGattOperationPending must be true after battery read runnable runs", testDevice.isGattOperationPendingForTesting)
+        assertTrue("Legacy mReadCharacteristicQueue must remain empty", testDevice.getLegacyQueue().isEmpty())
+
+        // Simulate callback
+        testDevice.gattCallbackForTesting.onCharacteristicRead(mockGatt, batteryChar, BluetoothGatt.GATT_SUCCESS)
+        assertFalse("Pending flag must be cleared after onCharacteristicRead", testDevice.isGattOperationPendingForTesting)
+    }
+
+    /**
+     * REQ-CON-028.2 / TST-CON-028.1: Verify readNextCharacteristic drains legacy mReadCharacteristicQueue
+     * into mGattQueue for backward compatibility.
+     */
+    @Test
+    fun testReadNextCharacteristic_drainsLegacyReadQueueIntoGattQueue() {
+        val char1 = mockk<BluetoothGattCharacteristic>(relaxed = true)
+        every { mockGatt.readCharacteristic(any()) } returns true
+
+        testDevice.getLegacyQueue().add(char1)
+        testDevice.readNextCharacteristic()
+
+        // Legacy queue must be empty, operation moved to mGattQueue
+        assertTrue("Legacy queue must be drained", testDevice.getLegacyQueue().isEmpty())
+        assertTrue("Operation must be pending in GATT queue", testDevice.isGattOperationPendingForTesting)
     }
 }
