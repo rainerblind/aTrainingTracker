@@ -588,7 +588,8 @@ fun ATrainingTrackerApp(
                     com.atrainingtracker.trainingtracker.ui.athleteprofile.AthleteProfileScreen(
                         viewModel = athleteProfileViewModel,
                         onOpenDrawer = { activity.openDrawer() },
-                        onNavigateToMorningHrv = { navController.navigate(NavRoutes.MORNING_HRV) }
+                        onNavigateToMorningHrv = { navController.navigate(NavRoutes.MORNING_HRV) },
+                        onNavigateToHrvTest = { navController.navigate(NavRoutes.HRV_TEST) }
                     )
                 }
 
@@ -650,6 +651,14 @@ fun ATrainingTrackerApp(
                     val morningHrvViewModel: com.atrainingtracker.trainingtracker.ui.hrv.MorningHrvCheckViewModel = viewModel()
                     com.atrainingtracker.trainingtracker.ui.hrv.MorningHrvCheckScreen(
                         viewModel = morningHrvViewModel,
+                        onNavigateBack = { navController.popBackStack() }
+                    )
+                }
+
+                composable(NavRoutes.HRV_TEST) {
+                    val hrvRampTestViewModel: com.atrainingtracker.trainingtracker.ui.hrv.HrvRampTestViewModel = viewModel()
+                    com.atrainingtracker.trainingtracker.ui.hrv.HrvRampTestScreen(
+                        viewModel = hrvRampTestViewModel,
                         onNavigateBack = { navController.popBackStack() }
                     )
                 }

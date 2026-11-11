@@ -149,4 +149,42 @@
     <string name="hrv_threshold_diag_low_r2">Faible corrélation linéaire (R² = %1$.2f &lt; %2$.2f)</string>
     <string name="hrv_threshold_no_estimate">--</string>
     <string name="hrv_threshold_informative_only">À titre informatif uniquement ; exclu de la mise à jour des zones</string>
+
+    <!-- Guided DFA a1 Ramp/Step Test Screen (ATT-4969 / REQ-TRK-071) -->
+    <string name="hrv_test_title">Test guidé des seuils DFA a1</string>
+    <string name="hrv_test_subtitle">Protocole de seuils aérobie et anaérobie</string>
+    <string name="hrv_test_protocol_label">Type de protocole</string>
+    <string name="hrv_test_protocol_step">Test par paliers progressifs</string>
+    <string name="hrv_test_protocol_ramp">Test sur rampe continue</string>
+    <string name="hrv_test_sport_label">Sport</string>
+    <string name="hrv_test_sport_cycling">Cyclisme (Watts)</string>
+    <string name="hrv_test_sport_running">Course à pied (Vitesse / Allure)</string>
+    <string name="hrv_test_step_duration_label">Durée du palier</string>
+    <string name="hrv_test_step_duration_4min">4 min (Recommandé)</string>
+    <string name="hrv_test_step_duration_3min">3 min (Minimum)</string>
+    <string name="hrv_test_start_load_label">Charge initiale</string>
+    <string name="hrv_test_increment_label">Incrément par palier</string>
+    <string name="hrv_test_warmup_label">Durée d\'échauffement</string>
+    <string name="hrv_test_warmup_desc">Échauffement régulier de 10 minutes avant les paliers du protocole</string>
+    <string name="hrv_test_preflight_title">Contrôle préalable du capteur</string>
+    <string name="hrv_test_preflight_checking">Vérification du flux RR ECG et de la qualité du signal…</string>
+    <string name="hrv_test_preflight_pass" formatted="false">Haute qualité du capteur (Artéfacts ≤ 3,0 %)</string>
+    <string name="hrv_test_preflight_warning" formatted="false">Qualité modérée du capteur (Artéfacts 3,0–5,0 %)</string>
+    <string name="hrv_test_preflight_fail" formatted="false">Capteur inadapté (Artéfacts &gt; 5,0 % ou pas de données RR)</string>
+    <string name="hrv_test_preflight_no_sensor">Aucun capteur de fréquence cardiaque connecté. Veuillez connecter une ceinture pectorale ECG.</string>
+    <string name="hrv_test_phase_warmup">Échauffement</string>
+    <string name="hrv_test_phase_step">Palier %1$d</string>
+    <string name="hrv_test_phase_ramp">Rampe</string>
+    <string name="hrv_test_phase_cooldown">Retour au calme</string>
+    <string name="hrv_test_target_power">Cible : %1$d W</string>
+    <string name="hrv_test_target_pace">Cible : %1$s</string>
+    <string name="hrv_test_time_remaining">Temps restant : %1$s</string>
+    <string name="hrv_test_live_a1">a1 en direct : %1$.2f</string>
+    <string name="hrv_test_live_artifacts">Artéfacts : %1$.1f%%</string>
+    <string name="hrv_test_early_complete_title">Seuils capturés !</string>
+    <string name="hrv_test_early_complete_desc">DFA a1 est descendu sous 0,45. HRVT1 et HRVT2 sont tous deux capturés. Vous pouvez maintenant passer au retour au calme sans aller jusqu\'à l\'épuisement.</string>
+    <string name="hrv_test_btn_start">Démarrer le test</string>
+    <string name="hrv_test_btn_finish">Terminer le test</string>
+    <string name="hrv_test_btn_cooldown">Commencer le retour au calme</string>
+    <string name="hrv_test_btn_cancel">Annuler le test</string>
 </resources>

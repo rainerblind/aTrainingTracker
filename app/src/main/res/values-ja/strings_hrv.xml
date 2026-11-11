@@ -149,4 +149,42 @@
     <string name="hrv_threshold_diag_low_r2">低い線形相関（R² = %1$.2f &lt; %2$.2f）</string>
     <string name="hrv_threshold_no_estimate">--</string>
     <string name="hrv_threshold_informative_only">参考情報のみ；ゾーン更新から除外されます</string>
+
+    <!-- Guided DFA a1 Ramp/Step Test Screen (ATT-4969 / REQ-TRK-071) -->
+    <string name="hrv_test_title">ガイド付きDFA a1閾値テスト</string>
+    <string name="hrv_test_subtitle">有酸素・無酸素閾値プロトコル</string>
+    <string name="hrv_test_protocol_label">プロトコル種別</string>
+    <string name="hrv_test_protocol_step">漸進的ステップテスト</string>
+    <string name="hrv_test_protocol_ramp">連続ランプテスト</string>
+    <string name="hrv_test_sport_label">スポーツ</string>
+    <string name="hrv_test_sport_cycling">サイクリング（ワット）</string>
+    <string name="hrv_test_sport_running">ランニング（速度／ペース）</string>
+    <string name="hrv_test_step_duration_label">ステップ時間</string>
+    <string name="hrv_test_step_duration_4min">4分（推奨）</string>
+    <string name="hrv_test_step_duration_3min">3分（最小）</string>
+    <string name="hrv_test_start_load_label">初期負荷</string>
+    <string name="hrv_test_increment_label">ステップ増分</string>
+    <string name="hrv_test_warmup_label">ウォームアップ時間</string>
+    <string name="hrv_test_warmup_desc">プロトコルステップ前の10分間の安定したウォームアップ</string>
+    <string name="hrv_test_preflight_title">事前センサーチェック</string>
+    <string name="hrv_test_preflight_checking">ECG RRストリームと信号品質を確認中…</string>
+    <string name="hrv_test_preflight_pass" formatted="false">センサー品質高（アーティファクト ≤ 3.0%）</string>
+    <string name="hrv_test_preflight_warning" formatted="false">センサー品質中程度（アーティファクト 3.0〜5.0%）</string>
+    <string name="hrv_test_preflight_fail" formatted="false">センサー不適合（アーティファクト &gt; 5.0%またはRRデータなし）</string>
+    <string name="hrv_test_preflight_no_sensor">心拍センサーが接続されていません。ECG胸部ストラップを接続してください。</string>
+    <string name="hrv_test_phase_warmup">ウォームアップ</string>
+    <string name="hrv_test_phase_step">ステップ %1$d</string>
+    <string name="hrv_test_phase_ramp">ランプ</string>
+    <string name="hrv_test_phase_cooldown">クールダウン</string>
+    <string name="hrv_test_target_power">目標: %1$d W</string>
+    <string name="hrv_test_target_pace">目標: %1$s</string>
+    <string name="hrv_test_time_remaining">残り時間: %1$s</string>
+    <string name="hrv_test_live_a1">ライブa1: %1$.2f</string>
+    <string name="hrv_test_live_artifacts">アーティファクト: %1$.1f%%</string>
+    <string name="hrv_test_early_complete_title">閾値を検出しました！</string>
+    <string name="hrv_test_early_complete_desc">DFA a1が0.45未満に低下しました。HRVT1とHRVT2の両方がキャプチャされました。疲労困憊まで追い込むことなくクールダウンに移行できます。</string>
+    <string name="hrv_test_btn_start">テスト開始</string>
+    <string name="hrv_test_btn_finish">テスト終了</string>
+    <string name="hrv_test_btn_cooldown">クールダウン開始</string>
+    <string name="hrv_test_btn_cancel">テストをキャンセル</string>
 </resources>

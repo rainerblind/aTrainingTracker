@@ -149,4 +149,42 @@
     <string name="hrv_threshold_diag_low_r2">Niska korelacja liniowa (R² = %1$.2f &lt; %2$.2f)</string>
     <string name="hrv_threshold_no_estimate">--</string>
     <string name="hrv_threshold_informative_only">Tylko informacyjnie; wykluczone z aktualizacji stref</string>
+
+    <!-- Guided DFA a1 Ramp/Step Test Screen (ATT-4969 / REQ-TRK-071) -->
+    <string name="hrv_test_title">Przewodnikowy test progów DFA a1</string>
+    <string name="hrv_test_subtitle">Protokół progu tlenowego i beztlenowego</string>
+    <string name="hrv_test_protocol_label">Typ protokołu</string>
+    <string name="hrv_test_protocol_step">Progresywny test stopniowy</string>
+    <string name="hrv_test_protocol_ramp">Test ciągłej rampy</string>
+    <string name="hrv_test_sport_label">Sport</string>
+    <string name="hrv_test_sport_cycling">Kolarstwo (Wat)</string>
+    <string name="hrv_test_sport_running">Bieganie (Prędkość / Tempo)</string>
+    <string name="hrv_test_step_duration_label">Czas trwania stopnia</string>
+    <string name="hrv_test_step_duration_4min">4 min (Zalecane)</string>
+    <string name="hrv_test_step_duration_3min">3 min (Minimum)</string>
+    <string name="hrv_test_start_load_label">Obciążenie początkowe</string>
+    <string name="hrv_test_increment_label">Przyrost stopnia</string>
+    <string name="hrv_test_warmup_label">Czas rozgrzewki</string>
+    <string name="hrv_test_warmup_desc">10-minutowa spokojna rozgrzewka przed rozpoczęciem stopni protokołu</string>
+    <string name="hrv_test_preflight_title">Wstępne sprawdzenie czujnika</string>
+    <string name="hrv_test_preflight_checking">Sprawdzanie strumienia RR EKG i jakości sygnału…</string>
+    <string name="hrv_test_preflight_pass" formatted="false">Wysoka jakość czujnika (Artefakty ≤ 3,0%)</string>
+    <string name="hrv_test_preflight_warning" formatted="false">Umiarkowana jakość czujnika (Artefakty 3,0–5,0%)</string>
+    <string name="hrv_test_preflight_fail" formatted="false">Czujnik nieodpowiedni (Artefakty &gt; 5,0% lub brak danych RR)</string>
+    <string name="hrv_test_preflight_no_sensor">Brak połączonego czujnika tętna. Połącz pasek piersiowy EKG.</string>
+    <string name="hrv_test_phase_warmup">Rozgrzewka</string>
+    <string name="hrv_test_phase_step">Stopień %1$d</string>
+    <string name="hrv_test_phase_ramp">Rampa</string>
+    <string name="hrv_test_phase_cooldown">Schłodzenie</string>
+    <string name="hrv_test_target_power">Cel: %1$d W</string>
+    <string name="hrv_test_target_pace">Cel: %1$s</string>
+    <string name="hrv_test_time_remaining">Pozostały czas: %1$s</string>
+    <string name="hrv_test_live_a1">a1 na żywo: %1$.2f</string>
+    <string name="hrv_test_live_artifacts">Artefakty: %1$.1f%%</string>
+    <string name="hrv_test_early_complete_title">Progi zarejestrowane!</string>
+    <string name="hrv_test_early_complete_desc">DFA a1 spadło poniżej 0,45. Zarówno HRVT1, jak i HRVT2 zostały zarejestrowane. Możesz teraz przejść do schłodzenia bez konieczności jazdy do wyczerpania.</string>
+    <string name="hrv_test_btn_start">Rozpocznij test</string>
+    <string name="hrv_test_btn_finish">Zakończ test</string>
+    <string name="hrv_test_btn_cooldown">Rozpocznij schłodzenie</string>
+    <string name="hrv_test_btn_cancel">Anuluj test</string>
 </resources>

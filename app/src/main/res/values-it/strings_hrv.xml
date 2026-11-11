@@ -149,4 +149,42 @@
     <string name="hrv_threshold_diag_low_r2">Bassa correlazione lineare (R² = %1$.2f &lt; %2$.2f)</string>
     <string name="hrv_threshold_no_estimate">--</string>
     <string name="hrv_threshold_informative_only">Solo informativo; escluso dagli aggiornamenti delle zone</string>
+
+    <!-- Guided DFA a1 Ramp/Step Test Screen (ATT-4969 / REQ-TRK-071) -->
+    <string name="hrv_test_title">Test guidato delle soglie DFA a1</string>
+    <string name="hrv_test_subtitle">Protocollo di soglia aerobica e anaerobica</string>
+    <string name="hrv_test_protocol_label">Tipo di protocollo</string>
+    <string name="hrv_test_protocol_step">Test a gradini progressivi</string>
+    <string name="hrv_test_protocol_ramp">Test su rampa continua</string>
+    <string name="hrv_test_sport_label">Sport</string>
+    <string name="hrv_test_sport_cycling">Ciclismo (Watt)</string>
+    <string name="hrv_test_sport_running">Corsa (Velocità / Passo)</string>
+    <string name="hrv_test_step_duration_label">Durata del gradino</string>
+    <string name="hrv_test_step_duration_4min">4 min (Consigliato)</string>
+    <string name="hrv_test_step_duration_3min">3 min (Minimo)</string>
+    <string name="hrv_test_start_load_label">Carico iniziale</string>
+    <string name="hrv_test_increment_label">Incremento per gradino</string>
+    <string name="hrv_test_warmup_label">Durata del riscaldamento</string>
+    <string name="hrv_test_warmup_desc">Riscaldamento costante di 10 minuti prima delle fasi del protocollo</string>
+    <string name="hrv_test_preflight_title">Controllo preliminare del sensore</string>
+    <string name="hrv_test_preflight_checking">Verifica del flusso RR ECG e della qualità del segnale…</string>
+    <string name="hrv_test_preflight_pass" formatted="false">Alta qualità del sensore (Artefatti ≤ 3,0%)</string>
+    <string name="hrv_test_preflight_warning" formatted="false">Qualità moderata del sensore (Artefatti 3,0–5,0%)</string>
+    <string name="hrv_test_preflight_fail" formatted="false">Sensore non idoneo (Artefatti &gt; 5,0% o assenza di dati RR)</string>
+    <string name="hrv_test_preflight_no_sensor">Nessun sensore di frequenza cardiaca collegato. Collegare una fascia cardio toracica ECG.</string>
+    <string name="hrv_test_phase_warmup">Riscaldamento</string>
+    <string name="hrv_test_phase_step">Gradino %1$d</string>
+    <string name="hrv_test_phase_ramp">Rampa</string>
+    <string name="hrv_test_phase_cooldown">Defaticamento</string>
+    <string name="hrv_test_target_power">Obiettivo: %1$d W</string>
+    <string name="hrv_test_target_pace">Obiettivo: %1$s</string>
+    <string name="hrv_test_time_remaining">Tempo rimanente: %1$s</string>
+    <string name="hrv_test_live_a1">a1 in tempo reale: %1$.2f</string>
+    <string name="hrv_test_live_artifacts">Artefatti: %1$.1f%%</string>
+    <string name="hrv_test_early_complete_title">Soglie acquisite!</string>
+    <string name="hrv_test_early_complete_desc">DFA a1 è sceso sotto 0,45. Sia HRVT1 che HRVT2 sono stati acquisiti. È ora possibile passare al defaticamento senza raggiungere l\'esaurimento.</string>
+    <string name="hrv_test_btn_start">Avvia test</string>
+    <string name="hrv_test_btn_finish">Termina test</string>
+    <string name="hrv_test_btn_cooldown">Inizia defaticamento</string>
+    <string name="hrv_test_btn_cancel">Annulla test</string>
 </resources>

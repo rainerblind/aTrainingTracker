@@ -149,4 +149,42 @@
     <string name="hrv_threshold_diag_low_r2">Low linear correlation (R² = %1$.2f &lt; %2$.2f)</string>
     <string name="hrv_threshold_no_estimate">--</string>
     <string name="hrv_threshold_informative_only">Informational only; excluded from zone updates</string>
+
+    <!-- Guided DFA a1 Ramp/Step Test Screen (ATT-4969 / REQ-TRK-071) -->
+    <string name="hrv_test_title">Guided DFA a1 Threshold Test</string>
+    <string name="hrv_test_subtitle">Aerobic &amp; Anaerobic Threshold Protocol</string>
+    <string name="hrv_test_protocol_label">Protocol Type</string>
+    <string name="hrv_test_protocol_step">Progressive Step Test</string>
+    <string name="hrv_test_protocol_ramp">Continuous Ramp Test</string>
+    <string name="hrv_test_sport_label">Sport</string>
+    <string name="hrv_test_sport_cycling">Cycling (Watts)</string>
+    <string name="hrv_test_sport_running">Running (Speed / Pace)</string>
+    <string name="hrv_test_step_duration_label">Step Duration</string>
+    <string name="hrv_test_step_duration_4min">4 min (Recommended)</string>
+    <string name="hrv_test_step_duration_3min">3 min (Minimum)</string>
+    <string name="hrv_test_start_load_label">Starting Target</string>
+    <string name="hrv_test_increment_label">Step Increment</string>
+    <string name="hrv_test_warmup_label">Warm-up Duration</string>
+    <string name="hrv_test_warmup_desc">10-minute steady warm-up before protocol steps</string>
+    <string name="hrv_test_preflight_title">Pre-Flight Sensor Check</string>
+    <string name="hrv_test_preflight_checking">Verifying ECG RR stream &amp; signal quality…</string>
+    <string name="hrv_test_preflight_pass" formatted="false">Sensor Quality High (Artifacts ≤ 3.0%)</string>
+    <string name="hrv_test_preflight_warning" formatted="false">Sensor Quality Moderate (Artifacts 3.0–5.0%)</string>
+    <string name="hrv_test_preflight_fail" formatted="false">Sensor Unsuitable (Artifacts &gt; 5.0% or no RR data)</string>
+    <string name="hrv_test_preflight_no_sensor">No heart rate sensor connected. Please connect an ECG chest strap.</string>
+    <string name="hrv_test_phase_warmup">Warm-up</string>
+    <string name="hrv_test_phase_step">Step %1$d</string>
+    <string name="hrv_test_phase_ramp">Ramp</string>
+    <string name="hrv_test_phase_cooldown">Cool-down</string>
+    <string name="hrv_test_target_power">Target: %1$d W</string>
+    <string name="hrv_test_target_pace">Target: %1$s</string>
+    <string name="hrv_test_time_remaining">Time Remaining: %1$s</string>
+    <string name="hrv_test_live_a1">Live a1: %1$.2f</string>
+    <string name="hrv_test_live_artifacts">Artifacts: %1$.1f%%</string>
+    <string name="hrv_test_early_complete_title">Thresholds Captured!</string>
+    <string name="hrv_test_early_complete_desc">DFA a1 has dropped below 0.45. Both HRVT1 and HRVT2 are captured. You can now transition to cool-down without riding to exhaustion.</string>
+    <string name="hrv_test_btn_start">Start Test</string>
+    <string name="hrv_test_btn_finish">Finish Test</string>
+    <string name="hrv_test_btn_cooldown">Begin Cool-down</string>
+    <string name="hrv_test_btn_cancel">Cancel Test</string>
 </resources>

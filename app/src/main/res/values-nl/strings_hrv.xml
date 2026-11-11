@@ -149,4 +149,42 @@
     <string name="hrv_threshold_diag_low_r2">Lage lineaire correlatie (R² = %1$.2f &lt; %2$.2f)</string>
     <string name="hrv_threshold_no_estimate">--</string>
     <string name="hrv_threshold_informative_only">Alleen ter informatie; uitgesloten van zone-updates</string>
+
+    <!-- Guided DFA a1 Ramp/Step Test Screen (ATT-4969 / REQ-TRK-071) -->
+    <string name="hrv_test_title">Begeleide DFA a1-drempeltest</string>
+    <string name="hrv_test_subtitle">Aëroob &amp; anaëroob drempelprotocol</string>
+    <string name="hrv_test_protocol_label">Protocoltype</string>
+    <string name="hrv_test_protocol_step">Progressieve stappentest</string>
+    <string name="hrv_test_protocol_ramp">Continue hellingtest</string>
+    <string name="hrv_test_sport_label">Sport</string>
+    <string name="hrv_test_sport_cycling">Fietsen (Watt)</string>
+    <string name="hrv_test_sport_running">Hardlopen (Snelheid / Tempo)</string>
+    <string name="hrv_test_step_duration_label">Stapduur</string>
+    <string name="hrv_test_step_duration_4min">4 min (Aanbevolen)</string>
+    <string name="hrv_test_step_duration_3min">3 min (Minimum)</string>
+    <string name="hrv_test_start_load_label">Startbelasting</string>
+    <string name="hrv_test_increment_label">Stapverhoging</string>
+    <string name="hrv_test_warmup_label">Duur warming-up</string>
+    <string name="hrv_test_warmup_desc">10 minuten gelijkmatige warming-up voor de protocolstappen</string>
+    <string name="hrv_test_preflight_title">Sensorcontrole vooraf</string>
+    <string name="hrv_test_preflight_checking">ECG RR-stroom &amp; signaalkwaliteit verifiëren…</string>
+    <string name="hrv_test_preflight_pass" formatted="false">Hoge sensorkwaliteit (Artefacten ≤ 3,0%)</string>
+    <string name="hrv_test_preflight_warning" formatted="false">Matige sensorkwaliteit (Artefacten 3,0–5,0%)</string>
+    <string name="hrv_test_preflight_fail" formatted="false">Sensor ongeschikt (Artefacten &gt; 5,0% of geen RR-gegevens)</string>
+    <string name="hrv_test_preflight_no_sensor">Geen hartslagsensor verbonden. Verbind een ECG-borstband.</string>
+    <string name="hrv_test_phase_warmup">Warming-up</string>
+    <string name="hrv_test_phase_step">Stap %1$d</string>
+    <string name="hrv_test_phase_ramp">Helling</string>
+    <string name="hrv_test_phase_cooldown">Cooling-down</string>
+    <string name="hrv_test_target_power">Doel: %1$d W</string>
+    <string name="hrv_test_target_pace">Doel: %1$s</string>
+    <string name="hrv_test_time_remaining">Resterende tijd: %1$s</string>
+    <string name="hrv_test_live_a1">Live a1: %1$.2f</string>
+    <string name="hrv_test_live_artifacts">Artefacten: %1$.1f%%</string>
+    <string name="hrv_test_early_complete_title">Drempels vastgelegd!</string>
+    <string name="hrv_test_early_complete_desc">DFA a1 is onder 0,45 gedaald. Zowel HRVT1 als HRVT2 zijn vastgelegd. U kunt nu overgaan op cooling-down zonder tot uitputting te gaan.</string>
+    <string name="hrv_test_btn_start">Test starten</string>
+    <string name="hrv_test_btn_finish">Test voltooien</string>
+    <string name="hrv_test_btn_cooldown">Start cooling-down</string>
+    <string name="hrv_test_btn_cancel">Test annuleren</string>
 </resources>

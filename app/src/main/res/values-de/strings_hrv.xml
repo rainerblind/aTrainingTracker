@@ -149,4 +149,42 @@
     <string name="hrv_threshold_diag_low_r2">Geringe lineare Korrelation (R² = %1$.2f &lt; %2$.2f)</string>
     <string name="hrv_threshold_no_estimate">--</string>
     <string name="hrv_threshold_informative_only">Nur zur Information; von Zonenaktualisierungen ausgeschlossen</string>
+
+    <!-- Guided DFA a1 Ramp/Step Test Screen (ATT-4969 / REQ-TRK-071) -->
+    <string name="hrv_test_title">Geführter DFA a1 Schwellentest</string>
+    <string name="hrv_test_subtitle">Aerobes &amp; Anaerobes Schwellenprotokoll</string>
+    <string name="hrv_test_protocol_label">Protokolltyp</string>
+    <string name="hrv_test_protocol_step">Progressiver Stufentest</string>
+    <string name="hrv_test_protocol_ramp">Kontinuierlicher Rampentest</string>
+    <string name="hrv_test_sport_label">Sportart</string>
+    <string name="hrv_test_sport_cycling">Radfahren (Watt)</string>
+    <string name="hrv_test_sport_running">Laufen (Tempo / Pace)</string>
+    <string name="hrv_test_step_duration_label">Stufendauer</string>
+    <string name="hrv_test_step_duration_4min">4 Min. (Empfohlen)</string>
+    <string name="hrv_test_step_duration_3min">3 Min. (Minimum)</string>
+    <string name="hrv_test_start_load_label">Startbelastung</string>
+    <string name="hrv_test_increment_label">Stufensteigerung</string>
+    <string name="hrv_test_warmup_label">Aufwärmdauer</string>
+    <string name="hrv_test_warmup_desc">10 Minuten gleichmäßiges Aufwärmen vor den Teststufen</string>
+    <string name="hrv_test_preflight_title">Vorflug-Sensorkontrolle</string>
+    <string name="hrv_test_preflight_checking">EKG-RR-Stream &amp; Signalqualität werden überprüft…</string>
+    <string name="hrv_test_preflight_pass" formatted="false">Hohe Sensorqualität (Artefakte ≤ 3,0 %)</string>
+    <string name="hrv_test_preflight_warning" formatted="false">Mäßige Sensorqualität (Artefakte 3,0–5,0 %)</string>
+    <string name="hrv_test_preflight_fail" formatted="false">Sensor ungeeignet (Artefakte &gt; 5,0 % oder keine RR-Daten)</string>
+    <string name="hrv_test_preflight_no_sensor">Kein Herzfrequenzsensor verbunden. Bitte verbinden Sie einen EKG-Brustgurt.</string>
+    <string name="hrv_test_phase_warmup">Aufwärmen</string>
+    <string name="hrv_test_phase_step">Stufe %1$d</string>
+    <string name="hrv_test_phase_ramp">Rampe</string>
+    <string name="hrv_test_phase_cooldown">Auslaufen / Abwärmen</string>
+    <string name="hrv_test_target_power">Ziel: %1$d W</string>
+    <string name="hrv_test_target_pace">Ziel: %1$s</string>
+    <string name="hrv_test_time_remaining">Verbleibende Zeit: %1$s</string>
+    <string name="hrv_test_live_a1">Live-a1: %1$.2f</string>
+    <string name="hrv_test_live_artifacts">Artefakte: %1$.1f%%</string>
+    <string name="hrv_test_early_complete_title">Schwellen erfasst!</string>
+    <string name="hrv_test_early_complete_desc">DFA a1 ist unter 0,45 gefallen. Sowohl HRVT1 als auch HRVT2 sind erfasst. Sie können nun ohne Ausbelastung zum Abwärmen übergehen.</string>
+    <string name="hrv_test_btn_start">Test starten</string>
+    <string name="hrv_test_btn_finish">Test beenden</string>
+    <string name="hrv_test_btn_cooldown">Abwärmen beginnen</string>
+    <string name="hrv_test_btn_cancel">Test abbrechen</string>
 </resources>

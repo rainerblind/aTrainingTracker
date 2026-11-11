@@ -3,7 +3,7 @@
 **Domain**: `tracking_cockpit`  
 **Prefixes**: `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA`  
 **Scope**: Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle.  
-**Total Tests**: 55
+**Total Tests**: 56
 
 ---
 
@@ -2178,6 +2178,33 @@
   • Verify zero format specifier mismatches and zero illegal collapsed linebreaks.
   5. *Clean-Room Targeted Regression Suite Execution (`TST-TRK-070.5`)*:
   • `./gradlew testDebugUnitTest --tests "com.atrainingtracker.banalservice.sensor.*" --tests "com.atrainingtracker.banalservice.ActivityTypeTest" --tests "com.atrainingtracker.trainingtracker.ui.tracking.editsensorfield.*"` asserting 100% pass rate.
+
+### TST-TRK-072: **Guided DFA a1 Step & Ramp Test Protocol Suite** [Verified]
+- **Requirement(s)**: `REQ-TRK-072` (`REQ-TRK-072.1`..`REQ-TRK-072.6`)
+- **Component**: `HrvRampTestViewModel.kt`, `HrvRampTestScreen.kt`, `HrvRampTestConfig.kt`, `HrvThresholdEstimator.kt`
+- **Jira**: `ATT-4969`
+- **Test Description**:
+  1. *Protocol Configuration & State Machine Transitions (`TST-TRK-072.1`, `HrvRampTestViewModelTest.kt`)*:
+     • Verify lifecycle state machine transitions across `CONFIG` -> `PRE_FLIGHT` -> `WARMUP` -> `TESTING` -> `COOLDOWN` -> `FINISHED`.
+     • Verify Cycling step presets (default 4 min / 240 s steps, starting load 100 W, increment +15 W) and continuous ramp configuration ($\tau_{\text{MRT}} = 45\text{ s}$).
+     • Verify Running presets (start speed / pace, 4-min steps, +0.5 km/h increment).
+  2. *Pre-Flight Sensor Quality & RR Stream Check (`TST-TRK-072.2`, `HrvRampTestViewModelTest.kt`)*:
+     • Verify `HIGH` quality status when beat-to-beat RR is streaming with artifact rate $\le 3.0\%$.
+     • Verify `WARNING` status when artifact rate is between $3.0\%$ and $5.0\%$.
+     • Verify `FAIL` status and blocked start when artifact rate $> 5.0\%$, smoothed stream detected, or no RR data available.
+  3. *Early Sub-Exhaustion Auto-Completion Detection (`TST-TRK-072.3`, `HrvRampTestViewModelTest.kt`)*:
+     • Stream simulated DFA $\alpha_1$ values descending from $1.00$ to $0.44$.
+     • Verify that sustained $\alpha_1 < 0.45$ for $\ge 60\text{ s}$ transitions state to `EARLY_COMPLETION` with user alert and prompts transition to `COOLDOWN`.
+     • Verify that transient dips below $0.45$ lasting $< 60\text{ s}$ do not trigger early completion.
+  4. *Per-Step Evaluation Window & Metadata Tagging (`TST-TRK-072.4`, `HrvRampTestViewModelTest.kt` / `HrvThresholdEstimatorTest.kt`)*:
+     • Verify workout session is tagged with `hrvTestProtocol = GUIDED_STEP` or `GUIDED_RAMP` with step duration and ramp slope.
+     • Verify `HrvThresholdEstimator` computes step points strictly over $[t_{\text{end},j} - 120\text{ s}, t_{\text{end},j}]$ with zero bleed into subsequent steps.
+  5. *Compose UI Screen Rendering & Pacing Guidance (`TST-TRK-072.5`, `HrvRampTestScreenTest.kt`)*:
+     • Verify Compose rendering of protocol title, active step indicator, target power/pace gauge, countdown timer, live $\alpha_1$, live artifact %, and early completion dialog.
+  6. *9-Language Localization & Format Parity Test (`TST-TRK-072.6`, `TranslationParityTest.kt`)*:
+     • Verify 100% presence and parity of all test screen string keys in `strings_hrv.xml` across all 9 locales: `values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`.
+  7. *Clean-Room Targeted Test Suite Execution (`TST-TRK-072.7`)*:
+     • `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.hrv.*" --tests "com.atrainingtracker.trainingtracker.localization.TranslationParityTest"` asserting 100% pass rate.
 
 
 

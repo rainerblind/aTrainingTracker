@@ -48,6 +48,7 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.testTag
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CalendarToday
@@ -131,6 +132,7 @@ fun AthleteProfileScreen(
     initialTab: Int = 0,
     onOpenDrawer: (() -> Unit)? = null,
     onNavigateToMorningHrv: (() -> Unit)? = null,
+    onNavigateToHrvTest: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -152,6 +154,7 @@ fun AthleteProfileScreen(
         onDeleteHrvReading = viewModel::deleteHrvReading,
         onOpenDrawer = onOpenDrawer,
         onNavigateToMorningHrv = onNavigateToMorningHrv,
+        onNavigateToHrvTest = onNavigateToHrvTest,
         initialTab = initialTab,
         modifier = modifier
     )
@@ -185,6 +188,7 @@ fun AthleteProfileContent(
     onDeleteHrvReading: (Long) -> Unit = {},
     onOpenDrawer: (() -> Unit)? = null,
     onNavigateToMorningHrv: (() -> Unit)? = null,
+    onNavigateToHrvTest: (() -> Unit)? = null,
     initialTab: Int = 0,
     modifier: Modifier = Modifier
 ) {
@@ -372,6 +376,28 @@ fun AthleteProfileContent(
                                     Spacer(modifier = Modifier.width(8.dp))
                                     Text(
                                         text = stringResource(R.string.hrv_measure_morning_cta),
+                                        style = MaterialTheme.typography.labelLarge
+                                    )
+                                }
+                            }
+
+                            // 1b. "Guided DFA a1 Threshold Test" CTA button (REQ-TRK-072)
+                            item {
+                                OutlinedButton(
+                                    onClick = { onNavigateToHrvTest?.invoke() },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .testTag("btn_guided_hrv_test"),
+                                    shape = RoundedCornerShape(10.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Favorite,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        text = stringResource(R.string.hrv_test_title),
                                         style = MaterialTheme.typography.labelLarge
                                     )
                                 }

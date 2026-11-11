@@ -3,7 +3,7 @@
 **Domain**: `tracking_cockpit`  
 **Prefixes**: `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA`  
 **Scope**: Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle.  
-**Total Requirements**: 85
+**Total Requirements**: 86
 
 ---
 
@@ -3959,6 +3959,58 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 • *Then* 100% of category and sub-category title strings exist without missing translations or malformed format tokens.
 
 **Invariants**: All 63 `SensorType` enum names and ordinals preserved; zero SQLite schema modifications; Section 5.8 bottom sheet scroll safety preserved; 100% unit and localization test pass rate.
+
+### REQ-TRK-072: Guided DFA a1 Step & Ramp Test Protocol Screen [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-TRK-072` | **Tickets**: `ATT-4969`
+- **Implementation**: `app/src/main/java/com/atrainingtracker/trainingtracker/ui/hrv/HrvRampTestScreen.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/ui/hrv/HrvRampTestViewModel.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/ui/hrv/HrvRampTestConfig.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/ui/hrv/HrvRampTestState.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/navigation/NavRoutes.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/ui/ATrainingTrackerApp.kt`
+- **Rationale**: While `ATT-3554` established confidence-gated post-workout threshold estimation (`REQ-PER-036`), determining physiological thresholds ($HRVT_1$ and $HRVT_2$) in unstandardized free-form workouts suffers from non-monotonic power/pace progressions, cadence surges, and pacing variability that reduce $R^2$ and trigger span failures. Furthermore, athletes often mistakenly believe threshold testing requires riding to maximal physical exhaustion, whereas autonomic threshold capture is complete as soon as DFA $\alpha_1$ sustainably drops below $0.45$. The system SHALL provide a dedicated, guided DFA $\alpha_1$ step and continuous ramp test protocol screen with pre-flight sensor checks, live target pacing guidance, and automated early sub-exhaustion completion detection.
+- **Description**:
+  1. *Protocol Configuration & Pacing Presets (`REQ-TRK-072.1`)*:
+     - The system SHALL provide configurable test protocols supporting both Cycling (`BIKE_POWER`, power in Watts) and Running (`RUNNING`, speed in km/h or pace in min/km).
+     - **Progressive Step Protocol (`GUIDED_STEP`)**: Defaults to 4 min (240 s) steps for complete cardiodynamic and autonomic settling (with selectable 3 min / 180 s minimum option). Configurable starting target (e.g. 100 W or 45% FTP for cycling) and step increment (default +15 W or +20 W; +0.5 km/h for running).
+     - **Continuous Ramp Protocol (`GUIDED_RAMP`)**: Continuous linear progression with gentle slope $s \in \{+10\text{ W/min}, +15\text{ W/min}\}$ starting at 100 W or 45% FTP, tagging Mean Response Time $\tau_{\text{MRT}} = 45\text{ s}$ for downstream lag-compensated threshold estimation.
+     - **Standard Warm-up**: Configurable steady warm-up defaulting to 10 minutes prior to protocol steps.
+  2. *Per-Step Evaluation Window & Zero Bleed Contract (`REQ-TRK-072.2`)*:
+     - For `GUIDED_STEP`, each completed step $j$ ending at $t_{\text{end},j}$ SHALL contribute exactly one $(\overline{P}_j, \overline{\text{HR}}_j, \alpha_{1,j})$ data point evaluated strictly on RR beats inside $[t_{\text{end},j} - 120\text{ s}, t_{\text{end},j}]$.
+     - Step evaluation SHALL NOT use data points beyond $t_{\text{end},j} - 60\text{ s}$ for centered windows, guaranteeing zero bleed into subsequent step transitions and eliminating step settling transients.
+  3. *Pre-Flight Sensor Quality & RR Stream Check (`REQ-TRK-072.3`)*:
+     - Prior to commencing the test, the system SHALL evaluate connected heart rate telemetry for beat-to-beat RR intervals.
+     - The pre-flight check SHALL grade sensor readiness:
+       - **High Quality**: ECG chest strap connected, beat-to-beat RR streaming, artifact rate $\le 3.0\%$.
+       - **Moderate Quality**: Artifact rate between $3.0\%$ and $5.0\%$, displaying a warning that results will be capped at `Confidence.MEDIUM`.
+       - **Unsuitable**: Artifact rate $> 5.0\%$, firmware-smoothed RR stream detected, or no RR interval stream available (e.g., optical wrist sensor). Test start SHALL be gated with clear user diagnostics.
+  4. *In-Workout Real-Time Guidance & Cockpit Overlay (`REQ-TRK-072.4`)*:
+     - The protocol screen SHALL render current phase (`WARMUP`, `STEP`, `RAMP`, `COOLDOWN`), active target intensity (Watts or Pace), step countdown timer ($MM:SS$), live DFA $\alpha_1$, live artifact rate (%), and current HR.
+  5. *Early Sub-Exhaustion Auto-Completion Detection (`REQ-TRK-072.5`)*:
+     - During the test phase, when live DFA $\alpha_1$ drops sustainably below $0.45$ for at least 60 consecutive seconds (confirming both $HRVT_1 = 0.75$ and $HRVT_2 = 0.50$ have been traversed), the system SHALL immediately notify the athlete via visual banner and audible tone that threshold determination is complete.
+     - The system SHALL offer a 1-tap transition into cool-down, terminating test loading without requiring maximal volitional exhaustion.
+  6. *Session Metadata Tagging & Decimated Grid Quality Governance (`REQ-TRK-072.6`)*:
+     - Upon completion, the session SHALL be tagged with `hrvTestProtocol = GUIDED_STEP` or `GUIDED_RAMP` and associated protocol parameters (`stepDurationSec`, `rampSlopeWattsPerMin`).
+     - Downstream threshold estimation in `HrvThresholdEstimator` (`REQ-PER-036`) SHALL restrict regression analysis strictly to the post-warmup monotonic test window and enforce quality gates on the decimated grid ($R^2 \ge 0.70$, artifact rate $\le 3.0\%$, $\ge 5$ steps or $N_{\text{eff}} \ge 10$) for `Confidence.HIGH`.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-TRK-072`, extending `REQ-TRK-061` (*Live HRV Telemetry & Configurable DFA a1 Thresholds*) and companion to `REQ-PER-036` (*Confidence-Gated HRVT1/HRVT2 Estimation & Summary Card*). Targets `HrvRampTestScreen.kt`, `HrvRampTestViewModel.kt`, `HrvRampTestConfig.kt`, and `ATrainingTrackerApp.kt`.
+2. *Historical Origin & Commit Trace*: Conceived in Epic `ATT-3539` (*Heart Rate Variability*), companion to `ATT-3554` (commit `5deec7cd`).
+3. *Root Reason for Existing Formulation*: Athletic tracking previously supported only free progression or static zone alerts. Free progression frequently suffers from pacing variability and non-monotonicity, while athletes lacked guidance to terminate tests sub-maximally when DFA $\alpha_1 < 0.45$.
+4. *Preservation of Core Invariants*: Preserves `TrackerService` 1 Hz telemetry and SQLite persistence (`REQ-TRK-015`, `REQ-TRK-026`), `HrvThresholdEstimator` mathematical model (`REQ-PER-036`), Section 5.8 Composable lifecycle isolation, and 100% 9-language localization parity.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* an athlete configuring a Guided DFA $\alpha_1$ Step Test on cycling,
+• *When* inspecting protocol options,
+• *Then* default step duration is 4 minutes (with 3-minute minimum option), warm-up is 10 minutes, and power targets increment by +15 W or +20 W per step.
+• *Given* an athlete with an ECG chest strap initiating pre-flight sensor check,
+• *When* beat-to-beat RR intervals stream with artifact rate $\le 3.0\%$,
+• *Then* pre-flight passes with High Quality status enabling test start.
+• *Given* a test in progress where DFA $\alpha_1$ drops below $0.45$ sustainably for $\ge 60\text{ s}$,
+• *When* the condition is met,
+• *Then* the screen notifies the athlete that both thresholds ($HRVT_1$ and $HRVT_2$) are captured and prompts immediate transition to cool-down without exhaustion.
+• *Given* a completed Guided Step Test session evaluated by `HrvThresholdEstimator`,
+• *When* regression is performed,
+• *Then* each step is evaluated strictly over $[t_{\text{end},j} - 120\text{ s}, t_{\text{end},j}]$ with zero bleed into subsequent steps, and high confidence is emitted only if $R^2 \ge 0.70$, artifact rate $\le 3.0\%$, and $\ge 5$ valid steps are present.
+
+**Invariants**: Zero background service sampling regressions; zero SQLite schema modifications; Section 5.8 Composable navigation safety; 100% clean-room test pass rate across all 9 locales.
+
 
 
 

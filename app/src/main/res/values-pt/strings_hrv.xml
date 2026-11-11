@@ -149,4 +149,42 @@
     <string name="hrv_threshold_diag_low_r2">Baixa correlação linear (R² = %1$.2f &lt; %2$.2f)</string>
     <string name="hrv_threshold_no_estimate">--</string>
     <string name="hrv_threshold_informative_only">Apenas informativo; excluído das atualizações de zona</string>
+
+    <!-- Guided DFA a1 Ramp/Step Test Screen (ATT-4969 / REQ-TRK-071) -->
+    <string name="hrv_test_title">Teste guiado de limiares DFA a1</string>
+    <string name="hrv_test_subtitle">Protocolo de limiares aeróbico e anaeróbico</string>
+    <string name="hrv_test_protocol_label">Tipo de protocolo</string>
+    <string name="hrv_test_protocol_step">Teste de degraus progressivos</string>
+    <string name="hrv_test_protocol_ramp">Teste de rampa contínua</string>
+    <string name="hrv_test_sport_label">Esporte</string>
+    <string name="hrv_test_sport_cycling">Ciclismo (Watts)</string>
+    <string name="hrv_test_sport_running">Corrida (Velocidade / Ritmo)</string>
+    <string name="hrv_test_step_duration_label">Duração do degrau</string>
+    <string name="hrv_test_step_duration_4min">4 min (Recomendado)</string>
+    <string name="hrv_test_step_duration_3min">3 min (Mínimo)</string>
+    <string name="hrv_test_start_load_label">Carga inicial</string>
+    <string name="hrv_test_increment_label">Incremento por degrau</string>
+    <string name="hrv_test_warmup_label">Duração do aquecimento</string>
+    <string name="hrv_test_warmup_desc">Aquecimento constante de 10 minutos antes dos degraus do protocolo</string>
+    <string name="hrv_test_preflight_title">Verificação prévia do sensor</string>
+    <string name="hrv_test_preflight_checking">Verificando fluxo RR de ECG e qualidade do sinal…</string>
+    <string name="hrv_test_preflight_pass" formatted="false">Alta qualidade do sensor (Artefatos ≤ 3,0%)</string>
+    <string name="hrv_test_preflight_warning" formatted="false">Qualidade moderada do sensor (Artefatos 3,0–5,0%)</string>
+    <string name="hrv_test_preflight_fail" formatted="false">Sensor inadequado (Artefatos &gt; 5,0% ou sem dados RR)</string>
+    <string name="hrv_test_preflight_no_sensor">Nenhum sensor de frequência cardíaca conectado. Conecte uma cinta peitoral de ECG.</string>
+    <string name="hrv_test_phase_warmup">Aquecimento</string>
+    <string name="hrv_test_phase_step">Degrau %1$d</string>
+    <string name="hrv_test_phase_ramp">Rampa</string>
+    <string name="hrv_test_phase_cooldown">Resfriamento</string>
+    <string name="hrv_test_target_power">Alvo: %1$d W</string>
+    <string name="hrv_test_target_pace">Alvo: %1$s</string>
+    <string name="hrv_test_time_remaining">Tempo restante: %1$s</string>
+    <string name="hrv_test_live_a1">a1 ao vivo: %1$.2f</string>
+    <string name="hrv_test_live_artifacts">Artefatos: %1$.1f%%</string>
+    <string name="hrv_test_early_complete_title">Limiares capturados!</string>
+    <string name="hrv_test_early_complete_desc">O DFA a1 caiu abaixo de 0,45. Ambos HRVT1 e HRVT2 foram capturados. Agora você pode fazer a transição para o desaquecimento sem precisar chegar à exaustão.</string>
+    <string name="hrv_test_btn_start">Iniciar teste</string>
+    <string name="hrv_test_btn_finish">Finalizar teste</string>
+    <string name="hrv_test_btn_cooldown">Iniciar resfriamento</string>
+    <string name="hrv_test_btn_cancel">Cancelar teste</string>
 </resources>

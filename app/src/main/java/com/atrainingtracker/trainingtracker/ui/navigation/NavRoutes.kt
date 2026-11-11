@@ -44,6 +44,7 @@ object NavRoutes {
     const val WORKOUTS = "workouts"
     const val PERIODS = "periods"
     const val MORNING_HRV = "morning_hrv"
+    const val HRV_TEST = "hrv_test"
     const val MAP = "map"
     const val MAP_PATTERN = "map?locationId={locationId}"
     const val ARG_LOCATION_ID = "locationId"
