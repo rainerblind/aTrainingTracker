@@ -138,4 +138,15 @@
 
     <!-- Advanced Settings / Tuning Accordion Category (ATT-6702 / REQ-UI-512) -->
     <string name="tuning_cat_cycling_radar">Fietsradar</string>
+
+    <!-- Post-Workout Traffic Analytics & Map Hotspots (ATT-5088 / REQ-RAD-005 / REQ-RAD-006) -->
+    <string name="radar_traffic_card_title">Radar verkeersoverzicht</string>
+    <string name="radar_total_vehicles">Inhalende voertuigen</string>
+    <string name="radar_traffic_density_km">Dichtheid (vtg/km)</string>
+    <string name="radar_traffic_density_hour">Dichtheid (vtg/u)</string>
+    <string name="radar_max_closing_speed">Max. naderingssnelheid</string>
+    <string name="radar_max_vehicle_speed">Max. voertuigsnelheid</string>
+    <string name="radar_high_threat_passes">Inhalingen met hoog risico</string>
+    <string name="radar_marker_pass_title">Inhalend voertuig (%1$s km/h)</string>
+    <string name="radar_marker_high_threat_title">Inhaling met hoog risico (%1$s km/h)</string>
 </resources>

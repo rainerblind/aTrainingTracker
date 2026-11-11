@@ -2148,6 +2148,16 @@
   • Execute targeted test suite (`--tests "com.atrainingtracker.trainingtracker.ui.RepositoryEngineCleanlinessContractTest" --tests "com.atrainingtracker.trainingtracker.database.*" --tests "com.atrainingtracker.trainingtracker.exporter.*" --tests "com.atrainingtracker.trainingtracker.migration.*" --tests "com.atrainingtracker.trainingtracker.tcx.*"`).
   • Assert 100% pass rate.
 
+### TST-EXP-042: **Garmin FIT Radar Threat Event & Developer Field Encoding Test** [Verified]
+- **Requirement(s)**: `REQ-EXP-042`
+- **Component**: `FitFileWriter.java`, `FitFileWriterRadarTest.kt`
+- **Jira**: `ATT-5088`
+- **Test Description**:
+  1. *Native FIT Radar Threat Event Test*: Export synthetic workout containing overtaking vehicle passes ($\Delta \text{RADAR\_VEHICLE\_COUNT} > 0$); decode output using Garmin FIT SDK `FitDecoder`; assert emission of `EventMesg` (`Event.RADAR_THREAT_ALERT`, `EventType.MARKER`) with matching threat count, threat level, and approach speed.
+  2. *MyBikeTraffic Developer Field Encoding Test*: Assert that `FitFileWriter` defines and serializes developer fields (`radar_current`, `radar_total`, `passing_speed`, `passing_speed_abs`) on `RecordMesg` according to FIT Protocol V2.0 specifications.
+  3. *Non-Radar Invariant Test*: Verify workouts without radar data export standard FIT files without developer fields or radar event overhead.
+
+
 
 
 

@@ -1150,6 +1150,16 @@
   4. *Targeted Regression Verification Suite (`TST-MAP-067.4`)*:
   • Run targeted tests: `--tests "com.atrainingtracker.trainingtracker.segments.*"` asserting 100% pass rate.
 
+### TST-RAD-006: **Aftermath Map Traffic Hotspot Markers Extraction & Geo-Location Test** [Verified]
+- **Requirement(s)**: `REQ-RAD-006`
+- **Component**: `WorkoutRepository.kt`, `TrackOnMapAftermathViewModel.kt`, `TrackOnMapScreen.kt`, `TrackOnMapAftermathViewModelTest.kt`
+- **Jira**: `ATT-5088`
+- **Test Description**:
+  1. *Pass Event Extraction Contract Test*: Verify `WorkoutRepository.getWorkoutMarkers()` identifies sample points where $\Delta \text{RADAR\_VEHICLE\_COUNT} > 0$ and creates `LocationMarker` instances with valid coordinates and speed metadata.
+  2. *High-Threat Visual Distinction Test*: Verify high-threat passes (`FAST_APPROACHING`) are tagged with distinct threat level metadata for visual differentiation on `TrackOnMapScreen.kt`.
+  3. *Non-Radar Isolation Invariant Test*: Verify workouts without radar samples yield zero traffic hotspot markers and preserve all standard track markers.
+
+
 
 
 

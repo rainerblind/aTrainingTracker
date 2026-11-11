@@ -138,6 +138,7 @@ data class WorkoutData(
     val maxPowerToWeight: Double? = null,
     val variabilityIndex: Double? = null,
     val cardioPowerDynamics: CardioPowerDynamicsRecord? = null,
+    val radarTrafficSummary: RadarTrafficSummary? = null,
 
     // --- 3. Heavy/Live Data ---
     val exportStatuses: List<ExportStatusGroupData> = emptyList(),

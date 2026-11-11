@@ -1021,6 +1021,25 @@
 
 **Invariants**: Zero out-of-span linear extrapolation; 60s decimation decorrelation; 100% 9-language localization parity; zero card rendering for non-HRV workouts.
 
+### REQ-RAD-005: Workout Traffic Persistence, Session Totals & Aftermath Summary Card [Verified]
+- **Tests**: `TST-RAD-005` | **Tickets**: `ATT-5088`
+- **Implementation**: `WorkoutExportHeader.kt`, `WorkoutRepository.kt`, `WorkoutSummariesDatabaseManager.java`, `RadarTrafficSummaryCard.kt`, `WorkoutDetailTabbedContent.kt`, `strings.xml`
+- **Rationale**: Cyclists reviewing rides recorded with cycling rearview radar require post-workout traffic analytics detailing total vehicles passed, traffic density, and peak vehicle speeds. The system SHALL persist 1 Hz scalar radar samples, compute session traffic extrema, and render a dedicated Traffic Summary Card in Workout Details with 100% 9-language localization parity without requiring database schema migrations.
+- **Description**:
+  1. *Sample Streaming & Persistence*: `WorkoutSampleRecord` in `WorkoutExportHeader.kt` and `WorkoutRepository.streamSamples()` SHALL expose latched 1 Hz radar metrics (`radarThreatCount: Int?`, `radarClosestDistanceM: Double?`, `radarApproachSpeedMps: Double?`, `radarVehicleCount: Int?`) populated from `WorkoutSamples.db` with zero SQLite schema migrations (`DB_VERSION` unchanged).
+  2. *Session Traffic Extrema*: The system SHALL aggregate session traffic extrema (`RadarTrafficSummary`): total vehicles passed, traffic density (vehicles/km and vehicles/hour), max approach speed, max absolute vehicle speed ($v_{\text{rider}} + v_{\text{approach}}$), and high-threat passes.
+  3. *Aftermath Traffic Summary Card*: `RadarTrafficSummaryCard.kt` SHALL render conditionally in `WorkoutDetailTabbedContent.kt` (`DETAILS`) when radar data is present. The card SHALL display key metrics (total vehicles, density per km/h, max closing speed, high-threat passes) localized across all 9 supported locales (EN, DE, ES, FR, IT, JA, NL, PL, PT). Non-radar workouts SHALL omit the card with zero layout shifts or performance overhead.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* a workout recorded with active radar telemetry,
+• *When* the workout is opened in Workout Details,
+• *Then* `RadarTrafficSummaryCard` renders total vehicles, traffic density, and peak speeds in the active locale.
+• *Given* a workout recorded without a radar sensor,
+• *When* opening Workout Details,
+• *Then* `RadarTrafficSummaryCard` is gracefully omitted without layout shift or error.
+
+**Invariants**: Zero SQLite schema migration; 100% 9-language localization parity; zero overhead or UI display for non-radar rides.
+
 
 
 

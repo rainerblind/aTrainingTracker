@@ -39,6 +39,12 @@ import com.atrainingtracker.trainingtracker.exporter.ExportInfo;
 import com.garmin.fit.Activity;
 import com.garmin.fit.ActivityMesg;
 import com.garmin.fit.DateTime;
+import com.garmin.fit.DeveloperDataIdMesg;
+import com.garmin.fit.DeveloperField;
+import com.garmin.fit.Event;
+import com.garmin.fit.EventMesg;
+import com.garmin.fit.EventType;
+import com.garmin.fit.FieldDescriptionMesg;
 import com.garmin.fit.FileEncoder;
 import com.garmin.fit.FileIdMesg;
 import com.garmin.fit.Fit;
@@ -46,6 +52,7 @@ import com.garmin.fit.HrvMesg;
 import com.garmin.fit.Intensity;
 import com.garmin.fit.LapMesg;
 import com.garmin.fit.Manufacturer;
+import com.garmin.fit.RadarThreatLevelType;
 import com.garmin.fit.RecordMesg;
 import com.garmin.fit.SessionMesg;
 import com.garmin.fit.Sport;
@@ -53,6 +60,7 @@ import com.garmin.fit.SubSport;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.text.ParseException;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
@@ -62,6 +70,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
+import java.util.UUID;
 import java.util.concurrent.CancellationException;
 
 /**
@@ -210,6 +219,74 @@ public class FitFileWriter extends BaseFileWriter {
             final long[] sampleCount = new long[]{0};
             final FileEncoder finalEncoder = encoder;
 
+            // Determine if radar metrics are present in this workout (REQ-EXP-042 / ATT-5088)
+            boolean haveRadar = workoutId > 0 && WorkoutRepository.getInstance(mContext).hasRadarData(workoutId, exportInfo.getFileBaseName());
+            DeveloperDataIdMesg devDataIdMesg = null;
+            FieldDescriptionMesg radarCurrentDesc = null;
+            FieldDescriptionMesg radarTotalDesc = null;
+            FieldDescriptionMesg passingSpeedDesc = null;
+            FieldDescriptionMesg passingSpeedAbsDesc = null;
+
+            if (haveRadar) {
+                devDataIdMesg = new DeveloperDataIdMesg();
+                devDataIdMesg.setDeveloperDataIndex((short) 0);
+                devDataIdMesg.setManufacturerId(Manufacturer.DEVELOPMENT);
+                devDataIdMesg.setApplicationVersion(1L);
+                UUID appIdUuid = UUID.fromString("6a4e3200-667b-11e3-949a-0800200c9a66");
+                ByteBuffer bb = ByteBuffer.wrap(new byte[16]);
+                bb.putLong(appIdUuid.getMostSignificantBits());
+                bb.putLong(appIdUuid.getLeastSignificantBits());
+                byte[] appIdBytes = bb.array();
+                for (int i = 0; i < 16; i++) {
+                    devDataIdMesg.setApplicationId(i, appIdBytes[i]);
+                }
+                encoder.write(devDataIdMesg);
+
+                radarCurrentDesc = new FieldDescriptionMesg();
+                radarCurrentDesc.setDeveloperDataIndex((short) 0);
+                radarCurrentDesc.setFieldDefinitionNumber((short) 0);
+                radarCurrentDesc.setFitBaseTypeId((short) Fit.BASE_TYPE_UINT8);
+                radarCurrentDesc.setFieldName(0, "radar_current");
+                radarCurrentDesc.setScale((short) 1);
+                radarCurrentDesc.setUnits(0, "targets");
+                encoder.write(radarCurrentDesc);
+
+                radarTotalDesc = new FieldDescriptionMesg();
+                radarTotalDesc.setDeveloperDataIndex((short) 0);
+                radarTotalDesc.setFieldDefinitionNumber((short) 1);
+                radarTotalDesc.setFitBaseTypeId((short) Fit.BASE_TYPE_UINT16);
+                radarTotalDesc.setFieldName(0, "radar_total");
+                radarTotalDesc.setScale((short) 1);
+                radarTotalDesc.setUnits(0, "vehicles");
+                encoder.write(radarTotalDesc);
+
+                passingSpeedDesc = new FieldDescriptionMesg();
+                passingSpeedDesc.setDeveloperDataIndex((short) 0);
+                passingSpeedDesc.setFieldDefinitionNumber((short) 2);
+                passingSpeedDesc.setFitBaseTypeId((short) Fit.BASE_TYPE_UINT16);
+                passingSpeedDesc.setFieldName(0, "passing_speed");
+                passingSpeedDesc.setScale((short) 100);
+                passingSpeedDesc.setUnits(0, "m/s");
+                encoder.write(passingSpeedDesc);
+
+                passingSpeedAbsDesc = new FieldDescriptionMesg();
+                passingSpeedAbsDesc.setDeveloperDataIndex((short) 0);
+                passingSpeedAbsDesc.setFieldDefinitionNumber((short) 3);
+                passingSpeedAbsDesc.setFitBaseTypeId((short) Fit.BASE_TYPE_UINT16);
+                passingSpeedAbsDesc.setFieldName(0, "passing_speed_abs");
+                passingSpeedAbsDesc.setScale((short) 100);
+                passingSpeedAbsDesc.setUnits(0, "m/s");
+                encoder.write(passingSpeedAbsDesc);
+            }
+
+            final boolean finalHaveRadar = haveRadar;
+            final DeveloperDataIdMesg finalDevDataIdMesg = devDataIdMesg;
+            final FieldDescriptionMesg finalRadarCurrentDesc = radarCurrentDesc;
+            final FieldDescriptionMesg finalRadarTotalDesc = radarTotalDesc;
+            final FieldDescriptionMesg finalPassingSpeedDesc = passingSpeedDesc;
+            final FieldDescriptionMesg finalPassingSpeedAbsDesc = passingSpeedAbsDesc;
+            final int[] prevVehCount = new int[]{0};
+
             try {
                 WorkoutRepository.getInstance(mContext).streamSamples(exportInfo.getFileBaseName(), sample -> {
                     if (isCancelled()) {
@@ -323,6 +400,56 @@ public class FitFileWriter extends BaseFileWriter {
                         if (!hrvBatch.isEmpty()) {
                             writeHrvMesg(finalEncoder, hrvBatch);
                             hrvBatch.clear();
+                        }
+                    }
+
+                    // Vehicle pass event emission (REQ-EXP-042 / ATT-5088)
+                    if (finalHaveRadar && sample.getRadarVehicleCount() != null) {
+                        int currentVehCount = sample.getRadarVehicleCount();
+                        if (currentVehCount > prevVehCount[0]) {
+                            prevVehCount[0] = currentVehCount;
+                            EventMesg eventMesg = new EventMesg();
+                            eventMesg.setTimestamp(new DateTime(sampleDate));
+                            eventMesg.setEvent(Event.RADAR_THREAT_ALERT);
+                            eventMesg.setEventType(EventType.MARKER);
+                            if (sample.getRadarThreatCount() != null) {
+                                eventMesg.setRadarThreatCount((short) sample.getRadarThreatCount().intValue());
+                            }
+                            double appSpdKph = (sample.getRadarApproachSpeedMps() != null ? sample.getRadarApproachSpeedMps() : 0.0) * 3.6;
+                            boolean isHighThreat = (sample.getRadarThreatCount() != null && sample.getRadarThreatCount() >= 2) || appSpdKph >= 25.0;
+                            eventMesg.setRadarThreatLevelMax(isHighThreat ? RadarThreatLevelType.THREAT_APPROACHING_FAST : RadarThreatLevelType.THREAT_APPROACHING);
+                            if (sample.getRadarApproachSpeedMps() != null) {
+                                float spd = (float) Math.min(Math.max(sample.getRadarApproachSpeedMps(), 0.0), 25.4);
+                                eventMesg.setRadarThreatMaxApproachSpeed(spd);
+                                eventMesg.setRadarThreatAvgApproachSpeed(spd);
+                            }
+                            finalEncoder.write(eventMesg);
+                        }
+                    }
+
+                    // Attach FIT Protocol V2.0 Developer Fields on RecordMesg (REQ-EXP-042 / ATT-5088)
+                    if (finalHaveRadar) {
+                        if (sample.getRadarThreatCount() != null && finalRadarCurrentDesc != null) {
+                            DeveloperField f = new DeveloperField(finalRadarCurrentDesc, finalDevDataIdMesg);
+                            f.setValue((short) sample.getRadarThreatCount().intValue());
+                            record.addDeveloperField(f);
+                        }
+                        if (sample.getRadarVehicleCount() != null && finalRadarTotalDesc != null) {
+                            DeveloperField f = new DeveloperField(finalRadarTotalDesc, finalDevDataIdMesg);
+                            f.setValue(sample.getRadarVehicleCount());
+                            record.addDeveloperField(f);
+                        }
+                        if (sample.getRadarApproachSpeedMps() != null) {
+                            if (finalPassingSpeedDesc != null) {
+                                DeveloperField f = new DeveloperField(finalPassingSpeedDesc, finalDevDataIdMesg);
+                                f.setValue(sample.getRadarApproachSpeedMps());
+                                record.addDeveloperField(f);
+                            }
+                            if (finalPassingSpeedAbsDesc != null && sample.getSpeedMps() != null) {
+                                DeveloperField f = new DeveloperField(finalPassingSpeedAbsDesc, finalDevDataIdMesg);
+                                f.setValue(sample.getSpeedMps() + sample.getRadarApproachSpeedMps());
+                                record.addDeveloperField(f);
+                            }
                         }
                     }
 

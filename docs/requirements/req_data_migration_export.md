@@ -3313,6 +3313,35 @@
 
 **Invariants**: Phase C (`TrackerService`, `BANALService`) strictly untouched; zero SQLite schema alterations; 100% test pass rate across all existing exporter, migration, and repository unit tests.
 
+### REQ-EXP-042: Garmin FIT Radar Threat Alert Events & MyBikeTraffic Developer Fields [Verified]
+- **Tests**: `TST-EXP-042` | **Tickets**: `ATT-5088`
+- **Implementation**: `FitFileWriter.java`
+- **Rationale**: Cyclists exporting rides to Garmin FIT format expect compatibility with third-party cycling radar analytics platforms (such as *MyBikeTraffic*). The system SHALL encode standard FIT `EventMesg` (`Event.RADAR_THREAT_ALERT`) upon vehicle overtaking events and define FIT Protocol V2.0 Developer Fields on `RecordMesg` for 1 Hz radar metrics.
+- **Description**:
+  1. *Native FIT Radar Threat Event*: During sample streaming in `FitFileWriter.java`, upon detecting an overtaking vehicle pass ($\Delta \text{RADAR\_VEHICLE\_COUNT} > 0$), the encoder SHALL emit a standard FIT `EventMesg` with:
+     - `Event.RADAR_THREAT_ALERT`
+     - `EventType.MARKER`
+     - `setRadarThreatCount()` (threat count)
+     - `setRadarThreatLevelMax(RadarThreatLevelType)` (peak threat level)
+     - `setRadarThreatMaxApproachSpeed()` (peak approach closing speed in m/s)
+  2. *MyBikeTraffic Developer Fields on RecordMesg*: `FitFileWriter.java` SHALL declare FIT Developer Fields using `DeveloperDataIdMesg` and `FieldDescriptionMesg`:
+     - `radar_current` (uint8, current threat count)
+     - `radar_total` (uint16, cumulative vehicles passed)
+     - `passing_speed` (uint16, scale 100, closing speed in m/s)
+     - `passing_speed_abs` (uint16, scale 100, absolute vehicle speed $v_{\text{rider}} + v_{\text{approach}}$)
+  3. *FIT Protocol V2.0 Compliance*: Developer fields SHALL strictly adhere to FIT Protocol V2.0 specifications without corrupting standard FIT record fields. Non-radar workouts SHALL omit radar developer fields with zero performance overhead.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* a workout recorded with active rearview radar,
+• *When* exported to Garmin `.fit` format,
+• *Then* `EventMesg` messages are emitted with `Event.RADAR_THREAT_ALERT`, and `RecordMesg` records contain valid developer fields parsed cleanly by Garmin FIT SDK.
+• *Given* a workout recorded without radar data,
+• *When* exported to `.fit`,
+• *Then* zero radar events or developer fields are emitted, preserving standard FIT record encoding.
+
+**Invariants**: FIT Protocol V2.0 conformance; zero regressions in standard FIT fields (Speed, Power, HR, Cadence, GPS).
+
+
 
 
 

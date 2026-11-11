@@ -818,6 +818,14 @@ private fun RenderWorkoutDetailCardSections(
                             .padding(horizontal = 16.dp, vertical = 4.dp)
                     )
                 }
+                if (workoutData.radarTrafficSummary != null) {
+                    RadarTrafficSummaryCard(
+                        summary = workoutData.radarTrafficSummary,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 4.dp)
+                    )
+                }
             }
             WorkoutDetailSectionType.DESCRIPTION -> {
                 WorkoutDescription(

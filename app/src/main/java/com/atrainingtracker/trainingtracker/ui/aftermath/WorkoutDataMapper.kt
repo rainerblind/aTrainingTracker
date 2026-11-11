@@ -205,6 +205,16 @@ class WorkoutDataMapper(
             maxPowerToWeight = powerSummary.maxPowerToWeight,
             variabilityIndex = powerSummary.variabilityIndex,
             cardioPowerDynamics = workoutSummariesDatabaseManager.getCardioPowerDynamics(workoutId),
+            radarTrafficSummary = resolveRadarTrafficSummary(
+                totalVehiclesVal = workoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.RADAR_VEHICLE_COUNT, ExtremaType.MAX)
+                    ?: workoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.RADAR_VEHICLE_COUNT, ExtremaType.END),
+                maxApproachSpeedVal = workoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.RADAR_APPROACH_SPEED_mps, ExtremaType.MAX),
+                maxVehicleSpeedVal = null,
+                highThreatPassVal = null,
+                totalDistanceM = totalDistance,
+                activeTimeSec = activeTimeSec,
+                riderMaxSpeedMps = workoutSummariesDatabaseManager.getExtremaValue(workoutId, SensorType.SPEED_mps, ExtremaType.MAX)
+            ),
 
             totalDistance = totalDistance,
             maxDisplacement = maxDisplacement,
@@ -504,6 +514,46 @@ class WorkoutDataMapper(
             avgPowerToWeight = resolvedAvgPtw,
             maxPowerToWeight = resolvedMaxPtw,
             variabilityIndex = resolvedVi
+        )
+    }
+
+    /**
+     * Resolves post-workout cycling rearview radar traffic summary analytics (REQ-RAD-005 / ATT-5088).
+     */
+    internal fun resolveRadarTrafficSummary(
+        totalVehiclesVal: Double?,
+        maxApproachSpeedVal: Double?,
+        maxVehicleSpeedVal: Double?,
+        highThreatPassVal: Double?,
+        totalDistanceM: Double,
+        activeTimeSec: Long,
+        riderMaxSpeedMps: Double? = null
+    ): RadarTrafficSummary? {
+        val totalVehicles = totalVehiclesVal?.toInt() ?: return null
+        if (totalVehicles <= 0) return null
+
+        val distanceKm = totalDistanceM / 1000.0
+        val vehiclesPerKm = if (distanceKm > 0.0) totalVehicles / distanceKm else 0.0
+        val durationHours = activeTimeSec / 3600.0
+        val vehiclesPerHour = if (durationHours > 0.0) totalVehicles / durationHours else 0.0
+
+        val maxApproachSpeed = maxApproachSpeedVal?.takeIf { it.isFinite() && it >= 0.0 } ?: 0.0
+        val maxVehicleSpeed = if (maxVehicleSpeedVal != null && maxVehicleSpeedVal > 0.0) {
+            maxVehicleSpeedVal
+        } else if (riderMaxSpeedMps != null && riderMaxSpeedMps > 0.0 && maxApproachSpeed > 0.0) {
+            riderMaxSpeedMps + maxApproachSpeed
+        } else {
+            maxApproachSpeed
+        }
+        val highThreatCount = highThreatPassVal?.toInt()?.coerceAtLeast(0) ?: 0
+
+        return RadarTrafficSummary(
+            totalVehicles = totalVehicles,
+            vehiclesPerKm = vehiclesPerKm,
+            vehiclesPerHour = vehiclesPerHour,
+            maxApproachSpeedMps = maxApproachSpeed,
+            maxVehicleSpeedMps = maxVehicleSpeed,
+            highThreatPassCount = highThreatCount
         )
     }
 
@@ -808,6 +858,16 @@ class WorkoutDataMapper(
             variabilityIndex = powerSummary.variabilityIndex,
             cardioPowerDynamics = batch.cardioPowerDynamics[snapshot.workoutId]
                 ?: workoutSummariesDatabaseManager.getCardioPowerDynamics(snapshot.workoutId),
+            radarTrafficSummary = resolveRadarTrafficSummary(
+                totalVehiclesVal = getBatchVal(SensorType.RADAR_VEHICLE_COUNT, ExtremaType.MAX)
+                    ?: getBatchVal(SensorType.RADAR_VEHICLE_COUNT, ExtremaType.END),
+                maxApproachSpeedVal = getBatchVal(SensorType.RADAR_APPROACH_SPEED_mps, ExtremaType.MAX),
+                maxVehicleSpeedVal = null,
+                highThreatPassVal = null,
+                totalDistanceM = snapshot.totalDistance,
+                activeTimeSec = snapshot.activeTimeSec,
+                riderMaxSpeedMps = getBatchVal(SensorType.SPEED_mps, ExtremaType.MAX)
+            ),
 
             totalDistance = snapshot.totalDistance,
             maxDisplacement = maxDisplacement,

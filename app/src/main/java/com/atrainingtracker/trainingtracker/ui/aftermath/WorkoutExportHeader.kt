@@ -57,7 +57,11 @@ data class WorkoutSampleRecord(
     val hr: Int? = null,
     val cadence: Double? = null,
     val power: Double? = null,
-    val temperature: Double? = null
+    val temperature: Double? = null,
+    val radarThreatCount: Int? = null,
+    val radarClosestDistanceM: Double? = null,
+    val radarApproachSpeedMps: Double? = null,
+    val radarVehicleCount: Int? = null
 )
 
 /**

@@ -725,6 +725,16 @@
   7. *Tier 1 Clean-Room Targeted Regression Execution (`TST-PER-044.7`)*:
   • Execute targeted unit tests `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.aftermath.workoutdetail.*" --tests "com.atrainingtracker.trainingtracker.localization.TranslationParityTest" --tests "com.atrainingtracker.trainingtracker.build.*"` verifying 100% clean-room test pass rate.
 
+### TST-RAD-005: **Workout Traffic Persistence, Summary Model & Card Rendering Contract Test** [Verified]
+- **Requirement(s)**: `REQ-RAD-005`
+- **Component**: `WorkoutExportHeader.kt`, `WorkoutRepository.kt`, `RadarTrafficSummaryCard.kt`, `RadarTrafficSummaryTest.kt`, `TranslationParityTest.kt`
+- **Jira**: `ATT-5088`
+- **Test Description**:
+  1. *Sample Streaming & Persistence Contract Test*: Verify `WorkoutSampleRecord` parses latched radar metrics (`radarThreatCount`, `radarClosestDistanceM`, `radarApproachSpeedMps`, `radarVehicleCount`) with zero SQLite schema migrations.
+  2. *Traffic Extrema & Summary Derivation Unit Test*: Verify `RadarTrafficSummary` evaluates total vehicles, density (veh/km, veh/h), max approach speed, and max absolute vehicle speed ($v_{\text{rider}} + v_{\text{approach}}$).
+  3. *Summary Card Rendering & Non-Radar Omission Contract Test*: Verify `RadarTrafficSummaryCard` renders under `WorkoutDetailTabbedContent.kt` (`DETAILS`) when radar data is present and is gracefully omitted for non-radar rides.
+  4. *9-Language Localization Parity Audit*: Verify 100% translation parity across all 9 supported locales in `strings.xml` for all traffic summary card string keys.
+
 
 
 

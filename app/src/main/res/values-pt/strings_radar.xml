@@ -138,4 +138,15 @@
 
     <!-- Advanced Settings / Tuning Accordion Category (ATT-6702 / REQ-UI-512) -->
     <string name="tuning_cat_cycling_radar">Radar de bicicleta</string>
+
+    <!-- Post-Workout Traffic Analytics & Map Hotspots (ATT-5088 / REQ-RAD-005 / REQ-RAD-006) -->
+    <string name="radar_traffic_card_title">Resumo de tráfego do radar</string>
+    <string name="radar_total_vehicles">Veículos ultrapassando</string>
+    <string name="radar_traffic_density_km">Densidade (veíc/km)</string>
+    <string name="radar_traffic_density_hour">Densidade (veíc/h)</string>
+    <string name="radar_max_closing_speed">Velocidade máx. de aproximação</string>
+    <string name="radar_max_vehicle_speed">Velocidade máx. do veículo</string>
+    <string name="radar_high_threat_passes">Ultrapassagens de alto risco</string>
+    <string name="radar_marker_pass_title">Passagem de veículo (%1$s km/h)</string>
+    <string name="radar_marker_high_threat_title">Passagem de alto risco (%1$s km/h)</string>
 </resources>

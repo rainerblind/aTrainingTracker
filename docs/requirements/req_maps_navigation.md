@@ -2214,6 +2214,27 @@
 
 **Invariants**: Zero lost updates; pure immutable state transitions; 100% test pass rate across `LiveSegmentsRepositoryTest`.
 
+### REQ-RAD-006: Aftermath Map Traffic Hotspot Markers [Verified]
+- **Tests**: `TST-RAD-006` | **Tickets**: `ATT-5088`
+- **Implementation**: `WorkoutRepository.kt`, `TrackOnMapAftermathViewModel.kt`, `TrackOnMapScreen.kt`
+- **Rationale**: Athletes reviewing cycling workouts need visual spatial context on where overtaking vehicles passed and where high-speed vehicular threats occurred along the route. The system SHALL detect vehicle passes from recorded radar telemetry and render discrete traffic hotspot markers on `TrackOnMapScreen.kt`.
+- **Description**:
+  1. *Pass Event Extraction*: `WorkoutRepository.getWorkoutMarkers()` and `TrackOnMapAftermathViewModel` SHALL identify sample intervals where $\Delta \text{RADAR\_VEHICLE\_COUNT} > 0$ with valid GPS coordinates.
+  2. *Spatial Marker Presentation*: For each detected pass, the system SHALL generate a `LocationMarker` positioned along the workout track polyline, indicating vehicle approach speed ($v_{\text{app}}$), absolute speed ($v_{\text{abs}}$), and threat level.
+  3. *High-Threat Highlighting*: Overtaking events classified as high-threat (`FAST_APPROACHING` / red alert) SHALL be visually highlighted on the aftermath map.
+  4. *Non-Radar Invariant*: Workouts recorded without radar telemetry SHALL omit traffic markers with zero regressions to standard mile/km split and technical markers.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* a completed workout containing recorded vehicle passes with valid GPS coordinates,
+• *When* the athlete views the track in `TrackOnMapScreen.kt`,
+• *Then* vehicle pass locations and high-speed threat hotspots are rendered along the GPS track.
+• *Given* a workout recorded without radar data,
+• *When* inspecting the aftermath map,
+• *Then* zero traffic markers are generated and standard track markers render unaffected.
+
+**Invariants**: Exact GPS trackpoint correlation; zero extraneous markers on non-radar sessions.
+
+
 
 
 

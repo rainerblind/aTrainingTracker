@@ -38,6 +38,7 @@ import com.atrainingtracker.database.DatabaseConstants
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager
 import com.atrainingtracker.banalservice.sensor.SensorType
 import com.atrainingtracker.banalservice.sensor.SensorValueType
+import java.util.Locale
 import com.atrainingtracker.trainingtracker.tracker.TrackerService
 import com.atrainingtracker.trainingtracker.tracker.LiveWorkoutSession
 import com.atrainingtracker.trainingtracker.MyHelper
@@ -581,6 +582,10 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
                 val cadIdx = col(SensorType.CADENCE.name)
                 val pwrIdx = col(SensorType.POWER.name)
                 val tempIdx = col(SensorType.TEMPERATURE.name)
+                val radarThreatCountIdx = col(SensorType.RADAR_THREAT_COUNT.name)
+                val radarClosestDistIdx = col(SensorType.RADAR_CLOSEST_DISTANCE_m.name)
+                val radarApproachSpdIdx = col(SensorType.RADAR_APPROACH_SPEED_mps.name)
+                val radarVehCountIdx = col(SensorType.RADAR_VEHICLE_COUNT.name)
 
                 fun getDoubleOrNull(idx: Int): Double? =
                     if (idx >= 0 && !cursor.isNull(idx)) {
@@ -613,7 +618,11 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
                         hr = getIntOrNull(hrIdx),
                         cadence = getDoubleOrNull(cadIdx),
                         power = getDoubleOrNull(pwrIdx),
-                        temperature = getDoubleOrNull(tempIdx)
+                        temperature = getDoubleOrNull(tempIdx),
+                        radarThreatCount = getIntOrNull(radarThreatCountIdx),
+                        radarClosestDistanceM = getDoubleOrNull(radarClosestDistIdx),
+                        radarApproachSpeedMps = getDoubleOrNull(radarApproachSpdIdx),
+                        radarVehicleCount = getIntOrNull(radarVehCountIdx)
                     )
                     consumer.accept(record)
                 }
@@ -622,6 +631,80 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
             if (e is java.util.concurrent.CancellationException) throw e
             Log.w(TAG, "streamSamples failed for $fileBaseName", e)
             throw e
+        }
+    }
+
+    /**
+     * Computes post-workout cycling radar traffic statistics from recorded sample points (REQ-RAD-005).
+     */
+    fun computeRadarTrafficSummaryFromSamples(
+        fileBaseName: String,
+        totalDistanceM: Double,
+        activeTimeSec: Long
+    ): RadarTrafficSummary? {
+        var hasRadar = false
+        var maxVehicles = 0
+        var maxApproachSpeed = 0.0
+        var maxAbsoluteSpeed = 0.0
+        var highThreatCount = 0
+
+        try {
+            streamSamples(fileBaseName) { sample ->
+                if (sample.radarVehicleCount != null || sample.radarThreatCount != null) {
+                    hasRadar = true
+                }
+                sample.radarVehicleCount?.let { count ->
+                    if (count > maxVehicles) maxVehicles = count
+                }
+                sample.radarApproachSpeedMps?.let { appSpd ->
+                    if (appSpd > maxApproachSpeed) maxApproachSpeed = appSpd
+                    sample.speedMps?.let { riderSpd ->
+                        val absSpd = riderSpd + appSpd
+                        if (absSpd > maxAbsoluteSpeed) maxAbsoluteSpeed = absSpd
+                    }
+                }
+                if (sample.radarThreatCount != null && sample.radarThreatCount > 1) {
+                    highThreatCount++
+                }
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "computeRadarTrafficSummaryFromSamples failed for $fileBaseName", e)
+            return null
+        }
+
+        if (!hasRadar || maxVehicles <= 0) return null
+
+        val distanceKm = totalDistanceM / 1000.0
+        val vehiclesPerKm = if (distanceKm > 0.0) maxVehicles / distanceKm else 0.0
+        val durationHours = activeTimeSec / 3600.0
+        val vehiclesPerHour = if (durationHours > 0.0) maxVehicles / durationHours else 0.0
+
+        return RadarTrafficSummary(
+            totalVehicles = maxVehicles,
+            vehiclesPerKm = vehiclesPerKm,
+            vehiclesPerHour = vehiclesPerHour,
+            maxApproachSpeedMps = maxApproachSpeed,
+            maxVehicleSpeedMps = if (maxAbsoluteSpeed > 0.0) maxAbsoluteSpeed else maxApproachSpeed,
+            highThreatPassCount = highThreatCount
+        )
+    }
+
+    /**
+     * Checks whether a workout contains recorded cycling radar telemetry (REQ-EXP-042 / ATT-5088).
+     */
+    fun hasRadarData(workoutId: Long, fileBaseName: String): Boolean {
+        if (workoutId > 0) {
+            val extremaCount = summariesManager.getExtremaValue(workoutId, SensorType.RADAR_VEHICLE_COUNT, ExtremaType.MAX)
+            if (extremaCount != null && extremaCount > 0.0) return true
+        }
+
+        return try {
+            val tableName = WorkoutSamplesDatabaseManager.getTableName(fileBaseName)
+            samplesManager.database.query(tableName, null, null, null, null, null, null, "1").use { cursor ->
+                cursor != null && cursor.getColumnIndex(SensorType.RADAR_VEHICLE_COUNT.name) >= 0
+            }
+        } catch (_: Exception) {
+            false
         }
     }
 
@@ -2240,6 +2323,41 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
                         title = title
                     )
                 )
+            }
+        }
+
+        // 4. Radar Vehicle Pass Markers (REQ-RAD-006 / ATT-5088)
+        val radarSummary = workoutData.radarTrafficSummary
+        val fileBaseName = workoutData.fileBaseName
+        if (radarSummary != null && radarSummary.totalVehicles > 0 && !fileBaseName.isNullOrBlank()) {
+            try {
+                var prevVehicles = 0
+                streamSamples(fileBaseName) { sample ->
+                    val vehCount = sample.radarVehicleCount
+                    if (vehCount != null && vehCount > prevVehicles) {
+                        prevVehicles = vehCount
+                        val lat = sample.latitude
+                        val lng = sample.longitude
+                        if (lat != null && lng != null && GeoUtils.isValidGpsCoordinate(lat, lng)) {
+                            val appSpdKph = (sample.radarApproachSpeedMps ?: 0.0) * 3.6
+                            val isHighThreat = (sample.radarThreatCount ?: 0) >= 2 || appSpdKph >= 25.0
+                            val title = if (isHighThreat) {
+                                application.getString(R.string.radar_marker_high_threat_title, String.format(Locale.getDefault(), "%.1f", appSpdKph))
+                            } else {
+                                application.getString(R.string.radar_marker_pass_title, String.format(Locale.getDefault(), "%.1f", appSpdKph))
+                            }
+                            markerList.add(
+                                LocationMarker(
+                                    position = LatLng(lat, lng),
+                                    iconResId = R.drawable.bike_radar,
+                                    title = title
+                                )
+                            )
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "Failed to stream radar markers for $fileBaseName", e)
             }
         }
 
