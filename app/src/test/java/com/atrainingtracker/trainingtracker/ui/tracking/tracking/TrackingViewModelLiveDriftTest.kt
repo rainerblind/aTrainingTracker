@@ -104,21 +104,27 @@ class TrackingViewModelLiveDriftTest {
 
     @Test
     fun testLiveHrDrift_colorMapping_distinctSemanticZones() {
-        // Drift <= 3 bpm -> Zone 2 (neutral / fresh)
+        // Drift <= 5.0 bpm -> Zone 2 (neutral / fresh)
         val colorFresh = callCalculateZoneColor(2.0)
         val colorZero = callCalculateZoneColor(0.0)
         val colorNegative = callCalculateZoneColor(-3.0)
+        val colorThreshold5 = callCalculateZoneColor(5.0)
         assertEquals(colorZone2, colorFresh)
         assertEquals(colorZone2, colorZero)
         assertEquals(colorZone2, colorNegative)
+        assertEquals(colorZone2, colorThreshold5)
 
-        // Drift 4..8 bpm -> Zone 3 (moderate decoupling)
+        // Drift 5.1..10.0 bpm -> Zone 3 (moderate decoupling)
         val colorModerate = callCalculateZoneColor(6.0)
+        val colorThreshold10 = callCalculateZoneColor(10.0)
         assertEquals(colorZone3, colorModerate)
+        assertEquals(colorZone3, colorThreshold10)
         assertNotEquals(colorFresh, colorModerate)
 
-        // Drift >= 9 bpm -> Zone 4 (elevated fatigue / high drift)
+        // Drift > 10.0 bpm -> Zone 4 (elevated fatigue / high drift)
+        val colorHighBoundary = callCalculateZoneColor(10.1)
         val colorHigh = callCalculateZoneColor(12.0)
+        assertEquals(colorZone4, colorHighBoundary)
         assertEquals(colorZone4, colorHigh)
         assertNotEquals(colorFresh, colorHigh)
         assertNotEquals(colorModerate, colorHigh)

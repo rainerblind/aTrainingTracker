@@ -782,8 +782,8 @@ class TrackingViewModel @JvmOverloads constructor(
             if (currentValue is Number) {
                 val drift = currentValue.toDouble()
                 return when {
-                    drift <= 3.0 -> zoneColors.getOrElse(1) { defaultZoneColor }
-                    drift <= 8.0 -> zoneColors.getOrElse(2) { defaultZoneColor }
+                    drift <= 5.0 -> zoneColors.getOrElse(1) { defaultZoneColor }
+                    drift <= 10.0 -> zoneColors.getOrElse(2) { defaultZoneColor }
                     else -> zoneColors.getOrElse(3) { defaultZoneColor }
                 }
             }

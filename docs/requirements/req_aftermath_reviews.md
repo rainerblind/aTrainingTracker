@@ -209,35 +209,47 @@
   • *Then* an empty state message or clean card omission is rendered without UI distortion, and `TranslationParityTest` passes across 9 locales.
 
 ### REQ-REV-012: Real-Time Live HR Drift Metric & Tracking Cockpit Integration [Verified]
-- **Tests**: `TST-REV-013` | **Tickets**: `ATT-3907`
-- **Implementation**: `SensorType.java`, `CyclingPowerMetricsDevice.java`, `SignedIntegerFormatter.java`, `TrackingViewModel.kt`, `SensorFieldState.kt`, `EditSensorFieldViewModel.kt`, `res/values*/strings_cardio_power.xml`
+- **Tests**: `TST-REV-013` | **Tickets**: `ATT-3907`, `ATT-6725`
+- **Implementation**: `SensorType.java`, `CyclingPowerMetricsDevice.java`, `ActivityType.java`, `SignedIntegerFormatter.java`, `TrackingViewModel.kt`, `SensorFieldState.kt`, `EditSensorFieldViewModel.kt`, `res/values*/strings_cardio_power.xml`
 - **Rationale**: During live endurance cycling, cardiac drift ($\text{HR}_{\text{actual}}(t) - \text{HR}_{\text{fresh\_model}}(t)$) provides immediate, power-normalized feedback on autonomic decoupling, thermal stress, and dehydration. Static ratios fail on variable terrain due to cardiorespiratory response latency ($\tau \approx 25\text{--}45\text{ s}$). The system SHALL compute real-time lag-compensated cardiac drift at 1 Hz in `CyclingPowerMetricsDevice.java`, publish `SensorType.LIVE_HR_DRIFT`, and integrate it into the customizable tracking cockpit with semantic color-coding.
 - **Description**:
-  1. *Sensor Definition (`SensorType.java`)*:
+  1. *Sensor Definition & Sport Scoping (`SensorType.java`, `ActivityType.java`)*:
      a. `LIVE_HR_DRIFT` SHALL be defined under `SensorCategory.HEART_RATE_AND_ENERGY` with `fullNameId = R.string.live_hr_drift`, `shortNameId = R.string.live_hr_drift_short`, `unitId = R.string.units_heart_rate`, `SensorValueType.INTEGER`, `filteringPossible = true`, and formatted via `SignedIntegerFormatter`.
      b. `getIconResId()` SHALL return `R.drawable.ic_heart_rate`.
-  2. *Real-Time Lag-Compensated Computation (`CyclingPowerMetricsDevice.java`)*:
+     c. `LIVE_HR_DRIFT` SHALL be scoped strictly to power-capable `ActivityType`s (`BIKE_POWER`) in `ActivityType.getSensorTypeArray()`, preventing clutter in non-power running, walking, or generic sports.
+  2. *Real-Time Lag-Compensated Computation & Session Caching (`CyclingPowerMetricsDevice.java`)*:
      a. `LIVE_HR_DRIFT` computation SHALL be gated by `enableCardioPowerDynamics == true` and simultaneous active presence of both `SensorType.POWER` and `SensorType.HR`. If power or heart rate is absent or unlinked, `mLiveHrDriftSensor` SHALL publish `null` (Rule 52).
-     b. Baseline Model Seeding: Prior to accumulating qualifying in-ride data, baseline parameters $(\tau, \text{HR}_0, K)$ SHALL be resolved from the athlete's recent rolling qualified rides ($R^2 \ge 0.50$, fallback default: $\tau = 40.0\text{ s}$, $\text{HR}_0 = 90.0\text{ bpm}$, $K = 0.20\text{ bpm/W}$).
+     b. Baseline Model Seeding & Session Caching: In `resetSession()`, initial baseline parameters $(\tau, \text{HR}_0, K)$ SHALL be resolved from the athlete's 30-day rolling average of qualified rides ($R^2 \ge 0.50$, fallback default: $\tau = 40.0\text{ s}$, $\text{HR}_0 = 90.0\text{ bpm}$, $K = 0.20\text{ bpm/W}$) and cached together with `enableCardioPowerDynamics`. Zero SQLite queries or blocking DataStore reads SHALL execute on the 1-Hz `calculateMetrics()` loop.
      c. Discrete State Propagation & Residual: At 1 Hz during active tracking ($P(t) \ge 0\text{ W}$, $\text{HR}(t) > 0$), propagate discrete state $x_k = \alpha x_{k-1} + (1-\alpha) P_k$ where $\alpha = \exp(-1.0/\tau)$, calculate model prediction $\widehat{\text{HR}}_k = \text{HR}_0 + K x_k$, and compute instantaneous residual $\text{drift}_k = \text{HR}_k - \widehat{\text{HR}}_k$.
-     d. Growing Warm-Up Window (Rule 40): The published drift value SHALL be smoothed over a 30-sample rolling FIFO window, computing the average over available samples ($1 \le k < 30$) during warm-up to prevent initial blank `"--"` delays.
-     e. Pause Handling & Lifecycle Parity (Rule 51): Session reset (`resetSession()`) and constructor SHALL reset state accumulators. Long pauses (> 30s) flush the residual smoothing window.
+     d. In-Ride Fresh Model Calibration: During active tracking between minutes 8 and 25 (post warm-up), buffer active 1-Hz paired $(P_k, \text{HR}_k)$ readings. When $\ge 600\text{ s}$ of qualifying active samples are accumulated, fit the in-ride Output-Error model via `PowerHrDynamicsCalculator.fitWindow()`. If the fit achieves $R^2 \ge 0.50$, update the live session baseline $(\tau, \text{HR}_0, K)$ to today's fresh physiology.
+     e. Growing Warm-Up Window (Rule 40): The published drift value SHALL be smoothed over a 30-sample rolling FIFO window, computing the average over available samples ($1 \le k < 30$) during warm-up to prevent initial blank `"--"` delays.
+     f. Pause Handling & Lifecycle Parity (Rule 51): Session reset (`resetSession()`) and constructor SHALL reset state accumulators. Long pauses (> 30s) flush the residual smoothing window.
   3. *Tracking Cockpit Grid Integration*:
      a. `SensorType.LIVE_HR_DRIFT` SHALL be selectable in any grid cell across tracking cockpit views (`SensorFieldState.kt`, `EditSensorFieldViewModel.kt`).
-     b. In `TrackingViewModel.kt`, drift values SHALL be color-coded for intuitive feedback: $\le +3\text{ bpm}$ (neutral/green `TTColor.Zone2`), $+4\dots+8\text{ bpm}$ (moderate decoupling `TTColor.Zone3`), $\ge +9\text{ bpm}$ (elevated fatigue `TTColor.Zone4`), with negative drift $\le -4\text{ bpm}$ indicated gracefully.
+     b. In `TrackingViewModel.kt`, drift values SHALL be color-coded for intuitive feedback: $\le +5.0\text{ bpm}$ (neutral/green `TTColor.Zone2`), $+5.0 < \text{drift} \le +10.0\text{ bpm}$ (moderate decoupling `TTColor.Zone3`), $> +10.0\text{ bpm}$ (elevated fatigue `TTColor.Zone4`), with negative drift indicated gracefully.
   4. *Localization Parity*:
      a. String tokens `live_hr_drift` and `live_hr_drift_short` SHALL be maintained in `res/values*/strings_cardio_power.xml` with 100% parity across all 9 supported locales (EN, DE, ES, FR, IT, JA, NL, PL, PT) with zero inline emojis.
+
+### Requirement Archaeology & Chesterton's Fence Audit
+* `Original Requirement ID & Target`: `REQ-REV-012` (*Real-Time Live HR Drift Metric & Tracking Cockpit Integration*), targeting `CyclingPowerMetricsDevice.java`, `ActivityType.java`, and `TrackingViewModel.kt`.
+* `Historical Origin & Commit Trace`: Added in `ATT-3907` (commit `11197f2b`, Sprint 2026-46.1).
+* `Root Reason for Existing Formulation`: Initial prototype queried providers synchronously on every tick for quick verification, appended the sensor to all activity types, and used preliminary $+3/+8\text{ bpm}$ zone cutoffs before field validation.
+* `Preservation of Core Invariants`: 1st-order discrete lag compensation ($x_k = \alpha x_{k-1} + (1-\alpha)P_k$, $\widehat{\text{HR}}_k = \text{HR}_0 + K x_k$), 30s rolling smoothing, and null safety on absent sensors are fully preserved while eliminating 1-Hz thread I/O blocking.
+
 - **Acceptance Criteria**:
   • *Given* active Power and HR sensor streams and `enableCardioPowerDynamics == true`,
   • *When* cycling power fluctuates during tracking,
-  • *Then* `CyclingPowerMetricsDevice` propagates 1st-order state $x_k$ and publishes `LIVE_HR_DRIFT` at 1 Hz with signed integer format (e.g. `+5 bpm`) without initial 30s blank delay.
+  • *Then* `CyclingPowerMetricsDevice` propagates 1st-order state $x_k$ and publishes `LIVE_HR_DRIFT` at 1 Hz with zero SQLite queries on the 1-Hz loop.
+  • *Given* a workout reaching minute 25 with sufficient dynamic power coupling,
+  • *When* `PowerHrDynamicsCalculator.fitWindow()` returns $R^2 \ge 0.50$,
+  • *Then* the live session baseline adapts to today's fresh parameters.
   • *Given* non-power workouts or disconnected HR straps,
   • *When* tracking is active,
   • *Then* `LIVE_HR_DRIFT` emits `null` (`"--"`) with zero phantom database records or crashes.
   • *Given* a custom tracking grid cell configured with `LIVE_HR_DRIFT`,
-  • *When* live drift crosses $+4\text{ bpm}$ and $+9\text{ bpm}$ thresholds,
+  • *When* live drift crosses $+5\text{ bpm}$ and $+10\text{ bpm}$ thresholds,
   • *Then* the cockpit cell renders appropriate semantic accent colors reactively.
-  • *Given* the 9 supported locales,
-  • *When* running `TranslationParityTest`,
-  • *Then* all new string resources in `strings_cardio_power.xml` exist with 100% parity and matching format specifiers.
+  • *Given* `ActivityType.getSensorTypeArray()`,
+  • *When* inspected for `RUN_SPEED_AND_CADENCE` or `GENERIC_HR`,
+  • *Then* `LIVE_HR_DRIFT` is absent, appearing only for `BIKE_POWER`.
 

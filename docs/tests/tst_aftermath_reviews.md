@@ -106,13 +106,15 @@
 
 ### TST-REV-013: **Real-Time Live HR Drift & Cockpit Telemetry Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-REV-012`
-- **Component**: `CyclingPowerMetricsDevice.java`, `SensorType.java`, `SignedIntegerFormatter.java`, `TrackingViewModel.kt`, `SensorFieldState.kt`, `res/values*/strings_cardio_power.xml`
-- **Jira**: `ATT-3907`
+- **Component**: `CyclingPowerMetricsDevice.java`, `SensorType.java`, `ActivityType.java`, `SignedIntegerFormatter.java`, `TrackingViewModel.kt`, `SensorFieldState.kt`, `res/values*/strings_cardio_power.xml`
+- **Jira**: `ATT-3907`, `ATT-6725`
 - **Test Description**:
   1. *Real-Time Filter & Propagation Unit Test (`CyclingPowerMetricsDeviceLiveHrDriftTest`)*: Verify 1st-order discrete-time state propagation ($x_k = \alpha x_{k-1} + (1-\alpha) P_k$), lag compensation on step workloads, 30s growing-window residual calculation, and signed integer emission.
-  2. *Sensor-Presence Gating & Governance Test (`LiveHrDriftGatingTest`)*: Verify Rule 51 constructor parity and `resetSession()`, Rule 52 gating requiring both `POWER` and `HR` sensors, null suppression when unlinked or when `enableCardioPowerDynamics == false`, and long pause flush (> 30s).
-  3. *Formatter & SensorType Registration Test (`SignedIntegerFormatterTest`)*: Verify `SignedIntegerFormatter` formats positive integers with `+` prefix (e.g. `+5`), zero as `0`, negative as `-3`, and handles nulls gracefully. Verify `SensorType.LIVE_HR_DRIFT` category, units, parcelable, and icon.
-  4. *Cockpit Grid & Semantic Color State Test (`TrackingViewModelLiveDriftTest`)*: Verify `TrackingViewModel` maps drift ranges ($\le +3$, $+4\dots+8$, $\ge +9$) to correct semantic zone colors, and verify cell formatting in `SensorFieldState`.
-  5. *9-Locale Localization Parity Test (`TranslationParityTest`)*: Verify `live_hr_drift` and `live_hr_drift_short` in `strings_cardio_power.xml` across EN, DE, ES, FR, IT, JA, NL, PL, PT.
+  2. *Zero-Query Loop & 30-Day Seed Contract Test (`CyclingPowerMetricsDeviceLiveHrDriftTest`)*: Verify that `calculateMetrics()` performs zero SQLite queries and zero blocking DataStore reads; verify 30-day rolling baseline resolution and session caching in `resetSession()`.
+  3. *In-Ride Minute 8–25 Calibration Test (`CyclingPowerMetricsDeviceLiveHrDriftTest`)*: Verify buffering of active 1-Hz `(Power, HR)` pairs during minutes 8–25 and dynamic baseline update via `PowerHrDynamicsCalculator.fitWindow()` when $R^2 \ge 0.50$.
+  4. *Sensor-Presence Gating & Sport Scoping Test (`LiveHrDriftGatingTest`)*: Verify Rule 51 constructor parity and `resetSession()`, Rule 52 gating requiring both `POWER` and `HR` sensors, null suppression when unlinked or when `enableCardioPowerDynamics == false`, long pause flush (> 30s), and scoping to `ActivityType.BIKE_POWER` only.
+  5. *Formatter & SensorType Registration Test (`SignedIntegerFormatterTest`)*: Verify `SignedIntegerFormatter` formats positive integers with `+` prefix (e.g. `+5`), zero as `0`, negative as `-3`, and handles nulls gracefully. Verify `SensorType.LIVE_HR_DRIFT` category, units, parcelable, and icon.
+  6. *Cockpit Grid & Semantic Color State Test (`TrackingViewModelLiveDriftTest`)*: Verify `TrackingViewModel` maps drift ranges ($\le +5.0\text{ bpm}$ Zone 2, $+5.0 < \text{drift} \le +10.0\text{ bpm}$ Zone 3, $> +10.0\text{ bpm}$ Zone 4) to correct semantic zone colors, and verify cell formatting in `SensorFieldState`.
+  7. *9-Locale Localization Parity Test (`TranslationParityTest`)*: Verify `live_hr_drift` and `live_hr_drift_short` in `strings_cardio_power.xml` across EN, DE, ES, FR, IT, JA, NL, PL, PT.
 
 

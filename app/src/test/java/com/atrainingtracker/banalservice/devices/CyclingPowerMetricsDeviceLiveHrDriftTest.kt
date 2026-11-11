@@ -25,6 +25,10 @@ import com.atrainingtracker.banalservice.sensor.MySensor
 import com.atrainingtracker.banalservice.sensor.MySensorManager
 import com.atrainingtracker.banalservice.sensor.SensorData
 import com.atrainingtracker.banalservice.sensor.SensorType
+import com.atrainingtracker.trainingtracker.database.CardioPowerDynamicsRecord
+import com.atrainingtracker.trainingtracker.database.CardioPowerTrendSample
+import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
+import com.atrainingtracker.trainingtracker.physiology.PowerHrDynamicsCalculator
 import io.mockk.*
 import org.junit.After
 import org.junit.Assert.*
@@ -315,6 +319,248 @@ class CyclingPowerMetricsDeviceLiveHrDriftTest {
         // Next tick flushes and starts fresh
         device.calculateMetrics()
         assertNotNull(device.liveHrDriftSensor.sensorData.value)
+
+        device.shutDown()
+    }
+
+    @Test
+    fun testZeroQueryLoop_baselineAndEnablementCachedAtSessionReset() {
+        val enabledProvider = mockk<CyclingPowerMetricsDevice.CardioPowerDynamicsEnabledProvider>()
+        val baselineProvider = mockk<CyclingPowerMetricsDevice.CardioPowerBaselineProvider>()
+
+        every { enabledProvider.isCardioPowerDynamicsEnabled(any()) } returns true
+        every { baselineProvider.getBaseline(any()) } returns CyclingPowerMetricsDevice.DynamicalBaseline(45.0, 95.0, 0.22)
+
+        every { powerSensorData.value } returns 200.0
+        every { hrSensorData.value } returns 139.0
+
+        val device = CyclingPowerMetricsDevice(
+            context,
+            sensorManager,
+            { false },
+            { 75.0f },
+            { 250 },
+            { 1000L },
+            { 250 },
+            { 20.0f },
+            enabledProvider,
+            baselineProvider
+        )
+
+        // Providers invoked once during initial resetSession() in constructor
+        verify(exactly = 1) { enabledProvider.isCardioPowerDynamicsEnabled(any()) }
+        verify(exactly = 1) { baselineProvider.getBaseline(any()) }
+
+        // Execute 1-Hz calculateMetrics() loop for 10 ticks
+        repeat(10) {
+            device.calculateMetrics()
+        }
+
+        // Zero additional provider queries during 1-Hz loop!
+        verify(exactly = 1) { enabledProvider.isCardioPowerDynamicsEnabled(any()) }
+        verify(exactly = 1) { baselineProvider.getBaseline(any()) }
+
+        // Calling resetSession() refreshes cache
+        device.resetSession()
+        verify(exactly = 2) { enabledProvider.isCardioPowerDynamicsEnabled(any()) }
+        verify(exactly = 2) { baselineProvider.getBaseline(any()) }
+
+        device.shutDown()
+    }
+
+    @Test
+    fun testCardioBaselineProvider_30DayRollingAverageResolution() {
+        mockkStatic(WorkoutSummariesDatabaseManager::class)
+        val mockDb = mockk<WorkoutSummariesDatabaseManager>(relaxed = true)
+        every { WorkoutSummariesDatabaseManager.getInstance(any()) } returns mockDb
+
+        val nowMs = 1_700_000_000_000L
+        val tenDaysAgoMs = nowMs - 10L * 24L * 3600L * 1000L
+        val twentyDaysAgoMs = nowMs - 20L * 24L * 3600L * 1000L
+        val fortyDaysAgoMs = nowMs - 40L * 24L * 3600L * 1000L
+
+        val rec1 = mockk<CardioPowerDynamicsRecord>(relaxed = true)
+        every { rec1.tauStart } returns 38.0
+        every { rec1.hr0Start } returns 88.0
+        every { rec1.kStart } returns 0.18
+
+        val rec2 = mockk<CardioPowerDynamicsRecord>(relaxed = true)
+        every { rec2.tauStart } returns 42.0
+        every { rec2.hr0Start } returns 92.0
+        every { rec2.kStart } returns 0.22
+
+        val rec3 = mockk<CardioPowerDynamicsRecord>(relaxed = true)
+        every { rec3.tauStart } returns 50.0
+        every { rec3.hr0Start } returns 100.0
+        every { rec3.kStart } returns 0.30
+
+        val sample1 = CardioPowerTrendSample(1L, tenDaysAgoMs, rec1)
+        val sample2 = CardioPowerTrendSample(2L, twentyDaysAgoMs, rec2)
+        val sample3 = CardioPowerTrendSample(3L, fortyDaysAgoMs, rec3)
+
+        every { mockDb.getCardioPowerDynamicsFitnessTrendSamples(0.50) } returns listOf(sample3, sample2, sample1)
+
+        val device = CyclingPowerMetricsDevice(
+            context,
+            sensorManager,
+            { false },
+            { 75.0f },
+            { 250 },
+            { nowMs },
+            { 250 },
+            { 20.0f },
+            { true },
+            null // Default provider uses 30-day average
+        )
+
+        val baseline = device.currentBaseline
+        assertNotNull(baseline)
+        // Average of sample 1 and 2: tau=(38+42)/2=40, hr0=(88+92)/2=90, k=(0.18+0.22)/2=0.20
+        assertEquals(40.0, baseline.tau, 0.001)
+        assertEquals(90.0, baseline.hr0, 0.001)
+        assertEquals(0.20, baseline.k, 0.001)
+
+        device.shutDown()
+    }
+
+    @Test
+    fun testInRideMinute8To25Calibration_updatesBaselineWhenR2Qualifies() {
+        val mockCalibrator = mockk<CyclingPowerMetricsDevice.InRideCalibrator>()
+        every { mockCalibrator.calibrate(any(), any()) } returns CyclingPowerMetricsDevice.DynamicalBaseline(35.0, 85.0, 0.24)
+
+        every { powerSensorData.value } returns 200.0
+        every { hrSensorData.value } returns 133.0
+
+        val device = CyclingPowerMetricsDevice(
+            context,
+            sensorManager,
+            { false },
+            { 75.0f },
+            { 250 },
+            { 1000L },
+            { 250 },
+            { 20.0f },
+            { true },
+            { CyclingPowerMetricsDevice.DynamicalBaseline(40.0, 90.0, 0.20) },
+            mockCalibrator
+        )
+
+        // Initial baseline
+        assertEquals(40.0, device.currentBaseline.tau, 0.001)
+        assertEquals(90.0, device.currentBaseline.hr0, 0.001)
+        assertEquals(0.20, device.currentBaseline.k, 0.001)
+        assertFalse(device.isInRideCalibrated)
+
+        // Buffer 600 samples during active window (480s..1079s)
+        device.setActivePowerDurationSec(479L)
+        repeat(600) {
+            device.calculateMetrics()
+        }
+        assertTrue("Expected >= 600 samples, was ${device.inRidePowerSamplesCount}", device.inRidePowerSamplesCount >= 600)
+        assertFalse(device.isInRideCalibrated)
+
+        // Advance to minute 25 (1500s)
+        device.setActivePowerDurationSec(1499L)
+        device.calculateMetrics()
+
+        // Minute 25 reached (1500 sec) -> in-ride calibration triggered
+        assertTrue(device.isInRideCalibrated)
+        assertEquals(35.0, device.currentBaseline.tau, 0.001)
+        assertEquals(85.0, device.currentBaseline.hr0, 0.001)
+        assertEquals(0.24, device.currentBaseline.k, 0.001)
+
+        // Subsequent ticks do not re-run calibrator
+        device.calculateMetrics()
+        verify(exactly = 1) {
+            mockCalibrator.calibrate(any(), any())
+        }
+
+        device.shutDown()
+    }
+
+    @Test
+    fun testInRideMinute8To25Calibration_retainsBaselineWhenR2BelowThreshold() {
+        val mockCalibrator = mockk<CyclingPowerMetricsDevice.InRideCalibrator>()
+        every { mockCalibrator.calibrate(any(), any()) } returns null
+
+        every { powerSensorData.value } returns 200.0
+        every { hrSensorData.value } returns 133.0
+
+        val device = CyclingPowerMetricsDevice(
+            context,
+            sensorManager,
+            { false },
+            { 75.0f },
+            { 250 },
+            { 1000L },
+            { 250 },
+            { 20.0f },
+            { true },
+            { CyclingPowerMetricsDevice.DynamicalBaseline(40.0, 90.0, 0.20) },
+            mockCalibrator
+        )
+
+        device.setActivePowerDurationSec(479L)
+        repeat(600) {
+            device.calculateMetrics()
+        }
+
+        device.setActivePowerDurationSec(1499L)
+        device.calculateMetrics()
+
+        assertTrue(device.isInRideCalibrated)
+        // Baseline retained from initial historical seed!
+        assertEquals(40.0, device.currentBaseline.tau, 0.001)
+        assertEquals(90.0, device.currentBaseline.hr0, 0.001)
+        assertEquals(0.20, device.currentBaseline.k, 0.001)
+
+        device.shutDown()
+    }
+
+    @Test
+    fun testDefaultInRideCalibrator_fitsSyntheticStepSignal() {
+        // Build 600 synthetic samples where true tau=35s, hr0=85 bpm, k=0.20
+        val pArr = DoubleArray(600)
+        val hArr = DoubleArray(600)
+        var x = 150.0
+        val alpha = exp(-1.0 / 35.0)
+        for (i in 0 until 600) {
+            val p = if ((i / 60) % 2 == 0) 150.0 else 250.0
+            x = alpha * x + (1.0 - alpha) * p
+            pArr[i] = p
+            hArr[i] = 85.0 + 0.20 * x
+        }
+
+        val device = CyclingPowerMetricsDevice(
+            context,
+            sensorManager,
+            { false },
+            { 75.0f },
+            { 250 },
+            { 1000L },
+            { 250 },
+            { 20.0f },
+            { true },
+            { CyclingPowerMetricsDevice.DynamicalBaseline(40.0, 90.0, 0.20) }
+        )
+
+        device.setActivePowerDurationSec(479L)
+        for (i in 0 until 600) {
+            every { powerSensorData.value } returns pArr[i]
+            every { hrSensorData.value } returns hArr[i]
+            device.calculateMetrics()
+        }
+
+        device.setActivePowerDurationSec(1500L)
+        every { powerSensorData.value } returns pArr[599]
+        every { hrSensorData.value } returns hArr[599]
+        device.calculateMetrics()
+
+        assertTrue(device.isInRideCalibrated)
+        // Verified updated baseline matches synthetic true values (tau ~ 35, hr0 ~ 85, k ~ 0.20)
+        assertEquals(35.0, device.currentBaseline.tau, 4.0)
+        assertEquals(85.0, device.currentBaseline.hr0, 4.0)
+        assertEquals(0.20, device.currentBaseline.k, 0.04)
 
         device.shutDown()
     }

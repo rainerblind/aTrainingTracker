@@ -44,7 +44,6 @@ class ActivityTypeTest {
             assertTrue("${activity.name} must contain HRV_RMSSD", sensors.contains(SensorType.HRV_RMSSD))
             assertTrue("${activity.name} must contain RR_INTERVAL", sensors.contains(SensorType.RR_INTERVAL))
             assertTrue("${activity.name} must contain HRV_ARTIFACT_RATE", sensors.contains(SensorType.HRV_ARTIFACT_RATE))
-            assertTrue("${activity.name} must contain LIVE_HR_DRIFT", sensors.contains(SensorType.LIVE_HR_DRIFT))
         }
     }
 
@@ -126,5 +125,22 @@ class ActivityTypeTest {
         val hrIndex = sensors.indexOf(SensorType.HR)
         val npIndex = sensors.indexOf(SensorType.NORMALIZED_POWER)
         assertTrue("HR must appear before NORMALIZED_POWER", hrIndex != -1 && npIndex != -1 && hrIndex < npIndex)
+    }
+
+    @Test
+    fun testGetSensorTypeArray_liveHrDriftScopedStrictlyToBikePower() {
+        val bikePowerSensors = ActivityType.getSensorTypeArray(ActivityType.BIKE_POWER, null).toList()
+        assertTrue("BIKE_POWER must contain LIVE_HR_DRIFT", bikePowerSensors.contains(SensorType.LIVE_HR_DRIFT))
+
+        val nonPowerActivities = listOf(
+            ActivityType.GENERIC_HR,
+            ActivityType.RUN_SPEED_AND_CADENCE,
+            ActivityType.BIKE_SPEED_AND_CADENCE
+        )
+
+        nonPowerActivities.forEach { activity ->
+            val sensors = ActivityType.getSensorTypeArray(activity, null).toList()
+            assertFalse("$activity must NOT contain LIVE_HR_DRIFT", sensors.contains(SensorType.LIVE_HR_DRIFT))
+        }
     }
 }
