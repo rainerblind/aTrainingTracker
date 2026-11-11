@@ -8230,3 +8230,27 @@
   4. *Tier 1 Targeted Unit Test Regression Suite (`TST-UI-512.4`)*:
   • Execute targeted test suite (`./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.settings.tuning.*"`).
   • Assert 100% pass rate.
+
+
+
+### TST-UI-513: **Fitness & Physiology Hub, Training Zones Settings & Drawer Navigation Verification Suite** [Verified]
+- **Target Release**: `V5.0.0`
+- **Requirement(s)**: `REQ-UI-513`
+- **Component**: `AppNavigationDrawer.kt`, `NavRoutes.kt`, `AthleteProfileScreen.kt`, `PeriodsTabsScreen.kt`, `ZoneSettingsScreen.kt`, `NavigationDrawerStateTest.kt`, `AppNavigationDrawerTest.kt`
+- **Jira**: `ATT-6720`
+- **Test Description**:
+  1. *Navigation Drawer Structure & Route Resolution Test (`TST-UI-513.1`, `NavigationDrawerStateTest.kt` / `AppNavigationDrawerTest.kt`)*:
+  • Verify Training drawer group has exactly 4 items (`drawer_start_tracking`, `drawer_workouts`, `drawer_periods`, `drawer_athlete_profile`).
+  • Verify `drawer_morning_hrv` is absent from the drawer group items.
+  • Verify Settings drawer group includes `drawer_training_zones` with icon `ic_speed` and title `prefs_training_zones`.
+  • Verify `isDrawerItemSelected` separates `drawer_training_zones` and `drawer_athlete_profile`.
+  2. *Periods Screen Clean Decoupling Test (`TST-UI-513.2`, `PeriodsViewModelTest.kt`)*:
+  • Verify `PeriodsViewModel` operates cleanly without `HrvReadinessRepository` dependencies and `PeriodsTabsScreen` contains zero HRV trend composables.
+  3. *Fitness & Physiology Tab Structure & HRV Hub Test (`TST-UI-513.3`, `AthleteProfileContractAndLocalizationTest.kt` / `FitnessPhysiologyTest.kt`)*:
+  • Verify 4-tab hub structure: PMC, HRV & Readiness, Body & Thresholds, Cardio-Power.
+  • Verify Tab 2 provides Morning HRV measurement CTA and empty state when 0 readings exist.
+  4. *9-Language Localization Parity Audit (`TST-UI-513.4`)*:
+  • Assert 100% presence and parity of all drawer, tab, and empty state strings across all 9 language folders (`values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`).
+  5. *Tier 1 Targeted Unit Test Regression Suite (`TST-UI-513.5`)*:
+  • Execute targeted test suite (`./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.navigation.*" --tests "com.atrainingtracker.trainingtracker.ui.athleteprofile.*" --tests "com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.*"`).
+  • Assert 100% pass rate.

@@ -118,4 +118,12 @@
     <string name="tuning_hrv_artifact_gate_title">HRV Artifact Gate Threshold</string>
     <string name="tuning_hrv_artifact_gate_desc" formatted="false">Maximum window artifact rate before DFA a1 calculation is suppressed. Range: 3.0% to 5.0%.</string>
     <string name="tuning_hrv_artifact_gate_default">Default: %1$.1f%%</string>
+
+    <!-- Morning HRV CTA & Onboarding in Fitness & Physiology (ATT-6720 / REQ-UI-513) -->
+    <string name="hrv_measure_morning_cta">Measure Morning HRV</string>
+    <string name="hrv_empty_onboarding_title">Track Your Recovery with Morning HRV</string>
+    <string name="hrv_empty_onboarding_desc">Perform a quick 60–120s morning measurement using an ECG chest strap to establish your autonomic baseline and readiness corridor.</string>
+    <string name="hrv_delete_entry_title">Delete HRV Reading</string>
+    <string name="hrv_delete_entry_confirm">Are you sure you want to delete this morning HRV reading?</string>
+    <string name="hrv_history_title">Morning HRV History</string>
 </resources>

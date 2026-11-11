@@ -118,4 +118,12 @@
     <string name="tuning_hrv_artifact_gate_title">HRV-Artefaktgrenze</string>
     <string name="tuning_hrv_artifact_gate_desc" formatted="false">Maximale Artefaktrate im Zeitfenster, bevor DFA a1 unterdrückt wird. Bereich: 3,0% bis 5,0%.</string>
     <string name="tuning_hrv_artifact_gate_default">Standard: %1$.1f%%</string>
+
+    <!-- Morning HRV CTA & Onboarding in Fitness & Physiology (ATT-6720 / REQ-UI-513) -->
+    <string name="hrv_measure_morning_cta">Morgendliche HRV messen</string>
+    <string name="hrv_empty_onboarding_title">Verfolge deine Erholung mit der morgendlichen HRV</string>
+    <string name="hrv_empty_onboarding_desc">Führe eine kurze 60–120s Messung mit einem Herzfrequenzgurt durch, um deine autonome Baseline und deinen Erholungskorridor aufzubauen.</string>
+    <string name="hrv_delete_entry_title">HRV-Messung löschen</string>
+    <string name="hrv_delete_entry_confirm">Möchtest du diese morgendliche HRV-Messung wirklich löschen?</string>
+    <string name="hrv_history_title">Morgendliche HRV-Historie</string>
 </resources>

@@ -26,6 +26,12 @@ import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.database.AthleteMetricEntry
 import com.atrainingtracker.trainingtracker.database.AthleteMetricType
 import com.atrainingtracker.trainingtracker.database.CardioPowerTrendSample
+import com.atrainingtracker.trainingtracker.database.hrv.HrvPosture
+import com.atrainingtracker.trainingtracker.database.hrv.HrvReadinessEntry
+import com.atrainingtracker.trainingtracker.database.hrv.HrvReadinessRepository
+import com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.HrvReadinessTrendMath
+import com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.HrvTrendMetricMode
+import com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.HrvTrendSeries
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
 import com.atrainingtracker.trainingtracker.physiology.PmcDailyPoint
 import com.atrainingtracker.trainingtracker.physiology.PmcSummaryResult
@@ -126,7 +132,27 @@ data class AthleteProfileUiState(
     val selectedCardioTimeRange: MetricsTimeRange = MetricsTimeRange.ALL,
     val cardioTrendPoints: List<CardioPlotPoint> = emptyList(),
     val cardioTrendRollingPoints: List<CardioPlotPoint> = emptyList(),
-    val cardioTrendYDomain: Pair<Double, Double> = 110.0 to 170.0
+    val cardioTrendYDomain: Pair<Double, Double> = 110.0 to 170.0,
+    val hrvReadinessEntries: List<HrvReadinessEntry> = emptyList(),
+    val hrvTrendSeries: HrvTrendSeries? = null,
+    val selectedHrvPosture: HrvPosture = HrvPosture.SUPINE,
+    val selectedHrvMetricMode: HrvTrendMetricMode = HrvTrendMetricMode.LN_RMSSD,
+    val showHrvTrainingLoad: Boolean = false,
+    val hasHrvReadings: Boolean = false
+)
+
+private data class HrvCombinedState(
+    val entries: List<HrvReadinessEntry> = emptyList(),
+    val posture: HrvPosture? = null,
+    val metricMode: HrvTrendMetricMode = HrvTrendMetricMode.LN_RMSSD,
+    val showTrainingLoad: Boolean = false
+)
+
+private data class ProfileCombinedInputs(
+    val workoutSamples: List<WorkoutTrainingLoadSample>,
+    val tuningConfig: TuningConfig,
+    val cardioState: Triple<List<CardioPowerTrendSample>, CardioTrendMetric, MetricsTimeRange>,
+    val hrvState: HrvCombinedState
 )
 
 /**
@@ -141,6 +167,7 @@ class AthleteProfileViewModel @JvmOverloads constructor(
     private val repository = AthleteMetricsRepository.getInstance(application)
     private val settingsDataStore = SettingsDataStore.getInstance(application)
     private val tuningDataStore = TuningPreferencesDataStore(application)
+    private val hrvReadinessRepo: HrvReadinessRepository = HrvReadinessRepository.getInstance(application)
 
     private val _selectedPlotMetric = MutableStateFlow(PlotMetricType.WEIGHT)
     private val _selectedTimeRange = MutableStateFlow(MetricsTimeRange.ALL)
@@ -151,6 +178,20 @@ class AthleteProfileViewModel @JvmOverloads constructor(
     private val _workoutLoadSamples = MutableStateFlow<List<WorkoutTrainingLoadSample>>(emptyList())
     private val _cardioTrendSamples = MutableStateFlow<List<CardioPowerTrendSample>>(emptyList())
     private val _hrMaxBpm = MutableStateFlow<Int?>(null)
+
+    private val _hrvReadinessEntries = MutableStateFlow<List<HrvReadinessEntry>>(emptyList())
+    private val _selectedHrvPosture = MutableStateFlow<HrvPosture?>(null)
+    private val _selectedHrvMetricMode = MutableStateFlow(HrvTrendMetricMode.LN_RMSSD)
+    private val _showHrvTrainingLoad = MutableStateFlow(false)
+
+    private val hrvStateFlow = combine(
+        _hrvReadinessEntries,
+        _selectedHrvPosture,
+        _selectedHrvMetricMode,
+        _showHrvTrainingLoad
+    ) { entries, posture, mode, showLoad ->
+        HrvCombinedState(entries, posture, mode, showLoad)
+    }
 
     private val cardioStateFlow = combine(
         _cardioTrendSamples,
@@ -165,10 +206,11 @@ class AthleteProfileViewModel @JvmOverloads constructor(
         _selectedPlotMetric,
         combine(_selectedTimeRange, _selectedPmcTimeRange) { tr, pmcTr -> tr to pmcTr },
         _historyFilterMetric,
-        combine(_workoutLoadSamples, tuningDataStore.tuningConfigFlow, cardioStateFlow) { samples, tuning, cardio ->
-            Triple(samples, tuning, cardio)
+        combine(_workoutLoadSamples, tuningDataStore.tuningConfigFlow, cardioStateFlow, hrvStateFlow) { samples, tuning, cardio, hrv ->
+            ProfileCombinedInputs(samples, tuning, cardio, hrv)
         }
-    ) { entries, rawPlotMetric, (timeRange, pmcTimeRange), rawHistoryFilter, (workoutSamples, tuningConfig, cardioState) ->
+    ) { entries, rawPlotMetric, (timeRange, pmcTimeRange), rawHistoryFilter, combinedInputs ->
+        val (workoutSamples, tuningConfig, cardioState, hrvState) = combinedInputs
         val isImperial = try {
             TrainingApplication.getUnit() == MyUnits.IMPERIAL
         } catch (_: Throwable) {
@@ -245,6 +287,41 @@ class AthleteProfileViewModel @JvmOverloads constructor(
             visibleEntries.filter { it.metricType == historyFilter }
         }
 
+        val hrvEntries = hrvState.entries
+        val (defaultPosture, availablePostures) = HrvReadinessTrendMath.resolveAvailablePostures(hrvEntries)
+        val postureToUse = if (hrvState.posture != null && (availablePostures.isEmpty() || availablePostures.contains(hrvState.posture))) {
+            hrvState.posture
+        } else {
+            defaultPosture
+        }
+
+        val dailyLoads = mutableMapOf<String, Double>()
+        for (sample in workoutSamples) {
+            if (sample.timestampMs > 0L) {
+                try {
+                    val dateIso = java.time.Instant.ofEpochMilli(sample.timestampMs)
+                        .atZone(java.time.ZoneId.systemDefault())
+                        .toLocalDate()
+                        .toString()
+                    val load = sample.powerTss ?: if (sample.activeTimeSeconds > 0) (sample.activeTimeSeconds / 3600.0 * 50.0) else 0.0
+                    if (load > 0.0) {
+                        dailyLoads[dateIso] = (dailyLoads[dateIso] ?: 0.0) + load
+                    }
+                } catch (_: Exception) {}
+            }
+        }
+
+        val hrvSeries = if (hrvEntries.isNotEmpty()) {
+            HrvReadinessTrendMath.calculateTrendSeries(
+                entries = hrvEntries,
+                selectedPosture = postureToUse,
+                metricMode = hrvState.metricMode,
+                dailyTrainingLoads = dailyLoads
+            )
+        } else {
+            null
+        }
+
         AthleteProfileUiState(
             latestWeightEntry = latestWeight,
             latestHrRestEntry = latestHrRest,
@@ -269,7 +346,13 @@ class AthleteProfileViewModel @JvmOverloads constructor(
             selectedCardioTimeRange = cardioRange,
             cardioTrendPoints = cardioPoints,
             cardioTrendRollingPoints = cardioRollingPoints,
-            cardioTrendYDomain = cardioYDomain
+            cardioTrendYDomain = cardioYDomain,
+            hrvReadinessEntries = hrvEntries,
+            hrvTrendSeries = hrvSeries,
+            selectedHrvPosture = postureToUse,
+            selectedHrvMetricMode = hrvState.metricMode,
+            showHrvTrainingLoad = hrvState.showTrainingLoad,
+            hasHrvReadings = hrvEntries.isNotEmpty()
         )
     }.stateIn(
         scope = viewModelScope,
@@ -297,6 +380,50 @@ class AthleteProfileViewModel @JvmOverloads constructor(
                 _workoutLoadSamples.value = samples
             }
         }
+        viewModelScope.launch(ioDispatcher) {
+            loadHrvData()
+        }
+    }
+
+    fun loadHrvData() {
+        viewModelScope.launch(ioDispatcher) {
+            if (com.atrainingtracker.trainingtracker.TrainingApplication.isHealthConnectHrvImportEnabled()) {
+                try {
+                    com.atrainingtracker.trainingtracker.cloud.healthconnect.HealthConnectHrvImporter.importRecentHrv(
+                        context = getApplication(),
+                        daysBack = 14,
+                        repository = hrvReadinessRepo
+                    )
+                } catch (e: Exception) {
+                    android.util.Log.w("AthleteProfileVM", "Background Health Connect HRV refresh failed: ${e.message}")
+                }
+            }
+            val entries = try {
+                hrvReadinessRepo.getAllEntries()
+            } catch (_: Throwable) {
+                emptyList()
+            }
+            _hrvReadinessEntries.value = entries
+        }
+    }
+
+    fun deleteHrvReading(id: Long) {
+        viewModelScope.launch(ioDispatcher) {
+            hrvReadinessRepo.deleteEntry(id)
+            loadHrvData()
+        }
+    }
+
+    fun selectHrvPosture(posture: HrvPosture) {
+        _selectedHrvPosture.value = posture
+    }
+
+    fun selectHrvMetricMode(mode: HrvTrendMetricMode) {
+        _selectedHrvMetricMode.value = mode
+    }
+
+    fun toggleHrvTrainingLoad(show: Boolean) {
+        _showHrvTrainingLoad.value = show
     }
 
     fun loadCardioTrendSamples() {
@@ -322,6 +449,8 @@ class AthleteProfileViewModel @JvmOverloads constructor(
 
     fun selectTimeRange(range: MetricsTimeRange) {
         _selectedTimeRange.value = range
+        _selectedPmcTimeRange.value = range
+        _selectedCardioTimeRange.value = range
     }
 
     fun selectPmcTimeRange(range: MetricsTimeRange) {

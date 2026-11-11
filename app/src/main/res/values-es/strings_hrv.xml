@@ -118,4 +118,12 @@
     <string name="tuning_hrv_artifact_gate_title">Umbral de artefactos HRV</string>
     <string name="tuning_hrv_artifact_gate_desc" formatted="false">Tasa máxima de artefactos en ventana antes de suprimir DFA a1. Rango: 3.0% a 5.0%.</string>
     <string name="tuning_hrv_artifact_gate_default">Predeterminado: %1$.1f%%</string>
+
+    <!-- Morning HRV CTA & Onboarding in Fitness & Physiology (ATT-6720 / REQ-UI-513) -->
+    <string name="hrv_measure_morning_cta">Medir VFC matutina</string>
+    <string name="hrv_empty_onboarding_title">Controla tu recuperación con la VFC matutina</string>
+    <string name="hrv_empty_onboarding_desc">Realiza una medición matutina rápida de 60–120s con una banda cardíaca para establecer tu línea base autonómica y tu corredor de disposición.</string>
+    <string name="hrv_delete_entry_title">Eliminar lectura de VFC</string>
+    <string name="hrv_delete_entry_confirm">¿Seguro que quieres eliminar esta lectura de VFC matutina?</string>
+    <string name="hrv_history_title">Historial de VFC matutina</string>
 </resources>

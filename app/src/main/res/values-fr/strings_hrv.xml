@@ -118,4 +118,12 @@
     <string name="tuning_hrv_artifact_gate_title">Seuil de filtre d\'artefacts VFC</string>
     <string name="tuning_hrv_artifact_gate_desc" formatted="false">Taux maximal d\'artefacts dans la fenêtre avant la suppression du calcul DFA a1. Plage : 3,0 % à 5,0 %.</string>
     <string name="tuning_hrv_artifact_gate_default">Par défaut : %1$.1f%%</string>
+
+    <!-- Morning HRV CTA & Onboarding in Fitness & Physiology (ATT-6720 / REQ-UI-513) -->
+    <string name="hrv_measure_morning_cta">Mesurer VRC matinale</string>
+    <string name="hrv_empty_onboarding_title">Suivez votre récupération avec la VRC matinale</string>
+    <string name="hrv_empty_onboarding_desc">Effectuez une mesure matinale rapide de 60 à 120s avec une ceinture cardiaque pour établir votre ligne de base autonome et votre couloir de récupération.</string>
+    <string name="hrv_delete_entry_title">Supprimer la mesure VRC</string>
+    <string name="hrv_delete_entry_confirm">Voulez-vous vraiment supprimer cette mesure de VRC matinale ?</string>
+    <string name="hrv_history_title">Historique VRC matinale</string>
 </resources>

@@ -19,11 +19,6 @@ import android.app.Application
 import android.util.Log
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.MyPreferenceManager
-import com.atrainingtracker.trainingtracker.TrainingApplication
-import com.atrainingtracker.trainingtracker.cloud.healthconnect.HealthConnectHrvImporter
-import com.atrainingtracker.trainingtracker.database.hrv.HrvPosture
-import com.atrainingtracker.trainingtracker.database.hrv.HrvReadinessEntry
-import com.atrainingtracker.trainingtracker.database.hrv.HrvReadinessRepository
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
 import com.google.android.gms.maps.model.LatLng
@@ -51,7 +46,6 @@ class PeriodsViewModelTest {
     private lateinit var mockWorkoutRepo: WorkoutRepository
     private lateinit var mockPeriodsRepo: PeriodsRepository
     private lateinit var mockPrefManager: MyPreferenceManager
-    private lateinit var mockHrvRepo: HrvReadinessRepository
 
     private val fakeGroupedPeriods = MutableStateFlow<List<List<PeriodSummary>>>(emptyList())
 
@@ -71,10 +65,6 @@ class PeriodsViewModelTest {
         mockWorkoutRepo = mockk(relaxed = true)
         mockPeriodsRepo = mockk(relaxed = true)
         mockPrefManager = mockk(relaxed = true)
-        mockHrvRepo = mockk(relaxed = true)
-
-        coEvery { mockHrvRepo.getAllEntries(any()) } returns emptyList()
-        HrvReadinessRepository.resetForTesting(mockHrvRepo)
 
         every { mockPeriodsRepo.scope } returns kotlinx.coroutines.CoroutineScope(Dispatchers.Unconfined)
 
@@ -94,7 +84,6 @@ class PeriodsViewModelTest {
     fun tearDown() {
         WorkoutRepository.resetForTesting(null)
         PeriodsRepository.setInstanceForTesting(null)
-        HrvReadinessRepository.resetForTesting(null)
         Dispatchers.resetMain()
         unmockkAll()
     }
@@ -102,9 +91,8 @@ class PeriodsViewModelTest {
     private fun createViewModel(
         app: Application = mockApplication,
         ioDispatcher: CoroutineDispatcher = testDispatcher,
-        defaultDispatcher: CoroutineDispatcher = testDispatcher,
-        hrvReadinessRepo: HrvReadinessRepository = mockHrvRepo
-    ): PeriodsViewModel = PeriodsViewModel(app, ioDispatcher, defaultDispatcher, hrvReadinessRepo)
+        defaultDispatcher: CoroutineDispatcher = testDispatcher
+    ): PeriodsViewModel = PeriodsViewModel(app, ioDispatcher, defaultDispatcher)
 
     private fun createPeriodSummary(
         label: String = "Week 42, 2026",
@@ -623,180 +611,29 @@ class PeriodsViewModelTest {
         assertEquals(2, bothState.regions.size)
     }
 
+    /**
+     * TST-UI-513.2: Clean Periods Screen Decoupling Test (REQ-UI-513.3).
+     * Asserts that PeriodsViewModel operates cleanly without HRV repository dependencies and
+     * PeriodsTabsScreen contains zero HRV trend composables.
+     */
     @Test
-    fun testHrvReadinessTrendState_whenNoEntries_emitsNull() = runTest(testDispatcher) {
-        coEvery { mockHrvRepo.getAllEntries(any()) } returns emptyList()
+    fun testPeriodsCleanDecoupling_hasNoHrvDependencies() {
         val viewModel = createViewModel()
-        viewModel.refreshHrvTrend()
-        testScheduler.advanceUntilIdle()
+        assertNotNull(viewModel)
 
-        assertNull(viewModel.hrvReadinessTrendState.value)
-    }
-
-    @Test
-    fun testHrvReadinessTrendState_whenEntriesExist_emitsPopulatedSeries() = runTest(testDispatcher) {
-        val sampleEntry = HrvReadinessEntry(
-            id = 1L,
-            timestampMs = 1730419200000L,
-            dateIso = "2026-11-01",
-            timezoneId = "UTC",
-            restingHrBpm = 55,
-            rmssdMs = 50.0,
-            lnRmssd = 3.91,
-            hrvScore100 = 78.2,
-            durationSec = 60,
-            posture = HrvPosture.SUPINE,
-            isPrimaryForDay = true
-        )
-        coEvery { mockHrvRepo.getAllEntries(any()) } returns listOf(sampleEntry)
-
-        val viewModel = createViewModel()
-        viewModel.refreshHrvTrend()
-        testScheduler.advanceUntilIdle()
-
-        val series = viewModel.hrvReadinessTrendState.value
-        assertNotNull(series)
-        assertEquals(HrvPosture.SUPINE, series?.posture)
-        assertEquals(1, series?.points?.size)
-        assertEquals(3.91, series?.points?.first()?.rawValue ?: 0.0, 0.001)
-    }
-
-    @Test
-    fun testSelectHrvPosture_andMetricMode_updatesState() = runTest(testDispatcher) {
-        val sampleEntry = HrvReadinessEntry(
-            id = 1L,
-            timestampMs = 1730419200000L,
-            dateIso = "2026-11-01",
-            timezoneId = "UTC",
-            restingHrBpm = 55,
-            rmssdMs = 50.0,
-            lnRmssd = 3.91,
-            hrvScore100 = 78.2,
-            durationSec = 60,
-            posture = HrvPosture.SEATED,
-            isPrimaryForDay = true
-        )
-        coEvery { mockHrvRepo.getAllEntries(any()) } returns listOf(sampleEntry)
-
-        val viewModel = createViewModel()
-        viewModel.selectHrvPosture(HrvPosture.SEATED)
-        viewModel.selectHrvMetricMode(HrvTrendMetricMode.RMSSD)
-        viewModel.toggleShowTrainingLoad(true)
-        testScheduler.advanceUntilIdle()
-
-        assertEquals(HrvPosture.SEATED, viewModel.selectedHrvPosture.value)
-        assertEquals(HrvTrendMetricMode.RMSSD, viewModel.selectedHrvMetricMode.value)
-        assertTrue(viewModel.showTrainingLoad.value)
-    }
-
-    @Test
-    fun testHrvReadinessTrend_defaultsToMostFrequentPostureInsteadOfEagerSupine() = runTest(testDispatcher) {
-        val supineEntry = HrvReadinessEntry(
-            id = 1L,
-            timestampMs = 1730419200000L,
-            dateIso = "2026-11-01",
-            timezoneId = "UTC",
-            restingHrBpm = 55,
-            rmssdMs = 50.0,
-            lnRmssd = 3.91,
-            hrvScore100 = 78.2,
-            durationSec = 60,
-            posture = HrvPosture.SUPINE,
-            isPrimaryForDay = true
-        )
-        val seatedEntry1 = HrvReadinessEntry(
-            id = 2L,
-            timestampMs = 1730505600000L,
-            dateIso = "2026-11-02",
-            timezoneId = "UTC",
-            restingHrBpm = 58,
-            rmssdMs = 52.0,
-            lnRmssd = 3.95,
-            hrvScore100 = 79.0,
-            durationSec = 60,
-            posture = HrvPosture.SEATED,
-            isPrimaryForDay = true
-        )
-        val seatedEntry2 = HrvReadinessEntry(
-            id = 3L,
-            timestampMs = 1730592000000L,
-            dateIso = "2026-11-03",
-            timezoneId = "UTC",
-            restingHrBpm = 57,
-            rmssdMs = 54.0,
-            lnRmssd = 3.99,
-            hrvScore100 = 79.8,
-            durationSec = 60,
-            posture = HrvPosture.SEATED,
-            isPrimaryForDay = true
-        )
-        // 2 SEATED entries vs 1 SUPINE entry: SEATED must be chosen as default!
-        coEvery { mockHrvRepo.getAllEntries(any()) } returns listOf(supineEntry, seatedEntry1, seatedEntry2)
-
-        val viewModel = createViewModel()
-        viewModel.refreshHrvTrend()
-        testScheduler.advanceUntilIdle()
-
-        assertEquals(HrvPosture.SEATED, viewModel.selectedHrvPosture.value)
-        assertEquals(HrvPosture.SEATED, viewModel.hrvReadinessTrendState.value?.posture)
-    }
-
-    @Test
-    fun testHrvReadinessTrend_reactivelyCollectsWorkoutsFromRepository() = runTest(testDispatcher) {
-        val hrvEntry = HrvReadinessEntry(
-            id = 1L,
-            timestampMs = 1730419200000L,
-            dateIso = "2026-11-01",
-            timezoneId = "UTC",
-            restingHrBpm = 55,
-            rmssdMs = 50.0,
-            lnRmssd = 3.91,
-            hrvScore100 = 78.2,
-            durationSec = 60,
-            posture = HrvPosture.SUPINE,
-            isPrimaryForDay = true
-        )
-        coEvery { mockHrvRepo.getAllEntries(any()) } returns listOf(hrvEntry)
-
-        val workoutsFlow = MutableStateFlow<List<WorkoutData>>(emptyList())
-        every { mockWorkoutRepo.allWorkouts } returns workoutsFlow
-
-        val viewModel = createViewModel()
-        testScheduler.advanceUntilIdle()
-
-        // Initially 0 load
-        assertEquals(0.0, viewModel.hrvReadinessTrendState.value?.maxTrainingLoad ?: 0.0, 0.01)
-
-        // Asynchronously emit hydrated workout data
-        val workout = mockk<WorkoutData>(relaxed = true) {
-            every { id } returns 101L
-            every { startTimeS } returns 1793523600L // 2026-11-01
-            every { activeTimeSec } returns 3600L
-            every { tss } returns 85.0
+        val periodsTabsFile = java.io.File("app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/periodlist/PeriodsTabsScreen.kt")
+        val altPeriodsTabsFile = java.io.File("../app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/periodlist/PeriodsTabsScreen.kt")
+        val targetFile = if (periodsTabsFile.exists()) periodsTabsFile else altPeriodsTabsFile
+        if (targetFile.exists()) {
+            val content = targetFile.readText()
+            assertFalse(
+                "PeriodsTabsScreen must not reference HrvReadinessTrendCard (REQ-UI-513.3)",
+                content.contains("HrvReadinessTrendCard")
+            )
+            assertFalse(
+                "PeriodsTabsScreen must not reference HrvTrendSeries (REQ-UI-513.3)",
+                content.contains("HrvTrendSeries")
+            )
         }
-        workoutsFlow.value = listOf(workout)
-        testScheduler.advanceUntilIdle()
-
-        // Verified: Trend reactively recomputed and hydrated training load!
-        assertEquals(85.0, viewModel.hrvReadinessTrendState.value?.maxTrainingLoad ?: 0.0, 0.01)
-    }
-
-    @Test
-    fun testRefreshHrvTrend_whenHealthConnectHrvImportEnabled_invokesImporter() = runTest(testDispatcher) {
-        mockkObject(HealthConnectHrvImporter)
-        mockkStatic(TrainingApplication::class)
-        every { TrainingApplication.isHealthConnectHrvImportEnabled() } returns true
-        coEvery { HealthConnectHrvImporter.importRecentHrv(any(), any(), any(), any()) } returns Result.success(0)
-
-        val viewModel = createViewModel()
-        testScheduler.advanceUntilIdle()
-
-        viewModel.refreshHrvTrend()
-        testScheduler.advanceUntilIdle()
-
-        coVerify { HealthConnectHrvImporter.importRecentHrv(any(), eq(14), any(), any()) }
-
-        unmockkStatic(TrainingApplication::class)
-        unmockkObject(HealthConnectHrvImporter)
     }
 }

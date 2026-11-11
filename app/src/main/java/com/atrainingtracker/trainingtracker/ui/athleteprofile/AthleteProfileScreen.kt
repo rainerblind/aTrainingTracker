@@ -50,15 +50,13 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Calculate
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.History
-import androidx.lifecycle.viewmodel.compose.viewModel
-import com.atrainingtracker.trainingtracker.activities.ZonesSettingsViewModel
-import com.atrainingtracker.trainingtracker.ui.settings.ZoneHistoryDialog
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DatePicker
@@ -97,21 +95,25 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.atrainingtracker.R
-import com.atrainingtracker.trainingtracker.activities.ZoneProfileTabContent
 import com.atrainingtracker.trainingtracker.database.AthleteMetricEntry
 import com.atrainingtracker.trainingtracker.database.AthleteMetricType
+import com.atrainingtracker.trainingtracker.database.hrv.HrvPosture
+import com.atrainingtracker.trainingtracker.database.hrv.HrvReadinessEntry
+import com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.HrvReadinessTrendCard
+import com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.HrvTrendMetricMode
+import com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.HrvTrendSeries
 import com.atrainingtracker.trainingtracker.ui.theme.TTColor
 import com.atrainingtracker.trainingtracker.physiology.AcwrZone
 import com.atrainingtracker.trainingtracker.physiology.PmcDailyPoint
 import com.atrainingtracker.trainingtracker.physiology.PmcSummaryResult
 import com.atrainingtracker.trainingtracker.physiology.TsbReadinessZone
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStore
-import com.atrainingtracker.trainingtracker.settings.SettingsDataStore.ZoneType
 import com.atrainingtracker.trainingtracker.ui.components.DeleteConfirmationDialog
 import com.atrainingtracker.trainingtracker.ui.dialogs.PowerHrDynamicsInfoDialog
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
@@ -121,12 +123,14 @@ import java.util.Locale
 import kotlin.math.roundToInt
 
 /**
- * Stateful entry composable for the unified **Profile & Zones** screen (`REQ-UI-391.5`, `REQ-UI-397.2`).
+ * Stateful entry composable for the unified **Fitness & Physiology** hub (`REQ-UI-513.4`).
  */
 @Composable
 fun AthleteProfileScreen(
     viewModel: AthleteProfileViewModel,
     initialTab: Int = 0,
+    onOpenDrawer: (() -> Unit)? = null,
+    onNavigateToMorningHrv: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -142,19 +146,25 @@ fun AthleteProfileScreen(
         onAddEntry = viewModel::addEntry,
         onUpdateEntry = viewModel::updateEntry,
         onDeleteEntry = viewModel::deleteEntry,
+        onSelectHrvPosture = viewModel::selectHrvPosture,
+        onSelectHrvMetricMode = viewModel::selectHrvMetricMode,
+        onToggleHrvTrainingLoad = viewModel::toggleHrvTrainingLoad,
+        onDeleteHrvReading = viewModel::deleteHrvReading,
+        onOpenDrawer = onOpenDrawer,
+        onNavigateToMorningHrv = onNavigateToMorningHrv,
         initialTab = initialTab,
         modifier = modifier
     )
 }
 
 /**
- * Stateless UI content for the unified **Profile & Zones** screen (`REQ-UI-391.5`, `REQ-UI-396.1`, `REQ-UI-397.2`, Rule 23, Rule 38, Rule 41).
+ * Stateless UI content for the unified **Fitness & Physiology** hub (`REQ-UI-513.4`, Rule 23, Rule 38, Rule 41).
  *
  * Hosts 4 tabs in a [PrimaryScrollableTabRow] + [HorizontalPager]:
- * - Page 0: Athlete Profile (`R.string.athlete_profile_tab_profile`)
- * - Page 1: Running Heart Rate Zones (`R.string.tab_hr_run`)
- * - Page 2: Cycling Heart Rate Zones (`R.string.tab_hr_bike`)
- * - Page 3: Cycling Power Zones (`R.string.tab_pwr_bike`)
+ * - Page 0: Fitness & Fatigue (PMC) (`R.string.fitness_tab_pmc`)
+ * - Page 1: HRV & Readiness (`R.string.fitness_tab_hrv`)
+ * - Page 2: Body & Thresholds (`R.string.fitness_tab_body`)
+ * - Page 3: Cardio-Power (`R.string.fitness_tab_cardio_power`, conditional)
  */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
@@ -169,37 +179,45 @@ fun AthleteProfileContent(
     onAddEntry: (AthleteMetricType, Double, Long) -> Unit,
     onUpdateEntry: (Long, AthleteMetricType, Double, Long) -> Unit,
     onDeleteEntry: (Long, AthleteMetricType) -> Unit,
+    onSelectHrvPosture: (HrvPosture) -> Unit = {},
+    onSelectHrvMetricMode: (HrvTrendMetricMode) -> Unit = {},
+    onToggleHrvTrainingLoad: (Boolean) -> Unit = {},
+    onDeleteHrvReading: (Long) -> Unit = {},
+    onOpenDrawer: (() -> Unit)? = null,
+    onNavigateToMorningHrv: (() -> Unit)? = null,
     initialTab: Int = 0,
     modifier: Modifier = Modifier
 ) {
     var showAddDialogForMetric by remember { mutableStateOf<AthleteMetricType?>(null) }
     var editingEntry by remember { mutableStateOf<AthleteMetricEntry?>(null) }
     var deletingEntry by remember { mutableStateOf<AthleteMetricEntry?>(null) }
-    var showZoneCalculatorDialog by remember { mutableStateOf(false) }
-    var showZoneHistoryDialog by remember { mutableStateOf(false) }
+    var deletingHrvEntry by remember { mutableStateOf<HrvReadinessEntry?>(null) }
     var showCardioInfoDialog by remember { mutableStateOf(false) }
     val navBarBottomPadding = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
 
-    val tabTitleResIds = remember {
-        listOf(
-            R.string.athlete_profile_tab_profile,
-            R.string.tab_hr_run,
-            R.string.tab_hr_bike,
-            R.string.tab_pwr_bike
-        )
+    val tabTitleResIds = remember(uiState.enableCardioPowerDynamics) {
+        buildList {
+            add(R.string.fitness_tab_pmc)
+            add(R.string.fitness_tab_hrv)
+            add(R.string.fitness_tab_body)
+            if (uiState.enableCardioPowerDynamics) {
+                add(R.string.fitness_tab_cardio_power)
+            }
+        }
     }
     val pagerState = rememberPagerState(
         initialPage = initialTab.coerceIn(0, tabTitleResIds.lastIndex),
         pageCount = { tabTitleResIds.size }
     )
     val scope = rememberCoroutineScope()
+    val bodyTabIndex = tabTitleResIds.indexOf(R.string.fitness_tab_body)
 
     Surface(
         modifier = modifier.fillMaxSize(),
         color = MaterialTheme.colorScheme.surface
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
-            // 1. Standard App Header + Tab Row (Rule 23, REQ-UI-397.2)
+            // 1. Standard App Header + Tab Row (Rule 23, REQ-UI-513.4)
             Surface(
                 color = MaterialTheme.colorScheme.primaryContainer,
                 modifier = Modifier.fillMaxWidth()
@@ -213,15 +231,28 @@ fun AthleteProfileContent(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Text(
-                            text = stringResource(R.string.athlete_profile_title),
-                            style = MaterialTheme.typography.headlineSmall,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier.weight(1f)
-                        )
-                        if (pagerState.currentPage == 0) {
+                        ) {
+                            if (onOpenDrawer != null) {
+                                IconButton(onClick = onOpenDrawer) {
+                                    Icon(
+                                        imageVector = Icons.Default.Menu,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.onPrimaryContainer
+                                    )
+                                }
+                            }
+                            Text(
+                                text = stringResource(R.string.athlete_profile_title),
+                                style = MaterialTheme.typography.headlineSmall,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                        if (pagerState.currentPage == bodyTabIndex) {
                             IconButton(
                                 onClick = {
                                     val defaultMetric = when (uiState.selectedPlotMetric) {
@@ -239,27 +270,6 @@ fun AthleteProfileContent(
                                     contentDescription = stringResource(R.string.athlete_profile_add_entry),
                                     tint = MaterialTheme.colorScheme.onPrimaryContainer
                                 )
-                            }
-                        } else {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                IconButton(
-                                    onClick = { showZoneCalculatorDialog = true }
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Calculate,
-                                        contentDescription = stringResource(R.string.zone_calc_button),
-                                        tint = MaterialTheme.colorScheme.onPrimaryContainer
-                                    )
-                                }
-                                IconButton(
-                                    onClick = { showZoneHistoryDialog = true }
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.History,
-                                        contentDescription = stringResource(R.string.zone_history_action_history),
-                                        tint = MaterialTheme.colorScheme.onPrimaryContainer
-                                    )
-                                }
                             }
                         }
                     }
@@ -285,8 +295,157 @@ fun AthleteProfileContent(
                 modifier = Modifier.fillMaxSize(),
                 beyondViewportPageCount = 1
             ) { page ->
-                when (page) {
-                    0 -> {
+                when (tabTitleResIds.getOrNull(page)) {
+                    R.string.fitness_tab_pmc -> {
+                        LazyColumn(
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(
+                                start = 16.dp,
+                                top = 16.dp,
+                                end = 16.dp,
+                                bottom = 16.dp + navBarBottomPadding
+                            ),
+                            verticalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            if (uiState.enablePmcModel) {
+                                item {
+                                    PerformanceManagementChartCard(
+                                        pmcSummary = uiState.pmcSummary,
+                                        pmcPlotPoints = uiState.pmcPlotPoints,
+                                        selectedPmcTimeRange = uiState.selectedPmcTimeRange,
+                                        onSelectPmcTimeRange = { range ->
+                                            onSelectPmcTimeRange(range)
+                                            onSelectTimeRange(range)
+                                        }
+                                    )
+                                }
+                            } else {
+                                item {
+                                    Card(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        shape = RoundedCornerShape(12.dp),
+                                        colors = CardDefaults.cardColors(
+                                            containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+                                        )
+                                    ) {
+                                        Box(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(24.dp),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Text(
+                                                text = stringResource(R.string.pmc_disabled_guidance),
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                textAlign = TextAlign.Center
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    R.string.fitness_tab_hrv -> {
+                        LazyColumn(
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(
+                                start = 16.dp,
+                                top = 16.dp,
+                                end = 16.dp,
+                                bottom = 16.dp + navBarBottomPadding
+                            ),
+                            verticalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            // 1. Primary "Measure Morning HRV" CTA button
+                            item {
+                                Button(
+                                    onClick = { onNavigateToMorningHrv?.invoke() },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    shape = RoundedCornerShape(10.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Favorite,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        text = stringResource(R.string.hrv_measure_morning_cta),
+                                        style = MaterialTheme.typography.labelLarge
+                                    )
+                                }
+                            }
+
+                            // 2. Trend Card or Empty Onboarding Card
+                            if (!uiState.hasHrvReadings) {
+                                item {
+                                    Card(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        shape = RoundedCornerShape(12.dp),
+                                        colors = CardDefaults.cardColors(
+                                            containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+                                        )
+                                    ) {
+                                        Column(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(24.dp),
+                                            horizontalAlignment = Alignment.CenterHorizontally,
+                                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                                        ) {
+                                            Text(
+                                                text = stringResource(R.string.hrv_empty_onboarding_title),
+                                                style = MaterialTheme.typography.titleMedium,
+                                                fontWeight = FontWeight.SemiBold,
+                                                color = MaterialTheme.colorScheme.onSurface,
+                                                textAlign = TextAlign.Center
+                                            )
+                                            Text(
+                                                text = stringResource(R.string.hrv_empty_onboarding_desc),
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                textAlign = TextAlign.Center
+                                            )
+                                        }
+                                    }
+                                }
+                            } else {
+                                item {
+                                    HrvReadinessTrendCard(
+                                        series = uiState.hrvTrendSeries,
+                                        selectedPosture = uiState.selectedHrvPosture,
+                                        onSelectPosture = onSelectHrvPosture,
+                                        metricMode = uiState.selectedHrvMetricMode,
+                                        onSelectMetricMode = onSelectHrvMetricMode,
+                                        showTrainingLoad = uiState.showHrvTrainingLoad,
+                                        onToggleTrainingLoad = onToggleHrvTrainingLoad
+                                    )
+                                }
+
+                                // 3. Chronological History Log
+                                item {
+                                    Text(
+                                        text = stringResource(R.string.hrv_history_title),
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                }
+
+                                items(
+                                    items = uiState.hrvReadinessEntries,
+                                    key = { it.id }
+                                ) { entry ->
+                                    HrvHistoryEntryRow(
+                                        entry = entry,
+                                        onDeleteClick = { deletingHrvEntry = entry }
+                                    )
+                                }
+                            }
+                        }
+                    }
+                    R.string.fitness_tab_body -> {
                         LazyColumn(
                             modifier = Modifier.fillMaxSize(),
                             contentPadding = PaddingValues(
@@ -504,34 +663,6 @@ fun AthleteProfileContent(
                     }
                 }
 
-                // 3b. Performance Management Chart (PMC: CTL / ATL / TSB / ACWR / Ramp Rate, REQ-UI-401.3, REQ-UI-403)
-                if (uiState.enablePmcModel) {
-                    item {
-                        PerformanceManagementChartCard(
-                            pmcSummary = uiState.pmcSummary,
-                            pmcPlotPoints = uiState.pmcPlotPoints,
-                            selectedPmcTimeRange = uiState.selectedPmcTimeRange,
-                            onSelectPmcTimeRange = onSelectPmcTimeRange
-                        )
-                    }
-                }
-
-                // 3c. Cardio-Power Fitness Trends Chart (REQ-REV-011 / ATT-3906)
-                if (uiState.enableCardioPowerDynamics) {
-                    item {
-                        CardioPowerTrendsCard(
-                            points = uiState.cardioTrendPoints,
-                            rollingPoints = uiState.cardioTrendRollingPoints,
-                            selectedMetric = uiState.selectedCardioTrendMetric,
-                            selectedTimeRange = uiState.selectedCardioTimeRange,
-                            yDomain = uiState.cardioTrendYDomain,
-                            onSelectMetric = onSelectCardioMetric,
-                            onSelectTimeRange = onSelectCardioTimeRange,
-                            onInfoClick = { showCardioInfoDialog = true }
-                        )
-                    }
-                }
-
                 // 4. History Log Header & Filter Row
                 item {
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -606,27 +737,35 @@ fun AthleteProfileContent(
                 }
                         }
                     }
-                    1 -> {
-                        ZoneProfileTabContent(
-                            zoneType = ZoneType.HR_RUN,
-                            showCalculatorDialog = showZoneCalculatorDialog && pagerState.currentPage == 1,
-                            onDismissCalculatorDialog = { showZoneCalculatorDialog = false }
-                        )
+                    R.string.fitness_tab_cardio_power -> {
+                        LazyColumn(
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(
+                                start = 16.dp,
+                                top = 16.dp,
+                                end = 16.dp,
+                                bottom = 16.dp + navBarBottomPadding
+                            ),
+                            verticalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            item {
+                                CardioPowerTrendsCard(
+                                    points = uiState.cardioTrendPoints,
+                                    rollingPoints = uiState.cardioTrendRollingPoints,
+                                    selectedMetric = uiState.selectedCardioTrendMetric,
+                                    selectedTimeRange = uiState.selectedCardioTimeRange,
+                                    yDomain = uiState.cardioTrendYDomain,
+                                    onSelectMetric = onSelectCardioMetric,
+                                    onSelectTimeRange = { range ->
+                                        onSelectCardioTimeRange(range)
+                                        onSelectTimeRange(range)
+                                    },
+                                    onInfoClick = { showCardioInfoDialog = true }
+                                )
+                            }
+                        }
                     }
-                    2 -> {
-                        ZoneProfileTabContent(
-                            zoneType = ZoneType.HR_BIKE,
-                            showCalculatorDialog = showZoneCalculatorDialog && pagerState.currentPage == 2,
-                            onDismissCalculatorDialog = { showZoneCalculatorDialog = false }
-                        )
-                    }
-                    else -> {
-                        ZoneProfileTabContent(
-                            zoneType = ZoneType.PWR_BIKE,
-                            showCalculatorDialog = showZoneCalculatorDialog && pagerState.currentPage == 3,
-                            onDismissCalculatorDialog = { showZoneCalculatorDialog = false }
-                        )
-                    }
+                    else -> Unit
                 }
             }
         }
@@ -695,29 +834,16 @@ fun AthleteProfileContent(
         )
     }
 
-    if (showZoneHistoryDialog && pagerState.currentPage in 1..3) {
-        val currentZoneType = when (pagerState.currentPage) {
-            1 -> ZoneType.HR_RUN
-            2 -> ZoneType.HR_BIKE
-            else -> ZoneType.PWR_BIKE
-        }
-        val zonesViewModel: ZonesSettingsViewModel = viewModel()
-        val zoneHistoryMap by zonesViewModel.zoneHistoryFlow.collectAsState()
-        val historyForCurrentType = zoneHistoryMap[currentZoneType] ?: emptyList()
-
-        ZoneHistoryDialog(
-            zoneType = currentZoneType,
-            history = historyForCurrentType,
-            onDismiss = { showZoneHistoryDialog = false },
-            onSaveSnapshot = { timestampMs, boundaries ->
-                zonesViewModel.saveBackdatedSnapshot(currentZoneType, boundaries, timestampMs)
+    // Delete HRV Reading Confirmation Dialog
+    deletingHrvEntry?.let { entry ->
+        DeleteConfirmationDialog(
+            title = stringResource(R.string.hrv_delete_entry_title),
+            message = stringResource(R.string.hrv_delete_entry_confirm),
+            onConfirm = {
+                onDeleteHrvReading(entry.id)
+                deletingHrvEntry = null
             },
-            onUpdateSnapshot = { id, timestampMs, boundaries ->
-                zonesViewModel.updateHistoricalSnapshot(id, currentZoneType, boundaries, timestampMs)
-            },
-            onDeleteSnapshot = { id ->
-                zonesViewModel.deleteHistoricalSnapshot(id, currentZoneType)
-            }
+            onDismiss = { deletingHrvEntry = null }
         )
     }
 
@@ -725,6 +851,73 @@ fun AthleteProfileContent(
         PowerHrDynamicsInfoDialog(
             onDismissRequest = { showCardioInfoDialog = false }
         )
+    }
+}
+
+@Composable
+private fun HrvHistoryEntryRow(
+    entry: HrvReadinessEntry,
+    onDeleteClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(10.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+        )
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 14.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(2.dp)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        text = entry.dateIso,
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    val postureStr = when (entry.posture) {
+                        HrvPosture.SUPINE -> stringResource(R.string.morning_hrv_posture_supine)
+                        HrvPosture.SEATED -> stringResource(R.string.morning_hrv_posture_seated)
+                        HrvPosture.STANDING -> stringResource(R.string.morning_hrv_posture_standing)
+                        else -> entry.posture.name
+                    }
+                    Text(
+                        text = postureStr,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+                Text(
+                    text = "ln(rMSSD): ${String.format(Locale.getDefault(), "%.2f", entry.lnRmssd)} | rMSSD: ${String.format(Locale.getDefault(), "%.1f ms", entry.rmssdMs)} | HR: ${entry.restingHrBpm} bpm",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            IconButton(
+                onClick = onDeleteClick,
+                modifier = Modifier.size(36.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Delete,
+                    contentDescription = stringResource(R.string.hrv_delete_entry_title),
+                    tint = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+        }
     }
 }
 

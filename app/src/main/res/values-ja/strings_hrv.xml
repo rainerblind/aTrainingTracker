@@ -118,4 +118,12 @@
     <string name="tuning_hrv_artifact_gate_title">HRVアーティファクト閾値</string>
     <string name="tuning_hrv_artifact_gate_desc" formatted="false">DFA a1の計算を抑制するウィンドウ内の最大アーティファクト率。範囲：3.0%〜5.0%。</string>
     <string name="tuning_hrv_artifact_gate_default">デフォルト：%1$.1f%%</string>
+
+    <!-- Morning HRV CTA & Onboarding in Fitness & Physiology (ATT-6720 / REQ-UI-513) -->
+    <string name="hrv_measure_morning_cta">朝のHRVを測定</string>
+    <string name="hrv_empty_onboarding_title">朝のHRVで回復状態を把握</string>
+    <string name="hrv_empty_onboarding_desc">心拍ベルトを使用して60〜120秒の簡単な測定を行い、自律神経ベースラインとレディネスコリドーを構築します。</string>
+    <string name="hrv_delete_entry_title">HRV測定値を削除</string>
+    <string name="hrv_delete_entry_confirm">この朝のHRV測定値を削除してもよろしいですか？</string>
+    <string name="hrv_history_title">朝のHRV履歴</string>
 </resources>

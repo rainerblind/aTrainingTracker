@@ -578,14 +578,17 @@ fun ATrainingTrackerApp(
                     ZoneSettingsScreen(
                         initialTab = initialTab,
                         promptReason = promptReason,
-                        onFinish = { navController.popBackStack() }
+                        onFinish = { navController.popBackStack() },
+                        onOpenDrawer = { activity.openDrawer() }
                     )
                 }
 
                 composable(NavRoutes.ATHLETE_PROFILE) {
                     val athleteProfileViewModel: com.atrainingtracker.trainingtracker.ui.athleteprofile.AthleteProfileViewModel = viewModel(activity)
                     com.atrainingtracker.trainingtracker.ui.athleteprofile.AthleteProfileScreen(
-                        viewModel = athleteProfileViewModel
+                        viewModel = athleteProfileViewModel,
+                        onOpenDrawer = { activity.openDrawer() },
+                        onNavigateToMorningHrv = { navController.navigate(NavRoutes.MORNING_HRV) }
                     )
                 }
 

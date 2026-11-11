@@ -37,7 +37,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
-import com.atrainingtracker.trainingtracker.database.hrv.HrvPosture
 import com.atrainingtracker.trainingtracker.ui.aftermath.editworkout.EditWorkoutScreen
 import com.atrainingtracker.trainingtracker.ui.aftermath.editworkout.EditWorkoutViewModel
 import com.atrainingtracker.trainingtracker.ui.aftermath.editworkout.EditWorkoutViewModelFactory
@@ -74,11 +73,6 @@ fun PeriodsScreen(
     val enabledMarkerTypes by viewModel.enabledMarkerTypes.collectAsStateWithLifecycle()
     val selectedMetric by viewModel.selectedMetric.collectAsStateWithLifecycle()
     val groups = viewModel.groups
-
-    val hrvTrendSeries by viewModel.hrvReadinessTrendState.collectAsStateWithLifecycle()
-    val selectedHrvPosture by viewModel.selectedHrvPosture.collectAsStateWithLifecycle()
-    val selectedHrvMetricMode by viewModel.selectedHrvMetricMode.collectAsStateWithLifecycle()
-    val showHrvTrainingLoad by viewModel.showTrainingLoad.collectAsStateWithLifecycle()
 
     val peekedWorkoutDataWithTrack by viewModel.peekedWorkoutDataWithTrack.collectAsStateWithLifecycle()
 
@@ -184,14 +178,7 @@ fun PeriodsScreen(
                 onToggleSportFilter = { viewModel.toggleSportFilter(it) },
                 selectedMetric = selectedMetric,
                 onSelectMetric = { viewModel.selectMetric(it) },
-                onDayCellClick = handleDayClick,
-                hrvTrendSeries = hrvTrendSeries,
-                selectedHrvPosture = selectedHrvPosture ?: (hrvTrendSeries?.posture ?: HrvPosture.SUPINE),
-                onSelectHrvPosture = { viewModel.selectHrvPosture(it) },
-                selectedHrvMetricMode = selectedHrvMetricMode,
-                onSelectHrvMetricMode = { viewModel.selectHrvMetricMode(it) },
-                showHrvTrainingLoad = showHrvTrainingLoad,
-                onToggleHrvTrainingLoad = { viewModel.toggleShowTrainingLoad(it) }
+                onDayCellClick = handleDayClick
             )
         }
     }

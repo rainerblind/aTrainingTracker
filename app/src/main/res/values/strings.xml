@@ -2234,8 +2234,14 @@
     <string name="athlete_weight_edit">Edit</string>
 
     <!-- Dedicated Athlete Profile Screen & Body Metrics History (ATT-3704, ATT-3851, REQ-UI-391, REQ-UI-397) -->
-    <string name="drawer_athlete_profile">Profile &amp; Zones</string>
-    <string name="athlete_profile_title">Profile &amp; Zones</string>
+    <string name="drawer_athlete_profile">Fitness &amp; Physiology</string>
+    <string name="athlete_profile_title">Fitness &amp; Physiology</string>
+    <string name="drawer_fitness_physiology">Fitness &amp; Physiology</string>
+    <string name="fitness_tab_pmc">Fitness &amp; Fatigue</string>
+    <string name="fitness_tab_hrv">HRV &amp; Readiness</string>
+    <string name="fitness_tab_body">Body &amp; Thresholds</string>
+    <string name="fitness_tab_cardio_power">Cardio-Power</string>
+    <string name="pmc_disabled_guidance">Performance Management Chart is disabled in Expert Settings.</string>
     <string name="athlete_profile_tab_profile">Profile</string>
     <string name="athlete_profile_add_entry">Add Measurement</string>
     <string name="athlete_profile_edit_entry">Edit Measurement</string>

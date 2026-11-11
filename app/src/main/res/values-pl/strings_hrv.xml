@@ -118,4 +118,12 @@
     <string name="tuning_hrv_artifact_gate_title">Próg artefaktów HRV</string>
     <string name="tuning_hrv_artifact_gate_desc" formatted="false">Maksymalny odsetek artefaktów w oknie przed stłumieniem DFA a1. Zakres: 3,0% do 5,0%.</string>
     <string name="tuning_hrv_artifact_gate_default">Domyślnie: %1$.1f%%</string>
+
+    <!-- Morning HRV CTA & Onboarding in Fitness & Physiology (ATT-6720 / REQ-UI-513) -->
+    <string name="hrv_measure_morning_cta">Zmierz poranne HRV</string>
+    <string name="hrv_empty_onboarding_title">Śledź swoją regenerację za pomocą porannego HRV</string>
+    <string name="hrv_empty_onboarding_desc">Wykonaj szybki 60–120s poranny pomiar za pomocą paska tętna, aby ustalić autonomiczną linię bazową i korytarz gotowości.</string>
+    <string name="hrv_delete_entry_title">Usuń odczyt HRV</string>
+    <string name="hrv_delete_entry_confirm">Czy na pewno chcesz usunąć ten poranny odczyt HRV?</string>
+    <string name="hrv_history_title">Historia porannego HRV</string>
 </resources>

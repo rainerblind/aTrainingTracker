@@ -2012,8 +2012,14 @@
     <string name="athlete_weight_edit">編集</string>
 
     <!-- Dedicated Athlete Profile Screen & Body Metrics History (ATT-3704, ATT-3851, REQ-UI-391, REQ-UI-397) -->
-    <string name="drawer_athlete_profile">プロフィールとゾーン</string>
-    <string name="athlete_profile_title">プロフィールとゾーン</string>
+    <string name="drawer_athlete_profile">フィットネスと生理学</string>
+    <string name="athlete_profile_title">フィットネスと生理学</string>
+    <string name="drawer_fitness_physiology">フィットネスと生理学</string>
+    <string name="fitness_tab_pmc">フィットネスと疲労</string>
+    <string name="fitness_tab_hrv">HRVとレディネス</string>
+    <string name="fitness_tab_body">身体と閾値</string>
+    <string name="fitness_tab_cardio_power">カーディオ・パワー</string>
+    <string name="pmc_disabled_guidance">エキスパート設定でパフォーマンス管理チャートが無効になっています。</string>
     <string name="athlete_profile_tab_profile">プロフィール</string>
     <string name="athlete_profile_add_entry">測定値を追加</string>
     <string name="athlete_profile_edit_entry">測定値を編集</string>

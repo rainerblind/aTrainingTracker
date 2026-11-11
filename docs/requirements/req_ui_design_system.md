@@ -15373,3 +15373,56 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 • *Then* cards align flush with sibling accordion bodies without double horizontal inset.
 
 **Invariants**: Zero schema migrations; settings persist immediately to `TuningPreferencesDataStore`; strict $< 400$ LOC limit across `ui/settings/tuning/`.
+
+
+
+### REQ-UI-513: Unified Fitness & Physiology Analytical Hub, Training Drawer Streamlining, and Dedicated Settings Training Zones [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-UI-513` | **Tickets**: `ATT-6720`
+- **Implementation**: `AppNavigationDrawer.kt`, `NavRoutes.kt`, `AthleteProfileScreen.kt`, `PeriodsTabsScreen.kt`, `PeriodsViewModel.kt`, `ZoneSettingsScreen.kt`, `strings.xml` (all 9 locales)
+- **Rationale**: Fragmented athlete analytics across Periods, Morning HRV, and Athlete Profile degrade scannability and confuse static settings with time-series trends. The system SHALL streamline the *Training* drawer group into 4 clean destinations, remove `HrvReadinessTrendCard` from `PeriodsTabsScreen`, consolidate longitudinal fitness and recovery analytics into a 4-tab **Fitness & Physiology** hub with a shared `MetricsTimeRange` X-axis, and restore **Training Zones** as a dedicated top-level destination inside the *Settings* drawer group.
+- **Description**:
+  1. *Training Drawer Streamlining (`REQ-UI-513.1`)*:
+     - The *Training* drawer group (`drawer__training`) in `AppNavigationDrawer.kt` SHALL contain exactly 4 items in sequence:
+       1. Start Tracking (`R.id.drawer_start_tracking`)
+       2. Workouts (`R.id.drawer_workouts`)
+       3. Periods (`R.id.drawer_periods`, strictly calendar volume summaries)
+       4. Fitness & Physiology (`R.id.drawer_athlete_profile`, title `R.string.drawer_fitness_physiology` / `drawer_athlete_profile`)
+     - Standalone `drawer_morning_hrv` SHALL be retired from top-level drawer items.
+  2. *Settings Drawer Training Zones Integration (`REQ-UI-513.2`)*:
+     - The *Settings* drawer group (`drawer__settings`) in `AppNavigationDrawer.kt` SHALL include Training Zones (`R.id.drawer_training_zones`, icon `R.drawable.ic_speed`, title `R.string.prefs_training_zones`), positioned following `drawer_sport_types`.
+     - `isDrawerItemSelected` SHALL recognize `R.id.drawer_training_zones` independently from `R.id.drawer_athlete_profile`, preserving deep-link backward compatibility.
+  3. *Clean Periods Screen Decoupling (`REQ-UI-513.3`)*:
+     - `PeriodsTabsScreen.kt` and `PeriodsViewModel.kt` SHALL strictly display calendar volume aggregations, removing `HrvReadinessTrendCard` and unnecessary `HrvReadinessRepository` loading overhead.
+  4. *Unified Fitness & Physiology Analytical Hub (`REQ-UI-513.4`)*:
+     - `AthleteProfileScreen.kt` (Fitness & Physiology) SHALL host 4 tabs in `PrimaryScrollableTabRow` + `HorizontalPager` with standard fixed header `LayoutConstants.HEADER_TITLE_ROW_HEIGHT` and synchronized `MetricsTimeRange` (`1M | 3M | 6M | 1Y | All`) calendar X-axis:
+       - **Tab 1: Fitness & Fatigue (PMC)**: `CTL / ATL / TSB / ACWR` + Ramp Rate KPI summary tiles and `PerformanceManagementChartCard` (with disabled guidance if PMC is inactive).
+       - **Tab 2: HRV & Readiness**: Primary "Measure Morning HRV" CTA button launching `MorningHrvCheckScreen`, empty-state onboarding card when 0 readings exist in `HrvReadiness.db`, `HrvReadinessTrendCard` (60d posture-isolated SWC corridor + 7d rolling trend + optional Training-Load overlay), and chronological history log of recorded morning HRV entries with delete support.
+       - **Tab 3: Body & Thresholds**: Current KPI summary tiles (`Weight`, `HRrest`, `FTP`, `CP`, `W'`, `W/kg`), `AthleteMetricTimeSeriesChart`, `+` Add Entry action, and filterable History Log.
+       - **Tab 4: Cardio-Power**: Longitudinal `CardioPowerTrendsCard` (`Fresh HR@200W`, Time Constant `τ`, Slope `1/K`), conditionally displayed when `enableCardioPowerDynamics` is true.
+  5. *Dedicated Settings Training Zones Hub (`REQ-UI-513.5`)*:
+     - `NavRoutes.TRAINING_ZONES` SHALL route directly to `ZoneSettingsScreen` in `ZonesSettingsActivity.kt` hosting the 3 zone configuration tabs (`HR Run`, `HR Bike`, `Power Bike`), Zone Calculator dialog, and Zone History dialog.
+  6. *9-Language Localization Parity (`REQ-UI-513.6`)*:
+     - All new and updated string resources (`drawer_fitness_physiology`, tab titles, empty states, button CTAs) SHALL be localized with 100% parity across `values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* the navigation drawer,
+• *When* expanded,
+• *Then* the Training group contains exactly 4 items (`Start Tracking`, `Workouts`, `Periods`, `Fitness & Physiology`) and Settings contains `Training Zones`.
+• *Given* the Periods screen,
+• *When* opened,
+• *Then* it displays only calendar volume bars with zero HRV trend card overhead.
+• *Given* the Fitness & Physiology hub,
+• *When* navigating between tabs,
+• *Then* Tab 1 renders PMC, Tab 2 renders HRV readiness with Morning HRV measurement CTA & log, Tab 3 renders Body & Thresholds, and Tab 4 renders Cardio-Power when enabled.
+• *Given* selecting Training Zones from Settings,
+• *When* opened,
+• *Then* it loads `ZoneSettingsScreen` with the 3 zone tabs, calculator, and history dialogs.
+
+**Archaeology (Chesterton's Fence)**:
+1. *Original Requirement ID & Target*: Amends `REQ-UI-397.1` & `REQ-UI-397.2` (*Consolidated Equipment & Profile/Zones Destinations*, Sprint 2026-42.7, ATT-3851), `REQ-UI-405.1` (*Training Drawer Order*, Sprint 2026-42.7, ATT-3928), and `REQ-PER-033.5` (*HRV Trend in Periods*, Sprint 2026-46.1, ATT-3557).
+2. *Historical Origin & Commit Trace*: Commit `b660ef43` (ATT-3704), commit `8471b409` (ATT-3851), and Sprint 2026-46.1 (ATT-3557).
+3. *Root Reason for Existing Formulation*: Zones were initially grouped with athlete profile as an interim consolidation step; HRV trend card was introduced into Periods to surface early longitudinal recovery data before a dedicated multi-tab physiology hub was architected.
+4. *Preservation of Core Invariants*: All zone calculation and editing capabilities preserved; all historical athlete metric entries and morning HRV records remain 100% accessible; backward-compatible route mappings (`NavRoutes.ATHLETE_PROFILE`, `NavRoutes.TRAINING_ZONES`) maintained.
+
+**Invariants**: DataStore zone persistence preserved; SQLite database tables (`HrvReadiness.db`, `AthleteMetricsDb`) unchanged; navigation deep-links backward-compatible; WCAG AA contrast maintained.

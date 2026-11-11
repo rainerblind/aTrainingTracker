@@ -118,4 +118,12 @@
     <string name="tuning_hrv_artifact_gate_title">HRV-artefactdrempel</string>
     <string name="tuning_hrv_artifact_gate_desc" formatted="false">Maximaal artefactpercentage in venster voordat DFA a1 wordt onderdrukt. Bereik: 3,0% tot 5,0%.</string>
     <string name="tuning_hrv_artifact_gate_default">Standaard: %1$.1f%%</string>
+
+    <!-- Morning HRV CTA & Onboarding in Fitness & Physiology (ATT-6720 / REQ-UI-513) -->
+    <string name="hrv_measure_morning_cta">Ochtend-HRV meten</string>
+    <string name="hrv_empty_onboarding_title">Volg je herstel met ochtend-HRV</string>
+    <string name="hrv_empty_onboarding_desc">Voer een snelle ochtendmeting van 60–120s uit met een hartslagband om je autonome basislijn en herstelcorridor op te bouwen.</string>
+    <string name="hrv_delete_entry_title">HRV-meting verwijderen</string>
+    <string name="hrv_delete_entry_confirm">Weet je zeker dat je deze ochtend-HRV-meting wilt verwijderen?</string>
+    <string name="hrv_history_title">Geschiedenis ochtend-HRV</string>
 </resources>

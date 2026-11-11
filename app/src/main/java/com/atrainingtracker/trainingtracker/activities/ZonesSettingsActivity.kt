@@ -53,6 +53,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Calculate
 import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.Menu
 import com.atrainingtracker.trainingtracker.ui.settings.ZoneHistoryDialog
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.atrainingtracker.R
@@ -117,6 +118,7 @@ fun ZoneSettingsScreen(
     initialTab: Int = 0,
     promptReason: String? = null,
     onFinish: () -> Unit = {},
+    onOpenDrawer: (() -> Unit)? = null,
     viewModel: ZonesSettingsViewModel = viewModel()
 ) {
     val context = LocalContext.current
@@ -188,6 +190,15 @@ fun ZoneSettingsScreen(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
+                            if (onOpenDrawer != null) {
+                                IconButton(onClick = onOpenDrawer) {
+                                    Icon(
+                                        imageVector = Icons.Default.Menu,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.onPrimaryContainer
+                                    )
+                                }
+                            }
                             Text(
                                 text = stringResource(R.string.title_edit_zones),
                                 style = MaterialTheme.typography.headlineSmall,

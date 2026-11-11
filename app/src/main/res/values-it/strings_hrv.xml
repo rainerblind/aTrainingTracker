@@ -118,4 +118,12 @@
     <string name="tuning_hrv_artifact_gate_title">Soglia filtro artefatti HRV</string>
     <string name="tuning_hrv_artifact_gate_desc" formatted="false">Tasso massimo di artefatti nella finestra prima della soppressione di DFA a1. Intervallo: da 3,0% a 5,0%.</string>
     <string name="tuning_hrv_artifact_gate_default">Predefinito: %1$.1f%%</string>
+
+    <!-- Morning HRV CTA & Onboarding in Fitness & Physiology (ATT-6720 / REQ-UI-513) -->
+    <string name="hrv_measure_morning_cta">Misura HRV mattutina</string>
+    <string name="hrv_empty_onboarding_title">Monitora il tuo recupero con l\'HRV mattutina</string>
+    <string name="hrv_empty_onboarding_desc">Esegui una rapida misurazione mattutina di 60–120s con una fascia cardio per stabilire la tua baseline autonomica e il corridoio di prontezza.</string>
+    <string name="hrv_delete_entry_title">Elimina misurazione HRV</string>
+    <string name="hrv_delete_entry_confirm">Vuoi davvero eliminare questa misurazione dell\'HRV mattutina?</string>
+    <string name="hrv_history_title">Cronologia HRV mattutina</string>
 </resources>
