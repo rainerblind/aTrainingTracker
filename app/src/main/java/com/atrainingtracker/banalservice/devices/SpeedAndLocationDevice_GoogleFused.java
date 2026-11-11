@@ -32,6 +32,7 @@ import com.atrainingtracker.banalservice.database.DevicesDatabaseManager;
 import com.atrainingtracker.banalservice.sensor.MySensorManager;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.location.FusedLocationProviderApi;
 import com.google.android.gms.location.LocationListener;
 import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationServices;
@@ -47,6 +48,10 @@ public class SpeedAndLocationDevice_GoogleFused extends SpeedAndLocationDevice
     protected GoogleApiClient mGoogleApiClient;
 
     protected LocationRequest mLocationRequest;
+
+    protected FusedLocationProviderApi mFusedLocationApi = LocationServices.FusedLocationApi;
+
+    private boolean mUpdatesRegistered = false;
 
     public SpeedAndLocationDevice_GoogleFused(Context context, MySensorManager mySensorManager) {
         super(context, mySensorManager, DeviceType.SPEED_AND_LOCATION_GOOGLE_FUSED);
@@ -74,30 +79,50 @@ public class SpeedAndLocationDevice_GoogleFused extends SpeedAndLocationDevice
         mGoogleApiClient.connect();
     }
 
+    /**
+     * Returns whether location updates are currently registered with Google Play Services.
+     *
+     * @return true if location updates are active; false otherwise.
+     */
+    public synchronized boolean isLocationUpdatesRegistered() {
+        return mUpdatesRegistered;
+    }
+
     @Override
-    public void onConnected(Bundle dataBundle) {
+    public synchronized void onConnected(Bundle dataBundle) {
         if (DEBUG) Log.d(TAG, "onConnected()");
+
+        if (mUpdatesRegistered) {
+            if (DEBUG) Log.d(TAG, "onConnected: location updates already registered, skipping");
+            return;
+        }
 
         if (ActivityCompat.checkSelfPermission(mContext, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             return;
         }
-        LocationServices.FusedLocationApi.requestLocationUpdates(mGoogleApiClient, mLocationRequest, this);
-
-        // set last active
-        setLastActive();
+        try {
+            mFusedLocationApi.requestLocationUpdates(mGoogleApiClient, mLocationRequest, this);
+            mUpdatesRegistered = true;
+            // set last active
+            setLastActive();
+        } catch (Exception e) {
+            Log.w(TAG, "Failed to request Google Fused location updates in onConnected: " + e.getMessage());
+        }
     }
 
 
     @Override
-    public void onConnectionSuspended(int i) {
+    public synchronized void onConnectionSuspended(int i) {
         Log.i(TAG, "GoogleApiClient connection has been suspend");
 
+        mUpdatesRegistered = false;
         LocationUnavailable();
     }
 
     @Override
-    public void onConnectionFailed(ConnectionResult connectionResult) {
+    public synchronized void onConnectionFailed(ConnectionResult connectionResult) {
         Log.i(TAG, "GoogleApiClient connection has failed");
+        mUpdatesRegistered = false;
     }
 
 
@@ -110,10 +135,15 @@ public class SpeedAndLocationDevice_GoogleFused extends SpeedAndLocationDevice
 
     @Override
     public synchronized void checkOrReRegisterLocationUpdates() {
+        if (mUpdatesRegistered) {
+            if (DEBUG) Log.d(TAG, "checkOrReRegisterLocationUpdates: already registered, skipping");
+            return;
+        }
         if (mGoogleApiClient != null && mGoogleApiClient.isConnected()) {
             if (ActivityCompat.checkSelfPermission(mContext, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
                 try {
-                    LocationServices.FusedLocationApi.requestLocationUpdates(mGoogleApiClient, mLocationRequest, this);
+                    mFusedLocationApi.requestLocationUpdates(mGoogleApiClient, mLocationRequest, this);
+                    mUpdatesRegistered = true;
                     setLastActive();
                     if (DEBUG) Log.i(TAG, "checkOrReRegisterLocationUpdates: Fused location updates registered successfully");
                 } catch (Exception e) {
@@ -126,8 +156,21 @@ public class SpeedAndLocationDevice_GoogleFused extends SpeedAndLocationDevice
     }
 
     @Override
-    public void shutDown() {
-        mGoogleApiClient.disconnect();
+    public synchronized void shutDown() {
+        if (DEBUG) Log.d(TAG, "shutDown()");
+        if (mGoogleApiClient != null && mGoogleApiClient.isConnected()) {
+            try {
+                mFusedLocationApi.removeLocationUpdates(mGoogleApiClient, this);
+                if (DEBUG) Log.i(TAG, "shutDown: Fused location updates removed successfully");
+            } catch (Exception e) {
+                Log.w(TAG, "Failed to remove Google Fused location updates: " + e.getMessage());
+            }
+        }
+        mUpdatesRegistered = false;
+
+        if (mGoogleApiClient != null) {
+            mGoogleApiClient.disconnect();
+        }
 
         super.shutDown();
     }

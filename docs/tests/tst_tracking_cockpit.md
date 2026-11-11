@@ -2179,6 +2179,27 @@
   5. *Clean-Room Targeted Regression Suite Execution (`TST-TRK-070.5`)*:
   • `./gradlew testDebugUnitTest --tests "com.atrainingtracker.banalservice.sensor.*" --tests "com.atrainingtracker.banalservice.ActivityTypeTest" --tests "com.atrainingtracker.trainingtracker.ui.tracking.editsensorfield.*"` asserting 100% pass rate.
 
+### TST-TRK-071: **Google Fused Location Registration Idempotency, Deduplication & Teardown Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-TRK-071` (`REQ-TRK-071.1`..`REQ-TRK-071.5`)
+- **Component**: `SpeedAndLocationDevice_GoogleFused.java`
+- **Jira**: `ATT-6683`
+- **Test Description**:
+  1. *Idempotent Registration Guard & Duplicate Prevention Test (`TST-TRK-071.1`, `SpeedAndLocationDeviceGoogleFusedTest.kt`)*:
+  • Given `SpeedAndLocationDevice_GoogleFused` connected with updates registered (`isLocationUpdatesRegistered() == true`),
+  • When `checkOrReRegisterLocationUpdates()` is called repeatedly (simulating 7 tracking lifecycle calls),
+  • Then verify `FusedLocationApi.requestLocationUpdates(...)` was called exactly once, preventing duplicate concurrent listener registrations.
+  2. *Initial Connection Registration & Observability Test (`TST-TRK-071.2`, `SpeedAndLocationDeviceGoogleFusedTest.kt`)*:
+  • Verify `isLocationUpdatesRegistered()` returns `false` before connection.
+  • Verify `onConnected(Bundle)` triggers `requestLocationUpdates(...)` and sets `isLocationUpdatesRegistered()` to `true`.
+  3. *Clean Lifecycle Teardown & Unregistration Test (`TST-TRK-071.3`, `SpeedAndLocationDeviceGoogleFusedTest.kt`)*:
+  • Verify `shutDown()` on an active registered device invokes `LocationServices.FusedLocationApi.removeLocationUpdates(...)`.
+  • Verify `isLocationUpdatesRegistered()` is reset to `false` and `mGoogleApiClient.disconnect()` is called.
+  4. *Connection State Resets & Exception Shielding Test (`TST-TRK-071.4`, `SpeedAndLocationDeviceGoogleFusedTest.kt`)*:
+  • Verify `onConnectionSuspended()` and `onConnectionFailed()` reset `isLocationUpdatesRegistered()` to `false`.
+  • Verify exceptions thrown during `removeLocationUpdates(...)` in `shutDown()` are caught and logged cleanly without throwing uncaught exceptions.
+  5. *Targeted Devices & Architecture Contract Suite Execution (`TST-TRK-071.5`)*:
+  • `./gradlew testDebugUnitTest --tests "com.atrainingtracker.banalservice.devices.*" --tests "com.atrainingtracker.trainingtracker.build.SystemContextContractTest"` asserting 100% pass rate.
+
 ### TST-TRK-072: **Guided DFA a1 Step & Ramp Test Protocol Suite** [Verified]
 - **Requirement(s)**: `REQ-TRK-072` (`REQ-TRK-072.1`..`REQ-TRK-072.6`)
 - **Component**: `HrvRampTestViewModel.kt`, `HrvRampTestScreen.kt`, `HrvRampTestConfig.kt`, `HrvThresholdEstimator.kt`
@@ -2205,13 +2226,3 @@
      • Verify 100% presence and parity of all test screen string keys in `strings_hrv.xml` across all 9 locales: `values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`.
   7. *Clean-Room Targeted Test Suite Execution (`TST-TRK-072.7`)*:
      • `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.hrv.*" --tests "com.atrainingtracker.trainingtracker.localization.TranslationParityTest"` asserting 100% pass rate.
-
-
-
-
-
-
-
-
-
-

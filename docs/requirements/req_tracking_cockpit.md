@@ -3960,6 +3960,42 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 **Invariants**: All 63 `SensorType` enum names and ordinals preserved; zero SQLite schema modifications; Section 5.8 bottom sheet scroll safety preserved; 100% unit and localization test pass rate.
 
+### REQ-TRK-071: Google Fused Location Registration Idempotency & Teardown Lifecycle [Verified]
+- **Tests**: `TST-TRK-071` | **Tickets**: `ATT-6683`
+- **Implementation**: `SpeedAndLocationDevice_GoogleFused.java`
+- **Rationale**: When tracking with Google Fused (`SpeedAndLocationDevice_GoogleFused`), Android lifecycle and tracking startup invoke `BANALService.checkOrInitializeLocationDevices()` repeatedly across UI and service entry points (e.g. `MainActivityWithNavigation.onResume`, `ControlTrackingScreen` composition and start button, `TrainingApplication.startTracking`, and `TrackerService` connection/start). Without internal registration state tracking, `checkOrReRegisterLocationUpdates()` executed `LocationServices.FusedLocationApi.requestLocationUpdates(...)` on every invocation, creating up to 7 concurrent duplicate listeners in Google Play Services and flooding Logcat 6 times per second (`location delivery to %s blocked - too fast`). Furthermore, `shutDown()` failed to unregister listeners via `LocationServices.FusedLocationApi.removeLocationUpdates(...)`, leaking active registrations until process death. Introducing an idempotent `mUpdatesRegistered` guard and clean defensive lifecycle teardown guarantees strictly at most 1 active listener while preserving permission recovery (ATT-6683, Parent Epic ATT-166, refining `REQ-STB-004`).
+- **Description**:
+1. *Idempotent Registration Guard (`REQ-TRK-071.1`)*:
+• `SpeedAndLocationDevice_GoogleFused` SHALL maintain an internal registration flag `mUpdatesRegistered` (initially `false`).
+• In `onConnected()` and `checkOrReRegisterLocationUpdates()`, if `mUpdatesRegistered == true`, the device SHALL immediately return without invoking `LocationServices.FusedLocationApi.requestLocationUpdates(...)`.
+2. *State Flag Transition on Registration (`REQ-TRK-071.2`)*:
+• Upon successfully requesting location updates via `LocationServices.FusedLocationApi.requestLocationUpdates(...)`, `SpeedAndLocationDevice_GoogleFused` SHALL set `mUpdatesRegistered = true`.
+3. *Defensive Lifecycle Teardown & Clean Unregistration (`REQ-TRK-071.3`)*:
+• In `shutDown()`, if `mGoogleApiClient != null && mGoogleApiClient.isConnected()`, `SpeedAndLocationDevice_GoogleFused` SHALL invoke `LocationServices.FusedLocationApi.removeLocationUpdates(mGoogleApiClient, this)` within a defensive try-catch block, reset `mUpdatesRegistered = false`, and disconnect the client.
+4. *Connection State Reset (`REQ-TRK-071.4`)*:
+• Upon `onConnectionSuspended()` or `onConnectionFailed()`, `SpeedAndLocationDevice_GoogleFused` SHALL reset `mUpdatesRegistered = false`.
+5. *Registration State Observability (`REQ-TRK-071.5`)*:
+• `SpeedAndLocationDevice_GoogleFused` SHALL expose `public synchronized boolean isLocationUpdatesRegistered()` returning `mUpdatesRegistered` for contract verification and parity with `SpeedAndLocationDevice_GPS`.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-TRK-071`, refining `REQ-STB-004` (*Resilient Location Provider Initialization & Device Hardware Fault Tolerance*). Targets `SpeedAndLocationDevice_GoogleFused.java`.
+2. *Historical Origin & Commit Trace*: `ATT-3045` (commit `53ba5fa8`). Introduced `checkOrReRegisterLocationUpdates()` to re-attempt provider registration following runtime permission grants.
+3. *Root Reason for Existing Formulation*: `SpeedAndLocationDevice_GPS` received the `mUpdatesRegistered` guard and unregistration teardown in `ATT-3045`, but `SpeedAndLocationDevice_GoogleFused` omitted them, causing Google Play Services to accumulate concurrent listeners whenever tracking startup triggered multiple checks.
+4. *Preservation of Core Invariants*: Runtime permission recovery on fresh installs or late permission grants is fully preserved (if permission is granted after initial connection, `checkOrReRegisterLocationUpdates()` proceeds because `!mUpdatesRegistered`). GoogleApiClient architecture (`SYSREQ-TRK-004`) is strictly maintained.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* `SpeedAndLocationDevice_GoogleFused` connected with updates registered (`isLocationUpdatesRegistered() == true`),
+• *When* `checkOrReRegisterLocationUpdates()` is called repeatedly,
+• *Then* `requestLocationUpdates(...)` SHALL NOT be called again, maintaining exactly 1 active registration.
+• *Given* `SpeedAndLocationDevice_GoogleFused` with active updates,
+• *When* `shutDown()` is invoked,
+• *Then* `removeLocationUpdates(...)` SHALL be invoked, `isLocationUpdatesRegistered()` SHALL become `false`, and `disconnect()` SHALL execute cleanly.
+• *Given* an active registered client,
+• *When* `onConnectionSuspended()` or `onConnectionFailed()` occurs,
+• *Then* `isLocationUpdatesRegistered()` SHALL reset to `false`.
+
+**Invariants**: Retains `GoogleApiClient` / `LocationServices.FusedLocationApi` architecture (`SYSREQ-TRK-004`); zero concurrent duplicate registrations; 100% test pass rate.
+
 ### REQ-TRK-072: Guided DFA a1 Step & Ramp Test Protocol Screen [Verified]
 - **Target Release**: `V5.0.0`
 - **Tests**: `TST-TRK-072` | **Tickets**: `ATT-4969`
@@ -4010,13 +4046,3 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 • *Then* each step is evaluated strictly over $[t_{\text{end},j} - 120\text{ s}, t_{\text{end},j}]$ with zero bleed into subsequent steps, and high confidence is emitted only if $R^2 \ge 0.70$, artifact rate $\le 3.0\%$, and $\ge 5$ valid steps are present.
 
 **Invariants**: Zero background service sampling regressions; zero SQLite schema modifications; Section 5.8 Composable navigation safety; 100% clean-room test pass rate across all 9 locales.
-
-
-
-
-
-
-
-
-
-
