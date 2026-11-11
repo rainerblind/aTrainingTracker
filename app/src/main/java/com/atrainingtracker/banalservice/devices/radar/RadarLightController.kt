@@ -38,7 +38,7 @@ object RadarLightController {
 
     private const val TAG = "RadarLightController"
 
-    private var activeRadarDevice: BTLERadarDevice? = null
+    private var activeRadarDevice: RadarLightDeviceClient? = null
 
     private val _currentMode = MutableStateFlow(RadarLightMode.OFF)
     @get:JvmStatic
@@ -53,11 +53,11 @@ object RadarLightController {
     val isStvzo: StateFlow<Boolean> = _isStvzo.asStateFlow()
 
     /**
-     * Binds a connected [BTLERadarDevice] peripheral to the controller.
+     * Binds a connected [RadarLightDeviceClient] peripheral (BLE or ANT+) to the controller.
      */
     @JvmStatic
     @JvmOverloads
-    fun registerRadarDevice(device: BTLERadarDevice, lightSupported: Boolean, isStvzo: Boolean = false) {
+    fun registerRadarDevice(device: RadarLightDeviceClient, lightSupported: Boolean, isStvzo: Boolean = false) {
         synchronized(this) {
             activeRadarDevice = device
             _isLightControlAvailable.value = lightSupported
@@ -69,10 +69,10 @@ object RadarLightController {
     }
 
     /**
-     * Unbinds a disconnected [BTLERadarDevice] peripheral.
+     * Unbinds a disconnected [RadarLightDeviceClient] peripheral.
      */
     @JvmStatic
-    fun unregisterRadarDevice(device: BTLERadarDevice) {
+    fun unregisterRadarDevice(device: RadarLightDeviceClient) {
         synchronized(this) {
             if (activeRadarDevice === device) {
                 activeRadarDevice = null

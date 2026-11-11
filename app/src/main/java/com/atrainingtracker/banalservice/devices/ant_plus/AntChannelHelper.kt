@@ -46,6 +46,11 @@ object AntChannelHelper {
     const val BIKE_RADAR_RF_FREQUENCY = 57 // 2457 MHz
     const val BIKE_RADAR_CHANNEL_PERIOD = 4084 // ~8.0235 Hz (counts)
 
+    /** Standard ANT+ Bike Lights device profile constants (REQ-CON-033.1, ATT-5103) */
+    const val BIKE_LIGHT_DEVICE_TYPE = 35 // 0x23
+    const val BIKE_LIGHT_RF_FREQUENCY = 57 // 2457 MHz
+    const val BIKE_LIGHT_CHANNEL_PERIOD = 4084 // ~8.0235 Hz (counts)
+
     fun interface ChannelAcquirer {
         @Throws(ChannelNotAvailableException::class, RemoteException::class)
         fun acquire(context: Context, provider: AntChannelProvider): AntChannel

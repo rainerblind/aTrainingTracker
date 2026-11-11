@@ -52,6 +52,7 @@ import com.atrainingtracker.banalservice.sensor.SensorType;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import com.atrainingtracker.banalservice.devices.radar.RadarLightDeviceClient;
 import java.util.UUID;
 
 /**
@@ -61,7 +62,7 @@ import java.util.UUID;
  * publishes high-rate (4–8 Hz) multi-target streams to [RadarStateRepository], maintains a 3.5s
  * fail-safe disconnect watchdog, and latches 1 Hz scalar metrics via [RadarWindowAggregator].
  */
-public class BTLERadarDevice extends MyBTLEDevice {
+public class BTLERadarDevice extends MyBTLEDevice implements RadarLightDeviceClient {
     private static final String TAG = "BTLERadarDevice";
     private static final boolean DEBUG = BANALService.getDebug(false);
 

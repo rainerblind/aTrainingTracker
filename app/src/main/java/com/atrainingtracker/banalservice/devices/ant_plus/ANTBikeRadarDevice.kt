@@ -99,6 +99,8 @@ class ANTBikeRadarDevice(
     private var antService: AntService? = null
     var antChannel: AntChannel? = null
         private set
+    var companionLightDevice: ANTBikeLightDevice? = null
+        internal set
     private var isServiceBound = false
 
     private val handler = Handler(Looper.getMainLooper())
@@ -210,6 +212,17 @@ class ANTBikeRadarDevice(
         channel.setChannelEventHandler(channelEventHandler)
         channel.open()
         if (DEBUG) Log.i(TAG, "ANT+ Bike Radar channel opened for device $antDeviceNumber")
+
+        if (companionLightDevice == null) {
+            try {
+                val lightDev = ANTBikeLightDevice(mContext, antDeviceNumber)
+                companionLightDevice = lightDev
+                val provider = antService?.channelProvider
+                lightDev.start(provider)
+            } catch (e: Exception) {
+                Log.w(TAG, "Failed to start companion ANT+ light device", e)
+            }
+        }
     }
 
     fun decodeBroadcastData(payload: ByteArray?) {
@@ -314,7 +327,7 @@ class ANTBikeRadarDevice(
             targets = targetsList,
             lastUpdateRealtimeMs = SystemClock.elapsedRealtime(),
             lightMode = currentState.lightMode,
-            isLightControlSupported = false,
+            isLightControlSupported = currentState.isLightControlSupported || (companionLightDevice?.isAssociated == true),
             audioSnoozeState = currentState.audioSnoozeState
         )
         RadarStateRepository.updateState(state)
@@ -364,7 +377,7 @@ class ANTBikeRadarDevice(
             targets = emptyList(),
             lastUpdateRealtimeMs = SystemClock.elapsedRealtime(),
             lightMode = currentState.lightMode,
-            isLightControlSupported = false,
+            isLightControlSupported = currentState.isLightControlSupported,
             audioSnoozeState = currentState.audioSnoozeState
         )
         RadarStateRepository.updateState(state)
@@ -436,6 +449,12 @@ class ANTBikeRadarDevice(
 
     override fun shutDown() {
         handler.removeCallbacks(watchdogRunnable)
+        try {
+            companionLightDevice?.stop()
+        } catch (e: Exception) {
+            Log.w(TAG, "Error stopping companion ANT+ light device", e)
+        }
+        companionLightDevice = null
         try {
             antChannel?.close()
             antChannel?.release()

@@ -2049,6 +2049,27 @@
   6. *Targeted Radar Test Suite Execution (`TST-CON-032.6`)*:
   • Run all radar unit and integration tests under `com.atrainingtracker.banalservice.devices.antplus.*` and `com.atrainingtracker.banalservice.devices.radar.*` asserting 100% pass rate.
 
+### TST-CON-033: **ANT+ Bike Lights Profile (Device Type 0x23) Companion Channel, Handshake & Mode Control Test Suite** [Verified]
+- **Requirement(s)**: `REQ-CON-033` (`REQ-CON-033.1`..`REQ-CON-033.5`)
+- **Component**: `ANTBikeLightDevice.kt`, `AntChannelHelper.kt`, `ANTBikeRadarDevice.kt`, `RadarLightController.kt`, `RadarLightDeviceClient.kt`, `RadarLightMode.kt`
+- **Jira**: `ATT-5103`, `ATT-7131`
+- **Test Description**:
+  1. *Channel Acquisition & Companion Binding Tests (`TST-CON-033.1`, `ANTBikeLightDeviceTest.kt`)*:
+  • Verify `AntChannelHelper` constants: `BIKE_LIGHT_DEVICE_TYPE = 35`, `BIKE_LIGHT_RF_FREQUENCY = 57`, `BIKE_LIGHT_CHANNEL_PERIOD = 4084`.
+  • Verify companion channel acquisition on Predefined Network slot 1 (`ANT_PLUS`), channel configuration as `BIDIRECTIONAL_SLAVE`, and clean teardown without creating duplicate database rows.
+  2. *Data Page 0x01 & 0x02 Broadcast Decoding Tests (`TST-CON-033.2`, `ANTBikeLightDeviceTest.kt`)*:
+  • Verify unpacking of Page `0x01` (Main Light State): Light Index, Light Type (Tail Light = 2), current mode, and battery status.
+  • Verify unpacking of Page `0x02` (Capabilities): supported modes bitmask and propagation to `RadarStateRepository`.
+  3. *Stateful 3-Step Handshake Tests (`TST-CON-033.3`, `ANTBikeLightDeviceTest.kt`)*:
+  • Verify Page `0x21` (Connect Command) transmission when `Light Index == 0`, assigning Light Index 1 and phone controller ID.
+  • Verify Page `0x22` (Mode Command) transmission with sequence incrementing only after `Light Index == 1` is confirmed.
+  • Verify Page `0x20` (Disconnect Command) transmission upon release.
+  4. *Unified Controller Abstraction Tests (`TST-CON-033.4`, `RadarLightControllerTest.kt`)*:
+  • Verify `RadarLightController` accepts `RadarLightDeviceClient` implementations (both BLE and ANT+).
+  • Verify mode transitions, workout auto-switch, and state updates dispatch to `ANTBikeLightDevice` identically to BLE.
+  5. *Fail-Safe Isolation & Radar Telemetry Non-Interference Tests (`TST-CON-033.5`, `ANTBikeRadarDeviceTest.kt`)*:
+  • Verify that companion light channel drop or timeout leaves ANT+ radar target tracking (Pages `0x30`/`0x31`) completely unaffected.
+
 ### TST-TRK-064: **1-Tap Radar Audio Snooze, Peloton Sync & Urban Suppression Test Suite** [Verified]
 - **Requirement(s)**: `REQ-TRK-064` (`REQ-TRK-064.1`..`REQ-TRK-064.7`)
 - **Component**: `RadarSnoozeController.kt`, `RadarAlertManager.kt`, `RadarEdgeOverlay.kt`, `RadarLightQuickSwitchSheet.kt`, `RadarState.kt`, `RadarStateRepository.kt`, `BTLERadarDevice.java`, `TuningPreferencesDataStore.kt`, `RadarSettingsSection.kt`, `strings_radar.xml`

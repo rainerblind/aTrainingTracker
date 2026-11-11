@@ -3672,6 +3672,41 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 **Invariants**: Predefined Network Slot 1 isolation; coexistence with legacy `antpluginlib_3-9-0.aar` PCC devices (HR, Speed, Cadence, Power); non-blocking background AIDL message handling; fail-safe 3.5s disconnect watchdog; zero SQLite schema migrations; 100% test pass rate.
 
+### REQ-CON-033: ANT+ Bike Lights Profile (Device Type 0x23) Companion Channel, Connect Handshake & Tail Light Mode Control [Verified]
+- **Tests**: `TST-CON-033` | **Tickets**: `ATT-5103`, `ATT-7131`
+- **Implementation**: `ANTBikeLightDevice.kt`, `AntChannelHelper.kt`, `ANTBikeRadarDevice.kt`, `RadarLightController.kt`, `RadarLightDeviceClient.kt`, `RadarLightMode.kt`
+- **Rationale**: Cycling rearview radar tail lights (Garmin Varia RTL515, RTL516, RearVue 820, Magene L508, Bryton Gardia R300L) broadcast radar telemetry over the ANT+ Bike Radar profile (`0x28`), but expose light control and battery status exclusively via the standardized ANT+ Bike Lights profile (Device Type 35 / `0x23`). Cyclists require handlebar mode switching (Day Flash, Night Flash, Solid, Peloton, Off) and automated workout start/stop light control without discovering and pairing duplicate sensors in the database. The system must establish an automated companion channel bound to the paired radar, execute the mandatory 3-step handshake (Data Page `0x21` Connect Command assigning `Light Index = 1`, Data Page `0x22` Mode Command with sequence indexing, and Data Page `0x20` Disconnect Command), and integrate seamlessly into `RadarLightController` (ATT-5103, Parent Epic ATT-1286, extending `REQ-CON-001`, `REQ-CON-031`, and `REQ-CON-032`):
+1. *ANT+ Bike Lights Channel Acquisition & Companion Lifecycle (`REQ-CON-033.1`)*:
+• `AntChannelHelper` SHALL define Bike Lights constants (`BIKE_LIGHT_DEVICE_TYPE = 35` / `0x23`, `BIKE_LIGHT_CHANNEL_PERIOD = 4084` counts / ~8.02 Hz).
+• When an `ANTBikeRadarDevice` connects, it SHALL automatically instantiate and bind an `ANTBikeLightDevice` companion channel on Predefined Network slot 1 (`ANT_PLUS`), RF frequency `57`, Channel Type `BIDIRECTIONAL_SLAVE`, matching the radar's device number (or wildcard fallback if independent).
+• The companion light channel SHALL NOT create a duplicate device entry in `DevicesDatabaseManager`. On radar teardown or disconnect, the companion channel SHALL release cleanly.
+2. *Broadcast Decoding: Page 0x01 (Main Light State) & Page 0x02 (Light Capabilities) (`REQ-CON-033.2`)*:
+• `ANTBikeLightDevice` SHALL decode Data Page `0x01`: Light Index (`0` = unassociated, `1..63` = assigned index), Light Type (`2` = Tail Light), current Beam/Flash mode, and battery status.
+• `ANTBikeLightDevice` SHALL decode Data Page `0x02`: bitmask of supported light modes (Day Flash, Night Flash, Solid High, Peloton/Solid Low, Off).
+• Discovered capabilities SHALL update `RadarLightController` and `RadarStateRepository`.
+3. *Stateful 3-Step Handshake: Connect (Page 0x21), Mode Control (Page 0x22) & Disconnect (Page 0x20) (`REQ-CON-033.3`)*:
+• *Step 1 (Connect Handshake, Page `0x21`)*: When Data Page `0x01` reports `Light Index == 0` (unassociated), `ANTBikeLightDevice` SHALL transmit an acknowledged Data Page `0x21` message assigning `Light Index = 1`, phone-derived Controller ID, and Light Type `2` (Tail Light). Mode setting commands SHALL NOT be transmitted until Page `0x01` confirms `Light Index == 1`.
+• *Step 2 (Mode Settings Command, Page `0x22`)*: Upon receiving confirmation that `Light Index == 1`, `ANTBikeLightDevice` SHALL transmit acknowledged Data Page `0x22` containing `Light Index = 1`, incrementing sequence number, and the target mode byte mapped from `RadarLightMode` (`OFF`, `SOLID_HIGH`, `SOLID_LOW / PELOTON`, `DAY_FLASH`, `NIGHT_FLASH`).
+• *Step 3 (Disconnect Release, Page `0x20`)*: Upon sensor teardown or workout finalization, `ANTBikeLightDevice` SHALL transmit acknowledged Data Page `0x20` with `Light Index = 1` and Controller ID to release the peripheral back to unassociated state.
+4. *Unified `RadarLightController` Abstraction (`REQ-CON-033.4`)*:
+• `RadarLightController` SHALL decouple from concrete `BTLERadarDevice` via a common interface (`RadarLightDeviceClient`).
+• Both BLE (`BTLERadarDevice`) and ANT+ (`ANTBikeLightDevice`) SHALL register as active light clients, ensuring identical operation for Cockpit quick-switch bottom sheets, workout auto-switch (`ATT-5102`), and traffic alerts.
+5. *Fail-Safe Channel Isolation & Radar Telemetry Non-Interference (`REQ-CON-033.5`)*:
+• Acknowledged transmissions, retries, or companion channel unavailability (e.g. radar-only models such as Garmin Varia RVR315) SHALL execute asynchronously and SHALL NOT block or degrade `ANTBikeRadarDevice` radar target parsing (Pages `0x30`/`0x31`) or the 3.5s starvation watchdog.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* an active ANT+ radar whose companion channel initially broadcasts Data Page `0x01` with `Light Index = 0`,
+• *When* the user or auto-light policy requests a light mode transition (`Day Flash`, `Peloton`, `Solid`, `Off`),
+• *Then* `ANTBikeLightDevice` transmits Data Page `0x21` to establish association (`Light Index = 1`), and upon confirmation transmits Data Page `0x22` with the desired mode byte.
+• *Given* an ANT+ radar tail light connected during a workout,
+• *When* the workout starts and finishes with auto-light control enabled,
+• *Then* the light automatically turns on at workout start and turns off/disconnects (`Page 0x20`) at workout finish without duplicate sensor entries in the database.
+• *Given* a radar-only unit (e.g. Garmin Varia RVR315) with no companion light channel,
+• *When* light connection times out or fails,
+• *Then* radar target tracking proceeds uninterrupted, setting `isLightControlSupported = false`.
+
+**Invariants**: Predefined Network slot 1 isolation; non-blocking asynchronous ACK transmission; zero database migrations or duplicate device rows; radar target telemetry and starvation watchdog independence; seamless UI parity across BLE and ANT+.
+
 ### REQ-TRK-064: 1-Tap Radar Audio Snooze, Peloton-Mode Audio Sync & Smart Urban Alert Suppression [Verified]
 - **Tests**: `TST-TRK-064` | **Tickets**: `ATT-5119`, `ATT-6708`
 - **Implementation**: `RadarSnoozeController.kt`, `RadarAlertManager.kt`, `RadarEdgeOverlay.kt`, `RadarLightQuickSwitchSheet.kt`, `RadarState.kt`, `RadarStateRepository.kt`, `BTLERadarDevice.java`, `TuningPreferencesDataStore.kt`, `RadarSettingsSection.kt`, `strings_radar.xml`

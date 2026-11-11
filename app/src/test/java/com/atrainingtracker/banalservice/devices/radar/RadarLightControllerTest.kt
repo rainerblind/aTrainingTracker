@@ -191,4 +191,20 @@ class RadarLightControllerTest {
         assertEquals(RadarLightMode.NIGHT_FLASH, RadarStateRepository.getState().lightMode)
         assertTrue(RadarStateRepository.getState().isLightControlSupported)
     }
+
+    @Test
+    fun testRadarLightController_radarLightDeviceClientInterface_supportsAntPlusClient() {
+        val mockClient = mockk<RadarLightDeviceClient>(relaxed = true)
+        every { mockClient.setLightMode(any()) } returns true
+
+        RadarLightController.registerRadarDevice(mockClient, lightSupported = true, isStvzo = false)
+        assertTrue(RadarLightController.isLightControlAvailable.value)
+
+        val dispatched = RadarLightController.setLightMode(RadarLightMode.DAY_FLASH)
+        assertTrue(dispatched)
+        verify { mockClient.setLightMode(RadarLightMode.DAY_FLASH) }
+
+        RadarLightController.unregisterRadarDevice(mockClient)
+        assertFalse(RadarLightController.isLightControlAvailable.value)
+    }
 }
