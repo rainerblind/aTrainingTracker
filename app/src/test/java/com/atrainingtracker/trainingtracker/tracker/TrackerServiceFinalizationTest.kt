@@ -863,10 +863,14 @@ class TrackerServiceFinalizationTest {
             executionOrder.add("unbindService")
         }
 
+        com.atrainingtracker.banalservice.devices.radar.RadarTrafficSimulator.start(com.atrainingtracker.banalservice.devices.radar.RadarScenario.SINGLE_CAR)
+        assertTrue(com.atrainingtracker.banalservice.devices.radar.RadarTrafficSimulator.isSimulating)
+
         realService.onDestroy()
 
         realService.finalizationFuture.get(3, java.util.concurrent.TimeUnit.SECONDS)
 
+        assertFalse("RadarTrafficSimulator must be stopped during onDestroy", com.atrainingtracker.banalservice.devices.radar.RadarTrafficSimulator.isSimulating)
         assertTrue("endWorkout must be called during onDestroy", realService.endWorkoutCalled)
         assertEquals("endWorkout must execute before unbindService", listOf("endWorkout", "unbindService"), executionOrder)
         assertTrue("unbindService must be called", realService.unbindServiceCalled)

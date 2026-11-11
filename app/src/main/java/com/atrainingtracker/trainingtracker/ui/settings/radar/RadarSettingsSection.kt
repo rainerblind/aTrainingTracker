@@ -82,6 +82,7 @@ import kotlin.math.roundToInt
  * Settings and preview composable for cycling radar edge overlay and traffic simulator (REQ-TRK-062.5, REQ-CON-029.4).
  */
 @OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
+@Suppress("LongMethod")
 @Composable
 fun RadarSettingsSection(
     modifier: Modifier = Modifier,
@@ -97,7 +98,7 @@ fun RadarSettingsSection(
 
     var selectedScenario by remember { mutableStateOf(RadarScenario.SINGLE_CAR) }
     val radarState by RadarStateRepository.radarState.collectAsState()
-    val isRunning = RadarTrafficSimulator.isSimulating
+    val isRunning by RadarTrafficSimulator.isSimulatingFlow.collectAsState()
 
     DisposableEffect(Unit) {
         onDispose {
@@ -813,28 +814,51 @@ fun RadarSettingsSection(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Scenario selection chips
-            FlowRow(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
+            var scenarioExpanded by remember { mutableStateOf(false) }
+
+            // Scenario selection dropdown (Design Guidelines §1.3: >4 options -> ExposedDropdownMenuBox)
+            ExposedDropdownMenuBox(
+                expanded = scenarioExpanded,
+                onExpandedChange = { scenarioExpanded = !scenarioExpanded },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("RadarSimulatorScenarioDropdown")
             ) {
-                RadarScenario.values().forEach { scenario ->
-                    FilterChip(
-                        selected = selectedScenario == scenario,
-                        onClick = {
-                            selectedScenario = scenario
-                            if (isRunning) {
-                                RadarTrafficSimulator.start(scenario)
-                            }
-                        },
-                        label = {
-                            Text(
-                                text = getScenarioTitle(scenario),
-                                style = MaterialTheme.typography.labelMedium
-                            )
-                        }
-                    )
+                OutlinedTextField(
+                    value = getScenarioTitle(selectedScenario),
+                    onValueChange = {},
+                    readOnly = true,
+                    label = { Text(stringResource(R.string.radar_simulator_scenario_label)) },
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = scenarioExpanded) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .menuAnchor(),
+                    textStyle = MaterialTheme.typography.bodyLarge
+                )
+                ExposedDropdownMenu(
+                    expanded = scenarioExpanded,
+                    onDismissRequest = { scenarioExpanded = false }
+                ) {
+                    RadarScenario.values().forEach { scenario ->
+                        DropdownMenuItem(
+                            text = {
+                                Text(
+                                    text = getScenarioTitle(scenario),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            },
+                            onClick = {
+                                selectedScenario = scenario
+                                if (isRunning) {
+                                    RadarTrafficSimulator.start(scenario)
+                                }
+                                scenarioExpanded = false
+                            },
+                            modifier = Modifier.testTag("RadarScenarioItem_${scenario.name}")
+                        )
+                    }
                 }
             }
 
@@ -872,7 +896,11 @@ fun RadarSettingsSection(
 
                     if (isRunning) {
                         Text(
-                            text = "${radarState.connectionState} • ${radarState.targets.size} targets",
+                            text = stringResource(
+                                R.string.radar_simulator_status,
+                                radarState.connectionState.name,
+                                radarState.targets.size
+                            ),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )

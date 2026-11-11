@@ -86,6 +86,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import com.atrainingtracker.trainingtracker.ui.utils.NumericalEncodingUtils;
 import com.atrainingtracker.banalservice.devices.radar.RadarLightController;
 import com.atrainingtracker.banalservice.devices.radar.RadarSnoozeController;
+import com.atrainingtracker.banalservice.devices.radar.RadarTrafficSimulator;
 import com.atrainingtracker.trainingtracker.audio.radar.RadarAlertManager;
 import com.atrainingtracker.trainingtracker.tracker.autopause.AutoPauseConfig;
 import com.atrainingtracker.trainingtracker.tracker.autopause.AutoPauseManager;
@@ -1194,6 +1195,7 @@ public class TrackerService extends Service {
 
         RadarLightController.onWorkoutStopped(this);
         RadarSnoozeController.reset();
+        RadarTrafficSimulator.INSTANCE.stop();
 
         cancelTrackerHandle();
         mScheduler.shutdownNow();
@@ -1396,6 +1398,7 @@ public class TrackerService extends Service {
         }
 
         RadarSnoozeController.reset();
+        RadarTrafficSimulator.INSTANCE.stop();
 
         LifecycleUtils.safeUnregisterReceiver(this, mSearchingFinishedReceiver, TAG);
         LifecycleUtils.safeUnregisterReceiver(this, mAltitudeCorrectionReceiver, TAG);

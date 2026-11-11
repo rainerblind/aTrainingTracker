@@ -48,6 +48,8 @@
     <string name="radar_simulator_stop">Simulatie stoppen</string>
     <string name="radar_simulator_running">Simulatie actief</string>
     <string name="radar_simulator_idle">Simulatie gestopt</string>
+    <string name="radar_simulator_status">%1$s • %2$d doelen</string>
+    <string name="radar_simulator_scenario_label">Scenario</string>
     <string name="radar_scenario_single_car">Enkele auto</string>
     <string name="radar_scenario_single_car_desc">Enkele inhalende auto met 12 m/s</string>
     <string name="radar_scenario_convoy">Konvooi</string>

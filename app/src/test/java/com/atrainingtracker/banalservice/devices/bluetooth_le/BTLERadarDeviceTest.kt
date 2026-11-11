@@ -35,8 +35,10 @@ import com.atrainingtracker.banalservice.devices.radar.LaneState
 import com.atrainingtracker.banalservice.devices.radar.RadarConnectionState
 import com.atrainingtracker.banalservice.devices.radar.RadarLightController
 import com.atrainingtracker.banalservice.devices.radar.RadarLightMode
+import com.atrainingtracker.banalservice.devices.radar.RadarScenario
 import com.atrainingtracker.banalservice.devices.radar.RadarStateRepository
 import com.atrainingtracker.banalservice.devices.radar.RadarTarget
+import com.atrainingtracker.banalservice.devices.radar.RadarTrafficSimulator
 import com.atrainingtracker.banalservice.devices.radar.RadarWindowAggregator
 import com.atrainingtracker.banalservice.devices.radar.ThreatLevel
 import com.atrainingtracker.banalservice.devices.radar.VehicleSizeCategory
@@ -401,10 +403,18 @@ class BTLERadarDeviceTest {
 
     @Test
     fun testIsMeasurementCharacteristic_acceptsBothV1AndV2() {
-        assertTrue(radarDevice.isMeasurementCharacteristicForTesting(BluetoothConstants.UUID_CHARACTERISTIC_RADAR_V1))
-        assertTrue(radarDevice.isMeasurementCharacteristicForTesting(BluetoothConstants.UUID_CHARACTERISTIC_RADAR_V2))
-        assertFalse(radarDevice.isMeasurementCharacteristicForTesting(BluetoothConstants.UUID_CHARACTERISTIC_RADAR_LIGHT_CONTROL))
-        assertFalse(radarDevice.isMeasurementCharacteristicForTesting(BluetoothConstants.UUID_CHARACTERISTIC_BATTERY_LEVEL))
+        assertTrue(radarDevice.isMeasurementCharacteristicForTesting(
+            BluetoothConstants.UUID_CHARACTERISTIC_RADAR_V1
+        ))
+        assertTrue(radarDevice.isMeasurementCharacteristicForTesting(
+            BluetoothConstants.UUID_CHARACTERISTIC_RADAR_V2
+        ))
+        assertFalse(radarDevice.isMeasurementCharacteristicForTesting(
+            BluetoothConstants.UUID_CHARACTERISTIC_RADAR_LIGHT_CONTROL
+        ))
+        assertFalse(radarDevice.isMeasurementCharacteristicForTesting(
+            BluetoothConstants.UUID_CHARACTERISTIC_BATTERY_LEVEL
+        ))
     }
 
     @Test
@@ -472,9 +482,31 @@ class BTLERadarDeviceTest {
         every { mockService.getCharacteristic(BluetoothConstants.UUID_CHARACTERISTIC_RADAR_V1) } returns mockV1Char
         every { mockV1Char.getDescriptor(BluetoothConstants.UUID_CHARACTERISTIC_CLIENT_CONFIG) } returns mockV1Desc
 
-        radarDevice.onDescriptorWriteCompletedForTesting(mockGatt, mockDescriptor, BluetoothGatt.GATT_INSUFFICIENT_AUTHENTICATION)
+        radarDevice.onDescriptorWriteCompletedForTesting(
+            mockGatt,
+            mockDescriptor,
+            BluetoothGatt.GATT_INSUFFICIENT_AUTHENTICATION
+        )
 
         assertFalse(radarDevice.isV2Stream)
         io.mockk.verify { mockGatt.setCharacteristicNotification(mockV1Char, true) }
+    }
+
+    @Test
+    fun testProcessTargets_haltsActiveRadarTrafficSimulator() {
+        RadarTrafficSimulator.start(RadarScenario.SINGLE_CAR)
+        assertTrue(RadarTrafficSimulator.isSimulating)
+
+        val v1Char = mockk<BluetoothGattCharacteristic>()
+        every { v1Char.uuid } returns BluetoothConstants.UUID_CHARACTERISTIC_RADAR_V1
+        // V1 payload with 1 target (4 bytes: header 0x00, targetId 1, range 60m, speedAndThreat 0x15)
+        every { v1Char.value } returns byteArrayOf(
+            0x00.toByte(), 0x01.toByte(), 60.toByte(), 0x15.toByte()
+        )
+
+        radarDevice.measurementCharacteristicUpdate(mockk(relaxed = true), v1Char)
+
+        // Verifies hardware packet arrival halted simulation immediately (REQ-CON-029.3)
+        assertFalse(RadarTrafficSimulator.isSimulating)
     }
 }

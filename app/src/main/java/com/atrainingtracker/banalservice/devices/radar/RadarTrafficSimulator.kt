@@ -18,10 +18,19 @@
 
 package com.atrainingtracker.banalservice.devices.radar
 
+import android.content.Context
+import android.os.SystemClock
+import android.util.Log
+import androidx.annotation.VisibleForTesting
+import com.atrainingtracker.banalservice.BANALService
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
@@ -49,6 +58,11 @@ enum class RadarScenario {
  */
 object RadarTrafficSimulator {
 
+    private const val TAG = "RadarTrafficSimulator"
+
+    /** Default coroutine scope managed with SupervisorJob. */
+    private val defaultScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
     /** Shared aggregator instance dedicated to the simulator engine. */
     val windowAggregator: RadarWindowAggregator = RadarWindowAggregator()
 
@@ -58,8 +72,28 @@ object RadarTrafficSimulator {
     var simulatedLightMode: RadarLightMode = RadarLightMode.OFF
         private set
 
+    private val _isSimulatingFlow = MutableStateFlow(false)
+
+    /** Reactive StateFlow observing whether simulation is currently running (REQ-CON-029.4). */
+    val isSimulatingFlow: StateFlow<Boolean> = _isSimulatingFlow.asStateFlow()
+
     val isSimulating: Boolean
-        get() = simulationJob?.isActive == true
+        get() = _isSimulatingFlow.value
+
+    /** Bridge to BANALService scalar sensors during active simulation. */
+    var simulatedDevice: SimulatedRadarDevice? = null
+        @VisibleForTesting set
+
+    /** Monotonic time source (SystemClock.elapsedRealtime() on Android, fallback to nanoTime in unit tests). */
+    @Suppress("TooGenericExceptionCaught")
+    var clock: () -> Long = {
+        try {
+            SystemClock.elapsedRealtime()
+        } catch (_: Exception) {
+            System.nanoTime() / 1_000_000L
+        }
+    }
+        @VisibleForTesting set
 
     fun setSimulatedLightMode(mode: RadarLightMode) {
         simulatedLightMode = mode
@@ -357,6 +391,8 @@ object RadarTrafficSimulator {
         )
         RadarStateRepository.updateState(frame)
         aggregator.onTargetsUpdated(frame.targets)
+        val snapshot = aggregator.sampleAndResetWindow()
+        simulatedDevice?.updateMetrics(snapshot)
         return frame
     }
 
@@ -389,23 +425,39 @@ object RadarTrafficSimulator {
     /**
      * Starts continuous 8 Hz background simulation of [scenario] (REQ-CON-029.2).
      */
+    @JvmOverloads
+    @Suppress("TooGenericExceptionCaught")
     fun start(
         scenario: RadarScenario,
-        scope: CoroutineScope = CoroutineScope(Dispatchers.Default),
+        scope: CoroutineScope? = null,
         aggregator: RadarWindowAggregator = windowAggregator,
-        tickIntervalMs: Long = 125L
+        tickIntervalMs: Long = 125L,
+        context: Context? = null
     ) {
         stop()
         activeScenario = scenario
-        val startTime = System.currentTimeMillis()
-        simulationJob = scope.launch {
+        _isSimulatingFlow.value = true
+
+        val ctx = context ?: BANALService.getServiceContext()
+        val sensorManager = BANALService.getSensorManager()
+        if (ctx != null && sensorManager != null && simulatedDevice == null) {
+            try {
+                simulatedDevice = SimulatedRadarDevice(ctx, sensorManager)
+            } catch (t: Throwable) {
+                Log.w(TAG, "Failed to create SimulatedRadarDevice", t)
+            }
+        }
+
+        val actualScope = scope ?: defaultScope
+        val startTime = clock()
+        simulationJob = actualScope.launch {
             try {
                 while (isActive) {
                     if (hardwareActiveProvider?.invoke() == true) {
                         stop()
                         break
                     }
-                    val elapsed = System.currentTimeMillis() - startTime
+                    val elapsed = clock() - startTime
                     val frame = generateFrame(scenario, elapsed).copy(
                         lightMode = simulatedLightMode,
                         isLightControlSupported = true,
@@ -413,12 +465,15 @@ object RadarTrafficSimulator {
                     )
                     RadarStateRepository.updateState(frame)
                     aggregator.onTargetsUpdated(frame.targets)
+                    val snapshot = aggregator.sampleAndResetWindow()
+                    simulatedDevice?.updateMetrics(snapshot)
                     delay(tickIntervalMs)
                 }
             } finally {
                 if (activeScenario == scenario) {
                     activeScenario = null
                 }
+                _isSimulatingFlow.value = false
             }
         }
     }
@@ -426,9 +481,17 @@ object RadarTrafficSimulator {
     /**
      * Halts active simulation and resets [RadarStateRepository] and [windowAggregator] (REQ-CON-029.3).
      */
+    @Suppress("TooGenericExceptionCaught")
     fun stop() {
         simulationJob?.cancel()
         simulationJob = null
+        try {
+            simulatedDevice?.shutDown()
+        } catch (t: Throwable) {
+            Log.w(TAG, "Error shutting down SimulatedRadarDevice", t)
+        }
+        simulatedDevice = null
+        _isSimulatingFlow.value = false
         activeScenario = null
         simulatedLightMode = RadarLightMode.OFF
         RadarStateRepository.reset()

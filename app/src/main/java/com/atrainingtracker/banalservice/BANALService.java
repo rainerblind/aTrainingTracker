@@ -148,10 +148,31 @@ public class BANALService
     public static final String URI_ANT_USB_SERVICE = "com.dsi.ant.usbservice";
 
     public static final int INIT_LAP_NR = 1;
+    private static volatile Context cServiceContext;
     private static volatile DeviceManager cDeviceManager;
     private static volatile MySensorManager cSensorManager;
     private static volatile FilterManager cFilterManager;
     protected volatile ActivityType mActivityTypeMax = ActivityType.getDefaultActivityType();
+
+    @Nullable
+    public static Context getServiceContext() {
+        return cServiceContext;
+    }
+
+    @Nullable
+    public static MySensorManager getSensorManager() {
+        return cSensorManager;
+    }
+
+    @VisibleForTesting
+    public static void setSensorManagerForTesting(@Nullable MySensorManager sensorManager) {
+        cSensorManager = sensorManager;
+    }
+
+    @VisibleForTesting
+    public static void setServiceContextForTesting(@Nullable Context context) {
+        cServiceContext = context;
+    }
 
     /***********************************************************************************************/
 
@@ -585,6 +606,7 @@ public class BANALService
         super.onCreate();
         if (DEBUG) Log.d(TAG, "onCreate");
 
+        cServiceContext = this.getApplicationContext();
         cSensorManager = new MySensorManager(this);
         cDeviceManager = new DeviceManager(this, cSensorManager);
         cFilterManager = new FilterManager(this, cDeviceManager, cSensorManager);
@@ -622,6 +644,7 @@ public class BANALService
         cDeviceManager = null;
         cSensorManager = null;
         cFilterManager = null;
+        cServiceContext = null;
 
         LifecycleUtils.safeUnregisterReceiver(this, mNewLapReceiver, TAG);
         LifecycleUtils.safeUnregisterReceiver(this, mStartSearchForPairedDevices, TAG);

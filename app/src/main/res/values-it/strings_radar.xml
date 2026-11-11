@@ -48,6 +48,8 @@
     <string name="radar_simulator_stop">Interrompi simulazione</string>
     <string name="radar_simulator_running">Simulazione attiva</string>
     <string name="radar_simulator_idle">Simulazione interrotta</string>
+    <string name="radar_simulator_status">%1$s • %2$d bersagli</string>
+    <string name="radar_simulator_scenario_label">Scenario</string>
     <string name="radar_scenario_single_car">Singolo veicolo</string>
     <string name="radar_scenario_single_car_desc">Un veicolo in sorpasso a 12 m/s</string>
     <string name="radar_scenario_convoy">Convoglio</string>

@@ -48,6 +48,8 @@
     <string name="radar_simulator_stop">Zatrzymaj symulację</string>
     <string name="radar_simulator_running">Symulacja aktywna</string>
     <string name="radar_simulator_idle">Symulacja zatrzymana</string>
+    <string name="radar_simulator_status">%1$s • %2$d celów</string>
+    <string name="radar_simulator_scenario_label">Scenariusz</string>
     <string name="radar_scenario_single_car">Pojedynczy pojazd</string>
     <string name="radar_scenario_single_car_desc">Pojedynczy pojazd wyprzedzający z prędkością 12 m/s</string>
     <string name="radar_scenario_convoy">Kolumna pojazdów</string>

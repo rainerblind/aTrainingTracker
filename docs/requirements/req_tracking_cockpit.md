@@ -3435,31 +3435,36 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 
 ### REQ-CON-029: Built-in Cycling Radar Traffic Simulator & Scenario Engine [Verified]
-- **Tests**: `TST-CON-029` | **Tickets**: `ATT-5087`
-- **Implementation**: `RadarTrafficSimulator.kt`, `RadarStateRepository.kt`, `RadarWindowAggregator.kt`, `RadarSettingsSection.kt`, `strings_radar.xml`
-- **Rationale**: Developing and testing cycling radar UI overlays (`ATT-5085`), audio/haptic alert synthesis (`ATT-5086`), and post-ride safety analytics (`ATT-5088`) without physical radar hardware on open roads requires a realistic, scriptable traffic simulator. `RadarTrafficSimulator` provides 5 scriptable scenario presets emitting synthetic target vectors at 8 Hz directly into `RadarStateRepository` and `RadarWindowAggregator`, enabling indoor workouts, UI preview, and automated clean-room CI validation. Physical radar hardware retains absolute precedence (ATT-5087, Parent Epic ATT-1286, extending `REQ-CON-028`):
+- **Tests**: `TST-CON-029` | **Tickets**: `ATT-5087`, `ATT-6704`
+- **Implementation**: `RadarTrafficSimulator.kt`, `SimulatedRadarDevice.kt`, `BANALService.java`, `BTLERadarDevice.java`, `TrackerService.java`, `RadarStateRepository.kt`, `RadarWindowAggregator.kt`, `RadarSettingsSection.kt`, `strings_radar.xml`
+- **Rationale**: Developing and testing cycling radar UI overlays (`ATT-5085`), audio/haptic alert synthesis (`ATT-5086`), and post-ride safety analytics (`ATT-5088`) without physical radar hardware on open roads requires a realistic, scriptable traffic simulator. `RadarTrafficSimulator` provides 5 scriptable scenario presets emitting synthetic target vectors at 8 Hz directly into `RadarStateRepository` and `RadarWindowAggregator`, enabling indoor workouts, UI preview, and automated clean-room CI validation. Physical radar hardware retains absolute precedence (ATT-5087, ATT-6704, Parent Epic ATT-1286, extending `REQ-CON-028`):
 1. *Scriptable Scenario Presets (`REQ-CON-029.1`)*:
 • The system SHALL provide 5 scriptable scenario presets: Single Overtaking Car (140m approach at 12 m/s, passing at 0m), Multi-Vehicle Convoy (3 simultaneous targets at 140m, 115m, 85m), High-Speed Threat (rapid approach at 25 m/s, `FAST_APPROACHING`), Mid-Ride Disconnect (starvation to `DISCONNECTED_ERROR` followed by recovery after 5s), and Continuous Country Road Loop (continuous randomized traffic intervals).
-2. *8 Hz Stream Pipeline Integration (`REQ-CON-029.2`)*:
-• The simulator SHALL emit synthetic target frames at 8 Hz into `RadarStateRepository` (`StateFlow<RadarState>`) and update `RadarWindowAggregator`, faithfully exercising vehicle passing hysteresis and scalar metrics (`RADAR_THREAT_COUNT`, `RADAR_CLOSEST_DISTANCE_m`, `RADAR_APPROACH_SPEED_mps`, `RADAR_VEHICLE_COUNT`).
-3. *Hardware Preemption & Safety Invariants (`REQ-CON-029.3`)*:
-• The simulator SHALL immediately halt when physical radar hardware connects and streams data (`isReceivingData() == true`), or when workout tracking stops.
-• The system SHALL guarantee zero phantom writes to database tables during inactive tracking or preview mode.
-4. *Settings & Preview Controls (`REQ-CON-029.4`)*:
-• Interactive scenario selection, preview toggle, and status indicators SHALL be exposed in `RadarSettingsSection.kt`.
+2. *8 Hz Stream Pipeline & Scalar MySensor Bridge (`REQ-CON-029.2`)*:
+• The simulator SHALL emit synthetic target frames at 8 Hz into `RadarStateRepository` (`StateFlow<RadarState>`) and update `RadarWindowAggregator`. When `BANALService` is active, `SimulatedRadarDevice` (extending `MyDevice`) SHALL register and publish the 6 scalar radar `MySensor` channels (`RADAR_THREAT_COUNT`, `RADAR_CLOSEST_DISTANCE_m`, `RADAR_APPROACH_SPEED_mps`, `RADAR_VEHICLE_COUNT`, `RADAR_PASSING_DISTANCE_m`, `RADAR_LARGE_VEHICLE_COUNT`), displaying live metrics in cockpit tiles and recording them to `WorkoutSamples.db` during workouts.
+3. *Hardware Preemption & Workout Lifecycle Cleanliness (`REQ-CON-029.3`)*:
+• The simulator SHALL immediately halt when physical radar hardware connects or streams data (`onPhysicalHardwareConnected()`), wired directly into `BTLERadarDevice` measurement notifications. `TrackerService` SHALL invoke `RadarTrafficSimulator.stop()` in `handleActionStop()` and `onDestroy()`, guaranteeing zero lingering simulation or phantom DB writes post-workout.
+4. *Reactive StateFlow, Monotonic Clock & ExposedDropdownMenuBox Controls (`REQ-CON-029.4`)*:
+• `RadarTrafficSimulator` SHALL expose `isSimulatingFlow: StateFlow<Boolean>` for reactive UI observation and evaluate elapsed simulation timing using monotonic `SystemClock.elapsedRealtime()` under a structured `SupervisorJob` scope. `RadarSettingsSection.kt` SHALL render `RadarScenario` selection using a Material 3 `ExposedDropdownMenuBox` per Design Guidelines §1.3.
 5. *9-Language Localization Parity (`REQ-CON-029.5`)*:
-• All simulator UI strings and scenario names in `strings_radar.xml` SHALL maintain 100% parity across EN, DE, ES, FR, IT, JA, NL, PL, PT (zero inline emojis).
+• All simulator UI strings, scenario names, and live target status indicators in `strings_radar.xml` SHALL maintain 100% parity across EN, DE, ES, FR, IT, JA, NL, PL, PT (zero inline emojis or untranslated concatenations).
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: `REQ-CON-029` (Built-in Cycling Radar Traffic Simulator & Scenario Engine), targeting `RadarTrafficSimulator.kt`, `SimulatedRadarDevice.kt`, `BANALService.java`, `BTLERadarDevice.java`, `TrackerService.java`, and `RadarSettingsSection.kt`.
+2. *Historical Origin & Commit Trace*: Introduced in `ATT-5087` (commit `69fec8e7`) as an indoor simulator and preview tool; refined in `ATT-6704` to wire scalar `MySensor` channels via `SimulatedRadarDevice`, wire physical preemption in `BTLERadarDevice`, stop on workout finish, expose `isSimulatingFlow`, switch to monotonic clock, and upgrade scenario selection to `ExposedDropdownMenuBox`.
+3. *Root Reason for Existing Formulation*: The initial simulator was built as a rapid standalone prototype for visual edge overlay and audio testing prior to hardware arrival, leaving `BANALService` scalar integration and hardware preemption hooks as omissions. Wall-clock timing was used for simplicity, and `FlowRow` chips were used before options grew to 5.
+4. *Preservation of Core Invariants*: Physical hardware retains 100% absolute precedence; zero phantom DB writes outside active workouts; zero SQLite schema modifications; 100% 9-language translation parity.
 
 **Acceptance Criteria (Given-When-Then)**:
-• *Given* Single Overtaking Car scenario selected,
-• *When* simulation runs,
-• *Then* a vehicle approaches from 140m at 12 m/s, passes at 0m, and increments `RADAR_VEHICLE_COUNT`.
+• *Given* Single Overtaking Car scenario selected and an active indoor workout,
+• *When* simulation runs and 1 Hz window latches,
+• *Then* a vehicle approaches from 140m at 12 m/s, passes at 0m, increments `RADAR_VEHICLE_COUNT`, and records scalar metrics to `WorkoutSamples.db`.
 • *Given* an active simulation,
-• *When* physical radar connects and streams data,
-• *Then* the simulator halts immediately and yields control to physical hardware.
-• *Given* High-Speed Threat scenario,
-• *When* vehicle closes at 25 m/s,
-• *Then* threat level evaluates to `FAST_APPROACHING`.
+• *When* physical radar connects and streams measurement data,
+• *Then* `BTLERadarDevice` immediately triggers `onPhysicalHardwareConnected()`, halting the simulator and yielding control cleanly to physical hardware.
+• *Given* `RadarSettingsSection.kt` displayed,
+• *When* selecting a scenario,
+• *Then* the scenario is selected via an `ExposedDropdownMenuBox` with localized status formatting and reactive button state driven by `isSimulatingFlow`.
 
 **Invariants**: Real hardware priority; coroutine job cleanup on stop; zero DB writes outside active tracking; 100% 9-language translation parity.
 

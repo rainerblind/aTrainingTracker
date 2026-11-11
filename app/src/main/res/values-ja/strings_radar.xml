@@ -48,6 +48,8 @@
     <string name="radar_simulator_stop">シミュレーション停止</string>
     <string name="radar_simulator_running">シミュレーション実行中</string>
     <string name="radar_simulator_idle">シミュレーション停止中</string>
+    <string name="radar_simulator_status">%1$s • %2$d ターゲット</string>
+    <string name="radar_simulator_scenario_label">シナリオ</string>
     <string name="radar_scenario_single_car">単一車両</string>
     <string name="radar_scenario_single_car_desc">12 m/sで追い越す1台の車両</string>
     <string name="radar_scenario_convoy">車列</string>
