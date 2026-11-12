@@ -339,27 +339,34 @@ The workflow SHALL mandate that:
 **Invariants**: Moving parent tickets to `Erledigt` remains strictly prohibited for the review runner; existing `tools/jira_util.py` functionality and 5-state lifecycle MUST NOT be degraded; API keys MUST NOT be logged or committed.
 
 ### REQ-PRO-019: Multi-Account Jira Authentication, Atomic Resolution & Terminal Error Handling [Verified]
-- **Tests**: `tools/jira_util.py`, `tools/review_agent.py`, `docs/project_protocol.md`, `.cursorrules`
-- **Implementation**: Provide reliable, role-specific authentication with atomic fallback and deterministic termination on missing credentials.
+- **Tests**: `tools/jira_util.py`, `tools/review_agent.py`, `docs/project_protocol.md`, `.cursorrules` | **Tickets**: `ATT-1123`, `ATT-1200`, `ATT-6146`
+- **Implementation**: Provide reliable, role-specific authentication with strict credential isolation and deterministic termination on missing credentials.
 - **Rationale**: The development workflow and CLI tooling (`tools/jira_util.py`, `tools/review_agent.py`) SHALL support role-specific Jira user credentials across three distinct agent roles: Agent 1 (Implementer), Agent 2 (Auditor), and Coordinator (Orchestrator):
 1. *Role Credentials Configuration*: `.env.jira` SHALL support optional role-specific environment variables (`JIRA_AGENT1_USER`, `JIRA_AGENT1_TOKEN`, `JIRA_AGENT2_USER`, `JIRA_AGENT2_TOKEN`, `JIRA_COORDINATOR_USER`, `JIRA_COORDINATOR_TOKEN`) alongside base default credentials (`JIRA_USER`, `JIRA_TOKEN`).
-2. *Atomic Resolution & Pair Fallback*: When resolving credentials for any role, if either the username or the API token for that role is missing, the system MUST NOT mix partial credentials; instead, it SHALL atomically fall back to the base default pair (`JIRA_USER`, `JIRA_TOKEN`) and emit an advisory notice to `sys.stderr`.
-3. *Terminal Failure on Missing Credentials*: If neither role-specific nor base default credentials exist (both username and token are unresolvable), the tooling MUST NOT attempt unauthenticated requests; it SHALL print a clean diagnostic error to `sys.stderr` and exit with non-zero exit code (1).
+2. *Strict Non-Human Credential Isolation (ATT-6146)*: Under ASPICE SUP.1 role separation, automated agent roles (`agent1`, `agent2`, `coordinator`) MUST strictly provide their own role credentials. Fallback to base default credentials (`JIRA_USER`, `JIRA_TOKEN`) is prohibited for automated agent roles; missing or partial role credentials SHALL immediately abort execution with exit code 1. Fallback to base credentials is permitted only when resolving the `human` role directly.
+3. *Terminal Failure on Missing Credentials*: If required role credentials (for automated roles) or default credentials (for human role) do not exist, the tooling MUST NOT attempt unauthenticated requests; it SHALL print a clean diagnostic error to `sys.stderr` and exit with non-zero exit code (1).
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: `REQ-PRO-019` (`REQ-PRO-019.2`, `REQ-PRO-019.4`) under ATT-6146. Targets `tools/jira_util.py`, `tools/hoechstmass/tools/jira_util.py`, and `tools/test_jira_accounts.py`.
+2. *Historical Origin & Commit Trace*: Introduced in Sprint 2026-44 via ATT-4520 (commit `2b1a9e40`) and refined in ATT-1123 / ATT-1200.
+3. *Root Reason for Existing Formulation*: Multi-account authentication originally provided a transitional fallback to default `JIRA_USER`/`JIRA_TOKEN` so developers with a single personal API token could run CLI tools before independent agent accounts were provisioned.
+4. *Preservation of Core Invariants*: Autonomous agent operations using service accounts (`agent1`, `agent2`, `coordinator`) remain 100% operational; ticket transitions to `Final Review (Human)` remain functional; human gate is strictly protected from agent impersonation; zero impact on Android runtime (`app/src/main/`).
+
 **Acceptance Criteria (Given-When-Then)**:
 • *Given* `.env.jira` configured with valid `JIRA_AGENT1_USER` and `JIRA_AGENT1_TOKEN`,
 • *When* `jira_util.py` is invoked with role `agent1`,
 • *Then* Jira HTTP requests SHALL use Basic Auth with Agent 1's username and token.
-• *Given* `.env.jira` where `JIRA_AGENT2_USER` is configured but `JIRA_AGENT2_TOKEN` is unset or empty,
-• *When* `jira_util.py` resolves credentials for `agent2`,
-• *Then* the system SHALL atomically fall back to `JIRA_USER` and `JIRA_TOKEN`, logging an advisory notice to stderr.
+• *Given* `.env.jira` where an automated role (`agent1`, `agent2`, or `coordinator`) has missing or partial credentials,
+• *When* `jira_util.py` resolves credentials for that role,
+• *Then* the system SHALL abort immediately with exit code 1 and emit a fatal credential isolation error, refusing fallback to `(JIRA_USER, JIRA_TOKEN)`.
 • *Given* `.env.jira` where neither role credentials nor default `JIRA_USER`/`JIRA_TOKEN` are defined,
 • *When* any Jira command is invoked,
 • *Then* the tool SHALL halt immediately with error code 1 and exit.
 **Invariants**: Moving any issue to `Erledigt` remains strictly prohibited across all roles; zero external pip dependencies (Python 3 standard library only); APK runtime code and assets MUST NOT be modified.
 
 ### REQ-PRO-020: Role Locking, Precedence, Anti-Spoofing & Actor Comment Attribution [Verified]
-- **Tests**: `tools/jira_util.py`, `tools/review_agent.py`, `docs/project_protocol.md`, `.cursorrules`
-- **Implementation**: Eliminate role impersonation between agents, enforce independent audit integrity, and formalize comment attribution.
+- **Tests**: `tools/jira_util.py`, `tools/review_agent.py`, `docs/project_protocol.md`, `.cursorrules` | **Tickets**: `ATT-1123`, `ATT-1200`, `ATT-6146`
+- **Implementation**: Eliminate role impersonation between agents and human operator, enforce independent audit integrity, and formalize comment attribution.
 - **Rationale**: The development workflow and tooling SHALL enforce strict role boundaries, anti-spoofing constraints, and distinct comment attribution across agent roles:
 1. *Precedence Rule*: The active role SHALL be determined strictly by: `CLI Flag (--as <role>)` > `Environment Variable (JIRA_ACTOR)` > `Script Default` (`agent1` for `jira_util.py`, `agent2` for `review_agent.py`).
 2. *Role Locking & Anti-Spoofing*: `tools/review_agent.py` MUST be permanently hardwired to role `agent2`. It SHALL NOT allow overriding the role to `agent1` or `coordinator`, ensuring Agent 1 cannot masquerade as the independent auditor.
@@ -369,6 +376,14 @@ The workflow SHALL mandate that:
 • Coordinator: `[Automated comment by AI Coordinator]`
 • Default / Unspecified: `[Automated comment by AI Agent]`.
 4. *Coordinator Governance Invariants*: The Coordinator persona SHALL be defined in `docs/project_protocol.md` and `.cursorrules` as an administrative/orchestration role. The Coordinator SHALL NOT override an Agent 2 `CHALLENGED` or `RECOMMEND REVISION` audit verdict, SHALL NOT bypass Gates 1 through 5, and MUST NOT transition parent tickets to `Erledigt`. Moving parent tickets to `Erledigt` remains an inviolable human-only gate.
+5. *Elimination of Human Role from Agent Selection (ATT-6146)*: Automated roles SHALL be restricted to `["agent1", "agent2", "coordinator"]`. The CLI tooling SHALL NOT permit agents to select the `human` role via `--as human`, `--as=human`, or `JIRA_ACTOR=human` (including aliases `user`, `rainer`). Attempted selection of the human role SHALL immediately abort with exit code 1 and a fatal governance error message. Ticket assignment to human (`assign_issue(..., "human")`) via `ROLE_ACCOUNT_IDS["human"]` remains permitted.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: `REQ-PRO-020` (`REQ-PRO-020.1`, `REQ-PRO-020.5`) under ATT-6146. Targets `tools/jira_util.py`, `tools/hoechstmass/tools/jira_util.py`, and `tools/test_jira_accounts.py`.
+2. *Historical Origin & Commit Trace*: Introduced in Sprint 2026-44 via ATT-4520 (commit `2b1a9e40`) and refined in ATT-1123 / ATT-1200.
+3. *Root Reason for Existing Formulation*: `VALID_ROLES` originally included `"human"` for historical convenience during early prototype testing before the ASPICE Human Decision Gate model was formalized.
+4. *Preservation of Core Invariants*: Autonomous agent operations using service accounts (`agent1`, `agent2`, `coordinator`) remain 100% operational; ticket transitions to `Final Review (Human)` remain functional; human gate is strictly protected from agent impersonation; zero impact on Android runtime (`app/src/main/`).
+
 **Acceptance Criteria (Given-When-Then)**:
 • *Given* `tools/review_agent.py`,
 • *When* executed,
@@ -376,6 +391,9 @@ The workflow SHALL mandate that:
 • *Given* `jira_util.py` executed with `--as coordinator`,
 • *When* adding a comment,
 • *Then* the coordinator credentials and `[Automated comment by AI Coordinator]` prefix SHALL be used.
+• *Given* `jira_util.py` invoked with `--as human`, `--as=human`, or `JIRA_ACTOR=human`,
+• *When* role resolution executes,
+• *Then* the tool SHALL abort with exit code 1 and emit: `Error: 'human' role cannot be selected via agent CLI or environment variable. Human actions must use interactive confirmation or the Jira web UI.`
 • *Given* any agent role attempting to execute a transition targeting `Erledigt` or `Freigabe erteilt`,
 • *Then* `tools/jira_util.py` SHALL block the transition and exit with error code 1.
 **Invariants**: Gate 1-5 ASPICE audit requirements remain mandatory and independent; AI agents remain strictly forbidden from closing parent tickets to `Erledigt`.

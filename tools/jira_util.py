@@ -28,7 +28,7 @@ TRANSITIONS = {
     "done": "41"
 }
 
-VALID_ROLES = ["agent1", "agent2", "coordinator", "human"]
+VALID_ROLES = ["agent1", "agent2", "coordinator"]
 
 ROLE_ACCOUNT_IDS = {
     "agent1": "712020:63ce5f53-e2ba-43f5-9879-edf4a22ff748",
@@ -200,8 +200,9 @@ def load_env_config(custom_path=None):
 def resolve_account(role="agent1", config=None):
     """
     Resolves (username, token) atomically for the given role.
-    If role keys are partially missing, falls back to (JIRA_USER, JIRA_TOKEN) with advisory notice.
-    If neither role nor default credentials exist, halts with exit code 1.
+    Under ASPICE SUP.1 role separation, automated roles (agent1, agent2, coordinator)
+    must strictly provide their own role credentials; fallback to default human
+    credentials (JIRA_USER, JIRA_TOKEN) is prohibited.
     """
     if config is None:
         config = get_config()
@@ -212,34 +213,34 @@ def resolve_account(role="agent1", config=None):
         "coordinator": ("JIRA_COORDINATOR_USER", "JIRA_COORDINATOR_TOKEN"),
     }
 
-    role_user_key, role_token_key = role_mapping.get(role, (None, None))
-    role_user = config.get(role_user_key) if role_user_key else None
-    role_token = config.get(role_token_key) if role_token_key else None
+    if role in role_mapping:
+        role_user_key, role_token_key = role_mapping[role]
+        role_user = config.get(role_user_key) if role_user_key else None
+        role_token = config.get(role_token_key) if role_token_key else None
 
-    # Check if both are present and non-empty
-    if role_user and role_token:
-        return role_user, role_token
+        # Check if both are present and non-empty
+        if role_user and role_token:
+            return role_user, role_token
 
-    # In Data Center or when Bearer PAT is enabled, role token alone is sufficient
-    auth_type = (config.get("JIRA_AUTH_TYPE") or "").lower()
-    if role_token and (is_datacenter(config) or auth_type == "bearer"):
-        return role_user or "", role_token
+        # In Data Center or when Bearer PAT is enabled, role token alone is sufficient
+        auth_type = (config.get("JIRA_AUTH_TYPE") or "").lower()
+        if role_token and (is_datacenter(config) or auth_type == "bearer"):
+            return role_user or "", role_token
 
-    # If partial definition (one is present, other is empty/missing), advise and fallback
-    if role_user or role_token:
-        missing = role_token_key if role_user else role_user_key
-        print(f"Advisory: Partial Jira credentials for role '{role}' ({missing} missing). "
-              f"Falling back atomically to default (JIRA_USER, JIRA_TOKEN).", file=sys.stderr)
+        print(f"Error: Missing role-specific credentials for role '{role}'. "
+              f"Fallback to human default credentials (JIRA_USER/JIRA_TOKEN) is prohibited under ASPICE SUP.1 role separation.", file=sys.stderr)
+        sys.exit(1)
 
-    default_user = config.get("JIRA_USER")
-    default_token = config.get("JIRA_TOKEN") or config.get("JIRA_API_TOKEN")
-    if default_user and default_token:
-        return default_user, default_token
+    if role == "human":
+        default_user = config.get("JIRA_USER")
+        default_token = config.get("JIRA_TOKEN") or config.get("JIRA_API_TOKEN")
+        auth_type = (config.get("JIRA_AUTH_TYPE") or "").lower()
+        if default_user and default_token:
+            return default_user, default_token
+        if default_token and (is_datacenter(config) or auth_type == "bearer"):
+            return default_user or "", default_token
 
-    if default_token and (is_datacenter(config) or auth_type == "bearer"):
-        return default_user or "", default_token
-
-    print(f"Error: No Jira credentials found for role '{role}' and no default JIRA_USER/JIRA_TOKEN in config.", file=sys.stderr)
+    print(f"Error: Missing Jira credentials for role '{role}'.", file=sys.stderr)
     sys.exit(1)
 
 def mask_secret(text):
@@ -317,7 +318,12 @@ def parse_role_from_args(args=None):
             remaining_args.append(args[i])
             i += 1
 
+    HUMAN_ROLES = {"human", "user", "rainer"}
     if role_from_cli:
+        if role_from_cli.lower() in HUMAN_ROLES:
+            print("Error: 'human' role cannot be selected via agent CLI or environment variable. "
+                  "Human actions must use interactive confirmation or the Jira web UI.", file=sys.stderr)
+            sys.exit(1)
         if role_from_cli not in VALID_ROLES:
             print(f"Error: Invalid role '{role_from_cli}'. Recognized roles: {', '.join(VALID_ROLES)}", file=sys.stderr)
             sys.exit(1)
@@ -325,6 +331,10 @@ def parse_role_from_args(args=None):
 
     env_actor = os.environ.get("JIRA_ACTOR")
     if env_actor:
+        if env_actor.lower() in HUMAN_ROLES:
+            print("Error: 'human' role cannot be selected via agent CLI or environment variable. "
+                  "Human actions must use interactive confirmation or the Jira web UI.", file=sys.stderr)
+            sys.exit(1)
         if env_actor not in VALID_ROLES:
             print(f"Error: Invalid role '{env_actor}' in JIRA_ACTOR environment variable. Recognized roles: {', '.join(VALID_ROLES)}", file=sys.stderr)
             sys.exit(1)
@@ -1564,7 +1574,7 @@ def close_epic(epic_key, role="coordinator", config=None):
     """
     REQ-PRO-040.2 / TST-PRO-040.2:
     Closes an Epic to 'Erledigt' under triple guardrail enforcement:
-    1. Role Guard: Restricted strictly to 'coordinator' or 'human' (rejects 'agent1', 'agent2').
+    1. Role Guard: Restricted strictly to 'coordinator' (rejects 'agent1', 'agent2').
     2. Issue Type Guard: Verifies target issue is an 'Epic' (rejects standard parent tickets).
     3. Completeness Guard: Verifies 0 open child tickets (aborts with list of unfinished tickets).
     """
@@ -1572,9 +1582,9 @@ def close_epic(epic_key, role="coordinator", config=None):
         config = get_config()
 
     # Guard 1: Role check
-    if role not in ("coordinator", "human"):
+    if role != "coordinator":
         print(f"ERROR: Role '{role}' is not authorized to close Epics.\n"
-              f"Closing an Epic is restricted strictly to '--as coordinator' or 'human'.",
+              f"Closing an Epic is restricted strictly to '--as coordinator'.",
               file=sys.stderr)
         sys.exit(1)
 
@@ -2175,7 +2185,7 @@ USAGE_TEXT = (
     "Commands:\n"
     "  list                                                  List active sprint issues\n"
     "  list-epics                                            List all project Epics with Done/Open child ticket counts\n"
-    "  close-epic KEY                                        Close an Epic after triple guardrail verification (coordinator/human only)\n"
+    "  close-epic KEY                                        Close an Epic after triple guardrail verification (coordinator only)\n"
     "  show KEY                                              Show issue details, description, comments, and subtasks\n"
     "  set-points KEY POINTS                                 Set story points (customfield_10016) on issue (e.g. 1, 2, 3, 5, or 'none')\n"
     "  status KEY                                            Show issue status\n"

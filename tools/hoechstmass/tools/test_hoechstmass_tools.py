@@ -30,6 +30,7 @@ from jira_util import (
     resolve_desired_parent_stage_for_subtask,
     count_final_review_bounces,
     final_review_verdict,
+    VALID_ROLES,
 )
 from verify_requirement_governance import (
     load_config,
@@ -88,17 +89,22 @@ class TestHoechstmassConfig(unittest.TestCase):
         self.assertEqual(u, "agent1@example.com")
         self.assertEqual(t, "token1")
 
-        # Fallback to default
-        u2, t2 = resolve_account("coordinator", config=env_config)
-        self.assertEqual(u2, "fallback@example.com")
-        self.assertEqual(t2, "fallback_token")
+        # Fallback to default is prohibited for agent roles under ASPICE SUP.1 (ATT-6146)
+        with self.assertRaises(SystemExit) as cm:
+            resolve_account("coordinator", config=env_config)
+        self.assertEqual(cm.exception.code, 1)
+
+        # Fallback to default is permitted for human role
+        u_human, t_human = resolve_account("human", config=env_config)
+        self.assertEqual(u_human, "fallback@example.com")
+        self.assertEqual(t_human, "fallback_token")
 
     def test_datacenter_helpers_and_auth(self):
         dc_config = {
             "JIRA_URL": "https://jira.internal.corp",
             "JIRA_DEPLOYMENT": "datacenter",
             "JIRA_AGENT1_NAME": "dc_agent1_user",
-            "JIRA_TOKEN": "datacenter_pat_token_abc"
+            "JIRA_AGENT1_TOKEN": "datacenter_pat_token_abc",
         }
         self.assertTrue(is_datacenter(dc_config))
         self.assertEqual(get_search_endpoint(dc_config), "https://jira.internal.corp/rest/api/2/search")
@@ -107,6 +113,10 @@ class TestHoechstmassConfig(unittest.TestCase):
 
         headers = get_headers(dc_config, role="agent1")
         self.assertEqual(headers["Authorization"], "Bearer datacenter_pat_token_abc")
+
+    def test_valid_roles_excludes_human(self):
+        self.assertNotIn("human", VALID_ROLES)
+        self.assertEqual(VALID_ROLES, ["agent1", "agent2", "coordinator"])
 
 
 class TestGovernanceVerification(unittest.TestCase):

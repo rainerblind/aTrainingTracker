@@ -319,10 +319,10 @@
 ### TST-PRO-012: **Multi-Account Jira Authentication, Atomic Resolution & Terminal Error Handling Verification** [Verified]
 - **Requirement(s)**: `REQ-PRO-019`
 - **Component**: **Multi-Account Jira Authentication, Atomic Resolution & Terminal Error Handling Verification**
-- **Jira**: ``ATT-1123` / `ATT-1200``
+- **Jira**: ``ATT-1123` / `ATT-1200` / `ATT-6146``
 - **Test Description**:
   1. Unit Test Credential Configuration Parsing (`.env.jira`): Verify `get_config()` and `resolve_account(role)` parse role-specific keys (`JIRA_AGENT1_USER`, `JIRA_AGENT1_TOKEN`, `JIRA_AGENT2_USER`, `JIRA_AGENT2_TOKEN`, `JIRA_COORDINATOR_USER`, `JIRA_COORDINATOR_TOKEN`) alongside base `JIRA_USER`, `JIRA_TOKEN`.
-  2. Unit Test Atomic Pair Resolution & Fallback: Verify that when both role user and token are set, the role credentials are used; verify that when only one is set (e.g. user set, token empty), resolution falls back atomically to `(JIRA_USER, JIRA_TOKEN)` and emits notice to `stderr`; verify that when no role keys exist, resolution cleanly defaults to base credentials.
+  2. Unit Test Role Credential Isolation & Elimination of Default Fallback (ATT-6146): Verify that when both role user and token are set, role credentials are used; verify that when role credentials are missing or partial for automated roles (`agent1`, `agent2`, `coordinator`), `resolve_account` aborts with exit code 1 and writes credential isolation error to `stderr`, refusing fallback to `(JIRA_USER, JIRA_TOKEN)` under ASPICE SUP.1.
   3. Unit Test Terminal Error on Missing Credentials: Mock configuration with no credentials defined; verify `get_headers()` or API request halts immediately with exit code 1 and writes diagnostic error to `stderr` without making unauthenticated requests.
   4. Unit Test Basic Auth Header Generation: Verify `get_headers(role)` produces base64 Basic Auth headers matching the resolved credentials.
   5. Backward Compatibility Invariant: Verify that single-account setups run without warnings or errors.
@@ -331,11 +331,11 @@
 ### TST-PRO-013: **Role Locking, Precedence, Anti-Spoofing & Actor Comment Attribution Verification** [Verified]
 - **Requirement(s)**: `REQ-PRO-020`
 - **Component**: **Role Locking, Precedence, Anti-Spoofing & Actor Comment Attribution Verification**
-- **Jira**: ``ATT-1123` / `ATT-1200``
+- **Jira**: ``ATT-1123` / `ATT-1200` / `ATT-6146``
 - **Test Description**:
   1. Unit Test Precedence Resolution: Verify role selection follows `CLI Flag (--as <role>)` > `Environment Variable (JIRA_ACTOR)` > `Script Default`.
   2. Unit Test Role Hardwiring in `review_agent.py`: Verify that `review_agent.py` hardwires role to `agent2` across all API calls and comments, rejecting or ignoring any attempt to run review audits as `agent1` or `coordinator`.
-  3. Unit Test Invalid Role Rejection: Verify `jira_util.py --as invalid_role` exits with error code 1 and descriptive usage message.
+  3. Unit Test Invalid & Human Role Rejection (ATT-6146): Verify `jira_util.py --as invalid_role` exits with error code 1 and descriptive usage message; verify `--as human`, `--as=human`, and `JIRA_ACTOR=human` abort with exit code 1 and a fatal governance error message.
   4. Unit Test Comment Prefix Attribution: Verify `add_comment` formats opening line with role-specific attribution prefix: `[Automated comment by AI Agent 1 (Implementer)]` for `agent1`, `[Automated comment by AI Agent 2 (Auditor)]` for `agent2`, and `[Automated comment by AI Coordinator]` for `coordinator`.
   5. Unit Test Human Gate Invariance: Verify that attempting `transition_issue(key, "erledigt")` or `transition_issue(key, "freigabe erteilt")` is blocked with exit code 1 specifically for transitions targeting Erledigt / Done, while non-Erledigt transitions (`in_progress`, `in_review`, `freigabe`) succeed.
   6. Automated Protocol Inspection: Programmatic test verifies `docs/project_protocol.md` and `.cursorrules` explicitly define the Coordinator role, specify Coordinator boundaries (cannot override Auditor verdicts, cannot skip gates, cannot close tickets to `Erledigt`).

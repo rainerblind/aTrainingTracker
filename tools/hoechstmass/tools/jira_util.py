@@ -78,7 +78,7 @@ STAGE_TO_SKILL_DIR = {
     "final review (agent)": "stage6-final-review",
 }
 
-VALID_ROLES = ["agent1", "agent2", "coordinator", "human"]
+VALID_ROLES = ["agent1", "agent2", "coordinator"]
 
 
 def resolve_desired_parent_stage_for_subtask(subtask_summary, subtask_done=True):
@@ -263,7 +263,12 @@ def get_account_id_for_role(role_or_id, config=None, h_config=None):
 
 
 def resolve_account(role="agent1", config=None, h_config=None):
-    """Resolves (username, token) for a role with fallback to default credentials or Bearer PAT in Data Center."""
+    """
+    Resolves (username, token) for a role.
+    Under ASPICE SUP.1 role separation, automated roles (agent1, agent2, coordinator)
+    must strictly provide their own role credentials; fallback to default human
+    credentials (JIRA_USER, JIRA_TOKEN) is prohibited.
+    """
     if config is None:
         config = load_env_config()
     if h_config is None:
@@ -274,26 +279,32 @@ def resolve_account(role="agent1", config=None, h_config=None):
         "agent2": ("JIRA_AGENT2_USER", "JIRA_AGENT2_TOKEN"),
         "coordinator": ("JIRA_COORDINATOR_USER", "JIRA_COORDINATOR_TOKEN"),
     }
-    user_key, token_key = role_map.get(role, (None, None))
-    user = config.get(user_key) if user_key else None
-    token = config.get(token_key) if token_key else None
+    if role in role_map:
+        user_key, token_key = role_map[role]
+        user = config.get(user_key) if user_key else None
+        token = config.get(token_key) if token_key else None
 
-    if user and token:
-        return user, token
+        if user and token:
+            return user, token
 
-    auth_type = (config.get("JIRA_AUTH_TYPE") or "").lower()
-    if token and (is_datacenter(config, h_config) or auth_type == "bearer"):
-        return user or "", token
+        auth_type = (config.get("JIRA_AUTH_TYPE") or "").lower()
+        if token and (is_datacenter(config, h_config) or auth_type == "bearer"):
+            return user or "", token
 
-    default_user = config.get("JIRA_USER")
-    default_token = config.get("JIRA_TOKEN") or config.get("JIRA_API_TOKEN")
-    if default_user and default_token:
-        return default_user, default_token
+        print(f"Error: Missing role-specific credentials for role '{role}'. "
+              f"Fallback to human default credentials (JIRA_USER/JIRA_TOKEN) is prohibited under ASPICE SUP.1 role separation.", file=sys.stderr)
+        sys.exit(1)
 
-    if default_token and (is_datacenter(config, h_config) or auth_type == "bearer"):
-        return default_user or "", default_token
+    if role == "human":
+        default_user = config.get("JIRA_USER")
+        default_token = config.get("JIRA_TOKEN") or config.get("JIRA_API_TOKEN")
+        auth_type = (config.get("JIRA_AUTH_TYPE") or "").lower()
+        if default_user and default_token:
+            return default_user, default_token
+        if default_token and (is_datacenter(config, h_config) or auth_type == "bearer"):
+            return default_user or "", default_token
 
-    print(f"Error: Missing Jira credentials for role '{role}' and no default credentials found.", file=sys.stderr)
+    print(f"Error: Missing Jira credentials for role '{role}'.", file=sys.stderr)
     sys.exit(1)
 
 
@@ -539,7 +550,7 @@ def close_epic(epic_key, role="coordinator", config=None, h_config=None):
     """
     REQ-PRO-040.2 / TST-PRO-040.2:
     Closes an Epic to 'Erledigt' under triple guardrail enforcement:
-    1. Role Guard: Restricted strictly to 'coordinator' or 'human' (rejects 'agent1', 'agent2').
+    1. Role Guard: Restricted strictly to 'coordinator' (rejects 'agent1', 'agent2').
     2. Issue Type Guard: Verifies target issue is an 'Epic' (rejects standard parent tickets).
     3. Completeness Guard: Verifies 0 open child tickets (aborts with list of unfinished tickets).
     """
@@ -549,9 +560,9 @@ def close_epic(epic_key, role="coordinator", config=None, h_config=None):
         h_config = load_hoechstmass_config()
 
     # Guard 1: Role check
-    if role not in ("coordinator", "human"):
+    if role != "coordinator":
         print(f"ERROR: Role '{role}' is not authorized to close Epics.\n"
-              f"Closing an Epic is restricted strictly to '--as coordinator' or 'human'.",
+              f"Closing an Epic is restricted strictly to '--as coordinator'.",
               file=sys.stderr)
         sys.exit(1)
 
@@ -974,9 +985,29 @@ def main():
 
     as_role = "agent1"
     args = sys.argv[1:]
+    role_specified = False
     if args[0] == "--as" and len(args) >= 3:
         as_role = args[1]
         args = args[2:]
+        role_specified = True
+    elif args[0].startswith("--as="):
+        as_role = args[0].split("=", 1)[1]
+        args = args[1:]
+        role_specified = True
+
+    if not role_specified:
+        env_actor = os.environ.get("JIRA_ACTOR")
+        if env_actor:
+            as_role = env_actor
+
+    HUMAN_ROLES = {"human", "user", "rainer"}
+    if as_role.lower() in HUMAN_ROLES:
+        print("Error: 'human' role cannot be selected via agent CLI or environment variable. "
+              "Human actions must use interactive confirmation or the Jira web UI.", file=sys.stderr)
+        sys.exit(1)
+    if as_role not in VALID_ROLES:
+        print(f"Error: Invalid role '{as_role}'. Recognized roles: {', '.join(VALID_ROLES)}", file=sys.stderr)
+        sys.exit(1)
 
     cmd = args[0]
     if cmd == "check-gate":

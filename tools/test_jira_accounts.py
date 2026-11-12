@@ -43,8 +43,8 @@ class TestJiraAccountResolution(unittest.TestCase):
         self.assertEqual(jira_util.resolve_account("agent2", config), ("agent2@example.com", "agent2_secret_token"))
         self.assertEqual(jira_util.resolve_account("coordinator", config), ("coordinator@example.com", "coordinator_secret_token"))
 
-    def test_atomic_pair_fallback_when_token_missing(self):
-        """When role user is set but role token is missing, atomically fall back to default credentials."""
+    def test_role_credential_isolation_when_token_missing(self):
+        """When role user is set but role token is missing for an agent, abort without falling back."""
         config = {
             "JIRA_USER": "fallback_user@example.com",
             "JIRA_TOKEN": "fallback_token_12345",
@@ -53,17 +53,17 @@ class TestJiraAccountResolution(unittest.TestCase):
         }
         stderr_capture = io.StringIO()
         with patch("sys.stderr", stderr_capture):
-            user, token = jira_util.resolve_account("agent1", config)
-        self.assertEqual(user, "fallback_user@example.com")
-        self.assertEqual(token, "fallback_token_12345")
+            with self.assertRaises(SystemExit) as cm:
+                jira_util.resolve_account("agent1", config)
+            self.assertEqual(cm.exception.code, 1)
         log_output = stderr_capture.getvalue()
-        self.assertIn("Advisory", log_output)
-        self.assertIn("agent1", log_output)
+        self.assertIn("Missing role-specific credentials for role 'agent1'", log_output)
+        self.assertIn("Fallback to human default credentials", log_output)
         # Verify secret masking: neither token is exposed in stderr
         self.assertNotIn("fallback_token_12345", log_output)
 
-    def test_atomic_pair_fallback_when_user_missing(self):
-        """When role token is set but role user is missing, atomically fall back to default credentials."""
+    def test_role_credential_isolation_when_user_missing(self):
+        """When role token is set but role user is missing for an agent, abort without falling back."""
         config = {
             "JIRA_USER": "fallback_user@example.com",
             "JIRA_TOKEN": "fallback_token_12345",
@@ -72,23 +72,37 @@ class TestJiraAccountResolution(unittest.TestCase):
         }
         stderr_capture = io.StringIO()
         with patch("sys.stderr", stderr_capture):
-            user, token = jira_util.resolve_account("coordinator", config)
-        self.assertEqual(user, "fallback_user@example.com")
-        self.assertEqual(token, "fallback_token_12345")
+            with self.assertRaises(SystemExit) as cm:
+                jira_util.resolve_account("coordinator", config)
+            self.assertEqual(cm.exception.code, 1)
         log_output = stderr_capture.getvalue()
-        self.assertIn("Advisory", log_output)
-        self.assertIn("coordinator", log_output)
+        self.assertIn("Missing role-specific credentials for role 'coordinator'", log_output)
+        self.assertIn("Fallback to human default credentials", log_output)
         self.assertNotIn("coordinator_secret_token", log_output)
 
-    def test_clean_fallback_when_role_unconfigured(self):
-        """When role keys are not defined at all, fall back cleanly without mixing."""
+    def test_role_credential_isolation_when_role_unconfigured(self):
+        """When agent role keys are not defined at all, abort without falling back to human credentials."""
         config = {
             "JIRA_USER": "default_user@example.com",
             "JIRA_TOKEN": "default_token_xyz",
         }
-        user, token = jira_util.resolve_account("agent2", config)
-        self.assertEqual(user, "default_user@example.com")
-        self.assertEqual(token, "default_token_xyz")
+        stderr_capture = io.StringIO()
+        with patch("sys.stderr", stderr_capture):
+            with self.assertRaises(SystemExit) as cm:
+                jira_util.resolve_account("agent2", config)
+            self.assertEqual(cm.exception.code, 1)
+        log_output = stderr_capture.getvalue()
+        self.assertIn("Missing role-specific credentials for role 'agent2'", log_output)
+
+    def test_human_role_resolution_uses_default_credentials(self):
+        """When resolving credentials for human role, default JIRA_USER and JIRA_TOKEN are used."""
+        config = {
+            "JIRA_USER": "human_user@example.com",
+            "JIRA_TOKEN": "human_token_xyz",
+        }
+        user, token = jira_util.resolve_account("human", config)
+        self.assertEqual(user, "human_user@example.com")
+        self.assertEqual(token, "human_token_xyz")
 
     def test_terminal_failure_when_no_credentials_exist(self):
         """When neither role nor default credentials exist, exit code 1 is triggered with clear diagnostic."""
@@ -99,7 +113,7 @@ class TestJiraAccountResolution(unittest.TestCase):
                 jira_util.resolve_account("agent1", config)
             self.assertEqual(cm.exception.code, 1)
         err_msg = stderr_capture.getvalue()
-        self.assertIn("Error: No Jira credentials found", err_msg)
+        self.assertIn("Missing role-specific credentials for role 'agent1'", err_msg)
 
     def test_basic_auth_header_encoding(self):
         """Headers generate valid HTTP Basic Auth using resolved credentials."""
@@ -148,6 +162,34 @@ class TestRolePrecedenceAndAttribution(unittest.TestCase):
                 jira_util.parse_role_from_args(["--as", "imposter_role", "status", "ATT-1201"])
             self.assertEqual(cm.exception.code, 1)
         self.assertIn("Invalid role 'imposter_role'", stderr_capture.getvalue())
+
+    def test_valid_roles_excludes_human(self):
+        """VALID_ROLES must not contain human (REQ-PRO-020.5)."""
+        self.assertNotIn("human", jira_util.VALID_ROLES)
+        self.assertEqual(jira_util.VALID_ROLES, ["agent1", "agent2", "coordinator"])
+
+    def test_human_role_selection_rejected_from_cli(self):
+        """Selecting human role via --as human or --as=human causes fatal governance abort (AC-1)."""
+        for flag in [["--as", "human"], ["--as=human"], ["--as", "user"], ["--as", "rainer"]]:
+            stderr_capture = io.StringIO()
+            with patch("sys.stderr", stderr_capture):
+                with self.assertRaises(SystemExit) as cm:
+                    jira_util.parse_role_from_args(flag + ["status", "ATT-1201"])
+                self.assertEqual(cm.exception.code, 1)
+            err_msg = stderr_capture.getvalue()
+            self.assertIn("Error: 'human' role cannot be selected via agent CLI or environment variable", err_msg)
+
+    def test_human_role_selection_rejected_from_env(self):
+        """Selecting human role via JIRA_ACTOR causes fatal governance abort (AC-1)."""
+        for actor in ["human", "user", "rainer", "HUMAN"]:
+            with patch.dict(os.environ, {"JIRA_ACTOR": actor}):
+                stderr_capture = io.StringIO()
+                with patch("sys.stderr", stderr_capture):
+                    with self.assertRaises(SystemExit) as cm:
+                        jira_util.parse_role_from_args(["status", "ATT-1201"])
+                    self.assertEqual(cm.exception.code, 1)
+                err_msg = stderr_capture.getvalue()
+                self.assertIn("Error: 'human' role cannot be selected via agent CLI or environment variable", err_msg)
 
     def test_comment_attribution_prefix(self):
         """add_comment prepends the correct role-specific attribution prefix."""
@@ -250,7 +292,8 @@ class TestSecretMasking(unittest.TestCase):
         }
         stderr_capture = io.StringIO()
         with patch("sys.stderr", stderr_capture):
-            jira_util.resolve_account("agent1", config)
+            with self.assertRaises(SystemExit):
+                jira_util.resolve_account("agent1", config)
         output = stderr_capture.getvalue()
         self.assertNotIn("SUPER_SECRET_FALLBACK_TOKEN_999", output)
 
