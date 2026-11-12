@@ -87,6 +87,7 @@ import com.atrainingtracker.trainingtracker.ui.utils.NumericalEncodingUtils;
 import com.atrainingtracker.banalservice.devices.radar.RadarLightController;
 import com.atrainingtracker.banalservice.devices.radar.RadarSnoozeController;
 import com.atrainingtracker.banalservice.devices.radar.RadarTrafficSimulator;
+import com.atrainingtracker.banalservice.devices.radar.SmartBrakeLightDetector;
 import com.atrainingtracker.trainingtracker.audio.radar.RadarAlertManager;
 import com.atrainingtracker.trainingtracker.tracker.autopause.AutoPauseConfig;
 import com.atrainingtracker.trainingtracker.tracker.autopause.AutoPauseManager;
@@ -1444,6 +1445,7 @@ public class TrackerService extends Service {
             mRadarAlertManager = null;
         }
 
+        RadarLightController.onWorkoutStopped(this);
         if (!TrainingApplication.isPaused()) {
             RadarSnoozeController.reset();
             RadarTrafficSimulator.INSTANCE.stop();
@@ -2247,6 +2249,11 @@ public class TrackerService extends Service {
                 LocalBroadcastManager.getInstance(TrackerService.this).sendBroadcast(new Intent(WORKOUT_UPDATED_INTENT).putExtra("WORKOUT_ID", workoutId));
             }, mDbExecutor);
             return;
+        }
+
+        SensorData<Number> speedData = banalService.getBestSensorData(SensorType.SPEED_mps);
+        if (speedData != null && speedData.getValue() != null) {
+            SmartBrakeLightDetector.onSpeedChanged(speedData.getValue().floatValue());
         }
 
         final ContentValues samplingValues = new ContentValues();

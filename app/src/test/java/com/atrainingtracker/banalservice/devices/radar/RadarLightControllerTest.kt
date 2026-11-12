@@ -49,6 +49,7 @@ class RadarLightControllerTest {
         RadarLightController.reset()
         RadarStateRepository.reset()
         RadarTrafficSimulator.stop()
+        SmartRadarLightEngine.reset()
     }
 
     @After
@@ -56,6 +57,7 @@ class RadarLightControllerTest {
         RadarLightController.reset()
         RadarStateRepository.reset()
         RadarTrafficSimulator.stop()
+        SmartRadarLightEngine.reset()
         unmockkStatic(Log::class)
     }
 
@@ -286,5 +288,61 @@ class RadarLightControllerTest {
         assertFalse(RadarLightController.isRearVue820Model("RTL516"))
         assertFalse(RadarLightController.isRearVue820Model("Gardia R300L"))
         assertFalse(RadarLightController.isRearVue820Model(null))
+    }
+
+    @Test
+    fun testRadarLightController_triggerBrakeLight_underNightConditions_clampedToSolid() {
+        val mockDevice = mockk<BTLERadarDevice>(relaxed = true)
+        every { mockDevice.setLightMode(any()) } returns true
+        RadarLightController.registerRadarDevice(mockDevice, lightSupported = true, isStvzo = false)
+
+        // Pre-brake mode: NIGHT_FLASH
+        RadarLightController.setLightMode(RadarLightMode.NIGHT_FLASH)
+
+        // Trigger brake requesting DAY_FLASH at night (Finding 4):
+        RadarLightController.triggerBrakeLight(active = true, brakeMode = RadarLightMode.DAY_FLASH, nowMs = 1000L)
+        assertTrue(RadarLightController.isBrakeActive)
+        assertEquals("Night brake mode must be strictly clamped to SOLID (25 lm), never DAY_FLASH (100 lm)", RadarLightMode.SOLID, RadarLightController.currentMode.value)
+        verify { mockDevice.setLightMode(RadarLightMode.SOLID) }
+    }
+
+    @Test
+    fun testRadarLightController_onWorkoutStopped_cleansUpBrakeHoldAndPreventsResuscitation() {
+        val mockDevice = mockk<BTLERadarDevice>(relaxed = true)
+        every { mockDevice.setLightMode(any()) } returns true
+        RadarLightController.registerRadarDevice(mockDevice, lightSupported = true, isStvzo = false)
+
+        // Initial mode: SOLID, then trigger brake
+        RadarLightController.setLightMode(RadarLightMode.SOLID)
+        RadarLightController.triggerBrakeLight(active = true, brakeMode = RadarLightMode.DAY_FLASH, nowMs = 1000L)
+        assertTrue(RadarLightController.isBrakeActive)
+
+        // Workout is stopped while brake is active / holding (Finding 3):
+        RadarLightController.onWorkoutStopped()
+        assertFalse("isBrakeActive must be cleared on workout stop", RadarLightController.isBrakeActive)
+        assertEquals(RadarLightMode.OFF, RadarLightController.currentMode.value)
+
+        // Simulate delayed hold expiration runnable firing after workout stopped:
+        val restored = RadarLightController.checkAndRestorePreBrakeMode(nowMs = 4000L)
+        assertFalse("Hold expiration after workout stopped must not restore light", restored)
+        assertEquals("Light must remain OFF after workout stopped", RadarLightMode.OFF, RadarLightController.currentMode.value)
+    }
+
+    @Test
+    fun testRadarLightController_onWorkoutPaused_and_onWorkoutResumed() {
+        val mockContext = mockk<Context>(relaxed = true)
+        RadarLightController.onWorkoutStarted(mockContext)
+
+        RadarLightController.triggerBrakeLight(active = true, nowMs = 1000L)
+        assertTrue(RadarLightController.isBrakeActive)
+
+        // Pause workout
+        RadarLightController.onWorkoutPaused()
+        assertFalse("Active brake must be cleared on pause", RadarLightController.isBrakeActive)
+        assertFalse("Sensor listening must be stopped on pause", SmartBrakeLightDetector.isListening)
+
+        // Resume workout
+        RadarLightController.onWorkoutResumed(mockContext)
+        // Verify resumed state
     }
 }

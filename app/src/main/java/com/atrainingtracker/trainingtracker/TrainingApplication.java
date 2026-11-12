@@ -1774,6 +1774,7 @@ public class TrainingApplication extends Application {
     public void setTracking() {
         mWasAutoPaused.set(false);
         cTrackingMode = TrackingMode.TRACKING;
+        com.atrainingtracker.banalservice.devices.radar.RadarLightController.onWorkoutResumed(this);
         notifyTrackingStateChanged();
     }
 
@@ -1878,6 +1879,7 @@ public class TrainingApplication extends Application {
         }
 
         cTrackingMode = TrackingMode.PAUSED;
+        com.atrainingtracker.banalservice.devices.radar.RadarLightController.onWorkoutPaused();
         notifyTrackingStateChanged();
     }
 
@@ -1906,6 +1908,7 @@ public class TrainingApplication extends Application {
         }
 
         cTrackingMode = TrackingMode.TRACKING;
+        com.atrainingtracker.banalservice.devices.radar.RadarLightController.onWorkoutResumed(this);
         notifyTrackingStateChanged();
     }
 

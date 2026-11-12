@@ -26,9 +26,10 @@
 | `REQ-CON-035.1` | Forward deceleration detection ($a \le -2.0\text{ m/s}^2$ sustained $\ge 250\text{ ms}$, $v \ge 2.5\text{ m/s}$, $dv/dt \le 0$) | `TST-CON-035.1` | `SmartBrakeLightDetectorTest.kt` |
 | `REQ-CON-035.2` | Road bump and vertical shock rejection ($|a_v| > 4.0\text{ m/s}^2$ without longitudinal deceleration) | `TST-CON-035.2` | `SmartBrakeLightDetectorTest.kt` |
 | `REQ-CON-035.3` | Immediate priority override of rate limits, continuous hold during braking, and $2.0\text{ s}$ post-brake hold before pre-brake restoration | `TST-CON-035.3` | `RadarLightControllerTest.kt` |
-| `REQ-CON-035.4` | StVZO mode clamping invariant (strictly clamps brake mode to steady `SOLID`, zero flashing) | `TST-CON-035.4` | `RadarLightControllerTest.kt` |
+| `REQ-CON-035.4` | StVZO and Night Anti-Glare mode clamping invariant (clamps to steady `SOLID` 25 lm; zero flashing under StVZO or at night) | `TST-CON-035.4` | `RadarLightControllerTest.kt` |
 | `REQ-CON-035.5` | Garmin Varia RearVue 820 onboard hardware brake sensor auto-bypass (BLE `0x2A24` / ANT+ Page `0x50`) | `TST-CON-035.5` | `RadarLightControllerTest.kt` |
 | `REQ-CON-035.6` | Preference persistence (`radarBrakeLightEnabled`) and 100% 9-language UI localization parity in `strings_radar.xml` | `TST-CON-035.6` | `TranslationParityTest.kt` |
+| `REQ-CON-035.7` | Active workout lifecycle wiring & battery conservation (SensorEventListener registered only while tracking; holds cancelled on stop/pause) | `TST-CON-035.7` | `SmartBrakeLightDetectorTest.kt`, `RadarLightControllerTest.kt` |
 
 ---
 

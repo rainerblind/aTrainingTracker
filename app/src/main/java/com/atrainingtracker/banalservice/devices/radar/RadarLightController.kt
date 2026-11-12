@@ -70,11 +70,17 @@ object RadarLightController {
     var isBrakeActive: Boolean = false
         private set
 
+    private var isWorkoutActive: Boolean = false
+    private var appContext: Context? = null
+
     private var preBrakeMode: RadarLightMode = RadarLightMode.OFF
     private var brakeHoldUntilRealtimeMs: Long = 0L
 
     private val handler by lazy { Handler(Looper.getMainLooper()) }
     private val brakeHoldRunnable = Runnable {
+        synchronized(this@RadarLightController) {
+            if (!isBrakeActive) return@Runnable
+        }
         checkAndRestorePreBrakeMode(SystemClock.elapsedRealtime())
     }
 
@@ -89,6 +95,8 @@ object RadarLightController {
         isStvzo: Boolean = false,
         hasHardwareBrakeSensor: Boolean = false
     ) {
+        val shouldStartListening: Boolean
+        val ctx: Context?
         synchronized(this) {
             activeRadarDevice = device
             _isLightControlAvailable.value = lightSupported
@@ -96,6 +104,13 @@ object RadarLightController {
             _hasHardwareBrakeSensor.value = hasHardwareBrakeSensor
             _isAutoBypassed.value = hasHardwareBrakeSensor
             SmartBrakeLightDetector.isAutoBypassed = hasHardwareBrakeSensor
+            shouldStartListening = isWorkoutActive && SmartBrakeLightDetector.isEnabled && !hasHardwareBrakeSensor
+            ctx = appContext
+        }
+        if (hasHardwareBrakeSensor) {
+            SmartBrakeLightDetector.stopListening()
+        } else if (shouldStartListening && ctx != null) {
+            SmartBrakeLightDetector.startListening(ctx)
         }
         val current = RadarStateRepository.getState()
         RadarStateRepository.updateState(current.copy(isLightControlSupported = lightSupported))
@@ -121,6 +136,7 @@ object RadarLightController {
                 } catch (_: Exception) {}
             }
         }
+        SmartBrakeLightDetector.stopListening()
         val current = RadarStateRepository.getState()
         RadarStateRepository.updateState(current.copy(isLightControlSupported = false, lightMode = RadarLightMode.OFF))
         Log.i(TAG, "Unregistered radar device")
@@ -200,6 +216,7 @@ object RadarLightController {
             try {
                 val cfg = TuningPreferencesDataStore.getInstance(context).getTuningConfig()
                 updateCachedPreferences(cfg.radarAutoLightControl, cfg.radarLightDefaultMode)
+                SmartBrakeLightDetector.isEnabled = cfg.radarBrakeLightEnabled
                 return Pair(cfg.radarAutoLightControl, cfg.radarLightDefaultMode)
             } catch (_: Throwable) {
                 // Ignore and use cached
@@ -211,30 +228,80 @@ object RadarLightController {
     }
 
     /**
-     * Workout start hook (REQ-CON-031.4): turns on tail light if auto-switch is enabled.
+     * Workout start hook (REQ-CON-031.4): turns on tail light if auto-switch is enabled
+     * and activates SmartBrakeLightDetector IMU listening.
      * Executes synchronously without unmanaged coroutines or filesDir inspections (Coding Standards §5.5).
      */
     @JvmStatic
     @JvmOverloads
     fun onWorkoutStarted(context: Context? = null) {
+        synchronized(this) {
+            isWorkoutActive = true
+            if (context != null) {
+                appContext = context.applicationContext
+            }
+        }
         val (autoControl, defaultMode) = resolveActiveConfig(context)
         if (autoControl) {
             setLightMode(defaultMode)
         }
+        val ctx = context?.applicationContext ?: synchronized(this) { appContext }
+        if (ctx != null && SmartBrakeLightDetector.isEnabled && !SmartBrakeLightDetector.isAutoBypassed) {
+            SmartBrakeLightDetector.startListening(ctx)
+        }
     }
 
     /**
-     * Workout finish/stop hook (REQ-CON-031.4): reverts tail light to OFF if auto-switch is enabled.
+     * Workout pause hook: stops IMU listening to conserve battery and clears pending brake holds.
+     */
+    @JvmStatic
+    fun onWorkoutPaused() {
+        synchronized(this) {
+            isBrakeActive = false
+            brakeHoldUntilRealtimeMs = 0L
+            try {
+                handler.removeCallbacks(brakeHoldRunnable)
+            } catch (_: Exception) {}
+        }
+        SmartBrakeLightDetector.stopListening()
+    }
+
+    /**
+     * Workout resume hook: resumes IMU listening and restores default mode if configured.
+     */
+    @JvmStatic
+    @JvmOverloads
+    fun onWorkoutResumed(context: Context? = null) {
+        onWorkoutStarted(context)
+    }
+
+    /**
+     * Workout finish/stop hook (REQ-CON-031.4): cancels pending holds, stops IMU listening,
+     * and reverts tail light to OFF if auto-switch is enabled.
      * Executes synchronously without unmanaged coroutines or filesDir inspections (Coding Standards §5.5).
      */
     @JvmStatic
     @JvmOverloads
     fun onWorkoutStopped(context: Context? = null) {
+        synchronized(this) {
+            isWorkoutActive = false
+            isBrakeActive = false
+            brakeHoldUntilRealtimeMs = 0L
+            preBrakeMode = RadarLightMode.OFF
+            try {
+                handler.removeCallbacks(brakeHoldRunnable)
+            } catch (_: Exception) {}
+        }
+        SmartBrakeLightDetector.stopListening()
+        SmartBrakeLightDetector.reset()
         val (autoControl, _) = resolveActiveConfig(context)
         if (autoControl) {
             setLightMode(RadarLightMode.OFF)
             val device = synchronized(this) { activeRadarDevice }
             device?.disconnectLight()
+        }
+        synchronized(this) {
+            appContext = null
         }
     }
 
@@ -242,7 +309,7 @@ object RadarLightController {
      * Triggers priority deceleration brake light or schedules 2.0s post-brake hold (REQ-CON-035.3, REQ-CON-035.4).
      *
      * Overrides SmartRadarLightEngine rate-limiting for immediate safety alerting.
-     * When [active] is true, dispatches brake mode (clamped to SOLID if StVZO).
+     * When [active] is true, dispatches brake mode (clamped to SOLID if StVZO or dark/night environment).
      * When [active] is false, holds brake mode for 2.0s before restoring pre-brake mode.
      */
     @JvmStatic
@@ -269,8 +336,15 @@ object RadarLightController {
                 }
                 brakeHoldUntilRealtimeMs = nowMs + POST_BRAKE_HOLD_DURATION_MS
 
-                // Clamping to SOLID under StVZO regulations (REQ-CON-035.4)
-                val targetBrakeMode = if (_isStvzo.value) {
+                // Anti-glare and StVZO clamping invariants:
+                // 1. StVZO units are permanently clamped to SOLID (REQ-CON-035.4).
+                // 2. Non-StVZO units ridden in dark/tunnel/night environments are clamped to SOLID (25 lm)
+                //    and MUST NEVER emit DAY_FLASH (100 lm) to avoid dazzling following road users (Finding 4).
+                val isDarkEnvironment = SmartRadarLightEngine.isTunnelActive ||
+                        (SmartRadarLightEngine.currentSolarProfile == SolarElevationCalculator.SolarProfile.DUSK_NIGHT) ||
+                        (preBrakeMode == RadarLightMode.NIGHT_FLASH)
+
+                val targetBrakeMode = if (_isStvzo.value || isDarkEnvironment) {
                     RadarLightMode.SOLID
                 } else {
                     brakeMode
@@ -332,6 +406,8 @@ object RadarLightController {
     fun reset() {
         synchronized(this) {
             activeRadarDevice = null
+            isWorkoutActive = false
+            appContext = null
             _isLightControlAvailable.value = false
             _isStvzo.value = false
             _hasHardwareBrakeSensor.value = false
@@ -346,6 +422,8 @@ object RadarLightController {
                 handler.removeCallbacks(brakeHoldRunnable)
             } catch (_: Exception) {}
         }
+        SmartBrakeLightDetector.stopListening()
+        SmartBrakeLightDetector.reset()
         val current = RadarStateRepository.getState()
         RadarStateRepository.updateState(current.copy(isLightControlSupported = false, lightMode = RadarLightMode.OFF))
     }

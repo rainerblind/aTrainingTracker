@@ -832,6 +832,11 @@ class TuningPreferencesDataStore(private val context: Context) {
                 // Best-effort legacy key purge on startup
             }
         }
+        appScope.launch {
+            tuningConfigFlow.collect { cfg ->
+                com.atrainingtracker.banalservice.devices.radar.SmartBrakeLightDetector.isEnabled = cfg.radarBrakeLightEnabled
+            }
+        }
     }
 
 /**

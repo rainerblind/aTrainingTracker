@@ -3762,13 +3762,16 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 • Upon a confirmed Brake Event, `RadarLightController` SHALL immediately override `SmartRadarLightEngine` rate limits and command the active radar peripheral to brake mode (`DAY_FLASH` 100 lm in daytime, or `SOLID` 25 lm).
 • The brake illumination SHALL be held continuously throughout the deceleration duration plus a $2.0\text{ s}$ post-brake hold window after deceleration ceases ($a > -2.0\text{ m/s}^2$).
 • Upon expiration of the $2.0\text{ s}$ hold window, `RadarLightController` SHALL smoothly restore the tail light to its pre-brake mode (`preBrakeMode`), resuming background `SmartRadarLightEngine` evaluation.
-4. *StVZO Mode Clamping Invariant (`REQ-CON-035.4`)*:
-• In strict compliance with `REQ-CON-031.2` and StVZO regulations, if connected hardware is StVZO-certified (`isStvzo == true`), brake mode command SHALL be clamped to steady `RadarLightMode.SOLID` (5 lm steady), strictly prohibiting any flashing mode.
+4. *StVZO & Night Anti-Glare Mode Clamping Invariant (`REQ-CON-035.4`)*:
+• In strict compliance with `REQ-CON-031.2`, `REQ-CON-034.4`, and StVZO regulations, if connected hardware is StVZO-certified (`isStvzo == true`) OR the ambient environment is dark/night/tunnel (`SmartRadarLightEngine.isTunnelActive == true` or solar profile `DUSK_NIGHT`), the brake mode command SHALL be clamped to steady `RadarLightMode.SOLID` (25 lm), strictly prohibiting `DAY_FLASH` (100 lm) or any flashing mode at night to prevent blinding trailing motorists.
 5. *Hardware Brake Sensor Auto-Bypass (`REQ-CON-035.5`)*:
 • When the connected radar peripheral is identified as having an onboard hardware brake sensor—specifically Garmin Varia RearVue 820 (`010-03180-00` or `010-03180-10`) identified via BLE Model Number `0x2A24` or ANT+ Page `0x50` Product ID—software deceleration triggering SHALL be automatically bypassed (defaulted to disabled) to prevent redundant actuation, with manual override permitted in Settings.
 6. *Settings Preference & 9-Language Localization Parity (`REQ-CON-035.6`)*:
 • `TuningPreferencesDataStore` SHALL persist preference `radarBrakeLightEnabled` (`Boolean`, default `true`, auto-bypassed for RearVue 820).
 • `RadarSettingsSection.kt` SHALL expose a dedicated toggle and status description with 100% localization parity across EN, DE, ES, FR, IT, JA, NL, PL, PT in `strings_radar.xml`.
+7. *Active Workout Lifecycle Management & Sensor Conservation (`REQ-CON-035.7`)*:
+• `SmartBrakeLightDetector` SHALL register Android `SensorEventListener` (`Sensor.TYPE_LINEAR_ACCELERATION` and `Sensor.TYPE_GRAVITY`) exclusively during active cycling tracking sessions when radar light control is connected and enabled.
+• Sensor listeners SHALL be immediately unregistered and any pending post-brake hold cancelled upon workout pause, stop, or service destruction to prevent battery drain and prevent tail light resuscitation.
 
 **Acceptance Criteria (Given-When-Then)**:
 • *Given* Software Brake Light enabled and tail light in `PELOTON` (8 lm) mode at $25\text{ km/h}$,
