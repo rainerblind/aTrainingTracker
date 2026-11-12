@@ -50,12 +50,14 @@ class SmartBrakeLightDetectorTest {
         every { Log.w(any(), any<String>()) } returns 0
         every { Log.w(any(), any(), any()) } returns 0
         every { Log.e(any(), any()) } returns 0
+        SmartBrakeLightDetector.isEnabled = true
         SmartBrakeLightDetector.reset()
         RadarLightController.reset()
     }
 
     @After
     fun tearDown() {
+        SmartBrakeLightDetector.isEnabled = true
         SmartBrakeLightDetector.reset()
         RadarLightController.reset()
         unmockkStatic(Log::class)
@@ -164,6 +166,14 @@ class SmartBrakeLightDetectorTest {
         SmartBrakeLightDetector.onLinearAccelerationChanged(0f, -4.0f, 0f, nowMs = 1400L)
 
         assertFalse("Disabled detector must never trigger software brake light", SmartBrakeLightDetector.isBraking)
+    }
+
+    @Test
+    fun testReset_doesNotClobberDisabledPreference() {
+        // Finding 2: reset() must preserve isEnabled and not overwrite disabled preference to true
+        SmartBrakeLightDetector.isEnabled = false
+        SmartBrakeLightDetector.reset()
+        assertFalse("reset() must NOT clobber disabled preference", SmartBrakeLightDetector.isEnabled)
     }
 
     @Test

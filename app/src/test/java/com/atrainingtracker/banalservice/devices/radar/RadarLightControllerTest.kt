@@ -46,6 +46,7 @@ class RadarLightControllerTest {
         every { Log.w(any(), any<String>()) } returns 0
         every { Log.w(any(), any(), any()) } returns 0
         every { Log.e(any(), any()) } returns 0
+        SmartBrakeLightDetector.isEnabled = true
         RadarLightController.reset()
         RadarStateRepository.reset()
         RadarTrafficSimulator.stop()
@@ -54,6 +55,7 @@ class RadarLightControllerTest {
 
     @After
     fun tearDown() {
+        SmartBrakeLightDetector.isEnabled = true
         RadarLightController.reset()
         RadarStateRepository.reset()
         RadarTrafficSimulator.stop()
@@ -331,6 +333,8 @@ class RadarLightControllerTest {
     @Test
     fun testRadarLightController_onWorkoutPaused_and_onWorkoutResumed() {
         val mockContext = mockk<Context>(relaxed = true)
+        val mockDevice = mockk<BTLERadarDevice>(relaxed = true)
+        RadarLightController.registerRadarDevice(mockDevice, lightSupported = true)
         RadarLightController.onWorkoutStarted(mockContext)
 
         RadarLightController.triggerBrakeLight(active = true, nowMs = 1000L)
@@ -344,5 +348,36 @@ class RadarLightControllerTest {
         // Resume workout
         RadarLightController.onWorkoutResumed(mockContext)
         // Verify resumed state
+    }
+
+    @Test
+    fun testRadarLightController_onWorkoutStarted_nonCyclingWorkout_doesNotStartListening() {
+        val mockContext = mockk<Context>(relaxed = true)
+        val mockDevice = mockk<BTLERadarDevice>(relaxed = true)
+        RadarLightController.registerRadarDevice(mockDevice, lightSupported = true)
+
+        // Non-cycling workout started (e.g. Run, Gym)
+        RadarLightController.onWorkoutStarted(mockContext, isCycling = false)
+        assertFalse("Non-cycling workout must NOT register IMU sensors", SmartBrakeLightDetector.isListening)
+    }
+
+    @Test
+    fun testRadarLightController_onWorkoutStarted_withoutLightAvailable_doesNotStartListening() {
+        val mockContext = mockk<Context>(relaxed = true)
+        // No radar device connected (_isLightControlAvailable == false)
+        RadarLightController.onWorkoutStarted(mockContext, isCycling = true)
+        assertFalse("Workout without radar light control must NOT register IMU sensors", SmartBrakeLightDetector.isListening)
+    }
+
+    @Test
+    fun testRadarLightController_registerRadarDevice_withoutLightSupport_doesNotStartListening() {
+        val mockContext = mockk<Context>(relaxed = true)
+        val mockRadarOnly = mockk<BTLERadarDevice>(relaxed = true)
+
+        RadarLightController.onWorkoutStarted(mockContext, isCycling = true)
+
+        // Radar without light support connects (e.g. Garmin RVR315)
+        RadarLightController.registerRadarDevice(mockRadarOnly, lightSupported = false)
+        assertFalse("Radar peripheral without light support must NOT register IMU sensors", SmartBrakeLightDetector.isListening)
     }
 }

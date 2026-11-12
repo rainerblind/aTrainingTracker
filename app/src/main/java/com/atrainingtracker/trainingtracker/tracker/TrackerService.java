@@ -1046,7 +1046,12 @@ public class TrackerService extends Service {
         mStartType = startType;
         mWorkoutStartLocationRecorded = (startType != StartType.START_NORMAL);
         if (startType == StartType.START_NORMAL || startType == StartType.RESUME_BY_USER || startType == StartType.RESUME_AUTOMATICALLY) {
-            RadarLightController.onWorkoutStarted(this);
+            BSportType sportType = (mBanalService != null) ? mBanalService.getBSportType() : null;
+            if (sportType == null) {
+                sportType = getSportTypesRepository().getBSportType(getSportTypeId());
+            }
+            boolean isCycling = (sportType == null || sportType == BSportType.BIKE);
+            RadarLightController.onWorkoutStarted(this, isCycling);
         }
         switch (startType) {
             case START_NORMAL:
@@ -2004,6 +2009,12 @@ public class TrackerService extends Service {
         long sportTypeId = getSportTypeId();
         BSportType bSport = getSportTypesRepository().getBSportType(sportTypeId);
 
+        if (bSport == BSportType.BIKE) {
+            RadarLightController.onWorkoutStarted(this, true);
+        } else {
+            RadarLightController.onWorkoutStopped(this);
+        }
+
         mTableInitializationFuture.thenAcceptAsync(v -> {
             try {
                 getWorkoutRepository().updateWorkoutSport(mWorkoutID, sportTypeId, bSport);
@@ -2251,9 +2262,12 @@ public class TrackerService extends Service {
             return;
         }
 
-        SensorData<Number> speedData = banalService.getBestSensorData(SensorType.SPEED_mps);
-        if (speedData != null && speedData.getValue() != null) {
-            SmartBrakeLightDetector.onSpeedChanged(speedData.getValue().floatValue());
+        boolean isCycling = (banalService.getBSportType() == null || banalService.getBSportType() == BSportType.BIKE);
+        if (isCycling && (RadarLightController.isLightControlAvailable().getValue() || RadarTrafficSimulator.INSTANCE.isSimulating())) {
+            SensorData<Number> speedData = banalService.getBestSensorData(SensorType.SPEED_mps);
+            if (speedData != null && speedData.getValue() != null) {
+                SmartBrakeLightDetector.onSpeedChanged(speedData.getValue().floatValue());
+            }
         }
 
         final ContentValues samplingValues = new ContentValues();

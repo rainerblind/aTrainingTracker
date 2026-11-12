@@ -345,7 +345,6 @@ object SmartBrakeLightDetector : SensorEventListener {
     fun reset() {
         synchronized(this) {
             stopListening()
-            isEnabled = true
             isAutoBypassed = false
             isBraking = false
             currentSpeedMps = 0f

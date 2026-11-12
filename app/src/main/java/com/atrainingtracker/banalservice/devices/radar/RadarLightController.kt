@@ -104,10 +104,10 @@ object RadarLightController {
             _hasHardwareBrakeSensor.value = hasHardwareBrakeSensor
             _isAutoBypassed.value = hasHardwareBrakeSensor
             SmartBrakeLightDetector.isAutoBypassed = hasHardwareBrakeSensor
-            shouldStartListening = isWorkoutActive && SmartBrakeLightDetector.isEnabled && !hasHardwareBrakeSensor
+            shouldStartListening = isWorkoutActive && lightSupported && SmartBrakeLightDetector.isEnabled && !hasHardwareBrakeSensor
             ctx = appContext
         }
-        if (hasHardwareBrakeSensor) {
+        if (hasHardwareBrakeSensor || !lightSupported) {
             SmartBrakeLightDetector.stopListening()
         } else if (shouldStartListening && ctx != null) {
             SmartBrakeLightDetector.startListening(ctx)
@@ -228,13 +228,17 @@ object RadarLightController {
     }
 
     /**
-     * Workout start hook (REQ-CON-031.4): turns on tail light if auto-switch is enabled
-     * and activates SmartBrakeLightDetector IMU listening.
+     * Workout start hook (REQ-CON-031.4, REQ-CON-035.7): turns on tail light if auto-switch is enabled
+     * and activates SmartBrakeLightDetector IMU listening ONLY for cycling workouts when light control is available.
      * Executes synchronously without unmanaged coroutines or filesDir inspections (Coding Standards §5.5).
      */
     @JvmStatic
     @JvmOverloads
-    fun onWorkoutStarted(context: Context? = null) {
+    fun onWorkoutStarted(context: Context? = null, isCycling: Boolean = true) {
+        if (!isCycling) {
+            Log.d(TAG, "Non-cycling workout started; skipping radar light and brake detection")
+            return
+        }
         synchronized(this) {
             isWorkoutActive = true
             if (context != null) {
@@ -246,7 +250,8 @@ object RadarLightController {
             setLightMode(defaultMode)
         }
         val ctx = context?.applicationContext ?: synchronized(this) { appContext }
-        if (ctx != null && SmartBrakeLightDetector.isEnabled && !SmartBrakeLightDetector.isAutoBypassed) {
+        val isLightAvailable = synchronized(this) { _isLightControlAvailable.value || RadarTrafficSimulator.isSimulating }
+        if (ctx != null && isLightAvailable && SmartBrakeLightDetector.isEnabled && !SmartBrakeLightDetector.isAutoBypassed) {
             SmartBrakeLightDetector.startListening(ctx)
         }
     }
@@ -271,8 +276,8 @@ object RadarLightController {
      */
     @JvmStatic
     @JvmOverloads
-    fun onWorkoutResumed(context: Context? = null) {
-        onWorkoutStarted(context)
+    fun onWorkoutResumed(context: Context? = null, isCycling: Boolean = true) {
+        onWorkoutStarted(context, isCycling)
     }
 
     /**
