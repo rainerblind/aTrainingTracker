@@ -35,6 +35,11 @@ from sprint_metrics import (
     record_sprint_metrics,
 )
 
+try:
+    from verify_requirement_governance import validate_impact_analysis_section
+except ImportError:
+    validate_impact_analysis_section = None
+
 DEFAULT_CONFIG_LOCATIONS = [
     os.path.join(os.path.dirname(__file__), "hoechstmass_config.json"),
     os.path.join(os.path.dirname(__file__), "..", "hoechstmass_config.json"),
@@ -853,6 +858,19 @@ def submit_stage(parent_key, stage_int, content_arg, as_role="agent1"):
     return target_subtask
 
 
+def get_subtask_summary_and_desc(subtask_key, as_role="agent2", config=None):
+    """Fetches summary, description, and parent key for a subtask."""
+    try:
+        if config is None:
+            config = load_env_config()
+        url = f"{config.get('JIRA_URL', '')}/rest/api/2/issue/{subtask_key}?fields=summary,description,parent"
+        data = jira_request(url, role=as_role, config=config)
+        fields = data.get("fields", {})
+        return fields.get("summary", ""), fields.get("description", ""), (fields.get("parent") or {}).get("key")
+    except Exception:
+        return "", "", None
+
+
 def gate_verdict(subtask_key, verdict, report_arg, as_role="agent2"):
     """
     Records an independent Gate 1-5 verdict as agent2 (PASS or REVISION).
@@ -862,6 +880,32 @@ def gate_verdict(subtask_key, verdict, report_arg, as_role="agent2"):
     h_config = load_hoechstmass_config()
     config = load_env_config()
     report = read_text_or_file(report_arg)
+
+    if verdict.upper() == "PASS":
+        # ATT-6157 / REQ-PRO-064.3: Validate Impact Analysis on [Analysis] subtasks before approval
+        summary, desc, parent_key = get_subtask_summary_and_desc(subtask_key, as_role=as_role, config=config)
+        if summary and re.search(r"\[analysis\]", summary, re.IGNORECASE):
+            eval_text = desc or ""
+            if parent_key:
+                cand = os.path.join("docs", "engineering", "analysis", f"{parent_key}_analysis.md")
+                if os.path.exists(cand):
+                    try:
+                        with open(cand, "r", encoding="utf-8") as f:
+                            local_text = f.read()
+                        if local_text and re.search(r"Impact\s+Analysis", local_text, re.IGNORECASE):
+                            eval_text = local_text
+                    except Exception:
+                        pass
+            if validate_impact_analysis_section:
+                is_valid, errors = validate_impact_analysis_section(eval_text)
+                if not is_valid:
+                    print(
+                        f"Error: Gate 1 approval rejected for {subtask_key}. Stage 1 deliverable missing or invalid Change Impact Analysis section:",
+                        file=sys.stderr,
+                    )
+                    for err in errors:
+                        print(f"  - {err}", file=sys.stderr)
+                    sys.exit(1)
 
     assign_issue(subtask_key, "agent2", as_role=as_role)
     add_comment(subtask_key, f"h4. Gate Review Verdict: {verdict.upper()}\n\n{report}", as_role=as_role)

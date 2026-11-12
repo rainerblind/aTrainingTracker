@@ -36,6 +36,8 @@ from tools.verify_requirement_governance import (
     verify_repository_encapsulation,
     verify_sprint_metrics,
     verify_independent_reviews,
+    validate_impact_analysis_section,
+    verify_stage1_impact_analysis,
 )
 
 
@@ -794,6 +796,93 @@ diff --git a/docs/requirements/req_process_stability.md b/docs/requirements/req_
             ok_any, msgs_any = verify_independent_reviews(sprint_name=None, repo_root=tmpdir)
             self.assertTrue(ok_any, f"Expected pass, got: {msgs_any}")
             self.assertTrue(any("Verified 1 independent review record(s)" in m for m in msgs_any))
+
+    def test_scenario_18_impact_analysis_section_validation(self):
+        """TST-PRO-064.1: Verify validate_impact_analysis_section validation across valid, missing, and placeholder cases."""
+        # 1. Valid Impact Analysis section with all 4 dimensions
+        valid_text = """
+# Stage 1 Analysis: ATT-6157
+
+## 5. Change-Request Impact Analysis (SUP.10)
+* **Affected Requirements**: Net-new REQ-PRO-064
+* **Affected Architecture Elements**: tools/jira_util.py, tools/verify_requirement_governance.py
+* **Verification Impact & Test Surface**: TST-PRO-064 and governance unit test suites
+* **Risk Assessment & Invariants**: Low risk. Affects developer governance tooling only.
+"""
+        ok, errors = validate_impact_analysis_section(valid_text)
+        self.assertTrue(ok, f"Expected valid impact analysis to pass, got: {errors}")
+        self.assertEqual(len(errors), 0)
+
+        # 2. Missing section header
+        missing_header_text = """
+# Stage 1 Analysis: ATT-6157
+* **Affected Requirements**: Net-new REQ-PRO-064
+* **Affected Architecture Elements**: tools/jira_util.py
+"""
+        ok_hdr, errs_hdr = validate_impact_analysis_section(missing_header_text)
+        self.assertFalse(ok_hdr)
+        self.assertTrue(any("Missing mandatory section header" in e for e in errs_hdr))
+
+        # 3. Missing one mandatory dimension (e.g. Risk Assessment)
+        missing_dim_text = """
+## Change Impact Analysis
+* **Affected Requirements**: Net-new REQ-PRO-064
+* **Affected Architecture Elements**: tools/jira_util.py
+* **Affected Tests**: TST-PRO-064
+"""
+        ok_dim, errs_dim = validate_impact_analysis_section(missing_dim_text)
+        self.assertFalse(ok_dim)
+        self.assertTrue(any("Risk Assessment" in e for e in errs_dim))
+
+        # 4. Placeholder content in dimensions
+        placeholder_text = """
+## Change-Request Impact Analysis
+* **Affected Requirements**: TODO
+* **Affected Architecture Elements**: TBD
+* **Verification Impact & Test Surface**: None
+* **Risk Assessment & Invariants**: N/A
+"""
+        ok_ph, errs_ph = validate_impact_analysis_section(placeholder_text)
+        self.assertFalse(ok_ph)
+        self.assertTrue(len(errs_ph) >= 4)
+        self.assertTrue(all("placeholder content" in e for e in errs_ph))
+
+    def test_scenario_19_verify_stage1_impact_analysis_file_and_cli(self):
+        """TST-PRO-064.2: Verify verify_stage1_impact_analysis and CLI --check-impact."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            analysis_dir = os.path.join(tmpdir, "docs", "engineering", "analysis")
+            os.makedirs(analysis_dir, exist_ok=True)
+
+            # 1. Non-existent file
+            ok, errs = verify_stage1_impact_analysis(analysis_file="missing.md", repo_root=tmpdir)
+            self.assertFalse(ok)
+            self.assertTrue(any("not found" in e for e in errs))
+
+            # 2. Invalid analysis file
+            bad_file = os.path.join(analysis_dir, "ATT-9999_analysis.md")
+            with open(bad_file, "w", encoding="utf-8") as f:
+                f.write("# Incomplete Analysis\nNo impact section here.\n")
+            ok_bad, errs_bad = verify_stage1_impact_analysis(analysis_file=bad_file, repo_root=tmpdir)
+            self.assertFalse(ok_bad)
+            self.assertTrue(any("failed validation" in e for e in errs_bad))
+
+            # 3. Valid analysis file
+            good_file = os.path.join(analysis_dir, "ATT-6157_analysis.md")
+            with open(good_file, "w", encoding="utf-8") as f:
+                f.write("""# Stage 1 Analysis: ATT-6157
+## Change Impact Analysis
+* **Affected Requirements**: REQ-PRO-064
+* **Affected Architecture Elements**: tools/jira_util.py
+* **Verification Impact & Test Surface**: TST-PRO-064
+* **Risk Assessment & Invariants**: Low risk developer tooling
+""")
+            ok_good, msgs_good = verify_stage1_impact_analysis(analysis_file=good_file, repo_root=tmpdir)
+            self.assertTrue(ok_good, f"Expected pass, got: {msgs_good}")
+            self.assertTrue(any("PASS:" in m for m in msgs_good))
+
+            # 4. Auto-discovery without explicit file
+            ok_auto, msgs_auto = verify_stage1_impact_analysis(analysis_file=None, repo_root=tmpdir)
+            self.assertTrue(ok_auto, f"Expected auto-discovery pass, got: {msgs_auto}")
 
 
 if __name__ == "__main__":

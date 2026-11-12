@@ -891,6 +891,38 @@ class TestJiraCliTooling(unittest.TestCase):
         posted_feat = mock_request.call_args[1]["payload"]["fields"]
         self.assertNotIn("labels", posted_feat)
 
+    @patch("jira_util.transition_issue")
+    @patch("jira_util.assign_issue")
+    @patch("jira_util.add_comment")
+    @patch("jira_util.get_subtask_summary_and_desc")
+    def test_gate_verdict_enforces_impact_analysis_on_analysis_subtasks(
+        self, mock_get_subtask, mock_comment, mock_assign, mock_transition
+    ):
+        """TST-PRO-064.3: Verify gate_verdict enforces Change-Request Impact Analysis on [Analysis] subtasks."""
+        # 1. [Analysis] subtask with missing Impact Analysis -> SystemExit(1)
+        mock_get_subtask.return_value = ("[Analysis] ATT-4300: Problem Domain Analysis", "No impact analysis here.", "ATT-4300")
+        with self.assertRaises(SystemExit) as cm:
+            jira_util.gate_verdict("ATT-4301", "PASS", "Gate 1 PASS audit report", role="agent2")
+        self.assertEqual(cm.exception.code, 1)
+
+        # 2. [Analysis] subtask with valid Impact Analysis -> succeeds and transitions
+        valid_desc = """
+# Stage 1 Analysis
+## Change Impact Analysis
+* **Affected Requirements**: REQ-PRO-064
+* **Affected Architecture Elements**: tools/jira_util.py
+* **Verification Impact & Test Surface**: TST-PRO-064
+* **Risk Assessment & Invariants**: Low risk
+"""
+        mock_get_subtask.return_value = ("[Analysis] ATT-4300: Problem Domain Analysis", valid_desc, "ATT-4300")
+        jira_util.gate_verdict("ATT-4301", "PASS", "Gate 1 PASS audit report", role="agent2")
+        mock_transition.assert_called_with("ATT-4301", "freigabe", role="agent2", inject_context=True)
+
+        # 3. Non-analysis subtask (e.g. [Req & Test Spec]) without impact analysis -> succeeds normally
+        mock_transition.reset_mock()
+        mock_get_subtask.return_value = ("[Req & Test Spec] ATT-4300: Test Spec", "Test spec details without impact section", "ATT-4300")
+        jira_util.gate_verdict("ATT-4302", "PASS", "Gate 2 PASS audit report", role="agent2")
+        mock_transition.assert_called_with("ATT-4302", "freigabe", role="agent2", inject_context=True)
 
 
 if __name__ == "__main__":

@@ -51,13 +51,23 @@
 
 ---
 
-## 5. Architectural Strategy & High-Level Solution
+## 5. Change-Request Impact Analysis (SUP.10)
+
+<!-- Required for explicit impact analysis under ASPICE SUP.10 (REQ-PRO-064). -->
+* **Affected Requirements**: [REQ-XXX or Net-new requirement(s)]
+* **Affected Architecture Elements**: [Classes, modules, database schemas, CLI tools, scripts]
+* **Verification Impact & Test Surface**: [TST-XXX, targeted test suites, regression test scope]
+* **Risk Assessment & Invariants**: [Risks, mitigations, core system invariants preserved]
+
+---
+
+## 6. Architectural Strategy & High-Level Solution
 
 <!-- High-level design approach, affected modules/classes, database schema impacts, thread models. -->
 
 ---
 
-## 6. System Invariants & Risk Assessment
+## 7. System Invariants & Risk Assessment
 
 * **Core Invariants**:
   1. Zero regression in existing features and unit tests.

@@ -42,6 +42,8 @@ from tools.hoechstmass.tools.jira_util import (
     qa_audit,
     record_review,
     create_issue,
+    gate_verdict,
+    get_subtask_summary_and_desc,
 )
 from tools.hoechstmass.tools.verify_requirement_governance import (
     load_config,
@@ -50,6 +52,8 @@ from tools.hoechstmass.tools.verify_requirement_governance import (
     verify_sprint_metrics,
     verify_qa_audits,
     verify_independent_reviews,
+    validate_impact_analysis_section,
+    verify_stage1_impact_analysis,
 )
 from tools.hoechstmass.tools.parallel_sprint_lock import (
     sprint_lock,
@@ -232,6 +236,71 @@ class TestGovernanceVerification(unittest.TestCase):
             ok, errors = verify_qa_audits("sprint_2026-46.3", repo_root=tmpdir)
             self.assertFalse(ok)
             self.assertTrue(len(errors) > 0)
+
+    def test_validate_impact_analysis_section_hoechstmass(self):
+        """TST-PRO-064.1 / TST-PRO-064.4: Verify validate_impact_analysis_section in Höchstmaß mirror."""
+        valid_text = """
+## 5. Change-Request Impact Analysis (SUP.10)
+* **Affected Requirements**: REQ-PRO-064
+* **Affected Architecture Elements**: tools/jira_util.py
+* **Verification Impact & Test Surface**: TST-PRO-064
+* **Risk Assessment & Invariants**: Low risk
+"""
+        ok, errors = validate_impact_analysis_section(valid_text)
+        self.assertTrue(ok, f"Expected valid impact analysis to pass, got: {errors}")
+
+        invalid_text = """
+## Change Impact Analysis
+* **Affected Requirements**: REQ-PRO-064
+* **Affected Architecture Elements**: tools/jira_util.py
+"""
+        ok_inv, errors_inv = validate_impact_analysis_section(invalid_text)
+        self.assertFalse(ok_inv)
+        self.assertTrue(any("Verification Impact" in e for e in errors_inv))
+
+    def test_analysis_templates_contain_impact_analysis(self):
+        """TST-PRO-064.4: Verify root and Höchstmaß analysis templates feature Change Impact Analysis."""
+        root_template = os.path.join(_repo_root, ".agents", "skills", "stage1-analysis", "templates", "analysis_template.md")
+        hoechstmass_template = os.path.join(_repo_root, "tools", "hoechstmass", "templates", "analysis_template.md")
+
+        for tmpl_path in [root_template, hoechstmass_template]:
+            self.assertTrue(os.path.exists(tmpl_path), f"Template not found: {tmpl_path}")
+            with open(tmpl_path, "r", encoding="utf-8") as f:
+                content = f.read()
+            self.assertIn("Change-Request Impact Analysis", content)
+            self.assertIn("Affected Requirements", content)
+            self.assertIn("Affected Architecture Elements", content)
+            self.assertIn("Verification Impact & Test Surface", content)
+            self.assertIn("Risk Assessment & Invariants", content)
+
+    def test_gate_verdict_enforces_impact_analysis_hoechstmass(self):
+        """TST-PRO-064.3: Verify gate_verdict in Höchstmaß mirror validates Impact Analysis on [Analysis] subtasks."""
+        from unittest.mock import patch
+
+        # 1. [Analysis] subtask with missing Impact Analysis -> SystemExit(1)
+        with patch("tools.hoechstmass.tools.jira_util.get_subtask_summary_and_desc") as mock_subtask, \
+             patch("tools.hoechstmass.tools.jira_util.assign_issue"), \
+             patch("tools.hoechstmass.tools.jira_util.add_comment"), \
+             patch("tools.hoechstmass.tools.jira_util.jira_request"):
+            mock_subtask.return_value = ("[Analysis] PROJ-100: Analysis", "Missing impact analysis", "PROJ-100")
+            with self.assertRaises(SystemExit) as cm:
+                gate_verdict("PROJ-101", "PASS", "Gate 1 audit report", as_role="agent2")
+            self.assertEqual(cm.exception.code, 1)
+
+            # 2. [Analysis] subtask with valid Impact Analysis -> succeeds
+            valid_desc = """
+## Change Impact Analysis
+* **Affected Requirements**: REQ-PRO-064
+* **Affected Architecture Elements**: tools/jira_util.py
+* **Verification Impact & Test Surface**: TST-PRO-064
+* **Risk Assessment & Invariants**: Low risk
+"""
+            mock_subtask.return_value = ("[Analysis] PROJ-100: Analysis", valid_desc, "PROJ-100")
+            gate_verdict("PROJ-101", "PASS", "Gate 1 audit report", as_role="agent2")
+
+            # 3. Non-analysis subtask [Req & Test Spec] without impact analysis -> succeeds normally
+            mock_subtask.return_value = ("[Req & Test Spec] PROJ-100: Spec", "No impact analysis", "PROJ-100")
+            gate_verdict("PROJ-102", "PASS", "Gate 2 audit report", as_role="agent2")
 
 
 class TestEpicCommands(unittest.TestCase):

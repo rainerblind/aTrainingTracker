@@ -27,6 +27,11 @@ from sprint_metrics import (
     record_sprint_metrics,
 )
 
+try:
+    from verify_requirement_governance import validate_impact_analysis_section
+except ImportError:
+    validate_impact_analysis_section = None
+
 # Transitions for ATT project
 TRANSITIONS = {
     "todo": "11",
@@ -1325,14 +1330,27 @@ def submit_stage(parent_key, stage_arg, text_or_file, summary_override=None, rol
     print(f"SUBTASK_KEY: {subtask_key} ready for {spec['gate']} review.")
     return subtask_key
 
+def get_subtask_summary_and_desc(subtask_key, role="agent2"):
+    """Fetches summary, description, and parent key for a subtask."""
+    try:
+        config = get_config()
+        url = f"{config['JIRA_URL']}/rest/api/2/issue/{subtask_key}?fields=summary,description,parent"
+        data = jira_request(url, role=role)
+        fields = data.get("fields", {})
+        return fields.get("summary", ""), fields.get("description", ""), (fields.get("parent") or {}).get("key")
+    except Exception:
+        return "", "", None
+
+
 def gate_verdict(subtask_key, verdict_arg, text_or_file, role="agent2"):
     """
     Composite Gate-Verdict Command for agent2 (ATT-4290 Process Improvement #2).
     Hardwired to role='agent2' (Anti-Spoofing lock).
-    1. Assigns subtask_key to agent2.
-    2. Posts text_or_file as a role-attributed agent2 audit comment on subtask_key.
-    3. If PASS: transitions subtask_key via 'freigabe' (closes sub-task to Erledigt, advances parent, and injects next stage SKILL.md).
-    4. If REVISION: transitions subtask_key back to 'in_progress' and assigns to agent1.
+    1. For [Analysis] subtasks on PASS: validates Change-Request Impact Analysis deliverable (REQ-PRO-064.3).
+    2. Assigns subtask_key to agent2.
+    3. Posts text_or_file as a role-attributed agent2 audit comment on subtask_key.
+    4. If PASS: transitions subtask_key via 'freigabe' (closes sub-task to Erledigt, advances parent, and injects next stage SKILL.md).
+    5. If REVISION: transitions subtask_key back to 'in_progress' and assigns to agent1.
     """
     auditor_role = "agent2"
     verdict_norm = (verdict_arg or "").strip().upper()
@@ -1344,13 +1362,39 @@ def gate_verdict(subtask_key, verdict_arg, text_or_file, role="agent2"):
         print(f"Error: Invalid verdict '{verdict_arg}'. Expected PASS or REVISION.", file=sys.stderr)
         sys.exit(1)
 
-    assign_issue(subtask_key, auditor_role, role=auditor_role)
-    add_comment(subtask_key, text_or_file, role=auditor_role)
-
     if is_pass:
+        # ATT-6157 / REQ-PRO-064.3: Validate Impact Analysis on [Analysis] subtasks before approval
+        summary, desc, parent_key = get_subtask_summary_and_desc(subtask_key, role=auditor_role)
+        if summary and re.search(r"\[analysis\]", summary, re.IGNORECASE):
+            eval_text = desc or ""
+            if parent_key:
+                cand = os.path.join("docs", "engineering", "analysis", f"{parent_key}_analysis.md")
+                if os.path.exists(cand):
+                    try:
+                        with open(cand, "r", encoding="utf-8") as f:
+                            local_text = f.read()
+                        if local_text and re.search(r"Impact\s+Analysis", local_text, re.IGNORECASE):
+                            eval_text = local_text
+                    except Exception:
+                        pass
+            if validate_impact_analysis_section:
+                is_valid, errors = validate_impact_analysis_section(eval_text)
+                if not is_valid:
+                    print(
+                        f"Error: Gate 1 approval rejected for {subtask_key}. Stage 1 deliverable missing or invalid Change Impact Analysis section:",
+                        file=sys.stderr,
+                    )
+                    for err in errors:
+                        print(f"  - {err}", file=sys.stderr)
+                    sys.exit(1)
+
+        assign_issue(subtask_key, auditor_role, role=auditor_role)
+        add_comment(subtask_key, text_or_file, role=auditor_role)
         transition_issue(subtask_key, "freigabe", role=auditor_role, inject_context=True)
         print(f"GATE_VERDICT: PASS recorded on {subtask_key} by {auditor_role}.")
     else:
+        assign_issue(subtask_key, auditor_role, role=auditor_role)
+        add_comment(subtask_key, text_or_file, role=auditor_role)
         transition_issue(subtask_key, "in_progress", role=auditor_role, inject_context=False)
         assign_issue(subtask_key, "agent1", role=auditor_role)
         print(f"GATE_VERDICT: REVISION recorded on {subtask_key} by {auditor_role} (reassigned to agent1).")

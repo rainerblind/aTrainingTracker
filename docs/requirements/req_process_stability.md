@@ -3201,6 +3201,36 @@ The workflow SHALL mandate that:
   • *Then* it outputs `problem_trends` with bug counts by severity and resolution rates.
 - **Invariants**: Zero modifications to Android production runtime code in `app/src/main/`; pure Python standard library retained; Rule 3 (`Erledigt` human-only gate) preserved.
 
+### REQ-PRO-064: Explicit Change-Request Impact Analysis Governance [Verified]
+- **Tests**: `tools/test_verify_requirement_governance.py`, `tools/test_jira_accounts.py`, `tools/hoechstmass/tools/test_hoechstmass_tools.py`
+- **Implementation**: Standardized `Impact Analysis` section in Stage 1 templates (`analysis_template.md`), automated schema validation `validate_impact_analysis_section()` in `tools/verify_requirement_governance.py` and `tools/hoechstmass/`, and Gate 1 checklist and CLI enforcement in `tools/jira_util.py` and `tools/hoechstmass/tools/jira_util.py`.
+- **Rationale**: Under ASPICE SUP.10 (Change Request Management) and Pre-Assessment Finding B-12, change request impact analysis must be formally and explicitly documented before Stage 1 approval rather than remaining implicit or scattered across analysis text. Formal evaluation of affected requirements, architecture components, verification test surface, and risks prevents downstream architecture drift and unexpected regressions:
+  1. *Standardized Impact Analysis Template (`REQ-PRO-064.1`)*:
+     • Stage 1 analysis templates in `.agents/skills/stage1-analysis/templates/analysis_template.md` and `tools/hoechstmass/templates/analysis_template.md` SHALL feature a dedicated "Change Impact Analysis" section mandating 4 discrete dimensions: Affected Requirements, Affected Architecture Elements, Affected Tests / Verification Impact, and Risk Assessment & Invariants.
+  2. *Automated Impact Analysis Verifier (`REQ-PRO-064.2`, tools/verify_requirement_governance.py)*:
+     • `tools/verify_requirement_governance.py` and Höchstmaß mirror SHALL implement `validate_impact_analysis_section(text)` and `verify_stage1_impact_analysis(analysis_file=None, repo_root=None)` with `--check-impact [FILE]`, validating that the section header exists and all 4 dimensions are populated with non-empty, non-placeholder content.
+  3. *Gate 1 Automated & Checklist Enforcement (`REQ-PRO-064.3`, tools/jira_util.py)*:
+     • The Gate 1 review process in `.agents/skills/stage1-analysis/SKILL.md` and `gate_verdict` in `tools/jira_util.py` (and Höchstmaß mirror) SHALL mandate that `gate-verdict <SUBTASK> PASS` on `[Analysis]` subtasks validates the presence and completeness of the Impact Analysis section, rejecting incomplete deliverables with an actionable error.
+  4. *Core Invariants & Non-Analysis Gate Independence (`REQ-PRO-064.4`)*:
+     • Gate verdict execution for non-analysis subtasks (Gates 2, 3, 4, 5) SHALL NOT be constrained by Gate 1 impact analysis checks; zero modifications to Android production runtime code in `app/src/main/`.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Net-new requirement `REQ-PRO-064` (`REQ-PRO-064.1`–`REQ-PRO-064.4`). Targets Stage 1 templates, `tools/verify_requirement_governance.py`, `tools/jira_util.py`, and `tools/hoechstmass/`.
+  2. *Historical Origin & Commit Trace*: Introduced in Sprint 2026-46.3 via ATT-6157 under Epic ATT-6141 to satisfy ASPICE pre-assessment finding B-12.
+  3. *Root Reason for Existing Formulation*: Impact analysis was previously implicit or omitted in Stage 1 analyses.
+  4. *Preservation of Core Invariants*: Zero changes to Android runtime code; pure Python 3 standard library; non-analysis gate workflows unaffected.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* a Stage 1 analysis deliverable,
+  • *When* `validate_impact_analysis_section()` runs,
+  • *Then* it passes if and only if all 4 dimensions (Requirements, Architecture, Tests, Risks) are explicitly specified with non-empty content.
+  • *Given* an `[Analysis]` subtask submitted for Gate 1 review,
+  • *When* `gate-verdict` is called with `PASS`,
+  • *Then* it verifies the deliverable contains a valid Impact Analysis section before allowing transition to Erledigt.
+  • *Given* a non-analysis subtask (Gates 2..5),
+  • *When* `gate-verdict` is called,
+  • *Then* it executes normally without requiring Stage 1 impact analysis format.
+- **Invariants**: Zero modifications to Android production runtime code in `app/src/main/`; pure Python standard library retained; Rule 3 (`Erledigt` human-only gate) preserved.
+
+
 
 
 

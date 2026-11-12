@@ -53,7 +53,10 @@ Instruct the ticket's persistent `subagent_flash` (`Model: "flash"`) to audit th
 2. **Call Site Audit**: Verify that all affected callers, classes, and resources are identified in the codebase.
 3. **Requirement Mapping Audit**: Check mapped Requirement IDs against `docs/requirements.md`.
 4. **System Invariants Verification**: Confirm explicit system invariants (what existing behavior, data precision, schema, or API contracts MUST NOT change).
-5. **Risk Rating & Gate Verdict (`gate-verdict`) + Fused Stage 2 Continuation (Rule 60)**:
+5. **Change-Request Impact Analysis Audit (`REQ-PRO-064` / ASPICE SUP.10)**:
+   - Verify that the deliverable contains an explicit `## Change Impact Analysis` (or `## Change-Request Impact Analysis`) section.
+   - Verify all 4 mandatory dimensions are populated with non-empty, non-placeholder content: Affected Requirements, Affected Architecture Elements, Verification Impact & Test Surface, and Risk Assessment & Invariants.
+6. **Risk Rating & Gate Verdict (`gate-verdict`) + Fused Stage 2 Continuation (Rule 60)**:
    - Assign risk rating (`LOW`, `MEDIUM`, `HIGH`) with technical justification and record the verdict in a single composite CLI call (which closes the sub-task to `Erledigt`, advances the parent ticket to `Test Spec`, and automatically injects `stage2-req-test-spec/SKILL.md` into stdout):
      ```bash
      python3 tools/jira_util.py --as agent2 gate-verdict <ANALYSIS_SUBTASK_KEY> PASS "<Audit Report>"

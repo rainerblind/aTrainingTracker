@@ -107,6 +107,150 @@ def validate_archaeology_section(text, mandatory_fields=None):
     return len(errors) == 0, errors
 
 
+IMPACT_HEADER_PATTERN = re.compile(
+    r"(?:^|\n)\s*(?:#{1,3}\s+|h[1-3]\.\s+)(?:\d+\.\s*)?(?:Change(?:[- ]?Request)?\s+)?Impact\s+Analysis.*",
+    re.IGNORECASE,
+)
+
+IMPACT_DIMENSIONS = [
+    {
+        "name": "Affected Requirements",
+        "patterns": [
+            r"Affected\s+Requirements?",
+            r"Requirements?\s+Impact",
+            r"Affected\s+REQs?",
+        ],
+    },
+    {
+        "name": "Affected Architecture Elements",
+        "patterns": [
+            r"Affected\s+Architecture(?:\s+Elements)?",
+            r"Architecture\s+Impact",
+            r"Affected\s+Components?",
+        ],
+    },
+    {
+        "name": "Verification Impact & Test Surface",
+        "patterns": [
+            r"Verification\s+Impact(?:\s*&\s*Test\s+Surface)?",
+            r"Affected\s+Tests?(?:\s*&\s*Verification\s+Impact)?",
+            r"Affected\s+Test\s+Cases?",
+            r"Test\s+Surface",
+            r"Test\s+Impact",
+        ],
+    },
+    {
+        "name": "Risk Assessment & Invariants",
+        "patterns": [
+            r"Risk\s+Assessment(?:\s*&\s*(?:Invariants|Mitigations))?",
+            r"Risks?(?:\s*&\s*(?:Invariants|Mitigations))?",
+        ],
+    },
+]
+
+
+def validate_impact_analysis_section(text, mandatory_dimensions=None):
+    """
+    REQ-PRO-064.2 / TST-PRO-064.1:
+    Validates that deliverable text contains a valid Change-Request Impact Analysis section.
+    Checks that the section header exists and that all mandatory dimensions:
+      1. Affected Requirements
+      2. Affected Architecture Elements
+      3. Verification Impact & Test Surface
+      4. Risk Assessment & Invariants
+    are present with non-empty, non-placeholder content.
+    Returns (is_valid: bool, errors: list[str]).
+    """
+    errors = []
+    if not text or not text.strip():
+        errors.append("Deliverable text is empty or missing.")
+        return False, errors
+
+    header_match = IMPACT_HEADER_PATTERN.search(text)
+    if not header_match:
+        errors.append(
+            "Missing mandatory section header: '## Change-Request Impact Analysis' "
+            "(or '## Impact Analysis' / 'h2. Impact Analysis')."
+        )
+        return False, errors
+
+    section_start = header_match.end()
+    remaining = text[section_start:]
+    next_header_match = re.search(r"(?:\n#{1,3}\s+|\nh[1-3]\.\s+)", remaining)
+    section_body = remaining[:next_header_match.start()] if next_header_match else remaining
+
+    dimensions = IMPACT_DIMENSIONS
+
+    for dim in dimensions:
+        dim_name = dim["name"]
+        patterns = dim["patterns"]
+        found = False
+        matched_val = None
+        for p in patterns:
+            dim_regex = re.compile(
+                rf"(?:[\*\-\•\#]+\s*)?(?:\*|`)*(?:{p})(?:\*|`)*\s*[:\-\—]\s*([^\n\r]+)",
+                re.IGNORECASE,
+            )
+            m = dim_regex.search(section_body)
+            if m:
+                found = True
+                matched_val = m.group(1).strip()
+                break
+
+        if not found:
+            label_found = False
+            for p in patterns:
+                if re.search(rf"(?:{p})", section_body, re.IGNORECASE):
+                    label_found = True
+                    break
+            if label_found:
+                errors.append(f"Dimension '{dim_name}' is present but has empty or invalid content.")
+            else:
+                errors.append(f"Missing mandatory impact dimension: '{dim_name}'.")
+        else:
+            clean_val = re.sub(r"^[`\*_]+|[`\*_]+$", "", matched_val).strip()
+            placeholder_tokens = {"todo", "tbd", "none", "n/a", "null", "undefined", ""}
+            if not clean_val or clean_val.lower() in placeholder_tokens or clean_val.lower() in {"[req-xxx]", "[todo]", "[tbd]", "[none]", "[n/a]"}:
+                errors.append(f"Dimension '{dim_name}' has empty or placeholder content: '{matched_val}'.")
+
+    return len(errors) == 0, errors
+
+
+def verify_stage1_impact_analysis(analysis_file=None, repo_root=None):
+    """
+    REQ-PRO-064.2 / TST-PRO-064.2:
+    Verifies that a Stage 1 analysis deliverable satisfies Change-Request Impact Analysis governance.
+    If analysis_file is specified, validates that file.
+    If not specified, discovers the latest analysis file from docs/engineering/analysis/.
+    """
+    if repo_root is None:
+        repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
+
+    if analysis_file:
+        target_path = analysis_file if os.path.isabs(analysis_file) else os.path.join(repo_root, analysis_file)
+        if not os.path.exists(target_path):
+            return False, [f"ERROR: Analysis file not found: {target_path}"]
+        try:
+            with open(target_path, "r", encoding="utf-8") as f:
+                content = f.read()
+        except Exception as e:
+            return False, [f"ERROR: Failed to read analysis file {target_path}: {e}"]
+
+        valid, errors = validate_impact_analysis_section(content)
+        if not valid:
+            return False, [f"FAIL: Change-Request Impact Analysis in {os.path.basename(target_path)} failed validation:"] + [f"  - {e}" for e in errors]
+        return True, [f"PASS: Change-Request Impact Analysis verified in {os.path.basename(target_path)}."]
+    else:
+        analysis_dir = os.path.join(repo_root, "docs", "engineering", "analysis")
+        if not os.path.isdir(analysis_dir):
+            return False, [f"ERROR: Analysis directory not found: {analysis_dir}"]
+        md_files = [f for f in os.listdir(analysis_dir) if f.endswith(".md")]
+        if not md_files:
+            return False, [f"ERROR: No analysis files found in {analysis_dir}"]
+        newest_file = max(md_files, key=lambda f: os.path.getmtime(os.path.join(analysis_dir, f)))
+        return verify_stage1_impact_analysis(os.path.join(analysis_dir, newest_file), repo_root=repo_root)
+
+
 def verify_engineering_directory_structure(eng_dir=None, allowed=None):
     """Verifies that docs/engineering/ contains only allowed canonical subdirectories."""
     cfg = load_config()
@@ -681,7 +825,21 @@ def main():
         default=None,
         help="Verify independent QA review records in docs/engineering/reviews/ (optionally specify sprint name).",
     )
+    parser.add_argument(
+        "--check-impact",
+        nargs="?",
+        const="",
+        default=None,
+        help="Verify Change-Request Impact Analysis in Stage 1 deliverable (optionally specify analysis file path).",
+    )
     args = parser.parse_args()
+
+    if args.check_impact is not None:
+        target_file = args.check_impact.strip() if args.check_impact.strip() else None
+        ok, diag = verify_stage1_impact_analysis(analysis_file=target_file)
+        for msg in diag:
+            print(msg, file=sys.stderr if not ok else sys.stdout)
+        sys.exit(0 if ok else 1)
 
     if args.check_gates is not None:
         target_sprint = args.check_gates if args.check_gates != "" else None

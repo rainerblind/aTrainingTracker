@@ -28,6 +28,12 @@
       "Historical Origin & Commit Trace",
       "Root Reason for Existing Formulation",
       "Preservation of Core Invariants"
+    ],
+    "mandatory_impact_dimensions": [
+      "Affected Requirements",
+      "Affected Architecture Elements",
+      "Verification Impact & Test Surface",
+      "Risk Assessment & Invariants"
     ]
   },
   "paths": {
