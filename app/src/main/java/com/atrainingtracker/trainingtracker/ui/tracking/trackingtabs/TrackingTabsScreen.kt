@@ -48,16 +48,26 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material3.Icon
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.ui.platform.testTag
+import com.atrainingtracker.trainingtracker.ui.theme.TTColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.PrimaryScrollableTabRow
 import androidx.compose.material3.Snackbar
@@ -159,7 +169,8 @@ private val DEBUG = BuildConfig.DEBUG
 
 @Composable
 fun TrackingTabsScreen(
-    trackingTabsViewModel: TrackingTabsViewModel
+    trackingTabsViewModel: TrackingTabsViewModel,
+    onNavigateToHrvTest: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val activity = remember(context) { context.findActivity() }
@@ -985,6 +996,23 @@ fun TrackingTabsScreen(
                                         onClick = { showRouteSelectorSheet = true },
                                         onClearRoute = { routeSelectorViewModel.clearRoute() }
                                     )
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    OutlinedButton(
+                                        onClick = onNavigateToHrvTest,
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .testTag("hrv_test_cockpit_launcher"),
+                                        shape = RoundedCornerShape(8.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Favorite,
+                                            contentDescription = null,
+                                            tint = TTColor.HrvHeartRateRed,
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text(stringResource(R.string.hrv_test_title))
+                                    }
                                 }
                             )
                         } else {

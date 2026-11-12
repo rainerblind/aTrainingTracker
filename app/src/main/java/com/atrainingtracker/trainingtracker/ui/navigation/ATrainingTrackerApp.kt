@@ -352,7 +352,10 @@ fun ATrainingTrackerApp(
                         viewModelStoreOwner = activity,
                         factory = TrackingTabsViewModelFactory(activity.application)
                     )
-                    TrackingTabsScreen(trackingTabsViewModel = trackingTabsViewModel)
+                    TrackingTabsScreen(
+                        trackingTabsViewModel = trackingTabsViewModel,
+                        onNavigateToHrvTest = { navController.navigate(NavRoutes.HRV_TEST) }
+                    )
                 }
 
                 composable(NavRoutes.WORKOUTS) {

@@ -19,6 +19,9 @@
 package com.atrainingtracker.trainingtracker.ui.hrv
 
 import android.app.Application
+import android.content.ContentValues
+import android.content.Intent
+import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.atrainingtracker.R
@@ -27,7 +30,10 @@ import com.atrainingtracker.banalservice.devices.RrBeatListener
 import com.atrainingtracker.banalservice.devices.hrv.HrvSignalQualityResult
 import com.atrainingtracker.banalservice.devices.hrv.HrvSignalQualityStatus
 import com.atrainingtracker.banalservice.sensor.SensorType
+import com.atrainingtracker.trainingtracker.TrainingApplication
+import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
 import com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository
+import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -54,7 +60,8 @@ import java.util.concurrent.CopyOnWriteArrayList
 class HrvRampTestViewModel @JvmOverloads constructor(
     application: Application,
     private val banalServiceRepository: BANALServiceRepository = BANALServiceRepository.getInstance(application),
-    private val dispatcher: CoroutineDispatcher = Dispatchers.Main
+    private val dispatcher: CoroutineDispatcher = Dispatchers.Main,
+    private val workoutRepository: WorkoutRepository = WorkoutRepository.getInstance(application)
 ) : AndroidViewModel(application) {
 
     private val _uiState = MutableStateFlow(HrvRampTestUiState())
@@ -63,6 +70,9 @@ class HrvRampTestViewModel @JvmOverloads constructor(
     private var timerJob: Job? = null
     private var telemetryJob: Job? = null
     private val bufferedBeats = CopyOnWriteArrayList<RrBeatEvent>()
+
+    var isWorkoutTagged: Boolean = false
+        private set
 
     private val rrBeatListener = RrBeatListener { event ->
         bufferedBeats.add(event)
@@ -77,6 +87,7 @@ class HrvRampTestViewModel @JvmOverloads constructor(
         telemetryJob = viewModelScope.launch(dispatcher) {
             banalServiceRepository.allFilteredSensorData.collect { sensorDataList ->
                 var hr: Int? = null
+                var power: Double? = null
                 var dfaA1: Double? = null
                 var artifactRate: Double? = null
 
@@ -84,6 +95,9 @@ class HrvRampTestViewModel @JvmOverloads constructor(
                     when (data.sensorType) {
                         SensorType.HR -> {
                             hr = (data.value as? Number)?.toInt()
+                        }
+                        SensorType.POWER -> {
+                            power = (data.value as? Number)?.toDouble()
                         }
                         SensorType.HRV_DFA_A1 -> {
                             dfaA1 = (data.value as? Number)?.toDouble()
@@ -98,6 +112,7 @@ class HrvRampTestViewModel @JvmOverloads constructor(
                 _uiState.update { current ->
                     current.copy(
                         currentHr = hr ?: current.currentHr,
+                        currentPower = power ?: current.currentPower,
                         currentDfaA1 = dfaA1 ?: current.currentDfaA1,
                         currentArtifactRate = artifactRate ?: current.currentArtifactRate
                     )
@@ -264,11 +279,45 @@ class HrvRampTestViewModel @JvmOverloads constructor(
     // Protocol Execution & Pacing Guidance (WARMUP / TESTING / COOLDOWN)
     // ------------------------------------------------------------------------
 
+    fun tagActiveWorkoutWithProtocol(targetWorkoutId: Long? = null) {
+        val workoutId = targetWorkoutId ?: TrainingApplication.getActiveWorkoutID()
+        if (workoutId > 0) {
+            val currentConfig = _uiState.value.config
+            val values = ContentValues().apply {
+                val protocolTag = if (currentConfig.protocolType == HrvTestProtocolType.GUIDED_STEP) "GUIDED_STEP" else "GUIDED_RAMP"
+                put(WorkoutSummariesDatabaseManager.WorkoutSummaries.METHOD, protocolTag)
+                val paramDesc = if (currentConfig.protocolType == HrvTestProtocolType.GUIDED_STEP) {
+                    "stepDurationSec=${currentConfig.stepDurationSec},stepIncrement=${currentConfig.stepIncrement}"
+                } else {
+                    "rampSlopeWattsPerMin=${currentConfig.rampSlopeWattsPerMin}"
+                }
+                put(WorkoutSummariesDatabaseManager.WorkoutSummaries.GOAL, paramDesc)
+            }
+            workoutRepository.updateWorkoutSummary(workoutId, values)
+            isWorkoutTagged = true
+            Log.i("HrvRampTestViewModel", "Tagged active workout $workoutId with protocol ${values.getAsString(WorkoutSummariesDatabaseManager.WorkoutSummaries.METHOD)}")
+        }
+    }
+
     fun startProtocol(autoStartTimer: Boolean = true) {
         val currentState = _uiState.value
         if (!currentState.canStartTest && currentState.phase != HrvTestPhase.CONFIG) {
             return
         }
+
+        try {
+            if (!TrainingApplication.isTracking()) {
+                val app = getApplication<Application>()
+                val startIntent = Intent(TrainingApplication.REQUEST_START_TRACKING).apply {
+                    setPackage(app.packageName)
+                }
+                app.sendBroadcast(startIntent)
+            }
+        } catch (e: Exception) {
+            Log.w("HrvRampTestViewModel", "Could not dispatch REQUEST_START_TRACKING", e)
+        }
+
+        tagActiveWorkoutWithProtocol()
 
         val hasWarmup = currentState.config.warmupDurationSec > 0
         val nextPhase = if (hasWarmup) HrvTestPhase.WARMUP else HrvTestPhase.TESTING
@@ -311,6 +360,10 @@ class HrvRampTestViewModel @JvmOverloads constructor(
         injectedHr: Int? = null,
         injectedArtifactRate: Double? = null
     ) {
+        if (!isWorkoutTagged) {
+            tagActiveWorkoutWithProtocol()
+        }
+
         _uiState.update { state ->
             val dfaA1 = injectedDfaA1 ?: state.currentDfaA1
             val hr = injectedHr ?: state.currentHr
@@ -407,6 +460,7 @@ class HrvRampTestViewModel @JvmOverloads constructor(
 
     fun finishTest() {
         timerJob?.cancel()
+        tagActiveWorkoutWithProtocol()
         _uiState.update {
             it.copy(
                 phase = HrvTestPhase.FINISHED,
