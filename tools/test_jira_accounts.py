@@ -524,6 +524,78 @@ class TestJiraCliTooling(unittest.TestCase):
             self.assertNotIn("Planned", tst_content)
             self.assertIn("| Verified |", tst_content)
 
+    @patch("jira_util.jira_request")
+    def test_export_gates_command_generates_markdown(self, mock_request):
+        """TST-PRO-059.1: export-gates CLI extracts verdicts and writes structured markdown."""
+        import tempfile
+
+        def mock_jira_side_effect(url, method="GET", payload=None, role=None, **kwargs):
+            if "/rest/agile/1.0/board" in url and "sprint" not in url:
+                return {"values": [{"id": 1, "name": "Sprint Board"}]}
+            elif "/rest/agile/1.0/board/1/sprint?state=active" in url:
+                return {"values": [{"id": 440, "name": "2026-46.3"}]}
+            elif "/rest/agile/1.0/sprint/440/issue" in url:
+                return {
+                    "issues": [
+                        {
+                            "key": "ATT-6149",
+                            "fields": {
+                                "summary": "Export Jira gate records",
+                                "status": {"name": "Implementation"},
+                                "issuetype": {"subtask": False},
+                                "comment": {
+                                    "comments": [
+                                        {
+                                            "body": "[Automated comment by AI Agent 2 (Auditor)]\n\n[FINAL REVIEW (AGENT) — PASS]\nStage 6 Cold Review passed.",
+                                            "author": {"displayName": "Agent 2 (Reviewer)", "accountId": "agent2_id"},
+                                            "created": "2026-11-12T03:00:00.000+0100",
+                                        }
+                                    ]
+                                },
+                                "subtasks": [
+                                    {
+                                        "key": "ATT-7247",
+                                        "fields": {
+                                            "summary": "[Analysis] Export gate records",
+                                            "status": {"name": "Erledigt"},
+                                        },
+                                        "comments": [
+                                            {
+                                                "body": "[Automated comment by AI Agent 2 (Auditor)]\n\nGATE_VERDICT: PASS\nGate 1 Audit verified.",
+                                                "author": {"displayName": "Agent 2 (Reviewer)", "accountId": "agent2_id"},
+                                                "created": "2026-11-12T02:00:00.000+0100",
+                                            }
+                                        ],
+                                    }
+                                ],
+                            },
+                        }
+                    ],
+                    "total": 1,
+                }
+            elif "/comment" in url:
+                return {"comments": []}
+            return {}
+
+        mock_request.side_effect = mock_jira_side_effect
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            out_file = os.path.join(tmpdir, "docs", "engineering", "gates", "sprint_2026-46.3.md")
+            res_path, records = jira_util.export_gates(sprint_arg=None, out_path=out_file, role="coordinator")
+            self.assertEqual(res_path, out_file)
+            self.assertTrue(os.path.exists(out_file))
+            self.assertEqual(len(records), 2)
+
+            with open(out_file, "r", encoding="utf-8") as f:
+                content = f.read()
+
+            self.assertIn("# Sprint Quality Gate Records: 2026-46.3", content)
+            self.assertIn("**Sprint ID**: `440`", content)
+            self.assertIn("Gate 1 | Analysis (Gate 1)", content)
+            self.assertIn("Gate 6 | Final Review (Agent) (Gate 6)", content)
+            self.assertIn("| ATT-6149 | ATT-7247 | Gate 1 | Analysis (Gate 1) | PASS | agent2 | Agent 2 (Reviewer) |", content)
+            self.assertIn("| ATT-6149 | - | Gate 6 | Final Review (Agent) (Gate 6) | PASS | agent2 | Agent 2 (Reviewer) |", content)
+
 
 if __name__ == "__main__":
     unittest.main()

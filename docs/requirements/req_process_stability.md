@@ -3042,6 +3042,35 @@ The workflow SHALL mandate that:
   • *Then* `gate_6` FTPR, bounce counts, and `p6_final_review_agent_escape` SHALL be accurately computed and formatted.
 - **Invariants**: Zero modifications to Android production runtime code in `app/src/main/`; Rule 3 (`Erledigt` human-only gate) and `REQ-TST-004` (Two-Tier Device Policy) strictly preserved.
 
+### REQ-PRO-059: Repository Export of Sprint Gate Records & Independent QA Evidence [Verified]
+- **Tests**: `tools/test_jira_accounts.py`, `tools/test_verify_requirement_governance.py`, `tools/hoechstmass/tools/test_hoechstmass_tools.py`
+- **Implementation**: Automated export command `export-gates` in `tools/jira_util.py` and `tools/hoechstmass/tools/jira_util.py`, structured markdown persistence in `docs/engineering/gates/<sprint>.md`, canonical directory registration, and `--check-gates` validation in `tools/verify_requirement_governance.py`.
+- **Rationale**: Under ASPICE SUP.1 (Quality Assurance) and GP 2.2 (Work Product Evidence), quality gate approvals and review verdicts currently reside exclusively inside Jira Cloud (Pre-Assessment Finding B-04). An external assessor without Jira tenant access cannot verify review independence, gate compliance, or review trails. This requirement establishes an automated export tool to persist sprint gate records into git version control and adds a governance check enforcing export presence:
+  1. *Gate Export CLI Tooling (`REQ-PRO-059.1`, tools/jira_util.py & tools/hoechstmass/tools/jira_util.py)*:
+     • `jira_util.py` and `tools/hoechstmass/tools/jira_util.py` SHALL implement `export-gates [--sprint <ID|NAME>] [--out <FILE>]` to extract all Gate 1–5 subtask audit verdicts and Stage 6 parent review verdicts for the active or designated sprint.
+  2. *Structured Gate Record Schema (`REQ-PRO-059.2`, docs/engineering/gates/<sprint>.md)*:
+     • The export file SHALL persist: Sprint ID, ticket key, subtask key, stage name, gate number (1–6), verdict (`PASS`/`BOUNCE`/`REVISION`), evaluator role (`agent2`/`human`/`coordinator`), actor identifier, ISO timestamp, and comment summary excerpt.
+  3. *Canonical Directory Governance (`REQ-PRO-059.3`, ALLOWED_ENGINEERING_ENTRIES & hoechstmass_config.json)*:
+     • `ALLOWED_ENGINEERING_ENTRIES` in `tools/verify_requirement_governance.py` and `tools/hoechstmass/hoechstmass_config.json` SHALL register `"gates"` as a recognized canonical engineering artifact directory.
+  4. *Sprint-End Governance Verification (`REQ-PRO-059.4`, tools/verify_requirement_governance.py)*:
+     • `tools/verify_requirement_governance.py` SHALL support `--check-gates [SPRINT]`, failing with exit code 1 if the expected sprint gate record is absent or empty.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Net-new requirement `REQ-PRO-059` (`REQ-PRO-059.1`–`REQ-PRO-059.4`). Targets `tools/jira_util.py`, `tools/hoechstmass/tools/jira_util.py`, `tools/verify_requirement_governance.py`, and `docs/engineering/gates/`.
+  2. *Historical Origin & Commit Trace*: Introduced in Sprint 2026-46.3 via ATT-6149 under Epic ATT-6141 to resolve ASPICE pre-assessment finding B-04.
+  3. *Root Reason for Existing Formulation*: Gate verdicts previously existed only inside Jira Cloud REST API, lacking in-repo configuration management and QA evidence.
+  4. *Preservation of Core Invariants*: Zero modifications to Android production runtime code in `app/src/main/`; pure Python standard library retained; offline/mock resilience preserved.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* sprint `sprint/2026-46.3` with evaluated tickets,
+  • *When* `tools/jira_util.py export-gates` is invoked,
+  • *Then* it generates `docs/engineering/gates/sprint_2026-46.3.md` listing every gate verdict with role, actor, timestamp, and verdict.
+  • *Given* a sprint name without an export file in `docs/engineering/gates/`,
+  • *When* `verify_requirement_governance.py --check-gates <sprint>` runs,
+  • *Then* it aborts with exit code 1.
+  • *Given* directory `docs/engineering/gates/`,
+  • *When* `verify_requirement_governance.py` verifies engineering directory structure,
+  • *Then* `"gates"` is accepted without errors.
+- **Invariants**: Zero modifications to Android production runtime code in `app/src/main/`; pure Python standard library retained; Rule 3 (Human Decision Gate for `Erledigt`) preserved.
+
 
 
 

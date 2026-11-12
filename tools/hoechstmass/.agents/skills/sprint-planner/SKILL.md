@@ -184,6 +184,13 @@ Jointly review all completed sprint tickets with the human user against expectat
      python3 tools/jira_util.py --as coordinator sprint-metrics --record --post-to-retro
      ```
      This calculates Gate 1–5 First-Time-Pass-Rates (FTPR), Reason Swiss Cheese defect escape rates ($p_1 \dots p_5$, $P_{\text{escape}} = \prod p_i$), and Statistical Process Control (SPC) moving baseline limits ($\mu \pm 2\sigma$), idempotently updates `docs/engineering/metrics/process_metrics.jsonl`, and posts the markdown scorecard directly as a comment on the sprint's `Review & Retro` ticket.
+   * **Mandatory Sprint Quality Gate Records Export (`REQ-PRO-059`, `ATT-6149`)**:
+     To maintain independent ASPICE SUP.1 (Quality Assurance) and GP 2.2 (Work Product Evidence) proof in repository configuration management, the Coordinator **MUST** export all Gate 1–5 and Stage 6 review verdicts to version control and verify its presence before sprint merge:
+     ```bash
+     python3 tools/jira_util.py --as coordinator export-gates
+     python3 tools/verify_requirement_governance.py --check-gates
+     ```
+     This exports all gate decisions, review comments, evaluator roles, actor IDs, and timestamps to `docs/engineering/gates/<sprint>.md`.
    * **Closed-Loop Process Improvement Trigger (PA 4.2 $\rightarrow$ PA 5.2)**:
      Whenever the scorecard detects an out-of-control condition (`⚠️ PA 4.2 Special Cause Variation` where any metric falls outside $\mu \pm 2\sigma$), the Retrospective document (`docs/engineering/retros/Sprint_Review_and_Retro_<KEY>.md`) **MUST** contain an explicit Root-Cause Analysis (RCA) and concrete process/skill countermeasure prior to sprint merge.
    * **Mandatory Tier 2 Re-Verification When Any Ticket Is Dropped or Reverted During Review (`Rule 77` — `ATT-5762`)**: If any ticket commit is removed (`git reset --hard`) or reverted (`git revert`) from `sprint/<SPRINT_NAME>` during Ceremony 2 (e.g., `ATT-5665`), the pre-review Tier 2 test run is invalidated because the code state at Sprint-End has changed. You **MUST** re-execute the full Tier 2 Sprint Integration Gate (`./gradlew testDebugUnitTest --max-workers=2 && python3 tools/verify_requirement_governance.py`) and `./gradlew installDebug` on the post-drop sprint branch **before** merging into `develop`.

@@ -38,6 +38,7 @@
     "tests_shard_dir": "docs/tests",
     "allowed_engineering_entries": [
       "analysis",
+      "gates",
       "metrics",
       "plans",
       "retros",

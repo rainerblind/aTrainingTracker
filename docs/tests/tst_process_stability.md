@@ -1824,6 +1824,18 @@
   • Assert `parse_final_review_agent_verdicts_from_comments` extracts `PASS` and `BOUNCE` verdicts from `[FINAL REVIEW (AGENT) — ...]` parent ticket comments.
   • Assert `parse_sprint_gate_metrics` computes `gate_6` (`Final Review (Agent)`) FTPR, bounce count, and `p6_final_review_agent_escape` in `swiss_cheese`.
 
+### TST-PRO-059: **Sprint Gate Record Export & Repository Verification** [Verified]
+- **Requirement(s)**: `REQ-PRO-059`
+- **Component**: `tools/jira_util.py`, `tools/verify_requirement_governance.py`, `tools/hoechstmass/tools/jira_util.py`, `tools/hoechstmass/tools/verify_requirement_governance.py`, `tools/test_jira_accounts.py`, `tools/test_verify_requirement_governance.py`, `tools/hoechstmass/tools/test_hoechstmass_tools.py`
+- **Jira**: `ATT-6149`
+- **Test Description**:
+  1. *`export-gates` CLI Command & Markdown Generation (`TST-PRO-059.1`, tools/test_jira_accounts.py & tools/hoechstmass/tools/test_hoechstmass_tools.py)*:
+  • Execute `export_gates` with mock Jira response; assert generated markdown contains Sprint ID, summary table, and detailed verdict log with role, actor, timestamp, and verdict.
+  2. *Post-Sprint Gate Verification Check (`TST-PRO-059.2`, tools/test_verify_requirement_governance.py)*:
+  • Run `verify_gate_records` against valid vs missing/empty sprint files; assert return status and diagnostic error messages.
+  3. *Canonical Directory Registration (`TST-PRO-059.3`, tools/test_verify_requirement_governance.py)*:
+  • Assert `"gates"` exists in `ALLOWED_ENGINEERING_ENTRIES` and `hoechstmass_config.json`.
+
 
 
 

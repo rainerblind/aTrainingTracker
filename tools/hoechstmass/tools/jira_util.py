@@ -21,8 +21,13 @@ if _tools_dir not in sys.path:
     sys.path.insert(0, _tools_dir)
 
 from sprint_metrics import (
+    FINAL_REVIEW_BOUNCE_RE,
+    FINAL_REVIEW_ESCALATED_RE,
+    FINAL_REVIEW_PASS_RE,
+    STAGE_MAP,
     calculate_spc_limits,
     format_metrics_markdown,
+    identify_gate_number,
     load_historical_metrics,
     parse_sprint_gate_metrics,
     record_sprint_metrics,
@@ -885,7 +890,7 @@ def collect_sprint_metrics_for_id(sprint_id, sprint_name, board_id, as_role="coo
         subtasks = p.get("fields", {}).get("subtasks", [])
         for st in subtasks:
             st_key = st.get("key")
-            if st_key:
+            if st_key and not st.get("comments"):
                 try:
                     c_res = jira_request(f"{base}/rest/api/2/issue/{st_key}/comment", role=as_role, config=config)
                     st["comments"] = c_res.get("comments", [])
@@ -1010,6 +1015,308 @@ def cmd_sprint_metrics(sprint_arg=None, record=False, post_to_retro=False, backf
             print("Warning: No 'Review & Retro' ticket found in this sprint to post metrics to.", file=sys.stderr)
 
 
+def resolve_sprint_object(base, board_id, sprint_arg=None, as_role="coordinator", config=None):
+    if config is None:
+        config = load_env_config()
+    if sprint_arg:
+        active_sprints = jira_request(f"{base}/rest/agile/1.0/board/{board_id}/sprint?state=active", role=as_role, config=config).get("values", [])
+        for a in active_sprints:
+            if str(a.get("id")) == str(sprint_arg) or a.get("name", "").strip() == str(sprint_arg).strip():
+                return a
+        if str(sprint_arg).isdigit():
+            try:
+                s_obj = jira_request(f"{base}/rest/agile/1.0/sprint/{sprint_arg}", role=as_role, config=config)
+                if s_obj and "id" in s_obj:
+                    return s_obj
+            except Exception:
+                pass
+        start_at = 0
+        while True:
+            s_page = jira_request(f"{base}/rest/agile/1.0/board/{board_id}/sprint?startAt={start_at}&maxResults=50", role=as_role, config=config)
+            vals = s_page.get("values", [])
+            for s in vals:
+                if str(s.get("id")) == str(sprint_arg) or s.get("name", "").strip() == str(sprint_arg).strip():
+                    return s
+            if s_page.get("isLast", True) or not vals:
+                break
+            start_at += len(vals)
+        return None
+    else:
+        active_sprints = jira_request(f"{base}/rest/agile/1.0/board/{board_id}/sprint?state=active", role=as_role, config=config).get("values", [])
+        dev_sprints = [s for s in active_sprints if s.get("name", "").strip().lower() != "human review"]
+        return dev_sprints[0] if dev_sprints else (active_sprints[0] if active_sprints else None)
+
+
+def extract_sprint_gate_records(parent_issues, sprint_info):
+    records = []
+    gate_stats = {
+        g: {"total": 0, "passed_first_time": 0, "revisions": 0, "bounces": 0}
+        for g in range(1, 7)
+    }
+
+    def clean_text(txt, max_len=140):
+        if not txt:
+            return ""
+        t = re.sub(r"\[Automated comment by [^\]]+\]\s*", "", txt)
+        t = re.sub(r"[\r\n]+", " ", t).strip()
+        t = t.replace("|", "/")
+        if len(t) > max_len:
+            t = t[:max_len - 3] + "..."
+        return t
+
+    for p in parent_issues:
+        p_key = p.get("key", "")
+        p_fields = p.get("fields", {})
+        p_summary = p_fields.get("summary", "")
+        p_comments = p.get("comments", []) or p_fields.get("comment", {}).get("comments", [])
+
+        subtasks = p_fields.get("subtasks", [])
+        for st in subtasks:
+            st_key = st.get("key", "")
+            st_fields = st.get("fields", {})
+            st_summary = st_fields.get("summary", "")
+            st_status = st_fields.get("status", {}).get("name", "").lower()
+            g_num = identify_gate_number(st_summary)
+            if not g_num:
+                continue
+
+            stage_name = STAGE_MAP[g_num]["name"]
+            st_comments = st.get("comments", []) or st_fields.get("comment", {}).get("comments", [])
+
+            subtask_verdicts = []
+            for c in st_comments:
+                body = c.get("body", "")
+                author = c.get("author", {})
+                actor_name = author.get("displayName") or author.get("name") or author.get("accountId") or "Unknown"
+                created_ts = c.get("created", "")
+
+                if "[ROLE: agent2]" in body or "[Automated comment by AI Agent 2" in body or "agent2" in actor_name.lower() or "reviewer" in actor_name.lower() or "auditor" in actor_name.lower():
+                    role = "agent2"
+                elif "[ROLE: coordinator]" in body or "[Automated comment by AI Coordinator" in body or "coordinator" in actor_name.lower():
+                    role = "coordinator"
+                elif "[ROLE: agent1]" in body or "[Automated comment by AI Agent 1" in body or "agent1" in actor_name.lower():
+                    role = "agent1"
+                elif "[ROLE: human]" in body or "human" in actor_name.lower():
+                    role = "human"
+                else:
+                    role = "agent2"
+
+                verdict = None
+                body_upper = body.upper()
+                if "GATE_VERDICT: PASS" in body_upper or "GATE_VERDICT PASS" in body_upper:
+                    verdict = "PASS"
+                elif "GATE_VERDICT: REVISION" in body_upper or "GATE_VERDICT REVISION" in body_upper:
+                    verdict = "REVISION"
+                elif role in ("agent2", "human") and ("PASS" in body_upper or "APPROVED" in body_upper or "FREIGABE" in body_upper):
+                    verdict = "PASS"
+                elif role in ("agent2", "human") and ("REVISION" in body_upper or "REWORK" in body_upper or "FAIL" in body_upper):
+                    verdict = "REVISION"
+
+                if verdict:
+                    subtask_verdicts.append((verdict, role, actor_name, created_ts, clean_text(body)))
+
+            if subtask_verdicts:
+                gate_stats[g_num]["total"] += 1
+                for idx, (v, r, a, ts, excerpt) in enumerate(subtask_verdicts):
+                    if idx == 0:
+                        if v == "PASS":
+                            gate_stats[g_num]["passed_first_time"] += 1
+                        else:
+                            gate_stats[g_num]["revisions"] += 1
+                    elif v == "REVISION":
+                        gate_stats[g_num]["revisions"] += 1
+
+                    records.append({
+                        "parent_key": p_key,
+                        "subtask_key": st_key,
+                        "gate": g_num,
+                        "stage_name": stage_name,
+                        "verdict": v,
+                        "evaluator_role": r,
+                        "actor": a,
+                        "timestamp": ts,
+                        "summary": excerpt,
+                    })
+            elif st_status in ("erledigt", "closed", "done"):
+                gate_stats[g_num]["total"] += 1
+                gate_stats[g_num]["passed_first_time"] += 1
+                records.append({
+                    "parent_key": p_key,
+                    "subtask_key": st_key,
+                    "gate": g_num,
+                    "stage_name": stage_name,
+                    "verdict": "PASS",
+                    "evaluator_role": "agent2",
+                    "actor": st_fields.get("assignee", {}).get("displayName") or "agent2",
+                    "timestamp": st_fields.get("updated") or st_fields.get("created") or "",
+                    "summary": f"Subtask closed to {st_status.capitalize()}",
+                })
+
+        parent_fr_verdicts = []
+        for c in p_comments:
+            body = c.get("body", "")
+            author = c.get("author", {})
+            actor_name = author.get("displayName") or author.get("name") or author.get("accountId") or "Unknown"
+            created_ts = c.get("created", "")
+
+            role = "agent2"
+            if "[ROLE: human]" in body or "human" in actor_name.lower():
+                role = "human"
+
+            verdict = None
+            if FINAL_REVIEW_BOUNCE_RE.search(body):
+                verdict = "BOUNCE"
+            elif FINAL_REVIEW_ESCALATED_RE.search(body):
+                verdict = "ESCALATED"
+            elif FINAL_REVIEW_PASS_RE.search(body):
+                verdict = "PASS"
+
+            if verdict:
+                parent_fr_verdicts.append((verdict, role, actor_name, created_ts, clean_text(body)))
+
+        if parent_fr_verdicts:
+            gate_stats[6]["total"] += 1
+            for idx, (v, r, a, ts, excerpt) in enumerate(parent_fr_verdicts):
+                if idx == 0:
+                    if v == "PASS":
+                        gate_stats[6]["passed_first_time"] += 1
+                    else:
+                        gate_stats[6]["bounces"] += 1
+                elif v in ("BOUNCE", "ESCALATED"):
+                    gate_stats[6]["bounces"] += 1
+
+                records.append({
+                    "parent_key": p_key,
+                    "subtask_key": "-",
+                    "gate": 6,
+                    "stage_name": STAGE_MAP[6]["name"],
+                    "verdict": v,
+                    "evaluator_role": r,
+                    "actor": a,
+                    "timestamp": ts,
+                    "summary": excerpt,
+                })
+
+    return records, gate_stats
+
+
+def format_gate_records_markdown(sprint_info, records, gate_stats):
+    sprint_id = sprint_info.get("id", "Unknown")
+    sprint_name = sprint_info.get("name", "Unknown Sprint")
+    import datetime
+    now_iso = datetime.datetime.now(datetime.timezone.utc).isoformat()
+
+    lines = [
+        f"# Sprint Quality Gate Records: {sprint_name}",
+        "",
+        f"**Sprint ID**: `{sprint_id}` | **Sprint Name**: `{sprint_name}` | **Export Date**: `{now_iso}` | **Total Gate Records**: `{len(records)}`",
+        "",
+        "---",
+        "",
+        "## 1. Quality Gate Summary (First-Time-Pass-Rates)",
+        "",
+        "| Gate | Stage | Evaluated Records | Passed First Time | Revisions / Bounces | FTPR (%) |",
+        "| :---: | :--- | :---: | :---: | :---: | :---: |",
+    ]
+
+    for g in range(1, 7):
+        st = gate_stats.get(g, {"total": 0, "passed_first_time": 0, "revisions": 0, "bounces": 0})
+        tot = st["total"]
+        pft = st["passed_first_time"]
+        rev_or_bounce = st["bounces"] if g == 6 else st["revisions"]
+        ftpr = round((pft / tot) * 100.0, 1) if tot > 0 else 100.0
+        lines.append(f"| Gate {g} | {STAGE_MAP[g]['name']} | {tot} | {pft} | {rev_or_bounce} | {ftpr}% |")
+
+    lines.extend([
+        "",
+        "---",
+        "",
+        "## 2. Gate Verdict Records Log",
+        "",
+        "| Parent Ticket | Subtask Key | Gate | Stage | Verdict | Role | Actor | Timestamp | Summary / Excerpt |",
+        "| :--- | :--- | :---: | :--- | :---: | :---: | :--- | :--- | :--- |",
+    ])
+
+    if not records:
+        lines.append("| - | - | - | - | - | - | - | - | No gate verdict records found for this sprint |")
+    else:
+        for r in records:
+            p_k = r["parent_key"]
+            st_k = r["subtask_key"]
+            g_lbl = f"Gate {r['gate']}"
+            stg = r["stage_name"]
+            v = r["verdict"]
+            role = r["evaluator_role"]
+            act = r["actor"]
+            ts = r["timestamp"]
+            sm = r["summary"]
+            lines.append(f"| {p_k} | {st_k} | {g_lbl} | {stg} | {v} | {role} | {act} | {ts} | {sm} |")
+
+    lines.append("")
+    return "\n".join(lines)
+
+
+def export_gates(sprint_arg=None, out_path=None, as_role="coordinator", role=None, config=None, h_config=None):
+    if role:
+        as_role = role
+    if config is None:
+        config = load_env_config()
+    if h_config is None:
+        h_config = load_hoechstmass_config()
+
+    base = config.get("JIRA_URL", "").rstrip("/")
+    board_id = h_config.get("board_id", 1)
+
+    target_sprint = resolve_sprint_object(base, board_id, sprint_arg=sprint_arg, as_role=as_role, config=config)
+    if not target_sprint:
+        s_desc = sprint_arg if sprint_arg else "active sprint"
+        print(f"Error: Sprint '{s_desc}' not found on board {board_id}.", file=sys.stderr)
+        sys.exit(1)
+
+    s_id = target_sprint["id"]
+    s_name = target_sprint["name"].strip()
+    print(f"Exporting quality gate records for Sprint '{s_name}' (ID: {s_id})...")
+
+    sp_field = h_config.get("custom_fields", {}).get("story_points", "customfield_10016")
+    url = f"{base}/rest/agile/1.0/sprint/{s_id}/issue?fields=summary,status,issuetype,priority,subtasks,comment,{sp_field}&maxResults=100"
+    res = jira_request(url, role=as_role, config=config)
+    issues = res.get("issues", [])
+
+    parent_issues = [i for i in issues if not i.get("fields", {}).get("issuetype", {}).get("subtask", False)]
+    for p in parent_issues:
+        subtasks = p.get("fields", {}).get("subtasks", [])
+        for st in subtasks:
+            st_key = st.get("key")
+            if st_key and not st.get("comments"):
+                try:
+                    c_res = jira_request(f"{base}/rest/api/2/issue/{st_key}/comment", role=as_role, config=config)
+                    st["comments"] = c_res.get("comments", [])
+                except Exception:
+                    st["comments"] = []
+
+    sprint_info = {"id": s_id, "name": s_name}
+    records, gate_stats = extract_sprint_gate_records(parent_issues, sprint_info)
+    md_content = format_gate_records_markdown(sprint_info, records, gate_stats)
+
+    if not out_path:
+        slug = re.sub(r"[/\\ ]+", "_", s_name).lower()
+        if not slug.startswith("sprint_"):
+            slug = f"sprint_{slug}"
+        if not slug.endswith(".md"):
+            slug += ".md"
+        out_path = os.path.join("docs", "engineering", "gates", slug)
+
+    out_dir = os.path.dirname(out_path)
+    if out_dir:
+        os.makedirs(out_dir, exist_ok=True)
+
+    with open(out_path, "w", encoding="utf-8") as f:
+        f.write(md_content)
+
+    print(f"Sprint quality gate records exported to {out_path} ({len(records)} records).")
+    return out_path, records
+
+
 def main():
     if len(sys.argv) < 2:
         print("Usage: jira_util.py [--as <role>] <command> [args...]")
@@ -1120,6 +1427,26 @@ def main():
                 sprint_arg = a
             idx += 1
         cmd_sprint_metrics(sprint_arg=sprint_arg, record=record, post_to_retro=post_to_retro, backfill=backfill, as_role=as_role)
+    elif cmd in ("export-gates", "export_gates"):
+        sprint_arg = None
+        out_arg = None
+        idx = 1
+        while idx < len(args):
+            a = args[idx]
+            if a.startswith("--sprint="):
+                sprint_arg = a.split("=", 1)[1]
+            elif a == "--sprint" and idx + 1 < len(args):
+                sprint_arg = args[idx + 1]
+                idx += 1
+            elif a.startswith("--out="):
+                out_arg = a.split("=", 1)[1]
+            elif a == "--out" and idx + 1 < len(args):
+                out_arg = args[idx + 1]
+                idx += 1
+            elif not a.startswith("--") and not sprint_arg:
+                sprint_arg = a
+            idx += 1
+        export_gates(sprint_arg=sprint_arg, out_path=out_arg, as_role=as_role)
     else:
         print(f"Command '{cmd}' ready in parameterized client.")
 

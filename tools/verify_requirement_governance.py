@@ -246,6 +246,7 @@ def validate_archaeology_section(text):
 
 ALLOWED_ENGINEERING_ENTRIES = {
     "analysis",
+    "gates",
     "metrics",
     "plans",
     "retros",
@@ -255,6 +256,75 @@ ALLOWED_ENGINEERING_ENTRIES = {
     "rule_history_archive.md",
     "workflow_overview.html",
 }
+
+
+def verify_gate_records(sprint_name=None, repo_root=None):
+    """
+    REQ-PRO-059.4 / TST-PRO-059.2:
+    Verifies that sprint quality gate records have been exported to docs/engineering/gates/
+    per REQ-PRO-059. Fails with exit code 1 if the expected sprint gate record is missing or empty.
+    """
+    if repo_root is None:
+        repo_root = os.getcwd()
+
+    gates_dir = os.path.join(repo_root, "docs", "engineering", "gates")
+    if not os.path.isdir(gates_dir):
+        return False, [f"ERROR: Quality gate export directory does not exist: {gates_dir}"]
+
+    if sprint_name:
+        clean_name = sprint_name.strip()
+        slug = re.sub(r"[/\\ ]+", "_", clean_name).lower()
+        if not slug.endswith(".md"):
+            slug += ".md"
+
+        candidates = [
+            slug,
+            f"sprint_{slug}" if not slug.startswith("sprint_") else slug,
+            slug.replace("sprint_", "", 1) if slug.startswith("sprint_") else slug,
+        ]
+
+        found_file = None
+        for cand in candidates:
+            cand_path = os.path.join(gates_dir, cand)
+            if os.path.isfile(cand_path):
+                found_file = cand_path
+                break
+
+        if not found_file:
+            return False, [
+                f"ERROR: Missing sprint quality gate export file for sprint '{sprint_name}'. "
+                f"Expected one of {[os.path.join('docs/engineering/gates', c) for c in candidates]}."
+            ]
+
+        try:
+            with open(found_file, "r", encoding="utf-8") as f:
+                content = f.read().strip()
+            if not content:
+                return False, [f"ERROR: Sprint quality gate export file is empty: {found_file}"]
+            if not re.search(r"\b(?:gate|verdict|pass|bounce|revision)\b", content, re.IGNORECASE):
+                return False, [f"ERROR: Sprint quality gate export file contains no recognized gate records: {found_file}"]
+            return True, [f"PASS: Sprint quality gate records verified for '{sprint_name}': {found_file}"]
+        except Exception as e:
+            return False, [f"ERROR: Failed to read gate export file {found_file}: {e}"]
+    else:
+        md_files = [f for f in os.listdir(gates_dir) if f.endswith(".md") and not f.startswith(".")]
+        if not md_files:
+            return False, [f"ERROR: No sprint quality gate export files (*.md) found in {gates_dir}"]
+
+        valid_files = 0
+        for fname in md_files:
+            fpath = os.path.join(gates_dir, fname)
+            try:
+                with open(fpath, "r", encoding="utf-8") as f:
+                    content = f.read().strip()
+                if content and re.search(r"\b(?:gate|verdict|pass|bounce|revision)\b", content, re.IGNORECASE):
+                    valid_files += 1
+            except Exception:
+                pass
+
+        if valid_files == 0:
+            return False, [f"ERROR: No valid, non-empty sprint quality gate export records found in {gates_dir}"]
+        return True, [f"PASS: Verified {valid_files} sprint quality gate export record(s) in {gates_dir}."]
 
 
 def verify_engineering_directory_structure(eng_dir="docs/engineering"):
@@ -942,8 +1012,22 @@ def main():
         action="store_true",
         help="Skip the 3 deterministic Python tripwires.",
     )
+    parser.add_argument(
+        "--check-gates",
+        nargs="?",
+        const="",
+        default=None,
+        help="Verify sprint quality gate records export in docs/engineering/gates/ (optionally specify sprint name).",
+    )
 
     args = parser.parse_args()
+
+    if args.check_gates is not None:
+        target_sprint = args.check_gates if args.check_gates != "" else None
+        ok, diag = verify_gate_records(sprint_name=target_sprint)
+        for msg in diag:
+            print(msg, file=sys.stderr if not ok else sys.stdout)
+        sys.exit(0 if ok else 1)
 
     if args.sync_indexes:
         recalculate_master_index_tables()

@@ -22,14 +22,17 @@ import unittest
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from tools.verify_requirement_governance import (
+    ALLOWED_ENGINEERING_ENTRIES,
     parse_diff_requirements,
-    validate_archaeology_section,
-    verify_governance,
-    verify_composable_islands,
-    verify_repository_encapsulation,
-    verify_architecture_and_system_specs,
-    verify_master_table_parity,
     recalculate_master_index_tables,
+    validate_archaeology_section,
+    verify_architecture_and_system_specs,
+    verify_composable_islands,
+    verify_engineering_directory_structure,
+    verify_gate_records,
+    verify_governance,
+    verify_master_table_parity,
+    verify_repository_encapsulation,
 )
 
 
@@ -476,6 +479,64 @@ diff --git a/docs/requirements/req_process_stability.md b/docs/requirements/req_
                 updated_text = f.read()
             self.assertIn("links to the 1 domain-sharded requirement files", updated_text)
             self.assertIn("across 1 domain shards.", updated_text)
+
+    def test_scenario_13_canonical_engineering_directory_allows_gates(self):
+        """Scenario 13: ALLOWED_ENGINEERING_ENTRIES registers 'gates' (TST-PRO-059.3)."""
+        self.assertIn("gates", ALLOWED_ENGINEERING_ENTRIES)
+        with tempfile.TemporaryDirectory() as tmpdir:
+            eng_dir = os.path.join(tmpdir, "docs", "engineering")
+            os.makedirs(os.path.join(eng_dir, "gates"), exist_ok=True)
+            os.makedirs(os.path.join(eng_dir, "analysis"), exist_ok=True)
+            ok, errors = verify_engineering_directory_structure(eng_dir=eng_dir)
+            self.assertTrue(ok, f"Expected gates to be allowed, got errors: {errors}")
+
+            # Non-canonical entry should fail
+            os.makedirs(os.path.join(eng_dir, "invalid_dir"), exist_ok=True)
+            ok_bad, errors_bad = verify_engineering_directory_structure(eng_dir=eng_dir)
+            self.assertFalse(ok_bad)
+            self.assertTrue(any("invalid_dir" in e for e in errors_bad))
+
+    def test_scenario_14_verify_gate_records_validation(self):
+        """Scenario 14: verify_gate_records validates export presence and failure modes (TST-PRO-059.2)."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            # 1. Missing gates directory
+            ok, errs = verify_gate_records(sprint_name="sprint/2026-46.3", repo_root=tmpdir)
+            self.assertFalse(ok)
+            self.assertTrue(any("does not exist" in e for e in errs))
+
+            gates_dir = os.path.join(tmpdir, "docs", "engineering", "gates")
+            os.makedirs(gates_dir, exist_ok=True)
+
+            # 2. Missing sprint file
+            ok, errs = verify_gate_records(sprint_name="sprint/2026-46.3", repo_root=tmpdir)
+            self.assertFalse(ok)
+            self.assertTrue(any("Missing sprint quality gate export file" in e for e in errs))
+
+            # 3. Empty sprint file
+            target_file = os.path.join(gates_dir, "sprint_2026-46.3.md")
+            with open(target_file, "w", encoding="utf-8") as f:
+                f.write("   \n")
+            ok, errs = verify_gate_records(sprint_name="sprint/2026-46.3", repo_root=tmpdir)
+            self.assertFalse(ok)
+            self.assertTrue(any("empty" in e for e in errs))
+
+            # 4. Valid sprint file with gate records
+            valid_content = (
+                "# Sprint Quality Gate Records: sprint/2026-46.3\n\n"
+                "| Parent Ticket | Subtask Key | Gate | Stage | Verdict | Role | Actor | Timestamp |\n"
+                "| ATT-6149 | ATT-7247 | Gate 1 | Analysis | PASS | agent2 | Agent 2 | 2026-11-12 |\n"
+            )
+            with open(target_file, "w", encoding="utf-8") as f:
+                f.write(valid_content)
+
+            ok, msgs = verify_gate_records(sprint_name="sprint/2026-46.3", repo_root=tmpdir)
+            self.assertTrue(ok, f"Expected valid gate records, got: {msgs}")
+            self.assertTrue(any("PASS" in m for m in msgs))
+
+            # 5. Wildcard validation without sprint name
+            ok_any, msgs_any = verify_gate_records(sprint_name=None, repo_root=tmpdir)
+            self.assertTrue(ok_any)
+            self.assertTrue(any("Verified 1 sprint quality gate export record" in m for m in msgs_any))
 
 
 if __name__ == "__main__":

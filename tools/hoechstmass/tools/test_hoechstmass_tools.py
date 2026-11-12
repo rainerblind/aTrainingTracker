@@ -6,11 +6,17 @@ Unit tests for Höchstmaß parameterized automation and governance tools.
 Executes with standard library unittest.
 """
 
-import os
-import unittest
 import json
+import os
+import sys
+import unittest
 
-from jira_util import (
+_tools_dir = os.path.dirname(os.path.abspath(__file__))
+_repo_root = os.path.abspath(os.path.join(_tools_dir, "..", "..", ".."))
+if _repo_root not in sys.path:
+    sys.path.insert(0, _repo_root)
+
+from tools.hoechstmass.tools.jira_util import (
     load_hoechstmass_config,
     load_env_config,
     mask_secret,
@@ -30,14 +36,15 @@ from jira_util import (
     resolve_desired_parent_stage_for_subtask,
     count_final_review_bounces,
     final_review_verdict,
+    export_gates,
     VALID_ROLES,
 )
-from verify_requirement_governance import (
+from tools.hoechstmass.tools.verify_requirement_governance import (
     load_config,
     validate_archaeology_section,
     verify_engineering_directory_structure,
 )
-from parallel_sprint_lock import (
+from tools.hoechstmass.tools.parallel_sprint_lock import (
     sprint_lock,
     is_lock_busy,
     run_locked,
@@ -198,7 +205,7 @@ class TestEpicCommands(unittest.TestCase):
     def test_transition_issue_blocks_parent_to_erledigt(self):
         import io
         from unittest.mock import patch
-        with patch("jira_util.jira_request") as mock_req:
+        with patch("tools.hoechstmass.tools.jira_util.jira_request") as mock_req:
             mock_req.return_value = {
                 "key": "PROJ-100",
                 "fields": {
@@ -227,10 +234,10 @@ class TestEpicCommands(unittest.TestCase):
         ]
         self.assertEqual(count_final_review_bounces(comments), 2)
 
-        with patch("jira_util.jira_request") as mock_req, \
-             patch("jira_util.assign_issue"), \
-             patch("jira_util.add_comment"), \
-             patch("jira_util.transition_issue") as mock_trans:
+        with patch("tools.hoechstmass.tools.jira_util.jira_request") as mock_req, \
+             patch("tools.hoechstmass.tools.jira_util.assign_issue"), \
+             patch("tools.hoechstmass.tools.jira_util.add_comment"), \
+             patch("tools.hoechstmass.tools.jira_util.transition_issue") as mock_trans:
             mock_req.return_value = {
                 "key": "PROJ-101",
                 "fields": {
@@ -242,6 +249,59 @@ class TestEpicCommands(unittest.TestCase):
             res = final_review_verdict("PROJ-101", "BOUNCE", "Defect 3", bounce_target="implementation", as_role="agent2")
             self.assertEqual(res, "BOUNCE_3")
             mock_trans.assert_called()
+
+    def test_export_gates_parameterized(self):
+        """TST-PRO-059.1: Parameterized export_gates in hoechstmass."""
+        import tempfile
+        from unittest.mock import patch
+
+        def mock_side_effect(url, method="GET", payload=None, role=None, **kwargs):
+            if "/rest/agile/1.0/board/1/sprint?state=active" in url:
+                return {"values": [{"id": 100, "name": "Sprint 100"}]}
+            elif "/rest/agile/1.0/sprint/100/issue" in url:
+                return {
+                    "issues": [
+                        {
+                            "key": "PROJ-101",
+                            "fields": {
+                                "summary": "Sample Task",
+                                "status": {"name": "Implementation"},
+                                "issuetype": {"subtask": False},
+                                "comment": {"comments": []},
+                                "subtasks": [
+                                    {
+                                        "key": "PROJ-102",
+                                        "fields": {
+                                            "summary": "[Analysis] Task",
+                                            "status": {"name": "Erledigt"},
+                                        },
+                                        "comments": [
+                                            {
+                                                "body": "[Automated comment by AI Agent 2 (Auditor)]\n\nGATE_VERDICT: PASS\nAnalysis verified.",
+                                                "author": {"displayName": "Agent 2", "accountId": "a2"},
+                                                "created": "2026-11-12T01:00:00Z",
+                                            }
+                                        ],
+                                    }
+                                ],
+                            },
+                        }
+                    ]
+                }
+            return {}
+
+        with patch("tools.hoechstmass.tools.jira_util.jira_request") as mock_req:
+            mock_req.side_effect = mock_side_effect
+            with tempfile.TemporaryDirectory() as tmpdir:
+                out_file = os.path.join(tmpdir, "docs", "engineering", "gates", "sprint_100.md")
+                res_path, records = export_gates(sprint_arg=None, out_path=out_file, as_role="coordinator")
+                self.assertEqual(res_path, out_file)
+                self.assertTrue(os.path.exists(out_file))
+                self.assertEqual(len(records), 1)
+                with open(out_file, "r", encoding="utf-8") as f:
+                    content = f.read()
+                self.assertIn("# Sprint Quality Gate Records: Sprint 100", content)
+                self.assertIn("| PROJ-101 | PROJ-102 | Gate 1 | Analysis (Gate 1) | PASS | agent2 | Agent 2 |", content)
 
 
 class TestHoechstmassFlock(unittest.TestCase):
