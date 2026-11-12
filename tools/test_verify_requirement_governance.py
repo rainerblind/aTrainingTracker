@@ -50,6 +50,7 @@ from tools.verify_requirement_governance import (
     format_coverage_markdown,
     format_coverage_json,
     verify_coverage_thresholds,
+    verify_tests_field_format,
     CoverageCategoryResult,
     TraceabilityCoverageReport,
     LEGACY_UNGROUNDED_VERIFIED_REQS,
@@ -1667,6 +1668,83 @@ diff --git a/docs/requirements/req_process_stability.md b/docs/requirements/req_
         self.assertEqual(len(report["uncovered_sysreqs"]), 0)
 
 
+
+
+
+
+    def test_scenario_44_verify_tests_field_format_valid_entries(self):
+        """TST-PRO-075.1: Assert valid single/multiple TST IDs and recognized placeholders pass."""
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            req_dir = os.path.join(tmp_dir, "docs", "requirements")
+            os.makedirs(req_dir)
+            valid_content = """# Domain Shard
+### REQ-TST-001: Test Valid Single [Verified]
+- **Tests**: `TST-CON-001`
+- **Implementation**: `ClassA.kt`
+
+### REQ-TST-002: Test Valid Multiple [Verified]
+- **Tests**: `TST-CON-001`, `TST-CON-002`, `TST-MAN-005`
+- **Implementation**: `ClassB.kt`
+
+### REQ-TST-003: Test Valid Placeholder None [Verified]
+- **Tests**: None
+- **Implementation**: `ClassC.kt`
+
+### REQ-TST-004: Test Valid Placeholder Planned [Planned]
+- **Tests**: `Planned`
+- **Implementation**: `ClassD.kt`
+
+### REQ-TST-005: Test Valid Placeholder Manual inspection [Verified]
+- **Tests**: Manual inspection
+- **Implementation**: `ClassE.kt`
+"""
+            with open(os.path.join(req_dir, "req_test.md"), "w", encoding="utf-8") as f:
+                f.write(valid_content)
+
+            ok, diag = verify_tests_field_format(repo_root=tmp_dir)
+            self.assertTrue(ok, f"Expected valid Tests fields to pass, got: {diag}")
+            self.assertTrue(any("PASS: All Tests fields" in d for d in diag))
+
+    def test_scenario_45_verify_tests_field_format_rejects_corrupted_and_source_files(self):
+        """TST-PRO-075.2 & TST-PRO-075.3: Assert rejection of unclosed backticks, dangling code, source files, and trailing tickets."""
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            req_dir = os.path.join(tmp_dir, "docs", "requirements")
+            os.makedirs(req_dir)
+            invalid_content = """# Domain Shard
+### REQ-BAD-001: Unclosed backtick [Verified]
+- **Tests**: `TST-CON-001
+- **Implementation**: `ClassA.kt`
+
+### REQ-BAD-002: Dangling code fragment [Verified]
+- **Tests**: code == 201` check that inadvertently classified
+- **Implementation**: `ClassB.kt`
+
+### REQ-BAD-003: Source code files in Tests [Verified]
+- **Tests**: `PeriodsViewModel.kt`, `PeriodMapScreen.kt`
+- **Implementation**: `ClassC.kt`
+
+### REQ-BAD-004: Trailing tickets annotation [Verified]
+- **Tests**: `TST-CON-001` | **Tickets**: `ATT-1234`
+- **Implementation**: `ClassD.kt`
+"""
+            with open(os.path.join(req_dir, "req_bad.md"), "w", encoding="utf-8") as f:
+                f.write(invalid_content)
+
+            ok, diag = verify_tests_field_format(repo_root=tmp_dir)
+            self.assertFalse(ok, "Expected invalid Tests fields to fail")
+            diag_text = "\n".join(diag)
+            self.assertIn("REQ-BAD-001", diag_text)
+            self.assertIn("unclosed backtick", diag_text)
+            self.assertIn("REQ-BAD-002", diag_text)
+            self.assertIn("invalid Tests field format", diag_text)
+            self.assertIn("REQ-BAD-003", diag_text)
+            self.assertIn("source code file in Tests field", diag_text)
+            self.assertIn("REQ-BAD-004", diag_text)
+
+    def test_scenario_46_verify_tests_field_format_live_repo(self):
+        """TST-PRO-075.4: Assert all living requirement shards in repository pass Tests format verification."""
+        ok, diag = verify_tests_field_format()
+        self.assertTrue(ok, f"Expected live repository requirement shards to pass Tests format rule, got: {diag}")
 
 
 

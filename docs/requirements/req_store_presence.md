@@ -8,7 +8,7 @@
 ---
 
 ### REQ-STP-001: 9-Language Google Play Store Presence Parity and Character Bound Invariants [Verified]
-- **Tests**: `TST-STP-001`, `TST-STP-003` | **Tickets**: `ATT-4853`, `ATT-490`
+- **Tests**: `TST-STP-001`, `TST-STP-003`
 - **Implementation**: `docs/store_presence/*.md`, `PlayStoreListingContractTest.kt`
 - **Rationale**: Google Play Console enforces strict character limits on app store listings. Exceeding limits blocks updates and causes store listing rejections (ATT-490). All 9 supported locales must maintain 100% structural parity and stay strictly within character bounds.
 - **Description**:
@@ -20,7 +20,7 @@
   3. Character count annotations in the markdown headers (e.g. `(29/30)`, `(65/80)`) SHALL reflect exact actual UTF-16 character counts.
 
 ### REQ-STP-002: Modernized V5.0 Feature Messaging, Privacy Sovereignty & Sports Science Accuracy [Verified]
-- **Tests**: `TST-STP-002`, `TST-STP-003` | **Tickets**: `ATT-4853`
+- **Tests**: `TST-STP-002`, `TST-STP-003`
 - **Implementation**: `docs/store_presence/*.md`
 - **Rationale**: The store presence was last updated in July 2026 and omitted major V5.0 innovations. Product descriptions must accurately highlight the state-of-the-art capabilities of *aTrainingTracker* to prospective athletes.
 - **Description**:
@@ -33,7 +33,7 @@
   7. Descriptions SHALL emphasize our core values: 100% ad-free, no mandatory account/cloud, local SQLite data sovereignty, and unmonetized core tracking with optional Pay-What-You-Want Supporter tier (`ATT-51`).
 
 ### REQ-STP-003: Automated Play Store Listing Regression Contract Test [Verified]
-- **Tests**: `TST-STP-003` | **Tickets**: `ATT-4853`, `ATT-490`
+- **Tests**: `TST-STP-003`
 - **Implementation**: `PlayStoreListingContractTest.kt`
 - **Rationale**: Manual verification of character counts across 9 languages is error-prone and caused the regression reported in ATT-490. An automated CI contract test is required to guarantee that no future copy edit exceeds Google Play limits.
 - **Description**:
@@ -46,7 +46,7 @@
   7. The test SHALL assert that no store presence file in `docs/store_presence/*.md` contains references to unimplemented backlog features: 'Radar', 'Mader', 'Glykogen', or 'Glycogen' (case-insensitive) (Rule 71).
 
 ### REQ-STP-004: Modernized Jetpack Compose Material 3 & AMOLED Device Store Screenshots [Verified]
-- **Tests**: `TST-STP-004` | **Tickets**: `ATT-4853`
+- **Tests**: `TST-STP-004`
 - **Implementation**: `docs/store_presence/screenshots/`, `images/Screenshots/`
 - **Rationale**: Existing screenshots depicted legacy pre-Compose views. Modern store presence requires high-resolution screenshots of the Jetpack Compose Material 3 and AMOLED Dark UI.
 - **Description**:
@@ -56,7 +56,7 @@
   4. Updating store listings and screenshots in the Google Play Console is designated as a Human Prerequisite (Rule 22).
 
 ### REQ-STP-005: Repository README Google Play Store Badge, Feature Accuracy & Screenshot Showcase [Verified]
-- **Tests**: `TST-STP-005` | **Tickets**: `ATT-2371`, `ATT-6096`
+- **Tests**: `TST-STP-005`
 - **Implementation**: `README.md`, `.reviews/README.md`, `images/google-play-badge.svg`, `docs/guide/img/*.png`, `ReadmePlayStoreBadgeContractTest.kt`
 - **Rationale**: The repository root `README.md` is the primary entry point on GitHub for athletes and developers. A prominent, brand-compliant Google Play Store badge with canonical application ID targeting (`id=com.atrainingtracker`), direct navigation to the bilingual Online User Guide (`ATT-2275`), verified modern Compose screenshot showcases, and strict trademark-free sports science terminology (`ATT-5678`) ensure installation conversion and accurate product perception without broken asset dependencies.
 - **Description**:
@@ -102,7 +102,7 @@
 **Invariants**: Zero broken links; Google Play badge URL strictly `id=com.atrainingtracker`; 100% contract test pass rate in CI.
 
 ### REQ-STP-006: Google Play Store Promo Video Storyboard, Composite Generator & Showcase Pipeline [Verified]
-- **Tests**: `TST-STP-006` | **Tickets**: `ATT-2274`
+- **Tests**: `TST-STP-006`
 - **Implementation**: `docs/store_presence/promo_video_storyboard.md`, `tools/generate_promo_video.py`, `docs/store_presence/video/`, `PromoVideoAssetsContractTest.kt`
 - **Rationale**: A static Google Play Store listing cannot convey dynamic telemetry visualizations, live map scrubbing, or Strava segment elevation profiles. A modular promo video production pipeline combining a 5-scene storyboard, procedural bicycle handlebar compositing, and automated 1080p MP4 rendering enables continuous showcase generation and authentic visual marketing while respecting Rule 22 human publishing prerequisites (ATT-2274, Parent Epic ATT-2273):
 - **Description**:
@@ -114,7 +114,7 @@
   6. Final upload to YouTube and Google Play Store Console URL registration is designated as a Human Prerequisite (Rule 22).
 
 ### REQ-STP-007: Stale Process Artifact Elimination & Repository Hygiene Hardening [Verified]
-- **Tests**: `TST-STP-007` | **Tickets**: `ATT-6153`
+- **Tests**: `TST-STP-007`
 - **Implementation**: `.gitignore`, `ReleaseCiAndLintConfigContractTest.kt`, `AspiceSweAuditContractTest.kt`
 - **Rationale**: Ephemeral task, plan, and walkthrough artifacts generated by legacy AI agents (`.active_task.json`, `implementation_plan.artifact.md`, and `.artifacts/`) were historically committed to git tracking, violating ASPICE SUP.8 (Finding B-08) configuration baseline purity. Controlled work products require removing stale leftovers, ignoring ephemeral patterns in `.gitignore`, and asserting repository cleanliness via automated contract tests.
 - **Description**:
@@ -124,7 +124,7 @@
   4. An automated build contract test SHALL assert the absence of tracked or filesystem leftovers of `.active_task.json`, `implementation_plan.artifact.md`, and `.artifacts/` in the repository root, and SHALL verify the presence of the required ignore rules in `.gitignore`.
 
 ### REQ-STP-008: Externalized Secure Keystore Password Provider Chain [Verified]
-- **Tests**: `TST-STP-008` | **Tickets**: `ATT-6148`
+- **Tests**: `TST-STP-008`
 - **Implementation**: `app/build.gradle`, `.github/workflows/android-release.yml`, `docs/ci-secrets.md`, `.agents/skills/release-manager/SKILL.md`, `ReleaseCiAndLintConfigContractTest.kt`
 - **Rationale**: Storing plaintext keystore and alias passwords inside the working tree (`release.properties`) violates ASPICE SUP.8 (Finding B-03) and poses an operational credential disclosure risk. Decoupling secrets into an externalized, prioritized resolution chain protects developer credentials and complies with repository security governance while keeping release automation intact.
 - **Description**:
@@ -138,7 +138,7 @@
   5. An automated build contract test SHALL enforce that `app/build.gradle` uses the secure provider chain, that `.github/workflows/android-release.yml` passes env vars rather than writing working-tree passwords, and that any existing workspace `release.properties` contains zero password keys.
 
 ### REQ-STP-009: Configuration Management Plan & Pinned Submodule Baseline [Verified]
-- **Tests**: `TST-STP-009` | **Tickets**: `ATT-6152`
+- **Tests**: `TST-STP-009`
 - **Implementation**: `docs/management/cm_plan.md`, `.gitmodules`, `ReleaseCiAndLintConfigContractTest.kt`
 - **Rationale**: ASPICE SUP.8 (Finding B-07) requires a formal Configuration Management Plan (SUP.8.BP1–BP7) and deterministic baseline reproduction. Submodule configurations pointing to floating upstream branches introduce non-deterministic build drift. Authoring a version-controlled CM plan and pinning submodule configurations in `.gitmodules` guarantees baseline integrity and auditable configuration control.
 - **Description**:
@@ -152,7 +152,7 @@
   4. An automated build contract test in `ReleaseCiAndLintConfigContractTest.kt` SHALL verify the presence and core section headers of `docs/management/cm_plan.md` and SHALL assert that `.gitmodules` contains zero floating branch directives.
 
 ### REQ-STP-010: Project Risk Register & Sprint-Start Review Governance [Verified]
-- **Tests**: `TST-STP-010` | **Tickets**: `ATT-6151`
+- **Tests**: `TST-STP-010`
 - **Implementation**: `docs/management/risk_register.md`, `.agents/skills/sprint-planner/SKILL.md`, `ReleaseCiAndLintConfigContractTest.kt`
 - **Rationale**: ASPICE MAN.3 (Finding B-06) requires a formal project and product risk register (MAN.3.BP5) with probability, impact, risk exposure, and mitigation tracking. Without a version-controlled risk register and an established review cadence at Sprint-Start, project and technical risks remain unmonitored. Establishing `docs/management/risk_register.md` and integrating an exception-based risk review into Ceremony 1 ensures continuous risk management without disrupting autonomous sprint execution.
 - **Description**:

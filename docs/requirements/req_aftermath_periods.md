@@ -33,8 +33,8 @@
 - **Rationale**: When displaying the Longest Workout highlight within a sport summary, the system SHALL show the workout's name, active duration, total distance, and total ascent. Period summary card headers SHALL display total duration and workout count. **Invariants**: All displayed metrics SHALL be formatted according to the active localized unit settings.
 
 ### REQ-PER-012: Period Map Scalability, Memory Budget & Adaptive Layering Invariant [Verified]
-- **Tests**: `PeriodsViewModel.kt`, `PeriodMapScreen.kt`, `InteractivePeriodMap.kt`, `AndroidManifest.xml`
-- **Implementation**: Ensure smooth, non-crashing (OOM-free) spatial rendering of long-term training periods with hundreds of sessions.
+- **Tests**: `TST-PER-018`
+- **Implementation**: `PeriodsViewModel.kt`, `PeriodMapScreen.kt`, `InteractivePeriodMap.kt`, `AndroidManifest.xml`
 - **Rationale**: The system SHALL ensure high-performance, non-crashing spatial visualization across periods of arbitrary size (days, weeks, months, years with hundreds of workouts):
 1. *Adaptive Layering Threshold*: When a period contains more than a configured safety threshold of member workouts (`MAX_VECTOR_WORKOUTS = 30`), the system SHALL NOT instantiate or render individual vector `Polyline`s (`memberTracks`) and individual member markers (`memberMarkers`) for all member workouts simultaneously. Instead, the spatial analytics SHALL render the high-performance raster `Heatmap` layer representing aggregate route density plus the prominent `anchorTracks` (the spatial boundary/longest routes) and period extrema markers (`extremaMarkers`).
 2. *Interactive Single-Track Inspection*: When the athlete taps or peeks a specific workout within a large period, that single workout's path SHALL be rendered as a crisp, interactive vector polyline via `peekedTracks` without rendering all other background sessions as vector paths.
@@ -43,8 +43,8 @@
 5. *Process Heap Headroom*: The application manifest SHALL declare `android:largeHeap="true"` to grant the runtime sufficient memory bandwidth for GIS map overlays and raster heatmaps on high-resolution devices.
 
 ### REQ-PER-013: Multi-Region Period Map Viewport Detection & Adaptive Bounding [Verified]
-- **Tests**: `SpatialRegionEngine.kt`, `PeriodsViewModel.kt`, `InteractivePeriodMap.kt`, `PeriodMapScreen.kt`, `PeriodSummaryCard.kt`
-- **Implementation**: Eliminate unusable viewports centered on empty oceans (Greenland anomaly) during multi-region training periods while providing seamless 1-tap region switching and preserving single-region performance.
+- **Tests**: `TST-PER-019`
+- **Implementation**: `SpatialRegionEngine.kt`, `PeriodsViewModel.kt`, `InteractivePeriodMap.kt`, `PeriodMapScreen.kt`, `PeriodSummaryCard.kt`
 - **Rationale**: When a period contains workouts separated across geographically distinct regions ($> \text{REGION\_CLUSTER\_THRESHOLD\_METERS} = 75\text{ km}$ geodesic span), the system SHALL NOT center the initial map camera or overview thumbnail over empty oceans or continents between regions (e.g. centering over Greenland / the North Atlantic for athletes training in Europe and North America). Instead, the system SHALL partition workouts into geographic activity regions, prioritize the primary activity region, and provide interactive region switching:
 1. *Spatial Region Partitioning & Fast-Path*: In `SpatialRegionEngine.detectRegions(workouts)`, workouts with valid GPS coordinates SHALL be partitioned into connected component clusters using Great-Circle Haversine distance with configurable parameter `REGION_CLUSTER_THRESHOLD_METERS` ($75\text{ km}$). If the global bounding box diagonal is $< \text{SINGLE\_REGION\_ENVELOPE\_METERS}$ ($60\text{ km}$) or total GPS workouts $\le 1$, the engine SHALL return a single region immediately ($O(1)$ fast-path).
 2. *Dominant Region Identification*: When multiple regions are detected ($k > 1$), the engine SHALL rank regions deterministically: (a) Primary: Workout frequency/count (descending); (b) Secondary tie-breaker: Total active distance in meters (descending); (c) Tertiary tie-breaker: Timestamp of most recent workout (descending). The highest-ranked region SHALL be marked as primary (`isPrimary = true`, index 0).
@@ -106,8 +106,8 @@
 - **Description**: The system SHALL display a detailed, multi-phase progress notification during the full recalculation or migration of Workout Clusters.
 
 ### REQ-PER-014: Immediate Period View Reactive Synchronization on Workout Finalization [Verified]
-- **Tests**: `PeriodsRepository.kt`, `PeriodsViewModel.kt`, `WorkoutSummariesDatabaseManager.java`
-- **Implementation**: Immediate period view reactive synchronization upon workout completion on fresh installs.
+- **Tests**: `TST-PER-020`
+- **Implementation**: `PeriodsRepository.kt`, `PeriodsViewModel.kt`, `WorkoutSummariesDatabaseManager.java`
 - **Rationale**: The system SHALL guarantee that newly finalized workouts are immediately aggregated and presented across all period analytics views (Day, Week, Month, Year) without requiring an app restart, navigation change, or manual refresh, even on clean installations or initial profiles (ATT-3056, refining `REQ-PER-001` and `REQ-MIG-026`):
 1. *Direct Workout Finalization Broadcast Handling (`PeriodsRepository.kt`)*:
 • `PeriodsRepository` SHALL register an active `BroadcastReceiver` listening for `TrackerService.TRACKING_FINISHED_INTENT` via both `LocalBroadcastManager` and context `sendBroadcast`..
@@ -143,8 +143,8 @@
 **Invariants**: O(1) integrity check formula, hierarchical rollup math, and 100% test pass rate MUST NOT be broken.
 
 ### REQ-PER-015: Calendar-Aware Period Boundaries Across DST Transitions, Sentinel Epoch Symmetry, and Local Day PMC Bucketing [Verified]
-- **Tests**: `PeriodsRepository.kt`, `WorkoutDataMapper.kt`, `PowerPhysiologyCalculator.kt`
-- **Implementation**: Calendar-aware local timezone period aggregation boundaries across DST transitions, sentinel epoch symmetry in WorkoutDataMapper, and local-day PMC bucketing in PowerPhysiologyCalculator.
+- **Tests**: `TST-PER-021`
+- **Implementation**: `PeriodsRepository.kt`, `WorkoutDataMapper.kt`, `PowerPhysiologyCalculator.kt`
 - **Rationale**: The system SHALL calculate temporal aggregation boundaries (Day, Week, Month, Year) in `PeriodsRepository` using calendar-aware local timezone offsets (`plusDays(1)` / `plusWeeks(1)` `.atStartOfDay(zoneId).toEpochSecond() - 1`) to eliminate 1-hour workout overlap or omission across Daylight Saving Time (DST) spring-forward (23h) and fall-back (25h) transitions, SHALL establish 1:1 symmetry in `WorkoutDataMapper.formatDateTime` by returning `Instant.EPOCH.atZone(zoneId).toLocalDateTime()` (epoch 1970-01-01T00:00:00) on parse failures to match sentinel `timestampS = 0L` while filtering out invalid `timestampS <= 0L` in period rebuilds, and SHALL bucket daily training load in `PowerPhysiologyCalculator.computePerformanceManagementChart` according to the athlete's local calendar day (`Instant.ofEpochMilli(sample.timestampMs).atZone(zoneId).toLocalDate().toEpochDay()`) using an injectable `ZoneId = ZoneId.systemDefault()`, while preserving `getPeriodSortKey` database string contracts and 100% clean-room test pass rate (ATT-4016, Implemented in: ATT-4016, Status: Planned, amending `REQ-PER-014` and `REQ-UI-401`):
 1. *Calendar-Aware Local Timezone Period Boundaries (`PeriodsRepository.kt`, `REQ-PER-015.1`)*:
 • In `PeriodsRepository`, day boundary calculation in `fetchWorkoutsInDay(startS)`, `aggregateDay()`, and `getAffectedPeriodRanges(ldt)` SHALL evaluate the inclusive day end timestamp as: `Instant.ofEpochSecond(dayStartS).atZone(zoneId).toLocalDate().plusDays(1).atStartOfDay(zoneId).toEpochSecond() - 1`.
@@ -187,8 +187,8 @@
 **Invariants**: Zero SQLite schema migration; `getPeriodSortKey` string invariance; EWMA math invariance; 100% clean-room test pass rate.
 
 ### REQ-PER-016: Period Rebuild Flow Projection, Single-Owner Tracking Finalization Orchestration & Shared Mapper Instance [Verified]
-- **Tests**: `PeriodsRepository.kt`, `WorkoutRepository.kt`
-- **Implementation**: Eliminate redundant period rebuilds on non-period workout updates and progressive loading chunks, establish single-owner tracking finalization orchestration, and consolidate WorkoutDataMapper allocations in PeriodsRepository.
+- **Tests**: `TST-PER-022`
+- **Implementation**: `PeriodsRepository.kt`, `WorkoutRepository.kt`
 - **Rationale**: The system SHALL eliminate redundant period rebuilds on non-period workout updates and progressive loading chunks, establish single-owner tracking finalization orchestration, and consolidate `WorkoutDataMapper` allocations across `PeriodsRepository` (ATT-4019, Implemented in: ATT-4019, Status: Verified, amending `REQ-PER-014` and interacting with `REQ-STB-018.1`):
 1. *Period-Relevant Flow Projection & Debounced Deduplication (`PeriodsRepository.kt`, `REQ-PER-016.1`)*:
 • In `PeriodsRepository`, reactive collection of `workoutRepo.allWorkouts` SHALL be projected and deduplicated using `distinctUntilChanged` on period-relevant workout properties (workout ID, `startTimeS`, `activeTimeSec`, spatial bounds, and sport type), preventing export status mutations (`stravaStatus`, `fileExportStatus`), notes/title edits, and intermediate 50-item streaming chunks from triggering redundant `loadFromDatabase(forceIncremental = true)` invocations and full SQLite period re-queries.
@@ -222,8 +222,8 @@
 **Invariants**: Immediate period finalization display (`REQ-PER-014`), calendar-aware aggregation boundaries (`REQ-PER-015`), O(1) self-healing sync (`REQ-MIG-026`), zero SQLite schema migrations, and 100% clean-room test pass rate.
 
 ### REQ-PER-017: True Line-Density Period Heatmap Visualization [Verified]
-- **Tests**: `PeriodMapUtils.kt`, `PeriodSummaryCard.kt`, `PeriodMapVisualsTest.kt`
-- **Implementation**: Replace point-cloud HeatmapTileProvider in PeriodMapUtils with PolylineHeatmapTileProvider and calibrate period-level opacity.
+- **Tests**: `TST-PER-023`, `TST-PER-025`
+- **Implementation**: `PeriodMapUtils.kt`, `PeriodSummaryCard.kt`, `PeriodMapVisualsTest.kt`
 - **Rationale**: The system SHALL visualize period training density using true line-density rasterization without point densification overhead (ATT-4480, Parent Epic ATT-4474, Status: Verified, refining `REQ-PER-010`):
 1. *Period Line-Density Integration (`PeriodMapUtils.kt`, `REQ-PER-017.1`)*:
 • `PeriodMapVisuals` SHALL declare `val heatmapProvider: com.google.android.gms.maps.model.TileProvider?` instead of restricting to `com.google.maps.android.heatmaps.HeatmapTileProvider?`.
@@ -252,8 +252,8 @@
 **Invariants**: Zero changes to `PeriodSummaries.db`, memory safety without OOMs, and 100% clean-room unit test pass rate.
 
 ### REQ-PER-018: Continuous Timeline PeriodBarGraph, Sub-Hour Value Formatting & Sport/Metric Modes [Verified]
-- **Tests**: `PeriodBarGraph.kt`, `PeriodBarGraphTest.kt`, `PeriodsTabsScreen.kt`
-- **Implementation**: Standalone PeriodBarGraph composable with timeline gap interpolation, sub-hour formatting, compact X-axis period labels, sport-stacked proportional bars, and metric mode toggle.
+- **Tests**: `TST-PER-024`, `TST-PER-028`, `TST-PER-029`
+- **Implementation**: `PeriodBarGraph.kt`, `PeriodBarGraphTest.kt`, `PeriodsTabsScreen.kt`
 - **Rationale**: The system SHALL provide continuous timeline analytics, sub-hour duration legibility, and multi-metric sport visualization in the PeriodBarGraph header (ATT-4478, Parent Epic ATT-4474, Status: Verified, refining `REQ-PER-007`):
 1. *Timeline Gap Interpolation & Rest Buckets (`REQ-PER-018.1`)*:
 • When rendering `periods` in `PeriodBarGraph`, the system SHALL generate continuous chronological buckets including zero-volume rest periods between active workouts up to a bounded window.
@@ -440,7 +440,7 @@
 **Invariants**: Zero changes to `PeriodSummaries.db`, memory safety without OOMs, and 100% clean-room test pass rate.
 
 ### REQ-PER-022: Periods Sport Type Header Filtering & Multi-Sport Projections [Verified]
-- **Tests**: `TST-PER-028` | **Tickets**: `ATT-4770`, `ATT-5828`
+- **Tests**: `TST-PER-028`
 - **Implementation**: `PeriodsTabsScreen.kt`, `PeriodsViewModel.kt`, `PeriodData.kt`, `PeriodsRepository.kt`
 - **Rationale**: The system SHALL provide toggleable sport filter icon buttons in the Periods header row to allow athletes to isolate specific disciplines (`Bike`, `Run`, `Other`) across the entire Periods view (Day, Week, Month, Year), dynamically filtering `PeriodBarGraph`, `PeriodSummaryCard`, and map previews while preserving non-empty filter invariants and database integrity (ATT-4770, refining `REQ-PER-018` and `REQ-PER-019`):
 1. *Canonical Sport Type Icon Buttons & Placement (`REQ-PER-022.1`)*:
@@ -546,7 +546,7 @@
 
 
 ### REQ-PER-024: Route-Frequency Heatmap Unification, Tolerance Calibration & Region Propagation [Verified]
-- **Tests**: `TST-PER-030`, `TST-PER-032` | **Tickets**: `ATT-4833`, `ATT-4935`
+- **Tests**: `TST-PER-030`, `TST-PER-032`
 - **Implementation**: `ThermalColorLut.kt`, `PolylineHeatmapTileProvider.kt`, `PeriodMapUtils.kt`, `PeriodSummaryCard.kt`, `PeriodMapScreen.kt`, `InteractivePeriodMap.kt`, `PeriodsViewModel.kt`
 - **Rationale**: The system SHALL unify the route-frequency heatmap as the primary path visualization across both the preview card (`PeriodSummaryCard`) and detailed map view (`PeriodMapScreen` / `InteractivePeriodMap`), SHALL eliminate polyline masking and marker clutter in period overviews, SHALL tighten polyline decimation tolerance to preserve shared-corridor additive stacking, SHALL calibrate adaptive frequency normalization and thermal contrast, SHALL propagate the active region across views, and SHALL slave heatmap path rendering and spatial region clustering to the master sport filter (ATT-4833, refined by ATT-4935, refining `REQ-PER-019` and `REQ-PER-021`):
 1. *Heatmap-Primary Visualization & Vector Track Suppression (`REQ-PER-024.1`)*:
@@ -606,7 +606,7 @@
 **Invariants**: Zero changes to `PeriodSummaries.db`, memory safety, True-Black AMOLED compliance, and 100% clean-room test pass rate.
 
 ### REQ-PER-025: GitHub-Style Yearly Activity Contribution Grids per BSportType in Periods (Years) [Verified]
-- **Tests**: `TST-PER-031` | **Tickets**: `ATT-4849`, `ATT-5076`, `ATT-5194`, `ATT-5193`
+- **Tests**: `TST-PER-031`
 - **Implementation**: `YearlyContributionGrid.kt`, `PeriodSummaryCard.kt`, `PeriodsTabsScreen.kt`, `PeriodsViewModel.kt`, `PeriodBarGraph.kt`
 - **Rationale**: In `Periods` (`PeriodType.YEAR`), the system SHALL render a compact GitHub-style $7 \times 53$ activity contribution grid for each active `BSportType`, slaved directly to the master sport filter and active metric selector, enabling athletes to visualize seasonal consistency, volume distributions, rest periods, and training blocks across the 12 months without redundant UI controls (ATT-4849, ATT-5076, ATT-5194, ATT-5193):
 1. *PeriodType.YEAR Scope (`REQ-PER-025.1`)*: The contribution grid SHALL be rendered exclusively on `PeriodSummaryCard` when `periodType == PeriodType.YEAR`.
@@ -654,7 +654,7 @@
 **Invariants**: Zero changes to `PeriodSummaries.db` (v27), 60 fps `LazyColumn` scrolling, Rule 36 unit parity, Rule 57 sport order, and 100% clean-room test pass rate.
 
 ### REQ-PER-026: Periods Map Region Place Name Resolution, Fallback Hierarchy & Persistent Caching [Verified]
-- **Tests**: `TST-PER-033` | **Tickets**: `ATT-4934`
+- **Tests**: `TST-PER-033`
 - **Implementation**: `RegionNameResolver.kt`, `SpatialRegionEngine.kt`, `PeriodMapScreen.kt`, `PeriodSummaryCard.kt`, `PeriodsViewModel.kt`, `PeriodMapUtils.kt`
 - **Rationale**: Region chips on `PeriodSummaryCard` and `PeriodMapScreen` historically displayed generic labels such as "Hauptregion: Region 1 (30)" and "Region 2 (1)", giving the athlete zero geographical context without inspecting the map canvas. The system SHALL resolve and display human-readable place names (e.g. "Schönaich (30)") derived from the region center using a deterministic 3-tier fallback hierarchy, asynchronous background execution, and persistent quantized grid caching (ATT-4934):
 1. *3-Tier Region Place Name Resolution Hierarchy (`REQ-PER-026.1`)*: When resolving the display name for a detected `SpatialRegion`'s geographical center (`region.center`), the system SHALL evaluate:
@@ -701,7 +701,7 @@
 **Invariants**: Zero changes to `PeriodSummaries.db` (v27) schema, zero network/disk I/O on UI thread, 9-language localization parity, and 100% clean-room test pass rate.
 
 ### REQ-PER-027: Embedded Daily Activity Intensity / Mini-Bar Strip for Months & Weeks in SportStatsRow [Verified]
-- **Tests**: `TST-PER-035` | **Tickets**: `ATT-5195`, `ATT-5280`
+- **Tests**: `TST-PER-035`
 - **Implementation**: `DailyActivityStrip.kt`, `PeriodSummaryCard.kt`, `PeriodData.kt`, `PeriodsRepository.kt`, `PeriodsViewModel.kt`
 - **Rationale**: For `Periods` in Months (`PeriodType.MONTH`) and Weeks (`PeriodType.WEEK`), the system SHALL embed a compact horizontal daily activity intensity / mini-bar chart inside each sport's `SportStatsRow` below the sport header and above sub-sports/longest workout (Option A), slaved directly to the master sport filter and active metric selector, matching the interactive drill-down and semantic coloring of `YearlyContributionGrid` (ATT-5195):
 1. *Month and Week Temporal Scope (`REQ-PER-027.1`)*: The daily activity strip SHALL be rendered inside each sport's `SportStatsRow` on `PeriodSummaryCard` when `periodType == PeriodType.MONTH` or `periodType == PeriodType.WEEK`. `PeriodType.YEAR` and `PeriodType.DAY` SHALL remain unaffected.
@@ -745,7 +745,7 @@
 **Invariants**: Zero changes to `PeriodSummaries.db` (v27) schema, 60 fps `LazyColumn` scrolling, Rule 36 unit parity, Rule 57 sport order, and 100% clean-room test pass rate.
 
 ### REQ-PER-028: Period Summary Date Range & Chart Metric Label Active Locale Formatting [Verified]
-- **Tests**: `TST-PER-036` | **Tickets**: `ATT-5836`
+- **Tests**: `TST-PER-036`
 - **Implementation**: `PeriodBarGraph.kt`, `PeriodsRepository.kt`, `DateTimeUtils.kt`, `PeriodSummaryCard.kt`
 - **Rationale**: Weekly period headers and chart metric values SHALL format dates and decimal numbers according to the user's active locale instead of hardcoding US patterns:
 1. *Active Locale Weekly Date Range Formatting (`REQ-PER-028.1`)*: Weekly period date ranges (`periodDateRange`) SHALL be formatted according to the active `Locale` (`Locale.getDefault()`). In day-first locales (e.g. German `de_DE`), the date range SHALL display day before month (e.g. `"2. Nov. – 8. Nov."` or `"2. Nov. - 8. Nov."`), and in month-first locales (e.g. US English `en_US`), month before day (e.g. `"Nov 2 – Nov 8"` or `"Nov. 2 - Nov. 8"`).
@@ -776,7 +776,7 @@
 **Invariants**: Zero changes to `PeriodSummaries.db` (v27) schema, 60 fps `LazyColumn` scrolling, and 100% clean-room test pass rate.
 
 ### REQ-PER-029: WorkoutShareBottomSheet Option A ('Karten- & Analyse-Snapshot') Automated Capture & Share Delegation [Verified]
-- **Tests**: `TST-PER-037` | **Tickets**: `ATT-6208`
+- **Tests**: `TST-PER-037`
 - **Implementation**: `WorkoutShareBottomSheet.kt`, `WorkoutDetailTabbedContent.kt`, `WorkoutSummary.kt`, `TrackOnMapScreen.kt`, `MapDetailLayout.kt`, `ShareUtils.kt`
 - **Rationale**: When an athlete selects Option A ("Karten- & Analyse-Snapshot") in `WorkoutShareBottomSheet`, the application SHALL automatically navigate or scroll to the Map tab, capture the composite map and analytics snapshot, and launch the Android system share sheet (`combineWorkoutAndShare`) instead of merely switching views without action:
 1. *Programmatic Snapshot Trigger in `MapDetailLayout` (`REQ-PER-029.1`)*: `MapDetailLayout` SHALL accept `externalSnapshotTrigger: Boolean = false` and `onSnapshotComplete: (() -> Unit)? = null`. When `externalSnapshotTrigger == true` and `!isSharing`, `MapDetailLayout` SHALL initiate `isSharing = true` to capture the composite map, header, elevation, and analytics layers and launch the Android Share sheet via `combineWorkoutAndShare`. Upon snapshot completion or error, `isSharing` SHALL reset and `onSnapshotComplete?.invoke()` SHALL be called.
@@ -804,7 +804,7 @@
 **Invariants**: Zero changes to database schema, zero UI freezes on main thread during snapshot composition, preservation of `showFloatingShareButton: Boolean = workoutData == null`, and 100% clean-room test pass rate.
 
 ### REQ-PER-030: Morning HRV Readiness Database Persistence, Backup Parity & Per-Posture SWC Baseline Calculator [Verified]
-- **Tests**: `TST-PER-038` | **Tickets**: `ATT-3545`, `ATT-6718`
+- **Tests**: `TST-PER-038`
 - **Implementation**: `HrvReadinessDatabaseManager.kt`, `HrvReadinessRepository.kt`, `HrvReadinessEntry.kt`, `HrvPosture.kt`, `ReadinessStatus.kt`, `HrvReadinessCalculator.kt`, `MorningHrvCheckScreen.kt`, `DatabaseSchemaRegistry.kt`, `DatabaseConnectionManager.kt`, `strings_hrv.xml`
 - **Rationale**: Resting morning Heart Rate Variability (HRV / $\ln(\text{rMSSD})$) provides objective longitudinal insight into autonomic nervous system recovery and physiological training readiness. To ensure clinically sound baselines without orthostatic contamination, the application SHALL persist daily waking HRV measurements in a dedicated database (`HrvReadiness.db`), integrate with `.attbackup` backup/restore, deduplicate multiple daily readings transactionally, and compute Smallest Worthwhile Change (SWC) baselines strictly isolated per posture:
 1. *Dedicated SQLite Persistence & Symmetric DTO Mapping (`REQ-PER-030.1`)*: The system SHALL persist morning readiness records in a dedicated SQLite database `HrvReadiness.db` (table `hrv_readiness_entries`, managed by `HrvReadinessDatabaseManager`, `DB_VERSION = 1`). Columns SHALL include `_id` (INTEGER PRIMARY KEY AUTOINCREMENT), `timestamp_ms` (INTEGER NOT NULL), `date_iso` (TEXT NOT NULL, `YYYY-MM-DD` local calendar date), `timezone_id` (TEXT NOT NULL), `resting_hr_bpm` (INTEGER NOT NULL), `rmssd_ms` (REAL NOT NULL), `ln_rmssd` (REAL NOT NULL), `hrv_score_100` (REAL NOT NULL, $20 \times \ln(\text{rMSSD})$), `sdnn_ms` (REAL), `artifact_rate_pct` (REAL), `duration_sec` (INTEGER NOT NULL), `posture` (TEXT NOT NULL, `SUPINE` / `SEATED` / `STANDING`), `is_primary_for_day` (INTEGER NOT NULL DEFAULT 0), and `notes` (TEXT). Domain model `HrvReadinessEntry` SHALL enforce symmetric single-row and batch `fromCursor` mapping per Rule 20.
@@ -842,7 +842,7 @@
 **Invariants**: Zero changes to existing workout/sensor databases, pure Kotlin calculation logic, and 100% clean-room test pass rate.
 
 ### REQ-PER-031: Android Health Connect Morning and Overnight Resting HRV Ingestion [Verified]
-- **Tests**: `TST-PER-039` | **Tickets**: `ATT-4981`, `ATT-6712`
+- **Tests**: `TST-PER-039`
 - **Implementation**: `HealthConnectHrvImporter.kt`, `HealthConnectManager.kt`, `HrvPosture.kt`, `HrvReadinessRepository.kt`, `HealthConnectSettingsDialog.kt`, `AndroidManifest.xml`
 - **Rationale**: Passive overnight wearable monitoring (smart rings, smartwatches) provides continuous nocturnal resting HRV and resting heart rate data via Android Health Connect. To allow athletes to utilize nocturnal biometric tracking without contaminating waking spot-check baselines, the system SHALL ingest nocturnal `HeartRateVariabilityRmssdRecord` and `RestingHeartRateRecord` into `HrvReadinessRepository` under an isolated `OVERNIGHT_WEARABLE` cohort:
 1. *Permission & User Opt-In Gating (`REQ-PER-031.1`)*: The system SHALL declare `READ_HEART_RATE_VARIABILITY` and `READ_RESTING_HEART_RATE` permissions in `AndroidManifest.xml` and manage runtime permission checks through `HealthConnectManager.kt`. `hasHrvReadPermissions()` SHALL gate strictly on `HeartRateVariabilityRmssdRecord`, treating `RestingHeartRateRecord` as optional. Ingestion SHALL require explicit user opt-in (`isHealthConnectHrvImportEnabled`) configured in `HealthConnectSettingsDialog`.
@@ -871,7 +871,7 @@
 **Invariants**: Zero changes to `HrvReadiness.db` (v1) schema, strict posture isolation, and 100% clean-room test pass rate.
 
 ### REQ-PER-032: Guided Morning Resting HRV Measurement Screen & Waking Protocol [Verified]
-- **Tests**: `TST-PER-040` | **Tickets**: `ATT-3556`, `ATT-6719`
+- **Tests**: `TST-PER-040`
 - **Implementation**: `MorningHrvCheckScreen.kt`, `MorningHrvCheckViewModel.kt`, `HrvReadinessRepository.kt`, `RrArtifactFilter.kt`, `ATrainingTrackerApp.kt`, `strings_hrv.xml`
 - **Rationale**: Accurate morning resting HRV evaluation requires standardized waking conditions (post-voiding, rested posture, normal breathing) without starting a full GPS workout. The system SHALL provide a dedicated Compose UI measurement screen (`MorningHrvCheckScreen`) and ViewModel (`MorningHrvCheckViewModel`) executing a guided waking protocol:
 1. *Standardized Protocol Lifecycle & UI Ergonomics (`REQ-PER-032.1`)*: The measurement state machine SHALL transition through `READY` -> `STABILIZING` -> `MEASURING` -> `COMPLETED`. The stabilization phase SHALL default to 15–30s to allow autonomic balance. The measurement duration SHALL default to 60s (validated per Esco & Flatt 2014) with a selectable 120s extended option, rendered using Material 3 `SingleChoiceSegmentedButtonRow`. The scrollable column SHALL include `navigationBarsPadding()`, and the screen SHALL be kept awake (`keepScreenOn = true`) during `STABILIZING` and `MEASURING`.
@@ -907,7 +907,7 @@
 **Invariants**: Zero workout generation, post-hoc centered filter calculation, 100% clean-room test pass rate.
 
 ### REQ-PER-033: Longitudinal HRV Readiness Trend, Posture-Matched 60-Day SWC Corridor & Training Load Overlay [Verified]
-- **Tests**: `TST-PER-041` | **Tickets**: `ATT-3557`, `ATT-6721`, `ATT-6712`
+- **Tests**: `TST-PER-041`
 - **Implementation**: `HrvReadinessTrendCard.kt`, `HrvReadinessTrendMath.kt`, `PeriodsScreen.kt`, `PeriodsTabsScreen.kt`, `PeriodsViewModel.kt`, `strings_hrv.xml`
 - **Rationale**: Athletes tracking daily morning resting HRV require longitudinal visualization within the `PeriodsScreen` analytical hub to observe autonomic nervous system adaptation and recovery across days, weeks, and months in relation to training load (*Plews et al. 2013*). The system SHALL render an interactive longitudinal HRV trend visualization:
 1. *Posture Isolation, Localization & Provenance Badge (`REQ-PER-033.1`)*: The HRV trend card SHALL provide a posture selector chip row supporting waking postures (`SUPINE`, `SEATED`, `STANDING`) and nocturnal passive monitoring (`OVERNIGHT_WEARABLE`). `OVERNIGHT_WEARABLE` SHALL be localized across all 9 supported locales in `strings_hrv.xml` (`morning_hrv_posture_overnight_wearable`), and entries originating from Health Connect SHALL render a source provenance badge parsed from `notes` (e.g. *"Health Connect (Oura / Fitbit / ...)"*). To preserve baseline validity against orthostatic shifts, each posture's trend, rolling 7-day average, and 60-day baseline corridor SHALL compute strictly in isolation without mixing postures. When multiple postures have data, the initial selection SHALL default to the posture with the greatest number of recorded readings without eager pre-selection overriding the athlete's primary posture. Manual posture selection in `MorningHrvCheckScreen` SHALL remain strictly restricted to waking postures.
@@ -937,7 +937,7 @@
 **Invariants**: Zero schema changes to `PeriodSummaries.db` or `HrvReadiness.db`, strict posture segregation in baseline math, 100% clean-room test pass rate.
 
 ### REQ-PER-034: Lossless WorkoutRrIntervals Persistence, Centered Recompute & Garmin FIT HrvMesg [Verified]
-- **Tests**: `TST-PER-042` | **Tickets**: `ATT-3543`, `ATT-6716`
+- **Tests**: `TST-PER-042`
 - **Implementation**: `WorkoutRrDatabaseManager.kt`, `WorkoutRrDbHelper.kt`, `WorkoutRrRepository.kt`, `WorkoutRrInterval.kt`, `HrvPostWorkoutRecomputer.kt`, `FitFileWriter.java`, `FitWorkoutParser.kt`, `LegacyImportEngine.kt`, `TrackerService.java`
 - **Rationale**: Live tracking calculates HRV metrics (DFA $\alpha_1$, $\text{rMSSD}$) using causal trailing windows with ~60s delay and discards raw beat-to-beat intervals upon session completion. Persisting raw beat intervals enables centered-window recomputation to eliminate phase lag and supports bidirectional Garmin FIT `HrvMesg` interoperability. The system SHALL support lossless RR persistence, centered recomputation, and FIT export/import:
 1. *Lossless RR Persistence & Schema Integrity (`REQ-PER-034.1`)*: The system SHALL persist raw beat-to-beat intervals into `WorkoutRr.db` table `workout_rr_intervals` (`workout_id: Long`, `beat_index: Int`, `beat_timestamp_ms: Long`, `rr_ms: Float`, `artifact_flag: Int`, `gap_beats: Int`). The database schema SHALL enforce a `UNIQUE(workout_id, beat_index)` constraint with a v2 migration in `WorkoutRrDbHelper`, and data access SHALL be routed through `WorkoutRrRepository` and `WorkoutRrDatabaseManager`, registered in `DatabaseSchemaRegistry`, and cascaded on session deletion via `WorkoutDeletionHelper`.
@@ -965,7 +965,7 @@
 • *Then* metrics evaluate via an $O(N)$ two-pointer sliding window on a 5s grid, session SDNN is saved in `WorkoutSummaries`, and `WorkoutRepository.refreshWorkout` is dispatched.
 
 ### REQ-PER-035: Interactive Workout Details DFA a1/rMSSD Charts & a1 Scatter Plot [Verified]
-- **Tests**: `TST-PER-043` | **Tickets**: `ATT-3544`, `ATT-6717`
+- **Tests**: `TST-PER-043`
 - **Implementation**: `TelemetryMetricGraph.kt`, `HrvAlpha1ScatterChart.kt`, `HrvAlpha1ScatterCard.kt`, `PathPoint.kt`, `WorkoutRepository.kt`, `MapDetailLayout.kt`, `WorkoutDetailTabbedContent.kt`
 - **Rationale**: Workout Details visualizes continuous telemetry curves for Speed, HR, and Power, but lacks visualization for centered post-workout HRV telemetry. Athletes and coaches require interactive inspection of DFA $\alpha_1$ and $\text{rMSSD}$ time-series to assess autonomic recovery, monitor threshold transitions ($\alpha_1 \approx 0.75$ aerobic, $\alpha_1 \approx 0.50$ anaerobic), and identify decoupling via an $\alpha_1$ vs. HR/Power/Pace scatter plot while suppressing high-artifact intervals. The system SHALL support interactive HRV telemetry and scatter visualization:
 1. *DFA $\alpha_1$ and rMSSD Telemetry Tracks (`REQ-PER-035.1`)*: `TelemetryMetricGraph` SHALL support `TelemetryMetricType.HRV_DFA_A1` and `TelemetryMetricType.HRV_RMSSD`. Curves SHALL share exact horizontal padding (`startPadding = 50.dp`) and scrubbing synchronization with existing telemetry graphs per Rule 64. Scrubbing lookup for DFA $\alpha_1$ and rMSSD in `MapDetailLayout` SHALL evaluate `isTimeDomain = (activeTelemetryDomain == ProfileXAxisDomain.TIME)` to display accurate nearest-point metrics on GPS workouts.
@@ -995,7 +995,7 @@
 **Invariants**: Pixel-perfect vertical alignment with `startPadding = 50.dp`, non-interpolated artifact gap rendering, zero UI presentation for non-HRV sessions, 100% 9-language localization parity.
 
 ### REQ-PER-036: Confidence-Gated HRVT1/HRVT2 Threshold Estimation & Summary Card [Verified]
-- **Tests**: `TST-PER-044` | **Tickets**: `ATT-3554`
+- **Tests**: `TST-PER-044`
 - **Implementation**: `HrvThresholdEstimator.kt`, `HrvThresholdSummaryCard.kt`, `WorkoutDetailTabbedContent.kt`, `strings_hrv.xml`
 - **Rationale**: While `HrvAlpha1ScatterCard` (`REQ-PER-035`) renders unconstrained scatter points across the entire workout, athletes require physiologically validated aerobic ($HRVT_1$, $\alpha_1 = 0.75$) and anaerobic ($HRVT_2$, $\alpha_1 = 0.50$) threshold estimates with lag compensation, fresh-window fatigue bounding, decimated-grid statistical validity, and explicit quality confidence classification. The system SHALL support confidence-gated threshold estimation and presentation:
 1. *Fresh-Window Telemetry Selection (`REQ-PER-036.1`)*: For free progression workouts, `HrvThresholdEstimator` SHALL restrict threshold regression strictly to active elapsed time $t \in [600, 3600]\text{ s}$ (`10–60 min`), excluding the initial 10-minute warm-up, paused intervals, late-workout cardiac fatigue drift ($>60\text{ min}$), and samples where artifact rate exceeds $5.0\%$. For workouts containing a guided step or continuous ramp test (`ATT-4969`), `HrvThresholdEstimator` SHALL evaluate the post-warmup monotonic test stage.
@@ -1022,7 +1022,7 @@
 **Invariants**: Zero out-of-span linear extrapolation; 60s decimation decorrelation; 100% 9-language localization parity; zero card rendering for non-HRV workouts.
 
 ### REQ-RAD-005: Workout Traffic Persistence, Session Totals & Aftermath Summary Card [Verified]
-- **Tests**: `TST-RAD-005` | **Tickets**: `ATT-5088`
+- **Tests**: `TST-RAD-005`
 - **Implementation**: `WorkoutExportHeader.kt`, `WorkoutRepository.kt`, `WorkoutSummariesDatabaseManager.java`, `RadarTrafficSummaryCard.kt`, `WorkoutDetailTabbedContent.kt`, `strings.xml`
 - **Rationale**: Cyclists reviewing rides recorded with cycling rearview radar require post-workout traffic analytics detailing total vehicles passed, traffic density, and peak vehicle speeds. The system SHALL persist 1 Hz scalar radar samples, compute session traffic extrema, and render a dedicated Traffic Summary Card in Workout Details with 100% 9-language localization parity without requiring database schema migrations.
 - **Description**:
@@ -1043,7 +1043,7 @@
 
 ### REQ-PER-037: HRV Threshold Training Zone Comparison, Multi-Session Consensus Gating & Anchor-Based Power/HR Zone Updates [Verified]
 - **Target Release**: `V5.0.0`
-- **Tests**: `TST-PER-045` | **Tickets**: `ATT-3555`, `ATT-7310`
+- **Tests**: `TST-PER-045`
 - **Implementation**: `HrvZoneComparisonMath.kt`, `HrvZoneComparisonResult.kt`, `HrvThresholdSummaryCard.kt`, `ZoneCalculationMath.kt`, `strings_hrv.xml`
 - **Rationale**: While `REQ-PER-036` (`ATT-3554`) produces confidence-gated physiological threshold estimates ($HRVT_1$ and $HRVT_2$) and `REQ-TRK-072` (`ATT-4969`) introduces guided step/ramp tests, athletes currently lack contextual comparison against their configured training zones (`ZoneCalculationMath.kt`). Moreover, updating athletic training zones requires strict physiological safeguards: power zones can be updated from threshold estimates with user confirmation, but only when verified via a `Confidence.HIGH` guided test or a 30-day multi-session consensus ($M \ge 3$ agreeing within $\pm 10\text{ W}$), whereas heart rate zones remain purely informational comparisons because submaximal thresholds cannot observe $HR_{\max}$ and legacy HR zones are anchored to $HR_{\max}$. The system SHALL support training zone comparison, multi-session consensus gating, and anchor-based power zone updates:
 - **Description**:
@@ -1117,7 +1117,7 @@
 
 ### REQ-PER-038: Model DFA a1 Autonomic Durability, Drift & Iso-Intensity Bins Across Multi-Hour Workouts [Verified]
 - **Target Release**: `V5.0.0`
-- **Tests**: `TST-PER-046` | **Tickets**: `ATT-4970`
+- **Tests**: `TST-PER-046`
 - **Implementation**: `HrvDurabilityCalculator.kt`, `HrvDurabilityResult.kt`, `ExtremaType.java`, `HrvPostWorkoutRecomputer.kt`, `WorkoutData.kt`, `WorkoutDataMapper.kt`, `HrvDurabilityCard.kt`, `WorkoutDetailTabbedContent.kt`, `strings_hrv.xml`
 - **Rationale**: During multi-hour endurance workouts ($\ge 90\text{ min}$), `DFA a1` progressively declines at a given external workload due to autonomic fatigue, vagal withdrawal, and cardiovascular drift (*Rogers et al. 2021; Gronwald et al. 2021*). While `REQ-PER-036` truncates threshold estimation at 60 minutes to prevent fatigue distortion, quantifying the rate of `DFA a1` decline at matched intensity provides an actionable Autonomic Durability metric ($\Delta\alpha_{1,\%}$) that complements cardiovascular stroke-volume Heart Efficiency drift ($\Delta C_{\text{O}_2}\%$) in `ATT-4842`. The system SHALL compute, persist, and visualize autonomic durability:
 - **Description**:

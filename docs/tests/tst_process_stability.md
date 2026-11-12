@@ -3,7 +3,7 @@
 **Domain**: `process_stability`  
 **Prefixes**: `ARC`, `BLD`, `BUG`, `INT`, `LIV`, `LOG`, `MAN`, `NFR`, `PRO`, `REG`, `SEC`, `STB`, `STR`, `TOOL`, `TST`  
 **Scope**: ASPICE governance, infinite context, crash stability, build architecture, security, and developer tools.  
-**Total Tests**: 129
+**Total Tests**: 130
 
 ---
 
@@ -2258,6 +2258,20 @@
   5. *End-to-End Markdown Summary Generation & Governance Parity Test (`TST-PRO-074.5`, test_generate_release_verification_summary.py & tools/verify_requirement_governance.py)*:
   • Verify end-to-end generation of `verification_summary.md` and confirm 100% living documentation parity.
 
+### TST-PRO-075: **Requirement Tests Field Format & Traceability Governance Verifier Test Suite** [Verified]
+- **Requirement(s)**: `REQ-PRO-075`
+- **Component**: `tools/verify_requirement_governance.py`, `tools/test_verify_requirement_governance.py`
+- **Jira**: `ATT-6125`
+- **Test Description**:
+  1. *Conforming Syntax Acceptance Test (`TST-PRO-075.1`, test_verify_requirement_governance.py)*:
+  • Assert that single and multiple backticked test IDs (e.g. `` `TST-CON-001` ``, `` `TST-CON-001`, `TST-CON-002` ``) and valid placeholders (`None`, `Planned`, `Review`, `Manual inspection`) pass validation with 0 errors.
+  2. *Corrupted Sentence Fragment Rejection Test (`TST-PRO-075.2`, test_verify_requirement_governance.py)*:
+  • Assert that unclosed backticks, dangling boolean expressions (e.g. `code == 201 check...`), and trailing pipe metadata (e.g. `| **Tickets**: ATT-...`) are detected as violations.
+  3. *Misplaced Source File Rejection Test (`TST-PRO-075.3`, test_verify_requirement_governance.py)*:
+  • Assert that Kotlin/Java/XML filenames in `Tests:` fields are detected as violations.
+  4. *Clean-Room Shard Audit & Governance Parity (`TST-PRO-075.4`, verify_requirement_governance.py)*:
+  • Assert `tools/verify_requirement_governance.py` passes with exit code 0 across all 9 shards and master index tables match with 100% parity.
+
 ### TST-PRO-076: **System-to-Software Requirement Traceability & Governance Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-PRO-076`
 - **Scope**: Tooling Unit Tests, Contract Tests & Governance Integration
@@ -2272,7 +2286,6 @@
   • Verify that software requirements belonging to tailored prefix families (`UI`, `UNT`, `PRO`, etc.) are recognized as software-derived (`[SWE-Derived]`) with valid architectural rationale.
   4. *CLI Integration & Living Documentation Parity Test (`TST-PRO-076.4`, tools/verify_requirement_governance.py & AspiceSweAuditContractTest.kt)*:
   • Verify end-to-end execution of `python3 tools/verify_requirement_governance.py --verify-sys-trace` and assert 100% master index parity across all living documentation shards.
-
 
 
 

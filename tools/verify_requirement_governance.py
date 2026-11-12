@@ -1300,6 +1300,75 @@ def find_dangling_references(req_shards=None, tst_shards=None, repo_root=None):
     return DanglingReferencesList(dangling_tsts=dangling_tsts, dangling_reqs=dangling_reqs)
 
 
+def verify_tests_field_format(repo_root=None):
+    """
+    Verifies that all 'Tests:' fields in docs/requirements/*.md contain strictly backticked
+    TST IDs (format `TST-[A-Z0-9_-]+`) or standardized placeholders (None, Planned, Review,
+    Manual inspection) per REQ-PRO-075 (ATT-6125).
+    Rejects truncated sentence fragments, dangling boolean checks, source code filenames (.kt, .java, .xml),
+    and trailing inline metadata.
+    Returns (is_ok: bool, diagnostics: list[str]).
+    """
+    if repo_root is None:
+        repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+
+    pattern = re.compile(
+        r"^(`TST-[A-Z0-9_-]+`|`?(?:None|Planned|Review|Manual inspection)`?)(\s*,\s*(`TST-[A-Z0-9_-]+`|`?(?:None|Planned|Review|Manual inspection)`?))*$",
+        re.IGNORECASE,
+    )
+
+    req_dir = os.path.join(repo_root, "docs", "requirements")
+    if not os.path.isdir(req_dir):
+        return True, ["PASS: No requirement shards found to validate."]
+
+    req_files = sorted(
+        [
+            os.path.join(req_dir, f)
+            for f in os.listdir(req_dir)
+            if f.startswith("req_") and f.endswith(".md")
+        ]
+    )
+    diagnostics = []
+    errors = []
+
+    for fpath in req_files:
+        rel_path = os.path.relpath(fpath, repo_root)
+        with open(fpath, "r", encoding="utf-8") as fp:
+            cur_req = None
+            for idx, line in enumerate(fp):
+                m_req = re.match(r"^(#{2,4})\s*(\[)?(REQ-[A-Z0-9_-]+)", line.strip())
+                if m_req:
+                    cur_req = m_req.group(3)
+                m_test = re.match(r"^\s*[-*]\s*\*{0,2}Tests?\*{0,2}\s*:\s*(.*)", line, re.IGNORECASE)
+                if m_test and cur_req:
+                    val = m_test.group(1).strip()
+                    # Check for unclosed backticks
+                    if val.count("`") % 2 != 0:
+                        errors.append(
+                            f"ERROR: {rel_path}:{idx+1} [{cur_req}] unclosed backtick in Tests field: '{val}'"
+                        )
+                        continue
+                    # Check for source code files
+                    if re.search(r"\.(?:kt|java|xml)\b", val):
+                        errors.append(
+                            f"ERROR: {rel_path}:{idx+1} [{cur_req}] source code file in Tests field: '{val}'"
+                        )
+                        continue
+                    # Check against conforming pattern
+                    if not pattern.match(val):
+                        errors.append(
+                            f"ERROR: {rel_path}:{idx+1} [{cur_req}] invalid Tests field format: '{val}'"
+                        )
+
+    if errors:
+        diagnostics.append(f"FAIL: {len(errors)} Tests field format violation(s) detected across requirement shards (REQ-PRO-075):")
+        diagnostics.extend(errors)
+        return False, diagnostics
+
+    diagnostics.append("PASS: All Tests fields in requirement shards conform to valid TST ID and placeholder syntax (REQ-PRO-075).")
+    return True, diagnostics
+
+
 def verify_dangling_references(
     repo_root=None,
     fail_on_dangling=False,
@@ -2658,6 +2727,12 @@ def verify_governance(
         return False, diagnostics
     diagnostics.extend(evidence_diag)
 
+    tests_ok, tests_diag = verify_tests_field_format()
+    if not tests_ok:
+        diagnostics.extend(tests_diag)
+        return False, diagnostics
+    diagnostics.extend(tests_diag)
+
     if (
         min_req_tst_coverage is not None
         or min_tst_code_coverage is not None
@@ -2906,6 +2981,11 @@ def main():
         action="store_true",
         help="Report detailed SYSREQ-to-SWE coverage matrix (REQ-PRO-076).",
     )
+    parser.add_argument(
+        "--check-tests-format",
+        action="store_true",
+        help="Verify that all Tests fields in requirement shards conform to valid TST ID and placeholder syntax (REQ-PRO-075).",
+    )
 
     args = parser.parse_args()
 
@@ -2925,6 +3005,12 @@ def main():
             print(f"Covered SYSREQs: {report['covered_count']} ({report['coverage_pct']}%)")
             for sys_id, reqs in sorted(report["sys_to_swe_map"].items()):
                 print(f"  {sys_id} ({len(reqs)} REQs): {', '.join(sorted(reqs))}")
+        sys.exit(0 if ok else 1)
+
+    if args.check_tests_format:
+        ok, diag = verify_tests_field_format()
+        for msg in diag:
+            print(msg, file=sys.stderr if not ok else sys.stdout)
         sys.exit(0 if ok else 1)
 
     if (
@@ -3021,6 +3107,11 @@ def main():
         evidence_ok, evidence_diag = verify_requirement_evidence_status(fail_on_unverified=args.enforce_evidence)
         if not evidence_ok:
             for d in evidence_diag:
+                print(d, file=sys.stderr)
+            sys.exit(1)
+        tests_ok, tests_diag = verify_tests_field_format()
+        if not tests_ok:
+            for d in tests_diag:
                 print(d, file=sys.stderr)
             sys.exit(1)
         print("PASS: Master index tables successfully synchronized with 100% parity.")
