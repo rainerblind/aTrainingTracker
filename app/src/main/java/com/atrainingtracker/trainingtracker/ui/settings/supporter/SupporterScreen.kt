@@ -18,6 +18,9 @@
 
 package com.atrainingtracker.trainingtracker.ui.settings.supporter
 
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -32,7 +35,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -60,6 +66,8 @@ import com.atrainingtracker.trainingtracker.monetization.ProFeatureManager
 import com.atrainingtracker.trainingtracker.monetization.SupporterBasePlan
 import com.atrainingtracker.trainingtracker.monetization.SupporterTier
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStore
+import com.atrainingtracker.trainingtracker.ui.sportingjourney.SportingJourneySheet
+import com.atrainingtracker.trainingtracker.ui.theme.TTColor
 
 /**
  * "Pay what you want" Supporter screen offering 5 subscription base plans
@@ -125,6 +133,58 @@ fun SupporterScreen(
             } else if (effectiveTier.isPro) {
                 ActiveTierBanner(tier = effectiveTier)
                 Spacer(modifier = Modifier.height(16.dp))
+            }
+
+            var showSportingJourneySheet by remember { mutableStateOf(false) }
+
+            // Sporting Journey Entry Card (REQ-SPT-001)
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { showSportingJourneySheet = true },
+                shape = RoundedCornerShape(12.dp),
+                colors = CardDefaults.cardColors(containerColor = TTColor.VaultCardBackground),
+                border = BorderStroke(1.dp, TTColor.VaultCardBorder)
+            ) {
+                Row(
+                    modifier = Modifier.padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(
+                        modifier = Modifier.weight(1f),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "🏆",
+                            style = MaterialTheme.typography.titleLarge,
+                            modifier = Modifier.padding(end = 12.dp)
+                        )
+                        Column {
+                            Text(
+                                text = stringResource(R.string.sporting_journey_entry_supporter_screen),
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = stringResource(R.string.sporting_journey_entry_supporter_desc),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                    Icon(
+                        imageVector = Icons.Default.ChevronRight,
+                        contentDescription = null,
+                        tint = TTColor.VaultAmber
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.height(16.dp))
+
+            if (showSportingJourneySheet) {
+                SportingJourneySheet(onDismissRequest = { showSportingJourneySheet = false })
             }
 
             // Subscription plans section header
