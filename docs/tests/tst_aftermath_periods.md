@@ -1,9 +1,9 @@
 # Living Test Specification: Post-Workout Analytics & Periods
 
 **Domain**: `aftermath_periods`  
-**Prefixes**: `PER`, `PERF`  
+**Prefixes**: `PER`, `PERF`, `RAD`, `SPT`  
 **Scope**: Post-workout analytics, period statistics, zone distributions, graphs and visual scrubbers.  
-**Total Tests**: 44
+**Total Tests**: 50
 
 ---
 
@@ -179,7 +179,7 @@
   • Execute `./gradlew testDebugUnitTest` verifying 100% test pass rate with zero regressions.
 
 ### TST-PER-021: **Calendar-Aware Period Aggregation Boundaries, Sentinel Epoch Symmetry & Local-Day PMC Bucketing Verification Suite** [Verified]
-- **Requirement(s)**: `REQ-PER-015`, `REQ-PER-014`, `REQ-UI-401`
+- **Requirement(s)**: `REQ-PER-015`
 - **Component**: **Calendar-Aware Period Aggregation Boundaries, Sentinel Epoch Symmetry & Local-Day PMC Bucketing Verification Suite**
 - **Jira**: ``ATT-4016``
 - **Test Description**:
@@ -198,7 +198,7 @@
   • Execute targeted unit tests and `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions.
 
 ### TST-PER-022: **Period Rebuild Flow Projection, Single-Owner Tracking Finalization Orchestration & Shared Mapper Instance Verification Suite** [Verified]
-- **Requirement(s)**: `REQ-PER-016`, `REQ-PER-014`, `REQ-STB-018`
+- **Requirement(s)**: `REQ-PER-016`
 - **Component**: **Period Rebuild Flow Projection, Single-Owner Tracking Finalization Orchestration & Shared Mapper Instance Verification Suite**
 - **Jira**: ``ATT-4019``
 - **Test Description**:
@@ -249,7 +249,7 @@
   • Run targeted unit tests `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.*"` verifying 100% pass rate.
 
 ### TST-PER-025: **PeriodCardMapState Background Pipeline, Douglas-Peucker Decimation & Full-Period Route Coverage Verification Suite** [Verified]
-- **Requirement(s)**: `REQ-PER-019`, `REQ-PER-017`, `REQ-PER-013`, `REQ-PER-012`
+- **Requirement(s)**: `REQ-PER-017`, `REQ-PER-019`
 - **Component**: **PeriodCardMapState Pipeline**
 - **Jira**: `ATT-4477`
 - **Test Description**:
@@ -277,7 +277,7 @@
   • Given a summary with both `summary.polylines` and `summary.workoutIdToPolylineMap` populated, verify that `prepareCardMapPreviewSync` prioritizes `summary.polylines`.
 
 ### TST-PER-026: **Self-Contained Period Persistence, Zero-N+1 Batch Loading & Bidirectional Sync Healing Verification Suite** [Verified]
-- **Requirement(s)**: `REQ-PER-020`, `REQ-MIG-026`, `REQ-PER-011`
+- **Requirement(s)**: `REQ-PER-020`
 - **Component**: **Period Summaries Database & Repository Sync**
 - **Jira**: `ATT-4476`
 - **Test Description**:
@@ -300,7 +300,7 @@
   • Execute targeted unit tests and `./gradlew testDebugUnitTest` verifying 100% test pass rate with zero regressions.
 
 ### TST-PER-027: **InteractivePeriodMap UI-Thread Decoupling, Deduplication & Large-Period Spatial Hit-Testing Verification Suite** [Verified]
-- **Requirement(s)**: `REQ-PER-021`, `REQ-PER-012`, `REQ-PER-013`
+- **Requirement(s)**: `REQ-PER-021`
 - **Component**: **Interactive Period Map & Spatial Hit-Testing**
 - **Jira**: `ATT-4475`
 - **Test Description**:
@@ -317,7 +317,7 @@
   • Execute targeted unit tests `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.*"` verifying 100% pass rate.
 
 ### TST-PER-028: **Periods Sport Type Header Filtering & Multi-Sport Projections Verification Suite** [Verified]
-- **Requirement(s)**: `REQ-PER-022`, `REQ-PER-018`, `REQ-PER-019`
+- **Requirement(s)**: `REQ-PER-018`, `REQ-PER-022`
 - **Component**: **Periods Header Sport Filter & ViewModel Projection**
 - **Jira**: `ATT-4770, ATT-5828`
 - **Test Description**:
@@ -777,7 +777,22 @@
   • Verify confirming updates `SettingsDataStore.setFtp` and triggers Coggan power zone recalculation while leaving HR zones untouched.
   7. *9-Language Localization Parity Test (`TST-PER-045.7`, `TranslationParityTest`)*:
   • Verify all 18 zone comparison and consensus gating string keys exist with 100% parity across all 9 `strings_hrv.xml` files.
+  8. *Threshold-Anchored HR Zone Boundary Calculation Test (`TST-PER-045.8`, `ZoneCalculationMathTest.kt`)*:
+  • Verify `calculateThresholdAnchoredHeartRateZones` anchors $Z_2 = HRVT_1$ and $Z_4 = HRVT_2$.
+  • Verify $Z_3 = \text{round}((HRVT_1 + HRVT_2)/2.0)$ and $Z_1$ calculation with and without $HR_{\text{rest}}$.
+  • Verify integer monotonicity $Z_1 < Z_2 < Z_3 < Z_4 < HR_{\max}$.
+  9. *Heart Rate Consensus Gating & Median Aggregation Test (`TST-PER-045.9`, `HrvZoneComparisonMathTest.kt`)*:
+  • Verify consensus unlocks on `Confidence.HIGH` Guided Ramp/Step Test or $M \ge 3$ sessions within 30 days agreeing within $\le 6\text{ bpm}$.
+  • Verify consensus locks on spread $> 6\text{ bpm}$ or $< 3$ sessions.
+  • Verify median calculation for $HRVT_1$ and $HRVT_2$.
+  10. *Summary Card HR Zone Update UI & Modal Confirmation Flow Contract Test (`TST-PER-045.10`, `HrvThresholdSummaryCardTest.kt`, `TrackOnMapAftermathViewModelTest.kt`)*:
+  • Verify `HrvThresholdSummaryCard` renders "Update HR Zones" button with correct enabled/disabled status.
+  • Verify modal confirmation dialog renders current vs new boundaries and triggers `updateHrZones` on confirm.
+  • Verify `TrackOnMapAftermathViewModel.updateHrZones` saves zones via `SettingsDataStore.saveCalculatedHeartRateZones(method = "HRVT_ANCHORS")`.
+  11. *9-Language Localization Parity for HR Consensus & Confirmation Dialog Test (`TST-PER-045.11`, `TranslationParityTest`)*:
+  • Verify all newly added HR zone comparison, consensus gating, and confirmation dialog string keys exist with 100% parity across all 9 `strings_hrv.xml` files.
  (ATT-3555: [Verbesserung] Compare estimated HRVT1/HRVT2 against configured training zones with multi-session consensus and anchor-based updates (ZoneCalculationMath))
+ (ATT-7310: [Feature] Enable anchor-based Heart Rate training zone updates from HRVT1/HRVT2 consensus)
 
 ### TST-PER-046: **DFA a1 Autonomic Durability, Drift & Iso-Intensity Bins Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-PER-038` (`REQ-PER-038.1`..`REQ-PER-038.6`)
@@ -808,3 +823,47 @@
   7. *9-Language Localization Parity Test (`TST-PER-046.7`, `TranslationParityTest`)*:
   • Verify all 11 durability string keys exist with 100% parity across all 9 `strings_hrv.xml` files with matching formatting tokens.
   (ATT-4970: [Feature] Model DFA a1 autonomic durability and drift across multi-hour workouts (paired with ATT-4842 Heart Efficiency))
+
+
+---
+
+### TST-SPT-005: Retrospective Filtering, Cluster Math, Lifetime Evaluation & ViewModel Tests [Verified]
+- **Target Requirement**: `REQ-SPT-002` (Retrospective Filtering, Cluster Aggregation & Lifetime Engine)
+- **Target Verification Component**: `SportingJourneyRepositoryTest.kt`, `SportingJourneyViewModelTest.kt`
+- **Verification Type**: Automated Unit & State Machine Verification
+- **Test Description**:
+  1. *Recurring Route Cluster Math Test (`TST-SPT-005.1`, `SportingJourneyRepositoryTest.kt`)*:
+  • Verify that clusters with repeat visits $\ge 3$ are counted as recurring routes (`favoriteRoutesCount = 1`, `recurringRoutesCount = 1`).
+  • Verify that singleton clusters and clusters with $< 3$ visits are excluded from favorite routes.
+  • Verify that ritual workouts count only workouts in recurring clusters, while all remaining workouts evaluate as explorer workouts.
+  2. *Sport Inclusivity & Running Cadence Suppression Test (`TST-SPT-005.2`, `SportingJourneyRepositoryTest.kt`)*:
+  • Verify that under `SportingSportFilter.ALL`, all finished workouts across all recorded sports (`BIKE`, `RUN`, `SWIM`, `UNKNOWN`) are aggregated into total workouts and distance.
+  • Verify that when `sportFilter == SportingSportFilter.RUNNING`, bicycle pedal revolutions and cadence ride counts are strictly suppressed to 0.
+  • Verify that under `ALL`, pedal revolutions are aggregated exclusively from cycling sessions.
+  3. *Global Lifetime History & Full Year Range Test (`TST-SPT-005.3`, `SportingJourneyRepositoryTest.kt`)*:
+  • Verify that under `SportingHorizon.Year(2026)`, `daysSinceFirstWorkout` evaluates globally from the earliest database record (e.g. 2012) and unlocks the `Pioneer Athlete` badge ($> 365$ days).
+  • Verify that `availableYears` returns all distinct years without artificial `.take(5)` truncation.
+  4. *ViewModel State Keying & Cancellation Test (`TST-SPT-005.4`, `SportingJourneyViewModelTest.kt`)*:
+  • Verify that `setHorizon` and `setSportFilter` immediately key `uiState.horizon` and `uiState.sportFilter` with `isLoading = true`.
+  • Verify that rapid filter changes cancel obsolete in-flight repository coroutine jobs.
+  (ATT-7321: [Verbesserung] SportingJourneyRepository & Aggregation: Fix recurring route cluster math, sport filtering, historical year range, and lifetime evaluation)
+
+
+---
+
+### TST-SPT-006: SportingJourney UI & UX Redesign, M3 Hierarchy, Grid Layout & Locale Formatting Tests [Verified]
+- **Target Requirement**: `REQ-SPT-005` (SportingJourney UI & UX Redesign, M3 Hierarchy, Grid Layout & Locale Formatting)
+- **Target Verification Component**: `SportingJourneyLocalizationContractTest.kt`, `SportingJourneyComponentsTest.kt`, `SportingJourneyShareHelperTest.kt`
+- **Verification Type**: Automated Unit & Contract Verification
+- **Test Description**:
+  1. *Terminology & Zero-Emoji XML Parity Contract Test (`TST-SPT-006.1`, `SportingJourneyLocalizationContractTest.kt`)*:
+  • Verify that `strings_sporting_journey.xml` across all 9 supported locales contains zero decorative inline Unicode emojis matching the ATT-5400 regex pattern `[\x{1F300}-\x{1F64F}\x{1F680}-\x{1F6FF}\x{2600}-\x{26FF}\x{2700}-\x{27BF}]`.
+  • Verify zero occurrences of Strava trademark "Local Legend", zero developer jargon "SQLite", and zero prototype phrases "Season Wrapped".
+  2. *Achievement Grid Layout & Header Weighting Test (`TST-SPT-006.2`, `SportingJourneyComponentsTest.kt`)*:
+  • Verify that chunked grid layout with 4 items per row pads incomplete rows with equal-weight spacers, preventing stretched cards.
+  • Verify that header rows in `HeroTotalsCard`, `HiddenGemsSection`, `GemCard`, `MilestonesSection`, and `AchievementRoomSection` apply `Modifier.weight(1f)` to title columns, preventing mid-word text wrapping and protecting trailing badges from compression.
+  3. *Locale.getDefault() & Imperial Unit Formatting Test (`TST-SPT-006.3`, `SportingJourneyShareHelperTest.kt`)*:
+  • Verify that number and date formatting across UI cards and share passport respects `Locale.getDefault()`.
+  • Verify that when `TrainingApplication.getUnit() == MyUnits.IMPERIAL`, total distance is formatted in miles (`mi`) and total elevation in feet (`ft`) using `BANALService` conversion factors.
+  • Verify that `SportingJourneyShareHelper.buildShareText` formats localized string templates.
+  (ATT-7323: [Verbesserung] SportingJourneySheet & SportingJourneyComponents: Material 3 redesign, row weight wrapping fixes, grid layout, and locale/unit formatting)

@@ -3,7 +3,7 @@
 **Domain**: `data_migration_export`  
 **Prefixes**: `DAT`, `EXP`, `EXT`, `MIG`  
 **Scope**: Database schema, backup/restore, migration pipelines, Strava/cloud upload, FIT/GPX export.  
-**Total Tests**: 106
+**Total Tests**: 117
 
 ---
 
@@ -1302,8 +1302,8 @@
   4. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions.
 
-### TST-DAT-001: **Deterministic Resource Management via Try-With-Resources and Bounds Checking on SQLite Cursors Verification Suite** [Verified]
-- **Requirement(s)**: `REQ-DAT-001`
+### TST-DAT-039: **Deterministic Resource Management via Try-With-Resources and Bounds Checking on SQLite Cursors Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-DAT-043`
 - **Component**: **Deterministic Resource Management via Try-With-Resources and Bounds Checking on SQLite Cursors Verification Suite**
 - **Jira**: ``ATT-3550``
 - **Test Description**:
@@ -1335,8 +1335,8 @@
   4. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions.
 
-### TST-DAT-021: **Workout Cluster Engine, Repository, and Equipment Data Provider Cursor Mapper Verification Suite** [Verified]
-- **Requirement(s)**: `REQ-DAT-026`
+### TST-DAT-040: **Workout Cluster Engine, Repository, and Equipment Data Provider Cursor Mapper Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-DAT-044`
 - **Component**: **Workout Cluster Engine, Repository, and Equipment Data Provider Cursor Mapper Verification Suite**
 - **Jira**: ``ATT-3577``
 - **Test Description**:
@@ -1356,7 +1356,7 @@
   5. *Clean-Room Full Suite Regression Execution*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions across all unit tests.
 
-### TST-MIG-036: **Offline Power Training Metrics Math, Historical Threshold Resolution & FIT/TCX/GPX Import Persistence Verification Suite** [Verified]
+### TST-MIG-049: **Offline Power Training Metrics Math, Historical Threshold Resolution & FIT/TCX/GPX Import Persistence Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-MIG-039`
 - **Component**: **Offline Power Training Metrics Math, Historical Threshold Resolution & FIT/TCX/GPX Import Persistence Verification Suite**
 - **Jira**: ``ATT-3860``
@@ -1793,7 +1793,7 @@
   • Verify `uploadToDropbox` is automatically reset to `false`.
 
 ### TST-DAT-028: **High-Performance Batch Workout Mapping, Non-Blocking Cluster Equipment Resolution & Consolidated Samples DB Telemetry Loading Verification Suite** [Verified]
-- **Requirement(s)**: `REQ-DAT-033`, `REQ-DAT-009`, `REQ-MAP-020`
+- **Requirement(s)**: `REQ-DAT-033`, `REQ-DAT-009`
 - **Component**: **High-Performance Batch Workout Mapping, Non-Blocking Cluster Equipment Resolution & Consolidated Samples DB Telemetry Loading Verification Suite**
 - **Jira**: ``ATT-4003, ATT-4707``
 - **Test Description**:

@@ -101,4 +101,76 @@ class LiveSparklineBufferSpanTest {
         assertTrue("Buffer size must remain <= 300", buffer.size <= LiveSparklineBuffer.MAX_FULL_WORKOUT_SAMPLES)
         assertEquals(7199, buffer.currentSpanSeconds)
     }
+
+    @Test
+    fun testTransferFrom_expandingHorizonPreservesAllSamplesAndSpan() {
+        val source = LiveSparklineBuffer(horizonSeconds = 60)
+        for (i in 1..60) {
+            source.addSample(100f + i)
+        }
+        assertEquals(60, source.size)
+        assertEquals(59, source.currentSpanSeconds)
+
+        val target = LiveSparklineBuffer(horizonSeconds = 300)
+        target.transferFrom(source)
+
+        assertEquals(60, target.size)
+        assertEquals(59, target.currentSpanSeconds)
+        assertEquals(101f, target.getSamples().first(), 0.001f)
+        assertEquals(160f, target.getSamples().last(), 0.001f)
+
+        // Adding next sample increments smoothly
+        target.addSample(161f)
+        assertEquals(61, target.size)
+        assertEquals(60, target.currentSpanSeconds)
+    }
+
+    @Test
+    fun testTransferFrom_contractingHorizonKeepsTrailingSamplesAndClampsSpan() {
+        val source = LiveSparklineBuffer(horizonSeconds = 300)
+        for (i in 1..301) {
+            source.addSample(i.toFloat())
+        }
+        assertEquals(300, source.size)
+        assertEquals(300, source.currentSpanSeconds)
+
+        val target = LiveSparklineBuffer(horizonSeconds = 60)
+        target.transferFrom(source)
+
+        assertEquals(60, target.size)
+        assertEquals(60, target.currentSpanSeconds)
+        // Trailing 60 samples: 242..301
+        assertEquals(242f, target.getSamples().first(), 0.001f)
+        assertEquals(301f, target.getSamples().last(), 0.001f)
+    }
+
+    @Test
+    fun testTransferFrom_fixedToFullWorkout() {
+        val source = LiveSparklineBuffer(horizonSeconds = 300)
+        for (i in 1..200) {
+            source.addSample(i.toFloat())
+        }
+
+        val target = LiveSparklineBuffer(horizonSeconds = 0)
+        target.transferFrom(source)
+
+        assertEquals(200, target.size)
+        assertEquals(199, target.currentSpanSeconds)
+        assertEquals(1f, target.getSamples().first(), 0.001f)
+        assertEquals(200f, target.getSamples().last(), 0.001f)
+    }
+
+    @Test
+    fun testTransferFrom_fullWorkoutToFixed() {
+        val source = LiveSparklineBuffer(horizonSeconds = 0)
+        for (i in 1..500) {
+            source.addSample(i.toFloat())
+        }
+
+        val target = LiveSparklineBuffer(horizonSeconds = 120)
+        target.transferFrom(source)
+
+        assertEquals(120, target.size)
+        assertEquals(120, target.currentSpanSeconds)
+    }
 }

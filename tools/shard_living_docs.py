@@ -108,10 +108,65 @@ def clean_multiline_text(text):
     return "\n".join(lines).strip()
 
 
+def split_markdown_table_row(row):
+    """
+    Splits a markdown table row by '|' cell delimiters while ignoring:
+    - Escaped pipes (\\|)
+    - Pipes inside backticks / inline code spans (`...` or ``...``)
+    Returns list of stripped cell contents without leading/trailing empty boundary cells.
+    """
+    cells = []
+    current = []
+    in_code_ticks = 0
+    i = 0
+    n = len(row)
+    while i < n:
+        char = row[i]
+
+        # Check for escaped characters
+        if char == "\\" and i + 1 < n:
+            current.append(char)
+            current.append(row[i + 1])
+            i += 2
+            continue
+
+        # Check for backtick run
+        if char == "`":
+            run_len = 1
+            while i + run_len < n and row[i + run_len] == "`":
+                run_len += 1
+            if in_code_ticks == 0:
+                in_code_ticks = run_len
+            elif in_code_ticks == run_len:
+                in_code_ticks = 0
+            current.append(row[i:i + run_len])
+            i += run_len
+            continue
+
+        # Check for pipe delimiter outside code spans
+        if char == "|" and in_code_ticks == 0:
+            cells.append("".join(current))
+            current = []
+            i += 1
+            continue
+
+        current.append(char)
+        i += 1
+
+    cells.append("".join(current))
+
+    # Strip leading and trailing empty cell from table row boundary pipes (| cell1 | cell2 |)
+    if cells and not cells[0].strip():
+        cells = cells[1:]
+    if cells and not cells[-1].strip():
+        cells = cells[:-1]
+    return [c.strip() for c in cells]
+
+
 def parse_requirements_file(filepath):
     """
     Parses docs/requirements.md into structured requirement objects.
-    Handles multi-line table rows gracefully.
+    Handles multi-line table rows gracefully and supports both 6-column and 7-column formats.
     """
     with open(filepath, "r", encoding="utf-8") as f:
         lines = f.readlines()
@@ -134,7 +189,7 @@ def parse_requirements_file(filepath):
 
     reqs = []
     for row in logical_rows:
-        parts = [p.strip() for p in row.split("|")[1:-1]]
+        parts = split_markdown_table_row(row)
         if len(parts) < 6:
             continue
         req_id_m = re.search(r"REQ-([A-Z0-9_-]+)", parts[0])
@@ -142,21 +197,34 @@ def parse_requirements_file(filepath):
             continue
         req_id = f"REQ-{req_id_m.group(1)}"
         prefix = req_id_m.group(1).split("-")[0]
-        desc_raw = parts[1]
-        rationale_raw = parts[2]
-        impl_raw = parts[3]
-        tests_raw = parts[4]
-        status_raw = parts[5]
 
-        # Extract title from description if bold
-        title_m = re.match(r"^\*\*([^*]+)\*\*\.?\s*(.*)", desc_raw, re.DOTALL)
-        if title_m:
-            title = title_m.group(1).strip().rstrip(".")
-            body = title_m.group(2).strip()
+        if len(parts) >= 7:
+            # 7-column table: [0] ID, [1] Title, [2] Description, [3] Rationale, [4] Implementation, [5] Tests, [6] Status
+            title = clean_multiline_text(parts[1]).strip().rstrip(".")
+            if title.startswith("**") and title.endswith("**"):
+                title = title[2:-2].strip().rstrip(".")
+            body = parts[2]
+            rationale_raw = parts[3]
+            impl_raw = parts[4]
+            tests_raw = parts[5]
+            status_raw = parts[6]
         else:
-            first_sent = desc_raw.split(". ")[0].strip().rstrip(".")
-            title = first_sent[:80] if len(first_sent) > 80 else first_sent
-            body = desc_raw
+            # 6-column table: [0] ID, [1] Description (with bold title), [2] Rationale, [3] Implementation, [4] Tests, [5] Status
+            desc_raw = parts[1]
+            rationale_raw = parts[2]
+            impl_raw = parts[3]
+            tests_raw = parts[4]
+            status_raw = parts[5]
+
+            # Extract title from description if bold
+            title_m = re.match(r"^\*\*([^*]+)\*\*\.?\s*(.*)", desc_raw, re.DOTALL)
+            if title_m:
+                title = title_m.group(1).strip().rstrip(".")
+                body = title_m.group(2).strip()
+            else:
+                first_sent = desc_raw.split(". ")[0].strip().rstrip(".")
+                title = first_sent[:80] if len(first_sent) > 80 else first_sent
+                body = desc_raw
 
         domain_key = PREFIX_TO_DOMAIN.get(prefix, "process_stability")
 
@@ -201,7 +269,7 @@ def parse_tests_file(filepath):
 
     tests = []
     for row in logical_rows:
-        parts = [p.strip() for p in row.split("|")[1:-1]]
+        parts = split_markdown_table_row(row)
         if len(parts) < 6:
             continue
         tst_id_m = re.search(r"TST-([A-Z0-9_-]+)", parts[0])
@@ -480,6 +548,7 @@ def main():
     parser = argparse.ArgumentParser(description="Shard living documentation into domain files (ATT-4594).")
     parser.add_argument("--repo-root", default=".", help="Root of git repository.")
     parser.add_argument("--verify-only", action="store_true", help="Only verify existing shards without re-generating.")
+    parser.add_argument("--force", action="store_true", help="Force overwrite even if master index or zero rows detected.")
     args = parser.parse_args()
 
     repo_root = os.path.abspath(args.repo_root)
@@ -496,10 +565,39 @@ def main():
         print(f"PASS: All {len(all_shards)} domain shards exist.")
         sys.exit(0)
 
+    # Safety Guard: Check if requirements.md or tests.md is already a Master Index
+    is_master_index = False
+    if os.path.exists(req_src):
+        with open(req_src, "r", encoding="utf-8") as f:
+            first_lines = "".join(f.readline() for _ in range(10))
+            if "Master Index" in first_lines:
+                is_master_index = True
+    if os.path.exists(tst_src):
+        with open(tst_src, "r", encoding="utf-8") as f:
+            first_lines = "".join(f.readline() for _ in range(10))
+            if "Master Index" in first_lines:
+                is_master_index = True
+
+    if is_master_index and not args.force:
+        print(
+            "ERROR: docs/requirements.md or docs/tests.md is already a Master Index! "
+            "Refusing to overwrite domain shards. Use --force to override.",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
     print("Parsing monolithic living documents...")
     reqs = parse_requirements_file(req_src)
     tests = parse_tests_file(tst_src)
     print(f"Parsed {len(reqs)} requirements and {len(tests)} test cases.")
+
+    if (len(reqs) == 0 or len(tests) == 0) and not args.force:
+        print(
+            f"ERROR: Parsed {len(reqs)} requirements and {len(tests)} tests. "
+            "Refusing to overwrite domain shards with empty data. Use --force to override.",
+            file=sys.stderr,
+        )
+        sys.exit(1)
 
     print(f"Writing {len(DOMAINS)} domain requirement shards and {len(DOMAINS)} domain test shards...")
     write_domain_shards(reqs, tests, repo_root)

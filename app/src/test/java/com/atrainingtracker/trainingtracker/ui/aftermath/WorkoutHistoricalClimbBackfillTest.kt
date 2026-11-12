@@ -107,6 +107,7 @@ class WorkoutHistoricalClimbBackfillTest {
         // Default to true during setUp so init's background launch doesn't race
         every { mockPrefs.getBoolean(WorkoutRepository.PREF_CLIMBS_WORKOUT_BACKFILL_V1, false) } returns true
         every { mockPrefs.getBoolean(WorkoutRepository.PREF_CLIMBS_WORKOUT_CLEANUP_V2, false) } returns true
+        every { mockPrefs.getBoolean(WorkoutRepository.PREF_CLIMBS_WORKOUT_DEDUPLICATION_V3, false) } returns true
 
         mockkStatic(WorkoutSummariesDatabaseManager::class)
         every { WorkoutSummariesDatabaseManager.getInstance(any()) } returns mockSummariesDb
@@ -304,5 +305,33 @@ class WorkoutHistoricalClimbBackfillTest {
             mockEditor.apply()
         }
         coVerify(atLeast = 1) { mockLiveClimbsRepo.refreshClimbs() }
+    }
+
+    @Test
+    fun testDeduplicateHistoricalClimbs_purgesDuplicatesAndSetsFlag() = runBlocking {
+        // REQ-CLM-011.2 / TST-CLM-011.2
+        every { mockPrefs.getBoolean(WorkoutRepository.PREF_CLIMBS_WORKOUT_DEDUPLICATION_V3, false) } returns false
+        coEvery { mockClimbsDb.deduplicateExistingClimbs(any()) } returns 3
+        coEvery { mockLiveClimbsRepo.refreshClimbs() } returns Unit
+
+        val purgedCount = repository.deduplicateHistoricalClimbs()
+
+        assertEquals("Should return purged duplicate count", 3, purgedCount)
+        coVerify(exactly = 1) { mockClimbsDb.deduplicateExistingClimbs(thresholdMeters = 100.0f) }
+        verify(exactly = 1) {
+            mockEditor.putBoolean(WorkoutRepository.PREF_CLIMBS_WORKOUT_DEDUPLICATION_V3, true)
+            mockEditor.apply()
+        }
+        coVerify(atLeast = 1) { mockLiveClimbsRepo.refreshClimbs() }
+    }
+
+    @Test
+    fun testDeduplicateHistoricalClimbs_whenAlreadyRun_isIdempotentNoOp() = runBlocking {
+        every { mockPrefs.getBoolean(WorkoutRepository.PREF_CLIMBS_WORKOUT_DEDUPLICATION_V3, false) } returns true
+
+        val purgedCount = repository.deduplicateHistoricalClimbs()
+
+        assertEquals("Should return 0 immediately", 0, purgedCount)
+        coVerify(exactly = 0) { mockClimbsDb.deduplicateExistingClimbs(any()) }
     }
 }

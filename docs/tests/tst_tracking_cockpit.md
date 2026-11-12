@@ -8,7 +8,7 @@
 ---
 
 ### TST-FIL-002: WorkoutSamplesDb [Verified]
-- **Requirement(s)**: `REQ-DAT-003`
+- **Requirement(s)**: `REQ-FIL-006`, `REQ-FIL-011`
 - **Component**: `WorkoutSamplesDb`
 - **Test Description**: Verify that `calcExtremaValue` returns `null` (not 0.0) when querying a sensor that has only NULL values or does not exist in the table.
 
@@ -17,6 +17,25 @@
 - **Component**: **Null-Safe Filter Verification**
 - **Jira**: ``ATT-275``
 - **Test Description**: 1. Execute `AverageFilterTest` (or similar unit test). 2. Pass `null` as a new value to the filter. 3. Call `getFilteredValue`.
+
+### TST-FUSION-001: Extended Kalman Filter State Estimation and Body-to-World Frame Rotation [Planned]
+- **Requirement(s)**: `REQ-FIL-007`, `REQ-FIL-008`
+- **Component**: Sensor Fusion Engine
+- **Test Description**:
+  1. *EKF Multi-Sensor Fusion Test*: Verify EKF correctly fuses simulated GPS coordinates, accelerometer/magnetometer IMU signals, and wheel speed telemetry into unified position and velocity state vectors.
+  2. *Body-to-World ENU Transformation Test*: Verify 3x3 direction cosine rotation matrix rotates arbitrary phone orientations into geographic East-North-Up coordinate frames.
+
+### TST-FUSION-002: Dead Reckoning Navigation in GPS-Denied Environments [Planned]
+- **Requirement(s)**: `REQ-FIL-009`
+- **Component**: Sensor Fusion Engine
+- **Test Description**:
+  1. *GPS Loss Dead Reckoning Test*: Simulate GPS drop in a tunnel or urban canyon; verify integrated IMU and wheel speed data maintain continuous trajectory and speed predictions without freeze or spike.
+
+### TST-FUSION-003: Dynamic Speed Sensor Wheel Scale Factor Auto-Calibration [Planned]
+- **Requirement(s)**: `REQ-FIL-010`
+- **Component**: Sensor Fusion Engine
+- **Test Description**:
+  1. *Auto-Calibration Convergence Test*: Feed raw wheel revolutions alongside ground-truth high-accuracy GPS fixes; verify the filter dynamically solves and converges the wheel scale factor within 1% error.
 
 ### TST-FIL-003: **Atomic Altitude Correction** [Verified]
 - **Requirement(s)**: `REQ-FIL-004`
@@ -972,7 +991,7 @@
   • Run `./gradlew testDebugUnitTest` verifying 100% pass rate.
 
 ### TST-TRK-031: **CyclingPowerMetricsDevice Constructor Seeding, Sensor-Presence Gating (Rule 52), Stationary/Paused W/kg Alignment, and Workout Summary Presentation Defense Verification Suite** [Verified]
-- **Requirement(s)**: `REQ-TRK-038`, `REQ-UI-106`
+- **Requirement(s)**: `REQ-TRK-038`
 - **Component**: **CyclingPowerMetricsDevice Constructor Seeding, Sensor-Presence Gating (Rule 52), Stationary/Paused W/kg Alignment, and Workout Summary Presentation Defense Verification Suite**
 - **Jira**: ``ATT-4368``
 - **Test Description**:
@@ -1019,7 +1038,7 @@
   • Evaluate with points having valid `power > 0` and `wPrimeBalKj >= 0.0`: assert returns `true`.
 
 ### TST-FIL-014: **Backend Filter Key Normalization, Runtime 'Best Sensor' Field Registration & Post-Trim Rolling Filter NaN Guard Verification Suite** [Verified]
-- **Requirement(s)**: `REQ-FIL-014`, `REQ-FIL-011`, `REQ-UI-167`
+- **Requirement(s)**: `REQ-FIL-014`, `REQ-FIL-011`
 - **Component**: **Backend Filter Key Normalization, Runtime 'Best Sensor' Field Registration & Post-Trim Rolling Filter NaN Guard Verification Suite**
 - **Jira**: ``ATT-4282``
 - **Test Description**:
@@ -1056,7 +1075,7 @@
   • Execute `./gradlew testDebugUnitTest` verifying 100% pass rate with zero regressions across the full test suite.
 
 ### TST-CON-021: **BLE Sensor Search Android 8–11 Compatibility and Defensive Exception Handling Verification Suite** [Verified]
-- **Requirement(s)**: `REQ-CON-021`, `REQ-CON-019`, `REQ-UI-106`
+- **Requirement(s)**: `REQ-CON-021`, `REQ-CON-019`
 - **Component**: **BLE Sensor Search Android 8–11 Compatibility and Defensive Exception Handling Verification Suite**
 - **Jira**: ``ATT-3997``
 - **Test Description**:
@@ -1104,7 +1123,7 @@
   • Execute `./gradlew testDebugUnitTest` verifying 100% pass rate with zero regressions across the full test suite.
 
 ### TST-CON-022: **Automated BLE/ANT+ Pedal Power Balance Reference Normalization & Obsolete UI Checkbox Deprecation Verification Suite** [Verified]
-- **Requirement(s)**: `REQ-CON-022`, `REQ-UI-377`
+- **Requirement(s)**: `REQ-CON-022`
 - **Component**: **Automated BLE/ANT+ Pedal Power Balance Reference Normalization & Obsolete UI Checkbox Deprecation Verification Suite**
 - **Jira**: ``ATT-4554``
 - **Test Description**:
@@ -1750,9 +1769,16 @@
   • Verify SensorFieldView when showValue = false, showBar = false, showGraph = true inside Row(Modifier.height(IntrinsicSize.Min)) measures non-zero height matching resolveSparklineHeight(viewSize, isGraphOnly = true) across SMALL, NORMAL, LARGE, and XLARGE ViewSizes.
   • Verify BANALServiceRepository resets all registered sparkline buffers upon receiving BANALService.RESET_ACCUMULATORS_INTENT and upon transition from TrackingMode.READY to TrackingMode.TRACKING.
   • Verify TrackingViewModel clears active sparkline samples and span seconds upon workout reset.
+  11. *Configuration Mode Sparkline Preview & Inactive Sensor Fallback Test (`TST-TRK-059.11`, `SensorFieldViewLayoutTest.kt`, `EditSensorFieldDialogSparklineTest.kt`, `ATT-7314`)*:
+  • Verify SensorFieldView in ScreenMode.CONFIGURATION and ScreenMode.PREVIEW renders DEFAULT_PREVIEW_SPARKLINE_SAMPLES and positive horizon span when sparklineSamples is empty and showGraph = true.
+  • Verify SensorFieldView in ScreenMode.TRACKING leaves sparkline empty when sparklineSamples is empty, asserting zero fake data during live recording.
+  • Verify EditSensorFieldDialog renders a preview sparkline container displaying DEFAULT_PREVIEW_SPARKLINE_SAMPLES and active duration when showGraph is true.
+  12. *Sparkline Buffer History Preservation Across Horizon Transition Test (`TST-TRK-059.12`, `LiveSparklineBufferSpanTest.kt`, `BANALServiceRepositorySparklineTest.kt`, `ATT-7314`)*:
+  • Verify LiveSparklineBuffer.transferFrom preserves historical samples when expanding horizon (e.g. 60s to 300s), contracting horizon (e.g. 300s to 60s taking trailing samples), transitioning to Full Workout, and transitioning from Full Workout to fixed horizon.
+  • Verify BANALServiceRepository.registerSparklineBuffer preserves existing buffer samples and span when re-registering an identical sensor configuration with a modified time horizon.
 
 ### TST-FIL-015: **Filter Initialization State Tracking, Alpha Validation & Zero-Bias Verification Suite** [Verified]
-- **Requirement(s)**: `REQ-FIL-015`, `REQ-FIL-011`, `REQ-FIL-012.5`, `REQ-FIL-013`
+- **Requirement(s)**: `REQ-FIL-015`, `REQ-FIL-011`, `REQ-FIL-012`, `REQ-FIL-013`
 - **Component**: **Filter Initialization State Tracking, Alpha Validation & Zero-Bias Verification Suite**
 - **Jira**: `ATT-6382`
 - **Test Description**:
@@ -1856,9 +1882,12 @@
   • Verify $\alpha_{1,\text{T2}} \le \alpha_1 \le \alpha_{1,\text{T1}}$ resolves to `TTColor.Zone3` (Orange).
   • Verify $\alpha_1 < \alpha_{1,\text{T2}}$ resolves to `TTColor.Zone4` (Red).
   • Verify `HRV_DFA_A1` inherits HR `ZoneDisplayOptions` (background, left/right bar, gauge).
-  4. *TuningPreferencesDataStore Threshold Configuration & Invariant Tests (`TST-TRK-061.4`, `TuningPreferencesDataStoreTest.kt`)*:
+  4. *Training Zones 4th Tab & Invariant Tests (`TST-TRK-061.4`, `HrvDfaA1SettingsContractTest.kt`, `TuningPreferencesDataStoreDfaA1Test.kt`)*:
+  • Verify `ZoneSettingsScreen` renders 4th tab `R.string.tab_hrv_dfa_a1` with $0.01$ step precision controls, Reset to Defaults action ($0.75 / 0.50$), and interactive `SensorFieldView` preview pills.
   • Verify default values $\alpha_{1,\text{T1}} = 0.75f$ and $\alpha_{1,\text{T2}} = 0.50f$.
-  • Verify invariant enforcement: setting $T_1$ or $T_2$ enforces $T_1 \ge T_2 + 0.05f$.
+  • Verify invariant enforcement: setting $T_1$ or $T_2$ enforces $T_1 \ge T_2 + 0.05f$ and bounds $[0.20, 1.50]$.
+  • Verify top bar calculator/history buttons are hidden when the 4th tab is active.
+  • Verify removal of redundant $T_1$ and $T_2$ sliders from `PhysiologyModelsSection.kt`.
   5. *HrvInfoBottomSheet Dynamic Thresholds & 9-Language Localization Audit (`TST-TRK-061.5`, `HrvInfoBottomSheetTest.kt`, `TranslationParityTest.kt`)*:
   • Verify dynamic display of configured $T_1 / T_2$ thresholds.
   • Verify Light, Dark, and AMOLED `@Preview` composables.
@@ -2314,9 +2343,9 @@
      • Verify `WARNING` status when artifact rate is between $3.0\%$ and $5.0\%$.
      • Verify `FAIL` status and blocked start when artifact rate $> 5.0\%$, smoothed stream detected, or no RR data available.
   3. *Early Sub-Exhaustion Auto-Completion Detection (`TST-TRK-072.3`, `HrvRampTestViewModelTest.kt`)*:
-     • Stream simulated DFA $\alpha_1$ values descending from $1.00$ to $0.44$.
-     • Verify that sustained $\alpha_1 < 0.45$ for $\ge 60\text{ s}$ transitions state to `EARLY_COMPLETION` with user alert and prompts transition to `COOLDOWN`.
-     • Verify that transient dips below $0.45$ lasting $< 60\text{ s}$ do not trigger early completion.
+     • Stream simulated DFA $\alpha_1$ values descending below dynamic cutoff $(T_2 - 0.05f).\text{coerceAtLeast}(0.25f)$ (cutoff $0.45$ for default $T_2 = 0.50$, or cutoff $0.55$ for custom $T_2 = 0.60$).
+     • Verify that sustained $\alpha_1 < \text{cutoff}$ for $\ge 60\text{ s}$ transitions state to `EARLY_COMPLETION` with user alert and prompts transition to `COOLDOWN`.
+     • Verify that transient dips below cutoff lasting $< 60\text{ s}$ do not trigger early completion.
   4. *Per-Step Evaluation Window & Metadata Tagging (`TST-TRK-072.4`, `HrvRampTestViewModelTest.kt` / `HrvThresholdEstimatorTest.kt`)*:
      • Verify workout session is tagged with `hrvTestProtocol = GUIDED_STEP` or `GUIDED_RAMP` with step duration and ramp slope.
      • Verify `HrvThresholdEstimator` computes step points strictly over $[t_{\text{end},j} - 120\text{ s}, t_{\text{end},j}]$ with zero bleed into subsequent steps.
@@ -2379,3 +2408,33 @@
      • Verify initial fix (`mPrevLocation == null`) with $\text{speed} == 0.0\text{ m/s}$ pins immediately to anchor on tick 1 (`REQ-TRK-074.4`).
   6. *Targeted Package Regression Execution (`TST-TRK-074.6`)*:
      • `./gradlew testDebugUnitTest --tests "com.atrainingtracker.banalservice.devices.*"` asserting 100% pass rate.
+
+
+### TST-TRK-075: **Core Tracking Pipeline Integration Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-TRK-075` (`REQ-TRK-075.1`..`REQ-TRK-075.5`)
+- **Component**: `TrackerService.java`, `WorkoutRepository.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/integration/TrackerServiceIntegrationTest.kt`
+- **Jira**: `ATT-6185`
+- **Test Description**:
+  1. *Start Tracking and Multi-Sensor Telemetry Ingestion Test (`TST-TRK-075.1`, `TrackerServiceIntegrationTest.kt`)*:
+     • Start tracking session; emit simulated samples for HR (145 bpm), Speed (8.33 m/s), Cadence (85 rpm), Power (220 W), Distance (100 m), and beat-to-beat RR intervals.
+     • Assert `workout_summaries` row exists with valid `workout_id`.
+     • Assert `workout_samples_<baseFileName>` table exists and contains inserted row with matching sensor column values.
+     • Assert `workout_rr_intervals` contains the flushed RR beat entries.
+  2. *Pause Tracking Ingestion Freeze Test (`TST-TRK-075.2`, `TrackerServiceIntegrationTest.kt`)*:
+     • Transition to pause (`TrainingApplication.pauseTracking(false)`).
+     • Trigger sample tick with updated total time and simulated sensor data.
+     • Query database: assert sample row count does not increase, active time remains unchanged, and total elapsed time is updated in `workout_summaries`.
+  3. *Resume Tracking Sample Continuation Test (`TST-TRK-075.3`, `TrackerServiceIntegrationTest.kt`)*:
+     • Transition to resume (`mAutoPauseManager.onManualResume(...)` and `TrainingApplication.setTracking()`).
+     • Trigger sample tick with incremented active time.
+     • Query database: assert sample row count increases and `TIME_ACTIVE_s` updates in SQLite.
+  4. *Auto-Pause Trigger and Motion Recovery Test (`TST-TRK-075.4`, `TrackerServiceIntegrationTest.kt`)*:
+     • Configure AutoPause with threshold $1.0\text{ m/s}$.
+     • Feed speed $0.2\text{ m/s}$ ($< 1.0\text{ m/s}$) for consecutive debounce ticks; assert transition to `AUTO_PAUSED` and pause broadcast.
+     • Feed speed $5.0\text{ m/s}$ ($> 1.0\text{ m/s}$); assert transition back to `TRACKING` and resume broadcast.
+  5. *Stop and Summary Finalization Verification Test (`TST-TRK-075.5`, `TrackerServiceIntegrationTest.kt`)*:
+     • Populate telemetry: distance, HR max/avg, active time, ascent.
+     • Invoke `endWorkout()`.
+     • Assert `workout_summaries` has `FINISHED = 1`, final lap record in `laps`, and all computed summary fields match expectations.
+  6. *Targeted Package Integration Suite Execution (`TST-TRK-075.6`)*:
+     • `python3 tools/parallel_sprint_lock.py -- ./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.integration.*"` asserting 100% pass rate.

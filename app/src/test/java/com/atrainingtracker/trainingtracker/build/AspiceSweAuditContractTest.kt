@@ -67,7 +67,7 @@ class AspiceSweAuditContractTest {
             "UI Components & Design System",
             "Engineering Process & Stability",
             "Jubilee Milestones & App Reviews",
-            "Project Governance & Store Presence"
+            "Store Presence"
         )
         for (shard in requiredShards) {
             assertTrue("Allocation table must reference shard '$shard'", content.contains(shard))
@@ -98,9 +98,12 @@ class AspiceSweAuditContractTest {
                 file.forEachLine { line ->
                     val trimmed = line.trim()
                     if (Regex("^#{2,4}\\s+$prefix-[A-Z0-9_-]+:").containsMatchIn(trimmed)) {
-                        val isStandard = trimmed.endsWith("[Verified]") || trimmed.endsWith("[Planned]") || trimmed.endsWith("[Implemented]")
+                        val isStandard = trimmed.endsWith("[Verified]") ||
+                                trimmed.endsWith("[Planned]") ||
+                                trimmed.endsWith("[Implemented]") ||
+                                trimmed.endsWith("[Open]")
                         assertTrue(
-                            "Heading in ${file.name} must end with standard status [Verified], [Planned], or [Implemented]: '$trimmed'",
+                            "Heading in ${file.name} must end with standard status [Verified], [Implemented], [Planned], or [Open]: '$trimmed'",
                             isStandard
                         )
                     }
@@ -112,6 +115,13 @@ class AspiceSweAuditContractTest {
         checkHeadings(testDir, "TST")
     }
 
+    private data class ShardCount(
+        val total: Int,
+        val verified: Int,
+        val implemented: Int,
+        val planned: Int
+    )
+
     @Test
     fun testMasterTableParity_matchesDomainShards() {
         val requirementsMaster = findRepoRootFile("docs/requirements.md")
@@ -120,20 +130,25 @@ class AspiceSweAuditContractTest {
         val testDir = findRepoRootFile("docs/tests")
 
         fun verifyParity(masterFile: File, shardDir: File, prefix: String) {
-            val shardCounts = mutableMapOf<String, Triple<Int, Int, Int>>()
+            val shardCounts = mutableMapOf<String, ShardCount>()
             val shardFiles = shardDir.listFiles { _, name -> name.endsWith(".md") } ?: emptyArray()
 
             for (file in shardFiles) {
                 var tot = 0
                 var ver = 0
+                var impl = 0
                 var plan = 0
                 file.forEachLine { line ->
                     if (Regex("^#{2,4}\\s+$prefix-[A-Z0-9_-]+:").containsMatchIn(line.trim())) {
                         tot++
-                        if (line.contains("[Verified]")) ver++ else plan++
+                        when {
+                            line.contains("[Verified]") -> ver++
+                            line.contains("[Implemented]") -> impl++
+                            else -> plan++
+                        }
                     }
                 }
-                shardCounts[file.name] = Triple(tot, ver, plan)
+                shardCounts[file.name] = ShardCount(tot, ver, impl, plan)
             }
 
             val isFeatureBranch = try {
@@ -146,7 +161,7 @@ class AspiceSweAuditContractTest {
 
             var grandTotal = 0
             var checkedShards = 0
-            val lineRegex = Regex("\\((?:requirements|tests)/((?:req|tst)_[^)]+\\.md)\\).*?\\|\\s*(\\d+)\\s*\\|\\s*(\\d+)\\s*\\|\\s*(\\d+)\\s*\\|")
+            val lineRegex = Regex("\\((?:requirements|tests)/((?:req|tst)_[^)]+\\.md)\\).*?\\|\\s*(\\d+)\\s*\\|\\s*(\\d+)\\s*\\|\\s*(\\d+)\\s*\\|\\s*(\\d+)\\s*\\|")
 
             masterFile.forEachLine { line ->
                 val match = lineRegex.find(line)
@@ -154,26 +169,28 @@ class AspiceSweAuditContractTest {
                     val shardName = match.groupValues[1]
                     val total = match.groupValues[2].toInt()
                     val verified = match.groupValues[3].toInt()
-                    val planned = match.groupValues[4].toInt()
+                    val implemented = match.groupValues[4].toInt()
+                    val planned = match.groupValues[5].toInt()
 
                     val expected = shardCounts[shardName]
                     assertTrue("Master table references missing shard $shardName", expected != null)
                     if (isFeatureBranch) {
                         // Under parallel sprint execution (REQ-PRO-041.4), living documentation master
                         // tables are synchronized under lock at Stage 5 squash-merge. On feature branches,
-                        // shards may contain in-progress Planned/Verified additions (expected >= table).
+                        // shards may contain in-progress Planned/Implemented/Verified additions (expected >= table).
                         assertTrue(
-                            "Verified in shard $shardName (${expected!!.second}) cannot be less than master table ($verified)",
-                            expected.second >= verified
+                            "Verified in shard $shardName (${expected!!.verified}) cannot be less than master table ($verified)",
+                            expected.verified >= verified
                         )
                         assertTrue(
-                            "Total in shard $shardName (${expected.first}) cannot be less than master table ($total)",
-                            expected.first >= total
+                            "Total in shard $shardName (${expected.total}) cannot be less than master table ($total)",
+                            expected.total >= total
                         )
                     } else {
-                        assertEquals("Total mismatch in ${masterFile.name} for $shardName", expected!!.first, total)
-                        assertEquals("Verified mismatch in ${masterFile.name} for $shardName", expected.second, verified)
-                        assertEquals("Planned mismatch in ${masterFile.name} for $shardName", expected.third, planned)
+                        assertEquals("Total mismatch in ${masterFile.name} for $shardName", expected!!.total, total)
+                        assertEquals("Verified mismatch in ${masterFile.name} for $shardName", expected.verified, verified)
+                        assertEquals("Implemented mismatch in ${masterFile.name} for $shardName", expected.implemented, implemented)
+                        assertEquals("Planned mismatch in ${masterFile.name} for $shardName", expected.planned, planned)
                     }
 
                     grandTotal += total
@@ -183,7 +200,7 @@ class AspiceSweAuditContractTest {
 
             assertEquals("All shards must be present in master table", shardCounts.size, checkedShards)
             if (!isFeatureBranch) {
-                val actualSum = shardCounts.values.sumOf { it.first }
+                val actualSum = shardCounts.values.sumOf { it.total }
                 assertEquals("Grand total must match sum of shards", actualSum, grandTotal)
             }
         }

@@ -79,6 +79,9 @@ import kotlinx.coroutines.launch
 fun WorkoutSummariesTabbedScreen(
     viewModel: WorkoutSummariesViewModel = viewModel(),
     trackOnMapViewModel: TrackOnMapAftermathViewModel = viewModel(),
+    isPushed: Boolean = false,
+    onMenuClick: (() -> Unit)? = null,
+    onBackClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -325,6 +328,7 @@ fun WorkoutSummariesTabbedScreen(
                     recentSessions = aftermathUIState.recentSessions,
                     isSmoothedStream = aftermathUIState.isSmoothedHrvStream,
                     onUpdateFtp = { trackOnMapViewModel.updateFtp(it) },
+                    onUpdateHrZones = { t1, t2 -> trackOnMapViewModel.updateHrZones(t1, t2) },
                     telemetryPath = aftermathUIState.telemetryPath,
                     initialAutoShareSnapshot = autoShareSnapshotOnOpen,
                     onSnapshotComplete = {
@@ -342,6 +346,11 @@ fun WorkoutSummariesTabbedScreen(
                     autoShareSnapshotOnOpen = false
                 }
             } else {
+                if (isPushed && onBackClick != null && selectedWorkoutIdForEdit == null) {
+                    BackHandler {
+                        onBackClick()
+                    }
+                }
                 // 3. Render the Tabbed UI
                 WorkoutTabsScreen(
                     workouts = workouts,
@@ -350,6 +359,8 @@ fun WorkoutSummariesTabbedScreen(
                     bikeListState = bikeListState,
                     runListState = runListState,
                     otherListState = otherListState,
+                    onMenuClick = if (isPushed) null else onMenuClick,
+                    onBackClick = if (isPushed) onBackClick else null,
                     onExportWorkoutTo = { workoutId, fileFormat ->
                         viewModel.onExportWorkoutTo(workoutId, fileFormat)
                     },

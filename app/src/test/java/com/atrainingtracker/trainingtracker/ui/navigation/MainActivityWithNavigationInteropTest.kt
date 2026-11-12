@@ -142,4 +142,18 @@ class MainActivityWithNavigationInteropTest {
         assertNotNull("dispatchKeyEvent method must be present", dispatchMethod)
         assertEquals(Boolean::class.javaPrimitiveType, dispatchMethod.returnType)
     }
+
+    @Test
+    fun testPushedWorkoutsNavigationMethodsPresence() {
+        // REQ-UI-517.2, TST-UI-517.2 (ATT-7313)
+        val clazz = MainActivityWithNavigation::class.java
+
+        val startFromPeriodMethod = clazz.methods.find { it.name == "startWorkoutSummaryListFromPeriod" }
+        assertNotNull("startWorkoutSummaryListFromPeriod method must exist", startFromPeriodMethod)
+        assertTrue(Modifier.isPublic(startFromPeriodMethod!!.modifiers))
+
+        val navigateFilteredMethod = clazz.methods.find { it.name == "navigateToFilteredWorkouts" }
+        assertNotNull("navigateToFilteredWorkouts method must exist", navigateFilteredMethod)
+        assertTrue(Modifier.isPublic(navigateFilteredMethod!!.modifiers))
+    }
 }

@@ -3,12 +3,15 @@
 **Domain**: `aftermath_reviews`  
 **Prefixes**: `REV`  
 **Scope**: Milestone workout auto-naming, jubilee achievements, Google Play in-app reviews, athlete feedback, and supporter tier promotions.  
-**Total Requirements**: 10
+**Total Requirements**: 12
 
 ---
 
 ### REQ-REV-001: Sport-Specific Finished Workout Milestone Counting & In-Memory Detection [Verified]
-- **Tests**: `TST-REV-001` | **Tickets**: `ATT-2308`
+- **Tests**: `TST-REV-001`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `WorkoutSummariesDatabaseManager.java`, `MilestoneAutoNamingManager.kt`
 - **Rationale**: Reaching round training milestones (100, 250, 500, 1000, 1500, 2000...) represents a major personal athletic achievement. The system SHALL maintain independent, accurate session counters segregated per primary sport type in SQLite rather than conflating all activities into an aggregate sum.
 - **Description**:
@@ -17,7 +20,10 @@
   3. Milestone evaluation SHALL execute on a background IO dispatcher (`Dispatchers.IO`) immediately following session finalization.
 
 ### REQ-REV-002: Dynamic Milestone Workout Auto-Naming & Export Title Propagation [Verified]
-- **Tests**: `TST-REV-002` | **Tickets**: `ATT-2308`
+- **Tests**: `TST-REV-002`, `TST-REV-005`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit, Integration
 - **Implementation**: `MilestoneAutoNamingManager.kt`, `WorkoutAutoNamingHelper.kt`, `TrackerService.java`
 - **Rationale**: Milestone sessions should be visibly celebrated across the athlete's entire ecosystem (session history, cloud sync, Strava, and TCX/FIT exports).
 - **Description**:
@@ -26,7 +32,10 @@
   3. Non-milestone sessions SHALL retain standard naming behavior without counter prefixing.
 
 ### REQ-REV-003: First-Jubilee Celebration Dialog & Multi-Channel Engagement [Verified]
-- **Tests**: `TST-REV-003`, `TST-REV-005` | **Tickets**: `ATT-2308`, `ATT-5401`, `ATT-5399`, `ATT-5467`, `ATT-5659`, `ATT-5658`
+- **Tests**: `TST-REV-003`, `TST-REV-005`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit, Integration, On-Device Manual
 - **Implementation**: `FirstJubileeCelebrationDialog.kt`, `MainActivityWithNavigation.kt`
 - **Rationale**: Reaching the very first milestone across any sport is an athlete's peak emotional moment. The app SHALL present a celebratory Material 3 dialog offering frictionless personal email feedback, Google Play review, and an authentic supporter appeal.
 - **Description**:
@@ -46,7 +55,10 @@
 4. *Preservation of Core Invariants*: Single-prompt invariant (`REQ-REV-004`) preserved; ReviewManager flow and fallback preserved; zero decorative emojis preserved; Rule 73 stacked button layout preserved.
 
 ### REQ-REV-004: Single-Prompt Invariant Persistence & Subsequent Jubilee Non-Intrusiveness [Verified]
-- **Tests**: `TST-REV-004` | **Tickets**: `ATT-2308`
+- **Tests**: `TST-REV-004`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `SettingsDataStore.kt`, `MilestoneAutoNamingManager.kt`
 - **Rationale**: To eliminate review spam and maintain professional user experience, celebration and review prompting MUST occur strictly once in the app lifetime.
 - **Description**:
@@ -55,7 +67,10 @@
   3. For all subsequent milestone events (e.g., 250, 500, or when a second sport hits 100), the system SHALL apply milestone auto-naming (`REQ-REV-002`), but SHALL NEVER display the celebration or review dialog again.
 
 ### REQ-REV-005: Diagnostic Jubilee Dialog Debug Preview Trigger [Verified]
-- **Tests**: `TST-REV-006` | **Tickets**: `ATT-2308`
+- **Tests**: `TST-REV-006`
+- **Priority**: Low
+- **Type**: Functional
+- **Verification Method**: Unit, On-Device Manual
 - **Implementation**: `SupporterDebugSection.kt`
 - **Rationale**: On-device verification and sprint review testing of the celebration dialog must be accessible without manually completing 100 workouts.
 - **Description**:
@@ -63,9 +78,12 @@
   2. Tapping this button SHALL trigger display of `FirstJubileeCelebrationDialog` with mock milestone data without mutating `SettingsDataStore.has_shown_first_jubilee_prompt`.
 
 ### REQ-REV-006: Map Snapshot Share Pager Stability, Duplicate Header Elimination & Caller State Restoration [Verified]
-- **Tests**: `TST-REV-007` | **Tickets**: `ATT-6322`, `ATT-6685`
+- **Tests**: `TST-REV-007`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit, Integration
 - **Implementation**: `WorkoutDetailTabbedContent.kt`, `MapDetailLayout.kt`, `TrackOnMapScreen.kt`, `WorkoutSummariesTabbedScreen.kt`
-- **Rationale**: Triggering 'Karten- & Analyse-Snapshot' in `WorkoutShareBottomSheet` must execute seamlessly without freezing the HorizontalPager at 50%, rendering duplicate visible headers under the tab row, stranding the athlete on the wrong tab or screen after sharing, or crashing the UI thread with multithreaded access violations during GraphicsLayer rasterization.
+- **Rationale**: Triggering 'Karten- & Analyse-Snapshot' in `WorkoutShareBottomSheet` must execute seamlessly without freezing the HorizontalPager at 50%, rendering duplicate visible headers under the tab row, stranding the athlete on the wrong tab or screen after sharing, crashing the UI thread with multithreaded access violations during GraphicsLayer rasterization, or emitting false failure toasts due to ForgottenCoroutineScopeException when ChooserActivity opens.
 - **Description**:
   1. *Pager Scroll Key Invariant & Programmatic Navigation*: `WorkoutDetailTabbedContent` SHALL NOT include `pagerState.currentPage` in the `LaunchedEffect` key list for programmatic snapshot tab switching (`pendingAutoShare`). The system SHALL use `pagerState.scrollToPage(mapTabIndex)` (instant transition without intermediate animation frames) so the pager coroutine is never cancelled mid-animation or frozen at the 50% midpoint (`Rule 80` / `docs/coding_standards.md` §1.11).
   2. *Origin Tab & Caller Screen Restoration*:
@@ -73,24 +91,28 @@
      b. When opened with `initialAutoShareSnapshot = true` from workout list containers (`WorkoutSummariesTabbedScreen`, `WorkoutSummariesListFragment`, `WorkoutClustersScreen`), `onSnapshotComplete` SHALL be propagated via `TrackOnMapScreen` to automatically dismiss/pop the detail screen, returning the athlete to the origin list view.
   3. *MapDetailLayout Header Slot Offscreen Recording & Duplicate Prevention*: `MapDetailLayout` SHALL accept `showHeader: Boolean = true`. When `showHeader == false`, `MapDetailLayout` SHALL measure and record `header()` into `headerLayer` offscreen without rendering a second visible `WorkoutHeader` in the tab's upper layout column. `WorkoutDetailTabbedContent` SHALL pass `showHeader = false` to prevent duplicate visible header rendering below the tab row.
   4. *Preservation of Bitmap Output & Standalone Layout Invariants*: `headerLayer` in `MapDetailLayout` MUST continue producing a full-fidelity software bitmap for `combineWorkoutAndShare`. All standalone invocations of `MapDetailLayout` with `showHeader = true` MUST retain 100% visual layout parity.
-  5. *UI-Thread GraphicsLayer Rasterization & Safe Share Dispatching Contract (REQ-REV-006.5 / ATT-6685)*:
+  5. *UI-Thread GraphicsLayer Rasterization & Safe Share Dispatching Contract (REQ-REV-006.5 / ATT-6685, ATT-7316)*:
      a. In `MapDetailLayout`, invoking `headerLayer.toImageBitmap().asAndroidBitmap()`, `elevationLayer.toImageBitmap().asAndroidBitmap()`, and `analyticsLayer.toImageBitmap().asAndroidBitmap()` inside `onSnapshotReady` MUST execute directly on the Main UI thread (`Dispatchers.Main.immediate` / `Dispatchers.Main`) to prevent multithreaded access violations on Compose's `SnapshotStateObserver`.
      b. Downstream multi-bitmap composition, canvas assembly, and file persistence (`combineWorkoutAndShare`) SHALL remain offloaded to `Dispatchers.Default` / `Dispatchers.IO`.
      c. The `onSnapshotReady` coroutine block SHALL encapsulate layer rasterization and share dispatching inside a `try-catch-finally` block ensuring that `isSharing = false` and `onSnapshotComplete?.invoke()` are guaranteed to execute even if an unexpected exception occurs during capture or sharing, preventing permanently stuck sharing states.
+     d. In `MapDetailLayout`, `executeSnapshotCaptureAndShare` SHALL wrap `shareAction` in `withContext(NonCancellable)` to prevent premature cancellation during system share sheet (`ChooserActivity`) presentation. Coroutine cancellation exceptions (`CancellationException`, including `ForgottenCoroutineScopeException` thrown when `rememberCoroutineScope` leaves composition) SHALL be caught and ignored, preventing erroneous display of failure toasts (`R.string.error_sharing_failed`) when sharing succeeds, while still executing `onFinally` to guarantee `isSharing = false` and `onSnapshotComplete?.invoke()` is invoked.
 
 **Requirement Archaeology & Chesterton's Fence Audit**:
 1. *Original Requirement ID & Target*: Amends `REQ-REV-006` (*Map Snapshot Share Pager Stability, Duplicate Header Elimination & Caller State Restoration*, `ATT-6322`). Targets `MapDetailLayout.kt`.
-2. *Historical Origin & Commit Trace*: Commit `5248ddab8` (`ATT-1890`) introduced `withContext(Dispatchers.Default)` around `toImageBitmap()`; commit `4fb53a57` (`ATT-6322`) introduced offscreen header measurement and recording when `showHeader = false`.
-3. *Root Reason for Existing Formulation*: Background dispatching was originally intended to prevent main-thread stutter during bitmap handling, but Compose's `GraphicsLayer` tree reads require state observation on the main Compose Owner's UI thread; worker thread execution pollutes `SnapshotStateObserver.previousThreadId` and triggers fatal crashes on the next VSync frame.
-4. *Preservation of Core Invariants*: Heavy bitmap stitching, scaling, and disk I/O in `combineWorkoutAndShare` remain 100% isolated on `Dispatchers.Default`; visual snapshot fidelity, offscreen header recording, and sharing sheet triggers remain completely preserved.
+2. *Historical Origin & Commit Trace*: Commit `5248ddab8` (`ATT-1890`) introduced `withContext(Dispatchers.Default)` around `toImageBitmap()`; commit `4fb53a57` (`ATT-6322`) introduced offscreen header measurement and recording when `showHeader = false`; commit `1047d39e` (`ATT-6685`) encapsulated execution in `try-catch-finally`.
+3. *Root Reason for Existing Formulation*: Background dispatching was originally intended to prevent main-thread stutter during bitmap handling, but Compose's `GraphicsLayer` tree reads require state observation on the main Compose Owner's UI thread; worker thread execution pollutes `SnapshotStateObserver.previousThreadId` and triggers fatal crashes on the next VSync frame. Subsequently, raw `Throwable` catch in `ATT-6685` caught `ForgottenCoroutineScopeException` as an error instead of recognizing coroutine unmount cancellation.
+4. *Preservation of Core Invariants*: Heavy bitmap stitching, scaling, and disk I/O in `combineWorkoutAndShare` remain 100% isolated on `Dispatchers.Default`; visual snapshot fidelity, offscreen header recording, genuine error toast reporting, and sharing sheet triggers remain completely preserved.
 
 **Acceptance Criteria (Given-When-Then)**:
-• *Given* `WorkoutDetailTabbedContent` active with `showHeader = false`,
-• *When* the user triggers *Karten- & Analyse-Snapshot* from the share sheet,
-• *Then* `headerLayer`, `elevationLayer`, and `analyticsLayer` rasterization executes on `Dispatchers.Main` without throwing `IllegalArgumentException` in `SnapshotStateObserver`, `combineWorkoutAndShare` stitches the full snapshot on `Dispatchers.Default`, and upon completion or failure `isSharing` is reset to false.
+• *Given* `WorkoutDetailTabbedContent` active with `showHeader = false` or bottom sheet snapshot share active,
+• *When* the user triggers *Karten- & Analyse-Snapshot* and the system share sheet (`ChooserActivity`) causes the composable or scope to leave composition,
+• *Then* `headerLayer`, `elevationLayer`, and `analyticsLayer` rasterization executes on `Dispatchers.Main`, `shareAction` executes under `NonCancellable`, `CancellationException` / `ForgottenCoroutineScopeException` is ignored without showing an error toast, and `isSharing` is reset to false.
 
 ### REQ-REV-007: Workout Cluster Reassignment Centroid Integrity & Sport Frequency Synchronization [Verified]
-- **Tests**: `TST-REV-008` | **Tickets**: `ATT-6159`
+- **Tests**: `TST-REV-008`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `WorkoutClusterEngine.kt`
 - **Rationale**: When an athlete moves a workout between route clusters in `moveWorkoutToCluster`, sequential updates must not overwrite calculated cluster centroids with stale snapshots, and sport frequency updates must be calculated after SQLite database reassignments.
 - **Description**:
@@ -104,7 +126,10 @@
   • *Then* both source and target clusters retain their recomputed weighted centroids without being overwritten, and `probableSportId` reflects the post-reassignment workout distribution.
 
 ### REQ-REV-008: Generic Zone Distribution Card Architecture & Composable Wrapper Deduplication [Verified]
-- **Tests**: `TST-REV-009` | **Tickets**: `ATT-6044`
+- **Tests**: `TST-REV-009`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit, Integration
 - **Implementation**: `ZoneDistributionCard.kt`, `PowerZoneDistributionCard.kt`, `HeartRateZoneDistributionCard.kt`, `GradeZoneDistributionCard.kt`
 - **Rationale**: The post-workout telemetry analysis screens feature three separate card components (`PowerZoneDistributionCard`, `HeartRateZoneDistributionCard`, `GradeZoneDistributionCard`) that share ~97% identical Compose layout, header styling, chart mode routing (`STACKED_BAR`, `COLUMNS`, `HISTOGRAM`), and segmented button controls (~600 lines total). Unifying these into a single parameterized `ZoneDistributionCard` eliminates ~440 lines of duplicate code while preserving public composable APIs, contract compatibility, and per-card state isolation.
 - **Description**:
@@ -134,7 +159,10 @@
 
 
 ### REQ-REV-009: 1st-Order Dynamical Power-HR System Identification Engine, 5th Physiological School & In-App Explanation Sheet [Verified]
-- **Tests**: `TST-REV-010` | **Tickets**: `ATT-3904`, `ATT-6722`
+- **Tests**: `TST-REV-010`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit, Integration
 - **Implementation**: `PowerHrDynamicsCalculator.kt`, `WorkoutSummariesDatabaseManager.java`, `WorkoutRepository.kt`, `LegacyImportEngine.kt`, `TrackerService.java`, `TuningPreferencesDataStore.kt`, `PhysiologyModelsSection.kt`, `PowerHrDynamicsInfoDialog.kt`, `AdvancedTuningAccordion.kt`, `TrackOnMapAftermathViewModel.kt`, `WorkoutSummariesViewModel.kt`
 - **Rationale**: Static ratios ($\text{EF} = \text{NP}/\text{Avg HR}$ and $\text{Pw:Hr}$) fail on variable or hilly terrain by ignoring physiological cardiorespiratory response latency ($\tau \approx 25\text{--}45\text{ s}$) and 4th-power NP inflation. A 1st-order Output-Error (OE) dynamical model ($x_k(\tau) = e^{-\Delta t/\tau} x_{k-1}(\tau) + (1 - e^{-\Delta t/\tau}) P_k, \widehat{\text{HR}}_k = \text{HR}_0 + K x_k(\tau)$) extracts terrain-independent physiological parameters: steady-state reference $\text{HR@200W} = \text{HR}_0 + 200 \cdot K$, response lag $\tau$, aerobic gain $K$ (slope $1/K$), and cardiac drift $\Delta\text{HR@200W} = \text{HR@200W}_{\text{end}} - \text{HR@200W}_{\text{start}}$.
 - **Description**:
@@ -179,7 +207,10 @@
   • *Then* all cardio-power string tokens in `strings_cardio_power.xml` exist with 100% parity and valid formatting.
 
 ### REQ-REV-010: Cardio-Power Dynamics Details Row & Fresh Model HR Graph Overlay [Verified]
-- **Tests**: `TST-REV-011` | **Tickets**: `ATT-3905`, `ATT-6723`
+- **Tests**: `TST-REV-011`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit, Integration
 - **Implementation**: `WorkoutDataMapper.kt`, `WorkoutDetailsData.kt`, `WorkoutDetails.kt`, `CardioPowerDynamicsCard.kt`, `TelemetryMetricGraph.kt`, `WorkoutSummary.kt`, `WorkoutDetailTabbedContent.kt`, `PowerHrDynamicsCalculator.kt`, `TrackOnMapScreen.kt`
 - **Rationale**: Having identified 1st-order dynamical Power-HR parameters in `ATT-3904`, athletes require visual presentation in workout details and interactive telemetry charts to evaluate submaximal aerobic economy, lag response, and cardiac drift fatigue.
 - **Description**:
@@ -218,7 +249,10 @@
   • *Then* the row and overlay are omitted with zero visual artifact, and `TranslationParityTest` passes across all 9 locales.
 
 ### REQ-REV-011: Cardio-Power Longitudinal Fitness Trends in Athlete Profile [Verified]
-- **Tests**: `TST-REV-012` | **Tickets**: `ATT-3906`, `ATT-6724`
+- **Tests**: `TST-REV-012`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit, Integration
 - **Implementation**: `WorkoutSummariesDatabaseManager.java`, `AthleteProfileViewModel.kt`, `AthleteProfileScreen.kt`, `CardioPowerTrendsCard.kt`
 - **Rationale**: While single-workout details display acute parameters, monitoring aerobic fitness adaptations across weeks and months requires longitudinal trend plotting of fresh model parameters ($\text{HR@200W}$, $\tau$, $1/K$) for qualified workouts without requiring maximal exhaustion tests.
 - **Description**:
@@ -266,7 +300,10 @@
   • *Then* an empty state message or clean card omission is rendered without UI distortion, and `TranslationParityTest` passes across 9 locales.
 
 ### REQ-REV-012: Real-Time Live HR Drift Metric & Tracking Cockpit Integration [Verified]
-- **Tests**: `TST-REV-013` | **Tickets**: `ATT-3907`, `ATT-6725`
+- **Tests**: `TST-REV-013`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit, Integration
 - **Implementation**: `SensorType.java`, `CyclingPowerMetricsDevice.java`, `ActivityType.java`, `SignedIntegerFormatter.java`, `TrackingViewModel.kt`, `SensorFieldState.kt`, `EditSensorFieldViewModel.kt`, `res/values*/strings_cardio_power.xml`
 - **Rationale**: During live endurance cycling, cardiac drift ($\text{HR}_{\text{actual}}(t) - \text{HR}_{\text{fresh\_model}}(t)$) provides immediate, power-normalized feedback on autonomic decoupling, thermal stress, and dehydration. Static ratios fail on variable terrain due to cardiorespiratory response latency ($\tau \approx 25\text{--}45\text{ s}$). The system SHALL compute real-time lag-compensated cardiac drift at 1 Hz in `CyclingPowerMetricsDevice.java`, publish `SensorType.LIVE_HR_DRIFT`, and integrate it into the customizable tracking cockpit with semantic color-coding.
 - **Description**:

@@ -19,9 +19,15 @@
 package com.atrainingtracker.trainingtracker.ui.hrv
 
 import android.app.Application
+import android.content.ContentValues
 import androidx.test.core.app.ApplicationProvider
 import com.atrainingtracker.R
+import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
 import com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository
+import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
+import io.mockk.mockk
+import io.mockk.slot
+import io.mockk.verify
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -227,6 +233,33 @@ class HrvRampTestViewModelTest {
     }
 
     @Test
+    fun testDynamicCutoffWithCustomizedT2_TST_TRK_072_3() = runTest(testDispatcher) {
+        val viewModel = HrvRampTestViewModel(application, banalRepository, testDispatcher)
+        viewModel.evaluatePreFlightQuality(artifactRate = 1.0, hasRrStream = true, isSmoothed = false)
+        viewModel.setWarmupDurationSec(0)
+        viewModel.startProtocol(autoStartTimer = false)
+
+        // Set custom anaerobic threshold T2 = 0.60f -> cutoff = 0.60 - 0.05 = 0.55f
+        viewModel.dfaA1ThresholdT2 = 0.60f
+
+        assertEquals(HrvTestPhase.TESTING, viewModel.uiState.value.phase)
+        assertFalse(viewModel.uiState.value.earlyCompletionDetected)
+
+        // Value of 0.53 is below cutoff 0.55 (even though above legacy 0.45)
+        for (i in 1..59) {
+            viewModel.processTick(injectedDfaA1 = 0.53)
+        }
+        assertEquals(59, viewModel.uiState.value.sub45DurationSec)
+        assertFalse(viewModel.uiState.value.earlyCompletionDetected)
+
+        // 60th tick triggers early completion alert based on dynamic cutoff
+        viewModel.processTick(injectedDfaA1 = 0.53)
+        assertEquals(60, viewModel.uiState.value.sub45DurationSec)
+        assertTrue(viewModel.uiState.value.earlyCompletionDetected)
+        assertEquals(HrvTestPhase.EARLY_COMPLETION, viewModel.uiState.value.phase)
+    }
+
+    @Test
     fun testContinuousRampPacingProgression_TST_TRK_072_1() = runTest(testDispatcher) {
         val viewModel = HrvRampTestViewModel(application, banalRepository, testDispatcher)
         viewModel.evaluatePreFlightQuality(artifactRate = 1.0, hasRrStream = true, isSmoothed = false)
@@ -265,5 +298,50 @@ class HrvRampTestViewModelTest {
         assertEquals(HrvTestPhase.CONFIG, viewModel.uiState.value.phase)
         assertFalse(viewModel.uiState.value.isCompleted)
         assertFalse(viewModel.uiState.value.earlyCompletionDetected)
+    }
+
+    @Test
+    fun testStartProtocolAndTagging_TST_TRK_072_6() = runTest(testDispatcher) {
+        val mockWorkoutRepo = mockk<WorkoutRepository>(relaxed = true)
+        val viewModel = HrvRampTestViewModel(
+            application = application,
+            banalServiceRepository = banalRepository,
+            workoutRepository = mockWorkoutRepo,
+            dispatcher = testDispatcher
+        )
+
+        viewModel.evaluatePreFlightQuality(artifactRate = 1.0, hasRrStream = true, isSmoothed = false)
+        viewModel.setProtocolType(HrvTestProtocolType.GUIDED_STEP)
+        viewModel.setStepDurationSec(240)
+        viewModel.setStepIncrement(15.0)
+
+        viewModel.tagActiveWorkoutWithProtocol(targetWorkoutId = 42L)
+
+        val slot = slot<ContentValues>()
+        verify { mockWorkoutRepo.updateWorkoutSummary(42L, capture(slot)) }
+        assertEquals("GUIDED_STEP", slot.captured.getAsString(WorkoutSummariesDatabaseManager.WorkoutSummaries.METHOD))
+        assertTrue(slot.captured.getAsString(WorkoutSummariesDatabaseManager.WorkoutSummaries.GOAL).contains("stepDurationSec=240"))
+        assertTrue(viewModel.isWorkoutTagged)
+    }
+
+    @Test
+    fun testFinishTest_tagsWorkoutAndSetsCompleted_TST_TRK_072_6() = runTest(testDispatcher) {
+        val mockWorkoutRepo = mockk<WorkoutRepository>(relaxed = true)
+        val viewModel = HrvRampTestViewModel(
+            application = application,
+            banalServiceRepository = banalRepository,
+            workoutRepository = mockWorkoutRepo,
+            dispatcher = testDispatcher
+        )
+
+        viewModel.setProtocolType(HrvTestProtocolType.GUIDED_RAMP)
+        viewModel.tagActiveWorkoutWithProtocol(targetWorkoutId = 99L)
+        viewModel.finishTest()
+
+        assertTrue(viewModel.uiState.value.isCompleted)
+        assertEquals(HrvTestPhase.FINISHED, viewModel.uiState.value.phase)
+        val slot = slot<ContentValues>()
+        verify { mockWorkoutRepo.updateWorkoutSummary(99L, capture(slot)) }
+        assertEquals("GUIDED_RAMP", slot.captured.getAsString(WorkoutSummariesDatabaseManager.WorkoutSummaries.METHOD))
     }
 }

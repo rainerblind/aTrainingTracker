@@ -75,6 +75,15 @@ fun ManualClusterScreen(
     var endPos by remember { mutableStateOf<LatLng?>(null) }
     var apexPos by remember { mutableStateOf<LatLng?>(null) }
     
+    val isPointToPoint = remember(startPos, endPos) {
+        val s = startPos
+        val e = endPos
+        if (s != null && e != null) {
+            com.atrainingtracker.trainingtracker.database.WorkoutClusterEngine.distanceBetween(s, e) >= 150f
+        } else false
+    }
+    val apexLabel = if (isPointToPoint) stringResource(R.string.route_apex) else stringResource(R.string.max_line_distance)
+
     var selectionMode by remember { mutableStateOf(SelectionMode.NONE) }
     
     val currentLocation by viewModel.currentLocation.collectAsStateWithLifecycle()
@@ -203,7 +212,7 @@ fun ManualClusterScreen(
                         modifier = Modifier.weight(1f)
                     )
                     PointToggleButton(
-                        label = stringResource(R.string.max_line_distance),
+                        label = apexLabel,
                         isSelected = selectionMode == SelectionMode.APEX,
                         hasValue = apexPos != null,
                         color = TTColor.ApexPoint,
@@ -271,7 +280,7 @@ fun ManualClusterScreen(
                         Marker(
                             state = rememberMarkerState(position = it).apply { position = it },
                             icon = remember { createSensorMarker(context, R.drawable.ic_distance, TTColor.ApexPoint) },
-                            title = stringResource(R.string.max_line_distance)
+                            title = apexLabel
                         )
                     }
                 }
@@ -285,7 +294,7 @@ fun ManualClusterScreen(
                     val modeLabel = when (selectionMode) {
                         SelectionMode.START -> stringResource(R.string.start)
                         SelectionMode.END -> stringResource(R.string.end)
-                        SelectionMode.APEX -> stringResource(R.string.max_line_distance)
+                        SelectionMode.APEX -> apexLabel
                         else -> ""
                     }
                     Surface(

@@ -31,7 +31,7 @@ import org.junit.Before
 import org.junit.Test
 
 /**
- * Comprehensive verification test suite for REQ-SET-067 and TST-SET-067 (ATT-714 / ATT-808):
+ * Comprehensive verification test suite for REQ-SET-067 and TST-SET-054 (ATT-714 / ATT-808):
  * Optional Activity Counter for Workout Clusters.
  *
  * Validates:
@@ -123,7 +123,7 @@ class WorkoutClusterCounterTest {
         unmockkAll()
     }
 
-    // --- TST-SET-067.1: formatClusterWorkoutName with Counter Enabled vs Disabled ---
+    // --- TST-SET-054.1: formatClusterWorkoutName with Counter Enabled vs Disabled ---
 
     @Test
     fun formatClusterWorkoutName_whenCounterEnabled_hitCount1_returnsBaseName() {
@@ -170,7 +170,7 @@ class WorkoutClusterCounterTest {
         assertEquals("Park Run #3", resultCount3)
     }
 
-    // --- TST-SET-067.2: Data Model Default & State Verification ---
+    // --- TST-SET-054.2: Data Model Default & State Verification ---
 
     @Test
     fun workoutClusterModel_hasCounterDefaultsToTrue() {
@@ -207,7 +207,7 @@ class WorkoutClusterCounterTest {
         assertFalse(cluster.hasCounter)
     }
 
-    // --- TST-SET-067.3: Engine assignClusterToWorkout Integration with hasCounter ---
+    // --- TST-SET-054.3: Engine assignClusterToWorkout Integration with hasCounter ---
 
     @Test
     fun assignClusterToWorkout_whenCounterEnabled_assignsNumberedNameOnSubsequentHits() {

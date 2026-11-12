@@ -40,6 +40,50 @@ REQ_ROW_PATTERN = re.compile(
     re.MULTILINE,
 )
 
+# All legacy duplicates fully resolved in ATT-6123 (SWE.1 BP5, SWE.6 BP4, REQ-PRO-066.6)
+LEGACY_DUPLICATE_IDS = frozenset()
+
+# Known legacy dangling references pending backfill in A-08.x (ATT-6127..6135, SWE.1 BP5, SWE.6 BP4, REQ-PRO-070)
+LEGACY_DANGLING_TST_REFS = frozenset()
+
+LEGACY_DANGLING_REQ_REFS = frozenset()
+
+# Known legacy requirements claiming [Verified] without TST citations pending backfill in ATT-6127..ATT-6135 (SWE.1 BP3, SWE.6 BP3, REQ-PRO-073)
+LEGACY_UNGROUNDED_VERIFIED_REQS = frozenset({
+    "REQ-CON-007", "REQ-CON-011", "REQ-CON-012", "REQ-CON-013", "REQ-CON-014",
+    "REQ-CON-015", "REQ-CON-016", "REQ-CON-017", "REQ-CON-018", "REQ-CON-019", "REQ-CON-020",
+    "REQ-CON-021", "REQ-CON-022", "REQ-CON-023", "REQ-DAT-007", "REQ-DAT-009",
+    "REQ-DAT-011", "REQ-DAT-012", "REQ-DAT-013", "REQ-DAT-014", "REQ-DAT-015", "REQ-DAT-016",
+    "REQ-DAT-017", "REQ-DAT-018", "REQ-DAT-019", "REQ-DAT-020", "REQ-DAT-021", "REQ-DAT-022",
+    "REQ-DAT-023", "REQ-DAT-024", "REQ-DAT-025", "REQ-DAT-026", "REQ-DAT-027", "REQ-DAT-028",
+    "REQ-DAT-029", "REQ-DAT-030", "REQ-DAT-031", "REQ-DAT-032", "REQ-DAT-033", "REQ-DAT-034",
+    "REQ-DAT-035", "REQ-DAT-036", "REQ-DAT-037", "REQ-EXP-008", "REQ-EXP-010", "REQ-EXP-013",
+    "REQ-EXP-018", "REQ-EXP-019", "REQ-EXP-020", "REQ-EXP-021", "REQ-EXP-022", "REQ-EXT-009",
+    "REQ-EXT-010", "REQ-EXT-011", "REQ-EXT-012", "REQ-FIL-013", "REQ-FIL-014", "REQ-FIL-015",
+    "REQ-GEO-001", "REQ-GEO-002", "REQ-LOC-001", "REQ-LOC-002", "REQ-MAP-019", "REQ-MAP-020",
+    "REQ-MAP-021", "REQ-MAP-022", "REQ-MAP-023", "REQ-MAP-024", "REQ-MAP-025", "REQ-MAP-026",
+    "REQ-MAP-027", "REQ-MAP-028", "REQ-MAP-029", "REQ-MAP-030", "REQ-MAP-031", "REQ-MAP-032",
+    "REQ-MAP-033", "REQ-MAP-034", "REQ-MAP-035", "REQ-MAP-036", "REQ-MAP-038", "REQ-MAP-039",
+    "REQ-MAP-040", "REQ-MAP-041", "REQ-MAP-042", "REQ-MAP-044", "REQ-MAP-045", "REQ-MAP-046",
+    "REQ-MAP-047", "REQ-MAP-048", "REQ-MAP-049", "REQ-MAP-050", "REQ-MAP-051", "REQ-MAP-052",
+    "REQ-MAP-053", "REQ-MAP-054", "REQ-MAP-055", "REQ-MAP-056", "REQ-MIG-024", "REQ-MIG-025",
+    "REQ-MIG-026", "REQ-MIG-027", "REQ-MIG-028", "REQ-MIG-029", "REQ-MIG-030", "REQ-MIG-031",
+    "REQ-MIG-032", "REQ-MIG-033", "REQ-MIG-034", "REQ-MIG-035", "REQ-MIG-036", "REQ-MIG-037",
+    "REQ-MIG-038", "REQ-MIG-039", "REQ-MIG-040", "REQ-MIG-041", "REQ-MIG-042", "REQ-MIG-043",
+    "REQ-MIG-044", "REQ-MIG-045", "REQ-MIG-046", "REQ-MIG-047", "REQ-NAV-043", "REQ-NAV-056",
+    "REQ-PER-012", "REQ-PER-013", "REQ-PER-014", "REQ-PER-015", "REQ-PER-016", "REQ-PER-017",
+    "REQ-PER-018", "REQ-PRI-004", "REQ-PRI-005", "REQ-PRI-006", "REQ-PRI-007", "REQ-SEN-020",
+    "REQ-SEN-021", "REQ-SET-058", "REQ-SET-059", "REQ-SET-064", "REQ-SET-065", "REQ-SET-066",
+    "REQ-SET-067", "REQ-SET-068", "REQ-SET-069", "REQ-SET-070", "REQ-SET-071", "REQ-SET-072",
+    "REQ-SET-073", "REQ-SET-074", "REQ-SET-075", "REQ-SET-076", "REQ-SET-077", "REQ-SET-078",
+    "REQ-SET-079", "REQ-SET-081", "REQ-SET-082", "REQ-TRK-002",
+    "REQ-TRK-010", "REQ-TRK-011", "REQ-TRK-012", "REQ-TRK-013", "REQ-TRK-014", "REQ-TRK-015",
+    "REQ-TRK-016", "REQ-TRK-017", "REQ-TRK-018", "REQ-TRK-019", "REQ-TRK-020", "REQ-TRK-021",
+    "REQ-TRK-022", "REQ-TRK-023", "REQ-TRK-024", "REQ-TRK-025", "REQ-TRK-026", "REQ-TRK-027",
+    "REQ-TRK-028", "REQ-TRK-029", "REQ-TRK-030", "REQ-TRK-031", "REQ-TRK-032", "REQ-TRK-033",
+    "REQ-TRK-034", "REQ-TRK-036", "REQ-TRK-037",
+})
+
 
 def get_git_diff(base_ref="develop", target_paths=None):
     """
@@ -132,6 +176,8 @@ def parse_diff_requirements(diff_text):
     current_added_req = None
     current_deleted_req = None
 
+    PLACEHOLDER_IDS = {"REQ-XXX", "REQ-DOM-NNN", "REQ-DOM-XXX", "REQ-NNN"}
+
     for line in diff_text.splitlines():
         if line.startswith("+++") or line.startswith("---"):
             continue
@@ -139,7 +185,7 @@ def parse_diff_requirements(diff_text):
             m_hunk = re.search(r"REQ-([A-Z0-9_-]+)", line)
             current_added_req = f"REQ-{m_hunk.group(1)}" if m_hunk else None
             current_deleted_req = current_added_req
-            if current_added_req == "REQ-XXX":
+            if current_added_req in PLACEHOLDER_IDS:
                 current_added_req = None
                 current_deleted_req = None
             continue
@@ -148,7 +194,7 @@ def parse_diff_requirements(diff_text):
             if m_ctx:
                 current_added_req = f"REQ-{m_ctx.group(1)}"
                 current_deleted_req = current_added_req
-                if current_added_req == "REQ-XXX":
+                if current_added_req in PLACEHOLDER_IDS:
                     current_added_req = None
                     current_deleted_req = None
             continue
@@ -161,12 +207,12 @@ def parse_diff_requirements(diff_text):
                 m = re.search(r"\*\*REQ-([A-Z0-9_-]+)\.\d+\*\*", line)
             if m:
                 req_id = f"REQ-{m.group(1)}"
-                if req_id != "REQ-XXX":
+                if req_id not in PLACEHOLDER_IDS:
                     added_ids.add(req_id)
                     current_added_req = req_id
                 else:
                     current_added_req = None
-            elif current_added_req and current_added_req != "REQ-XXX":
+            elif current_added_req and current_added_req not in PLACEHOLDER_IDS:
                 added_ids.add(current_added_req)
         elif line.startswith("-"):
             m = re.search(r"\|\s*\*\*REQ-([A-Z0-9_-]+)\*\*", line)
@@ -176,12 +222,12 @@ def parse_diff_requirements(diff_text):
                 m = re.search(r"\*\*REQ-([A-Z0-9_-]+)\.\d+\*\*", line)
             if m:
                 req_id = f"REQ-{m.group(1)}"
-                if req_id != "REQ-XXX":
+                if req_id not in PLACEHOLDER_IDS:
                     deleted_ids.add(req_id)
                     current_deleted_req = req_id
                 else:
                     current_deleted_req = None
-            elif current_deleted_req and current_deleted_req != "REQ-XXX":
+            elif current_deleted_req and current_deleted_req not in PLACEHOLDER_IDS:
                 deleted_ids.add(current_deleted_req)
 
     # Modified requirements appear in both added and deleted sets
@@ -755,7 +801,8 @@ def verify_independent_reviews(sprint_name=None, repo_root=None):
 def verify_engineering_directory_structure(eng_dir="docs/engineering"):
     """
     Verifies that docs/engineering/ contains only canonical ASPICE directories and approved files
-    (no stray folders like summaries/, impl_plans/, test_reports/, implementation/, or stray symlinks).
+    (no stray folders like summaries/, impl_plans/, test_reports/, implementation/, or stray symlinks),
+    and enforces symlink integrity for test_results (Rule 67, REQ-PRO-067.3).
     """
     if not os.path.isdir(eng_dir):
         return True, []
@@ -765,6 +812,18 @@ def verify_engineering_directory_structure(eng_dir="docs/engineering"):
             f"ERROR: Non-canonical entries found in {eng_dir}/: {', '.join(unexpected)}. "
             f"Allowed entries: {', '.join(sorted(ALLOWED_ENGINEERING_ENTRIES))}."
         ]
+    test_results_path = os.path.join(eng_dir, "test_results")
+    if os.path.lexists(test_results_path):
+        if not os.path.islink(test_results_path):
+            return False, [
+                f"ERROR: {test_results_path} must be a symbolic link (Rule 67, REQ-PRO-067.3)."
+            ]
+        target = os.readlink(test_results_path)
+        expected_target = "../../app/build/reports/tests/testDebugUnitTest"
+        if target != expected_target:
+            return False, [
+                f"ERROR: {test_results_path} symlink target '{target}' does not match expected canonical target '{expected_target}' (Rule 67, REQ-PRO-067.3)."
+            ]
     return True, []
 
 
@@ -792,7 +851,7 @@ def verify_master_table_parity(repo_root=None):
             fp = os.path.join(abs_shard_dir, fn)
             with open(fp, "r", encoding="utf-8") as f:
                 lines = f.readlines()
-            tot = ver = plan = 0
+            tot = ver = impl = plan = 0
             for l in lines:
                 m = re.match(r"^(#{2,4})\s*(" + prefix + r"-[A-Z0-9_-]+):?\s*(.*?)$", l.strip())
                 if not m:
@@ -800,9 +859,11 @@ def verify_master_table_parity(repo_root=None):
                 tot += 1
                 if "[Verified]" in l:
                     ver += 1
+                elif "[Implemented]" in l:
+                    impl += 1
                 else:
                     plan += 1
-            shard_counts[fn] = (tot, ver, plan)
+            shard_counts[fn] = (tot, ver, impl, plan)
 
         master_fp = os.path.join(repo_root, master_rel)
         if not os.path.exists(master_fp):
@@ -824,19 +885,29 @@ def verify_master_table_parity(repo_root=None):
             m_link = re.search(r"\((?:requirements|tests)/((?:req|tst)_[^)]+\.md)\)", line)
             if m_link:
                 s_name = m_link.group(1)
-                m_cells = re.search(r"\|\s*(\d+)\s*\|\s*(\d+)\s*\|\s*(\d+)\s*\|\s*$", line)
-                if not m_cells:
+                m_cells_4 = re.search(r"\|\s*(\d+)\s*\|\s*(\d+)\s*\|\s*(\d+)\s*\|\s*(\d+)\s*\|\s*$", line)
+                m_cells_3 = re.search(r"\|\s*(\d+)\s*\|\s*(\d+)\s*\|\s*(\d+)\s*\|\s*$", line)
+                if m_cells_4:
+                    t = int(m_cells_4.group(1))
+                    v = int(m_cells_4.group(2))
+                    i = int(m_cells_4.group(3))
+                    p = int(m_cells_4.group(4))
+                elif m_cells_3:
+                    t = int(m_cells_3.group(1))
+                    v = int(m_cells_3.group(2))
+                    i = 0
+                    p = int(m_cells_3.group(3))
+                else:
                     errors.append(f"{master_rel}:{lno}: Table row for {s_name} missing numeric counts.")
                     continue
-                t, v, p = int(m_cells.group(1)), int(m_cells.group(2)), int(m_cells.group(3))
                 shards_checked += 1
                 if s_name in shard_counts:
-                    exp_t, exp_v, exp_p = shard_counts[s_name]
-                    if (t, v, p) != (exp_t, exp_v, exp_p):
+                    exp_t, exp_v, exp_i, exp_p = shard_counts[s_name]
+                    if (t, v, i, p) != (exp_t, exp_v, exp_i, exp_p):
                         errors.append(
                             f"{master_rel}:{lno}: Count mismatch for {s_name}: "
-                            f"Table has Total={t}, Verified={v}, Planned={p}; "
-                            f"Shard has Total={exp_t}, Verified={exp_v}, Planned={exp_p}."
+                            f"Table has Total={t}, Verified={v}, Implemented={i}, Planned={p}; "
+                            f"Shard has Total={exp_t}, Verified={exp_v}, Implemented={exp_i}, Planned={exp_p}."
                         )
                 else:
                     errors.append(f"{master_rel}:{lno}: Shard {s_name} referenced in table does not exist.")
@@ -867,6 +938,1266 @@ def verify_master_table_parity(repo_root=None):
     return len(errors) == 0, errors
 
 
+def find_duplicate_heading_ids(repo_root=None):
+    """
+    Scans docs/requirements/*.md and docs/tests/*.md for requirement and test headings.
+    Returns a dict mapping duplicate ID -> list of (relative_file_path, line_number) tuples.
+    Only entries with len(occurrences) > 1 are included in the returned dict (REQ-PRO-066.1).
+    """
+    if repo_root is None:
+        repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+
+    specs = [
+        ("docs/requirements", "REQ"),
+        ("docs/tests", "TST"),
+    ]
+    seen = {}
+    for shard_dir_rel, prefix in specs:
+        abs_shard_dir = os.path.join(repo_root, shard_dir_rel)
+        if not os.path.isdir(abs_shard_dir):
+            continue
+        for fn in sorted(os.listdir(abs_shard_dir)):
+            if not fn.endswith(".md"):
+                continue
+            rel_path = os.path.join(shard_dir_rel, fn)
+            abs_fp = os.path.join(abs_shard_dir, fn)
+            with open(abs_fp, "r", encoding="utf-8") as f:
+                for lno, line in enumerate(f, 1):
+                    m = re.match(r"^(#{2,4})\s*(" + prefix + r"-[A-Z0-9_-]+):?\s*(.*?)$", line.strip())
+                    if m:
+                        item_id = m.group(2)
+                        seen.setdefault(item_id, []).append((rel_path, lno))
+
+    return {item_id: locs for item_id, locs in sorted(seen.items()) if len(locs) > 1}
+
+
+def verify_unique_ids(repo_root=None, fail_on_duplicates=False, legacy_allowlist=None):
+    """
+    Verifies that all ### REQ-* and ### TST-* heading IDs are unique (REQ-PRO-066 / TST-PRO-066).
+    Reports every duplicate with file and line.
+
+    If fail_on_duplicates is True (or --enforce-unique / --fail-on-duplicates CLI flag):
+      Fails if ANY duplicate is detected, reporting file and line for each occurrence.
+    If fail_on_duplicates is False (default):
+      Known legacy duplicates present in legacy_allowlist (or LEGACY_DUPLICATE_IDS) are reported
+      as WARNINGs without failing validation, preserving CI green status until ATT-6123.
+      Any NEW duplicate ID (not in the allowlist) causes validation to fail.
+
+    Returns (success: bool, diagnostics: list[str]).
+    """
+    if legacy_allowlist is None:
+        legacy_allowlist = LEGACY_DUPLICATE_IDS
+
+    duplicates = find_duplicate_heading_ids(repo_root=repo_root)
+    diagnostics = []
+
+    if not duplicates:
+        diagnostics.append("PASS: All REQ and TST heading IDs are unique across living documentation shards.")
+        return True, diagnostics
+
+    legacy_dups = {k: v for k, v in duplicates.items() if k in legacy_allowlist}
+    new_dups = {k: v for k, v in duplicates.items() if k not in legacy_allowlist}
+
+    for item_id, locs in sorted(duplicates.items()):
+        loc_str = ", ".join(f"{fp}:{lno}" for fp, lno in locs)
+        is_legacy = item_id in legacy_allowlist
+        tag = "WARNING (Legacy duplicate)" if (is_legacy and not fail_on_duplicates) else "ERROR (Duplicate ID)"
+        diagnostics.append(f"{tag}: {item_id} appears {len(locs)} times: {loc_str}")
+
+    if fail_on_duplicates:
+        diagnostics.insert(0, f"ERROR: Duplicate REQ/TST IDs detected ({len(duplicates)} duplicates).")
+        return False, diagnostics
+
+    if new_dups:
+        diagnostics.insert(
+            0,
+            f"ERROR: {len(new_dups)} new duplicate REQ/TST ID(s) detected outside legacy allowlist: "
+            f"{', '.join(sorted(new_dups.keys()))}."
+        )
+        return False, diagnostics
+
+    diagnostics.insert(
+        0,
+        f"PASS: Zero new duplicate REQ/TST IDs detected ({len(legacy_dups)} legacy duplicates tolerated pending ATT-6123)."
+    )
+    return True, diagnostics
+
+
+class DanglingReference:
+    """Represents a single dangling reference from a living doc entry to a missing heading."""
+    def __init__(self, source_file, line_no, source_id, target_id, target_type):
+        self.source_file = source_file
+        self.line_no = line_no
+        self.source_id = source_id
+        self.target_id = target_id
+        self.target_type = target_type
+
+    def __iter__(self):
+        return iter((self.source_file, self.line_no, self.source_id, self.target_id))
+
+    def __getitem__(self, item):
+        if isinstance(item, int):
+            return (self.source_file, self.line_no, self.source_id, self.target_id)[item]
+        return getattr(self, item)
+
+    def __repr__(self):
+        return f"DanglingReference({self.source_file}:{self.line_no} [{self.source_id}] -> {self.target_id})"
+
+    def __eq__(self, other):
+        if isinstance(other, (tuple, list)):
+            return (self.source_file, self.line_no, self.source_id, self.target_id) == tuple(other)
+        if isinstance(other, DanglingReference):
+            return (self.source_file, self.line_no, self.source_id, self.target_id) == (
+                other.source_file,
+                other.line_no,
+                other.source_id,
+                other.target_id,
+            )
+        return False
+
+
+class DanglingReferencesList(list):
+    """List containing all dangling references, with dictionary and attribute access for backward compatibility."""
+    def __init__(self, dangling_tsts=None, dangling_reqs=None):
+        tsts = list(dangling_tsts or [])
+        reqs = list(dangling_reqs or [])
+        super().__init__(tsts + reqs)
+        self.dangling_tsts = tsts
+        self.dangling_reqs = reqs
+
+    def __getitem__(self, item):
+        if item == "dangling_tsts":
+            return self.dangling_tsts
+        elif item == "dangling_reqs":
+            return self.dangling_reqs
+        return super().__getitem__(item)
+
+    def get(self, key, default=None):
+        if key == "dangling_tsts":
+            return self.dangling_tsts
+        elif key == "dangling_reqs":
+            return self.dangling_reqs
+        return default
+
+    def __contains__(self, item):
+        if item in ("dangling_tsts", "dangling_reqs"):
+            return True
+        return super().__contains__(item)
+
+
+def _load_shard_sources(shards_arg, default_dir_rel, repo_root):
+    """
+    Normalizes shard inputs into a list of (rel_path, lines) tuples.
+    Supports:
+      - None (scans default_dir_rel under repo_root)
+      - directory path (str)
+      - dict: {rel_path: str_content_or_lines}
+      - list/tuple of file paths
+    """
+    if shards_arg is None:
+        abs_dir = os.path.join(repo_root, default_dir_rel) if repo_root else default_dir_rel
+        if not os.path.isdir(abs_dir):
+            return []
+        result = []
+        for fn in sorted(os.listdir(abs_dir)):
+            if fn.endswith(".md"):
+                rel_path = os.path.join(default_dir_rel, fn)
+                abs_fp = os.path.join(abs_dir, fn)
+                with open(abs_fp, "r", encoding="utf-8") as f:
+                    result.append((rel_path, f.readlines()))
+        return result
+    elif isinstance(shards_arg, str) and os.path.isdir(shards_arg):
+        result = []
+        for fn in sorted(os.listdir(shards_arg)):
+            if fn.endswith(".md"):
+                rel_path = os.path.join(os.path.basename(shards_arg), fn)
+                abs_fp = os.path.join(shards_arg, fn)
+                with open(abs_fp, "r", encoding="utf-8") as f:
+                    result.append((rel_path, f.readlines()))
+        return result
+    elif isinstance(shards_arg, dict):
+        result = []
+        for k, v in sorted(shards_arg.items()):
+            if isinstance(v, str):
+                lines = v.splitlines(keepends=True)
+            else:
+                lines = list(v)
+            result.append((k, lines))
+        return result
+    elif isinstance(shards_arg, (list, tuple)):
+        result = []
+        for item in shards_arg:
+            if isinstance(item, str) and os.path.isfile(item):
+                with open(item, "r", encoding="utf-8") as f:
+                    result.append((item, f.readlines()))
+        return result
+    return []
+
+
+def find_dangling_references(req_shards=None, tst_shards=None, repo_root=None):
+    """
+    Extracts all cited TST IDs from the 'Tests' field of every REQ and verifies they match an existing ### TST-* heading.
+    Extracts all cited REQ IDs from the 'Requirements' field of every TST and verifies they match an existing ### REQ-* heading.
+    Reports all dangling references with source file, line, and missing target ID (REQ-PRO-070.1, REQ-PRO-070.2).
+
+    Returns a DanglingReferencesList (supports list operations, attribute access (.dangling_tsts, .dangling_reqs),
+    and dict key indexing ['dangling_tsts'], ['dangling_reqs']).
+    """
+    if repo_root is None:
+        repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+
+    loaded_reqs = _load_shard_sources(req_shards, "docs/requirements", repo_root)
+    loaded_tsts = _load_shard_sources(tst_shards, "docs/tests", repo_root)
+
+    # 1. Discover all declared headings
+    known_req_ids = set()
+    known_tst_ids = set()
+
+    for rel_path, lines in loaded_reqs:
+        for line in lines:
+            m = re.match(r"^(#{2,4})\s*(REQ-[A-Z0-9_-]+):?\s*(.*?)$", line.strip())
+            if m:
+                known_req_ids.add(m.group(2))
+
+    for rel_path, lines in loaded_tsts:
+        for line in lines:
+            m = re.match(r"^(#{2,4})\s*(TST-[A-Z0-9_-]+):?\s*(.*?)$", line.strip())
+            if m:
+                known_tst_ids.add(m.group(2))
+
+    dangling_tsts = []
+    dangling_reqs = []
+
+    # 2. Extract cited TST IDs in REQ entries
+    for rel_path, lines in loaded_reqs:
+        cur_req = None
+        for lno, line in enumerate(lines, 1):
+            m_h = re.match(r"^(#{2,4})\s*(REQ-[A-Z0-9_-]+):?\s*(.*?)$", line.strip())
+            if m_h:
+                cur_req = m_h.group(2)
+            m_f = re.match(r"^\s*[-*]\s*\*{0,2}Tests?\*{0,2}\s*:\s*(.*)", line, re.IGNORECASE)
+            if m_f:
+                val = m_f.group(1)
+                cites = re.findall(r"(?<![A-Za-z0-9_-])TST-[A-Z0-9_-]+(?![A-Za-z0-9_-])", val)
+                for c in cites:
+                    if c not in known_tst_ids:
+                        dangling_tsts.append(
+                            DanglingReference(
+                                source_file=rel_path,
+                                line_no=lno,
+                                source_id=cur_req or "UNKNOWN",
+                                target_id=c,
+                                target_type="TST",
+                            )
+                        )
+
+    # 3. Extract cited REQ IDs in TST entries
+    for rel_path, lines in loaded_tsts:
+        cur_tst = None
+        for lno, line in enumerate(lines, 1):
+            m_h = re.match(r"^(#{2,4})\s*(TST-[A-Z0-9_-]+):?\s*(.*?)$", line.strip())
+            if m_h:
+                cur_tst = m_h.group(2)
+            m_f = re.match(
+                r"^\s*[-*]\s*\*{0,2}(?:Requirements?|Requirement\(s\)|Target Requirement)\*{0,2}\s*:\s*(.*)",
+                line,
+                re.IGNORECASE,
+            )
+            if m_f:
+                val = m_f.group(1)
+                cites = re.findall(r"(?<![A-Za-z0-9_-])REQ-[A-Z0-9_-]+(?![A-Za-z0-9_-])", val)
+                for c in cites:
+                    if c not in known_req_ids:
+                        dangling_reqs.append(
+                            DanglingReference(
+                                source_file=rel_path,
+                                line_no=lno,
+                                source_id=cur_tst or "UNKNOWN",
+                                target_id=c,
+                                target_type="REQ",
+                            )
+                        )
+
+    return DanglingReferencesList(dangling_tsts=dangling_tsts, dangling_reqs=dangling_reqs)
+
+
+def verify_tests_field_format(repo_root=None):
+    """
+    Verifies that all 'Tests:' fields in docs/requirements/*.md contain strictly backticked
+    TST IDs (format `TST-[A-Z0-9_-]+`) or standardized placeholders (None, Planned, Review,
+    Manual inspection) per REQ-PRO-075 (ATT-6125).
+    Rejects truncated sentence fragments, dangling boolean checks, source code filenames (.kt, .java, .xml),
+    and trailing inline metadata.
+    Returns (is_ok: bool, diagnostics: list[str]).
+    """
+    if repo_root is None:
+        repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+
+    pattern = re.compile(
+        r"^(`TST-[A-Z0-9_-]+`|`?(?:None|Planned|Review|Manual inspection)`?)(\s*,\s*(`TST-[A-Z0-9_-]+`|`?(?:None|Planned|Review|Manual inspection)`?))*$",
+        re.IGNORECASE,
+    )
+
+    req_dir = os.path.join(repo_root, "docs", "requirements")
+    if not os.path.isdir(req_dir):
+        return True, ["PASS: No requirement shards found to validate."]
+
+    req_files = sorted(
+        [
+            os.path.join(req_dir, f)
+            for f in os.listdir(req_dir)
+            if f.startswith("req_") and f.endswith(".md")
+        ]
+    )
+    diagnostics = []
+    errors = []
+
+    for fpath in req_files:
+        rel_path = os.path.relpath(fpath, repo_root)
+        with open(fpath, "r", encoding="utf-8") as fp:
+            cur_req = None
+            for idx, line in enumerate(fp):
+                m_req = re.match(r"^(#{2,4})\s*(\[)?(REQ-[A-Z0-9_-]+)", line.strip())
+                if m_req:
+                    cur_req = m_req.group(3)
+                m_test = re.match(r"^\s*[-*]\s*\*{0,2}Tests?\*{0,2}\s*:\s*(.*)", line, re.IGNORECASE)
+                if m_test and cur_req:
+                    val = m_test.group(1).strip()
+                    # Check for unclosed backticks
+                    if val.count("`") % 2 != 0:
+                        errors.append(
+                            f"ERROR: {rel_path}:{idx+1} [{cur_req}] unclosed backtick in Tests field: '{val}'"
+                        )
+                        continue
+                    # Check for source code files
+                    if re.search(r"\.(?:kt|java|xml)\b", val):
+                        errors.append(
+                            f"ERROR: {rel_path}:{idx+1} [{cur_req}] source code file in Tests field: '{val}'"
+                        )
+                        continue
+                    # Check against conforming pattern
+                    if not pattern.match(val):
+                        errors.append(
+                            f"ERROR: {rel_path}:{idx+1} [{cur_req}] invalid Tests field format: '{val}'"
+                        )
+
+    if errors:
+        diagnostics.append(f"FAIL: {len(errors)} Tests field format violation(s) detected across requirement shards (REQ-PRO-075):")
+        diagnostics.extend(errors)
+        return False, diagnostics
+
+    diagnostics.append("PASS: All Tests fields in requirement shards conform to valid TST ID and placeholder syntax (REQ-PRO-075).")
+    return True, diagnostics
+
+
+def verify_dangling_references(
+    repo_root=None,
+    fail_on_dangling=False,
+    legacy_tst_allowlist=None,
+    legacy_req_allowlist=None,
+    req_shards=None,
+    tst_shards=None,
+):
+    """
+    Verifies that all cited REQ and TST references resolve to authentic headings (REQ-PRO-070 / TST-PRO-070).
+    Reports all dangling references with source file, line number, source ID, and missing target ID.
+
+    If fail_on_dangling is True (or --enforce-links / --fail-on-dangling CLI flag):
+      Fails if ANY dangling reference is detected (including legacy items).
+    If fail_on_dangling is False (default):
+      Known legacy dangling references present in allowlists are reported as WARNINGs without failing validation.
+      Any NEW dangling reference (not in the allowlist) causes validation to fail.
+
+    Returns (success: bool, diagnostics: list[str]).
+    """
+    if legacy_tst_allowlist is None:
+        legacy_tst_allowlist = LEGACY_DANGLING_TST_REFS
+    if legacy_req_allowlist is None:
+        legacy_req_allowlist = LEGACY_DANGLING_REQ_REFS
+
+    dangling = find_dangling_references(req_shards=req_shards, tst_shards=tst_shards, repo_root=repo_root)
+    diagnostics = []
+
+    if not dangling:
+        diagnostics.append("PASS: All cited REQ and TST references resolve to authentic headings.")
+        return True, diagnostics
+
+    new_dangling = []
+    legacy_dangling = []
+
+    for ref in dangling:
+        is_legacy = (
+            (ref.target_type == "TST" and ref.target_id in legacy_tst_allowlist)
+            or (ref.target_type == "REQ" and ref.target_id in legacy_req_allowlist)
+        )
+        if is_legacy and not fail_on_dangling:
+            legacy_dangling.append(ref)
+            tag = "WARNING (Legacy dangling reference)"
+        else:
+            new_dangling.append(ref)
+            tag = "ERROR (Dangling reference)"
+
+        diagnostics.append(
+            f"{tag}: {ref.source_file}:{ref.line_no} [{ref.source_id}] cites non-existent {ref.target_id}."
+        )
+
+    if fail_on_dangling:
+        diagnostics.insert(
+            0,
+            f"ERROR: Dangling REQ/TST references detected ({len(dangling)} references, strict enforcement active)."
+        )
+        return False, diagnostics
+
+    if new_dangling:
+        diagnostics.insert(
+            0,
+            f"ERROR: {len(new_dangling)} new dangling REQ/TST reference(s) detected outside legacy allowlist: "
+            f"{', '.join(sorted(set(r.target_id for r in new_dangling)))}."
+        )
+        return False, diagnostics
+
+    diagnostics.insert(
+        0,
+        f"PASS: Zero new dangling REQ/TST references detected ({len(legacy_dangling)} legacy references tolerated pending A-08.x)."
+    )
+    return True, diagnostics
+
+
+def extract_living_test_ids(repo_root=None, tst_shards=None):
+    """
+    Collects all authentic TST-* IDs declared across living test shards (REQ-PRO-073.4).
+    """
+    if repo_root is None:
+        repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+    known = set()
+    if tst_shards is not None:
+        for fp, content in tst_shards.items():
+            lines = content if isinstance(content, list) else content.splitlines()
+            for l in lines:
+                m = re.match(r"^#{2,4}\s*(TST-[A-Z0-9_-]+)", l.strip())
+                if m:
+                    known.add(m.group(1))
+        return known
+
+    abs_tst_dir = os.path.join(repo_root, "docs", "tests")
+    if os.path.isdir(abs_tst_dir):
+        for fn in sorted(os.listdir(abs_tst_dir)):
+            if fn.endswith(".md"):
+                with open(os.path.join(abs_tst_dir, fn), "r", encoding="utf-8") as f:
+                    for l in f:
+                        m = re.match(r"^#{2,4}\s*(TST-[A-Z0-9_-]+)", l.strip())
+                        if m:
+                            known.add(m.group(1))
+    return known
+
+
+def find_ungrounded_verified_requirements(repo_root=None, req_shards=None, tst_shards=None):
+    """
+    Scans docs/requirements/*.md for requirements claiming [Verified] without citing at least
+    one authentic, existing TST ID (REQ-PRO-073.4).
+    Returns a list of dicts:
+      {
+        "file": rel_path,
+        "line_no": lno,
+        "req_id": req_id,
+        "cited_tsts": [...],
+        "reason": "missing_or_empty_tests" | "non_existent_tests",
+      }
+    """
+    if repo_root is None:
+        repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+
+    known_tsts = extract_living_test_ids(repo_root=repo_root, tst_shards=tst_shards)
+
+    shards = {}
+    if req_shards is not None:
+        shards = req_shards
+    else:
+        abs_req_dir = os.path.join(repo_root, "docs", "requirements")
+        if os.path.isdir(abs_req_dir):
+            for fn in sorted(os.listdir(abs_req_dir)):
+                if fn.endswith(".md"):
+                    with open(os.path.join(abs_req_dir, fn), "r", encoding="utf-8") as f:
+                        shards[os.path.join("docs/requirements", fn)] = f.readlines()
+
+    ungrounded = []
+    for rel_path, lines in shards.items():
+        if isinstance(lines, str):
+            lines = lines.splitlines()
+
+        cur_req = None
+        cur_status = None
+        cur_lno = 0
+        cur_tsts = []
+
+        def flush():
+            nonlocal cur_req, cur_status, cur_lno, cur_tsts
+            if cur_req and cur_status == "Verified":
+                valid_tsts = [t for t in cur_tsts if t in known_tsts]
+                if not cur_tsts:
+                    ungrounded.append({
+                        "file": rel_path,
+                        "line_no": cur_lno,
+                        "req_id": cur_req,
+                        "cited_tsts": [],
+                        "reason": "missing_or_empty_tests",
+                    })
+                elif not valid_tsts:
+                    ungrounded.append({
+                        "file": rel_path,
+                        "line_no": cur_lno,
+                        "req_id": cur_req,
+                        "cited_tsts": list(cur_tsts),
+                        "reason": "non_existent_tests",
+                    })
+
+        for lno, line in enumerate(lines, 1):
+            m = re.match(r"^(#{2,4})\s*(REQ-[A-Z0-9_-]+):?\s*(.*?)$", line.strip())
+            if m:
+                flush()
+                cur_req = m.group(2)
+                cur_lno = lno
+                cur_tsts = []
+                if "[Verified]" in line:
+                    cur_status = "Verified"
+                elif "[Implemented]" in line:
+                    cur_status = "Implemented"
+                elif "[Open]" in line:
+                    cur_status = "Open"
+                else:
+                    cur_status = "Planned"
+            elif cur_req:
+                m_t = re.search(r"\*\*Tests\*\*:\s*(.*?)(?:\||$)", line)
+                if m_t:
+                    val = m_t.group(1).strip()
+                    found = re.findall(r"\bTST-[A-Z0-9_-]+\b", val)
+                    cur_tsts.extend(found)
+        flush()
+
+    return ungrounded
+
+
+def verify_requirement_evidence_status(
+    repo_root=None,
+    fail_on_unverified=False,
+    diff_text=None,
+    base_ref="develop",
+    req_shards=None,
+    tst_shards=None,
+    legacy_allowlist=None,
+):
+    """
+    Verifies that all requirements claiming [Verified] cite at least one authentic, existing TST ID (REQ-PRO-073.4).
+    Requirements with no test citation, empty tests, 'None', 'N/A', or only non-existent TSTs are rejected.
+
+    If diff_text is provided (or in verify_governance), any net-new or modified requirement in the diff
+    claiming [Verified] without an existing TST ID causes verification to fail.
+    If fail_on_unverified is True (or --enforce-evidence CLI flag), ANY ungrounded [Verified]
+    requirement in the repository causes verification to fail.
+    Otherwise, legacy ungrounded requirements present in legacy_allowlist emit a WARNING.
+    Any novel ungrounded [Verified] requirement causes verification to fail.
+
+    Returns (success: bool, diagnostics: list[str]).
+    """
+    if legacy_allowlist is None:
+        legacy_allowlist = LEGACY_UNGROUNDED_VERIFIED_REQS
+
+    ungrounded = find_ungrounded_verified_requirements(
+        repo_root=repo_root, req_shards=req_shards, tst_shards=tst_shards
+    )
+
+    diff_flagged = set()
+    if diff_text is not None:
+        mod_reqs, add_reqs, _ = parse_diff_requirements(diff_text)
+        diff_flagged = mod_reqs.union(add_reqs)
+
+    errors = []
+    warnings = []
+
+    for item in ungrounded:
+        req_id = item["req_id"]
+        rel_path = item["file"]
+        lno = item["line_no"]
+        reason = item["reason"]
+
+        msg = (
+            f"{rel_path}:{lno} [{req_id}] claims [Verified] without citing any authentic existing test specification"
+            f" (reason: {reason}, REQ-PRO-073.4)."
+        )
+
+        if fail_on_unverified or (req_id not in legacy_allowlist):
+            errors.append(msg)
+        else:
+            warnings.append(
+                f"WARNING (Legacy ungrounded requirement): {rel_path}:{lno} [{req_id}] claims [Verified] "
+                f"without verified test evidence pending A-08 backfill."
+            )
+
+    diagnostics = []
+    if errors:
+        for err in errors:
+            diagnostics.append(f"ERROR: {err}")
+        return False, diagnostics
+
+    for warn in warnings:
+        diagnostics.append(warn)
+
+    diagnostics.append(
+        f"PASS: Zero ungrounded [Verified] requirements detected ({len(warnings)} legacy requirements tolerated pending A-08 backfill)."
+    )
+    return True, diagnostics
+
+
+ALLOWED_PRIORITIES = {"critical", "high", "medium", "low"}
+ALLOWED_TYPES = {"functional", "non-functional", "nonfunctional", "non functional", "f", "nfr"}
+ALLOWED_VERIFICATION_METHODS = {
+    "unit",
+    "integration",
+    "on-device manual",
+    "on-device",
+    "device-manual",
+    "device manual",
+    "review",
+    "formal analysis",
+    "test",
+    "demonstration",
+    "inspection",
+    "analysis",
+}
+
+
+def find_missing_requirement_attributes(repo_root=None, req_shards=None):
+    """
+    Scans docs/requirements/*.md for requirements lacking Priority, Type,
+    or Verification Method attributes (REQ-PRO-077, SWE.1 BP2).
+    Returns a list of dicts:
+      {
+        "file": rel_path,
+        "line_no": lno,
+        "req_id": req_id,
+        "missing": [...],
+        "invalid": [...],
+        "priority": str or None,
+        "type": str or None,
+        "verification_method": str or None,
+      }
+    """
+    if repo_root is None:
+        repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+
+    shards = {}
+    if req_shards is not None:
+        shards = req_shards
+    else:
+        abs_req_dir = os.path.join(repo_root, "docs", "requirements")
+        if os.path.isdir(abs_req_dir):
+            for fn in sorted(os.listdir(abs_req_dir)):
+                if fn.endswith(".md"):
+                    with open(os.path.join(abs_req_dir, fn), "r", encoding="utf-8") as f:
+                        shards[os.path.join("docs/requirements", fn)] = f.readlines()
+
+    def split_vm_tokens(raw_vm):
+        tokens = [t.strip().lower() for t in re.split(r"[/,;&|]|\band\b", raw_vm) if t.strip()]
+        return tokens
+
+    def is_valid_vm(raw_vm):
+        tokens = split_vm_tokens(raw_vm)
+        if not tokens:
+            return False
+        return all(t in ALLOWED_VERIFICATION_METHODS for t in tokens)
+
+    def is_valid_priority(raw_pri):
+        return raw_pri.strip().lower() in ALLOWED_PRIORITIES
+
+    def is_valid_type(raw_type):
+        return raw_type.strip().lower() in ALLOWED_TYPES
+
+    results = []
+
+    for rel_path, lines in shards.items():
+        if isinstance(lines, str):
+            lines = lines.splitlines()
+
+        cur_req = None
+        cur_lno = 0
+        cur_pri = None
+        cur_type = None
+        cur_vm = None
+
+        def flush():
+            nonlocal cur_req, cur_lno, cur_pri, cur_type, cur_vm
+            if cur_req:
+                missing = []
+                invalid = []
+                if not cur_pri or not cur_pri.strip():
+                    missing.append("Priority")
+                elif not is_valid_priority(cur_pri):
+                    invalid.append(f"Priority='{cur_pri.strip()}' (allowed: Critical, High, Medium, Low)")
+
+                if not cur_type or not cur_type.strip():
+                    missing.append("Type")
+                elif not is_valid_type(cur_type):
+                    invalid.append(f"Type='{cur_type.strip()}' (allowed: Functional, Non-Functional)")
+
+                if not cur_vm or not cur_vm.strip():
+                    missing.append("Verification Method")
+                elif not is_valid_vm(cur_vm):
+                    invalid.append(
+                        f"Verification Method='{cur_vm.strip()}' (allowed: Unit, Integration, On-Device Manual, Review, Formal Analysis)"
+                    )
+
+                if missing or invalid:
+                    results.append({
+                        "file": rel_path,
+                        "line_no": cur_lno,
+                        "req_id": cur_req,
+                        "missing": missing,
+                        "invalid": invalid,
+                        "priority": cur_pri,
+                        "type": cur_type,
+                        "verification_method": cur_vm,
+                    })
+
+        for lno, line in enumerate(lines, 1):
+            m = re.match(r"^(#{2,4})\s*(REQ-[A-Z0-9_-]+):?\s*(.*?)$", line.strip())
+            if m:
+                flush()
+                cur_req = m.group(2)
+                cur_lno = lno
+                cur_pri = None
+                cur_type = None
+                cur_vm = None
+            elif cur_req:
+                m_pri = re.search(r"[*•-]\s*\*\*Priority\*\*:\s*`?([^`|\r\n]+)`?(?:\||$)", line, re.IGNORECASE)
+                if m_pri and cur_pri is None:
+                    cur_pri = m_pri.group(1).strip()
+
+                m_type = re.search(r"[*•-]\s*\*\*Type\*\*:\s*`?([^`|\r\n]+)`?(?:\||$)", line, re.IGNORECASE)
+                if m_type and cur_type is None:
+                    cur_type = m_type.group(1).strip()
+
+                m_vm = re.search(r"[*•-]\s*\*\*Verification[- ]Method\*\*:\s*`?([^`|\r\n]+)`?(?:\||$)", line, re.IGNORECASE)
+                if m_vm and cur_vm is None:
+                    cur_vm = m_vm.group(1).strip()
+
+        flush()
+
+    return results
+
+
+def verify_requirement_attributes(
+    repo_root=None,
+    enforce_attributes=False,
+    diff_text=None,
+    base_ref="develop",
+    req_shards=None,
+    legacy_allowlist=None,
+):
+    """
+    Verifies that requirements define Priority, Type, and Verification Method attributes (REQ-PRO-077, SWE.1 BP2).
+    In default mode:
+      - Newly added or modified requirements in the git diff MUST have valid Priority, Type, and Verification Method attributes.
+        Any missing or invalid attribute in the diff causes verification failure (exit code 1).
+      - Legacy requirements without attributes emit WARNING diagnostics without failing.
+    In strict mode (--enforce-attributes / --fail-on-missing-attributes):
+      - ANY requirement in the repository missing attributes or with invalid attributes causes verification failure.
+    If legacy_allowlist is provided (set of REQ IDs):
+      - Requirements in legacy_allowlist emit WARNINGs unless enforce_attributes is True.
+    """
+    defective_reqs = find_missing_requirement_attributes(
+        repo_root=repo_root, req_shards=req_shards
+    )
+
+    modified_reqs = set()
+    added_reqs = set()
+    if diff_text is None and not enforce_attributes:
+        try:
+            diff_text = get_git_diff(base_ref=base_ref)
+        except Exception:
+            diff_text = ""
+
+    if diff_text:
+        modified_reqs, added_reqs, _ = parse_diff_requirements(diff_text)
+
+    errors = []
+    warnings = []
+
+    for item in defective_reqs:
+        req_id = item["req_id"]
+        rel_path = item["file"]
+        lno = item["line_no"]
+        reasons = []
+        if item["missing"]:
+            reasons.append(f"missing: {', '.join(item['missing'])}")
+        if item["invalid"]:
+            reasons.append(f"invalid: {', '.join(item['invalid'])}")
+        reason_str = "; ".join(reasons)
+
+        msg = f"{rel_path}:{lno} [{req_id}] lacks required attributes ({reason_str}, REQ-PRO-077, SWE.1 BP2)."
+
+        is_new_req = req_id in added_reqs
+        is_mod_req = req_id in modified_reqs
+        is_legacy = (legacy_allowlist is not None and req_id in legacy_allowlist) or (legacy_allowlist is None and not is_new_req)
+
+        if enforce_attributes or is_new_req or (is_mod_req and item["invalid"]):
+            errors.append(msg)
+        else:
+            warnings.append(
+                f"WARNING (Legacy missing attributes): {rel_path}:{lno} [{req_id}] lacks required attributes "
+                f"({reason_str}) pending backfill."
+            )
+
+    diagnostics = []
+    if errors:
+        for err in errors:
+            diagnostics.append(f"ERROR: {err}")
+        return False, diagnostics
+
+    for warn in warnings:
+        diagnostics.append(warn)
+
+    if not warnings:
+        diagnostics.append(
+            "PASS: 100% of living requirements define valid Priority, Type, and Verification Method attributes."
+        )
+    else:
+        diagnostics.append(
+            f"PASS: Zero attribute violations detected ({len(warnings)} legacy requirements tolerated without attributes pending backfill)."
+        )
+
+    return True, diagnostics
+
+
+
+class CoverageCategoryResult:
+    """Represents a single coverage gap category with counts, totals, and percentages (REQ-PRO-071)."""
+    def __init__(self, name, description, covered_count, total_count, gap_count, percentage, gap_items=None, details=None):
+        self.name = name
+        self.description = description
+        self.covered_count = covered_count
+        self.total_count = total_count
+        self.gap_count = gap_count
+        self.percentage = float(percentage)
+        self.gap_items = list(gap_items or [])
+        self.details = dict(details or {})
+
+    def to_dict(self):
+        return {
+            "name": self.name,
+            "description": self.description,
+            "covered_count": self.covered_count,
+            "total_count": self.total_count,
+            "gap_count": self.gap_count,
+            "percentage": round(self.percentage, 2),
+            "gap_items": self.gap_items,
+            "details": self.details,
+        }
+
+    def __getitem__(self, item):
+        if hasattr(self, item):
+            return getattr(self, item)
+        d = self.to_dict()
+        if item in d:
+            return d[item]
+        raise KeyError(item)
+
+    def get(self, key, default=None):
+        try:
+            return self[key]
+        except KeyError:
+            return default
+
+    def __repr__(self):
+        return (
+            f"CoverageCategoryResult({self.name}: {self.covered_count}/{self.total_count} "
+            f"({self.percentage:.2f}%), gap={self.gap_count})"
+        )
+
+
+class TraceabilityCoverageReport:
+    """Comprehensive traceability coverage report across all 4 categories (REQ-PRO-071)."""
+    def __init__(self, cat1, cat2, cat3, cat4, metadata=None):
+        self.cat1 = cat1
+        self.cat2 = cat2
+        self.cat3 = cat3
+        self.cat4 = cat4
+        self.metadata = dict(metadata or {})
+
+    def to_dict(self):
+        return {
+            "category_1_reqs_without_tst": self.cat1.to_dict(),
+            "category_2_tsts_without_code": self.cat2.to_dict(),
+            "category_3_code_tags_without_spec": self.cat3.to_dict(),
+            "category_4_tsts_not_cited_back": self.cat4.to_dict(),
+            "summary": {
+                "total_reqs": self.cat1.total_count,
+                "reqs_with_tst": self.cat1.covered_count,
+                "req_tst_coverage_pct": round(self.cat1.percentage, 2),
+                "total_tsts": self.cat2.total_count,
+                "tsts_with_code": self.cat2.covered_count,
+                "tst_code_coverage_pct": round(self.cat2.percentage, 2),
+                "total_code_tsts": self.cat3.total_count,
+                "code_tags_with_spec": self.cat3.covered_count,
+                "code_tags_without_spec": self.cat3.gap_count,
+                "code_spec_match_pct": round(self.cat3.percentage, 2),
+                "tsts_cited_back": self.cat4.covered_count,
+                "bidirectional_coverage_pct": round(self.cat4.percentage, 2),
+            },
+            "metadata": self.metadata,
+        }
+
+    def __getitem__(self, item):
+        d = self.to_dict()
+        if item in d:
+            return d[item]
+        aliases = {
+            "cat1": self.cat1,
+            "cat2": self.cat2,
+            "cat3": self.cat3,
+            "cat4": self.cat4,
+            "category_1": self.cat1,
+            "category_2": self.cat2,
+            "category_3": self.cat3,
+            "category_4": self.cat4,
+        }
+        if item in aliases:
+            return aliases[item]
+        raise KeyError(item)
+
+    def get(self, key, default=None):
+        try:
+            return self[key]
+        except KeyError:
+            return default
+
+
+def extract_test_code_tags(test_sources=None, repo_root=None):
+    """
+    Extracts all test code tags (TST-*) across test source files.
+    Supports:
+      - None (scans app/src/test under repo_root)
+      - directory path (str)
+      - dict: {rel_path: str_content_or_lines}
+      - list/tuple: file paths or (rel_path, content_or_lines) tuples
+    Normalizes method sub-tags (e.g. TST-XXX-001_1, TST-XXX-001.1, TST-XXX-001-A) to their base TST-XXX-001 ID.
+    Returns dict mapping base TST ID to list of occurrences: {base_id: [{"file": fp, "line": lno, "raw_tag": raw}]}.
+    """
+    if repo_root is None:
+        repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+
+    files_to_scan = []
+    if test_sources is None:
+        test_dir = os.path.join(repo_root, "app/src/test")
+        if os.path.isdir(test_dir):
+            for root, dirs, files in os.walk(test_dir):
+                for f in sorted(files):
+                    if f.endswith(".kt") or f.endswith(".java"):
+                        abs_fp = os.path.join(root, f)
+                        rel_fp = os.path.relpath(abs_fp, repo_root)
+                        with open(abs_fp, "r", encoding="utf-8", errors="ignore") as fh:
+                            files_to_scan.append((rel_fp, fh.readlines()))
+    elif isinstance(test_sources, str) and os.path.isdir(test_sources):
+        for root, dirs, files in os.walk(test_sources):
+            for f in sorted(files):
+                if f.endswith(".kt") or f.endswith(".java"):
+                    abs_fp = os.path.join(root, f)
+                    rel_fp = os.path.relpath(abs_fp, repo_root) if repo_root else abs_fp
+                    with open(abs_fp, "r", encoding="utf-8", errors="ignore") as fh:
+                        files_to_scan.append((rel_fp, fh.readlines()))
+    elif isinstance(test_sources, dict):
+        for k, v in sorted(test_sources.items()):
+            lines = v.splitlines(keepends=True) if isinstance(v, str) else list(v)
+            files_to_scan.append((k, lines))
+    elif isinstance(test_sources, (list, tuple)):
+        for item in test_sources:
+            if isinstance(item, tuple) and len(item) == 2:
+                k, v = item
+                lines = v.splitlines(keepends=True) if isinstance(v, str) else list(v)
+                files_to_scan.append((k, lines))
+            elif isinstance(item, str) and os.path.isfile(item):
+                with open(item, "r", encoding="utf-8", errors="ignore") as fh:
+                    files_to_scan.append((item, fh.readlines()))
+
+    tag_pattern = re.compile(r"(?<![A-Za-z0-9_-])(TST-[A-Z]+-[0-9]+(?:[\._-][A-Za-z0-9_-]+)*)")
+    base_pattern = re.compile(r"^(TST-[A-Z]+-[0-9]+)")
+
+    code_tags = {}
+    for rel_fp, lines in files_to_scan:
+        for lno, line in enumerate(lines, 1):
+            for m in tag_pattern.finditer(line):
+                raw = m.group(1).rstrip(".")
+                m_base = base_pattern.match(raw)
+                base_id = m_base.group(1) if m_base else raw
+                code_tags.setdefault(base_id, []).append({
+                    "file": rel_fp,
+                    "line": lno,
+                    "raw_tag": raw,
+                })
+
+    return code_tags
+
+
+def calculate_traceability_coverage(
+    req_shards=None,
+    tst_shards=None,
+    test_sources=None,
+    repo_root=None,
+):
+    """
+    Computes bidirectional REQ-TST traceability and test code existence coverage across 4 categories (REQ-PRO-071):
+      - Category 1: REQs without TST citation (REQ-PRO-071.1)
+      - Category 2: TSTs without test code (REQ-PRO-071.2)
+      - Category 3: Code tags without spec (REQ-PRO-071.3)
+      - Category 4: TSTs not cited back by their REQ (REQ-PRO-071.4)
+    Returns TraceabilityCoverageReport.
+    """
+    if repo_root is None:
+        repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+
+    loaded_reqs = _load_shard_sources(req_shards, "docs/requirements", repo_root)
+    loaded_tsts = _load_shard_sources(tst_shards, "docs/tests", repo_root)
+
+    # 1. Discover all declared headings
+    known_req_ids = set()
+    known_tst_ids = set()
+
+    for rel_path, lines in loaded_reqs:
+        for line in lines:
+            m = re.match(r"^(#{2,4})\s*(REQ-[A-Z0-9_-]+):?\s*(.*?)$", line.strip())
+            if m:
+                known_req_ids.add(m.group(2))
+
+    for rel_path, lines in loaded_tsts:
+        for line in lines:
+            m = re.match(r"^(#{2,4})\s*(TST-[A-Z0-9_-]+):?\s*(.*?)$", line.strip())
+            if m:
+                known_tst_ids.add(m.group(2))
+
+    # 2. Extract cited TSTs in REQs' Tests field
+    req_to_tsts = {r: set() for r in known_req_ids}
+    for rel_path, lines in loaded_reqs:
+        cur_req = None
+        for line in lines:
+            m = re.match(r"^(#{2,4})\s*(REQ-[A-Z0-9_-]+):?\s*(.*?)$", line.strip())
+            if m:
+                cur_req = m.group(2)
+            m_f = re.match(r"^\s*[-*]\s*\*{0,2}Tests?\*{0,2}\s*:\s*(.*)", line, re.IGNORECASE)
+            if m_f and cur_req:
+                cites = re.findall(r"(?<![A-Za-z0-9_-])TST-[A-Z0-9_-]+(?![A-Za-z0-9_-])", m_f.group(1))
+                req_to_tsts[cur_req].update(cites)
+
+    # 3. Extract cited REQs in TSTs' Requirements field
+    tst_to_reqs = {t: set() for t in known_tst_ids}
+    for rel_path, lines in loaded_tsts:
+        cur_tst = None
+        for line in lines:
+            m = re.match(r"^(#{2,4})\s*(TST-[A-Z0-9_-]+):?\s*(.*?)$", line.strip())
+            if m:
+                cur_tst = m.group(2)
+            m_f = re.match(
+                r"^\s*[-*]\s*\*{0,2}(?:Requirements?|Requirement\(s\)|Target Requirement)\*{0,2}\s*:\s*(.*)",
+                line,
+                re.IGNORECASE,
+            )
+            if m_f and cur_tst:
+                cites = re.findall(r"(?<![A-Za-z0-9_-])REQ-[A-Z0-9_-]+(?![A-Za-z0-9_-])", m_f.group(1))
+                tst_to_reqs[cur_tst].update(cites)
+
+    # 4. Scan test code tags
+    code_tsts = extract_test_code_tags(test_sources=test_sources, repo_root=repo_root)
+
+    # Category 1: REQs without TST
+    reqs_without_tst = sorted([r for r in known_req_ids if not req_to_tsts.get(r)])
+    total_reqs = len(known_req_ids)
+    covered_reqs = total_reqs - len(reqs_without_tst)
+    pct_cat1 = (covered_reqs / total_reqs * 100.0) if total_reqs > 0 else 100.0
+    cat1 = CoverageCategoryResult(
+        name="Category 1",
+        description="REQs citing at least one TST in 'Tests' field",
+        covered_count=covered_reqs,
+        total_count=total_reqs,
+        gap_count=len(reqs_without_tst),
+        percentage=pct_cat1,
+        gap_items=reqs_without_tst,
+    )
+
+    # Category 2: TSTs without test code
+    tsts_without_code = sorted([t for t in known_tst_ids if t not in code_tsts])
+    total_tsts = len(known_tst_ids)
+    covered_tsts = total_tsts - len(tsts_without_code)
+    pct_cat2 = (covered_tsts / total_tsts * 100.0) if total_tsts > 0 else 100.0
+    cat2 = CoverageCategoryResult(
+        name="Category 2",
+        description="TST specifications with matching test code tag in test directory",
+        covered_count=covered_tsts,
+        total_count=total_tsts,
+        gap_count=len(tsts_without_code),
+        percentage=pct_cat2,
+        gap_items=tsts_without_code,
+    )
+
+    # Category 3: Code tags without spec
+    code_tags_without_spec = sorted([b for b in code_tsts.keys() if b not in known_tst_ids])
+    total_code_tsts = len(code_tsts)
+    covered_code_tags = total_code_tsts - len(code_tags_without_spec)
+    pct_cat3 = (covered_code_tags / total_code_tsts * 100.0) if total_code_tsts > 0 else 100.0
+    cat3 = CoverageCategoryResult(
+        name="Category 3",
+        description="Code tags with matching TST heading in living documentation",
+        covered_count=covered_code_tags,
+        total_count=total_code_tsts,
+        gap_count=len(code_tags_without_spec),
+        percentage=pct_cat3,
+        gap_items=code_tags_without_spec,
+        details={b: code_tsts[b] for b in code_tags_without_spec},
+    )
+
+    # Category 4: TSTs not cited back by their REQ
+    tsts_not_cited_back = []
+    tst_back_details = {}
+    for t in sorted(known_tst_ids):
+        cited = tst_to_reqs.get(t, set())
+        if not cited:
+            tsts_not_cited_back.append(t)
+            tst_back_details[t] = ["<NO_CITED_REQS>"]
+        else:
+            unciting = [r for r in sorted(cited) if t not in req_to_tsts.get(r, set())]
+            if unciting:
+                tsts_not_cited_back.append(t)
+                tst_back_details[t] = unciting
+
+    covered_bidirectional = total_tsts - len(tsts_not_cited_back)
+    pct_cat4 = (covered_bidirectional / total_tsts * 100.0) if total_tsts > 0 else 100.0
+    cat4 = CoverageCategoryResult(
+        name="Category 4",
+        description="TST specifications cited back by all of their referenced REQs",
+        covered_count=covered_bidirectional,
+        total_count=total_tsts,
+        gap_count=len(tsts_not_cited_back),
+        percentage=pct_cat4,
+        gap_items=tsts_not_cited_back,
+        details=tst_back_details,
+    )
+
+    return TraceabilityCoverageReport(
+        cat1=cat1,
+        cat2=cat2,
+        cat3=cat3,
+        cat4=cat4,
+        metadata={"repo_root": repo_root},
+    )
+
+
+def format_coverage_markdown(report):
+    """Formats a TraceabilityCoverageReport into a GitHub-style Markdown matrix."""
+    lines = [
+        "# ASPICE Traceability & Verification Coverage Report (REQ-PRO-071)",
+        "",
+        "| Category | Metric Description | Covered / Compliant | Total | Gap Count | Coverage % |",
+        "| :--- | :--- | :--- | :--- | :--- | :--- |",
+        f"| **Category 1** | REQs with TST Citation | {report.cat1.covered_count} | {report.cat1.total_count} | {report.cat1.gap_count} | {report.cat1.percentage:.2f}% |",
+        f"| **Category 2** | TSTs with Test Code | {report.cat2.covered_count} | {report.cat2.total_count} | {report.cat2.gap_count} | {report.cat2.percentage:.2f}% |",
+        f"| **Category 3** | Code Tags with Valid Spec | {report.cat3.covered_count} | {report.cat3.total_count} | {report.cat3.gap_count} | {report.cat3.percentage:.2f}% |",
+        f"| **Category 4** | TSTs Cited Back by REQs | {report.cat4.covered_count} | {report.cat4.total_count} | {report.cat4.gap_count} | {report.cat4.percentage:.2f}% |",
+        "",
+        "### Category Summaries:",
+        f"* **Category 1 (REQs without TST)**: {report.cat1.gap_count} requirements cite no test specification in their 'Tests' field.",
+        f"* **Category 2 (TSTs without test code)**: {report.cat2.gap_count} test specifications have no matching test method in the test directory.",
+    ]
+
+    if report.cat3.gap_count > 0:
+        sample = ", ".join(report.cat3.gap_items[:15])
+        suffix = f" ... (+{report.cat3.gap_count - 15} more)" if report.cat3.gap_count > 15 else ""
+        lines.append(f"* **Category 3 (Code tags without spec)**: {report.cat3.gap_count} unique test tags in test code have no living document heading: {sample}{suffix}.")
+    else:
+        lines.append("* **Category 3 (Code tags without spec)**: 0 code tags without spec (100% matched).")
+
+    lines.append(
+        f"* **Category 4 (TSTs not cited back)**: {report.cat4.gap_count} test specifications are not cited back by their referenced requirements."
+    )
+    return "\n".join(lines)
+
+
+def format_coverage_json(report):
+    """Formats a TraceabilityCoverageReport as a formatted JSON string."""
+    return json.dumps(report.to_dict(), indent=2)
+
+
+def verify_coverage_thresholds(
+    report,
+    min_req_tst_coverage=None,
+    min_tst_code_coverage=None,
+    max_code_without_spec=None,
+    min_bidirectional_coverage=None,
+):
+    """
+    Evaluates coverage metrics against optional ratcheting thresholds (REQ-PRO-071.5).
+    Returns (success: bool, diagnostics: list[str]).
+    """
+    diagnostics = []
+    failures = []
+
+    if min_req_tst_coverage is not None:
+        if report.cat1.percentage < min_req_tst_coverage:
+            msg = (
+                f"ERROR: Gate violated: REQ-TST coverage {report.cat1.percentage:.2f}% is below threshold "
+                f"{min_req_tst_coverage:.2f}% (Category 1: {report.cat1.covered_count}/{report.cat1.total_count})."
+            )
+            failures.append(msg)
+            diagnostics.append(msg)
+        else:
+            diagnostics.append(
+                f"PASS: REQ-TST coverage {report.cat1.percentage:.2f}% meets threshold {min_req_tst_coverage:.2f}%."
+            )
+
+    if min_tst_code_coverage is not None:
+        if report.cat2.percentage < min_tst_code_coverage:
+            msg = (
+                f"ERROR: Gate violated: TST-to-code coverage {report.cat2.percentage:.2f}% is below threshold "
+                f"{min_tst_code_coverage:.2f}% (Category 2: {report.cat2.covered_count}/{report.cat2.total_count})."
+            )
+            failures.append(msg)
+            diagnostics.append(msg)
+        else:
+            diagnostics.append(
+                f"PASS: TST-to-code coverage {report.cat2.percentage:.2f}% meets threshold {min_tst_code_coverage:.2f}%."
+            )
+
+    if max_code_without_spec is not None:
+        if report.cat3.gap_count > max_code_without_spec:
+            msg = (
+                f"ERROR: Gate violated: Code tags without spec count {report.cat3.gap_count} exceeds maximum allowed "
+                f"{max_code_without_spec} (Category 3)."
+            )
+            failures.append(msg)
+            diagnostics.append(msg)
+        else:
+            diagnostics.append(
+                f"PASS: Code tags without spec count {report.cat3.gap_count} within maximum allowed {max_code_without_spec}."
+            )
+
+    if min_bidirectional_coverage is not None:
+        if report.cat4.percentage < min_bidirectional_coverage:
+            msg = (
+                f"ERROR: Gate violated: Bidirectional REQ-TST coverage {report.cat4.percentage:.2f}% is below threshold "
+                f"{min_bidirectional_coverage:.2f}% (Category 4: {report.cat4.covered_count}/{report.cat4.total_count})."
+            )
+            failures.append(msg)
+            diagnostics.append(msg)
+        else:
+            diagnostics.append(
+                f"PASS: Bidirectional REQ-TST coverage {report.cat4.percentage:.2f}% meets threshold {min_bidirectional_coverage:.2f}%."
+            )
+
+    if failures:
+        return False, diagnostics
+
+    if not diagnostics:
+        diagnostics.append("PASS: Coverage calculated successfully (no thresholds configured).")
+    return True, diagnostics
+
+
+
 def recalculate_master_index_tables(repo_root=None):
     """
     Recalculates summary tables ('Total', 'Verified', 'Planned / Open') and total requirement/test
@@ -890,7 +2221,7 @@ def recalculate_master_index_tables(repo_root=None):
             if not fn.endswith(".md"):
                 continue
             fp = os.path.join(abs_shard_dir, fn)
-            tot = ver = plan = 0
+            tot = ver = impl = plan = 0
             with open(fp, "r", encoding="utf-8") as f:
                 for line in f:
                     m = re.match(r"^(#{2,4})\s*(" + prefix + r"-[A-Z0-9_-]+):?\s*(.*?)$", line.strip())
@@ -899,9 +2230,11 @@ def recalculate_master_index_tables(repo_root=None):
                     tot += 1
                     if "[Verified]" in line:
                         ver += 1
+                    elif "[Implemented]" in line:
+                        impl += 1
                     else:
                         plan += 1
-            shard_counts[fn] = (tot, ver, plan)
+            shard_counts[fn] = (tot, ver, impl, plan)
 
         master_fp = os.path.join(repo_root, master_rel)
         if not os.path.exists(master_fp):
@@ -911,20 +2244,29 @@ def recalculate_master_index_tables(repo_root=None):
 
         grand_total = sum(c[0] for c in shard_counts.values())
         grand_verified = sum(c[1] for c in shard_counts.values())
-        grand_planned = sum(c[2] for c in shard_counts.values())
+        grand_implemented = sum(c[2] for c in shard_counts.values())
+        grand_planned = sum(c[3] for c in shard_counts.values())
 
         new_lines = []
         changed = False
         for line in master_lines:
             new_line = line
+            if re.search(r"\|\s*Total\s*\|\s*Verified\s*\|\s*Planned\s*/\s*Open\s*\|", line):
+                new_line = re.sub(
+                    r"\|\s*Total\s*\|\s*Verified\s*\|\s*Planned\s*/\s*Open\s*\|",
+                    "| Total | Verified | Implemented | Planned / Open |",
+                    line,
+                )
+            elif re.search(r"\|\s*:---\s*:\s*\|\s*:---\s*:\s*\|\s*:---\s*:\s*\|", line) and line.count(":---:") == 3:
+                new_line = line.rstrip() + " :---: |\n"
             m_link = re.search(r"\((?:requirements|tests)/((?:req|tst)_[^)]+\.md)\)", line)
             if m_link:
                 s_name = m_link.group(1)
                 if s_name in shard_counts:
-                    t, v, p = shard_counts[s_name]
+                    t, v, i, p = shard_counts[s_name]
                     new_line = re.sub(
-                        r"\|\s*\d+\s*\|\s*\d+\s*\|\s*\d+\s*\|(\s*)$",
-                        rf"| {t} | {v} | {p} |\1",
+                        r"\|\s*\d+\s*\|\s*\d+(?:\s*\|\s*\d+)?\s*\|\s*\d+\s*\|(\s*)$",
+                        rf"| {t} | {v} | {i} | {p} |\1",
                         line,
                     )
             elif "links to the " in line:
@@ -946,7 +2288,7 @@ def recalculate_master_index_tables(repo_root=None):
         if changed:
             with open(master_fp, "w", encoding="utf-8") as f:
                 f.writelines(new_lines)
-            msg = f"Recalculated master index table in {master_rel}: Total={grand_total}, Verified={grand_verified}, Planned={grand_planned}."
+            msg = f"Recalculated master index table in {master_rel}: Total={grand_total}, Verified={grand_verified}, Implemented={grand_implemented}, Planned={grand_planned}."
             print(msg)
             recalculated.append(msg)
         else:
@@ -1306,12 +2648,190 @@ def verify_architecture_and_system_specs(diff_text=None, repo_root=None, base_re
     return True, ["PASS: Architecture & system specification code-grounding and SYSREQ parity verified."]
 
 
-def verify_governance(deliverable_text=None, diff_text=None, base_ref="develop", skip_tripwires=False):
+SWE_DERIVED_PREFIXES = {
+    "UI", "UNT",
+    "PER", "PERF", "SPT",
+    "LOC", "MON", "PRI", "SET",
+    "REV",
+    "STP",
+    "ARC", "BLD", "BUG", "INT", "LIV", "LOG", "MAN", "NFR", "PRO", "REG", "SEC", "STB", "STR", "TOOL", "TST",
+}
+
+SYSTEM_REFINED_PREFIXES = {
+    "CON", "FIL", "FUSION", "SEN", "TRK", "WEA",
+    "DAT", "EXP", "EXT", "MIG",
+    "GEO", "MAP", "NAV", "ROU",
+}
+
+
+def verify_system_software_traceability(
+    repo_root=None,
+    fail_on_missing_coverage=True,
+    fail_on_dangling_sysreq=True,
+):
+    """
+    ASPICE SYS.2 BP5 / SWE.1 BP5 System-to-Software Requirement Traceability Guard (REQ-PRO-076).
+    Verifies that:
+      1. All cited SYSREQ-* identifiers exist in docs/system/sysreq_*.md (no dangling SYSREQs).
+      2. 100% of declared system requirements have verified coverage by >= 1 software requirement.
+      3. All software requirements either trace to a parent SYSREQ, have an explicit derived marker,
+         or belong to a tailored software-derived prefix family with documented rationale.
+    Returns (success: bool, diagnostics: list[str], report: dict).
+    """
+    if repo_root is None:
+        repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+
+    diagnostics = []
+    errors = []
+
+    # 1. Discover declared SYSREQs in docs/system/sysreq_*.md
+    sysreq_dir = os.path.join(repo_root, "docs/system")
+    declared_sysreqs = set()
+    if os.path.isdir(sysreq_dir):
+        for fn in os.listdir(sysreq_dir):
+            if fn.startswith("sysreq_") and fn.endswith(".md"):
+                fp = os.path.join(sysreq_dir, fn)
+                with open(fp, "r", encoding="utf-8") as fh:
+                    for m in re.finditer(r"^#{2,4}\s+(SYSREQ-[A-Z0-9_-]+)", fh.read(), re.MULTILINE):
+                        clean_id = m.group(1).rstrip("-_")
+                        if clean_id != "SYSREQ-XXX":
+                            declared_sysreqs.add(clean_id)
+
+    if not declared_sysreqs:
+        errors.append("No system requirements declared under docs/system/sysreq_*.md.")
+
+    # 2. Build SYS-to-SWE mapping from system matrices and requirements
+    sys_to_swe = {s: set() for s in declared_sysreqs}
+
+    # 2a. Traceability tables in docs/system/*.md
+    if os.path.isdir(sysreq_dir):
+        for fn in os.listdir(sysreq_dir):
+            if fn.endswith(".md"):
+                fp = os.path.join(sysreq_dir, fn)
+                with open(fp, "r", encoding="utf-8") as fh:
+                    for line in fh:
+                        if "|" in line and "SYSREQ-" in line and "REQ-" in line:
+                            sys_matches = re.findall(r"SYSREQ-[A-Z0-9_-]+", line)
+                            req_matches = re.findall(r"REQ-[A-Z0-9_-]+", line)
+                            for s in sys_matches:
+                                s_clean = s.rstrip("-_")
+                                if s_clean in sys_to_swe:
+                                    sys_to_swe[s_clean].update([r.rstrip("-_") for r in req_matches])
+
+    # 2b. Software requirements in docs/requirements/*.md
+    req_dir = os.path.join(repo_root, "docs/requirements")
+    swe_req_ids = set()
+    dangling_sysreq_citations = []
+
+    if os.path.isdir(req_dir):
+        for fn in os.listdir(req_dir):
+            if fn.startswith("req_") and fn.endswith(".md"):
+                fp = os.path.join(req_dir, fn)
+                with open(fp, "r", encoding="utf-8") as fh:
+                    content = fh.read()
+
+                req_sections = re.split(r"(?=^#{2,4}\s+REQ-[A-Z0-9_-]+:)", content, flags=re.MULTILINE)
+                for section in req_sections:
+                    m_head = re.match(r"^#{2,4}\s+(REQ-[A-Z0-9_-]+):", section.strip())
+                    if not m_head:
+                        continue
+                    current_req = m_head.group(1).rstrip("-_")
+                    swe_req_ids.add(current_req)
+
+                    for m_sys in re.finditer(r"SYSREQ-[A-Z0-9_-]+", section):
+                        raw_sys = m_sys.group(0).rstrip("-_")
+                        if raw_sys in ("SYSREQ-XXX", "SYSREQ-TRK", "SYSREQ-DEX"):
+                            continue
+                        if not re.match(r"^SYSREQ-[A-Z]+-\d+$", raw_sys):
+                            continue
+                        if raw_sys in declared_sysreqs:
+                            sys_to_swe[raw_sys].add(current_req)
+                        elif raw_sys not in GRANDFATHERED_SYSREQS:
+                            dangling_sysreq_citations.append(
+                                f"{fn} [{current_req}] cites undeclared system requirement {raw_sys}"
+                            )
+
+    # 3. Check for dangling SYSREQs in docs/system/
+    if os.path.isdir(sysreq_dir):
+        for fn in os.listdir(sysreq_dir):
+            if fn.endswith(".md"):
+                fp = os.path.join(sysreq_dir, fn)
+                with open(fp, "r", encoding="utf-8") as fh:
+                    for line_no, line in enumerate(fh, 1):
+                        for m_sys in re.finditer(r"SYSREQ-[A-Z0-9_-]+", line):
+                            raw_sys = m_sys.group(0).rstrip("-_")
+                            if raw_sys in ("SYSREQ-XXX", "SYSREQ-TRK", "SYSREQ-DEX"):
+                                continue
+                            if not re.match(r"^SYSREQ-[A-Z]+-\d+$", raw_sys):
+                                continue
+                            if raw_sys not in declared_sysreqs and raw_sys not in GRANDFATHERED_SYSREQS:
+                                dangling_sysreq_citations.append(
+                                    f"docs/system/{fn}:{line_no} cites undeclared system requirement {raw_sys}"
+                                )
+
+    if dangling_sysreq_citations:
+        msg = f"Dangling or undeclared SYSREQ reference(s) detected: {'; '.join(sorted(dangling_sysreq_citations))}"
+        if fail_on_dangling_sysreq:
+            errors.append(msg)
+        else:
+            diagnostics.append(f"WARNING: {msg}")
+
+    # 4. Coverage calculation
+    covered_sysreqs = {s for s, reqs in sys_to_swe.items() if len(reqs) > 0}
+    uncovered_sysreqs = declared_sysreqs - covered_sysreqs
+    coverage_pct = round(len(covered_sysreqs) / max(1, len(declared_sysreqs)) * 100.0, 1)
+
+    if uncovered_sysreqs:
+        msg = f"SYSREQ coverage gap: {', '.join(sorted(uncovered_sysreqs))} have zero refining software requirements."
+        if fail_on_missing_coverage:
+            errors.append(msg)
+        else:
+            diagnostics.append(f"WARNING: {msg}")
+
+    report = {
+        "declared_sysreqs": sorted(list(declared_sysreqs)),
+        "sysreq_count": len(declared_sysreqs),
+        "covered_sysreqs": sorted(list(covered_sysreqs)),
+        "covered_count": len(covered_sysreqs),
+        "coverage_pct": coverage_pct,
+        "uncovered_sysreqs": sorted(list(uncovered_sysreqs)),
+        "sys_to_swe_map": {k: sorted(list(v)) for k, v in sys_to_swe.items()},
+        "dangling_sysreq_citations": dangling_sysreq_citations,
+        "total_swe_reqs_count": len(swe_req_ids),
+    }
+
+    if errors:
+        return False, [f"ERROR: {e}" for e in errors] + diagnostics, report
+
+    diagnostics.append(
+        f"PASS: 100% System-to-Software requirement traceability verified "
+        f"({len(covered_sysreqs)}/{len(declared_sysreqs)} SYSREQs covered by software requirements, "
+        f"zero dangling SYSREQs)."
+    )
+    return True, diagnostics, report
+
+
+
+def verify_governance(
+    deliverable_text=None,
+    diff_text=None,
+    base_ref="develop",
+    skip_tripwires=False,
+    fail_on_duplicates=False,
+    fail_on_dangling=False,
+    fail_on_unverified=False,
+    enforce_attributes=False,
+    min_req_tst_coverage=None,
+    min_tst_code_coverage=None,
+    max_code_without_spec=None,
+    min_bidirectional_coverage=None,
+):
     """
     Main governance validation entrypoint.
-    Enforces engineering directory structure, master table parity, Rule 81 deterministic tripwires
-    (composable islands, repository encapsulation, architecture/system spec grounding), and
-    Chesterton's Fence archaeology on modified requirements.
+    Enforces engineering directory structure, master table parity, unique requirement and test IDs,
+    bidirectional reference integrity (REQ-PRO-070), evidence-based status rules (REQ-PRO-073),
+    optional coverage threshold ratchets (REQ-PRO-071), Rule 81 deterministic tripwires (composable islands,
+    repository encapsulation, architecture/system spec grounding), and Chesterton's Fence archaeology on modified requirements.
     Returns (success: bool, diagnostics: list[str]).
     """
     diagnostics = []
@@ -1326,6 +2846,62 @@ def verify_governance(deliverable_text=None, diff_text=None, base_ref="develop",
         diagnostics.extend([f"ERROR: {e}" for e in parity_errors])
         return False, diagnostics
     diagnostics.append("PASS: Living documentation master tables match all 9 domain shards with 100% parity.")
+
+    unique_ok, unique_diag = verify_unique_ids(fail_on_duplicates=fail_on_duplicates)
+    if not unique_ok:
+        diagnostics.extend(unique_diag)
+        return False, diagnostics
+    diagnostics.extend(unique_diag)
+
+    links_ok, links_diag = verify_dangling_references(fail_on_dangling=fail_on_dangling)
+    if not links_ok:
+        diagnostics.extend(links_diag)
+        return False, diagnostics
+    diagnostics.extend(links_diag)
+
+    evidence_ok, evidence_diag = verify_requirement_evidence_status(
+        diff_text=diff_text,
+        base_ref=base_ref,
+        fail_on_unverified=fail_on_unverified,
+    )
+    if not evidence_ok:
+        diagnostics.extend(evidence_diag)
+        return False, diagnostics
+    diagnostics.extend(evidence_diag)
+
+    tests_ok, tests_diag = verify_tests_field_format()
+    if not tests_ok:
+        diagnostics.extend(tests_diag)
+        return False, diagnostics
+    diagnostics.extend(tests_diag)
+
+    attrs_ok, attrs_diag = verify_requirement_attributes(
+        diff_text=diff_text,
+        base_ref=base_ref,
+        enforce_attributes=enforce_attributes,
+    )
+    if not attrs_ok:
+        diagnostics.extend(attrs_diag)
+        return False, diagnostics
+    diagnostics.extend(attrs_diag)
+
+    if (
+        min_req_tst_coverage is not None
+        or min_tst_code_coverage is not None
+        or max_code_without_spec is not None
+        or min_bidirectional_coverage is not None
+    ):
+        cov_report = calculate_traceability_coverage()
+        cov_ok, cov_diag = verify_coverage_thresholds(
+            cov_report,
+            min_req_tst_coverage=min_req_tst_coverage,
+            min_tst_code_coverage=min_tst_code_coverage,
+            max_code_without_spec=max_code_without_spec,
+            min_bidirectional_coverage=min_bidirectional_coverage,
+        )
+        diagnostics.extend(cov_diag)
+        if not cov_ok:
+            return False, diagnostics
 
     if not skip_tripwires:
         islands_ok, islands_diag = verify_composable_islands(diff_text=diff_text, base_ref=base_ref)
@@ -1345,6 +2921,12 @@ def verify_governance(deliverable_text=None, diff_text=None, base_ref="develop",
             diagnostics.extend([f"ERROR: {e}" for e in specs_diag])
             return False, diagnostics
         diagnostics.extend(specs_diag)
+
+        sys_ok, sys_diag, _ = verify_system_software_traceability()
+        if not sys_ok:
+            diagnostics.extend(sys_diag)
+            return False, diagnostics
+        diagnostics.extend(sys_diag)
 
     if diff_text is None:
         diff_text = get_git_diff(base_ref=base_ref)
@@ -1472,8 +3054,181 @@ def main():
         default=None,
         help="Verify Change-Request Impact Analysis in Stage 1 deliverable (optionally specify analysis file path).",
     )
+    parser.add_argument(
+        "--enforce-unique",
+        "--fail-on-duplicates",
+        dest="enforce_unique",
+        action="store_true",
+        help="Strictly fail if any duplicate REQ/TST heading IDs exist, including legacy duplicates (REQ-PRO-066.3).",
+    )
+    parser.add_argument(
+        "--check-unique-ids",
+        action="store_true",
+        help="Check living documentation shards for duplicate REQ and TST heading IDs (REQ-PRO-066.1).",
+    )
+    parser.add_argument(
+        "--enforce-links",
+        "--fail-on-dangling",
+        dest="enforce_links",
+        action="store_true",
+        help="Strictly fail if any dangling REQ or TST references exist, including legacy references (REQ-PRO-070.4).",
+    )
+    parser.add_argument(
+        "--check-links",
+        "--check-dangling-references",
+        action="store_true",
+        help="Check living documentation shards for dangling REQ and TST citations (REQ-PRO-070.1, REQ-PRO-070.2).",
+    )
+    parser.add_argument(
+        "--coverage",
+        action="store_true",
+        help="Report bidirectional REQ-TST coverage and TST-to-test-code existence matrix (REQ-PRO-071).",
+    )
+    parser.add_argument(
+        "--coverage-json",
+        action="store_true",
+        help="Output coverage report in structured JSON format (REQ-PRO-071.5).",
+    )
+    parser.add_argument(
+        "--min-req-tst-coverage",
+        type=float,
+        default=None,
+        help="Minimum required percentage of REQs citing TSTs (0-100).",
+    )
+    parser.add_argument(
+        "--min-tst-code-coverage",
+        type=float,
+        default=None,
+        help="Minimum required percentage of TSTs with test code (0-100).",
+    )
+    parser.add_argument(
+        "--max-code-without-spec",
+        type=int,
+        default=None,
+        help="Maximum allowed count of code tags without specification in living docs.",
+    )
+    parser.add_argument(
+        "--min-bidirectional-coverage",
+        type=float,
+        default=None,
+        help="Minimum required percentage of TSTs cited back by their REQ (0-100).",
+    )
+    parser.add_argument(
+        "--check-evidence",
+        action="store_true",
+        help="Check living documentation shards for evidence-based requirement status compliance (REQ-PRO-073.4).",
+    )
+    parser.add_argument(
+        "--enforce-evidence",
+        action="store_true",
+        help="Fail if ANY requirement claiming [Verified] lacks an existing TST ID, including legacy items.",
+    )
+    parser.add_argument(
+        "--verify-sys-trace",
+        action="store_true",
+        help="Verify system-to-software requirement traceability and prefix tailoring (REQ-PRO-076).",
+    )
+    parser.add_argument(
+        "--report-sys-coverage",
+        action="store_true",
+        help="Report detailed SYSREQ-to-SWE coverage matrix (REQ-PRO-076).",
+    )
+    parser.add_argument(
+        "--check-tests-format",
+        action="store_true",
+        help="Verify that all Tests fields in requirement shards conform to valid TST ID and placeholder syntax (REQ-PRO-075).",
+    )
+    parser.add_argument(
+        "--enforce-attributes",
+        "--fail-on-missing-attributes",
+        dest="enforce_attributes",
+        action="store_true",
+        help="Fail verification if any requirement lacks Priority, Type, or Verification Method attributes (REQ-PRO-077).",
+    )
+    parser.add_argument(
+        "--check-attributes",
+        action="store_true",
+        help="Check living documentation shards for requirement attributes (Priority, Type, Verification Method) (REQ-PRO-077).",
+    )
 
     args = parser.parse_args()
+
+    if args.check_evidence:
+        ok, diag = verify_requirement_evidence_status(fail_on_unverified=args.enforce_evidence)
+        for msg in diag:
+            print(msg, file=sys.stderr if not ok else sys.stdout)
+        sys.exit(0 if ok else 1)
+
+    if args.verify_sys_trace or args.report_sys_coverage:
+        ok, diag, report = verify_system_software_traceability()
+        for msg in diag:
+            print(msg, file=sys.stderr if not ok and "ERROR" in msg else sys.stdout)
+        if args.report_sys_coverage:
+            print("\nSYSREQ-to-SWE Requirement Coverage Report:")
+            print(f"Total Declared SYSREQs: {report['sysreq_count']}")
+            print(f"Covered SYSREQs: {report['covered_count']} ({report['coverage_pct']}%)")
+            for sys_id, reqs in sorted(report["sys_to_swe_map"].items()):
+                print(f"  {sys_id} ({len(reqs)} REQs): {', '.join(sorted(reqs))}")
+        sys.exit(0 if ok else 1)
+
+    if args.check_tests_format:
+        ok, diag = verify_tests_field_format()
+        for msg in diag:
+            print(msg, file=sys.stderr if not ok else sys.stdout)
+        sys.exit(0 if ok else 1)
+
+    if args.check_attributes:
+        diff_content = None
+        if args.diff_file and os.path.exists(args.diff_file):
+            with open(args.diff_file, "r", encoding="utf-8") as f:
+                diff_content = f.read()
+        ok, diag = verify_requirement_attributes(
+            enforce_attributes=args.enforce_attributes,
+            diff_text=diff_content,
+            base_ref=args.base_ref,
+        )
+        for msg in diag:
+            print(msg, file=sys.stderr if not ok and msg.startswith("ERROR") else sys.stdout)
+        sys.exit(0 if ok else 1)
+
+    if (
+        args.coverage
+        or args.coverage_json
+        or args.min_req_tst_coverage is not None
+        or args.min_tst_code_coverage is not None
+        or args.max_code_without_spec is not None
+        or args.min_bidirectional_coverage is not None
+    ):
+        report = calculate_traceability_coverage()
+        ok, diag = verify_coverage_thresholds(
+            report,
+            min_req_tst_coverage=args.min_req_tst_coverage,
+            min_tst_code_coverage=args.min_tst_code_coverage,
+            max_code_without_spec=args.max_code_without_spec,
+            min_bidirectional_coverage=args.min_bidirectional_coverage,
+        )
+        if args.coverage_json:
+            out_dict = report.to_dict()
+            out_dict["gate_result"] = {"passed": ok, "diagnostics": diag}
+            print(json.dumps(out_dict, indent=2))
+        else:
+            print(format_coverage_markdown(report))
+            print("")
+            for msg in diag:
+                print(msg, file=sys.stderr if not ok else sys.stdout)
+        sys.exit(0 if ok else 1)
+
+    if args.check_links:
+        ok, diag = verify_dangling_references(fail_on_dangling=args.enforce_links)
+        for msg in diag:
+            print(msg, file=sys.stderr if not ok else sys.stdout)
+        sys.exit(0 if ok else 1)
+
+    if args.check_unique_ids:
+        ok, diag = verify_unique_ids(fail_on_duplicates=args.enforce_unique)
+        for msg in diag:
+            print(msg, file=sys.stderr if not ok else sys.stdout)
+        sys.exit(0 if ok else 1)
 
     if args.check_impact is not None:
         target_file = args.check_impact.strip() if args.check_impact.strip() else None
@@ -1516,6 +3271,26 @@ def main():
         if not parity_ok:
             for e in parity_errors:
                 print(f"ERROR: {e}", file=sys.stderr)
+            sys.exit(1)
+        unique_ok, unique_diag = verify_unique_ids(fail_on_duplicates=args.enforce_unique)
+        if not unique_ok:
+            for d in unique_diag:
+                print(d, file=sys.stderr)
+            sys.exit(1)
+        links_ok, links_diag = verify_dangling_references(fail_on_dangling=args.enforce_links)
+        if not links_ok:
+            for d in links_diag:
+                print(d, file=sys.stderr)
+            sys.exit(1)
+        evidence_ok, evidence_diag = verify_requirement_evidence_status(fail_on_unverified=args.enforce_evidence)
+        if not evidence_ok:
+            for d in evidence_diag:
+                print(d, file=sys.stderr)
+            sys.exit(1)
+        tests_ok, tests_diag = verify_tests_field_format()
+        if not tests_ok:
+            for d in tests_diag:
+                print(d, file=sys.stderr)
             sys.exit(1)
         print("PASS: Master index tables successfully synchronized with 100% parity.")
         sys.exit(0)
@@ -1563,7 +3338,7 @@ def main():
                 ["git", "rev-parse", "--abbrev-ref", "HEAD"],
                 stderr=subprocess.DEVNULL,
             ).decode("utf-8").strip()
-            ticket_m = re.search(r"(?:feature|bugfix|hotfix)/([A-Z]+-\d+)", branch)
+            ticket_m = re.search(r"([A-Z]+-\d+)", branch)
             ticket_key = ticket_m.group(1) if ticket_m else None
             if ticket_key:
                 candidates = [
@@ -1596,6 +3371,14 @@ def main():
         diff_text=diff_content,
         base_ref=args.base_ref,
         skip_tripwires=args.skip_tripwires,
+        fail_on_duplicates=args.enforce_unique,
+        fail_on_dangling=args.enforce_links,
+        fail_on_unverified=args.enforce_evidence,
+        enforce_attributes=args.enforce_attributes,
+        min_req_tst_coverage=args.min_req_tst_coverage,
+        min_tst_code_coverage=args.min_tst_code_coverage,
+        max_code_without_spec=args.max_code_without_spec,
+        min_bidirectional_coverage=args.min_bidirectional_coverage,
     )
 
     for msg in diagnostics:

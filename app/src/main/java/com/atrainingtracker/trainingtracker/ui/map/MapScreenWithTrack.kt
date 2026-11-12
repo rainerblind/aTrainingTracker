@@ -401,7 +401,7 @@ fun MapScreenWithTrack(
                             Box(contentAlignment = Alignment.Center) {
                                 Icon(
                                     imageVector = if (isBack) Icons.AutoMirrored.Filled.ArrowBack else Icons.Default.Menu,
-                                    contentDescription = if (isBack) stringResource(R.string.back) else null,
+                                    contentDescription = if (isBack) stringResource(R.string.back) else stringResource(R.string.navigation_drawer_open),
                                     modifier = Modifier.size(22.dp),
                                     tint = MaterialTheme.colorScheme.onSurface
                                 )
@@ -686,7 +686,8 @@ fun ClusterOnMapSheet(
 
     val startLabel = stringResource(R.string.start)
     val endLabel = stringResource(R.string.end)
-    val apexLabel = stringResource(R.string.max_line_distance)
+    val isPointToPoint = remember(resolvedCluster) { resolvedCluster.isPointToPoint }
+    val apexLabel = if (isPointToPoint) stringResource(R.string.route_apex) else stringResource(R.string.max_line_distance)
     val minAltLabel = stringResource(R.string.marker_min_altitude)
     val maxAltLabel = stringResource(R.string.marker_max_altitude)
 

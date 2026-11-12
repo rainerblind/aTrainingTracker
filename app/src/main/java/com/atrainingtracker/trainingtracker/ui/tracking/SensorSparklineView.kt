@@ -83,6 +83,19 @@ fun formatSparklineTimeOffset(seconds: Int): String {
 }
 
 /**
+ * Synthetic representative telemetry sample sequence used for layout preview when
+ * a sensor is inactive or disconnected in configuration mode (REQ-TRK-059.11, ATT-7314).
+ *
+ * <p>Represents a realistic 24-point cardiovascular/power progression with subtle fluctuations,
+ * providing the athlete with an immediate, glanceable visualization of sparkline trend rendering.</p>
+ */
+val DEFAULT_PREVIEW_SPARKLINE_SAMPLES: List<Float> = listOf(
+    130f, 132f, 135f, 133f, 137f, 142f, 140f, 145f,
+    148f, 146f, 151f, 155f, 153f, 158f, 162f, 160f,
+    165f, 168f, 166f, 171f, 169f, 167f, 164f, 166f
+)
+
+/**
  * Lightweight, hardware-accelerated Canvas sparkline composable rendering temporal telemetry trends
  * and glanceable X-axis labels with zero recomposition churn or snapshot state mutations (REQ-TRK-059.5, REQ-TRK-059.9, Rule 66).
  *

@@ -55,4 +55,14 @@ class AdvancedTuningNavigationTest {
             NavRoutes.toSettingsBottomSheetType(R.id.drawer_advanced_tuning)
         )
     }
+
+    @Test
+    fun testAdvancedSettingsRoute_withPushedContract() {
+        assertEquals("advanced_settings", NavRoutes.advancedSettings(pushed = false))
+        assertEquals("advanced_settings?pushed=true", NavRoutes.advancedSettings(pushed = true))
+        assertEquals(
+            R.id.drawer_advanced_tuning,
+            NavRoutes.toDrawerItemId("advanced_settings?pushed=true")
+        )
+    }
 }

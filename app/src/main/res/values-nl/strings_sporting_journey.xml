@@ -2,21 +2,21 @@
 <resources>
     <string name="sporting_journey_title">Mijn sportreis</string>
     <string name="sporting_journey_subtitle_all_time">Elke kilometer sinds %1$s vertelt een verhaal (%2$d dagen)</string>
-    <string name="sporting_journey_subtitle_wrapped">Jouw seizoensoverzicht van %1$d</string>
+    <string name="sporting_journey_subtitle_wrapped">Jouw seizoenretrospectief van %1$d</string>
     <string name="sporting_journey_horizon_all_time">Alles</string>
     <string name="sporting_journey_sport_all">Alle sporten</string>
     <string name="sporting_journey_sport_cycling">Fietsen</string>
     <string name="sporting_journey_sport_running">Hardlopen</string>
     <string name="sporting_journey_hero_distance_label">Totale geregistreerde afstand</string>
-    <string name="sporting_journey_hero_equator_badge">🌍 %1$.1f%% van de evenaar</string>
+    <string name="sporting_journey_hero_equator_badge">%1$.1f%% van de evenaar</string>
     <string name="sporting_journey_hero_workouts_label">Voltooide trainingen</string>
     <string name="sporting_journey_hero_hours_label">Actieve trainingstijd</string>
     <string name="sporting_journey_hero_days_sub">%1$.1f dagen onafgebroken beweging</string>
     <string name="sporting_journey_hero_elevation_label">Geklommen hoogtemeters</string>
-    <string name="sporting_journey_hero_everest_sub">🏔️ %1$.1f× Mt. Everest</string>
+    <string name="sporting_journey_hero_everest_sub">%1$.1f× Mt. Everest</string>
     <string name="sporting_journey_hero_routes_label">Favoriete routeclusters</string>
     <string name="sporting_journey_hidden_gems_header">Wat je gegevens jou vertellen</string>
-    <string name="sporting_journey_hidden_gems_badge">Verborgen schatten uit SQLite</string>
+    <string name="sporting_journey_hidden_gems_badge">Offline sensorinzichten</string>
     <string name="sporting_journey_hidden_gems_desc" formatted="false">100% offline berekend op basis van je HF-, cadans-, vermogens- en routegegevens.</string>
     <string name="sporting_journey_gem_engine_title">De biologische &amp; mechanische motor</string>
     <string name="sporting_journey_gem_engine_pill">HF × Cadans</string>
@@ -64,9 +64,9 @@
     <string name="sporting_journey_badge_pioneer_sub">Jarenlange veteraan</string>
     <string name="sporting_journey_badge_pioneer_story_title">Pioniersatleet — Ontgrendeld!</string>
     <string name="sporting_journey_badge_pioneer_story_text">Meer dan %1$d dagen sporthistorie vastgelegd met aTrainingTracker.</string>
-    <string name="sporting_journey_badge_legend_title">Lokale legende</string>
+    <string name="sporting_journey_badge_legend_title">Route-meester</string>
     <string name="sporting_journey_badge_legend_sub">Vaste lussen</string>
-    <string name="sporting_journey_badge_legend_story_title">Lokale legende — Ontgrendeld!</string>
+    <string name="sporting_journey_badge_legend_story_title">Route-meester — Ontgrendeld!</string>
     <string name="sporting_journey_badge_legend_story_text">Je vaste routes meer dan %1$d keer gereden.</string>
     <string name="sporting_journey_badge_powerplant_title">Menselijke centrale</string>
     <string name="sporting_journey_badge_powerplant_sub">60 kWh Club</string>
@@ -79,6 +79,16 @@
     <string name="sporting_journey_locked_hint">Blijf trainen om deze geheime trofee te ontgrendelen!</string>
     <string name="sporting_journey_share_card">Paspoort delen</string>
     <string name="sporting_journey_share_title">aTrainingTracker Atletenpaspoort</string>
+    <string name="sporting_journey_share_passport_header">aTrainingTracker • Officieel atletenpaspoort</string>
+    <string name="sporting_journey_share_tier_horizon">Rang: %1$s | Periode: %2$s</string>
+    <string name="sporting_journey_share_distance">Afstand: %1$s (%2$s%% van evenaar)</string>
+    <string name="sporting_journey_share_elevation">Hoogtemeters: %1$s (%2$s× Mt. Everest)</string>
+    <string name="sporting_journey_share_active_time">Actieve tijd: %1$s (%2$s dagen non-stop)</string>
+    <string name="sporting_journey_share_pedal_revs">Pedaalomwentelingen: %1$s</string>
+    <string name="sporting_journey_share_heartbeats">Hartslagen: %1$s</string>
+    <string name="sporting_journey_share_mechanical_work">Mechanische energie: %1$s kWh (%2$s e-bike bereik)</string>
+    <string name="sporting_journey_share_trophies">Geheime trofeeën: %1$d / %2$d Ontgrendeld</string>
+    <string name="sporting_journey_share_footer" formatted="false">100% offline vastgelegd met aTrainingTracker (2012–2026)</string>
     <string name="sporting_journey_entry_supporter_screen">De trofeeënkamer — Mijn sportreis</string>
     <string name="sporting_journey_entry_supporter_desc">Ontdek je historische overzicht, verborgen parels en trofeeën.</string>
     <string name="sporting_journey_no_workouts">Geen voltooide trainingen gevonden voor deze selectie.</string>

@@ -313,7 +313,8 @@ fun WorkoutShareBottomSheet(
                         val bitmapToShare = composedBitmap ?: return@Button
                         scope.launch {
                             isSharing = true
-                            val shareSummaryText = RadarTrafficSummaryFormatter.format(workoutData.radarTrafficSummary, context)
+                            val radarSummary = workoutData.radarTrafficSummary ?: workoutData.fileBaseName?.let { com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository.getInstance(context).getRadarTrafficSummary(it) }
+                            val shareSummaryText = RadarTrafficSummaryFormatter.format(radarSummary, context)
                             saveAndShare(context, bitmapToShare, "workout_photo_${workoutData.id}.png", shareSummaryText)
                             isSharing = false
                             onDismissRequest()

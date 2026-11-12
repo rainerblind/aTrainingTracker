@@ -101,7 +101,7 @@ class AppNavigationDrawerContractTest {
         assertNotNull("drawer_health_connect item must exist in online communities group", healthConnectItem)
         assertEquals(R.drawable.ic_health_connect, healthConnectItem!!.iconRes)
         assertEquals(R.string.health_connect_title, healthConnectItem.titleRes)
-        assertEquals(true, healthConnectItem.tintIcon)
+        assertEquals(false, healthConnectItem.tintIcon)
     }
 
     /**

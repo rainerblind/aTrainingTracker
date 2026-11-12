@@ -161,13 +161,13 @@ object TuningSubtitleFormatter {
     fun formatWorkoutMatrixSubtitle(
         cardPrefs: WorkoutCardSectionPreferences, detailPrefs: WorkoutDetailPreferences, context: Context
     ): String {
-        val listCount = listOf(cardPrefs.showDescription, cardPrefs.showExtrema, cardPrefs.showLaps, cardPrefs.showStrava, cardPrefs.showMapPreview, cardPrefs.showElevationProfile, cardPrefs.showTelemetryCharts, cardPrefs.showZoneAnalysis).count { it }
+        val listCount = listOf(cardPrefs.showDescription, cardPrefs.showExtrema, cardPrefs.showLaps, cardPrefs.showStrava, cardPrefs.showMapPreview, cardPrefs.showElevationProfile, cardPrefs.showTelemetryCharts, cardPrefs.showZoneAnalysis, cardPrefs.showRpeAndFeel).count { it }
         val detailCount = listOf(detailPrefs.showDescription, detailPrefs.showExtrema, detailPrefs.showLaps, detailPrefs.showStrava, detailPrefs.showMap, detailPrefs.showElevationProfile, detailPrefs.showTelemetryCharts, detailPrefs.showZoneAnalysis).count { it }
         return context.getString(R.string.tuning_summary_matrix_format, listCount, detailCount)
     }
 
     fun formatWorkoutMasksSubtitle(cardPrefs: WorkoutCardSectionPreferences, context: Context): String {
-        val activeCards = listOf(cardPrefs.showDescription, cardPrefs.showExtrema, cardPrefs.showLaps, cardPrefs.showStrava, cardPrefs.showMapPreview, cardPrefs.showElevationProfile, cardPrefs.showTelemetryCharts, cardPrefs.showZoneAnalysis).count { it }
+        val activeCards = listOf(cardPrefs.showDescription, cardPrefs.showExtrema, cardPrefs.showLaps, cardPrefs.showStrava, cardPrefs.showMapPreview, cardPrefs.showElevationProfile, cardPrefs.showTelemetryCharts, cardPrefs.showZoneAnalysis, cardPrefs.showRpeAndFeel).count { it }
         return context.getString(R.string.tuning_summary_masks_cards_format, activeCards)
     }
 

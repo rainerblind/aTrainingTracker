@@ -170,7 +170,7 @@ class ClimbDetectorTest {
     }
 
     /**
-     * TST-MAP-055.1: Verifies candidate search advances scanning index past non-viable bumps
+     * TST-MAP-070.1: Verifies candidate search advances scanning index past non-viable bumps
      * via maxOf(i + 1, peakIdx) in near-linear O(N) time on a 10,000-point route (<= 100 ms).
      */
     @Test
@@ -197,7 +197,7 @@ class ClimbDetectorTest {
     }
 
     /**
-     * TST-MAP-055.1: Verifies detection of steep climb sections embedded in long gentle ascents
+     * TST-MAP-070.1: Verifies detection of steep climb sections embedded in long gentle ascents
      * before summit dilution.
      */
     @Test

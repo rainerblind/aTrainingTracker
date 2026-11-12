@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="settings_workout_card_rpe_feel">RPE y sensación</string>
+    <string name="tuning_rpe_feel_desc">Registra el esfuerzo percibido (Borg CR10 1–10) y la sensación subjetiva (1–5) para tarjetas de resumen y carga de sesión RPE</string>
     <string name="workout_rpe_title">Esfuerzo percibido (RPE 1–10)</string>
     <string name="workout_feel_title">Sensación</string>
     <string name="srpe_load_badge">sRPE: %d</string>

@@ -93,6 +93,7 @@ fun HrvThresholdSummaryCard(
     hrZoneThresholds: HeartRateZoneThresholds? = null,
     recentSessions: List<HrvSessionThreshold> = emptyList(),
     onUpdateFtp: ((newFtp: Int) -> Unit)? = null,
+    onUpdateHrZones: ((newHrvt1: Int, newHrvt2: Int) -> Unit)? = null,
     onCalibrateMader: ((pT1: Int?, pT2: Int?) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
@@ -191,11 +192,13 @@ fun HrvThresholdSummaryCard(
             hrZoneThresholds = hrZoneThresholds,
             currentProtocol = protocolType,
             currentConfidence = powerEstimate?.overallConfidence ?: estimate.overallConfidence,
-            recentSessions = recentSessions
+            recentSessions = recentSessions,
+            currentHrConfidence = hrEstimate?.overallConfidence ?: estimate.overallConfidence
         )
     }
 
     var showConfirmDialog by rememberSaveable { mutableStateOf(false) }
+    var showHrConfirmDialog by rememberSaveable { mutableStateOf(false) }
 
     val paceFormatter = remember { PaceFormatter() }
 
@@ -634,6 +637,46 @@ fun HrvThresholdSummaryCard(
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
+
+                            // HR Consensus Status Row
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(top = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                val isHrUnlocked = comparison.hrConsensusGate.status == ConsensusGateStatus.UNLOCKED
+                                val hrBadgeBg = if (isHrUnlocked) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant
+                                val hrBadgeFg = if (isHrUnlocked) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
+                                val hrBadgeText = if (isHrUnlocked) stringResource(R.string.hrv_consensus_badge_unlocked) else stringResource(R.string.hrv_consensus_badge_locked)
+
+                                Surface(
+                                    shape = RoundedCornerShape(6.dp),
+                                    color = hrBadgeBg,
+                                    modifier = Modifier.testTag("hrv_hr_consensus_badge")
+                                ) {
+                                    Text(
+                                        text = hrBadgeText,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = FontWeight.Bold,
+                                        color = hrBadgeFg,
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                    )
+                                }
+
+                                val hrReasonText = if (comparison.hrConsensusGate.reasonParam != null) {
+                                    stringResource(comparison.hrConsensusGate.reasonResId, comparison.hrConsensusGate.reasonParam)
+                                } else {
+                                    stringResource(comparison.hrConsensusGate.reasonResId)
+                                }
+                                Text(
+                                    text = hrReasonText,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.weight(1f)
+                                )
+                            }
                         }
                     }
 
@@ -690,6 +733,19 @@ fun HrvThresholdSummaryCard(
                                 .testTag("hrv_btn_update_power_zones")
                         ) {
                             Text(stringResource(R.string.hrv_zone_comparison_btn_update_power))
+                        }
+
+                        val isHrUnlocked = comparison.hrConsensusGate.status == ConsensusGateStatus.UNLOCKED
+                        val suggestedT1 = comparison.hrConsensusGate.suggestedHrvt1Bpm
+                        val suggestedT2 = comparison.hrConsensusGate.suggestedHrvt2Bpm
+                        Button(
+                            onClick = { showHrConfirmDialog = true },
+                            enabled = isHrUnlocked && suggestedT1 != null && suggestedT2 != null && onUpdateHrZones != null,
+                            modifier = Modifier
+                                .weight(1f)
+                                .testTag("hrv_btn_update_hr_zones")
+                        ) {
+                            Text(stringResource(R.string.hrv_zone_comparison_btn_update_hr))
                         }
 
                         val pT1 = powerEstimate?.hrvt1?.intensity?.roundToInt()
@@ -759,6 +815,58 @@ fun HrvThresholdSummaryCard(
                 }
             },
             modifier = Modifier.testTag("hrv_power_zone_confirm_dialog")
+        )
+    }
+
+    // Modal Confirmation Dialog for Updating Heart Rate Zones (REQ-PER-037.7)
+    if (showHrConfirmDialog && comparison.hrConsensusGate.suggestedHrvt1Bpm != null && comparison.hrConsensusGate.suggestedHrvt2Bpm != null) {
+        val targetT1 = comparison.hrConsensusGate.suggestedHrvt1Bpm
+        val targetT2 = comparison.hrConsensusGate.suggestedHrvt2Bpm
+        val currentZ2 = hrZoneThresholds?.z2Max ?: configuredHrMax?.let { (0.69 * it).roundToInt() } ?: 0
+        val currentZ4 = hrZoneThresholds?.z4Max ?: configuredHrMax?.let { (0.89 * it).roundToInt() } ?: 0
+        val protocolStr = when (protocolType) {
+            HrvProtocolType.GUIDED_STEP -> stringResource(R.string.hrv_test_protocol_step)
+            HrvProtocolType.GUIDED_RAMP -> stringResource(R.string.hrv_test_protocol_ramp)
+            HrvProtocolType.FREE_WORKOUT -> stringResource(R.string.hrv_threshold_provenance_free)
+        }
+
+        AlertDialog(
+            onDismissRequest = { showHrConfirmDialog = false },
+            title = {
+                Text(stringResource(R.string.hrv_zone_comparison_dialog_hr_title))
+            },
+            text = {
+                Text(
+                    text = stringResource(
+                        R.string.hrv_zone_comparison_dialog_hr_body,
+                        targetT1,
+                        currentZ2,
+                        targetT2,
+                        currentZ4,
+                        protocolStr
+                    )
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        onUpdateHrZones?.invoke(targetT1, targetT2)
+                        showHrConfirmDialog = false
+                    },
+                    modifier = Modifier.testTag("hrv_btn_dialog_confirm_hr")
+                ) {
+                    Text(stringResource(R.string.hrv_zone_comparison_dialog_hr_confirm))
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { showHrConfirmDialog = false },
+                    modifier = Modifier.testTag("hrv_btn_dialog_cancel_hr")
+                ) {
+                    Text(stringResource(R.string.hrv_zone_comparison_dialog_hr_cancel))
+                }
+            },
+            modifier = Modifier.testTag("hrv_hr_zone_confirm_dialog")
         )
     }
 }

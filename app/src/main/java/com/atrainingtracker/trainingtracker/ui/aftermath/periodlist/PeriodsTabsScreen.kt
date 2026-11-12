@@ -27,6 +27,7 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Whatshot
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -38,6 +39,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
@@ -67,7 +69,8 @@ fun PeriodsTabsScreen(
     onToggleSportFilter: (BSportType) -> Unit = {},
     selectedMetric: PeriodBarMetric = PeriodBarMetric.DURATION,
     onSelectMetric: (PeriodBarMetric) -> Unit = {},
-    onDayCellClick: ((PeriodSummary, BSportType, java.time.LocalDate, DailySportActivity?) -> Unit)? = null
+    onDayCellClick: ((PeriodSummary, BSportType, java.time.LocalDate, DailySportActivity?) -> Unit)? = null,
+    onMenuClick: (() -> Unit)? = null
 ) {
     PeriodsTabsScreen(
         groupedPeriods = groupedPeriods,
@@ -84,7 +87,8 @@ fun PeriodsTabsScreen(
         onToggleSportFilter = onToggleSportFilter,
         selectedMetric = selectedMetric,
         onSelectMetric = onSelectMetric,
-        onDayCellClick = onDayCellClick
+        onDayCellClick = onDayCellClick,
+        onMenuClick = onMenuClick
     )
 }
 
@@ -105,7 +109,8 @@ fun PeriodsTabsScreen(
     onToggleSportFilter: (BSportType) -> Unit = {},
     selectedMetric: PeriodBarMetric = PeriodBarMetric.DURATION,
     onSelectMetric: (PeriodBarMetric) -> Unit = {},
-    onDayCellClick: ((PeriodSummary, BSportType, java.time.LocalDate, DailySportActivity?) -> Unit)? = null
+    onDayCellClick: ((PeriodSummary, BSportType, java.time.LocalDate, DailySportActivity?) -> Unit)? = null,
+    onMenuClick: (() -> Unit)? = null
 ) {
 
     val scope = rememberCoroutineScope()
@@ -221,15 +226,32 @@ fun PeriodsTabsScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(LayoutConstants.HEADER_TITLE_ROW_HEIGHT)
-                            .padding(horizontal = 16.dp),
+                            .padding(start = 4.dp, end = 16.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Text(
-                            text = stringResource(R.string.workout_periods__periods),
-                            style = MaterialTheme.typography.titleLarge,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer
-                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            if (onMenuClick != null) {
+                                IconButton(onClick = onMenuClick) {
+                                    Icon(
+                                        imageVector = Icons.Default.Menu,
+                                        contentDescription = stringResource(R.string.navigation_drawer_open),
+                                        tint = MaterialTheme.colorScheme.onPrimaryContainer
+                                    )
+                                }
+                            }
+                            Text(
+                                text = stringResource(R.string.workout_periods__periods),
+                                style = MaterialTheme.typography.titleLarge,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.padding(start = 4.dp)
+                            )
+                        }
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(4.dp)

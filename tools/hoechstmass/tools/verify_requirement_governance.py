@@ -252,7 +252,7 @@ def verify_stage1_impact_analysis(analysis_file=None, repo_root=None):
 
 
 def verify_engineering_directory_structure(eng_dir=None, allowed=None):
-    """Verifies that docs/engineering/ contains only allowed canonical subdirectories."""
+    """Verifies that docs/engineering/ contains only allowed canonical subdirectories and valid test_results symlink."""
     cfg = load_config()
     if eng_dir is None:
         eng_dir = cfg.get("paths", {}).get("engineering_dir", "docs/engineering")
@@ -268,6 +268,20 @@ def verify_engineering_directory_structure(eng_dir=None, allowed=None):
             f"ERROR: Non-canonical entries found in {eng_dir}/: {', '.join(unexpected)}. "
             f"Allowed entries: {', '.join(sorted(allowed))}."
         ]
+
+    test_results_path = os.path.join(eng_dir, "test_results")
+    if os.path.lexists(test_results_path):
+        if not os.path.islink(test_results_path):
+            return False, [
+                f"ERROR: {test_results_path} must be a symbolic link (Rule 67, REQ-PRO-067.3)."
+            ]
+        target = os.readlink(test_results_path)
+        expected_target = "../../app/build/reports/tests/testDebugUnitTest"
+        if target != expected_target:
+            return False, [
+                f"ERROR: {test_results_path} symlink target '{target}' does not match expected canonical target '{expected_target}' (Rule 67, REQ-PRO-067.3)."
+            ]
+
     return True, []
 
 

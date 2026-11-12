@@ -390,4 +390,123 @@ class VectorAssetResolutionContractTest {
             ActivityType.BIKE_SPEED_AND_CADENCE.logoId
         )
     }
+
+    /**
+     * TST-UI-514.5: Verify geometric bounding-box non-overlap and clearance contracts
+     * for dedicated radar drawables (ATT-7318 / REQ-UI-514):
+     * 1. In `bt_bike_radar.xml`: Cyclist group contains exactly 18 canonical unadorned paths
+     *    matching `bt_bike_pwr.xml`, with zero colliding saddle emission arcs, and canonical
+     *    top-left `mini_icon_radar` maintaining clean separation (>= 7.0 px) from cyclist silhouette.
+     * 2. In `bike_radar.xml`: Emission arcs maintain >= 3.0 units clearance from the rear wheel,
+     *    cyclist back/saddle, and card border, with all arc endpoints staying strictly above the
+     *    rear wheel top (y <= 35.0 vs y_wheel >= 39.0).
+     */
+    @Test
+    fun testRadarVectorAssetsGeometricBoundingBoxAndCollisionFreeContract() {
+        val drawableDir = File(resolveResDir(), "drawable")
+        val dbFactory = DocumentBuilderFactory.newInstance()
+        val dBuilder = dbFactory.newDocumentBuilder()
+
+        // 1. Verify bt_bike_radar.xml canonical alignment
+        val btRadarDoc = dBuilder.parse(File(drawableDir, "bt_bike_radar.xml"))
+        btRadarDoc.documentElement.normalize()
+        val groups = btRadarDoc.getElementsByTagName("group")
+        var cyclistGroupPathsCount = 0
+        var foundMiniIconRadar = false
+        var translateXCyclist = 0.0
+
+        for (i in 0 until groups.length) {
+            val groupElem = groups.item(i) as org.w3c.dom.Element
+            val groupName = groupElem.getAttribute("android:name")
+            if (groupName == "cyclist") {
+                translateXCyclist = groupElem.getAttribute("android:translateX").toDoubleOrNull() ?: 0.0
+                val pathChildren = groupElem.getElementsByTagName("path")
+                cyclistGroupPathsCount = pathChildren.length
+            } else if (groupName == "mini_icon_radar") {
+                foundMiniIconRadar = true
+                val tx = groupElem.getAttribute("android:translateX").toDoubleOrNull() ?: 0.0
+                val ty = groupElem.getAttribute("android:translateY").toDoubleOrNull() ?: 0.0
+                val sx = groupElem.getAttribute("android:scaleX").toDoubleOrNull() ?: 0.0
+                val sy = groupElem.getAttribute("android:scaleY").toDoubleOrNull() ?: 0.0
+
+                // Canonical mini-icon radar path bounds in local coords: x in [80, 960], y in [264, 800]
+                val minX = tx + 80.0 * sx
+                val maxX = tx + 960.0 * sx
+                val minY = ty + 264.0 * sy
+                val maxY = ty + 800.0 * sy
+
+                assertTrue("mini_icon_radar must remain within top-left quadrant (maxX <= 45.0)", maxX <= 45.0)
+                assertTrue("mini_icon_radar must clear cyclist silhouette (separation >= 7.0 units)", 51.3 - maxX >= 7.0)
+                assertTrue("mini_icon_radar must remain inside viewport (minX >= 10.0, minY >= 8.0)", minX >= 10.0 && minY >= 8.0)
+                assertTrue("mini_icon_radar maxY must remain above rear wheel (maxY <= 40.0)", maxY <= 40.0)
+            }
+        }
+
+        assertEquals("bt_bike_radar.xml cyclist group translateX must be 18.18", 18.18, translateXCyclist, 0.01)
+        assertEquals("bt_bike_radar.xml cyclist group must contain exactly 18 canonical paths", 18, cyclistGroupPathsCount)
+        assertTrue("bt_bike_radar.xml must define canonical mini_icon_radar group", foundMiniIconRadar)
+
+        // Ensure zero saddle arcs cut across cyclist group
+        val btXmlContent = File(drawableDir, "bt_bike_radar.xml").readText()
+        assertFalse("bt_bike_radar must not contain saddle arc pathData M 22.0,34.0", btXmlContent.contains("M 22.0,34.0"))
+        assertFalse("bt_bike_radar must not contain saddle arc pathData M 14.0,26.0", btXmlContent.contains("M 14.0,26.0"))
+        assertFalse("bt_bike_radar must not contain saddle arc pathData M 6.0,18.0", btXmlContent.contains("M 6.0,18.0"))
+
+        // 2. Verify bike_radar.xml arc geometry and clearance
+        val bikeRadarXml = File(drawableDir, "bike_radar.xml").readText()
+        val arcRegex = Regex("""M\s*([\d.]+),([\d.]+)\s*A\s*([\d.]+),([\d.]+)\s+0\s+0,0\s+([\d.]+),([\d.]+)""")
+        val arcMatches = arcRegex.findAll(bikeRadarXml).toList()
+        assertEquals("bike_radar.xml must contain exactly 3 radar emission arcs", 3, arcMatches.size)
+
+        for (match in arcMatches) {
+            val x1 = match.groupValues[1].toDouble()
+            val y1 = match.groupValues[2].toDouble()
+            val r = match.groupValues[3].toDouble()
+            val x2 = match.groupValues[5].toDouble()
+            val y2 = match.groupValues[6].toDouble()
+
+            // All arc endpoints must terminate strictly above rear wheel (y <= 35.0 vs wheel top y = 39.0)
+            assertTrue("Arc endpoint y2 must stay above rear wheel (y2 <= 35.0)", y2 <= 35.0)
+
+            // Reconstruct center and verify concentricity near (36.0, 26.0)
+            val dx = x2 - x1
+            val dy = y2 - y1
+            val d = Math.hypot(dx, dy)
+            assertTrue("Chord length must be <= 2*r", d <= 2 * r)
+            val h = Math.sqrt(r * r - (d / 2) * (d / 2))
+            val xc = (x1 + x2) / 2 + h * (dy / d)
+            val yc = (y1 + y2) / 2 - h * (dx / d)
+
+            assertEquals("Arc center xc must be concentric at ~36.0", 36.0, xc, 0.5)
+            assertEquals("Arc center yc must be concentric at ~26.0", 26.0, yc, 0.5)
+
+            // Sample 50 points along the arc and verify physical clearances
+            val th1 = Math.atan2(y1 - yc, x1 - xc)
+            val th2 = Math.atan2(y2 - yc, x2 - xc)
+            val span = (th1 - th2 + 2 * Math.PI) % (2 * Math.PI)
+
+            for (step in 0..50) {
+                val t = step / 50.0
+                val angle = th1 - t * span
+                val px = xc + r * Math.cos(angle)
+                val py = yc + r * Math.sin(angle)
+
+                // Wheel clearance: center (24.5, 51.5), radius 12.5, half-stroke 1.4
+                val distToWheel = Math.hypot(px - 24.5, py - 51.5) - 12.5 - 1.4
+                assertTrue("Arc point ($px, $py) must maintain >= 3.0 units clearance from rear wheel", distToWheel >= 3.0)
+
+                // Cyclist back clearance: segment (40.5, 31.0) to (53.5, 21.5), half-stroke 3.7
+                val l2 = Math.pow(53.5 - 40.5, 2.0) + Math.pow(21.5 - 31.0, 2.0)
+                val proj = Math.max(0.0, Math.min(1.0, ((px - 40.5) * (53.5 - 40.5) + (py - 31.0) * (21.5 - 31.0)) / l2))
+                val lx = 40.5 + proj * (53.5 - 40.5)
+                val ly = 31.0 + proj * (21.5 - 31.0)
+                val distToBack = Math.hypot(px - lx, py - ly) - 3.7
+                assertTrue("Arc point ($px, $py) must maintain >= 3.0 units clearance from cyclist back", distToBack >= 3.0)
+
+                // Card border clearance: viewport 96x96 with radius 10.0
+                assertTrue("Arc point x must stay >= 8.0 away from card left edge", px - 1.4 >= 8.0)
+                assertTrue("Arc point y must stay >= 8.0 away from card top edge", py - 1.4 >= 8.0)
+            }
+        }
+    }
 }

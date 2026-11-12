@@ -28,6 +28,7 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -36,8 +37,21 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.DirectionsBike
+import androidx.compose.material.icons.filled.EmojiEvents
+import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Place
+import androidx.compose.material.icons.filled.Public
+import androidx.compose.material.icons.filled.Repeat
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.Terrain
+import androidx.compose.material.icons.filled.Timer
+import androidx.compose.material.icons.filled.WbSunny
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -55,18 +69,21 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
+import com.atrainingtracker.banalservice.BANALService
+import com.atrainingtracker.trainingtracker.MyUnits
+import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.monetization.SupporterTier
 import com.atrainingtracker.trainingtracker.ui.theme.TTColor
 import java.time.DayOfWeek
 import java.time.format.TextStyle
 import java.util.Locale
+import kotlin.math.roundToLong
 
 /**
  * Filter chips row for selecting Time Horizon and Sport Filter (REQ-SPT-002).
@@ -104,7 +121,7 @@ fun SportingJourneyFilters(
                 )
             )
 
-            availableYears.take(5).forEach { yr ->
+            availableYears.forEach { yr ->
                 val isSelected = (horizon as? SportingHorizon.Year)?.year == yr
                 FilterChip(
                     selected = isSelected,
@@ -149,13 +166,35 @@ fun SportingJourneyFilters(
 }
 
 /**
- * Hero Totals Card displaying total distance, Equator percentage, and secondary metrics (REQ-SPT-002, Pillar 1).
+ * Hero Totals Card displaying total distance, Equator percentage, and secondary metrics (REQ-SPT-002, REQ-SPT-005).
  */
 @Composable
 fun HeroTotalsCard(
     totals: SportingHeroTotals,
     modifier: Modifier = Modifier
 ) {
+    val isImperial = remember {
+        try {
+            TrainingApplication.getUnit() == MyUnits.IMPERIAL
+        } catch (_: Exception) {
+            false
+        }
+    }
+
+    val distanceFormatted = if (isImperial) {
+        val distMiles = (totals.totalDistanceKm * 1000.0) / BANALService.METER_PER_MILE
+        "${String.format(Locale.getDefault(), "%,.1f", distMiles)} mi"
+    } else {
+        "${String.format(Locale.getDefault(), "%,.1f", totals.totalDistanceKm)} km"
+    }
+
+    val elevationFormatted = if (isImperial) {
+        val elevFeet = (totals.totalElevationM / BANALService.METER_PER_FOOT).roundToLong()
+        "${String.format(Locale.getDefault(), "%,d", elevFeet)} ft"
+    } else {
+        "${String.format(Locale.getDefault(), "%,d", totals.totalElevationM)} m"
+    }
+
     Card(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
@@ -178,9 +217,9 @@ fun HeroTotalsCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.Top
             ) {
-                Column {
+                Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "${String.format(Locale.US, "%,.1f", totals.totalDistanceKm)} km",
+                        text = distanceFormatted,
                         style = MaterialTheme.typography.headlineMedium,
                         fontWeight = FontWeight.ExtraBold,
                         color = MaterialTheme.colorScheme.onSurface
@@ -191,6 +230,8 @@ fun HeroTotalsCard(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
+
+                Spacer(modifier = Modifier.width(8.dp))
 
                 Surface(
                     shape = RoundedCornerShape(8.dp),
@@ -213,12 +254,12 @@ fun HeroTotalsCard(
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 SecondaryStatBox(
-                    title = String.format(Locale.US, "%,d", totals.totalWorkouts),
+                    title = String.format(Locale.getDefault(), "%,d", totals.totalWorkouts),
                     subtitle = stringResource(R.string.sporting_journey_hero_workouts_label),
                     modifier = Modifier.weight(1f)
                 )
                 SecondaryStatBox(
-                    title = "${String.format(Locale.US, "%,.0f", totals.totalActiveHours)} h",
+                    title = "${String.format(Locale.getDefault(), "%,.0f", totals.totalActiveHours)} h",
                     subtitle = stringResource(R.string.sporting_journey_hero_days_sub, totals.nonstopDays),
                     modifier = Modifier.weight(1f)
                 )
@@ -229,7 +270,7 @@ fun HeroTotalsCard(
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 SecondaryStatBox(
-                    title = "${String.format(Locale.US, "%,d", totals.totalElevationM)} m",
+                    title = elevationFormatted,
                     subtitle = stringResource(R.string.sporting_journey_hero_everest_sub, totals.everestMultiplier),
                     modifier = Modifier.weight(1f)
                 )
@@ -272,7 +313,7 @@ private fun SecondaryStatBox(
 }
 
 /**
- * Section displaying the 4 Hidden Gems discovered from SQLite telemetry (REQ-SPT-003, Pillar 2).
+ * Section displaying the 4 Hidden Gems discovered from offline telemetry (REQ-SPT-003, REQ-SPT-005, Pillar 2).
  */
 @Composable
 fun HiddenGemsSection(
@@ -289,8 +330,10 @@ fun HiddenGemsSection(
                 text = stringResource(R.string.sporting_journey_hidden_gems_header),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.weight(1f)
             )
+            Spacer(modifier = Modifier.width(8.dp))
             Surface(
                 shape = RoundedCornerShape(6.dp),
                 color = TTColor.VaultCardBackground
@@ -318,13 +361,13 @@ fun HiddenGemsSection(
             pillColor = TTColor.VaultBiologicalRed,
             headline = stringResource(
                 R.string.sporting_journey_gem_cranks_val,
-                String.format(Locale.US, "%,d", gems.pedalRevolutions)
+                String.format(Locale.getDefault(), "%,d", gems.pedalRevolutions)
             ),
             description = stringResource(
                 R.string.sporting_journey_gem_cranks_desc,
                 gems.cadenceTrackedRidesCount,
-                String.format(Locale.US, "%,d", gems.pedalRevolutions),
-                String.format(Locale.US, "%,d", gems.estimatedHeartbeats)
+                String.format(Locale.getDefault(), "%,d", gems.pedalRevolutions),
+                String.format(Locale.getDefault(), "%,d", gems.estimatedHeartbeats)
             )
         )
 
@@ -336,8 +379,8 @@ fun HiddenGemsSection(
             headline = stringResource(R.string.sporting_journey_gem_kwh_val, gems.mechanicalKwh),
             description = stringResource(
                 R.string.sporting_journey_gem_kwh_desc,
-                String.format(Locale.US, "%,.0f", gems.mechanicalKj),
-                String.format(Locale.US, "%,.0f", gems.ebikeKmEquivalent),
+                String.format(Locale.getDefault(), "%,.0f", gems.mechanicalKj),
+                String.format(Locale.getDefault(), "%,.0f", gems.ebikeKmEquivalent),
                 gems.espressosEquivalent,
                 gems.phoneChargesEquivalent
             )
@@ -348,7 +391,6 @@ fun HiddenGemsSection(
         val endH = (startH + 2) % 24
         val dowName = remember(gems.mostActiveDayOfWeek) {
             gems.mostActiveDayOfWeek?.let { dow ->
-                // SQLite strftime('%w'): 0=Sunday, 1=Monday, 2=Tuesday, 3=Wednesday, 4=Thursday, 5=Friday, 6=Saturday
                 val dayOfWeek = when (dow) {
                     0 -> DayOfWeek.SUNDAY
                     1 -> DayOfWeek.MONDAY
@@ -383,7 +425,7 @@ fun HiddenGemsSection(
             description = stringResource(
                 R.string.sporting_journey_gem_explorer_desc,
                 gems.ritualWorkoutsCount,
-                (gems.ritualWorkoutsCount / 20).coerceAtLeast(1),
+                gems.recurringRoutesCount,
                 gems.explorerWorkoutsCount
             )
         )
@@ -418,8 +460,10 @@ private fun GemCard(
                     text = categoryTitle,
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.Bold,
-                    color = pillColor
+                    color = pillColor,
+                    modifier = Modifier.weight(1f)
                 )
+                Spacer(modifier = Modifier.width(8.dp))
                 Surface(
                     shape = RoundedCornerShape(6.dp),
                     color = pillColor.copy(alpha = 0.15f)
@@ -451,7 +495,7 @@ private fun GemCard(
 }
 
 /**
- * Section presenting Signature Milestones with click-through navigation (REQ-SPT-003, Pillar 3).
+ * Section presenting Signature Milestones with click-through navigation (REQ-SPT-003, REQ-SPT-005, Pillar 3).
  */
 @Composable
 fun MilestonesSection(
@@ -469,8 +513,10 @@ fun MilestonesSection(
                 text = stringResource(R.string.sporting_journey_milestones_title),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.weight(1f)
             )
+            Spacer(modifier = Modifier.width(8.dp))
             Text(
                 text = stringResource(R.string.sporting_journey_milestones_hint),
                 style = MaterialTheme.typography.labelSmall,
@@ -479,6 +525,14 @@ fun MilestonesSection(
         }
 
         milestones.forEach { item ->
+            val icon = when (item.id) {
+                "first_workout" -> Icons.Default.History
+                "longest_workout" -> Icons.Default.Timer
+                "highest_climb" -> Icons.Default.Terrain
+                "busiest_month" -> Icons.Default.DateRange
+                else -> Icons.Default.Star
+            }
+
             Surface(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -498,12 +552,22 @@ fun MilestonesSection(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.weight(1f)
                     ) {
-                        Text(
-                            text = item.emoji,
-                            style = MaterialTheme.typography.titleMedium,
-                            modifier = Modifier.padding(end = 10.dp)
-                        )
-                        Column {
+                        Surface(
+                            shape = CircleShape,
+                            color = TTColor.VaultAmber.copy(alpha = 0.15f),
+                            modifier = Modifier.size(36.dp)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    imageVector = icon,
+                                    contentDescription = null,
+                                    tint = TTColor.VaultAmber,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                        }
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column(modifier = Modifier.weight(1f)) {
                             Text(
                                 text = item.title,
                                 style = MaterialTheme.typography.titleSmall,
@@ -519,6 +583,8 @@ fun MilestonesSection(
                             }
                         }
                     }
+
+                    Spacer(modifier = Modifier.width(8.dp))
 
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
@@ -543,9 +609,8 @@ fun MilestonesSection(
 }
 
 /**
- * Section displaying the Achievement Room with auto-unlocked trophies and story reveals (REQ-SPT-003, Pillar 4).
+ * Section displaying the Achievement Room with auto-unlocked trophies and uniform 4-column grid (REQ-SPT-003, REQ-SPT-005, Pillar 4).
  */
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun AchievementRoomSection(
     achievements: List<SportingAchievement>,
@@ -560,7 +625,7 @@ fun AchievementRoomSection(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Column {
+            Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = stringResource(R.string.sporting_journey_achievements_title),
                     style = MaterialTheme.typography.titleMedium,
@@ -574,6 +639,7 @@ fun AchievementRoomSection(
                     color = TTColor.VaultAmber
                 )
             }
+            Spacer(modifier = Modifier.width(8.dp))
             Text(
                 text = stringResource(R.string.sporting_journey_achievements_hint),
                 style = MaterialTheme.typography.labelSmall,
@@ -581,50 +647,82 @@ fun AchievementRoomSection(
             )
         }
 
-        // Badges Grid
-        FlowRow(
+        // Badges Uniform 4-Column Grid
+        Column(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-            maxItemsInEachRow = 4
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            achievements.forEach { badge ->
-                val isSelected = selectedBadge?.id == badge.id
-                Surface(
-                    modifier = Modifier
-                        .weight(1f)
-                        .clickable { selectedBadge = badge },
-                    shape = RoundedCornerShape(12.dp),
-                    color = if (badge.isUnlocked) {
-                        if (isSelected) TTColor.VaultCardBackground else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
-                    } else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.15f),
-                    border = BorderStroke(
-                        1.dp,
-                        if (isSelected) TTColor.VaultAmber
-                        else if (badge.isUnlocked) TTColor.VaultCardBorder
-                        else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f)
-                    )
+            achievements.chunked(4).forEach { rowBadges ->
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Column(
-                        modifier = Modifier.padding(8.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Text(
-                            text = if (badge.isUnlocked) badge.emoji else "🔒",
-                            style = MaterialTheme.typography.titleLarge
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = badge.name,
-                            style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = if (badge.isUnlocked) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Text(
-                            text = badge.subtitle,
-                            style = MaterialTheme.typography.labelSmall,
-                            color = if (badge.isUnlocked) TTColor.VaultAmber else MaterialTheme.colorScheme.outline
-                        )
+                    rowBadges.forEach { badge ->
+                        val isSelected = selectedBadge?.id == badge.id
+                        val badgeIcon = when (badge.id) {
+                            "century_rider" -> Icons.Default.DirectionsBike
+                            "everest_club" -> Icons.Default.Terrain
+                            "dawn_patrol" -> Icons.Default.WbSunny
+                            "million_cranks" -> Icons.Default.Repeat
+                            "pioneer_athlete" -> Icons.Default.EmojiEvents
+                            "local_legend" -> Icons.Default.Place
+                            "human_powerplant" -> Icons.Default.Bolt
+                            "halfway_world" -> Icons.Default.Public
+                            else -> Icons.Default.Star
+                        }
+
+                        Surface(
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(96.dp)
+                                .clickable { selectedBadge = badge },
+                            shape = RoundedCornerShape(12.dp),
+                            color = if (badge.isUnlocked) {
+                                if (isSelected) TTColor.VaultCardBackground else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+                            } else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.15f),
+                            border = BorderStroke(
+                                1.dp,
+                                if (isSelected) TTColor.VaultAmber
+                                else if (badge.isUnlocked) TTColor.VaultCardBorder
+                                else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f)
+                            )
+                        ) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(6.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.Center
+                            ) {
+                                Icon(
+                                    imageVector = if (badge.isUnlocked) badgeIcon else Icons.Default.Lock,
+                                    contentDescription = null,
+                                    tint = if (badge.isUnlocked) TTColor.VaultAmber else MaterialTheme.colorScheme.outline,
+                                    modifier = Modifier.size(24.dp)
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = badge.name,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    maxLines = 1,
+                                    textAlign = TextAlign.Center,
+                                    color = if (badge.isUnlocked) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Text(
+                                    text = badge.subtitle,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    maxLines = 1,
+                                    textAlign = TextAlign.Center,
+                                    color = if (badge.isUnlocked) TTColor.VaultAmber else MaterialTheme.colorScheme.outline
+                                )
+                            }
+                        }
+                    }
+
+                    // Pad incomplete rows with equal-weight spacers to guarantee uniform width
+                    repeat(4 - rowBadges.size) {
+                        Spacer(modifier = Modifier.weight(1f))
                     }
                 }
             }
@@ -662,7 +760,7 @@ fun AchievementRoomSection(
 }
 
 /**
- * Shareable Athlete Passport Card with native [Intent.ACTION_SEND] dispatch (REQ-SPT-004).
+ * Shareable Athlete Passport Card with native [Intent.ACTION_SEND] dispatch (REQ-SPT-004, REQ-SPT-005).
  */
 @Composable
 fun AthletePassportShareCard(
@@ -693,7 +791,7 @@ fun AthletePassportShareCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Column {
+                Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = stringResource(R.string.sporting_journey_share_title).uppercase(Locale.getDefault()),
                         style = MaterialTheme.typography.labelSmall,
@@ -709,6 +807,8 @@ fun AthletePassportShareCard(
                         color = androidx.compose.ui.graphics.Color.White
                     )
                 }
+
+                Spacer(modifier = Modifier.width(8.dp))
 
                 Button(
                     onClick = onShareClick,

@@ -22,7 +22,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 /**
- * Unit verification suite for [SportingJourneyCalculator] (REQ-SPT-002, REQ-SPT-003, TST-SPT-002, TST-SPT-003).
+ * Unit verification suite for [SportingJourneyCalculator] (REQ-SPT-002, TST-SPT-005).
  */
 class SportingJourneyCalculatorTest {
 

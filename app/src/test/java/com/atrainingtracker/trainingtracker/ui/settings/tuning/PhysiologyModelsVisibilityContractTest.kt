@@ -287,6 +287,17 @@ class PhysiologyModelsVisibilityContractTest {
     }
 
     @Test
+    fun `TST-WKO-036_1 testPhysiologyModelsSection_rpeFeelSwitchContract`() {
+        val sectionClass = Class.forName("com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.PhysiologyModelsSectionKt")
+        val method = sectionClass.declaredMethods.find { it.name.startsWith("PhysiologyModelsSection") }
+        org.junit.Assert.assertNotNull("PhysiologyModelsSection method must exist", method)
+
+        val strings = com.atrainingtracker.testing.LocalizationTestCache.getStrings("values", "strings_rpe_feel.xml")
+        org.junit.Assert.assertNotNull("settings_workout_card_rpe_feel must exist", strings["settings_workout_card_rpe_feel"])
+        org.junit.Assert.assertNotNull("tuning_rpe_feel_desc must exist", strings["tuning_rpe_feel_desc"])
+    }
+
+    @Test
     fun `TST-UI-388_4 testLiveCockpitAndBackgroundPersistenceInvariants`() {
         assertTrue(
             shouldIncludeSensorType(
@@ -319,6 +330,33 @@ class PhysiologyModelsVisibilityContractTest {
                 enableCogganPowerMetrics = true,
                 enableCriticalPowerModel = false
             )
+        )
+    }
+
+    @Test
+    fun `TST-TRK-061_4b testPhysiologyModelsSection_hrvThresholdSlidersRemovedAndLinkAdded`() {
+        val candidates = listOf(
+            File("app/src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning/categories/PhysiologyModelsSection.kt"),
+            File("src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning/categories/PhysiologyModelsSection.kt")
+        )
+        val file = candidates.firstOrNull { it.exists() }
+            ?: error("Could not find PhysiologyModelsSection.kt")
+        val content = file.readText()
+        assertFalse(
+            "PhysiologyModelsSection must not contain redundant tuning_dfa_a1_t1_title slider",
+            content.contains("R.string.tuning_dfa_a1_t1_title")
+        )
+        assertFalse(
+            "PhysiologyModelsSection must not contain redundant tuning_dfa_a1_t2_title slider",
+            content.contains("R.string.tuning_dfa_a1_t2_title")
+        )
+        assertTrue(
+            "PhysiologyModelsSection must retain HRV Artifact Gate slider",
+            content.contains("R.string.tuning_hrv_artifact_gate_title")
+        )
+        assertTrue(
+            "PhysiologyModelsSection must reference tuning_physiology_hrv_zones_link",
+            content.contains("R.string.tuning_physiology_hrv_zones_link")
         )
     }
 }

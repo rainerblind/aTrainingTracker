@@ -35,7 +35,7 @@ import org.junit.Before
 import org.junit.Test
 
 /**
- * Verification test suite for REQ-SET-070 and TST-SET-070 (ATT-221):
+ * Verification test suite for REQ-SET-068 and TST-SET-055 (ATT-221):
  * Aggregate performance statistics for workout clusters.
  */
 @OptIn(ExperimentalCoroutinesApi::class)

@@ -205,6 +205,7 @@ class WorkoutSummariesListFragment : Fragment() {
                                     recentSessions = aftermathUIState.recentSessions,
                                     isSmoothedStream = aftermathUIState.isSmoothedHrvStream,
                                     onUpdateFtp = { trackOnMapViewModel.updateFtp(it) },
+                                    onUpdateHrZones = { t1, t2 -> trackOnMapViewModel.updateHrZones(t1, t2) },
                                     telemetryPath = aftermathUIState.telemetryPath,
                                     initialAutoShareSnapshot = autoShareSnapshotOnOpen,
                                     onSnapshotComplete = {

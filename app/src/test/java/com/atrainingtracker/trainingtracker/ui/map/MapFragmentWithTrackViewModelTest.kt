@@ -234,14 +234,61 @@ class MapFragmentWithTrackViewModelTest {
         testDispatcher.scheduler.advanceUntilIdle()
         assertEquals(1, viewModel.uiState.value.climbs.size)
 
-        // Dynamically emit new climb into LiveClimbsRepository.allStoredClimbs
-        val climb2 = climb1.copy(id = 102L, name = "Alpe d'Huez")
+        // Dynamically emit new distinct climb into LiveClimbsRepository.allStoredClimbs
+        val climb2 = climb1.copy(
+            id = 102L,
+            name = "Alpe d'Huez",
+            startLat = 45.10,
+            startLng = 6.50,
+            endLat = 45.12,
+            endLng = 6.52
+        )
         fakeStoredClimbsFlow.value = listOf(climb1, climb2)
 
         testDispatcher.scheduler.advanceUntilIdle()
 
         assertEquals("uiState.climbs must update reactively without layer toggling (REQ-MAP-067.2)", 2, viewModel.uiState.value.climbs.size)
         assertEquals("Alpe d'Huez", viewModel.uiState.value.climbs[1].name)
+    }
+
+    @Test
+    fun testUiState_climbsFlowDeduplicatesOverlappingClimbsForDisplay() = runTest {
+        // REQ-CLM-011.3 / TST-CLM-011.3
+        val climb1 = Climb(
+            id = 101L,
+            name = "Col du Galibier",
+            startLat = 45.06,
+            startLng = 6.40,
+            endLat = 45.06,
+            endLng = 6.41,
+            distanceMeters = 8500.0,
+            elevationGainMeters = 585.0,
+            avgGradePercent = 6.9,
+            maxGradePercent = 10.1,
+            category = ClimbCategory.CAT_1
+        )
+        // Overlapping candidate along the same road segment
+        val duplicateClimb = climb1.copy(
+            id = 102L,
+            name = "Col du Galibier Duplicate",
+            startLat = 45.0605,
+            startLng = 6.4005,
+            endLat = 45.0605,
+            endLng = 6.4105
+        )
+        fakeStoredClimbsFlow.value = listOf(climb1, duplicateClimb)
+
+        val mockPrefs = mockk<SharedPreferences>(relaxed = true)
+        every { mockPrefs.getStringSet(MapFragmentWithTrackViewModel.PREF_GENERAL_MAP_ENABLED_LAYERS, null) } returns setOf("CLIMBS")
+
+        val viewModel = createViewModel(prefs = mockPrefs, liveClimbsRepo = mockLiveClimbsRepo)
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            viewModel.uiState.collect()
+        }
+
+        testDispatcher.scheduler.advanceUntilIdle()
+        assertEquals("uiState.climbs must deduplicate overlapping climb polylines for map display", 1, viewModel.uiState.value.climbs.size)
+        assertEquals("Col du Galibier", viewModel.uiState.value.climbs[0].name)
     }
 
     @Test

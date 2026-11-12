@@ -195,7 +195,7 @@ class TcxWorkoutParserTest {
     }
 
     /**
-     * TST-MAP-055.3: Verifies that indoor trackpoints lacking <Position> are retained with full
+     * TST-MAP-070.3: Verifies that indoor trackpoints lacking <Position> are retained with full
      * telemetry (HR, power, cadence), and decimal <Watts> and <Cadence> values round to nearest integer.
      */
     @Test

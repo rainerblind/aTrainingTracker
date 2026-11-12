@@ -1258,6 +1258,7 @@
     <string name="mapping_format_strava">Strava: %1$s</string>
     <string name="mapping_format_tcx">TCX: %1$s</string>
     <string name="max_line_distance">weiteste Entfernung</string>
+    <string name="route_apex">Scheitelpunkt</string>
     <string name="no_sport_types_available">Keine Sportarten verfügbar</string>
     <string name="no_workouts_available">Keine Einheiten verfügbar</string>
     <string name="no_periods_available">Keine Zeiträume verfügbar</string>
@@ -2339,6 +2340,7 @@
     <string name="copy_tab_title">Tab kopieren</string>
     <string name="copy_tab_action">Kopieren</string>
     <string name="back">Zurück</string>
+    <string name="navigation_drawer_open">Navigationsmenü öffnen</string>
     <string name="close">Schließen</string>
     <string name="clear">Löschen</string>
     <string name="select_route">Route auswählen</string>

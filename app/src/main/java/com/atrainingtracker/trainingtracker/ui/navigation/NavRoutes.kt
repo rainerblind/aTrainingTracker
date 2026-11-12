@@ -42,6 +42,8 @@ enum class SettingsBottomSheetType {
 object NavRoutes {
     const val START_TRACKING = "start_tracking"
     const val WORKOUTS = "workouts"
+    const val WORKOUTS_PATTERN = "workouts?pushed={pushed}"
+    const val ARG_PUSHED = "pushed"
     const val PERIODS = "periods"
     const val MORNING_HRV = "morning_hrv"
     const val HRV_TEST = "hrv_test"
@@ -61,34 +63,66 @@ object NavRoutes {
     const val SPORT_TYPES = "sport_types"
     const val AUTO_PAUSE = "auto_pause"
     const val TRAINING_ZONES = "training_zones"
-    const val TRAINING_ZONES_PATTERN = "training_zones?initialTab={initialTab}&promptReason={promptReason}"
+    const val TRAINING_ZONES_PATTERN = "training_zones?initialTab={initialTab}&promptReason={promptReason}&pushed={pushed}"
     const val ARG_INITIAL_TAB = "initialTab"
     const val ARG_PROMPT_REASON = "promptReason"
     const val ATHLETE_PROFILE = "athlete_profile"
     const val BACKUP_RESTORE = "backup_restore"
     const val ADVANCED_SETTINGS = "advanced_settings"
+    const val ADVANCED_SETTINGS_PATTERN = "advanced_settings?pushed={pushed}"
     const val TIPS_GUIDE = "tips_guide"
+    const val TIPS_GUIDE_PATTERN = "tips_guide?pushed={pushed}"
     const val TRACKING_LAYOUTS = "tracking_layouts"
     const val SUPPORTER = "supporter"
     const val ARG_PLAN_ID = "planId"
-    const val SUPPORTER_PATTERN = "supporter?planId={planId}"
+    const val SUPPORTER_PATTERN = "supporter?planId={planId}&pushed={pushed}"
 
     /**
      * Builds a navigation route to the Supporter screen, optionally pre-selecting a base plan (REQ-SET-088.5).
      */
-    fun supporter(planId: String? = null): String =
-        if (planId != null) "$SUPPORTER?$ARG_PLAN_ID=$planId" else SUPPORTER
+    fun supporter(planId: String? = null, pushed: Boolean = false): String {
+        val base = if (planId != null) "$SUPPORTER?$ARG_PLAN_ID=$planId" else SUPPORTER
+        return if (pushed) {
+            if (base.contains("?")) "$base&$ARG_PUSHED=true" else "$base?$ARG_PUSHED=true"
+        } else {
+            base
+        }
+    }
+
+    /**
+     * Builds a navigation route to the Advanced Settings screen, optionally marking it as pushed contextual navigation.
+     */
+    fun advancedSettings(pushed: Boolean = false): String =
+        if (pushed) "$ADVANCED_SETTINGS?$ARG_PUSHED=true" else ADVANCED_SETTINGS
+
+    /**
+     * Builds a navigation route to the Tips & Guide screen, optionally marking it as pushed contextual navigation.
+     */
+    fun tipsGuide(pushed: Boolean = false): String =
+        if (pushed) "$TIPS_GUIDE?$ARG_PUSHED=true" else TIPS_GUIDE
 
     /**
      * Builds a navigation route to Training Zones, optionally parameterized with an initial tab and onboarding prompt reason (REQ-UI-374.3).
      */
-    fun trainingZones(initialTab: Int = 0, promptReason: String? = null): String =
-        if (initialTab != 0 || promptReason != null) {
+    fun trainingZones(initialTab: Int = 0, promptReason: String? = null, pushed: Boolean = false): String {
+        val base = if (initialTab != 0 || promptReason != null) {
             val reasonParam = promptReason?.let { "&promptReason=$it" } ?: ""
             "training_zones?$ARG_INITIAL_TAB=$initialTab$reasonParam"
         } else {
             TRAINING_ZONES
         }
+        return if (pushed) {
+            if (base.contains("?")) "$base&$ARG_PUSHED=true" else "$base?$ARG_PUSHED=true"
+        } else {
+            base
+        }
+    }
+
+    /**
+     * Builds a navigation route to the Workouts destination, optionally marking it as pushed contextual navigation.
+     */
+    fun workouts(pushed: Boolean = false): String =
+        if (pushed) "$WORKOUTS?$ARG_PUSHED=true" else WORKOUTS
 
     /**
      * Builds a navigation route to the central map, optionally parameterized with a target location ID.

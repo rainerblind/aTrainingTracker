@@ -3,7 +3,7 @@
 **Domain**: `ui_design_system`  
 **Prefixes**: `UI`, `UNT`  
 **Scope**: Jetpack Compose design system, UI components, typography, dialogs, gestures, and layout contracts.  
-**Total Tests**: 392
+**Total Tests**: 466
 
 ---
 
@@ -207,10 +207,30 @@
 - **Component**: **Pause Movement Isolation**
 - **Test Description**: 1. Start workout. 2. Move to create track. 3. **Pause**. 4. Move 50m.
 
+### TST-UI-041: **Period Peak Markers Audit** [Verified]
+- **Requirement(s)**: `REQ-UI-033`, `REQ-UI-035`, `REQ-UI-036`
+- **Component**: **Interactive Period Map Peak Markers**
+- **Jira**: `SCRUM-130`
+- **Test Description**:
+  1. Navigate to Period Map for Week/Month summary in `PeriodMapScreen`.
+  2. Verify technical markers for Start, End, Maximum Altitude, and Maximum Line Displacement are present and displayed with subordinate alpha matching the period type.
+  3. Tap a peak marker: verify the bottom peek sheet opens displaying the corresponding workout details.
+  4. Ensure successful compilation and zero visual regressions.
+
 ### TST-UI-043: **Device Management Modernization** [Verified]
 - **Requirement(s)**: `REQ-UI-041`, `REQ-UI-043`
 - **Component**: **Device Management Modernization**
 - **Test Description**: 1. Navigate to Pairing screen. 2. Verify Tabbed layout. 3. Interact with Pair switches. 4. Click device to open Edit Dialog. 5. Modify a setting (e.g. name).
+
+### TST-UI-044: **Mappable Device Items Layout Verification** [Verified]
+- **Requirement(s)**: `REQ-UI-042`
+- **Component**: **High-Density Device Item Layout**
+- **Jira**: `SCRUM-37`
+- **Test Description**:
+  1. Inspect `DeviceItem` layout in the device pairing screen.
+  2. Verify removal of horizontal divider and unified multi-row structure matching Route/Segment cards.
+  3. Verify green/red availability LED icon is positioned to the left of the device metadata.
+  4. Confirm pairing switch is positioned at the bottom-right corner with 0.8f scale.
 
 ### TST-UI-045: **Reactive Map Updates** [Verified]
 - **Requirement(s)**: `REQ-MAP-009`
@@ -3207,23 +3227,23 @@
   5. *Clean-Room Full Suite Regression Execution*:
   • Run `./gradlew testDebugUnitTest` verifying 100% pass rate.
 
-### TST-UI-216: **Compact Equipment Card Layout & Harmonized Inter-Card Spacing Verification** [Verified]
-- **Requirement(s)**: `REQ-UI-257`
+### TST-UI-519: **Compact Equipment Card Layout & Harmonized Inter-Card Spacing Verification** [Verified]
+- **Requirement(s)**: `REQ-UI-523`
 - **Component**: **Compact Equipment Card Layout & Harmonized Inter-Card Spacing Verification**
 - **Jira**: ``ATT-2059``
 - **Test Description**:
-  1. *Layout Metrics & Spacing Contract Test (`EquipmentCardSpacingContractTest.kt`)*:
+  1. *Layout Metrics & Spacing Contract Test (`TST-UI-519.1`, `EquipmentCardSpacingContractTest.kt`)*:
   • Verify `EquipmentList` configures `verticalArrangement` with compact spacing (6.dp–8.dp).
   • Verify `MappableListItem` inside `EquipmentItem` has `vertical = 0.dp` margin to prevent double-gap compounding.
   • Verify minimum card touch target height satisfies WCAG accessibility (>= 48.dp).
-  2. *Adaptive Compact Presentation Test (`EquipmentCompactCardTest.kt`)*:
+  2. *Adaptive Compact Presentation Test (`TST-UI-519.2`, `EquipmentCompactCardTest.kt`)*:
   • Verify 0-workout items (`totalWorkouts == 0`) resolve compact typography (`titleMedium`) and vertical padding (`8.dp`).
   • Verify active items with workouts (`totalWorkouts > 0`) retain standard typography (`titleLarge`), 12.dp padding, and stats summary block.
   • Verify retired items (`isRetired == true`) apply `0.75f` alpha to `MappableListItem`.
-  3. *Interactive Invariants Test*:
+  3. *Interactive Invariants Test (`TST-UI-519.3`)*:
   • Verify single-tap triggers `onConfigClick`.
   • Verify long-press triggers delete dropdown menu anchored at `TopStart` per `REQ-UI-061`.
-  4. *Clean-Room Regression Execution*:
+  4. *Clean-Room Regression Execution (`TST-UI-519.4`)*:
   • Run `./gradlew testDebugUnitTest` verifying 100% pass rate.
 
 ### TST-UI-217: **Cockpit Sensor Field Visual Styling Architecture, Expert Settings Selection & Reactive Grid Layout Verification** [Verified]
@@ -8261,7 +8281,7 @@
 - **Target Release**: `V5.0.0`
 - **Requirement(s)**: `REQ-UI-514`
 - **Component**: `app/src/main/res/drawable/bike_radar.xml`, `app/src/main/res/drawable/bt_bike_radar.xml`, `UIHelper.java`, `DeviceData.kt`, `VectorAssetResolutionContractTest.kt`
-- **Jira**: `ATT-6699`
+- **Jira**: `ATT-6699`, `ATT-7318`
 - **Test Description**:
   1. *Vector XML Well-Formedness & Rule 37 Geometry Contract Test (`TST-UI-514.1`, `VectorAssetResolutionContractTest.kt`)*:
   • Verify `bike_radar.xml` (96x96) and `bt_bike_radar.xml` (144x144) exist in `app/src/main/res/drawable/`, parse cleanly as XML `<vector>` documents with `48dp x 48dp` dimensions, and have valid positive viewport bounds.
@@ -8277,8 +8297,11 @@
   • Assert `DeviceData.getIconId(DeviceType.BIKE_RADAR, Protocol.ANT_PLUS) == R.drawable.bike_radar`.
   • Assert `DeviceData.getIconId(DeviceType.BIKE_RADAR, Protocol.BLUETOOTH_LE) == R.drawable.bt_bike_radar`.
   4. *Tier 1 Targeted Unit Test Regression Suite (`TST-UI-514.4`)*:
-  • Execute targeted test suite (`./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.resources.VectorAssetResolutionContractTest" --tests "com.atrainingtracker.banalservice.devices.bluetooth_le.*"`).
+  • Execute targeted test suite (`./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.resources.VectorAssetResolutionContractTest"`).
   • Assert 100% pass rate.
+  5. *Radar Vector Asset Geometric Bounding Box & Collision-Free Contract Test (`TST-UI-514.5`, `VectorAssetResolutionContractTest.kt`)*:
+  • Verify `bt_bike_radar.xml` cyclist group contains exactly 18 standard cyclist paths with zero colliding saddle arcs, and `mini_icon_radar` maintains clean separation ($\ge 7.0$ px) from the cyclist silhouette.
+  • Verify `bike_radar.xml` emission arcs maintain $\ge 3.0$ units clearance from the rear wheel ($y_{\text{wheel}} \ge 39.0$), cyclist back, and card border, with all arc endpoints staying strictly above the rear wheel ($y \le 35.0$).
 
 
 
@@ -8331,3 +8354,58 @@
   • Assert 100% pass rate.
 
 
+
+### TST-UI-517: **Root Hamburger vs Pushed Back Arrow Contract and Training/Maps Header Leading Action Verification Suite** [Verified]
+- **Target Release**: `V5.0.0`
+- **Requirement(s)**: `REQ-UI-517`
+- **Component**: `NavRoutes.kt`, `ATrainingTrackerApp.kt`, `MainActivityWithNavigation.kt`, `WorkoutTabsScreen.kt`, `PeriodsTabsScreen.kt`, `SegmentsTabsScreen.kt`, `RouteTabbedScreen.kt`, `WorkoutClustersTabsScreen.kt`, `KnownLocationsScreen.kt`
+- **Jira**: `ATT-7313`
+- **Test Description**:
+  1. *Route Contract & Pushed Argument Verification (`TST-UI-517.1`, `SingleActivityNavigationTest.kt`)*:
+     - Verify `NavRoutes.workouts(pushed = false)` returns `"workouts"`.
+     - Verify `NavRoutes.workouts(pushed = true)` returns `"workouts?pushed=true"`.
+     - Verify `NavRoutes.locations(pushed = false)` returns `"locations"`.
+     - Verify `NavRoutes.locations(clusterId = 5L, pushed = true)` returns `"locations?clusterId=5&pushed=true"`.
+     - Verify `ARG_PUSHED` parsing matches `defaultValue = false`.
+  2. *MainActivityWithNavigation Push Contract Verification (`TST-UI-517.2`, `MainActivityWithNavigationInteropTest.kt`)*:
+     - Verify `startWorkoutSummaryListFromPeriod` and `navigateToFilteredWorkouts` push `WORKOUTS` with `pushed = true` onto `navController`.
+  3. *ATrainingTrackerApp Navigation & Interceptor State Verification (`TST-UI-517.3`, `ATrainingTrackerAppNavigationTest.kt`)*:
+     - Verify drawer edge interceptor is disabled when destination argument `pushed == true`.
+     - Verify system Back pops backstack and cleans filter criteria on pushed destinations.
+  4. *9-Language Localization Parity Verification (`TST-UI-517.4`, `TranslationParityTest.kt`)*:
+     - Verify `R.string.navigation_drawer_open` and `R.string.back` exist across all 9 locales (en, de, es, fr, it, ja, nl, pl, pt) with matching semantics.
+  5. *Theme & Visual Token Verification (`TST-UI-517.5`, `ThemeColorCentralizationAuditTest.kt`)*:
+     - Verify `onPrimaryContainer` tint is strictly used on leading icons.
+  6. *Tier 1 Targeted Unit Test Regression Suite (`TST-UI-517.6`)*:
+     - Execute `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.navigation.*"`.
+     - Assert 100% pass rate.
+
+
+### TST-UI-518: **Context-Aware Hamburger Menu vs Back Arrow Contract Across Secondary Drawer Groups Verification Suite** [Verified]
+- **Target Release**: `V5.0.0`
+- **Requirement(s)**: `REQ-UI-518`
+- **Component**: `NavRoutes.kt`, `ATrainingTrackerApp.kt`, `DevicesTabbedScreen.kt`, `EquipmentTabsScreen.kt`, `ImportBackupTabsScreen.kt`, `SportTypesTabsScreen.kt`, `ZonesSettingsActivity.kt`, `AdvancedTuningScreen.kt`, `SupporterScreen.kt`, `TipsGuideScreen.kt`
+- **Jira**: `ATT-7312`
+- **Test Description**:
+  1. *Route Contract & Pushed Argument Verification (`TST-UI-518.1`, `SingleActivityNavigationTest.kt`, `NavRoutesZoneTest.kt`, `AdvancedTuningNavigationTest.kt`)*:
+     - Verify `NavRoutes.trainingZones()` preserves backwards-compatible defaults while supporting `pushed: Boolean = false`.
+     - Verify `NavRoutes.supporter()` supports `pushed: Boolean = false`.
+     - Verify `NavRoutes.advancedSettings(pushed: Boolean = false)` builds correct route strings.
+     - Verify `toDrawerItemId()` and `fromDrawerItemId()` mappings for all secondary destinations.
+  2. *Secondary Tabbed Screens Leading Icon Verification (`TST-UI-518.2`)*:
+     - Verify `DevicesTabbedScreen`, `EquipmentTabsScreen`, `ImportBackupTabsScreen`, and `SportTypesTabsScreen` declare `onMenuClick` and `onBackClick` / `onNavigateBack` parameters.
+     - Verify leading `IconButton` renders `Icons.Default.Menu` when `onMenuClick` is non-null and `Icons.AutoMirrored.Filled.ArrowBack` when `onBackClick` is non-null.
+     - Verify 56 dp title alignment offset (`start = 4.dp` container padding + 48 dp IconButton + 4 dp text padding).
+  3. *Settings & Support Context-Aware TopAppBar Verification (`TST-UI-518.3`, `AdvancedTuningScreenTest.kt`, `TipsGuideScreenContractTest.kt`)*:
+     - Verify `ZoneSettingsScreen` renders `Icons.Default.Menu` when `onOpenDrawer` is provided and `Icons.AutoMirrored.Filled.ArrowBack` calling `onFinish` when `onOpenDrawer == null`.
+     - Verify `AdvancedTuningScreen` renders `Icons.Default.Menu` when `onOpenDrawer` is non-null and `Icons.AutoMirrored.Filled.ArrowBack` when `onOpenDrawer == null`.
+     - Verify `SupporterScreen` renders `Icons.Default.Menu` when `onOpenDrawer` is non-null and `Icons.AutoMirrored.Filled.ArrowBack` when `onOpenDrawer == null`.
+     - Verify `TipsGuideScreen` renders `Icons.Default.Menu` when `onOpenDrawer` is non-null and `Icons.AutoMirrored.Filled.ArrowBack` when `onOpenDrawer == null`.
+  4. *ATrainingTrackerApp Integration & Interceptor Verification (`TST-UI-518.4`, `ATrainingTrackerAppNavigationTest.kt`)*:
+     - Verify drawer edge interceptor is suppressed when secondary screens are pushed.
+     - Verify wiring passes `onOpenDrawer` for drawer-root destinations and back callbacks for pushed destinations.
+  5. *9-Language Localization Parity Verification (`TST-UI-518.5`, `TranslationParityTest.kt`)*:
+     - Verify `R.string.navigation_drawer_open`, `R.string.back`, and `R.string.cancel` exist across all 9 locales with 100% parity.
+  6. *Targeted Unit Test Regression Suite (`TST-UI-518.6`)*:
+     - Execute `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.navigation.*" --tests "com.atrainingtracker.trainingtracker.zones.*" --tests "com.atrainingtracker.trainingtracker.ui.settings.tuning.*" --tests "com.atrainingtracker.trainingtracker.ui.help.*"`.
+     - Assert 100% pass rate.

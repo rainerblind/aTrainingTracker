@@ -205,6 +205,16 @@ object RadarLightController {
     }
 
     /**
+     * User-initiated mode selection from Cockpit sheet (REQ-CON-031.3, REQ-CON-034).
+     * Suspends smart light automation via [SmartRadarLightEngine.onManualOverride] and dispatches command.
+     */
+    @JvmStatic
+    fun setManualLightMode(mode: RadarLightMode): Boolean {
+        SmartRadarLightEngine.onManualOverride(mode)
+        return setLightMode(mode)
+    }
+
+    /**
      * Returns the list of permitted modes, pruning flashing modes when StVZO hardware is indicated.
      */
     @JvmStatic
@@ -218,6 +228,7 @@ object RadarLightController {
                 val cfg = TuningPreferencesDataStore.getInstance(context).getTuningConfig()
                 updateCachedPreferences(cfg.radarAutoLightControl, cfg.radarLightDefaultMode)
                 SmartBrakeLightDetector.isEnabled = cfg.radarBrakeLightEnabled
+                SmartRadarLightEngine.isAutomationEnabled = cfg.radarSmartLightAutomation
                 return Pair(cfg.radarAutoLightControl, cfg.radarLightDefaultMode)
             } catch (_: Throwable) {
                 // Ignore and use cached
@@ -229,8 +240,8 @@ object RadarLightController {
     }
 
     /**
-     * Workout start hook (REQ-CON-031.4, REQ-CON-035.7): turns on tail light if auto-switch is enabled
-     * and activates SmartBrakeLightDetector IMU listening ONLY for cycling workouts when light control is available.
+     * Workout start hook (REQ-CON-031.4, REQ-CON-034, REQ-CON-035.7): turns on tail light if auto-switch is enabled
+     * and activates SmartBrakeLightDetector and SmartRadarLightEngine ONLY for cycling workouts when light control is available.
      * Executes synchronously without unmanaged coroutines or filesDir inspections (Coding Standards §5.5).
      */
     @JvmStatic
@@ -256,10 +267,13 @@ object RadarLightController {
         if (ctx != null && isLightAvailable && SmartBrakeLightDetector.isEnabled && !SmartBrakeLightDetector.isAutoBypassed) {
             SmartBrakeLightDetector.startListening(ctx)
         }
+        if (ctx != null && isCycling) {
+            SmartRadarLightEngine.start(ctx)
+        }
     }
 
     /**
-     * Workout pause hook: stops IMU listening to conserve battery, clears pending brake holds,
+     * Workout pause hook: stops IMU and ambient light listening to conserve battery, clears pending brake holds,
      * and reverts from active brake light to pre-brake mode.
      */
     @JvmStatic
@@ -278,10 +292,11 @@ object RadarLightController {
             } catch (_: Exception) {}
         }
         SmartBrakeLightDetector.stopListening()
+        SmartRadarLightEngine.stopListening()
     }
 
     /**
-     * Workout resume hook: resumes IMU listening and preserves current active light mode.
+     * Workout resume hook: resumes IMU and ambient light listening and preserves current active light mode.
      * Does NOT stomp active mode (e.g. PELOTON 8 lm or night modes) back to defaultMode unless currently OFF.
      * Checks [isCyclingSession] so non-cycling workouts never activate IMU listeners or tail lights upon unpause (REQ-CON-035.7).
      */
@@ -311,10 +326,13 @@ object RadarLightController {
         if (ctx != null && isLightAvailable && SmartBrakeLightDetector.isEnabled && !SmartBrakeLightDetector.isAutoBypassed) {
             SmartBrakeLightDetector.startListening(ctx)
         }
+        if (ctx != null && cycling) {
+            SmartRadarLightEngine.start(ctx)
+        }
     }
 
     /**
-     * Workout finish/stop hook (REQ-CON-031.4): cancels pending holds, stops IMU listening,
+     * Workout finish/stop hook (REQ-CON-031.4, REQ-CON-034): cancels pending holds, stops sensor listening,
      * and reverts tail light to OFF if auto-switch is enabled.
      * Executes synchronously without unmanaged coroutines or filesDir inspections (Coding Standards §5.5).
      */
@@ -333,6 +351,7 @@ object RadarLightController {
         }
         SmartBrakeLightDetector.stopListening()
         SmartBrakeLightDetector.reset()
+        SmartRadarLightEngine.stop()
         val (autoControl, _) = resolveActiveConfig(context)
         if (autoControl) {
             setLightMode(RadarLightMode.OFF)
@@ -464,6 +483,7 @@ object RadarLightController {
         }
         SmartBrakeLightDetector.stopListening()
         SmartBrakeLightDetector.reset()
+        SmartRadarLightEngine.reset()
         val current = RadarStateRepository.getState()
         RadarStateRepository.updateState(current.copy(isLightControlSupported = false, lightMode = RadarLightMode.OFF))
     }

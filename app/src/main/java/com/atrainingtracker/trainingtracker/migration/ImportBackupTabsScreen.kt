@@ -43,11 +43,13 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -101,7 +103,9 @@ fun ImportBackupTabsScreen(
     viewModel: BackupRestoreViewModel,
     onNavigateToWorkout: ((Long) -> Unit)? = { workoutId ->
         com.atrainingtracker.trainingtracker.ui.WorkoutNavigationEvents.triggerNavigateToWorkout(workoutId)
-    }
+    },
+    onMenuClick: (() -> Unit)? = null,
+    onBackClick: (() -> Unit)? = null
 ) {
     val context = LocalContext.current
     val appContext = context.applicationContext
@@ -283,14 +287,40 @@ fun ImportBackupTabsScreen(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(LayoutConstants.HEADER_TITLE_ROW_HEIGHT)
-                                .padding(horizontal = 16.dp),
-                            verticalAlignment = Alignment.CenterVertically
+                                .padding(start = 4.dp, end = 16.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            Text(
-                                text = stringResource(R.string.import_backup),
-                                style = MaterialTheme.typography.titleLarge,
-                                color = MaterialTheme.colorScheme.onPrimaryContainer,
-                            )
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                if (onBackClick != null) {
+                                    IconButton(onClick = onBackClick) {
+                                        Icon(
+                                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                            contentDescription = stringResource(R.string.back),
+                                            tint = MaterialTheme.colorScheme.onPrimaryContainer
+                                        )
+                                    }
+                                } else if (onMenuClick != null) {
+                                    IconButton(onClick = onMenuClick) {
+                                        Icon(
+                                            imageVector = Icons.Default.Menu,
+                                            contentDescription = stringResource(R.string.navigation_drawer_open),
+                                            tint = MaterialTheme.colorScheme.onPrimaryContainer
+                                        )
+                                    }
+                                }
+                                Text(
+                                    text = stringResource(R.string.import_backup),
+                                    style = MaterialTheme.typography.titleLarge,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier.padding(start = 4.dp)
+                                )
+                            }
                         }
                     }
                     

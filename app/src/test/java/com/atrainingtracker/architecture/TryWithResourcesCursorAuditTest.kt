@@ -9,7 +9,7 @@ import java.time.format.DateTimeParseException
 import java.util.regex.Pattern
 
 /**
- * Architecture Audit Test enforcing REQ-DAT-001 / TST-DAT-001:
+ * Architecture Audit Test enforcing REQ-DAT-043 / TST-DAT-039:
  * Enforce Try-With-Resources and Cursor Bounds Checks Across Legacy Java Database Managers.
  *
  * Verifies that all SQLite query invocations across legacy Java database managers are:
@@ -311,7 +311,7 @@ class TryWithResourcesCursorAuditTest {
         }
 
         assertTrue(
-            "Found legacy Java SQLite query call sites violating REQ-DAT-001 (must use try-with-resources or @CursorProvider):\n" +
+            "Found legacy Java SQLite query call sites violating REQ-DAT-043 (must use try-with-resources or @CursorProvider):\n" +
                     allViolations.joinToString("\n"),
             allViolations.isEmpty()
         )

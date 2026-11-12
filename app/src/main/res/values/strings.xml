@@ -616,6 +616,7 @@
     <string name="average">average</string>
     <string name="start">start</string>
     <string name="max_line_distance">furthest away</string>
+    <string name="route_apex">Apex</string>
     <string name="end">end</string>
     <string name="my_locations">Favorite Tracks</string>
     <string name="drawer__settings">Settings</string>
@@ -2455,6 +2456,7 @@
     <string name="copy_tab_title">Copy Tab</string>
     <string name="copy_tab_action">Copy</string>
     <string name="back">Back</string>
+    <string name="navigation_drawer_open">Open navigation drawer</string>
     <string name="close">Close</string>
     <string name="clear">Clear</string>
     <string name="select_route">Select route</string>

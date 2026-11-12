@@ -6721,7 +6721,7 @@
     <ID>MaxLineLength:TranslationParityTest.kt$TranslationParityTest$private val formatSpecifierPattern = Pattern.compile("%(\\d+\\\$)?([-#+ 0,(\\&lt;]*)?(\\d+)?(\\.\\d+)?([tT])?([a-zA-Z%])")</ID>
     <ID>MaxLineLength:TranslationParityTest.kt$TranslationParityTest$val basePositions = baseSpecs.mapNotNull { Regex("%(\\d+)\\\$").find(it)?.groupValues?.get(1) }.toSet()</ID>
     <ID>MaxLineLength:TranslationParityTest.kt$TranslationParityTest$val locPositions = locSpecs.mapNotNull { Regex("%(\\d+)\\\$").find(it)?.groupValues?.get(1) }.toSet()</ID>
-    <ID>MaxLineLength:TryWithResourcesCursorAuditTest.kt$TryWithResourcesCursorAuditTest$"Found legacy Java SQLite query call sites violating REQ-DAT-001 (must use try-with-resources or @CursorProvider):\n"</ID>
+    <ID>MaxLineLength:TryWithResourcesCursorAuditTest.kt$TryWithResourcesCursorAuditTest$"Found legacy Java SQLite query call sites violating REQ-DAT-043 (must use try-with-resources or @CursorProvider):\n"</ID>
     <ID>MaxLineLength:TryWithResourcesCursorAuditTest.kt$TryWithResourcesCursorAuditTest$(stripped.endsWith("{") &amp;&amp; stripped.contains("(") &amp;&amp; !stripped.startsWith("class ") &amp;&amp; !stripped.startsWith("interface "))</ID>
     <ID>MaxLineLength:TryWithResourcesCursorAuditTest.kt$TryWithResourcesCursorAuditTest$.</ID>
     <ID>MaxLineLength:TryWithResourcesCursorAuditTest.kt$TryWithResourcesCursorAuditTest$assertTrue("Compliant manager with CursorProvider, valid suppression, and try-with-resources must pass without violations, but got: $violations", violations.isEmpty())</ID>

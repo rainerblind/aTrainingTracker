@@ -113,6 +113,7 @@ class WorkoutDetailTabsTest {
                 customTitle = "My Overview|Special;Tab",
                 sections = listOf(
                     WorkoutDetailSectionType.MAP,
+                    WorkoutDetailSectionType.RPE_AND_FEEL,
                     WorkoutDetailSectionType.DETAILS,
                     WorkoutDetailSectionType.EXTREMA
                 )
@@ -143,6 +144,7 @@ class WorkoutDetailTabsTest {
         assertEquals(
             listOf(
                 WorkoutDetailSectionType.MAP,
+                WorkoutDetailSectionType.RPE_AND_FEEL,
                 WorkoutDetailSectionType.DETAILS,
                 WorkoutDetailSectionType.EXTREMA
             ),
@@ -185,6 +187,7 @@ class WorkoutDetailTabsTest {
         assertEquals(4, migrated.size)
         assertEquals(
             listOf(
+                WorkoutDetailSectionType.RPE_AND_FEEL,
                 WorkoutDetailSectionType.DETAILS,
                 WorkoutDetailSectionType.PHOTOS,
                 WorkoutDetailSectionType.DESCRIPTION,
@@ -194,11 +197,12 @@ class WorkoutDetailTabsTest {
             migrated[0].sections
         )
 
-        // But v2 payload without PHOTOS honors athlete's deliberate choice
+        // But v2 payload without PHOTOS honors athlete's deliberate choice (with RPE_AND_FEEL auto-migrated)
         val v2PayloadWithoutPhotos = "v2|tab_overview:OVERVIEW::DETAILS,DESCRIPTION,EXTREMA,EXPORT_STATUS;tab_map_graphs:MAP_AND_GRAPHS::MAP,ELEVATION,CHARTS;tab_zones:ZONES::ZONES;tab_laps_segments:LAPS_AND_SEGMENTS::LAPS,STRAVA"
         val v2Parsed = WorkoutDetailTabConfig.deserializeTabs(v2PayloadWithoutPhotos)
         assertEquals(
             listOf(
+                WorkoutDetailSectionType.RPE_AND_FEEL,
                 WorkoutDetailSectionType.DETAILS,
                 WorkoutDetailSectionType.DESCRIPTION,
                 WorkoutDetailSectionType.EXTREMA,
@@ -515,6 +519,29 @@ class WorkoutDetailTabsTest {
         assertEquals(
             listOf(WorkoutDetailSectionType.ZONES, WorkoutDetailSectionType.GRADE_DISTRIBUTION),
             zonesTab.sections
+        )
+    }
+
+    /**
+     * TST-UI-453.4c: RPE and Feel auto-migration into tab_overview (REQ-WKO-036.3 / ATT-7320).
+     */
+    @Test
+    fun `TST-UI-453_4c rpe and feel auto-migration into tab_overview when missing from wire string`() {
+        val legacyWire = "v2|tab_overview:OVERVIEW::DETAILS,PHOTOS,DESCRIPTION,EXTREMA,EXPORT_STATUS;tab_zones:ZONES::ZONES,GRADE_DISTRIBUTION"
+        val migrated = WorkoutDetailTabConfig.deserializeTabs(legacyWire)
+        assertEquals(2, migrated.size)
+        val overviewTab = migrated[0]
+        assertEquals(WorkoutDetailSectionType.RPE_AND_FEEL, overviewTab.sections.first())
+        assertEquals(
+            listOf(
+                WorkoutDetailSectionType.RPE_AND_FEEL,
+                WorkoutDetailSectionType.DETAILS,
+                WorkoutDetailSectionType.PHOTOS,
+                WorkoutDetailSectionType.DESCRIPTION,
+                WorkoutDetailSectionType.EXTREMA,
+                WorkoutDetailSectionType.EXPORT_STATUS
+            ),
+            overviewTab.sections
         )
     }
 

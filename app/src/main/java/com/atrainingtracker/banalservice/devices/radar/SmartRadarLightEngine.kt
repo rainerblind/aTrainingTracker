@@ -18,10 +18,24 @@
 
 package com.atrainingtracker.banalservice.devices.radar
 
+import android.content.Context
+import android.hardware.Sensor
+import android.hardware.SensorEvent
+import android.hardware.SensorEventListener
+import android.hardware.SensorManager
 import android.os.Handler
 import android.os.Looper
+import android.os.PowerManager
 import android.os.SystemClock
 import android.util.Log
+import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
 
 /**
  * Environmental & traffic-adaptive smart tail light mode automation engine (REQ-CON-034, ATT-5104).
@@ -33,8 +47,10 @@ import android.util.Log
  *    10s recovery hysteresis (> 300 lx) before returning to daytime mode.
  * 3. 3-Stage Threat Escalation Matrix with strict anti-glare cap at night (never Day Flash at night).
  * 4. Command Rate-Limiting: enforces >= 1.5s between mode command dispatches with 3.5s cooldown hysteresis.
+ * 5. Lifecycle Management: registers [Sensor.TYPE_LIGHT] and [Sensor.TYPE_PROXIMITY] during active cycling
+ *    workouts when automation is enabled, cleanly unregistering on pause/stop to protect battery life.
  */
-object SmartRadarLightEngine {
+object SmartRadarLightEngine : SensorEventListener {
 
     private const val TAG = "SmartRadarLightEngine"
 
@@ -49,7 +65,13 @@ object SmartRadarLightEngine {
         set(value) {
             field = value
             if (value) {
+                val ctx = appContext
+                if (isWorkoutActive && ctx != null) {
+                    startListening(ctx)
+                }
                 evaluateAndDispatch(SystemClock.elapsedRealtime())
+            } else {
+                stopListening()
             }
         }
 
@@ -67,6 +89,26 @@ object SmartRadarLightEngine {
 
     var lastDispatchedMode: RadarLightMode? = null
         private set
+
+    @Volatile
+    var coroutineDispatcher: CoroutineDispatcher = Dispatchers.Default
+
+    @Volatile
+    var isProximityNear: Boolean = false
+        private set
+
+    @Volatile
+    var isListening: Boolean = false
+        private set
+
+    @Volatile
+    var isWorkoutActive: Boolean = false
+        private set
+
+    private var sensorManager: SensorManager? = null
+    private var powerManager: PowerManager? = null
+    private var observationScope: CoroutineScope? = null
+    private var appContext: Context? = null
 
     private var lastDispatchRealtimeMs: Long = 0L
     private var threatCooldownUntilRealtimeMs: Long = 0L
@@ -272,15 +314,134 @@ object SmartRadarLightEngine {
     }
 
     /**
+     * Starts smart tail light automation and observers for active workout session (REQ-CON-034).
+     */
+    @JvmStatic
+    @Synchronized
+    fun start(context: Context) {
+        val appCtx = context.applicationContext
+        appContext = appCtx
+        isWorkoutActive = true
+
+        if (observationScope == null) {
+            val scope = CoroutineScope(SupervisorJob() + coroutineDispatcher)
+            observationScope = scope
+
+            scope.launch {
+                RadarStateRepository.radarState.collectLatest { state ->
+                    onRadarStateChanged(state)
+                }
+            }
+
+            scope.launch {
+                try {
+                    if (TuningPreferencesDataStore.hasInitializedInstance()) {
+                        TuningPreferencesDataStore.getInstance(appCtx).radarSmartLightAutomationFlow.collectLatest { enabled ->
+                            isAutomationEnabled = enabled
+                        }
+                    }
+                } catch (e: Throwable) {
+                    Log.w(TAG, "Error collecting radarSmartLightAutomationFlow", e)
+                }
+            }
+        }
+
+        if (isAutomationEnabled) {
+            startListening(appCtx)
+        }
+    }
+
+    /**
+     * Registers ambient light (Sensor.TYPE_LIGHT) and proximity (Sensor.TYPE_PROXIMITY) listeners.
+     */
+    @JvmStatic
+    @Synchronized
+    fun startListening(
+        context: Context,
+        customSensorManager: SensorManager? = null,
+        customPowerManager: PowerManager? = null
+    ) {
+        if (isListening) return
+        val sm = customSensorManager ?: (context.getSystemService(Context.SENSOR_SERVICE) as? SensorManager) ?: return
+        val pm = customPowerManager ?: (context.getSystemService(Context.POWER_SERVICE) as? PowerManager)
+
+        val lightSensor = sm.getDefaultSensor(Sensor.TYPE_LIGHT)
+        val proximitySensor = sm.getDefaultSensor(Sensor.TYPE_PROXIMITY)
+
+        if (lightSensor != null) {
+            sm.registerListener(this, lightSensor, SensorManager.SENSOR_DELAY_NORMAL)
+        }
+        if (proximitySensor != null) {
+            sm.registerListener(this, proximitySensor, SensorManager.SENSOR_DELAY_NORMAL)
+        }
+
+        sensorManager = sm
+        powerManager = pm
+        isListening = true
+        Log.i(TAG, "SmartRadarLightEngine registered sensor listeners (light=${lightSensor != null}, prox=${proximitySensor != null})")
+    }
+
+    /**
+     * Unregisters sensor listeners to prevent battery drain when paused or stopped.
+     */
+    @JvmStatic
+    @Synchronized
+    fun stopListening() {
+        if (!isListening) return
+        try {
+            sensorManager?.unregisterListener(this)
+        } catch (e: Exception) {
+            Log.w(TAG, "Error unregistering light/proximity sensor listeners", e)
+        }
+        sensorManager = null
+        powerManager = null
+        isListening = false
+        Log.i(TAG, "SmartRadarLightEngine unregistered sensor listeners")
+    }
+
+    /**
+     * Stops automation, unregisters sensors, and terminates background coroutine observers.
+     */
+    @JvmStatic
+    @Synchronized
+    fun stop() {
+        isWorkoutActive = false
+        stopListening()
+        observationScope?.cancel()
+        observationScope = null
+        appContext = null
+    }
+
+    override fun onSensorChanged(event: SensorEvent) {
+        when (event.sensor.type) {
+            Sensor.TYPE_PROXIMITY -> {
+                val distance = event.values.getOrNull(0) ?: return
+                isProximityNear = distance < event.sensor.maximumRange
+            }
+            Sensor.TYPE_LIGHT -> {
+                val lux = event.values.getOrNull(0) ?: return
+                val isInteractive = powerManager?.isInteractive ?: true
+                onAmbientLightChanged(lux, isInteractive, isProximityNear)
+            }
+        }
+    }
+
+    override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {
+        // No-op
+    }
+
+    /**
      * Resets engine state for unit testing isolation.
      */
     @JvmStatic
     fun reset() {
+        stop()
         isAutomationEnabled = false
         isTunnelActive = false
         currentSolarProfile = SolarElevationCalculator.SolarProfile.DAY
         currentThreatStage = 0
         isManualOverridden = false
+        isProximityNear = false
         lastDispatchedMode = null
         lastDispatchRealtimeMs = 0L
         threatCooldownUntilRealtimeMs = 0L

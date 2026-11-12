@@ -65,4 +65,20 @@ class NavRoutesZoneTest {
             NavRoutes.toDrawerItemId("training_zones")
         )
     }
+
+    @Test
+    fun testTrainingZonesRoute_withPushed() {
+        assertEquals(
+            "training_zones?pushed=true",
+            NavRoutes.trainingZones(pushed = true)
+        )
+        assertEquals(
+            "training_zones?initialTab=2&promptReason=pwr_paired&pushed=true",
+            NavRoutes.trainingZones(initialTab = 2, promptReason = "pwr_paired", pushed = true)
+        )
+        assertEquals(
+            R.id.drawer_training_zones,
+            NavRoutes.toDrawerItemId("training_zones?initialTab=2&promptReason=pwr_paired&pushed=true")
+        )
+    }
 }

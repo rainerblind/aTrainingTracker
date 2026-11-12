@@ -123,4 +123,44 @@ class LiveSparklineBuffer(val horizonSeconds: Int = 300) {
             totalElapsedSeconds = 0
         }
     }
+
+    /**
+     * Transfers historical telemetry samples and temporal duration from a previous buffer configuration
+     * (REQ-TRK-059.12, ATT-7314).
+     *
+     * <p>Preserves accumulated history across time-horizon adjustments:
+     * - Fixed-to-fixed: Retains the latest [horizonSeconds] samples and preserves/clamps elapsed duration.
+     * - Fixed-to-full: Retains all samples into the full workout buffer.
+     * - Full-to-fixed: Retains the latest [horizonSeconds] decimated samples.
+     * - Full-to-full: Retains all samples and decimates if exceeding [MAX_FULL_WORKOUT_SAMPLES].</p>
+     *
+     * @param previous Previous active buffer for this sensor configuration.
+     */
+    fun transferFrom(previous: LiveSparklineBuffer) {
+        val firstLock = if (System.identityHashCode(previous.lock) < System.identityHashCode(this.lock)) previous.lock else this.lock
+        val secondLock = if (firstLock === previous.lock) this.lock else previous.lock
+
+        synchronized(firstLock) {
+            synchronized(secondLock) {
+                val prevSamples = previous.getSamples()
+                if (horizonSeconds > 0) {
+                    val toKeep = if (prevSamples.size > horizonSeconds) {
+                        prevSamples.subList(prevSamples.size - horizonSeconds, prevSamples.size)
+                    } else {
+                        prevSamples
+                    }
+                    fixedBuffer.clear()
+                    fixedBuffer.addAll(toKeep)
+                    totalElapsedSeconds = minOf(previous.totalElapsedSeconds, horizonSeconds + 1)
+                } else {
+                    fullWorkoutBuffer.clear()
+                    fullWorkoutBuffer.addAll(prevSamples)
+                    totalElapsedSeconds = previous.totalElapsedSeconds
+                    while (fullWorkoutBuffer.size > MAX_FULL_WORKOUT_SAMPLES) {
+                        decimateFullWorkout()
+                    }
+                }
+            }
+        }
+    }
 }

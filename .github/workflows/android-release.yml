@@ -101,6 +101,26 @@ jobs:
       - name: Run unit tests
         run: ./gradlew :app:testDebugUnitTest
 
+      - name: Package JUnit test results archive
+        if: always()
+        run: |
+          TAG_NAME="${GITHUB_REF_NAME:-release}"
+          ARCHIVE_NAME="junit-test-results-${TAG_NAME}.zip"
+          mkdir -p build-evidence
+          if [ -d "app/build/reports/tests/testDebugUnitTest" ] || [ -d "app/build/test-results/testDebugUnitTest" ]; then
+            zip -r "build-evidence/${ARCHIVE_NAME}" app/build/reports/tests/testDebugUnitTest app/build/test-results/testDebugUnitTest || tar -czf "build-evidence/junit-test-results-${TAG_NAME}.tar.gz" app/build/reports/tests/testDebugUnitTest app/build/test-results/testDebugUnitTest
+          fi
+
+      - name: Upload release unit test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: release-unit-test-results
+          path: |
+            app/build/test-results/testDebugUnitTest/
+            app/build/reports/tests/testDebugUnitTest/
+            build-evidence/junit-test-results-*
+
       - name: Build release APK and AAB
         env:
           RELEASE_KEYSTORE_PASSWORD: ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}
@@ -123,3 +143,4 @@ jobs:
           files: |
             app/build/outputs/apk/release/*.apk
             app/build/outputs/bundle/release/*.aab
+            build-evidence/junit-test-results-*

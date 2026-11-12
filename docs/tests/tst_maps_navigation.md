@@ -3,7 +3,7 @@
 **Domain**: `maps_navigation`  
 **Prefixes**: `GEO`, `MAP`, `NAV`, `ROU`  
 **Scope**: Map rendering, polylines, navigation overlays, GPX track follow-me, and routing.  
-**Total Tests**: 53
+**Total Tests**: 70
 
 ---
 
@@ -442,6 +442,27 @@
   5. *Full Clean-Room Regression Suite*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with 0 regressions.
 
+### TST-MAP-038: **Known Locations: Heim-Basis Redundant Badge Excision & Start-Count Home Resolution Alignment Verification** [Verified]
+- **Requirement(s)**: `REQ-MAP-036`
+- **Component**: **Known Locations: Heim-Basis Redundant Badge Excision & Start-Count Home Resolution Alignment Verification**
+- **Jira**: `ATT-2629`
+- **Test Description**:
+  1. *Unified Home Location Candidate Resolution Hierarchy Test (`HomeLocationResolverTest.kt`, `TST-MAP-038.1`)*:
+  • Verify `resolveHomeLocationId` returns designated `isHome == true` location regardless of start counts.
+  • Verify fallback to highest `hitCount > 0` when no explicit home designation exists.
+  • Verify fallback to first location when all hitCounts are 0.
+  • Verify empty location list returns `null` safely.
+  2. *Repository Effective Home Resolution & Reactive State Test (`KnownLocationsRepositoryTest.kt`, `TST-MAP-038.2`)*:
+  • Verify `loadLocations()` queries database and evaluates `effectiveHomeId` via `HomeLocationResolver`.
+  • Verify `KnownLocationItem.isHome` matches `loc.id == effectiveHomeId`.
+  3. *UI Title Icon Retention & Badge Excision Contract Test (`KnownLocationHomeContractTest.kt`, `KnownLocationsScreenTest.kt`, `TST-MAP-038.3`)*:
+  • Verify title Home icon is rendered for the resolved home location.
+  • Verify "Heim-Basis" badge chip is completely excised from card layout.
+  4. *9-Language Localization Parity Audit (`TranslationParityTest.kt`, `TST-MAP-038.4`)*:
+  • Verify localized strings across all 9 supported locales (EN, DE, ES, FR, IT, JA, NL, PL, PT).
+  5. *Clean-Room Full Suite Regression Execution (`TST-MAP-038.5`)*:
+  • Execute `./gradlew testDebugUnitTest` verifying 100% test pass rate with zero regressions.
+
 ### TST-MAP-039: **Route Waypoint Marker Badge Diameter Optimization & Glanceability Proportional Scaling Verification** [Verified]
 - **Requirement(s)**: `REQ-MAP-037`
 - **Component**: **Route Waypoint Marker Badge Diameter Optimization & Glanceability Proportional Scaling Verification**
@@ -533,7 +554,7 @@
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with 0 regressions.
 
 ### TST-MAP-044: **Speed-Dependent Map Zoom Calibration, Lookahead Padding & Tuning Preferences Verification** [Verified]
-- **Requirement(s)**: `REQ-MAP-042`
+- **Requirement(s)**: `REQ-MAP-042`, `REQ-MAP-004`
 - **Component**: **Speed-Dependent Map Zoom Calibration, Lookahead Padding & Tuning Preferences Verification**
 - **Jira**: ``ATT-2946``
 - **Test Description**:
@@ -807,7 +828,7 @@
   • Execute `./gradlew testDebugUnitTest` verifying 100% pass rate.
 
 ### TST-MAP-056: **Batch GPX Route Import Sport Type Selection, Responsive Bottom Sheet Layout & Sequential Review Verification Suite** [Verified]
-- **Requirement(s)**: `REQ-MAP-053`, `REQ-UI-106`
+- **Requirement(s)**: `REQ-MAP-053`
 - **Component**: **Batch GPX Route Import Sport Type Selection, Responsive Bottom Sheet Layout & Sequential Review Verification Suite**
 - **Jira**: ``ATT-4372 / ATT-4430``
 - **Test Description**:
@@ -932,30 +953,30 @@
   6. *Clean-Room Full Suite Regression Execution (`TST-NAV-056.6`)*:
   • Run targeted caller unit tests and `./gradlew testDebugUnitTest` verifying 100% pass rate.
 
-### TST-MAP-055: **Climb Detection Performance, Route/TCX Import Fidelity & Power Calibration Verification Suite** [Verified]
-- **Requirement(s)**: `REQ-MAP-055`, `REQ-MAP-027`, `REQ-MAP-025`, `REQ-EXP-001`, `REQ-UI-370`
+### TST-MAP-070: **Climb Detection Performance, Route/TCX Import Fidelity & Power Calibration Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-MAP-055`, `REQ-MAP-027`, `REQ-MAP-025`
 - **Component**: **Climb Detection Performance, Route/TCX Import Fidelity & Power Calibration Verification Suite**
 - **Jira**: ``ATT-4033``
 - **Test Description**:
-  1. *Climb Detector O(N) Advancement & Steep Embedded Climb Unit Test (`TST-MAP-055.1`, `ClimbDetectorTest.kt`)*:
+  1. *Climb Detector O(N) Advancement & Steep Embedded Climb Unit Test (`TST-MAP-070.1`, `ClimbDetectorTest.kt`)*:
   • Verify candidate search advances scanning index past non-viable bumps via `maxOf(i + 1, peakIdx)` in $O(N)$ time on a 10,000-point route in $\le 100\text{ ms}$.
   • Verify detection of steep climb sections embedded in long gentle ascents before summit dilution.
   • Verify climb scoring ($\text{Score} = \text{length} \times \text{gradient}$) and category thresholds (`HC`, `CAT_1`..`CAT_4`) match `REQ-MAP-027` exactly.
-  2. *GPX Elevation Gain Hysteresis & Resilient DEM Batch Enrichment Unit Test (`TST-MAP-055.2`, `GpxRouteImporterTest.kt`)*:
+  2. *GPX Elevation Gain Hysteresis & Resilient DEM Batch Enrichment Unit Test (`TST-MAP-070.2`, `GpxRouteImporterTest.kt`)*:
   • Verify `calculateElevationGain` filters sub-2.0m elevation noise fluctuations and only accumulates deltas $\ge 2.0\text{ m}$.
   • Verify DEM batch enrichment logs warning and continues subsequent batches on transient batch failure rather than breaking the loop.
-  3. *TCX Decimal Numeric Rounding & Position-less Trackpoint Parsing Unit Test (`TST-MAP-055.3`, `TcxCourseParserTest.kt`, `TcxWorkoutParserTest.kt`)*:
+  3. *TCX Decimal Numeric Rounding & Position-less Trackpoint Parsing Unit Test (`TST-MAP-070.3`, `TcxCourseParserTest.kt`, `TcxWorkoutParserTest.kt`)*:
   • Verify `<Watts>` and `<Cadence>` with decimal strings round to nearest integer via `toDoubleOrNull()?.roundToInt()`.
   • Verify `TcxWorkoutParser` retains indoor trackpoints lacking `<Position>` (nullable `lat`/`lng`), preserving heart rate, power, and cadence.
   • Verify `TcxCourseParser` filters out position-less trackpoints for route polyline projection.
-  4. *Interval-Aware Normalized Power & Work-kJ Cleanup Unit Test (`TST-MAP-055.4`, `PowerPhysiologyCalculatorTest.kt`)*:
+  4. *Interval-Aware Normalized Power & Work-kJ Cleanup Unit Test (`TST-MAP-070.4`, `PowerPhysiologyCalculatorTest.kt`)*:
   • Verify `calculateNormalizedPower` scales rolling window dynamically: `maxOf(1, (30.0 / sampleIntervalSec).roundToInt())`.
   • Verify default `sampleIntervalSec = 1.0` preserves exact bit-parity with existing NP/TSS test suites.
   • Verify redundant work-kJ dead code branch is cleanly excised.
-  5. *Power Zone 1 Coasting Inclusion & Zero-Power Null Guard Unit Test (`TST-MAP-055.5`, `PowerZoneDistributionCalculatorTest.kt`, `WorkoutRepositoryTest.kt`)*:
+  5. *Power Zone 1 Coasting Inclusion & Zero-Power Null Guard Unit Test (`TST-MAP-070.5`, `PowerZoneDistributionCalculatorTest.kt`, `WorkoutRepositoryTest.kt`)*:
   • Verify 0 W coasting samples are categorized into Power Zone 1 (Active Recovery) when `samples.any { it.value > 0 }`.
   • Verify `null` is returned when all power samples are 0 W or absent, preserving parity with `PowerZoneDistributionCalculatorTest`.
-  6. *Clean-Room Full Suite Regression Execution (`TST-MAP-055.6`)*:
+  6. *Clean-Room Full Suite Regression Execution (`TST-MAP-070.6`)*:
   • Execute `./gradlew testDebugUnitTest` verifying 100% pass rate across the full project test suite.
 
 ### TST-MAP-058: **Line-Density PolylineHeatmapTileProvider, Web Mercator Projection & Sequential Blue Color LUT Verification Suite** [Verified]
@@ -1234,6 +1255,26 @@
   • Verify `climbScoringFormula` defaults to `FIETS`, persists `STRAVA_GARMIN`, and resets to `FIETS` on `resetToDefaults()`.
   5. *9-Language Localization Parity Audit (`TST-CLM-010.5`)*:
   • Verify string resources exist in `values`, `values-de`, `values-es`, `values-fr`, `values-it`, `values-ja`, `values-nl`, `values-pl`, `values-pt` without missing keys or unescaped XML formatting errors.
+
+### TST-CLM-011: **Deduplicate Overlapping Climbs in Climbs.db & Map Layer Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-CLM-011` (`REQ-CLM-011.1`..`REQ-CLM-011.3`)
+- **Component**: `ClimbsDatabaseManager.kt`, `WorkoutRepository.kt`, `LiveClimbsRepository.kt`, `MapFragmentWithTrackViewModel.kt`, `ClimbsDatabaseManagerTest.kt`, `WorkoutHistoricalClimbBackfillTest.kt`, `MapFragmentWithTrackViewModelTest.kt`
+- **Jira**: `ATT-7311` | **Target Release**: `V5.0.0`
+- **Test Description**:
+  1. *Spatial Endpoint & Corridor Overlap Deduplication Test (`TST-CLM-011.1`, `ClimbsDatabaseManagerTest.kt`)*:
+  • Verify that candidate climbs whose start and summit coordinates are within 100m are deduplicated via `insertClimbsWithDeduplicationBatch`.
+  • Verify that candidate climbs with start/end offset by > 50m but sharing $\ge 70\%$ corridor overlap in the same heading are deduplicated.
+  • Verify that reverse-heading climbs (heading difference > 45°) or perpendicular roads are NOT deduplicated.
+  • Verify that when a candidate climb possesses a `routeId` and matches an existing climb with `routeId == null`, the existing climb is updated with the `routeId`.
+  2. *Idempotent Historical Database Consolidation Migration Test (`TST-CLM-011.2`, `WorkoutHistoricalClimbBackfillTest.kt` / `ClimbsDatabaseManagerTest.kt`)*:
+  • Verify that `deduplicateExistingClimbs()` detects duplicate/overlapping climb records in SQLite, purges redundant rows, preserves route associations, and returns the count of purged duplicates.
+  • Verify that `WorkoutRepository` executes `deduplicateExistingClimbs()` when `climbs_workout_deduplication_v3` is false, marks the preference flag true, and refreshes `LiveClimbsRepository`.
+  • Verify that subsequent invocations are O(1) no-ops when the flag is true.
+  3. *Map ViewModel Display Deduplication Test (`TST-CLM-011.3`, `MapFragmentWithTrackViewModelTest.kt`)*:
+  • Verify that when `LiveClimbsRepository.allStoredClimbs` contains duplicate or overlapping climbs, `MapFragmentWithTrackViewModel.uiState.climbs` emits only the deduplicated list when `GeneralMapLayer.CLIMBS` is enabled.
+  4. *Targeted Regression Verification Suite (`TST-CLM-011.4`)*:
+  • Run targeted tests: `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.database.Climbs*" --tests "com.atrainingtracker.trainingtracker.climbs.*" --tests "com.atrainingtracker.trainingtracker.ui.map.MapFragmentWithTrackViewModel*" --tests "com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutHistoricalClimbBackfillTest"` asserting 100% pass rate.
+
 
 
 

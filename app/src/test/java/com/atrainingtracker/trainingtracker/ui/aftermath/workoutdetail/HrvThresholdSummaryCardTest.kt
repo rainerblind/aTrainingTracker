@@ -110,7 +110,16 @@ class HrvThresholdSummaryCardTest {
             "hrv_zone_comparison_dialog_body",
             "hrv_zone_comparison_dialog_confirm",
             "hrv_zone_comparison_dialog_cancel",
-            "hrv_zone_comparison_forward_mader"
+            "hrv_zone_comparison_forward_mader",
+            "hrv_hr_consensus_reason_guided_high",
+            "hrv_hr_consensus_reason_multi_session",
+            "hrv_hr_consensus_reason_insufficient_sessions",
+            "hrv_hr_consensus_reason_spread_too_high",
+            "hrv_zone_comparison_btn_update_hr",
+            "hrv_zone_comparison_dialog_hr_title",
+            "hrv_zone_comparison_dialog_hr_body",
+            "hrv_zone_comparison_dialog_hr_confirm",
+            "hrv_zone_comparison_dialog_hr_cancel"
         )
 
         val strings = LocalizationTestCache.getStrings("values", "strings_hrv.xml")

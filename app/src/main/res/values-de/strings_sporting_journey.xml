@@ -8,15 +8,15 @@
     <string name="sporting_journey_sport_cycling">Radfahren</string>
     <string name="sporting_journey_sport_running">Laufen</string>
     <string name="sporting_journey_hero_distance_label">Aufgezeichnete Gesamtdistanz</string>
-    <string name="sporting_journey_hero_equator_badge">🌍 %1$.1f%% des Äquators</string>
+    <string name="sporting_journey_hero_equator_badge">%1$.1f%% des Äquators</string>
     <string name="sporting_journey_hero_workouts_label">Absolvierte Einheiten</string>
     <string name="sporting_journey_hero_hours_label">Aktive Trainingszeit</string>
     <string name="sporting_journey_hero_days_sub">%1$.1f Tage ununterbrochene Bewegung</string>
     <string name="sporting_journey_hero_elevation_label">Bewältigte Höhenmeter</string>
-    <string name="sporting_journey_hero_everest_sub">🏔️ %1$.1f× Mt. Everest</string>
+    <string name="sporting_journey_hero_everest_sub">%1$.1f× Mt. Everest</string>
     <string name="sporting_journey_hero_routes_label">Bevorzugte Routen-Cluster</string>
     <string name="sporting_journey_hidden_gems_header">Was deine Daten dir verraten können</string>
-    <string name="sporting_journey_hidden_gems_badge">Verborgene Schätze aus SQLite</string>
+    <string name="sporting_journey_hidden_gems_badge">Verborgene Sensor-Einblicke</string>
     <string name="sporting_journey_hidden_gems_desc" formatted="false">100% offline berechnet aus deinen aufgezeichneten HF-, Trittfrequenz-, Leistungs- und Clusterdaten.</string>
     <string name="sporting_journey_gem_engine_title">Der biologische &amp; mechanische Motor</string>
     <string name="sporting_journey_gem_engine_pill">HF × Trittfrequenz</string>
@@ -64,9 +64,9 @@
     <string name="sporting_journey_badge_pioneer_sub">Langjähriger Veteran</string>
     <string name="sporting_journey_badge_pioneer_story_title">Pionier-Athlet — Freigeschaltet!</string>
     <string name="sporting_journey_badge_pioneer_story_text">Über %1$d Tage Trainingshistorie mit aTrainingTracker aufgezeichnet.</string>
-    <string name="sporting_journey_badge_legend_title">Lokale Legende</string>
+    <string name="sporting_journey_badge_legend_title">Routen-Meister</string>
     <string name="sporting_journey_badge_legend_sub">Signatur-Runden</string>
-    <string name="sporting_journey_badge_legend_story_title">Lokale Legende — Freigeschaltet!</string>
+    <string name="sporting_journey_badge_legend_story_title">Routen-Meister — Freigeschaltet!</string>
     <string name="sporting_journey_badge_legend_story_text">Deine Hausrunden über %1$d Mal absolviert.</string>
     <string name="sporting_journey_badge_powerplant_title">Menschliches Kraftwerk</string>
     <string name="sporting_journey_badge_powerplant_sub">60 kWh Club</string>
@@ -79,6 +79,16 @@
     <string name="sporting_journey_locked_hint">Trainiere weiter, um diese Trophäe freizuschalten!</string>
     <string name="sporting_journey_share_card">Pass teilen</string>
     <string name="sporting_journey_share_title">aTrainingTracker Athletenpass</string>
+    <string name="sporting_journey_share_passport_header">aTrainingTracker • Offizieller Athletenpass</string>
+    <string name="sporting_journey_share_tier_horizon">Rang: %1$s | Zeitraum: %2$s</string>
+    <string name="sporting_journey_share_distance">Distanz: %1$s (%2$s%% des Äquators)</string>
+    <string name="sporting_journey_share_elevation">Höhenmeter: %1$s (%2$s× Mt. Everest)</string>
+    <string name="sporting_journey_share_active_time">Aktive Zeit: %1$s (%2$s Tage non-stop)</string>
+    <string name="sporting_journey_share_pedal_revs">Kurbelumdrehungen: %1$s</string>
+    <string name="sporting_journey_share_heartbeats">Trainings-Herzschläge: %1$s</string>
+    <string name="sporting_journey_share_mechanical_work">Mechanische Leistung: %1$s kWh (%2$s E-Bike-Reichweite)</string>
+    <string name="sporting_journey_share_trophies">Geheime Trophäen: %1$d / %2$d Freigeschaltet</string>
+    <string name="sporting_journey_share_footer" formatted="false">100% offline aufgezeichnet mit aTrainingTracker (2012–2026)</string>
     <string name="sporting_journey_entry_supporter_screen">Die Schatzkammer — Meine sportliche Reise</string>
     <string name="sporting_journey_entry_supporter_desc">Erkunde deinen Lebenszeit-Rückblick, verborgene Schätze und Trophäen.</string>
     <string name="sporting_journey_no_workouts">Keine abgeschlossenen Einheiten für diese Auswahl gefunden.</string>

@@ -247,4 +247,64 @@ class BANALServiceRepositorySparklineTest {
 
         assertEquals("Transition READY -> TRACKING must clear sparkline buffers", 0, repository.getSparklineSamples(fieldId).size)
     }
+
+    @Test
+    fun testRegisterSparklineBuffer_horizonChange_preservesSamplesAndSpan() {
+        val fieldId = 707L
+        val buf1 = repository.registerSparklineBuffer(
+            sensorFieldId = fieldId,
+            horizonSeconds = 60,
+            sensorType = SensorType.HR,
+            filterType = FilterType.INSTANTANEOUS,
+            filterConstant = 0.0,
+            sourceDeviceName = "Garmin HRM"
+        )
+        for (i in 1..40) {
+            buf1.addSample(130f + i)
+        }
+        assertEquals(40, repository.getSparklineSamples(fieldId).size)
+        assertEquals(39, repository.getSparklineSpanSeconds(fieldId))
+
+        // Re-register with expanded horizon (300s): samples and span MUST be preserved (REQ-TRK-059.12, ATT-7314)
+        val buf2 = repository.registerSparklineBuffer(
+            sensorFieldId = fieldId,
+            horizonSeconds = 300,
+            sensorType = SensorType.HR,
+            filterType = FilterType.INSTANTANEOUS,
+            filterConstant = 0.0,
+            sourceDeviceName = "Garmin HRM"
+        )
+
+        assertEquals("Samples must be transferred to new buffer", 40, repository.getSparklineSamples(fieldId).size)
+        assertEquals("Span must be preserved", 39, repository.getSparklineSpanSeconds(fieldId))
+        assertEquals(131f, repository.getSparklineSamples(fieldId).first(), 0.001f)
+        assertEquals(170f, repository.getSparklineSamples(fieldId).last(), 0.001f)
+    }
+
+    @Test
+    fun testRegisterSparklineBuffer_sensorTypeChange_doesNotPreserveSamples() {
+        val fieldId = 808L
+        val buf1 = repository.registerSparklineBuffer(
+            sensorFieldId = fieldId,
+            horizonSeconds = 300,
+            sensorType = SensorType.HR,
+            filterType = FilterType.INSTANTANEOUS,
+            filterConstant = 0.0,
+            sourceDeviceName = null
+        )
+        buf1.addSample(140f)
+        assertEquals(1, repository.getSparklineSamples(fieldId).size)
+
+        // Change sensor type from HR to CADENCE on same fieldId: configHash changes, must start empty
+        repository.registerSparklineBuffer(
+            sensorFieldId = fieldId,
+            horizonSeconds = 300,
+            sensorType = SensorType.CADENCE,
+            filterType = FilterType.INSTANTANEOUS,
+            filterConstant = 0.0,
+            sourceDeviceName = null
+        )
+
+        assertEquals("Changing sensor type must start fresh buffer", 0, repository.getSparklineSamples(fieldId).size)
+    }
 }

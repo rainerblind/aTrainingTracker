@@ -54,13 +54,16 @@ data class HeartRateZoneDelta(
 )
 
 /**
- * Historical workout session threshold used for multi-session consensus evaluation (REQ-PER-037.3).
+ * Historical workout session threshold used for multi-session consensus evaluation (REQ-PER-037.3, REQ-PER-037.7).
  */
 data class HrvSessionThreshold(
     val workoutId: Long = 0L,
     val timestampEpochMs: Long,
-    val hrvt2Watts: Int?,
-    val confidence: ThresholdConfidence
+    val hrvt2Watts: Int? = null,
+    val confidence: ThresholdConfidence = ThresholdConfidence.LOW,
+    val hrvt1Bpm: Int? = null,
+    val hrvt2Bpm: Int? = null,
+    val hrConfidence: ThresholdConfidence = confidence
 )
 
 /**
@@ -74,6 +77,17 @@ data class ConsensusGateResult(
 )
 
 /**
+ * Evaluated heart rate consensus gate outcome with localized reason and suggested anchors (REQ-PER-037.7).
+ */
+data class HrConsensusGateResult(
+    val status: ConsensusGateStatus,
+    @StringRes val reasonResId: Int,
+    val reasonParam: Int? = null,
+    val suggestedHrvt1Bpm: Int? = null,
+    val suggestedHrvt2Bpm: Int? = null
+)
+
+/**
  * Complete comparison result between estimated HRV thresholds and configured training zones (REQ-PER-037).
  */
 data class HrvZoneComparisonResult(
@@ -83,7 +97,11 @@ data class HrvZoneComparisonResult(
     val hrT1Delta: HeartRateZoneDelta?,
     val hrT2Delta: HeartRateZoneDelta?,
     val configuredHrMax: Int?,
-    val consensusGate: ConsensusGateResult
+    val consensusGate: ConsensusGateResult,
+    val hrConsensusGate: HrConsensusGateResult = HrConsensusGateResult(
+        status = ConsensusGateStatus.LOCKED,
+        reasonResId = R.string.hrv_hr_consensus_reason_insufficient_sessions
+    )
 )
 
 /**
@@ -99,6 +117,7 @@ data class HrvZoneComparisonResult(
 object HrvZoneComparisonMath {
 
     const val MAX_CONSENSUS_SPREAD_WATTS = 10
+    const val MAX_HR_CONSENSUS_SPREAD_BPM = 6
     const val MIN_CONSENSUS_SESSIONS = 3
     const val CONSENSUS_WINDOW_MS = 30L * 24 * 60 * 60 * 1000L // 30 days
 
@@ -292,6 +311,92 @@ object HrvZoneComparisonMath {
     }
 
     /**
+     * Evaluates whether Heart Rate training zone updates can be unlocked based on either a High-Confidence Guided Test
+     * or a multi-session consensus across recent qualifying workouts (REQ-PER-037.7).
+     *
+     * @param currentProtocol Protocol provenance of current workout.
+     * @param currentConfidence Confidence level of current workout.
+     * @param currentHrvt1Bpm Estimated HRVT1 heart rate for current workout.
+     * @param currentHrvt2Bpm Estimated HRVT2 heart rate for current workout.
+     * @param currentTimestampMs Timestamp of current workout in epoch milliseconds.
+     * @param recentSessions Historical sessions within observation range.
+     * @return [HrConsensusGateResult] describing lock state, localized reason, and suggested HRVT1 / HRVT2 anchors.
+     */
+    fun evaluateHrConsensusGate(
+        currentProtocol: HrvProtocolType,
+        currentConfidence: ThresholdConfidence,
+        currentHrvt1Bpm: Int?,
+        currentHrvt2Bpm: Int?,
+        currentTimestampMs: Long = System.currentTimeMillis(),
+        recentSessions: List<HrvSessionThreshold> = emptyList()
+    ): HrConsensusGateResult {
+        if (currentHrvt1Bpm == null || currentHrvt2Bpm == null || currentHrvt1Bpm <= 0 || currentHrvt2Bpm <= currentHrvt1Bpm) {
+            return HrConsensusGateResult(
+                status = ConsensusGateStatus.LOCKED,
+                reasonResId = R.string.hrv_hr_consensus_reason_insufficient_sessions
+            )
+        }
+
+        // Condition A: High-confidence Guided Step or Ramp Test (ATT-4969)
+        val isGuidedTest = currentProtocol == HrvProtocolType.GUIDED_STEP || currentProtocol == HrvProtocolType.GUIDED_RAMP
+        if (isGuidedTest && currentConfidence == ThresholdConfidence.HIGH && (currentHrvt2Bpm >= currentHrvt1Bpm + 5)) {
+            return HrConsensusGateResult(
+                status = ConsensusGateStatus.UNLOCKED,
+                reasonResId = R.string.hrv_hr_consensus_reason_guided_high,
+                suggestedHrvt1Bpm = currentHrvt1Bpm,
+                suggestedHrvt2Bpm = currentHrvt2Bpm
+            )
+        }
+
+        // Condition B: Multi-Session Consensus (M >= 3 sessions within 30 days agreeing within <= 6 bpm)
+        val currentSession = HrvSessionThreshold(
+            timestampEpochMs = currentTimestampMs,
+            hrvt1Bpm = currentHrvt1Bpm,
+            hrvt2Bpm = currentHrvt2Bpm,
+            hrConfidence = currentConfidence,
+            confidence = currentConfidence
+        )
+        val allCandidateSessions = (recentSessions + currentSession)
+
+        val qualifyingSessions = allCandidateSessions.filter { session ->
+            val withinWindow = (currentTimestampMs - session.timestampEpochMs) in 0..CONSENSUS_WINDOW_MS
+            val validBpm = session.hrvt1Bpm != null && session.hrvt2Bpm != null && session.hrvt1Bpm > 0 && session.hrvt2Bpm > session.hrvt1Bpm
+            val validConfidence = session.hrConfidence == ThresholdConfidence.HIGH || session.hrConfidence == ThresholdConfidence.MEDIUM
+            withinWindow && validBpm && validConfidence
+        }
+
+        if (qualifyingSessions.size < MIN_CONSENSUS_SESSIONS) {
+            return HrConsensusGateResult(
+                status = ConsensusGateStatus.LOCKED,
+                reasonResId = R.string.hrv_hr_consensus_reason_insufficient_sessions
+            )
+        }
+
+        val t1List = qualifyingSessions.map { it.hrvt1Bpm!! }
+        val t2List = qualifyingSessions.map { it.hrvt2Bpm!! }
+
+        val spreadT1 = (t1List.maxOrNull() ?: 0) - (t1List.minOrNull() ?: 0)
+        val spreadT2 = (t2List.maxOrNull() ?: 0) - (t2List.minOrNull() ?: 0)
+
+        if (spreadT1 <= MAX_HR_CONSENSUS_SPREAD_BPM && spreadT2 <= MAX_HR_CONSENSUS_SPREAD_BPM) {
+            val suggestedT1 = calculateMedian(t1List)
+            val suggestedT2 = calculateMedian(t2List)
+            return HrConsensusGateResult(
+                status = ConsensusGateStatus.UNLOCKED,
+                reasonResId = R.string.hrv_hr_consensus_reason_multi_session,
+                reasonParam = qualifyingSessions.size,
+                suggestedHrvt1Bpm = suggestedT1,
+                suggestedHrvt2Bpm = suggestedT2
+            )
+        } else {
+            return HrConsensusGateResult(
+                status = ConsensusGateStatus.LOCKED,
+                reasonResId = R.string.hrv_hr_consensus_reason_spread_too_high
+            )
+        }
+    }
+
+    /**
      * Evaluates complete zone comparison metrics against both Power and Heart Rate training zones.
      */
     fun computeComparison(
@@ -305,7 +410,8 @@ object HrvZoneComparisonMath {
         currentProtocol: HrvProtocolType = HrvProtocolType.FREE_WORKOUT,
         currentConfidence: ThresholdConfidence = ThresholdConfidence.LOW,
         currentTimestampMs: Long = System.currentTimeMillis(),
-        recentSessions: List<HrvSessionThreshold> = emptyList()
+        recentSessions: List<HrvSessionThreshold> = emptyList(),
+        currentHrConfidence: ThresholdConfidence = currentConfidence
     ): HrvZoneComparisonResult {
         val (powerT1, powerT2) = comparePowerZones(hrvt1Watts, hrvt2Watts, configuredFtp)
         val (hrT1, hrT2) = compareHeartRateZones(hrvt1Bpm, hrvt2Bpm, configuredHrMax, hrZoneThresholds)
@@ -318,6 +424,15 @@ object HrvZoneComparisonMath {
             recentSessions = recentSessions
         )
 
+        val hrConsensusGate = evaluateHrConsensusGate(
+            currentProtocol = currentProtocol,
+            currentConfidence = currentHrConfidence,
+            currentHrvt1Bpm = hrvt1Bpm?.roundToInt(),
+            currentHrvt2Bpm = hrvt2Bpm?.roundToInt(),
+            currentTimestampMs = currentTimestampMs,
+            recentSessions = recentSessions
+        )
+
         return HrvZoneComparisonResult(
             powerT1Delta = powerT1,
             powerT2Delta = powerT2,
@@ -325,7 +440,8 @@ object HrvZoneComparisonMath {
             hrT1Delta = hrT1,
             hrT2Delta = hrT2,
             configuredHrMax = configuredHrMax,
-            consensusGate = consensusGate
+            consensusGate = consensusGate,
+            hrConsensusGate = hrConsensusGate
         )
     }
 }

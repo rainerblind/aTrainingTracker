@@ -74,6 +74,44 @@ class SingleActivityNavigationTest {
     }
 
     @Test
+    fun testNavRoutesPushedContracts() {
+        // REQ-UI-517.1, TST-UI-517.1 (ATT-7313)
+        assertEquals("workouts", NavRoutes.workouts(pushed = false))
+        assertEquals("workouts?pushed=true", NavRoutes.workouts(pushed = true))
+
+        assertEquals("locations", NavRoutes.locations(null))
+        assertEquals("locations?clusterId=42", NavRoutes.locations(42L))
+
+        assertEquals("workouts?pushed={pushed}", NavRoutes.WORKOUTS_PATTERN)
+        assertEquals("locations?clusterId={clusterId}", NavRoutes.LOCATIONS_PATTERN)
+        assertEquals("pushed", NavRoutes.ARG_PUSHED)
+
+        // Drawer ID mapping resilience for parameterized routes
+        assertEquals(R.id.drawer_workouts, NavRoutes.toDrawerItemId("workouts?pushed=true"))
+        assertEquals(R.id.drawer_my_locations, NavRoutes.toDrawerItemId("locations"))
+        assertEquals(R.id.drawer_my_locations, NavRoutes.toDrawerItemId("locations?clusterId=42"))
+
+        // REQ-UI-518.1, REQ-UI-518.3, TST-UI-518.1 (ATT-7312)
+        assertEquals("advanced_settings", NavRoutes.advancedSettings(pushed = false))
+        assertEquals("advanced_settings?pushed=true", NavRoutes.advancedSettings(pushed = true))
+        assertEquals(R.id.drawer_advanced_tuning, NavRoutes.toDrawerItemId("advanced_settings?pushed=true"))
+
+        assertEquals("supporter", NavRoutes.supporter(pushed = false))
+        assertEquals("supporter?pushed=true", NavRoutes.supporter(pushed = true))
+        assertEquals("supporter?planId=pro_monthly&pushed=true", NavRoutes.supporter(planId = "pro_monthly", pushed = true))
+        assertEquals(R.id.drawer_supporter, NavRoutes.toDrawerItemId("supporter?planId=pro_monthly&pushed=true"))
+
+        assertEquals("tips_guide", NavRoutes.tipsGuide(pushed = false))
+        assertEquals("tips_guide?pushed=true", NavRoutes.tipsGuide(pushed = true))
+        assertEquals(R.id.drawer_tips_guide, NavRoutes.toDrawerItemId("tips_guide?pushed=true"))
+
+        assertEquals("training_zones", NavRoutes.trainingZones(pushed = false))
+        assertEquals("training_zones?pushed=true", NavRoutes.trainingZones(pushed = true))
+        assertEquals("training_zones?initialTab=1&pushed=true", NavRoutes.trainingZones(initialTab = 1, pushed = true))
+        assertEquals(R.id.drawer_training_zones, NavRoutes.toDrawerItemId("training_zones?initialTab=1&pushed=true"))
+    }
+
+    @Test
     fun testDrawerItemIdToRouteMapping() {
         assertEquals(NavRoutes.START_TRACKING, NavRoutes.fromDrawerItemId(R.id.drawer_start_tracking))
         assertEquals(NavRoutes.WORKOUTS, NavRoutes.fromDrawerItemId(R.id.drawer_workouts))

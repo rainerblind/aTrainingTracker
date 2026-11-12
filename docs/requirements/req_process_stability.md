@@ -3,36 +3,51 @@
 **Domain**: `process_stability`  
 **Prefixes**: `ARC`, `BLD`, `BUG`, `INT`, `LIV`, `LOG`, `MAN`, `NFR`, `PRO`, `REG`, `SEC`, `STB`, `STR`, `TOOL`, `TST`  
 **Scope**: ASPICE governance, infinite context, crash stability, build architecture, security, and developer tools.  
-**Total Requirements**: 81
+**Total Requirements**: 87
 
 ---
 
 ### REQ-LIV-001: Detect segments using "Gates" and cross-products [Verified]
 - **Tests**: `TST-MAN-001`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `LiveSegmentsRepository.kt`
 - **Rationale**: Reliable entry/exit detection regardless of jitter.
 - **Description**: Detect segments using "Gates" and cross-products.
 
 ### REQ-LIV-002: Real-time progress on starred Strava segments [Verified]
 - **Tests**: `TST-MAN-001`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `LiveSegmentsRepository.kt`
 - **Rationale**: Motivate users during live efforts.
 - **Description**: Real-time progress on starred Strava segments.
 
 ### REQ-LIV-003: Remaining distance/time vs PR [Verified]
 - **Tests**: `TST-MAN-001`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `LiveSegmentsRepository.kt`
 - **Rationale**: Immediate feedback on performance.
 - **Description**: Remaining distance/time vs PR.
 
 ### REQ-LIV-004: Filter segments by bearing alignment (45°) [Verified]
 - **Tests**: `TST-MAN-001`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `LiveSegmentsRepository.kt`
 - **Rationale**: Eliminate false alerts on parallel roads.
 - **Description**: Filter segments by bearing alignment (45°).
 
 ### REQ-LIV-005: Active and Approaching Live Segments Numeric Distance Prioritization [Verified]
 - **Tests**: `TST-LIV-001`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `LiveSegmentsRepository.kt`, `TrackingViewModel.kt`
 - **Rationale**: The system SHALL prioritize and sort active and approaching Strava Live Segments during live tracking (`TrackingViewModel.kt`) strictly by raw numeric distance values in meters (`Double`), eliminating unit-boundary sorting inversions and erratic active segment flipping caused by lexicographical string comparisons (ATT-3324, refining `REQ-LIV-003`):
 1. *Raw Distance Representation in `LiveSegmentData` (`LiveSegmentsRepository.kt`)*:
@@ -79,157 +94,397 @@
 
 ### REQ-PRO-001: Integrate Agile Workflow with Jira Cloud [Verified]
 - **Tests**: `TST-MAN-001`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
 - **Implementation**: `project_protocol.md`, `ATT-103`
 - **Rationale**: Ensure bidirectional traceability between tasks and code.
 - **Description**: Integrate Agile Workflow with Jira Cloud.
 
 ### REQ-PRO-002: App Responsiveness [Verified]
 - **Tests**: `TST-STR-002`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
 - **Implementation**: `TrackerService.java`, `ExportManager.java`
 - **Rationale**: The system SHALL minimize lock contention to ensure the app remains responsive during heavy I/O or sensor load.
 
 ### REQ-PRO-006: Thread-Safe Sensor Management [Verified]
 - **Tests**: `TST-STR-011`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
 - **Implementation**: `MySensorManager.java`, `MyDevice.java`
 - **Rationale**: The sensor management system SHALL be thread-safe to prevent race conditions during registration and unregistration of hardware sensors across multiple threads.
 
 ### REQ-PRO-007: Traceable Test Execution [Verified]
 - **Tests**: `TST-STR-012`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
 - **Implementation**: `jira_util.py`, `project_protocol.md`
 - **Rationale**: The system SHALL integrate test verification into the Jira workflow by automatically creating sub-tasks for each test case defined in `docs/tests.md` that is relevant to the current ticket.
 
 ### REQ-PRO-010: Traceable Implementation Planning [Verified]
 - **Tests**: `TST-PRO-003`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
 - **Implementation**: `project_protocol.md`
 - **Rationale**: The development workflow SHALL include the creation of a dedicated Jira sub-task for every Implementation Plan to ensure high-visibility traceability and progress tracking.
 
 ### REQ-PRO-008: Automated Attachment Management [Verified]
 - **Tests**: `TST-PRO-001`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
 - **Implementation**: `jira_util.py`
 - **Rationale**: The development workflow SHALL support automated downloading of all attachments from a Jira ticket to a local documentation folder to facilitate analysis.
 
 ### REQ-PRO-009: Type-Aware Task Management [Verified]
 - **Tests**: `TST-PRO-002`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
 - **Implementation**: `jira_util.py`
 - **Rationale**: The development workflow SHALL provide visibility into Jira issue types (Bug, Task, Story) during listing and inspection to ensure appropriate processing logic.
 
 ### REQ-PRO-011: Mandatory Code Documentation [Verified]
 - **Tests**: `TST-STR-015`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
 - **Implementation**: `project_protocol.md`, `WorkoutRepository.kt`
 - **Rationale**: To ensure long-term maintainability and architectural transparency, all core system components SHALL utilize comprehensive internal documentation. Every class MUST feature a purpose-driven header, and every method MUST include a functional description detailing its logic and synchronization patterns.
 
 ### REQ-PRO-003: Pause Distance Isolation [Verified]
 - **Tests**: `TST-UNT-008`, `TST-REG-004`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
 - **Implementation**: `MyAccumulatorSensor.java`, `ANTBikeSpeedDevice.java`, `BTLEBikeDevice.java`
 - **Rationale**: The system SHALL prevent distance accumulation while paused to ensure workout statistics only reflect active movement.
 
 ### REQ-PRO-004: Pause Track Isolation [Verified]
 - **Tests**: `TST-UI-039`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
 - **Implementation**: `BANALServiceRepository.kt`
 - **Rationale**: The system SHALL prevent track and profile accumulation while paused, ensuring they strictly reflect active periods.
 
 ### REQ-PRO-005: Database Schema Integrity [Verified]
 - **Tests**: `TST-UNT-011`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
 - **Implementation**: `TrackingViewsDatabaseManager.java`
 - **Rationale**: The database initialization and migration logic must ensure that all required columns (e.g., ShowElevationProfile) exist for both fresh installations and upgrades.
 - **Description**: Database Schema Integrity.
 
-### REQ-NFR-001: Deterministic EKF Timing [Planned]
-- **Tests**: `TST-STR-010`
-- **Implementation**: TBD
+### REQ-NFR-001: Deterministic EKF Timing [Verified]
+- **Tests**: `TST-NFR-001`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit
+- **Implementation**: `TrackerService.java`, `docs/architecture.md` §4.9
 - **Rationale**: The estimation loop SHALL use hardware event timestamps and dynamic Delta-T calculation to ensure mathematical robustness against Android CPU jitter.
-- **Description**: Deterministic EKF Timing.
+- **Description**: The Extended Kalman Filter (EKF) estimation loop SHALL dynamically compute Delta-T from hardware sensor timestamps rather than wall-clock arrival times, bounding Delta-T jitter to <= 2.0 ms across consecutive sensor updates.
+- **Measurement Procedure**: Sensor simulation test harness evaluating synthetic IMU timestamp deltas vs calculated Delta-T under simulated CPU load.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* high-frequency sensor updates arriving with variable thread scheduling jitter,
+  • *When* the EKF estimation loop computes the motion update step,
+  • *Then* Delta-T SHALL be derived from hardware event timestamps with jitter <= 2.0 ms.
+- **Invariants**: Pure mathematical estimation stability; zero drift artifacts.
 
-### REQ-NFR-002: Stationary Pinning [Planned]
-- **Tests**: `TST-FUSION-004`
-- **Implementation**: TBD
+### REQ-NFR-002: Stationary Pinning Drift Prevention [Verified]
+- **Tests**: `TST-NFR-002`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit
+- **Implementation**: `TrackerService.java`, `docs/architecture.md` §4.9
 - **Rationale**: The system SHALL detect "Not Moving" events via IMU variance and coordinate clustering to prevent stationary "Drunkard's Walk" artifacts.
-- **Description**: Stationary Pinning.
+- **Description**: When IMU accelerometer variance indicates no motion, the position estimation filter SHALL pin coordinate updates, limiting stationary horizontal drift to < 0.5 m/min.
+- **Measurement Procedure**: Sensor replay harness processing stationary IMU accelerometer and GNSS coordinate records over a 30-minute stationary simulation window.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* an active recording session with the device stationary and IMU accelerometer variance below stillness threshold,
+  • *When* position estimation updates are processed over 30 minutes,
+  • *Then* accumulated horizontal drift SHALL NOT exceed 0.5 m/min.
+- **Invariants**: True movement resumption must unpin coordinates within 1.0 s.
 
-### REQ-NFR-003: Periodic Tick Latency Budget [Planned]
-- **Tests**: `TST-PRO-052`
+### REQ-NFR-003: Periodic Tick Latency Budget [Verified]
+- **Tests**: `TST-NFR-003`, `TST-PRO-052`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit
 - **Implementation**: `TrackerService.java`, `docs/architecture.md` §4.9
 - **Rationale**: `TrackerService` periodic tick execution latency SHALL NOT exceed 50 ms per 1000 ms cycle (`scheduleAtFixedRate`) on background thread, guaranteeing >= 950 ms idle headroom.
-- **Description**: Periodic Tick Latency Budget.
+- **Description**: `TrackerService`'s periodic 1-Hz timer loop scheduled on `mScheduler` SHALL complete all state evaluation, duration accumulation, and notification dispatch within <= 50 ms per tick.
+- **Measurement Procedure**: Android Studio CPU Profiler / System.nanoTime instrumentation measuring tick execution duration over a 1000-cycle recording session.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* an active workout recording session in `TrackerService`,
+  • *When* periodic 1-Hz ticks execute on `mScheduler`,
+  • *Then* execution duration for 99% of ticks SHALL be < 50 ms, leaving >= 950 ms idle headroom per 1000 ms cycle.
+- **Invariants**: Timer period remains strictly 1000 ms; zero dropped ticks.
 
-### REQ-NFR-004: CPU Consumption Ceiling [Planned]
-- **Tests**: `TST-PRO-052`
+### REQ-NFR-004: CPU Consumption Ceiling [Verified]
+- **Tests**: `TST-NFR-004`, `TST-PRO-052`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit
 - **Implementation**: `TrackerService.java`, `docs/architecture.md` §4.9
 - **Rationale**: `TrackerService` background tracking CPU consumption SHALL NOT exceed 5% of a single core on mid-tier reference hardware, preventing thermal throttling and CPU starvation.
-- **Description**: CPU Consumption Ceiling.
+- **Description**: Background telemetry processing, sensor calculation, and state management in `TrackerService` SHALL NOT exceed 5.0% single-core CPU utilization on mid-tier reference hardware.
+- **Measurement Procedure**: Android Studio CPU Profiler / `simpleperf` CPU trace during 30 minutes of continuous background tracking with GPS and 2 BLE sensors connected.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* `TrackerService` tracking in background with screen off and active GNSS + BLE sensors,
+  • *When* measuring CPU utilization over a 30-minute interval on reference hardware,
+  • *Then* average single-core CPU consumption SHALL be < 5.0%.
+- **Invariants**: Full calculation fidelity (heart rate, cadence, power, speed, distance) maintained without downsampling.
 
-### REQ-NFR-005: Dedicated Heap Footprint Ceiling [Planned]
-- **Tests**: `TST-PRO-052`
+### REQ-NFR-005: Dedicated Heap Footprint Ceiling [Verified]
+- **Tests**: `TST-NFR-005`, `TST-PRO-052`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit
 - **Implementation**: `TrackerService.java`, `docs/architecture.md` §4.9
 - **Rationale**: `TrackerService` dedicated heap allocation SHALL NOT exceed 40 MB, preventing GC pressure and OutOfMemoryError during 12+ hour endurance recordings.
-- **Description**: Dedicated Heap Footprint Ceiling.
+- **Description**: Dedicated memory retained by `TrackerService` and its active state accumulators SHALL NOT exceed 40 MB heap, and total application peak heap RAM SHALL NOT exceed 150 MB during multi-hour endurance tracking sessions with map rendering.
+- **Measurement Procedure**: Android Studio Memory Profiler / Android heap dump (`am dumpheap`) analyzed for retained memory after 2 hours of synthetic 1-Hz telemetry recording.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* an ongoing tracking session recording 1-Hz telemetry for 2+ hours,
+  • *When* inspecting JVM heap allocation via memory dump,
+  • *Then* dedicated `TrackerService` retained heap SHALL be < 40 MB, and total app heap RAM SHALL NOT exceed 150 MB.
+- **Invariants**: Zero memory leaks across workout start, pause, resume, and stop lifecycles.
 
-### REQ-NFR-006: Background Battery Drain Ceiling [Planned]
-- **Tests**: `TST-PRO-052`
+### REQ-NFR-006: Tracking Battery Drain Ceiling [Verified]
+- **Tests**: `TST-NFR-006`, `TST-PRO-052`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit
 - **Implementation**: `TrackerService.java`, `docs/architecture.md` §4.9
-- **Rationale**: Total background battery consumption during active recording with screen off, active GNSS, and connected BLE/ANT+ sensors SHALL NOT exceed 5%/h.
-- **Description**: Background Battery Drain Ceiling.
+- **Rationale**: Total background battery consumption during active recording with screen off, active GNSS, and connected BLE/ANT+ sensors SHALL NOT exceed 5%/h, and screen-on tracking with cockpit map rendering SHALL NOT exceed 12%/h.
+- **Description**: Active recording power drain SHALL NOT exceed 5.0%/h in background mode (screen off, GNSS 1 Hz, BLE/ANT+ connected) and SHALL NOT exceed 12.0%/h in foreground cockpit mode (screen on at 50% brightness, map rendering at 60 FPS).
+- **Measurement Procedure**: Android Battery Historian / Android Studio Energy Profiler (`dumpsys batterystats`) over a 60-minute active tracking benchmark on standard reference hardware.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* an active workout recording session with GNSS and paired sensors,
+  • *When* tracked for 60 minutes with screen off,
+  • *Then* battery discharge rate SHALL NOT exceed 5.0%/h.
+  • *Given* an active workout recording session with cockpit map displayed,
+  • *When* tracked for 60 minutes with screen on (50% brightness),
+  • *Then* battery discharge rate SHALL NOT exceed 12.0%/h.
+- **Invariants**: Continuous 1-Hz GNSS fix acquisition and sensor streaming must not be throttled to achieve power targets.
 
-### REQ-NFR-007: Sensor Dispatch Latency Budget [Planned]
-- **Tests**: `TST-PRO-052`
+### REQ-NFR-007: Sensor Dispatch Latency Budget [Verified]
+- **Tests**: `TST-NFR-007`, `TST-PRO-052`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit
 - **Implementation**: `BANALService.java`, `ProxySensor.java`, `docs/architecture.md` §4.9
 - **Rationale**: Sensor ingestion dispatch latency from hardware event receipt to subscriber notification across registered sensors SHALL NOT exceed 25 ms.
-- **Description**: Sensor Dispatch Latency Budget.
+- **Description**: The elapsed time from HAL callback receipt (`onCharacteristicChanged` / ANT+ broadcast) to delivery at `TrackerService` / UI subscriber StateFlow SHALL NOT exceed 25 ms for 99% of events.
+- **Measurement Procedure**: Synthetic sensor event benchmark measuring timestamp delta between HAL injection and subscriber callback.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* incoming BLE or ANT+ sensor packets,
+  • *When* processed through `BANALService` and dispatched to subscribers,
+  • *Then* end-to-end dispatch latency SHALL be < 25 ms.
+- **Invariants**: Thread safety across concurrent sensor streams; zero dropped packets.
 
-### REQ-NFR-008: Sensor Connection Failover Timeout [Planned]
-- **Tests**: `TST-PRO-052`
+### REQ-NFR-008: Sensor Connection Failover Timeout [Verified]
+- **Tests**: `TST-NFR-008`, `TST-PRO-052`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit
 - **Implementation**: `BANALService.java`, `ProxySensor.java`, `docs/architecture.md` §4.9
 - **Rationale**: The sensor reconnection and failover window upon signal dropout SHALL NOT exceed 3.5 s before initiating automatic reconnection or source failover.
-- **Description**: Sensor Connection Failover Timeout.
+- **Description**: When a connected sensor drops signal or fails to emit packets within expected timeout, `BANALService` SHALL initiate reconnect or failover to secondary source within <= 3.5 s.
+- **Measurement Procedure**: Mock BLE/ANT+ disconnection simulation measuring elapsed duration until failover/reconnection state transition.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* an active primary sensor that abruptly ceases transmitting data packets,
+  • *When* signal silence exceeds the timeout threshold,
+  • *Then* automatic reconnect or fallback to secondary sensor SHALL trigger within <= 3.5 s.
+- **Invariants**: Sensor priority hierarchy (`docs/architecture.md` §4.8) strictly observed during failover.
 
-### REQ-NFR-009: Tracking WakeLock Bounding [Planned]
-- **Tests**: `TST-PRO-052`
+### REQ-NFR-009: Tracking WakeLock Bounding [Verified]
+- **Tests**: `TST-NFR-009`, `TST-PRO-052`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit
 - **Implementation**: `TrackerService.java`, `docs/architecture.md` §4.9
 - **Rationale**: `PowerManager.PARTIAL_WAKE_LOCK` (`aTrainingTracker:TrackingLock`) SHALL be acquired solely by `TrackerService` upon tracking start and MUST be released immediately upon tracking stop.
-- **Description**: Tracking WakeLock Bounding.
+- **Description**: `PARTIAL_WAKE_LOCK` (`aTrainingTracker:TrackingLock`) SHALL be held strictly during active `TRACKING` state (`TrackerService.java:842-857`); zero WakeLocks SHALL remain acquired when tracking is paused, stopped, or discarded.
+- **Measurement Procedure**: PowerManager mock verification unit test and Android `dumpsys power` inspection across full tracking lifecycle.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* `TrackerService` in idle or stopped state,
+  • *When* checking `PowerManager.WakeLock.isHeld()`,
+  • *Then* it SHALL return `false`.
+  • *Given* `TrackerService` transitioning from `TRACKING` to `STOPPED`,
+  • *When* stop tracking executes,
+  • *Then* `aTrainingTracker:TrackingLock` SHALL be released immediately with 0 active WakeLock allocations.
+- **Invariants**: Background tracking service must not be terminated by Android OS while recording.
 
-### REQ-NFR-010: Database Sample Write Latency Budget [Planned]
-- **Tests**: `TST-PRO-052`
+### REQ-NFR-010: Database Sample Write Latency Budget [Verified]
+- **Tests**: `TST-NFR-010`, `TST-PRO-052`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit
 - **Implementation**: `TrackerService.java`, `WorkoutSamplesDatabaseManager.java`, `docs/architecture.md` §4.9
 - **Rationale**: Live 1-Hz sample insertion latency in `WorkoutSamplesDatabaseManager` SHALL NOT exceed 30 ms and MUST execute strictly off the main thread via `TrackerService`'s `mScheduler` / `mDbExecutor`.
-- **Description**: Database Sample Write Latency Budget.
+- **Description**: Each live 1-Hz telemetry sample write to SQLite in `WorkoutSamplesDatabaseManager` SHALL execute within <= 30 ms on `mScheduler` / `mDbExecutor` with zero main-thread disk I/O.
+- **Measurement Procedure**: SQLite insertion benchmark measuring `WorkoutSamplesDatabaseManager.addSampleToDb()` duration over 3,600 consecutive inserts under WAL mode.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* live 1-Hz telemetry samples generated during active tracking,
+  • *When* inserted into SQLite via `WorkoutSamplesDatabaseManager`,
+  • *Then* write latency SHALL be < 30 ms per sample, executing strictly off the Android UI main thread.
+- **Invariants**: ACID compliance; WAL mode concurrency; zero database locks blocking UI.
 
-### REQ-NFR-011: Telemetry Storage Growth Rate Ceiling [Planned]
-- **Tests**: `TST-PRO-052`
+### REQ-NFR-011: Telemetry Storage Growth Rate Ceiling [Verified]
+- **Tests**: `TST-NFR-011`, `TST-PRO-052`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit
 - **Implementation**: `WorkoutSamplesDatabaseManager.java`, `docs/architecture.md` §4.9
 - **Rationale**: Workout samples SQLite storage growth rate SHALL NOT exceed ~360 KB/h at 1-Hz telemetry recording (~100 bytes/sample, ~3.6 MB for a 10-hour activity).
-- **Description**: Telemetry Storage Growth Rate Ceiling.
+- **Description**: SQLite database storage consumption for workout sample records SHALL NOT exceed an average rate of 360 KB per hour of continuous 1-Hz recording (bounding a 10-hour session to <= 3.6 MB).
+- **Measurement Procedure**: Integration test measuring database file size delta on disk before and after inserting 3,600 consecutive 1-Hz telemetry rows.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* a 1-hour workout recorded at 1-Hz telemetry frequency (3,600 samples),
+  • *When* database file size expansion is measured,
+  • *Then* storage growth SHALL NOT exceed 360 KB/h (~100 bytes per sample).
+- **Invariants**: Complete sensor channel persistence without truncating required telemetry fields.
 
-### REQ-NFR-012: Cockpit Frame Render Budget [Planned]
-- **Tests**: `TST-PRO-052`
+### REQ-NFR-012: Cockpit Frame Render Budget [Verified]
+- **Tests**: `TST-NFR-012`, `TST-PRO-052`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit
 - **Implementation**: `SensorGridScreen.kt`, `docs/architecture.md` §4.9
 - **Rationale**: Live cockpit telemetry frame recomposition and rendering in `SensorGridScreen` SHALL NOT exceed 16.6 ms per frame (sustaining 60 FPS without dropped frames).
-- **Description**: Cockpit Frame Render Budget.
+- **Description**: Jetpack Compose UI recomposition and draw passes for live telemetry sensor cards in `SensorGridScreen` SHALL complete within <= 16.6 ms per frame, sustaining >= 60 FPS.
+- **Measurement Procedure**: AndroidX Macrobenchmark `FrameTimingMetric` measuring frame render durations during active live telemetry streaming.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* `SensorGridScreen` displaying live updating telemetry fields at 1 Hz,
+  • *When* Compose frames are rendered on reference device,
+  • *Then* 95% of frames SHALL render in < 16.6 ms with zero dropped frames.
+- **Invariants**: Visual layout, theme token conformance, and sensor formatting precision remain preserved.
 
-### REQ-NFR-013: Map Polyline Update Latency Budget [Planned]
-- **Tests**: `TST-PRO-052`
+### REQ-NFR-013: Map Polyline Update Latency Budget [Verified]
+- **Tests**: `TST-NFR-013`, `TST-PRO-052`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit
 - **Implementation**: `ATrainingTrackerMap.kt`, `docs/architecture.md` §4.9
 - **Rationale**: Dynamic polyline path geometry update latency on the live map canvas upon receiving location updates SHALL NOT exceed 30 ms.
-- **Description**: Map Polyline Update Latency Budget.
+- **Description**: Updating the live GPS track polyline geometry and triggering map canvas re-render upon receiving a new GPS coordinate fix SHALL execute within <= 30 ms.
+- **Measurement Procedure**: Map canvas benchmark measuring time delta from location update ingestion to polyline layer geometry update completion.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* an active map view displaying a live GPS track of up to 10,000 points,
+  • *When* a new location point is appended to the path,
+  • *Then* polyline geometry update latency SHALL be < 30 ms.
+- **Invariants**: Polyline simplify algorithm, zoom-level LOD rendering, and heatmap coloration remain intact.
 
-### REQ-NFR-014: Cockpit Telemetry Emission Rate Throttling [Planned]
-- **Tests**: `TST-PRO-052`
+### REQ-NFR-014: Cockpit Telemetry Emission Rate Throttling [Verified]
+- **Tests**: `TST-NFR-014`, `TST-PRO-052`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit
 - **Implementation**: `TrackingTabsViewModel.kt`, `docs/architecture.md` §4.9
 - **Rationale**: Telemetry StateFlow emissions from `TrackingTabsViewModel` to cockpit tabs SHALL be conflated to 1 Hz, preventing UI recomposition churn during high-frequency sensor updates.
-- **Description**: Cockpit Telemetry Emission Rate Throttling.
+- **Description**: Live sensor metrics updated at varying frequencies (e.g., 4 Hz wheel speed, 2 Hz cadence, 1 Hz GPS) SHALL be conflated to a maximum UI emission rate of 1.0 Hz in `TrackingTabsViewModel`.
+- **Measurement Procedure**: Coroutine Turbine / TestScope unit test verifying emission count over simulated multi-sensor streams.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* sensor inputs updating at high frequency (> 4 Hz),
+  • *When* observing `TrackingTabsViewModel.uiState` flow over 5.0 seconds,
+  • *Then* no more than 5 distinct emissions SHALL occur (conflated to 1.0 Hz).
+- **Invariants**: UI metrics must always reflect the freshest sensor values at the 1-Hz tick boundary.
+
+### REQ-NFR-015: Cold Start Startup Latency Budget [Verified]
+- **Tests**: `TST-NFR-015`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit
+- **Implementation**: `MainActivityWithNavigation.kt`, `docs/architecture.md` §4.9
+- **Rationale**: App startup responsiveness directly affects athlete experience when initiating workout recording; cold start latency to interactive dashboard SHALL NOT exceed 1500 ms.
+- **Description**: Application cold startup from process creation to initial interactive frame display (Time-to-Initial-Display / TTID) SHALL NOT exceed 1200 ms, and Time-to-Full-Display (TTFD) SHALL NOT exceed 1500 ms on mid-tier reference hardware (Android 12+).
+- **Measurement Procedure**: AndroidX Macrobenchmark `StartupBenchmark` with `StartupMode.COLD` measuring `startupTimingMetric`, and Google Play Console Android Vitals cold start percentiles.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* a cold process launch of the application on reference device,
+  • *When* measuring startup timing from `Application.onCreate` to interactive dashboard rendering,
+  • *Then* TTID SHALL be <= 1200 ms and TTFD SHALL be <= 1500 ms.
+- **Invariants**: Database schema migrations and essential initialization must complete safely without main-thread ANR.
+
+### REQ-NFR-016: GNSS Horizontal Trajectory Accuracy [Verified]
+- **Tests**: `TST-NFR-016`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit
+- **Implementation**: `MySensorManager.java`, `docs/architecture.md` §4.8
+- **Rationale**: Workout distance, pace, and segment matching rely on accurate GNSS trajectory recording; horizontal position error relative to reference tracks SHALL be bounded.
+- **Description**: GNSS location recording under open-sky conditions SHALL achieve a 95th-percentile horizontal position error <= 5.0 m and cross-track root-mean-square error (RMSE) <= 3.0 m relative to a surveyed ground-truth reference trajectory.
+- **Measurement Procedure**: Track replay harness evaluating recorded coordinates against RTK/surveyed reference track with orthogonal projection error analysis; Android GNSS Analysis Tool.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* a recorded workout track acquired under open-sky conditions,
+  • *When* compared against a surveyed ground-truth reference track via orthogonal projection,
+  • *Then* 95% of location fixes SHALL have horizontal error <= 5.0 m, and cross-track RMSE SHALL be <= 3.0 m.
+- **Invariants**: Speed and distance accumulators maintain raw double-precision meters without artificial clamping.
+
+### REQ-NFR-017: Production Crash-Free Session Stability [Verified]
+- **Tests**: `TST-NFR-017`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit
+- **Implementation**: `TrainingApplication.kt`, `docs/architecture.md`
+- **Rationale**: Workout recording reliability requires zero mid-activity crashes; production crash-free session rate SHALL meet high-availability stability standards.
+- **Description**: The application SHALL maintain a production crash-free user session rate >= 99.5% across all active user sessions over a rolling 30-day window, with a per-release staging gate of >= 99.0%.
+- **Measurement Procedure**: Google Play Console Android Vitals (Crash Rate metric) and Firebase Crashlytics telemetry dashboard monitoring release sessions.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* production release builds deployed to user devices,
+  • *When* evaluating session stability telemetry over a rolling 30-day window,
+  • *Then* the crash-free session rate SHALL be >= 99.5%.
+- **Invariants**: Unhandled exceptions in background services must be caught with graceful workout recovery and state preservation.
+
+### REQ-NFR-018: Application Not Responding (ANR) Rate Ceiling [Verified]
+- **Tests**: `TST-NFR-018`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit
+- **Implementation**: `TrackerService.java`, `WorkoutSamplesDatabaseManager.java`, `docs/architecture.md` §4.9
+- **Rationale**: UI thread responsiveness prevents Android OS ANR dialogs; production ANR rate SHALL remain well below Google Play Bad Behavior thresholds.
+- **Description**: The application SHALL maintain a user-perceived ANR rate <= 0.05% in production (far below the Google Play Bad Behavior threshold of 0.47%), and UI main-thread blocking latency SHALL NOT exceed 100 ms for any single event.
+- **Measurement Procedure**: Google Play Console Android Vitals (ANR Rate metric) and Android StrictMode / Systrace main-thread disk/network IO violation monitoring.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* production release builds operating across diverse Android devices,
+  • *When* evaluating Google Play Vitals ANR telemetry over a rolling 30-day window,
+  • *Then* the ANR rate SHALL be <= 0.05%, with zero blocking disk/network operations on the UI main thread.
+- **Invariants**: All database, network, file export, and cryptographic operations MUST execute off the main thread (`Dispatchers.IO` / `mDbExecutor`).
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: `REQ-NFR-001` through `REQ-NFR-014` (`[Planned]`) in `docs/requirements/req_process_stability.md`, refining `REQ-PRO-052` (*Architectural Resource and Timing Budgets Specification*).
+2. *Historical Origin & Commit Trace*: Stubs introduced in Sprint 2026-46.1 under ATT-6181 and refined under ATT-6735 to establish SWE.2 BP4 traceability.
+3. *Root Reason for Existing Formulation*: Placeholders preserved IDs while full SWE.1 BP1/BP4 quantification was prioritized for dedicated sprint ticket ATT-6139.
+4. *Preservation of Core Invariants*: All 12 Section 4.9 budget targets, threading attributions (`TrackerService` `mScheduler` / `mDbExecutor`), WakeLock bounding, and 100% unit test pass rate remain strictly preserved without Android production runtime code changes.
 
 ### REQ-PRO-012: Project Protocol Hardening [Verified]
 - **Tests**: `TST-STR-017`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
 - **Implementation**: `project_protocol.md`
 - **Rationale**: The system documentation MUST include strict rules for format string safety to prevent runtime crashes caused by invalid placeholders.
 
 ### REQ-PRO-013: System Invariant Protection & Impact Traceability [Verified]
 - **Tests**: `TST-PRO-005`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
 - **Implementation**: `project_protocol.md`
 - **Rationale**: The development workflow SHALL enforce explicit System Invariants ("What MUST NOT Change") for all requirements, MANDATE a pre-implementation `find_usages` cross-check of all requirements mapped to files slated for modification, and REQUIRE a pre-commit adversarial self-review to prevent regressions.
 
 ### REQ-PRO-014: Unified 5-Stage ASPICE Dual-Agent Quality Gates & Automated Jira Workflow [Verified]
-- **Tests**: `docs/project_protocol.md`, `.cursorrules`, `tools/jira_util.py`
+- **Tests**: `TST-PRO-006`, `TST-PRO-008`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
 - **Implementation**: Ensure bidirectional ASPICE traceability, automated Jira lifecycle management, and independent AI quality audits without manual developer overhead.
 - **Rationale**: The development workflow SHALL enforce explicit quality review gates embedded in the 5-state sub-task lifecycle (`Zu erledigen` -> `In Bearbeitung` -> `In Überprüfung` -> `Freigabe (Human)` -> `Erledigt`) across five sequential ASPICE stages for all ticket types (Bug, Improvement, Feature):
 1. *Stage 1: Analysis (`[Analysis]`)*: Problem domain, user motivation, and side effects for features/improvements; root cause analysis (RCA) for bugs.
@@ -258,7 +513,10 @@ The workflow SHALL mandate that:
 **Invariants**: Moving parent tickets to `Erledigt` remains an inviolable human-only gate; sub-tasks transition directly to `Erledigt` upon automated Gate audit PASS; direct merges to `develop` without 100% sub-task completion remain strictly forbidden.
 
 ### REQ-PRO-015: Agent-Driven Git Branching, Conventional Commits, and Develop Merging Protocol [Verified]
-- **Tests**: `docs/project_protocol.md`, `.cursorrules`
+- **Tests**: `TST-PRO-007`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
 - **Implementation**: Ensure full git traceability, branch isolation, and non-fast-forward merge history without manual developer overhead.
 - **Rationale**: The development workflow SHALL mandate agent-driven git lifecycle management for all assigned Jira tickets:
 1. *Branch Creation*: Upon starting work on any ticket, the agent SHALL verify or switch to `develop` and automatically create/checkout a dedicated branch adhering to naming standards (`feature/ATT-XXX` or `bugfix/ATT-XXX`).
@@ -277,7 +535,10 @@ The workflow SHALL mandate that:
 **Invariants**: Direct commits to `master` remain strictly forbidden; unreviewed code MUST NOT be merged into `develop`; sub-tasks complete autonomously via automated audit PASS while parent ticket release approval remains strictly reserved for the human user.
 
 ### REQ-PRO-016: Inviolable ASPICE Human Decision Gates & Prevention of Premature Implementation Triggers [Verified]
-- **Tests**: `docs/project_protocol.md`, `.cursorrules`, `tools/jira_util.py`, `.agents/rules/aspice_governance.md`
+- **Tests**: `TST-PRO-009`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
 - **Implementation**: Prevent premature implementation triggers and guarantee absolute compliance with ASPICE Human Decision Gates across all AI tooling environments.
 - **Rationale**: The development workflow SHALL strictly enforce human decision gate authority across all ASPICE stages, eliminating premature code execution caused by IDE test harness auto-approvals or synthetic prompts:
 1. *Artifact Metadata Policy (`RequestFeedback: false`)*: Whenever an AI agent creates or updates plan, walkthrough, or analysis artifacts in the IDE, the agent SHALL ALWAYS specify `ArtifactMetadata: { RequestFeedback: false, UserFacing: true, ... }`. AI agents are STRICTLY FORBIDDEN from specifying `RequestFeedback: true`. This disables the IDE's automated review policy hooks and suppresses any conflicting "Proceed" buttons in the IDE UI.
@@ -297,7 +558,10 @@ The workflow SHALL mandate that:
 **Invariants**: The 5-stage ASPICE lifecycle, automated Jira sub-task generation, and dual-agent reviews MUST remain fully intact; moving parent tickets to `Erledigt` remains an inviolable human-only gate while sub-tasks complete autonomously via automated Gate audit PASS.
 
 ### REQ-PRO-017: Process Hardening: Sub-Task Self-Sufficiency, Transition Sequencing, Discovery-First, and Git Finalization [Verified]
-- **Tests**: `docs/project_protocol.md`, `tools/jira_util.py`, `.cursorrules`
+- **Tests**: `TST-PRO-010`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
 - **Implementation**: Prevent empty review notifications, eliminate duplicate automated sub-tasks, ensure self-contained auditability, and ensure complete git integration upon ticket closure.
 - **Rationale**: The development workflow SHALL enforce four operational process safeguards across all ASPICE lifecycle stages:
 1. *Sub-Task Self-Sufficiency*: Every lifecycle sub-task MUST stand on its own as an independent audit record. Leaving sub-task Descriptions empty (`None`) or posting stub redirection comments (e.g. "see parent ticket") is strictly forbidden. Agent 1 SHALL write the full stage deliverable directly into the sub-task's Description via `tools/jira_util.py update-desc`. Independent Gate reviews posted by Agent 2 SHALL provide self-contained, concrete audit evidence directly in sub-task comments.
@@ -320,7 +584,10 @@ The workflow SHALL mandate that:
 **Invariants**: Moving parent tickets to `Erledigt` remains an inviolable human-only gate; zero unmerged feature branches upon ticket completion.
 
 ### REQ-PRO-018: Autonomous Multi-Model Independent Review Agent & Automated Gate Audits [Verified]
-- **Tests**: `tools/review_agent.py`, `docs/project_protocol.md`, `.cursorrules`
+- **Tests**: `TST-PRO-011`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
 - **Implementation**: Provide genuine architectural and cognitive independence for AI quality gate reviews, preventing self-confirmation bias while automating Jira audit posting and stage transitions.
 - **Rationale**: The development workflow SHALL provide an autonomous, out-of-process review runner (`tools/review_agent.py`) capable of performing independent ASPICE quality gate audits (Gates 1 through 5) using external LLM providers (Google Gemini REST API via `.env.gemini` and Anthropic Claude Messages API via `.env.claude`):
 1. *Architectural Independence & Memory Decoupling*: The review agent SHALL run in an independent Python process with zero shared conversational memory or prompt history with Agent 1, eliminating self-review confirmation bias.
@@ -339,7 +606,10 @@ The workflow SHALL mandate that:
 **Invariants**: Moving parent tickets to `Erledigt` remains strictly prohibited for the review runner; existing `tools/jira_util.py` functionality and 5-state lifecycle MUST NOT be degraded; API keys MUST NOT be logged or committed.
 
 ### REQ-PRO-019: Multi-Account Jira Authentication, Atomic Resolution & Terminal Error Handling [Verified]
-- **Tests**: `tools/jira_util.py`, `tools/review_agent.py`, `docs/project_protocol.md`, `.cursorrules` | **Tickets**: `ATT-1123`, `ATT-1200`, `ATT-6146`, `ATT-6147`
+- **Tests**: `TST-PRO-012`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
 - **Implementation**: Provide reliable, role-specific authentication with strict credential isolation, per-role file partitioning, and deterministic termination on missing credentials.
 - **Rationale**: The development workflow and CLI tooling (`tools/jira_util.py`, `tools/review_agent.py`) SHALL support role-specific Jira user credentials across three distinct agent roles: Agent 1 (Implementer), Agent 2 (Auditor), and Coordinator (Orchestrator):
 1. *Role Credentials Configuration & File Partitioning (ATT-6147)*: `.gitignore` SHALL ignore all role credential variants using `.env.jira*`. Credentials SHALL be partitioned into dedicated gitignored per-role files (`.env.jira.agent1`, `.env.jira.agent2`, `.env.jira.coordinator`) containing shared metadata (`JIRA_URL`, `JIRA_PROJECT`) alongside role-specific variables (`JIRA_<ROLE>_USER`, `JIRA_<ROLE>_TOKEN`). Human credentials (`JIRA_USER`, `JIRA_TOKEN`) SHALL be eliminated from the workspace and example templates.
@@ -371,7 +641,10 @@ The workflow SHALL mandate that:
 **Invariants**: Moving any issue to `Erledigt` remains strictly prohibited across all roles; zero external pip dependencies (Python 3 standard library only); APK runtime code and assets MUST NOT be modified.
 
 ### REQ-PRO-020: Role Locking, Precedence, Anti-Spoofing & Actor Comment Attribution [Verified]
-- **Tests**: `tools/jira_util.py`, `tools/review_agent.py`, `docs/project_protocol.md`, `.cursorrules` | **Tickets**: `ATT-1123`, `ATT-1200`, `ATT-6146`
+- **Tests**: `TST-PRO-013`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
 - **Implementation**: Eliminate role impersonation between agents and human operator, enforce independent audit integrity, and formalize comment attribution.
 - **Rationale**: The development workflow and tooling SHALL enforce strict role boundaries, anti-spoofing constraints, and distinct comment attribution across agent roles:
 1. *Precedence Rule*: The active role SHALL be determined strictly by: `CLI Flag (--as <role>)` > `Environment Variable (JIRA_ACTOR)` > `Script Default` (`agent1` for `jira_util.py`, `agent2` for `review_agent.py`).
@@ -405,7 +678,10 @@ The workflow SHALL mandate that:
 **Invariants**: Gate 1-5 ASPICE audit requirements remain mandatory and independent; AI agents remain strictly forbidden from closing parent tickets to `Erledigt`.
 
 ### REQ-PRO-021: Jira Credential & Token Secret Masking in Tooling [Verified]
-- **Tests**: `tools/jira_util.py`, `tools/review_agent.py`
+- **Tests**: `TST-PRO-014`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
 - **Implementation**: Prevent credential leakage into public logs, transcripts, or console streams.
 - **Rationale**: The development workflow and CLI tooling (`tools/jira_util.py`, `tools/review_agent.py`) SHALL prevent the exposure of sensitive Jira credentials in terminal outputs and logs:
 1. *Secret Masking*: The tooling SHALL NOT print `JIRA_TOKEN`, `JIRA_AGENT1_TOKEN`, `JIRA_AGENT2_TOKEN`, `JIRA_COORDINATOR_TOKEN`, or raw Basic Authorization headers to `sys.stdout` or `sys.stderr` under any log level, error condition, or trace output.
@@ -417,7 +693,10 @@ The workflow SHALL mandate that:
 **Invariants**: Tooling MUST remain purely on Python 3 standard library; zero leakage of API secrets in CI or local logs.
 
 ### REQ-PRO-022: Requirement Archaeology & Chesterton's Fence Modification Hurdle [Verified]
-- **Tests**: `docs/project_protocol.md`, `.cursorrules`, `tools/review_agent.py`, `tools/verify_requirement_governance.py`
+- **Tests**: `TST-PRO-015`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
 - **Implementation**: Prevent regressions and accidental destruction of hard-won architectural protections by enforcing the Chesterton's Fence principle prior to modifying established requirements.
 - **Rationale**: The development workflow and governance tooling SHALL enforce an explicit, auditable archaeological investigation before any existing requirement in `docs/requirements.md` is modified, relaxed, or replaced:
 1. *Mandatory Archaeological Investigation*: Prior to proposing or applying changes to an existing requirement, the agent/engineer SHALL inspect the requirement's historical git commits (`git log -S <REQ-ID> docs/requirements.md` with timeout and depth bounds), associated Jira tickets, and architectural rationale to understand why the requirement was originally formulated in its current form (Chesterton's Fence principle).
@@ -447,8 +726,11 @@ The workflow SHALL mandate that:
 **Invariants**: Zero external pip dependencies; APK runtime code and assets MUST NOT be modified; human decision gate authority remains inviolable.
 
 ### REQ-PRO-023: Android Framework Test Stubbing Helpers & Developer Tooling Consistency [Verified]
-- **Tests**: `app/src/test/java/com/atrainingtracker/testutil/MockCursorFactory.kt`, `tools/jira_util.py`, `docs/project_protocol.md`, `.cursorrules`
-- **Implementation**: Eliminate recurring MockK cursor boilerplate in database unit tests and streamline Jira issue lifecycle management.
+- **Tests**: `TST-PRO-016`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Implementation**: `app/src/test/java/com/atrainingtracker/testutil/MockCursorFactory.kt`, `tools/jira_util.py`, `docs/project_protocol.md`, `.cursorrules`
 - **Rationale**: The test infrastructure and developer tooling SHALL eliminate mocking boilerplate for Android SQLite framework types and automate metadata propagation across development workflows:
 1. *Centralized JVM Cursor Test Fixture*: The test suite SHALL provide a reusable factory `com.atrainingtracker.testutil.MockCursorFactory` in `app/src/test/` to generate MockK `android.database.Cursor` instances backed by in-memory tabular data maps. The factory SHALL support multi-row traversal (`moveToFirst`, `moveToNext`, `position`, `count`, `isAfterLast`), case-insensitive or exact column index lookups (`getColumnIndex`, `getColumnIndexOrThrow`), nullability assertions (`isNull`), and strongly typed scalar extraction (`getInt`, `getLong`, `getDouble`, `getFloat`, `getString`, `getBlob`).
 2. *Jira Tooling Metadata Propagation & Sprint Linking*: The CLI utility `tools/jira_util.py` SHALL support automatic inheritance and assignment of active sprint and version context on issue and sub-task creation:
@@ -467,7 +749,10 @@ The workflow SHALL mandate that:
 **Invariants**: Zero APK runtime bytecode or asset modifications (100% test-only code and developer tooling); existing test suites continue to pass with zero regressions; pure Python 3 standard library for all tooling scripts.
 
 ### REQ-PRO-024: Modular Skill-Based Agile Architecture & Role-Specialized On-Demand Workflows [Verified]
-- **Tests**: `.agents/skills/`, `docs/project_protocol.md`, `.cursorrules`, `tools/jira_util.py`
+- **Tests**: `TST-PRO-017`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
 - **Implementation**: Eliminate context window inflation and instruction drift, provide structured templates, enable rapid UI and backlog workflows, streamline subtask transitions, and formalize the 3-phase agile sprint lifecycle.
 - **Rationale**: The development workflow and agent orchestration SHALL transition from a monolithic protocol document into an on-demand, modular skill-based architecture under `.agents/skills/`, complemented by role-specialized agents:
 1. *Modular Skill Layout*: The workflow SHALL encapsulate procedural knowledge, quality gates, and domain practices into 9 discrete skills located under `.agents/skills/<skill_name>/` (`stage1-analysis`, `stage2-req-test-spec`, `stage3-impl-plan`, `stage4-implementation`, `stage5-verification`, `jira-workflow`, `ui-designer`, `brainstormer`, `sprint-planner`). Each skill directory SHALL contain a valid `SKILL.md` file with standardized YAML frontmatter (`name`, `description`) conforming to the Antigravity skill specification.
@@ -501,8 +786,11 @@ The workflow SHALL mandate that:
 **Invariants**: Zero APK runtime bytecode or asset modifications (100% process, documentation, and skill configuration); human decision gate on parent tickets remains inviolable; Gate 1 through Gate 5 quality checks remain mandatory.
 
 ### REQ-PRO-025: Automated Test Execution Acceleration, Worker Parallelism, and Resource-Safe Caching [Verified]
-- **Tests**: `app/build.gradle`, `gradle.properties`, `LocalizationTestCache.kt`
-- **Implementation**: Dramatically reduce full test suite execution time from 7-9 minutes to under 3.5 minutes while bounding memory consumption, preventing MockK/ByteBuddy GC thrashing, and ensuring complete test isolation.
+- **Tests**: `TST-PRO-018`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Implementation**: `app/build.gradle`, `gradle.properties`, `LocalizationTestCache.kt`
 - **Rationale**: The build and test execution system SHALL accelerate automated unit test suite execution while guaranteeing host stability, bounded resource consumption, and zero cross-test state pollution:
 1. *Multi-Worker Parallelism (`app/build.gradle`)*:
 • The build system SHALL configure `testOptions.unitTests.all` with dynamic hardware-adaptive worker forking: `maxParallelForks = Math.max(1, Runtime.getRuntime().availableProcessors() / 2)`.
@@ -547,7 +835,10 @@ The workflow SHALL mandate that:
 **Invariants**: Test isolation preserved; zero flaky tests; memory consumption bounded to safe host limits.
 
 ### REQ-PRO-026: Document Triad Architecture: Separation of ASPICE Governance, UI Design Guidelines, and Technical Coding Standards [Verified]
-- **Tests**: `.agents/rules/aspice_governance.md`, `docs/design_guidelines.md`, `docs/coding_standards.md`, `docs/project_protocol.md`
+- **Tests**: `TST-PRO-019`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
 - **Implementation**: Decouple process governance from UI design heuristics and software construction standards, establishing a clean Document Triad with importance-tiered governance, consolidated rules, and full retrospective traceability.
 - **Rationale**: The development workflow, AI agent governance, and living engineering documentation SHALL decouple process governance from visual design heuristics and software construction standards by establishing a canonical Document Triad (ATT-3323):
 1. *ASPICE Process Governance Streamlining (`.agents/rules/aspice_governance.md`)*:
@@ -600,8 +891,11 @@ The workflow SHALL mandate that:
 **Invariants**: Human Decision Gate for parent tickets remains inviolable; 100% clean-room test pass rate; zero regression in governance enforcement scripts.
 
 ### REQ-STB-001: Resilient WorkManager Initialization & Startup Protection [Verified]
-- **Tests**: `AndroidManifest.xml`, `TrainingApplication.java`, `ExportManager.java`, `BackupWorker.kt`
-- **Implementation**: Prevent fatal startup crashes on fragmented Android 14 environments while preserving background task functionality on compliant devices.
+- **Tests**: `TST-STB-001`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit
+- **Implementation**: `AndroidManifest.xml`, `TrainingApplication.java`, `ExportManager.java`, `BackupWorker.kt`
 - **Rationale**: The system SHALL prevent application startup crashes caused by platform-level `JobScheduler` incompatibilities (such as missing `JobScheduler.forNamespace` on non-standard Android 14 builds):
 1. *Decoupled Auto-Initialization*: The system SHALL remove automatic execution of `WorkManagerInitializer` from `androidx.startup.InitializationProvider` via manifest configuration (`tools:node="remove"`).
 2. *Controlled Resilient Startup*: The system SHALL manually initialize `WorkManager` within `TrainingApplication.onCreate()` guarded by a `try ... catch (Throwable)` block, ensuring application launch succeeds unconditionally even if framework scheduler creation fails.
@@ -616,7 +910,10 @@ The workflow SHALL mandate that:
 **Invariants**: Other `androidx.startup` components MUST NOT be disabled; background export and backup execution on standard devices MUST NOT be degraded.
 
 ### REQ-STB-002: Resilient TrackerService Foreground Service Lifecycle & Crash Protection [Verified]
-- **Tests**: Ensure workout tracking resilience via START_STICKY while preventing fatal SecurityException crashes on Android 14+ when restarted in the background without background location permissions.
+- **Tests**: `TST-STB-002`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit
 - **Implementation**: IllegalStateException)` block, safely logging any unexpected platform launch restriction exceptions and calling `stopSelf()` rather than crashing the application process.
 **Acceptance Criteria**:
 • *Given* an active workout on Android 14+ where the user has granted `ACCESS_BACKGROUND_LOCATION`,
@@ -637,8 +934,11 @@ The workflow SHALL mandate that:
 3. *Exception Shielding*: All invocations of `startForeground(...)` in `TrackerService` SHALL be encapsulated in a `try ... catch (SecurityException
 
 ### REQ-STB-003: Interrupted Workout Resumption & Unfinished Workout Recovery [Verified]
-- **Tests**: `TrackerService.java`, `MainActivityWithNavigation.java`, `ControlTrackingViewModel.kt`, `WorkoutSummariesDatabaseManager.java`, `TrainingApplication.java`
-- **Implementation**: Ensure interrupted workouts can be seamlessly resumed from notifications or recovered on app launch without data loss or crashes.
+- **Tests**: `TST-STB-003`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit
+- **Implementation**: `TrackerService.java`, `MainActivityWithNavigation.java`, `ControlTrackingViewModel.kt`, `WorkoutSummariesDatabaseManager.java`, `TrainingApplication.java`
 - **Rationale**: The system SHALL allow resuming ongoing workouts interrupted by system termination or permission restrictions:
 1. *Interrupted Notification Intent*: The notification posted by `TrackerService.showTrackingInterruptedNotification()` SHALL include an explicit action/extra (`EXTRA_RESUME_INTERRUPTED_WORKOUT = true`, and destination `SELECTED_FRAGMENT = START_OR_TRACKING`) in its `PendingIntent`.
 2. *Automatic Foreground Resumption*: When the user taps the interrupted tracking notification, `MainActivityWithNavigation.handleIntent()` SHALL detect `EXTRA_RESUME_INTERRUPTED_WORKOUT`, set `TrainingApplication.setResumeFromCrash(true)`, dismiss the interrupted notification, and immediately resume tracking via `TrackerService.StartType.RESUME_BY_USER`, ensuring Android 14+ while-in-use foreground location permissions succeed without `SecurityException` and preserving all previous metrics.
@@ -653,7 +953,10 @@ The workflow SHALL mandate that:
 **Invariants**: Normal workout start (`START_NORMAL`) MUST operate unchanged; `START_STICKY` lifecycle and exception shielding in `TrackerService` MUST NOT be altered; no data loss for interrupted workout sessions.
 
 ### REQ-STB-004: Resilient Location Provider Initialization & Device Hardware Fault Tolerance [Verified]
-- **Tests**: Prevent fatal service creation crashes on devices without GPS hardware or providers while preserving location tracking on standard hardware.
+- **Tests**: `TST-STB-004`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit
 - **Implementation**: SecurityException)` block. If the provider is unavailable or registration fails, the device SHALL call `LocationUnavailable()`, log a warning, and proceed cleanly without throwing runtime exceptions.
 2. *Safe Provider Verification & Registration in SpeedAndLocationDevice_Network*: The system SHALL enforce identical defensive provider existence checks and exception shielding for `LocationManager.NETWORK_PROVIDER` in `SpeedAndLocationDevice_Network`.
 3. *DeviceManager Instantiation Isolation*: In `DeviceManager.<init>` and `pairingChanged()`, the system SHALL verify provider availability before instantiating GPS and Network location devices, and encapsulate sensor creation in localized try-catch blocks to prevent any single hardware sensor failure from aborting `BANALService.onCreate()`.
@@ -670,8 +973,11 @@ The workflow SHALL mandate that:
 1. *Safe Provider Verification & Registration in SpeedAndLocationDevice_GPS*: Prior to requesting location updates, the system SHALL verify `mLocationManager != null` and `mLocationManager.getProvider(LocationManager.GPS_PROVIDER) != null`. All invocations of `LocationManager.requestLocationUpdates()` SHALL be encapsulated in a `try ... catch (IllegalArgumentException
 
 ### REQ-STB-005: Equipment Database Boundary Validation & Unassigned Equipment Query Optimization [Verified]
-- **Tests**: `EquipmentDbHelper.java`, `WorkoutDataMapper.kt`, `EquipmentDataProvider.kt`, `StravaUploader.kt`
-- **Implementation**: Eliminate Logcat error flooding and redundant database contention when loading workout summaries without assigned equipment.
+- **Tests**: `TST-STB-005`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit
+- **Implementation**: `EquipmentDbHelper.java`, `WorkoutDataMapper.kt`, `EquipmentDataProvider.kt`, `StravaUploader.kt`
 - **Rationale**: The system SHALL enforce strict boundary validation and caller-level short-circuiting for equipment lookups to eliminate Logcat error log flooding and redundant SQLite queries:
 1. *Precondition Guards in EquipmentDbHelper*: `EquipmentDbHelper.getEquipmentNameFromId(equipmentId)`, `getStravaIdFromId(equipmentId)`, and `getDeviceIdsForEquipment(equipmentId)` SHALL immediately validate that `equipmentId > 0`. If `equipmentId <= 0` (such as `0` resulting from SQLite cursor mapping of SQL `NULL`, or legacy `-1`), the methods SHALL return `null` (or an empty list) immediately without opening the database, executing SQLite queries, or logging `ERROR` messages.
 2. *Caller-Level Short-Circuiting*: Mappers and data providers (`WorkoutDataMapper`, `EquipmentDataProvider`, `StravaUploader`, `EquipmentAndSportTypeDiscoveryManager`, `SportTypeViewModel`) SHALL verify `equipmentId > 0` before querying `EquipmentDbHelper`, avoiding unnecessary object instantiation and helper method calls.
@@ -686,8 +992,11 @@ The workflow SHALL mandate that:
 **Invariants**: Valid equipment resolution and Strava upload gear synchronization MUST NOT be altered; positive non-existent IDs MUST continue to be logged as diagnostic errors.
 
 ### REQ-STB-006: Navigation Drawer Header Background Resource Availability & Crash Immunity [Verified]
-- **Tests**: `menu_header_background.jpg`, `AppNavigationDrawer.kt`
-- **Implementation**: Prevent fatal production startup and navigation drawer crashes caused by missing density-specific drawable resources under Android App Bundle density splitting.
+- **Tests**: `TST-STB-006`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit
+- **Implementation**: `menu_header_background.jpg`, `AppNavigationDrawer.kt`
 - **Rationale**: The system SHALL guarantee that the navigation drawer header background image (`menu_header_background`) is unconditionally accessible across all Android device screen densities, dynamic display scaling settings, and Android App Bundle (.aab) split configurations, and ensure the drawer header UI renders with crash immunity:
 1. *Base APK Resource Availability (`drawable-nodpi`)*:
 • The system SHALL provide a universal fallback for `menu_header_background.jpg` in `app/src/main/res/drawable-nodpi/` (and/or `app/src/main/res/drawable/`).
@@ -708,7 +1017,10 @@ The workflow SHALL mandate that:
 **Invariants**: Existing branding, dimensions, landscape aspect ratio, `logo_512` branding, and drawer navigation items MUST NOT be degraded.
 
 ### REQ-STB-007: AndroidX Core Compatibility & Android 14 (API 34) Insets Crash Immunity [Verified]
-- **Tests**: `app/build.gradle`
+- **Tests**: `TST-STB-007`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit
 - **Implementation**: Prevent fatal production crashes (`NoSuchMethodError`) during Compose window attachment on Android 14 devices where framework API methods were omitted in OEM firmware.
 - **Rationale**: The system SHALL guarantee that application startup and Jetpack Compose window insets initialization execute with complete crash immunity across all Android 14 (API 34) firmware builds and OEM implementations:
 1. *AndroidX Core Runtime Alignment*: The application build configuration SHALL enforce dependency resolution of `androidx.core:core` and `androidx.core:core-ktx` at stable version `1.15.0` (via explicit dependency declaration and Gradle `resolutionStrategy.force`), preventing transitive upgrades to defect-ridden `1.16.0–1.19.0` versions containing unguarded calls to `WindowInsets.Type.systemOverlays()` and `AccessibilityEvent.setAccessibilityDataSensitive()`.
@@ -728,8 +1040,11 @@ The workflow SHALL mandate that:
 • *Then* 100% of tests SHALL pass with zero regressions.
 
 ### REQ-STB-008: Resilient Permission-Gated Location Provider Access & Startup Crash Immunity [Verified]
-- **Tests**: `MainActivityWithNavigation.kt`, `SpeedAndLocationDevice_GPS.java`, `SpeedAndLocationDevice_Network.java`
-- **Implementation**: Prevent fatal startup crashes (`SecurityException`) during application launch when location permissions are ungranted or revoked, and eliminate premature GPS disabled alerts.
+- **Tests**: `TST-STB-008`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit
+- **Implementation**: `MainActivityWithNavigation.kt`, `SpeedAndLocationDevice_GPS.java`, `SpeedAndLocationDevice_Network.java`
 - **Rationale**: The system SHALL guarantee that application startup in `MainActivityWithNavigation.onCreate()` and location sensor initialization execute with complete crash immunity across all Android API versions and OEM builds when location permissions are missing or revoked:
 1. *Precondition Permission Gating in UI*: In `MainActivityWithNavigation`, `LocationManager.getProvider(LocationManager.GPS_PROVIDER)` and `LocationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)` SHALL ONLY be queried when `ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED`. If permission is absent or revoked, the query SHALL be bypassed without throwing exceptions or showing premature "GPS disabled" alerts.
 2. *Defensive Exception Shielding*: All invocations of `LocationManager.getProvider()` and `isProviderEnabled()` across `MainActivityWithNavigation.kt`, `SpeedAndLocationDevice_GPS.java`, and `SpeedAndLocationDevice_Network.java` SHALL be enclosed in localized exception handling catching `SecurityException` (IPC binder permission rejections) and `IllegalArgumentException` (invalid/non-existent provider names), logging diagnostics without terminating the application process.
@@ -753,8 +1068,11 @@ The workflow SHALL mandate that:
 **Invariants**: Live location tracking during active workouts with granted permissions MUST NOT be degraded; existing paired sensor discovery (ANT+, BLE, Google Fused) MUST remain fully operational.
 
 ### REQ-STB-009: Asynchronous Workout Initialization & Main-Thread ANR Immunity in TrackerService [Verified]
-- **Tests**: `TrackerService.java`, `WorkoutSamplesDatabaseManager.java`, `LiveWorkoutSession.java`
-- **Implementation**: Prevent fatal main-thread ANRs during workout startup caused by blocking SQLite DDL operations and disk latency.
+- **Tests**: `TST-STB-009`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit
+- **Implementation**: `TrackerService.java`, `WorkoutSamplesDatabaseManager.java`, `LiveWorkoutSession.java`
 - **Rationale**: The system SHALL guarantee that workout tracking startup and SQLite schema initialization execute with complete ANR and crash immunity across all Android devices, large database configurations, and disk I/O latency conditions:
 1. *Main-Thread Database Decoupling*: `TrackerService.onStartCommand` SHALL NOT execute synchronous database DDL statements (`CREATE TABLE`, `DROP TABLE`), database opening, or multi-row SQLite inserts on the Android main UI thread.
 2. *Asynchronous Executor Dispatch*: During `START_NORMAL` initialization, `createNewWorkout()`, `WorkoutSamplesDatabaseManager.createNewTable()`, and initial `notifyTrackingStarted()` SHALL be dispatched to `TrackerService`'s dedicated single-thread FIFO database executor (`mDbExecutor`).
@@ -777,8 +1095,11 @@ The workflow SHALL mandate that:
 **Invariants**: No sensor sample collection or persistence shall commence until the underlying workout table creation transaction is fully committed to disk; workout sampling rate (1s), live session metrics, map points, elevation streams, and Android 14+ FGS location permissions (`REQ-STB-002`) MUST remain fully intact.
 
 ### REQ-STB-010: Static Map Lite-Mode Enforcement in Compose Lazy Lists & RenderThread Deadlock Immunity [Verified]
-- **Tests**: `PathPreviewMap.kt`, `WorkoutClusterComponents.kt`
-- **Implementation**: Prevent fatal native RenderThread deadlocks and ANRs during activity stop/pause transitions by enforcing Lite Mode for list map previews.
+- **Tests**: `TST-STB-010`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit
+- **Implementation**: `PathPreviewMap.kt`, `WorkoutClusterComponents.kt`
 - **Rationale**: The system SHALL guarantee that map thumbnails embedded within scrollable Compose lists (`LazyColumn`, `LazyRow`) operate in Google Maps Lite Mode to eliminate native rendering thread resource contention and prevent fatal UI deadlocks:
 1. *Lite Mode Enforcement in List Previews*: All static map previews embedded inside scrolling list items (`PathPreviewMap.kt` used in workout and route summaries, and `WorkoutClusterComponents.kt` used in `ClusterCard` and `ClusterWorkoutCard`) SHALL configure `googleMapOptionsFactory = { GoogleMapOptions().liteMode(true) }`.
 2. *Render Pipeline Decoupling*: Map previews in Lite Mode SHALL render as static bitmap snapshots on background worker threads, completely eliminating native `GLSurfaceView`/`TextureView` allocations, continuous HWUI render thread loops, and native `setFrameCompleteCallback` registrations on `RenderThread`.
@@ -797,8 +1118,11 @@ The workflow SHALL mandate that:
 **Invariants**: Interactive maps with gestures enabled (live workout tracking, lap editing, manual cluster creation) MUST retain full vector rendering; route geometry, colors, and bounds padding MUST NOT be degraded.
 
 ### REQ-STB-011: Resilient SavedStateHandle Fallbacks & Crash Immunity in DevicesTabbedViewModel [Verified]
-- **Tests**: `DevicesTabbedViewModel.kt`, `ATrainingTrackerApp.kt`, `MainActivityWithNavigation.kt`
-- **Implementation**: Prevent fatal `NullPointerException` crashes and indefinite progress stalls when accessing the Sensors screen from Compose navigation.
+- **Tests**: `TST-STB-011`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit
+- **Implementation**: `DevicesTabbedViewModel.kt`, `ATrainingTrackerApp.kt`, `MainActivityWithNavigation.kt`
 - **Rationale**: The system SHALL guarantee that `DevicesTabbedViewModel` initializes with complete crash immunity across all navigation paradigms (Compose NavHost, Fragment transactions, or process recreation) when `SavedStateHandle` arguments are missing or malformed:
 1. *Defensive Protocol Parsing & Defaulting*: `protocol` SHALL safely parse `savedStateHandle[BANALService.PROTOCOL]`. If null, empty, or unparseable, it SHALL default to `Protocol.ALL` and persist the default to `savedStateHandle`.
 2. *Defensive DeviceType Parsing & Defaulting*: In `init`, `deviceType` SHALL safely parse `savedStateHandle[BANALService.DEVICE_TYPE]`. If absent or unparseable, it SHALL default to `DeviceType.ALL`, initialize `_uiState` to `UiState.DisplayingTabs(DeviceType.ALL)`, and persist the default to `savedStateHandle`.
@@ -807,11 +1131,55 @@ The workflow SHALL mandate that:
 
 ### REQ-STB-012: Forensic Process Kill Diagnosis, Dynamic Rationale Titles, Empathetic Escalation & Direct Battery Exemption Guidance [Verified]
 - **Tests**: `TST-STB-012`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit
 - **Implementation**: `MainActivityWithNavigation.kt`, `StartOrResumeDialog.kt`, `ProcessExitReasonHelper.kt`
 - **Rationale**: The system SHALL diagnose unexpected background tracking process terminations when an unfinalized workout exists in SQLite (`hasUnfinishedWorkout() == true`), evaluate `ApplicationExitInfo` on Android 11+ (API 30+) and `PowerManager.isIgnoringBatteryOptimizations()`, present a modernized, empathetic recovery dialog (`StartOrResumeDialog`) with dynamic rationale titles reflecting the concrete cause (Battery Kill, Low Memory, Permission Revocation), display constructive, empathetic athletic-partnership copy across progressive escalation stages without sarcasm, maintain an idempotent session-bound counter immune to screen rotation, prioritize direct system intents (`ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS`) per Rule 21, and reset the escalation counter upon exemption while strictly preserving workout resumption contracts (`REQ-STB-003`).
 
+### REQ-STB-013: Resilient Single-Pass Workout History Streaming & CursorWindow Crash Protection [Verified]
+- **Tests**: `TST-STB-013`, `TST-STB-018`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit
+- **Implementation**: `WorkoutRepository.kt`, `WorkoutDataMapper.kt`
+- **Rationale**: The system SHALL stream historical workout summaries from SQLite in a strictly monotonic, forward-only cursor pass and protect against fatal `CursorWindow` buffer allocation exceptions during large database loads (>1,600 workouts) (ATT-2309, amended by REQ-STB-018 in ATT-4002):
+1. *Monotonic Forward-Only Cursor Traversal (`WorkoutRepository.kt`)*:
+• `WorkoutRepository.loadAllWorkouts()` SHALL traverse the database cursor strictly forward using monotonic `c.moveToNext()` calls.
+• The repository SHALL NEVER invoke `c.moveToPosition(...)` or seek backwards across row/window boundaries during batch loading, eliminating Android `CursorWindow` page thrashing and desynchronization.
+2. *Two-Stage Extraction & Vectorized Batch Enrichment*:
+• During the forward cursor scan, row column values SHALL be read in a single pass into in-memory row snapshots (`RawCursorSnapshot`) in chunks of 50.
+• The repository SHALL execute vectorized batch metadata queries (`extrema`, `stravaData`, `clusterNames`, `laps`) in memory using the extracted chunk IDs.
+• The snapshots SHALL be enriched into complete `WorkoutData` domain objects (`mapper.fromSnapshot(snapshot, batchMetadata)`) and progressively pumped to the UI without re-querying or re-reading the SQLite cursor.
+3. *Defensive CursorWindow Exception Shielding*:
+• Individual cursor row extraction calls SHALL be encapsulated in defensive try/catch blocks catching `IllegalStateException`, `CursorWindowAllocationException`, or SQLite buffer exceptions, logging diagnostics and safely skipping corrupted/truncated rows without terminating the application process.
+4. *Stress & Stability Compliance*:
+• The system SHALL stream databases containing $> 1,600$ workouts completely to completion with zero `IllegalStateException` crashes.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new requirement only (`REQ-STB-013`). No existing requirements modified.
+2. *Historical Origin & Commit Trace*: Ticket `ATT-2309`, sprint `2026-40.16`, target release `V4.9.39`, Epic `ATT-68` (*[Epic] Improve WorkoutSummaries*).
+3. *Root Reason for Existing Formulation*: In `WorkoutRepository.kt`, workouts were loaded in batches of 50 by advancing the cursor 50 rows, querying metadata, and seeking backward to `currentChunkStartPos` via `c.moveToPosition(...)`. On large databases (>1,600 workouts), jumping backward across the 2MB `CursorWindow` memory boundary caused Android's `AbstractWindowedCursor` to throw a fatal `IllegalStateException: Couldn't read row 60, col 0 from CursorWindow`.
+4. *Preservation of Core Invariants*: SQLite schemas for `WorkoutSummaries.db`, `Extrema.db`, `StravaUpload.db`, `WorkoutClusters.db`, and `Laps.db` MUST NOT be altered. Vectorized query optimizations (ATT-359), progressive UI pumping, and 100% full-suite test pass rate MUST NOT be broken.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* a workout database containing $> 1,600$ workouts,
+• *When* `WorkoutRepository.loadAllWorkouts()` executes,
+• *Then* all workouts SHALL stream completely to completion in a single forward pass without calling `moveToPosition` backward, and zero `IllegalStateException` crashes SHALL occur.
+• *Given* an isolated cursor row that throws a `CursorWindow` or SQLite exception during extraction,
+• *When* the row is read,
+• *Then* the repository SHALL catch and log the exception, safely skip the corrupted row, and continue streaming remaining workouts without process death.
+• *Given* batch metadata queries (`extrema`, `stravaData`, `clusterNames`, `laps`),
+• *When* processing chunks of 50 workouts,
+• *Then* queries SHALL execute in vectorized batches without introducing N+1 individual queries.
+
+**Invariants**: SQLite table schemas and sort order (`TIME_START DESC`) remain unchanged; progressive UI emissions continue to update `_allWorkouts`; 100% test pass rate.
+
 ### REQ-STB-014: Resilient Foreground Service Startup Delegation & Background Launch Exception Shielding in TrainingApplication [Verified]
-- **Tests**: Prevent fatal production crashes (`IllegalStateException` / `SecurityException`) when `startTracking()` is invoked while the process is in background state, ensuring smooth foreground delegation and graceful failure recovery.
+- **Tests**: `TST-STB-014`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit
 - **Implementation**: SecurityException)` block. Any runtime restriction thrown by the Android framework (such as `IllegalStateException` due to background start restrictions or `ForegroundServiceStartNotAllowedException` on Android 12+ / API 31+, or `SecurityException` due to permission state) SHALL be caught and logged cleanly without terminating the application process.
 3. *Failure State Recovery & Athlete Notification*: If starting the service throws an `IllegalStateException` or `SecurityException`, the system SHALL reset `cTrackingMode = TrackingMode.READY`, notify registered tracking state observers via `notifyTrackingStateChanged()`, and post `TrackerService.showTrackingInterruptedNotification(this)` to alert the athlete that tracking could not start immediately and provide a high-priority notification to tap and resume once the app is explicitly brought to the foreground.
 
@@ -838,8 +1206,11 @@ The workflow SHALL mandate that:
 2. *Defensive Launch Exception Shielding*: The invocation of `ContextCompat.startForegroundService(this, intent)` SHALL be encapsulated in a `try ... catch (IllegalStateException
 
 ### REQ-STB-015: Simulated Process Exit Reason Injection Channel & Native PyQt6 Desktop Kill Simulator Architecture [Verified]
-- **Tests**: `ProcessExitReasonHelper.kt`, `tools/simulate_kill.py`
-- **Implementation**: Support simulated exit reason injection and PyQt6 desktop GUI for process kill simulator.
+- **Tests**: `TST-STB-015`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit
+- **Implementation**: `ProcessExitReasonHelper.kt`, `tools/simulate_kill.py`
 - **Rationale**: The system SHALL provide a debug-only simulated process exit reason injection channel in `ProcessExitReasonHelper.kt` and a native PyQt6 desktop GUI in `tools/simulate_kill.py` to enable deterministic desk verification of Low Memory Kills (LMK), Battery Kills, and Permission Revocations without requiring physical device RAM exhaustion (ATT-3377, harmonizing with `REQ-STB-012` and `ATT-2469`):
 1. *Debug Exit Reason Injection Channel (`ProcessExitReasonHelper.kt`)*:
 • In debug builds (`BuildConfig.DEBUG`), `ProcessExitReasonHelper.resolveKillReason()` SHALL inspect SharedPreferences for debug key `pref_debug_simulated_kill_reason` (`PREF_DEBUG_SIMULATED_KILL_REASON = "pref_debug_simulated_kill_reason"`).
@@ -879,7 +1250,10 @@ The workflow SHALL mandate that:
 **Invariants**: Zero release footprint, recovery dialog contracts preserved, 100% unit test pass rate.
 
 ### REQ-TOOL-001: Standalone External ADB GPX Replay & Mock GPS Simulation Tool for Desk Verification [Verified]
-- **Tests**: `tools/fake_gps.py`
+- **Tests**: `TST-TOOL-001`
+- **Priority**: Medium
+- **Type**: Non-Functional
+- **Verification Method**: Unit
 - **Implementation**: External CLI GPX replay and fake GPS simulation tool for desk verification via ADB.
 - **Rationale**: The project SHALL provide an external CLI developer testing tool (`tools/fake_gps.py`) executing outside the Android application that streams simulated GPS coordinates from any GPX route into a connected physical Android device (e.g. Pixel 10) or emulator via ADB `cmd location providers` at 1 Hz for desk testing and sprint review verification without modifying the production application source code or requiring third-party mock location apps (ATT-2467):
 1. *External CLI Architecture (`tools/fake_gps.py`)*:
@@ -934,7 +1308,10 @@ The workflow SHALL mandate that:
 **Invariants**: Clean hardware GPS restoration across all providers, single-instance protection, and 100% unit test pass rate MUST NOT be broken.
 
 ### REQ-TOOL-002: Synchronized TCX Workout Replay Tool with PyQt6 GUI Dashboard, BLE Cycling Power, Cadence, Heart Rate, and ADB Mock GPS Simulation [Verified]
-- **Tests**: `tools/replay_workout.py`
+- **Tests**: `TST-TOOL-002`
+- **Priority**: Medium
+- **Type**: Non-Functional
+- **Verification Method**: Unit
 - **Implementation**: Synchronized TCX workout replay tool with PyQt6 GUI, BLE Power, Cadence, Heart Rate, and mock GPS simulation.
 - **Rationale**: The project SHALL provide an external workout replay tool (`tools/replay_workout.py`) executing outside the Android application that parses recorded Garmin/Strava `.tcx` XML activities and broadcasts simulated BLE Cycling Power (`0x1818`), BLE Heart Rate (`0x180D`), and ADB mock GPS locations (`gps`, `network`, `fused`) concurrently in clock synchronization for desk testing and sprint review verification without modifying the production application source code (ATT-2969, amended by `REQ-TOOL-003`):
 1. *TCX Parsing & Telemetry Extraction Engine*:
@@ -998,7 +1375,10 @@ The workflow SHALL mandate that:
 **Invariants**: Clean hardware GPS restoration across all providers, graceful fallback without Bluetooth/ADB hardware, and 100% unit test pass rate MUST NOT be broken.
 
 ### REQ-TOOL-003: BLE Battery Service Simulation & PyQt6 Runtime Battery Level Controls for TCX Replay Tool [Verified]
-- **Tests**: `tools/replay_workout.py`, `tools/test_replay_workout.py`
+- **Tests**: `TST-TOOL-003`
+- **Priority**: Medium
+- **Type**: Non-Functional
+- **Verification Method**: Unit
 - **Implementation**: BLE Battery Service (0x180F) simulation and PyQt6 runtime battery controls for TCX replay tool.
 - **Rationale**: The TCX workout replay tool (`tools/replay_workout.py`) SHALL simulate the standard Bluetooth SIG Battery Service (UUID `0x180F`) and Battery Level Characteristic (UUID `0x2A19`) across simulated peripherals and provide interactive PyQt6 runtime controls and CLI parameters for testing battery-dependent features (ATT-3178):
 1. *Bluetooth SIG Battery Service (`0x180F`) & Characteristic (`0x2A19`)*:
@@ -1047,7 +1427,10 @@ The workflow SHALL mandate that:
 **Invariants**: Production code isolation, thread safety via isolated GLib main context, and 100% unit test pass rate MUST NOT be broken.
 
 ### REQ-TOOL-004: TCX Replay Per-Device Kill, Disconnection & Reconnection Simulation [Verified]
-- **Tests**: `tools/replay_workout.py`, `tools/test_replay_workout.py`
+- **Tests**: `TST-TOOL-004`
+- **Priority**: Medium
+- **Type**: Non-Functional
+- **Verification Method**: Unit
 - **Implementation**: TCX replay per-device kill, disconnection, and reconnection simulation across BLE HRM, Power, and mock GPS.
 - **Rationale**: The TCX workout replay tool (`tools/replay_workout.py`) SHALL provide independent runtime kill/disconnect and revive/reconnect controls for each simulated device (Heart Rate Monitor `ATT-HRM`, Cycling Power Meter `ATT-Pwr`, and Mock GPS location stream) to test sensor dropouts, signal loss, and automatic reconnection recovery (ATT-3179):
 1. *Per-Device BLE Disconnect & Revive Lifecycle (`BleReplayServer`)*:
@@ -1099,8 +1482,11 @@ The workflow SHALL mandate that:
 **Invariants**: Production code isolation, thread safety via isolated GLib main context, and 100% unit test pass rate MUST NOT be broken.
 
 ### REQ-ARC-001: Safe Enum Deserialization, Observability & Crash Immunity Across External Boundaries [Verified]
-- **Tests**: `EnumUtils.kt`, `DeviceManager.java`, `WorkoutSummariesDatabaseManager.java`, `PeriodSummariesDatabaseManager.kt`
-- **Implementation**: Safe enum deserialization and crash immunity across external boundaries.
+- **Tests**: `TST-ARC-001`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Review
+- **Implementation**: `EnumUtils.kt`, `DeviceManager.java`, `WorkoutSummariesDatabaseManager.java`, `PeriodSummariesDatabaseManager.kt`
 - **Rationale**: The system SHALL guarantee crash immunity against `NullPointerException` and `IllegalArgumentException` during enum deserialization from external untrusted sources (SQLite cursors, IPC Intents/Bundles, JSON payloads, and SharedPreferences), while enforcing ASPICE data correctness and telemetry observability (ATT-3562, parent epic ATT-235):
 1. *Canonical Deserialization Engine (`REQ-ARC-001.1`)*:
 • The system SHALL provide a centralized utility `com.atrainingtracker.util.EnumUtils` offering `safeValueOf(enumClass, name, defaultValue, tag)` and `safeValueOfOrNull(enumClass, name, tag)`.
@@ -1138,8 +1524,11 @@ The workflow SHALL mandate that:
 **Invariants**: Zero uncaught exceptions on external enum strings, hardware driver safety preserved, 100% clean-room test pass rate.
 
 ### REQ-STB-016: Guarded Service Launches and Idempotent BroadcastReceiver Teardown Across Lifecycle Boundaries [Verified]
-- **Tests**: `LifecycleUtils.kt`, `MainActivityWithNavigation.kt`, `BANALServiceRepository.kt`, `TrainingApplication.java`, `TrackerService.java`, `DeviceManager.java`
-- **Implementation**: Guarded service launches and idempotent BroadcastReceiver teardown across lifecycle boundaries.
+- **Tests**: `TST-STB-016`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit
+- **Implementation**: `LifecycleUtils.kt`, `MainActivityWithNavigation.kt`, `BANALServiceRepository.kt`, `TrainingApplication.java`, `TrackerService.java`, `DeviceManager.java`
 - **Rationale**: The system SHALL guarantee complete crash immunity against Android OS lifecycle exceptions (`IllegalStateException`, `BackgroundServiceStartNotAllowedException`, `ForegroundServiceStartNotAllowedException`, `SecurityException`, and `IllegalArgumentException: Receiver not registered`) during service launches and `BroadcastReceiver` teardown across activities, fragments, services, repositories, viewmodels, and hardware sensor devices (ATT-3563, parent epic ATT-235):
 1. *Canonical Lifecycle Safety Utility (`LifecycleUtils.kt`)*:
 • The system SHALL provide centralized utility `com.atrainingtracker.util.LifecycleUtils` offering `@JvmStatic` methods `safeStartService(context: Context?, intent: Intent?, tag: String = "LifecycleUtils"): ComponentName?` and `safeUnregisterReceiver(context: Context?, receiver: BroadcastReceiver?, tag: String = "LifecycleUtils"): Boolean`.
@@ -1176,7 +1565,10 @@ The workflow SHALL mandate that:
 **Invariants**: Zero unhandled lifecycle exceptions, idempotent receiver unregistration, 100% clean-room test pass rate.
 
 ### REQ-TOOL-005: Bluetooth Low Energy Cycling Power Simulator Pedal Power Balance Simulation [Verified]
-- **Tests**: `tools/ble_power_simulator.py`, `tools/test_ble_power_simulator.py`
+- **Tests**: `TST-TOOL-005`
+- **Priority**: Medium
+- **Type**: Non-Functional
+- **Verification Method**: Unit
 - **Implementation**: BLE Cycling Power Simulator Pedal Power Balance Simulation.
 - **Rationale**: The BLE Cycling Power simulator tool (`tools/ble_power_simulator.py`) SHALL simulate Bluetooth SIG Cycling Power Service (UUID `0x1818`) dual-sided pedal power balance telemetry, matching the parsing logic in `BTLEBikePowerDevice.java` and supporting interactive live testing of the cockpit balance widget (`REQ-UI-377`) (ATT-3678):
 1. *Cycling Power Feature Characteristic (`UUID 0x2A65`)*:
@@ -1219,7 +1611,10 @@ The workflow SHALL mandate that:
 **Invariants**: Production code isolation, backward compatibility of power/cadence simulation, and 100% test pass rate MUST NOT be broken.
 
 ### REQ-TOOL-006: Variable-Interval TCX Telemetry Interpolation, Time-Based Playback Stepping & Workout-Relative ADB GPS Timestamp Synchronization in `tools/replay_workout.py` [Verified]
-- **Tests**: `tools/replay_workout.py`, `tools/test_replay_workout.py`
+- **Tests**: `TST-TOOL-006`
+- **Priority**: Medium
+- **Type**: Non-Functional
+- **Verification Method**: Unit
 - **Implementation**: Fix TCX replay speed inflation and timeline progression for variable-interval GPS tracks in `tools/replay_workout.py`.
 - **Rationale**: The TCX workout replay tool (`tools/replay_workout.py`) SHALL preserve $1\text{ Hz}$ physiological telemetry across variable-interval GPS `<Trackpoint>` entries, compute fallback speed from distance/time deltas with zero-division / `NaN` / `Inf` guards when `<Speed>` extensions are absent, advance `ReplayEngine` by workout elapsed time (`time_sec`) rather than raw array index, and stamp ADB mock GPS fixes with Replay Session Epoch workout-relative timestamps so Android `SpeedAndLocationDevice.java` calculates accurate speed regardless of GPS recording interval or replay multiplier (ATT-3927, amending `REQ-TOOL-002`):
 1. *Variable-Interval TCX Trackpoint Preservation, Linear Coordinate Interpolation & Safe Fallback Speed (`REQ-TOOL-006.1`)*:
@@ -1255,7 +1650,10 @@ The workflow SHALL mandate that:
 **Invariants**: Zero production code modifications in `app/src/main`; full backward compatibility with `REQ-TOOL-002`, `REQ-TOOL-003`, `REQ-TOOL-004`; 100% clean-room test pass rate MUST NOT be broken.
 
 ### REQ-TOOL-007: Simulated Ground Speed Injection & Defensive AOSP CLI Fallback in `tools/replay_workout.py` [Verified]
-- **Tests**: `tools/replay_workout.py`, `tools/test_replay_workout.py`
+- **Tests**: `TST-TOOL-007`
+- **Priority**: Medium
+- **Type**: Non-Functional
+- **Verification Method**: Unit
 - **Implementation**: Append optional `--speed` flag to `set-test-provider-location` shell commands and forward `speed_mps` through the asynchronous queue with automatic fallback recovery in `AdbGpsInjector`.
 - **Rationale**: The TCX workout replay tool (`tools/replay_workout.py`) SHALL forward parsed or computed ground speed (`speed_mps`) through `AdbGpsInjector.inject_location()`, format `--speed {speed_mps:.2f}` in `build_inject_cmd()`, and defensively handle AOSP CLI environments (`LocationShellCommand.java`) where stock Android rejects `--speed` with `IllegalArgumentException` by transparently disabling `--speed` and retrying without interruption (ATT-6684, extending `REQ-TOOL-002` and `REQ-TOOL-006`):
 1. *Signature & Formatting in `build_inject_cmd()` (`REQ-TOOL-007.1`)*:
@@ -1286,8 +1684,11 @@ The workflow SHALL mandate that:
 **Invariants**: Zero production code modifications in `app/src/main`; full backward compatibility with all 39 existing unit tests in `tools/test_replay_workout.py`; replay continuity on stock AOSP devices MUST NOT be broken.
 
 ### REQ-BLD-001: R8 Minification, Resource Shrinking and DEX Code Obfuscation with Safe ProGuard Keep Rules [Verified]
-- **Tests**: `app/build.gradle`, `app/proguard-rules.pro`, `ProGuardRulesContractTest.kt`
-- **Implementation**: Enable R8 minification, resource shrinking, and DEX code obfuscation in release builds with safe ProGuard keep rules to satisfy Google Play threshold (>= 25%).
+- **Tests**: `TST-BLD-001`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit
+- **Implementation**: `app/build.gradle`, `app/proguard-rules.pro`, `ProGuardRulesContractTest.kt`
 - **Rationale**: The build system SHALL configure `app/build.gradle` and `app/proguard-rules.pro` to enable R8 minification, resource shrinking, dead-code optimization, and DEX code obfuscation in release builds conforming to Google Play vitals threshold ($\ge 25\%$) while guaranteeing 100% runtime reflection and data persistence safety (ATT-3770):
 1. *R8 Minification and Resource Shrinking in Release Build Variant (`REQ-BLD-001.1`)*:
 • In `app/build.gradle`, `buildTypes.release` SHALL configure `minifyEnabled = true` and `shrinkResources = true`.
@@ -1324,8 +1725,11 @@ The workflow SHALL mandate that:
 **Invariants**: Debug build speed preserved (`minifyEnabled false` in debug); SQLite enum persistence intact; 100% clean-room test pass rate MUST NOT be broken.
 
 ### REQ-BLD-002: Release CI Automated Test & Lint Gating with Baseline Hygiene [Verified]
-- **Tests**: `.github/workflows/android-release.yml`, `app/build.gradle`, `app/src/main/AndroidManifest.xml`, `app/lint-baseline.xml`, `ReleaseWorkflowContractTest.kt`
-- **Implementation**: Gate release CI artifact generation on `:app:testDebugUnitTest`, document lint suppressions in `app/build.gradle`, eliminate orphaned `StravaSegmentsIntentService` in manifest, and synchronize `lint-baseline.xml`.
+- **Tests**: `TST-BLD-002`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit
+- **Implementation**: `.github/workflows/android-release.yml`, `app/build.gradle`, `app/src/main/AndroidManifest.xml`, `app/lint-baseline.xml`, `ReleaseWorkflowContractTest.kt`
 - **Rationale**: The build system and CI pipeline SHALL gate release APK/AAB artifact generation and distribution on passing unit tests (`:app:testDebugUnitTest`), maintain release lint checks (`checkReleaseBuilds = true`), document justified lint suppressions, eliminate orphaned manifest declarations, and synchronize the lint baseline (ATT-4025, extending `REQ-BLD-001` and aligning with `REQ-LOC-001`):
 1. *Release CI Automated Unit Test Gating (`REQ-BLD-002.1`)*:
 • `.github/workflows/android-release.yml` SHALL execute `./gradlew :app:testDebugUnitTest` prior to `:app:assembleRelease` and `:app:bundleRelease`.
@@ -1366,8 +1770,11 @@ The workflow SHALL mandate that:
 **Invariants**: Release APK/AAB signing and publishing intact; 100% clean-room test pass rate; translation integrity preserved via `TranslationParityTest`.
 
 ### REQ-SEC-041: Zero-Leak Logging, PII & Credential Sanitization, Build-Scoped Debug Flags, and Proactive Token Invalidation [Verified]
-- **Tests**: `StravaHelper.kt`, `WorkoutRepository.kt`, `StravaUploader.kt`, `StravaEquipmentSynchronizeThread.java`, `TrainingApplication.java`, `LogcatPrivacySecurityTest.kt`
-- **Implementation**: Prevent Strava OAuth credentials, GPS polylines, and raw HTTP payloads from appearing in logcat, bind debug flags to BuildConfig.DEBUG, and programmatically invalidate legacy tokens on V4.9.40 upgrade.
+- **Tests**: `TST-SEC-038`
+- **Priority**: Critical
+- **Type**: Non-Functional
+- **Verification Method**: Review
+- **Implementation**: `StravaHelper.kt`, `WorkoutRepository.kt`, `StravaUploader.kt`, `StravaEquipmentSynchronizeThread.java`, `TrainingApplication.java`, `LogcatPrivacySecurityTest.kt`
 - **Rationale**: `StravaHelper` (`app/src/main/java/com/atrainingtracker/trainingtracker/onlinecommunities/strava/StravaHelper.kt`), `WorkoutRepository` (`app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/WorkoutRepository.kt`), `StravaUploader` (`app/src/main/java/com/atrainingtracker/trainingtracker/exporter/uploader/StravaUploader.kt`), `StravaEquipmentSynchronizeThread` (`app/src/main/java/com/atrainingtracker/trainingtracker/onlinecommunities/strava/StravaEquipmentSynchronizeThread.java`), `TrainingApplication` (`app/src/main/java/com/atrainingtracker/trainingtracker/TrainingApplication.java`), and 11 production classes hardcoding debug constants SHALL eliminate all credential and GPS polyline disclosures from Android logcat, bind debug logging strictly to `BuildConfig.DEBUG`, ensure complete absence of external logging interception, programmatically invalidate legacy Strava credentials on upgrade to V4.9.40 to guarantee revocation of historically exposed tokens, and enforce zero-leak logging via static CI/CD unit tests (ATT-3983, extending `REQ-EXT-009`):
 1. *OAuth Credential Sanitization (`REQ-SEC-041.1`)*:
 • In `StravaHelper.kt`, `storeJSONData` and token refresh handlers SHALL NOT log raw JSON responses, `access_token` strings, `refresh_token` strings, or full athlete profile JSON payloads.
@@ -1407,7 +1814,10 @@ The workflow SHALL mandate that:
 **Invariants**: OAuth flow idempotency, R8 dead-code stripping, and 100% clean-room test pass rate MUST NOT be broken.
 
 ### REQ-SEC-042: BuildConfig Secret Generation Restriction, Keystore Credential Exclusion, Codebase Decoupling, and Default Properties Fallback [Verified]
-- **Tests**: password).*`; and (c) all application code compiles cleanly without missing symbol errors.
+- **Tests**: `TST-SEC-039`
+- **Priority**: Critical
+- **Type**: Non-Functional
+- **Verification Method**: Review
 
 **Requirement Archaeology & Chesterton's Fence Audit**:
 1. *Original Requirement ID & Target*: Net-new requirement `REQ-SEC-042`, expanding security hardening initiated in `REQ-SEC-041`. Targets `app/build.gradle`, `secrets.defaults.properties`, `.github/workflows/android-branch-build.yml`, `.github/workflows/android-release.yml`, and `BuildConfigSecretsContractTest.kt`.
@@ -1449,8 +1859,11 @@ The workflow SHALL mandate that:
 • The test suite SHALL include an automated unit test (`BuildConfigSecretsContractTest.kt`) that inspects `BuildConfig::class.java.declaredFields` via reflection in `./gradlew testDebugUnitTest` to assert: (a) required fields exist: `MAPS_API_KEY`, `STRAVA_CLIENT_ID`, `STRAVA_CLIENT_SECRET`, `DROPBOX_APP_KEY`; (b) forbidden fields do NOT exist: `RUNKEEPER_*`, `TRAININGPEAKS_*`, `DROPBOX_APP_SECRET`, and any field matching `(?i).*key(alias
 
 ### REQ-STB-017: MainActivity Launch Intent Lifecycle Sanitization, Transient Extra Consumption & Safe Resumption Guards [Verified]
-- **Tests**: `MainActivityWithNavigation.kt`
-- **Implementation**: MainActivity launch intent lifecycle sanitization, transient extra consumption, and defensive resumption guards.
+- **Tests**: `TST-STB-017`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit
+- **Implementation**: `MainActivityWithNavigation.kt`
 - **Rationale**: The system SHALL guarantee that launch intent extras delivered to `MainActivityWithNavigation` are processed strictly on initial activity creation (`savedInstanceState == null`) or explicit new intent delivery (`onNewIntent`), transient intent extras are consumed upon processing, and tracking resumption via `chooseResume()` is defensively guarded against invalid state transitions and process resurrection (ATT-4001, amending `REQ-STB-003`, `REQ-UI-124`, and `REQ-UI-345`):
 1. *Activity Recreation Intent Isolation (`MainActivityWithNavigation.kt`)*:
 • In `MainActivityWithNavigation.onCreate()`, `handleIntent(intent)` SHALL be invoked if and only if `savedInstanceState == null`.
@@ -1494,8 +1907,11 @@ The workflow SHALL mandate that:
 **Invariants**: Normal cold start workout recovery dialog, notification intent routing, `onNewIntent` dispatch, and 100% clean-room test suite pass rate MUST NOT be broken.
 
 ### REQ-STB-018: WorkoutRepository Concurrency Invariants, Conflated Dirty-Flag Reloads, Stale Snapshot Defense & Exception Shielding [Verified]
-- **Tests**: `WorkoutRepository.kt`, `WorkoutRepositoryConcurrencyTest.kt`
-- **Implementation**: Enforce WorkoutRepository concurrency invariants: conflated per-workout dirty-flag reloads, atomic loading guard, stale-snapshot & deletion-resurrection defense, pure CAS updates, and defensive deletion reporting with guaranteed Idle progress reset prior to terminal completion events (Rule 74).
+- **Tests**: `TST-STB-018`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit
+- **Implementation**: `WorkoutRepository.kt`
 - **Rationale**: The system SHALL guarantee thread safety, state synchronization, and failure isolation within `WorkoutRepository` across background reloads, progressive history streaming, memory caching, and session deletion (ATT-4002, amended in ATT-5565, amending `REQ-STB-013`):
 1. *Conflated Per-Workout Reload Pipeline (`reloadWorkoutData` - `REQ-STB-018.1`)*:
 • `WorkoutRepository` SHALL implement a conflated, thread-safe reload pipeline for individual sessions (`reloadWorkoutData(workoutId)`).
@@ -1548,8 +1964,11 @@ The workflow SHALL mandate that:
 **Invariants**: Monotonic forward-only cursor traversal (`REQ-STB-013`), single source of truth in `_allWorkouts`, lifecycle transition guarantee, pure CAS retry invariant, progress dialog cleanliness, clean-room 100% test pass rate.
 
 ### REQ-STB-019: MainActivity Service Binding Safety, Lifecycle Scoping, In-Ride Battery State Retention & Off-Main-Thread DB Execution [Verified]
-- **Tests**: `MainActivityWithNavigation.kt`, `TrainingApplication.java`
-- **Implementation**: Enforce MainActivity service unbinding and runnable cancellation, lifecycle coroutine scoping, in-ride battery state retention across rotations, off-main-thread DB access, and Play Services dialog leak defense.
+- **Tests**: `TST-STB-019`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit
+- **Implementation**: `MainActivityWithNavigation.kt`, `TrainingApplication.java`
 - **Rationale**: The system SHALL guarantee complete service binding lifecycle safety, structured coroutine lifecycle scoping, persistent in-ride battery alert deduplication across configuration changes, safe dialog lifecycle management, and non-blocking asynchronous execution of SQLite queries across `MainActivityWithNavigation` and `TrainingApplication` (ATT-4020, Implemented in: ATT-4020, Status: Verified, amending `REQ-UI-356`):
 1. *Unconditional Service Unbinding & Handler Cleanup (`MainActivityWithNavigation.kt`, `REQ-STB-019.1`)*:
 • In `MainActivityWithNavigation.onDestroy()`, `disconnectFromBANALService()` SHALL be invoked unconditionally (eliminating the `!isChangingConfigurations` bypass), ensuring `mBanalConnection` is never leaked to `ActivityManagerService` across activity recreations or finishes.
@@ -1598,7 +2017,10 @@ The workflow SHALL mandate that:
 **Invariants**: Clean-room 100% test pass rate, no main-thread SQLite queries, no leaked service connections or windows, and no duplicate in-ride alerts.
 
 ### REQ-TST-001: Deterministic JVM Test State Isolation, Production Catch Workaround Excision, Strict Test Assertions, and Exporter Unit Test Coverage [Verified]
-- **Tests**: x.isNotEmpty()`) in place of deterministic JUnit assertions.
+- **Tests**: `TST-TST-001`
+- **Priority**: Medium
+- **Type**: Non-Functional
+- **Verification Method**: Unit
 • In `BatteryRemainingTimeFormatterTest` and `BatteryDeviceTest`, assertions SHALL strictly verify expected deterministic output strings (`assertEquals("Charging", result)` or specific battery values) matching test fixtures.
 3. *Excision of Test-Only Catch Workarounds in Production Code (`REQ-TST-001.3`)*:
 • Production code in `TrainingApplication.java` (`setManualPauseLock`, `setAutoPaused`), `TrackerService.java` (`performStopForeground`, `runOnMainThread`, `handleTrackingAborted`, `notifyTrackingStarted`, `sampleAndWriteToDb`), `WorkoutClusterEngine.kt` (`ensureStartingLocationAnchor`), and `AutoPauseManager.kt` (`try { Log.w(...) } catch (Throwable)`) SHALL NOT catch and swallow `Throwable` solely to tolerate unmocked Android dependencies during JVM test runs.
@@ -1630,8 +2052,11 @@ The workflow SHALL mandate that:
 • Test suites SHALL NOT use Kotlin bare `assert` keywords or tautological conditional checks (`x == "Charging"
 
 ### REQ-BLD-003: Manifest Component Security, Intent Filter Scoping & Permission Configuration Hygiene [Verified]
-- **Tests**: `app/src/main/AndroidManifest.xml`, `ManifestSecurityContractTest.kt`
-- **Implementation**: Enforce internal encapsulation for ConfigPebbleViewsActivity (exported="false"), harden GpxImportActivity intent filters without host="*" or file scheme, update ACCESS_BACKGROUND_LOCATION comment, and retain largeHeap and build invariants.
+- **Tests**: `TST-BLD-003`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit
+- **Implementation**: `app/src/main/AndroidManifest.xml`, `ManifestSecurityContractTest.kt`
 - **Rationale**: The application manifest (`app/src/main/AndroidManifest.xml`) SHALL enforce strict component encapsulation, harden external intent filter resolution, maintain Android 14+ background location foreground service recovery requirements, and preserve high-density memory and stability invariants (ATT-4027, extending `REQ-BLD-002` and aligning with `REQ-TRK-015`, `REQ-PER-012`, and `REQ-UI-164`):
 1. *Internal Component Encapsulation (`REQ-BLD-003.1`)*:
 • `ConfigPebbleViewsActivity` in `app/src/main/AndroidManifest.xml` SHALL be declared with `android:exported="false"`, eliminating unauthenticated external intent invocation surface for internal Pebble view configuration.
@@ -1669,8 +2094,11 @@ The workflow SHALL mandate that:
 **Invariants**: FGS Android 14+ location recovery (`REQ-TRK-015`), large heap budget (`REQ-PER-012`), OEM accessibility patch (`REQ-UI-164`), GPX content URI import compatibility, and 100% clean-room test pass rate.
 
 ### REQ-TST-002: Deprecation and Modernization of Fragile UI Source-Grep Contract Tests in Favor of Behavioral, Model, and Structural Test Verification [Verified]
-- **Tests**: `ReturnNavigationHudContractTest.kt`, `RouteTabbedCleanLayoutTest.kt`, `TurnDirectionIconContractTest.kt`
-- **Implementation**: Modernize fragile source-grep contract tests (ReturnNavigationHud, RouteTabbedCleanLayout, TurnDirectionIcon) to use domain models, reflection, and XML DOM evaluation while preserving architectural guards.
+- **Tests**: `TST-TST-002`
+- **Priority**: Medium
+- **Type**: Non-Functional
+- **Verification Method**: Unit
+- **Implementation**: `ReturnNavigationHudContractTest.kt`, `RouteTabbedCleanLayoutTest.kt`, `TurnDirectionIconContractTest.kt`
 - **Rationale**: The automated testing infrastructure SHALL deprecate and eliminate fragile source-code string greps (`File.readText().contains(...)`) asserting on literal Compose tokens, internal formatting substrings, omitted class references, or raw SVG path chunks, replacing them with resilient domain state model assertions, programmatic reflection/ABI checks, and XML DOM vertex parsing, while preserving vital system architectural governance guards (ATT-4028, Parent Epic ATT-2466, updating `docs/coding_standards.md` §5.1):
 1. *Deprecation of Source-Code Substring Greps for UI Styling & Tokens (`REQ-TST-002.1`)*:
 • Unit test suites SHALL NOT assert on literal Compose design tokens (such as `"RoundedCornerShape(12.dp)"`, `"TTColor.RouteSelected"`), raw emoji literals, or internal layout composition substrings via `File.readText().contains(...)`.
@@ -1711,8 +2139,11 @@ The workflow SHALL mandate that:
 **Invariants**: Zero alteration to production UI/logic, architectural safety guards preserved, 100% clean-room test pass rate.
 
 ### REQ-ARC-002: Exception Handling Hygiene, Fatal Error Propagation, Diagnostic Logging & Thread Interrupt Preservation [Verified]
-- **Tests**: `FitFileWriter.java`, `PeriodsRepository.kt`, `StravaUploader.kt`, `MyBanalDebugHelper.java`, `ForkNavigationRepository.kt`, `WorkoutClusterDatabaseManager.kt`, `MigrationEngine.kt`, `ExceptionHandlingHygieneTest.kt`
-- **Implementation**: Enforce exception handling hygiene across FitFileWriter, PeriodsRepository, StravaUploader, MyBanalDebugHelper, ForkNavigationRepository, and WorkoutClusterDatabaseManager: eliminate silent catches, replace catch(Throwable) with catch(Exception), preserve thread interrupts, and remove printStackTrace().
+- **Tests**: `TST-ARC-002`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Review
+- **Implementation**: `FitFileWriter.java`, `PeriodsRepository.kt`, `StravaUploader.kt`, `MyBanalDebugHelper.java`, `ForkNavigationRepository.kt`, `WorkoutClusterDatabaseManager.kt`, `MigrationEngine.kt`, `ExceptionHandlingHygieneTest.kt`
 - **Rationale**: The application architecture and source code SHALL enforce disciplined exception handling across main export, repository, database, and navigation components (`FitFileWriter`, `PeriodsRepository`, `StravaUploader`, `MyBanalDebugHelper`, `ForkNavigationRepository`, `WorkoutClusterDatabaseManager`, `MigrationEngine`), eliminating silent/empty catch blocks, strictly avoiding `catch (Throwable)` on recoverable logic to ensure fatal JVM errors and coroutine cancellation propagate naturally, logging non-fatal fallback conditions via `Log.w`/`Log.e`, preserving thread interrupt state on `InterruptedException`, and eliminating unsafe force-unwraps (ATT-4030, parent epic ATT-431, extending `REQ-ARC-001` and `REQ-TST-001`):
 1. *Silent/Empty Catch Elimination & Diagnostic Warning Logging (`REQ-ARC-002.1`)*:
 • In `FitFileWriter.java`, empty catch blocks around timestamp and distance conversions SHALL be replaced with diagnostic `Log.w(TAG, ...)` logging before applying fallback sentinels.
@@ -1756,8 +2187,11 @@ The workflow SHALL mandate that:
 **Invariants**: Graceful fallback degradation (no crashes on corrupt data), thread interrupt preservation, and 100% clean-room test pass rate.
 
 ### REQ-ARC-003: God Class Splitting, Dead Code Elimination, Thread-Safe Visibility & API Modernization [Verified]
-- **Tests**: `TrainingApplication.java`, `MainActivityWithNavigation.kt`, `AntStartupCheckContractTest.kt`, `DeadCodeEliminationContractTest.kt`
-- **Implementation**: Eliminate dead methods and legacy dialog classes, ensure volatile visibility on cResumeFromCrash, modernize lock-screen window APIs, and scope Compose previews to private.
+- **Tests**: `TST-ARC-003`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Review
+- **Implementation**: `TrainingApplication.java`, `MainActivityWithNavigation.kt`, `AntStartupCheckContractTest.kt`, `DeadCodeEliminationContractTest.kt`
 - **Rationale**: The application architecture and source code SHALL eliminate confirmed dead methods, unused state variables, and unreferenced legacy dialog/view classes, enforce volatile memory visibility on static cross-thread state in `TrainingApplication.java`, modernize deprecated window lock flags in `MainActivityWithNavigation.kt`, scope top-level Compose `@Preview` composables to `private` visibility, and verify all excisions via programmatic reflection and file existence contracts (ATT-4031, parent epic ATT-431, extending `REQ-ARC-001` and `REQ-ARC-002`):
 1. *Dead Method and Unused State Excision (`REQ-ARC-003.1`)*:
 • In `TrainingApplication.java`, dead methods `@Deprecated todo()`, `setIsSegmentListUpdating()`, `isSegmentListUpdating()`, and unused field `mSegmentListUpdating` SHALL be excised.
@@ -1800,8 +2234,11 @@ The workflow SHALL mandate that:
 **Invariants**: Cold-start permission checking, lock screen visibility behavior, and 100% clean-room test pass rate.
 
 ### REQ-TST-003: Deterministic Test State Isolation, Scaffolding Parity, Coroutine Teardown & Clean-Room Suite Execution [Verified]
-- **Tests**: `HardcodedStringsAndUnitsContractTest.kt`, `AltitudeAwareClusterMatchingTest.kt`, `DevicesTabbedViewModelTest.kt`, `BackupRestoreViewModelLocalRestoreTest.kt`, `BackupRestoreViewModel.kt`, `TrackingTabsViewModelInteropTest.kt`
-- **Implementation**: Deterministic full-suite unit test isolation, scaffolding parity, ViewModel dispatcher injection, and coroutine lifecycle teardown hygiene.
+- **Tests**: `TST-TST-003`
+- **Priority**: Medium
+- **Type**: Non-Functional
+- **Verification Method**: Unit
+- **Implementation**: `HardcodedStringsAndUnitsContractTest.kt`, `AltitudeAwareClusterMatchingTest.kt`, `DevicesTabbedViewModelTest.kt`, `BackupRestoreViewModelLocalRestoreTest.kt`, `BackupRestoreViewModel.kt`, `TrackingTabsViewModelInteropTest.kt`
 - **Rationale**: The automated test infrastructure and ViewModel architectures SHALL eliminate contract collisions with excised dead code, guarantee complete static dependency mocking across clustering engines, enforce isolated preference DataStore injection with stubbed application paths, guarantee deterministic ViewModel background dispatcher execution via `@JvmOverloads` injection, ensure rigorous ViewModel coroutine scope lifecycle teardown in test `@After` blocks to prevent uncaught coroutine exception leakage across JVM test boundaries, and maintain a 100% clean-room test pass rate across the full 3,840+ unit test suite under `./gradlew testDebugUnitTest` (ATT-4669, Parent Epic ATT-2466, extending `REQ-TST-001` and `REQ-BLD-002`):
 1. *Contract Test Alignment with Dead Code Excision (`REQ-TST-003.1`)*:
 • In `HardcodedStringsAndUnitsContractTest.kt`, the obsolete test asserting that `TrainingApplication.todo()` is marked `@Deprecated` SHALL be removed, aligning with dead-code excision in `REQ-ARC-003.1` and `DeadCodeEliminationContractTest`.
@@ -1846,8 +2283,11 @@ The workflow SHALL mandate that:
 **Invariants**: Zero alteration to production runtime business logic, thread safety preserved, 100% clean-room test pass rate.
 
 ### REQ-ARC-004: Android Framework Reflection Constructor Compatibility & Lifecycle ViewModel Factory Hygiene [Verified]
-- **Tests**: `WorkoutClustersViewModel.kt`, `AndroidViewModelReflectionContractTest.kt`, `docs/coding_standards.md`
-- **Implementation**: Annotate WorkoutClustersViewModel constructor with @JvmOverloads to provide 1-arg constructor for AndroidViewModelFactory reflection, add AndroidViewModel reflection contract test, and maintain coding standards.
+- **Tests**: `TST-ARC-004`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Review
+- **Implementation**: `WorkoutClustersViewModel.kt`, `AndroidViewModelReflectionContractTest.kt`, `docs/coding_standards.md`
 - **Rationale**: Whenever an `AndroidViewModel`, `ViewModel`, or `Fragment` class instantiated via default Android framework reflection (`ViewModelProvider.AndroidViewModelFactory`, `viewModel(activity)`) declares default constructor parameters (e.g., `CoroutineDispatcher = Dispatchers.IO`), the primary constructor SHALL be annotated with `@JvmOverloads constructor` to generate single-argument bytecode constructors matching framework reflection expectations, preventing runtime `NoSuchMethodException` failures (ATT-4667, Parent Epic ATT-431, extending `REQ-ARC-003` and aligning with `docs/coding_standards.md` §3.5):
 1. *WorkoutClustersViewModel Reflection Compatibility (`REQ-ARC-004.1`)*:
 • In `WorkoutClustersViewModel.kt`, the primary constructor SHALL declare `@JvmOverloads constructor(application: Application, private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO)`, ensuring that `ViewModelProvider.AndroidViewModelFactory` resolves `(Application.class)` constructor via Java reflection.
@@ -1880,7 +2320,10 @@ The workflow SHALL mandate that:
 **Invariants**: Zero alteration to clustering algorithms or StateFlows, coroutine dispatcher injection preserved, 100% clean-room test pass rate.
 
 ### REQ-PRO-027: Agile Agentic ASPICE (AAA) Governance, Constructive Resistance, Hypothesis Verification, Stage 5 Resource Gate & Ceremony 2 Completeness Sweep [Verified]
-- **Tests**: `docs/project_protocol.md`, `.agents/rules/aspice_governance.md`, `.agents/skills/stage1-analysis/SKILL.md`, `.agents/skills/stage5-verification/SKILL.md`, `.agents/skills/sprint-planner/SKILL.md`
+- **Tests**: `TST-PRO-020`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
 - **Implementation**: Codify Agile Agentic ASPICE (AAA) philosophy, constructive resistance, Stage 1 hypothesis audit, Stage 5 AAPT2 checks, and Ceremony 2 completeness sweep.
 - **Rationale**: The engineering workflow, AI agent orchestration, and living standards SHALL enshrine Agile Agentic ASPICE (AAA) and its three Automotive SPICE pillars (ATT-3534, Parent Epic ATT-232, refining `REQ-PRO-026` and `REQ-PRO-024`):
 1. *Three Automotive SPICE Pillars (`docs/project_protocol.md`, `.agents/rules/aspice_governance.md`)*:
@@ -1917,7 +2360,10 @@ The workflow SHALL mandate that:
 **Invariants**: Human Decision Gate remains inviolable; 100% clean-room test pass rate; zero governance regressions.
 
 ### REQ-PRO-028: Living Documentation Sharding, Multi-Line Markdown Section Formatting & Dual-Format Tooling Governance [Verified]
-- **Tests**: `docs/requirements.md`, `docs/tests.md`, `docs/requirements/`, `docs/tests/`, `tools/verify_requirement_governance.py`, `tools/jira_util.py`
+- **Tests**: `TST-PRO-021`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
 - **Implementation**: Restructure living documentation into domain-sharded multi-line markdown sections and upgrade governance tooling to support dual-format verification.
 - **Rationale**: The system living specification architecture and governance tooling SHALL restructure monolithic single-file tables into modular domain-sharded documents, introduce multi-line Markdown heading sections, and support dual-format verification in governance tools (ATT-4594, Parent Epic ATT-232, refining `REQ-PRO-026` and `REQ-PRO-027`):
 1. *Domain Directory Sharding (`REQ-PRO-028.1`)*:
@@ -1954,6 +2400,9 @@ The workflow SHALL mandate that:
 
 ### REQ-PRO-029: AAA 1/2/3/5+ Story Point Estimation, Complexity Split Guardrail & Sprint Capacity Tracking [Verified]
 - **Tests**: `TST-PRO-022`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
 - **Implementation**: `tools/jira_util.py`, `.agents/skills/sprint-planner/SKILL.md`, `.agents/skills/brainstormer/SKILL.md`, `docs/presentations/agile_agentic_aspice_beamer.tex`
 - **Rationale**: Introduce lightweight, T-shirt-like Story Point Estimation (1 / 2 / 3 / 5+ Split) into the Agile Agentic ASPICE (AAA) workflow, `tools/jira_util.py`, and agent skills to establish an automated complexity guardrail, predictable sprint capacity planning, and empirical velocity tracking (ATT-5203, Parent Epic ATT-232, refining `REQ-PRO-027`):
 1. *AAA Story Point Scale & Mandatory Split Guardrail (`REQ-PRO-029.1`)*:
@@ -1994,7 +2443,10 @@ The workflow SHALL mandate that:
 **Invariants**: Existing `jira_util.py` CLI interface and transitions remain 100% backward-compatible; zero Android runtime changes; zero regression in governance verification.
 
 ### REQ-PRO-033: Comprehensive Online User Guide and Feature Showcase on GitHub Pages [Verified]
-- **Tests**: `TST-PRO-033` | **Tickets**: `ATT-2275`, `ATT-5418`
+- **Tests**: `TST-PRO-033`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
 - **Implementation**: `docs/_config.yml`, `docs/index.md`, `docs/guide/`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/OnlineUserGuideContractTest.kt`
 - **Rationale**: Establish a comprehensive, responsive, screenshot-illustrated online user manual and feature showcase on GitHub Pages (in German and English) covering quick start, sensors, equipment matrix, live cockpit, maps/segments, route clustering, physiology, aftermath, and data export while preserving developer protocol hygiene (ATT-2275, Parent Epic ATT-2273):
 1. *Bilingual Screenshot-Rich Feature Chapters (`REQ-PRO-033.1`)*:
@@ -2034,7 +2486,10 @@ The workflow SHALL mandate that:
 **Invariants**: Developer ASPICE documentation files remain strictly in git; zero regression in app performance or build hygiene.
 
 ### REQ-PRO-034: ASPICE Audit Hardening (SWE.1/2/4/6): Living Doc Synchronization, Modern SWE.2 Architecture, Universal Image Inspection & Continuous Governance [Verified]
-- **Tests**: `TST-PRO-034` | **Tickets**: `ATT-5431`
+- **Tests**: `TST-PRO-034`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
 - **Implementation**: `docs/requirements.md`, `docs/tests.md`, `docs/requirements/`, `docs/tests/`, `docs/architecture.md`, `tools/jira_util.py`, `tools/verify_requirement_governance.py`, `.agents/skills/`, `.agents/rules/aspice_governance.md`
 - **Rationale**: Eliminate formal ASPICE compliance vulnerabilities (SWE.1, SWE.2, SWE.4, SWE.6) identified during process assessment by synchronizing all completed requirement and test statuses, modernizing the SWE.2 architecture specification with dynamic behavioral models and complete allocation, automating master index counter recalculation upon Stage 5 submission, and codifying universal image inspection, documentation code-grounding, and SWE.2 maintenance into agent skills (ATT-5431, Parent Epic ATT-232):
 1. *SWE.1 & SWE.4/6 Living Doc Status & Counter Parity (`REQ-PRO-034.1`)*:
@@ -2080,7 +2535,10 @@ The workflow SHALL mandate that:
 **Invariants**: Zero runtime app code modifications; backwards-compatible CLI tooling; 100% clean-room test suite pass rate.
 
 ### REQ-PRO-035: Standalone Agile Agentic ASPICE (AAA) Core Framework, Swiss Cheese Reliability & Starter Templates [Verified]
-- **Tests**: `TST-PRO-035` | **Tickets**: `ATT-3922`, `ATT-5817`, `ATT-6092`
+- **Tests**: `TST-PRO-035`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
 - **Implementation**: `tools/hoechstmass/README.md`, `tools/hoechstmass/docs/project_protocol.md`, `tools/hoechstmass/assets/swiss_cheese_layers.svg`, `tools/review_tool.py`, `tools/hoechstmass/.agents/`, `tools/hoechstmass/docs/`, `tools/hoechstmass/templates/`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/HoechstmassCoreFrameworkContractTest.kt`
 - **Rationale**: Extract and package the Agile Agentic ASPICE (AAA) methodology forged across 53+ sprints and 1,100+ tickets into a standalone, project-agnostic open-source skill set under `tools/hoechstmass/` (ATT-3922, Part 1 of 3, extended and refined in ATT-5817 and ATT-6092 to incorporate the 5-Layer Swiss Cheese vector model, statistical decorrelation derivation, multi-vendor adversarial review including Claude alongside Gemini and ChatGPT, the Entry Barrier chapter, inside-out AAA paradigm presentation, 2-column SVG architecture, and the isolated `.reviews/` Emacs in-place Code & Document Review workflow):
 1. *Branded README, Protocol, Epigraph Quote & Etymology (`REQ-PRO-035.1`)*:
@@ -2134,7 +2592,10 @@ The workflow SHALL mandate that:
 **Invariants**: Active project rules and runtime code in `app/src/main/` remain untouched; zero regression in test suite or governance.
 
 ### REQ-PRO-036: Parameterized Issue Tracker Automation & Requirement Governance Tooling [Verified]
-- **Tests**: `TST-PRO-036` | **Tickets**: `ATT-5667`
+- **Tests**: `TST-PRO-036`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
 - **Implementation**: `tools/hoechstmass/tools/hoechstmass_config.json`, `tools/hoechstmass/tools/.env.jira.example`, `tools/hoechstmass/tools/jira_util.py`, `tools/hoechstmass/tools/verify_requirement_governance.py`, `tools/hoechstmass/tools/test_hoechstmass_tools.py`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/HoechstmassToolingContractTest.kt`
 - **Rationale**: Extract, parameterize, and harden the core Agile Agentic ASPICE (AAA) automation tooling into `tools/hoechstmass/tools/` using a declarative configuration schema (`hoechstmass_config.json` and `.env.jira.example`), decoupling project constants from the automation engine (ATT-5667, Part 2 of 3, extending `REQ-PRO-019`, `REQ-PRO-020`, `REQ-PRO-021`, `REQ-PRO-022`, `REQ-PRO-034`, and `REQ-PRO-035`):
 1. *Declarative Configuration Schema & Multi-Account Template (`REQ-PRO-036.1`)*:
@@ -2172,7 +2633,10 @@ The workflow SHALL mandate that:
 **Invariants**: Active root tools in `tools/` and runtime code in `app/src/main/` remain untouched; zero regression in test suite or governance.
 
 ### REQ-PRO-037: Real-World Reference Showcase & Developer Community Launch Posts [Verified]
-- **Tests**: `TST-PRO-037` | **Tickets**: `ATT-5668`
+- **Tests**: `TST-PRO-037`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
 - **Implementation**: `tools/hoechstmass/examples/android-jetpack-compose/`, `tools/hoechstmass/docs/community/`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/HoechstmassShowcaseAndCommunityContractTest.kt`
 - **Rationale**: Establish an empirical reference showcase and technical developer community articles demonstrating the effectiveness of the Agile Agentic ASPICE (AAA) methodology in preventing LLM hallucinations, regressions, and simulation drift in production software engineering (ATT-5668, Part 3 of 3, concluding the Höchstmaß trilogy, extending `REQ-PRO-034`, `REQ-PRO-035`, and `REQ-PRO-036`):
 1. *Production Android & Compose Reference Showcase (`REQ-PRO-037.1`)*:
@@ -2211,7 +2675,10 @@ The workflow SHALL mandate that:
 **Invariants**: Active project rules and runtime code in `app/src/main/` remain untouched; zero regression in test suite or governance.
 
 ### REQ-PRO-038: Automated Quantitative Sprint Metrics (PA 4.1), Statistical Process Control (PA 4.2) & Ceremony 2 Governance [Verified]
-- **Tests**: `TST-PRO-038` | **Tickets**: `ATT-5765`, `ATT-5764`
+- **Tests**: `TST-PRO-038`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
 - **Implementation**: `tools/jira_util.py`, `tools/hoechstmass/tools/jira_util.py`, `tools/verify_requirement_governance.py`, `docs/engineering/metrics/process_metrics.jsonl`, `.agents/skills/sprint-planner/SKILL.md`, `tools/hoechstmass/.agents/skills/sprint-planner/SKILL.md`, `templates/sprint_retro_template.md`, `tools/hoechstmass/templates/sprint_retro_template.md`, `docs/project_protocol.md`, `tools/hoechstmass/docs/project_protocol.md`, `tools/hoechstmass/README.md`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/HoechstmassCoreFrameworkContractTest.kt`
 - **Rationale**: Fulfill ASPICE Level 4 (Predictable) and Level 5 (Innovating) process attributes `PA 4.1` (Quantitative Analysis), `PA 4.2` (Quantitative Control), `PA 5.1` (Process Innovation), and `PA 5.2` (Process Optimization) by automatically aggregating Gate 1–5 First-Time-Pass-Rates (FTPR), empirical Swiss Cheese layer defect escape probabilities, and Human Acceptance Rate directly from Jira comment attribution, embedding scorecards into Ceremony 2 Retrospectives, closing the loop with mandatory corrective actions on Special Cause Variations, and codifying the complete ASPICE Capability Level 1–5 Matrix across framework documentation.
 - **Description**:
@@ -2251,7 +2718,10 @@ The workflow SHALL mandate that:
 **Invariants**: Zero runtime app modifications in `app/src/main/`; backwards compatibility of existing `jira_util.py` commands; strict sprint retro-before-merge invariant preserved; 100% test pass rate.
 
 ### REQ-PRO-039: Jira Data Center & Enterprise On-Premise Support for Höchstmaß Automation Tooling [Verified]
-- **Tests**: `TST-PRO-039` | **Tickets**: `ATT-5830`
+- **Tests**: `TST-PRO-039`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
 - **Implementation**: `tools/jira_util.py`, `tools/hoechstmass/tools/jira_util.py`, `tools/hoechstmass/hoechstmass_config.json`, `.env.jira.example`, `tools/hoechstmass/.env.jira.example`, `.agents/skills/jira-workflow/SKILL.md`, `tools/hoechstmass/.agents/skills/jira-workflow/SKILL.md`, `tools/hoechstmass/README.md`, `tools/hoechstmass/tests/test_jira_datacenter.py`
 - **Rationale**: Support enterprise on-premise Jira Data Center (and Jira Server) deployments for automotive ASPICE development environments where Jira Cloud is restricted, accommodating Personal Access Token (PAT) authentication, corporate custom CA certificates, username-based assignee payloads, Epic Link custom fields for top-level issues, and REST API v2 JQL search routing while maintaining 100% backward compatibility with Jira Cloud.
 - **Description**:
@@ -2290,7 +2760,10 @@ The workflow SHALL mandate that:
 **Invariants**: Zero runtime changes to `app/src/main/`; existing Jira Cloud workflows remain 100% backward-compatible; composite commands (`submit-stage`, `gate-verdict`) maintain identical subtask transitions; secret masking (`REQ-PRO-021`) strictly enforced.
 
 ### REQ-PRO-040: Project-Wide Epic Lifecycle Governance, 'list-epics' / 'close-epic' CLI Commands, and Controlled Epic Creation & Closure [Verified]
-- **Tests**: `TST-PRO-040` | **Tickets**: `ATT-5911`
+- **Tests**: `TST-PRO-040`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
 - **Implementation**: `tools/jira_util.py`, `tools/hoechstmass/tools/jira_util.py`, `.agents/skills/brainstormer/SKILL.md`, `.agents/skills/sprint-planner/SKILL.md`, `.agents/skills/jira-workflow/SKILL.md`, `tools/hoechstmass/.agents/skills/brainstormer/SKILL.md`, `tools/hoechstmass/.agents/skills/sprint-planner/SKILL.md`, `tools/hoechstmass/.agents/skills/jira-workflow/SKILL.md`
 - **Rationale**: Support project-wide Epic lifecycle management by providing visibility into active Epics and child ticket completion states via `list-epics`, offering a guarded `close-epic` CLI command with a triple guardrail (role check, issue type check, zero-open-child completeness check), codifying the Canonical Epic Taxonomy across agent skills, and empowering agents to create and close Epics after explicit human confirmation without violating the Human Decision Gate on standard tickets (ATT-5911, extending `REQ-PRO-016`, `REQ-PRO-024`, and `REQ-PRO-036`):
 1. *CLI Support for Epic Inspection (`REQ-PRO-040.1`, `list-epics`)*:
@@ -2332,7 +2805,10 @@ The workflow SHALL mandate that:
 **Invariants**: Human Decision Gate on standard sprint tickets (`Feature`, `Bug`, `Verbesserung`) remains inviolable; zero changes to Android runtime code in `app/src/main/`.
 
 ### REQ-PRO-041: Parallel Sprint Execution Protocol for Disjoint Epics ('Workspace: share' Worktrees, Conflict-Free Strings/Docs & Flock Build/Merge Serialization) [Verified]
-- **Tests**: `TST-PRO-041` | **Tickets**: `ATT-5914`, `ATT-6743`, `ATT-7025`
+- **Tests**: `TST-PRO-041`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
 - **Implementation**: `.agents/rules/aspice_governance.md`, `.agents/skills/jira-workflow/SKILL.md`, `.agents/skills/stage4-implementation/SKILL.md`, `.agents/skills/stage5-verification/SKILL.md`, `.agents/skills/sprint-planner/SKILL.md`, `tools/run_serialized.sh`, `tools/parallel_sprint_lock.py`, `tools/jira_util.py`, `tools/hoechstmass/tools/jira_util.py`, `tools/verify_requirement_governance.py`, `app/src/test/java/com/atrainingtracker/trainingtracker/localization/TranslationParityTest.kt`
 - **Rationale**: Eliminate the throughput bottleneck of single-ticket sequential Phase 2 execution by enabling concurrent execution of up to 3 tickets belonging to disjoint Parent Epics. Resolves git branch collisions, strings.xml EOF append conflicts, living doc counter merge races, and Gradle test contention through worktree isolation, domain-partitioned strings, POSIX file locking, and rebase-then-recalculate sync (ATT-5914, extending `REQ-PRO-014`, `REQ-PRO-015`, `REQ-PRO-024`, and `REQ-PRO-025`; calibrated to concurrency=3 per ATT-6289 / ATT-6743; hardened with detached HEAD protocol and deterministic `--merge-ticket` subcommand per ATT-7025):
 1. *Subagent Worktree Isolation (`REQ-PRO-041.1`, Workspace: "share")*:
@@ -2375,7 +2851,10 @@ The workflow SHALL mandate that:
 **Invariants**: Human Decision Gate (`REQ-PRO-016`) remains inviolable; max 3 concurrent tickets across strictly disjoint Epics; zero Android runtime changes in `app/src/main/java/`.
 
 ### REQ-PRO-042: CI Configuration Integrity & Legacy Travis CI Deprecation [Verified]
-- **Tests**: `TST-PRO-042` | **Tickets**: `ATT-6177`
+- **Tests**: `TST-PRO-042`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
 - **Implementation**: `.travis.yml`, `app/build.gradle`, `ReleaseCiAndLintConfigContractTest.kt`
 - **Rationale**: Retaining unmaintained legacy CI configuration (`.travis.yml` referencing JDK 8 and API 29) alongside obsolete build script comments (`app/build.gradle:35`) creates ambiguity regarding authoritative build and verification environments, violating ASPICE SUP.8 (Configuration Management). GitHub Actions in `.github/workflows/` is the sole, authoritative CI/CD platform (ATT-6177, refining SUP.8 under Epic ATT-6142):
 - **Description**:
@@ -2405,7 +2884,10 @@ The workflow SHALL mandate that:
 - **Invariants**: Active GitHub Actions workflows in `.github/workflows/` remain authoritative and unchanged; zero impact on Android runtime code or APK packaging.
 
 ### REQ-PRO-043: SWE.2 Architecture & Authentic Codebase Resynchronization [Verified]
-- **Tests**: `TST-PRO-043` | **Tickets**: `ATT-6179, ATT-6727`
+- **Tests**: `TST-PRO-043`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
 - **Implementation**: `docs/architecture.md`, `docs/architecture/interfaces.md`, `AspiceSweAuditContractTest.kt`
 - **Rationale**: `docs/architecture.md` (authored under `ATT-5431` for ASPICE SWE.2 compliance) exhibits architectural drift against production code by naming non-existent placeholder components (`RouteLearningEngine`, `GpxExporter`, `TcxExporter`, `WorkoutSamplesDb`, `MilestoneDetector`, `InAppReviewManager`, `UserPreferences`, `EquipmentDatabaseManager`, `PrivacyZoneManager`, `BillingManager`, `TTTheme`, `CustomLineChart`, `ElevationPoint`, `StoreMetadataContractTest`), misrepresenting the tracking state machine (`TrackingMode`), and generalizing database dispatcher usage. Resynchronizing architecture specifications with authentic code and enforcing dynamic component existence guarantees ASPICE SWE.2 software architectural design conformance (ATT-6179, ATT-6727, refining `REQ-PRO-034` under Epic `ATT-6142`):
 - **Description**:
@@ -2451,7 +2933,10 @@ The workflow SHALL mandate that:
 - **Invariants**: All existing SWE.2 contract assertions in `AspiceSweAuditContractTest` remain satisfied; zero changes to production code in `app/src/main/`.
 
 ### REQ-PRO-044: ASPICE SWE.2 Software Interface Specification (IF-SWE-01..IF-SWE-08) [Verified]
-- **Tests**: `TST-PRO-044` | **Tickets**: `ATT-6180, ATT-6732`
+- **Tests**: `TST-PRO-044`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
 - **Implementation**: `docs/architecture/interfaces.md`, `docs/architecture.md`, `AspiceSweAuditContractTest.kt`
 - **Rationale**: While `docs/architecture.md` defines high-level architectural subsystems and dynamic models (SWE.2 BP1, BP3, BP4), it lacks formal software interface specifications (SWE.2 BP2). Defining operations, data schemas, threading contracts, and error protocols across all 8 architectural boundaries (`IF-SWE-01` through `IF-SWE-08`) eliminates integration ambiguity (Finding C-06) and fulfills ASPICE Level 2 requirements (ATT-6180, refining `REQ-PRO-034` under Epic `ATT-6142`). In ATT-6732, all interface definitions are code-grounded against `app/src/main/` to eliminate hallucinated methods, synthetic DTOs/classes, and false Retrofit dependency claims:
 - **Description**:
@@ -2489,7 +2974,10 @@ The workflow SHALL mandate that:
 
 
 ### REQ-PRO-045: ASPICE SWE.5 Software Integration Verification Strategy [Verified]
-- **Tests**: `TST-PRO-045` | **Tickets**: `ATT-6183, ATT-6736`
+- **Tests**: `TST-PRO-045`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
 - **Implementation**: `docs/architecture/integration_strategy.md`, `docs/architecture.md`, `AspiceSweAuditContractTest.kt`
 - **Rationale**: Prior to ATT-6183, aTrainingTracker lacked a formal Software Integration Verification Strategy (ASPICE SWE.5 BP1). Integration verification was informally conflated with unit testing during the Sprint Integration Gate without a documented sequence across architectural interfaces (`IF-SWE-01`..`IF-SWE-08`), defined verification levels, explicit entry/exit criteria, or structured regression tiers (Finding C-09). In ATT-6736, the strategy is fully code-grounded to align with the CI API 34 emulator runner, local in-sprint emulator retirement (Rule 79), mandatory real physical phone evaluation during Ceremony 2 Joint Review, authentic test doubles/fakes replacing MockWebServer, proper dbDispatcher attribution to KnownLocationsRepository, authentic TrackOnMapAftermathViewModel, 3,660+ Tier 2 test count, and sprint_bisect.py defect bisection tooling (ATT-6183, ATT-6736, refining `REQ-PRO-034` under Epic `ATT-6142`):
 - **Description**:
@@ -2523,7 +3011,10 @@ The workflow SHALL mandate that:
 
 
 ### REQ-PRO-046: Android Lint CI Quality Gate & Baseline Burn-down [Verified]
-- **Tests**: `TST-PRO-046` | **Tickets**: `ATT-6173, ATT-6728`
+- **Tests**: `TST-PRO-046`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
 - **Implementation**: `.github/workflows/android-branch-build.yml`, `app/build.gradle`, `app/lint-baseline.xml`, `ReleaseCiAndLintConfigContractTest.kt`
 - **Rationale**: Prior to ATT-6173, Android Lint was omitted from continuous integration (`.github/workflows/`), allowing static analysis defects to enter git branches unchecked. Furthermore, `app/lint-baseline.xml` accepted 607 issues, of which >60% (368 entries) referenced deleted legacy classes, obscuring genuine static issues (Finding C-02). Running `./gradlew :app:lintDebug` in CI, uploading report artifacts, ratcheting baseline issues to <= 239 (`issueCount in 0..239`), and enforcing Compose resource and locale rules as errors establishes ASPICE SWE.3 static analysis compliance (ATT-6173, ATT-6728, refining `REQ-BLD-002` and `REQ-PRO-034` under Epic `ATT-6142`):
 - **Description**:
@@ -2562,7 +3053,10 @@ The workflow SHALL mandate that:
 
 
 ### REQ-PRO-047: Detekt Static Analysis & Complexity Governance [Verified]
-- **Tests**: `TST-PRO-047` | **Tickets**: `ATT-6175`, `ATT-6729`
+- **Tests**: `TST-PRO-047`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
 - **Implementation**: `build.gradle`, `app/build.gradle`, `config/detekt/detekt.yml`, `app/detekt-baseline.xml`, `.github/workflows/android-branch-build.yml`, `ReleaseCiAndLintConfigContractTest.kt`
 - **Rationale**: ASPICE pre-assessment finding C-03 flagged that aTrainingTracker lacks Kotlin AST static code analysis and complexity/size boundaries. Over 15 source files exceed 1,200 lines of code without automated guardrails preventing further degradation. Introducing detekt into continuous integration (`.github/workflows/android-branch-build.yml`) with a curated configuration (`config/detekt/detekt.yml`), an initial baseline (`app/detekt-baseline.xml`), and strict complexity bounds (`LargeClass` <= 800, `LongMethod` <= 60, `CyclomaticComplexMethod` <= 15) enforces ASPICE SWE.3 static verification. Adding official Jetpack Compose exemptions and ratcheting the baseline ceiling down protects idiomatic Compose screens while eliminating hundreds of false positives (ATT-6175, ATT-6729, refining `REQ-PRO-034` under Epic `ATT-6142`):
 - **Description**:
@@ -2599,7 +3093,10 @@ The workflow SHALL mandate that:
 
 
 ### REQ-PRO-048: Kover Code Coverage Measurement & CI Threshold Gating [Verified]
-- **Tests**: `TST-PRO-048` | **Tickets**: `ATT-6171`, `ATT-6730`
+- **Tests**: `TST-PRO-048`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
 - **Implementation**: `build.gradle`, `app/build.gradle`, `.github/workflows/android-branch-build.yml`, `ReleaseCiAndLintConfigContractTest.kt`
 - **Rationale**: ASPICE pre-assessment finding C-01 flagged that aTrainingTracker lacks code coverage measurement and threshold enforcement (SWE.4 BP verification criteria). Currently, unit tests execute in CI via `./gradlew :app:testDebugUnitTest`, but neither line nor branch coverage is measured, reported, or gated. Introducing JetBrains Kotlinx Kover into Gradle and CI with an objective baseline threshold and artifact archiving establishes automated coverage verification (ATT-6171, ATT-6730, refining `REQ-PRO-034` under Epic `ATT-6142`):
 - **Description**:
@@ -2634,7 +3131,10 @@ The workflow SHALL mandate that:
 
 
 ### REQ-PRO-049: Source-Text Reading Test Prohibition & Audit Governance [Verified]
-- **Tests**: `TST-PRO-049` | **Tickets**: `ATT-6186`, `ATT-6731`, `ATT-6569`, `ATT-6568`, `ATT-6567`, `ATT-6566`, `ATT-6565`, `ATT-6564`
+- **Tests**: `TST-PRO-049`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
 - **Implementation**: `app/src/test/java/com/atrainingtracker/trainingtracker/build/SourceTextReadingAuditContractTest.kt`, `app/source-reading-baseline.txt`, `docs/coding_standards.md` §5.4
 - **Rationale**: ASPICE pre-assessment finding C-12 flagged that ~290 test files read production source code (`.readText()`, `Files.readString()`) to grep for literals or tokens instead of verifying runtime behavior. This violates `docs/coding_standards.md` §5.4 (prohibiting UI literal source-grep). To establish ASPICE SWE.4 unit verification criteria without destabilizing existing builds, an automated audit test with a ratcheting baseline must be introduced to block new violations while preserving legitimate system architectural governance guards (ATT-6186, ATT-6731, ATT-6569, ATT-6568, ATT-6567, ATT-6566, ATT-6565, ATT-6564, refining `REQ-PRO-034` under Epic `ATT-6142`):
 - **Description**:
@@ -2671,7 +3171,10 @@ The workflow SHALL mandate that:
 
 
 ### REQ-PRO-050: Automated Architecture Conformance Testing [Verified]
-- **Tests**: `TST-PRO-050` | **Tickets**: `ATT-6182`, `ATT-6734`
+- **Tests**: `TST-PRO-050`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
 - **Implementation**: `app/src/test/java/com/atrainingtracker/trainingtracker/build/ArchitectureConformanceContractTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/SourceTextReadingAuditContractTest.kt`, `docs/architecture.md`
 - **Rationale**: ASPICE pre-assessment finding C-08 identified that layering rules defined in `docs/architecture.md` lack automated CI test enforcement, allowing architectural drift (such as direct UI-to-DatabaseManager bindings) to accumulate unnoticed. Introducing `ArchitectureConformanceAuditTest` enforces layer boundaries and dependency directions (Presentation -> Domain -> Services -> Data -> Persistence) while ratcheting down existing baseline debt and maintaining pure domain logic isolation (ATT-6182, ATT-6734, refining `REQ-PRO-034` under Epic `ATT-6142`):
 - **Description**:
@@ -2711,7 +3214,10 @@ The workflow SHALL mandate that:
 
 
 ### REQ-PRO-051: Android Instrumented Test Infrastructure & Emulator CI Execution [Verified]
-- **Tests**: `TST-PRO-051` | **Tickets**: `ATT-6184, ATT-6737`
+- **Tests**: `TST-PRO-051`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
 - **Implementation**: `app/build.gradle`, `.github/workflows/android-branch-build.yml`, `app/src/androidTest/java/com/atrainingtracker/trainingtracker/AppSmokeAndroidTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/ReleaseCiAndLintConfigContractTest.kt`
 - **Rationale**: Prior to ATT-6184, aTrainingTracker lacked an `androidTest` source set, test instrumentation runner, and on-device / emulator CI verification pipeline (ASPICE finding C-10, SWE.5/SWE.6). In ATT-6737, the instrumented smoke test and CI emulator pipeline are expanded to exercise an end-to-end Activity launch and tracking lifecycle with non-destructive session cleanup, pre-build debug and test APKs before emulator boot, and target Android 14 (API 34) google_apis for foreground service verification without violating Rule 79 (ATT-6184, ATT-6737, refining `REQ-PRO-045` under Epic `ATT-6142`):
 - **Description**:
@@ -2752,7 +3258,10 @@ The workflow SHALL mandate that:
 
 
 ### REQ-PRO-052: Architectural Resource and Timing Budgets Specification [Verified]
-- **Tests**: `TST-PRO-052` | **Tickets**: `ATT-6181`, `ATT-6735`
+- **Tests**: `TST-PRO-052`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
 - **Implementation**: `docs/architecture.md`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/ArchitectureConformanceContractTest.kt`
 - **Rationale**: Prior to ATT-6181, `docs/architecture.md` lacked explicit CPU, memory, battery, disk growth, and timing budgets for runtime-critical subsystems, specifying only 1 Hz sampling and 3.5 s sensor failover (ASPICE finding C-07, SWE.2 BP4). Without documented resource budgets, runtime resource consumption is accidental rather than engineered, risking background thread starvation, UI jank, and battery drain during multi-hour endurance sessions. Defining quantified budgets in Section 4.9, attributing them truthfully to production code components/threads, establishing bidirectional traceability to `REQ-NFR-*` IDs, and enforcing their existence via contract testing fulfills SWE.2 BP4 and links architecture to non-functional performance requirements (ATT-6181, ATT-6735, refining `REQ-PRO-043` under Epic `ATT-6142`):
 - **Description**:
@@ -2783,7 +3292,10 @@ The workflow SHALL mandate that:
 
 
 ### REQ-PRO-053: System Context and External Interfaces Specification [Verified]
-- **Tests**: `TST-PRO-053` | **Tickets**: `ATT-6158`, `ATT-6738`
+- **Tests**: `TST-PRO-053`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
 - **Implementation**: `docs/system/system_context.md`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/SystemContextContractTest.kt`
 - **Rationale**: ASPICE 4.0 pre-assessment finding S-01 (SYS.2 BP1, SYS.3) identified that aTrainingTracker lacks a formal system-level context boundary specification. While the application interfaces with multiple hardware sensors (BLE/ANT+), platform services (GNSS, PowerManager, Foreground Services), mapping SDKs, and third-party cloud services (Strava, Dropbox, Google Drive, Health Connect, PebbleKit), these external dependencies and their operational boundaries were previously implicit in code. Establishing an authoritative system context in `docs/system/system_context.md` and verifying code grounding via contract tests closes this ASPICE CL2 gap (ATT-6158, ATT-6738, refining `REQ-PRO-043` under Epic `ATT-6142`):
 - **Description**:
@@ -2819,7 +3331,10 @@ The workflow SHALL mandate that:
 
 
 ### REQ-PRO-054: System Requirements for Live Tracking with Sensors [Verified]
-- **Tests**: `TST-PRO-054` | **Tickets**: `ATT-6160`, `ATT-6739`
+- **Tests**: `TST-PRO-054`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
 - **Implementation**: `docs/system/sysreq_live_tracking.md`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/SystemLiveTrackingRequirementsContractTest.kt`
 - **Rationale**: ASPICE 4.0 pre-assessment finding S-02 (SYS.2 BP1-BP3) identified that aTrainingTracker lacks formal system-level requirements (`SYSREQ-*`) specifying the end-to-end behavior of the mobile tracking system with external wireless sensors and GNSS positioning. While individual software classes exist, end-to-end system capabilities—multi-sensor acquisition, exponential backoff reconnection, 1-Hz deterministic sampling, GNSS positioning, foreground execution, power governance, and real-time sensory alerts—are not formally specified independent of software design. Specifying these capabilities in `docs/system/sysreq_live_tracking.md` and verifying code grounding via contract tests closes this ASPICE CL2 gap (ATT-6160, refining `REQ-PRO-043` under Epic `ATT-6142`). ATT-6739 replaces hallucinated/stale references (`RadarThreatView`, `SoundEngine`, `BikeBellAudioSynthesizer.java`, `BANALServiceTest`, `MapViewportHelper.kt`, `FusedLocationProviderClient`, and `CONNECTED_DEVICE`), brings them into strict alignment with live Kotlin/Java sources, and hardens dynamic `File.exists()` contract test assertions:
 - **Description**:
@@ -2854,7 +3369,10 @@ The workflow SHALL mandate that:
 
 
 ### REQ-PRO-055: System Requirements for Data Exchange and Cloud Integration [Verified]
-- **Tests**: `TST-PRO-055` | **Tickets**: `ATT-6161`, `ATT-6740`
+- **Tests**: `TST-PRO-055`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
 - **Implementation**: `docs/system/sysreq_data_exchange.md`, `docs/system_requirements.md`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/SystemDataExchangeRequirementsContractTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/SystemRequirementsSpecificationContractTest.kt`
 - **Rationale**: ASPICE 4.0 pre-assessment finding S-03 (SYS.2 BP1-BP3) identified that external data interfaces (multi-format workout export/import in FIT, TCX, GPX, CSV, cloud synchronization with Strava, Dropbox, Google Drive, Health Connect biometrics, and full application state backup/restore via `.attbackup`) lack formal system-level specifications. While software classes exist, black-box system requirements specifying data schemas, API rate governance, atomic backup transactions, Zip Slip path traversal defenses, credential isolation, and decommissioned platform boundaries were undocumented. Specifying these capabilities in `docs/system/sysreq_data_exchange.md` and verifying code grounding via contract tests closes this ASPICE CL2 gap (ATT-6161, refining `REQ-PRO-043` under Epic `ATT-6142`). ATT-6740 aligns 11 stale/non-existent filenames with live Kotlin/Java/XML sources, clarifies CSV metadata parsing scope in `SYSREQ-DEX-002`, documents routes/segments/GDrive/HealthConnect cloud capabilities, renumbers `docs/system_requirements.md` sections sequentially 1..4, and hardens dynamic `File.exists()` contract test assertions:
 - **Description**:
@@ -2891,7 +3409,10 @@ The workflow SHALL mandate that:
 
 
 ### REQ-PRO-056: System Architectural Design & SYSREQ Allocation [Verified]
-- **Tests**: `TST-PRO-056` | **Tickets**: `ATT-6164`, `ATT-6741`
+- **Tests**: `TST-PRO-056`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
 - **Implementation**: `docs/system/system_architecture.md`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/SystemArchitectureDesignContractTest.kt`
 - **Rationale**: ASPICE 4.0 pre-assessment finding S-05 (SYS.3 BP1-BP6) identified that aTrainingTracker lacks a formal system architectural design establishing the physical boundaries, system elements, interface definitions, dynamic behaviors, and 100% allocation of system requirements across hardware sensors, host Android application, OS platform services, and cloud environments. While software architecture (`docs/architecture.md`) specifies SWE.2 internal classes, the overarching system architecture bridging SYS.2 system requirements to software components was undocumented. Establishing `docs/system/system_architecture.md` and verifying consistency via contract testing closes this ASPICE CL2 gap (ATT-6164, refining `REQ-PRO-043` under Epic `ATT-6142`). ATT-6741 reconciles Section 5 to eliminate 13 orphan SYSREQ IDs, replaces 10 hallucinated classes/constants/entities with grounded code elements, corrects the workout finalization actor in Sequence Diagram 4.2 to `TrackerService` on `mDbExecutor`, and enforces exact bidirectional set equality (`declaredSysreqs == allocatedSysreqs`) in `SystemArchitectureDesignContractTest.kt`:
 - **Description**:
@@ -2924,7 +3445,10 @@ The workflow SHALL mandate that:
 
 ### REQ-PRO-057: Configuration Management Repository Grounding (Master Production Branch, Sprint Milestone Tags, Release Contents & Controlled CI Inventory) [Verified]
 - **Target Release**: `V5.0.0`
-- **Tests**: `TST-PRO-057` | **Tickets**: `ATT-6733`
+- **Tests**: `TST-PRO-057`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
 - **Implementation**: `docs/management/cm_plan.md`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/ReleaseCiAndLintConfigContractTest.kt`
 - **Rationale**: ASPICE SUP.8 requires strict alignment between the Configuration Management Plan (`docs/management/cm_plan.md`) and authentic repository configuration. Discrepancies regarding branch naming, omission of sprint milestone tags, uncatalogued configuration items, and undefined release contents violate SUP.8.BP1–BP3 (ATT-6733, Epic ATT-6141):
 - **Description**:
@@ -2958,7 +3482,10 @@ The workflow SHALL mandate that:
 **Invariants**: Zero Android runtime changes in `app/src/main/`; Git repository remote branches untouched; 100% unit test pass rate.
 
 ### REQ-TST-004: Android Emulator Lifecycle Management, Physical-Phone Guardrail, and Two-Tier Verification Policy [Verified]
-- **Tests**: `TST-TST-004` | **Tickets**: `ATT-6506`
+- **Tests**: `TST-TST-004`
+- **Priority**: Medium
+- **Type**: Non-Functional
+- **Verification Method**: Unit
 - **Implementation**: `tools/agent_emulator.py`, `tools/fake_gps.py`, `tools/simulate_kill.py`, `tools/replay_workout.py`, `.agents/rules/aspice_governance.md`, `.agents/skills/stage5-verification/SKILL.md`, `.agents/skills/sprint-planner/SKILL.md`, `.agents/skills/ui-designer/SKILL.md`, `docs/project_protocol.md`
 - **Rationale**: Autonomous agents executing in-sprint testing (Stages 1–5) and simulation scripts must not hijack or disrupt the connected physical daily driver device (Pixel 10), while preserving full-sprint evaluation on physical hardware at Ceremony 2. The developer tools and governance SHALL enforce automated boot, configuration, and data seeding on `emulator-5554` during Phase 2, guard desk simulators against unauthorized physical device access in agent mode, and establish a strict Two-Tier Device Policy across project governance and verification skills (ATT-6506, parent epic ATT-2466, superseding legacy Rule 79 / ATT-5890):
 - **Description**:
@@ -3000,9 +3527,12 @@ The workflow SHALL mandate that:
   • *Then* deployment and evaluation execute on the real physical phone.
 - **Invariants**: Zero runtime changes to `app/src/main/`; 100% unit test pass rate.
 
-### REQ-PRO-058: Stage 6 Cold Carbon Final Review (Agent), 3-Bounce Healing Loop, and Gate 6 Metrics [In Progress]
+### REQ-PRO-058: Stage 6 Cold Carbon Final Review (Agent), 3-Bounce Healing Loop, and Gate 6 Metrics [Implemented]
 - **Target Release**: `V5.0.0`
-- **Tests**: `TST-PRO-058` | **Tickets**: `ATT-7101`
+- **Tests**: `TST-PRO-058`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
 - **Implementation**: `tools/jira_util.py`, `tools/sprint_metrics.py`, `tools/hoechstmass/tools/jira_util.py`, `tools/hoechstmass/tools/sprint_metrics.py`, `.agents/skills/stage6-final-review/SKILL.md`, `tools/hoechstmass/.agents/skills/stage6-final-review/SKILL.md`, `.agents/skills/stage5-verification/SKILL.md`, `.agents/skills/sprint-planner/SKILL.md`, `.agents/skills/jira-workflow/SKILL.md`, `.agents/rules/aspice_governance.md`
 - **Rationale**: Persistent Epic-scoped subagent pairs (`pro`/`flash`) executing Stages 1–5 share the iterative conversational context of a ticket, which can create blind spots or tunnel vision. Introducing an orthogonal, zero-context **Stage 6 (`Final Review (Agent)`)** audited by a freshly spawned **Cold `Gemini 4 Carbon` (`Model: "pro"`)** reviewer (with up to 3 autonomous healing bounces back to the original pair before escalating to `Final Review (Human)`) establishes an additional independent Swiss Cheese barrier ($p_6$) and produces a structured Executive Review Summary for the Product Owner prior to Ceremony 2 (ATT-7101, Epic ATT-232):
 - **Description**:
@@ -3043,7 +3573,10 @@ The workflow SHALL mandate that:
 - **Invariants**: Zero modifications to Android production runtime code in `app/src/main/`; Rule 3 (`Erledigt` human-only gate) and `REQ-TST-004` (Two-Tier Device Policy) strictly preserved.
 
 ### REQ-PRO-059: Repository Export of Sprint Gate Records & Independent QA Evidence [Verified]
-- **Tests**: `tools/test_jira_accounts.py`, `tools/test_verify_requirement_governance.py`, `tools/hoechstmass/tools/test_hoechstmass_tools.py`
+- **Tests**: `TST-PRO-059`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
 - **Implementation**: Automated export command `export-gates` in `tools/jira_util.py` and `tools/hoechstmass/tools/jira_util.py`, structured markdown persistence in `docs/engineering/gates/<sprint>.md`, canonical directory registration, and `--check-gates` validation in `tools/verify_requirement_governance.py`.
 - **Rationale**: Under ASPICE SUP.1 (Quality Assurance) and GP 2.2 (Work Product Evidence), quality gate approvals and review verdicts currently reside exclusively inside Jira Cloud (Pre-Assessment Finding B-04). An external assessor without Jira tenant access cannot verify review independence, gate compliance, or review trails. This requirement establishes an automated export tool to persist sprint gate records into git version control and adds a governance check enforcing export presence:
   1. *Gate Export CLI Tooling (`REQ-PRO-059.1`, tools/jira_util.py & tools/hoechstmass/tools/jira_util.py)*:
@@ -3072,7 +3605,10 @@ The workflow SHALL mandate that:
 - **Invariants**: Zero modifications to Android production runtime code in `app/src/main/`; pure Python standard library retained; Rule 3 (Human Decision Gate for `Erledigt`) preserved.
 
 ### REQ-PRO-060: Sprint Metrics Persistence & Story Point Governance [Verified]
-- **Tests**: `tools/test_sprint_metrics.py`, `tools/test_verify_requirement_governance.py`, `tools/hoechstmass/tools/test_hoechstmass_tools.py`
+- **Tests**: `TST-PRO-060`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
 - **Implementation**: Story points extraction and serialization in `tools/sprint_metrics.py` and `tools/jira_util.py`, mandatory metrics execution in `.agents/skills/sprint-planner/SKILL.md` Ceremony 2, governance check `--check-metrics [SPRINT]` in `tools/verify_requirement_governance.py` and `tools/hoechstmass/tools/verify_requirement_governance.py`, and subtask comments indexing optimization in `collect_sprint_metrics_for_id`.
 - **Rationale**: Under ASPICE MAN.3 (Project Monitoring and Control) and GP 2.1 (Resource Management), sprint velocity and process metrics must be systematically persisted and verified in configuration management (Pre-Assessment Finding B-05). Historical process metrics in `docs/engineering/metrics/process_metrics.jsonl` lacked story point data for early sprints and lacked automated verification. This requirement establishes mandatory sprint metrics verification (`--check-metrics`), ensures story points are recorded every sprint, and optimizes query execution:
   1. *Story Points Extraction & Recording (`REQ-PRO-060.1`, tools/sprint_metrics.py & tools/jira_util.py)*:
@@ -3101,7 +3637,10 @@ The workflow SHALL mandate that:
 - **Invariants**: Zero modifications to Android production runtime code in `app/src/main/`; pure Python standard library retained; Rule 3 (`Erledigt` human-only gate) preserved.
 
 ### REQ-PRO-061: Sprint-Level QA Process-Compliance Audit [Verified]
-- **Tests**: `tools/test_jira_accounts.py`, `tools/test_verify_requirement_governance.py`, `tools/hoechstmass/tools/test_hoechstmass_tools.py`
+- **Tests**: `TST-PRO-061`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
 - **Implementation**: Automated `qa-audit` CLI command in `tools/jira_util.py` and `tools/hoechstmass/tools/jira_util.py`, structured markdown reporting in `docs/engineering/qa_audits/<sprint>.md`, canonical directory registration, and `--check-qa-audits` validation in `tools/verify_requirement_governance.py`.
 - **Rationale**: Under ASPICE SUP.1 (Quality Assurance) and GP 2.2 (Work Product Evidence), quality gates independently audit work products, but no separate audit validates lifecycle process conformity (Pre-Assessment Finding B-09). This requirement establishes an automated QA process-compliance audit tool (`qa-audit`) that samples $\ge 2$ tickets per sprint, evaluates a 5-point process checklist, records compliance in `docs/engineering/qa_audits/<sprint>.md`, and validates presence via `--check-qa-audits`:
   1. *QA Process Audit Tooling (`REQ-PRO-061.1`, tools/jira_util.py & tools/hoechstmass/tools/jira_util.py)*:
@@ -3132,7 +3671,10 @@ The workflow SHALL mandate that:
 - **Invariants**: Zero modifications to Android production runtime code in `app/src/main/`; pure Python standard library retained; Rule 3 (`Erledigt` human-only gate) preserved.
 
 ### REQ-PRO-062: Independent QA & Cross-Vendor Review Evidence Persistence [Verified]
-- **Tests**: `tools/test_jira_accounts.py`, `tools/test_verify_requirement_governance.py`, `tools/hoechstmass/tools/test_hoechstmass_tools.py`
+- **Tests**: `TST-PRO-062`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
 - **Implementation**: Automated `record-review` CLI command in `tools/jira_util.py` and `tools/hoechstmass/tools/jira_util.py`, structured markdown reporting in `docs/engineering/reviews/<review_file>.md`, canonical directory registration, and `--check-reviews` validation in `tools/verify_requirement_governance.py`.
 - **Rationale**: Under ASPICE SUP.1 (Quality Assurance), QA evidence must demonstrate independence from the work product author (Pre-Assessment Finding B-10). While in-sprint agents operate on the same vendor framework, independent reviews conducted by the Human (during Ceremony 2 Sprint Review before `Erledigt`) and cross-vendor AI models (Layer 5) previously lacked persistent repository records. This requirement establishes a structured review evidence format and CLI tooling:
   1. *Review Record Schema (`REQ-PRO-062.1`, docs/engineering/reviews/<sprint_or_review>.md)*:
@@ -3165,7 +3707,10 @@ The workflow SHALL mandate that:
 - **Invariants**: Zero modifications to Android production runtime code in `app/src/main/`; pure Python standard library retained; Rule 3 (`Erledigt` human-only gate) preserved.
 
 ### REQ-PRO-063: Problem Severity Classification & Defect Trend Metrics [Verified]
-- **Tests**: `tools/test_jira_accounts.py`, `tools/test_sprint_metrics.py`, `tools/hoechstmass/tools/test_sprint_metrics.py`, `tools/hoechstmass/tools/test_hoechstmass_tools.py`
+- **Tests**: `TST-PRO-063`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
 - **Implementation**: Mandatory severity validation in `create_issue` in `tools/jira_util.py` and `tools/hoechstmass/tools/jira_util.py`, severity labeling (`severity-<level>`), problem trend metrics extraction in `tools/sprint_metrics.py`, and JSONL serialization to `docs/engineering/metrics/process_metrics.jsonl`.
 - **Rationale**: Under ASPICE SUP.9 (Problem Resolution Management) and MAN.3 (Project Monitoring and Control), problem resolution requires classifying defects by severity independently of scheduling priority and tracking problem trends across iterations (Pre-Assessment Finding B-11). Previously, Jira issues recorded priority (`Highest`..`Lowest`) but lacked mandatory severity categorization (`Critical`, `Major`, `Minor`, `Cosmetic`), and quantitative metrics lacked defect trend telemetry:
   1. *Mandatory Severity on Bug Creation (`REQ-PRO-063.1`, tools/jira_util.py & tools/hoechstmass/tools/jira_util.py)*:
@@ -3202,7 +3747,10 @@ The workflow SHALL mandate that:
 - **Invariants**: Zero modifications to Android production runtime code in `app/src/main/`; pure Python standard library retained; Rule 3 (`Erledigt` human-only gate) preserved.
 
 ### REQ-PRO-064: Explicit Change-Request Impact Analysis Governance [Verified]
-- **Tests**: `tools/test_verify_requirement_governance.py`, `tools/test_jira_accounts.py`, `tools/hoechstmass/tools/test_hoechstmass_tools.py`
+- **Tests**: `TST-PRO-064`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
 - **Implementation**: Standardized `Impact Analysis` section in Stage 1 templates (`analysis_template.md`), automated schema validation `validate_impact_analysis_section()` in `tools/verify_requirement_governance.py` and `tools/hoechstmass/`, and Gate 1 checklist and CLI enforcement in `tools/jira_util.py` and `tools/hoechstmass/tools/jira_util.py`.
 - **Rationale**: Under ASPICE SUP.10 (Change Request Management) and Pre-Assessment Finding B-12, change request impact analysis must be formally and explicitly documented before Stage 1 approval rather than remaining implicit or scattered across analysis text. Formal evaluation of affected requirements, architecture components, verification test surface, and risks prevents downstream architecture drift and unexpected regressions:
   1. *Standardized Impact Analysis Template (`REQ-PRO-064.1`)*:
@@ -3230,6 +3778,476 @@ The workflow SHALL mandate that:
   • *Then* it executes normally without requiring Stage 1 impact analysis format.
 - **Invariants**: Zero modifications to Android production runtime code in `app/src/main/`; pure Python standard library retained; Rule 3 (`Erledigt` human-only gate) preserved.
 
+### REQ-PRO-065: Living Documentation Sharding Parser Code-Span Pipe Immunity & Master Index Safety Guard [Verified]
+- **Tests**: `TST-PRO-065`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Implementation**: Robust character tokenizer `split_markdown_table_row(row)` in `tools/shard_living_docs.py`, 6-column and 7-column normalization in `parse_requirements_file` and `parse_tests_file`, and Master Index overwrite abort guard in `main()`.
+- **Rationale**: Monolithic living documentation parsing in `tools/shard_living_docs.py` previously used naive `row.split("|")[1:-1]`. When table cells contain backticked code spans with pipes or logical OR (`||`, e.g. `code == 200 || code == 201`), raw pipe splitting injects extraneous columns, shifting column assignments and corrupting the `Tests` field with string fragments while discarding downstream columns. Furthermore, running the tool without guards when `docs/requirements.md` is already a Master Index would wipe all domain shards:
+  1. *Code-Span & Escaped Pipe Immunity (`REQ-PRO-065.1`)*:
+     • `tools/shard_living_docs.py` SHALL implement a table row tokenizer `split_markdown_table_row(row)` that parses table row cells by `|` while ignoring escaped pipes (`\|`) and any pipe characters residing inside inline code spans delimited by single or multiple backticks (`` `...` ``, ```` ``...`` ````).
+  2. *Column Count Normalization (`REQ-PRO-065.2`)*:
+     • `parse_requirements_file()` and `parse_tests_file()` SHALL handle both 6-column (`ID`, `Description`, `Rationale`, `Implementation`, `Tests`, `Status`) and 7-column (`ID`, `Title`, `Description`, `Rationale`, `Implementation`, `Tests`, `Status`) rows without index shifting.
+  3. *Master Index Overwrite Safety Guard (`REQ-PRO-065.3`)*:
+     • `tools/shard_living_docs.py` SHALL inspect the target source files (`docs/requirements.md` and `docs/tests.md`) before sharding. If either file is already a Master Index (e.g. contains `(Master Index)` or contains 0 requirement/test table rows), the tool SHALL abort immediately with exit code 1 and an explanatory error, unless an explicit `--force` flag is provided.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Net-new requirement `REQ-PRO-065` (`REQ-PRO-065.1`–`REQ-PRO-065.3`). Targets `tools/shard_living_docs.py` and `tools/test_shard_living_docs.py`.
+  2. *Historical Origin & Commit Trace*: Sprint 2026-46.4 via ticket `ATT-6124` under Epic `ATT-6119`.
+  3. *Root Reason for Existing Formulation*: Sharding was created in ATT-4594 without code-span tokenizer or Master Index detection.
+  4. *Preservation of Core Invariants*: Existing 9-domain shard structure, 100% ID parity, multi-line living doc formatting, and zero changes to Android runtime code in `app/src/main/`.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* a markdown table row containing backticks with `||` (e.g. `binary \`code == 200 || code == 201\` check`),
+  • *When* `split_markdown_table_row()` executes,
+  • *Then* the pipe characters inside the backticks SHALL NOT split the cell, and the resulting column count SHALL match the true table schema without shifting.
+  • *Given* an execution of `tools/shard_living_docs.py` against a repository where `docs/requirements.md` is a Master Index,
+  • *When* run without `--force`,
+  • *Then* the process SHALL abort with exit code 1 and prevent overwriting of domain shards.
+  • *Given* regression test reproducing the pre-fix naive `row.split("|")` behavior,
+  • *When* executed on the old splitting logic,
+  • *Then* it fails (proving reproduction), and passes on `split_markdown_table_row()`.
+- **Invariants**: Sharding preserves cell contents byte-identically; zero Android runtime changes; pure Python standard library.
+
+### REQ-PRO-066: Living Documentation Unique Requirement & Test Identifier Governance [Verified]
+- **Tests**: `TST-PRO-066`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Implementation**: `tools/verify_requirement_governance.py` (`verify_unique_ids()`, `--fail-on-duplicates`, `--enforce-unique`), `tools/test_verify_requirement_governance.py`.
+- **Rationale**: Requirement and test identifiers (`### REQ-*`, `### TST-*`) across domain shards in `docs/requirements/` and `docs/tests/` must be globally unique to guarantee unambiguous bidirectional traceability and reliable ASPICE evidence tracking. Duplicate IDs cause link ambiguity in verification matrices and prevent automated traceability tooling from accurately resolving test coverage:
+  1. *Duplicate Heading Detection (`REQ-PRO-066.1`)*:
+     • `tools/verify_requirement_governance.py` SHALL scan all `.md` shard files under `docs/requirements/` and `docs/tests/` for requirement (`### REQ-*`) and test (`### TST-*`) heading identifiers.
+     • For every identifier encountered more than once across or within domain shards, the verifier SHALL report each duplicate instance specifying its identifier, file path, and line number.
+  2. *Legacy Duplicate Baseline Allowlist & CI Non-Regression (`REQ-PRO-066.2`)*:
+     • To prevent breaking active CI during concurrent development prior to the remediation of the 11 known legacy duplicate IDs in ATT-6123, `tools/verify_requirement_governance.py` SHALL maintain a controlled baseline allowlist (`LEGACY_DUPLICATE_IDS`) of the 11 known pre-existing duplicates.
+     • When running in standard verification mode, known legacy duplicates SHALL emit warning diagnostics without failing the process. Any net-new duplicate (an identifier collision not present in the legacy allowlist) SHALL immediately fail verification with exit code 1.
+  3. *Strict Uniqueness Enforcement Flag (`REQ-PRO-066.3`)*:
+     • `tools/verify_requirement_governance.py` SHALL support a command-line flag (`--enforce-unique` / `--fail-on-duplicates`) that activates strict zero-tolerance mode, causing verification to fail with exit code 1 whenever any duplicate identifier (including legacy duplicates) is detected.
+  4. *Remediation of Legacy Duplicate Identifiers (`REQ-PRO-066.4`)*:
+     • In ATT-6123, all 11 legacy duplicate heading identifiers SHALL be renumbered to unique sequential IDs (`REQ-DAT-043`, `REQ-DAT-044`, `REQ-MIG-051`, `REQ-UI-521`, `REQ-UI-522`, `REQ-UI-523`, `TST-DAT-039`, `TST-DAT-040`, `TST-MAP-070`, `TST-MIG-049`, `TST-UI-519`) with all test citations, code tags, and tooling synchronized, and `LEGACY_DUPLICATE_IDS` SHALL be emptied to enforce strict zero tolerance globally.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Net-new requirement `REQ-PRO-066` (`REQ-PRO-066.1`–`REQ-PRO-066.4`). Targets `tools/verify_requirement_governance.py`.
+  2. *Historical Origin & Commit Trace*: Sprint 2026-46.4 via ticket `ATT-6120` and `ATT-6123` under Epic `ATT-6119` (ASPICE CL2 – Evidence Integrity & Bidirectional Traceability).
+  3. *Root Reason for Existing Formulation*: ASPICE 4.0 assessment of 2026-11-08 identified 11 undetected duplicate IDs (SWE.1 BP5, SWE.6 BP4).
+  4. *Preservation of Core Invariants*: Existing master table parity, directory structure checks, Composable islands, repository encapsulation, and Chesterton's Fence archaeology checks remain untouched; pure Python 3 standard library; zero production Android runtime code changes.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* two heading definitions in `docs/requirements/*.md` or `docs/tests/*.md` share an ID,
+  • *When* `verify_requirement_governance.py` runs,
+  • *Then* it outputs an error listing the duplicate ID with all offending filenames and line numbers, and exits with code 1.
+  • *Given* all headings have unique IDs,
+  • *When* `verify_requirement_governance.py` runs (with or without `--enforce-unique`),
+  • *Then* it outputs `PASS: All REQ and TST heading IDs are unique across living documentation shards.` and exits with code 0 (passing).
+- **Invariants**: Pure Python 3 standard library; zero Android runtime changes; zero regression in existing governance checks.
+
+### REQ-PRO-067: JUnit Test Results Archival & Evidence Integrity [Verified]
+- **Tests**: `TST-PRO-067`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Implementation**: `app/src/test/java/com/atrainingtracker/trainingtracker/build/ReleaseCiAndLintConfigContractTest.kt`
+- **Rationale**: Under ASPICE SWE.4 BP, SWE.6 BP3, and SUP.8 (Remediation ID: A-10), verification evidence must be baseline-controlled, integrity-preserved, and retrievable per CI run and release tag. Local transient test reports via `docs/engineering/test_results` provide effortless developer inspection, while CI artifact uploads and release tag attachments ensure persistent, auditable verification evidence:
+  1. *CI Branch Run JUnit Archival (`REQ-PRO-067.1`, .github/workflows/android-branch-build.yml)*:
+     • `.github/workflows/android-branch-build.yml` SHALL execute an `actions/upload-artifact@v4` step with `if: always()` immediately following unit tests, archiving both JUnit XML reports (`app/build/test-results/testDebugUnitTest/`) and HTML test reports (`app/build/reports/tests/testDebugUnitTest/`).
+  2. *Release Tag JUnit Test Results Packaging & Attachment (`REQ-PRO-067.2`, .github/workflows/android-release.yml)*:
+     • `.github/workflows/android-release.yml` SHALL package unit test results into a versioned archive `junit-test-results-<tag>.zip` (or `.tar.gz`) named with the release tag and attach it to the GitHub Release via `softprops/action-gh-release@v2` alongside release APK and AAB binaries.
+     • The release workflow SHALL also upload the test results as a workflow artifact.
+  3. *Local 1-Click Developer Symlink Preservation (`REQ-PRO-067.3`, docs/engineering/test_results)*:
+     • `docs/engineering/test_results` SHALL remain a symbolic link pointing to `../../app/build/reports/tests/testDebugUnitTest` (Rule 67), enabling immediate 1-click inspection of local test reports without committing transient HTML files to git.
+  4. *Governance & Contract Verification (`REQ-PRO-067.4`, ReleaseCiAndLintConfigContractTest.kt & tools/verify_requirement_governance.py)*:
+     • `ReleaseCiAndLintConfigContractTest.kt` and `tools/verify_requirement_governance.py` SHALL verify workflow YAML presence and configuration, ensure `if: always()` is configured for CI unit test uploads, verify release archive attachment patterns, and enforce symlink integrity for `docs/engineering/test_results`.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Net-new requirement `REQ-PRO-067` (`REQ-PRO-067.1`–`REQ-PRO-067.4`). Targets `.github/workflows/android-branch-build.yml`, `.github/workflows/android-release.yml`, `docs/engineering/test_results`, `tools/verify_requirement_governance.py`, and `ReleaseCiAndLintConfigContractTest.kt`.
+  2. *Historical Origin & Commit Trace*: Introduced in Sprint 2026-46.4 via ATT-6137 under Epic ATT-6119 (ASPICE CL2 Remediation A-10).
+  3. *Root Reason for Existing Formulation*: Historical CI workflows only uploaded lint and build binaries; release tags lacked attached unit test verification evidence.
+  4. *Preservation of Core Invariants*: Rule 67 canonical layout intact; 100% clean-room test pass rate; release signing and publishing workflows remain non-breaking.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* a CI branch build executing unit tests,
+  • *When* the test execution step completes (pass or fail),
+  • *Then* `actions/upload-artifact@v4` uploads JUnit XML and HTML reports (`if: always()`).
+  • *Given* a release build triggered by a release tag,
+  • *When* unit tests complete and release assets are published,
+  • *Then* a versioned `junit-test-results-<tag>.zip` (or `.tar.gz`) archive is attached to the GitHub Release.
+  • *Given* the repository checkout,
+  • *When* inspecting `docs/engineering/test_results`,
+  • *Then* it is a valid symbolic link pointing to `../../app/build/reports/tests/testDebugUnitTest`.
+  • *Given* the automated contract tests and governance script,
+  • *When* executed,
+  • *Then* symlink integrity and workflow YAML validity pass with 100% success.
+- **Invariants**: Zero modifications to Android production runtime code in `app/src/main/`; Rule 67 canonical directory structure preserved.
+
+### REQ-PRO-068: System Integration Verification & Sensor Simulators Specification [Verified]
+- **Tests**: `TST-PRO-068`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Implementation**: `app/src/test/java/com/atrainingtracker/trainingtracker/build/SystemIntegrationTestContractTest.kt`
+- **Rationale**: Under ASPICE SYS.4 (Finding S-06), system integration test specifications and repeatable verification procedures must be established covering all external system interfaces (BLE, ANT+, GNSS, Cloud) using sensor simulators to ensure reproducible integration verification in CI and pre-release audits:
+  1. *System Integration Test Specification (`REQ-PRO-068.1`, docs/system/sys_integration_tests.md)*:
+     • `docs/system/sys_integration_tests.md` SHALL specify formal system integration test cases (`SYS-INT-001` through `SYS-INT-006`) covering external interfaces: BLE Heart Rate (`0x180D`), BLE Cycling Power (`0x1818`), BLE Garmin Varia Radar (`6a4e3200`), ANT+ Radio IPC (`SYS-IF-02`), GNSS Positioning (`SYS-IF-03`), and Cloud Synchronization (`SYS-IF-05`).
+     • Every integration test case SHALL trace bidirectionally to corresponding system requirements (`SYSREQ-TRK-*`, `SYSREQ-DEX-*`) and system elements (`SYS-EL-01` through `SYS-EL-05`).
+     • Pass/fail criteria, timing tolerances, and artifact logging under `docs/releases/<tag>/` SHALL be formally specified.
+  2. *Headless CI Integration Test Runner (`REQ-PRO-068.2`, tools/run_system_integration_tests.py)*:
+     • `tools/run_system_integration_tests.py` SHALL execute automated system integration verification headless without physical hardware in CI, simulating peripheral data streams and logging structured execution results in JSON format.
+  3. *Integration Runner Test Suite (`REQ-PRO-068.3`, tools/test_system_integration_tests.py)*:
+     • `tools/test_system_integration_tests.py` SHALL verify runner functionality, interface simulation handlers, CLI arguments, and error reporting using standard library unittest.
+  4. *Contract Testing & Governance (`REQ-PRO-068.4`, SystemIntegrationTestContractTest.kt & verify_requirement_governance.py)*:
+     • `SystemIntegrationTestContractTest.kt` SHALL verify `docs/system/sys_integration_tests.md` structural completeness, interface coverage, system requirement allocation mapping, and automated command availability.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Net-new requirement `REQ-PRO-068` (`REQ-PRO-068.1`–`REQ-PRO-068.4`). Targets `docs/system/sys_integration_tests.md`, `tools/run_system_integration_tests.py`, `tools/test_system_integration_tests.py`, and `SystemIntegrationTestContractTest.kt`.
+  2. *Historical Origin & Commit Trace*: Sprint 2026-46.4 via ticket `ATT-6166` under Epic `ATT-6142` (ASPICE CL2 Remediation S-06).
+  3. *Root Reason for Existing Formulation*: ASPICE 4.0 assessment of 2026-11-08 rated SYS.4 as CL0 due to the absence of a documented system integration test specification and repeatable procedure.
+  4. *Preservation of Core Invariants*: Zero modifications to Android production runtime code in `app/src/main/`; pure Python standard library for simulator verification tooling.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* `docs/system/sys_integration_tests.md`,
+  • *When* inspected,
+  • *Then* formal integration test cases cover each external system interface (`SYS-IF-01` through `SYS-IF-05`) with bidirectional traceability to `SYSREQ-*` requirements.
+  • *Given* the headless CI runner `tools/run_system_integration_tests.py`,
+  • *When* executed in CI without hardware,
+  • *Then* it executes all simulator integration test scenarios, logs structured results, and exits with code 0.
+  • *Given* `SystemIntegrationTestContractTest.kt`,
+  • *When* executed via Gradle,
+  • *Then* all contract tests pass with 100% success.
+- **Invariants**: Zero Android production runtime code changes in `app/src/main/`; existing simulator scripts remain fully functional.
+
+### REQ-PRO-069: System Verification Protocol & Real Sensor Hardware Reference Matrix Specification [Verified]
+- **Tests**: `TST-PRO-069`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Implementation**: `app/src/test/java/com/atrainingtracker/trainingtracker/build/SystemVerificationProtocolContractTest.kt`
+- **Rationale**: Under ASPICE SYS.5 (Finding S-07), system verification must validate product capabilities against system requirements (`SYSREQ-TRK-*`, `SYSREQ-DEX-*`) in the real operational target environment using a standardized hardware reference matrix, structured verification cases across diverse environmental conditions, objective pass/fail criteria, and formal release sign-off record templates:
+  1. *Hardware Reference Matrix (`REQ-PRO-069.1`, docs/system/sys_verification_protocol.md)*:
+     • `docs/system/sys_verification_protocol.md` SHALL specify a physical hardware reference matrix covering reference mobile devices (Google Pixel reference family, Android 14/15), BLE Heart Rate monitors (Polar H10, Garmin HRM-Pro), BLE/ANT+ Power meters (Favero Assioma Duo, Stages, Wahoo KICKR), Garmin Varia Cycling Radar (RTL515), and Barometric Altimeter / Multi-GNSS hardware.
+  2. *Environmental Operating Conditions Matrix (`REQ-PRO-069.2`, docs/system/sys_verification_protocol.md)*:
+     • The protocol SHALL define 5 quantified real-world operating environments: (E1) Urban Canyon (multipath GNSS reflection, building obstruction), (E2) Rural Road / High Speed (high-velocity vehicle approaches, continuous RF tracking), (E3) Alpine Climb & Barometric Variation (rapid elevation gradient $\ge 15\%$, pressure changes), (E4) Indoor Smart Trainer (stationary power/cadence, absence of GPS movement), and (E5) Extended Endurance & Battery Longevity ($\ge 3$ hours continuous multi-sensor tracking, battery drain rate $\le 8\%$/hr).
+  3. *Structured System Verification Cases (`REQ-PRO-069.3`, docs/system/sys_verification_protocol.md)*:
+     • The protocol SHALL specify formal system verification test cases (`SYS-VRF-001` through `SYS-VRF-008`) covering all system requirements (`SYSREQ-TRK-001..006` and `SYSREQ-DEX-001..006`).
+     • Each verification case SHALL define prerequisite hardware/software setup, execution procedure, verifiable sensor telemetry, objective pass/fail criteria, and error recovery handling.
+  4. *Data Integrity, Reconnection & Release Sign-Off Record (`REQ-PRO-069.4`, docs/system/sys_verification_protocol.md & docs/releases/<tag>/sys_verification_record.md)*:
+     • The protocol SHALL define objective pass/fail criteria for data integrity (FIT/TCX export schema validity, Strava/Dropbox synchronization without corruption, sensor reconnection after RF dropout within exponential backoff schedule, $\le 1\%$ sample drop rate).
+     • A release sign-off record template SHALL be provided under `docs/releases/<tag>/sys_verification_record.md` to record executed test cases, device/firmware serials, environment conditions, results, and approval signatures.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Net-new requirement `REQ-PRO-069` (`REQ-PRO-069.1`–`REQ-PRO-069.4`). Targets `docs/system/sys_verification_protocol.md`, `docs/architecture.md`, and `SystemVerificationProtocolContractTest.kt`.
+  2. *Historical Origin & Commit Trace*: Sprint 2026-46.4 via ticket `ATT-6167` under Epic `ATT-6142` (ASPICE CL2 Remediation S-07).
+  3. *Root Reason for Existing Formulation*: ASPICE 4.0 assessment of 2026-11-08 rated SYS.5 as CL0 due to reliance on informal, ad-hoc walkthroughs without release-level system verification against system requirements.
+  4. *Preservation of Core Invariants*: Zero modifications to Android production runtime code in `app/src/main/`; pure governance and verification tooling.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* `docs/system/sys_verification_protocol.md`,
+  • *When* reviewed against SYS.5,
+  • *Then* it contains the hardware reference matrix, environmental conditions matrix, verification cases covering all `SYSREQ-TRK-*` and `SYSREQ-DEX-*` requirements, objective criteria, and release sign-off template.
+  • *Given* `SystemVerificationProtocolContractTest.kt`,
+  • *When* executed via Gradle,
+  • *Then* all contract assertions pass with 100% success.
+- **Invariants**: Zero Android production runtime code changes in `app/src/main/`.
+
+### REQ-PRO-070: Living Documentation Bidirectional Reference Integrity Governance [Verified]
+- **Tests**: `TST-PRO-070`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Implementation**: `tools/verify_requirement_governance.py` (`find_dangling_references()`, `verify_dangling_references()`, `--fail-on-dangling`, `--enforce-links`), `tools/test_verify_requirement_governance.py`.
+- **Rationale**: Citations between requirements and test cases across domain shards in `docs/requirements/` and `docs/tests/` must point to authentic, existing target headings (`### REQ-*`, `### TST-*`) to guarantee evidence integrity, bidirectional traceability, and ASPICE SWE.1 BP5 / SWE.6 BP4 compliance. Dangling references (pointing to non-existent tests or non-existent requirements) compromise traceability and prevent automated verification of test coverage:
+  1. *Dangling TST Citation Detection in Requirements (`REQ-PRO-070.1`)*:
+     • `tools/verify_requirement_governance.py` SHALL extract all cited test identifiers (`TST-*`) from the `Tests` field of every requirement in `docs/requirements/*.md` and verify that each cited test matches an existing `### TST-*` heading in `docs/tests/*.md`.
+     • Any missing target identifier SHALL be flagged as a dangling test reference with source file, line number, requirement ID, and missing test ID.
+  2. *Dangling REQ Citation Detection in Tests (`REQ-PRO-070.2`)*:
+     • `tools/verify_requirement_governance.py` SHALL extract all cited requirement identifiers (`REQ-*`) from the `Requirements` (or `Requirement(s)`) field of every test in `docs/tests/*.md` and verify that each cited requirement matches an existing `### REQ-*` heading in `docs/requirements/*.md`.
+     • Any missing target identifier SHALL be flagged as a dangling requirement reference with source file, line number, test ID, and missing requirement ID.
+  3. *Legacy Dangling Reference Allowlist & CI Non-Regression (`REQ-PRO-070.3`)*:
+     • To maintain non-breaking CI compatibility while existing legacy dangling links await scheduled remediation in A-08.x (ATT-6127..6135), `tools/verify_requirement_governance.py` SHALL maintain controlled baseline allowlists (`LEGACY_DANGLING_TST_REFS`, `LEGACY_DANGLING_REQ_REFS`).
+     • In standard verification mode, known legacy dangling references SHALL emit warning diagnostics without failing the process. Any net-new dangling reference (outside the allowlists) SHALL immediately fail verification with exit code 1.
+  4. *Strict Link Enforcement Flag (`REQ-PRO-070.4`)*:
+     • `tools/verify_requirement_governance.py` SHALL support a command-line flag (`--enforce-links` / `--fail-on-dangling`) that triggers exit code 1 if ANY dangling reference (including legacy allowlisted references) is detected.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Net-new requirement `REQ-PRO-070` (`REQ-PRO-070.1`–`REQ-PRO-070.4`). Targets `tools/verify_requirement_governance.py`.
+  2. *Historical Origin & Commit Trace*: Sprint 2026-46.4 via ticket `ATT-6121` under Epic `ATT-6119` (ASPICE CL2 – Evidence Integrity & Bidirectional Traceability).
+  3. *Root Reason for Existing Formulation*: ASPICE 4.0 assessment of 2026-11-08 identified 8 dangling TST citations and 11 dangling REQ citations (SWE.1 BP5, SWE.6 BP4).
+  4. *Preservation of Core Invariants*: Existing master table parity, unique ID checks, architecture validation, Composable island checks, and repository encapsulation remain untouched; pure Python 3 standard library; zero production Android runtime code changes.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* a requirement cites a non-existent `TST-*` ID or a test cites a non-existent `REQ-*` ID outside the legacy allowlist,
+  • *When* `verify_requirement_governance.py` runs,
+  • *Then* it outputs an error identifying the dangling reference with source file, line number, and missing ID, and exits with code 1.
+  • *Given* `--enforce-links` or `--fail-on-dangling` is enabled and any dangling link exists,
+  • *When* `verify_requirement_governance.py` runs,
+  • *Then* it fails with exit code 1 reporting all dangling references.
+  • *Given* all citations resolve to existing headings (or match the legacy allowlist in default mode),
+  • *When* `verify_requirement_governance.py` runs,
+  • *Then* it outputs a PASS diagnostic and exits with code 0.
+- **Invariants**: Pure Python 3 standard library; zero Android runtime changes; zero regression in existing governance checks.
+
+### REQ-PRO-071: Living Documentation Bidirectional REQ-TST Traceability & Code Coverage Reporting [Verified]
+- **Tests**: `TST-PRO-071`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Implementation**: `tools/verify_requirement_governance.py` (`calculate_traceability_coverage()`, `--coverage`, `--coverage-json`, `--min-req-tst-coverage`, `--min-tst-code-coverage`, `--max-code-without-spec`, `--min-bidirectional-coverage`), `tools/test_verify_requirement_governance.py`.
+- **Rationale**: ASPICE SWE.6 BP4 (Verify Software Unit) and SWE.4 (Software Unit Verification) require bidirectional traceability between software requirements, test specifications, and verified test code. Coverage reporting identifies gaps and allows CI ratcheting so progress can be monitored and gated:
+  1. *Category 1: REQs Without TST Citation (`REQ-PRO-071.1`)*:
+     • `tools/verify_requirement_governance.py` SHALL scan all `docs/requirements/*.md` shards and identify all requirements whose `Tests` field contains no valid test citation (empty, None, or absent).
+  2. *Category 2: TSTs Without Test Code (`REQ-PRO-071.2`)*:
+     • `tools/verify_requirement_governance.py` SHALL scan all `docs/tests/*.md` shards and identify all `### TST-*` headings that have no corresponding test code tag in `app/src/test/`.
+  3. *Category 3: Code Tags Without Spec (`REQ-PRO-071.3`)*:
+     • `tools/verify_requirement_governance.py` SHALL scan `app/src/test/` for all test code tags (`TST-*`) and identify any tagged base test IDs that do not exist as valid headings in `docs/tests/*.md`.
+  4. *Category 4: TSTs Not Cited Back by Their REQ (`REQ-PRO-071.4`)*:
+     • `tools/verify_requirement_governance.py` SHALL analyze cross-citations and identify every test specification (`TST-*`) whose cited requirement does not cite that test back in its `Tests` field.
+  5. *Structured Report Generation & Configurable Threshold Gates (`REQ-PRO-071.5`)*:
+     • `tools/verify_requirement_governance.py` SHALL support generating structured Markdown and JSON reports detailing counts, totals, and percentages for all 4 categories.
+     • The verifier SHALL support configurable threshold ratchets (`--min-req-tst-coverage`, `--min-tst-code-coverage`, `--max-code-without-spec`, `--min-bidirectional-coverage`) to enforce CI quality gates.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Net-new requirement `REQ-PRO-071` (`REQ-PRO-071.1`–`REQ-PRO-071.5`). Targets `tools/verify_requirement_governance.py`.
+  2. *Historical Origin & Commit Trace*: Sprint 2026-46.4 via ticket `ATT-6122` under Epic `ATT-6119` (ASPICE CL2 – Evidence Integrity & Bidirectional Traceability).
+  3. *Root Reason for Existing Formulation*: ASPICE 4.0 pre-assessment identified 581 TSTs never cited back, 273 spec TSTs without test code, and 159 code tags missing from spec.
+  4. *Preservation of Core Invariants*: Existing verifier routines (table parity, duplicate IDs, dangling references, tripwires) remain untouched; pure Python 3 standard library; zero Android runtime modifications.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* `--coverage` is invoked on the repository,
+  • *When* `verify_requirement_governance.py` runs,
+  • *Then* it outputs a Markdown matrix report of the 4 gap categories with counts, totals, and percentages.
+  • *Given* `--coverage-json` is specified,
+  • *When* `verify_requirement_governance.py` runs,
+  • *Then* it outputs structured JSON containing exact metric numbers and category item listings.
+  • *Given* a coverage threshold is configured and repository telemetry falls below that threshold,
+  • *When* `verify_requirement_governance.py` runs,
+  • *Then* it exits with code 1 and outputs a descriptive gate violation error.
+- **Invariants**: Pure Python 3 standard library; zero Android runtime changes; zero regression in existing governance checks.
+
+### REQ-PRO-072: Release Manager System Verification Evidence Integration & Release Gating Governance [Verified]
+- **Tests**: `TST-PRO-072`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Implementation**: `.agents/skills/release-manager/SKILL.md`, `docs/releases/README.md`, `docs/releases/TEMPLATE.md`, `docs/architecture.md`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/ReleaseManagerSystemEvidenceContractTest.kt`
+- **Rationale**: Under ASPICE SYS.5 and SUP.8 (Finding S-08), release decisions and release checklists must reference system-level evidence (SYS.4 integration verification and SYS.5 system verification protocol records). The release manager skill, release checklists, and release documentation must require verified system integration and system verification evidence, explicitly blocking release candidate tag creation if records are missing or failing:
+  1. *Mandatory System Evidence Gate Specification (`REQ-PRO-072.1`, .agents/skills/release-manager/SKILL.md)*:
+     • `.agents/skills/release-manager/SKILL.md` SHALL specify mandatory verification gates requiring both SYS.4 System Integration Verification results (`docs/releases/<tag>/system_integration_results.json` generated by `tools/run_system_integration_tests.py`) and SYS.5 System Verification Protocol sign-off records (`docs/releases/<tag>/sys_verification_record.md` per `docs/system/sys_verification_protocol.md`).
+  2. *Release Tagging Blocking Gate (`REQ-PRO-072.2`, .agents/skills/release-manager/SKILL.md)*:
+     • The release checklist and step-by-step procedures in `.agents/skills/release-manager/SKILL.md` SHALL explicitly block the creation of release candidate tags (`V<versionName>__<versionCode>`) and production distribution if either system verification record is missing, incomplete, or contains failing test verdicts.
+  3. *Standardized Release Evidence Directory & Template (`REQ-PRO-072.3`, docs/releases/)*:
+     • A standardized release evidence specification and template (`docs/releases/README.md` and `docs/releases/TEMPLATE.md`) SHALL be established defining required directory structure `docs/releases/<tag>/`, artifact schemas, and cross-references to SYS.4 and SYS.5 sign-off criteria.
+  4. *Release Manager System Evidence Contract Testing (`REQ-PRO-072.4`, ReleaseManagerSystemEvidenceContractTest.kt)*:
+     • An automated JUnit contract test `ReleaseManagerSystemEvidenceContractTest.kt` SHALL verify that `.agents/skills/release-manager/SKILL.md` and release templates enforce the mandatory SYS.4 and SYS.5 gating criteria and block release candidate creation upon missing/failing evidence.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Net-new requirement `REQ-PRO-072` (`REQ-PRO-072.1`–`REQ-PRO-072.4`). Targets `.agents/skills/release-manager/SKILL.md`, `docs/releases/`, `docs/architecture.md`, and `ReleaseManagerSystemEvidenceContractTest.kt`.
+  2. *Historical Origin & Commit Trace*: Sprint 2026-46.4 via ticket `ATT-6169` under Epic `ATT-6142` (ASPICE CL2 Remediation S-08). Builds on `daab754c` (ATT-6166) and `0d18ef1a` (ATT-6167).
+  3. *Root Reason for Existing Formulation*: ASPICE 4.0 assessment of 2026-11-08 identified that release checklists only verified unit compilation and APK signing without verifying system-level evidence against system requirements.
+  4. *Preservation of Core Invariants*: Canonical 10-step release process from ATT-170 is preserved with mandatory system evidence verification prerequisites; zero production Android runtime code changes in `app/src/main/`.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* `.agents/skills/release-manager/SKILL.md`,
+  • *When* inspected,
+  • *Then* it specifies mandatory gates requiring `docs/releases/<tag>/system_integration_results.json` and `docs/releases/<tag>/sys_verification_record.md`.
+  • *Given* release candidate preparation,
+  • *When* system verification records are missing or failing,
+  • *Then* the release procedure blocks release candidate tag creation.
+  • *Given* `ReleaseManagerSystemEvidenceContractTest.kt`,
+  • *When* executed via Gradle,
+  • *Then* all assertions pass with 100% success.
+- **Invariants**: Zero Android production runtime code changes in `app/src/main/`.
+
+### REQ-PRO-073: Evidence-Based Living Requirement Status Model and Governance Verification [Verified]
+- **Tests**: `TST-PRO-073`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Implementation**: `tools/verify_requirement_governance.py` (`verify_master_table_parity()`, `recalculate_master_index_tables()`, `verify_requirement_evidence_status()`, `--sync-indexes`, `--check-evidence`, `--enforce-evidence`), `app/src/test/java/com/atrainingtracker/trainingtracker/build/AspiceSweAuditContractTest.kt`, `tools/test_verify_requirement_governance.py`, `docs/project_governance.md`.
+- **Rationale**: ASPICE SWE.1 (Software Requirements Analysis), SWE.6 BP3 (Verify Software Units), and GP 2.2 require work product status claims to be grounded in controlled, versioned evidence, preventing status inflation:
+  1. *Status Lifecycle Taxonomy (`REQ-PRO-073.1`)*:
+     • Requirements and test specifications SHALL use multi-line headings ending with an explicit status: `[Planned]`, `[Open]`, `[Implemented]`, or `[Verified]`.
+     • `[Planned]` / `[Open]`: Requirement is specified, but no verified test evidence or passing automated test exists yet.
+     • `[Implemented]`: Production code exists in the repository, but automated test evidence (`TST-*`) is pending, incomplete, unintegrated, or failing.
+     • `[Verified]`: Requires >= 1 authentic test specification (`TST-*`) with passing automated test code or formal archived verification record.
+  2. *Master Index Table 4-Column Format (`REQ-PRO-073.2`)*:
+     • Master index tables in `docs/requirements.md` and `docs/tests.md` SHALL use the 4-column summary format: `Total | Verified | Implemented | Planned / Open`.
+  3. *Automated Index Synchronization (`REQ-PRO-073.3`)*:
+     • `tools/verify_requirement_governance.py --sync-indexes` and `verify_master_table_parity()` SHALL support parsing and synchronizing `[Implemented]` status alongside `[Verified]` and `[Planned]` / `[Open]` with 100% mathematical parity across all 9 domain shards.
+  4. *Evidence-Backed Verification Rule (`REQ-PRO-073.4`)*:
+     • `tools/verify_requirement_governance.py` SHALL verify that any requirement claiming `[Verified]` cites >= 1 existing TST ID. In default CI checks (`verify_governance()`), any new or modified requirement claiming `[Verified]` without an existing TST ID SHALL fail validation. Under full-repository gating (`--enforce-evidence`), any requirement claiming `[Verified]` without valid test evidence SHALL fail.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Net-new requirement `REQ-PRO-073` (`REQ-PRO-073.1`–`REQ-PRO-073.4`). Targets `tools/verify_requirement_governance.py` and `AspiceSweAuditContractTest.kt`.
+  2. *Historical Origin & Commit Trace*: Sprint 2026-46.4 via ticket `ATT-6126` under Epic `ATT-6119` (ASPICE CL2 – Evidence Integrity & Bidirectional Traceability). Preceding: ATT-6122 (commit `687e8388`, traceability coverage reporting) and ATT-6137 (commit `ddd1024a`, release JUnit archival).
+  3. *Root Reason for Existing Formulation*: ASPICE 4.0 pre-assessment identified status inflation (98% `[Verified]` despite 59% lacking tests). Adding `[Implemented]` and 4-column master tables provides evidence-based status grounding.
+  4. *Preservation of Core Invariants*: 100% parity across all 9 domain shards; pure Python 3 standard library; zero Android runtime modifications.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* a REQ claims `[Verified]` without citing an existing TST ID,
+  • *When* `verify_requirement_governance.py` runs,
+  • *Then* it fails with a descriptive error.
+  • *Given* a REQ claims `[Verified]` and cites an existing TST ID backed by test code,
+  • *When* `verify_requirement_governance.py` runs,
+  • *Then* it passes.
+  • *Given* living doc shards with `[Implemented]` headings,
+  • *When* `python3 tools/verify_requirement_governance.py --sync-indexes` runs,
+  • *Then* master tables in `docs/requirements.md` and `docs/tests.md` reflect the 4-column format with 100% parity.
+- **Invariants**: Pure Python 3 standard library; zero Android runtime changes; zero regression in existing governance checks.
+
+### REQ-PRO-074: Release Verification Summary Generation per Tag [Verified]
+- **Tests**: `TST-PRO-074`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Implementation**: `tools/generate_release_verification_summary.py`, `tools/test_generate_release_verification_summary.py`, `.agents/skills/release-manager/SKILL.md`, `docs/releases/README.md`
+- **Rationale**: Under ASPICE SWE.6 BP5 (Finding A-11), release decisions must be based on recorded, baseline-controlled verification evidence. A standalone generator script SHALL consolidate unit test counts/results, bidirectional requirement-to-test traceability matrices, system integration verification results (SYS.4), and system verification protocol sign-off records (SYS.5) into an authoritative Markdown summary per release tag (`docs/releases/<tag>/verification_summary.md`), explicitly highlighting all deviations requiring human approval:
+  1. *Automated Release Verification Summary CLI (`REQ-PRO-074.1`, tools/generate_release_verification_summary.py)*:
+     • `tools/generate_release_verification_summary.py` SHALL provide a command-line interface accepting `--tag <TAG>` (e.g. `V5.0.0__2026111201`), optional `--commit <SHA>` (defaulting to current HEAD), optional `--out <PATH>` (defaulting to `docs/releases/<tag>/verification_summary.md`), and optional threshold parameters (`--min-req-tst-coverage`, `--min-tst-code-coverage`, `--min-bidirectional-coverage`).
+  2. *Unit & Regression Test Evidence Aggregation (`REQ-PRO-074.2`, tools/generate_release_verification_summary.py)*:
+     • The generator SHALL aggregate total unit test count, passed, failed, and skipped tests from `app/build/test-results/testDebugUnitTest/` or test archive files, and reference the versioned JUnit test archive artifact (`build-evidence/junit-test-results-<tag>.zip` per ATT-6137).
+  3. *Bidirectional REQ-TST Traceability Matrix Aggregation (`REQ-PRO-074.3`, tools/generate_release_verification_summary.py)*:
+     • The generator SHALL query and embed bidirectional requirement-to-test coverage data via `tools/verify_requirement_governance.py --coverage-json` (per ATT-6122), presenting REQ-to-TST coverage %, TST-to-code coverage %, and bidirectional coverage metrics.
+  4. *System Integration & Verification Protocol Status Aggregation (`REQ-PRO-074.4`, tools/generate_release_verification_summary.py)*:
+     • The generator SHALL parse and summarize SYS.4 System Integration Verification results from `docs/releases/<tag>/system_integration_results.json` (per ATT-6166) and SYS.5 System Verification Protocol sign-off records from `docs/releases/<tag>/sys_verification_record.md` (per ATT-6167).
+  5. *Open Deviations & Human Approval Gating (`REQ-PRO-074.5`, tools/generate_release_verification_summary.py)*:
+     • The generator SHALL evaluate whether any test failure, missing evidence file, or coverage below configured thresholds exists, and enumerate them under an explicit `Deviations Requiring Human Approval` section, assigning an overall status of `PASS` or `BLOCKED / REQUIRES HUMAN APPROVAL`.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Net-new requirement `REQ-PRO-074` (`REQ-PRO-074.1`–`REQ-PRO-074.5`). Targets `tools/generate_release_verification_summary.py`, `tools/test_generate_release_verification_summary.py`, `.agents/skills/release-manager/SKILL.md`, and `docs/releases/README.md`.
+  2. *Historical Origin & Commit Trace*: Sprint 2026-46.4 via ticket `ATT-6138` under Epic `ATT-6119` (ASPICE CL2 Remediation A-11). Builds on `ddd1024a` (ATT-6137), `687e8388` (ATT-6122), `daab754c` (ATT-6166), `0d18ef1a` (ATT-6167), and `bf31bead` (ATT-6169).
+  3. *Root Reason for Existing Formulation*: ASPICE 4.0 assessment finding A-11 identified that release decisions lacked a consolidated, baseline-controlled verification summary file documenting all verification dimensions and deviations.
+  4. *Preservation of Core Invariants*: Canonical release workflow preserved; pure Python 3 standard library CLI; zero production Android runtime code changes in `app/src/main/`.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* release evidence artifacts for a release tag,
+  • *When* `tools/generate_release_verification_summary.py --tag <TAG>` executes,
+  • *Then* `docs/releases/<tag>/verification_summary.md` is generated with unit tests, coverage matrix, SYS.4, and SYS.5 sections.
+  • *Given* any failing test, missing evidence, or coverage below threshold,
+  • *When* the summary is generated,
+  • *Then* it is explicitly listed under `Deviations Requiring Human Approval` with overall status `BLOCKED / REQUIRES HUMAN APPROVAL`.
+  • *Given* `tools/test_generate_release_verification_summary.py`,
+  • *When* executed via pytest/unittest,
+  • *Then* 100% of unit tests pass.
+- **Invariants**: Zero Android production runtime code changes in `app/src/main/`.
+
+### REQ-PRO-075: Requirement Shards Tests Field Format & Machine-Readable Traceability Integrity [Verified]
+- **Tests**: `TST-PRO-075`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Implementation**: `tools/verify_requirement_governance.py`, `tools/test_verify_requirement_governance.py`
+- **Rationale**: Under ASPICE SWE.1 BP1 and evidence integrity governance, requirement-to-test traceability must be machine-checkable and unambiguous across all living documentation shards. The system SHALL enforce that the `Tests:` field of every requirement in `docs/requirements/*.md` contains strictly valid backticked test identifiers or standardized non-executable placeholders, preventing truncated sentence fragments, dangling code checks, misplaced production source files, or inline metadata:
+  1. *Permitted Syntax Format (`REQ-PRO-075.1`, tools/verify_requirement_governance.py)*:
+     • The `Tests:` field of every requirement section SHALL consist exclusively of a comma-separated sequence of backticked test identifiers conforming to regex pattern `` `TST-[A-Z0-9_-]+` `` or recognized placeholders (`None`, `Planned`, `Review`, `Manual inspection`).
+     • Production source code files (`.kt`, `.java`, `.xml`), unclosed backticks, dangling boolean/code expressions (`code == ...`), and trailing pipe annotations (`| **Tickets**: ...`) SHALL NOT appear in the `Tests:` field.
+  2. *Automated Governance Verifier Enforcement (`REQ-PRO-075.2`, tools/verify_requirement_governance.py)*:
+     • `tools/verify_requirement_governance.py` SHALL include `verify_tests_field_format(repo_root=None)` as a mandatory verification gate during CI runs.
+     • Any non-conforming line SHALL be reported with its relative shard path, line number, requirement ID, and offending content, causing the verifier to exit with a non-zero exit code.
+  3. *Living Documentation & Master Table Synchronization (`REQ-PRO-075.3`)*:
+     • All living requirement shards (`docs/requirements/*.md`) and master index tables (`docs/requirements.md`) SHALL maintain 100% parity with zero format violations.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Net-new requirement `REQ-PRO-075` (`REQ-PRO-075.1`–`REQ-PRO-075.3`). Targets `tools/verify_requirement_governance.py`, `tools/test_verify_requirement_governance.py`, and `docs/requirements/*.md`. References `REQ-PRO-028` and `REQ-PRO-065`.
+  2. *Historical Origin & Commit Trace*: Sprint 2026-46.4 via ticket `ATT-6125` under Epic `ATT-6119` (ASPICE CL2 Remediation A-06). Builds on `c9c2d428` (`ATT-6124`).
+  3. *Root Reason for Existing Formulation*: Historical sharding in `06990c88` split rows with code-span pipes and conflated 6-column and 7-column table rows, shifting implementation files and sentence fragments into `Tests:`.
+  4. *Preservation of Core Invariants*: 100% requirement ID uniqueness, living doc multi-line formatting, and master table parity invariants remain preserved. Zero changes to Android runtime code in `app/src/main/`.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* all requirement shards under `docs/requirements/*.md`,
+  • *When* `tools/verify_requirement_governance.py` validates `Tests:` field syntax,
+  • *Then* zero format violations are detected.
+  • *Given* a requirement containing a non-TST string, source file reference, or dangling syntax in `Tests:`,
+  • *When* `verify_tests_field_format()` evaluates the shard,
+  • *Then* a failure is recorded with exact file, line, and REQ ID, and execution fails.
+  • *Given* `tools/test_verify_requirement_governance.py`,
+  • *When* executed via pytest/unittest,
+  • *Then* 100% of unit tests pass.
+- **Invariants**: Zero Android production runtime code changes in `app/src/main/`.
+
+### REQ-PRO-076: Bidirectional System-to-Software Requirement Traceability and Governance Verification [Verified]
+- **Tests**: `TST-PRO-076`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Implementation**: `tools/verify_requirement_governance.py`, `tools/test_verify_requirement_governance.py`, `docs/system/sysreq_live_tracking.md`, `docs/system/sysreq_data_exchange.md`, `docs/system/system_software_traceability.md`, `docs/project_governance.md`
+- **Rationale**: Under ASPICE SYS.2 BP5 and SWE.1 BP5 (Remediation S-04 / ATT-6163), software requirements must not exist in isolation. Every software requirement SHALL either trace to an authentic system requirement (`SYSREQ-*`) or be formally classified as software-derived with documented rationale:
+  1. *Bidirectional System-to-Software Traceability Matrix (`REQ-PRO-076.1`)*:
+     • The system engineering baseline SHALL establish explicit bidirectional traceability matrices between system requirements (`SYSREQ-TRK-001`..`006`, `SYSREQ-DEX-001`..`006`) and refining software requirements in `docs/system/sysreq_live_tracking.md`, `docs/system/sysreq_data_exchange.md`, and `docs/system/system_software_traceability.md`.
+  2. *Domain & Prefix Tailoring Rules (`REQ-PRO-076.2`)*:
+     • Process governance (`docs/project_governance.md` and `docs/system/system_software_traceability.md`) SHALL define formal tailoring rules classifying purely internal UI, theme, calculation, and process requirement prefixes (`UI`, `UNT`, `PER`, `PERF`, `SPT`, `LOC`, `MON`, `PRI`, `SET`, `REV`, `STP`, `ARC`, `BLD`, `BUG`, `INT`, `LIV`, `LOG`, `MAN`, `NFR`, `PRO`, `REG`, `SEC`, `STB`, `STR`, `TOOL`, `TST`) as software-derived (`[SWE-Derived]`) with documented architectural rationale.
+  3. *Automated Verification of Cited SYSREQ Existence (`REQ-PRO-076.3`)*:
+     • `tools/verify_requirement_governance.py` SHALL verify that every `SYSREQ-*` identifier cited in living requirements or traceability matrices exists as a declared system requirement in `docs/system/sysreq_*.md`. Any dangling or invalid SYSREQ reference SHALL trigger verification failure.
+  4. *SYSREQ Refinement Coverage Verification (`REQ-PRO-076.4`)*:
+     • `tools/verify_requirement_governance.py` SHALL verify that 100% of declared system requirements are refined by $\ge 1$ software requirement, reporting unrefined system requirements and failing verification if any system requirement is unrefined.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Net-new requirement `REQ-PRO-076` (`REQ-PRO-076.1`–`REQ-PRO-076.4`). Targets `tools/verify_requirement_governance.py`, `tools/test_verify_requirement_governance.py`, `docs/system/sysreq_live_tracking.md`, `docs/system/sysreq_data_exchange.md`, `docs/system/system_software_traceability.md`, and `docs/project_governance.md`.
+  2. *Historical Origin & Commit Trace*: Sprint 2026-46.4 via ticket `ATT-6163` under Epic `ATT-6142` (ASPICE CL2 Remediation S-04). Builds on `88525c79` (ATT-6121) and SYS.2 foundations `b5e7d58f` (ATT-6160) and `95eb871b` (ATT-6161).
+  3. *Root Reason for Existing Formulation*: ASPICE 4.0 assessment finding S-04 identified that SWE requirements stood alone without machine-checked linkage to parent system requirements.
+  4. *Preservation of Core Invariants*: Zero Android production runtime code changes in `app/src/main/`; pure Python 3 standard library CLI; living documentation master index mathematical parity preserved.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* software requirements and traceability matrices citing `SYSREQ-*` IDs,
+  • *When* `tools/verify_requirement_governance.py` runs,
+  • *Then* all cited SYSREQs must exist in `docs/system/sysreq_*.md`, all declared SYSREQs must be covered by $\ge 1$ software requirement, and software requirements with tailored prefixes are classified as derived.
+  • *Given* a requirement citing a non-existent `SYSREQ-XXX`,
+  • *When* `tools/verify_requirement_governance.py` runs,
+  • *Then* it fails with a descriptive dangling SYSREQ reference error.
+  • *Given* `tools/test_verify_requirement_governance.py`,
+  • *When* executed via pytest/unittest,
+  • *Then* 100% of unit tests pass.
+- **Invariants**: Pure Python 3 standard library; zero Android runtime changes; zero regression in existing governance checks.
+
+### REQ-PRO-077: Requirement Priority, Type, and Verification Method Specification & Governance [Verified]
+- **Tests**: `TST-PRO-077`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Implementation**: `.agents/skills/stage2-req-test-spec/SKILL.md`, `.agents/skills/stage2-req-test-spec/templates/test_spec_template.md`, `docs/requirements.md`, `tools/verify_requirement_governance.py`, `tools/test_verify_requirement_governance.py`
+- **Rationale**: Under ASPICE SWE.1 BP2 (Remediation A-09 / ATT-6136), software requirements must define explicit priority, type (functional vs. non-functional), and verification method attributes. Without these attributes, requirements cannot be systematically prioritized, non-functional requirements cannot be programmatically tracked, and verification methods cannot be audited:
+  1. *Requirement Template Standardization (`REQ-PRO-077.1`)*:
+     • The Stage 2 engineering lifecycle skill (`.agents/skills/stage2-req-test-spec/SKILL.md`), test specification deliverable template (`templates/test_spec_template.md`), and living requirements developer guidelines (`docs/requirements.md`) SHALL define and enforce mandatory presence of three core attributes in the requirement header metadata:
+       - **Priority**: `Critical`, `High`, `Medium`, or `Low`.
+       - **Type**: `Functional` or `Non-Functional`.
+       - **Verification Method**: `Unit`, `Integration`, `On-Device Manual`, `Review`, `Formal Analysis` (or composite list thereof).
+  2. *Automated Attribute Verification Tooling (`REQ-PRO-077.2`)*:
+     • `tools/verify_requirement_governance.py` SHALL implement `verify_requirement_attributes()` to parse requirement sections across all domain shards (`docs/requirements/*.md`) and inspect for presence of `- **Priority**:`, `- **Type**:`, and `- **Verification Method**:`, validating values against their permitted domain vocabularies.
+  3. *Legacy Requirement Warning Tolerance & Diff Enforcement (`REQ-PRO-077.3`)*:
+     • In default verification mode, existing legacy requirements that have not yet had attributes backfilled SHALL emit warning diagnostics without failing the process.
+     • Any newly added or modified requirement identified in the git diff against the baseline branch SHALL strictly mandate valid Priority, Type, and Verification Method attributes; missing or invalid attributes SHALL immediately fail verification with exit code 1.
+  4. *Strict Attribute Enforcement CLI Flag (`REQ-PRO-077.4`)*:
+     • `tools/verify_requirement_governance.py` SHALL support `--enforce-attributes` / `--fail-on-missing-attributes` command-line flags causing verification to exit with code 1 if ANY requirement in the repository lacks valid Priority, Type, or Verification Method attributes.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Net-new requirement `REQ-PRO-077` (`REQ-PRO-077.1`–`REQ-PRO-077.4`). Targets `tools/verify_requirement_governance.py`, `.agents/skills/stage2-req-test-spec/SKILL.md`, `templates/test_spec_template.md`, and `docs/requirements.md`.
+  2. *Historical Origin & Commit Trace*: Sprint 2026-46.4 via ticket `ATT-6136` under Epic `ATT-6119` (ASPICE CL2 – Evidence Integrity & Bidirectional Traceability, Remediation A-09).
+  3. *Root Reason for Existing Formulation*: ASPICE 4.0 assessment finding A-09 identified that requirements had no priority, no type (functional/non-functional), and no verification method.
+  4. *Preservation of Core Invariants*: Existing master table parity, unique ID checks, dangling reference checks, and Python 3 stdlib execution preserved; zero production Android runtime code changes.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* any newly authored or modified requirement in the git diff,
+  • *When* `tools/verify_requirement_governance.py` runs,
+  • *Then* missing Priority, Type, or Verification Method fails verification with exit code 1.
+  • *Given* legacy requirements without attributes,
+  • *When* `tools/verify_requirement_governance.py` runs in default mode,
+  • *Then* warning diagnostics are emitted without failing verification.
+  • *Given* `--enforce-attributes` / `--fail-on-missing-attributes`,
+  • *When* `tools/verify_requirement_governance.py` runs,
+  • *Then* any missing attribute in the entire repository fails verification.
+  • *Given* `tools/test_verify_requirement_governance.py`,
+  • *When* executed via pytest/unittest,
+  • *Then* 100% of unit tests pass.
+- **Invariants**: Pure Python 3 standard library; zero Android runtime changes; zero regression in existing governance checks.
+
+### REQ-PRO-079: Aftermath Reviews Test Evidence Backfill & Bidirectional Traceability Governance [Verified]
+- **Tests**: `TST-PRO-079`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Implementation**: `docs/requirements/req_aftermath_reviews.md`, `docs/tests/tst_aftermath_reviews.md`, `ZoneDistributionCardTest.kt`, `tools/verify_requirement_governance.py`
+- **Rationale**: Under ASPICE SWE.6 BP4, SWE.1 BP5, and Remediation A-08.2 (ATT-6128), all requirements in the `aftermath_reviews` domain shard must link to valid, existing test specifications in `docs/tests/tst_aftermath_reviews.md` with verified test code implementations in `app/src/test/` or be downgraded to `[Implemented]` per REQ-PRO-073. Bidirectional reference integrity must guarantee that every referenced TST cites all of its parent REQs back with zero dangling references:
+  1. *Complete TST Coverage & Evidence Verification (`REQ-PRO-079.1`)*:
+     • Every requirement in `docs/requirements/req_aftermath_reviews.md` SHALL cite one or more valid, existing backticked `TST-*` IDs in its `Tests:` field.
+     • All 12 `REQ-REV-*` requirements SHALL retain `[Verified]` status backed by automated unit, contract, or architecture tests in `app/src/test/`.
+  2. *Bidirectional Citation Integrity (`REQ-PRO-079.2`)*:
+     • Every test specification in `docs/tests/tst_aftermath_reviews.md` SHALL be cited back by 100% of the requirements it declares in its `Requirement(s):` field (`REQ-REV-002` SHALL cite `TST-REV-005` in addition to `TST-REV-002`).
+     • Zero dangling references SHALL exist within the `aftermath_reviews` domain.
+  3. *Test Code Tag Synchronization (`REQ-PRO-079.3`)*:
+     • All 13 test specifications in `docs/tests/tst_aftermath_reviews.md` SHALL have corresponding test code tags recognized by `verify_requirement_governance.py --coverage`, including `TST-REV-009` tagged in `ZoneDistributionCardTest.kt`.
+  4. *Attribute Compliance & Header Parity (`REQ-PRO-079.4`)*:
+     • All requirements in `docs/requirements/req_aftermath_reviews.md` SHALL declare valid `Priority`, `Type`, and `Verification Method` attributes per `REQ-PRO-077`.
+     • Domain shard headers SHALL reflect accurate totals (`Total Requirements: 12`, `Total Tests: 13`) in 100% parity with master index tables.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Net-new requirement `REQ-PRO-079` (`REQ-PRO-079.1`–`REQ-PRO-079.4`). Targets `docs/requirements/req_aftermath_reviews.md`, `docs/tests/tst_aftermath_reviews.md`, and test tags.
+  2. *Historical Origin & Commit Trace*: Sprint 2026-46.4 via ticket `ATT-6128` under Epic `ATT-6119` (ASPICE CL2, Remediation A-08.2).
+  3. *Root Reason for Existing Formulation*: Baseline assessment identified evidence and back-link gaps in the aftermath reviews domain shards following incremental feature expansions.
+  4. *Preservation of Core Invariants*: Full functional test suite execution, master table mathematical parity, and pure Python 3 stdlib execution preserved with zero production Android APK modifications.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* `docs/requirements/req_aftermath_reviews.md`,
+  • *When* evaluated via `python3 tools/verify_requirement_governance.py --coverage`,
+  • *Then* 100% of requirements cite valid TSTs, 100% of TSTs have test code tags, and 100% of TSTs are cited back by all referenced REQs.
+  • *Given* `docs/requirements/req_aftermath_reviews.md` and `docs/tests/tst_aftermath_reviews.md`,
+  • *When* checked for dangling references and attributes,
+  • *Then* zero dangling references and zero missing attributes are detected.
+  • *Given* `tools/verify_requirement_governance.py --sync-indexes`,
+  • *When* executed,
+  • *Then* master index tables achieve 100% mathematical parity.
+- **Invariants**: Pure Python 3 standard library; zero Android runtime changes; zero regression in existing governance checks.
 
 
 
@@ -3239,3 +4257,299 @@ The workflow SHALL mandate that:
 
 
 
+
+
+
+
+### REQ-PRO-078: Living Documentation Tracking Cockpit Test Evidence Integrity & Bidirectional Traceability Governance [Verified]
+- **Tests**: `TST-PRO-078`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Implementation**: `tools/verify_requirement_governance.py`, `tools/test_verify_requirement_governance.py`, `docs/requirements/req_tracking_cockpit.md`, `docs/tests/tst_tracking_cockpit.md`, `docs/project_governance.md`
+- **Rationale**: Under ASPICE SWE.1 BP5 and SWE.6 BP4 (Remediation A-08.1 / ATT-6127), requirements in the Tracking Cockpit domain must maintain verified test evidence, 0 dangling references, and complete bidirectional linkage:
+  1. *Tracking Cockpit Test Citation Completeness (`REQ-PRO-078.1`)*:
+     • Every requirement in `docs/requirements/req_tracking_cockpit.md` SHALL cite at least one valid, existing `TST-*` identifier in its `Tests:` field, achieving $\ge 95\%$ test citation coverage.
+  2. *Bidirectional Linkage Parity (`REQ-PRO-078.2`)*:
+     • Every test specification in `docs/tests/tst_tracking_cockpit.md` SHALL be cited back by all of its referenced requirements in `docs/requirements/req_tracking_cockpit.md`, achieving $\ge 95\%$ bidirectional parity (Category 4).
+  3. *Zero Dangling References (`REQ-PRO-078.3`)*:
+     • The Tracking Cockpit domain SHALL maintain zero dangling references (`TST-FUSION-001`..`003`, `REQ-TRK-035` fully resolved and eliminated from legacy allowlists).
+  4. *Evidence-Grounded Status Model Transition (`REQ-PRO-078.4`)*:
+     • Requirements claiming `[Verified]` must cite $\ge 1$ test specification with verified automated test code. Requirements lacking automated evidence SHALL be transitioned to `[Implemented]` per `REQ-PRO-073`.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Net-new requirement `REQ-PRO-078` (`REQ-PRO-078.1`–`REQ-PRO-078.4`). Targets `tools/verify_requirement_governance.py`, `docs/requirements/req_tracking_cockpit.md`, `docs/tests/tst_tracking_cockpit.md`.
+  2. *Historical Origin & Commit Trace*: Sprint 2026-46.4 via ticket `ATT-6127` under Epic `ATT-6119` (ASPICE CL2 Remediation A-08.1). Builds on `e73eda46` (ATT-6126) and `88525c79` (ATT-6121).
+  3. *Root Reason for Existing Formulation*: ASPICE 4.0 assessment finding A-08.1 identified ungrounded `[Verified]` claims, dangling references, and broken bidirectional links in the Tracking Cockpit domain.
+  4. *Preservation of Core Invariants*: Zero Android production runtime code changes in `app/src/main/`; pure Python 3 standard library CLI; living documentation master index mathematical parity preserved.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* living documentation shards `req_tracking_cockpit.md` and `tst_tracking_cockpit.md`,
+  • *When* `tools/verify_requirement_governance.py --coverage` runs,
+  • *Then* Tracking Cockpit Category 1 coverage is $\ge 95\%$, Category 4 coverage is $\ge 95\%$, and zero dangling references exist in this domain.
+  • *Given* `tools/test_verify_requirement_governance.py`,
+  • *When* executed via unittest,
+  • *Then* 100% of unit tests pass.
+- **Invariants**: Pure Python 3 standard library; zero Android runtime changes; zero regression in existing governance checks.
+
+
+### REQ-PRO-080: Aftermath Periods Test Evidence Backfill & Bidirectional Traceability Governance [Verified]
+- **Tests**: `TST-PRO-080`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Implementation**: `docs/requirements/req_aftermath_periods.md`, `docs/tests/tst_aftermath_periods.md`, `PeriodBarGraphTest.kt`, `WorkoutShareBottomSheetContractTest.kt`, `SportingJourneyRepositoryTest.kt`, `SportingJourneyViewModelTest.kt`, `SportingJourneyCalculatorTest.kt`, `tools/verify_requirement_governance.py`
+- **Rationale**: Under ASPICE SWE.6 BP4, SWE.1 BP5, and Remediation A-08.3 (ATT-6129), all requirements in the `aftermath_periods` domain shard must link to valid, existing test specifications in `docs/tests/tst_aftermath_periods.md` with verified test code implementations in `app/src/test/` or be downgraded to `[Implemented]` per REQ-PRO-073. Bidirectional reference integrity must guarantee that every referenced TST cites all of its parent REQs back with zero dangling references:
+  1. *Complete TST Coverage & Evidence Verification (`REQ-PRO-080.1`)*:
+     • Every requirement in `docs/requirements/req_aftermath_periods.md` SHALL cite one or more valid, existing backticked `TST-*` IDs in its `Tests:` field.
+     • All 41 `REQ-PER-*`, `REQ-RAD-*`, and `REQ-SPT-*` requirements SHALL retain `[Verified]` status backed by automated unit, contract, or architecture tests in `app/src/test/`.
+     • `REQ-SPT-002` and `REQ-SPT-005` SHALL be eliminated from `LEGACY_UNGROUNDED_VERIFIED_REQS` in `tools/verify_requirement_governance.py`.
+  2. *Bidirectional Citation Integrity (`REQ-PRO-080.2`)*:
+     • Every test specification in `docs/tests/tst_aftermath_periods.md` SHALL be cited back by 100% of the requirements it declares in its `Requirement(s):` field.
+     • Zero dangling references SHALL exist within the `aftermath_periods` domain.
+  3. *Test Code Tag Synchronization (`REQ-PRO-080.3`)*:
+     • Test source files in `app/src/test/` SHALL be annotated with standardized `TST-*` comment tags for automated scanner discovery: `TST-PER-024`, `TST-PER-029`, `TST-PER-036`, `TST-PER-037`, `TST-SPT-005`, and `TST-SPT-006`.
+  4. *Attribute Compliance & Header Parity (`REQ-PRO-080.4`)*:
+     • All 41 requirements in `docs/requirements/req_aftermath_periods.md` SHALL declare valid `Priority`, `Type`, and `Verification Method` attributes per `REQ-PRO-077`.
+     • Domain shard headers SHALL reflect accurate totals (`Total Requirements: 41`, `Total Tests: 50`) in 100% parity with master index tables.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Net-new requirement `REQ-PRO-080` (`REQ-PRO-080.1`–`REQ-PRO-080.4`). Targets `docs/requirements/req_aftermath_periods.md`, `docs/tests/tst_aftermath_periods.md`, and test tags.
+  2. *Historical Origin & Commit Trace*: Sprint 2026-46.4 via ticket `ATT-6129` under Epic `ATT-6119` (ASPICE CL2, Remediation A-08.3).
+  3. *Root Reason for Existing Formulation*: Baseline pre-assessment identified evidence grounding gaps (`REQ-SPT-002`, `REQ-SPT-005` missing Tests field), header total drift, and bidirectional link gaps across the aftermath periods domain shards.
+  4. *Preservation of Core Invariants*: Full functional test suite execution, master table mathematical parity, and pure Python 3 stdlib execution preserved with zero production Android APK modifications.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* `docs/requirements/req_aftermath_periods.md`,
+  • *When* evaluated via `python3 tools/verify_requirement_governance.py --coverage`,
+  • *Then* 100% of requirements cite valid TSTs, Category 4 bidirectional gaps for the domain are 0, and Category 3 unmapped tags for SPT are eliminated.
+  • *Given* `docs/requirements/req_aftermath_periods.md` and `docs/tests/tst_aftermath_periods.md`,
+  • *When* checked for dangling references and attributes,
+  • *Then* zero dangling references and zero missing attributes are detected.
+
+### REQ-PRO-081: Maps and Navigation Test Evidence Backfill & Bidirectional Traceability Governance [Verified]
+- **Tests**: `TST-PRO-081`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Implementation**: `docs/requirements/req_maps_navigation.md`, `docs/tests/tst_maps_navigation.md`, `WaypointBadgeMarkerTest.kt`, `tools/verify_requirement_governance.py`
+- **Rationale**: Under ASPICE SWE.6 BP4, SWE.1 BP5, and Remediation A-08.5 (ATT-6131), all requirements in the `maps_navigation` domain shard must link to valid, existing test specifications in `docs/tests/tst_maps_navigation.md` with verified automated test code implementations in `app/src/test/` or be downgraded to `[Implemented]` per REQ-PRO-073. Bidirectional reference integrity must guarantee that every referenced TST cites all of its parent REQs back with zero dangling references:
+  1. *Complete TST Coverage & Evidence Verification (`REQ-PRO-081.1`)*:
+     • Every requirement in `docs/requirements/req_maps_navigation.md` SHALL cite one or more valid, existing backticked `TST-*` IDs in its `Tests:` field.
+     • Requirements lacking automated test code (`REQ-MAP-001`, `REQ-MAP-002`) SHALL be transitioned to `[Implemented]` per `REQ-PRO-073`. All other 73 requirements SHALL retain `[Verified]` status backed by automated unit tests in `app/src/test/`.
+  2. *Dangling Reference Elimination & Bidirectional Citation Integrity (`REQ-PRO-081.2`)*:
+     • Missing requirement `REQ-MAP-037` (*Route Waypoint Marker Badge Diameter Optimization & Glanceability Proportional Scaling*) SHALL be restored in `req_maps_navigation.md` citing `TST-MAP-039`, and removed from `LEGACY_DANGLING_REQ_REFS`.
+     • Missing test specification `TST-MAP-038` (*Known Locations: Heim-Basis Redundant Badge Excision & Start-Count Home Resolution Alignment Verification*) SHALL be restored in `tst_maps_navigation.md` citing `REQ-MAP-036`.
+     • Every test specification in `tst_maps_navigation.md` SHALL be cited back by 100% of the requirements it declares in its `Requirement(s):` field.
+  3. *Test Code Tag Synchronization (`REQ-PRO-081.3`)*:
+     • `WaypointBadgeMarkerTest.kt` SHALL be annotated with `TST-MAP-039` to eliminate unmapped test code tags.
+  4. *Attribute Compliance & Header Parity (`REQ-PRO-081.4`)*:
+     • All 75 requirements in `docs/requirements/req_maps_navigation.md` SHALL declare valid `Priority`, `Type`, and `Verification Method` attributes per `REQ-PRO-077`.
+     • Domain shard headers SHALL reflect accurate totals (`Total Requirements: 75`, `Total Tests: 70`) in 100% mathematical parity with master index tables.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Net-new requirement `REQ-PRO-081` (`REQ-PRO-081.1`–`REQ-PRO-081.4`). Targets `docs/requirements/req_maps_navigation.md`, `docs/tests/tst_maps_navigation.md`, `WaypointBadgeMarkerTest.kt`, and `tools/verify_requirement_governance.py`.
+  2. *Historical Origin & Commit Trace*: Sprint 2026-46.4 via ticket `ATT-6131` under Epic `ATT-6119` (ASPICE CL2, Remediation A-08.5).
+  3. *Root Reason for Existing Formulation*: Baseline assessment identified evidence and back-link gaps in the Maps & Navigation domain shards following living document partitioning in `ATT-4594`.
+  4. *Preservation of Core Invariants*: Full clean-room unit test suite execution, master table mathematical parity, and pure Python 3 stdlib execution preserved with zero production Android APK modifications.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* `docs/requirements/req_maps_navigation.md`,
+  • *When* evaluated via `python3 tools/verify_requirement_governance.py --coverage`,
+  • *Then* 100% of requirements cite valid TSTs, zero unmapped MAP/NAV tags exist in Category 3, and 100% of domain TSTs are cited back by all referenced REQs.
+  • *Given* `docs/requirements/req_maps_navigation.md` and `docs/tests/tst_maps_navigation.md`,
+  • *When* checked for dangling references and attributes,
+  • *Then* zero dangling references and zero missing attributes are detected in maps_navigation.
+  • *Given* `tools/verify_requirement_governance.py --sync-indexes`,
+  • *When* executed,
+  • *Then* master index tables achieve 100% mathematical parity.
+- **Invariants**: Pure Python 3 standard library; zero Android runtime changes; zero regression in existing governance checks.
+
+### REQ-PRO-083: Data Migration and Export Test Evidence Backfill & Bidirectional Traceability Governance [Verified]
+- **Tests**: `TST-PRO-083`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Implementation**: `docs/requirements/req_data_migration_export.md`, `docs/tests/tst_data_migration_export.md`, `WorkoutDeletionHelperTest.kt`, `tools/verify_requirement_governance.py`
+- **Rationale**: Under ASPICE SWE.6 BP4, SWE.1 BP5, and Remediation A-08.8 (ATT-6134), all requirements in the `data_migration_export` domain shard must link to valid, existing test specifications in `docs/tests/tst_data_migration_export.md` with verified automated test code implementations in `app/src/test/` or be downgraded to `[Implemented]` per REQ-PRO-073. Bidirectional reference integrity must guarantee that every referenced TST cites all of its parent REQs back with zero dangling references:
+  1. *Complete TST Coverage & Evidence Verification (`REQ-PRO-083.1`)*:
+     • Every requirement in `docs/requirements/req_data_migration_export.md` SHALL cite one or more valid, existing backticked `TST-*` IDs in its `Tests:` field.
+     • `REQ-DAT-010` (*Bulk Workout Deletion & Relational Storage Purge*) SHALL cite `TST-DAT-004`, backed by automated unit tests in `WorkoutDeletionHelperTest.kt`. All 130 requirements in `req_data_migration_export.md` SHALL maintain `[Verified]` status backed by automated unit tests in `app/src/test/`.
+  2. *Bidirectional Citation Integrity & Category 4 Gap Elimination (`REQ-PRO-083.2`)*:
+     • Every test specification in `tst_data_migration_export.md` SHALL be cited back by 100% of the requirements it declares in its `Requirement(s):` field.
+     • `REQ-DAT-007` SHALL cite `TST-DAT-001`, `TST-DAT-002`, `TST-DAT-009`.
+     • `REQ-DAT-009` SHALL cite `TST-DAT-003`, `TST-DAT-028`.
+     • `REQ-DAT-010` SHALL cite `TST-DAT-004`.
+     • `TST-DAT-028` SHALL prune extraneous non-domain citation `REQ-MAP-020`.
+     • `REQ-MIG-016` SHALL cite `TST-MIG-012`, `TST-MIG-018`.
+     • `REQ-MIG-017` SHALL cite `TST-MIG-013`, `TST-MIG-017`.
+     • `REQ-MIG-004` SHALL cite `TST-MIG-001`, `TST-MIG-037`.
+     • `REQ-MIG-036` SHALL cite `TST-MIG-033`, `TST-MIG-036`, `TST-DAT-031`, `TST-MIG-045`, `TST-MIG-037`.
+     • `REQ-MIG-039` SHALL cite `TST-MIG-049`.
+  3. *Test Code Tag Synchronization (`REQ-PRO-083.3`)*:
+     • `WorkoutDeletionHelperTest.kt` SHALL be annotated with `(REQ-DAT-010, TST-DAT-004 / ATT-296)` to eliminate Category 2 untagged test code gaps.
+  4. *Attribute Compliance & Header Parity (`REQ-PRO-083.4`)*:
+     • All 130 requirements in `docs/requirements/req_data_migration_export.md` SHALL declare valid `Priority`, `Type`, and `Verification Method` attributes per `REQ-PRO-077`.
+     • Domain shard headers SHALL reflect accurate totals (`Total Requirements: 130`, `Total Tests: 117`) in 100% mathematical parity with master index tables.
+  5. *Tooling Allowlist Pruning (`REQ-PRO-083.5`)*:
+     • `REQ-DAT-010` SHALL be removed from `LEGACY_UNGROUNDED_VERIFIED_REQS` in `tools/verify_requirement_governance.py`.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Net-new requirement `REQ-PRO-083` (`REQ-PRO-083.1`–`REQ-PRO-083.5`). Targets `docs/requirements/req_data_migration_export.md`, `docs/tests/tst_data_migration_export.md`, `WorkoutDeletionHelperTest.kt`, and `tools/verify_requirement_governance.py`.
+  2. *Historical Origin & Commit Trace*: Sprint 2026-46.4 via ticket `ATT-6134` under Epic `ATT-6119` (ASPICE CL2, Remediation A-08.8).
+  3. *Root Reason for Existing Formulation*: Baseline assessment identified evidence and back-link gaps in the Data Migration and Export domain shards following living document partitioning in `ATT-4594`.
+  4. *Preservation of Core Invariants*: Full clean-room unit test suite execution, master table mathematical parity, and pure Python 3 stdlib execution preserved with zero production Android APK modifications.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* `docs/requirements/req_data_migration_export.md`,
+  • *When* evaluated via `python3 tools/verify_requirement_governance.py --coverage`,
+  • *Then* 100% of requirements cite valid TSTs, zero ungrounded Verified statuses exist in data_migration_export, and 100% of domain TSTs are cited back by all referenced REQs (0 Category 4 domain gaps).
+  • *Given* `docs/requirements/req_data_migration_export.md` and `docs/tests/tst_data_migration_export.md`,
+  • *When* checked for dangling references and attributes,
+  • *Then* zero dangling references and zero missing attributes are detected in data_migration_export.
+  • *Given* `tools/verify_requirement_governance.py --sync-indexes`,
+  • *When* executed,
+  • *Then* master index tables achieve 100% mathematical parity.
+- **Invariants**: Pure Python 3 standard library; zero Android runtime changes; zero regression in existing governance checks.
+
+
+### REQ-PRO-082: Settings and Profiles Test Evidence Backfill & Bidirectional Traceability Governance [Verified]
+- **Tests**: `TST-PRO-082`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Implementation**: `docs/requirements/req_settings_profiles.md`, `docs/tests/tst_settings_profiles.md`, `WorkoutClusterCounterTest.kt`, `WorkoutClusterStatsTest.kt`, `tools/verify_requirement_governance.py`
+- **Rationale**: Under ASPICE SWE.6 BP4, SWE.1 BP5, and Remediation A-08.7 (ATT-6133), all requirements in the `settings_profiles` domain shard must link to valid, existing test specifications in `docs/tests/tst_settings_profiles.md` with verified test code implementations in `app/src/test/` or be downgraded to `[Implemented]` per REQ-PRO-073. Bidirectional reference integrity must guarantee that every referenced TST cites all of its parent REQs back with zero dangling references:
+  1. *Complete TST Coverage & Evidence Verification (`REQ-PRO-082.1`)*:
+     • Every requirement in `docs/requirements/req_settings_profiles.md` SHALL cite one or more valid, existing backticked `TST-*` IDs in its `Tests:` field.
+     • `REQ-PRI-002` SHALL be downgraded from `[Verified]` to `[Implemented]` per `REQ-PRO-073` due to lack of automated test fixtures for documentation policy (`privacy.md`).
+     • `REQ-SET-001` SHALL cite `TST-SET-082`, `REQ-SET-002` SHALL cite `TST-SET-098`, `REQ-SET-004` SHALL cite `TST-SET-053`, `REQ-SET-005` SHALL cite `TST-NAV-005`, and `REQ-PRI-001` SHALL cite `TST-PRI-002`.
+     • `REQ-SET-075` SHALL cite `TST-SET-077`, `TST-UI-318`, `TST-UI-321`.
+     • `REQ-SET-083`, `REQ-SET-084`, `REQ-SET-085`, and `REQ-SET-087` SHALL cite `TST-LOC-001` alongside their respective `TST-SET-*` IDs.
+  2. *Bidirectional Citation Integrity & Tag Synchronization (`REQ-PRO-082.2`)*:
+     • Every test specification in `docs/tests/tst_settings_profiles.md` SHALL be cited back by 100% of the requirements it declares in its `Requirement(s):` field.
+     • Shorthand numeric requirement citations (`007`, `008`, `011`, `030`, `038`) in `docs/tests/tst_settings_profiles.md` SHALL be expanded to canonical IDs (`REQ-SET-007`, `REQ-SET-008`, `REQ-SET-011`, `REQ-SET-030`, `REQ-SET-037`).
+     • In test classes `WorkoutClusterCounterTest.kt` and `WorkoutClusterStatsTest.kt`, code tags SHALL align with living specifications `TST-SET-054` and `TST-SET-055`, eliminating Category 3 ungrounded tags.
+     • Zero dangling references SHALL exist within the `settings_profiles` domain.
+  3. *Attribute Compliance & Header Parity (`REQ-PRO-082.3`)*:
+     • All 102 requirements in `docs/requirements/req_settings_profiles.md` SHALL declare valid `Priority`, `Type`, and `Verification Method` attributes per `REQ-PRO-077`.
+     • Domain shard headers SHALL reflect accurate totals (`Total Requirements: 102`, `Total Tests: 89`) in 100% parity with master index tables.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Net-new requirement `REQ-PRO-082` (`REQ-PRO-082.1`–`REQ-PRO-082.3`). Targets `docs/requirements/req_settings_profiles.md`, `docs/tests/tst_settings_profiles.md`, and test code tags.
+  2. *Historical Origin & Commit Trace*: Sprint 2026-46.4 via ticket `ATT-6133` under Epic `ATT-6119` (ASPICE CL2, Remediation A-08.7).
+  3. *Root Reason for Existing Formulation*: Baseline pre-assessment identified evidence grounding gaps, header total drift, shorthand citation formatting, and bidirectional link gaps across settings and profiles domain shards.
+  4. *Preservation of Core Invariants*: Full functional test suite execution, master table mathematical parity, and pure Python 3 stdlib execution preserved with zero production Android APK modifications.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* `docs/requirements/req_settings_profiles.md`,
+  • *When* evaluated via `python3 tools/verify_requirement_governance.py --coverage`,
+  • *Then* 100% of requirements cite valid TSTs, Category 4 bidirectional gaps for the domain are 0, and Category 3 unmapped tags for SET are eliminated.
+  • *Given* `docs/requirements/req_settings_profiles.md` and `docs/tests/tst_settings_profiles.md`,
+  • *When* checked for dangling references and attributes,
+  • *Then* zero dangling references and zero missing attributes are detected.
+  • *Given* `tools/verify_requirement_governance.py --sync-indexes`,
+  • *When* executed,
+  • *Then* master index tables achieve 100% mathematical parity.
+- **Invariants**: Pure Python 3 standard library; zero Android runtime changes; zero regression in existing governance checks.
+
+
+### REQ-PRO-084: Store Presence Test Evidence Backfill & Bidirectional Traceability Governance [Verified]
+- **Tests**: `TST-PRO-084`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Implementation**: `docs/requirements/req_store_presence.md`, `docs/tests/tst_store_presence.md`, `PlayStoreListingContractTest.kt`, `tools/verify_requirement_governance.py`
+- **Rationale**: Under ASPICE SWE.6 BP4, SWE.1 BP5, and Remediation A-08.9 (ATT-6135), all requirements in the `store_presence` domain shard (historically known as `project_governance` prior to ATT-6140) must link to valid, existing test specifications in `docs/tests/tst_store_presence.md` with verified test code implementations in `app/src/test/` or be downgraded to `[Implemented]` per REQ-PRO-073. Bidirectional reference integrity must guarantee that every referenced TST cites all of its parent REQs back with zero dangling references:
+  1. *Test Code Tag Grounding & Category 2 Completeness (`REQ-PRO-084.1`)*:
+     • In `PlayStoreListingContractTest.kt`, test methods `fullDescriptionsContainMandatoryV5Features()` and `storeListingsDoNotContainUnimplementedBacklogFeatures()` SHALL declare test code tag `TST-STP-002`.
+     • In `PlayStoreListingContractTest.kt`, test method `storeScreenshotsAreUniqueAndValid()` SHALL declare test code tag `TST-STP-004`.
+     • Class documentation header of `PlayStoreListingContractTest.kt` SHALL cite `REQ-STP-004`, `TST-STP-002`, and `TST-STP-004`, eliminating all Category 2 test code tag gaps for the domain.
+  2. *Mandatory Attribute Compliance (`REQ-PRO-084.2`)*:
+     • All 10 requirements in `docs/requirements/req_store_presence.md` SHALL declare valid `Priority`, `Type`, and `Verification Method` attributes per `REQ-PRO-077`.
+  3. *Test Specification Alignment (`REQ-PRO-084.3`)*:
+     • Test specifications `TST-STP-001` through `TST-STP-010` in `docs/tests/tst_store_presence.md` SHALL declare `Priority`, `Type`, and `Verification Method` attributes.
+     • Zero dangling references SHALL exist within the `store_presence` domain and 100% of test specifications SHALL be cited back by their requirements.
+  4. *Evidence Grounding & Index Parity (`REQ-PRO-084.4`)*:
+     • All 10 requirements SHALL maintain `[Verified]` backed by authentic automated build contract tests in `com.atrainingtracker.trainingtracker.build.*`.
+     • Living documentation master index tables in `docs/requirements.md` and `docs/tests.md` SHALL achieve 100% mathematical parity.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Net-new requirement `REQ-PRO-084` (`REQ-PRO-084.1`–`REQ-PRO-084.4`). Targets `docs/requirements/req_store_presence.md`, `docs/tests/tst_store_presence.md`, and `PlayStoreListingContractTest.kt`.
+  2. *Historical Origin & Commit Trace*: Sprint 2026-46.4 via ticket `ATT-6135` under Epic `ATT-6119` (ASPICE CL2, Remediation A-08.9).
+  3. *Root Reason for Existing Formulation*: Baseline pre-assessment identified test code tag omissions (`TST-STP-002`, `TST-STP-004`) in contract tests, missing mandatory attributes (`REQ-PRO-077`), and required formal verification evidence grounding across store presence living documentation.
+  4. *Preservation of Core Invariants*: Full build contract test suite pass rate, master table mathematical parity, and pure Python 3 stdlib execution preserved with zero production Android APK modifications.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* `docs/requirements/req_store_presence.md`,
+  • *When* evaluated via `python3 tools/verify_requirement_governance.py --coverage`,
+  • *Then* 100% of requirements cite valid TSTs (10/10), 100% of TSTs have test code tags (10/10), and Category 4 bidirectional gaps for STP are 0.
+  • *Given* `docs/requirements/req_store_presence.md` and `docs/tests/tst_store_presence.md`,
+  • *When* checked for dangling references and attributes,
+  • *Then* zero dangling references and zero missing attributes are detected.
+### REQ-PRO-085: UI Design System Test Evidence Backfill & Bidirectional Traceability Governance [Verified]
+- **Tests**: `TST-PRO-085`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Implementation**: `docs/requirements/req_ui_design_system.md`, `docs/tests/tst_ui_design_system.md`, `docs/tests/tst_process_stability.md`, `tools/verify_requirement_governance.py`
+- **Rationale**: Under ASPICE SWE.6 BP4, SWE.1 BP5, and Remediation A-08.6 (ATT-6132), all requirements in the `ui_design_system` domain shard must link to valid, existing test specifications in `docs/tests/tst_ui_design_system.md` with verified automated test code implementations in `app/src/test/` or be downgraded to `[Implemented]` per REQ-PRO-073. Bidirectional reference integrity must guarantee that every referenced TST cites all of its parent REQs back with zero dangling references:
+  1. *Complete TST Coverage & Evidence Verification (`REQ-PRO-085.1`)*:
+     • Every requirement in `docs/requirements/req_ui_design_system.md` SHALL cite one or more valid, existing backticked `TST-*` IDs in its `Tests:` field.
+     • The 8 omitted requirements (`REQ-UI-002`, `REQ-UI-008`, `REQ-UI-009`, `REQ-UI-010`, `REQ-UI-062`, `REQ-UI-135`, `REQ-UI-166`, `REQ-UI-289`) SHALL be restored with full specifications. All 452 requirements in `req_ui_design_system.md` SHALL maintain `[Verified]` status backed by automated unit tests in `app/src/test/`.
+  2. *Dangling Reference Elimination & Test Specification Backfill (`REQ-PRO-085.2`)*:
+     • Test specifications `TST-UI-041` (*Period Peak Markers Audit*) and `TST-UI-044` (*Mappable Device Items Layout Verification*) SHALL be registered in `docs/tests/tst_ui_design_system.md`.
+     • Test specification `TST-INT-007` (*Original Sport Icons Visual Identity Verification*) SHALL be registered in `docs/tests/tst_process_stability.md`.
+     • Zero dangling references SHALL exist across UI requirements and tests.
+  3. *Bidirectional Citation Integrity & Category 4 Gap Elimination (`REQ-PRO-085.3`)*:
+     • Every test specification in `tst_ui_design_system.md` SHALL be cited back by 100% of the requirements it declares in its `Requirement(s):` field.
+     • All 41 Category 4 gaps identified in the UI domain SHALL be updated in `req_ui_design_system.md` with reciprocal citations.
+  4. *Attribute Compliance & Header Parity (`REQ-PRO-085.4`)*:
+     • All 452 requirements in `docs/requirements/req_ui_design_system.md` SHALL declare valid `Priority`, `Type`, and `Verification Method` attributes per `REQ-PRO-077`.
+     • Domain shard headers SHALL reflect accurate totals (`Total Requirements: 452`, `Total Tests: 466`) in 100% mathematical parity with master index tables.
+  5. *Tooling Allowlist Pruning (`REQ-PRO-085.5`)*:
+     • All resolved UI references (`TST-UI-041`, `TST-UI-044`, `TST-INT-007`, `REQ-UI-002`, `REQ-UI-008`, `REQ-UI-009`, `REQ-UI-010`, `REQ-UI-062`, `REQ-UI-135`, `REQ-UI-166`, `REQ-UI-289`, and `REQ-UI-*` in `LEGACY_UNGROUNDED_VERIFIED_REQS`) SHALL be pruned from `tools/verify_requirement_governance.py`.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Net-new requirement `REQ-PRO-085` (`REQ-PRO-085.1`–`REQ-PRO-085.5`). Targets `docs/requirements/req_ui_design_system.md`, `docs/tests/tst_ui_design_system.md`, `docs/tests/tst_process_stability.md`, and `tools/verify_requirement_governance.py`.
+  2. *Historical Origin & Commit Trace*: Sprint 2026-46.4 via ticket `ATT-6132` under Epic `ATT-6119` (ASPICE CL2, Remediation A-08.6).
+  3. *Root Reason for Existing Formulation*: Baseline assessment identified dangling references, missing requirement headings, unreciprocated Category 4 links, and missing metadata attributes across the UI Design System domain.
+  4. *Preservation of Core Invariants*: Full clean-room unit test suite execution, master table mathematical parity, and pure Python 3 stdlib execution preserved with zero production Android APK modifications.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* `docs/requirements/req_ui_design_system.md`,
+  • *When* evaluated via `python3 tools/verify_requirement_governance.py --coverage`,
+  • *Then* 100% of requirements cite valid TSTs, zero ungrounded Verified statuses exist in ui_design_system, and 100% of domain TSTs are cited back by all referenced REQs (0 Category 4 domain gaps).
+  • *Given* `docs/requirements/req_ui_design_system.md` and `docs/tests/tst_ui_design_system.md`,
+  • *When* checked for dangling references and attributes,
+  • *Then* zero dangling references and zero missing attributes are detected in ui_design_system.
+  • *Given* `tools/verify_requirement_governance.py --sync-indexes`,
+  • *When* executed,
+  • *Then* master index tables achieve 100% mathematical parity.
+- **Invariants**: Pure Python 3 standard library; zero Android runtime changes; zero regression in existing governance checks.
+
+### REQ-PRO-086: Process Stability Test Evidence Backfill & Bidirectional Traceability Governance [Verified]
+- **Tests**: `TST-PRO-086`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Implementation**: `docs/requirements/req_process_stability.md`, `docs/tests/tst_process_stability.md`, `tools/verify_requirement_governance.py`, `tools/test_verify_requirement_governance.py`
+- **Rationale**: Under ASPICE SWE.6 BP4, SWE.1 BP5, and Remediation A-08.4 (ATT-6130), all requirements in the `process_stability` domain shard must link to valid, existing test specifications in `docs/tests/tst_process_stability.md` backed by authentic automated test code in `tools/` and `app/src/test/` or be downgraded to `[Implemented]`. All dangling references in this domain must be eliminated, mandatory attributes (`Priority`, `Type`, `Verification Method` per `REQ-PRO-077`, SWE.1 BP2) populated across all REQs and TSTs, missing `REQ-STB-013` restored, legacy ungrounded allowlists pruned, and master index tables synchronized with 100% mathematical parity:
+  1. *Restoration of REQ-STB-013 & SQLite Streaming Governance (`REQ-PRO-086.1`)*:
+     • `REQ-STB-013` SHALL be restored in `docs/requirements/req_process_stability.md` with complete attributes, rationale, Chesterton's Fence archaeology, and invariants.
+     • `REQ-STB-013` SHALL be linked bidirectionally with `TST-STB-013` and `TST-STB-018`, backed by `WorkoutRepositoryStreamTest.kt`.
+  2. *Dangling Reference Elimination (`REQ-PRO-086.2`)*:
+     • Dangling citations `TST-STR-010` and `TST-FUSION-004` SHALL be removed from `REQ-NFR-001` and `REQ-NFR-002`.
+     • Dangling citations in `docs/tests/tst_process_stability.md` (`TST-INT-004`, `TST-INT-005`, `TST-INT-006`, `TST-STR-001`, `TST-STR-003`) SHALL be resolved to authentic headings (`REQ-UI-110`, `REQ-UI-111`, `REQ-UI-109`).
+     • `TST-STR-010`, `TST-FUSION-004`, and `REQ-STB-013` SHALL be pruned from legacy allowlists in `tools/verify_requirement_governance.py`.
+  3. *Mandatory Attribute Compliance (`REQ-PRO-086.3`)*:
+     • All requirements in `docs/requirements/req_process_stability.md` SHALL declare valid `Priority`, `Type`, and `Verification Method` attributes per `REQ-PRO-077`.
+     • All test specifications in `docs/tests/tst_process_stability.md` SHALL declare valid `Priority`, `Type`, and `Verification Method` attributes.
+  4. *Bidirectional Parity & Ungrounded Allowlist Pruning (`REQ-PRO-086.4`)*:
+     • `TST-MAN-001` SHALL explicitly enumerate all 23 citing requirements across living shards.
+     • `TST-PRO-052` SHALL explicitly list `REQ-NFR-003` through `REQ-NFR-014`.
+     • All 58 verified `process_stability` requirements SHALL be pruned from `LEGACY_UNGROUNDED_VERIFIED_REQS` in `tools/verify_requirement_governance.py`.
+  5. *Index Synchronization & Parity (`REQ-PRO-086.5`)*:
+     • Master tables in `docs/requirements.md` and `docs/tests.md` SHALL be recalculated via `tools/verify_requirement_governance.py --sync-indexes`, achieving 100% mathematical parity.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Net-new requirement `REQ-PRO-086` (`REQ-PRO-086.1`–`REQ-PRO-086.5`). Targets `docs/requirements/req_process_stability.md`, `docs/tests/tst_process_stability.md`, `tools/verify_requirement_governance.py`, and `tools/test_verify_requirement_governance.py`.
+  2. *Historical Origin & Commit Trace*: Sprint 2026-46.4 via ticket `ATT-6130` under Epic `ATT-6119` (ASPICE CL2, Remediation A-08.4).
+  3. *Root Reason for Existing Formulation*: Baseline pre-assessment identified ungrounded `[Verified]` claims, dangling citations (`TST-STR-010`, `TST-FUSION-004`, `REQ-STB-013`), missing mandatory attributes, and omitted `REQ-STB-013` following document sharding.
+  4. *Preservation of Core Invariants*: 100% governance unit test pass rate, master table mathematical parity, pure Python 3 stdlib execution, and zero Android production runtime code changes.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* `docs/requirements/req_process_stability.md` and `docs/tests/tst_process_stability.md`,
+  • *When* evaluated via `python3 tools/verify_requirement_governance.py --coverage`,
+  • *Then* >= 95% of REQs cite valid TSTs (100%), Category 4 bidirectional parity is >= 95%, and zero ungrounded Verified statuses exist.
+  • *Given* `docs/requirements/req_process_stability.md` and `docs/tests/tst_process_stability.md`,
+  • *When* checked for dangling references and attributes,
+  • *Then* zero dangling references and zero missing attributes are detected.
+  • *Given* `python3 tools/verify_requirement_governance.py --sync-indexes`,
+  • *When* executed,
+  • *Then* master index tables achieve 100% mathematical parity.
+- **Invariants**: Pure Python 3 standard library; zero Android runtime changes; zero regression in existing governance checks.

@@ -6,9 +6,9 @@ description: Orchestrates the production release lifecycle based on GitFlow, ATT
 # Skill: release-manager
 
 ## Overview
-This skill governs the end-to-end production release process for aTrainingTracker. It standardizes the workflow defined in template ticket **ATT-170** and active release tickets (e.g. **ATT-1191**).
+This skill governs the end-to-end production release process for aTrainingTracker. It standardizes the workflow defined in template ticket **ATT-170**, active release tickets (e.g. **ATT-1191**), and ASPICE CL2 release governance requirements (**REQ-PRO-072**).
 
-The lifecycle bridges GitFlow branch management, Gradle build automation, signed artifact verification, Google Play Store distribution, real-time Jira release ticket checklist maintenance, structured audit commenting, and version incrementation for the next development cycle.
+The lifecycle bridges GitFlow branch management, Gradle build automation, signed artifact verification, mandatory system integration and verification evidence gating under `docs/releases/<tag>/` (**ASPICE SYS.4 & SYS.5**), Google Play Store distribution, real-time Jira release ticket checklist maintenance, structured audit commenting, and version incrementation for the next development cycle.
 
 ---
 
@@ -51,15 +51,18 @@ python3 tools/jira_util.py comment <RELEASE_TICKET_KEY> "h4. Release Progress: S
 
 ---
 
-## The 10-Step Release Checklist (ATT-170 Specification)
+## The 10-Step Release Checklist (ATT-170 Specification) & System Verification Gate
 
 1. `Gitflow: new Release` (Start `release/V<versionName>__<versionCode>`)
 2. `Gradle: Version: Remove -dev` (Set clean production `versionName`)
 3. `Build: Signed APK` (`app-release.apk`)
 4. `Build: Signed APP Bundle` (`app-release.aab`)
+* **[MANDATORY SYSTEM EVIDENCE GATE - ASPICE SYS.4 & SYS.5]**: Release candidate tag creation (Step 7) and Play Store distribution (Step 6) are **STRICTLY BLOCKED** unless verified system evidence artifacts exist under `docs/releases/<tag>/` and pass all criteria:
+  - SYS.4: `docs/releases/<tag>/system_integration_results.json` (from `tools/run_system_integration_tests.py`)
+  - SYS.5: `docs/releases/<tag>/sys_verification_record.md` (per `docs/system/sys_verification_protocol.md`)
 5. `Jira: Finish Release & Create new one` (Release current version, create next FixVersion)
-6. `Play Store: Upload as Testing` (Upload `.aab` to Internal/Closed Testing track)
-7. `Gitflow: Finish Release` (Merge into `master` with tags, merge back into `develop`)
+6. `Play Store: Upload as Testing` (Upload `.aab` to Internal/Closed Testing track — blocked if system evidence missing/failing)
+7. `Gitflow: Finish Release` (Merge into `master` with tags, merge back into `develop` — tag creation blocked if system evidence missing/failing)
 8. `Git: Push Develop & Master` (`git push origin master develop --tags`)
 9. `GitHub: Create new Release` (Create GitHub release and attach `.apk`)
 10. `Gradle: Increment Version; add -dev to name` (Bump `versionName` to `<next>-dev` & `versionCode` on `develop`)
@@ -168,6 +171,67 @@ python3 tools/jira_util.py comment <RELEASE_TICKET_KEY> "h4. Release Progress: S
 
 ---
 
+### Phase 2.5: Mandatory System Verification Evidence Gate (ASPICE SYS.4, SYS.5, SUP.8, REQ-PRO-072)
+
+Before proceeding to Jira release finalization, Play Store distribution, or GitFlow release candidate tag creation, the release manager **MUST verify and commit both system-level evidence artifacts** under `docs/releases/<tag>/` (where `<tag>` is `V${VERSION_NAME}__${VERSION_CODE}` or `V${VERSION_NAME}`):
+
+```
+docs/releases/<tag>/
+├── system_integration_results.json   # SYS.4 System Integration Verification Evidence
+├── sys_verification_record.md        # SYS.5 System Verification Protocol Sign-Off Record
+└── verification_summary.md           # SWE.6 BP5 / REQ-PRO-074 Release Verification Summary per Tag
+```
+
+#### 1. SYS.4: System Integration Verification Execution & Logging
+Run the automated headless system integration test runner across all 6 interface simulation test cases (`SYS-INT-001` through `SYS-INT-006`):
+```bash
+python3 tools/run_system_integration_tests.py --headless --output-json docs/releases/V${VERSION_NAME}__${VERSION_CODE}/system_integration_results.json
+```
+*Verification Checklist*:
+* Exit code is `0` and overall status is `"PASS"`.
+* All 6 test cases (`SYS-INT-001` through `SYS-INT-006`) pass without assertion failures.
+* Telemetry phase conservation drift is $\le 5.0\text{ ms}$.
+
+#### 2. SYS.5: System Verification Protocol Sign-Off Verification
+Verify that real-hardware system verification has been executed across the hardware reference matrix and target environmental scenarios per `docs/system/sys_verification_protocol.md`:
+```bash
+test -f docs/releases/V${VERSION_NAME}__${VERSION_CODE}/sys_verification_record.md
+```
+*Verification Checklist*:
+* Document follows `docs/system/sys_verification_protocol.md` Section 6 template and `docs/releases/TEMPLATE.md`.
+* All 8 system verification cases (`SYS-VRF-001` through `SYS-VRF-008`) are marked `PASS`.
+* Objective criteria met: sample loss $\le 1.0\%$, RF reconnection latency $\le 10.0\text{ s}$, battery drain rate $\le 8.0\%/\text{hr}$, FIT/TCX integrity valid with zero CRC errors.
+* Formal sign-off signatures and approval dates from System Verification Engineer and Quality Gatekeeper are present.
+
+#### 3. Release Verification Summary Generation (ASPICE SWE.6 BP5, REQ-PRO-074)
+Generate the consolidated release verification summary markdown document aggregating unit tests, traceability coverage, and system verification results:
+```bash
+python3 tools/generate_release_verification_summary.py --tag V${VERSION_NAME}__${VERSION_CODE}
+```
+*Verification Checklist*:
+* Output file `docs/releases/V${VERSION_NAME}__${VERSION_CODE}/verification_summary.md` generated.
+* Overall status is `PASS (READY FOR RELEASE)`.
+* Zero open deviations listed under `Deviations Requiring Human Approval`.
+* Link to versioned JUnit archive `build-evidence/junit-test-results-<tag>.zip` verified.
+
+#### 4. Blocking Gate Enforcement (REQ-PRO-072.2, REQ-PRO-074.5)
+> [!CAUTION]
+> **TAGGING & DISTRIBUTION BLOCKED ON MISSING/FAILING SYSTEM EVIDENCE**:
+> Creating the release candidate tag (`V${VERSION_NAME}__${VERSION_CODE}` in Phase 4 `git flow release finish`) and uploading artifacts to the Google Play Store (Phase 3) are **STRICTLY BLOCKED** if:
+> 1. `docs/releases/<tag>/system_integration_results.json` is missing or has failing test cases.
+> 2. `docs/releases/<tag>/sys_verification_record.md` is missing, incomplete, or contains `REVISION` / `FAIL` verdicts.
+> 3. `docs/releases/<tag>/verification_summary.md` is missing or contains unresolved deviations requiring human approval.
+>
+> If either check fails, the release manager MUST halt the release immediately and post a blocking issue comment on the Jira release ticket.
+
+#### 5. Update Jira Release Ticket:
+Post audit comment documenting verified system evidence:
+```bash
+python3 tools/jira_util.py comment <KEY> "h4. Mandatory System Verification Evidence Verified (ASPICE SYS.4 & SYS.5)\n* SYS.4 Integration Results: docs/releases/V${VERSION_NAME}__${VERSION_CODE}/system_integration_results.json (6/6 PASS)\n* SYS.5 Verification Protocol: docs/releases/V${VERSION_NAME}__${VERSION_CODE}/sys_verification_record.md (8/8 PASS, QA Signed-off)\n* Verification Summary: docs/releases/V${VERSION_NAME}__${VERSION_CODE}/verification_summary.md (PASS)\n* Release candidate tag creation APPROVED."
+```
+
+---
+
 ### Phase 3: Human Gate – Testing & Play Store Distribution
 
 1. **Jira Release Lifecycle**:
@@ -193,8 +257,17 @@ python3 tools/jira_util.py comment <RELEASE_TICKET_KEY> "h4. Release Progress: S
 
 ### Phase 4: GitFlow Finalization & Branch Synchronization
 
-1. **Finish GitFlow Release**:
-   Once the build is approved, finish the release branch:
+1. **Pre-Tagging System Evidence Verification**:
+   Verify that system integration and verification evidence exist and pass before allowing release candidate tags:
+   ```bash
+   if [ ! -f "docs/releases/V${VERSION_NAME}__${VERSION_CODE}/system_integration_results.json" ] || [ ! -f "docs/releases/V${VERSION_NAME}__${VERSION_CODE}/sys_verification_record.md" ]; then
+       echo "FATAL: Release candidate tag creation BLOCKED. Missing mandatory system verification evidence (REQ-PRO-072)." >&2
+       exit 1
+   fi
+   ```
+
+2. **Finish GitFlow Release**:
+   Once the build is approved and system evidence is verified, finish the release branch:
    ```bash
    git flow release finish -m "Release V${VERSION_NAME}__${VERSION_CODE}" V${VERSION_NAME}__${VERSION_CODE}
    ```
@@ -204,19 +277,19 @@ python3 tools/jira_util.py comment <RELEASE_TICKET_KEY> "h4. Release Progress: S
    * Merges `release/V...` back into `develop` (`--no-ff`).
    * Deletes local branch `release/V...`.
 
-2. **Add Clean Major Tag (Repository Invariant)**:
+3. **Add Clean Major Tag (Repository Invariant)**:
    Historically, the repository tags both `V<Version>__<Code>` and clean `V<Version>` on the release commit:
    ```bash
    git checkout master
    git tag -a "V${VERSION_NAME}" -m "Release V${VERSION_NAME}"
    ```
 
-3. **Push Master, Develop, and Tags to Remote**:
+4. **Push Master, Develop, and Tags to Remote**:
    ```bash
    git push origin master develop --tags
    ```
 
-4. **Update Jira Release Ticket**:
+5. **Update Jira Release Ticket**:
    * Mark steps 7 and 8 as completed `(/)` in description.
    * Post audit comment:
      ```bash

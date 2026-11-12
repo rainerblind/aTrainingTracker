@@ -23,16 +23,14 @@ import com.atrainingtracker.trainingtracker.monetization.SupporterTier
 import io.mockk.mockk
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.util.Locale
 
 /**
- * Unit verification suite for [SportingJourneyShareHelper] (REQ-SPT-004, TST-SPT-004).
+ * Unit verification suite for [SportingJourneyShareHelper] (REQ-SPT-004, REQ-SPT-005.5, TST-SPT-006.3).
  */
 class SportingJourneyShareHelperTest {
 
-    @Test
-    fun testBuildShareText_containsPassportData() {
-        val mockContext: Context = mockk(relaxed = true)
-
+    private fun sampleData(): SportingJourneyData {
         val totals = SportingHeroTotals(
             totalDistanceKm = 20529.0,
             equatorPercentage = 51.2,
@@ -61,7 +59,7 @@ class SportingJourneyShareHelperTest {
             SportingAchievement("w", "🔒", "World", "", false, "", "")
         )
 
-        val data = SportingJourneyData(
+        return SportingJourneyData(
             horizon = SportingHorizon.AllTime,
             sportFilter = SportingSportFilter.ALL,
             heroTotals = totals,
@@ -69,8 +67,20 @@ class SportingJourneyShareHelperTest {
             achievements = achievements,
             athleteName = "Rainer"
         )
+    }
 
-        val shareText = SportingJourneyShareHelper.buildShareText(mockContext, data, SupporterTier.GOLD)
+    @Test
+    fun testBuildShareText_containsPassportData() {
+        val mockContext: Context = mockk(relaxed = true)
+        val data = sampleData()
+
+        val shareText = SportingJourneyShareHelper.buildShareText(
+            context = mockContext,
+            data = data,
+            tier = SupporterTier.GOLD,
+            isMetric = true,
+            locale = Locale.US
+        )
 
         assertTrue(shareText.contains("Official Athlete Passport"))
         assertTrue(shareText.contains("GOLD SPONSOR"))
@@ -82,5 +92,46 @@ class SportingJourneyShareHelperTest {
         assertTrue(shareText.contains("67.6 kWh"))
         assertTrue(shareText.contains("2 / 3 Unlocked"))
         assertTrue(shareText.contains("Recorded 100% offline with aTrainingTracker"))
+    }
+
+    @Test
+    fun testBuildShareText_imperialUnits() {
+        val mockContext: Context = mockk(relaxed = true)
+        val data = sampleData()
+
+        val shareText = SportingJourneyShareHelper.buildShareText(
+            context = mockContext,
+            data = data,
+            tier = SupporterTier.DIAMOND,
+            isMetric = false,
+            locale = Locale.US
+        )
+
+        // 20529 km -> 12,756.1 mi
+        assertTrue("Expected imperial miles: $shareText", shareText.contains("12,756.1 mi"))
+        // 88450 m -> 290,190 ft
+        assertTrue("Expected imperial feet: $shareText", shareText.contains("290,190 ft"))
+        // 6760 km ebike -> 4,200 mi
+        assertTrue("Expected imperial e-bike range: $shareText", shareText.contains("4,200 mi"))
+        assertTrue(shareText.contains("DIAMOND SPONSOR"))
+    }
+
+    @Test
+    fun testBuildShareText_germanLocale() {
+        val mockContext: Context = mockk(relaxed = true)
+        val data = sampleData()
+
+        val shareText = SportingJourneyShareHelper.buildShareText(
+            context = mockContext,
+            data = data,
+            tier = SupporterTier.PIONEER,
+            isMetric = true,
+            locale = Locale.GERMANY
+        )
+
+        // German format: 20.529,0 km or 51,2%
+        assertTrue("Expected German decimal format: $shareText", shareText.contains("51,2%"))
+        assertTrue("Expected German number format: $shareText", shareText.contains("20.529,0 km"))
+        assertTrue(shareText.contains("PIONEER"))
     }
 }

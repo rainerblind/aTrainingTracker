@@ -3,259 +3,407 @@
 **Domain**: `process_stability`  
 **Prefixes**: `ARC`, `BLD`, `BUG`, `INT`, `LIV`, `LOG`, `MAN`, `NFR`, `PRO`, `REG`, `SEC`, `STB`, `STR`, `TOOL`, `TST`  
 **Scope**: ASPICE governance, infinite context, crash stability, build architecture, security, and developer tools.  
-**Total Tests**: 110
+**Total Tests**: 130
 
 ---
 
 ### TST-REG-001: **Tracking** [Verified]
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Integration
 - **Requirement(s)**: `REQ-TRK-001`, `REQ-TRK-003`, `REQ-TRK-007`, `REQ-MAP-003`
 - **Component**: **Tracking**
 - **Test Description**: Start workout, background app for 10 min, check bearing jitter.
 
 ### TST-REG-002: **Branding** [Verified]
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Integration
 - **Requirement(s)**: `REQ-EXT-001`, `REQ-EXT-002`, `REQ-MAP-005`
 - **Component**: **Branding**
 - **Test Description**: Navigate to Strava Segments list and Detail map.
 
 ### TST-REG-003: **Cloud** [Verified]
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Integration
 - **Requirement(s)**: `REQ-EXP-001`, `REQ-EXP-002`
 - **Component**: **Cloud**
 - **Test Description**: Complete workout with Strava enabled.
 
 ### TST-REG-004: **Pause Logic** [Verified]
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Integration
 - **Requirement(s)**: `REQ-PRO-003`
 - **Component**: **Pause Logic**
 - **Test Description**: Connect hardware distance sensor. Start workout. Record distance. **Pause**. Continue movement (e.g., spin wheel). **Resume**. Record more distance. Repeat for all relevant protocols (ANT+/BTLE).
 
 ### TST-INT-002: **UI/Logic** [Verified]
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Integration
 - **Requirement(s)**: `REQ-EXP-006`
 - **Component**: **UI/Logic**
 - **Test Description**: In Sport Type Editor, select "- No upload -". Then create/edit workout with this type.
 
 ### TST-INT-003: **Mapping** [Verified]
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Integration
 - **Requirement(s)**: `REQ-EXP-007`
 - **Component**: **Mapping**
 - **Test Description**: In Sport Type Editor, select a new Strava type (e.g., Gravel Ride). Save and reopen.
 
 ### TST-INT-004: **UI/Logic** [Verified]
-- **Requirement(s)**: `REQ-UI-009`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Integration
+- **Requirement(s)**: `REQ-UI-110`
 - **Component**: **UI/Logic**
 - **Test Description**: In Tracking Tab Configuration, toggle "Show Elevation Profile".
 
 ### TST-INT-005: **UI Layout** [Verified]
-- **Requirement(s)**: `REQ-UI-010`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Integration
+- **Requirement(s)**: `REQ-UI-111`
 - **Component**: **UI Layout**
 - **Test Description**: Open the Tab Configuration on a narrow device or split-screen.
 
 ### TST-INT-006: **UI Layout** [Verified]
-- **Requirement(s)**: `REQ-UI-010`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Integration
+- **Requirement(s)**: `REQ-UI-111`
 - **Component**: **UI Layout**
 - **Test Description**: Audit the checkbox sequence in the tab configuration header.
 
 ### TST-REG-005: **Map Context** [Verified]
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Integration
 - **Requirement(s)**: `REQ-MAP-008`
 - **Component**: **Map Context**
 - **Test Description**: Open detail map. Verify active item is primary. Verify background items of same sport are muted (0.3). Verify background items of different sport are highly muted (0.1).
 
+### TST-INT-007: **Original Sport Icons Visual Identity Verification** [Verified]
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Manual / Review
+- **Requirement(s)**: `REQ-UI-114`
+- **Component**: **ActivityTypeSelectionDialog, SportTypeListFragment**
+- **Test Description**:
+  1. Open sport type selection dialog and sport type list screens.
+  2. Verify that sport type icons render in their authentic original colors and are not subject to theme-based tinting in active states.
+  3. Verify muted/disabled state icons render with appropriate transparency.
+
 ### TST-INT-008: **Settings Cleanup Verification** [Verified]
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Integration
 - **Requirement(s)**: `REQ-SET-055`
 - **Component**: **Settings Cleanup Verification**
 - **Jira**: ``ATT-268``
 - **Test Description**: 1. Gradle Build: Ensure the project compiles successfully after reorganization and deletions. 2. Navigation Test: Verify all settings items in the drawer (Units, Display, Search, Export, Strava, Dropbox, Tracking Tabs) still function correctly.
 
 ### TST-PRO-001: **Jira Attachment Download** [Verified]
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
 - **Requirement(s)**: `REQ-PRO-008`
 - **Component**: **Jira Attachment Download**
 - **Jira**: ``ATT-273``
 - **Test Description**: 1. Identify a Jira ticket with attachments. 2. Run `jira_util.py download-all KEY`.
 
 ### TST-PRO-002: **Jira Type Visibility** [Verified]
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
 - **Requirement(s)**: `REQ-PRO-009`
 - **Component**: **Jira Type Visibility**
 - **Jira**: ``ATT-274``
 - **Test Description**: 1. Run `jira_util.py list`. 2. Run `jira_util.py show KEY`.
 
 ### TST-PRO-003: **Plan Sub-Task Verification** [Verified]
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
 - **Requirement(s)**: `REQ-PRO-010`
 - **Component**: **Plan Sub-Task Verification**
 - **Jira**: ``ATT-327``
 - **Test Description**: 1. Identify a task requires a plan. 2. Verify that the agent creates a Jira sub-task with summary `[Plan] SCRUM-XXX: Summary` and description matching the plan.
 
 ### TST-REG-007: **Pause Time Sync** [Verified]
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Integration
 - **Requirement(s)**: `REQ-TRK-009`, `REQ-UI-038`
 - **Component**: **Pause Time Sync**
 - **Test Description**: 1. Start workout. 2. Pause after 10s. 3. Wait 20s while paused.
 
 ### TST-REG-008: **Dropbox Auth** [Verified]
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Integration
 - **Requirement(s)**: `REQ-EXP-002`
 - **Component**: **Dropbox Auth**
 - **Jira**: ``ATT-257``
 - **Test Description**: 1. Navigate to 'Dropbox' in Ecosystem. 2. Tap 'Connect to Dropbox'. 3. Complete OAuth flow in browser. 4. Return to app.
 
 ### TST-LOG-001: **Logic** [Verified]
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Requirement(s)**: `REQ-UI-011`
 - **Component**: **Logic**
 - **Test Description**: Verify that all rows, including "Pace", follow strict mathematical ordering (numerical minimum in Min column, numerical maximum in Max column).
 
 ### TST-LOG-002: **Logic** [Verified]
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Requirement(s)**: `REQ-UI-011`
 - **Component**: **Logic**
 - **Test Description**: Verify that for a running activity, both Speed and Pace rows are generated from the single Speed data source.
 
 ### TST-MAN-001: **General** [Verified]
-- **Requirement(s)**: All other `REQ`
+- **Priority**: Low
+- **Type**: Functional
+- **Verification Method**: On-Device Manual
+- **Requirement(s)**: `REQ-DAT-002`, `REQ-DAT-003`, `REQ-EXP-003`, `REQ-MAP-002`, `REQ-LIV-001`, `REQ-LIV-002`, `REQ-LIV-003`, `REQ-LIV-004`, `REQ-PRO-001`, `REQ-PRI-002`, `REQ-CON-008`, `REQ-CON-009`, `REQ-TRK-004`, `REQ-TRK-006`, `REQ-WEA-001`, `REQ-UI-101`, `REQ-UI-102`, `REQ-UI-103`, `REQ-UI-104`, `REQ-UI-105`, `REQ-UI-106`, `REQ-UI-107`, `REQ-UI-108`
 - **Component**: **General**
 - **Test Description**: Ad-hoc functional testing on a physical device.
 
 ### TST-PRO-004: **Decoupled Interaction Queue** [Verified]
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
 - **Requirement(s)**: `REQ-MIG-014`
 - **Component**: **Decoupled Interaction Queue**
 - **Jira**: ``ATT-333``
 - **Test Description**: 1. Start a bulk TCX import that triggers multiple cluster naming candidates. 2. Verify that while the ClusterNamingDialog is shown, the background progress indicator remains visible. 3. Complete the first naming task.
 
 ### TST-BUG-006: **Adaptive Header Framing** [Verified]
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Requirement(s)**: `REQ-UI-117`
 - **Component**: **Adaptive Header Framing**
 - **Jira**: ``ATT-397``
 - **Test Description**: 1. Open the app on a device with a large status bar (e.g. Pixel 10). 2. Navigate to Workouts, Periods, and My Locations.
 
 ### TST-BUG-007: **Internal Altitude Source Visibility** [Verified]
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Requirement(s)**: `REQ-UI-118`
 - **Component**: **Internal Altitude Source Visibility**
 - **Jira**: ``ATT-410``
 - **Test Description**: 1. Open tracking screen on device with pressure sensor. 2. Tap Altitude icon.
 
 ### TST-BUG-008: **Self-Healing Pressure Sensor Registration** [Verified]
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Requirement(s)**: `REQ-DAT-006`
 - **Component**: **Self-Healing Pressure Sensor Registration**
 - **Jira**: ``ATT-414``
 - **Test Description**: 1. Use Database Inspector to delete the 'Altitude from Pressure' entry from the `Devices` table. 2. Restart the app on a device with a pressure sensor. 3. Navigate to 'My Sensors'.
 
 ### TST-BUG-009: **Internal Sensor Pairing Control** [Verified]
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Requirement(s)**: `REQ-CON-010`
 - **Component**: **Internal Sensor Pairing Control**
 - **Jira**: ``ATT-416``
 - **Test Description**: 1. Navigate to 'My Sensors'. 2. Deactivate the 'Altitude from Pressure' sensor using the toggle switch. 3. Verify that the sensor status LED turns grey and real-time altitude updates from this source stop. 4. Reactivate and verify resumption.
 
 ### TST-BUG-011: **Eager Pressure Sensor Visibility** [Verified]
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Requirement(s)**: `REQ-DAT-006`
 - **Component**: **Eager Pressure Sensor Visibility**
 - **Jira**: ``ATT-420``
 - **Test Description**: 1. Use Database Inspector to delete the 'Altitude from Pressure' entry from the `Devices` table. 2. Restart the app on a device with a pressure sensor. 3. Navigate to 'My Sensors'.
 
 ### TST-BUG-010: **Internal Sensor Iconography** [Verified]
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Requirement(s)**: `REQ-UI-119`
 - **Component**: **Internal Sensor Iconography**
 - **Test Description**: 1. Open 'My Sensors'. 2. Inspect the 'Altitude from Pressure' entry.
 
 ### TST-STR-001: **Stability** [Verified]
-- **Requirement(s)**: `REQ-CON-005`, `REQ-TRK-005`, `REQ-DAT-005`, `REQ-UI-008`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit
+- **Requirement(s)**: `REQ-CON-005`, `REQ-TRK-005`, `REQ-DAT-005`, `REQ-UI-109`
 - **Component**: **Stability**
 - **Test Description**: Static analysis and architectural audit.
 
 ### TST-STR-002: **Thread Safety** [Verified]
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit
 - **Requirement(s)**: `REQ-PRO-002`
 - **Component**: **Thread Safety**
 - **Test Description**: Static analysis of `synchronized` blocks to ensure no nested locks or I/O within locks.
 
 ### TST-STR-003: **Data Integrity** [Verified]
-2. `addDefaultTab` must initialize `SHOW_ELEVATION_PROFILE` using the value provided for `showMap`.]
-- **Requirement(s)**: `REQ-UI-009`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit
+- **Requirement(s)**: `REQ-UI-110`
 - **Component**: **Data Integrity**
 - **Test Description**:
   1. Static analysis of `onUpgrade` (v9->v10).
   2. Static analysis of `onCreate` and `addDefaultTab`.
 
 ### TST-STR-004: **Consistency** [Verified]
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit
 - **Requirement(s)**: `REQ-TRK-008`
 - **Component**: **Consistency**
 - **Test Description**: Static analysis of `TrackerService.java`.
 
 ### TST-STR-005: **Map DSL** [Verified]
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit
 - **Requirement(s)**: `REQ-MAP-006`
 - **Component**: **Map DSL**
 - **Test Description**: Static audit of `ATrainingTrackerMap` callers.
 
 ### TST-STR-006: **Metric Consistency** [Verified]
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit
 - **Requirement(s)**: `REQ-UI-015`
 - **Component**: **Metric Consistency**
 - **Test Description**: Visual audit of Workout, Route, and Segment screens.
 
 ### TST-STR-007: **Formatter Sync** [Verified]
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit
 - **Requirement(s)**: `REQ-UI-016`
 - **Component**: **Formatter Sync**
 - **Test Description**: Static audit of `LocalMetricFormatter` usages.
 
 ### TST-STR-008: **List Foundation** [Verified]
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit
 - **Requirement(s)**: `REQ-UI-017`
 - **Component**: **List Foundation**
 - **Test Description**: Audit of `MappableListItem` usages.
 
 ### TST-STR-011: **Thread-Safe Sensor Management** [Verified]
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit
 - **Requirement(s)**: `REQ-PRO-006`
 - **Component**: **Thread-Safe Sensor Management**
 - **Test Description**: Static audit of `MySensorManager` and `MyDevice`.
 
 ### TST-STR-012: **Sub-Task Automation Verification** [Verified]
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit
 - **Requirement(s)**: `REQ-PRO-007`
 - **Component**: **Sub-Task Automation Verification**
 - **Test Description**: 1. Define a requirement and a test case in the docs. 2. The agent should be able to create a sub-task in Jira linked to the main ticket with the test ID and summary. 3. Verify the sub-task is created with the correct parent.
 
 ### TST-STR-013: **String Resource Integrity Check** [Verified]
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit
 - **Requirement(s)**: `REQ-UI-113`
 - **Component**: **String Resource Integrity Check**
 - **Jira**: ``ATT-251``
 - **Test Description**: 1. Audit all `values-*/strings.xml` files. 2. Compare the set of keys in each file with the keys in `values/strings.xml`. 3. Identify keys present in translations but missing in default. 4. Verify that after implementation, no such discrepancies exist.
 
 ### TST-STR-015: **Documentation Audit** [Verified]
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit
 - **Requirement(s)**: `REQ-PRO-011`
 - **Component**: **Documentation Audit**
 - **Jira**: ``ATT-486``
 - **Test Description**: 1. Perform a static audit of the modified source files (e.g., `WorkoutRepository.kt`). 2. Verify that every class has a header describing its purpose. 3. Verify that every method has a header describing what it does and how.
 
 ### TST-STR-014: **Missing Translation Audit** [Verified]
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit
 - **Requirement(s)**: `REQ-UI-106`
 - **Component**: **Missing Translation Audit**
 - **Jira**: ``ATT-484``
 - **Test Description**: 1. Run a script to identify all translatable keys in default `values/` that are missing in any supported locale (DE, ES, FR, IT, JA, NL, PL, PT). 2. Verify that after implementation, zero translatable keys from the default locale are missing in any supported sub-locale. 3. Verify that specialized resource files (e.g., `strings_devices.xml`, `strings_filters.xml`) are also consistent across locales.
 
 ### TST-STR-016: **Global Format String Audit** [Verified]
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit
 - **Requirement(s)**: `REQ-UI-122`
 - **Component**: **Global Format String Audit**
 - **Jira**: ``ATT-523``
 - **Test Description**: 1. Execute a comprehensive search across all `strings.xml` files in all locales (DE, ES, FR, IT, JA, NL, PL, PT) for positional format specifiers that are incomplete (e.g., `%1` without `$s`, `$d`, or `$f`). 2. Correct any identified issues. 3. Verify that the final resource set contains only syntactically valid `java.util.Formatter` specifiers.
 
 ### TST-BUG-001: **Cluster Selection Race Condition** [Verified]
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Requirement(s)**: `REQ-PER-002`
 - **Component**: **Cluster Selection Race Condition**
 - **Jira**: ``ATT-364``
 - **Test Description**: 1. Open Workout Cluster list. 2. Tap Cluster A. 3. Immediately go back and tap Cluster B. 4. Wait for loading to complete.
 
 ### TST-BUG-002: **Aggregation Gap Stability** [Verified]
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Requirement(s)**: `REQ-PER-001`
 - **Component**: **Aggregation Gap Stability**
 - **Jira**: ``ATT-372``
 - **Test Description**: 1. Import training history with temporal gaps (e.g. skip a week/month). 2. Trigger a full hierarchical sync.
 
 ### TST-STR-017: **Protocol Integrity Audit** [Verified]
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit
 - **Requirement(s)**: `REQ-PRO-012`
 - **Component**: **Protocol Integrity Audit**
 - **Jira**: ``ATT-523``
 - **Test Description**: Verify that the 'Format String Hardening' section is correctly incorporated into 'project_protocol.md'.
 
 ### TST-PRO-005: **System Invariant & Impact Protocol Verification** [Verified]
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
 - **Requirement(s)**: `REQ-PRO-013`
 - **Component**: **System Invariant & Impact Protocol Verification**
 - **Jira**: ``ATT-523``
 - **Test Description**: Verify that 'project_protocol.md' mandates System Invariants, pre-implementation `find_usages` requirement cross-checks, and adversarial self-reviews.
 
 ### TST-PRO-006: **Dual-Gate Review Protocol Verification** [Verified]
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
 - **Requirement(s)**: `REQ-PRO-014`
 - **Component**: **Dual-Gate Review Protocol Verification**
 - **Jira**: ``ATT-523``
 - **Test Description**: Verify that 'project_protocol.md' mandates the unified 5-stage sub-task lifecycle using the automated dual-agent review workflow, with autonomous transitions upon passing gate audits and human approval reserved exclusively for parent tickets.
 
 ### TST-PRO-007: **Agent Git Branch, Commit & Merge Protocol Verification** [Verified]
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
 - **Requirement(s)**: `REQ-PRO-015`
 - **Component**: **Agent Git Branch, Commit & Merge Protocol Verification**
 - **Jira**: ``ATT-422``
@@ -266,6 +414,9 @@
   4. Validate repository state demonstrates successful branch creation (`feature/ATT-422`), commit adherence, and merge flow.
 
 ### TST-PRO-008: **Automated 5-Stage ASPICE Workflow & Independent Agent 2 Audit Verification** [Verified]
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
 - **Requirement(s)**: `REQ-PRO-014`
 - **Component**: **Automated 5-Stage ASPICE Workflow & Independent Agent 2 Audit Verification**
 - **Jira**: ``ATT-670` / `ATT-685``
@@ -281,6 +432,9 @@
   9. Verify protocol and `.cursorrules` mandate `Lösungsversion` (*Fix Version/s*) and its audit in Gate 5 prior to closure.
 
 ### TST-PRO-009: **Inviolable ASPICE Human Decision Gate & Anti-Premature Trigger Protocol Verification** [Verified]
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
 - **Requirement(s)**: `REQ-PRO-016`
 - **Component**: **Inviolable ASPICE Human Decision Gate & Anti-Premature Trigger Protocol Verification**
 - **Jira**: ``ATT-728` / `ATT-941``
@@ -292,6 +446,9 @@
   5. Verify `.agents/rules/aspice_governance.md` exists and enforces these rules in Antigravity.
 
 ### TST-PRO-010: **Sub-Task Self-Sufficiency, Transition Sequencing, Discovery-First, and Git Finalization Verification** [Verified]
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
 - **Requirement(s)**: `REQ-PRO-017`
 - **Component**: **Sub-Task Self-Sufficiency, Transition Sequencing, Discovery-First, and Git Finalization Verification**
 - **Jira**: ``ATT-945` / `ATT-1000``
@@ -303,6 +460,9 @@
   5. Validate that ATT-945 deliverables adhere to the hardened protocol with full documentation in `docs/engineering/Sprint_Review_and_Retro_ATT-945.md`.
 
 ### TST-PRO-011: **Autonomous Multi-Model Independent Review Agent & Automated Gate Audits Verification** [Verified]
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
 - **Requirement(s)**: `REQ-PRO-018`
 - **Component**: **Autonomous Multi-Model Independent Review Agent & Automated Gate Audits Verification**
 - **Jira**: ``ATT-1122` / `ATT-1194``
@@ -317,6 +477,9 @@
   8. Execute automated unit/functional test of `tools/review_agent.py` verifying mock and live execution across providers.
 
 ### TST-PRO-012: **Multi-Account Jira Authentication, Atomic Resolution & Terminal Error Handling Verification** [Verified]
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
 - **Requirement(s)**: `REQ-PRO-019`
 - **Component**: **Multi-Account Jira Authentication, Atomic Resolution & Terminal Error Handling Verification**
 - **Jira**: ``ATT-1123` / `ATT-1200` / `ATT-6146` / `ATT-6147``
@@ -330,6 +493,9 @@
   7. Unit Test Per-Role Credential Partitioning & Gitignore Wildcard (ATT-6147): Verify that `get_config(role="agent1")` loads `.env.jira.agent1` and isolates credentials; verify that invoking with `--as agent2` without `agent2` credentials exits with code 1; verify `.gitignore` contains `.env.jira*`; verify `tools/hoechstmass/.env.jira.example` contains zero human credentials.
 
 ### TST-PRO-013: **Role Locking, Precedence, Anti-Spoofing & Actor Comment Attribution Verification** [Verified]
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
 - **Requirement(s)**: `REQ-PRO-020`
 - **Component**: **Role Locking, Precedence, Anti-Spoofing & Actor Comment Attribution Verification**
 - **Jira**: ``ATT-1123` / `ATT-1200` / `ATT-6146``
@@ -342,6 +508,9 @@
   6. Automated Protocol Inspection: Programmatic test verifies `docs/project_protocol.md` and `.cursorrules` explicitly define the Coordinator role, specify Coordinator boundaries (cannot override Auditor verdicts, cannot skip gates, cannot close tickets to `Erledigt`).
 
 ### TST-PRO-014: **Jira Credential & Token Secret Masking Verification** [Verified]
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
 - **Requirement(s)**: `REQ-PRO-021`
 - **Component**: **Jira Credential & Token Secret Masking Verification**
 - **Jira**: ``ATT-1123` / `ATT-1200``
@@ -351,6 +520,9 @@
   3. Unit Test Exception Masking: Simulate HTTP errors (e.g. 401 Unauthorized); verify error outputs printed to console do not echo request authorization headers or secret tokens.
 
 ### TST-PRO-015: **Requirement Archaeology & Chesterton's Fence Governance Verification** [Verified]
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
 - **Requirement(s)**: `REQ-PRO-022`
 - **Component**: **Requirement Archaeology & Chesterton's Fence Governance Verification**
 - **Jira**: ``ATT-1141` / `ATT-1205``
@@ -369,6 +541,9 @@
   • Verify `tools/verify_requirement_governance.py` imports only Python 3 standard library modules (`os`, `sys`, `re`, `subprocess`, `unittest`) with zero external pip dependencies.
 
 ### TST-PRO-016: **Android Test Fixtures & Jira Metadata Auto-Inheritance Verification** [Verified]
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
 - **Requirement(s)**: `REQ-PRO-023`
 - **Component**: **Android Test Fixtures & Jira Metadata Auto-Inheritance Verification**
 - **Jira**: ``ATT-1125` / `ATT-1210``
@@ -388,6 +563,9 @@
   • Verify `docs/project_protocol.md` and `.cursorrules` explicitly document filesystem boundaries for Gradle Daemon caches (`~/.gradle`, `~/.android`) and when to execute with elevated permissions (`BypassSandbox: true`).
 
 ### TST-PRO-017: **Modular Skill-Based Agile Architecture & Directory Parity Verification** [Verified]
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
 - **Requirement(s)**: `REQ-PRO-024`
 - **Component**: **Modular Skill-Based Agile Architecture & Directory Parity Verification**
 - **Jira**: ``ATT-1508` / `ATT-1513``
@@ -411,6 +589,9 @@
   • Verify `docs/project_protocol.md` and `.cursorrules` document the modular skill layout, referencing `.agents/skills/` for execution while preserving core invariants and Human Decision Gates.
 
 ### TST-PRO-018: **Parallel Unit Test Forking, Worker Recycling, and Performance Benchmarking** [Verified]
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
 2. *Defensive Memory Allocation Capping Verification (`TST-PRO-018.2`)*: Inspect command line arguments of `GradleWorkerMain` processes via `ps -ef` or `/proc/<pid>/cmdline`. Verify presence of `-Xms256m` and `-Xmx768m`. Confirm aggregate heap across workers is capped $\le 3.1\text{ GB}$.
 3. *Shared Localization DOM Cache Thread-Safety & Immutability Verification (`TST-PRO-018.3`)*: Execute `LocalizationTestCacheTest.kt` verifying all 9 locales parse correctly, returned maps are unmodifiable (`UnsupportedOperationException` on mutation), 16 concurrent threads access the cache without data races, and disk is read at most once per locale per JVM.
 4. *Worker Recycling & MockK Heap Stability Verification (`TST-PRO-018.4`)*: Monitor worker PIDs during a full run of all 436 test classes. Verify worker processes exit and new workers are spawned every 80 test classes (`forkEvery = 80`). Verify absence of escalating GC pauses.
@@ -421,6 +602,9 @@
 - **Test Description**: 1. *Parallel Worker Forking & Multi-Core Utilization Verification (`TST-PRO-018.1`)*: Trigger `./gradlew testDebugUnitTest`. Inspect OS processes via `ps aux
 
 ### TST-PRO-019: **Document Triad Architecture, Governance Streamlining, and Invariant Verification** [Verified]
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
 - **Requirement(s)**: `REQ-PRO-026`
 - **Component**: **Document Triad Architecture, Governance Streamlining, and Invariant Verification**
 - **Jira**: ``ATT-3323``
@@ -457,6 +641,9 @@
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions.
 
 ### TST-STB-001: **Resilient WorkManager Initialization & Startup Protection Verification** [Verified]
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit
 - **Requirement(s)**: `REQ-STB-001`
 - **Component**: **Resilient WorkManager Initialization & Startup Protection Verification**
 - **Jira**: ``ATT-621``
@@ -468,6 +655,9 @@
   5. Run full test suite (`./gradlew testDebugUnitTest`) to ensure zero regression.
 
 ### TST-STB-002: **TrackerService Foreground Service Resilience Verification** [Verified]
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit
 4. Create and run unit tests verifying safe handling of `null` intent restarts without background location permission and graceful recovery when `startForeground` throws `SecurityException`.
 5. Run full test suite (`./gradlew testDebugUnitTest`) to ensure zero regression.]
 - **Requirement(s)**: `REQ-STB-002`
@@ -479,6 +669,9 @@
   3. Verify that all `startForeground` calls are wrapped in `try ... catch (SecurityException
 
 ### TST-STB-003: **Interrupted Workout Resumption & Recovery Verification** [Verified]
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit
 - **Requirement(s)**: `REQ-STB-003`
 - **Component**: **Interrupted Workout Resumption & Recovery Verification**
 - **Jira**: ``ATT-635``
@@ -492,6 +685,9 @@
   7. Run full test suite (`./gradlew testDebugUnitTest`) to ensure zero regression.
 
 ### TST-STB-004: **Location Provider Availability & Exception Shielding Verification** [Verified]
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit
 3. Verify that when GPS or Network provider is missing or throws `IllegalArgumentException: provider does not exist`, the device calls `LocationUnavailable()` and does not crash.
 4. Verify `DeviceManager` checks provider availability and isolates device initialization failures.
 5. Execute unit tests in `SpeedAndLocationDeviceResilienceTest.kt` verifying missing provider and exception handling.
@@ -504,6 +700,9 @@
   2. Verify all `LocationManager.requestLocationUpdates()` calls in `SpeedAndLocationDevice_GPS` and `SpeedAndLocationDevice_Network` are wrapped in `try ... catch (IllegalArgumentException
 
 ### TST-STB-005: **Equipment Database Boundary Validation & Error Log Shielding Verification** [Verified]
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit
 - **Requirement(s)**: `REQ-STB-005`
 - **Component**: **Equipment Database Boundary Validation & Error Log Shielding Verification**
 - **Jira**: ``ATT-644``
@@ -518,6 +717,9 @@
   8. Run full regression test suite (`./gradlew testDebugUnitTest`) to ensure zero regression.
 
 ### TST-STB-006: **Navigation Drawer Header Background Resource Availability & Crash Immunity Verification** [Verified]
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit
 - **Requirement(s)**: `REQ-STB-006`
 - **Component**: **Navigation Drawer Header Background Resource Availability & Crash Immunity Verification**
 - **Jira**: ``ATT-1036`, `ATT-1086``
@@ -536,6 +738,9 @@
   • Adjust system display size / text zoom setting and verify drawer continues to display without crashing.
 
 ### TST-STB-007: **AndroidX Core 1.15.0 Alignment & Insets Crash Immunity Verification** [Verified]
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit
 - **Requirement(s)**: `REQ-STB-007`
 - **Component**: **AndroidX Core 1.15.0 Alignment & Insets Crash Immunity Verification**
 - **Jira**: ``ATT-1037`, `ATT-1092``
@@ -552,6 +757,9 @@
   • Verify application startup, Compose navigation drawer, and bottom popups render properly without insets crashes.
 
 ### TST-STB-008: **Resilient Permission-Gated Location Provider Access & SecurityException Immunity Verification** [Verified]
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit
 - **Requirement(s)**: `REQ-STB-008`
 - **Component**: **Resilient Permission-Gated Location Provider Access & SecurityException Immunity Verification**
 - **Jira**: ``ATT-1243``
@@ -565,6 +773,9 @@
   7. Run full clean-room regression test suite (`./gradlew testDebugUnitTest`) to ensure zero regressions across all modules.
 
 ### TST-STB-009: **Asynchronous Workout Initialization, Barrier Synchronization & ANR Immunity Verification** [Verified]
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit
 - **Requirement(s)**: `REQ-STB-009`
 - **Component**: **Asynchronous Workout Initialization, Barrier Synchronization & ANR Immunity Verification**
 - **Jira**: ``ATT-1245` / `ATT-1260``
@@ -584,6 +795,9 @@
   • Execute `./gradlew testDebugUnitTest` across all modules with zero regressions.
 
 ### TST-STB-010: **Compose List Map Lite-Mode Enforcement & RenderThread Deadlock Immunity Verification** [Verified]
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit
 - **Requirement(s)**: `REQ-STB-010`
 - **Component**: **Compose List Map Lite-Mode Enforcement & RenderThread Deadlock Immunity Verification**
 - **Jira**: ``ATT-1246` / `ATT-1272``
@@ -605,6 +819,9 @@
   • Perform backgrounding and task switching during scroll; inspect Logcat to verify 0 ANRs, 0 native deadlocks, and clean UI thread responsiveness.
 
 ### TST-STB-011: **DevicesTabbedViewModel SavedStateHandle Fallbacks & Crash Immunity Verification** [Verified]
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit
 - **Requirement(s)**: `REQ-STB-011`
 - **Component**: **DevicesTabbedViewModel SavedStateHandle Fallbacks & Crash Immunity Verification**
 - **Jira**: ``ATT-1308``
@@ -627,6 +844,9 @@
   • Execute `./gradlew testDebugUnitTest` across all modules with zero regressions.
 
 ### TST-STR-018: **Global Translation Parity, Array Integrity & Formatter Audit** [Verified]
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit
 - **Requirement(s)**: `REQ-LOC-001`
 - **Component**: **Global Translation Parity, Array Integrity & Formatter Audit**
 - **Jira**: ``ATT-525``
@@ -641,6 +861,9 @@
   8. Run full regression test suite (`./gradlew testDebugUnitTest`) to ensure zero regression.
 
 ### TST-STB-012: **Forensic Process Kill Diagnosis, Dynamic Rationale Titles, Empathetic Escalation & Direct Battery Exemption Guidance Verification** [Verified]
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit
 - **Requirement(s)**: `REQ-STB-012`
 - **Component**: **Forensic Process Kill Diagnosis, Dynamic Rationale Titles, Empathetic Escalation & Direct Battery Exemption Guidance Verification**
 - **Jira**: ``ATT-2079``
@@ -664,6 +887,9 @@
   • Run `./gradlew testDebugUnitTest` verifying 100% pass rate.
 
 ### TST-STB-013: **Resilient Single-Pass Workout History Streaming & CursorWindow Crash Protection Verification** [Verified]
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit
 - **Requirement(s)**: `REQ-STB-013`
 - **Component**: **Resilient Single-Pass Workout History Streaming & CursorWindow Crash Protection Verification**
 - **Jira**: ``ATT-2309``
@@ -683,6 +909,9 @@
   • Execute `./gradlew testDebugUnitTest` verifying 100% pass rate with zero regressions.
 
 ### TST-STB-014: **TrainingApplication Foreground Service Startup Delegation & Exception Shielding Verification** [Verified]
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit
 - **Requirement(s)**: `REQ-STB-014`
 - **Component**: **TrainingApplication Foreground Service Startup Delegation & Exception Shielding Verification**
 - **Jira**: ``ATT-2661``
@@ -702,6 +931,9 @@
   • Run `./gradlew testDebugUnitTest` verifying 100% pass rate with zero regressions.
 
 ### TST-STB-015: **Simulated Process Exit Reason Injection & Native PyQt6 Desktop Kill Simulator Verification** [Verified]
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit
 - **Requirement(s)**: `REQ-STB-015`
 - **Component**: **Simulated Process Exit Reason Injection & Native PyQt6 Desktop Kill Simulator Verification**
 - **Jira**: ``ATT-3377``
@@ -725,6 +957,9 @@
   • Run `./gradlew testDebugUnitTest` verifying 100% pass rate with zero regressions.
 
 ### TST-TOOL-001: **External ADB GPX Replay Tool Verification & Simulation Engine Unit Tests** [Verified]
+- **Priority**: Medium
+- **Type**: Non-Functional
+- **Verification Method**: Unit
 - **Requirement(s)**: `REQ-TOOL-001`
 - **Component**: **External ADB GPX Replay Tool Verification & Simulation Engine Unit Tests**
 - **Jira**: ``ATT-2467``
@@ -748,6 +983,9 @@
   • Execute `./gradlew testDebugUnitTest` and `python3 tools/test_fake_gps.py` asserting 100% test pass rate with 0 regressions.
 
 ### TST-TOOL-002: **Synchronized TCX Workout Replay Tool with PyQt6 GUI & Telemetry Verification** [Verified]
+- **Priority**: Medium
+- **Type**: Non-Functional
+- **Verification Method**: Unit
 - **Requirement(s)**: `REQ-TOOL-002`
 - **Component**: **Synchronized TCX Workout Replay Tool with PyQt6 GUI & Telemetry Verification**
 - **Jira**: ``ATT-2969``
@@ -772,6 +1010,9 @@
   • Execute `./gradlew testDebugUnitTest` verifying 100% test pass rate with zero regressions.
 
 ### TST-TOOL-003: **TCX Replay BLE Battery Service Simulation, GATT Notification & GUI Control Verification** [Verified]
+- **Priority**: Medium
+- **Type**: Non-Functional
+- **Verification Method**: Unit
 - **Requirement(s)**: `REQ-TOOL-003`
 - **Component**: **TCX Replay BLE Battery Service Simulation, GATT Notification & GUI Control Verification**
 - **Jira**: ``ATT-3178``
@@ -800,6 +1041,9 @@
   • Execute `./gradlew testDebugUnitTest` verifying 100% test pass rate with zero regressions.
 
 ### TST-TOOL-004: **TCX Replay Per-Device Kill, Disconnection, Reconnection & GUI/CLI Control Verification** [Verified]
+- **Priority**: Medium
+- **Type**: Non-Functional
+- **Verification Method**: Unit
 - **Requirement(s)**: `REQ-TOOL-004`
 - **Component**: **TCX Replay Per-Device Kill, Disconnection, Reconnection & GUI/CLI Control Verification**
 - **Jira**: ``ATT-3179``
@@ -824,6 +1068,9 @@
   • Execute `./gradlew testDebugUnitTest` verifying 100% test pass rate with zero regressions.
 
 ### TST-LIV-001: **Active and Approaching Live Segments Numeric Distance Sorting Verification** [Verified]
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Requirement(s)**: `REQ-LIV-005`
 - **Component**: **Active and Approaching Live Segments Numeric Distance Sorting Verification**
 - **Jira**: ``ATT-3324``
@@ -844,6 +1091,9 @@
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions.
 
 ### TST-ARC-001: **Safe Enum Deserialization, Observability & Architecture Guard Verification Suite** [Verified]
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Review
 - **Requirement(s)**: `REQ-ARC-001`
 - **Component**: **Safe Enum Deserialization, Observability & Architecture Guard Verification Suite**
 - **Jira**: ``ATT-3562``
@@ -871,6 +1121,9 @@
   • Execute `./gradlew testDebugUnitTest` asserting 100% pass rate.
 
 ### TST-STB-016: **Lifecycle Safety, Guarded Service Launches & Idempotent Receiver Teardown Verification Suite** [Verified]
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit
 - **Requirement(s)**: `REQ-STB-016`
 - **Component**: **Lifecycle Safety, Guarded Service Launches & Idempotent Receiver Teardown Verification Suite**
 - **Jira**: ``ATT-3563``
@@ -894,6 +1147,9 @@
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions across all 2900+ tests.
 
 ### TST-TOOL-005: **BLE Cycling Power Simulator Pedal Power Balance Verification Suite** [Verified]
+- **Priority**: Medium
+- **Type**: Non-Functional
+- **Verification Method**: Unit
 - **Requirement(s)**: `REQ-TOOL-005`
 - **Component**: **BLE Cycling Power Simulator Pedal Power Balance Verification Suite**
 - **Jira**: ``ATT-3678``
@@ -914,6 +1170,9 @@
   • Execute `python3 -m unittest tools/test_ble_power_simulator.py` and `./gradlew testDebugUnitTest` asserting 100% test pass rate.
 
 ### TST-TOOL-006: **Variable-Interval TCX Interpolation, Elapsed-Time Playback Stepping & Workout-Relative ADB GPS Timestamp Verification Suite** [Verified]
+- **Priority**: Medium
+- **Type**: Non-Functional
+- **Verification Method**: Unit
 - **Requirement(s)**: `REQ-TOOL-006`
 - **Component**: **Variable-Interval TCX Interpolation, Elapsed-Time Playback Stepping & Workout-Relative ADB GPS Timestamp Verification Suite**
 - **Jira**: ``ATT-3927``
@@ -933,6 +1192,9 @@
   • Execute `python3 -m unittest tools/test_replay_workout.py` and `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions.
 
 ### TST-TOOL-007: **Simulated Ground Speed Injection & Defensive AOSP CLI Fallback Verification Suite** [Verified]
+- **Priority**: Medium
+- **Type**: Non-Functional
+- **Verification Method**: Unit
 - **Requirement(s)**: `REQ-TOOL-007`
 - **Component**: **Simulated Ground Speed Injection & Defensive AOSP CLI Fallback Verification Suite**
 - **Jira**: ``ATT-6684``
@@ -952,6 +1214,9 @@
   • Execute `python3 -m unittest tools/test_replay_workout.py` asserting 100% test pass rate across all 39+ tests.
 
 ### TST-BLD-001: **R8 Release Build Minification, ProGuard Keep Rules & DEX Obfuscation Verification Suite** [Verified]
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit
 - **Requirement(s)**: `REQ-BLD-001`
 - **Component**: **R8 Release Build Minification, ProGuard Keep Rules & DEX Obfuscation Verification Suite**
 - **Jira**: ``ATT-3770``
@@ -972,6 +1237,9 @@
   • Verify `TranslationParityTest` passes cleanly across all 9 languages.
 
 ### TST-BLD-002: **Release CI Workflow Automated Test Gating, Manifest Hygiene & Lint Baseline Verification Suite** [Verified]
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit
 - **Requirement(s)**: `REQ-BLD-002`
 - **Component**: **Release CI Workflow Automated Test Gating, Manifest Hygiene & Lint Baseline Verification Suite**
 - **Jira**: ``ATT-4025``
@@ -990,6 +1258,9 @@
   • Execute `./gradlew testDebugUnitTest` and `TranslationParityTest` asserting 100% test pass rate with zero regressions across all 9 supported locales.
 
 ### TST-SEC-038: **Zero-Leak Logging, PII & Credential Sanitization, Build-Scoped Debug Flags, and Proactive Token Invalidation Verification Suite** [Verified]
+- **Priority**: Critical
+- **Type**: Non-Functional
+- **Verification Method**: Review
 - **Requirement(s)**: `REQ-SEC-041`, `REQ-EXT-009`
 - **Component**: **Zero-Leak Logging, PII & Credential Sanitization, Build-Scoped Debug Flags, and Proactive Token Invalidation Verification Suite**
 - **Jira**: ``ATT-3983``
@@ -1014,6 +1285,9 @@
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions.
 
 ### TST-SEC-039: **BuildConfig Secret Reflection Audit, Keystore Exclusion & Defaults Configuration Verification Suite** [Verified]
+- **Priority**: Critical
+- **Type**: Non-Functional
+- **Verification Method**: Review
 - **Requirement(s)**: `REQ-SEC-042`
 - **Component**: **BuildConfig Secret Reflection Audit, Keystore Exclusion & Defaults Configuration Verification Suite**
 - **Jira**: ``ATT-4004``
@@ -1031,6 +1305,9 @@
   • Assert that no field matches `(?i).*key(alias
 
 ### TST-STB-017: **MainActivity Launch Intent Lifecycle Sanitization & Safe Resumption Guards Verification Suite** [Verified]
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit
 - **Requirement(s)**: `REQ-STB-017`, `REQ-STB-003`, `REQ-UI-124`
 - **Component**: **MainActivity Launch Intent Lifecycle Sanitization & Safe Resumption Guards Verification Suite**
 - **Jira**: ``ATT-4001``
@@ -1054,6 +1331,9 @@
   • Execute `./gradlew testDebugUnitTest` verifying 100% pass rate across the full test suite.
 
 ### TST-STB-018: **WorkoutRepository Concurrency, Conflated Dirty-Flag Reloads, Stale Snapshot Defense & Exception Shielding Verification Suite** [Verified]
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit
 - **Requirement(s)**: `REQ-STB-018`, `REQ-STB-013`
 - **Component**: **WorkoutRepository Concurrency, Conflated Dirty-Flag Reloads, Stale Snapshot Defense & Exception Shielding Verification Suite**
 - **Jira**: `ATT-4002`, `ATT-5565`
@@ -1080,6 +1360,9 @@
   • Run targeted unit tests and clean-room test suite verifying 100% pass rate.
 
 ### TST-STB-019: **MainActivity Service Binding Safety, Lifecycle Scoping, In-Ride Battery State Retention & Off-Main-Thread DB Verification Suite** [Verified]
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit
 - **Requirement(s)**: `REQ-STB-019`, `REQ-UI-356`
 - **Component**: **MainActivity Service Binding Safety, Lifecycle Scoping, In-Ride Battery State Retention & Off-Main-Thread DB Verification Suite**
 - **Jira**: ``ATT-4020``
@@ -1104,6 +1387,9 @@
   • Execute targeted tests and `./gradlew testDebugUnitTest` verifying 100% pass rate across the full test suite.
 
 ### TST-TST-001: **Deterministic JVM Test State Isolation, Production Catch Excision & Exporter Test Coverage Verification Suite** [Verified]
+- **Priority**: Medium
+- **Type**: Non-Functional
+- **Verification Method**: Unit
 - **Requirement(s)**: `REQ-TST-001`
 - **Component**: **Deterministic JVM Test State Isolation, Production Catch Excision & Exporter Test Coverage Verification Suite**
 - **Jira**: ``ATT-4024``
@@ -1114,6 +1400,9 @@
   • Verify `BatteryRemainingTimeFormatterTest` and `BatteryDeviceTest` use strict `assertEquals("Charging", ...)` and deterministic expected value assertions, eliminating bare `assert` and tautological `
 
 ### TST-BLD-003: **Manifest Component Security, GPX Intent Filter Hardening & Permission Invariants Verification Suite** [Verified]
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit
 - **Requirement(s)**: `REQ-BLD-003`
 - **Component**: **Manifest Component Security, GPX Intent Filter Hardening & Permission Invariants Verification Suite**
 - **Jira**: ``ATT-4027``
@@ -1132,6 +1421,9 @@
   • Execute `./gradlew testDebugUnitTest` and `TranslationParityTest` asserting 100% pass rate with zero regressions across all 9 supported locales.
 
 ### TST-TST-002: **Fragile UI Source-Grep Contract Test Modernization & Architectural Guard Preservation Verification Suite** [Verified]
+- **Priority**: Medium
+- **Type**: Non-Functional
+- **Verification Method**: Unit
 - **Requirement(s)**: `REQ-TST-002`
 - **Component**: **Fragile UI Source-Grep Contract Test Modernization & Architectural Guard Preservation Verification Suite**
 - **Jira**: ``ATT-4028``
@@ -1153,6 +1445,9 @@
   • Execute `./gradlew testDebugUnitTest` verifying 100% pass rate across the full test suite.
 
 ### TST-STR-019: **Locale Hygiene, Translation Completeness & ExtraTranslation De-duplication Verification Suite** [Verified]
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit
 - **Requirement(s)**: `REQ-LOC-002`, `REQ-LOC-001`
 - **Component**: **Locale Hygiene, Translation Completeness & ExtraTranslation De-duplication Verification Suite**
 - **Jira**: ``ATT-4029``
@@ -1172,6 +1467,9 @@
   • Execute `./gradlew testDebugUnitTest` verifying 100% pass rate across the full project test suite.
 
 ### TST-ARC-002: **Exception Handling Hygiene, Fatal Error Escalation & Diagnostic Observability Verification Suite** [Verified]
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Review
 - **Requirement(s)**: `REQ-ARC-002`
 - **Component**: **Exception Handling Hygiene, Fatal Error Escalation & Diagnostic Observability Verification Suite**
 - **Jira**: ``ATT-4030``
@@ -1194,6 +1492,9 @@
   • Execute `./gradlew testDebugUnitTest` and `TranslationParityTest` asserting 100% pass rate with zero regressions across the codebase.
 
 ### TST-ARC-003: **Dead Code Elimination, Volatile Visibility & Lock-Screen API Modernization Verification Suite** [Verified]
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Review
 - **Requirement(s)**: `REQ-ARC-003`
 - **Component**: **Dead Code Elimination, Volatile Visibility & Lock-Screen API Modernization Verification Suite**
 - **Jira**: ``ATT-4031``
@@ -1214,6 +1515,9 @@
   • Execute `./gradlew testDebugUnitTest` and `TranslationParityTest` asserting 100% pass rate with zero regressions.
 
 ### TST-TST-003: **Deterministic Full-Suite Unit Test Scaffolding & Teardown Hygiene Verification Suite** [Verified]
+- **Priority**: Medium
+- **Type**: Non-Functional
+- **Verification Method**: Unit
 - **Requirement(s)**: `REQ-TST-003`, `REQ-TST-001`, `REQ-BLD-002`
 - **Component**: **Deterministic Full-Suite Unit Test Scaffolding & Teardown Hygiene Verification Suite**
 - **Jira**: ``ATT-4669``
@@ -1232,6 +1536,9 @@
   • Execute `./gradlew testDebugUnitTest` verifying 100% pass rate across the full 3,840+ unit test suite.
 
 ### TST-ARC-004: **Android Framework Reflection Constructor Compatibility & Lifecycle ViewModel Factory Hygiene Verification Suite** [Verified]
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Review
 - **Requirement(s)**: `REQ-ARC-004`, `REQ-ARC-003`
 - **Component**: **Android Framework Reflection Constructor Compatibility & Lifecycle ViewModel Factory Hygiene Verification Suite**
 - **Jira**: ``ATT-4667``
@@ -1247,6 +1554,9 @@
   • Execute `./gradlew testDebugUnitTest` verifying 100% pass rate across the full unit test suite without regressions.
 
 ### TST-PRO-020: **Agile Agentic ASPICE (AAA) Governance, Constructive Resistance, Hypothesis Verification, Stage 5 Resource Gate & Ceremony 2 Completeness Sweep Verification** [Verified]
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
 - **Requirement(s)**: `REQ-PRO-027`
 - **Component**: **Agile Agentic ASPICE (AAA) Governance, Constructive Resistance, Hypothesis Verification, Stage 5 Resource Gate & Ceremony 2 Completeness Sweep Verification**
 - **Jira**: ``ATT-3534``
@@ -1261,6 +1571,9 @@
   • Verify `.agents/skills/sprint-planner/SKILL.md` Ceremony 2 Step 3 mandates `git show` commit review and codebase completeness sweep (`grep`/`rg`) across `app/src/main` for refactoring/cleanup tickets.
 
 ### TST-PRO-021: **Living Documentation Sharding, Multi-Line Markdown Section Formatting & Dual-Format Tooling Verification Suite** [Verified]
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
 - **Requirement(s)**: `REQ-PRO-028`
 - **Component**: **Living Documentation Sharding, Multi-Line Markdown Section Formatting & Dual-Format Tooling Verification Suite**
 - **Jira**: ``ATT-4594``, ``ATT-6140``
@@ -1277,6 +1590,9 @@
   • Verify `verify_master_table_parity()` in `tools/verify_requirement_governance.py` validates that prose stated shard counts match filesystem shard counts with exit code 0 on parity and exit code 1 on mismatch.
 
 ### TST-PRO-022: **AAA Story Point Estimation, CLI Operations, Complexity Split Guardrail & Sprint Capacity Tracking Verification** [Verified]
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
 - **Requirement(s)**: `REQ-PRO-029`
 - **Component**: **AAA Story Point Estimation, CLI Operations, Complexity Split Guardrail & Sprint Capacity Tracking Verification**
 - **Jira**: ``ATT-5203``
@@ -1297,6 +1613,9 @@
   • Execute `python3 tools/verify_requirement_governance.py` asserting exit code 0 and zero governance violations.
 
 ### TST-PRO-033: **Online User Guide Content, Exclusion & Asset Contract** [Verified]
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
 - **Requirement(s)**: `REQ-PRO-033`
 - **Component**: **Online User Guide Content, Exclusion & Asset Contract**
 - **Jira**: ``ATT-2275``, ``ATT-5418``
@@ -1315,6 +1634,9 @@
   • Verify 100% anchor parity across all 9 chapters between DE and EN.
 
 ### TST-PRO-034: **ASPICE SWE.1/2/4/6 Audit Hardening Verification Suite** [Verified]
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
 - **Requirement(s)**: `REQ-PRO-034`
 - **Component**: **ASPICE Audit Hardening Verification Suite**
 - **Jira**: ``ATT-5431``
@@ -1331,6 +1653,9 @@
   • Execute `python3 tools/verify_requirement_governance.py` (exit 0) and targeted build tests.
 
 ### TST-PRO-035: **Standalone Agile Agentic ASPICE (AAA) Core Framework, Swiss Cheese Reliability & Starter Templates Verification Suite** [Verified]
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
 - **Requirement(s)**: `REQ-PRO-035`
 - **Component**: **Höchstmaß Core Framework & Starter Templates**
 - **Jira**: `ATT-3922`, `ATT-5817`, `ATT-6092`
@@ -1345,6 +1670,9 @@
   • Execute `python3 tools/verify_requirement_governance.py` (exit 0) and targeted unit tests `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.build.*"`.
 
 ### TST-PRO-036: **Parameterized Issue Tracker Automation & Requirement Governance Tooling Verification Suite** [Verified]
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
 - **Requirement(s)**: `REQ-PRO-036`
 - **Component**: **Höchstmaß Parameterized Tooling**
 - **Jira**: `ATT-5667`
@@ -1361,6 +1689,9 @@
   • Execute `python3 tools/verify_requirement_governance.py` (exit 0) and targeted unit tests `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.build.*"`.
 
 ### TST-PRO-037: **Real-World Reference Showcase & Developer Community Launch Posts Verification Suite** [Verified]
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
 - **Requirement(s)**: `REQ-PRO-037`
 - **Component**: **Höchstmaß Showcase & Community Documentation**
 - **Jira**: `ATT-5668`
@@ -1375,6 +1706,9 @@
   • Execute `python3 tools/verify_requirement_governance.py` (exit 0) and targeted unit tests `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.build.*"`.
 
 ### TST-PRO-038: **Automated Quantitative Sprint Metrics (PA 4.1), Statistical Process Control (PA 4.2) & Ceremony 2 Governance Verification Suite** [Verified]
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
 - **Requirement(s)**: `REQ-PRO-038`
 - **Component**: **Jira Process Tooling, Sprint Retrospective Governance & Höchstmaß Framework**
 - **Jira**: `ATT-5765`, `ATT-5764`
@@ -1395,6 +1729,9 @@
   • Assert `HoechstmassCoreFrameworkContractTest.kt` verifies the ASPICE Level 1–5 matrix and retro template parity.
 
 ### TST-PRO-039: **Jira Data Center & Enterprise On-Premise Tooling Verification Suite** [Verified]
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
 - **Requirement(s)**: `REQ-PRO-039`
 - **Component**: **Jira Process Tooling, Höchstmaß Framework & Deployment Adapters**
 - **Jira**: `ATT-5830`
@@ -1418,6 +1755,9 @@
   • Execute `python3 tools/verify_requirement_governance.py` (exit 0) and Python unit tests.
 
 ### TST-PRO-040: **Epic Lifecycle Management, 'list-epics' / 'close-epic' CLI Commands, and Taxonomy Governance Verification Suite** [Verified]
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
 - **Requirement(s)**: `REQ-PRO-040`
 - **Component**: `tools/jira_util.py`, `tools/hoechstmass/tools/jira_util.py`, `.agents/skills/{brainstormer,sprint-planner,jira-workflow}/SKILL.md`
 - **Jira**: `ATT-5911`
@@ -1438,6 +1778,9 @@
   • Execute `python3 tools/verify_requirement_governance.py` (exit 0) and `python3 -m unittest tools/test_jira_epics.py`.
 
 ### TST-PRO-041: **Parallel Sprint Execution Protocol for Disjoint Epics, Flock Serialization & Partitioned Localization Verification Suite** [Verified]
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
 - **Requirement(s)**: `REQ-PRO-041`
 - **Component**: `.agents/rules/aspice_governance.md`, `.agents/skills/{jira-workflow,stage4-implementation,stage5-verification,sprint-planner}/SKILL.md`, `tools/run_serialized.sh`, `tools/parallel_sprint_lock.py`, `tools/jira_util.py`, `tools/verify_requirement_governance.py`, `tools/test_verify_requirement_governance.py`, `tools/test_flock_serialization.py`, `app/src/test/java/com/atrainingtracker/trainingtracker/localization/TranslationParityTest.kt`
 - **Jira**: `ATT-5914`, `ATT-6743`, `ATT-7025`
@@ -1462,6 +1805,9 @@
   • Execute `python3 tools/verify_requirement_governance.py` (exit 0) and `python3 tools/test_verify_requirement_governance.py`.
 
 ### TST-PRO-042: **CI Configuration Integrity & Stale Travis Artifacts Contract Test Suite** [Verified]
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
 - **Requirement(s)**: `REQ-PRO-042`
 - **Component**: `ReleaseCiAndLintConfigContractTest.kt`, `app/build.gradle`
 - **Jira**: `ATT-6177`
@@ -1478,6 +1824,9 @@
   • Execute targeted unit test suite `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.build.*"` asserting 100% pass rate.
 
 ### TST-PRO-043: **SWE.2 Architecture Conformance & Code-Grounding Contract Test Suite** [Verified]
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
 - **Requirement(s)**: `REQ-PRO-043`
 - **Component**: `docs/architecture.md`, `docs/architecture/interfaces.md`, `AspiceSweAuditContractTest.kt`
 - **Jira**: `ATT-6179, ATT-6727`
@@ -1494,6 +1843,9 @@
   • Execute targeted unit test suite `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.build.AspiceSweAuditContractTest"` asserting 100% pass rate.
 
 ### TST-PRO-044: **ASPICE SWE.2 Software Interface Specification Contract Test Suite** [Verified]
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
 - **Requirement(s)**: `REQ-PRO-044`
 - **Component**: `docs/architecture/interfaces.md`, `docs/architecture.md`, `AspiceSweAuditContractTest.kt`
 - **Jira**: `ATT-6180, ATT-6732`
@@ -1513,6 +1865,9 @@
 
 
 ### TST-PRO-045: **ASPICE SWE.5 Software Integration Verification Strategy Contract Test Suite** [Verified]
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
 - **Requirement(s)**: `REQ-PRO-045`
 - **Component**: `docs/architecture/integration_strategy.md`, `docs/architecture.md`, `AspiceSweAuditContractTest.kt`
 - **Jira**: `ATT-6183, ATT-6736`
@@ -1530,6 +1885,9 @@
 
 
 ### TST-PRO-046: **Android Lint CI Quality Gate & Baseline Burn-down Contract Test Suite** [Verified]
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
 - **Requirement(s)**: `REQ-PRO-046`
 - **Component**: `.github/workflows/android-branch-build.yml`, `app/build.gradle`, `app/lint-baseline.xml`, `ReleaseCiAndLintConfigContractTest.kt`
 - **Jira**: `ATT-6173, ATT-6728`
@@ -1555,6 +1913,9 @@
 
 
 ### TST-PRO-047: **Detekt Static Analysis & Complexity Governance Contract Test Suite** [Verified]
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
 - **Requirement(s)**: `REQ-PRO-047`
 - **Component**: `build.gradle`, `app/build.gradle`, `config/detekt/detekt.yml`, `app/detekt-baseline.xml`, `.github/workflows/android-branch-build.yml`, `ReleaseCiAndLintConfigContractTest.kt`
 - **Jira**: `ATT-6175`, `ATT-6729`
@@ -1576,6 +1937,9 @@
 
 
 ### TST-PRO-048: **Kover Code Coverage Measurement & CI Threshold Gating Contract Test Suite** [Verified]
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
 - **Requirement(s)**: `REQ-PRO-048`
 - **Component**: `build.gradle`, `app/build.gradle`, `.github/workflows/android-branch-build.yml`, `ReleaseCiAndLintConfigContractTest.kt`
 - **Jira**: `ATT-6171`, `ATT-6730`
@@ -1595,6 +1959,9 @@
 
 
 ### TST-PRO-049: **Source-Text Reading Test Audit Suite** [Verified]
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
 - **Requirement(s)**: `REQ-PRO-049`
 - **Component**: `app/src/test/java/com/atrainingtracker/trainingtracker/build/SourceTextReadingAuditContractTest.kt`, `app/source-reading-baseline.txt`, `docs/coding_standards.md` §5.4
 - **Jira**: `ATT-6186`, `ATT-6731`, `ATT-6569`, `ATT-6568`, `ATT-6567`, `ATT-6566`, `ATT-6565`, `ATT-6564`
@@ -1615,6 +1982,9 @@
 
 
 ### TST-PRO-050: **Automated Architecture Conformance Test Suite** [Verified]
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
 - **Requirement(s)**: `REQ-PRO-050`
 - **Component**: `app/src/test/java/com/atrainingtracker/trainingtracker/build/ArchitectureConformanceContractTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/SourceTextReadingAuditContractTest.kt`, `docs/architecture.md`
 - **Jira**: `ATT-6182`, `ATT-6734`
@@ -1636,6 +2006,9 @@
 
 
 ### TST-PRO-051: **Android Instrumented Test Infrastructure & Emulator CI Contract Test Suite** [Verified]
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
 - **Requirement(s)**: `REQ-PRO-051`
 - **Component**: `app/build.gradle`, `.github/workflows/android-branch-build.yml`, `app/src/androidTest/java/com/atrainingtracker/trainingtracker/AppSmokeAndroidTest.kt`, `ReleaseCiAndLintConfigContractTest.kt`
 - **Jira**: `ATT-6184, ATT-6737`
@@ -1658,7 +2031,10 @@
 
 
 ### TST-PRO-052: **Architectural Resource and Timing Budgets Contract Test Suite** [Verified]
-- **Requirement(s)**: `REQ-PRO-052`, `REQ-NFR-003`..`REQ-NFR-014`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Requirement(s)**: `REQ-PRO-052`, `REQ-NFR-003`, `REQ-NFR-004`, `REQ-NFR-005`, `REQ-NFR-006`, `REQ-NFR-007`, `REQ-NFR-008`, `REQ-NFR-009`, `REQ-NFR-010`, `REQ-NFR-011`, `REQ-NFR-012`, `REQ-NFR-013`, `REQ-NFR-014`
 - **Component**: `docs/architecture.md`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/ArchitectureConformanceContractTest.kt`
 - **Jira**: `ATT-6181`, `ATT-6735`
 - **Test Description**:
@@ -1679,6 +2055,9 @@
 
 
 ### TST-PRO-053: **System Context Specification and Code-Grounding Contract Test Suite** [Verified]
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
 - **Requirement(s)**: `REQ-PRO-053`
 - **Component**: `docs/system/system_context.md`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/SystemContextContractTest.kt`
 - **Jira**: `ATT-6158`, `ATT-6738`
@@ -1702,6 +2081,9 @@
 
 
 ### TST-PRO-054: **System Requirements for Live Tracking Contract Test Suite** [Verified]
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
 - **Requirement(s)**: `REQ-PRO-054`
 - **Component**: `docs/system/sysreq_live_tracking.md`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/SystemLiveTrackingRequirementsContractTest.kt`
 - **Jira**: `ATT-6160`, `ATT-6739`
@@ -1721,6 +2103,9 @@
 
 
 ### TST-PRO-055: **System Requirements for Data Exchange Contract Test Suite** [Verified]
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
 - **Requirement(s)**: `REQ-PRO-055`
 - **Component**: `docs/system/sysreq_data_exchange.md`, `docs/system_requirements.md`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/SystemDataExchangeRequirementsContractTest.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/SystemRequirementsSpecificationContractTest.kt`
 - **Jira**: `ATT-6161`, `ATT-6740`
@@ -1741,6 +2126,9 @@
 
 
 ### TST-PRO-056: **System Architectural Design Contract Test Suite** [Verified]
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
 - **Requirement(s)**: `REQ-PRO-056`
 - **Component**: `docs/system/system_architecture.md`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/SystemArchitectureDesignContractTest.kt`
 - **Jira**: `ATT-6164`, `ATT-6741`
@@ -1763,6 +2151,9 @@
   • Verify referenced application process ID matches `com.atrainingtracker`.
 
 ### TST-PRO-057: **Configuration Management Repository Grounding & cm_plan.md Parity Contract Test Suite** [Verified]
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
 - **Requirement(s)**: `REQ-PRO-057`
 - **Component**: `docs/management/cm_plan.md`, `ReleaseCiAndLintConfigContractTest.kt`
 - **Jira**: `ATT-6733`
@@ -1781,6 +2172,9 @@
   • Execute targeted unit test suite `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.build.ReleaseCiAndLintConfigContractTest"` asserting 100% pass rate.
 
 ### TST-TST-004: **Android Emulator Lifecycle Management, Physical-Phone Guardrail, and Two-Tier Verification Suite** [Verified]
+- **Priority**: Medium
+- **Type**: Non-Functional
+- **Verification Method**: Unit
 - **Requirement(s)**: `REQ-TST-004`
 - **Component**: `tools/agent_emulator.py`, `tools/fake_gps.py`, `tools/simulate_kill.py`, `tools/replay_workout.py`, `tools/test_agent_emulator.py`
 - **Jira**: `ATT-6506`
@@ -1803,7 +2197,10 @@
   6. *Python Standard Library Compliance Test (`TST-TST-004.6`, tools/test_agent_emulator.py)*:
   • Assert `tools/agent_emulator.py` imports only standard library modules complying with `TST-PRO-005.6`.
 
-### TST-PRO-058: **Stage 6 Cold Carbon Final Review (Agent), 3-Bounce Healing Loop & Gate 6 Metrics Verification Suite** [In Progress]
+### TST-PRO-058: **Stage 6 Cold Carbon Final Review (Agent), 3-Bounce Healing Loop & Gate 6 Metrics Verification Suite** [Implemented]
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
 - **Requirement(s)**: `REQ-PRO-058`
 - **Component**: `tools/jira_util.py`, `tools/sprint_metrics.py`, `tools/hoechstmass/tools/jira_util.py`, `tools/hoechstmass/tools/sprint_metrics.py`, `.agents/skills/stage6-final-review/SKILL.md`, `tools/test_jira_epics.py`, `tools/test_sprint_metrics.py`, `HoechstmassCoreFrameworkContractTest.kt`
 - **Jira**: `ATT-7101`
@@ -1825,6 +2222,9 @@
   • Assert `parse_sprint_gate_metrics` computes `gate_6` (`Final Review (Agent)`) FTPR, bounce count, and `p6_final_review_agent_escape` in `swiss_cheese`.
 
 ### TST-PRO-059: **Sprint Gate Record Export & Repository Verification** [Verified]
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
 - **Requirement(s)**: `REQ-PRO-059`
 - **Component**: `tools/jira_util.py`, `tools/verify_requirement_governance.py`, `tools/hoechstmass/tools/jira_util.py`, `tools/hoechstmass/tools/verify_requirement_governance.py`, `tools/test_jira_accounts.py`, `tools/test_verify_requirement_governance.py`, `tools/hoechstmass/tools/test_hoechstmass_tools.py`
 - **Jira**: `ATT-6149`
@@ -1837,6 +2237,9 @@
   • Assert `"gates"` exists in `ALLOWED_ENGINEERING_ENTRIES` and `hoechstmass_config.json`.
 
 ### TST-PRO-060: **Sprint Metrics Persistence, Story Point Governance & Query Optimization** [Verified]
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
 - **Requirement(s)**: `REQ-PRO-060`
 - **Component**: `tools/sprint_metrics.py`, `tools/jira_util.py`, `tools/verify_requirement_governance.py`, `tools/hoechstmass/tools/jira_util.py`, `tools/hoechstmass/tools/verify_requirement_governance.py`, `tools/test_sprint_metrics.py`, `tools/test_verify_requirement_governance.py`, `tools/hoechstmass/tools/test_hoechstmass_tools.py`
 - **Jira**: `ATT-6150`
@@ -1849,6 +2252,9 @@
   • Assert `verify_sprint_metrics` parity and verify `collect_sprint_metrics_for_id` uses pre-indexed comments without extra network requests.
 
 ### TST-PRO-061: **Sprint-Level QA Process-Compliance Audit Suite** [Verified]
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
 - **Requirement(s)**: `REQ-PRO-061`
 - **Component**: `tools/jira_util.py`, `tools/verify_requirement_governance.py`, `tools/hoechstmass/tools/jira_util.py`, `tools/hoechstmass/tools/verify_requirement_governance.py`, `tools/test_jira_accounts.py`, `tools/test_verify_requirement_governance.py`, `tools/hoechstmass/tools/test_hoechstmass_tools.py`
 - **Jira**: `ATT-6154`
@@ -1863,6 +2269,9 @@
   • Assert `"qa_audits"` exists in `ALLOWED_ENGINEERING_ENTRIES` and `hoechstmass_config.json`.
 
 ### TST-PRO-062: **Independent QA & Cross-Vendor Review Evidence Suite** [Verified]
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
 - **Requirement(s)**: `REQ-PRO-062`
 - **Component**: `tools/jira_util.py`, `tools/verify_requirement_governance.py`, `tools/hoechstmass/tools/jira_util.py`, `tools/hoechstmass/tools/verify_requirement_governance.py`, `tools/test_jira_accounts.py`, `tools/test_verify_requirement_governance.py`, `tools/hoechstmass/tools/test_hoechstmass_tools.py`
 - **Jira**: `ATT-6155`
@@ -1877,6 +2286,9 @@
   • Assert `"reviews"` exists in `ALLOWED_ENGINEERING_ENTRIES` and `hoechstmass_config.json`.
 
 ### TST-PRO-063: **Problem Severity Classification & Defect Trend Metrics Suite** [Verified]
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
 - **Requirement(s)**: `REQ-PRO-063`
 - **Component**: `tools/jira_util.py`, `tools/sprint_metrics.py`, `tools/verify_requirement_governance.py`, `tools/hoechstmass/tools/jira_util.py`, `tools/hoechstmass/tools/sprint_metrics.py`, `tools/hoechstmass/tools/verify_requirement_governance.py`, `tools/test_jira_accounts.py`, `tools/test_sprint_metrics.py`, `tools/hoechstmass/tools/test_sprint_metrics.py`, `tools/hoechstmass/tools/test_hoechstmass_tools.py`
 - **Jira**: `ATT-6156`
@@ -1892,6 +2304,9 @@
   • Assert Höchstmaß mirror tools maintain 100% functional parity for bug severity enforcement and metrics extraction.
 
 ### TST-PRO-064: **Change-Request Impact Analysis Governance Verification Suite** [Verified]
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
 - **Requirement(s)**: `REQ-PRO-064`
 - **Component**: `tools/jira_util.py`, `tools/verify_requirement_governance.py`, `tools/hoechstmass/tools/jira_util.py`, `tools/hoechstmass/tools/verify_requirement_governance.py`, `tools/test_jira_accounts.py`, `tools/test_verify_requirement_governance.py`, `tools/hoechstmass/tools/test_hoechstmass_tools.py`
 - **Jira**: `ATT-6157`
@@ -1908,6 +2323,505 @@
   • Assert both `.agents/skills/stage1-analysis/templates/analysis_template.md` and `tools/hoechstmass/templates/analysis_template.md` contain the standardized Change Impact Analysis section.
   • Assert Höchstmaß mirror tools maintain 100% functional parity with root tooling.
 
+### TST-PRO-065: **Living Documentation Sharding Code-Span Pipe Splitting & Master Index Safety Guard Verification Suite** [Verified]
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Requirement(s)**: `REQ-PRO-065`
+- **Component**: `tools/shard_living_docs.py`, `tools/test_shard_living_docs.py`
+- **Jira**: `ATT-6124`
+- **Test Description**:
+  1. *Code-Span Pipe Splitting & Pre-Fix Reproduction (`TST-PRO-065.1`, tools/test_shard_living_docs.py)*:
+  • Test `split_markdown_table_row()` against single backticks (`...`), double backticks (``...``), escaped pipes (`\|`), and code snippets containing `||` (e.g. `REQ-EXP-021` snippet).
+  • Assert reproduction: demonstrate that naive `row.split("|")` splits into 9 parts corrupting `Tests`, whereas `split_markdown_table_row()` preserves exact 7 columns with intact `Tests = TST-EXP-018`.
+  2. *6-Column and 7-Column Requirement Parsing (`TST-PRO-065.2`, tools/test_shard_living_docs.py)*:
+  • Parse synthetic requirements table with both 6-column and 7-column rows, verifying Title, Description, Rationale, Implementation, Tests, and Status are correctly populated without index shifts.
+  3. *Master Index Overwrite Safety Guard (`TST-PRO-065.3`, tools/test_shard_living_docs.py)*:
+  • Invoke `shard_living_docs.py` against a directory where `docs/requirements.md` is a Master Index; verify process exits with code 1 and existing shards are preserved.
+  • Test `--force` bypass allowing overwrite when explicitly requested.
+  4. *Clean Execution & Parity Verification (`TST-PRO-065.4`, tools/test_shard_living_docs.py)*:
+  • Verify `--verify-only` succeeds on current repository living documentation shards.
+
+### TST-PRO-066: **Living Documentation Unique Requirement & Test Identifier Governance Verification Suite** [Verified]
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Requirement(s)**: `REQ-PRO-066`
+- **Component**: `tools/verify_requirement_governance.py`, `tools/test_verify_requirement_governance.py`
+- **Jira**: `ATT-6120`, `ATT-6123`
+- **Test Description**:
+  1. *Duplicate Heading ID Detection & Detailed Reporting (`TST-PRO-066.1`, tools/test_verify_requirement_governance.py)*:
+  • Create synthetic requirements and test shards in a temporary directory containing duplicated IDs.
+  • Verify `verify_unique_ids()` detects each duplicated ID and formats error diagnostics reporting the exact identifier, filename, and line numbers of all occurrences.
+  2. *Legacy Duplicate Baseline Tolerance & New Duplicate Rejection (`TST-PRO-066.2`, tools/test_verify_requirement_governance.py)*:
+  • Verify that duplicate IDs present in `legacy_allowlist` produce warnings but return `success = True` in standard verification mode.
+  • Verify that adding any single new duplicate outside the allowlist causes `verify_unique_ids()` to return `success = False` and triggers exit code 1.
+  3. *Strict Uniqueness Enforcement Option (`TST-PRO-066.3`, tools/test_verify_requirement_governance.py)*:
+  • Verify that when `fail_on_duplicates=True` (or CLI `--enforce-unique`), duplicates trigger `success = False` and exit code 1.
+  4. *Clean Repository Governance Parity (`TST-PRO-066.4`, tools/test_verify_requirement_governance.py)*:
+  • Verify that running `verify_unique_ids()` and `verify_unique_ids(fail_on_duplicates=True)` against the authentic repository passes cleanly with 0 duplicates and zero warnings.
+
+### TST-PRO-067: **JUnit Test Results Archival & Evidence Integrity Contract Test Suite** [Verified]
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Requirement(s)**: `REQ-PRO-067`
+- **Component**: `.github/workflows/android-branch-build.yml`, `.github/workflows/android-release.yml`, `docs/engineering/test_results`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/ReleaseCiAndLintConfigContractTest.kt`, `tools/verify_requirement_governance.py`, `tools/test_verify_requirement_governance.py`
+- **Jira**: `ATT-6137`
+- **Test Description**:
+  1. *CI Branch Build Workflow Archival Test (`TST-PRO-067.1`, ReleaseCiAndLintConfigContractTest.kt)*:
+  • Inspect `.github/workflows/android-branch-build.yml`.
+  • Assert presence of an artifact upload step configured with `if: always()` and step name indicating unit test report archival.
+  • Assert artifact paths include `app/build/test-results/testDebugUnitTest/` and `app/build/reports/tests/testDebugUnitTest/`.
+  2. *Release Workflow Test Results Packaging & Attachment Test (`TST-PRO-067.2`, ReleaseCiAndLintConfigContractTest.kt)*:
+  • Inspect `.github/workflows/android-release.yml`.
+  • Assert presence of step packaging `junit-test-results-<tag>.zip` (or `.tar.gz`) from unit test report directories.
+  • Assert that release assets attached via `softprops/action-gh-release@v2` include the versioned test results archive pattern.
+  • Assert workflow artifact upload for release test results.
+  3. *Local Developer Symlink Integrity Test (`TST-PRO-067.3`, ReleaseCiAndLintConfigContractTest.kt & tools/verify_requirement_governance.py)*:
+  • Assert `docs/engineering/test_results` exists and is a symbolic link.
+  • Assert the link target points to `../../app/build/reports/tests/testDebugUnitTest`.
+  4. *Governance Tooling Integration (`TST-PRO-067.4`, tools/test_verify_requirement_governance.py)*:
+  • Assert `verify_engineering_directory_structure()` in `tools/verify_requirement_governance.py` validates `docs/engineering/test_results` symlink target integrity.
+  5. *Workflow YAML Syntax Validation (`TST-PRO-067.5`, tools/test_verify_requirement_governance.py & ReleaseCiAndLintConfigContractTest.kt)*:
+  • Parse `.github/workflows/android-branch-build.yml` and `.github/workflows/android-release.yml` with YAML parser and assert zero syntax errors.
+
+### TST-PRO-068: **System Integration Verification & Sensor Simulators Specification Contract Test Suite** [Verified]
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Requirement(s)**: `REQ-PRO-068`
+- **Component**: `docs/system/sys_integration_tests.md`, `tools/run_system_integration_tests.py`, `tools/test_system_integration_tests.py`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/SystemIntegrationTestContractTest.kt`
+- **Jira**: `ATT-6166`
+- **Test Description**:
+  1. *System Integration Specification Structural Integrity (`TST-PRO-068.1`, SystemIntegrationTestContractTest.kt)*:
+  • Assert `docs/system/sys_integration_tests.md` exists and contains required metadata header.
+  • Assert all 6 integration test cases (`SYS-INT-001` through `SYS-INT-006`) are defined.
+  • Assert coverage across all external system interfaces (`SYS-IF-01` BLE, `SYS-IF-02` ANT+, `SYS-IF-03` GNSS, `SYS-IF-05` Cloud).
+  2. *System Requirements Bidirectional Traceability (`TST-PRO-068.2`, SystemIntegrationTestContractTest.kt)*:
+  • Assert all integration test cases trace to system requirements (`SYSREQ-TRK-*`, `SYSREQ-DEX-*`) and system elements (`SYS-EL-*`).
+  • Assert exact bidirectional parity between referenced requirements and system documents.
+  3. *Headless CI Runner Execution & Artifact Generation (`TST-PRO-068.3`, tools/test_system_integration_tests.py)*:
+  • Execute `tools/run_system_integration_tests.py` in headless mode.
+  • Verify output report structure, pass/fail status, timestamping, and exit code 0.
+  4. *Integration Runner Unit Test Suite (`TST-PRO-068.4`, tools/test_system_integration_tests.py)*:
+  • Verify unit tests for simulation handlers, error paths, and CLI arguments pass cleanly under Python unittest.
+
+### TST-PRO-069: **System Verification Protocol & Hardware Reference Specification Contract Test Suite** [Verified]
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Requirement(s)**: `REQ-PRO-069`
+- **Component**: `docs/system/sys_verification_protocol.md`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/SystemVerificationProtocolContractTest.kt`, `docs/architecture.md`
+- **Jira**: `ATT-6167`
+- **Test Description**:
+  1. *Protocol Structural Integrity & Metadata Header (`TST-PRO-069.1`, SystemVerificationProtocolContractTest.kt)*:
+  • Assert `docs/system/sys_verification_protocol.md` exists and contains required metadata header referencing ASPICE SYS.5, REQ-PRO-069, and TST-PRO-069.
+  • Assert protocol contains Mermaid workflow and system verification topology diagrams.
+  2. *Hardware Reference & Environmental Conditions Matrices (`TST-PRO-069.2`, SystemVerificationProtocolContractTest.kt)*:
+  • Assert protocol specifies hardware matrix with Google Pixel reference family, BLE HRM (Polar H10/Garmin HRM-Pro), Cycling Power (Favero Assioma/Stages/Wahoo), Garmin Varia Radar (RTL515), and Barometric Altimeter / GNSS.
+  • Assert protocol specifies 5 environmental test matrices (Urban, Rural, Climb, Indoor, Longevity).
+  3. *System Verification Cases & SYSREQ Traceability (`TST-PRO-069.3`, SystemVerificationProtocolContractTest.kt)*:
+  • Assert protocol specifies formal test cases (`SYS-VRF-001` through `SYS-VRF-008`).
+  • Assert bidirectional coverage of all system requirements (`SYSREQ-TRK-001`..`006` and `SYSREQ-DEX-001`..`006`) with zero dangling IDs.
+  4. *Objective Pass/Fail Criteria & Release Record Template (`TST-PRO-069.4`, SystemVerificationProtocolContractTest.kt)*:
+  • Assert protocol defines pass/fail thresholds for FIT/TCX integrity, Strava/Dropbox sync, RF reconnection, sample loss $\le 1\%$, and battery drain $\le 8\%$/hr.
+  • Assert protocol includes release sign-off record template with signature fields for release governance.
+
+### TST-PRO-070: **Living Documentation Bidirectional Reference Integrity Test Suite** [Verified]
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Requirement(s)**: `REQ-PRO-070`
+- **Component**: `tools/verify_requirement_governance.py`, `tools/test_verify_requirement_governance.py`
+- **Jira**: `ATT-6121`
+- **Test Description**:
+  1. *Dangling TST Detection in Requirements (`TST-PRO-070.1`, tools/test_verify_requirement_governance.py)*:
+  • Assert that `find_dangling_references()` detects unresolvable `TST-*` IDs cited in `- **Tests**:` fields of REQs, reporting source file, line number, and target ID.
+  2. *Dangling REQ Detection in Tests (`TST-PRO-070.2`, tools/test_verify_requirement_governance.py)*:
+  • Assert that `find_dangling_references()` detects unresolvable `REQ-*` IDs cited in `- **Requirement(s)**:` fields of TSTs, reporting source file, line number, and target ID.
+  3. *Legacy Allowlist Tolerance & New Reference Rejection (`TST-PRO-070.3`, tools/test_verify_requirement_governance.py)*:
+  • Assert that `verify_dangling_references()` emits warnings and returns success (`True`) for known allowlisted legacy dangling links.
+  • Assert that any net-new dangling link outside the allowlist fails verification (`False`) with error diagnostics.
+  4. *Strict Enforcement Mode (`TST-PRO-070.4`, tools/test_verify_requirement_governance.py)*:
+  • Assert that passing `--enforce-links` / `--fail-on-dangling` (or `fail_on_dangling=True`) returns failure (`False`) when any dangling reference is present.
+  5. *Clean Repository Resolution (`TST-PRO-070.5`, tools/test_verify_requirement_governance.py)*:
+  • Assert that verification passes cleanly when all cited IDs resolve to valid headings.
+
+### TST-PRO-071: **Living Documentation Bidirectional REQ-TST Traceability & Code Coverage Test Suite** [Verified]
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Requirement(s)**: `REQ-PRO-071`
+- **Component**: `tools/verify_requirement_governance.py`, `tools/test_verify_requirement_governance.py`
+- **Jira**: `ATT-6122`
+- **Test Description**:
+  1. *Category 1 Calculation (REQs without TST) (`TST-PRO-071.1`, tools/test_verify_requirement_governance.py)*:
+  • Assert that requirements with missing, empty, or 'None' `Tests` fields are correctly categorized and quantified.
+  2. *Category 2 Calculation (TSTs without Test Code) (`TST-PRO-071.2`, tools/test_verify_requirement_governance.py)*:
+  • Assert that TST headings lacking corresponding test code tags in test directories are detected and quantified.
+  3. *Category 3 Calculation (Code Tags without Spec) (`TST-PRO-071.3`, tools/test_verify_requirement_governance.py)*:
+  • Assert that code tags referencing test IDs not defined in living doc headings are detected and reported.
+  4. *Category 4 Calculation (TSTs not Cited Back by REQs) (`TST-PRO-071.4`, tools/test_verify_requirement_governance.py)*:
+  • Assert that TST specifications whose cited REQs do not include them in the `Tests` field are identified.
+  5. *Report Output Formatting (`TST-PRO-071.5`, tools/test_verify_requirement_governance.py)*:
+  • Assert that Markdown and JSON coverage reports format counts, totals, and percentages accurately.
+  6. *Threshold Gate Ratcheting (`TST-PRO-071.6`, tools/test_verify_requirement_governance.py)*:
+  • Assert that verifier fails with exit code 1 when coverage metrics fall below configured minimum thresholds, and passes when thresholds are met.
+
+### TST-NFR-001: **Deterministic EKF Timing Verification** [Verified]
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit
+- **Requirement(s)**: `REQ-NFR-001`
+- **Component**: `TrackerService.java`, `docs/architecture.md` §4.9
+- **Jira**: `ATT-6139`
+- **Test Description**:
+  1. *Scope*: Sensor Simulation & Timing Benchmark (`TST-NFR-001.1`).
+  2. *Preconditions*: High-frequency synthetic IMU hardware timestamps with thread scheduling jitter.
+  3. *Action*: Ingest sensor packets into EKF filter, compute Delta-T vs hardware event timestamps.
+  4. *Expected Result*: Calculated Delta-T jitter <= 2.0 ms across consecutive sensor updates.
+
+### TST-NFR-002: **Stationary Pinning Drift Prevention Verification** [Verified]
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit
+- **Requirement(s)**: `REQ-NFR-002`
+- **Component**: `TrackerService.java`, `docs/architecture.md` §4.9
+- **Jira**: `ATT-6139`
+- **Test Description**:
+  1. *Scope*: Sensor Replay Simulation (`TST-NFR-002.1`).
+  2. *Preconditions*: Simulated stationary state with IMU accelerometer variance below stillness threshold.
+  3. *Action*: Run 30-minute position estimation loop with synthetic stationary coordinates and IMU inputs.
+  4. *Expected Result*: Accumulated coordinate drift < 0.5 m/min; coordinate unpinning within 1.0 s of movement resumption.
+
+### TST-NFR-003: **Periodic Tick Latency Budget Verification** [Verified]
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit
+- **Requirement(s)**: `REQ-NFR-003`
+- **Component**: `TrackerService.java`, `docs/architecture.md` §4.9
+- **Jira**: `ATT-6139`, `ATT-6181`
+- **Test Description**:
+  1. *Scope*: Android Studio CPU Profiler / System.nanoTime instrumentation (`TST-NFR-003.1`).
+  2. *Preconditions*: Active workout recording session on background `mScheduler`.
+  3. *Action*: Profile 1000 consecutive periodic 1-Hz tick executions.
+  4. *Expected Result*: Execution duration < 50 ms for >= 99% of cycles, guaranteeing >= 950 ms idle headroom.
+
+### TST-NFR-004: **CPU Consumption Ceiling Verification** [Verified]
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit
+- **Requirement(s)**: `REQ-NFR-004`
+- **Component**: `TrackerService.java`, `docs/architecture.md` §4.9
+- **Jira**: `ATT-6139`, `ATT-6181`
+- **Test Description**:
+  1. *Scope*: Android Studio CPU Profiler / simpleperf CPU trace (`TST-NFR-004.1`).
+  2. *Preconditions*: Continuous 30-minute background recording with screen off, active GNSS, and 2 connected BLE sensors.
+  3. *Action*: Measure average CPU utilization across single-core reference device.
+  4. *Expected Result*: Average CPU consumption < 5.0% single-core on mid-tier reference hardware.
+
+### TST-NFR-005: **Dedicated Heap Footprint Ceiling Verification** [Verified]
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit
+- **Requirement(s)**: `REQ-NFR-005`
+- **Component**: `TrackerService.java`, `docs/architecture.md` §4.9
+- **Jira**: `ATT-6139`, `ATT-6181`
+- **Test Description**:
+  1. *Scope*: Android Memory Profiler / Heap Dump (`TST-NFR-005.1`).
+  2. *Preconditions*: Continuous 12+ hour simulated workout recording with map display and 1-Hz telemetry.
+  3. *Action*: Capture heap dump (`am dumpheap`) and evaluate retained memory allocations in LeakCanary / Memory Profiler.
+  4. *Expected Result*: Dedicated `TrackerService` heap <= 40 MB; total application peak heap RAM <= 150 MB.
+
+### TST-NFR-006: **Tracking Battery Drain Ceiling Verification** [Verified]
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit
+- **Requirement(s)**: `REQ-NFR-006`
+- **Component**: `TrackerService.java`, `docs/architecture.md` §4.9
+- **Jira**: `ATT-6139`, `ATT-6181`
+- **Test Description**:
+  1. *Scope*: Android Battery Historian / Energy Profiler (`TST-NFR-006.1`).
+  2. *Preconditions*: 60-minute active tracking benchmark on calibrated reference hardware with active GNSS and BLE sensors.
+  3. *Action*: Measure discharge rate in screen-off background mode and screen-on cockpit map mode (50% brightness).
+  4. *Expected Result*: Battery drain <= 5.0%/h screen off; <= 12.0%/h screen on with cockpit map rendering.
+
+### TST-NFR-007: **Sensor Dispatch Latency Budget Verification** [Verified]
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit
+- **Requirement(s)**: `REQ-NFR-007`
+- **Component**: `BANALService.java`, `ProxySensor.java`, `docs/architecture.md` §4.9
+- **Jira**: `ATT-6139`, `ATT-6181`
+- **Test Description**:
+  1. *Scope*: Synthetic Sensor Event Benchmark (`TST-NFR-007.1`).
+  2. *Preconditions*: Registered sensor subscribers across `TrackerService` and UI listeners.
+  3. *Action*: Measure timestamp delta from HAL ingestion to subscriber notification callback across 10,000 packets.
+  4. *Expected Result*: Dispatch latency < 25 ms for >= 99% of events.
+
+### TST-NFR-008: **Sensor Connection Failover Timeout Verification** [Verified]
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit
+- **Requirement(s)**: `REQ-NFR-008`
+- **Component**: `BANALService.java`, `ProxySensor.java`, `docs/architecture.md` §4.9
+- **Jira**: `ATT-6139`, `ATT-6181`
+- **Test Description**:
+  1. *Scope*: Disconnect Simulation Harness (`TST-NFR-008.1`).
+  2. *Preconditions*: Primary sensor emitting telemetry with secondary fallback paired.
+  3. *Action*: Abruptly drop primary sensor packet stream and measure time until reconnection or failover initiation.
+  4. *Expected Result*: Failover or automatic reconnect initiated within <= 3.5 s.
+
+### TST-NFR-009: **Tracking WakeLock Bounding Verification** [Verified]
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit
+- **Requirement(s)**: `REQ-NFR-009`
+- **Component**: `TrackerService.java`, `docs/architecture.md` §4.9
+- **Jira**: `ATT-6139`, `ATT-6735`
+- **Test Description**:
+  1. *Scope*: PowerManager Mock Unit Test & Dumpsys Power Inspection (`TST-NFR-009.1`).
+  2. *Preconditions*: Full lifecycle transition sequence: Idle -> Tracking -> Paused -> Tracking -> Stopped.
+  3. *Action*: Assert `isHeld()` on `aTrainingTracker:TrackingLock` across each state transition.
+  4. *Expected Result*: WakeLock held strictly in `TRACKING` state; immediately released in `STOPPED` and `PAUSED` with 0 leak.
+
+### TST-NFR-010: **Database Sample Write Latency Budget Verification** [Verified]
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit
+- **Requirement(s)**: `REQ-NFR-010`
+- **Component**: `TrackerService.java`, `WorkoutSamplesDatabaseManager.java`, `docs/architecture.md` §4.9
+- **Jira**: `ATT-6139`, `ATT-6735`
+- **Test Description**:
+  1. *Scope*: SQLite Write Latency Benchmark (`TST-NFR-010.1`).
+  2. *Preconditions*: Active SQLite database in WAL mode on `mScheduler` / `mDbExecutor`.
+  3. *Action*: Measure insertion duration for 3,600 consecutive 1-Hz workout sample rows.
+  4. *Expected Result*: Write latency < 30 ms per sample with zero operations on the Android main thread.
+
+### TST-NFR-011: **Telemetry Storage Growth Rate Ceiling Verification** [Verified]
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit
+- **Requirement(s)**: `REQ-NFR-011`
+- **Component**: `WorkoutSamplesDatabaseManager.java`, `docs/architecture.md` §4.9
+- **Jira**: `ATT-6139`, `ATT-6181`
+- **Test Description**:
+  1. *Scope*: Database Storage Progression Integration Test (`TST-NFR-011.1`).
+  2. *Preconditions*: 3,600 consecutive 1-Hz telemetry samples recorded in database.
+  3. *Action*: Measure database file size growth on disk before and after workout insertion.
+  4. *Expected Result*: Storage growth <= 360 KB/h (~100 bytes/sample, <= 3.6 MB for a 10-hour activity).
+
+### TST-NFR-012: **Cockpit Frame Render Budget Verification** [Verified]
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit
+- **Requirement(s)**: `REQ-NFR-012`
+- **Component**: `SensorGridScreen.kt`, `docs/architecture.md` §4.9
+- **Jira**: `ATT-6139`, `ATT-6181`
+- **Test Description**:
+  1. *Scope*: AndroidX Macrobenchmark FrameTimingMetric (`TST-NFR-012.1`).
+  2. *Preconditions*: `SensorGridScreen` rendering live telemetry card updates at 1 Hz on reference hardware.
+  3. *Action*: Measure 95th-percentile frame render durations over a 60-second scrolling and streaming session.
+  4. *Expected Result*: Render duration < 16.6 ms per frame (sustaining >= 60 FPS without dropped frames).
+
+### TST-NFR-013: **Map Polyline Update Latency Budget Verification** [Verified]
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit
+- **Requirement(s)**: `REQ-NFR-013`
+- **Component**: `ATrainingTrackerMap.kt`, `docs/architecture.md` §4.9
+- **Jira**: `ATT-6139`, `ATT-6181`
+- **Test Description**:
+  1. *Scope*: Map Canvas Render Pipeline Benchmark (`TST-NFR-013.1`).
+  2. *Preconditions*: Live GPS track with 10,000 points displayed on canvas.
+  3. *Action*: Ingest coordinate update and measure time to recalculate polyline geometry and complete canvas draw.
+  4. *Expected Result*: Polyline path update latency < 30 ms.
+
+### TST-NFR-014: **Cockpit Telemetry Emission Rate Throttling Verification** [Verified]
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit
+- **Requirement(s)**: `REQ-NFR-014`
+- **Component**: `TrackingTabsViewModel.kt`, `docs/architecture.md` §4.9
+- **Jira**: `ATT-6139`, `ATT-6181`
+- **Test Description**:
+  1. *Scope*: Coroutine Turbine / TestScope StateFlow Test (`TST-NFR-014.1`).
+  2. *Preconditions*: High-frequency mock sensor streams updating at > 4 Hz.
+  3. *Action*: Collect emissions from `TrackingTabsViewModel.uiState` over 5.0 seconds.
+  4. *Expected Result*: Maximum 5 distinct UI state emissions (strictly conflated to 1.0 Hz).
+
+### TST-NFR-015: **Cold Start Startup Latency Budget Verification** [Verified]
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit
+- **Requirement(s)**: `REQ-NFR-015`
+- **Component**: `MainActivityWithNavigation.kt`, `docs/architecture.md` §4.9
+- **Jira**: `ATT-6139`
+- **Test Description**:
+  1. *Scope*: AndroidX Macrobenchmark StartupBenchmark / Google Play Vitals (`TST-NFR-015.1`).
+  2. *Preconditions*: Cold process launch from launcher intent on reference device.
+  3. *Action*: Measure Time-to-Initial-Display (TTID) and Time-to-Full-Display (TTFD).
+  4. *Expected Result*: TTID <= 1200 ms; TTFD <= 1500 ms to interactive dashboard rendering.
+
+### TST-NFR-016: **GNSS Horizontal Trajectory Accuracy Verification** [Verified]
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit
+- **Requirement(s)**: `REQ-NFR-016`
+- **Component**: `MySensorManager.java`, `docs/architecture.md` §4.8
+- **Jira**: `ATT-6139`
+- **Test Description**:
+  1. *Scope*: Track Replay & Orthogonal Error Analysis (`TST-NFR-016.1`).
+  2. *Preconditions*: Open-sky recorded workout track and RTK-surveyed ground-truth reference polyline.
+  3. *Action*: Compute orthogonal distance error for each recorded fix against reference track.
+  4. *Expected Result*: 95th-percentile horizontal position error <= 5.0 m; cross-track RMSE <= 3.0 m.
+
+### TST-NFR-017: **Production Crash-Free Session Stability Verification** [Verified]
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit
+- **Requirement(s)**: `REQ-NFR-017`
+- **Component**: `TrainingApplication.kt`, `docs/architecture.md`
+- **Jira**: `ATT-6139`
+- **Test Description**:
+  1. *Scope*: Google Play Console Android Vitals & Firebase Crashlytics Telemetry (`TST-NFR-017.1`).
+  2. *Preconditions*: Production release builds running across user base over rolling 30-day window.
+  3. *Action*: Evaluate crash rate metrics across all recorded user sessions.
+  4. *Expected Result*: Production crash-free session rate >= 99.5%; per-release staging gate >= 99.0%.
+
+### TST-NFR-018: **Application Not Responding (ANR) Rate Ceiling Verification** [Verified]
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit
+- **Requirement(s)**: `REQ-NFR-018`
+- **Component**: `TrackerService.java`, `WorkoutSamplesDatabaseManager.java`, `docs/architecture.md` §4.9
+- **Jira**: `ATT-6139`
+- **Test Description**:
+  1. *Scope*: Google Play Console Android Vitals & StrictMode Audit (`TST-NFR-018.1`).
+  2. *Preconditions*: Production release builds monitored via Play Console Android Vitals.
+  3. *Action*: Query user-perceived ANR rate over 30 days and run StrictMode thread policy audit in debug tests.
+  4. *Expected Result*: Production ANR rate <= 0.05% (Google Play Bad Behavior threshold: 0.47%); zero main-thread I/O violations.
+
+### TST-PRO-072: **Release Manager System Verification Evidence Integration & Release Gating Test Suite** [Verified]
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Requirement(s)**: `REQ-PRO-072`
+- **Component**: `.agents/skills/release-manager/SKILL.md`, `docs/releases/README.md`, `docs/releases/TEMPLATE.md`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/ReleaseManagerSystemEvidenceContractTest.kt`, `docs/architecture.md`
+- **Jira**: `ATT-6169`
+- **Test Description**:
+  1. *Skill System Evidence Gate Specification Contract Test (`TST-PRO-072.1`, ReleaseManagerSystemEvidenceContractTest.kt)*:
+  • Assert that `.agents/skills/release-manager/SKILL.md` exists and mandates SYS.4 (`system_integration_results.json`) and SYS.5 (`sys_verification_record.md`) verification gates.
+  2. *Release Tag Blocking Logic Contract Test (`TST-PRO-072.2`, ReleaseManagerSystemEvidenceContractTest.kt)*:
+  • Assert that the release checklist and step-by-step procedures explicitly define pre-tagging blocking checks that reject tag creation if system verification records are missing or failing.
+  3. *Release Template & Directory Structure Contract Test (`TST-PRO-072.3`, ReleaseManagerSystemEvidenceContractTest.kt)*:
+  • Assert that `docs/releases/` contains `README.md` and `TEMPLATE.md` specifying `docs/releases/<tag>/` artifact requirements and SYS.4/SYS.5 sign-off criteria.
+  4. *Contract Test Suite Execution & Governance Parity (`TST-PRO-072.4`, ReleaseManagerSystemEvidenceContractTest.kt & tools/verify_requirement_governance.py)*:
+  • Assert `ReleaseManagerSystemEvidenceContractTest.kt` passes cleanly under Gradle and `python3 tools/verify_requirement_governance.py` confirms 100% living documentation parity.
+
+### TST-PRO-073: **Evidence-Based Requirement Status Model and Master Index Parity Test Suite** [Verified]
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Requirement(s)**: `REQ-PRO-073`
+- **Scope**: Contract Tests & Tooling Unit Tests
+- **Component**: `tools/verify_requirement_governance.py`, `tools/test_verify_requirement_governance.py`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/AspiceSweAuditContractTest.kt`
+- **Jira**: `ATT-6126`
+- **Test Description**:
+  1. *Headings Standardization (`TST-PRO-073.1`, AspiceSweAuditContractTest.kt)*:
+     • Assert that all living requirement and test headings end with standard status tokens: `[Verified]`, `[Implemented]`, `[Planned]`, or `[Open]`.
+  2. *4-Column Master Table Parity (`TST-PRO-073.2`, AspiceSweAuditContractTest.kt)*:
+     • Assert that master tables in `docs/requirements.md` and `docs/tests.md` have 4 numeric columns (Total, Verified, Implemented, Planned/Open) matching shard counts with 100% mathematical parity.
+  3. *Verifier 4-Column Sync & Parity (`TST-PRO-073.3`, tools/test_verify_requirement_governance.py)*:
+     • Assert that `verify_master_table_parity()` and `recalculate_master_index_tables()` correctly calculate and output 4-column master table records.
+  4. *Evidence Status Verification Rule (`TST-PRO-073.4`, tools/test_verify_requirement_governance.py)*:
+     • Assert that requirements claiming `[Verified]` without an existing TST ID fail verification, while requirements citing existing TST IDs pass cleanly.
+
+### TST-PRO-074: **Release Verification Summary Generator Test Suite** [Verified]
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Requirement(s)**: `REQ-PRO-074`
+- **Component**: `tools/generate_release_verification_summary.py`, `tools/test_generate_release_verification_summary.py`, `.agents/skills/release-manager/SKILL.md`, `docs/releases/README.md`
+- **Jira**: `ATT-6138`
+- **Test Description**:
+  1. *CLI Argument Parsing & Default Output Path Test (`TST-PRO-074.1`, test_generate_release_verification_summary.py)*:
+  • Verify CLI accepts `--tag`, `--commit`, `--out`, and coverage threshold flags, correctly defaulting output to `docs/releases/<tag>/verification_summary.md`.
+  2. *Unit Test Report Parsing & Archival Link Test (`TST-PRO-074.2`, test_generate_release_verification_summary.py)*:
+  • Verify parsing of JUnit XML reports and versioned archive reference `build-evidence/junit-test-results-<tag>.zip`.
+  3. *Coverage JSON Integration & Threshold Verification Test (`TST-PRO-074.3`, test_generate_release_verification_summary.py)*:
+  • Verify extraction of bidirectional REQ-TST and TST-Code metrics from `--coverage-json` output and threshold breach detection.
+  4. *SYS.4 and SYS.5 Evidence Parsing & Deviation Detection Test (`TST-PRO-074.4`, test_generate_release_verification_summary.py)*:
+  • Verify parsing of `system_integration_results.json` and `sys_verification_record.md`, flagging missing files, failed tests, and unsigned protocols under deviations requiring human approval.
+  5. *End-to-End Markdown Summary Generation & Governance Parity Test (`TST-PRO-074.5`, test_generate_release_verification_summary.py & tools/verify_requirement_governance.py)*:
+  • Verify end-to-end generation of `verification_summary.md` and confirm 100% living documentation parity.
+
+### TST-PRO-075: **Requirement Tests Field Format & Traceability Governance Verifier Test Suite** [Verified]
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Requirement(s)**: `REQ-PRO-075`
+- **Component**: `tools/verify_requirement_governance.py`, `tools/test_verify_requirement_governance.py`
+- **Jira**: `ATT-6125`
+- **Test Description**:
+  1. *Conforming Syntax Acceptance Test (`TST-PRO-075.1`, test_verify_requirement_governance.py)*:
+  • Assert that single and multiple backticked test IDs (e.g. `` `TST-CON-001` ``, `` `TST-CON-001`, `TST-CON-002` ``) and valid placeholders (`None`, `Planned`, `Review`, `Manual inspection`) pass validation with 0 errors.
+  2. *Corrupted Sentence Fragment Rejection Test (`TST-PRO-075.2`, test_verify_requirement_governance.py)*:
+  • Assert that unclosed backticks, dangling boolean expressions (e.g. `code == 201 check...`), and trailing pipe metadata (e.g. `| **Tickets**: ATT-...`) are detected as violations.
+  3. *Misplaced Source File Rejection Test (`TST-PRO-075.3`, test_verify_requirement_governance.py)*:
+  • Assert that Kotlin/Java/XML filenames in `Tests:` fields are detected as violations.
+  4. *Clean-Room Shard Audit & Governance Parity (`TST-PRO-075.4`, verify_requirement_governance.py)*:
+  • Assert `tools/verify_requirement_governance.py` passes with exit code 0 across all 9 shards and master index tables match with 100% parity.
+
+### TST-PRO-076: **System-to-Software Requirement Traceability & Governance Verification Suite** [Verified]
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Requirement(s)**: `REQ-PRO-076`
+- **Scope**: Tooling Unit Tests, Contract Tests & Governance Integration
+- **Component**: `tools/verify_requirement_governance.py`, `tools/test_verify_requirement_governance.py`, `docs/system/sysreq_live_tracking.md`, `docs/system/sysreq_data_exchange.md`, `docs/system/system_software_traceability.md`, `docs/project_governance.md`
+- **Jira**: `ATT-6163`
+- **Test Description**:
+  1. *SYSREQ Citation Integrity Unit Test (`TST-PRO-076.1`, test_verify_requirement_governance.py)*:
+  • Verify that `verify_system_software_traceability()` passes when all cited `SYSREQ-*` IDs exist in `docs/system/sysreq_*.md`, and fails with descriptive errors when an ungrounded or dangling `SYSREQ-XXX` is cited.
+  2. *SYSREQ Coverage by Software Requirements Test (`TST-PRO-076.2`, test_verify_requirement_governance.py)*:
+  • Verify that 100% of declared system requirements (`SYSREQ-TRK-001`..`006`, `SYSREQ-DEX-001`..`006`) are refined by software requirements, and flag missing coverage if any system requirement is unrefined.
+  3. *Domain & Prefix Tailoring Governance Rule Test (`TST-PRO-076.3`, test_verify_requirement_governance.py)*:
+  • Verify that software requirements belonging to tailored prefix families (`UI`, `UNT`, `PRO`, etc.) are recognized as software-derived (`[SWE-Derived]`) with valid architectural rationale.
+  4. *CLI Integration & Living Documentation Parity Test (`TST-PRO-076.4`, tools/verify_requirement_governance.py & AspiceSweAuditContractTest.kt)*:
+  • Verify end-to-end execution of `python3 tools/verify_requirement_governance.py --verify-sys-trace` and assert 100% master index parity across all living documentation shards.
+
+### TST-PRO-077: **Requirement Attributes Governance Verification Suite** [Verified]
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Requirement(s)**: `REQ-PRO-077`
+- **Scope**: Tooling Unit Tests, Contract Tests & Governance Integration
+- **Component**: `tools/verify_requirement_governance.py`, `tools/test_verify_requirement_governance.py`, `.agents/skills/stage2-req-test-spec/SKILL.md`, `templates/test_spec_template.md`, `docs/requirements.md`
+- **Jira**: `ATT-6136`
+- **Test Description**:
+  1. *Requirement Attribute Presence & Domain Validation Unit Test (`TST-PRO-077.1`, test_verify_requirement_governance.py)*:
+  • Verify that `verify_requirement_attributes()` passes when all three attributes (Priority, Type, Verification Method) are present and valid, and fails when any attribute is missing, empty, or has an invalid value.
+  2. *Git Diff Enforcement & Legacy Tolerance Unit Test (`TST-PRO-077.2`, test_verify_requirement_governance.py)*:
+  • Verify that diff-based checking enforces all three attributes on newly added or modified requirements while emitting warnings for untouched legacy requirements.
+  3. *Strict CLI Enforcement Flag Test (`TST-PRO-077.3`, test_verify_requirement_governance.py)*:
+  • Verify that `--enforce-attributes` / `--fail-on-missing-attributes` fails with exit code 1 if any requirement in the repository lacks valid attributes.
+  4. *Template & Living Documentation Parity Audit (`TST-PRO-077.4`, tools/verify_requirement_governance.py)*:
+  • Verify that Stage 2 skill template, deliverable template, and `docs/requirements.md` contain standardized attribute fields and living documentation master tables maintain 100% parity.
+
+### TST-PRO-079: **Aftermath Reviews Test Evidence Backfill & Traceability Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-PRO-079`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Component**: `docs/requirements/req_aftermath_reviews.md`, `docs/tests/tst_aftermath_reviews.md`, `ZoneDistributionCardTest.kt`, `tools/verify_requirement_governance.py`
+- **Jira**: `ATT-6128`
+- **Test Description**:
+  1. *Coverage & Existence Matrix Verification*: Run `python3 tools/verify_requirement_governance.py --coverage` asserting 0 gaps in Category 1 (100% REQs with TST), 0 gaps in Category 2 for TST-REV (100% TSTs with code), 0 gaps in Category 3 for TST-REV, and 0 gaps in Category 4 for TST-REV (100% bidirectional citation).
+  2. *Dangling Link & Evidence Audit*: Run `python3 tools/verify_requirement_governance.py --check-links` and `--check-evidence` asserting zero dangling references and zero ungrounded Verified statuses in `aftermath_reviews`.
+  3. *Attribute Compliance Check*: Run `python3 tools/verify_requirement_governance.py --check-attributes` asserting all 12 `REQ-REV-*` requirements define valid Priority, Type, and Verification Method attributes.
+  4. *Targeted Unit Test Verification*: Execute `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.aftermath.zones.ZoneDistributionCardTest"` asserting 100% pass rate.
 
 
 
@@ -1917,3 +2831,119 @@
 
 
 
+
+
+
+
+
+
+
+### TST-PRO-078: **Tracking Cockpit Verification & Bidirectional Traceability Verification Suite** [Verified]
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Requirement(s)**: `REQ-PRO-078`
+- **Scope**: Tooling Unit Tests, Contract Tests & Governance Integration
+- **Component**: `tools/verify_requirement_governance.py`, `tools/test_verify_requirement_governance.py`, `docs/requirements/req_tracking_cockpit.md`, `docs/tests/tst_tracking_cockpit.md`
+- **Jira**: `ATT-6127`
+- **Test Description**:
+  1. *Tracking Cockpit Domain Coverage Test (`TST-PRO-078.1`, test_verify_requirement_governance.py)*:
+  • Verify that `calculate_traceability_coverage()` across `req_tracking_cockpit.md` and `tst_tracking_cockpit.md` yields $\ge 95\%$ Category 1 coverage and $\ge 95\%$ Category 4 bidirectional coverage with zero ungrounded [Verified] claims.
+  2. *Zero Dangling Reference Verification Test (`TST-PRO-078.2`, verify_requirement_governance.py)*:
+  • Verify that `find_dangling_references()` detects zero dangling references in `req_tracking_cockpit.md` and `tst_tracking_cockpit.md` after removing `TST-FUSION-001`..`003` and `REQ-TRK-035` from legacy allowlists.
+  3. *Living Documentation Master Table Parity Test (`TST-PRO-078.3`, AspiceSweAuditContractTest.kt)*:
+  • Verify 100% mathematical parity across all 4 columns of `docs/requirements.md` and `docs/tests.md` via `verify_master_table_parity()` and `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.build.AspiceSweAuditContractTest"`.
+
+
+### TST-PRO-080: **Aftermath Periods Test Evidence Backfill & Traceability Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-PRO-080`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Component**: `docs/requirements/req_aftermath_periods.md`, `docs/tests/tst_aftermath_periods.md`, `PeriodBarGraphTest.kt`, `WorkoutShareBottomSheetContractTest.kt`, `SportingJourneyRepositoryTest.kt`, `SportingJourneyViewModelTest.kt`, `SportingJourneyCalculatorTest.kt`, `tools/verify_requirement_governance.py`
+- **Jira**: `ATT-6129`
+- **Test Description**:
+  1. *Coverage & Existence Matrix Verification*: Run `python3 tools/verify_requirement_governance.py --coverage` asserting 0 gaps in Category 1 for aftermath_periods (100% REQs with TST), 0 gaps in Category 4 for aftermath_periods, and 0 Category 3 tags for SPT.
+  2. *Dangling Link & Evidence Audit*: Run `python3 tools/verify_requirement_governance.py --check-links` and `--check-evidence` asserting zero dangling references and zero ungrounded Verified statuses in `aftermath_periods`.
+  3. *Attribute Compliance Check*: Run `python3 tools/verify_requirement_governance.py --check-attributes` asserting all 41 requirements in `req_aftermath_periods.md` define valid Priority, Type, and Verification Method attributes.
+  4. *Targeted Unit Test Verification*: Execute `./gradlew testDebugUnitTest --tests "*PeriodBarGraph*" --tests "*SportingJourney*"` asserting 100% pass rate.
+
+### TST-PRO-081: **Maps and Navigation Test Evidence Backfill & Bidirectional Traceability Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-PRO-081`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Scope**: Governance Verification, Coverage Analysis & Unit Tests
+- **Component**: `docs/requirements/req_maps_navigation.md`, `docs/tests/tst_maps_navigation.md`, `WaypointBadgeMarkerTest.kt`, `tools/verify_requirement_governance.py`
+- **Jira**: `ATT-6131`
+- **Test Description**:
+  1. *Coverage & Existence Matrix Verification*: Run `python3 tools/verify_requirement_governance.py --coverage` asserting 0 gaps in Category 1 for maps_navigation (100% REQs with TST), resolution of `TST-MAP-038` in Category 3, and 100% bidirectional citation for all MAP and NAV test specifications in Category 4.
+  2. *Dangling Link & Evidence Audit*: Run `python3 tools/verify_requirement_governance.py --check-links` and `--check-evidence` asserting zero dangling references in `maps_navigation` (pruning `REQ-MAP-037` from legacy allowlist) and zero ungrounded Verified statuses.
+  3. *Attribute Compliance Check*: Run `python3 tools/verify_requirement_governance.py --check-attributes` asserting all 75 requirements in `req_maps_navigation.md` define valid Priority, Type, and Verification Method attributes.
+  4. *Targeted Unit Test Verification*: Execute `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.map.WaypointBadgeMarkerTest"` asserting 100% pass rate.
+
+### TST-PRO-082: **Settings and Profiles Test Evidence Backfill & Traceability Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-PRO-082`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Component**: `docs/requirements/req_settings_profiles.md`, `docs/tests/tst_settings_profiles.md`, `WorkoutClusterCounterTest.kt`, `WorkoutClusterStatsTest.kt`, `tools/verify_requirement_governance.py`
+- **Jira**: `ATT-6133`
+- **Test Description**:
+  1. *Coverage & Existence Matrix Verification*: Run `python3 tools/verify_requirement_governance.py --coverage` asserting 0 gaps in Category 1 for settings_profiles (100% REQs with TST), 0 gaps in Category 4 for settings_profiles, and 0 Category 3 tags for SET.
+  2. *Dangling Link & Evidence Audit*: Run `python3 tools/verify_requirement_governance.py --check-links` and `--check-evidence` asserting zero dangling references and zero ungrounded Verified statuses in `settings_profiles`.
+  3. *Attribute Compliance Check*: Run `python3 tools/verify_requirement_governance.py --check-attributes` asserting all 102 requirements in `req_settings_profiles.md` define valid Priority, Type, and Verification Method attributes.
+  4. *Targeted Unit Test Verification*: Execute `./gradlew testDebugUnitTest --tests "*Cluster*" --tests "*Setting*"` asserting 100% pass rate.
+
+### TST-PRO-083: **Data Migration and Export Test Evidence Backfill & Bidirectional Traceability Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-PRO-083`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Scope**: Governance Verification, Coverage Analysis & Unit Tests
+- **Component**: `docs/requirements/req_data_migration_export.md`, `docs/tests/tst_data_migration_export.md`, `WorkoutDeletionHelperTest.kt`, `tools/verify_requirement_governance.py`
+- **Jira**: `ATT-6134`
+- **Test Description**:
+  1. *Coverage & Existence Matrix Verification*: Run `python3 tools/verify_requirement_governance.py --coverage` asserting 0 gaps in Category 1 for data_migration_export (100% REQs with TST), resolution of `REQ-DAT-010` ungrounded claim, and 100% bidirectional citation for all DAT, EXP, EXT, and MIG test specifications in Category 4.
+  2. *Dangling Link & Evidence Audit*: Run `python3 tools/verify_requirement_governance.py --check-links` and `--check-evidence` asserting zero dangling references in `data_migration_export` and zero ungrounded Verified statuses (pruning `REQ-DAT-010` from `LEGACY_UNGROUNDED_VERIFIED_REQS`).
+  3. *Attribute Compliance Check*: Run `python3 tools/verify_requirement_governance.py --check-attributes` asserting all 130 requirements in `req_data_migration_export.md` define valid Priority, Type, and Verification Method attributes.
+  4. *Targeted Unit Test Verification*: Execute `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.database.WorkoutDeletionHelperTest"` asserting 100% pass rate.
+
+### TST-PRO-084: **Store Presence Test Evidence Backfill & Traceability Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-PRO-084`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Component**: `docs/requirements/req_store_presence.md`, `docs/tests/tst_store_presence.md`, `PlayStoreListingContractTest.kt`, `tools/verify_requirement_governance.py`
+- **Jira**: `ATT-6135`
+- **Test Description**:
+  1. *Coverage & Existence Matrix Verification*: Run `python3 tools/verify_requirement_governance.py --coverage` asserting 0 gaps in Category 1 for store_presence (100% REQs with TST), 0 gaps in Category 2 for store_presence (10/10 TSTs tagged in code), and 0 gaps in Category 4 for store_presence.
+  2. *Dangling Link & Evidence Audit*: Run `python3 tools/verify_requirement_governance.py --check-links` and `--check-evidence` asserting zero dangling references and zero ungrounded Verified statuses in `store_presence`.
+  3. *Attribute Compliance Check*: Run `python3 tools/verify_requirement_governance.py --check-attributes` asserting all 10 requirements in `req_store_presence.md` define valid Priority, Type, and Verification Method attributes.
+  4. *Targeted Unit Test Verification*: Execute `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.build.*"` asserting 100% pass rate.
+### TST-PRO-085: **UI Design System Test Evidence Backfill & Bidirectional Traceability Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-PRO-085`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Scope**: Governance Verification, Coverage Analysis & Unit Tests
+- **Component**: `docs/requirements/req_ui_design_system.md`, `docs/tests/tst_ui_design_system.md`, `tools/verify_requirement_governance.py`
+- **Jira**: `ATT-6132`
+- **Test Description**:
+  1. *Coverage & Existence Matrix Verification*: Run `python3 tools/verify_requirement_governance.py --coverage` asserting 0 gaps in Category 1 for ui_design_system (100% REQs with TST), 0 ungrounded claims, and 100% bidirectional citation for all UI and UNT test specifications in Category 4.
+  2. *Dangling Link & Evidence Audit*: Run `python3 tools/verify_requirement_governance.py --check-links`, `--check-evidence`, and `--enforce-unique` asserting zero dangling references and zero ungrounded Verified statuses in `ui_design_system` (pruning all UI items from legacy allowlists).
+  3. *Attribute Compliance Check*: Run `python3 tools/verify_requirement_governance.py --check-attributes` asserting all 452 requirements in `req_ui_design_system.md` define valid Priority, Type, and Verification Method attributes.
+  4. *Targeted Unit Test Verification*: Execute `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.theme.ThemeColorCentralizationAuditTest" --tests "com.atrainingtracker.banalservice.sensor.formater.TimeFormatterTest"` asserting 100% pass rate.
+
+### TST-PRO-086: **Process Stability Test Evidence Backfill & Traceability Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-PRO-086`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Component**: `docs/requirements/req_process_stability.md`, `docs/tests/tst_process_stability.md`, `tools/verify_requirement_governance.py`, `tools/test_verify_requirement_governance.py`
+- **Jira**: `ATT-6130`
+- **Test Description**:
+  1. *Coverage & Existence Matrix Verification*: Run `python3 tools/verify_requirement_governance.py --coverage` asserting 0 gaps in Category 1 for process_stability (100% REQs with TST), zero dangling references originating from this domain, and >= 95% Category 4 bidirectional parity.
+  2. *Dangling Link & Evidence Audit*: Run `python3 tools/verify_requirement_governance.py --check-links` and `--check-evidence` asserting zero dangling references and zero ungrounded Verified statuses in `process_stability`.
+  3. *Attribute Compliance Check*: Run `python3 tools/verify_requirement_governance.py --check-attributes` asserting all requirements in `req_process_stability.md` and test specifications in `tst_process_stability.md` define valid Priority, Type, and Verification Method attributes.
+  4. *Targeted Unit Test Verification*: Execute `python3 -m unittest tools/test_verify_requirement_governance.py` asserting 100% pass rate across all governance verifier unit tests.

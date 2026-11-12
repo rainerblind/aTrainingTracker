@@ -180,6 +180,15 @@ data class WorkoutCluster(
     val minAltLatLng: LatLng? get() = if (minAltLat != null && minAltLng != null) LatLng(minAltLat, minAltLng) else null
     val maxAltLatLng: LatLng? get() = if (maxAltLat != null && maxAltLng != null) LatLng(maxAltLat, maxAltLng) else null
 
+    /**
+     * Determines whether this cluster represents a point-to-point (A->B) route rather than a closed loop (REQ-SET-097.5, ATT-7315).
+     */
+    val isPointToPoint: Boolean
+        get() = WorkoutClusterEngine.distanceBetween(
+            LatLng(startLat, startLng),
+            LatLng(endLat, endLng)
+        ) >= 150f
+
     companion object {
         fun fromCursor(cursor: Cursor): WorkoutCluster = WorkoutClusterDatabaseManager.mapCursorToCluster(cursor)
     }

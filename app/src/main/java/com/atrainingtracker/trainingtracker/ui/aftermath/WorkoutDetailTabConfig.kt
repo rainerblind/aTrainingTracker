@@ -491,7 +491,23 @@ data class WorkoutDetailTabConfig(
                 } else {
                     withPhotos
                 }
-                withGrade
+
+                // ATT-7320: If RPE_AND_FEEL is not present in ANY tab,
+                // auto-migrate RPE_AND_FEEL into tab_overview at index 0.
+                val withRpe = if (withGrade.none { tab -> WorkoutDetailSectionType.RPE_AND_FEEL in tab.sections }) {
+                    withGrade.map { tab ->
+                        if (tab.id == "tab_overview" || tab.preset == WorkoutDetailTabPreset.OVERVIEW) {
+                            val currentSections = tab.sections.toMutableList()
+                            currentSections.add(0, WorkoutDetailSectionType.RPE_AND_FEEL)
+                            tab.copy(sections = normalizeTabSections(currentSections))
+                        } else {
+                            tab
+                        }
+                    }
+                } else {
+                    withGrade
+                }
+                withRpe
             }.getOrElse { DEFAULT_TABS }
         }
 

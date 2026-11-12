@@ -16,7 +16,18 @@ Reuse the ticket's two persistent `TypeName: "self"` subagents via `send_message
 ## Key Responsibilities (`subagent_flash` as `agent1` — `flash`)
 1. **Requirement Formulation (`REQ-XXX`)**:
    - Write clear SHALL/MUST clauses, structured architectural constraints, and Given-When-Then acceptance criteria.
-   - Insert new requirement rows into the appropriate domain shard under `docs/requirements/` (`docs/requirements.md` master index) using the multi-line section format (or conduct Chesterton's Fence archaeology if modifying existing lines).
+   - Insert new requirement rows into the appropriate domain shard under `docs/requirements/` (`docs/requirements.md` master index) using the multi-line section format:
+     ```markdown
+     ### REQ-DOM-NNN: Formal Title [Planned]
+     - **Tests**: `TST-DOM-NNN`
+     - **Priority**: Critical / High / Medium / Low
+     - **Type**: Functional / Non-Functional
+     - **Verification Method**: Unit / Integration / On-Device Manual / Review / Formal Analysis
+     - **Implementation**: `TargetComponent.kt`
+     - **Rationale**: Architectural justification...
+     - **Description**: Normative contract specification...
+     ```
+   - (or conduct Chesterton's Fence archaeology if modifying existing lines).
    - Validate governance via `python3 tools/verify_requirement_governance.py`.
 2. **Test Specification (`TST-XXX`)**:
    - Specify deterministic unit, repository, ViewModel, database, and UI test cases.
@@ -50,6 +61,8 @@ Message the ticket's persistent `subagent_pro` (`send_message`) to audit the Sta
      - `Root Reason for Existing Formulation` ("Why was this fence built?")
      - `Preservation of Core Invariants` ("Why is it safe to modify now?")
    - Net-new requirements (novel IDs absent from base) are exempt from this hurdle.
+5. **Requirement Attributes Audit (`REQ-PRO-077`, SWE.1 BP2)**:
+   - Verify that new or modified requirements explicitly define valid `Priority` (`Critical`, `High`, `Medium`, `Low`), `Type` (`Functional`, `Non-Functional`), and `Verification Method` (`Unit`, `Integration`, `On-Device Manual`, `Review`, `Formal Analysis`) attributes in living docs and the Stage 2 deliverable.
 4. **Gate Verdict (`gate-verdict`) + Fused Stage 3 Continuation (Rule 60)**:
    - Record the verdict in a single composite CLI call (which closes the sub-task to `Erledigt`, advances the parent ticket to `Implementation Plan`, and automatically injects `stage3-impl-plan/SKILL.md` into stdout):
      ```bash

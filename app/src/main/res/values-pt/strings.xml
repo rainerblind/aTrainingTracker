@@ -484,6 +484,7 @@
     <string name="average">média</string>
     <string name="start">partida</string>
     <string name="max_line_distance">mais distante</string>
+    <string name="route_apex">Ápice</string>
     <string name="end">chegada</string>
     <string name="drawer__settings">Ajustes</string>
     <string name="drawer__info_support">Informações e suporte</string>
@@ -2252,6 +2253,7 @@
     <string name="copy_tab_title">Copiar separador</string>
     <string name="copy_tab_action">Copiar</string>
     <string name="back">Voltar</string>
+    <string name="navigation_drawer_open">Abrir gaveta de navegação</string>
     <string name="close">Fechar</string>
     <string name="clear">Limpar</string>
     <string name="select_route">Selecionar rota</string>

@@ -76,6 +76,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun RoutesScreen(
     viewModel: RoutesViewModel = viewModel(),
+    onMenuClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -261,7 +262,8 @@ fun RoutesScreen(
                     tuningConfig = tuningConfig,
                     onApplyFilterCriteria = { viewModel.setFilterCriteria(it) },
                     onClearAllFilters = { viewModel.clearFilterCriteria() },
-                    onUpdateFilterCriteria = { viewModel.updateFilterCriteria(it) }
+                    onUpdateFilterCriteria = { viewModel.updateFilterCriteria(it) },
+                    onMenuClick = onMenuClick
                 )
 
                 if (selectedRouteIdForEdit != null) {

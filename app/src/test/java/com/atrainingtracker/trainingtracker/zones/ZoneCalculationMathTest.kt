@@ -173,4 +173,77 @@ class ZoneCalculationMathTest {
             assertTrue(e.message?.contains("at least 20") == true)
         }
     }
+
+    @Test
+    fun calculateThresholdAnchoredHeartRateZones_withRestingHr_calculatesStrictAscendingBoundaries() {
+        val thresholds = ZoneCalculationMath.calculateThresholdAnchoredHeartRateZones(
+            hrvt1 = 145,
+            hrvt2 = 172,
+            hrMax = 195,
+            hrRest = 50
+        )
+
+        // z1 = round(50 + 0.70 * (145 - 50)) = round(116.5) = 117
+        assertEquals(117, thresholds.z1Max)
+        // z2 = hrvt1
+        assertEquals(145, thresholds.z2Max)
+        // z3 = round((145 + 172) / 2.0) = 159
+        assertEquals(159, thresholds.z3Max)
+        // z4 = hrvt2
+        assertEquals(172, thresholds.z4Max)
+
+        assertTrue(thresholds.z1Max < thresholds.z2Max)
+        assertTrue(thresholds.z2Max < thresholds.z3Max)
+        assertTrue(thresholds.z3Max < thresholds.z4Max)
+        assertTrue(thresholds.z4Max < 195)
+    }
+
+    @Test
+    fun calculateThresholdAnchoredHeartRateZones_withoutRestingHr_usesPercentageFallback() {
+        val thresholds = ZoneCalculationMath.calculateThresholdAnchoredHeartRateZones(
+            hrvt1 = 140,
+            hrvt2 = 168,
+            hrMax = 190,
+            hrRest = null
+        )
+
+        // z1 = round(0.85 * 140) = 119
+        assertEquals(119, thresholds.z1Max)
+        assertEquals(140, thresholds.z2Max)
+        // z3 = round((140 + 168) / 2.0) = 154
+        assertEquals(154, thresholds.z3Max)
+        assertEquals(168, thresholds.z4Max)
+
+        assertTrue(thresholds.z1Max < thresholds.z2Max)
+        assertTrue(thresholds.z2Max < thresholds.z3Max)
+        assertTrue(thresholds.z3Max < thresholds.z4Max)
+        assertTrue(thresholds.z4Max < 190)
+    }
+
+    @Test
+    fun calculateThresholdAnchoredHeartRateZones_invalidInputs_throws() {
+        // hrvt2 <= hrvt1
+        try {
+            ZoneCalculationMath.calculateThresholdAnchoredHeartRateZones(hrvt1 = 150, hrvt2 = 150)
+            fail("Expected IllegalArgumentException for hrvt2 <= hrvt1")
+        } catch (e: IllegalArgumentException) {
+            assertTrue(e.message?.contains("strictly greater than HRVT1") == true)
+        }
+
+        // hrMax <= hrvt2
+        try {
+            ZoneCalculationMath.calculateThresholdAnchoredHeartRateZones(hrvt1 = 140, hrvt2 = 175, hrMax = 170)
+            fail("Expected IllegalArgumentException for hrMax <= hrvt2")
+        } catch (e: IllegalArgumentException) {
+            assertTrue(e.message?.contains("strictly greater than HRVT2") == true)
+        }
+
+        // out of bounds hrvt1
+        try {
+            ZoneCalculationMath.calculateThresholdAnchoredHeartRateZones(hrvt1 = 50, hrvt2 = 160)
+            fail("Expected IllegalArgumentException for hrvt1 < MIN_HR_MAX")
+        } catch (e: IllegalArgumentException) {
+            assertTrue(e.message?.contains("HRVT1") == true)
+        }
+    }
 }

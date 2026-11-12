@@ -24,8 +24,10 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Link
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -77,6 +79,8 @@ fun DevicesTabbedScreen(
     onCheckAntInstallation: () -> Unit = {},
     onNavigateToZones: ((initialTab: Int, promptReason: String?) -> Unit)? = null,
     onNavigateToSupporter: ((planId: String?) -> Unit)? = null,
+    onMenuClick: (() -> Unit)? = null,
+    onBackClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     LaunchedEffect(listViewModel) {
@@ -302,7 +306,7 @@ fun DevicesTabbedScreen(
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .height(LayoutConstants.HEADER_TITLE_ROW_HEIGHT)
-                                        .padding(horizontal = 16.dp),
+                                        .padding(start = 4.dp, end = 16.dp),
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.SpaceBetween
                                 ) {
@@ -310,6 +314,24 @@ fun DevicesTabbedScreen(
                                         verticalAlignment = Alignment.CenterVertically,
                                         modifier = Modifier.weight(1f)
                                     ) {
+                                        if (onBackClick != null) {
+                                            IconButton(onClick = onBackClick) {
+                                                Icon(
+                                                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                                    contentDescription = stringResource(R.string.back),
+                                                    tint = MaterialTheme.colorScheme.onPrimaryContainer
+                                                )
+                                            }
+                                        } else if (onMenuClick != null) {
+                                            IconButton(onClick = onMenuClick) {
+                                                Icon(
+                                                    imageVector = Icons.Default.Menu,
+                                                    contentDescription = stringResource(R.string.navigation_drawer_open),
+                                                    tint = MaterialTheme.colorScheme.onPrimaryContainer
+                                                )
+                                            }
+                                        }
+
                                         // 1. Icon (Protocol or Device Type)
                                         val headerIcon = when {
                                             deviceType != DeviceType.ALL -> com.atrainingtracker.banalservice.ui.devices.devicedata.getIconId(deviceType, protocol)
@@ -343,7 +365,8 @@ fun DevicesTabbedScreen(
                                             style = MaterialTheme.typography.titleLarge,
                                             color = MaterialTheme.colorScheme.onPrimaryContainer,
                                             maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis
+                                            overflow = TextOverflow.Ellipsis,
+                                            modifier = if (headerIcon == null) Modifier.padding(start = 4.dp) else Modifier
                                         )
                                     }
 

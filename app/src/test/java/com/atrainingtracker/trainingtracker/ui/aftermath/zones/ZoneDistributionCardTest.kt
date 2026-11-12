@@ -24,7 +24,8 @@ import org.junit.Assert.*
 import org.junit.Test
 
 /**
- * Unit test verifying ZoneDistributionCard architecture, wrapper delegation, and fallback resolution.
+ * Unit test verifying ZoneDistributionCard architecture, wrapper delegation, and fallback resolution
+ * (REQ-REV-008, TST-REV-009 / ATT-6044).
  * Refactored to JVM reflection and behavioral tests per docs/coding_standards.md §5.4 and REQ-PRO-049.
  */
 class ZoneDistributionCardTest {

@@ -174,4 +174,73 @@ object ZoneCalculationMath {
             z4Max = z4
         )
     }
+
+    /**
+     * Calculates 5 heart rate zone cutoffs anchored to physiological thresholds HRVT1 and HRVT2 (REQ-PER-037.7).
+     *
+     * Invariants:
+     * - Zone 2 ceiling (Aerobic threshold) anchors strictly at [hrvt1].
+     * - Zone 4 ceiling (Anaerobic threshold / LTHR) anchors strictly at [hrvt2].
+     * - Zone 3 ceiling (Tempo) is the midpoint: round((hrvt1 + hrvt2) / 2.0).
+     * - Zone 1 ceiling (Active Recovery): if hrRest is valid and hrRest < hrvt1,
+     *   round(hrRest + 0.70 * (hrvt1 - hrRest)), otherwise round(0.85 * hrvt1).
+     * - Monotonic ascending rationalization ensures: z1Max < z2Max < z3Max < z4Max (< hrMax).
+     *
+     * @param hrvt1 Estimated HRVT1 heart rate in bpm (must be in [MIN_HR_MAX, MAX_HR_MAX]).
+     * @param hrvt2 Estimated HRVT2 heart rate in bpm (must be in [MIN_HR_MAX, MAX_HR_MAX]).
+     * @param hrMax Configured maximum heart rate in bpm (optional; must be > hrvt2 if present).
+     * @param hrRest Configured resting heart rate in bpm (optional).
+     * @return [HeartRateZoneThresholds] containing strictly ascending cutoffs Z1..Z4.
+     */
+    fun calculateThresholdAnchoredHeartRateZones(
+        hrvt1: Int,
+        hrvt2: Int,
+        hrMax: Int? = null,
+        hrRest: Int? = null
+    ): HeartRateZoneThresholds {
+        require(hrvt1 in MIN_HR_MAX..MAX_HR_MAX) {
+            "HRVT1 ($hrvt1 bpm) must be in [$MIN_HR_MAX, $MAX_HR_MAX]"
+        }
+        require(hrvt2 in MIN_HR_MAX..MAX_HR_MAX) {
+            "HRVT2 ($hrvt2 bpm) must be in [$MIN_HR_MAX, $MAX_HR_MAX]"
+        }
+        require(hrvt2 > hrvt1) {
+            "HRVT2 ($hrvt2 bpm) must be strictly greater than HRVT1 ($hrvt1 bpm)"
+        }
+        if (hrMax != null) {
+            require(hrMax in MIN_HR_MAX..MAX_HR_MAX) {
+                "HRmax ($hrMax bpm) must be in [$MIN_HR_MAX, $MAX_HR_MAX]"
+            }
+            require(hrMax > hrvt2) {
+                "HRmax ($hrMax bpm) must be strictly greater than HRVT2 ($hrvt2 bpm)"
+            }
+        }
+
+        var z2 = hrvt1
+        var z4 = hrvt2
+        var z3 = Math.round((hrvt1 + hrvt2) / 2.0).toInt()
+
+        var z1 = if (hrRest != null && hrRest in MIN_HR_REST..MAX_HR_REST && hrRest < hrvt1) {
+            Math.round(hrRest + 0.70 * (hrvt1 - hrRest)).toInt()
+        } else {
+            Math.round(0.85 * hrvt1).toInt()
+        }
+
+        // Monotonic rationalization
+        if (z1 >= z2) z1 = z2 - 1
+        if (z3 <= z2) z3 = z2 + 1
+        if (z3 >= z4) z3 = z4 - 1
+        if (z4 <= z3) z4 = z3 + 1
+
+        if (hrMax != null) {
+            require(z4 < hrMax) { "Zone 4 cutoff ($z4 bpm) must be strictly less than HRmax ($hrMax bpm)" }
+        }
+
+        return HeartRateZoneThresholds(
+            z1Max = z1,
+            z2Max = z2,
+            z3Max = z3,
+            z4Max = z4
+        )
+    }
 }

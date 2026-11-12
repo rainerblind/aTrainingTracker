@@ -125,7 +125,7 @@ class LiveClimbsRepository private constructor(
         }
 
         val stored = climbsDb.getAllClimbs().map { it.copy(category = it.resolveCategory(formula)) }
-        _allStoredClimbs.value = stored
+        _allStoredClimbs.value = ClimbDeduplicator.deduplicateForDisplay(stored)
 
         val rawList = if (activeRouteId != null) {
             climbsDb.getClimbsForRoute(activeRouteId)

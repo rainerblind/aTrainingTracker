@@ -51,6 +51,7 @@ import com.google.android.gms.common.GoogleApiAvailability
 fun PeriodsScreen(
     viewModel: PeriodsViewModel = viewModel(),
     onStartWorkoutList: ((PeriodSummary, BSportType?, Long?) -> Unit)? = null,
+    onMenuClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -178,7 +179,8 @@ fun PeriodsScreen(
                 onToggleSportFilter = { viewModel.toggleSportFilter(it) },
                 selectedMetric = selectedMetric,
                 onSelectMetric = { viewModel.selectMetric(it) },
-                onDayCellClick = handleDayClick
+                onDayCellClick = handleDayClick,
+                onMenuClick = onMenuClick
             )
         }
     }

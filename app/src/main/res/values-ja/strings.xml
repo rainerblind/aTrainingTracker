@@ -482,6 +482,7 @@
     <string name="average">平均</string>
     <string name="start">スタート</string>
     <string name="max_line_distance">最遠地点</string>
+    <string name="route_apex">頂点</string>
     <string name="end">ゴール</string>
     <string name="drawer__settings">設定</string>
     <string name="drawer__info_support">情報とサポート</string>
@@ -2233,6 +2234,7 @@
     <string name="copy_tab_title">タブをコピー</string>
     <string name="copy_tab_action">コピー</string>
     <string name="back">戻る</string>
+    <string name="navigation_drawer_open">ナビゲーション ドロワーを開く</string>
     <string name="close">閉じる</string>
     <string name="clear">クリア</string>
     <string name="select_route">ルートを選択</string>

@@ -484,6 +484,7 @@
     <string name="average">media</string>
     <string name="start">partenza</string>
     <string name="max_line_distance">più lontano</string>
+    <string name="route_apex">Apice</string>
     <string name="end">fine</string>
     <string name="drawer__settings">Impostazioni</string>
     <string name="drawer__info_support">Info e supporto</string>
@@ -2254,6 +2255,7 @@
     <string name="copy_tab_title">Copia scheda</string>
     <string name="copy_tab_action">Copia</string>
     <string name="back">Indietro</string>
+    <string name="navigation_drawer_open">Apri menu di navigazione</string>
     <string name="close">Chiudi</string>
     <string name="clear">Cancella</string>
     <string name="select_route">Seleziona percorso</string>

@@ -45,11 +45,13 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Save
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
@@ -107,7 +109,9 @@ import kotlinx.coroutines.launch
 @Composable
 fun SportTypesTabsScreen(
     viewModel: SportTypeViewModel,
-    onNavigateToWorkouts: (StatsData) -> Unit
+    onNavigateToWorkouts: (StatsData) -> Unit,
+    onMenuClick: (() -> Unit)? = null,
+    onBackClick: (() -> Unit)? = null
 ) {
     val sportTypes by viewModel.sportTypes.collectAsStateWithLifecycle()
 
@@ -214,15 +218,40 @@ fun SportTypesTabsScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(LayoutConstants.HEADER_TITLE_ROW_HEIGHT)
-                            .padding(horizontal = 16.dp),
+                            .padding(start = 4.dp, end = 16.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Text(
-                            text = stringResource(R.string.sport_types),
-                            style = MaterialTheme.typography.titleLarge,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer
-                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            if (onBackClick != null) {
+                                IconButton(onClick = onBackClick) {
+                                    Icon(
+                                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                        contentDescription = stringResource(R.string.back),
+                                        tint = MaterialTheme.colorScheme.onPrimaryContainer
+                                    )
+                                }
+                            } else if (onMenuClick != null) {
+                                IconButton(onClick = onMenuClick) {
+                                    Icon(
+                                        imageVector = Icons.Default.Menu,
+                                        contentDescription = stringResource(R.string.navigation_drawer_open),
+                                        tint = MaterialTheme.colorScheme.onPrimaryContainer
+                                    )
+                                }
+                            }
+                            Text(
+                                text = stringResource(R.string.sport_types),
+                                style = MaterialTheme.typography.titleLarge,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.padding(start = 4.dp)
+                            )
+                        }
                     }
 
                     PrimaryScrollableTabRow(

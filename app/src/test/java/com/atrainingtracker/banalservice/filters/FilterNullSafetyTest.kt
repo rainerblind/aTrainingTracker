@@ -20,6 +20,10 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.Assert.*
 
+/**
+ * Unit tests verifying null-safe sensor filtering across all filter implementations
+ * (REQ-FIL-011, TST-FIL-001, ATT-275).
+ */
 class FilterNullSafetyTest {
 
     @Before

@@ -9,6 +9,9 @@
 
 ### TST-STP-001: 9-Locale Store Presence Character Bound & Formatting Parity [Verified]
 - **Requirement(s)**: `REQ-STP-001`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
 - **Component**: `docs/store_presence/*.md`
 - **Jira**: `ATT-4853`, `ATT-490`
 - **Test Description**:
@@ -20,7 +23,10 @@
 
 ### TST-STP-002: V5.0 Feature Messaging, Privacy & Sports Science Completeness Audit [Verified]
 - **Requirement(s)**: `REQ-STP-002`
-- **Component**: `docs/store_presence/*.md`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit / Review
+- **Component**: `docs/store_presence/*.md`, `PlayStoreListingContractTest.kt`
 - **Jira**: `ATT-4853`
 - **Test Description**:
   1. Verify each language file highlights: .FIT export/import, Google Drive cloud backup, Coggan/Skiba sports science ($\text{NP}$, $\text{IF}$, $\text{TSS}$, $W'_{\text{bal}}$, $\text{PMC}$), Periods 2.0 contribution grids, Barometer calibration & Electronic Bike Bell.
@@ -29,6 +35,9 @@
 
 ### TST-STP-003: Automated Play Store Listing Regression Contract Test [Verified]
 - **Requirement(s)**: `REQ-STP-001`, `REQ-STP-002`, `REQ-STP-003`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit
 - **Component**: `app/src/test/java/com/atrainingtracker/trainingtracker/build/PlayStoreListingContractTest.kt`
 - **Jira**: `ATT-4853`, `ATT-490`
 - **Test Description**:
@@ -39,7 +48,10 @@
 
 ### TST-STP-004: Jetpack Compose Material 3 & AMOLED Device Store Screenshots [Verified]
 - **Requirement(s)**: `REQ-STP-004`
-- **Component**: `docs/store_presence/screenshots/`, `images/Screenshots/`
+- **Priority**: Medium
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Component**: `docs/store_presence/screenshots/`, `images/Screenshots/`, `PlayStoreListingContractTest.kt`
 - **Jira**: `ATT-4853`
 - **Test Description**:
   1. Capture high-resolution $1080 \times 2424$ screenshots via ADB from connected Pixel 10 hardware.
@@ -49,6 +61,9 @@
 
 ### TST-STP-005: README Play Store Badge Asset, Link Integrity, Trademark-Free & Screenshot Showcase Contract Test [Verified]
 - **Requirement(s)**: `REQ-STP-005`
+- **Priority**: Medium
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
 - **Component**: `README.md`, `.reviews/README.md`, `images/google-play-badge.svg`, `docs/guide/img/*.png`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/ReadmePlayStoreBadgeContractTest.kt`
 - **Jira**: `ATT-2371`, `ATT-6096`
 - **Test Description**:
@@ -69,6 +84,9 @@
 
 ### TST-STP-006: Play Store Promo Video Assets, Storyboard & Generator Contract Test [Verified]
 - **Requirement(s)**: `REQ-STP-006`
+- **Priority**: Low
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
 - **Component**: `docs/store_presence/promo_video_storyboard.md`, `tools/generate_promo_video.py`, `docs/store_presence/video/att_promo_showcase.mp4`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/PromoVideoAssetsContractTest.kt`
 - **Jira**: `ATT-2274`
 - **Test Description**:
@@ -87,6 +105,9 @@
 
 ### TST-STP-007: Stale Process Artifacts Excision & Gitignore Hygiene Contract Test [Verified]
 - **Requirement(s)**: `REQ-STP-007`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit
 - **Component**: `.gitignore`, `ReleaseCiAndLintConfigContractTest.kt`, `AspiceSweAuditContractTest.kt`
 - **Jira**: `ATT-6153`
 - **Test Description**:
@@ -103,6 +124,9 @@
 
 ### TST-STP-008: Keystore Password Decoupling & Secure Provider Chain Contract Test [Verified]
 - **Requirement(s)**: `REQ-STP-008`
+- **Priority**: Critical
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
 - **Component**: `app/build.gradle`, `.github/workflows/android-release.yml`, `ReleaseCiAndLintConfigContractTest.kt`
 - **Jira**: `ATT-6148`
 - **Test Description**:
@@ -122,6 +146,9 @@
 
 ### TST-STP-009: CM Plan Integrity & Submodule Pinning Contract Test [Verified]
 - **Requirement(s)**: `REQ-STP-009`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
 - **Component**: `docs/management/cm_plan.md`, `.gitmodules`, `ReleaseCiAndLintConfigContractTest.kt`
 - **Jira**: `ATT-6152`
 - **Test Description**:
@@ -139,6 +166,9 @@
 
 ### TST-STP-010: Project Risk Register & Sprint-Start Governance Contract Test [Verified]
 - **Requirement(s)**: `REQ-STP-010`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
 - **Component**: `docs/management/risk_register.md`, `.agents/skills/sprint-planner/SKILL.md`, `ReleaseCiAndLintConfigContractTest.kt`
 - **Jira**: `ATT-6151`
 - **Test Description**:
@@ -154,8 +184,3 @@
      • Execute `python3 tools/verify_requirement_governance.py` and verify exit code 0, confirming zero non-canonical entries in `docs/engineering/`.
   4. *Build Contract Suite Execution (`TST-STP-010.4`)*:
      • Execute `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.build.*"` asserting 100% pass rate in CI.
-
-
-
-
-

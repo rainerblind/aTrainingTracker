@@ -28,14 +28,14 @@ import java.util.regex.Pattern
 
 /**
  * Validates Google Play Store presence listings across all 9 supported locales:
- * DE, EN, ES, FR, IT, JA, NL, PL, PT (REQ-STP-001, REQ-STP-002, REQ-STP-003, TST-STP-001, TST-STP-003, ATT-4853, ATT-490).
+ * DE, EN, ES, FR, IT, JA, NL, PL, PT (REQ-STP-001, REQ-STP-002, REQ-STP-003, REQ-STP-004, TST-STP-001, TST-STP-002, TST-STP-003, TST-STP-004, ATT-4853, ATT-490, ATT-6135).
  *
  * Asserts strict Google Play character bounds:
  * - App Title: <= 30 UTF-16 code units
  * - Short Description: <= 80 UTF-16 code units
  * - Full Description: <= 4000 UTF-16 code units
  *
- * Also validates V5.0 core capability messaging and HTML tag hygiene.
+ * Also validates V5.0 core capability messaging, screenshot uniqueness, and HTML tag hygiene.
  */
 class PlayStoreListingContractTest {
 
@@ -141,6 +141,9 @@ class PlayStoreListingContractTest {
         }
     }
 
+    /**
+     * Asserts mandatory V5.0 feature messaging, cloud backup triad, and privacy sovereignty (REQ-STP-002, TST-STP-002).
+     */
     @Test
     fun fullDescriptionsContainMandatoryV5Features() {
         for (locale in supportedLocales) {
@@ -196,6 +199,9 @@ class PlayStoreListingContractTest {
         }
     }
 
+    /**
+     * Asserts screenshot resolution (1080x2400/2424) and SHA-256 uniqueness (REQ-STP-004, TST-STP-004).
+     */
     @Test
     fun storeScreenshotsAreUniqueAndValid() {
         val screenshotNames = listOf(

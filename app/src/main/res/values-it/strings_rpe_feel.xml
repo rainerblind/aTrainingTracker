@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="settings_workout_card_rpe_feel">RPE e sensazione</string>
+    <string name="tuning_rpe_feel_desc">Valuta lo sforzo percepito (Borg CR10 1–10) e la sensazione soggettiva (1–5) per le schede di riepilogo e il carico di sessione RPE</string>
     <string name="workout_rpe_title">Sforzo percepito (RPE 1–10)</string>
     <string name="workout_feel_title">Sensazione</string>
     <string name="srpe_load_badge">sRPE: %d</string>

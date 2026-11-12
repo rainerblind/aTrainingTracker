@@ -487,6 +487,24 @@ private fun ActivePacingGuidanceCard(
                     )
                 }
 
+                // Live Cycling Power (REQ-TRK-072)
+                if (uiState.config.sport == HrvTestSport.CYCLING) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            text = stringResource(R.string.graph_heading_power),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            text = uiState.currentPower?.let { "${it.toInt()} W" } ?: "--",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.testTag("hrv_test_live_power")
+                        )
+                    }
+                }
+
                 // Live DFA a1
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(

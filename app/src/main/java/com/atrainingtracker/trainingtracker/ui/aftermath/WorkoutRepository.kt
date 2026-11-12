@@ -102,6 +102,7 @@ import com.atrainingtracker.trainingtracker.ui.aftermath.zones.ZoneSample
 import com.atrainingtracker.trainingtracker.ui.aftermath.workoutdetail.HrvProtocolType
 import com.atrainingtracker.trainingtracker.ui.aftermath.workoutdetail.HrvScatterIntensityMode
 import com.atrainingtracker.trainingtracker.ui.aftermath.workoutdetail.HrvThresholdEstimator
+import com.atrainingtracker.trainingtracker.ui.aftermath.workoutdetail.ThresholdConfidence
 import com.atrainingtracker.trainingtracker.zones.HrvSessionThreshold
 import kotlin.math.roundToInt
 import com.atrainingtracker.trainingtracker.ui.util.SingleLiveEvent
@@ -160,6 +161,7 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
 
         const val PREF_CLIMBS_WORKOUT_BACKFILL_V1 = "climbs_workout_backfill_v1"
         const val PREF_CLIMBS_WORKOUT_CLEANUP_V2 = "climbs_workout_cleanup_v2"
+        const val PREF_CLIMBS_WORKOUT_DEDUPLICATION_V3 = "climbs_workout_deduplication_v3"
 
         @JvmStatic
         val cropMutex get() = com.atrainingtracker.trainingtracker.domain.crop.CropCoordinator.mutex
@@ -670,25 +672,34 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
         var minPassingDist: Double? = null
         var closePasses = 0
         var maxLargeVehicles = 0
+        var prevVehicles = 0
+        var currentOvertakeMinPassDist: Double? = null
 
         try {
             streamSamples(fileBaseName) { sample ->
                 if (sample.radarVehicleCount != null || sample.radarThreatCount != null || sample.radarPassingDistanceM != null) {
                     hasRadar = true
                 }
-                sample.radarVehicleCount?.let { count ->
-                    if (count > maxVehicles) maxVehicles = count
-                }
-                sample.radarLargeVehicleCount?.let { count ->
-                    if (count > maxLargeVehicles) maxLargeVehicles = count
-                }
                 sample.radarPassingDistanceM?.let { passDist ->
                     if (minPassingDist == null || passDist < minPassingDist!!) {
                         minPassingDist = passDist
                     }
-                    if (passDist < closePassThresholdM) {
-                        closePasses++
+                    if (currentOvertakeMinPassDist == null || passDist < currentOvertakeMinPassDist!!) {
+                        currentOvertakeMinPassDist = passDist
                     }
+                }
+                sample.radarVehicleCount?.let { count ->
+                    if (count > prevVehicles) {
+                        if (currentOvertakeMinPassDist != null && currentOvertakeMinPassDist!! < closePassThresholdM) {
+                            closePasses++
+                        }
+                        currentOvertakeMinPassDist = null
+                        prevVehicles = count
+                    }
+                    if (count > maxVehicles) maxVehicles = count
+                }
+                sample.radarLargeVehicleCount?.let { count ->
+                    if (count > maxLargeVehicles) maxLargeVehicles = count
                 }
                 sample.radarApproachSpeedMps?.let { appSpd ->
                     if (appSpd > maxApproachSpeed) maxApproachSpeed = appSpd
@@ -700,6 +711,9 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
                 if (sample.radarThreatCount != null && sample.radarThreatCount > 1) {
                     highThreatCount++
                 }
+            }
+            if (currentOvertakeMinPassDist != null && currentOvertakeMinPassDist!! < closePassThresholdM) {
+                closePasses++
             }
         } catch (e: Exception) {
             Log.w(TAG, "computeRadarTrafficSummaryFromSamples failed for $fileBaseName", e)
@@ -2366,7 +2380,12 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
             markerList.add(LocationMarker(it, R.drawable.control_stop, stopTitle))
         }
         workoutData.maxDisplacementLatLng?.takeIf { GeoUtils.isValidGpsCoordinate(it.latitude, it.longitude) }?.let {
-            markerList.add(LocationMarker(it, R.drawable.ic_distance, application.getString(R.string.max_line_distance)))
+            val apexTitle = if (workoutData.isPointToPoint) {
+                application.getString(R.string.route_apex)
+            } else {
+                application.getString(R.string.max_line_distance)
+            }
+            markerList.add(LocationMarker(it, R.drawable.ic_distance, apexTitle))
         }
 
 
@@ -2741,6 +2760,9 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
             if (!prefs.getBoolean(PREF_CLIMBS_WORKOUT_CLEANUP_V2, false)) {
                 cleanupCorruptedWorkoutClimbs()
             }
+            if (!prefs.getBoolean(PREF_CLIMBS_WORKOUT_DEDUPLICATION_V3, false)) {
+                deduplicateHistoricalClimbs()
+            }
         } catch (e: Exception) {
             Log.w(TAG, "Error checking/triggering historical climb backfill/cleanup", e)
         }
@@ -2907,6 +2929,40 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
             }
         } catch (e: Exception) {
             Log.w(TAG, "Failed to finalize climbs_workout_cleanup_v2 preference", e)
+        }
+
+        purgedCount
+    }
+
+    /**
+     * Executes an idempotent one-time deduplication pass for Climbs.db (REQ-CLM-011.2 / ATT-7311).
+     * Purges redundant duplicate and heavily overlapping climb records resulting from historical backfills.
+     *
+     * Marks [PREF_CLIMBS_WORKOUT_DEDUPLICATION_V3] as true in SharedPreferences and refreshes [LiveClimbsRepository].
+     *
+     * @return Total count of purged duplicate climb records (0 if already completed).
+     */
+    suspend fun deduplicateHistoricalClimbs(): Int = withContext(Dispatchers.IO) {
+        val prefs = try {
+            androidx.preference.PreferenceManager.getDefaultSharedPreferences(application)
+        } catch (_: Throwable) {
+            null
+        }
+
+        if (prefs?.getBoolean(PREF_CLIMBS_WORKOUT_DEDUPLICATION_V3, false) == true) {
+            return@withContext 0
+        }
+
+        val climbsDb = ClimbsDatabaseManager.getInstance(application)
+        val purgedCount = climbsDb.deduplicateExistingClimbs(thresholdMeters = 100.0f)
+
+        try {
+            prefs?.edit()?.putBoolean(PREF_CLIMBS_WORKOUT_DEDUPLICATION_V3, true)?.apply()
+            if (purgedCount > 0) {
+                LiveClimbsRepository.getInstance(application).refreshClimbs()
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to finalize climbs_workout_deduplication_v3 preference", e)
         }
 
         purgedCount
@@ -3306,7 +3362,13 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
         withContext(Dispatchers.IO) {
             summariesManager.getWorkoutCursor(id).use { cursor ->
                 if (cursor?.moveToFirst() == true) {
-                    val workout = mapper.fromCursor(cursor)
+                    val rawWorkout = mapper.fromCursor(cursor)
+                    val workout = if (rawWorkout.radarTrafficSummary != null && !rawWorkout.fileBaseName.isNullOrBlank()) {
+                        val fullRadar = getRadarTrafficSummary(rawWorkout.fileBaseName)
+                        if (fullRadar != null) rawWorkout.copy(radarTrafficSummary = fullRadar) else rawWorkout
+                    } else {
+                        rawWorkout
+                    }
                     _initialWorkoutLoaded.postValue(workout)
 
                     _allWorkouts.update { currentList ->
@@ -4450,21 +4512,44 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
                 continue
             }
             val points = getWorkoutTelemetryPoints(workout.id)
-            if (points.isNotEmpty() && points.any { it.hrvDfaA1 != null } && points.any { it.power != null && it.power > 0 }) {
-                val est = HrvThresholdEstimator.estimateThresholds(
-                    points = points,
-                    mode = HrvScatterIntensityMode.POWER,
-                    protocolType = HrvProtocolType.FREE_WORKOUT
-                )
-                val hrvt2Watts = est.hrvt2.intensity?.roundToInt()
-                val session = HrvSessionThreshold(
-                    workoutId = workout.id,
-                    timestampEpochMs = workout.startTimeS * 1000L,
-                    hrvt2Watts = hrvt2Watts,
-                    confidence = est.hrvt2.confidence
-                )
-                recentHrvThresholdsCache[workout.id] = session
-                results.add(session)
+            if (points.isNotEmpty() && points.any { it.hrvDfaA1 != null }) {
+                var hrvt2Watts: Int? = null
+                var powerConfidence = ThresholdConfidence.LOW
+                if (points.any { it.power != null && it.power > 0 }) {
+                    val est = HrvThresholdEstimator.estimateThresholds(
+                        points = points,
+                        mode = HrvScatterIntensityMode.POWER,
+                        protocolType = HrvProtocolType.FREE_WORKOUT
+                    )
+                    hrvt2Watts = est.hrvt2.intensity?.roundToInt()
+                    powerConfidence = est.hrvt2.confidence
+                }
+                var hrvt1Bpm: Int? = null
+                var hrvt2Bpm: Int? = null
+                var hrConfidence = ThresholdConfidence.LOW
+                if (points.any { it.hr != null && it.hr > 0 }) {
+                    val estHr = HrvThresholdEstimator.estimateThresholds(
+                        points = points,
+                        mode = HrvScatterIntensityMode.HEART_RATE,
+                        protocolType = HrvProtocolType.FREE_WORKOUT
+                    )
+                    hrvt1Bpm = estHr.hrvt1.intensity?.roundToInt()
+                    hrvt2Bpm = estHr.hrvt2.intensity?.roundToInt()
+                    hrConfidence = estHr.overallConfidence
+                }
+                if (hrvt2Watts != null || (hrvt1Bpm != null && hrvt2Bpm != null)) {
+                    val session = HrvSessionThreshold(
+                        workoutId = workout.id,
+                        timestampEpochMs = workout.startTimeS * 1000L,
+                        hrvt2Watts = hrvt2Watts,
+                        confidence = powerConfidence,
+                        hrvt1Bpm = hrvt1Bpm,
+                        hrvt2Bpm = hrvt2Bpm,
+                        hrConfidence = hrConfidence
+                    )
+                    recentHrvThresholdsCache[workout.id] = session
+                    results.add(session)
+                }
             }
         }
         results

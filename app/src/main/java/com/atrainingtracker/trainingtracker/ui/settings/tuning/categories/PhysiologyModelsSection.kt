@@ -27,11 +27,14 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -101,7 +104,9 @@ fun PhysiologyModelsSection(
     enableMuscleSoreness: Boolean = false,
     onEnableMuscleSorenessChange: (Boolean) -> Unit = {},
     enableContextTags: Boolean = false,
-    onEnableContextTagsChange: (Boolean) -> Unit = {}
+    onEnableContextTagsChange: (Boolean) -> Unit = {},
+    showRpeAndFeel: Boolean = false,
+    onShowRpeAndFeelChange: (Boolean) -> Unit = {}
 ) {
     var showInternalInfoDialog by remember { mutableStateOf(false) }
 
@@ -122,6 +127,7 @@ fun PhysiologyModelsSection(
     val morningEnergyCallback = remember(onEnableMorningEnergyChange) { onEnableMorningEnergyChange }
     val muscleSorenessCallback = remember(onEnableMuscleSorenessChange) { onEnableMuscleSorenessChange }
     val contextTagsCallback = remember(onEnableContextTagsChange) { onEnableContextTagsChange }
+    val rpeAndFeelCallback = remember(onShowRpeAndFeelChange) { onShowRpeAndFeelChange }
 
     Column(
         modifier = Modifier
@@ -231,42 +237,36 @@ fun PhysiologyModelsSection(
 
         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
 
-        // Model 6: HRV DFA a1 Aerobic & Anaerobic Thresholds (REQ-TRK-061.4)
-        TuningSliderItem(
-            title = stringResource(R.string.tuning_dfa_a1_t1_title),
-            valueText = String.format(Locale.US, "%.2f", dfaA1ThresholdT1),
-            helperText = stringResource(R.string.tuning_dfa_a1_t1_desc),
-            defaultText = stringResource(R.string.tuning_dfa_a1_default, TuningPreferencesDefaults.DEFAULT_DFA_A1_THRESHOLD_T1),
-            value = dfaA1ThresholdT1,
-            onValueChange = { newValue ->
-                val rounded = Math.round(newValue * 100f) / 100f
-                val clamped = rounded.coerceIn(
-                    dfaA1ThresholdT2 + TuningPreferencesDefaults.MIN_DFA_A1_THRESHOLD_GAP,
-                    TuningPreferencesDefaults.MAX_DFA_A1_THRESHOLD
+        // Model 6: HRV DFA a1 Aerobic & Anaerobic Thresholds moved to Training Zones (REQ-TRK-061.4 / ATT-7317)
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 4.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+            ),
+            shape = MaterialTheme.shapes.medium
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Info,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(20.dp)
                 )
-                dfaT1Callback(clamped)
-            },
-            valueRange = 0.60f..1.20f,
-            steps = 11
-        )
-
-        TuningSliderItem(
-            title = stringResource(R.string.tuning_dfa_a1_t2_title),
-            valueText = String.format(Locale.US, "%.2f", dfaA1ThresholdT2),
-            helperText = stringResource(R.string.tuning_dfa_a1_t2_desc),
-            defaultText = stringResource(R.string.tuning_dfa_a1_default, TuningPreferencesDefaults.DEFAULT_DFA_A1_THRESHOLD_T2),
-            value = dfaA1ThresholdT2,
-            onValueChange = { newValue ->
-                val rounded = Math.round(newValue * 100f) / 100f
-                val clamped = rounded.coerceIn(
-                    TuningPreferencesDefaults.MIN_DFA_A1_THRESHOLD,
-                    dfaA1ThresholdT1 - TuningPreferencesDefaults.MIN_DFA_A1_THRESHOLD_GAP
+                Text(
+                    text = stringResource(R.string.tuning_physiology_hrv_zones_link),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                dfaT2Callback(clamped)
-            },
-            valueRange = 0.30f..0.80f,
-            steps = 9
-        )
+            }
+        }
 
         TuningSliderItem(
             title = stringResource(R.string.tuning_hrv_artifact_gate_title),
@@ -320,6 +320,16 @@ fun PhysiologyModelsSection(
                 onCheckedChange = contextTagsCallback
             )
         }
+
+        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+
+        // Model 8: Perceived Exertion (RPE) & Feel (REQ-WKO-036)
+        TuningToggleItem(
+            title = stringResource(R.string.settings_workout_card_rpe_feel),
+            isChecked = showRpeAndFeel,
+            onCheckedChange = rpeAndFeelCallback,
+            summary = stringResource(R.string.tuning_rpe_feel_desc)
+        )
     }
 
     if (showInternalInfoDialog) {
@@ -336,24 +346,10 @@ private fun PhysiologyModelsSectionDefaultPreview() {
     ATrainingTrackerTheme {
         Surface {
             PhysiologyModelsSection(
-                enableCogganPowerMetrics = true,
-                onEnableCogganPowerMetricsChange = {},
-                showCogganPowerInWorkoutSummary = true,
-                onShowCogganPowerInWorkoutSummaryChange = {},
-                enablePmcModel = false,
-                onEnablePmcModelChange = {},
-                enableAerobicEfficiencyModel = false,
-                onEnableAerobicEfficiencyModelChange = {},
-                showAerobicEfficiencyInWorkoutSummary = true,
-                onShowAerobicEfficiencyInWorkoutSummaryChange = {},
-                enableCriticalPowerModel = false,
-                onEnableCriticalPowerModelChange = {},
-                showCriticalPowerInWorkoutSummary = true,
-                onShowCriticalPowerInWorkoutSummaryChange = {},
-                enableCardioPowerDynamics = false,
-                onEnableCardioPowerDynamicsChange = {},
-                showCardioPowerInWorkoutSummary = true,
-                onShowCardioPowerInWorkoutSummaryChange = {}
+                enableCogganPowerMetrics = true, onEnableCogganPowerMetricsChange = {},
+                enablePmcModel = false, onEnablePmcModelChange = {},
+                enableAerobicEfficiencyModel = false, onEnableAerobicEfficiencyModelChange = {},
+                enableCriticalPowerModel = false, onEnableCriticalPowerModelChange = {}
             )
         }
     }
@@ -365,24 +361,13 @@ private fun PhysiologyModelsSectionAllEnabledPreview() {
     ATrainingTrackerTheme {
         Surface {
             PhysiologyModelsSection(
-                enableCogganPowerMetrics = true,
-                onEnableCogganPowerMetricsChange = {},
-                showCogganPowerInWorkoutSummary = true,
-                onShowCogganPowerInWorkoutSummaryChange = {},
-                enablePmcModel = true,
-                onEnablePmcModelChange = {},
-                enableAerobicEfficiencyModel = true,
-                onEnableAerobicEfficiencyModelChange = {},
-                showAerobicEfficiencyInWorkoutSummary = true,
-                onShowAerobicEfficiencyInWorkoutSummaryChange = {},
-                enableCriticalPowerModel = true,
-                onEnableCriticalPowerModelChange = {},
-                showCriticalPowerInWorkoutSummary = true,
-                onShowCriticalPowerInWorkoutSummaryChange = {},
-                enableCardioPowerDynamics = true,
-                onEnableCardioPowerDynamicsChange = {},
-                showCardioPowerInWorkoutSummary = true,
-                onShowCardioPowerInWorkoutSummaryChange = {}
+                enableCogganPowerMetrics = true, onEnableCogganPowerMetricsChange = {},
+                enablePmcModel = true, onEnablePmcModelChange = {},
+                enableAerobicEfficiencyModel = true, onEnableAerobicEfficiencyModelChange = {},
+                enableCriticalPowerModel = true, onEnableCriticalPowerModelChange = {},
+                enableCardioPowerDynamics = true, onEnableCardioPowerDynamicsChange = {},
+                enableMorningSleepAndWellness = true, onEnableMorningSleepAndWellnessChange = {},
+                showRpeAndFeel = true, onShowRpeAndFeelChange = {}
             )
         }
     }

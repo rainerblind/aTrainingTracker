@@ -119,8 +119,7 @@ class SportingJourneyRepository internal constructor(
 
         when (sportFilter) {
             SportingSportFilter.ALL -> {
-                whereClauses.add("${WorkoutSummaries.B_SPORT} IN ('BIKE', 'RUN')")
-                whereClausesJoined.add("w.${WorkoutSummaries.B_SPORT} IN ('BIKE', 'RUN')")
+                // Include all sports: no filter on B_SPORT
             }
             SportingSportFilter.CYCLING -> {
                 whereClauses.add("${WorkoutSummaries.B_SPORT} = 'BIKE'")
@@ -152,9 +151,6 @@ class SportingJourneyRepository internal constructor(
         var totalDistanceM = 0.0
         var totalActiveS = 0L
         var totalElevationM = 0
-        var distinctClusters = 0
-        var ritualCount = 0
-        var explorerCount = 0
         var firstWorkoutDateStr: String? = null
         var maxDistanceM = 0.0
         var maxElevationM = 0
@@ -165,9 +161,6 @@ class SportingJourneyRepository internal constructor(
                 IFNULL(SUM(${WorkoutSummaries.DISTANCE_TOTAL_m}), 0.0) AS sum_dist,
                 IFNULL(SUM(${WorkoutSummaries.TIME_ACTIVE_s}), 0) AS sum_active_s,
                 IFNULL(SUM(${WorkoutSummaries.ASCENDING}), 0) AS sum_elevation,
-                COUNT(DISTINCT CASE WHEN ${WorkoutSummaries.CLUSTER_ID} > 0 THEN ${WorkoutSummaries.CLUSTER_ID} END) AS num_clusters,
-                COUNT(CASE WHEN ${WorkoutSummaries.CLUSTER_ID} > 0 THEN 1 END) AS ritual_cnt,
-                COUNT(CASE WHEN ${WorkoutSummaries.CLUSTER_ID} <= 0 OR ${WorkoutSummaries.CLUSTER_ID} IS NULL THEN 1 END) AS explorer_cnt,
                 MIN(${WorkoutSummaries.TIME_START}) AS first_time,
                 MAX(${WorkoutSummaries.DISTANCE_TOTAL_m}) AS max_dist,
                 MAX(${WorkoutSummaries.ASCENDING}) AS max_elev
@@ -182,15 +175,39 @@ class SportingJourneyRepository internal constructor(
                     totalDistanceM = cursor.getDouble(cursor.getColumnIndexOrThrow("sum_dist"))
                     totalActiveS = cursor.getLong(cursor.getColumnIndexOrThrow("sum_active_s"))
                     totalElevationM = cursor.getInt(cursor.getColumnIndexOrThrow("sum_elevation"))
-                    distinctClusters = cursor.getInt(cursor.getColumnIndexOrThrow("num_clusters"))
-                    ritualCount = cursor.getInt(cursor.getColumnIndexOrThrow("ritual_cnt"))
-                    explorerCount = cursor.getInt(cursor.getColumnIndexOrThrow("explorer_cnt"))
                     firstWorkoutDateStr = cursor.getString(cursor.getColumnIndexOrThrow("first_time"))
                     maxDistanceM = cursor.getDouble(cursor.getColumnIndexOrThrow("max_dist"))
                     maxElevationM = cursor.getInt(cursor.getColumnIndexOrThrow("max_elev"))
                 }
             }
         } catch (_: Throwable) {}
+
+        // Recurring route cluster math: count only recurring clusters with repeat visits (COUNT(*) >= 3)
+        var recurringRoutesCount = 0
+        var ritualCount = 0
+        val recurringQuery = """
+            SELECT
+                COUNT(*) AS recurring_cluster_count,
+                IFNULL(SUM(cluster_workouts), 0) AS recurring_workouts_count
+            FROM (
+                SELECT ${WorkoutSummaries.CLUSTER_ID}, COUNT(*) AS cluster_workouts
+                FROM ${WorkoutSummaries.TABLE}
+                WHERE $whereSql AND ${WorkoutSummaries.CLUSTER_ID} > 0
+                GROUP BY ${WorkoutSummaries.CLUSTER_ID}
+                HAVING COUNT(*) >= 3
+            )
+        """.trimIndent()
+
+        try {
+            db.rawQuery(recurringQuery, argsArray).use { cursor ->
+                if (cursor.moveToFirst()) {
+                    recurringRoutesCount = cursor.getInt(cursor.getColumnIndexOrThrow("recurring_cluster_count"))
+                    ritualCount = cursor.getInt(cursor.getColumnIndexOrThrow("recurring_workouts_count"))
+                }
+            }
+        } catch (_: Throwable) {}
+
+        val explorerCount = (totalWorkouts - ritualCount).coerceAtLeast(0)
 
         val totalDistanceKm = totalDistanceM / 1000.0
         val totalActiveHours = totalActiveS.toDouble() / 3600.0
@@ -206,32 +223,39 @@ class SportingJourneyRepository internal constructor(
             nonstopDays = nonstopDays,
             totalElevationM = totalElevationM,
             everestMultiplier = everestMultiplier,
-            favoriteRoutesCount = distinctClusters
+            favoriteRoutesCount = recurringRoutesCount
         )
 
-        // 3. Hidden Gems: Cadence
+        // 3. Hidden Gems: Cadence (suppressed on Running; bike-only for ALL)
         var cadenceRidesCount = 0
         var totalRevolutions = 0L
-        val cadenceQuery = """
-            SELECT
-                COUNT(DISTINCT w.${WorkoutSummaries.C_ID}) AS cadence_cnt,
-                IFNULL(SUM(e.${WorkoutSummaries.VALUE} * (w.${WorkoutSummaries.TIME_ACTIVE_s} / 60.0)), 0.0) AS total_revs
-            FROM ${WorkoutSummaries.TABLE} w
-            INNER JOIN ${WorkoutSummaries.TABLE_EXTREMA_VALUES} e ON w.${WorkoutSummaries.C_ID} = e.${WorkoutSummaries.WORKOUT_ID}
-            WHERE $whereSqlJoined
-              AND e.${WorkoutSummaries.SENSOR_TYPE} = '${SensorType.CADENCE.name}'
-              AND e.${WorkoutSummaries.EXTREMA_TYPE} = '${ExtremaType.AVG.name}'
-              AND e.${WorkoutSummaries.VALUE} > 0 AND e.${WorkoutSummaries.VALUE} <= 250
-        """.trimIndent()
 
-        try {
-            db.rawQuery(cadenceQuery, argsArray).use { cursor ->
-                if (cursor.moveToFirst()) {
-                    cadenceRidesCount = cursor.getInt(cursor.getColumnIndexOrThrow("cadence_cnt"))
-                    totalRevolutions = cursor.getDouble(cursor.getColumnIndexOrThrow("total_revs")).toLong()
+        if (sportFilter != SportingSportFilter.RUNNING) {
+            val cadenceSportCondition = if (sportFilter == SportingSportFilter.ALL) {
+                " AND w.${WorkoutSummaries.B_SPORT} = 'BIKE'"
+            } else ""
+
+            val cadenceQuery = """
+                SELECT
+                    COUNT(DISTINCT w.${WorkoutSummaries.C_ID}) AS cadence_cnt,
+                    IFNULL(SUM(e.${WorkoutSummaries.VALUE} * (w.${WorkoutSummaries.TIME_ACTIVE_s} / 60.0)), 0.0) AS total_revs
+                FROM ${WorkoutSummaries.TABLE} w
+                INNER JOIN ${WorkoutSummaries.TABLE_EXTREMA_VALUES} e ON w.${WorkoutSummaries.C_ID} = e.${WorkoutSummaries.WORKOUT_ID}
+                WHERE $whereSqlJoined$cadenceSportCondition
+                  AND e.${WorkoutSummaries.SENSOR_TYPE} = '${SensorType.CADENCE.name}'
+                  AND e.${WorkoutSummaries.EXTREMA_TYPE} = '${ExtremaType.AVG.name}'
+                  AND e.${WorkoutSummaries.VALUE} > 0 AND e.${WorkoutSummaries.VALUE} <= 250
+            """.trimIndent()
+
+            try {
+                db.rawQuery(cadenceQuery, argsArray).use { cursor ->
+                    if (cursor.moveToFirst()) {
+                        cadenceRidesCount = cursor.getInt(cursor.getColumnIndexOrThrow("cadence_cnt"))
+                        totalRevolutions = cursor.getDouble(cursor.getColumnIndexOrThrow("total_revs")).toLong()
+                    }
                 }
-            }
-        } catch (_: Throwable) {}
+            } catch (_: Throwable) {}
+        }
 
         // 4. Hidden Gems: Heart Rate
         var hrWorkoutsCount = 0
@@ -363,7 +387,8 @@ class SportingJourneyRepository internal constructor(
             mostActiveDayOfWeek = mostActiveDow,
             ritualWorkoutsCount = ritualCount,
             explorerWorkoutsCount = explorerCount,
-            ritualPercentage = ritualPct
+            ritualPercentage = ritualPct,
+            recurringRoutesCount = recurringRoutesCount
         )
 
         // 7. Milestones
@@ -375,19 +400,36 @@ class SportingJourneyRepository internal constructor(
         }
         val displayDateFormat = SimpleDateFormat("d MMM yyyy", Locale.getDefault())
 
+        // Evaluate lifetime history (MIN(timeStart)) globally across all database records
+        var globalFirstWorkoutDateStr: String? = null
+        val globalLifetimeQuery = """
+            SELECT MIN(${WorkoutSummaries.TIME_START}) AS global_first_time
+            FROM ${WorkoutSummaries.TABLE}
+            WHERE ${WorkoutSummaries.FINISHED} = 1 AND ${WorkoutSummaries.TIME_START} IS NOT NULL
+        """.trimIndent()
+
+        try {
+            db.rawQuery(globalLifetimeQuery, null).use { cursor ->
+                if (cursor.moveToFirst()) {
+                    globalFirstWorkoutDateStr = cursor.getString(cursor.getColumnIndexOrThrow("global_first_time"))
+                }
+            }
+        } catch (_: Throwable) {}
+
         var firstWorkoutDateFormatted: String? = null
         var daysSinceFirst = 0L
 
-        if (!firstWorkoutDateStr.isNullOrBlank()) {
+        val lifetimeDateStr = globalFirstWorkoutDateStr ?: firstWorkoutDateStr
+        if (!lifetimeDateStr.isNullOrBlank()) {
             try {
-                val parsedDate = dbDateFormat.parse(firstWorkoutDateStr!!)
+                val parsedDate = dbDateFormat.parse(lifetimeDateStr)
                 if (parsedDate != null) {
                     firstWorkoutDateFormatted = displayDateFormat.format(parsedDate)
                     val diffMs = System.currentTimeMillis() - parsedDate.time
                     daysSinceFirst = TimeUnit.MILLISECONDS.toDays(diffMs).coerceAtLeast(1)
                 }
             } catch (_: Throwable) {
-                firstWorkoutDateFormatted = firstWorkoutDateStr
+                firstWorkoutDateFormatted = lifetimeDateStr
             }
         }
 
@@ -613,8 +655,8 @@ class SportingJourneyRepository internal constructor(
             )
         )
 
-        // Badge 6: Local Legend (distinct clusters >= 5 or ritual count >= 10)
-        val legendUnlocked = distinctClusters >= 5 || ritualCount >= 10
+        // Badge 6: Local Legend (recurring clusters >= 5 or ritual count >= 10)
+        val legendUnlocked = recurringRoutesCount >= 5 || ritualCount >= 10
         achievements.add(
             SportingAchievement(
                 id = "local_legend",

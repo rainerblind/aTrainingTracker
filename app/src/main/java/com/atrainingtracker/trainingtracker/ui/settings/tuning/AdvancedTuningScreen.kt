@@ -29,6 +29,7 @@ import androidx.compose.material.icons.automirrored.filled.ViewList
 import androidx.compose.material.icons.filled.BrightnessMedium
 import androidx.compose.material.icons.filled.Hub
 import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.MonitorHeart
 import androidx.compose.material.icons.filled.Navigation
 import androidx.compose.material.icons.filled.RestartAlt
@@ -78,12 +79,13 @@ import kotlinx.coroutines.launch
 @Composable
 fun AdvancedTuningScreen(
     onNavigateBack: () -> Unit,
+    onOpenDrawer: (() -> Unit)? = null,
     onSettingsChanged: (() -> Unit)? = null
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    val tuningDataStore = remember { TuningPreferencesDataStore(context) }
-    val persistedConfig by tuningDataStore.tuningConfigFlow.collectAsState(initial = TuningConfig())
+    val tuningDataStore = remember { TuningPreferencesDataStore.getInstance(context) }
+    val persistedConfig by tuningDataStore.tuningConfigFlow.collectAsState(initial = null)
     val preferenceManager = remember { MyPreferenceManager(context.applicationContext) }
     val persistedWorkoutCardPrefs by preferenceManager.workoutCardPreferencesFlow.collectAsState(initial = null)
     val persistedWorkoutDetailPrefs by preferenceManager.workoutDetailPreferencesFlow.collectAsState(initial = null)
@@ -162,10 +164,11 @@ fun AdvancedTuningScreen(
         enableMuscleSoreness = config.enableMuscleSoreness
         enableContextTags = config.enableContextTags
     }
-    var isInitialized by rememberSaveable { mutableStateOf(false) }
+    var isInitialized by remember { mutableStateOf(false) }
     LaunchedEffect(persistedConfig) {
-        if (!isInitialized) {
-            applyConfig(persistedConfig)
+        val config = persistedConfig
+        if (!isInitialized && config != null) {
+            applyConfig(config)
             isInitialized = true
         }
     }
@@ -184,7 +187,8 @@ fun AdvancedTuningScreen(
     }
 
     fun onSaveSettings() {
-        val newConfig = persistedConfig.copy(
+        val baseConfig = persistedConfig ?: TuningConfig()
+        val newConfig = baseConfig.copy(
             elevationXAxisDomain = elevationXAxisDomain, telemetryXAxisDomain = telemetryXAxisDomain,
             cockpitFontFamily = cockpitFontFamily, cockpitFontWeight = cockpitFontWeight,
             sensorFieldVariant = sensorFieldVariant, sensorFieldCornerRadius = sensorFieldCornerRadius,
@@ -227,7 +231,21 @@ fun AdvancedTuningScreen(
             TopAppBar(
                 title = { Text(text = stringResource(R.string.advanced_tuning_title)) },
                 navigationIcon = {
-                    IconButton(onClick = onNavigateBack) { Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.cancel)) }
+                    if (onOpenDrawer != null) {
+                        IconButton(onClick = onOpenDrawer) {
+                            Icon(
+                                imageVector = Icons.Default.Menu,
+                                contentDescription = stringResource(R.string.navigation_drawer_open)
+                            )
+                        }
+                    } else {
+                        IconButton(onClick = onNavigateBack) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = stringResource(R.string.cancel)
+                            )
+                        }
+                    }
                 },
                 actions = {
                     IconButton(onClick = { onResetToDefaults() }) { Icon(imageVector = Icons.Default.RestartAlt, contentDescription = stringResource(R.string.reset_to_defaults)) }
@@ -335,9 +353,9 @@ fun AdvancedTuningScreen(
             TuningAccordionSection(
                 icon = Icons.Default.Sensors, title = stringResource(R.string.tuning_cat_cycling_radar),
                 subtitle = TuningSubtitleFormatter.formatCyclingRadarSubtitle(
-                    edgeSide = persistedConfig.radarEdgeSide,
-                    alertMode = persistedConfig.radarAudioAlertMode,
-                    lightMode = persistedConfig.radarLightDefaultMode,
+                    edgeSide = persistedConfig?.radarEdgeSide ?: TuningPreferencesDefaults.RADAR_EDGE_SIDE,
+                    alertMode = persistedConfig?.radarAudioAlertMode ?: TuningPreferencesDefaults.RADAR_AUDIO_ALERT_MODE,
+                    lightMode = persistedConfig?.radarLightDefaultMode ?: TuningPreferencesDefaults.RADAR_LIGHT_DEFAULT_MODE,
                     isRunning = isRadarSimRunning,
                     scenario = activeRadarScenario,
                     context = context
@@ -402,7 +420,9 @@ fun AdvancedTuningScreen(
                     enableSleepDurationAndQuality = enableSleepDurationAndQuality, onEnableSleepDurationAndQualityChange = { enableSleepDurationAndQuality = it },
                     enableMorningEnergy = enableMorningEnergy, onEnableMorningEnergyChange = { enableMorningEnergy = it },
                     enableMuscleSoreness = enableMuscleSoreness, onEnableMuscleSorenessChange = { enableMuscleSoreness = it },
-                    enableContextTags = enableContextTags, onEnableContextTagsChange = { enableContextTags = it }
+                    enableContextTags = enableContextTags, onEnableContextTagsChange = { enableContextTags = it },
+                    showRpeAndFeel = workoutCardPrefs.showRpeAndFeel,
+                    onShowRpeAndFeelChange = { workoutCardPrefs = workoutCardPrefs.copy(showRpeAndFeel = it) }
                 )
             }
 
