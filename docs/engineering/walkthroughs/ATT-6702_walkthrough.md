@@ -35,8 +35,13 @@
 
 4. **Screen & Dialog Mounting (`REQ-UI-512.3`)**:
    - Mounted `RadarSettingsSection` in `AdvancedTuningScreen.kt` and `AdvancedTuningDialog.kt` under Block 2, defaulting to collapsed (`expandedSections = emptySet()`) per Design Guidelines §3.
+   - Guarded initial config hydration in both `AdvancedTuningScreen` and `AdvancedTuningDialog` with `var isInitialized by rememberSaveable { mutableStateOf(false) }` to prevent immediate radar preference writes from overwriting unsaved local edits across other accordion categories.
+   - Connected reactive simulation state collection using `RadarTrafficSimulator.isSimulatingFlow.collectAsState()`, ensuring the accordion header subtitle immediately updates when simulation starts or stops.
 
-5. **Modularity Enforcement (`REQ-UI-512.5` / `TST-UI-512.2`)**:
+5. **Cross-Ticket Hygiene**:
+   - Restored the section header `## 4. Requirement Archaeology & Chesterton's Fence Audit` in `docs/engineering/analysis/ATT-6719_analysis.md`.
+
+6. **Modularity Enforcement (`REQ-UI-512.5` / `TST-UI-512.2`)**:
    - Compacted `AdvancedTuningAccordion.kt` from 408 to 360 LOC ($< 400$).
    - Maintained `AdvancedTuningScreen.kt` at 391 LOC and `AdvancedTuningDialog.kt` at 377 LOC.
    - All files under `ui/settings/tuning/` strictly satisfy `AdvancedTuningModularityTest`.
