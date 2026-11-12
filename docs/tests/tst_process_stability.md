@@ -1596,7 +1596,7 @@
 ### TST-PRO-049: **Source-Text Reading Test Audit Suite** [Verified]
 - **Requirement(s)**: `REQ-PRO-049`
 - **Component**: `app/src/test/java/com/atrainingtracker/trainingtracker/build/SourceTextReadingAuditContractTest.kt`, `app/source-reading-baseline.txt`, `docs/coding_standards.md` §5.4
-- **Jira**: `ATT-6186`, `ATT-6731`, `ATT-6569`, `ATT-6568`, `ATT-6567`, `ATT-6566`, `ATT-6565`
+- **Jira**: `ATT-6186`, `ATT-6731`, `ATT-6569`, `ATT-6568`, `ATT-6567`, `ATT-6566`, `ATT-6565`, `ATT-6564`
 - **Test Description**:
   1. *Audit Scanner Execution & Baseline Conformance Test (`TST-PRO-049.1`, `SourceTextReadingAuditContractTest.kt`)*:
   • Recursively scan all `.java` and `.kt` test files in `app/src/test/java/` using expanded reader detection (`readText`, `readLines`, `readString`, `useLines`, `bufferedReader`) targeting `app/src/main/`.
@@ -1606,7 +1606,7 @@
   • Assert that each guard ends with `Test.kt` or `Cache.kt` and exists on disk in `app/src/test/java`.
   3. *Legacy Baseline Ratchet & Stale-Entry Detection Test (`TST-PRO-049.3`, `SourceTextReadingAuditContractTest.kt`)*:
   • Assert that `(baseline - detectedReaders).isEmpty()`, guaranteeing zero stale entries remain in the baseline when legacy tests are phased out.
-  • Assert that `baseline.size <= 139`, enforcing a monotonic non-increasing ceiling on legacy debt (ratcheted down from 181 by removing 42 tests across `ui.tracking` in ATT-6565).
+  • Assert that `baseline.size <= 94`, enforcing a monotonic non-increasing ceiling on legacy debt (ratcheted down from 139 by removing 45 tests across `ui.map` in ATT-6564).
   4. *Ratcheting Tripwire Violation Detection Test (`TST-PRO-049.4`, `SourceTextReadingAuditContractTest.kt`)*:
   • Validate that a synthetic unallow-listed reader triggers an assertion failure.
   5. *Clean-Room Targeted Test Suite Execution (`TST-PRO-049.5`)*:

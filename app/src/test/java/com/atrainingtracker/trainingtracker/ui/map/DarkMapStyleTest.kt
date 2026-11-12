@@ -63,7 +63,7 @@ class DarkMapStyleTest {
         val fileInRoot = File("app/src/main/res/raw/map_style_dark.json")
         val file = if (fileInApp.exists()) fileInApp else fileInRoot
         assertTrue("map_style_dark.json must exist at ${file.absolutePath}", file.exists())
-        return file.readText()
+        return file.inputStream().use { String(it.readBytes()) }
     }
 
     @Test

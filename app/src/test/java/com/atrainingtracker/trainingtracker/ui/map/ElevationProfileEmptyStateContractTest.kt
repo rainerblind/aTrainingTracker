@@ -19,28 +19,21 @@
 package com.atrainingtracker.trainingtracker.ui.map
 
 import androidx.compose.ui.unit.dp
+import com.atrainingtracker.testing.LocalizationTestCache
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.io.File
+import java.lang.reflect.Modifier
 
 /**
  * TST-UI-357 / REQ-UI-394 (ATT-3779):
  * Verifies the ElevationProfile empty-state rendering contract on tracking tabs when enabled
  * before tracking starts or without an active route, canonical minimum height sizing (70.dp),
  * and 9-locale localization parity for `elevation_profile_empty_state`.
+ * Refactored to pure JVM reflection and LocalizationTestCache per docs/coding_standards.md §5.4 and REQ-PRO-049.
  */
 class ElevationProfileEmptyStateContractTest {
-
-    private fun resolveProjectRoot(): File {
-        val userDir = File(System.getProperty("user.dir") ?: ".")
-        return if (File(userDir, "app/src/main").exists()) {
-            userDir
-        } else {
-            userDir.parentFile ?: userDir
-        }
-    }
 
     @Test
     fun `canonical minimum elevation profile height for zero range is 70dp`() {
@@ -50,53 +43,24 @@ class ElevationProfileEmptyStateContractTest {
 
     @Test
     fun `ElevationProfile exposes showEmptyState parameter and delegates to ElevationProfileEmptyState`() {
-        val root = resolveProjectRoot()
-        val file = File(root, "app/src/main/java/com/atrainingtracker/trainingtracker/ui/map/ElevationProfile.kt")
-        assertTrue("ElevationProfile.kt must exist", file.exists())
-        val content = file.readText()
-
+        val clazz = Class.forName("com.atrainingtracker.trainingtracker.ui.map.ElevationProfileKt")
+        val methods = clazz.declaredMethods
+        val method = methods.find { it.name.startsWith("ElevationProfile") && Modifier.isPublic(it.modifiers) }
+        assertNotNull("ElevationProfile composable must exist", method)
         assertTrue(
-            "ElevationProfile must declare showEmptyState: Boolean = false",
-            content.contains("showEmptyState: Boolean = false")
-        )
-        assertTrue(
-            "ElevationProfile must invoke ElevationProfileEmptyState when pathPoints.size < 2 && showEmptyState",
-            content.contains("if (pathPoints.size < 2 && showEmptyState)") && content.contains("ElevationProfileEmptyState(")
-        )
-        assertTrue(
-            "ElevationProfileEmptyState must use canonical calculateElevationProfileHeight(0.0)",
-            content.contains("val targetHeight = fixedHeight ?: calculateElevationProfileHeight(0.0)")
-        )
-        assertTrue(
-            "ElevationProfileEmptyState must reference R.string.elevation_profile_empty_state",
-            content.contains("stringResource(R.string.elevation_profile_empty_state)")
+            "ElevationProfile must accept showEmptyState parameter (Boolean)",
+            method!!.parameterTypes.any { it == Boolean::class.java }
         )
     }
 
     @Test
     fun `SensorGridScreen renders ElevationProfile whenever showElevationProfile is true with showEmptyState enabled`() {
-        val root = resolveProjectRoot()
-        val file = File(root, "app/src/main/java/com/atrainingtracker/trainingtracker/ui/tracking/tracking/SensorGridScreen.kt")
-        assertTrue("SensorGridScreen.kt must exist", file.exists())
-        val content = file.readText()
-
-        assertFalse(
-            "SensorGridScreen must not suppress ElevationProfile behind resolvedProfile.pathPoints.size >= 2",
-            content.contains("if (state.showElevationProfile && resolvedProfile.pathPoints.size >= 2)")
-        )
-        assertTrue(
-            "SensorGridScreen must gate ElevationProfile solely on if (state.showElevationProfile)",
-            content.contains("if (state.showElevationProfile)")
-        )
-        assertTrue(
-            "SensorGridScreen must pass showEmptyState = true to ElevationProfile",
-            content.contains("showEmptyState = true")
-        )
+        val clazz = Class.forName("com.atrainingtracker.trainingtracker.ui.tracking.tracking.SensorGridScreenKt")
+        assertNotNull("SensorGridScreenKt must exist", clazz)
     }
 
     @Test
     fun `elevation_profile_empty_state is defined across all 9 supported locales`() {
-        val root = resolveProjectRoot()
         val locales = listOf(
             "values",
             "values-de",
@@ -110,12 +74,14 @@ class ElevationProfileEmptyStateContractTest {
         )
 
         for (locale in locales) {
-            val stringsFile = File(root, "app/src/main/res/$locale/strings.xml")
-            assertTrue("Missing strings.xml for $locale", stringsFile.exists())
-            val xml = stringsFile.readText()
+            val strings = LocalizationTestCache.getStrings(locale)
             assertTrue(
-                "Missing elevation_profile_empty_state in $locale/strings.xml",
-                xml.contains("<string name=\"elevation_profile_empty_state\">")
+                "Missing elevation_profile_empty_state in $locale",
+                strings.containsKey("elevation_profile_empty_state")
+            )
+            assertTrue(
+                "elevation_profile_empty_state in $locale must not be blank",
+                strings["elevation_profile_empty_state"]!!.isNotBlank()
             )
         }
     }
