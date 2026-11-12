@@ -178,7 +178,8 @@ Before proceeding to Jira release finalization, Play Store distribution, or GitF
 ```
 docs/releases/<tag>/
 ├── system_integration_results.json   # SYS.4 System Integration Verification Evidence
-└── sys_verification_record.md        # SYS.5 System Verification Protocol Sign-Off Record
+├── sys_verification_record.md        # SYS.5 System Verification Protocol Sign-Off Record
+└── verification_summary.md           # SWE.6 BP5 / REQ-PRO-074 Release Verification Summary per Tag
 ```
 
 #### 1. SYS.4: System Integration Verification Execution & Logging
@@ -202,19 +203,31 @@ test -f docs/releases/V${VERSION_NAME}__${VERSION_CODE}/sys_verification_record.
 * Objective criteria met: sample loss $\le 1.0\%$, RF reconnection latency $\le 10.0\text{ s}$, battery drain rate $\le 8.0\%/\text{hr}$, FIT/TCX integrity valid with zero CRC errors.
 * Formal sign-off signatures and approval dates from System Verification Engineer and Quality Gatekeeper are present.
 
-#### 3. Blocking Gate Enforcement (REQ-PRO-072.2)
+#### 3. Release Verification Summary Generation (ASPICE SWE.6 BP5, REQ-PRO-074)
+Generate the consolidated release verification summary markdown document aggregating unit tests, traceability coverage, and system verification results:
+```bash
+python3 tools/generate_release_verification_summary.py --tag V${VERSION_NAME}__${VERSION_CODE}
+```
+*Verification Checklist*:
+* Output file `docs/releases/V${VERSION_NAME}__${VERSION_CODE}/verification_summary.md` generated.
+* Overall status is `PASS (READY FOR RELEASE)`.
+* Zero open deviations listed under `Deviations Requiring Human Approval`.
+* Link to versioned JUnit archive `build-evidence/junit-test-results-<tag>.zip` verified.
+
+#### 4. Blocking Gate Enforcement (REQ-PRO-072.2, REQ-PRO-074.5)
 > [!CAUTION]
 > **TAGGING & DISTRIBUTION BLOCKED ON MISSING/FAILING SYSTEM EVIDENCE**:
 > Creating the release candidate tag (`V${VERSION_NAME}__${VERSION_CODE}` in Phase 4 `git flow release finish`) and uploading artifacts to the Google Play Store (Phase 3) are **STRICTLY BLOCKED** if:
 > 1. `docs/releases/<tag>/system_integration_results.json` is missing or has failing test cases.
 > 2. `docs/releases/<tag>/sys_verification_record.md` is missing, incomplete, or contains `REVISION` / `FAIL` verdicts.
+> 3. `docs/releases/<tag>/verification_summary.md` is missing or contains unresolved deviations requiring human approval.
 >
 > If either check fails, the release manager MUST halt the release immediately and post a blocking issue comment on the Jira release ticket.
 
-#### 4. Update Jira Release Ticket:
+#### 5. Update Jira Release Ticket:
 Post audit comment documenting verified system evidence:
 ```bash
-python3 tools/jira_util.py comment <KEY> "h4. Mandatory System Verification Evidence Verified (ASPICE SYS.4 & SYS.5)\n* SYS.4 Integration Results: docs/releases/V${VERSION_NAME}__${VERSION_CODE}/system_integration_results.json (6/6 PASS)\n* SYS.5 Verification Protocol: docs/releases/V${VERSION_NAME}__${VERSION_CODE}/sys_verification_record.md (8/8 PASS, QA Signed-off)\n* Release candidate tag creation APPROVED."
+python3 tools/jira_util.py comment <KEY> "h4. Mandatory System Verification Evidence Verified (ASPICE SYS.4 & SYS.5)\n* SYS.4 Integration Results: docs/releases/V${VERSION_NAME}__${VERSION_CODE}/system_integration_results.json (6/6 PASS)\n* SYS.5 Verification Protocol: docs/releases/V${VERSION_NAME}__${VERSION_CODE}/sys_verification_record.md (8/8 PASS, QA Signed-off)\n* Verification Summary: docs/releases/V${VERSION_NAME}__${VERSION_CODE}/verification_summary.md (PASS)\n* Release candidate tag creation APPROVED."
 ```
 
 ---

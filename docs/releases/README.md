@@ -9,6 +9,7 @@ Each release candidate tag (`<tag>`, e.g., `V5.0.0` or `V4.9.38__262`) MUST have
 docs/releases/<tag>/
 ├── system_integration_results.json   # SYS.4: Automated system integration verification results
 ├── sys_verification_record.md        # SYS.5: On-device system verification protocol sign-off record
+├── verification_summary.md           # SWE.6 BP5 / REQ-PRO-074: Release verification summary per tag
 └── release_dossier.md                 # SUP.8: Release qualification summary and audit sign-off
 ```
 
@@ -45,6 +46,18 @@ docs/releases/<tag>/
   - Battery drain rate $\le 8.0\%\text{ per hour}$
   - FIT/TCX export schema validity 100% valid with zero CRC errors
   - Formal signatures and dates from System Verification Engineer and Process Owner / Quality Gatekeeper.
+
+### 3. SWE.6 BP5 Release Verification Summary per Tag
+* **File**: `docs/releases/<tag>/verification_summary.md`
+* **Governing Specification**: `REQ-PRO-074` / `TST-PRO-074` (Finding A-11)
+* **Generation Command**:
+  ```bash
+  python3 tools/generate_release_verification_summary.py --tag <tag>
+  ```
+* **Required Pass/Fail Criteria**:
+  - `Overall Verification Status`: `PASS (READY FOR RELEASE)`
+  - Zero open deviations listed under `Deviations Requiring Human Approval`
+  - Complete aggregation of unit test counts/archive, bidirectional traceability matrix, SYS.4 integration results, and SYS.5 on-device protocol sign-off.
 
 ---
 

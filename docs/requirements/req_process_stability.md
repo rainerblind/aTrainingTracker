@@ -3614,6 +3614,37 @@ The workflow SHALL mandate that:
   • *Then* all assertions pass with 100% success.
 - **Invariants**: Zero Android production runtime code changes in `app/src/main/`.
 
+### REQ-PRO-074: Release Verification Summary Generation per Tag [Verified]
+- **Tests**: `TST-PRO-074`
+- **Implementation**: `tools/generate_release_verification_summary.py`, `tools/test_generate_release_verification_summary.py`, `.agents/skills/release-manager/SKILL.md`, `docs/releases/README.md`
+- **Rationale**: Under ASPICE SWE.6 BP5 (Finding A-11), release decisions must be based on recorded, baseline-controlled verification evidence. A standalone generator script SHALL consolidate unit test counts/results, bidirectional requirement-to-test traceability matrices, system integration verification results (SYS.4), and system verification protocol sign-off records (SYS.5) into an authoritative Markdown summary per release tag (`docs/releases/<tag>/verification_summary.md`), explicitly highlighting all deviations requiring human approval:
+  1. *Automated Release Verification Summary CLI (`REQ-PRO-074.1`, tools/generate_release_verification_summary.py)*:
+     • `tools/generate_release_verification_summary.py` SHALL provide a command-line interface accepting `--tag <TAG>` (e.g. `V5.0.0__2026111201`), optional `--commit <SHA>` (defaulting to current HEAD), optional `--out <PATH>` (defaulting to `docs/releases/<tag>/verification_summary.md`), and optional threshold parameters (`--min-req-tst-coverage`, `--min-tst-code-coverage`, `--min-bidirectional-coverage`).
+  2. *Unit & Regression Test Evidence Aggregation (`REQ-PRO-074.2`, tools/generate_release_verification_summary.py)*:
+     • The generator SHALL aggregate total unit test count, passed, failed, and skipped tests from `app/build/test-results/testDebugUnitTest/` or test archive files, and reference the versioned JUnit test archive artifact (`build-evidence/junit-test-results-<tag>.zip` per ATT-6137).
+  3. *Bidirectional REQ-TST Traceability Matrix Aggregation (`REQ-PRO-074.3`, tools/generate_release_verification_summary.py)*:
+     • The generator SHALL query and embed bidirectional requirement-to-test coverage data via `tools/verify_requirement_governance.py --coverage-json` (per ATT-6122), presenting REQ-to-TST coverage %, TST-to-code coverage %, and bidirectional coverage metrics.
+  4. *System Integration & Verification Protocol Status Aggregation (`REQ-PRO-074.4`, tools/generate_release_verification_summary.py)*:
+     • The generator SHALL parse and summarize SYS.4 System Integration Verification results from `docs/releases/<tag>/system_integration_results.json` (per ATT-6166) and SYS.5 System Verification Protocol sign-off records from `docs/releases/<tag>/sys_verification_record.md` (per ATT-6167).
+  5. *Open Deviations & Human Approval Gating (`REQ-PRO-074.5`, tools/generate_release_verification_summary.py)*:
+     • The generator SHALL evaluate whether any test failure, missing evidence file, or coverage below configured thresholds exists, and enumerate them under an explicit `Deviations Requiring Human Approval` section, assigning an overall status of `PASS` or `BLOCKED / REQUIRES HUMAN APPROVAL`.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Net-new requirement `REQ-PRO-074` (`REQ-PRO-074.1`–`REQ-PRO-074.5`). Targets `tools/generate_release_verification_summary.py`, `tools/test_generate_release_verification_summary.py`, `.agents/skills/release-manager/SKILL.md`, and `docs/releases/README.md`.
+  2. *Historical Origin & Commit Trace*: Sprint 2026-46.4 via ticket `ATT-6138` under Epic `ATT-6119` (ASPICE CL2 Remediation A-11). Builds on `ddd1024a` (ATT-6137), `687e8388` (ATT-6122), `daab754c` (ATT-6166), `0d18ef1a` (ATT-6167), and `bf31bead` (ATT-6169).
+  3. *Root Reason for Existing Formulation*: ASPICE 4.0 assessment finding A-11 identified that release decisions lacked a consolidated, baseline-controlled verification summary file documenting all verification dimensions and deviations.
+  4. *Preservation of Core Invariants*: Canonical release workflow preserved; pure Python 3 standard library CLI; zero production Android runtime code changes in `app/src/main/`.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* release evidence artifacts for a release tag,
+  • *When* `tools/generate_release_verification_summary.py --tag <TAG>` executes,
+  • *Then* `docs/releases/<tag>/verification_summary.md` is generated with unit tests, coverage matrix, SYS.4, and SYS.5 sections.
+  • *Given* any failing test, missing evidence, or coverage below threshold,
+  • *When* the summary is generated,
+  • *Then* it is explicitly listed under `Deviations Requiring Human Approval` with overall status `BLOCKED / REQUIRES HUMAN APPROVAL`.
+  • *Given* `tools/test_generate_release_verification_summary.py`,
+  • *When* executed via pytest/unittest,
+  • *Then* 100% of unit tests pass.
+- **Invariants**: Zero Android production runtime code changes in `app/src/main/`.
+
 
 
 

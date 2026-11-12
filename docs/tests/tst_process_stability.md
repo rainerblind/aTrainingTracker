@@ -2227,6 +2227,23 @@
   4. *Contract Test Suite Execution & Governance Parity (`TST-PRO-072.4`, ReleaseManagerSystemEvidenceContractTest.kt & tools/verify_requirement_governance.py)*:
   • Assert `ReleaseManagerSystemEvidenceContractTest.kt` passes cleanly under Gradle and `python3 tools/verify_requirement_governance.py` confirms 100% living documentation parity.
 
+### TST-PRO-074: **Release Verification Summary Generator Test Suite** [Verified]
+- **Requirement(s)**: `REQ-PRO-074`
+- **Component**: `tools/generate_release_verification_summary.py`, `tools/test_generate_release_verification_summary.py`, `.agents/skills/release-manager/SKILL.md`, `docs/releases/README.md`
+- **Jira**: `ATT-6138`
+- **Test Description**:
+  1. *CLI Argument Parsing & Default Output Path Test (`TST-PRO-074.1`, test_generate_release_verification_summary.py)*:
+  • Verify CLI accepts `--tag`, `--commit`, `--out`, and coverage threshold flags, correctly defaulting output to `docs/releases/<tag>/verification_summary.md`.
+  2. *Unit Test Report Parsing & Archival Link Test (`TST-PRO-074.2`, test_generate_release_verification_summary.py)*:
+  • Verify parsing of JUnit XML reports and versioned archive reference `build-evidence/junit-test-results-<tag>.zip`.
+  3. *Coverage JSON Integration & Threshold Verification Test (`TST-PRO-074.3`, test_generate_release_verification_summary.py)*:
+  • Verify extraction of bidirectional REQ-TST and TST-Code metrics from `--coverage-json` output and threshold breach detection.
+  4. *SYS.4 and SYS.5 Evidence Parsing & Deviation Detection Test (`TST-PRO-074.4`, test_generate_release_verification_summary.py)*:
+  • Verify parsing of `system_integration_results.json` and `sys_verification_record.md`, flagging missing files, failed tests, and unsigned protocols under deviations requiring human approval.
+  5. *End-to-End Markdown Summary Generation & Governance Parity Test (`TST-PRO-074.5`, test_generate_release_verification_summary.py & tools/verify_requirement_governance.py)*:
+  • Verify end-to-end generation of `verification_summary.md` and confirm 100% living documentation parity.
+
+
 
 
 
