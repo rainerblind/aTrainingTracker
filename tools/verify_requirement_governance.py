@@ -40,6 +40,21 @@ REQ_ROW_PATTERN = re.compile(
     re.MULTILINE,
 )
 
+# Known legacy duplicates prior to ATT-6123 remediation (SWE.1 BP5, SWE.6 BP4, REQ-PRO-066.2)
+LEGACY_DUPLICATE_IDS = frozenset({
+    "REQ-DAT-001",
+    "REQ-DAT-026",
+    "REQ-MIG-018",
+    "REQ-UI-116",
+    "REQ-UI-123",
+    "REQ-UI-257",
+    "TST-DAT-001",
+    "TST-DAT-021",
+    "TST-MAP-055",
+    "TST-MIG-036",
+    "TST-UI-216",
+})
+
 
 def get_git_diff(base_ref="develop", target_paths=None):
     """
@@ -867,6 +882,91 @@ def verify_master_table_parity(repo_root=None):
     return len(errors) == 0, errors
 
 
+def find_duplicate_heading_ids(repo_root=None):
+    """
+    Scans docs/requirements/*.md and docs/tests/*.md for requirement and test headings.
+    Returns a dict mapping duplicate ID -> list of (relative_file_path, line_number) tuples.
+    Only entries with len(occurrences) > 1 are included in the returned dict (REQ-PRO-066.1).
+    """
+    if repo_root is None:
+        repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+
+    specs = [
+        ("docs/requirements", "REQ"),
+        ("docs/tests", "TST"),
+    ]
+    seen = {}
+    for shard_dir_rel, prefix in specs:
+        abs_shard_dir = os.path.join(repo_root, shard_dir_rel)
+        if not os.path.isdir(abs_shard_dir):
+            continue
+        for fn in sorted(os.listdir(abs_shard_dir)):
+            if not fn.endswith(".md"):
+                continue
+            rel_path = os.path.join(shard_dir_rel, fn)
+            abs_fp = os.path.join(abs_shard_dir, fn)
+            with open(abs_fp, "r", encoding="utf-8") as f:
+                for lno, line in enumerate(f, 1):
+                    m = re.match(r"^(#{2,4})\s*(" + prefix + r"-[A-Z0-9_-]+):?\s*(.*?)$", line.strip())
+                    if m:
+                        item_id = m.group(2)
+                        seen.setdefault(item_id, []).append((rel_path, lno))
+
+    return {item_id: locs for item_id, locs in sorted(seen.items()) if len(locs) > 1}
+
+
+def verify_unique_ids(repo_root=None, fail_on_duplicates=False, legacy_allowlist=None):
+    """
+    Verifies that all ### REQ-* and ### TST-* heading IDs are unique (REQ-PRO-066 / TST-PRO-066).
+    Reports every duplicate with file and line.
+
+    If fail_on_duplicates is True (or --enforce-unique / --fail-on-duplicates CLI flag):
+      Fails if ANY duplicate is detected, reporting file and line for each occurrence.
+    If fail_on_duplicates is False (default):
+      Known legacy duplicates present in legacy_allowlist (or LEGACY_DUPLICATE_IDS) are reported
+      as WARNINGs without failing validation, preserving CI green status until ATT-6123.
+      Any NEW duplicate ID (not in the allowlist) causes validation to fail.
+
+    Returns (success: bool, diagnostics: list[str]).
+    """
+    if legacy_allowlist is None:
+        legacy_allowlist = LEGACY_DUPLICATE_IDS
+
+    duplicates = find_duplicate_heading_ids(repo_root=repo_root)
+    diagnostics = []
+
+    if not duplicates:
+        diagnostics.append("PASS: All REQ and TST heading IDs are unique across living documentation shards.")
+        return True, diagnostics
+
+    legacy_dups = {k: v for k, v in duplicates.items() if k in legacy_allowlist}
+    new_dups = {k: v for k, v in duplicates.items() if k not in legacy_allowlist}
+
+    for item_id, locs in sorted(duplicates.items()):
+        loc_str = ", ".join(f"{fp}:{lno}" for fp, lno in locs)
+        is_legacy = item_id in legacy_allowlist
+        tag = "WARNING (Legacy duplicate)" if (is_legacy and not fail_on_duplicates) else "ERROR (Duplicate ID)"
+        diagnostics.append(f"{tag}: {item_id} appears {len(locs)} times: {loc_str}")
+
+    if fail_on_duplicates:
+        diagnostics.insert(0, f"ERROR: Duplicate REQ/TST IDs detected ({len(duplicates)} duplicates).")
+        return False, diagnostics
+
+    if new_dups:
+        diagnostics.insert(
+            0,
+            f"ERROR: {len(new_dups)} new duplicate REQ/TST ID(s) detected outside legacy allowlist: "
+            f"{', '.join(sorted(new_dups.keys()))}."
+        )
+        return False, diagnostics
+
+    diagnostics.insert(
+        0,
+        f"PASS: Zero new duplicate REQ/TST IDs detected ({len(legacy_dups)} legacy duplicates tolerated pending ATT-6123)."
+    )
+    return True, diagnostics
+
+
 def recalculate_master_index_tables(repo_root=None):
     """
     Recalculates summary tables ('Total', 'Verified', 'Planned / Open') and total requirement/test
@@ -1306,12 +1406,12 @@ def verify_architecture_and_system_specs(diff_text=None, repo_root=None, base_re
     return True, ["PASS: Architecture & system specification code-grounding and SYSREQ parity verified."]
 
 
-def verify_governance(deliverable_text=None, diff_text=None, base_ref="develop", skip_tripwires=False):
+def verify_governance(deliverable_text=None, diff_text=None, base_ref="develop", skip_tripwires=False, fail_on_duplicates=False):
     """
     Main governance validation entrypoint.
-    Enforces engineering directory structure, master table parity, Rule 81 deterministic tripwires
-    (composable islands, repository encapsulation, architecture/system spec grounding), and
-    Chesterton's Fence archaeology on modified requirements.
+    Enforces engineering directory structure, master table parity, unique requirement and test IDs,
+    Rule 81 deterministic tripwires (composable islands, repository encapsulation, architecture/system
+    spec grounding), and Chesterton's Fence archaeology on modified requirements.
     Returns (success: bool, diagnostics: list[str]).
     """
     diagnostics = []
@@ -1326,6 +1426,12 @@ def verify_governance(deliverable_text=None, diff_text=None, base_ref="develop",
         diagnostics.extend([f"ERROR: {e}" for e in parity_errors])
         return False, diagnostics
     diagnostics.append("PASS: Living documentation master tables match all 9 domain shards with 100% parity.")
+
+    unique_ok, unique_diag = verify_unique_ids(fail_on_duplicates=fail_on_duplicates)
+    if not unique_ok:
+        diagnostics.extend(unique_diag)
+        return False, diagnostics
+    diagnostics.extend(unique_diag)
 
     if not skip_tripwires:
         islands_ok, islands_diag = verify_composable_islands(diff_text=diff_text, base_ref=base_ref)
@@ -1472,8 +1578,26 @@ def main():
         default=None,
         help="Verify Change-Request Impact Analysis in Stage 1 deliverable (optionally specify analysis file path).",
     )
+    parser.add_argument(
+        "--enforce-unique",
+        "--fail-on-duplicates",
+        dest="enforce_unique",
+        action="store_true",
+        help="Strictly fail if any duplicate REQ/TST heading IDs exist, including legacy duplicates (REQ-PRO-066.3).",
+    )
+    parser.add_argument(
+        "--check-unique-ids",
+        action="store_true",
+        help="Check living documentation shards for duplicate REQ and TST heading IDs (REQ-PRO-066.1).",
+    )
 
     args = parser.parse_args()
+
+    if args.check_unique_ids:
+        ok, diag = verify_unique_ids(fail_on_duplicates=args.enforce_unique)
+        for msg in diag:
+            print(msg, file=sys.stderr if not ok else sys.stdout)
+        sys.exit(0 if ok else 1)
 
     if args.check_impact is not None:
         target_file = args.check_impact.strip() if args.check_impact.strip() else None
@@ -1516,6 +1640,11 @@ def main():
         if not parity_ok:
             for e in parity_errors:
                 print(f"ERROR: {e}", file=sys.stderr)
+            sys.exit(1)
+        unique_ok, unique_diag = verify_unique_ids(fail_on_duplicates=args.enforce_unique)
+        if not unique_ok:
+            for d in unique_diag:
+                print(d, file=sys.stderr)
             sys.exit(1)
         print("PASS: Master index tables successfully synchronized with 100% parity.")
         sys.exit(0)
@@ -1596,6 +1725,7 @@ def main():
         diff_text=diff_content,
         base_ref=args.base_ref,
         skip_tripwires=args.skip_tripwires,
+        fail_on_duplicates=args.enforce_unique,
     )
 
     for msg in diagnostics:

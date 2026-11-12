@@ -23,6 +23,8 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")
 
 from tools.verify_requirement_governance import (
     ALLOWED_ENGINEERING_ENTRIES,
+    LEGACY_DUPLICATE_IDS,
+    find_duplicate_heading_ids,
     parse_diff_requirements,
     recalculate_master_index_tables,
     validate_archaeology_section,
@@ -36,6 +38,7 @@ from tools.verify_requirement_governance import (
     verify_repository_encapsulation,
     verify_sprint_metrics,
     verify_independent_reviews,
+    verify_unique_ids,
     validate_impact_analysis_section,
     verify_stage1_impact_analysis,
 )
@@ -883,6 +886,117 @@ diff --git a/docs/requirements/req_process_stability.md b/docs/requirements/req_
             # 4. Auto-discovery without explicit file
             ok_auto, msgs_auto = verify_stage1_impact_analysis(analysis_file=None, repo_root=tmpdir)
             self.assertTrue(ok_auto, f"Expected auto-discovery pass, got: {msgs_auto}")
+
+    def test_scenario_20_duplicate_heading_detection_and_reporting(self):
+        """TST-PRO-066.1: Verify duplicate heading detection and detailed file/line reporting."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            req_dir = os.path.join(tmpdir, "docs", "requirements")
+            tst_dir = os.path.join(tmpdir, "docs", "tests")
+            os.makedirs(req_dir, exist_ok=True)
+            os.makedirs(tst_dir, exist_ok=True)
+
+            # Create synthetic shard files with duplicates
+            req_file_1 = os.path.join(req_dir, "req_shard1.md")
+            with open(req_file_1, "w", encoding="utf-8") as f:
+                f.write("# Requirements 1\n\n### REQ-SYN-001: First Heading [Verified]\nBody 1\n\n### REQ-SYN-002: Second Heading [Planned]\nBody 2\n")
+
+            req_file_2 = os.path.join(req_dir, "req_shard2.md")
+            with open(req_file_2, "w", encoding="utf-8") as f:
+                f.write("# Requirements 2\n\n### REQ-SYN-001: Duplicate First Heading [Planned]\nBody 3\n")
+
+            tst_file_1 = os.path.join(tst_dir, "tst_shard1.md")
+            with open(tst_file_1, "w", encoding="utf-8") as f:
+                f.write("# Tests 1\n\n### TST-SYN-001: Test One [Verified]\nLine 4\n\n### TST-SYN-001: Test Duplicate [Planned]\nLine 6\n")
+
+            dups = find_duplicate_heading_ids(repo_root=tmpdir)
+            self.assertIn("REQ-SYN-001", dups)
+            self.assertIn("TST-SYN-001", dups)
+            self.assertNotIn("REQ-SYN-002", dups)
+
+            # Check occurrences
+            req_locs = dups["REQ-SYN-001"]
+            self.assertEqual(len(req_locs), 2)
+            self.assertEqual(req_locs[0], ("docs/requirements/req_shard1.md", 3))
+            self.assertEqual(req_locs[1], ("docs/requirements/req_shard2.md", 3))
+
+            tst_locs = dups["TST-SYN-001"]
+            self.assertEqual(len(tst_locs), 2)
+            self.assertEqual(tst_locs[0], ("docs/tests/tst_shard1.md", 3))
+            self.assertEqual(tst_locs[1], ("docs/tests/tst_shard1.md", 6))
+
+            # verify_unique_ids without allowlist fails and reports exact locations
+            ok, diag = verify_unique_ids(repo_root=tmpdir, legacy_allowlist=frozenset())
+            self.assertFalse(ok)
+            diag_str = "\n".join(diag)
+            self.assertIn("REQ-SYN-001", diag_str)
+            self.assertIn("docs/requirements/req_shard1.md:3", diag_str)
+            self.assertIn("docs/requirements/req_shard2.md:3", diag_str)
+            self.assertIn("TST-SYN-001", diag_str)
+            self.assertIn("docs/tests/tst_shard1.md:3", diag_str)
+            self.assertIn("docs/tests/tst_shard1.md:6", diag_str)
+
+    def test_scenario_21_legacy_baseline_tolerance_and_new_duplicate_rejection(self):
+        """TST-PRO-066.2: Verify legacy baseline tolerance and immediate rejection of novel duplicates."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            req_dir = os.path.join(tmpdir, "docs", "requirements")
+            os.makedirs(req_dir, exist_ok=True)
+
+            allowlist = frozenset({"REQ-LEGACY-001"})
+
+            # Only legacy duplicate present
+            shard_path = os.path.join(req_dir, "req_test.md")
+            with open(shard_path, "w", encoding="utf-8") as f:
+                f.write("### REQ-LEGACY-001: Item 1\nline 2\n### REQ-LEGACY-001: Item 2\nline 4\n")
+
+            ok_leg, diag_leg = verify_unique_ids(repo_root=tmpdir, legacy_allowlist=allowlist)
+            self.assertTrue(ok_leg, f"Expected legacy duplicate to be tolerated, got: {diag_leg}")
+            self.assertTrue(any("WARNING (Legacy duplicate)" in m for m in diag_leg))
+            self.assertTrue(any("tolerated pending ATT-6123" in m for m in diag_leg))
+
+            # Add a novel duplicate outside allowlist
+            with open(shard_path, "a", encoding="utf-8") as f:
+                f.write("### REQ-NOVEL-001: Item 3\nline 6\n### REQ-NOVEL-001: Item 4\nline 8\n")
+
+            ok_nov, diag_nov = verify_unique_ids(repo_root=tmpdir, legacy_allowlist=allowlist)
+            self.assertFalse(ok_nov, f"Expected novel duplicate to fail, got: {diag_nov}")
+            self.assertTrue(any("outside legacy allowlist: REQ-NOVEL-001" in m for m in diag_nov))
+            self.assertTrue(any("ERROR (Duplicate ID): REQ-NOVEL-001" in m for m in diag_nov))
+
+    def test_scenario_22_strict_enforcement_flag(self):
+        """TST-PRO-066.3: Verify fail_on_duplicates=True rejects even legacy duplicates."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            req_dir = os.path.join(tmpdir, "docs", "requirements")
+            os.makedirs(req_dir, exist_ok=True)
+
+            allowlist = frozenset({"REQ-LEGACY-001"})
+            shard_path = os.path.join(req_dir, "req_test.md")
+            with open(shard_path, "w", encoding="utf-8") as f:
+                f.write("### REQ-LEGACY-001: Item 1\nline 2\n### REQ-LEGACY-001: Item 2\nline 4\n")
+
+            # With fail_on_duplicates=True, even allowlisted duplicate fails
+            ok_strict, diag_strict = verify_unique_ids(
+                repo_root=tmpdir,
+                fail_on_duplicates=True,
+                legacy_allowlist=allowlist,
+            )
+            self.assertFalse(ok_strict)
+            self.assertTrue(any("ERROR: Duplicate REQ/TST IDs detected" in m for m in diag_strict))
+            self.assertTrue(any("ERROR (Duplicate ID): REQ-LEGACY-001" in m for m in diag_strict))
+
+    def test_scenario_23_live_repository_unique_ids_parity(self):
+        """TST-PRO-066.4: Verify live repository living docs pass in standard mode and match known baseline."""
+        # Standard mode: passes cleanly with zero novel duplicates
+        ok, diag = verify_unique_ids()
+        self.assertTrue(ok, f"Expected live repository to pass in standard mode, got: {diag}")
+        self.assertTrue(any("Zero new duplicate REQ/TST IDs detected" in m for m in diag))
+
+        # Strict mode: detects exactly the 11 known legacy duplicates
+        ok_strict, diag_strict = verify_unique_ids(fail_on_duplicates=True)
+        self.assertFalse(ok_strict)
+        dups = find_duplicate_heading_ids()
+        self.assertEqual(set(dups.keys()), set(LEGACY_DUPLICATE_IDS))
+        self.assertEqual(len(dups), 11)
+
 
 
 if __name__ == "__main__":

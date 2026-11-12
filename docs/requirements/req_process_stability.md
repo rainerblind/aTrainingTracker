@@ -3257,6 +3257,36 @@ The workflow SHALL mandate that:
   • *Then* it fails (proving reproduction), and passes on `split_markdown_table_row()`.
 - **Invariants**: Sharding preserves cell contents byte-identically; zero Android runtime changes; pure Python standard library.
 
+### REQ-PRO-066: Living Documentation Unique Requirement & Test Identifier Governance [Verified]
+- **Tests**: `TST-PRO-066`
+- **Implementation**: `tools/verify_requirement_governance.py` (`verify_unique_ids()`, `--fail-on-duplicates`, `--enforce-unique`), `tools/test_verify_requirement_governance.py`.
+- **Rationale**: Requirement and test identifiers (`### REQ-*`, `### TST-*`) across domain shards in `docs/requirements/` and `docs/tests/` must be globally unique to guarantee unambiguous bidirectional traceability and reliable ASPICE evidence tracking. Duplicate IDs cause link ambiguity in verification matrices and prevent automated traceability tooling from accurately resolving test coverage:
+  1. *Duplicate Heading Detection (`REQ-PRO-066.1`)*:
+     • `tools/verify_requirement_governance.py` SHALL scan all `.md` shard files under `docs/requirements/` and `docs/tests/` for requirement (`### REQ-*`) and test (`### TST-*`) heading identifiers.
+     • For every identifier encountered more than once across or within domain shards, the verifier SHALL report each duplicate instance specifying its identifier, file path, and line number.
+  2. *Legacy Duplicate Baseline Allowlist & CI Non-Regression (`REQ-PRO-066.2`)*:
+     • To prevent breaking active CI during concurrent development prior to the remediation of the 11 known legacy duplicate IDs in ATT-6123, `tools/verify_requirement_governance.py` SHALL maintain a controlled baseline allowlist (`LEGACY_DUPLICATE_IDS`) of the 11 known pre-existing duplicates.
+     • When running in standard verification mode, known legacy duplicates SHALL emit warning diagnostics without failing the process. Any net-new duplicate (an identifier collision not present in the legacy allowlist) SHALL immediately fail verification with exit code 1.
+  3. *Strict Uniqueness Enforcement Flag (`REQ-PRO-066.3`)*:
+     • `tools/verify_requirement_governance.py` SHALL support a command-line flag (`--enforce-unique` / `--fail-on-duplicates`) that activates strict zero-tolerance mode, causing verification to fail with exit code 1 whenever any duplicate identifier (including legacy duplicates) is detected.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Net-new requirement `REQ-PRO-066` (`REQ-PRO-066.1`–`REQ-PRO-066.3`). Targets `tools/verify_requirement_governance.py`.
+  2. *Historical Origin & Commit Trace*: Sprint 2026-46.4 via ticket `ATT-6120` under Epic `ATT-6119` (ASPICE CL2 – Evidence Integrity & Bidirectional Traceability).
+  3. *Root Reason for Existing Formulation*: ASPICE 4.0 assessment of 2026-11-08 identified 11 undetected duplicate IDs (SWE.1 BP5, SWE.6 BP4).
+  4. *Preservation of Core Invariants*: Existing master table parity, directory structure checks, Composable islands, repository encapsulation, and Chesterton's Fence archaeology checks remain untouched; pure Python 3 standard library; zero production Android runtime code changes.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* two heading definitions in `docs/requirements/*.md` or `docs/tests/*.md` share an ID that is not in the legacy baseline,
+  • *When* `verify_requirement_governance.py` runs,
+  • *Then* it outputs an error listing the duplicate ID with all offending filenames and line numbers, and exits with code 1.
+  • *Given* all headings have unique IDs, or duplicate IDs match only the known legacy baseline,
+  • *When* `verify_requirement_governance.py` runs in standard mode,
+  • *Then* it exits with code 0 (passing).
+  • *Given* the 11 legacy duplicates exist and `--enforce-unique` is supplied,
+  • *When* `verify_requirement_governance.py --enforce-unique` runs,
+  • *Then* it lists all 11 duplicates with file and line numbers and exits with code 1.
+- **Invariants**: Pure Python 3 standard library; zero Android runtime changes; zero regression in existing governance checks.
+
+
 
 
 
