@@ -3922,3 +3922,42 @@ The workflow SHALL mandate that:
   • *When* executed,
   • *Then* master index tables achieve 100% mathematical parity.
 - **Invariants**: Pure Python 3 standard library; zero Android runtime changes; zero regression in existing governance checks.
+
+
+### REQ-PRO-082: Settings and Profiles Test Evidence Backfill & Bidirectional Traceability Governance [Verified]
+- **Tests**: `TST-PRO-082`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Implementation**: `docs/requirements/req_settings_profiles.md`, `docs/tests/tst_settings_profiles.md`, `WorkoutClusterCounterTest.kt`, `WorkoutClusterStatsTest.kt`, `tools/verify_requirement_governance.py`
+- **Rationale**: Under ASPICE SWE.6 BP4, SWE.1 BP5, and Remediation A-08.7 (ATT-6133), all requirements in the `settings_profiles` domain shard must link to valid, existing test specifications in `docs/tests/tst_settings_profiles.md` with verified test code implementations in `app/src/test/` or be downgraded to `[Implemented]` per REQ-PRO-073. Bidirectional reference integrity must guarantee that every referenced TST cites all of its parent REQs back with zero dangling references:
+  1. *Complete TST Coverage & Evidence Verification (`REQ-PRO-082.1`)*:
+     • Every requirement in `docs/requirements/req_settings_profiles.md` SHALL cite one or more valid, existing backticked `TST-*` IDs in its `Tests:` field.
+     • `REQ-PRI-002` SHALL be downgraded from `[Verified]` to `[Implemented]` per `REQ-PRO-073` due to lack of automated test fixtures for documentation policy (`privacy.md`).
+     • `REQ-SET-001` SHALL cite `TST-SET-082`, `REQ-SET-002` SHALL cite `TST-SET-098`, `REQ-SET-004` SHALL cite `TST-SET-053`, `REQ-SET-005` SHALL cite `TST-NAV-005`, and `REQ-PRI-001` SHALL cite `TST-PRI-002`.
+     • `REQ-SET-075` SHALL cite `TST-SET-077`, `TST-UI-318`, `TST-UI-321`.
+     • `REQ-SET-083`, `REQ-SET-084`, `REQ-SET-085`, and `REQ-SET-087` SHALL cite `TST-LOC-001` alongside their respective `TST-SET-*` IDs.
+  2. *Bidirectional Citation Integrity & Tag Synchronization (`REQ-PRO-082.2`)*:
+     • Every test specification in `docs/tests/tst_settings_profiles.md` SHALL be cited back by 100% of the requirements it declares in its `Requirement(s):` field.
+     • Shorthand numeric requirement citations (`007`, `008`, `011`, `030`, `038`) in `docs/tests/tst_settings_profiles.md` SHALL be expanded to canonical IDs (`REQ-SET-007`, `REQ-SET-008`, `REQ-SET-011`, `REQ-SET-030`, `REQ-SET-037`).
+     • In test classes `WorkoutClusterCounterTest.kt` and `WorkoutClusterStatsTest.kt`, code tags SHALL align with living specifications `TST-SET-054` and `TST-SET-055`, eliminating Category 3 ungrounded tags.
+     • Zero dangling references SHALL exist within the `settings_profiles` domain.
+  3. *Attribute Compliance & Header Parity (`REQ-PRO-082.3`)*:
+     • All 102 requirements in `docs/requirements/req_settings_profiles.md` SHALL declare valid `Priority`, `Type`, and `Verification Method` attributes per `REQ-PRO-077`.
+     • Domain shard headers SHALL reflect accurate totals (`Total Requirements: 102`, `Total Tests: 89`) in 100% parity with master index tables.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Net-new requirement `REQ-PRO-082` (`REQ-PRO-082.1`–`REQ-PRO-082.3`). Targets `docs/requirements/req_settings_profiles.md`, `docs/tests/tst_settings_profiles.md`, and test code tags.
+  2. *Historical Origin & Commit Trace*: Sprint 2026-46.4 via ticket `ATT-6133` under Epic `ATT-6119` (ASPICE CL2, Remediation A-08.7).
+  3. *Root Reason for Existing Formulation*: Baseline pre-assessment identified evidence grounding gaps, header total drift, shorthand citation formatting, and bidirectional link gaps across settings and profiles domain shards.
+  4. *Preservation of Core Invariants*: Full functional test suite execution, master table mathematical parity, and pure Python 3 stdlib execution preserved with zero production Android APK modifications.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* `docs/requirements/req_settings_profiles.md`,
+  • *When* evaluated via `python3 tools/verify_requirement_governance.py --coverage`,
+  • *Then* 100% of requirements cite valid TSTs, Category 4 bidirectional gaps for the domain are 0, and Category 3 unmapped tags for SET are eliminated.
+  • *Given* `docs/requirements/req_settings_profiles.md` and `docs/tests/tst_settings_profiles.md`,
+  • *When* checked for dangling references and attributes,
+  • *Then* zero dangling references and zero missing attributes are detected.
+  • *Given* `tools/verify_requirement_governance.py --sync-indexes`,
+  • *When* executed,
+  • *Then* master index tables achieve 100% mathematical parity.
+- **Invariants**: Pure Python 3 standard library; zero Android runtime changes; zero regression in existing governance checks.

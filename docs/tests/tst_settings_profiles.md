@@ -3,7 +3,7 @@
 **Domain**: `settings_profiles`  
 **Prefixes**: `LOC`, `MON`, `PRI`, `SET`  
 **Scope**: Athlete settings, bike/sensor profiles, privacy zones, data stores, monetization, and 9-locale parity.  
-**Total Tests**: 77
+**Total Tests**: 89
 
 ---
 
@@ -13,7 +13,7 @@
 - **Test Description**: 1. Open Workout Details, Period Map, and Route Heatmap. 2. Inspect Start/End markers.
 
 ### TST-SET-001: **Workout Learning Engine** [Verified]
-- **Requirement(s)**: `REQ-SET-006`, `007`, `008`
+- **Requirement(s)**: `REQ-SET-006`, `REQ-SET-007`, `REQ-SET-008`
 - **Component**: **Workout Learning Engine**
 - **Test Description**: 1. Track a route. 2. Name it \"Park Loop\" and set sport to \"Running\". 3. Track the same route again.
 
@@ -23,7 +23,7 @@
 - **Test Description**: 1. Navigate to \"Workout Clusters\" drawer. 2. Select a recurring path.
 
 ### TST-SET-003: **Cluster Tuning** [Verified]
-- **Requirement(s)**: `REQ-SET-010`, `011`
+- **Requirement(s)**: `REQ-SET-010`, `REQ-SET-011`
 - **Component**: **Cluster Tuning**
 - **Test Description**: 1. Navigate to \"Workout Clusters\". 2. Open Tuning menu. 3. Adjust the master slider. 4. Optionally toggle detailed controls. 5. Tap \"Recalculate\".
 
@@ -113,7 +113,7 @@
 - **Test Description**: 1. Navigate to \"Workout Clusters\". 2. Observe FAB position and styling. 3. Compare with \"Sport Types\" and \"Equipment\" FABs.
 
 ### TST-SET-021: **Identity Arbitration** [Verified]
-- **Requirement(s)**: `REQ-SET-029`, `030`
+- **Requirement(s)**: `REQ-SET-029`, `REQ-SET-030`
 - **Component**: **Identity Arbitration**
 - **Test Description**: 1. Link a specific sensor to a bike. 2. Record a session with that sensor on a route matched to a cluster with a different majority sport.
 
@@ -148,7 +148,7 @@
 - **Test Description**: 1. Start the app. 2. Open Android Studio Database Inspector.
 
 ### TST-SET-028: **Hit Count Synchronization** [Verified]
-- **Requirement(s)**: `REQ-SET-037`, `038`
+- **Requirement(s)**: `REQ-SET-037`
 - **Component**: **Hit Count Synchronization**
 - **Test Description**: 1. Identify a cluster with hit count > 0. 2. Use Database Inspector to manually clear `clusterId` for its workouts. 3. Open Favorite Tracks list.
 
@@ -706,7 +706,7 @@
   • Execute `./gradlew testDebugUnitTest` asserting 100% pass rate with zero regressions.
 
 ### TST-PRI-005: **Decoupled Multi-Permission Cascade, Contextual Bluetooth & Notification Gating, Sensor Discovery Permission Handling, and Legacy Code Retirement Verification Suite** [Verified]
-- **Requirement(s)**: `REQ-PRI-006`, `REQ-UI-106`
+- **Requirement(s)**: `REQ-PRI-006`
 - **Component**: **Decoupled Multi-Permission Cascade, Contextual Bluetooth & Notification Gating, Sensor Discovery Permission Handling, and Legacy Code Retirement Verification Suite**
 - **Jira**: ``ATT-3998`, `ATT-4449``
 - **Test Description**:
@@ -752,7 +752,7 @@
   • Verify `./gradlew testDebugUnitTest` runs with 100% pass rate across the full project test suite.
 
 ### TST-PRI-006: **Abortable First-Install Permission Onboarding Flow, DataStore Persistence, Upgrade Auto-Skip & 9-Language Localization Verification Suite** [Verified]
-- **Requirement(s)**: `REQ-PRI-007`, `REQ-PRI-003`, `REQ-PRI-006`, `REQ-UI-106`
+- **Requirement(s)**: `REQ-PRI-007`
 - **Component**: **Abortable First-Install Permission Onboarding Flow, DataStore Persistence, Upgrade Auto-Skip & 9-Language Localization Verification Suite**
 - **Jira**: ``ATT-4455``
 - **Test Description**:

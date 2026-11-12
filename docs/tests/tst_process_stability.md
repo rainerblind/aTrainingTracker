@@ -2370,3 +2370,16 @@
   2. *Dangling Link & Evidence Audit*: Run `python3 tools/verify_requirement_governance.py --check-links` and `--check-evidence` asserting zero dangling references in `maps_navigation` (pruning `REQ-MAP-037` from legacy allowlist) and zero ungrounded Verified statuses.
   3. *Attribute Compliance Check*: Run `python3 tools/verify_requirement_governance.py --check-attributes` asserting all 75 requirements in `req_maps_navigation.md` define valid Priority, Type, and Verification Method attributes.
   4. *Targeted Unit Test Verification*: Execute `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.map.WaypointBadgeMarkerTest"` asserting 100% pass rate.
+
+### TST-PRO-082: **Settings and Profiles Test Evidence Backfill & Traceability Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-PRO-082`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Component**: `docs/requirements/req_settings_profiles.md`, `docs/tests/tst_settings_profiles.md`, `WorkoutClusterCounterTest.kt`, `WorkoutClusterStatsTest.kt`, `tools/verify_requirement_governance.py`
+- **Jira**: `ATT-6133`
+- **Test Description**:
+  1. *Coverage & Existence Matrix Verification*: Run `python3 tools/verify_requirement_governance.py --coverage` asserting 0 gaps in Category 1 for settings_profiles (100% REQs with TST), 0 gaps in Category 4 for settings_profiles, and 0 Category 3 tags for SET.
+  2. *Dangling Link & Evidence Audit*: Run `python3 tools/verify_requirement_governance.py --check-links` and `--check-evidence` asserting zero dangling references and zero ungrounded Verified statuses in `settings_profiles`.
+  3. *Attribute Compliance Check*: Run `python3 tools/verify_requirement_governance.py --check-attributes` asserting all 102 requirements in `req_settings_profiles.md` define valid Priority, Type, and Verification Method attributes.
+  4. *Targeted Unit Test Verification*: Execute `./gradlew testDebugUnitTest --tests "*Cluster*" --tests "*Setting*"` asserting 100% pass rate.
