@@ -2015,14 +2015,16 @@
 ### TST-CON-030: **Garmin Varia BLE V2 High-Resolution Radar Stream Test Suite** [Verified]
 - **Requirement(s)**: `REQ-CON-030` (`REQ-CON-030.1`..`REQ-CON-030.7`)
 - **Component**: `BTLERadarDevice.java`, `MyBTLEDevice.java`, `DeviceType.java`, `ActivityType.java`, `RadarTarget.kt`, `RadarWindowAggregator.kt`, `RadarTrafficSimulator.kt`, `SensorType.java`, `BluetoothConstants.java`, `strings_radar.xml`
-- **Jira**: `ATT-5095`, `ATT-6706`
+- **Jira**: `ATT-5095`, `ATT-6706`, `ATT-7542`
 - **Test Description**:
   1. *V2 Handshake Choreography, MTU Negotiation & Notification Routing Tests (`TST-CON-030.1`, `BTLERadarDeviceTest.kt`, `MyBTLEDeviceTest.kt`)*:
-  • Verify request of MTU 247 enqueued in `mGattQueue`, bonding verification, serialized GATT handshake execution on peripheral discovery of characteristic `6a4e3204`, and end-to-end routing of V2 payloads through `isMeasurementCharacteristic` and `mGattCallback.onCharacteristicChanged`.
+  • Verify Battery 0x2a19 read and CCCD notification subscription execute prior to V2 characteristic 6a4e3204 setup without touching V1 prematurely.
+  • Verify request of MTU 247 enqueued in `mGattQueue`, bonding verification, serialized GATT handshake execution on peripheral discovery of characteristic `6a4e3204`, and end-to-end routing of V2 payloads through `isMeasurementCharacteristic`.
   2. *Automatic Legacy Fallback Invariant Tests (`TST-CON-030.2`, `BTLERadarDeviceTest.kt`)*:
-  • Verify immediate fallback to V1 characteristic `6a4e3203` when `6a4e3204` is absent, when device is unbonded, when handshake negotiation times out, or when CCCD descriptor write fails with non-GATT_SUCCESS status.
+  • Verify immediate fallback to V1 characteristic `6a4e3203` when `6a4e3204` is absent, when device is unbonded, when CCCD descriptor write fails with non-GATT_SUCCESS status, or when the 1500 ms V2 silence timer expires without notifications.
+  • Verify fallback state resets cleanly upon device disconnect.
   3. *V2 Packet Parsing & Domain Mapping Tests (`TST-CON-030.3`, `BTLERadarDeviceTest.kt`)*:
-  • Verify decoding of V2 multi-target packets, checking range up to 175 m (0.1 m resolution), approach speed, signed lateral offset, and vehicle size classification.
+  • Verify decoding of `2 + 9*N` V2 multi-target packets, checking 24-bit packed range word unpacking (11-bit lateral offset, 13-bit longitudinal range up to 175 m), negative `speedY` closing speed derivation, target classification (`LARGE`, `MODERATE`, `FAINT`), and 2-byte idle heartbeats (`02 00` / `02 90`) and 5/6-byte device-status frames (`0x0004`).
   4. *Lateral Passing Clearance & Large Vehicle Aggregation Tests (`TST-CON-030.4`, `RadarWindowAggregatorTest.kt`)*:
   • Verify latching of minimum lateral passing clearance when $y \le 3.0\text{ m}$ and cumulative tracking of large vehicle counts.
   5. *SensorType Enum, DeviceType Mapping & Unit Formatter Tests (`TST-CON-030.5`, `SensorTypeTest.kt`, `DeviceTypeTest.kt`)*:

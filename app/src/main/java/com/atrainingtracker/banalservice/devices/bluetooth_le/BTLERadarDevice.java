@@ -70,6 +70,9 @@ public class BTLERadarDevice extends MyBTLEDevice implements RadarLightDeviceCli
     public static final byte PACKET_TYPE_V2_THREAT = 0x01;
     public static final long WATCHDOG_TIMEOUT_MS = 3500L;
     public static final long STALE_TRACK_TIMEOUT_MS = 2000L;
+    public static final long STALE_TRACK_MOVING_MS = 800L;
+    public static final long STALE_TRACK_PARKED_MS = 5000L;
+    public static final long V2_SILENCE_TIMEOUT_MS = 1500L;
 
     public static class TrackState {
         public final float rangeMeters;
@@ -107,12 +110,28 @@ public class BTLERadarDevice extends MyBTLEDevice implements RadarLightDeviceCli
         synchronized (mTrackHistory) {
             java.util.Iterator<java.util.Map.Entry<Integer, TrackState>> it = mTrackHistory.entrySet().iterator();
             while (it.hasNext()) {
-                if (nowMs - it.next().getValue().timestampMs > STALE_TRACK_TIMEOUT_MS) {
+                TrackState state = it.next().getValue();
+                long timeout = state.approachSpeedMps > 0.0f ? STALE_TRACK_MOVING_MS : STALE_TRACK_PARKED_MS;
+                if (nowMs - state.timestampMs > timeout) {
                     it.remove();
                 }
             }
         }
     }
+
+    private final Runnable mV2SilenceRunnable = new Runnable() {
+        @Override
+        public void run() {
+            if (DEBUG) Log.w(TAG, "V2 silence watchdog expired (1500ms with 0 notifications). Falling back to V1 (REQ-CON-030.2)");
+            final BluetoothGatt gatt = mBluetoothGatt;
+            if (gatt != null) {
+                BluetoothGattService service = gatt.getService(BluetoothConstants.UUID_SERVICE_RADAR);
+                if (service != null) {
+                    fallbackToV1(gatt, service);
+                }
+            }
+        }
+    };
 
     private final Runnable mWatchdogRunnable = new Runnable() {
         @Override
@@ -201,6 +220,34 @@ public class BTLERadarDevice extends MyBTLEDevice implements RadarLightDeviceCli
             mHandler.postDelayed(mWatchdogRunnable, WATCHDOG_TIMEOUT_MS);
         }
 
+        // Ensure Battery CCCD subscription (REQ-CON-007, ATT-3312, REQ-CON-030.1) is queued before V2
+        if (mBatteryCharacteristic == null) {
+            BluetoothGattService batteryService = gatt.getService(BluetoothConstants.UUID_SERVICE_BATTERY);
+            if (batteryService != null) {
+                mBatteryCharacteristic = batteryService.getCharacteristic(BluetoothConstants.UUID_CHARACTERISTIC_BATTERY_LEVEL);
+            }
+        }
+        if (mBatteryCharacteristic != null && (mBatteryCharacteristic.getProperties() & BluetoothGattCharacteristic.PROPERTY_NOTIFY) != 0) {
+            try {
+                gatt.setCharacteristicNotification(mBatteryCharacteristic, true);
+            } catch (SecurityException e) {
+                Log.w(TAG, "Missing BLUETOOTH_CONNECT permission enabling battery notifications", e);
+            }
+            BluetoothGattDescriptor batteryDescriptor = mBatteryCharacteristic.getDescriptor(BluetoothConstants.UUID_CHARACTERISTIC_CLIENT_CONFIG);
+            if (batteryDescriptor != null) {
+                enqueueWriteDescriptor(batteryDescriptor, BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);
+            }
+        }
+
+        // Device Information Service discovery for StVZO model number detection (ATT-6707 / REQ-CON-031.1)
+        BluetoothGattService disService = gatt.getService(BluetoothConstants.UUID_SERVICE_DEVICE_INFORMATION);
+        if (disService != null) {
+            BluetoothGattCharacteristic modelChar = disService.getCharacteristic(BluetoothConstants.UUID_CHARACTERISTIC_MODEL_NUMBER);
+            if (modelChar != null) {
+                enqueueReadCharacteristic(modelChar);
+            }
+        }
+
         BluetoothGattCharacteristic v2Char = btGattService.getCharacteristic(BluetoothConstants.UUID_CHARACTERISTIC_RADAR_V2);
         BluetoothDevice device = gatt.getDevice();
         boolean isBonded = (device != null && device.getBondState() == BluetoothDevice.BOND_BONDED);
@@ -266,27 +313,13 @@ public class BTLERadarDevice extends MyBTLEDevice implements RadarLightDeviceCli
             mIsLightControlSupported = false;
             RadarLightController.registerRadarDevice(this, false, false);
         }
-
-        // Device Information Service discovery for StVZO model number detection (ATT-6707 / REQ-CON-031.1)
-        BluetoothGattService disService = gatt.getService(BluetoothConstants.UUID_SERVICE_DEVICE_INFORMATION);
-        if (disService != null) {
-            BluetoothGattCharacteristic modelChar = disService.getCharacteristic(BluetoothConstants.UUID_CHARACTERISTIC_MODEL_NUMBER);
-            if (modelChar != null) {
-                enqueueReadCharacteristic(modelChar);
-            }
-        }
-
-        // Chained battery CCCD write (REQ-CON-007, ATT-3312) via queue
-        if (mBatteryCharacteristic != null && (mBatteryCharacteristic.getProperties() & BluetoothGattCharacteristic.PROPERTY_NOTIFY) != 0) {
-            BluetoothGattDescriptor batteryDescriptor = mBatteryCharacteristic.getDescriptor(BluetoothConstants.UUID_CHARACTERISTIC_CLIENT_CONFIG);
-            if (batteryDescriptor != null) {
-                enqueueWriteDescriptor(batteryDescriptor, BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);
-            }
-        }
     }
 
     @android.annotation.SuppressLint("MissingPermission")
     public void fallbackToV1(BluetoothGatt gatt, BluetoothGattService btGattService) {
+        if (mHandler != null) {
+            mHandler.removeCallbacks(mV2SilenceRunnable);
+        }
         if (DEBUG) Log.i(TAG, "Falling back to legacy V1 characteristic 6a4e3203 (REQ-CON-030.2)");
         mIsV2Stream = false;
         BluetoothGattCharacteristic v1Char = btGattService.getCharacteristic(BluetoothConstants.UUID_CHARACTERISTIC_RADAR_V1);
@@ -305,6 +338,16 @@ public class BTLERadarDevice extends MyBTLEDevice implements RadarLightDeviceCli
         }
     }
 
+    @android.annotation.SuppressLint("MissingPermission")
+    public void fallbackToV1(@Nullable BluetoothGatt gatt) {
+        if (gatt != null) {
+            BluetoothGattService service = gatt.getService(BluetoothConstants.UUID_SERVICE_RADAR);
+            if (service != null) {
+                fallbackToV1(gatt, service);
+            }
+        }
+    }
+
     @Override
     protected boolean isMeasurementCharacteristic(@NonNull UUID uuid) {
         return BluetoothConstants.UUID_CHARACTERISTIC_RADAR_V1.equals(uuid) ||
@@ -315,14 +358,25 @@ public class BTLERadarDevice extends MyBTLEDevice implements RadarLightDeviceCli
     @android.annotation.SuppressLint("MissingPermission")
     protected void onDescriptorWriteCompleted(BluetoothGatt gatt, BluetoothGattDescriptor descriptor, int status) {
         super.onDescriptorWriteCompleted(gatt, descriptor, status);
-        if (descriptor != null && status != BluetoothGatt.GATT_SUCCESS) {
+        if (descriptor != null) {
             BluetoothGattCharacteristic parentChar = descriptor.getCharacteristic();
             if (parentChar != null && BluetoothConstants.UUID_CHARACTERISTIC_RADAR_V2.equals(parentChar.getUuid())) {
-                Log.w(TAG, "V2 CCCD write failed with status " + status + "; falling back to V1 stream");
-                if (gatt != null) {
-                    BluetoothGattService service = gatt.getService(BluetoothConstants.UUID_SERVICE_RADAR);
-                    if (service != null) {
-                        fallbackToV1(gatt, service);
+                if (status == BluetoothGatt.GATT_SUCCESS) {
+                    if (DEBUG) Log.i(TAG, "V2 CCCD write succeeded; arming 1500ms silence watchdog");
+                    if (mHandler != null) {
+                        mHandler.removeCallbacks(mV2SilenceRunnable);
+                        mHandler.postDelayed(mV2SilenceRunnable, V2_SILENCE_TIMEOUT_MS);
+                    }
+                } else {
+                    Log.w(TAG, "V2 CCCD write failed with status " + status + "; falling back to V1 stream");
+                    if (mHandler != null) {
+                        mHandler.removeCallbacks(mV2SilenceRunnable);
+                    }
+                    if (gatt != null) {
+                        BluetoothGattService service = gatt.getService(BluetoothConstants.UUID_SERVICE_RADAR);
+                        if (service != null) {
+                            fallbackToV1(gatt, service);
+                        }
                     }
                 }
             }
@@ -336,6 +390,9 @@ public class BTLERadarDevice extends MyBTLEDevice implements RadarLightDeviceCli
         }
 
         if (BluetoothConstants.UUID_CHARACTERISTIC_RADAR_V2.equals(characteristic.getUuid())) {
+            if (mHandler != null) {
+                mHandler.removeCallbacks(mV2SilenceRunnable);
+            }
             byte[] payload = characteristic.getValue();
             List<RadarTarget> targets = parseV2ThreatPacket(payload);
             if (targets != null) {
@@ -348,6 +405,7 @@ public class BTLERadarDevice extends MyBTLEDevice implements RadarLightDeviceCli
     }
 
     private void processTargets(List<RadarTarget> targets) {
+        pruneStaleTracks(SystemClock.elapsedRealtime());
         // Hardware preemption (REQ-CON-029.3): physical data preempts simulator immediately
         RadarTrafficSimulator.INSTANCE.onPhysicalHardwareConnected();
 
@@ -427,7 +485,9 @@ public class BTLERadarDevice extends MyBTLEDevice implements RadarLightDeviceCli
     protected void disconnectFromGatt() {
         if (mHandler != null) {
             mHandler.removeCallbacks(mWatchdogRunnable);
+            mHandler.removeCallbacks(mV2SilenceRunnable);
         }
+        mIsV2Stream = false;
         synchronized (mTrackHistory) {
             mTrackHistory.clear();
         }
@@ -451,7 +511,9 @@ public class BTLERadarDevice extends MyBTLEDevice implements RadarLightDeviceCli
     public void shutDown() {
         if (mHandler != null) {
             mHandler.removeCallbacks(mWatchdogRunnable);
+            mHandler.removeCallbacks(mV2SilenceRunnable);
         }
+        mIsV2Stream = false;
         synchronized (mTrackHistory) {
             mTrackHistory.clear();
         }
@@ -701,107 +763,239 @@ public class BTLERadarDevice extends MyBTLEDevice implements RadarLightDeviceCli
     /**
      * Demuxes and parses a Garmin Varia BLE V2 high-resolution packet (characteristic 6a4e3204, REQ-CON-030.3).
      *
-     * Header byte 0x01 indicates a V2 multi-target threat frame.
-     * Each target record is 8 bytes:
-     * - offset + 0: targetId (1 byte uint8)
-     * - offset + 1..2: rangeRaw (uint16 LE, 0.1m precision)
-     * - offset + 3..4: speedRaw (int16 LE, 0.1 m/s precision)
-     * - offset + 5..6: lateralRaw (int16 LE signed, 0.1m precision, negative=left, positive=right)
-     * - offset + 7: sizeAndThreat (1 byte: bits 0..1 threat, bits 2..3 size, bits 4..5 lane)
+     * Wire formats:
+     * - Authentic RearVue 820:
+     *   - len == 2: 2-byte idle heartbeat (02 00, 02 90, or bit 0 set); resets watchdog, prunes stale tracks.
+     *   - len == 5 or 6 (bit 2 0x0004 set in LE header): device status frame; resets watchdog.
+     *   - len >= 11 && (len - 2) % 9 == 0: 2-byte header + N * 9-byte target structs.
+     *     - offset + 0: targetId (uint8)
+     *     - offset + 1: targetClass (LARGE=36 -> TRUCK_OR_BUS, MODERATE=23|26 -> CAR, FAINT=13|16 -> UNKNOWN_OR_LIGHT, 4 -> UNKNOWN_OR_LIGHT)
+     *     - offset + 2..4: 24-bit LE packed range word (bits 0..10 signed lateralX * 0.1m, bits 11..23 signed rangeY * 0.1m)
+     *     - offset + 5: lengthMeters (uint8 * 0.25f)
+     *     - offset + 6: widthMeters (uint8 * 0.25f)
+     *     - offset + 7: speedY (int8 * 0.5f m/s longitudinal closing speed; negative=approaching -> approachSpeedMps = -speedY)
+     *     - offset + 8: speedX (int8 * 0.5f m/s lateral speed; 0x80 = unknown sentinel)
+     * - Legacy synthetic format:
+     *   - 1-byte clear frame (0x01)
+     *   - 1-byte header 0x01 + N * 8-byte target structs
      */
     @Nullable
     public static List<RadarTarget> parseV2ThreatPacket(@Nullable byte[] payload) {
-        if (payload == null || payload.length < 1) {
+        if (payload == null || payload.length == 0) {
             return null;
         }
 
-        if (payload[0] != PACKET_TYPE_V2_THREAT) {
+        // Legacy synthetic 1-byte clear frame
+        if (payload.length == 1) {
+            if (payload[0] == PACKET_TYPE_V2_THREAT) {
+                return Collections.emptyList();
+            }
             return null;
         }
 
-        int targetPayloadLen = payload.length - 1;
-        if (targetPayloadLen % 8 != 0) {
+        int header = (payload[0] & 0xFF) | ((payload[1] & 0xFF) << 8);
+
+        // Authentic RearVue 820: 2-byte idle heartbeat (e.g. 02 00, 02 90, or bit 0 set)
+        if (payload.length == 2) {
+            if ((header & 0x0001) != 0 || payload[0] == 0x02) {
+                return Collections.emptyList();
+            }
             return null;
         }
 
-        int numTargets = targetPayloadLen / 8;
-        List<RadarTarget> targets = new ArrayList<>(numTargets);
+        // Authentic RearVue 820: 5/6-byte device status frame (bit 2 0x0004 set)
+        if ((header & 0x0004) != 0 && (payload.length == 5 || payload.length == 6)) {
+            return Collections.emptyList();
+        }
 
-        for (int i = 0; i < numTargets; i++) {
-            int offset = 1 + i * 8;
-            int targetId = payload[offset] & 0xFF;
-            int rangeRaw = (payload[offset + 1] & 0xFF) | ((payload[offset + 2] & 0xFF) << 8);
-            float rangeMeters = rangeRaw / 10.0f;
+        // Authentic RearVue 820: 2 + 9*N multi-target frame
+        if (payload.length >= 11 && (payload.length - 2) % 9 == 0) {
+            int numTargets = (payload.length - 2) / 9;
+            List<RadarTarget> targets = new ArrayList<>(numTargets);
 
-            short speedRaw = (short) ((payload[offset + 3] & 0xFF) | ((payload[offset + 4] & 0xFF) << 8));
-            float approachSpeedMps = speedRaw / 10.0f;
+            for (int i = 0; i < numTargets; i++) {
+                int offset = 2 + i * 9;
+                int targetId = payload[offset] & 0xFF;
 
-            short lateralRaw = (short) ((payload[offset + 5] & 0xFF) | ((payload[offset + 6] & 0xFF) << 8));
-            float lateralOffsetMeters = lateralRaw / 10.0f;
+                int targetClass = payload[offset + 1] & 0xFF;
+                VehicleSizeCategory sizeCategory;
+                switch (targetClass) {
+                    case 36: // 0x24: LARGE
+                        sizeCategory = VehicleSizeCategory.TRUCK_OR_BUS;
+                        break;
+                    case 23: // 0x17: MODERATE
+                    case 26: // 0x1A: MODERATE
+                        sizeCategory = VehicleSizeCategory.CAR;
+                        break;
+                    case 13: // 0x0D: FAINT
+                    case 16: // 0x10: FAINT
+                    case 4:  // UNKNOWN
+                    default:
+                        sizeCategory = VehicleSizeCategory.UNKNOWN_OR_LIGHT;
+                        break;
+                }
 
-            int sizeAndThreat = payload[offset + 7] & 0xFF;
-            int threatBits = sizeAndThreat & 0x03;
-            ThreatLevel threatLevel;
-            switch (threatBits) {
-                case 1:
-                    threatLevel = ThreatLevel.APPROACHING;
-                    break;
-                case 2:
-                case 3:
+                // 24-bit little-endian packed range word
+                int b0 = payload[offset + 2] & 0xFF;
+                int b1 = payload[offset + 3] & 0xFF;
+                int b2 = payload[offset + 4] & 0xFF;
+                int packed = b0 | (b1 << 8) | (b2 << 16);
+
+                // Bits 0..10: 11-bit signed lateral X offset (* 0.1m, positive = right)
+                int rangeXBits = packed & 0x7FF;
+                if ((rangeXBits & 0x400) != 0) {
+                    rangeXBits -= 0x800;
+                }
+                float lateralOffsetMeters = rangeXBits * 0.1f;
+
+                // Bits 11..23: 13-bit signed longitudinal Y range (* 0.1m, positive = behind rider)
+                int rangeYBits = (packed >> 11) & 0x1FFF;
+                if ((rangeYBits & 0x1000) != 0) {
+                    rangeYBits -= 0x2000;
+                }
+                float rangeMeters = rangeYBits * 0.1f;
+
+                float lengthMeters = (payload[offset + 5] & 0xFF) * 0.25f;
+                float widthMeters = (payload[offset + 6] & 0xFF) * 0.25f;
+
+                // Speed Y: signed int8 * 0.5 m/s longitudinal closing speed (negative = approaching)
+                byte rawSpeedY = payload[offset + 7];
+                float speedYMps = rawSpeedY * 0.5f;
+                float approachSpeedMps = -speedYMps;
+                if (approachSpeedMps < 0.0f) {
+                    approachSpeedMps = 0.0f;
+                }
+
+                // Speed X: signed int8 * 0.5 m/s lateral speed (0x80 = unknown sentinel)
+                byte rawSpeedX = payload[offset + 8];
+                Float speedXMps = null;
+                if ((rawSpeedX & 0xFF) != 0x80) {
+                    speedXMps = rawSpeedX * 0.5f;
+                }
+
+                ThreatLevel threatLevel;
+                if (approachSpeedMps >= 15.0f) {
                     threatLevel = ThreatLevel.FAST_APPROACHING;
-                    break;
-                default:
+                } else if (rangeMeters > 0.0f) {
+                    threatLevel = ThreatLevel.APPROACHING;
+                } else {
                     threatLevel = ThreatLevel.NONE;
-                    break;
-            }
+                }
 
-            int sizeBits = (sizeAndThreat >> 2) & 0x03;
-            VehicleSizeCategory sizeCategory;
-            switch (sizeBits) {
-                case 1:
-                    sizeCategory = VehicleSizeCategory.CAR;
-                    break;
-                case 2:
-                    sizeCategory = VehicleSizeCategory.TRUCK_OR_BUS;
-                    break;
-                default:
-                    sizeCategory = VehicleSizeCategory.UNKNOWN_OR_LIGHT;
-                    break;
-            }
-
-            int laneBits = (sizeAndThreat >> 4) & 0x03;
-            LaneState laneState;
-            switch (laneBits) {
-                case 1:
+                LaneState laneState;
+                float absLat = Math.abs(lateralOffsetMeters);
+                if (absLat < 1.0f) {
                     laneState = LaneState.IN_RIDER_LANE;
-                    break;
-                case 2:
+                } else if (absLat <= 2.2f) {
                     laneState = LaneState.CHANGING_LANE;
-                    break;
-                case 3:
+                } else {
                     laneState = LaneState.PASSING_LANE;
-                    break;
-                default:
-                    laneState = LaneState.UNKNOWN;
-                    break;
-            }
+                }
 
-            targets.add(new RadarTarget(
-                    targetId,
-                    rangeMeters,
-                    approachSpeedMps,
-                    threatLevel,
-                    lateralOffsetMeters,
-                    approachSpeedMps,
-                    0.0f,
-                    null,
-                    null,
-                    sizeCategory,
-                    laneState
-            ));
+                targets.add(new RadarTarget(
+                        targetId,
+                        rangeMeters,
+                        approachSpeedMps,
+                        threatLevel,
+                        lateralOffsetMeters,
+                        approachSpeedMps,
+                        speedXMps,
+                        widthMeters,
+                        lengthMeters,
+                        sizeCategory,
+                        laneState
+                ));
+            }
+            return targets;
         }
 
-        return targets;
+        // Backward compatibility: Legacy synthetic V2 packet (header 0x01, 1 + 8*N bytes)
+        if (payload[0] == PACKET_TYPE_V2_THREAT && (payload.length - 1) % 8 == 0) {
+            int targetPayloadLen = payload.length - 1;
+            int numTargets = targetPayloadLen / 8;
+            List<RadarTarget> targets = new ArrayList<>(numTargets);
+
+            for (int i = 0; i < numTargets; i++) {
+                int offset = 1 + i * 8;
+                int targetId = payload[offset] & 0xFF;
+                int rangeRaw = (payload[offset + 1] & 0xFF) | ((payload[offset + 2] & 0xFF) << 8);
+                float rangeMeters = rangeRaw / 10.0f;
+
+                short speedRaw = (short) ((payload[offset + 3] & 0xFF) | ((payload[offset + 4] & 0xFF) << 8));
+                float approachSpeedMps = speedRaw / 10.0f;
+
+                short lateralRaw = (short) ((payload[offset + 5] & 0xFF) | ((payload[offset + 6] & 0xFF) << 8));
+                float lateralOffsetMeters = lateralRaw / 10.0f;
+
+                int sizeAndThreat = payload[offset + 7] & 0xFF;
+                int threatBits = sizeAndThreat & 0x03;
+                ThreatLevel threatLevel;
+                switch (threatBits) {
+                    case 1:
+                        threatLevel = ThreatLevel.APPROACHING;
+                        break;
+                    case 2:
+                    case 3:
+                        threatLevel = ThreatLevel.FAST_APPROACHING;
+                        break;
+                    default:
+                        threatLevel = ThreatLevel.NONE;
+                        break;
+                }
+
+                int sizeBits = (sizeAndThreat >> 2) & 0x03;
+                VehicleSizeCategory sizeCategory;
+                switch (sizeBits) {
+                    case 1:
+                        sizeCategory = VehicleSizeCategory.CAR;
+                        break;
+                    case 2:
+                        sizeCategory = VehicleSizeCategory.TRUCK_OR_BUS;
+                        break;
+                    default:
+                        sizeCategory = VehicleSizeCategory.UNKNOWN_OR_LIGHT;
+                        break;
+                }
+
+                int laneBits = (sizeAndThreat >> 4) & 0x03;
+                LaneState laneState;
+                switch (laneBits) {
+                    case 1:
+                        laneState = LaneState.IN_RIDER_LANE;
+                        break;
+                    case 2:
+                        laneState = LaneState.CHANGING_LANE;
+                        break;
+                    case 3:
+                        laneState = LaneState.PASSING_LANE;
+                        break;
+                    default:
+                        laneState = LaneState.UNKNOWN;
+                        break;
+                }
+
+                targets.add(new RadarTarget(
+                        targetId,
+                        rangeMeters,
+                        approachSpeedMps,
+                        threatLevel,
+                        lateralOffsetMeters,
+                        approachSpeedMps,
+                        0.0f,
+                        null,
+                        null,
+                        sizeCategory,
+                        laneState
+                ));
+            }
+            return targets;
+        }
+
+        return null;
+    }
+
+    public Runnable getV2SilenceRunnableForTesting() {
+        return mV2SilenceRunnable;
     }
 
     public boolean isV2Stream() {
