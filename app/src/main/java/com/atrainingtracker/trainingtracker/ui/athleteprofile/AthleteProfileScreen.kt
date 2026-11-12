@@ -76,6 +76,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -199,20 +200,18 @@ fun AthleteProfileContent(
     var showCardioInfoDialog by remember { mutableStateOf(false) }
     val navBarBottomPadding = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
 
-    val tabTitleResIds = remember(uiState.enableCardioPowerDynamics) {
-        buildList {
-            add(R.string.fitness_tab_pmc)
-            add(R.string.fitness_tab_hrv)
-            add(R.string.fitness_tab_body)
-            if (uiState.enableCardioPowerDynamics) {
-                add(R.string.fitness_tab_cardio_power)
-            }
-        }
+    val tabTitleResIds = remember(uiState.enablePmcModel, uiState.enableCardioPowerDynamics) {
+        resolveFitnessHubTabs(uiState.enablePmcModel, uiState.enableCardioPowerDynamics)
     }
     val pagerState = rememberPagerState(
-        initialPage = initialTab.coerceIn(0, tabTitleResIds.lastIndex),
+        initialPage = initialTab.coerceIn(0, (tabTitleResIds.size - 1).coerceAtLeast(0)),
         pageCount = { tabTitleResIds.size }
     )
+    LaunchedEffect(tabTitleResIds.size) {
+        if (pagerState.currentPage > tabTitleResIds.lastIndex && tabTitleResIds.isNotEmpty()) {
+            pagerState.scrollToPage(tabTitleResIds.lastIndex)
+        }
+    }
     val scope = rememberCoroutineScope()
     val bodyTabIndex = tabTitleResIds.indexOf(R.string.fitness_tab_body)
 
@@ -311,42 +310,16 @@ fun AthleteProfileContent(
                             ),
                             verticalArrangement = Arrangement.spacedBy(16.dp)
                         ) {
-                            if (uiState.enablePmcModel) {
-                                item {
-                                    PerformanceManagementChartCard(
-                                        pmcSummary = uiState.pmcSummary,
-                                        pmcPlotPoints = uiState.pmcPlotPoints,
-                                        selectedPmcTimeRange = uiState.selectedPmcTimeRange,
-                                        onSelectPmcTimeRange = { range ->
-                                            onSelectPmcTimeRange(range)
-                                            onSelectTimeRange(range)
-                                        }
-                                    )
-                                }
-                            } else {
-                                item {
-                                    Card(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        shape = RoundedCornerShape(12.dp),
-                                        colors = CardDefaults.cardColors(
-                                            containerColor = MaterialTheme.colorScheme.surfaceContainerLow
-                                        )
-                                    ) {
-                                        Box(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .padding(24.dp),
-                                            contentAlignment = Alignment.Center
-                                        ) {
-                                            Text(
-                                                text = stringResource(R.string.pmc_disabled_guidance),
-                                                style = MaterialTheme.typography.bodyMedium,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                                textAlign = TextAlign.Center
-                                            )
-                                        }
+                            item {
+                                PerformanceManagementChartCard(
+                                    pmcSummary = uiState.pmcSummary,
+                                    pmcPlotPoints = uiState.pmcPlotPoints,
+                                    selectedPmcTimeRange = uiState.selectedPmcTimeRange,
+                                    onSelectPmcTimeRange = { range ->
+                                        onSelectPmcTimeRange(range)
+                                        onSelectTimeRange(range)
                                     }
-                                }
+                                )
                             }
                         }
                     }

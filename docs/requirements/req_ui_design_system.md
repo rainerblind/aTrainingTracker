@@ -16807,11 +16807,13 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
   3. *Clean Periods Screen Decoupling (`REQ-UI-513.3`)*:
      - `PeriodsTabsScreen.kt` and `PeriodsViewModel.kt` SHALL strictly display calendar volume aggregations, removing `HrvReadinessTrendCard` and unnecessary `HrvReadinessRepository` loading overhead.
   4. *Unified Fitness & Physiology Analytical Hub (`REQ-UI-513.4`)*:
-     - `AthleteProfileScreen.kt` (Fitness & Physiology) SHALL host 4 tabs in `PrimaryScrollableTabRow` + `HorizontalPager` with standard fixed header `LayoutConstants.HEADER_TITLE_ROW_HEIGHT` and synchronized `MetricsTimeRange` (`1M | 3M | 6M | 1Y | All`) calendar X-axis:
-       - **Tab 1: Fitness & Fatigue (PMC)**: `CTL / ATL / TSB / ACWR` + Ramp Rate KPI summary tiles and `PerformanceManagementChartCard` (with disabled guidance if PMC is inactive).
-       - **Tab 2: HRV & Readiness**: Primary "Measure Morning HRV" CTA button launching `MorningHrvCheckScreen`, empty-state onboarding card when 0 readings exist in `HrvReadiness.db`, `HrvReadinessTrendCard` (60d posture-isolated SWC corridor + 7d rolling trend + optional Training-Load overlay), and chronological history log of recorded morning HRV entries with delete support.
-       - **Tab 3: Body & Thresholds**: Current KPI summary tiles (`Weight`, `HRrest`, `FTP`, `CP`, `W'`, `W/kg`), `AthleteMetricTimeSeriesChart`, `+` Add Entry action, and filterable History Log.
-       - **Tab 4: Cardio-Power**: Longitudinal `CardioPowerTrendsCard` (`Fresh HR@200W`, Time Constant `τ`, Slope `1/K`), conditionally displayed when `enableCardioPowerDynamics` is true.
+     - `AthleteProfileScreen.kt` (Fitness & Physiology) SHALL host tabs in `PrimaryScrollableTabRow` + `HorizontalPager` with standard fixed header `LayoutConstants.HEADER_TITLE_ROW_HEIGHT` and synchronized `MetricsTimeRange` (`1M | 3M | 6M | 1Y | All`) calendar X-axis:
+       - **Tab 1: Body & Thresholds (`R.string.fitness_tab_body`)**: Primary baseline physiological inputs and thresholds (Weight, Resting HR, FTP, CP, W', W/kg) with `+` Add Entry action visible in top header bar, `AthleteMetricTimeSeriesChart`, and filterable History Log. Default landing tab (`initialTab = 0`).
+       - **Tab 2: Fitness & Fatigue (PMC) (`R.string.fitness_tab_pmc`)**: Conditionally displayed when `enablePmcModel` is true. `CTL / ATL / TSB / ACWR` + Ramp Rate KPI summary tiles and `PerformanceManagementChartCard`. When `enablePmcModel` is false, the tab header and page SHALL be omitted entirely from the hub (no empty placeholder card).
+       - **Tab 3: HRV & Readiness (`R.string.fitness_tab_hrv`)**: Primary "Measure Morning HRV" CTA button launching `MorningHrvCheckScreen`, empty-state onboarding card when 0 readings exist in `HrvReadiness.db`, `HrvReadinessTrendCard` (60d posture-isolated SWC corridor + 7d rolling trend + optional Training-Load overlay), and chronological history log of recorded morning HRV entries with delete support.
+       - **Tab 4: Cardio-Power (`R.string.fitness_tab_cardio_power`)**: Longitudinal `CardioPowerTrendsCard` (`Fresh HR@200W`, Time Constant `τ`, Slope `1/K`), conditionally displayed when `enableCardioPowerDynamics` is true.
+     - Tab resolution SHALL be executed via pure function `resolveFitnessHubTabs(enablePmcModel: Boolean, enableCardioPowerDynamics: Boolean): List<Int>`.
+     - On dynamic shrinkage of active tabs, `pagerState.currentPage` MUST be safely clamped to `0..tabTitleResIds.lastIndex`.
   5. *Dedicated Settings Training Zones Hub (`REQ-UI-513.5`)*:
      - `NavRoutes.TRAINING_ZONES` SHALL route directly to `ZoneSettingsScreen` in `ZonesSettingsActivity.kt` hosting the 3 zone configuration tabs (`HR Run`, `HR Bike`, `Power Bike`), Zone Calculator dialog, and Zone History dialog.
   6. *9-Language Localization Parity (`REQ-UI-513.6`)*:
@@ -16825,8 +16827,11 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 • *When* opened,
 • *Then* it displays only calendar volume bars with zero HRV trend card overhead.
 • *Given* the Fitness & Physiology hub,
-• *When* navigating between tabs,
-• *Then* Tab 1 renders PMC, Tab 2 renders HRV readiness with Morning HRV measurement CTA & log, Tab 3 renders Body & Thresholds, and Tab 4 renders Cardio-Power when enabled.
+• *When* navigating between tabs with default settings (`enablePmcModel = true`, `enableCardioPowerDynamics = true`),
+• *Then* Tab 1 renders Body & Thresholds (with `+` Add Entry visible), Tab 2 renders PMC, Tab 3 renders HRV readiness with Morning HRV CTA & log, and Tab 4 renders Cardio-Power.
+• *Given* `enablePmcModel = false` in Expert Settings,
+• *When* opening Fitness & Physiology,
+• *Then* the PMC tab is completely omitted from the tab row, starting on Body & Thresholds followed by HRV readiness (and Cardio-Power if enabled).
 • *Given* selecting Training Zones from Settings,
 • *When* opened,
 • *Then* it loads `ZoneSettingsScreen` with the 3 zone tabs, calculator, and history dialogs.
@@ -16836,6 +16841,11 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 2. *Historical Origin & Commit Trace*: Commit `b660ef43` (ATT-3704), commit `8471b409` (ATT-3851), and Sprint 2026-46.1 (ATT-3557).
 3. *Root Reason for Existing Formulation*: Zones were initially grouped with athlete profile as an interim consolidation step; HRV trend card was introduced into Periods to surface early longitudinal recovery data before a dedicated multi-tab physiology hub was architected.
 4. *Preservation of Core Invariants*: All zone calculation and editing capabilities preserved; all historical athlete metric entries and morning HRV records remain 100% accessible; backward-compatible route mappings (`NavRoutes.ATHLETE_PROFILE`, `NavRoutes.TRAINING_ZONES`) maintained.
+5. *Tab Hierarchy & Inactive PMC Suppression Archaeology (ATT-7531, Sprint 2026-46.5)*:
+   - *Original Requirement ID & Target*: Refines `REQ-UI-513.4` (*Unified Fitness & Physiology Analytical Hub*, Sprint 2026-46.3, ATT-6720 / commit `83e5f529`).
+   - *Historical Origin & Commit Trace*: Sprint 2026-46.3 commit `83e5f529` (`ATT-6720`).
+   - *Root Reason for Existing Formulation*: PMC was placed first as an umbrella fitness chart, and an inactive placeholder card was displayed to inform the user that PMC was disabled in Expert Settings.
+   - *Preservation of Core Invariants*: Opening the hub lands on active, universally applicable baseline parameters (*Körper & Schwellen*) with immediate `+` entry capability; all underlying PMC, HRV, and Cardio-Power calculation engines, charts, and data stores remain 100% intact; hiding inactive tabs ensures consistency with `enableCardioPowerDynamics` behavior; 9-language localization parity is preserved.
 
 **Invariants**: DataStore zone persistence preserved; SQLite database tables (`HrvReadiness.db`, `AthleteMetricsDb`) unchanged; navigation deep-links backward-compatible; WCAG AA contrast maintained.
 

@@ -8271,8 +8271,11 @@
   2. *Periods Screen Clean Decoupling Test (`TST-UI-513.2`, `PeriodsViewModelTest.kt`)*:
   • Verify `PeriodsViewModel` operates cleanly without `HrvReadinessRepository` dependencies and `PeriodsTabsScreen` contains zero HRV trend composables.
   3. *Fitness & Physiology Tab Structure & HRV Hub Test (`TST-UI-513.3`, `AthleteProfileContractAndLocalizationTest.kt` / `FitnessPhysiologyTest.kt`)*:
-  • Verify 4-tab hub structure: PMC, HRV & Readiness, Body & Thresholds, Cardio-Power.
-  • Verify Tab 2 provides Morning HRV measurement CTA and empty state when 0 readings exist.
+  • Verify tab ordering starts with Body & Thresholds (`R.string.fitness_tab_body`), followed by conditional PMC (`R.string.fitness_tab_pmc`), HRV & Readiness (`R.string.fitness_tab_hrv`), and conditional Cardio-Power (`R.string.fitness_tab_cardio_power`).
+  • Verify all 4 boolean permutations of `resolveFitnessHubTabs(enablePmcModel, enableCardioPowerDynamics)`.
+  • Verify PMC tab is suppressed when `enablePmcModel = false`.
+  • Verify Morning HRV measurement CTA and empty state when 0 readings exist.
+  • Verify `+` Add Entry action is visible on default landing tab (`initialTab = 0`).
   4. *9-Language Localization Parity Audit (`TST-UI-513.4`)*:
   • Assert 100% presence and parity of all drawer, tab, and empty state strings across all 9 language folders (`values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`).
   5. *Tier 1 Targeted Unit Test Regression Suite (`TST-UI-513.5`)*:
