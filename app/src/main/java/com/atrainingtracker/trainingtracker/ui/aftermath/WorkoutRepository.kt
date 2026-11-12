@@ -670,25 +670,34 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
         var minPassingDist: Double? = null
         var closePasses = 0
         var maxLargeVehicles = 0
+        var prevVehicles = 0
+        var currentOvertakeMinPassDist: Double? = null
 
         try {
             streamSamples(fileBaseName) { sample ->
                 if (sample.radarVehicleCount != null || sample.radarThreatCount != null || sample.radarPassingDistanceM != null) {
                     hasRadar = true
                 }
-                sample.radarVehicleCount?.let { count ->
-                    if (count > maxVehicles) maxVehicles = count
-                }
-                sample.radarLargeVehicleCount?.let { count ->
-                    if (count > maxLargeVehicles) maxLargeVehicles = count
-                }
                 sample.radarPassingDistanceM?.let { passDist ->
                     if (minPassingDist == null || passDist < minPassingDist!!) {
                         minPassingDist = passDist
                     }
-                    if (passDist < closePassThresholdM) {
-                        closePasses++
+                    if (currentOvertakeMinPassDist == null || passDist < currentOvertakeMinPassDist!!) {
+                        currentOvertakeMinPassDist = passDist
                     }
+                }
+                sample.radarVehicleCount?.let { count ->
+                    if (count > prevVehicles) {
+                        if (currentOvertakeMinPassDist != null && currentOvertakeMinPassDist!! < closePassThresholdM) {
+                            closePasses++
+                        }
+                        currentOvertakeMinPassDist = null
+                        prevVehicles = count
+                    }
+                    if (count > maxVehicles) maxVehicles = count
+                }
+                sample.radarLargeVehicleCount?.let { count ->
+                    if (count > maxLargeVehicles) maxLargeVehicles = count
                 }
                 sample.radarApproachSpeedMps?.let { appSpd ->
                     if (appSpd > maxApproachSpeed) maxApproachSpeed = appSpd
@@ -700,6 +709,9 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
                 if (sample.radarThreatCount != null && sample.radarThreatCount > 1) {
                     highThreatCount++
                 }
+            }
+            if (currentOvertakeMinPassDist != null && currentOvertakeMinPassDist!! < closePassThresholdM) {
+                closePasses++
             }
         } catch (e: Exception) {
             Log.w(TAG, "computeRadarTrafficSummaryFromSamples failed for $fileBaseName", e)
@@ -3306,7 +3318,13 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
         withContext(Dispatchers.IO) {
             summariesManager.getWorkoutCursor(id).use { cursor ->
                 if (cursor?.moveToFirst() == true) {
-                    val workout = mapper.fromCursor(cursor)
+                    val rawWorkout = mapper.fromCursor(cursor)
+                    val workout = if (rawWorkout.radarTrafficSummary != null && !rawWorkout.fileBaseName.isNullOrBlank()) {
+                        val fullRadar = getRadarTrafficSummary(rawWorkout.fileBaseName)
+                        if (fullRadar != null) rawWorkout.copy(radarTrafficSummary = fullRadar) else rawWorkout
+                    } else {
+                        rawWorkout
+                    }
                     _initialWorkoutLoaded.postValue(workout)
 
                     _allWorkouts.update { currentList ->

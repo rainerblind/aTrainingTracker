@@ -56,6 +56,7 @@ class RadarWindowAggregator @JvmOverloads constructor(
 
     private var cumulativeVehicleCount: Int = 0
     private var cumulativeLargeVehicleCount: Int = 0
+    private var latchedPassingDistance: Double? = null
 
     // Target tracking for vehicle passing hysteresis and metadata
     private data class TrackedTargetInfo(
@@ -81,6 +82,7 @@ class RadarWindowAggregator @JvmOverloads constructor(
             frameBuffer.clear()
             cumulativeVehicleCount = 0
             cumulativeLargeVehicleCount = 0
+            latchedPassingDistance = null
             activeTargetInfo.clear()
             hasReceivedData = false
         }
@@ -144,6 +146,11 @@ class RadarWindowAggregator @JvmOverloads constructor(
                     if (info.vehicleSizeCategory == VehicleSizeCategory.TRUCK_OR_BUS) {
                         cumulativeLargeVehicleCount++
                     }
+                    info.minPassingLateral?.let { lat ->
+                        if (latchedPassingDistance == null || lat < latchedPassingDistance!!) {
+                            latchedPassingDistance = lat
+                        }
+                    }
                 }
                 activeTargetInfo.remove(id)
             }
@@ -189,12 +196,15 @@ class RadarWindowAggregator @JvmOverloads constructor(
                 }
             }
 
+            val effectivePassingDistance = minPassingDistance ?: latchedPassingDistance
+            latchedPassingDistance = null
+
             return RadarLatchedSnapshot(
                 threatCount = maxThreats,
                 closestDistanceMeters = minDistance,
                 approachSpeedMps = maxSpeed,
                 vehicleCount = cumulativeVehicleCount,
-                passingDistanceMeters = minPassingDistance,
+                passingDistanceMeters = effectivePassingDistance,
                 largeVehicleCount = cumulativeLargeVehicleCount
             )
         }

@@ -475,7 +475,8 @@ object PhotoTrackOverlayComposer {
         workoutData: WorkoutData
     ) = withContext(Dispatchers.Default) {
         val composed = composeOverlay(context, photo, workoutData)
-        val shareSummaryText = RadarTrafficSummaryFormatter.format(workoutData.radarTrafficSummary, context)
+        val radarSummary = workoutData.radarTrafficSummary ?: workoutData.fileBaseName?.let { com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository.getInstance(context).getRadarTrafficSummary(it) }
+        val shareSummaryText = RadarTrafficSummaryFormatter.format(radarSummary, context)
         saveAndShare(context, composed, "workout_photo_${workoutData.id}.png", shareSummaryText)
     }
 }
