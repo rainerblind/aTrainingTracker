@@ -1079,6 +1079,11 @@ class BleReplayServer:
         self.cumulative_crank_revs = 0
         self.last_crank_event_time = 0
 
+        # Maintain RrSynthesizer instance in server so mock mode (--no-ble) tracks HRV metrics
+        self.hr_synthesizer = RrSynthesizer(bpm=135, rmssd=35.0, regime='aerobic') if (RrSynthesizer and self.enable_rr) else None
+        self.current_rmssd = 35.0
+        self.current_a1 = 1.00
+
         self.radar_engine = RadarKinematicsEngine(tick_rate_hz=5.0) if RadarKinematicsEngine else None
         self.on_light_mode_changed: Optional[Callable[[int], None]] = None
 
@@ -1101,7 +1106,17 @@ class BleReplayServer:
         self._radar_timer_thread = None
 
     def start(self):
-        """Starts advertising BLE services over BlueZ D-Bus."""
+        """Starts advertising BLE services over BlueZ D-Bus and launches 5 Hz radar ticker."""
+        # Centralized 5 Hz radar kinematics ticker thread (runs in both BlueZ and mock modes)
+        if self.enable_radar and self.radar_engine and not self._radar_running:
+            self._radar_running = True
+            def radar_worker():
+                while self._radar_running:
+                    time.sleep(0.2)
+                    self.tick_radar(0.2)
+            self._radar_timer_thread = threading.Thread(target=radar_worker, daemon=True)
+            self._radar_timer_thread.start()
+
         if not self.enabled:
             return
         try:
@@ -1176,16 +1191,6 @@ class BleReplayServer:
 
             self.is_advertising = True
 
-            # Start 5 Hz radar ticker if radar active
-            if self.enable_radar and self.radar_engine:
-                self._radar_running = True
-                def radar_worker():
-                    while self._radar_running:
-                        time.sleep(0.2)
-                        self.tick_radar(0.2)
-                self._radar_timer_thread = threading.Thread(target=radar_worker, daemon=True)
-                self._radar_timer_thread.start()
-
             # Start GLib main loop in background thread with dedicated isolated context
             def glib_worker():
                 ctx = GLib.MainContext.new()
@@ -1254,12 +1259,29 @@ class BleReplayServer:
             self.kill_radar()
         return self.is_radar_killed
 
+    def set_radar_light_mode(self, mode: int):
+        if self.radar_engine:
+            self.radar_engine.set_light_mode(mode)
+            self._handle_light_mode_changed(mode)
+
     def set_hrv_mode(self, mode: str):
         self.hrv_regime = mode
+        if self.hr_synthesizer:
+            if mode != 'auto' and RrSynthesizer and mode in RrSynthesizer.REGIMES:
+                self.hr_synthesizer.set_regime(mode)
+                self.current_a1 = RrSynthesizer.REGIMES[mode]['target_a1']
+                self.current_rmssd = self.hr_synthesizer.rmssd
+            elif mode == 'auto':
+                a1, rmssd = compute_auto_hrv_params(self.current_hr)
+                self.current_a1 = a1
+                self.current_rmssd = rmssd
+                self.hr_synthesizer.set_rmssd(rmssd)
         if self.hr_service and self.hr_service.meas_char:
             self.hr_service.meas_char.set_hrv_mode(mode)
 
     def inject_hrv_artifact(self, kind: str):
+        if self.hr_synthesizer:
+            self.hr_synthesizer.inject_artifact(kind)
         if self.hr_service and self.hr_service.meas_char:
             self.hr_service.meas_char.inject_artifact(kind)
 
@@ -1359,6 +1381,22 @@ class BleReplayServer:
         self.current_watts = watts
         self.current_cadence = cadence
         self.current_hr = hr_bpm
+
+        if self.enable_rr and self.hr_synthesizer:
+            if self.hrv_regime == 'auto':
+                a1, rmssd = compute_auto_hrv_params(self.current_hr)
+                self.current_a1 = a1
+                self.current_rmssd = rmssd
+                self.hr_synthesizer.set_bpm(self.current_hr)
+                self.hr_synthesizer.set_rmssd(rmssd)
+                phi = max(-0.5, min(0.9, 1.6 * (a1 - 0.5) - 0.1))
+                self.hr_synthesizer.phi = phi
+            else:
+                self.hr_synthesizer.set_bpm(self.current_hr)
+                self.current_rmssd = self.hr_synthesizer.rmssd
+                reg = getattr(self.hr_synthesizer, 'regime_name', 'aerobic')
+                self.current_a1 = RrSynthesizer.REGIMES.get(reg, {}).get('target_a1', 1.00) if RrSynthesizer else 1.00
+            self.hr_synthesizer.tick_1hz(1000.0)
 
         if cadence > 0:
             revs_per_sec = cadence / 60.0
@@ -2432,7 +2470,6 @@ if HAS_PYQT6:
         def on_timer_tick(self):
             self.tick_counter += 1
             if self.tick_counter % 2 == 0:
-                self.ble.tick_radar(0.2)
                 self._update_radar_ui()
             # Step engine at 1 Hz intervals (or scaled by multiplier)
             if self.engine.status == "PLAYING" and self.tick_counter % 10 == 0:
@@ -2507,10 +2544,14 @@ if HAS_PYQT6:
                 self.btn_radar_loop.setStyleSheet("background-color: #03DAC6; color: #000;" if not active else "")
 
         def _update_hrv_ui(self):
+            rmssd = getattr(self.ble, 'current_rmssd', 35.0)
+            a1 = getattr(self.ble, 'current_a1', 1.00)
             if self.ble.hr_service and self.ble.hr_service.meas_char:
                 ch = self.ble.hr_service.meas_char
-                self.lbl_hrv_rmssd_val.setText(f"{ch.current_rmssd:.1f} ms")
-                self.lbl_hrv_a1_val.setText(f"{ch.current_a1:.2f}")
+                rmssd = ch.current_rmssd
+                a1 = ch.current_a1
+            self.lbl_hrv_rmssd_val.setText(f"{rmssd:.1f} ms")
+            self.lbl_hrv_a1_val.setText(f"{a1:.2f}")
 
         def _update_radar_ui(self):
             if not self.ble.enable_radar or not self.ble.radar_engine:
@@ -2726,7 +2767,6 @@ def run_headless_cli(engine: ReplayEngine, ble: BleReplayServer, gps: AdbGpsInje
 
             if engine.status == "PLAYING":
                 engine.step()
-                ble.tick_radar(1.0)
 
             pt = engine.current_point
             bar_len = 16
@@ -2737,9 +2777,14 @@ def run_headless_cli(engine: ReplayEngine, ble: BleReplayServer, gps: AdbGpsInje
             gps_s = "OFF" if gps.is_killed else "ON"
 
             hrv_str = ""
-            if ble.hr_service and ble.hr_service.meas_char:
-                ch = ble.hr_service.meas_char
-                hrv_str = f" | HRV:{ch.hrv_mode} (a1={ch.current_a1:.2f})"
+            if ble.enable_rr:
+                cur_mode = getattr(ble, 'hrv_regime', 'auto')
+                cur_a1 = getattr(ble, 'current_a1', 1.00)
+                if ble.hr_service and ble.hr_service.meas_char:
+                    ch = ble.hr_service.meas_char
+                    cur_mode = ch.hrv_mode
+                    cur_a1 = ch.current_a1
+                hrv_str = f" | HRV:{cur_mode} (a1={cur_a1:.2f})"
 
             radar_str = ""
             if ble.enable_radar and ble.radar_engine:

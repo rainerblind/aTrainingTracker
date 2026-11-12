@@ -237,146 +237,167 @@ class RadarKinematicsEngine:
     """
     Manages kinematic radar targets at 5 Hz (200 ms interval),
     interactive presets, tail light state, and watchdog starvation.
+    Thread-safe across GUI, CLI, and BlueZ notification worker threads.
     """
     def __init__(self, tick_rate_hz=5.0, is_stvzo=False):
         self.tick_rate_hz = float(tick_rate_hz)
         self.dt = 1.0 / self.tick_rate_hz
         self.is_stvzo = bool(is_stvzo)
-        self.targets = []
+        self._lock = threading.RLock()
+        self._targets = []
         self.light_mode = RadarLightMode.SOLID
         self.starve_ticks_remaining = 0
         self.country_loop_active = False
         self._country_loop_cooldown_ticks = 0
 
+    @property
+    def targets(self):
+        with self._lock:
+            return list(self._targets)
+
+    @targets.setter
+    def targets(self, val):
+        with self._lock:
+            self._targets = list(val)
+
     def is_starving(self):
-        return self.starve_ticks_remaining > 0
+        with self._lock:
+            return self.starve_ticks_remaining > 0
 
     def trigger_watchdog_starvation(self, duration_sec=4.5):
-        self.starve_ticks_remaining = int(math.ceil(duration_sec * self.tick_rate_hz))
-        print(f"[WATCHDOG] Starvation active: Suppressing radar notifications for {duration_sec:.1f}s "
-              f"({self.starve_ticks_remaining} ticks) to trigger client 3500ms timeout...")
+        with self._lock:
+            self.starve_ticks_remaining = int(math.ceil(duration_sec * self.tick_rate_hz))
+            print(f"[WATCHDOG] Starvation active: Suppressing radar notifications for {duration_sec:.1f}s "
+                  f"({self.starve_ticks_remaining} ticks) to trigger client 3500ms timeout...")
 
     def set_light_mode(self, mode_byte):
-        if not RadarLightMode.is_valid(mode_byte):
-            print(f"[LIGHT ERROR] Invalid light mode byte: 0x{mode_byte:02X}")
-            return False
-        if self.is_stvzo and mode_byte in (RadarLightMode.PELOTON, RadarLightMode.NIGHT_FLASH, RadarLightMode.DAY_FLASH):
-            print(f"[LIGHT WARNING] StVZO mode active: Flashing mode {RadarLightMode.name_of(mode_byte)} "
-                  f"restricted -> setting SOLID (0x01)")
-            mode_byte = RadarLightMode.SOLID
-        self.light_mode = mode_byte
-        print(f"[LIGHT] Phone switched Radar Tail Light -> {RadarLightMode.name_of(mode_byte)} (0x{mode_byte:02X})")
-        return True
+        with self._lock:
+            if not RadarLightMode.is_valid(mode_byte):
+                print(f"[LIGHT ERROR] Invalid light mode byte: 0x{mode_byte:02X}")
+                return False
+            if self.is_stvzo and mode_byte in (RadarLightMode.PELOTON, RadarLightMode.NIGHT_FLASH, RadarLightMode.DAY_FLASH):
+                print(f"[LIGHT WARNING] StVZO mode active: Flashing mode {RadarLightMode.name_of(mode_byte)} "
+                      f"restricted -> setting SOLID (0x01)")
+                mode_byte = RadarLightMode.SOLID
+            self.light_mode = mode_byte
+            print(f"[LIGHT] Phone switched Radar Tail Light -> {RadarLightMode.name_of(mode_byte)} (0x{mode_byte:02X})")
+            return True
 
     def spawn_preset(self, key):
         key = key.lower()
-        if key == 'c':
-            # Single car
-            self._upsert_target(RadarTargetState(
-                target_id=1, range_m=140.0, speed_mps=12.0, lateral_m=-1.8,
-                threat_level=ThreatLevel.APPROACHING, size_category=VehicleSizeCategory.CAR,
-                lane_state=LaneState.PASSING_LANE
-            ))
-            print("[TRAFFIC] Spawned Single Car (ID=1, Range=140m, Speed=12m/s, Lateral=-1.8m)")
-        elif key == 'f':
-            # Fast car
-            self._upsert_target(RadarTargetState(
-                target_id=2, range_m=160.0, speed_mps=22.0, lateral_m=-2.0,
-                threat_level=ThreatLevel.FAST_APPROACHING, size_category=VehicleSizeCategory.CAR,
-                lane_state=LaneState.PASSING_LANE
-            ))
-            print("[TRAFFIC] Spawned Fast Car (ID=2, Range=160m, Speed=22m/s, FAST_APPROACHING)")
-        elif key == 't':
-            # Heavy truck/bus
-            self._upsert_target(RadarTargetState(
-                target_id=3, range_m=150.0, speed_mps=15.0, lateral_m=-2.2,
-                threat_level=ThreatLevel.APPROACHING, size_category=VehicleSizeCategory.TRUCK_OR_BUS,
-                lane_state=LaneState.PASSING_LANE
-            ))
-            print("[TRAFFIC] Spawned Truck/Bus (ID=3, Range=150m, Speed=15m/s, TRUCK_OR_BUS)")
-        elif key == 'p':
-            # Close pass (< 1.5m passing distance)
-            self._upsert_target(RadarTargetState(
-                target_id=4, range_m=120.0, speed_mps=14.0, lateral_m=-1.1,
-                threat_level=ThreatLevel.APPROACHING, size_category=VehicleSizeCategory.CAR,
-                lane_state=LaneState.CHANGING_LANE
-            ))
-            print("[TRAFFIC] Spawned Close Pass (<1.5m) (ID=4, Range=120m, Speed=14m/s, Lateral=-1.1m)")
-        elif key == 'm':
-            # 3-car convoy
-            self._upsert_target(RadarTargetState(
-                target_id=11, range_m=100.0, speed_mps=14.0, lateral_m=-1.8,
-                threat_level=ThreatLevel.APPROACHING, size_category=VehicleSizeCategory.CAR,
-                lane_state=LaneState.PASSING_LANE
-            ))
-            self._upsert_target(RadarTargetState(
-                target_id=12, range_m=130.0, speed_mps=14.0, lateral_m=-1.8,
-                threat_level=ThreatLevel.APPROACHING, size_category=VehicleSizeCategory.CAR,
-                lane_state=LaneState.PASSING_LANE
-            ))
-            self._upsert_target(RadarTargetState(
-                target_id=13, range_m=160.0, speed_mps=14.0, lateral_m=-1.8,
-                threat_level=ThreatLevel.APPROACHING, size_category=VehicleSizeCategory.CAR,
-                lane_state=LaneState.PASSING_LANE
-            ))
-            print("[TRAFFIC] Spawned 3-Car Convoy (IDs=11,12,13 at 100m, 130m, 160m)")
-        elif key == 'l':
-            self.country_loop_active = not self.country_loop_active
-            status = "AKTIV" if self.country_loop_active else "DEAKTIVIERT"
-            print(f"[TRAFFIC] Country Loop: {status}")
-        elif key == '0':
-            self.clear_targets()
-            print("[TRAFFIC] All-Clear: Alle Ziele entfernt.")
+        with self._lock:
+            if key == 'c':
+                # Single car
+                self._upsert_target(RadarTargetState(
+                    target_id=1, range_m=140.0, speed_mps=12.0, lateral_m=-1.8,
+                    threat_level=ThreatLevel.APPROACHING, size_category=VehicleSizeCategory.CAR,
+                    lane_state=LaneState.PASSING_LANE
+                ))
+                print("[TRAFFIC] Spawned Single Car (ID=1, Range=140m, Speed=12m/s, Lateral=-1.8m)")
+            elif key == 'f':
+                # Fast car
+                self._upsert_target(RadarTargetState(
+                    target_id=2, range_m=160.0, speed_mps=22.0, lateral_m=-2.0,
+                    threat_level=ThreatLevel.FAST_APPROACHING, size_category=VehicleSizeCategory.CAR,
+                    lane_state=LaneState.PASSING_LANE
+                ))
+                print("[TRAFFIC] Spawned Fast Car (ID=2, Range=160m, Speed=22m/s, FAST_APPROACHING)")
+            elif key == 't':
+                # Heavy truck/bus
+                self._upsert_target(RadarTargetState(
+                    target_id=3, range_m=150.0, speed_mps=15.0, lateral_m=-2.2,
+                    threat_level=ThreatLevel.APPROACHING, size_category=VehicleSizeCategory.TRUCK_OR_BUS,
+                    lane_state=LaneState.PASSING_LANE
+                ))
+                print("[TRAFFIC] Spawned Truck/Bus (ID=3, Range=150m, Speed=15m/s, TRUCK_OR_BUS)")
+            elif key == 'p':
+                # Close pass (< 1.5m passing distance)
+                self._upsert_target(RadarTargetState(
+                    target_id=4, range_m=120.0, speed_mps=14.0, lateral_m=-1.1,
+                    threat_level=ThreatLevel.APPROACHING, size_category=VehicleSizeCategory.CAR,
+                    lane_state=LaneState.CHANGING_LANE
+                ))
+                print("[TRAFFIC] Spawned Close Pass (<1.5m) (ID=4, Range=120m, Speed=14m/s, Lateral=-1.1m)")
+            elif key == 'm':
+                # 3-car convoy
+                self._upsert_target(RadarTargetState(
+                    target_id=11, range_m=100.0, speed_mps=14.0, lateral_m=-1.8,
+                    threat_level=ThreatLevel.APPROACHING, size_category=VehicleSizeCategory.CAR,
+                    lane_state=LaneState.PASSING_LANE
+                ))
+                self._upsert_target(RadarTargetState(
+                    target_id=12, range_m=130.0, speed_mps=14.0, lateral_m=-1.8,
+                    threat_level=ThreatLevel.APPROACHING, size_category=VehicleSizeCategory.CAR,
+                    lane_state=LaneState.PASSING_LANE
+                ))
+                self._upsert_target(RadarTargetState(
+                    target_id=13, range_m=160.0, speed_mps=14.0, lateral_m=-1.8,
+                    threat_level=ThreatLevel.APPROACHING, size_category=VehicleSizeCategory.CAR,
+                    lane_state=LaneState.PASSING_LANE
+                ))
+                print("[TRAFFIC] Spawned 3-Car Convoy (IDs=11,12,13 at 100m, 130m, 160m)")
+            elif key == 'l':
+                self.country_loop_active = not self.country_loop_active
+                status = "AKTIV" if self.country_loop_active else "DEAKTIVIERT"
+                print(f"[TRAFFIC] Country Loop: {status}")
+            elif key == '0':
+                self.clear_targets()
+                print("[TRAFFIC] All-Clear: Alle Ziele entfernt.")
 
     def _upsert_target(self, target):
-        for idx, existing in enumerate(self.targets):
-            if existing.target_id == target.target_id:
-                self.targets[idx] = target
-                return
-        self.targets.append(target)
+        with self._lock:
+            for idx, existing in enumerate(self._targets):
+                if existing.target_id == target.target_id:
+                    self._targets[idx] = target
+                    return
+            self._targets.append(target)
 
     def clear_targets(self):
-        self.targets.clear()
+        with self._lock:
+            self._targets.clear()
 
     def tick(self, dt=None):
         if dt is None:
             dt = self.dt
 
-        # Watchdog starvation check
-        if self.starve_ticks_remaining > 0:
-            self.starve_ticks_remaining -= 1
-            if self.starve_ticks_remaining == 0:
-                print("[WATCHDOG] Starvation ended: Resumed radar threat notifications.")
-            return None
+        with self._lock:
+            ticks = max(1, int(round(dt * self.tick_rate_hz)))
 
-        # Country loop traffic generation
-        if self.country_loop_active:
-            if self._country_loop_cooldown_ticks > 0:
-                self._country_loop_cooldown_ticks -= 1
-            elif len(self.targets) < 3:
-                is_truck = random.random() < 0.25
-                size = VehicleSizeCategory.TRUCK_OR_BUS if is_truck else VehicleSizeCategory.CAR
-                speed = random.uniform(12.0, 20.0)
-                threat = ThreatLevel.FAST_APPROACHING if speed > 18.0 else ThreatLevel.APPROACHING
-                tid = random.randint(20, 99)
-                self._upsert_target(RadarTargetState(
-                    target_id=tid, range_m=random.uniform(130.0, 160.0), speed_mps=speed,
-                    lateral_m=random.uniform(-2.2, -1.6), threat_level=threat,
-                    size_category=size, lane_state=LaneState.PASSING_LANE
-                ))
-                self._country_loop_cooldown_ticks = int(random.uniform(6.0, 12.0) * self.tick_rate_hz)
+            # Watchdog starvation check (properly decremented by elapsed ticks)
+            if self.starve_ticks_remaining > 0:
+                self.starve_ticks_remaining = max(0, self.starve_ticks_remaining - ticks)
+                if self.starve_ticks_remaining == 0:
+                    print("[WATCHDOG] Starvation ended: Resumed radar threat notifications.")
+                return None
 
-        # Update target positions
-        active = []
-        for t in self.targets:
-            t.range_m -= t.speed_mps * dt
-            if t.range_m > 0.0:
-                active.append(t)
-            else:
-                print(f"[TRAFFIC] Target {t.target_id} passed rider (overtake completed, removed)")
+            # Country loop traffic generation
+            if self.country_loop_active:
+                if self._country_loop_cooldown_ticks > 0:
+                    self._country_loop_cooldown_ticks = max(0, self._country_loop_cooldown_ticks - ticks)
+                elif len(self._targets) < 3:
+                    is_truck = random.random() < 0.25
+                    size = VehicleSizeCategory.TRUCK_OR_BUS if is_truck else VehicleSizeCategory.CAR
+                    speed = random.uniform(12.0, 20.0)
+                    threat = ThreatLevel.FAST_APPROACHING if speed > 18.0 else ThreatLevel.APPROACHING
+                    tid = random.randint(20, 99)
+                    self._upsert_target(RadarTargetState(
+                        target_id=tid, range_m=random.uniform(130.0, 160.0), speed_mps=speed,
+                        lateral_m=random.uniform(-2.2, -1.6), threat_level=threat,
+                        size_category=size, lane_state=LaneState.PASSING_LANE
+                    ))
+                    self._country_loop_cooldown_ticks = int(random.uniform(6.0, 12.0) * self.tick_rate_hz)
 
-        self.targets = active
-        return list(self.targets)
+            # Update target positions
+            active = []
+            for t in self._targets:
+                t.range_m -= t.speed_mps * dt
+                if t.range_m > 0.0:
+                    active.append(t)
+                else:
+                    print(f"[TRAFFIC] Target {t.target_id} passed rider (overtake completed, removed)")
+
+            self._targets = active
+            return list(self._targets)
 
 
 # -----------------------------------------------------------------------------

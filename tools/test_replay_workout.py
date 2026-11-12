@@ -556,6 +556,95 @@ class TestPyQt6GuiContracts(unittest.TestCase):
 
         window.close()
 
+    def test_gui_radar_and_hrv_controls(self):
+        sample_path = os.path.join(os.path.dirname(__file__), "sample_workout.tcx")
+        points = TcxParser.parse_file(sample_path)
+        engine = ReplayEngine(points)
+        ble = BleReplayServer(enabled=False, enable_rr=True, enable_radar=True)
+        gps = AdbGpsInjector(enabled=False)
+
+        window = ReplayGuiWindow(sample_path, engine, ble, gps)
+        self.assertIsNotNone(window.btn_toggle_radar)
+        self.assertIsNotNone(window.lbl_status_radar_badge)
+        self.assertIsNotNone(window.lbl_radar_light_badge)
+        self.assertIsNotNone(window.lbl_radar_status)
+        self.assertIsNotNone(window.lbl_radar_dist)
+        self.assertIsNotNone(window.combo_hrv_regime)
+        self.assertIsNotNone(window.lbl_hrv_rmssd_val)
+        self.assertIsNotNone(window.lbl_hrv_a1_val)
+
+        # 1. Radar kill and revive toggle
+        self.assertEqual(window.lbl_status_radar_badge.text(), "● Radar Active")
+        self.assertEqual(window.btn_toggle_radar.text(), "Kill Radar")
+        window.btn_toggle_radar.click()
+        self.assertTrue(ble.is_radar_killed)
+        self.assertEqual(window.lbl_status_radar_badge.text(), "■ Radar Killed")
+        self.assertEqual(window.btn_toggle_radar.text(), "Revive Radar")
+        window.btn_toggle_radar.click()
+        self.assertFalse(ble.is_radar_killed)
+        self.assertEqual(window.lbl_status_radar_badge.text(), "● Radar Active")
+
+        # 2. HRV regime combo selection & badge updates in mock mode
+        window.combo_hrv_regime.setCurrentIndex(1)  # Aerobic
+        self.assertEqual(ble.hrv_regime, 'aerobic')
+        self.assertIn("1.00", window.lbl_hrv_a1_val.text())
+
+        window.combo_hrv_regime.setCurrentIndex(2)  # Threshold
+        self.assertEqual(ble.hrv_regime, 'threshold')
+        self.assertIn("0.70", window.lbl_hrv_a1_val.text())
+
+        window.combo_hrv_regime.setCurrentIndex(3)  # Anaerobic
+        self.assertEqual(ble.hrv_regime, 'anaerobic')
+        self.assertIn("0.45", window.lbl_hrv_a1_val.text())
+
+        window.combo_hrv_regime.setCurrentIndex(0)  # Auto
+        self.assertEqual(ble.hrv_regime, 'auto')
+
+        # 3. Artifact buttons click
+        window.btn_art_ectopic.click()
+        self.assertEqual(len(ble.hr_synthesizer.artifact_queue), 2)
+        window.btn_art_missed.click()
+        self.assertEqual(len(ble.hr_synthesizer.artifact_queue), 3)
+        window.btn_art_gap.click()
+        self.assertEqual(ble.hr_synthesizer.gap_ticks_remaining, 3)
+
+        # 4. Traffic preset buttons
+        self.assertEqual(len(ble.radar_engine.targets), 0)
+        window.btn_radar_car.click()
+        self.assertEqual(len(ble.radar_engine.targets), 1)
+        self.assertEqual(ble.radar_engine.targets[0].target_id, 1)
+
+        window.btn_radar_truck.click()
+        self.assertEqual(len(ble.radar_engine.targets), 2)
+
+        window.btn_radar_close.click()
+        self.assertEqual(len(ble.radar_engine.targets), 3)
+
+        # Verify radar UI reflects targets
+        window._update_radar_ui()
+        self.assertIn("VEHICLES APPROACHING", window.lbl_radar_status.text())
+        self.assertNotEqual(window.lbl_radar_dist.text(), "-- m")
+
+        # Clear targets
+        window.btn_radar_clear.click()
+        self.assertEqual(len(ble.radar_engine.targets), 0)
+        window._update_radar_ui()
+        self.assertIn("ALL CLEAR", window.lbl_radar_status.text())
+
+        # 5. Radar light mode update
+        ble.set_radar_light_mode(RadarLightMode.NIGHT_FLASH)
+        self.assertIn("NIGHT_FLASH", window.lbl_radar_light_badge.text())
+
+        # 6. Mock telemetry dispatch updates HRV labels
+        pt = TcxPoint(time_iso="2026-11-12T00:00:10Z", time_sec=10.0, lat=48.0, lon=11.0, ele=500.0, dist=100.0, hr=165, watts=280, cadence=90)
+        window.on_engine_update(pt)
+        self.assertEqual(ble.current_hr, 165)
+        self.assertAlmostEqual(ble.current_a1, 0.50, places=2)
+        self.assertIn("0.50", window.lbl_hrv_a1_val.text())
+        self.assertIn("15.0 ms", window.lbl_hrv_rmssd_val.text())
+
+        window.close()
+
 
 class TestAdbGpsInjector(unittest.TestCase):
     def test_build_inject_cmd_android14_syntax(self):
