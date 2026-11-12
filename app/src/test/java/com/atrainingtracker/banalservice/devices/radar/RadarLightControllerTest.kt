@@ -370,6 +370,27 @@ class RadarLightControllerTest {
     }
 
     @Test
+    fun testRadarLightController_workoutStoppedFromPausedState_turnsOffTailLight() {
+        val mockDevice = mockk<BTLERadarDevice>(relaxed = true)
+        every { mockDevice.setLightMode(any()) } returns true
+        RadarLightController.registerRadarDevice(mockDevice, lightSupported = true)
+        RadarLightController.updateCachedPreferences(autoControl = true, defaultMode = RadarLightMode.DAY_FLASH)
+
+        val mockContext = mockk<Context>(relaxed = true)
+        RadarLightController.onWorkoutStarted(mockContext, isCycling = true)
+        assertEquals(RadarLightMode.DAY_FLASH, RadarLightController.currentMode.value)
+
+        // Workout paused: tail light must NOT turn off (remains DAY_FLASH for road safety)
+        RadarLightController.onWorkoutPaused()
+        assertEquals("Pausing workout must preserve tail light mode", RadarLightMode.DAY_FLASH, RadarLightController.currentMode.value)
+
+        // Workout stopped from paused state (e.g. TrainingApplication.stopTracking when !TrackerService.isRunning)
+        RadarLightController.onWorkoutStopped(mockContext)
+        assertEquals("Stopping workout from paused state must turn off tail light", RadarLightMode.OFF, RadarLightController.currentMode.value)
+        verify { mockDevice.setLightMode(RadarLightMode.OFF) }
+    }
+
+    @Test
     fun testRadarLightController_onWorkoutResumed_preservesNonCyclingSessionState() {
         val mockSensorManager = mockk<SensorManager>(relaxed = true)
         val mockLinAcc = mockk<Sensor>(relaxed = true)

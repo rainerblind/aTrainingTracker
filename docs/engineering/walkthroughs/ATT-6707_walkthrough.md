@@ -103,3 +103,10 @@ PASS: Requirement Archaeology & Chesterton's Fence Audit successfully verified w
 2. **Living Documentation Synchronized**: Status for `REQ-CON-031` and `TST-CON-031` verified with master index tables synchronized via `--sync-indexes`.
 3. **Subtask Governance**: Stage 4 subtask `ATT-6969` approved with `PASS`. Stage 5 submitted via `submit-stage ATT-6707 5`.
 4. **Parent Ticket Final Review Handover**: Parent ticket `ATT-6707` ready for Gate 5 sign-off and advancement to `Final Review (Human)` assigned to Rainer Blind. Single squashed commit on `sprint/2026-46.2` under `/tmp/att_build_merge.lock`.
+
+---
+
+## 6. Cold Carbon Review (Stage 6) Defect Resolution & Healing
+1. **Radar Tail Light Teardown on Stop From Paused State**:
+   - In `TrainingApplication.java` (`stopTracking()`), invoked `RadarLightController.onWorkoutStopped(this)` when `!TrackerService.isRunning()`, ensuring that stopping a workout from the paused state immediately extinguishes the radar tail light and unbinds peripherals.
+   - Added `testRadarLightController_workoutStoppedFromPausedState_turnsOffTailLight` in `RadarLightControllerTest.kt`, asserting that pausing preserves the active tail light mode, and stopping from the paused state turns off the tail light and dispatches `RadarLightMode.OFF`.
