@@ -204,7 +204,7 @@ class TcxCourseParserTest {
     }
 
     /**
-     * TST-MAP-055.3: Verifies that TcxCourseParser filters out position-less trackpoints
+     * TST-MAP-070.3: Verifies that TcxCourseParser filters out position-less trackpoints
      * to protect route polyline projection.
      */
     @Test

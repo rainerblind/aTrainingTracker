@@ -150,7 +150,7 @@ class PowerZoneDistributionCalculatorTest {
     }
 
     /**
-     * TST-MAP-055.5: Verifies that 0 W coasting samples are categorized into Power Zone 1 (Active Recovery)
+     * TST-MAP-070.5: Verifies that 0 W coasting samples are categorized into Power Zone 1 (Active Recovery)
      * when positive power samples exist, while all-zero power streams return null.
      */
     @Test

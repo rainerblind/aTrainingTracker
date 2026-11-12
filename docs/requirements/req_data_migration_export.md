@@ -727,7 +727,7 @@
 - **Implementation**: `DeviceManager.java`, `DevicesDatabaseManager.java`
 - **Rationale**: The `DeviceManager` SHALL ensure that all detectable internal sensors (e.g., Pressure Sensor) are registered in the database *prior* to any pairing checks or device instantiations within its constructor. This guarantees that internal hardware always has a valid database identity and can be correctly auditable in the UI.
 
-### REQ-MIG-018: Sparse Data Import [Verified]
+### REQ-MIG-051: Sparse Data Import [Verified]
 - **Tests**: `TST-MIG-014`
 - **Implementation**: `LegacyImportEngine.kt`, `WorkoutSamplesDatabaseManager.java`
 - **Rationale**: The TCX import engine SHALL dynamically detect available sensors and only create database columns and summary metrics for telemetry actually present in the source file, preventing the population of zero-filled streams for missing data.
@@ -2009,15 +2009,14 @@
 
 **Invariants**: Facade API backward compatibility, Single Source of Truth (Rule 36), database mapping symmetry (Rule 20), and 100% clean-room test pass rate MUST NOT be broken.
 
-### REQ-DAT-001: Deterministic Resource Management via Try-With-Resources and Bounds Checking on SQLite Cursors Across Legacy Database Managers [Verified]
-- **Tests**: `ExportStatusDatabaseManager.java`, `DevicesDatabaseManager.java`, `SportTypeDatabaseManager.java`, `TrackingViewsDatabaseManager.java`, `PebbleDatabaseManager.java`, `BaseFileWriter.java`
-- **Implementation**: Deterministic resource management via try-with-resources and bounds checking on SQLite cursors across legacy database managers.
+### REQ-DAT-043: Deterministic Resource Management via Try-With-Resources and Bounds Checking on SQLite Cursors Across Legacy Database Managers [Verified]
+- **Tests**: `TST-DAT-039` | **Implementation**: `ExportStatusDatabaseManager.java`, `DevicesDatabaseManager.java`, `SportTypeDatabaseManager.java`, `TrackingViewsDatabaseManager.java`, `PebbleDatabaseManager.java`, `BaseFileWriter.java`
 - **Rationale**: The system SHALL guarantee deterministic resource cleanup and zero cursor leaks by enclosing all internally-consumed `Cursor` instances in `try-with-resources` (`AutoCloseable`) blocks across all Java database managers, database helpers, and file exporters, AND SHALL guarantee crash immunity against `CursorIndexOutOfBoundsException` by validating cursor navigation before accessing column data (ATT-3550, parent epic ATT-431):
-1. *Try-With-Resources Allocation (`REQ-DAT-001.1`)*:
+1. *Try-With-Resources Allocation (`REQ-DAT-043.1`)*:
 • All local queries (`db.query(...)`, `db.rawQuery(...)`) in `ExportStatusDatabaseManager`, `DevicesDatabaseManager`, `SportTypeDatabaseManager`, `TrackingViewsDatabaseManager`, `SegmentsDatabaseManager`, `WorkoutSamplesDatabaseManager`, `PebbleDatabaseManager`, `EquipmentDbHelper`, `ActiveDevicesDbHelper`, `ExportManager`, `BaseFileWriter`, and `GPXFileWriter` SHALL be wrapped in `try (Cursor cursor = ...)`.
 • Trailing manual `cursor.close()` calls on try-with-resources cursors SHALL be eliminated.
 • Public/protected factory/provider methods returning an open `Cursor` to external components (e.g. `getCursorForAllDevices()`, `getDeviceCursor(long)`) SHALL NOT close the cursor internally, but callers consuming them within internal methods SHALL use try-with-resources.
-2. *Comprehensive Navigation Safety & Canonical Sentinel Mapping (`REQ-DAT-001.2`)*:
+2. *Comprehensive Navigation Safety & Canonical Sentinel Mapping (`REQ-DAT-043.2`)*:
 • All cursor navigation operations (`cursor.moveToFirst()`, `cursor.moveToLast()`, and iteration loops `while (cursor.moveToNext())`) SHALL be conditionally validated before reading column indices.
 • If a query yields 0 rows (empty result set), query methods SHALL return deterministic, type-specific canonical empty-state sentinels:
 - Collection and List types (`List<T>`, `Set<T>`): SHALL return empty collection (`Collections.emptyList()`, `Collections.emptySet()`, or empty `new ArrayList<>()`).
@@ -2026,12 +2025,12 @@
 - Numeric counts and scalar metrics (`int`, `double`): SHALL return `0` / `0.0`.
 - Boolean state flags: SHALL return `false`.
 • Zero `CursorIndexOutOfBoundsException` or `NullPointerException` crashes SHALL occur on empty or closed cursor states.
-3. *Static Architectural Guard & Whitelist-Based CI/CD Contract (`REQ-DAT-001.3`)*:
+3. *Static Architectural Guard & Whitelist-Based CI/CD Contract (`REQ-DAT-043.3`)*:
 • The codebase SHALL enforce try-with-resources and cursor safety via an automated JUnit architecture audit test (`TryWithResourcesCursorAuditTest.kt`) executed as part of `./gradlew testDebugUnitTest`, verifying that all local cursor allocations in Java database managers use try-with-resources.
 • The static audit test and standalone CLI linter `tools/lint_cursor_safety.py` SHALL utilize an explicit whitelist/method signature detection for provider methods returning `Cursor` (`public/protected Cursor get...`), preventing false positives on intentional cursor factory methods.
 
 **Requirement Archaeology & Chesterton's Fence Audit**:
-1. *Original Requirement ID & Target*: Net-new requirement `REQ-DAT-001`. Fixes resource leak and empty cursor crash vectors in ATT-3550.
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-DAT-043` (formerly `REQ-DAT-001`, renumbered in ATT-6123 to resolve identifier collision). Fixes resource leak and empty cursor crash vectors in ATT-3550.
 2. *Historical Origin & Commit Trace*: Sprint 2026-42.4 (`ATT-3550`). Legacy code was written prior to Android API 19 try-with-resources support, relying on manual cursor closing and assuming non-empty query results.
 3. *Root Reason for Existing Formulation*: Unchecked cursor navigation caused `CursorIndexOutOfBoundsException` when rows were missing, and unshielded cursors leaked on runtime exceptions.
 4. *Preservation of Core Invariants*: Database schemas, table columns, query filters, and return values remain 100% backward compatible; cursors returning to external callers remain open.
@@ -2083,23 +2082,22 @@
 
 **Invariants**: Exact state restoration parity, zero cursor leaks, zero out-of-bounds crashes, 100% clean-room test pass rate.
 
-### REQ-DAT-026: Authoritative Cursor Mappers for Workout Cluster Engine and Equipment Data Provider Architecture [Verified]
-- **Tests**: `WorkoutClusterEngine.kt`, `EquipmentDataProvider.kt`, `WorkoutClusterRepository.kt`, `WorkoutClusterDatabaseManager.kt`, `WorkoutClusterMapperTest.kt`
-- **Implementation**: Authoritative cursor mappers for WorkoutClusterEngine and EquipmentDataProvider architecture (Rule 20, Rule 36).
+### REQ-DAT-044: Authoritative Cursor Mappers for Workout Cluster Engine and Equipment Data Provider Architecture [Verified]
+- **Tests**: `TST-DAT-040` | **Implementation**: `WorkoutClusterEngine.kt`, `EquipmentDataProvider.kt`, `WorkoutClusterRepository.kt`, `WorkoutClusterDatabaseManager.kt`, `WorkoutClusterMapperTest.kt`
 - **Rationale**: The system SHALL eliminate manual inline cursor column extractions across workout clustering and equipment data provider layers by introducing typed `fromCursor` DTO mappers (`WorkoutBoundsDto`, `ClusterWorkoutCandidateDto`, `WorkoutEquipmentDto`) and centralizing batch key extraction in `WorkoutClusterDatabaseManager`, enforcing Rule 20 (Database & DTO Mapping Symmetry) and Rule 36 (Single Source of Truth & DRY) (ATT-3577, complementing `REQ-DAT-025`):
-1. *Workout Bounds DTO Mapper (`WorkoutBoundsDto`)*:
+1. *Workout Bounds DTO Mapper (`WorkoutBoundsDto`, `REQ-DAT-044.1`)*:
 • The system SHALL define `WorkoutBoundsDto(val minLat: Double?, val minLng: Double?, val maxLat: Double?, val maxLng: Double?)` with `val hasPoints: Boolean get() = minLat != null && minLng != null && maxLat != null && maxLng != null`.
 • `WorkoutBoundsDto.companion.fromCursor(cursor: Cursor): WorkoutBoundsDto` SHALL extract `BOUND_MIN_LAT`, `BOUND_MIN_LNG`, `BOUND_MAX_LAT`, `BOUND_MAX_LNG` via `cursor.getColumnIndexOrThrow(...)` and `cursor.isNull(...)`, preserving null safety.
 • `WorkoutClusterEngine.recalculateClusterAnchors` SHALL delegate cursor row extraction strictly to `WorkoutBoundsDto.fromCursor(c)`, completely eliminating direct `getColumnIndex` / `getColumnIndexOrThrow` calls.
-2. *Cluster Workout Candidate DTO Mapper (`ClusterWorkoutCandidateDto`)*:
+2. *Cluster Workout Candidate DTO Mapper (`ClusterWorkoutCandidateDto`, `REQ-DAT-044.2`)*:
 • The system SHALL define `ClusterWorkoutCandidateDto(val workoutId: Long, val workoutName: String?, val fileBaseName: String?, val sportId: Long, val distance: Double)`.
 • `ClusterWorkoutCandidateDto.companion.fromCursor(cursor: Cursor): ClusterWorkoutCandidateDto` SHALL extract `C_ID`, `WORKOUT_NAME`, `FILE_BASE_NAME`, `SPORT_ID`, `DISTANCE_TOTAL_m` via `cursor.getColumnIndexOrThrow(...)`.
 • `WorkoutClusterEngine.clusterExistingWorkouts` SHALL delegate candidate extraction strictly to `ClusterWorkoutCandidateDto.fromCursor(c)`, completely eliminating direct `getColumnIndex` / `getColumnIndexOrThrow` calls.
-3. *Workout Equipment DTO Mapper (`WorkoutEquipmentDto`)*:
+3. *Workout Equipment DTO Mapper (`WorkoutEquipmentDto`, `REQ-DAT-044.3`)*:
 • The system SHALL define `WorkoutEquipmentDto(val sportId: Long, val equipmentId: Long)`.
 • `WorkoutEquipmentDto.companion.fromCursor(cursor: Cursor): WorkoutEquipmentDto` SHALL extract `SPORT_ID` and `EQUIPMENT_ID` via `cursor.getColumnIndexOrThrow(...)`.
 • `EquipmentDataProvider.getEquipmentData` SHALL delegate cursor reading strictly to `WorkoutEquipmentDto.fromCursor(cursor)`, completely eliminating direct `getColumnIndex` / `getColumnIndexOrThrow` calls while preserving `equipmentId > 0` short-circuit logic (`REQ-STB-005`).
-4. *Clean Architecture Centralization of Batch Key Extraction*:
+4. *Clean Architecture Centralization of Batch Key Extraction (`REQ-DAT-044.4`)*:
 • `WorkoutClusterDatabaseManager` SHALL declare and implement `WorkoutBatchKey` and `fromCursorBatchKeys(cursor: Cursor): WorkoutBatchKeys`.
 • `WorkoutClusterRepository` SHALL maintain typealiases and delegate `fromCursorBatchKeys` to `WorkoutClusterDatabaseManager.fromCursorBatchKeys(cursor)`.
 • `WorkoutClusterEngine.kt`, `WorkoutClusterRepository.kt`, and `EquipmentDataProvider.kt` SHALL contain strictly **0 occurrences** of `getColumnIndex` and `getColumnIndexOrThrow`.
@@ -2109,7 +2107,7 @@
 • Cursor lifecycle ownership (mappers do not advance, reset, or close cursors), spatial bounds calculation, cluster matching heuristics, equipment boundary guards, and 100% full-suite unit test pass rate MUST NOT be broken.
 
 **Requirement Archaeology & Chesterton's Fence Audit**:
-1. *Original Requirement ID & Target*: Complements `REQ-DAT-025` (*Authoritative Database Cursor Row and Batch Mappers for Route and Cluster Repositories*). Formally tracked as `REQ-DAT-026`. Targets `WorkoutClusterEngine.kt`, `EquipmentDataProvider.kt`, `WorkoutClusterRepository.kt`, `WorkoutClusterDatabaseManager.kt`, and `WorkoutClusterMapperTest.kt`.
+1. *Original Requirement ID & Target*: Complements `REQ-DAT-025` (*Authoritative Database Cursor Row and Batch Mappers for Route and Cluster Repositories*). Formally tracked as `REQ-DAT-044` (formerly `REQ-DAT-026`, renumbered in ATT-6123 to resolve identifier collision). Targets `WorkoutClusterEngine.kt`, `EquipmentDataProvider.kt`, `WorkoutClusterRepository.kt`, `WorkoutClusterDatabaseManager.kt`, and `WorkoutClusterMapperTest.kt`.
 2. *Historical Origin & Commit Trace*: Sprint 2026-42.3, commit `776d3fc0` implemented `REQ-DAT-025` for `RoutesDatabaseManager.kt` and `WorkoutClusterRepository.kt`, but left `WorkoutClusterEngine.kt` and `EquipmentDataProvider.kt` with manual cursor extraction blocks and placed mapper helpers directly inside `WorkoutClusterRepository.kt`.
 3. *Root Reason for Existing Formulation*: ATT-3366 focused strictly on repository classes, deferring engine and UI provider mapper extraction.
 4. *Preservation of Core Invariants*: Bounding coordinate null-safety, cluster matching distance threshold, equipment boundary short-circuiting, cursor lifecycle management, and 100% unit test pass rate strictly preserved.

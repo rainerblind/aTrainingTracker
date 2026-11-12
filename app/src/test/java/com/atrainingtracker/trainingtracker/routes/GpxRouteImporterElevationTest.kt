@@ -292,7 +292,7 @@ class GpxRouteImporterElevationTest {
     }
 
     /**
-     * TST-MAP-055.2: Verifies that calculateElevationGain filters sub-2.0m elevation noise
+     * TST-MAP-070.2: Verifies that calculateElevationGain filters sub-2.0m elevation noise
      * fluctuations and only accumulates deltas >= 2.0m.
      */
     @Test
@@ -336,7 +336,7 @@ class GpxRouteImporterElevationTest {
     }
 
     /**
-     * TST-MAP-055.2: Verifies that transient DEM batch failure (ServerError) does not terminate
+     * TST-MAP-070.2: Verifies that transient DEM batch failure (ServerError) does not terminate
      * enrichment, continuing to subsequent batches.
      */
     @Test

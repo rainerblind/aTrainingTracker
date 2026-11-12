@@ -2,7 +2,7 @@
 """
 tools/lint_cursor_safety.py
 
-Static architecture guard enforcing REQ-DAT-001 / TST-DAT-001:
+Static architecture guard enforcing REQ-DAT-043 / TST-DAT-039:
 Ensures all SQLite queries across legacy Java database managers use try-with-resources,
 prohibits chained calls (.query(...).moveToFirst()), enforces @CursorProvider contracts,
 and verifies that any @SuppressCursorAudit annotations have not expired.
@@ -199,7 +199,7 @@ if __name__ == "__main__":
     project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
     violations = run_audit(project_root)
     if violations:
-        print(f"FAILED: Found {len(violations)} cursor safety violations violating REQ-DAT-001:")
+        print(f"FAILED: Found {len(violations)} cursor safety violations violating REQ-DAT-043:")
         for v in violations:
             print(f"  - {v}")
         sys.exit(1)

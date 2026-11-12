@@ -932,30 +932,30 @@
   6. *Clean-Room Full Suite Regression Execution (`TST-NAV-056.6`)*:
   • Run targeted caller unit tests and `./gradlew testDebugUnitTest` verifying 100% pass rate.
 
-### TST-MAP-055: **Climb Detection Performance, Route/TCX Import Fidelity & Power Calibration Verification Suite** [Verified]
+### TST-MAP-070: **Climb Detection Performance, Route/TCX Import Fidelity & Power Calibration Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-MAP-055`, `REQ-MAP-027`, `REQ-MAP-025`, `REQ-EXP-001`, `REQ-UI-370`
 - **Component**: **Climb Detection Performance, Route/TCX Import Fidelity & Power Calibration Verification Suite**
 - **Jira**: ``ATT-4033``
 - **Test Description**:
-  1. *Climb Detector O(N) Advancement & Steep Embedded Climb Unit Test (`TST-MAP-055.1`, `ClimbDetectorTest.kt`)*:
+  1. *Climb Detector O(N) Advancement & Steep Embedded Climb Unit Test (`TST-MAP-070.1`, `ClimbDetectorTest.kt`)*:
   • Verify candidate search advances scanning index past non-viable bumps via `maxOf(i + 1, peakIdx)` in $O(N)$ time on a 10,000-point route in $\le 100\text{ ms}$.
   • Verify detection of steep climb sections embedded in long gentle ascents before summit dilution.
   • Verify climb scoring ($\text{Score} = \text{length} \times \text{gradient}$) and category thresholds (`HC`, `CAT_1`..`CAT_4`) match `REQ-MAP-027` exactly.
-  2. *GPX Elevation Gain Hysteresis & Resilient DEM Batch Enrichment Unit Test (`TST-MAP-055.2`, `GpxRouteImporterTest.kt`)*:
+  2. *GPX Elevation Gain Hysteresis & Resilient DEM Batch Enrichment Unit Test (`TST-MAP-070.2`, `GpxRouteImporterTest.kt`)*:
   • Verify `calculateElevationGain` filters sub-2.0m elevation noise fluctuations and only accumulates deltas $\ge 2.0\text{ m}$.
   • Verify DEM batch enrichment logs warning and continues subsequent batches on transient batch failure rather than breaking the loop.
-  3. *TCX Decimal Numeric Rounding & Position-less Trackpoint Parsing Unit Test (`TST-MAP-055.3`, `TcxCourseParserTest.kt`, `TcxWorkoutParserTest.kt`)*:
+  3. *TCX Decimal Numeric Rounding & Position-less Trackpoint Parsing Unit Test (`TST-MAP-070.3`, `TcxCourseParserTest.kt`, `TcxWorkoutParserTest.kt`)*:
   • Verify `<Watts>` and `<Cadence>` with decimal strings round to nearest integer via `toDoubleOrNull()?.roundToInt()`.
   • Verify `TcxWorkoutParser` retains indoor trackpoints lacking `<Position>` (nullable `lat`/`lng`), preserving heart rate, power, and cadence.
   • Verify `TcxCourseParser` filters out position-less trackpoints for route polyline projection.
-  4. *Interval-Aware Normalized Power & Work-kJ Cleanup Unit Test (`TST-MAP-055.4`, `PowerPhysiologyCalculatorTest.kt`)*:
+  4. *Interval-Aware Normalized Power & Work-kJ Cleanup Unit Test (`TST-MAP-070.4`, `PowerPhysiologyCalculatorTest.kt`)*:
   • Verify `calculateNormalizedPower` scales rolling window dynamically: `maxOf(1, (30.0 / sampleIntervalSec).roundToInt())`.
   • Verify default `sampleIntervalSec = 1.0` preserves exact bit-parity with existing NP/TSS test suites.
   • Verify redundant work-kJ dead code branch is cleanly excised.
-  5. *Power Zone 1 Coasting Inclusion & Zero-Power Null Guard Unit Test (`TST-MAP-055.5`, `PowerZoneDistributionCalculatorTest.kt`, `WorkoutRepositoryTest.kt`)*:
+  5. *Power Zone 1 Coasting Inclusion & Zero-Power Null Guard Unit Test (`TST-MAP-070.5`, `PowerZoneDistributionCalculatorTest.kt`, `WorkoutRepositoryTest.kt`)*:
   • Verify 0 W coasting samples are categorized into Power Zone 1 (Active Recovery) when `samples.any { it.value > 0 }`.
   • Verify `null` is returned when all power samples are 0 W or absent, preserving parity with `PowerZoneDistributionCalculatorTest`.
-  6. *Clean-Room Full Suite Regression Execution (`TST-MAP-055.6`)*:
+  6. *Clean-Room Full Suite Regression Execution (`TST-MAP-070.6`)*:
   • Execute `./gradlew testDebugUnitTest` verifying 100% pass rate across the full project test suite.
 
 ### TST-MAP-058: **Line-Density PolylineHeatmapTileProvider, Web Mercator Projection & Sequential Blue Color LUT Verification Suite** [Verified]

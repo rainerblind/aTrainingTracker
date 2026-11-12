@@ -1927,18 +1927,18 @@
 ### TST-PRO-066: **Living Documentation Unique Requirement & Test Identifier Governance Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-PRO-066`
 - **Component**: `tools/verify_requirement_governance.py`, `tools/test_verify_requirement_governance.py`
-- **Jira**: `ATT-6120`
+- **Jira**: `ATT-6120`, `ATT-6123`
 - **Test Description**:
   1. *Duplicate Heading ID Detection & Detailed Reporting (`TST-PRO-066.1`, tools/test_verify_requirement_governance.py)*:
   • Create synthetic requirements and test shards in a temporary directory containing duplicated IDs.
   • Verify `verify_unique_ids()` detects each duplicated ID and formats error diagnostics reporting the exact identifier, filename, and line numbers of all occurrences.
   2. *Legacy Duplicate Baseline Tolerance & New Duplicate Rejection (`TST-PRO-066.2`, tools/test_verify_requirement_governance.py)*:
-  • Verify that duplicate IDs present in `LEGACY_DUPLICATE_IDS` produce warnings but return `success = True` in standard verification mode.
-  • Verify that adding any single new duplicate outside the baseline causes `verify_unique_ids()` to return `success = False` and triggers exit code 1.
+  • Verify that duplicate IDs present in `legacy_allowlist` produce warnings but return `success = True` in standard verification mode.
+  • Verify that adding any single new duplicate outside the allowlist causes `verify_unique_ids()` to return `success = False` and triggers exit code 1.
   3. *Strict Uniqueness Enforcement Option (`TST-PRO-066.3`, tools/test_verify_requirement_governance.py)*:
-  • Verify that when `fail_on_duplicates=True` (or CLI `--enforce-unique`), even legacy duplicates trigger `success = False` and exit code 1.
+  • Verify that when `fail_on_duplicates=True` (or CLI `--enforce-unique`), duplicates trigger `success = False` and exit code 1.
   4. *Clean Repository Governance Parity (`TST-PRO-066.4`, tools/test_verify_requirement_governance.py)*:
-  • Verify that running `verify_unique_ids()` against the authentic repository passes cleanly under standard mode without raising errors.
+  • Verify that running `verify_unique_ids()` and `verify_unique_ids(fail_on_duplicates=True)` against the authentic repository passes cleanly with 0 duplicates and zero warnings.
 
 ### TST-PRO-067: **JUnit Test Results Archival & Evidence Integrity Contract Test Suite** [Verified]
 - **Requirement(s)**: `REQ-PRO-067`

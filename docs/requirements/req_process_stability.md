@@ -3269,21 +3269,20 @@ The workflow SHALL mandate that:
      • When running in standard verification mode, known legacy duplicates SHALL emit warning diagnostics without failing the process. Any net-new duplicate (an identifier collision not present in the legacy allowlist) SHALL immediately fail verification with exit code 1.
   3. *Strict Uniqueness Enforcement Flag (`REQ-PRO-066.3`)*:
      • `tools/verify_requirement_governance.py` SHALL support a command-line flag (`--enforce-unique` / `--fail-on-duplicates`) that activates strict zero-tolerance mode, causing verification to fail with exit code 1 whenever any duplicate identifier (including legacy duplicates) is detected.
+  4. *Remediation of Legacy Duplicate Identifiers (`REQ-PRO-066.4`)*:
+     • In ATT-6123, all 11 legacy duplicate heading identifiers SHALL be renumbered to unique sequential IDs (`REQ-DAT-043`, `REQ-DAT-044`, `REQ-MIG-051`, `REQ-UI-518`, `REQ-UI-519`, `REQ-UI-520`, `TST-DAT-039`, `TST-DAT-040`, `TST-MAP-070`, `TST-MIG-049`, `TST-UI-518`) with all test citations, code tags, and tooling synchronized, and `LEGACY_DUPLICATE_IDS` SHALL be emptied to enforce strict zero tolerance globally.
 - **Requirement Archaeology & Chesterton's Fence Audit**:
-  1. *Original Requirement ID & Target*: Net-new requirement `REQ-PRO-066` (`REQ-PRO-066.1`–`REQ-PRO-066.3`). Targets `tools/verify_requirement_governance.py`.
-  2. *Historical Origin & Commit Trace*: Sprint 2026-46.4 via ticket `ATT-6120` under Epic `ATT-6119` (ASPICE CL2 – Evidence Integrity & Bidirectional Traceability).
+  1. *Original Requirement ID & Target*: Net-new requirement `REQ-PRO-066` (`REQ-PRO-066.1`–`REQ-PRO-066.4`). Targets `tools/verify_requirement_governance.py`.
+  2. *Historical Origin & Commit Trace*: Sprint 2026-46.4 via ticket `ATT-6120` and `ATT-6123` under Epic `ATT-6119` (ASPICE CL2 – Evidence Integrity & Bidirectional Traceability).
   3. *Root Reason for Existing Formulation*: ASPICE 4.0 assessment of 2026-11-08 identified 11 undetected duplicate IDs (SWE.1 BP5, SWE.6 BP4).
   4. *Preservation of Core Invariants*: Existing master table parity, directory structure checks, Composable islands, repository encapsulation, and Chesterton's Fence archaeology checks remain untouched; pure Python 3 standard library; zero production Android runtime code changes.
 - **Acceptance Criteria (Given-When-Then)**:
-  • *Given* two heading definitions in `docs/requirements/*.md` or `docs/tests/*.md` share an ID that is not in the legacy baseline,
+  • *Given* two heading definitions in `docs/requirements/*.md` or `docs/tests/*.md` share an ID,
   • *When* `verify_requirement_governance.py` runs,
   • *Then* it outputs an error listing the duplicate ID with all offending filenames and line numbers, and exits with code 1.
-  • *Given* all headings have unique IDs, or duplicate IDs match only the known legacy baseline,
-  • *When* `verify_requirement_governance.py` runs in standard mode,
-  • *Then* it exits with code 0 (passing).
-  • *Given* the 11 legacy duplicates exist and `--enforce-unique` is supplied,
-  • *When* `verify_requirement_governance.py --enforce-unique` runs,
-  • *Then* it lists all 11 duplicates with file and line numbers and exits with code 1.
+  • *Given* all headings have unique IDs,
+  • *When* `verify_requirement_governance.py` runs (with or without `--enforce-unique`),
+  • *Then* it outputs `PASS: All REQ and TST heading IDs are unique across living documentation shards.` and exits with code 0 (passing).
 - **Invariants**: Pure Python 3 standard library; zero Android runtime changes; zero regression in existing governance checks.
 
 ### REQ-PRO-067: JUnit Test Results Archival & Evidence Integrity [Verified]

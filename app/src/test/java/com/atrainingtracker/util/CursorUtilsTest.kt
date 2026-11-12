@@ -8,7 +8,7 @@ import org.junit.Assert.*
 import org.junit.Test
 
 /**
- * Unit test suite for [CursorUtils] enforcing REQ-DAT-001 / TST-DAT-001.
+ * Unit test suite for [CursorUtils] enforcing REQ-DAT-043 / TST-DAT-039.
  *
  * Verifies bounds checking, null-safety, canonical fallback return values,
  * and deterministic exception propagation.

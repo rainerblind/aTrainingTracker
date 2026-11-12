@@ -185,7 +185,7 @@ class PowerPhysiologyCalculatorTest {
 
     @Test
     fun computePowerTrainingMetrics_steadyAndVariablePower_matchesCogganFormulas() {
-        // TST-MIG-036 (REQ-MIG-039.1): 1 hour (3600s) steady at 250W, FTP = 250W, weight = 75.0kg
+        // TST-MIG-049 (REQ-MIG-039.1): 1 hour (3600s) steady at 250W, FTP = 250W, weight = 75.0kg
         val steady1Hour = List(3600) { 250.0 }
         val steadyResult = PowerPhysiologyCalculator.computePowerTrainingMetrics(
             powerSamplesWatts = steady1Hour,
@@ -248,7 +248,7 @@ class PowerPhysiologyCalculatorTest {
 
     @Test
     fun importAndHistoricalThresholdResolution_sourceContractsArePresent() {
-        // TST-MIG-036 (REQ-MIG-039.2, REQ-MIG-039.3, REQ-MIG-039.4)
+        // TST-MIG-049 (REQ-MIG-039.2, REQ-MIG-039.3, REQ-MIG-039.4)
         val projectRoot = java.io.File(System.getProperty("user.dir") ?: ".")
         val baseDir = if (java.io.File(projectRoot, "app/src/main").exists()) {
             java.io.File(projectRoot, "app/src/main/java/com/atrainingtracker")
@@ -477,7 +477,7 @@ class PowerPhysiologyCalculatorTest {
     }
 
     /**
-     * TST-MAP-055.4: Verifies that calculateNormalizedPower dynamically adapts its rolling window size
+     * TST-MAP-070.4: Verifies that calculateNormalizedPower dynamically adapts its rolling window size
      * based on sampleIntervalSec, while preserving bit-parity for the default 1.0s interval.
      */
     @Test

@@ -984,18 +984,21 @@ diff --git a/docs/requirements/req_process_stability.md b/docs/requirements/req_
             self.assertTrue(any("ERROR (Duplicate ID): REQ-LEGACY-001" in m for m in diag_strict))
 
     def test_scenario_23_live_repository_unique_ids_parity(self):
-        """TST-PRO-066.4: Verify live repository living docs pass in standard mode and match known baseline."""
-        # Standard mode: passes cleanly with zero novel duplicates
+        """TST-PRO-066.4: Verify live repository living docs pass cleanly with zero duplicates (ATT-6123)."""
+        # Standard mode: passes cleanly with zero duplicates
         ok, diag = verify_unique_ids()
         self.assertTrue(ok, f"Expected live repository to pass in standard mode, got: {diag}")
-        self.assertTrue(any("Zero new duplicate REQ/TST IDs detected" in m for m in diag))
+        self.assertTrue(any("All REQ and TST heading IDs are unique" in m for m in diag))
 
-        # Strict mode: detects exactly the 11 known legacy duplicates
+        # Strict mode (--enforce-unique): passes cleanly with zero duplicates
         ok_strict, diag_strict = verify_unique_ids(fail_on_duplicates=True)
-        self.assertFalse(ok_strict)
+        self.assertTrue(ok_strict, f"Expected live repository to pass strict mode, got: {diag_strict}")
+        self.assertTrue(any("All REQ and TST heading IDs are unique" in m for m in diag_strict))
+
         dups = find_duplicate_heading_ids()
-        self.assertEqual(set(dups.keys()), set(LEGACY_DUPLICATE_IDS))
-        self.assertEqual(len(dups), 11)
+        self.assertEqual(len(dups), 0)
+        self.assertEqual(set(dups.keys()), set())
+        self.assertEqual(LEGACY_DUPLICATE_IDS, frozenset())
 
     def test_scenario_24_verify_engineering_directory_structure_test_results_symlink(self):
         """TST-PRO-067.4: Verify verify_engineering_directory_structure enforces test_results symlink."""

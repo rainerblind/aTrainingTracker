@@ -40,20 +40,8 @@ REQ_ROW_PATTERN = re.compile(
     re.MULTILINE,
 )
 
-# Known legacy duplicates prior to ATT-6123 remediation (SWE.1 BP5, SWE.6 BP4, REQ-PRO-066.2)
-LEGACY_DUPLICATE_IDS = frozenset({
-    "REQ-DAT-001",
-    "REQ-DAT-026",
-    "REQ-MIG-018",
-    "REQ-UI-116",
-    "REQ-UI-123",
-    "REQ-UI-257",
-    "TST-DAT-001",
-    "TST-DAT-021",
-    "TST-MAP-055",
-    "TST-MIG-036",
-    "TST-UI-216",
-})
+# All legacy duplicates fully resolved in ATT-6123 (SWE.1 BP5, SWE.6 BP4, REQ-PRO-066.6)
+LEGACY_DUPLICATE_IDS = frozenset()
 
 
 def get_git_diff(base_ref="develop", target_paths=None):
@@ -1705,7 +1693,7 @@ def main():
                 ["git", "rev-parse", "--abbrev-ref", "HEAD"],
                 stderr=subprocess.DEVNULL,
             ).decode("utf-8").strip()
-            ticket_m = re.search(r"(?:feature|bugfix|hotfix)/([A-Z]+-\d+)", branch)
+            ticket_m = re.search(r"([A-Z]+-\d+)", branch)
             ticket_key = ticket_m.group(1) if ticket_m else None
             if ticket_key:
                 candidates = [
