@@ -281,6 +281,14 @@ In accordance with **ASPICE SYS.4 (System Integration and Integration Verificati
 * **Interfaces Verified**: `SYS-IF-01` (BLE Heart Rate `0x180D`, Cycling Power `0x1818`, Garmin Varia Radar `6a4e3200`), `SYS-IF-02` (ANT+ IPC Radio Socket), `SYS-IF-03` (Multi-Source GNSS Fixes), and `SYS-IF-05` (Cloud Sync / Strava REST API).
 * **Automated CI Execution**: Headless virtual execution via `python3 tools/run_system_integration_tests.py --headless`, generating structured JSON verification evidence (`docs/releases/<tag>/system_integration_results.json`) for audit compliance and pre-release gating.
 
+### 6.3 System Verification Protocol on Real Hardware & Sensors (ASPICE SYS.5, `REQ-PRO-069`, `TST-PRO-069`)
+
+In accordance with **ASPICE SYS.5 (System Verification)**, end-to-end qualification of integrated software releases against system requirements (`SYSREQ-TRK-*`, `SYSREQ-DEX-*`) on physical hardware in target operational endurance environments is formally specified in [`docs/system/sys_verification_protocol.md`](system/sys_verification_protocol.md):
+* **Hardware Reference Matrix**: Google Pixel reference devices (Android 14/15), BLE Heart Rate monitors (Polar H10, Garmin HRM-Pro), BLE/ANT+ cycling power meters (Favero Assioma Duo, Stages, Wahoo KICKR), Garmin Varia cycling radar (RTL515), and barometric/GNSS hardware.
+* **Environmental Operating Conditions**: 5 quantified operational endurance environments: (E1) Urban Canyon, (E2) Rural Road / High Speed, (E3) Alpine Climb & Barometric Variation, (E4) Indoor Smart Trainer, and (E5) Extended Endurance Battery Longevity.
+* **Release Qualification**: Formal test cases (`SYS-VRF-001` through `SYS-VRF-008`), objective pass/fail criteria (sample loss $\le 1\%$, battery drain $\le 8\%$/hr, RF reconnection within backoff window, FIT/TCX schema validity), and release sign-off record generation under `docs/releases/<tag>/sys_verification_record.md`.
+
+
 
 
 

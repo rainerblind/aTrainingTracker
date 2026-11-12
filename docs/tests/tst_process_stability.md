@@ -1980,6 +1980,24 @@
   4. *Integration Runner Unit Test Suite (`TST-PRO-068.4`, tools/test_system_integration_tests.py)*:
   • Verify unit tests for simulation handlers, error paths, and CLI arguments pass cleanly under Python unittest.
 
+### TST-PRO-069: **System Verification Protocol & Hardware Reference Specification Contract Test Suite** [Verified]
+- **Requirement(s)**: `REQ-PRO-069`
+- **Component**: `docs/system/sys_verification_protocol.md`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/SystemVerificationProtocolContractTest.kt`, `docs/architecture.md`
+- **Jira**: `ATT-6167`
+- **Test Description**:
+  1. *Protocol Structural Integrity & Metadata Header (`TST-PRO-069.1`, SystemVerificationProtocolContractTest.kt)*:
+  • Assert `docs/system/sys_verification_protocol.md` exists and contains required metadata header referencing ASPICE SYS.5, REQ-PRO-069, and TST-PRO-069.
+  • Assert protocol contains Mermaid workflow and system verification topology diagrams.
+  2. *Hardware Reference & Environmental Conditions Matrices (`TST-PRO-069.2`, SystemVerificationProtocolContractTest.kt)*:
+  • Assert protocol specifies hardware matrix with Google Pixel reference family, BLE HRM (Polar H10/Garmin HRM-Pro), Cycling Power (Favero Assioma/Stages/Wahoo), Garmin Varia Radar (RTL515), and Barometric Altimeter / GNSS.
+  • Assert protocol specifies 5 environmental test matrices (Urban, Rural, Climb, Indoor, Longevity).
+  3. *System Verification Cases & SYSREQ Traceability (`TST-PRO-069.3`, SystemVerificationProtocolContractTest.kt)*:
+  • Assert protocol specifies formal test cases (`SYS-VRF-001` through `SYS-VRF-008`).
+  • Assert bidirectional coverage of all system requirements (`SYSREQ-TRK-001`..`006` and `SYSREQ-DEX-001`..`006`) with zero dangling IDs.
+  4. *Objective Pass/Fail Criteria & Release Record Template (`TST-PRO-069.4`, SystemVerificationProtocolContractTest.kt)*:
+  • Assert protocol defines pass/fail thresholds for FIT/TCX integrity, Strava/Dropbox sync, RF reconnection, sample loss $\le 1\%$, and battery drain $\le 8\%$/hr.
+  • Assert protocol includes release sign-off record template with signature fields for release governance.
+
 ### TST-PRO-070: **Living Documentation Bidirectional Reference Integrity Test Suite** [Verified]
 - **Requirement(s)**: `REQ-PRO-070`
 - **Component**: `tools/verify_requirement_governance.py`, `tools/test_verify_requirement_governance.py`
@@ -1996,7 +2014,6 @@
   • Assert that passing `--enforce-links` / `--fail-on-dangling` (or `fail_on_dangling=True`) returns failure (`False`) when any dangling reference is present.
   5. *Clean Repository Resolution (`TST-PRO-070.5`, tools/test_verify_requirement_governance.py)*:
   • Assert that verification passes cleanly when all cited IDs resolve to valid headings.
-
 
 
 

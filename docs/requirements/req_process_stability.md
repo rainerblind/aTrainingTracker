@@ -3349,6 +3349,34 @@ The workflow SHALL mandate that:
   • *Then* all contract tests pass with 100% success.
 - **Invariants**: Zero Android production runtime code changes in `app/src/main/`; existing simulator scripts remain fully functional.
 
+### REQ-PRO-069: System Verification Protocol & Real Sensor Hardware Reference Matrix Specification [Verified]
+- **Tests**: `TST-PRO-069`, `docs/system/sys_verification_protocol.md`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/SystemVerificationProtocolContractTest.kt`
+- **Implementation**: `docs/system/sys_verification_protocol.md`, `docs/architecture.md`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/SystemVerificationProtocolContractTest.kt`
+- **Rationale**: Under ASPICE SYS.5 (Finding S-07), system verification must validate product capabilities against system requirements (`SYSREQ-TRK-*`, `SYSREQ-DEX-*`) in the real operational target environment using a standardized hardware reference matrix, structured verification cases across diverse environmental conditions, objective pass/fail criteria, and formal release sign-off record templates:
+  1. *Hardware Reference Matrix (`REQ-PRO-069.1`, docs/system/sys_verification_protocol.md)*:
+     • `docs/system/sys_verification_protocol.md` SHALL specify a physical hardware reference matrix covering reference mobile devices (Google Pixel reference family, Android 14/15), BLE Heart Rate monitors (Polar H10, Garmin HRM-Pro), BLE/ANT+ Power meters (Favero Assioma Duo, Stages, Wahoo KICKR), Garmin Varia Cycling Radar (RTL515), and Barometric Altimeter / Multi-GNSS hardware.
+  2. *Environmental Operating Conditions Matrix (`REQ-PRO-069.2`, docs/system/sys_verification_protocol.md)*:
+     • The protocol SHALL define 5 quantified real-world operating environments: (E1) Urban Canyon (multipath GNSS reflection, building obstruction), (E2) Rural Road / High Speed (high-velocity vehicle approaches, continuous RF tracking), (E3) Alpine Climb & Barometric Variation (rapid elevation gradient $\ge 15\%$, pressure changes), (E4) Indoor Smart Trainer (stationary power/cadence, absence of GPS movement), and (E5) Extended Endurance & Battery Longevity ($\ge 3$ hours continuous multi-sensor tracking, battery drain rate $\le 8\%$/hr).
+  3. *Structured System Verification Cases (`REQ-PRO-069.3`, docs/system/sys_verification_protocol.md)*:
+     • The protocol SHALL specify formal system verification test cases (`SYS-VRF-001` through `SYS-VRF-008`) covering all system requirements (`SYSREQ-TRK-001..006` and `SYSREQ-DEX-001..006`).
+     • Each verification case SHALL define prerequisite hardware/software setup, execution procedure, verifiable sensor telemetry, objective pass/fail criteria, and error recovery handling.
+  4. *Data Integrity, Reconnection & Release Sign-Off Record (`REQ-PRO-069.4`, docs/system/sys_verification_protocol.md & docs/releases/<tag>/sys_verification_record.md)*:
+     • The protocol SHALL define objective pass/fail criteria for data integrity (FIT/TCX export schema validity, Strava/Dropbox synchronization without corruption, sensor reconnection after RF dropout within exponential backoff schedule, $\le 1\%$ sample drop rate).
+     • A release sign-off record template SHALL be provided under `docs/releases/<tag>/sys_verification_record.md` to record executed test cases, device/firmware serials, environment conditions, results, and approval signatures.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Net-new requirement `REQ-PRO-069` (`REQ-PRO-069.1`–`REQ-PRO-069.4`). Targets `docs/system/sys_verification_protocol.md`, `docs/architecture.md`, and `SystemVerificationProtocolContractTest.kt`.
+  2. *Historical Origin & Commit Trace*: Sprint 2026-46.4 via ticket `ATT-6167` under Epic `ATT-6142` (ASPICE CL2 Remediation S-07).
+  3. *Root Reason for Existing Formulation*: ASPICE 4.0 assessment of 2026-11-08 rated SYS.5 as CL0 due to reliance on informal, ad-hoc walkthroughs without release-level system verification against system requirements.
+  4. *Preservation of Core Invariants*: Zero modifications to Android production runtime code in `app/src/main/`; pure governance and verification tooling.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* `docs/system/sys_verification_protocol.md`,
+  • *When* reviewed against SYS.5,
+  • *Then* it contains the hardware reference matrix, environmental conditions matrix, verification cases covering all `SYSREQ-TRK-*` and `SYSREQ-DEX-*` requirements, objective criteria, and release sign-off template.
+  • *Given* `SystemVerificationProtocolContractTest.kt`,
+  • *When* executed via Gradle,
+  • *Then* all contract assertions pass with 100% success.
+- **Invariants**: Zero Android production runtime code changes in `app/src/main/`.
+
 ### REQ-PRO-070: Living Documentation Bidirectional Reference Integrity Governance [Verified]
 - **Tests**: `TST-PRO-070`
 - **Implementation**: `tools/verify_requirement_governance.py` (`find_dangling_references()`, `verify_dangling_references()`, `--fail-on-dangling`, `--enforce-links`), `tools/test_verify_requirement_governance.py`.
@@ -3380,7 +3408,6 @@ The workflow SHALL mandate that:
   • *When* `verify_requirement_governance.py` runs,
   • *Then* it outputs a PASS diagnostic and exits with code 0.
 - **Invariants**: Pure Python 3 standard library; zero Android runtime changes; zero regression in existing governance checks.
-
 
 
 
