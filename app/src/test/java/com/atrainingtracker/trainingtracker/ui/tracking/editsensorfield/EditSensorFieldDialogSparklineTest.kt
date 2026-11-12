@@ -307,4 +307,11 @@ class EditSensorFieldDialogSparklineTest {
             assertEquals(duration, viewModel.uiState.value.graphHorizonSeconds)
         }
     }
+
+    @Test
+    fun testDefaultPreviewSparklineSamples_has24PointsAndPositiveValues() {
+        val samples = com.atrainingtracker.trainingtracker.ui.tracking.DEFAULT_PREVIEW_SPARKLINE_SAMPLES
+        assertEquals(24, samples.size)
+        assertTrue(samples.all { it > 0f })
+    }
 }

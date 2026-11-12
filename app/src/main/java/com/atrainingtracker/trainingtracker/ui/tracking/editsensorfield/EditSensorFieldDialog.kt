@@ -60,6 +60,8 @@ import com.atrainingtracker.trainingtracker.ui.components.core.AppModalBottomShe
 import com.atrainingtracker.trainingtracker.ui.settings.AthleteWeightDialog
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 import com.atrainingtracker.trainingtracker.ui.theme.safePainterResource
+import com.atrainingtracker.trainingtracker.ui.tracking.DEFAULT_PREVIEW_SPARKLINE_SAMPLES
+import com.atrainingtracker.trainingtracker.ui.tracking.SensorSparklineView
 import com.atrainingtracker.trainingtracker.ui.tracking.getDisplayName
 import kotlin.math.roundToInt
 import kotlinx.coroutines.Dispatchers
@@ -283,6 +285,35 @@ fun EditSensorFieldDialog(
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.outline
                     )
+                }
+                Spacer(Modifier.height(8.dp))
+
+                // --- Live Sparkline Preview in Edit Dialog (REQ-TRK-059.11, ATT-7314) ---
+                Surface(
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                    shape = MaterialTheme.shapes.small,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 12.dp, vertical = 8.dp)
+                    ) {
+                        Text(
+                            text = stringResource(R.string.Preview).replaceFirstChar { it.uppercase() },
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(Modifier.height(4.dp))
+                        SensorSparklineView(
+                            samples = DEFAULT_PREVIEW_SPARKLINE_SAMPLES,
+                            spanSeconds = if (uiState.graphHorizonSeconds > 0) uiState.graphHorizonSeconds else 300,
+                            lineColor = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(44.dp)
+                        )
+                    }
                 }
                 Spacer(Modifier.height(16.dp))
             }

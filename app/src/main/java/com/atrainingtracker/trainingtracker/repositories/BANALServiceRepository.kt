@@ -618,6 +618,9 @@ class BANALServiceRepository private constructor(context: Context) {
             return existing.buffer
         }
         val buffer = LiveSparklineBuffer(horizonSeconds)
+        if (existing != null && existing.configHash == configHash) {
+            buffer.transferFrom(existing.buffer)
+        }
         sparklineBuffers[sensorFieldId] = SparklineRegistration(
             sensorFieldId = sensorFieldId,
             horizonSeconds = horizonSeconds,

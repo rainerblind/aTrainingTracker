@@ -63,4 +63,12 @@ class SensorSparklineViewTest {
         assertEquals(52.dp, resolveSparklineHeight(ViewSize.LARGE, isGraphOnly = true))
         assertEquals(68.dp, resolveSparklineHeight(ViewSize.XLARGE, isGraphOnly = true))
     }
+
+    @Test
+    fun testDefaultPreviewSparklineSamples_properties() {
+        assertEquals("Representative curve must contain 24 samples", 24, DEFAULT_PREVIEW_SPARKLINE_SAMPLES.size)
+        val min = DEFAULT_PREVIEW_SPARKLINE_SAMPLES.minOrNull() ?: 0f
+        val max = DEFAULT_PREVIEW_SPARKLINE_SAMPLES.maxOrNull() ?: 0f
+        org.junit.Assert.assertTrue("Preview samples must vary to produce a visible curve", max > min)
+    }
 }
