@@ -112,6 +112,7 @@ import java.util.Map;
 import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
@@ -269,6 +270,8 @@ public class TrackerService extends Service {
     private static final int RR_FLUSH_BATCH_THRESHOLD = 100;
     private long mLastRrFlushTimeMs = 0L;
     private final Object mRrFlushLock = new Object();
+    private final java.util.concurrent.ExecutorService mRrFlushExecutor = Executors.newSingleThreadExecutor();
+    private volatile Future<?> mPendingRrFlushFuture = null;
     private final ConcurrentLinkedQueue<WorkoutRrInterval> mLiveRrQueue = new ConcurrentLinkedQueue<>();
     private final AtomicInteger mRrBeatIndexCounter = new AtomicInteger(0);
     private final RrBeatListener mRrBeatListener = new RrBeatListener() {
@@ -302,45 +305,84 @@ public class TrackerService extends Service {
         }
     }
 
-    private void flushLiveRrQueueAsync() {
+    @VisibleForTesting
+    void flushLiveRrQueueAsync() {
         if (mLiveRrQueue.isEmpty() || mWorkoutID <= 0) {
             return;
         }
         mLastRrFlushTimeMs = System.currentTimeMillis();
         final long workoutId = mWorkoutID;
-        final List<WorkoutRrInterval> batch = new ArrayList<>();
-        WorkoutRrInterval item;
-        while ((item = mLiveRrQueue.poll()) != null) {
-            batch.add(item);
-        }
-        if (!batch.isEmpty()) {
-            java.util.concurrent.ForkJoinPool.commonPool().execute(() -> {
-                synchronized (mRrFlushLock) {
+        synchronized (mRrFlushLock) {
+            final List<WorkoutRrInterval> batch = new ArrayList<>();
+            WorkoutRrInterval item;
+            while ((item = mLiveRrQueue.poll()) != null) {
+                batch.add(item);
+            }
+            if (!batch.isEmpty()) {
+                if (!mRrFlushExecutor.isShutdown()) {
+                    mPendingRrFlushFuture = mRrFlushExecutor.submit(() -> {
+                        try {
+                            getWorkoutRrRepository().insertIntervalsBlocking(batch);
+                        } catch (Throwable t) {
+                            Log.e(TAG, "Error asynchronously flushing live RR intervals for workout " + workoutId, t);
+                        }
+                    });
+                } else {
                     try {
                         getWorkoutRrRepository().insertIntervalsBlocking(batch);
                     } catch (Throwable t) {
-                        Log.e(TAG, "Error asynchronously flushing live RR intervals for workout " + workoutId, t);
+                        Log.e(TAG, "Error inline flushing live RR intervals for workout " + workoutId, t);
                     }
-                }
-            });
-        }
-    }
-
-    private void flushLiveRrQueueSync(long workoutId) {
-        final List<WorkoutRrInterval> batch = new ArrayList<>();
-        WorkoutRrInterval item;
-        while ((item = mLiveRrQueue.poll()) != null) {
-            batch.add(item);
-        }
-        synchronized (mRrFlushLock) {
-            if (!batch.isEmpty()) {
-                try {
-                    getWorkoutRrRepository().insertIntervalsBlocking(batch);
-                } catch (Throwable t) {
-                    Log.e(TAG, "Error synchronously flushing live RR intervals for workout " + workoutId, t);
                 }
             }
         }
+    }
+
+    @VisibleForTesting
+    void flushLiveRrQueueSync(long workoutId) {
+        Future<?> pending;
+        synchronized (mRrFlushLock) {
+            final List<WorkoutRrInterval> batch = new ArrayList<>();
+            WorkoutRrInterval item;
+            while ((item = mLiveRrQueue.poll()) != null) {
+                batch.add(item);
+            }
+            if (!batch.isEmpty()) {
+                if (!mRrFlushExecutor.isShutdown()) {
+                    mPendingRrFlushFuture = mRrFlushExecutor.submit(() -> {
+                        try {
+                            getWorkoutRrRepository().insertIntervalsBlocking(batch);
+                        } catch (Throwable t) {
+                            Log.e(TAG, "Error synchronously flushing live RR intervals for workout " + workoutId, t);
+                        }
+                    });
+                } else {
+                    try {
+                        getWorkoutRrRepository().insertIntervalsBlocking(batch);
+                    } catch (Throwable t) {
+                        Log.e(TAG, "Error inline flushing live RR intervals for workout " + workoutId, t);
+                    }
+                }
+            }
+            pending = mPendingRrFlushFuture;
+        }
+        if (pending != null) {
+            try {
+                pending.get(10, java.util.concurrent.TimeUnit.SECONDS);
+            } catch (Throwable t) {
+                Log.e(TAG, "Error waiting for pending RR flush for workout " + workoutId, t);
+            }
+        }
+    }
+
+    @VisibleForTesting
+    ConcurrentLinkedQueue<WorkoutRrInterval> getLiveRrQueueForTesting() {
+        return mLiveRrQueue;
+    }
+
+    @VisibleForTesting
+    Future<?> getPendingRrFlushFutureForTesting() {
+        return mPendingRrFlushFuture;
     }
 
     /**
@@ -1225,6 +1267,7 @@ public class TrackerService extends Service {
             } catch (Throwable t) {
                 Log.e(TAG, "Unexpected error during async workout finalization in handleActionStop", t);
             } finally {
+                mRrFlushExecutor.shutdown();
                 mBanalService = null;
                 releaseWakeLock();
                 runOnMainThread(() -> {
@@ -1419,6 +1462,7 @@ public class TrackerService extends Service {
                 } catch (Throwable ignored) {
                 }
             }
+            mRrFlushExecutor.shutdown();
             safeUnbindBanalService();
             performStopForeground();
             return;
@@ -1439,6 +1483,7 @@ public class TrackerService extends Service {
             } catch (Throwable t) {
                 Log.e(TAG, "Unexpected error during async workout finalization in onDestroy", t);
             } finally {
+                mRrFlushExecutor.shutdown();
                 mBanalService = null;
                 releaseWakeLock();
                 runOnMainThread(() -> {
