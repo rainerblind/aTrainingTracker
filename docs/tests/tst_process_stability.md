@@ -1803,7 +1803,7 @@
   6. *Python Standard Library Compliance Test (`TST-TST-004.6`, tools/test_agent_emulator.py)*:
   • Assert `tools/agent_emulator.py` imports only standard library modules complying with `TST-PRO-005.6`.
 
-### TST-PRO-058: **Stage 6 Cold Carbon Final Review (Agent), 3-Bounce Healing Loop & Gate 6 Metrics Verification Suite** [In Progress]
+### TST-PRO-058: **Stage 6 Cold Carbon Final Review (Agent), 3-Bounce Healing Loop & Gate 6 Metrics Verification Suite** [Implemented]
 - **Requirement(s)**: `REQ-PRO-058`
 - **Component**: `tools/jira_util.py`, `tools/sprint_metrics.py`, `tools/hoechstmass/tools/jira_util.py`, `tools/hoechstmass/tools/sprint_metrics.py`, `.agents/skills/stage6-final-review/SKILL.md`, `tools/test_jira_epics.py`, `tools/test_sprint_metrics.py`, `HoechstmassCoreFrameworkContractTest.kt`
 - **Jira**: `ATT-7101`
@@ -2226,6 +2226,21 @@
   • Assert that `docs/releases/` contains `README.md` and `TEMPLATE.md` specifying `docs/releases/<tag>/` artifact requirements and SYS.4/SYS.5 sign-off criteria.
   4. *Contract Test Suite Execution & Governance Parity (`TST-PRO-072.4`, ReleaseManagerSystemEvidenceContractTest.kt & tools/verify_requirement_governance.py)*:
   • Assert `ReleaseManagerSystemEvidenceContractTest.kt` passes cleanly under Gradle and `python3 tools/verify_requirement_governance.py` confirms 100% living documentation parity.
+
+### TST-PRO-073: **Evidence-Based Requirement Status Model and Master Index Parity Test Suite** [Verified]
+- **Requirement(s)**: `REQ-PRO-073`
+- **Scope**: Contract Tests & Tooling Unit Tests
+- **Component**: `tools/verify_requirement_governance.py`, `tools/test_verify_requirement_governance.py`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/AspiceSweAuditContractTest.kt`
+- **Jira**: `ATT-6126`
+- **Test Description**:
+  1. *Headings Standardization (`TST-PRO-073.1`, AspiceSweAuditContractTest.kt)*:
+     • Assert that all living requirement and test headings end with standard status tokens: `[Verified]`, `[Implemented]`, `[Planned]`, or `[Open]`.
+  2. *4-Column Master Table Parity (`TST-PRO-073.2`, AspiceSweAuditContractTest.kt)*:
+     • Assert that master tables in `docs/requirements.md` and `docs/tests.md` have 4 numeric columns (Total, Verified, Implemented, Planned/Open) matching shard counts with 100% mathematical parity.
+  3. *Verifier 4-Column Sync & Parity (`TST-PRO-073.3`, tools/test_verify_requirement_governance.py)*:
+     • Assert that `verify_master_table_parity()` and `recalculate_master_index_tables()` correctly calculate and output 4-column master table records.
+  4. *Evidence Status Verification Rule (`TST-PRO-073.4`, tools/test_verify_requirement_governance.py)*:
+     • Assert that requirements claiming `[Verified]` without an existing TST ID fail verification, while requirements citing existing TST IDs pass cleanly.
 
 ### TST-PRO-074: **Release Verification Summary Generator Test Suite** [Verified]
 - **Requirement(s)**: `REQ-PRO-074`

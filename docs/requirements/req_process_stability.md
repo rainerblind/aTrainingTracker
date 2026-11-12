@@ -3144,7 +3144,7 @@ The workflow SHALL mandate that:
   • *Then* deployment and evaluation execute on the real physical phone.
 - **Invariants**: Zero runtime changes to `app/src/main/`; 100% unit test pass rate.
 
-### REQ-PRO-058: Stage 6 Cold Carbon Final Review (Agent), 3-Bounce Healing Loop, and Gate 6 Metrics [In Progress]
+### REQ-PRO-058: Stage 6 Cold Carbon Final Review (Agent), 3-Bounce Healing Loop, and Gate 6 Metrics [Implemented]
 - **Target Release**: `V5.0.0`
 - **Tests**: `TST-PRO-058` | **Tickets**: `ATT-7101`
 - **Implementation**: `tools/jira_util.py`, `tools/sprint_metrics.py`, `tools/hoechstmass/tools/jira_util.py`, `tools/hoechstmass/tools/sprint_metrics.py`, `.agents/skills/stage6-final-review/SKILL.md`, `tools/hoechstmass/.agents/skills/stage6-final-review/SKILL.md`, `.agents/skills/stage5-verification/SKILL.md`, `.agents/skills/sprint-planner/SKILL.md`, `.agents/skills/jira-workflow/SKILL.md`, `.agents/rules/aspice_governance.md`
@@ -3613,6 +3613,38 @@ The workflow SHALL mandate that:
   • *When* executed via Gradle,
   • *Then* all assertions pass with 100% success.
 - **Invariants**: Zero Android production runtime code changes in `app/src/main/`.
+
+### REQ-PRO-073: Evidence-Based Living Requirement Status Model and Governance Verification [Verified]
+- **Tests**: `TST-PRO-073`
+- **Implementation**: `tools/verify_requirement_governance.py` (`verify_master_table_parity()`, `recalculate_master_index_tables()`, `verify_requirement_evidence_status()`, `--sync-indexes`, `--check-evidence`, `--enforce-evidence`), `app/src/test/java/com/atrainingtracker/trainingtracker/build/AspiceSweAuditContractTest.kt`, `tools/test_verify_requirement_governance.py`, `docs/project_governance.md`.
+- **Rationale**: ASPICE SWE.1 (Software Requirements Analysis), SWE.6 BP3 (Verify Software Units), and GP 2.2 require work product status claims to be grounded in controlled, versioned evidence, preventing status inflation:
+  1. *Status Lifecycle Taxonomy (`REQ-PRO-073.1`)*:
+     • Requirements and test specifications SHALL use multi-line headings ending with an explicit status: `[Planned]`, `[Open]`, `[Implemented]`, or `[Verified]`.
+     • `[Planned]` / `[Open]`: Requirement is specified, but no verified test evidence or passing automated test exists yet.
+     • `[Implemented]`: Production code exists in the repository, but automated test evidence (`TST-*`) is pending, incomplete, unintegrated, or failing.
+     • `[Verified]`: Requires >= 1 authentic test specification (`TST-*`) with passing automated test code or formal archived verification record.
+  2. *Master Index Table 4-Column Format (`REQ-PRO-073.2`)*:
+     • Master index tables in `docs/requirements.md` and `docs/tests.md` SHALL use the 4-column summary format: `Total | Verified | Implemented | Planned / Open`.
+  3. *Automated Index Synchronization (`REQ-PRO-073.3`)*:
+     • `tools/verify_requirement_governance.py --sync-indexes` and `verify_master_table_parity()` SHALL support parsing and synchronizing `[Implemented]` status alongside `[Verified]` and `[Planned]` / `[Open]` with 100% mathematical parity across all 9 domain shards.
+  4. *Evidence-Backed Verification Rule (`REQ-PRO-073.4`)*:
+     • `tools/verify_requirement_governance.py` SHALL verify that any requirement claiming `[Verified]` cites >= 1 existing TST ID. In default CI checks (`verify_governance()`), any new or modified requirement claiming `[Verified]` without an existing TST ID SHALL fail validation. Under full-repository gating (`--enforce-evidence`), any requirement claiming `[Verified]` without valid test evidence SHALL fail.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Net-new requirement `REQ-PRO-073` (`REQ-PRO-073.1`–`REQ-PRO-073.4`). Targets `tools/verify_requirement_governance.py` and `AspiceSweAuditContractTest.kt`.
+  2. *Historical Origin & Commit Trace*: Sprint 2026-46.4 via ticket `ATT-6126` under Epic `ATT-6119` (ASPICE CL2 – Evidence Integrity & Bidirectional Traceability). Preceding: ATT-6122 (commit `687e8388`, traceability coverage reporting) and ATT-6137 (commit `ddd1024a`, release JUnit archival).
+  3. *Root Reason for Existing Formulation*: ASPICE 4.0 pre-assessment identified status inflation (98% `[Verified]` despite 59% lacking tests). Adding `[Implemented]` and 4-column master tables provides evidence-based status grounding.
+  4. *Preservation of Core Invariants*: 100% parity across all 9 domain shards; pure Python 3 standard library; zero Android runtime modifications.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* a REQ claims `[Verified]` without citing an existing TST ID,
+  • *When* `verify_requirement_governance.py` runs,
+  • *Then* it fails with a descriptive error.
+  • *Given* a REQ claims `[Verified]` and cites an existing TST ID backed by test code,
+  • *When* `verify_requirement_governance.py` runs,
+  • *Then* it passes.
+  • *Given* living doc shards with `[Implemented]` headings,
+  • *When* `python3 tools/verify_requirement_governance.py --sync-indexes` runs,
+  • *Then* master tables in `docs/requirements.md` and `docs/tests.md` reflect the 4-column format with 100% parity.
+- **Invariants**: Pure Python 3 standard library; zero Android runtime changes; zero regression in existing governance checks.
 
 ### REQ-PRO-074: Release Verification Summary Generation per Tag [Verified]
 - **Tests**: `TST-PRO-074`

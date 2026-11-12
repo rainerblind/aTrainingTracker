@@ -69,6 +69,102 @@ LEGACY_DANGLING_REQ_REFS = frozenset({
     "REQ-UI-289",
 })
 
+# Known legacy requirements claiming [Verified] without TST citations pending backfill in ATT-6127..ATT-6135 (SWE.1 BP3, SWE.6 BP3, REQ-PRO-073)
+LEGACY_UNGROUNDED_VERIFIED_REQS = frozenset({
+    "REQ-ARC-001", "REQ-ARC-002", "REQ-ARC-003", "REQ-ARC-004", "REQ-BLD-001", "REQ-BLD-002",
+    "REQ-BLD-003", "REQ-CON-007", "REQ-CON-011", "REQ-CON-012", "REQ-CON-013", "REQ-CON-014",
+    "REQ-CON-015", "REQ-CON-016", "REQ-CON-017", "REQ-CON-018", "REQ-CON-019", "REQ-CON-020",
+    "REQ-CON-021", "REQ-CON-022", "REQ-CON-023", "REQ-DAT-007", "REQ-DAT-009", "REQ-DAT-010",
+    "REQ-DAT-011", "REQ-DAT-012", "REQ-DAT-013", "REQ-DAT-014", "REQ-DAT-015", "REQ-DAT-016",
+    "REQ-DAT-017", "REQ-DAT-018", "REQ-DAT-019", "REQ-DAT-020", "REQ-DAT-021", "REQ-DAT-022",
+    "REQ-DAT-023", "REQ-DAT-024", "REQ-DAT-025", "REQ-DAT-026", "REQ-DAT-027", "REQ-DAT-028",
+    "REQ-DAT-029", "REQ-DAT-030", "REQ-DAT-031", "REQ-DAT-032", "REQ-DAT-033", "REQ-DAT-034",
+    "REQ-DAT-035", "REQ-DAT-036", "REQ-DAT-037", "REQ-EXP-008", "REQ-EXP-010", "REQ-EXP-013",
+    "REQ-EXP-018", "REQ-EXP-019", "REQ-EXP-020", "REQ-EXP-021", "REQ-EXP-022", "REQ-EXT-009",
+    "REQ-EXT-010", "REQ-EXT-011", "REQ-EXT-012", "REQ-FIL-013", "REQ-FIL-014", "REQ-FIL-015",
+    "REQ-GEO-001", "REQ-GEO-002", "REQ-LOC-001", "REQ-LOC-002", "REQ-MAP-019", "REQ-MAP-020",
+    "REQ-MAP-021", "REQ-MAP-022", "REQ-MAP-023", "REQ-MAP-024", "REQ-MAP-025", "REQ-MAP-026",
+    "REQ-MAP-027", "REQ-MAP-028", "REQ-MAP-029", "REQ-MAP-030", "REQ-MAP-031", "REQ-MAP-032",
+    "REQ-MAP-033", "REQ-MAP-034", "REQ-MAP-035", "REQ-MAP-036", "REQ-MAP-038", "REQ-MAP-039",
+    "REQ-MAP-040", "REQ-MAP-041", "REQ-MAP-042", "REQ-MAP-044", "REQ-MAP-045", "REQ-MAP-046",
+    "REQ-MAP-047", "REQ-MAP-048", "REQ-MAP-049", "REQ-MAP-050", "REQ-MAP-051", "REQ-MAP-052",
+    "REQ-MAP-053", "REQ-MAP-054", "REQ-MAP-055", "REQ-MAP-056", "REQ-MIG-024", "REQ-MIG-025",
+    "REQ-MIG-026", "REQ-MIG-027", "REQ-MIG-028", "REQ-MIG-029", "REQ-MIG-030", "REQ-MIG-031",
+    "REQ-MIG-032", "REQ-MIG-033", "REQ-MIG-034", "REQ-MIG-035", "REQ-MIG-036", "REQ-MIG-037",
+    "REQ-MIG-038", "REQ-MIG-039", "REQ-MIG-040", "REQ-MIG-041", "REQ-MIG-042", "REQ-MIG-043",
+    "REQ-MIG-044", "REQ-MIG-045", "REQ-MIG-046", "REQ-MIG-047", "REQ-NAV-043", "REQ-NAV-056",
+    "REQ-PER-012", "REQ-PER-013", "REQ-PER-014", "REQ-PER-015", "REQ-PER-016", "REQ-PER-017",
+    "REQ-PER-018", "REQ-PRI-004", "REQ-PRI-005", "REQ-PRI-006", "REQ-PRI-007", "REQ-PRO-014",
+    "REQ-PRO-015", "REQ-PRO-016", "REQ-PRO-017", "REQ-PRO-018", "REQ-PRO-019", "REQ-PRO-020",
+    "REQ-PRO-021", "REQ-PRO-022", "REQ-PRO-023", "REQ-PRO-024", "REQ-PRO-025", "REQ-PRO-026",
+    "REQ-PRO-027", "REQ-PRO-028", "REQ-PRO-059", "REQ-PRO-060", "REQ-PRO-061", "REQ-PRO-062",
+    "REQ-PRO-063", "REQ-PRO-064", "REQ-PRO-067", "REQ-SEC-041", "REQ-SEC-042", "REQ-SEN-020",
+    "REQ-SEN-021", "REQ-SET-058", "REQ-SET-059", "REQ-SET-064", "REQ-SET-065", "REQ-SET-066",
+    "REQ-SET-067", "REQ-SET-068", "REQ-SET-069", "REQ-SET-070", "REQ-SET-071", "REQ-SET-072",
+    "REQ-SET-073", "REQ-SET-074", "REQ-SET-075", "REQ-SET-076", "REQ-SET-077", "REQ-SET-078",
+    "REQ-SET-079", "REQ-SET-081", "REQ-SET-082", "REQ-SPT-002", "REQ-SPT-005", "REQ-STB-001",
+    "REQ-STB-002", "REQ-STB-003", "REQ-STB-004", "REQ-STB-005", "REQ-STB-006", "REQ-STB-007",
+    "REQ-STB-008", "REQ-STB-009", "REQ-STB-010", "REQ-STB-011", "REQ-STB-014", "REQ-STB-015",
+    "REQ-STB-016", "REQ-STB-017", "REQ-STB-018", "REQ-STB-019", "REQ-TOOL-001", "REQ-TOOL-002",
+    "REQ-TOOL-003", "REQ-TOOL-004", "REQ-TOOL-005", "REQ-TOOL-006", "REQ-TOOL-007", "REQ-TRK-002",
+    "REQ-TRK-010", "REQ-TRK-011", "REQ-TRK-012", "REQ-TRK-013", "REQ-TRK-014", "REQ-TRK-015",
+    "REQ-TRK-016", "REQ-TRK-017", "REQ-TRK-018", "REQ-TRK-019", "REQ-TRK-020", "REQ-TRK-021",
+    "REQ-TRK-022", "REQ-TRK-023", "REQ-TRK-024", "REQ-TRK-025", "REQ-TRK-026", "REQ-TRK-027",
+    "REQ-TRK-028", "REQ-TRK-029", "REQ-TRK-030", "REQ-TRK-031", "REQ-TRK-032", "REQ-TRK-033",
+    "REQ-TRK-034", "REQ-TRK-036", "REQ-TRK-037", "REQ-TST-001", "REQ-TST-002", "REQ-TST-003",
+    "REQ-UI-033", "REQ-UI-035", "REQ-UI-036", "REQ-UI-042", "REQ-UI-061", "REQ-UI-114",
+    "REQ-UI-123", "REQ-UI-124", "REQ-UI-125", "REQ-UI-126", "REQ-UI-127", "REQ-UI-128",
+    "REQ-UI-128", "REQ-UI-129", "REQ-UI-130", "REQ-UI-131", "REQ-UI-132", "REQ-UI-133",
+    "REQ-UI-134", "REQ-UI-136", "REQ-UI-137", "REQ-UI-138", "REQ-UI-139", "REQ-UI-140",
+    "REQ-UI-141", "REQ-UI-143", "REQ-UI-144", "REQ-UI-145", "REQ-UI-146", "REQ-UI-147",
+    "REQ-UI-148", "REQ-UI-150", "REQ-UI-151", "REQ-UI-152", "REQ-UI-153", "REQ-UI-154",
+    "REQ-UI-155", "REQ-UI-156", "REQ-UI-157", "REQ-UI-158", "REQ-UI-159", "REQ-UI-160",
+    "REQ-UI-161", "REQ-UI-162", "REQ-UI-163", "REQ-UI-164", "REQ-UI-165", "REQ-UI-167",
+    "REQ-UI-168", "REQ-UI-169", "REQ-UI-170", "REQ-UI-171", "REQ-UI-173", "REQ-UI-174",
+    "REQ-UI-175", "REQ-UI-176", "REQ-UI-177", "REQ-UI-178", "REQ-UI-179", "REQ-UI-180",
+    "REQ-UI-181", "REQ-UI-182", "REQ-UI-183", "REQ-UI-184", "REQ-UI-185", "REQ-UI-186",
+    "REQ-UI-187", "REQ-UI-188", "REQ-UI-189", "REQ-UI-190", "REQ-UI-191", "REQ-UI-192",
+    "REQ-UI-193", "REQ-UI-194", "REQ-UI-195", "REQ-UI-196", "REQ-UI-197", "REQ-UI-198",
+    "REQ-UI-199", "REQ-UI-200", "REQ-UI-201", "REQ-UI-202", "REQ-UI-203", "REQ-UI-204",
+    "REQ-UI-205", "REQ-UI-206", "REQ-UI-207", "REQ-UI-208", "REQ-UI-209", "REQ-UI-210",
+    "REQ-UI-211", "REQ-UI-212", "REQ-UI-213", "REQ-UI-214", "REQ-UI-215", "REQ-UI-216",
+    "REQ-UI-217", "REQ-UI-218", "REQ-UI-219", "REQ-UI-220", "REQ-UI-221", "REQ-UI-222",
+    "REQ-UI-223", "REQ-UI-224", "REQ-UI-225", "REQ-UI-226", "REQ-UI-227", "REQ-UI-228",
+    "REQ-UI-229", "REQ-UI-230", "REQ-UI-231", "REQ-UI-232", "REQ-UI-233", "REQ-UI-234",
+    "REQ-UI-235", "REQ-UI-236", "REQ-UI-237", "REQ-UI-238", "REQ-UI-239", "REQ-UI-240",
+    "REQ-UI-241", "REQ-UI-242", "REQ-UI-243", "REQ-UI-244", "REQ-UI-245", "REQ-UI-246",
+    "REQ-UI-247", "REQ-UI-248", "REQ-UI-249", "REQ-UI-250", "REQ-UI-251", "REQ-UI-252",
+    "REQ-UI-253", "REQ-UI-254", "REQ-UI-255", "REQ-UI-256", "REQ-UI-257", "REQ-UI-258",
+    "REQ-UI-259", "REQ-UI-260", "REQ-UI-261", "REQ-UI-262", "REQ-UI-263", "REQ-UI-264",
+    "REQ-UI-265", "REQ-UI-266", "REQ-UI-267", "REQ-UI-268", "REQ-UI-269", "REQ-UI-270",
+    "REQ-UI-271", "REQ-UI-272", "REQ-UI-273", "REQ-UI-274", "REQ-UI-275", "REQ-UI-276",
+    "REQ-UI-277", "REQ-UI-278", "REQ-UI-279", "REQ-UI-280", "REQ-UI-281", "REQ-UI-282",
+    "REQ-UI-283", "REQ-UI-284", "REQ-UI-285", "REQ-UI-286", "REQ-UI-287", "REQ-UI-288",
+    "REQ-UI-290", "REQ-UI-291", "REQ-UI-293", "REQ-UI-294", "REQ-UI-295", "REQ-UI-296",
+    "REQ-UI-297", "REQ-UI-298", "REQ-UI-299", "REQ-UI-300", "REQ-UI-301", "REQ-UI-302",
+    "REQ-UI-303", "REQ-UI-304", "REQ-UI-305", "REQ-UI-306", "REQ-UI-307", "REQ-UI-308",
+    "REQ-UI-309", "REQ-UI-310", "REQ-UI-311", "REQ-UI-312", "REQ-UI-313", "REQ-UI-314",
+    "REQ-UI-315", "REQ-UI-316", "REQ-UI-317", "REQ-UI-318", "REQ-UI-319", "REQ-UI-320",
+    "REQ-UI-321", "REQ-UI-322", "REQ-UI-323", "REQ-UI-324", "REQ-UI-325", "REQ-UI-326",
+    "REQ-UI-327", "REQ-UI-328", "REQ-UI-329", "REQ-UI-330", "REQ-UI-331", "REQ-UI-332",
+    "REQ-UI-333", "REQ-UI-335", "REQ-UI-336", "REQ-UI-337", "REQ-UI-338", "REQ-UI-339",
+    "REQ-UI-340", "REQ-UI-341", "REQ-UI-342", "REQ-UI-343", "REQ-UI-344", "REQ-UI-345",
+    "REQ-UI-346", "REQ-UI-347", "REQ-UI-348", "REQ-UI-349", "REQ-UI-350", "REQ-UI-351",
+    "REQ-UI-352", "REQ-UI-353", "REQ-UI-354", "REQ-UI-355", "REQ-UI-356", "REQ-UI-357",
+    "REQ-UI-358", "REQ-UI-359", "REQ-UI-360", "REQ-UI-361", "REQ-UI-362", "REQ-UI-363",
+    "REQ-UI-364", "REQ-UI-365", "REQ-UI-366", "REQ-UI-367", "REQ-UI-368", "REQ-UI-369",
+    "REQ-UI-370", "REQ-UI-371", "REQ-UI-372", "REQ-UI-373", "REQ-UI-374", "REQ-UI-375",
+    "REQ-UI-376", "REQ-UI-377", "REQ-UI-378", "REQ-UI-379", "REQ-UI-380", "REQ-UI-381",
+    "REQ-UI-382", "REQ-UI-383", "REQ-UI-384", "REQ-UI-385", "REQ-UI-386", "REQ-UI-387",
+    "REQ-UI-388", "REQ-UI-389", "REQ-UI-390", "REQ-UI-391", "REQ-UI-392", "REQ-UI-393",
+    "REQ-UI-394", "REQ-UI-395", "REQ-UI-396", "REQ-UI-397", "REQ-UI-398", "REQ-UI-399",
+    "REQ-UI-400", "REQ-UI-401", "REQ-UI-402", "REQ-UI-403", "REQ-UI-404", "REQ-UI-405",
+    "REQ-UI-406", "REQ-UI-407", "REQ-UI-409", "REQ-UI-410", "REQ-UI-411", "REQ-UI-412",
+    "REQ-UI-413", "REQ-UI-414", "REQ-UI-415", "REQ-UI-416", "REQ-UI-417", "REQ-UI-418",
+    "REQ-UI-419", "REQ-UI-420", "REQ-UI-421", "REQ-UI-422", "REQ-UI-423", "REQ-UI-424",
+    "REQ-UI-425", "REQ-UI-426", "REQ-UI-427", "REQ-UI-428", "REQ-UI-429", "REQ-UI-430",
+})
+
 
 def get_git_diff(base_ref="develop", target_paths=None):
     """
@@ -834,7 +930,7 @@ def verify_master_table_parity(repo_root=None):
             fp = os.path.join(abs_shard_dir, fn)
             with open(fp, "r", encoding="utf-8") as f:
                 lines = f.readlines()
-            tot = ver = plan = 0
+            tot = ver = impl = plan = 0
             for l in lines:
                 m = re.match(r"^(#{2,4})\s*(" + prefix + r"-[A-Z0-9_-]+):?\s*(.*?)$", l.strip())
                 if not m:
@@ -842,9 +938,11 @@ def verify_master_table_parity(repo_root=None):
                 tot += 1
                 if "[Verified]" in l:
                     ver += 1
+                elif "[Implemented]" in l:
+                    impl += 1
                 else:
                     plan += 1
-            shard_counts[fn] = (tot, ver, plan)
+            shard_counts[fn] = (tot, ver, impl, plan)
 
         master_fp = os.path.join(repo_root, master_rel)
         if not os.path.exists(master_fp):
@@ -866,19 +964,29 @@ def verify_master_table_parity(repo_root=None):
             m_link = re.search(r"\((?:requirements|tests)/((?:req|tst)_[^)]+\.md)\)", line)
             if m_link:
                 s_name = m_link.group(1)
-                m_cells = re.search(r"\|\s*(\d+)\s*\|\s*(\d+)\s*\|\s*(\d+)\s*\|\s*$", line)
-                if not m_cells:
+                m_cells_4 = re.search(r"\|\s*(\d+)\s*\|\s*(\d+)\s*\|\s*(\d+)\s*\|\s*(\d+)\s*\|\s*$", line)
+                m_cells_3 = re.search(r"\|\s*(\d+)\s*\|\s*(\d+)\s*\|\s*(\d+)\s*\|\s*$", line)
+                if m_cells_4:
+                    t = int(m_cells_4.group(1))
+                    v = int(m_cells_4.group(2))
+                    i = int(m_cells_4.group(3))
+                    p = int(m_cells_4.group(4))
+                elif m_cells_3:
+                    t = int(m_cells_3.group(1))
+                    v = int(m_cells_3.group(2))
+                    i = 0
+                    p = int(m_cells_3.group(3))
+                else:
                     errors.append(f"{master_rel}:{lno}: Table row for {s_name} missing numeric counts.")
                     continue
-                t, v, p = int(m_cells.group(1)), int(m_cells.group(2)), int(m_cells.group(3))
                 shards_checked += 1
                 if s_name in shard_counts:
-                    exp_t, exp_v, exp_p = shard_counts[s_name]
-                    if (t, v, p) != (exp_t, exp_v, exp_p):
+                    exp_t, exp_v, exp_i, exp_p = shard_counts[s_name]
+                    if (t, v, i, p) != (exp_t, exp_v, exp_i, exp_p):
                         errors.append(
                             f"{master_rel}:{lno}: Count mismatch for {s_name}: "
-                            f"Table has Total={t}, Verified={v}, Planned={p}; "
-                            f"Shard has Total={exp_t}, Verified={exp_v}, Planned={exp_p}."
+                            f"Table has Total={t}, Verified={v}, Implemented={i}, Planned={p}; "
+                            f"Shard has Total={exp_t}, Verified={exp_v}, Implemented={exp_i}, Planned={exp_p}."
                         )
                 else:
                     errors.append(f"{master_rel}:{lno}: Shard {s_name} referenced in table does not exist.")
@@ -1263,6 +1371,192 @@ def verify_dangling_references(
         f"PASS: Zero new dangling REQ/TST references detected ({len(legacy_dangling)} legacy references tolerated pending A-08.x)."
     )
     return True, diagnostics
+
+
+def extract_living_test_ids(repo_root=None, tst_shards=None):
+    """
+    Collects all authentic TST-* IDs declared across living test shards (REQ-PRO-073.4).
+    """
+    if repo_root is None:
+        repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+    known = set()
+    if tst_shards is not None:
+        for fp, content in tst_shards.items():
+            lines = content if isinstance(content, list) else content.splitlines()
+            for l in lines:
+                m = re.match(r"^#{2,4}\s*(TST-[A-Z0-9_-]+)", l.strip())
+                if m:
+                    known.add(m.group(1))
+        return known
+
+    abs_tst_dir = os.path.join(repo_root, "docs", "tests")
+    if os.path.isdir(abs_tst_dir):
+        for fn in sorted(os.listdir(abs_tst_dir)):
+            if fn.endswith(".md"):
+                with open(os.path.join(abs_tst_dir, fn), "r", encoding="utf-8") as f:
+                    for l in f:
+                        m = re.match(r"^#{2,4}\s*(TST-[A-Z0-9_-]+)", l.strip())
+                        if m:
+                            known.add(m.group(1))
+    return known
+
+
+def find_ungrounded_verified_requirements(repo_root=None, req_shards=None, tst_shards=None):
+    """
+    Scans docs/requirements/*.md for requirements claiming [Verified] without citing at least
+    one authentic, existing TST ID (REQ-PRO-073.4).
+    Returns a list of dicts:
+      {
+        "file": rel_path,
+        "line_no": lno,
+        "req_id": req_id,
+        "cited_tsts": [...],
+        "reason": "missing_or_empty_tests" | "non_existent_tests",
+      }
+    """
+    if repo_root is None:
+        repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+
+    known_tsts = extract_living_test_ids(repo_root=repo_root, tst_shards=tst_shards)
+
+    shards = {}
+    if req_shards is not None:
+        shards = req_shards
+    else:
+        abs_req_dir = os.path.join(repo_root, "docs", "requirements")
+        if os.path.isdir(abs_req_dir):
+            for fn in sorted(os.listdir(abs_req_dir)):
+                if fn.endswith(".md"):
+                    with open(os.path.join(abs_req_dir, fn), "r", encoding="utf-8") as f:
+                        shards[os.path.join("docs/requirements", fn)] = f.readlines()
+
+    ungrounded = []
+    for rel_path, lines in shards.items():
+        if isinstance(lines, str):
+            lines = lines.splitlines()
+
+        cur_req = None
+        cur_status = None
+        cur_lno = 0
+        cur_tsts = []
+
+        def flush():
+            nonlocal cur_req, cur_status, cur_lno, cur_tsts
+            if cur_req and cur_status == "Verified":
+                valid_tsts = [t for t in cur_tsts if t in known_tsts]
+                if not cur_tsts:
+                    ungrounded.append({
+                        "file": rel_path,
+                        "line_no": cur_lno,
+                        "req_id": cur_req,
+                        "cited_tsts": [],
+                        "reason": "missing_or_empty_tests",
+                    })
+                elif not valid_tsts:
+                    ungrounded.append({
+                        "file": rel_path,
+                        "line_no": cur_lno,
+                        "req_id": cur_req,
+                        "cited_tsts": list(cur_tsts),
+                        "reason": "non_existent_tests",
+                    })
+
+        for lno, line in enumerate(lines, 1):
+            m = re.match(r"^(#{2,4})\s*(REQ-[A-Z0-9_-]+):?\s*(.*?)$", line.strip())
+            if m:
+                flush()
+                cur_req = m.group(2)
+                cur_lno = lno
+                cur_tsts = []
+                if "[Verified]" in line:
+                    cur_status = "Verified"
+                elif "[Implemented]" in line:
+                    cur_status = "Implemented"
+                elif "[Open]" in line:
+                    cur_status = "Open"
+                else:
+                    cur_status = "Planned"
+            elif cur_req:
+                m_t = re.search(r"\*\*Tests\*\*:\s*(.*?)(?:\||$)", line)
+                if m_t:
+                    val = m_t.group(1).strip()
+                    found = re.findall(r"\bTST-[A-Z0-9_-]+\b", val)
+                    cur_tsts.extend(found)
+        flush()
+
+    return ungrounded
+
+
+def verify_requirement_evidence_status(
+    repo_root=None,
+    fail_on_unverified=False,
+    diff_text=None,
+    base_ref="develop",
+    req_shards=None,
+    tst_shards=None,
+    legacy_allowlist=None,
+):
+    """
+    Verifies that all requirements claiming [Verified] cite at least one authentic, existing TST ID (REQ-PRO-073.4).
+    Requirements with no test citation, empty tests, 'None', 'N/A', or only non-existent TSTs are rejected.
+
+    If diff_text is provided (or in verify_governance), any net-new or modified requirement in the diff
+    claiming [Verified] without an existing TST ID causes verification to fail.
+    If fail_on_unverified is True (or --enforce-evidence CLI flag), ANY ungrounded [Verified]
+    requirement in the repository causes verification to fail.
+    Otherwise, legacy ungrounded requirements present in legacy_allowlist emit a WARNING.
+    Any novel ungrounded [Verified] requirement causes verification to fail.
+
+    Returns (success: bool, diagnostics: list[str]).
+    """
+    if legacy_allowlist is None:
+        legacy_allowlist = LEGACY_UNGROUNDED_VERIFIED_REQS
+
+    ungrounded = find_ungrounded_verified_requirements(
+        repo_root=repo_root, req_shards=req_shards, tst_shards=tst_shards
+    )
+
+    diff_flagged = set()
+    if diff_text is not None:
+        mod_reqs, add_reqs, _ = parse_diff_requirements(diff_text)
+        diff_flagged = mod_reqs.union(add_reqs)
+
+    errors = []
+    warnings = []
+
+    for item in ungrounded:
+        req_id = item["req_id"]
+        rel_path = item["file"]
+        lno = item["line_no"]
+        reason = item["reason"]
+
+        msg = (
+            f"{rel_path}:{lno} [{req_id}] claims [Verified] without citing any authentic existing test specification"
+            f" (reason: {reason}, REQ-PRO-073.4)."
+        )
+
+        if fail_on_unverified or (req_id not in legacy_allowlist):
+            errors.append(msg)
+        else:
+            warnings.append(
+                f"WARNING (Legacy ungrounded requirement): {rel_path}:{lno} [{req_id}] claims [Verified] "
+                f"without verified test evidence pending A-08 backfill."
+            )
+
+    diagnostics = []
+    if errors:
+        for err in errors:
+            diagnostics.append(f"ERROR: {err}")
+        return False, diagnostics
+
+    for warn in warnings:
+        diagnostics.append(warn)
+
+    diagnostics.append(
+        f"PASS: Zero ungrounded [Verified] requirements detected ({len(warnings)} legacy requirements tolerated pending A-08 backfill)."
+    )
+    return True, diagnostics
+
 
 
 class CoverageCategoryResult:
@@ -1717,7 +2011,7 @@ def recalculate_master_index_tables(repo_root=None):
             if not fn.endswith(".md"):
                 continue
             fp = os.path.join(abs_shard_dir, fn)
-            tot = ver = plan = 0
+            tot = ver = impl = plan = 0
             with open(fp, "r", encoding="utf-8") as f:
                 for line in f:
                     m = re.match(r"^(#{2,4})\s*(" + prefix + r"-[A-Z0-9_-]+):?\s*(.*?)$", line.strip())
@@ -1726,9 +2020,11 @@ def recalculate_master_index_tables(repo_root=None):
                     tot += 1
                     if "[Verified]" in line:
                         ver += 1
+                    elif "[Implemented]" in line:
+                        impl += 1
                     else:
                         plan += 1
-            shard_counts[fn] = (tot, ver, plan)
+            shard_counts[fn] = (tot, ver, impl, plan)
 
         master_fp = os.path.join(repo_root, master_rel)
         if not os.path.exists(master_fp):
@@ -1738,20 +2034,29 @@ def recalculate_master_index_tables(repo_root=None):
 
         grand_total = sum(c[0] for c in shard_counts.values())
         grand_verified = sum(c[1] for c in shard_counts.values())
-        grand_planned = sum(c[2] for c in shard_counts.values())
+        grand_implemented = sum(c[2] for c in shard_counts.values())
+        grand_planned = sum(c[3] for c in shard_counts.values())
 
         new_lines = []
         changed = False
         for line in master_lines:
             new_line = line
+            if re.search(r"\|\s*Total\s*\|\s*Verified\s*\|\s*Planned\s*/\s*Open\s*\|", line):
+                new_line = re.sub(
+                    r"\|\s*Total\s*\|\s*Verified\s*\|\s*Planned\s*/\s*Open\s*\|",
+                    "| Total | Verified | Implemented | Planned / Open |",
+                    line,
+                )
+            elif re.search(r"\|\s*:---\s*:\s*\|\s*:---\s*:\s*\|\s*:---\s*:\s*\|", line) and line.count(":---:") == 3:
+                new_line = line.rstrip() + " :---: |\n"
             m_link = re.search(r"\((?:requirements|tests)/((?:req|tst)_[^)]+\.md)\)", line)
             if m_link:
                 s_name = m_link.group(1)
                 if s_name in shard_counts:
-                    t, v, p = shard_counts[s_name]
+                    t, v, i, p = shard_counts[s_name]
                     new_line = re.sub(
-                        r"\|\s*\d+\s*\|\s*\d+\s*\|\s*\d+\s*\|(\s*)$",
-                        rf"| {t} | {v} | {p} |\1",
+                        r"\|\s*\d+\s*\|\s*\d+(?:\s*\|\s*\d+)?\s*\|\s*\d+\s*\|(\s*)$",
+                        rf"| {t} | {v} | {i} | {p} |\1",
                         line,
                     )
             elif "links to the " in line:
@@ -1773,7 +2078,7 @@ def recalculate_master_index_tables(repo_root=None):
         if changed:
             with open(master_fp, "w", encoding="utf-8") as f:
                 f.writelines(new_lines)
-            msg = f"Recalculated master index table in {master_rel}: Total={grand_total}, Verified={grand_verified}, Planned={grand_planned}."
+            msg = f"Recalculated master index table in {master_rel}: Total={grand_total}, Verified={grand_verified}, Implemented={grand_implemented}, Planned={grand_planned}."
             print(msg)
             recalculated.append(msg)
         else:
@@ -2140,6 +2445,7 @@ def verify_governance(
     skip_tripwires=False,
     fail_on_duplicates=False,
     fail_on_dangling=False,
+    fail_on_unverified=False,
     min_req_tst_coverage=None,
     min_tst_code_coverage=None,
     max_code_without_spec=None,
@@ -2148,9 +2454,9 @@ def verify_governance(
     """
     Main governance validation entrypoint.
     Enforces engineering directory structure, master table parity, unique requirement and test IDs,
-    bidirectional reference integrity (REQ-PRO-070), optional coverage threshold ratchets (REQ-PRO-071),
-    Rule 81 deterministic tripwires (composable islands, repository encapsulation, architecture/system
-    spec grounding), and Chesterton's Fence archaeology on modified requirements.
+    bidirectional reference integrity (REQ-PRO-070), evidence-based status rules (REQ-PRO-073),
+    optional coverage threshold ratchets (REQ-PRO-071), Rule 81 deterministic tripwires (composable islands,
+    repository encapsulation, architecture/system spec grounding), and Chesterton's Fence archaeology on modified requirements.
     Returns (success: bool, diagnostics: list[str]).
     """
     diagnostics = []
@@ -2177,6 +2483,16 @@ def verify_governance(
         diagnostics.extend(links_diag)
         return False, diagnostics
     diagnostics.extend(links_diag)
+
+    evidence_ok, evidence_diag = verify_requirement_evidence_status(
+        diff_text=diff_text,
+        base_ref=base_ref,
+        fail_on_unverified=fail_on_unverified,
+    )
+    if not evidence_ok:
+        diagnostics.extend(evidence_diag)
+        return False, diagnostics
+    diagnostics.extend(evidence_diag)
 
     if (
         min_req_tst_coverage is not None
@@ -2400,8 +2716,24 @@ def main():
         default=None,
         help="Minimum required percentage of TSTs cited back by their REQ (0-100).",
     )
+    parser.add_argument(
+        "--check-evidence",
+        action="store_true",
+        help="Check living documentation shards for evidence-based requirement status compliance (REQ-PRO-073.4).",
+    )
+    parser.add_argument(
+        "--enforce-evidence",
+        action="store_true",
+        help="Fail if ANY requirement claiming [Verified] lacks an existing TST ID, including legacy items.",
+    )
 
     args = parser.parse_args()
+
+    if args.check_evidence:
+        ok, diag = verify_requirement_evidence_status(fail_on_unverified=args.enforce_evidence)
+        for msg in diag:
+            print(msg, file=sys.stderr if not ok else sys.stdout)
+        sys.exit(0 if ok else 1)
 
     if (
         args.coverage
@@ -2494,6 +2826,11 @@ def main():
             for d in links_diag:
                 print(d, file=sys.stderr)
             sys.exit(1)
+        evidence_ok, evidence_diag = verify_requirement_evidence_status(fail_on_unverified=args.enforce_evidence)
+        if not evidence_ok:
+            for d in evidence_diag:
+                print(d, file=sys.stderr)
+            sys.exit(1)
         print("PASS: Master index tables successfully synchronized with 100% parity.")
         sys.exit(0)
 
@@ -2575,6 +2912,7 @@ def main():
         skip_tripwires=args.skip_tripwires,
         fail_on_duplicates=args.enforce_unique,
         fail_on_dangling=args.enforce_links,
+        fail_on_unverified=args.enforce_evidence,
         min_req_tst_coverage=args.min_req_tst_coverage,
         min_tst_code_coverage=args.min_tst_code_coverage,
         max_code_without_spec=args.max_code_without_spec,

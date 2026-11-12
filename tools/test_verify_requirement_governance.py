@@ -52,6 +52,10 @@ from tools.verify_requirement_governance import (
     verify_coverage_thresholds,
     CoverageCategoryResult,
     TraceabilityCoverageReport,
+    LEGACY_UNGROUNDED_VERIFIED_REQS,
+    extract_living_test_ids,
+    find_ungrounded_verified_requirements,
+    verify_requirement_evidence_status,
 )
 
 
@@ -1414,6 +1418,114 @@ diff --git a/docs/requirements/req_process_stability.md b/docs/requirements/req_
             min_bidirectional_coverage=35.0,
         )
         self.assertTrue(ok, f"Expected repository coverage sanity thresholds to pass, got: {diag}")
+
+    def test_scenario_38_master_table_parity_and_sync_4_columns(self):
+        """TST-PRO-073.3: Verify 4-column master table parity and recalculation (Total | Verified | Implemented | Planned)."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            docs_req = os.path.join(tmpdir, "docs", "requirements")
+            os.makedirs(docs_req, exist_ok=True)
+            with open(os.path.join(docs_req, "req_test.md"), "w", encoding="utf-8") as f:
+                f.write(
+                    "### REQ-T-001: Verified Item [Verified]\n"
+                    "- **Tests**: `TST-T-001`\n\n"
+                    "### REQ-T-002: Implemented Item [Implemented]\n"
+                    "- **Tests**: None\n\n"
+                    "### REQ-T-003: Planned Item [Planned]\n"
+                    "- **Tests**: None\n"
+                )
+
+            # Master table with 4 columns
+            master_4col = (
+                "# Living Requirements\n\n"
+                "This master index links to the 1 domain-sharded requirement files under `docs/requirements/`.\n\n"
+                "| Domain Shard | Scope | Prefixes | Total | Verified | Implemented | Planned / Open |\n"
+                "| :--- | :--- | :--- | :---: | :---: | :---: | :---: |\n"
+                "| [Test](requirements/req_test.md) | Scope | `T` | 3 | 1 | 1 | 1 |\n\n"
+                "**Total Living Requirements**: 3 across 1 domain shards.\n"
+            )
+            with open(os.path.join(tmpdir, "docs", "requirements.md"), "w", encoding="utf-8") as f:
+                f.write(master_4col)
+
+            ok, errs = verify_master_table_parity(repo_root=tmpdir)
+            self.assertTrue(ok, f"Expected 4-column parity to pass, got: {errs}")
+
+            # Now modify master table to have mismatched Implemented count
+            mismatched_master = master_4col.replace("| 3 | 1 | 1 | 1 |", "| 3 | 2 | 0 | 1 |")
+            with open(os.path.join(tmpdir, "docs", "requirements.md"), "w", encoding="utf-8") as f:
+                f.write(mismatched_master)
+
+            ok_fail, errs_fail = verify_master_table_parity(repo_root=tmpdir)
+            self.assertFalse(ok_fail)
+            self.assertTrue(any("Count mismatch for req_test.md" in e for e in errs_fail))
+
+            # Recalculate should restore 4-column parity
+            recalculate_master_index_tables(repo_root=tmpdir)
+            ok_recalc, errs_recalc = verify_master_table_parity(repo_root=tmpdir)
+            self.assertTrue(ok_recalc, f"Expected parity after recalculate, got: {errs_recalc}")
+
+    def test_scenario_39_evidence_status_rule(self):
+        """TST-PRO-073.4: Verify requirement evidence status rule ([Verified] requires existing TST)."""
+        req_shards = {
+            "docs/requirements/req_test.md": (
+                "### REQ-E-001: Valid Verified [Verified]\n"
+                "- **Tests**: `TST-E-001`\n\n"
+                "### REQ-E-002: Invalid Verified [Verified]\n"
+                "- **Tests**: None\n\n"
+                "### REQ-E-003: Valid Implemented [Implemented]\n"
+                "- **Tests**: None\n\n"
+                "### REQ-E-004: Valid Planned [Planned]\n"
+                "- **Tests**: None\n\n"
+                "### REQ-E-005: Verified With Nonexistent Test [Verified]\n"
+                "- **Tests**: `TST-NONEXISTENT-999`\n"
+            )
+        }
+        tst_shards = {
+            "docs/tests/tst_test.md": (
+                "### TST-E-001: Authentic Test [Verified]\n"
+                "- **Requirement(s)**: `REQ-E-001`\n"
+            )
+        }
+
+        # Full check without allowlist should flag REQ-E-002 and REQ-E-005
+        ok_fail, diag_fail = verify_requirement_evidence_status(
+            fail_on_unverified=True,
+            req_shards=req_shards,
+            tst_shards=tst_shards,
+            legacy_allowlist=set(),
+        )
+        self.assertFalse(ok_fail)
+        self.assertTrue(any("REQ-E-002" in d and "missing_or_empty_tests" in d for d in diag_fail))
+        self.assertTrue(any("REQ-E-005" in d and "non_existent_tests" in d for d in diag_fail))
+
+        # Check with REQ-E-002 and REQ-E-005 in legacy allowlist (when fail_on_unverified=False)
+        ok_warn, diag_warn = verify_requirement_evidence_status(
+            fail_on_unverified=False,
+            req_shards=req_shards,
+            tst_shards=tst_shards,
+            legacy_allowlist={"REQ-E-002", "REQ-E-005"},
+        )
+        self.assertTrue(ok_warn)
+        self.assertTrue(any("Legacy ungrounded requirement" in d for d in diag_warn))
+
+        # Only clean REQs
+        clean_reqs = {
+            "docs/requirements/req_clean.md": (
+                "### REQ-C-001: Verified [Verified]\n"
+                "- **Tests**: `TST-E-001`\n\n"
+                "### REQ-C-002: Implemented [Implemented]\n"
+                "- **Tests**: None\n\n"
+                "### REQ-C-003: Planned [Planned]\n"
+                "- **Tests**: None\n"
+            )
+        }
+        ok_clean, diag_clean = verify_requirement_evidence_status(
+            fail_on_unverified=True,
+            req_shards=clean_reqs,
+            tst_shards=tst_shards,
+            legacy_allowlist=set(),
+        )
+        self.assertTrue(ok_clean, f"Expected clean evidence verification to pass, got: {diag_clean}")
+
 
 
 
