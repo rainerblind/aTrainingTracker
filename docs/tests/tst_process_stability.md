@@ -2383,3 +2383,17 @@
   2. *Dangling Link & Evidence Audit*: Run `python3 tools/verify_requirement_governance.py --check-links` and `--check-evidence` asserting zero dangling references and zero ungrounded Verified statuses in `settings_profiles`.
   3. *Attribute Compliance Check*: Run `python3 tools/verify_requirement_governance.py --check-attributes` asserting all 102 requirements in `req_settings_profiles.md` define valid Priority, Type, and Verification Method attributes.
   4. *Targeted Unit Test Verification*: Execute `./gradlew testDebugUnitTest --tests "*Cluster*" --tests "*Setting*"` asserting 100% pass rate.
+
+### TST-PRO-083: **Data Migration and Export Test Evidence Backfill & Bidirectional Traceability Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-PRO-083`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Scope**: Governance Verification, Coverage Analysis & Unit Tests
+- **Component**: `docs/requirements/req_data_migration_export.md`, `docs/tests/tst_data_migration_export.md`, `WorkoutDeletionHelperTest.kt`, `tools/verify_requirement_governance.py`
+- **Jira**: `ATT-6134`
+- **Test Description**:
+  1. *Coverage & Existence Matrix Verification*: Run `python3 tools/verify_requirement_governance.py --coverage` asserting 0 gaps in Category 1 for data_migration_export (100% REQs with TST), resolution of `REQ-DAT-010` ungrounded claim, and 100% bidirectional citation for all DAT, EXP, EXT, and MIG test specifications in Category 4.
+  2. *Dangling Link & Evidence Audit*: Run `python3 tools/verify_requirement_governance.py --check-links` and `--check-evidence` asserting zero dangling references in `data_migration_export` and zero ungrounded Verified statuses (pruning `REQ-DAT-010` from `LEGACY_UNGROUNDED_VERIFIED_REQS`).
+  3. *Attribute Compliance Check*: Run `python3 tools/verify_requirement_governance.py --check-attributes` asserting all 130 requirements in `req_data_migration_export.md` define valid Priority, Type, and Verification Method attributes.
+  4. *Targeted Unit Test Verification*: Execute `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.database.WorkoutDeletionHelperTest"` asserting 100% pass rate.

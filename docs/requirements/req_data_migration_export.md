@@ -3,70 +3,103 @@
 **Domain**: `data_migration_export`  
 **Prefixes**: `DAT`, `EXP`, `EXT`, `MIG`  
 **Scope**: Database schema, backup/restore, migration pipelines, Strava/cloud upload, FIT/GPX export.  
-**Total Requirements**: 119
+**Total Requirements**: 130
 
 ---
 
 ### REQ-DAT-001: Store per-second sensor samples and extrema [Verified]
 - **Tests**: `TST-STR-001`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `WorkoutSamplesDatabaseManager.java`
 - **Rationale**: Granular data and peak performance insights.
 - **Description**: Store per-second sensor samples and extrema.
 
 ### REQ-DAT-002: Support automatic deletion of old workouts [Verified]
 - **Tests**: `TST-MAN-001`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `WorkoutDeletionHelper.java`
 - **Rationale**: Manage device storage automatically.
 - **Description**: Support automatic deletion of old workouts.
 
 ### REQ-DAT-003: Provide period-based statistics (W/M/Y) [Verified]
 - **Tests**: `TST-MAN-001`, `TST-PERF-004`, `TST-BUG-002`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `PeriodsViewModel.kt`, `PeriodsRepository.kt`
 - **Rationale**: Enable long-term training volume analysis.
 - **Description**: Provide period-based statistics (W/M/Y).
 
 ### REQ-DAT-004: Encoded polylines and streams for storage/map [Verified]
 - **Tests**: `TST-UNT-001`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `NumericalEncodingUtils.kt`
 - **Rationale**: Optimize database size and UI performance.
 - **Description**: Encoded polylines and streams for storage/map.
 
 ### REQ-DAT-005: Dynamic database schema evolution [Verified]
 - **Tests**: `TST-STR-001`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit
 - **Implementation**: `TrackerService.java`
 - **Rationale**: Support future hardware without migrations.
 - **Description**: Dynamic database schema evolution.
 
 ### REQ-EXP-001: Export Interoperability [Verified]
 - **Tests**: `TST-REG-003`, `TST-EXP-004`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `writer/`, `TCXFileWriter.java`
 - **Rationale**: The system SHALL support workout export to GPX, TCX, CSV, and GC JSON formats. The TCX export MUST strictly adhere to the Version 2.0 schema, ensuring that specific fields like `<Cadence>`, `<Watts>`, and `<RunCadence>` are formatted as integers to guarantee compatibility with professional analytical tools.
 
 ### REQ-EXP-002: Cloud Synchronization [Verified]
 - **Tests**: `TST-REG-003`, `TST-REG-008`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `ExportManager.java`, `CloudUploadFragment.kt`
 - **Rationale**: The system SHALL support automated workout uploads to Strava and Dropbox. The system SHALL correctly persist and reflect the connection state (Authorized/Disconnected) across application restarts and fragment navigation.
 
 ### REQ-EXP-003: Selective Upload (exclude specific data) [Verified]
 - **Tests**: `TST-MAN-001`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `StravaUploader.kt`
 - **Rationale**: Provide users control over data privacy.
 - **Description**: Selective Upload (exclude specific data).
 
 ### REQ-EXP-006: Explicit "No upload" option for Strava mapping [Verified]
 - **Tests**: `TST-UNT-006`, `TST-UNT-007`, `TST-INT-002`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `SportTypeDatabaseManager.java`, `EditWorkoutViewModel.kt`
 - **Rationale**: Allow users to opt-out of Strava sync for specific custom sport types via a dedicated "- No upload -" mapping option.
 - **Description**: Explicit "No upload" option for Strava mapping.
 
 ### REQ-EXP-007: Support latest Strava sport types [Verified]
 - **Tests**: `TST-INT-003`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `arrays.xml`, `SportTypeDatabaseManager.java`
 - **Rationale**: Ensure compatibility with modern Strava activity classification (e.g., Trail Run, Gravel Ride) for better social integration.
 - **Description**: Support latest Strava sport types.
 
 ### REQ-EXP-008: Smart Asymmetric Workout Naming Strategy & Pre-Upload Duplicate Discovery for Strava [Verified]
 - **Tests**: `TST-EXP-005`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
 4. *System Invariants*:
 • Sport type mapping (`TYPE`, `SPORT_TYPE`), equipment/gear ID (`GEAR_ID`), workout description (`DESCRIPTION`), trainer flag (`TRAINER`), and commute flag (`COMMUTE`) SHALL continue to be synchronized to Strava during both fresh and duplicate updates.
 • TCX file export serialization (`REQ-DAT-013`) and spatial route clustering (`REQ-ROU-001`) MUST NOT be altered.
@@ -103,6 +136,9 @@
 
 ### REQ-EXP-009: Strava Duplicate Reconciliation Equipment, Retired Gear & Detailed Sport Type Enrichment [Verified]
 - **Tests**: `TST-EXP-006`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `StravaUploader.kt`, `EquipmentDbHelper.java`, `SportTypeDatabaseManager.java`, `WorkoutRepository.kt`
 - **Rationale**: The system SHALL enrich imported workouts matching existing Strava activities (`isDuplicate == true`) with equipment and detailed sport classification without overwriting Strava cloud data:
 1. *Strava Cloud Authority on Duplicate*: When reconciling an existing Strava activity, the system SHALL NOT submit `type`/`sport_type` or `gear_id` to Strava's update API (`doUpdate`), preserving Strava's cloud metadata as authoritative.
@@ -129,6 +165,9 @@
 
 ### REQ-EXP-010: Strava Segment Personal Best Update & Achievement Presentation [Verified]
 - **Tests**: `TST-EXP-007`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
 • If `stravaSegmentId` does not exist in `StarredSegmentsTable` or the existing PR time is already faster or equal, the database record SHALL NOT be altered and the method SHALL return `false`.
 3. *Reactive In-Memory State Propagation (`SegmentsRepository`)*:
 • Upon a successful database update (`updateSegmentPrTime == true`), `StravaUploader` SHALL notify `SegmentsRepository.getInstance(context).updateSegmentPr(segmentId, elapsedTimeSec)`.
@@ -145,6 +184,9 @@
 
 ### REQ-EXP-011: Strava Segments Mandatory Daily Automated Synchronization [Verified]
 - **Tests**: `TST-EXP-008`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `StravaSettingsDialog.kt`, `StravaSegmentsSyncWorker.kt`, `TrainingApplication.java`, `SegmentsRepository.kt`
 - **Rationale**: The system SHALL support mandatory automated daily background synchronization of starred Strava segments via Android `WorkManager` (ATT-913, ATT-1178):
 1. *Mandatory Daily Scheduling*: When Strava is authenticated (`TrainingApplication.getStravaAccessToken() != null`), `StravaSegmentsSyncWorker.schedule(context)` SHALL enqueue unique periodic work `automated_strava_segments_sync_work` with a fixed interval of 1 day (`1, TimeUnit.DAYS`), `NetworkType.CONNECTED`, and `requiresBatteryNotLow(true)`.
@@ -166,6 +208,9 @@
 
 ### REQ-EXP-012: Strava Routes Mandatory Daily Automated Synchronization [Verified]
 - **Tests**: `TST-EXP-009`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `StravaSettingsDialog.kt`, `StravaRoutesSyncWorker.kt`, `TrainingApplication.java`, `RoutesRepository.kt`
 - **Rationale**: The system SHALL support mandatory automated daily background synchronization of Strava routes via Android `WorkManager` (ATT-914, ATT-1178):
 1. *Mandatory Daily Scheduling*: When Strava is authenticated (`TrainingApplication.getStravaAccessToken() != null`), `StravaRoutesSyncWorker.schedule(context)` SHALL enqueue unique periodic work `automated_strava_routes_sync_work` with a fixed interval of 1 day (`1, TimeUnit.DAYS`), `NetworkType.CONNECTED`, and `requiresBatteryNotLow(true)`.
@@ -187,6 +232,9 @@
 
 ### REQ-EXP-013: Strava Activity Feedback Data Minimization to Athlete Achievements [Verified]
 - **Tests**: `TST-EXP-010`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `StravaActivityData.kt`, `StravaUploader.kt`, `StravaUploadDbHelper.java`, `StravaActivitySection.kt`
 - **Rationale**: The system SHALL minimize persisted Strava activity response payloads to athlete-specific achievements and preserve strict Command-Query Separation across database interactions (ATT-1190):
 1. *Data Minimization to Achievements*: Upon receiving activity feedback (`GET /api/v3/activities/{id}`), `StravaUploader` SHALL NOT persist raw third-party JSON blobs containing transient social, profile, map, or partner fields to SQLite. Instead, the system SHALL extract only the athlete's own achievements and serialize a compact JSON payload (`"v": 2`) containing strictly `id`, `segment_efforts` (`name`, `elapsed_time`, `pr_rank`, `kom_rank`, `starred`, `segment_id`), and `best_efforts` (`name`, `elapsed_time`, `pr_rank`, `distance`). All extraneous fields (kudos, comments, athlete profiles, photos, external URLs, polyline vectors) SHALL be discarded before storage.
@@ -214,6 +262,9 @@
 
 ### REQ-EXP-014: Reactive Strava Segment Synchronization Progress Indicator & Transient State Decoupling [Verified]
 - **Tests**: `TST-EXP-011`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `SegmentsRepository.kt`, `StravaSettingsDialog.kt`, `strings.xml` (all 9 locales)
 - **Rationale**: The system SHALL provide reactive in-memory synchronization progress tracking for starred Strava segments and decouple transient UI state from persistent storage (ATT-1219):
 1. *Reactive In-Memory State Flow*: `SegmentsRepository` SHALL expose an overarching `val isSyncing: StateFlow<Boolean>` property that transitions to `true` upon the initiation of starred segment synchronization (`syncStarredSegments`) and reliably resets to `false` via a `finally` block upon completion or failure.
@@ -242,6 +293,9 @@
 
 ### REQ-EXP-015: Reactive Strava Route Synchronization Progress Indicator & Transient State Decoupling [Verified]
 - **Tests**: `TST-EXP-012`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `RoutesRepository.kt`, `StravaSettingsDialog.kt`, `strings.xml` (all 9 locales)
 - **Rationale**: The system SHALL provide reactive in-memory synchronization progress tracking for Strava routes and decouple transient UI state from persistent storage (ATT-1230):
 1. *Reactive In-Memory State Flow*: `RoutesRepository` SHALL expose an overarching `val isSyncing: StateFlow<Boolean>` property that transitions to `true` upon the initiation of route synchronization (`syncRoutesFromStrava`) and reliably resets to `false` via a `finally` block upon completion or failure.
@@ -270,6 +324,9 @@
 
 ### REQ-EXP-016: Reactive Strava Equipment Synchronization Progress Indicator & Transient State Decoupling [Verified]
 - **Tests**: `TST-EXP-013`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `EquipmentRepository.kt`, `StravaEquipmentSynchronizeThread.java`, `StravaSettingsDialog.kt`, `strings.xml` (all 9 locales)
 - **Rationale**: The system SHALL provide reactive in-memory synchronization progress tracking for Strava equipment and decouple transient UI state from persistent storage (ATT-1231):
 1. *Reactive In-Memory State Flow*: `EquipmentRepository` SHALL expose an overarching `@JvmStatic val isSyncing: StateFlow<Boolean>` property that transitions to `true` upon the initiation of equipment synchronization (`StravaEquipmentSynchronizeThread`) and reliably resets to `false` via a `finally` block upon completion or failure.
@@ -301,6 +358,9 @@
 
 ### REQ-EXP-017: Non-Blocking Strava Equipment Background Synchronization & Modal Dialog Elimination [Verified]
 - **Tests**: `TST-EXP-014`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `StravaEquipmentSynchronizeThread.java`, `StravaSettingsDialog.kt`, `EquipmentRepository.kt`, `strings.xml` (all 9 locales)
 - **Rationale**: The system SHALL execute Strava equipment synchronization strictly as a non-blocking background task without presenting any modal progress dialogs, toasts, or window-blocking UI notifications (ATT-1242):
 1. *Dialog-Free Background Worker Thread*: `StravaEquipmentSynchronizeThread` SHALL NOT instantiate, configure, show, or dismiss `android.app.ProgressDialog` or any modal dialog. Synchronization HTTP requests, JSON parsing, SQLite updates in `EquipmentDbHelper`, and frame type queries SHALL proceed non-blockingly on the background thread.
@@ -327,6 +387,9 @@
 
 ### REQ-EXP-019: Automated Background Synchronization for Strava Segments, Routes, and Equipment [Verified]
 - **Tests**: `TST-EXP-016`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `TrainingApplication.java`, `StravaSegmentsSyncWorker.kt`, `StravaRoutesSyncWorker.kt`, `StravaEquipmentSyncWorker.kt`, `StravaDataPurgeManager.kt`, `strings.xml` (all 9 locales)
 - **Rationale**: The system SHALL reliably execute automated background synchronization for starred Strava segments, routes, and equipment via WorkManager, honoring user preference toggles and interval schedules, preventing startup cancellation race conditions, and proactively refreshing OAuth credentials (ATT-3478, amending `REQ-EXP-011` and `REQ-EXP-012`):
 1. *Initialization Ordering & Startup Race Prevention (`TrainingApplication.java`)*:
@@ -380,6 +443,9 @@
 
 ### REQ-EXP-020: Decommission Obsolete Runkeeper and TrainingPeaks Legacy Exporters, Activities, and Retain Google Maps Legacy Platform Library [Verified]
 - **Tests**: `TST-EXP-017`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `app/build.gradle`, `AndroidManifest.xml`, `MyHelper.java`, `ExportManager.java`, `TrainingApplication.java`, `BaseFileWriter.java`
 - **Rationale**: The system SHALL decommission obsolete, unmaintained Runkeeper and TrainingPeaks integrations, delete dead token extraction activities, uploaders, and file writers, remove unused manifest elements and legacy Apache HttpClient dependencies, and eliminate dead elevation helpers in `MyHelper.java`, enforcing Rule 18 (Dependency Cleanliness), Rule 23 (Dead Code Removal), and Rule 36 (Single Source of Truth & DRY) (ATT-3551, amended in ATT-5561):
 1. *Decommission Dead Runkeeper & TrainingPeaks Classes & Activities*:
@@ -434,6 +500,9 @@
 
 ### REQ-EXP-021: Strava Upload Transient Error Resilient Retry, Polling Fault Tolerance & Pre-Upload Duplicate False-Start Protection [Verified]
 - **Tests**: `TST-EXP-018`
+- **Priority**: Medium
+- **Type**: Non-Functional
+- **Verification Method**: Unit
 4. *Preservation of Core Invariants*: True duplicates on Strava continue to bypass TCX upload and preserve Strava cloud metadata, while transient failures are retried and false-starts are rejected.
 
 **Acceptance Criteria (Given-When-Then)**:
@@ -492,6 +561,9 @@
 
 ### REQ-EXP-022: GPX/TCX Export XML Well-Formedness, Garmin Schema Compliance, Downloads MIME Type & Privacy Protection [Verified]
 - **Tests**: `TST-EXP-019`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit
 - **Implementation**: `GPXFileWriter.java`, `TCXFileWriter.java`, `BaseExporter.java`, `BaseFileWriter.java`, `FileFormat.java`
 - **Rationale**: The system SHALL guarantee well-formed and schema-compliant XML exports for GPX and TCX formats across all workout configurations, ensure thread-safe UTC timestamp formatting, prevent public storage privacy leaks of internal upload files, and provide correct per-format MIME types and null-safe MediaStore handling (ATT-4013):
 1. *GPX Segment State Machine & XML Well-Formedness (`GPXFileWriter.java`)*:
@@ -545,56 +617,86 @@
 
 ### REQ-EXP-005: Exponential backoff for Strava uploads [Verified]
 - **Tests**: `TST-STR-001`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `StravaUploader.kt`
 - **Rationale**: Robust sync even with API issues.
 - **Description**: Exponential backoff for Strava uploads.
 
 ### REQ-EXT-001: "Powered by Strava" branding on all Strava data [Verified]
 - **Tests**: `TST-REG-002`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `PoweredByStrava.kt`
 - **Rationale**: Comply with mandatory API guidelines.
 - **Description**: "Powered by Strava" branding on all Strava data.
 
 ### REQ-EXT-002: Official Strava Assets [Verified]
 - **Tests**: `TST-REG-002`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `StravaUploadFragment.kt`
 - **Rationale**: The system SHALL use official Strava \"Connect\" authentication assets to comply with partner brand requirements.
 
 ### REQ-EXT-003: Display logo contextually within lists/headers [Verified]
 - **Tests**: `TST-REG-002`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `SegmentList.kt`
 - **Rationale**: Maintain compliance without UI clutter.
 - **Description**: Display logo contextually within lists/headers.
 
 ### REQ-EXT-004: Integrated Strava Authorization [Verified]
 - **Tests**: `TST-EXT-001`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `StravaHelper.kt`, `StravaUploadFragment.kt`
 - **Rationale**: The system SHALL use Chrome Custom Tabs for Strava authorization to provide a seamless user experience within the application context.
 - **Description**: Integrated Strava Authorization.
 
 ### REQ-EXT-005: Reactive OAuth Feedback [Verified]
 - **Tests**: `TST-EXT-002`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `StravaOAuthCallbackActivity.kt`, `StravaAuthViewModel.kt`
 - **Rationale**: The system SHALL provide immediate visual feedback (loading/error) during the Strava token exchange process using modern UI components.
 - **Description**: Reactive OAuth Feedback.
 
 ### REQ-EXT-006: Strava Profile Scope & Equipment Synchronization Integrity [Verified]
 - **Tests**: `TST-EXT-003`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `StravaHelper.kt`, `StravaEquipmentSynchronizeThread.java`, `EquipmentFragment.kt`
 - **Rationale**: The system SHALL request the `profile:read_all` OAuth permission scope during Strava authentication (alongside `read`, `read_all`, `activity:read_all`, and `activity:write`) to ensure athlete gear details (bikes and shoes) are returned by Strava API `/api/v3/athlete`. `StravaEquipmentSynchronizeThread` SHALL validate that an active access token is present before executing requests, accurately extract both `bikes` and `shoes` arrays into `EquipmentDbHelper`, avoid creating duplicate local entries for existing unlinked equipment with identical names, and report a descriptive warning if gear arrays are absent due to missing permissions. Furthermore, `EquipmentFragment` SHALL listen for `SYNCHRONIZE_EQUIPMENT_STRAVA_FINISHED` to automatically refresh its equipment view upon synchronization completion.
 
 ### REQ-EXT-007: Automated & On-Demand Strava Route Synchronization [Verified]
 - **Tests**: `TST-EXT-004`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `StravaUploadFragment.kt`, `RoutesRepository.kt`, `TrainingApplication.java`, `prefs_strava.xml`
 - **Rationale**: The system SHALL automatically initiate synchronization of athlete routes from Strava API (`/api/v3/athletes/{id}/routes`) into `RoutesDatabaseManager` when Strava authorization succeeds (`StravaAuthState.Success`), alongside equipment and segments. The system SHALL provide an on-demand synchronization control `updateStravaRoutes` in Strava settings (`prefs_strava.xml`), displaying the last route synchronization timestamp and triggering route synchronization when tapped. The route synchronization process SHALL extract high-resolution route streams (`/api/v3/routes/{id}/streams`), decode polyline fallback coordinates if streams are unavailable, persist routes with `RouteSource.STRAVA` and bounds in `RoutesDatabaseManager`, update the last route synchronization timestamp, and seed imported routes into `WorkoutClusterEngine` for recurring route pattern discovery. Existing non-Strava routes, user-selected route states, and database schemas MUST remain preserved.
 
 ### REQ-EXT-008: Automated Community Upload for Imported Workouts [Verified]
 - **Tests**: `TST-EXT-005`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `LegacyImportEngine.kt`, `ExportManager.java`, `BackupRestoreViewModel.kt`
 - **Rationale**: Upon successful completion of a TCX workout import and statistical recalculation (`LegacyImportEngine.importFromTcx`), the system SHALL evaluate whether community upload to Strava is enabled (`TrainingApplication.uploadToCommunity(FileFormat.STRAVA)`). If enabled, the system SHALL schedule an asynchronous community upload task for the imported workout using `ExportManager`, persisting tracking export status to `ExportStatusDatabaseManager` and queuing the background upload via `WorkManager`. The imported workout record in `WorkoutSummaries` SHALL have `UPLOAD_TO_STRAVA` initialized to reflect the upload request (`1` if requested, or `-1` default). **Invariants**: Import file parsing, local database insertion, and spatial recalculation MUST NOT block on network execution. If network upload fails, the local workout record and stats MUST remain completely intact and available.
 
 ### REQ-EXT-009: Strava Data Deletion on Token Invalidation, Deauthorization & Reauthorization Integrity [Verified]
 - **Tests**: `TST-EXT-006`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `StravaAuthManager.kt`, `StravaSettingsDialog.kt`, `StravaDeauthorizationThread.java`, `StravaDataPurgeManager.kt`, `StravaHelper.kt`, `TrainingApplication.java`, `StravaUploadDbHelper.java`, `SegmentsDatabaseManager.java`, `SegmentsRepository.kt`, `RoutesDatabaseManager.kt`, `RoutesRepository.kt`, `EquipmentDbHelper.java`
 - **Rationale**: The system SHALL ensure strict compliance with the Strava API Policy (Section 7.4 Deletion Obligation & Section 6.2 Cache and Retention) regarding authorization termination, while protecting native athlete data and hardware sensor configurations:
 1. *Mandatory Purge on Deauthorization & Revocation*: Upon explicit user disconnection in `StravaSettingsDialog` or automated server-side revocation detection (unrecoverable token refresh failure with `invalid_grant` / HTTP 400 in `StravaHelper.getRefreshedAccessToken`), the system SHALL execute a comprehensive data purge:
@@ -613,6 +715,9 @@
 
 ### REQ-EXT-010: Strava Route & Segment 7-Day TTL Cache Retention, Orphan Pruning & Route Preservation [Verified]
 - **Tests**: `TST-EXT-007`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `RoutesDatabaseManager.kt`, `RoutesRepository.kt`, `SegmentsDatabaseManager.java`, `SegmentsRepository.kt`, `StravaRoutesSyncWorker.kt`, `StravaSegmentsSyncWorker.kt`
 - **Rationale**: The system SHALL enforce strict compliance with Section 6.2 ("Cache and Retention") of the Strava API Agreement and Developer Terms across all Strava-originated routes and starred segments:
 1. *7-Day Retention Limit & Persistent Timestamping*: The system SHALL NOT retain cached Strava routes (`RouteSource.STRAVA` in `Routes.db`) or starred segments (in `Segments.db`) for longer than 7 days (604,800,000 ms) without fresh synchronization. Both `Routes.db` (`TABLE_ROUTES`) and `Segments.db` (`TABLE_STARRED_SEGMENTS`) SHALL maintain a `synced_at` timestamp column (`INTEGER DEFAULT 0`, Schema v8). Whenever a route or segment is synchronized or updated from the Strava API, its `synced_at` timestamp SHALL be updated to current epoch milliseconds (`System.currentTimeMillis()`).
@@ -623,6 +728,9 @@
 
 ### REQ-EXT-011: Resilient Strava Token Refresh Concurrency, Expiry Margin, Precise Revocation Discrimination & Safe Header Construction [Verified]
 - **Tests**: `TST-EXT-008`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit
 • If the error response contains `field == "client_secret"`, `field == "client_id"`, or `resource == "Application"`, or any generic parameter/server error, `StravaHelper` SHALL NOT trigger `StravaDataPurgeManager.purgeAllStravaData()`. It SHALL log an error and return `null` without deleting local data.
 2. *Thread-Safe Reentrant Token Refresh & Double-Checked Locking (`REQ-EXT-011.2`)*:
 • `StravaHelper` SHALL synchronize concurrent invocations of `getRefreshedAccessToken()` via a reentrant lock or monitor (`refreshLock`).
@@ -667,6 +775,9 @@
 
 ### REQ-EXT-012: Strava OAuth 2.0 State Parameter CSRF Protection, Structured Repository Scope Exchange, Application ID Scheme Callback Scoping, and Legacy Callback Deletion [Verified]
 - **Tests**: `TST-EXT-009`, `TST-EXT-012`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit
 - **Implementation**: `AndroidManifest.xml`, `StravaHelper.kt`, `StravaOAuthCallbackActivity.kt`, `StravaOAuthStateManager.kt`, `StravaAuthRepository.kt`
 - **Rationale**: `StravaHelper` (`app/src/main/java/com/atrainingtracker/trainingtracker/onlinecommunities/strava/StravaHelper.kt`), `StravaOAuthCallbackActivity` (`app/src/main/java/com/atrainingtracker/trainingtracker/onlinecommunities/strava/StravaOAuthCallbackActivity.kt`), `StravaOAuthStateManager` (`app/src/main/java/com/atrainingtracker/trainingtracker/onlinecommunities/strava/StravaOAuthStateManager.kt`), and `StravaAuthRepository` (`app/src/main/java/com/atrainingtracker/trainingtracker/onlinecommunities/strava/StravaAuthRepository.kt`) SHALL protect the Strava OAuth 2.0 authorization code flow against Login Cross-Site Request Forgery (CSRF) via cryptographically random state parameter validation and 10-minute expiration, scope redirect URI scheme by applicationId (`strava.${applicationId}`) to prevent release/debug app chooser collisions and legacy build wildcard path collisions, execute token exchange within a structured repository coroutine scope eliminating `GlobalScope`, safely delete unused `BaseOAuthCallbackActivity.java`, and preserve official branding and permissions (ATT-4022, ATT-4668, ATT-4706, refining `REQ-EXT-004` and `REQ-EXT-005`):
 1. *Cryptographic State Generation, Persistence & 10-Minute Expiration (`REQ-EXT-012.1`)*:
@@ -724,16 +835,25 @@
 
 ### REQ-DAT-006: Eager Internal Sensor Registration [Verified]
 - **Tests**: `TST-BUG-011`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `DeviceManager.java`, `DevicesDatabaseManager.java`
 - **Rationale**: The `DeviceManager` SHALL ensure that all detectable internal sensors (e.g., Pressure Sensor) are registered in the database *prior* to any pairing checks or device instantiations within its constructor. This guarantees that internal hardware always has a valid database identity and can be correctly auditable in the UI.
 
 ### REQ-MIG-051: Sparse Data Import [Verified]
 - **Tests**: `TST-MIG-014`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `LegacyImportEngine.kt`, `WorkoutSamplesDatabaseManager.java`
 - **Rationale**: The TCX import engine SHALL dynamically detect available sensors and only create database columns and summary metrics for telemetry actually present in the source file, preventing the population of zero-filled streams for missing data.
 
 ### REQ-DAT-007: Automated Altitude Reference Discovery & Stable Reference Elevation Preservation [Verified]
-- **Tests**: `TST-DAT-009`
+- **Tests**: `TST-DAT-001`, `TST-DAT-002`, `TST-DAT-009`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `KnownLocationsDatabaseManager.java`, `AltitudeFromPressureDevice.java`
 - **Rationale**: The system SHALL maintain a database of known locations in `StartLocation2Altitude.db` based on workout start points (`ExtremaType.START`) without corrupting them through running averages of barometric pressure:
 1. *Zero Altitude Mutation*: In `KnownLocationsDatabaseManager.learnLocation(LatLng pos, Double altitude, ExtremaType type)`, the system SHALL NOT modify the stored `altitude` of an existing location entry within the spatial geofence radius ($200\text{m}$).
@@ -759,11 +879,17 @@
 
 ### REQ-DAT-008: Atomic Database Upgrades [Verified]
 - **Tests**: `TST-UNT-014`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `WorkoutSummariesDatabaseManager.java`
 - **Rationale**: The system SHALL NOT perform manual transaction management (e.g., `setTransactionSuccessful`) within `onUpgrade` callbacks of `SQLiteOpenHelper`. All schema migrations MUST rely on the automatic transaction wrapper provided by the Android framework to prevent `IllegalStateException` and ensure data integrity.
 
 ### REQ-DAT-009: Authoritative Altitude Extrema Reconciliation & Self-Healing [Verified]
-- **Tests**: `TST-DAT-003`
+- **Tests**: `TST-DAT-003`, `TST-DAT-028`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `WorkoutDataMapper.kt`, `WorkoutSummariesDatabaseManager.java`
 - **Rationale**: When loading or mapping workout records (`WorkoutDataMapper.kt`) that contain a non-empty `ALTITUDE_STREAM` (amended by `REQ-DAT-033` in ATT-4003: self-healing writes decoupled from batch read loops), the system SHALL verify that persisted `minAltitude` and `maxAltitude` in `extrema_values` are consistent with the decoded stream points. If stored extrema deviate from the actual stream envelope (specifically, if stored min > stream min [persisted minimum higher than actual lowest stream point] or stored min < stream min - 15.0m [historical pre-ATT-499 GPS startup spike], or stored max < stream max or stored max > stream max + 15.0m), the system SHALL reconcile the authoritative extrema to the decoded stream bounds, update `WorkoutData`, and idempotently persist the corrected extrema to `extrema_values` in SQLite.
 **Acceptance Criteria**:
@@ -773,12 +899,18 @@
 **Invariants**: Legitimate workouts where extrema match their stream MUST NOT be re-written; workouts without altitude streams MUST retain existing extrema.
 
 ### REQ-DAT-010: Bulk Workout Deletion & Relational Storage Purge [Verified]
-- **Tests**: `Planned`
+- **Tests**: `TST-DAT-004`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Rationale**: The system SHALL provide functionality to bulk-delete workout sessions and all associated relational telemetry older than a user-specified retention threshold ($D \ge 0$ days).
 1. *Query Selection*: The system SHALL select all workout records from `WorkoutSummaries` where `TIME_START <= datetime('now', '-'
 
 ### REQ-DAT-011: Period Database Cache Invalidation & Resynchronization upon Bulk Deletion [Verified]
 - **Tests**: `TST-DAT-005`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `PeriodsRepository.kt`, `PeriodSummariesDatabaseManager.kt`, `WorkoutRepository.kt`
 - **Rationale**: Following bulk deletion of workouts older than $D$ days, the system SHALL invalidate and rebuild the persistent period cache (`PeriodSummaries.db`) to ensure that aggregated analytical summaries match the remaining workouts in the database:
 1. *Historical Purge*: All fully purged historical periods (Days, Weeks, Months, Years with zero surviving workouts) MUST be completely removed from `PeriodSummaries.db`.
@@ -792,6 +924,9 @@
 
 ### REQ-DAT-012: TCX Lap Information (Name and Description) Bidirectional Export & Import [Verified]
 - **Tests**: `TST-DAT-006`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `TCXFileWriter.java`, `LegacyImportEngine.kt`, `LapsDatabaseManager.java`
 - **Rationale**: The system SHALL support bidirectional serialization and deserialization of lap names and descriptions within Garmin TCX v2 files (`TrainingCenterDatabasev2.xsd`), preserving custom lap labels, quick tags, coaching notes, and activity descriptions across export and import cycles:
 1. *TCX Export Schema Placement & Formatting (`TCXFileWriter.java`)*:
@@ -826,6 +961,9 @@
 
 ### REQ-DAT-013: TCX Workout Name & Description Bidirectional Export & Import [Verified]
 - **Tests**: `TST-DAT-007`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Rationale**: The system SHALL support bidirectional serialization and deserialization of the workout name (`WorkoutSummaries.WORKOUT_NAME` / `exportName`) and workout description (`WorkoutSummaries.DESCRIPTION`) in Garmin TCX v2 files (`TrainingCenterDatabasev2.xsd`), ensuring that custom workout names and descriptions are preserved across export and import cycles and protected against cluster-name overwriting:
 1. *TCX Export Serialization (`BaseFileWriter.java` & `TCXFileWriter.java`)*:
 • `BaseFileWriter.getHeaderData()` SHALL query and populate `workoutName` from `WorkoutSummaries.WORKOUT_NAME` (`"exportName"`).
@@ -840,6 +978,9 @@
 
 ### REQ-DAT-014: Internet Digital Elevation Model (DEM) Reference Altitude Retrieval, Spatial Caching & Legacy Location Healing [Verified]
 - **Tests**: `TST-DAT-008`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `ElevationService.kt`, `ElevationSource.kt`, `KnownLocationsDatabaseManager.java`, `AltitudeFromPressureDevice.java`
 - **Rationale**: The system SHALL retrieve topographic ground-truth elevation from an open Digital Elevation Model (DEM) service over the internet to calibrate barometric altitude sensors at workout start points:
 1. *Authoritative DEM Retrieval*: When establishing a reference altitude for a workout start location, the system SHALL query the Open-Meteo Elevation API (`https://api.open-meteo.com/v1/elevation?latitude={lat}&longitude={lng}`) asynchronously via `ElevationService` on a background I/O dispatcher (`Dispatchers.IO`) without blocking the sensor dispatch thread or UI Looper.
@@ -871,6 +1012,9 @@
 
 ### REQ-DAT-015: Decoupled Barometric Altimeter Calibration and Authoritative Workout Start Counting [Verified]
 - **Tests**: `TST-DAT-010`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `AltitudeFromPressureDevice.java`, `KnownLocationsDatabaseManager.java`, `TrackerService.java`
 - **Rationale**: The system SHALL decouple barometric altimeter calibration from location visit/start frequency counting, ensuring that location hit counts exclusively reflect athlete-initiated workout recording sessions (ATT-1447):
 1. *Read-Only Sensor Warmup Calibration (`AltitudeFromPressureDevice.java`)*:
@@ -911,6 +1055,9 @@
 
 ### REQ-DAT-016: Authoritative Workout Start Count Self-Healing Reconciliation & Reactive Presentation [Verified]
 - **Tests**: `TST-DAT-011`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `WorkoutSummariesDatabaseManager.java`, `KnownLocationsDatabaseManager.java`, `KnownLocationsRepository.kt`, `KnownLocationsViewModel.kt`, `KnownLocationsScreen.kt`
 - **Rationale**: The system SHALL reconcile known location visit counts (`hitCount`) with authoritative recorded workout starts and provide synchronized reactive counts across data and presentation layers (ATT-1734):
 1. *Authoritative Workout Start Location Extraction (`WorkoutSummariesDatabaseManager.java`)*:
@@ -951,6 +1098,9 @@
 
 ### REQ-DAT-017: Workout Origin Source Provenance Attribute [Verified]
 - **Tests**: `TST-DAT-012`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `WorkoutSource.kt`, `WorkoutSummariesDatabaseManager.java`, `WorkoutData.kt`, `WorkoutHeaderData.kt`, `WorkoutDataMapper.kt`, `LegacyImportEngine.kt`, `WorkoutHeader.kt`
 - **Rationale**: The system SHALL store, maintain, and display the origin source of every workout session across the application lifecycle:
 1. *Domain Model Definition (`WorkoutSource`)*: The system SHALL define an enum `com.atrainingtracker.trainingtracker.database.WorkoutSource` with values `TRACKED` (live sensor tracking on Android device), `TCX` (Garmin Training Center XML), `GPX` (GPS Exchange Format), and `FIT` (Garmin Flexible and Interoperable Data Transfer). `WorkoutSource` SHALL provide parser `fromString(value: String?)` defaulting to `TRACKED` for null, blank, or unrecognized values.
@@ -981,6 +1131,9 @@
 
 ### REQ-DAT-018: Full-Telemetry FIT Workout Exporter via Garmin FIT SDK (`FitFileWriter`) [Verified]
 - **Tests**: `TST-DAT-013`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `FitFileWriter.java`, `FileFormat.java`, `ExportManager.java`, `TrainingApplication.java`, `ExportSettingsDialog.kt`
 - **Rationale**: The system SHALL export workout sessions to binary Garmin FIT format (`.fit`) utilizing the official Garmin FIT SDK (`com.garmin:fit`):
 1. *FIT Protocol & SDK Integration*: The system SHALL utilize `com.garmin.fit.FileEncoder` with protocol `Fit.ProtocolVersion.V2_0` to encode valid, CRC-protected binary `.fit` activity files.
@@ -1019,6 +1172,9 @@
 
 ### REQ-DAT-019: External FIT Workout Importer with Duplicate Detection & Sport Mapping [Verified]
 - **Tests**: `TST-DAT-014`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `LegacyImportEngine.kt`, `BackupRestoreViewModel.kt`, `ImportBackupTabsScreen.kt`, `strings.xml` (9 locales)
 - **Rationale**: The system SHALL import external binary Garmin FIT activity files (`.fit`) into the application's local workout database utilizing the official Garmin FIT SDK (`com.garmin:fit`):
 1. *FIT Stream Decoding (`LegacyImportEngine.importFromFit`)*:
@@ -1062,6 +1218,9 @@
 
 ### REQ-DAT-020: Google Drive Integration for Automated Workout Export and Database Backup [Verified]
 - **Tests**: `TST-DAT-015`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `GoogleDriveClient.kt`, `GoogleDriveUploader.kt`, `GoogleDriveBackupManager.kt`, `GoogleDriveSettingsDialog.kt`, `GoogleDriveAuthManager.kt`, `ExportManager.java`, `BackupWorker.kt`, `BackupRestoreViewModel.kt`
 - **Rationale**: The system SHALL integrate Google Drive cloud storage for automated workout export and database backup synchronization utilizing the least-privilege `drive.file` scope (ATT-1306):
 1. *Native Google Sign-In & Verified OAuth2 Token Exchange (`GoogleDriveAuthManager`, `TrainingApplication`)*:
@@ -1129,6 +1288,9 @@
 
 ### REQ-DAT-021: Workout Origin Source Batch Mapping Symmetry and Cursor Snapshot Propagation [Verified]
 - **Tests**: `TST-DAT-016`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `WorkoutDataMapper.kt`, `WorkoutData.kt`, `WorkoutHeader.kt`
 - **Rationale**: The system SHALL map the `WorkoutSummaries.SOURCE` attribute symmetrically across all cursor mapping pathways in `WorkoutDataMapper.kt` (ATT-2387):
 1. *Raw Cursor Snapshot Provenance Support (`WorkoutDataMapper.RawCursorSnapshot`)*:
@@ -1167,6 +1329,9 @@
 
 ### REQ-DAT-022: Google Drive Background Token Refresh, 401 Re-Authentication, Folder Hierarchy Resolution Resilience & Concurrency Synchronization [Verified]
 - **Tests**: `TST-DAT-017`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit
 - **Implementation**: `GoogleDriveAuthManager.kt`, `GoogleDriveClient.kt`, `GoogleDriveUploader.kt`, `GoogleDriveBackupManager.kt`, `strings.xml` (all 9 locales)
 - **Rationale**: The system SHALL ensure resilient folder hierarchy resolution, automatic token renewal, concurrency synchronization, and user-actionable error reporting during Google Drive background exports and backups (ATT-2631):
 1. *Thread-Safe Token Renewal (`GoogleDriveAuthManager.kt`)*:
@@ -1218,6 +1383,9 @@
 
 ### REQ-DAT-023: Workout Route Preview Map Simplification via Douglas-Peucker & Compact Scalar Streams [Verified]
 - **Tests**: `TST-DAT-018`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit / Review
 - **Implementation**: `LegacyImportEngine.kt`, `LiveWorkoutSession.java`, `TrackerService.java`
 - **Rationale**: The system SHALL generate high-fidelity, compact workout route previews (`WorkoutSummaries.MAP_POLYLINE`) and scalar elevation/distance streams (`WorkoutSummaries.ALTITUDE_STREAM`, `WorkoutSummaries.DISTANCE_STREAM`) for both imported and live-tracked workouts (ATT-2667):
 1. *Imported Workout Route Simplification (`LegacyImportEngine.kt`)*: In `recalculateStats()`, when generating `WorkoutSummaries.MAP_POLYLINE` from parsed trackpoints (`points: List<LatLng>`), the system SHALL apply the Ramer-Douglas-Peucker simplification algorithm via `PolyUtil.simplify(points, 10.0)` (10.0 meters tolerance) before encoding to polyline string. If `points` contains fewer than 3 coordinates, `PolyUtil.simplify` SHALL return `points` unchanged.
@@ -1250,6 +1418,9 @@
 
 ### REQ-DAT-024: Google Drive Format-Specific Directory Organization for Workout Exports and Imports (FIT, TCX, GPX, CSV, GC) [Verified]
 - **Tests**: `TST-DAT-019`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `GoogleDriveUploader.kt`, `LegacyImportEngine.kt`
 - **Rationale**: The system SHALL organize Google Drive workout activities into format-specific subdirectories matching their `FileFormat.dirName` and Dropbox directory parity, while preserving backward-compatible import discovery for legacy flat folders (ATT-3168):
 1. *Format-Specific Destination Hierarchy (`GoogleDriveUploader.kt`)*: When exporting a workout session to Google Drive (`GoogleDriveUploader.doExport`), the system SHALL resolve the destination folder hierarchy dynamically: `listOf("aTrainingTracker", exportInfo.fileFormat.dirName)` (e.g. `["aTrainingTracker", "FIT"]`, `["aTrainingTracker", "TCX"]`, `["aTrainingTracker", "GPX"]`, `["aTrainingTracker", "CSV"]`, `["aTrainingTracker", "GC"]`). If `dirName` is null or empty, the system SHALL fall back defensively to `"Workouts"`.
@@ -1278,6 +1449,9 @@
 
 ### REQ-DAT-025: Authoritative Database Cursor Row and Batch Mappers for Route and Cluster Repositories [Verified]
 - **Tests**: `TST-DAT-020`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `RoutesDatabaseManager.kt`, `WorkoutClusterDatabaseManager.kt`, `WorkoutClusterRepository.kt`
 - **Rationale**: The system SHALL eliminate manual inline cursor column extractions and enforce Rule 20 (Database & DTO Mapping Symmetry) and Rule 36 (Single Source of Truth & DRY) across route and cluster persistence layers (ATT-3366):
 1. *Cursor Lifecycle & Positioning Invariants*:
@@ -1329,61 +1503,97 @@
 
 ### REQ-MIG-001: State Bundling [Verified]
 - **Tests**: `TST-MIG-001`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `BackupManager`
 - **Rationale**: The system SHALL be able to bundle all internal SQLite databases (including high-fidelity samples) and shared preferences into a single portable archive (`.attbackup`).
 
 ### REQ-MIG-002: Multi-Destination Backup [Verified]
 - **Tests**: `TST-MIG-001`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `BackupManager`, `DropboxIntegration`
 - **Rationale**: The system SHALL support both manual backup (via Android SAF) and direct upload to a linked Dropbox account.
 
 ### REQ-MIG-003: Regular Cloud Backups [Verified]
 - **Tests**: `TST-MIG-003`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `BackupWorkManager`
 - **Rationale**: The system SHALL optionally perform automated background backups to Dropbox to ensure disaster recovery (e.g., lost/stolen device).
 
 ### REQ-MIG-004: Full Migration Mode [Verified]
-- **Tests**: `TST-MIG-001`
+- **Tests**: `TST-MIG-001`, `TST-MIG-037`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `MigrationEngine`
 - **Rationale**: The system SHALL support a "Full Restore" mode that replaces the entire local state with a backup, followed by a forced app restart to ensure consistency.
 
 ### REQ-MIG-005: Incremental Import [Verified]
 - **Tests**: `TST-MIG-002`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `ImportEngine.kt`, `LegacyImportEngine.kt`
 - **Rationale**: The system SHALL support merging backups into an existing database. It MUST perform deduplication using the `FILE_BASE_NAME` as the unique identifier. Legacy recovery SHALL also skip files that already exist in the database.
 
 ### REQ-MIG-013: Idempotent Recovery [Verified]
 - **Tests**: `TST-MIG-010`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `LegacyImportEngine.kt`
 - **Rationale**: The legacy recovery process SHALL NOT trigger clustering prompts for workouts that are already present in the database or already have a cluster assigned.
 
 ### REQ-MIG-014: Queued User Interaction [Verified]
 - **Tests**: `TST-MIG-017`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `LegacyImportEngine.kt`, `BackupRestoreViewModel.kt`, `ImportBackupTabsScreen.kt`
 - **Rationale**: The system SHALL decouple user interaction requests (e.g., cluster naming) from background file importing. While an interaction is pending user resolution, the TCX import engine SHALL continue downloading and processing subsequent files concurrently in the background, queuing up to 3 pending user interactions without blocking progress. **Invariants**: Progress indicators and status updates MUST remain visible during background importing.
 
 ### REQ-MIG-006: State Lockdown [Verified]
 - **Tests**: `TST-MIG-001`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `MigrationUI`
 - **Rationale**: Backup and Restore operations SHALL ONLY be allowed when the system is in a non-tracking state to prevent data corruption.
 
 ### REQ-MIG-007: Full Restore Confirmation [Verified]
 - **Tests**: `TST-MIG-004`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `BackupRestoreScreen.kt`
 - **Rationale**: The system SHALL require explicit user confirmation before initiating a "Full Restore" from Dropbox.
 
 ### REQ-MIG-008: Informative Dashboard Labels [Verified]
 - **Tests**: `TST-MIG-005`
+- **Priority**: Low
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `BackupRestoreScreen.kt`
 - **Rationale**: The Backup \u0026 Restore dashboard SHALL provide clear descriptive text for all operations. The Dropbox backup button SHALL be labeled \"Create \u0026 Upload Backup to Dropbox\". Destructive and merging sections SHALL feature high-level descriptions explaining their impact on local data.
 
 ### REQ-MIG-011: Tabbed Import \u0026 Backup UI [Verified]
 - **Tests**: `TST-MIG-008`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `ImportBackupTabsScreen.kt`
 - **Rationale**: The system's data management interface SHALL be organized into a three-tabbed layout: Import, Backup, and Restore. This layout SHALL use the project's standard `HorizontalPager` pattern for consistent navigation. The screen SHALL be prominently labeled \"Import \u0026 Backup\".
 
 ### REQ-MIG-012: Responsive Pre-Import Workout Cluster Tuning Bottom Sheet [Verified]
 - **Tests**: `TST-MIG-009`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `ImportBackupTabsScreen.kt`, `ClusterTuningScreen.kt`, `ClusterInfoDialog.kt`, `BackupRestoreViewModel.kt`
 - **Rationale**: The system SHALL provide access to workout clustering parameters (spatial tolerances, sport type firewall, and altitude position extrema) within an interactive Material 3 `ModalBottomSheet` prior to executing a bulk or single-file TCX workout import. The bottom sheet SHALL span the available screen width and dynamically adapt vertically, displaying the title (`cluster_tuning_title`), an integrated educational Info button (`Icons.Outlined.Info`) triggering the `ClusterInfoDialog`, explanatory guidance, and a scrollable `ClusterTuningContent` layout. The bottom sheet SHALL provide explicit confirmation and dismissal actions.
 
@@ -1400,61 +1610,97 @@
 
 ### REQ-MIG-009: Default Backup Interval [Verified]
 - **Tests**: `TST-MIG-006`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `prefs_dropbox.xml`, `BackupWorker.kt`
 - **Rationale**: The system SHALL default the automated backup interval to 1 day (Daily) to maximize data safety for new users.
 
 ### REQ-MIG-010: Enable Backups by Default [Verified]
 - **Tests**: `TST-MIG-007`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `prefs_dropbox.xml`, `BackupWorker.kt`
 - **Rationale**: The system SHALL enable the automated backup feature by default for new installations.
 
 ### REQ-MIG-015: Efficient Legacy Recovery [Verified]
 - **Tests**: `TST-MIG-011`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `LegacyImportEngine.kt`
 - **Rationale**: The legacy recovery process SHALL skip already imported workouts BEFORE downloading them from remote storage to ensure optimal performance and bandwidth usage.
 
 ### REQ-MIG-016: Paginated & Recursive Cloud Recovery [Verified]
-- **Tests**: `TST-MIG-018`
+- **Tests**: `TST-MIG-012`, `TST-MIG-018`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `LegacyImportEngine.kt`, `BackupRestoreViewModel.kt`
 - **Rationale**: The system SHALL robustly scan and paginate cloud storage paths (e.g., `/TCX`, `/apps/Workouts/TCX` and their subdirectories) using `.withRecursive(true)` and `listFolderContinue()` with error recovery to discover all TCX workout files regardless of folder size. **Invariants**: Deduplication (`isWorkoutExisting`) MUST continue using `FILE_BASE_NAME` as the unique identifier.
 
 ### REQ-MIG-021: Informative Import Summary [Verified]
 - **Tests**: `TST-MIG-018`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `BackupRestoreViewModel.kt`, `LegacyImportEngine.kt`, `strings.xml`
 - **Rationale**: Upon completing a bulk import, the system SHALL display a detailed summary stating the number of newly imported workouts, the number of skipped/already existing workouts, and the total number of files scanned. **Invariants**: Success and error messages MUST be accurately formatted.
 
 ### REQ-MIG-022: Preserve Original Filename During Import [Verified]
 - **Tests**: `TST-MIG-019`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `LegacyImportEngine.kt`
 - **Rationale**: The TCX import engine SHALL preserve the original source filename when storing `FILE_BASE_NAME` and `WORKOUT_NAME` in the database. Temporary download files and worker subdirectories MUST NOT modify, prefix, or append counters to the source filename. **Invariants**: `WorkoutSummaries.FILE_BASE_NAME` MUST exactly equal the source file name without extension.
 
 ### REQ-MIG-023: Unlinked Cloud Feature Deactivation [Verified]
 - **Tests**: `TST-MIG-020`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `ImportBackupTabsScreen.kt`, `TrainingApplication.java`, `BackupRestoreViewModel.kt`, `DropboxUploader.java`
 - **Rationale**: When the user is not authenticated or connected to Dropbox, all cloud-dependent features (including scanning/importing legacy TCX files, cloud backups, and cloud restores) SHALL be visually deactivated in the UI (rendered in a muted/grey state). Clicking a deactivated cloud action SHALL present an informational dialog explaining that Dropbox is disconnected. **Invariants**: Credential reading and background jobs MUST NOT throw null pointer exceptions when unlinked.
 
 ### REQ-MIG-017: Limited Interaction Queue & Backpressure [Verified]
-- **Tests**: `TST-MIG-017`
+- **Tests**: `TST-MIG-013`, `TST-MIG-017`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `LegacyImportEngine.kt`, `BackupRestoreViewModel.kt`
 - **Rationale**: The system SHALL limit the number of concurrent pending UI interactions to a maximum of 3 using a semaphore (`interactionSemaphore(3)`). The background import engine MUST ONLY suspend file downloading and parsing when 3 candidate interactions are active in `_interactionQueue`, automatically resuming as the user resolves queued items. **Invariants**: Queue size MUST NOT exceed 3 items.
 
 ### REQ-MIG-018: Sparse Data Import [Verified]
 - **Tests**: `TST-MIG-014`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `LegacyImportEngine.kt`, `WorkoutSamplesDatabaseManager.java`
 - **Rationale**: The TCX import engine SHALL dynamically detect available sensors and only create database columns and summary metrics for telemetry actually present in the source file, preventing the population of zero-filled streams for missing data.
 
 ### REQ-MIG-019: Dropbox Wait Feedback [Verified]
 - **Tests**: `TST-MIG-015`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `LegacyImportEngine.kt`, `BackupRestoreViewModel.kt`
 - **Rationale**: The TCX import process SHALL provide explicit visual feedback (e.g., status message) when the system is waiting for a response from the Dropbox API (e.g., during folder scanning or file downloading) to ensure the user is aware of the external dependency.
 
 ### REQ-MIG-020: Positive Import Branding [Verified]
 - **Tests**: `TST-MIG-016`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `ImportBackupTabsScreen.kt`, `strings.xml`
 - **Rationale**: The workout import feature (formerly Legacy Recovery) SHALL be presented as a first-class feature for migrating data from previous devices. Terminology SHALL avoid negative or technical qualifiers like \"Legacy\" or \"Recovery\" and instead use active, feature-oriented language. Redundant introduction text SHALL be removed from the tabbed interface.
 
 ### REQ-MIG-024: High-Fidelity TCX Telemetry & Multi-Lap Structure Import [Verified]
 - **Tests**: `TST-MIG-021`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `LegacyImportEngine.kt`, `LapsDatabaseManager.java`, `WorkoutSummariesDatabaseManager.java`, `WorkoutSamplesDatabaseManager.java`
 - **Rationale**: The TCX import engine (`LegacyImportEngine`) SHALL parse and persist high-fidelity telemetry and multi-lap structures from TCX activity files:
 1. *Trackpoint Extensions (TPX)*: The engine SHALL parse Garmin TrackpointExtension v2 elements, extracting instantaneous speed (`<Speed>` in m/s) and running cadence (`<RunCadence>` in RPM/spm) when present, populating `SensorType.SPEED` and `SensorType.CADENCE` respectively without falling back to lossy delta approximations.
@@ -1469,6 +1715,9 @@
 
 ### REQ-MIG-025: TCX Import Cluster Decision Integrity & Unclustered Workout Preservation [Verified]
 - **Tests**: `TST-MIG-022`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `LegacyImportEngine.kt`, `WorkoutClusterEngine.kt`, `WorkoutRepository.kt`
 - **Rationale**: The system SHALL strictly respect user cluster decisions when importing workouts from TCX or external files:
 1. *User Decision Sovereignty*: When a user dismisses or chooses "Leave Unclustered" (`@string/cluster_naming__leave_unclustered`) in `ClusterNamingDialog`, the workout SHALL remain unclustered in the database with `WorkoutSummaries.CLUSTER_ID = -1L`.
@@ -1499,6 +1748,9 @@
 
 ### REQ-MIG-026: TCX Import Reactive Period Aggregation, Direct Pipeline Notification & Self-Healing Period Sync [Verified]
 - **Tests**: `TST-MIG-023`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `LegacyImportEngine.kt`, `WorkoutRepository.kt`, `PeriodsRepository.kt`, `PeriodSummariesDatabaseManager.kt`, `BackupRestoreViewModel.kt`
 - **Rationale**: The system SHALL ensure that all workouts imported from TCX (single file or cloud bulk recovery) immediately and deterministically appear in the Workout Periods analytics views (Days, Weeks, Months, Years):
 1. *Direct Repository Notification Pipeline*: Upon completing statistical recalculation for an imported workout (`recalculateStats`), `LegacyImportEngine` SHALL NOT rely exclusively on unbuffered `LocalBroadcastManager` broadcasts. It SHALL directly invoke `WorkoutRepository.getInstance(app).reloadWorkoutData(workoutId)` and ensure `PeriodsRepository.getInstance(app).onWorkoutFinished(freshWorkoutData)` executes to aggregate the session into its Day period and propagate metrics upward (Day -> Week/Month -> Year).
@@ -1517,6 +1769,9 @@
 
 ### REQ-MIG-027: TCX Import Cluster Assignment, Multi-Sport Heuristics & In-Memory Cache Refresh [Verified]
 - **Tests**: `TST-MIG-024`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `LegacyImportEngine.kt`, `WorkoutClusterEngine.kt`, `WorkoutClusterRepository.kt`, `WorkoutClustersViewModel.kt`, `BackupRestoreViewModel.kt`
 - **Rationale**: The system SHALL ensure that workouts imported from TCX are accurately evaluated against route clusters without false rejections due to unmapped sports, and that cluster state is reactively reflected in the UI:
 1. *Multi-Sport & Unknown Sport Inference*: When evaluating cluster candidates in `LegacyImportEngine` (`suggestCluster`), if `bSportType == BSportType.UNKNOWN`, the engine MUST NOT pass `setOf(BSportType.UNKNOWN)` (which incurs a punitive `+5.0` penalty in `calculateSimilarity`). Instead, it SHALL evaluate candidate sports using `EquipmentAndSportTypeDiscoveryManager.getCandidateBSportTypes(bSportType, avgSpeed)` or pass `emptySet()` to enable multi-sport candidate evaluation.
@@ -1539,6 +1794,9 @@
 
 ### REQ-MIG-028: Optional Strava Upload on TCX Import [Verified]
 - **Tests**: `TST-MIG-025`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `LegacyImportEngine.kt`, `TrainingApplication.java`, `BackupRestoreViewModel.kt`, `ImportBackupTabsScreen.kt`
 - **Rationale**: The system SHALL allow athletes to choose whether workouts imported from TCX (via single file import or cloud bulk recovery) are automatically uploaded to Strava:
 1. *Persistent Configuration*: The system SHALL provide a persistent configuration setting (`SP_IMPORT_TCX_UPLOAD_TO_STRAVA`) in `TrainingApplication` / `SharedPreferences` indicating whether imported workouts should be uploaded to Strava. To prevent unintended historical feed flooding and Strava API quota exhaustion, this setting SHALL default to `false`.
@@ -1562,6 +1820,9 @@
 
 ### REQ-MIG-029: TCX Import & Spatial Route Cluster Auto-Matching Parity & Lossless Candidate Discovery [Verified]
 - **Tests**: `TST-MIG-026`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit
 - **Implementation**: `WorkoutClusterEngine.kt`, `LegacyImportEngine.kt`, `BackupRestoreViewModel.kt`, `ImportBackupTabsScreen.kt`
 - **Rationale**: The system SHALL guarantee lossless candidate evaluation and scoring parity between automated TCX import cluster matching and interactive route cluster selection:
 1. *Lossless Candidate Discovery in `suggestCluster`*: `WorkoutClusterEngine.suggestCluster()` SHALL NOT prune candidate clusters using restrictive bounding box filters that prematurely discard valid matches whose composite similarity score is $< 1.0$. Specifically, `suggestCluster()` SHALL evaluate candidate similarity across all available route clusters (`dbManager.getAllClusters()`), guaranteeing that single-dimension deviations (such as start point displacement $> 1.0 \times \text{endpointTol}$, e.g. 250m–400m) are not pruned before their multi-component composite score is evaluated.
@@ -1580,6 +1841,9 @@
 
 ### REQ-MIG-030: High-Fidelity GPX Workout Import & Full Telemetry Ingestion Parity [Verified]
 - **Tests**: `TST-MIG-027`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit
 - **Implementation**: `LegacyImportEngine.kt`, `BackupRestoreViewModel.kt`, `ImportBackupTabsScreen.kt`
 - **Rationale**: The system SHALL support importing historical workouts from GPX files (single file via file picker and cloud bulk recovery from Dropbox), matching the analytical fidelity, cluster routing, and period aggregation of the TCX import pipeline:
 1. *Spatial & Temporal Parsing*: Parse `<trk>` / `<trkseg>` / `<trkpt>` (and fallback `<rte>` / `<rtept>`) elements, extracting latitude (`lat`), longitude (`lon`), elevation (`<ele>`), and UTC timestamps (`<time>`). Compute cumulative geodesic distance (`SensorType.DISTANCE_m`) between consecutive GPS coordinates.
@@ -1592,6 +1856,9 @@
 
 ### REQ-MIG-031: Multi-Dimensional Workout Deduplication & Concurrent Worker Race Condition Guard in TCX/GPX Import with Extended 3-Minute Same-Sport Tolerance Window (Option 2) [Verified]
 - **Tests**: `TST-MIG-028`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `LegacyImportEngine.kt`, `BackupRestoreViewModel.kt`
 - **Rationale**: The system SHALL prevent duplicate imports of workouts across single-file and cloud bulk recovery flows through multi-dimensional deduplication, atomic synchronization, pre-dispatch filtering, and an extended same-sport start-time tolerance window (ATT-2023 Revision 2):
 1. *Extended Same-Sport Tolerance Window (`isWorkoutExisting` in `LegacyImportEngine.kt`)*:
@@ -1629,6 +1896,9 @@
 
 ### REQ-MIG-032: Interactive Post-Import Workout Navigation & Decoupled List Auto-Focus [Verified]
 - **Tests**: `TST-MIG-029`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `LegacyImportEngine.kt`, `BackupRestoreViewModel.kt`, `ImportBackupTabsScreen.kt`, `WorkoutNavigationEvents.kt`, `WorkoutSummariesTabbedScreen.kt`, `MainActivityWithNavigation.kt`
 - **Rationale**: The system SHALL provide interactive post-import workout navigation and decoupled list auto-focus upon successful activity file import (ATT-2337):
 1. *Non-Breaking Import Result Contract (`LegacyImportEngine.kt`)*:
@@ -1668,6 +1938,9 @@
 
 ### REQ-MIG-033: Enhanced Altitude & Speed Telemetry Ingestion Parity in FIT Workout Import [Verified]
 - **Tests**: `TST-MIG-030`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit
 - **Implementation**: `LegacyImportEngine.kt`
 - **Rationale**: The system SHALL guarantee complete elevation profile extraction, ascent/descent computation, and high-resolution speed parsing when importing Garmin/Wahoo/Hammerhead FIT workout files (ATT-2338):
 1. *Enhanced Altitude Extraction & Precedence (`RecordMesg`)*:
@@ -1705,6 +1978,9 @@
 
 ### REQ-MIG-034: Google Drive Historical Workout File Discovery, Top-Level Candidates & Bulk Recovery (.fit, .tcx, .gpx) [Verified]
 - **Tests**: `TST-MIG-031`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
 • Upon successful import of one or more activities, the system SHALL asynchronously trigger post-recovery reconciliation: `WorkoutRepository.loadAllWorkouts()`, `PeriodsRepository.syncPeriodsIfDiscrepancy()`, `WorkoutClusterRepository.refreshClusters()`.
 4. *UI Integration & Connection Gating (`ImportBackupTabsScreen.kt`)*:
 • `ImportTabContent` SHALL render a "Scan Google Drive" action button within each format card.
@@ -1757,6 +2033,9 @@
 
 ### REQ-MIG-035: Dropbox Historical Workout File Discovery & Bulk Recovery for FIT (.fit) [Verified]
 - **Tests**: `TST-MIG-032`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `LegacyImportEngine.kt`
 - **Rationale**: The system SHALL extend Dropbox cloud recovery in `LegacyImportEngine.bulkRecoverFromDropbox` to discover, download, and import historical `.fit` workout activity files (ATT-2341):
 1. *Target Directory Expansion (`LegacyImportEngine.kt`)*:
@@ -1797,7 +2076,10 @@
 • *Then* it dispatches to `importFromFitInternal`, parsing telemetry and saving the workout to `WorkoutSummaries`.
 
 ### REQ-MIG-036: Automated Background Backup WorkManager Scheduling, Monotonic Timer Preservation, Conditional Network Constraints, Status Diagnostics, Unified Manual Cloud Backup, and Dynamic Automated Subtitles [Verified]
-- **Tests**: `TST-MIG-033`, `TST-MIG-036`, `TST-DAT-031`, `TST-MIG-045`
+- **Tests**: `TST-MIG-033`, `TST-MIG-036`, `TST-DAT-031`, `TST-MIG-045`, `TST-MIG-037`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `BackupWorker.kt`, `BackupRestoreViewModel.kt`, `ImportBackupTabsScreen.kt`, `BackupTabContent.kt`, `RestoreTabContent.kt`, `BackupManager.kt`, `values*/strings.xml`
 - **Rationale**: The system SHALL execute automated periodic database backups reliably in the background without timer resets on application cold starts, aligning default preference values, guaranteeing co-located atomic file creation with stale cleanup, providing bounded local backup retention, enforcing conditional network constraints, displaying localized per-target status diagnostics, exposing internal rolling backups directly in the UI, and dynamically adapting manual cloud backup triggers and automated backup subtitles to reflect active cloud providers (ATT-3472, ATT-4458, ATT-4518, ATT-4587, amending `REQ-MIG-003` and `REQ-MIG-004`):
 1. *Monotonic WorkManager Periodic Scheduling (`BackupWorker.kt`)*:
@@ -1902,6 +2184,9 @@
 
 ### REQ-EXP-018: FIT Format Support in Detailed Export Report, Safe Database Upsert & Workout Header Export Menu Integration [Verified]
 - **Tests**: `TST-EXP-015`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `ExportStatusDatabaseManager.java`, `ExportStatusDataProvider.kt`, `ExportStatusRepository.kt`, `WorkoutHeader.kt`, `strings.xml` (all 9 locales)
 - **Rationale**: The system SHALL include the FIT binary format in the detailed export status report, ensure database persistence via safe upsert in `ExportStatusDatabaseManager`, and provide direct on-demand FIT export in the workout header overflow menu (ATT-2310):
 1. *Safe Database Upsert (`ExportStatusDatabaseManager.java`)*: When `updateExportStatus(contentValues, fileBaseName, exportType, fileFormat)` is called: (a) If `exportType != null`, the system SHALL execute `db.update(...)`. If `0` rows are affected, the system SHALL insert a new row into `ExportStatusDbHelper.TABLE` with `fileBaseName`, `TYPE = exportType.name()`, `FORMAT = fileFormat.name()`, `EXPORT_STATUS = contentValues.getAsString(EXPORT_STATUS)` (defaulting to `UNWANTED`), and `ANSWER = contentValues.getAsString(ANSWER)`. (b) If `exportType == null`, the system SHALL update all rows matching `FILE_BASE_NAME = ? AND FORMAT = ?`. If `0` rows are affected, the system SHALL insert rows for all `ExportType`s that support `fileFormat`. (c) `updateExportStatus(contentValues, exportInfo)` SHALL delegate cleanly to `updateExportStatus(contentValues, exportInfo.getFileBaseName(), exportInfo.getExportType(), exportInfo.getFileFormat())`.
@@ -1928,6 +2213,9 @@
 
 ### REQ-MIG-037: Unified Streaming TCX and GPX XML Trackpoint Parsing Engine (Rule 36) [Verified]
 - **Tests**: `TST-MIG-034`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `TrackpointXmlParser.kt`, `TcxTrackpointParser.kt`, `GpxTrackpointParser.kt`, `LegacyImportEngine.kt`, `TcxCourseParser.kt`, `GpxRouteImporter.kt`
 - **Rationale**: The system SHALL consolidate all duplicated XML trackpoint and course/route parsing logic across workout imports and route imports into a unified, shared streaming XML parser architecture (`com.atrainingtracker.trainingtracker.routes.parsers.TrackpointXmlParser.kt`), enforcing Rule 36 (Single Source of Truth & DRY) and guaranteeing 100% data fidelity between workout imports and route imports (ATT-3362, complementing `REQ-MIG-030`, `REQ-MAP-025`, and `REQ-MAP-026`):
 1. *Shared XML Trackpoint Domain DTOs (`TrackpointXmlParser.kt`)*:
@@ -1968,6 +2256,9 @@
 
 ### REQ-MIG-038: Modular Workout Format Parsers for TCX, GPX, and FIT Ingestion & LegacyImportEngine Architectural Facade [Verified]
 - **Tests**: `TST-MIG-035`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `ParsedWorkoutData.kt`, `TcxWorkoutParser.kt`, `GpxWorkoutParser.kt`, `FitWorkoutParser.kt`, `LegacyImportEngine.kt`
 - **Rationale**: The system SHALL decompose the monolithic `LegacyImportEngine.kt` by extracting format-specific parsing algorithms into dedicated, single-responsibility parser components (`TcxWorkoutParser`, `GpxWorkoutParser`, `FitWorkoutParser`) under `migration/parsers/`, unifying the post-parsing database persistence pipeline, and preserving 100% backward compatibility of `LegacyImportEngine`'s public and internal APIs, enforcing Rule 20 (Database Mapping Symmetry), Rule 23 (Code Cleanliness), and Rule 36 (Single Source of Truth & DRY) (ATT-3552, complementing `REQ-MIG-030`, `REQ-MIG-036`, and `REQ-MIG-037`):
 1. *Structured In-Memory Parsed Workout Model (`ParsedWorkoutData`)*:
@@ -2011,6 +2302,9 @@
 
 ### REQ-DAT-043: Deterministic Resource Management via Try-With-Resources and Bounds Checking on SQLite Cursors Across Legacy Database Managers [Verified]
 - **Tests**: `TST-DAT-039`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit
 - **Implementation**: `ExportStatusDatabaseManager.java`, `DevicesDatabaseManager.java`, `SportTypeDatabaseManager.java`, `TrackingViewsDatabaseManager.java`, `PebbleDatabaseManager.java`, `BaseFileWriter.java`
 - **Rationale**: The system SHALL guarantee deterministic resource cleanup and zero cursor leaks by enclosing all internally-consumed `Cursor` instances in `try-with-resources` (`AutoCloseable`) blocks across all Java database managers, database helpers, and file exporters, AND SHALL guarantee crash immunity against `CursorIndexOutOfBoundsException` by validating cursor navigation before accessing column data (ATT-3550, parent epic ATT-431):
 1. *Try-With-Resources Allocation (`REQ-DAT-043.1`)*:
@@ -2051,6 +2345,9 @@
 
 ### REQ-DAT-026: Targeted Single-Row Query and Bounds-Checked Resume Reconstruction in TrackerService [Verified]
 - **Tests**: `TST-DAT-021`
+- **Priority**: Medium
+- **Type**: Non-Functional
+- **Verification Method**: Unit
 - **Implementation**: `WorkoutClusterEngine.kt`, `EquipmentDataProvider.kt`, `WorkoutClusterRepository.kt`, `WorkoutClusterDatabaseManager.kt`, `WorkoutClusterMapperTest.kt`
 - **Rationale**: The system SHALL optimize crash recovery in `TrackerService.java` by constraining database access on `WorkoutSummaries.TABLE` to a targeted projection of required scalar columns and a single latest row, enclosed in try-with-resources with defensive cursor bounds checking (ATT-3549, parent epic ATT-431):
 1. *Constrained Projection & Single-Row Index Scan (`REQ-DAT-026.1`)*:
@@ -2085,6 +2382,9 @@
 
 ### REQ-DAT-044: Authoritative Cursor Mappers for Workout Cluster Engine and Equipment Data Provider Architecture [Verified]
 - **Tests**: `TST-DAT-040`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `WorkoutClusterEngine.kt`, `EquipmentDataProvider.kt`, `WorkoutClusterRepository.kt`, `WorkoutClusterDatabaseManager.kt`, `WorkoutClusterMapperTest.kt`
 - **Rationale**: The system SHALL eliminate manual inline cursor column extractions across workout clustering and equipment data provider layers by introducing typed `fromCursor` DTO mappers (`WorkoutBoundsDto`, `ClusterWorkoutCandidateDto`, `WorkoutEquipmentDto`) and centralizing batch key extraction in `WorkoutClusterDatabaseManager`, enforcing Rule 20 (Database & DTO Mapping Symmetry) and Rule 36 (Single Source of Truth & DRY) (ATT-3577, complementing `REQ-DAT-025`):
 1. *Workout Bounds DTO Mapper (`WorkoutBoundsDto`, `REQ-DAT-044.1`)*:
@@ -2132,6 +2432,9 @@
 
 ### REQ-DAT-027: GoldenCheetah JSON File Export Format and Data Integrity Verification [Verified]
 - **Tests**: `TST-DAT-022`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `GCFileWriter.java`, `GCFileWriterTest.kt`
 - **Rationale**: The system SHALL modernize and harden `GCFileWriter.java` conforming to the GoldenCheetah Ride JSON specification (ATT-2169):
 1. *Pure Numeric JSON Sample Metrics (Locale-Independent)*:
@@ -2174,7 +2477,10 @@
 **Invariants**: GoldenCheetah file extension remains `.json`; zero regression in FIT/TCX/GPX exporters; 100% clean-room test pass rate MUST NOT be broken.
 
 ### REQ-MIG-039: Offline Power Training Metrics Calculation, Historical Athlete Threshold Resolution, and Import/Finalization Extrema Persistence [Verified]
-- **Tests**: `TST-MIG-036`
+- **Tests**: `TST-MIG-049`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `PowerPhysiologyCalculator.kt`, `AthleteMetricsDatabaseManager.kt`, `SettingsDataStoreJavaHelper.kt`, `ParsedWorkoutData.kt`, `FitWorkoutParser.kt`, `LegacyImportEngine.kt`, `TrackerService.java`, `CyclingPowerMetricsDevice.java`
 - **Rationale**: The system SHALL calculate and persist session-level power training metrics — Normalized Power ($\text{NP}$, in $\text{W}$), Intensity Factor ($\text{IF} = \text{NP} / \text{FTP}$), Training Stress Score ($\text{TSS} = \frac{T_{\text{active}} \cdot \text{NP} \cdot \text{IF}}{\text{FTP} \cdot 36.0}$), Mechanical Work ($\text{Work}$, in $\text{kJ}$), Power-to-Weight ($\text{W/kg}$), and Variability Index ($\text{VI} = \text{NP} / \text{Avg\_Power}$) — across `PowerPhysiologyCalculator`, `AthleteMetricsDatabaseManager`, `SettingsDataStoreJavaHelper`, `FitWorkoutParser`, `LegacyImportEngine.recalculateStats()`, and `TrackerService.finalizeLiveSession()` (ATT-3860, complementing `REQ-MIG-038`, `REQ-TRK-019`, `REQ-TRK-020`, `REQ-TRK-021`, and `REQ-UI-391`):
 1. *Canonical Power Training Metrics Domain Calculator (`REQ-MIG-039.1` — Rule 36 & Rule 40)*:
@@ -2205,6 +2511,9 @@
 
 ### REQ-MIG-040: Zip-Slip Path Traversal Protection, Symlink Rejection, Top-Level Whitelist & Bounded Stream Extraction in Backup Operations [Verified]
 - **Tests**: `TST-MIG-037`, `TST-MIG-038`, `TST-MIG-044`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit
 - **Implementation**: `MigrationEngine.kt`, `ImportEngine.kt`, `LegacyImportEngine.kt`, `BackupImportSecurityTest.kt`
 - **Rationale**: `MigrationEngine` (`app/src/main/java/com/atrainingtracker/trainingtracker/migration/MigrationEngine.kt`), `ImportEngine` (`app/src/main/java/com/atrainingtracker/trainingtracker/migration/ImportEngine.kt`), and `LegacyImportEngine` (`app/src/main/java/com/atrainingtracker/trainingtracker/migration/LegacyImportEngine.kt`) SHALL validate the normalized path of every extracted archive entry against the destination boundary, reject all symbolic link entries and components, enforce a top-level directory whitelist for `.attbackup` archives (`databases/`, `shared_prefs/`, `datastore/`), protect against zip bomb resource exhaustion via streaming counting, and sanitize remote Google Drive file downloads (ATT-3982, extending `REQ-MIG-004` and `REQ-MIG-036`):
 1. *Path Normalization & Canonical Boundary Validation (`REQ-MIG-040.1`)*:
@@ -2247,6 +2556,9 @@
 
 ### REQ-MIG-041: Pre-Restore Backup Validation, Schema Version Bounds, Connection Teardown, and Atomic Rollback Snapshot [Verified]
 - **Tests**: `TST-MIG-038`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit
 - **Implementation**: `MigrationEngine.kt`, `SecureZipExtractor.kt`, `TrainingApplication.java`, `FullRestoreValidationSecurityTest.kt`
 - **Rationale**: `MigrationEngine` (`app/src/main/java/com/atrainingtracker/trainingtracker/migration/MigrationEngine.kt`), `SecureZipExtractor` (`app/src/main/java/com/atrainingtracker/trainingtracker/migration/SecureZipExtractor.kt`), and `TrainingApplication` (`app/src/main/java/com/atrainingtracker/trainingtracker/TrainingApplication.java`) SHALL guarantee that a full restore operation never deletes or modifies current application state before validating archive structure, SQLite integrity, and schema versions; closes active database singletons prior to file replacement; creates a non-destructive rollback snapshot; rolls back automatically on any installation failure; and cleans up all temporary and rollback staging directories (ATT-3989, extending `REQ-MIG-040` and `REQ-MIG-004`):
 1. *Pre-Restore Archive Structure Validation (`REQ-MIG-041.1`)*:
@@ -2289,6 +2601,9 @@
 
 ### REQ-MIG-042: Samples Table Name Escaping, Case-Insensitive Deduplication, Deterministic Disambiguation & Structural DDL Construction [Verified]
 - **Tests**: `TST-MIG-039`
+- **Priority**: Medium
+- **Type**: Non-Functional
+- **Verification Method**: Unit
 - **Implementation**: `WorkoutSamplesDatabaseManager.java`, `ImportEngine.kt`, `LegacyImportEngine.kt`
 - **Rationale**: The system SHALL guarantee SQL injection immunity, case-insensitive collision protection, and safe structural table construction during workout imports (ATT-3991):
 1. *Safe Identifier Escaping (`WorkoutSamplesDatabaseManager.java`)*:
@@ -2328,6 +2643,9 @@
 
 ### REQ-MIG-043: Atomic Cross-Database Import via SQLite ATTACH, Dedicated Scoped Connection, Shared ReentrantLock, Non-Destructive Orphan Repair, insertOrThrow Enforcement & Cooperative Coroutine Responsiveness [Verified]
 - **Tests**: `TST-MIG-040`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit
 - **Implementation**: `ImportEngine.kt`, `LegacyImportEngine.kt`, `BackupManager.kt`
 - **Rationale**: `ImportEngine` (`app/src/main/java/com/atrainingtracker/trainingtracker/migration/ImportEngine.kt`), `LegacyImportEngine` (`app/src/main/java/com/atrainingtracker/trainingtracker/migration/LegacyImportEngine.kt`), and `BackupManager` (`app/src/main/java/com/atrainingtracker/trainingtracker/migration/BackupManager.kt`) SHALL enforce true cross-database ACID transaction atomicity via SQLite `ATTACH DATABASE` on dedicated non-singleton connections, serialize concurrent database access with a shared `ReentrantLock` during the `ATTACH` window across import and backup operations, provide non-destructive diagnostic orphan detection, eliminate silent `db.insert()` failures with `insertOrThrow()`, enforce static schema intersection with explicit `NOT NULL` defaults, invert legacy import side-effects, and adhere strictly to coroutine cooperative cancellation and non-blocking backoff (ATT-3992, extending `REQ-MIG-042` and `REQ-MIG-031`):
 1. *Dedicated Connection Lifecycle & Absolute Path ATTACH (`REQ-MIG-043.1`)*:
@@ -2383,6 +2701,9 @@
 
 ### REQ-MIG-044: Non-Destructive SportType Schema Upgrade, Custom Sport Preservation, Post-v2 Data Healing Reconciliation, Placeholder Flagging & Strict Downgrade Guard [Verified]
 - **Tests**: `TST-MIG-041`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `SportTypeDatabaseManager.java`, `SportTypeDbHelper`, `SportTypeSelectorContract.kt`
 - **Rationale**: `SportTypeDatabaseManager` (`app/src/main/java/com/atrainingtracker/banalservice/database/SportTypeDatabaseManager.java`) and `SportTypeSelectorContract` SHALL guarantee that upgrading `SportType.db` never drops or recreates `SportTypes` table, strictly preserves all user-defined sport types and primary key IDs, atomically migrates `WALK` base sport type to `RUN`, introduces `is_placeholder INTEGER DEFAULT 0` column in Schema v3, heals post-v2 corrupted databases by resurrecting referenced orphan IDs as flagged placeholders, synchronizes `sqlite_sequence` to eliminate primary key collision vulnerabilities, isolates placeholders from active workout selection, and strictly prohibits database downgrades (ATT-3993, extending `REQ-MIG-043`):
 1. *Non-Destructive Schema Upgrade & Version 3 Evolution (`REQ-MIG-044.1`)*:
@@ -2431,6 +2752,9 @@
 
 ### REQ-DAT-028: UTC-Anchored Binary FIT Export, Transient Lap Synthesis, Fail-Fast Stream Error Propagation, and Application Context Lifetime [Verified]
 - **Tests**: `TST-DAT-023`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `FitFileWriter.java`, `FitFileWriterTest.kt`
 - **Rationale**: `FitFileWriter` (`app/src/main/java/com/atrainingtracker/trainingtracker/exporter/writer/FitFileWriter.java`) SHALL guarantee that all exported Garmin FIT activity files (`.fit`) encode timestamps in true UTC matching SQLite `CURRENT_TIMESTAMP` ground truth regardless of host device timezone using thread-safe `java.time.format.DateTimeFormatter`, synthesize a single transient in-memory `LapMesg` for unsegmented workouts preserving active `totalTimerTime` and wall-clock `totalElapsedTime` (supporting workouts with pauses) to satisfy FIT Protocol V2.0 compliance without mutating `Laps.db`, fail fast with `ExportResult(false)` upon timestamp parse errors, negative durations, or sample read exceptions without publishing truncated files, clean up partially written `.fit` files upon failure, and bind to `getApplicationContext()` to prevent Activity lifecycle leaks (ATT-3994, extending `REQ-DAT-018`):
 1. *Strict UTC Timezone Anchoring with Thread-Safe `DateTimeFormatter` (`REQ-DAT-028.1`)*:
@@ -2476,6 +2800,9 @@
 
 ### REQ-DAT-029: Resilient Background Export & Upload Pipeline, Attempt Capping, Cooperative Cancellation, Transactional Upload Remediation, and Stuck State Recovery [Verified]
 - **Tests**: `TST-DAT-024`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `BaseExporter.java`, `ExportWorker.kt`, `ExportManager.java`, `ExportStatusDatabaseManager.java`, `WorkoutDeletionHelper.java`
 - **Rationale**: `BaseExporter` (`app/src/main/java/com/atrainingtracker/trainingtracker/exporter/BaseExporter.java`), `ExportWorker` (`app/src/main/java/com/atrainingtracker/trainingtracker/exporter/ExportWorker.kt`), `ExportManager` (`app/src/main/java/com/atrainingtracker/trainingtracker/exporter/ExportManager.java`), `ExportStatusDatabaseManager` (`app/src/main/java/com/atrainingtracker/trainingtracker/exporter/db/ExportStatusDatabaseManager.java`), and `WorkoutDeletionHelper` (`app/src/main/java/com/atrainingtracker/trainingtracker/database/WorkoutDeletionHelper.java`) SHALL guarantee that export operations never retry infinitely upon deterministic failures, do not abandon database status in `PROCESSING` on uncaught exceptions, atomically fail dependent upload rows upon file generation failure in strict sequence, execute cooperative cancellation at the start of sample loops and immediately after blocking I/O without orphaned resources or partial files, strictly synchronize WorkManager tags and unique work names during invalidation, sanitize inputs at entry, maintain periodic heartbeat timestamps, lazily recover stranded states exceeding `MAX_EXPORT_DURATION_MS` (15 minutes) of silence guarded by double-checked WorkManager liveness without premature false positives on long workouts, and safely delete workouts without `IllegalArgumentException` crashes (ATT-3995, extending `REQ-DAT-028` and `REQ-DAT-018`):
 1. *Deterministic vs Retryable Error Classification (`REQ-DAT-029.1`)*:
@@ -2539,6 +2866,9 @@
 
 ### REQ-MIG-045: Real SQLite In-Memory & Fixture Migration Testing Framework via Robolectric [Verified]
 - **Tests**: `TST-MIG-042`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit
 - **Implementation**: Equip test suite with authentic SQLite execution via Robolectric and AndroidX Test, providing reusable migration test fixture helper and real SQLite verification suites covering WorkoutSummaries, SportType, Equipment, Routes, and TrackingViews.
 - **Rationale**: The test harness, build configuration (`app/build.gradle`), and automated unit test suite SHALL equip the project with an authentic SQLite execution environment using Robolectric and AndroidX Test, enabling `SQLiteOpenHelper` implementations to execute DDL, DML, PRAGMA statements, multi-version upgrade chains, and data preservation checks against a genuine SQLite engine during JVM test execution (`./gradlew testDebugUnitTest`), eliminating reliance on mock-only `execSQL` verification (ATT-4005, extending `REQ-MIG-044` and `REQ-MIG-041`):
 1. *Robolectric & AndroidX Test Dependency Integration (`REQ-MIG-045.1`)*:
@@ -2587,6 +2917,9 @@
 
 ### REQ-MIG-046: Legacy SQLite Upgrade DDL Hardening, Synchronous onUpgrade Excision, and Idempotent Cross-Database Backfill Architecture [Verified]
 - **Tests**: `TST-MIG-043`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit
 - **Implementation**: `WorkoutSummariesDatabaseManager.java`, `WorkoutClusterDatabaseManager.kt`, `DatabaseBackfillManager.kt`
 - **Rationale**: `WorkoutSummariesDatabaseManager.WorkoutSummariesDbHelper` (`app/src/main/java/com/atrainingtracker/trainingtracker/database/WorkoutSummariesDatabaseManager.java`) and `WorkoutClusterDatabaseManager.WorkoutClusterDbHelper` (`app/src/main/java/com/atrainingtracker/trainingtracker/database/WorkoutClusterDatabaseManager.kt`) SHALL eliminate fatal DDL syntax errors (`DEFAULT ???`) and column query defects for legacy database upgrades (`oldVersion < 11`), excise heavy cross-database DML backfills (`migrateExistingWorkouts`, `migrateExtremaPositions`, `migrateSpatialBounds`, `backfillAltitudeExtrema`) from synchronous execution inside `onUpgrade` to guarantee non-blocking database open completing in $< 10\text{ ms}$, execute idempotent background backfills with atomic in-database state tracking resilient to process death, and guarantee non-crashing graceful degradation in the Data Access Layer during the migration window (ATT-4009, extending `REQ-MIG-045`):
 1. *Legacy DDL Syntax & Column Guard Hardening (`REQ-MIG-046.1`)*:
@@ -2631,6 +2964,9 @@
 
 ### REQ-DAT-030: Google Drive Query Escaping, Encapsulated Account Cache, Atomic Download Staging & Transparent Scan Results [Verified]
 - **Tests**: `TST-DAT-025`
+- **Priority**: Medium
+- **Type**: Non-Functional
+- **Verification Method**: Unit
 - **Implementation**: `GoogleDriveClient.kt`, `GoogleDriveUploader.kt`, `GoogleDriveBackupManager.kt`, `LegacyImportEngine.kt`
 - **Rationale**: The system SHALL ensure secure query construction, account-isolated folder caching with self-healing re-creation, atomic download streaming, and transparent directory scans during Google Drive cloud operations (ATT-4014, refining `REQ-DAT-022`):
 1. *Centralized Query Construction & Escaping (`GoogleDriveQueryBuilder`, `REQ-DAT-030.1`)*:
@@ -2686,6 +3022,9 @@
 
 ### REQ-DAT-031: Atomic Concurrent-Safe Database Backup Snapshots, Storage Verification, and Singleton Helper Lifecycle [Verified]
 - **Tests**: `TST-DAT-026`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `BackupManager.kt`, `DatabaseConnectionManager.kt`, `StravaUploadDbHelper.java`, `EquipmentDbHelper.java`, `ActiveDevicesDbHelper.java`
 - **Rationale**: `BackupManager` (`app/src/main/java/com/atrainingtracker/trainingtracker/migration/BackupManager.kt`), `DatabaseConnectionManager` (`app/src/main/java/com/atrainingtracker/trainingtracker/migration/DatabaseConnectionManager.kt`), `StravaUploadDbHelper` (`app/src/main/java/com/atrainingtracker/trainingtracker/exporter/db/StravaUploadDbHelper.java`), `EquipmentDbHelper` (`app/src/main/java/com/atrainingtracker/trainingtracker/database/EquipmentDbHelper.java`), and `ActiveDevicesDbHelper` (`app/src/main/java/com/atrainingtracker/trainingtracker/database/ActiveDevicesDbHelper.java`) SHALL guarantee that backup bundle creation generates atomic, consistent database snapshots without torn page reads or omitted WAL frames under active concurrent tracking writes, pre-verifies available filesystem storage before staging, executes SQLite `VACUUM INTO` on API 30+ without blocking concurrent writers, provides a writer-synchronized fallback checkpoint and retry mechanism on API 26–29, manages all SQLite open helpers as thread-safe singletons without connection or file descriptor leakage, verifies snapshot integrity prior to packaging, and cleans up staging directories on all exit paths (ATT-4011, extending `REQ-MIG-040`, `REQ-MIG-041`, and `REQ-MIG-043`):
 1. *Storage Space Pre-Verification (`REQ-DAT-031.1`)*:
@@ -2738,6 +3077,9 @@
 
 ### REQ-DAT-032: OAuth Credential Isolation, Android Auto Backup & Device Transfer Rules, and .attbackup Credential Exclusion Policy [Verified]
 - **Tests**: `TST-DAT-027`, `TST-DAT-031`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `TrainingApplication.java`, `AuthCredentialsStore.kt`, `ExportManager.java`, `BackupManager.kt`, `MigrationEngine.kt`, `BackupWorker.kt`, `BackupRestoreViewModel.kt`, `ImportBackupTabsScreen.kt`, `DropboxUploader.java`, `DropboxBackupManager.kt`, `MainActivityWithNavigation.kt`, `AndroidManifest.xml`
 - **Rationale**: `TrainingApplication` (`app/src/main/java/com/atrainingtracker/trainingtracker/TrainingApplication.java`), `AuthCredentialsStore` (`app/src/main/java/com/atrainingtracker/trainingtracker/security/AuthCredentialsStore.kt`), `BackupManager` (`app/src/main/java/com/atrainingtracker/trainingtracker/migration/BackupManager.kt`), `MigrationEngine` (`app/src/main/java/com/atrainingtracker/trainingtracker/migration/MigrationEngine.kt`), `BackupWorker` (`app/src/main/java/com/atrainingtracker/trainingtracker/migration/BackupWorker.kt`), `MainActivityWithNavigation` (`app/src/main/java/com/atrainingtracker/trainingtracker/activities/MainActivityWithNavigation.kt`), and `AndroidManifest.xml` SHALL isolate all OAuth authentication credentials into a dedicated private preferences file (`auth_credentials_prefs.xml`), migrate legacy credentials transparently, exclude `auth_credentials_prefs.xml` from Android Auto Backup and device transfers via XML extraction rules, exclude `auth_credentials_prefs.xml` from `.attbackup` archive creation and restoration, require a clean one-time re-authentication after full restore, guard cloud provider connection checks against unauthenticated or missing tokens, self-heal orphaned cloud toggles, and eliminate broad FileProvider attack surfaces (ATT-4023, refined by ATT-4459, extending `REQ-DAT-031`, `REQ-MIG-040`, and `REQ-SEC-041`):
 1. *Isolated Authentication Credentials Store & Dual-Key Legacy Migration (`REQ-DAT-032.1`)*:
@@ -2822,6 +3164,9 @@
 
 ### REQ-DAT-033: High-Performance Batch Workout Mapping, Non-Blocking Cluster Equipment Resolution & Consolidated Samples DB Telemetry Loading [Verified]
 - **Tests**: `TST-DAT-028`
+- **Priority**: Medium
+- **Type**: Non-Functional
+- **Verification Method**: Unit
 - **Implementation**: `WorkoutDataMapper.kt`, `PeriodsRepository.kt`, `WorkoutClustersTabsScreen.kt`, `WorkoutClustersViewModel.kt`, `WorkoutRepository.kt`, `TrackOnMapAftermathViewModel.kt`, `WorkoutRepositoryProjectionTest.kt`
 - **Rationale**: The system SHALL eliminate synchronous per-workout N+1 database queries, read-time SQLite writes, Main-thread Compose queries, and redundant samples table scans across workout mapping, period analytics, cluster navigation, and Aftermath loading (ATT-4003, ATT-4707, Implemented in: ATT-4003, Status: Verified, amending `REQ-DAT-009` and `REQ-MAP-020`):
 1. *Batch Workout Mapping & Expanded Batch Metadata (`REQ-DAT-033.1`)*:
@@ -2868,6 +3213,9 @@
 
 ### REQ-DAT-034: Database Performance Optimization, Missing Index Migrations, Routes N+1 Query Elimination & Synchronized Transactional Clustering Engine [Verified]
 - **Tests**: `TST-DAT-029`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit
 - **Implementation**: `RoutesDatabaseManager.kt`, `WorkoutSummariesDatabaseManager.java`, `LapsDatabaseManager.java`, `WorkoutClusterEngine.kt`
 - **Rationale**: The system SHALL optimize database performance and thread safety across routes, workout summaries, laps, and route clustering by adding missing database indexes across both fresh creation and upgrades, eliminating N+1 route query amplification, batching historical cluster migrations in SQLite transactions with in-memory cluster candidate caching, and serializing cluster mutations via concurrency synchronization (ATT-4008, Implemented in: ATT-4008, Status: Verified):
 1. *Database Schema Version Upgrades & Index Migrations (`REQ-DAT-034.1`)*:
@@ -2901,6 +3249,9 @@
 
 ### REQ-DAT-035: Nullable Altitude Telemetry, Sea-Level Fidelity (0.0 m), Crop Stream Gap Resilience & Extrema Reconciliation Integrity [Verified]
 - **Tests**: `TST-DAT-030`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Rationale**: The system SHALL support nullable altitude telemetry (`PathPoint.altitude: Double? = null`) to explicitly decouple missing altitude measurements from valid sea-level altitude ($0.0\text{ m}$), eliminate artificial $0.0\text{ m}$ canyon plunge artifacts during workout cropping and downsampling, protect authoritative extrema reconciliation in `WorkoutDataMapper` from resetting valid positive minimum altitudes to $0.0\text{ m}$ upon stream gaps, and render elevation profiles and aftermath statistics accurately for sea-level and trackless workouts (ATT-4017, Implemented in: ATT-4017, Status: Verified, amending `REQ-DAT-009` and `REQ-UI-332`, refining `REQ-UI-126`):
 1. *Nullable Altitude DTO & Track Point Extraction (`MapModels.kt`, `WorkoutRepository.kt`, `REQ-DAT-035.1`)*:
 • In `MapModels.kt`, `PathPoint.altitude` SHALL be declared as nullable (`val altitude: Double? = null`), permitting call sites to omit altitude or pass `null` when elevation data is unrecorded.
@@ -2909,6 +3260,9 @@
 
 ### REQ-MIG-047: Canonical Destination Resolution, Symlinked Parent Directory Boundary Tolerance & Symlink Rejection Invariant in SecureZipExtractor [Verified]
 - **Tests**: `TST-MIG-044`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `SecureZipExtractor.kt`, `BackupImportSecurityTest.kt`
 - **Rationale**: The system SHALL resolve and canonicalize the destination directory once (`realDestPath = destPath.toRealPath()`) before resolving archive entry paths, resolve all archive entries directly against `realDestPath` (`entryPath = realDestPath.resolve(entryName).normalize()`), terminate ancestor symlink traversal loops at `realDestPath` (`while (ancestor != null && ancestor != realDestPath)`), and validate real paths (`toRealPath(LinkOption.NOFOLLOW_LINKS)`) relative to `realDestPath`, ensuring that pre-existing OS-level parent symlinks (e.g., Android `/data/user/0 -> /data/data`) do not trigger spurious `SecurityException` failures during full restore or incremental backup import, while strictly preserving rejection of any symbolic links inside the archive or within the destination hierarchy (ATT-4592, parent epic ATT-281, status: Verified, amending `REQ-MIG-040`):
 1. *Canonical Destination Initialization & Entry Resolution (`SecureZipExtractor.kt`, `REQ-MIG-047.1`)*:
@@ -2949,6 +3303,9 @@
 
 ### REQ-DAT-036: SQLite Schema Evolution, `onCreate`/`onUpgrade` Parity & Automated Migration Verification [Verified]
 - **Tests**: `TST-DAT-032`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit
 - **Implementation**: Mandate symmetrical SQLite schema evolution between onCreate and onUpgrade, safe DEFAULT values for added NOT NULL columns, and automated migration contract tests.
 - **Rationale**: The system and engineering coding standards SHALL mandate symmetrical SQLite database schema evolution, non-null column safety, and automated schema migration test coverage across all SQLite database helpers (ATT-3534, Parent Epic ATT-232, refining `REQ-DAT-008` and `REQ-PRO-026`):
 1. *Symmetrical Evolution (`docs/coding_standards.md` §2.3)*:
@@ -2974,6 +3331,9 @@
 
 ### REQ-DAT-037: Resilient Google Drive Background Upload Retry, Post-Restore Re-Auth Parity & Stuck Export Recovery [Verified]
 - **Tests**: `TST-DAT-033`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit
 - **Implementation**: `GoogleDriveUploaderTest.kt`, `DropboxUploaderTest.kt`, `GoogleDriveBackupManagerTest.kt`, `AuthCredentialsStoreTest.kt`, `GoogleDriveSettingsDialogTest.kt`, `ExportManagerTest.kt`, `ExportStatusDatabaseManagerTest.kt`, `MainActivityGoogleDriveStartupRecoveryTest.kt`
 - **Rationale**: The system SHALL guarantee reliable background cloud workout uploads and backups by attempting silent token acquisition when the cached token is null, preventing zombie connected states post-restore, classifying transient network and rate-limit errors as retryable with WorkManager exponential backoff, and automatically recovering exports previously stuck on credential failures both on re-authentication and asynchronously on application startup (ATT-4922, ATT-5081, Parent Epic ATT-162, amending `REQ-DAT-030` and `REQ-DAT-032`):
 1. *Silent Token Acquisition Fallback (`REQ-DAT-037.1`)*:
@@ -3021,6 +3381,9 @@
 
 ### REQ-MIG-048: Strava Bulk Export Archive Ingestion Pipeline, Bilingual CSV Metadata Enrichment, Transparent GZIP Decompression, Tolerant XML Deserialization, Equipment Sync, and Duplicate Re-Upload Prevention [Verified]
 - **Tests**: `TST-MIG-046`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `StravaBulkExportImporter.kt`, `StravaCsvParser.kt`, `LegacyImportEngine.kt`, `ImportBackupTabsScreen.kt`, `TrackpointModels.kt`, `EquipmentDbHelper.java`, `StravaUploadDbHelper.java`
 - **Rationale**: Strava provides users with complete account archives (`export_<id>.zip`) containing an authoritative metadata summary (`activities.csv`), user equipment tables (`bikes.csv`, `shoes.csv`), and compressed activity streams (`activities/*.fit.gz`, `*.tcx.gz`, `*.gpx.gz`). To enable seamless migration into `aTrainingTracker` without gigabyte-scale uncompressed disk bloat or XML parser crashes, the system SHALL ingest Strava export archives via streaming ZIP reading, decode compressed stream files transparently, parse bilingual RFC 4180 metadata, sanitize TCX XML declarations against leading whitespace, synchronize equipment, and register Strava activity IDs to prevent duplicate re-upload loops (ATT-4957, extending `REQ-MIG-030`, `REQ-MIG-031`, `REQ-MIG-037`, `REQ-MIG-038`, and `REQ-MIG-040`):
 1. *Streaming ZIP Archive & Transparent GZIP Decompression (`REQ-MIG-048.1`)*:
@@ -3067,6 +3430,9 @@
 
 ### REQ-DAT-038: Workout Photo Storage, Symmetrical SQLite Schema v27, and EXIF/Trackpoint Interpolation [Verified]
 - **Tests**: `TST-DAT-034`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit
 - **Implementation**: `WorkoutSummariesDatabaseManager.java`, `DatabaseSchemaRegistry.kt`, `WorkoutPhotoManager.kt`, `WorkoutDeletionHelper.java`
 - **Rationale**: Athletes capture photos during workouts and export archives containing workout media. To persist photos attached to workouts without ballooning SQLite database size, photo metadata SHALL be stored in a dedicated `workout_photos` table in `WorkoutSummaries.db` (v27) while image binaries are stored in app-private filesystem storage (`filesDir/workout_photos/<workout_id>/`), accompanied by EXIF metadata extraction and GPS trackpoint interpolation (ATT-43):
 1. *Symmetrical SQLite Schema v27 & DatabaseSchemaRegistry Parity (`REQ-DAT-038.1`)*:
@@ -3101,6 +3467,9 @@
 
 ### REQ-MIG-049: Unified Chronological Ascending Ingestion Order for Bulk Imports & Cloud Recovery [Verified]
 - **Tests**: `TST-MIG-047`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `StravaBulkExportImporter.kt`, `SafDirectoryScanner.kt`, `BackupRestoreViewModel.kt`, `LegacyImportEngine.kt`
 - **Rationale**: Historical activities ingested through bulk import pipelines (Strava bulk ZIP export, SAF directory scanning, multi-URI file selection, and Dropbox/Google Drive cloud recovery) must be processed in deterministic chronological ascending order (oldest first). Ingesting newest first causes inverted sequential cluster counter numbering (`#1` assigned to modern workouts and `#350` to older ones in `WorkoutClusterEngine`) and SQLite autoincrement `_id` inversion. The system SHALL re-order activities/URIs/entries across all bulk pipelines prior to sequential processing (ATT-6039, extending `REQ-MIG-048`, `REQ-UI-363`, `REQ-MIG-031`, `REQ-MIG-034`, and `REQ-MIG-035`):
 1. *Strava Bulk Export Chronological Re-Ordering (`REQ-MIG-049.1`)*:
@@ -3137,6 +3506,9 @@
 
 ### REQ-MIG-050: In-Memory Existing Workout Deduplication Snapshot & Zero-I/O Fast-Forward for Bulk Importers [Verified]
 - **Tests**: `TST-MIG-048`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `ExistingWorkoutsSnapshot.kt`, `StravaBulkExportImporter.kt`, `BackupRestoreViewModel.kt`, `LegacyImportEngine.kt`, `WorkoutSummariesDatabaseManager.java`, `StravaUploadDbHelper.java`
 - **Rationale**: When resuming or repeating large bulk imports (Strava bulk ZIP archives, local multi-file/SAF folders, or Dropbox/Google Drive recovery), importers currently perform expensive I/O, file copying to `cacheDir`, and full stream decompression/parsing on already-imported workouts before discovering they already exist in downstream database checks (`isWorkoutExisting`). The system SHALL pre-load an in-memory snapshot of existing workout identifiers and execute zero-I/O upstream pre-filtering to fast-forward bulk imports without stream parsing or file copying (ATT-5902, extending `REQ-MIG-031`, `REQ-MIG-048.5`, and `REQ-MIG-049.5`):
 1. *Single-Pass In-Memory Deduplication Snapshot (`REQ-MIG-050.1`)*:
@@ -3178,6 +3550,9 @@
 ### REQ-DAT-039: Point-to-Point (A->B) Route Apex Migration, Import Unification & Mapper Parity [Verified]
 - **Target Release**: `V5.0.0`
 - **Tests**: `TST-DAT-035`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit
 - **Implementation**: `app/src/main/java/com/atrainingtracker/trainingtracker/database/WorkoutClusterEngine.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/database/WorkoutClusterRepository.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/migration/LegacyImportEngine.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/WorkoutDataMapper.kt`
 - **Rationale**: While `REQ-SET-097` (`ATT-5899`) introduced non-degenerate elliptical apex calculation (`findApexFromPoints`) for live recordings on point-to-point (A->B) routes ($d(\text{start}, \text{end}) \ge 150\text{ m}$), historical workouts in `TABLE_EXTREMA_VALUES` and historical clusters in `WorkoutClusters.db` still store legacy apex coordinates that collapsed onto the destination point ($P_{\text{apex}} \approx P_{\text{end}}$). Furthermore, premature `< 50f` skip filtering prevented healing realistic commute overshoots. The system SHALL perform a self-healing migration across existing point-to-point database records using bipolar product apex resolution and unify apex calculation across import pipelines and data mappers.
 - **Description**:
@@ -3211,6 +3586,9 @@
 ### REQ-DAT-040: TCX Structured DTO Serialization, Parsing Decoupling & Round-Trip Fidelity [Verified]
 - **Target Release**: `V5.0.0`
 - **Tests**: `TST-DAT-036`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `app/src/main/java/com/atrainingtracker/trainingtracker/tcx/model/`, `app/src/main/java/com/atrainingtracker/trainingtracker/tcx/serializer/`, `app/src/main/java/com/atrainingtracker/trainingtracker/tcx/parser/`, `app/src/main/java/com/atrainingtracker/trainingtracker/exporter/writer/TCXFileWriter.java`, `app/src/main/java/com/atrainingtracker/trainingtracker/migration/parsers/TcxWorkoutParser.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/routes/parsers/TcxTrackpointParser.kt`
 - **Rationale**: To prevent schema sequence violations, escaping bugs, and silent field drops during XML interchange, the system SHALL introduce structured, immutable Data Transfer Objects (DTOs) for the Garmin TCX schema (`TrainingCenterDatabasev2.xsd`), decoupling XML serialization and parsing from internal SQLite database representations and providing bit-exact round-trip fidelity across workout export and re-import.
 - **Description**:
@@ -3248,6 +3626,9 @@
 ### REQ-DAT-041: Repository-Only Engine, Exporter & Migration Layer Database Access (Phase B) [Verified]
 - **Target Release**: `V5.0.0`
 - **Tests**: `TST-DAT-037`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `app/src/main/java/com/atrainingtracker/trainingtracker/database/WorkoutClusterEngine.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/migration/LegacyImportEngine.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/exporter/StravaUploader.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/exporter/FitFileWriter.java`, `app/src/main/java/com/atrainingtracker/trainingtracker/exporter/TCXFileWriter.java`, `app/src/main/java/com/atrainingtracker/trainingtracker/database/WorkoutDeletionHelper.java`
 - **Rationale**: Direct instantiation of SQLite database manager singletons (`*DatabaseManager.getInstance()`) inside processing engines, exporters, and migration helpers violates Clean Architecture (SWE.2) and couples core background pipelines directly to low-level SQLite helpers. The system SHALL eliminate all direct database manager references from Phase B components by routing all database operations through domain repositories (`WorkoutRepository`, `SportTypesRepository`, `EquipmentRepository`, `WorkoutClusterRepository`, `KnownLocationsRepository`, `RoutesRepository`, `SegmentsRepository`, `ExportStatusRepository`).
 - **Description**:
@@ -3280,6 +3661,9 @@
 ### REQ-DAT-042: True Repository Encapsulation & SQLite Backdoor Elimination (Phase B Hardening) [Verified]
 - **Target Release**: `V5.0.0`
 - **Tests**: `TST-DAT-038`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit
 - **Implementation**: `app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/WorkoutRepository.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/database/WorkoutClusterRepository.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/ui/components/export/ExportStatusRepository.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/repositories/RoutesRepository.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/exporter/writer/FitFileWriter.java`, `app/src/main/java/com/atrainingtracker/trainingtracker/exporter/writer/TCXFileWriter.java`, `app/src/main/java/com/atrainingtracker/trainingtracker/exporter/writer/BaseFileWriter.java`, `app/src/main/java/com/atrainingtracker/trainingtracker/migration/LegacyImportEngine.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/database/WorkoutDeletionHelper.java`, `app/src/main/java/com/atrainingtracker/trainingtracker/exporter/uploader/StravaUploader.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/database/WorkoutClusterEngine.kt`
 - **Rationale**: While ATT-6426 decoupled background engines from direct `*DatabaseManager.getInstance()` calls, repositories introduced public and internal backdoor getters exposing raw database managers, SQLiteDatabase handles, and Cursors. This violates SWE.2 encapsulation and coding standards §2.5. Low-level persistence details, table definitions, and Cursor lifecycle must be strictly encapsulated inside domain repositories.
 - **Description**:
@@ -3316,6 +3700,9 @@
 
 ### REQ-EXP-042: Garmin FIT Radar Threat Alert Events & MyBikeTraffic Developer Fields [Verified]
 - **Tests**: `TST-EXP-042`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `FitFileWriter.java`
 - **Rationale**: Cyclists exporting rides to Garmin FIT format expect compatibility with third-party cycling radar analytics platforms (such as *MyBikeTraffic*). The system SHALL encode standard FIT `EventMesg` (`Event.RADAR_THREAT_ALERT`) upon vehicle overtaking events and define FIT Protocol V2.0 Developer Fields on `RecordMesg` for 1 Hz radar metrics.
 - **Description**:
@@ -3344,6 +3731,9 @@
 
 ### REQ-RAD-007: Radar Traffic & Close-Pass Summary in Strava Description & Share Intent [Verified]
 - **Tests**: `TST-RAD-007`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `RadarTrafficSummaryFormatter.kt`, `StravaUploader.kt`, `ShareUtils.kt`
 - **Rationale**: Cyclists recording rides with rearview radar want to document road traffic safety and motorist overtaking behavior in their Strava activity feeds and social shares without manual copy-pasting. The system SHALL provide an opt-in setting to automatically append a concise, standardized Radar Traffic & Close-Pass Summary to Strava activity descriptions and workout share texts.
 - **Description**:

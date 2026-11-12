@@ -3918,6 +3918,47 @@ The workflow SHALL mandate that:
   • *When* executed,
   • *Then* master index tables achieve 100% mathematical parity.
 - **Invariants**: Pure Python 3 standard library; zero Android runtime changes; zero regression in existing governance checks.
+
+### REQ-PRO-083: Data Migration and Export Test Evidence Backfill & Bidirectional Traceability Governance [Verified]
+- **Tests**: `TST-PRO-083`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Implementation**: `docs/requirements/req_data_migration_export.md`, `docs/tests/tst_data_migration_export.md`, `WorkoutDeletionHelperTest.kt`, `tools/verify_requirement_governance.py`
+- **Rationale**: Under ASPICE SWE.6 BP4, SWE.1 BP5, and Remediation A-08.8 (ATT-6134), all requirements in the `data_migration_export` domain shard must link to valid, existing test specifications in `docs/tests/tst_data_migration_export.md` with verified automated test code implementations in `app/src/test/` or be downgraded to `[Implemented]` per REQ-PRO-073. Bidirectional reference integrity must guarantee that every referenced TST cites all of its parent REQs back with zero dangling references:
+  1. *Complete TST Coverage & Evidence Verification (`REQ-PRO-083.1`)*:
+     • Every requirement in `docs/requirements/req_data_migration_export.md` SHALL cite one or more valid, existing backticked `TST-*` IDs in its `Tests:` field.
+     • `REQ-DAT-010` (*Bulk Workout Deletion & Relational Storage Purge*) SHALL cite `TST-DAT-004`, backed by automated unit tests in `WorkoutDeletionHelperTest.kt`. All 130 requirements in `req_data_migration_export.md` SHALL maintain `[Verified]` status backed by automated unit tests in `app/src/test/`.
+  2. *Bidirectional Citation Integrity & Category 4 Gap Elimination (`REQ-PRO-083.2`)*:
+     • Every test specification in `tst_data_migration_export.md` SHALL be cited back by 100% of the requirements it declares in its `Requirement(s):` field.
+     • `REQ-DAT-007` SHALL cite `TST-DAT-001`, `TST-DAT-002`, `TST-DAT-009`.
+     • `REQ-DAT-009` SHALL cite `TST-DAT-003`, `TST-DAT-028`.
+     • `REQ-DAT-010` SHALL cite `TST-DAT-004`.
+     • `TST-DAT-028` SHALL prune extraneous non-domain citation `REQ-MAP-020`.
+     • `REQ-MIG-016` SHALL cite `TST-MIG-012`, `TST-MIG-018`.
+     • `REQ-MIG-017` SHALL cite `TST-MIG-013`, `TST-MIG-017`.
+     • `REQ-MIG-004` SHALL cite `TST-MIG-001`, `TST-MIG-037`.
+     • `REQ-MIG-036` SHALL cite `TST-MIG-033`, `TST-MIG-036`, `TST-DAT-031`, `TST-MIG-045`, `TST-MIG-037`.
+     • `REQ-MIG-039` SHALL cite `TST-MIG-049`.
+  3. *Test Code Tag Synchronization (`REQ-PRO-083.3`)*:
+     • `WorkoutDeletionHelperTest.kt` SHALL be annotated with `(REQ-DAT-010, TST-DAT-004 / ATT-296)` to eliminate Category 2 untagged test code gaps.
+  4. *Attribute Compliance & Header Parity (`REQ-PRO-083.4`)*:
+     • All 130 requirements in `docs/requirements/req_data_migration_export.md` SHALL declare valid `Priority`, `Type`, and `Verification Method` attributes per `REQ-PRO-077`.
+     • Domain shard headers SHALL reflect accurate totals (`Total Requirements: 130`, `Total Tests: 117`) in 100% mathematical parity with master index tables.
+  5. *Tooling Allowlist Pruning (`REQ-PRO-083.5`)*:
+     • `REQ-DAT-010` SHALL be removed from `LEGACY_UNGROUNDED_VERIFIED_REQS` in `tools/verify_requirement_governance.py`.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Net-new requirement `REQ-PRO-083` (`REQ-PRO-083.1`–`REQ-PRO-083.5`). Targets `docs/requirements/req_data_migration_export.md`, `docs/tests/tst_data_migration_export.md`, `WorkoutDeletionHelperTest.kt`, and `tools/verify_requirement_governance.py`.
+  2. *Historical Origin & Commit Trace*: Sprint 2026-46.4 via ticket `ATT-6134` under Epic `ATT-6119` (ASPICE CL2, Remediation A-08.8).
+  3. *Root Reason for Existing Formulation*: Baseline assessment identified evidence and back-link gaps in the Data Migration and Export domain shards following living document partitioning in `ATT-4594`.
+  4. *Preservation of Core Invariants*: Full clean-room unit test suite execution, master table mathematical parity, and pure Python 3 stdlib execution preserved with zero production Android APK modifications.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* `docs/requirements/req_data_migration_export.md`,
+  • *When* evaluated via `python3 tools/verify_requirement_governance.py --coverage`,
+  • *Then* 100% of requirements cite valid TSTs, zero ungrounded Verified statuses exist in data_migration_export, and 100% of domain TSTs are cited back by all referenced REQs (0 Category 4 domain gaps).
+  • *Given* `docs/requirements/req_data_migration_export.md` and `docs/tests/tst_data_migration_export.md`,
+  • *When* checked for dangling references and attributes,
+  • *Then* zero dangling references and zero missing attributes are detected in data_migration_export.
   • *Given* `tools/verify_requirement_governance.py --sync-indexes`,
   • *When* executed,
   • *Then* master index tables achieve 100% mathematical parity.

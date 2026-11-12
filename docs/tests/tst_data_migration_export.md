@@ -3,7 +3,7 @@
 **Domain**: `data_migration_export`  
 **Prefixes**: `DAT`, `EXP`, `EXT`, `MIG`  
 **Scope**: Database schema, backup/restore, migration pipelines, Strava/cloud upload, FIT/GPX export.  
-**Total Tests**: 106
+**Total Tests**: 117
 
 ---
 
@@ -1793,7 +1793,7 @@
   • Verify `uploadToDropbox` is automatically reset to `false`.
 
 ### TST-DAT-028: **High-Performance Batch Workout Mapping, Non-Blocking Cluster Equipment Resolution & Consolidated Samples DB Telemetry Loading Verification Suite** [Verified]
-- **Requirement(s)**: `REQ-DAT-033`, `REQ-DAT-009`, `REQ-MAP-020`
+- **Requirement(s)**: `REQ-DAT-033`, `REQ-DAT-009`
 - **Component**: **High-Performance Batch Workout Mapping, Non-Blocking Cluster Equipment Resolution & Consolidated Samples DB Telemetry Loading Verification Suite**
 - **Jira**: ``ATT-4003, ATT-4707``
 - **Test Description**:
