@@ -22,7 +22,9 @@ import android.bluetooth.BluetoothGatt
 import android.bluetooth.BluetoothGattCharacteristic
 import android.bluetooth.BluetoothGattDescriptor
 import android.bluetooth.BluetoothGattService
+import android.bluetooth.BluetoothManager
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Handler
 import android.os.Looper
@@ -106,6 +108,10 @@ class BTLERadarDeviceTest {
         every { DevicesDatabaseManager.getInstance(any()) } returns mockDevicesDbManager
 
         mockContext = mockk(relaxed = true)
+        val mockBtManager = mockk<BluetoothManager>(relaxed = true)
+        every { mockContext.getSystemService(Context.BLUETOOTH_SERVICE) } returns mockBtManager
+        every { mockBtManager.adapter } returns null
+
         val mockLooper = mockk<Looper>(relaxed = true)
         every { mockContext.mainLooper } returns mockLooper
         mockSensorManager = mockk(relaxed = true)
@@ -115,6 +121,13 @@ class BTLERadarDeviceTest {
         every { anyConstructed<Handler>().postDelayed(any(), any()) } answers { true }
         every { anyConstructed<Handler>().removeCallbacks(any<Runnable>()) } answers { }
         every { anyConstructed<Handler>().removeCallbacksAndMessages(any()) } answers { }
+
+        mockkConstructor(Intent::class)
+        every { anyConstructed<Intent>().setPackage(any()) } answers { self as Intent }
+        every { anyConstructed<Intent>().putExtra(any<String>(), any<String>()) } answers { self as Intent }
+        every { anyConstructed<Intent>().putExtra(any<String>(), any<Long>()) } answers { self as Intent }
+        every { anyConstructed<Intent>().putExtra(any<String>(), any<Int>()) } answers { self as Intent }
+        every { anyConstructed<Intent>().putExtra(any<String>(), any<Boolean>()) } answers { self as Intent }
 
         RadarStateRepository.reset()
         radarDevice = BTLERadarDevice(mockContext, mockSensorManager, 101L, "DC:2C:26:01:02:03")
@@ -508,5 +521,128 @@ class BTLERadarDeviceTest {
 
         // Verifies hardware packet arrival halted simulation immediately (REQ-CON-029.3)
         assertFalse(RadarTrafficSimulator.isSimulating)
+    }
+
+    @Test
+    fun testStartSearching_transitionsRadarStateToConnecting() {
+        assertEquals(RadarConnectionState.DISCONNECTED, RadarStateRepository.getState().connectionState)
+        radarDevice.startSearching()
+        assertEquals(RadarConnectionState.CONNECTING, RadarStateRepository.getState().connectionState)
+    }
+
+    @Test
+    fun testConfigureServices_transitionsRadarStateToConnectedAndArmsWatchdog() {
+        val mockGatt = mockk<BluetoothGatt>(relaxed = true)
+        val mockService = mockk<BluetoothGattService>(relaxed = true)
+        every { mockGatt.getService(BluetoothConstants.UUID_SERVICE_RADAR) } returns mockService
+        every { mockService.getCharacteristic(BluetoothConstants.UUID_CHARACTERISTIC_RADAR_V2) } returns null
+        every { mockService.getCharacteristic(BluetoothConstants.UUID_CHARACTERISTIC_RADAR_V1) } returns null
+        every { mockService.getCharacteristic(BluetoothConstants.UUID_CHARACTERISTIC_RADAR_LIGHT_CONTROL) } returns null
+
+        radarDevice.configureServices(mockGatt)
+
+        assertEquals(RadarConnectionState.CONNECTED, RadarStateRepository.getState().connectionState)
+    }
+
+    @Test
+    fun testParseV1ThreatPacket_realHardwareRearVue820Sequences() {
+        val seqHeaders = byteArrayOf(
+            0x02, 0x12, 0x22, 0x32, 0x42, 0x52, 0x62, 0x72,
+            0x82.toByte(), 0x92.toByte(), 0xA2.toByte(), 0xB2.toByte(),
+            0xC2.toByte(), 0xD2.toByte(), 0xE2.toByte(), 0xF2.toByte()
+        )
+
+        for (seq in seqHeaders) {
+            // 1-Byte Heartbeat
+            val hb = byteArrayOf(seq)
+            val hbTargets = BTLERadarDevice.parseV1ThreatPacket(hb)
+            assertNotNull("Heartbeat $seq must be demuxed", hbTargets)
+            assertTrue("Heartbeat $seq must produce empty targets", hbTargets!!.isEmpty())
+
+            // Real RearVue 820 Threat frame with sequence header and valid target (vid=0x81 -> ID 1, range 50m, flag 0x01)
+            val threatFrame = byteArrayOf(seq, 0x81.toByte(), 50.toByte(), 0x01.toByte())
+            val targets = BTLERadarDevice.parseV1ThreatPacket(threatFrame)
+            assertNotNull(targets)
+            assertEquals(1, targets!!.size)
+            assertEquals(1, targets[0].targetId)
+            assertEquals(50.0f, targets[0].rangeMeters, 0.001f)
+            assertEquals(ThreatLevel.APPROACHING, targets[0].threatLevel)
+        }
+    }
+
+    @Test
+    fun testParseV1ThreatPacket_filtersInvalidTracks() {
+        // Multi-triplet packet with:
+        // Triplet 1: vid=0x00 (vid < 0x80) -> INVALID, must be filtered
+        // Triplet 2: vid=0x82 (valid ID 2), dist=75m, flag=1 -> VALID
+        // Triplet 3: vid=0xFD (invalid sentinel) -> INVALID, must be filtered
+        // Triplet 4: vid=0x83, dist=0xFF (255 invalid range) -> INVALID, must be filtered
+        // Triplet 5: vid=0x80 (valid ID 0), dist=30m, flag=0 -> VALID
+        val payload = byteArrayOf(
+            0x02,
+            0x00, 10.toByte(), 0x01,
+            0x82.toByte(), 75.toByte(), 0x01,
+            0xFD.toByte(), 20.toByte(), 0x01,
+            0x83.toByte(), 0xFF.toByte(), 0x01,
+            0x80.toByte(), 30.toByte(), 0x00
+        )
+
+        val targets = BTLERadarDevice.parseV1ThreatPacket(payload)
+        assertNotNull(targets)
+        assertEquals(2, targets!!.size)
+
+        assertEquals(2, targets[0].targetId)
+        assertEquals(75.0f, targets[0].rangeMeters, 0.001f)
+
+        assertEquals(0, targets[1].targetId)
+        assertEquals(30.0f, targets[1].rangeMeters, 0.001f)
+    }
+
+    @Test
+    fun testParseV1ThreatPacket_statefulSpeedAndThreatCalculation() {
+        val trackHistory = mutableMapOf<Int, BTLERadarDevice.TrackState>()
+
+        // Observation 1 at t=1000ms: target ID 1 at 80m
+        val p1 = byteArrayOf(0x02, 0x81.toByte(), 80.toByte(), 0x01)
+        val t1 = BTLERadarDevice.parseV1ThreatPacket(p1, trackHistory, 1000L)
+        assertNotNull(t1)
+        assertEquals(1, t1!!.size)
+        assertEquals(0.0f, t1[0].approachSpeedMps, 0.001f)
+        assertEquals(ThreatLevel.APPROACHING, t1[0].threatLevel)
+
+        // Observation 2 at t=2000ms: target ID 1 closed to 60m (dr = 20m, dt = 1.0s -> speed = 20 m/s >= 15 m/s -> FAST_APPROACHING)
+        val p2 = byteArrayOf(0x12, 0x81.toByte(), 60.toByte(), 0x01)
+        val t2 = BTLERadarDevice.parseV1ThreatPacket(p2, trackHistory, 2000L)
+        assertNotNull(t2)
+        assertEquals(1, t2!!.size)
+        assertEquals(20.0f, t2[0].approachSpeedMps, 0.001f)
+        assertEquals(ThreatLevel.FAST_APPROACHING, t2[0].threatLevel)
+
+        // Observation 3 at t=3000ms: target ID 1 closed to 52m (dr = 8m, dt = 1.0s -> speed = 8 m/s < 15 m/s -> APPROACHING)
+        val p3 = byteArrayOf(0x22, 0x81.toByte(), 52.toByte(), 0x01)
+        val t3 = BTLERadarDevice.parseV1ThreatPacket(p3, trackHistory, 3000L)
+        assertNotNull(t3)
+        assertEquals(1, t3!!.size)
+        assertEquals(8.0f, t3[0].approachSpeedMps, 0.001f)
+        assertEquals(ThreatLevel.APPROACHING, t3[0].threatLevel)
+    }
+
+    @Test
+    fun testProcessV1Notification_heartbeatAndSectorLinkAlive() {
+        // Sector amplitude packet (header 0x06, length 6) is link-alive
+        val sector = byteArrayOf(0x06, 0x10, 0x20, 0x30, 0x40, 0x50)
+        assertTrue(BTLERadarDevice.isV1SectorPacket(sector))
+        assertNull(BTLERadarDevice.parseV1ThreatPacket(sector)) // Not a threat packet
+
+        radarDevice.processV1NotificationForTesting(sector)
+        assertEquals(RadarConnectionState.CONNECTED, RadarStateRepository.getState().connectionState)
+
+        // 1-byte heartbeat
+        val heartbeat = byteArrayOf(0x42)
+        assertTrue(BTLERadarDevice.isV1Heartbeat(heartbeat))
+
+        radarDevice.processV1NotificationForTesting(heartbeat)
+        assertEquals(RadarConnectionState.CONNECTED, RadarStateRepository.getState().connectionState)
+        assertTrue(RadarStateRepository.getState().targets.isEmpty())
     }
 }

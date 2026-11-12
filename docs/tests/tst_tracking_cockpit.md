@@ -1899,15 +1899,19 @@
 ### TST-CON-028: **BLE Cycling Radar Protocol Driver, Serialized GATT Queue, Latch Aggregator & Parity Test Suite** [Verified]
 - **Requirement(s)**: `REQ-CON-028` (`REQ-CON-028.1`..`REQ-CON-028.6`)
 - **Component**: `DeviceType.java`, `SensorType.java`, `ActivityType.java`, `BluetoothConstants.java`, `MyBTLEDevice.java`, `BTSearchForNewDevicesEngine.java`, `BTLERadarDevice.java`, `RadarStateRepository.kt`, `RadarWindowAggregator.kt`, `EquipmentSensorOrdering.kt`, `strings_radar.xml`
-- **Jira**: `ATT-5083`, `ATT-6700`, `ATT-6701`
+- **Jira**: `ATT-5083`, `ATT-6700`, `ATT-6701`, `ATT-7543`
 - **Test Description**:
   1. *Serialized GATT Operation Queue Unit Tests (`TST-CON-028.1`, `MyBTLEDeviceQueueTest.kt`)*:
   • Verify sequential FIFO execution of CCCD descriptor writes and characteristic read/write requests without race conditions.
   • Verify that pending queue operations wait for explicit callback confirmations (`onDescriptorWrite`, `onCharacteristicRead`, `onCharacteristicWrite`).
   • Verify `mBatteryReadRunnable` enqueues characteristic reads onto `mGattQueue` via `enqueueReadCharacteristic`, preventing split-brain queue races and premature release of `mGattOperationPending`.
-  2. *BTLERadarDevice V1 Threat Decoding & Watchdog Unit Tests (`TST-CON-028.2`, `BTLERadarDeviceTest.kt`)*:
-  • Verify header `byte[0]` demuxing cleanly isolates threat triplets (`1 + 3*N` bytes) while ignoring heartbeat and sector amplitude frames.
-  • Verify accurate conversion of target distance, closing speed, and threat level into immutable `RadarTarget` instances.
+  2. *BTLERadarDevice V1 Threat Decoding, GATT Lifecycle & Track Ageing Unit Tests (`TST-CON-028.2`, `BTLERadarDeviceTest.kt`)*:
+  • Verify `startSearching()` transitions `RadarStateRepository` to `CONNECTING`.
+  • Verify `configureServices()` transitions `RadarStateRepository` to `CONNECTED` and arms the 3.5s watchdog upon subscription.
+  • Verify real-hardware V1 notifications with sequence header `(seq << 4) | 0x02` (`0x02..0xF2`) and legacy `0x00` are demuxed and decoded cleanly.
+  • Verify 1-byte heartbeats (`0x02..0xF2`) and 6-byte sector diagnostics (`0x06`) re-arm the 3.5s watchdog, prune stale tracks (`STALE_MS = 2000L`), and publish `CONNECTED`.
+  • Verify threat triplets with `vid >= 0x80` decode valid targets (`trackId = vid & 0x7F`, `rangeMeters = dist & 0xFF`), discarding `vid < 0x80`, `vid == 0xFD`, and `dist == 0xFF`.
+  • Verify stateful track history calculates closing speed $\Delta d / \Delta t$ across observations and classifies `FAST_APPROACHING` vs `APPROACHING` with `STALE_MS = 2000L` ageing.
   • Verify that 3.5 seconds of packet starvation triggers transition to `DISCONNECTED_ERROR`.
   3. *1 Hz Window Aggregator & Vehicle Counter Hysteresis Unit Tests (`TST-CON-028.3`, `RadarWindowAggregatorTest.kt`, `BTLERadarDeviceTest.kt`)*:
   • Verify 1,000 ms rolling latch window retention across 8 Hz bursts followed by clear frames: metrics are retained for 1,000 ms before decaying.
@@ -1922,6 +1926,7 @@
   6. *Clean-Room Targeted Test Suite Execution (`TST-CON-028.6`)*:
   • Execute targeted package tests (`com.atrainingtracker.banalservice.*`, `com.atrainingtracker.trainingtracker.build.*`) asserting 100% pass rate.
   7. *BLE Radar Peripheral Discovery & Scan Filter Unit Tests (`TST-CON-028.7`, `BTSearchForNewDevicesEngineTest.kt`)*:
+  • Verify `buildScanFilters(DeviceType.BIKE_RADAR)` includes Garmin 16-bit Member Service UUID `0xFE1F` (`0000fe1f-0000-1000-8000-00805f9b34fb`) alongside 128-bit `6a4e3200-667b-11e3-949a-0800200c9a66` for both service UUID and service data filters.
   • Verify `onServicesDiscovered` for `DeviceType.BIKE_RADAR` enqueues Device Info and Battery Level metadata characteristics first before verifying `UUID_SERVICE_RADAR` in `readNextCharacteristic`.
   • Verify devices lacking `UUID_SERVICE_RADAR` are rejected cleanly without invoking `newDeviceFound`.
   • Verify dead `matchesScanRecord` helper is eliminated and scan filters build cleanly.

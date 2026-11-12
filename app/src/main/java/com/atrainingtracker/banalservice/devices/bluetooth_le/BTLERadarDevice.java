@@ -69,6 +69,23 @@ public class BTLERadarDevice extends MyBTLEDevice implements RadarLightDeviceCli
     public static final byte PACKET_TYPE_THREAT = 0x00;
     public static final byte PACKET_TYPE_V2_THREAT = 0x01;
     public static final long WATCHDOG_TIMEOUT_MS = 3500L;
+    public static final long STALE_TRACK_TIMEOUT_MS = 2000L;
+
+    public static class TrackState {
+        public final float rangeMeters;
+        public final float approachSpeedMps;
+        public final ThreatLevel threatLevel;
+        public final long timestampMs;
+
+        public TrackState(float rangeMeters, float approachSpeedMps, ThreatLevel threatLevel, long timestampMs) {
+            this.rangeMeters = rangeMeters;
+            this.approachSpeedMps = approachSpeedMps;
+            this.threatLevel = threatLevel;
+            this.timestampMs = timestampMs;
+        }
+    }
+
+    private final java.util.Map<Integer, TrackState> mTrackHistory = new java.util.HashMap<>();
 
     protected MySensor<Integer> mThreatCountSensor;
     protected MySensor<Double> mClosestDistanceSensor;
@@ -86,10 +103,24 @@ public class BTLERadarDevice extends MyBTLEDevice implements RadarLightDeviceCli
 
     private RadarWindowAggregator mWindowAggregator = new RadarWindowAggregator();
 
+    private void pruneStaleTracks(long nowMs) {
+        synchronized (mTrackHistory) {
+            java.util.Iterator<java.util.Map.Entry<Integer, TrackState>> it = mTrackHistory.entrySet().iterator();
+            while (it.hasNext()) {
+                if (nowMs - it.next().getValue().timestampMs > STALE_TRACK_TIMEOUT_MS) {
+                    it.remove();
+                }
+            }
+        }
+    }
+
     private final Runnable mWatchdogRunnable = new Runnable() {
         @Override
         public void run() {
             if (DEBUG) Log.w(TAG, "Radar packet starvation (3.5s timeout); transitioning to DISCONNECTED_ERROR");
+            synchronized (mTrackHistory) {
+                mTrackHistory.clear();
+            }
             RadarState currentState = RadarStateRepository.getState();
             RadarStateRepository.updateState(new RadarState(
                     RadarConnectionState.DISCONNECTED_ERROR,
@@ -107,6 +138,21 @@ public class BTLERadarDevice extends MyBTLEDevice implements RadarLightDeviceCli
     public BTLERadarDevice(Context context, MySensorManager mySensorManager, long deviceID, String address) {
         super(context, mySensorManager, DeviceType.BIKE_RADAR, deviceID, address);
         if (DEBUG) Log.d(TAG, "Creating BTLERadarDevice for " + address);
+    }
+
+    @Override
+    public void startSearching() {
+        super.startSearching();
+        RadarState currentState = RadarStateRepository.getState();
+        RadarStateRepository.updateState(new RadarState(
+                RadarConnectionState.CONNECTING,
+                ThreatLevel.NONE,
+                Collections.emptyList(),
+                SystemClock.elapsedRealtime(),
+                currentState.getLightMode(),
+                mIsLightControlSupported,
+                currentState.getAudioSnoozeState()
+        ));
     }
 
     @Override
@@ -137,6 +183,22 @@ public class BTLERadarDevice extends MyBTLEDevice implements RadarLightDeviceCli
         if (btGattService == null) {
             if (DEBUG) Log.w(TAG, "Radar service not found!");
             return;
+        }
+
+        // Radar service discovered: transition to CONNECTED and arm 3.5s fail-safe watchdog (ATT-7543 / REQ-CON-028.4)
+        RadarState currentState = RadarStateRepository.getState();
+        RadarStateRepository.updateState(new RadarState(
+                RadarConnectionState.CONNECTED,
+                ThreatLevel.NONE,
+                Collections.emptyList(),
+                SystemClock.elapsedRealtime(),
+                currentState.getLightMode(),
+                mIsLightControlSupported,
+                currentState.getAudioSnoozeState()
+        ));
+        if (mHandler != null) {
+            mHandler.removeCallbacks(mWatchdogRunnable);
+            mHandler.postDelayed(mWatchdogRunnable, WATCHDOG_TIMEOUT_MS);
         }
 
         BluetoothGattCharacteristic v2Char = btGattService.getCharacteristic(BluetoothConstants.UUID_CHARACTERISTIC_RADAR_V2);
@@ -281,10 +343,7 @@ public class BTLERadarDevice extends MyBTLEDevice implements RadarLightDeviceCli
             }
         } else if (BluetoothConstants.UUID_CHARACTERISTIC_RADAR_V1.equals(characteristic.getUuid())) {
             byte[] payload = characteristic.getValue();
-            List<RadarTarget> targets = parseV1ThreatPacket(payload);
-            if (targets != null) {
-                processTargets(targets);
-            }
+            processV1Notification(payload);
         }
     }
 
@@ -369,6 +428,9 @@ public class BTLERadarDevice extends MyBTLEDevice implements RadarLightDeviceCli
         if (mHandler != null) {
             mHandler.removeCallbacks(mWatchdogRunnable);
         }
+        synchronized (mTrackHistory) {
+            mTrackHistory.clear();
+        }
         RadarLightController.unregisterRadarDevice(this);
         mLightControlCharacteristic = null;
         mIsLightControlSupported = false;
@@ -389,6 +451,9 @@ public class BTLERadarDevice extends MyBTLEDevice implements RadarLightDeviceCli
     public void shutDown() {
         if (mHandler != null) {
             mHandler.removeCallbacks(mWatchdogRunnable);
+        }
+        synchronized (mTrackHistory) {
+            mTrackHistory.clear();
         }
         RadarLightController.unregisterRadarDevice(this);
         mLightControlCharacteristic = null;
@@ -462,21 +527,87 @@ public class BTLERadarDevice extends MyBTLEDevice implements RadarLightDeviceCli
         }
     }
 
+    public static boolean isV1Heartbeat(@Nullable byte[] payload) {
+        if (payload == null || payload.length != 1) return false;
+        byte header = payload[0];
+        return ((header & 0x0F) == 0x02) || header == PACKET_TYPE_THREAT;
+    }
+
+    public static boolean isV1SectorPacket(@Nullable byte[] payload) {
+        return payload != null && payload.length == 6 && payload[0] == 0x06;
+    }
+
+    public void processV1Notification(@Nullable byte[] payload) {
+        if (payload == null || payload.length < 1) {
+            return;
+        }
+
+        long nowMs = SystemClock.elapsedRealtime();
+
+        // 1-Byte Heartbeat (~7 Hz when no vehicles present, cycling 0x02..0xF2)
+        if (isV1Heartbeat(payload)) {
+            synchronized (mTrackHistory) {
+                mTrackHistory.clear();
+            }
+            processTargets(Collections.emptyList());
+            return;
+        }
+
+        // 6-Byte Sector Amplitude Packet (diagnostic frame emitted alongside heartbeats/threats)
+        if (isV1SectorPacket(payload)) {
+            pruneStaleTracks(nowMs);
+            List<RadarTarget> active = new ArrayList<>();
+            synchronized (mTrackHistory) {
+                for (RadarTarget target : RadarStateRepository.getState().getTargets()) {
+                    if (mTrackHistory.containsKey(target.getTargetId())) {
+                        active.add(target);
+                    }
+                }
+            }
+            processTargets(active);
+            return;
+        }
+
+        // Threat Packet (len >= 4, (len - 1) % 3 == 0)
+        List<RadarTarget> targets = parseV1ThreatPacket(payload, mTrackHistory, nowMs);
+        if (targets != null) {
+            pruneStaleTracks(nowMs);
+            processTargets(targets);
+        }
+    }
+
     /**
      * Demuxes and parses a Garmin Varia BLE V1 packet (characteristic 6a4e3203).
      *
-     * Non-threat packets (heartbeats, sector amplitude frames) or malformed payloads return null.
-     * Valid threat frames (length 1 + 3*N, byte[0] == 0x00) return a non-null list of RadarTargets.
+     * Supports sequence-framed headers (low nibble 0x02, cycling 0x02..0xF2) and legacy 0x00 frames.
+     * Demuxes 1-byte heartbeats, 6-byte sector diagnostics, and multi-target threat triplets.
      */
     @Nullable
     public static List<RadarTarget> parseV1ThreatPacket(@Nullable byte[] payload) {
+        return parseV1ThreatPacket(payload, null, SystemClock.elapsedRealtime());
+    }
+
+    @Nullable
+    public static List<RadarTarget> parseV1ThreatPacket(
+            @Nullable byte[] payload,
+            @Nullable java.util.Map<Integer, TrackState> trackHistory,
+            long nowMs
+    ) {
         if (payload == null || payload.length < 1) {
             return null;
         }
 
-        // Header byte check: Threat packets use PACKET_TYPE_THREAT (0x00)
-        if (payload[0] != PACKET_TYPE_THREAT) {
+        byte header = payload[0];
+        boolean isV1SeqHeader = (header & 0x0F) == 0x02;
+        boolean isLegacyHeader = (header == PACKET_TYPE_THREAT);
+
+        if (!isV1SeqHeader && !isLegacyHeader) {
             return null;
+        }
+
+        // 1-byte clear frame / heartbeat
+        if (payload.length == 1) {
+            return Collections.emptyList();
         }
 
         int targetPayloadLen = payload.length - 1;
@@ -484,32 +615,71 @@ public class BTLERadarDevice extends MyBTLEDevice implements RadarLightDeviceCli
             return null; // Malformed or non-threat packet
         }
 
-        int numTargets = targetPayloadLen / 3;
-        List<RadarTarget> targets = new ArrayList<>(numTargets);
+        int numTriplets = targetPayloadLen / 3;
+        List<RadarTarget> targets = new ArrayList<>(numTriplets);
 
-        for (int i = 0; i < numTargets; i++) {
+        for (int i = 0; i < numTriplets; i++) {
             int offset = 1 + i * 3;
-            int targetId = payload[offset] & 0xFF;
-            float rangeMeters = (float) (payload[offset + 1] & 0xFF);
-            int speedAndThreat = payload[offset + 2] & 0xFF;
+            int vid = payload[offset] & 0xFF;
+            int dist = payload[offset + 1] & 0xFF;
+            int flagOrSpeed = payload[offset + 2] & 0xFF;
 
-            int threatBits = (speedAndThreat >> 4) & 0x03;
-            ThreatLevel threatLevel;
-            switch (threatBits) {
-                case 1:
+            if (isV1SeqHeader) {
+                // Real hardware frame: bit 7 (0x80) indicates valid vehicle.
+                // Filter out vid < 0x80, vid == 0xFD, and dist == 0xFF.
+                if ((vid & 0x80) == 0 || vid == 0xFD || dist == 0xFF) {
+                    continue;
+                }
+                int trackId = vid & 0x7F;
+                float rangeMeters = (float) dist;
+                float approachSpeedMps = 0.0f;
+                ThreatLevel threatLevel;
+
+                if (trackHistory != null) {
+                    synchronized (trackHistory) {
+                        TrackState prev = trackHistory.get(trackId);
+                        if (prev != null && nowMs > prev.timestampMs) {
+                            float dt = (nowMs - prev.timestampMs) / 1000.0f;
+                            float dr = prev.rangeMeters - rangeMeters;
+                            if (dt > 0.001f && dr > 0.0f) {
+                                approachSpeedMps = dr / dt;
+                            } else if (dt > 0.001f) {
+                                approachSpeedMps = 0.0f;
+                            }
+                        }
+                        if (approachSpeedMps >= 15.0f) {
+                            threatLevel = ThreatLevel.FAST_APPROACHING;
+                        } else {
+                            threatLevel = ThreatLevel.APPROACHING;
+                        }
+                        trackHistory.put(trackId, new TrackState(rangeMeters, approachSpeedMps, threatLevel, nowMs));
+                    }
+                } else {
                     threatLevel = ThreatLevel.APPROACHING;
-                    break;
-                case 2:
-                case 3:
-                    threatLevel = ThreatLevel.FAST_APPROACHING;
-                    break;
-                default:
-                    threatLevel = ThreatLevel.NONE;
-                    break;
-            }
+                }
 
-            float approachSpeedMps = (float) (speedAndThreat & 0x0F);
-            targets.add(new RadarTarget(targetId, rangeMeters, approachSpeedMps, threatLevel));
+                targets.add(new RadarTarget(trackId, rangeMeters, approachSpeedMps, threatLevel));
+            } else {
+                // Legacy synthetic packet parsing (header == 0x00)
+                int targetId = vid;
+                float rangeMeters = (float) dist;
+                int threatBits = (flagOrSpeed >> 4) & 0x03;
+                ThreatLevel threatLevel;
+                switch (threatBits) {
+                    case 1:
+                        threatLevel = ThreatLevel.APPROACHING;
+                        break;
+                    case 2:
+                    case 3:
+                        threatLevel = ThreatLevel.FAST_APPROACHING;
+                        break;
+                    default:
+                        threatLevel = ThreatLevel.NONE;
+                        break;
+                }
+                float approachSpeedMps = (float) (flagOrSpeed & 0x0F);
+                targets.add(new RadarTarget(targetId, rangeMeters, approachSpeedMps, threatLevel));
+            }
         }
 
         return targets;
@@ -664,6 +834,14 @@ public class BTLERadarDevice extends MyBTLEDevice implements RadarLightDeviceCli
 
     public boolean isMeasurementCharacteristicForTesting(@NonNull UUID uuid) {
         return isMeasurementCharacteristic(uuid);
+    }
+
+    public java.util.Map<Integer, TrackState> getTrackHistoryForTesting() {
+        return mTrackHistory;
+    }
+
+    public void processV1NotificationForTesting(@Nullable byte[] payload) {
+        processV1Notification(payload);
     }
 
     public void onDescriptorWriteCompletedForTesting(BluetoothGatt gatt, BluetoothGattDescriptor descriptor, int status) {
