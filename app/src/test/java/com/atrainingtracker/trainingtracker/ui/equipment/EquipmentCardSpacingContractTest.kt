@@ -26,7 +26,7 @@ import java.io.File
 
 /**
  * Structural contract and behavior verification for compact equipment card layout
- * and harmonized inter-card spacing (REQ-UI-520, TST-UI-518, ATT-2059).
+ * and harmonized inter-card spacing (REQ-UI-523, TST-UI-519, ATT-2059).
  */
 class EquipmentCardSpacingContractTest {
 

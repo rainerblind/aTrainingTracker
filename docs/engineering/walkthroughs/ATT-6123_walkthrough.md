@@ -14,8 +14,8 @@
 Under ASPICE SWE.1 BP5 and SWE.6 BP4, requirement and test specifications must maintain unambiguous bidirectional traceability. In ATT-6120, duplicate heading detection was added to `tools/verify_requirement_governance.py` alongside a temporary baseline allowlist (`LEGACY_DUPLICATE_IDS`) holding the 11 known duplicate IDs. 
 
 In ATT-6123, all 11 collisions have been systematically resolved:
-* 6 duplicate REQ headings renumbered: `REQ-DAT-001` (#2) $\rightarrow$ `REQ-DAT-043`, `REQ-DAT-026` (#2) $\rightarrow$ `REQ-DAT-044`, `REQ-MIG-018` (#1) $\rightarrow$ `REQ-MIG-051`, `REQ-UI-116` (#1) $\rightarrow$ `REQ-UI-518`, `REQ-UI-123` (#2) $\rightarrow$ `REQ-UI-519`, `REQ-UI-257` (#2) $\rightarrow$ `REQ-UI-520`.
-* 5 duplicate TST headings renumbered: `TST-DAT-001` (#2) $\rightarrow$ `TST-DAT-039`, `TST-DAT-021` (#2) $\rightarrow$ `TST-DAT-040`, `TST-MAP-055` (#2) $\rightarrow$ `TST-MAP-070`, `TST-MIG-036` (#2) $\rightarrow$ `TST-MIG-049`, `TST-UI-216` (#2) $\rightarrow$ `TST-UI-518`.
+* 6 duplicate REQ headings renumbered: `REQ-DAT-001` (#2) $\rightarrow$ `REQ-DAT-043`, `REQ-DAT-026` (#2) $\rightarrow$ `REQ-DAT-044`, `REQ-MIG-018` (#1) $\rightarrow$ `REQ-MIG-051`, `REQ-UI-116` (#1) $\rightarrow$ `REQ-UI-521`, `REQ-UI-123` (#2) $\rightarrow$ `REQ-UI-522`, `REQ-UI-257` (#2) $\rightarrow$ `REQ-UI-523`.
+* 5 duplicate TST headings renumbered: `TST-DAT-001` (#2) $\rightarrow$ `TST-DAT-039`, `TST-DAT-021` (#2) $\rightarrow$ `TST-DAT-040`, `TST-MAP-055` (#2) $\rightarrow$ `TST-MAP-070`, `TST-MIG-036` (#2) $\rightarrow$ `TST-MIG-049`, `TST-UI-216` (#2) $\rightarrow$ `TST-UI-519`.
 * All cross-references, test citations, and code tags updated across `app/src/test/` and `tools/`.
 * `LEGACY_DUPLICATE_IDS` in `tools/verify_requirement_governance.py` emptied to `frozenset()`.
 * Governance verifier passes with zero warnings and zero errors in strict `--enforce-unique` mode.

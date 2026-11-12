@@ -61,7 +61,7 @@ Duplicate identifiers violate ASPICE SWE.1 BP5 and SWE.6 BP4 by making bidirecti
 ---
 
 ## 5. Change-Request Impact Analysis (SUP.10)
-* **Affected Requirements**: `REQ-PRO-066` (enforcing 0 duplicates), `REQ-DAT-043` (was `REQ-DAT-001` #2), `REQ-DAT-044` (was `REQ-DAT-026` #2), `REQ-MIG-051` (was `REQ-MIG-018` #1), `REQ-UI-518` (was `REQ-UI-116` #1), `REQ-UI-519` (was `REQ-UI-123` #2), `REQ-UI-520` (was `REQ-UI-257` #2).
+* **Affected Requirements**: `REQ-PRO-066` (enforcing 0 duplicates), `REQ-DAT-043` (was `REQ-DAT-001` #2), `REQ-DAT-044` (was `REQ-DAT-026` #2), `REQ-MIG-051` (was `REQ-MIG-018` #1), `REQ-UI-521` (was `REQ-UI-116` #1), `REQ-UI-522` (was `REQ-UI-123` #2), `REQ-UI-523` (was `REQ-UI-257` #2).
 * **Affected Architecture Elements**: `tools/verify_requirement_governance.py`, `tools/test_verify_requirement_governance.py`, `docs/requirements/*.md`, `docs/tests/*.md`, `docs/requirements.md`, `docs/tests.md`, `tools/lint_cursor_safety.py`, `app/src/test/java/...`.
 * **Verification Impact & Test Surface**: Unit tests in `test_verify_requirement_governance.py`, `python3 tools/verify_requirement_governance.py --enforce-unique`, and targeted unit tests referencing renumbered tags.
 * **Risk Assessment & Invariants**: LOW risk. Zero runtime bytecode changes; documentation and static analysis reference updates only.
@@ -73,14 +73,14 @@ Duplicate identifiers violate ASPICE SWE.1 BP5 and SWE.6 BP4 by making bidirecti
   * `REQ-DAT-001` (Line 2012) $\rightarrow$ `REQ-DAT-043` (Sub-reqs: `.1`, `.2`, `.3`)
   * `REQ-DAT-026` (Line 2086) $\rightarrow$ `REQ-DAT-044` (Sub-reqs: `.1`, `.2`, `.3`, `.4`)
   * `REQ-MIG-018` (Line 730) $\rightarrow$ `REQ-MIG-051`
-  * `REQ-UI-116` (Line 10) $\rightarrow$ `REQ-UI-518`
-  * `REQ-UI-123` (Line 5627) $\rightarrow$ `REQ-UI-519`
-  * `REQ-UI-257` (Line 5649) $\rightarrow$ `REQ-UI-520`
+  * `REQ-UI-116` (Line 10) $\rightarrow$ `REQ-UI-521` (accommodating concurrent `REQ-UI-518` from ATT-7312)
+  * `REQ-UI-123` (Line 5627) $\rightarrow$ `REQ-UI-522`
+  * `REQ-UI-257` (Line 5649) $\rightarrow$ `REQ-UI-523`
   * `TST-DAT-001` (Line 1305) $\rightarrow$ `TST-DAT-039` (Subtests: `.1`, `.2`, `.3`)
   * `TST-DAT-021` (Line 1338) $\rightarrow$ `TST-DAT-040` (Subtests: `.1`, `.2`, `.3`, `.4`)
   * `TST-MAP-055` (Line 935) $\rightarrow$ `TST-MAP-070` (Subtests: `.1`..`.6`)
   * `TST-MIG-036` (Line 1359) $\rightarrow$ `TST-MIG-049` (Subtests: `.1`, `.2`, `.3`)
-  * `TST-UI-216` (Line 3210) $\rightarrow$ `TST-UI-518` (Subtests: `.1`..`.4`)
+  * `TST-UI-216` (Line 3210) $\rightarrow$ `TST-UI-519` (Subtests: `.1`..`.4`, accommodating concurrent `TST-UI-518` from ATT-7312)
 * **Tooling & Verifier Update**:
   * Clear `LEGACY_DUPLICATE_IDS = frozenset()` in `tools/verify_requirement_governance.py`.
   * Update `test_verify_requirement_governance.py` to assert zero duplicates and green pass with empty allowlist.

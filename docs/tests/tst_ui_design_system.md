@@ -3207,23 +3207,23 @@
   5. *Clean-Room Full Suite Regression Execution*:
   • Run `./gradlew testDebugUnitTest` verifying 100% pass rate.
 
-### TST-UI-518: **Compact Equipment Card Layout & Harmonized Inter-Card Spacing Verification** [Verified]
-- **Requirement(s)**: `REQ-UI-520`
+### TST-UI-519: **Compact Equipment Card Layout & Harmonized Inter-Card Spacing Verification** [Verified]
+- **Requirement(s)**: `REQ-UI-523`
 - **Component**: **Compact Equipment Card Layout & Harmonized Inter-Card Spacing Verification**
 - **Jira**: ``ATT-2059``
 - **Test Description**:
-  1. *Layout Metrics & Spacing Contract Test (`TST-UI-518.1`, `EquipmentCardSpacingContractTest.kt`)*:
+  1. *Layout Metrics & Spacing Contract Test (`TST-UI-519.1`, `EquipmentCardSpacingContractTest.kt`)*:
   • Verify `EquipmentList` configures `verticalArrangement` with compact spacing (6.dp–8.dp).
   • Verify `MappableListItem` inside `EquipmentItem` has `vertical = 0.dp` margin to prevent double-gap compounding.
   • Verify minimum card touch target height satisfies WCAG accessibility (>= 48.dp).
-  2. *Adaptive Compact Presentation Test (`TST-UI-518.2`, `EquipmentCompactCardTest.kt`)*:
+  2. *Adaptive Compact Presentation Test (`TST-UI-519.2`, `EquipmentCompactCardTest.kt`)*:
   • Verify 0-workout items (`totalWorkouts == 0`) resolve compact typography (`titleMedium`) and vertical padding (`8.dp`).
   • Verify active items with workouts (`totalWorkouts > 0`) retain standard typography (`titleLarge`), 12.dp padding, and stats summary block.
   • Verify retired items (`isRetired == true`) apply `0.75f` alpha to `MappableListItem`.
-  3. *Interactive Invariants Test (`TST-UI-518.3`)*:
+  3. *Interactive Invariants Test (`TST-UI-519.3`)*:
   • Verify single-tap triggers `onConfigClick`.
   • Verify long-press triggers delete dropdown menu anchored at `TopStart` per `REQ-UI-061`.
-  4. *Clean-Room Regression Execution (`TST-UI-518.4`)*:
+  4. *Clean-Room Regression Execution (`TST-UI-519.4`)*:
   • Run `./gradlew testDebugUnitTest` verifying 100% pass rate.
 
 ### TST-UI-217: **Cockpit Sensor Field Visual Styling Architecture, Expert Settings Selection & Reactive Grid Layout Verification** [Verified]

@@ -3270,7 +3270,7 @@ The workflow SHALL mandate that:
   3. *Strict Uniqueness Enforcement Flag (`REQ-PRO-066.3`)*:
      • `tools/verify_requirement_governance.py` SHALL support a command-line flag (`--enforce-unique` / `--fail-on-duplicates`) that activates strict zero-tolerance mode, causing verification to fail with exit code 1 whenever any duplicate identifier (including legacy duplicates) is detected.
   4. *Remediation of Legacy Duplicate Identifiers (`REQ-PRO-066.4`)*:
-     • In ATT-6123, all 11 legacy duplicate heading identifiers SHALL be renumbered to unique sequential IDs (`REQ-DAT-043`, `REQ-DAT-044`, `REQ-MIG-051`, `REQ-UI-518`, `REQ-UI-519`, `REQ-UI-520`, `TST-DAT-039`, `TST-DAT-040`, `TST-MAP-070`, `TST-MIG-049`, `TST-UI-518`) with all test citations, code tags, and tooling synchronized, and `LEGACY_DUPLICATE_IDS` SHALL be emptied to enforce strict zero tolerance globally.
+     • In ATT-6123, all 11 legacy duplicate heading identifiers SHALL be renumbered to unique sequential IDs (`REQ-DAT-043`, `REQ-DAT-044`, `REQ-MIG-051`, `REQ-UI-521`, `REQ-UI-522`, `REQ-UI-523`, `TST-DAT-039`, `TST-DAT-040`, `TST-MAP-070`, `TST-MIG-049`, `TST-UI-519`) with all test citations, code tags, and tooling synchronized, and `LEGACY_DUPLICATE_IDS` SHALL be emptied to enforce strict zero tolerance globally.
 - **Requirement Archaeology & Chesterton's Fence Audit**:
   1. *Original Requirement ID & Target*: Net-new requirement `REQ-PRO-066` (`REQ-PRO-066.1`–`REQ-PRO-066.4`). Targets `tools/verify_requirement_governance.py`.
   2. *Historical Origin & Commit Trace*: Sprint 2026-46.4 via ticket `ATT-6120` and `ATT-6123` under Epic `ATT-6119` (ASPICE CL2 – Evidence Integrity & Bidirectional Traceability).

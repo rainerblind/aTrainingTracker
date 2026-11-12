@@ -37,9 +37,9 @@ Renumber the 11 non-canonical heading identifiers and their internal sub-item ID
   * `REQ-DAT-026` (Line 2086) $\rightarrow$ `REQ-DAT-044` (`.1`, `.2`, `.3`, `.4`)
   * `REQ-MIG-018` (Line 730) $\rightarrow$ `REQ-MIG-051`
 * `docs/requirements/req_ui_design_system.md`:
-  * `REQ-UI-116` (Line 10) $\rightarrow$ `REQ-UI-518`
-  * `REQ-UI-123` (Line 5627) $\rightarrow$ `REQ-UI-519`
-  * `REQ-UI-257` (Line 5649) $\rightarrow$ `REQ-UI-520`
+  * `REQ-UI-116` (Line 10) $\rightarrow$ `REQ-UI-521` (accommodating concurrent `REQ-UI-518` from ATT-7312)
+  * `REQ-UI-123` (Line 5627) $\rightarrow$ `REQ-UI-522`
+  * `REQ-UI-257` (Line 5649) $\rightarrow$ `REQ-UI-523`
 * `docs/tests/tst_data_migration_export.md`:
   * `TST-DAT-001` (Line 1305) $\rightarrow$ `TST-DAT-039` (`.1`, `.2`, `.3`), citing `REQ-DAT-043`
   * `TST-DAT-021` (Line 1338) $\rightarrow$ `TST-DAT-040` (`.1`, `.2`, `.3`, `.4`), citing `REQ-DAT-044`
@@ -47,7 +47,7 @@ Renumber the 11 non-canonical heading identifiers and their internal sub-item ID
 * `docs/tests/tst_maps_navigation.md`:
   * `TST-MAP-055` (Line 935) $\rightarrow$ `TST-MAP-070` (`.1`..`.6`)
 * `docs/tests/tst_ui_design_system.md`:
-  * `TST-UI-216` (Line 3210) $\rightarrow$ `TST-UI-518` (`.1`..`.4`), citing `REQ-UI-520`
+  * `TST-UI-216` (Line 3210) $\rightarrow$ `TST-UI-519` (`.1`..`.4`, accommodating concurrent `TST-UI-518` from ATT-7312), citing `REQ-UI-523`
 
 ### Component 2: Living Docs Process Stability Shards (`req_process_stability.md`, `tst_process_stability.md`)
 Update `REQ-PRO-066` and `TST-PRO-066` to document the completed remediation of the 11 legacy duplicates and the enforcement of zero tolerance.

@@ -20,14 +20,14 @@ Under ASPICE SWE.1 BP5 and SWE.6 BP4, requirement and test specifications must m
    * `REQ-DAT-001` (Try-With-Resources cursor lifecycle, line 2012) $\rightarrow$ `REQ-DAT-043` (Sub-reqs: `.1`, `.2`, `.3`).
    * `REQ-DAT-026` (Authoritative cursor mappers, line 2086) $\rightarrow$ `REQ-DAT-044` (Sub-reqs: `.1`, `.2`, `.3`, `.4`).
    * `REQ-MIG-018` (Stray sparse data import heading, line 730) $\rightarrow$ `REQ-MIG-051`.
-   * `REQ-UI-116` (Stray weekly period heading, line 10) $\rightarrow$ `REQ-UI-518`.
-   * `REQ-UI-123` (Localized cluster naming interface, line 5627) $\rightarrow$ `REQ-UI-519`.
-   * `REQ-UI-257` (Compact equipment card layout, line 5649) $\rightarrow$ `REQ-UI-520`.
+   * `REQ-UI-116` (Stray weekly period heading, line 10) $\rightarrow$ `REQ-UI-521` (accommodating concurrent `REQ-UI-518` from ATT-7312).
+   * `REQ-UI-123` (Localized cluster naming interface, line 5627) $\rightarrow$ `REQ-UI-522`.
+   * `REQ-UI-257` (Compact equipment card layout, line 5649) $\rightarrow$ `REQ-UI-523`.
    * `TST-DAT-001` (Try-With-Resources cursor verification, line 1305) $\rightarrow$ `TST-DAT-039` (Subtests: `.1`, `.2`, `.3`).
    * `TST-DAT-021` (Workout cluster cursor verification, line 1338) $\rightarrow$ `TST-DAT-040` (Subtests: `.1`, `.2`, `.3`, `.4`).
    * `TST-MAP-055` (Climb detection & power calibration, line 935) $\rightarrow$ `TST-MAP-070` (Subtests: `.1`..`.6`).
    * `TST-MIG-036` (Offline power training metrics math, line 1359) $\rightarrow$ `TST-MIG-049` (Subtests: `.1`, `.2`, `.3`).
-   * `TST-UI-216` (Compact equipment card layout verification, line 3210) $\rightarrow$ `TST-UI-518` (Subtests: `.1`..`.4`).
+   * `TST-UI-216` (Compact equipment card layout verification, line 3210) $\rightarrow$ `TST-UI-519` (Subtests: `.1`..`.4`, accommodating concurrent `TST-UI-518` from ATT-7312).
 2. **Bidirectional Reference & Code Tag Synchronization (`REQ-PRO-066.5`)**:
    The system SHALL update all cross-references in requirement/test specifications, master tables (`docs/requirements.md`, `docs/tests.md`), unit/contract test headers and comments (`TryWithResourcesCursorAuditTest.kt`, `CursorUtilsTest.kt`, `EquipmentCardSpacingContractTest.kt`, `ClimbDetectorTest.kt`, `GpxRouteImporterElevationTest.kt`, `TcxWorkoutParserTest.kt`, `TcxCourseParserTest.kt`, `PowerPhysiologyCalculatorTest.kt`, `PowerZoneDistributionCalculatorTest.kt`), and static analysis tooling (`lint_cursor_safety.py`, `detekt-baseline.xml`) to reference the newly assigned canonical IDs.
 3. **Allowlist Deprecation & Zero-Tolerance Enforcement (`REQ-PRO-066.6`)**:
