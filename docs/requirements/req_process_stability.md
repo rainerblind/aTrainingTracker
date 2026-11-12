@@ -3,7 +3,7 @@
 **Domain**: `process_stability`  
 **Prefixes**: `ARC`, `BLD`, `BUG`, `INT`, `LIV`, `LOG`, `MAN`, `NFR`, `PRO`, `REG`, `SEC`, `STB`, `STR`, `TOOL`, `TST`  
 **Scope**: ASPICE governance, infinite context, crash stability, build architecture, security, and developer tools.  
-**Total Requirements**: 81
+**Total Requirements**: 82
 
 ---
 
@@ -3229,6 +3229,33 @@ The workflow SHALL mandate that:
   • *When* `gate-verdict` is called,
   • *Then* it executes normally without requiring Stage 1 impact analysis format.
 - **Invariants**: Zero modifications to Android production runtime code in `app/src/main/`; pure Python standard library retained; Rule 3 (`Erledigt` human-only gate) preserved.
+
+### REQ-PRO-065: Living Documentation Sharding Parser Code-Span Pipe Immunity & Master Index Safety Guard [Verified]
+- **Tests**: `TST-PRO-065`
+- **Implementation**: Robust character tokenizer `split_markdown_table_row(row)` in `tools/shard_living_docs.py`, 6-column and 7-column normalization in `parse_requirements_file` and `parse_tests_file`, and Master Index overwrite abort guard in `main()`.
+- **Rationale**: Monolithic living documentation parsing in `tools/shard_living_docs.py` previously used naive `row.split("|")[1:-1]`. When table cells contain backticked code spans with pipes or logical OR (`||`, e.g. `code == 200 || code == 201`), raw pipe splitting injects extraneous columns, shifting column assignments and corrupting the `Tests` field with string fragments while discarding downstream columns. Furthermore, running the tool without guards when `docs/requirements.md` is already a Master Index would wipe all domain shards:
+  1. *Code-Span & Escaped Pipe Immunity (`REQ-PRO-065.1`)*:
+     • `tools/shard_living_docs.py` SHALL implement a table row tokenizer `split_markdown_table_row(row)` that parses table row cells by `|` while ignoring escaped pipes (`\|`) and any pipe characters residing inside inline code spans delimited by single or multiple backticks (`` `...` ``, ```` ``...`` ````).
+  2. *Column Count Normalization (`REQ-PRO-065.2`)*:
+     • `parse_requirements_file()` and `parse_tests_file()` SHALL handle both 6-column (`ID`, `Description`, `Rationale`, `Implementation`, `Tests`, `Status`) and 7-column (`ID`, `Title`, `Description`, `Rationale`, `Implementation`, `Tests`, `Status`) rows without index shifting.
+  3. *Master Index Overwrite Safety Guard (`REQ-PRO-065.3`)*:
+     • `tools/shard_living_docs.py` SHALL inspect the target source files (`docs/requirements.md` and `docs/tests.md`) before sharding. If either file is already a Master Index (e.g. contains `(Master Index)` or contains 0 requirement/test table rows), the tool SHALL abort immediately with exit code 1 and an explanatory error, unless an explicit `--force` flag is provided.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Net-new requirement `REQ-PRO-065` (`REQ-PRO-065.1`–`REQ-PRO-065.3`). Targets `tools/shard_living_docs.py` and `tools/test_shard_living_docs.py`.
+  2. *Historical Origin & Commit Trace*: Sprint 2026-46.4 via ticket `ATT-6124` under Epic `ATT-6119`.
+  3. *Root Reason for Existing Formulation*: Sharding was created in ATT-4594 without code-span tokenizer or Master Index detection.
+  4. *Preservation of Core Invariants*: Existing 9-domain shard structure, 100% ID parity, multi-line living doc formatting, and zero changes to Android runtime code in `app/src/main/`.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* a markdown table row containing backticks with `||` (e.g. `binary \`code == 200 || code == 201\` check`),
+  • *When* `split_markdown_table_row()` executes,
+  • *Then* the pipe characters inside the backticks SHALL NOT split the cell, and the resulting column count SHALL match the true table schema without shifting.
+  • *Given* an execution of `tools/shard_living_docs.py` against a repository where `docs/requirements.md` is a Master Index,
+  • *When* run without `--force`,
+  • *Then* the process SHALL abort with exit code 1 and prevent overwriting of domain shards.
+  • *Given* regression test reproducing the pre-fix naive `row.split("|")` behavior,
+  • *When* executed on the old splitting logic,
+  • *Then* it fails (proving reproduction), and passes on `split_markdown_table_row()`.
+- **Invariants**: Sharding preserves cell contents byte-identically; zero Android runtime changes; pure Python standard library.
 
 
 
