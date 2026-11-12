@@ -3,7 +3,7 @@
 **Domain**: `maps_navigation`  
 **Prefixes**: `GEO`, `MAP`, `NAV`, `ROU`  
 **Scope**: Map rendering, polylines, navigation overlays, GPX track follow-me, and routing.  
-**Total Tests**: 53
+**Total Tests**: 70
 
 ---
 
@@ -442,6 +442,27 @@
   5. *Full Clean-Room Regression Suite*:
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with 0 regressions.
 
+### TST-MAP-038: **Known Locations: Heim-Basis Redundant Badge Excision & Start-Count Home Resolution Alignment Verification** [Verified]
+- **Requirement(s)**: `REQ-MAP-036`
+- **Component**: **Known Locations: Heim-Basis Redundant Badge Excision & Start-Count Home Resolution Alignment Verification**
+- **Jira**: `ATT-2629`
+- **Test Description**:
+  1. *Unified Home Location Candidate Resolution Hierarchy Test (`HomeLocationResolverTest.kt`, `TST-MAP-038.1`)*:
+  • Verify `resolveHomeLocationId` returns designated `isHome == true` location regardless of start counts.
+  • Verify fallback to highest `hitCount > 0` when no explicit home designation exists.
+  • Verify fallback to first location when all hitCounts are 0.
+  • Verify empty location list returns `null` safely.
+  2. *Repository Effective Home Resolution & Reactive State Test (`KnownLocationsRepositoryTest.kt`, `TST-MAP-038.2`)*:
+  • Verify `loadLocations()` queries database and evaluates `effectiveHomeId` via `HomeLocationResolver`.
+  • Verify `KnownLocationItem.isHome` matches `loc.id == effectiveHomeId`.
+  3. *UI Title Icon Retention & Badge Excision Contract Test (`KnownLocationHomeContractTest.kt`, `KnownLocationsScreenTest.kt`, `TST-MAP-038.3`)*:
+  • Verify title Home icon is rendered for the resolved home location.
+  • Verify "Heim-Basis" badge chip is completely excised from card layout.
+  4. *9-Language Localization Parity Audit (`TranslationParityTest.kt`, `TST-MAP-038.4`)*:
+  • Verify localized strings across all 9 supported locales (EN, DE, ES, FR, IT, JA, NL, PL, PT).
+  5. *Clean-Room Full Suite Regression Execution (`TST-MAP-038.5`)*:
+  • Execute `./gradlew testDebugUnitTest` verifying 100% test pass rate with zero regressions.
+
 ### TST-MAP-039: **Route Waypoint Marker Badge Diameter Optimization & Glanceability Proportional Scaling Verification** [Verified]
 - **Requirement(s)**: `REQ-MAP-037`
 - **Component**: **Route Waypoint Marker Badge Diameter Optimization & Glanceability Proportional Scaling Verification**
@@ -533,7 +554,7 @@
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with 0 regressions.
 
 ### TST-MAP-044: **Speed-Dependent Map Zoom Calibration, Lookahead Padding & Tuning Preferences Verification** [Verified]
-- **Requirement(s)**: `REQ-MAP-042`
+- **Requirement(s)**: `REQ-MAP-042`, `REQ-MAP-004`
 - **Component**: **Speed-Dependent Map Zoom Calibration, Lookahead Padding & Tuning Preferences Verification**
 - **Jira**: ``ATT-2946``
 - **Test Description**:
@@ -807,7 +828,7 @@
   • Execute `./gradlew testDebugUnitTest` verifying 100% pass rate.
 
 ### TST-MAP-056: **Batch GPX Route Import Sport Type Selection, Responsive Bottom Sheet Layout & Sequential Review Verification Suite** [Verified]
-- **Requirement(s)**: `REQ-MAP-053`, `REQ-UI-106`
+- **Requirement(s)**: `REQ-MAP-053`
 - **Component**: **Batch GPX Route Import Sport Type Selection, Responsive Bottom Sheet Layout & Sequential Review Verification Suite**
 - **Jira**: ``ATT-4372 / ATT-4430``
 - **Test Description**:
@@ -933,7 +954,7 @@
   • Run targeted caller unit tests and `./gradlew testDebugUnitTest` verifying 100% pass rate.
 
 ### TST-MAP-070: **Climb Detection Performance, Route/TCX Import Fidelity & Power Calibration Verification Suite** [Verified]
-- **Requirement(s)**: `REQ-MAP-055`, `REQ-MAP-027`, `REQ-MAP-025`, `REQ-EXP-001`, `REQ-UI-370`
+- **Requirement(s)**: `REQ-MAP-055`, `REQ-MAP-027`, `REQ-MAP-025`
 - **Component**: **Climb Detection Performance, Route/TCX Import Fidelity & Power Calibration Verification Suite**
 - **Jira**: ``ATT-4033``
 - **Test Description**:

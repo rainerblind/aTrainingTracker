@@ -27,7 +27,8 @@ import org.junit.Test
 
 /**
  * Automated unit and contract tests verifying category color mapping, Maki icon resource linkage,
- * and high-contrast badge marker generation for waypoints (REQ-MAP-033, TST-MAP-035, ATT-2461).
+ * high-contrast badge marker generation, and 22 dp marker size scaling for waypoints
+ * (REQ-MAP-033, TST-MAP-035, ATT-2461; REQ-MAP-037, TST-MAP-039 / ATT-2628).
  */
 class WaypointBadgeMarkerTest {
 

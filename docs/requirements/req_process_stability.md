@@ -3882,6 +3882,42 @@ The workflow SHALL mandate that:
   • *Given* `docs/requirements/req_aftermath_periods.md` and `docs/tests/tst_aftermath_periods.md`,
   • *When* checked for dangling references and attributes,
   • *Then* zero dangling references and zero missing attributes are detected.
+
+### REQ-PRO-081: Maps and Navigation Test Evidence Backfill & Bidirectional Traceability Governance [Verified]
+- **Tests**: `TST-PRO-081`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Implementation**: `docs/requirements/req_maps_navigation.md`, `docs/tests/tst_maps_navigation.md`, `WaypointBadgeMarkerTest.kt`, `tools/verify_requirement_governance.py`
+- **Rationale**: Under ASPICE SWE.6 BP4, SWE.1 BP5, and Remediation A-08.5 (ATT-6131), all requirements in the `maps_navigation` domain shard must link to valid, existing test specifications in `docs/tests/tst_maps_navigation.md` with verified automated test code implementations in `app/src/test/` or be downgraded to `[Implemented]` per REQ-PRO-073. Bidirectional reference integrity must guarantee that every referenced TST cites all of its parent REQs back with zero dangling references:
+  1. *Complete TST Coverage & Evidence Verification (`REQ-PRO-081.1`)*:
+     • Every requirement in `docs/requirements/req_maps_navigation.md` SHALL cite one or more valid, existing backticked `TST-*` IDs in its `Tests:` field.
+     • Requirements lacking automated test code (`REQ-MAP-001`, `REQ-MAP-002`) SHALL be transitioned to `[Implemented]` per `REQ-PRO-073`. All other 73 requirements SHALL retain `[Verified]` status backed by automated unit tests in `app/src/test/`.
+  2. *Dangling Reference Elimination & Bidirectional Citation Integrity (`REQ-PRO-081.2`)*:
+     • Missing requirement `REQ-MAP-037` (*Route Waypoint Marker Badge Diameter Optimization & Glanceability Proportional Scaling*) SHALL be restored in `req_maps_navigation.md` citing `TST-MAP-039`, and removed from `LEGACY_DANGLING_REQ_REFS`.
+     • Missing test specification `TST-MAP-038` (*Known Locations: Heim-Basis Redundant Badge Excision & Start-Count Home Resolution Alignment Verification*) SHALL be restored in `tst_maps_navigation.md` citing `REQ-MAP-036`.
+     • Every test specification in `tst_maps_navigation.md` SHALL be cited back by 100% of the requirements it declares in its `Requirement(s):` field.
+  3. *Test Code Tag Synchronization (`REQ-PRO-081.3`)*:
+     • `WaypointBadgeMarkerTest.kt` SHALL be annotated with `TST-MAP-039` to eliminate unmapped test code tags.
+  4. *Attribute Compliance & Header Parity (`REQ-PRO-081.4`)*:
+     • All 75 requirements in `docs/requirements/req_maps_navigation.md` SHALL declare valid `Priority`, `Type`, and `Verification Method` attributes per `REQ-PRO-077`.
+     • Domain shard headers SHALL reflect accurate totals (`Total Requirements: 75`, `Total Tests: 70`) in 100% mathematical parity with master index tables.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Net-new requirement `REQ-PRO-081` (`REQ-PRO-081.1`–`REQ-PRO-081.4`). Targets `docs/requirements/req_maps_navigation.md`, `docs/tests/tst_maps_navigation.md`, `WaypointBadgeMarkerTest.kt`, and `tools/verify_requirement_governance.py`.
+  2. *Historical Origin & Commit Trace*: Sprint 2026-46.4 via ticket `ATT-6131` under Epic `ATT-6119` (ASPICE CL2, Remediation A-08.5).
+  3. *Root Reason for Existing Formulation*: Baseline assessment identified evidence and back-link gaps in the Maps & Navigation domain shards following living document partitioning in `ATT-4594`.
+  4. *Preservation of Core Invariants*: Full clean-room unit test suite execution, master table mathematical parity, and pure Python 3 stdlib execution preserved with zero production Android APK modifications.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* `docs/requirements/req_maps_navigation.md`,
+  • *When* evaluated via `python3 tools/verify_requirement_governance.py --coverage`,
+  • *Then* 100% of requirements cite valid TSTs, zero unmapped MAP/NAV tags exist in Category 3, and 100% of domain TSTs are cited back by all referenced REQs.
+  • *Given* `docs/requirements/req_maps_navigation.md` and `docs/tests/tst_maps_navigation.md`,
+  • *When* checked for dangling references and attributes,
+  • *Then* zero dangling references and zero missing attributes are detected in maps_navigation.
+  • *Given* `tools/verify_requirement_governance.py --sync-indexes`,
+  • *When* executed,
+  • *Then* master index tables achieve 100% mathematical parity.
+- **Invariants**: Pure Python 3 standard library; zero Android runtime changes; zero regression in existing governance checks.
   • *Given* `tools/verify_requirement_governance.py --sync-indexes`,
   • *When* executed,
   • *Then* master index tables achieve 100% mathematical parity.

@@ -2356,3 +2356,17 @@
   2. *Dangling Link & Evidence Audit*: Run `python3 tools/verify_requirement_governance.py --check-links` and `--check-evidence` asserting zero dangling references and zero ungrounded Verified statuses in `aftermath_periods`.
   3. *Attribute Compliance Check*: Run `python3 tools/verify_requirement_governance.py --check-attributes` asserting all 41 requirements in `req_aftermath_periods.md` define valid Priority, Type, and Verification Method attributes.
   4. *Targeted Unit Test Verification*: Execute `./gradlew testDebugUnitTest --tests "*PeriodBarGraph*" --tests "*SportingJourney*"` asserting 100% pass rate.
+
+### TST-PRO-081: **Maps and Navigation Test Evidence Backfill & Bidirectional Traceability Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-PRO-081`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Scope**: Governance Verification, Coverage Analysis & Unit Tests
+- **Component**: `docs/requirements/req_maps_navigation.md`, `docs/tests/tst_maps_navigation.md`, `WaypointBadgeMarkerTest.kt`, `tools/verify_requirement_governance.py`
+- **Jira**: `ATT-6131`
+- **Test Description**:
+  1. *Coverage & Existence Matrix Verification*: Run `python3 tools/verify_requirement_governance.py --coverage` asserting 0 gaps in Category 1 for maps_navigation (100% REQs with TST), resolution of `TST-MAP-038` in Category 3, and 100% bidirectional citation for all MAP and NAV test specifications in Category 4.
+  2. *Dangling Link & Evidence Audit*: Run `python3 tools/verify_requirement_governance.py --check-links` and `--check-evidence` asserting zero dangling references in `maps_navigation` (pruning `REQ-MAP-037` from legacy allowlist) and zero ungrounded Verified statuses.
+  3. *Attribute Compliance Check*: Run `python3 tools/verify_requirement_governance.py --check-attributes` asserting all 75 requirements in `req_maps_navigation.md` define valid Priority, Type, and Verification Method attributes.
+  4. *Targeted Unit Test Verification*: Execute `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.map.WaypointBadgeMarkerTest"` asserting 100% pass rate.

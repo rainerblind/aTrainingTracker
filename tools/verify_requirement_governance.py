@@ -53,7 +53,6 @@ LEGACY_DANGLING_TST_REFS = frozenset({
 })
 
 LEGACY_DANGLING_REQ_REFS = frozenset({
-    "REQ-MAP-037",
     "REQ-STB-013",
     "REQ-UI-002",
     "REQ-UI-008",
