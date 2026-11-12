@@ -3,12 +3,15 @@
 **Domain**: `aftermath_reviews`  
 **Prefixes**: `REV`  
 **Scope**: Milestone workout auto-naming, jubilee achievements, Google Play in-app reviews, athlete feedback, and supporter tier promotions.  
-**Total Requirements**: 10
+**Total Requirements**: 12
 
 ---
 
 ### REQ-REV-001: Sport-Specific Finished Workout Milestone Counting & In-Memory Detection [Verified]
 - **Tests**: `TST-REV-001`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `WorkoutSummariesDatabaseManager.java`, `MilestoneAutoNamingManager.kt`
 - **Rationale**: Reaching round training milestones (100, 250, 500, 1000, 1500, 2000...) represents a major personal athletic achievement. The system SHALL maintain independent, accurate session counters segregated per primary sport type in SQLite rather than conflating all activities into an aggregate sum.
 - **Description**:
@@ -17,7 +20,10 @@
   3. Milestone evaluation SHALL execute on a background IO dispatcher (`Dispatchers.IO`) immediately following session finalization.
 
 ### REQ-REV-002: Dynamic Milestone Workout Auto-Naming & Export Title Propagation [Verified]
-- **Tests**: `TST-REV-002`
+- **Tests**: `TST-REV-002`, `TST-REV-005`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit, Integration
 - **Implementation**: `MilestoneAutoNamingManager.kt`, `WorkoutAutoNamingHelper.kt`, `TrackerService.java`
 - **Rationale**: Milestone sessions should be visibly celebrated across the athlete's entire ecosystem (session history, cloud sync, Strava, and TCX/FIT exports).
 - **Description**:
@@ -27,6 +33,9 @@
 
 ### REQ-REV-003: First-Jubilee Celebration Dialog & Multi-Channel Engagement [Verified]
 - **Tests**: `TST-REV-003`, `TST-REV-005`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit, Integration, On-Device Manual
 - **Implementation**: `FirstJubileeCelebrationDialog.kt`, `MainActivityWithNavigation.kt`
 - **Rationale**: Reaching the very first milestone across any sport is an athlete's peak emotional moment. The app SHALL present a celebratory Material 3 dialog offering frictionless personal email feedback, Google Play review, and an authentic supporter appeal.
 - **Description**:
@@ -47,6 +56,9 @@
 
 ### REQ-REV-004: Single-Prompt Invariant Persistence & Subsequent Jubilee Non-Intrusiveness [Verified]
 - **Tests**: `TST-REV-004`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `SettingsDataStore.kt`, `MilestoneAutoNamingManager.kt`
 - **Rationale**: To eliminate review spam and maintain professional user experience, celebration and review prompting MUST occur strictly once in the app lifetime.
 - **Description**:
@@ -56,6 +68,9 @@
 
 ### REQ-REV-005: Diagnostic Jubilee Dialog Debug Preview Trigger [Verified]
 - **Tests**: `TST-REV-006`
+- **Priority**: Low
+- **Type**: Functional
+- **Verification Method**: Unit, On-Device Manual
 - **Implementation**: `SupporterDebugSection.kt`
 - **Rationale**: On-device verification and sprint review testing of the celebration dialog must be accessible without manually completing 100 workouts.
 - **Description**:
@@ -64,6 +79,9 @@
 
 ### REQ-REV-006: Map Snapshot Share Pager Stability, Duplicate Header Elimination & Caller State Restoration [Verified]
 - **Tests**: `TST-REV-007`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit, Integration
 - **Implementation**: `WorkoutDetailTabbedContent.kt`, `MapDetailLayout.kt`, `TrackOnMapScreen.kt`, `WorkoutSummariesTabbedScreen.kt`
 - **Rationale**: Triggering 'Karten- & Analyse-Snapshot' in `WorkoutShareBottomSheet` must execute seamlessly without freezing the HorizontalPager at 50%, rendering duplicate visible headers under the tab row, stranding the athlete on the wrong tab or screen after sharing, crashing the UI thread with multithreaded access violations during GraphicsLayer rasterization, or emitting false failure toasts due to ForgottenCoroutineScopeException when ChooserActivity opens.
 - **Description**:
@@ -92,6 +110,9 @@
 
 ### REQ-REV-007: Workout Cluster Reassignment Centroid Integrity & Sport Frequency Synchronization [Verified]
 - **Tests**: `TST-REV-008`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `WorkoutClusterEngine.kt`
 - **Rationale**: When an athlete moves a workout between route clusters in `moveWorkoutToCluster`, sequential updates must not overwrite calculated cluster centroids with stale snapshots, and sport frequency updates must be calculated after SQLite database reassignments.
 - **Description**:
@@ -106,6 +127,9 @@
 
 ### REQ-REV-008: Generic Zone Distribution Card Architecture & Composable Wrapper Deduplication [Verified]
 - **Tests**: `TST-REV-009`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit, Integration
 - **Implementation**: `ZoneDistributionCard.kt`, `PowerZoneDistributionCard.kt`, `HeartRateZoneDistributionCard.kt`, `GradeZoneDistributionCard.kt`
 - **Rationale**: The post-workout telemetry analysis screens feature three separate card components (`PowerZoneDistributionCard`, `HeartRateZoneDistributionCard`, `GradeZoneDistributionCard`) that share ~97% identical Compose layout, header styling, chart mode routing (`STACKED_BAR`, `COLUMNS`, `HISTOGRAM`), and segmented button controls (~600 lines total). Unifying these into a single parameterized `ZoneDistributionCard` eliminates ~440 lines of duplicate code while preserving public composable APIs, contract compatibility, and per-card state isolation.
 - **Description**:
@@ -136,6 +160,9 @@
 
 ### REQ-REV-009: 1st-Order Dynamical Power-HR System Identification Engine, 5th Physiological School & In-App Explanation Sheet [Verified]
 - **Tests**: `TST-REV-010`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit, Integration
 - **Implementation**: `PowerHrDynamicsCalculator.kt`, `WorkoutSummariesDatabaseManager.java`, `WorkoutRepository.kt`, `LegacyImportEngine.kt`, `TrackerService.java`, `TuningPreferencesDataStore.kt`, `PhysiologyModelsSection.kt`, `PowerHrDynamicsInfoDialog.kt`, `AdvancedTuningAccordion.kt`, `TrackOnMapAftermathViewModel.kt`, `WorkoutSummariesViewModel.kt`
 - **Rationale**: Static ratios ($\text{EF} = \text{NP}/\text{Avg HR}$ and $\text{Pw:Hr}$) fail on variable or hilly terrain by ignoring physiological cardiorespiratory response latency ($\tau \approx 25\text{--}45\text{ s}$) and 4th-power NP inflation. A 1st-order Output-Error (OE) dynamical model ($x_k(\tau) = e^{-\Delta t/\tau} x_{k-1}(\tau) + (1 - e^{-\Delta t/\tau}) P_k, \widehat{\text{HR}}_k = \text{HR}_0 + K x_k(\tau)$) extracts terrain-independent physiological parameters: steady-state reference $\text{HR@200W} = \text{HR}_0 + 200 \cdot K$, response lag $\tau$, aerobic gain $K$ (slope $1/K$), and cardiac drift $\Delta\text{HR@200W} = \text{HR@200W}_{\text{end}} - \text{HR@200W}_{\text{start}}$.
 - **Description**:
@@ -181,6 +208,9 @@
 
 ### REQ-REV-010: Cardio-Power Dynamics Details Row & Fresh Model HR Graph Overlay [Verified]
 - **Tests**: `TST-REV-011`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit, Integration
 - **Implementation**: `WorkoutDataMapper.kt`, `WorkoutDetailsData.kt`, `WorkoutDetails.kt`, `CardioPowerDynamicsCard.kt`, `TelemetryMetricGraph.kt`, `WorkoutSummary.kt`, `WorkoutDetailTabbedContent.kt`, `PowerHrDynamicsCalculator.kt`, `TrackOnMapScreen.kt`
 - **Rationale**: Having identified 1st-order dynamical Power-HR parameters in `ATT-3904`, athletes require visual presentation in workout details and interactive telemetry charts to evaluate submaximal aerobic economy, lag response, and cardiac drift fatigue.
 - **Description**:
@@ -220,6 +250,9 @@
 
 ### REQ-REV-011: Cardio-Power Longitudinal Fitness Trends in Athlete Profile [Verified]
 - **Tests**: `TST-REV-012`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit, Integration
 - **Implementation**: `WorkoutSummariesDatabaseManager.java`, `AthleteProfileViewModel.kt`, `AthleteProfileScreen.kt`, `CardioPowerTrendsCard.kt`
 - **Rationale**: While single-workout details display acute parameters, monitoring aerobic fitness adaptations across weeks and months requires longitudinal trend plotting of fresh model parameters ($\text{HR@200W}$, $\tau$, $1/K$) for qualified workouts without requiring maximal exhaustion tests.
 - **Description**:
@@ -268,6 +301,9 @@
 
 ### REQ-REV-012: Real-Time Live HR Drift Metric & Tracking Cockpit Integration [Verified]
 - **Tests**: `TST-REV-013`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit, Integration
 - **Implementation**: `SensorType.java`, `CyclingPowerMetricsDevice.java`, `ActivityType.java`, `SignedIntegerFormatter.java`, `TrackingViewModel.kt`, `SensorFieldState.kt`, `EditSensorFieldViewModel.kt`, `res/values*/strings_cardio_power.xml`
 - **Rationale**: During live endurance cycling, cardiac drift ($\text{HR}_{\text{actual}}(t) - \text{HR}_{\text{fresh\_model}}(t)$) provides immediate, power-normalized feedback on autonomic decoupling, thermal stress, and dehydration. Static ratios fail on variable terrain due to cardiorespiratory response latency ($\tau \approx 25\text{--}45\text{ s}$). The system SHALL compute real-time lag-compensated cardiac drift at 1 Hz in `CyclingPowerMetricsDevice.java`, publish `SensorType.LIVE_HR_DRIFT`, and integrate it into the customizable tracking cockpit with semantic color-coding.
 - **Description**:
