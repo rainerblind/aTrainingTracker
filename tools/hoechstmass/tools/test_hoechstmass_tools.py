@@ -40,6 +40,7 @@ from tools.hoechstmass.tools.jira_util import (
     collect_sprint_metrics_for_id,
     VALID_ROLES,
     qa_audit,
+    record_review,
 )
 from tools.hoechstmass.tools.verify_requirement_governance import (
     load_config,
@@ -47,6 +48,7 @@ from tools.hoechstmass.tools.verify_requirement_governance import (
     verify_engineering_directory_structure,
     verify_sprint_metrics,
     verify_qa_audits,
+    verify_independent_reviews,
 )
 from tools.hoechstmass.tools.parallel_sprint_lock import (
     sprint_lock,
@@ -538,6 +540,85 @@ class TestEpicCommands(unittest.TestCase):
                 self.assertIn("ATT-6149", content)
                 self.assertIn("ATT-6150", content)
                 self.assertIn("COMPLIANT", content)
+
+    def test_hoechstmass_record_review(self):
+        from unittest.mock import patch
+        import tempfile
+
+        def mock_jira_req(url, method="GET", payload=None, role="coordinator", **kwargs):
+            if "/rest/agile/1.0/board" in url and "/sprint" not in url:
+                return {"values": [{"id": 1, "name": "ATT Board"}]}
+            elif "/rest/agile/1.0/board/1/sprint?state=active" in url:
+                return {"values": [{"id": 440, "name": "2026-46.3", "state": "active"}]}
+            elif "/rest/agile/1.0/sprint/440/issue" in url:
+                return {
+                    "issues": [
+                        {"key": "ATT-6150", "fields": {"summary": "Issue 1", "issuetype": {"subtask": False}}},
+                    ],
+                    "total": 1,
+                }
+            return {}
+
+        with patch("tools.hoechstmass.tools.jira_util.jira_request", side_effect=mock_jira_req):
+            with tempfile.TemporaryDirectory() as tmpdir:
+                out_file = os.path.join(tmpdir, "docs", "engineering", "reviews", "sprint_2026-46.3.md")
+                res_path, meta = record_review(
+                    sprint_arg="2026-46.3",
+                    ticket_key="ATT-6150",
+                    reviewer="Human",
+                    verdict="PASS",
+                    findings="Human ceremony 2 acceptance notes.",
+                    out_path=out_file,
+                    repo_root=tmpdir,
+                )
+                self.assertEqual(res_path, out_file)
+                self.assertTrue(os.path.exists(out_file))
+                self.assertEqual(meta["reviewer"], "Human")
+
+                with open(out_file, "r", encoding="utf-8") as f:
+                    content = f.read()
+
+                self.assertIn("# Independent QA Review Record: Sprint 2026-46.3", content)
+                self.assertIn("**Reviewer**: Human", content)
+                self.assertIn("**Verdict**: **PASS**", content)
+                self.assertIn("ATT-6150", content)
+
+    def test_verify_independent_reviews_hoechstmass(self):
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            # 1. Missing directory
+            ok, errs = verify_independent_reviews(sprint_name="2026-46.3", repo_root=tmpdir)
+            self.assertFalse(ok)
+            self.assertTrue(any("does not exist" in e for e in errs))
+
+            rev_dir = os.path.join(tmpdir, "docs", "engineering", "reviews")
+            os.makedirs(rev_dir, exist_ok=True)
+
+            # 2. Missing record
+            ok, errs = verify_independent_reviews(sprint_name="2026-46.3", repo_root=tmpdir)
+            self.assertFalse(ok)
+            self.assertTrue(any("Missing independent review record" in e for e in errs))
+
+            # 3. Valid record
+            target = os.path.join(rev_dir, "sprint_2026-46.3.md")
+            with open(target, "w", encoding="utf-8") as f:
+                f.write(
+                    "# Independent QA Review Record: Sprint 2026-46.3\n\n"
+                    "* **Reviewer**: Human\n"
+                    "* **Date**: 2026-11-12 04:00:00\n"
+                    "* **Scope**: Ceremony 2 Sprint Review\n"
+                    "* **Verdict**: **PASS**\n"
+                )
+
+            ok, msgs = verify_independent_reviews(sprint_name="2026-46.3", repo_root=tmpdir)
+            self.assertTrue(ok, f"Expected pass, got: {msgs}")
+            self.assertTrue(any("PASS" in m for m in msgs))
+
+            # 4. Wildcard
+            ok_any, msgs_any = verify_independent_reviews(sprint_name=None, repo_root=tmpdir)
+            self.assertTrue(ok_any)
+            self.assertTrue(any("Verified 1 independent review record" in m for m in msgs_any))
 
 
 

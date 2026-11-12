@@ -3131,6 +3131,39 @@ The workflow SHALL mandate that:
   • *Then* it passes with exit code 0.
 - **Invariants**: Zero modifications to Android production runtime code in `app/src/main/`; pure Python standard library retained; Rule 3 (`Erledigt` human-only gate) preserved.
 
+### REQ-PRO-062: Independent QA & Cross-Vendor Review Evidence Persistence [Verified]
+- **Tests**: `tools/test_jira_accounts.py`, `tools/test_verify_requirement_governance.py`, `tools/hoechstmass/tools/test_hoechstmass_tools.py`
+- **Implementation**: Automated `record-review` CLI command in `tools/jira_util.py` and `tools/hoechstmass/tools/jira_util.py`, structured markdown reporting in `docs/engineering/reviews/<review_file>.md`, canonical directory registration, and `--check-reviews` validation in `tools/verify_requirement_governance.py`.
+- **Rationale**: Under ASPICE SUP.1 (Quality Assurance), QA evidence must demonstrate independence from the work product author (Pre-Assessment Finding B-10). While in-sprint agents operate on the same vendor framework, independent reviews conducted by the Human (during Ceremony 2 Sprint Review before `Erledigt`) and cross-vendor AI models (Layer 5) previously lacked persistent repository records. This requirement establishes a structured review evidence format and CLI tooling:
+  1. *Review Record Schema (`REQ-PRO-062.1`, docs/engineering/reviews/<sprint_or_review>.md)*:
+     • Review deliverables SHALL record traceable metadata: Reviewer (`Human` or external AI vendor), Model/Version (if AI), Date/Timestamp, Reviewed Ticket(s) or Commit(s), Scope, and Findings / Verdict (`PASS` / `FAIL`).
+  2. *Independent Review CLI Helper (`REQ-PRO-062.2`, tools/jira_util.py & tools/hoechstmass/tools/jira_util.py)*:
+     • Tooling SHALL implement `record-review` command supporting both Human Sprint Reviews (Ceremony 2) and Cross-Vendor AI Reviews (Layer 5) with parameters `--sprint`, `--ticket`, `--reviewer`, `--vendor`, `--model`, `--version`, `--scope`, `--verdict`, and `--findings`.
+  3. *Directory Governance (`REQ-PRO-062.3`, ALLOWED_ENGINEERING_ENTRIES & hoechstmass_config.json)*:
+     • `ALLOWED_ENGINEERING_ENTRIES` in `tools/verify_requirement_governance.py` and `hoechstmass_config.json` SHALL register `"reviews"`.
+  4. *Governance Enforcement CLI (`REQ-PRO-062.4`, tools/verify_requirement_governance.py & tools/hoechstmass/tools/verify_requirement_governance.py)*:
+     • `tools/verify_requirement_governance.py` and Höchstmaß mirror SHALL implement `--check-reviews [SPRINT]`, validating existence and schema compliance of review records.
+  5. *Autonomous Execution Decoupling (`REQ-PRO-062.5`)*:
+     • Autonomous Phase 2 lifecycle execution (`Stage 5 -> Final Review`) SHALL NOT be blocked by missing human review records, preserving automated in-sprint throughput.
+  6. *Ceremony 2 Review Mandate (`REQ-PRO-062.6`, .agents/skills/sprint-planner/SKILL.md)*:
+     • `sprint-planner/SKILL.md` Ceremony 2 SHALL document recording human review acceptance into `docs/engineering/reviews/` prior to sprint closure.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Net-new requirement `REQ-PRO-062` (`REQ-PRO-062.1`–`REQ-PRO-062.6`). Targets `tools/jira_util.py`, `tools/verify_requirement_governance.py`, `docs/engineering/reviews/`, and `tools/hoechstmass/`.
+  2. *Historical Origin & Commit Trace*: Introduced in Sprint 2026-46.3 via ATT-6155 under Epic ATT-6141 to satisfy ASPICE pre-assessment finding B-10.
+  3. *Root Reason for Existing Formulation*: Lack of repository evidence for independent human / cross-vendor reviews under ASPICE SUP.1.
+  4. *Preservation of Core Invariants*: Zero changes to Android runtime code; pure Python 3 standard library; autonomous Phase 2 execution strictly preserved.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* a completed Ceremony 2 or cross-vendor AI review,
+  • *When* `record-review` is executed,
+  • *Then* it generates a markdown file in `docs/engineering/reviews/` with traceable reviewer metadata, scope, and verdict.
+  • *Given* a review file in `docs/engineering/reviews/`,
+  • *When* `verify_requirement_governance.py --check-reviews` runs,
+  • *Then* it verifies that all required metadata fields are present and valid.
+  • *Given* a ticket progressing through Stages 1..5 in Phase 2,
+  • *When* transitioning to `Final Review (Agent)`,
+  • *Then* the transition is unblocked regardless of whether a human review record exists.
+- **Invariants**: Zero modifications to Android production runtime code in `app/src/main/`; pure Python standard library retained; Rule 3 (`Erledigt` human-only gate) preserved.
+
 
 
 

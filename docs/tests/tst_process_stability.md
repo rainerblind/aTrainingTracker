@@ -1862,6 +1862,20 @@
   4. *Canonical Directory Registration (`TST-PRO-061.4`, tools/test_verify_requirement_governance.py)*:
   • Assert `"qa_audits"` exists in `ALLOWED_ENGINEERING_ENTRIES` and `hoechstmass_config.json`.
 
+### TST-PRO-062: **Independent QA & Cross-Vendor Review Evidence Suite** [Verified]
+- **Requirement(s)**: `REQ-PRO-062`
+- **Component**: `tools/jira_util.py`, `tools/verify_requirement_governance.py`, `tools/hoechstmass/tools/jira_util.py`, `tools/hoechstmass/tools/verify_requirement_governance.py`, `tools/test_jira_accounts.py`, `tools/test_verify_requirement_governance.py`, `tools/hoechstmass/tools/test_hoechstmass_tools.py`
+- **Jira**: `ATT-6155`
+- **Test Description**:
+  1. *`record-review` CLI Command & Report Generation (`TST-PRO-062.1`, tools/test_jira_accounts.py & tools/hoechstmass/tools/test_hoechstmass_tools.py)*:
+  • Execute `record-review` for Human Ceremony 2 review and Cross-Vendor AI review; verify structured markdown output and metadata serialization.
+  2. *Independent Review Governance Verification (`TST-PRO-062.2`, tools/test_verify_requirement_governance.py)*:
+  • Run `verify_independent_reviews` against valid vs missing and malformed review records; assert pass/fail status and schema diagnostics.
+  3. *Counterpart Parity & Tooling Integration (`TST-PRO-062.3`, tools/hoechstmass/tools/test_hoechstmass_tools.py)*:
+  • Assert `record-review` and `verify_independent_reviews` in Höchstmaß mirror match root tooling behavior.
+  4. *Canonical Directory Registration (`TST-PRO-062.4`, tools/test_verify_requirement_governance.py)*:
+  • Assert `"reviews"` exists in `ALLOWED_ENGINEERING_ENTRIES` and `hoechstmass_config.json`.
+
 
 
 

@@ -35,6 +35,7 @@ from tools.verify_requirement_governance import (
     verify_qa_audits,
     verify_repository_encapsulation,
     verify_sprint_metrics,
+    verify_independent_reviews,
 )
 
 
@@ -483,15 +484,17 @@ diff --git a/docs/requirements/req_process_stability.md b/docs/requirements/req_
             self.assertIn("across 1 domain shards.", updated_text)
 
     def test_scenario_13_canonical_engineering_directory_allows_gates(self):
-        """Scenario 13: ALLOWED_ENGINEERING_ENTRIES registers 'gates' and 'qa_audits' (TST-PRO-059.3, TST-PRO-061.4)."""
+        """Scenario 13: ALLOWED_ENGINEERING_ENTRIES registers 'gates', 'qa_audits', and 'reviews' (TST-PRO-059.3, TST-PRO-061.4, TST-PRO-062.3)."""
         self.assertIn("gates", ALLOWED_ENGINEERING_ENTRIES)
         self.assertIn("qa_audits", ALLOWED_ENGINEERING_ENTRIES)
+        self.assertIn("reviews", ALLOWED_ENGINEERING_ENTRIES)
         with tempfile.TemporaryDirectory() as tmpdir:
             eng_dir = os.path.join(tmpdir, "docs", "engineering")
             os.makedirs(os.path.join(eng_dir, "gates"), exist_ok=True)
             os.makedirs(os.path.join(eng_dir, "analysis"), exist_ok=True)
+            os.makedirs(os.path.join(eng_dir, "reviews"), exist_ok=True)
             ok, errors = verify_engineering_directory_structure(eng_dir=eng_dir)
-            self.assertTrue(ok, f"Expected gates to be allowed, got errors: {errors}")
+            self.assertTrue(ok, f"Expected gates and reviews to be allowed, got errors: {errors}")
 
             # Non-canonical entry should fail
             os.makedirs(os.path.join(eng_dir, "invalid_dir"), exist_ok=True)
@@ -695,7 +698,69 @@ diff --git a/docs/requirements/req_process_stability.md b/docs/requirements/req_
             self.assertTrue(ok_any, f"Expected pass, got: {msgs_any}")
             self.assertTrue(any("Verified 1 sprint QA process-compliance audit record" in m for m in msgs_any))
 
+    def test_scenario_17_verify_reviews_validation(self):
+        """Scenario 17: verify_independent_reviews validates presence, schema, and metadata fields (TST-PRO-062.2)."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            # 1. Missing reviews directory
+            ok, errs = verify_independent_reviews(sprint_name="sprint/2026-46.3", repo_root=tmpdir)
+            self.assertFalse(ok)
+            self.assertTrue(any("does not exist" in e for e in errs))
 
+            reviews_dir = os.path.join(tmpdir, "docs", "engineering", "reviews")
+            os.makedirs(reviews_dir, exist_ok=True)
+
+            # 2. Missing sprint review record
+            ok, errs = verify_independent_reviews(sprint_name="sprint/2026-46.3", repo_root=tmpdir)
+            self.assertFalse(ok)
+            self.assertTrue(any("Missing independent review record" in e for e in errs))
+
+            # 3. Empty review file
+            target_file = os.path.join(reviews_dir, "sprint_2026-46.3.md")
+            with open(target_file, "w", encoding="utf-8") as f:
+                f.write("   \n")
+            ok, errs = verify_independent_reviews(sprint_name="sprint/2026-46.3", repo_root=tmpdir)
+            self.assertFalse(ok)
+            self.assertTrue(any("empty" in e for e in errs))
+
+            # 4. Review file missing required metadata fields (e.g., missing Verdict)
+            incomplete_content = (
+                "# Independent Review: sprint/2026-46.3\n\n"
+                "* **Reviewer**: Human Process Owner\n"
+                "* **Date**: 2026-11-12 04:00:00\n"
+                "* **Scope**: Ceremony 2 Sprint Review\n"
+            )
+            with open(target_file, "w", encoding="utf-8") as f:
+                f.write(incomplete_content)
+            ok, errs = verify_independent_reviews(sprint_name="sprint/2026-46.3", repo_root=tmpdir)
+            self.assertFalse(ok)
+            self.assertTrue(any("missing required metadata field: Verdict" in e for e in errs))
+
+            # 5. Valid sprint review record with all metadata fields
+            valid_content = (
+                "# Independent Review: sprint/2026-46.3\n\n"
+                "## Metadata\n"
+                "* **Reviewer**: Human Process Owner\n"
+                "* **Review Type**: Human Sprint Review (Ceremony 2)\n"
+                "* **Vendor**: Human\n"
+                "* **Model**: Human Process Owner\n"
+                "* **Version**: N/A\n"
+                "* **Date**: 2026-11-12 04:00:00\n"
+                "* **Scope**: Ceremony 2 Sprint Review\n"
+                "* **Verdict**: **PASS**\n\n"
+                "## Findings\n"
+                "All sprint deliverables reviewed and accepted.\n"
+            )
+            with open(target_file, "w", encoding="utf-8") as f:
+                f.write(valid_content)
+
+            ok, msgs = verify_independent_reviews(sprint_name="sprint/2026-46.3", repo_root=tmpdir)
+            self.assertTrue(ok, f"Expected pass, got: {msgs}")
+            self.assertTrue(any("PASS" in m for m in msgs))
+
+            # 6. Wildcard verification without sprint name
+            ok_any, msgs_any = verify_independent_reviews(sprint_name=None, repo_root=tmpdir)
+            self.assertTrue(ok_any, f"Expected pass, got: {msgs_any}")
+            self.assertTrue(any("Verified 1 independent review record(s)" in m for m in msgs_any))
 
 
 if __name__ == "__main__":

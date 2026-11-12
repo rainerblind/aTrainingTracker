@@ -776,6 +776,90 @@ class TestJiraCliTooling(unittest.TestCase):
                 content = f.read()
             self.assertIn("NON-COMPLIANT", content)
 
+    @patch("jira_util.jira_request")
+    def test_record_review_command_generates_markdown(self, mock_request):
+        """TST-PRO-062.1: Verify record-review generates structured review markdown for Human and AI reviews."""
+        def mock_jira_side_effect(url, method="GET", payload=None, role="coordinator"):
+            if "/rest/agile/1.0/board" in url and "/sprint" not in url:
+                return {"values": [{"id": 1, "name": "ATT Board"}]}
+            elif "/rest/agile/1.0/board/1/sprint?state=active" in url:
+                return {"values": [{"id": 440, "name": "2026-46.3", "state": "active"}]}
+            elif "/rest/agile/1.0/sprint/440/issue" in url:
+                return {
+                    "issues": [
+                        {"key": "ATT-6150", "fields": {"summary": "Issue 1", "issuetype": {"subtask": False}}},
+                        {"key": "ATT-6154", "fields": {"summary": "Issue 2", "issuetype": {"subtask": False}}},
+                    ],
+                    "total": 2,
+                }
+            return {}
+
+        mock_request.side_effect = mock_jira_side_effect
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            # 1. Human Ceremony 2 Review
+            out_human = os.path.join(tmpdir, "docs", "engineering", "reviews", "sprint_2026-46.3.md")
+            path1, meta1 = jira_util.record_review(
+                sprint_arg=None,
+                ticket_key="ATT-6150,ATT-6154",
+                reviewer="Human",
+                verdict="PASS",
+                findings="Sprint tickets accepted during Ceremony 2.",
+                out_path=out_human,
+                repo_root=tmpdir,
+            )
+            self.assertEqual(path1, out_human)
+            self.assertTrue(os.path.exists(out_human))
+            self.assertEqual(meta1["reviewer"], "Human")
+            self.assertEqual(meta1["review_type"], "Human Sprint Review (Ceremony 2)")
+
+            with open(out_human, "r", encoding="utf-8") as f:
+                content_h = f.read()
+
+            self.assertIn("# Independent QA Review Record: Sprint 2026-46.3", content_h)
+            self.assertIn("**Reviewer**: Human", content_h)
+            self.assertIn("**Review Type**: Human Sprint Review (Ceremony 2)", content_h)
+            self.assertIn("**Vendor**: Human", content_h)
+            self.assertIn("**Scope**: Ceremony 2 Sprint Review", content_h)
+            self.assertIn("**Verdict**: **PASS**", content_h)
+            self.assertIn("ATT-6150", content_h)
+            self.assertIn("ATT-6154", content_h)
+            self.assertIn("Sprint tickets accepted during Ceremony 2.", content_h)
+
+            # 2. Cross-Vendor AI Review (Layer 5)
+            out_ai = os.path.join(tmpdir, "docs", "engineering", "reviews", "layer5_claude.md")
+            path2, meta2 = jira_util.record_review(
+                sprint_arg="2026-46.3",
+                ticket_key="ATT-6155",
+                reviewer="Anthropic Claude",
+                vendor="Anthropic",
+                model="claude-3-7-sonnet",
+                version="20250219",
+                scope="Layer 5 Cross-Vendor Audit",
+                verdict="PASS",
+                findings="ASPICE compliance and role integrity verified.",
+                out_path=out_ai,
+                repo_root=tmpdir,
+            )
+            self.assertEqual(path2, out_ai)
+            self.assertTrue(os.path.exists(out_ai))
+            self.assertEqual(meta2["vendor"], "Anthropic")
+            self.assertEqual(meta2["model"], "claude-3-7-sonnet")
+            self.assertEqual(meta2["version"], "20250219")
+
+            with open(out_ai, "r", encoding="utf-8") as f:
+                content_ai = f.read()
+
+            self.assertIn("# Independent QA Review Record: Sprint 2026-46.3", content_ai)
+            self.assertIn("**Reviewer**: Anthropic Claude", content_ai)
+            self.assertIn("**Review Type**: Cross-Vendor AI Review (Layer 5)", content_ai)
+            self.assertIn("**Vendor**: Anthropic", content_ai)
+            self.assertIn("**Model & Version**: claude-3-7-sonnet (v20250219)", content_ai)
+            self.assertIn("**Scope**: Layer 5 Cross-Vendor Audit", content_ai)
+            self.assertIn("**Verdict**: **PASS**", content_ai)
+            self.assertIn("ATT-6155", content_ai)
+            self.assertIn("ASPICE compliance and role integrity verified.", content_ai)
+
 
 
 if __name__ == "__main__":
