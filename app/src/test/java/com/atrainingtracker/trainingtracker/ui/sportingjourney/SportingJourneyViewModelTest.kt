@@ -127,4 +127,12 @@ class SportingJourneyViewModelTest {
         assertEquals(SportingSportFilter.RUNNING, viewModel.uiState.value.sportFilter)
         coVerify(exactly = 1) { repository.loadJourneyData(SportingHorizon.AllTime, SportingSportFilter.RUNNING) }
     }
+
+    @Test
+    fun testAndroidViewModelFactoryInstantiation_hasSingleArgConstructor() {
+        val constructor = SportingJourneyViewModel::class.java.getConstructor(Application::class.java)
+        org.junit.Assert.assertNotNull(constructor)
+        val vm = constructor.newInstance(application)
+        org.junit.Assert.assertNotNull(vm)
+    }
 }

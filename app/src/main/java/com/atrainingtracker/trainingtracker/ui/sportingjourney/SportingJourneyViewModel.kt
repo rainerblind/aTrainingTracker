@@ -30,7 +30,7 @@ import kotlinx.coroutines.launch
 /**
  * ViewModel orchestrating data loading and filter mutations for [SportingJourneySheet] (REQ-SPT-002, REQ-SPT-003).
  */
-class SportingJourneyViewModel(
+class SportingJourneyViewModel @JvmOverloads constructor(
     application: Application,
     private val repository: SportingJourneyRepository = SportingJourneyRepository.getInstance(application)
 ) : AndroidViewModel(application) {
