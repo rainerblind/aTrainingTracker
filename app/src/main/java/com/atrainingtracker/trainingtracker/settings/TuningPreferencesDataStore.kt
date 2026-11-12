@@ -824,21 +824,6 @@ class TuningPreferencesDataStore(private val context: Context) {
 
     fun getTuningConfig(): TuningConfig = tuningConfigStateFlow.value
 
-    init {
-        CoroutineScope(Dispatchers.IO).launch {
-            try {
-                purgeLegacyMapCameraPreferences()
-            } catch (_: Exception) {
-                // Best-effort legacy key purge on startup
-            }
-        }
-        appScope.launch {
-            tuningConfigFlow.collect { cfg ->
-                com.atrainingtracker.banalservice.devices.radar.SmartBrakeLightDetector.isEnabled = cfg.radarBrakeLightEnabled
-            }
-        }
-    }
-
 /**
  * Resolved follow-me camera preferences slice (REQ-MAP-050).
  */
@@ -1153,6 +1138,21 @@ data class AutoPausePreferences(
             radarLaneChangeTickEnabled = radarLaneChangeTickEnabled,
             radarClosePassThresholdM = radarClosePassThresholdM
         )
+    }
+
+    init {
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                purgeLegacyMapCameraPreferences()
+            } catch (_: Exception) {
+                // Best-effort legacy key purge on startup
+            }
+        }
+        appScope.launch {
+            tuningConfigFlow.collect { cfg ->
+                com.atrainingtracker.banalservice.devices.radar.SmartBrakeLightDetector.isEnabled = cfg.radarBrakeLightEnabled
+            }
+        }
     }
 
     val enableCogganPowerMetricsFlow: Flow<Boolean> = context.dataStore.data.map { prefs ->
