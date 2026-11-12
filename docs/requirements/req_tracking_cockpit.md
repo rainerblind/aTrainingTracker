@@ -4291,3 +4291,40 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 • *Then* `SpeedAndLocationDevice` immediately pins to stationary anchor on the 1st fix without waiting for 3 ticks.
 
 **Invariants**: Zero background service IPC regressions; initial fix stationary pinning preserved; 100% test pass rate across `banalservice.devices.*`.
+
+
+### REQ-TRK-075: Core Tracking Pipeline Integration Verification (TrackerService, Sensor Layer & SQLite Database) [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-TRK-075` | **Tickets**: `ATT-6185`
+- **Implementation**: `TrackerService.java`, `WorkoutRepository.kt`, `AutoPauseManager.kt`, `LiveWorkoutSession.java`, `app/src/test/java/com/atrainingtracker/trainingtracker/integration/TrackerServiceIntegrationTest.kt`
+- **Rationale**: Prior unit tests isolated tracking components using heavy mocking of databases and services, leaving the full tracking chain unverified as integrated software. In compliance with ASPICE SWE.5 (Remediation ID C-11), the system SHALL verify the integrated execution of TrackerService, sensor telemetry ingestion, active/pause/resume state transitions, and real SQLite persistence (workout_summaries, workout_samples, workout_rr_intervals, and laps) using Robolectric and authentic database engines (ATT-6185):
+- **Description**:
+  1. *Start Tracking and Multi-Sensor Telemetry Persistence (`REQ-TRK-075.1`)*:
+     - Upon starting a workout, TrackerService SHALL create a record in `workout_summaries`, dynamically create the `workout_samples_<baseFileName>` table, ingest simulated multi-sensor telemetry (Heart Rate, Speed, Cadence, Power, GPS coordinates, Altitude), persist sample rows to SQLite, and stream beat-to-beat RR intervals to `workout_rr_intervals`.
+  2. *Manual Pause Invariant (`REQ-TRK-075.2`)*:
+     - When tracking is paused, TrackerService SHALL suspend sample row insertions into the dynamic samples table and freeze active time (`TIME_ACTIVE_s`), while continuing to update total elapsed time (`TIME_TOTAL_s`) in `workout_summaries`.
+  3. *Manual Resume Continuity (`REQ-TRK-075.3`)*:
+     - Upon resuming from pause, TrackerService SHALL resume accumulating active time (`TIME_ACTIVE_s`) and resume inserting sample rows into the dynamic samples table.
+  4. *Auto-Pause State Transitions (`REQ-TRK-075.4`)*:
+     - TrackerService and AutoPauseManager SHALL evaluate speed against the configured auto-pause speed threshold; dropping below threshold SHALL transition state to `AUTO_PAUSED` and trigger pause broadcast; exceeding threshold SHALL transition state to `TRACKING` and trigger resume broadcast.
+  5. *Finalization and Summary Persistence (`REQ-TRK-075.5`)*:
+     - Upon calling `endWorkout()`, TrackerService SHALL close out the active lap in `laps`, flush pending RR intervals synchronously to SQLite, compute terminal summary statistics (total distance, active time, total time, average speed, average/max heart rate, ascent), and commit `FINISHED = 1` in `workout_summaries`.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* TrackerService initialized with simulated multi-sensor telemetry (HR, Speed, Cadence, Power, GPS),
+• *When* tracking is started and samples are processed,
+• *Then* `workout_summaries`, `workout_samples_<baseFileName>`, and `workout_rr_intervals` tables in SQLite contain matching populated records.
+• *Given* an active tracking session,
+• *When* tracking is paused,
+• *Then* no new sample rows are inserted into the samples table, `TIME_ACTIVE_s` stops increasing, and `TIME_TOTAL_s` continues updating.
+• *Given* a paused tracking session,
+• *When* tracking is resumed,
+• *Then* active time accumulation resumes and new sample rows are written to SQLite.
+• *Given* tracking with auto-pause enabled,
+• *When* speed drops below the auto-pause threshold,
+• *Then* the service transitions to `AUTO_PAUSED`; when speed subsequently rises above the threshold, it resumes to `TRACKING`.
+• *Given* an active workout with recorded telemetry and laps,
+• *When* `endWorkout()` is invoked,
+• *Then* the final lap is saved, `FINISHED = 1` is committed, and computed summary metrics (distance, active time, max/avg HR, ascent) are persisted to SQLite.
+
+**Invariants**: Zero modification to production code or database schemas; complete test isolation per run; 100% authentic SQLite persistence verification.

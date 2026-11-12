@@ -2389,3 +2389,33 @@
      • Verify initial fix (`mPrevLocation == null`) with $\text{speed} == 0.0\text{ m/s}$ pins immediately to anchor on tick 1 (`REQ-TRK-074.4`).
   6. *Targeted Package Regression Execution (`TST-TRK-074.6`)*:
      • `./gradlew testDebugUnitTest --tests "com.atrainingtracker.banalservice.devices.*"` asserting 100% pass rate.
+
+
+### TST-TRK-075: **Core Tracking Pipeline Integration Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-TRK-075` (`REQ-TRK-075.1`..`REQ-TRK-075.5`)
+- **Component**: `TrackerService.java`, `WorkoutRepository.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/integration/TrackerServiceIntegrationTest.kt`
+- **Jira**: `ATT-6185`
+- **Test Description**:
+  1. *Start Tracking and Multi-Sensor Telemetry Ingestion Test (`TST-TRK-075.1`, `TrackerServiceIntegrationTest.kt`)*:
+     • Start tracking session; emit simulated samples for HR (145 bpm), Speed (8.33 m/s), Cadence (85 rpm), Power (220 W), Distance (100 m), and beat-to-beat RR intervals.
+     • Assert `workout_summaries` row exists with valid `workout_id`.
+     • Assert `workout_samples_<baseFileName>` table exists and contains inserted row with matching sensor column values.
+     • Assert `workout_rr_intervals` contains the flushed RR beat entries.
+  2. *Pause Tracking Ingestion Freeze Test (`TST-TRK-075.2`, `TrackerServiceIntegrationTest.kt`)*:
+     • Transition to pause (`TrainingApplication.pauseTracking(false)`).
+     • Trigger sample tick with updated total time and simulated sensor data.
+     • Query database: assert sample row count does not increase, active time remains unchanged, and total elapsed time is updated in `workout_summaries`.
+  3. *Resume Tracking Sample Continuation Test (`TST-TRK-075.3`, `TrackerServiceIntegrationTest.kt`)*:
+     • Transition to resume (`mAutoPauseManager.onManualResume(...)` and `TrainingApplication.setTracking()`).
+     • Trigger sample tick with incremented active time.
+     • Query database: assert sample row count increases and `TIME_ACTIVE_s` updates in SQLite.
+  4. *Auto-Pause Trigger and Motion Recovery Test (`TST-TRK-075.4`, `TrackerServiceIntegrationTest.kt`)*:
+     • Configure AutoPause with threshold $1.0\text{ m/s}$.
+     • Feed speed $0.2\text{ m/s}$ ($< 1.0\text{ m/s}$) for consecutive debounce ticks; assert transition to `AUTO_PAUSED` and pause broadcast.
+     • Feed speed $5.0\text{ m/s}$ ($> 1.0\text{ m/s}$); assert transition back to `TRACKING` and resume broadcast.
+  5. *Stop and Summary Finalization Verification Test (`TST-TRK-075.5`, `TrackerServiceIntegrationTest.kt`)*:
+     • Populate telemetry: distance, HR max/avg, active time, ascent.
+     • Invoke `endWorkout()`.
+     • Assert `workout_summaries` has `FINISHED = 1`, final lap record in `laps`, and all computed summary fields match expectations.
+  6. *Targeted Package Integration Suite Execution (`TST-TRK-075.6`)*:
+     • `python3 tools/parallel_sprint_lock.py -- ./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.integration.*"` asserting 100% pass rate.
