@@ -33,6 +33,8 @@ import com.atrainingtracker.banalservice.sensor.SensorType
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
 import com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository
+import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore
+import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDefaults
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
@@ -61,7 +63,8 @@ class HrvRampTestViewModel @JvmOverloads constructor(
     application: Application,
     private val banalServiceRepository: BANALServiceRepository = BANALServiceRepository.getInstance(application),
     private val dispatcher: CoroutineDispatcher = Dispatchers.Main,
-    private val workoutRepository: WorkoutRepository = WorkoutRepository.getInstance(application)
+    private val workoutRepository: WorkoutRepository = WorkoutRepository.getInstance(application),
+    private val tuningPreferencesDataStore: TuningPreferencesDataStore = TuningPreferencesDataStore(application)
 ) : AndroidViewModel(application) {
 
     private val _uiState = MutableStateFlow(HrvRampTestUiState())
@@ -69,7 +72,11 @@ class HrvRampTestViewModel @JvmOverloads constructor(
 
     private var timerJob: Job? = null
     private var telemetryJob: Job? = null
+    private var tuningJob: Job? = null
     private val bufferedBeats = CopyOnWriteArrayList<RrBeatEvent>()
+
+    var dfaA1ThresholdT2: Float = TuningPreferencesDefaults.DEFAULT_DFA_A1_THRESHOLD_T2
+        internal set
 
     var isWorkoutTagged: Boolean = false
         private set
@@ -83,6 +90,12 @@ class HrvRampTestViewModel @JvmOverloads constructor(
     }
 
     init {
+        tuningJob = viewModelScope.launch(dispatcher) {
+            tuningPreferencesDataStore.dfaA1ThresholdT2Flow.collect { t2 ->
+                dfaA1ThresholdT2 = t2
+            }
+        }
+
         // Collect live telemetry from BANALServiceRepository
         telemetryJob = viewModelScope.launch(dispatcher) {
             banalServiceRepository.allFilteredSensorData.collect { sensorDataList ->
@@ -402,8 +415,9 @@ class HrvRampTestViewModel @JvmOverloads constructor(
                         target = state.config.startingTarget + (stepElapsed / 60.0) * state.config.rampSlopeWattsPerMin
                     }
 
-                    // 2. Sub-exhaustion early completion detection (REQ-TRK-072.5)
-                    if (dfaA1 != null && dfaA1 < 0.45) {
+                    // 2. Sub-exhaustion early completion detection (REQ-TRK-072.5 / ATT-7317)
+                    val earlyCutoff = (dfaA1ThresholdT2 - 0.05f).coerceAtLeast(0.25f)
+                    if (dfaA1 != null && dfaA1 < earlyCutoff) {
                         sub45Duration += 1
                         if (sub45Duration >= 60) {
                             earlyDetected = true

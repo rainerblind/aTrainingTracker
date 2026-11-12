@@ -27,6 +27,20 @@
     <string name="hrv_sdnn">SDNN</string>
     <string name="hrv_sdnn_short">SDNN</string>
 
+    <!-- Training Zones Tab (ATT-7317 / REQ-TRK-061.4) -->
+    <string name="tab_hrv_dfa_a1">HRV (DFA a1)</string>
+    <string name="hrv_zone_aerobic_base_label">有酸素ベース (ゾーン2)</string>
+    <string name="hrv_zone_threshold_transition_label">閾値移行 (ゾーン3)</string>
+    <string name="hrv_zone_anaerobic_label">高強度 / 無酸素 (ゾーン4)</string>
+    <string name="hrv_t1_aerobic_threshold_label">有酸素閾値 T1 (HRVT1)</string>
+    <string name="hrv_t2_anaerobic_threshold_label">無酸素閾値 T2 (HRVT2)</string>
+    <string name="tuning_physiology_hrv_zones_link">トレーニングゾーンでDFA a1有酸素・無酸素閾値を設定</string>
+    <string name="hrv_start_guided_ramp_test">ガイド付き閾値テストを開始</string>
+    <string name="hrv_preview_pill_aerobic">有酸素</string>
+    <string name="hrv_preview_pill_transition">移行</string>
+    <string name="hrv_preview_pill_anaerobic">無酸素</string>
+    <string name="hrv_zones_guidance_desc">HRV DFA a1の閾値は有酸素ペースと強度をガイドします。値が高いほどフラクタル変動性（有酸素）が高いことを示します。ゾーン2は緑（&gt; T1）、ゾーン3はオレンジ（T2..T1）、ゾーン4は赤（&lt; T2）です。</string>
+
     <string name="hrv_info_title">心拍変動（HRV）と有酸素閾値</string>
     <string name="hrv_info_trailing_lag_title">ローリングウィンドウとペーシング遅延</string>
     <string name="hrv_info_trailing_lag_desc">リアルタイムDFA a1は2分間のローリングウィンドウ（5秒毎更新）、rMSSDは60秒間で計算されます。ペース変化が自律神経テレメトリに反映されるまで1〜2分かかります。</string>

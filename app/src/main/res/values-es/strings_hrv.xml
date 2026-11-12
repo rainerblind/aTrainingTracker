@@ -27,6 +27,20 @@
     <string name="hrv_sdnn">SDNN</string>
     <string name="hrv_sdnn_short">SDNN</string>
 
+    <!-- Training Zones Tab (ATT-7317 / REQ-TRK-061.4) -->
+    <string name="tab_hrv_dfa_a1">VFC (DFA a1)</string>
+    <string name="hrv_zone_aerobic_base_label">Base Aeróbica (Zona 2)</string>
+    <string name="hrv_zone_threshold_transition_label">Transición de Umbral (Zona 3)</string>
+    <string name="hrv_zone_anaerobic_label">Alta Intensidad / Anaeróbico (Zona 4)</string>
+    <string name="hrv_t1_aerobic_threshold_label">Umbral Aeróbico T1 (HRVT1)</string>
+    <string name="hrv_t2_anaerobic_threshold_label">Umbral Anaeróbico T2 (HRVT2)</string>
+    <string name="tuning_physiology_hrv_zones_link">Configurar umbrales aeróbicos y anaeróbicos DFA a1 en Zonas de Entrenamiento</string>
+    <string name="hrv_start_guided_ramp_test">Iniciar prueba de umbral guiada</string>
+    <string name="hrv_preview_pill_aerobic">Aeróbico</string>
+    <string name="hrv_preview_pill_transition">Transición</string>
+    <string name="hrv_preview_pill_anaerobic">Anaeróbico</string>
+    <string name="hrv_zones_guidance_desc">Los umbrales DFA a1 guían el ritmo aeróbico y la intensidad. Valores más altos indican mayor variabilidad fractal (aeróbico). Zona 2 es verde (&gt; T1), Zona 3 es naranja (T2..T1) y Zona 4 es roja (&lt; T2).</string>
+
     <string name="hrv_info_title">Variabilidad de frecuencia cardíaca y umbrales aeróbicos</string>
     <string name="hrv_info_trailing_lag_title">Ventana móvil y retardo de ritmo</string>
     <string name="hrv_info_trailing_lag_desc">El DFA a1 en tiempo real se calcula sobre una ventana móvil de 2 minutos (actualizada cada 5 segundos) y rMSSD sobre 60 segundos. Los cambios de ritmo tardan de 1 a 2 minutos en manifestarse en la telemetría autonómica.</string>

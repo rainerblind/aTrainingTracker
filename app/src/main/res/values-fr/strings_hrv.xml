@@ -27,6 +27,20 @@
     <string name="hrv_sdnn">SDNN</string>
     <string name="hrv_sdnn_short">SDNN</string>
 
+    <!-- Training Zones Tab (ATT-7317 / REQ-TRK-061.4) -->
+    <string name="tab_hrv_dfa_a1">VFC (DFA a1)</string>
+    <string name="hrv_zone_aerobic_base_label">Base Aérobie (Zone 2)</string>
+    <string name="hrv_zone_threshold_transition_label">Transition de Seuil (Zone 3)</string>
+    <string name="hrv_zone_anaerobic_label">Haute Intensité / Anaérobie (Zone 4)</string>
+    <string name="hrv_t1_aerobic_threshold_label">Seuil Aérobie T1 (HRVT1)</string>
+    <string name="hrv_t2_anaerobic_threshold_label">Seuil Anaérobie T2 (HRVT2)</string>
+    <string name="tuning_physiology_hrv_zones_link">Configurer les seuils aérobie et anaérobie DFA a1 dans les Zones d\'entraînement</string>
+    <string name="hrv_start_guided_ramp_test">Démarrer le test de seuil guidé</string>
+    <string name="hrv_preview_pill_aerobic">Aérobie</string>
+    <string name="hrv_preview_pill_transition">Transition</string>
+    <string name="hrv_preview_pill_anaerobic">Anaérobie</string>
+    <string name="hrv_zones_guidance_desc">Les seuils DFA a1 guident l\'allure et l\'intensité aérobie. Des valeurs plus élevées indiquent une plus grande variabilité fractale (aérobie). La Zone 2 est verte (&gt; T1), la Zone 3 orange (T2..T1) et la Zone 4 rouge (&lt; T2).</string>
+
     <string name="hrv_info_title">Variabilité de la fréquence cardiaque et seuils aérobies</string>
     <string name="hrv_info_trailing_lag_title">Fenêtre glissante et délai d\'allure</string>
     <string name="hrv_info_trailing_lag_desc">Le DFA a1 en temps réel est calculé sur une fenêtre glissante de 2 minutes (mise à jour toutes les 5 secondes) et le rMSSD sur 60 secondes. Les changements d\'allure mettent 1 à 2 minutes à se refléter dans la télémétrie autonome.</string>

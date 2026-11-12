@@ -27,6 +27,20 @@
     <string name="hrv_sdnn">SDNN</string>
     <string name="hrv_sdnn_short">SDNN</string>
 
+    <!-- Training Zones Tab (ATT-7317 / REQ-TRK-061.4) -->
+    <string name="tab_hrv_dfa_a1">HRV (DFA a1)</string>
+    <string name="hrv_zone_aerobic_base_label">Baza Tlenowa (Strefa 2)</string>
+    <string name="hrv_zone_threshold_transition_label">Przejście Progowe (Strefa 3)</string>
+    <string name="hrv_zone_anaerobic_label">Wysoka Intensywność / Beztlenowa (Strefa 4)</string>
+    <string name="hrv_t1_aerobic_threshold_label">Próg Tlenowy T1 (HRVT1)</string>
+    <string name="hrv_t2_anaerobic_threshold_label">Próg Beztlenowy T2 (HRVT2)</string>
+    <string name="tuning_physiology_hrv_zones_link">Skonfiguruj progi tlenowe i beztlenowe DFA a1 w Strefach treningowych</string>
+    <string name="hrv_start_guided_ramp_test">Rozpocznij prowadzony test progowy</string>
+    <string name="hrv_preview_pill_aerobic">Tlenowy</string>
+    <string name="hrv_preview_pill_transition">Przejście</string>
+    <string name="hrv_preview_pill_anaerobic">Beztlenowy</string>
+    <string name="hrv_zones_guidance_desc">Progi HRV DFA a1 sterują tempem tlenowym i intensywnością treningu. Wyższe wartości oznaczają wyższą zmienność fraktalną (tlenową). Strefa 2 jest zielona (&gt; T1), Strefa 3 pomarańczowa (T2..T1), a Strefa 4 czerwona (&lt; T2).</string>
+
     <string name="hrv_info_title">Zmienność rytmu zatokowego (HRV) i progi tlenowe</string>
     <string name="hrv_info_trailing_lag_title">Kroczące okno czasowe i opóźnienie tempa</string>
     <string name="hrv_info_trailing_lag_desc">DFA a1 w czasie rzeczywistym oblicza się w kroczącym oknie 2-minutowym (aktualizowanym co 5 sekund), a rMSSD w oknie 60 sekund. Zmiany tempa wymagają 1–2 minut, aby odzwierciedlić się w telemetrii autonomicznej.</string>

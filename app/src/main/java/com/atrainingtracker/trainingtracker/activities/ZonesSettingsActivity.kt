@@ -52,8 +52,11 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Calculate
+import androidx.compose.material.icons.filled.FitnessCenter
 import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.RestartAlt
 import com.atrainingtracker.trainingtracker.ui.settings.ZoneHistoryDialog
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.atrainingtracker.R
@@ -61,12 +64,18 @@ import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStore
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStore.ZoneType
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStore.Zone
+import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore
+import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDefaults
 import com.atrainingtracker.trainingtracker.settings.ZoneDisplayOptions
 import com.atrainingtracker.trainingtracker.settings.ZoneProfileState
 import com.atrainingtracker.trainingtracker.ui.theme.ATrainingTrackerTheme
 import com.atrainingtracker.trainingtracker.ui.theme.CockpitThemeMode
+import com.atrainingtracker.trainingtracker.ui.theme.TTColor
 import com.atrainingtracker.trainingtracker.ui.theme.resolveEffectiveCockpitDarkTheme
+import com.atrainingtracker.trainingtracker.ui.tracking.HrvInfoBottomSheet
+import com.atrainingtracker.trainingtracker.ui.tracking.HrvZoneIndicator
 import com.atrainingtracker.trainingtracker.ui.tracking.ScreenMode
+import java.util.Locale
 import com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldState
 import com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldView
 import com.atrainingtracker.trainingtracker.ui.tracking.ViewSize
@@ -119,6 +128,7 @@ fun ZoneSettingsScreen(
     promptReason: String? = null,
     onFinish: () -> Unit = {},
     onOpenDrawer: (() -> Unit)? = null,
+    onNavigateToHrvTest: (() -> Unit)? = null,
     viewModel: ZonesSettingsViewModel = viewModel()
 ) {
     val context = LocalContext.current
@@ -146,7 +156,8 @@ fun ZoneSettingsScreen(
     val profileNameResIds = listOf(
         R.string.tab_hr_run,
         R.string.tab_hr_bike,
-        R.string.tab_pwr_bike
+        R.string.tab_pwr_bike,
+        R.string.tab_hrv_dfa_a1
     )
     val zoneTypes = listOf(ZoneType.HR_RUN, ZoneType.HR_BIKE, ZoneType.PWR_BIKE)
 
@@ -158,7 +169,7 @@ fun ZoneSettingsScreen(
         pageCount = { profileNameResIds.size }
     )
 
-    val currentType = zoneTypes[pagerState.currentPage]
+    val currentType = zoneTypes.getOrElse(pagerState.currentPage) { ZoneType.HR_RUN }
     val isCustomized by dataStore.isZoneCustomizedFlow(currentType).collectAsState(initial = false)
     val storedFtp by dataStore.ftpFlow.collectAsState(initial = null)
     val storedHrMax by dataStore.hrMaxFlow.collectAsState(initial = null)
@@ -212,23 +223,25 @@ fun ZoneSettingsScreen(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
-                            IconButton(
-                                onClick = { showCalculatorDialog = true }
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Calculate,
-                                    contentDescription = stringResource(R.string.zone_calc_button),
-                                    tint = MaterialTheme.colorScheme.onPrimaryContainer
-                                )
-                            }
-                            IconButton(
-                                onClick = { showHistoryDialog = true }
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.History,
-                                    contentDescription = stringResource(R.string.zone_history_action_history),
-                                    tint = MaterialTheme.colorScheme.onPrimaryContainer
-                                )
+                            if (pagerState.currentPage < 3) {
+                                IconButton(
+                                    onClick = { showCalculatorDialog = true }
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Calculate,
+                                        contentDescription = stringResource(R.string.zone_calc_button),
+                                        tint = MaterialTheme.colorScheme.onPrimaryContainer
+                                    )
+                                }
+                                IconButton(
+                                    onClick = { showHistoryDialog = true }
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.History,
+                                        contentDescription = stringResource(R.string.zone_history_action_history),
+                                        tint = MaterialTheme.colorScheme.onPrimaryContainer
+                                    )
+                                }
                             }
                         }
                     }
@@ -277,27 +290,33 @@ fun ZoneSettingsScreen(
                     modifier = Modifier.fillMaxSize(),
                     beyondViewportPageCount = 1
                 ) { page ->
-                    // Get the specific state for this page
-                    val profileState = allProfilesData.getOrNull(page) ?: return@HorizontalPager
+                    if (page == 3) {
+                        HrvDfaA1SettingsContent(
+                            onOpenHrvTest = onNavigateToHrvTest
+                        )
+                    } else {
+                        // Get the specific state for this page
+                        val profileState = allProfilesData.getOrNull(page) ?: return@HorizontalPager
 
-                    SettingsScreenContent(
-                        z1Max = profileState.z1,
-                        z2Max = profileState.z2,
-                        z3Max = profileState.z3,
-                        z4Max = profileState.z4,
-                        z5Max = profileState.z5,
-                        z6Max = profileState.z6,
-                        displayOptions = profileState.displayOptions,
-                        zoneType = profileState.type,
+                        SettingsScreenContent(
+                            z1Max = profileState.z1,
+                            z2Max = profileState.z2,
+                            z3Max = profileState.z3,
+                            z4Max = profileState.z4,
+                            z5Max = profileState.z5,
+                            z6Max = profileState.z6,
+                            displayOptions = profileState.displayOptions,
+                            zoneType = profileState.type,
 
-                        onUpdateZone1Max = { new -> viewModel.updateThreshold(profileState.type, 1, new) },
-                        onUpdateZone2Max = { new -> viewModel.updateThreshold(profileState.type, 2, new) },
-                        onUpdateZone3Max = { new -> viewModel.updateThreshold(profileState.type, 3, new) },
-                        onUpdateZone4Max = { new -> viewModel.updateThreshold(profileState.type, 4, new) },
-                        onUpdateZone5Max = { new -> viewModel.updateThreshold(profileState.type, 5, new) },
-                        onUpdateZone6Max = { new -> viewModel.updateThreshold(profileState.type, 6, new) },
-                        onUpdateDisplayOptions = { newOptions -> viewModel.updateDisplayOptions(profileState.type, newOptions) }
-                    )
+                            onUpdateZone1Max = { new -> viewModel.updateThreshold(profileState.type, 1, new) },
+                            onUpdateZone2Max = { new -> viewModel.updateThreshold(profileState.type, 2, new) },
+                            onUpdateZone3Max = { new -> viewModel.updateThreshold(profileState.type, 3, new) },
+                            onUpdateZone4Max = { new -> viewModel.updateThreshold(profileState.type, 4, new) },
+                            onUpdateZone5Max = { new -> viewModel.updateThreshold(profileState.type, 5, new) },
+                            onUpdateZone6Max = { new -> viewModel.updateThreshold(profileState.type, 6, new) },
+                            onUpdateDisplayOptions = { newOptions -> viewModel.updateDisplayOptions(profileState.type, newOptions) }
+                        )
+                    }
                 }
             }
         }
@@ -1018,5 +1037,521 @@ fun ZoneProfileTabContent(
                 }
             }
         )
+    }
+}
+
+/**
+ * Settings content for the dedicated HRV DFA a1 physiological zones tab (REQ-TRK-061.4 / ATT-7317).
+ *
+ * Displays:
+ * 1. 3 inverse-intensity physiological bands (Zone 2/Green > T1, Zone 3/Orange T2..T1, Zone 4/Red < T2)
+ *    conforming to [TTColor] and Rule 71.
+ * 2. Fine 0.01-step threshold controls for T1 (aerobic, default 0.75) and T2 (anaerobic, default 0.50),
+ *    strictly enforcing T1 >= T2 + 0.05 invariant.
+ * 3. Reset to Defaults (0.75 / 0.50) action.
+ * 4. Info sheet action opening [HrvInfoBottomSheet] with live T1 and T2 values.
+ * 5. Live theme-aware [SensorFieldView] preview with interactive pills for Aerobic, Transition, and Anaerobic.
+ * 6. Optional CTA to launch [onOpenHrvTest] (Guided DFA a1 threshold test).
+ */
+@Composable
+fun HrvDfaA1SettingsContent(
+    tuningPreferencesDataStore: TuningPreferencesDataStore? = null,
+    onOpenHrvTest: (() -> Unit)? = null,
+    modifier: Modifier = Modifier
+) {
+    val context = LocalContext.current
+    val dataStore = tuningPreferencesDataStore ?: remember { TuningPreferencesDataStore(context) }
+    val scope = rememberCoroutineScope()
+    val scrollState = rememberScrollState()
+
+    val t1 by dataStore.dfaA1ThresholdT1Flow.collectAsState(
+        initial = TuningPreferencesDefaults.DEFAULT_DFA_A1_THRESHOLD_T1
+    )
+    val t2 by dataStore.dfaA1ThresholdT2Flow.collectAsState(
+        initial = TuningPreferencesDefaults.DEFAULT_DFA_A1_THRESHOLD_T2
+    )
+
+    var showInfoSheet by rememberSaveable { mutableStateOf(false) }
+
+    var displayOptions by remember {
+        mutableStateOf(
+            ZoneDisplayOptions(
+                showBackground = true,
+                showLeftBar = true,
+                showRightBar = false,
+                showTextColor = false,
+                showGauge = true
+            )
+        )
+    }
+    var selectedPreviewBand by rememberSaveable { mutableIntStateOf(2) } // 2=Aerobic, 3=Transition, 4=Anaerobic
+
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .padding(16.dp)
+            .verticalScroll(scrollState),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        // Section Header with Actions
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = stringResource(R.string.hrv_info_zones_title),
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                TextButton(
+                    onClick = {
+                        scope.launch {
+                            dataStore.setDfaA1Thresholds(
+                                TuningPreferencesDefaults.DEFAULT_DFA_A1_THRESHOLD_T1,
+                                TuningPreferencesDefaults.DEFAULT_DFA_A1_THRESHOLD_T2
+                            )
+                        }
+                    }
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.RestartAlt,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = stringResource(R.string.reset_to_defaults),
+                        style = MaterialTheme.typography.labelMedium
+                    )
+                }
+
+                IconButton(onClick = { showInfoSheet = true }) {
+                    Icon(
+                        imageVector = Icons.Default.Info,
+                        contentDescription = stringResource(R.string.hrv_info_title),
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
+        }
+
+        // Guidance text
+        Text(
+            text = stringResource(R.string.hrv_zones_guidance_desc),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+
+        Spacer(modifier = Modifier.height(4.dp))
+
+        // 3 Inverse-Intensity Physiological Bands
+        // Zone 2: Aerobic Base (a1 > T1)
+        HrvZoneBandCard(
+            zoneLabel = stringResource(R.string.hrv_zone_aerobic_base_label),
+            rangeDescription = String.format(Locale.US, "α₁ > %.2f", t1),
+            guidance = "Aerobic base endurance pacing, low autonomic stress",
+            containerColor = TTColor.Zone2
+        )
+
+        // Zone 3: Threshold Transition (T2 <= a1 <= T1)
+        HrvZoneBandCard(
+            zoneLabel = stringResource(R.string.hrv_zone_threshold_transition_label),
+            rangeDescription = String.format(Locale.US, "%.2f ≤ α₁ ≤ %.2f", t2, t1),
+            guidance = "Aerobic-to-anaerobic threshold transition, moderate fatigue",
+            containerColor = TTColor.Zone3
+        )
+
+        // Zone 4: High Intensity / Anaerobic (a1 < T2)
+        HrvZoneBandCard(
+            zoneLabel = stringResource(R.string.hrv_zone_anaerobic_label),
+            rangeDescription = String.format(Locale.US, "α₁ < %.2f", t2),
+            guidance = "Anaerobic / high intensity, rapid autonomic depletion",
+            containerColor = TTColor.Zone4
+        )
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        // Threshold Controls with 0.01 precision and T1 >= T2 + 0.05 invariant
+        Text(
+            text = stringResource(R.string.title_edit_zones),
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.padding(vertical = 4.dp)
+        )
+
+        HrvThresholdControlRow(
+            title = stringResource(R.string.hrv_t1_aerobic_threshold_label),
+            value = t1,
+            onValueChange = { newVal ->
+                val rounded = Math.round(newVal * 100f) / 100f
+                val clamped = rounded.coerceIn(
+                    t2 + TuningPreferencesDefaults.MIN_DFA_A1_THRESHOLD_GAP,
+                    1.20f
+                )
+                scope.launch {
+                    dataStore.setDfaA1ThresholdT1(clamped)
+                }
+            },
+            valueRange = 0.60f..1.20f,
+            minAllowed = t2 + TuningPreferencesDefaults.MIN_DFA_A1_THRESHOLD_GAP,
+            maxAllowed = 1.20f,
+            helperText = "Aerobic threshold (default 0.75). Invariant: T1 >= T2 + 0.05"
+        )
+
+        Spacer(modifier = Modifier.height(4.dp))
+
+        HrvThresholdControlRow(
+            title = stringResource(R.string.hrv_t2_anaerobic_threshold_label),
+            value = t2,
+            onValueChange = { newVal ->
+                val rounded = Math.round(newVal * 100f) / 100f
+                val clamped = rounded.coerceIn(
+                    0.30f,
+                    t1 - TuningPreferencesDefaults.MIN_DFA_A1_THRESHOLD_GAP
+                )
+                scope.launch {
+                    dataStore.setDfaA1ThresholdT2(clamped)
+                }
+            },
+            valueRange = 0.30f..0.80f,
+            minAllowed = 0.30f,
+            maxAllowed = t1 - TuningPreferencesDefaults.MIN_DFA_A1_THRESHOLD_GAP,
+            helperText = "Anaerobic threshold (default 0.50). Invariant: T2 <= T1 - 0.05"
+        )
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        // Section: Zone Visualization Options
+        Text(
+            text = stringResource(R.string.zone_display_title),
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.padding(top = 4.dp, bottom = 4.dp)
+        )
+
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = MaterialTheme.shapes.medium,
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+            )
+        ) {
+            Column(
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
+            ) {
+                ZoneDisplayToggleRow(
+                    label = stringResource(R.string.zone_display_background),
+                    checked = displayOptions.showBackground,
+                    onCheckedChange = { displayOptions = displayOptions.copy(showBackground = it) }
+                )
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+
+                ZoneDisplayToggleRow(
+                    label = stringResource(R.string.zone_display_left_bar),
+                    checked = displayOptions.showLeftBar,
+                    onCheckedChange = { displayOptions = displayOptions.copy(showLeftBar = it) }
+                )
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+
+                ZoneDisplayToggleRow(
+                    label = stringResource(R.string.zone_display_right_bar),
+                    checked = displayOptions.showRightBar,
+                    onCheckedChange = { displayOptions = displayOptions.copy(showRightBar = it) }
+                )
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+
+                ZoneDisplayToggleRow(
+                    label = stringResource(R.string.zone_display_text_color),
+                    checked = displayOptions.showTextColor,
+                    onCheckedChange = { displayOptions = displayOptions.copy(showTextColor = it) }
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        // Section: Live Theme-Aware SensorFieldView Preview
+        Text(
+            text = stringResource(R.string.zone_display_preview_title),
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.padding(top = 4.dp, bottom = 4.dp)
+        )
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            ZonePreviewPill(
+                label = stringResource(R.string.hrv_preview_pill_aerobic),
+                zoneColor = TTColor.Zone2,
+                selected = selectedPreviewBand == 2,
+                onClick = { selectedPreviewBand = 2 },
+                modifier = Modifier.weight(1f)
+            )
+            ZonePreviewPill(
+                label = stringResource(R.string.hrv_preview_pill_transition),
+                zoneColor = TTColor.Zone3,
+                selected = selectedPreviewBand == 3,
+                onClick = { selectedPreviewBand = 3 },
+                modifier = Modifier.weight(1f)
+            )
+            ZonePreviewPill(
+                label = stringResource(R.string.hrv_preview_pill_anaerobic),
+                zoneColor = TTColor.Zone4,
+                selected = selectedPreviewBand == 4,
+                onClick = { selectedPreviewBand = 4 },
+                modifier = Modifier.weight(1f)
+            )
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        val previewAlpha1 = when (selectedPreviewBand) {
+            2 -> (t1 + 0.15f).coerceAtMost(1.10f).toDouble()
+            3 -> ((t1 + t2) / 2.0)
+            else -> (t2 - 0.10f).coerceAtLeast(0.30f).toDouble()
+        }
+        val previewZoneColor = when (selectedPreviewBand) {
+            2 -> TTColor.Zone2
+            3 -> TTColor.Zone3
+            else -> TTColor.Zone4
+        }
+        val previewGaugeState = HrvZoneIndicator.calculateZoneGaugeState(
+            alpha1 = previewAlpha1,
+            t1 = t1,
+            t2 = t2
+        )
+
+        val previewFieldState = SensorFieldState(
+            configHash = 0,
+            sensorFieldId = 0,
+            rowNr = 0,
+            colNr = 0,
+            viewSize = ViewSize.NORMAL,
+            label = stringResource(R.string.hrv_dfa_a1),
+            filterDescription = "",
+            value = String.format(Locale.US, "%.2f", previewAlpha1),
+            units = "",
+            zoneColor = previewZoneColor,
+            zoneDisplayOptions = displayOptions,
+            zoneGaugeState = previewGaugeState,
+            showValue = true,
+            showBar = true
+        )
+
+        val isSystemDark = isSystemInDarkTheme()
+        val cockpitThemeMode = remember {
+            try {
+                TrainingApplication.getCockpitThemeMode()
+            } catch (e: Exception) {
+                CockpitThemeMode.SYSTEM
+            }
+        }
+        val isCockpitDark = resolveEffectiveCockpitDarkTheme(cockpitThemeMode, isSystemDark)
+
+        Box(
+            modifier = resolveZonePreviewContainerModifier()
+        ) {
+            ATrainingTrackerTheme(
+                darkTheme = isCockpitDark,
+                amoled = isCockpitDark,
+                setWindowColors = false
+            ) {
+                Surface(
+                    modifier = Modifier.fillMaxSize(),
+                    color = MaterialTheme.colorScheme.surface,
+                    shape = MaterialTheme.shapes.medium
+                ) {
+                    SensorFieldView(
+                        fieldState = previewFieldState,
+                        modifier = Modifier.fillMaxSize(),
+                        screenMode = ScreenMode.TRACKING
+                    )
+                }
+            }
+        }
+
+        if (onOpenHrvTest != null) {
+            Spacer(modifier = Modifier.height(12.dp))
+            OutlinedButton(
+                onClick = onOpenHrvTest,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Icon(
+                    imageVector = Icons.Default.FitnessCenter,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(stringResource(R.string.hrv_start_guided_ramp_test))
+            }
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+    }
+
+    if (showInfoSheet) {
+        HrvInfoBottomSheet(
+            onDismissRequest = { showInfoSheet = false },
+            dfaA1ThresholdT1 = t1,
+            dfaA1ThresholdT2 = t2
+        )
+    }
+}
+
+/**
+ * Renders an inverse-intensity physiological band card with a solid left indicator strip
+ * and semantic [TTColor] background tint (REQ-TRK-061.4).
+ */
+@Composable
+fun HrvZoneBandCard(
+    zoneLabel: String,
+    rangeDescription: String,
+    guidance: String,
+    containerColor: androidx.compose.ui.graphics.Color
+) {
+    Card(
+        colors = CardDefaults.cardColors(
+            containerColor = containerColor.copy(alpha = 0.12f)
+        ),
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.medium
+    ) {
+        Row(modifier = Modifier.height(IntrinsicSize.Min)) {
+            Spacer(
+                modifier = Modifier
+                    .width(6.dp)
+                    .fillMaxHeight()
+                    .background(containerColor)
+            )
+            Column(
+                modifier = Modifier.padding(12.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = zoneLabel,
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Surface(
+                        shape = RoundedCornerShape(6.dp),
+                        color = containerColor.copy(alpha = 0.25f)
+                    ) {
+                        Text(
+                            text = rangeDescription,
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = guidance,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+    }
+}
+
+/**
+ * Renders a fine 0.01-step threshold control row with stepper buttons and a continuous slider (REQ-TRK-061.4).
+ */
+@Composable
+fun HrvThresholdControlRow(
+    title: String,
+    value: Float,
+    onValueChange: (Float) -> Unit,
+    valueRange: ClosedFloatingPointRange<Float>,
+    minAllowed: Float,
+    maxAllowed: Float,
+    helperText: String,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.medium,
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
+        )
+    ) {
+        Column(
+            modifier = Modifier.padding(12.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f, fill = false)) {
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.titleSmall,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        text = helperText,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    FilledTonalIconButton(
+                        onClick = {
+                            val next = (Math.round((value - 0.01f) * 100f) / 100f).coerceIn(minAllowed, maxAllowed)
+                            onValueChange(next)
+                        },
+                        modifier = Modifier.size(32.dp),
+                        enabled = value > minAllowed + 0.001f
+                    ) {
+                        Text("-", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    }
+                    Text(
+                        text = String.format(Locale.US, "%.2f", value),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(horizontal = 6.dp)
+                    )
+                    FilledTonalIconButton(
+                        onClick = {
+                            val next = (Math.round((value + 0.01f) * 100f) / 100f).coerceIn(minAllowed, maxAllowed)
+                            onValueChange(next)
+                        },
+                        modifier = Modifier.size(32.dp),
+                        enabled = value < maxAllowed - 0.001f
+                    ) {
+                        Text("+", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+            Slider(
+                value = value.coerceIn(minAllowed, maxAllowed),
+                onValueChange = { newVal ->
+                    val rounded = Math.round(newVal * 100f) / 100f
+                    val clamped = rounded.coerceIn(minAllowed, maxAllowed)
+                    onValueChange(clamped)
+                },
+                valueRange = valueRange,
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
     }
 }

@@ -27,6 +27,20 @@
     <string name="hrv_sdnn">SDNN</string>
     <string name="hrv_sdnn_short">SDNN</string>
 
+    <!-- Training Zones Tab (ATT-7317 / REQ-TRK-061.4) -->
+    <string name="tab_hrv_dfa_a1">HRV (DFA a1)</string>
+    <string name="hrv_zone_aerobic_base_label">Base Aerobica (Zone 2)</string>
+    <string name="hrv_zone_threshold_transition_label">Transizione di Soglia (Zone 3)</string>
+    <string name="hrv_zone_anaerobic_label">Alta Intensità / Anaerobico (Zone 4)</string>
+    <string name="hrv_t1_aerobic_threshold_label">Soglia Aerobica T1 (HRVT1)</string>
+    <string name="hrv_t2_anaerobic_threshold_label">Soglia Anaerobica T2 (HRVT2)</string>
+    <string name="tuning_physiology_hrv_zones_link">Configura le soglie aerobiche e anaerobiche DFA a1 nelle Zone di allenamento</string>
+    <string name="hrv_start_guided_ramp_test">Avvia test di soglia guidato</string>
+    <string name="hrv_preview_pill_aerobic">Aerobico</string>
+    <string name="hrv_preview_pill_transition">Transizione</string>
+    <string name="hrv_preview_pill_anaerobic">Anaerobico</string>
+    <string name="hrv_zones_guidance_desc">Le soglie DFA a1 guidano il ritmo e l\'intensità aerobica. Valori più alti indicano maggiore variabilità frattale (aerobica). La Zona 2 è verde (&gt; T1), la Zona 3 è arancione (T2..T1) e la Zona 4 è rossa (&lt; T2).</string>
+
     <string name="hrv_info_title">Variabilità della frequenza cardiaca e soglie aerobiche</string>
     <string name="hrv_info_trailing_lag_title">Finestra mobile e ritardo di andatura</string>
     <string name="hrv_info_trailing_lag_desc">Il DFA a1 in tempo reale viene calcolato su una finestra mobile di 2 minuti (aggiornata ogni 5 secondi) e rMSSD su 60 secondi. Le variazioni di andatura richiedono 1–2 minuti per manifestarsi nella telemetria autonomica.</string>

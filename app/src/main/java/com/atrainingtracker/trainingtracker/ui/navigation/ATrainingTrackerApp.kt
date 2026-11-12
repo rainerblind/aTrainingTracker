@@ -582,7 +582,8 @@ fun ATrainingTrackerApp(
                         initialTab = initialTab,
                         promptReason = promptReason,
                         onFinish = { navController.popBackStack() },
-                        onOpenDrawer = { activity.openDrawer() }
+                        onOpenDrawer = { activity.openDrawer() },
+                        onNavigateToHrvTest = { navController.navigate(NavRoutes.HRV_TEST) }
                     )
                 }
 

@@ -332,4 +332,31 @@ class PhysiologyModelsVisibilityContractTest {
             )
         )
     }
+
+    @Test
+    fun `TST-TRK-061_4b testPhysiologyModelsSection_hrvThresholdSlidersRemovedAndLinkAdded`() {
+        val candidates = listOf(
+            File("app/src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning/categories/PhysiologyModelsSection.kt"),
+            File("src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning/categories/PhysiologyModelsSection.kt")
+        )
+        val file = candidates.firstOrNull { it.exists() }
+            ?: error("Could not find PhysiologyModelsSection.kt")
+        val content = file.readText()
+        assertFalse(
+            "PhysiologyModelsSection must not contain redundant tuning_dfa_a1_t1_title slider",
+            content.contains("R.string.tuning_dfa_a1_t1_title")
+        )
+        assertFalse(
+            "PhysiologyModelsSection must not contain redundant tuning_dfa_a1_t2_title slider",
+            content.contains("R.string.tuning_dfa_a1_t2_title")
+        )
+        assertTrue(
+            "PhysiologyModelsSection must retain HRV Artifact Gate slider",
+            content.contains("R.string.tuning_hrv_artifact_gate_title")
+        )
+        assertTrue(
+            "PhysiologyModelsSection must reference tuning_physiology_hrv_zones_link",
+            content.contains("R.string.tuning_physiology_hrv_zones_link")
+        )
+    }
 }

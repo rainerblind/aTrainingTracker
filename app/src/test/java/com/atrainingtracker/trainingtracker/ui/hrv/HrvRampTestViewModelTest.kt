@@ -233,6 +233,33 @@ class HrvRampTestViewModelTest {
     }
 
     @Test
+    fun testDynamicCutoffWithCustomizedT2_TST_TRK_072_3() = runTest(testDispatcher) {
+        val viewModel = HrvRampTestViewModel(application, banalRepository, testDispatcher)
+        viewModel.evaluatePreFlightQuality(artifactRate = 1.0, hasRrStream = true, isSmoothed = false)
+        viewModel.setWarmupDurationSec(0)
+        viewModel.startProtocol(autoStartTimer = false)
+
+        // Set custom anaerobic threshold T2 = 0.60f -> cutoff = 0.60 - 0.05 = 0.55f
+        viewModel.dfaA1ThresholdT2 = 0.60f
+
+        assertEquals(HrvTestPhase.TESTING, viewModel.uiState.value.phase)
+        assertFalse(viewModel.uiState.value.earlyCompletionDetected)
+
+        // Value of 0.53 is below cutoff 0.55 (even though above legacy 0.45)
+        for (i in 1..59) {
+            viewModel.processTick(injectedDfaA1 = 0.53)
+        }
+        assertEquals(59, viewModel.uiState.value.sub45DurationSec)
+        assertFalse(viewModel.uiState.value.earlyCompletionDetected)
+
+        // 60th tick triggers early completion alert based on dynamic cutoff
+        viewModel.processTick(injectedDfaA1 = 0.53)
+        assertEquals(60, viewModel.uiState.value.sub45DurationSec)
+        assertTrue(viewModel.uiState.value.earlyCompletionDetected)
+        assertEquals(HrvTestPhase.EARLY_COMPLETION, viewModel.uiState.value.phase)
+    }
+
+    @Test
     fun testContinuousRampPacingProgression_TST_TRK_072_1() = runTest(testDispatcher) {
         val viewModel = HrvRampTestViewModel(application, banalRepository, testDispatcher)
         viewModel.evaluatePreFlightQuality(artifactRate = 1.0, hasRrStream = true, isSmoothed = false)

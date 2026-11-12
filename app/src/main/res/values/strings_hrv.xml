@@ -27,6 +27,20 @@
     <string name="hrv_sdnn">SDNN</string>
     <string name="hrv_sdnn_short">SDNN</string>
 
+    <!-- Training Zones Tab (ATT-7317 / REQ-TRK-061.4) -->
+    <string name="tab_hrv_dfa_a1">HRV (DFA a1)</string>
+    <string name="hrv_zone_aerobic_base_label">Aerobic Base (Zone 2)</string>
+    <string name="hrv_zone_threshold_transition_label">Threshold Transition (Zone 3)</string>
+    <string name="hrv_zone_anaerobic_label">High Intensity / Anaerobic (Zone 4)</string>
+    <string name="hrv_t1_aerobic_threshold_label">Aerobic Threshold T1 (HRVT1)</string>
+    <string name="hrv_t2_anaerobic_threshold_label">Anaerobic Threshold T2 (HRVT2)</string>
+    <string name="tuning_physiology_hrv_zones_link">Configure DFA a1 aerobic and anaerobic thresholds in Training Zones</string>
+    <string name="hrv_start_guided_ramp_test">Start Guided Threshold Test</string>
+    <string name="hrv_preview_pill_aerobic">Aerobic</string>
+    <string name="hrv_preview_pill_transition">Transition</string>
+    <string name="hrv_preview_pill_anaerobic">Anaerobic</string>
+    <string name="hrv_zones_guidance_desc">HRV DFA a1 threshold boundaries guide aerobic pacing and intensity. Higher values indicate higher fractal variability (aerobic). Zone 2 is green (&gt; T1), Zone 3 is orange (T2..T1), and Zone 4 is red (&lt; T2).</string>
+
     <string name="hrv_info_title">Heart Rate Variability &amp; Aerobic Thresholds</string>
     <string name="hrv_info_trailing_lag_title">Rolling Window &amp; Pacing Lag</string>
     <string name="hrv_info_trailing_lag_desc">Real-time DFA a1 is calculated over a rolling 2-minute window (updated every 5 seconds) and rMSSD over 60 seconds. Rapid pacing changes take 1–2 minutes to manifest in autonomic telemetry.</string>

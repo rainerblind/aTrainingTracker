@@ -27,6 +27,20 @@
     <string name="hrv_sdnn">SDNN</string>
     <string name="hrv_sdnn_short">SDNN</string>
 
+    <!-- Training Zones Tab (ATT-7317 / REQ-TRK-061.4) -->
+    <string name="tab_hrv_dfa_a1">VFC (DFA a1)</string>
+    <string name="hrv_zone_aerobic_base_label">Base Aeróbica (Zona 2)</string>
+    <string name="hrv_zone_threshold_transition_label">Transição de Limiar (Zona 3)</string>
+    <string name="hrv_zone_anaerobic_label">Alta Intensidade / Anaeróbico (Zona 4)</string>
+    <string name="hrv_t1_aerobic_threshold_label">Limiar Aeróbico T1 (HRVT1)</string>
+    <string name="hrv_t2_anaerobic_threshold_label">Limiar Anaeróbico T2 (HRVT2)</string>
+    <string name="tuning_physiology_hrv_zones_link">Configurar limiares aeróbico e anaeróbico DFA a1 nas Zonas de Treino</string>
+    <string name="hrv_start_guided_ramp_test">Iniciar teste de limiar guiado</string>
+    <string name="hrv_preview_pill_aerobic">Aeróbico</string>
+    <string name="hrv_preview_pill_transition">Transição</string>
+    <string name="hrv_preview_pill_anaerobic">Anaeróbico</string>
+    <string name="hrv_zones_guidance_desc">Os limiares DFA a1 guiam o ritmo aeróbico e a intensidade do treino. Valores mais altos indicam maior variabilidade fractal (aeróbica). A Zona 2 é verde (&gt; T1), a Zona 3 é laranja (T2..T1) e a Zona 4 é vermelha (&lt; T2).</string>
+
     <string name="hrv_info_title">Variabilidade da frequência cardíaca e limiares aeróbios</string>
     <string name="hrv_info_trailing_lag_title">Janela deslizante e atraso de ritmo</string>
     <string name="hrv_info_trailing_lag_desc">O DFA a1 em tempo real é calculado sobre uma janela deslizante de 2 minutos (atualizada a cada 5 segundos) e o rMSSD sobre 60 segundos. Mudanças de ritmo levam de 1 a 2 minutos para se refletir na telemetria autonômica.</string>

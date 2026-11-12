@@ -1863,9 +1863,12 @@
   • Verify $\alpha_{1,\text{T2}} \le \alpha_1 \le \alpha_{1,\text{T1}}$ resolves to `TTColor.Zone3` (Orange).
   • Verify $\alpha_1 < \alpha_{1,\text{T2}}$ resolves to `TTColor.Zone4` (Red).
   • Verify `HRV_DFA_A1` inherits HR `ZoneDisplayOptions` (background, left/right bar, gauge).
-  4. *TuningPreferencesDataStore Threshold Configuration & Invariant Tests (`TST-TRK-061.4`, `TuningPreferencesDataStoreTest.kt`)*:
+  4. *Training Zones 4th Tab & Invariant Tests (`TST-TRK-061.4`, `HrvDfaA1SettingsContractTest.kt`, `TuningPreferencesDataStoreDfaA1Test.kt`)*:
+  • Verify `ZoneSettingsScreen` renders 4th tab `R.string.tab_hrv_dfa_a1` with $0.01$ step precision controls, Reset to Defaults action ($0.75 / 0.50$), and interactive `SensorFieldView` preview pills.
   • Verify default values $\alpha_{1,\text{T1}} = 0.75f$ and $\alpha_{1,\text{T2}} = 0.50f$.
-  • Verify invariant enforcement: setting $T_1$ or $T_2$ enforces $T_1 \ge T_2 + 0.05f$.
+  • Verify invariant enforcement: setting $T_1$ or $T_2$ enforces $T_1 \ge T_2 + 0.05f$ and bounds $[0.20, 1.50]$.
+  • Verify top bar calculator/history buttons are hidden when the 4th tab is active.
+  • Verify removal of redundant $T_1$ and $T_2$ sliders from `PhysiologyModelsSection.kt`.
   5. *HrvInfoBottomSheet Dynamic Thresholds & 9-Language Localization Audit (`TST-TRK-061.5`, `HrvInfoBottomSheetTest.kt`, `TranslationParityTest.kt`)*:
   • Verify dynamic display of configured $T_1 / T_2$ thresholds.
   • Verify Light, Dark, and AMOLED `@Preview` composables.
@@ -2321,9 +2324,9 @@
      • Verify `WARNING` status when artifact rate is between $3.0\%$ and $5.0\%$.
      • Verify `FAIL` status and blocked start when artifact rate $> 5.0\%$, smoothed stream detected, or no RR data available.
   3. *Early Sub-Exhaustion Auto-Completion Detection (`TST-TRK-072.3`, `HrvRampTestViewModelTest.kt`)*:
-     • Stream simulated DFA $\alpha_1$ values descending from $1.00$ to $0.44$.
-     • Verify that sustained $\alpha_1 < 0.45$ for $\ge 60\text{ s}$ transitions state to `EARLY_COMPLETION` with user alert and prompts transition to `COOLDOWN`.
-     • Verify that transient dips below $0.45$ lasting $< 60\text{ s}$ do not trigger early completion.
+     • Stream simulated DFA $\alpha_1$ values descending below dynamic cutoff $(T_2 - 0.05f).\text{coerceAtLeast}(0.25f)$ (cutoff $0.45$ for default $T_2 = 0.50$, or cutoff $0.55$ for custom $T_2 = 0.60$).
+     • Verify that sustained $\alpha_1 < \text{cutoff}$ for $\ge 60\text{ s}$ transitions state to `EARLY_COMPLETION` with user alert and prompts transition to `COOLDOWN`.
+     • Verify that transient dips below cutoff lasting $< 60\text{ s}$ do not trigger early completion.
   4. *Per-Step Evaluation Window & Metadata Tagging (`TST-TRK-072.4`, `HrvRampTestViewModelTest.kt` / `HrvThresholdEstimatorTest.kt`)*:
      • Verify workout session is tagged with `hrvTestProtocol = GUIDED_STEP` or `GUIDED_RAMP` with step duration and ramp slope.
      • Verify `HrvThresholdEstimator` computes step points strictly over $[t_{\text{end},j} - 120\text{ s}, t_{\text{end},j}]$ with zero bleed into subsequent steps.
