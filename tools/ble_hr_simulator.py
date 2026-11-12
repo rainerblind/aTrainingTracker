@@ -2,26 +2,31 @@
 """
 BLE Heart Rate Monitor Simulator for aTrainingTracker
 Emulates a standard Bluetooth Low Energy Heart Rate Service (UUID 0x180D) with:
-- Heart Rate Measurement (UUID 0x2A37)
+- Heart Rate Measurement (UUID 0x2A37) with Beat-to-Beat RR-Interval packing (Bit 4 0x10)
 - Body Sensor Location (UUID 0x2A38)
 - Battery Service (UUID 0x180F) with Battery Level (0x2A19)
 - Device Information (UUID 0x180A) with Manufacturer Name (0x2A29)
 
+Requirement: REQ-SIM-001 (REQ-TST-005.1..4)
+Tests: TST-SIM-001 (TST-TST-005.1..5), tools/test_ble_hr_simulator.py
+
 Usage:
-    python3 tools/ble_hr_simulator.py                     # Default: 135 BPM, 100% Battery
-    python3 tools/ble_hr_simulator.py --battery 15        # Start with critical low battery (15%)
-    python3 tools/ble_hr_simulator.py --bpm 140 --battery 85
+    python3 tools/ble_hr_simulator.py                     # Default: 135 BPM, 100% Battery, RR enabled
+    python3 tools/ble_hr_simulator.py --no-rr             # Legacy 8-bit BPM only (flags = 0x00)
+    python3 tools/ble_hr_simulator.py --bpm 140 --battery 85 --rmssd 45.0 --dfa-regime threshold
 """
 
 import sys
 import os
 import argparse
+import math
+import random
+import threading
+import time
 import dbus
 import dbus.exceptions
 import dbus.mainloop.glib
 import dbus.service
-import threading
-import time
 from gi.repository import GLib
 
 BLUEZ_SERVICE_NAME = 'org.bluez'
@@ -180,12 +185,14 @@ class Service(dbus.service.Object):
 
 
 class Characteristic(dbus.service.Object):
+    PATH_BASE = '/org/bluez/example/characteristic'
+
     def __init__(self, bus, index, uuid, flags, service):
-        self.path = service.path + '/char' + str(index)
+        self.path = self.PATH_BASE + str(index)
         self.bus = bus
         self.uuid = uuid
-        self.service = service
         self.flags = flags
+        self.service = service
         self.descriptors = []
         dbus.service.Object.__init__(self, bus, self.path)
 
@@ -238,24 +245,164 @@ class Characteristic(dbus.service.Object):
         pass
 
 
+class RrSynthesizer:
+    """
+    Pure Python 3 standard library Beat-to-Beat RR series synthesizer (REQ-SIM-001.3).
+    Supports selectable DFA alpha-1 regimes via AR(1) pink/white noise,
+    exact rMSSD innovation scaling, phase-locked 1 Hz beat accumulation with error diffusion,
+    and interactive physiological artifact and RF gap injection (REQ-SIM-001.4).
+    Zero external pip dependencies (TST-PRO-005.6).
+    """
+    REGIMES = {
+        'aerobic': {'phi': 0.70, 'target_a1': 1.00},
+        'threshold': {'phi': 0.35, 'target_a1': 0.70},
+        'anaerobic': {'phi': -0.20, 'target_a1': 0.45},
+    }
+
+    def __init__(self, bpm=135, rmssd=35.0, regime='aerobic', phi=None):
+        self.bpm = max(30, min(240, int(bpm)))
+        self.rmssd = max(0.0, float(rmssd))
+        self.regime_name = regime if regime in self.REGIMES else 'aerobic'
+        self.phi = float(phi) if phi is not None else self.REGIMES[self.regime_name]['phi']
+        self.delta_prev = 0.0
+        self.phase_ms = 0.0
+        self.quant_error_ms = 0.0
+        self.artifact_queue = []
+        self.gap_ticks_remaining = 0
+
+    def set_bpm(self, bpm):
+        self.bpm = max(30, min(240, int(bpm)))
+
+    def set_rmssd(self, rmssd_ms):
+        self.rmssd = max(0.0, float(rmssd_ms))
+
+    def set_regime(self, name):
+        if name in self.REGIMES:
+            self.regime_name = name
+            self.phi = self.REGIMES[name]['phi']
+
+    def inject_artifact(self, kind):
+        """
+        Injects physiological artifacts or RF packet dropout (REQ-SIM-001.4).
+        - 'ectopic' / 'e': PVC pair (shortened beat ~0.70x followed by compensatory pause ~1.30x)
+        - 'missed' / 'm': Missed beat (single interval ~2.0x)
+        - 'extra' / 'x': Extra beat (two intervals ~0.50x each)
+        - 'gap' / 'g': RF dropout (> 2.5s notification suppression)
+        """
+        k = kind.lower().strip()
+        if k in ('e', 'ectopic'):
+            self.artifact_queue.append(('ectopic', 0.70))
+            self.artifact_queue.append(('ectopic', 1.30))
+        elif k in ('m', 'missed'):
+            self.artifact_queue.append(('missed', 2.00))
+        elif k in ('x', 'extra'):
+            self.artifact_queue.append(('extra', 0.50))
+            self.artifact_queue.append(('extra', 0.50))
+        elif k in ('g', 'gap'):
+            self.gap_ticks_remaining = 3  # 3 seconds suppression (> 2.5s)
+
+    def generate_next_rr_ms(self):
+        """
+        Generates the next beat interval in milliseconds.
+        """
+        rr_mean = 60000.0 / self.bpm
+        if self.artifact_queue:
+            art_type, factor = self.artifact_queue.pop(0)
+            self.delta_prev = 0.0
+            return max(200.0, min(3000.0, rr_mean * factor))
+
+        if self.rmssd <= 1e-6:
+            return rr_mean
+
+        sigma = self.rmssd * math.sqrt(max(0.001, (1.0 + self.phi) / 2.0))
+        eps = random.gauss(0.0, 1.0)
+        delta = self.phi * self.delta_prev + sigma * eps
+        rr = max(250.0, min(2200.0, rr_mean + delta))
+        self.delta_prev = rr - rr_mean
+        return rr
+
+    def tick_1hz(self, dt_ms=1000.0):
+        """
+        Advances the phase accumulator across a 1 Hz tick (dt_ms).
+        Returns a list of completed RR intervals encoded in 1/1024s uint16 raw units.
+        Guarantees 60s cumulative drift <= 50 ms (REQ-SIM-001.2).
+        """
+        if self.gap_ticks_remaining > 0:
+            self.gap_ticks_remaining -= 1
+            self.phase_ms += dt_ms
+            return []
+
+        self.phase_ms += dt_ms
+        rr_mean = 60000.0 / self.bpm
+        emitted_raw_1024 = []
+
+        while self.phase_ms >= rr_mean - 1e-6:
+            rr_ms = self.generate_next_rr_ms()
+            target_ms = rr_ms + self.quant_error_ms
+            raw = int(round(target_ms * 1024.0 / 1000.0))
+            raw = max(1, min(65535, raw))
+            eff_ms = raw * 1000.0 / 1024.0
+            self.quant_error_ms = target_ms - eff_ms
+            self.phase_ms -= rr_mean
+            emitted_raw_1024.append(raw)
+
+        if abs(self.phase_ms) < 1e-6:
+            self.phase_ms = 0.0
+
+        return emitted_raw_1024
+
+
+def build_hr_payload(bpm, rr_raw_list=None, enable_rr=True):
+    """
+    Constructs BLE 0x2A37 Heart Rate Measurement payload bytes (REQ-SIM-001.1).
+    When enable_rr is True and rr_raw_list is non-empty, sets Bit 4 (0x10) and appends
+    little-endian uint16 values (1/1024s units). When enable_rr is False or list is empty,
+    emits flags=0x00 and 8-bit BPM only.
+    """
+    bpm_val = max(30, min(240, int(bpm)))
+    if not enable_rr or not rr_raw_list:
+        return [0x00, bpm_val]
+
+    payload = [0x10, bpm_val]
+    for raw in rr_raw_list:
+        raw_clamped = max(0, min(65535, int(raw)))
+        payload.append(raw_clamped & 0xFF)
+        payload.append((raw_clamped >> 8) & 0xFF)
+    return payload
+
+
 class HeartRateMeasurementCharacteristic(Characteristic):
     # UUID 0x2A37: Heart Rate Measurement
-    def __init__(self, bus, index, service, initial_bpm=135):
+    def __init__(self, bus, index, service, initial_bpm=135, enable_rr=True, rmssd=35.0,
+                 regime='aerobic', phi=None):
         super().__init__(bus, index, HEART_RATE_MEASUREMENT_UUID, ['notify'], service)
         self.notifying = False
         self.bpm = max(30, min(240, int(initial_bpm)))
+        self.enable_rr = bool(enable_rr)
+        self.synthesizer = RrSynthesizer(bpm=self.bpm, rmssd=rmssd, regime=regime, phi=phi)
         self.timer_id = None
 
+    def set_bpm(self, bpm):
+        self.bpm = max(30, min(240, int(bpm)))
+        self.synthesizer.set_bpm(self.bpm)
+
     def build_payload(self):
-        # Flags: uint8 (0x00 = UINT8 heart rate format, sensor contact not supported)
-        flags = 0x00
         bpm_val = max(30, min(240, int(self.bpm)))
-        payload = [flags, bpm_val]
+        self.synthesizer.set_bpm(bpm_val)
+        if not self.enable_rr:
+            payload = build_hr_payload(bpm_val, enable_rr=False)
+        else:
+            rr_raw_list = self.synthesizer.tick_1hz(1000.0)
+            payload = build_hr_payload(bpm_val, rr_raw_list, enable_rr=True)
         return dbus.Array([dbus.Byte(b) for b in payload], signature='y')
 
     def send_notification(self):
         if not self.notifying:
             return False
+        # If RF gap active, advance simulator clock but suppress GATT notification
+        if self.enable_rr and self.synthesizer.gap_ticks_remaining > 0:
+            self.synthesizer.tick_1hz(1000.0)
+            return True
         val = self.build_payload()
         self.PropertiesChanged(GATT_CHRC_IFACE, {'Value': val}, [])
         return True
@@ -265,7 +412,8 @@ class HeartRateMeasurementCharacteristic(Characteristic):
         if self.notifying:
             return
         self.notifying = True
-        print(f"[*] Client verbunden & Herzfrequenz abonniert! (Sende {self.bpm} BPM)")
+        mode_str = f"RR-Intervals (Bit 4 0x10, regime={self.synthesizer.regime_name})" if self.enable_rr else "Legacy BPM only (--no-rr)"
+        print(f"[*] Client verbunden & Herzfrequenz abonniert! (Sende {self.bpm} BPM | {mode_str})")
         self.timer_id = GLib.timeout_add(1000, self.send_notification)
 
     @dbus.service.method(GATT_CHRC_IFACE)
@@ -292,9 +440,13 @@ class BodySensorLocationCharacteristic(Characteristic):
 
 
 class HeartRateService(Service):
-    def __init__(self, bus, index, initial_bpm=135):
+    def __init__(self, bus, index, initial_bpm=135, enable_rr=True, rmssd=35.0,
+                 regime='aerobic', phi=None):
         super().__init__(bus, index, HEART_RATE_SERVICE_UUID, True)
-        self.measurement_char = HeartRateMeasurementCharacteristic(bus, 0, self, initial_bpm)
+        self.measurement_char = HeartRateMeasurementCharacteristic(
+            bus, 0, self, initial_bpm=initial_bpm, enable_rr=enable_rr,
+            rmssd=rmssd, regime=regime, phi=phi
+        )
         self.add_characteristic(self.measurement_char)
         self.add_characteristic(BodySensorLocationCharacteristic(bus, 1, self))
 
@@ -377,17 +529,24 @@ def find_adapter(bus):
 
 def keyboard_input_loop(meas_char, battery_char, loop):
     time.sleep(0.5)
-    print("\n" + "=" * 60)
-    print("  ATT BLE Herzfrequenz- & Batterie-Simulator LÄUFT")
-    print("=" * 60)
+    print("\n" + "=" * 65)
+    print("  ATT BLE Herzfrequenz-, HRV- & Batterie-Simulator LÄUFT")
+    print("=" * 65)
     print("  Steuerung im Terminal:")
-    print("    [+] / [-]     : Puls um 5 BPM erhöhen / verringern")
-    print("    [h<Zahl>]     : Exakter Puls (z.B. h145 für 145 BPM)")
-    print("    [b<Zahl>]     : Batteriestand ändern (z.B. b15 für 15%, b85 für 85%)")
-    print("    [b+] / [b-]   : Batteriestand um 5% erhöhen / verringern")
-    print("    [q]           : Beenden")
-    print("=" * 60)
-    print(f"  Aktuell: {meas_char.bpm} BPM | Batterie: {battery_char.battery_level}%\n")
+    print("    [+] / [-]         : Puls um 5 BPM erhöhen / verringern")
+    print("    [h<Zahl>]         : Exakter Puls (z.B. h145 für 145 BPM)")
+    print("    [b<Zahl>]         : Batteriestand ändern (z.B. b15 für 15%, b85 für 85%)")
+    print("    [b+] / [b-]       : Batteriestand um 5% erhöhen / verringern")
+    print("    [a1] / [a2] / [a3]: DFA a1 Zone (aerobic / threshold / anaerobic)")
+    print("    [r<Zahl>]         : Target rMSSD in ms (z.B. r65, r35, r15)")
+    print("    [e]               : Ektopischer Extraschlag (PVC + Pause)")
+    print("    [m]               : Ausgelassener Schlag (Missed Beat: 2x RR)")
+    print("    [x]               : Zusätzlicher Schlag (Extra Beat: 2x 0.5 RR)")
+    print("    [g]               : RF Dropout / Sensor-Lücke (> 2.5s Pause)")
+    print("    [q]               : Beenden")
+    print("=" * 65)
+    mode_str = f"RR={meas_char.enable_rr} ({meas_char.synthesizer.regime_name}, rMSSD={meas_char.synthesizer.rmssd:.1f}ms)"
+    print(f"  Aktuell: {meas_char.bpm} BPM | {mode_str} | Batterie: {battery_char.battery_level}%\n")
 
     while True:
         try:
@@ -395,10 +554,10 @@ def keyboard_input_loop(meas_char, battery_char, loop):
             if not line:
                 continue
             if line == '+':
-                meas_char.bpm = min(240, meas_char.bpm + 5)
+                meas_char.set_bpm(min(240, meas_char.bpm + 5))
                 print(f" -> Herzfrequenz: {meas_char.bpm} BPM")
             elif line == '-':
-                meas_char.bpm = max(30, meas_char.bpm - 5)
+                meas_char.set_bpm(max(30, meas_char.bpm - 5))
                 print(f" -> Herzfrequenz: {meas_char.bpm} BPM")
             elif line == 'b+':
                 battery_char.set_battery(battery_char.battery_level + 5)
@@ -406,30 +565,63 @@ def keyboard_input_loop(meas_char, battery_char, loop):
                 battery_char.set_battery(battery_char.battery_level - 5)
             elif line.startswith('h'):
                 try:
-                    meas_char.bpm = int(line[1:])
+                    meas_char.set_bpm(int(line[1:]))
                     print(f" -> Herzfrequenz: {meas_char.bpm} BPM")
                 except ValueError:
                     print("Ungültige BPM-Eingabe (z.B. h140)")
-            elif line.startswith('b'):
+            elif line.startswith('b') and line[1:].isdigit():
                 try:
                     battery_char.set_battery(int(line[1:]))
                 except ValueError:
                     print("Ungültige Batterie-Eingabe (z.B. b15)")
+            elif line in ('a1', 'aerobic'):
+                meas_char.synthesizer.set_regime('aerobic')
+                print(f" -> DFA a1 Regime: aerobic (phi=0.70, target a1=1.00)")
+            elif line in ('a2', 'threshold'):
+                meas_char.synthesizer.set_regime('threshold')
+                print(f" -> DFA a1 Regime: threshold (phi=0.35, target a1=0.70)")
+            elif line in ('a3', 'anaerobic'):
+                meas_char.synthesizer.set_regime('anaerobic')
+                print(f" -> DFA a1 Regime: anaerobic (phi=-0.20, target a1=0.45)")
+            elif line.startswith('r'):
+                try:
+                    val = float(line[1:])
+                    meas_char.synthesizer.set_rmssd(val)
+                    print(f" -> Target rMSSD: {meas_char.synthesizer.rmssd:.1f} ms")
+                except ValueError:
+                    print("Ungültige rMSSD-Eingabe (z.B. r45)")
+            elif line in ('e', 'ectopic'):
+                meas_char.synthesizer.inject_artifact('ectopic')
+                print(" -> [Artefakt injiziert] Ektopischer Extraschlag (PVC + Pause)")
+            elif line in ('m', 'missed'):
+                meas_char.synthesizer.inject_artifact('missed')
+                print(" -> [Artefakt injiziert] Ausgelassener Herzschlag (2x RR)")
+            elif line in ('x', 'extra'):
+                meas_char.synthesizer.inject_artifact('extra')
+                print(" -> [Artefakt injiziert] Zusätzlicher Extraschlag (2x 0.5 RR)")
+            elif line in ('g', 'gap'):
+                meas_char.synthesizer.inject_artifact('gap')
+                print(" -> [Artefakt injiziert] RF Dropout / Paketlücke (3.0s Pause)")
             elif line == 'q':
                 print("Beende Simulator...")
                 loop.quit()
                 break
             else:
-                print("Unbekannter Befehl (+, -, h<Zahl>, b<Zahl>, b+, b-, q)")
+                print("Unbekannter Befehl (+, -, h<Zahl>, b<Zahl>, b+, b-, a1, a2, a3, r<ms>, e, m, x, g, q)")
         except (EOFError, KeyboardInterrupt):
             loop.quit()
             break
 
 
 def main():
-    parser = argparse.ArgumentParser(description="BLE Heart Rate & Battery Simulator for aTrainingTracker")
+    parser = argparse.ArgumentParser(description="BLE Heart Rate, HRV & Battery Simulator for aTrainingTracker")
     parser.add_argument("--bpm", type=int, default=135, help="Initial heart rate in BPM (default: 135)")
     parser.add_argument("--battery", type=int, default=100, help="Initial battery percentage (0-100, default: 100)")
+    parser.add_argument("--no-rr", action="store_true", help="Disable RR intervals (legacy 8-bit BPM only)")
+    parser.add_argument("--rmssd", type=float, default=35.0, help="Target rMSSD in ms (default: 35.0)")
+    parser.add_argument("--dfa-regime", choices=["aerobic", "threshold", "anaerobic"], default="aerobic",
+                        help="Initial DFA alpha-1 regime (default: aerobic)")
+    parser.add_argument("--dfa-a1", type=float, default=None, help="Custom DFA alpha-1 / AR(1) phi parameter")
     args = parser.parse_args()
 
     dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
@@ -447,7 +639,14 @@ def main():
     ad_manager = dbus.Interface(bus.get_object(BLUEZ_SERVICE_NAME, adapter), LE_ADVERTISING_MANAGER_IFACE)
 
     app = Application(bus)
-    hr_service = HeartRateService(bus, 0, initial_bpm=args.bpm)
+    hr_service = HeartRateService(
+        bus, 0,
+        initial_bpm=args.bpm,
+        enable_rr=not args.no_rr,
+        rmssd=args.rmssd,
+        regime=args.dfa_regime,
+        phi=args.dfa_a1
+    )
     battery_service = BatteryService(bus, 1, initial_battery=args.battery)
     app.add_service(hr_service)
     app.add_service(battery_service)
@@ -457,8 +656,10 @@ def main():
 
     loop = GLib.MainLoop()
 
-    print("[*] Starte BLE Herzfrequenz & Batterie Simulator...")
+    print("[*] Starte BLE Herzfrequenz, HRV & Batterie Simulator...")
     print(f"[*] Initiale Werte: {hr_service.measurement_char.bpm} BPM, {battery_service.battery_char.battery_level}% Batterie")
+    mode_str = f"RR aktiv (Regime: {hr_service.measurement_char.synthesizer.regime_name}, rMSSD: {hr_service.measurement_char.synthesizer.rmssd:.1f}ms)" if not args.no_rr else "Legacy BPM-only (Bit 4 deaktiviert)"
+    print(f"[*] HRV Modus: {mode_str}")
     print("[*] Registriere GATT Application (Heart Rate 0x180D, Battery 0x180F, Device Info 0x180A)...")
     service_manager.RegisterApplication(app.get_path(), {},
                                         reply_handler=lambda: print("[OK] GATT Services registriert."),
