@@ -73,4 +73,11 @@ class AdvancedTuningScreenTest {
         val clazz = Class.forName("com.atrainingtracker.trainingtracker.ui.settings.tuning.AdvancedTuningScreenKt")
         assertNotNull("AdvancedTuningScreenKt must exist", clazz)
     }
+
+    @Test
+    fun testTuningPreferencesDataStore_singletonContract() {
+        val dsClass = Class.forName("com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore")
+        val getInstanceMethod = dsClass.declaredMethods.find { it.name == "getInstance" && Modifier.isStatic(it.modifiers) }
+        assertNotNull("TuningPreferencesDataStore must have a static getInstance(context) factory", getInstanceMethod)
+    }
 }

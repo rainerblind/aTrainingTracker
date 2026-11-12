@@ -80,8 +80,8 @@ fun AdvancedTuningDialog(
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    val tuningDataStore = remember { TuningPreferencesDataStore(context) }
-    val persistedConfig by tuningDataStore.tuningConfigFlow.collectAsState(initial = TuningConfig())
+    val tuningDataStore = remember { TuningPreferencesDataStore.getInstance(context) }
+    val persistedConfig by tuningDataStore.tuningConfigFlow.collectAsState(initial = null)
 
     val preferenceManager = remember { MyPreferenceManager(context.applicationContext) }
     val persistedWorkoutCardPrefs by preferenceManager.workoutCardPreferencesFlow.collectAsState(initial = null)
@@ -174,10 +174,11 @@ fun AdvancedTuningDialog(
         enableContextTags = config.enableContextTags
     }
 
-    var isInitialized by rememberSaveable { mutableStateOf(false) }
+    var isInitialized by remember { mutableStateOf(false) }
     LaunchedEffect(persistedConfig) {
-        if (!isInitialized) {
-            applyConfig(persistedConfig)
+        val config = persistedConfig
+        if (!isInitialized && config != null) {
+            applyConfig(config)
             isInitialized = true
         }
     }
@@ -189,7 +190,8 @@ fun AdvancedTuningDialog(
         actions = {
             AppDialogActions.SaveCancel(
                 onSave = {
-                    val newConfig = persistedConfig.copy(
+                    val baseConfig = persistedConfig ?: TuningConfig()
+                    val newConfig = baseConfig.copy(
                         elevationXAxisDomain = elevationXAxisDomain, telemetryXAxisDomain = telemetryXAxisDomain, cockpitFontFamily = cockpitFontFamily, cockpitFontWeight = cockpitFontWeight,
                         sensorFieldVariant = sensorFieldVariant, sensorFieldCornerRadius = sensorFieldCornerRadius, sensorFieldBorderThickness = sensorFieldBorderThickness, sensorFieldBorderContrast = sensorFieldBorderContrast,
                         fullDimFactor = fullDimFactor, mediumDimFactor = mediumDimFactor, slopeFlatThreshold = slopeFlat, slopeSteepThreshold = slopeSteep,
@@ -316,9 +318,9 @@ fun AdvancedTuningDialog(
             TuningAccordionSection(
                 icon = Icons.Default.Sensors, title = stringResource(R.string.tuning_cat_cycling_radar),
                 subtitle = TuningSubtitleFormatter.formatCyclingRadarSubtitle(
-                    edgeSide = persistedConfig.radarEdgeSide,
-                    alertMode = persistedConfig.radarAudioAlertMode,
-                    lightMode = persistedConfig.radarLightDefaultMode,
+                    edgeSide = persistedConfig?.radarEdgeSide ?: TuningPreferencesDefaults.RADAR_EDGE_SIDE,
+                    alertMode = persistedConfig?.radarAudioAlertMode ?: TuningPreferencesDefaults.RADAR_AUDIO_ALERT_MODE,
+                    lightMode = persistedConfig?.radarLightDefaultMode ?: TuningPreferencesDefaults.RADAR_LIGHT_DEFAULT_MODE,
                     isRunning = isRadarSimRunning,
                     scenario = activeRadarScenario,
                     context = context
