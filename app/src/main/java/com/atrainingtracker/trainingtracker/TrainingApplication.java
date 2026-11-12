@@ -1919,6 +1919,8 @@ public class TrainingApplication extends Application {
 
         stopPebbleWatchapp();
 
+        com.atrainingtracker.banalservice.devices.radar.RadarTrafficSimulator.INSTANCE.stop();
+
         if (TrackerService.isRunning()) {
             Intent stopIntent = new Intent(this, TrackerService.class);
             stopIntent.setAction(TrackerService.ACTION_STOP);
@@ -1926,7 +1928,6 @@ public class TrainingApplication extends Application {
         } else {
             com.atrainingtracker.banalservice.devices.radar.RadarLightController.onWorkoutStopped(this);
             com.atrainingtracker.banalservice.devices.radar.RadarSnoozeController.reset();
-            com.atrainingtracker.banalservice.devices.radar.RadarTrafficSimulator.INSTANCE.stop();
             stopService(new Intent(this, TrackerService.class));
         }
 

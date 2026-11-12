@@ -1453,7 +1453,6 @@ public class TrackerService extends Service {
         RadarLightController.onWorkoutStopped(this);
         if (!TrainingApplication.isPaused()) {
             RadarSnoozeController.reset();
-            RadarTrafficSimulator.INSTANCE.stop();
         }
 
         LifecycleUtils.safeUnregisterReceiver(this, mSearchingFinishedReceiver, TAG);

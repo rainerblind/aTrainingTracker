@@ -61,3 +61,13 @@ Sprint 2026-46.1 review identified three defects in `RadarAlertManager.kt` and `
 
 ## 4. Conclusion & Next Steps
 All requirements for `REQ-TRK-063.1`, `REQ-TRK-063.3`, `REQ-TRK-063.6`, and `REQ-TRK-063.7` are implemented and verified. Ready for Gate 4 Review by agent2 (`subagent_pro`), parent advancement to `Test`, and fused Stage 5 Verification.
+
+---
+
+## 5. Cold Carbon Review (Stage 6) Defect Resolution & Healing
+1. **RadarTrafficSimulator Lifecycle Cleanliness**:
+   - In `TrackerService.java` (`onDestroy`), guarded simulator and snooze reset with `if (!TrainingApplication.isPaused())`, ensuring pausing a workout does not terminate active radar traffic simulation.
+   - In `TrainingApplication.java` (`stopTracking`), invoked `RadarTrafficSimulator.INSTANCE.stop()` when stopping from a paused state (where `TrackerService.handleActionStop()` is skipped), guaranteeing zero lingering background simulation.
+   - Preserved `RadarTrafficSimulator.INSTANCE.stop()` in `TrackerService.handleActionStop()` for active tracking teardown.
+2. **Canonical Plan Deliverable Naming**:
+   - Canonically renamed the Stage 3 implementation plan artifact from `docs/engineering/plans/ATT-6705_impl_plan.md` to `docs/engineering/plans/ATT-6705_plan.md` (committed in `ee4b955c`), satisfying agile ASPICE deliverable naming rules.
