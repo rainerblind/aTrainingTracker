@@ -99,6 +99,11 @@ import com.atrainingtracker.trainingtracker.ui.aftermath.zones.PowerZoneThreshol
 import com.atrainingtracker.trainingtracker.ui.aftermath.zones.ZoneDistributionCalculator
 import com.atrainingtracker.trainingtracker.ui.aftermath.zones.ZoneDistributionData
 import com.atrainingtracker.trainingtracker.ui.aftermath.zones.ZoneSample
+import com.atrainingtracker.trainingtracker.ui.aftermath.workoutdetail.HrvProtocolType
+import com.atrainingtracker.trainingtracker.ui.aftermath.workoutdetail.HrvScatterIntensityMode
+import com.atrainingtracker.trainingtracker.ui.aftermath.workoutdetail.HrvThresholdEstimator
+import com.atrainingtracker.trainingtracker.zones.HrvSessionThreshold
+import kotlin.math.roundToInt
 import com.atrainingtracker.trainingtracker.ui.util.SingleLiveEvent
 import com.google.android.gms.maps.model.LatLng
 import kotlinx.coroutines.CancellationException
@@ -1536,6 +1541,7 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
     private val activeReloadWorkoutIds = java.util.concurrent.ConcurrentHashMap.newKeySet<Long>()
     private val dirtyReloadWorkoutIds = java.util.concurrent.ConcurrentHashMap.newKeySet<Long>()
     internal val ineligibleCardioPowerWorkoutIds: MutableSet<Long> = java.util.concurrent.ConcurrentHashMap.newKeySet()
+    private val recentHrvThresholdsCache = java.util.concurrent.ConcurrentHashMap<Long, HrvSessionThreshold>()
 
     /**
      * Provides a reactive stream for a specific workout ID.
@@ -4001,6 +4007,7 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
      * Dispatches an asynchronous reload of in-memory workout data for the specified workout ID (REQ-PER-034.3).
      */
     fun refreshWorkout(workoutId: Long) {
+        recentHrvThresholdsCache.remove(workoutId)
         launch {
             reloadWorkoutData(workoutId)
         }
@@ -4418,6 +4425,49 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
             reloadWorkoutData(workoutId)
             loadWorkout(workoutId)
         }
+    }
+
+    /**
+     * Resolves historical workout sessions within [windowDays] having valid HRV DFA a1 and Power telemetry,
+     * computing their HRVT2 anaerobic power estimates for multi-session consensus evaluation (REQ-PER-037.3).
+     */
+    suspend fun getRecentHrvSessionThresholds(
+        currentWorkoutId: Long,
+        referenceTimestampMs: Long = System.currentTimeMillis(),
+        windowDays: Int = 30
+    ): List<HrvSessionThreshold> = withContext(Dispatchers.IO) {
+        val cutoffMs = referenceTimestampMs - windowDays * 24L * 3600L * 1000L
+        val cutoffS = cutoffMs / 1000L
+        val refS = referenceTimestampMs / 1000L
+        val candidateWorkouts = allWorkouts.value.filter {
+            it.id != currentWorkoutId && it.startTimeS in cutoffS..refS && it.finished
+        }
+        val results = mutableListOf<HrvSessionThreshold>()
+        for (workout in candidateWorkouts) {
+            val cached = recentHrvThresholdsCache[workout.id]
+            if (cached != null) {
+                results.add(cached)
+                continue
+            }
+            val points = getWorkoutTelemetryPoints(workout.id)
+            if (points.isNotEmpty() && points.any { it.hrvDfaA1 != null } && points.any { it.power != null && it.power > 0 }) {
+                val est = HrvThresholdEstimator.estimateThresholds(
+                    points = points,
+                    mode = HrvScatterIntensityMode.POWER,
+                    protocolType = HrvProtocolType.FREE_WORKOUT
+                )
+                val hrvt2Watts = est.hrvt2.intensity?.roundToInt()
+                val session = HrvSessionThreshold(
+                    workoutId = workout.id,
+                    timestampEpochMs = workout.startTimeS * 1000L,
+                    hrvt2Watts = hrvt2Watts,
+                    confidence = est.hrvt2.confidence
+                )
+                recentHrvThresholdsCache[workout.id] = session
+                results.add(session)
+            }
+        }
+        results
     }
 
 }

@@ -322,6 +322,8 @@ fun WorkoutSummariesTabbedScreen(
                     gradeZoneDistribution = aftermathUIState.gradeZoneDistribution,
                     hrZoneThresholds = aftermathUIState.hrThresholds,
                     powerZoneThresholds = aftermathUIState.powerThresholds,
+                    recentSessions = aftermathUIState.recentSessions,
+                    onUpdateFtp = { trackOnMapViewModel.updateFtp(it) },
                     telemetryPath = aftermathUIState.telemetryPath,
                     initialAutoShareSnapshot = autoShareSnapshotOnOpen,
                     onSnapshotComplete = {

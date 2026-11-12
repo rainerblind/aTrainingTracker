@@ -211,4 +211,35 @@ class TrackOnMapAftermathViewModelTest {
         advanceUntilIdle()
         assertTrue("Tracks remain empty for workout B without polyline", viewModel.uiState.value.tracks.isEmpty())
     }
+
+    @Test
+    fun updateFtp_persistsPowerZonesAndUpdatesUiState() = runTest(testDispatcher) {
+        val mockSettingsDataStore = mockk<com.atrainingtracker.trainingtracker.settings.SettingsDataStore>(relaxed = true)
+        val mockAthleteMetricsRepo = mockk<com.atrainingtracker.trainingtracker.ui.athleteprofile.AthleteMetricsRepository>(relaxed = true)
+
+        mockkObject(com.atrainingtracker.trainingtracker.settings.SettingsDataStore.Companion)
+        every { com.atrainingtracker.trainingtracker.settings.SettingsDataStore.getInstance(any()) } returns mockSettingsDataStore
+
+        mockkObject(com.atrainingtracker.trainingtracker.ui.athleteprofile.AthleteMetricsRepository.Companion)
+        every { com.atrainingtracker.trainingtracker.ui.athleteprofile.AthleteMetricsRepository.getInstance(any()) } returns mockAthleteMetricsRepo
+
+        val viewModel = TrackOnMapAftermathViewModel(mockApplication, ioDispatcher = testDispatcher)
+
+        viewModel.updateFtp(280)
+        advanceUntilIdle()
+
+        coVerify(exactly = 1) {
+            mockSettingsDataStore.saveCalculatedPowerZones(280, any())
+        }
+        coVerify(exactly = 1) {
+            mockAthleteMetricsRepo.addEntry(
+                metricType = com.atrainingtracker.trainingtracker.database.AthleteMetricType.FTP_WATTS,
+                value = 280.0,
+                timestampMs = any()
+            )
+        }
+
+        assertNotNull(viewModel.uiState.value.powerThresholds)
+        assertEquals(294, viewModel.uiState.value.powerThresholds?.z4Max)
+    }
 }

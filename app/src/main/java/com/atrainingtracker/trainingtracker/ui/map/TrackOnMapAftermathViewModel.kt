@@ -37,6 +37,11 @@ import com.atrainingtracker.trainingtracker.physiology.PowerHrDynamicsCalculator
 import com.atrainingtracker.trainingtracker.ui.aftermath.zones.HeartRateZoneThresholds
 import com.atrainingtracker.trainingtracker.ui.aftermath.zones.PowerZoneThresholds
 import com.atrainingtracker.trainingtracker.ui.aftermath.zones.ZoneDistributionData
+import com.atrainingtracker.trainingtracker.zones.HrvSessionThreshold
+import com.atrainingtracker.trainingtracker.zones.ZoneCalculationMath
+import com.atrainingtracker.trainingtracker.settings.SettingsDataStore
+import com.atrainingtracker.trainingtracker.ui.athleteprofile.AthleteMetricsRepository
+import com.atrainingtracker.trainingtracker.database.AthleteMetricType
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -62,6 +67,7 @@ data class AftermathMapUIState(
     val telemetryPath: List<PathPoint> = emptyList(),
     val hrThresholds: HeartRateZoneThresholds? = null,
     val powerThresholds: PowerZoneThresholds? = null,
+    val recentSessions: List<HrvSessionThreshold> = emptyList(),
     val loadedWorkoutId: Long? = null
 )
 
@@ -284,19 +290,44 @@ class TrackOnMapAftermathViewModel @JvmOverloads constructor(
             val gradeDistribution = telemetry?.gradeZoneDistribution ?: workoutRepository.getGradeZoneDistribution(workoutId)
             val hrThresholds = telemetry?.hrThresholds ?: TelemetryZoneMath.loadHeartRateThresholds(getApplication(), bSportType)
             val powerThresholds = telemetry?.powerThresholds ?: TelemetryZoneMath.loadPowerThresholds(getApplication())
+            val recentHrvSessions = workoutRepository.getRecentHrvSessionThresholds(workoutId)
             withContext(Dispatchers.Main) {
                 _uiState.value = _uiState.value.copy(
                     hrZoneDistribution = hrDistribution,
                     powerZoneDistribution = powerDistribution,
                     gradeZoneDistribution = gradeDistribution,
                     hrThresholds = hrThresholds,
-                    powerThresholds = powerThresholds
+                    powerThresholds = powerThresholds,
+                    recentSessions = recentHrvSessions
                 )
             }
 
             // --- PHASE 8: Lazy Cardio-Power Dynamics Resolution (REQ-REV-009 / ATT-6722) ---
             if (workoutData.cardioPowerDynamics == null && workoutData.activeTimeSec >= PowerHrDynamicsCalculator.MIN_QUALIFYING_DURATION_SEC) {
                 workoutRepository.getOrComputeCardioPowerDynamics(workoutId)
+            }
+        }
+    }
+
+    /**
+     * Unidirectionally updates the athlete's cycling Functional Threshold Power (FTP) and calculated
+     * Coggan power zones in SettingsDataStore and AthleteMetrics.db (REQ-PER-037.4).
+     */
+    fun updateFtp(newFtp: Int) {
+        viewModelScope.launch(ioDispatcher) {
+            val settingsDataStore = SettingsDataStore.getInstance(getApplication())
+            val thresholds = ZoneCalculationMath.calculateCogganPowerZones(newFtp)
+            val cutoffs = listOf(
+                thresholds.z1Max, thresholds.z2Max, thresholds.z3Max,
+                thresholds.z4Max, thresholds.z5Max, thresholds.z6Max
+            )
+            settingsDataStore.saveCalculatedPowerZones(newFtp, cutoffs)
+            AthleteMetricsRepository.getInstance(getApplication()).addEntry(
+                metricType = AthleteMetricType.FTP_WATTS,
+                value = newFtp.toDouble()
+            )
+            withContext(Dispatchers.Main) {
+                _uiState.value = _uiState.value.copy(powerThresholds = thresholds)
             }
         }
     }

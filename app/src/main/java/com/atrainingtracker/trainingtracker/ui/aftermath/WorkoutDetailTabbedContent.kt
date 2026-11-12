@@ -64,6 +64,7 @@ import com.atrainingtracker.trainingtracker.ui.aftermath.splits.LapSplitVisualiz
 import com.atrainingtracker.trainingtracker.ui.aftermath.workoutdetail.HrvAlpha1ScatterCard
 import com.atrainingtracker.trainingtracker.ui.aftermath.workoutdetail.HrvDurabilityCard
 import com.atrainingtracker.trainingtracker.ui.aftermath.workoutdetail.HrvThresholdSummaryCard
+import com.atrainingtracker.trainingtracker.zones.HrvSessionThreshold
 import com.atrainingtracker.trainingtracker.ui.aftermath.zones.GradeZoneDistributionCard
 import com.atrainingtracker.trainingtracker.ui.aftermath.zones.HeartRateZoneDistributionCard
 import com.atrainingtracker.trainingtracker.ui.aftermath.zones.HeartRateZoneThresholds
@@ -123,6 +124,7 @@ fun WorkoutDetailTabbedContent(
     powerZoneThresholds: PowerZoneThresholds? = null,
     configuredFtp: Int? = null,
     configuredHrMax: Int? = null,
+    recentSessions: List<HrvSessionThreshold> = emptyList(),
     onUpdateFtp: ((Int) -> Unit)? = null,
     onCalibrateMader: ((Int?, Int?) -> Unit)? = null,
     useStatusBarsPadding: Boolean,
@@ -423,6 +425,7 @@ fun WorkoutDetailTabbedContent(
                                             powerZoneThresholds = powerZoneThresholds,
                                             configuredFtp = configuredFtp,
                                             configuredHrMax = configuredHrMax,
+                                            recentSessions = recentSessions,
                                             onUpdateFtp = onUpdateFtp,
                                             onCalibrateMader = onCalibrateMader,
                                             onAddPhotos = { uris ->
@@ -512,6 +515,7 @@ fun WorkoutDetailTabbedContent(
                                                 powerZoneThresholds = powerZoneThresholds,
                                                 configuredFtp = configuredFtp,
                                                 configuredHrMax = configuredHrMax,
+                                                recentSessions = recentSessions,
                                                 onUpdateFtp = onUpdateFtp,
                                                 onCalibrateMader = onCalibrateMader,
                                                 onAddPhotos = { uris ->
@@ -574,6 +578,7 @@ fun WorkoutDetailTabbedContent(
                                     powerZoneThresholds = powerZoneThresholds,
                                     configuredFtp = configuredFtp,
                                     configuredHrMax = configuredHrMax,
+                                    recentSessions = recentSessions,
                                     onUpdateFtp = onUpdateFtp,
                                     onCalibrateMader = onCalibrateMader,
                                     onAddPhotos = { uris ->
@@ -818,6 +823,7 @@ private fun RenderWorkoutDetailCardSections(
     powerZoneThresholds: PowerZoneThresholds? = null,
     configuredFtp: Int? = null,
     configuredHrMax: Int? = null,
+    recentSessions: List<HrvSessionThreshold> = emptyList(),
     onUpdateFtp: ((Int) -> Unit)? = null,
     onCalibrateMader: ((Int?, Int?) -> Unit)? = null,
     activeScrubPath: List<com.atrainingtracker.trainingtracker.ui.map.PathPoint>? = null,
@@ -929,6 +935,7 @@ private fun RenderWorkoutDetailCardSections(
                         configuredFtp = resolvedFtp,
                         configuredHrMax = resolvedHrMax,
                         hrZoneThresholds = hrZoneThresholds,
+                        recentSessions = recentSessions,
                         onUpdateFtp = onUpdateFtp,
                         onCalibrateMader = onCalibrateMader,
                         modifier = Modifier
