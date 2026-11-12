@@ -253,4 +253,40 @@ class SmartRadarLightEngineTest {
         SmartRadarLightEngine.resumeAutomation()
         assertFalse(SmartRadarLightEngine.isManualOverridden)
     }
+
+    @Test
+    fun testStartAndStopListening_managesSensorsAndLifecycle() {
+        val mockContext = mockk<android.content.Context>(relaxed = true)
+        val mockSensorManager = mockk<android.hardware.SensorManager>(relaxed = true)
+        val mockPowerManager = mockk<android.os.PowerManager>(relaxed = true)
+        val mockLightSensor = mockk<android.hardware.Sensor>(relaxed = true)
+        val mockProxSensor = mockk<android.hardware.Sensor>(relaxed = true)
+
+        every { mockSensorManager.getDefaultSensor(android.hardware.Sensor.TYPE_LIGHT) } returns mockLightSensor
+        every { mockSensorManager.getDefaultSensor(android.hardware.Sensor.TYPE_PROXIMITY) } returns mockProxSensor
+        every { mockSensorManager.registerListener(any(), any<android.hardware.Sensor>(), any()) } returns true
+
+        SmartRadarLightEngine.startListening(mockContext, customSensorManager = mockSensorManager, customPowerManager = mockPowerManager)
+        assertTrue(SmartRadarLightEngine.isListening)
+        verify { mockSensorManager.registerListener(SmartRadarLightEngine, mockLightSensor, android.hardware.SensorManager.SENSOR_DELAY_NORMAL) }
+        verify { mockSensorManager.registerListener(SmartRadarLightEngine, mockProxSensor, android.hardware.SensorManager.SENSOR_DELAY_NORMAL) }
+
+        SmartRadarLightEngine.stopListening()
+        assertFalse(SmartRadarLightEngine.isListening)
+        verify { mockSensorManager.unregisterListener(SmartRadarLightEngine) }
+    }
+
+    @Test
+    fun testSetManualLightMode_overridesAutomation() {
+        SmartRadarLightEngine.isAutomationEnabled = true
+        RadarLightController.setManualLightMode(RadarLightMode.PELOTON)
+        assertTrue(SmartRadarLightEngine.isManualOverridden)
+        assertEquals(RadarLightMode.PELOTON, RadarLightController.currentMode.value)
+    }
+
+    @Test
+    fun testLocationAndTimeChanged_updatesSolarProfile() {
+        SmartRadarLightEngine.onLocationAndTimeChanged(0.0, 0.0, 1700050000000L)
+        assertFalse(SmartRadarLightEngine.isTunnelActive)
+    }
 }

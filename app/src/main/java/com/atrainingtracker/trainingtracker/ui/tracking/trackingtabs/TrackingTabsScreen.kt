@@ -1106,7 +1106,7 @@ fun TrackingTabsScreen(
                             isLightControlSupported = radarState.isLightControlSupported,
                             snoozeState = radarState.audioSnoozeState,
                             onModeSelected = { mode ->
-                                RadarLightController.setLightMode(mode)
+                                RadarLightController.setManualLightMode(mode)
                                 showRadarLightQuickSwitch = false
                             },
                             onSnoozeSelected = { mode ->

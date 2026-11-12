@@ -2280,6 +2280,13 @@ public class TrackerService extends Service {
             }
         }
         final LatLng currentPos = currentPosTemp;
+        if (currentPos != null) {
+            com.atrainingtracker.banalservice.devices.radar.SmartRadarLightEngine.onLocationAndTimeChanged(
+                    currentPos.latitude,
+                    currentPos.longitude,
+                    System.currentTimeMillis()
+            );
+        }
 
         // ATT-1447 / REQ-DAT-015: Record workout start location atomically on first valid GPS fix
         if (mStartType == StartType.START_NORMAL && !mWorkoutStartLocationRecorded && currentPos != null) {
