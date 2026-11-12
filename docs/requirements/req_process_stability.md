@@ -3318,6 +3318,37 @@ The workflow SHALL mandate that:
   • *Then* symlink integrity and workflow YAML validity pass with 100% success.
 - **Invariants**: Zero modifications to Android production runtime code in `app/src/main/`; Rule 67 canonical directory structure preserved.
 
+### REQ-PRO-068: System Integration Verification & Sensor Simulators Specification [Verified]
+- **Tests**: `TST-PRO-068`, `docs/system/sys_integration_tests.md`, `tools/run_system_integration_tests.py`, `tools/test_system_integration_tests.py`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/SystemIntegrationTestContractTest.kt`
+- **Implementation**: `docs/system/sys_integration_tests.md`, `tools/run_system_integration_tests.py`, `tools/test_system_integration_tests.py`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/SystemIntegrationTestContractTest.kt`
+- **Rationale**: Under ASPICE SYS.4 (Finding S-06), system integration test specifications and repeatable verification procedures must be established covering all external system interfaces (BLE, ANT+, GNSS, Cloud) using sensor simulators to ensure reproducible integration verification in CI and pre-release audits:
+  1. *System Integration Test Specification (`REQ-PRO-068.1`, docs/system/sys_integration_tests.md)*:
+     • `docs/system/sys_integration_tests.md` SHALL specify formal system integration test cases (`SYS-INT-001` through `SYS-INT-006`) covering external interfaces: BLE Heart Rate (`0x180D`), BLE Cycling Power (`0x1818`), BLE Garmin Varia Radar (`6a4e3200`), ANT+ Radio IPC (`SYS-IF-02`), GNSS Positioning (`SYS-IF-03`), and Cloud Synchronization (`SYS-IF-05`).
+     • Every integration test case SHALL trace bidirectionally to corresponding system requirements (`SYSREQ-TRK-*`, `SYSREQ-DEX-*`) and system elements (`SYS-EL-01` through `SYS-EL-05`).
+     • Pass/fail criteria, timing tolerances, and artifact logging under `docs/releases/<tag>/` SHALL be formally specified.
+  2. *Headless CI Integration Test Runner (`REQ-PRO-068.2`, tools/run_system_integration_tests.py)*:
+     • `tools/run_system_integration_tests.py` SHALL execute automated system integration verification headless without physical hardware in CI, simulating peripheral data streams and logging structured execution results in JSON format.
+  3. *Integration Runner Test Suite (`REQ-PRO-068.3`, tools/test_system_integration_tests.py)*:
+     • `tools/test_system_integration_tests.py` SHALL verify runner functionality, interface simulation handlers, CLI arguments, and error reporting using standard library unittest.
+  4. *Contract Testing & Governance (`REQ-PRO-068.4`, SystemIntegrationTestContractTest.kt & verify_requirement_governance.py)*:
+     • `SystemIntegrationTestContractTest.kt` SHALL verify `docs/system/sys_integration_tests.md` structural completeness, interface coverage, system requirement allocation mapping, and automated command availability.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Net-new requirement `REQ-PRO-068` (`REQ-PRO-068.1`–`REQ-PRO-068.4`). Targets `docs/system/sys_integration_tests.md`, `tools/run_system_integration_tests.py`, `tools/test_system_integration_tests.py`, and `SystemIntegrationTestContractTest.kt`.
+  2. *Historical Origin & Commit Trace*: Sprint 2026-46.4 via ticket `ATT-6166` under Epic `ATT-6142` (ASPICE CL2 Remediation S-06).
+  3. *Root Reason for Existing Formulation*: ASPICE 4.0 assessment of 2026-11-08 rated SYS.4 as CL0 due to the absence of a documented system integration test specification and repeatable procedure.
+  4. *Preservation of Core Invariants*: Zero modifications to Android production runtime code in `app/src/main/`; pure Python standard library for simulator verification tooling.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* `docs/system/sys_integration_tests.md`,
+  • *When* inspected,
+  • *Then* formal integration test cases cover each external system interface (`SYS-IF-01` through `SYS-IF-05`) with bidirectional traceability to `SYSREQ-*` requirements.
+  • *Given* the headless CI runner `tools/run_system_integration_tests.py`,
+  • *When* executed in CI without hardware,
+  • *Then* it executes all simulator integration test scenarios, logs structured results, and exits with code 0.
+  • *Given* `SystemIntegrationTestContractTest.kt`,
+  • *When* executed via Gradle,
+  • *Then* all contract tests pass with 100% success.
+- **Invariants**: Zero Android production runtime code changes in `app/src/main/`; existing simulator scripts remain fully functional.
+
 
 
 

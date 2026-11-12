@@ -275,6 +275,13 @@ Software components are integrated bottom-up to validate database persistence an
 
 For complete verification level definitions, entry/exit criteria, two-tier regression selection, and defect bisection workflows, see [`docs/architecture/integration_strategy.md`](architecture/integration_strategy.md).
 
+### 6.2 System Integration Verification with Sensor Simulators (ASPICE SYS.4, `REQ-PRO-068`, `TST-PRO-068`)
+
+In accordance with **ASPICE SYS.4 (System Integration and Integration Verification)**, Level 3 integration verification between the Android host application (`SYS-EL-01`) and external wireless sensors, GNSS providers, and cloud platforms is formally specified in [`docs/system/sys_integration_tests.md`](system/sys_integration_tests.md):
+* **Interfaces Verified**: `SYS-IF-01` (BLE Heart Rate `0x180D`, Cycling Power `0x1818`, Garmin Varia Radar `6a4e3200`), `SYS-IF-02` (ANT+ IPC Radio Socket), `SYS-IF-03` (Multi-Source GNSS Fixes), and `SYS-IF-05` (Cloud Sync / Strava REST API).
+* **Automated CI Execution**: Headless virtual execution via `python3 tools/run_system_integration_tests.py --headless`, generating structured JSON verification evidence (`docs/releases/<tag>/system_integration_results.json`) for audit compliance and pre-release gating.
+
+
 
 
 

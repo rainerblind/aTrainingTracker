@@ -1962,6 +1962,25 @@
   5. *Workflow YAML Syntax Validation (`TST-PRO-067.5`, tools/test_verify_requirement_governance.py & ReleaseCiAndLintConfigContractTest.kt)*:
   • Parse `.github/workflows/android-branch-build.yml` and `.github/workflows/android-release.yml` with YAML parser and assert zero syntax errors.
 
+### TST-PRO-068: **System Integration Verification & Sensor Simulators Specification Contract Test Suite** [Verified]
+- **Requirement(s)**: `REQ-PRO-068`
+- **Component**: `docs/system/sys_integration_tests.md`, `tools/run_system_integration_tests.py`, `tools/test_system_integration_tests.py`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/SystemIntegrationTestContractTest.kt`
+- **Jira**: `ATT-6166`
+- **Test Description**:
+  1. *System Integration Specification Structural Integrity (`TST-PRO-068.1`, SystemIntegrationTestContractTest.kt)*:
+  • Assert `docs/system/sys_integration_tests.md` exists and contains required metadata header.
+  • Assert all 6 integration test cases (`SYS-INT-001` through `SYS-INT-006`) are defined.
+  • Assert coverage across all external system interfaces (`SYS-IF-01` BLE, `SYS-IF-02` ANT+, `SYS-IF-03` GNSS, `SYS-IF-05` Cloud).
+  2. *System Requirements Bidirectional Traceability (`TST-PRO-068.2`, SystemIntegrationTestContractTest.kt)*:
+  • Assert all integration test cases trace to system requirements (`SYSREQ-TRK-*`, `SYSREQ-DEX-*`) and system elements (`SYS-EL-*`).
+  • Assert exact bidirectional parity between referenced requirements and system documents.
+  3. *Headless CI Runner Execution & Artifact Generation (`TST-PRO-068.3`, tools/test_system_integration_tests.py)*:
+  • Execute `tools/run_system_integration_tests.py` in headless mode.
+  • Verify output report structure, pass/fail status, timestamping, and exit code 0.
+  4. *Integration Runner Unit Test Suite (`TST-PRO-068.4`, tools/test_system_integration_tests.py)*:
+  • Verify unit tests for simulation handlers, error paths, and CLI arguments pass cleanly under Python unittest.
+
+
 
 
 
