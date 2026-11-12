@@ -3735,6 +3735,45 @@ The workflow SHALL mandate that:
   • *Then* 100% of unit tests pass.
 - **Invariants**: Pure Python 3 standard library; zero Android runtime changes; zero regression in existing governance checks.
 
+### REQ-PRO-077: Requirement Priority, Type, and Verification Method Specification & Governance [Verified]
+- **Tests**: `TST-PRO-077`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Implementation**: `.agents/skills/stage2-req-test-spec/SKILL.md`, `.agents/skills/stage2-req-test-spec/templates/test_spec_template.md`, `docs/requirements.md`, `tools/verify_requirement_governance.py`, `tools/test_verify_requirement_governance.py`
+- **Rationale**: Under ASPICE SWE.1 BP2 (Remediation A-09 / ATT-6136), software requirements must define explicit priority, type (functional vs. non-functional), and verification method attributes. Without these attributes, requirements cannot be systematically prioritized, non-functional requirements cannot be programmatically tracked, and verification methods cannot be audited:
+  1. *Requirement Template Standardization (`REQ-PRO-077.1`)*:
+     • The Stage 2 engineering lifecycle skill (`.agents/skills/stage2-req-test-spec/SKILL.md`), test specification deliverable template (`templates/test_spec_template.md`), and living requirements developer guidelines (`docs/requirements.md`) SHALL define and enforce mandatory presence of three core attributes in the requirement header metadata:
+       - **Priority**: `Critical`, `High`, `Medium`, or `Low`.
+       - **Type**: `Functional` or `Non-Functional`.
+       - **Verification Method**: `Unit`, `Integration`, `On-Device Manual`, `Review`, `Formal Analysis` (or composite list thereof).
+  2. *Automated Attribute Verification Tooling (`REQ-PRO-077.2`)*:
+     • `tools/verify_requirement_governance.py` SHALL implement `verify_requirement_attributes()` to parse requirement sections across all domain shards (`docs/requirements/*.md`) and inspect for presence of `- **Priority**:`, `- **Type**:`, and `- **Verification Method**:`, validating values against their permitted domain vocabularies.
+  3. *Legacy Requirement Warning Tolerance & Diff Enforcement (`REQ-PRO-077.3`)*:
+     • In default verification mode, existing legacy requirements that have not yet had attributes backfilled SHALL emit warning diagnostics without failing the process.
+     • Any newly added or modified requirement identified in the git diff against the baseline branch SHALL strictly mandate valid Priority, Type, and Verification Method attributes; missing or invalid attributes SHALL immediately fail verification with exit code 1.
+  4. *Strict Attribute Enforcement CLI Flag (`REQ-PRO-077.4`)*:
+     • `tools/verify_requirement_governance.py` SHALL support `--enforce-attributes` / `--fail-on-missing-attributes` command-line flags causing verification to exit with code 1 if ANY requirement in the repository lacks valid Priority, Type, or Verification Method attributes.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Net-new requirement `REQ-PRO-077` (`REQ-PRO-077.1`–`REQ-PRO-077.4`). Targets `tools/verify_requirement_governance.py`, `.agents/skills/stage2-req-test-spec/SKILL.md`, `templates/test_spec_template.md`, and `docs/requirements.md`.
+  2. *Historical Origin & Commit Trace*: Sprint 2026-46.4 via ticket `ATT-6136` under Epic `ATT-6119` (ASPICE CL2 – Evidence Integrity & Bidirectional Traceability, Remediation A-09).
+  3. *Root Reason for Existing Formulation*: ASPICE 4.0 assessment finding A-09 identified that requirements had no priority, no type (functional/non-functional), and no verification method.
+  4. *Preservation of Core Invariants*: Existing master table parity, unique ID checks, dangling reference checks, and Python 3 stdlib execution preserved; zero production Android runtime code changes.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* any newly authored or modified requirement in the git diff,
+  • *When* `tools/verify_requirement_governance.py` runs,
+  • *Then* missing Priority, Type, or Verification Method fails verification with exit code 1.
+  • *Given* legacy requirements without attributes,
+  • *When* `tools/verify_requirement_governance.py` runs in default mode,
+  • *Then* warning diagnostics are emitted without failing verification.
+  • *Given* `--enforce-attributes` / `--fail-on-missing-attributes`,
+  • *When* `tools/verify_requirement_governance.py` runs,
+  • *Then* any missing attribute in the entire repository fails verification.
+  • *Given* `tools/test_verify_requirement_governance.py`,
+  • *When* executed via pytest/unittest,
+  • *Then* 100% of unit tests pass.
+- **Invariants**: Pure Python 3 standard library; zero Android runtime changes; zero regression in existing governance checks.
+
 
 
 

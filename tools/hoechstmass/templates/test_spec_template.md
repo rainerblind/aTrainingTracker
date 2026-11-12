@@ -18,16 +18,21 @@
 ### 1.1 Problem Statement & Rationale
 <!-- Motivation and problem addressed by this requirement -->
 
-### 1.2 Functional & Architectural Requirements
+### 1.2 Attributes
+- **Priority**: [Critical | High | Medium | Low]
+- **Type**: [Functional | Non-Functional]
+- **Verification Method**: [Unit | Integration | On-Device Manual | Review | Formal Analysis]
+
+### 1.3 Functional & Architectural Requirements
 <!-- System SHALL / MUST criteria broken down into structured, numbered items -->
 
-### 1.3 Acceptance Criteria (Given-When-Then)
+### 1.4 Acceptance Criteria (Given-When-Then)
 * **Criterion 1**:
   * *Given* [precondition]
   * *When* [action triggered]
   * *Then* [expected outcome]
 
-### 1.4 System Invariants
+### 1.5 System Invariants
 <!-- Hard constraints, e.g. backward compatibility, zero regression, thread safety -->
 
 ---

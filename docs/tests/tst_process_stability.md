@@ -2287,6 +2287,21 @@
   4. *CLI Integration & Living Documentation Parity Test (`TST-PRO-076.4`, tools/verify_requirement_governance.py & AspiceSweAuditContractTest.kt)*:
   • Verify end-to-end execution of `python3 tools/verify_requirement_governance.py --verify-sys-trace` and assert 100% master index parity across all living documentation shards.
 
+### TST-PRO-077: **Requirement Attributes Governance Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-PRO-077`
+- **Scope**: Tooling Unit Tests, Contract Tests & Governance Integration
+- **Component**: `tools/verify_requirement_governance.py`, `tools/test_verify_requirement_governance.py`, `.agents/skills/stage2-req-test-spec/SKILL.md`, `templates/test_spec_template.md`, `docs/requirements.md`
+- **Jira**: `ATT-6136`
+- **Test Description**:
+  1. *Requirement Attribute Presence & Domain Validation Unit Test (`TST-PRO-077.1`, test_verify_requirement_governance.py)*:
+  • Verify that `verify_requirement_attributes()` passes when all three attributes (Priority, Type, Verification Method) are present and valid, and fails when any attribute is missing, empty, or has an invalid value.
+  2. *Git Diff Enforcement & Legacy Tolerance Unit Test (`TST-PRO-077.2`, test_verify_requirement_governance.py)*:
+  • Verify that diff-based checking enforces all three attributes on newly added or modified requirements while emitting warnings for untouched legacy requirements.
+  3. *Strict CLI Enforcement Flag Test (`TST-PRO-077.3`, test_verify_requirement_governance.py)*:
+  • Verify that `--enforce-attributes` / `--fail-on-missing-attributes` fails with exit code 1 if any requirement in the repository lacks valid attributes.
+  4. *Template & Living Documentation Parity Audit (`TST-PRO-077.4`, tools/verify_requirement_governance.py)*:
+  • Verify that Stage 2 skill template, deliverable template, and `docs/requirements.md` contain standardized attribute fields and living documentation master tables maintain 100% parity.
+
 
 
 

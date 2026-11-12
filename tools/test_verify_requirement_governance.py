@@ -60,6 +60,11 @@ from tools.verify_requirement_governance import (
     verify_system_software_traceability,
     SWE_DERIVED_PREFIXES,
     SYSTEM_REFINED_PREFIXES,
+    ALLOWED_PRIORITIES,
+    ALLOWED_TYPES,
+    ALLOWED_VERIFICATION_METHODS,
+    find_missing_requirement_attributes,
+    verify_requirement_attributes,
 )
 
 
@@ -1666,6 +1671,164 @@ diff --git a/docs/requirements/req_process_stability.md b/docs/requirements/req_
         self.assertEqual(report["sysreq_count"], 12)
         self.assertEqual(len(report["dangling_sysreq_citations"]), 0)
         self.assertEqual(len(report["uncovered_sysreqs"]), 0)
+
+    def test_scenario_44_requirement_attributes_validation(self):
+        """TST-PRO-077.1: Verify attribute presence and domain validation for Priority, Type, and Verification Method."""
+        valid_content = """### REQ-VAL-001: Valid Requirement [Verified]
+- **Tests**: `TST-VAL-001`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit / Review
+- **Implementation**: `ValidComponent.kt`
+"""
+        missing_pri = """### REQ-VAL-002: Missing Priority [Planned]
+- **Tests**: `TST-VAL-002`
+- **Type**: Non-Functional
+- **Verification Method**: Integration
+"""
+        missing_type = """### REQ-VAL-003: Missing Type [Planned]
+- **Tests**: `TST-VAL-003`
+- **Priority**: Critical
+- **Verification Method**: Formal Analysis
+"""
+        missing_vm = """### REQ-VAL-004: Missing Verification Method [Planned]
+- **Tests**: `TST-VAL-004`
+- **Priority**: Low
+- **Type**: Functional
+"""
+        invalid_values = """### REQ-VAL-005: Invalid Attribute Values [Planned]
+- **Tests**: `TST-VAL-005`
+- **Priority**: SuperHigh
+- **Type**: UnknownType
+- **Verification Method**: HandWaving
+"""
+
+        # 1. Valid requirement passes
+        shards_valid = {"docs/requirements/req_valid.md": valid_content}
+        defective_valid = find_missing_requirement_attributes(req_shards=shards_valid)
+        self.assertEqual(len(defective_valid), 0)
+
+        # 2. Missing Priority detected
+        shards_mis_pri = {"docs/requirements/req_test.md": missing_pri}
+        defective_pri = find_missing_requirement_attributes(req_shards=shards_mis_pri)
+        self.assertEqual(len(defective_pri), 1)
+        self.assertEqual(defective_pri[0]["req_id"], "REQ-VAL-002")
+        self.assertIn("Priority", defective_pri[0]["missing"])
+
+        # 3. Missing Type detected
+        shards_mis_type = {"docs/requirements/req_test.md": missing_type}
+        defective_type = find_missing_requirement_attributes(req_shards=shards_mis_type)
+        self.assertEqual(len(defective_type), 1)
+        self.assertEqual(defective_type[0]["req_id"], "REQ-VAL-003")
+        self.assertIn("Type", defective_type[0]["missing"])
+
+        # 4. Missing Verification Method detected
+        shards_mis_vm = {"docs/requirements/req_test.md": missing_vm}
+        defective_vm = find_missing_requirement_attributes(req_shards=shards_mis_vm)
+        self.assertEqual(len(defective_vm), 1)
+        self.assertEqual(defective_vm[0]["req_id"], "REQ-VAL-004")
+        self.assertIn("Verification Method", defective_vm[0]["missing"])
+
+        # 5. Invalid values detected
+        shards_invalid = {"docs/requirements/req_test.md": invalid_values}
+        defective_inv = find_missing_requirement_attributes(req_shards=shards_invalid)
+        self.assertEqual(len(defective_inv), 1)
+        self.assertEqual(defective_inv[0]["req_id"], "REQ-VAL-005")
+        self.assertEqual(len(defective_inv[0]["invalid"]), 3)
+
+    def test_scenario_45_diff_attribute_enforcement_and_legacy_tolerance(self):
+        """TST-PRO-077.2: Verify diff enforcement fails on new REQs without attributes, while legacy REQs pass with warning."""
+        shard_content = """### REQ-LEG-001: Legacy Item [Verified]
+- **Tests**: `TST-LEG-001`
+- **Implementation**: `Legacy.kt`
+
+### REQ-NEW-001: New Item [Planned]
+- **Tests**: `TST-NEW-001`
+- **Implementation**: `New.kt`
+"""
+        shards = {"docs/requirements/req_test.md": shard_content}
+
+        # Diff adds REQ-NEW-001 without attributes
+        diff_text = """diff --git a/docs/requirements/req_test.md b/docs/requirements/req_test.md
++### REQ-NEW-001: New Item [Planned]
++- **Tests**: `TST-NEW-001`
++- **Implementation**: `New.kt`
+"""
+        ok, diag = verify_requirement_attributes(
+            req_shards=shards,
+            diff_text=diff_text,
+            enforce_attributes=False,
+        )
+        self.assertFalse(ok)
+        self.assertTrue(any("REQ-NEW-001" in msg and "ERROR" in msg for msg in diag))
+
+        # Now give REQ-NEW-001 valid attributes in shard
+        shard_content_fixed = """### REQ-LEG-001: Legacy Item [Verified]
+- **Tests**: `TST-LEG-001`
+- **Implementation**: `Legacy.kt`
+
+### REQ-NEW-001: New Item [Planned]
+- **Tests**: `TST-NEW-001`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Implementation**: `New.kt`
+"""
+        shards_fixed = {"docs/requirements/req_test.md": shard_content_fixed}
+        ok_fixed, diag_fixed = verify_requirement_attributes(
+            req_shards=shards_fixed,
+            diff_text=diff_text,
+            enforce_attributes=False,
+        )
+        self.assertTrue(ok_fixed, f"Expected pass with legacy tolerance, got: {diag_fixed}")
+        self.assertTrue(any("WARNING" in msg and "REQ-LEG-001" in msg for msg in diag_fixed))
+        self.assertTrue(any("1 legacy requirements tolerated" in msg for msg in diag_fixed))
+
+    def test_scenario_46_strict_attribute_enforcement_flag(self):
+        """TST-PRO-077.3: Verify --enforce-attributes fails if ANY legacy requirement lacks attributes."""
+        shard_content = """### REQ-LEG-001: Legacy Item [Verified]
+- **Tests**: `TST-LEG-001`
+- **Implementation**: `Legacy.kt`
+"""
+        shards = {"docs/requirements/req_test.md": shard_content}
+
+        # Default mode (not enforced, no diff) -> passes with warning
+        ok_def, diag_def = verify_requirement_attributes(
+            req_shards=shards,
+            diff_text="",
+            enforce_attributes=False,
+        )
+        self.assertTrue(ok_def)
+        self.assertTrue(any("WARNING" in msg for msg in diag_def))
+
+        # Strict mode (--enforce-attributes) -> fails
+        ok_strict, diag_strict = verify_requirement_attributes(
+            req_shards=shards,
+            diff_text="",
+            enforce_attributes=True,
+        )
+        self.assertFalse(ok_strict)
+        self.assertTrue(any("ERROR" in msg and "REQ-LEG-001" in msg for msg in diag_strict))
+
+    def test_scenario_47_req_pro_077_living_doc_attribute_presence(self):
+        """TST-PRO-077.4: Verify REQ-PRO-077 defines Priority, Type, and Verification Method in living documentation."""
+        repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+        ps_path = os.path.join(repo_root, "docs", "requirements", "req_process_stability.md")
+        self.assertTrue(os.path.exists(ps_path))
+
+        with open(ps_path, "r", encoding="utf-8") as f:
+            lines = f.readlines()
+
+        shards = {"docs/requirements/req_process_stability.md": lines}
+        defective = find_missing_requirement_attributes(req_shards=shards)
+
+        # Filter defective items to check if REQ-PRO-077 is among them
+        defective_pro_077 = [d for d in defective if d["req_id"] == "REQ-PRO-077"]
+        self.assertEqual(
+            len(defective_pro_077),
+            0,
+            f"REQ-PRO-077 must have valid attributes, but was flagged: {defective_pro_077}",
+        )
 
 
 

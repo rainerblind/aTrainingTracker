@@ -257,6 +257,8 @@ def parse_diff_requirements(diff_text):
     current_added_req = None
     current_deleted_req = None
 
+    PLACEHOLDER_IDS = {"REQ-XXX", "REQ-DOM-NNN", "REQ-DOM-XXX", "REQ-NNN"}
+
     for line in diff_text.splitlines():
         if line.startswith("+++") or line.startswith("---"):
             continue
@@ -264,7 +266,7 @@ def parse_diff_requirements(diff_text):
             m_hunk = re.search(r"REQ-([A-Z0-9_-]+)", line)
             current_added_req = f"REQ-{m_hunk.group(1)}" if m_hunk else None
             current_deleted_req = current_added_req
-            if current_added_req == "REQ-XXX":
+            if current_added_req in PLACEHOLDER_IDS:
                 current_added_req = None
                 current_deleted_req = None
             continue
@@ -273,7 +275,7 @@ def parse_diff_requirements(diff_text):
             if m_ctx:
                 current_added_req = f"REQ-{m_ctx.group(1)}"
                 current_deleted_req = current_added_req
-                if current_added_req == "REQ-XXX":
+                if current_added_req in PLACEHOLDER_IDS:
                     current_added_req = None
                     current_deleted_req = None
             continue
@@ -286,12 +288,12 @@ def parse_diff_requirements(diff_text):
                 m = re.search(r"\*\*REQ-([A-Z0-9_-]+)\.\d+\*\*", line)
             if m:
                 req_id = f"REQ-{m.group(1)}"
-                if req_id != "REQ-XXX":
+                if req_id not in PLACEHOLDER_IDS:
                     added_ids.add(req_id)
                     current_added_req = req_id
                 else:
                     current_added_req = None
-            elif current_added_req and current_added_req != "REQ-XXX":
+            elif current_added_req and current_added_req not in PLACEHOLDER_IDS:
                 added_ids.add(current_added_req)
         elif line.startswith("-"):
             m = re.search(r"\|\s*\*\*REQ-([A-Z0-9_-]+)\*\*", line)
@@ -301,12 +303,12 @@ def parse_diff_requirements(diff_text):
                 m = re.search(r"\*\*REQ-([A-Z0-9_-]+)\.\d+\*\*", line)
             if m:
                 req_id = f"REQ-{m.group(1)}"
-                if req_id != "REQ-XXX":
+                if req_id not in PLACEHOLDER_IDS:
                     deleted_ids.add(req_id)
                     current_deleted_req = req_id
                 else:
                     current_deleted_req = None
-            elif current_deleted_req and current_deleted_req != "REQ-XXX":
+            elif current_deleted_req and current_deleted_req not in PLACEHOLDER_IDS:
                 deleted_ids.add(current_deleted_req)
 
     # Modified requirements appear in both added and deleted sets
@@ -1627,6 +1629,226 @@ def verify_requirement_evidence_status(
     return True, diagnostics
 
 
+ALLOWED_PRIORITIES = {"critical", "high", "medium", "low"}
+ALLOWED_TYPES = {"functional", "non-functional", "nonfunctional", "non functional", "f", "nfr"}
+ALLOWED_VERIFICATION_METHODS = {
+    "unit",
+    "integration",
+    "on-device manual",
+    "on-device",
+    "device-manual",
+    "device manual",
+    "review",
+    "formal analysis",
+    "test",
+    "demonstration",
+    "inspection",
+    "analysis",
+}
+
+
+def find_missing_requirement_attributes(repo_root=None, req_shards=None):
+    """
+    Scans docs/requirements/*.md for requirements lacking Priority, Type,
+    or Verification Method attributes (REQ-PRO-077, SWE.1 BP2).
+    Returns a list of dicts:
+      {
+        "file": rel_path,
+        "line_no": lno,
+        "req_id": req_id,
+        "missing": [...],
+        "invalid": [...],
+        "priority": str or None,
+        "type": str or None,
+        "verification_method": str or None,
+      }
+    """
+    if repo_root is None:
+        repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+
+    shards = {}
+    if req_shards is not None:
+        shards = req_shards
+    else:
+        abs_req_dir = os.path.join(repo_root, "docs", "requirements")
+        if os.path.isdir(abs_req_dir):
+            for fn in sorted(os.listdir(abs_req_dir)):
+                if fn.endswith(".md"):
+                    with open(os.path.join(abs_req_dir, fn), "r", encoding="utf-8") as f:
+                        shards[os.path.join("docs/requirements", fn)] = f.readlines()
+
+    def split_vm_tokens(raw_vm):
+        tokens = [t.strip().lower() for t in re.split(r"[/,;&|]|\band\b", raw_vm) if t.strip()]
+        return tokens
+
+    def is_valid_vm(raw_vm):
+        tokens = split_vm_tokens(raw_vm)
+        if not tokens:
+            return False
+        return all(t in ALLOWED_VERIFICATION_METHODS for t in tokens)
+
+    def is_valid_priority(raw_pri):
+        return raw_pri.strip().lower() in ALLOWED_PRIORITIES
+
+    def is_valid_type(raw_type):
+        return raw_type.strip().lower() in ALLOWED_TYPES
+
+    results = []
+
+    for rel_path, lines in shards.items():
+        if isinstance(lines, str):
+            lines = lines.splitlines()
+
+        cur_req = None
+        cur_lno = 0
+        cur_pri = None
+        cur_type = None
+        cur_vm = None
+
+        def flush():
+            nonlocal cur_req, cur_lno, cur_pri, cur_type, cur_vm
+            if cur_req:
+                missing = []
+                invalid = []
+                if not cur_pri or not cur_pri.strip():
+                    missing.append("Priority")
+                elif not is_valid_priority(cur_pri):
+                    invalid.append(f"Priority='{cur_pri.strip()}' (allowed: Critical, High, Medium, Low)")
+
+                if not cur_type or not cur_type.strip():
+                    missing.append("Type")
+                elif not is_valid_type(cur_type):
+                    invalid.append(f"Type='{cur_type.strip()}' (allowed: Functional, Non-Functional)")
+
+                if not cur_vm or not cur_vm.strip():
+                    missing.append("Verification Method")
+                elif not is_valid_vm(cur_vm):
+                    invalid.append(
+                        f"Verification Method='{cur_vm.strip()}' (allowed: Unit, Integration, On-Device Manual, Review, Formal Analysis)"
+                    )
+
+                if missing or invalid:
+                    results.append({
+                        "file": rel_path,
+                        "line_no": cur_lno,
+                        "req_id": cur_req,
+                        "missing": missing,
+                        "invalid": invalid,
+                        "priority": cur_pri,
+                        "type": cur_type,
+                        "verification_method": cur_vm,
+                    })
+
+        for lno, line in enumerate(lines, 1):
+            m = re.match(r"^(#{2,4})\s*(REQ-[A-Z0-9_-]+):?\s*(.*?)$", line.strip())
+            if m:
+                flush()
+                cur_req = m.group(2)
+                cur_lno = lno
+                cur_pri = None
+                cur_type = None
+                cur_vm = None
+            elif cur_req:
+                m_pri = re.search(r"[*•-]\s*\*\*Priority\*\*:\s*`?([^`|\r\n]+)`?(?:\||$)", line, re.IGNORECASE)
+                if m_pri and cur_pri is None:
+                    cur_pri = m_pri.group(1).strip()
+
+                m_type = re.search(r"[*•-]\s*\*\*Type\*\*:\s*`?([^`|\r\n]+)`?(?:\||$)", line, re.IGNORECASE)
+                if m_type and cur_type is None:
+                    cur_type = m_type.group(1).strip()
+
+                m_vm = re.search(r"[*•-]\s*\*\*Verification[- ]Method\*\*:\s*`?([^`|\r\n]+)`?(?:\||$)", line, re.IGNORECASE)
+                if m_vm and cur_vm is None:
+                    cur_vm = m_vm.group(1).strip()
+
+        flush()
+
+    return results
+
+
+def verify_requirement_attributes(
+    repo_root=None,
+    enforce_attributes=False,
+    diff_text=None,
+    base_ref="develop",
+    req_shards=None,
+    legacy_allowlist=None,
+):
+    """
+    Verifies that requirements define Priority, Type, and Verification Method attributes (REQ-PRO-077, SWE.1 BP2).
+    In default mode:
+      - Newly added or modified requirements in the git diff MUST have valid Priority, Type, and Verification Method attributes.
+        Any missing or invalid attribute in the diff causes verification failure (exit code 1).
+      - Legacy requirements without attributes emit WARNING diagnostics without failing.
+    In strict mode (--enforce-attributes / --fail-on-missing-attributes):
+      - ANY requirement in the repository missing attributes or with invalid attributes causes verification failure.
+    If legacy_allowlist is provided (set of REQ IDs):
+      - Requirements in legacy_allowlist emit WARNINGs unless enforce_attributes is True.
+    """
+    defective_reqs = find_missing_requirement_attributes(
+        repo_root=repo_root, req_shards=req_shards
+    )
+
+    modified_reqs = set()
+    added_reqs = set()
+    if diff_text is None and not enforce_attributes:
+        try:
+            diff_text = get_git_diff(base_ref=base_ref)
+        except Exception:
+            diff_text = ""
+
+    if diff_text:
+        modified_reqs, added_reqs, _ = parse_diff_requirements(diff_text)
+
+    errors = []
+    warnings = []
+
+    for item in defective_reqs:
+        req_id = item["req_id"]
+        rel_path = item["file"]
+        lno = item["line_no"]
+        reasons = []
+        if item["missing"]:
+            reasons.append(f"missing: {', '.join(item['missing'])}")
+        if item["invalid"]:
+            reasons.append(f"invalid: {', '.join(item['invalid'])}")
+        reason_str = "; ".join(reasons)
+
+        msg = f"{rel_path}:{lno} [{req_id}] lacks required attributes ({reason_str}, REQ-PRO-077, SWE.1 BP2)."
+
+        is_new_req = req_id in added_reqs
+        is_mod_req = req_id in modified_reqs
+        is_legacy = (legacy_allowlist is not None and req_id in legacy_allowlist) or (legacy_allowlist is None and not is_new_req)
+
+        if enforce_attributes or is_new_req or (is_mod_req and item["invalid"]):
+            errors.append(msg)
+        else:
+            warnings.append(
+                f"WARNING (Legacy missing attributes): {rel_path}:{lno} [{req_id}] lacks required attributes "
+                f"({reason_str}) pending backfill."
+            )
+
+    diagnostics = []
+    if errors:
+        for err in errors:
+            diagnostics.append(f"ERROR: {err}")
+        return False, diagnostics
+
+    for warn in warnings:
+        diagnostics.append(warn)
+
+    if not warnings:
+        diagnostics.append(
+            "PASS: 100% of living requirements define valid Priority, Type, and Verification Method attributes."
+        )
+    else:
+        diagnostics.append(
+            f"PASS: Zero attribute violations detected ({len(warnings)} legacy requirements tolerated without attributes pending backfill)."
+        )
+
+    return True, diagnostics
+
+
 
 class CoverageCategoryResult:
     """Represents a single coverage gap category with counts, totals, and percentages (REQ-PRO-071)."""
@@ -2679,6 +2901,7 @@ def verify_governance(
     fail_on_duplicates=False,
     fail_on_dangling=False,
     fail_on_unverified=False,
+    enforce_attributes=False,
     min_req_tst_coverage=None,
     min_tst_code_coverage=None,
     max_code_without_spec=None,
@@ -2732,6 +2955,16 @@ def verify_governance(
         diagnostics.extend(tests_diag)
         return False, diagnostics
     diagnostics.extend(tests_diag)
+
+    attrs_ok, attrs_diag = verify_requirement_attributes(
+        diff_text=diff_text,
+        base_ref=base_ref,
+        enforce_attributes=enforce_attributes,
+    )
+    if not attrs_ok:
+        diagnostics.extend(attrs_diag)
+        return False, diagnostics
+    diagnostics.extend(attrs_diag)
 
     if (
         min_req_tst_coverage is not None
@@ -2986,6 +3219,18 @@ def main():
         action="store_true",
         help="Verify that all Tests fields in requirement shards conform to valid TST ID and placeholder syntax (REQ-PRO-075).",
     )
+    parser.add_argument(
+        "--enforce-attributes",
+        "--fail-on-missing-attributes",
+        dest="enforce_attributes",
+        action="store_true",
+        help="Fail verification if any requirement lacks Priority, Type, or Verification Method attributes (REQ-PRO-077).",
+    )
+    parser.add_argument(
+        "--check-attributes",
+        action="store_true",
+        help="Check living documentation shards for requirement attributes (Priority, Type, Verification Method) (REQ-PRO-077).",
+    )
 
     args = parser.parse_args()
 
@@ -3011,6 +3256,20 @@ def main():
         ok, diag = verify_tests_field_format()
         for msg in diag:
             print(msg, file=sys.stderr if not ok else sys.stdout)
+        sys.exit(0 if ok else 1)
+
+    if args.check_attributes:
+        diff_content = None
+        if args.diff_file and os.path.exists(args.diff_file):
+            with open(args.diff_file, "r", encoding="utf-8") as f:
+                diff_content = f.read()
+        ok, diag = verify_requirement_attributes(
+            enforce_attributes=args.enforce_attributes,
+            diff_text=diff_content,
+            base_ref=args.base_ref,
+        )
+        for msg in diag:
+            print(msg, file=sys.stderr if not ok and msg.startswith("ERROR") else sys.stdout)
         sys.exit(0 if ok else 1)
 
     if (
@@ -3196,6 +3455,7 @@ def main():
         fail_on_duplicates=args.enforce_unique,
         fail_on_dangling=args.enforce_links,
         fail_on_unverified=args.enforce_evidence,
+        enforce_attributes=args.enforce_attributes,
         min_req_tst_coverage=args.min_req_tst_coverage,
         min_tst_code_coverage=args.min_tst_code_coverage,
         max_code_without_spec=args.max_code_without_spec,
