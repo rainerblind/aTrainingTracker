@@ -1897,7 +1897,7 @@ The workflow SHALL mandate that:
 - **Implementation**: Restructure living documentation into domain-sharded multi-line markdown sections and upgrade governance tooling to support dual-format verification.
 - **Rationale**: The system living specification architecture and governance tooling SHALL restructure monolithic single-file tables into modular domain-sharded documents, introduce multi-line Markdown heading sections, and support dual-format verification in governance tools (ATT-4594, Parent Epic ATT-232, refining `REQ-PRO-026` and `REQ-PRO-027`):
 1. *Domain Directory Sharding (`REQ-PRO-028.1`)*:
-• The living documentation SHALL be sharded into 7 domain-specific files under `docs/requirements/` and `docs/tests/` (`req_tracking_cockpit.md`, `req_aftermath_periods.md`, `req_maps_navigation.md`, `req_data_migration_export.md`, `req_settings_profiles.md`, `req_ui_design_system.md`, `req_process_stability.md`).
+• The living documentation SHALL be sharded into 9 domain-specific files under `docs/requirements/` and `docs/tests/` (`req_tracking_cockpit.md`, `req_aftermath_periods.md`, `req_maps_navigation.md`, `req_data_migration_export.md`, `req_settings_profiles.md`, `req_ui_design_system.md`, `req_process_stability.md`, `req_aftermath_reviews.md`, `req_store_presence.md`).
 • `docs/requirements.md` and `docs/tests.md` SHALL serve as lightweight master indices referencing all domain shards.
 2. *Multi-Line Heading & Bullet Section Format (`REQ-PRO-028.2`)*:
 • Monolithic single-line pipe-delimited table rows SHALL be replaced with structured multi-line Markdown heading sections (`### REQ-XXX: ... [Status]` and `### TST-XXX: ... [Status]`), eliminating single-line bloat and enabling token-efficient granular modifications.
@@ -1915,7 +1915,7 @@ The workflow SHALL mandate that:
 **Acceptance Criteria (Given-When-Then)**:
 • *Given* `docs/requirements/` and `docs/tests/`,
 • *When* inspected,
-• *Then* 7 domain-sharded markdown files exist in each directory, and master indices provide links and counts.
+• *Then* 9 domain-sharded markdown files exist in each directory, and master indices provide links and counts.
 • *Given* living specification entries in domain shards,
 • *When* inspected,
 • *Then* entries use multi-line heading format `### REQ-XXX: ... [Status]`.

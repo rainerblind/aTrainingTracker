@@ -1262,16 +1262,18 @@
 ### TST-PRO-021: **Living Documentation Sharding, Multi-Line Markdown Section Formatting & Dual-Format Tooling Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-PRO-028`
 - **Component**: **Living Documentation Sharding, Multi-Line Markdown Section Formatting & Dual-Format Tooling Verification Suite**
-- **Jira**: ``ATT-4594``
+- **Jira**: ``ATT-4594``, ``ATT-6140``
 - **Test Description**:
   1. *Domain Shard Structure & Master Index Verification (`TST-PRO-021.1`)*:
-  • Verify existence of 7 domain files in `docs/requirements/` and `docs/tests/`, and verify master index tables link to all shards.
+  • Verify existence of 9 domain files in `docs/requirements/` and `docs/tests/` (including `req_store_presence.md` and `tst_store_presence.md`), and verify master index tables link to all shards.
   2. *Bitwise ID & Entity Migration Parity Test (`TST-PRO-021.2`)*:
   • Verify `tools/shard_living_docs.py` preserves 100% of all 762 `REQ-` and 764 `TST-` IDs, status tags, and sub-clauses.
   3. *Dual-Format Governance Verification (`TST-PRO-021.3`)*:
   • Verify `tools/verify_requirement_governance.py` and `tools/jira_util.py` detect requirements, diffs, archaeology sections, and update status from `[Planned]` to `[Verified]` in domain-sharded multi-line files.
   4. *Clean-Room Governance & Full Suite Regression Execution (`TST-PRO-021.4`)*:
   • Run `python3 tools/verify_requirement_governance.py` asserting exit code 0; execute `./gradlew testDebugUnitTest` verifying 100% test pass rate.
+  5. *Prose Shard Count Preamble Verification (`TST-PRO-021.5`)*:
+  • Verify `verify_master_table_parity()` in `tools/verify_requirement_governance.py` validates that prose stated shard counts match filesystem shard counts with exit code 0 on parity and exit code 1 on mismatch.
 
 ### TST-PRO-022: **AAA Story Point Estimation, CLI Operations, Complexity Split Guardrail & Sprint Capacity Tracking Verification** [Verified]
 - **Requirement(s)**: `REQ-PRO-029`

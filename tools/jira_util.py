@@ -1160,10 +1160,16 @@ def recalculate_master_index_tables(repo_root=None):
                         rf"| {t} | {v} | {p} |\1",
                         line,
                     )
+            elif "links to the " in line:
+                new_line = re.sub(
+                    r"(links to the )\d+( domain-sharded)",
+                    rf"\g<1>{len(shard_counts)}\g<2>",
+                    line,
+                )
             elif "Total Living " in line:
                 new_line = re.sub(
-                    r"(\*\*Total Living (?:Requirements|Tests)\*\*:\s*)\d+(\s*across \d+ domain shards\.)",
-                    rf"\g<1>{grand_total}\g<2>",
+                    r"(\*\*Total Living (?:Requirements|Tests)\*\*:\s*)\d+(\s*across )\d+(\s*domain shards\.)",
+                    rf"\g<1>{grand_total}\g<2>{len(shard_counts)}\g<3>",
                     line,
                 )
             if new_line != line:

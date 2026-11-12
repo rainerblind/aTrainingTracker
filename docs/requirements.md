@@ -1,6 +1,6 @@
 # aTrainingTracker: Living Requirements Specification (Master Index)
 
-This master index links to the 7 domain-sharded requirement files under `docs/requirements/`.
+This master index links to the 9 domain-sharded requirement files under `docs/requirements/`.
 Living requirements use multi-line Markdown headings (`### REQ-XXX: Title [Status]`) to eliminate single-line table bloat (ATT-4594, `REQ-PRO-028`).
 
 ## Domain Requirement Shards
@@ -15,7 +15,7 @@ Living requirements use multi-line Markdown headings (`### REQ-XXX: Title [Statu
 | [UI Components & Design System](requirements/req_ui_design_system.md) | Jetpack Compose design system, UI components, typography, dialogs, gestures, and layout contracts. | `UI`, `UNT` | 442 | 442 | 0 |
 | [Engineering Process, Stability & Architecture](requirements/req_process_stability.md) | ASPICE governance, infinite context, crash stability, build architecture, security, and developer tools. | `ARC`, `BLD`, `BUG`, `INT`, `LIV`, `LOG`, `MAN`, `NFR`, `PRO`, `REG`, `SEC`, `STB`, `STR`, `TOOL`, `TST` | 112 | 97 | 15 |
 | [Jubilee Milestones & App Reviews](requirements/req_aftermath_reviews.md) | Milestone workout auto-naming, jubilee achievements, Google Play in-app reviews, athlete feedback, and supporter tier promotions. | `REV` | 12 | 12 | 0 |
-| [Project Governance & Store Presence](requirements/req_project_governance.md) | Store presence, Google Play listings, screenshots, store metadata contract testing, and release governance. | `STP` | 10 | 10 | 0 |
+| [Store Presence](requirements/req_store_presence.md) | Store presence, Google Play listings, screenshots, store metadata contract testing, and release governance. | `STP` | 10 | 10 | 0 |
 
 **Total Living Requirements**: 1048 across 9 domain shards.
 

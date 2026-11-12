@@ -318,6 +318,14 @@ def verify_master_table_parity(repo_root=None):
         grand_total = sum(c[0] for c in shard_counts.values())
         shards_checked = 0
         for lno, line in enumerate(master_lines, 1):
+            m_preamble = re.search(r"links to the (\d+) domain-sharded", line)
+            if m_preamble:
+                stated_preamble = int(m_preamble.group(1))
+                if stated_preamble != len(shard_counts):
+                    errors.append(
+                        f"{master_rel}:{lno}: Preamble shard count mismatch: "
+                        f"Stated={stated_preamble}, Actual filesystem shard count={len(shard_counts)}."
+                    )
             m_link = re.search(r"\((?:requirements|tests)/((?:req|tst)_[^)]+\.md)\)", line)
             if m_link:
                 s_name = m_link.group(1)
@@ -345,6 +353,14 @@ def verify_master_table_parity(repo_root=None):
                         errors.append(
                             f"{master_rel}:{lno}: Grand total mismatch: "
                             f"Reported={reported_total}, Actual parsed sum={grand_total}."
+                        )
+                m_shards = re.search(r"across (\d+) domain shards", line)
+                if m_shards:
+                    reported_shards = int(m_shards.group(1))
+                    if reported_shards != len(shard_counts):
+                        errors.append(
+                            f"{master_rel}:{lno}: Summary shard count mismatch: "
+                            f"Reported={reported_shards}, Actual filesystem shard count={len(shard_counts)}."
                         )
 
         if shards_checked != len(shard_counts):
@@ -416,10 +432,16 @@ def recalculate_master_index_tables(repo_root=None):
                         rf"| {t} | {v} | {p} |\1",
                         line,
                     )
+            elif "links to the " in line:
+                new_line = re.sub(
+                    r"(links to the )\d+( domain-sharded)",
+                    rf"\g<1>{len(shard_counts)}\g<2>",
+                    line,
+                )
             elif "Total Living " in line:
                 new_line = re.sub(
-                    r"(\*\*Total Living (?:Requirements|Tests)\*\*:\s*)\d+(\s*across \d+ domain shards\.)",
-                    rf"\g<1>{grand_total}\g<2>",
+                    r"(\*\*Total Living (?:Requirements|Tests)\*\*:\s*)\d+(\s*across )\d+(\s*domain shards\.)",
+                    rf"\g<1>{grand_total}\g<2>{len(shard_counts)}\g<3>",
                     line,
                 )
             if new_line != line:

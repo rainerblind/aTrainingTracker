@@ -20,7 +20,7 @@ DOMAINS = [
         "title": "Tracking & Live Sensor Cockpit",
         "req_file": "docs/requirements/req_tracking_cockpit.md",
         "tst_file": "docs/tests/tst_tracking_cockpit.md",
-        "prefixes": {"TRK", "CON", "FIL", "SEN", "FUSION", "STP", "WEA"},
+        "prefixes": {"TRK", "CON", "FIL", "SEN", "FUSION", "WEA"},
         "desc": "Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle.",
     },
     {
@@ -70,6 +70,22 @@ DOMAINS = [
         "tst_file": "docs/tests/tst_process_stability.md",
         "prefixes": {"PRO", "STB", "ARC", "BLD", "TOOL", "MAN", "TST", "STR", "SEC", "REG", "LIV", "BUG", "INT", "LOG", "NFR"},
         "desc": "ASPICE governance, infinite context, crash stability, build architecture, security, and developer tools.",
+    },
+    {
+        "key": "aftermath_reviews",
+        "title": "Jubilee Milestones & App Reviews",
+        "req_file": "docs/requirements/req_aftermath_reviews.md",
+        "tst_file": "docs/tests/tst_aftermath_reviews.md",
+        "prefixes": {"REV"},
+        "desc": "Milestone workout auto-naming, jubilee achievements, Google Play in-app reviews, athlete feedback, and supporter tier promotions.",
+    },
+    {
+        "key": "store_presence",
+        "title": "Store Presence",
+        "req_file": "docs/requirements/req_store_presence.md",
+        "tst_file": "docs/tests/tst_store_presence.md",
+        "prefixes": {"STP"},
+        "desc": "Store presence, Google Play listings, screenshots, store metadata contract testing, and release governance.",
     },
 ]
 
@@ -338,7 +354,7 @@ def generate_master_indices(reqs, tests, repo_root):
     req_index_lines = [
         "# aTrainingTracker: Living Requirements Specification (Master Index)",
         "",
-        "This master index links to the 7 domain-sharded requirement files under `docs/requirements/`.",
+        f"This master index links to the {len(DOMAINS)} domain-sharded requirement files under `docs/requirements/`.",
         "Living requirements use multi-line Markdown headings (`### REQ-XXX: Title [Status]`) to eliminate single-line table bloat (ATT-4594, `REQ-PRO-028`).",
         "",
         "## Domain Requirement Shards",
@@ -357,7 +373,7 @@ def generate_master_indices(reqs, tests, repo_root):
         )
     req_index_lines.extend([
         "",
-        f"**Total Living Requirements**: {len(reqs)} across 7 domain shards.",
+        f"**Total Living Requirements**: {len(reqs)} across {len(DOMAINS)} domain shards.",
         "",
         "---",
         "",
@@ -382,7 +398,7 @@ def generate_master_indices(reqs, tests, repo_root):
     tst_index_lines = [
         "# aTrainingTracker: Living Test Specification & Verification Plan (Master Index)",
         "",
-        "This master index links to the 7 domain-sharded test specification files under `docs/tests/`.",
+        f"This master index links to the {len(DOMAINS)} domain-sharded test specification files under `docs/tests/`.",
         "Living test specifications use multi-line Markdown headings (`### TST-XXX: Title [Status]`) (ATT-4594, `REQ-PRO-028`).",
         "",
         "## Domain Test Shards",
@@ -401,7 +417,7 @@ def generate_master_indices(reqs, tests, repo_root):
         )
     tst_index_lines.extend([
         "",
-        f"**Total Living Tests**: {len(tests)} across 7 domain shards.",
+        f"**Total Living Tests**: {len(tests)} across {len(DOMAINS)} domain shards.",
         "",
         "---",
         "",
@@ -477,7 +493,7 @@ def main():
         if missing:
             print(f"FAIL: Missing shards: {missing}", file=sys.stderr)
             sys.exit(1)
-        print("PASS: All 14 domain shards exist.")
+        print(f"PASS: All {len(all_shards)} domain shards exist.")
         sys.exit(0)
 
     print("Parsing monolithic living documents...")
@@ -485,7 +501,7 @@ def main():
     tests = parse_tests_file(tst_src)
     print(f"Parsed {len(reqs)} requirements and {len(tests)} test cases.")
 
-    print("Writing 7 domain requirement shards and 7 domain test shards...")
+    print(f"Writing {len(DOMAINS)} domain requirement shards and {len(DOMAINS)} domain test shards...")
     write_domain_shards(reqs, tests, repo_root)
 
     print("Generating lightweight master index files...")
@@ -499,7 +515,7 @@ def main():
             print(f"  - {err}", file=sys.stderr)
         sys.exit(1)
 
-    print(f"SUCCESS: Successfully sharded {len(reqs)} REQ IDs and {len(tests)} TST IDs into 7 domains with 100% parity.")
+    print(f"SUCCESS: Successfully sharded {len(reqs)} REQ IDs and {len(tests)} TST IDs into {len(DOMAINS)} domains with 100% parity.")
 
 
 if __name__ == "__main__":

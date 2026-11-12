@@ -16,6 +16,7 @@ Scenarios tested:
 import os
 import subprocess
 import sys
+import tempfile
 import unittest
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
@@ -27,6 +28,8 @@ from tools.verify_requirement_governance import (
     verify_composable_islands,
     verify_repository_encapsulation,
     verify_architecture_and_system_specs,
+    verify_master_table_parity,
+    recalculate_master_index_tables,
 )
 
 
@@ -437,6 +440,42 @@ diff --git a/docs/requirements/req_process_stability.md b/docs/requirements/req_
         self.assertTrue(any("Composable islands detected" in d for d in diag))
         self.assertTrue(any("Repository encapsulation verified" in d for d in diag))
         self.assertTrue(any("Architecture & system specification" in d for d in diag))
+
+    def test_scenario_12_master_table_preamble_and_shard_count_parity(self):
+        """Scenario 12: verify_master_table_parity asserts preamble and summary shard counts (ATT-6140)."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            docs_req = os.path.join(tmpdir, "docs", "requirements")
+            os.makedirs(docs_req, exist_ok=True)
+            # Create a single shard
+            with open(os.path.join(docs_req, "req_test.md"), "w", encoding="utf-8") as f:
+                f.write("### REQ-TST-001: Sample [Verified]\n")
+
+            # Mismatched preamble (claims 7 domain-sharded, but filesystem has 1 shard)
+            master_content_mismatch = (
+                "# Living Requirements\n\n"
+                "This master index links to the 7 domain-sharded requirement files under `docs/requirements/`.\n\n"
+                "| Domain Shard | Prefixes | Total | Verified | Planned / Open |\n"
+                "| :--- | :--- | :---: | :---: | :---: |\n"
+                "| [Test](requirements/req_test.md) | `TST` | 1 | 1 | 0 |\n\n"
+                "**Total Living Requirements**: 1 across 7 domain shards.\n"
+            )
+            with open(os.path.join(tmpdir, "docs", "requirements.md"), "w", encoding="utf-8") as f:
+                f.write(master_content_mismatch)
+
+            ok, errs = verify_master_table_parity(repo_root=tmpdir)
+            self.assertFalse(ok)
+            self.assertTrue(any("Preamble shard count mismatch" in e for e in errs))
+            self.assertTrue(any("Summary shard count mismatch" in e for e in errs))
+
+            # Recalculate should synchronize both preamble and summary counts to actual 1 shard
+            recalculate_master_index_tables(repo_root=tmpdir)
+            ok_after, errs_after = verify_master_table_parity(repo_root=tmpdir)
+            self.assertTrue(ok_after, f"Expected parity after recalculate, got errors: {errs_after}")
+
+            with open(os.path.join(tmpdir, "docs", "requirements.md"), "r", encoding="utf-8") as f:
+                updated_text = f.read()
+            self.assertIn("links to the 1 domain-sharded requirement files", updated_text)
+            self.assertIn("across 1 domain shards.", updated_text)
 
 
 if __name__ == "__main__":

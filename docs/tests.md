@@ -1,6 +1,6 @@
 # aTrainingTracker: Living Test Specification & Verification Plan (Master Index)
 
-This master index links to the 7 domain-sharded test specification files under `docs/tests/`.
+This master index links to the 9 domain-sharded test specification files under `docs/tests/`.
 Living test specifications use multi-line Markdown headings (`### TST-XXX: Title [Status]`) (ATT-4594, `REQ-PRO-028`).
 
 ## Domain Test Shards
@@ -15,7 +15,7 @@ Living test specifications use multi-line Markdown headings (`### TST-XXX: Title
 | [UI Components & Design System](tests/tst_ui_design_system.md) | Jetpack Compose design system, UI components, typography, dialogs, gestures, and layout contracts. | `UI`, `UNT` | 462 | 462 | 0 |
 | [Engineering Process, Stability & Architecture](tests/tst_process_stability.md) | ASPICE governance, infinite context, crash stability, build architecture, security, and developer tools. | `ARC`, `BLD`, `BUG`, `INT`, `LIV`, `LOG`, `MAN`, `NFR`, `PRO`, `REG`, `SEC`, `STB`, `STR`, `TOOL`, `TST` | 129 | 128 | 1 |
 | [Jubilee Milestones & App Reviews](tests/tst_aftermath_reviews.md) | Milestone workout auto-naming, jubilee achievements, Google Play in-app reviews, athlete feedback, and supporter tier promotions. | `REV` | 13 | 13 | 0 |
-| [Project Governance & Store Presence](tests/tst_project_governance.md) | Store presence, Google Play listings, screenshots, store metadata contract testing, and release governance. | `STP` | 10 | 10 | 0 |
+| [Store Presence](tests/tst_store_presence.md) | Store presence, Google Play listings, screenshots, store metadata contract testing, and release governance. | `STP` | 10 | 10 | 0 |
 
 **Total Living Tests**: 1038 across 9 domain shards.
 
