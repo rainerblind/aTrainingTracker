@@ -2235,7 +2235,7 @@
 ### TST-TRK-069: **ANT+ UTC Epoch Timestamping, Reconnection Sensor Registration & BLE Bundled Drift Guard Test Suite** [Verified]
 - **Requirement(s)**: `REQ-TRK-069` (`REQ-TRK-069.1`..`REQ-TRK-069.4`)
 - **Component**: `ANTHeartRateDevice.java`, `BTLEHeartRateDevice.java`, `HRVMetricsDevice.kt`
-- **Jira**: `ATT-6713`
+- **Jira**: `ATT-6713`, `ATT-6742`
 - **Test Description**:
   1. *ANT+ estTimestamp UTC Epoch Conversion Unit Tests (`TST-TRK-069.1`, `ANTHeartRateDeviceTest.kt`)*:
   • Verify `estTimestamp > 0` is converted via `System.currentTimeMillis() - SystemClock.elapsedRealtime() + estTimestamp`, yielding valid UTC epoch timestamp matching current wall-clock.
