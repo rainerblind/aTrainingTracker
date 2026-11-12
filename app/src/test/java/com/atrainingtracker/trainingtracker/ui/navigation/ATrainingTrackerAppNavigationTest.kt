@@ -109,22 +109,34 @@ class ATrainingTrackerAppNavigationTest {
 
     @Test
     fun testDrawerEdgeSwipeInterceptorPredicate_deactivatedWhenPushed() {
-        // REQ-UI-517.2, TST-UI-517.3 (ATT-7313)
-        fun shouldEnableDrawerEdgeSwipe(isPushed: Boolean, locationId: Long): Boolean {
-            val isCurrentScreenPushed = isPushed || locationId > 0
+        // REQ-UI-517.2, TST-UI-517.3 (ATT-7313), REQ-UI-518.4, TST-UI-518.4 (ATT-7312)
+        fun shouldEnableDrawerEdgeSwipe(
+            isPushed: Boolean,
+            locationId: Long = -1L,
+            clusterId: Long = -1L,
+            promptReason: String? = null,
+            planId: String? = null
+        ): Boolean {
+            val isCurrentScreenPushed = isPushed || locationId > 0 || clusterId > 0 || promptReason != null || planId != null
             return !isCurrentScreenPushed
         }
 
         // Root drawer destinations: edge swipe enabled
-        assertTrue("Root WORKOUTS must enable edge swipe", shouldEnableDrawerEdgeSwipe(isPushed = false, locationId = -1L))
-        assertTrue("Root LOCATIONS must enable edge swipe", shouldEnableDrawerEdgeSwipe(isPushed = false, locationId = -1L))
-        assertTrue("Root MAP must enable edge swipe", shouldEnableDrawerEdgeSwipe(isPushed = false, locationId = -1L))
+        assertTrue("Root WORKOUTS must enable edge swipe", shouldEnableDrawerEdgeSwipe(isPushed = false))
+        assertTrue("Root LOCATIONS must enable edge swipe", shouldEnableDrawerEdgeSwipe(isPushed = false))
+        assertTrue("Root MAP must enable edge swipe", shouldEnableDrawerEdgeSwipe(isPushed = false))
+        assertTrue("Root TRAINING_ZONES must enable edge swipe", shouldEnableDrawerEdgeSwipe(isPushed = false))
+        assertTrue("Root SUPPORTER must enable edge swipe", shouldEnableDrawerEdgeSwipe(isPushed = false))
+        assertTrue("Root ADVANCED_SETTINGS must enable edge swipe", shouldEnableDrawerEdgeSwipe(isPushed = false))
 
         // Pushed destinations: edge swipe disabled
-        assertFalse("Pushed WORKOUTS must disable edge swipe", shouldEnableDrawerEdgeSwipe(isPushed = true, locationId = -1L))
-        assertFalse("Pushed LOCATIONS must disable edge swipe", shouldEnableDrawerEdgeSwipe(isPushed = true, locationId = -1L))
+        assertFalse("Pushed WORKOUTS must disable edge swipe", shouldEnableDrawerEdgeSwipe(isPushed = true))
+        assertFalse("Pushed LOCATIONS must disable edge swipe", shouldEnableDrawerEdgeSwipe(isPushed = true))
         assertFalse("Pushed MAP with locationId must disable edge swipe", shouldEnableDrawerEdgeSwipe(isPushed = false, locationId = 123L))
         assertFalse("Pushed MAP with locationId and pushed must disable edge swipe", shouldEnableDrawerEdgeSwipe(isPushed = true, locationId = 123L))
+        assertFalse("Pushed TRAINING_ZONES with promptReason must disable edge swipe", shouldEnableDrawerEdgeSwipe(isPushed = false, promptReason = "hr_paired"))
+        assertFalse("Pushed SUPPORTER with planId must disable edge swipe", shouldEnableDrawerEdgeSwipe(isPushed = false, planId = "pro_monthly"))
+        assertFalse("Pushed ADVANCED_SETTINGS with pushed=true must disable edge swipe", shouldEnableDrawerEdgeSwipe(isPushed = true))
     }
 
     @Test

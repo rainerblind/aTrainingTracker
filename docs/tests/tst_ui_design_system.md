@@ -8359,3 +8359,33 @@
   6. *Tier 1 Targeted Unit Test Regression Suite (`TST-UI-517.6`)*:
      - Execute `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.navigation.*"`.
      - Assert 100% pass rate.
+
+
+### TST-UI-518: **Context-Aware Hamburger Menu vs Back Arrow Contract Across Secondary Drawer Groups Verification Suite** [Verified]
+- **Target Release**: `V5.0.0`
+- **Requirement(s)**: `REQ-UI-518`
+- **Component**: `NavRoutes.kt`, `ATrainingTrackerApp.kt`, `DevicesTabbedScreen.kt`, `EquipmentTabsScreen.kt`, `ImportBackupTabsScreen.kt`, `SportTypesTabsScreen.kt`, `ZonesSettingsActivity.kt`, `AdvancedTuningScreen.kt`, `SupporterScreen.kt`, `TipsGuideScreen.kt`
+- **Jira**: `ATT-7312`
+- **Test Description**:
+  1. *Route Contract & Pushed Argument Verification (`TST-UI-518.1`, `SingleActivityNavigationTest.kt`, `NavRoutesZoneTest.kt`, `AdvancedTuningNavigationTest.kt`)*:
+     - Verify `NavRoutes.trainingZones()` preserves backwards-compatible defaults while supporting `pushed: Boolean = false`.
+     - Verify `NavRoutes.supporter()` supports `pushed: Boolean = false`.
+     - Verify `NavRoutes.advancedSettings(pushed: Boolean = false)` builds correct route strings.
+     - Verify `toDrawerItemId()` and `fromDrawerItemId()` mappings for all secondary destinations.
+  2. *Secondary Tabbed Screens Leading Icon Verification (`TST-UI-518.2`)*:
+     - Verify `DevicesTabbedScreen`, `EquipmentTabsScreen`, `ImportBackupTabsScreen`, and `SportTypesTabsScreen` declare `onMenuClick` and `onBackClick` / `onNavigateBack` parameters.
+     - Verify leading `IconButton` renders `Icons.Default.Menu` when `onMenuClick` is non-null and `Icons.AutoMirrored.Filled.ArrowBack` when `onBackClick` is non-null.
+     - Verify 56 dp title alignment offset (`start = 4.dp` container padding + 48 dp IconButton + 4 dp text padding).
+  3. *Settings & Support Context-Aware TopAppBar Verification (`TST-UI-518.3`, `AdvancedTuningScreenTest.kt`, `TipsGuideScreenContractTest.kt`)*:
+     - Verify `ZoneSettingsScreen` renders `Icons.Default.Menu` when `onOpenDrawer` is provided and `Icons.AutoMirrored.Filled.ArrowBack` calling `onFinish` when `onOpenDrawer == null`.
+     - Verify `AdvancedTuningScreen` renders `Icons.Default.Menu` when `onOpenDrawer` is non-null and `Icons.AutoMirrored.Filled.ArrowBack` when `onOpenDrawer == null`.
+     - Verify `SupporterScreen` renders `Icons.Default.Menu` when `onOpenDrawer` is non-null and `Icons.AutoMirrored.Filled.ArrowBack` when `onOpenDrawer == null`.
+     - Verify `TipsGuideScreen` renders `Icons.Default.Menu` when `onOpenDrawer` is non-null and `Icons.AutoMirrored.Filled.ArrowBack` when `onOpenDrawer == null`.
+  4. *ATrainingTrackerApp Integration & Interceptor Verification (`TST-UI-518.4`, `ATrainingTrackerAppNavigationTest.kt`)*:
+     - Verify drawer edge interceptor is suppressed when secondary screens are pushed.
+     - Verify wiring passes `onOpenDrawer` for drawer-root destinations and back callbacks for pushed destinations.
+  5. *9-Language Localization Parity Verification (`TST-UI-518.5`, `TranslationParityTest.kt`)*:
+     - Verify `R.string.navigation_drawer_open`, `R.string.back`, and `R.string.cancel` exist across all 9 locales with 100% parity.
+  6. *Targeted Unit Test Regression Suite (`TST-UI-518.6`)*:
+     - Execute `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.navigation.*" --tests "com.atrainingtracker.trainingtracker.zones.*" --tests "com.atrainingtracker.trainingtracker.ui.settings.tuning.*" --tests "com.atrainingtracker.trainingtracker.ui.help.*"`.
+     - Assert 100% pass rate.

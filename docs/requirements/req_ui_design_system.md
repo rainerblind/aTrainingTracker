@@ -15578,3 +15578,39 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 • *Then* there SHALL be zero horizontal or vertical title shift.
 
 **Invariants**: All 21 navigation drawer destinations in `NavRoutes` preserved; `REQ-UI-161` 40 dp threshold preserved for root screens; `REQ-UI-162` LIFO back handling hierarchy preserved.
+
+
+### REQ-UI-518: Standardize Context-Aware Hamburger Menu vs Back Arrow Contract Across Secondary Drawer Groups (Sensors, Equipment, Backup, Sport Types, Zones, Settings, Support) [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-UI-518` | **Tickets**: `ATT-7312`
+- **Implementation**: `NavRoutes.kt`, `ATrainingTrackerApp.kt`, `DevicesTabbedScreen.kt`, `EquipmentTabsScreen.kt`, `ImportBackupTabsScreen.kt`, `SportTypesTabsScreen.kt`, `ZonesSettingsActivity.kt`, `AdvancedTuningScreen.kt`, `SupporterScreen.kt`, `TipsGuideScreen.kt`
+- **Rationale**: Completing Part 1 (`ATT-7313`), this requirement standardizes the context-aware Hamburger Menu vs Back Arrow navigation contract across all remaining secondary drawer destinations (`My Stuff`, `Online Communities`, `Settings`, `Info & Support`). Previously, four tabbed screens lacked a leading navigation button entirely, three top-level screens unconditionally displayed Back Arrow even when opened from the drawer, and Training Zones unconditionally displayed Hamburger Menu even when pushed above My Sensors via onboarding pairing banners.
+- **Description**:
+  1. *Tabbed Secondary Headers Contract (`REQ-UI-518.1`)*:
+     - `DevicesTabbedScreen.kt`, `EquipmentTabsScreen.kt` (for `EQUIPMENT`, `BIKES`, and `SHOES`), `ImportBackupTabsScreen.kt`, and `SportTypesTabsScreen.kt` SHALL add a leading navigation `IconButton` to the `primaryContainer` header row.
+     - When opened as a root destination from `AppNavigationDrawer`, the button SHALL render `Icons.Default.Menu` with `R.string.navigation_drawer_open` accessibility description and open the drawer on click.
+     - When pushed above another destination, the button SHALL render `Icons.AutoMirrored.Filled.ArrowBack` with `R.string.back` accessibility description and navigate back on click.
+     - The header row SHALL maintain `padding(start = 4.dp, end = 16.dp)`, `IconButton` size 48 dp, tint `MaterialTheme.colorScheme.onPrimaryContainer`, and 4 dp start padding on the title text, enforcing a consistent 56 dp start offset without visual jumps across tab switches.
+  2. *Training Zones Context-Aware Navigation (`REQ-UI-518.2`)*:
+     - In `ZonesSettingsActivity.kt` / `ATrainingTrackerApp.kt`, `ZoneSettingsScreen` SHALL display `Icons.Default.Menu` with localized `R.string.navigation_drawer_open` description when opened directly from `drawer_training_zones`.
+     - When pushed above `My Sensors` via pairing onboarding banners (`onNavigateToZones` with `promptReason != null` or `pushed == true`), `ZoneSettingsScreen` SHALL display `Icons.AutoMirrored.Filled.ArrowBack` with `R.string.back` description, and tapping it SHALL pop back to the origin caller.
+  3. *Settings & Support TopAppBar Navigation Contract (`REQ-UI-518.3`)*:
+     - `AdvancedTuningScreen.kt`, `SupporterScreen.kt`, and `TipsGuideScreen.kt` SHALL accept an optional `onOpenDrawer: (() -> Unit)? = null` callback alongside `onNavigateBack`.
+     - When opened as root drawer destinations from `AppNavigationDrawer`, they SHALL render `Icons.Default.Menu` (`R.string.navigation_drawer_open`).
+     - When pushed above another view, they SHALL render `Icons.AutoMirrored.Filled.ArrowBack` (`R.string.back` / `R.string.cancel`).
+     - `AdvancedTuningScreen`'s bottom `Save / Cancel` bar SHALL remain fully functional in both drawer-root and pushed modes.
+  4. *Pushed Destination Interceptor Suppression (`REQ-UI-518.4`)*:
+     - When any of the secondary screens are pushed (`isCurrentScreenPushed == true`), the root 40 dp left-edge drawer interceptor in `ATrainingTrackerApp.kt` SHALL be deactivated to prevent gesture conflicts with child views and system predictive back.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* the athlete opens `My Sensors`, `Equipment`, `Import & Backup`, `Sport Types`, `Training Zones`, `Advanced Tuning`, `Supporter`, or `Tips & Guide` from `AppNavigationDrawer`,
+• *When* the destination screen renders at its top level,
+• *Then* the header SHALL display `Icons.Default.Menu` and tapping it SHALL open `AppNavigationDrawer`.
+• *Given* the athlete navigates to `Training Zones` from `My Sensors` via a sensor pairing banner, or navigates to `Supporter` from `My Sensors` / `Equipment`, or navigates to `Advanced Tuning` from `Display Settings` / `WorkoutClustersScreen`,
+• *When* the target screen renders above the origin caller,
+• *Then* the header SHALL display `Icons.AutoMirrored.Filled.ArrowBack` and tapping it SHALL pop back to the origin caller.
+• *Given* all newly added Hamburger and Back `IconButton` controls across `:app` and `:banalservice`,
+• *When* inspected in any of the 9 supported locales,
+• *Then* every button SHALL provide localized `contentDescription` (`navigation_drawer_open` or `back` / `cancel`) and align to the 56 dp title baseline.
+
+**Invariants**: All 21 navigation drawer destinations in `NavRoutes` preserved; `REQ-UI-161` 40 dp threshold preserved for root screens; `REQ-UI-162` LIFO back handling hierarchy preserved; zero regressions on existing deep links.

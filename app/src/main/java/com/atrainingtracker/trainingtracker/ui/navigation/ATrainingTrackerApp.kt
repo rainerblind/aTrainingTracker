@@ -224,7 +224,9 @@ fun ATrainingTrackerApp(
     val currentBackStackEntry by navController.currentBackStackEntryAsState()
     val isCurrentScreenPushed = currentBackStackEntry?.arguments?.getBoolean(NavRoutes.ARG_PUSHED) == true ||
         (currentBackStackEntry?.arguments?.getLong(NavRoutes.ARG_LOCATION_ID, -1L) ?: -1L) > 0 ||
-        (currentBackStackEntry?.arguments?.getLong(NavRoutes.ARG_CLUSTER_ID, -1L) ?: -1L) > 0
+        (currentBackStackEntry?.arguments?.getLong(NavRoutes.ARG_CLUSTER_ID, -1L) ?: -1L) > 0 ||
+        (currentBackStackEntry?.arguments?.getString(NavRoutes.ARG_PROMPT_REASON) != null) ||
+        (currentBackStackEntry?.arguments?.getString(NavRoutes.ARG_PLAN_ID) != null)
     val currentRoute = currentBackStackEntry?.destination?.route ?: NavRoutes.START_TRACKING
 
     // Keep drawerController.selectedItemId in sync with active route
@@ -519,7 +521,7 @@ fun ATrainingTrackerApp(
                             navController.popBackStack()
                         },
                         onNavigateToAdvancedSettings = {
-                            navController.navigate(NavRoutes.ADVANCED_SETTINGS)
+                            navController.navigate(NavRoutes.advancedSettings(pushed = true))
                         }
                     )
                 }
@@ -535,8 +537,9 @@ fun ATrainingTrackerApp(
                             navController.navigate(NavRoutes.trainingZones(initialTab, promptReason))
                         },
                         onNavigateToSupporter = { planId ->
-                            navController.navigate(NavRoutes.supporter(planId))
-                        }
+                            navController.navigate(NavRoutes.supporter(planId, pushed = true))
+                        },
+                        onMenuClick = { drawerController.openDrawer() }
                     )
                 }
 
@@ -549,8 +552,9 @@ fun ATrainingTrackerApp(
                             activity.navigateToFilteredWorkouts(stats)
                         },
                         onNavigateToSupporter = { planId ->
-                            navController.navigate(NavRoutes.supporter(planId))
-                        }
+                            navController.navigate(NavRoutes.supporter(planId, pushed = true))
+                        },
+                        onMenuClick = { drawerController.openDrawer() }
                     )
                 }
 
@@ -563,8 +567,9 @@ fun ATrainingTrackerApp(
                             activity.navigateToFilteredWorkouts(stats)
                         },
                         onNavigateToSupporter = { planId ->
-                            navController.navigate(NavRoutes.supporter(planId))
-                        }
+                            navController.navigate(NavRoutes.supporter(planId, pushed = true))
+                        },
+                        onMenuClick = { drawerController.openDrawer() }
                     )
                 }
 
@@ -577,8 +582,9 @@ fun ATrainingTrackerApp(
                             activity.navigateToFilteredWorkouts(stats)
                         },
                         onNavigateToSupporter = { planId ->
-                            navController.navigate(NavRoutes.supporter(planId))
-                        }
+                            navController.navigate(NavRoutes.supporter(planId, pushed = true))
+                        },
+                        onMenuClick = { drawerController.openDrawer() }
                     )
                 }
 
@@ -588,7 +594,8 @@ fun ATrainingTrackerApp(
                         viewModel = sportTypeViewModel,
                         onNavigateToWorkouts = { stats ->
                             activity.navigateToFilteredWorkouts(stats)
-                        }
+                        },
+                        onMenuClick = { drawerController.openDrawer() }
                     )
                 }
 
@@ -611,16 +618,21 @@ fun ATrainingTrackerApp(
                             type = NavType.StringType
                             nullable = true
                             defaultValue = null
+                        },
+                        navArgument(NavRoutes.ARG_PUSHED) {
+                            type = NavType.BoolType
+                            defaultValue = false
                         }
                     )
                 ) { backStackEntry ->
                     val initialTab = backStackEntry.arguments?.getInt(NavRoutes.ARG_INITIAL_TAB) ?: 0
                     val promptReason = backStackEntry.arguments?.getString(NavRoutes.ARG_PROMPT_REASON)
+                    val isPushed = backStackEntry.arguments?.getBoolean(NavRoutes.ARG_PUSHED) == true || promptReason != null
                     ZoneSettingsScreen(
                         initialTab = initialTab,
                         promptReason = promptReason,
                         onFinish = { navController.popBackStack() },
-                        onOpenDrawer = { activity.openDrawer() },
+                        onOpenDrawer = if (isPushed) null else { { activity.openDrawer() } },
                         onNavigateToHrvTest = { navController.navigate(NavRoutes.HRV_TEST) }
                     )
                 }
@@ -637,12 +649,25 @@ fun ATrainingTrackerApp(
 
                 composable(NavRoutes.BACKUP_RESTORE) {
                     val backupRestoreViewModel: BackupRestoreViewModel = viewModel(activity)
-                    ImportBackupTabsScreen(viewModel = backupRestoreViewModel)
+                    ImportBackupTabsScreen(
+                        viewModel = backupRestoreViewModel,
+                        onMenuClick = { drawerController.openDrawer() }
+                    )
                 }
 
-                composable(NavRoutes.ADVANCED_SETTINGS) {
+                composable(
+                    route = NavRoutes.ADVANCED_SETTINGS_PATTERN,
+                    arguments = listOf(
+                        navArgument(NavRoutes.ARG_PUSHED) {
+                            type = NavType.BoolType
+                            defaultValue = false
+                        }
+                    )
+                ) { backStackEntry ->
+                    val isPushed = backStackEntry.arguments?.getBoolean(NavRoutes.ARG_PUSHED) == true
                     AdvancedTuningScreen(
                         onNavigateBack = { navController.popBackStack() },
+                        onOpenDrawer = if (isPushed) null else { { activity.openDrawer() } },
                         onSettingsChanged = { activity.applyDisplaySettings() }
                     )
                 }
@@ -654,17 +679,32 @@ fun ATrainingTrackerApp(
                             type = NavType.StringType
                             nullable = true
                             defaultValue = null
+                        },
+                        navArgument(NavRoutes.ARG_PUSHED) {
+                            type = NavType.BoolType
+                            defaultValue = false
                         }
                     )
                 ) { backStackEntry ->
                     val planId = backStackEntry.arguments?.getString(NavRoutes.ARG_PLAN_ID)
+                    val isPushed = backStackEntry.arguments?.getBoolean(NavRoutes.ARG_PUSHED) == true || planId != null
                     SupporterScreen(
                         onNavigateBack = { navController.popBackStack() },
+                        onOpenDrawer = if (isPushed) null else { { activity.openDrawer() } },
                         preSelectedPlanId = planId
                     )
                 }
 
-                composable(NavRoutes.TIPS_GUIDE) {
+                composable(
+                    route = NavRoutes.TIPS_GUIDE_PATTERN,
+                    arguments = listOf(
+                        navArgument(NavRoutes.ARG_PUSHED) {
+                            type = NavType.BoolType
+                            defaultValue = false
+                        }
+                    )
+                ) { backStackEntry ->
+                    val isPushed = backStackEntry.arguments?.getBoolean(NavRoutes.ARG_PUSHED) == true
                     TipsGuideScreen(
                         onNavigateBack = {
                             if (navController.previousBackStackEntry != null) {
@@ -673,6 +713,7 @@ fun ATrainingTrackerApp(
                                 activity.navigateToDrawerItem(R.id.drawer_start_tracking)
                             }
                         },
+                        onOpenDrawer = if (isPushed) null else { { drawerController.openDrawer() } },
                         onNavigateToRoute = { route ->
                             when (route) {
                                 NavRoutes.LOCATIONS -> activity.navigateToDrawerItem(R.id.drawer_my_locations)
@@ -683,6 +724,8 @@ fun ATrainingTrackerApp(
                                 NavRoutes.EQUIPMENT -> activity.navigateToDrawerItem(R.id.drawer_equipment)
                                 NavRoutes.BACKUP_RESTORE -> activity.navigateToDrawerItem(R.id.drawer_backup_restore)
                                 NavRoutes.SUPPORTER -> activity.navigateToDrawerItem(R.id.drawer_supporter)
+                                NavRoutes.TRAINING_ZONES -> navController.navigate(NavRoutes.trainingZones(pushed = true))
+                                NavRoutes.ADVANCED_SETTINGS -> navController.navigate(NavRoutes.advancedSettings(pushed = true))
                                 else -> navController.navigate(route)
                             }
                         }
@@ -738,7 +781,7 @@ fun ATrainingTrackerApp(
                     onSettingsChanged = { activity.applyDisplaySettings() },
                     onNavigateToTuning = {
                         drawerController.activeBottomSheet = null
-                        navController.navigate(NavRoutes.ADVANCED_SETTINGS)
+                        navController.navigate(NavRoutes.advancedSettings(pushed = true))
                     }
                 )
                 SettingsBottomSheetType.ADVANCED_TUNING -> AdvancedTuningDialog(

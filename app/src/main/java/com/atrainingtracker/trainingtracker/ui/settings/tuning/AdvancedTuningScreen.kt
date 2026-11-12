@@ -29,6 +29,7 @@ import androidx.compose.material.icons.automirrored.filled.ViewList
 import androidx.compose.material.icons.filled.BrightnessMedium
 import androidx.compose.material.icons.filled.Hub
 import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.MonitorHeart
 import androidx.compose.material.icons.filled.Navigation
 import androidx.compose.material.icons.filled.RestartAlt
@@ -78,6 +79,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun AdvancedTuningScreen(
     onNavigateBack: () -> Unit,
+    onOpenDrawer: (() -> Unit)? = null,
     onSettingsChanged: (() -> Unit)? = null
 ) {
     val context = LocalContext.current
@@ -229,7 +231,21 @@ fun AdvancedTuningScreen(
             TopAppBar(
                 title = { Text(text = stringResource(R.string.advanced_tuning_title)) },
                 navigationIcon = {
-                    IconButton(onClick = onNavigateBack) { Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.cancel)) }
+                    if (onOpenDrawer != null) {
+                        IconButton(onClick = onOpenDrawer) {
+                            Icon(
+                                imageVector = Icons.Default.Menu,
+                                contentDescription = stringResource(R.string.navigation_drawer_open)
+                            )
+                        }
+                    } else {
+                        IconButton(onClick = onNavigateBack) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = stringResource(R.string.cancel)
+                            )
+                        }
+                    }
                 },
                 actions = {
                     IconButton(onClick = { onResetToDefaults() }) { Icon(imageVector = Icons.Default.RestartAlt, contentDescription = stringResource(R.string.reset_to_defaults)) }

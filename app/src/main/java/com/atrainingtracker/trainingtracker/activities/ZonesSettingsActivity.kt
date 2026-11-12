@@ -51,6 +51,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Calculate
 import androidx.compose.material.icons.filled.FitnessCenter
 import androidx.compose.material.icons.filled.History
@@ -113,7 +114,8 @@ class ZonesSettingsActivity : ComponentActivity() {
                 // Pass the initial tab to the route
                 ZoneSettingsScreen(
                     initialTab = targetTab,
-                    promptReason = promptReason
+                    promptReason = promptReason,
+                    onFinish = { finish() }
                 )
             }
         }
@@ -205,7 +207,15 @@ fun ZoneSettingsScreen(
                                 IconButton(onClick = onOpenDrawer) {
                                     Icon(
                                         imageVector = Icons.Default.Menu,
-                                        contentDescription = null,
+                                        contentDescription = stringResource(R.string.navigation_drawer_open),
+                                        tint = MaterialTheme.colorScheme.onPrimaryContainer
+                                    )
+                                }
+                            } else {
+                                IconButton(onClick = onFinish) {
+                                    Icon(
+                                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                        contentDescription = stringResource(R.string.back),
                                         tint = MaterialTheme.colorScheme.onPrimaryContainer
                                     )
                                 }
