@@ -4002,3 +4002,40 @@ The workflow SHALL mandate that:
   • *When* executed,
   • *Then* master index tables achieve 100% mathematical parity.
 - **Invariants**: Pure Python 3 standard library; zero Android runtime changes; zero regression in existing governance checks.
+
+
+### REQ-PRO-084: Store Presence Test Evidence Backfill & Bidirectional Traceability Governance [Verified]
+- **Tests**: `TST-PRO-084`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Implementation**: `docs/requirements/req_store_presence.md`, `docs/tests/tst_store_presence.md`, `PlayStoreListingContractTest.kt`, `tools/verify_requirement_governance.py`
+- **Rationale**: Under ASPICE SWE.6 BP4, SWE.1 BP5, and Remediation A-08.9 (ATT-6135), all requirements in the `store_presence` domain shard (historically known as `project_governance` prior to ATT-6140) must link to valid, existing test specifications in `docs/tests/tst_store_presence.md` with verified test code implementations in `app/src/test/` or be downgraded to `[Implemented]` per REQ-PRO-073. Bidirectional reference integrity must guarantee that every referenced TST cites all of its parent REQs back with zero dangling references:
+  1. *Test Code Tag Grounding & Category 2 Completeness (`REQ-PRO-084.1`)*:
+     • In `PlayStoreListingContractTest.kt`, test methods `fullDescriptionsContainMandatoryV5Features()` and `storeListingsDoNotContainUnimplementedBacklogFeatures()` SHALL declare test code tag `TST-STP-002`.
+     • In `PlayStoreListingContractTest.kt`, test method `storeScreenshotsAreUniqueAndValid()` SHALL declare test code tag `TST-STP-004`.
+     • Class documentation header of `PlayStoreListingContractTest.kt` SHALL cite `REQ-STP-004`, `TST-STP-002`, and `TST-STP-004`, eliminating all Category 2 test code tag gaps for the domain.
+  2. *Mandatory Attribute Compliance (`REQ-PRO-084.2`)*:
+     • All 10 requirements in `docs/requirements/req_store_presence.md` SHALL declare valid `Priority`, `Type`, and `Verification Method` attributes per `REQ-PRO-077`.
+  3. *Test Specification Alignment (`REQ-PRO-084.3`)*:
+     • Test specifications `TST-STP-001` through `TST-STP-010` in `docs/tests/tst_store_presence.md` SHALL declare `Priority`, `Type`, and `Verification Method` attributes.
+     • Zero dangling references SHALL exist within the `store_presence` domain and 100% of test specifications SHALL be cited back by their requirements.
+  4. *Evidence Grounding & Index Parity (`REQ-PRO-084.4`)*:
+     • All 10 requirements SHALL maintain `[Verified]` backed by authentic automated build contract tests in `com.atrainingtracker.trainingtracker.build.*`.
+     • Living documentation master index tables in `docs/requirements.md` and `docs/tests.md` SHALL achieve 100% mathematical parity.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Net-new requirement `REQ-PRO-084` (`REQ-PRO-084.1`–`REQ-PRO-084.4`). Targets `docs/requirements/req_store_presence.md`, `docs/tests/tst_store_presence.md`, and `PlayStoreListingContractTest.kt`.
+  2. *Historical Origin & Commit Trace*: Sprint 2026-46.4 via ticket `ATT-6135` under Epic `ATT-6119` (ASPICE CL2, Remediation A-08.9).
+  3. *Root Reason for Existing Formulation*: Baseline pre-assessment identified test code tag omissions (`TST-STP-002`, `TST-STP-004`) in contract tests, missing mandatory attributes (`REQ-PRO-077`), and required formal verification evidence grounding across store presence living documentation.
+  4. *Preservation of Core Invariants*: Full build contract test suite pass rate, master table mathematical parity, and pure Python 3 stdlib execution preserved with zero production Android APK modifications.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* `docs/requirements/req_store_presence.md`,
+  • *When* evaluated via `python3 tools/verify_requirement_governance.py --coverage`,
+  • *Then* 100% of requirements cite valid TSTs (10/10), 100% of TSTs have test code tags (10/10), and Category 4 bidirectional gaps for STP are 0.
+  • *Given* `docs/requirements/req_store_presence.md` and `docs/tests/tst_store_presence.md`,
+  • *When* checked for dangling references and attributes,
+  • *Then* zero dangling references and zero missing attributes are detected.
+  • *Given* `tools/verify_requirement_governance.py --sync-indexes`,
+  • *When* executed,
+  • *Then* master index tables achieve 100% mathematical parity.
+- **Invariants**: Pure Python 3 standard library; zero Android runtime changes; zero regression in existing governance checks.
