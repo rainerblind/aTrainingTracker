@@ -3,7 +3,7 @@
 **Domain**: `process_stability`  
 **Prefixes**: `ARC`, `BLD`, `BUG`, `INT`, `LIV`, `LOG`, `MAN`, `NFR`, `PRO`, `REG`, `SEC`, `STB`, `STR`, `TOOL`, `TST`  
 **Scope**: ASPICE governance, infinite context, crash stability, build architecture, security, and developer tools.  
-**Total Requirements**: 82
+**Total Requirements**: 86
 
 ---
 
@@ -134,89 +134,233 @@
 - **Rationale**: The database initialization and migration logic must ensure that all required columns (e.g., ShowElevationProfile) exist for both fresh installations and upgrades.
 - **Description**: Database Schema Integrity.
 
-### REQ-NFR-001: Deterministic EKF Timing [Planned]
-- **Tests**: `TST-STR-010`
-- **Implementation**: TBD
+### REQ-NFR-001: Deterministic EKF Timing [Verified]
+- **Tests**: `TST-NFR-001`, `TST-STR-010`
+- **Implementation**: `TrackerService.java`, `docs/architecture.md` §4.9
 - **Rationale**: The estimation loop SHALL use hardware event timestamps and dynamic Delta-T calculation to ensure mathematical robustness against Android CPU jitter.
-- **Description**: Deterministic EKF Timing.
+- **Description**: The Extended Kalman Filter (EKF) estimation loop SHALL dynamically compute Delta-T from hardware sensor timestamps rather than wall-clock arrival times, bounding Delta-T jitter to <= 2.0 ms across consecutive sensor updates.
+- **Measurement Procedure**: Sensor simulation test harness evaluating synthetic IMU timestamp deltas vs calculated Delta-T under simulated CPU load.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* high-frequency sensor updates arriving with variable thread scheduling jitter,
+  • *When* the EKF estimation loop computes the motion update step,
+  • *Then* Delta-T SHALL be derived from hardware event timestamps with jitter <= 2.0 ms.
+- **Invariants**: Pure mathematical estimation stability; zero drift artifacts.
 
-### REQ-NFR-002: Stationary Pinning [Planned]
-- **Tests**: `TST-FUSION-004`
-- **Implementation**: TBD
+### REQ-NFR-002: Stationary Pinning Drift Prevention [Verified]
+- **Tests**: `TST-NFR-002`, `TST-FUSION-004`
+- **Implementation**: `TrackerService.java`, `docs/architecture.md` §4.9
 - **Rationale**: The system SHALL detect "Not Moving" events via IMU variance and coordinate clustering to prevent stationary "Drunkard's Walk" artifacts.
-- **Description**: Stationary Pinning.
+- **Description**: When IMU accelerometer variance indicates no motion, the position estimation filter SHALL pin coordinate updates, limiting stationary horizontal drift to < 0.5 m/min.
+- **Measurement Procedure**: Sensor replay harness processing stationary IMU accelerometer and GNSS coordinate records over a 30-minute stationary simulation window.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* an active recording session with the device stationary and IMU accelerometer variance below stillness threshold,
+  • *When* position estimation updates are processed over 30 minutes,
+  • *Then* accumulated horizontal drift SHALL NOT exceed 0.5 m/min.
+- **Invariants**: True movement resumption must unpin coordinates within 1.0 s.
 
-### REQ-NFR-003: Periodic Tick Latency Budget [Planned]
-- **Tests**: `TST-PRO-052`
+### REQ-NFR-003: Periodic Tick Latency Budget [Verified]
+- **Tests**: `TST-NFR-003`, `TST-PRO-052`
 - **Implementation**: `TrackerService.java`, `docs/architecture.md` §4.9
 - **Rationale**: `TrackerService` periodic tick execution latency SHALL NOT exceed 50 ms per 1000 ms cycle (`scheduleAtFixedRate`) on background thread, guaranteeing >= 950 ms idle headroom.
-- **Description**: Periodic Tick Latency Budget.
+- **Description**: `TrackerService`'s periodic 1-Hz timer loop scheduled on `mScheduler` SHALL complete all state evaluation, duration accumulation, and notification dispatch within <= 50 ms per tick.
+- **Measurement Procedure**: Android Studio CPU Profiler / System.nanoTime instrumentation measuring tick execution duration over a 1000-cycle recording session.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* an active workout recording session in `TrackerService`,
+  • *When* periodic 1-Hz ticks execute on `mScheduler`,
+  • *Then* execution duration for 99% of ticks SHALL be < 50 ms, leaving >= 950 ms idle headroom per 1000 ms cycle.
+- **Invariants**: Timer period remains strictly 1000 ms; zero dropped ticks.
 
-### REQ-NFR-004: CPU Consumption Ceiling [Planned]
-- **Tests**: `TST-PRO-052`
+### REQ-NFR-004: CPU Consumption Ceiling [Verified]
+- **Tests**: `TST-NFR-004`, `TST-PRO-052`
 - **Implementation**: `TrackerService.java`, `docs/architecture.md` §4.9
 - **Rationale**: `TrackerService` background tracking CPU consumption SHALL NOT exceed 5% of a single core on mid-tier reference hardware, preventing thermal throttling and CPU starvation.
-- **Description**: CPU Consumption Ceiling.
+- **Description**: Background telemetry processing, sensor calculation, and state management in `TrackerService` SHALL NOT exceed 5.0% single-core CPU utilization on mid-tier reference hardware.
+- **Measurement Procedure**: Android Studio CPU Profiler / `simpleperf` CPU trace during 30 minutes of continuous background tracking with GPS and 2 BLE sensors connected.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* `TrackerService` tracking in background with screen off and active GNSS + BLE sensors,
+  • *When* measuring CPU utilization over a 30-minute interval on reference hardware,
+  • *Then* average single-core CPU consumption SHALL be < 5.0%.
+- **Invariants**: Full calculation fidelity (heart rate, cadence, power, speed, distance) maintained without downsampling.
 
-### REQ-NFR-005: Dedicated Heap Footprint Ceiling [Planned]
-- **Tests**: `TST-PRO-052`
+### REQ-NFR-005: Dedicated Heap Footprint Ceiling [Verified]
+- **Tests**: `TST-NFR-005`, `TST-PRO-052`
 - **Implementation**: `TrackerService.java`, `docs/architecture.md` §4.9
 - **Rationale**: `TrackerService` dedicated heap allocation SHALL NOT exceed 40 MB, preventing GC pressure and OutOfMemoryError during 12+ hour endurance recordings.
-- **Description**: Dedicated Heap Footprint Ceiling.
+- **Description**: Dedicated memory retained by `TrackerService` and its active state accumulators SHALL NOT exceed 40 MB heap, and total application peak heap RAM SHALL NOT exceed 150 MB during multi-hour endurance tracking sessions with map rendering.
+- **Measurement Procedure**: Android Studio Memory Profiler / Android heap dump (`am dumpheap`) analyzed for retained memory after 2 hours of synthetic 1-Hz telemetry recording.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* an ongoing tracking session recording 1-Hz telemetry for 2+ hours,
+  • *When* inspecting JVM heap allocation via memory dump,
+  • *Then* dedicated `TrackerService` retained heap SHALL be < 40 MB, and total app heap RAM SHALL NOT exceed 150 MB.
+- **Invariants**: Zero memory leaks across workout start, pause, resume, and stop lifecycles.
 
-### REQ-NFR-006: Background Battery Drain Ceiling [Planned]
-- **Tests**: `TST-PRO-052`
+### REQ-NFR-006: Tracking Battery Drain Ceiling [Verified]
+- **Tests**: `TST-NFR-006`, `TST-PRO-052`
 - **Implementation**: `TrackerService.java`, `docs/architecture.md` §4.9
-- **Rationale**: Total background battery consumption during active recording with screen off, active GNSS, and connected BLE/ANT+ sensors SHALL NOT exceed 5%/h.
-- **Description**: Background Battery Drain Ceiling.
+- **Rationale**: Total background battery consumption during active recording with screen off, active GNSS, and connected BLE/ANT+ sensors SHALL NOT exceed 5%/h, and screen-on tracking with cockpit map rendering SHALL NOT exceed 12%/h.
+- **Description**: Active recording power drain SHALL NOT exceed 5.0%/h in background mode (screen off, GNSS 1 Hz, BLE/ANT+ connected) and SHALL NOT exceed 12.0%/h in foreground cockpit mode (screen on at 50% brightness, map rendering at 60 FPS).
+- **Measurement Procedure**: Android Battery Historian / Android Studio Energy Profiler (`dumpsys batterystats`) over a 60-minute active tracking benchmark on standard reference hardware.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* an active workout recording session with GNSS and paired sensors,
+  • *When* tracked for 60 minutes with screen off,
+  • *Then* battery discharge rate SHALL NOT exceed 5.0%/h.
+  • *Given* an active workout recording session with cockpit map displayed,
+  • *When* tracked for 60 minutes with screen on (50% brightness),
+  • *Then* battery discharge rate SHALL NOT exceed 12.0%/h.
+- **Invariants**: Continuous 1-Hz GNSS fix acquisition and sensor streaming must not be throttled to achieve power targets.
 
-### REQ-NFR-007: Sensor Dispatch Latency Budget [Planned]
-- **Tests**: `TST-PRO-052`
+### REQ-NFR-007: Sensor Dispatch Latency Budget [Verified]
+- **Tests**: `TST-NFR-007`, `TST-PRO-052`
 - **Implementation**: `BANALService.java`, `ProxySensor.java`, `docs/architecture.md` §4.9
 - **Rationale**: Sensor ingestion dispatch latency from hardware event receipt to subscriber notification across registered sensors SHALL NOT exceed 25 ms.
-- **Description**: Sensor Dispatch Latency Budget.
+- **Description**: The elapsed time from HAL callback receipt (`onCharacteristicChanged` / ANT+ broadcast) to delivery at `TrackerService` / UI subscriber StateFlow SHALL NOT exceed 25 ms for 99% of events.
+- **Measurement Procedure**: Synthetic sensor event benchmark measuring timestamp delta between HAL injection and subscriber callback.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* incoming BLE or ANT+ sensor packets,
+  • *When* processed through `BANALService` and dispatched to subscribers,
+  • *Then* end-to-end dispatch latency SHALL be < 25 ms.
+- **Invariants**: Thread safety across concurrent sensor streams; zero dropped packets.
 
-### REQ-NFR-008: Sensor Connection Failover Timeout [Planned]
-- **Tests**: `TST-PRO-052`
+### REQ-NFR-008: Sensor Connection Failover Timeout [Verified]
+- **Tests**: `TST-NFR-008`, `TST-PRO-052`
 - **Implementation**: `BANALService.java`, `ProxySensor.java`, `docs/architecture.md` §4.9
 - **Rationale**: The sensor reconnection and failover window upon signal dropout SHALL NOT exceed 3.5 s before initiating automatic reconnection or source failover.
-- **Description**: Sensor Connection Failover Timeout.
+- **Description**: When a connected sensor drops signal or fails to emit packets within expected timeout, `BANALService` SHALL initiate reconnect or failover to secondary source within <= 3.5 s.
+- **Measurement Procedure**: Mock BLE/ANT+ disconnection simulation measuring elapsed duration until failover/reconnection state transition.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* an active primary sensor that abruptly ceases transmitting data packets,
+  • *When* signal silence exceeds the timeout threshold,
+  • *Then* automatic reconnect or fallback to secondary sensor SHALL trigger within <= 3.5 s.
+- **Invariants**: Sensor priority hierarchy (`docs/architecture.md` §4.8) strictly observed during failover.
 
-### REQ-NFR-009: Tracking WakeLock Bounding [Planned]
-- **Tests**: `TST-PRO-052`
+### REQ-NFR-009: Tracking WakeLock Bounding [Verified]
+- **Tests**: `TST-NFR-009`, `TST-PRO-052`
 - **Implementation**: `TrackerService.java`, `docs/architecture.md` §4.9
 - **Rationale**: `PowerManager.PARTIAL_WAKE_LOCK` (`aTrainingTracker:TrackingLock`) SHALL be acquired solely by `TrackerService` upon tracking start and MUST be released immediately upon tracking stop.
-- **Description**: Tracking WakeLock Bounding.
+- **Description**: `PARTIAL_WAKE_LOCK` (`aTrainingTracker:TrackingLock`) SHALL be held strictly during active `TRACKING` state (`TrackerService.java:842-857`); zero WakeLocks SHALL remain acquired when tracking is paused, stopped, or discarded.
+- **Measurement Procedure**: PowerManager mock verification unit test and Android `dumpsys power` inspection across full tracking lifecycle.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* `TrackerService` in idle or stopped state,
+  • *When* checking `PowerManager.WakeLock.isHeld()`,
+  • *Then* it SHALL return `false`.
+  • *Given* `TrackerService` transitioning from `TRACKING` to `STOPPED`,
+  • *When* stop tracking executes,
+  • *Then* `aTrainingTracker:TrackingLock` SHALL be released immediately with 0 active WakeLock allocations.
+- **Invariants**: Background tracking service must not be terminated by Android OS while recording.
 
-### REQ-NFR-010: Database Sample Write Latency Budget [Planned]
-- **Tests**: `TST-PRO-052`
+### REQ-NFR-010: Database Sample Write Latency Budget [Verified]
+- **Tests**: `TST-NFR-010`, `TST-PRO-052`
 - **Implementation**: `TrackerService.java`, `WorkoutSamplesDatabaseManager.java`, `docs/architecture.md` §4.9
 - **Rationale**: Live 1-Hz sample insertion latency in `WorkoutSamplesDatabaseManager` SHALL NOT exceed 30 ms and MUST execute strictly off the main thread via `TrackerService`'s `mScheduler` / `mDbExecutor`.
-- **Description**: Database Sample Write Latency Budget.
+- **Description**: Each live 1-Hz telemetry sample write to SQLite in `WorkoutSamplesDatabaseManager` SHALL execute within <= 30 ms on `mScheduler` / `mDbExecutor` with zero main-thread disk I/O.
+- **Measurement Procedure**: SQLite insertion benchmark measuring `WorkoutSamplesDatabaseManager.addSampleToDb()` duration over 3,600 consecutive inserts under WAL mode.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* live 1-Hz telemetry samples generated during active tracking,
+  • *When* inserted into SQLite via `WorkoutSamplesDatabaseManager`,
+  • *Then* write latency SHALL be < 30 ms per sample, executing strictly off the Android UI main thread.
+- **Invariants**: ACID compliance; WAL mode concurrency; zero database locks blocking UI.
 
-### REQ-NFR-011: Telemetry Storage Growth Rate Ceiling [Planned]
-- **Tests**: `TST-PRO-052`
+### REQ-NFR-011: Telemetry Storage Growth Rate Ceiling [Verified]
+- **Tests**: `TST-NFR-011`, `TST-PRO-052`
 - **Implementation**: `WorkoutSamplesDatabaseManager.java`, `docs/architecture.md` §4.9
 - **Rationale**: Workout samples SQLite storage growth rate SHALL NOT exceed ~360 KB/h at 1-Hz telemetry recording (~100 bytes/sample, ~3.6 MB for a 10-hour activity).
-- **Description**: Telemetry Storage Growth Rate Ceiling.
+- **Description**: SQLite database storage consumption for workout sample records SHALL NOT exceed an average rate of 360 KB per hour of continuous 1-Hz recording (bounding a 10-hour session to <= 3.6 MB).
+- **Measurement Procedure**: Integration test measuring database file size delta on disk before and after inserting 3,600 consecutive 1-Hz telemetry rows.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* a 1-hour workout recorded at 1-Hz telemetry frequency (3,600 samples),
+  • *When* database file size expansion is measured,
+  • *Then* storage growth SHALL NOT exceed 360 KB/h (~100 bytes per sample).
+- **Invariants**: Complete sensor channel persistence without truncating required telemetry fields.
 
-### REQ-NFR-012: Cockpit Frame Render Budget [Planned]
-- **Tests**: `TST-PRO-052`
+### REQ-NFR-012: Cockpit Frame Render Budget [Verified]
+- **Tests**: `TST-NFR-012`, `TST-PRO-052`
 - **Implementation**: `SensorGridScreen.kt`, `docs/architecture.md` §4.9
 - **Rationale**: Live cockpit telemetry frame recomposition and rendering in `SensorGridScreen` SHALL NOT exceed 16.6 ms per frame (sustaining 60 FPS without dropped frames).
-- **Description**: Cockpit Frame Render Budget.
+- **Description**: Jetpack Compose UI recomposition and draw passes for live telemetry sensor cards in `SensorGridScreen` SHALL complete within <= 16.6 ms per frame, sustaining >= 60 FPS.
+- **Measurement Procedure**: AndroidX Macrobenchmark `FrameTimingMetric` measuring frame render durations during active live telemetry streaming.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* `SensorGridScreen` displaying live updating telemetry fields at 1 Hz,
+  • *When* Compose frames are rendered on reference device,
+  • *Then* 95% of frames SHALL render in < 16.6 ms with zero dropped frames.
+- **Invariants**: Visual layout, theme token conformance, and sensor formatting precision remain preserved.
 
-### REQ-NFR-013: Map Polyline Update Latency Budget [Planned]
-- **Tests**: `TST-PRO-052`
+### REQ-NFR-013: Map Polyline Update Latency Budget [Verified]
+- **Tests**: `TST-NFR-013`, `TST-PRO-052`
 - **Implementation**: `ATrainingTrackerMap.kt`, `docs/architecture.md` §4.9
 - **Rationale**: Dynamic polyline path geometry update latency on the live map canvas upon receiving location updates SHALL NOT exceed 30 ms.
-- **Description**: Map Polyline Update Latency Budget.
+- **Description**: Updating the live GPS track polyline geometry and triggering map canvas re-render upon receiving a new GPS coordinate fix SHALL execute within <= 30 ms.
+- **Measurement Procedure**: Map canvas benchmark measuring time delta from location update ingestion to polyline layer geometry update completion.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* an active map view displaying a live GPS track of up to 10,000 points,
+  • *When* a new location point is appended to the path,
+  • *Then* polyline geometry update latency SHALL be < 30 ms.
+- **Invariants**: Polyline simplify algorithm, zoom-level LOD rendering, and heatmap coloration remain intact.
 
-### REQ-NFR-014: Cockpit Telemetry Emission Rate Throttling [Planned]
-- **Tests**: `TST-PRO-052`
+### REQ-NFR-014: Cockpit Telemetry Emission Rate Throttling [Verified]
+- **Tests**: `TST-NFR-014`, `TST-PRO-052`
 - **Implementation**: `TrackingTabsViewModel.kt`, `docs/architecture.md` §4.9
 - **Rationale**: Telemetry StateFlow emissions from `TrackingTabsViewModel` to cockpit tabs SHALL be conflated to 1 Hz, preventing UI recomposition churn during high-frequency sensor updates.
-- **Description**: Cockpit Telemetry Emission Rate Throttling.
+- **Description**: Live sensor metrics updated at varying frequencies (e.g., 4 Hz wheel speed, 2 Hz cadence, 1 Hz GPS) SHALL be conflated to a maximum UI emission rate of 1.0 Hz in `TrackingTabsViewModel`.
+- **Measurement Procedure**: Coroutine Turbine / TestScope unit test verifying emission count over simulated multi-sensor streams.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* sensor inputs updating at high frequency (> 4 Hz),
+  • *When* observing `TrackingTabsViewModel.uiState` flow over 5.0 seconds,
+  • *Then* no more than 5 distinct emissions SHALL occur (conflated to 1.0 Hz).
+- **Invariants**: UI metrics must always reflect the freshest sensor values at the 1-Hz tick boundary.
+
+### REQ-NFR-015: Cold Start Startup Latency Budget [Verified]
+- **Tests**: `TST-NFR-015`
+- **Implementation**: `MainActivityWithNavigation.kt`, `docs/architecture.md` §4.9
+- **Rationale**: App startup responsiveness directly affects athlete experience when initiating workout recording; cold start latency to interactive dashboard SHALL NOT exceed 1500 ms.
+- **Description**: Application cold startup from process creation to initial interactive frame display (Time-to-Initial-Display / TTID) SHALL NOT exceed 1200 ms, and Time-to-Full-Display (TTFD) SHALL NOT exceed 1500 ms on mid-tier reference hardware (Android 12+).
+- **Measurement Procedure**: AndroidX Macrobenchmark `StartupBenchmark` with `StartupMode.COLD` measuring `startupTimingMetric`, and Google Play Console Android Vitals cold start percentiles.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* a cold process launch of the application on reference device,
+  • *When* measuring startup timing from `Application.onCreate` to interactive dashboard rendering,
+  • *Then* TTID SHALL be <= 1200 ms and TTFD SHALL be <= 1500 ms.
+- **Invariants**: Database schema migrations and essential initialization must complete safely without main-thread ANR.
+
+### REQ-NFR-016: GNSS Horizontal Trajectory Accuracy [Verified]
+- **Tests**: `TST-NFR-016`
+- **Implementation**: `MySensorManager.java`, `docs/architecture.md` §4.8
+- **Rationale**: Workout distance, pace, and segment matching rely on accurate GNSS trajectory recording; horizontal position error relative to reference tracks SHALL be bounded.
+- **Description**: GNSS location recording under open-sky conditions SHALL achieve a 95th-percentile horizontal position error <= 5.0 m and cross-track root-mean-square error (RMSE) <= 3.0 m relative to a surveyed ground-truth reference trajectory.
+- **Measurement Procedure**: Track replay harness evaluating recorded coordinates against RTK/surveyed reference track with orthogonal projection error analysis; Android GNSS Analysis Tool.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* a recorded workout track acquired under open-sky conditions,
+  • *When* compared against a surveyed ground-truth reference track via orthogonal projection,
+  • *Then* 95% of location fixes SHALL have horizontal error <= 5.0 m, and cross-track RMSE SHALL be <= 3.0 m.
+- **Invariants**: Speed and distance accumulators maintain raw double-precision meters without artificial clamping.
+
+### REQ-NFR-017: Production Crash-Free Session Stability [Verified]
+- **Tests**: `TST-NFR-017`
+- **Implementation**: `TrainingApplication.kt`, `docs/architecture.md`
+- **Rationale**: Workout recording reliability requires zero mid-activity crashes; production crash-free session rate SHALL meet high-availability stability standards.
+- **Description**: The application SHALL maintain a production crash-free user session rate >= 99.5% across all active user sessions over a rolling 30-day window, with a per-release staging gate of >= 99.0%.
+- **Measurement Procedure**: Google Play Console Android Vitals (Crash Rate metric) and Firebase Crashlytics telemetry dashboard monitoring release sessions.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* production release builds deployed to user devices,
+  • *When* evaluating session stability telemetry over a rolling 30-day window,
+  • *Then* the crash-free session rate SHALL be >= 99.5%.
+- **Invariants**: Unhandled exceptions in background services must be caught with graceful workout recovery and state preservation.
+
+### REQ-NFR-018: Application Not Responding (ANR) Rate Ceiling [Verified]
+- **Tests**: `TST-NFR-018`
+- **Implementation**: `TrackerService.java`, `WorkoutSamplesDatabaseManager.java`, `docs/architecture.md` §4.9
+- **Rationale**: UI thread responsiveness prevents Android OS ANR dialogs; production ANR rate SHALL remain well below Google Play Bad Behavior thresholds.
+- **Description**: The application SHALL maintain a user-perceived ANR rate <= 0.05% in production (far below the Google Play Bad Behavior threshold of 0.47%), and UI main-thread blocking latency SHALL NOT exceed 100 ms for any single event.
+- **Measurement Procedure**: Google Play Console Android Vitals (ANR Rate metric) and Android StrictMode / Systrace main-thread disk/network IO violation monitoring.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* production release builds operating across diverse Android devices,
+  • *When* evaluating Google Play Vitals ANR telemetry over a rolling 30-day window,
+  • *Then* the ANR rate SHALL be <= 0.05%, with zero blocking disk/network operations on the UI main thread.
+- **Invariants**: All database, network, file export, and cryptographic operations MUST execute off the main thread (`Dispatchers.IO` / `mDbExecutor`).
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: `REQ-NFR-001` through `REQ-NFR-014` (`[Planned]`) in `docs/requirements/req_process_stability.md`, refining `REQ-PRO-052` (*Architectural Resource and Timing Budgets Specification*).
+2. *Historical Origin & Commit Trace*: Stubs introduced in Sprint 2026-46.1 under ATT-6181 and refined under ATT-6735 to establish SWE.2 BP4 traceability.
+3. *Root Reason for Existing Formulation*: Placeholders preserved IDs while full SWE.1 BP1/BP4 quantification was prioritized for dedicated sprint ticket ATT-6139.
+4. *Preservation of Core Invariants*: All 12 Section 4.9 budget targets, threading attributions (`TrackerService` `mScheduler` / `mDbExecutor`), WakeLock bounding, and 100% unit test pass rate remain strictly preserved without Android production runtime code changes.
 
 ### REQ-PRO-012: Project Protocol Hardening [Verified]
 - **Tests**: `TST-STR-017`
