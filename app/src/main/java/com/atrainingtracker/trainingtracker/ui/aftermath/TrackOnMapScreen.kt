@@ -107,6 +107,7 @@ fun TrackOnMapScreen(
     onSaveTabsConfig: ((List<WorkoutDetailTabConfig>) -> Unit)? = null,
     onUpdateFtp: ((Int) -> Unit)? = null,
     recentSessions: List<HrvSessionThreshold> = emptyList(),
+    isSmoothedStream: Boolean = false,
     useTabbedLayout: Boolean = true,
     initialAutoShareSnapshot: Boolean = false,
     onSnapshotComplete: (() -> Unit)? = null
@@ -325,6 +326,7 @@ fun TrackOnMapScreen(
             hrZoneThresholds = hrZoneThresholds,
             powerZoneThresholds = powerZoneThresholds,
             recentSessions = recentSessions,
+            isSmoothedStream = isSmoothedStream,
             onUpdateFtp = effectiveOnUpdateFtp,
             useStatusBarsPadding = useStatusBarsPadding,
             onClusterClick = onClusterClick,

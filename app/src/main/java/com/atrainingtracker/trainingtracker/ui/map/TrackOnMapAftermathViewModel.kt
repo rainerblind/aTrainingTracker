@@ -68,6 +68,7 @@ data class AftermathMapUIState(
     val hrThresholds: HeartRateZoneThresholds? = null,
     val powerThresholds: PowerZoneThresholds? = null,
     val recentSessions: List<HrvSessionThreshold> = emptyList(),
+    val isSmoothedHrvStream: Boolean = false,
     val loadedWorkoutId: Long? = null
 )
 
@@ -291,6 +292,7 @@ class TrackOnMapAftermathViewModel @JvmOverloads constructor(
             val hrThresholds = telemetry?.hrThresholds ?: TelemetryZoneMath.loadHeartRateThresholds(getApplication(), bSportType)
             val powerThresholds = telemetry?.powerThresholds ?: TelemetryZoneMath.loadPowerThresholds(getApplication())
             val recentHrvSessions = workoutRepository.getRecentHrvSessionThresholds(workoutId)
+            val isSmoothedHrv = workoutRepository.isWorkoutHrvSmoothed(workoutId)
             withContext(Dispatchers.Main) {
                 _uiState.value = _uiState.value.copy(
                     hrZoneDistribution = hrDistribution,
@@ -298,7 +300,8 @@ class TrackOnMapAftermathViewModel @JvmOverloads constructor(
                     gradeZoneDistribution = gradeDistribution,
                     hrThresholds = hrThresholds,
                     powerThresholds = powerThresholds,
-                    recentSessions = recentHrvSessions
+                    recentSessions = recentHrvSessions,
+                    isSmoothedHrvStream = isSmoothedHrv
                 )
             }
 

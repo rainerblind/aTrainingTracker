@@ -4470,4 +4470,31 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
         results
     }
 
+    /**
+     * Evaluates whether a workout's beat-to-beat RR stream exhibited smoothed or quantized sensor artifacts
+     * (REQ-TRK-068.4).
+     */
+    suspend fun isWorkoutHrvSmoothed(workoutId: Long): Boolean = withContext(Dispatchers.IO) {
+        try {
+            val rrRepository = WorkoutRrRepository.getInstance(application)
+            val intervals = rrRepository.getIntervalsForWorkout(workoutId)
+            if (intervals.isEmpty() || intervals.size < 10) return@withContext false
+            val beats = intervals.map { interval ->
+                com.atrainingtracker.banalservice.devices.hrv.FilteredRrBeat(
+                    beatTimestampMs = interval.beatTimestampMs,
+                    rawRrMs = interval.rrMs.toDouble(),
+                    correctedRrMs = interval.rrMs.toDouble(),
+                    artifactFlag = interval.artifactFlag,
+                    isArtifact = interval.artifactFlag != com.atrainingtracker.banalservice.devices.RrBeatEvent.ARTIFACT_NORMAL
+                )
+            }
+            val quality = com.atrainingtracker.trainingtracker.database.hrv.HrvPostWorkoutRecomputer.analyzeSignalQuality(beats)
+            quality.status == com.atrainingtracker.banalservice.devices.hrv.HrvSignalQualityStatus.SMOOTHED_STREAM ||
+                quality.status == com.atrainingtracker.banalservice.devices.hrv.HrvSignalQualityStatus.QUANTIZED_SYNTHETIC
+        } catch (e: Exception) {
+            Log.w(TAG, "Error evaluating HRV signal quality for workout $workoutId", e)
+            false
+        }
+    }
+
 }

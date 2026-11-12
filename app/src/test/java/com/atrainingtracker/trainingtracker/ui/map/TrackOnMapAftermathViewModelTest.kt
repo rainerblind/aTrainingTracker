@@ -50,6 +50,7 @@ class TrackOnMapAftermathViewModelTest {
 
     private val testDispatcher = StandardTestDispatcher()
     private val mockApplication = mockk<Application>(relaxed = true)
+    private lateinit var mockWorkoutRepo: WorkoutRepository
 
     @Before
     fun setUp() {
@@ -61,7 +62,7 @@ class TrackOnMapAftermathViewModelTest {
         })
 
         mockkObject(WorkoutRepository.Companion)
-        val mockWorkoutRepo = mockk<WorkoutRepository>(relaxed = true)
+        mockWorkoutRepo = mockk<WorkoutRepository>(relaxed = true)
         every { WorkoutRepository.getInstance(any()) } returns mockWorkoutRepo
         coEvery { mockWorkoutRepo.getWorkoutTrackPoints(any(), any()) } returns emptyList()
         coEvery { mockWorkoutRepo.getWorkoutTelemetryPoints(any()) } returns emptyList()
@@ -241,5 +242,19 @@ class TrackOnMapAftermathViewModelTest {
 
         assertNotNull(viewModel.uiState.value.powerThresholds)
         assertEquals(294, viewModel.uiState.value.powerThresholds?.z4Max)
+    }
+
+    @Test
+    fun loadAftermathData_populatesIsSmoothedHrvStreamFromWorkoutRepository() = runTest(testDispatcher) {
+        coEvery { mockWorkoutRepo.isWorkoutHrvSmoothed(101L) } returns true
+
+        val viewModel = TrackOnMapAftermathViewModel(mockApplication, ioDispatcher = testDispatcher)
+        assertFalse("Initial isSmoothedHrvStream must be false", viewModel.uiState.value.isSmoothedHrvStream)
+
+        val workout = createWorkout(101L)
+        viewModel.loadAftermathData(workout)
+        advanceUntilIdle()
+
+        assertTrue("isSmoothedHrvStream must be populated from repository", viewModel.uiState.value.isSmoothedHrvStream)
     }
 }

@@ -125,6 +125,7 @@ fun WorkoutDetailTabbedContent(
     configuredFtp: Int? = null,
     configuredHrMax: Int? = null,
     recentSessions: List<HrvSessionThreshold> = emptyList(),
+    isSmoothedStream: Boolean = false,
     onUpdateFtp: ((Int) -> Unit)? = null,
     onCalibrateMader: ((Int?, Int?) -> Unit)? = null,
     useStatusBarsPadding: Boolean,
@@ -426,6 +427,7 @@ fun WorkoutDetailTabbedContent(
                                             configuredFtp = configuredFtp,
                                             configuredHrMax = configuredHrMax,
                                             recentSessions = recentSessions,
+                                            isSmoothedStream = isSmoothedStream,
                                             onUpdateFtp = onUpdateFtp,
                                             onCalibrateMader = onCalibrateMader,
                                             onAddPhotos = { uris ->
@@ -516,6 +518,7 @@ fun WorkoutDetailTabbedContent(
                                                 configuredFtp = configuredFtp,
                                                 configuredHrMax = configuredHrMax,
                                                 recentSessions = recentSessions,
+                                                isSmoothedStream = isSmoothedStream,
                                                 onUpdateFtp = onUpdateFtp,
                                                 onCalibrateMader = onCalibrateMader,
                                                 onAddPhotos = { uris ->
@@ -579,6 +582,7 @@ fun WorkoutDetailTabbedContent(
                                     configuredFtp = configuredFtp,
                                     configuredHrMax = configuredHrMax,
                                     recentSessions = recentSessions,
+                                    isSmoothedStream = isSmoothedStream,
                                     onUpdateFtp = onUpdateFtp,
                                     onCalibrateMader = onCalibrateMader,
                                     onAddPhotos = { uris ->
@@ -824,6 +828,7 @@ private fun RenderWorkoutDetailCardSections(
     configuredFtp: Int? = null,
     configuredHrMax: Int? = null,
     recentSessions: List<HrvSessionThreshold> = emptyList(),
+    isSmoothedStream: Boolean = false,
     onUpdateFtp: ((Int) -> Unit)? = null,
     onCalibrateMader: ((Int?, Int?) -> Unit)? = null,
     activeScrubPath: List<com.atrainingtracker.trainingtracker.ui.map.PathPoint>? = null,
@@ -920,6 +925,7 @@ private fun RenderWorkoutDetailCardSections(
                 if (TelemetryMetricUtils.hasHrvData(activeScrubPath)) {
                     HrvAlpha1ScatterCard(
                         points = activeScrubPath ?: emptyList(),
+                        isSmoothedStream = isSmoothedStream,
                         dfaA1ThresholdT1 = tuningConfig.dfaA1ThresholdT1,
                         dfaA1ThresholdT2 = tuningConfig.dfaA1ThresholdT2,
                         modifier = Modifier

@@ -449,8 +449,10 @@ fun EditSensorFieldDialog(
                     val tuning by tuningFlow.collectAsState(
                         initial = com.atrainingtracker.trainingtracker.settings.TuningConfig()
                     )
+                    val signalQualityStatus = com.atrainingtracker.banalservice.BANALService.getDeviceManager()?.hrvMetricsDevice?.signalQualityResult?.status
                     com.atrainingtracker.trainingtracker.ui.tracking.HrvInfoBottomSheet(
                         onDismissRequest = { showHrvInfo = false },
+                        signalQualityStatus = signalQualityStatus,
                         dfaA1ThresholdT1 = tuning.dfaA1ThresholdT1,
                         dfaA1ThresholdT2 = tuning.dfaA1ThresholdT2
                     )

@@ -40,6 +40,43 @@ class HrvInfoBottomSheetTest {
     }
 
     @Test
+    fun testBottomSheetSourceContract_acceptsSignalQualityStatusParameter() {
+        val clazz = Class.forName("com.atrainingtracker.trainingtracker.ui.tracking.HrvInfoBottomSheetKt")
+        val methods = clazz.declaredMethods
+        val sheetMethod = methods.find { it.name.startsWith("HrvInfoBottomSheet") && Modifier.isPublic(it.modifiers) }
+        assertNotNull("HrvInfoBottomSheet composable must exist", sheetMethod)
+        val hasSignalQualityParam = sheetMethod!!.parameterTypes.any {
+            it.name.contains("HrvSignalQualityStatus")
+        }
+        assertTrue("HrvInfoBottomSheet must accept HrvSignalQualityStatus parameter", hasSignalQualityParam)
+    }
+
+    @Test
+    fun testSensorFieldState_hrvSignalQualityStatus_defaultsToNullAndPreservesStatus() {
+        val defaultState = SensorFieldState(
+            configHash = 1,
+            sensorFieldId = 1L,
+            rowNr = 0,
+            colNr = 0,
+            viewSize = ViewSize.NORMAL,
+            label = "DFA a1",
+            filterDescription = "",
+            value = "--.--",
+            units = "",
+            zoneColor = androidx.compose.ui.graphics.Color.Transparent
+        )
+        org.junit.Assert.assertNull(defaultState.hrvSignalQualityStatus)
+
+        val smoothedState = defaultState.copy(
+            hrvSignalQualityStatus = com.atrainingtracker.banalservice.devices.hrv.HrvSignalQualityStatus.SMOOTHED_STREAM
+        )
+        org.junit.Assert.assertEquals(
+            com.atrainingtracker.banalservice.devices.hrv.HrvSignalQualityStatus.SMOOTHED_STREAM,
+            smoothedState.hrvSignalQualityStatus
+        )
+    }
+
+    @Test
     fun testNineLocaleLocalizationParity_allHrvInfoStringsPresentInStringsHrvXml() {
         val locales = listOf(
             "values",

@@ -203,6 +203,7 @@ class WorkoutSummariesListFragment : Fragment() {
                                     hrZoneThresholds = aftermathUIState.hrThresholds,
                                     powerZoneThresholds = aftermathUIState.powerThresholds,
                                     recentSessions = aftermathUIState.recentSessions,
+                                    isSmoothedStream = aftermathUIState.isSmoothedHrvStream,
                                     onUpdateFtp = { trackOnMapViewModel.updateFtp(it) },
                                     telemetryPath = aftermathUIState.telemetryPath,
                                     initialAutoShareSnapshot = autoShareSnapshotOnOpen,
