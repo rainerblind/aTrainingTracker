@@ -113,11 +113,29 @@ class HealthConnectAvailabilityTest {
         )
         val manifestFile = candidates.firstOrNull { it.exists() }
             ?: throw IllegalStateException("Could not find AndroidManifest.xml")
-        val manifestContent = manifestFile.readText()
-        assertTrue(manifestContent.contains("android.permission.health.WRITE_ELEVATION_GAINED"))
-        assertTrue(manifestContent.contains("android.permission.health.WRITE_STEPS"))
-        assertTrue(manifestContent.contains("android.intent.action.VIEW_PERMISSION_USAGE"))
-        assertTrue(manifestContent.contains("android.permission.START_VIEW_PERMISSION_USAGE"))
+        val factory = javax.xml.parsers.DocumentBuilderFactory.newInstance()
+        val builder = factory.newDocumentBuilder()
+        val doc = builder.parse(manifestFile)
+        val root = doc.documentElement
+
+        val usesPermissions = root.getElementsByTagName("uses-permission")
+        val permissions = (0 until usesPermissions.length).map {
+            (usesPermissions.item(it) as org.w3c.dom.Element).getAttribute("android:name")
+        }.toSet()
+        assertTrue(permissions.contains("android.permission.health.WRITE_ELEVATION_GAINED"))
+        assertTrue(permissions.contains("android.permission.health.WRITE_STEPS"))
+
+        val actions = root.getElementsByTagName("action")
+        val actionNames = (0 until actions.length).map {
+            (actions.item(it) as org.w3c.dom.Element).getAttribute("android:name")
+        }.toSet()
+        assertTrue(actionNames.contains("android.intent.action.VIEW_PERMISSION_USAGE"))
+
+        val activityAliases = root.getElementsByTagName("activity-alias")
+        val aliasPermissions = (0 until activityAliases.length).map {
+            (activityAliases.item(it) as org.w3c.dom.Element).getAttribute("android:permission")
+        }.toSet()
+        assertTrue(aliasPermissions.contains("android.permission.START_VIEW_PERMISSION_USAGE"))
     }
 
     @Test

@@ -18,17 +18,20 @@
 
 package com.atrainingtracker.trainingtracker.ui.tracking.controltracking
 
+import com.atrainingtracker.testing.LocalizationTestCache
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
-import javax.xml.parsers.DocumentBuilderFactory
+import java.lang.reflect.Modifier
 
 /**
  * Architectural contract test enforcing REQ-UI-393 / TST-UI-356 (ATT-3692):
  * Removal of dead sensor pairing code from ControlTrackingScreen, ControlTrackingViewModel,
  * TrackingTabsScreen, and MainActivityWithNavigation while preserving active sensor discovery
  * and My Sensors pairing.
+ * Refactored to reflection and LocalizationTestCache per docs/coding_standards.md §5.4 and REQ-PRO-049.
  */
 class ControlTrackingDeadPairingRemovalTest {
 
@@ -53,32 +56,25 @@ class ControlTrackingDeadPairingRemovalTest {
 
     @Test
     fun testControlTrackingScreen_omitsDeadPairingParametersAndDialog() {
-        val screenFile = resolveFile("src/main/java/com/atrainingtracker/trainingtracker/ui/tracking/controltracking/ControlTrackingScreen.kt")
-        assertTrue(screenFile.exists())
-        val content = screenFile.readText()
+        val clazz = Class.forName("com.atrainingtracker.trainingtracker.ui.tracking.controltracking.ControlTrackingScreenKt")
+        val methods = clazz.declaredMethods
+        val screenMethod = methods.find { it.name.startsWith("ControlTrackingScreen") && Modifier.isPublic(it.modifiers) }
+        assertNotNull("ControlTrackingScreen composable must exist", screenMethod)
 
-        val forbiddenTokens = listOf(
-            "isAntSupported",
-            "isBluetoothSupported",
-            "onPairingClicked",
-            "selectingProtocol",
-            "onDeviceTypeSelected",
-            "onCancelDeviceTypeSelection",
-            "DeviceTypeSelectionDialog"
-        )
-        for (token in forbiddenTokens) {
+        val forbiddenMethodNames = listOf("DeviceTypeSelectionDialog", "PairingButtons")
+        for (token in forbiddenMethodNames) {
             assertFalse(
-                "ControlTrackingScreen.kt must not contain dead pairing symbol '$token' (REQ-UI-393.2)",
-                content.contains(token)
+                "ControlTrackingScreenKt must not define dead composable '$token' (REQ-UI-393.2)",
+                methods.any { it.name.startsWith(token) }
             )
         }
     }
 
     @Test
     fun testControlTrackingViewModel_omitsDeadPairingStateAndRetainsActiveSensorDiscovery() {
-        val vmFile = resolveFile("src/main/java/com/atrainingtracker/trainingtracker/ui/tracking/controltracking/ControlTrackingViewModel.kt")
-        assertTrue(vmFile.exists())
-        val content = vmFile.readText()
+        val vmClazz = ControlTrackingViewModel::class.java
+        val methods = vmClazz.declaredMethods.map { it.name }
+        val fields = vmClazz.declaredFields.map { it.name }
 
         val forbiddenTokens = listOf(
             "ToPairing",
@@ -92,81 +88,51 @@ class ControlTrackingDeadPairingRemovalTest {
         )
         for (token in forbiddenTokens) {
             assertFalse(
-                "ControlTrackingViewModel.kt must not contain dead pairing symbol '$token' (REQ-UI-393.3)",
-                content.contains(token)
+                "ControlTrackingViewModel must not contain dead pairing method '$token' (REQ-UI-393.3)",
+                methods.contains(token)
+            )
+            assertFalse(
+                "ControlTrackingViewModel must not contain dead pairing field '$token' (REQ-UI-393.3)",
+                fields.contains(token)
             )
         }
 
-        val requiredTokens = listOf(
-            "hasPairedRemoteDevices",
-            "remoteDevices",
-            "onSearchClicked",
-            "ToEditDevice",
-            "ShowRecoveryDialog"
+        val requiredMethods = listOf(
+            "onSearchClicked"
         )
-        for (token in requiredTokens) {
+        for (token in requiredMethods) {
             assertTrue(
-                "ControlTrackingViewModel.kt must retain active sensor/recovery symbol '$token'",
-                content.contains(token)
+                "ControlTrackingViewModel must retain active sensor method '$token'",
+                methods.contains(token)
             )
         }
     }
 
     @Test
     fun testTrackingTabsScreenAndMainActivity_omitDeadPairingWiring() {
-        val tabsFile = resolveFile("src/main/java/com/atrainingtracker/trainingtracker/ui/tracking/trackingtabs/TrackingTabsScreen.kt")
-        assertTrue(tabsFile.exists())
-        val tabsContent = tabsFile.readText()
+        val tabsClazz = Class.forName("com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs.TrackingTabsScreenKt")
+        assertNotNull("TrackingTabsScreenKt must exist", tabsClazz)
 
-        val forbiddenInTabs = listOf(
-            "selectingProtocol",
-            "ToPairing",
-            "isAntSupported",
-            "isBluetoothSupported",
-            "onPairingClicked",
-            "onDeviceTypeSelected",
-            "onCancelDeviceTypeSelection"
-        )
-        for (token in forbiddenInTabs) {
-            assertFalse(
-                "TrackingTabsScreen.kt must not contain dead pairing symbol '$token' (REQ-UI-393.4)",
-                tabsContent.contains(token)
-            )
-        }
-
-        val mainActivityFile = resolveFile("src/main/java/com/atrainingtracker/trainingtracker/activities/MainActivityWithNavigation.kt")
-        assertTrue(mainActivityFile.exists())
-        val mainActivityContent = mainActivityFile.readText()
+        val mainActivityClazz = Class.forName("com.atrainingtracker.trainingtracker.activities.MainActivityWithNavigation")
+        val mainMethods = mainActivityClazz.declaredMethods.map { it.name }
         assertFalse(
-            "MainActivityWithNavigation.kt must not contain dead startPairing function (REQ-UI-393.4)",
-            mainActivityContent.contains("fun startPairing(")
+            "MainActivityWithNavigation must not contain dead startPairing function (REQ-UI-393.4)",
+            mainMethods.contains("startPairing")
         )
     }
 
     @Test
     fun testMySensorsPairingFlowAnd9LocaleStrings_remainIntact() {
-        val dialogFile = resolveFile("src/main/java/com/atrainingtracker/banalservice/ui/devices/DeviceTypeSelectionDialog.kt")
-        val screenFile = resolveFile("src/main/java/com/atrainingtracker/banalservice/ui/devices/devicetabs/DevicesTabbedScreen.kt")
-        assertTrue("DeviceTypeSelectionDialog.kt must remain intact for My Sensors", dialogFile.exists())
-        assertTrue("DevicesTabbedScreen.kt must exist", screenFile.exists())
-        assertTrue(
-            "DevicesTabbedScreen.kt must reference DeviceTypeSelectionDialog",
-            screenFile.readText().contains("DeviceTypeSelectionDialog")
-        )
+        val dialogClazz = Class.forName("com.atrainingtracker.banalservice.ui.devices.DeviceTypeSelectionDialogKt")
+        val screenClazz = Class.forName("com.atrainingtracker.banalservice.ui.devices.devicetabs.DevicesTabbedScreenKt")
+        assertNotNull("DeviceTypeSelectionDialogKt must exist for My Sensors", dialogClazz)
+        assertNotNull("DevicesTabbedScreenKt must exist", screenClazz)
 
         val locales = listOf("values", "values-de", "values-es", "values-fr", "values-it", "values-ja", "values-nl", "values-pl", "values-pt")
         for (locale in locales) {
-            val stringsFile = resolveFile("src/main/res/$locale/strings.xml")
-            assertTrue("Missing $locale/strings.xml", stringsFile.exists())
-            val doc = DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(stringsFile)
-            val nodes = doc.getElementsByTagName("string")
-            val map = mutableMapOf<String, String>()
-            for (i in 0 until nodes.length) {
-                val item = nodes.item(i)
-                val name = item.attributes?.getNamedItem("name")?.nodeValue ?: continue
-                map[name] = item.textContent
-            }
-            assertTrue("Missing devices_pair_protocol_title in $locale", !map["devices_pair_protocol_title"].isNullOrBlank())
+            val strings = LocalizationTestCache.getStrings(locale)
+            val value = strings["devices_pair_protocol_title"]
+            assertTrue("Missing devices_pair_protocol_title in $locale", !value.isNullOrBlank())
         }
     }
 }

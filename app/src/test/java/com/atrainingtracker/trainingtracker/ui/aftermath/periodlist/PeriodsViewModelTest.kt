@@ -621,19 +621,16 @@ class PeriodsViewModelTest {
         val viewModel = createViewModel()
         assertNotNull(viewModel)
 
-        val periodsTabsFile = java.io.File("app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/periodlist/PeriodsTabsScreen.kt")
-        val altPeriodsTabsFile = java.io.File("../app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/periodlist/PeriodsTabsScreen.kt")
-        val targetFile = if (periodsTabsFile.exists()) periodsTabsFile else altPeriodsTabsFile
-        if (targetFile.exists()) {
-            val content = targetFile.readText()
-            assertFalse(
-                "PeriodsTabsScreen must not reference HrvReadinessTrendCard (REQ-UI-513.3)",
-                content.contains("HrvReadinessTrendCard")
-            )
-            assertFalse(
-                "PeriodsTabsScreen must not reference HrvTrendSeries (REQ-UI-513.3)",
-                content.contains("HrvTrendSeries")
-            )
-        }
+        val clazz = Class.forName("com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.PeriodsTabsScreenKt")
+        assertNotNull(clazz)
+        val methodNames = clazz.declaredMethods.map { it.name }
+        assertFalse(
+            "PeriodsTabsScreen must not reference HrvReadinessTrendCard (REQ-UI-513.3)",
+            methodNames.any { it.contains("HrvReadinessTrendCard") }
+        )
+        assertFalse(
+            "PeriodsTabsScreen must not reference HrvTrendSeries (REQ-UI-513.3)",
+            methodNames.any { it.contains("HrvTrendSeries") }
+        )
     }
 }

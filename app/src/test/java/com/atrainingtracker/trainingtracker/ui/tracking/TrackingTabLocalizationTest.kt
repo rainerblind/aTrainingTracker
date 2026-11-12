@@ -18,14 +18,15 @@
 
 package com.atrainingtracker.trainingtracker.ui.tracking
 
+import com.atrainingtracker.testing.LocalizationTestCache
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.io.File
-import java.util.regex.Pattern
 
 /**
  * Unit test verifying 100% 9-language localization parity for all tracking tab WYSIWYG
  * strings introduced in ATT-2360 (REQ-UI-275, TST-UI-235.4).
+ * Refactored to LocalizationTestCache per docs/coding_standards.md §5.4 and REQ-PRO-049.
  */
 class TrackingTabLocalizationTest {
 
@@ -51,16 +52,11 @@ class TrackingTabLocalizationTest {
     @Test
     fun testAllRequiredKeysExistAcrossAll9Locales() {
         for (locale in locales) {
-            val file = File("src/main/res/$locale/strings.xml")
-            assertTrue("Locale file $file must exist", file.exists())
-            val content = file.readText()
-
+            val strings = LocalizationTestCache.getStrings(locale)
             for (key in requiredKeys) {
-                val pattern = Pattern.compile("<string\\s+name=\"$key\">(.*?)</string>", Pattern.DOTALL)
-                val matcher = pattern.matcher(content)
-                assertTrue("Key '$key' must exist in $locale/strings.xml", matcher.find())
-                val value = matcher.group(1)?.trim().orEmpty()
-                assertTrue("Value for '$key' in $locale/strings.xml must not be empty", value.isNotEmpty())
+                val value = strings[key]
+                assertNotNull("Key '$key' must exist in $locale/strings.xml", value)
+                assertTrue("Value for '$key' in $locale/strings.xml must not be empty", value!!.isNotEmpty())
             }
         }
     }

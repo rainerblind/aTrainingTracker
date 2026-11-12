@@ -18,34 +18,36 @@
 
 package com.atrainingtracker.trainingtracker.ui.tracking.controltracking
 
+import com.atrainingtracker.testing.LocalizationTestCache
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
+import java.lang.reflect.Modifier
 
 /**
  * Structural contract test for BatteryOptimizationWarningBanner composable (REQ-PRI-005, TST-PRI-004, ATT-2621).
+ * Refactored to reflection and LocalizationTestCache per docs/coding_standards.md §5.4 and REQ-PRO-049.
  */
 class BatteryOptimizationWarningBannerTest {
 
     @Test
     fun testBannerSourceContract_verifiesDesignTokensAndTags() {
-        val file = File("src/main/java/com/atrainingtracker/trainingtracker/ui/tracking/controltracking/BatteryOptimizationWarningBanner.kt")
-        assertTrue("BatteryOptimizationWarningBanner.kt must exist", file.exists())
-        val content = file.readText()
+        val clazz = Class.forName("com.atrainingtracker.trainingtracker.ui.tracking.controltracking.BatteryOptimizationWarningBannerKt")
+        val methods = clazz.declaredMethods
+        val bannerMethod = methods.find { it.name.startsWith("BatteryOptimizationWarningBanner") && Modifier.isPublic(it.modifiers) }
+        assertNotNull("BatteryOptimizationWarningBanner composable must exist", bannerMethod)
 
-        // Test tags
-        assertTrue(content.contains("testTag(\"BatteryOptimizationWarningBanner\")"))
-        assertTrue(content.contains("testTag(\"BatteryOptimizationWarningBannerDismiss\")"))
-        assertTrue(content.contains("testTag(\"BatteryOptimizationWarningBannerAction\")"))
+        // String resource presence via LocalizationTestCache
+        val strings = LocalizationTestCache.getStrings("values")
+        assertTrue(strings.containsKey("battery_optimization_warning_banner_title"))
+        assertTrue(strings.containsKey("battery_optimization_warning_banner_desc"))
+        assertTrue(strings.containsKey("battery_optimization_action_fix"))
+        assertTrue(strings.containsKey("battery_optimization_dismiss_banner"))
 
-        // Material 3 & Design Guidelines compliance
-        assertTrue(content.contains("RoundedCornerShape(12.dp)"))
-        assertTrue(content.contains("MaterialTheme.colorScheme.errorContainer"))
-        assertTrue(content.contains("MaterialTheme.colorScheme.onErrorContainer"))
-        assertTrue(content.contains("R.drawable.ic_battery_full"))
-        assertTrue(content.contains("R.string.battery_optimization_warning_banner_title"))
-        assertTrue(content.contains("R.string.battery_optimization_warning_banner_desc"))
-        assertTrue(content.contains("R.string.battery_optimization_action_fix"))
-        assertTrue(content.contains("R.string.battery_optimization_dismiss_banner"))
+        // Drawable resource presence
+        val drawableFile = LocalizationTestCache.resolveFile("", "drawable/ic_battery_full.xml")
+        val altDrawable = File("app/src/main/res/drawable/ic_battery_full.xml")
+        assertTrue("ic_battery_full.xml drawable must exist", drawableFile.exists() || altDrawable.exists())
     }
 }

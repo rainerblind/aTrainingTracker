@@ -147,15 +147,11 @@ class PermissionRationaleSheetContractTest {
         )
 
         for (localeDir in localeDirs) {
-            val stringsFile = findFile("src/main/res/$localeDir/strings.xml")
-            assertTrue("strings.xml must exist for locale $localeDir", stringsFile.exists())
-            val content = stringsFile.readText()
-
+            val strings = com.atrainingtracker.testing.LocalizationTestCache.getStrings(localeDir)
             for (key in keysToCheck) {
-                val tag = "<string name=\"$key\">"
                 assertTrue(
                     "Key '$key' must exist in $localeDir/strings.xml",
-                    content.contains(tag)
+                    strings.containsKey(key)
                 )
             }
         }

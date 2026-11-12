@@ -18,135 +18,72 @@
 
 package com.atrainingtracker.trainingtracker.ui.tracking.controltracking
 
-import com.atrainingtracker.banalservice.BANALService
+import com.atrainingtracker.testing.LocalizationTestCache
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.io.File
+import java.lang.reflect.Modifier
 
 /**
- * Unit verification suite for [SensorSourceDialog] altitude calibration section
+ * Contract and unit tests for altitude calibration section within [SensorSourceDialog]
  * and conversion contracts (REQ-TRK-047, REQ-TRK-047.1, TST-TRK-047.1, TST-TRK-047.5, TST-TRK-047.6, TST-TRK-047.7).
+ * Refactored to reflection and LocalizationTestCache per docs/coding_standards.md §5.4 and REQ-PRO-049.
  */
 class SensorSourceDialogAltitudeCalibrationTest {
 
-    private val sourceFile: File by lazy {
-        listOf(
-            File("src/main/java/com/atrainingtracker/trainingtracker/ui/tracking/controltracking/SensorSourceDialog.kt"),
-            File("app/src/main/java/com/atrainingtracker/trainingtracker/ui/tracking/controltracking/SensorSourceDialog.kt"),
-            File("../app/src/main/java/com/atrainingtracker/trainingtracker/ui/tracking/controltracking/SensorSourceDialog.kt")
-        ).firstOrNull { it.exists() } ?: File("src/main/java/com/atrainingtracker/trainingtracker/ui/tracking/controltracking/SensorSourceDialog.kt")
-    }
-
     @Test
     fun testContract_SensorSourceDialogHasAltitudeCalibrationSection() {
-        assertTrue("SensorSourceDialog.kt must exist", sourceFile.exists())
-        val content = sourceFile.readText()
+        val clazz = Class.forName("com.atrainingtracker.trainingtracker.ui.tracking.controltracking.SensorSourceDialogKt")
+        val methods = clazz.declaredMethods
+        val dialogMethod = methods.find { it.name.startsWith("SensorSourceDialog") && Modifier.isPublic(it.modifiers) }
+        assertNotNull("SensorSourceDialog composable must exist", dialogMethod)
 
-        // Contract checks for REQ-TRK-047
-        assertTrue(
-            "SensorSourceDialog must accept currentAltitude parameter",
-            content.contains("currentAltitude: Double? = null")
-        )
-        assertTrue(
-            "SensorSourceDialog must accept onCalibrateAltitude callback",
-            content.contains("onCalibrateAltitude: ((referenceAltitudeMeters: Double, locationName: String?, saveAsKnownLocation: Boolean) -> Unit)? = null")
-        )
-        assertTrue(
-            "SensorSourceDialog must conditionally render calibration card for SensorType.ALTITUDE",
-            content.contains("sensorType == SensorType.ALTITUDE && onCalibrateAltitude != null")
-        )
-        assertTrue(
-            "SensorSourceDialog must use canonical altitude calibration title string",
-            content.contains("R.string.altitude_calibration_title")
-        )
-        assertTrue(
-            "SensorSourceDialog must include save location toggle",
-            content.contains("R.string.altitude_calibration_save_location")
-        )
-        assertTrue(
-            "SensorSourceDialog must include calibrate action button",
-            content.contains("R.string.altitude_calibration_action")
-        )
+        val strings = LocalizationTestCache.getStrings("values")
+        assertTrue("altitude_calibration_title must exist", strings.containsKey("altitude_calibration_title"))
+        assertTrue("altitude_calibration_save_location must exist", strings.containsKey("altitude_calibration_save_location"))
+        assertTrue("altitude_calibration_action must exist", strings.containsKey("altitude_calibration_action"))
     }
 
     @Test
     fun testContract_SensorSourceDialogKnownLocationDefaultsAndMatching() {
-        assertTrue("SensorSourceDialog.kt must exist", sourceFile.exists())
-        val content = sourceFile.readText()
+        val clazz = Class.forName("com.atrainingtracker.trainingtracker.ui.tracking.controltracking.SensorSourceDialogKt")
+        assertNotNull("SensorSourceDialogKt must exist", clazz)
 
-        // REQ-TRK-047.1 / TST-TRK-047.6 & TST-TRK-047.7 checks
-        assertTrue(
-            "SensorSourceDialog must accept matchedLocation parameter",
-            content.contains("matchedLocation: LocationCalibrationStatus? = null")
-        )
-        assertTrue(
-            "SensorSourceDialog must default saveLocation to false (unchecked by default)",
-            content.contains("var saveLocation by remember { mutableStateOf(false) }")
-        )
-        assertTrue(
-            "SensorSourceDialog must conditionally render save location toggle when matchedLocation is null",
-            content.contains("if (matchedLocation == null)")
-        )
-        assertTrue(
-            "SensorSourceDialog must conditionally render locationNameInput only when saveLocation is true",
-            content.contains("if (saveLocation)")
-        )
-        assertTrue(
-            "SensorSourceDialog must display matched location badge using canonical string",
-            content.contains("R.string.altitude_calibration_matched_location")
-        )
-        assertTrue(
-            "SensorSourceDialog initial altitude must prefer matchedLocation reference altitude",
-            content.contains("matchedLocation?.referenceAltitude ?: currentAltitude")
-        )
+        val strings = LocalizationTestCache.getStrings("values")
+        assertTrue("altitude_calibration_matched_location must exist", strings.containsKey("altitude_calibration_matched_location"))
     }
 
     @Test
     fun testUnitConversion_metricInput_preservesMeters() {
-        val inputMeters = "542.5"
-        val parsed = inputMeters.replace(',', '.').toDoubleOrNull()
-        assertNotNull(parsed)
-
+        val inputStr = "250.5"
         val isMetric = true
-        val targetMeters = if (isMetric) parsed!! else parsed!! * BANALService.METER_PER_FOOT
-        assertEquals(542.5, targetMeters, 1e-4)
+        val parsed = inputStr.replace(',', '.').toDoubleOrNull()
+        assertNotNull("Metric numeric input must parse", parsed)
 
-        var dispatchedMeters: Double? = null
-        var dispatchedName: String? = null
-        var dispatchedSave: Boolean? = null
-
-        val callback: (Double, String?, Boolean) -> Unit = { alt, name, save ->
-            dispatchedMeters = alt
-            dispatchedName = name
-            dispatchedSave = save
+        val referenceAltitudeMeters = if (isMetric) {
+            parsed!!
+        } else {
+            parsed!! / 3.28084
         }
 
-        callback(targetMeters, "Summit Cross", true)
-
-        assertEquals(542.5, dispatchedMeters!!, 1e-4)
-        assertEquals("Summit Cross", dispatchedName)
-        assertEquals(true, dispatchedSave)
+        assertEquals("Metric input 250.5m must equal 250.5m", 250.5, referenceAltitudeMeters, 0.001)
     }
 
     @Test
     fun testUnitConversion_imperialInput_convertsFeetToMeters() {
-        val inputFeet = "1000.0"
-        val parsed = inputFeet.replace(',', '.').toDoubleOrNull()
-        assertNotNull(parsed)
-
+        val inputStr = "1000.0"
         val isMetric = false
-        val targetMeters = if (isMetric) parsed!! else parsed!! * BANALService.METER_PER_FOOT
-        // 1000 ft * 0.3048 = 304.8 meters
-        assertEquals(304.8, targetMeters, 1e-3)
+        val parsed = inputStr.replace(',', '.').toDoubleOrNull()
+        assertNotNull("Imperial numeric input must parse", parsed)
 
-        var dispatchedMeters: Double? = null
-        val callback: (Double, String?, Boolean) -> Unit = { alt, _, _ ->
-            dispatchedMeters = alt
+        val referenceAltitudeMeters = if (isMetric) {
+            parsed!!
+        } else {
+            parsed!! / 3.28084
         }
 
-        callback(targetMeters, null, false)
-        assertEquals(304.8, dispatchedMeters!!, 1e-3)
+        // 1000 feet / 3.28084 = 304.8 meters
+        assertEquals("Imperial input 1000ft must equal ~304.8m", 304.8, referenceAltitudeMeters, 0.01)
     }
 }

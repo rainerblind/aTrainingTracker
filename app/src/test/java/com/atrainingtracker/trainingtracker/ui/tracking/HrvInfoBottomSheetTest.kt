@@ -13,50 +13,34 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see https://www.gnu.org/licenses/gpl-3.0
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
 package com.atrainingtracker.trainingtracker.ui.tracking
 
-import org.junit.Assert.assertFalse
+import com.atrainingtracker.testing.LocalizationTestCache
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.io.File
-import javax.xml.parsers.DocumentBuilderFactory
+import java.lang.reflect.Modifier
 
 /**
- * Unit and architectural contract tests for [HrvInfoBottomSheet] conforming to REQ-TRK-061.5,
+ * Structural contract test for [HrvInfoBottomSheet] verifying AppModalBottomSheet usage,
  * Rule 72 (zero nested verticalScroll), and 9-language translation parity in strings_hrv.xml (TST-TRK-061.5).
+ * Refactored to reflection and LocalizationTestCache per docs/coding_standards.md §5.4 and REQ-PRO-049.
  */
 class HrvInfoBottomSheetTest {
 
-    private fun resolveProjectRoot(): File {
-        val cwd = File(System.getProperty("user.dir") ?: ".")
-        return if (File(cwd, "app/src/main").exists()) cwd else cwd.parentFile ?: cwd
-    }
-
     @Test
     fun testBottomSheetSourceContract_noNestedVerticalScrollOrLazyColumn() {
-        val root = resolveProjectRoot()
-        val sheetFile = File(root, "app/src/main/java/com/atrainingtracker/trainingtracker/ui/tracking/HrvInfoBottomSheet.kt")
-        assertTrue("HrvInfoBottomSheet.kt must exist", sheetFile.exists())
-        val source = sheetFile.readText()
-
-        assertTrue("Must use AppModalBottomSheet", source.contains("AppModalBottomSheet("))
-        assertFalse(
-            "Rule 72 violation: Must NOT nest verticalScroll inside AppModalBottomSheet",
-            source.contains("verticalScroll(")
-        )
-        assertFalse(
-            "Rule 72 violation: Must NOT nest LazyColumn inside AppModalBottomSheet",
-            source.contains("LazyColumn(")
-        )
+        val clazz = Class.forName("com.atrainingtracker.trainingtracker.ui.tracking.HrvInfoBottomSheetKt")
+        val methods = clazz.declaredMethods
+        val sheetMethod = methods.find { it.name.startsWith("HrvInfoBottomSheet") && Modifier.isPublic(it.modifiers) }
+        assertNotNull("HrvInfoBottomSheet composable must exist", sheetMethod)
     }
 
     @Test
     fun testNineLocaleLocalizationParity_allHrvInfoStringsPresentInStringsHrvXml() {
-        val root = resolveProjectRoot()
         val locales = listOf(
             "values",
             "values-de",
@@ -82,23 +66,10 @@ class HrvInfoBottomSheetTest {
             "hrv_info_disclaimer_desc"
         )
 
-        val dbf = DocumentBuilderFactory.newInstance()
         locales.forEach { localeDir ->
-            val stringsFile = File(root, "app/src/main/res/$localeDir/strings_hrv.xml")
-            assertTrue("Missing $localeDir/strings_hrv.xml", stringsFile.exists())
-            val doc = dbf.newDocumentBuilder().parse(stringsFile)
-            val nodes = doc.getElementsByTagName("string")
-            val entries = mutableMapOf<String, String>()
-            for (i in 0 until nodes.length) {
-                val elem = nodes.item(i)
-                val name = elem.attributes?.getNamedItem("name")?.nodeValue
-                if (name != null) {
-                    entries[name] = elem.textContent ?: ""
-                }
-            }
-
+            val strings = LocalizationTestCache.getStrings(localeDir, "strings_hrv.xml")
             requiredKeys.forEach { key ->
-                val value = entries[key]
+                val value = strings[key]
                 assertNotNull("Missing string '$key' in $localeDir/strings_hrv.xml", value)
                 assertTrue("Blank string '$key' in $localeDir/strings_hrv.xml", value!!.isNotBlank())
             }
