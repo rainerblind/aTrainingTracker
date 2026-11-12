@@ -1207,22 +1207,22 @@ diff --git a/docs/requirements/req_process_stability.md b/docs/requirements/req_
         # Standard mode: passes cleanly with 0 novel dangling references
         ok, diag = verify_dangling_references()
         self.assertTrue(ok, f"Expected live repository to pass in standard mode, got: {diag}")
-        self.assertTrue(any("Zero new dangling REQ/TST references detected" in m for m in diag))
+        self.assertTrue(any("All cited REQ and TST references resolve to authentic headings" in m or "Zero new dangling" in m for m in diag))
 
         # Check exact counts of legacy dangling references
         dangling = find_dangling_references()
-        self.assertEqual(len(dangling.dangling_tsts), 2)
-        self.assertEqual(len(dangling.dangling_reqs), 2)
+        self.assertEqual(len(dangling.dangling_tsts), 0)
+        self.assertEqual(len(dangling.dangling_reqs), 0)
 
         tst_targets = set(r.target_id for r in dangling.dangling_tsts)
         req_targets = set(r.target_id for r in dangling.dangling_reqs)
         self.assertEqual(tst_targets, LEGACY_DANGLING_TST_REFS)
         self.assertEqual(req_targets, LEGACY_DANGLING_REQ_REFS)
 
-        # Strict mode: fails because 4 legacy dangling references exist pending A-08.x (ATT-6127 resolved 5, ATT-6131 resolved 1, ATT-6132 resolved 17)
+        # Strict mode: passes cleanly because all legacy dangling references have been resolved across all domains!
         ok_strict, diag_strict = verify_dangling_references(fail_on_dangling=True)
-        self.assertFalse(ok_strict)
-        self.assertTrue(any("strict enforcement active" in m for m in diag_strict))
+        self.assertTrue(ok_strict, f"Expected strict mode to pass with 0 dangling refs, got: {diag_strict}")
+        self.assertTrue(any("All cited REQ and TST references resolve to authentic headings" in m for m in diag_strict))
 
     def test_scenario_31_coverage_category_1_reqs_without_tst(self):
         """TST-PRO-071.1: Verify Category 1 calculates REQs citing no TST in Tests field."""
