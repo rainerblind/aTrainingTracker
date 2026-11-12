@@ -17041,3 +17041,31 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 • *Then* every button SHALL provide localized `contentDescription` (`navigation_drawer_open` or `back` / `cancel`) and align to the 56 dp title baseline.
 
 **Invariants**: All 21 navigation drawer destinations in `NavRoutes` preserved; `REQ-UI-161` 40 dp threshold preserved for root screens; `REQ-UI-162` LIFO back handling hierarchy preserved; zero regressions on existing deep links.
+
+
+### REQ-UI-524: Official Google Drive and Health Connect Brand Vector Fidelity [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-UI-524`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Implementation**: `app/src/main/res/drawable/ic_google_drive.xml`, `app/src/main/res/drawable/ic_health_connect.xml`
+- **Rationale**: Defective third-party brand icons in the navigation drawer and backup/health settings undermine visual professionalism. Replacing `ic_google_drive.xml` with the official 2020+ 6-segment vector and `ic_health_connect.xml` with the official interlocking dual-loop vector restores authentic brand visual fidelity while ensuring high-contrast rendering across Light and Dark themes.
+- **Description**:
+  1. *Official Google Drive Brand Vector (`REQ-UI-524.1`)*:
+     - `app/src/main/res/drawable/ic_google_drive.xml` SHALL render the official 2020+ Google Drive triangle vector consisting of 6 distinct color paths (`#0066DA`, `#00AC47`, `#EA4335`, `#00832D`, `#2684FC`, `#FFBA00`), centered in a square 87.3x87.3 viewport (`translateY="4.65"`), eliminating broken polygonal gaps and unaligned segments.
+  2. *Official Android Health Connect Brand Vector (`REQ-UI-524.2`)*:
+     - `app/src/main/res/drawable/ic_health_connect.xml` SHALL render the official Google Health Connect dual interlocking loop brand geometry: left loop in Dark Teal (`#003144`), right loop in Google Blue (`#4285F4`), and upper-right circular node in Google Blue (`#4285F4`).
+     - In both Light and Dark themes, the icon SHALL maintain clear contrast and legibility without disappearing on dark backgrounds.
+  3. *Un-tinted Brand Icon Integration (`REQ-UI-524.3`)*:
+     - Both icons SHALL retain `tintIcon = false` in `AppNavigationDrawer.kt` and `Color.Unspecified` in Compose screens, displaying authentic multi-color brand palettes.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* `res/drawable/ic_google_drive.xml` rendered in the Navigation Drawer and Import/Backup screens,
+• *When* displayed,
+• *Then* it renders the official 6-segment Google Drive vector with a horizontal blue base and continuous segment boundaries.
+• *Given* `res/drawable/ic_health_connect.xml` rendered in the Navigation Drawer and Health Connect dialog,
+• *When* displayed in either Light or Dark mode,
+• *Then* it renders the official interlocking dual-loop heart with upper-right blue dot with high contrast.
+
+**Invariants**: Resource IDs `R.drawable.ic_google_drive` and `R.drawable.ic_health_connect` remain stable; zero changes to OAuth or Health Connect API logic.

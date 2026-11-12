@@ -11,19 +11,26 @@
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp"
     android:height="24dp"
-    android:viewportWidth="24"
-    android:viewportHeight="24">
-    <!-- Google Drive Brand Triangle Vector -->
-    <!-- Yellow top segment -->
-    <path
-        android:fillColor="#FFBA00"
-        android:pathData="M8.01,2.02L15.99,2.02L22.25,12.87L14.27,12.87Z" />
-    <!-- Blue bottom segment -->
-    <path
-        android:fillColor="#2684FC"
-        android:pathData="M14.27,12.87L22.25,12.87L18.26,19.78L10.28,19.78Z" />
-    <!-- Green left segment -->
-    <path
-        android:fillColor="#00AC47"
-        android:pathData="M1.75,12.87L5.74,5.97L13.72,19.78L9.73,19.78Z" />
+    android:viewportWidth="87.3"
+    android:viewportHeight="87.3">
+    <group android:translateY="4.65">
+        <path
+            android:fillColor="#0066DA"
+            android:pathData="m6.6,66.85 l3.85,6.65c0.8,1.4 1.95,2.5 3.3,3.3l13.75,-23.8h-27.5c0,1.55 0.4,3.1 1.2,4.5z" />
+        <path
+            android:fillColor="#00AC47"
+            android:pathData="m43.65,25 l-13.75,-23.8c-1.35,0.8 -2.5,1.9 -3.3,3.3l-25.4,44a9.06,9.06 0,0 0,-1.2 4.5h27.5z" />
+        <path
+            android:fillColor="#EA4335"
+            android:pathData="m73.55,76.8c1.35,-0.8 2.5,-1.9 3.3,-3.3l1.6,-2.75 7.65,-13.25c0.8,-1.4 1.2,-2.95 1.2,-4.5h-27.502l5.852,11.5z" />
+        <path
+            android:fillColor="#00832D"
+            android:pathData="m43.65,25 l13.75,-23.8c-1.35,-0.8 -2.9,-1.2 -4.5,-1.2h-18.5c-1.6,0 -3.15,0.45 -4.5,1.2z" />
+        <path
+            android:fillColor="#2684FC"
+            android:pathData="m59.8,53h-32.3l-13.75,23.8c1.35,0.8 2.9,1.2 4.5,1.2h50.8c1.6,0 3.15,-0.45 4.5,-1.2z" />
+        <path
+            android:fillColor="#FFBA00"
+            android:pathData="m73.4,26.5 l-12.7,-22c-0.8,-1.4 -1.95,-2.5 -3.3,-3.3l-13.75,23.8 16.15,28h27.45c0,-1.55 -0.4,-3.1 -1.2,-4.5z" />
+    </group>
 </vector>

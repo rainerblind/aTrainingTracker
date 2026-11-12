@@ -8413,3 +8413,18 @@
   6. *Targeted Unit Test Regression Suite (`TST-UI-518.6`)*:
      - Execute `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.navigation.*" --tests "com.atrainingtracker.trainingtracker.zones.*" --tests "com.atrainingtracker.trainingtracker.ui.settings.tuning.*" --tests "com.atrainingtracker.trainingtracker.ui.help.*"`.
      - Assert 100% pass rate.
+
+
+### TST-UI-524: **Official Google Drive & Health Connect Brand Vector Contract Verification Suite** [Verified]
+- **Target Release**: `V5.0.0`
+- **Requirement(s)**: `REQ-UI-524`
+- **Component**: `app/src/main/res/drawable/ic_google_drive.xml`, `app/src/main/res/drawable/ic_health_connect.xml`, `BrandIconContractTest.kt`
+- **Jira**: `ATT-7534`
+- **Test Description**:
+  1. *Google Drive Vector Geometry & Color Verification (`TST-UI-524.1`, `BrandIconContractTest.kt`)*:
+     - Verify `ic_google_drive.xml` exists in `app/src/main/res/drawable/`, parses as valid `<vector>` XML, contains 6 distinct `<path>` elements with official 2020+ Google Drive hex color codes (`#0066DA`, `#00AC47`, `#EA4335`, `#00832D`, `#2684FC`, `#FFBA00`), and defines a square 87.3x87.3 viewport.
+  2. *Health Connect Vector Geometry & Color Verification (`TST-UI-524.2`, `BrandIconContractTest.kt`)*:
+     - Verify `ic_health_connect.xml` exists in `app/src/main/res/drawable/`, parses as valid `<vector>` XML, defines `viewportWidth="88"` and `viewportHeight="88"` (or official dimensions), contains the 2 interlocking loops with `fillType="evenOdd"` and the circular node, and uses official brand colors (`#003144` and `#4285F4`).
+  3. *Tier 1 Resource Compilation & Navigation Suite (`TST-UI-524.3`)*:
+     - Execute `./gradlew processDebugResources` and `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.navigation.*"`.
+     - Assert 100% pass rate.
