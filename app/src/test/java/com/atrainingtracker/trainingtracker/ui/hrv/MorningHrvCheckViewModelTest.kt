@@ -503,4 +503,34 @@ class MorningHrvCheckViewModelTest {
         assertEquals(1, state.muscleSoreness1To5)
         assertTrue(state.selectedContextTags.contains("TRAVEL"))
     }
+
+    @Test
+    fun testSignalQualityAndArtifactsTriggerRecommendDiscard() {
+        val stateDefault = MorningHrvUiState()
+        val recommendDiscardDefault = stateDefault.highArtifactWarning ||
+            stateDefault.signalQualityStatus in setOf(
+                HrvSignalQualityStatus.SMOOTHED_STREAM,
+                HrvSignalQualityStatus.QUANTIZED_SYNTHETIC,
+                HrvSignalQualityStatus.HIGH_ARTIFACTS
+            )
+        assertFalse(recommendDiscardDefault)
+
+        val stateSmoothed = MorningHrvUiState(signalQualityStatus = HrvSignalQualityStatus.SMOOTHED_STREAM)
+        val recommendDiscardSmoothed = stateSmoothed.highArtifactWarning ||
+            stateSmoothed.signalQualityStatus in setOf(
+                HrvSignalQualityStatus.SMOOTHED_STREAM,
+                HrvSignalQualityStatus.QUANTIZED_SYNTHETIC,
+                HrvSignalQualityStatus.HIGH_ARTIFACTS
+            )
+        assertTrue(recommendDiscardSmoothed)
+
+        val stateHighArtifacts = MorningHrvUiState(highArtifactWarning = true)
+        val recommendDiscardHighArtifacts = stateHighArtifacts.highArtifactWarning ||
+            stateHighArtifacts.signalQualityStatus in setOf(
+                HrvSignalQualityStatus.SMOOTHED_STREAM,
+                HrvSignalQualityStatus.QUANTIZED_SYNTHETIC,
+                HrvSignalQualityStatus.HIGH_ARTIFACTS
+            )
+        assertTrue(recommendDiscardHighArtifacts)
+    }
 }

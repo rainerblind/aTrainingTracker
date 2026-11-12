@@ -55,7 +55,7 @@
 
     <!-- Morning Resting HRV Check (ATT-3556 / REQ-PER-032) -->
     <string name="morning_hrv_title">Morgendlicher HRV-Check</string>
-    <string name="morning_hrv_subtitle">Aufwachprotokoll für autonome Erholung</string>
+    <string name="morning_hrv_subtitle">Ruhemessung direkt nach dem Aufwachen</string>
     <string name="morning_hrv_posture_label">Körperhaltung</string>
     <string name="morning_hrv_posture_supine">Liegend</string>
     <string name="morning_hrv_posture_seated">Sitzend</string>
@@ -68,9 +68,10 @@
     <string name="morning_hrv_state_stabilizing">Stabilisierung: %1$ds</string>
     <string name="morning_hrv_state_measuring">Messung: %1$ds / %2$ds</string>
     <string name="morning_hrv_state_completed">Messung abgeschlossen</string>
+    <string name="morning_hrv_result_title">Messergebnis</string>
     <string name="morning_hrv_btn_start">Messung starten</string>
     <string name="morning_hrv_btn_cancel">Abbrechen</string>
-    <string name="morning_hrv_btn_save">Messung speichern</string>
+    <string name="morning_hrv_btn_save">Speichern</string>
     <string name="morning_hrv_btn_discard">Verwerfen</string>
     <string name="morning_hrv_instructions_title">Standardisiertes Protokoll</string>
     <string name="morning_hrv_instructions_desc">Direkt nach dem Aufwachen und Entleeren der Blase messen. Ruhig bleiben, normal atmen und nicht sprechen. Haltung beibehalten für verlässliche SWC-Vergleiche.</string>

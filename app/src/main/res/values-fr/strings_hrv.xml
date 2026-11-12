@@ -55,7 +55,7 @@
 
     <!-- Morning Resting HRV Check (ATT-3556 / REQ-PER-032) -->
     <string name="morning_hrv_title">Contrôle matinal VRC</string>
-    <string name="morning_hrv_subtitle">Protocole de réveil pour récupération autonome</string>
+    <string name="morning_hrv_subtitle">Mesure au repos dès le réveil</string>
     <string name="morning_hrv_posture_label">Posture</string>
     <string name="morning_hrv_posture_supine">Couché</string>
     <string name="morning_hrv_posture_seated">Assis</string>
@@ -68,9 +68,10 @@
     <string name="morning_hrv_state_stabilizing">Stabilisation : %1$ds</string>
     <string name="morning_hrv_state_measuring">Mesure : %1$ds / %2$ds</string>
     <string name="morning_hrv_state_completed">Mesure terminée</string>
+    <string name="morning_hrv_result_title">Résultat de la mesure</string>
     <string name="morning_hrv_btn_start">Démarrer la mesure</string>
     <string name="morning_hrv_btn_cancel">Annuler</string>
-    <string name="morning_hrv_btn_save">Enregistrer la mesure</string>
+    <string name="morning_hrv_btn_save">Enregistrer</string>
     <string name="morning_hrv_btn_discard">Ignorer</string>
     <string name="morning_hrv_instructions_title">Protocole standardisé</string>
     <string name="morning_hrv_instructions_desc">Mesurer au réveil après avoir vidé la vessie. Rester immobile et respirer normalement sans parler. Garder la même posture pour des comparaisons fiables.</string>

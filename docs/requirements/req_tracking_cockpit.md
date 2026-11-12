@@ -3979,6 +3979,9 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 ### REQ-TRK-067: Firmware-Smoothed & Quantized Synthetic RR Stream Detection (HrvSignalQualityAnalyzer) [Verified]
 - **Target Release**: `V5.0.0`
 - **Tests**: `TST-TRK-067`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `app/src/main/java/com/atrainingtracker/banalservice/devices/hrv/HrvSignalQualityAnalyzer.kt`, `app/src/main/java/com/atrainingtracker/banalservice/devices/hrv/HrvSignalQualityResult.kt`, `app/src/main/java/com/atrainingtracker/banalservice/devices/HRVMetricsDevice.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/ui/morninghrv/MorningHrvCheckViewModel.kt`, `app/src/main/java/com/atrainingtracker/banalservice/devices/hrv/HrvPostWorkoutRecomputer.kt`
 - **Rationale**: Budget dual-band ECG chest straps (e.g. Magene H64/H303, CooSpo) apply internal moving-average smoothing to beat-to-beat intervals in firmware prior to BLE `0x2A37` transmission, while some optical/budget sensors synthesize stepped RR intervals from integer BPM ($RR = 60000 / \text{BPM}$). Because smoothed intervals lack abrupt spike outliers, the Lipponen & Tarvainen (2019) artifact detector reports 0.0% artifacts (green light) while adjacent interval differences collapse ($rMSSD$ 3–8 ms even at rest) and short-scale variance $F(4)$ is erased, artificially inflating DFA $\alpha_1$ into a smooth Brownian regime (1.40–1.85). In real human physiology, $rMSSD < 10.0\text{ ms}$ and DFA $\alpha_1 > 1.35$ are mutually exclusive (intense sympathetic exercise collapses $\alpha_1 \to 0.50$, never $> 1.35$). The system must detect smoothed and quantized synthetic streams using Turning-Point Ratio ($TPR$), zero-diff rate, and discordance gates without falsely penalizing authentic exercise or resting ECG.
 - **Description**:
@@ -3990,22 +3993,26 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
      - If the artifact rate exceeds 5.0% ($> 0.05$), the analyzer SHALL return status `HIGH_ARTIFACTS`.
   3. *Smoothed Stream Detection via Discordance & Turning-Point Ratio (`REQ-TRK-067.3`)*:
      - The analyzer SHALL flag the window as `SMOOTHED_STREAM` if:
-       a. $rMSSD < 10.0\text{ ms}$ AND DFA $\alpha_1 > 1.35$; OR
+       a. Discordance: $rMSSD < 10.0\text{ ms}$ AND DFA $\alpha_1 > 1.35$ AND accompanied by either suppressed Turning-Point Ratio ($TPR < 0.28$) or extreme variance collapse ($rMSSD < 2.0\text{ ms}$); OR
        b. Turning-Point Ratio ($TPR$) of consecutive non-zero differences $\Delta RR_i = RR_i - RR_{i-1}$ satisfies $TPR < 0.20$ alongside DFA $\alpha_1 > 1.30$.
   4. *Quantized Synthetic RR Detection (`REQ-TRK-067.4`)*:
      - The analyzer SHALL flag the window as `QUANTIZED_SYNTHETIC` if more than 55% ($> 0.55$) of consecutive beat pairs satisfy $|\Delta RR_i| < 1.0\text{ ms}$ over $\ge 30$ beats.
   5. *Preservation of Authentic Physiology Invariants (`REQ-TRK-067.5`)*:
      - Authentic resting ECG ($rMSSD \approx 42\text{ ms}$, $\alpha_1 \approx 1.12$, normal RSA turning points) SHALL evaluate to `VALID`.
      - Authentic high-intensity exercise ECG ($rMSSD \approx 4.5\text{ ms}$, $\alpha_1 \approx 0.48$) SHALL evaluate to `VALID` and MUST NEVER be falsely flagged as `SMOOTHED_STREAM` or `QUANTIZED_SYNTHETIC`.
+     - Authentic resting sinus rhythm under sympathetic/evening/orthostatic conditions with low vagal tone and baroreflex Mayer-wave drift ($rMSSD < 10.0\text{ ms}$, DFA $\alpha_1 > 1.35$, $TPR \ge 0.28$, e.g. Polar H10 with $rMSSD = 4.5\text{ ms}$, $\alpha_1 = 1.52$, $TPR = 0.38$) SHALL evaluate to `VALID`.
   6. *Engine Telemetry & Service Wiring (`REQ-TRK-067.6`)*:
      - `HRVMetricsDevice.kt` SHALL expose `@Volatile var signalQualityResult: HrvSignalQualityResult` updated on each 5s evaluation tick, resetting to default state upon `resetSession()` (`Rule 51`/`52`).
      - `MorningHrvCheckViewModel.kt` SHALL evaluate signal quality at completion of 60s/120s measurements and hold the status in `MorningHrvUiState`.
      - `HrvPostWorkoutRecomputer.kt` SHALL expose helper evaluation for post-workout RR streams.
 
 **Acceptance Criteria (Given-When-Then)**:
-• *Given* an empirical Magene-style smoothed series ($rMSSD \approx 3\text{--}8\text{ ms}$, $\alpha_1 > 1.35$, or low $TPR < 0.20$ with $\alpha_1 > 1.30$),
+• *Given* an empirical Magene-style smoothed series ($rMSSD \approx 3\text{--}8\text{ ms}$, $\alpha_1 > 1.35$ with $TPR < 0.28$, or low $TPR < 0.20$ with $\alpha_1 > 1.30$),
 • *When* evaluated by `HrvSignalQualityAnalyzer.analyze(...)`,
 • *Then* `status` equals `SMOOTHED_STREAM`.
+• *Given* an authentic resting ECG series with baroreflex Mayer drift ($rMSSD = 4.5\text{ ms}$, $\alpha_1 = 1.52$, $TPR = 0.38$),
+• *When* evaluated by `HrvSignalQualityAnalyzer.analyze(...)`,
+• *Then* `status` equals `VALID` (no false-positive smoothed sensor warning).
 • *Given* a quantized constant-BPM synthetic series derived from $RR = 60000 / \text{integer\_BPM}$ with $>55\%$ $|\Delta RR| < 1.0\text{ ms}$,
 • *When* evaluated by `HrvSignalQualityAnalyzer.analyze(...)`,
 • *Then* `status` equals `QUANTIZED_SYNTHETIC`.
@@ -4022,11 +4029,20 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 • *When* evaluated by `HrvSignalQualityAnalyzer.analyze(...)`,
 • *Then* `status` equals `INSUFFICIENT_DATA`.
 
+**Requirement Archaeology & Chesterton's Fence (REQ-PRO-022)**:
+- `Original Requirement ID & Target`: `REQ-TRK-067.3` (Discordance Gate, ATT-6744).
+- `Historical Origin & Commit Trace`: Commit `5551c89e` (`ATT-6744`, Sprint 2026-46.3).
+- `Root Reason for Existing Formulation`: Unconditionally assumed $rMSSD < 10\text{ ms}$ and $\alpha_1 > 1.35$ were physiologically discordant, based on high-intensity exercise dynamics where $\alpha_1 \to 0.50$, overlooking resting/orthostatic Mayer-wave baroreflex drift where $\alpha_1$ legitimately exceeds $1.35$ while $TPR \ge 0.28$.
+- `Preservation of Core Invariants`: Firmware-smoothed series ($TPR < 0.20$ or discordant $TPR < 0.28$) remain 100% detected; authentic resting sinus rhythm is preserved without false alerts.
+
 **Invariants**: Zero false-positive smoothing flags during authentic intense exercise; Rule 51 (state seeding parity) & Rule 52 (presence gating before RR arrival) preserved in `HRVMetricsDevice`; zero SQLite schema modifications; 100% unit test pass rate.
 
-### REQ-TRK-068: Smoothed RR Stream Warnings & Sensor Compatibility Guidance across Presentation Surfaces [Implemented]
+### REQ-TRK-068: Smoothed RR Stream Warnings & Sensor Compatibility Guidance across Presentation Surfaces [Verified]
 - **Target Release**: `V5.0.0`
 - **Tests**: `TST-TRK-068`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit / Review
 - **Implementation**: `app/src/main/java/com/atrainingtracker/trainingtracker/ui/hrv/HrvInfoBottomSheet.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/ui/hrv/MorningHrvCheckScreen.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/ui/hrv/HrvAlpha1ScatterCard.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/ui/cockpit/HrvZoneIndicator.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/viewmodel/TrackingViewModel.kt`, `app/src/main/res/values*/strings_hrv.xml`
 - **Rationale**: When athletes pair budget ECG chest straps applying firmware moving-average smoothing (e.g. Magene H64/H303, CooSpo) or synthetic stepped RR streams, the outlier filter reports 0.0% artifacts while DFA $\alpha_1$ is falsely inflated into an easy aerobic Zone 2 (> 1.40) and $rMSSD$ collapses. Without explicit UI warnings, athletes pacing live efforts receive deceptive guidance, morning readiness baselines ($SWC$) are polluted with artificially low $rMSSD$, and athletes are unaware their sensor hardware is unsuitable for aerobic threshold estimation. The presentation layer must surface prominent cautionary warnings across all 4 touchpoints and provide clear sensor hardware recommendations with 9-language parity.
 - **Description**:
@@ -4035,12 +4051,20 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
   2. *Live Cockpit Smoothed Stream Warning & Zone Suppression (`REQ-TRK-068.2`)*:
      - `HrvInfoBottomSheet.kt` SHALL render a top warning banner when the active device `signalQualityStatus` is `SMOOTHED_STREAM` or `QUANTIZED_SYNTHETIC`.
      - `HrvZoneIndicator.kt` and `TrackingViewModel.kt` SHALL suppress/caution the green aerobic Zone 2 indicator when `isSmoothedStream` is true, replacing misleading green feedback with a neutral warning state.
-  3. *Morning HRV Check Smoothed Warning Card (`REQ-TRK-068.3`)*:
+  3. *Morning HRV Check Smoothed Warning Card & Dynamic Action Button Prominence (`REQ-TRK-068.3`)*:
      - `MorningHrvCheckScreen.kt` SHALL render a dedicated `SmoothedSignalWarningCard` when measurement completion yields `signalQualityStatus == SMOOTHED_STREAM` or `QUANTIZED_SYNTHETIC`, cautioning the athlete that firmware smoothing suppresses $rMSSD$ and advising against saving into longitudinal readiness baselines.
+     - When discard is recommended (`recommendDiscard == true`, due to `highArtifactWarning` or `signalQualityStatus` in `SMOOTHED_STREAM`, `QUANTIZED_SYNTHETIC`, `HIGH_ARTIFACTS`) and measurement is unsaved:
+       a. The *Verwerfen* (Discard) button SHALL be visually emphasized as the primary filled `Button`.
+       b. The *Speichern* (Save) button SHALL be de-emphasized as secondary `OutlinedButton`.
+     - When discard is not recommended (`recommendDiscard == false`), *Verwerfen* SHALL remain `OutlinedButton` and *Speichern* SHALL remain primary filled `Button`.
+     - Action buttons SHALL enforce `Modifier.heightIn(min = 52.dp)` and button text SHALL specify `maxLines = 1` with `overflow = TextOverflow.Ellipsis`, preventing multi-line wrapping and vertical slicing/clipping.
   4. *Post-Workout DFA Alpha 1 Scatter Warning Banner (`REQ-TRK-068.4`)*:
      - `HrvAlpha1ScatterCard.kt` SHALL render an inline warning banner when workout RR intervals were detected as firmware-smoothed or synthetic (`isSmoothedStream == true`), indicating that $\alpha_1 = 0.75$ ($HRVT_1$) and $\alpha_1 = 0.50$ ($HRVT_2$) threshold estimates are uncalibrated.
-  5. *9-Language Localization Parity (`REQ-TRK-068.5`)*:
+  5. *9-Language Localization Parity & Copy Polish (`REQ-TRK-068.5`)*:
      - All user-facing strings across warnings and sensor recommendations SHALL maintain 100% parity across all 9 canonical locales (`values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`).
+     - `morning_hrv_subtitle` SHALL use natural resting guidance phrasing across all 9 locales (DE: *"Ruhemessung direkt nach dem Aufwachen"*; EN: *"Resting measurement right after waking"*).
+     - `ReadinessResultCard` SHALL display dedicated title `morning_hrv_result_title` (DE: *"Messergebnis"*; EN: *"Measurement Result"*) rather than duplicating `morning_hrv_state_completed`.
+     - `morning_hrv_btn_save` SHALL be shortened to a single-word verb (DE: *"Speichern"*; EN: *"Save"*) matching *"Verwerfen"* across all 9 locales.
   6. *Presentation Invariants & Theme Parity (`REQ-TRK-068.6`)*:
      - Warning banners SHALL use centralized `TTColor.ArtifactWarning*` / `TTColor.Warning` theme tokens (Rule 71).
      - Standard zone pacing on valid unsmoothed streams and independent $> 5\%$ artifact warning cards SHALL continue to function without regression.
@@ -4055,12 +4079,24 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 • *Given* `MorningHrvCheckViewModel` completes with `signalQualityStatus == SMOOTHED_STREAM` or `QUANTIZED_SYNTHETIC`,
 • *When* rendering `MorningHrvCheckScreen`,
 • *Then* a dedicated `SmoothedSignalWarningCard` is displayed above the readiness actions.
+• *Given* `MorningHrvCheckScreen` with `recommendDiscard == true`,
+• *When* rendering completion action buttons,
+• *Then* *Verwerfen* is rendered as the primary filled `Button` and *Speichern* is rendered as secondary `OutlinedButton`.
+• *Given* the German locale on `MorningHrvCheckScreen`,
+• *When* viewing the top bar and completed result card,
+• *Then* the subtitle reads *"Ruhemessung direkt nach dem Aufwachen"*, the card title reads *"Messergebnis"*, and the save button reads *"Speichern"* on a single line without vertical clipping.
 • *Given* a workout session with smoothed RR intervals,
 • *When* `HrvAlpha1ScatterCard` is displayed,
 • *Then* an inline warning banner informs the user that threshold estimates are uncalibrated due to sensor smoothing.
 • *Given* all 9 supported locales,
 • *When* checking `strings_hrv.xml`,
 • *Then* all new warning and recommendation strings have 100% key and format-specifier parity.
+
+**Requirement Archaeology & Chesterton's Fence (REQ-PRO-022)**:
+- `Original Requirement ID & Target`: `REQ-TRK-068.3` & `REQ-TRK-068.5` (Morning HRV warnings and strings, ATT-6745).
+- `Historical Origin & Commit Trace`: Commit `fb6797a7` (`ATT-6745`, Sprint 2026-46.3).
+- `Root Reason for Existing Formulation`: ATT-6745 introduced warning cards and action buttons with fixed `52.dp` height and static save prominence, without dynamic discard highlighting when bad data was detected, and used literal translations that caused two-line button text clipping.
+- `Preservation of Core Invariants`: Theme colors, warning card conditions, and standard save workflows are preserved while UI ergonomics and button hierarchy are aligned with recommended user actions.
 
 **Invariants**: Independent $> 5\%$ artifact warnings preserved; Rule 71 theme tokens enforced; Rule 72 modal sheet scrolling safety maintained; zero SQLite schema modifications; 100% unit test pass rate.
 

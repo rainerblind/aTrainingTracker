@@ -55,7 +55,7 @@
 
     <!-- Morning Resting HRV Check (ATT-3556 / REQ-PER-032) -->
     <string name="morning_hrv_title">Morning HRV Check</string>
-    <string name="morning_hrv_subtitle">Autonomic Readiness Waking Protocol</string>
+    <string name="morning_hrv_subtitle">Resting measurement right after waking</string>
     <string name="morning_hrv_posture_label">Posture</string>
     <string name="morning_hrv_posture_supine">Supine</string>
     <string name="morning_hrv_posture_seated">Seated</string>
@@ -68,9 +68,10 @@
     <string name="morning_hrv_state_stabilizing">Stabilizing: %1$ds</string>
     <string name="morning_hrv_state_measuring">Measuring: %1$ds / %2$ds</string>
     <string name="morning_hrv_state_completed">Measurement Completed</string>
+    <string name="morning_hrv_result_title">Measurement Result</string>
     <string name="morning_hrv_btn_start">Start Measurement</string>
     <string name="morning_hrv_btn_cancel">Cancel</string>
-    <string name="morning_hrv_btn_save">Save Reading</string>
+    <string name="morning_hrv_btn_save">Save</string>
     <string name="morning_hrv_btn_discard">Discard</string>
     <string name="morning_hrv_instructions_title">Standardized Protocol</string>
     <string name="morning_hrv_instructions_desc">Measure upon waking after bladder voiding. Remain still and breathe normally without speaking. Maintain posture consistency for reliable SWC baseline comparisons.</string>

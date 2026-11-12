@@ -165,4 +165,32 @@ class HrvSignalQualityAnalyzerTest {
         assertEquals(HrvSignalQualityStatus.VALID, result.status)
         assertEquals(40, result.beatCount)
     }
+
+    @Test
+    fun testAuthenticPolarH10RestingStreamPreservedAsValid() {
+        // ATT-7533 / REQ-TRK-067.5: Authentic Polar H10 ECG resting stream in evening/sympathetic state
+        // rMSSD = 4.5 ms (< 10 ms), DFA a1 = 1.52 (> 1.35), SDNN = 8.7 ms, TPR = 0.38 (>= 0.28).
+        // Respiratory beat-to-beat sign reversals are authentic; must NOT be flagged as SMOOTHED_STREAM.
+        val rng = Random(424242L)
+        val series = mutableListOf<Double>()
+        var current = 720.0
+        for (i in 0 until 70) {
+            val delta = (rng.nextDouble() - 0.5) * 6.0
+            current = (current + delta).coerceIn(700.0, 750.0)
+            series.add(current)
+        }
+
+        val tpr = HrvSignalQualityAnalyzer.computeTurningPointRatio(series)
+        assertNotNull(tpr)
+        assertTrue("Authentic ECG must retain turning-point ratio >= 0.28, actual=$tpr", tpr!! >= 0.28)
+
+        val result = HrvSignalQualityAnalyzer.analyze(
+            rawRrIntervalsMs = series,
+            rmssdMs = 4.5,
+            dfaAlpha1 = 1.52,
+            artifactRatePercent = 0.0
+        )
+
+        assertEquals(HrvSignalQualityStatus.VALID, result.status)
+    }
 }

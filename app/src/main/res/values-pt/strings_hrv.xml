@@ -55,7 +55,7 @@
 
     <!-- Morning Resting HRV Check (ATT-3556 / REQ-PER-032) -->
     <string name="morning_hrv_title">Verificação matinal de VFC</string>
-    <string name="morning_hrv_subtitle">Protocolo matinal de prontidão autonômica</string>
+    <string name="morning_hrv_subtitle">Medição de repouso logo após acordar</string>
     <string name="morning_hrv_posture_label">Postura</string>
     <string name="morning_hrv_posture_supine">Supina</string>
     <string name="morning_hrv_posture_seated">Sentada</string>
@@ -68,9 +68,10 @@
     <string name="morning_hrv_state_stabilizing">Estabilizando: %1$ds</string>
     <string name="morning_hrv_state_measuring">Medindo: %1$ds / %2$ds</string>
     <string name="morning_hrv_state_completed">Medição concluída</string>
+    <string name="morning_hrv_result_title">Resultado da medição</string>
     <string name="morning_hrv_btn_start">Iniciar medição</string>
     <string name="morning_hrv_btn_cancel">Cancelar</string>
-    <string name="morning_hrv_btn_save">Salvar medição</string>
+    <string name="morning_hrv_btn_save">Salvar</string>
     <string name="morning_hrv_btn_discard">Descartar</string>
     <string name="morning_hrv_instructions_title">Protocolo padronizado</string>
     <string name="morning_hrv_instructions_desc">Meça ao acordar após esvaziar a bexiga. Permaneça imóvel e respire normalmente sem falar. Mantenha a mesma postura para comparações basais confiáveis.</string>

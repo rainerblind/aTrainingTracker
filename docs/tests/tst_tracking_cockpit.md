@@ -2228,12 +2228,13 @@
 - **Jira**: `ATT-6744`
 - **Test Description**:
   1. *Smoothed RR Stream Detection Tests (`TST-TRK-067.1`, `HrvSignalQualityAnalyzerTest.kt`)*:
-  • Verify classification of empirical Magene-style moving-average smoothed series ($rMSSD \approx 3.3\text{--}7.3\text{ ms}$, $\alpha_1 \approx 1.41\text{--}1.81$) as `SMOOTHED_STREAM` via both low-rMSSD/high-a1 discordance gate and low Turning-Point Ratio ($TPR < 0.20$ with $\alpha_1 > 1.30$).
+  • Verify classification of empirical Magene-style moving-average smoothed series ($rMSSD \approx 3.3\text{--}7.3\text{ ms}$, $\alpha_1 \approx 1.41\text{--}1.81$) as `SMOOTHED_STREAM` via both low-rMSSD/high-a1 discordance gate (accompanied by $TPR < 0.28$) and low Turning-Point Ratio ($TPR < 0.20$ with $\alpha_1 > 1.30$).
   2. *Quantized Constant-BPM Stepped Series Tests (`TST-TRK-067.2`, `HrvSignalQualityAnalyzerTest.kt`)*:
   • Verify classification of stepped constant-BPM series ($RR = 60000 / \text{integer\_BPM}$) where $>55\%$ of consecutive beat differences satisfy $|\Delta RR| < 1.0\text{ ms}$ over $\ge 30$ beats as `QUANTIZED_SYNTHETIC`.
   3. *Authentic Rest & High-Intensity Exercise Invariant Tests (`TST-TRK-067.3`, `HrvSignalQualityAnalyzerTest.kt`)*:
   • Verify authentic resting ECG ($rMSSD \approx 42\text{ ms}$, $\alpha_1 \approx 1.12$, normal RSA turning points) evaluates to `VALID`.
   • Verify authentic high-intensity exercise ECG ($rMSSD \approx 4.5\text{ ms}$, $\alpha_1 \approx 0.48$) evaluates to `VALID` and is never falsely flagged as `SMOOTHED_STREAM` or `QUANTIZED_SYNTHETIC`.
+  • Verify authentic resting sinus rhythm with Mayer-wave baroreflex drift ($rMSSD = 4.5\text{ ms}$, $SDNN = 8.7\text{ ms}$, $\alpha_1 = 1.52$, $TPR = 0.38$, e.g. Polar H10 evening/sympathetic state) evaluates to `VALID` and is not falsely flagged as smoothed.
   4. *Data Sufficiency & Artifact Pre-Gating Tests (`TST-TRK-067.4`, `HrvSignalQualityAnalyzerTest.kt`)*:
   • Verify $<30$ beats evaluates to `INSUFFICIENT_DATA`.
   • Verify $>5.0\%$ artifact rate evaluates to `HIGH_ARTIFACTS`.
@@ -2256,13 +2257,15 @@
   2. *Cockpit DFA a1 Zone 2 Suppression Tests (`TST-TRK-068.2`, `HrvZoneIndicatorTest.kt`, `TrackingViewModelHrvTest.kt`)*:
   • Verify `HrvZoneIndicator.calculateZoneColor` and `TrackingViewModel` suppress green Zone 2 color when `isSmoothedStream` is true.
   • Verify valid unsmoothed streams maintain normal `TTColor.Zone2` rendering.
-  3. *MorningHrvCheckScreen Smoothed Signal Warning Card Tests (`TST-TRK-068.3`, `MorningHrvCheckScreenTest.kt`)*:
+  3. *MorningHrvCheckScreen Smoothed Signal Warning Card & Dynamic Action Button Tests (`TST-TRK-068.3`, `MorningHrvCheckScreenTest.kt`)*:
   • Verify `SmoothedSignalWarningCard` renders when `uiState.signalQualityStatus` is `SMOOTHED_STREAM` or `QUANTIZED_SYNTHETIC`.
   • Verify independent co-existence with `highArtifactWarning`.
+  • Verify action button dynamic prominence: when `recommendDiscard == true`, *Verwerfen* renders as primary filled `Button` and *Speichern* renders as secondary `OutlinedButton`; when `false`, *Speichern* is filled `Button`.
+  • Verify action button constraints apply `Modifier.heightIn(min = 52.dp)` with single-line truncation protection.
   4. *HrvAlpha1ScatterCard Warning Banner Tests (`TST-TRK-068.4`, `HrvAlpha1ScatterCardTest.kt`)*:
   • Verify inline warning banner renders when `isSmoothedStream == true` and is hidden when false.
-  5. *9-Language Translation Parity Test (`TST-TRK-068.5`, `TranslationParityTest.kt`)*:
-  • Verify 100% key and format parity across `strings_hrv.xml` in all 9 supported locales (`values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`).
+  5. *9-Language Translation Parity & Copy Polish Tests (`TST-TRK-068.5`, `TranslationParityTest.kt`)*:
+  • Verify 100% key and format parity across `strings_hrv.xml` in all 9 supported locales (`values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`) for updated `morning_hrv_subtitle`, `morning_hrv_btn_save`, and new `morning_hrv_result_title`.
   6. *Clean-Room Targeted Test Suite Execution (`TST-TRK-068.6`)*:
   • `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.hrv.*" --tests "com.atrainingtracker.trainingtracker.ui.cockpit.*" --tests "com.atrainingtracker.trainingtracker.localization.TranslationParityTest"` asserting 100% pass rate.
 

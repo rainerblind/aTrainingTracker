@@ -55,7 +55,7 @@
 
     <!-- Morning Resting HRV Check (ATT-3556 / REQ-PER-032) -->
     <string name="morning_hrv_title">Poranny test HRV</string>
-    <string name="morning_hrv_subtitle">Protokół poranny gotowości autonomicznej</string>
+    <string name="morning_hrv_subtitle">Pomiar spoczynkowy zaraz po przebudzeniu</string>
     <string name="morning_hrv_posture_label">Postawa</string>
     <string name="morning_hrv_posture_supine">Leżąca</string>
     <string name="morning_hrv_posture_seated">Siedząca</string>
@@ -68,9 +68,10 @@
     <string name="morning_hrv_state_stabilizing">Stabilizacja: %1$ds</string>
     <string name="morning_hrv_state_measuring">Pomiar: %1$ds / %2$ds</string>
     <string name="morning_hrv_state_completed">Pomiar ukończony</string>
+    <string name="morning_hrv_result_title">Wynik pomiaru</string>
     <string name="morning_hrv_btn_start">Rozpocznij pomiar</string>
     <string name="morning_hrv_btn_cancel">Anuluj</string>
-    <string name="morning_hrv_btn_save">Zapisz pomiar</string>
+    <string name="morning_hrv_btn_save">Zapisz</string>
     <string name="morning_hrv_btn_discard">Odrzuć</string>
     <string name="morning_hrv_instructions_title">Standaryzowany protokół</string>
     <string name="morning_hrv_instructions_desc">Wykonaj pomiar po przebudzeniu i opróżnieniu pęcherza. Pozostań w bezruchu i oddychaj normalnie bez mówienia. Zachowaj stałą postawę dla wiarygodnych porównań SWC.</string>
