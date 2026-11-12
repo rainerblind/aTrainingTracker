@@ -99,6 +99,10 @@ public class BTLERadarDevice extends MyBTLEDevice implements RadarLightDeviceCli
 
     private boolean mIsV2Stream = false;
     private BluetoothGattCharacteristic mLightControlCharacteristic;
+    private BluetoothGattCharacteristic mRadarControlWriteChar;
+    private BluetoothGattCharacteristic mRadarControlNotifyChar;
+    private volatile long mLastLightModeCommandTimeMs = 0L;
+    public static final long ECHO_GUARD_WINDOW_MS = 1000L;
     private volatile boolean mIsLightControlSupported = false;
     private volatile boolean mIsStvzo = false;
     private volatile String mModelNumber = null;
@@ -276,42 +280,82 @@ public class BTLERadarDevice extends MyBTLEDevice implements RadarLightDeviceCli
             fallbackToV1(gatt, btGattService);
         }
 
-        // Tail light control characteristic discovery (ATT-5102 / REQ-CON-031.1)
-        BluetoothGattCharacteristic lightChar = btGattService.getCharacteristic(BluetoothConstants.UUID_CHARACTERISTIC_RADAR_LIGHT_CONTROL);
-        if (lightChar != null) {
-            if (DEBUG) Log.i(TAG, "Garmin Varia light control characteristic 6a4e3202 discovered (REQ-CON-031.1).");
-            mLightControlCharacteristic = lightChar;
+        // RearVue 820 tail light control service discovery (ATT-7545 / REQ-CON-031.1)
+        BluetoothGattService controlService = gatt.getService(BluetoothConstants.UUID_SERVICE_RADAR_CONTROL);
+        BluetoothGattCharacteristic controlWriteChar = controlService != null
+                ? controlService.getCharacteristic(BluetoothConstants.UUID_CHARACTERISTIC_RADAR_CONTROL_WRITE)
+                : null;
+        BluetoothGattCharacteristic controlNotifyChar = controlService != null
+                ? controlService.getCharacteristic(BluetoothConstants.UUID_CHARACTERISTIC_RADAR_CONTROL_NOTIFY)
+                : null;
+
+        if (controlWriteChar != null && controlNotifyChar != null) {
+            if (DEBUG) Log.i(TAG, "Garmin RearVue 820 control service 6a4e2f00 discovered (REQ-CON-031.1).");
+            mRadarControlWriteChar = controlWriteChar;
+            mRadarControlNotifyChar = controlNotifyChar;
+            mLightControlCharacteristic = controlWriteChar;
             mIsLightControlSupported = true;
             RadarLightController.registerRadarDevice(this, true, mIsStvzo);
 
-            // Subscribe or read initial physical light mode
-            if ((lightChar.getProperties() & (BluetoothGattCharacteristic.PROPERTY_NOTIFY | BluetoothGattCharacteristic.PROPERTY_INDICATE)) != 0) {
-                try {
-                    gatt.setCharacteristicNotification(lightChar, true);
-                    BluetoothGattDescriptor desc = lightChar.getDescriptor(BluetoothConstants.UUID_CHARACTERISTIC_CLIENT_CONFIG);
-                    if (desc != null) {
-                        byte[] val = (lightChar.getProperties() & BluetoothGattCharacteristic.PROPERTY_INDICATE) != 0
-                                ? BluetoothGattDescriptor.ENABLE_INDICATION_VALUE
-                                : BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE;
-                        enqueueWriteDescriptor(desc, val);
-                    }
-                } catch (SecurityException e) {
-                    Log.w(TAG, "Missing BLUETOOTH_CONNECT permission enabling light notifications", e);
+            try {
+                gatt.setCharacteristicNotification(controlNotifyChar, true);
+                BluetoothGattDescriptor desc = controlNotifyChar.getDescriptor(BluetoothConstants.UUID_CHARACTERISTIC_CLIENT_CONFIG);
+                if (desc != null) {
+                    byte[] val = (controlNotifyChar.getProperties() & BluetoothGattCharacteristic.PROPERTY_INDICATE) != 0
+                            ? BluetoothGattDescriptor.ENABLE_INDICATION_VALUE
+                            : BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE;
+                    enqueueWriteDescriptor(desc, val);
                 }
-            } else if ((lightChar.getProperties() & BluetoothGattCharacteristic.PROPERTY_READ) != 0) {
-                enqueueReadCharacteristic(lightChar);
+            } catch (SecurityException e) {
+                Log.w(TAG, "Missing BLUETOOTH_CONNECT permission enabling radar control notifications", e);
             }
 
             // Mid-ride reconnect: re-apply active workout light mode
             RadarLightMode activeMode = RadarLightController.getCurrentMode().getValue();
             if (activeMode != RadarLightMode.OFF) {
                 if (DEBUG) Log.i(TAG, "Re-applying active workout light mode upon reconnect: " + activeMode);
-                enqueueWriteCharacteristic(lightChar, new byte[]{activeMode.getCommandByte()});
+                setLightMode(activeMode);
             }
         } else {
-            mLightControlCharacteristic = null;
-            mIsLightControlSupported = false;
-            RadarLightController.registerRadarDevice(this, false, false);
+            mRadarControlWriteChar = null;
+            mRadarControlNotifyChar = null;
+            // Legacy tail light control characteristic fallback (ATT-5102 / REQ-CON-031.1)
+            BluetoothGattCharacteristic lightChar = btGattService.getCharacteristic(BluetoothConstants.UUID_CHARACTERISTIC_RADAR_LIGHT_CONTROL);
+            if (lightChar != null) {
+                if (DEBUG) Log.i(TAG, "Garmin Varia light control characteristic 6a4e3202 discovered (REQ-CON-031.1).");
+                mLightControlCharacteristic = lightChar;
+                mIsLightControlSupported = true;
+                RadarLightController.registerRadarDevice(this, true, mIsStvzo);
+
+                // Subscribe or read initial physical light mode
+                if ((lightChar.getProperties() & (BluetoothGattCharacteristic.PROPERTY_NOTIFY | BluetoothGattCharacteristic.PROPERTY_INDICATE)) != 0) {
+                    try {
+                        gatt.setCharacteristicNotification(lightChar, true);
+                        BluetoothGattDescriptor desc = lightChar.getDescriptor(BluetoothConstants.UUID_CHARACTERISTIC_CLIENT_CONFIG);
+                        if (desc != null) {
+                            byte[] val = (lightChar.getProperties() & BluetoothGattCharacteristic.PROPERTY_INDICATE) != 0
+                                    ? BluetoothGattDescriptor.ENABLE_INDICATION_VALUE
+                                    : BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE;
+                            enqueueWriteDescriptor(desc, val);
+                        }
+                    } catch (SecurityException e) {
+                        Log.w(TAG, "Missing BLUETOOTH_CONNECT permission enabling light notifications", e);
+                    }
+                } else if ((lightChar.getProperties() & BluetoothGattCharacteristic.PROPERTY_READ) != 0) {
+                    enqueueReadCharacteristic(lightChar);
+                }
+
+                // Mid-ride reconnect: re-apply active workout light mode
+                RadarLightMode activeMode = RadarLightController.getCurrentMode().getValue();
+                if (activeMode != RadarLightMode.OFF) {
+                    if (DEBUG) Log.i(TAG, "Re-applying active workout light mode upon reconnect: " + activeMode);
+                    enqueueWriteCharacteristic(lightChar, new byte[]{activeMode.getCommandByte()});
+                }
+            } else {
+                mLightControlCharacteristic = null;
+                mIsLightControlSupported = false;
+                RadarLightController.registerRadarDevice(this, false, false);
+            }
         }
     }
 
@@ -493,6 +537,9 @@ public class BTLERadarDevice extends MyBTLEDevice implements RadarLightDeviceCli
         }
         RadarLightController.unregisterRadarDevice(this);
         mLightControlCharacteristic = null;
+        mRadarControlWriteChar = null;
+        mRadarControlNotifyChar = null;
+        mLastLightModeCommandTimeMs = 0L;
         mIsLightControlSupported = false;
         RadarStateRepository.updateState(new RadarState(
                 RadarConnectionState.DISCONNECTED,
@@ -519,13 +566,20 @@ public class BTLERadarDevice extends MyBTLEDevice implements RadarLightDeviceCli
         }
         RadarLightController.unregisterRadarDevice(this);
         mLightControlCharacteristic = null;
+        mRadarControlWriteChar = null;
+        mRadarControlNotifyChar = null;
+        mLastLightModeCommandTimeMs = 0L;
         mIsLightControlSupported = false;
         mWindowAggregator.resetSession();
         super.shutDown();
     }
 
     /**
-     * Dispatches a light mode command to the connected radar peripheral (REQ-CON-031.1).
+     * Dispatches a light mode command to the connected radar peripheral (REQ-CON-031.1, REQ-CON-031.2).
+     *
+     * On RearVue 820 peripherals with dedicated Control Service 6a4e2f00, formats a 4-byte command
+     * `06 09 01 TT` on characteristic 6a4e2f11 and immediately performs an optimistic hardware mode update.
+     * On legacy units (e.g. RTL515, RTL516), dispatches a 1-byte command on characteristic 6a4e3202.
      *
      * Queues write operation via [enqueueWriteCharacteristic] into the serialized GATT queue.
      *
@@ -533,6 +587,16 @@ public class BTLERadarDevice extends MyBTLEDevice implements RadarLightDeviceCli
      * @return true if command was successfully enqueued, false if characteristic not supported.
      */
     public boolean setLightMode(@NonNull RadarLightMode mode) {
+        if (mRadarControlWriteChar != null) {
+            byte type = getRearVueModeType(mode);
+            byte[] cmd = new byte[]{0x06, 0x09, 0x01, type};
+            enqueueWriteCharacteristic(mRadarControlWriteChar, cmd);
+            mLastLightModeCommandTimeMs = SystemClock.elapsedRealtime();
+            mLastConfiguredLightMode = mode;
+            RadarLightController.updateHardwareLightMode(mode);
+            return true;
+        }
+
         BluetoothGattCharacteristic lightChar = mLightControlCharacteristic;
         if (lightChar == null) {
             if (DEBUG) Log.w(TAG, "Cannot set light mode: characteristic not supported or disconnected");
@@ -586,7 +650,73 @@ public class BTLERadarDevice extends MyBTLEDevice implements RadarLightDeviceCli
                 if (DEBUG) Log.i(TAG, "Read physical tail light mode: " + mode);
                 RadarLightController.updateHardwareLightMode(mode);
             }
+        } else if (BluetoothConstants.UUID_CHARACTERISTIC_RADAR_CONTROL_NOTIFY.equals(characteristic.getUuid())) {
+            byte[] val = characteristic.getValue();
+            if (isControlSlotNotification(val)) {
+                long nowMs = SystemClock.elapsedRealtime();
+                if (nowMs - mLastLightModeCommandTimeMs < ECHO_GUARD_WINDOW_MS) {
+                    if (DEBUG) Log.d(TAG, "Ignoring RearVue 820 slot notification within echo guard window");
+                    return;
+                }
+                RadarLightMode mode = parseRearVueModeType(val[3]);
+                if (mode != null) {
+                    if (DEBUG) Log.i(TAG, "Read RearVue 820 physical light mode: " + mode);
+                    RadarLightController.updateHardwareLightMode(mode);
+                }
+            }
         }
+    }
+
+    /**
+     * Maps [RadarLightMode] to the 1-byte type code used in RearVue 820 4-byte control frames (REQ-CON-031.2).
+     */
+    public static byte getRearVueModeType(@NonNull RadarLightMode mode) {
+        switch (mode) {
+            case SOLID:
+                return (byte) 0x11;
+            case PELOTON:
+                return (byte) 0x12;
+            case DAY_FLASH:
+                return (byte) 0x13;
+            case NIGHT_FLASH:
+                return (byte) 0x14;
+            case OFF:
+            default:
+                return (byte) 0x1F;
+        }
+    }
+
+    /**
+     * Decodes the RearVue 820 1-byte light type code into [RadarLightMode] (REQ-CON-031.2).
+     */
+    @Nullable
+    public static RadarLightMode parseRearVueModeType(byte type) {
+        int val = type & 0xFF;
+        switch (val) {
+            case 0x11:
+            case 0x01:
+                return RadarLightMode.SOLID;
+            case 0x12:
+                return RadarLightMode.PELOTON;
+            case 0x13:
+                return RadarLightMode.DAY_FLASH;
+            case 0x14:
+                return RadarLightMode.NIGHT_FLASH;
+            case 0x1F:
+            case 0x00:
+                return RadarLightMode.OFF;
+            default:
+                return null;
+        }
+    }
+
+    /**
+     * Determines whether a notification on characteristic 6a4e2f14 is a valid 4-byte slot notification (REQ-CON-031.2).
+     *
+     * Format: 01 [slot] ff [type]
+     */
+    public static boolean isControlSlotNotification(@Nullable byte[] payload) {
+        return payload != null && payload.length == 4 && (payload[0] & 0xFF) == 0x01 && (payload[2] & 0xFF) == 0xFF;
     }
 
     public static boolean isV1Heartbeat(@Nullable byte[] payload) {
@@ -1043,5 +1173,20 @@ public class BTLERadarDevice extends MyBTLEDevice implements RadarLightDeviceCli
 
     public void onDescriptorWriteCompletedForTesting(BluetoothGatt gatt, BluetoothGattDescriptor descriptor, int status) {
         onDescriptorWriteCompleted(gatt, descriptor, status);
+    }
+
+    @androidx.annotation.VisibleForTesting
+    public BluetoothGattCharacteristic getRadarControlWriteCharForTesting() {
+        return mRadarControlWriteChar;
+    }
+
+    @androidx.annotation.VisibleForTesting
+    public BluetoothGattCharacteristic getRadarControlNotifyCharForTesting() {
+        return mRadarControlNotifyChar;
+    }
+
+    @androidx.annotation.VisibleForTesting
+    public void setLastLightModeCommandTimeMsForTesting(long timeMs) {
+        mLastLightModeCommandTimeMs = timeMs;
     }
 }

@@ -131,11 +131,14 @@ class BTLERadarDeviceTest {
         every { anyConstructed<Intent>().putExtra(any<String>(), any<Boolean>()) } answers { self as Intent }
 
         RadarStateRepository.reset()
+        RadarLightController.reset()
         radarDevice = BTLERadarDevice(mockContext, mockSensorManager, 101L, "DC:2C:26:01:02:03")
     }
 
     @After
     fun tearDown() {
+        RadarLightController.reset()
+        RadarStateRepository.reset()
         unmockkAll()
     }
 
@@ -443,6 +446,7 @@ class BTLERadarDeviceTest {
         every { mockDevice.bondState } returns android.bluetooth.BluetoothDevice.BOND_BONDED
         every { mockGatt.getService(BluetoothConstants.UUID_SERVICE_RADAR) } returns mockService
         every { mockGatt.getService(BluetoothConstants.UUID_SERVICE_DEVICE_INFORMATION) } returns null
+        every { mockGatt.getService(BluetoothConstants.UUID_SERVICE_RADAR_CONTROL) } returns null
         every { mockService.getCharacteristic(BluetoothConstants.UUID_CHARACTERISTIC_RADAR_V2) } returns mockV2Char
         every { mockService.getCharacteristic(BluetoothConstants.UUID_CHARACTERISTIC_RADAR_LIGHT_CONTROL) } returns null
         every { mockV2Char.getDescriptor(BluetoothConstants.UUID_CHARACTERISTIC_CLIENT_CONFIG) } returns mockDescriptor
@@ -755,6 +759,8 @@ class BTLERadarDeviceTest {
         every { mockGatt.getService(BluetoothConstants.UUID_SERVICE_RADAR) } returns mockRadarService
         every { mockGatt.getService(BluetoothConstants.UUID_SERVICE_BATTERY) } returns mockBatteryService
         every { mockGatt.getService(BluetoothConstants.UUID_SERVICE_DEVICE_INFORMATION) } returns null
+        every { mockGatt.getService(BluetoothConstants.UUID_SERVICE_RADAR_CONTROL) } returns null
+        every { mockRadarService.getCharacteristic(BluetoothConstants.UUID_CHARACTERISTIC_RADAR_LIGHT_CONTROL) } returns null
         every { mockBatteryService.getCharacteristic(BluetoothConstants.UUID_CHARACTERISTIC_BATTERY_LEVEL) } returns mockBatteryChar
         every { mockBatteryChar.properties } returns BluetoothGattCharacteristic.PROPERTY_NOTIFY
         every { mockBatteryChar.getDescriptor(BluetoothConstants.UUID_CHARACTERISTIC_CLIENT_CONFIG) } returns mockBatteryDesc
@@ -817,5 +823,167 @@ class BTLERadarDeviceTest {
         radarDevice.disconnectFromGatt()
         assertFalse(radarDevice.isV2Stream)
         assertEquals(RadarConnectionState.DISCONNECTED, RadarStateRepository.getState().connectionState)
+    }
+
+    @Test
+    fun testRearVueProtocol_modeTypeEncoding() {
+        assertEquals(0x11.toByte(), BTLERadarDevice.getRearVueModeType(RadarLightMode.SOLID))
+        assertEquals(0x12.toByte(), BTLERadarDevice.getRearVueModeType(RadarLightMode.PELOTON))
+        assertEquals(0x13.toByte(), BTLERadarDevice.getRearVueModeType(RadarLightMode.DAY_FLASH))
+        assertEquals(0x14.toByte(), BTLERadarDevice.getRearVueModeType(RadarLightMode.NIGHT_FLASH))
+        assertEquals(0x1F.toByte(), BTLERadarDevice.getRearVueModeType(RadarLightMode.OFF))
+    }
+
+    @Test
+    fun testRearVueProtocol_modeTypeDecoding() {
+        assertEquals(RadarLightMode.SOLID, BTLERadarDevice.parseRearVueModeType(0x11.toByte()))
+        assertEquals(RadarLightMode.SOLID, BTLERadarDevice.parseRearVueModeType(0x01.toByte()))
+        assertEquals(RadarLightMode.PELOTON, BTLERadarDevice.parseRearVueModeType(0x12.toByte()))
+        assertEquals(RadarLightMode.DAY_FLASH, BTLERadarDevice.parseRearVueModeType(0x13.toByte()))
+        assertEquals(RadarLightMode.NIGHT_FLASH, BTLERadarDevice.parseRearVueModeType(0x14.toByte()))
+        assertEquals(RadarLightMode.OFF, BTLERadarDevice.parseRearVueModeType(0x1F.toByte()))
+        assertEquals(RadarLightMode.OFF, BTLERadarDevice.parseRearVueModeType(0x00.toByte()))
+        assertNull(BTLERadarDevice.parseRearVueModeType(0x55.toByte()))
+        assertNull(BTLERadarDevice.parseRearVueModeType(0xFE.toByte()))
+    }
+
+    @Test
+    fun testRearVueProtocol_isControlSlotNotification() {
+        val validSolidSlot0 = byteArrayOf(0x01, 0x00, 0xFF.toByte(), 0x11)
+        val validFlashSlot1 = byteArrayOf(0x01, 0x01, 0xFF.toByte(), 0x13)
+        assertTrue(BTLERadarDevice.isControlSlotNotification(validSolidSlot0))
+        assertTrue(BTLERadarDevice.isControlSlotNotification(validFlashSlot1))
+
+        assertFalse(BTLERadarDevice.isControlSlotNotification(null))
+        assertFalse(BTLERadarDevice.isControlSlotNotification(byteArrayOf()))
+        assertFalse(BTLERadarDevice.isControlSlotNotification(byteArrayOf(0x01, 0x00))) // len 2
+        assertFalse(BTLERadarDevice.isControlSlotNotification(byteArrayOf(0x02, 0x00, 0xFF.toByte(), 0x11))) // header 0x02
+        assertFalse(BTLERadarDevice.isControlSlotNotification(byteArrayOf(0x01, 0x00, 0x00, 0x11))) // byte[2] != 0xFF
+        assertFalse(BTLERadarDevice.isControlSlotNotification(ByteArray(10))) // 10-byte config blob
+    }
+
+    @Test
+    fun testConfigureServices_discoversRearVueControlService() {
+        val mockGatt = mockk<BluetoothGatt>(relaxed = true)
+        val mockRadarService = mockk<BluetoothGattService>(relaxed = true)
+        val mockControlService = mockk<BluetoothGattService>(relaxed = true)
+        val mockWriteChar = mockk<BluetoothGattCharacteristic>(relaxed = true)
+        val mockNotifyChar = mockk<BluetoothGattCharacteristic>(relaxed = true)
+        val mockNotifyDesc = mockk<BluetoothGattDescriptor>(relaxed = true)
+
+        every { mockGatt.getService(BluetoothConstants.UUID_SERVICE_RADAR) } returns mockRadarService
+        every { mockGatt.getService(BluetoothConstants.UUID_SERVICE_RADAR_CONTROL) } returns mockControlService
+        every { mockControlService.getCharacteristic(BluetoothConstants.UUID_CHARACTERISTIC_RADAR_CONTROL_WRITE) } returns mockWriteChar
+        every { mockControlService.getCharacteristic(BluetoothConstants.UUID_CHARACTERISTIC_RADAR_CONTROL_NOTIFY) } returns mockNotifyChar
+        every { mockNotifyChar.properties } returns BluetoothGattCharacteristic.PROPERTY_NOTIFY
+        every { mockNotifyChar.getDescriptor(BluetoothConstants.UUID_CHARACTERISTIC_CLIENT_CONFIG) } returns mockNotifyDesc
+
+        radarDevice.configureServices(mockGatt)
+
+        assertTrue(radarDevice.isLightControlSupported)
+        assertEquals(mockWriteChar, radarDevice.radarControlWriteCharForTesting)
+        assertEquals(mockNotifyChar, radarDevice.radarControlNotifyCharForTesting)
+    }
+
+    @Test
+    fun testConfigureServices_fallsBackToLegacyLightControlWhenControlServiceMissing() {
+        val mockGatt = mockk<BluetoothGatt>(relaxed = true)
+        val mockRadarService = mockk<BluetoothGattService>(relaxed = true)
+        val mockLegacyLightChar = mockk<BluetoothGattCharacteristic>(relaxed = true)
+
+        every { mockGatt.getService(BluetoothConstants.UUID_SERVICE_RADAR) } returns mockRadarService
+        every { mockGatt.getService(BluetoothConstants.UUID_SERVICE_RADAR_CONTROL) } returns null
+        every { mockRadarService.getCharacteristic(BluetoothConstants.UUID_CHARACTERISTIC_RADAR_LIGHT_CONTROL) } returns null
+        every { mockRadarService.getCharacteristic(BluetoothConstants.UUID_CHARACTERISTIC_RADAR_LIGHT_CONTROL) } returns mockLegacyLightChar
+
+        radarDevice.configureServices(mockGatt)
+
+        assertTrue(radarDevice.isLightControlSupported)
+        assertNull(radarDevice.radarControlWriteCharForTesting)
+        assertNull(radarDevice.radarControlNotifyCharForTesting)
+    }
+
+    @Test
+    fun testSetLightMode_rearVue4ByteCommandDispatchAndOptimisticUpdate() {
+        val mockGatt = mockk<BluetoothGatt>(relaxed = true)
+        val mockRadarService = mockk<BluetoothGattService>(relaxed = true)
+        val mockControlService = mockk<BluetoothGattService>(relaxed = true)
+        val mockWriteChar = mockk<BluetoothGattCharacteristic>(relaxed = true)
+        val mockNotifyChar = mockk<BluetoothGattCharacteristic>(relaxed = true)
+
+        every { mockGatt.getService(BluetoothConstants.UUID_SERVICE_RADAR) } returns mockRadarService
+        every { mockGatt.getService(BluetoothConstants.UUID_SERVICE_RADAR_CONTROL) } returns mockControlService
+        every { mockControlService.getCharacteristic(BluetoothConstants.UUID_CHARACTERISTIC_RADAR_CONTROL_WRITE) } returns mockWriteChar
+        every { mockControlService.getCharacteristic(BluetoothConstants.UUID_CHARACTERISTIC_RADAR_CONTROL_NOTIFY) } returns mockNotifyChar
+
+        radarDevice.configureServices(mockGatt)
+
+        val success = radarDevice.setLightMode(RadarLightMode.DAY_FLASH)
+        assertTrue(success)
+        assertEquals(RadarLightMode.DAY_FLASH, RadarLightController.currentMode.value)
+        assertEquals(RadarLightMode.DAY_FLASH, RadarStateRepository.getState().lightMode)
+    }
+
+    @Test
+    fun testOnOtherCharacteristicUpdate_rearVueSlotNotificationUpdatesController() {
+        val mockGatt = mockk<BluetoothGatt>(relaxed = true)
+        val mockNotifyChar = mockk<BluetoothGattCharacteristic>(relaxed = true)
+        every { mockNotifyChar.uuid } returns BluetoothConstants.UUID_CHARACTERISTIC_RADAR_CONTROL_NOTIFY
+        every { mockNotifyChar.value } returns byteArrayOf(0x01, 0x00, 0xFF.toByte(), 0x13) // DAY_FLASH
+
+        radarDevice.setLastLightModeCommandTimeMsForTesting(0L)
+        radarDevice.onOtherCharacteristicUpdateForTesting(mockGatt, mockNotifyChar)
+
+        assertEquals(RadarLightMode.DAY_FLASH, RadarLightController.currentMode.value)
+        assertEquals(RadarLightMode.DAY_FLASH, RadarStateRepository.getState().lightMode)
+    }
+
+    @Test
+    fun testOnOtherCharacteristicUpdate_rearVueEchoGuardSuppressesNotificationWithinWindow() {
+        val mockGatt = mockk<BluetoothGatt>(relaxed = true)
+        val mockNotifyChar = mockk<BluetoothGattCharacteristic>(relaxed = true)
+        every { mockNotifyChar.uuid } returns BluetoothConstants.UUID_CHARACTERISTIC_RADAR_CONTROL_NOTIFY
+        every { mockNotifyChar.value } returns byteArrayOf(0x01, 0x00, 0xFF.toByte(), 0x12) // PELOTON
+
+        // Set previous mode to SOLID and record recent command at t = 1000ms
+        RadarLightController.updateHardwareLightMode(RadarLightMode.SOLID)
+        radarDevice.setLastLightModeCommandTimeMsForTesting(1000L)
+
+        // Notification arrives at t = 1500ms (within 1000ms echo guard)
+        every { android.os.SystemClock.elapsedRealtime() } returns 1500L
+        radarDevice.onOtherCharacteristicUpdateForTesting(mockGatt, mockNotifyChar)
+
+        // Notification must be ignored
+        assertEquals(RadarLightMode.SOLID, RadarLightController.currentMode.value)
+
+        // Notification arrives at t = 2001L (> 1000ms guard)
+        every { android.os.SystemClock.elapsedRealtime() } returns 2001L
+        radarDevice.onOtherCharacteristicUpdateForTesting(mockGatt, mockNotifyChar)
+
+        // Now notification is accepted
+        assertEquals(RadarLightMode.PELOTON, RadarLightController.currentMode.value)
+    }
+
+    @Test
+    fun testDisconnectFromGatt_cleansUpRearVueControlCharacteristics() {
+        val mockGatt = mockk<BluetoothGatt>(relaxed = true)
+        val mockRadarService = mockk<BluetoothGattService>(relaxed = true)
+        val mockControlService = mockk<BluetoothGattService>(relaxed = true)
+        val mockWriteChar = mockk<BluetoothGattCharacteristic>(relaxed = true)
+        val mockNotifyChar = mockk<BluetoothGattCharacteristic>(relaxed = true)
+
+        every { mockGatt.getService(BluetoothConstants.UUID_SERVICE_RADAR) } returns mockRadarService
+        every { mockGatt.getService(BluetoothConstants.UUID_SERVICE_RADAR_CONTROL) } returns mockControlService
+        every { mockControlService.getCharacteristic(BluetoothConstants.UUID_CHARACTERISTIC_RADAR_CONTROL_WRITE) } returns mockWriteChar
+        every { mockControlService.getCharacteristic(BluetoothConstants.UUID_CHARACTERISTIC_RADAR_CONTROL_NOTIFY) } returns mockNotifyChar
+
+        radarDevice.configureServices(mockGatt)
+        assertTrue(radarDevice.isLightControlSupported)
+        assertNotNull(radarDevice.radarControlWriteCharForTesting)
+
+        radarDevice.disconnectFromGatt()
+        assertFalse(radarDevice.isLightControlSupported)
+        assertNull(radarDevice.radarControlWriteCharForTesting)
+        assertNull(radarDevice.radarControlNotifyCharForTesting)
     }
 }

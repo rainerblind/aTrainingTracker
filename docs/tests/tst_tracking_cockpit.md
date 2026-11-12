@@ -2039,12 +2039,12 @@
 ### TST-CON-031: **BLE Radar Tail Light Mode Control Test Suite** [Verified]
 - **Requirement(s)**: `REQ-CON-031` (`REQ-CON-031.1`..`REQ-CON-031.7`)
 - **Component**: `BTLERadarDevice.java`, `RadarLightController.kt`, `RadarLightMode.kt`, `RadarEdgeOverlay.kt`, `RadarSettingsSection.kt`, `TuningPreferencesDataStore.kt`, `TrackerService.java`, `RadarLightQuickSwitchSheet.kt`, `strings_radar.xml`
-- **Jira**: `ATT-5102`, `ATT-6707`
+- **Jira**: `ATT-5102`, `ATT-6707`, `ATT-7545`
 - **Test Description**:
   1. *Light Characteristic Discovery, Model Number Query & Queue Routing Tests (`TST-CON-031.1`, `BTLERadarDeviceTest.kt`)*:
-  • Verify discovery of characteristic `6a4e3202`, read of Device Information `0x2A24` (Model Number string), StVZO detection (`isStvzo = true` for `010-03180-10`, `RTL516`), initial read of `6a4e3202` on connect, active light mode re-dispatch on mid-ride reconnect, and serialized write queueing.
-  2. *Mode Command Encoding, StVZO Pruning & Gated Mutation Tests (`TST-CON-031.2`, `RadarLightControllerTest.kt`)*:
-  • Verify encoding of light mode commands into raw GATT byte arrays (`OFF`, `DAY_FLASH`, `NIGHT_FLASH`, `SOLID`, `PELOTON`), flashing mode pruning under StVZO, and verification that `_currentMode` and `RadarStateRepository` mutate strictly when `dispatched == true`.
+  • Verify discovery of RearVue 820 Control Service `6a4e2f00` (write `6a4e2f11`, notify `6a4e2f14`) and CCCD subscription on `6a4e2f14`, transparent legacy fallback to `6a4e3202` on service `6a4e3200`, read of Device Information `0x2A24` (Model Number string), StVZO detection (`isStvzo = true` for `010-03180-10`, `RTL516`), initial read/registration of light control on connect, active light mode re-dispatch on mid-ride reconnect, and serialized write queueing.
+  2. *Mode Command Encoding, Slot Notification Decoding, StVZO Pruning & Gated Mutation Tests (`TST-CON-031.2`, `BTLERadarDeviceTest.kt`, `RadarLightControllerTest.kt`)*:
+  • Verify dispatch of 4-byte mode commands `06 09 01 TT` (`0x11` SOLID, `0x12` PELOTON, `0x13` DAY_FLASH, `0x14` NIGHT_FLASH, `0x1F` OFF) on `6a4e2f11` with immediate `RadarLightController.updateHardwareLightMode(mode)` update, legacy 1-byte command dispatch on `6a4e3202`, decoding of 4-byte slot notifications `01 [slot] ff [type]` on `6a4e2f14` updating `RadarLightController`, flashing mode pruning under StVZO, and verification that `_currentMode` and `RadarStateRepository` mutate strictly when `dispatched == true`.
   3. *Cockpit Quick-Switch Sheet UI & State Tests (`TST-CON-031.3`, `RadarLightQuickSwitchSheetTest.kt`)*:
   • Verify modal sheet rendering upon badge tap, active mode indication, selection callback invocation, non-interactive badge behavior on devices lacking light characteristic, styling using `MaterialTheme.colorScheme.outline`, and `@Preview` coverage.
   4. *Workout Lifecycle Auto-Switch Automation & Pause Safety Tests (`TST-CON-031.4`, `RadarLightControllerTest.kt`, `TrackerServiceTest.kt`)*:

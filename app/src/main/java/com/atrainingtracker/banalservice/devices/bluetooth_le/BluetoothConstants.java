@@ -52,7 +52,7 @@ public class BluetoothConstants {
     private static final String CHARACTERISTIC_CYCLING_POWER_FEATURE = "00002a65-0000-1000-8000-00805f9b34fb";
     public static final UUID UUID_CHARACTERISTIC_CYCLING_POWER_FEATURE = UUID.fromString(CHARACTERISTIC_CYCLING_POWER_FEATURE);
 
-    // Garmin Varia Radar (ATT-5083 / REQ-CON-028, ATT-5095 / REQ-CON-030, ATT-5102 / REQ-CON-031, ATT-7543)
+    // Garmin Varia Radar (ATT-5083 / REQ-CON-028, ATT-5095 / REQ-CON-030, ATT-5102 / REQ-CON-031, ATT-7543, ATT-7545)
     public static final String SERVICE_RADAR = "6a4e3200-667b-11e3-949a-0800200c9a66";
     public static final UUID UUID_SERVICE_RADAR = UUID.fromString(SERVICE_RADAR);
     public static final String SERVICE_GARMIN_MEMBER = "0000fe1f-0000-1000-8000-00805f9b34fb";
@@ -63,6 +63,13 @@ public class BluetoothConstants {
     public static final UUID UUID_CHARACTERISTIC_RADAR_V1 = UUID.fromString(CHARACTERISTIC_RADAR_V1);
     public static final String CHARACTERISTIC_RADAR_V2 = "6a4e3204-667b-11e3-949a-0800200c9a66";
     public static final UUID UUID_CHARACTERISTIC_RADAR_V2 = UUID.fromString(CHARACTERISTIC_RADAR_V2);
+    // RearVue 820 Tail Light Control Service & Characteristics (ATT-7545 / REQ-CON-031)
+    public static final String SERVICE_RADAR_CONTROL = "6a4e2f00-667b-11e3-949a-0800200c9a66";
+    public static final UUID UUID_SERVICE_RADAR_CONTROL = UUID.fromString(SERVICE_RADAR_CONTROL);
+    public static final String CHARACTERISTIC_RADAR_CONTROL_WRITE = "6a4e2f11-667b-11e3-949a-0800200c9a66";
+    public static final UUID UUID_CHARACTERISTIC_RADAR_CONTROL_WRITE = UUID.fromString(CHARACTERISTIC_RADAR_CONTROL_WRITE);
+    public static final String CHARACTERISTIC_RADAR_CONTROL_NOTIFY = "6a4e2f14-667b-11e3-949a-0800200c9a66";
+    public static final UUID UUID_CHARACTERISTIC_RADAR_CONTROL_NOTIFY = UUID.fromString(CHARACTERISTIC_RADAR_CONTROL_NOTIFY);
 
     private static final HashMap<DeviceType, UUID> SERVICE_UUIDS = new HashMap<DeviceType, UUID>();
     private static final HashMap<DeviceType, UUID> CHARACTERISTIC_MEASUREMENT_UUIDS = new HashMap<DeviceType, UUID>();
