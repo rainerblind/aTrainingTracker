@@ -429,6 +429,27 @@ class TestEpicCommands(unittest.TestCase):
         """TST-PRO-061.1: Verify Höchstmaß qa_audit execution and markdown formatting."""
         from unittest.mock import patch
         import tempfile
+        import subprocess
+
+        stages = [
+            (1, "[Analysis]"),
+            (2, "[Req & Test Spec]"),
+            (3, "[Impl-Plan]"),
+            (4, "[Implementation]"),
+            (5, "[Test]"),
+        ]
+
+        def make_subtasks(prefix, parent_key):
+            return [
+                {
+                    "key": f"{prefix}-{g_idx}",
+                    "fields": {
+                        "summary": f"{name} {parent_key}",
+                        "status": {"name": "Erledigt"},
+                    },
+                }
+                for g_idx, name in stages
+            ]
 
         def mock_jira_req(url, method="GET", payload=None, role="coordinator", **kwargs):
             if "/rest/agile/1.0/board" in url and "/sprint" not in url:
@@ -441,39 +462,74 @@ class TestEpicCommands(unittest.TestCase):
                         {
                             "key": "ATT-6149",
                             "fields": {
-                                "summary": "Export Jira gate records",
+                                "summary": "Export Jira gate records REQ-PRO-059",
+                                "description": "Addresses REQ-PRO-059.1",
                                 "status": {"name": "Final Review (Human)"},
                                 "issuetype": {"subtask": False},
-                                "subtasks": [
-                                    {"key": "ATT-7247", "fields": {"summary": "[Analysis] Task", "status": {"name": "Erledigt"}}}
-                                ],
+                                "subtasks": make_subtasks("ATT-724", "ATT-6149"),
                             },
                         },
                         {
                             "key": "ATT-6150",
                             "fields": {
-                                "summary": "Record story points and sprint metrics",
+                                "summary": "Record story points and sprint metrics REQ-PRO-060",
+                                "description": "Addresses REQ-PRO-060.1",
                                 "status": {"name": "Final Review (Human)"},
                                 "issuetype": {"subtask": False},
-                                "subtasks": [
-                                    {"key": "ATT-7258", "fields": {"summary": "[Analysis] Task", "status": {"name": "Erledigt"}}}
-                                ],
+                                "subtasks": make_subtasks("ATT-725", "ATT-6150"),
                             },
                         },
                     ],
                     "total": 2,
                 }
             elif "/comment" in url:
-                return {"comments": []}
+                return {
+                    "comments": [
+                        {
+                            "body": "[Automated comment by AI Agent 2 (Reviewer)]\n\n[ROLE: agent2]\nGATE_VERDICT: PASS recorded by agent2.",
+                            "author": {"displayName": "AI Agent 2"},
+                        }
+                    ]
+                }
             return {}
 
         with patch("tools.hoechstmass.tools.jira_util.jira_request", side_effect=mock_jira_req):
             with tempfile.TemporaryDirectory() as tmpdir:
+                # 1. Setup git repo and commits
+                subprocess.run(["git", "init"], cwd=tmpdir, check=True, stdout=subprocess.DEVNULL)
+                subprocess.run(["git", "config", "user.name", "Tester"], cwd=tmpdir, check=True)
+                subprocess.run(["git", "config", "user.email", "test@example.com"], cwd=tmpdir, check=True)
+                subprocess.run(["git", "commit", "--allow-empty", "-m", "ATT-6149: Export Jira gate records"], cwd=tmpdir, check=True, stdout=subprocess.DEVNULL)
+                subprocess.run(["git", "commit", "--allow-empty", "-m", "ATT-6150: Record story points and sprint metrics"], cwd=tmpdir, check=True, stdout=subprocess.DEVNULL)
+
+                # 2. Setup deliverables
+                for k in ["ATT-6149", "ATT-6150"]:
+                    for subfolder, suffix in [
+                        ("analysis", "_analysis.md"),
+                        ("test_specs", "_test_spec.md"),
+                        ("plans", "_plan.md"),
+                        ("walkthroughs", "_walkthrough.md"),
+                    ]:
+                        d = os.path.join(tmpdir, "docs", "engineering", subfolder)
+                        os.makedirs(d, exist_ok=True)
+                        with open(os.path.join(d, f"{k}{suffix}"), "w", encoding="utf-8") as f:
+                            f.write(f"# Deliverable for {k}")
+
+                # 3. Setup living docs master table
+                os.makedirs(os.path.join(tmpdir, "docs"), exist_ok=True)
+                with open(os.path.join(tmpdir, "docs", "requirements.md"), "w", encoding="utf-8") as f:
+                    f.write("""| Requirement ID | Summary | Target | Status | Jira Ticket |
+| :--- | :--- | :--- | :--- | :--- |
+| REQ-PRO-059 | Gate records | Tool | Verified | ATT-6149 |
+| REQ-PRO-060 | Metrics | Tool | Verified | ATT-6150 |
+""")
+
                 out_file = os.path.join(tmpdir, "docs", "engineering", "qa_audits", "sprint_2026-46.3.md")
                 res_path, results = qa_audit(sprint_arg=None, sample_size=2, out_path=out_file, role="coordinator", repo_root=tmpdir)
                 self.assertEqual(res_path, out_file)
                 self.assertTrue(os.path.exists(out_file))
                 self.assertEqual(len(results), 2)
+                self.assertTrue(all(r["compliant"] for r in results))
 
                 with open(out_file, "r", encoding="utf-8") as f:
                     content = f.read()

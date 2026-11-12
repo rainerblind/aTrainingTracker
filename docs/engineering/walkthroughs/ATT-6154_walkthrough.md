@@ -17,11 +17,15 @@
 
 ATT-6154 resolves ASPICE SUP.1 (Process Quality Assurance) pre-assessment finding B-09 by implementing independent, sprint-level QA process adherence audits:
 1. Implemented `qa-audit` command in `tools/jira_util.py` and `tools/hoechstmass/tools/jira_util.py` sampling >= 2 tickets per sprint, auditing a 5-point lifecycle checklist (deliverables, gate sequence, 4-Augen role separation, living doc parity, commit hygiene), and persisting reports to `docs/engineering/qa_audits/<sprint>.md`.
-2. Registered `"qa_audits"` in `ALLOWED_ENGINEERING_ENTRIES` in `tools/verify_requirement_governance.py` and `hoechstmass_config.json`.
-3. Implemented `verify_qa_audits(sprint_name, repo_root)` and `--check-qa-audits [SPRINT]` in `tools/verify_requirement_governance.py` and Höchstmaß mirror, asserting >= 2 sampled tickets and COMPLIANT verdicts.
-4. Integrated `qa-audit` and `--check-qa-audits` into Ceremony 2 governance of `.agents/skills/sprint-planner/SKILL.md` and Höchstmaß mirror.
-5. Living documentation synchronized with 100% mathematical parity for `REQ-PRO-061` and `TST-PRO-061`.
-6. Authored unit test suites across `test_verify_requirement_governance.py`, `test_jira_accounts.py`, and `test_hoechstmass_tools.py` with 100% pass rate.
+2. Healed Bounce 1/3 Cold Carbon review findings:
+   - Replaced stubbed checks with real evaluations for Criterion 3 (role separation: zero verdicts by agent1, >= 1 verdict by agent2), Criterion 4 (living doc parity: referenced requirement IDs must exist in master table), and Criterion 5 (commit hygiene: git log verification for `<KEY>: ...`).
+   - Fixed Criterion 1 deliverables check to enforce `all()` conjunction across analysis, test_spec, plan, and walkthrough.
+   - Fixed Criterion 2 gate progression to require complete Stage 1..5 subtasks, all Erledigt, all with PASS comments.
+3. Registered `"qa_audits"` in `ALLOWED_ENGINEERING_ENTRIES` in `tools/verify_requirement_governance.py` and `hoechstmass_config.json`.
+4. Implemented `verify_qa_audits(sprint_name, repo_root)` and `--check-qa-audits [SPRINT]` in `tools/verify_requirement_governance.py` and Höchstmaß mirror, asserting >= 2 sampled tickets and COMPLIANT verdicts.
+5. Integrated `qa-audit` and `--check-qa-audits` into Ceremony 2 governance of `.agents/skills/sprint-planner/SKILL.md` and Höchstmaß mirror.
+6. Living documentation synchronized with 100% mathematical parity for `REQ-PRO-061` and `TST-PRO-061`.
+7. Authored unit test suites across `test_verify_requirement_governance.py`, `test_jira_accounts.py`, and `test_hoechstmass_tools.py` with 100% pass rate.
 
 ---
 
@@ -30,6 +34,7 @@ ATT-6154 resolves ASPICE SUP.1 (Process Quality Assurance) pre-assessment findin
 | Requirement | Test Spec | Verification Method | Result | Status in Living Docs |
 | :--- | :--- | :--- | :--- | :--- |
 | `REQ-PRO-061.1` | `TST-PRO-061.1` | Unit Test (`test_qa_audit_command_generates_markdown` in `tools/test_jira_accounts.py`) | **PASSED** | `Verified` |
+| `REQ-PRO-061.1` | `TST-PRO-061.1` | Unit Test (`test_qa_audit_rejects_non_compliant_tickets` in `tools/test_jira_accounts.py`) | **PASSED** | `Verified` |
 | `REQ-PRO-061.1` | `TST-PRO-061.1` | Unit Test (`test_hoechstmass_qa_audit_execution` in `tools/hoechstmass/tools/test_hoechstmass_tools.py`) | **PASSED** | `Verified` |
 | `REQ-PRO-061.2` | `TST-PRO-061.2` | Unit Test (`test_scenario_16_verify_qa_audits_validation` in `tools/test_verify_requirement_governance.py`) | **PASSED** | `Verified` |
 | `REQ-PRO-061.2` | `TST-PRO-061.2` | Unit Test (`test_verify_qa_audits_valid_and_invalid` in `tools/hoechstmass/tools/test_hoechstmass_tools.py`) | **PASSED** | `Verified` |
@@ -39,14 +44,14 @@ ATT-6154 resolves ASPICE SUP.1 (Process Quality Assurance) pre-assessment findin
 
 ## 3. Automated Test Evidence
 
-### Python Tooling Test Suites (96 Tests Passed)
+### Python Tooling Test Suites (97 Tests Passed)
 ```text
 Ran 16 tests in tools/test_verify_requirement_governance.py (OK)
-Ran 35 tests in tools/test_jira_accounts.py (OK)
+Ran 36 tests in tools/test_jira_accounts.py (OK)
 Ran 7 tests in tools/test_sprint_metrics.py (OK)
 Ran 16 tests in tools/test_jira_epics.py (OK)
 Ran 22 tests in tools/hoechstmass/tools/test_hoechstmass_tools.py (OK)
-Total: 96 passed cleanly across root and Höchstmaß suites.
+Total: 97 passed cleanly across root and Höchstmaß suites.
 ```
 
 ### Requirement Governance Verification

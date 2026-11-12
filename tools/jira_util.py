@@ -5,6 +5,7 @@ import json
 import os
 import re
 import ssl
+import subprocess
 import sys
 from urllib.parse import urlencode
 
@@ -2770,25 +2771,123 @@ def qa_audit(sprint_arg=None, sample_size=2, out_path=None, role="coordinator", 
             "plan": os.path.isfile(os.path.join(repo_root, "docs", "engineering", "plans", f"{key}_plan.md")),
             "walkthrough": os.path.isfile(os.path.join(repo_root, "docs", "engineering", "walkthroughs", f"{key}_walkthrough.md")),
         }
-        deliv_pass = (
-            deliv_checks["analysis"]
-            or deliv_checks["test_spec"]
-            or deliv_checks["plan"]
-            or not os.path.isdir(os.path.join(repo_root, "docs", "engineering"))
-        )
+        deliv_pass = all(deliv_checks.values())
 
         # 2. Stage Subtask Lifecycle Progression
-        st_statuses = [st.get("fields", {}).get("status", {}).get("name", "") for st in subtasks]
-        gate_pass = len(subtasks) == 0 or any("erledigt" in s.lower() for s in st_statuses)
+        found_gates = {}
+        for st in subtasks:
+            st_summary = st.get("fields", {}).get("summary", "")
+            g_num = identify_gate_number(st_summary)
+            if not g_num:
+                for idx, pat in [
+                    (1, r"analysis"),
+                    (2, r"req|spec|test\s*spec"),
+                    (3, r"plan|design"),
+                    (4, r"impl"),
+                    (5, r"test|verif"),
+                ]:
+                    if re.search(pat, st_summary, re.IGNORECASE):
+                        g_num = idx
+                        break
+            if g_num:
+                found_gates[g_num] = st
+
+        expected_stages = {1, 2, 3, 4, 5}
+        gate_pass = False
+        if expected_stages.issubset(found_gates.keys()):
+            all_stages_good = True
+            for g_num in expected_stages:
+                st = found_gates[g_num]
+                st_st = st.get("fields", {}).get("status", {}).get("name", "").lower()
+                st_comms = st.get("comments", []) or st.get("fields", {}).get("comment", {}).get("comments", [])
+                if st_st not in ("erledigt", "done", "closed", "geschlossen", "resolved"):
+                    all_stages_good = False
+                    break
+                has_pass = any("PASS" in c.get("body", "").upper() for c in st_comms)
+                if not has_pass:
+                    all_stages_good = False
+                    break
+            gate_pass = all_stages_good
+        elif len(subtasks) >= 5:
+            all_st_erledigt = all(
+                st.get("fields", {}).get("status", {}).get("name", "").lower() in ("erledigt", "done", "closed", "geschlossen", "resolved")
+                for st in subtasks
+            )
+            all_st_pass = all(
+                any("PASS" in c.get("body", "").upper() for c in (st.get("comments", []) or st.get("fields", {}).get("comment", {}).get("comments", [])))
+                for st in subtasks
+            )
+            gate_pass = all_st_erledigt and all_st_pass
 
         # 3. 4-Augen-Prinzip & Role Separation
         role_sep_pass = True
+        agent2_verdicts_count = 0
+        agent1_violations_count = 0
+
+        for st in subtasks:
+            st_comments = st.get("comments", []) or st.get("fields", {}).get("comment", {}).get("comments", [])
+            for c in st_comments:
+                body = c.get("body", "")
+                author = c.get("author", {})
+                author_name = author.get("displayName") or author.get("name") or author.get("accountId") or ""
+
+                is_verdict = "GATE_VERDICT:" in body.upper() or "GATE-VERDICT" in body.upper() or "VERDICT: PASS" in body.upper() or "VERDICT: REVISION" in body.upper()
+                if is_verdict:
+                    if "[ROLE: agent1]" in body or "agent1" in author_name.lower():
+                        agent1_violations_count += 1
+                    if "[ROLE: agent2]" in body or "agent2" in body.lower() or "agent2" in author_name.lower() or "reviewer" in author_name.lower():
+                        agent2_verdicts_count += 1
+
+        if agent1_violations_count > 0 or agent2_verdicts_count == 0:
+            role_sep_pass = False
 
         # 4. Living Documentation Parity
-        living_doc_pass = True
+        master_req_ids = set(re.findall(r"\bREQ-[A-Z0-9_-]+\b", req_master_text))
+        desc = item.get("fields", {}).get("description", "") or ""
+        ticket_text_combined = f"{summary} {desc}"
+        referenced_reqs = set(re.findall(r"\bREQ-[A-Z0-9_-]+\b", ticket_text_combined))
+
+        for d_path in [
+            os.path.join(repo_root, "docs", "engineering", "test_specs", f"{key}_test_spec.md"),
+            os.path.join(repo_root, "docs", "engineering", "analysis", f"{key}_analysis.md"),
+            os.path.join(repo_root, "docs", "engineering", "walkthroughs", f"{key}_walkthrough.md"),
+        ]:
+            if os.path.isfile(d_path):
+                try:
+                    with open(d_path, "r", encoding="utf-8") as f:
+                        referenced_reqs.update(re.findall(r"\bREQ-[A-Z0-9_-]+\b", f.read()))
+                except Exception:
+                    pass
+
+        for line in req_master_text.splitlines():
+            if key in line:
+                referenced_reqs.update(re.findall(r"\bREQ-[A-Z0-9_-]+\b", line))
+
+        if referenced_reqs and master_req_ids:
+            living_doc_pass = referenced_reqs.issubset(master_req_ids)
+        elif key in req_master_text:
+            living_doc_pass = True
+        else:
+            living_doc_pass = False
 
         # 5. Commit Hygiene
-        commit_pass = True
+        commit_pass = False
+        try:
+            cmd = ["git", "log", f"--grep=^{key}:", "-n", "1", "--oneline"]
+            res = subprocess.run(cmd, cwd=repo_root, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=5)
+            if res.returncode == 0 and res.stdout.strip():
+                commit_pass = True
+            else:
+                cmd_all = ["git", "log", f"--grep={key}", "-n", "10", "--oneline"]
+                res_all = subprocess.run(cmd_all, cwd=repo_root, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=5)
+                if res_all.returncode == 0:
+                    for line in res_all.stdout.strip().splitlines():
+                        parts = line.split(maxsplit=1)
+                        if len(parts) > 1 and parts[1].strip().startswith(f"{key}:"):
+                            commit_pass = True
+                            break
+        except Exception:
+            commit_pass = False
 
         ticket_compliant = deliv_pass and gate_pass and role_sep_pass and living_doc_pass and commit_pass
         if not ticket_compliant:
