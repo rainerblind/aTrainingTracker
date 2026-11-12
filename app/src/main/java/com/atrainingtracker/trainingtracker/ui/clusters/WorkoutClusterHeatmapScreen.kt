@@ -111,7 +111,8 @@ fun WorkoutClusterHeatmapScreen(
 
     val startLabel = stringResource(R.string.start)
     val endLabel = stringResource(R.string.end)
-    val apexLabel = stringResource(R.string.max_line_distance)
+    val isPointToPoint = remember(cluster) { cluster.isPointToPoint }
+    val apexLabel = if (isPointToPoint) stringResource(R.string.route_apex) else stringResource(R.string.max_line_distance)
     val minAltLabel = stringResource(R.string.marker_min_altitude)
     val maxAltLabel = stringResource(R.string.marker_max_altitude)
 
@@ -494,7 +495,7 @@ fun WorkoutClusterHeatmapScreen(
                     val (label, iconRes, color) = when (selectedEditMarkerType) {
                         ClusterMarkerType.START -> Triple(stringResource(R.string.start), R.drawable.control_start, TTColor.StartPoint)
                         ClusterMarkerType.END -> Triple(stringResource(R.string.end), R.drawable.control_stop, TTColor.EndPoint)
-                        ClusterMarkerType.DISTANCE -> Triple(stringResource(R.string.max_line_distance), R.drawable.ic_distance, TTColor.ApexPoint)
+                        ClusterMarkerType.DISTANCE -> Triple(apexLabel, R.drawable.ic_distance, TTColor.ApexPoint)
                         ClusterMarkerType.ALTITUDE_MIN -> Triple(stringResource(R.string.marker_min_altitude), R.drawable.ic_altitude_min, TTColor.MinAltitude)
                         ClusterMarkerType.ALTITUDE_MAX -> Triple(stringResource(R.string.marker_max_altitude), R.drawable.ic_altitude_max, TTColor.MaxAltitude)
                         null -> Triple("", 0, Color.Unspecified)
@@ -570,7 +571,7 @@ fun WorkoutClusterHeatmapScreen(
                                             Spacer(Modifier.width(8.dp))
                                             Text(
                                                 text = when (type) {
-                                                    ClusterMarkerType.DISTANCE -> stringResource(R.string.marker_max_distance)
+                                                    ClusterMarkerType.DISTANCE -> if (isPointToPoint) stringResource(R.string.route_apex) else stringResource(R.string.marker_max_distance)
                                                     ClusterMarkerType.START -> stringResource(R.string.marker_start)
                                                     ClusterMarkerType.END -> stringResource(R.string.marker_end)
                                                     ClusterMarkerType.ALTITUDE_MIN -> stringResource(R.string.marker_min_altitude)
@@ -668,6 +669,7 @@ fun WorkoutClusterSummaryHeader(
 ) {
     var showContextMenu by remember { mutableStateOf(false) }
     val haptic = LocalHapticFeedback.current
+    val apexLabel = if (cluster.isPointToPoint) stringResource(R.string.route_apex) else stringResource(R.string.max_line_distance)
 
     Surface(
         modifier = modifier
@@ -731,7 +733,7 @@ fun WorkoutClusterSummaryHeader(
                         val options = listOf(
                             Triple(ClusterMarkerType.START, stringResource(R.string.start), R.drawable.control_start to TTColor.StartPoint),
                             Triple(ClusterMarkerType.END, stringResource(R.string.end), R.drawable.control_stop to TTColor.EndPoint),
-                            Triple(ClusterMarkerType.DISTANCE, stringResource(R.string.max_line_distance), R.drawable.ic_distance to TTColor.ApexPoint),
+                            Triple(ClusterMarkerType.DISTANCE, apexLabel, R.drawable.ic_distance to TTColor.ApexPoint),
                             Triple(ClusterMarkerType.ALTITUDE_MIN, stringResource(R.string.marker_min_altitude), R.drawable.ic_altitude_min to TTColor.MinAltitude),
                             Triple(ClusterMarkerType.ALTITUDE_MAX, stringResource(R.string.marker_max_altitude), R.drawable.ic_altitude_max to TTColor.MaxAltitude)
                         )

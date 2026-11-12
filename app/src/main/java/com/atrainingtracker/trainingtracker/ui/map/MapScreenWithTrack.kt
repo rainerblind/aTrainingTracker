@@ -686,7 +686,8 @@ fun ClusterOnMapSheet(
 
     val startLabel = stringResource(R.string.start)
     val endLabel = stringResource(R.string.end)
-    val apexLabel = stringResource(R.string.max_line_distance)
+    val isPointToPoint = remember(resolvedCluster) { resolvedCluster.isPointToPoint }
+    val apexLabel = if (isPointToPoint) stringResource(R.string.route_apex) else stringResource(R.string.max_line_distance)
     val minAltLabel = stringResource(R.string.marker_min_altitude)
     val maxAltLabel = stringResource(R.string.marker_max_altitude)
 

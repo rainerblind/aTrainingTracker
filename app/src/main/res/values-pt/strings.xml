@@ -484,6 +484,7 @@
     <string name="average">média</string>
     <string name="start">partida</string>
     <string name="max_line_distance">mais distante</string>
+    <string name="route_apex">Ápice</string>
     <string name="end">chegada</string>
     <string name="drawer__settings">Ajustes</string>
     <string name="drawer__info_support">Informações e suporte</string>

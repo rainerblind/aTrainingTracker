@@ -484,6 +484,7 @@
     <string name="average">moyenne</string>
     <string name="start">départ</string>
     <string name="max_line_distance">point le plus loin</string>
+    <string name="route_apex">Apex</string>
     <string name="end">arrivée</string>
     <string name="drawer__settings">Réglages</string>
     <string name="drawer__info_support">Info et assistance</string>

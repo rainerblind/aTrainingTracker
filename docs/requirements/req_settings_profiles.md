@@ -1716,8 +1716,8 @@ d. Step 4 (`OnboardingStep.BATTERY_OPTIMIZATION`): Doze mode background survival
 **Invariants**: Workouts not belonging to the cluster MUST NOT be affected; primary cluster retains unselected variants; SQLite transactional atomicity; single-source-of-truth hit count reconciliation; 9-language localization parity.
 
 ### REQ-SET-097: Point-to-Point (A->B) Route Corridor Discrimination & Bipolar Product Apex [Verified]
-- **Tests**: `TST-SET-097` | **Tickets**: `ATT-5899`, `ATT-6686`
-- **Implementation**: `WorkoutClusterEngine.kt`, `TrackerService.java`, `WorkoutClusterCorridorDetector.kt`
+- **Tests**: `TST-SET-097` | **Tickets**: `ATT-5899`, `ATT-6686`, `ATT-7315`
+- **Implementation**: `WorkoutClusterEngine.kt`, `TrackerService.java`, `WorkoutClusterCorridorDetector.kt`, `WorkoutRepository.kt`, `WorkoutClustersViewModel.kt`, `WorkoutClusterHeatmapScreen.kt`, `MapScreenWithTrack.kt`
 - **Rationale**: On point-to-point (A -> B) routes (e.g. Sindelfingen -> Schönaich commutes), evaluating the spatial apex solely as the point of maximum distance from `start` causes the apex to collapse onto `end` ($apex \approx end$). Furthermore, the elliptical focal sum $d(\text{start}, P) + d(P, \text{end})$ mathematically favors longitudinal GPS overshoots near endpoints ($2\delta \gg 2h^2/D$) over lateral mid-corridor curves. The system SHALL maximize the bipolar distance product $d(\text{start}, P) \times d(P, \text{end})$ to eliminate endpoint degeneracy and evaluate mid-corridor polyline deviation for candidate cluster scoring:
 1. *Non-Degenerate Bipolar Product Apex Calculation (`REQ-SET-097.1`)*:
    - For all point-to-point routes where $d(\text{start}, \text{end}) \ge 150\text{ m}$, `WorkoutClusterEngine.findApexFromPoints(start, points, end)` SHALL evaluate and maximize the bipolar distance product $P(p) = d(\text{start}, p) \times d(p, \text{end})$ across all track coordinates $p$.
@@ -1730,6 +1730,16 @@ d. Step 4 (`OnboardingStep.BATTERY_OPTIMIZATION`): Doze mode background survival
    - Candidate clusters following the matching route corridor SHALL receive minimal corridor deviation penalty, reliably discriminating parallel variants (e.g. split clusters) between the same origin and destination.
 4. *Loop-Route Backward Compatibility (`REQ-SET-097.4`)*:
    - For all closed-loop courses where $d(\text{start}, \text{end}) < 150\text{ m}$, the system SHALL evaluate displacement from `start` alone, preserving legacy apex coordinates, similarity calculations, and cluster matching behavior 1:1.
+5. *Differentiated Map Marker Labeling for Point-to-Point Routes (`REQ-SET-097.5` / ATT-7315)*:
+   - For all point-to-point routes where $d(\text{start}, \text{end}) \ge 150\text{ m}$ (or `isPointToPoint == true`), the map marker title for the apex coordinate (`ClusterMarkerType.DISTANCE` / `ic_distance`) SHALL be labeled `R.string.route_apex` ("Scheitelpunkt" in German, "Apex" across all 9 localized languages).
+   - For closed-loop routes where $d(\text{start}, \text{end}) < 150\text{ m}$, the marker title SHALL retain `R.string.max_line_distance` ("weiteste Entfernung" in German, "furthest away" in English) representing the physical turnaround point furthest from the origin.
+   - This dynamic differentiation SHALL apply across `WorkoutRepository.getMapMarkerList`, `WorkoutClustersViewModel`, `WorkoutClusterHeatmapScreen`, and `MapScreenWithTrack`.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: `REQ-SET-097` targeting `WorkoutClusterEngine.kt`, `WorkoutRepository.kt`, `WorkoutClustersViewModel.kt`, `WorkoutClusterHeatmapScreen.kt`, and `MapScreenWithTrack.kt`.
+2. *Historical Origin & Commit Trace*: Commit `23f048e4` (ATT-6686: Use bipolar product in `findApexFromPoints`) and ATT-5899.
+3. *Root Reason for Existing Formulation*: The apex marker title was historically hardcoded to `R.string.max_line_distance` ("weiteste Entfernung" / "furthest away") assuming loop routes. In ATT-6686, the bipolar product optimization shifted the apex coordinate on point-to-point routes to the midpoint / detour peak, making "weiteste Entfernung" factually incorrect since destination is furthest away.
+4. *Preservation of Core Invariants*: Closed loops ($d(\text{start}, \text{end}) < 150\text{ m}$) remain labeled "weiteste Entfernung" / "furthest away" 100% preserving historical behavior. Underlying telemetry database tables and sensor types are strictly unchanged.
 
 **Acceptance Criteria (Given-When-Then)**:
 • *Given* an A -> B point-to-point route with $d(\text{start}, \text{end}) \ge 150\text{ m}$ and a lateral corridor deflection,
@@ -1744,6 +1754,12 @@ d. Step 4 (`OnboardingStep.BATTERY_OPTIMIZATION`): Doze mode background survival
 • *Given* a closed-loop workout where $d(\text{start}, \text{end}) < 150\text{ m}$,
 • *When* `findApexFromPoints(start, points, end)` is invoked,
 • *Then* the apex coordinate is identical to legacy $\max d(\text{start}, P)$ calculation.
+• *Given* an A -> B point-to-point route with $d(\text{start}, \text{end}) \ge 150\text{ m}$,
+• *When* the map markers are generated or rendered on the map,
+• *Then* the apex marker title SHALL be `route_apex` ("Scheitelpunkt" in German, "Apex" across all 9 localized languages).
+• *Given* a closed-loop route with $d(\text{start}, \text{end}) < 150\text{ m}$,
+• *When* the map markers are generated or rendered on the map,
+• *Then* the apex marker title SHALL be `max_line_distance` ("weiteste Entfernung" / "furthest away").
 
 **Invariants**: Closed-loop apex and similarity calculations MUST remain identical; thread safety under `clusterLock`; zero regressions on existing cluster test suites.
 

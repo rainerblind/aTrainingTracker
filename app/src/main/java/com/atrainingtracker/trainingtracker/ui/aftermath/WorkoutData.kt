@@ -221,6 +221,14 @@ data class WorkoutData(
             workoutId = id
         )
 
+    /**
+     * Determines whether this workout represents a point-to-point (A->B) route rather than a closed loop (REQ-SET-097.5, ATT-7315).
+     */
+    val isPointToPoint: Boolean
+        get() = if (startLatLng != null && endLatLng != null) {
+            com.atrainingtracker.trainingtracker.database.WorkoutClusterEngine.distanceBetween(startLatLng, endLatLng) >= 150f
+        } else false
+
     companion object {
         fun resolveProtocolType(
             method: String?,

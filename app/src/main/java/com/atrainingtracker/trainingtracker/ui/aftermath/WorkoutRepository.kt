@@ -2378,7 +2378,12 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
             markerList.add(LocationMarker(it, R.drawable.control_stop, stopTitle))
         }
         workoutData.maxDisplacementLatLng?.takeIf { GeoUtils.isValidGpsCoordinate(it.latitude, it.longitude) }?.let {
-            markerList.add(LocationMarker(it, R.drawable.ic_distance, application.getString(R.string.max_line_distance)))
+            val apexTitle = if (workoutData.isPointToPoint) {
+                application.getString(R.string.route_apex)
+            } else {
+                application.getString(R.string.max_line_distance)
+            }
+            markerList.add(LocationMarker(it, R.drawable.ic_distance, apexTitle))
         }
 
 

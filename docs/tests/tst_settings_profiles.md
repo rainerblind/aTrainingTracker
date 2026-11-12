@@ -1016,8 +1016,8 @@
 
 ### TST-SET-097: **Point-to-Point Route Corridor Discrimination & Bipolar Product Apex Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-SET-097`
-- **Component**: `WorkoutClusterEngine.kt`, `TrackerService.java`, `WorkoutClusterCorridorDetector.kt`
-- **Jira**: `ATT-5899`, `ATT-6686`
+- **Component**: `WorkoutClusterEngine.kt`, `TrackerService.java`, `WorkoutClusterCorridorDetector.kt`, `WorkoutRepository.kt`, `WorkoutClustersViewModel.kt`, `WorkoutClusterHeatmapScreen.kt`, `MapScreenWithTrack.kt`
+- **Jira**: `ATT-5899`, `ATT-6686`, `ATT-7315`
 - **Test Description**:
   1. *Bipolar Product Apex Calculation Unit Tests (`TST-SET-097.1`, `WorkoutClusterPointToPointApexTest.kt`)*:
   • Verify that for an A -> B route with lateral deflection (e.g. northern arc between Sindelfingen and Schönaich), the apex is located at the point of maximum $d(\text{start}, P) \times d(P, \text{end})$, separated from `end` by > 1.5 km.
@@ -1030,7 +1030,11 @@
   • When a new workout matching the city corridor is evaluated, verify that the city cluster is suggested.
   3. *TrackerService Integration & Persistence Audit (`TST-SET-097.3`)*:
   • Verify that session finalization in `TrackerService` passes `endPos` into `findApexFromPoints()` and persists non-degenerate apex coordinates into `WorkoutSummaries`.
-  4. *Clean-Room Targeted Regression Execution (`TST-SET-097.4`)*:
+  4. *Differentiated Map Marker Labeling Test (`TST-SET-097.5`, `WorkoutClusterPointToPointApexTest.kt`)*:
+  • Verify that `WorkoutCluster.isPointToPoint` and `WorkoutData.isPointToPoint` evaluate to `true` when $d(\text{start}, \text{end}) \ge 150\text{ m}$ and `false` when $d(\text{start}, \text{end}) < 150\text{ m}$.
+  • Verify that `WorkoutRepository.getMapMarkerList()` assigns `R.string.route_apex` ("Scheitelpunkt" / "Apex") for point-to-point workouts and `R.string.max_line_distance` ("weiteste Entfernung" / "furthest away") for closed-loop workouts.
+  • Verify that `TranslationParityTest` passes across all 9 localized languages for string resource `route_apex`.
+  5. *Clean-Room Targeted Regression Execution (`TST-SET-097.4`)*:
   • Run targeted unit tests (`com.atrainingtracker.trainingtracker.clusters.*`, `com.atrainingtracker.trainingtracker.database.WorkoutCluster*`, `com.atrainingtracker.trainingtracker.ui.clusters.*`) ensuring zero regressions.
 
 ### TST-SET-098: **Equipment Lookup Normalization, Strava Ingestion & Deduplication Reconciliation Suite** [Verified]

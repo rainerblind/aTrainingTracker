@@ -968,6 +968,7 @@
     <string name="average">średnia</string>
     <string name="start">start</string>
     <string name="max_line_distance">najdalej</string>
+    <string name="route_apex">Wierzchołek</string>
     <string name="end">koniec</string>
     <string name="my_locations">Ulubione trasy</string>
     <string name="drawer__settings">Ustawienia</string>

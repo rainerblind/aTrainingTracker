@@ -482,6 +482,7 @@
     <string name="average">平均</string>
     <string name="start">スタート</string>
     <string name="max_line_distance">最遠地点</string>
+    <string name="route_apex">頂点</string>
     <string name="end">ゴール</string>
     <string name="drawer__settings">設定</string>
     <string name="drawer__info_support">情報とサポート</string>

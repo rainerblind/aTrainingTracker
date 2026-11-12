@@ -484,6 +484,7 @@
     <string name="average">gemiddelde</string>
     <string name="start">start</string>
     <string name="max_line_distance">verste punt</string>
+    <string name="route_apex">Apex</string>
     <string name="end">stop</string>
     <string name="drawer__settings">Instellingen</string>
     <string name="drawer__info_support">Info &amp; ondersteuning</string>

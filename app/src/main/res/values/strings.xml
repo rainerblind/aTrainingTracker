@@ -616,6 +616,7 @@
     <string name="average">average</string>
     <string name="start">start</string>
     <string name="max_line_distance">furthest away</string>
+    <string name="route_apex">Apex</string>
     <string name="end">end</string>
     <string name="my_locations">Favorite Tracks</string>
     <string name="drawer__settings">Settings</string>
