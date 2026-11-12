@@ -631,9 +631,9 @@ public class BTLERadarDevice extends MyBTLEDevice implements RadarLightDeviceCli
         }
 
         // Threat Packet (len >= 4, (len - 1) % 3 == 0)
+        pruneStaleTracks(nowMs);
         List<RadarTarget> targets = parseV1ThreatPacket(payload, mTrackHistory, nowMs);
         if (targets != null) {
-            pruneStaleTracks(nowMs);
             processTargets(targets);
         }
     }
@@ -700,13 +700,16 @@ public class BTLERadarDevice extends MyBTLEDevice implements RadarLightDeviceCli
                 if (trackHistory != null) {
                     synchronized (trackHistory) {
                         TrackState prev = trackHistory.get(trackId);
-                        if (prev != null && nowMs > prev.timestampMs) {
-                            float dt = (nowMs - prev.timestampMs) / 1000.0f;
-                            float dr = prev.rangeMeters - rangeMeters;
-                            if (dt > 0.001f && dr > 0.0f) {
-                                approachSpeedMps = dr / dt;
-                            } else if (dt > 0.001f) {
-                                approachSpeedMps = 0.0f;
+                        if (prev != null) {
+                            long dtMs = nowMs - prev.timestampMs;
+                            if (dtMs > 0 && dtMs <= STALE_TRACK_TIMEOUT_MS) {
+                                float dt = dtMs / 1000.0f;
+                                float dr = prev.rangeMeters - rangeMeters;
+                                if (dt > 0.001f && dr > 0.0f) {
+                                    approachSpeedMps = dr / dt;
+                                } else if (dt > 0.001f) {
+                                    approachSpeedMps = 0.0f;
+                                }
                             }
                         }
                         if (approachSpeedMps >= 15.0f) {

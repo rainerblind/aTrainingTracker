@@ -626,6 +626,35 @@ class BTLERadarDeviceTest {
         assertEquals(1, t3!!.size)
         assertEquals(8.0f, t3[0].approachSpeedMps, 0.001f)
         assertEquals(ThreatLevel.APPROACHING, t3[0].threatLevel)
+
+        // Observation 4 at t=6000ms (gap of 3000ms > STALE_TRACK_TIMEOUT_MS = 2000ms):
+        // Target ID 1 reused by new vehicle or observed after gap at 10m -> must reset speed history to 0.0 m/s
+        val p4 = byteArrayOf(0x32, 0x81.toByte(), 10.toByte(), 0x01)
+        val t4 = BTLERadarDevice.parseV1ThreatPacket(p4, trackHistory, 6000L)
+        assertNotNull(t4)
+        assertEquals(1, t4!!.size)
+        assertEquals(0.0f, t4[0].approachSpeedMps, 0.001f)
+        assertEquals(ThreatLevel.APPROACHING, t4[0].threatLevel)
+    }
+
+    @Test
+    fun testParseV1ThreatPacket_trackReuseAfterTimeoutResetsSpeedHistory() {
+        val trackHistory = mutableMapOf<Int, BTLERadarDevice.TrackState>()
+
+        // Previous vehicle with track ID 3 was at 130m at t=10000ms
+        val p1 = byteArrayOf(0x02, 0x83.toByte(), 130.toByte(), 0x01)
+        BTLERadarDevice.parseV1ThreatPacket(p1, trackHistory, 10000L)
+
+        // New vehicle reuses track ID 3 at 25m after 5000ms (t=15000ms)
+        // Without timeout check, dr = 105m, dt = 5s -> 21 m/s (false FAST_APPROACHING red alert)
+        // With timeout check, dt > STALE_TRACK_TIMEOUT_MS (2000ms) -> resets to 0.0 m/s (APPROACHING)
+        val p2 = byteArrayOf(0x12, 0x83.toByte(), 25.toByte(), 0x01)
+        val t2 = BTLERadarDevice.parseV1ThreatPacket(p2, trackHistory, 15000L)
+
+        assertNotNull(t2)
+        assertEquals(1, t2!!.size)
+        assertEquals(0.0f, t2[0].approachSpeedMps, 0.001f)
+        assertEquals(ThreatLevel.APPROACHING, t2[0].threatLevel)
     }
 
     @Test
