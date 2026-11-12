@@ -256,4 +256,57 @@ class HrvThresholdEstimatorTest {
         assertEquals(ThresholdConfidence.LOW, shortResult.hrvt1.confidence)
         assertEquals(R.string.hrv_threshold_diag_short_duration, shortResult.hrvt1.diagnosticReasonRes)
     }
+
+    @Test
+    fun `noisy data with positive slope for heart rate rejects thresholds and sets diagnostic (Finding 2)`() {
+        val points = mutableListOf<PathPoint>()
+        // Inverted physiological response: as HR increases from 120 to 180, alpha 1 INCREASES from 0.40 to 0.95
+        for (t in 600L..1800L step 5L) {
+            val frac = (t - 600L).toDouble() / 1200.0
+            val hr = (120 + frac * 60).toInt()
+            val a1 = 0.40 + frac * 0.55 // positive slope!
+            points.add(createPoint(timeSec = t, hr = hr, a1 = a1, art = 1.0))
+        }
+
+        val result = HrvThresholdEstimator.estimateThresholds(
+            points = points,
+            mode = HrvScatterIntensityMode.HEART_RATE
+        )
+
+        assertNull("Threshold intensity must be null for positive slope in HR mode", result.hrvt1.intensity)
+        assertNull("Threshold intensity must be null for positive slope in HR mode", result.hrvt2.intensity)
+        assertEquals(ThresholdConfidence.LOW, result.hrvt1.confidence)
+        assertEquals(ThresholdConfidence.LOW, result.hrvt2.confidence)
+        assertEquals(R.string.hrv_threshold_diag_low_r2, result.hrvt1.diagnosticReasonRes)
+        assertEquals(R.string.hrv_threshold_diag_low_r2, result.hrvt2.diagnosticReasonRes)
+    }
+
+    @Test
+    fun `pace mode with positive slope calculates valid thresholds (Finding 2)`() {
+        val points = mutableListOf<PathPoint>()
+        // For pace, intensity = 1 / speedMps (s/m).
+        // Slower speed = larger s/m (lower workload) -> alpha 1 is higher.
+        // Faster speed = smaller s/m (higher workload) -> alpha 1 is lower.
+        // So slope (alpha 1 vs s/m) is POSITIVE!
+        for (t in 600L..1800L step 5L) {
+            val frac = (t - 600L).toDouble() / 1200.0
+            // speedMps ranges from 4.0 m/s (250 s/km = 0.25 s/m, a1 = 0.45) down to 2.5 m/s (400 s/km = 0.40 s/m, a1 = 0.95)
+            val speedMps = 4.0 - frac * 1.5 // 4.0 m/s down to 2.5 m/s
+            val a1 = 0.40 + frac * 0.55 // 0.40 up to 0.95
+            points.add(createPoint(timeSec = t, speedMps = speedMps, a1 = a1, art = 1.0))
+        }
+
+        val result = HrvThresholdEstimator.estimateThresholds(
+            points = points,
+            mode = HrvScatterIntensityMode.PACE
+        )
+
+        assertTrue("HRVT1 span satisfied", result.hrvt1.spanSatisfied)
+        assertTrue("HRVT2 span satisfied", result.hrvt2.spanSatisfied)
+        assertNotNull("Pace HRVT1 intensity must not be null", result.hrvt1.intensity)
+        assertNotNull("Pace HRVT2 intensity must not be null", result.hrvt2.intensity)
+        // For pace (s/m), HRVT1 (aerobic, slower) must have higher s/m than HRVT2 (anaerobic, faster)
+        assertTrue("HRVT1 s/m (${result.hrvt1.intensity}) must be greater than HRVT2 s/m (${result.hrvt2.intensity})",
+            result.hrvt1.intensity!! > result.hrvt2.intensity!!)
+    }
 }

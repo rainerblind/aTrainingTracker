@@ -936,6 +936,7 @@ private fun RenderWorkoutDetailCardSections(
                     val resolvedHrMax = configuredHrMax ?: hrZoneThresholds?.let { kotlin.math.round(it.z2Max / 0.69).toInt() }
                     HrvThresholdSummaryCard(
                         points = activeScrubPath ?: emptyList(),
+                        protocolType = workoutData.protocolType,
                         dfaA1ThresholdT1 = tuningConfig.dfaA1ThresholdT1,
                         dfaA1ThresholdT2 = tuningConfig.dfaA1ThresholdT2,
                         configuredFtp = resolvedFtp,

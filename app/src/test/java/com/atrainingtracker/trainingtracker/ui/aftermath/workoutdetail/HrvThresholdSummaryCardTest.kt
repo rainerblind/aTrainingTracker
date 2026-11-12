@@ -19,6 +19,8 @@
 package com.atrainingtracker.trainingtracker.ui.aftermath.workoutdetail
 
 import com.atrainingtracker.testing.LocalizationTestCache
+import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -128,5 +130,55 @@ class HrvThresholdSummaryCardTest {
     fun `WorkoutDetailTabbedContent wires configuredFtp, configuredHrMax and callbacks (Rule 81)`() {
         val contentClazz = Class.forName("com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDetailTabbedContentKt")
         assertNotNull("WorkoutDetailTabbedContentKt must exist", contentClazz)
+    }
+
+    @Test
+    fun `WorkoutData resolves protocolType from metadata (Finding 3)`() {
+        assertEquals(
+            HrvProtocolType.GUIDED_STEP,
+            WorkoutData.resolveProtocolType("GUIDED_STEP", null, null, "Morning Ride")
+        )
+        assertEquals(
+            HrvProtocolType.GUIDED_STEP,
+            WorkoutData.resolveProtocolType(null, null, null, "Step Test 20W")
+        )
+        assertEquals(
+            HrvProtocolType.GUIDED_RAMP,
+            WorkoutData.resolveProtocolType("GUIDED_RAMP", null, null, "Evening Ramp")
+        )
+        assertEquals(
+            HrvProtocolType.GUIDED_RAMP,
+            WorkoutData.resolveProtocolType(null, "Ramp Test Protocol", null, "Ride")
+        )
+        assertEquals(
+            HrvProtocolType.FREE_WORKOUT,
+            WorkoutData.resolveProtocolType("Intervals", "Aerobic base", "Fun ride", "Sunday Long Ride")
+        )
+    }
+
+    @Test
+    fun `diagnostic string resources format positional arguments cleanly across all 9 locales (Finding 1)`() {
+        val locales = listOf("values", "values-de", "values-es", "values-fr", "values-it", "values-ja", "values-nl", "values-pl", "values-pt")
+        for (loc in locales) {
+            val strings = LocalizationTestCache.getStrings(loc, "strings_hrv.xml")
+
+            // 1. High artifact (%1$.1f)
+            val highArtFormat = strings["hrv_threshold_diag_high_artifact"]
+            assertNotNull("hrv_threshold_diag_high_artifact must exist in $loc", highArtFormat)
+            val formattedArt = String.format(java.util.Locale.US, highArtFormat!!, 6.4)
+            assertTrue("Formatted artifact string must contain 6.4 in $loc", formattedArt.contains("6.4"))
+
+            // 2. Short duration (%1$d, %2$d)
+            val shortDurFormat = strings["hrv_threshold_diag_short_duration"]
+            assertNotNull("hrv_threshold_diag_short_duration must exist in $loc", shortDurFormat)
+            val formattedDur = String.format(java.util.Locale.US, shortDurFormat!!, 5, 8)
+            assertTrue("Formatted duration string must contain 5 and 8 in $loc", formattedDur.contains("5") && formattedDur.contains("8"))
+
+            // 3. Low R2 (%1$.2f, %2$.2f)
+            val lowR2Format = strings["hrv_threshold_diag_low_r2"]
+            assertNotNull("hrv_threshold_diag_low_r2 must exist in $loc", lowR2Format)
+            val formattedR2 = String.format(java.util.Locale.US, lowR2Format!!, 0.42, 0.55)
+            assertTrue("Formatted R2 string must contain 0.42 and 0.55 in $loc", formattedR2.contains("0.42") && formattedR2.contains("0.55"))
+        }
     }
 }

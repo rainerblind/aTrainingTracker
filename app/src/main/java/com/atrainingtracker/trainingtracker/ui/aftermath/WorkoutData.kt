@@ -22,6 +22,7 @@ import androidx.compose.runtime.Immutable
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.database.CardioPowerDynamicsRecord
 import com.atrainingtracker.trainingtracker.database.WorkoutSource
+import com.atrainingtracker.trainingtracker.ui.aftermath.workoutdetail.HrvProtocolType
 import com.atrainingtracker.trainingtracker.ui.components.export.ExportStatusGroupData
 import com.atrainingtracker.trainingtracker.ui.components.workoutdescription.DescriptionData
 import com.atrainingtracker.trainingtracker.ui.components.workoutdetails.WorkoutDetailsData
@@ -144,6 +145,7 @@ data class WorkoutData(
     val dfaA1FreshBaseline: Double? = null,
     val dfaA1LateMean: Double? = null,
     val dfaA1DurabilityDriftPct: Double? = null,
+    val protocolType: HrvProtocolType = resolveProtocolType(method, goal, description, workoutName),
 
     // --- 3. Heavy/Live Data ---
     val exportStatuses: List<ExportStatusGroupData> = emptyList(),
@@ -218,4 +220,24 @@ data class WorkoutData(
             dataRows = extremaRows,
             workoutId = id
         )
+
+    companion object {
+        fun resolveProtocolType(
+            method: String?,
+            goal: String?,
+            description: String?,
+            workoutName: String?
+        ): HrvProtocolType {
+            val combined = "${workoutName.orEmpty()} ${method.orEmpty()} ${goal.orEmpty()} ${description.orEmpty()}"
+            return when {
+                combined.contains("GUIDED_STEP", ignoreCase = true) ||
+                combined.contains("Step Test", ignoreCase = true) -> HrvProtocolType.GUIDED_STEP
+
+                combined.contains("GUIDED_RAMP", ignoreCase = true) ||
+                combined.contains("Ramp Test", ignoreCase = true) -> HrvProtocolType.GUIDED_RAMP
+
+                else -> HrvProtocolType.FREE_WORKOUT
+            }
+        }
+    }
 }
