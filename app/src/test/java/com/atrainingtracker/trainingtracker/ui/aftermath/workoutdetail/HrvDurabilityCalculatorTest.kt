@@ -104,7 +104,7 @@ class HrvDurabilityCalculatorTest {
         // Reference power = 200 W (median of fresh baseline).
         // +/- 10% band is [180 W, 220 W].
         // Out-of-band samples (e.g. 150 W and 260 W) must be excluded.
-        // Sample at 210 W has alpha1 = 0.84 -> normalized alpha1 = 0.84 / (210/200) = 0.80.
+        // Sample at 210 W has raw alpha1 = 0.80 * (200/210) -> normalized alpha1 = raw * (210/200) = 0.80.
         val points = mutableListOf<PathPoint>()
         // Warmup (0–15 min)
         for (t in 0 until 900 step 5) {
@@ -117,8 +117,8 @@ class HrvDurabilityCalculatorTest {
                 1 -> 200
                 else -> 210
             }
-            // For power p, alpha1 = 0.80 * (p / 200.0) so normalized alpha1 is exactly 0.80
-            val a1 = 0.80 * (p / 200.0)
+            // For power p, alpha1 decreases with higher workload: a1 = 0.80 * (200.0 / p) so normalized alpha1 is exactly 0.80
+            val a1 = 0.80 * (200.0 / p)
             points.add(createPoint(timeSec = t.toLong(), power = p, alpha1 = a1))
         }
         // Transition (45–60 min)
@@ -132,7 +132,7 @@ class HrvDurabilityCalculatorTest {
                 1 -> 200
                 else -> 210
             }
-            val a1 = 0.72 * (p / 200.0)
+            val a1 = 0.72 * (200.0 / p)
             points.add(createPoint(timeSec = t.toLong(), power = p, alpha1 = a1))
         }
 

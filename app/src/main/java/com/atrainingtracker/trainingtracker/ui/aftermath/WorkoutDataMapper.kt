@@ -901,6 +901,10 @@ class WorkoutDataMapper(
                 heavyVehicleCountVal = getBatchVal(SensorType.RADAR_LARGE_VEHICLE_COUNT, ExtremaType.MAX)
             ),
 
+            dfaA1FreshBaseline = getBatchVal(SensorType.HRV_DFA_A1, ExtremaType.DFA_A1_FRESH_BASELINE),
+            dfaA1LateMean = getBatchVal(SensorType.HRV_DFA_A1, ExtremaType.DFA_A1_LATE_MEAN),
+            dfaA1DurabilityDriftPct = getBatchVal(SensorType.HRV_DFA_A1, ExtremaType.DFA_A1_DRIFT_PCT),
+
             totalDistance = snapshot.totalDistance,
             maxDisplacement = maxDisplacement,
             activeTimeSec = snapshot.activeTimeSec,

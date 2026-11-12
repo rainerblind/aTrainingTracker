@@ -1107,7 +1107,7 @@
   2. *Iso-Intensity Matched-Power & Matched-Pace Binning (`REQ-PER-038.2`)*:
      - The system SHALL determine the athlete's median aerobic reference intensity during the fresh baseline: reference power $P_{\text{ref}}$ (for cycling / power workouts) or reference speed $v_{\text{ref}}$ (for running / non-power workouts).
      - The system SHALL filter both the fresh baseline ($15\text{--}45\text{ min}$) and the late segment ($> 60\text{ min}$) to samples falling strictly within the iso-intensity band $[0.90 \cdot I_{\text{ref}}, 1.10 \cdot I_{\text{ref}}]$.
-     - Minor intra-bin workload variations SHALL be normalized via the autonomic efficiency ratio $\alpha_{1,\text{norm}} = \alpha_1 / (I / I_{\text{ref}})$.
+     - Minor intra-bin workload variations SHALL be normalized via the autonomic efficiency ratio $\alpha_{1,\text{norm}} = \alpha_1 \cdot (I / I_{\text{ref}})$.
   3. *Autonomic Durability Drift Calculation & Minimum Data Guard (`REQ-PER-038.3`)*:
      - Autonomic Durability Drift SHALL be calculated as:
        $$\Delta\alpha_{1,\%} = \frac{\overline{\alpha}_{1,\text{late,norm}} - \overline{\alpha}_{1,\text{fresh,norm}}}{\overline{\alpha}_{1,\text{fresh,norm}}} \times 100\%$$
