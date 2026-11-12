@@ -8260,13 +8260,13 @@
 ### TST-UI-513: **Fitness & Physiology Hub, Training Zones Settings & Drawer Navigation Verification Suite** [Verified]
 - **Target Release**: `V5.0.0`
 - **Requirement(s)**: `REQ-UI-513`
-- **Component**: `AppNavigationDrawer.kt`, `NavRoutes.kt`, `AthleteProfileScreen.kt`, `PeriodsTabsScreen.kt`, `ZoneSettingsScreen.kt`, `NavigationDrawerStateTest.kt`, `AppNavigationDrawerTest.kt`
-- **Jira**: `ATT-6720`
+- **Component**: `AppNavigationDrawer.kt`, `NavRoutes.kt`, `AthleteProfileScreen.kt`, `PeriodsTabsScreen.kt`, `ZoneSettingsScreen.kt`, `NavigationDrawerStateTest.kt`, `AppNavigationDrawerTest.kt`, `AutoPauseNavigationTest.kt`
+- **Jira**: `ATT-6720`, `ATT-7535`
 - **Test Description**:
-  1. *Navigation Drawer Structure & Route Resolution Test (`TST-UI-513.1`, `NavigationDrawerStateTest.kt` / `AppNavigationDrawerTest.kt`)*:
+  1. *Navigation Drawer Structure & Route Resolution Test (`TST-UI-513.1`, `NavigationDrawerStateTest.kt` / `AppNavigationDrawerTest.kt` / `AutoPauseNavigationTest.kt`)*:
   • Verify Training drawer group has exactly 4 items (`drawer_start_tracking`, `drawer_workouts`, `drawer_periods`, `drawer_athlete_profile`).
   • Verify `drawer_morning_hrv` is absent from the drawer group items.
-  • Verify Settings drawer group includes `drawer_training_zones` with icon `ic_speed` and title `prefs_training_zones`.
+  • Verify Settings drawer group contains exactly 7 items in order: `drawer_training_zones`, `drawer_sport_types`, `drawer_tracking_layouts`, `drawer_display_settings`, `drawer_auto_pause`, `drawer_units`, `drawer_advanced_tuning`.
   • Verify `isDrawerItemSelected` separates `drawer_training_zones` and `drawer_athlete_profile`.
   2. *Periods Screen Clean Decoupling Test (`TST-UI-513.2`, `PeriodsViewModelTest.kt`)*:
   • Verify `PeriodsViewModel` operates cleanly without `HrvReadinessRepository` dependencies and `PeriodsTabsScreen` contains zero HRV trend composables.

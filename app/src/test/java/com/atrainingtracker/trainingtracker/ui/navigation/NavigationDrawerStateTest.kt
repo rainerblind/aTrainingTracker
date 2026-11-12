@@ -139,22 +139,26 @@ class NavigationDrawerStateTest {
             onlineIds
         )
 
-        // Verify Settings ordering: Tracking Layouts, Sport Types, Training Zones, Auto-Pause, Display, Units, Advanced Tuning (REQ-UI-513.2)
+        // Verify Settings ordering: Training Zones, Sport Types, Tracking Layouts, Display, Auto-Pause, Units, Advanced Tuning (REQ-UI-513.2)
         val settingsIds = settingsGroup.items.map { it.id }
         assertEquals(
             listOf(
-                R.id.drawer_tracking_layouts,
-                R.id.drawer_sport_types,
                 R.id.drawer_training_zones,
-                R.id.drawer_auto_pause,
+                R.id.drawer_sport_types,
+                R.id.drawer_tracking_layouts,
                 R.id.drawer_display_settings,
+                R.id.drawer_auto_pause,
                 R.id.drawer_units,
                 R.id.drawer_advanced_tuning
             ),
             settingsIds
         )
+        assertEquals(R.id.drawer_training_zones, settingsIds[0])
         assertEquals(R.id.drawer_sport_types, settingsIds[1])
-        assertEquals(R.id.drawer_training_zones, settingsIds[2])
+        assertEquals(R.id.drawer_tracking_layouts, settingsIds[2])
+        assertEquals(R.id.drawer_display_settings, settingsIds[3])
+        assertEquals(R.id.drawer_auto_pause, settingsIds[4])
+        assertEquals(R.id.drawer_units, settingsIds[5])
         assertEquals(R.id.drawer_advanced_tuning, settingsIds.last())
         val sportTypesItem = settingsGroup.items.first { it.id == R.id.drawer_sport_types }
         assertEquals(R.drawable.ic_sports_combined, sportTypesItem.iconRes)
