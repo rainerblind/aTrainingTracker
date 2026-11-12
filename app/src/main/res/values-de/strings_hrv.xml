@@ -227,4 +227,26 @@
     <string name="hrv_durability_trajectory_title">15-Minuten-Abschnittsverlauf</string>
     <string name="hrv_durability_slice_label">%1$d–%2$d Min.</string>
     <string name="hrv_durability_description">Vergleicht DFA α1 in der frischen Basislinie (15–45 Min.) mit späteren Einheitenabschnitten (>60 Min.) bei angeglichener Belastung zur Quantifizierung von autonomer Ermüdung und vagaler Resistenz.</string>
+
+    <!-- Morning Sleep & Wellness Tracking (ATT-7034 / REQ-HRV-038..042) -->
+    <string name="tuning_morning_sleep_wellness_title">Morgenschlaf &amp; Wohlbefinden</string>
+    <string name="tuning_morning_sleep_wellness_desc">Erfasse subjektive Schlafdauer, Schlafqualität und morgendliches Befinden mit oder ohne HF-Brustgurt</string>
+    <string name="tuning_morning_sleep_wellness_short">Schlaf &amp; Wohlbefinden</string>
+    <string name="tuning_morning_sleep_duration_quality_title">Schlafdauer &amp; -qualität (1–5)</string>
+    <string name="tuning_morning_energy_title">Morgendliche Energie / Befinden (1–5)</string>
+    <string name="tuning_morning_muscle_soreness_title">Muskelkater / Schwere Beine (1–5)</string>
+    <string name="tuning_morning_context_tags_title">Kontext-Tags (Krank, Alkohol, Reise, Ruhetag)</string>
+
+    <string name="morning_hrv_wellness_title">Morgenschlaf &amp; Wohlbefinden</string>
+    <string name="morning_hrv_sleep_duration_label">Schlafdauer: %s</string>
+    <string name="morning_hrv_sleep_quality_label">Schlafqualität: %d/5</string>
+    <string name="morning_hrv_morning_energy_label">Morgendliche Energie: %d/5</string>
+    <string name="morning_hrv_muscle_soreness_label">Muskelkater: %d/5</string>
+    <string name="morning_hrv_context_tags_label">Kontext-Tags</string>
+    <string name="morning_hrv_tag_sick">Krank</string>
+    <string name="morning_hrv_tag_alcohol">Alkohol</string>
+    <string name="morning_hrv_tag_travel">Reise</string>
+    <string name="morning_hrv_tag_rest">Ruhetag</string>
+    <string name="morning_hrv_btn_save_wellness">Morgen-Wohlbefinden speichern</string>
+    <string name="morning_hrv_wellness_saved_toast">Morgen-Wohlbefinden gespeichert</string>
 </resources>

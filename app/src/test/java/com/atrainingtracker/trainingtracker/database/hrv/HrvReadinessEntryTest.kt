@@ -48,6 +48,28 @@ class HrvReadinessEntryTest {
         HrvReadinessDbHelper.COLUMN_NOTES
     )
 
+    private val fullColumns = arrayOf(
+        HrvReadinessDbHelper.COLUMN_ID,
+        HrvReadinessDbHelper.COLUMN_TIMESTAMP_MS,
+        HrvReadinessDbHelper.COLUMN_DATE_ISO,
+        HrvReadinessDbHelper.COLUMN_TIMEZONE_ID,
+        HrvReadinessDbHelper.COLUMN_RESTING_HR_BPM,
+        HrvReadinessDbHelper.COLUMN_RMSSD_MS,
+        HrvReadinessDbHelper.COLUMN_LN_RMSSD,
+        HrvReadinessDbHelper.COLUMN_HRV_SCORE_100,
+        HrvReadinessDbHelper.COLUMN_SDNN_MS,
+        HrvReadinessDbHelper.COLUMN_ARTIFACT_RATE_PCT,
+        HrvReadinessDbHelper.COLUMN_DURATION_SEC,
+        HrvReadinessDbHelper.COLUMN_POSTURE,
+        HrvReadinessDbHelper.COLUMN_IS_PRIMARY_FOR_DAY,
+        HrvReadinessDbHelper.COLUMN_NOTES,
+        HrvReadinessDbHelper.COLUMN_SLEEP_DURATION_MIN,
+        HrvReadinessDbHelper.COLUMN_SLEEP_QUALITY_1_5,
+        HrvReadinessDbHelper.COLUMN_MORNING_ENERGY_1_5,
+        HrvReadinessDbHelper.COLUMN_MUSCLE_SORENESS_1_5,
+        HrvReadinessDbHelper.COLUMN_CONTEXT_TAGS
+    )
+
     @Test
     fun fromCursor_and_fromCursorBatch_yieldIdenticalResults_Rule20() {
         val cursor = MatrixCursor(columns)
@@ -109,9 +131,9 @@ class HrvReadinessEntryTest {
         assertEquals("2026-11-10", singleEntry1.dateIso)
         assertEquals("Europe/Berlin", singleEntry1.timezoneId)
         assertEquals(52, singleEntry1.restingHrBpm)
-        assertEquals(65.4, singleEntry1.rmssdMs, 1e-4)
-        assertEquals(4.1805, singleEntry1.lnRmssd, 1e-4)
-        assertEquals(83.61, singleEntry1.hrvScore100, 1e-4)
+        assertEquals(65.4, singleEntry1.rmssdMs!!, 1e-4)
+        assertEquals(4.1805, singleEntry1.lnRmssd!!, 1e-4)
+        assertEquals(83.61, singleEntry1.hrvScore100!!, 1e-4)
         assertEquals(78.2, singleEntry1.sdnnMs!!, 1e-4)
         assertEquals(1.2, singleEntry1.artifactRatePct!!, 1e-4)
         assertEquals(180, singleEntry1.durationSec)
@@ -162,5 +184,81 @@ class HrvReadinessEntryTest {
         assertEquals("STANDING", cv.getAsString(HrvReadinessDbHelper.COLUMN_POSTURE))
         assertEquals(1, cv.getAsInteger(HrvReadinessDbHelper.COLUMN_IS_PRIMARY_FOR_DAY).toInt())
         assertEquals("Test Note", cv.getAsString(HrvReadinessDbHelper.COLUMN_NOTES))
+    }
+
+    @Test
+    fun fromCursor_withWellnessFields_mapsSymmetrically_Rule20() {
+        val cursor = MatrixCursor(fullColumns)
+        cursor.addRow(
+            arrayOf<Any?>(
+                10L,
+                1731308400000L,
+                "2026-11-11",
+                "Europe/Berlin",
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                "SUPINE",
+                1,
+                "Standalone wellness check",
+                465, // 7h 45m
+                4,   // sleep quality
+                5,   // morning energy
+                2,   // muscle soreness
+                "REST_DAY,GOOD_SLEEP"
+            )
+        )
+
+        cursor.moveToPosition(0)
+        val entry = HrvReadinessEntry.fromCursor(cursor)
+        assertEquals(10L, entry.id)
+        assertNull(entry.restingHrBpm)
+        assertNull(entry.rmssdMs)
+        assertNull(entry.lnRmssd)
+        assertNull(entry.hrvScore100)
+        assertNull(entry.sdnnMs)
+        assertNull(entry.artifactRatePct)
+        assertNull(entry.durationSec)
+        assertEquals(465, entry.sleepDurationMin)
+        assertEquals(4, entry.sleepQuality1To5)
+        assertEquals(5, entry.morningEnergy1To5)
+        assertEquals(2, entry.muscleSoreness1To5)
+        assertEquals("REST_DAY,GOOD_SLEEP", entry.contextTags)
+        assertTrue(entry.isPrimaryForDay)
+    }
+
+    @Test
+    fun toContentValues_withStandaloneWellness_preservesNullHrvFieldsAndPopulatesWellness() {
+        val entry = HrvReadinessEntry(
+            timestampMs = 1731308400000L,
+            dateIso = "2026-11-11",
+            timezoneId = "Europe/Berlin",
+            restingHrBpm = null,
+            rmssdMs = null,
+            lnRmssd = null,
+            hrvScore100 = null,
+            sleepDurationMin = 480,
+            sleepQuality1To5 = 4,
+            morningEnergy1To5 = 3,
+            muscleSoreness1To5 = 1,
+            contextTags = "FOAM_ROLLING",
+            posture = HrvPosture.SUPINE,
+            isPrimaryForDay = true
+        )
+
+        val cv = entry.toContentValues()
+        assertNull(cv.getAsInteger(HrvReadinessDbHelper.COLUMN_RESTING_HR_BPM))
+        assertNull(cv.getAsDouble(HrvReadinessDbHelper.COLUMN_RMSSD_MS))
+        assertNull(cv.getAsDouble(HrvReadinessDbHelper.COLUMN_LN_RMSSD))
+        assertNull(cv.getAsDouble(HrvReadinessDbHelper.COLUMN_HRV_SCORE_100))
+        assertEquals(480, cv.getAsInteger(HrvReadinessDbHelper.COLUMN_SLEEP_DURATION_MIN).toInt())
+        assertEquals(4, cv.getAsInteger(HrvReadinessDbHelper.COLUMN_SLEEP_QUALITY_1_5).toInt())
+        assertEquals(3, cv.getAsInteger(HrvReadinessDbHelper.COLUMN_MORNING_ENERGY_1_5).toInt())
+        assertEquals(1, cv.getAsInteger(HrvReadinessDbHelper.COLUMN_MUSCLE_SORENESS_1_5).toInt())
+        assertEquals("FOAM_ROLLING", cv.getAsString(HrvReadinessDbHelper.COLUMN_CONTEXT_TAGS))
     }
 }

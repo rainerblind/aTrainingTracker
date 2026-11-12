@@ -110,6 +110,11 @@ fun AdvancedTuningDialog(
     var dfaA1ThresholdT1 by remember { mutableFloatStateOf(TuningPreferencesDefaults.DEFAULT_DFA_A1_THRESHOLD_T1) }
     var dfaA1ThresholdT2 by remember { mutableFloatStateOf(TuningPreferencesDefaults.DEFAULT_DFA_A1_THRESHOLD_T2) }
     var hrvArtifactGateThresholdPercent by remember { mutableFloatStateOf(TuningPreferencesDefaults.DEFAULT_HRV_ARTIFACT_GATE_THRESHOLD_PERCENT) }
+    var enableMorningSleepAndWellness by remember { mutableStateOf(TuningPreferencesDefaults.DEFAULT_ENABLE_MORNING_SLEEP_AND_WELLNESS) }
+    var enableSleepDurationAndQuality by remember { mutableStateOf(TuningPreferencesDefaults.DEFAULT_ENABLE_SLEEP_DURATION_AND_QUALITY) }
+    var enableMorningEnergy by remember { mutableStateOf(TuningPreferencesDefaults.DEFAULT_ENABLE_MORNING_ENERGY) }
+    var enableMuscleSoreness by remember { mutableStateOf(TuningPreferencesDefaults.DEFAULT_ENABLE_MUSCLE_SORENESS) }
+    var enableContextTags by remember { mutableStateOf(TuningPreferencesDefaults.DEFAULT_ENABLE_CONTEXT_TAGS) }
     var sensorSearchPrefs by remember { mutableStateOf(SensorSearchPreferences.load(context)) }
 
     var workoutCardPrefs by remember { mutableStateOf(WorkoutCardSectionPreferences()) }; var isAftermathPrefsInitialized by remember { mutableStateOf(false) }
@@ -159,6 +164,11 @@ fun AdvancedTuningDialog(
         enableCardioPowerDynamics = config.enableCardioPowerDynamics; showCardioPowerInWorkoutSummary = config.showCardioPowerInWorkoutSummary
         dfaA1ThresholdT1 = config.dfaA1ThresholdT1; dfaA1ThresholdT2 = config.dfaA1ThresholdT2
         hrvArtifactGateThresholdPercent = config.hrvArtifactGateThresholdPercent
+        enableMorningSleepAndWellness = config.enableMorningSleepAndWellness
+        enableSleepDurationAndQuality = config.enableSleepDurationAndQuality
+        enableMorningEnergy = config.enableMorningEnergy
+        enableMuscleSoreness = config.enableMuscleSoreness
+        enableContextTags = config.enableContextTags
     }
 
     var isInitialized by rememberSaveable { mutableStateOf(false) }
@@ -192,7 +202,12 @@ fun AdvancedTuningDialog(
                         enableCriticalPowerModel = enableCriticalPowerModel, showCriticalPowerInWorkoutSummary = showCriticalPowerInWorkoutSummary,
                         enableCardioPowerDynamics = enableCardioPowerDynamics, showCardioPowerInWorkoutSummary = showCardioPowerInWorkoutSummary,
                         dfaA1ThresholdT1 = dfaA1ThresholdT1, dfaA1ThresholdT2 = dfaA1ThresholdT2,
-                        hrvArtifactGateThresholdPercent = hrvArtifactGateThresholdPercent
+                        hrvArtifactGateThresholdPercent = hrvArtifactGateThresholdPercent,
+                        enableMorningSleepAndWellness = enableMorningSleepAndWellness,
+                        enableSleepDurationAndQuality = enableSleepDurationAndQuality,
+                        enableMorningEnergy = enableMorningEnergy,
+                        enableMuscleSoreness = enableMuscleSoreness,
+                        enableContextTags = enableContextTags
                     )
                     scope.launch {
                         tuningDataStore.saveTuningConfig(newConfig)
@@ -359,7 +374,17 @@ fun AdvancedTuningDialog(
                     dfaA1ThresholdT1 = dfaA1ThresholdT1, onDfaA1ThresholdT1Change = { dfaA1ThresholdT1 = it },
                     dfaA1ThresholdT2 = dfaA1ThresholdT2, onDfaA1ThresholdT2Change = { dfaA1ThresholdT2 = it },
                     hrvArtifactGateThresholdPercent = hrvArtifactGateThresholdPercent,
-                    onHrvArtifactGateThresholdPercentChange = { hrvArtifactGateThresholdPercent = it }
+                    onHrvArtifactGateThresholdPercentChange = { hrvArtifactGateThresholdPercent = it },
+                    enableMorningSleepAndWellness = enableMorningSleepAndWellness,
+                    onEnableMorningSleepAndWellnessChange = { enableMorningSleepAndWellness = it },
+                    enableSleepDurationAndQuality = enableSleepDurationAndQuality,
+                    onEnableSleepDurationAndQualityChange = { enableSleepDurationAndQuality = it },
+                    enableMorningEnergy = enableMorningEnergy,
+                    onEnableMorningEnergyChange = { enableMorningEnergy = it },
+                    enableMuscleSoreness = enableMuscleSoreness,
+                    onEnableMuscleSorenessChange = { enableMuscleSoreness = it },
+                    enableContextTags = enableContextTags,
+                    onEnableContextTagsChange = { enableContextTags = it }
                 )
             }
 

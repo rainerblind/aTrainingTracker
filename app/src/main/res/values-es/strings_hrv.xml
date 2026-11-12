@@ -227,4 +227,26 @@
     <string name="hrv_durability_trajectory_title">Trayectoria de tramos de 15 minutos</string>
     <string name="hrv_durability_slice_label">%1$d–%2$d min</string>
     <string name="hrv_durability_description">Compara DFA α1 de la línea base fresca (15–45 min) con tramos posteriores (>60 min) a intensidad coincidente para cuantificar fatiga autonómica y resistencia vagal.</string>
+
+    <!-- Morning Sleep & Wellness Tracking (ATT-7034 / REQ-HRV-038..042) -->
+    <string name="tuning_morning_sleep_wellness_title">Sueño y bienestar matutino</string>
+    <string name="tuning_morning_sleep_wellness_desc">Registra duración del sueño, calidad y energía matutina con o sin banda pectoral de FC</string>
+    <string name="tuning_morning_sleep_wellness_short">Sueño y bienestar</string>
+    <string name="tuning_morning_sleep_duration_quality_title">Duración y calidad del sueño (1–5)</string>
+    <string name="tuning_morning_energy_title">Energía / sensación matutina (1–5)</string>
+    <string name="tuning_morning_muscle_soreness_title">Dolor muscular / piernas pesadas (1–5)</string>
+    <string name="tuning_morning_context_tags_title">Etiquetas de contexto (Enfermo, Alcohol, Viaje, Descanso)</string>
+
+    <string name="morning_hrv_wellness_title">Sueño y bienestar matutino</string>
+    <string name="morning_hrv_sleep_duration_label">Duración del sueño: %s</string>
+    <string name="morning_hrv_sleep_quality_label">Calidad del sueño: %d/5</string>
+    <string name="morning_hrv_morning_energy_label">Energía matutina: %d/5</string>
+    <string name="morning_hrv_muscle_soreness_label">Dolor muscular: %d/5</string>
+    <string name="morning_hrv_context_tags_label">Etiquetas de contexto</string>
+    <string name="morning_hrv_tag_sick">Enfermo</string>
+    <string name="morning_hrv_tag_alcohol">Alcohol</string>
+    <string name="morning_hrv_tag_travel">Viaje</string>
+    <string name="morning_hrv_tag_rest">Descanso</string>
+    <string name="morning_hrv_btn_save_wellness">Guardar bienestar matutino</string>
+    <string name="morning_hrv_wellness_saved_toast">Bienestar matutino guardado</string>
 </resources>

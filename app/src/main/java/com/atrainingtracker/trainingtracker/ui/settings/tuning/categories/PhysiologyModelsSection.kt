@@ -91,7 +91,17 @@ fun PhysiologyModelsSection(
     dfaA1ThresholdT2: Float = TuningPreferencesDefaults.DEFAULT_DFA_A1_THRESHOLD_T2,
     onDfaA1ThresholdT2Change: (Float) -> Unit = {},
     hrvArtifactGateThresholdPercent: Float = TuningPreferencesDefaults.DEFAULT_HRV_ARTIFACT_GATE_THRESHOLD_PERCENT,
-    onHrvArtifactGateThresholdPercentChange: (Float) -> Unit = {}
+    onHrvArtifactGateThresholdPercentChange: (Float) -> Unit = {},
+    enableMorningSleepAndWellness: Boolean = false,
+    onEnableMorningSleepAndWellnessChange: (Boolean) -> Unit = {},
+    enableSleepDurationAndQuality: Boolean = true,
+    onEnableSleepDurationAndQualityChange: (Boolean) -> Unit = {},
+    enableMorningEnergy: Boolean = true,
+    onEnableMorningEnergyChange: (Boolean) -> Unit = {},
+    enableMuscleSoreness: Boolean = false,
+    onEnableMuscleSorenessChange: (Boolean) -> Unit = {},
+    enableContextTags: Boolean = false,
+    onEnableContextTagsChange: (Boolean) -> Unit = {}
 ) {
     var showInternalInfoDialog by remember { mutableStateOf(false) }
 
@@ -107,6 +117,11 @@ fun PhysiologyModelsSection(
     val dfaT1Callback = remember(onDfaA1ThresholdT1Change) { onDfaA1ThresholdT1Change }
     val dfaT2Callback = remember(onDfaA1ThresholdT2Change) { onDfaA1ThresholdT2Change }
     val hrvArtifactGateCallback = remember(onHrvArtifactGateThresholdPercentChange) { onHrvArtifactGateThresholdPercentChange }
+    val morningSleepAndWellnessCallback = remember(onEnableMorningSleepAndWellnessChange) { onEnableMorningSleepAndWellnessChange }
+    val sleepDurationAndQualityCallback = remember(onEnableSleepDurationAndQualityChange) { onEnableSleepDurationAndQualityChange }
+    val morningEnergyCallback = remember(onEnableMorningEnergyChange) { onEnableMorningEnergyChange }
+    val muscleSorenessCallback = remember(onEnableMuscleSorenessChange) { onEnableMuscleSorenessChange }
+    val contextTagsCallback = remember(onEnableContextTagsChange) { onEnableContextTagsChange }
 
     Column(
         modifier = Modifier
@@ -273,6 +288,38 @@ fun PhysiologyModelsSection(
             valueRange = 3.0f..5.0f,
             steps = 3
         )
+
+        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+
+        // Model 7: Morning Sleep & Wellness Tracking (REQ-HRV-038)
+        TuningToggleItem(
+            title = stringResource(R.string.tuning_morning_sleep_wellness_title),
+            isChecked = enableMorningSleepAndWellness,
+            onCheckedChange = morningSleepAndWellnessCallback,
+            summary = stringResource(R.string.tuning_morning_sleep_wellness_desc)
+        )
+        if (enableMorningSleepAndWellness) {
+            SubordinateTuningToggleItem(
+                title = stringResource(R.string.tuning_morning_sleep_duration_quality_title),
+                isChecked = enableSleepDurationAndQuality,
+                onCheckedChange = sleepDurationAndQualityCallback
+            )
+            SubordinateTuningToggleItem(
+                title = stringResource(R.string.tuning_morning_energy_title),
+                isChecked = enableMorningEnergy,
+                onCheckedChange = morningEnergyCallback
+            )
+            SubordinateTuningToggleItem(
+                title = stringResource(R.string.tuning_morning_muscle_soreness_title),
+                isChecked = enableMuscleSoreness,
+                onCheckedChange = muscleSorenessCallback
+            )
+            SubordinateTuningToggleItem(
+                title = stringResource(R.string.tuning_morning_context_tags_title),
+                isChecked = enableContextTags,
+                onCheckedChange = contextTagsCallback
+            )
+        }
     }
 
     if (showInternalInfoDialog) {

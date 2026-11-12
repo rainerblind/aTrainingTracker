@@ -107,9 +107,9 @@ class HrvReadinessDatabaseManagerTest {
         assertEquals("2026-11-10", retrieved.dateIso)
         assertEquals("Europe/Berlin", retrieved.timezoneId)
         assertEquals(50, retrieved.restingHrBpm)
-        assertEquals(72.5, retrieved.rmssdMs, 1e-4)
-        assertEquals(4.2835, retrieved.lnRmssd, 1e-4)
-        assertEquals(85.67, retrieved.hrvScore100, 1e-4)
+        assertEquals(72.5, retrieved.rmssdMs!!, 1e-4)
+        assertEquals(4.2835, retrieved.lnRmssd!!, 1e-4)
+        assertEquals(85.67, retrieved.hrvScore100!!, 1e-4)
         assertEquals(88.0, retrieved.sdnnMs!!, 1e-4)
         assertEquals(1.0, retrieved.artifactRatePct!!, 1e-4)
         assertEquals(180, retrieved.durationSec)
@@ -448,11 +448,153 @@ class HrvReadinessDatabaseManagerTest {
         assertNotNull(retrieved)
         assertEquals(1731220000000L, retrieved!!.timestampMs)
         assertEquals(52, retrieved.restingHrBpm)
-        assertEquals(50.0, retrieved.rmssdMs, 1e-4)
-        assertEquals(3.912, retrieved.lnRmssd, 1e-4)
-        assertEquals(78.24, retrieved.hrvScore100, 1e-4)
+        assertEquals(50.0, retrieved.rmssdMs!!, 1e-4)
+        assertEquals(3.912, retrieved.lnRmssd!!, 1e-4)
+        assertEquals(78.24, retrieved.hrvScore100!!, 1e-4)
         assertEquals(28800, retrieved.durationSec)
         assertTrue(retrieved.isPrimaryForDay)
         assertEquals("HealthConnect:com.ouraring.oura:2", retrieved.notes)
+    }
+
+    @Test
+    fun databaseUpgrade_fromV1ToV2_preservesExistingDataAndAllowsNullHrv() {
+        // Close current manager and delete database to simulate upgrade from scratch
+        manager.close()
+        context.deleteDatabase(HrvReadinessDbHelper.DB_NAME)
+        val helperV1 = object : android.database.sqlite.SQLiteOpenHelper(context, HrvReadinessDbHelper.DB_NAME, null, 1) {
+            override fun onCreate(sqliteDb: android.database.sqlite.SQLiteDatabase) {
+                sqliteDb.execSQL(
+                    """
+                    CREATE TABLE ${HrvReadinessDbHelper.TABLE_HRV_READINESS} (
+                        ${HrvReadinessDbHelper.COLUMN_ID} INTEGER PRIMARY KEY AUTOINCREMENT,
+                        ${HrvReadinessDbHelper.COLUMN_TIMESTAMP_MS} INTEGER NOT NULL,
+                        ${HrvReadinessDbHelper.COLUMN_DATE_ISO} TEXT NOT NULL,
+                        ${HrvReadinessDbHelper.COLUMN_TIMEZONE_ID} TEXT NOT NULL,
+                        ${HrvReadinessDbHelper.COLUMN_RESTING_HR_BPM} INTEGER NOT NULL,
+                        ${HrvReadinessDbHelper.COLUMN_RMSSD_MS} REAL NOT NULL,
+                        ${HrvReadinessDbHelper.COLUMN_LN_RMSSD} REAL NOT NULL,
+                        ${HrvReadinessDbHelper.COLUMN_HRV_SCORE_100} REAL NOT NULL,
+                        ${HrvReadinessDbHelper.COLUMN_SDNN_MS} REAL,
+                        ${HrvReadinessDbHelper.COLUMN_ARTIFACT_RATE_PCT} REAL,
+                        ${HrvReadinessDbHelper.COLUMN_DURATION_SEC} INTEGER NOT NULL,
+                        ${HrvReadinessDbHelper.COLUMN_POSTURE} TEXT NOT NULL,
+                        ${HrvReadinessDbHelper.COLUMN_IS_PRIMARY_FOR_DAY} INTEGER NOT NULL DEFAULT 1,
+                        ${HrvReadinessDbHelper.COLUMN_NOTES} TEXT
+                    );
+                    """.trimIndent()
+                )
+            }
+            override fun onUpgrade(sqliteDb: android.database.sqlite.SQLiteDatabase, oldVersion: Int, newVersion: Int) {}
+        }
+
+        val v1Db = helperV1.writableDatabase
+        v1Db.execSQL(
+            """
+            INSERT INTO ${HrvReadinessDbHelper.TABLE_HRV_READINESS} (
+                ${HrvReadinessDbHelper.COLUMN_TIMESTAMP_MS},
+                ${HrvReadinessDbHelper.COLUMN_DATE_ISO},
+                ${HrvReadinessDbHelper.COLUMN_TIMEZONE_ID},
+                ${HrvReadinessDbHelper.COLUMN_RESTING_HR_BPM},
+                ${HrvReadinessDbHelper.COLUMN_RMSSD_MS},
+                ${HrvReadinessDbHelper.COLUMN_LN_RMSSD},
+                ${HrvReadinessDbHelper.COLUMN_HRV_SCORE_100},
+                ${HrvReadinessDbHelper.COLUMN_DURATION_SEC},
+                ${HrvReadinessDbHelper.COLUMN_POSTURE},
+                ${HrvReadinessDbHelper.COLUMN_IS_PRIMARY_FOR_DAY}
+            ) VALUES (1731222000000, '2026-11-10', 'UTC', 50, 60.0, 4.094, 81.88, 180, 'SUPINE', 1);
+            """.trimIndent()
+        )
+        helperV1.close()
+
+        // Open with HrvReadinessDbHelper at DB_VERSION = 2
+        val helperV2 = HrvReadinessDbHelper(context)
+        val v2Db = helperV2.writableDatabase
+
+        // Verify V1 row was copied over cleanly
+        v2Db.rawQuery("SELECT * FROM ${HrvReadinessDbHelper.TABLE_HRV_READINESS}", null).use { cursor ->
+            assertTrue(cursor.moveToFirst())
+            assertEquals(1, cursor.count)
+            val entry = HrvReadinessEntry.fromCursor(cursor)
+            assertEquals("2026-11-10", entry.dateIso)
+            assertEquals(60.0, entry.rmssdMs!!, 1e-4)
+            assertNull(entry.sleepDurationMin)
+            assertNull(entry.sleepQuality1To5)
+        }
+
+        // Verify nullable HRV and wellness insert works on migrated schema
+        v2Db.execSQL(
+            """
+            INSERT INTO ${HrvReadinessDbHelper.TABLE_HRV_READINESS} (
+                ${HrvReadinessDbHelper.COLUMN_TIMESTAMP_MS},
+                ${HrvReadinessDbHelper.COLUMN_DATE_ISO},
+                ${HrvReadinessDbHelper.COLUMN_TIMEZONE_ID},
+                ${HrvReadinessDbHelper.COLUMN_POSTURE},
+                ${HrvReadinessDbHelper.COLUMN_IS_PRIMARY_FOR_DAY},
+                ${HrvReadinessDbHelper.COLUMN_SLEEP_DURATION_MIN},
+                ${HrvReadinessDbHelper.COLUMN_SLEEP_QUALITY_1_5}
+            ) VALUES (1731308400000, '2026-11-11', 'UTC', 'SUPINE', 1, 450, 4);
+            """.trimIndent()
+        )
+
+        v2Db.rawQuery("SELECT * FROM ${HrvReadinessDbHelper.TABLE_HRV_READINESS} WHERE ${HrvReadinessDbHelper.COLUMN_DATE_ISO} = '2026-11-11'", null).use { cursor ->
+            assertTrue(cursor.moveToFirst())
+            val standalone = HrvReadinessEntry.fromCursor(cursor)
+            assertNull(standalone.rmssdMs)
+            assertNull(standalone.restingHrBpm)
+            assertEquals(450, standalone.sleepDurationMin)
+            assertEquals(4, standalone.sleepQuality1To5)
+        }
+
+        helperV2.close()
+        // Reopen manager for subsequent tests
+        HrvReadinessDatabaseManager.resetForTesting(null)
+        manager = HrvReadinessDatabaseManager.getInstance(context)
+    }
+
+    @Test
+    fun getPrimaryEntriesInWindow_excludesStandaloneWellnessEntriesWithoutHrv_REQ_HRV_038() {
+        val day1Ts = 1731222000000L
+        val day2Ts = 1731308400000L
+
+        // Day 1: valid HRV reading
+        manager.insertEntry(
+            HrvReadinessEntry(
+                timestampMs = day1Ts,
+                dateIso = "2026-11-10",
+                timezoneId = "UTC",
+                restingHrBpm = 50,
+                rmssdMs = 65.0,
+                lnRmssd = 4.174,
+                hrvScore100 = 83.48,
+                durationSec = 180,
+                posture = HrvPosture.SUPINE,
+                isPrimaryForDay = true
+            )
+        )
+
+        // Day 2: standalone wellness check without HR strap
+        manager.insertEntry(
+            HrvReadinessEntry(
+                timestampMs = day2Ts,
+                dateIso = "2026-11-11",
+                timezoneId = "UTC",
+                restingHrBpm = null,
+                rmssdMs = null,
+                lnRmssd = null,
+                hrvScore100 = null,
+                durationSec = null,
+                sleepDurationMin = 480,
+                sleepQuality1To5 = 4,
+                morningEnergy1To5 = 4,
+                muscleSoreness1To5 = 2,
+                posture = HrvPosture.SUPINE,
+                isPrimaryForDay = true
+            )
+        )
+
+        val windowEntries = manager.getPrimaryEntriesInWindow(HrvPosture.SUPINE, "2026-11-10", "2026-11-11")
+        assertEquals("Standalone entry without HRV must be excluded from baseline window", 1, windowEntries.size)
+        assertEquals("2026-11-10", windowEntries[0].dateIso)
+        assertEquals(65.0, windowEntries[0].rmssdMs!!, 1e-4)
     }
 }

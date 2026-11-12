@@ -95,10 +95,11 @@ object HrvReadinessCalculator {
         val dMinus6 = targetDate.minusDays(6)
         val dMinus59 = targetDate.minusDays(59)
 
-        // 1. Filter by posture and valid artifact rate (<= 5.0% or null)
+        // 1. Filter by posture, valid artifact rate (<= 5.0% or null), and presence of HRV metrics
         val validPostureEntries = entries.filter { entry ->
             entry.posture == posture &&
-                (entry.artifactRatePct == null || entry.artifactRatePct <= MAX_VALID_ARTIFACT_RATE_PCT)
+                (entry.artifactRatePct == null || entry.artifactRatePct <= MAX_VALID_ARTIFACT_RATE_PCT) &&
+                entry.lnRmssd != null
         }
 
         // 2. Daily deduplication: group by dateIso and select primary
@@ -138,7 +139,7 @@ object HrvReadinessCalculator {
         val n60d = entries60d.size
 
         val mu7d = if (n7d >= MIN_7D_DAYS) {
-            entries7d.map { it.lnRmssd }.average()
+            entries7d.mapNotNull { it.lnRmssd }.average()
         } else {
             null
         }
@@ -149,9 +150,9 @@ object HrvReadinessCalculator {
         val swcUpper: Double?
 
         if (n60d >= MIN_60D_DAYS) {
-            val mean60 = entries60d.map { it.lnRmssd }.average()
-            val sumSquaredDiff = entries60d.map {
-                val diff = it.lnRmssd - mean60
+            val mean60 = entries60d.mapNotNull { it.lnRmssd }.average()
+            val sumSquaredDiff = entries60d.mapNotNull { it.lnRmssd }.map {
+                val diff = it - mean60
                 diff * diff
             }.sum()
 

@@ -926,8 +926,11 @@ private fun HrvHistoryEntryRow(
                         color = MaterialTheme.colorScheme.primary
                     )
                 }
+                val lnStr = entry.lnRmssd?.let { String.format(Locale.getDefault(), "%.2f", it) } ?: "--"
+                val rmssdStr = entry.rmssdMs?.let { String.format(Locale.getDefault(), "%.1f ms", it) } ?: "--"
+                val hrStr = entry.restingHrBpm?.let { "$it bpm" } ?: "--"
                 Text(
-                    text = "ln(rMSSD): ${String.format(Locale.getDefault(), "%.2f", entry.lnRmssd)} | rMSSD: ${String.format(Locale.getDefault(), "%.1f ms", entry.rmssdMs)} | HR: ${entry.restingHrBpm} bpm",
+                    text = "ln(rMSSD): $lnStr | rMSSD: $rmssdStr | HR: $hrStr",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

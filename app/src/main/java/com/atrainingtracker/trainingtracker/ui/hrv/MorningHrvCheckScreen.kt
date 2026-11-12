@@ -65,10 +65,12 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import java.util.Locale
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
@@ -213,6 +215,18 @@ fun MorningHrvCheckScreen(
                 )
             }
 
+            // Morning Sleep & Minimal Wellness Card (REQ-HRV-038, REQ-HRV-040, REQ-HRV-041)
+            if (uiState.enableMorningSleepAndWellness) {
+                MorningWellnessInputCard(
+                    uiState = uiState,
+                    onSleepDurationChange = { viewModel.setSleepDurationMinutes(it) },
+                    onSleepQualityChange = { viewModel.setSleepQuality(it) },
+                    onMorningEnergyChange = { viewModel.setMorningEnergy(it) },
+                    onMuscleSorenessChange = { viewModel.setMuscleSoreness(it) },
+                    onToggleContextTag = { viewModel.toggleContextTag(it) }
+                )
+            }
+
             // 3. Live Pacing / Measurement Status Card
             MeasurementPacingCard(uiState = uiState)
 
@@ -252,6 +266,18 @@ fun MorningHrvCheckScreen(
                             Toast.makeText(
                                 context,
                                 R.string.morning_hrv_saved_toast,
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        }
+                    }
+                },
+                onSaveStandaloneWellness = {
+                    coroutineScope.launch {
+                        val rowId = viewModel.saveStandaloneWellness()
+                        if (rowId > 0) {
+                            Toast.makeText(
+                                context,
+                                R.string.morning_hrv_wellness_saved_toast,
                                 Toast.LENGTH_SHORT
                             ).show()
                         }
@@ -692,18 +718,18 @@ private fun ReadinessResultCard(
             // Metrics Summary
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text(
-                    text = stringResource(R.string.morning_hrv_summary_rmssd, entry.rmssdMs),
+                    text = stringResource(R.string.morning_hrv_summary_rmssd, entry.rmssdMs ?: 0.0),
                     style = MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 Text(
-                    text = stringResource(R.string.morning_hrv_summary_ln_rmssd, entry.lnRmssd),
+                    text = stringResource(R.string.morning_hrv_summary_ln_rmssd, entry.lnRmssd ?: 0.0),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Text(
-                    text = stringResource(R.string.morning_hrv_summary_resting_hr, entry.restingHrBpm),
+                    text = stringResource(R.string.morning_hrv_summary_resting_hr, entry.restingHrBpm ?: 0),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -727,7 +753,7 @@ private fun ReadinessResultCard(
 }
 
 /**
- * Action button bar managing lifecycle operations (`REQ-PER-032.1`, `REQ-PER-032.5`).
+ * Action button bar managing lifecycle operations (`REQ-PER-032.1`, `REQ-PER-032.5`, `REQ-HRV-040`).
  */
 @Composable
 private fun ActionButtonsSection(
@@ -736,23 +762,52 @@ private fun ActionButtonsSection(
     onCancel: () -> Unit,
     onDiscard: () -> Unit,
     onSave: () -> Unit,
+    onSaveStandaloneWellness: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     Box(modifier = modifier.fillMaxWidth()) {
         when (uiState.phase) {
             MorningHrvPhase.READY -> {
-                Button(
-                    onClick = onStart,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(52.dp),
-                    shape = RoundedCornerShape(12.dp)
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Text(
-                        text = stringResource(R.string.morning_hrv_btn_start),
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.Bold
-                    )
+                    Button(
+                        onClick = onStart,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(52.dp),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text(
+                            text = stringResource(R.string.morning_hrv_btn_start),
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+
+                    if (uiState.enableMorningSleepAndWellness) {
+                        OutlinedButton(
+                            onClick = onSaveStandaloneWellness,
+                            enabled = !uiState.isWellnessSaved,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(52.dp),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            if (uiState.isWellnessSaved) {
+                                Icon(
+                                    imageVector = Icons.Default.Check,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(stringResource(R.string.morning_hrv_btn_saved))
+                            } else {
+                                Text(stringResource(R.string.morning_hrv_btn_save_wellness))
+                            }
+                        }
+                    }
                 }
             }
             MorningHrvPhase.STABILIZING, MorningHrvPhase.MEASURING -> {
@@ -809,6 +864,164 @@ private fun ActionButtonsSection(
                             Text(stringResource(R.string.morning_hrv_btn_saved))
                         } else {
                             Text(stringResource(R.string.morning_hrv_btn_save))
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Interactive subjective sleep and morning wellness input card (`REQ-HRV-038`, `REQ-HRV-040`, `REQ-HRV-041`).
+ */
+@Composable
+private fun MorningWellnessInputCard(
+    uiState: MorningHrvUiState,
+    onSleepDurationChange: (Int) -> Unit,
+    onSleepQualityChange: (Int) -> Unit,
+    onMorningEnergyChange: (Int) -> Unit,
+    onMuscleSorenessChange: (Int) -> Unit,
+    onToggleContextTag: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
+        modifier = modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Text(
+                text = stringResource(R.string.morning_hrv_wellness_title),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+
+            // Sleep Duration & Quality
+            if (uiState.enableSleepDurationAndQuality) {
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    val hours = uiState.sleepDurationMinutes / 60
+                    val mins = uiState.sleepDurationMinutes % 60
+                    val durationText = String.format(Locale.getDefault(), "%dh %02dm", hours, mins)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = stringResource(R.string.morning_hrv_sleep_duration_label, durationText),
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                    Slider(
+                        value = uiState.sleepDurationMinutes.toFloat(),
+                        onValueChange = { onSleepDurationChange(it.toInt()) },
+                        valueRange = 180f..720f,
+                        steps = 35
+                    )
+                }
+
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(
+                        text = stringResource(R.string.morning_hrv_sleep_quality_label, uiState.sleepQuality1To5),
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Medium
+                    )
+                    SingleChoiceSegmentedButtonRow(
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        (1..5).forEachIndexed { index, score ->
+                            SegmentedButton(
+                                selected = uiState.sleepQuality1To5 == score,
+                                onClick = { onSleepQualityChange(score) },
+                                shape = SegmentedButtonDefaults.itemShape(index = index, count = 5)
+                            ) {
+                                Text("$score")
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Morning Energy / Feel
+            if (uiState.enableMorningEnergy) {
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(
+                        text = stringResource(R.string.morning_hrv_morning_energy_label, uiState.morningEnergy1To5),
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Medium
+                    )
+                    SingleChoiceSegmentedButtonRow(
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        (1..5).forEachIndexed { index, score ->
+                            SegmentedButton(
+                                selected = uiState.morningEnergy1To5 == score,
+                                onClick = { onMorningEnergyChange(score) },
+                                shape = SegmentedButtonDefaults.itemShape(index = index, count = 5)
+                            ) {
+                                Text("$score")
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Muscle Soreness (optional)
+            if (uiState.enableMuscleSoreness) {
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(
+                        text = stringResource(R.string.morning_hrv_muscle_soreness_label, uiState.muscleSoreness1To5),
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Medium
+                    )
+                    SingleChoiceSegmentedButtonRow(
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        (1..5).forEachIndexed { index, score ->
+                            SegmentedButton(
+                                selected = uiState.muscleSoreness1To5 == score,
+                                onClick = { onMuscleSorenessChange(score) },
+                                shape = SegmentedButtonDefaults.itemShape(index = index, count = 5)
+                            ) {
+                                Text("$score")
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Context Tags (optional)
+            if (uiState.enableContextTags) {
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text(
+                        text = stringResource(R.string.morning_hrv_context_tags_label),
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Medium
+                    )
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        val tags = listOf(
+                            "Sick" to R.string.morning_hrv_tag_sick,
+                            "Alcohol" to R.string.morning_hrv_tag_alcohol,
+                            "Travel" to R.string.morning_hrv_tag_travel,
+                            "Rest" to R.string.morning_hrv_tag_rest
+                        )
+                        for ((tagKey, strRes) in tags) {
+                            FilterChip(
+                                selected = uiState.selectedContextTags.contains(tagKey),
+                                onClick = { onToggleContextTag(tagKey) },
+                                label = { Text(stringResource(strRes)) }
+                            )
                         }
                     }
                 }
