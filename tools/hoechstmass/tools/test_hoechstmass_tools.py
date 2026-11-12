@@ -118,6 +118,30 @@ class TestHoechstmassConfig(unittest.TestCase):
         self.assertNotIn("human", VALID_ROLES)
         self.assertEqual(VALID_ROLES, ["agent1", "agent2", "coordinator"])
 
+    def test_load_env_config_per_role(self):
+        """load_env_config(role=...) loads per-role files and isolates role credentials (ATT-6147)."""
+        import tempfile
+        with tempfile.TemporaryDirectory() as tmpdir:
+            base_file = os.path.join(tmpdir, ".env.jira")
+            with open(base_file, "w") as f:
+                f.write("JIRA_URL=https://jira.corp.internal\nJIRA_AGENT1_USER=old@corp\n")
+            a1_file = os.path.join(tmpdir, ".env.jira.agent1")
+            with open(a1_file, "w") as f:
+                f.write("JIRA_AGENT1_USER=a1@corp\nJIRA_AGENT1_TOKEN=t1\n")
+            a2_file = os.path.join(tmpdir, ".env.jira.agent2")
+            with open(a2_file, "w") as f:
+                f.write("JIRA_AGENT2_USER=a2@corp\nJIRA_AGENT2_TOKEN=t2\n")
+
+            cfg_a1 = load_env_config(custom_path=base_file, role="agent1")
+            self.assertEqual(cfg_a1.get("JIRA_AGENT1_USER"), "a1@corp")
+            self.assertEqual(cfg_a1.get("JIRA_AGENT1_TOKEN"), "t1")
+            self.assertNotIn("JIRA_AGENT2_USER", cfg_a1)
+
+            cfg_a2 = load_env_config(custom_path=base_file, role="agent2")
+            self.assertEqual(cfg_a2.get("JIRA_AGENT2_USER"), "a2@corp")
+            self.assertEqual(cfg_a2.get("JIRA_AGENT2_TOKEN"), "t2")
+            self.assertNotIn("JIRA_AGENT1_USER", cfg_a2)
+
 
 class TestGovernanceVerification(unittest.TestCase):
 

@@ -181,21 +181,72 @@ def assign_issue(issue_key, target_role_or_account_id, role="agent1"):
     except Exception as e:
         print(f"Warning: Failed to assign {issue_key} to {target_role_or_account_id}: {e}", file=sys.stderr)
 
-def get_config():
-    env_file = os.path.join(os.path.dirname(__file__), "..", ".env.jira")
+def get_config(role=None):
+    """
+    Loads configuration for Jira tooling.
+    Under ASPICE SUP.1 / SUP.8 per-role credential isolation (ATT-6147):
+    - When role is provided (or JIRA_ACTOR is set), checks for role-specific file (.env.jira.<role>).
+    - If .env.jira.<role> exists, it loads shared non-secret config from .env.jira (if present)
+      and overlays .env.jira.<role>.
+    - If .env.jira.<role> does not exist, falls back to .env.jira.
+    - When role is specified, credentials for other roles are excluded to enforce isolation.
+    """
+    if role is None:
+        role = os.environ.get("JIRA_ACTOR")
+    if role:
+        role = role.strip().lower()
+
+    repo_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+    base_env = os.path.join(repo_dir, ".env.jira")
+    role_env = os.path.join(repo_dir, f".env.jira.{role}") if role else None
+
     config = {}
-    if not os.path.exists(env_file):
-        print(f"Error: {env_file} not found.", file=sys.stderr)
+    # 1. Load base .env.jira if present (provides shared JIRA_URL, JIRA_PROJECT, etc.)
+    if os.path.exists(base_env):
+        with open(base_env, "r", encoding="utf-8") as f:
+            for line in f:
+                if "=" in line and not line.startswith("#"):
+                    k, v = line.strip().split("=", 1)
+                    config[k.strip()] = v.strip()
+
+    # 2. If role-specific file exists, overlay it
+    if role_env and os.path.exists(role_env):
+        with open(role_env, "r", encoding="utf-8") as f:
+            for line in f:
+                if "=" in line and not line.startswith("#"):
+                    k, v = line.strip().split("=", 1)
+                    config[k.strip()] = v.strip()
+
+    # 3. If role is specified, filter out other roles' credentials to enforce strict isolation
+    if role in ("agent1", "agent2", "coordinator"):
+        other_roles = {"agent1", "agent2", "coordinator"} - {role}
+        for other in other_roles:
+            config.pop(f"JIRA_{other.upper()}_USER", None)
+            config.pop(f"JIRA_{other.upper()}_TOKEN", None)
+            config.pop(f"JIRA_{other.upper()}_ACCOUNT_ID", None)
+
+    # 4. If neither base_env nor role_env exists and config is empty, report error and exit
+    if not config and not os.path.exists(base_env) and not (role_env and os.path.exists(role_env)):
+        target = role_env if role else base_env
+        print(f"Error: {target} not found.", file=sys.stderr)
         sys.exit(1)
-    with open(env_file, "r", encoding="utf-8") as f:
-        for line in f:
-            if "=" in line and not line.startswith("#"):
-                k, v = line.strip().split("=", 1)
-                config[k.strip()] = v.strip()
+
     return config
 
-def load_env_config(custom_path=None):
-    return get_config()
+def load_env_config(custom_path=None, role=None):
+    if custom_path:
+        config = {}
+        if os.path.exists(custom_path):
+            with open(custom_path, "r", encoding="utf-8") as f:
+                for line in f:
+                    if "=" in line and not line.startswith("#"):
+                        k, v = line.strip().split("=", 1)
+                        config[k.strip()] = v.strip()
+            return config
+        else:
+            print(f"Error: {custom_path} not found.", file=sys.stderr)
+            sys.exit(1)
+    return get_config(role=role)
 
 def resolve_account(role="agent1", config=None):
     """
@@ -205,7 +256,7 @@ def resolve_account(role="agent1", config=None):
     credentials (JIRA_USER, JIRA_TOKEN) is prohibited.
     """
     if config is None:
-        config = get_config()
+        config = get_config(role=role)
 
     role_mapping = {
         "agent1": ("JIRA_AGENT1_USER", "JIRA_AGENT1_TOKEN"),
@@ -269,7 +320,9 @@ def sanitize_secrets(text, secrets_to_mask=None):
     sanitized = re.sub(r'Basic\s+[A-Za-z0-9+/=]{16,}', 'Basic [MASKED]', sanitized)
     return sanitized
 
-def get_headers(config, role="agent1"):
+def get_headers(config=None, role="agent1"):
+    if config is None:
+        config = get_config(role=role)
     user, token = resolve_account(role, config)
     auth_type = (config.get("JIRA_AUTH_TYPE") or "").lower()
     is_dc = is_datacenter(config)
@@ -343,7 +396,7 @@ def parse_role_from_args(args=None):
     return "agent1", remaining_args
 
 def jira_request(url, method="GET", payload=None, is_binary=False, role="agent1"):
-    config = get_config()
+    config = get_config(role=role)
     headers = get_headers(config, role=role)
     data = json.dumps(payload).encode("utf-8") if payload else None
 

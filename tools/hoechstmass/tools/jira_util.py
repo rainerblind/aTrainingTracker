@@ -184,12 +184,26 @@ def get_ssl_context(config=None):
     return None
 
 
-def load_env_config(custom_path=None):
-    """Loads environment variables from .env.jira."""
+def load_env_config(custom_path=None, role=None):
+    """
+    Loads environment variables from .env.jira or .env.jira.<role>.
+    Under ASPICE SUP.1 / SUP.8 per-role credential isolation (ATT-6147):
+    - When role is provided (or JIRA_ACTOR is set), checks for role-specific file (.env.jira.<role>).
+    - If .env.jira.<role> exists, overlays it onto base config.
+    - Filters out other roles' credentials when role is specified.
+    """
+    if role is None:
+        role = os.environ.get("JIRA_ACTOR")
+    if role:
+        role = role.strip().lower()
+
     paths = [custom_path] if custom_path else DEFAULT_ENV_LOCATIONS
     config = dict(os.environ)
+    loaded_base_dir = None
+
     for p in paths:
         if p and os.path.exists(p):
+            loaded_base_dir = os.path.dirname(p)
             with open(p, "r", encoding="utf-8") as f:
                 for line in f:
                     line = line.strip()
@@ -197,6 +211,24 @@ def load_env_config(custom_path=None):
                         k, v = line.split("=", 1)
                         config[k.strip()] = v.strip()
             break
+
+    if role and loaded_base_dir:
+        role_path = os.path.join(loaded_base_dir, f".env.jira.{role}")
+        if os.path.exists(role_path):
+            with open(role_path, "r", encoding="utf-8") as f:
+                for line in f:
+                    line = line.strip()
+                    if "=" in line and not line.startswith("#"):
+                        k, v = line.split("=", 1)
+                        config[k.strip()] = v.strip()
+
+    if role in ("agent1", "agent2", "coordinator"):
+        other_roles = {"agent1", "agent2", "coordinator"} - {role}
+        for other in other_roles:
+            config.pop(f"JIRA_{other.upper()}_USER", None)
+            config.pop(f"JIRA_{other.upper()}_TOKEN", None)
+            config.pop(f"JIRA_{other.upper()}_ACCOUNT_ID", None)
+
     return config
 
 
@@ -270,7 +302,7 @@ def resolve_account(role="agent1", config=None, h_config=None):
     credentials (JIRA_USER, JIRA_TOKEN) is prohibited.
     """
     if config is None:
-        config = load_env_config()
+        config = load_env_config(role=role)
     if h_config is None:
         h_config = load_hoechstmass_config()
 
@@ -311,7 +343,7 @@ def resolve_account(role="agent1", config=None, h_config=None):
 def get_headers(config=None, role="agent1", h_config=None):
     """Builds HTTP headers supporting Basic Auth or Bearer PAT in Jira Data Center."""
     if config is None:
-        config = load_env_config()
+        config = load_env_config(role=role)
     if h_config is None:
         h_config = load_hoechstmass_config()
 
@@ -338,7 +370,7 @@ def get_headers(config=None, role="agent1", h_config=None):
 def jira_request(url, method="GET", payload=None, role="agent1", config=None, h_config=None):
     """Executes an authenticated HTTP request to the Jira REST API."""
     if config is None:
-        config = load_env_config()
+        config = load_env_config(role=role)
     if h_config is None:
         h_config = load_hoechstmass_config()
 

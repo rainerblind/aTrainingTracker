@@ -2,7 +2,7 @@
 local.properties
 secrets.properties
 .env*
-.env.jira
+.env.jira*
 !tools/hoechstmass/.env.jira.example
 
 # Release signing property file

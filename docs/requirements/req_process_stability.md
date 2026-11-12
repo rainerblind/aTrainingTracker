@@ -339,23 +339,29 @@ The workflow SHALL mandate that:
 **Invariants**: Moving parent tickets to `Erledigt` remains strictly prohibited for the review runner; existing `tools/jira_util.py` functionality and 5-state lifecycle MUST NOT be degraded; API keys MUST NOT be logged or committed.
 
 ### REQ-PRO-019: Multi-Account Jira Authentication, Atomic Resolution & Terminal Error Handling [Verified]
-- **Tests**: `tools/jira_util.py`, `tools/review_agent.py`, `docs/project_protocol.md`, `.cursorrules` | **Tickets**: `ATT-1123`, `ATT-1200`, `ATT-6146`
-- **Implementation**: Provide reliable, role-specific authentication with strict credential isolation and deterministic termination on missing credentials.
+- **Tests**: `tools/jira_util.py`, `tools/review_agent.py`, `docs/project_protocol.md`, `.cursorrules` | **Tickets**: `ATT-1123`, `ATT-1200`, `ATT-6146`, `ATT-6147`
+- **Implementation**: Provide reliable, role-specific authentication with strict credential isolation, per-role file partitioning, and deterministic termination on missing credentials.
 - **Rationale**: The development workflow and CLI tooling (`tools/jira_util.py`, `tools/review_agent.py`) SHALL support role-specific Jira user credentials across three distinct agent roles: Agent 1 (Implementer), Agent 2 (Auditor), and Coordinator (Orchestrator):
-1. *Role Credentials Configuration*: `.env.jira` SHALL support optional role-specific environment variables (`JIRA_AGENT1_USER`, `JIRA_AGENT1_TOKEN`, `JIRA_AGENT2_USER`, `JIRA_AGENT2_TOKEN`, `JIRA_COORDINATOR_USER`, `JIRA_COORDINATOR_TOKEN`) alongside base default credentials (`JIRA_USER`, `JIRA_TOKEN`).
-2. *Strict Non-Human Credential Isolation (ATT-6146)*: Under ASPICE SUP.1 role separation, automated agent roles (`agent1`, `agent2`, `coordinator`) MUST strictly provide their own role credentials. Fallback to base default credentials (`JIRA_USER`, `JIRA_TOKEN`) is prohibited for automated agent roles; missing or partial role credentials SHALL immediately abort execution with exit code 1. Fallback to base credentials is permitted only when resolving the `human` role directly.
+1. *Role Credentials Configuration & File Partitioning (ATT-6147)*: `.gitignore` SHALL ignore all role credential variants using `.env.jira*`. Credentials SHALL be partitioned into dedicated gitignored per-role files (`.env.jira.agent1`, `.env.jira.agent2`, `.env.jira.coordinator`) containing shared metadata (`JIRA_URL`, `JIRA_PROJECT`) alongside role-specific variables (`JIRA_<ROLE>_USER`, `JIRA_<ROLE>_TOKEN`). Human credentials (`JIRA_USER`, `JIRA_TOKEN`) SHALL be eliminated from the workspace and example templates.
+2. *Role-Aware Dynamic Loading & Strict Credential Isolation (ATT-6146, ATT-6147)*: `get_config(role=None)` in `tools/jira_util.py` and `load_env_config(role=None)` in `tools/hoechstmass/tools/jira_util.py` SHALL load `.env.jira.<role>` when `role` is specified, overlaying shared base `.env.jira` without cross-role credential disclosure or fallback. Under ASPICE SUP.1 role separation, automated agent roles (`agent1`, `agent2`, `coordinator`) MUST strictly provide their own role credentials; missing or partial role credentials SHALL immediately abort execution with exit code 1. Fallback to base credentials is permitted only when resolving the `human` role directly.
 3. *Terminal Failure on Missing Credentials*: If required role credentials (for automated roles) or default credentials (for human role) do not exist, the tooling MUST NOT attempt unauthenticated requests; it SHALL print a clean diagnostic error to `sys.stderr` and exit with non-zero exit code (1).
 
 **Requirement Archaeology & Chesterton's Fence Audit**:
-1. *Original Requirement ID & Target*: `REQ-PRO-019` (`REQ-PRO-019.2`, `REQ-PRO-019.4`) under ATT-6146. Targets `tools/jira_util.py`, `tools/hoechstmass/tools/jira_util.py`, and `tools/test_jira_accounts.py`.
-2. *Historical Origin & Commit Trace*: Introduced in Sprint 2026-44 via ATT-4520 (commit `2b1a9e40`) and refined in ATT-1123 / ATT-1200.
-3. *Root Reason for Existing Formulation*: Multi-account authentication originally provided a transitional fallback to default `JIRA_USER`/`JIRA_TOKEN` so developers with a single personal API token could run CLI tools before independent agent accounts were provisioned.
+1. *Original Requirement ID & Target*: `REQ-PRO-019` (`REQ-PRO-019.5`, `REQ-PRO-019.6`, `REQ-PRO-019.7`, `REQ-PRO-019.8`) under ATT-6147. Targets `tools/jira_util.py`, `tools/hoechstmass/tools/jira_util.py`, `.gitignore`, `tools/test_jira_accounts.py`.
+2. *Historical Origin & Commit Trace*: Introduced in Sprint 2026-44 via ATT-4520 (commit `2b1a9e40`) and refined in ATT-1123, ATT-1200, ATT-6146 (`51509174`), and ATT-6147.
+3. *Root Reason for Existing Formulation*: A single monolithic `.env.jira` was chosen as a transitional stepping stone when migrating from single-account human authentication to multi-agent credentials.
 4. *Preservation of Core Invariants*: Autonomous agent operations using service accounts (`agent1`, `agent2`, `coordinator`) remain 100% operational; ticket transitions to `Final Review (Human)` remain functional; human gate is strictly protected from agent impersonation; zero impact on Android runtime (`app/src/main/`).
 
 **Acceptance Criteria (Given-When-Then)**:
 • *Given* `.env.jira` configured with valid `JIRA_AGENT1_USER` and `JIRA_AGENT1_TOKEN`,
 • *When* `jira_util.py` is invoked with role `agent1`,
 • *Then* Jira HTTP requests SHALL use Basic Auth with Agent 1's username and token.
+• *Given* an environment provided only with `agent1`'s credential file (`.env.jira.agent1`),
+• *When* `jira_util.py` is invoked with `--as agent2`,
+• *Then* the tool SHALL abort with exit code 1 without leaking credentials or falling back to other roles.
+• *Given* `.gitignore` and template files (`tools/hoechstmass/.env.jira.example`),
+• *When* inspected,
+• *Then* `.gitignore` ignores `.env.jira*` and template files contain zero human `JIRA_USER`/`JIRA_TOKEN` credentials.
 • *Given* `.env.jira` where an automated role (`agent1`, `agent2`, or `coordinator`) has missing or partial credentials,
 • *When* `jira_util.py` resolves credentials for that role,
 • *Then* the system SHALL abort immediately with exit code 1 and emit a fatal credential isolation error, refusing fallback to `(JIRA_USER, JIRA_TOKEN)`.

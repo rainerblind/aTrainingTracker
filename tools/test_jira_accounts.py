@@ -129,6 +129,68 @@ class TestJiraAccountResolution(unittest.TestCase):
         decoded = base64.b64decode(encoded.encode("ascii")).decode("ascii")
         self.assertEqual(decoded, "test_agent1@example.com:token_abc_123")
 
+    def test_per_role_config_file_resolution(self):
+        """get_config(role=...) loads per-role files and isolates role credentials (ATT-6147)."""
+        import tempfile
+        with tempfile.TemporaryDirectory() as tmpdir:
+            base_file = os.path.join(tmpdir, ".env.jira")
+            with open(base_file, "w") as f:
+                f.write("JIRA_URL=https://jira.example.com\nJIRA_PROJECT=ATT\n")
+            a1_file = os.path.join(tmpdir, ".env.jira.agent1")
+            with open(a1_file, "w") as f:
+                f.write("JIRA_AGENT1_USER=a1@example.com\nJIRA_AGENT1_TOKEN=token1\n")
+            a2_file = os.path.join(tmpdir, ".env.jira.agent2")
+            with open(a2_file, "w") as f:
+                f.write("JIRA_AGENT2_USER=a2@example.com\nJIRA_AGENT2_TOKEN=token2\n")
+
+            with patch("os.path.dirname", return_value=os.path.join(tmpdir, "tools")):
+                cfg_a1 = jira_util.get_config(role="agent1")
+                self.assertEqual(cfg_a1.get("JIRA_URL"), "https://jira.example.com")
+                self.assertEqual(cfg_a1.get("JIRA_AGENT1_USER"), "a1@example.com")
+                self.assertEqual(cfg_a1.get("JIRA_AGENT1_TOKEN"), "token1")
+                self.assertNotIn("JIRA_AGENT2_USER", cfg_a1)
+
+                cfg_a2 = jira_util.get_config(role="agent2")
+                self.assertEqual(cfg_a2.get("JIRA_URL"), "https://jira.example.com")
+                self.assertEqual(cfg_a2.get("JIRA_AGENT2_USER"), "a2@example.com")
+                self.assertEqual(cfg_a2.get("JIRA_AGENT2_TOKEN"), "token2")
+                self.assertNotIn("JIRA_AGENT1_USER", cfg_a2)
+
+    def test_strict_per_role_isolation_cross_role_access(self):
+        """When only agent1 credential file exists, resolving agent2 aborts with exit code 1 (ATT-6147 AC-2)."""
+        import tempfile
+        with tempfile.TemporaryDirectory() as tmpdir:
+            base_file = os.path.join(tmpdir, ".env.jira")
+            with open(base_file, "w") as f:
+                f.write("JIRA_URL=https://jira.example.com\nJIRA_PROJECT=ATT\n")
+            a1_file = os.path.join(tmpdir, ".env.jira.agent1")
+            with open(a1_file, "w") as f:
+                f.write("JIRA_AGENT1_USER=a1@example.com\nJIRA_AGENT1_TOKEN=token1\n")
+
+            with patch("os.path.dirname", return_value=os.path.join(tmpdir, "tools")):
+                cfg_a2 = jira_util.get_config(role="agent2")
+                stderr_capture = io.StringIO()
+                with patch("sys.stderr", stderr_capture):
+                    with self.assertRaises(SystemExit) as cm:
+                        jira_util.resolve_account("agent2", cfg_a2)
+                    self.assertEqual(cm.exception.code, 1)
+                self.assertIn("Missing role-specific credentials for role 'agent2'", stderr_capture.getvalue())
+
+    def test_gitignore_contains_env_jira_wildcard(self):
+        """.gitignore must contain .env.jira* to prevent committing per-role credentials (ATT-6147)."""
+        gitignore_path = os.path.join(REPO_ROOT, ".gitignore")
+        with open(gitignore_path, "r", encoding="utf-8") as f:
+            content = f.read()
+        self.assertIn(".env.jira*", content)
+
+    def test_hoechstmass_example_has_no_human_credentials(self):
+        """.env.jira.example must not contain human credentials JIRA_USER or JIRA_TOKEN (ATT-6147 AC-1)."""
+        example_path = os.path.join(REPO_ROOT, "tools", "hoechstmass", ".env.jira.example")
+        with open(example_path, "r", encoding="utf-8") as f:
+            content = f.read()
+        self.assertNotIn("JIRA_USER=", content)
+        self.assertNotIn("JIRA_TOKEN=", content)
+
 
 class TestRolePrecedenceAndAttribution(unittest.TestCase):
     """Verifies REQ-PRO-020 / TST-PRO-013: Role Locking, Precedence, Anti-Spoofing & Actor Comment Attribution."""

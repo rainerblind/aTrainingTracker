@@ -319,7 +319,7 @@
 ### TST-PRO-012: **Multi-Account Jira Authentication, Atomic Resolution & Terminal Error Handling Verification** [Verified]
 - **Requirement(s)**: `REQ-PRO-019`
 - **Component**: **Multi-Account Jira Authentication, Atomic Resolution & Terminal Error Handling Verification**
-- **Jira**: ``ATT-1123` / `ATT-1200` / `ATT-6146``
+- **Jira**: ``ATT-1123` / `ATT-1200` / `ATT-6146` / `ATT-6147``
 - **Test Description**:
   1. Unit Test Credential Configuration Parsing (`.env.jira`): Verify `get_config()` and `resolve_account(role)` parse role-specific keys (`JIRA_AGENT1_USER`, `JIRA_AGENT1_TOKEN`, `JIRA_AGENT2_USER`, `JIRA_AGENT2_TOKEN`, `JIRA_COORDINATOR_USER`, `JIRA_COORDINATOR_TOKEN`) alongside base `JIRA_USER`, `JIRA_TOKEN`.
   2. Unit Test Role Credential Isolation & Elimination of Default Fallback (ATT-6146): Verify that when both role user and token are set, role credentials are used; verify that when role credentials are missing or partial for automated roles (`agent1`, `agent2`, `coordinator`), `resolve_account` aborts with exit code 1 and writes credential isolation error to `stderr`, refusing fallback to `(JIRA_USER, JIRA_TOKEN)` under ASPICE SUP.1.
@@ -327,6 +327,7 @@
   4. Unit Test Basic Auth Header Generation: Verify `get_headers(role)` produces base64 Basic Auth headers matching the resolved credentials.
   5. Backward Compatibility Invariant: Verify that single-account setups run without warnings or errors.
   6. Standard Library Invariant: Verify all unit tests and tooling run with zero pip dependencies on Python 3 standard library.
+  7. Unit Test Per-Role Credential Partitioning & Gitignore Wildcard (ATT-6147): Verify that `get_config(role="agent1")` loads `.env.jira.agent1` and isolates credentials; verify that invoking with `--as agent2` without `agent2` credentials exits with code 1; verify `.gitignore` contains `.env.jira*`; verify `tools/hoechstmass/.env.jira.example` contains zero human credentials.
 
 ### TST-PRO-013: **Role Locking, Precedence, Anti-Spoofing & Actor Comment Attribution Verification** [Verified]
 - **Requirement(s)**: `REQ-PRO-020`
