@@ -61,6 +61,7 @@ private fun buildMatrixFeatureRow(
     prefs: WorkoutCardSectionPreferences,
     onPrefsChange: (WorkoutCardSectionPreferences) -> Unit
 ): MatrixFeatureRow = when (type) {
+    WorkoutSectionType.RPE_AND_FEEL -> MatrixFeatureRow(type, R.string.settings_workout_card_rpe_feel, prefs.showRpeAndFeel) { onPrefsChange(prefs.copy(showRpeAndFeel = it)) }
     WorkoutSectionType.DETAILS -> MatrixFeatureRow(type, R.string.workout_detail_section_details, prefs.showDetails) { onPrefsChange(prefs.copy(showDetails = it)) }
     WorkoutSectionType.DESCRIPTION -> MatrixFeatureRow(type, R.string.settings_workout_card_description, prefs.showDescription) { onPrefsChange(prefs.copy(showDescription = it)) }
     WorkoutSectionType.EXTREMA -> MatrixFeatureRow(type, R.string.settings_workout_card_extrema, prefs.showExtrema) { onPrefsChange(prefs.copy(showExtrema = it)) }

@@ -315,6 +315,12 @@ object FitWorkoutParser {
             val sessionIf = primarySession?.intensityFactor?.toDouble()?.takeIf { it > 0.0 }
             val sessionTss = primarySession?.trainingStressScore?.toDouble()?.takeIf { it > 0.0 }
             val sessionWorkKj = primarySession?.totalWork?.toDouble()?.takeIf { it > 0.0 }?.let { it / 1000.0 }
+            val sessionRpe = primarySession?.workoutRpe?.toInt()?.let { raw ->
+                (raw / 10).coerceIn(1, 10)
+            }
+            val sessionFeel = primarySession?.workoutFeel?.toInt()?.let { raw ->
+                (Math.round(raw.toFloat() / 25f) + 1).coerceIn(1, 5)
+            }
 
             var bSportType = FitSportMapper.mapFitSport(primarySession?.sport, primarySession?.subSport)
             var resolvedSportId = if (bSportType != BSportType.UNKNOWN) {
@@ -360,6 +366,8 @@ object FitWorkoutParser {
                     sessionIntensityFactor = sessionIf,
                     sessionTss = sessionTss,
                     sessionWorkKj = sessionWorkKj,
+                    sessionRpe = sessionRpe,
+                    sessionFeel = sessionFeel,
                     rawRrIntervals = extractedRrIntervals,
                     parsedRrBeats = extractedRrBeats
                 )

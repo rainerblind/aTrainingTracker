@@ -75,6 +75,7 @@ internal fun parsePhotoThumbnailSize(
  * Configurable section visibility preferences for detailed workout journal cards (REQ-UI-210 / ATT-1714 / REQ-UI-229 / REQ-UI-240 / REQ-UI-388 / REQ-UI-414.6).
  */
 data class WorkoutCardSectionPreferences(
+    val showRpeAndFeel: Boolean = false,
     val showDetails: Boolean = true,
     val showDescription: Boolean = true,
     val showExtrema: Boolean = true,
@@ -140,6 +141,7 @@ class MyPreferenceManager(context: Context) {
         val SEGMENT_FILTER_CRITERIA_JSON = stringPreferencesKey("segment_filter_criteria_json")
         val CLUSTER_FILTER_CRITERIA_JSON = stringPreferencesKey("cluster_filter_criteria_json")
 
+        val WORKOUT_CARD_SHOW_RPE_AND_FEEL = booleanPreferencesKey("workout_card_show_rpe_and_feel")
         val WORKOUT_CARD_SHOW_DETAILS = booleanPreferencesKey("workout_card_show_details")
         val WORKOUT_CARD_SHOW_DESCRIPTION = booleanPreferencesKey("workout_card_show_description")
         val WORKOUT_CARD_SHOW_EXTREMA = booleanPreferencesKey("workout_card_show_extrema")
@@ -185,6 +187,7 @@ class MyPreferenceManager(context: Context) {
 
     val workoutCardPreferencesFlow: Flow<WorkoutCardSectionPreferences> = dataStore.data.map { preferences ->
         WorkoutCardSectionPreferences(
+            showRpeAndFeel = preferences[WORKOUT_CARD_SHOW_RPE_AND_FEEL] ?: false,
             showDetails = preferences[WORKOUT_CARD_SHOW_DETAILS] ?: true,
             showDescription = preferences[WORKOUT_CARD_SHOW_DESCRIPTION] ?: true,
             showExtrema = preferences[WORKOUT_CARD_SHOW_EXTREMA] ?: true,
@@ -215,6 +218,7 @@ class MyPreferenceManager(context: Context) {
 
     suspend fun setWorkoutCardPreferences(prefs: WorkoutCardSectionPreferences) {
         dataStore.edit { preferences ->
+            preferences[WORKOUT_CARD_SHOW_RPE_AND_FEEL] = prefs.showRpeAndFeel
             preferences[WORKOUT_CARD_SHOW_DETAILS] = prefs.showDetails
             preferences[WORKOUT_CARD_SHOW_DESCRIPTION] = prefs.showDescription
             preferences[WORKOUT_CARD_SHOW_EXTREMA] = prefs.showExtrema

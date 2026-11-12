@@ -105,7 +105,7 @@ class WorkoutSummariesCardioPowerTrendTest {
 
         val dateStr = "2026-06-15 14:30:00"
         val expectedMs = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.ROOT).apply {
-            timeZone = java.util.TimeZone.getDefault()
+            timeZone = java.util.TimeZone.getTimeZone("UTC")
         }.parse(dateStr)!!.time
 
         every { mockCursor.getLong(0) } returns 42L

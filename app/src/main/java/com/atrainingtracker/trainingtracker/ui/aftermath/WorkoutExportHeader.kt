@@ -40,7 +40,9 @@ data class WorkoutExportHeader(
     val calories: Int? = null,
     val totalAscent: Int? = null,
     val totalDescent: Int? = null,
-    val avgSpeedMps: Double? = null
+    val avgSpeedMps: Double? = null,
+    val rpe: Int? = null,
+    val feel: Int? = null
 )
 
 /**

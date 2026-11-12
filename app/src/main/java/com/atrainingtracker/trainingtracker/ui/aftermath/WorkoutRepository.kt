@@ -791,6 +791,8 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
                 val ascIdx = col(WorkoutSummariesDatabaseManager.WorkoutSummaries.ASCENDING)
                 val descIdx = col(WorkoutSummariesDatabaseManager.WorkoutSummaries.DESCENDING)
                 val spdIdx = col(WorkoutSummariesDatabaseManager.WorkoutSummaries.SPEED_AVERAGE_mps)
+                val rpeIdx = col(WorkoutSummariesDatabaseManager.WorkoutSummaries.RPE)
+                val feelIdx = col(WorkoutSummariesDatabaseManager.WorkoutSummaries.FEEL)
 
                 return WorkoutExportHeader(
                     workoutId = if (idIdx >= 0 && !cursor.isNull(idIdx)) cursor.getLong(idIdx) else DatabaseConstants.INVALID_ID,
@@ -808,7 +810,9 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
                     calories = if (calIdx >= 0 && !cursor.isNull(calIdx)) cursor.getInt(calIdx) else null,
                     totalAscent = if (ascIdx >= 0 && !cursor.isNull(ascIdx)) cursor.getInt(ascIdx) else null,
                     totalDescent = if (descIdx >= 0 && !cursor.isNull(descIdx)) cursor.getInt(descIdx) else null,
-                    avgSpeedMps = if (spdIdx >= 0 && !cursor.isNull(spdIdx)) cursor.getDouble(spdIdx) else null
+                    avgSpeedMps = if (spdIdx >= 0 && !cursor.isNull(spdIdx)) cursor.getDouble(spdIdx) else null,
+                    rpe = if (rpeIdx >= 0 && !cursor.isNull(rpeIdx)) cursor.getInt(rpeIdx) else null,
+                    feel = if (feelIdx >= 0 && !cursor.isNull(feelIdx)) cursor.getInt(feelIdx) else null
                 )
             }
         } catch (e: Exception) {
@@ -1069,7 +1073,9 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
         goal: String?,
         isCommute: Boolean,
         source: String,
-        uploadToStrava: Boolean
+        uploadToStrava: Boolean,
+        rpe: Int? = null,
+        feel: Int? = null
     ): Long {
         val summaryValues = ContentValues().apply {
             put(WorkoutSummariesDatabaseManager.WorkoutSummaries.FILE_BASE_NAME, fileBaseName)
@@ -1086,6 +1092,12 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
             }
             if (isCommute) {
                 put(WorkoutSummariesDatabaseManager.WorkoutSummaries.COMMUTE, 1)
+            }
+            if (rpe != null) {
+                put(WorkoutSummariesDatabaseManager.WorkoutSummaries.RPE, rpe)
+            }
+            if (feel != null) {
+                put(WorkoutSummariesDatabaseManager.WorkoutSummaries.FEEL, feel)
             }
             put(WorkoutSummariesDatabaseManager.WorkoutSummaries.FINISHED, 1)
             put(WorkoutSummariesDatabaseManager.WorkoutSummaries.SOURCE, source)

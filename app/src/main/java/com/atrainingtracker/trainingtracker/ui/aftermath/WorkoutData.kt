@@ -111,6 +111,8 @@ data class WorkoutData(
 
     val stravaActivityData: String? = null,
     val recordingErrors: String? = null,
+    val rpe: Int? = null,
+    val feel: Int? = null,
     val clusterId: Long = -1,
     val clusterName: String? = null,
     val startLocationName: String? = null,

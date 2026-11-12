@@ -830,6 +830,18 @@ private fun RenderWorkoutDetailCardSections(
 ) {
     sections.forEach { section ->
         when (section) {
+            WorkoutDetailSectionType.RPE_AND_FEEL -> {
+                if (workoutData.rpe != null || workoutData.feel != null) {
+                    WorkoutRpeFeelSection(
+                        rpe = workoutData.rpe,
+                        feel = workoutData.feel,
+                        activeTimeSec = workoutData.activeTimeSec,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 4.dp)
+                    )
+                }
+            }
             WorkoutDetailSectionType.DETAILS -> {
                 WorkoutDetails(
                     data = workoutData.detailsData,

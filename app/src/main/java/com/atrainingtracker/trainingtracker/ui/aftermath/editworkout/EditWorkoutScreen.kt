@@ -68,6 +68,7 @@ import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.exporter.FileFormat
+import com.atrainingtracker.trainingtracker.ui.aftermath.RpeFeelEditorControls
 import com.atrainingtracker.trainingtracker.ui.clusters.EditWorkoutClusterDialog
 import com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClusterSelectionDialog
 import com.atrainingtracker.trainingtracker.ui.components.DropdownSelector
@@ -94,6 +95,7 @@ fun EditWorkoutDialog(
 ) {
     // Observe LiveData from ViewModel
     val workoutData by viewModel.workoutData.collectAsState()
+    val cardPrefs by viewModel.cardPreferences.collectAsState()
     val sportTypes by viewModel.sportTypeNames.observeAsState(emptyList())
     val equipmentNames by viewModel.equipmentNames.observeAsState(emptyList())
 
@@ -365,6 +367,17 @@ fun EditWorkoutDialog(
                         color = MaterialTheme.colorScheme.onSurface
                     )
                 }
+            }
+
+            // 5c. RPE and Feel (REQ-WKO-036)
+            val showRpeAndFeel = cardPrefs.showRpeAndFeel || (workoutData?.rpe != null) || (workoutData?.feel != null)
+            if (showRpeAndFeel) {
+                RpeFeelEditorControls(
+                    rpe = workoutData?.rpe,
+                    feel = workoutData?.feel,
+                    onRpeChange = { viewModel.updateRpe(it) },
+                    onFeelChange = { viewModel.updateFeel(it) }
+                )
             }
 
             // 6. Description

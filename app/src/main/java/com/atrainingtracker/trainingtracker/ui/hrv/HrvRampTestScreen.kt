@@ -71,6 +71,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.atrainingtracker.R
+import com.atrainingtracker.trainingtracker.ui.theme.TTColor
 import java.util.Locale
 
 /**
@@ -326,8 +327,8 @@ private fun PreFlightSensorCard(
             )
 
             val statusColor = when (tier) {
-                SensorQualityTier.HIGH -> Color(0xFF2E7D32)
-                SensorQualityTier.MODERATE -> Color(0xFFF57F17)
+                SensorQualityTier.HIGH -> TTColor.HrvQualityHigh
+                SensorQualityTier.MODERATE -> TTColor.HrvQualityModerate
                 SensorQualityTier.UNSUITABLE -> MaterialTheme.colorScheme.error
             }
 
@@ -476,7 +477,7 @@ private fun ActivePacingGuidanceCard(
                     Icon(
                         imageVector = Icons.Default.Favorite,
                         contentDescription = null,
-                        tint = Color(0xFFD32F2F),
+                        tint = TTColor.HrvHeartRateRed,
                         modifier = Modifier.size(24.dp)
                     )
                     Text(
@@ -526,7 +527,7 @@ private fun ActivePacingGuidanceCard(
                         .fillMaxWidth()
                         .testTag("hrv_test_early_complete_banner"),
                     shape = RoundedCornerShape(8.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFF2E7D32).copy(alpha = 0.15f))
+                    colors = CardDefaults.cardColors(containerColor = TTColor.HrvSuccessGreen.copy(alpha = 0.15f))
                 ) {
                     Column(
                         modifier = Modifier.padding(12.dp),
@@ -536,7 +537,7 @@ private fun ActivePacingGuidanceCard(
                             text = stringResource(R.string.hrv_test_early_complete_title),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
-                            color = Color(0xFF2E7D32)
+                            color = TTColor.HrvSuccessGreen
                         )
                         Text(
                             text = stringResource(R.string.hrv_test_early_complete_desc),
@@ -548,7 +549,7 @@ private fun ActivePacingGuidanceCard(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .testTag("hrv_test_cooldown_button"),
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2E7D32))
+                            colors = ButtonDefaults.buttonColors(containerColor = TTColor.HrvSuccessGreen)
                         ) {
                             Text(stringResource(R.string.hrv_test_btn_cooldown))
                         }
@@ -606,13 +607,13 @@ private fun ProtocolFinishedCard(
             Box(
                 modifier = Modifier
                     .size(64.dp)
-                    .background(Color(0xFF2E7D32).copy(alpha = 0.15f), CircleShape),
+                    .background(TTColor.HrvSuccessGreen.copy(alpha = 0.15f), CircleShape),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = Icons.Default.Check,
                     contentDescription = null,
-                    tint = Color(0xFF2E7D32),
+                    tint = TTColor.HrvSuccessGreen,
                     modifier = Modifier.size(36.dp)
                 )
             }

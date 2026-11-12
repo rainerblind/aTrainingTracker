@@ -615,8 +615,56 @@ class WorkoutSummariesRealSqliteMigrationTest {
     }
 
     @Test
-    fun testSchemaRegistryMatchesV29() {
-        assertEquals(29, DatabaseSchemaRegistry.getMaxSupportedVersion("WorkoutSummaries.db"))
+    fun testIncrementalUpgradeV29ToV30AddsRpeAndFeelColumns() {
+        val database = checkNotNull(db)
+        scaffoldV22Schema(database)
+        helper.onUpgrade(database, 22, 29)
+        database.version = 29
+
+        // Insert workout at v29
+        val cv = ContentValues().apply {
+            put(WorkoutSummaries.WORKOUT_NAME, "Tempo Ride v29")
+            put(WorkoutSummaries.DISTANCE_TOTAL_m, 35000.0)
+        }
+        val insertedWorkoutId = database.insertOrThrow(WorkoutSummaries.TABLE, null, cv)
+        assertEquals(1L, insertedWorkoutId)
+
+        // Upgrade v29 -> v30
+        helper.onUpgrade(database, 29, 30)
+        database.version = 30
+
+        // Verify columns exist in real SQLite
+        assertTrue(RealSqliteTestHelper.hasColumn(database, WorkoutSummaries.TABLE, WorkoutSummaries.RPE))
+        assertTrue(RealSqliteTestHelper.hasColumn(database, WorkoutSummaries.TABLE, WorkoutSummaries.FEEL))
+
+        // Existing row must have null rpe and feel
+        database.query(WorkoutSummaries.TABLE, null, "${WorkoutSummaries.C_ID} = ?", arrayOf("1"), null, null, null).use { cursor ->
+            assertTrue(cursor.moveToFirst())
+            val rpeIdx = cursor.getColumnIndexOrThrow(WorkoutSummaries.RPE)
+            val feelIdx = cursor.getColumnIndexOrThrow(WorkoutSummaries.FEEL)
+            assertTrue("Existing row must have null rpe", cursor.isNull(rpeIdx))
+            assertTrue("Existing row must have null feel", cursor.isNull(feelIdx))
+        }
+
+        // Test updating rpe and feel
+        val updateCv = ContentValues().apply {
+            put(WorkoutSummaries.RPE, 7)
+            put(WorkoutSummaries.FEEL, 4)
+        }
+        database.update(WorkoutSummaries.TABLE, updateCv, "${WorkoutSummaries.C_ID} = ?", arrayOf("1"))
+
+        database.query(WorkoutSummaries.TABLE, null, "${WorkoutSummaries.C_ID} = ?", arrayOf("1"), null, null, null).use { cursor ->
+            assertTrue(cursor.moveToFirst())
+            val rpeIdx = cursor.getColumnIndexOrThrow(WorkoutSummaries.RPE)
+            val feelIdx = cursor.getColumnIndexOrThrow(WorkoutSummaries.FEEL)
+            assertEquals(7, cursor.getInt(rpeIdx))
+            assertEquals(4, cursor.getInt(feelIdx))
+        }
+    }
+
+    @Test
+    fun testSchemaRegistryMatchesV30() {
+        assertEquals(30, DatabaseSchemaRegistry.getMaxSupportedVersion("WorkoutSummaries.db"))
     }
 }
 

@@ -43,8 +43,9 @@ class TrackOnMapScreenSectionSlottingContractTest {
         val defaultOrder = WorkoutSectionType.DEFAULT_ORDER
         val (preMap, postMap) = partitionSections(defaultOrder)
 
-        // Default: [DETAILS, DESCRIPTION, EXTREMA, PHOTOS] before MAP (REQ-UI-285 / REQ-UI-414.6 / REQ-UI-499)
+        // Default: [RPE_AND_FEEL, DETAILS, DESCRIPTION, EXTREMA, PHOTOS] before MAP (REQ-WKO-037 / REQ-UI-285 / REQ-UI-414.6 / REQ-UI-499)
         assertEquals(listOf(
+            WorkoutSectionType.RPE_AND_FEEL,
             WorkoutSectionType.DETAILS,
             WorkoutSectionType.DESCRIPTION,
             WorkoutSectionType.EXTREMA,

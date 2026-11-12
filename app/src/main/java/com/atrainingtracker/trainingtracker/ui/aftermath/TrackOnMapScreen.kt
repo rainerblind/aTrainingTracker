@@ -736,6 +736,18 @@ fun TrackOnMapScreen(
                                 )
                             }
                         }
+                        WorkoutSectionType.RPE_AND_FEEL -> {
+                            if (workoutData.rpe != null || workoutData.feel != null) {
+                                WorkoutRpeFeelSection(
+                                    rpe = workoutData.rpe,
+                                    feel = workoutData.feel,
+                                    activeTimeSec = workoutData.activeTimeSec,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 16.dp, vertical = 4.dp)
+                                )
+                            }
+                        }
                         WorkoutSectionType.DETAILS,
                         WorkoutSectionType.PHOTOS,
                         WorkoutSectionType.MAP -> {
