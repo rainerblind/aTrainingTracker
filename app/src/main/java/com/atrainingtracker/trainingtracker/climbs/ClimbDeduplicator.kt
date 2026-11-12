@@ -101,6 +101,12 @@ object ClimbDeduplicator {
         if (climbA.id != 0L && climbA.id == climbB.id) return true
 
         val effectiveThreshold = maxOf(thresholdMeters, DEFAULT_ENDPOINT_THRESHOLD_METERS)
+
+        // 0. O(1) Fast Geographic Bounding-Box Pre-Filter (REQ-CLM-011.1)
+        if (!climbA.boundingBox.overlaps(climbB.boundingBox, effectiveThreshold.toDouble())) {
+            return false
+        }
+
         val startDist = computeDistanceMeters(climbA.startLat, climbA.startLng, climbB.startLat, climbB.startLng)
         val endDist = computeDistanceMeters(climbA.endLat, climbA.endLng, climbB.endLat, climbB.endLng)
 
@@ -124,7 +130,7 @@ object ClimbDeduplicator {
             return false
         }
 
-        // 4. Spatial corridor overlap check
+        // 4. Spatial corridor overlap check with segment pruning and early-exit (REQ-CLM-011.1)
         val shorter = if (climbA.distanceMeters <= climbB.distanceMeters) climbA else climbB
         val longer = if (climbA.distanceMeters <= climbB.distanceMeters) climbB else climbA
 
@@ -144,22 +150,56 @@ object ClimbDeduplicator {
         val samplePoints = shorterPoints.filterIndexed { index, _ -> index % step == 0 || index == shorterPoints.lastIndex }
         if (samplePoints.isEmpty()) return false
 
+        val totalSamples = samplePoints.size
+        val requiredMatches = ceil(totalSamples * DEFAULT_MIN_OVERLAP_FRACTION).toInt()
         var matchedCount = 0
-        for (p in samplePoints) {
-            var minDistance = Double.MAX_VALUE
+
+        for ((index, p) in samplePoints.withIndex()) {
+            val remainingSamples = totalSamples - index - 1
+            if (matchedCount + remainingSamples + 1 < requiredMatches) {
+                // Early exit: impossible to reach required match fraction
+                return false
+            }
+
+            val pLat = p.latitude
+            val pLng = p.longitude
+            val cosLat = cos(Math.toRadians(pLat)).coerceAtLeast(0.01)
+            val deltaLat = DEFAULT_CORRIDOR_TOLERANCE_METERS / 111_000.0
+            val deltaLng = DEFAULT_CORRIDOR_TOLERANCE_METERS / (111_000.0 * cosLat)
+            val pMinLat = pLat - deltaLat
+            val pMaxLat = pLat + deltaLat
+            val pMinLng = pLng - deltaLng
+            val pMaxLng = pLng + deltaLng
+
+            var matched = false
             for (i in 0 until longerPoints.size - 1) {
-                val d = distanceToSegmentMeters(p, longerPoints[i], longerPoints[i + 1])
-                if (d < minDistance) {
-                    minDistance = d
+                val a = longerPoints[i]
+                val b = longerPoints[i + 1]
+
+                val segMinLat = minOf(a.latitude, b.latitude)
+                val segMaxLat = maxOf(a.latitude, b.latitude)
+                if (pMinLat > segMaxLat || pMaxLat < segMinLat) continue
+
+                val segMinLng = minOf(a.longitude, b.longitude)
+                val segMaxLng = maxOf(a.longitude, b.longitude)
+                if (pMinLng > segMaxLng || pMaxLng < segMinLng) continue
+
+                val d = distanceToSegmentMeters(p, a, b)
+                if (d <= DEFAULT_CORRIDOR_TOLERANCE_METERS) {
+                    matched = true
+                    break
                 }
             }
-            if (minDistance <= DEFAULT_CORRIDOR_TOLERANCE_METERS) {
+
+            if (matched) {
                 matchedCount++
+                if (matchedCount >= requiredMatches) {
+                    return true
+                }
             }
         }
 
-        val overlapFraction = matchedCount.toDouble() / samplePoints.size
-        return overlapFraction >= DEFAULT_MIN_OVERLAP_FRACTION
+        return matchedCount >= requiredMatches
     }
 
     /**

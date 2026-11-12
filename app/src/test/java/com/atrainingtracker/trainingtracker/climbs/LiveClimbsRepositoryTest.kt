@@ -390,11 +390,43 @@ class LiveClimbsRepositoryTest {
 
         assertEquals(listOf(sampleClimb), repository.allStoredClimbs.value)
 
-        val updatedClimbs = listOf(sampleClimb, sampleClimb.copy(id = 2L, name = "Climb 2"))
+        val climb2Path = listOf(
+            PathPoint(distance = 0.0, latLng = LatLng(48.0, 11.0), altitude = 500.0),
+            PathPoint(distance = 500.0, latLng = LatLng(48.005, 11.0), altitude = 550.0),
+            PathPoint(distance = 1000.0, latLng = LatLng(48.01, 11.0), altitude = 600.0)
+        )
+        val climb2 = sampleClimb.copy(
+            id = 2L,
+            name = "Climb 2",
+            startLat = 48.0,
+            startLng = 11.0,
+            endLat = 48.01,
+            endLng = 11.0,
+            pathPoints = climb2Path
+        )
+        val updatedClimbs = listOf(sampleClimb, climb2)
         coEvery { mockClimbsDb.getAllClimbs() } returns updatedClimbs
 
         repository.refreshClimbs(null)
         assertEquals(updatedClimbs, repository.allStoredClimbs.value)
+    }
+
+    @Test
+    fun testAllStoredClimbs_deduplicatesOverlappingClimbsOnRefresh() = runTest(testDispatcher) {
+        // REQ-CLM-011.3: LiveClimbsRepository publishes single pre-deduplicated allStoredClimbs list
+        val duplicateClimb = sampleClimb.copy(
+            id = 200L,
+            name = "Sample Climb Duplicate",
+            startLat = sampleClimb.startLat + 0.0005,
+            startLng = sampleClimb.startLng + 0.0005,
+            endLat = sampleClimb.endLat + 0.0005,
+            endLng = sampleClimb.endLng + 0.0005
+        )
+        coEvery { mockClimbsDb.getAllClimbs() } returns listOf(sampleClimb, duplicateClimb)
+
+        repository.refreshClimbs(null)
+        assertEquals("allStoredClimbs must deduplicate overlapping climb rows on refresh", 1, repository.allStoredClimbs.value.size)
+        assertEquals(sampleClimb.id, repository.allStoredClimbs.value[0].id)
     }
 
     @Test
