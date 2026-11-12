@@ -341,6 +341,11 @@ object TuningPreferencesDefaults {
     const val DEFAULT_HRV_ARTIFACT_GATE_THRESHOLD_PERCENT = 5.0f
     const val MIN_HRV_ARTIFACT_GATE_THRESHOLD_PERCENT = 3.0f
     const val MAX_HRV_ARTIFACT_GATE_THRESHOLD_PERCENT = 5.0f
+
+    const val DEFAULT_SHOW_MORNING_CHECK_ON_START_SCREEN = true
+    const val DEFAULT_MORNING_CHECK_CUTOFF_HOUR = 11
+    const val MIN_MORNING_CHECK_CUTOFF_HOUR = 6
+    const val MAX_MORNING_CHECK_CUTOFF_HOUR = 15
 }
 
 /**
@@ -423,6 +428,8 @@ data class TuningConfig(
     val enableMorningEnergy: Boolean = TuningPreferencesDefaults.DEFAULT_ENABLE_MORNING_ENERGY,
     val enableMuscleSoreness: Boolean = TuningPreferencesDefaults.DEFAULT_ENABLE_MUSCLE_SORENESS,
     val enableContextTags: Boolean = TuningPreferencesDefaults.DEFAULT_ENABLE_CONTEXT_TAGS,
+    val showMorningCheckOnStartScreen: Boolean = TuningPreferencesDefaults.DEFAULT_SHOW_MORNING_CHECK_ON_START_SCREEN,
+    val morningCheckCutoffHour: Int = TuningPreferencesDefaults.DEFAULT_MORNING_CHECK_CUTOFF_HOUR,
     val dfaA1ThresholdT1: Float = TuningPreferencesDefaults.DEFAULT_DFA_A1_THRESHOLD_T1,
     val dfaA1ThresholdT2: Float = TuningPreferencesDefaults.DEFAULT_DFA_A1_THRESHOLD_T2,
     val hrvArtifactGateThresholdPercent: Float = TuningPreferencesDefaults.DEFAULT_HRV_ARTIFACT_GATE_THRESHOLD_PERCENT,
@@ -594,6 +601,8 @@ class TuningPreferencesDataStore(private val context: Context) {
         val KEY_ENABLE_MORNING_ENERGY: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_enable_morning_energy")
         val KEY_ENABLE_MUSCLE_SORENESS: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_enable_muscle_soreness")
         val KEY_ENABLE_CONTEXT_TAGS: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_enable_context_tags")
+        val KEY_SHOW_MORNING_CHECK_ON_START_SCREEN: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_show_morning_check_on_start_screen")
+        val KEY_MORNING_CHECK_CUTOFF_HOUR: Preferences.Key<Int> = intPreferencesKey("tuning_morning_check_cutoff_hour")
         val KEY_DFA_A1_THRESHOLD_T1: Preferences.Key<Float> = floatPreferencesKey("tuning_dfa_a1_threshold_t1")
         val KEY_DFA_A1_THRESHOLD_T2: Preferences.Key<Float> = floatPreferencesKey("tuning_dfa_a1_threshold_t2")
         val KEY_HRV_ARTIFACT_GATE_THRESHOLD_PERCENT: Preferences.Key<Float> = floatPreferencesKey("tuning_hrv_artifact_gate_threshold_percent")
@@ -695,6 +704,8 @@ class TuningPreferencesDataStore(private val context: Context) {
             KEY_ENABLE_MORNING_ENERGY,
             KEY_ENABLE_MUSCLE_SORENESS,
             KEY_ENABLE_CONTEXT_TAGS,
+            KEY_SHOW_MORNING_CHECK_ON_START_SCREEN,
+            KEY_MORNING_CHECK_CUTOFF_HOUR,
             KEY_DFA_A1_THRESHOLD_T1,
             KEY_DFA_A1_THRESHOLD_T2,
             KEY_RADAR_EDGE_SIDE,
@@ -1116,6 +1127,11 @@ data class AutoPausePreferences(
             enableMorningEnergy = prefs[KEY_ENABLE_MORNING_ENERGY] ?: TuningPreferencesDefaults.DEFAULT_ENABLE_MORNING_ENERGY,
             enableMuscleSoreness = prefs[KEY_ENABLE_MUSCLE_SORENESS] ?: TuningPreferencesDefaults.DEFAULT_ENABLE_MUSCLE_SORENESS,
             enableContextTags = prefs[KEY_ENABLE_CONTEXT_TAGS] ?: TuningPreferencesDefaults.DEFAULT_ENABLE_CONTEXT_TAGS,
+            showMorningCheckOnStartScreen = prefs[KEY_SHOW_MORNING_CHECK_ON_START_SCREEN] ?: TuningPreferencesDefaults.DEFAULT_SHOW_MORNING_CHECK_ON_START_SCREEN,
+            morningCheckCutoffHour = (prefs[KEY_MORNING_CHECK_CUTOFF_HOUR] ?: TuningPreferencesDefaults.DEFAULT_MORNING_CHECK_CUTOFF_HOUR).coerceIn(
+                TuningPreferencesDefaults.MIN_MORNING_CHECK_CUTOFF_HOUR,
+                TuningPreferencesDefaults.MAX_MORNING_CHECK_CUTOFF_HOUR
+            ),
             dfaA1ThresholdT1 = prefs[KEY_DFA_A1_THRESHOLD_T1] ?: TuningPreferencesDefaults.DEFAULT_DFA_A1_THRESHOLD_T1,
             dfaA1ThresholdT2 = prefs[KEY_DFA_A1_THRESHOLD_T2] ?: TuningPreferencesDefaults.DEFAULT_DFA_A1_THRESHOLD_T2,
             hrvArtifactGateThresholdPercent = prefs[KEY_HRV_ARTIFACT_GATE_THRESHOLD_PERCENT] ?: TuningPreferencesDefaults.DEFAULT_HRV_ARTIFACT_GATE_THRESHOLD_PERCENT,
@@ -1182,6 +1198,30 @@ data class AutoPausePreferences(
     suspend fun setEnableMorningSleepAndWellness(enabled: Boolean) {
         context.dataStore.edit { prefs ->
             prefs[KEY_ENABLE_MORNING_SLEEP_AND_WELLNESS] = enabled
+        }
+    }
+
+    val showMorningCheckOnStartScreenFlow: Flow<Boolean> = context.dataStore.data.map { prefs ->
+        prefs[KEY_SHOW_MORNING_CHECK_ON_START_SCREEN] ?: TuningPreferencesDefaults.DEFAULT_SHOW_MORNING_CHECK_ON_START_SCREEN
+    }
+
+    suspend fun setShowMorningCheckOnStartScreen(enabled: Boolean) {
+        context.dataStore.edit { prefs ->
+            prefs[KEY_SHOW_MORNING_CHECK_ON_START_SCREEN] = enabled
+        }
+    }
+
+    val morningCheckCutoffHourFlow: Flow<Int> = context.dataStore.data.map { prefs ->
+        (prefs[KEY_MORNING_CHECK_CUTOFF_HOUR] ?: TuningPreferencesDefaults.DEFAULT_MORNING_CHECK_CUTOFF_HOUR)
+            .coerceIn(TuningPreferencesDefaults.MIN_MORNING_CHECK_CUTOFF_HOUR, TuningPreferencesDefaults.MAX_MORNING_CHECK_CUTOFF_HOUR)
+    }
+
+    suspend fun setMorningCheckCutoffHour(hour: Int) {
+        context.dataStore.edit { prefs ->
+            prefs[KEY_MORNING_CHECK_CUTOFF_HOUR] = hour.coerceIn(
+                TuningPreferencesDefaults.MIN_MORNING_CHECK_CUTOFF_HOUR,
+                TuningPreferencesDefaults.MAX_MORNING_CHECK_CUTOFF_HOUR
+            )
         }
     }
 
@@ -1491,6 +1531,11 @@ data class AutoPausePreferences(
             prefs[KEY_ENABLE_MORNING_ENERGY] = config.enableMorningEnergy
             prefs[KEY_ENABLE_MUSCLE_SORENESS] = config.enableMuscleSoreness
             prefs[KEY_ENABLE_CONTEXT_TAGS] = config.enableContextTags
+            prefs[KEY_SHOW_MORNING_CHECK_ON_START_SCREEN] = config.showMorningCheckOnStartScreen
+            prefs[KEY_MORNING_CHECK_CUTOFF_HOUR] = config.morningCheckCutoffHour.coerceIn(
+                TuningPreferencesDefaults.MIN_MORNING_CHECK_CUTOFF_HOUR,
+                TuningPreferencesDefaults.MAX_MORNING_CHECK_CUTOFF_HOUR
+            )
             prefs[KEY_DFA_A1_THRESHOLD_T1] = clampedDfaA1T1
             prefs[KEY_DFA_A1_THRESHOLD_T2] = clampedDfaA1T2
             prefs[KEY_HRV_ARTIFACT_GATE_THRESHOLD_PERCENT] = clampedArtifactGate

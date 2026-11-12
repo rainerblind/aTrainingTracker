@@ -8431,3 +8431,28 @@
   3. *Tier 1 Resource Compilation & Navigation Suite (`TST-UI-524.3`)*:
      - Execute `./gradlew processDebugResources` and `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.navigation.*"`.
      - Assert 100% pass rate.
+
+
+### TST-UI-525: **Configurable Morning HRV Check Launch Button on Start Tracking Screen Verification Suite** [Verified]
+- **Target Release**: `V5.0.0`
+- **Requirement(s)**: `REQ-UI-525`
+- **Component**: `TuningPreferencesDataStore.kt`, `DevicesDatabaseManager.java`, `DeviceDataRepository.kt`, `HrvReadinessDatabaseManager.kt`, `HrvReadinessRepository.kt`, `ControlTrackingViewModel.kt`, `TrackingTabsScreen.kt`, `ControlTrackingScreen.kt`
+- **Jira**: `ATT-7532`
+- **Test Description**:
+  1. *Tuning Preferences DataStore & Config Verification (`TST-UI-525.1`, `TuningConfigTest.kt`)*:
+     - Verify default values: `showMorningCheckOnStartScreen = true`, `morningCheckCutoffHour = 11`.
+     - Verify mutation and clamping of cutoff hour (`6..15`).
+  2. *Paired HRM Sensor SQLite Query Verification (`TST-UI-525.2`, `DevicesDatabaseManagerTest.kt`)*:
+     - Verify `hasPairedHeartRateDevices()` returns false when table is empty or contains only non-HRM paired devices (speed, cadence, radar).
+     - Verify `hasPairedHeartRateDevices()` returns true when at least one `DeviceType.HRM` device with `PAIRED > 0` is present.
+  3. *Today's Morning Check SQLite Query Verification (`TST-UI-525.3`, `HrvReadinessDatabaseManagerTest.kt`)*:
+     - Verify `hasCompletedMorningCheck(dateIso)` returns false when no entries exist for `dateIso`.
+     - Verify `hasCompletedMorningCheck(dateIso)` returns true once an entry with `dateIso` is inserted.
+  4. *ControlTrackingViewModel Reactive Visibility Rules Verification (`TST-UI-525.4`, `ControlTrackingViewModelTest.kt`)*:
+     - Verify `isMorningHrvCheckVisible` evaluates to true when mode is `READY`, pref is true, paired HRM exists, hour < cutoff, and today check is not completed.
+     - Verify `isMorningHrvCheckVisible` evaluates to false when: mode is `RECORDING` or `PAUSED`; pref is false; no paired HRM; hour >= cutoff; or check is already completed.
+  5. *9-Language Localization Parity Verification (`TST-UI-525.5`, `TranslationParityTest.kt`)*:
+     - Verify all 5 new string resources exist across all 9 locales with 100% parity.
+  6. *Targeted Unit Test Regression Suite (`TST-UI-525.6`)*:
+     - Execute `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.settings.*" --tests "com.atrainingtracker.banalservice.database.*" --tests "com.atrainingtracker.trainingtracker.database.hrv.*" --tests "com.atrainingtracker.trainingtracker.ui.tracking.controltracking.*"`.
+     - Assert 100% pass rate.

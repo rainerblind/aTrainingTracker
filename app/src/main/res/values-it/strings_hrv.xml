@@ -273,4 +273,11 @@
     <string name="morning_hrv_tag_rest">Riposo</string>
     <string name="morning_hrv_btn_save_wellness">Salva benessere mattutino</string>
     <string name="morning_hrv_wellness_saved_toast">Benessere mattutino salvato</string>
+
+    <!-- Morning HRV Check on Start Screen (ATT-7532 / REQ-UI-525) -->
+    <string name="hrv_morning_check_start_button">Controllo mattutino</string>
+    <string name="tuning_show_morning_check_on_start_screen_title">Controllo HRV mattutino nella schermata iniziale</string>
+    <string name="tuning_show_morning_check_on_start_screen_desc">Mostra un pulsante nella schermata iniziale prima dell\'allenamento per avviare il controllo HRV mattutino se è associato un sensore di frequenza cardiaca.</string>
+    <string name="tuning_morning_check_cutoff_hour_title">Ora limite per il controllo mattutino</string>
+    <string name="tuning_morning_check_cutoff_hour_desc">Visualizzato nella schermata iniziale fino alle %d:00.</string>
 </resources>

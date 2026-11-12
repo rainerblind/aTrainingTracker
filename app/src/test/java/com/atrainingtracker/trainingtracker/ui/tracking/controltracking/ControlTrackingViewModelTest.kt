@@ -34,7 +34,11 @@ import com.atrainingtracker.trainingtracker.TrackingMode
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
 import com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository
+import com.atrainingtracker.trainingtracker.database.hrv.HrvReadinessRepository
+import com.atrainingtracker.trainingtracker.settings.TuningConfig
+import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
+import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkConstructor
@@ -87,6 +91,7 @@ class ControlTrackingViewModelTest {
         every { Log.i(any<String>(), any<String>()) } returns 0
         every { Log.w(any<String>(), any<String>()) } returns 0
         every { Log.e(any<String>(), any<String>()) } returns 0
+        every { Log.e(any<String>(), any<String>(), any<Throwable>()) } returns 0
 
         mockDeviceDataRepository = mockk(relaxed = true)
         mockkObject(DeviceDataRepository.Companion)
@@ -95,6 +100,7 @@ class ControlTrackingViewModelTest {
         every { mockDeviceDataRepository.allDevices } returns allDevicesFlow
         every { mockDeviceDataRepository.hasPairedRemoteDevices() } answers { mockDevicesDb.hasPairedRemoteDevices() }
         every { mockDeviceDataRepository.hasPairedBluetoothDevices() } answers { mockDevicesDb.hasPairedBluetoothDevices() }
+        every { mockDeviceDataRepository.hasPairedHeartRateDevices() } answers { mockDevicesDb.hasPairedHeartRateDevices() }
 
         mockBanalRepo = mockk(relaxed = true)
         mockkObject(BANALServiceRepository.Companion)
@@ -109,6 +115,7 @@ class ControlTrackingViewModelTest {
         every { DevicesDatabaseManager.getInstance(any()) } returns mockDevicesDb
         every { mockDevicesDb.hasPairedRemoteDevices() } returns false
         every { mockDevicesDb.hasPairedBluetoothDevices() } returns false
+        every { mockDevicesDb.hasPairedHeartRateDevices() } returns false
 
         mockWorkoutSummariesDb = mockk(relaxed = true)
         mockkStatic(WorkoutSummariesDatabaseManager::class)
@@ -118,6 +125,16 @@ class ControlTrackingViewModelTest {
         val mockWorkoutRepo = mockk<WorkoutRepository>(relaxed = true)
         WorkoutRepository.resetForTesting(mockWorkoutRepo)
         every { mockWorkoutRepo.hasUnfinishedWorkout() } answers { mockWorkoutSummariesDb.hasUnfinishedWorkout() }
+
+        val mockTuningDataStore = mockk<TuningPreferencesDataStore>(relaxed = true)
+        mockkObject(TuningPreferencesDataStore.Companion)
+        every { TuningPreferencesDataStore.getInstance(any()) } returns mockTuningDataStore
+        every { mockTuningDataStore.tuningConfigFlow } returns MutableStateFlow(TuningConfig())
+
+        val mockHrvRepo = mockk<HrvReadinessRepository>(relaxed = true)
+        mockkObject(HrvReadinessRepository.Companion)
+        every { HrvReadinessRepository.getInstance(any()) } returns mockHrvRepo
+        coEvery { mockHrvRepo.hasCompletedMorningCheck(any()) } returns false
 
         mockkConstructor(android.content.Intent::class)
         every { anyConstructed<android.content.Intent>().setPackage(any()) } answers { self as android.content.Intent }
@@ -371,6 +388,116 @@ class ControlTrackingViewModelTest {
             ),
             emittedEvents
         )
+
+        job.cancel()
+    }
+
+    @Test
+    fun isMorningHrvCheckVisible_whenAllConditionsMet_emitsTrue() = runTest {
+        val trackingModeLiveData = MutableLiveData(TrackingMode.READY)
+        every { mockBanalRepo.trackingMode } returns trackingModeLiveData
+
+        val configFlow = MutableStateFlow(
+            TuningConfig(
+                showMorningCheckOnStartScreen = true,
+                morningCheckCutoffHour = 11
+            )
+        )
+        val mockTuning = mockk<TuningPreferencesDataStore>(relaxed = true)
+        every { mockTuning.tuningConfigFlow } returns configFlow
+
+        val mockHrv = mockk<HrvReadinessRepository>(relaxed = true)
+        coEvery { mockHrv.hasCompletedMorningCheck(any()) } returns false
+
+        // Provide paired HRM device
+        allDevicesFlow.value = listOf(
+            createDeviceUiData(1L, DeviceType.HRM, "Polar H10")
+        )
+
+        // Time at 08:30 AM (before 11:00 AM cutoff)
+        val testTime = java.time.LocalTime.of(8, 30)
+        val viewModel = ControlTrackingViewModel(
+            application = application,
+            tuningPreferencesDataStore = mockTuning,
+            hrvReadinessRepository = mockHrv,
+            timeProvider = { testTime }
+        )
+
+        val values = mutableListOf<Boolean>()
+        val job = launch(testDispatcher) {
+            viewModel.isMorningHrvCheckVisible.collect { values.add(it) }
+        }
+
+        assertTrue("Expected button visible when all 5 conditions hold", values.last())
+
+        // Condition 1: Workout starts (TrackingMode.TRACKING) -> hides
+        trackingModeLiveData.value = TrackingMode.TRACKING
+        assertFalse("Expected button hidden during active tracking", values.last())
+
+        // Back to READY -> visible again
+        trackingModeLiveData.value = TrackingMode.READY
+        assertTrue("Expected button visible again when back in READY", values.last())
+
+        // Condition 2: Preference disabled -> hides
+        configFlow.value = configFlow.value.copy(showMorningCheckOnStartScreen = false)
+        assertFalse("Expected button hidden when preference disabled", values.last())
+        configFlow.value = configFlow.value.copy(showMorningCheckOnStartScreen = true)
+        assertTrue("Expected button visible when preference re-enabled", values.last())
+
+        // Condition 3: No paired HRM device -> hides
+        allDevicesFlow.value = listOf(
+            createDeviceUiData(2L, DeviceType.BIKE_SPEED, "Speed Sensor")
+        )
+        assertFalse("Expected button hidden when no HRM paired", values.last())
+        allDevicesFlow.value = listOf(
+            createDeviceUiData(1L, DeviceType.HRM, "Polar H10")
+        )
+        assertTrue("Expected button visible when HRM paired", values.last())
+
+        // Condition 4: Morning check completed for today -> hides
+        coEvery { mockHrv.hasCompletedMorningCheck(any()) } returns true
+        viewModel.refreshMorningCheckStatus()
+        assertFalse("Expected button hidden once check is completed today", values.last())
+
+        job.cancel()
+    }
+
+    @Test
+    fun isMorningHrvCheckVisible_whenPastCutoffHour_emitsFalse() = runTest {
+        val trackingModeLiveData = MutableLiveData(TrackingMode.READY)
+        every { mockBanalRepo.trackingMode } returns trackingModeLiveData
+
+        val configFlow = MutableStateFlow(
+            TuningConfig(
+                showMorningCheckOnStartScreen = true,
+                morningCheckCutoffHour = 11
+            )
+        )
+        val mockTuning = mockk<TuningPreferencesDataStore>(relaxed = true)
+        every { mockTuning.tuningConfigFlow } returns configFlow
+
+        val mockHrv = mockk<HrvReadinessRepository>(relaxed = true)
+        coEvery { mockHrv.hasCompletedMorningCheck(any()) } returns false
+
+        allDevicesFlow.value = listOf(
+            createDeviceUiData(1L, DeviceType.HRM, "Polar H10")
+        )
+
+        // Time at 11:00 AM (past/at cutoff)
+        val testTime = java.time.LocalTime.of(11, 0)
+        val viewModel = ControlTrackingViewModel(
+            application = application,
+            tuningPreferencesDataStore = mockTuning,
+            hrvReadinessRepository = mockHrv,
+            timeProvider = { testTime }
+        )
+
+        val values = mutableListOf<Boolean>()
+        val job = launch(testDispatcher) {
+            viewModel.isMorningHrvCheckVisible.collect { values.add(it) }
+        }
+
+        assertFalse("Expected button hidden when at or past cutoff hour", values.last())
 
         job.cancel()
     }

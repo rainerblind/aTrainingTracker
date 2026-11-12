@@ -345,7 +345,8 @@ fun ATrainingTrackerApp(
                     )
                     TrackingTabsScreen(
                         trackingTabsViewModel = trackingTabsViewModel,
-                        onNavigateToHrvTest = { navController.navigate(NavRoutes.HRV_TEST) }
+                        onNavigateToHrvTest = { navController.navigate(NavRoutes.HRV_TEST) },
+                        onNavigateToMorningHrv = { navController.navigate(NavRoutes.MORNING_HRV) }
                     )
                 }
 

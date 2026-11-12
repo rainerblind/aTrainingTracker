@@ -273,4 +273,11 @@
     <string name="morning_hrv_tag_rest">Rust</string>
     <string name="morning_hrv_btn_save_wellness">Ochtendwelzijn opslaan</string>
     <string name="morning_hrv_wellness_saved_toast">Ochtendwelzijn opgeslagen</string>
+
+    <!-- Morning HRV Check on Start Screen (ATT-7532 / REQ-UI-525) -->
+    <string name="hrv_morning_check_start_button">Ochtendcontrole</string>
+    <string name="tuning_show_morning_check_on_start_screen_title">Ochtend HRV-controle op startscherm</string>
+    <string name="tuning_show_morning_check_on_start_screen_desc">Toont voor de training een knop op het startscherm om de ochtend HRV-controle te starten als er een hartslagsensor is gekoppeld.</string>
+    <string name="tuning_morning_check_cutoff_hour_title">Eindtijd ochtendcontrole</string>
+    <string name="tuning_morning_check_cutoff_hour_desc">Zichtbaar op het startscherm tot %d:00 uur.</string>
 </resources>

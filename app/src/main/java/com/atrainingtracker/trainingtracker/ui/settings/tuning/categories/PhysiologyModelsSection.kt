@@ -105,6 +105,10 @@ fun PhysiologyModelsSection(
     onEnableMuscleSorenessChange: (Boolean) -> Unit = {},
     enableContextTags: Boolean = false,
     onEnableContextTagsChange: (Boolean) -> Unit = {},
+    showMorningCheckOnStartScreen: Boolean = TuningPreferencesDefaults.DEFAULT_SHOW_MORNING_CHECK_ON_START_SCREEN,
+    onShowMorningCheckOnStartScreenChange: (Boolean) -> Unit = {},
+    morningCheckCutoffHour: Int = TuningPreferencesDefaults.DEFAULT_MORNING_CHECK_CUTOFF_HOUR,
+    onMorningCheckCutoffHourChange: (Int) -> Unit = {},
     showRpeAndFeel: Boolean = false,
     onShowRpeAndFeelChange: (Boolean) -> Unit = {}
 ) {
@@ -127,6 +131,8 @@ fun PhysiologyModelsSection(
     val morningEnergyCallback = remember(onEnableMorningEnergyChange) { onEnableMorningEnergyChange }
     val muscleSorenessCallback = remember(onEnableMuscleSorenessChange) { onEnableMuscleSorenessChange }
     val contextTagsCallback = remember(onEnableContextTagsChange) { onEnableContextTagsChange }
+    val showMorningCheckOnStartScreenCallback = remember(onShowMorningCheckOnStartScreenChange) { onShowMorningCheckOnStartScreenChange }
+    val morningCheckCutoffHourCallback = remember(onMorningCheckCutoffHourChange) { onMorningCheckCutoffHourChange }
     val rpeAndFeelCallback = remember(onShowRpeAndFeelChange) { onShowRpeAndFeelChange }
 
     Column(
@@ -318,6 +324,30 @@ fun PhysiologyModelsSection(
                 title = stringResource(R.string.tuning_morning_context_tags_title),
                 isChecked = enableContextTags,
                 onCheckedChange = contextTagsCallback
+            )
+        }
+
+        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+
+        // Morning HRV Check on Start Screen (REQ-UI-525.1)
+        TuningToggleItem(
+            title = stringResource(R.string.tuning_show_morning_check_on_start_screen_title),
+            isChecked = showMorningCheckOnStartScreen,
+            onCheckedChange = showMorningCheckOnStartScreenCallback,
+            summary = stringResource(R.string.tuning_show_morning_check_on_start_screen_desc)
+        )
+        if (showMorningCheckOnStartScreen) {
+            TuningSliderItem(
+                title = stringResource(R.string.tuning_morning_check_cutoff_hour_title),
+                valueText = "${morningCheckCutoffHour}:00",
+                helperText = stringResource(R.string.tuning_morning_check_cutoff_hour_desc, morningCheckCutoffHour),
+                defaultText = "${TuningPreferencesDefaults.DEFAULT_MORNING_CHECK_CUTOFF_HOUR}:00",
+                value = morningCheckCutoffHour.toFloat(),
+                onValueChange = { hourFloat ->
+                    morningCheckCutoffHourCallback(kotlin.math.round(hourFloat).toInt().coerceIn(6, 15))
+                },
+                valueRange = 6.0f..15.0f,
+                steps = 8
             )
         }
 

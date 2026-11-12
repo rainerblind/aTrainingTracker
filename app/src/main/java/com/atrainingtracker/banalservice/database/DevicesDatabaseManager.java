@@ -343,6 +343,34 @@ public class DevicesDatabaseManager {
         }
     }
 
+    /**
+     * Checks whether at least one paired Heart Rate (HRM) device exists in the database (ATT-7532 / REQ-UI-525.2).
+     *
+     * @return true if at least one paired HRM device is registered in SQLite, false otherwise.
+     */
+    public boolean hasPairedHeartRateDevices() {
+        if (DEBUG) Log.d(TAG, "hasPairedHeartRateDevices()");
+        SQLiteDatabase db = getDatabase();
+        if (db == null || !db.isOpen()) {
+            return false;
+        }
+        try (Cursor cursor = db.query(
+                DevicesDbHelper.DEVICES,
+                new String[]{DevicesDbHelper.C_ID},
+                DevicesDbHelper.PAIRED + " > 0 AND " + DevicesDbHelper.DEVICE_TYPE + "=?",
+                new String[]{DeviceType.HRM.name()},
+                null,
+                null,
+                null,
+                "1"
+        )) {
+            return cursor != null && cursor.moveToFirst();
+        } catch (Exception e) {
+            Log.e(TAG, "Error checking paired heart rate devices", e);
+            return false;
+        }
+    }
+
     public DeviceIdAndNameLists getDeviceIdAndNameLists(SensorType sensorType) {
         if (DEBUG) Log.i(TAG, "getDeviceIdAndNameLists(" + sensorType + ")");
 

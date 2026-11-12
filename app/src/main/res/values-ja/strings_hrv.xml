@@ -273,4 +273,11 @@
     <string name="morning_hrv_tag_rest">休養</string>
     <string name="morning_hrv_btn_save_wellness">朝のウェルネスを保存</string>
     <string name="morning_hrv_wellness_saved_toast">朝のウェルネスが保存されました</string>
+
+    <!-- Morning HRV Check on Start Screen (ATT-7532 / REQ-UI-525) -->
+    <string name="hrv_morning_check_start_button">モーニングチェック</string>
+    <string name="tuning_show_morning_check_on_start_screen_title">スタート画面の朝のHRVチェック</string>
+    <string name="tuning_show_morning_check_on_start_screen_desc">心拍センサーがペアリングされている場合、ワークアウト前にスタート画面に朝のHRVチェックを開始するボタンを表示します。</string>
+    <string name="tuning_morning_check_cutoff_hour_title">モーニングチェック終了時刻</string>
+    <string name="tuning_morning_check_cutoff_hour_desc">スタート画面に %d:00 まで表示されます。</string>
 </resources>

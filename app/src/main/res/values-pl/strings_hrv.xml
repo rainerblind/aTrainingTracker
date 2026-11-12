@@ -273,4 +273,11 @@
     <string name="morning_hrv_tag_rest">Odpoczynek</string>
     <string name="morning_hrv_btn_save_wellness">Zapisz poranne samopoczucie</string>
     <string name="morning_hrv_wellness_saved_toast">Poranne samopoczucie zapisane</string>
+
+    <!-- Morning HRV Check on Start Screen (ATT-7532 / REQ-UI-525) -->
+    <string name="hrv_morning_check_start_button">Poranny pomiar</string>
+    <string name="tuning_show_morning_check_on_start_screen_title">Poranny pomiar HRV na ekranie startowym</string>
+    <string name="tuning_show_morning_check_on_start_screen_desc">Wyświetla przycisk na ekranie startowym przed treningiem, aby rozpocząć poranny pomiar HRV, jeśli sparowany jest czujnik tętna.</string>
+    <string name="tuning_morning_check_cutoff_hour_title">Godzina graniczna porannego pomiaru</string>
+    <string name="tuning_morning_check_cutoff_hour_desc">Wyświetlany na ekranie startowym do godziny %d:00.</string>
 </resources>

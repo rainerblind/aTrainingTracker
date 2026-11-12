@@ -17079,3 +17079,52 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 • *Then* it renders the official interlocking dual-loop heart with upper-right blue dot with high contrast.
 
 **Invariants**: Resource IDs `R.drawable.ic_google_drive` and `R.drawable.ic_health_connect` remain stable; zero changes to OAuth or Health Connect API logic.
+
+
+### REQ-UI-525: Configurable Morning HRV Check Launch Button on Start Tracking Screen [Verified]
+- **Target Release**: `V5.0.0`
+- **Tickets**: `ATT-7532`
+- **Tests**: `TST-UI-525`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Implementation**: `TuningPreferencesDataStore.kt`, `DevicesDatabaseManager.java`, `DeviceDataRepository.kt`, `HrvReadinessDatabaseManager.kt`, `HrvReadinessRepository.kt`, `ControlTrackingViewModel.kt`, `TrackingTabsScreen.kt`, `ControlTrackingScreen.kt`, `PhysiologyModelsSection.kt`, `AdvancedTuningScreen.kt`
+- **Rationale**: Following `REQ-UI-513`, athletes performing waking morning HRV check-ins require an immediate 1-tap shortcut on the Start screen (`ControlTrackingScreen`) without navigating nested menus. To prevent cockpit clutter during active tracking and avoid irrelevant prompts for athletes without heart rate sensors, after today's reading has been taken, or past morning hours, the launcher must be strictly conditional and user-configurable.
+- **Description**:
+  1. *Tuning Preferences Configuration (`REQ-UI-525.1`)*:
+     - `TuningPreferencesDataStore.kt` and `TuningConfig.kt` SHALL provide `showMorningCheckOnStartScreen: Boolean` (default `true`) and `morningCheckCutoffHour: Int` (default `11`, range 6..15).
+     - These preferences SHALL be surfaced under the Physiology Models accordion section (`PhysiologyModelsSection.kt`) in `AdvancedTuningScreen.kt` and `AdvancedTuningDialog.kt` with localized titles and summaries.
+  2. *Paired Heart Rate Sensor Check (`REQ-UI-525.2`)*:
+     - `DevicesDatabaseManager.java` SHALL provide `hasPairedHeartRateDevices(): Boolean` which queries SQLite `DEVICES` table for `PAIRED > 0 AND DEVICE_TYPE = 'HRM'`.
+     - `DeviceDataRepository.kt` SHALL expose `hasPairedHeartRateDevices(): Boolean` forwarding this query.
+  3. *Today's Morning Check Completion Check (`REQ-UI-525.3`)*:
+     - `HrvReadinessDatabaseManager.kt` SHALL provide `hasCompletedMorningCheck(dateIso: String): Boolean` which queries SQLite `hrv_readiness.db` for the existence of any entry matching `dateIso`.
+     - `HrvReadinessRepository.kt` SHALL expose `hasCompletedMorningCheck(dateIso: String): Boolean`.
+  4. *Reactive Visibility & Navigation Contract on Start Tracking Screen (`REQ-UI-525.4`)*:
+     - `ControlTrackingViewModel.kt` SHALL expose `isMorningHrvCheckVisible: StateFlow<Boolean>` which evaluates to `true` iff ALL of the following conditions hold:
+       1. Tracking state is `TrackingMode.READY` (not `RECORDING`, `PAUSED`, or `STOPPED`).
+       2. `showMorningCheckOnStartScreen == true` in tuning preferences.
+       3. At least one HRM device is paired (`hasPairedHeartRateDevices == true`).
+       4. Local system time is before cutoff hour (`LocalTime.now().hour < morningCheckCutoffHour`).
+       5. No morning HRV check entry exists for today's local date (`!hasCompletedMorningCheck(LocalDate.now().toString())`).
+     - In `ControlTrackingScreen.kt` / `TrackingTabsScreen.kt`, when `isMorningHrvCheckVisible == true`, `bottomContent` SHALL render a prominent "Morgendlicher Check" CTA button styled with `RoundedCornerShape(8.dp)`, `Icons.Default.Favorite` (or Heart icon), and localized text `R.string.hrv_morning_check_start_button`.
+     - Clicking the CTA button SHALL trigger `onNavigateToMorningHrv` navigating to `NavRoutes.MORNING_HRV`.
+     - Once a morning check entry is saved for today and the athlete navigates back to the Start screen, the button SHALL immediately auto-hide for the remainder of the calendar day.
+  5. *9-Language Localization Parity (`REQ-UI-525.5`)*:
+     - All newly introduced string keys (`hrv_morning_check_start_button`, `pref_show_morning_check_title`, `pref_show_morning_check_summary`, `pref_morning_check_cutoff_title`, `pref_morning_check_cutoff_summary`) SHALL be localized across all 9 supported Android resource directories (`values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`).
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* an athlete with at least one paired HRM sensor opens `ControlTrackingScreen` in `TrackingMode.READY` before 11:00 AM on a day with no morning check recorded,
+• *When* the screen renders,
+• *Then* the "Morgendlicher Check" CTA button is visible in `bottomContent` and tapping it navigates to `NavRoutes.MORNING_HRV`.
+• *Given* the athlete completes and saves today's morning check or the local time passes 11:00 AM or `showMorningCheckOnStartScreen` is disabled,
+• *When* `ControlTrackingScreen` renders or resumes,
+• *Then* the CTA button is hidden.
+• *Given* the athlete starts a workout (`TrackingMode.RECORDING`),
+• *When* the cockpit renders,
+• *Then* the CTA button is hidden.
+• *Given* any of the 9 supported locales,
+• *When* viewing the button or tuning settings,
+• *Then* all titles and summaries are localized with 100% parity and no placeholder text.
+
+**Invariants**: Zero database migrations on `devices.db` or `hrv_readiness.db`; zero modifications to existing morning check scoring, baseline corridors, or workout tracking lifecycle; zero background alarms or wake locks.
