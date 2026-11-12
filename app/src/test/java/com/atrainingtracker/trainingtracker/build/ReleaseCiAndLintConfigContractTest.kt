@@ -26,9 +26,9 @@ import java.io.File
 /**
  * Validates Release CI test gating, AndroidManifest hygiene, Lint configuration,
  * Detekt static analysis, Kover code coverage gating, CI integrity, and instrumented androidTest
- * infrastructure with emulator CI runner (REQ-BLD-002, TST-BLD-002, REQ-PRO-042,
+ * infrastructure with emulator CI runner, and JUnit test results archival across CI runs and release tags (REQ-BLD-002, TST-BLD-002, REQ-PRO-042,
  * TST-PRO-042, REQ-PRO-046, TST-PRO-046, REQ-PRO-047, TST-PRO-047, REQ-PRO-048, TST-PRO-048,
- * REQ-PRO-051, TST-PRO-051, REQ-STP-007, TST-STP-007, REQ-STP-008, TST-STP-008, REQ-STP-009, TST-STP-009, ATT-6148, ATT-6152, ATT-6153, ATT-6171, ATT-6175, ATT-6184, ATT-6737).
+ * REQ-PRO-051, TST-PRO-051, REQ-PRO-067, TST-PRO-067, REQ-STP-007, TST-STP-007, REQ-STP-008, TST-STP-008, REQ-STP-009, TST-STP-009, ATT-6137, ATT-6148, ATT-6152, ATT-6153, ATT-6171, ATT-6175, ATT-6184, ATT-6737).
  */
 class ReleaseCiAndLintConfigContractTest {
 
@@ -810,5 +810,119 @@ class ReleaseCiAndLintConfigContractTest {
             sprintPlannerContent.contains("docs/management/risk_register.md") &&
                 sprintPlannerContent.contains("REQ-STP-010")
         )
+    }
+
+    /**
+     * Asserts that .github/workflows/android-branch-build.yml archives and uploads JUnit XML and HTML
+     * test reports as workflow artifacts on every CI run using if: always() (REQ-PRO-067.1, TST-PRO-067.1, ATT-6137).
+     */
+    @Test
+    fun testBranchBuildWorkflow_archivesUnitTestResultsWithAlwaysCondition() {
+        val content = findCiWorkflowFile().readText()
+
+        assertTrue(
+            "Branch build workflow must contain 'actions/upload-artifact' for unit test results (REQ-PRO-067.1)",
+            content.contains("Upload Unit Test Results") || content.contains("unit-test-results")
+        )
+        assertTrue(
+            "Branch build test results upload must be guarded with 'if: always()' (REQ-PRO-067.1)",
+            content.contains("if: always()")
+        )
+        assertTrue(
+            "Branch build must archive JUnit test results XML path (REQ-PRO-067.1)",
+            content.contains("app/build/test-results/testDebugUnitTest")
+        )
+        assertTrue(
+            "Branch build must archive JUnit test reports HTML path (REQ-PRO-067.1)",
+            content.contains("app/build/reports/tests/testDebugUnitTest")
+        )
+
+        // Ensure unit test step precedes test report artifact upload
+        val testStepIndex = content.indexOf("./gradlew :app:testDebugUnitTest")
+        val uploadStepIndex = content.indexOf("Upload Unit Test Results")
+        assertTrue(
+            "Unit test execution step must precede test results artifact upload (REQ-PRO-067.1)",
+            testStepIndex != -1 && uploadStepIndex != -1 && testStepIndex < uploadStepIndex
+        )
+    }
+
+    /**
+     * Asserts that .github/workflows/android-release.yml packages versioned JUnit test reports
+     * into junit-test-results-<tag>.zip / tar.gz, uploads them as workflow artifacts, and attaches
+     * them to the GitHub Release alongside release binaries (REQ-PRO-067.2, TST-PRO-067.2, ATT-6137).
+     */
+    @Test
+    fun testReleaseWorkflow_packagesAndAttachesUnitTestResults() {
+        val content = findReleaseWorkflowFile().readText()
+
+        assertTrue(
+            "Release workflow must include a step packaging JUnit test results archive (REQ-PRO-067.2)",
+            content.contains("Package JUnit test results archive") || content.contains("junit-test-results")
+        )
+        assertTrue(
+            "Release workflow must package archive with versioned tag name (REQ-PRO-067.2)",
+            content.contains("junit-test-results-")
+        )
+        assertTrue(
+            "Release workflow must upload release test results artifact (REQ-PRO-067.2)",
+            content.contains("release-unit-test-results") || content.contains("Upload release unit test results")
+        )
+
+        // Verify attachment to GitHub Release step
+        val releaseStepIndex = content.indexOf("softprops/action-gh-release@v2")
+        assertTrue(
+            "Release workflow must contain softprops/action-gh-release@v2 step (REQ-PRO-067.2)",
+            releaseStepIndex != -1
+        )
+        val releaseStepContent = content.substring(releaseStepIndex)
+        assertTrue(
+            "Release workflow must attach junit-test-results archive to GitHub Release (REQ-PRO-067.2)",
+            releaseStepContent.contains("junit-test-results-")
+        )
+    }
+
+    /**
+     * Asserts that docs/engineering/test_results exists, is a symbolic link pointing to
+     * canonical target ../../app/build/reports/tests/testDebugUnitTest, enabling 1-click
+     * developer inspection (REQ-PRO-067.3, TST-PRO-067.3, Rule 67, ATT-6137).
+     */
+    @Test
+    fun testEngineeringTestResultsSymlink_integrityAndCanonicalTarget() {
+        val repoRoot = findRepoRootDir()
+        val testResultsFile = File(repoRoot, "docs/engineering/test_results")
+
+        assertTrue(
+            "docs/engineering/test_results must exist in workspace (REQ-PRO-067.3, Rule 67)",
+            testResultsFile.exists() || java.nio.file.Files.isSymbolicLink(testResultsFile.toPath())
+        )
+        assertTrue(
+            "docs/engineering/test_results must be a symbolic link (REQ-PRO-067.3, Rule 67)",
+            java.nio.file.Files.isSymbolicLink(testResultsFile.toPath())
+        )
+
+        val target = java.nio.file.Files.readSymbolicLink(testResultsFile.toPath()).toString()
+        val expectedTarget = "../../app/build/reports/tests/testDebugUnitTest"
+        assertTrue(
+            "Symlink target '$target' must match expected '$expectedTarget' (REQ-PRO-067.3, Rule 67)",
+            target == expectedTarget
+        )
+    }
+
+    /**
+     * Asserts that both CI and Release workflows have valid non-empty YAML definitions
+     * with valid job structure (REQ-PRO-067.4, TST-PRO-067.5, ATT-6137).
+     */
+    @Test
+    fun testWorkflowYaml_syntaxAndStructure() {
+        val ciWorkflow = findCiWorkflowFile()
+        val releaseWorkflow = findReleaseWorkflowFile()
+
+        for (wf in listOf(ciWorkflow, releaseWorkflow)) {
+            val lines = wf.readLines()
+            assertTrue("${wf.name} must not be empty", lines.isNotEmpty())
+            assertTrue("${wf.name} must define workflow name", lines.any { it.startsWith("name:") })
+            assertTrue("${wf.name} must define triggers (on:)", lines.any { it.startsWith("on:") })
+            assertTrue("${wf.name} must define jobs", lines.any { it.startsWith("jobs:") })
+        }
     }
 }

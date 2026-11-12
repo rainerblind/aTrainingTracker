@@ -3286,6 +3286,39 @@ The workflow SHALL mandate that:
   • *Then* it lists all 11 duplicates with file and line numbers and exits with code 1.
 - **Invariants**: Pure Python 3 standard library; zero Android runtime changes; zero regression in existing governance checks.
 
+### REQ-PRO-067: JUnit Test Results Archival & Evidence Integrity [Verified]
+- **Tests**: `.github/workflows/android-branch-build.yml`, `.github/workflows/android-release.yml`, `docs/engineering/test_results`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/ReleaseCiAndLintConfigContractTest.kt`, `tools/verify_requirement_governance.py`, `tools/test_verify_requirement_governance.py`
+- **Implementation**: CI workflow step uploading JUnit XML and HTML reports on all branch runs (`if: always()`), release workflow step packaging and attaching `junit-test-results-<tag>.zip` (or `.tar.gz`) to GitHub Releases, developer-convenience symlink preservation (`Rule 67`), and automated contract verification.
+- **Rationale**: Under ASPICE SWE.4 BP, SWE.6 BP3, and SUP.8 (Remediation ID: A-10), verification evidence must be baseline-controlled, integrity-preserved, and retrievable per CI run and release tag. Local transient test reports via `docs/engineering/test_results` provide effortless developer inspection, while CI artifact uploads and release tag attachments ensure persistent, auditable verification evidence:
+  1. *CI Branch Run JUnit Archival (`REQ-PRO-067.1`, .github/workflows/android-branch-build.yml)*:
+     • `.github/workflows/android-branch-build.yml` SHALL execute an `actions/upload-artifact@v4` step with `if: always()` immediately following unit tests, archiving both JUnit XML reports (`app/build/test-results/testDebugUnitTest/`) and HTML test reports (`app/build/reports/tests/testDebugUnitTest/`).
+  2. *Release Tag JUnit Test Results Packaging & Attachment (`REQ-PRO-067.2`, .github/workflows/android-release.yml)*:
+     • `.github/workflows/android-release.yml` SHALL package unit test results into a versioned archive `junit-test-results-<tag>.zip` (or `.tar.gz`) named with the release tag and attach it to the GitHub Release via `softprops/action-gh-release@v2` alongside release APK and AAB binaries.
+     • The release workflow SHALL also upload the test results as a workflow artifact.
+  3. *Local 1-Click Developer Symlink Preservation (`REQ-PRO-067.3`, docs/engineering/test_results)*:
+     • `docs/engineering/test_results` SHALL remain a symbolic link pointing to `../../app/build/reports/tests/testDebugUnitTest` (Rule 67), enabling immediate 1-click inspection of local test reports without committing transient HTML files to git.
+  4. *Governance & Contract Verification (`REQ-PRO-067.4`, ReleaseCiAndLintConfigContractTest.kt & tools/verify_requirement_governance.py)*:
+     • `ReleaseCiAndLintConfigContractTest.kt` and `tools/verify_requirement_governance.py` SHALL verify workflow YAML presence and configuration, ensure `if: always()` is configured for CI unit test uploads, verify release archive attachment patterns, and enforce symlink integrity for `docs/engineering/test_results`.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Net-new requirement `REQ-PRO-067` (`REQ-PRO-067.1`–`REQ-PRO-067.4`). Targets `.github/workflows/android-branch-build.yml`, `.github/workflows/android-release.yml`, `docs/engineering/test_results`, `tools/verify_requirement_governance.py`, and `ReleaseCiAndLintConfigContractTest.kt`.
+  2. *Historical Origin & Commit Trace*: Introduced in Sprint 2026-46.4 via ATT-6137 under Epic ATT-6119 (ASPICE CL2 Remediation A-10).
+  3. *Root Reason for Existing Formulation*: Historical CI workflows only uploaded lint and build binaries; release tags lacked attached unit test verification evidence.
+  4. *Preservation of Core Invariants*: Rule 67 canonical layout intact; 100% clean-room test pass rate; release signing and publishing workflows remain non-breaking.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* a CI branch build executing unit tests,
+  • *When* the test execution step completes (pass or fail),
+  • *Then* `actions/upload-artifact@v4` uploads JUnit XML and HTML reports (`if: always()`).
+  • *Given* a release build triggered by a release tag,
+  • *When* unit tests complete and release assets are published,
+  • *Then* a versioned `junit-test-results-<tag>.zip` (or `.tar.gz`) archive is attached to the GitHub Release.
+  • *Given* the repository checkout,
+  • *When* inspecting `docs/engineering/test_results`,
+  • *Then* it is a valid symbolic link pointing to `../../app/build/reports/tests/testDebugUnitTest`.
+  • *Given* the automated contract tests and governance script,
+  • *When* executed,
+  • *Then* symlink integrity and workflow YAML validity pass with 100% success.
+- **Invariants**: Zero modifications to Android production runtime code in `app/src/main/`; Rule 67 canonical directory structure preserved.
+
 
 
 

@@ -997,6 +997,48 @@ diff --git a/docs/requirements/req_process_stability.md b/docs/requirements/req_
         self.assertEqual(set(dups.keys()), set(LEGACY_DUPLICATE_IDS))
         self.assertEqual(len(dups), 11)
 
+    def test_scenario_24_verify_engineering_directory_structure_test_results_symlink(self):
+        """TST-PRO-067.4: Verify verify_engineering_directory_structure enforces test_results symlink."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            eng_dir = os.path.join(tmpdir, "docs", "engineering")
+            os.makedirs(eng_dir, exist_ok=True)
+            for entry in ["analysis", "test_specs", "plans", "walkthroughs", "retros"]:
+                os.makedirs(os.path.join(eng_dir, entry), exist_ok=True)
+
+            # 1. Non-symlink test_results directory fails
+            bad_results = os.path.join(eng_dir, "test_results")
+            os.makedirs(bad_results, exist_ok=True)
+            ok_bad, errs_bad = verify_engineering_directory_structure(eng_dir=eng_dir)
+            self.assertFalse(ok_bad)
+            self.assertTrue(any("must be a symbolic link" in e for e in errs_bad))
+            os.rmdir(bad_results)
+
+            # 2. Symlink with wrong target fails
+            os.symlink("/wrong/target", bad_results)
+            ok_wrong, errs_wrong = verify_engineering_directory_structure(eng_dir=eng_dir)
+            self.assertFalse(ok_wrong)
+            self.assertTrue(any("does not match expected canonical target" in e for e in errs_wrong))
+            os.unlink(bad_results)
+
+            # 3. Canonical symlink passes
+            os.symlink("../../app/build/reports/tests/testDebugUnitTest", bad_results)
+            ok_good, errs_good = verify_engineering_directory_structure(eng_dir=eng_dir)
+            self.assertTrue(ok_good, f"Expected pass, got: {errs_good}")
+
+    def test_scenario_25_workflow_yaml_syntax_validity(self):
+        """TST-PRO-067.5: Assert workflow YAML syntax validity using yaml.safe_load."""
+        import yaml
+        repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+        workflows = [
+            os.path.join(repo_root, ".github", "workflows", "android-branch-build.yml"),
+            os.path.join(repo_root, ".github", "workflows", "android-release.yml"),
+        ]
+        for wf in workflows:
+            self.assertTrue(os.path.exists(wf), f"Workflow file must exist: {wf}")
+            with open(wf, "r", encoding="utf-8") as f:
+                data = yaml.safe_load(f)
+            self.assertIsInstance(data, dict, f"Parsed YAML must be a dict: {wf}")
+            self.assertIn("jobs", data, f"Workflow must contain jobs: {wf}")
 
 
 if __name__ == "__main__":

@@ -770,7 +770,8 @@ def verify_independent_reviews(sprint_name=None, repo_root=None):
 def verify_engineering_directory_structure(eng_dir="docs/engineering"):
     """
     Verifies that docs/engineering/ contains only canonical ASPICE directories and approved files
-    (no stray folders like summaries/, impl_plans/, test_reports/, implementation/, or stray symlinks).
+    (no stray folders like summaries/, impl_plans/, test_reports/, implementation/, or stray symlinks),
+    and enforces symlink integrity for test_results (Rule 67, REQ-PRO-067.3).
     """
     if not os.path.isdir(eng_dir):
         return True, []
@@ -780,6 +781,18 @@ def verify_engineering_directory_structure(eng_dir="docs/engineering"):
             f"ERROR: Non-canonical entries found in {eng_dir}/: {', '.join(unexpected)}. "
             f"Allowed entries: {', '.join(sorted(ALLOWED_ENGINEERING_ENTRIES))}."
         ]
+    test_results_path = os.path.join(eng_dir, "test_results")
+    if os.path.lexists(test_results_path):
+        if not os.path.islink(test_results_path):
+            return False, [
+                f"ERROR: {test_results_path} must be a symbolic link (Rule 67, REQ-PRO-067.3)."
+            ]
+        target = os.readlink(test_results_path)
+        expected_target = "../../app/build/reports/tests/testDebugUnitTest"
+        if target != expected_target:
+            return False, [
+                f"ERROR: {test_results_path} symlink target '{target}' does not match expected canonical target '{expected_target}' (Rule 67, REQ-PRO-067.3)."
+            ]
     return True, []
 
 

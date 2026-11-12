@@ -1940,6 +1940,28 @@
   4. *Clean Repository Governance Parity (`TST-PRO-066.4`, tools/test_verify_requirement_governance.py)*:
   • Verify that running `verify_unique_ids()` against the authentic repository passes cleanly under standard mode without raising errors.
 
+### TST-PRO-067: **JUnit Test Results Archival & Evidence Integrity Contract Test Suite** [Verified]
+- **Requirement(s)**: `REQ-PRO-067`
+- **Component**: `.github/workflows/android-branch-build.yml`, `.github/workflows/android-release.yml`, `docs/engineering/test_results`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/ReleaseCiAndLintConfigContractTest.kt`, `tools/verify_requirement_governance.py`, `tools/test_verify_requirement_governance.py`
+- **Jira**: `ATT-6137`
+- **Test Description**:
+  1. *CI Branch Build Workflow Archival Test (`TST-PRO-067.1`, ReleaseCiAndLintConfigContractTest.kt)*:
+  • Inspect `.github/workflows/android-branch-build.yml`.
+  • Assert presence of an artifact upload step configured with `if: always()` and step name indicating unit test report archival.
+  • Assert artifact paths include `app/build/test-results/testDebugUnitTest/` and `app/build/reports/tests/testDebugUnitTest/`.
+  2. *Release Workflow Test Results Packaging & Attachment Test (`TST-PRO-067.2`, ReleaseCiAndLintConfigContractTest.kt)*:
+  • Inspect `.github/workflows/android-release.yml`.
+  • Assert presence of step packaging `junit-test-results-<tag>.zip` (or `.tar.gz`) from unit test report directories.
+  • Assert that release assets attached via `softprops/action-gh-release@v2` include the versioned test results archive pattern.
+  • Assert workflow artifact upload for release test results.
+  3. *Local Developer Symlink Integrity Test (`TST-PRO-067.3`, ReleaseCiAndLintConfigContractTest.kt & tools/verify_requirement_governance.py)*:
+  • Assert `docs/engineering/test_results` exists and is a symbolic link.
+  • Assert the link target points to `../../app/build/reports/tests/testDebugUnitTest`.
+  4. *Governance Tooling Integration (`TST-PRO-067.4`, tools/test_verify_requirement_governance.py)*:
+  • Assert `verify_engineering_directory_structure()` in `tools/verify_requirement_governance.py` validates `docs/engineering/test_results` symlink target integrity.
+  5. *Workflow YAML Syntax Validation (`TST-PRO-067.5`, tools/test_verify_requirement_governance.py & ReleaseCiAndLintConfigContractTest.kt)*:
+  • Parse `.github/workflows/android-branch-build.yml` and `.github/workflows/android-release.yml` with YAML parser and assert zero syntax errors.
+
 
 
 
