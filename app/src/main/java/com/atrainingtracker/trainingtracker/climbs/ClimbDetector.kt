@@ -188,8 +188,8 @@ object ClimbDetector {
         val avgGrade = if (dist > 0) (gain / dist) * 100.0 else 0.0
         val climbPoints = points.subList(startIdx, peakIdx + 1)
         val maxGrade = calculateMaxGrade(climbPoints)
-        val score = dist * avgGrade
-        val category = ClimbCategory.fromScore(score)
+        val summitAlt = points[peakIdx].altitude
+        val category = ClimbCategory.fromFietsIndex(dist, gain, summitAlt)
         val appContext = context ?: TrainingApplication.getAppContext()
         val climbTitle = appContext?.getString(R.string.climb_title) ?: "Climb"
         val formattedDistance = DistanceFormatter().format_with_units(dist)

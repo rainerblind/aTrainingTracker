@@ -1219,6 +1219,23 @@
   4. *Targeted Regression Verification Suite (`TST-CLM-009.4`)*:
   • Run targeted tests: `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.climbs.*" --tests "com.atrainingtracker.trainingtracker.ui.aftermath.*"` asserting 100% pass rate.
 
+### TST-CLM-010: **Configurable Climb Categorization: FIETS Index & Strava/Garmin Formula Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-CLM-010` (`REQ-CLM-010.1`..`REQ-CLM-010.3`)
+- **Component**: `Climb.kt`, `ClimbDetector.kt`, `TuningPreferencesDataStore.kt`, `NavigationSection.kt`, `ClimbCategorizationFormulaTest.kt`
+- **Jira**: `ATT-7162` | **Target Release**: `V5.0.0`
+- **Test Description**:
+  1. *FIETS Index Mathematical Accuracy & Altitude Bonus Test (`TST-CLM-010.1`, `ClimbCategorizationFormulaTest.kt`)*:
+  • Verify FIETS base calculation $(H^2)/(10 \times D)$, high-altitude bonus above 1000m, and category classification across HC, Cat 1, Cat 2, Cat 3, Cat 4, Uncategorized.
+  2. *Strava/Garmin Formula Backward Compatibility Test (`TST-CLM-010.2`, `ClimbCategorizationFormulaTest.kt`)*:
+  • Verify Strava/Garmin score evaluation and classification matching existing thresholds.
+  3. *Dynamic Re-Categorization Without DB Migration Test (`TST-CLM-010.3`, `ClimbCategorizationFormulaTest.kt`)*:
+  • Verify `Climb.resolveCategory()` evaluates both formulas correctly on existing `Climb` instances with and without pathPoints summit altitude.
+  4. *Preferences Persistence & Reset Test (`TST-CLM-010.4`, `TuningPreferencesDataStoreTest.kt`)*:
+  • Verify `climbScoringFormula` defaults to `FIETS`, persists `STRAVA_GARMIN`, and resets to `FIETS` on `resetToDefaults()`.
+  5. *9-Language Localization Parity Audit (`TST-CLM-010.5`)*:
+  • Verify string resources exist in `values`, `values-de`, `values-es`, `values-fr`, `values-it`, `values-ja`, `values-nl`, `values-pl`, `values-pt` without missing keys or unescaped XML formatting errors.
+
+
 
 
 

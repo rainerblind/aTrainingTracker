@@ -11,6 +11,7 @@
 package com.atrainingtracker.trainingtracker.settings
 
 import com.atrainingtracker.banalservice.devices.radar.RadarLightMode
+import com.atrainingtracker.trainingtracker.climbs.ClimbScoringFormula
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -93,6 +94,8 @@ class TuningConfigTest {
         assertEquals(RadarTrafficOrientation.RIGHT_HAND, TuningPreferencesDefaults.RADAR_TRAFFIC_ORIENTATION)
         assertEquals(true, config.radarLaneChangeTickEnabled)
         assertEquals(true, TuningPreferencesDefaults.RADAR_LANE_CHANGE_TICK_ENABLED)
+        assertEquals(ClimbScoringFormula.FIETS, config.climbScoringFormula)
+        assertEquals(ClimbScoringFormula.FIETS, TuningPreferencesDefaults.DEFAULT_CLIMB_SCORING_FORMULA)
     }
 
     @Test

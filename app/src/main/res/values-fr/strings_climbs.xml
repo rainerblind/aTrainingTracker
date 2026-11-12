@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="tuning_climb_formula_title">Formule de catégorisation des côtes</string>
+    <string name="tuning_climb_formula_desc">L\'indice FIETS pondère la pente et l\'altitude (par défaut). Strava / Garmin catégorise uniquement selon le dénivelé.</string>
+    <string name="tuning_climb_formula_fiets">Indice FIETS</string>
+    <string name="tuning_climb_formula_strava_garmin">Strava / Garmin</string>
+</resources>

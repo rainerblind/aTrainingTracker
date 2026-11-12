@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="tuning_climb_formula_title">Klimcategorisatie-formule</string>
+    <string name="tuning_climb_formula_desc">FIETS-index weegt hellingsgraad en hoogte mee (standaard). Strava / Garmin categoriseert puur op hoogtemeters.</string>
+    <string name="tuning_climb_formula_fiets">FIETS-index</string>
+    <string name="tuning_climb_formula_strava_garmin">Strava / Garmin</string>
+</resources>

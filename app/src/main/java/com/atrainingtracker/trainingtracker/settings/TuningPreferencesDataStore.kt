@@ -41,6 +41,7 @@ import kotlin.math.roundToInt
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.banalservice.devices.radar.RadarLightMode
 import com.atrainingtracker.trainingtracker.TrainingApplication
+import com.atrainingtracker.trainingtracker.climbs.ClimbScoringFormula
 import com.atrainingtracker.trainingtracker.tracker.TrackerService
 import com.atrainingtracker.trainingtracker.ui.tracking.typography.CockpitFontFamily
 import com.atrainingtracker.trainingtracker.ui.tracking.typography.CockpitFontWeight
@@ -154,6 +155,7 @@ object TuningPreferencesDefaults {
     const val SHOW_LIVE_CLIMBS = true
     const val CLIMB_MIN_LENGTH_METERS = 500.0f
     const val CLIMB_MIN_GRADIENT_PERCENT = 3.0f
+    val DEFAULT_CLIMB_SCORING_FORMULA = ClimbScoringFormula.FIETS
 
     const val TURN_PROMPTS_ENABLED = true
     const val TURN_AUDIO_ALERTS_ENABLED = true
@@ -362,6 +364,7 @@ data class TuningConfig(
     val showLiveClimbs: Boolean = TuningPreferencesDefaults.SHOW_LIVE_CLIMBS,
     val climbMinLengthMeters: Float = TuningPreferencesDefaults.CLIMB_MIN_LENGTH_METERS,
     val climbMinGradientPercent: Float = TuningPreferencesDefaults.CLIMB_MIN_GRADIENT_PERCENT,
+    val climbScoringFormula: ClimbScoringFormula = TuningPreferencesDefaults.DEFAULT_CLIMB_SCORING_FORMULA,
     val turnPromptsEnabled: Boolean = TuningPreferencesDefaults.TURN_PROMPTS_ENABLED,
     val turnAudioAlertsEnabled: Boolean = TuningPreferencesDefaults.TURN_AUDIO_ALERTS_ENABLED,
     val turnCueCountdownDistanceMeters: Float = TuningPreferencesDefaults.TURN_CUE_COUNTDOWN_DISTANCE_METERS,
@@ -507,6 +510,7 @@ class TuningPreferencesDataStore(private val context: Context) {
         val KEY_SHOW_LIVE_CLIMBS: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_show_live_climbs")
         val KEY_CLIMB_MIN_LENGTH_METERS: Preferences.Key<Float> = floatPreferencesKey("tuning_climb_min_length_meters")
         val KEY_CLIMB_MIN_GRADIENT_PERCENT: Preferences.Key<Float> = floatPreferencesKey("tuning_climb_min_gradient_percent")
+        val KEY_CLIMB_SCORING_FORMULA: Preferences.Key<String> = stringPreferencesKey("tuning_climb_scoring_formula")
         val KEY_TURN_PROMPTS_ENABLED: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_turn_prompts_enabled")
         val KEY_TURN_AUDIO_ALERTS_ENABLED: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_turn_audio_alerts_enabled")
         val KEY_TURN_CUE_COUNTDOWN_DISTANCE: Preferences.Key<Float> = floatPreferencesKey("tuning_turn_cue_countdown_distance")
@@ -629,6 +633,7 @@ class TuningPreferencesDataStore(private val context: Context) {
             KEY_SHOW_LIVE_CLIMBS,
             KEY_CLIMB_MIN_LENGTH_METERS,
             KEY_CLIMB_MIN_GRADIENT_PERCENT,
+            KEY_CLIMB_SCORING_FORMULA,
             KEY_TURN_PROMPTS_ENABLED,
             KEY_TURN_AUDIO_ALERTS_ENABLED,
             KEY_TURN_CUE_COUNTDOWN_DISTANCE,
@@ -965,6 +970,13 @@ data class AutoPausePreferences(
         val showLiveClimbs = prefs[KEY_SHOW_LIVE_CLIMBS] ?: TuningPreferencesDefaults.SHOW_LIVE_CLIMBS
         val climbMinLength = prefs[KEY_CLIMB_MIN_LENGTH_METERS] ?: TuningPreferencesDefaults.CLIMB_MIN_LENGTH_METERS
         val climbMinGradient = prefs[KEY_CLIMB_MIN_GRADIENT_PERCENT] ?: TuningPreferencesDefaults.CLIMB_MIN_GRADIENT_PERCENT
+        val climbScoringFormula = prefs[KEY_CLIMB_SCORING_FORMULA]?.let { name ->
+            try {
+                ClimbScoringFormula.valueOf(name)
+            } catch (e: Exception) {
+                TuningPreferencesDefaults.DEFAULT_CLIMB_SCORING_FORMULA
+            }
+        } ?: TuningPreferencesDefaults.DEFAULT_CLIMB_SCORING_FORMULA
 
         val turnPromptsEnabled = prefs[KEY_TURN_PROMPTS_ENABLED] ?: TuningPreferencesDefaults.TURN_PROMPTS_ENABLED
         val turnAudioAlertsEnabled = prefs[KEY_TURN_AUDIO_ALERTS_ENABLED] ?: TuningPreferencesDefaults.TURN_AUDIO_ALERTS_ENABLED
@@ -1022,6 +1034,7 @@ data class AutoPausePreferences(
             showLiveClimbs = showLiveClimbs,
             climbMinLengthMeters = climbMinLength,
             climbMinGradientPercent = climbMinGradient,
+            climbScoringFormula = climbScoringFormula,
             turnPromptsEnabled = turnPromptsEnabled,
             turnAudioAlertsEnabled = turnAudioAlertsEnabled,
             turnCueCountdownDistanceMeters = clampedTurnCountdown,
@@ -1400,6 +1413,7 @@ data class AutoPausePreferences(
             prefs[KEY_SHOW_LIVE_CLIMBS] = config.showLiveClimbs
             prefs[KEY_CLIMB_MIN_LENGTH_METERS] = config.climbMinLengthMeters
             prefs[KEY_CLIMB_MIN_GRADIENT_PERCENT] = config.climbMinGradientPercent
+            prefs[KEY_CLIMB_SCORING_FORMULA] = config.climbScoringFormula.name
             prefs[KEY_TURN_PROMPTS_ENABLED] = config.turnPromptsEnabled
             prefs[KEY_TURN_AUDIO_ALERTS_ENABLED] = config.turnAudioAlertsEnabled
             prefs[KEY_TURN_CUE_COUNTDOWN_DISTANCE] = config.turnCueCountdownDistanceMeters.coerceIn(
@@ -1502,6 +1516,12 @@ data class AutoPausePreferences(
     suspend fun updateShowLiveClimbs(show: Boolean) {
         context.dataStore.edit { prefs ->
             prefs[KEY_SHOW_LIVE_CLIMBS] = show
+        }
+    }
+
+    suspend fun updateClimbScoringFormula(formula: ClimbScoringFormula) {
+        context.dataStore.edit { prefs ->
+            prefs[KEY_CLIMB_SCORING_FORMULA] = formula.name
         }
     }
 

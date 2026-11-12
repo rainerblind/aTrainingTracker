@@ -23,6 +23,7 @@ import android.location.Location
 import com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository
 import com.atrainingtracker.trainingtracker.database.ClimbsDatabaseManager
 import com.atrainingtracker.trainingtracker.repositories.RoutesRepository
+import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore
 import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.SphericalUtil
 import com.atrainingtracker.trainingtracker.geo.PolylineProgressTracker
@@ -44,6 +45,12 @@ class LiveClimbsRepository private constructor(
     private val climbsDb: ClimbsDatabaseManager = ClimbsDatabaseManager.getInstance(context),
     private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 ) {
+
+    private val tuningDataStore: TuningPreferencesDataStore? = try {
+        TuningPreferencesDataStore.getInstance(context)
+    } catch (e: Throwable) {
+        null
+    }
 
     private val _activeLiveClimb = MutableStateFlow<LiveClimbData?>(null)
     val activeLiveClimb: StateFlow<LiveClimbData?> = _activeLiveClimb.asStateFlow()
@@ -73,6 +80,34 @@ class LiveClimbsRepository private constructor(
                 }
             }
         }
+
+        // 3. Observe climb categorization formula changes to dynamically re-categorize climbs (REQ-CLM-010.2)
+        if (tuningDataStore != null) {
+            scope.launch {
+                try {
+                    tuningDataStore.tuningConfigFlow
+                        .map { it.climbScoringFormula }
+                        .distinctUntilChanged()
+                        .collect { formula ->
+                            applyFormula(formula)
+                        }
+                } catch (e: Throwable) {
+                    // Ignore in headless / test environments
+                }
+            }
+        }
+    }
+
+    /**
+     * Dynamically re-categorizes stored and live climbs according to [formula] (REQ-CLM-010.2).
+     */
+    fun applyFormula(formula: ClimbScoringFormula) {
+        _allStoredClimbs.value = _allStoredClimbs.value.map { it.copy(category = it.resolveCategory(formula)) }
+        _allClimbs.value = _allClimbs.value.map { it.copy(category = it.resolveCategory(formula)) }
+        val active = _activeLiveClimb.value
+        if (active != null) {
+            _activeLiveClimb.value = active.copy(climb = active.climb.copy(category = active.climb.resolveCategory(formula)))
+        }
     }
 
     /**
@@ -83,19 +118,30 @@ class LiveClimbsRepository private constructor(
     }
 
     suspend fun refreshClimbs(activeRouteId: Long?) {
-        val stored = climbsDb.getAllClimbs()
+        val formula = try {
+            tuningDataStore?.getTuningConfig()?.climbScoringFormula ?: ClimbScoringFormula.FIETS
+        } catch (e: Throwable) {
+            ClimbScoringFormula.FIETS
+        }
+
+        val stored = climbsDb.getAllClimbs().map { it.copy(category = it.resolveCategory(formula)) }
         _allStoredClimbs.value = stored
 
-        val list = if (activeRouteId != null) {
+        val rawList = if (activeRouteId != null) {
             climbsDb.getClimbsForRoute(activeRouteId)
         } else {
             stored
         }
+        val list = rawList.map { it.copy(category = it.resolveCategory(formula)) }
         _allClimbs.value = list
 
         val active = _activeLiveClimb.value
-        if (active != null && list.none { it.id == active.climb.id }) {
-            _activeLiveClimb.value = null
+        if (active != null) {
+            if (list.none { it.id == active.climb.id }) {
+                _activeLiveClimb.value = null
+            } else {
+                _activeLiveClimb.value = active.copy(climb = active.climb.copy(category = active.climb.resolveCategory(formula)))
+            }
         }
     }
 

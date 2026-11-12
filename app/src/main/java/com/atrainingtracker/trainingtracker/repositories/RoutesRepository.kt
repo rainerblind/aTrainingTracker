@@ -24,6 +24,8 @@ import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.climbs.Climb
 import com.atrainingtracker.trainingtracker.climbs.ClimbDetector
+import com.atrainingtracker.trainingtracker.climbs.ClimbScoringFormula
+import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore
 import com.atrainingtracker.trainingtracker.database.ClimbsDatabaseManager
 import com.atrainingtracker.trainingtracker.database.RouteSource
 import com.atrainingtracker.trainingtracker.database.RouteSummary
@@ -45,6 +47,8 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -127,6 +131,20 @@ class RoutesRepository internal constructor(
                 }
             }
         }
+
+        // Auto-refresh climbs when formula changes (REQ-CLM-010.2)
+        repositoryScope.launch {
+            try {
+                TuningPreferencesDataStore.getInstance(context).tuningConfigFlow
+                    .map { it.climbScoringFormula }
+                    .distinctUntilChanged()
+                    .collect {
+                        refreshRoutes()
+                    }
+            } catch (e: Throwable) {
+                // Ignore in headless / test environments
+            }
+        }
     }
 
     /**
@@ -134,6 +152,11 @@ class RoutesRepository internal constructor(
      * to on-the-fly detection via ClimbDetector if no climbs are stored (REQ-UI-274).
      */
     private suspend fun enrichRouteWithClimbs(route: RouteWithPath): RouteWithPath {
+        val formula = try {
+            TuningPreferencesDataStore.getInstance(context).getTuningConfig().climbScoringFormula
+        } catch (e: Throwable) {
+            ClimbScoringFormula.FIETS
+        }
         var climbs = climbsDb.getClimbsForRoute(route.summary.id)
         if (climbs.isEmpty() && route.path.size >= 2) {
             val detected = ClimbDetector.detectClimbs(route.path, routeId = route.summary.id)
@@ -142,7 +165,8 @@ class RoutesRepository internal constructor(
                 climbs = detected
             }
         }
-        return route.copy(climbs = climbs)
+        val resolved = climbs.map { it.copy(category = it.resolveCategory(formula)) }
+        return route.copy(climbs = resolved)
     }
 
     /**
@@ -246,6 +270,11 @@ class RoutesRepository internal constructor(
      * Retrieves all climbs for a specific route ID (REQ-MAP-027, REQ-UI-274).
      */
     suspend fun getClimbsForRoute(routeId: Long): List<Climb> = withContext(Dispatchers.IO) {
+        val formula = try {
+            TuningPreferencesDataStore.getInstance(context).getTuningConfig().climbScoringFormula
+        } catch (e: Throwable) {
+            ClimbScoringFormula.FIETS
+        }
         var climbs = climbsDb.getClimbsForRoute(routeId)
         if (climbs.isEmpty()) {
             val path = routesDb.getRoutePath(routeId)
@@ -257,7 +286,7 @@ class RoutesRepository internal constructor(
                 }
             }
         }
-        climbs
+        climbs.map { it.copy(category = it.resolveCategory(formula)) }
     }
 
     /**

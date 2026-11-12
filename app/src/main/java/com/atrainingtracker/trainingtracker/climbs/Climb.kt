@@ -22,8 +22,24 @@ import com.atrainingtracker.trainingtracker.ui.map.PathPoint
 import com.google.android.gms.maps.model.LatLng
 
 /**
- * Standard cycling climb category classifications according to UCI climb score formulas.
- * (REQ-MAP-027).
+ * Supported climb difficulty categorization formulas (REQ-CLM-010.1).
+ */
+enum class ClimbScoringFormula {
+    /**
+     * Open FIETS Index: (H^2 / (10 * D)) + max(0, (summitAlt - 1000) / 1000).
+     * Weights both vertical gain, steepness gradient, and high-altitude difficulty. Default formula.
+     */
+    FIETS,
+
+    /**
+     * Traditional Strava / Garmin formula: distance * avgGrade = 100 * elevationGain.
+     * Categorizes purely based on total vertical gain.
+     */
+    STRAVA_GARMIN
+}
+
+/**
+ * Standard cycling climb category classifications according to UCI and FIETS formulas (REQ-MAP-027, REQ-CLM-010).
  */
 enum class ClimbCategory(val code: String, val minScore: Double) {
     HC("HC", 80000.0),
@@ -42,6 +58,53 @@ enum class ClimbCategory(val code: String, val minScore: Double) {
                 score >= CAT_3.minScore -> CAT_3
                 score >= CAT_4.minScore -> CAT_4
                 else -> UNCATEGORIZED
+            }
+        }
+
+        fun calculateFietsIndex(
+            distanceMeters: Double,
+            elevationGainMeters: Double,
+            summitAltitudeMeters: Double? = null
+        ): Double {
+            val base = if (distanceMeters > 0.0) {
+                (elevationGainMeters * elevationGainMeters) / (10.0 * distanceMeters)
+            } else {
+                0.0
+            }
+            val altitudeBonus = if (summitAltitudeMeters != null && summitAltitudeMeters > 1000.0) {
+                (summitAltitudeMeters - 1000.0) / 1000.0
+            } else {
+                0.0
+            }
+            return base + altitudeBonus
+        }
+
+        fun fromFietsIndex(
+            distanceMeters: Double,
+            elevationGainMeters: Double,
+            summitAltitudeMeters: Double? = null
+        ): ClimbCategory {
+            val score = calculateFietsIndex(distanceMeters, elevationGainMeters, summitAltitudeMeters)
+            return when {
+                score >= 6.5 -> HC
+                score >= 5.0 -> CAT_1
+                score >= 3.5 -> CAT_2
+                score >= 2.0 -> CAT_3
+                score >= 0.5 -> CAT_4
+                else -> UNCATEGORIZED
+            }
+        }
+
+        fun fromFormula(
+            formula: ClimbScoringFormula,
+            distanceMeters: Double,
+            elevationGainMeters: Double,
+            avgGradePercent: Double,
+            summitAltitudeMeters: Double? = null
+        ): ClimbCategory {
+            return when (formula) {
+                ClimbScoringFormula.FIETS -> fromFietsIndex(distanceMeters, elevationGainMeters, summitAltitudeMeters)
+                ClimbScoringFormula.STRAVA_GARMIN -> fromScore(distanceMeters * avgGradePercent)
             }
         }
 
@@ -107,6 +170,15 @@ data class Climb(
             if (startDist == 0.0) return pathPoints
             return pathPoints.map { it.copy(distance = (it.distance - startDist).coerceAtLeast(0.0)) }
         }
+
+    /**
+     * Dynamically resolves the climb category according to the selected [formula] (REQ-CLM-010.2).
+     * Uses [distanceMeters], [elevationGainMeters], and the summit altitude from [pathPoints].
+     */
+    fun resolveCategory(formula: ClimbScoringFormula): ClimbCategory {
+        val summitAlt = pathPoints.lastOrNull()?.altitude
+        return ClimbCategory.fromFormula(formula, distanceMeters, elevationGainMeters, avgGradePercent, summitAlt)
+    }
 }
 
 /**

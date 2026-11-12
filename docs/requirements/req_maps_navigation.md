@@ -2368,6 +2368,41 @@
 
 **Invariants**: Zero false climb detections from GPS/barometer spikes; DEM ground-truth consistency; idempotent v2 cleanup migration; 100% test pass rate.
 
+### REQ-CLM-010: Configurable FIETS Index & Strava/Garmin Climb Categorization [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-CLM-010` | **Tickets**: `ATT-7162`
+- **Implementation**: `Climb.kt`, `ClimbDetector.kt`, `TuningPreferencesDataStore.kt`, `NavigationSection.kt`
+- **Rationale**: Strava/Garmin score ($\text{dist} \times \text{grade\%} = 100 \times H$) cancels distance entirely, ignoring gradient difficulty: a steep 1.3 km @ 9.6% wall scores the same as a gentle 3% false-flat. The FIETS Index ($H^2 / (10 \times D) + \max(0, (\text{summitAlt} - 1000)/1000)$) accurately weights elevation gain, gradient, and high-altitude difficulty. The system SHALL support FIETS as the default and Strava/Garmin as a selectable alternative in Advanced Tuning, dynamically updating displayed categories without database rebuild:
+1. *FIETS & Strava/Garmin Formula Calculations (`REQ-CLM-010.1`)*:
+• The system SHALL introduce `enum class ClimbScoringFormula { FIETS, STRAVA_GARMIN }` with default `FIETS`.
+• `ClimbCategory.fromFietsIndex(distanceMeters, elevationGainMeters, summitAltitudeMeters)` SHALL compute base score as $(H^2)/(10 \times D)$ and altitude bonus as $\max(0, (\text{summitAlt} - 1000)/1000)$, applying open thresholds: `HC >= 6.5`, `CAT_1 >= 5.0`, `CAT_2 >= 3.5`, `CAT_3 >= 2.0`, `CAT_4 >= 0.5`, `UNCATEGORIZED < 0.5`.
+• `ClimbCategory.fromScore(score)` SHALL retain Strava/Garmin thresholds (`HC >= 80000`, `CAT_1 >= 64000`, `CAT_2 >= 32000`, `CAT_3 >= 16000`, `CAT_4 >= 8000`).
+2. *Dynamic Presentation Category Resolution (`REQ-CLM-010.2`)*:
+• `Climb.resolveCategory(formula: ClimbScoringFormula)` SHALL dynamically evaluate category from distance, elevation gain, and summit altitude without modifying persisted schema or requiring DB rebuilds.
+3. *Preferences & 9-Language Localization Parity (`REQ-CLM-010.3`)*:
+• `TuningPreferencesDataStore` SHALL persist `climbScoringFormula` (default `FIETS`) with reactive `StateFlow` and reset support.
+• `NavigationSection.kt` SHALL expose a FilterChip selector with full 9-language localization parity (`values`, `de`, `es`, `fr`, `it`, `ja`, `nl`, `pl`, `pt`).
+
+### Requirement Archaeology & Chesterton's Fence Audit
+1. *Original Requirement ID & Target*: Refines `REQ-MAP-027` (*Climb Detection*) & `REQ-UI-281` (*Navigation Tuning*).
+2. *Historical Origin & Commit Trace*: Commit `c7438e78` (`ATT-2565`).
+3. *Root Reason for Existing Formulation*: Strava/Garmin was originally adopted for 1:1 parity with Garmin Edge devices.
+4. *Preservation of Core Invariants*: Strava/Garmin formula is preserved as a user-selectable option; detection geometry and DB schema remain untouched.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* a 1 km climb @ 15% (150m gain, summit 500m),
+• *When* evaluated under FIETS,
+• *Then* score is 2.25 and category is `CAT_3` (versus `CAT_4` under Strava).
+• *Given* a 15 km pass with 1,000m gain (summit 2,200m),
+• *When* evaluated under FIETS,
+• *Then* score is $6.67 + 1.20 = 7.87$ (`HC`).
+• *Given* existing climbs in `Climbs.db`,
+• *When* `climbScoringFormula` is toggled in Settings,
+• *Then* UI badges update immediately without DB re-ingestion.
+
+**Invariants**: Default formula is `FIETS`; zero database schema migration; 100% localization parity across 9 languages.
+
+
 
 
 

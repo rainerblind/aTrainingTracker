@@ -58,6 +58,7 @@ import com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.Afterm
 import com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.AmoledBatterySaverSection
 import com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.ClusterTuningSection
 import com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.CockpitTypographySection
+import com.atrainingtracker.trainingtracker.climbs.ClimbScoringFormula
 import com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.NavigationSection
 import com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.PhysiologyModelsSection
 import com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.SensorsGpsFilterSection
@@ -100,6 +101,7 @@ fun AdvancedTuningDialog(
     var elevationSmoothingSigmaMeters by remember { mutableFloatStateOf(TuningPreferencesDefaults.DEFAULT_ELEVATION_SMOOTHING_SIGMA_METERS) }
     var showAntMissingAdapterWarnings by remember { mutableStateOf(!TuningPreferencesDefaults.SUPPRESS_ANT_MISSING_ADAPTER_DIALOG) }; var autoFollowUniqueRouteEnabled by remember { mutableStateOf(TuningPreferencesDefaults.DEFAULT_AUTO_FOLLOW_UNIQUE_ROUTE_ENABLED) }
     var turnCueCountdownDistanceMeters by remember { mutableFloatStateOf(TuningPreferencesDefaults.TURN_CUE_COUNTDOWN_DISTANCE_METERS) }
+    var climbScoringFormula by remember { mutableStateOf(TuningPreferencesDefaults.DEFAULT_CLIMB_SCORING_FORMULA) }
     var clusterTolEndpoints by remember { mutableFloatStateOf(TuningPreferencesDefaults.CLUSTER_TOL_ENDPOINTS) }; var clusterTolApex by remember { mutableFloatStateOf(TuningPreferencesDefaults.CLUSTER_TOL_APEX) }
     var clusterTolDistance by remember { mutableFloatStateOf(TuningPreferencesDefaults.CLUSTER_TOL_DISTANCE) }; var clusterTolAltitudePos by remember { mutableFloatStateOf(TuningPreferencesDefaults.CLUSTER_TOL_ALTITUDE_POS) }
     var clusterUseSportType by remember { mutableStateOf(TuningPreferencesDefaults.CLUSTER_USE_SPORT_TYPE) }; var clusterUseAltitudePos by remember { mutableStateOf(TuningPreferencesDefaults.CLUSTER_USE_ALTITUDE_POS) }; var clusterScoreThreshold by remember { mutableFloatStateOf(TuningPreferencesDefaults.CLUSTER_SCORE_THRESHOLD) }
@@ -154,6 +156,7 @@ fun AdvancedTuningDialog(
         navigationCueDismissDurationSec = config.navigationCueDismissDurationSec; elevationSmoothingSigmaMeters = config.elevationSmoothingSigmaMeters
         showAntMissingAdapterWarnings = config.showAntMissingAdapterWarnings; autoFollowUniqueRouteEnabled = config.autoFollowUniqueRouteEnabled
         turnCueCountdownDistanceMeters = config.turnCueCountdownDistanceMeters
+        climbScoringFormula = config.climbScoringFormula
         clusterTolEndpoints = config.clusterTolEndpoints; clusterTolApex = config.clusterTolApex
         clusterTolDistance = config.clusterTolDistance; clusterTolAltitudePos = config.clusterTolAltitudePos
         clusterUseSportType = config.clusterUseSportType; clusterUseAltitudePos = config.clusterUseAltitudePos; clusterScoreThreshold = config.clusterScoreThreshold
@@ -194,7 +197,9 @@ fun AdvancedTuningDialog(
                         slopeMinSpeedMps = slopeMinSpeed, paceCeilingMinKm = paceCeilingMinKm, routeSelectionRadiusKm = routeSelectionRadiusKm,
                         navigationCueDismissDurationSec = navigationCueDismissDurationSec, elevationSmoothingSigmaMeters = elevationSmoothingSigmaMeters,
                         suppressAntMissingAdapterDialog = !showAntMissingAdapterWarnings, autoFollowUniqueRouteEnabled = autoFollowUniqueRouteEnabled,
-                        turnCueCountdownDistanceMeters = turnCueCountdownDistanceMeters, clusterTolEndpoints = clusterTolEndpoints, clusterTolApex = clusterTolApex,
+                        turnCueCountdownDistanceMeters = turnCueCountdownDistanceMeters,
+                        climbScoringFormula = climbScoringFormula,
+                        clusterTolEndpoints = clusterTolEndpoints, clusterTolApex = clusterTolApex,
                         clusterTolDistance = clusterTolDistance, clusterTolAltitudePos = clusterTolAltitudePos,
                         clusterUseSportType = clusterUseSportType, clusterUseAltitudePos = clusterUseAltitudePos, clusterScoreThreshold = clusterScoreThreshold,
                         enableCogganPowerMetrics = enableCogganPowerMetrics, showCogganPowerInWorkoutSummary = showCogganPowerInWorkoutSummary, enablePmcModel = enablePmcModel,
@@ -253,7 +258,8 @@ fun AdvancedTuningDialog(
                     routeSelectionRadiusKm = routeSelectionRadiusKm, onRadiusChange = { routeSelectionRadiusKm = it },
                     navigationCueDismissDurationSec = navigationCueDismissDurationSec, onDismissDurationChange = { navigationCueDismissDurationSec = it },
                     autoFollowUniqueRouteEnabled = autoFollowUniqueRouteEnabled, onAutoFollowUniqueRouteEnabledChange = { autoFollowUniqueRouteEnabled = it },
-                    turnCueCountdownDistanceMeters = turnCueCountdownDistanceMeters, onTurnCueCountdownDistanceChange = { turnCueCountdownDistanceMeters = it }
+                    turnCueCountdownDistanceMeters = turnCueCountdownDistanceMeters, onTurnCueCountdownDistanceChange = { turnCueCountdownDistanceMeters = it },
+                    climbScoringFormula = climbScoringFormula, onClimbScoringFormulaChange = { climbScoringFormula = it }
                 )
             }
 
