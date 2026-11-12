@@ -160,7 +160,11 @@ class SportingJourneyRepositoryTest {
         assertEquals(35.0, data.heroTotals.totalDistanceKm, 0.01)
         assertEquals(1.5, data.heroTotals.totalActiveHours, 0.01)
         assertEquals(550, data.heroTotals.totalElevationM)
-        assertEquals(1, data.heroTotals.favoriteRoutesCount)
+        // Singleton cluster (1 workout) is NOT a favorite recurring route (requires >= 3 visits)
+        assertEquals(0, data.heroTotals.favoriteRoutesCount)
+        assertEquals(0, data.hiddenGems.recurringRoutesCount)
+        assertEquals(0, data.hiddenGems.ritualWorkoutsCount)
+        assertEquals(2, data.hiddenGems.explorerWorkoutsCount)
 
         // Hidden Gems: Cadence revs from 2026 bike = 85 * 60 = 5100
         assertEquals(5100L, data.hiddenGems.pedalRevolutions)
@@ -260,5 +264,70 @@ class SportingJourneyRepositoryTest {
 
         val years = repository.getAvailableYears()
         assertEquals(listOf(2026, 2025, 2024), years)
+    }
+
+    @Test
+    fun testRecurringRouteClusterMath_onlyCountsClustersWithRepeatVisitsGte3() = runTest {
+        // Cluster 10 has 3 repeat visits (qualifies as recurring route)
+        insertTestWorkout("C10_1", "BIKE", "2026-01-01 10:00:00", 3600, 20000.0, 200, clusterId = 10)
+        insertTestWorkout("C10_2", "BIKE", "2026-01-02 10:00:00", 3600, 20000.0, 200, clusterId = 10)
+        insertTestWorkout("C10_3", "BIKE", "2026-01-03 10:00:00", 3600, 20000.0, 200, clusterId = 10)
+
+        // Cluster 20 has only 2 visits (does NOT qualify)
+        insertTestWorkout("C20_1", "BIKE", "2026-01-04 10:00:00", 3600, 15000.0, 150, clusterId = 20)
+        insertTestWorkout("C20_2", "BIKE", "2026-01-05 10:00:00", 3600, 15000.0, 150, clusterId = 20)
+
+        // Unclustered workout
+        insertTestWorkout("Unclustered", "BIKE", "2026-01-06 10:00:00", 1800, 10000.0, 100, clusterId = -1)
+
+        val data = repository.loadJourneyData(SportingHorizon.AllTime, SportingSportFilter.ALL)
+
+        assertEquals(6, data.heroTotals.totalWorkouts)
+        // Exactly 1 recurring route cluster (cluster 10)
+        assertEquals(1, data.heroTotals.favoriteRoutesCount)
+        assertEquals(1, data.hiddenGems.recurringRoutesCount)
+        // 3 ritual workouts (from cluster 10), remaining 3 are explorer workouts
+        assertEquals(3, data.hiddenGems.ritualWorkoutsCount)
+        assertEquals(3, data.hiddenGems.explorerWorkoutsCount)
+        assertEquals(50, data.hiddenGems.ritualPercentage)
+    }
+
+    @Test
+    fun testSportFilterAll_includesAllSportsWithoutDroppingUnknownOrSwim() = runTest {
+        insertTestWorkout("Bike", "BIKE", "2026-02-01 10:00:00", 3600, 20000.0, 100, 0, avgCadence = 80.0)
+        insertTestWorkout("Run", "RUN", "2026-02-02 10:00:00", 1800, 5000.0, 50, 0, avgCadence = 160.0)
+        insertTestWorkout("Swim", "SWIM", "2026-02-03 10:00:00", 2400, 2000.0, 0, 0)
+        insertTestWorkout("UnknownSport", "UNKNOWN", "2026-02-04 10:00:00", 1200, 1000.0, 10, 0)
+
+        val data = repository.loadJourneyData(SportingHorizon.AllTime, SportingSportFilter.ALL)
+
+        // All 4 workouts MUST be included under SportingSportFilter.ALL
+        assertEquals(4, data.heroTotals.totalWorkouts)
+        assertEquals(28.0, data.heroTotals.totalDistanceKm, 0.01)
+
+        // Pedal revolutions must only count from BIKE (80 rpm * 60 min = 4800), not RUN cadence
+        assertEquals(4800L, data.hiddenGems.pedalRevolutions)
+        assertEquals(1, data.hiddenGems.cadenceTrackedRidesCount)
+    }
+
+    @Test
+    fun testGlobalLifetimeEvaluation_retainsHistoryAcrossYearsAndUnlocksPioneer() = runTest {
+        // Historical workout from 2012 (> 10 years ago)
+        insertTestWorkout("Old Pioneer Workout", "BIKE", "2012-05-01 10:00:00", 3600, 30000.0, 300, 0)
+        // Workout from 2026
+        insertTestWorkout("Recent Workout", "BIKE", "2026-06-01 10:00:00", 3600, 30000.0, 300, 0)
+
+        // Query Annual Wrapped for 2026
+        val data2026 = repository.loadJourneyData(SportingHorizon.Year(2026), SportingSportFilter.ALL)
+
+        // Annual totals only contain the 2026 workout
+        assertEquals(1, data2026.heroTotals.totalWorkouts)
+        assertEquals(30.0, data2026.heroTotals.totalDistanceKm, 0.01)
+
+        // BUT lifetime evaluation is global across all database records
+        assertTrue("daysSinceFirstWorkout should be > 365 days across history", data2026.daysSinceFirstWorkout > 365)
+        val pioneerBadge = data2026.achievements.find { it.id == "pioneer_athlete" }
+        assertNotNull(pioneerBadge)
+        assertTrue("Pioneer badge must be unlocked globally even in annual view", pioneerBadge!!.isUnlocked)
     }
 }

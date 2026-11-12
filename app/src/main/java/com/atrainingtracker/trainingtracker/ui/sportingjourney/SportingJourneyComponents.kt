@@ -104,7 +104,7 @@ fun SportingJourneyFilters(
                 )
             )
 
-            availableYears.take(5).forEach { yr ->
+            availableYears.forEach { yr ->
                 val isSelected = (horizon as? SportingHorizon.Year)?.year == yr
                 FilterChip(
                     selected = isSelected,
@@ -383,7 +383,7 @@ fun HiddenGemsSection(
             description = stringResource(
                 R.string.sporting_journey_gem_explorer_desc,
                 gems.ritualWorkoutsCount,
-                (gems.ritualWorkoutsCount / 20).coerceAtLeast(1),
+                gems.recurringRoutesCount,
                 gems.explorerWorkoutsCount
             )
         )

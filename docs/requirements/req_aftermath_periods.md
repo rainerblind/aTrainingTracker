@@ -1137,3 +1137,40 @@
 • *Then* `HrvDurabilityCard` displays the durability drift percentage and 15-minute slice trajectory in the user's active locale across all 9 supported languages.
 
 **Invariants**: Zero SQLite schema migration; strict 10-minute matched data guard; 100% 9-language localization parity; graceful omission for non-HRV or short workouts.
+
+
+---
+
+### REQ-SPT-002: Retrospective Filtering, Cluster Aggregation & Lifetime Engine [Verified]
+- **Target**: `SportingJourneyRepository.kt`, `SportingJourneyModels.kt`, `SportingJourneyViewModel.kt`, `SportingJourneyComponents.kt`
+- **Implementation**: `SportingJourneyRepository.kt`, `SportingJourneyModels.kt`, `SportingJourneyViewModel.kt`, `SportingJourneyComponents.kt`
+- **Rationale**: Retrospective discovery in "The Trophy Vault" must provide mathematically exact and sport-faithful aggregation of historical workout data across All-Time and Annual Wrapped horizons without heuristics or data loss (ATT-7022, refined by ATT-7321):
+- **Description**:
+  1. *Recurring Route Cluster Math (`REQ-SPT-002.1`)*:
+     - The engine SHALL identify recurring routes by grouping clusters with repeat visits $\text{COUNT}(*) \ge 3$ within the active query scope (`cluster_id > 0`).
+     - Singleton or $< 3$ visit clusters SHALL NOT be counted as signature loops / favorite routes.
+     - Workouts in recurring clusters ($\text{COUNT}(*) \ge 3$) SHALL be classified as ritual workouts (`ritualWorkoutsCount`), while all remaining workouts SHALL be classified as explorer workouts (`explorerWorkoutsCount = \text{totalWorkouts} - \text{ritualWorkoutsCount}`).
+     - Fabricated heuristics (`gems.ritualWorkoutsCount / 20`) SHALL be eliminated, exposing the true recurring route count via `SportingHeroTotals.favoriteRoutesCount` and `SportingHiddenGems.recurringRoutesCount`.
+  2. *Inclusive Sport Aggregation (`REQ-SPT-002.2`)*:
+     - Under `SportingSportFilter.ALL`, the engine SHALL include all finished workouts (`FINISHED = 1`) across all recorded sports without restricting to `BIKE` or `RUN`.
+  3. *Sport-Specific Metric Gating (`REQ-SPT-002.3`)*:
+     - When `sportFilter == SportingSportFilter.RUNNING`, bicycle pedal revolutions and cadence ride counts SHALL be suppressed to `0L` and `0`. Under `ALL`, cadence revolutions SHALL only be aggregated from cycling sessions (`B_SPORT = 'BIKE'`).
+  4. *Full Historical Year Range (`REQ-SPT-002.4`)*:
+     - The UI filter chips and repository SHALL expose all available distinct calendar years (`availableYears`) without artificial truncation (`take(5)`).
+  5. *Global Lifetime History & Immediate State Keying (`REQ-SPT-002.5`)*:
+     - Athlete lifetime start date (`MIN(timeStart)`) and the Pioneer Athlete badge (`>= 365` days) SHALL be evaluated globally across all database records (`finished = 1`), regardless of the active calendar year horizon.
+     - `SportingJourneyViewModel` SHALL immediately key its UI state on `(horizon, sportFilter)` and cancel preceding in-flight queries upon filter changes.
+  (ATT-7321: [Verbesserung] SportingJourneyRepository & Aggregation: Fix recurring route cluster math, sport filtering, historical year range, and lifetime evaluation)
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* workouts belonging to route clusters with $\ge 3$ visits, $< 3$ visits, and unclustered routes,
+• *When* `SportingJourneyRepository.loadJourneyData` aggregates routes,
+• *Then* `favoriteRoutesCount` and `recurringRoutesCount` reflect only clusters with $\ge 3$ visits, and explorer workouts reflect all remaining sessions.
+• *Given* workouts of diverse sports (`BIKE`, `RUN`, `SWIM`, `UNKNOWN`),
+• *When* filtered by `SportingSportFilter.ALL`,
+• *Then* all workouts are included in hero totals, while pedal revolutions are restricted strictly to cycling.
+• *Given* a 14-year database history (2012–2026),
+• *When* viewing Annual Wrapped for 2026,
+• *Then* `availableYears` renders all historical years, and `Pioneer Athlete` remains unlocked based on the global 2012 inception date.
+
+**Invariants**: Zero SQLite schema migration; exact distance, elevation, and time math preserved; 100% 9-language localization parity.

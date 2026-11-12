@@ -21,6 +21,7 @@ package com.atrainingtracker.trainingtracker.ui.sportingjourney
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -29,15 +30,17 @@ import kotlinx.coroutines.launch
 /**
  * ViewModel orchestrating data loading and filter mutations for [SportingJourneySheet] (REQ-SPT-002, REQ-SPT-003).
  */
-class SportingJourneyViewModel(application: Application) : AndroidViewModel(application) {
-
-    private val repository = SportingJourneyRepository.getInstance(application)
+class SportingJourneyViewModel(
+    application: Application,
+    private val repository: SportingJourneyRepository = SportingJourneyRepository.getInstance(application)
+) : AndroidViewModel(application) {
 
     private val _uiState = MutableStateFlow(SportingJourneyData(isLoading = true))
     val uiState: StateFlow<SportingJourneyData> = _uiState.asStateFlow()
 
     private var currentHorizon: SportingHorizon = SportingHorizon.AllTime
     private var currentSportFilter: SportingSportFilter = SportingSportFilter.ALL
+    private var loadJob: Job? = null
 
     init {
         loadData()
@@ -45,10 +48,16 @@ class SportingJourneyViewModel(application: Application) : AndroidViewModel(appl
 
     /**
      * Loads retrospective data for [currentHorizon] and [currentSportFilter].
+     * Cancels any in-flight query and immediately keys [uiState] to the target filters.
      */
     fun loadData() {
-        viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true)
+        loadJob?.cancel()
+        _uiState.value = _uiState.value.copy(
+            horizon = currentHorizon,
+            sportFilter = currentSportFilter,
+            isLoading = true
+        )
+        loadJob = viewModelScope.launch {
             val data = repository.loadJourneyData(currentHorizon, currentSportFilter)
             _uiState.value = data.copy(isLoading = false)
         }

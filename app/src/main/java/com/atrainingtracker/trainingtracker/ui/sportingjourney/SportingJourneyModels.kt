@@ -77,7 +77,8 @@ data class SportingHiddenGems(
     val mostActiveDayOfWeek: Int? = null,
     val ritualWorkoutsCount: Int = 0,
     val explorerWorkoutsCount: Int = 0,
-    val ritualPercentage: Int = 0
+    val ritualPercentage: Int = 0,
+    val recurringRoutesCount: Int = 0
 )
 
 /**

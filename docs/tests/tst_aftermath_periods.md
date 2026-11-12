@@ -808,3 +808,27 @@
   7. *9-Language Localization Parity Test (`TST-PER-046.7`, `TranslationParityTest`)*:
   • Verify all 11 durability string keys exist with 100% parity across all 9 `strings_hrv.xml` files with matching formatting tokens.
   (ATT-4970: [Feature] Model DFA a1 autonomic durability and drift across multi-hour workouts (paired with ATT-4842 Heart Efficiency))
+
+
+---
+
+### TST-SPT-005: Retrospective Filtering, Cluster Math, Lifetime Evaluation & ViewModel Tests [Verified]
+- **Target Requirement**: `REQ-SPT-002` (Retrospective Filtering, Cluster Aggregation & Lifetime Engine)
+- **Target Verification Component**: `SportingJourneyRepositoryTest.kt`, `SportingJourneyViewModelTest.kt`
+- **Verification Type**: Automated Unit & State Machine Verification
+- **Test Description**:
+  1. *Recurring Route Cluster Math Test (`TST-SPT-005.1`, `SportingJourneyRepositoryTest.kt`)*:
+  • Verify that clusters with repeat visits $\ge 3$ are counted as recurring routes (`favoriteRoutesCount = 1`, `recurringRoutesCount = 1`).
+  • Verify that singleton clusters and clusters with $< 3$ visits are excluded from favorite routes.
+  • Verify that ritual workouts count only workouts in recurring clusters, while all remaining workouts evaluate as explorer workouts.
+  2. *Sport Inclusivity & Running Cadence Suppression Test (`TST-SPT-005.2`, `SportingJourneyRepositoryTest.kt`)*:
+  • Verify that under `SportingSportFilter.ALL`, all finished workouts across all recorded sports (`BIKE`, `RUN`, `SWIM`, `UNKNOWN`) are aggregated into total workouts and distance.
+  • Verify that when `sportFilter == SportingSportFilter.RUNNING`, bicycle pedal revolutions and cadence ride counts are strictly suppressed to 0.
+  • Verify that under `ALL`, pedal revolutions are aggregated exclusively from cycling sessions.
+  3. *Global Lifetime History & Full Year Range Test (`TST-SPT-005.3`, `SportingJourneyRepositoryTest.kt`)*:
+  • Verify that under `SportingHorizon.Year(2026)`, `daysSinceFirstWorkout` evaluates globally from the earliest database record (e.g. 2012) and unlocks the `Pioneer Athlete` badge ($> 365$ days).
+  • Verify that `availableYears` returns all distinct years without artificial `.take(5)` truncation.
+  4. *ViewModel State Keying & Cancellation Test (`TST-SPT-005.4`, `SportingJourneyViewModelTest.kt`)*:
+  • Verify that `setHorizon` and `setSportFilter` immediately key `uiState.horizon` and `uiState.sportFilter` with `isLoading = true`.
+  • Verify that rapid filter changes cancel obsolete in-flight repository coroutine jobs.
+  (ATT-7321: [Verbesserung] SportingJourneyRepository & Aggregation: Fix recurring route cluster math, sport filtering, historical year range, and lifetime evaluation)
