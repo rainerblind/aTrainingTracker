@@ -50,9 +50,13 @@ For each ticket in `Final Review (Agent)`, trace the implementation across all 6
    - Is any SQLite query, SharedPreferences read, object allocation, or uncached baseline calculation happening on the Main UI thread or inside a 1-Hz sensor callback?
    - Are shared mutable state / `SnapshotStateObserver` / coroutine flows accessed safely across threads?
    - Are there any new Kotlin/Java compiler warnings (e.g., always-true/false conditions, unchecked casts, deprecated APIs)?
-5. **UI/UX, Material 3 Guidelines, & 9-Language Localization**:
+5. **UI/UX, Material 3 Guidelines (`docs/design_guidelines.md`), & 9-Language Localization**:
    - Are any user-facing strings hardcoded in Kotlin or English-only instead of localized across all 9 language `strings.xml` files?
-   - Can Compose layouts collapse to `0px` height/width, clip text, leave ghost tap targets when hidden, or violate `docs/design_guidelines.md`?
+   - Can Compose layouts collapse to `0px` height/width, clip text, or leave ghost tap targets when hidden?
+   - **Mandatory `docs/design_guidelines.md` Bounce Triggers** (execute `BOUNCE` immediately if any of these appear in the diff):
+     - **Binary / 3-Way Exclusive Choices**: Using `FilterChip` instead of `SingleChoiceSegmentedButtonRow` / `SegmentedButton(..., icon = {})` (or `TuningSegmentedButtonRow`).
+     - **Expert Settings (`ui/settings/tuning/categories/`)**: Using raw unscaled `Switch(`, raw `Slider(`, raw `FilterChip(`, custom `titleSmall` headings, or nested `ElevatedCard(` inside an `ExpertCategoryCard` instead of the standardized components in `TuningFormControls.kt` (`TuningToggleItem`, `TuningSliderItem`, `TuningSegmentedButtonRow`, `TuningDropdownRow`).
+     - **Side-by-Side Action Buttons & German String Length**: Side-by-side `Row` buttons where longer German labels (e.g., *"Messung speichern"*) wrap onto two lines on phone screens, or where a warning/discard recommendation still highlights the "Save" button as the filled primary CTA instead of swapping primary/secondary emphasis.
 6. **Test Authenticity & Hygiene Verification**:
    - Inspect `git show <COMMIT_HASH> -- app/src/test/`. Do the unit tests instantiate and exercise the **real production class/method**, or do they test a tautological mock / local copy that would pass even if the production code were deleted?
    - Are there any cross-ticket collateral files accidentally included in the commit?

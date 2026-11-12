@@ -23,7 +23,11 @@ Reuse the ticket's two persistent `TypeName: "self"` subagents via `send_message
    - **Mandatory Reachability Step (`Rule 81`)**: Whenever introducing a new `@Composable` screen/section/dialog, `SensorType` enum, or background importer/backfill engine, explicitly schedule an atomic step to mount it in its live host (`MainActivityWithNavigation` / `AppNavigationDrawer` / `AdvancedTuningScreen` / `SensorGridScreen` / `WorkoutDetailTabbedContent`, `ActivityType.getSensorTypeArray()`, or startup/`WorkManager` hook). Never plan an isolated component without its host wiring, and never plan public `*DatabaseManager`/`Cursor` getters on Repositories (`docs/coding_standards.md` §1.12, §2.5).
 3. **Invariant Protection & Rollback Safety**:
    - Explicitly list non-negotiable invariants (backward compatibility, null safety, human decision gate).
-   - **UI Consistency**: If the ticket adds or changes UI, read `docs/design_guidelines.md` (Section 5) and fill the plan's `UI Consistency` section: closest existing reference screen, reused components (`ui/components/`), theme tokens (shapes, spacing, `MaterialTheme.colorScheme`, `TTColor`), and a justification for any new one-off style.
+   - **UI Consistency & Style Guide Compliance (`docs/design_guidelines.md`)**: If the ticket adds or changes UI, read the **entire** [`docs/design_guidelines.md`](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/docs/design_guidelines.md) (especially **§1 Component Selection Matrix** and `TuningFormControls.kt`) and fill the plan's `UI Consistency` section:
+     - **2–3 mutually exclusive options** $\rightarrow$ `SingleChoiceSegmentedButtonRow` with `SegmentedButton(..., icon = {})` (or `TuningSegmentedButtonRow` in Expert Settings). **Never** propose `FilterChip` for mutually exclusive mode choices.
+     - **Expert Settings (`ui/settings/tuning/categories/`)** $\rightarrow$ Always use the standardized wrappers in `TuningFormControls.kt` (`TuningToggleItem`, `TuningSliderItem`, `TuningSegmentedButtonRow`, `TuningDropdownRow`). Never propose raw unscaled `Switch`, raw `FilterChip`, or nested `ElevatedCard` inside an `ExpertCategoryCard`.
+     - **Side-by-Side Action Buttons** $\rightarrow$ Ensure German translations fit on a single line (`maxLines = 1`) on 360dp–412dp screens and that the recommended primary action is the filled `Button` while the secondary/destructive fallback is the `OutlinedButton`.
+     - **Anti-"Broken Window" Rule**: If a neighboring file still contains a legacy anti-pattern (e.g., `FilterChip` for a binary toggle), **follow `docs/design_guidelines.md` — never copy a legacy anti-pattern from a sibling file.**
 4. **Single-Turn Stage Submission (`submit-stage`) & Concise Deliverable Cap (Rule 60)**:
    - Author `docs/engineering/plans/<TICKET_KEY>_plan.md` using `templates/plan_template.md` in a **concise bullet-and-table format (target $\le 60\text{--}80$ lines)**.
    - Submit Stage 3 in a single composite CLI call (creates/updates `[Impl-Plan]` sub-task and moves it to `In Überprüfung`):
@@ -40,7 +44,9 @@ Message the ticket's persistent `subagent_flash` (`send_message`) to audit the S
    - Confirm all system invariants, non-target metrics, and file schemas are explicitly protected.
 3. **Verification Coverage**:
    - Ensure every proposed change maps to an automated or manual test case in `docs/tests.md`.
-4. **Gate Verdict (`gate-verdict`) + Fused Stage 4 Continuation (Rule 60)**:
+4. **UI & Design Guidelines Compliance (`docs/design_guidelines.md`)**:
+   - If the plan touches any UI or Settings screen, verify that the `UI Consistency` section strictly adheres to `docs/design_guidelines.md` §1 (`SingleChoiceSegmentedButtonRow` with `icon = {}` for 2–3 exclusive choices, `TuningFormControls.kt` wrappers in `ui/settings/tuning/categories/`, single-line button labels in German). Reject (`REVISION`) any plan that proposes `FilterChip` for exclusive mode choices or raw unscaled `Switch` / nested `ElevatedCard` in Expert Settings.
+5. **Gate Verdict (`gate-verdict`) + Fused Stage 4 Continuation (Rule 60)**:
    - Record the verdict in a single composite CLI call (which closes the sub-task to `Erledigt`, advances the parent ticket to `Implementation`, and automatically injects `stage4-implementation/SKILL.md` into stdout):
      ```bash
      python3 tools/jira_util.py --as agent2 gate-verdict <IMPL_PLAN_SUBTASK_KEY> PASS "<Audit Report>"
