@@ -8,7 +8,7 @@
 ---
 
 ### TST-FIL-002: WorkoutSamplesDb [Verified]
-- **Requirement(s)**: `REQ-DAT-003`
+- **Requirement(s)**: `REQ-FIL-006`, `REQ-FIL-011`
 - **Component**: `WorkoutSamplesDb`
 - **Test Description**: Verify that `calcExtremaValue` returns `null` (not 0.0) when querying a sensor that has only NULL values or does not exist in the table.
 
@@ -17,6 +17,25 @@
 - **Component**: **Null-Safe Filter Verification**
 - **Jira**: ``ATT-275``
 - **Test Description**: 1. Execute `AverageFilterTest` (or similar unit test). 2. Pass `null` as a new value to the filter. 3. Call `getFilteredValue`.
+
+### TST-FUSION-001: Extended Kalman Filter State Estimation and Body-to-World Frame Rotation [Planned]
+- **Requirement(s)**: `REQ-FIL-007`, `REQ-FIL-008`
+- **Component**: Sensor Fusion Engine
+- **Test Description**:
+  1. *EKF Multi-Sensor Fusion Test*: Verify EKF correctly fuses simulated GPS coordinates, accelerometer/magnetometer IMU signals, and wheel speed telemetry into unified position and velocity state vectors.
+  2. *Body-to-World ENU Transformation Test*: Verify 3x3 direction cosine rotation matrix rotates arbitrary phone orientations into geographic East-North-Up coordinate frames.
+
+### TST-FUSION-002: Dead Reckoning Navigation in GPS-Denied Environments [Planned]
+- **Requirement(s)**: `REQ-FIL-009`
+- **Component**: Sensor Fusion Engine
+- **Test Description**:
+  1. *GPS Loss Dead Reckoning Test*: Simulate GPS drop in a tunnel or urban canyon; verify integrated IMU and wheel speed data maintain continuous trajectory and speed predictions without freeze or spike.
+
+### TST-FUSION-003: Dynamic Speed Sensor Wheel Scale Factor Auto-Calibration [Planned]
+- **Requirement(s)**: `REQ-FIL-010`
+- **Component**: Sensor Fusion Engine
+- **Test Description**:
+  1. *Auto-Calibration Convergence Test*: Feed raw wheel revolutions alongside ground-truth high-accuracy GPS fixes; verify the filter dynamically solves and converges the wheel scale factor within 1% error.
 
 ### TST-FIL-003: **Atomic Altitude Correction** [Verified]
 - **Requirement(s)**: `REQ-FIL-004`
@@ -972,7 +991,7 @@
   • Run `./gradlew testDebugUnitTest` verifying 100% pass rate.
 
 ### TST-TRK-031: **CyclingPowerMetricsDevice Constructor Seeding, Sensor-Presence Gating (Rule 52), Stationary/Paused W/kg Alignment, and Workout Summary Presentation Defense Verification Suite** [Verified]
-- **Requirement(s)**: `REQ-TRK-038`, `REQ-UI-106`
+- **Requirement(s)**: `REQ-TRK-038`
 - **Component**: **CyclingPowerMetricsDevice Constructor Seeding, Sensor-Presence Gating (Rule 52), Stationary/Paused W/kg Alignment, and Workout Summary Presentation Defense Verification Suite**
 - **Jira**: ``ATT-4368``
 - **Test Description**:
@@ -1019,7 +1038,7 @@
   • Evaluate with points having valid `power > 0` and `wPrimeBalKj >= 0.0`: assert returns `true`.
 
 ### TST-FIL-014: **Backend Filter Key Normalization, Runtime 'Best Sensor' Field Registration & Post-Trim Rolling Filter NaN Guard Verification Suite** [Verified]
-- **Requirement(s)**: `REQ-FIL-014`, `REQ-FIL-011`, `REQ-UI-167`
+- **Requirement(s)**: `REQ-FIL-014`, `REQ-FIL-011`
 - **Component**: **Backend Filter Key Normalization, Runtime 'Best Sensor' Field Registration & Post-Trim Rolling Filter NaN Guard Verification Suite**
 - **Jira**: ``ATT-4282``
 - **Test Description**:
@@ -1056,7 +1075,7 @@
   • Execute `./gradlew testDebugUnitTest` verifying 100% pass rate with zero regressions across the full test suite.
 
 ### TST-CON-021: **BLE Sensor Search Android 8–11 Compatibility and Defensive Exception Handling Verification Suite** [Verified]
-- **Requirement(s)**: `REQ-CON-021`, `REQ-CON-019`, `REQ-UI-106`
+- **Requirement(s)**: `REQ-CON-021`, `REQ-CON-019`
 - **Component**: **BLE Sensor Search Android 8–11 Compatibility and Defensive Exception Handling Verification Suite**
 - **Jira**: ``ATT-3997``
 - **Test Description**:
@@ -1104,7 +1123,7 @@
   • Execute `./gradlew testDebugUnitTest` verifying 100% pass rate with zero regressions across the full test suite.
 
 ### TST-CON-022: **Automated BLE/ANT+ Pedal Power Balance Reference Normalization & Obsolete UI Checkbox Deprecation Verification Suite** [Verified]
-- **Requirement(s)**: `REQ-CON-022`, `REQ-UI-377`
+- **Requirement(s)**: `REQ-CON-022`
 - **Component**: **Automated BLE/ANT+ Pedal Power Balance Reference Normalization & Obsolete UI Checkbox Deprecation Verification Suite**
 - **Jira**: ``ATT-4554``
 - **Test Description**:
@@ -1759,7 +1778,7 @@
   • Verify BANALServiceRepository.registerSparklineBuffer preserves existing buffer samples and span when re-registering an identical sensor configuration with a modified time horizon.
 
 ### TST-FIL-015: **Filter Initialization State Tracking, Alpha Validation & Zero-Bias Verification Suite** [Verified]
-- **Requirement(s)**: `REQ-FIL-015`, `REQ-FIL-011`, `REQ-FIL-012.5`, `REQ-FIL-013`
+- **Requirement(s)**: `REQ-FIL-015`, `REQ-FIL-011`, `REQ-FIL-012`, `REQ-FIL-013`
 - **Component**: **Filter Initialization State Tracking, Alpha Validation & Zero-Bias Verification Suite**
 - **Jira**: `ATT-6382`
 - **Test Description**:

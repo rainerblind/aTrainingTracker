@@ -45,9 +45,6 @@ LEGACY_DUPLICATE_IDS = frozenset()
 
 # Known legacy dangling references pending backfill in A-08.x (ATT-6127..6135, SWE.1 BP5, SWE.6 BP4, REQ-PRO-070)
 LEGACY_DANGLING_TST_REFS = frozenset({
-    "TST-FUSION-001",
-    "TST-FUSION-002",
-    "TST-FUSION-003",
     "TST-FUSION-004",
     "TST-INT-007",
     "TST-STR-010",
@@ -58,7 +55,6 @@ LEGACY_DANGLING_TST_REFS = frozenset({
 LEGACY_DANGLING_REQ_REFS = frozenset({
     "REQ-MAP-037",
     "REQ-STB-013",
-    "REQ-TRK-035",
     "REQ-UI-002",
     "REQ-UI-008",
     "REQ-UI-009",

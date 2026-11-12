@@ -3784,3 +3784,33 @@ The workflow SHALL mandate that:
 
 
 
+
+
+### REQ-PRO-078: Living Documentation Tracking Cockpit Test Evidence Integrity & Bidirectional Traceability Governance [Verified]
+- **Tests**: `TST-PRO-078`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Implementation**: `tools/verify_requirement_governance.py`, `tools/test_verify_requirement_governance.py`, `docs/requirements/req_tracking_cockpit.md`, `docs/tests/tst_tracking_cockpit.md`, `docs/project_governance.md`
+- **Rationale**: Under ASPICE SWE.1 BP5 and SWE.6 BP4 (Remediation A-08.1 / ATT-6127), requirements in the Tracking Cockpit domain must maintain verified test evidence, 0 dangling references, and complete bidirectional linkage:
+  1. *Tracking Cockpit Test Citation Completeness (`REQ-PRO-078.1`)*:
+     • Every requirement in `docs/requirements/req_tracking_cockpit.md` SHALL cite at least one valid, existing `TST-*` identifier in its `Tests:` field, achieving $\ge 95\%$ test citation coverage.
+  2. *Bidirectional Linkage Parity (`REQ-PRO-078.2`)*:
+     • Every test specification in `docs/tests/tst_tracking_cockpit.md` SHALL be cited back by all of its referenced requirements in `docs/requirements/req_tracking_cockpit.md`, achieving $\ge 95\%$ bidirectional parity (Category 4).
+  3. *Zero Dangling References (`REQ-PRO-078.3`)*:
+     • The Tracking Cockpit domain SHALL maintain zero dangling references (`TST-FUSION-001`..`003`, `REQ-TRK-035` fully resolved and eliminated from legacy allowlists).
+  4. *Evidence-Grounded Status Model Transition (`REQ-PRO-078.4`)*:
+     • Requirements claiming `[Verified]` must cite $\ge 1$ test specification with verified automated test code. Requirements lacking automated evidence SHALL be transitioned to `[Implemented]` per `REQ-PRO-073`.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Net-new requirement `REQ-PRO-078` (`REQ-PRO-078.1`–`REQ-PRO-078.4`). Targets `tools/verify_requirement_governance.py`, `docs/requirements/req_tracking_cockpit.md`, `docs/tests/tst_tracking_cockpit.md`.
+  2. *Historical Origin & Commit Trace*: Sprint 2026-46.4 via ticket `ATT-6127` under Epic `ATT-6119` (ASPICE CL2 Remediation A-08.1). Builds on `e73eda46` (ATT-6126) and `88525c79` (ATT-6121).
+  3. *Root Reason for Existing Formulation*: ASPICE 4.0 assessment finding A-08.1 identified ungrounded `[Verified]` claims, dangling references, and broken bidirectional links in the Tracking Cockpit domain.
+  4. *Preservation of Core Invariants*: Zero Android production runtime code changes in `app/src/main/`; pure Python 3 standard library CLI; living documentation master index mathematical parity preserved.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* living documentation shards `req_tracking_cockpit.md` and `tst_tracking_cockpit.md`,
+  • *When* `tools/verify_requirement_governance.py --coverage` runs,
+  • *Then* Tracking Cockpit Category 1 coverage is $\ge 95\%$, Category 4 coverage is $\ge 95\%$, and zero dangling references exist in this domain.
+  • *Given* `tools/test_verify_requirement_governance.py`,
+  • *When* executed via unittest,
+  • *Then* 100% of unit tests pass.
+- **Invariants**: Pure Python 3 standard library; zero Android runtime changes; zero regression in existing governance checks.

@@ -1178,9 +1178,9 @@ def auto_verify_living_docs_on_stage5(parent_key, repo_root=None):
 
 def recalculate_master_index_tables(repo_root=None):
     """
-    Recalculates summary tables ('Total', 'Verified', 'Planned / Open') and total requirement/test
+    Recalculates summary tables ('Total', 'Verified', 'Implemented', 'Planned / Open') and total requirement/test
     counts in docs/requirements.md and docs/tests.md based on actual parsed section headings
-    in the 9 domain shards under docs/requirements/ and docs/tests/ (ATT-5431).
+    in the 9 domain shards under docs/requirements/ and docs/tests/ (ATT-5431, ATT-6126).
     """
     if repo_root is None:
         repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
@@ -1198,7 +1198,7 @@ def recalculate_master_index_tables(repo_root=None):
             if not fn.endswith(".md"):
                 continue
             fp = os.path.join(abs_shard_dir, fn)
-            tot = ver = plan = 0
+            tot = ver = impl = plan = 0
             with open(fp, "r", encoding="utf-8") as f:
                 for line in f:
                     m = re.match(r"^(#{2,4})\s*(" + prefix + r"-[A-Z0-9_-]+):?\s*(.*?)$", line.strip())
@@ -1207,9 +1207,11 @@ def recalculate_master_index_tables(repo_root=None):
                     tot += 1
                     if "[Verified]" in line:
                         ver += 1
+                    elif "[Implemented]" in line:
+                        impl += 1
                     else:
                         plan += 1
-            shard_counts[fn] = (tot, ver, plan)
+            shard_counts[fn] = (tot, ver, impl, plan)
 
         master_fp = os.path.join(repo_root, master_rel)
         if not os.path.exists(master_fp):
@@ -1219,20 +1221,29 @@ def recalculate_master_index_tables(repo_root=None):
 
         grand_total = sum(c[0] for c in shard_counts.values())
         grand_verified = sum(c[1] for c in shard_counts.values())
-        grand_planned = sum(c[2] for c in shard_counts.values())
+        grand_implemented = sum(c[2] for c in shard_counts.values())
+        grand_planned = sum(c[3] for c in shard_counts.values())
 
         new_lines = []
         changed = False
         for line in master_lines:
             new_line = line
+            if re.search(r"\|\s*Total\s*\|\s*Verified\s*\|\s*Planned\s*/\s*Open\s*\|", line):
+                new_line = re.sub(
+                    r"\|\s*Total\s*\|\s*Verified\s*\|\s*Planned\s*/\s*Open\s*\|",
+                    "| Total | Verified | Implemented | Planned / Open |",
+                    line,
+                )
+            elif re.search(r"\|\s*:---\s*:\s*\|\s*:---\s*:\s*\|\s*:---\s*:\s*\|", line) and line.count(":---:") == 3:
+                new_line = line.rstrip() + " :---: |\n"
             m_link = re.search(r"\((?:requirements|tests)/((?:req|tst)_[^)]+\.md)\)", line)
             if m_link:
                 s_name = m_link.group(1)
                 if s_name in shard_counts:
-                    t, v, p = shard_counts[s_name]
+                    t, v, i, p = shard_counts[s_name]
                     new_line = re.sub(
-                        r"\|\s*\d+\s*\|\s*\d+\s*\|\s*\d+\s*\|(\s*)$",
-                        rf"| {t} | {v} | {p} |\1",
+                        r"\|\s*\d+\s*\|\s*\d+(?:\s*\|\s*\d+)?\s*\|\s*\d+\s*\|(\s*)$",
+                        rf"| {t} | {v} | {i} | {p} |\1",
                         line,
                     )
             elif "links to the " in line:
@@ -1254,7 +1265,7 @@ def recalculate_master_index_tables(repo_root=None):
         if changed:
             with open(master_fp, "w", encoding="utf-8") as f:
                 f.writelines(new_lines)
-            print(f"Recalculated master index table in {master_rel}: Total={grand_total}, Verified={grand_verified}, Planned={grand_planned}.")
+            print(f"Recalculated master index table in {master_rel}: Total={grand_total}, Verified={grand_verified}, Implemented={grand_implemented}, Planned={grand_planned}.")
 
 def submit_stage(parent_key, stage_arg, text_or_file, summary_override=None, role="agent1"):
     """

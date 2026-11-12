@@ -2314,3 +2314,17 @@
 
 
 
+
+
+### TST-PRO-078: **Tracking Cockpit Verification & Bidirectional Traceability Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-PRO-078`
+- **Scope**: Tooling Unit Tests, Contract Tests & Governance Integration
+- **Component**: `tools/verify_requirement_governance.py`, `tools/test_verify_requirement_governance.py`, `docs/requirements/req_tracking_cockpit.md`, `docs/tests/tst_tracking_cockpit.md`
+- **Jira**: `ATT-6127`
+- **Test Description**:
+  1. *Tracking Cockpit Domain Coverage Test (`TST-PRO-078.1`, test_verify_requirement_governance.py)*:
+  • Verify that `calculate_traceability_coverage()` across `req_tracking_cockpit.md` and `tst_tracking_cockpit.md` yields $\ge 95\%$ Category 1 coverage and $\ge 95\%$ Category 4 bidirectional coverage with zero ungrounded [Verified] claims.
+  2. *Zero Dangling Reference Verification Test (`TST-PRO-078.2`, verify_requirement_governance.py)*:
+  • Verify that `find_dangling_references()` detects zero dangling references in `req_tracking_cockpit.md` and `tst_tracking_cockpit.md` after removing `TST-FUSION-001`..`003` and `REQ-TRK-035` from legacy allowlists.
+  3. *Living Documentation Master Table Parity Test (`TST-PRO-078.3`, AspiceSweAuditContractTest.kt)*:
+  • Verify 100% mathematical parity across all 4 columns of `docs/requirements.md` and `docs/tests.md` via `verify_master_table_parity()` and `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.build.AspiceSweAuditContractTest"`.
