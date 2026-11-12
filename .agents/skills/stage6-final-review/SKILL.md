@@ -82,13 +82,19 @@ python3 tools/jira_util.py --as agent2 final-review-verdict <TICKET_KEY> BOUNCE 
   - If a 4th bounce is triggered, `jira_util.py` automatically tags `[FINAL REVIEW (AGENT) — ESCALATED AFTER 3 BOUNCES]`, transitions `<TICKET_KEY>` to `Final Review (Human)`, and assigns it to `human` so the Product Owner can inspect the disputed ticket during Ceremony 2 without an infinite loop.
 
 ### Case B — `PASS` (`I.O.` $\rightarrow$ `Final Review (Human)`)
-Only when all 6 adversarial audit dimensions are verified clean (or after all bounced defects have been healed and re-verified), record the `PASS` verdict:
+Only when all 6 adversarial audit dimensions are verified clean (or after all bounced defects have been healed and re-verified), record the `PASS` verdict. Every Stage 6 review MUST answer the exact three review ceremony questions: **Pros**, **Cons / Auffälligkeiten**, and **Würdest du das freigeben?**:
 ```bash
 python3 tools/jira_util.py --as agent2 final-review-verdict <TICKET_KEY> PASS "h3. Cold Final Review (Agent) — Executive Summary
 * *Commit*: <COMMIT_HASH>
 * *What Changed*: <1-2 concise bullets summarizing the production change>
 * *Adversarial Audit Checks*: <Specific callers, lifecycle paths, math boundaries, and counterpart classes inspected>
+* *Pros (Was ist gut/gelungen?)*:
+  * <Clean architectural separation, invariant protection, realistic test assertions>
+* *Cons / Auffälligkeiten / Defects Identified (Was ist kritisch, verbesserungsbedürftig oder unvollständig?)*:
+  * <Enumerate any observed flaws/quirks, or 'Keine kritischen Mängel festgestellt'>
+* *Würdest du das freigeben? (Freigabe-Empfehlung)*:
+  * **JA — Freigabe empfohlen** (bzw. **NEIN — BOUNCE** if any defect found) mit prägnanter Begründung.
 * *Requirements & Tests Verified*: <REQ-XXX / TST-XXX> (<TestClassName> — 100% pass)
 * *Residual Risk / Human Focus*: <Low/Medium — specific area for PO spot-check on Pixel 10 if applicable>"
 ```
-This atomically verifies deliverable/requirement hygiene, posts `[FINAL REVIEW (AGENT) — PASS]`, transitions `<TICKET_KEY>` to `Final Review (Human)`, and assigns it to `human`.
+This atomically verifies deliverable/requirement hygiene, validates presence of the mandatory review ceremony questions, posts `[FINAL REVIEW (AGENT) — PASS]`, transitions `<TICKET_KEY>` to `Final Review (Human)`, and assigns it to `human`.

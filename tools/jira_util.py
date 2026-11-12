@@ -1477,6 +1477,23 @@ def final_review_verdict(parent_key, verdict_arg, text_or_file, bounce_target="i
     assign_issue(parent_key, auditor_role, role=auditor_role)
 
     if is_pass:
+        report_lower = report_text.lower()
+        has_pros = any(kw in report_lower for kw in ("pros", "vorteile", "pro:"))
+        has_cons = any(kw in report_lower for kw in ("cons", "nachteile", "auffälligkeiten", "defects"))
+        has_recommendation = any(kw in report_lower for kw in ("freigeben", "freigabe", "recommend", "würdest du"))
+        if not (has_pros and has_cons and has_recommendation):
+            missing = []
+            if not has_pros: missing.append("Pros")
+            if not has_cons: missing.append("Cons / Defects Identified / Auffälligkeiten")
+            if not has_recommendation: missing.append("Würdest du das freigeben? (Freigabe-Empfehlung)")
+            print(f"Error: Stage 6 Final Review report missing mandatory review ceremony questions: {', '.join(missing)}.\n"
+                  f"Every Stage 6 Cold Carbon review MUST answer:\n"
+                  f"* *Pros (Was ist gut/gelungen?)*:\n"
+                  f"* *Cons / Auffälligkeiten / Defects Identified (Was ist kritisch/unvollständig?)*:\n"
+                  f"* *Würdest du das freigeben? (Freigabe-Empfehlung)*:\n",
+                  file=sys.stderr)
+            sys.exit(1)
+
         comment_body = report_text if FINAL_REVIEW_PASS_TAG in report_text else f"{FINAL_REVIEW_PASS_TAG}\n\n{report_text}"
         add_comment(parent_key, comment_body, role=auditor_role)
         transition_issue(parent_key, "final review (human)", role=auditor_role, inject_context=False)
