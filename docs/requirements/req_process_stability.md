@@ -3677,6 +3677,36 @@ The workflow SHALL mandate that:
   • *Then* 100% of unit tests pass.
 - **Invariants**: Zero Android production runtime code changes in `app/src/main/`.
 
+### REQ-PRO-076: Bidirectional System-to-Software Requirement Traceability and Governance Verification [Verified]
+- **Tests**: `TST-PRO-076`
+- **Implementation**: `tools/verify_requirement_governance.py`, `tools/test_verify_requirement_governance.py`, `docs/system/sysreq_live_tracking.md`, `docs/system/sysreq_data_exchange.md`, `docs/system/system_software_traceability.md`, `docs/project_governance.md`
+- **Rationale**: Under ASPICE SYS.2 BP5 and SWE.1 BP5 (Remediation S-04 / ATT-6163), software requirements must not exist in isolation. Every software requirement SHALL either trace to an authentic system requirement (`SYSREQ-*`) or be formally classified as software-derived with documented rationale:
+  1. *Bidirectional System-to-Software Traceability Matrix (`REQ-PRO-076.1`)*:
+     • The system engineering baseline SHALL establish explicit bidirectional traceability matrices between system requirements (`SYSREQ-TRK-001`..`006`, `SYSREQ-DEX-001`..`006`) and refining software requirements in `docs/system/sysreq_live_tracking.md`, `docs/system/sysreq_data_exchange.md`, and `docs/system/system_software_traceability.md`.
+  2. *Domain & Prefix Tailoring Rules (`REQ-PRO-076.2`)*:
+     • Process governance (`docs/project_governance.md` and `docs/system/system_software_traceability.md`) SHALL define formal tailoring rules classifying purely internal UI, theme, calculation, and process requirement prefixes (`UI`, `UNT`, `PER`, `PERF`, `SPT`, `LOC`, `MON`, `PRI`, `SET`, `REV`, `STP`, `ARC`, `BLD`, `BUG`, `INT`, `LIV`, `LOG`, `MAN`, `NFR`, `PRO`, `REG`, `SEC`, `STB`, `STR`, `TOOL`, `TST`) as software-derived (`[SWE-Derived]`) with documented architectural rationale.
+  3. *Automated Verification of Cited SYSREQ Existence (`REQ-PRO-076.3`)*:
+     • `tools/verify_requirement_governance.py` SHALL verify that every `SYSREQ-*` identifier cited in living requirements or traceability matrices exists as a declared system requirement in `docs/system/sysreq_*.md`. Any dangling or invalid SYSREQ reference SHALL trigger verification failure.
+  4. *SYSREQ Refinement Coverage Verification (`REQ-PRO-076.4`)*:
+     • `tools/verify_requirement_governance.py` SHALL verify that 100% of declared system requirements are refined by $\ge 1$ software requirement, reporting unrefined system requirements and failing verification if any system requirement is unrefined.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Net-new requirement `REQ-PRO-076` (`REQ-PRO-076.1`–`REQ-PRO-076.4`). Targets `tools/verify_requirement_governance.py`, `tools/test_verify_requirement_governance.py`, `docs/system/sysreq_live_tracking.md`, `docs/system/sysreq_data_exchange.md`, `docs/system/system_software_traceability.md`, and `docs/project_governance.md`.
+  2. *Historical Origin & Commit Trace*: Sprint 2026-46.4 via ticket `ATT-6163` under Epic `ATT-6142` (ASPICE CL2 Remediation S-04). Builds on `88525c79` (ATT-6121) and SYS.2 foundations `b5e7d58f` (ATT-6160) and `95eb871b` (ATT-6161).
+  3. *Root Reason for Existing Formulation*: ASPICE 4.0 assessment finding S-04 identified that SWE requirements stood alone without machine-checked linkage to parent system requirements.
+  4. *Preservation of Core Invariants*: Zero Android production runtime code changes in `app/src/main/`; pure Python 3 standard library CLI; living documentation master index mathematical parity preserved.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* software requirements and traceability matrices citing `SYSREQ-*` IDs,
+  • *When* `tools/verify_requirement_governance.py` runs,
+  • *Then* all cited SYSREQs must exist in `docs/system/sysreq_*.md`, all declared SYSREQs must be covered by $\ge 1$ software requirement, and software requirements with tailored prefixes are classified as derived.
+  • *Given* a requirement citing a non-existent `SYSREQ-XXX`,
+  • *When* `tools/verify_requirement_governance.py` runs,
+  • *Then* it fails with a descriptive dangling SYSREQ reference error.
+  • *Given* `tools/test_verify_requirement_governance.py`,
+  • *When* executed via pytest/unittest,
+  • *Then* 100% of unit tests pass.
+- **Invariants**: Pure Python 3 standard library; zero Android runtime changes; zero regression in existing governance checks.
+
+
 
 
 

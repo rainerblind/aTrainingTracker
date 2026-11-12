@@ -108,3 +108,19 @@ These requirements satisfy ASPICE 4.0 **SYS.2 (System Requirements Analysis)** B
 | `SYSREQ-DEX-004` | Dropbox & Google Drive cloud backup & workout sync | `DropboxBackupManager`, `GoogleDriveBackupManager`, `GoogleDriveUploader` | `/Backups/`, `aTrainingTracker/Backups/`, `dropbox-core-sdk:8.0.2` |
 | `SYSREQ-DEX-005` | Full state `.attbackup` atomic archiving & Zip Slip defense | `BackupManager`, `SecureZipExtractor` | `BACKUP_FILENAME = "aTrainingTracker_backup.attbackup"`, 1.5x space check, WAL flush |
 | `SYSREQ-DEX-006` | Credential exclusion, Health Connect, decommissioned services | `AuthCredentialsStore`, `full_backup_content.xml`, `data_extraction_rules.xml`, `HealthConnectHrvImporter` | Exclusion of `auth_credentials_prefs.xml`, Health Connect HRV consent, Runkeeper & TrainingPeaks inert demarcation |
+
+---
+
+## 4. System-to-Software Requirement Traceability Matrix (SYS.2 BP5 -> SWE.1 BP5)
+
+The following matrix establishes bidirectional traceability between system data exchange requirements and concrete refining software requirements in `docs/requirements/req_data_migration_export.md`:
+
+| System Requirement | System Title | Refining Software Requirements (`REQ-*`) | Grounded Classes & Verification Test |
+| :--- | :--- | :--- | :--- |
+| `SYSREQ-DEX-001` | Multi-Format Telemetry Export | `REQ-EXP-001`, `REQ-EXP-022`, `REQ-DAT-018`, `REQ-DAT-027`, `REQ-DAT-028` | `ExportManager.java`, `FitFileWriter.java`, `TCXFileWriter.java`, `GPXFileWriter.java`, `CSVFileWriter.java`, `SystemDataExchangeRequirementsContractTest.kt` |
+| `SYSREQ-DEX-002` | Multi-Format Workout Ingestion & Deduplication | `REQ-DAT-001`, `REQ-DAT-019`, `REQ-DAT-021`, `REQ-DAT-025` | `LegacyImportEngine.kt`, `StravaBulkExportImporter.kt`, `StravaCsvParser.kt`, `WorkoutSamplesDatabaseManager.java`, `SystemDataExchangeRequirementsContractTest.kt` |
+| `SYSREQ-DEX-003` | Cloud Activity Sync (Strava) | `REQ-EXP-002`, `REQ-EXP-005`, `REQ-EXP-008`, `REQ-EXP-009`, `REQ-EXP-011`, `REQ-EXP-012`, `REQ-EXP-019`, `REQ-EXP-021`, `REQ-EXT-004` | `StravaUploader.kt`, `StravaEquipmentSyncWorker.kt`, `StravaRoutesSyncWorker.kt`, `StravaSegmentsSyncWorker.kt`, `SystemDataExchangeRequirementsContractTest.kt` |
+| `SYSREQ-DEX-004` | Cloud Storage Sync (Dropbox & GDrive) | `REQ-DAT-020`, `REQ-DAT-022`, `REQ-DAT-024`, `REQ-DAT-029` | `DropboxBackupManager.kt`, `GoogleDriveBackupManager.kt`, `GoogleDriveUploader.kt`, `BackupWorker.kt`, `SystemDataExchangeRequirementsContractTest.kt` |
+| `SYSREQ-DEX-005` | Full State Backup & Atomic Recovery | `REQ-DAT-005`, `REQ-DAT-020`, `REQ-DAT-026`, `REQ-MIG-023` | `BackupManager.kt`, `SecureZipExtractor.kt`, `BackupRestoreViewModel.kt`, `DatabaseConnectionManager.kt`, `SystemDataExchangeRequirementsContractTest.kt` |
+| `SYSREQ-DEX-006` | Security Isolation & Credentials Shield | `REQ-EXP-020`, `REQ-DAT-024` | `AuthCredentialsStore.kt`, `full_backup_content.xml`, `data_extraction_rules.xml`, `HealthConnectHrvImporter.kt`, `SystemDataExchangeRequirementsContractTest.kt` |
+

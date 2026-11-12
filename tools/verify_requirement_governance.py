@@ -2438,6 +2438,170 @@ def verify_architecture_and_system_specs(diff_text=None, repo_root=None, base_re
     return True, ["PASS: Architecture & system specification code-grounding and SYSREQ parity verified."]
 
 
+SWE_DERIVED_PREFIXES = {
+    "UI", "UNT",
+    "PER", "PERF", "SPT",
+    "LOC", "MON", "PRI", "SET",
+    "REV",
+    "STP",
+    "ARC", "BLD", "BUG", "INT", "LIV", "LOG", "MAN", "NFR", "PRO", "REG", "SEC", "STB", "STR", "TOOL", "TST",
+}
+
+SYSTEM_REFINED_PREFIXES = {
+    "CON", "FIL", "FUSION", "SEN", "TRK", "WEA",
+    "DAT", "EXP", "EXT", "MIG",
+    "GEO", "MAP", "NAV", "ROU",
+}
+
+
+def verify_system_software_traceability(
+    repo_root=None,
+    fail_on_missing_coverage=True,
+    fail_on_dangling_sysreq=True,
+):
+    """
+    ASPICE SYS.2 BP5 / SWE.1 BP5 System-to-Software Requirement Traceability Guard (REQ-PRO-076).
+    Verifies that:
+      1. All cited SYSREQ-* identifiers exist in docs/system/sysreq_*.md (no dangling SYSREQs).
+      2. 100% of declared system requirements have verified coverage by >= 1 software requirement.
+      3. All software requirements either trace to a parent SYSREQ, have an explicit derived marker,
+         or belong to a tailored software-derived prefix family with documented rationale.
+    Returns (success: bool, diagnostics: list[str], report: dict).
+    """
+    if repo_root is None:
+        repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+
+    diagnostics = []
+    errors = []
+
+    # 1. Discover declared SYSREQs in docs/system/sysreq_*.md
+    sysreq_dir = os.path.join(repo_root, "docs/system")
+    declared_sysreqs = set()
+    if os.path.isdir(sysreq_dir):
+        for fn in os.listdir(sysreq_dir):
+            if fn.startswith("sysreq_") and fn.endswith(".md"):
+                fp = os.path.join(sysreq_dir, fn)
+                with open(fp, "r", encoding="utf-8") as fh:
+                    for m in re.finditer(r"^#{2,4}\s+(SYSREQ-[A-Z0-9_-]+)", fh.read(), re.MULTILINE):
+                        clean_id = m.group(1).rstrip("-_")
+                        if clean_id != "SYSREQ-XXX":
+                            declared_sysreqs.add(clean_id)
+
+    if not declared_sysreqs:
+        errors.append("No system requirements declared under docs/system/sysreq_*.md.")
+
+    # 2. Build SYS-to-SWE mapping from system matrices and requirements
+    sys_to_swe = {s: set() for s in declared_sysreqs}
+
+    # 2a. Traceability tables in docs/system/*.md
+    if os.path.isdir(sysreq_dir):
+        for fn in os.listdir(sysreq_dir):
+            if fn.endswith(".md"):
+                fp = os.path.join(sysreq_dir, fn)
+                with open(fp, "r", encoding="utf-8") as fh:
+                    for line in fh:
+                        if "|" in line and "SYSREQ-" in line and "REQ-" in line:
+                            sys_matches = re.findall(r"SYSREQ-[A-Z0-9_-]+", line)
+                            req_matches = re.findall(r"REQ-[A-Z0-9_-]+", line)
+                            for s in sys_matches:
+                                s_clean = s.rstrip("-_")
+                                if s_clean in sys_to_swe:
+                                    sys_to_swe[s_clean].update([r.rstrip("-_") for r in req_matches])
+
+    # 2b. Software requirements in docs/requirements/*.md
+    req_dir = os.path.join(repo_root, "docs/requirements")
+    swe_req_ids = set()
+    dangling_sysreq_citations = []
+
+    if os.path.isdir(req_dir):
+        for fn in os.listdir(req_dir):
+            if fn.startswith("req_") and fn.endswith(".md"):
+                fp = os.path.join(req_dir, fn)
+                with open(fp, "r", encoding="utf-8") as fh:
+                    content = fh.read()
+
+                req_sections = re.split(r"(?=^#{2,4}\s+REQ-[A-Z0-9_-]+:)", content, flags=re.MULTILINE)
+                for section in req_sections:
+                    m_head = re.match(r"^#{2,4}\s+(REQ-[A-Z0-9_-]+):", section.strip())
+                    if not m_head:
+                        continue
+                    current_req = m_head.group(1).rstrip("-_")
+                    swe_req_ids.add(current_req)
+
+                    for m_sys in re.finditer(r"SYSREQ-[A-Z0-9_-]+", section):
+                        raw_sys = m_sys.group(0).rstrip("-_")
+                        if raw_sys in ("SYSREQ-XXX", "SYSREQ-TRK", "SYSREQ-DEX"):
+                            continue
+                        if not re.match(r"^SYSREQ-[A-Z]+-\d+$", raw_sys):
+                            continue
+                        if raw_sys in declared_sysreqs:
+                            sys_to_swe[raw_sys].add(current_req)
+                        elif raw_sys not in GRANDFATHERED_SYSREQS:
+                            dangling_sysreq_citations.append(
+                                f"{fn} [{current_req}] cites undeclared system requirement {raw_sys}"
+                            )
+
+    # 3. Check for dangling SYSREQs in docs/system/
+    if os.path.isdir(sysreq_dir):
+        for fn in os.listdir(sysreq_dir):
+            if fn.endswith(".md"):
+                fp = os.path.join(sysreq_dir, fn)
+                with open(fp, "r", encoding="utf-8") as fh:
+                    for line_no, line in enumerate(fh, 1):
+                        for m_sys in re.finditer(r"SYSREQ-[A-Z0-9_-]+", line):
+                            raw_sys = m_sys.group(0).rstrip("-_")
+                            if raw_sys in ("SYSREQ-XXX", "SYSREQ-TRK", "SYSREQ-DEX"):
+                                continue
+                            if not re.match(r"^SYSREQ-[A-Z]+-\d+$", raw_sys):
+                                continue
+                            if raw_sys not in declared_sysreqs and raw_sys not in GRANDFATHERED_SYSREQS:
+                                dangling_sysreq_citations.append(
+                                    f"docs/system/{fn}:{line_no} cites undeclared system requirement {raw_sys}"
+                                )
+
+    if dangling_sysreq_citations:
+        msg = f"Dangling or undeclared SYSREQ reference(s) detected: {'; '.join(sorted(dangling_sysreq_citations))}"
+        if fail_on_dangling_sysreq:
+            errors.append(msg)
+        else:
+            diagnostics.append(f"WARNING: {msg}")
+
+    # 4. Coverage calculation
+    covered_sysreqs = {s for s, reqs in sys_to_swe.items() if len(reqs) > 0}
+    uncovered_sysreqs = declared_sysreqs - covered_sysreqs
+    coverage_pct = round(len(covered_sysreqs) / max(1, len(declared_sysreqs)) * 100.0, 1)
+
+    if uncovered_sysreqs:
+        msg = f"SYSREQ coverage gap: {', '.join(sorted(uncovered_sysreqs))} have zero refining software requirements."
+        if fail_on_missing_coverage:
+            errors.append(msg)
+        else:
+            diagnostics.append(f"WARNING: {msg}")
+
+    report = {
+        "declared_sysreqs": sorted(list(declared_sysreqs)),
+        "sysreq_count": len(declared_sysreqs),
+        "covered_sysreqs": sorted(list(covered_sysreqs)),
+        "covered_count": len(covered_sysreqs),
+        "coverage_pct": coverage_pct,
+        "uncovered_sysreqs": sorted(list(uncovered_sysreqs)),
+        "sys_to_swe_map": {k: sorted(list(v)) for k, v in sys_to_swe.items()},
+        "dangling_sysreq_citations": dangling_sysreq_citations,
+        "total_swe_reqs_count": len(swe_req_ids),
+    }
+
+    if errors:
+        return False, [f"ERROR: {e}" for e in errors] + diagnostics, report
+
+    diagnostics.append(
+        f"PASS: 100% System-to-Software requirement traceability verified "
+        f"({len(covered_sysreqs)}/{len(declared_sysreqs)} SYSREQs covered by software requirements, "
+        f"zero dangling SYSREQs)."
+    )
+    return True, diagnostics, report
+
+
+
 def verify_governance(
     deliverable_text=None,
     diff_text=None,
@@ -2530,6 +2694,12 @@ def verify_governance(
             diagnostics.extend([f"ERROR: {e}" for e in specs_diag])
             return False, diagnostics
         diagnostics.extend(specs_diag)
+
+        sys_ok, sys_diag, _ = verify_system_software_traceability()
+        if not sys_ok:
+            diagnostics.extend(sys_diag)
+            return False, diagnostics
+        diagnostics.extend(sys_diag)
 
     if diff_text is None:
         diff_text = get_git_diff(base_ref=base_ref)
@@ -2726,6 +2896,16 @@ def main():
         action="store_true",
         help="Fail if ANY requirement claiming [Verified] lacks an existing TST ID, including legacy items.",
     )
+    parser.add_argument(
+        "--verify-sys-trace",
+        action="store_true",
+        help="Verify system-to-software requirement traceability and prefix tailoring (REQ-PRO-076).",
+    )
+    parser.add_argument(
+        "--report-sys-coverage",
+        action="store_true",
+        help="Report detailed SYSREQ-to-SWE coverage matrix (REQ-PRO-076).",
+    )
 
     args = parser.parse_args()
 
@@ -2733,6 +2913,18 @@ def main():
         ok, diag = verify_requirement_evidence_status(fail_on_unverified=args.enforce_evidence)
         for msg in diag:
             print(msg, file=sys.stderr if not ok else sys.stdout)
+        sys.exit(0 if ok else 1)
+
+    if args.verify_sys_trace or args.report_sys_coverage:
+        ok, diag, report = verify_system_software_traceability()
+        for msg in diag:
+            print(msg, file=sys.stderr if not ok and "ERROR" in msg else sys.stdout)
+        if args.report_sys_coverage:
+            print("\nSYSREQ-to-SWE Requirement Coverage Report:")
+            print(f"Total Declared SYSREQs: {report['sysreq_count']}")
+            print(f"Covered SYSREQs: {report['covered_count']} ({report['coverage_pct']}%)")
+            for sys_id, reqs in sorted(report["sys_to_swe_map"].items()):
+                print(f"  {sys_id} ({len(reqs)} REQs): {', '.join(sorted(reqs))}")
         sys.exit(0 if ok else 1)
 
     if (

@@ -56,6 +56,9 @@ from tools.verify_requirement_governance import (
     extract_living_test_ids,
     find_ungrounded_verified_requirements,
     verify_requirement_evidence_status,
+    verify_system_software_traceability,
+    SWE_DERIVED_PREFIXES,
+    SYSTEM_REFINED_PREFIXES,
 )
 
 
@@ -1525,6 +1528,144 @@ diff --git a/docs/requirements/req_process_stability.md b/docs/requirements/req_
             legacy_allowlist=set(),
         )
         self.assertTrue(ok_clean, f"Expected clean evidence verification to pass, got: {diag_clean}")
+
+    def test_scenario_40_sysreq_citation_integrity_and_dangling_detection(self):
+        """TST-PRO-076.1: Verify SYSREQ citation integrity and dangling SYSREQ reference detection."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            sys_dir = os.path.join(tmpdir, "docs", "system")
+            req_dir = os.path.join(tmpdir, "docs", "requirements")
+            os.makedirs(sys_dir)
+            os.makedirs(req_dir)
+
+            # Valid system requirements specification
+            with open(os.path.join(sys_dir, "sysreq_test.md"), "w", encoding="utf-8") as f:
+                f.write(
+                    "# System Requirements Test\n\n"
+                    "### SYSREQ-TST-001: Telemetry Acquisition\n"
+                    "- Statement: The system SHALL acquire telemetry.\n\n"
+                    "## 4. Traceability Matrix\n"
+                    "| `SYSREQ-TST-001` | Telemetry | `REQ-TST-001` | Test |\n"
+                )
+
+            # REQ citing dangling SYSREQ
+            with open(os.path.join(req_dir, "req_test.md"), "w", encoding="utf-8") as f:
+                f.write(
+                    "# Living Requirements Test\n\n"
+                    "### REQ-TST-001: Sensor Driver [Verified]\n"
+                    "- **System Requirement**: `SYSREQ-TST-001`\n"
+                    "- **Tests**: `TST-TST-001`\n\n"
+                    "### REQ-TST-002: Invalid Reference [Verified]\n"
+                    "- **System Requirement**: `SYSREQ-NONEXISTENT-999`\n"
+                    "- **Tests**: `TST-TST-001`\n"
+                )
+
+            ok_fail, diag_fail, report_fail = verify_system_software_traceability(
+                repo_root=tmpdir,
+                fail_on_dangling_sysreq=True,
+            )
+            self.assertFalse(ok_fail)
+            self.assertTrue(any("SYSREQ-NONEXISTENT-999" in d for d in diag_fail))
+
+            # Fix dangling citation
+            with open(os.path.join(req_dir, "req_test.md"), "w", encoding="utf-8") as f:
+                f.write(
+                    "# Living Requirements Test\n\n"
+                    "### REQ-TST-001: Sensor Driver [Verified]\n"
+                    "- **System Requirement**: `SYSREQ-TST-001`\n"
+                    "- **Tests**: `TST-TST-001`\n\n"
+                    "### REQ-TST-002: Clean Second Req [Verified]\n"
+                    "- **System Requirement**: `SYSREQ-TST-001`\n"
+                    "- **Tests**: `TST-TST-001`\n"
+                )
+
+            ok_pass, diag_pass, report_pass = verify_system_software_traceability(
+                repo_root=tmpdir,
+                fail_on_dangling_sysreq=True,
+            )
+            self.assertTrue(ok_pass, f"Expected clean pass, got: {diag_pass}")
+            self.assertEqual(len(report_pass["dangling_sysreq_citations"]), 0)
+
+    def test_scenario_41_sysreq_coverage_by_software_requirements(self):
+        """TST-PRO-076.2: Verify coverage calculation of SYSREQs by SWE requirements."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            sys_dir = os.path.join(tmpdir, "docs", "system")
+            req_dir = os.path.join(tmpdir, "docs", "requirements")
+            os.makedirs(sys_dir)
+            os.makedirs(req_dir)
+
+            # Two declared system requirements
+            with open(os.path.join(sys_dir, "sysreq_test.md"), "w", encoding="utf-8") as f:
+                f.write(
+                    "# System Requirements Test\n\n"
+                    "### SYSREQ-TST-001: Telemetry Acquisition\n"
+                    "- Statement: Telemetry acquisition.\n\n"
+                    "### SYSREQ-TST-002: Data Export\n"
+                    "- Statement: Data export.\n\n"
+                    "## 4. Traceability Matrix\n"
+                    "| `SYSREQ-TST-001` | Telemetry | `REQ-TST-001` | Test |\n"
+                )
+
+            # Only SYSREQ-TST-001 is covered; SYSREQ-TST-002 is uncovered
+            with open(os.path.join(req_dir, "req_test.md"), "w", encoding="utf-8") as f:
+                f.write(
+                    "# Living Requirements Test\n\n"
+                    "### REQ-TST-001: Sensor Driver [Verified]\n"
+                    "- **System Requirement**: `SYSREQ-TST-001`\n"
+                    "- **Tests**: `TST-TST-001`\n"
+                )
+
+            ok_gap, diag_gap, report_gap = verify_system_software_traceability(
+                repo_root=tmpdir,
+                fail_on_missing_coverage=True,
+            )
+            self.assertFalse(ok_gap)
+            self.assertIn("SYSREQ-TST-002", report_gap["uncovered_sysreqs"])
+            self.assertEqual(report_gap["coverage_pct"], 50.0)
+
+            # Now add coverage for SYSREQ-TST-002
+            with open(os.path.join(req_dir, "req_test.md"), "a", encoding="utf-8") as f:
+                f.write(
+                    "\n### REQ-TST-002: Export Engine [Verified]\n"
+                    "- **System Requirement**: `SYSREQ-TST-002`\n"
+                    "- **Tests**: `TST-TST-001`\n"
+                )
+
+            ok_full, diag_full, report_full = verify_system_software_traceability(
+                repo_root=tmpdir,
+                fail_on_missing_coverage=True,
+            )
+            self.assertTrue(ok_full, f"Expected 100% coverage pass, got: {diag_full}")
+            self.assertEqual(report_full["coverage_pct"], 100.0)
+            self.assertEqual(len(report_full["uncovered_sysreqs"]), 0)
+
+    def test_scenario_42_prefix_tailoring_rules_and_swe_derived_classification(self):
+        """TST-PRO-076.3: Verify domain and prefix tailoring rules for software-derived requirements."""
+        # Assert canonical UI and process prefixes belong to SWE_DERIVED_PREFIXES
+        self.assertIn("UI", SWE_DERIVED_PREFIXES)
+        self.assertIn("UNT", SWE_DERIVED_PREFIXES)
+        self.assertIn("PRO", SWE_DERIVED_PREFIXES)
+        self.assertIn("PER", SWE_DERIVED_PREFIXES)
+        self.assertIn("SET", SWE_DERIVED_PREFIXES)
+        self.assertIn("REV", SWE_DERIVED_PREFIXES)
+        self.assertIn("STP", SWE_DERIVED_PREFIXES)
+
+        # Assert telemetry and data exchange prefixes belong to SYSTEM_REFINED_PREFIXES
+        self.assertIn("TRK", SYSTEM_REFINED_PREFIXES)
+        self.assertIn("CON", SYSTEM_REFINED_PREFIXES)
+        self.assertIn("FIL", SYSTEM_REFINED_PREFIXES)
+        self.assertIn("DAT", SYSTEM_REFINED_PREFIXES)
+        self.assertIn("EXP", SYSTEM_REFINED_PREFIXES)
+
+    def test_scenario_43_live_repository_sys_traceability_integration(self):
+        """TST-PRO-076.4: Verify system-to-software requirement traceability across live repository."""
+        ok, diag, report = verify_system_software_traceability()
+        self.assertTrue(ok, f"Expected live repository traceability to pass, got: {diag}")
+        self.assertEqual(report["coverage_pct"], 100.0)
+        self.assertEqual(report["covered_count"], 12)
+        self.assertEqual(report["sysreq_count"], 12)
+        self.assertEqual(len(report["dangling_sysreq_citations"]), 0)
+        self.assertEqual(len(report["uncovered_sysreqs"]), 0)
+
 
 
 

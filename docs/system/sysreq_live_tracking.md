@@ -107,3 +107,19 @@ These requirements satisfy ASPICE 4.0 **SYS.2 (System Requirements Analysis)** B
 | `SYSREQ-TRK-004` | GNSS acquisition & null-island filtering | `SpeedAndLocationDevice_GPS`, `SpeedAndLocationDevice_GoogleFused`, `MapDetailViewportMath` | `LocationManager.GPS_PROVIDER`, `GoogleApiClient`, `LocationListener` |
 | `SYSREQ-TRK-005` | Foreground service, WakeLock, power governance | `TrackerService`, `TrainingApplication` | `PowerManager.PARTIAL_WAKE_LOCK`, `FOREGROUND_SERVICE_TYPE_LOCATION`, `FOREGROUND_SERVICE_TYPE_HEALTH` |
 | `SYSREQ-TRK-006` | Cockpit tiles, radar visual/audio warnings | `SensorGridScreen`, `RadarEdgeOverlay`, `RadarAlertManager`, `RadarAudioSynthesizer`, `BikeBellAudioSynthesizer`, `NavigationAudioAlertManager` | `USAGE_ALARM`, `USAGE_MEDIA`, radar threat levels |
+
+---
+
+## 4. System-to-Software Requirement Traceability Matrix (SYS.2 BP5 -> SWE.1 BP5)
+
+The following matrix establishes bidirectional traceability between system tracking requirements and concrete refining software requirements in `docs/requirements/req_tracking_cockpit.md`:
+
+| System Requirement | System Title | Refining Software Requirements (`REQ-*`) | Grounded Classes & Verification Test |
+| :--- | :--- | :--- | :--- |
+| `SYSREQ-TRK-001` | Multi-Sensor Profile Interoperability | `REQ-CON-001`, `REQ-CON-002`, `REQ-CON-003`, `REQ-CON-004`, `REQ-CON-005`, `REQ-CON-007`, `REQ-CON-028` | `BANALService.java`, `BluetoothConstants.java`, `BTLERadarDevice.java`, `SystemLiveTrackingRequirementsContractTest.kt` |
+| `SYSREQ-TRK-002` | Reconnection Resilience & Watchdog | `REQ-CON-005`, `REQ-CON-028`, `REQ-TRK-013` | `MyBTLEDevice.java`, `BTLERadarDevice.java`, `FilterManager.java`, `SystemLiveTrackingRequirementsContractTest.kt` |
+| `SYSREQ-TRK-003` | Deterministic 1-Hz Sampling Loop | `REQ-TRK-001`, `REQ-TRK-002`, `REQ-TRK-007`, `REQ-FIL-001`, `REQ-FIL-005` | `TrackerService.java`, `WorkoutSamplesDatabaseManager.java`, `SystemLiveTrackingRequirementsContractTest.kt` |
+| `SYSREQ-TRK-004` | Multi-Source GNSS Positioning | `REQ-TRK-003`, `REQ-TRK-013`, `REQ-TRK-014`, `REQ-TRK-017` | `SpeedAndLocationDevice_GPS.java`, `SpeedAndLocationDevice_GoogleFused.java`, `SystemLiveTrackingRequirementsContractTest.kt` |
+| `SYSREQ-TRK-005` | Foreground Service & Power Management | `REQ-TRK-003`, `REQ-TRK-005`, `REQ-TRK-015`, `REQ-TRK-016` | `TrackerService.java`, `TrainingApplication.java`, `SystemLiveTrackingRequirementsContractTest.kt` |
+| `SYSREQ-TRK-006` | Real-Time Alerts & Cockpit Feedback | `REQ-TRK-018`, `REQ-TRK-019`, `REQ-TRK-073`, `REQ-CON-028` | `SensorGridScreen.kt`, `RadarEdgeOverlay.kt`, `RadarAlertManager.kt`, `SystemLiveTrackingRequirementsContractTest.kt` |
+

@@ -46,3 +46,16 @@ The governance verifier (`tools/verify_requirement_governance.py`) enforces:
 2. **Evidence Integrity**: A requirement claiming `[Verified]` must cite $\ge 1$ existing, valid test specification (`TST-*`) in its `Tests:` field. Citing zero tests, `None`, or dangling/non-existent test IDs is rejected.
 3. **Bidirectional Link Integrity**: All cited `REQ-*` and `TST-*` identifiers must resolve to authentic headings across the 9 living documentation shards (`REQ-PRO-070`).
 4. **Coverage Ratchets**: Traceability and test code coverage can be measured and ratcheted via `--coverage` (`REQ-PRO-071`).
+
+---
+
+## 4. System-to-Software Requirement Traceability & Tailoring Governance (SYS.2 BP5 / SWE.1 BP5 / REQ-PRO-076)
+
+Under ASPICE SYS.2 BP5 and SWE.1 BP5, bidirectional traceability must connect the system level to the software level:
+
+1. **System Refinement**: Software requirements governing telemetry acquisition, sensors, GNSS, power, data export, ingestion, cloud sync, and backup trace to parent system requirements (`SYSREQ-TRK-*`, `SYSREQ-DEX-*`) documented in `docs/system/sysreq_live_tracking.md`, `docs/system/sysreq_data_exchange.md`, and `docs/system/system_software_traceability.md`.
+2. **Software-Derived Requirements (`[SWE-Derived]`)**: Requirements governing internal Compose UI components, design tokens, mathematical calculation algorithms, user preferences, localization strings, milestones, store assets, and process tooling (`UI`, `UNT`, `PER`, `PERF`, `SPT`, `LOC`, `MON`, `PRI`, `SET`, `REV`, `STP`, `ARC`, `BLD`, `BUG`, `INT`, `LIV`, `LOG`, `MAN`, `NFR`, `PRO`, `REG`, `SEC`, `STB`, `STR`, `TOOL`, `TST`) are classified as software-derived with documented architectural rationale.
+3. **Automated Verifier Enforcement**:
+   - `tools/verify_requirement_governance.py` validates that 100% of declared `SYSREQ-*` identifiers have verified coverage by at least one software requirement.
+   - All cited `SYSREQ-*` identifiers must exist in `docs/system/sysreq_*.md`. Dangling citations fail verification.
+
