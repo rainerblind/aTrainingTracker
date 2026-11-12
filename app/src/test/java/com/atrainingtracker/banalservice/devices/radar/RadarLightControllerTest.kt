@@ -19,6 +19,8 @@
 package com.atrainingtracker.banalservice.devices.radar
 
 import android.content.Context
+import android.hardware.Sensor
+import android.hardware.SensorManager
 import android.util.Log
 import com.atrainingtracker.banalservice.devices.bluetooth_le.BTLERadarDevice
 import io.mockk.every
@@ -332,10 +334,25 @@ class RadarLightControllerTest {
 
     @Test
     fun testRadarLightController_onWorkoutPaused_and_onWorkoutResumed() {
+        val mockSensorManager = mockk<SensorManager>(relaxed = true)
+        val mockLinAcc = mockk<Sensor>(relaxed = true)
+        val mockGravity = mockk<Sensor>(relaxed = true)
+        every { mockSensorManager.getDefaultSensor(Sensor.TYPE_LINEAR_ACCELERATION) } returns mockLinAcc
+        every { mockSensorManager.getDefaultSensor(Sensor.TYPE_GRAVITY) } returns mockGravity
+
         val mockContext = mockk<Context>(relaxed = true)
+        every { mockContext.applicationContext } returns mockContext
+        every { mockContext.getSystemService(Context.SENSOR_SERVICE) } returns mockSensorManager
+
         val mockDevice = mockk<BTLERadarDevice>(relaxed = true)
+        every { mockDevice.setLightMode(any()) } returns true
         RadarLightController.registerRadarDevice(mockDevice, lightSupported = true)
-        RadarLightController.onWorkoutStarted(mockContext)
+        RadarLightController.onWorkoutStarted(mockContext, isCycling = true)
+
+        // Set mode to PELOTON (e.g. rider manually switched or group ride mode)
+        RadarLightController.setLightMode(RadarLightMode.PELOTON)
+        assertEquals(RadarLightMode.PELOTON, RadarLightController.currentMode.value)
+        assertTrue("Sensor listening should be active during cycling workout", SmartBrakeLightDetector.isListening)
 
         RadarLightController.triggerBrakeLight(active = true, nowMs = 1000L)
         assertTrue(RadarLightController.isBrakeActive)
@@ -344,16 +361,49 @@ class RadarLightControllerTest {
         RadarLightController.onWorkoutPaused()
         assertFalse("Active brake must be cleared on pause", RadarLightController.isBrakeActive)
         assertFalse("Sensor listening must be stopped on pause", SmartBrakeLightDetector.isListening)
+        assertEquals("Light mode should revert from brake to pre-brake mode on pause", RadarLightMode.PELOTON, RadarLightController.currentMode.value)
 
         // Resume workout
         RadarLightController.onWorkoutResumed(mockContext)
-        // Verify resumed state
+        assertTrue("Sensor listening must be resumed on unpause", SmartBrakeLightDetector.isListening)
+        assertEquals("PELOTON mode must be preserved on resume and not stomped to defaultMode", RadarLightMode.PELOTON, RadarLightController.currentMode.value)
+    }
+
+    @Test
+    fun testRadarLightController_onWorkoutResumed_preservesNonCyclingSessionState() {
+        val mockSensorManager = mockk<SensorManager>(relaxed = true)
+        val mockLinAcc = mockk<Sensor>(relaxed = true)
+        val mockGravity = mockk<Sensor>(relaxed = true)
+        every { mockSensorManager.getDefaultSensor(Sensor.TYPE_LINEAR_ACCELERATION) } returns mockLinAcc
+        every { mockSensorManager.getDefaultSensor(Sensor.TYPE_GRAVITY) } returns mockGravity
+
+        val mockContext = mockk<Context>(relaxed = true)
+        every { mockContext.applicationContext } returns mockContext
+        every { mockContext.getSystemService(Context.SENSOR_SERVICE) } returns mockSensorManager
+
+        val mockDevice = mockk<BTLERadarDevice>(relaxed = true)
+        every { mockDevice.setLightMode(any()) } returns true
+        RadarLightController.registerRadarDevice(mockDevice, lightSupported = true)
+
+        // Non-cycling workout started (e.g. Run, Gym)
+        RadarLightController.onWorkoutStarted(mockContext, isCycling = false)
+        assertFalse("Non-cycling workout must NOT register IMU sensors", SmartBrakeLightDetector.isListening)
+        assertEquals(RadarLightMode.OFF, RadarLightController.currentMode.value)
+
+        // Pause workout
+        RadarLightController.onWorkoutPaused()
+
+        // Resume workout without specifying isCycling (e.g. TrainingApplication call)
+        RadarLightController.onWorkoutResumed(mockContext)
+        assertFalse("Non-cycling workout session must NOT activate IMU sensors on resume", SmartBrakeLightDetector.isListening)
+        assertEquals("Light mode must remain OFF for non-cycling session", RadarLightMode.OFF, RadarLightController.currentMode.value)
     }
 
     @Test
     fun testRadarLightController_onWorkoutStarted_nonCyclingWorkout_doesNotStartListening() {
         val mockContext = mockk<Context>(relaxed = true)
         val mockDevice = mockk<BTLERadarDevice>(relaxed = true)
+        every { mockDevice.setLightMode(any()) } returns true
         RadarLightController.registerRadarDevice(mockDevice, lightSupported = true)
 
         // Non-cycling workout started (e.g. Run, Gym)

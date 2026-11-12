@@ -71,6 +71,7 @@ object RadarLightController {
         private set
 
     private var isWorkoutActive: Boolean = false
+    private var isCyclingSession: Boolean = false
     private var appContext: Context? = null
 
     private var preBrakeMode: RadarLightMode = RadarLightMode.OFF
@@ -104,7 +105,7 @@ object RadarLightController {
             _hasHardwareBrakeSensor.value = hasHardwareBrakeSensor
             _isAutoBypassed.value = hasHardwareBrakeSensor
             SmartBrakeLightDetector.isAutoBypassed = hasHardwareBrakeSensor
-            shouldStartListening = isWorkoutActive && lightSupported && SmartBrakeLightDetector.isEnabled && !hasHardwareBrakeSensor
+            shouldStartListening = isWorkoutActive && isCyclingSession && lightSupported && SmartBrakeLightDetector.isEnabled && !hasHardwareBrakeSensor
             ctx = appContext
         }
         if (hasHardwareBrakeSensor || !lightSupported) {
@@ -235,11 +236,12 @@ object RadarLightController {
     @JvmStatic
     @JvmOverloads
     fun onWorkoutStarted(context: Context? = null, isCycling: Boolean = true) {
-        if (!isCycling) {
-            Log.d(TAG, "Non-cycling workout started; skipping radar light and brake detection")
-            return
-        }
         synchronized(this) {
+            isCyclingSession = isCycling
+            if (!isCycling) {
+                Log.d(TAG, "Non-cycling workout started; skipping radar light and brake detection")
+                return
+            }
             isWorkoutActive = true
             if (context != null) {
                 appContext = context.applicationContext
@@ -257,12 +259,19 @@ object RadarLightController {
     }
 
     /**
-     * Workout pause hook: stops IMU listening to conserve battery and clears pending brake holds.
+     * Workout pause hook: stops IMU listening to conserve battery, clears pending brake holds,
+     * and reverts from active brake light to pre-brake mode.
      */
     @JvmStatic
     fun onWorkoutPaused() {
         synchronized(this) {
-            isBrakeActive = false
+            isWorkoutActive = false
+            if (isBrakeActive) {
+                if (preBrakeMode != RadarLightMode.OFF) {
+                    setLightMode(preBrakeMode)
+                }
+                isBrakeActive = false
+            }
             brakeHoldUntilRealtimeMs = 0L
             try {
                 handler.removeCallbacks(brakeHoldRunnable)
@@ -272,12 +281,36 @@ object RadarLightController {
     }
 
     /**
-     * Workout resume hook: resumes IMU listening and restores default mode if configured.
+     * Workout resume hook: resumes IMU listening and preserves current active light mode.
+     * Does NOT stomp active mode (e.g. PELOTON 8 lm or night modes) back to defaultMode unless currently OFF.
+     * Checks [isCyclingSession] so non-cycling workouts never activate IMU listeners or tail lights upon unpause (REQ-CON-035.7).
      */
     @JvmStatic
     @JvmOverloads
-    fun onWorkoutResumed(context: Context? = null, isCycling: Boolean = true) {
-        onWorkoutStarted(context, isCycling)
+    fun onWorkoutResumed(context: Context? = null, isCycling: Boolean? = null) {
+        val cycling = isCycling ?: synchronized(this) { isCyclingSession }
+        if (!cycling) {
+            Log.d(TAG, "Non-cycling workout resumed; skipping radar light and brake detection")
+            return
+        }
+        synchronized(this) {
+            isWorkoutActive = true
+            isCyclingSession = true
+            if (context != null) {
+                appContext = context.applicationContext
+            }
+        }
+        val (autoControl, defaultMode) = resolveActiveConfig(context)
+        if (autoControl) {
+            if (_currentMode.value == RadarLightMode.OFF) {
+                setLightMode(defaultMode)
+            }
+        }
+        val ctx = context?.applicationContext ?: synchronized(this) { appContext }
+        val isLightAvailable = synchronized(this) { _isLightControlAvailable.value || RadarTrafficSimulator.isSimulating }
+        if (ctx != null && isLightAvailable && SmartBrakeLightDetector.isEnabled && !SmartBrakeLightDetector.isAutoBypassed) {
+            SmartBrakeLightDetector.startListening(ctx)
+        }
     }
 
     /**
@@ -290,6 +323,7 @@ object RadarLightController {
     fun onWorkoutStopped(context: Context? = null) {
         synchronized(this) {
             isWorkoutActive = false
+            isCyclingSession = false
             isBrakeActive = false
             brakeHoldUntilRealtimeMs = 0L
             preBrakeMode = RadarLightMode.OFF
@@ -412,6 +446,7 @@ object RadarLightController {
         synchronized(this) {
             activeRadarDevice = null
             isWorkoutActive = false
+            isCyclingSession = false
             appContext = null
             _isLightControlAvailable.value = false
             _isStvzo.value = false
