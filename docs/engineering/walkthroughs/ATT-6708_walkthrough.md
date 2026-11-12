@@ -85,3 +85,14 @@ PASS: Requirement Archaeology & Chesterton's Fence Audit successfully verified w
 2. **Living Documentation Synchronized**: Status for `REQ-TRK-064` and `TST-TRK-064` updated to `[Verified]`.
 3. **Subtask Governance**: Stage 4 subtask `ATT-6952` approved with `PASS`. Stage 5 submitted via `submit-stage ATT-6708 5`.
 4. **Parent Ticket Final Review Handover**: Parent ticket `ATT-6708` ready for Gate 5 sign-off and advancement to `Final Review (Human)` assigned to Rainer Blind. Single squashed commit on `sprint/2026-46.2` under `/tmp/att_build_merge.lock`.
+
+---
+
+## 6. Cold Carbon Review (Stage 6) Defect Resolution & Healing
+
+1. **Radar Snooze Lifecycle Decoupling Across Pause/Stop**:
+   - In `TrackerService.java` (`onDestroy`), removed `RadarSnoozeController.reset()`, ensuring that pausing a workout preserves the athlete's active 15m/30m/Rest-of-Ride snooze state across `READY`, `PAUSED`, and `TRACKING`.
+   - In `TrainingApplication.java` (`stopTracking`), invoked `RadarSnoozeController.reset()` unconditionally on workout stop, ensuring snooze state is cleanly cleared when stopping from a paused state.
+   - Preserved `RadarSnoozeController.reset()` in `TrackerService.handleActionStop()` for active tracking teardown.
+   - Added `snoozeState_isPreservedAcrossWorkoutPauseAndResetOnWorkoutStop` in `RadarSnoozeControllerTest.kt` verifying snooze persistence across pause and reset on stop.
+
