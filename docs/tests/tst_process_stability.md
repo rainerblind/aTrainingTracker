@@ -57,6 +57,14 @@
 - **Component**: **Map Context**
 - **Test Description**: Open detail map. Verify active item is primary. Verify background items of same sport are muted (0.3). Verify background items of different sport are highly muted (0.1).
 
+### TST-INT-007: **Original Sport Icons Visual Identity Verification** [Verified]
+- **Requirement(s)**: `REQ-UI-114`
+- **Component**: **ActivityTypeSelectionDialog, SportTypeListFragment**
+- **Test Description**:
+  1. Open sport type selection dialog and sport type list screens.
+  2. Verify that sport type icons render in their authentic original colors and are not subject to theme-based tinting in active states.
+  3. Verify muted/disabled state icons render with appropriate transparency.
+
 ### TST-INT-008: **Settings Cleanup Verification** [Verified]
 - **Requirement(s)**: `REQ-SET-055`
 - **Component**: **Settings Cleanup Verification**
@@ -2410,3 +2418,16 @@
   2. *Dangling Link & Evidence Audit*: Run `python3 tools/verify_requirement_governance.py --check-links` and `--check-evidence` asserting zero dangling references and zero ungrounded Verified statuses in `store_presence`.
   3. *Attribute Compliance Check*: Run `python3 tools/verify_requirement_governance.py --check-attributes` asserting all 10 requirements in `req_store_presence.md` define valid Priority, Type, and Verification Method attributes.
   4. *Targeted Unit Test Verification*: Execute `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.build.*"` asserting 100% pass rate.
+### TST-PRO-085: **UI Design System Test Evidence Backfill & Bidirectional Traceability Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-PRO-085`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Scope**: Governance Verification, Coverage Analysis & Unit Tests
+- **Component**: `docs/requirements/req_ui_design_system.md`, `docs/tests/tst_ui_design_system.md`, `tools/verify_requirement_governance.py`
+- **Jira**: `ATT-6132`
+- **Test Description**:
+  1. *Coverage & Existence Matrix Verification*: Run `python3 tools/verify_requirement_governance.py --coverage` asserting 0 gaps in Category 1 for ui_design_system (100% REQs with TST), 0 ungrounded claims, and 100% bidirectional citation for all UI and UNT test specifications in Category 4.
+  2. *Dangling Link & Evidence Audit*: Run `python3 tools/verify_requirement_governance.py --check-links`, `--check-evidence`, and `--enforce-unique` asserting zero dangling references and zero ungrounded Verified statuses in `ui_design_system` (pruning all UI items from legacy allowlists).
+  3. *Attribute Compliance Check*: Run `python3 tools/verify_requirement_governance.py --check-attributes` asserting all 452 requirements in `req_ui_design_system.md` define valid Priority, Type, and Verification Method attributes.
+  4. *Targeted Unit Test Verification*: Execute `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.theme.ThemeColorCentralizationAuditTest" --tests "com.atrainingtracker.banalservice.sensor.formater.TimeFormatterTest"` asserting 100% pass rate.

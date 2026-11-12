@@ -3,7 +3,7 @@
 **Domain**: `ui_design_system`  
 **Prefixes**: `UI`, `UNT`  
 **Scope**: Jetpack Compose design system, UI components, typography, dialogs, gestures, and layout contracts.  
-**Total Tests**: 392
+**Total Tests**: 466
 
 ---
 
@@ -207,10 +207,30 @@
 - **Component**: **Pause Movement Isolation**
 - **Test Description**: 1. Start workout. 2. Move to create track. 3. **Pause**. 4. Move 50m.
 
+### TST-UI-041: **Period Peak Markers Audit** [Verified]
+- **Requirement(s)**: `REQ-UI-033`, `REQ-UI-035`, `REQ-UI-036`
+- **Component**: **Interactive Period Map Peak Markers**
+- **Jira**: `SCRUM-130`
+- **Test Description**:
+  1. Navigate to Period Map for Week/Month summary in `PeriodMapScreen`.
+  2. Verify technical markers for Start, End, Maximum Altitude, and Maximum Line Displacement are present and displayed with subordinate alpha matching the period type.
+  3. Tap a peak marker: verify the bottom peek sheet opens displaying the corresponding workout details.
+  4. Ensure successful compilation and zero visual regressions.
+
 ### TST-UI-043: **Device Management Modernization** [Verified]
 - **Requirement(s)**: `REQ-UI-041`, `REQ-UI-043`
 - **Component**: **Device Management Modernization**
 - **Test Description**: 1. Navigate to Pairing screen. 2. Verify Tabbed layout. 3. Interact with Pair switches. 4. Click device to open Edit Dialog. 5. Modify a setting (e.g. name).
+
+### TST-UI-044: **Mappable Device Items Layout Verification** [Verified]
+- **Requirement(s)**: `REQ-UI-042`
+- **Component**: **High-Density Device Item Layout**
+- **Jira**: `SCRUM-37`
+- **Test Description**:
+  1. Inspect `DeviceItem` layout in the device pairing screen.
+  2. Verify removal of horizontal divider and unified multi-row structure matching Route/Segment cards.
+  3. Verify green/red availability LED icon is positioned to the left of the device metadata.
+  4. Confirm pairing switch is positioned at the bottom-right corner with 0.8f scale.
 
 ### TST-UI-045: **Reactive Map Updates** [Verified]
 - **Requirement(s)**: `REQ-MAP-009`

@@ -4035,6 +4035,40 @@ The workflow SHALL mandate that:
   • *Given* `docs/requirements/req_store_presence.md` and `docs/tests/tst_store_presence.md`,
   • *When* checked for dangling references and attributes,
   • *Then* zero dangling references and zero missing attributes are detected.
+### REQ-PRO-085: UI Design System Test Evidence Backfill & Bidirectional Traceability Governance [Verified]
+- **Tests**: `TST-PRO-085`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Implementation**: `docs/requirements/req_ui_design_system.md`, `docs/tests/tst_ui_design_system.md`, `docs/tests/tst_process_stability.md`, `tools/verify_requirement_governance.py`
+- **Rationale**: Under ASPICE SWE.6 BP4, SWE.1 BP5, and Remediation A-08.6 (ATT-6132), all requirements in the `ui_design_system` domain shard must link to valid, existing test specifications in `docs/tests/tst_ui_design_system.md` with verified automated test code implementations in `app/src/test/` or be downgraded to `[Implemented]` per REQ-PRO-073. Bidirectional reference integrity must guarantee that every referenced TST cites all of its parent REQs back with zero dangling references:
+  1. *Complete TST Coverage & Evidence Verification (`REQ-PRO-085.1`)*:
+     • Every requirement in `docs/requirements/req_ui_design_system.md` SHALL cite one or more valid, existing backticked `TST-*` IDs in its `Tests:` field.
+     • The 8 omitted requirements (`REQ-UI-002`, `REQ-UI-008`, `REQ-UI-009`, `REQ-UI-010`, `REQ-UI-062`, `REQ-UI-135`, `REQ-UI-166`, `REQ-UI-289`) SHALL be restored with full specifications. All 452 requirements in `req_ui_design_system.md` SHALL maintain `[Verified]` status backed by automated unit tests in `app/src/test/`.
+  2. *Dangling Reference Elimination & Test Specification Backfill (`REQ-PRO-085.2`)*:
+     • Test specifications `TST-UI-041` (*Period Peak Markers Audit*) and `TST-UI-044` (*Mappable Device Items Layout Verification*) SHALL be registered in `docs/tests/tst_ui_design_system.md`.
+     • Test specification `TST-INT-007` (*Original Sport Icons Visual Identity Verification*) SHALL be registered in `docs/tests/tst_process_stability.md`.
+     • Zero dangling references SHALL exist across UI requirements and tests.
+  3. *Bidirectional Citation Integrity & Category 4 Gap Elimination (`REQ-PRO-085.3`)*:
+     • Every test specification in `tst_ui_design_system.md` SHALL be cited back by 100% of the requirements it declares in its `Requirement(s):` field.
+     • All 41 Category 4 gaps identified in the UI domain SHALL be updated in `req_ui_design_system.md` with reciprocal citations.
+  4. *Attribute Compliance & Header Parity (`REQ-PRO-085.4`)*:
+     • All 452 requirements in `docs/requirements/req_ui_design_system.md` SHALL declare valid `Priority`, `Type`, and `Verification Method` attributes per `REQ-PRO-077`.
+     • Domain shard headers SHALL reflect accurate totals (`Total Requirements: 452`, `Total Tests: 466`) in 100% mathematical parity with master index tables.
+  5. *Tooling Allowlist Pruning (`REQ-PRO-085.5`)*:
+     • All resolved UI references (`TST-UI-041`, `TST-UI-044`, `TST-INT-007`, `REQ-UI-002`, `REQ-UI-008`, `REQ-UI-009`, `REQ-UI-010`, `REQ-UI-062`, `REQ-UI-135`, `REQ-UI-166`, `REQ-UI-289`, and `REQ-UI-*` in `LEGACY_UNGROUNDED_VERIFIED_REQS`) SHALL be pruned from `tools/verify_requirement_governance.py`.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Net-new requirement `REQ-PRO-085` (`REQ-PRO-085.1`–`REQ-PRO-085.5`). Targets `docs/requirements/req_ui_design_system.md`, `docs/tests/tst_ui_design_system.md`, `docs/tests/tst_process_stability.md`, and `tools/verify_requirement_governance.py`.
+  2. *Historical Origin & Commit Trace*: Sprint 2026-46.4 via ticket `ATT-6132` under Epic `ATT-6119` (ASPICE CL2, Remediation A-08.6).
+  3. *Root Reason for Existing Formulation*: Baseline assessment identified dangling references, missing requirement headings, unreciprocated Category 4 links, and missing metadata attributes across the UI Design System domain.
+  4. *Preservation of Core Invariants*: Full clean-room unit test suite execution, master table mathematical parity, and pure Python 3 stdlib execution preserved with zero production Android APK modifications.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* `docs/requirements/req_ui_design_system.md`,
+  • *When* evaluated via `python3 tools/verify_requirement_governance.py --coverage`,
+  • *Then* 100% of requirements cite valid TSTs, zero ungrounded Verified statuses exist in ui_design_system, and 100% of domain TSTs are cited back by all referenced REQs (0 Category 4 domain gaps).
+  • *Given* `docs/requirements/req_ui_design_system.md` and `docs/tests/tst_ui_design_system.md`,
+  • *When* checked for dangling references and attributes,
+  • *Then* zero dangling references and zero missing attributes are detected in ui_design_system.
   • *Given* `tools/verify_requirement_governance.py --sync-indexes`,
   • *When* executed,
   • *Then* master index tables achieve 100% mathematical parity.

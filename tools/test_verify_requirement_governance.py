@@ -1211,15 +1211,15 @@ diff --git a/docs/requirements/req_process_stability.md b/docs/requirements/req_
 
         # Check exact counts of legacy dangling references
         dangling = find_dangling_references()
-        self.assertEqual(len(dangling.dangling_tsts), 7)
-        self.assertEqual(len(dangling.dangling_reqs), 14)
+        self.assertEqual(len(dangling.dangling_tsts), 2)
+        self.assertEqual(len(dangling.dangling_reqs), 2)
 
         tst_targets = set(r.target_id for r in dangling.dangling_tsts)
         req_targets = set(r.target_id for r in dangling.dangling_reqs)
         self.assertEqual(tst_targets, LEGACY_DANGLING_TST_REFS)
         self.assertEqual(req_targets, LEGACY_DANGLING_REQ_REFS)
 
-        # Strict mode: fails because 21 legacy dangling references exist pending A-08.x (ATT-6127 resolved 5, ATT-6131 resolved 1)
+        # Strict mode: fails because 4 legacy dangling references exist pending A-08.x (ATT-6127 resolved 5, ATT-6131 resolved 1, ATT-6132 resolved 17)
         ok_strict, diag_strict = verify_dangling_references(fail_on_dangling=True)
         self.assertFalse(ok_strict)
         self.assertTrue(any("strict enforcement active" in m for m in diag_strict))
