@@ -42,6 +42,8 @@ enum class SettingsBottomSheetType {
 object NavRoutes {
     const val START_TRACKING = "start_tracking"
     const val WORKOUTS = "workouts"
+    const val WORKOUTS_PATTERN = "workouts?pushed={pushed}"
+    const val ARG_PUSHED = "pushed"
     const val PERIODS = "periods"
     const val MORNING_HRV = "morning_hrv"
     const val HRV_TEST = "hrv_test"
@@ -89,6 +91,12 @@ object NavRoutes {
         } else {
             TRAINING_ZONES
         }
+
+    /**
+     * Builds a navigation route to the Workouts destination, optionally marking it as pushed contextual navigation.
+     */
+    fun workouts(pushed: Boolean = false): String =
+        if (pushed) "$WORKOUTS?$ARG_PUSHED=true" else WORKOUTS
 
     /**
      * Builds a navigation route to the central map, optionally parameterized with a target location ID.

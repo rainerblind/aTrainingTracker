@@ -20,9 +20,11 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -63,7 +65,9 @@ fun WorkoutClustersTabsScreen(
     migrationStatus: com.atrainingtracker.trainingtracker.ui.util.MigrationStatus? = null,
     onNavigateToAdvancedSettings: () -> Unit = {},
     onMergeRequest: (WorkoutCluster) -> Unit = {},
-    onSplitRequest: (WorkoutCluster) -> Unit = {}
+    onSplitRequest: (WorkoutCluster) -> Unit = {},
+    onMenuClick: (() -> Unit)? = null,
+    onBackClick: (() -> Unit)? = null
 ) {
     val clusters by viewModel.allClusters.collectAsState()
     val unclusteredWorkouts by viewModel.unclusteredWorkouts.collectAsState()
@@ -258,17 +262,40 @@ fun WorkoutClustersTabsScreen(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(LayoutConstants.HEADER_TITLE_ROW_HEIGHT)
-                                .padding(horizontal = 16.dp),
+                                .padding(start = 4.dp, end = 16.dp),
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            Text(
-                                text = stringResource(R.string.my_locations),
-                                style = MaterialTheme.typography.titleLarge,
-                                color = MaterialTheme.colorScheme.onPrimaryContainer,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                if (onBackClick != null) {
+                                    IconButton(onClick = onBackClick) {
+                                        Icon(
+                                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                            contentDescription = stringResource(R.string.back),
+                                            tint = MaterialTheme.colorScheme.onPrimaryContainer
+                                        )
+                                    }
+                                } else if (onMenuClick != null) {
+                                    IconButton(onClick = onMenuClick) {
+                                        Icon(
+                                            imageVector = Icons.Default.Menu,
+                                            contentDescription = stringResource(R.string.navigation_drawer_open),
+                                            tint = MaterialTheme.colorScheme.onPrimaryContainer
+                                        )
+                                    }
+                                }
+                                Text(
+                                    text = stringResource(R.string.my_locations),
+                                    style = MaterialTheme.typography.titleLarge,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier.padding(start = 4.dp)
+                                )
+                            }
 
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 // --- INFO BUTTON (ATT-501) ---

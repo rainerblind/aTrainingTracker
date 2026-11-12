@@ -401,7 +401,7 @@ fun MapScreenWithTrack(
                             Box(contentAlignment = Alignment.Center) {
                                 Icon(
                                     imageVector = if (isBack) Icons.AutoMirrored.Filled.ArrowBack else Icons.Default.Menu,
-                                    contentDescription = if (isBack) stringResource(R.string.back) else null,
+                                    contentDescription = if (isBack) stringResource(R.string.back) else stringResource(R.string.navigation_drawer_open),
                                     modifier = Modifier.size(22.dp),
                                     tint = MaterialTheme.colorScheme.onSurface
                                 )

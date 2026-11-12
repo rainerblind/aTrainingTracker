@@ -2456,6 +2456,7 @@
     <string name="copy_tab_title">Copy Tab</string>
     <string name="copy_tab_action">Copy</string>
     <string name="back">Back</string>
+    <string name="navigation_drawer_open">Open navigation drawer</string>
     <string name="close">Close</string>
     <string name="clear">Clear</string>
     <string name="select_route">Select route</string>

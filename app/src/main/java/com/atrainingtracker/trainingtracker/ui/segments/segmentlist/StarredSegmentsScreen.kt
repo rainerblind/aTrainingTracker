@@ -42,6 +42,7 @@ import com.atrainingtracker.trainingtracker.ui.segments.SegmentOnMapScreen
 fun StarredSegmentsScreen(
     viewModel: SegmentListViewModel,
     onConnectToStrava: () -> Unit,
+    onMenuClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val segments by viewModel.segmentsWithPath.collectAsStateWithLifecycle()
@@ -82,7 +83,8 @@ fun StarredSegmentsScreen(
                 filterCriteria = filterCriteria,
                 onFilterApply = { viewModel.setFilterCriteria(it) },
                 onFilterClear = { viewModel.clearFilterCriteria() },
-                onFilterUpdate = { transform -> viewModel.updateFilterCriteria(transform) }
+                onFilterUpdate = { transform -> viewModel.updateFilterCriteria(transform) },
+                onMenuClick = onMenuClick
             )
         } else {
             // SHOW DETAIL

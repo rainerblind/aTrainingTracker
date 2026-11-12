@@ -2256,6 +2256,7 @@
     <string name="copy_tab_title">Kopiuj kartę</string>
     <string name="copy_tab_action">Kopiuj</string>
     <string name="back">Wstecz</string>
+    <string name="navigation_drawer_open">Otwórz panel nawigacji</string>
     <string name="close">Zamknij</string>
     <string name="clear">Wyczyść</string>
     <string name="select_route">Wybierz trasę</string>

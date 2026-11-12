@@ -2254,6 +2254,7 @@
     <string name="copy_tab_title">Copier l\'onglet</string>
     <string name="copy_tab_action">Copier</string>
     <string name="back">Retour</string>
+    <string name="navigation_drawer_open">Ouvrir le menu de navigation</string>
     <string name="close">Fermer</string>
     <string name="clear">Effacer</string>
     <string name="select_route">Sélectionner un itinéraire</string>

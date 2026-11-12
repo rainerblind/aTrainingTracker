@@ -2254,6 +2254,7 @@
     <string name="copy_tab_title">Tabblad kopiëren</string>
     <string name="copy_tab_action">Kopiëren</string>
     <string name="back">Terug</string>
+    <string name="navigation_drawer_open">Navigatielade openen</string>
     <string name="close">Sluiten</string>
     <string name="clear">Wissen</string>
     <string name="select_route">Route selecteren</string>

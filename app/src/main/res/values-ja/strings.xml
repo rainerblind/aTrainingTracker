@@ -2234,6 +2234,7 @@
     <string name="copy_tab_title">タブをコピー</string>
     <string name="copy_tab_action">コピー</string>
     <string name="back">戻る</string>
+    <string name="navigation_drawer_open">ナビゲーション ドロワーを開く</string>
     <string name="close">閉じる</string>
     <string name="clear">クリア</string>
     <string name="select_route">ルートを選択</string>

@@ -8334,3 +8334,28 @@
   • Assert 100% pass rate.
 
 
+
+### TST-UI-517: **Root Hamburger vs Pushed Back Arrow Contract and Training/Maps Header Leading Action Verification Suite** [Verified]
+- **Target Release**: `V5.0.0`
+- **Requirement(s)**: `REQ-UI-517`
+- **Component**: `NavRoutes.kt`, `ATrainingTrackerApp.kt`, `MainActivityWithNavigation.kt`, `WorkoutTabsScreen.kt`, `PeriodsTabsScreen.kt`, `SegmentsTabsScreen.kt`, `RouteTabbedScreen.kt`, `WorkoutClustersTabsScreen.kt`, `KnownLocationsScreen.kt`
+- **Jira**: `ATT-7313`
+- **Test Description**:
+  1. *Route Contract & Pushed Argument Verification (`TST-UI-517.1`, `SingleActivityNavigationTest.kt`)*:
+     - Verify `NavRoutes.workouts(pushed = false)` returns `"workouts"`.
+     - Verify `NavRoutes.workouts(pushed = true)` returns `"workouts?pushed=true"`.
+     - Verify `NavRoutes.locations(pushed = false)` returns `"locations"`.
+     - Verify `NavRoutes.locations(clusterId = 5L, pushed = true)` returns `"locations?clusterId=5&pushed=true"`.
+     - Verify `ARG_PUSHED` parsing matches `defaultValue = false`.
+  2. *MainActivityWithNavigation Push Contract Verification (`TST-UI-517.2`, `MainActivityWithNavigationInteropTest.kt`)*:
+     - Verify `startWorkoutSummaryListFromPeriod` and `navigateToFilteredWorkouts` push `WORKOUTS` with `pushed = true` onto `navController`.
+  3. *ATrainingTrackerApp Navigation & Interceptor State Verification (`TST-UI-517.3`, `ATrainingTrackerAppNavigationTest.kt`)*:
+     - Verify drawer edge interceptor is disabled when destination argument `pushed == true`.
+     - Verify system Back pops backstack and cleans filter criteria on pushed destinations.
+  4. *9-Language Localization Parity Verification (`TST-UI-517.4`, `TranslationParityTest.kt`)*:
+     - Verify `R.string.navigation_drawer_open` and `R.string.back` exist across all 9 locales (en, de, es, fr, it, ja, nl, pl, pt) with matching semantics.
+  5. *Theme & Visual Token Verification (`TST-UI-517.5`, `ThemeColorCentralizationAuditTest.kt`)*:
+     - Verify `onPrimaryContainer` tint is strictly used on leading icons.
+  6. *Tier 1 Targeted Unit Test Regression Suite (`TST-UI-517.6`)*:
+     - Execute `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.navigation.*"`.
+     - Assert 100% pass rate.

@@ -39,8 +39,9 @@ import androidx.compose.foundation.pager.PagerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.InsertDriveFile
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Sort
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.Sort
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -68,6 +69,7 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
@@ -104,7 +106,8 @@ fun RouteTabbedScreen(
     tuningConfig: TuningConfig = TuningConfig(),
     onApplyFilterCriteria: (RouteFilterCriteria) -> Unit = {},
     onClearAllFilters: () -> Unit = {},
-    onUpdateFilterCriteria: ((RouteFilterCriteria) -> RouteFilterCriteria) -> Unit = {}
+    onUpdateFilterCriteria: ((RouteFilterCriteria) -> RouteFilterCriteria) -> Unit = {},
+    onMenuClick: (() -> Unit)? = null
 ) {
     // Define our tabs mapping to BSportType
     val tabs = listOf(
@@ -211,15 +214,32 @@ fun RouteTabbedScreen(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(LayoutConstants.HEADER_TITLE_ROW_HEIGHT)
-                                .padding(horizontal = 16.dp),
+                                .padding(start = 4.dp, end = 16.dp),
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            Text(
-                                text = stringResource(R.string.routes),
-                                style = MaterialTheme.typography.titleLarge,
-                                color = MaterialTheme.colorScheme.onPrimaryContainer,
-                            )
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                if (onMenuClick != null) {
+                                    IconButton(onClick = onMenuClick) {
+                                        Icon(
+                                            imageVector = Icons.Default.Menu,
+                                            contentDescription = stringResource(R.string.navigation_drawer_open),
+                                            tint = MaterialTheme.colorScheme.onPrimaryContainer
+                                        )
+                                    }
+                                }
+                                Text(
+                                    text = stringResource(R.string.routes),
+                                    style = MaterialTheme.typography.titleLarge,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier.padding(start = 4.dp)
+                                )
+                            }
 
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 // --- SELECT ALL SWITCH ---

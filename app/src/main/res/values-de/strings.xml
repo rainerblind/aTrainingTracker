@@ -2340,6 +2340,7 @@
     <string name="copy_tab_title">Tab kopieren</string>
     <string name="copy_tab_action">Kopieren</string>
     <string name="back">Zurück</string>
+    <string name="navigation_drawer_open">Navigationsmenü öffnen</string>
     <string name="close">Schließen</string>
     <string name="clear">Löschen</string>
     <string name="select_route">Route auswählen</string>

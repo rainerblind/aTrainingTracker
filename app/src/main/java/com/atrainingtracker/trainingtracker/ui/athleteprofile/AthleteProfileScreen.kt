@@ -243,7 +243,7 @@ fun AthleteProfileContent(
                                 IconButton(onClick = onOpenDrawer) {
                                     Icon(
                                         imageVector = Icons.Default.Menu,
-                                        contentDescription = null,
+                                        contentDescription = stringResource(R.string.navigation_drawer_open),
                                         tint = MaterialTheme.colorScheme.onPrimaryContainer
                                     )
                                 }

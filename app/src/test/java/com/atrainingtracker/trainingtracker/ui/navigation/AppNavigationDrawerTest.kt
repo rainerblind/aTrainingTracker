@@ -121,7 +121,7 @@ class AppNavigationDrawerTest {
         val groups = createDrawerGroups(R.string.tab_start)
         val allItems = groups.flatMap { it.items }
         val monochromeItems = allItems.filter {
-            it.id != R.id.drawer_strava && it.id != R.id.drawer_dropbox && it.id != R.id.drawer_google_drive
+            it.id != R.id.drawer_strava && it.id != R.id.drawer_dropbox && it.id != R.id.drawer_google_drive && it.id != R.id.drawer_health_connect
         }
 
         assertTrue("Drawer must define multiple monochrome items", monochromeItems.size >= 19)
@@ -149,6 +149,10 @@ class AppNavigationDrawerTest {
         val googleDriveItem = allItems.firstOrNull { it.id == R.id.drawer_google_drive }
         assertTrue("Google Drive drawer item must exist", googleDriveItem != null)
         assertFalse("Google Drive icon must NOT be tinted with monochrome colors (tintIcon = false)", googleDriveItem!!.tintIcon)
+
+        val healthConnectItem = allItems.firstOrNull { it.id == R.id.drawer_health_connect }
+        assertTrue("Health Connect drawer item must exist", healthConnectItem != null)
+        assertFalse("Health Connect icon must NOT be tinted with monochrome colors (tintIcon = false)", healthConnectItem!!.tintIcon)
     }
 
     @Test

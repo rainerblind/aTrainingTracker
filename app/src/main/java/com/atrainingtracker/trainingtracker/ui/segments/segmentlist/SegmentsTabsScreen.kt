@@ -38,6 +38,7 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Sort
 import androidx.compose.material3.CircularProgressIndicator
@@ -63,6 +64,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
@@ -92,7 +94,8 @@ fun SegmentsTabsScreen(
     filterCriteria: SegmentFilterCriteria,
     onFilterApply: (SegmentFilterCriteria) -> Unit,
     onFilterClear: () -> Unit,
-    onFilterUpdate: ((SegmentFilterCriteria) -> SegmentFilterCriteria) -> Unit
+    onFilterUpdate: ((SegmentFilterCriteria) -> SegmentFilterCriteria) -> Unit,
+    onMenuClick: (() -> Unit)? = null
 ) {
     val tabs = listOf(
         Pair(stringResource(R.string.workout_summaries_tab_bike), BSportType.BIKE),
@@ -166,15 +169,32 @@ fun SegmentsTabsScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(LayoutConstants.HEADER_TITLE_ROW_HEIGHT)
-                            .padding(horizontal = 16.dp),
+                            .padding(start = 4.dp, end = 16.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Text(
-                            text = stringResource(R.string.segments),
-                            style = MaterialTheme.typography.titleLarge,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer,
-                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            if (onMenuClick != null) {
+                                IconButton(onClick = onMenuClick) {
+                                    Icon(
+                                        imageVector = Icons.Default.Menu,
+                                        contentDescription = stringResource(R.string.navigation_drawer_open),
+                                        tint = MaterialTheme.colorScheme.onPrimaryContainer
+                                    )
+                                }
+                            }
+                            Text(
+                                text = stringResource(R.string.segments),
+                                style = MaterialTheme.typography.titleLarge,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.padding(start = 4.dp)
+                            )
+                        }
 
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             // --- REFRESH BUTTON / PROGRESS INDICATOR ---

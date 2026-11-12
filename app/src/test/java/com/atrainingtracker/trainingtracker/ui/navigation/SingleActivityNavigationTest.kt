@@ -74,6 +74,25 @@ class SingleActivityNavigationTest {
     }
 
     @Test
+    fun testNavRoutesPushedContracts() {
+        // REQ-UI-517.1, TST-UI-517.1 (ATT-7313)
+        assertEquals("workouts", NavRoutes.workouts(pushed = false))
+        assertEquals("workouts?pushed=true", NavRoutes.workouts(pushed = true))
+
+        assertEquals("locations", NavRoutes.locations(null))
+        assertEquals("locations?clusterId=42", NavRoutes.locations(42L))
+
+        assertEquals("workouts?pushed={pushed}", NavRoutes.WORKOUTS_PATTERN)
+        assertEquals("locations?clusterId={clusterId}", NavRoutes.LOCATIONS_PATTERN)
+        assertEquals("pushed", NavRoutes.ARG_PUSHED)
+
+        // Drawer ID mapping resilience for parameterized routes
+        assertEquals(R.id.drawer_workouts, NavRoutes.toDrawerItemId("workouts?pushed=true"))
+        assertEquals(R.id.drawer_my_locations, NavRoutes.toDrawerItemId("locations"))
+        assertEquals(R.id.drawer_my_locations, NavRoutes.toDrawerItemId("locations?clusterId=42"))
+    }
+
+    @Test
     fun testDrawerItemIdToRouteMapping() {
         assertEquals(NavRoutes.START_TRACKING, NavRoutes.fromDrawerItemId(R.id.drawer_start_tracking))
         assertEquals(NavRoutes.WORKOUTS, NavRoutes.fromDrawerItemId(R.id.drawer_workouts))

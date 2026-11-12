@@ -869,7 +869,12 @@ class MainActivityWithNavigation :
         )
         val summariesViewModel = androidx.lifecycle.ViewModelProvider(this)[WorkoutSummariesViewModel::class.java]
         summariesViewModel.setFilterCriteria(criteria)
-        navigateToDrawerItem(R.id.drawer_workouts)
+        val controller = navController
+        if (controller != null) {
+            controller.navigate(NavRoutes.workouts(pushed = true))
+        } else {
+            navigateToDrawerItem(R.id.drawer_workouts)
+        }
     }
 
     fun startWorkoutSummaryListFromPeriod(
@@ -879,11 +884,17 @@ class MainActivityWithNavigation :
     ) {
         val criteria = WorkoutFilterCriteria(
             startDateS = periodSummary.startTimestampS.takeIf { it > 0 },
-            endDateS = periodSummary.endTimestampS.takeIf { it > 0 }
+            endDateS = periodSummary.endTimestampS.takeIf { it > 0 },
+            bSportType = bSportType
         )
         val summariesViewModel = androidx.lifecycle.ViewModelProvider(this)[WorkoutSummariesViewModel::class.java]
         summariesViewModel.setFilterCriteria(criteria)
-        navigateToDrawerItem(R.id.drawer_workouts)
+        val controller = navController
+        if (controller != null) {
+            controller.navigate(NavRoutes.workouts(pushed = true))
+        } else {
+            navigateToDrawerItem(R.id.drawer_workouts)
+        }
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {

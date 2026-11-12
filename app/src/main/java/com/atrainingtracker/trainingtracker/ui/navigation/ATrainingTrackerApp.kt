@@ -222,6 +222,9 @@ fun ATrainingTrackerApp(
     }
 
     val currentBackStackEntry by navController.currentBackStackEntryAsState()
+    val isCurrentScreenPushed = currentBackStackEntry?.arguments?.getBoolean(NavRoutes.ARG_PUSHED) == true ||
+        (currentBackStackEntry?.arguments?.getLong(NavRoutes.ARG_LOCATION_ID, -1L) ?: -1L) > 0 ||
+        (currentBackStackEntry?.arguments?.getLong(NavRoutes.ARG_CLUSTER_ID, -1L) ?: -1L) > 0
     val currentRoute = currentBackStackEntry?.destination?.route ?: NavRoutes.START_TRACKING
 
     // Keep drawerController.selectedItemId in sync with active route
@@ -311,7 +314,8 @@ fun ATrainingTrackerApp(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .pointerInput(drawerState) {
+                .pointerInput(drawerState, isCurrentScreenPushed) {
+                    if (isCurrentScreenPushed) return@pointerInput
                     val edgeThresholdPx = 40.dp.toPx()
                     awaitEachGesture {
                         val down = awaitFirstDown(pass = PointerEventPass.Initial, requireUnconsumed = false)
@@ -358,12 +362,29 @@ fun ATrainingTrackerApp(
                     )
                 }
 
-                composable(NavRoutes.WORKOUTS) {
+                composable(
+                    route = NavRoutes.WORKOUTS_PATTERN,
+                    arguments = listOf(
+                        navArgument(NavRoutes.ARG_PUSHED) {
+                            type = NavType.BoolType
+                            defaultValue = false
+                        }
+                    )
+                ) { backStackEntry ->
+                    val isPushed = backStackEntry.arguments?.getBoolean(NavRoutes.ARG_PUSHED) == true
                     val summariesViewModel: WorkoutSummariesViewModel = viewModel(activity)
                     val trackOnMapViewModel: TrackOnMapAftermathViewModel = viewModel(activity)
                     WorkoutSummariesTabbedScreen(
                         viewModel = summariesViewModel,
-                        trackOnMapViewModel = trackOnMapViewModel
+                        trackOnMapViewModel = trackOnMapViewModel,
+                        isPushed = isPushed,
+                        onMenuClick = if (isPushed) null else { { drawerController.openDrawer() } },
+                        onBackClick = if (isPushed) {
+                            {
+                                summariesViewModel.clearFilterCriteria()
+                                navController.popBackStack()
+                            }
+                        } else null
                     )
                 }
 
@@ -373,7 +394,8 @@ fun ATrainingTrackerApp(
                         viewModel = periodsViewModel,
                         onStartWorkoutList = { periodSummary, bSportType, scrollToWorkoutId ->
                             activity.startWorkoutSummaryListFromPeriod(periodSummary, bSportType, scrollToWorkoutId)
-                        }
+                        },
+                        onMenuClick = { drawerController.openDrawer() }
                     )
                 }
 
@@ -402,13 +424,17 @@ fun ATrainingTrackerApp(
                     )
                     StarredSegmentsScreen(
                         viewModel = segmentViewModel,
-                        onConnectToStrava = { activity.navigateToDrawerItem(R.id.drawer_strava) }
+                        onConnectToStrava = { activity.navigateToDrawerItem(R.id.drawer_strava) },
+                        onMenuClick = { drawerController.openDrawer() }
                     )
                 }
 
                 composable(NavRoutes.ROUTES) {
                     val routesViewModel: RoutesViewModel = viewModel(activity)
-                    RoutesScreen(viewModel = routesViewModel)
+                    RoutesScreen(
+                        viewModel = routesViewModel,
+                        onMenuClick = { drawerController.openDrawer() }
+                    )
                 }
 
                 composable(NavRoutes.START_LOCATIONS) {
@@ -429,7 +455,7 @@ fun ATrainingTrackerApp(
                                 startLocationRadiusM = locationItem.radius.toDouble().takeIf { it > 0.0 } ?: 200.0
                             )
                             summariesViewModel.setFilterCriteria(criteria)
-                            navController.navigate(NavRoutes.WORKOUTS)
+                            navController.navigate(NavRoutes.workouts(pushed = true))
                         },
                         onShowWorkoutsForSport = { locationItem, bSportType ->
                             val criteria = WorkoutFilterCriteria(
@@ -440,7 +466,7 @@ fun ATrainingTrackerApp(
                                 bSportType = bSportType
                             )
                             summariesViewModel.setFilterCriteria(criteria)
-                            navController.navigate(NavRoutes.WORKOUTS)
+                            navController.navigate(NavRoutes.workouts(pushed = true))
                         },
                         onSelectCluster = { clusterId ->
                             navController.navigate(NavRoutes.locations(clusterId))
@@ -471,12 +497,24 @@ fun ATrainingTrackerApp(
                     val clustersViewModel: WorkoutClustersViewModel = viewModel(activity)
                     val summariesViewModel: WorkoutSummariesViewModel = viewModel(activity)
                     val trackOnMapViewModel: TrackOnMapAftermathViewModel = viewModel(activity)
+                    val clusterFilterCriteria by clustersViewModel.filterCriteria.collectAsState()
+                    val isPushed = clusterIdArg != null || clusterFilterCriteria.startLocationName != null
                     WorkoutClustersScreen(
                         viewModel = clustersViewModel,
                         summariesViewModel = summariesViewModel,
                         trackOnMapViewModel = trackOnMapViewModel,
                         initialClusterId = clusterIdArg,
+                        isPushed = isPushed,
+                        onMenuClick = if (isPushed) null else { { drawerController.openDrawer() } },
+                        onBackClick = if (isPushed) {
+                            {
+                                clustersViewModel.clearFilterCriteria()
+                                clustersViewModel.selectCluster(null)
+                                navController.popBackStack()
+                            }
+                        } else null,
                         onBackToNav = {
+                            clustersViewModel.clearFilterCriteria()
                             clustersViewModel.selectCluster(null)
                             navController.popBackStack()
                         },

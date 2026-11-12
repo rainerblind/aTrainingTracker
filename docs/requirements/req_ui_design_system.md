@@ -15544,3 +15544,37 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 **Invariants**: Zero changes to Pioneer entitlement detection or subscription billing logic; 9-language localization parity with zero emojis.
 
 
+
+### REQ-UI-517: Standardize Root-Drawer Hamburger Menu vs Pushed Back Arrow Contract and Training and Maps Screen Headers [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-UI-517` | **Tickets**: `ATT-7313`
+- **Implementation**: `NavRoutes.kt`, `ATrainingTrackerApp.kt`, `MainActivityWithNavigation.kt`, `WorkoutTabsScreen.kt`, `PeriodsTabsScreen.kt`, `SegmentsTabsScreen.kt`, `RouteTabbedScreen.kt`, `WorkoutClustersTabsScreen.kt`, `KnownLocationsScreen.kt`
+- **Rationale**: In `ATrainingTrackerApp.kt`, drawer swipe-to-open is intentionally restricted to a narrow 40 dp left-edge interceptor (`REQ-UI-161`). However, only 6 of 18 drawer destinations render a Hamburger Menu icon (`Icons.Default.Menu`), leaving primary top-level views (`Workouts`, `Periods`, `Segments`, `Routes`, `Lieblingsorte`) without any visible navigation button. Furthermore, opening filtered Workouts from `Periods` or `Equipment` calls `navigateToDrawerItem`, resetting the backstack to `START_TRACKING` and preventing system Back from returning to the caller. The system SHALL distinguish Drawer-root destinations from pushed contextual destinations and establish a consistent leading navigation contract across all Training and Maps views.
+- **Description**:
+  1. *Deterministic Route Contract (`REQ-UI-517.1`)*:
+     - `NavRoutes.WORKOUTS` and `NavRoutes.LOCATIONS` SHALL support an optional query parameter `pushed: Boolean = false` (`ARG_PUSHED = "pushed"`).
+     - Helper builders `NavRoutes.workouts(pushed: Boolean = false)` and `NavRoutes.locations(clusterId: Long? = null, pushed: Boolean = false)` SHALL construct type-safe route strings.
+  2. *Pushed Destination Backstack & Interceptor Contract (`REQ-UI-517.2`)*:
+     - When a destination is pushed (`isPushed == true`), the root 40 dp left-edge drawer interceptor in `ATrainingTrackerApp.kt` SHALL be deactivated.
+     - Pushed screens SHALL display `Icons.AutoMirrored.Filled.ArrowBack` with `R.string.back` contentDescription. Tapping the back button or pressing system Back SHALL pop back to the origin caller and clear contextual filter criteria (`WorkoutFilterCriteria`, `ClusterFilterCriteria`).
+     - `MainActivityWithNavigation.startWorkoutSummaryListFromPeriod()` and `navigateToFilteredWorkouts()` SHALL push `NavRoutes.workouts(pushed = true)` onto `navController`.
+  3. *Root Destination Drawer Contract (`REQ-UI-517.3`)*:
+     - When opened as a top-level drawer destination (`isPushed == false`), screens SHALL display `Icons.Default.Menu` with `R.string.navigation_drawer_open` contentDescription, and tapping it SHALL open `AppNavigationDrawer` via `drawerController.openDrawer()`.
+     - The 40 dp left-edge drawer interceptor SHALL remain active when `isPushed == false`.
+  4. *Collapsible Header Leading-Icon Alignment (`REQ-UI-517.4`)*:
+     - Headers in `WorkoutTabsScreen`, `PeriodsTabsScreen`, `SegmentsTabsScreen`, `RouteTabbedScreen`, `WorkoutClustersTabsScreen`, and `KnownLocationsScreen` SHALL standardize leading `IconButton` placement (48 dp target, `start = 4.dp`), tint (`MaterialTheme.colorScheme.onPrimaryContainer`), and `titleLarge` text spacing, ensuring zero horizontal or vertical title jump when navigating between drawer destinations.
+  5. *Sub-View Drill-Down Integrity (`REQ-UI-517.5`)*:
+     - In-screen detail views (`TrackOnMapScreen`, `EditWorkoutScreen`, `PeriodMapScreen`, `RouteOnMapScreen`, `WorkoutClusterHeatmapScreen`) SHALL retain `Icons.AutoMirrored.Filled.ArrowBack` and return to their parent list when tapped.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* the athlete selects Workouts, Periods, Segments, Routes, or Lieblingsorte from `AppNavigationDrawer`,
+• *When* the destination screen renders at its top level,
+• *Then* the header SHALL display the Hamburger Menu button (`Icons.Default.Menu`) and tapping it SHALL open `AppNavigationDrawer`.
+• *Given* the athlete opens Workouts from Periods, Start Locations, Equipment, or Sport Types (or opens Lieblingsorte from Start Locations),
+• *When* the destination renders,
+• *Then* the header SHALL display `Icons.AutoMirrored.Filled.ArrowBack` and tapping it or pressing system Back SHALL pop back to the caller screen and clear contextual filter criteria.
+• *Given* the athlete switches between any of the top-level Training and Maps tabbed views,
+• *When* observing the header title and leading icon,
+• *Then* there SHALL be zero horizontal or vertical title shift.
+
+**Invariants**: All 21 navigation drawer destinations in `NavRoutes` preserved; `REQ-UI-161` 40 dp threshold preserved for root screens; `REQ-UI-162` LIFO back handling hierarchy preserved.

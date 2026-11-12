@@ -2255,6 +2255,7 @@
     <string name="copy_tab_title">Copia scheda</string>
     <string name="copy_tab_action">Copia</string>
     <string name="back">Indietro</string>
+    <string name="navigation_drawer_open">Apri menu di navigazione</string>
     <string name="close">Chiudi</string>
     <string name="clear">Cancella</string>
     <string name="select_route">Seleziona percorso</string>

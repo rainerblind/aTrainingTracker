@@ -72,6 +72,9 @@ fun WorkoutClustersScreen(
     summariesViewModel: WorkoutSummariesViewModel = viewModel(),
     trackOnMapViewModel: TrackOnMapAftermathViewModel = viewModel(),
     initialClusterId: Long? = null,
+    isPushed: Boolean = false,
+    onMenuClick: (() -> Unit)? = null,
+    onBackClick: (() -> Unit)? = null,
     onBackToNav: (() -> Unit)? = null,
     onNavigateToAdvancedSettings: () -> Unit = {},
     modifier: Modifier = Modifier
@@ -281,6 +284,11 @@ fun WorkoutClustersScreen(
             )
         }
         else -> {
+            if (isPushed && onBackClick != null) {
+                BackHandler {
+                    onBackClick()
+                }
+            }
             var workoutToCluster by remember { mutableStateOf<WorkoutData?>(null) }
             var clusterToMerge by remember { mutableStateOf<WorkoutCluster?>(null) }
             var clusterToSplit by remember { mutableStateOf<WorkoutCluster?>(null) }
@@ -303,7 +311,9 @@ fun WorkoutClustersScreen(
                 migrationStatus = migrationStatus,
                 onNavigateToAdvancedSettings = onNavigateToAdvancedSettings,
                 onMergeRequest = { clusterToMerge = it },
-                onSplitRequest = { clusterToSplit = it }
+                onSplitRequest = { clusterToSplit = it },
+                onMenuClick = if (isPushed) null else onMenuClick,
+                onBackClick = if (isPushed) onBackClick else null
             )
 
             if (clusterToSplit != null) {
