@@ -64,6 +64,8 @@ import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.monetization.SupporterTier
 import com.atrainingtracker.trainingtracker.ui.theme.TTColor
+import java.time.DayOfWeek
+import java.time.format.TextStyle
 import java.util.Locale
 
 /**
@@ -344,15 +346,21 @@ fun HiddenGemsSection(
         // Gem 3: Circadian DNA
         val startH = gems.mostActiveHourStart ?: 6
         val endH = (startH + 2) % 24
-        val dowName = when (gems.mostActiveDayOfWeek) {
-            1 -> "Sunday"
-            2 -> "Monday"
-            3 -> "Tuesday"
-            4 -> "Wednesday"
-            5 -> "Thursday"
-            6 -> "Friday"
-            7 -> "Saturday"
-            else -> "Friday"
+        val dowName = remember(gems.mostActiveDayOfWeek) {
+            gems.mostActiveDayOfWeek?.let { dow ->
+                // SQLite strftime('%w'): 0=Sunday, 1=Monday, 2=Tuesday, 3=Wednesday, 4=Thursday, 5=Friday, 6=Saturday
+                val dayOfWeek = when (dow) {
+                    0 -> DayOfWeek.SUNDAY
+                    1 -> DayOfWeek.MONDAY
+                    2 -> DayOfWeek.TUESDAY
+                    3 -> DayOfWeek.WEDNESDAY
+                    4 -> DayOfWeek.THURSDAY
+                    5 -> DayOfWeek.FRIDAY
+                    6 -> DayOfWeek.SATURDAY
+                    else -> DayOfWeek.FRIDAY
+                }
+                dayOfWeek.getDisplayName(TextStyle.FULL, Locale.getDefault())
+            } ?: DayOfWeek.FRIDAY.getDisplayName(TextStyle.FULL, Locale.getDefault())
         }
         GemCard(
             categoryTitle = stringResource(R.string.sporting_journey_gem_circadian_title),

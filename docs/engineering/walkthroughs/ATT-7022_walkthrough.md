@@ -1,7 +1,7 @@
 # Stage 5: Walkthrough & Verification - ATT-7022: SensorStatus & SportingJourneySheet: Wire Supporter Emblem to 'My Sporting Journey' Trophy Vault
 
 **Ticket**: [ATT-7022](https://rainerblind.atlassian.net/browse/ATT-7022)  
-**Sub-task**: [ATT-7203](https://rainerblind.atlassian.net/browse/ATT-7203) (`[Test]`)  
+**Sub-task**: `[Test]`  
 **Parent Epic**: [ATT-67](https://rainerblind.atlassian.net/browse/ATT-67) (*Zeiträume / Periods & Stats*)  
 **Target Release**: `V5.0.0` | **Active Sprint**: `2026-46.3` | **Branch**: `feature/ATT-7022`  
 **Requirement Mapping**: `REQ-SPT-001`–`REQ-SPT-004` | **Test Spec ID**: `TST-SPT-001`–`TST-SPT-004`  
@@ -36,6 +36,7 @@ BUILD SUCCESSFUL in 18s
 ```
 Targeted suites executed with 0 failures:
 - `SportingJourneyCalculatorTest`: Equator percentage, Everest multiplier, nonstop motion days, pedal revolutions, heartbeats, mechanical kWh from kJ & Power, e-bike range, espressos brewed, phone charges, and ritual percentage calculations.
+- `SportingJourneyRepositoryTest`: Full repository integration tests across All-Time and Annual Wrapped horizons, sport filtering, and year extraction without SQL alias syntax errors.
 - `SportingJourneyShareHelperTest`: Full text passport composition with tier branding, distance, elevation, active time, crank turns, kWh output, and secret trophy counts.
 - `TranslationParityTest`: 100% translation key and format specifier parity across all 9 supported locales (`values`, `de`, `es`, `fr`, `it`, `ja`, `nl`, `pl`, `pt`) in `strings_sporting_journey.xml`.
 - `ThemeColorCentralizationAuditTest`: Zero hardcoded hex colors outside `Color.kt`.

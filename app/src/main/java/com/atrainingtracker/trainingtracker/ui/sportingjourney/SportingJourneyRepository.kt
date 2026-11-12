@@ -41,10 +41,10 @@ import kotlin.math.roundToInt
  * Executes strictly on [Dispatchers.IO] against existing `WorkoutSummaries` and `ExtremumValues` tables
  * with zero schema modifications.
  */
-class SportingJourneyRepository private constructor(private val context: Context) {
-
-    private val dbManager: WorkoutSummariesDatabaseManager =
-        WorkoutSummariesDatabaseManager.getInstance(context)
+class SportingJourneyRepository internal constructor(
+    private val context: Context,
+    private val dbManager: WorkoutSummariesDatabaseManager = WorkoutSummariesDatabaseManager.getInstance(context)
+) {
 
     companion object {
         @Volatile
@@ -53,6 +53,12 @@ class SportingJourneyRepository private constructor(private val context: Context
         fun getInstance(context: Context): SportingJourneyRepository {
             return instance ?: synchronized(this) {
                 instance ?: SportingJourneyRepository(context.applicationContext).also { instance = it }
+            }
+        }
+
+        fun resetForTesting(repository: SportingJourneyRepository? = null) {
+            synchronized(this) {
+                instance = repository
             }
         }
     }
@@ -66,7 +72,7 @@ class SportingJourneyRepository private constructor(private val context: Context
         if (!db.isOpen) return@withContext emptyList()
 
         val query = """
-            SELECT DISTINCT CAST(strftime('%Y', ${WorkoutSummaries.TIME_START}) AS INTEGER) AS yr
+            SELECT DISTINCT CAST(strftime('%Y', ${WorkoutSummaries.TIME_START}, 'localtime') AS INTEGER) AS yr
             FROM ${WorkoutSummaries.TABLE}
             WHERE ${WorkoutSummaries.FINISHED} = 1 AND ${WorkoutSummaries.TIME_START} IS NOT NULL
             ORDER BY yr DESC
@@ -108,17 +114,21 @@ class SportingJourneyRepository private constructor(private val context: Context
 
         // 1. Build SQL where filter fragments
         val whereClauses = mutableListOf("${WorkoutSummaries.FINISHED} = 1")
+        val whereClausesJoined = mutableListOf("w.${WorkoutSummaries.FINISHED} = 1")
         val selectionArgs = mutableListOf<String>()
 
         when (sportFilter) {
             SportingSportFilter.ALL -> {
                 whereClauses.add("${WorkoutSummaries.B_SPORT} IN ('BIKE', 'RUN')")
+                whereClausesJoined.add("w.${WorkoutSummaries.B_SPORT} IN ('BIKE', 'RUN')")
             }
             SportingSportFilter.CYCLING -> {
                 whereClauses.add("${WorkoutSummaries.B_SPORT} = 'BIKE'")
+                whereClausesJoined.add("w.${WorkoutSummaries.B_SPORT} = 'BIKE'")
             }
             SportingSportFilter.RUNNING -> {
                 whereClauses.add("${WorkoutSummaries.B_SPORT} = 'RUN'")
+                whereClausesJoined.add("w.${WorkoutSummaries.B_SPORT} = 'RUN'")
             }
         }
 
@@ -127,12 +137,14 @@ class SportingJourneyRepository private constructor(private val context: Context
                 // No year filtering
             }
             is SportingHorizon.Year -> {
-                whereClauses.add("strftime('%Y', ${WorkoutSummaries.TIME_START}) = ?")
+                whereClauses.add("CAST(strftime('%Y', ${WorkoutSummaries.TIME_START}, 'localtime') AS INTEGER) = ?")
+                whereClausesJoined.add("CAST(strftime('%Y', w.${WorkoutSummaries.TIME_START}, 'localtime') AS INTEGER) = ?")
                 selectionArgs.add(horizon.year.toString())
             }
         }
 
         val whereSql = whereClauses.joinToString(" AND ")
+        val whereSqlJoined = whereClausesJoined.joinToString(" AND ")
         val argsArray = if (selectionArgs.isEmpty()) null else selectionArgs.toTypedArray()
 
         // 2. Query Hero Totals and high-level milestones
@@ -206,7 +218,7 @@ class SportingJourneyRepository private constructor(private val context: Context
                 IFNULL(SUM(e.${WorkoutSummaries.VALUE} * (w.${WorkoutSummaries.TIME_ACTIVE_s} / 60.0)), 0.0) AS total_revs
             FROM ${WorkoutSummaries.TABLE} w
             INNER JOIN ${WorkoutSummaries.TABLE_EXTREMA_VALUES} e ON w.${WorkoutSummaries.C_ID} = e.${WorkoutSummaries.WORKOUT_ID}
-            WHERE ${whereClauses.joinToString(" AND ") { "w.$it" }}
+            WHERE $whereSqlJoined
               AND e.${WorkoutSummaries.SENSOR_TYPE} = '${SensorType.CADENCE.name}'
               AND e.${WorkoutSummaries.EXTREMA_TYPE} = '${ExtremaType.AVG.name}'
               AND e.${WorkoutSummaries.VALUE} > 0 AND e.${WorkoutSummaries.VALUE} <= 250
@@ -230,7 +242,7 @@ class SportingJourneyRepository private constructor(private val context: Context
                 IFNULL(SUM(e.${WorkoutSummaries.VALUE} * (w.${WorkoutSummaries.TIME_ACTIVE_s} / 60.0)), 0.0) AS total_beats
             FROM ${WorkoutSummaries.TABLE} w
             INNER JOIN ${WorkoutSummaries.TABLE_EXTREMA_VALUES} e ON w.${WorkoutSummaries.C_ID} = e.${WorkoutSummaries.WORKOUT_ID}
-            WHERE ${whereClauses.joinToString(" AND ") { "w.$it" }}
+            WHERE $whereSqlJoined
               AND e.${WorkoutSummaries.SENSOR_TYPE} = '${SensorType.HR.name}'
               AND e.${WorkoutSummaries.EXTREMA_TYPE} = '${ExtremaType.AVG.name}'
               AND e.${WorkoutSummaries.VALUE} >= 30 AND e.${WorkoutSummaries.VALUE} <= 240
@@ -261,7 +273,7 @@ class SportingJourneyRepository private constructor(private val context: Context
                     ) AS workout_kj
                 FROM ${WorkoutSummaries.TABLE} w
                 INNER JOIN ${WorkoutSummaries.TABLE_EXTREMA_VALUES} e ON w.${WorkoutSummaries.C_ID} = e.${WorkoutSummaries.WORKOUT_ID}
-                WHERE ${whereClauses.joinToString(" AND ") { "w.$it" }}
+                WHERE $whereSqlJoined
                 GROUP BY w.${WorkoutSummaries.C_ID}
                 HAVING workout_kj IS NOT NULL AND workout_kj > 0
             )
@@ -284,7 +296,7 @@ class SportingJourneyRepository private constructor(private val context: Context
         // 6. Circadian Launch Window & Day of Week
         var mostActiveHour: Int? = null
         val hourQuery = """
-            SELECT CAST(strftime('%H', ${WorkoutSummaries.TIME_START}) AS INTEGER) AS hr_start, COUNT(*) AS cnt
+            SELECT CAST(strftime('%H', ${WorkoutSummaries.TIME_START}, 'localtime') AS INTEGER) AS hr_start, COUNT(*) AS cnt
             FROM ${WorkoutSummaries.TABLE}
             WHERE $whereSql AND ${WorkoutSummaries.TIME_START} IS NOT NULL
             GROUP BY hr_start
@@ -302,7 +314,7 @@ class SportingJourneyRepository private constructor(private val context: Context
 
         var mostActiveDow: Int? = null
         val dowQuery = """
-            SELECT CAST(strftime('%w', ${WorkoutSummaries.TIME_START}) AS INTEGER) AS dow, COUNT(*) AS cnt
+            SELECT CAST(strftime('%w', ${WorkoutSummaries.TIME_START}, 'localtime') AS INTEGER) AS dow, COUNT(*) AS cnt
             FROM ${WorkoutSummaries.TABLE}
             WHERE $whereSql AND ${WorkoutSummaries.TIME_START} IS NOT NULL
             GROUP BY dow
@@ -323,7 +335,7 @@ class SportingJourneyRepository private constructor(private val context: Context
             SELECT COUNT(*) AS early_cnt
             FROM ${WorkoutSummaries.TABLE}
             WHERE $whereSql AND ${WorkoutSummaries.TIME_START} IS NOT NULL
-              AND CAST(strftime('%H', ${WorkoutSummaries.TIME_START}) AS INTEGER) < 7
+              AND CAST(strftime('%H', ${WorkoutSummaries.TIME_START}, 'localtime') AS INTEGER) < 7
         """.trimIndent()
 
         try {
@@ -392,13 +404,13 @@ class SportingJourneyRepository private constructor(private val context: Context
             db.rawQuery(firstWorkoutQuery, argsArray).use { cursor ->
                 if (cursor.moveToFirst()) {
                     val wId = cursor.getLong(cursor.getColumnIndexOrThrow(WorkoutSummaries.C_ID))
-                    val wName = cursor.getString(cursor.getColumnIndexOrThrow(WorkoutSummaries.WORKOUT_NAME)) ?: context.getString(R.string.sporting_journey_milestone_first_title)
+                    val wName = cursor.getString(cursor.getColumnIndexOrThrow(WorkoutSummaries.WORKOUT_NAME)) ?: safeGetString(R.string.sporting_journey_milestone_first_title, "First Recorded Workout")
                     val distKm = cursor.getDouble(cursor.getColumnIndexOrThrow(WorkoutSummaries.DISTANCE_TOTAL_m)) / 1000.0
                     milestones.add(
                         SportingMilestone(
                             id = "first_workout",
                             emoji = "🌱",
-                            title = context.getString(R.string.sporting_journey_milestone_first_title),
+                            title = safeGetString(R.string.sporting_journey_milestone_first_title, "First Recorded Workout"),
                             subtitle = firstWorkoutDateFormatted ?: "",
                             value = "${String.format(Locale.US, "%.1f", distKm)} km",
                             workoutId = wId
@@ -431,7 +443,7 @@ class SportingJourneyRepository private constructor(private val context: Context
                         SportingMilestone(
                             id = "longest_workout",
                             emoji = "🏆",
-                            title = context.getString(R.string.sporting_journey_milestone_longest_title),
+                            title = safeGetString(R.string.sporting_journey_milestone_longest_title, "Longest Single Workout"),
                             subtitle = longestWorkoutName ?: dateStr ?: "",
                             value = "${String.format(Locale.US, "%.1f", longestWorkoutKm)} km",
                             workoutId = longestWorkoutId
@@ -464,7 +476,7 @@ class SportingJourneyRepository private constructor(private val context: Context
                         SportingMilestone(
                             id = "highest_climb",
                             emoji = "⛰️",
-                            title = context.getString(R.string.sporting_journey_milestone_climb_title),
+                            title = safeGetString(R.string.sporting_journey_milestone_climb_title, "Highest Single Climb"),
                             subtitle = highestClimbName ?: dateStr ?: "",
                             value = "$highestClimbM m",
                             workoutId = highestClimbWorkoutId
@@ -476,7 +488,7 @@ class SportingJourneyRepository private constructor(private val context: Context
 
         // Milestone 4: Busiest Month
         val monthQuery = """
-            SELECT strftime('%Y-%m', ${WorkoutSummaries.TIME_START}) AS ym, COUNT(*) AS cnt, SUM(${WorkoutSummaries.DISTANCE_TOTAL_m}) AS dist_m
+            SELECT strftime('%Y-%m', ${WorkoutSummaries.TIME_START}, 'localtime') AS ym, COUNT(*) AS cnt, SUM(${WorkoutSummaries.DISTANCE_TOTAL_m}) AS dist_m
             FROM ${WorkoutSummaries.TABLE}
             WHERE $whereSql AND ${WorkoutSummaries.TIME_START} IS NOT NULL
             GROUP BY ym
@@ -494,8 +506,8 @@ class SportingJourneyRepository private constructor(private val context: Context
                         SportingMilestone(
                             id = "busiest_month",
                             emoji = "🔥",
-                            title = context.getString(R.string.sporting_journey_milestone_active_month_title),
-                            subtitle = "$ym ($cnt ${context.getString(R.string.sporting_journey_hero_workouts_label).lowercase()})",
+                            title = safeGetString(R.string.sporting_journey_milestone_active_month_title, "Most Active Month"),
+                            subtitle = "$ym ($cnt ${safeGetString(R.string.sporting_journey_hero_workouts_label, "workouts").lowercase()})",
                             value = "${String.format(Locale.US, "%.0f", distKm)} km"
                         )
                     )
@@ -512,17 +524,18 @@ class SportingJourneyRepository private constructor(private val context: Context
             SportingAchievement(
                 id = "century_rider",
                 emoji = "🌲",
-                name = context.getString(R.string.sporting_journey_badge_century_title),
-                subtitle = context.getString(R.string.sporting_journey_badge_century_sub),
+                name = safeGetString(R.string.sporting_journey_badge_century_title, "Century Rider"),
+                subtitle = safeGetString(R.string.sporting_journey_badge_century_sub, "100 km Max Single Workout"),
                 isUnlocked = centuryUnlocked,
-                storyTitle = context.getString(R.string.sporting_journey_badge_century_story_title),
+                storyTitle = safeGetString(R.string.sporting_journey_badge_century_story_title, "Century Milestone"),
                 storyText = if (centuryUnlocked) {
-                    context.getString(
+                    safeGetString(
                         R.string.sporting_journey_badge_century_story_text,
                         longestWorkoutName ?: "",
-                        longestWorkoutKm
+                        longestWorkoutKm,
+                        fallback = "Completed %s (%.1f km)."
                     )
-                } else context.getString(R.string.sporting_journey_locked_hint),
+                } else safeGetString(R.string.sporting_journey_locked_hint, "Keep training to unlock!"),
                 workoutId = if (centuryUnlocked) longestWorkoutId else null
             )
         )
@@ -533,17 +546,18 @@ class SportingJourneyRepository private constructor(private val context: Context
             SportingAchievement(
                 id = "everest_club",
                 emoji = "🏔️",
-                name = context.getString(R.string.sporting_journey_badge_everest_title),
-                subtitle = context.getString(R.string.sporting_journey_badge_everest_sub),
+                name = safeGetString(R.string.sporting_journey_badge_everest_title, "Mount Everest Club"),
+                subtitle = safeGetString(R.string.sporting_journey_badge_everest_sub, "8,848 m Elevation Gain"),
                 isUnlocked = everestUnlocked,
-                storyTitle = context.getString(R.string.sporting_journey_badge_everest_story_title),
+                storyTitle = safeGetString(R.string.sporting_journey_badge_everest_story_title, "Summit Ascent"),
                 storyText = if (everestUnlocked) {
-                    context.getString(
+                    safeGetString(
                         R.string.sporting_journey_badge_everest_story_text,
                         totalElevationM.toString(),
-                        everestMultiplier
+                        everestMultiplier,
+                        fallback = "Climbed %s m (%.2f× Mt. Everest)."
                     )
-                } else context.getString(R.string.sporting_journey_locked_hint)
+                } else safeGetString(R.string.sporting_journey_locked_hint, "Keep training to unlock!")
             )
         )
 
@@ -553,16 +567,17 @@ class SportingJourneyRepository private constructor(private val context: Context
             SportingAchievement(
                 id = "dawn_patrol",
                 emoji = "🌅",
-                name = context.getString(R.string.sporting_journey_badge_dawn_title),
-                subtitle = context.getString(R.string.sporting_journey_badge_dawn_sub),
+                name = safeGetString(R.string.sporting_journey_badge_dawn_title, "Dawn Patrol"),
+                subtitle = safeGetString(R.string.sporting_journey_badge_dawn_sub, "Early Morning Starts"),
                 isUnlocked = dawnUnlocked,
-                storyTitle = context.getString(R.string.sporting_journey_badge_dawn_story_title),
+                storyTitle = safeGetString(R.string.sporting_journey_badge_dawn_story_title, "Early Riser"),
                 storyText = if (dawnUnlocked) {
-                    context.getString(
+                    safeGetString(
                         R.string.sporting_journey_badge_dawn_story_text,
-                        earlyMorningStarts
+                        earlyMorningStarts,
+                        fallback = "%d launches before 07:00."
                     )
-                } else context.getString(R.string.sporting_journey_locked_hint)
+                } else safeGetString(R.string.sporting_journey_locked_hint, "Keep training to unlock!")
             )
         )
 
@@ -572,13 +587,13 @@ class SportingJourneyRepository private constructor(private val context: Context
             SportingAchievement(
                 id = "million_cranks",
                 emoji = "⚙️",
-                name = context.getString(R.string.sporting_journey_badge_cranks_title),
-                subtitle = context.getString(R.string.sporting_journey_badge_cranks_sub),
+                name = safeGetString(R.string.sporting_journey_badge_cranks_title, "Million Cranks"),
+                subtitle = safeGetString(R.string.sporting_journey_badge_cranks_sub, "1,000,000 Revolutions"),
                 isUnlocked = cranksUnlocked,
-                storyTitle = context.getString(R.string.sporting_journey_badge_cranks_story_title),
+                storyTitle = safeGetString(R.string.sporting_journey_badge_cranks_story_title, "Pedal Power"),
                 storyText = if (cranksUnlocked) {
-                    context.getString(R.string.sporting_journey_badge_cranks_story_text)
-                } else context.getString(R.string.sporting_journey_locked_hint)
+                    safeGetString(R.string.sporting_journey_badge_cranks_story_text, "Turned the pedals over 1 million times.")
+                } else safeGetString(R.string.sporting_journey_locked_hint, "Keep training to unlock!")
             )
         )
 
@@ -588,13 +603,13 @@ class SportingJourneyRepository private constructor(private val context: Context
             SportingAchievement(
                 id = "pioneer_athlete",
                 emoji = "📡",
-                name = context.getString(R.string.sporting_journey_badge_pioneer_title),
-                subtitle = context.getString(R.string.sporting_journey_badge_pioneer_sub),
+                name = safeGetString(R.string.sporting_journey_badge_pioneer_title, "Pioneer Athlete"),
+                subtitle = safeGetString(R.string.sporting_journey_badge_pioneer_sub, "Longtime Supporter"),
                 isUnlocked = pioneerUnlocked,
-                storyTitle = context.getString(R.string.sporting_journey_badge_pioneer_story_title),
+                storyTitle = safeGetString(R.string.sporting_journey_badge_pioneer_story_title, "Long-term History"),
                 storyText = if (pioneerUnlocked) {
-                    context.getString(R.string.sporting_journey_badge_pioneer_story_text, daysSinceFirst)
-                } else context.getString(R.string.sporting_journey_locked_hint)
+                    safeGetString(R.string.sporting_journey_badge_pioneer_story_text, daysSinceFirst, fallback = "Training with aTrainingTracker for %d days.")
+                } else safeGetString(R.string.sporting_journey_locked_hint, "Keep training to unlock!")
             )
         )
 
@@ -604,13 +619,13 @@ class SportingJourneyRepository private constructor(private val context: Context
             SportingAchievement(
                 id = "local_legend",
                 emoji = "🔁",
-                name = context.getString(R.string.sporting_journey_badge_legend_title),
-                subtitle = context.getString(R.string.sporting_journey_badge_legend_sub),
+                name = safeGetString(R.string.sporting_journey_badge_legend_title, "Local Legend"),
+                subtitle = safeGetString(R.string.sporting_journey_badge_legend_sub, "Signature Routes"),
                 isUnlocked = legendUnlocked,
-                storyTitle = context.getString(R.string.sporting_journey_badge_legend_story_title),
+                storyTitle = safeGetString(R.string.sporting_journey_badge_legend_story_title, "Route Master"),
                 storyText = if (legendUnlocked) {
-                    context.getString(R.string.sporting_journey_badge_legend_story_text, ritualCount)
-                } else context.getString(R.string.sporting_journey_locked_hint)
+                    safeGetString(R.string.sporting_journey_badge_legend_story_text, ritualCount, fallback = "Conquered %d signature loops.")
+                } else safeGetString(R.string.sporting_journey_locked_hint, "Keep training to unlock!")
             )
         )
 
@@ -620,17 +635,18 @@ class SportingJourneyRepository private constructor(private val context: Context
             SportingAchievement(
                 id = "human_power_plant",
                 emoji = "⚡",
-                name = context.getString(R.string.sporting_journey_badge_powerplant_title),
-                subtitle = context.getString(R.string.sporting_journey_badge_powerplant_sub),
+                name = safeGetString(R.string.sporting_journey_badge_powerplant_title, "Human Power Plant"),
+                subtitle = safeGetString(R.string.sporting_journey_badge_powerplant_sub, "60 kWh Output"),
                 isUnlocked = powerPlantUnlocked,
-                storyTitle = context.getString(R.string.sporting_journey_badge_powerplant_story_title),
+                storyTitle = safeGetString(R.string.sporting_journey_badge_powerplant_story_title, "Watt Machine"),
                 storyText = if (powerPlantUnlocked) {
-                    context.getString(
+                    safeGetString(
                         R.string.sporting_journey_badge_powerplant_story_text,
                         mechanicalKwh,
-                        String.format(Locale.US, "%,.0f", totalMechanicalKj)
+                        String.format(Locale.US, "%,.0f", totalMechanicalKj),
+                        fallback = "Generated %.1f kWh (%s kJ)."
                     )
-                } else context.getString(R.string.sporting_journey_locked_hint)
+                } else safeGetString(R.string.sporting_journey_locked_hint, "Keep training to unlock!")
             )
         )
 
@@ -640,16 +656,17 @@ class SportingJourneyRepository private constructor(private val context: Context
             SportingAchievement(
                 id = "half_way_world",
                 emoji = "🌍",
-                name = context.getString(R.string.sporting_journey_badge_world_title),
-                subtitle = context.getString(R.string.sporting_journey_badge_world_sub),
+                name = safeGetString(R.string.sporting_journey_badge_world_title, "Half-Way Around the World"),
+                subtitle = safeGetString(R.string.sporting_journey_badge_world_sub, "20,037 km Milestone"),
                 isUnlocked = worldUnlocked,
-                storyTitle = context.getString(R.string.sporting_journey_badge_world_story_title),
+                storyTitle = safeGetString(R.string.sporting_journey_badge_world_story_title, "Global Milestone"),
                 storyText = if (worldUnlocked) {
-                    context.getString(
+                    safeGetString(
                         R.string.sporting_journey_badge_world_story_text,
-                        String.format(Locale.US, "%,.0f", totalDistanceKm)
+                        String.format(Locale.US, "%,.0f", totalDistanceKm),
+                        fallback = "Covered %s km around the globe."
                     )
-                } else context.getString(R.string.sporting_journey_locked_hint)
+                } else safeGetString(R.string.sporting_journey_locked_hint, "Keep training to unlock!")
             )
         )
 
@@ -666,5 +683,25 @@ class SportingJourneyRepository private constructor(private val context: Context
             athleteName = null,
             isLoading = false
         )
+    }
+
+    private fun safeGetString(resId: Int, fallback: String): String {
+        return try {
+            context.getString(resId)
+        } catch (_: Throwable) {
+            fallback
+        }
+    }
+
+    private fun safeGetString(resId: Int, vararg formatArgs: Any, fallback: String): String {
+        return try {
+            context.getString(resId, *formatArgs)
+        } catch (_: Throwable) {
+            try {
+                String.format(fallback, *formatArgs)
+            } catch (_: Throwable) {
+                fallback
+            }
+        }
     }
 }
