@@ -39,12 +39,14 @@ from tools.hoechstmass.tools.jira_util import (
     export_gates,
     collect_sprint_metrics_for_id,
     VALID_ROLES,
+    qa_audit,
 )
 from tools.hoechstmass.tools.verify_requirement_governance import (
     load_config,
     validate_archaeology_section,
     verify_engineering_directory_structure,
     verify_sprint_metrics,
+    verify_qa_audits,
 )
 from tools.hoechstmass.tools.parallel_sprint_lock import (
     sprint_lock,
@@ -188,6 +190,45 @@ class TestGovernanceVerification(unittest.TestCase):
         is_valid, errors = validate_archaeology_section(placeholder_text)
         self.assertFalse(is_valid)
         self.assertTrue(len(errors) >= 3)
+
+    def test_verify_qa_audits_valid_and_invalid(self):
+        """TST-PRO-061.2: Verify verify_qa_audits governance check in Höchstmaß mirror."""
+        import tempfile
+        with tempfile.TemporaryDirectory() as tmpdir:
+            qa_dir = os.path.join(tmpdir, "docs", "engineering", "qa_audits")
+            os.makedirs(qa_dir, exist_ok=True)
+            audit_file = os.path.join(qa_dir, "sprint_2026-46.3.md")
+
+            # Missing file
+            ok, errors = verify_qa_audits("sprint_2026-46.3", repo_root=tmpdir)
+            self.assertFalse(ok)
+            self.assertTrue(len(errors) > 0)
+
+            # Valid with >= 2 sampled tickets and COMPLIANT verdict
+            with open(audit_file, "w", encoding="utf-8") as f:
+                f.write("""# Sprint QA Process-Compliance Audit: Sprint 2026-46.3
+## 2. Sampled Tickets Audit
+### Sample 1: ATT-6149
+* Verdict: COMPLIANT
+### Sample 2: ATT-6150
+* Verdict: COMPLIANT
+## 3. Overall Process Verdict: COMPLIANT
+""")
+            ok, msgs = verify_qa_audits("sprint_2026-46.3", repo_root=tmpdir)
+            self.assertTrue(ok)
+            self.assertTrue(any("PASS:" in m for m in msgs))
+
+            # Invalid: < 2 sampled tickets
+            with open(audit_file, "w", encoding="utf-8") as f:
+                f.write("""# Sprint QA Process-Compliance Audit: Sprint 2026-46.3
+## 2. Sampled Tickets Audit
+### Sample 1: ATT-6149
+* Verdict: COMPLIANT
+## 3. Overall Process Verdict: COMPLIANT
+""")
+            ok, errors = verify_qa_audits("sprint_2026-46.3", repo_root=tmpdir)
+            self.assertFalse(ok)
+            self.assertTrue(len(errors) > 0)
 
 
 class TestEpicCommands(unittest.TestCase):
@@ -383,6 +424,64 @@ class TestEpicCommands(unittest.TestCase):
             # Assert only 1 request was made (fetch_all_sprint_issues), zero sequential comment calls for ST-1
             self.assertEqual(len(call_urls), 1)
             self.assertTrue(any("/rest/agile/1.0/sprint/200/issue" in u for u in call_urls))
+
+    def test_hoechstmass_qa_audit_execution(self):
+        """TST-PRO-061.1: Verify Höchstmaß qa_audit execution and markdown formatting."""
+        from unittest.mock import patch
+        import tempfile
+
+        def mock_jira_req(url, method="GET", payload=None, role="coordinator", **kwargs):
+            if "/rest/agile/1.0/board" in url and "/sprint" not in url:
+                return {"values": [{"id": 1, "name": "ATT Board"}]}
+            elif "/rest/agile/1.0/board/1/sprint?state=active" in url:
+                return {"values": [{"id": 440, "name": "2026-46.3", "state": "active"}]}
+            elif "/rest/agile/1.0/sprint/440/issue" in url:
+                return {
+                    "issues": [
+                        {
+                            "key": "ATT-6149",
+                            "fields": {
+                                "summary": "Export Jira gate records",
+                                "status": {"name": "Final Review (Human)"},
+                                "issuetype": {"subtask": False},
+                                "subtasks": [
+                                    {"key": "ATT-7247", "fields": {"summary": "[Analysis] Task", "status": {"name": "Erledigt"}}}
+                                ],
+                            },
+                        },
+                        {
+                            "key": "ATT-6150",
+                            "fields": {
+                                "summary": "Record story points and sprint metrics",
+                                "status": {"name": "Final Review (Human)"},
+                                "issuetype": {"subtask": False},
+                                "subtasks": [
+                                    {"key": "ATT-7258", "fields": {"summary": "[Analysis] Task", "status": {"name": "Erledigt"}}}
+                                ],
+                            },
+                        },
+                    ],
+                    "total": 2,
+                }
+            elif "/comment" in url:
+                return {"comments": []}
+            return {}
+
+        with patch("tools.hoechstmass.tools.jira_util.jira_request", side_effect=mock_jira_req):
+            with tempfile.TemporaryDirectory() as tmpdir:
+                out_file = os.path.join(tmpdir, "docs", "engineering", "qa_audits", "sprint_2026-46.3.md")
+                res_path, results = qa_audit(sprint_arg=None, sample_size=2, out_path=out_file, role="coordinator", repo_root=tmpdir)
+                self.assertEqual(res_path, out_file)
+                self.assertTrue(os.path.exists(out_file))
+                self.assertEqual(len(results), 2)
+
+                with open(out_file, "r", encoding="utf-8") as f:
+                    content = f.read()
+
+                self.assertIn("# Sprint QA Process-Compliance Audit: Sprint 2026-46.3", content)
+                self.assertIn("ATT-6149", content)
+                self.assertIn("ATT-6150", content)
+                self.assertIn("COMPLIANT", content)
 
 
 

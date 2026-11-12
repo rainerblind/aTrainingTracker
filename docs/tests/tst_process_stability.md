@@ -1848,6 +1848,21 @@
   3. *Counterpart Parity & Indexing Optimization (`TST-PRO-060.3`, tools/hoechstmass/tools/test_hoechstmass_tools.py)*:
   • Assert `verify_sprint_metrics` parity and verify `collect_sprint_metrics_for_id` uses pre-indexed comments without extra network requests.
 
+### TST-PRO-061: **Sprint-Level QA Process-Compliance Audit Suite** [Verified]
+- **Requirement(s)**: `REQ-PRO-061`
+- **Component**: `tools/jira_util.py`, `tools/verify_requirement_governance.py`, `tools/hoechstmass/tools/jira_util.py`, `tools/hoechstmass/tools/verify_requirement_governance.py`, `tools/test_jira_accounts.py`, `tools/test_verify_requirement_governance.py`, `tools/hoechstmass/tools/test_hoechstmass_tools.py`
+- **Jira**: `ATT-6154`
+- **Test Description**:
+  1. *`qa-audit` CLI Command & Report Generation (`TST-PRO-061.1`, tools/test_jira_accounts.py & tools/hoechstmass/tools/test_hoechstmass_tools.py)*:
+  • Execute `qa_audit` with mock Jira response; verify sampled tickets, 5-point checklist evaluation, and markdown formatting.
+  2. *Post-Sprint QA Audit Verification (`TST-PRO-061.2`, tools/test_verify_requirement_governance.py)*:
+  • Run `verify_qa_audits` against valid vs missing, empty, and $<2$ sample files; assert pass/fail status and diagnostics.
+  3. *Counterpart Parity & Tooling Integration (`TST-PRO-061.3`, tools/hoechstmass/tools/test_hoechstmass_tools.py)*:
+  • Assert `qa_audit` and `verify_qa_audits` in Höchstmaß mirror match root tooling behavior.
+  4. *Canonical Directory Registration (`TST-PRO-061.4`, tools/test_verify_requirement_governance.py)*:
+  • Assert `"qa_audits"` exists in `ALLOWED_ENGINEERING_ENTRIES` and `hoechstmass_config.json`.
+
+
 
 
 

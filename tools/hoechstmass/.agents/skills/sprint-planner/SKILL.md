@@ -192,6 +192,13 @@ Jointly review all completed sprint tickets with the human user against expectat
      python3 tools/verify_requirement_governance.py --check-gates
      ```
      This exports all gate decisions, review comments, evaluator roles, actor IDs, and timestamps to `docs/engineering/gates/<sprint>.md`.
+   * **Mandatory Sprint QA Process-Compliance Audit (`REQ-PRO-061`, `ATT-6154`)**:
+     To maintain independent ASPICE SUP.1 process compliance evidence, the Coordinator **MUST** sample $\ge 2$ tickets and execute an independent QA process-compliance audit before sprint merge:
+     ```bash
+     python3 tools/jira_util.py --as coordinator qa-audit
+     python3 tools/verify_requirement_governance.py --check-qa-audits
+     ```
+     This evaluates the 5-point lifecycle process checklist (artifacts, gate order, 4-Augen role separation, living doc parity, commit hygiene) and persists the audit report in `docs/engineering/qa_audits/<sprint>.md`.
    * **Closed-Loop Process Improvement Trigger (PA 4.2 $\rightarrow$ PA 5.2)**:
      Whenever the scorecard detects an out-of-control condition (`⚠️ PA 4.2 Special Cause Variation` where any metric falls outside $\mu \pm 2\sigma$), the Retrospective document (`docs/engineering/retros/Sprint_Review_and_Retro_<KEY>.md`) **MUST** contain an explicit Root-Cause Analysis (RCA) and concrete process/skill countermeasure prior to sprint merge.
    * **Mandatory Tier 2 Re-Verification When Any Ticket Is Dropped or Reverted During Review (`Rule 77` — `ATT-5762`)**: If any ticket commit is removed (`git reset --hard`) or reverted (`git revert`) from `sprint/<SPRINT_NAME>` during Ceremony 2 (e.g., `ATT-5665`), the pre-review Tier 2 test run is invalidated because the code state at Sprint-End has changed. You **MUST** re-execute the full Tier 2 Sprint Integration Gate (`./gradlew testDebugUnitTest --max-workers=2 && python3 tools/verify_requirement_governance.py`) and `./gradlew installDebug` on the post-drop sprint branch **before** merging into `develop`.

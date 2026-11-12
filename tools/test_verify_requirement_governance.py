@@ -32,6 +32,7 @@ from tools.verify_requirement_governance import (
     verify_gate_records,
     verify_governance,
     verify_master_table_parity,
+    verify_qa_audits,
     verify_repository_encapsulation,
     verify_sprint_metrics,
 )
@@ -482,8 +483,9 @@ diff --git a/docs/requirements/req_process_stability.md b/docs/requirements/req_
             self.assertIn("across 1 domain shards.", updated_text)
 
     def test_scenario_13_canonical_engineering_directory_allows_gates(self):
-        """Scenario 13: ALLOWED_ENGINEERING_ENTRIES registers 'gates' (TST-PRO-059.3)."""
+        """Scenario 13: ALLOWED_ENGINEERING_ENTRIES registers 'gates' and 'qa_audits' (TST-PRO-059.3, TST-PRO-061.4)."""
         self.assertIn("gates", ALLOWED_ENGINEERING_ENTRIES)
+        self.assertIn("qa_audits", ALLOWED_ENGINEERING_ENTRIES)
         with tempfile.TemporaryDirectory() as tmpdir:
             eng_dir = os.path.join(tmpdir, "docs", "engineering")
             os.makedirs(os.path.join(eng_dir, "gates"), exist_ok=True)
@@ -622,6 +624,77 @@ diff --git a/docs/requirements/req_process_stability.md b/docs/requirements/req_
             ok_any, msgs_any = verify_sprint_metrics(sprint_name=None, repo_root=tmpdir)
             self.assertTrue(ok_any, f"Expected pass, got: {msgs_any}")
             self.assertTrue(any("Verified 2 sprint metrics record(s)" in m for m in msgs_any))
+
+    def test_scenario_16_verify_qa_audits_validation(self):
+        """Scenario 16: verify_qa_audits validates report presence, verdicts, and >= 2 sampled tickets (TST-PRO-061.2)."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            # 1. Missing qa_audits directory
+            ok, errs = verify_qa_audits(sprint_name="sprint/2026-46.3", repo_root=tmpdir)
+            self.assertFalse(ok)
+            self.assertTrue(any("does not exist" in e for e in errs))
+
+            qa_dir = os.path.join(tmpdir, "docs", "engineering", "qa_audits")
+            os.makedirs(qa_dir, exist_ok=True)
+
+            # 2. Missing sprint report
+            ok, errs = verify_qa_audits(sprint_name="sprint/2026-46.3", repo_root=tmpdir)
+            self.assertFalse(ok)
+            self.assertTrue(any("Missing sprint QA process-compliance audit file" in e for e in errs))
+
+            # 3. Empty report
+            target_file = os.path.join(qa_dir, "sprint_2026-46.3.md")
+            with open(target_file, "w", encoding="utf-8") as f:
+                f.write("   \n")
+            ok, errs = verify_qa_audits(sprint_name="sprint/2026-46.3", repo_root=tmpdir)
+            self.assertFalse(ok)
+            self.assertTrue(any("empty" in e for e in errs))
+
+            # 4. Report without recognized compliance verdicts
+            with open(target_file, "w", encoding="utf-8") as f:
+                f.write("# QA Report\nRandom notes without verdict.\n")
+            ok, errs = verify_qa_audits(sprint_name="sprint/2026-46.3", repo_root=tmpdir)
+            self.assertFalse(ok)
+            self.assertTrue(any("no recognized compliance verdicts" in e for e in errs))
+
+            # 5. Report with only 1 sampled ticket (< 2)
+            single_sample_content = (
+                "# Sprint QA Process-Compliance Audit: Sprint 2026-46.3\n\n"
+                "**Overall Process Verdict**: **COMPLIANT**\n\n"
+                "| Ticket | Summary | Compliance Verdict |\n"
+                "| ATT-6150 | Metrics Persistence | COMPLIANT |\n\n"
+                "### Ticket: ATT-6150\n"
+                "* **Process Verdict**: **COMPLIANT**\n"
+            )
+            with open(target_file, "w", encoding="utf-8") as f:
+                f.write(single_sample_content)
+            ok, errs = verify_qa_audits(sprint_name="sprint/2026-46.3", repo_root=tmpdir)
+            self.assertFalse(ok)
+            self.assertTrue(any("minimum >= 2 required" in e for e in errs))
+
+            # 6. Valid report with >= 2 sampled tickets
+            valid_content = (
+                "# Sprint QA Process-Compliance Audit: Sprint 2026-46.3\n\n"
+                "**Overall Process Verdict**: **COMPLIANT**\n\n"
+                "| Ticket | Summary | Compliance Verdict |\n"
+                "| ATT-6149 | Gate Records Export | COMPLIANT |\n"
+                "| ATT-6150 | Metrics Persistence | COMPLIANT |\n\n"
+                "### Ticket: ATT-6149 - Gate Records Export\n"
+                "* **Process Verdict**: **COMPLIANT**\n\n"
+                "### Ticket: ATT-6150 - Metrics Persistence\n"
+                "* **Process Verdict**: **COMPLIANT**\n"
+            )
+            with open(target_file, "w", encoding="utf-8") as f:
+                f.write(valid_content)
+
+            ok, msgs = verify_qa_audits(sprint_name="sprint/2026-46.3", repo_root=tmpdir)
+            self.assertTrue(ok, f"Expected pass, got: {msgs}")
+            self.assertTrue(any("PASS" in m for m in msgs))
+
+            # 7. Wildcard verification without sprint name
+            ok_any, msgs_any = verify_qa_audits(sprint_name=None, repo_root=tmpdir)
+            self.assertTrue(ok_any, f"Expected pass, got: {msgs_any}")
+            self.assertTrue(any("Verified 1 sprint QA process-compliance audit record" in m for m in msgs_any))
+
 
 
 

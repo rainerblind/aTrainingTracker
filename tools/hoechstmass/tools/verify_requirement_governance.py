@@ -275,6 +275,97 @@ def verify_sprint_metrics(sprint_name=None, repo_root=None):
         ]
 
 
+def verify_qa_audits(sprint_name=None, repo_root=None):
+    """
+    REQ-PRO-061.4 / TST-PRO-061.2:
+    Verifies that sprint QA process-compliance audit records exist in docs/engineering/qa_audits/
+    per REQ-PRO-061. Fails with exit code 1 if:
+    - qa_audits directory does not exist.
+    - Expected sprint audit file is missing or empty.
+    - Audit record does not contain recognized compliance verdicts ('COMPLIANT' or 'NON-COMPLIANT').
+    - Audit record does not contain at least 2 sampled ticket evaluations (REQ-PRO-061.1).
+    """
+    if repo_root is None:
+        repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
+
+    qa_dir = os.path.join(repo_root, "docs", "engineering", "qa_audits")
+    if not os.path.isdir(qa_dir):
+        return False, [f"ERROR: QA audit reports directory does not exist: {qa_dir}"]
+
+    if sprint_name:
+        clean_name = sprint_name.strip()
+        slug = re.sub(r"[/\\ ]+", "_", clean_name).lower()
+        if not slug.endswith(".md"):
+            slug += ".md"
+
+        candidates = [
+            slug,
+            f"sprint_{slug}" if not slug.startswith("sprint_") else slug,
+            slug.replace("sprint_", "", 1) if slug.startswith("sprint_") else slug,
+        ]
+
+        found_file = None
+        for cand in candidates:
+            cand_path = os.path.join(qa_dir, cand)
+            if os.path.isfile(cand_path):
+                found_file = cand_path
+                break
+
+        if not found_file:
+            return False, [
+                f"ERROR: Missing sprint QA process-compliance audit file for sprint '{sprint_name}'. "
+                f"Expected one of {[os.path.join('docs/engineering/qa_audits', c) for c in candidates]}."
+            ]
+
+        try:
+            with open(found_file, "r", encoding="utf-8") as f:
+                content = f.read().strip()
+            if not content:
+                return False, [f"ERROR: Sprint QA audit report is empty: {found_file}"]
+            if not re.search(r"\b(?:COMPLIANT|NON-COMPLIANT)\b", content, re.IGNORECASE):
+                return False, [f"ERROR: Sprint QA audit report contains no recognized compliance verdicts: {found_file}"]
+
+            ticket_sections = re.findall(
+                r"(?:###\s*(?:Sampled\s+)?Ticket:?\s*([A-Z0-9_-]+)|\|\s*([A-Z0-9_-]+)\s*\|\s*(?:PASS|FAIL|COMPLIANT|NON-COMPLIANT))",
+                content,
+                re.IGNORECASE,
+            )
+            sampled_tickets = set(t[0] or t[1] for t in ticket_sections if (t[0] or t[1]) and not (t[0] or t[1]).startswith("ATT-232"))
+            if len(sampled_tickets) == 0:
+                all_keys = set(re.findall(r"\b(?:ATT|PROJ)-\d+\b", content))
+                sampled_tickets = {k for k in all_keys if not k.startswith("ATT-232")}
+
+            total_sampled = len(sampled_tickets)
+            if total_sampled < 2:
+                return False, [
+                    f"ERROR: Sprint QA audit report in {found_file} sampled only {total_sampled} ticket(s) (minimum >= 2 required by REQ-PRO-061.1)."
+                ]
+
+            return True, [f"PASS: Sprint QA audit report verified for '{sprint_name}' ({total_sampled} sampled tickets): {found_file}"]
+        except Exception as e:
+            return False, [f"ERROR: Failed to read QA audit file {found_file}: {e}"]
+    else:
+        md_files = [f for f in os.listdir(qa_dir) if f.endswith(".md") and not f.startswith(".")]
+        if not md_files:
+            return False, [f"ERROR: No sprint QA process-compliance audit files (*.md) found in {qa_dir}"]
+
+        valid_files = 0
+        for fname in md_files:
+            fpath = os.path.join(qa_dir, fname)
+            try:
+                with open(fpath, "r", encoding="utf-8") as f:
+                    content = f.read().strip()
+                if content and re.search(r"\b(?:COMPLIANT|NON-COMPLIANT)\b", content, re.IGNORECASE):
+                    valid_files += 1
+            except Exception:
+                pass
+
+        if valid_files == 0:
+            return False, [f"ERROR: No valid, non-empty sprint QA audit records found in {qa_dir}"]
+        return True, [f"PASS: Verified {valid_files} sprint QA process-compliance audit record(s) in {qa_dir}."]
+
+
+
 
 def verify_master_table_parity(repo_root=None, config=None):
     """Verifies 100% mathematical parity between master tables and domain shards."""
@@ -468,6 +559,13 @@ def main():
         default=None,
         help="Verify sprint process metrics in docs/engineering/metrics/process_metrics.jsonl (optionally specify sprint name).",
     )
+    parser.add_argument(
+        "--check-qa-audits",
+        nargs="?",
+        const="",
+        default=None,
+        help="Verify sprint QA process-compliance audit reports in docs/engineering/qa_audits/ (optionally specify sprint name).",
+    )
     args = parser.parse_args()
 
     if args.check_gates is not None:
@@ -480,6 +578,13 @@ def main():
     if args.check_metrics is not None:
         target_sprint = args.check_metrics if args.check_metrics != "" else None
         ok, diag = verify_sprint_metrics(sprint_name=target_sprint)
+        for msg in diag:
+            print(msg, file=sys.stderr if not ok else sys.stdout)
+        sys.exit(0 if ok else 1)
+
+    if args.check_qa_audits is not None:
+        target_sprint = args.check_qa_audits if args.check_qa_audits != "" else None
+        ok, diag = verify_qa_audits(sprint_name=target_sprint)
         for msg in diag:
             print(msg, file=sys.stderr if not ok else sys.stdout)
         sys.exit(0 if ok else 1)

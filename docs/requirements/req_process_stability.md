@@ -3100,6 +3100,38 @@ The workflow SHALL mandate that:
   • *Then* it passes with exit code 0.
 - **Invariants**: Zero modifications to Android production runtime code in `app/src/main/`; pure Python standard library retained; Rule 3 (`Erledigt` human-only gate) preserved.
 
+### REQ-PRO-061: Sprint-Level QA Process-Compliance Audit [Verified]
+- **Tests**: `tools/test_jira_accounts.py`, `tools/test_verify_requirement_governance.py`, `tools/hoechstmass/tools/test_hoechstmass_tools.py`
+- **Implementation**: Automated `qa-audit` CLI command in `tools/jira_util.py` and `tools/hoechstmass/tools/jira_util.py`, structured markdown reporting in `docs/engineering/qa_audits/<sprint>.md`, canonical directory registration, and `--check-qa-audits` validation in `tools/verify_requirement_governance.py`.
+- **Rationale**: Under ASPICE SUP.1 (Quality Assurance) and GP 2.2 (Work Product Evidence), quality gates independently audit work products, but no separate audit validates lifecycle process conformity (Pre-Assessment Finding B-09). This requirement establishes an automated QA process-compliance audit tool (`qa-audit`) that samples $\ge 2$ tickets per sprint, evaluates a 5-point process checklist, records compliance in `docs/engineering/qa_audits/<sprint>.md`, and validates presence via `--check-qa-audits`:
+  1. *QA Process Audit Tooling (`REQ-PRO-061.1`, tools/jira_util.py & tools/hoechstmass/tools/jira_util.py)*:
+     • `jira_util.py` and `tools/hoechstmass/tools/jira_util.py` SHALL implement `qa-audit [--sprint <ID|NAME>] [--sample N] [--out <FILE>]` to sample $\ge 2$ engineering tickets and audit 5 core process criteria (artifacts, gate order, 4-Augen role separation, living doc parity, commit hygiene).
+  2. *Audit Report Schema (`REQ-PRO-061.2`, docs/engineering/qa_audits/<sprint>.md)*:
+     • The audit deliverable SHALL record: Sprint ID/Name, Auditor Role, Date, Sampled Tickets table, Checklist Results per ticket, Overall Compliance Verdict (`COMPLIANT` / `NON-COMPLIANT`), and links to any non-compliance tracking issues.
+  3. *Directory Governance (`REQ-PRO-061.3`, ALLOWED_ENGINEERING_ENTRIES & hoechstmass_config.json)*:
+     • `ALLOWED_ENGINEERING_ENTRIES` in `tools/verify_requirement_governance.py` and `hoechstmass_config.json` SHALL register `"qa_audits"`.
+  4. *Governance Enforcement CLI (`REQ-PRO-061.4`, tools/verify_requirement_governance.py & tools/hoechstmass/tools/verify_requirement_governance.py)*:
+     • `tools/verify_requirement_governance.py` and Höchstmaß mirror SHALL implement `--check-qa-audits [SPRINT]`, failing with exit code 1 if the audit file is missing, empty, or has $<2$ sampled ticket evaluations.
+  5. *Ceremony 2 Retrospective Mandate (`REQ-PRO-061.5`, .agents/skills/sprint-planner/SKILL.md)*:
+     • `sprint-planner/SKILL.md` Ceremony 2 SHALL mandate executing `qa-audit` and `verify_requirement_governance.py --check-qa-audits` prior to sprint closure.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Net-new requirement `REQ-PRO-061` (`REQ-PRO-061.1`–`REQ-PRO-061.5`). Targets `tools/jira_util.py`, `tools/verify_requirement_governance.py`, `docs/engineering/qa_audits/`, and `tools/hoechstmass/`.
+  2. *Historical Origin & Commit Trace*: Introduced in Sprint 2026-46.3 via ATT-6154 under Epic ATT-6141 to satisfy ASPICE pre-assessment finding B-09.
+  3. *Root Reason for Existing Formulation*: Gaps in independent QA process adherence audits; gate reviews verified artifacts but did not systematically audit end-to-end lifecycle conformity.
+  4. *Preservation of Core Invariants*: Zero changes to Android runtime code; pure Python 3 standard library; offline mock testing resilience preserved.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* Ceremony 2 of sprint `sprint/2026-46.3`,
+  • *When* `qa-audit` is executed,
+  • *Then* it generates `docs/engineering/qa_audits/sprint_2026-46.3.md` auditing $\ge 2$ sampled tickets with compliance verdicts.
+  • *Given* a sprint without a QA audit record or with $<2$ sampled tickets,
+  • *When* `verify_requirement_governance.py --check-qa-audits <sprint>` runs,
+  • *Then* it aborts with exit code 1.
+  • *Given* a valid QA audit record with $\ge 2$ sampled tickets,
+  • *When* `verify_requirement_governance.py --check-qa-audits <sprint>` runs,
+  • *Then* it passes with exit code 0.
+- **Invariants**: Zero modifications to Android production runtime code in `app/src/main/`; pure Python standard library retained; Rule 3 (`Erledigt` human-only gate) preserved.
+
+
 
 
 

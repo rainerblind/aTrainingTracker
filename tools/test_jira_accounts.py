@@ -12,6 +12,7 @@ import os
 import sys
 import io
 import base64
+import tempfile
 from unittest.mock import patch, MagicMock
 
 # Ensure tools directory is on sys.path
@@ -595,6 +596,65 @@ class TestJiraCliTooling(unittest.TestCase):
             self.assertIn("Gate 6 | Final Review (Agent) (Gate 6)", content)
             self.assertIn("| ATT-6149 | ATT-7247 | Gate 1 | Analysis (Gate 1) | PASS | agent2 | Agent 2 (Reviewer) |", content)
             self.assertIn("| ATT-6149 | - | Gate 6 | Final Review (Agent) (Gate 6) | PASS | agent2 | Agent 2 (Reviewer) |", content)
+
+    @patch("jira_util.jira_request")
+    def test_qa_audit_command_generates_markdown(self, mock_request):
+        """TST-PRO-061.1: Verify qa-audit CLI command generates structured report for >= 2 tickets."""
+        def mock_jira_side_effect(url, method="GET", payload=None, role="coordinator"):
+            if "/rest/agile/1.0/board" in url and "/sprint" not in url:
+                return {"values": [{"id": 1, "name": "ATT Board"}]}
+            elif "/rest/agile/1.0/board/1/sprint?state=active" in url:
+                return {"values": [{"id": 440, "name": "2026-46.3", "state": "active"}]}
+            elif "/rest/agile/1.0/sprint/440/issue" in url:
+                return {
+                    "issues": [
+                        {
+                            "key": "ATT-6149",
+                            "fields": {
+                                "summary": "Export Jira gate records",
+                                "status": {"name": "Final Review (Human)"},
+                                "issuetype": {"subtask": False},
+                                "subtasks": [
+                                    {"key": "ATT-7247", "fields": {"summary": "[Analysis] Task", "status": {"name": "Erledigt"}}}
+                                ],
+                            },
+                        },
+                        {
+                            "key": "ATT-6150",
+                            "fields": {
+                                "summary": "Record story points and sprint metrics",
+                                "status": {"name": "Final Review (Human)"},
+                                "issuetype": {"subtask": False},
+                                "subtasks": [
+                                    {"key": "ATT-7258", "fields": {"summary": "[Analysis] Task", "status": {"name": "Erledigt"}}}
+                                ],
+                            },
+                        },
+                    ],
+                    "total": 2,
+                }
+            elif "/comment" in url:
+                return {"comments": []}
+            return {}
+
+        mock_request.side_effect = mock_jira_side_effect
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            out_file = os.path.join(tmpdir, "docs", "engineering", "qa_audits", "sprint_2026-46.3.md")
+            res_path, results = jira_util.qa_audit(sprint_arg=None, sample_size=2, out_path=out_file, role="coordinator", repo_root=tmpdir)
+            self.assertEqual(res_path, out_file)
+            self.assertTrue(os.path.exists(out_file))
+            self.assertEqual(len(results), 2)
+
+            with open(out_file, "r", encoding="utf-8") as f:
+                content = f.read()
+
+            self.assertIn("# Sprint QA Process-Compliance Audit: Sprint 2026-46.3", content)
+            self.assertIn("Overall Process Verdict", content)
+            self.assertIn("ATT-6149", content)
+            self.assertIn("ATT-6150", content)
+            self.assertIn("COMPLIANT", content)
+
 
 
 if __name__ == "__main__":

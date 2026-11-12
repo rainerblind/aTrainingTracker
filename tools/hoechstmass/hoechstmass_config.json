@@ -41,6 +41,7 @@
       "gates",
       "metrics",
       "plans",
+      "qa_audits",
       "retros",
       "test_specs",
       "walkthroughs",
