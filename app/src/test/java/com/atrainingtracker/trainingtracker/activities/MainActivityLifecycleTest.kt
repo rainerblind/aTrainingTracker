@@ -330,4 +330,73 @@ class MainActivityLifecycleTest {
             activity.mPlayServicesErrorDialog
         )
     }
+
+    // --- TST-UI-114.8: Navigation Graph Readiness & Early Queuing (ATT-7526) ---
+
+    @Test
+    fun testIsNavGraphReady_returnsFalseForNullOrThrowingController() {
+        val activity = Robolectric.buildActivity(MainActivityWithNavigation::class.java).get()
+
+        // Null controller -> false
+        assertFalse(activity.isNavGraphReady(null))
+
+        // Controller whose getGraph throws IllegalStateException -> false
+        val throwingController = mockk<androidx.navigation.NavHostController>()
+        every { throwingController.graph } throws IllegalStateException("You must call setGraph() before calling getGraph()")
+        assertFalse(activity.isNavGraphReady(throwingController))
+
+        // Controller with valid graph -> true
+        val readyController = mockk<androidx.navigation.NavHostController>()
+        val mockGraph = mockk<androidx.navigation.NavGraph>()
+        every { readyController.graph } returns mockGraph
+        assertTrue(activity.isNavGraphReady(readyController))
+    }
+
+    @Test
+    fun testNavigateToDrawerItem_whenNavGraphNotReady_queuesPendingItemSafely() {
+        val activity = Robolectric.buildActivity(MainActivityWithNavigation::class.java).get()
+
+        // When navController is null, queue pending item
+        activity.navController = null
+        val handled = activity.navigateToDrawerItem(com.atrainingtracker.R.id.drawer_workouts)
+        assertTrue(handled)
+
+        val pendingField = MainActivityWithNavigation::class.java.getDeclaredField("mPendingDrawerItemId")
+        pendingField.isAccessible = true
+        org.junit.Assert.assertEquals(com.atrainingtracker.R.id.drawer_workouts, pendingField.get(activity))
+
+        // When navController is non-null but graph throws, it safely keeps pending item without throwing IllegalStateException
+        val throwingController = mockk<androidx.navigation.NavHostController>()
+        every { throwingController.graph } throws IllegalStateException("You must call setGraph() before calling getGraph()")
+        activity.navController = throwingController
+
+        val handled2 = activity.navigateToDrawerItem(com.atrainingtracker.R.id.drawer_routes)
+        assertTrue(handled2)
+        org.junit.Assert.assertEquals(com.atrainingtracker.R.id.drawer_routes, pendingField.get(activity))
+    }
+
+    @Test
+    fun testOnNavControllerReady_withPendingItemAndReadyGraph_dispatchesAndClearsPending() {
+        val activity = Robolectric.buildActivity(MainActivityWithNavigation::class.java).get()
+
+        val pendingField = MainActivityWithNavigation::class.java.getDeclaredField("mPendingDrawerItemId")
+        pendingField.isAccessible = true
+        pendingField.set(activity, com.atrainingtracker.R.id.drawer_workouts)
+
+        val readyController = mockk<androidx.navigation.NavHostController>(relaxed = true)
+        val navigatorProvider = androidx.navigation.NavigatorProvider()
+        val graphNavigator = androidx.navigation.NavGraphNavigator(navigatorProvider)
+        val realGraph = androidx.navigation.NavGraph(graphNavigator)
+        val destination = androidx.navigation.NavDestination("test").apply { id = 123 }
+        realGraph.addDestination(destination)
+        realGraph.setStartDestination(123)
+        every { readyController.graph } returns realGraph
+
+        activity.onNavControllerReady(readyController)
+
+        // Pending ID must be cleared
+        assertNull(pendingField.get(activity))
+        // Controller navigate must have been invoked for workouts
+        verify { readyController.navigate(eq(com.atrainingtracker.trainingtracker.ui.navigation.NavRoutes.WORKOUTS), any<androidx.navigation.NavOptionsBuilder.() -> Unit>()) }
+    }
 }

@@ -1971,9 +1971,25 @@ Specifically:
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
+- **Implementation**: `ATrainingTrackerApp.kt`, `MainActivityWithNavigation.kt`, `AppNavigationDrawer.kt`
 - **Rationale**: The system SHALL establish Material 3's `DrawerState` as the single authoritative source of truth for navigation drawer visibility and navigation control, eliminating decoupled boolean state flags, and SHALL isolate overlay back navigation (Navigation Drawer and Settings Bottom Sheets) from screen-level destination back navigation using scoped, conditionally composed `BackHandler`s:
 1. *Single Source of Truth*: `NavigationDrawerController` SHALL delegate drawer open and close actions directly to Material 3's `DrawerState` via functional action delegates, removing the decoupled mutable boolean state flag (`isDrawerOpen`) entirely and eliminating split-brain asynchronous synchronization.
-2. *Scoped Overlay Back Navigation & Dynamic LIFO Precedence*: Overlay back handlers for `ModalNavigationDrawer` and Settings Bottom Sheets SHALL be conditionally composed (`if (isDrawerVisible) { BackHandler { ... } }` and `if (activeBottomSheet != null) { BackHandler { ... } }`). Conditionally composing `BackHandler` dynamically appends its callback to the head of the `OnBackPressedDispatcher` LIFO evaluation stack whenever the overlay is presented, guaranteeing that system Back exclusively dismisses the active overlay and strictly supersedes `NavHost`'s internal backstack popping and destination screen back handlers across all animated phases (`currentValue != Closed
+2. *Scoped Overlay Back Navigation & Dynamic LIFO Precedence*: Overlay back handlers for `ModalNavigationDrawer` and Settings Bottom Sheets SHALL be conditionally composed (`if (isDrawerVisible) { BackHandler { ... } }` and `if (activeBottomSheet != null) { BackHandler { ... } }`). Conditionally composing `BackHandler` dynamically appends its callback to the head of the `OnBackPressedDispatcher` LIFO evaluation stack whenever the overlay is presented, guaranteeing that system Back exclusively dismisses the active overlay and strictly supersedes `NavHost`'s internal backstack popping and destination screen back handlers across all animated phases (`currentValue != Closed || targetValue != Closed`).
+3. *NavController Lifecycle Binding & Defensive Graph Readiness*: In `ATrainingTrackerApp.kt`, `DisposableEffect(navController)` binding `activity.onNavControllerReady(navController)` and initial route synchronization SHALL be composed within the `Scaffold` content lambda after `NavHost`, guaranteeing that `NavHost` initializes and attaches the navigation graph (`setGraph`) before `onNavControllerReady` executes queued drawer navigation. In `MainActivityWithNavigation.kt`, navigation methods (`navigateToDrawerItem`, `navigateToFilteredWorkouts`, `startWorkoutSummaryListFromPeriod`) SHALL verify that `navController` has an initialized graph; if called before `NavHost` sets its graph, `navigateToDrawerItem` SHALL buffer `mPendingDrawerItemId = itemId` without accessing `controller.graph` or throwing `IllegalStateException`.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: `REQ-UI-162` (*Single Source of Truth & Scoped Overlay Back Navigation*), implemented under `ATT-1327` / `ATT-1335`. Targets `ATrainingTrackerApp.kt`, `MainActivityWithNavigation.kt`, and `AppNavigationDrawer.kt`.
+2. *Historical Origin & Commit Trace*: Ticket `ATT-1327` / `ATT-1335` bound `MainActivityWithNavigation` navigation callbacks to Compose `NavHostController`. Refined under `ATT-7526` (`Sprint 2026-46.5`).
+3. *Root Reason for Existing Formulation*: `DisposableEffect(navController)` was originally placed in the outer `ATrainingTrackerApp` body to bind `navController` on initial composition. Because `Scaffold` defers subcomposition of its content lambda until the measure/layout pass, the outer `DisposableEffect`'s `onRemembered()` fired before `NavHost` invoked `setGraph()`, crashing on early drawer navigation with `IllegalStateException: You must call setGraph() before calling getGraph()`.
+4. *Preservation of Core Invariants*: Binding `navController` inside `Scaffold` after `NavHost` maintains the exact binding lifecycle contract while eliminating premature callback dispatch before graph readiness. Scoped `BackHandler` LIFO precedence and 21 drawer destinations remain 100% preserved.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* an early drawer navigation request arrives prior to Compose graph initialization (e.g. `mPendingDrawerItemId = itemId`),
+• *When* `ATrainingTrackerApp` initial composition occurs,
+• *Then* `NavHost` SHALL attach the navigation graph before `activity.onNavControllerReady(navController)` executes, successfully navigating to the pending drawer destination without throwing `IllegalStateException`.
+• *Given* `navigateToDrawerItem(itemId)` is invoked while `navController` is present but has no graph attached,
+• *When* the method executes,
+• *Then* it SHALL safely buffer `mPendingDrawerItemId = itemId` and return `true` without accessing `controller.graph`.
 
 ### REQ-UI-163: Cockpit Tab Navigation on Tracking Initiation & Origin-Aware Resume Neutrality [Verified]
 - **Tests**: `TST-UI-115`, `TST-UI-373`, `TST-UI-375`, `TST-UI-399`

@@ -1088,7 +1088,7 @@
 ### TST-UI-114: **ModalNavigationDrawer Back Navigation Isolation & State Synchronization Test** [Verified]
 - **Requirement(s)**: `REQ-UI-162`
 - **Component**: **ModalNavigationDrawer Back Navigation Isolation & State Synchronization Test**
-- **Jira**: ``ATT-1335``
+- **Jira**: ``ATT-1335`, `ATT-7526``
 - **Test Description**:
   1. *Unit Test Navigation Drawer Controller Single Source of Truth (`SingleActivityNavigationTest.kt`)*:
   • Verify that `NavigationDrawerController` properly delegates `openDrawer()`, `closeDrawer()`, and `isDrawerOpen` when bound to an authoritative state provider.
@@ -1113,6 +1113,10 @@
   • Press Android Back button/gesture: verify drawer dismisses smoothly and the screen remains on `Workouts` (does NOT navigate to tracking).
   • Press Back again with drawer closed: verify app navigates to main tracking control screen.
   • While drawer is opening, perform rapid double-back press: verify drawer closes cleanly without unexpected screen route changes.
+  8. *Unit Test Navigation Graph Readiness & Early Drawer Navigation Queuing (`MainActivityWithNavigationTest.kt` / `MainActivityWithNavigationInteropTest.kt`)*:
+  • Verify that invoking `navigateToDrawerItem(itemId)` when `navController` is null or has no graph attached buffers `mPendingDrawerItemId = itemId` without throwing `IllegalStateException`.
+  • Verify that when `onNavControllerReady(controller)` is called with an attached graph, queued pending navigation is executed and cleared.
+  • Verify that `navigateToFilteredWorkouts` and `startWorkoutSummaryListFromPeriod` safely fall back to queued drawer navigation when the graph is uninitialized.
 
 ### TST-UI-115: **Cockpit Tab Navigation on Tracking Initiation & Origin-Aware Resume Neutrality Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-163`
