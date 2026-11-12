@@ -176,4 +176,8 @@
     <string name="radar_min_passing_distance">Min. odstęp boczny</string>
     <string name="radar_close_pass_warning">⚠️ %1$d bliskich wyprzedzań (&lt;%2$sm)</string>
     <string name="radar_heavy_vehicle_share">Pojazdy ciężarowe</string>
+
+    <!-- Smartphone IMU/GPS Deceleration Brake-Light Trigger (ATT-5121 / REQ-CON-035) -->
+    <string name="radar_brake_light_title">Światło hamowania po zwolnieniu</string>
+    <string name="radar_brake_light_desc">Rozjaśnia tylne światło podczas gwałtownego hamowania IMU/GPS (utrzymanie 2,0 s, pomijane w RearVue 820)</string>
 </resources>

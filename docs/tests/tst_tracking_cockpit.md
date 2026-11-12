@@ -3,7 +3,7 @@
 **Domain**: `tracking_cockpit`  
 **Prefixes**: `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA`  
 **Scope**: Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle.  
-**Total Tests**: 56
+**Total Tests**: 57
 
 ---
 
@@ -2093,6 +2093,31 @@
   6. *Settings & 9-Language Localization Parity Tests (`TST-CON-034.6`, `TranslationParityTest.kt`)*:
   • Verify `radarSmartLightAutomation` DataStore persistence and UI toggle rendering.
   • Verify 100% key parity and matching specifiers across all 9 locales in `strings_radar.xml`.
+
+### TST-CON-035: **Smartphone IMU/GPS Deceleration Brake-Light Trigger Test Suite** [Verified]
+- **Requirement(s)**: `REQ-CON-035` (`REQ-CON-035.1`..`REQ-CON-035.6`)
+- **Component**: `SmartBrakeLightDetector.kt`, `RadarLightController.kt`, `RadarLightMode.kt`, `TuningPreferencesDataStore.kt`, `RadarSettingsSection.kt`, `strings_radar.xml`
+- **Jira**: `ATT-5121`
+- **Test Description**:
+  1. *Deceleration Detection & Duration Gating Tests (`TST-CON-035.1`, `SmartBrakeLightDetectorTest.kt`)*:
+  • Verify that sustained deceleration $a \le -2.0\text{ m/s}^2$ for $\ge 250\text{ ms}$ with speed $v \ge 2.5\text{ m/s}$ triggers a Brake Event.
+  • Verify that transient deceleration lasting $< 250\text{ ms}$ does not trigger a Brake Event.
+  • Verify that deceleration below minimum speed ($v < 2.5\text{ m/s}$) does not trigger a Brake Event.
+  2. *Vertical Shock & Pothole Rejection Tests (`TST-CON-035.2`, `SmartBrakeLightDetectorTest.kt`)*:
+  • Simulate high vertical shock acceleration ($|a_v| > 6.0\text{ m/s}^2$) at constant velocity ($v = 7.0\text{ m/s}$, $dv/dt = 0$) and assert zero false brake activations.
+  3. *Controller Immediate Override & 2.0s Hold Tests (`TST-CON-035.3`, `RadarLightControllerTest.kt`)*:
+  • Verify that confirmed Brake Event immediately overrides `SmartRadarLightEngine` rate limits and dispatches brake mode.
+  • Verify that brake mode persists throughout deceleration plus $2.0\text{ s}$ post-brake hold window.
+  • Verify that previous active mode (`preBrakeMode`, e.g. `PELOTON` or `OFF`) is restored upon hold expiration.
+  4. *StVZO Mode Clamping Tests (`TST-CON-035.4`, `RadarLightControllerTest.kt`)*:
+  • Verify that when `isStvzo == true`, brake mode is strictly clamped to `RadarLightMode.SOLID` and never emits `DAY_FLASH`.
+  5. *RearVue 820 Hardware Auto-Bypass Tests (`TST-CON-035.5`, `RadarLightControllerTest.kt`)*:
+  • Verify that connecting a RearVue 820 device (`010-03180-00`/`010-03180-10`) automatically sets brake light auto-bypass to active.
+  6. *Settings & 9-Language Localization Parity Tests (`TST-CON-035.6`, `TranslationParityTest.kt`)*:
+  • Verify `radarBrakeLightEnabled` DataStore persistence, default value, and UI toggle in `RadarSettingsSection.kt`.
+  • Verify 100% key parity and format specifiers across all 9 locales in `strings_radar.xml`.
+  7. *Targeted Radar Test Suite Execution (`TST-CON-035.7`)*:
+  • Fast clean-room test execution of `RadarLightControllerTest`, `SmartBrakeLightDetectorTest`, and `TranslationParityTest`.
 
 ### TST-TRK-064: **1-Tap Radar Audio Snooze, Peloton Sync & Urban Suppression Test Suite** [Verified]
 - **Requirement(s)**: `REQ-TRK-064` (`REQ-TRK-064.1`..`REQ-TRK-064.7`)

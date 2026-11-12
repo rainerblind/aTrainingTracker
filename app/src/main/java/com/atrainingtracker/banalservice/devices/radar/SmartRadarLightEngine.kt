@@ -217,7 +217,7 @@ object SmartRadarLightEngine {
      * Evaluates current state and dispatches mode command subject to rate-limiting.
      */
     fun evaluateAndDispatch(nowMs: Long = SystemClock.elapsedRealtime()) {
-        if (!isAutomationEnabled || isManualOverridden) return
+        if (!isAutomationEnabled || isManualOverridden || RadarLightController.isBrakeActive) return
 
         val targetMode = computeTargetMode(isTunnelActive, currentSolarProfile, currentThreatStage)
         if (targetMode == lastDispatchedMode) return

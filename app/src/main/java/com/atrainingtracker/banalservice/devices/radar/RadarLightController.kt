@@ -19,6 +19,9 @@
 package com.atrainingtracker.banalservice.devices.radar
 
 import android.content.Context
+import android.os.Handler
+import android.os.Looper
+import android.os.SystemClock
 import android.util.Log
 import com.atrainingtracker.banalservice.devices.bluetooth_le.BTLERadarDevice
 import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore
@@ -26,17 +29,21 @@ import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDefaults
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import java.util.Locale
 
 /**
- * Central controller coordinating Garmin Varia BLE radar tail light modes (REQ-CON-031).
+ * Central controller coordinating Garmin Varia BLE and ANT+ radar tail light modes (REQ-CON-031, REQ-CON-035).
  *
- * Manages mode selection, StVZO capability filtering, and non-blocking GATT command
- * dispatch via [BTLERadarDevice.setLightMode]. Handles automated workout lighting
+ * Manages mode selection, StVZO capability filtering, non-blocking GATT/ANT+ command
+ * dispatch via [RadarLightDeviceClient.setLightMode], priority smartphone deceleration
+ * brake-light triggering with 2.0s post-brake hold, and automated workout lighting
  * lifecycle transitions without duplicate BLE pairing or database storage.
  */
 object RadarLightController {
 
     private const val TAG = "RadarLightController"
+
+    const val POST_BRAKE_HOLD_DURATION_MS = 2000L
 
     private var activeRadarDevice: RadarLightDeviceClient? = null
 
@@ -52,20 +59,47 @@ object RadarLightController {
     @get:JvmStatic
     val isStvzo: StateFlow<Boolean> = _isStvzo.asStateFlow()
 
+    private val _hasHardwareBrakeSensor = MutableStateFlow(false)
+    @get:JvmStatic
+    val hasHardwareBrakeSensor: StateFlow<Boolean> = _hasHardwareBrakeSensor.asStateFlow()
+
+    private val _isAutoBypassed = MutableStateFlow(false)
+    @get:JvmStatic
+    val isAutoBypassed: StateFlow<Boolean> = _isAutoBypassed.asStateFlow()
+
+    var isBrakeActive: Boolean = false
+        private set
+
+    private var preBrakeMode: RadarLightMode = RadarLightMode.OFF
+    private var brakeHoldUntilRealtimeMs: Long = 0L
+
+    private val handler by lazy { Handler(Looper.getMainLooper()) }
+    private val brakeHoldRunnable = Runnable {
+        checkAndRestorePreBrakeMode(SystemClock.elapsedRealtime())
+    }
+
     /**
      * Binds a connected [RadarLightDeviceClient] peripheral (BLE or ANT+) to the controller.
      */
     @JvmStatic
     @JvmOverloads
-    fun registerRadarDevice(device: RadarLightDeviceClient, lightSupported: Boolean, isStvzo: Boolean = false) {
+    fun registerRadarDevice(
+        device: RadarLightDeviceClient,
+        lightSupported: Boolean,
+        isStvzo: Boolean = false,
+        hasHardwareBrakeSensor: Boolean = false
+    ) {
         synchronized(this) {
             activeRadarDevice = device
             _isLightControlAvailable.value = lightSupported
             _isStvzo.value = isStvzo
+            _hasHardwareBrakeSensor.value = hasHardwareBrakeSensor
+            _isAutoBypassed.value = hasHardwareBrakeSensor
+            SmartBrakeLightDetector.isAutoBypassed = hasHardwareBrakeSensor
         }
         val current = RadarStateRepository.getState()
         RadarStateRepository.updateState(current.copy(isLightControlSupported = lightSupported))
-        Log.i(TAG, "Registered radar device (lightSupported=$lightSupported, isStvzo=$isStvzo)")
+        Log.i(TAG, "Registered radar device (lightSupported=$lightSupported, isStvzo=$isStvzo, hasHardwareBrake=$hasHardwareBrakeSensor)")
     }
 
     /**
@@ -77,7 +111,14 @@ object RadarLightController {
             if (activeRadarDevice === device) {
                 activeRadarDevice = null
                 _isLightControlAvailable.value = false
+                _hasHardwareBrakeSensor.value = false
+                _isAutoBypassed.value = false
+                SmartBrakeLightDetector.isAutoBypassed = false
                 _currentMode.value = RadarLightMode.OFF
+                isBrakeActive = false
+                try {
+                    handler.removeCallbacks(brakeHoldRunnable)
+                } catch (_: Exception) {}
             }
         }
         val current = RadarStateRepository.getState()
@@ -198,6 +239,93 @@ object RadarLightController {
     }
 
     /**
+     * Triggers priority deceleration brake light or schedules 2.0s post-brake hold (REQ-CON-035.3, REQ-CON-035.4).
+     *
+     * Overrides SmartRadarLightEngine rate-limiting for immediate safety alerting.
+     * When [active] is true, dispatches brake mode (clamped to SOLID if StVZO).
+     * When [active] is false, holds brake mode for 2.0s before restoring pre-brake mode.
+     */
+    @JvmStatic
+    @JvmOverloads
+    fun triggerBrakeLight(
+        active: Boolean,
+        brakeMode: RadarLightMode = RadarLightMode.DAY_FLASH,
+        nowMs: Long = SystemClock.elapsedRealtime()
+    ): Boolean {
+        synchronized(this) {
+            if (_hasHardwareBrakeSensor.value) {
+                Log.d(TAG, "Hardware brake sensor present; software trigger bypassed")
+                return false
+            }
+
+            if (active) {
+                try {
+                    handler.removeCallbacks(brakeHoldRunnable)
+                } catch (_: Exception) {}
+
+                if (!isBrakeActive) {
+                    preBrakeMode = _currentMode.value
+                    isBrakeActive = true
+                }
+                brakeHoldUntilRealtimeMs = nowMs + POST_BRAKE_HOLD_DURATION_MS
+
+                // Clamping to SOLID under StVZO regulations (REQ-CON-035.4)
+                val targetBrakeMode = if (_isStvzo.value) {
+                    RadarLightMode.SOLID
+                } else {
+                    brakeMode
+                }
+
+                return setLightMode(targetBrakeMode)
+            } else {
+                if (isBrakeActive) {
+                    brakeHoldUntilRealtimeMs = nowMs + POST_BRAKE_HOLD_DURATION_MS
+                    try {
+                        handler.removeCallbacks(brakeHoldRunnable)
+                        handler.postDelayed(brakeHoldRunnable, POST_BRAKE_HOLD_DURATION_MS)
+                    } catch (_: Exception) {
+                        // Test environment fallback
+                    }
+                }
+                return true
+            }
+        }
+    }
+
+    /**
+     * Evaluates whether post-brake hold window has expired and restores pre-brake operating mode (REQ-CON-035.3).
+     */
+    @JvmStatic
+    @JvmOverloads
+    fun checkAndRestorePreBrakeMode(nowMs: Long = SystemClock.elapsedRealtime()): Boolean {
+        synchronized(this) {
+            if (!isBrakeActive) return false
+            if (nowMs >= brakeHoldUntilRealtimeMs) {
+                isBrakeActive = false
+                val restored = setLightMode(preBrakeMode)
+                Log.i(TAG, "Post-brake 2.0s hold expired; restored pre-brake mode: $preBrakeMode")
+                if (SmartRadarLightEngine.isAutomationEnabled) {
+                    SmartRadarLightEngine.evaluateAndDispatch(nowMs)
+                }
+                return restored
+            }
+            return false
+        }
+    }
+
+    /**
+     * Checks if a device model string indicates a Garmin Varia RearVue 820 unit with onboard hardware brake sensor (REQ-CON-035.5).
+     */
+    @JvmStatic
+    fun isRearVue820Model(model: String?): Boolean {
+        if (model == null) return false
+        val upper = model.uppercase(Locale.US)
+        return upper.contains("010-03180") ||
+               upper.contains("REARVUE 820") ||
+               upper.contains("REARVUE820")
+    }
+
+    /**
      * Resets controller state for unit test isolation.
      */
     @JvmStatic
@@ -206,9 +334,17 @@ object RadarLightController {
             activeRadarDevice = null
             _isLightControlAvailable.value = false
             _isStvzo.value = false
+            _hasHardwareBrakeSensor.value = false
+            _isAutoBypassed.value = false
             _currentMode.value = RadarLightMode.OFF
+            isBrakeActive = false
+            preBrakeMode = RadarLightMode.OFF
+            brakeHoldUntilRealtimeMs = 0L
             cachedAutoLightControl = TuningPreferencesDefaults.RADAR_AUTO_LIGHT_CONTROL
             cachedLightDefaultMode = TuningPreferencesDefaults.RADAR_LIGHT_DEFAULT_MODE
+            try {
+                handler.removeCallbacks(brakeHoldRunnable)
+            } catch (_: Exception) {}
         }
         val current = RadarStateRepository.getState()
         RadarStateRepository.updateState(current.copy(isLightControlSupported = false, lightMode = RadarLightMode.OFF))

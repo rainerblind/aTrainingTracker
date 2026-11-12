@@ -447,9 +447,10 @@ public class BTLERadarDevice extends MyBTLEDevice implements RadarLightDeviceCli
             if (model != null) {
                 mModelNumber = model;
                 boolean stvzo = isStvzoModel(model);
+                boolean hasHardwareBrake = RadarLightController.isRearVue820Model(model);
                 mIsStvzo = stvzo;
-                if (DEBUG) Log.i(TAG, "Read model number: " + model + " (isStvzo=" + stvzo + ")");
-                RadarLightController.registerRadarDevice(this, mIsLightControlSupported, mIsStvzo);
+                if (DEBUG) Log.i(TAG, "Read model number: " + model + " (isStvzo=" + stvzo + ", hasHardwareBrake=" + hasHardwareBrake + ")");
+                RadarLightController.registerRadarDevice(this, mIsLightControlSupported, mIsStvzo, hasHardwareBrake);
             }
         } else if (BluetoothConstants.UUID_CHARACTERISTIC_RADAR_LIGHT_CONTROL.equals(characteristic.getUuid())) {
             byte[] val = characteristic.getValue();

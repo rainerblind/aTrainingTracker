@@ -207,4 +207,84 @@ class RadarLightControllerTest {
         RadarLightController.unregisterRadarDevice(mockClient)
         assertFalse(RadarLightController.isLightControlAvailable.value)
     }
+
+    @Test
+    fun testRadarLightController_triggerBrakeLight_dispatchesBrakeModeAndRestoresPreBrakeModeAfterHold() {
+        val mockDevice = mockk<BTLERadarDevice>(relaxed = true)
+        every { mockDevice.setLightMode(any()) } returns true
+        RadarLightController.registerRadarDevice(mockDevice, lightSupported = true, isStvzo = false)
+
+        // Initial mode: PELOTON (8 lm)
+        RadarLightController.setLightMode(RadarLightMode.PELOTON)
+        assertEquals(RadarLightMode.PELOTON, RadarLightController.currentMode.value)
+
+        // Trigger brake light at t = 1000ms
+        val dispatched = RadarLightController.triggerBrakeLight(active = true, brakeMode = RadarLightMode.DAY_FLASH, nowMs = 1000L)
+        assertTrue(dispatched)
+        assertTrue(RadarLightController.isBrakeActive)
+        assertEquals(RadarLightMode.DAY_FLASH, RadarLightController.currentMode.value)
+        verify { mockDevice.setLightMode(RadarLightMode.DAY_FLASH) }
+
+        // Deceleration ceases at t = 2000ms: brake released, entering 2.0s hold window
+        RadarLightController.triggerBrakeLight(active = false, nowMs = 2000L)
+        assertTrue("Brake light must remain active during 2.0s hold window", RadarLightController.isBrakeActive)
+        assertEquals(RadarLightMode.DAY_FLASH, RadarLightController.currentMode.value)
+
+        // Check at t = 3500ms (1.5s into hold window): must still be holding
+        val restoredEarly = RadarLightController.checkAndRestorePreBrakeMode(nowMs = 3500L)
+        assertFalse(restoredEarly)
+        assertTrue(RadarLightController.isBrakeActive)
+        assertEquals(RadarLightMode.DAY_FLASH, RadarLightController.currentMode.value)
+
+        // Check at t = 4000ms (exactly 2.0s post-brake): must restore PELOTON
+        val restored = RadarLightController.checkAndRestorePreBrakeMode(nowMs = 4000L)
+        assertTrue(restored)
+        assertFalse(RadarLightController.isBrakeActive)
+        assertEquals(RadarLightMode.PELOTON, RadarLightController.currentMode.value)
+        verify { mockDevice.setLightMode(RadarLightMode.PELOTON) }
+    }
+
+    @Test
+    fun testRadarLightController_triggerBrakeLight_underStvzo_strictlyClampedToSolid() {
+        val mockDevice = mockk<BTLERadarDevice>(relaxed = true)
+        every { mockDevice.setLightMode(any()) } returns true
+        RadarLightController.registerRadarDevice(mockDevice, lightSupported = true, isStvzo = true)
+
+        RadarLightController.setLightMode(RadarLightMode.OFF)
+
+        // Request DAY_FLASH during braking on StVZO unit:
+        RadarLightController.triggerBrakeLight(active = true, brakeMode = RadarLightMode.DAY_FLASH, nowMs = 1000L)
+        assertTrue(RadarLightController.isBrakeActive)
+        assertEquals("Brake mode under StVZO must be strictly clamped to SOLID", RadarLightMode.SOLID, RadarLightController.currentMode.value)
+        verify { mockDevice.setLightMode(RadarLightMode.SOLID) }
+    }
+
+    @Test
+    fun testRadarLightController_hardwareAutoBypass_rearVue820() {
+        val mockDevice = mockk<BTLERadarDevice>(relaxed = true)
+        every { mockDevice.setLightMode(any()) } returns true
+        // Register device with hardware brake sensor present (RearVue 820)
+        RadarLightController.registerRadarDevice(mockDevice, lightSupported = true, isStvzo = false, hasHardwareBrakeSensor = true)
+
+        assertTrue(RadarLightController.hasHardwareBrakeSensor.value)
+        assertTrue(RadarLightController.isAutoBypassed.value)
+        assertTrue(SmartBrakeLightDetector.isAutoBypassed)
+
+        // Software brake trigger must be cleanly bypassed
+        val triggered = RadarLightController.triggerBrakeLight(active = true, brakeMode = RadarLightMode.DAY_FLASH, nowMs = 1000L)
+        assertFalse(triggered)
+        assertFalse(RadarLightController.isBrakeActive)
+    }
+
+    @Test
+    fun testRadarLightController_isRearVue820Model() {
+        assertTrue(RadarLightController.isRearVue820Model("010-03180-00"))
+        assertTrue(RadarLightController.isRearVue820Model("010-03180-10"))
+        assertTrue(RadarLightController.isRearVue820Model("Garmin RearVue 820"))
+        assertTrue(RadarLightController.isRearVue820Model("RearVue820"))
+        assertFalse(RadarLightController.isRearVue820Model("RTL515"))
+        assertFalse(RadarLightController.isRearVue820Model("RTL516"))
+        assertFalse(RadarLightController.isRearVue820Model("Gardia R300L"))
+        assertFalse(RadarLightController.isRearVue820Model(null))
+    }
 }

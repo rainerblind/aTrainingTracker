@@ -176,4 +176,8 @@
     <string name="radar_min_passing_distance">Min Passing Clearance</string>
     <string name="radar_close_pass_warning">⚠️ %1$d Close Passes (&lt;%2$sm)</string>
     <string name="radar_heavy_vehicle_share">Heavy Vehicles</string>
+
+    <!-- Smartphone IMU/GPS Deceleration Brake-Light Trigger (ATT-5121 / REQ-CON-035) -->
+    <string name="radar_brake_light_title">Deceleration Brake Light</string>
+    <string name="radar_brake_light_desc">Brightens tail light during sharp smartphone IMU/GPS deceleration (2.0s hold, auto-bypassed on RearVue 820)</string>
 </resources>
