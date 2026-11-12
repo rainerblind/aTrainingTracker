@@ -49,6 +49,7 @@ import com.atrainingtracker.trainingtracker.ui.util.LocalMetricFormatter
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.ui.map.*
 import androidx.compose.ui.platform.LocalContext
+import kotlinx.coroutines.flow.firstOrNull
 import com.atrainingtracker.trainingtracker.MyPreferenceManager
 import com.atrainingtracker.trainingtracker.WorkoutCardSectionPreferences
 import com.atrainingtracker.trainingtracker.WorkoutDetailPreferences
@@ -106,6 +107,7 @@ fun TrackOnMapScreen(
     tabsConfig: List<WorkoutDetailTabConfig>? = null,
     onSaveTabsConfig: ((List<WorkoutDetailTabConfig>) -> Unit)? = null,
     onUpdateFtp: ((Int) -> Unit)? = null,
+    onUpdateHrZones: ((Int, Int) -> Unit)? = null,
     recentSessions: List<HrvSessionThreshold> = emptyList(),
     isSmoothedStream: Boolean = false,
     useTabbedLayout: Boolean = true,
@@ -302,6 +304,43 @@ fun TrackOnMapScreen(
         }
     }
 
+    val effectiveOnUpdateHrZones: (Int, Int) -> Unit = onUpdateHrZones ?: { newHrvt1, newHrvt2 ->
+        coroutineScope.launch(Dispatchers.IO) {
+            try {
+                val settingsDataStore = SettingsDataStore.getInstance(context.applicationContext)
+                val zoneType = if (workoutData.bSportType == BSportType.RUN) {
+                    SettingsDataStore.ZoneType.HR_RUN
+                } else {
+                    SettingsDataStore.ZoneType.HR_BIKE
+                }
+                val configuredHrMax = settingsDataStore.hrMaxFlow.firstOrNull() ?: SettingsDataStore.DEFAULT_HR_MAX
+                val hrMax = if (configuredHrMax > newHrvt2) configuredHrMax else (newHrvt2 + 10).coerceAtMost(ZoneCalculationMath.MAX_HR_MAX)
+                val hrRest = settingsDataStore.hrRestFlow.firstOrNull()
+                val thresholds = ZoneCalculationMath.calculateThresholdAnchoredHeartRateZones(
+                    hrvt1 = newHrvt1,
+                    hrvt2 = newHrvt2,
+                    hrMax = hrMax,
+                    hrRest = hrRest
+                )
+                val cutoffs = listOf(
+                    thresholds.z1Max,
+                    thresholds.z2Max,
+                    thresholds.z3Max,
+                    thresholds.z4Max
+                )
+                settingsDataStore.saveCalculatedHeartRateZones(
+                    zoneType = zoneType,
+                    hrMax = hrMax,
+                    hrRest = hrRest,
+                    method = "HRVT_ANCHORS",
+                    cutoffs = cutoffs
+                )
+            } catch (e: Exception) {
+                Log.e("TrackOnMapScreen", "Error updating HR zones in fallback", e)
+            }
+        }
+    }
+
     if (useTabbedLayout && metadataContent == null && analyticsContent == null) {
         WorkoutDetailTabbedContent(
             workoutData = workoutData,
@@ -328,6 +367,7 @@ fun TrackOnMapScreen(
             recentSessions = recentSessions,
             isSmoothedStream = isSmoothedStream,
             onUpdateFtp = effectiveOnUpdateFtp,
+            onUpdateHrZones = effectiveOnUpdateHrZones,
             useStatusBarsPadding = useStatusBarsPadding,
             onClusterClick = onClusterClick,
             onEditWorkout = onEditWorkout,

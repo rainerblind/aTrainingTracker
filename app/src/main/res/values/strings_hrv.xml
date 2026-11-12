@@ -227,6 +227,15 @@
     <string name="hrv_zone_comparison_dialog_confirm">Update FTP</string>
     <string name="hrv_zone_comparison_dialog_cancel">Cancel</string>
     <string name="hrv_zone_comparison_forward_mader">Calibrate Metabolic Model</string>
+    <string name="hrv_hr_consensus_reason_guided_high">High-confidence guided test HR thresholds verified.</string>
+    <string name="hrv_hr_consensus_reason_multi_session">Multi-session HR consensus verified (%1$d sessions within ±6 bpm).</string>
+    <string name="hrv_hr_consensus_reason_insufficient_sessions">Requires a High-Confidence Guided Test or ≥3 consistent sessions within 30 days.</string>
+    <string name="hrv_hr_consensus_reason_spread_too_high">Recent session HR estimates vary by more than ±6 bpm.</string>
+    <string name="hrv_zone_comparison_btn_update_hr">Update HR Zones</string>
+    <string name="hrv_zone_comparison_dialog_hr_title">Update Heart Rate Zones</string>
+    <string name="hrv_zone_comparison_dialog_hr_body">Update Heart Rate training zones anchored to physiological thresholds?\n\n• Zone 2 (Aerobic ceiling): %1$d bpm (was %2$d bpm)\n• Zone 4 (Anaerobic / LTHR): %3$d bpm (was %4$d bpm)\n• Protocol: %5$s\n\nNote: Applying physiological anchors will recalculate standard zones based on HRVT1/HRVT2 while manual overrides can still be made in Zone Settings.</string>
+    <string name="hrv_zone_comparison_dialog_hr_confirm">Update HR Zones</string>
+    <string name="hrv_zone_comparison_dialog_hr_cancel">Cancel</string>
 
     <!-- Autonomic Durability & Drift (ATT-4970 / REQ-PER-038) -->
     <string name="hrv_durability_title">Autonomic Durability</string>

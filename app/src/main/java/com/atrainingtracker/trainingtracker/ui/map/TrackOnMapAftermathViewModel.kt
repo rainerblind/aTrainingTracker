@@ -48,6 +48,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -331,6 +332,47 @@ class TrackOnMapAftermathViewModel @JvmOverloads constructor(
             )
             withContext(Dispatchers.Main) {
                 _uiState.value = _uiState.value.copy(powerThresholds = thresholds)
+            }
+        }
+    }
+
+    /**
+     * Updates the athlete's Heart Rate training zones anchored to physiological thresholds HRVT1 and HRVT2
+     * in SettingsDataStore (REQ-PER-037.7).
+     */
+    fun updateHrZones(newHrvt1: Int, newHrvt2: Int) {
+        viewModelScope.launch(ioDispatcher) {
+            val settingsDataStore = SettingsDataStore.getInstance(getApplication())
+            val zoneType = if (_uiState.value.bSportType == BSportType.RUN) {
+                SettingsDataStore.ZoneType.HR_RUN
+            } else {
+                SettingsDataStore.ZoneType.HR_BIKE
+            }
+            val configuredHrMax = settingsDataStore.hrMaxFlow.firstOrNull() ?: SettingsDataStore.DEFAULT_HR_MAX
+            val hrMax = if (configuredHrMax > newHrvt2) configuredHrMax else (newHrvt2 + 10).coerceAtMost(ZoneCalculationMath.MAX_HR_MAX)
+            val hrRest = settingsDataStore.hrRestFlow.firstOrNull()
+
+            val thresholds = ZoneCalculationMath.calculateThresholdAnchoredHeartRateZones(
+                hrvt1 = newHrvt1,
+                hrvt2 = newHrvt2,
+                hrMax = hrMax,
+                hrRest = hrRest
+            )
+            val cutoffs = listOf(
+                thresholds.z1Max,
+                thresholds.z2Max,
+                thresholds.z3Max,
+                thresholds.z4Max
+            )
+            settingsDataStore.saveCalculatedHeartRateZones(
+                zoneType = zoneType,
+                hrMax = hrMax,
+                hrRest = hrRest,
+                method = "HRVT_ANCHORS",
+                cutoffs = cutoffs
+            )
+            withContext(Dispatchers.Main) {
+                _uiState.value = _uiState.value.copy(hrThresholds = thresholds)
             }
         }
     }

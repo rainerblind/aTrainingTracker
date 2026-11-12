@@ -227,6 +227,15 @@
     <string name="hrv_zone_comparison_dialog_confirm">FTPを更新</string>
     <string name="hrv_zone_comparison_dialog_cancel">キャンセル</string>
     <string name="hrv_zone_comparison_forward_mader">代謝モデルを較正</string>
+    <string name="hrv_hr_consensus_reason_guided_high">高信頼度のガイド付きテストプロトコルが確認されました。</string>
+    <string name="hrv_hr_consensus_reason_multi_session">複数セッションの心拍数コンセンサスが確認されました（±6 bpm以内で%1$dセッション）。</string>
+    <string name="hrv_hr_consensus_reason_insufficient_sessions">高信頼度のガイドテストまたは30日以内に3回以上の一致するセッションが必要です。</string>
+    <string name="hrv_hr_consensus_reason_spread_too_high">最近の心拍数推定値の差が±6 bpmを超えています。</string>
+    <string name="hrv_zone_comparison_btn_update_hr">心拍ゾーンを更新</string>
+    <string name="hrv_zone_comparison_dialog_hr_title">心拍トレーニングゾーンの更新</string>
+    <string name="hrv_zone_comparison_dialog_hr_body">生理的閾値にアンカーされた心拍トレーニングゾーンを更新しますか？\n\n• ゾーン2（有酸素上限）: %1$d bpm（旧: %2$d bpm）\n• ゾーン4（無酸素 / LTHR）: %3$d bpm（旧: %4$d bpm）\n• プロトコル: %5$s\n\n注: 生理学的アンカーを適用するとHRVT1/HRVT2に基づいてゾーンが再計算されます。ゾーン設定で手動調整することも可能です。</string>
+    <string name="hrv_zone_comparison_dialog_hr_confirm">心拍ゾーンを更新</string>
+    <string name="hrv_zone_comparison_dialog_hr_cancel">キャンセル</string>
 
     <!-- Autonomic Durability & Drift (ATT-4970 / REQ-PER-038) -->
     <string name="hrv_durability_title">自律神経耐久性</string>

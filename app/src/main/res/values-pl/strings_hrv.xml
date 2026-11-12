@@ -227,6 +227,15 @@
     <string name="hrv_zone_comparison_dialog_confirm">Aktualizuj FTP</string>
     <string name="hrv_zone_comparison_dialog_cancel">Anuluj</string>
     <string name="hrv_zone_comparison_forward_mader">Kalibruj model metaboliczny</string>
+    <string name="hrv_hr_consensus_reason_guided_high">Zweryfikowano protokół testu tętna o wysokiej wiarygodności.</string>
+    <string name="hrv_hr_consensus_reason_multi_session">Zweryfikowano konsensus tętna z wielu sesji (%1$d sesji w granicach ±6 bpm).</string>
+    <string name="hrv_hr_consensus_reason_insufficient_sessions">Wymaga testu z przewodnikiem o wysokiej pewności lub ≥3 spójnych sesji w ciągu 30 dni.</string>
+    <string name="hrv_hr_consensus_reason_spread_too_high">Ostatnie szacunki tętna różnią się o więcej niż ±6 bpm.</string>
+    <string name="hrv_zone_comparison_btn_update_hr">Aktualizuj strefy tętna</string>
+    <string name="hrv_zone_comparison_dialog_hr_title">Aktualizuj strefy tętna</string>
+    <string name="hrv_zone_comparison_dialog_hr_body">Zaktualizować strefy tętna zakotwiczone w progach fizjologicznych?\n\n• Strefa 2 (Pułap tlenowy): %1$d bpm (było %2$d bpm)\n• Strefa 4 (Próg beztlenowy / LTHR): %3$d bpm (było %4$d bpm)\n• Protokół: %5$s\n\nUwaga: Zastosowanie kotwic fizjologicznych przeliczy strefy standardowe na podstawie HRVT1/HRVT2, a ręczne korekty nadal są możliwe w Ustawieniach stref.</string>
+    <string name="hrv_zone_comparison_dialog_hr_confirm">Aktualizuj strefy</string>
+    <string name="hrv_zone_comparison_dialog_hr_cancel">Anuluj</string>
 
     <!-- Autonomic Durability & Drift (ATT-4970 / REQ-PER-038) -->
     <string name="hrv_durability_title">Trwałość autonomiczna</string>

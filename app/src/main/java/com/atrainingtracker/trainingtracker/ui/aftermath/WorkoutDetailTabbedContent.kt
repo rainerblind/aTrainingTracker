@@ -127,6 +127,7 @@ fun WorkoutDetailTabbedContent(
     recentSessions: List<HrvSessionThreshold> = emptyList(),
     isSmoothedStream: Boolean = false,
     onUpdateFtp: ((Int) -> Unit)? = null,
+    onUpdateHrZones: ((Int, Int) -> Unit)? = null,
     onCalibrateMader: ((Int?, Int?) -> Unit)? = null,
     useStatusBarsPadding: Boolean,
     onClusterClick: ((Long) -> Unit)?,
@@ -429,6 +430,7 @@ fun WorkoutDetailTabbedContent(
                                             recentSessions = recentSessions,
                                             isSmoothedStream = isSmoothedStream,
                                             onUpdateFtp = onUpdateFtp,
+                                            onUpdateHrZones = onUpdateHrZones,
                                             onCalibrateMader = onCalibrateMader,
                                             onAddPhotos = { uris ->
                                                 coroutineScope.launch {
@@ -520,6 +522,7 @@ fun WorkoutDetailTabbedContent(
                                                 recentSessions = recentSessions,
                                                 isSmoothedStream = isSmoothedStream,
                                                 onUpdateFtp = onUpdateFtp,
+                                                onUpdateHrZones = onUpdateHrZones,
                                                 onCalibrateMader = onCalibrateMader,
                                                 onAddPhotos = { uris ->
                                                     coroutineScope.launch {
@@ -584,6 +587,7 @@ fun WorkoutDetailTabbedContent(
                                     recentSessions = recentSessions,
                                     isSmoothedStream = isSmoothedStream,
                                     onUpdateFtp = onUpdateFtp,
+                                    onUpdateHrZones = onUpdateHrZones,
                                     onCalibrateMader = onCalibrateMader,
                                     onAddPhotos = { uris ->
                                         coroutineScope.launch {
@@ -830,6 +834,7 @@ private fun RenderWorkoutDetailCardSections(
     recentSessions: List<HrvSessionThreshold> = emptyList(),
     isSmoothedStream: Boolean = false,
     onUpdateFtp: ((Int) -> Unit)? = null,
+    onUpdateHrZones: ((Int, Int) -> Unit)? = null,
     onCalibrateMader: ((Int?, Int?) -> Unit)? = null,
     activeScrubPath: List<com.atrainingtracker.trainingtracker.ui.map.PathPoint>? = null,
     photos: List<WorkoutPhotoEntry> = emptyList(),
@@ -944,6 +949,7 @@ private fun RenderWorkoutDetailCardSections(
                         hrZoneThresholds = hrZoneThresholds,
                         recentSessions = recentSessions,
                         onUpdateFtp = onUpdateFtp,
+                        onUpdateHrZones = onUpdateHrZones,
                         onCalibrateMader = onCalibrateMader,
                         modifier = Modifier
                             .fillMaxWidth()

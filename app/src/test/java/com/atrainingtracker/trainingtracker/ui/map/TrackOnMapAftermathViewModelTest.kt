@@ -245,6 +245,33 @@ class TrackOnMapAftermathViewModelTest {
     }
 
     @Test
+    fun updateHrZones_persistsHeartRateZonesAndUpdatesUiState() = runTest(testDispatcher) {
+        val mockSettingsDataStore = mockk<com.atrainingtracker.trainingtracker.settings.SettingsDataStore>(relaxed = true)
+
+        mockkObject(com.atrainingtracker.trainingtracker.settings.SettingsDataStore.Companion)
+        every { com.atrainingtracker.trainingtracker.settings.SettingsDataStore.getInstance(any()) } returns mockSettingsDataStore
+
+        val viewModel = TrackOnMapAftermathViewModel(mockApplication, ioDispatcher = testDispatcher)
+
+        viewModel.updateHrZones(newHrvt1 = 145, newHrvt2 = 172)
+        advanceUntilIdle()
+
+        coVerify(exactly = 1) {
+            mockSettingsDataStore.saveCalculatedHeartRateZones(
+                zoneType = any(),
+                hrMax = any(),
+                hrRest = any(),
+                method = "HRVT_ANCHORS",
+                cutoffs = match { it[1] == 145 && it[3] == 172 }
+            )
+        }
+
+        assertNotNull(viewModel.uiState.value.hrThresholds)
+        assertEquals(145, viewModel.uiState.value.hrThresholds?.z2Max)
+        assertEquals(172, viewModel.uiState.value.hrThresholds?.z4Max)
+    }
+
+    @Test
     fun loadAftermathData_populatesIsSmoothedHrvStreamFromWorkoutRepository() = runTest(testDispatcher) {
         coEvery { mockWorkoutRepo.isWorkoutHrvSmoothed(101L) } returns true
 

@@ -295,4 +295,125 @@ class HrvZoneComparisonMathTest {
         assertEquals(280, HrvZoneComparisonMath.calculateMedian(listOf(270, 275, 285, 290)))
         assertEquals(275, HrvZoneComparisonMath.calculateMedian(listOf(275)))
     }
+
+    @Test
+    fun testEvaluateHrConsensusGate_guidedHighConfidence_unlocks() {
+        val result = HrvZoneComparisonMath.evaluateHrConsensusGate(
+            currentProtocol = HrvProtocolType.GUIDED_RAMP,
+            currentConfidence = ThresholdConfidence.HIGH,
+            currentHrvt1Bpm = 145,
+            currentHrvt2Bpm = 172,
+            recentSessions = emptyList()
+        )
+
+        assertEquals(ConsensusGateStatus.UNLOCKED, result.status)
+        assertEquals(R.string.hrv_hr_consensus_reason_guided_high, result.reasonResId)
+        assertEquals(145, result.suggestedHrvt1Bpm)
+        assertEquals(172, result.suggestedHrvt2Bpm)
+    }
+
+    @Test
+    fun testEvaluateHrConsensusGate_guidedHighSpreadTooNarrow_remainsLocked() {
+        val result = HrvZoneComparisonMath.evaluateHrConsensusGate(
+            currentProtocol = HrvProtocolType.GUIDED_STEP,
+            currentConfidence = ThresholdConfidence.HIGH,
+            currentHrvt1Bpm = 160,
+            currentHrvt2Bpm = 162, // Only 2 bpm difference (< 5 bpm min spread)
+            recentSessions = emptyList()
+        )
+
+        assertEquals(ConsensusGateStatus.LOCKED, result.status)
+        assertEquals(R.string.hrv_hr_consensus_reason_insufficient_sessions, result.reasonResId)
+        assertNull(result.suggestedHrvt1Bpm)
+        assertNull(result.suggestedHrvt2Bpm)
+    }
+
+    @Test
+    fun testEvaluateHrConsensusGate_singleFreeRide_remainsLocked() {
+        val result = HrvZoneComparisonMath.evaluateHrConsensusGate(
+            currentProtocol = HrvProtocolType.FREE_WORKOUT,
+            currentConfidence = ThresholdConfidence.HIGH,
+            currentHrvt1Bpm = 142,
+            currentHrvt2Bpm = 170,
+            recentSessions = emptyList()
+        )
+
+        assertEquals(ConsensusGateStatus.LOCKED, result.status)
+        assertEquals(R.string.hrv_hr_consensus_reason_insufficient_sessions, result.reasonResId)
+        assertNull(result.suggestedHrvt1Bpm)
+        assertNull(result.suggestedHrvt2Bpm)
+    }
+
+    @Test
+    fun testEvaluateHrConsensusGate_threeSessionsWithin6Bpm_unlocksWithMedian() {
+        val now = System.currentTimeMillis()
+        val recentSessions = listOf(
+            HrvSessionThreshold(
+                workoutId = 1L,
+                timestampEpochMs = now - (2L * 24 * 60 * 60 * 1000L), // 2 days ago
+                hrvt1Bpm = 143,
+                hrvt2Bpm = 169,
+                hrConfidence = ThresholdConfidence.MEDIUM
+            ),
+            HrvSessionThreshold(
+                workoutId = 2L,
+                timestampEpochMs = now - (10L * 24 * 60 * 60 * 1000L), // 10 days ago
+                hrvt1Bpm = 145,
+                hrvt2Bpm = 171,
+                hrConfidence = ThresholdConfidence.HIGH
+            )
+        )
+
+        val result = HrvZoneComparisonMath.evaluateHrConsensusGate(
+            currentProtocol = HrvProtocolType.FREE_WORKOUT,
+            currentConfidence = ThresholdConfidence.MEDIUM,
+            currentHrvt1Bpm = 146,
+            currentHrvt2Bpm = 173,
+            currentTimestampMs = now,
+            recentSessions = recentSessions
+        )
+
+        // T1: [143, 145, 146] -> max-min = 3 <= 6, median = 145
+        // T2: [169, 171, 173] -> max-min = 4 <= 6, median = 171
+        assertEquals(ConsensusGateStatus.UNLOCKED, result.status)
+        assertEquals(R.string.hrv_hr_consensus_reason_multi_session, result.reasonResId)
+        assertEquals(3, result.reasonParam)
+        assertEquals(145, result.suggestedHrvt1Bpm)
+        assertEquals(171, result.suggestedHrvt2Bpm)
+    }
+
+    @Test
+    fun testEvaluateHrConsensusGate_threeSessionsSpreadExceeds6Bpm_remainsLocked() {
+        val now = System.currentTimeMillis()
+        val recentSessions = listOf(
+            HrvSessionThreshold(
+                workoutId = 1L,
+                timestampEpochMs = now - (2L * 24 * 60 * 60 * 1000L),
+                hrvt1Bpm = 138,
+                hrvt2Bpm = 165,
+                hrConfidence = ThresholdConfidence.MEDIUM
+            ),
+            HrvSessionThreshold(
+                workoutId = 2L,
+                timestampEpochMs = now - (5L * 24 * 60 * 60 * 1000L),
+                hrvt1Bpm = 142,
+                hrvt2Bpm = 170,
+                hrConfidence = ThresholdConfidence.HIGH
+            )
+        )
+
+        val result = HrvZoneComparisonMath.evaluateHrConsensusGate(
+            currentProtocol = HrvProtocolType.FREE_WORKOUT,
+            currentConfidence = ThresholdConfidence.HIGH,
+            currentHrvt1Bpm = 147, // Spread: 147 - 138 = 9 bpm > 6 bpm
+            currentHrvt2Bpm = 170,
+            currentTimestampMs = now,
+            recentSessions = recentSessions
+        )
+
+        assertEquals(ConsensusGateStatus.LOCKED, result.status)
+        assertEquals(R.string.hrv_hr_consensus_reason_spread_too_high, result.reasonResId)
+        assertNull(result.suggestedHrvt1Bpm)
+        assertNull(result.suggestedHrvt2Bpm)
+    }
 }

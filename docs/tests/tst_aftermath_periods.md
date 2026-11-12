@@ -777,7 +777,22 @@
   • Verify confirming updates `SettingsDataStore.setFtp` and triggers Coggan power zone recalculation while leaving HR zones untouched.
   7. *9-Language Localization Parity Test (`TST-PER-045.7`, `TranslationParityTest`)*:
   • Verify all 18 zone comparison and consensus gating string keys exist with 100% parity across all 9 `strings_hrv.xml` files.
+  8. *Threshold-Anchored HR Zone Boundary Calculation Test (`TST-PER-045.8`, `ZoneCalculationMathTest.kt`)*:
+  • Verify `calculateThresholdAnchoredHeartRateZones` anchors $Z_2 = HRVT_1$ and $Z_4 = HRVT_2$.
+  • Verify $Z_3 = \text{round}((HRVT_1 + HRVT_2)/2.0)$ and $Z_1$ calculation with and without $HR_{\text{rest}}$.
+  • Verify integer monotonicity $Z_1 < Z_2 < Z_3 < Z_4 < HR_{\max}$.
+  9. *Heart Rate Consensus Gating & Median Aggregation Test (`TST-PER-045.9`, `HrvZoneComparisonMathTest.kt`)*:
+  • Verify consensus unlocks on `Confidence.HIGH` Guided Ramp/Step Test or $M \ge 3$ sessions within 30 days agreeing within $\le 6\text{ bpm}$.
+  • Verify consensus locks on spread $> 6\text{ bpm}$ or $< 3$ sessions.
+  • Verify median calculation for $HRVT_1$ and $HRVT_2$.
+  10. *Summary Card HR Zone Update UI & Modal Confirmation Flow Contract Test (`TST-PER-045.10`, `HrvThresholdSummaryCardTest.kt`, `TrackOnMapAftermathViewModelTest.kt`)*:
+  • Verify `HrvThresholdSummaryCard` renders "Update HR Zones" button with correct enabled/disabled status.
+  • Verify modal confirmation dialog renders current vs new boundaries and triggers `updateHrZones` on confirm.
+  • Verify `TrackOnMapAftermathViewModel.updateHrZones` saves zones via `SettingsDataStore.saveCalculatedHeartRateZones(method = "HRVT_ANCHORS")`.
+  11. *9-Language Localization Parity for HR Consensus & Confirmation Dialog Test (`TST-PER-045.11`, `TranslationParityTest`)*:
+  • Verify all newly added HR zone comparison, consensus gating, and confirmation dialog string keys exist with 100% parity across all 9 `strings_hrv.xml` files.
  (ATT-3555: [Verbesserung] Compare estimated HRVT1/HRVT2 against configured training zones with multi-session consensus and anchor-based updates (ZoneCalculationMath))
+ (ATT-7310: [Feature] Enable anchor-based Heart Rate training zone updates from HRVT1/HRVT2 consensus)
 
 ### TST-PER-046: **DFA a1 Autonomic Durability, Drift & Iso-Intensity Bins Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-PER-038` (`REQ-PER-038.1`..`REQ-PER-038.6`)

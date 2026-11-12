@@ -227,6 +227,15 @@
     <string name="hrv_zone_comparison_dialog_confirm">Actualizar FTP</string>
     <string name="hrv_zone_comparison_dialog_cancel">Cancelar</string>
     <string name="hrv_zone_comparison_forward_mader">Calibrar modelo metabólico</string>
+    <string name="hrv_hr_consensus_reason_guided_high">Protocolo de prueba guiada de FC con alta confianza verificado.</string>
+    <string name="hrv_hr_consensus_reason_multi_session">Consenso de FC de múltiples sesiones verificado (%1$d sesiones dentro de ±6 ppm).</string>
+    <string name="hrv_hr_consensus_reason_insufficient_sessions">Requiere prueba guiada de alta confianza o ≥3 sesiones consistentes en 30 días.</string>
+    <string name="hrv_hr_consensus_reason_spread_too_high">Las estimaciones recientes de FC varían en más de ±6 ppm.</string>
+    <string name="hrv_zone_comparison_btn_update_hr">Actualizar zonas de FC</string>
+    <string name="hrv_zone_comparison_dialog_hr_title">Actualizar zonas de frecuencia cardíaca</string>
+    <string name="hrv_zone_comparison_dialog_hr_body">¿Actualizar zonas de entrenamiento de FC ancladas a umbrales fisiológicos?\n\n• Zona 2 (Límite aeróbico): %1$d ppm (antes %2$d ppm)\n• Zona 4 (Anaeróbico / LTHR): %3$d ppm (antes %4$d ppm)\n• Protocolo: %5$s\n\nNota: La aplicación de anclas fisiológicas recalculará las zonas estándar según HRVT1/HRVT2; los ajustes manuales siguen siendo posibles en Ajustes de zonas.</string>
+    <string name="hrv_zone_comparison_dialog_hr_confirm">Actualizar zonas de FC</string>
+    <string name="hrv_zone_comparison_dialog_hr_cancel">Cancelar</string>
 
     <!-- Autonomic Durability & Drift (ATT-4970 / REQ-PER-038) -->
     <string name="hrv_durability_title">Durabilidad autonómica</string>

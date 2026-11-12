@@ -102,6 +102,7 @@ import com.atrainingtracker.trainingtracker.ui.aftermath.zones.ZoneSample
 import com.atrainingtracker.trainingtracker.ui.aftermath.workoutdetail.HrvProtocolType
 import com.atrainingtracker.trainingtracker.ui.aftermath.workoutdetail.HrvScatterIntensityMode
 import com.atrainingtracker.trainingtracker.ui.aftermath.workoutdetail.HrvThresholdEstimator
+import com.atrainingtracker.trainingtracker.ui.aftermath.workoutdetail.ThresholdConfidence
 import com.atrainingtracker.trainingtracker.zones.HrvSessionThreshold
 import kotlin.math.roundToInt
 import com.atrainingtracker.trainingtracker.ui.util.SingleLiveEvent
@@ -4511,21 +4512,44 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
                 continue
             }
             val points = getWorkoutTelemetryPoints(workout.id)
-            if (points.isNotEmpty() && points.any { it.hrvDfaA1 != null } && points.any { it.power != null && it.power > 0 }) {
-                val est = HrvThresholdEstimator.estimateThresholds(
-                    points = points,
-                    mode = HrvScatterIntensityMode.POWER,
-                    protocolType = HrvProtocolType.FREE_WORKOUT
-                )
-                val hrvt2Watts = est.hrvt2.intensity?.roundToInt()
-                val session = HrvSessionThreshold(
-                    workoutId = workout.id,
-                    timestampEpochMs = workout.startTimeS * 1000L,
-                    hrvt2Watts = hrvt2Watts,
-                    confidence = est.hrvt2.confidence
-                )
-                recentHrvThresholdsCache[workout.id] = session
-                results.add(session)
+            if (points.isNotEmpty() && points.any { it.hrvDfaA1 != null }) {
+                var hrvt2Watts: Int? = null
+                var powerConfidence = ThresholdConfidence.LOW
+                if (points.any { it.power != null && it.power > 0 }) {
+                    val est = HrvThresholdEstimator.estimateThresholds(
+                        points = points,
+                        mode = HrvScatterIntensityMode.POWER,
+                        protocolType = HrvProtocolType.FREE_WORKOUT
+                    )
+                    hrvt2Watts = est.hrvt2.intensity?.roundToInt()
+                    powerConfidence = est.hrvt2.confidence
+                }
+                var hrvt1Bpm: Int? = null
+                var hrvt2Bpm: Int? = null
+                var hrConfidence = ThresholdConfidence.LOW
+                if (points.any { it.hr != null && it.hr > 0 }) {
+                    val estHr = HrvThresholdEstimator.estimateThresholds(
+                        points = points,
+                        mode = HrvScatterIntensityMode.HEART_RATE,
+                        protocolType = HrvProtocolType.FREE_WORKOUT
+                    )
+                    hrvt1Bpm = estHr.hrvt1.intensity?.roundToInt()
+                    hrvt2Bpm = estHr.hrvt2.intensity?.roundToInt()
+                    hrConfidence = estHr.overallConfidence
+                }
+                if (hrvt2Watts != null || (hrvt1Bpm != null && hrvt2Bpm != null)) {
+                    val session = HrvSessionThreshold(
+                        workoutId = workout.id,
+                        timestampEpochMs = workout.startTimeS * 1000L,
+                        hrvt2Watts = hrvt2Watts,
+                        confidence = powerConfidence,
+                        hrvt1Bpm = hrvt1Bpm,
+                        hrvt2Bpm = hrvt2Bpm,
+                        hrConfidence = hrConfidence
+                    )
+                    recentHrvThresholdsCache[workout.id] = session
+                    results.add(session)
+                }
             }
         }
         results

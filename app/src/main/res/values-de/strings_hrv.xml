@@ -227,6 +227,15 @@
     <string name="hrv_zone_comparison_dialog_confirm">FTP aktualisieren</string>
     <string name="hrv_zone_comparison_dialog_cancel">Abbrechen</string>
     <string name="hrv_zone_comparison_forward_mader">Stoffwechselmodell kalibrieren</string>
+    <string name="hrv_hr_consensus_reason_guided_high">Hochgradig verlässliches Stufentest-Protokoll bestätigt.</string>
+    <string name="hrv_hr_consensus_reason_multi_session">Mehr-Einheiten-HF-Konsens bestätigt (%1$d Einheiten innerhalb von ±6 bpm).</string>
+    <string name="hrv_hr_consensus_reason_insufficient_sessions">Erfordert einen verlässlichen Stufentest oder ≥3 konsistente Einheiten innerhalb von 30 Tagen.</string>
+    <string name="hrv_hr_consensus_reason_spread_too_high">Aktuelle HF-Schätzungen weichen um mehr als ±6 bpm voneinander ab.</string>
+    <string name="hrv_zone_comparison_btn_update_hr">HF-Zonen aktualisieren</string>
+    <string name="hrv_zone_comparison_dialog_hr_title">Herzfrequenz-Zonen aktualisieren</string>
+    <string name="hrv_zone_comparison_dialog_hr_body">Herzfrequenz-Trainingszonen basierend auf physiologischen Schwellen aktualisieren?\n\n• Zone 2 (Aerobe Obergrenze): %1$d bpm (bisher %2$d bpm)\n• Zone 4 (Anaerob / IANS): %3$d bpm (bisher %4$d bpm)\n• Protokoll: %5$s\n\nHinweis: Das Anwenden physiologischer Anker berechnet Standardzonen basierend auf HRVT1/HRVT2 neu. Manuelle Anpassungen sind weiterhin in den Zoneneinstellungen möglich.</string>
+    <string name="hrv_zone_comparison_dialog_hr_confirm">HF-Zonen aktualisieren</string>
+    <string name="hrv_zone_comparison_dialog_hr_cancel">Abbrechen</string>
 
     <!-- Autonomic Durability & Drift (ATT-4970 / REQ-PER-038) -->
     <string name="hrv_durability_title">Autonome Belastungsverträglichkeit</string>
