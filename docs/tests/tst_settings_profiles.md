@@ -1124,7 +1124,7 @@
 - **Requirement(s)**: `REQ-SET-103`
 - **Component**: `HealthConnectSettingsDialog.kt`, `HealthConnectManager.kt`, `AppNavigationDrawer.kt`, `NavRoutes.kt`, `WorkoutHeader.kt`, `EditWorkoutScreen.kt`, `HealthConnectSyncTest.kt`, `strings_health_connect.xml`
 - **Jira**: `ATT-3052`, `ATT-6712`, `ATT-6711`
-- **Status**: Specified
+- **Status**: Verified
 - **Test Description**:
   1. *Settings Toggle State Persistence Test (`TST-SET-103.1`)*:
   • Verify toggle state binds to `TrainingApplication` / `SharedPreferences` preferences.
