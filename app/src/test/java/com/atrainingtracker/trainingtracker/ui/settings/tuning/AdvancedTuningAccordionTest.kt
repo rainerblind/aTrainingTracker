@@ -246,7 +246,7 @@ class AdvancedTuningAccordionTest {
             "${formatArgs[0]}/8 Cards"
         }
 
-        // All 8 cards true
+        // All 8 legacy cards true, showRpeAndFeel false
         val fullCardPrefs = WorkoutCardSectionPreferences(
             showDescription = true,
             showExtrema = true,
@@ -255,7 +255,8 @@ class AdvancedTuningAccordionTest {
             showMapPreview = true,
             showElevationProfile = true,
             showTelemetryCharts = true,
-            showZoneAnalysis = true
+            showZoneAnalysis = true,
+            showRpeAndFeel = false
         )
 
         val fullSubtitle = TuningSubtitleFormatter.formatWorkoutMasksSubtitle(
@@ -263,6 +264,13 @@ class AdvancedTuningAccordionTest {
             mockContext
         )
         assertEquals("8/8 Cards", fullSubtitle)
+
+        // All 9 cards true including showRpeAndFeel (ATT-7320 / REQ-WKO-036.2)
+        val fullWithRpeSubtitle = TuningSubtitleFormatter.formatWorkoutMasksSubtitle(
+            fullCardPrefs.copy(showRpeAndFeel = true),
+            mockContext
+        )
+        assertEquals("9/8 Cards", fullWithRpeSubtitle)
 
         // Custom subset: 3 cards
         val subsetCardPrefs = WorkoutCardSectionPreferences(
@@ -273,7 +281,8 @@ class AdvancedTuningAccordionTest {
             showMapPreview = true,
             showElevationProfile = false,
             showTelemetryCharts = false,
-            showZoneAnalysis = false
+            showZoneAnalysis = false,
+            showRpeAndFeel = false
         )
 
         val subsetSubtitle = TuningSubtitleFormatter.formatWorkoutMasksSubtitle(
@@ -281,6 +290,12 @@ class AdvancedTuningAccordionTest {
             mockContext
         )
         assertEquals("3/8 Cards", subsetSubtitle)
+
+        val subsetWithRpeSubtitle = TuningSubtitleFormatter.formatWorkoutMasksSubtitle(
+            subsetCardPrefs.copy(showRpeAndFeel = true),
+            mockContext
+        )
+        assertEquals("4/8 Cards", subsetWithRpeSubtitle)
     }
 
     @Test
@@ -325,6 +340,13 @@ class AdvancedTuningAccordionTest {
             mockContext
         )
         assertEquals("3/8 List, 8/8 Details", subtitle)
+
+        val subtitleWithRpe = TuningSubtitleFormatter.formatWorkoutMatrixSubtitle(
+            cardPrefs.copy(showRpeAndFeel = true),
+            detailPrefs,
+            mockContext
+        )
+        assertEquals("4/8 List, 8/8 Details", subtitleWithRpe)
     }
 
     @Test

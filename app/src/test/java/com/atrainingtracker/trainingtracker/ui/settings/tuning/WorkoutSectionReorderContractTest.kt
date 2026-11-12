@@ -45,13 +45,13 @@ class WorkoutSectionReorderContractTest {
     fun testReorderingLogic_moveUpAndDown() {
         val initialOrder = WorkoutSectionType.DEFAULT_ORDER
 
-        // 1. Move Up on second element (DESCRIPTION at index 1 -> index 0)
+        // 1. Move Up on second element (DETAILS at index 1 -> index 0)
         val afterMoveUp = moveSection(initialOrder, 1, 0)
-        assertEquals(WorkoutSectionType.DESCRIPTION, afterMoveUp[0])
-        assertEquals(WorkoutSectionType.DETAILS, afterMoveUp[1])
-        assertEquals(12, afterMoveUp.size)
+        assertEquals(WorkoutSectionType.DETAILS, afterMoveUp[0])
+        assertEquals(WorkoutSectionType.RPE_AND_FEEL, afterMoveUp[1])
+        assertEquals(13, afterMoveUp.size)
 
-        // 2. Move Down on first element (DESCRIPTION at index 0 -> index 1)
+        // 2. Move Down on first element (DETAILS at index 0 -> index 1)
         val afterMoveDown = moveSection(afterMoveUp, 0, 1)
         assertEquals(initialOrder, afterMoveDown)
     }

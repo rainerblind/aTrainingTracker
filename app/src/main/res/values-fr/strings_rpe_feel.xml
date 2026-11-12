@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="settings_workout_card_rpe_feel">RPE &amp; Ressenti</string>
+    <string name="tuning_rpe_feel_desc">Évaluer l\'effort perçu (Borg CR10 1–10) et le ressenti subjectif (1–5) pour les cartes récapitulatives et la charge de session RPE</string>
     <string name="workout_rpe_title">Effort perçu (RPE 1–10)</string>
     <string name="workout_feel_title">Ressenti</string>
     <string name="srpe_load_badge">sRPE : %d</string>

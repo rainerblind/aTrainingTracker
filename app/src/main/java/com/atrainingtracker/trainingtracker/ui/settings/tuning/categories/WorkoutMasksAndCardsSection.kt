@@ -140,7 +140,7 @@ fun WorkoutMasksAndCardsSection(
         listOf(
             workoutCardPrefs.showDetails, workoutCardPrefs.showDescription, workoutCardPrefs.showExtrema, workoutCardPrefs.showLaps, workoutCardPrefs.showStrava,
             workoutCardPrefs.showMapPreview, workoutCardPrefs.showElevationProfile, workoutCardPrefs.showTelemetryCharts,
-            workoutCardPrefs.showZoneAnalysis, workoutCardPrefs.showGradeDistribution, workoutCardPrefs.showExportStatus, workoutCardPrefs.showPhotos
+            workoutCardPrefs.showZoneAnalysis, workoutCardPrefs.showGradeDistribution, workoutCardPrefs.showExportStatus, workoutCardPrefs.showPhotos, workoutCardPrefs.showRpeAndFeel
         ).count { it }
     }
 

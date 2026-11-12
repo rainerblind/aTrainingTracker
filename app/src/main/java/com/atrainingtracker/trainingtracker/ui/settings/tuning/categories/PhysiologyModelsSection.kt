@@ -101,7 +101,9 @@ fun PhysiologyModelsSection(
     enableMuscleSoreness: Boolean = false,
     onEnableMuscleSorenessChange: (Boolean) -> Unit = {},
     enableContextTags: Boolean = false,
-    onEnableContextTagsChange: (Boolean) -> Unit = {}
+    onEnableContextTagsChange: (Boolean) -> Unit = {},
+    showRpeAndFeel: Boolean = false,
+    onShowRpeAndFeelChange: (Boolean) -> Unit = {}
 ) {
     var showInternalInfoDialog by remember { mutableStateOf(false) }
 
@@ -122,6 +124,7 @@ fun PhysiologyModelsSection(
     val morningEnergyCallback = remember(onEnableMorningEnergyChange) { onEnableMorningEnergyChange }
     val muscleSorenessCallback = remember(onEnableMuscleSorenessChange) { onEnableMuscleSorenessChange }
     val contextTagsCallback = remember(onEnableContextTagsChange) { onEnableContextTagsChange }
+    val rpeAndFeelCallback = remember(onShowRpeAndFeelChange) { onShowRpeAndFeelChange }
 
     Column(
         modifier = Modifier
@@ -320,6 +323,16 @@ fun PhysiologyModelsSection(
                 onCheckedChange = contextTagsCallback
             )
         }
+
+        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+
+        // Model 8: Perceived Exertion (RPE) & Feel (REQ-WKO-036)
+        TuningToggleItem(
+            title = stringResource(R.string.settings_workout_card_rpe_feel),
+            isChecked = showRpeAndFeel,
+            onCheckedChange = rpeAndFeelCallback,
+            summary = stringResource(R.string.tuning_rpe_feel_desc)
+        )
     }
 
     if (showInternalInfoDialog) {
@@ -336,24 +349,10 @@ private fun PhysiologyModelsSectionDefaultPreview() {
     ATrainingTrackerTheme {
         Surface {
             PhysiologyModelsSection(
-                enableCogganPowerMetrics = true,
-                onEnableCogganPowerMetricsChange = {},
-                showCogganPowerInWorkoutSummary = true,
-                onShowCogganPowerInWorkoutSummaryChange = {},
-                enablePmcModel = false,
-                onEnablePmcModelChange = {},
-                enableAerobicEfficiencyModel = false,
-                onEnableAerobicEfficiencyModelChange = {},
-                showAerobicEfficiencyInWorkoutSummary = true,
-                onShowAerobicEfficiencyInWorkoutSummaryChange = {},
-                enableCriticalPowerModel = false,
-                onEnableCriticalPowerModelChange = {},
-                showCriticalPowerInWorkoutSummary = true,
-                onShowCriticalPowerInWorkoutSummaryChange = {},
-                enableCardioPowerDynamics = false,
-                onEnableCardioPowerDynamicsChange = {},
-                showCardioPowerInWorkoutSummary = true,
-                onShowCardioPowerInWorkoutSummaryChange = {}
+                enableCogganPowerMetrics = true, onEnableCogganPowerMetricsChange = {},
+                enablePmcModel = false, onEnablePmcModelChange = {},
+                enableAerobicEfficiencyModel = false, onEnableAerobicEfficiencyModelChange = {},
+                enableCriticalPowerModel = false, onEnableCriticalPowerModelChange = {}
             )
         }
     }
@@ -365,24 +364,13 @@ private fun PhysiologyModelsSectionAllEnabledPreview() {
     ATrainingTrackerTheme {
         Surface {
             PhysiologyModelsSection(
-                enableCogganPowerMetrics = true,
-                onEnableCogganPowerMetricsChange = {},
-                showCogganPowerInWorkoutSummary = true,
-                onShowCogganPowerInWorkoutSummaryChange = {},
-                enablePmcModel = true,
-                onEnablePmcModelChange = {},
-                enableAerobicEfficiencyModel = true,
-                onEnableAerobicEfficiencyModelChange = {},
-                showAerobicEfficiencyInWorkoutSummary = true,
-                onShowAerobicEfficiencyInWorkoutSummaryChange = {},
-                enableCriticalPowerModel = true,
-                onEnableCriticalPowerModelChange = {},
-                showCriticalPowerInWorkoutSummary = true,
-                onShowCriticalPowerInWorkoutSummaryChange = {},
-                enableCardioPowerDynamics = true,
-                onEnableCardioPowerDynamicsChange = {},
-                showCardioPowerInWorkoutSummary = true,
-                onShowCardioPowerInWorkoutSummaryChange = {}
+                enableCogganPowerMetrics = true, onEnableCogganPowerMetricsChange = {},
+                enablePmcModel = true, onEnablePmcModelChange = {},
+                enableAerobicEfficiencyModel = true, onEnableAerobicEfficiencyModelChange = {},
+                enableCriticalPowerModel = true, onEnableCriticalPowerModelChange = {},
+                enableCardioPowerDynamics = true, onEnableCardioPowerDynamicsChange = {},
+                enableMorningSleepAndWellness = true, onEnableMorningSleepAndWellnessChange = {},
+                showRpeAndFeel = true, onShowRpeAndFeelChange = {}
             )
         }
     }

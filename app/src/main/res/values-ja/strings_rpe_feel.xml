@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="settings_workout_card_rpe_feel">RPEとフィーリング</string>
+    <string name="tuning_rpe_feel_desc">ワークアウト後のカードとセッションRPE負荷のために主観的運動強度（Borg CR10 1–10）と主観的フィーリング（1–5）を記録します</string>
     <string name="workout_rpe_title">自覚的運動強度 (RPE 1–10)</string>
     <string name="workout_feel_title">フィーリング</string>
     <string name="srpe_load_badge">sRPE: %d</string>

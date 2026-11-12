@@ -287,6 +287,17 @@ class PhysiologyModelsVisibilityContractTest {
     }
 
     @Test
+    fun `TST-WKO-036_1 testPhysiologyModelsSection_rpeFeelSwitchContract`() {
+        val sectionClass = Class.forName("com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.PhysiologyModelsSectionKt")
+        val method = sectionClass.declaredMethods.find { it.name.startsWith("PhysiologyModelsSection") }
+        org.junit.Assert.assertNotNull("PhysiologyModelsSection method must exist", method)
+
+        val strings = com.atrainingtracker.testing.LocalizationTestCache.getStrings("values", "strings_rpe_feel.xml")
+        org.junit.Assert.assertNotNull("settings_workout_card_rpe_feel must exist", strings["settings_workout_card_rpe_feel"])
+        org.junit.Assert.assertNotNull("tuning_rpe_feel_desc must exist", strings["tuning_rpe_feel_desc"])
+    }
+
+    @Test
     fun `TST-UI-388_4 testLiveCockpitAndBackgroundPersistenceInvariants`() {
         assertTrue(
             shouldIncludeSensorType(

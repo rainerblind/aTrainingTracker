@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="settings_workout_card_rpe_feel">RPE i samopoczucie</string>
+    <string name="tuning_rpe_feel_desc">Oceń odczuwany wysiłek (Borg CR10 1–10) i subiektywne samopoczucie (1–5) dla kart podsumowania i obciążenia sesji RPE</string>
     <string name="workout_rpe_title">Odczuwany wysiłek (RPE 1–10)</string>
     <string name="workout_feel_title">Samopoczucie</string>
     <string name="srpe_load_badge">sRPE: %d</string>

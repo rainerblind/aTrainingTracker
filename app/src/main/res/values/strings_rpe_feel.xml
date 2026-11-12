@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="settings_workout_card_rpe_feel">RPE &amp; Feel</string>
+    <string name="tuning_rpe_feel_desc">Rate perceived exertion (Borg CR10 1–10) and subjective workout feel (1–5) for aftermath cards and session-RPE load</string>
     <string name="workout_rpe_title">Perceived Exertion (RPE 1–10)</string>
     <string name="workout_feel_title">Workout Feel</string>
     <string name="srpe_load_badge">sRPE: %d</string>

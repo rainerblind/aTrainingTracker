@@ -392,7 +392,9 @@ fun AdvancedTuningDialog(
                     enableMuscleSoreness = enableMuscleSoreness,
                     onEnableMuscleSorenessChange = { enableMuscleSoreness = it },
                     enableContextTags = enableContextTags,
-                    onEnableContextTagsChange = { enableContextTags = it }
+                    onEnableContextTagsChange = { enableContextTags = it },
+                    showRpeAndFeel = workoutCardPrefs.showRpeAndFeel,
+                    onShowRpeAndFeelChange = { workoutCardPrefs = workoutCardPrefs.copy(showRpeAndFeel = it) }
                 )
             }
 

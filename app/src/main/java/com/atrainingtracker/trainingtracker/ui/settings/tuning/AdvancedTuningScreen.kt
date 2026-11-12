@@ -404,7 +404,9 @@ fun AdvancedTuningScreen(
                     enableSleepDurationAndQuality = enableSleepDurationAndQuality, onEnableSleepDurationAndQualityChange = { enableSleepDurationAndQuality = it },
                     enableMorningEnergy = enableMorningEnergy, onEnableMorningEnergyChange = { enableMorningEnergy = it },
                     enableMuscleSoreness = enableMuscleSoreness, onEnableMuscleSorenessChange = { enableMuscleSoreness = it },
-                    enableContextTags = enableContextTags, onEnableContextTagsChange = { enableContextTags = it }
+                    enableContextTags = enableContextTags, onEnableContextTagsChange = { enableContextTags = it },
+                    showRpeAndFeel = workoutCardPrefs.showRpeAndFeel,
+                    onShowRpeAndFeelChange = { workoutCardPrefs = workoutCardPrefs.copy(showRpeAndFeel = it) }
                 )
             }
 
