@@ -105,3 +105,12 @@ PASS: Zero architecture or system specification modifications detected.
 3. **Garmin FIT SDK Compatibility**: FIT encoding conforms strictly to FIT Protocol V2.0 using official Garmin SDK 21.141.0 APIs.
 4. **Human Gate Governance**: Subtasks transition to `Erledigt` via automated gate verdict; parent ticket `ATT-5088` transitions strictly to `Final Review (Human)` assigned to `rainer.blind`.
 5. **One Commit per Ticket**: Exactly 1 atomic squashed commit on `sprint/2026-46.2`.
+
+---
+
+## 6. Cold Carbon Review (Stage 6) Defect Resolution & Healing
+1. **End-to-End Traffic Telemetry Persistence Wiring**:
+   - Added `SensorType.RADAR_VEHICLE_COUNT` and `SensorType.RADAR_APPROACH_SPEED_mps` to `SENSORS_TO_TRACK` in `TrackerService.java`. This guarantees running session extrema are captured and committed into `TABLE_EXTREMA_VALUES` so `resolveRadarTrafficSummary()` in `WorkoutDataMapper.kt` receives valid peak vehicle counts and maximum closing speeds.
+2. **ANT+ Radar Session Boundary Reset**:
+   - In `ANTBikeRadarDevice.kt` (`onAccumulatorsReset()`), invoked `windowAggregator.resetSession()` alongside `vehicleCountSensor.newValue(0)`, ensuring cumulative radar counts do not leak across consecutive workout sessions.
+
