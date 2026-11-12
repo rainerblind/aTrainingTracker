@@ -338,6 +338,35 @@ class PowerPhysiologyCalculatorTest {
             ),
             1e-4
         )
+
+        // Tier 4: Session-RPE (sRPE) fallback when no power and no HR data exists (REQ-WKO-039 / TST-WKO-039)
+        val tier4Sample = WorkoutTrainingLoadSample(
+            timestampMs = 1_760_000_000_000L,
+            activeTimeSeconds = 3600,
+            powerTss = null,
+            normalizedPowerWatts = null,
+            avgPowerWatts = null,
+            avgHrBpm = null,
+            rpe = 7
+        )
+        // 7 * (3600 / 60.0) = 420.0
+        assertEquals(
+            420.0,
+            PowerPhysiologyCalculator.resolveWorkoutTrainingLoad(tier4Sample),
+            1e-4
+        )
+    }
+
+    @Test
+    fun calculateSessionRpe_computesFosterScoreCorrectly() {
+        // RPE 7 for 60 min (3600s) -> 7 * 60 = 420.0
+        assertEquals(420.0, PowerPhysiologyCalculator.calculateSessionRpe(7, 3600.0), 1e-4)
+
+        // Invalid durations or out-of-range RPE scores return 0.0
+        assertEquals(0.0, PowerPhysiologyCalculator.calculateSessionRpe(7, 0.0), 1e-4)
+        assertEquals(0.0, PowerPhysiologyCalculator.calculateSessionRpe(7, -60.0), 1e-4)
+        assertEquals(0.0, PowerPhysiologyCalculator.calculateSessionRpe(0, 3600.0), 1e-4)
+        assertEquals(0.0, PowerPhysiologyCalculator.calculateSessionRpe(11, 3600.0), 1e-4)
     }
 
     @Test

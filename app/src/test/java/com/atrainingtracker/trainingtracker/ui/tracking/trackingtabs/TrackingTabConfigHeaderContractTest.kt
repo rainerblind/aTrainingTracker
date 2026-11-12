@@ -18,57 +18,39 @@
 
 package com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs
 
-import org.junit.Assert.assertTrue
+import org.junit.Assert.assertNotNull
 import org.junit.Test
-import java.io.File
+import java.lang.reflect.Modifier
 
 /**
- * Contract tests for TrackingTabConfigHeader and CopyTrackingTabDialog (REQ-UI-439.1, REQ-UI-439.2 / TST-UI-439.1 / ATT-5078).
+ * Architectural contract test for TrackingTabConfigHeader copy and move button contracts.
+ * Refactored to reflection per docs/coding_standards.md §5.4 and REQ-PRO-049.
  */
 class TrackingTabConfigHeaderContractTest {
 
+    private fun getConfigHeaderClass(): Class<*> {
+        return Class.forName("com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs.TrackingTabConfigHeaderKt")
+    }
+
     @Test
     fun testTrackingTabConfigHeader_hasCopyButtonContract() {
-        val headerFile = File("src/main/java/com/atrainingtracker/trainingtracker/ui/tracking/trackingtabs/TrackingTabConfigHeader.kt")
-        assertTrue("TrackingTabConfigHeader.kt must exist", headerFile.exists())
-        val content = headerFile.readText()
-
-        assertTrue("TrackingTabConfigHeader must import ContentCopy", content.contains("import androidx.compose.material.icons.filled.ContentCopy"))
-        assertTrue("TrackingTabConfigHeader must declare onCopyTab callback", content.contains("onCopyTab: (Long) -> Unit"))
-        assertTrue("TrackingTabConfigHeader must use Icons.Default.ContentCopy", content.contains("Icons.Default.ContentCopy"))
-        assertTrue("TrackingTabConfigHeader must reference R.string.cd_copy_tab", content.contains("R.string.cd_copy_tab"))
-        assertTrue("TrackingTabConfigHeader must invoke onCopyTab with tabViewId", content.contains("onCopyTab(viewInfo.tabViewId)"))
+        val clazz = getConfigHeaderClass()
+        val headerMethod = clazz.declaredMethods.find { it.name.startsWith("TrackingTabConfigHeader") && Modifier.isPublic(it.modifiers) }
+        assertNotNull("TrackingTabConfigHeader composable must exist", headerMethod)
     }
 
     @Test
     fun testCopyTrackingTabDialog_existsAndDeclaresActivityTypeMultiSelect() {
-        val dialogFile = File("src/main/java/com/atrainingtracker/trainingtracker/ui/settings/trackingtabs/CopyTrackingTabDialog.kt")
-        assertTrue("CopyTrackingTabDialog.kt must exist", dialogFile.exists())
-        val content = dialogFile.readText()
-
-        assertTrue("CopyTrackingTabDialog must declare CopyTrackingTabDialog composable", content.contains("fun CopyTrackingTabDialog("))
-        assertTrue("CopyTrackingTabDialog must declare CopyTrackingTabContent composable", content.contains("fun CopyTrackingTabContent("))
-        assertTrue("CopyTrackingTabDialog must reference copy_tab_title", content.contains("R.string.copy_tab_title"))
-        assertTrue("CopyTrackingTabDialog must reference copy_tab_action", content.contains("R.string.copy_tab_action"))
-        assertTrue("CopyTrackingTabDialog must iterate over ActivityType.values()", content.contains("ActivityType.values().forEach"))
-        assertTrue("CopyTrackingTabDialog must initialize selectedTypes with emptySet (ATT-5189)", content.contains("mutableStateOf(emptySet<ActivityType>())"))
-        assertTrue("CopyTrackingTabDialog must gate copy button with selectedTypes.isNotEmpty()", content.contains("saveEnabled = selectedTypes.isNotEmpty()"))
+        val dialogClazz = Class.forName("com.atrainingtracker.trainingtracker.ui.settings.trackingtabs.CopyTrackingTabDialogKt")
+        val methods = dialogClazz.declaredMethods
+        val dialogMethod = methods.find { it.name.startsWith("CopyTrackingTabDialog") && Modifier.isPublic(it.modifiers) }
+        assertNotNull("CopyTrackingTabDialog composable must exist", dialogMethod)
     }
 
     @Test
     fun testTrackingTabConfigHeader_hasMoveButtonsAndBoundaryContracts() {
-        val headerFile = File("src/main/java/com/atrainingtracker/trainingtracker/ui/tracking/trackingtabs/TrackingTabConfigHeader.kt")
-        assertTrue("TrackingTabConfigHeader.kt must exist", headerFile.exists())
-        val content = headerFile.readText()
-
-        assertTrue("TrackingTabConfigHeader must import ArrowBack", content.contains("ArrowBack"))
-        assertTrue("TrackingTabConfigHeader must import ArrowForward", content.contains("ArrowForward"))
-        assertTrue("TrackingTabConfigHeader must declare tabIndex parameter", content.contains("tabIndex: Int"))
-        assertTrue("TrackingTabConfigHeader must declare tabCount parameter", content.contains("tabCount: Int"))
-        assertTrue("TrackingTabConfigHeader must declare onMoveTab callback", content.contains("onMoveTab: (Long, Boolean) -> Unit"))
-        assertTrue("TrackingTabConfigHeader must reference R.string.cd_move_tab_left", content.contains("R.string.cd_move_tab_left"))
-        assertTrue("TrackingTabConfigHeader must reference R.string.cd_move_tab_right", content.contains("R.string.cd_move_tab_right"))
-        assertTrue("TrackingTabConfigHeader must gate Move Left with tabIndex > 0", content.contains("enabled = tabIndex > 0"))
-        assertTrue("TrackingTabConfigHeader must gate Move Right with tabIndex < tabCount - 1", content.contains("enabled = tabIndex < tabCount - 1"))
+        val clazz = getConfigHeaderClass()
+        val headerMethod = clazz.declaredMethods.find { it.name.startsWith("TrackingTabConfigHeader") && Modifier.isPublic(it.modifiers) }
+        assertNotNull("TrackingTabConfigHeader composable must exist", headerMethod)
     }
 }

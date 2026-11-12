@@ -56,6 +56,8 @@ data class ParsedWorkoutData(
     val sessionIntensityFactor: Double? = null,
     val sessionTss: Double? = null,
     val sessionWorkKj: Double? = null,
+    val sessionRpe: Int? = null,
+    val sessionFeel: Int? = null,
     val rawRrIntervals: List<Double> = emptyList(),
     val parsedRrBeats: List<FitRrBeat> = emptyList()
 )

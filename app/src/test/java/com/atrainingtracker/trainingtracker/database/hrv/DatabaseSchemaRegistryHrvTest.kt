@@ -46,7 +46,8 @@ class DatabaseSchemaRegistryHrvTest {
         )
 
         assertTrue(DatabaseSchemaRegistry.isVersionSupported(HrvReadinessDbHelper.DB_NAME, 1))
-        assertFalse(DatabaseSchemaRegistry.isVersionSupported(HrvReadinessDbHelper.DB_NAME, 2))
+        assertTrue(DatabaseSchemaRegistry.isVersionSupported(HrvReadinessDbHelper.DB_NAME, 2))
+        assertFalse(DatabaseSchemaRegistry.isVersionSupported(HrvReadinessDbHelper.DB_NAME, 3))
     }
 
     @Test

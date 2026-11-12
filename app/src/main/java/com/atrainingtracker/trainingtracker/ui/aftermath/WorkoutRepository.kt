@@ -44,10 +44,13 @@ import com.atrainingtracker.trainingtracker.tracker.TrackerService
 import com.atrainingtracker.trainingtracker.tracker.LiveWorkoutSession
 import com.atrainingtracker.trainingtracker.MyHelper
 import com.atrainingtracker.trainingtracker.TrainingApplication
+import com.atrainingtracker.trainingtracker.climbs.Climb
+import com.atrainingtracker.trainingtracker.climbs.ClimbCategory
 import com.atrainingtracker.trainingtracker.climbs.ClimbDetector
 import com.atrainingtracker.trainingtracker.climbs.LiveClimbsRepository
 import com.atrainingtracker.trainingtracker.database.CardioPowerDynamicsRecord
 import com.atrainingtracker.trainingtracker.database.CardioPowerTrendSample
+import com.atrainingtracker.trainingtracker.database.ElevationCacheDatabaseManager
 import com.atrainingtracker.trainingtracker.database.ClimbsDatabaseManager
 import com.atrainingtracker.trainingtracker.physiology.WorkoutTrainingLoadSample
 import com.atrainingtracker.trainingtracker.database.EquipmentDbHelper
@@ -96,6 +99,11 @@ import com.atrainingtracker.trainingtracker.ui.aftermath.zones.PowerZoneThreshol
 import com.atrainingtracker.trainingtracker.ui.aftermath.zones.ZoneDistributionCalculator
 import com.atrainingtracker.trainingtracker.ui.aftermath.zones.ZoneDistributionData
 import com.atrainingtracker.trainingtracker.ui.aftermath.zones.ZoneSample
+import com.atrainingtracker.trainingtracker.ui.aftermath.workoutdetail.HrvProtocolType
+import com.atrainingtracker.trainingtracker.ui.aftermath.workoutdetail.HrvScatterIntensityMode
+import com.atrainingtracker.trainingtracker.ui.aftermath.workoutdetail.HrvThresholdEstimator
+import com.atrainingtracker.trainingtracker.zones.HrvSessionThreshold
+import kotlin.math.roundToInt
 import com.atrainingtracker.trainingtracker.ui.util.SingleLiveEvent
 import com.google.android.gms.maps.model.LatLng
 import kotlinx.coroutines.CancellationException
@@ -151,6 +159,7 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
         private val DEBUG = TrainingApplication.getDebug(true)
 
         const val PREF_CLIMBS_WORKOUT_BACKFILL_V1 = "climbs_workout_backfill_v1"
+        const val PREF_CLIMBS_WORKOUT_CLEANUP_V2 = "climbs_workout_cleanup_v2"
 
         @JvmStatic
         val cropMutex get() = com.atrainingtracker.trainingtracker.domain.crop.CropCoordinator.mutex
@@ -787,6 +796,8 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
                 val ascIdx = col(WorkoutSummariesDatabaseManager.WorkoutSummaries.ASCENDING)
                 val descIdx = col(WorkoutSummariesDatabaseManager.WorkoutSummaries.DESCENDING)
                 val spdIdx = col(WorkoutSummariesDatabaseManager.WorkoutSummaries.SPEED_AVERAGE_mps)
+                val rpeIdx = col(WorkoutSummariesDatabaseManager.WorkoutSummaries.RPE)
+                val feelIdx = col(WorkoutSummariesDatabaseManager.WorkoutSummaries.FEEL)
 
                 return WorkoutExportHeader(
                     workoutId = if (idIdx >= 0 && !cursor.isNull(idIdx)) cursor.getLong(idIdx) else DatabaseConstants.INVALID_ID,
@@ -804,7 +815,9 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
                     calories = if (calIdx >= 0 && !cursor.isNull(calIdx)) cursor.getInt(calIdx) else null,
                     totalAscent = if (ascIdx >= 0 && !cursor.isNull(ascIdx)) cursor.getInt(ascIdx) else null,
                     totalDescent = if (descIdx >= 0 && !cursor.isNull(descIdx)) cursor.getInt(descIdx) else null,
-                    avgSpeedMps = if (spdIdx >= 0 && !cursor.isNull(spdIdx)) cursor.getDouble(spdIdx) else null
+                    avgSpeedMps = if (spdIdx >= 0 && !cursor.isNull(spdIdx)) cursor.getDouble(spdIdx) else null,
+                    rpe = if (rpeIdx >= 0 && !cursor.isNull(rpeIdx)) cursor.getInt(rpeIdx) else null,
+                    feel = if (feelIdx >= 0 && !cursor.isNull(feelIdx)) cursor.getInt(feelIdx) else null
                 )
             }
         } catch (e: Exception) {
@@ -1065,7 +1078,9 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
         goal: String?,
         isCommute: Boolean,
         source: String,
-        uploadToStrava: Boolean
+        uploadToStrava: Boolean,
+        rpe: Int? = null,
+        feel: Int? = null
     ): Long {
         val summaryValues = ContentValues().apply {
             put(WorkoutSummariesDatabaseManager.WorkoutSummaries.FILE_BASE_NAME, fileBaseName)
@@ -1082,6 +1097,12 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
             }
             if (isCommute) {
                 put(WorkoutSummariesDatabaseManager.WorkoutSummaries.COMMUTE, 1)
+            }
+            if (rpe != null) {
+                put(WorkoutSummariesDatabaseManager.WorkoutSummaries.RPE, rpe)
+            }
+            if (feel != null) {
+                put(WorkoutSummariesDatabaseManager.WorkoutSummaries.FEEL, feel)
             }
             put(WorkoutSummariesDatabaseManager.WorkoutSummaries.FINISHED, 1)
             put(WorkoutSummariesDatabaseManager.WorkoutSummaries.SOURCE, source)
@@ -1520,6 +1541,7 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
     private val activeReloadWorkoutIds = java.util.concurrent.ConcurrentHashMap.newKeySet<Long>()
     private val dirtyReloadWorkoutIds = java.util.concurrent.ConcurrentHashMap.newKeySet<Long>()
     internal val ineligibleCardioPowerWorkoutIds: MutableSet<Long> = java.util.concurrent.ConcurrentHashMap.newKeySet()
+    private val recentHrvThresholdsCache = java.util.concurrent.ConcurrentHashMap<Long, HrvSessionThreshold>()
 
     /**
      * Provides a reactive stream for a specific workout ID.
@@ -2716,8 +2738,11 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
             if (!prefs.getBoolean(PREF_CLIMBS_WORKOUT_BACKFILL_V1, false)) {
                 backfillHistoricalClimbs()
             }
+            if (!prefs.getBoolean(PREF_CLIMBS_WORKOUT_CLEANUP_V2, false)) {
+                cleanupCorruptedWorkoutClimbs()
+            }
         } catch (e: Exception) {
-            Log.w(TAG, "Error checking/triggering historical climb backfill", e)
+            Log.w(TAG, "Error checking/triggering historical climb backfill/cleanup", e)
         }
     }
 
@@ -2801,6 +2826,90 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
         }
 
         totalClimbsPersisted
+    }
+
+    /**
+     * Executes an idempotent one-time cleanup pass for Climbs.db (REQ-CLM-009.3 / ATT-7159).
+     * Purges corrupted workout-extracted climbs (routeId == null) that violate physical plausibility
+     * (avgGradePercent > 25.0%, maxGradePercent > 45.0%, or step jumps > 25.0m) or DEM ground-truth gain.
+     *
+     * Marks [PREF_CLIMBS_WORKOUT_CLEANUP_V2] as true in SharedPreferences and refreshes [LiveClimbsRepository].
+     *
+     * @return Total count of purged corrupted climb records (0 if already completed).
+     */
+    suspend fun cleanupCorruptedWorkoutClimbs(): Int = withContext(Dispatchers.IO) {
+        val prefs = try {
+            androidx.preference.PreferenceManager.getDefaultSharedPreferences(application)
+        } catch (_: Throwable) {
+            null
+        }
+
+        if (prefs?.getBoolean(PREF_CLIMBS_WORKOUT_CLEANUP_V2, false) == true) {
+            return@withContext 0
+        }
+
+        val climbsDb = ClimbsDatabaseManager.getInstance(application)
+        val allClimbs = climbsDb.getAllClimbs()
+        val elevationCache = ElevationCacheDatabaseManager.getInstance(application)
+        var purgedCount = 0
+
+        for (climb in allClimbs) {
+            if (climb.routeId == null) {
+                var isCorrupted = false
+
+                // 1. Plausibility bounds
+                if (climb.avgGradePercent > 25.0 || climb.maxGradePercent > 45.0) {
+                    isCorrupted = true
+                }
+
+                // 2. Vertical discontinuity step jumps across points
+                if (!isCorrupted && climb.pathPoints.size >= 2) {
+                    for (k in 0 until climb.pathPoints.size - 1) {
+                        val a1 = climb.pathPoints[k].altitude
+                        val a2 = climb.pathPoints[k + 1].altitude
+                        val d1 = climb.pathPoints[k].distance
+                        val d2 = climb.pathPoints[k + 1].distance
+                        val stepDist = d2 - d1
+                        val stepAlt = if (a1 != null && a2 != null) kotlin.math.abs(a2 - a1) else 0.0
+                        if ((stepDist <= 50.0 && stepAlt > 25.0) ||
+                            (stepDist >= 10.0 && (stepAlt / stepDist) * 100.0 > 45.0)
+                        ) {
+                            isCorrupted = true
+                            break
+                        }
+                    }
+                }
+
+                // 3. DEM cross-validation if cached elevations exist
+                if (!isCorrupted) {
+                    val startDem = elevationCache.getElevation(climb.startLat, climb.startLng, toleranceE5 = 20)
+                    val endDem = elevationCache.getElevation(climb.endLat, climb.endLng, toleranceE5 = 20)
+                    if (startDem != null && endDem != null) {
+                        val demGain = endDem.toDouble() - startDem.toDouble()
+                        val demAvgGrade = if (climb.distanceMeters > 0) (demGain / climb.distanceMeters) * 100.0 else 0.0
+                        if (demGain < 15.0 || demAvgGrade < 2.2 || climb.elevationGainMeters > kotlin.math.max(demGain * 1.6 + 18.0, demGain + 35.0)) {
+                            isCorrupted = true
+                        }
+                    }
+                }
+
+                if (isCorrupted) {
+                    climbsDb.deleteClimb(climb.id)
+                    purgedCount++
+                }
+            }
+        }
+
+        try {
+            prefs?.edit()?.putBoolean(PREF_CLIMBS_WORKOUT_CLEANUP_V2, true)?.apply()
+            if (purgedCount > 0) {
+                LiveClimbsRepository.getInstance(application).refreshClimbs()
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to finalize climbs_workout_cleanup_v2 preference", e)
+        }
+
+        purgedCount
     }
 
     /**
@@ -3898,6 +4007,7 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
      * Dispatches an asynchronous reload of in-memory workout data for the specified workout ID (REQ-PER-034.3).
      */
     fun refreshWorkout(workoutId: Long) {
+        recentHrvThresholdsCache.remove(workoutId)
         launch {
             reloadWorkoutData(workoutId)
         }
@@ -3982,14 +4092,46 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
             if (points.size >= 2) {
                 val detected = ClimbDetector.detectClimbs(points, routeId = null, context = application)
                 if (detected.isNotEmpty()) {
-                    val ids = ClimbsDatabaseManager.getInstance(application)
-                        .insertClimbsWithDeduplicationBatch(detected, thresholdMeters = 50.0f)
-                    try {
-                        LiveClimbsRepository.getInstance(application).refreshClimbs()
-                    } catch (e: Exception) {
-                        Log.w(TAG, "Failed to refresh LiveClimbsRepository after workout climb extraction", e)
+                    val elevationCache = ElevationCacheDatabaseManager.getInstance(application)
+                    val validatedClimbs = mutableListOf<Climb>()
+
+                    for (climb in detected) {
+                        val startDem = elevationCache.getElevation(climb.startLat, climb.startLng, toleranceE5 = 20)
+                        val endDem = elevationCache.getElevation(climb.endLat, climb.endLng, toleranceE5 = 20)
+
+                        if (startDem != null && endDem != null) {
+                            val demGain = endDem.toDouble() - startDem.toDouble()
+                            val demAvgGrade = if (climb.distanceMeters > 0) (demGain / climb.distanceMeters) * 100.0 else 0.0
+
+                            // REQ-CLM-009.2: Reject if DEM gain < 75% of minGain, DEM grade < 2.2%, or barometric drift exceeds threshold
+                            if (demGain < 15.0 || demAvgGrade < 2.2 || climb.elevationGainMeters > kotlin.math.max(demGain * 1.6 + 18.0, demGain + 35.0)) {
+                                continue
+                            }
+
+                            // Calibrate gain and grade against DEM ground truth
+                            validatedClimbs.add(
+                                climb.copy(
+                                    elevationGainMeters = demGain,
+                                    avgGradePercent = demAvgGrade,
+                                    category = ClimbCategory.fromScore(climb.distanceMeters * demAvgGrade)
+                                )
+                            )
+                        } else {
+                            // DEM cache miss: retain detected climb as-is (governed by ClimbDetector's spike guards)
+                            validatedClimbs.add(climb)
+                        }
                     }
-                    return@withContext ids
+
+                    if (validatedClimbs.isNotEmpty()) {
+                        val ids = ClimbsDatabaseManager.getInstance(application)
+                            .insertClimbsWithDeduplicationBatch(validatedClimbs, thresholdMeters = 50.0f)
+                        try {
+                            LiveClimbsRepository.getInstance(application).refreshClimbs()
+                        } catch (e: Exception) {
+                            Log.w(TAG, "Failed to refresh LiveClimbsRepository after workout climb extraction", e)
+                        }
+                        return@withContext ids
+                    }
                 }
             }
         } catch (e: Exception) {
@@ -4282,6 +4424,76 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
 
             reloadWorkoutData(workoutId)
             loadWorkout(workoutId)
+        }
+    }
+
+    /**
+     * Resolves historical workout sessions within [windowDays] having valid HRV DFA a1 and Power telemetry,
+     * computing their HRVT2 anaerobic power estimates for multi-session consensus evaluation (REQ-PER-037.3).
+     */
+    suspend fun getRecentHrvSessionThresholds(
+        currentWorkoutId: Long,
+        referenceTimestampMs: Long = System.currentTimeMillis(),
+        windowDays: Int = 30
+    ): List<HrvSessionThreshold> = withContext(Dispatchers.IO) {
+        val cutoffMs = referenceTimestampMs - windowDays * 24L * 3600L * 1000L
+        val cutoffS = cutoffMs / 1000L
+        val refS = referenceTimestampMs / 1000L
+        val candidateWorkouts = allWorkouts.value.filter {
+            it.id != currentWorkoutId && it.startTimeS in cutoffS..refS && it.finished
+        }
+        val results = mutableListOf<HrvSessionThreshold>()
+        for (workout in candidateWorkouts) {
+            val cached = recentHrvThresholdsCache[workout.id]
+            if (cached != null) {
+                results.add(cached)
+                continue
+            }
+            val points = getWorkoutTelemetryPoints(workout.id)
+            if (points.isNotEmpty() && points.any { it.hrvDfaA1 != null } && points.any { it.power != null && it.power > 0 }) {
+                val est = HrvThresholdEstimator.estimateThresholds(
+                    points = points,
+                    mode = HrvScatterIntensityMode.POWER,
+                    protocolType = HrvProtocolType.FREE_WORKOUT
+                )
+                val hrvt2Watts = est.hrvt2.intensity?.roundToInt()
+                val session = HrvSessionThreshold(
+                    workoutId = workout.id,
+                    timestampEpochMs = workout.startTimeS * 1000L,
+                    hrvt2Watts = hrvt2Watts,
+                    confidence = est.hrvt2.confidence
+                )
+                recentHrvThresholdsCache[workout.id] = session
+                results.add(session)
+            }
+        }
+        results
+    }
+
+    /**
+     * Evaluates whether a workout's beat-to-beat RR stream exhibited smoothed or quantized sensor artifacts
+     * (REQ-TRK-068.4).
+     */
+    suspend fun isWorkoutHrvSmoothed(workoutId: Long): Boolean = withContext(Dispatchers.IO) {
+        try {
+            val rrRepository = WorkoutRrRepository.getInstance(application)
+            val intervals = rrRepository.getIntervalsForWorkout(workoutId)
+            if (intervals.isEmpty() || intervals.size < 10) return@withContext false
+            val beats = intervals.map { interval ->
+                com.atrainingtracker.banalservice.devices.hrv.FilteredRrBeat(
+                    beatTimestampMs = interval.beatTimestampMs,
+                    rawRrMs = interval.rrMs.toDouble(),
+                    correctedRrMs = interval.rrMs.toDouble(),
+                    artifactFlag = interval.artifactFlag,
+                    isArtifact = interval.artifactFlag != com.atrainingtracker.banalservice.devices.RrBeatEvent.ARTIFACT_NORMAL
+                )
+            }
+            val quality = com.atrainingtracker.trainingtracker.database.hrv.HrvPostWorkoutRecomputer.analyzeSignalQuality(beats)
+            quality.status == com.atrainingtracker.banalservice.devices.hrv.HrvSignalQualityStatus.SMOOTHED_STREAM ||
+                quality.status == com.atrainingtracker.banalservice.devices.hrv.HrvSignalQualityStatus.QUANTIZED_SYNTHETIC
+        } catch (e: Exception) {
+            Log.w(TAG, "Error evaluating HRV signal quality for workout $workoutId", e)
+            false
         }
     }
 

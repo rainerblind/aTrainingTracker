@@ -117,10 +117,11 @@ object HrvReadinessTrendMath {
             availablePostures.firstOrNull() ?: defaultPosture
         }
 
-        // 1. Filter by active posture and artifact gate
+        // 1. Filter by active posture, artifact gate, and non-null HRV metrics
         val postureEntries = entries.filter {
             it.posture == activePosture &&
-                (it.artifactRatePct == null || it.artifactRatePct <= MAX_VALID_ARTIFACT_RATE_PCT)
+                (it.artifactRatePct == null || it.artifactRatePct <= MAX_VALID_ARTIFACT_RATE_PCT) &&
+                it.rmssdMs != null && it.lnRmssd != null
         }
 
         // 2. Daily deduplication: group by dateIso and pick primary
@@ -176,7 +177,7 @@ object HrvReadinessTrendMath {
                     continue
                 }
                 if (!d.isAfter(targetDate)) {
-                    val value = if (metricMode == HrvTrendMetricMode.LN_RMSSD) entry.lnRmssd else entry.rmssdMs
+                    val value = (if (metricMode == HrvTrendMetricMode.LN_RMSSD) entry.lnRmssd else entry.rmssdMs) ?: 0.0
                     if (!d.isBefore(dMinus6)) {
                         window7dValues.add(value)
                     }

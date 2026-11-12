@@ -6,11 +6,17 @@ Unit tests for Höchstmaß parameterized automation and governance tools.
 Executes with standard library unittest.
 """
 
-import os
-import unittest
 import json
+import os
+import sys
+import unittest
 
-from jira_util import (
+_tools_dir = os.path.dirname(os.path.abspath(__file__))
+_repo_root = os.path.abspath(os.path.join(_tools_dir, "..", "..", ".."))
+if _repo_root not in sys.path:
+    sys.path.insert(0, _repo_root)
+
+from tools.hoechstmass.tools.jira_util import (
     load_hoechstmass_config,
     load_env_config,
     mask_secret,
@@ -30,13 +36,26 @@ from jira_util import (
     resolve_desired_parent_stage_for_subtask,
     count_final_review_bounces,
     final_review_verdict,
+    export_gates,
+    collect_sprint_metrics_for_id,
+    VALID_ROLES,
+    qa_audit,
+    record_review,
+    create_issue,
+    gate_verdict,
+    get_subtask_summary_and_desc,
 )
-from verify_requirement_governance import (
+from tools.hoechstmass.tools.verify_requirement_governance import (
     load_config,
     validate_archaeology_section,
     verify_engineering_directory_structure,
+    verify_sprint_metrics,
+    verify_qa_audits,
+    verify_independent_reviews,
+    validate_impact_analysis_section,
+    verify_stage1_impact_analysis,
 )
-from parallel_sprint_lock import (
+from tools.hoechstmass.tools.parallel_sprint_lock import (
     sprint_lock,
     is_lock_busy,
     run_locked,
@@ -88,17 +107,22 @@ class TestHoechstmassConfig(unittest.TestCase):
         self.assertEqual(u, "agent1@example.com")
         self.assertEqual(t, "token1")
 
-        # Fallback to default
-        u2, t2 = resolve_account("coordinator", config=env_config)
-        self.assertEqual(u2, "fallback@example.com")
-        self.assertEqual(t2, "fallback_token")
+        # Fallback to default is prohibited for agent roles under ASPICE SUP.1 (ATT-6146)
+        with self.assertRaises(SystemExit) as cm:
+            resolve_account("coordinator", config=env_config)
+        self.assertEqual(cm.exception.code, 1)
+
+        # Fallback to default is permitted for human role
+        u_human, t_human = resolve_account("human", config=env_config)
+        self.assertEqual(u_human, "fallback@example.com")
+        self.assertEqual(t_human, "fallback_token")
 
     def test_datacenter_helpers_and_auth(self):
         dc_config = {
             "JIRA_URL": "https://jira.internal.corp",
             "JIRA_DEPLOYMENT": "datacenter",
             "JIRA_AGENT1_NAME": "dc_agent1_user",
-            "JIRA_TOKEN": "datacenter_pat_token_abc"
+            "JIRA_AGENT1_TOKEN": "datacenter_pat_token_abc",
         }
         self.assertTrue(is_datacenter(dc_config))
         self.assertEqual(get_search_endpoint(dc_config), "https://jira.internal.corp/rest/api/2/search")
@@ -107,6 +131,34 @@ class TestHoechstmassConfig(unittest.TestCase):
 
         headers = get_headers(dc_config, role="agent1")
         self.assertEqual(headers["Authorization"], "Bearer datacenter_pat_token_abc")
+
+    def test_valid_roles_excludes_human(self):
+        self.assertNotIn("human", VALID_ROLES)
+        self.assertEqual(VALID_ROLES, ["agent1", "agent2", "coordinator"])
+
+    def test_load_env_config_per_role(self):
+        """load_env_config(role=...) loads per-role files and isolates role credentials (ATT-6147)."""
+        import tempfile
+        with tempfile.TemporaryDirectory() as tmpdir:
+            base_file = os.path.join(tmpdir, ".env.jira")
+            with open(base_file, "w") as f:
+                f.write("JIRA_URL=https://jira.corp.internal\nJIRA_AGENT1_USER=old@corp\n")
+            a1_file = os.path.join(tmpdir, ".env.jira.agent1")
+            with open(a1_file, "w") as f:
+                f.write("JIRA_AGENT1_USER=a1@corp\nJIRA_AGENT1_TOKEN=t1\n")
+            a2_file = os.path.join(tmpdir, ".env.jira.agent2")
+            with open(a2_file, "w") as f:
+                f.write("JIRA_AGENT2_USER=a2@corp\nJIRA_AGENT2_TOKEN=t2\n")
+
+            cfg_a1 = load_env_config(custom_path=base_file, role="agent1")
+            self.assertEqual(cfg_a1.get("JIRA_AGENT1_USER"), "a1@corp")
+            self.assertEqual(cfg_a1.get("JIRA_AGENT1_TOKEN"), "t1")
+            self.assertNotIn("JIRA_AGENT2_USER", cfg_a1)
+
+            cfg_a2 = load_env_config(custom_path=base_file, role="agent2")
+            self.assertEqual(cfg_a2.get("JIRA_AGENT2_USER"), "a2@corp")
+            self.assertEqual(cfg_a2.get("JIRA_AGENT2_TOKEN"), "t2")
+            self.assertNotIn("JIRA_AGENT1_USER", cfg_a2)
 
 
 class TestGovernanceVerification(unittest.TestCase):
@@ -146,6 +198,110 @@ class TestGovernanceVerification(unittest.TestCase):
         self.assertFalse(is_valid)
         self.assertTrue(len(errors) >= 3)
 
+    def test_verify_qa_audits_valid_and_invalid(self):
+        """TST-PRO-061.2: Verify verify_qa_audits governance check in Höchstmaß mirror."""
+        import tempfile
+        with tempfile.TemporaryDirectory() as tmpdir:
+            qa_dir = os.path.join(tmpdir, "docs", "engineering", "qa_audits")
+            os.makedirs(qa_dir, exist_ok=True)
+            audit_file = os.path.join(qa_dir, "sprint_2026-46.3.md")
+
+            # Missing file
+            ok, errors = verify_qa_audits("sprint_2026-46.3", repo_root=tmpdir)
+            self.assertFalse(ok)
+            self.assertTrue(len(errors) > 0)
+
+            # Valid with >= 2 sampled tickets and COMPLIANT verdict
+            with open(audit_file, "w", encoding="utf-8") as f:
+                f.write("""# Sprint QA Process-Compliance Audit: Sprint 2026-46.3
+## 2. Sampled Tickets Audit
+### Sample 1: ATT-6149
+* Verdict: COMPLIANT
+### Sample 2: ATT-6150
+* Verdict: COMPLIANT
+## 3. Overall Process Verdict: COMPLIANT
+""")
+            ok, msgs = verify_qa_audits("sprint_2026-46.3", repo_root=tmpdir)
+            self.assertTrue(ok)
+            self.assertTrue(any("PASS:" in m for m in msgs))
+
+            # Invalid: < 2 sampled tickets
+            with open(audit_file, "w", encoding="utf-8") as f:
+                f.write("""# Sprint QA Process-Compliance Audit: Sprint 2026-46.3
+## 2. Sampled Tickets Audit
+### Sample 1: ATT-6149
+* Verdict: COMPLIANT
+## 3. Overall Process Verdict: COMPLIANT
+""")
+            ok, errors = verify_qa_audits("sprint_2026-46.3", repo_root=tmpdir)
+            self.assertFalse(ok)
+            self.assertTrue(len(errors) > 0)
+
+    def test_validate_impact_analysis_section_hoechstmass(self):
+        """TST-PRO-064.1 / TST-PRO-064.4: Verify validate_impact_analysis_section in Höchstmaß mirror."""
+        valid_text = """
+## 5. Change-Request Impact Analysis (SUP.10)
+* **Affected Requirements**: REQ-PRO-064
+* **Affected Architecture Elements**: tools/jira_util.py
+* **Verification Impact & Test Surface**: TST-PRO-064
+* **Risk Assessment & Invariants**: Low risk
+"""
+        ok, errors = validate_impact_analysis_section(valid_text)
+        self.assertTrue(ok, f"Expected valid impact analysis to pass, got: {errors}")
+
+        invalid_text = """
+## Change Impact Analysis
+* **Affected Requirements**: REQ-PRO-064
+* **Affected Architecture Elements**: tools/jira_util.py
+"""
+        ok_inv, errors_inv = validate_impact_analysis_section(invalid_text)
+        self.assertFalse(ok_inv)
+        self.assertTrue(any("Verification Impact" in e for e in errors_inv))
+
+    def test_analysis_templates_contain_impact_analysis(self):
+        """TST-PRO-064.4: Verify root and Höchstmaß analysis templates feature Change Impact Analysis."""
+        root_template = os.path.join(_repo_root, ".agents", "skills", "stage1-analysis", "templates", "analysis_template.md")
+        hoechstmass_template = os.path.join(_repo_root, "tools", "hoechstmass", "templates", "analysis_template.md")
+
+        for tmpl_path in [root_template, hoechstmass_template]:
+            self.assertTrue(os.path.exists(tmpl_path), f"Template not found: {tmpl_path}")
+            with open(tmpl_path, "r", encoding="utf-8") as f:
+                content = f.read()
+            self.assertIn("Change-Request Impact Analysis", content)
+            self.assertIn("Affected Requirements", content)
+            self.assertIn("Affected Architecture Elements", content)
+            self.assertIn("Verification Impact & Test Surface", content)
+            self.assertIn("Risk Assessment & Invariants", content)
+
+    def test_gate_verdict_enforces_impact_analysis_hoechstmass(self):
+        """TST-PRO-064.3: Verify gate_verdict in Höchstmaß mirror validates Impact Analysis on [Analysis] subtasks."""
+        from unittest.mock import patch
+
+        # 1. [Analysis] subtask with missing Impact Analysis -> SystemExit(1)
+        with patch("tools.hoechstmass.tools.jira_util.get_subtask_summary_and_desc") as mock_subtask, \
+             patch("tools.hoechstmass.tools.jira_util.assign_issue"), \
+             patch("tools.hoechstmass.tools.jira_util.add_comment"), \
+             patch("tools.hoechstmass.tools.jira_util.jira_request"):
+            mock_subtask.return_value = ("[Analysis] PROJ-100: Analysis", "Missing impact analysis", "PROJ-100")
+            with self.assertRaises(SystemExit) as cm:
+                gate_verdict("PROJ-101", "PASS", "Gate 1 audit report", as_role="agent2")
+            self.assertEqual(cm.exception.code, 1)
+
+            # 2. [Analysis] subtask with valid Impact Analysis -> succeeds
+            valid_desc = """
+## Change Impact Analysis
+* **Affected Requirements**: REQ-PRO-064
+* **Affected Architecture Elements**: tools/jira_util.py
+* **Verification Impact & Test Surface**: TST-PRO-064
+* **Risk Assessment & Invariants**: Low risk
+"""
+            mock_subtask.return_value = ("[Analysis] PROJ-100: Analysis", valid_desc, "PROJ-100")
+            gate_verdict("PROJ-101", "PASS", "Gate 1 audit report", as_role="agent2")
+
+            # 3. Non-analysis subtask [Req & Test Spec] without impact analysis -> succeeds normally
+            mock_subtask.return_value = ("[Req & Test Spec] PROJ-100: Spec", "No impact analysis", "PROJ-100")
+            gate_verdict("PROJ-102", "PASS", "Gate 2 audit report", as_role="agent2")
+
 
 class TestEpicCommands(unittest.TestCase):
     """TST-PRO-040.3: Hoechstmass parameterized epic commands."""
@@ -164,7 +320,7 @@ class TestEpicCommands(unittest.TestCase):
     def test_transition_issue_blocks_parent_to_erledigt(self):
         import io
         from unittest.mock import patch
-        with patch("jira_util.jira_request") as mock_req:
+        with patch("tools.hoechstmass.tools.jira_util.jira_request") as mock_req:
             mock_req.return_value = {
                 "key": "PROJ-100",
                 "fields": {
@@ -193,10 +349,10 @@ class TestEpicCommands(unittest.TestCase):
         ]
         self.assertEqual(count_final_review_bounces(comments), 2)
 
-        with patch("jira_util.jira_request") as mock_req, \
-             patch("jira_util.assign_issue"), \
-             patch("jira_util.add_comment"), \
-             patch("jira_util.transition_issue") as mock_trans:
+        with patch("tools.hoechstmass.tools.jira_util.jira_request") as mock_req, \
+             patch("tools.hoechstmass.tools.jira_util.assign_issue"), \
+             patch("tools.hoechstmass.tools.jira_util.add_comment"), \
+             patch("tools.hoechstmass.tools.jira_util.transition_issue") as mock_trans:
             mock_req.return_value = {
                 "key": "PROJ-101",
                 "fields": {
@@ -208,6 +364,387 @@ class TestEpicCommands(unittest.TestCase):
             res = final_review_verdict("PROJ-101", "BOUNCE", "Defect 3", bounce_target="implementation", as_role="agent2")
             self.assertEqual(res, "BOUNCE_3")
             mock_trans.assert_called()
+
+    def test_export_gates_parameterized(self):
+        """TST-PRO-059.1: Parameterized export_gates in hoechstmass."""
+        import tempfile
+        from unittest.mock import patch
+
+        def mock_side_effect(url, method="GET", payload=None, role=None, **kwargs):
+            if "/rest/agile/1.0/board/1/sprint?state=active" in url:
+                return {"values": [{"id": 100, "name": "Sprint 100"}]}
+            elif "/rest/agile/1.0/sprint/100/issue" in url:
+                return {
+                    "issues": [
+                        {
+                            "key": "PROJ-101",
+                            "fields": {
+                                "summary": "Sample Task",
+                                "status": {"name": "Implementation"},
+                                "issuetype": {"subtask": False},
+                                "comment": {"comments": []},
+                                "subtasks": [
+                                    {
+                                        "key": "PROJ-102",
+                                        "fields": {
+                                            "summary": "[Analysis] Task",
+                                            "status": {"name": "Erledigt"},
+                                        },
+                                        "comments": [
+                                            {
+                                                "body": "[Automated comment by AI Agent 2 (Auditor)]\n\nGATE_VERDICT: PASS\nAnalysis verified.",
+                                                "author": {"displayName": "Agent 2", "accountId": "a2"},
+                                                "created": "2026-11-12T01:00:00Z",
+                                            }
+                                        ],
+                                    }
+                                ],
+                            },
+                        }
+                    ]
+                }
+            return {}
+
+        with patch("tools.hoechstmass.tools.jira_util.jira_request") as mock_req:
+            mock_req.side_effect = mock_side_effect
+            with tempfile.TemporaryDirectory() as tmpdir:
+                out_file = os.path.join(tmpdir, "docs", "engineering", "gates", "sprint_100.md")
+                res_path, records = export_gates(sprint_arg=None, out_path=out_file, as_role="coordinator")
+                self.assertEqual(res_path, out_file)
+                self.assertTrue(os.path.exists(out_file))
+                self.assertEqual(len(records), 1)
+                with open(out_file, "r", encoding="utf-8") as f:
+                    content = f.read()
+                self.assertIn("# Sprint Quality Gate Records: Sprint 100", content)
+                self.assertIn("| PROJ-101 | PROJ-102 | Gate 1 | Analysis (Gate 1) | PASS | agent2 | Agent 2 |", content)
+
+    def test_verify_sprint_metrics_hoechstmass(self):
+        """TST-PRO-060.2 / TST-PRO-060.3: verify_sprint_metrics in hoechstmass."""
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            metrics_dir = os.path.join(tmpdir, "docs", "engineering", "metrics")
+            os.makedirs(metrics_dir, exist_ok=True)
+            metrics_file = os.path.join(metrics_dir, "process_metrics.jsonl")
+
+            # 1. Missing file
+            ok, errs = verify_sprint_metrics(sprint_name="2026-46.3", repo_root=tmpdir)
+            self.assertFalse(ok)
+
+            # 2. Valid metrics file
+            record = {
+                "sprint_id": 100,
+                "sprint_name": "2026-46.3",
+                "recorded_at": "2026-11-12T04:00:00Z",
+                "throughput": {
+                    "total_tickets": 8,
+                    "completed_tickets": 8,
+                    "total_story_points": 18.0,
+                    "completed_story_points": 18.0,
+                },
+                "quality_gates": {"overall_ftpr_percent": 90.0},
+            }
+            with open(metrics_file, "w", encoding="utf-8") as f:
+                f.write(json.dumps(record) + "\n")
+
+            ok, msgs = verify_sprint_metrics(sprint_name="2026-46.3", repo_root=tmpdir)
+            self.assertTrue(ok)
+            self.assertTrue(any("PASS" in m for m in msgs))
+
+    def test_collect_sprint_metrics_preindexed_comments(self):
+        """TST-PRO-060.3 / REQ-PRO-060.4: Pre-indexed subtask comments without extra REST calls."""
+        from unittest.mock import patch
+
+        call_urls = []
+
+        def mock_jira_req(url, role=None, config=None, **kwargs):
+            call_urls.append(url)
+            if "/rest/agile/1.0/sprint/200/issue" in url:
+                return {
+                    "issues": [
+                        {
+                            "key": "PARENT-1",
+                            "fields": {
+                                "summary": "Parent Feature",
+                                "status": {"name": "Final Review (Human)"},
+                                "issuetype": {"subtask": False},
+                                "customfield_10016": 3.0,
+                                "subtasks": [
+                                    {"key": "ST-1", "fields": {"summary": "[Analysis] Task", "status": {"name": "Erledigt"}}}
+                                ],
+                            },
+                        },
+                        {
+                            "key": "ST-1",
+                            "fields": {
+                                "issuetype": {"subtask": True},
+                                "comment": {
+                                    "comments": [
+                                        {"body": "GATE_VERDICT: PASS", "author": {"displayName": "Agent 2"}}
+                                    ]
+                                },
+                            },
+                        },
+                    ]
+                }
+            return {}
+
+        with patch("tools.hoechstmass.tools.jira_util.jira_request", side_effect=mock_jira_req):
+            metrics = collect_sprint_metrics_for_id(200, "Sprint 200", 1)
+            self.assertEqual(metrics["throughput"]["total_story_points"], 3.0)
+            self.assertEqual(metrics["throughput"]["completed_story_points"], 3.0)
+            # Assert only 1 request was made (fetch_all_sprint_issues), zero sequential comment calls for ST-1
+            self.assertEqual(len(call_urls), 1)
+            self.assertTrue(any("/rest/agile/1.0/sprint/200/issue" in u for u in call_urls))
+
+    def test_hoechstmass_qa_audit_execution(self):
+        """TST-PRO-061.1: Verify Höchstmaß qa_audit execution and markdown formatting."""
+        from unittest.mock import patch
+        import tempfile
+        import subprocess
+
+        stages = [
+            (1, "[Analysis]"),
+            (2, "[Req & Test Spec]"),
+            (3, "[Impl-Plan]"),
+            (4, "[Implementation]"),
+            (5, "[Test]"),
+        ]
+
+        def make_subtasks(prefix, parent_key):
+            return [
+                {
+                    "key": f"{prefix}-{g_idx}",
+                    "fields": {
+                        "summary": f"{name} {parent_key}",
+                        "status": {"name": "Erledigt"},
+                    },
+                }
+                for g_idx, name in stages
+            ]
+
+        def mock_jira_req(url, method="GET", payload=None, role="coordinator", **kwargs):
+            if "/rest/agile/1.0/board" in url and "/sprint" not in url:
+                return {"values": [{"id": 1, "name": "ATT Board"}]}
+            elif "/rest/agile/1.0/board/1/sprint?state=active" in url:
+                return {"values": [{"id": 440, "name": "2026-46.3", "state": "active"}]}
+            elif "/rest/agile/1.0/sprint/440/issue" in url:
+                return {
+                    "issues": [
+                        {
+                            "key": "ATT-6149",
+                            "fields": {
+                                "summary": "Export Jira gate records REQ-PRO-059",
+                                "description": "Addresses REQ-PRO-059.1",
+                                "status": {"name": "Final Review (Human)"},
+                                "issuetype": {"subtask": False},
+                                "subtasks": make_subtasks("ATT-724", "ATT-6149"),
+                            },
+                        },
+                        {
+                            "key": "ATT-6150",
+                            "fields": {
+                                "summary": "Record story points and sprint metrics REQ-PRO-060",
+                                "description": "Addresses REQ-PRO-060.1",
+                                "status": {"name": "Final Review (Human)"},
+                                "issuetype": {"subtask": False},
+                                "subtasks": make_subtasks("ATT-725", "ATT-6150"),
+                            },
+                        },
+                    ],
+                    "total": 2,
+                }
+            elif "/comment" in url:
+                return {
+                    "comments": [
+                        {
+                            "body": "[Automated comment by AI Agent 2 (Reviewer)]\n\n[ROLE: agent2]\nGATE_VERDICT: PASS recorded by agent2.",
+                            "author": {"displayName": "AI Agent 2"},
+                        }
+                    ]
+                }
+            return {}
+
+        with patch("tools.hoechstmass.tools.jira_util.jira_request", side_effect=mock_jira_req):
+            with tempfile.TemporaryDirectory() as tmpdir:
+                # 1. Setup git repo and commits
+                subprocess.run(["git", "init"], cwd=tmpdir, check=True, stdout=subprocess.DEVNULL)
+                subprocess.run(["git", "config", "user.name", "Tester"], cwd=tmpdir, check=True)
+                subprocess.run(["git", "config", "user.email", "test@example.com"], cwd=tmpdir, check=True)
+                subprocess.run(["git", "commit", "--allow-empty", "-m", "ATT-6149: Export Jira gate records"], cwd=tmpdir, check=True, stdout=subprocess.DEVNULL)
+                subprocess.run(["git", "commit", "--allow-empty", "-m", "ATT-6150: Record story points and sprint metrics"], cwd=tmpdir, check=True, stdout=subprocess.DEVNULL)
+
+                # 2. Setup deliverables
+                for k in ["ATT-6149", "ATT-6150"]:
+                    for subfolder, suffix in [
+                        ("analysis", "_analysis.md"),
+                        ("test_specs", "_test_spec.md"),
+                        ("plans", "_plan.md"),
+                        ("walkthroughs", "_walkthrough.md"),
+                    ]:
+                        d = os.path.join(tmpdir, "docs", "engineering", subfolder)
+                        os.makedirs(d, exist_ok=True)
+                        with open(os.path.join(d, f"{k}{suffix}"), "w", encoding="utf-8") as f:
+                            f.write(f"# Deliverable for {k}")
+
+                # 3. Setup living docs master table
+                os.makedirs(os.path.join(tmpdir, "docs"), exist_ok=True)
+                with open(os.path.join(tmpdir, "docs", "requirements.md"), "w", encoding="utf-8") as f:
+                    f.write("""| Requirement ID | Summary | Target | Status | Jira Ticket |
+| :--- | :--- | :--- | :--- | :--- |
+| REQ-PRO-059 | Gate records | Tool | Verified | ATT-6149 |
+| REQ-PRO-060 | Metrics | Tool | Verified | ATT-6150 |
+""")
+
+                out_file = os.path.join(tmpdir, "docs", "engineering", "qa_audits", "sprint_2026-46.3.md")
+                res_path, results = qa_audit(sprint_arg=None, sample_size=2, out_path=out_file, role="coordinator", repo_root=tmpdir)
+                self.assertEqual(res_path, out_file)
+                self.assertTrue(os.path.exists(out_file))
+                self.assertEqual(len(results), 2)
+                self.assertTrue(all(r["compliant"] for r in results))
+
+                with open(out_file, "r", encoding="utf-8") as f:
+                    content = f.read()
+
+                self.assertIn("# Sprint QA Process-Compliance Audit: Sprint 2026-46.3", content)
+                self.assertIn("ATT-6149", content)
+                self.assertIn("ATT-6150", content)
+                self.assertIn("COMPLIANT", content)
+
+    def test_hoechstmass_record_review(self):
+        from unittest.mock import patch
+        import tempfile
+
+        def mock_jira_req(url, method="GET", payload=None, role="coordinator", **kwargs):
+            if "/rest/agile/1.0/board" in url and "/sprint" not in url:
+                return {"values": [{"id": 1, "name": "ATT Board"}]}
+            elif "/rest/agile/1.0/board/1/sprint?state=active" in url:
+                return {"values": [{"id": 440, "name": "2026-46.3", "state": "active"}]}
+            elif "/rest/agile/1.0/sprint/440/issue" in url:
+                return {
+                    "issues": [
+                        {"key": "ATT-6150", "fields": {"summary": "Issue 1", "issuetype": {"subtask": False}}},
+                    ],
+                    "total": 1,
+                }
+            return {}
+
+        with patch("tools.hoechstmass.tools.jira_util.jira_request", side_effect=mock_jira_req):
+            with tempfile.TemporaryDirectory() as tmpdir:
+                out_file = os.path.join(tmpdir, "docs", "engineering", "reviews", "sprint_2026-46.3.md")
+                res_path, meta = record_review(
+                    sprint_arg="2026-46.3",
+                    ticket_key="ATT-6150",
+                    reviewer="Human",
+                    verdict="PASS",
+                    findings="Human ceremony 2 acceptance notes.",
+                    out_path=out_file,
+                    repo_root=tmpdir,
+                )
+                self.assertEqual(res_path, out_file)
+                self.assertTrue(os.path.exists(out_file))
+                self.assertEqual(meta["reviewer"], "Human")
+
+                with open(out_file, "r", encoding="utf-8") as f:
+                    content = f.read()
+
+                self.assertIn("# Independent QA Review Record: Sprint 2026-46.3", content)
+                self.assertIn("**Reviewer**: Human", content)
+                self.assertIn("**Verdict**: **PASS**", content)
+                self.assertIn("ATT-6150", content)
+
+    def test_verify_independent_reviews_hoechstmass(self):
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            # 1. Missing directory
+            ok, errs = verify_independent_reviews(sprint_name="2026-46.3", repo_root=tmpdir)
+            self.assertFalse(ok)
+            self.assertTrue(any("does not exist" in e for e in errs))
+
+            rev_dir = os.path.join(tmpdir, "docs", "engineering", "reviews")
+            os.makedirs(rev_dir, exist_ok=True)
+
+            # 2. Missing record
+            ok, errs = verify_independent_reviews(sprint_name="2026-46.3", repo_root=tmpdir)
+            self.assertFalse(ok)
+            self.assertTrue(any("Missing independent review record" in e for e in errs))
+
+            # 3. Valid record
+            target = os.path.join(rev_dir, "sprint_2026-46.3.md")
+            with open(target, "w", encoding="utf-8") as f:
+                f.write(
+                    "# Independent QA Review Record: Sprint 2026-46.3\n\n"
+                    "* **Reviewer**: Human\n"
+                    "* **Date**: 2026-11-12 04:00:00\n"
+                    "* **Scope**: Ceremony 2 Sprint Review\n"
+                    "* **Verdict**: **PASS**\n"
+                )
+
+            ok, msgs = verify_independent_reviews(sprint_name="2026-46.3", repo_root=tmpdir)
+            self.assertTrue(ok, f"Expected pass, got: {msgs}")
+            self.assertTrue(any("PASS" in m for m in msgs))
+
+            # 4. Wildcard
+            ok_any, msgs_any = verify_independent_reviews(sprint_name=None, repo_root=tmpdir)
+            self.assertTrue(ok_any)
+            self.assertTrue(any("Verified 1 independent review record" in m for m in msgs_any))
+
+    def test_hoechstmass_create_issue_severity_enforcement(self):
+        """TST-PRO-063.4: Verify create_issue severity enforcement in hoechstmass."""
+        from unittest.mock import patch
+
+        def mock_jira_req(url, method="GET", payload=None, role="coordinator", **kwargs):
+            return {"key": "PROJ-8888"}
+
+        with patch("tools.hoechstmass.tools.jira_util.jira_request", side_effect=mock_jira_req):
+            # 1. Bug without severity -> exit 1
+            with self.assertRaises(SystemExit) as cm:
+                create_issue("Bug without severity", "Description", issuetype_id="10006")
+            self.assertEqual(cm.exception.code, 1)
+
+            # 2. Bug with invalid severity -> exit 1
+            with self.assertRaises(SystemExit) as cm:
+                create_issue("Bug with invalid severity", "Description", issuetype_id="10006", severity="catastrophic")
+            self.assertEqual(cm.exception.code, 1)
+
+            # 3. Bug with valid severity -> succeeds
+            key = create_issue("Bug with valid severity", "Description", issuetype_id="10006", severity="major")
+            self.assertEqual(key, "PROJ-8888")
+
+            # 4. Non-bug without severity -> succeeds
+            key_feat = create_issue("Feature without severity", "Description", issuetype_id="10007")
+            self.assertEqual(key_feat, "PROJ-8888")
+
+    def test_hoechstmass_verify_sprint_metrics_problem_trends(self):
+        """TST-PRO-063.4: Verify problem_trends schema validation in hoechstmass verify_sprint_metrics."""
+        import tempfile
+        import json
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            metrics_dir = os.path.join(tmpdir, "docs", "engineering", "metrics")
+            os.makedirs(metrics_dir, exist_ok=True)
+            metrics_file = os.path.join(metrics_dir, "process_metrics.jsonl")
+
+            valid_record = {
+                "sprint_id": 101,
+                "sprint_name": "Sprint 101",
+                "throughput": {"total_story_points": 10.0, "completed_story_points": 10.0},
+                "quality_gates": {},
+                "problem_trends": {
+                    "total_bugs": 2,
+                    "open_bugs": 0,
+                    "closed_bugs": 2,
+                    "resolution_rate_percent": 100.0,
+                    "by_severity": {"Critical": 1, "Major": 1, "Minor": 0, "Cosmetic": 0},
+                },
+            }
+            with open(metrics_file, "w", encoding="utf-8") as f:
+                f.write(json.dumps(valid_record) + "\n")
+
+            ok, msgs = verify_sprint_metrics(sprint_name="Sprint 101", repo_root=tmpdir)
+            self.assertTrue(ok, f"Expected valid metrics with problem_trends to pass, got: {msgs}")
+
 
 
 class TestHoechstmassFlock(unittest.TestCase):

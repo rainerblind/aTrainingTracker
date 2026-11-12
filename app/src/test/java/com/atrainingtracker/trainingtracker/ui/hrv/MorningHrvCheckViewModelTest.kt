@@ -259,9 +259,9 @@ class MorningHrvCheckViewModelTest {
         assertNotNull(state.computedEntry)
 
         val entry = state.computedEntry!!
-        assertTrue("rMSSD must be positive", entry.rmssdMs > 0.0)
-        assertTrue("ln(rMSSD) must be positive", entry.lnRmssd > 0.0)
-        assertTrue("HRV Score must be between 0 and 100", entry.hrvScore100 in 0.0..100.0)
+        assertTrue("rMSSD must be positive", entry.rmssdMs!! > 0.0)
+        assertTrue("ln(rMSSD) must be positive", entry.lnRmssd!! > 0.0)
+        assertTrue("HRV Score must be between 0 and 100", entry.hrvScore100!! in 0.0..100.0)
         assertEquals(60, entry.restingHrBpm)
         assertNotNull(entry.sdnnMs)
         assertTrue("SDNN must be positive", entry.sdnnMs!! > 0.0)
@@ -438,5 +438,69 @@ class MorningHrvCheckViewModelTest {
 
         unmockkStatic(TrainingApplication::class)
         unmockkObject(com.atrainingtracker.trainingtracker.cloud.healthconnect.HealthConnectHrvImporter)
+    }
+
+    @Test
+    fun testStandaloneWellnessSave_persistsRecordAndSetsSaved_TST_HRV_038() = runTest(testDispatcher) {
+        val viewModel = MorningHrvCheckViewModel(
+            application = application,
+            banalServiceRepository = banalRepository,
+            hrvReadinessRepository = hrvRepository,
+            dispatcher = testDispatcher
+        )
+        advanceUntilIdle()
+        viewModel.setWellnessTogglesForTesting(
+            enableMorningSleepAndWellness = true,
+            enableSleepDurationAndQuality = true,
+            enableMorningEnergy = true,
+            enableMuscleSoreness = true,
+            enableContextTags = true
+        )
+
+        viewModel.setSleepDurationMinutes(450)
+        viewModel.setSleepQuality(4)
+        viewModel.setMorningEnergy(5)
+        viewModel.setMuscleSoreness(2)
+        viewModel.toggleContextTag("REST_DAY")
+
+        val savedId = viewModel.saveStandaloneWellness()
+        advanceUntilIdle()
+
+        assertTrue(viewModel.uiState.value.isWellnessSaved)
+        val dbManager = HrvReadinessDatabaseManager.getInstance(application)
+        val entries = dbManager.getAllEntries()
+        assertEquals(1, entries.size)
+        val saved = entries[0]
+        assertNull(saved.rmssdMs)
+        assertNull(saved.restingHrBpm)
+        assertEquals(450, saved.sleepDurationMin)
+        assertEquals(4, saved.sleepQuality1To5)
+        assertEquals(5, saved.morningEnergy1To5)
+        assertEquals(2, saved.muscleSoreness1To5)
+        assertEquals("REST_DAY", saved.contextTags)
+    }
+
+    @Test
+    fun testWellnessInputSetters_updateUiState_TST_HRV_040() = runTest(testDispatcher) {
+        val viewModel = MorningHrvCheckViewModel(
+            application = application,
+            banalServiceRepository = banalRepository,
+            hrvReadinessRepository = hrvRepository,
+            dispatcher = testDispatcher
+        )
+        advanceUntilIdle()
+
+        viewModel.setSleepDurationMinutes(420)
+        viewModel.setSleepQuality(3)
+        viewModel.setMorningEnergy(4)
+        viewModel.setMuscleSoreness(1)
+        viewModel.toggleContextTag("TRAVEL")
+
+        val state = viewModel.uiState.value
+        assertEquals(420, state.sleepDurationMinutes)
+        assertEquals(3, state.sleepQuality1To5)
+        assertEquals(4, state.morningEnergy1To5)
+        assertEquals(1, state.muscleSoreness1To5)
+        assertTrue(state.selectedContextTags.contains("TRAVEL"))
     }
 }

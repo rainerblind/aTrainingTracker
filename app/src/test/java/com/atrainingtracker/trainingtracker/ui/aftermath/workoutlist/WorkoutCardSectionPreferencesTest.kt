@@ -48,6 +48,7 @@ class WorkoutCardSectionPreferencesTest {
         assertTrue("Zone analysis should be enabled by default", prefs.showZoneAnalysis)
         assertFalse("Grade distribution should be disabled by default for list cards", prefs.showGradeDistribution)
         assertTrue("Export status should be enabled by default", prefs.showExportStatus)
+        assertFalse("RPE and Feel should be disabled by default (REQ-WKO-035)", prefs.showRpeAndFeel)
     }
 
     @Test

@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_workout_card_rpe_feel">RPE &amp; Befinden</string>
+    <string name="workout_rpe_title">Belastungsempfinden (RPE 1–10)</string>
+    <string name="workout_feel_title">Befinden</string>
+    <string name="srpe_load_badge">sRPE: %d</string>
+
+    <string name="rpe_anchor_1">1 — Sehr leicht</string>
+    <string name="rpe_anchor_2">2 — Leicht</string>
+    <string name="rpe_anchor_3">3 — Moderat</string>
+    <string name="rpe_anchor_4">4 — Etwas anstrengend</string>
+    <string name="rpe_anchor_5">5 — Anstrengend</string>
+    <string name="rpe_anchor_6">6 — Anstrengend+</string>
+    <string name="rpe_anchor_7">7 — Sehr anstrengend</string>
+    <string name="rpe_anchor_8">8 — Sehr anstrengend+</string>
+    <string name="rpe_anchor_9">9 — Extrem anstrengend</string>
+    <string name="rpe_anchor_10">10 — Maximal</string>
+
+    <string name="feel_anchor_1">Sehr schlecht</string>
+    <string name="feel_anchor_2">Schlecht</string>
+    <string name="feel_anchor_3">Normal</string>
+    <string name="feel_anchor_4">Gut</string>
+    <string name="feel_anchor_5">Großartig</string>
+</resources>

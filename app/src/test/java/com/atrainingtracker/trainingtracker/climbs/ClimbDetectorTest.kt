@@ -235,4 +235,38 @@ class ClimbDetectorTest {
         assertTrue("Grade must be >= 3.0%", climb.avgGradePercent >= 3.0)
         assertEquals(ClimbCategory.CAT_4, climb.category)
     }
+
+    @Test
+    fun testDetectClimbs_rejectsAltitudeStepSpikesAndExtremeGradients() {
+        // REQ-CLM-009.1 / TST-CLM-009.1:
+        // 1. Extreme 104.6% climb (541m length, 602m -> 1168m gain = 566m gain)
+        val spikePoints = mutableListOf<PathPoint>()
+        for (i in 0..10) {
+            val d = i * 54.1
+            val alt = 602.0 + (i * 56.6)
+            spikePoints.add(PathPoint(distance = d, latLng = LatLng(48.657 + (i * 0.0001), 9.054), altitude = alt))
+        }
+        val spikeClimbs = ClimbDetector.detectClimbs(spikePoints)
+        assertTrue("Extreme 104.6% grade must be rejected as an implausible spike", spikeClimbs.isEmpty())
+
+        // 2. Single-step vertical jump (+155m jump in a single step)
+        val stepJumpPoints = mutableListOf<PathPoint>()
+        stepJumpPoints.add(PathPoint(distance = 0.0, latLng = LatLng(48.0, 11.0), altitude = 200.0))
+        stepJumpPoints.add(PathPoint(distance = 100.0, latLng = LatLng(48.001, 11.0), altitude = 205.0))
+        stepJumpPoints.add(PathPoint(distance = 110.0, latLng = LatLng(48.0011, 11.0), altitude = 360.0)) // +155m jump!
+        stepJumpPoints.add(PathPoint(distance = 600.0, latLng = LatLng(48.006, 11.0), altitude = 380.0))
+        val stepJumpClimbs = ClimbDetector.detectClimbs(stepJumpPoints)
+        assertTrue("Single-step vertical jump > 25m must break candidate ascent", stepJumpClimbs.isEmpty())
+
+        // 3. Post-summit calibration snap drop (-110m drop within 20m after summit)
+        val snapPoints = mutableListOf<PathPoint>()
+        for (i in 0..10) {
+            val d = i * 60.0
+            val alt = 300.0 + (i * 6.0) // 60m gain over 600m (10% grade)
+            snapPoints.add(PathPoint(distance = d, latLng = LatLng(48.0 + (i * 0.0005), 11.0), altitude = alt))
+        }
+        snapPoints.add(PathPoint(distance = 620.0, latLng = LatLng(48.0055, 11.0), altitude = 250.0)) // -110m drop in 20m
+        val snapClimbs = ClimbDetector.detectClimbs(snapPoints)
+        assertTrue("Post-summit calibration snap drop > 35m within 50m must be rejected", snapClimbs.isEmpty())
+    }
 }

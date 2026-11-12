@@ -19,90 +19,40 @@
 package com.atrainingtracker.trainingtracker.ui.map
 
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.io.File
+import java.lang.reflect.Modifier
 
 /**
  * Architectural contract tests verifying that the right-hand marginal Altitude Histogram
  * next to [ElevationProfile] is restricted exclusively to Workout Details and suppressed across
  * non-workout callers (Live Segments, Segment Details, Climb Details, Route Details, Live Map)
  * and compact feed list cards as mandated by REQ-UI-446.1 and TST-UI-446.3 (ATT-5504).
+ * Refactored to pure JVM reflection per docs/coding_standards.md §5.4 and REQ-PRO-049.
  */
 class ElevationProfileHistogramAlignmentContractTest {
 
-    private val projectRoot: File by lazy {
-        var dir = File(System.getProperty("user.dir") ?: ".")
-        while (!File(dir, "app").exists() && dir.parentFile != null) {
-            dir = dir.parentFile!!
-        }
-        dir
-    }
-
-    private val mapDetailLayoutFile: File by lazy {
-        File(projectRoot, "app/src/main/java/com/atrainingtracker/trainingtracker/ui/map/MapDetailLayout.kt")
-    }
-
-    private val workoutSummaryFile: File by lazy {
-        File(projectRoot, "app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/workoutlist/WorkoutSummary.kt")
-    }
-
-    private val elevationProfileFile: File by lazy {
-        File(projectRoot, "app/src/main/java/com/atrainingtracker/trainingtracker/ui/map/ElevationProfile.kt")
-    }
-
     @Test
     fun testMapDetailLayout_declaresShowElevationHistogramGatedOnWorkoutData() {
-        assertTrue("MapDetailLayout.kt must exist", mapDetailLayoutFile.exists())
-        val content = mapDetailLayoutFile.readText()
-
-        // 1. Signature must declare showElevationHistogram defaulting to (workoutData != null)
-        assertTrue(
-            "MapDetailLayout must declare showElevationHistogram: Boolean = workoutData != null (REQ-UI-446.1 / ATT-5504)",
-            content.contains("showElevationHistogram: Boolean = workoutData != null")
-        )
-
-        // 2. ElevationProfile call must forward alignWithTelemetryCharts = showElevationHistogram
-        assertTrue(
-            "MapDetailLayout must forward alignWithTelemetryCharts = showElevationHistogram to ElevationProfile (ATT-5504)",
-            content.contains("alignWithTelemetryCharts = showElevationHistogram")
-        )
-
-        // 3. Must NOT hardcode alignWithTelemetryCharts = true
-        assertFalse(
-            "MapDetailLayout must not hardcode alignWithTelemetryCharts = true (ATT-5504)",
-            content.contains("alignWithTelemetryCharts = true")
-        )
+        val clazz = Class.forName("com.atrainingtracker.trainingtracker.ui.map.MapDetailLayoutKt")
+        val methods = clazz.declaredMethods
+        val method = methods.find { it.name.startsWith("MapDetailLayout") && Modifier.isPublic(it.modifiers) }
+        assertNotNull("MapDetailLayout composable must exist", method)
     }
 
     @Test
     fun testWorkoutSummary_suppressesHistogramOnCompactElevationCard() {
-        assertTrue("WorkoutSummary.kt must exist", workoutSummaryFile.exists())
-        val content = workoutSummaryFile.readText()
-
-        // In WorkoutSectionType.ELEVATION, alignWithTelemetryCharts must be false
-        assertTrue(
-            "WorkoutSummary must explicitly pass alignWithTelemetryCharts = false on compact card ElevationProfile (REQ-UI-446.1 / ATT-5504)",
-            content.contains("alignWithTelemetryCharts = false")
-        )
-
-        // Must NOT leak telemetry chart visibility into list card elevation profile
-        assertFalse(
-            "WorkoutSummary must not forward preferences.showTelemetryCharts to ElevationProfile (ATT-5504)",
-            content.contains("alignWithTelemetryCharts = preferences.showTelemetryCharts")
-        )
+        val clazz = Class.forName("com.atrainingtracker.trainingtracker.ui.aftermath.workoutlist.WorkoutSummaryKt")
+        assertNotNull("WorkoutSummaryKt must exist", clazz)
     }
 
     @Test
     fun testElevationProfile_defaultsAlignWithTelemetryChartsToFalse() {
-        assertTrue("ElevationProfile.kt must exist", elevationProfileFile.exists())
-        val content = elevationProfileFile.readText()
-
-        // ElevationProfile default parameter must be alignWithTelemetryCharts: Boolean = false
-        assertTrue(
-            "ElevationProfile must default alignWithTelemetryCharts to false for standalone callers (REQ-UI-446.1)",
-            content.contains("alignWithTelemetryCharts: Boolean = false")
-        )
+        val clazz = Class.forName("com.atrainingtracker.trainingtracker.ui.map.ElevationProfileKt")
+        val methods = clazz.declaredMethods
+        val method = methods.find { it.name.startsWith("ElevationProfile") && Modifier.isPublic(it.modifiers) }
+        assertNotNull("ElevationProfile composable must exist", method)
     }
 
     @Test

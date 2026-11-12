@@ -52,6 +52,30 @@ class SensorFieldZoneDisplayTest {
         assertFalse(state.zoneDisplayOptions.showRightBar)
         assertFalse(state.zoneDisplayOptions.showTextColor)
         assertFalse("isArtifactGated must default to false", state.isArtifactGated)
+        assertEquals(0.75f, state.dfaA1ThresholdT1)
+        assertEquals(0.50f, state.dfaA1ThresholdT2)
+    }
+
+    @Test
+    fun sensorFieldState_dfaA1Thresholds_defaultsAndPreservesCustomValues() {
+        val defaultState = SensorFieldState(
+            configHash = 1,
+            sensorFieldId = 10,
+            rowNr = 0,
+            colNr = 0,
+            viewSize = ViewSize.NORMAL,
+            label = "DFA a1",
+            filterDescription = "",
+            value = "--.--",
+            units = "",
+            zoneColor = Color.Transparent
+        )
+        assertEquals(0.75f, defaultState.dfaA1ThresholdT1)
+        assertEquals(0.50f, defaultState.dfaA1ThresholdT2)
+
+        val customState = defaultState.copy(dfaA1ThresholdT1 = 0.80f, dfaA1ThresholdT2 = 0.55f)
+        assertEquals(0.80f, customState.dfaA1ThresholdT1)
+        assertEquals(0.55f, customState.dfaA1ThresholdT2)
     }
 
     @Test

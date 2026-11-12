@@ -28,6 +28,12 @@
       "Historical Origin & Commit Trace",
       "Root Reason for Existing Formulation",
       "Preservation of Core Invariants"
+    ],
+    "mandatory_impact_dimensions": [
+      "Affected Requirements",
+      "Affected Architecture Elements",
+      "Verification Impact & Test Surface",
+      "Risk Assessment & Invariants"
     ]
   },
   "paths": {
@@ -38,9 +44,12 @@
     "tests_shard_dir": "docs/tests",
     "allowed_engineering_entries": [
       "analysis",
+      "gates",
       "metrics",
       "plans",
+      "qa_audits",
       "retros",
+      "reviews",
       "test_specs",
       "walkthroughs",
       "test_results",

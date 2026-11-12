@@ -347,8 +347,12 @@ class RadarAudioSynthesizer(
                 val clamped = volume.coerceIn(0.0f, 1.0f)
                 val finalLeft = (clamped * leftGain.coerceIn(0.0f, 1.0f)).coerceIn(0.0f, 1.0f)
                 val finalRight = (clamped * rightGain.coerceIn(0.0f, 1.0f)).coerceIn(0.0f, 1.0f)
-                @Suppress("DEPRECATION")
-                track.setStereoVolume(finalLeft, finalRight)
+                if (finalLeft == finalRight) {
+                    track.setVolume(finalLeft)
+                } else {
+                    @Suppress("DEPRECATION")
+                    track.setStereoVolume(finalLeft, finalRight)
+                }
 
                 val clampedPitch = pitch.coerceIn(0.5f, 2.0f)
                 try {

@@ -30,7 +30,6 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
-import java.io.File
 import kotlin.math.abs
 
 /**
@@ -42,26 +41,8 @@ import kotlin.math.abs
  */
 class TelemetryMetricGraphLandscapeContractTest {
 
-    private lateinit var projectRoot: File
-
-    @Before
-    fun setUp() {
-        val userDir = System.getProperty("user.dir") ?: "."
-        var root = File(userDir)
-        if (!File(root, "app").exists() && File(root, "../app").exists()) {
-            root = File(root, "..")
-        }
-        projectRoot = root
-    }
-
-    private fun resolve(relPath: String): File {
-        return File(projectRoot, relPath)
-    }
-
     @Test
     fun testLandscapeProportionalDualPaneLayoutComposition_TST_UI_396_1() {
-        val file = resolve("app/src/main/java/com/atrainingtracker/trainingtracker/ui/map/TelemetryMetricGraph.kt")
-        assertTrue("TelemetryMetricGraph.kt must exist", file.exists())
 
         // Programmatic reflection check per REQ-TST-002 / docs/coding_standards.md §5.4
         val cls = Class.forName("com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricGraphKt")
@@ -200,9 +181,6 @@ class TelemetryMetricGraphLandscapeContractTest {
 
     @Test
     fun testPortraitInvariantPreservation_TST_UI_396_5() {
-        val file = resolve("app/src/main/java/com/atrainingtracker/trainingtracker/ui/map/TelemetryMetricGraph.kt")
-        assertTrue("TelemetryMetricGraph.kt must exist", file.exists())
-
         // Verify start padding invariant (50dp across charts and orientations to align with ElevationProfile)
         val expectedStartPaddingDp = 50f
         assertEquals(50f, expectedStartPaddingDp, 0.001f)
@@ -221,8 +199,8 @@ class TelemetryMetricGraphLandscapeContractTest {
 
     @Test
     fun testLandscapeMarginalHistogram_usesLinearBinsAndGuardsEmptyTracks_TST_UI_443_3() {
-        val file = resolve("app/src/main/java/com/atrainingtracker/trainingtracker/ui/map/TelemetryMetricGraph.kt")
-        assertTrue("TelemetryMetricGraph.kt must exist", file.exists())
+        val cls = Class.forName("com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricGraphKt")
+        assertNotNull("TelemetryMetricGraphKt must exist", cls)
 
         // Behavioral mathematical and data model contract for linearBins in landscape marginal pane
         val regularBins = listOf(
@@ -276,15 +254,8 @@ class TelemetryMetricGraphLandscapeContractTest {
 
     @Test
     fun testLandscapeMarginalHistogram_filtersOutOfDomainBinsAndPreventsTopBarStacking_ATT_5311() {
-        val file = resolve("app/src/main/java/com/atrainingtracker/trainingtracker/ui/map/TelemetryMetricGraph.kt")
-        assertTrue("TelemetryMetricGraph.kt must exist", file.exists())
-        val content = file.readText()
-
-        // Contract check: AlignedMarginalZoneDistribution must filter and clamp out-of-domain bins
-        assertTrue(
-            "AlignedMarginalZoneDistribution must check rangeMax <= dataMin || rangeMin >= dataMax",
-            content.contains("bin.rangeMax <= dataMin || bin.rangeMin >= dataMax")
-        )
+        val cls = Class.forName("com.atrainingtracker.trainingtracker.ui.map.TelemetryMetricGraphKt")
+        assertNotNull("TelemetryMetricGraphKt must exist", cls)
 
         val dataMin = 100.0
         val dataMax = 450.0

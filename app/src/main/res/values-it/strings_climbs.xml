@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="tuning_climb_formula_title">Formula di categorizzazione salite</string>
+    <string name="tuning_climb_formula_desc">L\'indice FIETS calcola pendenza e quota (predefinito). Strava / Garmin categorizza solo in base al dislivello.</string>
+    <string name="tuning_climb_formula_fiets">Indice FIETS</string>
+    <string name="tuning_climb_formula_strava_garmin">Strava / Garmin</string>
+</resources>

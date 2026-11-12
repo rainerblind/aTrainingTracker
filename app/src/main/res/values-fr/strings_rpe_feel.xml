@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_workout_card_rpe_feel">RPE &amp; Ressenti</string>
+    <string name="workout_rpe_title">Effort perçu (RPE 1–10)</string>
+    <string name="workout_feel_title">Ressenti</string>
+    <string name="srpe_load_badge">sRPE : %d</string>
+
+    <string name="rpe_anchor_1">1 — Très léger</string>
+    <string name="rpe_anchor_2">2 — Léger</string>
+    <string name="rpe_anchor_3">3 — Modéré</string>
+    <string name="rpe_anchor_4">4 — Un peu dur</string>
+    <string name="rpe_anchor_5">5 — Dur</string>
+    <string name="rpe_anchor_6">6 — Dur+</string>
+    <string name="rpe_anchor_7">7 — Très dur</string>
+    <string name="rpe_anchor_8">8 — Très dur+</string>
+    <string name="rpe_anchor_9">9 — Extrêmement dur</string>
+    <string name="rpe_anchor_10">10 — Effort maximal</string>
+
+    <string name="feel_anchor_1">Très mauvais</string>
+    <string name="feel_anchor_2">Mauvais</string>
+    <string name="feel_anchor_3">Normal</string>
+    <string name="feel_anchor_4">Bien</string>
+    <string name="feel_anchor_5">Super</string>
+</resources>

@@ -34,6 +34,7 @@ enum class WorkoutDisplayContext {
  * and detailed aftermath views (REQ-UI-255 / ATT-2176).
  */
 enum class WorkoutSectionType(@StringRes val titleRes: Int) {
+    RPE_AND_FEEL(R.string.settings_workout_card_rpe_feel),
     DETAILS(R.string.workout_detail_section_details),
     DESCRIPTION(R.string.settings_workout_card_description),
     EXTREMA(R.string.settings_workout_card_extrema),
@@ -49,6 +50,7 @@ enum class WorkoutSectionType(@StringRes val titleRes: Int) {
 
     companion object {
         val DEFAULT_ORDER: List<WorkoutSectionType> = listOf(
+            RPE_AND_FEEL,
             DETAILS,
             DESCRIPTION,
             EXTREMA,
@@ -68,9 +70,8 @@ enum class WorkoutSectionType(@StringRes val titleRes: Int) {
          * Falls back safely to [DEFAULT_ORDER] if the string is blank or invalid.
          * Appends any missing enum values to ensure self-healing completeness.
          *
-         * Backwards-compatible migration for DETAILS (REQ-UI-499.2 / ATT-6213):
-         * If DETAILS is not in the persisted list, inserts DETAILS at index 1 if PHOTOS
-         * was at index 0, or at index 0 otherwise.
+         * Backwards-compatible migration for RPE_AND_FEEL (ATT-6879) and DETAILS (REQ-UI-499.2 / ATT-6213):
+         * Inserts RPE_AND_FEEL at index 0 if absent, and inserts DETAILS if absent.
          */
         fun fromSerializedString(serialized: String?): List<WorkoutSectionType> {
             if (serialized.isNullOrBlank()) return DEFAULT_ORDER
@@ -93,9 +94,15 @@ enum class WorkoutSectionType(@StringRes val titleRes: Int) {
                 parsed
             }
 
+            val withRpeFeel = if (!withDetails.contains(RPE_AND_FEEL)) {
+                listOf(RPE_AND_FEEL) + withDetails
+            } else {
+                withDetails
+            }
+
             // Append any missing enum values to maintain self-healing complete list
-            val missing = values().filter { !withDetails.contains(it) }
-            return withDetails + missing
+            val missing = values().filter { !withRpeFeel.contains(it) }
+            return withRpeFeel + missing
         }
 
         /**

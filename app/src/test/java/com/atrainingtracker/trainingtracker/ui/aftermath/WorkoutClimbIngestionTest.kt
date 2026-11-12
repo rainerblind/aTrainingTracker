@@ -29,6 +29,7 @@ import com.atrainingtracker.trainingtracker.climbs.Climb
 import com.atrainingtracker.trainingtracker.climbs.ClimbCategory
 import com.atrainingtracker.trainingtracker.climbs.LiveClimbsRepository
 import com.atrainingtracker.trainingtracker.database.ClimbsDatabaseManager
+import com.atrainingtracker.trainingtracker.database.ElevationCacheDatabaseManager
 import com.atrainingtracker.trainingtracker.database.WorkoutSamplesDatabaseManager
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
 import com.atrainingtracker.trainingtracker.ui.map.PathPoint
@@ -60,6 +61,7 @@ class WorkoutClimbIngestionTest {
     private val mockSamplesDb = mockk<WorkoutSamplesDatabaseManager>(relaxed = true)
     private val mockClimbsDb = mockk<ClimbsDatabaseManager>(relaxed = true)
     private val mockLiveClimbsRepo = mockk<LiveClimbsRepository>(relaxed = true)
+    private val mockElevationCache = mockk<ElevationCacheDatabaseManager>(relaxed = true)
     private lateinit var repository: WorkoutRepository
 
     @Before
@@ -75,7 +77,9 @@ class WorkoutClimbIngestionTest {
         every { Log.d(any<String>(), any<String>()) } returns 0
         every { Log.i(any<String>(), any<String>()) } returns 0
         every { Log.w(any<String>(), any<String>()) } returns 0
+        every { Log.w(any<String>(), any<String>(), any<Throwable>()) } returns 0
         every { Log.e(any<String>(), any<String>()) } returns 0
+        every { Log.e(any<String>(), any<String>(), any<Throwable>()) } returns 0
 
         mockkConstructor(IntentFilter::class)
         every { anyConstructed<IntentFilter>().addAction(any()) } returns Unit
@@ -97,6 +101,8 @@ class WorkoutClimbIngestionTest {
 
         ClimbsDatabaseManager.resetForTesting(mockClimbsDb)
         LiveClimbsRepository.resetForTesting(mockLiveClimbsRepo)
+        ElevationCacheDatabaseManager.resetForTesting(mockElevationCache)
+        every { mockElevationCache.getElevation(any(), any(), any()) } returns null
 
         val constructor = WorkoutRepository::class.java.getDeclaredConstructor(Application::class.java)
         constructor.isAccessible = true
@@ -110,6 +116,7 @@ class WorkoutClimbIngestionTest {
         WorkoutRepository.resetForTesting(null)
         ClimbsDatabaseManager.resetForTesting(null)
         LiveClimbsRepository.resetForTesting(null)
+        ElevationCacheDatabaseManager.resetForTesting(null)
         unmockkAll()
     }
 
@@ -175,6 +182,33 @@ class WorkoutClimbIngestionTest {
         val resultIds = repository.extractAndPersistClimbsFromWorkout(workoutId)
 
         assertTrue("Result IDs should be empty for flat track", resultIds.isEmpty())
+        coVerify(exactly = 0) {
+            mockClimbsDb.insertClimbsWithDeduplicationBatch(any(), any())
+        }
+    }
+
+    @Test
+    fun testWorkoutClimbIngestion_rejectsBarometerThermalDriftViaDemGroundTruth() = runBlocking {
+        // REQ-CLM-009.2 / TST-CLM-009.2:
+        // A 1000m commute track with +50m barometric drift (from 400m to 450m, 5% grade),
+        // but DEM ground truth shows it's actually flat or downhill (start 458m -> end 452m = -6m gain).
+        val workoutId = 45L
+        val points = mutableListOf<PathPoint>()
+        for (i in 0..10) {
+            val dist = i * 100.0
+            val alt = 400.0 + (i * 5.0) // 50m barometric gain
+            points.add(PathPoint(distance = dist, latLng = LatLng(48.65 + (i * 0.001), 9.05), altitude = alt))
+        }
+
+        // Start elevation in DEM is 458m, end elevation is 452m (downhill!)
+        every { mockElevationCache.getElevation(48.65, 9.05, any()) } returns 458.0
+        every { mockElevationCache.getElevation(48.66, 9.05, any()) } returns 452.0
+
+        coEvery { repository.getWorkoutTrackPoints(workoutId, TrackType.BEST) } returns points
+
+        val resultIds = repository.extractAndPersistClimbsFromWorkout(workoutId)
+
+        assertTrue("Phantom thermal drift climb must be rejected by DEM validation", resultIds.isEmpty())
         coVerify(exactly = 0) {
             mockClimbsDb.insertClimbsWithDeduplicationBatch(any(), any())
         }

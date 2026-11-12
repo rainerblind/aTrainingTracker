@@ -67,6 +67,33 @@ try:
 except ImportError:
     HAS_PYQT6 = False
 
+# --- Simulator module imports (tools/ble_hr_simulator.py & tools/ble_radar_simulator.py) ---
+try:
+    from tools.ble_hr_simulator import RrSynthesizer
+    from tools.ble_radar_simulator import (
+        RadarKinematicsEngine, RadarPayloadBuilder, RadarLightMode,
+        RadarTargetState, ThreatLevel, VehicleSizeCategory, LaneState,
+        compute_advertising_pdu_size,
+    )
+except ImportError:
+    try:
+        from ble_hr_simulator import RrSynthesizer
+        from ble_radar_simulator import (
+            RadarKinematicsEngine, RadarPayloadBuilder, RadarLightMode,
+            RadarTargetState, ThreatLevel, VehicleSizeCategory, LaneState,
+            compute_advertising_pdu_size,
+        )
+    except ImportError:
+        RrSynthesizer = None
+        RadarKinematicsEngine = None
+        RadarPayloadBuilder = None
+        RadarLightMode = None
+        RadarTargetState = None
+        ThreatLevel = None
+        VehicleSizeCategory = None
+        LaneState = None
+        compute_advertising_pdu_size = None
+
 
 EARTH_RADIUS_METERS = 6371000.0
 
@@ -423,11 +450,60 @@ def build_power_payload(watts: int, cadence: int, cumulative_revs: int = 0, even
     crank_time_bytes = list((event_time_1024 % 65536).to_bytes(2, byteorder='little'))
     return flags_bytes + power_bytes + crank_rev_bytes + crank_time_bytes
 
-def build_hr_payload(bpm: int) -> List[int]:
-    """Generates 2-byte BLE Heart Rate Measurement payload (UUID 0x2A37)."""
-    flags = 0x00  # UINT8 format
+def compute_auto_hrv_params(bpm: float) -> Tuple[float, float]:
+    """
+    Computes intensity-coupled DFA alpha-1 and rMSSD (ms) based on replayed TCX HR (REQ-SIM-003.1).
+    - Alpha-1 curve:
+        bpm <= 120: alpha-1 = 1.05
+        120 < bpm <= 145: linearly interpolated from 1.05 to 0.75 (aerobic HRVT1 threshold at 145)
+        145 < bpm <= 165: linearly interpolated from 0.75 to 0.50 (anaerobic HRVT2 threshold at 165)
+        bpm > 165: alpha-1 = 0.50
+    - rMSSD curve:
+        bpm <= 120: rmssd = 60.0 ms
+        120 < bpm < 170: linearly interpolated from 60.0 ms down to 10.0 ms
+        bpm >= 170: rmssd = 10.0 ms
+    Returns (target_alpha1, target_rmssd_ms).
+    """
+    bpm_val = float(bpm)
+    if bpm_val <= 120.0:
+        a1 = 1.05
+    elif bpm_val <= 145.0:
+        frac = (bpm_val - 120.0) / 25.0
+        a1 = 1.05 - frac * 0.30
+    elif bpm_val <= 165.0:
+        frac = (bpm_val - 145.0) / 20.0
+        a1 = 0.75 - frac * 0.25
+    else:
+        a1 = 0.50
+
+    if bpm_val <= 120.0:
+        rmssd = 60.0
+    elif bpm_val >= 170.0:
+        rmssd = 10.0
+    else:
+        frac = (bpm_val - 120.0) / 50.0
+        rmssd = 60.0 - frac * 50.0
+
+    return round(a1, 3), round(rmssd, 1)
+
+
+def build_hr_payload(bpm: int, rr_raw_list: Optional[List[int]] = None, enable_rr: bool = True) -> List[int]:
+    """
+    Constructs BLE 0x2A37 Heart Rate Measurement payload bytes (REQ-SIM-003.1).
+    When enable_rr is True and rr_raw_list is non-empty, sets Bit 4 (0x10) and appends
+    little-endian uint16 values (1/1024s units). When enable_rr is False or list is empty,
+    emits flags=0x00 and 8-bit BPM only.
+    """
     bpm_clamped = max(0, min(255, int(bpm)))
-    return [flags, bpm_clamped]
+    if not enable_rr or not rr_raw_list:
+        return [0x00, bpm_clamped]
+
+    payload = [0x10, bpm_clamped]
+    for raw in rr_raw_list:
+        raw_clamped = max(0, min(65535, int(raw)))
+        payload.append(raw_clamped & 0xFF)
+        payload.append((raw_clamped >> 8) & 0xFF)
+    return payload
 
 def build_battery_payload(level: int) -> List[int]:
     """Generates 1-byte BLE Battery Level payload (UUID 0x2A19), clamped to 0-100."""
@@ -462,6 +538,12 @@ BATTERY_LEVEL_CHARACTERISTIC_UUID = '00002a19-0000-1000-8000-00805f9b34fb'
 
 DEVICE_INFO_SERVICE_UUID = '0000180a-0000-1000-8000-00805f9b34fb'
 MANUFACTURER_NAME_UUID = '00002a29-0000-1000-8000-00805f9b34fb'
+
+# Garmin Varia Primary Radar Service & Characteristics (REQ-SIM-003.3)
+RADAR_SERVICE_UUID = '6a4e3200-667b-11e3-949a-0800200c9a66'
+RADAR_LIGHT_CONTROL_UUID = '6a4e3202-667b-11e3-949a-0800200c9a66'
+RADAR_V1_CHARACTERISTIC_UUID = '6a4e3203-667b-11e3-949a-0800200c9a66'
+RADAR_V2_CHARACTERISTIC_UUID = '6a4e3204-667b-11e3-949a-0800200c9a66'
 
 
 @dataclass
@@ -761,28 +843,149 @@ if HAS_DBUS:
             return dbus.Array([dbus.Byte(b) for b in self.value], signature='y')
 
     class HeartRateMeasurementCharacteristic(DBusCharacteristic):
-        def __init__(self, bus, index, service):
+        def __init__(self, bus, index, service, enable_rr: bool = True, hrv_regime: str = 'auto', synthesizer=None):
             super().__init__(bus, index, HEART_RATE_MEASUREMENT_UUID, ['notify'], service)
             self.notifying = False
             self.bpm = 0
+            self.enable_rr = bool(enable_rr)
+            self.hrv_mode = hrv_regime if hrv_regime in ('auto', 'aerobic', 'threshold', 'anaerobic') else 'auto'
+            self.synthesizer = synthesizer if synthesizer is not None else (RrSynthesizer(bpm=135, rmssd=35.0, regime='aerobic') if RrSynthesizer else None)
+            self.current_a1 = 1.05
+            self.current_rmssd = 35.0
+
+        def set_hrv_mode(self, mode: str):
+            if mode in ('auto', 'aerobic', 'threshold', 'anaerobic'):
+                self.hrv_mode = mode
+                if self.synthesizer and mode != 'auto' and hasattr(RrSynthesizer, 'REGIMES') and mode in RrSynthesizer.REGIMES:
+                    self.synthesizer.set_regime(mode)
+                    self.current_a1 = RrSynthesizer.REGIMES[mode]['target_a1']
+                    self.current_rmssd = self.synthesizer.rmssd
+
+        def inject_artifact(self, kind: str):
+            if self.synthesizer:
+                self.synthesizer.inject_artifact(kind)
 
         def update_values(self, bpm: int):
             self.bpm = bpm
+            rr_raw = []
+            if self.enable_rr and self.synthesizer:
+                self.synthesizer.set_bpm(self.bpm)
+                if self.hrv_mode == 'auto':
+                    a1, rmssd = compute_auto_hrv_params(self.bpm)
+                    self.current_a1 = a1
+                    self.current_rmssd = rmssd
+                    self.synthesizer.set_rmssd(rmssd)
+                    phi = max(-0.5, min(0.9, (a1 - 0.5) * 1.5 - 0.2))
+                    self.synthesizer.phi = phi
+                elif hasattr(RrSynthesizer, 'REGIMES') and self.hrv_mode in RrSynthesizer.REGIMES:
+                    self.current_a1 = RrSynthesizer.REGIMES[self.hrv_mode]['target_a1']
+                    self.current_rmssd = self.synthesizer.rmssd
+
+                if self.synthesizer.gap_ticks_remaining > 0:
+                    self.synthesizer.tick_1hz(1000.0)
+                    return
+                rr_raw = self.synthesizer.tick_1hz(1000.0)
+
             if self.notifying:
-                payload = build_hr_payload(self.bpm)
+                payload = build_hr_payload(self.bpm, rr_raw, enable_rr=self.enable_rr)
                 val = dbus.Array([dbus.Byte(b) for b in payload], signature='y')
                 self.PropertiesChanged(GATT_CHRC_IFACE, {'Value': val}, [])
 
         @dbus.service.method(GATT_CHRC_IFACE)
         def StartNotify(self):
             self.notifying = True
-            payload = build_hr_payload(self.bpm)
+            rr_raw = []
+            if self.enable_rr and self.synthesizer:
+                rr_raw = self.synthesizer.tick_1hz(1000.0)
+            payload = build_hr_payload(self.bpm, rr_raw, enable_rr=self.enable_rr)
             val = dbus.Array([dbus.Byte(b) for b in payload], signature='y')
             self.PropertiesChanged(GATT_CHRC_IFACE, {'Value': val}, [])
 
         @dbus.service.method(GATT_CHRC_IFACE)
         def StopNotify(self):
             self.notifying = False
+
+    class RadarLightControlCharacteristic(DBusCharacteristic):
+        # UUID 6a4e3202: Bidirectional Tail Light Control (REQ-SIM-003.3)
+        def __init__(self, bus, index, service, kinematics_engine: Optional[Any] = None,
+                     on_mode_changed: Optional[Callable[[int], None]] = None):
+            super().__init__(bus, index, RADAR_LIGHT_CONTROL_UUID,
+                             ['read', 'write', 'write-without-response'], service)
+            self.engine = kinematics_engine
+            self.on_mode_changed = on_mode_changed
+
+        @dbus.service.method(GATT_CHRC_IFACE, in_signature='a{sv}', out_signature='ay')
+        def ReadValue(self, options):
+            mode = self.engine.light_mode if self.engine else 0x01
+            return dbus.Array([dbus.Byte(mode)], signature='y')
+
+        @dbus.service.method(GATT_CHRC_IFACE, in_signature='aya{sv}')
+        def WriteValue(self, value, options):
+            if not value or len(value) < 1:
+                return
+            mode_byte = int(value[0])
+            if self.engine:
+                success = self.engine.set_light_mode(mode_byte)
+                if success:
+                    val = dbus.Array([dbus.Byte(self.engine.light_mode)], signature='y')
+                    self.PropertiesChanged(GATT_CHRC_IFACE, {'Value': val}, [])
+                    if self.on_mode_changed:
+                        self.on_mode_changed(self.engine.light_mode)
+
+    class RadarV2Characteristic(DBusCharacteristic):
+        # UUID 6a4e3204: High-Resolution 2D Target Stream (REQ-SIM-003.3)
+        def __init__(self, bus, index, service):
+            super().__init__(bus, index, RADAR_V2_CHARACTERISTIC_UUID, ['notify'], service)
+            self.notifying = False
+
+        def send_threats(self, targets):
+            if not self.notifying or not RadarPayloadBuilder:
+                return
+            payload = RadarPayloadBuilder.build_v2_payload(targets)
+            val = dbus.Array([dbus.Byte(b) for b in payload], signature='y')
+            self.PropertiesChanged(GATT_CHRC_IFACE, {'Value': val}, [])
+
+        @dbus.service.method(GATT_CHRC_IFACE)
+        def StartNotify(self):
+            self.notifying = True
+
+        @dbus.service.method(GATT_CHRC_IFACE)
+        def StopNotify(self):
+            self.notifying = False
+
+    class RadarV1Characteristic(DBusCharacteristic):
+        # UUID 6a4e3203: Legacy V1 Threat Stream (REQ-SIM-003.3)
+        def __init__(self, bus, index, service):
+            super().__init__(bus, index, RADAR_V1_CHARACTERISTIC_UUID, ['notify'], service)
+            self.notifying = False
+
+        def send_threats(self, targets):
+            if not self.notifying or not RadarPayloadBuilder:
+                return
+            payload = RadarPayloadBuilder.build_v1_payload(targets)
+            val = dbus.Array([dbus.Byte(b) for b in payload], signature='y')
+            self.PropertiesChanged(GATT_CHRC_IFACE, {'Value': val}, [])
+
+        @dbus.service.method(GATT_CHRC_IFACE)
+        def StartNotify(self):
+            self.notifying = True
+
+        @dbus.service.method(GATT_CHRC_IFACE)
+        def StopNotify(self):
+            self.notifying = False
+
+    class RadarService(DBusService):
+        # Primary Radar Service (UUID 6a4e3200-667b-11e3-949a-0800200c9a66)
+        def __init__(self, bus, index, kinematics_engine: Optional[Any] = None,
+                     on_mode_changed: Optional[Callable[[int], None]] = None):
+            super().__init__(bus, index, RADAR_SERVICE_UUID, True)
+            self.engine = kinematics_engine
+            self.v2_char = RadarV2Characteristic(bus, 0, self)
+            self.v1_char = RadarV1Characteristic(bus, 1, self)
+            self.light_char = RadarLightControlCharacteristic(bus, 2, self, kinematics_engine, on_mode_changed)
+            self.add_characteristic(self.v2_char)
+            self.add_characteristic(self.v1_char)
+            self.add_characteristic(self.light_char)
 
     class BodySensorLocationCharacteristic(DBusCharacteristic):
         def __init__(self, bus, index, service):
@@ -837,9 +1040,9 @@ if HAS_DBUS:
             self.add_characteristic(SensorLocationCharacteristic(bus, 2, self))
 
     class HeartRateService(DBusService):
-        def __init__(self, bus, index):
+        def __init__(self, bus, index, enable_rr: bool = True, hrv_regime: str = 'auto', synthesizer=None):
             super().__init__(bus, index, HEART_RATE_SERVICE_UUID, True)
-            self.meas_char = HeartRateMeasurementCharacteristic(bus, 0, self)
+            self.meas_char = HeartRateMeasurementCharacteristic(bus, 0, self, enable_rr=enable_rr, hrv_regime=hrv_regime, synthesizer=synthesizer)
             self.add_characteristic(self.meas_char)
             self.add_characteristic(BodySensorLocationCharacteristic(bus, 1, self))
 
@@ -856,13 +1059,18 @@ if HAS_DBUS:
 
 
 class BleReplayServer:
-    """Manages combined BlueZ GATT Peripheral and dual advertising for Cycling Power and Heart Rate."""
+    """Manages combined BlueZ GATT Peripheral and dual/triple advertising for Cycling Power, Heart Rate & HRV, and Garmin Varia Radar."""
 
-    def __init__(self, enabled: bool = True, hr_battery: int = 100, power_battery: int = 100):
+    def __init__(self, enabled: bool = True, hr_battery: int = 100, power_battery: int = 100,
+                 enable_rr: bool = True, enable_radar: bool = True, hrv_regime: str = 'auto'):
         self.enabled = enabled and HAS_DBUS
         self.is_advertising = False
         self.is_hr_killed = False
         self.is_power_killed = False
+        self.is_radar_killed = False
+        self.enable_rr = bool(enable_rr)
+        self.enable_radar = bool(enable_radar)
+        self.hrv_regime = hrv_regime
         self.hr_battery = max(0, min(100, int(hr_battery)))
         self.power_battery = max(0, min(100, int(power_battery)))
         self.current_watts = 0
@@ -871,22 +1079,45 @@ class BleReplayServer:
         self.cumulative_crank_revs = 0
         self.last_crank_event_time = 0
 
+        self.radar_engine = RadarKinematicsEngine(tick_rate_hz=5.0) if RadarKinematicsEngine else None
+        self.rr_synthesizer = RrSynthesizer(bpm=135, rmssd=35.0, regime=self.hrv_regime if self.hrv_regime != 'auto' else 'aerobic') if RrSynthesizer else None
+        self.current_hrv_a1 = 1.05
+        self.current_hrv_rmssd = 35.0
+        self.hrv_mode = self.hrv_regime
+        self.on_light_mode_changed: Optional[Callable[[int], None]] = None
+
         self.bus = None
         self.adapter = None
         self.app = None
         self.cp_service = None
         self.hr_service = None
+        self.radar_service = None
         self.cp_battery_service = None
         self.hr_battery_service = None
         self.ad_pwr = None
         self.ad_hrm = None
+        self.ad_radar = None
         self.ad_manager = None
         self.service_manager = None
         self.loop = None
         self.loop_thread = None
+        self._radar_running = False
+        self._radar_timer_thread = None
+
+    def _start_radar_ticker(self):
+        """Starts background 5 Hz ticker for radar kinematics progression (REQ-SIM-003.4)."""
+        if self.enable_radar and self.radar_engine and not self._radar_running:
+            self._radar_running = True
+            def radar_worker():
+                while self._radar_running:
+                    time.sleep(0.2)
+                    self.tick_radar(0.2)
+            self._radar_timer_thread = threading.Thread(target=radar_worker, daemon=True)
+            self._radar_timer_thread.start()
 
     def start(self):
-        """Starts advertising BLE services over BlueZ D-Bus."""
+        """Starts advertising BLE services over BlueZ D-Bus and launches 5 Hz radar ticker."""
+        self._start_radar_ticker()
         if not self.enabled:
             return
         try:
@@ -915,7 +1146,7 @@ class BleReplayServer:
             # Create GATT application
             self.app = DBusApplication(self.bus)
             self.cp_service = CyclingPowerService(self.bus, 0)
-            self.hr_service = HeartRateService(self.bus, 1)
+            self.hr_service = HeartRateService(self.bus, 1, enable_rr=self.enable_rr, hrv_regime=self.hrv_regime, synthesizer=self.rr_synthesizer)
             self.app.add_service(self.cp_service)
             self.app.add_service(self.hr_service)
             self.app.add_service(DeviceInfoService(self.bus, 2))
@@ -924,9 +1155,15 @@ class BleReplayServer:
             self.app.add_service(self.cp_battery_service)
             self.app.add_service(self.hr_battery_service)
 
-            # Create Advertisements: ATT-Pwr (1818, 180f) and ATT-HRM (180d, 180f)
+            if self.enable_radar and self.radar_engine:
+                self.radar_service = RadarService(self.bus, 5, self.radar_engine, on_mode_changed=self._handle_light_mode_changed)
+                self.app.add_service(self.radar_service)
+
+            # Create Advertisements: ATT-Pwr (1818, 180f), ATT-HRM (180d, 180f) and VariaSim
             self.ad_pwr = DBusAdvertisement(self.bus, 0, 'peripheral', ['1818', '180f'], 'ATT-Pwr')
             self.ad_hrm = DBusAdvertisement(self.bus, 1, 'peripheral', ['180d', '180f'], 'ATT-HRM')
+            if self.enable_radar:
+                self.ad_radar = DBusAdvertisement(self.bus, 2, 'peripheral', [RADAR_SERVICE_UUID], 'VariaSim')
 
             # Register Application
             self.service_manager.RegisterApplication(
@@ -946,6 +1183,12 @@ class BleReplayServer:
                 reply_handler=lambda: None,
                 error_handler=lambda e: print(f"[!] Warning: BlueZ RegisterAdvertisement (ATT-HRM) error: {e}")
             )
+            if self.ad_radar:
+                self.ad_manager.RegisterAdvertisement(
+                    self.ad_radar.get_path(), {},
+                    reply_handler=lambda: None,
+                    error_handler=lambda e: print(f"[!] Warning: BlueZ RegisterAdvertisement (VariaSim) error: {e}")
+                )
 
             self.is_advertising = True
 
@@ -964,11 +1207,86 @@ class BleReplayServer:
 
             self.loop_thread = threading.Thread(target=glib_worker, daemon=True)
             self.loop_thread.start()
-            print("[*] BLE GATT server active: Advertising 'ATT-Pwr' (0x1818, 0x180F) and 'ATT-HRM' (0x180D, 0x180F).")
+            radar_msg = ", 'VariaSim' (Radar 0x3200)" if self.enable_radar else ""
+            print(f"[*] BLE GATT server active: Advertising 'ATT-Pwr' (0x1818, 0x180F), 'ATT-HRM' (0x180D, 0x180F){radar_msg}.")
 
         except Exception as e:
             print(f"[!] Warning: BlueZ DBus error ({e}). Continuing in mock BLE mode.")
             self.is_advertising = False
+
+    def _handle_light_mode_changed(self, mode: int):
+        if self.on_light_mode_changed:
+            try:
+                self.on_light_mode_changed(mode)
+            except Exception:
+                pass
+
+    def tick_radar(self, dt: float = 0.2):
+        if not self.enable_radar or not self.radar_engine:
+            return
+        self.radar_engine.tick(dt)
+        if not self.is_radar_killed and not self.radar_engine.is_starving() and self.radar_service:
+            targets = self.radar_engine.targets
+            self.radar_service.v2_char.send_threats(targets)
+            self.radar_service.v1_char.send_threats(targets)
+
+    def kill_radar(self):
+        """Kills Garmin Varia Radar simulation: unregisters advertisement and silences notifications."""
+        self.is_radar_killed = True
+        if self.ad_manager and self.ad_radar:
+            try:
+                self.ad_manager.UnregisterAdvertisement(self.ad_radar.get_path())
+            except Exception:
+                pass
+        self._disconnect_clients()
+
+    def revive_radar(self):
+        """Revives Garmin Varia Radar simulation: re-registers advertisement and resumes notifications."""
+        self.is_radar_killed = False
+        if self.ad_manager and self.ad_radar and self.is_advertising:
+            try:
+                self.ad_manager.RegisterAdvertisement(
+                    self.ad_radar.get_path(), {},
+                    reply_handler=lambda: None,
+                    error_handler=lambda e: None
+                )
+            except Exception:
+                pass
+
+    def toggle_radar(self) -> bool:
+        if self.is_radar_killed:
+            self.revive_radar()
+        else:
+            self.kill_radar()
+        return self.is_radar_killed
+
+    def set_hrv_mode(self, mode: str):
+        """Sets HRV synthesis regime in both live BlueZ and mock modes (REQ-SIM-003.2)."""
+        if mode in ('auto', 'aerobic', 'threshold', 'anaerobic'):
+            self.hrv_regime = mode
+            self.hrv_mode = mode
+            if self.rr_synthesizer and mode != 'auto' and hasattr(RrSynthesizer, 'REGIMES') and mode in RrSynthesizer.REGIMES:
+                self.rr_synthesizer.set_regime(mode)
+                self.current_hrv_a1 = RrSynthesizer.REGIMES[mode]['target_a1']
+                self.current_hrv_rmssd = self.rr_synthesizer.rmssd
+            elif mode == 'auto':
+                target_bpm = self.current_hr if self.current_hr > 0 else 135
+                a1, rmssd = compute_auto_hrv_params(target_bpm)
+                self.current_hrv_a1 = a1
+                self.current_hrv_rmssd = rmssd
+                if self.rr_synthesizer:
+                    self.rr_synthesizer.set_rmssd(rmssd)
+                    phi = max(-0.5, min(0.9, (a1 - 0.5) * 1.5 - 0.2))
+                    self.rr_synthesizer.phi = phi
+            if self.hr_service and self.hr_service.meas_char:
+                self.hr_service.meas_char.set_hrv_mode(mode)
+
+    def inject_hrv_artifact(self, kind: str):
+        """Injects HRV artifact or RF gap across simulator and GATT char (REQ-SIM-003.2)."""
+        if self.rr_synthesizer:
+            self.rr_synthesizer.inject_artifact(kind)
+        if self.hr_service and self.hr_service.meas_char:
+            self.hr_service.meas_char.inject_artifact(kind)
 
     def _disconnect_clients(self):
         """Attempts to disconnect connected BlueZ client devices to simulate hard signal drop."""
@@ -1067,6 +1385,19 @@ class BleReplayServer:
         self.current_cadence = cadence
         self.current_hr = hr_bpm
 
+        if self.enable_rr and self.rr_synthesizer:
+            self.rr_synthesizer.set_bpm(self.current_hr)
+            if self.hrv_mode == 'auto':
+                a1, rmssd = compute_auto_hrv_params(self.current_hr)
+                self.current_hrv_a1 = a1
+                self.current_hrv_rmssd = rmssd
+                self.rr_synthesizer.set_rmssd(rmssd)
+                phi = max(-0.5, min(0.9, (a1 - 0.5) * 1.5 - 0.2))
+                self.rr_synthesizer.phi = phi
+            elif hasattr(RrSynthesizer, 'REGIMES') and self.hrv_mode in RrSynthesizer.REGIMES:
+                self.current_hrv_a1 = RrSynthesizer.REGIMES[self.hrv_mode]['target_a1']
+                self.current_hrv_rmssd = self.rr_synthesizer.rmssd
+
         if cadence > 0:
             revs_per_sec = cadence / 60.0
             self.cumulative_crank_revs = (self.cumulative_crank_revs + int(round(revs_per_sec))) % 65536
@@ -1084,6 +1415,7 @@ class BleReplayServer:
 
     def stop(self):
         """Unregisters advertisements and releases BlueZ GATT resources."""
+        self._radar_running = False
         if self.ad_manager:
             if self.ad_pwr:
                 try:
@@ -1093,6 +1425,11 @@ class BleReplayServer:
             if self.ad_hrm:
                 try:
                     self.ad_manager.UnregisterAdvertisement(self.ad_hrm.get_path())
+                except Exception:
+                    pass
+            if self.ad_radar:
+                try:
+                    self.ad_manager.UnregisterAdvertisement(self.ad_radar.get_path())
                 except Exception:
                     pass
         if self.loop:
@@ -1351,7 +1688,8 @@ class ScheduledTriggerManager:
     def __init__(self, ble: BleReplayServer, gps: AdbGpsInjector,
                  kill_hr_at: Optional[float] = None, revive_hr_at: Optional[float] = None,
                  kill_power_at: Optional[float] = None, revive_power_at: Optional[float] = None,
-                 kill_gps_at: Optional[float] = None, revive_gps_at: Optional[float] = None):
+                 kill_gps_at: Optional[float] = None, revive_gps_at: Optional[float] = None,
+                 kill_radar_at: Optional[float] = None, revive_radar_at: Optional[float] = None):
         self.ble = ble
         self.gps = gps
         self.kill_hr_at = kill_hr_at
@@ -1360,6 +1698,8 @@ class ScheduledTriggerManager:
         self.revive_power_at = revive_power_at
         self.kill_gps_at = kill_gps_at
         self.revive_gps_at = revive_gps_at
+        self.kill_radar_at = kill_radar_at
+        self.revive_radar_at = revive_radar_at
 
         self._hr_killed_triggered = False
         self._hr_revived_triggered = False
@@ -1367,6 +1707,8 @@ class ScheduledTriggerManager:
         self._power_revived_triggered = False
         self._gps_killed_triggered = False
         self._gps_revived_triggered = False
+        self._radar_killed_triggered = False
+        self._radar_revived_triggered = False
 
     def evaluate(self, time_sec: float):
         if self.kill_hr_at is not None and not self._hr_killed_triggered and time_sec >= self.kill_hr_at:
@@ -1398,6 +1740,16 @@ class ScheduledTriggerManager:
             self.gps.revive()
             self._gps_revived_triggered = True
             print(f"[*] Scheduled event: GPS revived at {format_duration(time_sec)}")
+
+        if self.kill_radar_at is not None and not self._radar_killed_triggered and time_sec >= self.kill_radar_at:
+            self.ble.kill_radar()
+            self._radar_killed_triggered = True
+            print(f"[*] Scheduled event: Radar killed at {format_duration(time_sec)}")
+
+        if self.revive_radar_at is not None and not self._radar_revived_triggered and time_sec >= self.revive_radar_at:
+            self.ble.revive_radar()
+            self._radar_revived_triggered = True
+            print(f"[*] Scheduled event: Radar revived at {format_duration(time_sec)}")
 
 
 # ==============================================================================
@@ -1518,12 +1870,13 @@ if HAS_PYQT6:
             self.trigger_mgr = trigger_mgr
 
             self.setWindowTitle("aTrainingTracker - TCX Workout Replay & Telemetry Simulator")
-            self.resize(880, 750)
+            self.resize(880, 850)
             self.setup_ui()
             self.apply_theme()
 
             # Wire engine update callback
             self.engine.on_update = self.on_engine_update
+            self.ble.on_light_mode_changed = lambda mode: self._update_radar_ui()
 
             # Playback ticker timer (runs at 10 Hz)
             self.timer = QTimer(self)
@@ -1749,6 +2102,160 @@ if HAS_PYQT6:
             battery_box.addLayout(battery_cols)
             main_layout.addWidget(battery_frame)
 
+            # --- 5a. HRV & Beat-to-Beat RR Synthesis (0x2A37 Bit 4) (ATT-6677 / REQ-SIM-003.1) ---
+            hrv_frame = QFrame()
+            hrv_frame.setStyleSheet("""
+                QFrame {
+                    background-color: #1A1A1A;
+                    border: 1px solid #2D2D2D;
+                    border-radius: 10px;
+                }
+            """)
+            hrv_box = QVBoxLayout(hrv_frame)
+            hrv_box.setSpacing(8)
+            hrv_box.setContentsMargins(14, 10, 14, 10)
+
+            hrv_hdr_layout = QHBoxLayout()
+            lbl_hrv_header = QLabel("HRV BEAT-TO-BEAT RR SYNTHESIS (0x2A37 Bit 4)")
+            lbl_hrv_header.setFont(QFont("Inter", 9, QFont.Weight.Bold))
+            lbl_hrv_header.setStyleSheet("color: #888888; border: none; background: transparent;")
+            hrv_hdr_layout.addWidget(lbl_hrv_header)
+            hrv_hdr_layout.addStretch()
+
+            lbl_reg_title = QLabel("Regime:")
+            lbl_reg_title.setStyleSheet("color: #AAAAAA; font-size: 10px; border: none; background: transparent;")
+            self.combo_hrv_regime = QComboBox()
+            self.combo_hrv_regime.setFixedHeight(26)
+            self.combo_hrv_regime.addItems(["Auto-HRV", "Aerobic (a1=1.00)", "Threshold (a1=0.70)", "Anaerobic (a1=0.45)"])
+            self.combo_hrv_regime.currentIndexChanged.connect(self.on_hrv_regime_changed)
+            hrv_hdr_layout.addWidget(lbl_reg_title)
+            hrv_hdr_layout.addWidget(self.combo_hrv_regime)
+            hrv_box.addLayout(hrv_hdr_layout)
+
+            hrv_row = QHBoxLayout()
+            hrv_row.setSpacing(14)
+
+            self.lbl_hrv_rmssd_val = QLabel("35.0 ms")
+            self.lbl_hrv_rmssd_val.setFont(QFont("Monospace", 11, QFont.Weight.Bold))
+            self.lbl_hrv_rmssd_val.setStyleSheet("color: #03DAC6; border: none; background: transparent;")
+
+            self.lbl_hrv_a1_val = QLabel("1.05")
+            self.lbl_hrv_a1_val.setFont(QFont("Monospace", 11, QFont.Weight.Bold))
+            self.lbl_hrv_a1_val.setStyleSheet("color: #BB86FC; border: none; background: transparent;")
+
+            lbl_rmssd_title = QLabel("rMSSD:")
+            lbl_rmssd_title.setStyleSheet("color: #888888; border: none; background: transparent;")
+            lbl_a1_title = QLabel("Target α1:")
+            lbl_a1_title.setStyleSheet("color: #888888; border: none; background: transparent;")
+
+            hrv_row.addWidget(lbl_rmssd_title)
+            hrv_row.addWidget(self.lbl_hrv_rmssd_val)
+            hrv_row.addSpacing(10)
+            hrv_row.addWidget(lbl_a1_title)
+            hrv_row.addWidget(self.lbl_hrv_a1_val)
+            hrv_row.addStretch()
+
+            lbl_art_title = QLabel("Artifacts:")
+            lbl_art_title.setStyleSheet("color: #888888; border: none; background: transparent;")
+            hrv_row.addWidget(lbl_art_title)
+
+            self.btn_art_ectopic = QPushButton("Ectopic")
+            self.btn_art_ectopic.setFixedHeight(24)
+            self.btn_art_ectopic.clicked.connect(lambda: self.ble.inject_hrv_artifact('ectopic'))
+
+            self.btn_art_missed = QPushButton("Missed")
+            self.btn_art_missed.setFixedHeight(24)
+            self.btn_art_missed.clicked.connect(lambda: self.ble.inject_hrv_artifact('missed'))
+
+            self.btn_art_extra = QPushButton("Extra")
+            self.btn_art_extra.setFixedHeight(24)
+            self.btn_art_extra.clicked.connect(lambda: self.ble.inject_hrv_artifact('extra'))
+
+            self.btn_art_gap = QPushButton("RF Gap")
+            self.btn_art_gap.setFixedHeight(24)
+            self.btn_art_gap.clicked.connect(lambda: self.ble.inject_hrv_artifact('gap'))
+
+            hrv_row.addWidget(self.btn_art_ectopic)
+            hrv_row.addWidget(self.btn_art_missed)
+            hrv_row.addWidget(self.btn_art_extra)
+            hrv_row.addWidget(self.btn_art_gap)
+            hrv_box.addLayout(hrv_row)
+            main_layout.addWidget(hrv_frame)
+
+            # --- 5b. Garmin Varia BLE Radar & Tail Light (0x3200) (ATT-6677 / REQ-SIM-003.3) ---
+            radar_frame = QFrame()
+            radar_frame.setStyleSheet("""
+                QFrame {
+                    background-color: #1A1A1A;
+                    border: 1px solid #2D2D2D;
+                    border-radius: 10px;
+                }
+            """)
+            radar_box = QVBoxLayout(radar_frame)
+            radar_box.setSpacing(8)
+            radar_box.setContentsMargins(14, 10, 14, 10)
+
+            radar_hdr_layout = QHBoxLayout()
+            lbl_radar_header = QLabel("GARMIN VARIA BLE RADAR & TAIL LIGHT (0x3200)")
+            lbl_radar_header.setFont(QFont("Inter", 9, QFont.Weight.Bold))
+            lbl_radar_header.setStyleSheet("color: #888888; border: none; background: transparent;")
+            radar_hdr_layout.addWidget(lbl_radar_header)
+            radar_hdr_layout.addStretch()
+
+            self.lbl_radar_light_badge = QLabel("● Light: SOLID (0x01)")
+            self.lbl_radar_light_badge.setFont(QFont("Inter", 9, QFont.Weight.Bold))
+            self.lbl_radar_light_badge.setStyleSheet("color: #FFA726; border: none; background: transparent;")
+            radar_hdr_layout.addWidget(self.lbl_radar_light_badge)
+            radar_box.addLayout(radar_hdr_layout)
+
+            radar_row = QHBoxLayout()
+            radar_row.setSpacing(10)
+
+            self.lbl_radar_status = QLabel("ALL CLEAR (0 targets)")
+            self.lbl_radar_status.setFont(QFont("Inter", 10, QFont.Weight.Bold))
+            self.lbl_radar_status.setStyleSheet("color: #03DAC6; border: none; background: transparent;")
+
+            self.lbl_radar_dist = QLabel("-- m")
+            self.lbl_radar_dist.setFont(QFont("Monospace", 11, QFont.Weight.Bold))
+            self.lbl_radar_dist.setStyleSheet("color: #FFA726; border: none; background: transparent;")
+
+            radar_row.addWidget(self.lbl_radar_status)
+            radar_row.addWidget(self.lbl_radar_dist)
+            radar_row.addStretch()
+
+            self.btn_radar_car = QPushButton("+ Car")
+            self.btn_radar_car.setFixedHeight(24)
+            self.btn_radar_car.clicked.connect(lambda: self.ble.radar_engine.spawn_preset('c') if self.ble.radar_engine else None)
+
+            self.btn_radar_fast = QPushButton("+ Fast")
+            self.btn_radar_fast.setFixedHeight(24)
+            self.btn_radar_fast.clicked.connect(lambda: self.ble.radar_engine.spawn_preset('f') if self.ble.radar_engine else None)
+
+            self.btn_radar_truck = QPushButton("+ Truck")
+            self.btn_radar_truck.setFixedHeight(24)
+            self.btn_radar_truck.clicked.connect(lambda: self.ble.radar_engine.spawn_preset('t') if self.ble.radar_engine else None)
+
+            self.btn_radar_close = QPushButton("+ Close (<1.5m)")
+            self.btn_radar_close.setFixedHeight(24)
+            self.btn_radar_close.clicked.connect(lambda: self.ble.radar_engine.spawn_preset('p') if self.ble.radar_engine else None)
+
+            self.btn_radar_loop = QPushButton("Auto Loop")
+            self.btn_radar_loop.setFixedHeight(24)
+            self.btn_radar_loop.clicked.connect(self.on_toggle_radar_loop)
+
+            self.btn_radar_clear = QPushButton("Clear")
+            self.btn_radar_clear.setFixedHeight(24)
+            self.btn_radar_clear.clicked.connect(lambda: self.ble.radar_engine.spawn_preset('0') if self.ble.radar_engine else None)
+
+            radar_row.addWidget(self.btn_radar_car)
+            radar_row.addWidget(self.btn_radar_fast)
+            radar_row.addWidget(self.btn_radar_truck)
+            radar_row.addWidget(self.btn_radar_close)
+            radar_row.addWidget(self.btn_radar_loop)
+            radar_row.addWidget(self.btn_radar_clear)
+            radar_box.addLayout(radar_row)
+            main_layout.addWidget(radar_frame)
+
             # --- 6. Device Connectivity & Dropout Simulation (ATT-3179 / REQ-TOOL-004) ---
             conn_frame = QFrame()
             conn_frame.setStyleSheet("""
@@ -1809,6 +2316,20 @@ if HAS_PYQT6:
             box_gps.addWidget(self.lbl_status_gps_badge)
             box_gps.addWidget(self.btn_toggle_gps)
             conn_row.addLayout(box_gps)
+
+            conn_row.addSpacing(10)
+
+            # Radar Kill/Revive (ATT-6677)
+            box_radar = QHBoxLayout()
+            self.lbl_status_radar_badge = QLabel("● Radar Active")
+            self.lbl_status_radar_badge.setFont(QFont("Inter", 10, QFont.Weight.Bold))
+            self.lbl_status_radar_badge.setStyleSheet("color: #FFA726; border: none; background: transparent;")
+            self.btn_toggle_radar = QPushButton("Kill Radar")
+            self.btn_toggle_radar.setFixedHeight(28)
+            self.btn_toggle_radar.clicked.connect(self.on_toggle_radar_clicked)
+            box_radar.addWidget(self.lbl_status_radar_badge)
+            box_radar.addWidget(self.btn_toggle_radar)
+            conn_row.addLayout(box_radar)
 
             conn_box.addLayout(conn_row)
             main_layout.addWidget(conn_frame)
@@ -1948,6 +2469,8 @@ if HAS_PYQT6:
 
         def on_timer_tick(self):
             self.tick_counter += 1
+            if self.tick_counter % 2 == 0:
+                self._update_radar_ui()
             # Step engine at 1 Hz intervals (or scaled by multiplier)
             if self.engine.status == "PLAYING" and self.tick_counter % 10 == 0:
                 self.engine.step()
@@ -1980,6 +2503,9 @@ if HAS_PYQT6:
             self.ble.update_telemetry(pt.watts, pt.cadence, pt.hr)
             self.gps.inject_location(pt.lat, pt.lon, pt.ele, pt.speed_mps, pt.bearing, time_sec=pt.time_sec)
 
+            self._update_hrv_ui()
+            self._update_radar_ui()
+
         def _update_battery_label_color(self, label: QLabel, level: int):
             if level <= 5:
                 color = "#CF6679"  # Critical red
@@ -2004,6 +2530,49 @@ if HAS_PYQT6:
 
         def set_pwr_battery_preset(self, val: int):
             self.slider_pwr_battery.setValue(val)
+
+        def on_hrv_regime_changed(self, idx: int):
+            modes = ['auto', 'aerobic', 'threshold', 'anaerobic']
+            if 0 <= idx < len(modes):
+                self.ble.set_hrv_mode(modes[idx])
+                self._update_hrv_ui()
+
+        def on_toggle_radar_loop(self):
+            if self.ble.radar_engine:
+                active = getattr(self.ble.radar_engine, 'country_loop_active', False)
+                self.ble.radar_engine.spawn_preset('l')
+                self.btn_radar_loop.setStyleSheet("background-color: #03DAC6; color: #000;" if not active else "")
+
+        def _update_hrv_ui(self):
+            self.lbl_hrv_rmssd_val.setText(f"{self.ble.current_hrv_rmssd:.1f} ms")
+            self.lbl_hrv_a1_val.setText(f"{self.ble.current_hrv_a1:.2f}")
+
+        def _update_radar_ui(self):
+            if not self.ble.enable_radar or not self.ble.radar_engine:
+                self.lbl_radar_status.setText("RADAR DISABLED")
+                self.lbl_radar_status.setStyleSheet("color: #888888; font-size: 11px;")
+                self.lbl_radar_dist.setText("-- m")
+                return
+
+            eng = self.ble.radar_engine
+            active = [t for t in eng.targets if t.range_m > 0]
+            if not active:
+                self.lbl_radar_status.setText("ALL CLEAR (0 targets)")
+                self.lbl_radar_status.setStyleSheet("color: #03DAC6; font-size: 11px;")
+                self.lbl_radar_dist.setText("-- m")
+            else:
+                closest = min(t.range_m for t in active)
+                is_close_pass = any(abs(t.lateral_m) < 1.5 and t.range_m < 15.0 for t in active)
+                color = "#CF6679" if is_close_pass or closest < 20.0 else "#FFA726"
+                txt = f"{len(active)} VEHICLE{'S' if len(active) > 1 else ''} APPROACHING"
+                if is_close_pass:
+                    txt += " [CLOSE PASS!]"
+                self.lbl_radar_status.setText(txt)
+                self.lbl_radar_status.setStyleSheet(f"color: {color}; font-size: 11px; font-weight: bold;")
+                self.lbl_radar_dist.setText(f"{closest:.1f} m")
+
+            mode_name = RadarLightMode.name_of(eng.light_mode) if RadarLightMode else f"0x{eng.light_mode:02X}"
+            self.lbl_radar_light_badge.setText(f"● Light: {mode_name}")
 
         def _update_connectivity_ui(self):
             if self.ble.is_hr_killed:
@@ -2039,6 +2608,17 @@ if HAS_PYQT6:
                 self.btn_toggle_gps.setText("Kill GPS")
                 self.btn_toggle_gps.setStyleSheet("background-color: #2A2A2A; color: #FFFFFF;")
 
+            if self.ble.is_radar_killed:
+                self.lbl_status_radar_badge.setText("■ Radar Killed")
+                self.lbl_status_radar_badge.setStyleSheet("color: #CF6679; border: none; background: transparent;")
+                self.btn_toggle_radar.setText("Revive Radar")
+                self.btn_toggle_radar.setStyleSheet("background-color: #CF6679; color: #000000; font-weight: bold;")
+            else:
+                self.lbl_status_radar_badge.setText("● Radar Active")
+                self.lbl_status_radar_badge.setStyleSheet("color: #FFA726; border: none; background: transparent;")
+                self.btn_toggle_radar.setText("Kill Radar")
+                self.btn_toggle_radar.setStyleSheet("background-color: #2A2A2A; color: #FFFFFF;")
+
         def on_toggle_hr_clicked(self):
             self.ble.toggle_hr()
             self._update_connectivity_ui()
@@ -2049,6 +2629,10 @@ if HAS_PYQT6:
 
         def on_toggle_gps_clicked(self):
             self.gps.toggle()
+            self._update_connectivity_ui()
+
+        def on_toggle_radar_clicked(self):
+            self.ble.toggle_radar()
             self._update_connectivity_ui()
 
 
@@ -2098,7 +2682,8 @@ def run_headless_cli(engine: ReplayEngine, ble: BleReplayServer, gps: AdbGpsInje
     print("=" * 70)
     print(f"Points: {len(engine.points)} | Duration: {format_duration(engine.total_duration_sec)} | Distance: {engine.total_distance_m / 1000.0:.2f} km")
     print(f"BLE Sensors: ATT-HRM Battery: {ble.hr_battery}% | ATT-Pwr Battery: {ble.power_battery}%")
-    print("Hotkeys: [Space] Play/Pause | [s] Stop | [1,2,5,0] Speed | [h] Toggle HR | [p] Toggle Power | [g] Toggle GPS | [q] Quit\n")
+    print("Hotkeys: [Space] Play/Pause | [s] Stop | [1,2,5,0] Speed | [h] Toggle HR | [p] Toggle Power | [g] Toggle GPS | [r] Toggle Radar")
+    print("         [a] HRV Regime | [e,m,x,j] HRV Artifacts | [c,f,t,k,l,0,w] Radar Presets | [q] Quit\n")
 
     def on_update(pt: TcxPoint):
         if trigger_mgr:
@@ -2141,6 +2726,36 @@ def run_headless_cli(engine: ReplayEngine, ble: BleReplayServer, gps: AdbGpsInje
                 elif k in ('g', 'G'):
                     st = gps.toggle()
                     print(f"\n[*] Hotkey: GPS {'KILLED' if st else 'REVIVED'}")
+                elif k in ('r', 'R'):
+                    st = ble.toggle_radar()
+                    print(f"\n[*] Hotkey: Radar {'KILLED' if st else 'REVIVED'}")
+                elif k in ('a', 'A'):
+                    regimes = ['auto', 'aerobic', 'threshold', 'anaerobic']
+                    cur_idx = regimes.index(ble.hrv_regime) if ble.hrv_regime in regimes else 0
+                    next_reg = regimes[(cur_idx + 1) % len(regimes)]
+                    ble.set_hrv_mode(next_reg)
+                    print(f"\n[*] Hotkey: HRV Mode -> {next_reg}")
+                elif k == 'e':
+                    ble.inject_hrv_artifact('ectopic')
+                    print("\n[*] Hotkey: Injected Ectopic PVC Pair")
+                elif k == 'm':
+                    ble.inject_hrv_artifact('missed')
+                    print("\n[*] Hotkey: Injected Missed Beat")
+                elif k == 'x':
+                    ble.inject_hrv_artifact('extra')
+                    print("\n[*] Hotkey: Injected Extra Beat")
+                elif k in ('j', 'J'):
+                    ble.inject_hrv_artifact('gap')
+                    print("\n[*] Hotkey: Injected RF Gap (3s)")
+                elif k in ('c', 'f', 't', 'k', 'l', '0', 'w') and ble.radar_engine:
+                    if k == 'w':
+                        ble.radar_engine.trigger_watchdog_starvation(4.5)
+                    elif k == '0':
+                        ble.radar_engine.spawn_preset('0')
+                    elif k == 'k':
+                        ble.radar_engine.spawn_preset('p')
+                    else:
+                        ble.radar_engine.spawn_preset(k)
                 elif k in ('q', 'Q', '\x03'):
                     break
 
@@ -2148,15 +2763,29 @@ def run_headless_cli(engine: ReplayEngine, ble: BleReplayServer, gps: AdbGpsInje
                 engine.step()
 
             pt = engine.current_point
-            bar_len = 20
+            bar_len = 16
             filled = int(round(engine.progress_ratio * bar_len))
             bar = "[" + "#" * filled + "-" * (bar_len - filled) + "]"
             hr_s = "OFF" if ble.is_hr_killed else "ON"
             pwr_s = "OFF" if ble.is_power_killed else "ON"
             gps_s = "OFF" if gps.is_killed else "ON"
+
+            hrv_str = ""
+            if ble.enable_rr:
+                hrv_str = f" | HRV:{ble.hrv_mode} (a1={ble.current_hrv_a1:.2f})"
+
+            radar_str = ""
+            if ble.enable_radar and ble.radar_engine:
+                eng = ble.radar_engine
+                active = [t for t in eng.targets if t.range_m > 0]
+                closest = f"{min(t.range_m for t in active):.0f}m" if active else "--"
+                light_n = RadarLightMode.name_of(eng.light_mode) if RadarLightMode else str(eng.light_mode)
+                r_s = "OFF" if ble.is_radar_killed else "ON"
+                radar_str = f" | Rdr:{len(active)}tgt({closest},{light_n},{r_s})"
+
             sys.stdout.write(
                 f"\r{bar} {format_duration(pt.time_sec)} | "
-                f"Pwr:{pt.watts:3d}W ({pwr_s}) | Cad:{pt.cadence:2d} | HR:{pt.hr:3d} ({hr_s}) | "
+                f"Pwr:{pt.watts:3d}W ({pwr_s}) | Cad:{pt.cadence:2d} | HR:{pt.hr:3d} ({hr_s}){hrv_str}{radar_str} | "
                 f"GPS:{gps_s} | {engine.status} ({engine.speed_multiplier:.0f}x)   "
             )
             sys.stdout.flush()
@@ -2190,7 +2819,13 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--revive-power-at", type=float, help="Automatically revive Cycling Power sensor at given workout elapsed seconds")
     parser.add_argument("--kill-gps-at", type=float, help="Automatically kill GPS location injection at given workout elapsed seconds")
     parser.add_argument("--revive-gps-at", type=float, help="Automatically revive GPS location injection at given workout elapsed seconds")
+    parser.add_argument("--kill-radar-at", type=float, help="Automatically kill Garmin Varia Radar simulation at given workout elapsed seconds")
+    parser.add_argument("--revive-radar-at", type=float, help="Automatically revive Garmin Varia Radar simulation at given workout elapsed seconds")
     parser.add_argument("--speed-injection", action=argparse.BooleanOptionalAction, default=True, help="Inject recorded/computed speed into ADB mock location providers (default True, falls back automatically on stock AOSP)")
+    parser.add_argument("--no-rr", action="store_true", help="Disable Beat-to-Beat RR-Interval packing in BLE HR stream (emits legacy flags=0x00)")
+    parser.add_argument("--no-radar", action="store_true", help="Disable Garmin Varia BLE Radar peripheral simulation")
+    parser.add_argument("--radar", action="store_true", default=True, help="Enable Garmin Varia BLE Radar peripheral simulation (default True)")
+    parser.add_argument("--hrv-regime", choices=["auto", "aerobic", "threshold", "anaerobic"], default="auto", help="Initial HRV synthesis regime (default auto)")
     return parser
 
 
@@ -2247,7 +2882,14 @@ def main():
     target_device = args.device or report.device_serial
 
     # Initialize subsystems
-    ble_server = BleReplayServer(enabled=not args.no_ble, hr_battery=args.hr_battery, power_battery=args.power_battery)
+    ble_server = BleReplayServer(
+        enabled=not args.no_ble,
+        hr_battery=args.hr_battery,
+        power_battery=args.power_battery,
+        enable_rr=not args.no_rr,
+        enable_radar=not args.no_radar,
+        hrv_regime=args.hrv_regime
+    )
     ble_server.start()
 
     gps_injector = AdbGpsInjector(enabled=not args.no_gps, device_serial=target_device, agent_mode=args.agent, speed_injection=args.speed_injection)
@@ -2257,7 +2899,8 @@ def main():
         ble=ble_server, gps=gps_injector,
         kill_hr_at=args.kill_hr_at, revive_hr_at=args.revive_hr_at,
         kill_power_at=args.kill_power_at, revive_power_at=args.revive_power_at,
-        kill_gps_at=args.kill_gps_at, revive_gps_at=args.revive_gps_at
+        kill_gps_at=args.kill_gps_at, revive_gps_at=args.revive_gps_at,
+        kill_radar_at=args.kill_radar_at, revive_radar_at=args.revive_radar_at
     )
 
     # Clean exit teardown registration

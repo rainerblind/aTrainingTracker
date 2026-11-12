@@ -59,6 +59,7 @@ import com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.Afterm
 import com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.AmoledBatterySaverSection
 import com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.ClusterTuningSection
 import com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.CockpitTypographySection
+import com.atrainingtracker.trainingtracker.climbs.ClimbScoringFormula
 import com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.NavigationSection
 import com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.PhysiologyModelsSection
 import com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.SensorsGpsFilterSection
@@ -101,6 +102,7 @@ fun AdvancedTuningScreen(
     var elevationSmoothingSigmaMeters by remember { mutableFloatStateOf(TuningPreferencesDefaults.DEFAULT_ELEVATION_SMOOTHING_SIGMA_METERS) }
     var showAntMissingAdapterWarnings by remember { mutableStateOf(!TuningPreferencesDefaults.SUPPRESS_ANT_MISSING_ADAPTER_DIALOG) }; var autoFollowUniqueRouteEnabled by remember { mutableStateOf(TuningPreferencesDefaults.DEFAULT_AUTO_FOLLOW_UNIQUE_ROUTE_ENABLED) }
     var turnCueCountdownDistanceMeters by remember { mutableFloatStateOf(TuningPreferencesDefaults.TURN_CUE_COUNTDOWN_DISTANCE_METERS) }
+    var climbScoringFormula by remember { mutableStateOf(TuningPreferencesDefaults.DEFAULT_CLIMB_SCORING_FORMULA) }
     var clusterTolEndpoints by remember { mutableFloatStateOf(TuningPreferencesDefaults.CLUSTER_TOL_ENDPOINTS) }; var clusterTolApex by remember { mutableFloatStateOf(TuningPreferencesDefaults.CLUSTER_TOL_APEX) }
     var clusterTolDistance by remember { mutableFloatStateOf(TuningPreferencesDefaults.CLUSTER_TOL_DISTANCE) }; var clusterTolAltitudePos by remember { mutableFloatStateOf(TuningPreferencesDefaults.CLUSTER_TOL_ALTITUDE_POS) }
     var clusterUseSportType by remember { mutableStateOf(TuningPreferencesDefaults.CLUSTER_USE_SPORT_TYPE) }; var clusterUseAltitudePos by remember { mutableStateOf(TuningPreferencesDefaults.CLUSTER_USE_ALTITUDE_POS) }; var clusterScoreThreshold by remember { mutableFloatStateOf(TuningPreferencesDefaults.CLUSTER_SCORE_THRESHOLD) }
@@ -109,6 +111,11 @@ fun AdvancedTuningScreen(
     var enableCriticalPowerModel by remember { mutableStateOf(TuningPreferencesDefaults.DEFAULT_ENABLE_CRITICAL_POWER_MODEL) }; var showCriticalPowerInWorkoutSummary by remember { mutableStateOf(TuningPreferencesDefaults.DEFAULT_SHOW_CRITICAL_POWER_IN_WORKOUT_SUMMARY) }
     var enableCardioPowerDynamics by remember { mutableStateOf(TuningPreferencesDefaults.DEFAULT_ENABLE_CARDIO_POWER_DYNAMICS) }; var showCardioPowerInWorkoutSummary by remember { mutableStateOf(TuningPreferencesDefaults.DEFAULT_SHOW_CARDIO_POWER_IN_WORKOUT_SUMMARY) }
     var dfaA1ThresholdT1 by remember { mutableFloatStateOf(TuningPreferencesDefaults.DEFAULT_DFA_A1_THRESHOLD_T1) }; var dfaA1ThresholdT2 by remember { mutableFloatStateOf(TuningPreferencesDefaults.DEFAULT_DFA_A1_THRESHOLD_T2) }; var hrvArtifactGateThresholdPercent by remember { mutableFloatStateOf(TuningPreferencesDefaults.DEFAULT_HRV_ARTIFACT_GATE_THRESHOLD_PERCENT) }
+    var enableMorningSleepAndWellness by remember { mutableStateOf(TuningPreferencesDefaults.DEFAULT_ENABLE_MORNING_SLEEP_AND_WELLNESS) }
+    var enableSleepDurationAndQuality by remember { mutableStateOf(TuningPreferencesDefaults.DEFAULT_ENABLE_SLEEP_DURATION_AND_QUALITY) }
+    var enableMorningEnergy by remember { mutableStateOf(TuningPreferencesDefaults.DEFAULT_ENABLE_MORNING_ENERGY) }
+    var enableMuscleSoreness by remember { mutableStateOf(TuningPreferencesDefaults.DEFAULT_ENABLE_MUSCLE_SORENESS) }
+    var enableContextTags by remember { mutableStateOf(TuningPreferencesDefaults.DEFAULT_ENABLE_CONTEXT_TAGS) }
     var sensorSearchPrefs by remember { mutableStateOf(SensorSearchPreferences.load(context)) }
 
     var workoutCardPrefs by remember { mutableStateOf(WorkoutCardSectionPreferences()) }; var isAftermathPrefsInitialized by remember { mutableStateOf(false) }
@@ -139,6 +146,7 @@ fun AdvancedTuningScreen(
         routeSelectionRadiusKm = config.routeSelectionRadiusKm; navigationCueDismissDurationSec = config.navigationCueDismissDurationSec
         elevationSmoothingSigmaMeters = config.elevationSmoothingSigmaMeters; showAntMissingAdapterWarnings = config.showAntMissingAdapterWarnings
         autoFollowUniqueRouteEnabled = config.autoFollowUniqueRouteEnabled; turnCueCountdownDistanceMeters = config.turnCueCountdownDistanceMeters
+        climbScoringFormula = config.climbScoringFormula
         clusterTolEndpoints = config.clusterTolEndpoints; clusterTolApex = config.clusterTolApex
         clusterTolDistance = config.clusterTolDistance; clusterTolAltitudePos = config.clusterTolAltitudePos
         clusterUseSportType = config.clusterUseSportType; clusterUseAltitudePos = config.clusterUseAltitudePos; clusterScoreThreshold = config.clusterScoreThreshold
@@ -148,6 +156,11 @@ fun AdvancedTuningScreen(
         enableCriticalPowerModel = config.enableCriticalPowerModel; showCriticalPowerInWorkoutSummary = config.showCriticalPowerInWorkoutSummary
         enableCardioPowerDynamics = config.enableCardioPowerDynamics; showCardioPowerInWorkoutSummary = config.showCardioPowerInWorkoutSummary
         dfaA1ThresholdT1 = config.dfaA1ThresholdT1; dfaA1ThresholdT2 = config.dfaA1ThresholdT2; hrvArtifactGateThresholdPercent = config.hrvArtifactGateThresholdPercent
+        enableMorningSleepAndWellness = config.enableMorningSleepAndWellness
+        enableSleepDurationAndQuality = config.enableSleepDurationAndQuality
+        enableMorningEnergy = config.enableMorningEnergy
+        enableMuscleSoreness = config.enableMuscleSoreness
+        enableContextTags = config.enableContextTags
     }
     var isInitialized by rememberSaveable { mutableStateOf(false) }
     LaunchedEffect(persistedConfig) {
@@ -185,6 +198,7 @@ fun AdvancedTuningScreen(
             elevationSmoothingSigmaMeters = elevationSmoothingSigmaMeters,
             suppressAntMissingAdapterDialog = !showAntMissingAdapterWarnings, autoFollowUniqueRouteEnabled = autoFollowUniqueRouteEnabled,
             turnCueCountdownDistanceMeters = turnCueCountdownDistanceMeters,
+            climbScoringFormula = climbScoringFormula,
             clusterTolEndpoints = clusterTolEndpoints, clusterTolApex = clusterTolApex,
             clusterTolDistance = clusterTolDistance, clusterTolAltitudePos = clusterTolAltitudePos,
             clusterUseSportType = clusterUseSportType, clusterUseAltitudePos = clusterUseAltitudePos, clusterScoreThreshold = clusterScoreThreshold,
@@ -193,7 +207,12 @@ fun AdvancedTuningScreen(
             enableCriticalPowerModel = enableCriticalPowerModel, showCriticalPowerInWorkoutSummary = showCriticalPowerInWorkoutSummary,
             enableCardioPowerDynamics = enableCardioPowerDynamics, showCardioPowerInWorkoutSummary = showCardioPowerInWorkoutSummary,
             dfaA1ThresholdT1 = dfaA1ThresholdT1, dfaA1ThresholdT2 = dfaA1ThresholdT2,
-            hrvArtifactGateThresholdPercent = hrvArtifactGateThresholdPercent
+            hrvArtifactGateThresholdPercent = hrvArtifactGateThresholdPercent,
+            enableMorningSleepAndWellness = enableMorningSleepAndWellness,
+            enableSleepDurationAndQuality = enableSleepDurationAndQuality,
+            enableMorningEnergy = enableMorningEnergy,
+            enableMuscleSoreness = enableMuscleSoreness,
+            enableContextTags = enableContextTags
         )
         scope.launch {
             tuningDataStore.saveTuningConfig(newConfig)
@@ -258,7 +277,8 @@ fun AdvancedTuningScreen(
                     routeSelectionRadiusKm = routeSelectionRadiusKm, onRadiusChange = { routeSelectionRadiusKm = it },
                     navigationCueDismissDurationSec = navigationCueDismissDurationSec, onDismissDurationChange = { navigationCueDismissDurationSec = it },
                     autoFollowUniqueRouteEnabled = autoFollowUniqueRouteEnabled, onAutoFollowUniqueRouteEnabledChange = { autoFollowUniqueRouteEnabled = it },
-                    turnCueCountdownDistanceMeters = turnCueCountdownDistanceMeters, onTurnCueCountdownDistanceChange = { turnCueCountdownDistanceMeters = it }
+                    turnCueCountdownDistanceMeters = turnCueCountdownDistanceMeters, onTurnCueCountdownDistanceChange = { turnCueCountdownDistanceMeters = it },
+                    climbScoringFormula = climbScoringFormula, onClimbScoringFormulaChange = { climbScoringFormula = it }
                 )
             }
 
@@ -377,7 +397,12 @@ fun AdvancedTuningScreen(
                     enableCardioPowerDynamics = enableCardioPowerDynamics, onEnableCardioPowerDynamicsChange = { enableCardioPowerDynamics = it },
                     showCardioPowerInWorkoutSummary = showCardioPowerInWorkoutSummary, onShowCardioPowerInWorkoutSummaryChange = { showCardioPowerInWorkoutSummary = it },
                     dfaA1ThresholdT1 = dfaA1ThresholdT1, onDfaA1ThresholdT1Change = { dfaA1ThresholdT1 = it }, dfaA1ThresholdT2 = dfaA1ThresholdT2, onDfaA1ThresholdT2Change = { dfaA1ThresholdT2 = it },
-                    hrvArtifactGateThresholdPercent = hrvArtifactGateThresholdPercent, onHrvArtifactGateThresholdPercentChange = { hrvArtifactGateThresholdPercent = it }
+                    hrvArtifactGateThresholdPercent = hrvArtifactGateThresholdPercent, onHrvArtifactGateThresholdPercentChange = { hrvArtifactGateThresholdPercent = it },
+                    enableMorningSleepAndWellness = enableMorningSleepAndWellness, onEnableMorningSleepAndWellnessChange = { enableMorningSleepAndWellness = it },
+                    enableSleepDurationAndQuality = enableSleepDurationAndQuality, onEnableSleepDurationAndQualityChange = { enableSleepDurationAndQuality = it },
+                    enableMorningEnergy = enableMorningEnergy, onEnableMorningEnergyChange = { enableMorningEnergy = it },
+                    enableMuscleSoreness = enableMuscleSoreness, onEnableMuscleSorenessChange = { enableMuscleSoreness = it },
+                    enableContextTags = enableContextTags, onEnableContextTagsChange = { enableContextTags = it }
                 )
             }
 

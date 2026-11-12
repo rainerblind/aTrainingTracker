@@ -164,12 +164,12 @@ class SourceTextReadingAuditContractTest {
         )
 
         assertTrue(
-            "Baseline legacy source-reading tests debt must not exceed ratcheted ceiling of 181 (REQ-PRO-049.3): current=${baseline.size}",
-            baseline.size <= 181
+            "Baseline legacy source-reading tests debt must not exceed ratcheted ceiling of 94 (REQ-PRO-049.3): current=${baseline.size}",
+            baseline.size <= 94
         )
         assertEquals(
             "Baseline legacy source-reading tests debt must match recorded count (REQ-PRO-049.3)",
-            181,
+            94,
             baseline.size
         )
     }

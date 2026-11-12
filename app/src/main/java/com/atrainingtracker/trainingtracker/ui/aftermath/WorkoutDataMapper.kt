@@ -250,6 +250,12 @@ class WorkoutDataMapper(
             recordingErrors = cursor.getColumnIndex(WorkoutSummaries.RECORDING_ERRORS).takeIf { it >= 0 }?.let {
                 if (cursor.isNull(it)) null else cursor.getString(it)
             },
+            rpe = cursor.getColumnIndex(WorkoutSummaries.RPE).takeIf { it >= 0 }?.let {
+                if (cursor.isNull(it)) null else cursor.getInt(it)
+            },
+            feel = cursor.getColumnIndex(WorkoutSummaries.FEEL).takeIf { it >= 0 }?.let {
+                if (cursor.isNull(it)) null else cursor.getInt(it)
+            },
 
             extremaRows = sensorsToCheck.flatMap { sensorType ->
                 val rows = mutableListOf<ExtremaDataRow>()
@@ -635,7 +641,9 @@ class WorkoutDataMapper(
         val goal: String?,
         val method: String?,
         val calories: Int? = null,
-        val recordingErrors: String? = null
+        val recordingErrors: String? = null,
+        val rpe: Int? = null,
+        val feel: Int? = null
     )
 
     /**
@@ -680,6 +688,12 @@ class WorkoutDataMapper(
         val recordingErrors = cursor.getColumnIndex(WorkoutSummaries.RECORDING_ERRORS).takeIf { it >= 0 }?.let {
             if (cursor.isNull(it)) null else cursor.getString(it)
         }
+        val rpe = cursor.getColumnIndex(WorkoutSummaries.RPE).takeIf { it >= 0 }?.let {
+            if (cursor.isNull(it)) null else cursor.getInt(it)
+        }
+        val feel = cursor.getColumnIndex(WorkoutSummaries.FEEL).takeIf { it >= 0 }?.let {
+            if (cursor.isNull(it)) null else cursor.getInt(it)
+        }
 
         return RawCursorSnapshot(
             workoutId = workoutId,
@@ -715,7 +729,9 @@ class WorkoutDataMapper(
             goal = goal,
             method = method,
             calories = calories,
-            recordingErrors = recordingErrors
+            recordingErrors = recordingErrors,
+            rpe = rpe,
+            feel = feel
         )
     }
 
@@ -885,6 +901,10 @@ class WorkoutDataMapper(
                 heavyVehicleCountVal = getBatchVal(SensorType.RADAR_LARGE_VEHICLE_COUNT, ExtremaType.MAX)
             ),
 
+            dfaA1FreshBaseline = getBatchVal(SensorType.HRV_DFA_A1, ExtremaType.DFA_A1_FRESH_BASELINE),
+            dfaA1LateMean = getBatchVal(SensorType.HRV_DFA_A1, ExtremaType.DFA_A1_LATE_MEAN),
+            dfaA1DurabilityDriftPct = getBatchVal(SensorType.HRV_DFA_A1, ExtremaType.DFA_A1_DRIFT_PCT),
+
             totalDistance = snapshot.totalDistance,
             maxDisplacement = maxDisplacement,
             activeTimeSec = snapshot.activeTimeSec,
@@ -908,6 +928,8 @@ class WorkoutDataMapper(
             stravaSportName = sportInfo?.stravaSportName ?: sportTypeDatabaseManager.getStravaName(snapshot.sportId),
             stravaActivityData = stravaActivityData,
             recordingErrors = snapshot.recordingErrors,
+            rpe = snapshot.rpe,
+            feel = snapshot.feel,
 
             extremaRows = sensorsToCheck.flatMap { sensorType ->
                 val rows = mutableListOf<ExtremaDataRow>()

@@ -58,6 +58,14 @@ import com.atrainingtracker.trainingtracker.ui.components.workoutdescription.Wor
 import com.atrainingtracker.trainingtracker.ui.components.workoutextrema.WorkoutExtrema
 import com.atrainingtracker.trainingtracker.ui.components.strava.StravaActivitySection
 import android.app.Application
+import android.util.Log
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import com.atrainingtracker.trainingtracker.database.AthleteMetricType
+import com.atrainingtracker.trainingtracker.settings.SettingsDataStore
+import com.atrainingtracker.trainingtracker.ui.athleteprofile.AthleteMetricsRepository
+import com.atrainingtracker.trainingtracker.zones.HrvSessionThreshold
+import com.atrainingtracker.trainingtracker.zones.ZoneCalculationMath
 import com.atrainingtracker.trainingtracker.ui.components.workoutlaps.CreateLapOnMapSheet
 import com.atrainingtracker.trainingtracker.ui.components.workoutlaps.LapEditBottomSheet
 import com.atrainingtracker.trainingtracker.ui.components.workoutlaps.MoveLapBoundaryOnMapSheet
@@ -97,6 +105,9 @@ fun TrackOnMapScreen(
     sectionsOrder: List<WorkoutSectionType>? = null,
     tabsConfig: List<WorkoutDetailTabConfig>? = null,
     onSaveTabsConfig: ((List<WorkoutDetailTabConfig>) -> Unit)? = null,
+    onUpdateFtp: ((Int) -> Unit)? = null,
+    recentSessions: List<HrvSessionThreshold> = emptyList(),
+    isSmoothedStream: Boolean = false,
     useTabbedLayout: Boolean = true,
     initialAutoShareSnapshot: Boolean = false,
     onSnapshotComplete: (() -> Unit)? = null
@@ -271,6 +282,26 @@ fun TrackOnMapScreen(
         )
     }
 
+    val effectiveOnUpdateFtp: (Int) -> Unit = onUpdateFtp ?: { newFtp ->
+        coroutineScope.launch(Dispatchers.IO) {
+            try {
+                val settingsDataStore = SettingsDataStore.getInstance(context.applicationContext)
+                val thresholds = ZoneCalculationMath.calculateCogganPowerZones(newFtp)
+                val cutoffs = listOf(
+                    thresholds.z1Max, thresholds.z2Max, thresholds.z3Max,
+                    thresholds.z4Max, thresholds.z5Max, thresholds.z6Max
+                )
+                settingsDataStore.saveCalculatedPowerZones(newFtp, cutoffs)
+                AthleteMetricsRepository.getInstance(context.applicationContext).addEntry(
+                    metricType = AthleteMetricType.FTP_WATTS,
+                    value = newFtp.toDouble()
+                )
+            } catch (e: Exception) {
+                Log.e("TrackOnMapScreen", "Error updating FTP in fallback", e)
+            }
+        }
+    }
+
     if (useTabbedLayout && metadataContent == null && analyticsContent == null) {
         WorkoutDetailTabbedContent(
             workoutData = workoutData,
@@ -294,6 +325,9 @@ fun TrackOnMapScreen(
             onGradeZoneDisplayModeChange = { gradeZoneDisplayMode = it },
             hrZoneThresholds = hrZoneThresholds,
             powerZoneThresholds = powerZoneThresholds,
+            recentSessions = recentSessions,
+            isSmoothedStream = isSmoothedStream,
+            onUpdateFtp = effectiveOnUpdateFtp,
             useStatusBarsPadding = useStatusBarsPadding,
             onClusterClick = onClusterClick,
             onEditWorkout = onEditWorkout,
@@ -733,6 +767,18 @@ fun TrackOnMapScreen(
                             if (activeDetailPrefs.showExportStatus) {
                                 ExportStatus(
                                     exportStatuses = workoutData.exportStatuses
+                                )
+                            }
+                        }
+                        WorkoutSectionType.RPE_AND_FEEL -> {
+                            if (workoutData.rpe != null || workoutData.feel != null) {
+                                WorkoutRpeFeelSection(
+                                    rpe = workoutData.rpe,
+                                    feel = workoutData.feel,
+                                    activeTimeSec = workoutData.activeTimeSec,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 16.dp, vertical = 4.dp)
                                 )
                             }
                         }

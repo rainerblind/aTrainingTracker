@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="tuning_climb_formula_title">登坂カテゴライズ計算式</string>
+    <string name="tuning_climb_formula_desc">FIETS指数は勾配と標高難易度を重視します（デフォルト）。Strava / Garminは獲得標高のみで分類します。</string>
+    <string name="tuning_climb_formula_fiets">FIETS指数</string>
+    <string name="tuning_climb_formula_strava_garmin">Strava / Garmin</string>
+</resources>

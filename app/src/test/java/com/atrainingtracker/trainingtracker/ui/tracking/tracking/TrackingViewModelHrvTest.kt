@@ -19,30 +19,42 @@
 package com.atrainingtracker.trainingtracker.ui.tracking.tracking
 
 import android.app.Application
+import androidx.compose.ui.graphics.Color
 import androidx.core.content.ContextCompat
 import com.atrainingtracker.R
+import com.atrainingtracker.banalservice.ActivityType
 import com.atrainingtracker.banalservice.BSportType
+import com.atrainingtracker.banalservice.filters.FilterType
+import com.atrainingtracker.banalservice.filters.FilteredSensorData
 import com.atrainingtracker.banalservice.sensor.SensorType
 import com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository
 import com.atrainingtracker.trainingtracker.repositories.RoutesRepository
 import com.atrainingtracker.trainingtracker.segments.LiveSegmentsRepository
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStore
+import com.atrainingtracker.trainingtracker.settings.TuningConfig
+import com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldState
 import com.atrainingtracker.trainingtracker.ui.tracking.TrackingViewsRepository
+import com.atrainingtracker.trainingtracker.ui.tracking.ViewSize
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkStatic
 import io.mockk.unmockkStatic
+import kotlinx.coroutines.flow.MutableStateFlow
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import java.util.Objects
 
 /**
  * Unit tests for [TrackingViewModel] HRV telemetry integration conforming to REQ-TRK-061.3 and TST-TRK-061.3:
  * - ZoneType resolution for HRV_DFA_A1 mapping to HR_RUN and HR_BIKE
  * - HR ZoneDisplayOptions parity inheritance
+ * - Dynamic artifact suppression threshold gating via TuningConfig (REQ-TRK-061.2)
  */
 class TrackingViewModelHrvTest {
 
@@ -80,6 +92,30 @@ class TrackingViewModelHrvTest {
         return method.invoke(viewModel, sensorType, sportType) as? SettingsDataStore.ZoneType
     }
 
+    @Suppress("UNCHECKED_CAST")
+    private fun callApplySensorData(
+        currentFields: List<SensorFieldState>,
+        allSensorData: List<FilteredSensorData<*>>,
+        activityType: ActivityType
+    ): List<SensorFieldState> {
+        val method = TrackingViewModel::class.java.getDeclaredMethod(
+            "applySensorData",
+            List::class.java,
+            List::class.java,
+            ActivityType::class.java
+        )
+        method.isAccessible = true
+        return method.invoke(viewModel, currentFields, allSensorData, activityType) as List<SensorFieldState>
+    }
+
+    @Suppress("UNCHECKED_CAST")
+    private fun setTuningConfig(config: TuningConfig) {
+        val field = TrackingViewModel::class.java.getDeclaredField("_tuningConfig")
+        field.isAccessible = true
+        val flow = field.get(viewModel) as MutableStateFlow<TuningConfig>
+        flow.value = config
+    }
+
     @Test
     fun testGetZoneType_hrvDfaA1_mapsToHrZonesBySport() {
         // REQ-TRK-061.3: HRV_DFA_A1 maps to HR zone types
@@ -102,5 +138,75 @@ class TrackingViewModelHrvTest {
         val hrBikeZone = callGetZoneType(SensorType.HR, BSportType.BIKE)
         val dfaBikeZone = callGetZoneType(SensorType.HRV_DFA_A1, BSportType.BIKE)
         assertEquals(hrBikeZone, dfaBikeZone)
+    }
+
+    @Test
+    fun applySensorData_dynamicArtifactThreshold_gatesHrvDfaA1() {
+        // Set a custom threshold of 3.0% instead of hardcoded 5.0%
+        setTuningConfig(TuningConfig(hrvArtifactGateThresholdPercent = 3.0f))
+
+        val dfaHash = Objects.hash(SensorType.HRV_DFA_A1, FilterType.INSTANTANEOUS, 1.0, null)
+        val dfaField = SensorFieldState(
+            configHash = dfaHash,
+            sensorFieldId = 1L,
+            rowNr = 0,
+            colNr = 0,
+            viewSize = ViewSize.NORMAL,
+            label = "DFA a1",
+            filterDescription = "",
+            value = "--.--",
+            units = "",
+            zoneColor = Color.Transparent,
+            sensorType = SensorType.HRV_DFA_A1,
+            isArtifactGated = false
+        )
+
+        // Case 1: Artifact rate is 2.5% (<= 3.0%) -> isArtifactGated should remain false
+        val lowArtifactData = FilteredSensorData<Double>(
+            SensorType.HRV_ARTIFACT_RATE,
+            2.5,
+            "2.5%",
+            null,
+            FilterType.INSTANTANEOUS,
+            1.0
+        )
+        val resultLow = callApplySensorData(
+            listOf(dfaField),
+            listOf(lowArtifactData),
+            ActivityType.RUN_SPEED_AND_CADENCE
+        )
+        assertFalse("Rate 2.5% <= 3.0% must not trigger artifact gate", resultLow.first().isArtifactGated)
+
+        // Case 2: Artifact rate is 3.5% (> 3.0%) -> isArtifactGated must become true
+        val highArtifactData = FilteredSensorData<Double>(
+            SensorType.HRV_ARTIFACT_RATE,
+            3.5,
+            "3.5%",
+            null,
+            FilterType.INSTANTANEOUS,
+            1.0
+        )
+        val resultHigh = callApplySensorData(
+            resultLow,
+            listOf(highArtifactData),
+            ActivityType.RUN_SPEED_AND_CADENCE
+        )
+        assertTrue("Rate 3.5% > 3.0% must trigger artifact gate", resultHigh.first().isArtifactGated)
+
+        // Case 3: Artifact rate drops back to 1.0% (<= 3.0%) -> isArtifactGated un-gates
+        val droppedArtifactData = FilteredSensorData<Double>(
+            SensorType.HRV_ARTIFACT_RATE,
+            1.0,
+            "1.0%",
+            null,
+            FilterType.INSTANTANEOUS,
+            1.0
+        )
+        val resultDropped = callApplySensorData(
+            resultHigh,
+            listOf(droppedArtifactData),
+            ActivityType.RUN_SPEED_AND_CADENCE
+        )
+        assertFalse("Rate 1.0% <= 3.0% must clear artifact gate", resultDropped.first().isArtifactGated)
     }
 }

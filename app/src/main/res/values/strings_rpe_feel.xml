@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_workout_card_rpe_feel">RPE &amp; Feel</string>
+    <string name="workout_rpe_title">Perceived Exertion (RPE 1–10)</string>
+    <string name="workout_feel_title">Workout Feel</string>
+    <string name="srpe_load_badge">sRPE: %d</string>
+
+    <string name="rpe_anchor_1">1 — Very Light</string>
+    <string name="rpe_anchor_2">2 — Light</string>
+    <string name="rpe_anchor_3">3 — Moderate</string>
+    <string name="rpe_anchor_4">4 — Somewhat Hard</string>
+    <string name="rpe_anchor_5">5 — Hard</string>
+    <string name="rpe_anchor_6">6 — Hard+</string>
+    <string name="rpe_anchor_7">7 — Very Hard</string>
+    <string name="rpe_anchor_8">8 — Very Hard+</string>
+    <string name="rpe_anchor_9">9 — Extremely Hard</string>
+    <string name="rpe_anchor_10">10 — Maximum Effort</string>
+
+    <string name="feel_anchor_1">Very Poor</string>
+    <string name="feel_anchor_2">Poor</string>
+    <string name="feel_anchor_3">Normal</string>
+    <string name="feel_anchor_4">Good</string>
+    <string name="feel_anchor_5">Great</string>
+</resources>

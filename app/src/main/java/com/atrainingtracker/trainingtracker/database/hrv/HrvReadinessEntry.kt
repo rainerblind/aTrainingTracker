@@ -32,16 +32,21 @@ data class HrvReadinessEntry(
     val timestampMs: Long,
     val dateIso: String,
     val timezoneId: String,
-    val restingHrBpm: Int,
-    val rmssdMs: Double,
-    val lnRmssd: Double,
-    val hrvScore100: Double,
+    val restingHrBpm: Int? = null,
+    val rmssdMs: Double? = null,
+    val lnRmssd: Double? = null,
+    val hrvScore100: Double? = null,
     val sdnnMs: Double? = null,
     val artifactRatePct: Double? = null,
-    val durationSec: Int,
+    val durationSec: Int? = null,
     val posture: HrvPosture,
     val isPrimaryForDay: Boolean = false,
-    val notes: String? = null
+    val notes: String? = null,
+    val sleepDurationMin: Int? = null,
+    val sleepQuality1To5: Int? = null,
+    val morningEnergy1To5: Int? = null,
+    val muscleSoreness1To5: Int? = null,
+    val contextTags: String? = null
 ) {
     fun toContentValues(): ContentValues {
         val cv = ContentValues()
@@ -51,10 +56,26 @@ data class HrvReadinessEntry(
         cv.put(HrvReadinessDbHelper.COLUMN_TIMESTAMP_MS, timestampMs)
         cv.put(HrvReadinessDbHelper.COLUMN_DATE_ISO, dateIso)
         cv.put(HrvReadinessDbHelper.COLUMN_TIMEZONE_ID, timezoneId)
-        cv.put(HrvReadinessDbHelper.COLUMN_RESTING_HR_BPM, restingHrBpm)
-        cv.put(HrvReadinessDbHelper.COLUMN_RMSSD_MS, rmssdMs)
-        cv.put(HrvReadinessDbHelper.COLUMN_LN_RMSSD, lnRmssd)
-        cv.put(HrvReadinessDbHelper.COLUMN_HRV_SCORE_100, hrvScore100)
+        if (restingHrBpm != null) {
+            cv.put(HrvReadinessDbHelper.COLUMN_RESTING_HR_BPM, restingHrBpm)
+        } else {
+            cv.putNull(HrvReadinessDbHelper.COLUMN_RESTING_HR_BPM)
+        }
+        if (rmssdMs != null) {
+            cv.put(HrvReadinessDbHelper.COLUMN_RMSSD_MS, rmssdMs)
+        } else {
+            cv.putNull(HrvReadinessDbHelper.COLUMN_RMSSD_MS)
+        }
+        if (lnRmssd != null) {
+            cv.put(HrvReadinessDbHelper.COLUMN_LN_RMSSD, lnRmssd)
+        } else {
+            cv.putNull(HrvReadinessDbHelper.COLUMN_LN_RMSSD)
+        }
+        if (hrvScore100 != null) {
+            cv.put(HrvReadinessDbHelper.COLUMN_HRV_SCORE_100, hrvScore100)
+        } else {
+            cv.putNull(HrvReadinessDbHelper.COLUMN_HRV_SCORE_100)
+        }
         if (sdnnMs != null) {
             cv.put(HrvReadinessDbHelper.COLUMN_SDNN_MS, sdnnMs)
         } else {
@@ -65,13 +86,42 @@ data class HrvReadinessEntry(
         } else {
             cv.putNull(HrvReadinessDbHelper.COLUMN_ARTIFACT_RATE_PCT)
         }
-        cv.put(HrvReadinessDbHelper.COLUMN_DURATION_SEC, durationSec)
+        if (durationSec != null) {
+            cv.put(HrvReadinessDbHelper.COLUMN_DURATION_SEC, durationSec)
+        } else {
+            cv.putNull(HrvReadinessDbHelper.COLUMN_DURATION_SEC)
+        }
         cv.put(HrvReadinessDbHelper.COLUMN_POSTURE, posture.name)
         cv.put(HrvReadinessDbHelper.COLUMN_IS_PRIMARY_FOR_DAY, if (isPrimaryForDay) 1 else 0)
         if (notes != null) {
             cv.put(HrvReadinessDbHelper.COLUMN_NOTES, notes)
         } else {
             cv.putNull(HrvReadinessDbHelper.COLUMN_NOTES)
+        }
+        if (sleepDurationMin != null) {
+            cv.put(HrvReadinessDbHelper.COLUMN_SLEEP_DURATION_MIN, sleepDurationMin)
+        } else {
+            cv.putNull(HrvReadinessDbHelper.COLUMN_SLEEP_DURATION_MIN)
+        }
+        if (sleepQuality1To5 != null) {
+            cv.put(HrvReadinessDbHelper.COLUMN_SLEEP_QUALITY_1_5, sleepQuality1To5)
+        } else {
+            cv.putNull(HrvReadinessDbHelper.COLUMN_SLEEP_QUALITY_1_5)
+        }
+        if (morningEnergy1To5 != null) {
+            cv.put(HrvReadinessDbHelper.COLUMN_MORNING_ENERGY_1_5, morningEnergy1To5)
+        } else {
+            cv.putNull(HrvReadinessDbHelper.COLUMN_MORNING_ENERGY_1_5)
+        }
+        if (muscleSoreness1To5 != null) {
+            cv.put(HrvReadinessDbHelper.COLUMN_MUSCLE_SORENESS_1_5, muscleSoreness1To5)
+        } else {
+            cv.putNull(HrvReadinessDbHelper.COLUMN_MUSCLE_SORENESS_1_5)
+        }
+        if (contextTags != null) {
+            cv.put(HrvReadinessDbHelper.COLUMN_CONTEXT_TAGS, contextTags)
+        } else {
+            cv.putNull(HrvReadinessDbHelper.COLUMN_CONTEXT_TAGS)
         }
         return cv
     }
@@ -97,29 +147,51 @@ data class HrvReadinessEntry(
             val primIdx = cursor.getColumnIndexOrThrow(HrvReadinessDbHelper.COLUMN_IS_PRIMARY_FOR_DAY)
             val notesIdx = cursor.getColumnIndexOrThrow(HrvReadinessDbHelper.COLUMN_NOTES)
 
+            val sleepDurIdx = cursor.getColumnIndex(HrvReadinessDbHelper.COLUMN_SLEEP_DURATION_MIN)
+            val sleepQualIdx = cursor.getColumnIndex(HrvReadinessDbHelper.COLUMN_SLEEP_QUALITY_1_5)
+            val energyIdx = cursor.getColumnIndex(HrvReadinessDbHelper.COLUMN_MORNING_ENERGY_1_5)
+            val sorenessIdx = cursor.getColumnIndex(HrvReadinessDbHelper.COLUMN_MUSCLE_SORENESS_1_5)
+            val tagsIdx = cursor.getColumnIndex(HrvReadinessDbHelper.COLUMN_CONTEXT_TAGS)
+
             val postureName = cursor.getString(postIdx)
             val posture = HrvPosture.fromNameOrNull(postureName)
                 ?: HrvPosture.SUPINE
 
+            val hr = if (cursor.isNull(hrIdx)) null else cursor.getInt(hrIdx)
+            val rmssd = if (cursor.isNull(rmssdIdx)) null else cursor.getDouble(rmssdIdx)
+            val ln = if (cursor.isNull(lnIdx)) null else cursor.getDouble(lnIdx)
+            val score = if (cursor.isNull(scoreIdx)) null else cursor.getDouble(scoreIdx)
             val sdnn = if (cursor.isNull(sdnnIdx)) null else cursor.getDouble(sdnnIdx)
             val artRate = if (cursor.isNull(artIdx)) null else cursor.getDouble(artIdx)
+            val dur = if (cursor.isNull(durIdx)) null else cursor.getInt(durIdx)
             val notes = if (cursor.isNull(notesIdx)) null else cursor.getString(notesIdx)
+
+            val sleepDur = if (sleepDurIdx != -1 && !cursor.isNull(sleepDurIdx)) cursor.getInt(sleepDurIdx) else null
+            val sleepQual = if (sleepQualIdx != -1 && !cursor.isNull(sleepQualIdx)) cursor.getInt(sleepQualIdx) else null
+            val energy = if (energyIdx != -1 && !cursor.isNull(energyIdx)) cursor.getInt(energyIdx) else null
+            val soreness = if (sorenessIdx != -1 && !cursor.isNull(sorenessIdx)) cursor.getInt(sorenessIdx) else null
+            val tags = if (tagsIdx != -1 && !cursor.isNull(tagsIdx)) cursor.getString(tagsIdx) else null
 
             return HrvReadinessEntry(
                 id = cursor.getLong(idIdx),
                 timestampMs = cursor.getLong(tsIdx),
                 dateIso = cursor.getString(dateIdx),
                 timezoneId = cursor.getString(tzIdx),
-                restingHrBpm = cursor.getInt(hrIdx),
-                rmssdMs = cursor.getDouble(rmssdIdx),
-                lnRmssd = cursor.getDouble(lnIdx),
-                hrvScore100 = cursor.getDouble(scoreIdx),
+                restingHrBpm = hr,
+                rmssdMs = rmssd,
+                lnRmssd = ln,
+                hrvScore100 = score,
                 sdnnMs = sdnn,
                 artifactRatePct = artRate,
-                durationSec = cursor.getInt(durIdx),
+                durationSec = dur,
                 posture = posture,
                 isPrimaryForDay = cursor.getInt(primIdx) == 1,
-                notes = notes
+                notes = notes,
+                sleepDurationMin = sleepDur,
+                sleepQuality1To5 = sleepQual,
+                morningEnergy1To5 = energy,
+                muscleSoreness1To5 = soreness,
+                contextTags = tags
             )
         }
 
@@ -146,12 +218,29 @@ data class HrvReadinessEntry(
             val primIdx = cursor.getColumnIndexOrThrow(HrvReadinessDbHelper.COLUMN_IS_PRIMARY_FOR_DAY)
             val notesIdx = cursor.getColumnIndexOrThrow(HrvReadinessDbHelper.COLUMN_NOTES)
 
+            val sleepDurIdx = cursor.getColumnIndex(HrvReadinessDbHelper.COLUMN_SLEEP_DURATION_MIN)
+            val sleepQualIdx = cursor.getColumnIndex(HrvReadinessDbHelper.COLUMN_SLEEP_QUALITY_1_5)
+            val energyIdx = cursor.getColumnIndex(HrvReadinessDbHelper.COLUMN_MORNING_ENERGY_1_5)
+            val sorenessIdx = cursor.getColumnIndex(HrvReadinessDbHelper.COLUMN_MUSCLE_SORENESS_1_5)
+            val tagsIdx = cursor.getColumnIndex(HrvReadinessDbHelper.COLUMN_CONTEXT_TAGS)
+
             do {
                 val postureName = cursor.getString(postIdx)
                 val posture = HrvPosture.fromNameOrNull(postureName) ?: HrvPosture.SUPINE
+                val hr = if (cursor.isNull(hrIdx)) null else cursor.getInt(hrIdx)
+                val rmssd = if (cursor.isNull(rmssdIdx)) null else cursor.getDouble(rmssdIdx)
+                val ln = if (cursor.isNull(lnIdx)) null else cursor.getDouble(lnIdx)
+                val score = if (cursor.isNull(scoreIdx)) null else cursor.getDouble(scoreIdx)
                 val sdnn = if (cursor.isNull(sdnnIdx)) null else cursor.getDouble(sdnnIdx)
                 val artRate = if (cursor.isNull(artIdx)) null else cursor.getDouble(artIdx)
+                val dur = if (cursor.isNull(durIdx)) null else cursor.getInt(durIdx)
                 val notes = if (cursor.isNull(notesIdx)) null else cursor.getString(notesIdx)
+
+                val sleepDur = if (sleepDurIdx != -1 && !cursor.isNull(sleepDurIdx)) cursor.getInt(sleepDurIdx) else null
+                val sleepQual = if (sleepQualIdx != -1 && !cursor.isNull(sleepQualIdx)) cursor.getInt(sleepQualIdx) else null
+                val energy = if (energyIdx != -1 && !cursor.isNull(energyIdx)) cursor.getInt(energyIdx) else null
+                val soreness = if (sorenessIdx != -1 && !cursor.isNull(sorenessIdx)) cursor.getInt(sorenessIdx) else null
+                val tags = if (tagsIdx != -1 && !cursor.isNull(tagsIdx)) cursor.getString(tagsIdx) else null
 
                 list.add(
                     HrvReadinessEntry(
@@ -159,16 +248,21 @@ data class HrvReadinessEntry(
                         timestampMs = cursor.getLong(tsIdx),
                         dateIso = cursor.getString(dateIdx),
                         timezoneId = cursor.getString(tzIdx),
-                        restingHrBpm = cursor.getInt(hrIdx),
-                        rmssdMs = cursor.getDouble(rmssdIdx),
-                        lnRmssd = cursor.getDouble(lnIdx),
-                        hrvScore100 = cursor.getDouble(scoreIdx),
+                        restingHrBpm = hr,
+                        rmssdMs = rmssd,
+                        lnRmssd = ln,
+                        hrvScore100 = score,
                         sdnnMs = sdnn,
                         artifactRatePct = artRate,
-                        durationSec = cursor.getInt(durIdx),
+                        durationSec = dur,
                         posture = posture,
                         isPrimaryForDay = cursor.getInt(primIdx) == 1,
-                        notes = notes
+                        notes = notes,
+                        sleepDurationMin = sleepDur,
+                        sleepQuality1To5 = sleepQual,
+                        morningEnergy1To5 = energy,
+                        muscleSoreness1To5 = soreness,
+                        contextTags = tags
                     )
                 )
             } while (cursor.moveToNext())

@@ -176,4 +176,8 @@
     <string name="radar_min_passing_distance">Afastamento mínimo</string>
     <string name="radar_close_pass_warning">⚠️ %1$d ultrapassagens perigosas (&lt;%2$sm)</string>
     <string name="radar_heavy_vehicle_share">Veículos pesados</string>
+
+    <!-- Smartphone IMU/GPS Deceleration Brake-Light Trigger (ATT-5121 / REQ-CON-035) -->
+    <string name="radar_brake_light_title">Luz de travão por desaceleração</string>
+    <string name="radar_brake_light_desc">Acende a luz traseira durante desaceleração brusca de IMU/GPS (2,0 s de retenção, ignorado no RearVue 820)</string>
 </resources>

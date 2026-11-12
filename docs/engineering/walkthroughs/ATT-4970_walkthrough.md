@@ -59,10 +59,25 @@ BUILD SUCCESSFUL in 3m 21s
   - `testHrvDurabilityCard_insufficientData_rendersDiagnosticReason_TST_PER_046_6`: PASSED
   - `testHrvDurabilityCard_nullResult_gracefullyOmitted_TST_PER_046_6`: PASSED
 - `WorkoutDataMapperDurabilityTest`:
-  - `testExtremaTypeRegistration_TST_PER_046_5`: PASSED
-  - `testWorkoutDataDurabilityProperties_TST_PER_046_5`: PASSED
-  - `testWorkoutDataMapper_resolveDurabilityMetrics_TST_PER_046_5`: PASSED
+  - `ExtremaType contains durability enum constants (REQ-PER-038_5)`: PASSED
+  - `WorkoutData exposes durability properties with null defaults (REQ-PER-038_5)`: PASSED
+  - `WorkoutDataMapper maps durability extrema into WorkoutData via fromSnapshot (TST-PER-046_5)`: PASSED
 - `TranslationParityTest`:
   - `testAllTranslationsPresentAndValid`: PASSED (100% parity across 9 languages)
 - `verify_requirement_governance.py`:
   - Living docs master indices match all 9 domain shards with 100% parity (0 orphan IDs).
+
+---
+
+## 4. Cold Carbon Review (Stage 6) Defect Resolution & Healing
+1. **Finding 1 (Governance & Documentation Status)**:
+   - Verified that `REQ-PER-038` in `docs/requirements/req_aftermath_periods.md` and `TST-PER-046` in `docs/tests/tst_aftermath_periods.md` are marked `[Verified]`.
+   - Synchronized master index tables with 100% parity via `verify_requirement_governance.py`.
+2. **Finding 2 (Indoor / Trackless Workouts Reachability)**:
+   - In `HrvPostWorkoutRecomputer.kt`, wired fallback `.ifEmpty { repo.getWorkoutTelemetryPoints(workoutId) }` when `getWorkoutTrackPoints()` returns empty.
+   - Ensures smart trainer and indoor cycling sessions without GPS tracks calculate and persist autonomic durability metrics into `WorkoutSummaries.TABLE_EXTREMA_VALUES`.
+3. **Finding 3 (Math & Normalization Invariant)**:
+   - In `HrvDurabilityCalculator.kt` (lines 184, 222, 223), corrected intra-bin workload normalization to `alpha1 * (intensity / refIntensity)` (replacing division).
+   - Because DFA $\alpha_1$ is inversely related to workload, higher intra-bin intensity depresses raw $\alpha_1$; multiplying by $(I / I_{\text{ref}})$ accurately normalizes $\alpha_1$ back to reference baseline intensity.
+   - Updated `HrvDurabilityCalculatorTest.kt` to verify exact physiological normalization behavior.
+

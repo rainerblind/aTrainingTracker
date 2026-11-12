@@ -256,6 +256,101 @@ class TestSprintMetrics(unittest.TestCase):
         self.assertEqual(g6["escape_rate_p"], 0.5)
         self.assertEqual(metrics["quality_gates"]["swiss_cheese"]["p6_final_review_agent_escape"], 0.5)
 
+    def test_parse_sprint_gate_metrics_problem_trends(self):
+        """TST-PRO-063.2: Verify problem trends extraction by severity and defect resolution rates."""
+        parent_issues = [
+            {
+                "key": "ATT-301",
+                "fields": {
+                    "summary": "Critical crash in sensor listener",
+                    "status": {"name": "Erledigt"},
+                    "priority": {"name": "Highest"},
+                    "issuetype": {"id": "10006", "name": "Bug"},
+                    "labels": ["severity-critical"],
+                    "customfield_10016": 1.0,
+                    "subtasks": [],
+                },
+            },
+            {
+                "key": "ATT-302",
+                "fields": {
+                    "summary": "Major calculation error in cadence",
+                    "status": {"name": "Erledigt"},
+                    "priority": {"name": "High"},
+                    "issuetype": {"id": "10006", "name": "Fehler"},
+                    "labels": ["severity-major"],
+                    "customfield_10016": 2.0,
+                    "subtasks": [],
+                },
+            },
+            {
+                "key": "ATT-303",
+                "fields": {
+                    "summary": "Minor label overlap on dashboard",
+                    "status": {"name": "In Bearbeitung"},
+                    "priority": {"name": "Medium"},
+                    "issuetype": {"id": "10006", "name": "Bug"},
+                    "labels": ["severity-minor"],
+                    "customfield_10016": 1.0,
+                    "subtasks": [],
+                },
+            },
+            {
+                "key": "ATT-304",
+                "fields": {
+                    "summary": "Feature ticket: add heart rate export",
+                    "status": {"name": "Erledigt"},
+                    "priority": {"name": "Medium"},
+                    "issuetype": {"id": "10007", "name": "Feature"},
+                    "customfield_10016": 3.0,
+                    "subtasks": [],
+                },
+            },
+        ]
+        metrics = parse_sprint_gate_metrics(parent_issues, {"id": 440, "name": "Sprint 2026-46.3"})
+        self.assertIn("problem_trends", metrics)
+        pt = metrics["problem_trends"]
+        self.assertEqual(pt["total_bugs"], 3)
+        self.assertEqual(pt["closed_bugs"], 2)
+        self.assertEqual(pt["open_bugs"], 1)
+        self.assertEqual(pt["resolution_rate_percent"], 66.7)
+        self.assertEqual(pt["by_severity"]["Critical"], 1)
+        self.assertEqual(pt["by_severity"]["Major"], 1)
+        self.assertEqual(pt["by_severity"]["Minor"], 1)
+        self.assertEqual(pt["by_severity"]["Cosmetic"], 0)
+        self.assertEqual(pt["closed_by_severity"]["Critical"], 1)
+        self.assertEqual(pt["closed_by_severity"]["Major"], 1)
+        self.assertEqual(pt["open_by_severity"]["Minor"], 1)
+
+    def test_format_metrics_markdown_includes_problem_trends(self):
+        """TST-PRO-063.3: Verify format_metrics_markdown renders problem trends section."""
+        metrics = {
+            "sprint_name": "2026-46.3",
+            "throughput": {"completed_tickets": 2, "total_tickets": 3, "completion_rate_percent": 66.7, "completed_story_points": 5.0},
+            "quality_gates": {
+                "overall_ftpr_percent": 100.0,
+                "total_subtasks_evaluated": 5,
+                "gates": {},
+                "swiss_cheese": {"theoretical_cumulative_escape_prob": 0.001},
+                "human_acceptance_rate_percent": 100.0,
+            },
+            "problem_trends": {
+                "total_bugs": 2,
+                "open_bugs": 0,
+                "closed_bugs": 2,
+                "resolution_rate_percent": 100.0,
+                "by_severity": {"Critical": 1, "Major": 1, "Minor": 0, "Cosmetic": 0},
+                "open_by_severity": {"Critical": 0, "Major": 0, "Minor": 0, "Cosmetic": 0},
+                "closed_by_severity": {"Critical": 1, "Major": 1, "Minor": 0, "Cosmetic": 0},
+            },
+        }
+        md = format_metrics_markdown(metrics)
+        self.assertIn("Problem Trends & Defect Severity", md)
+        self.assertIn("*Total Bugs*: 2", md)
+        self.assertIn("Critical", md)
+        self.assertIn("Major", md)
+        self.assertIn("*Resolution Rate*: *100.0%*", md)
+
 
 if __name__ == "__main__":
     unittest.main()

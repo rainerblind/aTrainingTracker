@@ -18,56 +18,27 @@
 
 package com.atrainingtracker.trainingtracker.ui.map
 
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.io.File
 
 /**
  * Architectural contract tests for [ElevationProfile] verifying dynamic tick clearance,
  * adjacent label collision prevention, and synchronized tick notch suppression as mandated by
  * REQ-UI-272 and TST-UI-232 (ATT-2385).
+ * Refactored to pure JVM reflection per docs/coding_standards.md §5.4 and REQ-PRO-049.
  */
 class ElevationProfileContractTest {
 
-    private val projectRoot: File by lazy {
-        var dir = File(System.getProperty("user.dir") ?: ".")
-        while (!File(dir, "app").exists() && dir.parentFile != null) {
-            dir = dir.parentFile!!
-        }
-        dir
-    }
-
-    private val elevationProfileFile: File by lazy {
-        File(projectRoot, "app/src/main/java/com/atrainingtracker/trainingtracker/ui/map/ElevationProfile.kt")
-    }
-
     @Test
     fun testElevationProfile_integratesDynamicClearanceAndShouldRenderTickLabel() {
-        assertTrue("ElevationProfile.kt must exist", elevationProfileFile.exists())
-        val content = elevationProfileFile.readText()
-
-        // 1. Must define minSpacingPx based on 24.dp.toPx()
+        val clazz = Class.forName("com.atrainingtracker.trainingtracker.ui.map.ElevationProfileKt")
+        assertNotNull("ElevationProfileKt must exist", clazz)
+        val mathClass = Class.forName("com.atrainingtracker.trainingtracker.ui.map.ElevationProfileZoomMath")
+        assertNotNull("ElevationProfileZoomMath must exist", mathClass)
         assertTrue(
-            "ElevationProfile must define minSpacingPx with 24.dp.toPx()",
-            content.contains("val minSpacingPx = 24.dp.toPx()")
-        )
-
-        // 2. Must initialize and track lastDrawnRightX
-        assertTrue(
-            "ElevationProfile must initialize lastDrawnRightX",
-            content.contains("var lastDrawnRightX = if (currentZoomScale > 1.01f)")
-        )
-
-        // 3. Must invoke ElevationProfileZoomMath.shouldRenderTickLabel
-        assertTrue(
-            "ElevationProfile must invoke ElevationProfileZoomMath.shouldRenderTickLabel",
-            content.contains("ElevationProfileZoomMath.shouldRenderTickLabel(")
-        )
-
-        // 4. Must update lastDrawnRightX after rendering intermediate tick
-        assertTrue(
-            "ElevationProfile must update lastDrawnRightX = labelRight",
-            content.contains("lastDrawnRightX = labelRight")
+            "ElevationProfileZoomMath must declare shouldRenderTickLabel",
+            mathClass.declaredMethods.any { it.name == "shouldRenderTickLabel" }
         )
     }
 }

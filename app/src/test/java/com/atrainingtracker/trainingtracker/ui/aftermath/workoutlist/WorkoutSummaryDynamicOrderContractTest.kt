@@ -80,6 +80,7 @@ class WorkoutSummaryDynamicOrderContractTest {
 
         customOrder.forEach { sectionType ->
             val isVisible = when (sectionType) {
+                WorkoutSectionType.RPE_AND_FEEL -> prefs.showRpeAndFeel
                 WorkoutSectionType.DESCRIPTION -> true
                 WorkoutSectionType.DETAILS -> prefs.showDetails
                 WorkoutSectionType.EXTREMA -> true

@@ -3,7 +3,7 @@
 **Domain**: `tracking_cockpit`  
 **Prefixes**: `CON`, `FIL`, `FUSION`, `SEN`, `TRK`, `WEA`  
 **Scope**: Live sensor telemetry, Bluetooth/ANT+ connectivity, filtering, GPS/tracking lifecycle.  
-**Total Requirements**: 86
+**Total Requirements**: 87
 
 ---
 
@@ -3749,6 +3749,46 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 **Invariants**: Strict night anti-glare cap; pocket and screen-off false trigger immunity; $\ge 1.5\text{ s}$ command rate-limiting; StVZO mode pruning compliance; zero SQLite migrations.
 
+### REQ-CON-035: Smartphone IMU/GPS Deceleration Brake-Light Trigger for BLE & ANT+ (0x23) Radar Tail Lights [Verified]
+- **Tests**: `TST-CON-035` | **Tickets**: `ATT-5121`
+- **Implementation**: `SmartBrakeLightDetector.kt`, `RadarLightController.kt`, `RadarLightMode.kt`, `TuningPreferencesDataStore.kt`, `RadarSettingsSection.kt`, `strings_radar.xml`
+- **Rationale**: Cycling radar tail lights lacking internal brake sensors (e.g. Garmin Varia RTL515, RTL516, RTL510, Bryton Gardia R300L, Magene L508) cannot warn approaching traffic or group ride partners during emergency or sudden braking. Smartphone devices mounted on handlebars or carried during rides feature high-frequency IMU sensors (`Sensor.TYPE_LINEAR_ACCELERATION`, `Sensor.TYPE_GRAVITY`) and GPS/wheel-speed telemetry. The system provides an automated software brake-light trigger that fuses linear deceleration and attitude compensation, rejects road shocks/potholes, immediately overrides tail light rate-limiting with high-visibility illumination (`SOLID` or `DAY_FLASH`), preserves a 2.0s hold window, and automatically bypasses when radar hardware with onboard brake sensing (Garmin Varia RearVue 820) is detected (ATT-5121, Parent Epic ATT-1286, extending `REQ-CON-031`, `REQ-CON-033`, and `REQ-CON-034`):
+1. *Sensor Fusion Deceleration Trigger & Sustained Threshold (`REQ-CON-035.1`)*:
+• `SmartBrakeLightDetector` SHALL process 3-axis linear acceleration from `Sensor.TYPE_LINEAR_ACCELERATION` ($\vec{a}_{\text{lin}}$) attitude-compensated using `Sensor.TYPE_GRAVITY` ($\hat{g}$), projecting forward longitudinal deceleration $a_{\text{long}} = \vec{a}_{\text{lin}} \cdot \hat{f}$ along the travel axis.
+• A Brake Event SHALL be triggered when forward deceleration $a \le -2.0\text{ m/s}^2$ is sustained continuously for $\ge 250\text{ ms}$ while current riding speed $v \ge 2.5\text{ m/s}$ ($9\text{ km/h}$) and speed derivative $dv/dt \le 0$.
+2. *Pothole & Vertical Shock Rejection (`REQ-CON-035.2`)*:
+• High-frequency vertical acceleration spikes ($|a_v| = |\vec{a}_{\text{lin}} \cdot \hat{g}| > 4.0\text{ m/s}^2$) caused by road bumps, expansion joints, or potholes without sustained longitudinal deceleration ($a_{\text{long}} > -2.0\text{ m/s}^2$) SHALL NOT trigger a Brake Event.
+3. *Immediate Priority Override & 2.0s Post-Brake Hold Window (`REQ-CON-035.3`)*:
+• Upon a confirmed Brake Event, `RadarLightController` SHALL immediately override `SmartRadarLightEngine` rate limits and command the active radar peripheral to brake mode (`DAY_FLASH` 100 lm in daytime, or `SOLID` 25 lm).
+• The brake illumination SHALL be held continuously throughout the deceleration duration plus a $2.0\text{ s}$ post-brake hold window after deceleration ceases ($a > -2.0\text{ m/s}^2$).
+• Upon expiration of the $2.0\text{ s}$ hold window, `RadarLightController` SHALL smoothly restore the tail light to its pre-brake mode (`preBrakeMode`), resuming background `SmartRadarLightEngine` evaluation.
+4. *StVZO & Night Anti-Glare Mode Clamping Invariant (`REQ-CON-035.4`)*:
+• In strict compliance with `REQ-CON-031.2`, `REQ-CON-034.4`, and StVZO regulations, if connected hardware is StVZO-certified (`isStvzo == true`) OR the ambient environment is dark/night/tunnel (`SmartRadarLightEngine.isTunnelActive == true` or solar profile `DUSK_NIGHT`), the brake mode command SHALL be clamped to steady `RadarLightMode.SOLID` (25 lm), strictly prohibiting `DAY_FLASH` (100 lm) or any flashing mode at night to prevent blinding trailing motorists.
+5. *Hardware Brake Sensor Auto-Bypass (`REQ-CON-035.5`)*:
+• When the connected radar peripheral is identified as having an onboard hardware brake sensor—specifically Garmin Varia RearVue 820 (`010-03180-00` or `010-03180-10`) identified via BLE Model Number `0x2A24` or ANT+ Page `0x50` Product ID—software deceleration triggering SHALL be automatically bypassed (defaulted to disabled) to prevent redundant actuation, with manual override permitted in Settings.
+6. *Settings Preference & 9-Language Localization Parity (`REQ-CON-035.6`)*:
+• `TuningPreferencesDataStore` SHALL persist preference `radarBrakeLightEnabled` (`Boolean`, default `true`, auto-bypassed for RearVue 820).
+• `RadarSettingsSection.kt` SHALL expose a dedicated toggle and status description with 100% localization parity across EN, DE, ES, FR, IT, JA, NL, PL, PT in `strings_radar.xml`.
+7. *Active Workout Lifecycle Management & Sensor Conservation (`REQ-CON-035.7`)*:
+• `SmartBrakeLightDetector` SHALL register Android `SensorEventListener` (`Sensor.TYPE_LINEAR_ACCELERATION` and `Sensor.TYPE_GRAVITY`) exclusively during active cycling tracking sessions when radar light control is connected and enabled.
+• Sensor listeners SHALL be immediately unregistered and any pending post-brake hold cancelled upon workout pause, stop, or service destruction to prevent battery drain and prevent tail light resuscitation.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* Software Brake Light enabled and tail light in `PELOTON` (8 lm) mode at $25\text{ km/h}$,
+• *When* the cyclist brakes hard ($a \le -2.0\text{ m/s}^2$ for $\ge 250\text{ ms}$),
+• *Then* `RadarLightController` immediately commands brake mode (`DAY_FLASH` or `SOLID`) overriding normal rate limits, holds through braking, and restores `PELOTON` exactly $2.0\text{ s}$ after braking ends.
+• *Given* the cyclist rides over a pothole at constant speed ($25\text{ km/h}$) causing a vertical acceleration spike ($|a_v| > 5.0\text{ m/s}^2$),
+• *When* longitudinal deceleration does not exceed $-2.0\text{ m/s}^2$ for $250\text{ ms}$,
+• *Then* `SmartBrakeLightDetector` rejects the shock and does not trigger the brake light.
+• *Given* an StVZO-certified radar tail light connected,
+• *When* a brake event occurs,
+• *Then* `RadarLightController` clamps the brake mode to `SOLID` and never triggers a flashing mode.
+• *Given* a Garmin Varia RearVue 820 connected,
+• *When* device identification completes,
+• *Then* software brake triggering is automatically bypassed to defer to the peripheral's hardware brake sensor.
+
+**Invariants**: StVZO flashing prohibition compliance; road shock/pothole immunity; 2.0s hold window with exact pre-brake mode restoration; zero SQLite schema modifications; 100% 9-language translation parity.
+
 ### REQ-TRK-064: 1-Tap Radar Audio Snooze, Peloton-Mode Audio Sync & Smart Urban Alert Suppression [Verified]
 - **Tests**: `TST-TRK-064` | **Tickets**: `ATT-5119`, `ATT-6708`
 - **Implementation**: `RadarSnoozeController.kt`, `RadarAlertManager.kt`, `RadarEdgeOverlay.kt`, `RadarLightQuickSwitchSheet.kt`, `RadarState.kt`, `RadarStateRepository.kt`, `BTLERadarDevice.java`, `TuningPreferencesDataStore.kt`, `RadarSettingsSection.kt`, `strings_radar.xml`
@@ -3959,7 +3999,7 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 ### REQ-TRK-069: ANT+ UTC Epoch Timestamping, Reconnection Sensor Registration & BLE Bundled Drift Guard [Verified]
 - **Target Release**: `V5.0.0`
-- **Tests**: `TST-TRK-069` | **Tickets**: `ATT-6713`
+- **Tests**: `TST-TRK-069` | **Tickets**: `ATT-6713`, `ATT-6742`
 - **Implementation**: `app/src/main/java/com/atrainingtracker/banalservice/devices/ANTHeartRateDevice.java`, `app/src/main/java/com/atrainingtracker/banalservice/devices/BTLEHeartRateDevice.java`, `app/src/main/java/com/atrainingtracker/banalservice/devices/hrv/HRVMetricsDevice.kt`
 - **Rationale**: Real-time HRV metrics (`rMSSD`, `DFA a1`) and lossless `WorkoutRrIntervals` persistence require accurate UTC Unix epoch timestamps across hardware acquisition interfaces. Under `ATT-3540`/`ATT-6742`, ANT+ `estTimestamp` was passed as raw boot-relative time (`SystemClock.elapsedRealtime()`), causing immediate eviction in `HRVMetricsDevice.pruneOldBeats()` and near-1970 timestamp corruption. Additionally, `unregisterSensors()` in both ANT+ and BLE drivers failed to clear `mRrIntervalSensor`, preventing sensor re-registration upon device reconnection. Finally, BLE bundled RR packets anchored the first beat instead of the newest beat and accumulated integer millisecond rounding errors, triggering spurious `ARTIFACT_GAP` drift events after 30–40 min. Hardware drivers must convert ANT+ timestamps to UTC epoch ms, reset sensor handles on disconnect, anchor bundled BLE packets to arrival time, and accumulate timestamps with sub-millisecond precision.
 - **Description**:

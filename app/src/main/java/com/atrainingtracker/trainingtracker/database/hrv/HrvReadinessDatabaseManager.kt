@@ -38,7 +38,7 @@ class HrvReadinessDbHelper(context: Context) :
 
     companion object {
         const val DB_NAME = "HrvReadiness.db"
-        const val DB_VERSION = 1
+        const val DB_VERSION = 2
 
         const val TABLE_HRV_READINESS = "hrv_readiness_entries"
 
@@ -56,6 +56,11 @@ class HrvReadinessDbHelper(context: Context) :
         const val COLUMN_POSTURE = "posture"
         const val COLUMN_IS_PRIMARY_FOR_DAY = "is_primary_for_day"
         const val COLUMN_NOTES = "notes"
+        const val COLUMN_SLEEP_DURATION_MIN = "sleep_duration_min"
+        const val COLUMN_SLEEP_QUALITY_1_5 = "sleep_quality_1_5"
+        const val COLUMN_MORNING_ENERGY_1_5 = "morning_energy_1_5"
+        const val COLUMN_MUSCLE_SORENESS_1_5 = "muscle_soreness_1_5"
+        const val COLUMN_CONTEXT_TAGS = "context_tags"
 
         const val CREATE_TABLE_HRV_READINESS = """
             CREATE TABLE IF NOT EXISTS $TABLE_HRV_READINESS (
@@ -63,16 +68,21 @@ class HrvReadinessDbHelper(context: Context) :
                 $COLUMN_TIMESTAMP_MS INTEGER NOT NULL,
                 $COLUMN_DATE_ISO TEXT NOT NULL,
                 $COLUMN_TIMEZONE_ID TEXT NOT NULL,
-                $COLUMN_RESTING_HR_BPM INTEGER NOT NULL,
-                $COLUMN_RMSSD_MS REAL NOT NULL,
-                $COLUMN_LN_RMSSD REAL NOT NULL,
-                $COLUMN_HRV_SCORE_100 REAL NOT NULL,
+                $COLUMN_RESTING_HR_BPM INTEGER,
+                $COLUMN_RMSSD_MS REAL,
+                $COLUMN_LN_RMSSD REAL,
+                $COLUMN_HRV_SCORE_100 REAL,
                 $COLUMN_SDNN_MS REAL,
                 $COLUMN_ARTIFACT_RATE_PCT REAL,
-                $COLUMN_DURATION_SEC INTEGER NOT NULL,
+                $COLUMN_DURATION_SEC INTEGER,
                 $COLUMN_POSTURE TEXT NOT NULL,
                 $COLUMN_IS_PRIMARY_FOR_DAY INTEGER NOT NULL DEFAULT 0,
-                $COLUMN_NOTES TEXT
+                $COLUMN_NOTES TEXT,
+                $COLUMN_SLEEP_DURATION_MIN INTEGER,
+                $COLUMN_SLEEP_QUALITY_1_5 INTEGER,
+                $COLUMN_MORNING_ENERGY_1_5 INTEGER,
+                $COLUMN_MUSCLE_SORENESS_1_5 INTEGER,
+                $COLUMN_CONTEXT_TAGS TEXT
             );
         """
 
@@ -94,7 +104,56 @@ class HrvReadinessDbHelper(context: Context) :
     }
 
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
-        // V1 Initial creation. Schema parity guaranteed per Rule 64.
+        if (oldVersion < 2) {
+            db.execSQL(
+                """
+                CREATE TABLE ${TABLE_HRV_READINESS}_v2 (
+                    $COLUMN_ID INTEGER PRIMARY KEY AUTOINCREMENT,
+                    $COLUMN_TIMESTAMP_MS INTEGER NOT NULL,
+                    $COLUMN_DATE_ISO TEXT NOT NULL,
+                    $COLUMN_TIMEZONE_ID TEXT NOT NULL,
+                    $COLUMN_RESTING_HR_BPM INTEGER,
+                    $COLUMN_RMSSD_MS REAL,
+                    $COLUMN_LN_RMSSD REAL,
+                    $COLUMN_HRV_SCORE_100 REAL,
+                    $COLUMN_SDNN_MS REAL,
+                    $COLUMN_ARTIFACT_RATE_PCT REAL,
+                    $COLUMN_DURATION_SEC INTEGER,
+                    $COLUMN_POSTURE TEXT NOT NULL,
+                    $COLUMN_IS_PRIMARY_FOR_DAY INTEGER NOT NULL DEFAULT 0,
+                    $COLUMN_NOTES TEXT,
+                    $COLUMN_SLEEP_DURATION_MIN INTEGER,
+                    $COLUMN_SLEEP_QUALITY_1_5 INTEGER,
+                    $COLUMN_MORNING_ENERGY_1_5 INTEGER,
+                    $COLUMN_MUSCLE_SORENESS_1_5 INTEGER,
+                    $COLUMN_CONTEXT_TAGS TEXT
+                );
+                """.trimIndent()
+            )
+
+            db.execSQL(
+                """
+                INSERT INTO ${TABLE_HRV_READINESS}_v2 (
+                    $COLUMN_ID, $COLUMN_TIMESTAMP_MS, $COLUMN_DATE_ISO, $COLUMN_TIMEZONE_ID,
+                    $COLUMN_RESTING_HR_BPM, $COLUMN_RMSSD_MS, $COLUMN_LN_RMSSD, $COLUMN_HRV_SCORE_100,
+                    $COLUMN_SDNN_MS, $COLUMN_ARTIFACT_RATE_PCT, $COLUMN_DURATION_SEC, $COLUMN_POSTURE,
+                    $COLUMN_IS_PRIMARY_FOR_DAY, $COLUMN_NOTES
+                )
+                SELECT 
+                    $COLUMN_ID, $COLUMN_TIMESTAMP_MS, $COLUMN_DATE_ISO, $COLUMN_TIMEZONE_ID,
+                    $COLUMN_RESTING_HR_BPM, $COLUMN_RMSSD_MS, $COLUMN_LN_RMSSD, $COLUMN_HRV_SCORE_100,
+                    $COLUMN_SDNN_MS, $COLUMN_ARTIFACT_RATE_PCT, $COLUMN_DURATION_SEC, $COLUMN_POSTURE,
+                    $COLUMN_IS_PRIMARY_FOR_DAY, $COLUMN_NOTES
+                FROM $TABLE_HRV_READINESS;
+                """.trimIndent()
+            )
+
+            db.execSQL("DROP TABLE $TABLE_HRV_READINESS;")
+            db.execSQL("ALTER TABLE ${TABLE_HRV_READINESS}_v2 RENAME TO $TABLE_HRV_READINESS;")
+
+            db.execSQL(CREATE_INDEX_DATE_POSTURE)
+            db.execSQL(CREATE_INDEX_TIMESTAMP)
+        }
     }
 }
 
@@ -417,6 +476,7 @@ class HrvReadinessDatabaseManager private constructor(context: Context) {
               AND ${HrvReadinessDbHelper.COLUMN_DATE_ISO} >= ?
               AND ${HrvReadinessDbHelper.COLUMN_DATE_ISO} <= ?
               AND (${HrvReadinessDbHelper.COLUMN_ARTIFACT_RATE_PCT} IS NULL OR ${HrvReadinessDbHelper.COLUMN_ARTIFACT_RATE_PCT} <= ?)
+              AND ${HrvReadinessDbHelper.COLUMN_RMSSD_MS} IS NOT NULL
             ORDER BY ${HrvReadinessDbHelper.COLUMN_DATE_ISO} ASC, ${HrvReadinessDbHelper.COLUMN_IS_PRIMARY_FOR_DAY} DESC, ${HrvReadinessDbHelper.COLUMN_TIMESTAMP_MS} ASC
         """
         val allValid = ArrayList<HrvReadinessEntry>()

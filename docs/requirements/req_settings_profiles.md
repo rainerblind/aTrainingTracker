@@ -1885,7 +1885,7 @@ d. Step 4 (`OnboardingStep.BATTERY_OPTIMIZATION`): Doze mode background survival
 ### REQ-SET-103: Health Connect Settings UI, Manual Re-Sync & Write Idempotency [Verified]
 - **Tests**: `TST-SET-103` | **Tickets**: `ATT-3052`, `ATT-6712`, `ATT-6711`
 - **Implementation**: `HealthConnectSettingsDialog.kt`, `AppNavigationDrawer.kt`, `NavRoutes.kt`, `WorkoutHeader.kt`, `WorkoutDetailTabbedContent.kt`, `WorkoutSummary.kt`, `EditWorkoutScreen.kt`, `HealthConnectManager.kt`, `PeriodsViewModel.kt`, `MorningHrvCheckViewModel.kt`
-- **Status**: Specified
+- **Status**: Verified
 - **Rationale**: Athletes require user-friendly settings controls and deterministic synchronization guarantees:
 1. *Cloud Integrations Settings Toggle & Navigation Drawer Entry (`REQ-SET-103.1`)*:
    - The navigation drawer SHALL include `drawer_health_connect` (with dedicated vector icon and Last Sync timestamp per `Design Guidelines §3.4`) under `prefsOnlineCommunities`, mapping via `NavRoutes.toBottomSheetType()` to `SettingsBottomSheetType.HEALTH_CONNECT`.

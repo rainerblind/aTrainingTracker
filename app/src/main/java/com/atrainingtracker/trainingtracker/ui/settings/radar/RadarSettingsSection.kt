@@ -815,6 +815,36 @@ fun RadarSettingsSection(
                         }
                     )
                 }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Software Deceleration Brake-Light Trigger (REQ-CON-035.6 / ATT-5121)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f).padding(end = 16.dp)) {
+                        Text(
+                            text = stringResource(R.string.radar_brake_light_title),
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = stringResource(R.string.radar_brake_light_desc),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Switch(
+                        checked = tuningConfig.radarBrakeLightEnabled,
+                        onCheckedChange = { checked ->
+                            coroutineScope.launch {
+                                actualDataStore.updateRadarBrakeLightEnabled(checked)
+                            }
+                        }
+                    )
+                }
             }
         }
 

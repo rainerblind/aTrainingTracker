@@ -176,4 +176,8 @@
     <string name="radar_min_passing_distance">Min. Seitenabstand</string>
     <string name="radar_close_pass_warning">⚠️ %1$d gefährlich nahe Überholungen (&lt;%2$sm)</string>
     <string name="radar_heavy_vehicle_share">Schwerlastanteil</string>
+
+    <!-- Smartphone IMU/GPS Deceleration Brake-Light Trigger (ATT-5121 / REQ-CON-035) -->
+    <string name="radar_brake_light_title">Verzögerungs-Bremslicht</string>
+    <string name="radar_brake_light_desc">Hellt das Rücklicht bei starker Smartphone-IMU/GPS-Verzögerung auf (2,0 s Haltezeit, bei RearVue 820 automatisch umgangen)</string>
 </resources>

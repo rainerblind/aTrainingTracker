@@ -93,7 +93,7 @@ All system requirements across the 9 living domain shards are allocated directly
 | **UI Components & Design System** | `UI`, `UNT` | Jetpack Compose theme (`ATrainingTrackerTheme`), `MetricItem`, `ElevationProfile`, `TelemetryMetricGraph`, `AppModalBottomSheet`, `WorkoutPhotoStrip`, `WorkoutTimePhotoPickerSheet`, `MorningHrvCheckScreen` | High-contrast AMOLED theming, responsive landscape layouts, chart scrubbing, reusable Compose components, chronological workout photo selection, guided morning resting HRV acquisition. |
 | **Engineering Process & Stability** | `ARC`, `BLD`, `BUG`, `INT`, `LIV`, `LOG`, `MAN`, `NFR`, `PRO`, `REG`, `SEC`, `STB`, `STR`, `TOOL`, `TST` | ASPICE Dual-Agent Quality Gates, `jira_util.py`, `verify_requirement_governance.py`, ProGuard rules | CI/CD build hygiene, Chesterton's fence archaeology, crash resilience, process kill simulation. |
 | **Jubilee Milestones & App Reviews** | `REV` | `MilestoneAutoNamingManager`, `FirstJubileeCelebrationDialog`, `FirstJubileeActionHelper` | Milestone counting, achievement celebration, Google Play in-app review prompting. |
-| **Project Governance & Store Presence** | `STP` | `PlayStoreListingContractTest`, Google Play assets, screenshots | Google Play store presence parity, localized descriptions, automated metadata validation. |
+| **Store Presence** | `STP` | `PlayStoreListingContractTest`, Google Play assets, screenshots | Google Play store presence parity, localized descriptions, automated metadata validation. |
 
 ---
 

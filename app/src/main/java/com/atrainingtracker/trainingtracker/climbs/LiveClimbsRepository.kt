@@ -23,6 +23,7 @@ import android.location.Location
 import com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository
 import com.atrainingtracker.trainingtracker.database.ClimbsDatabaseManager
 import com.atrainingtracker.trainingtracker.repositories.RoutesRepository
+import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore
 import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.SphericalUtil
 import com.atrainingtracker.trainingtracker.geo.PolylineProgressTracker
@@ -44,6 +45,12 @@ class LiveClimbsRepository private constructor(
     private val climbsDb: ClimbsDatabaseManager = ClimbsDatabaseManager.getInstance(context),
     private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 ) {
+
+    private val tuningDataStore: TuningPreferencesDataStore? = try {
+        TuningPreferencesDataStore.getInstance(context)
+    } catch (e: Throwable) {
+        null
+    }
 
     private val _activeLiveClimb = MutableStateFlow<LiveClimbData?>(null)
     val activeLiveClimb: StateFlow<LiveClimbData?> = _activeLiveClimb.asStateFlow()
@@ -68,10 +75,38 @@ class LiveClimbsRepository private constructor(
         scope.launch {
             banalRepository.currentLocation.collect { location ->
                 if (location != null) {
-                    val bearing = banalRepository.currentBearing.value ?: 0.0
+                    val bearing = banalRepository.currentBearing.value
                     updateTracking(location, bearing)
                 }
             }
+        }
+
+        // 3. Observe climb categorization formula changes to dynamically re-categorize climbs (REQ-CLM-010.2)
+        if (tuningDataStore != null) {
+            scope.launch {
+                try {
+                    tuningDataStore.tuningConfigFlow
+                        .map { it.climbScoringFormula }
+                        .distinctUntilChanged()
+                        .collect { formula ->
+                            applyFormula(formula)
+                        }
+                } catch (e: Throwable) {
+                    // Ignore in headless / test environments
+                }
+            }
+        }
+    }
+
+    /**
+     * Dynamically re-categorizes stored and live climbs according to [formula] (REQ-CLM-010.2).
+     */
+    fun applyFormula(formula: ClimbScoringFormula) {
+        _allStoredClimbs.value = _allStoredClimbs.value.map { it.copy(category = it.resolveCategory(formula)) }
+        _allClimbs.value = _allClimbs.value.map { it.copy(category = it.resolveCategory(formula)) }
+        val active = _activeLiveClimb.value
+        if (active != null) {
+            _activeLiveClimb.value = active.copy(climb = active.climb.copy(category = active.climb.resolveCategory(formula)))
         }
     }
 
@@ -83,21 +118,37 @@ class LiveClimbsRepository private constructor(
     }
 
     suspend fun refreshClimbs(activeRouteId: Long?) {
-        val stored = climbsDb.getAllClimbs()
+        val formula = try {
+            tuningDataStore?.getTuningConfig()?.climbScoringFormula ?: ClimbScoringFormula.FIETS
+        } catch (e: Throwable) {
+            ClimbScoringFormula.FIETS
+        }
+
+        val stored = climbsDb.getAllClimbs().map { it.copy(category = it.resolveCategory(formula)) }
         _allStoredClimbs.value = stored
 
-        val list = if (activeRouteId != null) {
+        val rawList = if (activeRouteId != null) {
             climbsDb.getClimbsForRoute(activeRouteId)
         } else {
             stored
         }
+        val list = rawList.map { it.copy(category = it.resolveCategory(formula)) }
         _allClimbs.value = list
+
+        val active = _activeLiveClimb.value
+        if (active != null) {
+            if (list.none { it.id == active.climb.id }) {
+                _activeLiveClimb.value = null
+            } else {
+                _activeLiveClimb.value = active.copy(climb = active.climb.copy(category = active.climb.resolveCategory(formula)))
+            }
+        }
     }
 
     /**
-     * Updates live climb tracking telemetry based on athlete's current [location] and [bearing].
+     * Updates live climb tracking telemetry based on athlete's current [location] and optional [bearing].
      */
-    fun updateTracking(location: LatLng, bearing: Double) {
+    fun updateTracking(location: LatLng, bearing: Double? = null) {
         val candidates = _allClimbs.value
         if (candidates.isEmpty()) {
             _activeLiveClimb.value = null
@@ -120,6 +171,12 @@ class LiveClimbsRepository private constructor(
             } else {
                 return
             }
+        }
+
+        // When stationary or indoors without a valid movement vector, do not match new approaching climbs
+        if (bearing == null) {
+            _activeLiveClimb.value = null
+            return
         }
 
         // Otherwise scan candidates for approaching or starting climb
@@ -176,7 +233,7 @@ class LiveClimbsRepository private constructor(
     private fun evaluateClimbProgress(
         current: LiveClimbData,
         location: LatLng,
-        bearing: Double
+        bearing: Double?
     ): LiveClimbData? {
         val climb = current.climb
         val results = FloatArray(1)

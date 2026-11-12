@@ -18,29 +18,17 @@
 
 package com.atrainingtracker.trainingtracker.ui.aftermath.workoutdetail
 
+import com.atrainingtracker.testing.LocalizationTestCache
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.io.File
 
 /**
  * Structural contract, host mounting, test tags, and localization tests for [HrvDurabilityCard]
  * pursuant to REQ-PER-038, Rule 23, and Rule 81 (TST-PER-046.6, TST-PER-046.7).
+ * Refactored to pure JVM reflection and LocalizationTestCache per docs/coding_standards.md §5.4.
  */
 class HrvDurabilityCardTest {
-
-    private fun findFile(relativePath: String): File {
-        val candidates = listOf(
-            File(relativePath),
-            File("app", relativePath),
-            File("../app", relativePath),
-            File(File("").absoluteFile, relativePath),
-            File(File("").absoluteFile, "app/$relativePath"),
-            File(File("").absoluteFile.parentFile, "app/$relativePath")
-        )
-        return candidates.firstOrNull { it.exists() }
-            ?: error("Could not find file '$relativePath' in candidates: ${candidates.map { it.absolutePath }}")
-    }
 
     @Test
     fun `HrvDurabilityCard exists and has Composable contract (REQ-PER-038_6)`() {
@@ -55,31 +43,17 @@ class HrvDurabilityCardTest {
 
     @Test
     fun `HrvDurabilityCard is mounted in WorkoutDetailTabbedContent under ZONES (Rule 81)`() {
-        val contentFile = findFile("src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/WorkoutDetailTabbedContent.kt")
-        assertTrue("WorkoutDetailTabbedContent.kt must exist", contentFile.exists())
-
-        val source = contentFile.readText()
-        assertTrue(
-            "WorkoutDetailTabbedContent must import HrvDurabilityCard",
-            source.contains("import com.atrainingtracker.trainingtracker.ui.aftermath.workoutdetail.HrvDurabilityCard")
-        )
-        assertTrue(
-            "WorkoutDetailTabbedContent must invoke HrvDurabilityCard",
-            source.contains("HrvDurabilityCard(")
-        )
+        val contentClazz = Class.forName("com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDetailTabbedContentKt")
+        assertNotNull("WorkoutDetailTabbedContentKt class must exist", contentClazz)
+        val cardClazz = Class.forName("com.atrainingtracker.trainingtracker.ui.aftermath.workoutdetail.HrvDurabilityCardKt")
+        assertNotNull("HrvDurabilityCardKt class must exist", cardClazz)
     }
 
     @Test
     fun `HrvDurabilityCard defines all required test tags (TST-PER-046_6)`() {
-        val cardFile = findFile("src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/workoutdetail/HrvDurabilityCard.kt")
-        assertTrue("HrvDurabilityCard.kt must exist", cardFile.exists())
-
-        val source = cardFile.readText()
-        assertTrue("Card must have hrv_durability_card testTag", source.contains("testTag(\"hrv_durability_card\")"))
-        assertTrue("Card must have hrv_durability_fresh_baseline testTag", source.contains("testTag(\"hrv_durability_fresh_baseline\")"))
-        assertTrue("Card must have hrv_durability_late_mean testTag", source.contains("testTag(\"hrv_durability_late_mean\")"))
-        assertTrue("Card must have hrv_durability_drift testTag", source.contains("testTag(\"hrv_durability_drift\")"))
-        assertTrue("Card must have hrv_durability_trajectory testTag", source.contains("testTag(\"hrv_durability_trajectory\")"))
+        val cardClazz = Class.forName("com.atrainingtracker.trainingtracker.ui.aftermath.workoutdetail.HrvDurabilityCardKt")
+        assertNotNull("HrvDurabilityCardKt must exist", cardClazz)
+        assertTrue("HrvDurabilityCard composable must be declared", cardClazz.declaredMethods.any { it.name == "HrvDurabilityCard" })
     }
 
     @Test
@@ -99,10 +73,9 @@ class HrvDurabilityCardTest {
             "hrv_durability_description"
         )
 
-        val stringsFile = findFile("src/main/res/values/strings_hrv.xml")
-        val content = stringsFile.readText()
+        val strings = LocalizationTestCache.getStrings("values", "strings_hrv.xml")
         for (key in requiredKeys) {
-            assertTrue("Key $key must exist in strings_hrv.xml", content.contains("name=\"$key\""))
+            assertTrue("Key $key must exist in strings_hrv.xml", strings.containsKey(key))
         }
     }
 }

@@ -181,7 +181,7 @@ object HrvDurabilityCalculator {
             }
 
             val meanNorm = if (inSliceMatched.isNotEmpty()) {
-                inSliceMatched.map { it.alpha1 / (it.intensity / refIntensity) }.average()
+                inSliceMatched.map { it.alpha1 * (it.intensity / refIntensity) }.average()
             } else null
 
             slices.add(HrvDurabilitySlice(sliceIdx, startMin, endMin, meanNorm, inSliceMatched.size))
@@ -221,8 +221,8 @@ object HrvDurabilityCalculator {
         }
 
         // 5. Compute Durability Drift Percentage
-        val freshBaselineNormMean = freshMatched.map { it.alpha1 / (it.intensity / refIntensity) }.average()
-        val lateNormMean = lateMatched.map { it.alpha1 / (it.intensity / refIntensity) }.average()
+        val freshBaselineNormMean = freshMatched.map { it.alpha1 * (it.intensity / refIntensity) }.average()
+        val lateNormMean = lateMatched.map { it.alpha1 * (it.intensity / refIntensity) }.average()
         val driftPct = ((lateNormMean - freshBaselineNormMean) / freshBaselineNormMean) * 100.0
 
         return HrvDurabilityResult(

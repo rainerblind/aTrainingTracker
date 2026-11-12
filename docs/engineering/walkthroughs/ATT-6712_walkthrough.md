@@ -62,3 +62,16 @@ PASS: Requirement Archaeology & Chesterton's Fence Audit successfully verified w
 ## 4. Verification & Clean-Room Audit
 * **Invariants**: Waking spot-check baselines (`SUPINE`, `SEATED`, `STANDING`) and nocturnal baselines (`OVERNIGHT_WEARABLE`) remain strictly isolated; manual check in `MorningHrvCheckScreen` remains waking-only; zero schema changes to `HrvReadiness.db` (v1); user-pinned readings are never overwritten.
 * **Localization & UI**: 100% parity across all 9 supported application locales in `strings_hrv.xml` and `strings_health_connect.xml`.
+
+---
+
+## 5. Cold Carbon Review (Stage 6) Defect Resolution & Healing
+- **Finding 1 (Living Documentation Governance)**: Resolved residual status discrepancies where `REQ-SET-103` in `docs/requirements/req_settings_profiles.md` and `TST-SET-103` in `docs/tests/tst_settings_profiles.md` were left marked `[Specified]` instead of `[Verified]`.
+- **Master Table Parity**: Re-synchronized living documentation master indexes via `verify_requirement_governance.py --sync-indexes`, achieving 100% parity across all living doc tables.
+- **Verification**: Executed targeted unit tests (`HealthConnectSettingsDialogTest`, `HealthConnectHrvImporterTest`) and confirmed clean requirement governance compliance.
+
+### Requirement Archaeology & Chesterton's Fence Audit
+* **Original Requirement ID & Target**: `REQ-PER-031` (`REQ-PER-031.1`..`031.5`), `REQ-PER-033`, `REQ-SET-103`.
+* **Historical Origin & Commit Trace**: Sprint `2026-46.1` (`ATT-4981`, commit `04c05e52`).
+* **Root Reason for Existing Formulation**: ATT-4981 established initial ingestion math (log-normal aggregation) and posture isolation. Settings UI wiring and pagination were deferred to sprint follow-up; RHR was coupled to HRV read permissions out of convenience.
+* **Preservation of Core Invariants**: Waking spot-check baselines (`SUPINE`, `SEATED`, `STANDING`) and nocturnal baselines (`OVERNIGHT_WEARABLE`) remain strictly isolated; manual check remains restricted to waking postures; zero schema changes to `HrvReadiness.db`.

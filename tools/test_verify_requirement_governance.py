@@ -16,17 +16,28 @@ Scenarios tested:
 import os
 import subprocess
 import sys
+import tempfile
 import unittest
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from tools.verify_requirement_governance import (
+    ALLOWED_ENGINEERING_ENTRIES,
     parse_diff_requirements,
+    recalculate_master_index_tables,
     validate_archaeology_section,
-    verify_governance,
-    verify_composable_islands,
-    verify_repository_encapsulation,
     verify_architecture_and_system_specs,
+    verify_composable_islands,
+    verify_engineering_directory_structure,
+    verify_gate_records,
+    verify_governance,
+    verify_master_table_parity,
+    verify_qa_audits,
+    verify_repository_encapsulation,
+    verify_sprint_metrics,
+    verify_independent_reviews,
+    validate_impact_analysis_section,
+    verify_stage1_impact_analysis,
 )
 
 
@@ -169,7 +180,7 @@ index 1234567..89abcdef 100644
                     imported_modules.add(node.module.split(".")[0])
 
         # Allowed standard library modules
-        std_lib_modules = {"os", "sys", "re", "subprocess", "argparse", "unittest"}
+        std_lib_modules = {"os", "sys", "re", "subprocess", "argparse", "unittest", "json"}
         for mod in imported_modules:
             self.assertIn(
                 mod,
@@ -437,6 +448,441 @@ diff --git a/docs/requirements/req_process_stability.md b/docs/requirements/req_
         self.assertTrue(any("Composable islands detected" in d for d in diag))
         self.assertTrue(any("Repository encapsulation verified" in d for d in diag))
         self.assertTrue(any("Architecture & system specification" in d for d in diag))
+
+    def test_scenario_12_master_table_preamble_and_shard_count_parity(self):
+        """Scenario 12: verify_master_table_parity asserts preamble and summary shard counts (ATT-6140)."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            docs_req = os.path.join(tmpdir, "docs", "requirements")
+            os.makedirs(docs_req, exist_ok=True)
+            # Create a single shard
+            with open(os.path.join(docs_req, "req_test.md"), "w", encoding="utf-8") as f:
+                f.write("### REQ-TST-001: Sample [Verified]\n")
+
+            # Mismatched preamble (claims 7 domain-sharded, but filesystem has 1 shard)
+            master_content_mismatch = (
+                "# Living Requirements\n\n"
+                "This master index links to the 7 domain-sharded requirement files under `docs/requirements/`.\n\n"
+                "| Domain Shard | Prefixes | Total | Verified | Planned / Open |\n"
+                "| :--- | :--- | :---: | :---: | :---: |\n"
+                "| [Test](requirements/req_test.md) | `TST` | 1 | 1 | 0 |\n\n"
+                "**Total Living Requirements**: 1 across 7 domain shards.\n"
+            )
+            with open(os.path.join(tmpdir, "docs", "requirements.md"), "w", encoding="utf-8") as f:
+                f.write(master_content_mismatch)
+
+            ok, errs = verify_master_table_parity(repo_root=tmpdir)
+            self.assertFalse(ok)
+            self.assertTrue(any("Preamble shard count mismatch" in e for e in errs))
+            self.assertTrue(any("Summary shard count mismatch" in e for e in errs))
+
+            # Recalculate should synchronize both preamble and summary counts to actual 1 shard
+            recalculate_master_index_tables(repo_root=tmpdir)
+            ok_after, errs_after = verify_master_table_parity(repo_root=tmpdir)
+            self.assertTrue(ok_after, f"Expected parity after recalculate, got errors: {errs_after}")
+
+            with open(os.path.join(tmpdir, "docs", "requirements.md"), "r", encoding="utf-8") as f:
+                updated_text = f.read()
+            self.assertIn("links to the 1 domain-sharded requirement files", updated_text)
+            self.assertIn("across 1 domain shards.", updated_text)
+
+    def test_scenario_13_canonical_engineering_directory_allows_gates(self):
+        """Scenario 13: ALLOWED_ENGINEERING_ENTRIES registers 'gates', 'qa_audits', and 'reviews' (TST-PRO-059.3, TST-PRO-061.4, TST-PRO-062.3)."""
+        self.assertIn("gates", ALLOWED_ENGINEERING_ENTRIES)
+        self.assertIn("qa_audits", ALLOWED_ENGINEERING_ENTRIES)
+        self.assertIn("reviews", ALLOWED_ENGINEERING_ENTRIES)
+        with tempfile.TemporaryDirectory() as tmpdir:
+            eng_dir = os.path.join(tmpdir, "docs", "engineering")
+            os.makedirs(os.path.join(eng_dir, "gates"), exist_ok=True)
+            os.makedirs(os.path.join(eng_dir, "analysis"), exist_ok=True)
+            os.makedirs(os.path.join(eng_dir, "reviews"), exist_ok=True)
+            ok, errors = verify_engineering_directory_structure(eng_dir=eng_dir)
+            self.assertTrue(ok, f"Expected gates and reviews to be allowed, got errors: {errors}")
+
+            # Non-canonical entry should fail
+            os.makedirs(os.path.join(eng_dir, "invalid_dir"), exist_ok=True)
+            ok_bad, errors_bad = verify_engineering_directory_structure(eng_dir=eng_dir)
+            self.assertFalse(ok_bad)
+            self.assertTrue(any("invalid_dir" in e for e in errors_bad))
+
+    def test_scenario_14_verify_gate_records_validation(self):
+        """Scenario 14: verify_gate_records validates export presence and failure modes (TST-PRO-059.2)."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            # 1. Missing gates directory
+            ok, errs = verify_gate_records(sprint_name="sprint/2026-46.3", repo_root=tmpdir)
+            self.assertFalse(ok)
+            self.assertTrue(any("does not exist" in e for e in errs))
+
+            gates_dir = os.path.join(tmpdir, "docs", "engineering", "gates")
+            os.makedirs(gates_dir, exist_ok=True)
+
+            # 2. Missing sprint file
+            ok, errs = verify_gate_records(sprint_name="sprint/2026-46.3", repo_root=tmpdir)
+            self.assertFalse(ok)
+            self.assertTrue(any("Missing sprint quality gate export file" in e for e in errs))
+
+            # 3. Empty sprint file
+            target_file = os.path.join(gates_dir, "sprint_2026-46.3.md")
+            with open(target_file, "w", encoding="utf-8") as f:
+                f.write("   \n")
+            ok, errs = verify_gate_records(sprint_name="sprint/2026-46.3", repo_root=tmpdir)
+            self.assertFalse(ok)
+            self.assertTrue(any("empty" in e for e in errs))
+
+            # 4. Valid sprint file with gate records
+            valid_content = (
+                "# Sprint Quality Gate Records: sprint/2026-46.3\n\n"
+                "| Parent Ticket | Subtask Key | Gate | Stage | Verdict | Role | Actor | Timestamp |\n"
+                "| ATT-6149 | ATT-7247 | Gate 1 | Analysis | PASS | agent2 | Agent 2 | 2026-11-12 |\n"
+            )
+            with open(target_file, "w", encoding="utf-8") as f:
+                f.write(valid_content)
+
+            ok, msgs = verify_gate_records(sprint_name="sprint/2026-46.3", repo_root=tmpdir)
+            self.assertTrue(ok, f"Expected valid gate records, got: {msgs}")
+            self.assertTrue(any("PASS" in m for m in msgs))
+
+            # 5. Wildcard validation without sprint name
+            ok_any, msgs_any = verify_gate_records(sprint_name=None, repo_root=tmpdir)
+            self.assertTrue(ok_any)
+            self.assertTrue(any("Verified 1 sprint quality gate export record" in m for m in msgs_any))
+
+    def test_scenario_15_verify_sprint_metrics_validation(self):
+        """Scenario 15: verify_sprint_metrics validates JSONL schema and positive story points (TST-PRO-060.2)."""
+        import json
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            metrics_dir = os.path.join(tmpdir, "docs", "engineering", "metrics")
+            os.makedirs(metrics_dir, exist_ok=True)
+            metrics_file = os.path.join(metrics_dir, "process_metrics.jsonl")
+
+            # 1. Missing metrics file
+            ok, errs = verify_sprint_metrics(sprint_name="2026-46.3", repo_root=tmpdir)
+            self.assertFalse(ok)
+            self.assertTrue(any("does not exist" in e for e in errs))
+
+            # 2. Empty metrics file
+            with open(metrics_file, "w", encoding="utf-8") as f:
+                f.write("   \n")
+            ok, errs = verify_sprint_metrics(sprint_name="2026-46.3", repo_root=tmpdir)
+            self.assertFalse(ok)
+            self.assertTrue(any("empty" in e for e in errs))
+
+            # 3. Malformed JSON
+            with open(metrics_file, "w", encoding="utf-8") as f:
+                f.write("not valid json\n")
+            ok, errs = verify_sprint_metrics(sprint_name="2026-46.3", repo_root=tmpdir)
+            self.assertFalse(ok)
+            self.assertTrue(any("Malformed JSON" in e for e in errs))
+
+            # 4. Missing required schema fields
+            with open(metrics_file, "w", encoding="utf-8") as f:
+                f.write(json.dumps({"sprint_id": 1, "sprint_name": "test"}) + "\n")
+            ok, errs = verify_sprint_metrics(sprint_name="test", repo_root=tmpdir)
+            self.assertFalse(ok)
+            self.assertTrue(any("missing required schema fields" in e for e in errs))
+
+            # 5. Sprint with 0 story points
+            zero_sp_record = {
+                "sprint_id": 100,
+                "sprint_name": "2026-40.1",
+                "recorded_at": "2026-11-12T00:00:00Z",
+                "throughput": {
+                    "total_tickets": 5,
+                    "completed_tickets": 5,
+                    "total_story_points": 0.0,
+                    "completed_story_points": 0.0,
+                },
+                "quality_gates": {"overall_ftpr_percent": 100.0},
+            }
+            with open(metrics_file, "w", encoding="utf-8") as f:
+                f.write(json.dumps(zero_sp_record) + "\n")
+            ok, errs = verify_sprint_metrics(sprint_name="2026-40.1", repo_root=tmpdir)
+            self.assertFalse(ok)
+            self.assertTrue(any("invalid story points" in e for e in errs))
+
+            # 6. Missing requested sprint
+            ok, errs = verify_sprint_metrics(sprint_name="nonexistent", repo_root=tmpdir)
+            self.assertFalse(ok)
+            self.assertTrue(any("Missing sprint metrics record" in e for e in errs))
+
+            # 7. Valid sprint record with >0 story points
+            valid_record = {
+                "sprint_id": 440,
+                "sprint_name": "2026-46.3",
+                "recorded_at": "2026-11-12T04:00:00Z",
+                "throughput": {
+                    "total_tickets": 10,
+                    "completed_tickets": 10,
+                    "total_story_points": 25.0,
+                    "completed_story_points": 25.0,
+                },
+                "quality_gates": {"overall_ftpr_percent": 95.0},
+            }
+            with open(metrics_file, "a", encoding="utf-8") as f:
+                f.write(json.dumps(valid_record) + "\n")
+
+            ok, msgs = verify_sprint_metrics(sprint_name="sprint/2026-46.3", repo_root=tmpdir)
+            self.assertTrue(ok, f"Expected pass, got: {msgs}")
+            self.assertTrue(any("PASS" in m for m in msgs))
+
+            # 8. Wildcard verification (latest entry is valid_record)
+            ok_any, msgs_any = verify_sprint_metrics(sprint_name=None, repo_root=tmpdir)
+            self.assertTrue(ok_any, f"Expected pass, got: {msgs_any}")
+            self.assertTrue(any("Verified 2 sprint metrics record(s)" in m for m in msgs_any))
+
+            # 9. Record with valid problem_trends schema passes
+            valid_pt_record = {
+                "sprint_id": 441,
+                "sprint_name": "2026-47.1",
+                "throughput": {"total_story_points": 15.0, "completed_story_points": 15.0},
+                "quality_gates": {},
+                "problem_trends": {
+                    "total_bugs": 2,
+                    "open_bugs": 0,
+                    "closed_bugs": 2,
+                    "resolution_rate_percent": 100.0,
+                    "by_severity": {"Critical": 1, "Major": 1, "Minor": 0, "Cosmetic": 0},
+                },
+            }
+            with open(metrics_file, "a", encoding="utf-8") as f:
+                f.write(json.dumps(valid_pt_record) + "\n")
+            ok_valid_pt, msgs_valid_pt = verify_sprint_metrics(sprint_name="2026-47.1", repo_root=tmpdir)
+            self.assertTrue(ok_valid_pt, f"Expected valid problem_trends to pass, got: {msgs_valid_pt}")
+
+            # 10. Record with malformed problem_trends schema fails (REQ-PRO-063.6)
+            bad_pt_record = {
+                "sprint_id": 442,
+                "sprint_name": "2026-47.2",
+                "throughput": {"total_story_points": 10.0, "completed_story_points": 10.0},
+                "quality_gates": {},
+                "problem_trends": {"total_bugs": 1},  # missing open_bugs, closed_bugs, by_severity
+            }
+            with open(metrics_file, "a", encoding="utf-8") as f:
+                f.write(json.dumps(bad_pt_record) + "\n")
+            ok_bad_pt, errs_bad_pt = verify_sprint_metrics(sprint_name="2026-47.2", repo_root=tmpdir)
+            self.assertFalse(ok_bad_pt)
+            self.assertTrue(any("problem_trends fields" in e for e in errs_bad_pt))
+
+    def test_scenario_16_verify_qa_audits_validation(self):
+        """Scenario 16: verify_qa_audits validates report presence, verdicts, and >= 2 sampled tickets (TST-PRO-061.2)."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            # 1. Missing qa_audits directory
+            ok, errs = verify_qa_audits(sprint_name="sprint/2026-46.3", repo_root=tmpdir)
+            self.assertFalse(ok)
+            self.assertTrue(any("does not exist" in e for e in errs))
+
+            qa_dir = os.path.join(tmpdir, "docs", "engineering", "qa_audits")
+            os.makedirs(qa_dir, exist_ok=True)
+
+            # 2. Missing sprint report
+            ok, errs = verify_qa_audits(sprint_name="sprint/2026-46.3", repo_root=tmpdir)
+            self.assertFalse(ok)
+            self.assertTrue(any("Missing sprint QA process-compliance audit file" in e for e in errs))
+
+            # 3. Empty report
+            target_file = os.path.join(qa_dir, "sprint_2026-46.3.md")
+            with open(target_file, "w", encoding="utf-8") as f:
+                f.write("   \n")
+            ok, errs = verify_qa_audits(sprint_name="sprint/2026-46.3", repo_root=tmpdir)
+            self.assertFalse(ok)
+            self.assertTrue(any("empty" in e for e in errs))
+
+            # 4. Report without recognized compliance verdicts
+            with open(target_file, "w", encoding="utf-8") as f:
+                f.write("# QA Report\nRandom notes without verdict.\n")
+            ok, errs = verify_qa_audits(sprint_name="sprint/2026-46.3", repo_root=tmpdir)
+            self.assertFalse(ok)
+            self.assertTrue(any("no recognized compliance verdicts" in e for e in errs))
+
+            # 5. Report with only 1 sampled ticket (< 2)
+            single_sample_content = (
+                "# Sprint QA Process-Compliance Audit: Sprint 2026-46.3\n\n"
+                "**Overall Process Verdict**: **COMPLIANT**\n\n"
+                "| Ticket | Summary | Compliance Verdict |\n"
+                "| ATT-6150 | Metrics Persistence | COMPLIANT |\n\n"
+                "### Ticket: ATT-6150\n"
+                "* **Process Verdict**: **COMPLIANT**\n"
+            )
+            with open(target_file, "w", encoding="utf-8") as f:
+                f.write(single_sample_content)
+            ok, errs = verify_qa_audits(sprint_name="sprint/2026-46.3", repo_root=tmpdir)
+            self.assertFalse(ok)
+            self.assertTrue(any("minimum >= 2 required" in e for e in errs))
+
+            # 6. Valid report with >= 2 sampled tickets
+            valid_content = (
+                "# Sprint QA Process-Compliance Audit: Sprint 2026-46.3\n\n"
+                "**Overall Process Verdict**: **COMPLIANT**\n\n"
+                "| Ticket | Summary | Compliance Verdict |\n"
+                "| ATT-6149 | Gate Records Export | COMPLIANT |\n"
+                "| ATT-6150 | Metrics Persistence | COMPLIANT |\n\n"
+                "### Ticket: ATT-6149 - Gate Records Export\n"
+                "* **Process Verdict**: **COMPLIANT**\n\n"
+                "### Ticket: ATT-6150 - Metrics Persistence\n"
+                "* **Process Verdict**: **COMPLIANT**\n"
+            )
+            with open(target_file, "w", encoding="utf-8") as f:
+                f.write(valid_content)
+
+            ok, msgs = verify_qa_audits(sprint_name="sprint/2026-46.3", repo_root=tmpdir)
+            self.assertTrue(ok, f"Expected pass, got: {msgs}")
+            self.assertTrue(any("PASS" in m for m in msgs))
+
+            # 7. Wildcard verification without sprint name
+            ok_any, msgs_any = verify_qa_audits(sprint_name=None, repo_root=tmpdir)
+            self.assertTrue(ok_any, f"Expected pass, got: {msgs_any}")
+            self.assertTrue(any("Verified 1 sprint QA process-compliance audit record" in m for m in msgs_any))
+
+    def test_scenario_17_verify_reviews_validation(self):
+        """Scenario 17: verify_independent_reviews validates presence, schema, and metadata fields (TST-PRO-062.2)."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            # 1. Missing reviews directory
+            ok, errs = verify_independent_reviews(sprint_name="sprint/2026-46.3", repo_root=tmpdir)
+            self.assertFalse(ok)
+            self.assertTrue(any("does not exist" in e for e in errs))
+
+            reviews_dir = os.path.join(tmpdir, "docs", "engineering", "reviews")
+            os.makedirs(reviews_dir, exist_ok=True)
+
+            # 2. Missing sprint review record
+            ok, errs = verify_independent_reviews(sprint_name="sprint/2026-46.3", repo_root=tmpdir)
+            self.assertFalse(ok)
+            self.assertTrue(any("Missing independent review record" in e for e in errs))
+
+            # 3. Empty review file
+            target_file = os.path.join(reviews_dir, "sprint_2026-46.3.md")
+            with open(target_file, "w", encoding="utf-8") as f:
+                f.write("   \n")
+            ok, errs = verify_independent_reviews(sprint_name="sprint/2026-46.3", repo_root=tmpdir)
+            self.assertFalse(ok)
+            self.assertTrue(any("empty" in e for e in errs))
+
+            # 4. Review file missing required metadata fields (e.g., missing Verdict)
+            incomplete_content = (
+                "# Independent Review: sprint/2026-46.3\n\n"
+                "* **Reviewer**: Human Process Owner\n"
+                "* **Date**: 2026-11-12 04:00:00\n"
+                "* **Scope**: Ceremony 2 Sprint Review\n"
+            )
+            with open(target_file, "w", encoding="utf-8") as f:
+                f.write(incomplete_content)
+            ok, errs = verify_independent_reviews(sprint_name="sprint/2026-46.3", repo_root=tmpdir)
+            self.assertFalse(ok)
+            self.assertTrue(any("missing required metadata field: Verdict" in e for e in errs))
+
+            # 5. Valid sprint review record with all metadata fields
+            valid_content = (
+                "# Independent Review: sprint/2026-46.3\n\n"
+                "## Metadata\n"
+                "* **Reviewer**: Human Process Owner\n"
+                "* **Review Type**: Human Sprint Review (Ceremony 2)\n"
+                "* **Vendor**: Human\n"
+                "* **Model**: Human Process Owner\n"
+                "* **Version**: N/A\n"
+                "* **Date**: 2026-11-12 04:00:00\n"
+                "* **Scope**: Ceremony 2 Sprint Review\n"
+                "* **Verdict**: **PASS**\n\n"
+                "## Findings\n"
+                "All sprint deliverables reviewed and accepted.\n"
+            )
+            with open(target_file, "w", encoding="utf-8") as f:
+                f.write(valid_content)
+
+            ok, msgs = verify_independent_reviews(sprint_name="sprint/2026-46.3", repo_root=tmpdir)
+            self.assertTrue(ok, f"Expected pass, got: {msgs}")
+            self.assertTrue(any("PASS" in m for m in msgs))
+
+            # 6. Wildcard verification without sprint name
+            ok_any, msgs_any = verify_independent_reviews(sprint_name=None, repo_root=tmpdir)
+            self.assertTrue(ok_any, f"Expected pass, got: {msgs_any}")
+            self.assertTrue(any("Verified 1 independent review record(s)" in m for m in msgs_any))
+
+    def test_scenario_18_impact_analysis_section_validation(self):
+        """TST-PRO-064.1: Verify validate_impact_analysis_section validation across valid, missing, and placeholder cases."""
+        # 1. Valid Impact Analysis section with all 4 dimensions
+        valid_text = """
+# Stage 1 Analysis: ATT-6157
+
+## 5. Change-Request Impact Analysis (SUP.10)
+* **Affected Requirements**: Net-new REQ-PRO-064
+* **Affected Architecture Elements**: tools/jira_util.py, tools/verify_requirement_governance.py
+* **Verification Impact & Test Surface**: TST-PRO-064 and governance unit test suites
+* **Risk Assessment & Invariants**: Low risk. Affects developer governance tooling only.
+"""
+        ok, errors = validate_impact_analysis_section(valid_text)
+        self.assertTrue(ok, f"Expected valid impact analysis to pass, got: {errors}")
+        self.assertEqual(len(errors), 0)
+
+        # 2. Missing section header
+        missing_header_text = """
+# Stage 1 Analysis: ATT-6157
+* **Affected Requirements**: Net-new REQ-PRO-064
+* **Affected Architecture Elements**: tools/jira_util.py
+"""
+        ok_hdr, errs_hdr = validate_impact_analysis_section(missing_header_text)
+        self.assertFalse(ok_hdr)
+        self.assertTrue(any("Missing mandatory section header" in e for e in errs_hdr))
+
+        # 3. Missing one mandatory dimension (e.g. Risk Assessment)
+        missing_dim_text = """
+## Change Impact Analysis
+* **Affected Requirements**: Net-new REQ-PRO-064
+* **Affected Architecture Elements**: tools/jira_util.py
+* **Affected Tests**: TST-PRO-064
+"""
+        ok_dim, errs_dim = validate_impact_analysis_section(missing_dim_text)
+        self.assertFalse(ok_dim)
+        self.assertTrue(any("Risk Assessment" in e for e in errs_dim))
+
+        # 4. Placeholder content in dimensions
+        placeholder_text = """
+## Change-Request Impact Analysis
+* **Affected Requirements**: TODO
+* **Affected Architecture Elements**: TBD
+* **Verification Impact & Test Surface**: None
+* **Risk Assessment & Invariants**: N/A
+"""
+        ok_ph, errs_ph = validate_impact_analysis_section(placeholder_text)
+        self.assertFalse(ok_ph)
+        self.assertTrue(len(errs_ph) >= 4)
+        self.assertTrue(all("placeholder content" in e for e in errs_ph))
+
+    def test_scenario_19_verify_stage1_impact_analysis_file_and_cli(self):
+        """TST-PRO-064.2: Verify verify_stage1_impact_analysis and CLI --check-impact."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            analysis_dir = os.path.join(tmpdir, "docs", "engineering", "analysis")
+            os.makedirs(analysis_dir, exist_ok=True)
+
+            # 1. Non-existent file
+            ok, errs = verify_stage1_impact_analysis(analysis_file="missing.md", repo_root=tmpdir)
+            self.assertFalse(ok)
+            self.assertTrue(any("not found" in e for e in errs))
+
+            # 2. Invalid analysis file
+            bad_file = os.path.join(analysis_dir, "ATT-9999_analysis.md")
+            with open(bad_file, "w", encoding="utf-8") as f:
+                f.write("# Incomplete Analysis\nNo impact section here.\n")
+            ok_bad, errs_bad = verify_stage1_impact_analysis(analysis_file=bad_file, repo_root=tmpdir)
+            self.assertFalse(ok_bad)
+            self.assertTrue(any("failed validation" in e for e in errs_bad))
+
+            # 3. Valid analysis file
+            good_file = os.path.join(analysis_dir, "ATT-6157_analysis.md")
+            with open(good_file, "w", encoding="utf-8") as f:
+                f.write("""# Stage 1 Analysis: ATT-6157
+## Change Impact Analysis
+* **Affected Requirements**: REQ-PRO-064
+* **Affected Architecture Elements**: tools/jira_util.py
+* **Verification Impact & Test Surface**: TST-PRO-064
+* **Risk Assessment & Invariants**: Low risk developer tooling
+""")
+            ok_good, msgs_good = verify_stage1_impact_analysis(analysis_file=good_file, repo_root=tmpdir)
+            self.assertTrue(ok_good, f"Expected pass, got: {msgs_good}")
+            self.assertTrue(any("PASS:" in m for m in msgs_good))
+
+            # 4. Auto-discovery without explicit file
+            ok_auto, msgs_auto = verify_stage1_impact_analysis(analysis_file=None, repo_root=tmpdir)
+            self.assertTrue(ok_auto, f"Expected auto-discovery pass, got: {msgs_auto}")
 
 
 if __name__ == "__main__":

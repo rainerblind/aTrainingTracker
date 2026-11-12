@@ -227,4 +227,26 @@
     <string name="hrv_durability_trajectory_title">15分スライス軌跡</string>
     <string name="hrv_durability_slice_label">%1$d–%2$d分</string>
     <string name="hrv_durability_description">フレッシュベースライン (15–45分) と終盤セグメント (>60分) のDFA α1を同等強度で比較し、自律神経の疲労および迷走神経活動の維持度を定量化します。</string>
+
+    <!-- Morning Sleep & Wellness Tracking (ATT-7034 / REQ-HRV-038..042) -->
+    <string name="tuning_morning_sleep_wellness_title">朝の睡眠とウェルネス記録</string>
+    <string name="tuning_morning_sleep_wellness_desc">胸部ストラップによるHR測定の有無にかかわらず、睡眠時間、睡眠の質、エネルギーを記録します</string>
+    <string name="tuning_morning_sleep_wellness_short">睡眠とウェルネス</string>
+    <string name="tuning_morning_sleep_duration_quality_title">睡眠時間と質 (1–5)</string>
+    <string name="tuning_morning_energy_title">朝のエネルギー / 気分 (1–5)</string>
+    <string name="tuning_morning_muscle_soreness_title">筋肉痛 / 脚の重さ (1–5)</string>
+    <string name="tuning_morning_context_tags_title">コンテキストタグ (体調不良、飲酒、移動、休養)</string>
+
+    <string name="morning_hrv_wellness_title">朝の睡眠とウェルネス</string>
+    <string name="morning_hrv_sleep_duration_label">睡眠時間: %s</string>
+    <string name="morning_hrv_sleep_quality_label">睡眠の質: %d/5</string>
+    <string name="morning_hrv_morning_energy_label">朝のエネルギー: %d/5</string>
+    <string name="morning_hrv_muscle_soreness_label">筋肉痛: %d/5</string>
+    <string name="morning_hrv_context_tags_label">コンテキストタグ</string>
+    <string name="morning_hrv_tag_sick">体調不良</string>
+    <string name="morning_hrv_tag_alcohol">飲酒</string>
+    <string name="morning_hrv_tag_travel">移動</string>
+    <string name="morning_hrv_tag_rest">休養</string>
+    <string name="morning_hrv_btn_save_wellness">朝のウェルネスを保存</string>
+    <string name="morning_hrv_wellness_saved_toast">朝のウェルネスが保存されました</string>
 </resources>

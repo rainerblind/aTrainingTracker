@@ -204,14 +204,22 @@ object HrvThresholdEstimator {
         val meanArtifactRate = decimated.map { it.artifactRate }.average()
         val effectiveSampleSize = decimated.size
 
-        // 5. Independent Span Gating (REQ-PER-036.3)
+        // 5. Slope Direction Check (REQ-PER-036 / Physiological Invariants)
+        // For Heart Rate and Power: as workload increases, alpha 1 decreases (slope < -1e-6).
+        // For Pace (s/m): as s/m increases (slower speed/lower workload), alpha 1 increases (slope > 1e-6).
+        val isSlopeDirectionValid = when (mode) {
+            HrvScatterIntensityMode.PACE -> slope > 1e-6
+            HrvScatterIntensityMode.HEART_RATE, HrvScatterIntensityMode.POWER -> slope < -1e-6
+        }
+
+        // 6. Independent Span Gating (REQ-PER-036.3)
         val minAlpha1 = decimated.minOf { it.alpha1 }
         val maxAlpha1 = decimated.maxOf { it.alpha1 }
 
         val t1SpanSatisfied = (maxAlpha1 >= dfaA1ThresholdT1 + 0.10) && (minAlpha1 <= dfaA1ThresholdT1 - 0.10)
         val t2SpanSatisfied = (maxAlpha1 >= dfaA1ThresholdT2 + 0.10) && (minAlpha1 <= dfaA1ThresholdT2 - 0.05)
 
-        // 6. Three-Tier Confidence Evaluation (REQ-PER-036.4)
+        // 7. Three-Tier Confidence Evaluation (REQ-PER-036.4)
         val minHighN = if (protocolType == HrvProtocolType.GUIDED_STEP) 5 else 10
         val minMedN = if (protocolType == HrvProtocolType.GUIDED_STEP) 4 else 8
 
@@ -229,13 +237,12 @@ object HrvThresholdEstimator {
                 )
             }
 
-            val expectedNegativeSlope = slope < -1e-6
-            val rawIntensity = if (expectedNegativeSlope) (target - intercept) / slope else null
+            val rawIntensity = if (isSlopeDirectionValid) (target - intercept) / slope else null
             val intensityValid = rawIntensity?.let { isIntensityPlausible(it, mode) } == true
             val intensity = if (intensityValid) rawIntensity else null
 
             val confidence = when {
-                intensity == null -> ThresholdConfidence.LOW
+                intensity == null || !isSlopeDirectionValid -> ThresholdConfidence.LOW
                 rSquared >= 0.70 && meanArtifactRate <= 3.0 && effectiveSampleSize >= minHighN -> ThresholdConfidence.HIGH
                 rSquared >= 0.55 && meanArtifactRate <= 5.0 && effectiveSampleSize >= minMedN -> ThresholdConfidence.MEDIUM
                 else -> ThresholdConfidence.LOW
@@ -244,10 +251,11 @@ object HrvThresholdEstimator {
             val diagnostic = when (confidence) {
                 ThresholdConfidence.HIGH, ThresholdConfidence.MEDIUM -> null
                 ThresholdConfidence.LOW -> when {
+                    !isSlopeDirectionValid -> R.string.hrv_threshold_diag_low_r2
                     meanArtifactRate > 5.0 -> R.string.hrv_threshold_diag_high_artifact
                     effectiveSampleSize < minMedN -> R.string.hrv_threshold_diag_short_duration
                     rSquared < 0.55 -> R.string.hrv_threshold_diag_low_r2
-                    else -> null
+                    else -> R.string.hrv_threshold_diag_low_r2
                 }
                 ThresholdConfidence.INSUFFICIENT_SPAN -> R.string.hrv_threshold_diag_steady
             }
@@ -261,8 +269,21 @@ object HrvThresholdEstimator {
             )
         }
 
-        val estT1 = evaluateThreshold(dfaA1ThresholdT1, t1SpanSatisfied)
-        val estT2 = evaluateThreshold(dfaA1ThresholdT2, t2SpanSatisfied)
+        var estT1 = evaluateThreshold(dfaA1ThresholdT1, t1SpanSatisfied)
+        var estT2 = evaluateThreshold(dfaA1ThresholdT2, t2SpanSatisfied)
+
+        // Enforce physiological monotonicity: HRVT1 must be lower workload than HRVT2
+        val isInverted = if (estT1.intensity != null && estT2.intensity != null) {
+            when (mode) {
+                HrvScatterIntensityMode.PACE -> estT1.intensity <= estT2.intensity
+                HrvScatterIntensityMode.HEART_RATE, HrvScatterIntensityMode.POWER -> estT1.intensity >= estT2.intensity
+            }
+        } else false
+
+        if (isInverted) {
+            estT1 = estT1.copy(intensity = null, confidence = ThresholdConfidence.LOW, diagnosticReasonRes = R.string.hrv_threshold_diag_low_r2)
+            estT2 = estT2.copy(intensity = null, confidence = ThresholdConfidence.LOW, diagnosticReasonRes = R.string.hrv_threshold_diag_low_r2)
+        }
 
         val overallConfidence = when {
             estT1.confidence == ThresholdConfidence.HIGH && estT2.confidence == ThresholdConfidence.HIGH -> ThresholdConfidence.HIGH

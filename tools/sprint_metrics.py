@@ -120,6 +120,14 @@ def parse_sprint_gate_metrics(parent_issues, sprint_info):
     completed_sp = 0.0
     risk_counts = {"Low": 0, "Medium": 0, "High": 0, "Highest": 0}
 
+    # Problem trends containers (REQ-PRO-063)
+    total_bugs = 0
+    open_bugs = 0
+    closed_bugs = 0
+    by_severity = {"Critical": 0, "Major": 0, "Minor": 0, "Cosmetic": 0}
+    open_by_severity = {"Critical": 0, "Major": 0, "Minor": 0, "Cosmetic": 0}
+    closed_by_severity = {"Critical": 0, "Major": 0, "Minor": 0, "Cosmetic": 0}
+
     # Gate statistics containers
     gate_data = {
         g: {"total": 0, "passed_first_time": 0, "revisions": 0, "bounces": 0}
@@ -150,6 +158,50 @@ def parse_sprint_gate_metrics(parent_issues, sprint_info):
             risk_counts[priority_name] += 1
         else:
             risk_counts["Medium"] += 1
+
+        # Problem resolution tracking (REQ-PRO-063)
+        itype = fields.get("issuetype", {})
+        itype_id = str(itype.get("id", ""))
+        itype_name = itype.get("name", "").lower()
+        is_bug = itype_id == "10006" or itype_name in ("bug", "fehler")
+        if is_bug:
+            total_bugs += 1
+            is_bug_closed = status_name in ("erledigt", "closed", "done")
+            if is_bug_closed:
+                closed_bugs += 1
+            else:
+                open_bugs += 1
+
+            detected_sev = None
+            labels = fields.get("labels", [])
+            for l in labels:
+                ll = str(l).strip().lower()
+                if ll.startswith("severity-"):
+                    cand = ll.replace("severity-", "").capitalize()
+                    if cand in by_severity:
+                        detected_sev = cand
+                        break
+                elif ll.capitalize() in by_severity:
+                    detected_sev = ll.capitalize()
+                    break
+
+            if not detected_sev:
+                desc = fields.get("description", "")
+                m_sev = re.search(r"(?:\*\*Severity\*\*|Severity:?)\s*([A-Za-z]+)", desc, re.I)
+                if m_sev:
+                    cand = m_sev.group(1).capitalize()
+                    if cand in by_severity:
+                        detected_sev = cand
+
+            if not detected_sev:
+                p_map = {"Highest": "Critical", "High": "Major", "Medium": "Minor", "Low": "Cosmetic", "Lowest": "Cosmetic"}
+                detected_sev = p_map.get(priority_name, "Major")
+
+            by_severity[detected_sev] += 1
+            if is_bug_closed:
+                closed_by_severity[detected_sev] += 1
+            else:
+                open_by_severity[detected_sev] += 1
 
         # Inspect parent comments for Stage 6 ('Final Review (Agent)') verdicts
         parent_comments = issue.get("comments", []) or fields.get("comment", {}).get("comments", [])
@@ -250,6 +302,11 @@ def parse_sprint_gate_metrics(parent_issues, sprint_info):
         if total_tickets > 0 else 100.0
     )
 
+    resolution_rate = (
+        round((closed_bugs / total_bugs) * 100.0, 1)
+        if total_bugs > 0 else 100.0
+    )
+
     metrics = {
         "sprint_id": sprint_id,
         "sprint_name": sprint_name,
@@ -262,6 +319,15 @@ def parse_sprint_gate_metrics(parent_issues, sprint_info):
             "completed_story_points": completed_sp,
         },
         "risk_distribution": risk_counts,
+        "problem_trends": {
+            "total_bugs": total_bugs,
+            "open_bugs": open_bugs,
+            "closed_bugs": closed_bugs,
+            "resolution_rate_percent": resolution_rate,
+            "by_severity": by_severity,
+            "open_by_severity": open_by_severity,
+            "closed_by_severity": closed_by_severity,
+        },
         "quality_gates": {
             "overall_ftpr_percent": overall_ftpr,
             "total_subtasks_evaluated": total_evaluated_subtasks,
@@ -451,10 +517,29 @@ def format_metrics_markdown(metrics, spc=None):
         f"* *Theoretical Cumulative Defect Escape Probability*: P(escaped defect) = {sc.get('theoretical_cumulative_escape_prob')}",
     ])
 
-    if spc and spc.get("has_history"):
+    pt = metrics.get("problem_trends", {})
+    if pt:
         lines.extend([
             "",
-            f"h3. 3. Statistical Process Control (SPC — PA 4.2, Sample Size: {spc.get('sample_size')} Sprints)",
+            "h3. 3. Problem Trends & Defect Severity (ASPICE SUP.9)",
+            f"* *Total Bugs*: {pt.get('total_bugs', 0)} (Open: {pt.get('open_bugs', 0)}, Closed: {pt.get('closed_bugs', 0)}) | *Resolution Rate*: *{pt.get('resolution_rate_percent', 100.0)}%*",
+            "",
+            "|| Severity || Total || Open || Closed ||",
+        ])
+        by_sev = pt.get("by_severity", {})
+        open_by_sev = pt.get("open_by_severity", {})
+        closed_by_sev = pt.get("closed_by_severity", {})
+        for sev in ("Critical", "Major", "Minor", "Cosmetic"):
+            tot = by_sev.get(sev, 0)
+            op = open_by_sev.get(sev, 0)
+            cl = closed_by_sev.get(sev, 0)
+            lines.append(f"| {sev} | {tot} | {op} | {cl} |")
+
+    if spc and spc.get("has_history"):
+        spc_num = "4" if pt else "3"
+        lines.extend([
+            "",
+            f"h3. {spc_num}. Statistical Process Control (SPC — PA 4.2, Sample Size: {spc.get('sample_size')} Sprints)",
         ])
         for k, v in spc.get("limits", {}).items():
             lines.append(f"* *{k.upper()}*: mu={v['mu']}, sigma={v['sigma']} -> Control Band [LCL: {v['lcl']}, UCL: {v['ucl']}]")

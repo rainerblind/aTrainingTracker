@@ -1,46 +1,72 @@
 ---
 name: stage5-verification
-description: Executes Stage 5 (Verification, Clean-Room Regression & Walkthrough) of the agile ASPICE lifecycle. Runs the full test suite, performs verification checks, authors the walkthrough, updates living docs to Verified, integrates verified changes into the sprint branch, and advances the parent ticket to Final Review (Human).
+description: Executes Stage 5 (Verification, Clean-Room Regression & Walkthrough) of the agile ASPICE lifecycle. Runs the full test suite, performs on-device checks, authors the walkthrough, updates living docs to Verified, integrates verified changes into the sprint branch (Strategy A), and advances the parent ticket to Final Review (Agent) for Stage 6 Cold Carbon Review.
 ---
 
 # Skill: stage5-verification
 
 ## Overview
-This skill guides the agent through **Stage 5 (Verification & Release Quality Gate)**. It validates the complete implementation across clean-room regression tests, updates living documents, documents the walkthrough, merges the verified feature branch into the sprint integration branch, and transitions the parent ticket to human review.
+This skill guides the agent through **Stage 5 (Verification & Release Quality Gate)**. It validates the complete implementation across clean-room regression tests, updates living documents, documents the walkthrough, merges the verified feature branch into the sprint integration branch (`sprint/<sprint_id>`), and transitions the parent ticket to `Final Review (Agent)` (Stage 6 Cold Carbon Review before `Final Review (Human)`).
 
-## Subagent Model Pairing ("Zipper Principle" — Core Rule 7)
-Reuse the persistent subagent pair via messages:
-- **Doing (`--as agent1`)**: **`subagent_flash`** — Running targeted unit tests, authoring `walkthrough.md`, and submitting Stage 5 via `submit-stage`.
-- **Gate 5 Review (`--as agent2`)**: **`subagent_pro`** — Final autonomous "Chief Inspector" before `Final Review (Human)`. Audits verification evidence, executes Gate 5 `PASS`, and performs squashed atomic merge onto the sprint branch.
+## Subagent Model Pairing ("Zipper Principle" & Epic-Scoped Persistent Ping-Pong — Core Rule 7)
+Reuse the Epic-scoped (or standalone ticket) persistent `TypeName: "self"` subagents via `send_message`:
+- **Doing (`--as agent1`)**: **`subagent_flash`** (`send_message` to the `flash` subagent) — Running Tier 1 targeted unit tests, updating `docs/requirements.md` & `docs/tests.md` to `Verified`, authoring `walkthrough.md`, and submitting Stage 5 via `submit-stage` are deterministic procedural steps.
+- **Gate 5 Review (`--as agent2`)**: **`subagent_pro`** (`send_message` to the `pro` subagent) — Audits Stage 5 verification evidence, executes `python3 tools/jira_util.py --as agent2 gate-verdict <SUBTASK_KEY> PASS ...` (which advances the parent ticket to `Final Review (Agent)` and injects `stage6-final-review/SKILL.md`), and squashes `feature/<KEY>` onto `sprint/<SPRINT_NAME>` (via `python3 tools/parallel_sprint_lock.py --merge-ticket ...` under flock). Keep the persistent `subagent_pro` + `subagent_flash` pair alive until the independent Cold `Gemini 4 Carbon` (`Model: "pro"`) reviewer completes **Stage 6 (`Final Review (Agent)`)** and advances the parent ticket to `Final Review (Human)`, so any Stage 6 bounce (`1/3..3/3`) can be healed immediately. Terminate standalone ticket subagents or rotate Epic-scoped subagent pairs after 3 completed tickets (`Rule 62`) once Stage 6 passes.
 
-## Key Responsibilities (`subagent_flash` as `agent1`)
-1. **Targeted Verification & Fast Regression**:
-   - Run targeted unit and contract tests covering all modified and directly adjacent packages/modules.
-   - Run requirement governance verification script.
-   - For UI or resource tickets, perform visual verification and resource checks.
-2. **Walkthrough Documentation & Living Spec Parity**:
-   - Author `docs/engineering/walkthroughs/<TICKET_KEY>_walkthrough.md` using `templates/walkthrough_template.md` (target $\le 60\text{--}80$ lines).
-   - State test scope explicitly (`Tier 1 targeted: <modules>` vs. `full suite`).
-3. **Single-Turn Stage Submission (`submit-stage`)**:
-   - Submit Stage 5 walkthrough in a single composite CLI call:
+## Key Responsibilities (`subagent_flash` as `agent1` — `flash`)
+1. **Two-Tier Unit Test Execution Strategy (Rule 60 — `ATT-4465`)**:
+   - **Tier 1 — Per-Ticket Verification (Stage 4 & Stage 5, ~10–20s)**:
+     - Run targeted unit and contract tests covering all modified and directly adjacent packages/classes (plus `ThemeColorCentralizationAuditTest` and `ui.components.core.*` whenever any UI/Compose/Map/Sheet file is modified, `Rules 64 & 79` — `ATT-4718`, `ATT-5890`):
+       ```bash
+       ./gradlew testDebugUnitTest --tests "com.atrainingtracker.<modified_package>.*" --tests "com.atrainingtracker.trainingtracker.ui.theme.ThemeColorCentralizationAuditTest" --tests "com.atrainingtracker.trainingtracker.ui.components.core.*"
+       ```
+     - Run `TranslationParityTest` whenever any `strings.xml` resource file is modified (~3s):
+       ```bash
+       ./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.localization.TranslationParityTest"
+       ```
+     - Run fast AAPT2 resource compilation verification to rapidly trap 9-language XML/AAPT2 resource errors without full APK build overhead (~5s, ATT-3534):
+       ```bash
+       ./gradlew processDebugResources
+       ```
+     - Run `python3 tools/verify_requirement_governance.py` when existing requirements are modified.
+     - **Exception (High-Risk Core Infrastructure)**: Run the full `./gradlew testDebugUnitTest` suite per-ticket *only* for High-Risk cross-cutting changes touching core shared infrastructure (`TrainingApplication`, `TrackerService`, `BANALService`, or SQLite database schema migrations).
+   - **Tier 2 — Sprint Integration Gate (Once per Sprint at the End of Phase 2, ~8m)** (Rule 66 — `ATT-4864`):
+     - After the **last** sprint ticket is squashed onto `sprint/<SPRINT_NAME>`, the Coordinator runs the full suite `./gradlew testDebugUnitTest --max-workers=2 && python3 tools/verify_requirement_governance.py` and fixes every failure (stale tests of earlier tickets, cross-test leaks) as separate attributed commits **before** Ceremony 2. The background run at the start of the Sprint Review is a confirmation only.
+   - **Explicit Test Scope in the Walkthrough**: State exactly what was run (`Tier 1 targeted: <packages/classes>` or `full suite`). Never write "100% PASS" / "zero regressions" for a targeted subset without naming the scope.
+2. **Conditional On-Device / Emulator Verification (Two-Tier Device Policy — ATT-6506, REQ-TST-004, Rules 60, 62 & 76)**:
+   - **Stages 1–5 (In-Sprint Per-Ticket Validation)**: Autonomous agents MUST deploy and verify exclusively on an emulated device (`emulator-5554`, `Pixel_8_Android_15`). Run `python3 tools/agent_emulator.py ensure` to boot, unlock keyguard, zero animation scales (`0.0`), configure permissions, and seed golden databases. Prefix all Gradle and ADB commands with `ANDROID_SERIAL=emulator-5554` (`ANDROID_SERIAL=emulator-5554 ./gradlew installDebug`, `adb -s emulator-5554 ...`). Autonomous agents are strictly prohibited from touching or deploying to the PO's connected physical USB phone during Phase 2.
+   - **UI / Compose / Resource / Navigation / Foreground Service Tickets**: Deploy debug APK to `emulator-5554` (`ANDROID_SERIAL=emulator-5554 ./gradlew installDebug`), explicitly launch the **Debug** package (`adb -s emulator-5554 shell am start -n com.atrainingtracker.debug/com.atrainingtracker.trainingtracker.activities.MainActivityWithNavigation` — never `com.atrainingtracker`, which opens the unpatched Release package), navigate on-device to **every single screen/route** whose `ViewModel`, `Fragment`, or composable was modified, and verify `adb -s emulator-5554 logcat -b crash -d` is clean. Capture on-device screenshots (`adb -s emulator-5554 exec-out screencap -p > docs/engineering/walkthroughs/img/<KEY>_<name>.png`) of the new/changed UI and reference screen, and compare against `docs/design_guidelines.md` Section 5.
+   - **Deterministic `uiautomator dump` Coordinate Resolution Before `adb shell input tap` (`Rule 76` — `ATT-5663`)**: Never visually guess `(x, y)` tap coordinates from a downscaled screenshot. Before executing `adb -s emulator-5554 shell input tap`, dump the active UI hierarchy (`adb -s emulator-5554 shell uiautomator dump /sdcard/window_dump.xml && adb -s emulator-5554 shell grep -oE 'text="[^"]*"[^>]*bounds="\[[0-9,]+\]\[[0-9,]+\]"' /sdcard/window_dump.xml`) to obtain the exact `bounds="[x1,y1][x2,y2]"` center coordinates of the target tab/button. If any `input tap` opens an unintended dialog or bottom sheet, **NEVER** repeat that same `(x, y)` coordinate after dismissing the dialog.
+   - **Non-UI Backend / Algorithm / DB Query / Dead-Code Cleanup Tickets**: Skip APK deployment in Stage 5 and rely on targeted unit/contract tests + `./gradlew processDebugResources` compilation verification.
+   - **Ceremony 2 (Sprint-End Joint Review)**: Evaluate the integrated sprint build on the real physical phone (`Pixel 10`, `ANDROID_SERIAL=<physical_serial> ./gradlew installDebug`).
+3. **Walkthrough Documentation & Automatic Living Documentation Synchronization (Concise Cap $\le 60\text{--}80$ Lines)**:
+   - Author `docs/engineering/walkthroughs/<TICKET_KEY>_walkthrough.md` using `templates/walkthrough_template.md` in a **concise bullet-and-table format (target $\le 60\text{--}80$ lines)**.
+    - Note: `submit-stage <TICKET_KEY> 5` **automatically** flips `Planned` / `Status: Planned (<TICKET_KEY>)` rows and headings across `docs/requirements/`, `docs/tests/`, `docs/requirements.md` and `docs/tests.md` to `Verified`—no manual `replace_file_content` calls are needed just to flip the status column.
+4. **Single-Turn Stage Submission (`submit-stage`)**:
+   - Submit Stage 5 walkthrough in a single composite CLI call (auto-flips `Planned` $\rightarrow$ `Verified` in living docs, creates/updates `[Test]` sub-task, and moves it to `In Überprüfung`):
      ```bash
-     python3 tools/workflow_util.py --as agent1 submit-stage <TICKET_KEY> 5 @docs/engineering/walkthroughs/<TICKET_KEY>_walkthrough.md
+     python3 tools/jira_util.py --as agent1 submit-stage <TICKET_KEY> 5 @docs/engineering/walkthroughs/<TICKET_KEY>_walkthrough.md
      ```
 
-## Gate 5 Independent Review Checklist (`subagent_pro` as `agent2`)
-Audit the Stage 5 walkthrough and repository state against this checklist:
-1. **Regression & Governance Verification**: Verify targeted unit tests and requirement governance passed with 100% success.
-2. **Evidence Integrity**: Verify walkthrough evidence demonstrates acceptance criteria satisfaction.
-3. **Living Documentation Parity**: Confirm living documentation statuses and master counters are synchronized to `Verified`.
-4. **Target Release Verification**: Verify the deliverable references the active unreleased target release version.
+## Gate 5 Independent Review Checklist (`subagent_pro` as `agent2` — `pro`)
+Message the ticket's persistent `subagent_pro` (`send_message`) to audit the Stage 5 walkthrough and repository state against this checklist and record the verdict via `--as agent2 gate-verdict`:
+1. **Regression & Governance Verification**: Verify Tier 1 targeted/contract unit tests (or full suite for High-Risk tickets), `TranslationParityTest` (if strings changed), and `verify_requirement_governance.py` passed with 100% success (0 failures, 0 regressions).
+2. **Evidence Integrity & Mandatory `read_file` Visual Screenshot Audit (Rules 66, 71 & 73 — `ATT-4864`, `ATT-5313`, `ATT-5402`)**: Both `agent1` (in Stage 5) and `agent2` (`subagent_pro` in Gate 5) **MUST** call `read_file` on **every** screenshot and generated image (`docs/engineering/walkthroughs/img/*.png`, `docs/guide/img/*.png`, `docs/store_presence/screenshots/*.png`, `docs/store_presence/video/frames/*.png`) to visually verify that:
+   - Each image actually renders the target UI screen or dialog (never a post-crash Android launcher/app drawer fallback or an unrelated screen such as `"Zum Bäcker #46"`).
+   - No buttons or chips wrap mid-word (`Suppor\nt`, `Abbreche\nn`) across modified dialogs/bottom sheets (`Rule 73` stacked full-width CTA check in German) and no untranslated English strings or `%%` typos appear on localized screens.
+   - Before/after or on/off image pairs MUST differ (`md5sum docs/engineering/walkthroughs/img/<KEY>_*.png` — identical hashes → `REVISION`). Re-check the Gate 4 AC-by-AC table against the final state.
+3. **Living Documentation, Dynamic Symbol-vs-Source Sweep & SWE.2 Architecture Parity (`ATT-5431`, `Rule 81` — `ATT-6179`, `ATT-6289`)**: Confirm living documentation in `docs/requirements/` and `docs/tests/` status fields and master index counter tables are synchronized. If the ticket introduced architectural subsystems or requirement prefixes, verify that [`docs/architecture.md`](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/docs/architecture.md) was updated accordingly. Whenever `docs/architecture*.md` or `docs/system/*.md` was created or modified, run an automated symbol-vs-source check confirming every backticked `.kt`/`.java`/`.xml` file and class exists in `app/src/main/` and `SYS.2 <-> SYS.3` IDs match 1:1 (`declared == allocated`).
+4. **Mandatory Lösungsversion (Fix Version/s) Governance Audit**:
+   - In accordance with Core Rule 8 ("FixVersion set only upon completion" and sub-tasks never having `fixVersions`), active in-sprint tickets legitimately have Parent `Lösungsversion` as `None` until final acceptance during Joint Review or release. Verify that every Stage 1–5 deliverable references the target release version that `python3 tools/jira_util.py versions` reports as `ACTIVE/UNRELEASED` (never a free-text or invented version — Rule 66, `ATT-4864`) and that sub-tasks have no fix version assigned.
 5. **Gate Verdict (`gate-verdict`) & Stage 6 (`Final Review (Agent)`) Handover (Core Rule 3 & REQ-PRO-058)**:
-   - Record verdict via `--as agent2 gate-verdict`:
+   - Record the verdict in a single composite CLI call (which closes the `[Test]` sub-task to `Erledigt`, automatically advances the parent ticket to `Final Review (Agent)`, retains `agent2` assignment, and injects `stage6-final-review/SKILL.md`):
      ```bash
-     python3 tools/workflow_util.py --as agent2 gate-verdict <TEST_SUBTASK_KEY> PASS "<Audit Report>"
+     python3 tools/jira_util.py --as agent2 gate-verdict <TEST_SUBTASK_KEY> PASS "<Audit Report>"
      ```
-   - Advances parent ticket to `Final Review (Agent)` (Stage 6 Cold Carbon Review), after which an independent Cold `Model: "pro"` reviewer audits the squashed commit and executes `final-review-verdict <TICKET_KEY> PASS|BOUNCE ...` to transition the ticket to `Final Review (Human)` and assign it to `human`. AI agents are strictly forbidden from transitioning parent tickets to completed.
-6. **Single Atomic Commit per Ticket & Sprint Branch Integration (Core Rule 8 & Rule 9 — `REQ-PRO-041`)**:
-   - Integrate verified ticket into the sprint branch as **strictly one squashed atomic commit**:
+   - After squashing the ticket commit onto `sprint/<SPRINT_NAME>` (Step 6 below), the Coordinator invokes a freshly spawned **Cold `Gemini 4 Carbon` (`Model: "pro"`)** reviewer (following `stage6-final-review/SKILL.md`) to audit the squashed commit and execute `python3 tools/jira_util.py --as agent2 final-review-verdict <TICKET_KEY> PASS|BOUNCE ...` to advance the parent ticket to `Final Review (Human)`.
+   - Note: AI agents are strictly forbidden from transitioning parent tickets to `Erledigt`.
+6. **Single Atomic Commit per Ticket & Continuous Sprint Branch Integration (Core Rule 8 & Rule 9 — `REQ-PRO-041`)**:
+   - Each ticket MUST result in **strictly one atomic commit** on `sprint/<SPRINT_NAME>` containing the complete Stage 1–5 deliverables (`analysis`, `test_spec`, `plan`, `walkthrough`), living documentation (`docs/requirements.md`, `docs/tests.md`), production code, and unit tests:
      ```bash
      git add -A
      git commit -m "<KEY>: <Concise Ticket Summary>"
@@ -49,18 +75,11 @@ Audit the Stage 5 walkthrough and repository state against this checklist:
      git commit -m "<KEY>: <Concise Ticket Summary>"
      git branch -D feature/<KEY>
      ```
-   - **Parallel Sprint Execution Merge Protocol (`REQ-PRO-041.2`, `REQ-PRO-041.4`)**: Under parallel sprint execution, serialize rebase, living docs recalculation, and squash-merging under POSIX `flock` (`/tmp/att_build_merge.lock`):
+   - **Parallel Sprint Execution Merge Protocol (`REQ-PRO-041.2`, `REQ-PRO-041.4`)**: When parallel sprint execution is active across multiple worktrees, execute the deterministic `--merge-ticket` subcommand under POSIX `flock` (`/tmp/att_build_merge.lock`), which automatically guards submodule symlinks, rebases against the local `sprint/<SPRINT_NAME>` branch, recalculates living doc master indexes (`--sync-indexes`), fast-forwards the main repository without branch checkout collisions, and deletes the feature branch:
      ```bash
-     python3 tools/parallel_sprint_lock.py bash -c '
-       git add -A && git commit -m "<KEY>: <Concise Ticket Summary>" || true
-       git fetch origin
-       git rebase origin/sprint/<SPRINT_NAME>
-       python3 tools/verify_requirement_governance.py --sync-indexes
-       git add docs/requirements.md docs/tests.md
-       git commit --amend --no-edit || true
-       git checkout sprint/<SPRINT_NAME>
-       git merge --squash feature/<KEY>
-       git commit -m "<KEY>: <Concise Ticket Summary>"
-       git branch -D feature/<KEY>
-     '
+     python3 tools/parallel_sprint_lock.py --merge-ticket <KEY> --sprint sprint/<SPRINT_NAME> --summary "<KEY>: <Concise Ticket Summary>"
      ```
+
+## Deliverable Template
+Use the standardized markdown template located at:
+`templates/walkthrough_template.md`

@@ -43,6 +43,15 @@
 
 ---
 
-## 5. System Invariants & Risk Assessment
+## 5. Change-Request Impact Analysis (SUP.10)
+<!-- Required for explicit impact analysis under ASPICE SUP.10 (REQ-PRO-064). -->
+* **Affected Requirements**: [REQ-XXX or Net-new requirement(s)]
+* **Affected Architecture Elements**: [Classes, modules, database schemas, CLI tools, scripts]
+* **Verification Impact & Test Surface**: [TST-XXX, targeted test suites, regression test scope]
+* **Risk Assessment & Invariants**: [Risks, mitigations, core system invariants preserved]
+
+---
+
+## 6. System Invariants & Risk Assessment
 * **Core Invariants**: [Existing behavior, APIs, or data schemas that MUST NOT change]
 * **Risk Rating**: [LOW | MEDIUM | HIGH] with technical rationale.

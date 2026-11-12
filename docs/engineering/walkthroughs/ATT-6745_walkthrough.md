@@ -4,12 +4,12 @@
 **Sub-task**: [ATT-6781](https://rainerblind.atlassian.net/browse/ATT-6781) (`[Test]`)  
 **Parent Epic**: [ATT-3539](https://rainerblind.atlassian.net/browse/ATT-3539) (*HRV Autonomic Metrics*)  
 **Target Release**: `V5.0.0`  
-**Active Sprint**: `2026-46.2`  
+**Active Sprint**: `2026-46.3`  
 **Requirement Mapping**: `REQ-TRK-068`  
 **Test Mapping**: `TST-TRK-068`  
-**Branch**: `feature/ATT-6745`  
-**Author**: AI Agent 1 (Implementer, `subagent_flash`)  
-**Date**: 2026-11-11  
+**Branch**: `ticket/ATT-6745`  
+**Author**: AI Agent 1 (Implementer, `subagent_flash`) & AI Agent 2 (Reviewer, `subagent_pro`)  
+**Date**: 2026-11-12  
 
 ---
 
@@ -21,6 +21,17 @@ Delivered user-facing protections against firmware-smoothed and synthetic RR int
 * **Morning Assessment Protection (`MorningHrvCheckScreen.kt`)**: Added dedicated `SmoothedSignalWarningCard` displayed upon measurement completion when signal is smoothed/synthetic, advising against saving into the 60-day readiness baseline.
 * **Post-Workout Aftermath Warning (`HrvAlpha1ScatterCard.kt`)**: Added inline warning banner cautioning that threshold estimates are unreliable on smoothed sessions.
 * **9-Language Parity**: All 6 new warning keys and updated sensor text localized with 100% parity across `values`, `de`, `es`, `fr`, `it`, `ja`, `nl`, `pl`, `pt`.
+
+### 1.1 Stage 6 Cold Carbon Review Healing (Sprint 2026-46.3)
+Healed adversarial findings from Stage 6 review:
+1. **Live Cockpit `signalQualityStatus` Wiring**:
+   - `hrvSignalQualityStatus` on `SensorFieldState` is dynamically populated from `BANALService.getDeviceManager()?.hrvMetricsDevice?.signalQualityResult?.status` in `TrackingViewModel.kt` (during initial load and within `applySensorData`) and in `EditSensorFieldDialog.kt`.
+   - Wired to `HrvInfoBottomSheet` in `SensorFieldView.kt` and verified via contract tests in `HrvInfoBottomSheetTest.kt`.
+2. **Post-Workout Signal Quality Evaluation & Wiring**:
+   - Implemented `isWorkoutHrvSmoothed(workoutId: Long)` in `WorkoutRepository.kt` which queries persisted beat-to-beat intervals from `WorkoutRrRepository` and evaluates signal quality via `HrvPostWorkoutRecomputer.analyzeSignalQuality(beats)`.
+   - Exposed `isSmoothedHrvStream` on `AftermathMapUIState` in `TrackOnMapAftermathViewModel.kt` populated during `loadAftermathData`.
+   - Threaded `isSmoothedStream` through `WorkoutSummariesTabbedScreen.kt`, `WorkoutSummariesListFragment.kt`, `TrackOnMapScreen.kt`, and `WorkoutDetailTabbedContent.kt` directly into `HrvAlpha1ScatterCard(..., isSmoothedStream = isSmoothedStream)`.
+   - Verified via unit test `loadAftermathData_populatesIsSmoothedHrvStreamFromWorkoutRepository` in `TrackOnMapAftermathViewModelTest.kt`.
 
 ---
 

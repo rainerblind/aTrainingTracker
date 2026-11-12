@@ -1774,6 +1774,7 @@ public class TrainingApplication extends Application {
     public void setTracking() {
         mWasAutoPaused.set(false);
         cTrackingMode = TrackingMode.TRACKING;
+        com.atrainingtracker.banalservice.devices.radar.RadarLightController.onWorkoutResumed(this);
         notifyTrackingStateChanged();
     }
 
@@ -1878,6 +1879,7 @@ public class TrainingApplication extends Application {
         }
 
         cTrackingMode = TrackingMode.PAUSED;
+        com.atrainingtracker.banalservice.devices.radar.RadarLightController.onWorkoutPaused();
         notifyTrackingStateChanged();
     }
 
@@ -1906,6 +1908,7 @@ public class TrainingApplication extends Application {
         }
 
         cTrackingMode = TrackingMode.TRACKING;
+        com.atrainingtracker.banalservice.devices.radar.RadarLightController.onWorkoutResumed(this);
         notifyTrackingStateChanged();
     }
 
@@ -1916,14 +1919,15 @@ public class TrainingApplication extends Application {
 
         stopPebbleWatchapp();
 
+        com.atrainingtracker.banalservice.devices.radar.RadarTrafficSimulator.INSTANCE.stop();
+        com.atrainingtracker.banalservice.devices.radar.RadarSnoozeController.reset();
+
         if (TrackerService.isRunning()) {
             Intent stopIntent = new Intent(this, TrackerService.class);
             stopIntent.setAction(TrackerService.ACTION_STOP);
             LifecycleUtils.safeStartService(this, stopIntent, TAG);
         } else {
             com.atrainingtracker.banalservice.devices.radar.RadarLightController.onWorkoutStopped(this);
-            com.atrainingtracker.banalservice.devices.radar.RadarSnoozeController.reset();
-            com.atrainingtracker.banalservice.devices.radar.RadarTrafficSimulator.INSTANCE.stop();
             stopService(new Intent(this, TrackerService.class));
         }
 

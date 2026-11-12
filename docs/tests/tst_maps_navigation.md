@@ -1191,6 +1191,53 @@
   2. *High-Threat Visual Distinction Test*: Verify high-threat passes (`FAST_APPROACHING`) are tagged with distinct threat level metadata for visual differentiation on `TrackOnMapScreen.kt`.
   3. *Non-Radar Isolation Invariant Test*: Verify workouts without radar samples yield zero traffic hotspot markers and preserve all standard track markers.
 
+### TST-CLM-008: **Live Climb Detection Movement-Bearing Gating & Cache Reconciliation Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-CLM-008` (`REQ-CLM-008.1`..`REQ-CLM-008.3`)
+- **Component**: `LiveClimbsRepository.kt`, `LiveClimbsRepositoryTest.kt`
+- **Jira**: `ATT-7160` | **Target Release**: `V5.0.0`
+- **Test Description**:
+  1. *Stationary Null-Bearing Candidate Rejection Test (`TST-CLM-008.1`, `LiveClimbsRepositoryTest.kt`)*:
+  • Verify that when `updateTracking` is invoked with `bearing = null`, a candidate climb within 250m whose initial segment points North (0°) is NOT activated as `APPROACHING` and `_activeLiveClimb.value` remains `null`.
+  2. *Mid-Climb Pause Progress Preservation Test (`TST-CLM-008.2`, `LiveClimbsRepositoryTest.kt`)*:
+  • Verify that when `updateTracking` is invoked with `bearing = null` while `_activeLiveClimb` is `ON_CLIMB`, the climb status remains `ON_CLIMB` and orthogonal polyline projection progress is accurately updated.
+  3. *Stale Active Climb Cleared on Refresh Test (`TST-CLM-008.3`, `LiveClimbsRepositoryTest.kt`)*:
+  • Verify that when `refreshClimbs()` reloads climbs and the currently active climb ID is no longer present in `_allClimbs`, `_activeLiveClimb.value` is reset to `null`.
+  4. *Targeted Regression Verification Suite (`TST-CLM-008.4`)*:
+  • Run targeted tests: `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.climbs.*"` asserting 100% pass rate.
+
+### TST-CLM-009: **Climb Detection Spike Guards, DEM Ground-Truth Cross-Validation & Corrupted Climbs Self-Healing Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-CLM-009` (`REQ-CLM-009.1`..`REQ-CLM-009.3`)
+- **Component**: `ClimbDetector.kt`, `WorkoutRepository.kt`, `ClimbDetectorTest.kt`, `WorkoutClimbIngestionTest.kt`, `WorkoutHistoricalClimbBackfillTest.kt`
+- **Jira**: `ATT-7159` | **Target Release**: `V5.0.0`
+- **Test Description**:
+  1. *Altitude Step Discontinuity & Extreme Gradient Rejection Test (`TST-CLM-009.1`, `ClimbDetectorTest.kt`)*:
+  • Verify that tracks containing single-step vertical jumps ($|\Delta\text{alt}| > 25\text{ m}$), average grade $> 25\%$, or post-peak calibration snaps ($> 35\text{ m}$ drop in $< 50\text{ m}$) yield zero detected climbs.
+  2. *Barometer Thermal Drift DEM Ground-Truth Cross-Validation Test (`TST-CLM-009.2`, `WorkoutClimbIngestionTest.kt`)*:
+  • Verify that candidate workout climbs where barometric ascent exceeds DEM ground-truth gain by $> \max(\text{demGain} \times 1.6 + 18.0, \text{demGain} + 35.0)$ or where DEM grade $< 2.2\%$ are rejected from `Climbs.db`.
+  3. *Climbs.db v2 Cleanup Migration Test (`TST-CLM-009.3`, `WorkoutHistoricalClimbBackfillTest.kt`)*:
+  • Verify that `cleanupCorruptedWorkoutClimbs()` purges corrupted `route_id IS NULL` climbs (`avgGrade > 25%`), sets `climbs_workout_cleanup_v2` to true, and refreshes `LiveClimbsRepository`.
+  4. *Targeted Regression Verification Suite (`TST-CLM-009.4`)*:
+  • Run targeted tests: `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.climbs.*" --tests "com.atrainingtracker.trainingtracker.ui.aftermath.*"` asserting 100% pass rate.
+
+### TST-CLM-010: **Configurable Climb Categorization: FIETS Index & Strava/Garmin Formula Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-CLM-010` (`REQ-CLM-010.1`..`REQ-CLM-010.3`)
+- **Component**: `Climb.kt`, `ClimbDetector.kt`, `TuningPreferencesDataStore.kt`, `NavigationSection.kt`, `ClimbCategorizationFormulaTest.kt`
+- **Jira**: `ATT-7162` | **Target Release**: `V5.0.0`
+- **Test Description**:
+  1. *FIETS Index Mathematical Accuracy & Altitude Bonus Test (`TST-CLM-010.1`, `ClimbCategorizationFormulaTest.kt`)*:
+  • Verify FIETS base calculation $(H^2)/(10 \times D)$, high-altitude bonus above 1000m, and category classification across HC, Cat 1, Cat 2, Cat 3, Cat 4, Uncategorized.
+  2. *Strava/Garmin Formula Backward Compatibility Test (`TST-CLM-010.2`, `ClimbCategorizationFormulaTest.kt`)*:
+  • Verify Strava/Garmin score evaluation and classification matching existing thresholds.
+  3. *Dynamic Re-Categorization Without DB Migration Test (`TST-CLM-010.3`, `ClimbCategorizationFormulaTest.kt`)*:
+  • Verify `Climb.resolveCategory()` evaluates both formulas correctly on existing `Climb` instances with and without pathPoints summit altitude.
+  4. *Preferences Persistence & Reset Test (`TST-CLM-010.4`, `TuningPreferencesDataStoreTest.kt`)*:
+  • Verify `climbScoringFormula` defaults to `FIETS`, persists `STRAVA_GARMIN`, and resets to `FIETS` on `resetToDefaults()`.
+  5. *9-Language Localization Parity Audit (`TST-CLM-010.5`)*:
+  • Verify string resources exist in `values`, `values-de`, `values-es`, `values-fr`, `values-it`, `values-ja`, `values-nl`, `values-pl`, `values-pt` without missing keys or unescaped XML formatting errors.
+
+
+
+
 
 
 

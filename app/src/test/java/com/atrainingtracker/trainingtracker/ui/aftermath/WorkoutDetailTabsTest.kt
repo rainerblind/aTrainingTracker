@@ -44,11 +44,12 @@ class WorkoutDetailTabsTest {
         val defaults = WorkoutDetailTabConfig.DEFAULT_TABS
         assertEquals(4, defaults.size)
 
-        // Tab 1: Overview (REQ-UI-408.1 / ATT-5655)
+        // Tab 1: Overview (REQ-UI-408.1 / ATT-5655 / REQ-WKO-037)
         assertEquals("tab_overview", defaults[0].id)
         assertEquals(R.string.workout_detail_tab_overview, defaults[0].preset.defaultTitleRes)
         assertEquals(
             listOf(
+                WorkoutDetailSectionType.RPE_AND_FEEL,
                 WorkoutDetailSectionType.DETAILS,
                 WorkoutDetailSectionType.PHOTOS,
                 WorkoutDetailSectionType.DESCRIPTION,
@@ -264,16 +265,16 @@ class WorkoutDetailTabsTest {
         tabs = WorkoutDetailTabConfig.moveSectionInTab(tabs, 0, 0, 1)
         assertEquals(WorkoutDetailSectionType.MAP, tabs[0].sections.first())
 
-        // Attempting to move index 1 (DETAILS) up to index 0 (above MAP) is blocked
+        // Attempting to move index 1 (RPE_AND_FEEL) up to index 0 (above MAP) is blocked
         tabs = WorkoutDetailTabConfig.moveSectionInTab(tabs, 0, 1, 0)
         assertEquals(WorkoutDetailSectionType.MAP, tabs[0].sections.first())
-        assertEquals(WorkoutDetailSectionType.DETAILS, tabs[0].sections[1])
+        assertEquals(WorkoutDetailSectionType.RPE_AND_FEEL, tabs[0].sections[1])
 
-        // Moving non-MAP sections among indices >= 1 succeeds while keeping MAP at index 0 (moves DETAILS to index 2, displacing PHOTOS to index 1)
+        // Moving non-MAP sections among indices >= 1 succeeds while keeping MAP at index 0 (moves RPE_AND_FEEL to index 2, displacing DETAILS to index 1)
         tabs = WorkoutDetailTabConfig.moveSectionInTab(tabs, 0, 1, 2)
         assertEquals(WorkoutDetailSectionType.MAP, tabs[0].sections[0])
-        assertEquals(WorkoutDetailSectionType.PHOTOS, tabs[0].sections[1])
-        assertEquals(WorkoutDetailSectionType.DETAILS, tabs[0].sections[2])
+        assertEquals(WorkoutDetailSectionType.DETAILS, tabs[0].sections[1])
+        assertEquals(WorkoutDetailSectionType.RPE_AND_FEEL, tabs[0].sections[2])
 
         // Toggling MAP OFF removes MAP cleanly
         tabs = WorkoutDetailTabConfig.toggleSectionInTab(tabs, 0, WorkoutDetailSectionType.MAP)
@@ -457,6 +458,7 @@ class WorkoutDetailTabsTest {
     @Test
     fun `TST-UI-377_1 authoritative tab data availability ignores legacy detailPreferences boolean flags`() {
         val availability = WorkoutDetailSectionAvailability(
+            hasRpeAndFeel = true,
             hasDetails = true,
             hasDescription = true,
             hasExtrema = true,

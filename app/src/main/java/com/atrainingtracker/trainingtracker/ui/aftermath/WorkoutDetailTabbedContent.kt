@@ -64,6 +64,7 @@ import com.atrainingtracker.trainingtracker.ui.aftermath.splits.LapSplitVisualiz
 import com.atrainingtracker.trainingtracker.ui.aftermath.workoutdetail.HrvAlpha1ScatterCard
 import com.atrainingtracker.trainingtracker.ui.aftermath.workoutdetail.HrvDurabilityCard
 import com.atrainingtracker.trainingtracker.ui.aftermath.workoutdetail.HrvThresholdSummaryCard
+import com.atrainingtracker.trainingtracker.zones.HrvSessionThreshold
 import com.atrainingtracker.trainingtracker.ui.aftermath.zones.GradeZoneDistributionCard
 import com.atrainingtracker.trainingtracker.ui.aftermath.zones.HeartRateZoneDistributionCard
 import com.atrainingtracker.trainingtracker.ui.aftermath.zones.HeartRateZoneThresholds
@@ -123,6 +124,8 @@ fun WorkoutDetailTabbedContent(
     powerZoneThresholds: PowerZoneThresholds? = null,
     configuredFtp: Int? = null,
     configuredHrMax: Int? = null,
+    recentSessions: List<HrvSessionThreshold> = emptyList(),
+    isSmoothedStream: Boolean = false,
     onUpdateFtp: ((Int) -> Unit)? = null,
     onCalibrateMader: ((Int?, Int?) -> Unit)? = null,
     useStatusBarsPadding: Boolean,
@@ -423,6 +426,8 @@ fun WorkoutDetailTabbedContent(
                                             powerZoneThresholds = powerZoneThresholds,
                                             configuredFtp = configuredFtp,
                                             configuredHrMax = configuredHrMax,
+                                            recentSessions = recentSessions,
+                                            isSmoothedStream = isSmoothedStream,
                                             onUpdateFtp = onUpdateFtp,
                                             onCalibrateMader = onCalibrateMader,
                                             onAddPhotos = { uris ->
@@ -512,6 +517,8 @@ fun WorkoutDetailTabbedContent(
                                                 powerZoneThresholds = powerZoneThresholds,
                                                 configuredFtp = configuredFtp,
                                                 configuredHrMax = configuredHrMax,
+                                                recentSessions = recentSessions,
+                                                isSmoothedStream = isSmoothedStream,
                                                 onUpdateFtp = onUpdateFtp,
                                                 onCalibrateMader = onCalibrateMader,
                                                 onAddPhotos = { uris ->
@@ -574,6 +581,8 @@ fun WorkoutDetailTabbedContent(
                                     powerZoneThresholds = powerZoneThresholds,
                                     configuredFtp = configuredFtp,
                                     configuredHrMax = configuredHrMax,
+                                    recentSessions = recentSessions,
+                                    isSmoothedStream = isSmoothedStream,
                                     onUpdateFtp = onUpdateFtp,
                                     onCalibrateMader = onCalibrateMader,
                                     onAddPhotos = { uris ->
@@ -818,6 +827,8 @@ private fun RenderWorkoutDetailCardSections(
     powerZoneThresholds: PowerZoneThresholds? = null,
     configuredFtp: Int? = null,
     configuredHrMax: Int? = null,
+    recentSessions: List<HrvSessionThreshold> = emptyList(),
+    isSmoothedStream: Boolean = false,
     onUpdateFtp: ((Int) -> Unit)? = null,
     onCalibrateMader: ((Int?, Int?) -> Unit)? = null,
     activeScrubPath: List<com.atrainingtracker.trainingtracker.ui.map.PathPoint>? = null,
@@ -830,6 +841,18 @@ private fun RenderWorkoutDetailCardSections(
 ) {
     sections.forEach { section ->
         when (section) {
+            WorkoutDetailSectionType.RPE_AND_FEEL -> {
+                if (workoutData.rpe != null || workoutData.feel != null) {
+                    WorkoutRpeFeelSection(
+                        rpe = workoutData.rpe,
+                        feel = workoutData.feel,
+                        activeTimeSec = workoutData.activeTimeSec,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 4.dp)
+                    )
+                }
+            }
             WorkoutDetailSectionType.DETAILS -> {
                 WorkoutDetails(
                     data = workoutData.detailsData,
@@ -902,6 +925,7 @@ private fun RenderWorkoutDetailCardSections(
                 if (TelemetryMetricUtils.hasHrvData(activeScrubPath)) {
                     HrvAlpha1ScatterCard(
                         points = activeScrubPath ?: emptyList(),
+                        isSmoothedStream = isSmoothedStream,
                         dfaA1ThresholdT1 = tuningConfig.dfaA1ThresholdT1,
                         dfaA1ThresholdT2 = tuningConfig.dfaA1ThresholdT2,
                         modifier = Modifier
@@ -912,11 +936,13 @@ private fun RenderWorkoutDetailCardSections(
                     val resolvedHrMax = configuredHrMax ?: hrZoneThresholds?.let { kotlin.math.round(it.z2Max / 0.69).toInt() }
                     HrvThresholdSummaryCard(
                         points = activeScrubPath ?: emptyList(),
+                        protocolType = workoutData.protocolType,
                         dfaA1ThresholdT1 = tuningConfig.dfaA1ThresholdT1,
                         dfaA1ThresholdT2 = tuningConfig.dfaA1ThresholdT2,
                         configuredFtp = resolvedFtp,
                         configuredHrMax = resolvedHrMax,
                         hrZoneThresholds = hrZoneThresholds,
+                        recentSessions = recentSessions,
                         onUpdateFtp = onUpdateFtp,
                         onCalibrateMader = onCalibrateMader,
                         modifier = Modifier

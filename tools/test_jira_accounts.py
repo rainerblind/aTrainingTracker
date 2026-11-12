@@ -12,6 +12,7 @@ import os
 import sys
 import io
 import base64
+import tempfile
 from unittest.mock import patch, MagicMock
 
 # Ensure tools directory is on sys.path
@@ -43,8 +44,8 @@ class TestJiraAccountResolution(unittest.TestCase):
         self.assertEqual(jira_util.resolve_account("agent2", config), ("agent2@example.com", "agent2_secret_token"))
         self.assertEqual(jira_util.resolve_account("coordinator", config), ("coordinator@example.com", "coordinator_secret_token"))
 
-    def test_atomic_pair_fallback_when_token_missing(self):
-        """When role user is set but role token is missing, atomically fall back to default credentials."""
+    def test_role_credential_isolation_when_token_missing(self):
+        """When role user is set but role token is missing for an agent, abort without falling back."""
         config = {
             "JIRA_USER": "fallback_user@example.com",
             "JIRA_TOKEN": "fallback_token_12345",
@@ -53,17 +54,17 @@ class TestJiraAccountResolution(unittest.TestCase):
         }
         stderr_capture = io.StringIO()
         with patch("sys.stderr", stderr_capture):
-            user, token = jira_util.resolve_account("agent1", config)
-        self.assertEqual(user, "fallback_user@example.com")
-        self.assertEqual(token, "fallback_token_12345")
+            with self.assertRaises(SystemExit) as cm:
+                jira_util.resolve_account("agent1", config)
+            self.assertEqual(cm.exception.code, 1)
         log_output = stderr_capture.getvalue()
-        self.assertIn("Advisory", log_output)
-        self.assertIn("agent1", log_output)
+        self.assertIn("Missing role-specific credentials for role 'agent1'", log_output)
+        self.assertIn("Fallback to human default credentials", log_output)
         # Verify secret masking: neither token is exposed in stderr
         self.assertNotIn("fallback_token_12345", log_output)
 
-    def test_atomic_pair_fallback_when_user_missing(self):
-        """When role token is set but role user is missing, atomically fall back to default credentials."""
+    def test_role_credential_isolation_when_user_missing(self):
+        """When role token is set but role user is missing for an agent, abort without falling back."""
         config = {
             "JIRA_USER": "fallback_user@example.com",
             "JIRA_TOKEN": "fallback_token_12345",
@@ -72,23 +73,37 @@ class TestJiraAccountResolution(unittest.TestCase):
         }
         stderr_capture = io.StringIO()
         with patch("sys.stderr", stderr_capture):
-            user, token = jira_util.resolve_account("coordinator", config)
-        self.assertEqual(user, "fallback_user@example.com")
-        self.assertEqual(token, "fallback_token_12345")
+            with self.assertRaises(SystemExit) as cm:
+                jira_util.resolve_account("coordinator", config)
+            self.assertEqual(cm.exception.code, 1)
         log_output = stderr_capture.getvalue()
-        self.assertIn("Advisory", log_output)
-        self.assertIn("coordinator", log_output)
+        self.assertIn("Missing role-specific credentials for role 'coordinator'", log_output)
+        self.assertIn("Fallback to human default credentials", log_output)
         self.assertNotIn("coordinator_secret_token", log_output)
 
-    def test_clean_fallback_when_role_unconfigured(self):
-        """When role keys are not defined at all, fall back cleanly without mixing."""
+    def test_role_credential_isolation_when_role_unconfigured(self):
+        """When agent role keys are not defined at all, abort without falling back to human credentials."""
         config = {
             "JIRA_USER": "default_user@example.com",
             "JIRA_TOKEN": "default_token_xyz",
         }
-        user, token = jira_util.resolve_account("agent2", config)
-        self.assertEqual(user, "default_user@example.com")
-        self.assertEqual(token, "default_token_xyz")
+        stderr_capture = io.StringIO()
+        with patch("sys.stderr", stderr_capture):
+            with self.assertRaises(SystemExit) as cm:
+                jira_util.resolve_account("agent2", config)
+            self.assertEqual(cm.exception.code, 1)
+        log_output = stderr_capture.getvalue()
+        self.assertIn("Missing role-specific credentials for role 'agent2'", log_output)
+
+    def test_human_role_resolution_uses_default_credentials(self):
+        """When resolving credentials for human role, default JIRA_USER and JIRA_TOKEN are used."""
+        config = {
+            "JIRA_USER": "human_user@example.com",
+            "JIRA_TOKEN": "human_token_xyz",
+        }
+        user, token = jira_util.resolve_account("human", config)
+        self.assertEqual(user, "human_user@example.com")
+        self.assertEqual(token, "human_token_xyz")
 
     def test_terminal_failure_when_no_credentials_exist(self):
         """When neither role nor default credentials exist, exit code 1 is triggered with clear diagnostic."""
@@ -99,7 +114,7 @@ class TestJiraAccountResolution(unittest.TestCase):
                 jira_util.resolve_account("agent1", config)
             self.assertEqual(cm.exception.code, 1)
         err_msg = stderr_capture.getvalue()
-        self.assertIn("Error: No Jira credentials found", err_msg)
+        self.assertIn("Missing role-specific credentials for role 'agent1'", err_msg)
 
     def test_basic_auth_header_encoding(self):
         """Headers generate valid HTTP Basic Auth using resolved credentials."""
@@ -114,6 +129,68 @@ class TestJiraAccountResolution(unittest.TestCase):
         encoded = auth_val.split("Basic ")[1]
         decoded = base64.b64decode(encoded.encode("ascii")).decode("ascii")
         self.assertEqual(decoded, "test_agent1@example.com:token_abc_123")
+
+    def test_per_role_config_file_resolution(self):
+        """get_config(role=...) loads per-role files and isolates role credentials (ATT-6147)."""
+        import tempfile
+        with tempfile.TemporaryDirectory() as tmpdir:
+            base_file = os.path.join(tmpdir, ".env.jira")
+            with open(base_file, "w") as f:
+                f.write("JIRA_URL=https://jira.example.com\nJIRA_PROJECT=ATT\n")
+            a1_file = os.path.join(tmpdir, ".env.jira.agent1")
+            with open(a1_file, "w") as f:
+                f.write("JIRA_AGENT1_USER=a1@example.com\nJIRA_AGENT1_TOKEN=token1\n")
+            a2_file = os.path.join(tmpdir, ".env.jira.agent2")
+            with open(a2_file, "w") as f:
+                f.write("JIRA_AGENT2_USER=a2@example.com\nJIRA_AGENT2_TOKEN=token2\n")
+
+            with patch("os.path.dirname", return_value=os.path.join(tmpdir, "tools")):
+                cfg_a1 = jira_util.get_config(role="agent1")
+                self.assertEqual(cfg_a1.get("JIRA_URL"), "https://jira.example.com")
+                self.assertEqual(cfg_a1.get("JIRA_AGENT1_USER"), "a1@example.com")
+                self.assertEqual(cfg_a1.get("JIRA_AGENT1_TOKEN"), "token1")
+                self.assertNotIn("JIRA_AGENT2_USER", cfg_a1)
+
+                cfg_a2 = jira_util.get_config(role="agent2")
+                self.assertEqual(cfg_a2.get("JIRA_URL"), "https://jira.example.com")
+                self.assertEqual(cfg_a2.get("JIRA_AGENT2_USER"), "a2@example.com")
+                self.assertEqual(cfg_a2.get("JIRA_AGENT2_TOKEN"), "token2")
+                self.assertNotIn("JIRA_AGENT1_USER", cfg_a2)
+
+    def test_strict_per_role_isolation_cross_role_access(self):
+        """When only agent1 credential file exists, resolving agent2 aborts with exit code 1 (ATT-6147 AC-2)."""
+        import tempfile
+        with tempfile.TemporaryDirectory() as tmpdir:
+            base_file = os.path.join(tmpdir, ".env.jira")
+            with open(base_file, "w") as f:
+                f.write("JIRA_URL=https://jira.example.com\nJIRA_PROJECT=ATT\n")
+            a1_file = os.path.join(tmpdir, ".env.jira.agent1")
+            with open(a1_file, "w") as f:
+                f.write("JIRA_AGENT1_USER=a1@example.com\nJIRA_AGENT1_TOKEN=token1\n")
+
+            with patch("os.path.dirname", return_value=os.path.join(tmpdir, "tools")):
+                cfg_a2 = jira_util.get_config(role="agent2")
+                stderr_capture = io.StringIO()
+                with patch("sys.stderr", stderr_capture):
+                    with self.assertRaises(SystemExit) as cm:
+                        jira_util.resolve_account("agent2", cfg_a2)
+                    self.assertEqual(cm.exception.code, 1)
+                self.assertIn("Missing role-specific credentials for role 'agent2'", stderr_capture.getvalue())
+
+    def test_gitignore_contains_env_jira_wildcard(self):
+        """.gitignore must contain .env.jira* to prevent committing per-role credentials (ATT-6147)."""
+        gitignore_path = os.path.join(REPO_ROOT, ".gitignore")
+        with open(gitignore_path, "r", encoding="utf-8") as f:
+            content = f.read()
+        self.assertIn(".env.jira*", content)
+
+    def test_hoechstmass_example_has_no_human_credentials(self):
+        """.env.jira.example must not contain human credentials JIRA_USER or JIRA_TOKEN (ATT-6147 AC-1)."""
+        example_path = os.path.join(REPO_ROOT, "tools", "hoechstmass", ".env.jira.example")
+        with open(example_path, "r", encoding="utf-8") as f:
+            content = f.read()
+        self.assertNotIn("JIRA_USER=", content)
+        self.assertNotIn("JIRA_TOKEN=", content)
 
 
 class TestRolePrecedenceAndAttribution(unittest.TestCase):
@@ -148,6 +225,34 @@ class TestRolePrecedenceAndAttribution(unittest.TestCase):
                 jira_util.parse_role_from_args(["--as", "imposter_role", "status", "ATT-1201"])
             self.assertEqual(cm.exception.code, 1)
         self.assertIn("Invalid role 'imposter_role'", stderr_capture.getvalue())
+
+    def test_valid_roles_excludes_human(self):
+        """VALID_ROLES must not contain human (REQ-PRO-020.5)."""
+        self.assertNotIn("human", jira_util.VALID_ROLES)
+        self.assertEqual(jira_util.VALID_ROLES, ["agent1", "agent2", "coordinator"])
+
+    def test_human_role_selection_rejected_from_cli(self):
+        """Selecting human role via --as human or --as=human causes fatal governance abort (AC-1)."""
+        for flag in [["--as", "human"], ["--as=human"], ["--as", "user"], ["--as", "rainer"]]:
+            stderr_capture = io.StringIO()
+            with patch("sys.stderr", stderr_capture):
+                with self.assertRaises(SystemExit) as cm:
+                    jira_util.parse_role_from_args(flag + ["status", "ATT-1201"])
+                self.assertEqual(cm.exception.code, 1)
+            err_msg = stderr_capture.getvalue()
+            self.assertIn("Error: 'human' role cannot be selected via agent CLI or environment variable", err_msg)
+
+    def test_human_role_selection_rejected_from_env(self):
+        """Selecting human role via JIRA_ACTOR causes fatal governance abort (AC-1)."""
+        for actor in ["human", "user", "rainer", "HUMAN"]:
+            with patch.dict(os.environ, {"JIRA_ACTOR": actor}):
+                stderr_capture = io.StringIO()
+                with patch("sys.stderr", stderr_capture):
+                    with self.assertRaises(SystemExit) as cm:
+                        jira_util.parse_role_from_args(["status", "ATT-1201"])
+                    self.assertEqual(cm.exception.code, 1)
+                err_msg = stderr_capture.getvalue()
+                self.assertIn("Error: 'human' role cannot be selected via agent CLI or environment variable", err_msg)
 
     def test_comment_attribution_prefix(self):
         """add_comment prepends the correct role-specific attribution prefix."""
@@ -250,7 +355,8 @@ class TestSecretMasking(unittest.TestCase):
         }
         stderr_capture = io.StringIO()
         with patch("sys.stderr", stderr_capture):
-            jira_util.resolve_account("agent1", config)
+            with self.assertRaises(SystemExit):
+                jira_util.resolve_account("agent1", config)
         output = stderr_capture.getvalue()
         self.assertNotIn("SUPER_SECRET_FALLBACK_TOKEN_999", output)
 
@@ -418,6 +524,405 @@ class TestJiraCliTooling(unittest.TestCase):
             self.assertEqual(req_content.count("| Verified |"), 3)
             self.assertNotIn("Planned", tst_content)
             self.assertIn("| Verified |", tst_content)
+
+    @patch("jira_util.jira_request")
+    def test_export_gates_command_generates_markdown(self, mock_request):
+        """TST-PRO-059.1: export-gates CLI extracts verdicts and writes structured markdown."""
+        import tempfile
+
+        def mock_jira_side_effect(url, method="GET", payload=None, role=None, **kwargs):
+            if "/rest/agile/1.0/board" in url and "sprint" not in url:
+                return {"values": [{"id": 1, "name": "Sprint Board"}]}
+            elif "/rest/agile/1.0/board/1/sprint?state=active" in url:
+                return {"values": [{"id": 440, "name": "2026-46.3"}]}
+            elif "/rest/agile/1.0/sprint/440/issue" in url:
+                return {
+                    "issues": [
+                        {
+                            "key": "ATT-6149",
+                            "fields": {
+                                "summary": "Export Jira gate records",
+                                "status": {"name": "Implementation"},
+                                "issuetype": {"subtask": False},
+                                "comment": {
+                                    "comments": [
+                                        {
+                                            "body": "[Automated comment by AI Agent 2 (Auditor)]\n\n[FINAL REVIEW (AGENT) — PASS]\nStage 6 Cold Review passed.",
+                                            "author": {"displayName": "Agent 2 (Reviewer)", "accountId": "agent2_id"},
+                                            "created": "2026-11-12T03:00:00.000+0100",
+                                        }
+                                    ]
+                                },
+                                "subtasks": [
+                                    {
+                                        "key": "ATT-7247",
+                                        "fields": {
+                                            "summary": "[Analysis] Export gate records",
+                                            "status": {"name": "Erledigt"},
+                                        },
+                                        "comments": [
+                                            {
+                                                "body": "[Automated comment by AI Agent 2 (Auditor)]\n\nGATE_VERDICT: PASS\nGate 1 Audit verified.",
+                                                "author": {"displayName": "Agent 2 (Reviewer)", "accountId": "agent2_id"},
+                                                "created": "2026-11-12T02:00:00.000+0100",
+                                            }
+                                        ],
+                                    }
+                                ],
+                            },
+                        }
+                    ],
+                    "total": 1,
+                }
+            elif "/comment" in url:
+                return {"comments": []}
+            return {}
+
+        mock_request.side_effect = mock_jira_side_effect
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            out_file = os.path.join(tmpdir, "docs", "engineering", "gates", "sprint_2026-46.3.md")
+            res_path, records = jira_util.export_gates(sprint_arg=None, out_path=out_file, role="coordinator")
+            self.assertEqual(res_path, out_file)
+            self.assertTrue(os.path.exists(out_file))
+            self.assertEqual(len(records), 2)
+
+            with open(out_file, "r", encoding="utf-8") as f:
+                content = f.read()
+
+            self.assertIn("# Sprint Quality Gate Records: 2026-46.3", content)
+            self.assertIn("**Sprint ID**: `440`", content)
+            self.assertIn("Gate 1 | Analysis (Gate 1)", content)
+            self.assertIn("Gate 6 | Final Review (Agent) (Gate 6)", content)
+            self.assertIn("| ATT-6149 | ATT-7247 | Gate 1 | Analysis (Gate 1) | PASS | agent2 | Agent 2 (Reviewer) |", content)
+            self.assertIn("| ATT-6149 | - | Gate 6 | Final Review (Agent) (Gate 6) | PASS | agent2 | Agent 2 (Reviewer) |", content)
+
+    @patch("jira_util.jira_request")
+    def test_qa_audit_command_generates_markdown(self, mock_request):
+        """TST-PRO-061.1: Verify qa-audit CLI command generates structured report for >= 2 tickets."""
+        stages = [
+            (1, "[Analysis]"),
+            (2, "[Req & Test Spec]"),
+            (3, "[Impl-Plan]"),
+            (4, "[Implementation]"),
+            (5, "[Test]"),
+        ]
+
+        def make_subtasks(prefix, parent_key):
+            return [
+                {
+                    "key": f"{prefix}-{g_idx}",
+                    "fields": {
+                        "summary": f"{name} {parent_key}",
+                        "status": {"name": "Erledigt"},
+                    },
+                }
+                for g_idx, name in stages
+            ]
+
+        def mock_jira_side_effect(url, method="GET", payload=None, role="coordinator"):
+            if "/rest/agile/1.0/board" in url and "/sprint" not in url:
+                return {"values": [{"id": 1, "name": "ATT Board"}]}
+            elif "/rest/agile/1.0/board/1/sprint?state=active" in url:
+                return {"values": [{"id": 440, "name": "2026-46.3", "state": "active"}]}
+            elif "/rest/agile/1.0/sprint/440/issue" in url:
+                return {
+                    "issues": [
+                        {
+                            "key": "ATT-6149",
+                            "fields": {
+                                "summary": "Export Jira gate records REQ-PRO-059",
+                                "description": "Addresses REQ-PRO-059.1",
+                                "status": {"name": "Final Review (Human)"},
+                                "issuetype": {"subtask": False},
+                                "subtasks": make_subtasks("ATT-724", "ATT-6149"),
+                            },
+                        },
+                        {
+                            "key": "ATT-6150",
+                            "fields": {
+                                "summary": "Record story points and sprint metrics REQ-PRO-060",
+                                "description": "Addresses REQ-PRO-060.1",
+                                "status": {"name": "Final Review (Human)"},
+                                "issuetype": {"subtask": False},
+                                "subtasks": make_subtasks("ATT-725", "ATT-6150"),
+                            },
+                        },
+                    ],
+                    "total": 2,
+                }
+            elif "/comment" in url:
+                return {
+                    "comments": [
+                        {
+                            "body": "[Automated comment by AI Agent 2 (Reviewer)]\n\n[ROLE: agent2]\nGATE_VERDICT: PASS recorded by agent2.",
+                            "author": {"displayName": "AI Agent 2"},
+                        }
+                    ]
+                }
+            return {}
+
+        mock_request.side_effect = mock_jira_side_effect
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            # 1. Setup git repo and commits
+            import subprocess
+            subprocess.run(["git", "init"], cwd=tmpdir, check=True, stdout=subprocess.DEVNULL)
+            subprocess.run(["git", "config", "user.name", "Tester"], cwd=tmpdir, check=True)
+            subprocess.run(["git", "config", "user.email", "test@example.com"], cwd=tmpdir, check=True)
+            subprocess.run(["git", "commit", "--allow-empty", "-m", "ATT-6149: Export Jira gate records"], cwd=tmpdir, check=True, stdout=subprocess.DEVNULL)
+            subprocess.run(["git", "commit", "--allow-empty", "-m", "ATT-6150: Record story points and sprint metrics"], cwd=tmpdir, check=True, stdout=subprocess.DEVNULL)
+
+            # 2. Setup deliverables
+            for k in ["ATT-6149", "ATT-6150"]:
+                for subfolder, suffix in [
+                    ("analysis", "_analysis.md"),
+                    ("test_specs", "_test_spec.md"),
+                    ("plans", "_plan.md"),
+                    ("walkthroughs", "_walkthrough.md"),
+                ]:
+                    d = os.path.join(tmpdir, "docs", "engineering", subfolder)
+                    os.makedirs(d, exist_ok=True)
+                    with open(os.path.join(d, f"{k}{suffix}"), "w", encoding="utf-8") as f:
+                        f.write(f"# Deliverable for {k}")
+
+            # 3. Setup living docs master table
+            os.makedirs(os.path.join(tmpdir, "docs"), exist_ok=True)
+            with open(os.path.join(tmpdir, "docs", "requirements.md"), "w", encoding="utf-8") as f:
+                f.write("""| Requirement ID | Summary | Target | Status | Jira Ticket |
+| :--- | :--- | :--- | :--- | :--- |
+| REQ-PRO-059 | Gate records | Tool | Verified | ATT-6149 |
+| REQ-PRO-060 | Metrics | Tool | Verified | ATT-6150 |
+""")
+
+            out_file = os.path.join(tmpdir, "docs", "engineering", "qa_audits", "sprint_2026-46.3.md")
+            res_path, results = jira_util.qa_audit(sprint_arg=None, sample_size=2, out_path=out_file, role="coordinator", repo_root=tmpdir)
+            self.assertEqual(res_path, out_file)
+            self.assertTrue(os.path.exists(out_file))
+            self.assertEqual(len(results), 2)
+            self.assertTrue(all(r["compliant"] for r in results))
+
+            with open(out_file, "r", encoding="utf-8") as f:
+                content = f.read()
+
+            self.assertIn("# Sprint QA Process-Compliance Audit: Sprint 2026-46.3", content)
+            self.assertIn("Overall Process Verdict", content)
+            self.assertIn("ATT-6149", content)
+            self.assertIn("ATT-6150", content)
+            self.assertIn("COMPLIANT", content)
+
+    @patch("jira_util.jira_request")
+    def test_qa_audit_rejects_non_compliant_tickets(self, mock_request):
+        """TST-PRO-061.1: Verify qa-audit flags missing deliverables, incomplete gates, role violation, and missing commits."""
+        def mock_jira_side_effect(url, method="GET", payload=None, role="coordinator"):
+            if "/rest/agile/1.0/board" in url and "/sprint" not in url:
+                return {"values": [{"id": 1, "name": "ATT Board"}]}
+            elif "/rest/agile/1.0/board/1/sprint?state=active" in url:
+                return {"values": [{"id": 440, "name": "2026-46.3", "state": "active"}]}
+            elif "/rest/agile/1.0/sprint/440/issue" in url:
+                return {
+                    "issues": [
+                        {
+                            "key": "ATT-9001",
+                            "fields": {
+                                "summary": "Ticket with 1 subtask and agent1 verdict",
+                                "status": {"name": "Final Review (Human)"},
+                                "issuetype": {"subtask": False},
+                                "subtasks": [
+                                    {"key": "ATT-9002", "fields": {"summary": "[Analysis] Task", "status": {"name": "In Bearbeitung"}}}
+                                ],
+                            },
+                        },
+                        {
+                            "key": "ATT-9003",
+                            "fields": {
+                                "summary": "Ticket without deliverables or commits",
+                                "status": {"name": "Final Review (Human)"},
+                                "issuetype": {"subtask": False},
+                                "subtasks": [],
+                            },
+                        },
+                    ],
+                    "total": 2,
+                }
+            elif "/comment" in url:
+                return {
+                    "comments": [
+                        {
+                            "body": "[Automated comment by AI Agent 1 (Implementer)]\n\n[ROLE: agent1]\nGATE_VERDICT: PASS recorded by agent1.",
+                            "author": {"displayName": "AI Agent 1"},
+                        }
+                    ]
+                }
+            return {}
+
+        mock_request.side_effect = mock_jira_side_effect
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            out_file = os.path.join(tmpdir, "docs", "engineering", "qa_audits", "sprint_2026-46.3.md")
+            res_path, results = jira_util.qa_audit(sprint_arg=None, sample_size=2, out_path=out_file, role="coordinator", repo_root=tmpdir)
+            self.assertEqual(len(results), 2)
+            # Both tickets should be NON-COMPLIANT
+            self.assertFalse(results[0]["compliant"])
+            self.assertFalse(results[0]["gate_pass"])       # only 1 subtask, In Bearbeitung
+            self.assertFalse(results[0]["role_sep_pass"])   # agent1 recorded verdict!
+            self.assertFalse(results[0]["deliv_pass"])      # deliverables missing
+            self.assertFalse(results[0]["commit_pass"])     # no commit
+
+            self.assertFalse(results[1]["compliant"])
+            self.assertFalse(results[1]["gate_pass"])       # 0 subtasks
+
+            with open(out_file, "r", encoding="utf-8") as f:
+                content = f.read()
+            self.assertIn("NON-COMPLIANT", content)
+
+    @patch("jira_util.jira_request")
+    def test_record_review_command_generates_markdown(self, mock_request):
+        """TST-PRO-062.1: Verify record-review generates structured review markdown for Human and AI reviews."""
+        def mock_jira_side_effect(url, method="GET", payload=None, role="coordinator"):
+            if "/rest/agile/1.0/board" in url and "/sprint" not in url:
+                return {"values": [{"id": 1, "name": "ATT Board"}]}
+            elif "/rest/agile/1.0/board/1/sprint?state=active" in url:
+                return {"values": [{"id": 440, "name": "2026-46.3", "state": "active"}]}
+            elif "/rest/agile/1.0/sprint/440/issue" in url:
+                return {
+                    "issues": [
+                        {"key": "ATT-6150", "fields": {"summary": "Issue 1", "issuetype": {"subtask": False}}},
+                        {"key": "ATT-6154", "fields": {"summary": "Issue 2", "issuetype": {"subtask": False}}},
+                    ],
+                    "total": 2,
+                }
+            return {}
+
+        mock_request.side_effect = mock_jira_side_effect
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            # 1. Human Ceremony 2 Review
+            out_human = os.path.join(tmpdir, "docs", "engineering", "reviews", "sprint_2026-46.3.md")
+            path1, meta1 = jira_util.record_review(
+                sprint_arg=None,
+                ticket_key="ATT-6150,ATT-6154",
+                reviewer="Human",
+                verdict="PASS",
+                findings="Sprint tickets accepted during Ceremony 2.",
+                out_path=out_human,
+                repo_root=tmpdir,
+            )
+            self.assertEqual(path1, out_human)
+            self.assertTrue(os.path.exists(out_human))
+            self.assertEqual(meta1["reviewer"], "Human")
+            self.assertEqual(meta1["review_type"], "Human Sprint Review (Ceremony 2)")
+
+            with open(out_human, "r", encoding="utf-8") as f:
+                content_h = f.read()
+
+            self.assertIn("# Independent QA Review Record: Sprint 2026-46.3", content_h)
+            self.assertIn("**Reviewer**: Human", content_h)
+            self.assertIn("**Review Type**: Human Sprint Review (Ceremony 2)", content_h)
+            self.assertIn("**Vendor**: Human", content_h)
+            self.assertIn("**Scope**: Ceremony 2 Sprint Review", content_h)
+            self.assertIn("**Verdict**: **PASS**", content_h)
+            self.assertIn("ATT-6150", content_h)
+            self.assertIn("ATT-6154", content_h)
+            self.assertIn("Sprint tickets accepted during Ceremony 2.", content_h)
+
+            # 2. Cross-Vendor AI Review (Layer 5)
+            out_ai = os.path.join(tmpdir, "docs", "engineering", "reviews", "layer5_claude.md")
+            path2, meta2 = jira_util.record_review(
+                sprint_arg="2026-46.3",
+                ticket_key="ATT-6155",
+                reviewer="Anthropic Claude",
+                vendor="Anthropic",
+                model="claude-3-7-sonnet",
+                version="20250219",
+                scope="Layer 5 Cross-Vendor Audit",
+                verdict="PASS",
+                findings="ASPICE compliance and role integrity verified.",
+                out_path=out_ai,
+                repo_root=tmpdir,
+            )
+            self.assertEqual(path2, out_ai)
+            self.assertTrue(os.path.exists(out_ai))
+            self.assertEqual(meta2["vendor"], "Anthropic")
+            self.assertEqual(meta2["model"], "claude-3-7-sonnet")
+            self.assertEqual(meta2["version"], "20250219")
+
+            with open(out_ai, "r", encoding="utf-8") as f:
+                content_ai = f.read()
+
+            self.assertIn("# Independent QA Review Record: Sprint 2026-46.3", content_ai)
+            self.assertIn("**Reviewer**: Anthropic Claude", content_ai)
+            self.assertIn("**Review Type**: Cross-Vendor AI Review (Layer 5)", content_ai)
+            self.assertIn("**Vendor**: Anthropic", content_ai)
+            self.assertIn("**Model & Version**: claude-3-7-sonnet (v20250219)", content_ai)
+            self.assertIn("**Scope**: Layer 5 Cross-Vendor Audit", content_ai)
+            self.assertIn("**Verdict**: **PASS**", content_ai)
+            self.assertIn("ATT-6155", content_ai)
+            self.assertIn("ASPICE compliance and role integrity verified.", content_ai)
+
+    @patch("jira_util.rank_at_top_of_backlog")
+    @patch("jira_util.jira_request")
+    def test_create_issue_requires_severity_for_bugs(self, mock_request, mock_rank):
+        """TST-PRO-063.1: Verify create_issue mandates severity for bugs and passes non-bugs."""
+        mock_request.return_value = {"key": "ATT-9999"}
+
+        # 1. Bug without severity -> SystemExit(1)
+        with self.assertRaises(SystemExit) as cm:
+            jira_util.create_issue("Bug without severity", "Description", issuetype_id="10006")
+        self.assertEqual(cm.exception.code, 1)
+
+        # 2. Bug with invalid severity -> SystemExit(1)
+        with self.assertRaises(SystemExit) as cm:
+            jira_util.create_issue("Bug with invalid severity", "Description", issuetype_id="10006", severity="catastrophic")
+        self.assertEqual(cm.exception.code, 1)
+
+        # 3. Bug with valid severity -> succeeds and tags severity label
+        mock_request.reset_mock()
+        key = jira_util.create_issue("Bug with critical severity", "Description", issuetype_id="10006", severity="critical")
+        self.assertEqual(key, "ATT-9999")
+        posted_fields = mock_request.call_args[1]["payload"]["fields"]
+        self.assertIn("severity-critical", posted_fields["labels"])
+        self.assertIn("**Severity**: Critical", posted_fields["description"])
+
+        # 4. Non-bug (Feature 10007) without severity -> succeeds
+        mock_request.reset_mock()
+        key_feat = jira_util.create_issue("Feature without severity", "Description", issuetype_id="10007")
+        self.assertEqual(key_feat, "ATT-9999")
+        posted_feat = mock_request.call_args[1]["payload"]["fields"]
+        self.assertNotIn("labels", posted_feat)
+
+    @patch("jira_util.transition_issue")
+    @patch("jira_util.assign_issue")
+    @patch("jira_util.add_comment")
+    @patch("jira_util.get_subtask_summary_and_desc")
+    def test_gate_verdict_enforces_impact_analysis_on_analysis_subtasks(
+        self, mock_get_subtask, mock_comment, mock_assign, mock_transition
+    ):
+        """TST-PRO-064.3: Verify gate_verdict enforces Change-Request Impact Analysis on [Analysis] subtasks."""
+        # 1. [Analysis] subtask with missing Impact Analysis -> SystemExit(1)
+        mock_get_subtask.return_value = ("[Analysis] ATT-4300: Problem Domain Analysis", "No impact analysis here.", "ATT-4300")
+        with self.assertRaises(SystemExit) as cm:
+            jira_util.gate_verdict("ATT-4301", "PASS", "Gate 1 PASS audit report", role="agent2")
+        self.assertEqual(cm.exception.code, 1)
+
+        # 2. [Analysis] subtask with valid Impact Analysis -> succeeds and transitions
+        valid_desc = """
+# Stage 1 Analysis
+## Change Impact Analysis
+* **Affected Requirements**: REQ-PRO-064
+* **Affected Architecture Elements**: tools/jira_util.py
+* **Verification Impact & Test Surface**: TST-PRO-064
+* **Risk Assessment & Invariants**: Low risk
+"""
+        mock_get_subtask.return_value = ("[Analysis] ATT-4300: Problem Domain Analysis", valid_desc, "ATT-4300")
+        jira_util.gate_verdict("ATT-4301", "PASS", "Gate 1 PASS audit report", role="agent2")
+        mock_transition.assert_called_with("ATT-4301", "freigabe", role="agent2", inject_context=True)
+
+        # 3. Non-analysis subtask (e.g. [Req & Test Spec]) without impact analysis -> succeeds normally
+        mock_transition.reset_mock()
+        mock_get_subtask.return_value = ("[Req & Test Spec] ATT-4300: Test Spec", "Test spec details without impact section", "ATT-4300")
+        jira_util.gate_verdict("ATT-4302", "PASS", "Gate 2 PASS audit report", role="agent2")
+        mock_transition.assert_called_with("ATT-4302", "freigabe", role="agent2", inject_context=True)
 
 
 if __name__ == "__main__":

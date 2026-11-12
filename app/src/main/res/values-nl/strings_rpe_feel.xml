@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_workout_card_rpe_feel">RPE &amp; gevoel</string>
+    <string name="workout_rpe_title">Ervaren inspanning (RPE 1–10)</string>
+    <string name="workout_feel_title">Gevoel</string>
+    <string name="srpe_load_badge">sRPE: %d</string>
+
+    <string name="rpe_anchor_1">1 — Zeer licht</string>
+    <string name="rpe_anchor_2">2 — Licht</string>
+    <string name="rpe_anchor_3">3 — Matig</string>
+    <string name="rpe_anchor_4">4 — Enigszins zwaar</string>
+    <string name="rpe_anchor_5">5 — Zwaar</string>
+    <string name="rpe_anchor_6">6 — Zwaar+</string>
+    <string name="rpe_anchor_7">7 — Zeer zwaar</string>
+    <string name="rpe_anchor_8">8 — Zeer zwaar+</string>
+    <string name="rpe_anchor_9">9 — Extreem zwaar</string>
+    <string name="rpe_anchor_10">10 — Maximale inspanning</string>
+
+    <string name="feel_anchor_1">Zeer slecht</string>
+    <string name="feel_anchor_2">Slecht</string>
+    <string name="feel_anchor_3">Normaal</string>
+    <string name="feel_anchor_4">Goed</string>
+    <string name="feel_anchor_5">Geweldig</string>
+</resources>

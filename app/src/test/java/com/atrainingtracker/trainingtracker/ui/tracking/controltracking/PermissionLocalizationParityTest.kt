@@ -18,16 +18,17 @@
 
 package com.atrainingtracker.trainingtracker.ui.tracking.controltracking
 
+import com.atrainingtracker.testing.LocalizationTestCache
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertTrue
+import org.junit.Assert.assertNotNull
 import org.junit.Test
-import java.io.File
 
 /**
  * 9-Language Localization & Format Specifier Audit (REQ-PRI-006.6, TST-PRI-005.4, ATT-3998).
  *
  * Verifies that all newly introduced user-facing string resources exist and are non-empty
  * across all 9 supported locales: EN, DE, ES, FR, IT, JA, NL, PL, PT.
+ * Refactored to LocalizationTestCache per docs/coding_standards.md §5.4 and REQ-PRO-049.
  */
 class PermissionLocalizationParityTest {
 
@@ -50,32 +51,14 @@ class PermissionLocalizationParityTest {
         "permission_rationale_bluetooth_subtitle"
     )
 
-    private fun findFile(relativePath: String): File {
-        val candidates = listOf(
-            File(relativePath),
-            File("app/$relativePath"),
-            File("../$relativePath"),
-            File("../../$relativePath")
-        )
-        return candidates.firstOrNull { it.exists() }
-            ?: error("File not found in candidates: $relativePath")
-    }
-
     @Test
     fun testAllRequiredKeysExistAndNonEmptyAcrossAllNineLocales() {
         for (key in requiredKeys) {
-            val regex = Regex("""<string name="$key">(.*?)</string>""", RegexOption.DOT_MATCHES_ALL)
-
             for (locale in locales) {
-                val file = findFile("src/main/res/$locale/strings.xml")
-                assertTrue("strings.xml must exist for locale $locale", file.exists())
-                val text = file.readText()
-
-                val match = regex.find(text)
-                assertTrue("Key '$key' must exist in $locale/strings.xml", match != null)
-
-                val value = match?.groupValues?.get(1)?.trim() ?: ""
-                assertFalse("String value for '$key' in $locale must not be blank", value.isBlank())
+                val strings = LocalizationTestCache.getStrings(locale)
+                val value = strings[key]
+                assertNotNull("Key '$key' must exist in $locale/strings.xml", value)
+                assertFalse("String value for '$key' in $locale must not be blank", value!!.isBlank())
             }
         }
     }

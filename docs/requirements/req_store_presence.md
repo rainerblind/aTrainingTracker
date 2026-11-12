@@ -1,9 +1,9 @@
-# Living Requirements: Project Governance & Store Presence
+# Living Requirements: Store Presence
 
-**Domain**: `project_governance`  
+**Domain**: `store_presence`  
 **Prefixes**: `STP`  
 **Scope**: Store presence, Google Play listings, screenshots, store metadata contract testing, and release governance.  
-**Total Requirements**: 5
+**Total Requirements**: 10
 
 ---
 

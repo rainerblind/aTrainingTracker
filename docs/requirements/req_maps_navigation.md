@@ -2296,6 +2296,114 @@
 
 **Invariants**: Exact GPS trackpoint correlation; zero extraneous markers on non-radar sessions.
 
+### REQ-CLM-008: Live Climb Detection Movement-Bearing Gating & Cache Reconciliation [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-CLM-008` | **Tickets**: `ATT-7160`
+- **Implementation**: `LiveClimbsRepository.kt`
+- **Rationale**: When stationary or indoors (`Nicht gestartet` / `IDLE`), `banalRepository.currentBearing` is null. Previously, `LiveClimbsRepository` substituted `0.0°` (due North), causing stored climbs within 250m whose initial segment pointed North (315°..45°) to falsely trigger `LiveClimbStatus.APPROACHING` and display `LiveClimbSheet`. The system SHALL require a non-null movement bearing before matching approaching climbs, preserve active tracking during mid-climb pauses, and reconcile `_activeLiveClimb` on database refresh:
+1. *Movement-Bearing Gating (`REQ-CLM-008.1`)*:
+• `LiveClimbsRepository.updateTracking(location: LatLng, bearing: Double?)` SHALL accept a nullable movement bearing, eliminating synthetic `?: 0.0` North fallback.
+• In candidate climb scanning (`LiveClimbStatus.APPROACHING`), when `currentLive == null` or finished, the system SHALL evaluate initial segment heading difference (`bearingDiff <= 45.0`) only when `bearing != null`.
+• When `bearing == null`, candidate evaluation SHALL NOT match new climbs, and `_activeLiveClimb` SHALL remain null.
+2. *Mid-Climb Pause Progress Retention (`REQ-CLM-008.2`)*:
+• When an athlete is already in `LiveClimbStatus.ON_CLIMB` or actively `LiveClimbStatus.APPROACHING`, receiving `bearing == null` (such as a temporary stop on a steep ascent or pause at traffic light) SHALL NOT cancel or clear the active climb.
+• Progress evaluation SHALL continue using orthogonal polyline projection via `PolylineProgressTracker.projectLocation` and distance-to-summit checks.
+3. *Active Climb Cache Reconciliation on Database Refresh (`REQ-CLM-008.3`)*:
+• In `LiveClimbsRepository.refreshClimbs(activeRouteId: Long?)`, after reloading `_allClimbs` (from route climbs or `ClimbsDatabaseManager.getAllClimbs()`), the system SHALL verify whether `_activeLiveClimb.value?.climb?.id` is still present in the updated `_allClimbs.value`.
+• If the active climb ID is absent from `_allClimbs.value` (e.g. deleted or filtered out by a route change), `LiveClimbsRepository` SHALL immediately clear `_activeLiveClimb.value = null`.
+
+### Requirement Archaeology & Chesterton's Fence Audit
+1. *Original Requirement ID & Target*: Amends `REQ-MAP-027` (Section 3: Live Climb Tracking Engine) in `LiveClimbsRepository.kt`.
+2. *Historical Origin & Commit Trace*: Commit `045e14d4` (`ATT-1281`, sprint `2026-40.14`).
+3. *Root Reason for Existing Formulation*: Elvis fallback `?: 0.0` was introduced to satisfy non-null `Double` parameter in `updateTracking`, assuming GPS bearing would always accompany GPS fix.
+4. *Preservation of Core Invariants*: Spatial thresholds (approach 250m, start gate 30m, summit gate 35m) and heading divergence limit (45°) remain strictly preserved.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* an athlete is stationary (`banalRepository.currentBearing.value == null`) near a climb start (< 250m) heading North (18°),
+• *When* `banalRepository.currentLocation` emits a GPS fix,
+• *Then* `LiveClimbsRepository` does not substitute `0.0°` and `_activeLiveClimb.value` remains `null`.
+• *Given* an athlete actively on a climb (`LiveClimbStatus.ON_CLIMB`) who pauses mid-ascent (`currentBearing == null`),
+• *When* a stationary GPS fix arrives on the climb polyline,
+• *Then* `ON_CLIMB` progress remains latched and is not cleared.
+• *Given* `_activeLiveClimb` references a climb ID that was deleted or filtered out of `_allClimbs`,
+• *When* `refreshClimbs()` runs,
+• *Then* `_activeLiveClimb.value` is immediately reset to `null`.
+
+**Invariants**: Zero false approaching triggers while stationary; zero drop of active climbs during mid-ascent pauses; 100% test pass rate across `LiveClimbsRepositoryTest`.
+
+### REQ-CLM-009: Climb Detection Spike Guards, DEM Ground-Truth Cross-Validation & Corrupted Climbs Self-Healing [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-CLM-009` | **Tickets**: `ATT-7159`
+- **Implementation**: `ClimbDetector.kt`, `WorkoutRepository.kt`
+- **Rationale**: `Climbs.db` contains corrupted climbs (e.g. `541m @ 104.6%`, `max_grade = 367.4%` on a flat residential street) and phantom climbs caused by cold-air barometer thermal drift on winter commutes (`+50m` drift vs `-9.6m` DEM). `ClimbDetector` lacks vertical jump and gradient ceiling checks, `WorkoutRepository` feeds raw `ALTITUDE` without DEM validation, and existing `Climbs.db` instances lack an automated cleanup pass. The system SHALL reject vertical step jumps and non-physical gradients in `ClimbDetector`, cross-validate workout climbs against DEM ground truth, and execute an idempotent cleanup migration:
+1. *Vertical Discontinuity & Plausibility Spike Guards (`REQ-CLM-009.1`)*:
+• `ClimbDetector.detectClimbs()` SHALL reject non-physical vertical altitude step jumps ($|\Delta\text{alt}| > 25.0\text{ m}$ or segment gradient $> 45.0\%$ over $d \ge 10\text{ m}$), splitting or terminating candidate segments.
+• `ClimbDetector.detectClimbs()` SHALL reject candidate climbs whose average gradient exceeds $25.0\%$ over $d \ge 500\text{ m}$ (`avgGradePercent > 25.0`) or whose maximum instantaneous gradient exceeds $45.0\%$ (`maxGradePercent > 45.0`).
+• `ClimbDetector.detectClimbs()` SHALL reject calibration snap phantom peaks where altitude drops catastrophically by $> 35\text{ m}$ within $< 50\text{ m}$ horizontal distance immediately following the summit (`peakIdx`).
+2. *DEM Ground-Truth Cross-Validation for Workout Climbs (`REQ-CLM-009.2`)*:
+• In `WorkoutRepository.extractAndPersistClimbsFromWorkout()` and historical backfill, candidate workout climbs (`routeId == null`) SHALL be cross-validated against digital elevation model (DEM) ground truth (`ElevationCacheDatabaseManager.getElevation()` at start, midpoint, and summit).
+• The system SHALL reject any candidate workout climb where DEM ground-truth gain is $< 75\%$ of threshold gain ($\text{demGain} < \text{minGain} \times 0.75$) or where DEM average gradient is $< 2.2\%$.
+• The system SHALL reject phantom climbs caused by cold-air barometer thermal drift where recorded barometric gain exceeds DEM ground-truth gain by $> \max(\text{demGain} \times 1.6 + 18.0, \text{demGain} + 35.0)$. When valid DEM elevations exist, `WorkoutRepository` SHALL calibrate climb gain and profile against DEM.
+3. *Idempotent Corrupted Climbs Cleanup Migration (`REQ-CLM-009.3`)*:
+• `WorkoutRepository` SHALL implement a one-time idempotent cleanup migration gated on `SharedPreferences` boolean flag `climbs_workout_cleanup_v2` (`PREF_CLIMBS_WORKOUT_CLEANUP_V2`).
+• The migration SHALL query all `route_id IS NULL` rows in `Climbs.db` and delete any entry violating physical plausibility (`avgGradePercent > 25.0`, `maxGradePercent > 45.0`, or single-step $|\Delta\text{alt}| > 25.0\text{ m}`) or DEM validation.
+• Upon completion, `climbs_workout_cleanup_v2` SHALL be marked `true`, and `LiveClimbsRepository.refreshClimbs()` SHALL be invoked to purge deleted climbs from memory.
+
+### Requirement Archaeology & Chesterton's Fence Audit
+1. *Original Requirement ID & Target*: Refines `REQ-MAP-064` (*Workout Climb Ingestion*) & `REQ-MAP-066` (*Historical Climb Backfill*), targeting `ClimbDetector.kt` and `WorkoutRepository.kt`.
+2. *Historical Origin & Commit Trace*: Commit `c7438e78` (`ATT-2766`), `8d42cf31` (`ATT-6691`).
+3. *Root Reason for Existing Formulation*: Early ingestion assumed continuous, drift-free barometer readings without GPS altitude cold-start jumps.
+4. *Preservation of Core Invariants*: Scoring formula ($\text{Score} = \text{length} \times \text{gradient}$), category thresholds (`HC`..`CAT_4`), and 50m spatial deduplication remain preserved.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* a track with an altitude jump from 602m to 1,168m over 541m (104.6% grade),
+• *When* `ClimbDetector` runs,
+• *Then* zero climbs are detected.
+• *Given* a flat commute with +52m barometric drift and -6m DEM gain,
+• *When* `extractAndPersistClimbsFromWorkout()` validates against DEM,
+• *Then* the phantom climb is rejected.
+• *Given* `Climbs.db` with corrupted `route_id IS NULL` climbs (`avgGrade > 25%`),
+• *When* `v2` cleanup runs,
+• *Then* invalid climbs are purged and `LiveClimbsRepository` refreshed.
+
+**Invariants**: Zero false climb detections from GPS/barometer spikes; DEM ground-truth consistency; idempotent v2 cleanup migration; 100% test pass rate.
+
+### REQ-CLM-010: Configurable FIETS Index & Strava/Garmin Climb Categorization [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-CLM-010` | **Tickets**: `ATT-7162`
+- **Implementation**: `Climb.kt`, `ClimbDetector.kt`, `TuningPreferencesDataStore.kt`, `NavigationSection.kt`
+- **Rationale**: Strava/Garmin score ($\text{dist} \times \text{grade\%} = 100 \times H$) cancels distance entirely, ignoring gradient difficulty: a steep 1.3 km @ 9.6% wall scores the same as a gentle 3% false-flat. The FIETS Index ($H^2 / (10 \times D) + \max(0, (\text{summitAlt} - 1000)/1000)$) accurately weights elevation gain, gradient, and high-altitude difficulty. The system SHALL support FIETS as the default and Strava/Garmin as a selectable alternative in Advanced Tuning, dynamically updating displayed categories without database rebuild:
+1. *FIETS & Strava/Garmin Formula Calculations (`REQ-CLM-010.1`)*:
+• The system SHALL introduce `enum class ClimbScoringFormula { FIETS, STRAVA_GARMIN }` with default `FIETS`.
+• `ClimbCategory.fromFietsIndex(distanceMeters, elevationGainMeters, summitAltitudeMeters)` SHALL compute base score as $(H^2)/(10 \times D)$ and altitude bonus as $\max(0, (\text{summitAlt} - 1000)/1000)$, applying open thresholds: `HC >= 6.5`, `CAT_1 >= 5.0`, `CAT_2 >= 3.5`, `CAT_3 >= 2.0`, `CAT_4 >= 0.5`, `UNCATEGORIZED < 0.5`.
+• `ClimbCategory.fromScore(score)` SHALL retain Strava/Garmin thresholds (`HC >= 80000`, `CAT_1 >= 64000`, `CAT_2 >= 32000`, `CAT_3 >= 16000`, `CAT_4 >= 8000`).
+2. *Dynamic Presentation Category Resolution (`REQ-CLM-010.2`)*:
+• `Climb.resolveCategory(formula: ClimbScoringFormula)` SHALL dynamically evaluate category from distance, elevation gain, and summit altitude without modifying persisted schema or requiring DB rebuilds.
+3. *Preferences & 9-Language Localization Parity (`REQ-CLM-010.3`)*:
+• `TuningPreferencesDataStore` SHALL persist `climbScoringFormula` (default `FIETS`) with reactive `StateFlow` and reset support.
+• `NavigationSection.kt` SHALL expose a FilterChip selector with full 9-language localization parity (`values`, `de`, `es`, `fr`, `it`, `ja`, `nl`, `pl`, `pt`).
+
+### Requirement Archaeology & Chesterton's Fence Audit
+1. *Original Requirement ID & Target*: Refines `REQ-MAP-027` (*Climb Detection*) & `REQ-UI-281` (*Navigation Tuning*).
+2. *Historical Origin & Commit Trace*: Commit `c7438e78` (`ATT-2565`).
+3. *Root Reason for Existing Formulation*: Strava/Garmin was originally adopted for 1:1 parity with Garmin Edge devices.
+4. *Preservation of Core Invariants*: Strava/Garmin formula is preserved as a user-selectable option; detection geometry and DB schema remain untouched.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* a 1 km climb @ 15% (150m gain, summit 500m),
+• *When* evaluated under FIETS,
+• *Then* score is 2.25 and category is `CAT_3` (versus `CAT_4` under Strava).
+• *Given* a 15 km pass with 1,000m gain (summit 2,200m),
+• *When* evaluated under FIETS,
+• *Then* score is $6.67 + 1.20 = 7.87$ (`HC`).
+• *Given* existing climbs in `Climbs.db`,
+• *When* `climbScoringFormula` is toggled in Settings,
+• *Then* UI badges update immediately without DB re-ingestion.
+
+**Invariants**: Default formula is `FIETS`; zero database schema migration; 100% localization parity across 9 languages.
+
+
+
 
 
 

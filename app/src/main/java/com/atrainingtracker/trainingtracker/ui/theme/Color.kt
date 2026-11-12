@@ -207,6 +207,18 @@ object TTColor {
     val Zone7 = Color(0xFF000000) // Pure Black
 
     /**
+     * Color mapping for Borg CR10 RPE scale (1–10) (REQ-WKO-038 / ATT-6879).
+     */
+    fun rpeColor(rpe: Int): Color = when (rpe) {
+        1, 2 -> Zone2 // Green / Recovery
+        3, 4 -> Zone1 // Light Green / Aerobic
+        5, 6 -> Zone3 // Orange / Tempo
+        7, 8 -> Zone4 // Red / Threshold
+        9, 10 -> Zone5 // Dark Violet / Anaerobic Max
+        else -> Zone2
+    }
+
+    /**
      * Computes the WCAG 2.1 relative luminance of [color] in the range [0.0, 1.0].
      */
     fun relativeLuminance(color: Color): Double {
@@ -394,4 +406,26 @@ object TTColor {
     val ArtifactWarningBorder = Color(0xFFFFB74D)
     val ArtifactWarningTitle = Color(0xFFE65100)
     val ArtifactWarningDesc = Color(0xFFBF360C)
+    val HrvQualityHigh = Color(0xFF2E7D32)
+    val HrvQualityModerate = Color(0xFFF57F17)
+    val HrvHeartRateRed = Color(0xFFD32F2F)
+    val HrvSuccessGreen = Color(0xFF2E7D32)
+
+    // The Trophy Vault & Sporting Journey Tokens (REQ-SPT-001..004, ATT-7022)
+    val VaultGold = Color(0xFFFFD700)
+    val VaultAmber = Color(0xFFF59E0B)
+    val VaultCardBackground = Color(0x1AF59E0B)
+    val VaultCardBorder = Color(0x4DF59E0B)
+    val VaultHeroStart = Color(0x26F59E0B)
+    val VaultHeroEnd = Color(0x05F59E0B)
+    val VaultBiologicalRed = Color(0xFFF43F5E)
+    val VaultBiologicalRedContainer = Color(0x26F43F5E)
+    val VaultElectricAmber = Color(0xFFF59E0B)
+    val VaultElectricAmberContainer = Color(0x26F59E0B)
+    val VaultCircadianSky = Color(0xFF0EA5E9)
+    val VaultCircadianSkyContainer = Color(0x260EA5E9)
+    val VaultExplorerEmerald = Color(0xFF10B981)
+    val VaultExplorerEmeraldContainer = Color(0x2610B981)
+    val VaultPassportBgStart = Color(0xFF0F172A)
+    val VaultPassportBgEnd = Color(0xFF1E293B)
 }

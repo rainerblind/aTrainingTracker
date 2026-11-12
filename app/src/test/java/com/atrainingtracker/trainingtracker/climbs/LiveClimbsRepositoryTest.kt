@@ -396,4 +396,55 @@ class LiveClimbsRepositoryTest {
         repository.refreshClimbs(null)
         assertEquals(updatedClimbs, repository.allStoredClimbs.value)
     }
+
+    @Test
+    fun testApproachingClimb_rejectedWhenBearingIsNull() = runTest(testDispatcher) {
+        // REQ-CLM-008.1 / TST-CLM-008.1: Stationary rider with null bearing must not trigger false APPROACHING
+        repository.refreshClimbs(null)
+
+        // Position 100 meters south of start, heading North (climb initial bearing is 0 deg)
+        val athletePos = LatLng(47.0 - 0.0009, 10.0)
+        repository.updateTracking(athletePos, bearing = null)
+
+        val live = repository.activeLiveClimb.value
+        assertNull("Should NOT detect approaching climb when movement bearing is null (stationary/idle)", live)
+    }
+
+    @Test
+    fun testOnClimb_retainsTrackingDuringMidClimbPauseWithNullBearing() = runTest(testDispatcher) {
+        // REQ-CLM-008.2 / TST-CLM-008.2: Pausing mid-climb (bearing = null) must retain ON_CLIMB and polyline projection
+        repository.refreshClimbs(null)
+
+        // Enter climb at start (bearing 0 deg)
+        repository.updateTracking(LatLng(47.0, 10.0), bearing = 0.0)
+        val liveStart = repository.activeLiveClimb.value
+        assertNotNull(liveStart)
+        assertEquals(LiveClimbStatus.ON_CLIMB, liveStart!!.status)
+
+        // Rider stops mid-climb (bearing becomes null) at lat 47.005 (500m along climb)
+        repository.updateTracking(LatLng(47.005, 10.0), bearing = null)
+        val livePaused = repository.activeLiveClimb.value
+        assertNotNull("Should retain active climb during stationary pause mid-climb", livePaused)
+        assertEquals(LiveClimbStatus.ON_CLIMB, livePaused!!.status)
+        assertEquals(0.5f, livePaused.currentProgressFraction, 0.05f)
+        assertEquals(500.0, livePaused.distanceToSummit, 50.0)
+    }
+
+    @Test
+    fun testRefreshClimbs_clearsActiveLiveClimbIfDeletedFromDatabase() = runTest(testDispatcher) {
+        // REQ-CLM-008.3 / TST-CLM-008.3: If active climb is deleted from Climbs.db, refreshClimbs resets active climb
+        coEvery { mockClimbsDb.getAllClimbs() } returns listOf(sampleClimb)
+        repository.refreshClimbs(null)
+
+        // Start tracking climb (sampleClimb has id = 1L)
+        repository.updateTracking(LatLng(47.0, 10.0), bearing = 0.0)
+        assertNotNull(repository.activeLiveClimb.value)
+        assertEquals(1L, repository.activeLiveClimb.value?.climb?.id)
+
+        // Climbs database reloaded after climb deletion (empty list or different climb)
+        coEvery { mockClimbsDb.getAllClimbs() } returns emptyList()
+        repository.refreshClimbs(null)
+
+        assertNull("Active live climb must be cleared when no longer present in refreshed database", repository.activeLiveClimb.value)
+    }
 }

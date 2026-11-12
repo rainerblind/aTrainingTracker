@@ -10,16 +10,26 @@ import os
 import sys
 import unittest
 import tempfile
+import ast
+import struct
 
 from tools.replay_workout import (
     TcxParser, TcxPoint, ReplayEngine,
     build_power_payload, build_hr_payload, build_battery_payload,
+    compute_auto_hrv_params,
     format_duration, haversine_distance, calculate_bearing,
     BleReplayServer, AdbGpsInjector,
     HostPreFlightDiagnostics, PreFlightReport,
     CYCLING_POWER_SERVICE_UUID, HEART_RATE_SERVICE_UUID,
+    RADAR_SERVICE_UUID, RADAR_LIGHT_CONTROL_UUID,
+    RADAR_V1_CHARACTERISTIC_UUID, RADAR_V2_CHARACTERISTIC_UUID,
     BATTERY_SERVICE_UUID, BATTERY_LEVEL_CHARACTERISTIC_UUID,
     build_arg_parser, ScheduledTriggerManager
+)
+from tools.ble_hr_simulator import RrSynthesizer
+from tools.ble_radar_simulator import (
+    RadarKinematicsEngine, RadarPayloadBuilder, RadarLightMode,
+    RadarTargetState, ThreatLevel, VehicleSizeCategory, LaneState
 )
 
 try:
@@ -546,6 +556,115 @@ class TestPyQt6GuiContracts(unittest.TestCase):
 
         window.close()
 
+    def test_radar_and_hrv_gui_controls(self):
+        """Verifies GUI controls for Radar toggle/presets/badges and HRV regime/artifact buttons (REQ-SIM-003.5)."""
+        sample_path = os.path.join(os.path.dirname(__file__), "sample_workout.tcx")
+        if not os.path.exists(sample_path):
+            sample_path = "tools/sample_workout.tcx"
+        points = TcxParser.parse_file(sample_path)
+        engine = ReplayEngine(points)
+        ble = BleReplayServer(enabled=False)
+        gps = AdbGpsInjector(enabled=False)
+
+        window = ReplayGuiWindow(sample_path, engine, ble, gps)
+
+        # 1. Radar Kill/Revive Toggle & Badge
+        self.assertIsNotNone(window.btn_toggle_radar)
+        self.assertIsNotNone(window.lbl_status_radar_badge)
+        self.assertEqual(window.lbl_status_radar_badge.text(), "● Radar Active")
+        self.assertEqual(window.btn_toggle_radar.text(), "Kill Radar")
+
+        window.btn_toggle_radar.click()
+        self.assertTrue(ble.is_radar_killed)
+        self.assertEqual(window.lbl_status_radar_badge.text(), "■ Radar Killed")
+        self.assertEqual(window.btn_toggle_radar.text(), "Revive Radar")
+
+        window.btn_toggle_radar.click()
+        self.assertFalse(ble.is_radar_killed)
+        self.assertEqual(window.lbl_status_radar_badge.text(), "● Radar Active")
+        self.assertEqual(window.btn_toggle_radar.text(), "Kill Radar")
+
+        # 2. Radar Light Badge & Mode Handling
+        self.assertIsNotNone(window.lbl_radar_light_badge)
+        self.assertIn("SOLID", window.lbl_radar_light_badge.text())
+        if ble.radar_engine:
+            ble.radar_engine.set_light_mode(RadarLightMode.DAY_FLASH)
+            window._update_radar_ui()
+            self.assertIn("DAY_FLASH", window.lbl_radar_light_badge.text())
+
+        # 3. Radar Preset Buttons
+        self.assertIsNotNone(window.btn_radar_car)
+        self.assertIsNotNone(window.btn_radar_fast)
+        self.assertIsNotNone(window.btn_radar_truck)
+        self.assertIsNotNone(window.btn_radar_close)
+        self.assertIsNotNone(window.btn_radar_clear)
+        self.assertIsNotNone(window.btn_radar_loop)
+
+        # Trigger presets via button clicks
+        window.btn_radar_car.click()
+        self.assertEqual(len(ble.radar_engine.targets), 1)
+        self.assertEqual(ble.radar_engine.targets[0].target_id, 1)
+
+        window.btn_radar_fast.click()
+        self.assertEqual(len(ble.radar_engine.targets), 2)
+
+        window.btn_radar_close.click()
+        close_targets = [t for t in ble.radar_engine.targets if t.target_id == 4]
+        self.assertEqual(len(close_targets), 1)
+        self.assertLess(abs(close_targets[0].lateral_m), 1.5)
+
+        window.btn_radar_clear.click()
+        self.assertEqual(len(ble.radar_engine.targets), 0)
+
+        # Country loop toggle button
+        self.assertFalse(ble.radar_engine.country_loop_active)
+        window.btn_radar_loop.click()
+        self.assertTrue(ble.radar_engine.country_loop_active)
+        window.btn_radar_loop.click()
+        self.assertFalse(ble.radar_engine.country_loop_active)
+
+        # 4. HRV Regime Combobox & Badges in Mock Mode
+        self.assertIsNotNone(window.combo_hrv_regime)
+        self.assertIsNotNone(window.lbl_hrv_rmssd_val)
+        self.assertIsNotNone(window.lbl_hrv_a1_val)
+
+        # Switch to Aerobic
+        window.combo_hrv_regime.setCurrentIndex(1)
+        self.assertEqual(ble.hrv_mode, "aerobic")
+        self.assertEqual(window.lbl_hrv_a1_val.text(), "1.00")
+
+        # Switch to Threshold
+        window.combo_hrv_regime.setCurrentIndex(2)
+        self.assertEqual(ble.hrv_mode, "threshold")
+        self.assertEqual(window.lbl_hrv_a1_val.text(), "0.70")
+
+        # Switch to Anaerobic
+        window.combo_hrv_regime.setCurrentIndex(3)
+        self.assertEqual(ble.hrv_mode, "anaerobic")
+        self.assertEqual(window.lbl_hrv_a1_val.text(), "0.45")
+
+        # Switch back to Auto-HRV & verify update via engine update
+        window.combo_hrv_regime.setCurrentIndex(0)
+        self.assertEqual(ble.hrv_mode, "auto")
+        test_pt = TcxPoint(time_iso="2026-11-12T00:00:10Z", time_sec=10.0, lat=48.0, lon=11.0, ele=500.0, dist=100.0, hr=145, watts=200, cadence=90, speed_mps=8.0, bearing=0.0)
+        window.on_engine_update(test_pt)
+        self.assertEqual(window.lbl_hrv_a1_val.text(), "0.75")
+        self.assertEqual(window.lbl_hrv_rmssd_val.text(), "35.0 ms")
+
+        # 5. HRV Artifact Buttons
+        self.assertIsNotNone(window.btn_art_ectopic)
+        self.assertIsNotNone(window.btn_art_missed)
+        self.assertIsNotNone(window.btn_art_extra)
+        self.assertIsNotNone(window.btn_art_gap)
+
+        window.btn_art_ectopic.click()
+        window.btn_art_missed.click()
+        window.btn_art_extra.click()
+        window.btn_art_gap.click()
+        self.assertTrue(len(ble.rr_synthesizer.artifact_queue) > 0 or ble.rr_synthesizer.gap_ticks_remaining > 0)
+
+        window.close()
+
 
 class TestAdbGpsInjector(unittest.TestCase):
     def test_build_inject_cmd_android14_syntax(self):
@@ -894,6 +1013,351 @@ class TestScheduledTriggerManager(unittest.TestCase):
         self.assertFalse(ble.is_hr_killed)
         self.assertFalse(ble.is_power_killed)
         self.assertFalse(gps.is_killed)
+
+    def test_scheduled_radar_triggers(self):
+        ble = BleReplayServer(enabled=False)
+        gps = AdbGpsInjector(enabled=False)
+        mgr = ScheduledTriggerManager(
+            ble, gps,
+            kill_radar_at=10.0, revive_radar_at=20.0
+        )
+
+        mgr.evaluate(5.0)
+        self.assertFalse(ble.is_radar_killed)
+
+        mgr.evaluate(10.0)
+        self.assertTrue(ble.is_radar_killed)
+
+        mgr.evaluate(15.0)
+        self.assertTrue(ble.is_radar_killed)
+
+        mgr.evaluate(20.0)
+        self.assertFalse(ble.is_radar_killed)
+
+
+# ==============================================================================
+# ATT-6677: BLE HRV Synthesis & Garmin Varia Radar Test Suites (TST-SIM-003)
+# ==============================================================================
+
+class TestHrPayloadPackingAndHrvCurve(unittest.TestCase):
+    """Verifies BLE 0x2A37 Bit 4 RR packing and Auto-HRV intensity mapping (TST-SIM-003.1 & .2)."""
+
+    def test_build_hr_payload_rr_packing(self):
+        # 140 BPM, RR raw intervals: 800 (0x0320) and 850 (0x0352)
+        payload = build_hr_payload(140, rr_raw_list=[800, 850], enable_rr=True)
+        self.assertEqual(len(payload), 6)
+        # Flag byte bit 4 (0x10) set
+        self.assertEqual(payload[0], 0x10)
+        # BPM byte
+        self.assertEqual(payload[1], 140)
+        # RR1: 800 -> 0x20, 0x03
+        self.assertEqual(payload[2], 0x20)
+        self.assertEqual(payload[3], 0x03)
+        # RR2: 850 -> 0x52, 0x03
+        self.assertEqual(payload[4], 0x52)
+        self.assertEqual(payload[5], 0x03)
+
+    def test_build_hr_payload_rr_disabled(self):
+        # When enable_rr=False, Bit 4 is NOT set and payload is legacy 2 bytes
+        payload = build_hr_payload(140, rr_raw_list=[800, 850], enable_rr=False)
+        self.assertEqual(len(payload), 2)
+        self.assertEqual(payload[0], 0x00)
+        self.assertEqual(payload[1], 140)
+
+        # When rr_raw_list is None or empty
+        payload_none = build_hr_payload(140, rr_raw_list=None, enable_rr=True)
+        self.assertEqual(payload_none, [0x00, 140])
+        payload_empty = build_hr_payload(140, rr_raw_list=[], enable_rr=True)
+        self.assertEqual(payload_empty, [0x00, 140])
+
+    def test_build_hr_payload_raw_clamping(self):
+        payload = build_hr_payload(140, rr_raw_list=[70000, -10], enable_rr=True)
+        self.assertEqual(len(payload), 6)
+        # 70000 clamped to 65535 (0xFFFF)
+        self.assertEqual(payload[2], 0xFF)
+        self.assertEqual(payload[3], 0xFF)
+        # -10 clamped to 0 (0x0000)
+        self.assertEqual(payload[4], 0x00)
+        self.assertEqual(payload[5], 0x00)
+
+    def test_compute_auto_hrv_params_curve(self):
+        # BPM <= 120: a1 = 1.05, rmssd = 60.0
+        a1, rmssd = compute_auto_hrv_params(90.0)
+        self.assertEqual(a1, 1.05)
+        self.assertEqual(rmssd, 60.0)
+
+        a1, rmssd = compute_auto_hrv_params(120.0)
+        self.assertEqual(a1, 1.05)
+        self.assertEqual(rmssd, 60.0)
+
+        # BPM = 145 (aerobic HRVT1 threshold): a1 = 0.75, rmssd = 35.0
+        a1, rmssd = compute_auto_hrv_params(145.0)
+        self.assertEqual(a1, 0.75)
+        self.assertEqual(rmssd, 35.0)
+
+        # BPM = 165 (anaerobic HRVT2 threshold): a1 = 0.50, rmssd = 15.0
+        a1, rmssd = compute_auto_hrv_params(165.0)
+        self.assertEqual(a1, 0.50)
+        self.assertEqual(rmssd, 15.0)
+
+        # BPM >= 170: a1 = 0.50, rmssd = 10.0
+        a1, rmssd = compute_auto_hrv_params(175.0)
+        self.assertEqual(a1, 0.50)
+        self.assertEqual(rmssd, 10.0)
+
+        a1, rmssd = compute_auto_hrv_params(200.0)
+        self.assertEqual(a1, 0.50)
+        self.assertEqual(rmssd, 10.0)
+
+    def test_compute_auto_hrv_params_monotonicity(self):
+        prev_a1, prev_rmssd = 10.0, 1000.0
+        for bpm in range(100, 190, 2):
+            a1, rmssd = compute_auto_hrv_params(float(bpm))
+            self.assertLessEqual(a1, prev_a1 + 1e-6)
+            self.assertLessEqual(rmssd, prev_rmssd + 1e-6)
+            prev_a1, prev_rmssd = a1, rmssd
+
+    def test_phase_accumulator_60s_drift(self):
+        synth = RrSynthesizer(bpm=135, rmssd=35.0, regime='aerobic')
+        total_emitted_ms = 0.0
+        for _ in range(60):
+            raws = synth.tick_1hz(1000.0)
+            for raw in raws:
+                total_emitted_ms += raw * 1000.0 / 1024.0
+
+        # Phase tracking invariant: total elapsed time + residual phase tracks 60,000ms within <= 50ms
+        effective_elapsed = total_emitted_ms + synth.phase_ms + synth.quant_error_ms
+        drift_ms = abs(effective_elapsed - 60000.0)
+        self.assertLessEqual(drift_ms, 50.0, f"60s cumulative RR drift exceeded: {drift_ms:.2f} ms > 50 ms")
+
+
+class TestRadarProtocolAndService(unittest.TestCase):
+    """Verifies Garmin Varia Radar UUIDs, Light Mode enum, and payload serialization (TST-SIM-003.3)."""
+
+    def test_radar_uuids(self):
+        self.assertEqual(RADAR_SERVICE_UUID, "6a4e3200-667b-11e3-949a-0800200c9a66")
+        self.assertEqual(RADAR_LIGHT_CONTROL_UUID, "6a4e3202-667b-11e3-949a-0800200c9a66")
+        self.assertEqual(RADAR_V1_CHARACTERISTIC_UUID, "6a4e3203-667b-11e3-949a-0800200c9a66")
+        self.assertEqual(RADAR_V2_CHARACTERISTIC_UUID, "6a4e3204-667b-11e3-949a-0800200c9a66")
+
+    def test_radar_light_mode_enum_and_validation(self):
+        self.assertEqual(RadarLightMode.OFF, 0x00)
+        self.assertEqual(RadarLightMode.SOLID, 0x01)
+        self.assertEqual(RadarLightMode.PELOTON, 0x05)
+        self.assertEqual(RadarLightMode.NIGHT_FLASH, 0x06)
+        self.assertEqual(RadarLightMode.DAY_FLASH, 0x07)
+
+        self.assertTrue(RadarLightMode.is_valid(0x01))
+        self.assertTrue(RadarLightMode.is_valid(0x07))
+        self.assertFalse(RadarLightMode.is_valid(0x02))
+        self.assertFalse(RadarLightMode.is_valid(0xFF))
+
+        self.assertEqual(RadarLightMode.name_of(0x01), "SOLID")
+        self.assertEqual(RadarLightMode.name_of(0x07), "DAY_FLASH")
+
+    def test_radar_v2_payload_serialization(self):
+        target = RadarTargetState(
+            target_id=1, range_m=120.5, speed_mps=15.2, lateral_m=-1.8,
+            threat_level=ThreatLevel.APPROACHING,
+            size_category=VehicleSizeCategory.CAR,
+            lane_state=LaneState.PASSING_LANE
+        )
+        payload = RadarPayloadBuilder.build_v2_payload([target])
+        # Header byte 0x01 + 8 stride bytes = 9 bytes
+        self.assertEqual(len(payload), 9)
+        self.assertEqual(payload[0], 0x01)
+        self.assertEqual(payload[1], 1)  # Target ID
+        # Range 120.5m -> 1205 raw (0x04B5) -> 0xB5, 0x04
+        self.assertEqual(payload[2], 0xB5)
+        self.assertEqual(payload[3], 0x04)
+
+    def test_radar_v1_payload_serialization(self):
+        target = RadarTargetState(
+            target_id=1, range_m=120.0, speed_mps=12.0, lateral_m=-1.8,
+            threat_level=ThreatLevel.APPROACHING,
+            size_category=VehicleSizeCategory.CAR,
+            lane_state=LaneState.PASSING_LANE
+        )
+        payload = RadarPayloadBuilder.build_v1_payload([target])
+        # Header byte 0x00 + 3 stride bytes = 4 bytes
+        self.assertEqual(len(payload), 4)
+        self.assertEqual(payload[0], 0x00)
+        self.assertEqual(payload[1], 1)  # Target ID
+        self.assertEqual(payload[2], 120)  # Range meters (uint8)
+
+    def test_radar_empty_payloads(self):
+        v2_empty = RadarPayloadBuilder.build_v2_payload([])
+        self.assertEqual(v2_empty, [0x01])
+        v1_empty = RadarPayloadBuilder.build_v1_payload([])
+        self.assertEqual(v1_empty, [0x00])
+
+
+class TestRadarKinematicsEngine(unittest.TestCase):
+    """Verifies 5 Hz kinematics, presets, and overtake removal (TST-SIM-003.4)."""
+
+    def test_spawn_presets(self):
+        engine = RadarKinematicsEngine(tick_rate_hz=5.0)
+
+        # Preset 'c' (Car)
+        engine.spawn_preset('c')
+        self.assertEqual(len(engine.targets), 1)
+        self.assertEqual(engine.targets[0].target_id, 1)
+        self.assertEqual(engine.targets[0].range_m, 140.0)
+
+        # Preset 'f' (Fast car)
+        engine.spawn_preset('f')
+        self.assertEqual(len(engine.targets), 2)
+        fast_t = [t for t in engine.targets if t.target_id == 2][0]
+        self.assertEqual(fast_t.speed_mps, 22.0)
+
+        # Preset 't' (Truck)
+        engine.spawn_preset('t')
+        self.assertEqual(len(engine.targets), 3)
+
+        # Preset 'p' (Close pass)
+        engine.spawn_preset('p')
+        close_t = [t for t in engine.targets if t.target_id == 4][0]
+        self.assertLess(abs(close_t.lateral_m), 1.5)
+
+        # Clear '0'
+        engine.spawn_preset('0')
+        self.assertEqual(len(engine.targets), 0)
+
+    def test_closing_range_and_overtake_removal(self):
+        engine = RadarKinematicsEngine(tick_rate_hz=5.0)
+        engine.spawn_preset('c')  # 140m at 12m/s
+        self.assertEqual(len(engine.targets), 1)
+
+        # 1 tick of dt=0.2s -> closes by 12 * 0.2 = 2.4m -> range = 137.6m
+        engine.tick(0.2)
+        self.assertAlmostEqual(engine.targets[0].range_m, 137.6, places=2)
+
+        # Large tick to pass rider (overtake completed)
+        engine.tick(15.0)
+        self.assertEqual(len(engine.targets), 0)
+
+    def test_watchdog_starvation(self):
+        engine = RadarKinematicsEngine(tick_rate_hz=5.0)
+        engine.spawn_preset('c')
+        engine.trigger_watchdog_starvation(duration_sec=1.0)  # 5 ticks
+
+        self.assertTrue(engine.is_starving())
+        for _ in range(5):
+            res = engine.tick()
+            self.assertIsNone(res)
+
+        self.assertFalse(engine.is_starving())
+        res = engine.tick()
+        self.assertIsNotNone(res)
+
+
+class TestBleReplayServerRadarAndHrv(unittest.TestCase):
+    """Verifies BleReplayServer radar controls and HRV artifact injection (REQ-SIM-003.2 & .3)."""
+
+    def test_server_initialization_defaults(self):
+        server = BleReplayServer(enabled=False)
+        self.assertTrue(server.enable_rr)
+        self.assertTrue(server.enable_radar)
+        self.assertEqual(server.hrv_regime, 'auto')
+        self.assertIsNotNone(server.radar_engine)
+        self.assertFalse(server.is_radar_killed)
+
+    def test_server_radar_kill_and_revive(self):
+        server = BleReplayServer(enabled=False)
+        self.assertFalse(server.is_radar_killed)
+
+        server.kill_radar()
+        self.assertTrue(server.is_radar_killed)
+
+        server.toggle_radar()
+        self.assertFalse(server.is_radar_killed)
+
+        server.toggle_radar()
+        self.assertTrue(server.is_radar_killed)
+
+        server.revive_radar()
+        self.assertFalse(server.is_radar_killed)
+
+    def test_server_hrv_regime_and_artifacts(self):
+        server = BleReplayServer(enabled=False)
+        server.set_hrv_mode('threshold')
+        self.assertEqual(server.hrv_regime, 'threshold')
+
+        # Artifact injection triggers should execute cleanly
+        server.inject_hrv_artifact('ectopic')
+        server.inject_hrv_artifact('missed')
+        server.inject_hrv_artifact('extra')
+        server.inject_hrv_artifact('gap')
+
+    def test_server_mock_mode_hrv_telemetry_progression(self):
+        """Verifies HRV parameters update in mock mode (--no-ble) without BlueZ (Finding 4)."""
+        server = BleReplayServer(enabled=False)
+        self.assertIsNotNone(server.rr_synthesizer)
+
+        # In Auto-HRV mode, update telemetry with HR=145 (aerobic HRVT1)
+        server.update_telemetry(watts=200, cadence=90, hr_bpm=145)
+        self.assertEqual(server.current_hrv_a1, 0.75)
+        self.assertEqual(server.current_hrv_rmssd, 35.0)
+
+        # Update telemetry with HR=165 (anaerobic HRVT2)
+        server.update_telemetry(watts=250, cadence=95, hr_bpm=165)
+        self.assertEqual(server.current_hrv_a1, 0.50)
+        self.assertEqual(server.current_hrv_rmssd, 15.0)
+
+        # Switch to threshold regime
+        server.set_hrv_mode('threshold')
+        self.assertEqual(server.hrv_mode, 'threshold')
+        self.assertEqual(server.current_hrv_a1, 0.70)
+
+        # Artifact injection adds to queue in mock mode
+        server.inject_hrv_artifact('ectopic')
+        self.assertEqual(len(server.rr_synthesizer.artifact_queue), 2)
+
+
+class TestCliParserAndStdLibCompliance(unittest.TestCase):
+    """Verifies CLI argument parser options and stdlib compliance (TST-SIM-003.5 / TST-PRO-005.6)."""
+
+    def test_cli_parser_radar_and_hrv_options(self):
+        parser = build_arg_parser()
+        args = parser.parse_args([])
+        self.assertFalse(args.no_rr)
+        self.assertFalse(args.no_radar)
+        self.assertTrue(args.radar)
+        self.assertEqual(args.hrv_regime, 'auto')
+
+        args_custom = parser.parse_args([
+            "--no-rr",
+            "--no-radar",
+            "--hrv-regime", "anaerobic",
+            "--kill-radar-at", "30.0",
+            "--revive-radar-at", "60.0"
+        ])
+        self.assertTrue(args_custom.no_rr)
+        self.assertTrue(args_custom.no_radar)
+        self.assertEqual(args_custom.hrv_regime, "anaerobic")
+        self.assertEqual(args_custom.kill_radar_at, 30.0)
+        self.assertEqual(args_custom.revive_radar_at, 60.0)
+
+    def test_python_stdlib_compliance(self):
+        """Validates zero disallowed pip packages in tools/replay_workout.py (TST-PRO-005.6)."""
+        replay_script = os.path.join(os.path.dirname(__file__), "replay_workout.py")
+        with open(replay_script, "r", encoding="utf-8") as f:
+            tree = ast.parse(f.read(), filename="replay_workout.py")
+
+        disallowed_modules = {
+            "numpy", "scipy", "pandas", "requests", "matplotlib", "sklearn", "torch", "seaborn"
+        }
+        imported_modules = set()
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Import):
+                for alias in node.names:
+                    imported_modules.add(alias.name.split('.')[0])
+            elif isinstance(node, ast.ImportFrom):
+                if node.module:
+                    imported_modules.add(node.module.split('.')[0])
+
+        violations = imported_modules.intersection(disallowed_modules)
+        self.assertEqual(len(violations), 0, f"Disallowed external pip libraries found: {violations}")
 
 
 if __name__ == "__main__":

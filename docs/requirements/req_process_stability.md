@@ -339,27 +339,40 @@ The workflow SHALL mandate that:
 **Invariants**: Moving parent tickets to `Erledigt` remains strictly prohibited for the review runner; existing `tools/jira_util.py` functionality and 5-state lifecycle MUST NOT be degraded; API keys MUST NOT be logged or committed.
 
 ### REQ-PRO-019: Multi-Account Jira Authentication, Atomic Resolution & Terminal Error Handling [Verified]
-- **Tests**: `tools/jira_util.py`, `tools/review_agent.py`, `docs/project_protocol.md`, `.cursorrules`
-- **Implementation**: Provide reliable, role-specific authentication with atomic fallback and deterministic termination on missing credentials.
+- **Tests**: `tools/jira_util.py`, `tools/review_agent.py`, `docs/project_protocol.md`, `.cursorrules` | **Tickets**: `ATT-1123`, `ATT-1200`, `ATT-6146`, `ATT-6147`
+- **Implementation**: Provide reliable, role-specific authentication with strict credential isolation, per-role file partitioning, and deterministic termination on missing credentials.
 - **Rationale**: The development workflow and CLI tooling (`tools/jira_util.py`, `tools/review_agent.py`) SHALL support role-specific Jira user credentials across three distinct agent roles: Agent 1 (Implementer), Agent 2 (Auditor), and Coordinator (Orchestrator):
-1. *Role Credentials Configuration*: `.env.jira` SHALL support optional role-specific environment variables (`JIRA_AGENT1_USER`, `JIRA_AGENT1_TOKEN`, `JIRA_AGENT2_USER`, `JIRA_AGENT2_TOKEN`, `JIRA_COORDINATOR_USER`, `JIRA_COORDINATOR_TOKEN`) alongside base default credentials (`JIRA_USER`, `JIRA_TOKEN`).
-2. *Atomic Resolution & Pair Fallback*: When resolving credentials for any role, if either the username or the API token for that role is missing, the system MUST NOT mix partial credentials; instead, it SHALL atomically fall back to the base default pair (`JIRA_USER`, `JIRA_TOKEN`) and emit an advisory notice to `sys.stderr`.
-3. *Terminal Failure on Missing Credentials*: If neither role-specific nor base default credentials exist (both username and token are unresolvable), the tooling MUST NOT attempt unauthenticated requests; it SHALL print a clean diagnostic error to `sys.stderr` and exit with non-zero exit code (1).
+1. *Role Credentials Configuration & File Partitioning (ATT-6147)*: `.gitignore` SHALL ignore all role credential variants using `.env.jira*`. Credentials SHALL be partitioned into dedicated gitignored per-role files (`.env.jira.agent1`, `.env.jira.agent2`, `.env.jira.coordinator`) containing shared metadata (`JIRA_URL`, `JIRA_PROJECT`) alongside role-specific variables (`JIRA_<ROLE>_USER`, `JIRA_<ROLE>_TOKEN`). Human credentials (`JIRA_USER`, `JIRA_TOKEN`) SHALL be eliminated from the workspace and example templates.
+2. *Role-Aware Dynamic Loading & Strict Credential Isolation (ATT-6146, ATT-6147)*: `get_config(role=None)` in `tools/jira_util.py` and `load_env_config(role=None)` in `tools/hoechstmass/tools/jira_util.py` SHALL load `.env.jira.<role>` when `role` is specified, overlaying shared base `.env.jira` without cross-role credential disclosure or fallback. Under ASPICE SUP.1 role separation, automated agent roles (`agent1`, `agent2`, `coordinator`) MUST strictly provide their own role credentials; missing or partial role credentials SHALL immediately abort execution with exit code 1. Fallback to base credentials is permitted only when resolving the `human` role directly.
+3. *Terminal Failure on Missing Credentials*: If required role credentials (for automated roles) or default credentials (for human role) do not exist, the tooling MUST NOT attempt unauthenticated requests; it SHALL print a clean diagnostic error to `sys.stderr` and exit with non-zero exit code (1).
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: `REQ-PRO-019` (`REQ-PRO-019.5`, `REQ-PRO-019.6`, `REQ-PRO-019.7`, `REQ-PRO-019.8`) under ATT-6147. Targets `tools/jira_util.py`, `tools/hoechstmass/tools/jira_util.py`, `.gitignore`, `tools/test_jira_accounts.py`.
+2. *Historical Origin & Commit Trace*: Introduced in Sprint 2026-44 via ATT-4520 (commit `2b1a9e40`) and refined in ATT-1123, ATT-1200, ATT-6146 (`51509174`), and ATT-6147.
+3. *Root Reason for Existing Formulation*: A single monolithic `.env.jira` was chosen as a transitional stepping stone when migrating from single-account human authentication to multi-agent credentials.
+4. *Preservation of Core Invariants*: Autonomous agent operations using service accounts (`agent1`, `agent2`, `coordinator`) remain 100% operational; ticket transitions to `Final Review (Human)` remain functional; human gate is strictly protected from agent impersonation; zero impact on Android runtime (`app/src/main/`).
+
 **Acceptance Criteria (Given-When-Then)**:
 • *Given* `.env.jira` configured with valid `JIRA_AGENT1_USER` and `JIRA_AGENT1_TOKEN`,
 • *When* `jira_util.py` is invoked with role `agent1`,
 • *Then* Jira HTTP requests SHALL use Basic Auth with Agent 1's username and token.
-• *Given* `.env.jira` where `JIRA_AGENT2_USER` is configured but `JIRA_AGENT2_TOKEN` is unset or empty,
-• *When* `jira_util.py` resolves credentials for `agent2`,
-• *Then* the system SHALL atomically fall back to `JIRA_USER` and `JIRA_TOKEN`, logging an advisory notice to stderr.
+• *Given* an environment provided only with `agent1`'s credential file (`.env.jira.agent1`),
+• *When* `jira_util.py` is invoked with `--as agent2`,
+• *Then* the tool SHALL abort with exit code 1 without leaking credentials or falling back to other roles.
+• *Given* `.gitignore` and template files (`tools/hoechstmass/.env.jira.example`),
+• *When* inspected,
+• *Then* `.gitignore` ignores `.env.jira*` and template files contain zero human `JIRA_USER`/`JIRA_TOKEN` credentials.
+• *Given* `.env.jira` where an automated role (`agent1`, `agent2`, or `coordinator`) has missing or partial credentials,
+• *When* `jira_util.py` resolves credentials for that role,
+• *Then* the system SHALL abort immediately with exit code 1 and emit a fatal credential isolation error, refusing fallback to `(JIRA_USER, JIRA_TOKEN)`.
 • *Given* `.env.jira` where neither role credentials nor default `JIRA_USER`/`JIRA_TOKEN` are defined,
 • *When* any Jira command is invoked,
 • *Then* the tool SHALL halt immediately with error code 1 and exit.
 **Invariants**: Moving any issue to `Erledigt` remains strictly prohibited across all roles; zero external pip dependencies (Python 3 standard library only); APK runtime code and assets MUST NOT be modified.
 
 ### REQ-PRO-020: Role Locking, Precedence, Anti-Spoofing & Actor Comment Attribution [Verified]
-- **Tests**: `tools/jira_util.py`, `tools/review_agent.py`, `docs/project_protocol.md`, `.cursorrules`
-- **Implementation**: Eliminate role impersonation between agents, enforce independent audit integrity, and formalize comment attribution.
+- **Tests**: `tools/jira_util.py`, `tools/review_agent.py`, `docs/project_protocol.md`, `.cursorrules` | **Tickets**: `ATT-1123`, `ATT-1200`, `ATT-6146`
+- **Implementation**: Eliminate role impersonation between agents and human operator, enforce independent audit integrity, and formalize comment attribution.
 - **Rationale**: The development workflow and tooling SHALL enforce strict role boundaries, anti-spoofing constraints, and distinct comment attribution across agent roles:
 1. *Precedence Rule*: The active role SHALL be determined strictly by: `CLI Flag (--as <role>)` > `Environment Variable (JIRA_ACTOR)` > `Script Default` (`agent1` for `jira_util.py`, `agent2` for `review_agent.py`).
 2. *Role Locking & Anti-Spoofing*: `tools/review_agent.py` MUST be permanently hardwired to role `agent2`. It SHALL NOT allow overriding the role to `agent1` or `coordinator`, ensuring Agent 1 cannot masquerade as the independent auditor.
@@ -369,6 +382,14 @@ The workflow SHALL mandate that:
 • Coordinator: `[Automated comment by AI Coordinator]`
 • Default / Unspecified: `[Automated comment by AI Agent]`.
 4. *Coordinator Governance Invariants*: The Coordinator persona SHALL be defined in `docs/project_protocol.md` and `.cursorrules` as an administrative/orchestration role. The Coordinator SHALL NOT override an Agent 2 `CHALLENGED` or `RECOMMEND REVISION` audit verdict, SHALL NOT bypass Gates 1 through 5, and MUST NOT transition parent tickets to `Erledigt`. Moving parent tickets to `Erledigt` remains an inviolable human-only gate.
+5. *Elimination of Human Role from Agent Selection (ATT-6146)*: Automated roles SHALL be restricted to `["agent1", "agent2", "coordinator"]`. The CLI tooling SHALL NOT permit agents to select the `human` role via `--as human`, `--as=human`, or `JIRA_ACTOR=human` (including aliases `user`, `rainer`). Attempted selection of the human role SHALL immediately abort with exit code 1 and a fatal governance error message. Ticket assignment to human (`assign_issue(..., "human")`) via `ROLE_ACCOUNT_IDS["human"]` remains permitted.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: `REQ-PRO-020` (`REQ-PRO-020.1`, `REQ-PRO-020.5`) under ATT-6146. Targets `tools/jira_util.py`, `tools/hoechstmass/tools/jira_util.py`, and `tools/test_jira_accounts.py`.
+2. *Historical Origin & Commit Trace*: Introduced in Sprint 2026-44 via ATT-4520 (commit `2b1a9e40`) and refined in ATT-1123 / ATT-1200.
+3. *Root Reason for Existing Formulation*: `VALID_ROLES` originally included `"human"` for historical convenience during early prototype testing before the ASPICE Human Decision Gate model was formalized.
+4. *Preservation of Core Invariants*: Autonomous agent operations using service accounts (`agent1`, `agent2`, `coordinator`) remain 100% operational; ticket transitions to `Final Review (Human)` remain functional; human gate is strictly protected from agent impersonation; zero impact on Android runtime (`app/src/main/`).
+
 **Acceptance Criteria (Given-When-Then)**:
 • *Given* `tools/review_agent.py`,
 • *When* executed,
@@ -376,6 +397,9 @@ The workflow SHALL mandate that:
 • *Given* `jira_util.py` executed with `--as coordinator`,
 • *When* adding a comment,
 • *Then* the coordinator credentials and `[Automated comment by AI Coordinator]` prefix SHALL be used.
+• *Given* `jira_util.py` invoked with `--as human`, `--as=human`, or `JIRA_ACTOR=human`,
+• *When* role resolution executes,
+• *Then* the tool SHALL abort with exit code 1 and emit: `Error: 'human' role cannot be selected via agent CLI or environment variable. Human actions must use interactive confirmation or the Jira web UI.`
 • *Given* any agent role attempting to execute a transition targeting `Erledigt` or `Freigabe erteilt`,
 • *Then* `tools/jira_util.py` SHALL block the transition and exit with error code 1.
 **Invariants**: Gate 1-5 ASPICE audit requirements remain mandatory and independent; AI agents remain strictly forbidden from closing parent tickets to `Erledigt`.
@@ -1897,7 +1921,7 @@ The workflow SHALL mandate that:
 - **Implementation**: Restructure living documentation into domain-sharded multi-line markdown sections and upgrade governance tooling to support dual-format verification.
 - **Rationale**: The system living specification architecture and governance tooling SHALL restructure monolithic single-file tables into modular domain-sharded documents, introduce multi-line Markdown heading sections, and support dual-format verification in governance tools (ATT-4594, Parent Epic ATT-232, refining `REQ-PRO-026` and `REQ-PRO-027`):
 1. *Domain Directory Sharding (`REQ-PRO-028.1`)*:
-• The living documentation SHALL be sharded into 7 domain-specific files under `docs/requirements/` and `docs/tests/` (`req_tracking_cockpit.md`, `req_aftermath_periods.md`, `req_maps_navigation.md`, `req_data_migration_export.md`, `req_settings_profiles.md`, `req_ui_design_system.md`, `req_process_stability.md`).
+• The living documentation SHALL be sharded into 9 domain-specific files under `docs/requirements/` and `docs/tests/` (`req_tracking_cockpit.md`, `req_aftermath_periods.md`, `req_maps_navigation.md`, `req_data_migration_export.md`, `req_settings_profiles.md`, `req_ui_design_system.md`, `req_process_stability.md`, `req_aftermath_reviews.md`, `req_store_presence.md`).
 • `docs/requirements.md` and `docs/tests.md` SHALL serve as lightweight master indices referencing all domain shards.
 2. *Multi-Line Heading & Bullet Section Format (`REQ-PRO-028.2`)*:
 • Monolithic single-line pipe-delimited table rows SHALL be replaced with structured multi-line Markdown heading sections (`### REQ-XXX: ... [Status]` and `### TST-XXX: ... [Status]`), eliminating single-line bloat and enabling token-efficient granular modifications.
@@ -1915,7 +1939,7 @@ The workflow SHALL mandate that:
 **Acceptance Criteria (Given-When-Then)**:
 • *Given* `docs/requirements/` and `docs/tests/`,
 • *When* inspected,
-• *Then* 7 domain-sharded markdown files exist in each directory, and master indices provide links and counts.
+• *Then* 9 domain-sharded markdown files exist in each directory, and master indices provide links and counts.
 • *Given* living specification entries in domain shards,
 • *When* inspected,
 • *Then* entries use multi-line heading format `### REQ-XXX: ... [Status]`.
@@ -2308,42 +2332,45 @@ The workflow SHALL mandate that:
 **Invariants**: Human Decision Gate on standard sprint tickets (`Feature`, `Bug`, `Verbesserung`) remains inviolable; zero changes to Android runtime code in `app/src/main/`.
 
 ### REQ-PRO-041: Parallel Sprint Execution Protocol for Disjoint Epics ('Workspace: share' Worktrees, Conflict-Free Strings/Docs & Flock Build/Merge Serialization) [Verified]
-- **Tests**: `TST-PRO-041` | **Tickets**: `ATT-5914`, `ATT-6743`
+- **Tests**: `TST-PRO-041` | **Tickets**: `ATT-5914`, `ATT-6743`, `ATT-7025`
 - **Implementation**: `.agents/rules/aspice_governance.md`, `.agents/skills/jira-workflow/SKILL.md`, `.agents/skills/stage4-implementation/SKILL.md`, `.agents/skills/stage5-verification/SKILL.md`, `.agents/skills/sprint-planner/SKILL.md`, `tools/run_serialized.sh`, `tools/parallel_sprint_lock.py`, `tools/jira_util.py`, `tools/hoechstmass/tools/jira_util.py`, `tools/verify_requirement_governance.py`, `app/src/test/java/com/atrainingtracker/trainingtracker/localization/TranslationParityTest.kt`
-- **Rationale**: Eliminate the throughput bottleneck of single-ticket sequential Phase 2 execution by enabling concurrent execution of up to 3 tickets belonging to disjoint Parent Epics. Resolves git branch collisions, strings.xml EOF append conflicts, living doc counter merge races, and Gradle test contention through worktree isolation, domain-partitioned strings, POSIX file locking, and rebase-then-recalculate sync (ATT-5914, extending `REQ-PRO-014`, `REQ-PRO-015`, `REQ-PRO-024`, and `REQ-PRO-025`; calibrated to concurrency=3 per ATT-6289 / ATT-6743):
+- **Rationale**: Eliminate the throughput bottleneck of single-ticket sequential Phase 2 execution by enabling concurrent execution of up to 3 tickets belonging to disjoint Parent Epics. Resolves git branch collisions, strings.xml EOF append conflicts, living doc counter merge races, and Gradle test contention through worktree isolation, domain-partitioned strings, POSIX file locking, and rebase-then-recalculate sync (ATT-5914, extending `REQ-PRO-014`, `REQ-PRO-015`, `REQ-PRO-024`, and `REQ-PRO-025`; calibrated to concurrency=3 per ATT-6289 / ATT-6743; hardened with detached HEAD protocol and deterministic `--merge-ticket` subcommand per ATT-7025):
 1. *Subagent Worktree Isolation (`REQ-PRO-041.1`, Workspace: "share")*:
 • Coordinator SHALL orchestrate parallel sprint ticket execution using `invoke_subagent(..., Workspace="share")` for persistent subagent pairs.
-• Each subagent pair SHALL operate in an isolated Git worktree linked to the primary repository, possessing independent working directories, `HEAD` pointers, and index states.
+• Each subagent pair SHALL operate in an isolated Git worktree linked to the primary repository, possessing independent working directories, `HEAD` pointers, and index states. Subagents in an Epic pair SHALL operate on **detached `HEAD`** (`git checkout --detach sprint/<SPRINT_NAME>`) in a single shared Epic worktree directory to eliminate split-brain divergence and branch checkout collisions.
 • Concurrency is strictly bounded: at most 3 concurrent tickets, and ONLY tickets belonging to disjoint Parent Epics (zero package, screen, or living-doc shard overlap). Parallel execution of tickets within the same Epic remains prohibited.
 2. *POSIX File Lock Mutual Exclusion (`REQ-PRO-041.2`, flock)*:
 • Tooling and governance SHALL provide a serialized execution wrapper using POSIX `flock` (exclusive lock on `/tmp/att_build_merge.lock`) for:
   a) Heavy Gradle test execution (`./gradlew testDebugUnitTest`).
   b) Physical device deployment and ADB verification (`./gradlew installDebug && adb ...`).
-  c) Stage 5 Git squash-merging and branch deletion on `sprint/<SPRINT_NAME>`.
+  c) Stage 5 Git squash-merging, living doc synchronization, fast-forwarding the main worktree, and branch cleanup on local `sprint/<SPRINT_NAME>` via `python3 tools/parallel_sprint_lock.py --merge-ticket <KEY> --sprint sprint/<SPRINT_NAME> --summary "<KEY>: <Summary>"`.
 • Stages 1–3 (Analysis, Test Spec, Impl Plan) and Stage 4 code authoring SHALL proceed 100% concurrently without lock contention.
 3. *Domain-Scoped Localization Partitioning (`REQ-PRO-041.3`, strings_<domain>.xml)*:
 • String additions for independent domain features SHALL support creation and editing of domain-partitioned files: `res/values*/strings_<domain>.xml` (e.g. `strings_process.xml`, `strings_cockpit.xml`) across all 9 supported locales.
 • `TranslationParityTest.kt` SHALL dynamically discover all XML files matching `strings*.xml` across each `values*/` directory, guaranteeing 100% translation parity, placeholder format safety, and missing key detection across partitioned string files.
 4. *Deterministic Living Documentation Synchronization (`REQ-PRO-041.4`, Rebase-then-Recalculate)*:
-• Living documentation master index updates (`recalculate_master_index_tables()` / `python3 tools/jira_util.py recalc-docs`) for parallel tickets SHALL be serialized under the merge lock during Stage 5.
-• Subagents SHALL fetch/rebase against latest `sprint/<SPRINT_NAME>` before recalculating and committing living documentation counters, preventing Git merge conflicts on `docs/requirements.md` and `docs/tests.md`.
+• Living documentation master index updates (`recalculate_master_index_tables()` / `python3 tools/jira_util.py recalc-docs` / `verify_requirement_governance.py --sync-indexes`) for parallel tickets SHALL be serialized under the merge lock during Stage 5 inside `--merge-ticket`.
+• `--merge-ticket` SHALL rebase the ticket against local `sprint/<SPRINT_NAME>` and recalculate living documentation indexes before creating the squashed atomic commit, preventing Git merge conflicts on `docs/requirements.md` and `docs/tests.md`.
 
 **Requirement Archaeology & Chesterton's Fence Audit**:
-1. *Original Requirement ID & Target*: `REQ-PRO-041` (`REQ-PRO-041.1`, `REQ-PRO-041.2`). Targets `.agents/rules/aspice_governance.md`, `.agents/skills/`, tooling, and living documentation synchronization.
-2. *Historical Origin & Commit Trace*: Commit `d002a9bd` (`ATT-5914`, Sprint 2026-45.2); calibrated during Sprint 2026-46.1 retrospective (`ATT-6289` / `Rule 81`, `ATT-6743`).
-3. *Root Reason for Existing Formulation*: Concurrency was conservatively capped at 2 to validate 'Workspace: share' worktree isolation and avoid host CPU/memory starvation while proving POSIX flock build/merge serialization.
-4. *Preservation of Core Invariants*: Bumping concurrency to 3 across strictly disjoint Parent Epics preserves worktree isolation, POSIX flock mutual exclusion on Gradle, adb, and merge, zero cross-epic file collisions, and 100% human gate governance.
+1. *Original Requirement ID & Target*: `REQ-PRO-041` (`REQ-PRO-041.1`, `REQ-PRO-041.2`, `REQ-PRO-041.4`). Targets `.agents/rules/aspice_governance.md`, `.agents/skills/`, tooling, and living documentation synchronization.
+2. *Historical Origin & Commit Trace*: Commit `d002a9bd` (`ATT-5914`, Sprint 2026-45.2); calibrated during Sprint 2026-46.1 retrospective (`ATT-6289` / `Rule 81`, `ATT-6743`); hardened against multi-pair split brain and branch collisions in Sprint 2026-46.3 (`ATT-7025`).
+3. *Root Reason for Existing Formulation*: Concurrency was conservatively capped at 2 and Stage 5 rebase assumed remote tracking branch (`origin/sprint/...`) and single-repo checkout (`git checkout sprint/...`), which failed in multi-worktree topologies.
+4. *Preservation of Core Invariants*: Bumping concurrency to 3 across strictly disjoint Parent Epics, enforcing detached HEAD pair alignment, POSIX flock mutual exclusion on Gradle, adb, and `--merge-ticket`, zero cross-epic file collisions, and 100% human gate governance are strictly preserved.
 
 **Acceptance Criteria (Given-When-Then)**:
 • *Given* up to three tickets from disjoint Epics in an active sprint,
 • *When* dispatched concurrently by Coordinator using `Workspace: "share"`,
-• *Then* all subagent pairs operate in isolated worktrees without Git branch conflicts.
+• *Then* all subagent pairs operate in isolated worktrees on detached `HEAD` without Git branch conflicts.
 • *Given* concurrent test execution, device installations, or Stage 5 squash-merges,
 • *When* executing under `flock /tmp/att_build_merge.lock`,
 • *Then* heavy operations serialize cleanly without worker collision or merge races.
 • *Given* localized strings added in `strings_<domain>.xml`,
 • *When* `TranslationParityTest.kt` executes,
 • *Then* it discovers all partitioned string files across 9 locales and enforces 100% parity.
+• *Given* a subagent worktree ready for Stage 5 integration,
+• *When* `parallel_sprint_lock.py --merge-ticket <KEY>` runs under lock,
+• *Then* it rebases onto local `sprint/<SPRINT_NAME>`, updates living docs, fast-forwards the main repository worktree, and deletes `feature/<KEY>` without checkout collision.
 
 **Invariants**: Human Decision Gate (`REQ-PRO-016`) remains inviolable; max 3 concurrent tickets across strictly disjoint Epics; zero Android runtime changes in `app/src/main/java/`.
 
@@ -2606,24 +2633,24 @@ The workflow SHALL mandate that:
 
 
 
-### REQ-PRO-049: Source-Text Reading Test Prohibition & Audit Governance [Draft]
-- **Tests**: `TST-PRO-049` | **Tickets**: `ATT-6186`, `ATT-6731`, `ATT-6569`, `ATT-6568`, `ATT-6567`, `ATT-6566`
+### REQ-PRO-049: Source-Text Reading Test Prohibition & Audit Governance [Verified]
+- **Tests**: `TST-PRO-049` | **Tickets**: `ATT-6186`, `ATT-6731`, `ATT-6569`, `ATT-6568`, `ATT-6567`, `ATT-6566`, `ATT-6565`, `ATT-6564`
 - **Implementation**: `app/src/test/java/com/atrainingtracker/trainingtracker/build/SourceTextReadingAuditContractTest.kt`, `app/source-reading-baseline.txt`, `docs/coding_standards.md` §5.4
-- **Rationale**: ASPICE pre-assessment finding C-12 flagged that ~290 test files read production source code (`.readText()`, `Files.readString()`) to grep for literals or tokens instead of verifying runtime behavior. This violates `docs/coding_standards.md` §5.4 (prohibiting UI literal source-grep). To establish ASPICE SWE.4 unit verification criteria without destabilizing existing builds, an automated audit test with a ratcheting baseline must be introduced to block new violations while preserving legitimate system architectural governance guards (ATT-6186, ATT-6731, ATT-6569, ATT-6568, ATT-6567, ATT-6566, refining `REQ-PRO-034` under Epic `ATT-6142`):
+- **Rationale**: ASPICE pre-assessment finding C-12 flagged that ~290 test files read production source code (`.readText()`, `Files.readString()`) to grep for literals or tokens instead of verifying runtime behavior. This violates `docs/coding_standards.md` §5.4 (prohibiting UI literal source-grep). To establish ASPICE SWE.4 unit verification criteria without destabilizing existing builds, an automated audit test with a ratcheting baseline must be introduced to block new violations while preserving legitimate system architectural governance guards (ATT-6186, ATT-6731, ATT-6569, ATT-6568, ATT-6567, ATT-6566, ATT-6565, ATT-6564, refining `REQ-PRO-034` under Epic `ATT-6142`):
 - **Description**:
   1. *Source Text Reading Audit Test (`REQ-PRO-049.1`)*:
      • An automated architectural audit test (`SourceTextReadingAuditContractTest`) SHALL scan all unit test files in `app/src/test/java/` and detect any read invocations (`.readText()`, `readLines()`, `readString()`, `useLines()`, `bufferedReader()`) targeting `app/src/main/` production source files.
   2. *Governance Guard Allow-List (`REQ-PRO-049.2`)*:
      • The audit test SHALL maintain an explicit allow-list for legitimate system policy and architectural governance contract tests, strictly capped at 22 approved guards (including `TryWithResourcesCursorAuditTest`, `ManifestAndBuildConfigContractTest`, `ReleaseCiAndLintConfigContractTest`, `DeadCodeEliminationContractTest`, `ExceptionHandlingHygieneTest`, `BackupRulesXmlValidationTest`, `FileProviderHardeningContractTest`, `LogcatPrivacySecurityTest`, `MergedManifestFgsAuditTest`, `NotificationIconContractTest`, `TurnDirectionIconContractTest`, `ArchitectureConformanceContractTest`, `SafeEnumDeserializationAuditTest`, `LifecycleServiceReceiverSafetyAuditTest`, `TranslationParityTest`, `LocalizationTestCache`, `ThemeColorCentralizationAuditTest`, `RepositoryEngineCleanlinessContractTest`, `RepositoryUiCleanlinessContractTest`, `GlobalDeleteContextMenuAuditTest`, `EditIconConsistencyTest`, `AspiceSweAuditContractTest`).
   3. *Legacy Baseline Debt Isolation & Ratcheted Ceiling (`REQ-PRO-049.3`)*:
-     • The audit test SHALL isolate existing legacy source-reading tests in `app/source-reading-baseline.txt` with a ratcheted ceiling (`baseline.size <= 181`), enforcing `(baseline - detectedReaders).isEmpty()` to prevent stale entries and failing deterministically if any new or unallow-listed test reads `app/src/main/` production code.
+     • The audit test SHALL isolate existing legacy source-reading tests in `app/source-reading-baseline.txt` with a ratcheted ceiling (`baseline.size <= 94`), enforcing `(baseline - detectedReaders).isEmpty()` to prevent stale entries and failing deterministically if any new or unallow-listed test reads `app/src/main/` production code.
   4. *Structured Inventory & Downstream Complexity Guardrails (`REQ-PRO-049.4`)*:
-     • A structured baseline inventory categorized by domain and package SHALL be documented in the living documentation, tracking remaining legacy debt (181 entries after phasing out 24 tests across `banalservice.ui` and `migration` in ATT-6569, 15 tests in `ui.routes` in ATT-6568, 25 tests in `ui.settings` in ATT-6567, and 30 tests in `ui.aftermath` in ATT-6566) and bounding downstream cleanup batches to comply with `REQ-PRO-029` story point and complexity limits.
+     • A structured baseline inventory categorized by domain and package SHALL be documented in the living documentation, tracking remaining legacy debt (94 entries after phasing out 24 tests across `banalservice.ui` and `migration` in ATT-6569, 15 tests in `ui.routes` in ATT-6568, 25 tests in `ui.settings` in ATT-6567, 30 tests in `ui.aftermath` in ATT-6566, 42 tests in `ui.tracking` in ATT-6565, and 45 tests in `ui.map` in ATT-6564) and bounding downstream cleanup batches to comply with `REQ-PRO-029` story point and complexity limits.
 - **Requirement Archaeology & Chesterton's Fence Audit**:
   1. *Original Requirement ID & Target*: `REQ-PRO-049` (`REQ-PRO-049.1`–`REQ-PRO-049.4`), refining `REQ-PRO-034` (*SWE.1/2/4/6 Hardening*). Targets `SourceTextReadingAuditContractTest.kt` and `app/source-reading-baseline.txt`.
-  2. *Historical Origin & Commit Trace*: Independent ASPICE pre-assessment finding C-12 (2026-11-08), ticket ATT-6186 (`c91e62b6`), refined in ATT-6731 (`88ce1d51`), phased out across `banalservice.ui` and `migration` in ATT-6569 (`bed1157d`), phased out in `ui.routes` in ATT-6568 (`17300170`), phased out in `ui.settings` in ATT-6567 (`3b5a5b41`), and phased out in `ui.aftermath` in ATT-6566.
+  2. *Historical Origin & Commit Trace*: Independent ASPICE pre-assessment finding C-12 (2026-11-08), ticket ATT-6186 (`c91e62b6`), refined in ATT-6731 (`88ce1d51`), phased out across `banalservice.ui` and `migration` in ATT-6569 (`bed1157d`), phased out in `ui.routes` in ATT-6568 (`17300170`), phased out in `ui.settings` in ATT-6567 (`3b5a5b41`), phased out in `ui.aftermath` in ATT-6566, phased out in `ui.tracking` in ATT-6565, and phased out in `ui.map` in ATT-6564.
   3. *Root Reason for Existing Formulation*: Baseline originally captured all tests accessing `src/main` without discriminating single-file UI grep tests from repository-wide architectural scanners, setting an exact count (280) before ratcheting mechanisms were standardized.
-  4. *Preservation of Core Invariants*: Promoting governance guards to `LEGITIMATE_GOVERNANCE_GUARDS` guarantees that essential system invariants (Rule 34, 9-locale parity, database decoupling, theme centralization) are preserved and never deleted by downstream cleanup tickets. Enforcing `(baseline - detectedReaders).isEmpty()` prevents stale debt accumulation. Phasing out legacy readers across `banalservice.ui`, `migration`, `ui.routes`, `ui.settings`, and `ui.aftermath` replaces brittle source-grep with behavioral assertions while preserving all test coverage.
+  4. *Preservation of Core Invariants*: Promoting governance guards to `LEGITIMATE_GOVERNANCE_GUARDS` guarantees that essential system invariants (Rule 34, 9-locale parity, database decoupling, theme centralization) are preserved and never deleted by downstream cleanup tickets. Enforcing `(baseline - detectedReaders).isEmpty()` prevents stale debt accumulation. Phasing out legacy readers across `banalservice.ui`, `migration`, `ui.routes`, `ui.settings`, `ui.aftermath`, `ui.tracking`, and `ui.map` replaces brittle source-grep with behavioral assertions while preserving all test coverage.
 - **Acceptance Criteria (Given-When-Then)**:
   • *Given* `app/src/test/java/`,
   • *When* `SourceTextReadingAuditContractTest` executes,
@@ -2633,7 +2660,7 @@ The workflow SHALL mandate that:
   • *Then* exactly 22 legitimate governance guards SHALL be present in `LEGITIMATE_GOVERNANCE_GUARDS`, each ending with `Test.kt` or `Cache.kt` and existing on disk.
   • *Given* `app/source-reading-baseline.txt`,
   • *When* compared against detected legacy readers,
-  • *Then* `(baseline - detectedReaders).isEmpty()` SHALL hold and `baseline.size <= 181`.
+  • *Then* `(baseline - detectedReaders).isEmpty()` SHALL hold and `baseline.size <= 94`.
   • *Given* a new, unallow-listed test reading `src/main/` (or stream reading via `useLines`/`bufferedReader`),
   • *When* the audit test runs,
   • *Then* the test SHALL fail deterministically.
@@ -3014,6 +3041,198 @@ The workflow SHALL mandate that:
   • *When* `sprint_metrics.py` parses the sprint,
   • *Then* `gate_6` FTPR, bounce counts, and `p6_final_review_agent_escape` SHALL be accurately computed and formatted.
 - **Invariants**: Zero modifications to Android production runtime code in `app/src/main/`; Rule 3 (`Erledigt` human-only gate) and `REQ-TST-004` (Two-Tier Device Policy) strictly preserved.
+
+### REQ-PRO-059: Repository Export of Sprint Gate Records & Independent QA Evidence [Verified]
+- **Tests**: `tools/test_jira_accounts.py`, `tools/test_verify_requirement_governance.py`, `tools/hoechstmass/tools/test_hoechstmass_tools.py`
+- **Implementation**: Automated export command `export-gates` in `tools/jira_util.py` and `tools/hoechstmass/tools/jira_util.py`, structured markdown persistence in `docs/engineering/gates/<sprint>.md`, canonical directory registration, and `--check-gates` validation in `tools/verify_requirement_governance.py`.
+- **Rationale**: Under ASPICE SUP.1 (Quality Assurance) and GP 2.2 (Work Product Evidence), quality gate approvals and review verdicts currently reside exclusively inside Jira Cloud (Pre-Assessment Finding B-04). An external assessor without Jira tenant access cannot verify review independence, gate compliance, or review trails. This requirement establishes an automated export tool to persist sprint gate records into git version control and adds a governance check enforcing export presence:
+  1. *Gate Export CLI Tooling (`REQ-PRO-059.1`, tools/jira_util.py & tools/hoechstmass/tools/jira_util.py)*:
+     • `jira_util.py` and `tools/hoechstmass/tools/jira_util.py` SHALL implement `export-gates [--sprint <ID|NAME>] [--out <FILE>]` to extract all Gate 1–5 subtask audit verdicts and Stage 6 parent review verdicts for the active or designated sprint.
+  2. *Structured Gate Record Schema (`REQ-PRO-059.2`, docs/engineering/gates/<sprint>.md)*:
+     • The export file SHALL persist: Sprint ID, ticket key, subtask key, stage name, gate number (1–6), verdict (`PASS`/`BOUNCE`/`REVISION`), evaluator role (`agent2`/`human`/`coordinator`), actor identifier, ISO timestamp, and comment summary excerpt.
+  3. *Canonical Directory Governance (`REQ-PRO-059.3`, ALLOWED_ENGINEERING_ENTRIES & hoechstmass_config.json)*:
+     • `ALLOWED_ENGINEERING_ENTRIES` in `tools/verify_requirement_governance.py` and `tools/hoechstmass/hoechstmass_config.json` SHALL register `"gates"` as a recognized canonical engineering artifact directory.
+  4. *Sprint-End Governance Verification (`REQ-PRO-059.4`, tools/verify_requirement_governance.py)*:
+     • `tools/verify_requirement_governance.py` SHALL support `--check-gates [SPRINT]`, failing with exit code 1 if the expected sprint gate record is absent or empty.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Net-new requirement `REQ-PRO-059` (`REQ-PRO-059.1`–`REQ-PRO-059.4`). Targets `tools/jira_util.py`, `tools/hoechstmass/tools/jira_util.py`, `tools/verify_requirement_governance.py`, and `docs/engineering/gates/`.
+  2. *Historical Origin & Commit Trace*: Introduced in Sprint 2026-46.3 via ATT-6149 under Epic ATT-6141 to resolve ASPICE pre-assessment finding B-04.
+  3. *Root Reason for Existing Formulation*: Gate verdicts previously existed only inside Jira Cloud REST API, lacking in-repo configuration management and QA evidence.
+  4. *Preservation of Core Invariants*: Zero modifications to Android production runtime code in `app/src/main/`; pure Python standard library retained; offline/mock resilience preserved.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* sprint `sprint/2026-46.3` with evaluated tickets,
+  • *When* `tools/jira_util.py export-gates` is invoked,
+  • *Then* it generates `docs/engineering/gates/sprint_2026-46.3.md` listing every gate verdict with role, actor, timestamp, and verdict.
+  • *Given* a sprint name without an export file in `docs/engineering/gates/`,
+  • *When* `verify_requirement_governance.py --check-gates <sprint>` runs,
+  • *Then* it aborts with exit code 1.
+  • *Given* directory `docs/engineering/gates/`,
+  • *When* `verify_requirement_governance.py` verifies engineering directory structure,
+  • *Then* `"gates"` is accepted without errors.
+- **Invariants**: Zero modifications to Android production runtime code in `app/src/main/`; pure Python standard library retained; Rule 3 (Human Decision Gate for `Erledigt`) preserved.
+
+### REQ-PRO-060: Sprint Metrics Persistence & Story Point Governance [Verified]
+- **Tests**: `tools/test_sprint_metrics.py`, `tools/test_verify_requirement_governance.py`, `tools/hoechstmass/tools/test_hoechstmass_tools.py`
+- **Implementation**: Story points extraction and serialization in `tools/sprint_metrics.py` and `tools/jira_util.py`, mandatory metrics execution in `.agents/skills/sprint-planner/SKILL.md` Ceremony 2, governance check `--check-metrics [SPRINT]` in `tools/verify_requirement_governance.py` and `tools/hoechstmass/tools/verify_requirement_governance.py`, and subtask comments indexing optimization in `collect_sprint_metrics_for_id`.
+- **Rationale**: Under ASPICE MAN.3 (Project Monitoring and Control) and GP 2.1 (Resource Management), sprint velocity and process metrics must be systematically persisted and verified in configuration management (Pre-Assessment Finding B-05). Historical process metrics in `docs/engineering/metrics/process_metrics.jsonl` lacked story point data for early sprints and lacked automated verification. This requirement establishes mandatory sprint metrics verification (`--check-metrics`), ensures story points are recorded every sprint, and optimizes query execution:
+  1. *Story Points Extraction & Recording (`REQ-PRO-060.1`, tools/sprint_metrics.py & tools/jira_util.py)*:
+     • `sprint_metrics.py` and `jira_util.py` SHALL extract planned and completed story points (`customfield_10016` / `customfield_10026`) and serialize them under `throughput` in `docs/engineering/metrics/process_metrics.jsonl`.
+  2. *Ceremony 2 Metrics Mandate (`REQ-PRO-060.2`, .agents/skills/sprint-planner/SKILL.md)*:
+     • The sprint retrospective process in `sprint-planner/SKILL.md` SHALL mandate execution of `jira_util.py sprint-metrics --record` and `verify_requirement_governance.py --check-metrics` at sprint close.
+  3. *Governance Verification CLI (`REQ-PRO-060.3`, tools/verify_requirement_governance.py & tools/hoechstmass/tools/verify_requirement_governance.py)*:
+     • `tools/verify_requirement_governance.py` and `tools/hoechstmass/tools/verify_requirement_governance.py` SHALL implement `--check-metrics [SPRINT]`, validating file presence, JSONL schema integrity, and requiring `total_story_points > 0` and `completed_story_points > 0` for evaluated sprints.
+  4. *Query Performance Optimization (`REQ-PRO-060.4`, tools/jira_util.py & tools/hoechstmass/tools/jira_util.py)*:
+     • `collect_sprint_metrics_for_id` in `tools/jira_util.py` and `tools/hoechstmass/tools/jira_util.py` SHALL index subtask comments from `fetch_all_sprint_issues` in memory to eliminate serial per-subtask REST requests.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Net-new requirement `REQ-PRO-060` (`REQ-PRO-060.1`–`REQ-PRO-060.4`). Targets `tools/sprint_metrics.py`, `tools/jira_util.py`, `tools/verify_requirement_governance.py`, and `tools/hoechstmass/`.
+  2. *Historical Origin & Commit Trace*: Introduced in Sprint 2026-46.3 via ATT-6150 under Epic ATT-6141 to satisfy ASPICE pre-assessment finding B-05.
+  3. *Root Reason for Existing Formulation*: Historical sprints lacked automated SP verification at sprint close; `process_metrics.jsonl` had gaps and zero story point records.
+  4. *Preservation of Core Invariants*: Zero changes to Android runtime code; pure Python 3 standard library; offline mock testing resilience preserved.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* completed sprint issues with story points assigned,
+  • *When* `sprint-metrics --record` is executed,
+  • *Then* a record with `total_story_points > 0` and `completed_story_points > 0` is appended to `process_metrics.jsonl`.
+  • *Given* a sprint name with no metrics record or with zero story points,
+  • *When* `verify_requirement_governance.py --check-metrics <sprint>` runs,
+  • *Then* it aborts with exit code 1.
+  • *Given* a sprint record with valid schema and positive story points,
+  • *When* `verify_requirement_governance.py --check-metrics <sprint>` runs,
+  • *Then* it passes with exit code 0.
+- **Invariants**: Zero modifications to Android production runtime code in `app/src/main/`; pure Python standard library retained; Rule 3 (`Erledigt` human-only gate) preserved.
+
+### REQ-PRO-061: Sprint-Level QA Process-Compliance Audit [Verified]
+- **Tests**: `tools/test_jira_accounts.py`, `tools/test_verify_requirement_governance.py`, `tools/hoechstmass/tools/test_hoechstmass_tools.py`
+- **Implementation**: Automated `qa-audit` CLI command in `tools/jira_util.py` and `tools/hoechstmass/tools/jira_util.py`, structured markdown reporting in `docs/engineering/qa_audits/<sprint>.md`, canonical directory registration, and `--check-qa-audits` validation in `tools/verify_requirement_governance.py`.
+- **Rationale**: Under ASPICE SUP.1 (Quality Assurance) and GP 2.2 (Work Product Evidence), quality gates independently audit work products, but no separate audit validates lifecycle process conformity (Pre-Assessment Finding B-09). This requirement establishes an automated QA process-compliance audit tool (`qa-audit`) that samples $\ge 2$ tickets per sprint, evaluates a 5-point process checklist, records compliance in `docs/engineering/qa_audits/<sprint>.md`, and validates presence via `--check-qa-audits`:
+  1. *QA Process Audit Tooling (`REQ-PRO-061.1`, tools/jira_util.py & tools/hoechstmass/tools/jira_util.py)*:
+     • `jira_util.py` and `tools/hoechstmass/tools/jira_util.py` SHALL implement `qa-audit [--sprint <ID|NAME>] [--sample N] [--out <FILE>]` to sample $\ge 2$ engineering tickets and audit 5 core process criteria (artifacts, gate order, 4-Augen role separation, living doc parity, commit hygiene).
+  2. *Audit Report Schema (`REQ-PRO-061.2`, docs/engineering/qa_audits/<sprint>.md)*:
+     • The audit deliverable SHALL record: Sprint ID/Name, Auditor Role, Date, Sampled Tickets table, Checklist Results per ticket, Overall Compliance Verdict (`COMPLIANT` / `NON-COMPLIANT`), and links to any non-compliance tracking issues.
+  3. *Directory Governance (`REQ-PRO-061.3`, ALLOWED_ENGINEERING_ENTRIES & hoechstmass_config.json)*:
+     • `ALLOWED_ENGINEERING_ENTRIES` in `tools/verify_requirement_governance.py` and `hoechstmass_config.json` SHALL register `"qa_audits"`.
+  4. *Governance Enforcement CLI (`REQ-PRO-061.4`, tools/verify_requirement_governance.py & tools/hoechstmass/tools/verify_requirement_governance.py)*:
+     • `tools/verify_requirement_governance.py` and Höchstmaß mirror SHALL implement `--check-qa-audits [SPRINT]`, failing with exit code 1 if the audit file is missing, empty, or has $<2$ sampled ticket evaluations.
+  5. *Ceremony 2 Retrospective Mandate (`REQ-PRO-061.5`, .agents/skills/sprint-planner/SKILL.md)*:
+     • `sprint-planner/SKILL.md` Ceremony 2 SHALL mandate executing `qa-audit` and `verify_requirement_governance.py --check-qa-audits` prior to sprint closure.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Net-new requirement `REQ-PRO-061` (`REQ-PRO-061.1`–`REQ-PRO-061.5`). Targets `tools/jira_util.py`, `tools/verify_requirement_governance.py`, `docs/engineering/qa_audits/`, and `tools/hoechstmass/`.
+  2. *Historical Origin & Commit Trace*: Introduced in Sprint 2026-46.3 via ATT-6154 under Epic ATT-6141 to satisfy ASPICE pre-assessment finding B-09.
+  3. *Root Reason for Existing Formulation*: Gaps in independent QA process adherence audits; gate reviews verified artifacts but did not systematically audit end-to-end lifecycle conformity.
+  4. *Preservation of Core Invariants*: Zero changes to Android runtime code; pure Python 3 standard library; offline mock testing resilience preserved.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* Ceremony 2 of sprint `sprint/2026-46.3`,
+  • *When* `qa-audit` is executed,
+  • *Then* it generates `docs/engineering/qa_audits/sprint_2026-46.3.md` auditing $\ge 2$ sampled tickets with compliance verdicts.
+  • *Given* a sprint without a QA audit record or with $<2$ sampled tickets,
+  • *When* `verify_requirement_governance.py --check-qa-audits <sprint>` runs,
+  • *Then* it aborts with exit code 1.
+  • *Given* a valid QA audit record with $\ge 2$ sampled tickets,
+  • *When* `verify_requirement_governance.py --check-qa-audits <sprint>` runs,
+  • *Then* it passes with exit code 0.
+- **Invariants**: Zero modifications to Android production runtime code in `app/src/main/`; pure Python standard library retained; Rule 3 (`Erledigt` human-only gate) preserved.
+
+### REQ-PRO-062: Independent QA & Cross-Vendor Review Evidence Persistence [Verified]
+- **Tests**: `tools/test_jira_accounts.py`, `tools/test_verify_requirement_governance.py`, `tools/hoechstmass/tools/test_hoechstmass_tools.py`
+- **Implementation**: Automated `record-review` CLI command in `tools/jira_util.py` and `tools/hoechstmass/tools/jira_util.py`, structured markdown reporting in `docs/engineering/reviews/<review_file>.md`, canonical directory registration, and `--check-reviews` validation in `tools/verify_requirement_governance.py`.
+- **Rationale**: Under ASPICE SUP.1 (Quality Assurance), QA evidence must demonstrate independence from the work product author (Pre-Assessment Finding B-10). While in-sprint agents operate on the same vendor framework, independent reviews conducted by the Human (during Ceremony 2 Sprint Review before `Erledigt`) and cross-vendor AI models (Layer 5) previously lacked persistent repository records. This requirement establishes a structured review evidence format and CLI tooling:
+  1. *Review Record Schema (`REQ-PRO-062.1`, docs/engineering/reviews/<sprint_or_review>.md)*:
+     • Review deliverables SHALL record traceable metadata: Reviewer (`Human` or external AI vendor), Model/Version (if AI), Date/Timestamp, Reviewed Ticket(s) or Commit(s), Scope, and Findings / Verdict (`PASS` / `FAIL`).
+  2. *Independent Review CLI Helper (`REQ-PRO-062.2`, tools/jira_util.py & tools/hoechstmass/tools/jira_util.py)*:
+     • Tooling SHALL implement `record-review` command supporting both Human Sprint Reviews (Ceremony 2) and Cross-Vendor AI Reviews (Layer 5) with parameters `--sprint`, `--ticket`, `--reviewer`, `--vendor`, `--model`, `--version`, `--scope`, `--verdict`, and `--findings`.
+  3. *Directory Governance (`REQ-PRO-062.3`, ALLOWED_ENGINEERING_ENTRIES & hoechstmass_config.json)*:
+     • `ALLOWED_ENGINEERING_ENTRIES` in `tools/verify_requirement_governance.py` and `hoechstmass_config.json` SHALL register `"reviews"`.
+  4. *Governance Enforcement CLI (`REQ-PRO-062.4`, tools/verify_requirement_governance.py & tools/hoechstmass/tools/verify_requirement_governance.py)*:
+     • `tools/verify_requirement_governance.py` and Höchstmaß mirror SHALL implement `--check-reviews [SPRINT]`, validating existence and schema compliance of review records.
+  5. *Autonomous Execution Decoupling (`REQ-PRO-062.5`)*:
+     • Autonomous Phase 2 lifecycle execution (`Stage 5 -> Final Review`) SHALL NOT be blocked by missing human review records, preserving automated in-sprint throughput.
+  6. *Ceremony 2 Review Mandate (`REQ-PRO-062.6`, .agents/skills/sprint-planner/SKILL.md)*:
+     • `sprint-planner/SKILL.md` Ceremony 2 SHALL document recording human review acceptance into `docs/engineering/reviews/` prior to sprint closure.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Net-new requirement `REQ-PRO-062` (`REQ-PRO-062.1`–`REQ-PRO-062.6`). Targets `tools/jira_util.py`, `tools/verify_requirement_governance.py`, `docs/engineering/reviews/`, and `tools/hoechstmass/`.
+  2. *Historical Origin & Commit Trace*: Introduced in Sprint 2026-46.3 via ATT-6155 under Epic ATT-6141 to satisfy ASPICE pre-assessment finding B-10.
+  3. *Root Reason for Existing Formulation*: Lack of repository evidence for independent human / cross-vendor reviews under ASPICE SUP.1.
+  4. *Preservation of Core Invariants*: Zero changes to Android runtime code; pure Python 3 standard library; autonomous Phase 2 execution strictly preserved.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* a completed Ceremony 2 or cross-vendor AI review,
+  • *When* `record-review` is executed,
+  • *Then* it generates a markdown file in `docs/engineering/reviews/` with traceable reviewer metadata, scope, and verdict.
+  • *Given* a review file in `docs/engineering/reviews/`,
+  • *When* `verify_requirement_governance.py --check-reviews` runs,
+  • *Then* it verifies that all required metadata fields are present and valid.
+  • *Given* a ticket progressing through Stages 1..5 in Phase 2,
+  • *When* transitioning to `Final Review (Agent)`,
+  • *Then* the transition is unblocked regardless of whether a human review record exists.
+- **Invariants**: Zero modifications to Android production runtime code in `app/src/main/`; pure Python standard library retained; Rule 3 (`Erledigt` human-only gate) preserved.
+
+### REQ-PRO-063: Problem Severity Classification & Defect Trend Metrics [Verified]
+- **Tests**: `tools/test_jira_accounts.py`, `tools/test_sprint_metrics.py`, `tools/hoechstmass/tools/test_sprint_metrics.py`, `tools/hoechstmass/tools/test_hoechstmass_tools.py`
+- **Implementation**: Mandatory severity validation in `create_issue` in `tools/jira_util.py` and `tools/hoechstmass/tools/jira_util.py`, severity labeling (`severity-<level>`), problem trend metrics extraction in `tools/sprint_metrics.py`, and JSONL serialization to `docs/engineering/metrics/process_metrics.jsonl`.
+- **Rationale**: Under ASPICE SUP.9 (Problem Resolution Management) and MAN.3 (Project Monitoring and Control), problem resolution requires classifying defects by severity independently of scheduling priority and tracking problem trends across iterations (Pre-Assessment Finding B-11). Previously, Jira issues recorded priority (`Highest`..`Lowest`) but lacked mandatory severity categorization (`Critical`, `Major`, `Minor`, `Cosmetic`), and quantitative metrics lacked defect trend telemetry:
+  1. *Mandatory Severity on Bug Creation (`REQ-PRO-063.1`, tools/jira_util.py & tools/hoechstmass/tools/jira_util.py)*:
+     • When creating an issue of type `Bug` / `Fehler` (`10006`) via `create_issue()` or `jira_util.py create-issue`, specifying a valid severity level (`Critical`, `Major`, `Minor`, `Cosmetic`) SHALL be mandatory. Omission MUST cause immediate validation failure with exit code 1.
+     • Non-bug issue types (Feature, Improvement, Story, Task, Epic) SHALL NOT require a severity parameter.
+  2. *Severity Labeling & Metadata (`REQ-PRO-063.2`, tools/jira_util.py & tools/hoechstmass/tools/jira_util.py)*:
+     • When a Bug is created with a valid severity, the tooling SHALL append a standardized label `severity-<level>` (e.g. `severity-critical`) and embed severity metadata in the issue description.
+  3. *Problem Trend Metrics Extraction (`REQ-PRO-063.3`, tools/sprint_metrics.py & tools/hoechstmass/tools/sprint_metrics.py)*:
+     • `parse_sprint_gate_metrics()` SHALL identify all Bug issues in the sprint, aggregate counts by severity (`Critical`, `Major`, `Minor`, `Cosmetic`), track `open_bugs` vs `closed_bugs`, and calculate sprint defect escape and resolution rate metrics.
+  4. *Quantitative Process Metrics Schema (`REQ-PRO-063.4`, docs/engineering/metrics/process_metrics.jsonl)*:
+     • Sprint metrics records serialized to `docs/engineering/metrics/process_metrics.jsonl` SHALL include the `problem_trends` object containing `total_bugs`, `by_severity`, `open_bugs`, `closed_bugs`, and `resolution_rate_percent`.
+  5. *Markdown Report Formatting (`REQ-PRO-063.5`, tools/sprint_metrics.py & tools/hoechstmass/tools/sprint_metrics.py)*:
+     • `format_metrics_markdown()` SHALL render a dedicated "Problem Trends & Defect Severity" section displaying bug counts and resolution rates.
+  6. *Governance Verification CLI (`REQ-PRO-063.6`, tools/verify_requirement_governance.py)*:
+     • `verify_sprint_metrics()` in `tools/verify_requirement_governance.py` and Höchstmaß mirror SHALL accept and validate the `problem_trends` schema fields.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Net-new requirement `REQ-PRO-063` (`REQ-PRO-063.1`–`REQ-PRO-063.6`). Targets `tools/jira_util.py`, `tools/sprint_metrics.py`, `docs/engineering/metrics/process_metrics.jsonl`, and `tools/hoechstmass/`.
+  2. *Historical Origin & Commit Trace*: Introduced in Sprint 2026-46.3 via ATT-6156 under Epic ATT-6141 to satisfy ASPICE pre-assessment finding B-11.
+  3. *Root Reason for Existing Formulation*: Sprints previously lacked mandatory defect severity categorization and quantitative problem trend telemetry.
+  4. *Preservation of Core Invariants*: Zero changes to Android runtime code; pure Python 3 standard library; backward compatibility for non-bug issue creation preserved.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* a new Bug issue being created via `jira_util.py create-issue`,
+  • *When* `--severity` is omitted,
+  • *Then* creation is rejected with exit code 1 and error message detailing mandatory severity levels.
+  • *Given* a new Bug issue being created with `--severity=critical`,
+  • *When* created,
+  • *Then* the issue is created with label `severity-critical` and description metadata.
+  • *Given* a non-bug issue being created,
+  • *When* created without severity,
+  • *Then* creation succeeds normally.
+  • *Given* sprint issues processed by `sprint_metrics.py`,
+  • *When* `parse_sprint_gate_metrics()` runs,
+  • *Then* it outputs `problem_trends` with bug counts by severity and resolution rates.
+- **Invariants**: Zero modifications to Android production runtime code in `app/src/main/`; pure Python standard library retained; Rule 3 (`Erledigt` human-only gate) preserved.
+
+### REQ-PRO-064: Explicit Change-Request Impact Analysis Governance [Verified]
+- **Tests**: `tools/test_verify_requirement_governance.py`, `tools/test_jira_accounts.py`, `tools/hoechstmass/tools/test_hoechstmass_tools.py`
+- **Implementation**: Standardized `Impact Analysis` section in Stage 1 templates (`analysis_template.md`), automated schema validation `validate_impact_analysis_section()` in `tools/verify_requirement_governance.py` and `tools/hoechstmass/`, and Gate 1 checklist and CLI enforcement in `tools/jira_util.py` and `tools/hoechstmass/tools/jira_util.py`.
+- **Rationale**: Under ASPICE SUP.10 (Change Request Management) and Pre-Assessment Finding B-12, change request impact analysis must be formally and explicitly documented before Stage 1 approval rather than remaining implicit or scattered across analysis text. Formal evaluation of affected requirements, architecture components, verification test surface, and risks prevents downstream architecture drift and unexpected regressions:
+  1. *Standardized Impact Analysis Template (`REQ-PRO-064.1`)*:
+     • Stage 1 analysis templates in `.agents/skills/stage1-analysis/templates/analysis_template.md` and `tools/hoechstmass/templates/analysis_template.md` SHALL feature a dedicated "Change Impact Analysis" section mandating 4 discrete dimensions: Affected Requirements, Affected Architecture Elements, Affected Tests / Verification Impact, and Risk Assessment & Invariants.
+  2. *Automated Impact Analysis Verifier (`REQ-PRO-064.2`, tools/verify_requirement_governance.py)*:
+     • `tools/verify_requirement_governance.py` and Höchstmaß mirror SHALL implement `validate_impact_analysis_section(text)` and `verify_stage1_impact_analysis(analysis_file=None, repo_root=None)` with `--check-impact [FILE]`, validating that the section header exists and all 4 dimensions are populated with non-empty, non-placeholder content.
+  3. *Gate 1 Automated & Checklist Enforcement (`REQ-PRO-064.3`, tools/jira_util.py)*:
+     • The Gate 1 review process in `.agents/skills/stage1-analysis/SKILL.md` and `gate_verdict` in `tools/jira_util.py` (and Höchstmaß mirror) SHALL mandate that `gate-verdict <SUBTASK> PASS` on `[Analysis]` subtasks validates the presence and completeness of the Impact Analysis section, rejecting incomplete deliverables with an actionable error.
+  4. *Core Invariants & Non-Analysis Gate Independence (`REQ-PRO-064.4`)*:
+     • Gate verdict execution for non-analysis subtasks (Gates 2, 3, 4, 5) SHALL NOT be constrained by Gate 1 impact analysis checks; zero modifications to Android production runtime code in `app/src/main/`.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Net-new requirement `REQ-PRO-064` (`REQ-PRO-064.1`–`REQ-PRO-064.4`). Targets Stage 1 templates, `tools/verify_requirement_governance.py`, `tools/jira_util.py`, and `tools/hoechstmass/`.
+  2. *Historical Origin & Commit Trace*: Introduced in Sprint 2026-46.3 via ATT-6157 under Epic ATT-6141 to satisfy ASPICE pre-assessment finding B-12.
+  3. *Root Reason for Existing Formulation*: Impact analysis was previously implicit or omitted in Stage 1 analyses.
+  4. *Preservation of Core Invariants*: Zero changes to Android runtime code; pure Python 3 standard library; non-analysis gate workflows unaffected.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* a Stage 1 analysis deliverable,
+  • *When* `validate_impact_analysis_section()` runs,
+  • *Then* it passes if and only if all 4 dimensions (Requirements, Architecture, Tests, Risks) are explicitly specified with non-empty content.
+  • *Given* an `[Analysis]` subtask submitted for Gate 1 review,
+  • *When* `gate-verdict` is called with `PASS`,
+  • *Then* it verifies the deliverable contains a valid Impact Analysis section before allowing transition to Erledigt.
+  • *Given* a non-analysis subtask (Gates 2..5),
+  • *When* `gate-verdict` is called,
+  • *Then* it executes normally without requiring Stage 1 impact analysis format.
+- **Invariants**: Zero modifications to Android production runtime code in `app/src/main/`; pure Python standard library retained; Rule 3 (`Erledigt` human-only gate) preserved.
+
+
+
+
 
 
 

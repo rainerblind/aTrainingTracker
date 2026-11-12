@@ -63,6 +63,13 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
             initialValue = com.atrainingtracker.trainingtracker.EditWorkoutFieldPreferences()
         )
 
+    val cardPreferences: StateFlow<com.atrainingtracker.trainingtracker.WorkoutCardSectionPreferences> = prefManager.workoutCardPreferencesFlow
+        .stateIn(
+            scope = viewModelScope,
+            started = kotlinx.coroutines.flow.SharingStarted.WhileSubscribed(5000),
+            initialValue = com.atrainingtracker.trainingtracker.WorkoutCardSectionPreferences()
+        )
+
     // Using StateFlow for modern reactive UI
     private val _workoutData = MutableStateFlow<WorkoutData?>(null)
     val workoutData: StateFlow<WorkoutData?> = _workoutData.asStateFlow()
@@ -358,6 +365,14 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
         _equipmentNames.value = options.distinct()
     }
 
+
+    fun updateRpe(newRpe: Int?) {
+        _workoutData.update { it?.copy(rpe = newRpe) }
+    }
+
+    fun updateFeel(newFeel: Int?) {
+        _workoutData.update { it?.copy(feel = newFeel) }
+    }
 
     fun updateDescription(newDescription: String) {
         _workoutData.update { it?.copy(description = newDescription) }

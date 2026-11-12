@@ -319,23 +319,24 @@
 ### TST-PRO-012: **Multi-Account Jira Authentication, Atomic Resolution & Terminal Error Handling Verification** [Verified]
 - **Requirement(s)**: `REQ-PRO-019`
 - **Component**: **Multi-Account Jira Authentication, Atomic Resolution & Terminal Error Handling Verification**
-- **Jira**: ``ATT-1123` / `ATT-1200``
+- **Jira**: ``ATT-1123` / `ATT-1200` / `ATT-6146` / `ATT-6147``
 - **Test Description**:
   1. Unit Test Credential Configuration Parsing (`.env.jira`): Verify `get_config()` and `resolve_account(role)` parse role-specific keys (`JIRA_AGENT1_USER`, `JIRA_AGENT1_TOKEN`, `JIRA_AGENT2_USER`, `JIRA_AGENT2_TOKEN`, `JIRA_COORDINATOR_USER`, `JIRA_COORDINATOR_TOKEN`) alongside base `JIRA_USER`, `JIRA_TOKEN`.
-  2. Unit Test Atomic Pair Resolution & Fallback: Verify that when both role user and token are set, the role credentials are used; verify that when only one is set (e.g. user set, token empty), resolution falls back atomically to `(JIRA_USER, JIRA_TOKEN)` and emits notice to `stderr`; verify that when no role keys exist, resolution cleanly defaults to base credentials.
+  2. Unit Test Role Credential Isolation & Elimination of Default Fallback (ATT-6146): Verify that when both role user and token are set, role credentials are used; verify that when role credentials are missing or partial for automated roles (`agent1`, `agent2`, `coordinator`), `resolve_account` aborts with exit code 1 and writes credential isolation error to `stderr`, refusing fallback to `(JIRA_USER, JIRA_TOKEN)` under ASPICE SUP.1.
   3. Unit Test Terminal Error on Missing Credentials: Mock configuration with no credentials defined; verify `get_headers()` or API request halts immediately with exit code 1 and writes diagnostic error to `stderr` without making unauthenticated requests.
   4. Unit Test Basic Auth Header Generation: Verify `get_headers(role)` produces base64 Basic Auth headers matching the resolved credentials.
   5. Backward Compatibility Invariant: Verify that single-account setups run without warnings or errors.
   6. Standard Library Invariant: Verify all unit tests and tooling run with zero pip dependencies on Python 3 standard library.
+  7. Unit Test Per-Role Credential Partitioning & Gitignore Wildcard (ATT-6147): Verify that `get_config(role="agent1")` loads `.env.jira.agent1` and isolates credentials; verify that invoking with `--as agent2` without `agent2` credentials exits with code 1; verify `.gitignore` contains `.env.jira*`; verify `tools/hoechstmass/.env.jira.example` contains zero human credentials.
 
 ### TST-PRO-013: **Role Locking, Precedence, Anti-Spoofing & Actor Comment Attribution Verification** [Verified]
 - **Requirement(s)**: `REQ-PRO-020`
 - **Component**: **Role Locking, Precedence, Anti-Spoofing & Actor Comment Attribution Verification**
-- **Jira**: ``ATT-1123` / `ATT-1200``
+- **Jira**: ``ATT-1123` / `ATT-1200` / `ATT-6146``
 - **Test Description**:
   1. Unit Test Precedence Resolution: Verify role selection follows `CLI Flag (--as <role>)` > `Environment Variable (JIRA_ACTOR)` > `Script Default`.
   2. Unit Test Role Hardwiring in `review_agent.py`: Verify that `review_agent.py` hardwires role to `agent2` across all API calls and comments, rejecting or ignoring any attempt to run review audits as `agent1` or `coordinator`.
-  3. Unit Test Invalid Role Rejection: Verify `jira_util.py --as invalid_role` exits with error code 1 and descriptive usage message.
+  3. Unit Test Invalid & Human Role Rejection (ATT-6146): Verify `jira_util.py --as invalid_role` exits with error code 1 and descriptive usage message; verify `--as human`, `--as=human`, and `JIRA_ACTOR=human` abort with exit code 1 and a fatal governance error message.
   4. Unit Test Comment Prefix Attribution: Verify `add_comment` formats opening line with role-specific attribution prefix: `[Automated comment by AI Agent 1 (Implementer)]` for `agent1`, `[Automated comment by AI Agent 2 (Auditor)]` for `agent2`, and `[Automated comment by AI Coordinator]` for `coordinator`.
   5. Unit Test Human Gate Invariance: Verify that attempting `transition_issue(key, "erledigt")` or `transition_issue(key, "freigabe erteilt")` is blocked with exit code 1 specifically for transitions targeting Erledigt / Done, while non-Erledigt transitions (`in_progress`, `in_review`, `freigabe`) succeed.
   6. Automated Protocol Inspection: Programmatic test verifies `docs/project_protocol.md` and `.cursorrules` explicitly define the Coordinator role, specify Coordinator boundaries (cannot override Auditor verdicts, cannot skip gates, cannot close tickets to `Erledigt`).
@@ -1262,16 +1263,18 @@
 ### TST-PRO-021: **Living Documentation Sharding, Multi-Line Markdown Section Formatting & Dual-Format Tooling Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-PRO-028`
 - **Component**: **Living Documentation Sharding, Multi-Line Markdown Section Formatting & Dual-Format Tooling Verification Suite**
-- **Jira**: ``ATT-4594``
+- **Jira**: ``ATT-4594``, ``ATT-6140``
 - **Test Description**:
   1. *Domain Shard Structure & Master Index Verification (`TST-PRO-021.1`)*:
-  • Verify existence of 7 domain files in `docs/requirements/` and `docs/tests/`, and verify master index tables link to all shards.
+  • Verify existence of 9 domain files in `docs/requirements/` and `docs/tests/` (including `req_store_presence.md` and `tst_store_presence.md`), and verify master index tables link to all shards.
   2. *Bitwise ID & Entity Migration Parity Test (`TST-PRO-021.2`)*:
   • Verify `tools/shard_living_docs.py` preserves 100% of all 762 `REQ-` and 764 `TST-` IDs, status tags, and sub-clauses.
   3. *Dual-Format Governance Verification (`TST-PRO-021.3`)*:
   • Verify `tools/verify_requirement_governance.py` and `tools/jira_util.py` detect requirements, diffs, archaeology sections, and update status from `[Planned]` to `[Verified]` in domain-sharded multi-line files.
   4. *Clean-Room Governance & Full Suite Regression Execution (`TST-PRO-021.4`)*:
   • Run `python3 tools/verify_requirement_governance.py` asserting exit code 0; execute `./gradlew testDebugUnitTest` verifying 100% test pass rate.
+  5. *Prose Shard Count Preamble Verification (`TST-PRO-021.5`)*:
+  • Verify `verify_master_table_parity()` in `tools/verify_requirement_governance.py` validates that prose stated shard counts match filesystem shard counts with exit code 0 on parity and exit code 1 on mismatch.
 
 ### TST-PRO-022: **AAA Story Point Estimation, CLI Operations, Complexity Split Guardrail & Sprint Capacity Tracking Verification** [Verified]
 - **Requirement(s)**: `REQ-PRO-029`
@@ -1436,15 +1439,16 @@
 
 ### TST-PRO-041: **Parallel Sprint Execution Protocol for Disjoint Epics, Flock Serialization & Partitioned Localization Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-PRO-041`
-- **Component**: `.agents/rules/aspice_governance.md`, `.agents/skills/{jira-workflow,stage4-implementation,stage5-verification,sprint-planner}/SKILL.md`, `tools/run_serialized.sh`, `tools/parallel_sprint_lock.py`, `tools/jira_util.py`, `tools/verify_requirement_governance.py`, `tools/test_verify_requirement_governance.py`, `app/src/test/java/com/atrainingtracker/trainingtracker/localization/TranslationParityTest.kt`
-- **Jira**: `ATT-5914`, `ATT-6743`
+- **Component**: `.agents/rules/aspice_governance.md`, `.agents/skills/{jira-workflow,stage4-implementation,stage5-verification,sprint-planner}/SKILL.md`, `tools/run_serialized.sh`, `tools/parallel_sprint_lock.py`, `tools/jira_util.py`, `tools/verify_requirement_governance.py`, `tools/test_verify_requirement_governance.py`, `tools/test_flock_serialization.py`, `app/src/test/java/com/atrainingtracker/trainingtracker/localization/TranslationParityTest.kt`
+- **Jira**: `ATT-5914`, `ATT-6743`, `ATT-7025`
 - **Test Description**:
   1. *Subagent Worktree Isolation & Disjoint Epic Guardrail (`TST-PRO-041.1`)*:
   • Verify `Workspace: "share"` subagent pairs execute in independent worktrees without branch or working-tree collisions across up to 3 concurrent lanes (`concurrency = 3`).
   • Verify governance enforces strict disjoint Parent Epic constraint (rejecting parallel execution within the same Epic).
-  2. *POSIX Flock Build, Device & Merge Mutual Exclusion (`TST-PRO-041.2`, `test_flock_serialization.py`)*:
+  2. *POSIX Flock Build, Device & Deterministic Merge Mutual Exclusion (`TST-PRO-041.2`, `test_flock_serialization.py`)*:
   • Simulate concurrent processes competing for `/tmp/att_build_merge.lock`.
   • Verify mutual exclusion: exactly one process holds the lock at a time for heavy Gradle tests, `installDebug` / `adb` commands, and Stage 5 squash merges. Subsequent processes queue deterministically, and lock releases reliably upon completion or failure.
+  • Verify multi-worktree `--merge-ticket` execution (`test_merge_ticket_multi_worktree_success`, `test_merge_ticket_concurrent_worktrees_serialization`): changes rebase cleanly onto local `sprint/<SPRINT_NAME>`, living doc indexes synchronize, the main worktree fast-forwards to the new commit, and feature branches are cleanly deleted without checkout collisions.
   3. *Dynamic Multi-File String Discovery & Parity Test Suite (`TST-PRO-041.3`, `TranslationParityTest.kt`)*:
   • Verify `TranslationParityTest.kt` dynamically scans all `strings*.xml` across `res/values*/`.
   • Assert partitioned domain string files (`strings_<domain>.xml`) maintain 100% key and placeholder parity across all 9 supported locales.
@@ -1590,10 +1594,10 @@
 
 
 
-### TST-PRO-049: **Source-Text Reading Test Audit Suite** [Draft]
+### TST-PRO-049: **Source-Text Reading Test Audit Suite** [Verified]
 - **Requirement(s)**: `REQ-PRO-049`
 - **Component**: `app/src/test/java/com/atrainingtracker/trainingtracker/build/SourceTextReadingAuditContractTest.kt`, `app/source-reading-baseline.txt`, `docs/coding_standards.md` §5.4
-- **Jira**: `ATT-6186`, `ATT-6731`, `ATT-6569`, `ATT-6568`, `ATT-6567`, `ATT-6566`
+- **Jira**: `ATT-6186`, `ATT-6731`, `ATT-6569`, `ATT-6568`, `ATT-6567`, `ATT-6566`, `ATT-6565`, `ATT-6564`
 - **Test Description**:
   1. *Audit Scanner Execution & Baseline Conformance Test (`TST-PRO-049.1`, `SourceTextReadingAuditContractTest.kt`)*:
   • Recursively scan all `.java` and `.kt` test files in `app/src/test/java/` using expanded reader detection (`readText`, `readLines`, `readString`, `useLines`, `bufferedReader`) targeting `app/src/main/`.
@@ -1603,7 +1607,7 @@
   • Assert that each guard ends with `Test.kt` or `Cache.kt` and exists on disk in `app/src/test/java`.
   3. *Legacy Baseline Ratchet & Stale-Entry Detection Test (`TST-PRO-049.3`, `SourceTextReadingAuditContractTest.kt`)*:
   • Assert that `(baseline - detectedReaders).isEmpty()`, guaranteeing zero stale entries remain in the baseline when legacy tests are phased out.
-  • Assert that `baseline.size <= 181`, enforcing a monotonic non-increasing ceiling on legacy debt (ratcheted down from 211 by removing 30 tests across `ui.aftermath` in ATT-6566).
+  • Assert that `baseline.size <= 94`, enforcing a monotonic non-increasing ceiling on legacy debt (ratcheted down from 139 by removing 45 tests across `ui.map` in ATT-6564).
   4. *Ratcheting Tripwire Violation Detection Test (`TST-PRO-049.4`, `SourceTextReadingAuditContractTest.kt`)*:
   • Validate that a synthetic unallow-listed reader triggers an assertion failure.
   5. *Clean-Room Targeted Test Suite Execution (`TST-PRO-049.5`)*:
@@ -1819,6 +1823,94 @@
   4. *Gate 6 Quantitative Metrics & Swiss Cheese $p_6$ Tests (`TST-PRO-058.4`, tools/test_sprint_metrics.py)*:
   • Assert `parse_final_review_agent_verdicts_from_comments` extracts `PASS` and `BOUNCE` verdicts from `[FINAL REVIEW (AGENT) — ...]` parent ticket comments.
   • Assert `parse_sprint_gate_metrics` computes `gate_6` (`Final Review (Agent)`) FTPR, bounce count, and `p6_final_review_agent_escape` in `swiss_cheese`.
+
+### TST-PRO-059: **Sprint Gate Record Export & Repository Verification** [Verified]
+- **Requirement(s)**: `REQ-PRO-059`
+- **Component**: `tools/jira_util.py`, `tools/verify_requirement_governance.py`, `tools/hoechstmass/tools/jira_util.py`, `tools/hoechstmass/tools/verify_requirement_governance.py`, `tools/test_jira_accounts.py`, `tools/test_verify_requirement_governance.py`, `tools/hoechstmass/tools/test_hoechstmass_tools.py`
+- **Jira**: `ATT-6149`
+- **Test Description**:
+  1. *`export-gates` CLI Command & Markdown Generation (`TST-PRO-059.1`, tools/test_jira_accounts.py & tools/hoechstmass/tools/test_hoechstmass_tools.py)*:
+  • Execute `export_gates` with mock Jira response; assert generated markdown contains Sprint ID, summary table, and detailed verdict log with role, actor, timestamp, and verdict.
+  2. *Post-Sprint Gate Verification Check (`TST-PRO-059.2`, tools/test_verify_requirement_governance.py)*:
+  • Run `verify_gate_records` against valid vs missing/empty sprint files; assert return status and diagnostic error messages.
+  3. *Canonical Directory Registration (`TST-PRO-059.3`, tools/test_verify_requirement_governance.py)*:
+  • Assert `"gates"` exists in `ALLOWED_ENGINEERING_ENTRIES` and `hoechstmass_config.json`.
+
+### TST-PRO-060: **Sprint Metrics Persistence, Story Point Governance & Query Optimization** [Verified]
+- **Requirement(s)**: `REQ-PRO-060`
+- **Component**: `tools/sprint_metrics.py`, `tools/jira_util.py`, `tools/verify_requirement_governance.py`, `tools/hoechstmass/tools/jira_util.py`, `tools/hoechstmass/tools/verify_requirement_governance.py`, `tools/test_sprint_metrics.py`, `tools/test_verify_requirement_governance.py`, `tools/hoechstmass/tools/test_hoechstmass_tools.py`
+- **Jira**: `ATT-6150`
+- **Test Description**:
+  1. *Story Point Extraction & Schema Persistence (`TST-PRO-060.1`, tools/test_sprint_metrics.py)*:
+  • Verify `parse_sprint_gate_metrics` populates `total_story_points` and `completed_story_points` from custom fields.
+  2. *Governance Verification Check (`TST-PRO-060.2`, tools/test_verify_requirement_governance.py)*:
+  • Run `verify_sprint_metrics` against valid, missing, empty, and zero-story-point files; assert pass/fail responses.
+  3. *Counterpart Parity & Indexing Optimization (`TST-PRO-060.3`, tools/hoechstmass/tools/test_hoechstmass_tools.py)*:
+  • Assert `verify_sprint_metrics` parity and verify `collect_sprint_metrics_for_id` uses pre-indexed comments without extra network requests.
+
+### TST-PRO-061: **Sprint-Level QA Process-Compliance Audit Suite** [Verified]
+- **Requirement(s)**: `REQ-PRO-061`
+- **Component**: `tools/jira_util.py`, `tools/verify_requirement_governance.py`, `tools/hoechstmass/tools/jira_util.py`, `tools/hoechstmass/tools/verify_requirement_governance.py`, `tools/test_jira_accounts.py`, `tools/test_verify_requirement_governance.py`, `tools/hoechstmass/tools/test_hoechstmass_tools.py`
+- **Jira**: `ATT-6154`
+- **Test Description**:
+  1. *`qa-audit` CLI Command & Report Generation (`TST-PRO-061.1`, tools/test_jira_accounts.py & tools/hoechstmass/tools/test_hoechstmass_tools.py)*:
+  • Execute `qa_audit` with mock Jira response; verify sampled tickets, 5-point checklist evaluation, and markdown formatting.
+  2. *Post-Sprint QA Audit Verification (`TST-PRO-061.2`, tools/test_verify_requirement_governance.py)*:
+  • Run `verify_qa_audits` against valid vs missing, empty, and $<2$ sample files; assert pass/fail status and diagnostics.
+  3. *Counterpart Parity & Tooling Integration (`TST-PRO-061.3`, tools/hoechstmass/tools/test_hoechstmass_tools.py)*:
+  • Assert `qa_audit` and `verify_qa_audits` in Höchstmaß mirror match root tooling behavior.
+  4. *Canonical Directory Registration (`TST-PRO-061.4`, tools/test_verify_requirement_governance.py)*:
+  • Assert `"qa_audits"` exists in `ALLOWED_ENGINEERING_ENTRIES` and `hoechstmass_config.json`.
+
+### TST-PRO-062: **Independent QA & Cross-Vendor Review Evidence Suite** [Verified]
+- **Requirement(s)**: `REQ-PRO-062`
+- **Component**: `tools/jira_util.py`, `tools/verify_requirement_governance.py`, `tools/hoechstmass/tools/jira_util.py`, `tools/hoechstmass/tools/verify_requirement_governance.py`, `tools/test_jira_accounts.py`, `tools/test_verify_requirement_governance.py`, `tools/hoechstmass/tools/test_hoechstmass_tools.py`
+- **Jira**: `ATT-6155`
+- **Test Description**:
+  1. *`record-review` CLI Command & Report Generation (`TST-PRO-062.1`, tools/test_jira_accounts.py & tools/hoechstmass/tools/test_hoechstmass_tools.py)*:
+  • Execute `record-review` for Human Ceremony 2 review and Cross-Vendor AI review; verify structured markdown output and metadata serialization.
+  2. *Independent Review Governance Verification (`TST-PRO-062.2`, tools/test_verify_requirement_governance.py)*:
+  • Run `verify_independent_reviews` against valid vs missing and malformed review records; assert pass/fail status and schema diagnostics.
+  3. *Counterpart Parity & Tooling Integration (`TST-PRO-062.3`, tools/hoechstmass/tools/test_hoechstmass_tools.py)*:
+  • Assert `record-review` and `verify_independent_reviews` in Höchstmaß mirror match root tooling behavior.
+  4. *Canonical Directory Registration (`TST-PRO-062.4`, tools/test_verify_requirement_governance.py)*:
+  • Assert `"reviews"` exists in `ALLOWED_ENGINEERING_ENTRIES` and `hoechstmass_config.json`.
+
+### TST-PRO-063: **Problem Severity Classification & Defect Trend Metrics Suite** [Verified]
+- **Requirement(s)**: `REQ-PRO-063`
+- **Component**: `tools/jira_util.py`, `tools/sprint_metrics.py`, `tools/verify_requirement_governance.py`, `tools/hoechstmass/tools/jira_util.py`, `tools/hoechstmass/tools/sprint_metrics.py`, `tools/hoechstmass/tools/verify_requirement_governance.py`, `tools/test_jira_accounts.py`, `tools/test_sprint_metrics.py`, `tools/hoechstmass/tools/test_sprint_metrics.py`, `tools/hoechstmass/tools/test_hoechstmass_tools.py`
+- **Jira**: `ATT-6156`
+- **Test Description**:
+  1. *Bug Creation Severity Mandate (`TST-PRO-063.1`, tools/test_jira_accounts.py & tools/hoechstmass/tools/test_hoechstmass_tools.py)*:
+  • Test creating a Bug without severity fails with exit code 1; test creating a Bug with `--severity=critical` attaches `severity-critical` label and succeeds.
+  • Test non-bug issue types (Features, Improvements) can be created without severity.
+  2. *Defect Trend Metrics Extraction (`TST-PRO-063.2`, tools/test_sprint_metrics.py & tools/hoechstmass/tools/test_sprint_metrics.py)*:
+  • Process sprint issues containing bugs with severity labels; verify `parse_sprint_gate_metrics()` aggregates bug counts by severity, open vs closed, and calculates defect escape/resolution rates.
+  3. *Metrics Markdown Reporting & Schema Validation (`TST-PRO-063.3`, tools/test_sprint_metrics.py & tools/test_verify_requirement_governance.py)*:
+  • Verify `format_metrics_markdown()` includes the "Problem Trends & Defect Severity" section; verify `verify_sprint_metrics()` accepts `problem_trends` schema fields.
+  4. *Counterpart Parity & Tooling Integration (`TST-PRO-063.4`, tools/hoechstmass/tools/test_hoechstmass_tools.py & tools/hoechstmass/tools/test_sprint_metrics.py)*:
+  • Assert Höchstmaß mirror tools maintain 100% functional parity for bug severity enforcement and metrics extraction.
+
+### TST-PRO-064: **Change-Request Impact Analysis Governance Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-PRO-064`
+- **Component**: `tools/jira_util.py`, `tools/verify_requirement_governance.py`, `tools/hoechstmass/tools/jira_util.py`, `tools/hoechstmass/tools/verify_requirement_governance.py`, `tools/test_jira_accounts.py`, `tools/test_verify_requirement_governance.py`, `tools/hoechstmass/tools/test_hoechstmass_tools.py`
+- **Jira**: `ATT-6157`
+- **Test Description**:
+  1. *Impact Analysis Section Validation (`TST-PRO-064.1`, tools/test_verify_requirement_governance.py & tools/hoechstmass/tools/test_hoechstmass_tools.py)*:
+  • Test `validate_impact_analysis_section()` against valid markdown containing all 4 dimensions (Requirements, Architecture, Tests, Risks) and assert True.
+  • Test invalid markdown (missing section, missing dimension, empty or placeholder text) and assert False / failure diagnostics.
+  2. *Governance CLI `--check-impact` Flag (`TST-PRO-064.2`, tools/test_verify_requirement_governance.py)*:
+  • Test `verify_stage1_impact_analysis(analysis_file)` and CLI invocation `--check-impact [FILE]` verifying exit code 0 on valid deliverables and exit code 1 with actionable errors on invalid files.
+  3. *Gate 1 Impact Analysis Verification (`TST-PRO-064.3`, tools/test_jira_accounts.py & tools/hoechstmass/tools/test_hoechstmass_tools.py)*:
+  • Test `gate-verdict` on `[Analysis]` subtask with missing/incomplete impact analysis fails with error; test valid deliverable passes Gate 1.
+  • Test non-analysis subtasks (Gates 2..5) proceed normally without triggering Stage 1 impact analysis check.
+  4. *Counterpart Parity & Template Verification (`TST-PRO-064.4`, tools/hoechstmass/tools/test_hoechstmass_tools.py)*:
+  • Assert both `.agents/skills/stage1-analysis/templates/analysis_template.md` and `tools/hoechstmass/templates/analysis_template.md` contain the standardized Change Impact Analysis section.
+  • Assert Höchstmaß mirror tools maintain 100% functional parity with root tooling.
+
+
+
+
 
 
 

@@ -155,17 +155,21 @@ class RadarAudioSynthesizerTest {
     }
 
     @Test
-    fun playTrack_setsEffectiveVolumeWithoutCallingDeprecatedSetStereoVolume() {
+    fun playTrack_setsAsymmetricStereoVolumeToPreserveSpatialPanning() {
         val mockTrack = mockk<AudioTrack>(relaxed = true)
         val synthesizer = RadarAudioSynthesizer(audioTrackFactory = { mockTrack })
 
         // Asymmetric stereo gains (1.0f vs 0.2f)
         synthesizer.playApproach(0.8f, RadarAudioRoute.SYSTEM_DEFAULT, leftGain = 1.0f, rightGain = 0.2f)
 
-        // Verifies non-deprecated setVolume is called with effective volume (0.8f)
-        verify { mockTrack.setVolume(0.8f) }
+        // Verifies setStereoVolume is called with asymmetrically panned channel gains (0.8f vs 0.16f)
         @Suppress("DEPRECATION")
-        verify(exactly = 0) { mockTrack.setStereoVolume(any(), any()) }
+        verify {
+            mockTrack.setStereoVolume(
+                match { kotlin.math.abs(it - 0.8f) < 1e-4f },
+                match { kotlin.math.abs(it - 0.16f) < 1e-4f }
+            )
+        }
 
         synthesizer.close()
     }

@@ -106,6 +106,7 @@ class WorkoutHistoricalClimbBackfillTest {
         every { mockEditor.putBoolean(any(), any()) } returns mockEditor
         // Default to true during setUp so init's background launch doesn't race
         every { mockPrefs.getBoolean(WorkoutRepository.PREF_CLIMBS_WORKOUT_BACKFILL_V1, false) } returns true
+        every { mockPrefs.getBoolean(WorkoutRepository.PREF_CLIMBS_WORKOUT_CLEANUP_V2, false) } returns true
 
         mockkStatic(WorkoutSummariesDatabaseManager::class)
         every { WorkoutSummariesDatabaseManager.getInstance(any()) } returns mockSummariesDb
@@ -213,5 +214,95 @@ class WorkoutHistoricalClimbBackfillTest {
         coVerify(exactly = 0) {
             mockClimbsDb.insertClimbsWithDeduplicationBatch(any(), any())
         }
+    }
+
+    @Test
+    fun testCleanupCorruptedWorkoutClimbs_purgesCorruptedEntriesAndSetsFlag() = runBlocking {
+        // REQ-CLM-009.3 / TST-CLM-009.3
+        every { mockPrefs.getBoolean(WorkoutRepository.PREF_CLIMBS_WORKOUT_CLEANUP_V2, false) } returns false
+
+        // 4 climbs in DB:
+        // 1. Corrupted workout climb (routeId = null, avgGrade = 104.6%) -> must be deleted
+        // 2. Corrupted workout climb (routeId = null, single-step jump deltaAlt = 60m) -> must be deleted
+        // 3. Valid route climb (routeId = 200L) -> must NOT be deleted
+        // 4. Valid workout climb (routeId = null, 6% grade) -> must NOT be deleted
+        val corruptedClimb1 = com.atrainingtracker.trainingtracker.climbs.Climb(
+            id = 101L,
+            name = "Corrupted 104.6%",
+            routeId = null,
+            startLat = 48.65,
+            startLng = 9.05,
+            endLat = 48.66,
+            endLng = 9.05,
+            distanceMeters = 541.0,
+            elevationGainMeters = 566.0,
+            avgGradePercent = 104.6,
+            maxGradePercent = 367.4,
+            category = com.atrainingtracker.trainingtracker.climbs.ClimbCategory.CAT_2
+        )
+        val corruptedClimb2 = com.atrainingtracker.trainingtracker.climbs.Climb(
+            id = 102L,
+            name = "Corrupted Step Jump",
+            routeId = null,
+            startLat = 48.65,
+            startLng = 9.05,
+            endLat = 48.66,
+            endLng = 9.05,
+            distanceMeters = 800.0,
+            elevationGainMeters = 60.0,
+            avgGradePercent = 7.5,
+            maxGradePercent = 12.0,
+            category = com.atrainingtracker.trainingtracker.climbs.ClimbCategory.CAT_4,
+            pathPoints = listOf(
+                PathPoint(distance = 0.0, latLng = LatLng(48.65, 9.05), altitude = 200.0),
+                PathPoint(distance = 50.0, latLng = LatLng(48.651, 9.05), altitude = 260.0), // +60m jump!
+                PathPoint(distance = 800.0, latLng = LatLng(48.66, 9.05), altitude = 260.0)
+            )
+        )
+        val validRouteClimb = com.atrainingtracker.trainingtracker.climbs.Climb(
+            id = 103L,
+            name = "Valid Route Climb",
+            routeId = 200L,
+            startLat = 48.0,
+            startLng = 11.0,
+            endLat = 48.01,
+            endLng = 11.0,
+            distanceMeters = 1000.0,
+            elevationGainMeters = 60.0,
+            avgGradePercent = 6.0,
+            maxGradePercent = 8.0,
+            category = com.atrainingtracker.trainingtracker.climbs.ClimbCategory.CAT_4
+        )
+        val validWorkoutClimb = com.atrainingtracker.trainingtracker.climbs.Climb(
+            id = 104L,
+            name = "Valid Workout Climb",
+            routeId = null,
+            startLat = 48.0,
+            startLng = 11.0,
+            endLat = 48.01,
+            endLng = 11.0,
+            distanceMeters = 1000.0,
+            elevationGainMeters = 60.0,
+            avgGradePercent = 6.0,
+            maxGradePercent = 8.0,
+            category = com.atrainingtracker.trainingtracker.climbs.ClimbCategory.CAT_4
+        )
+
+        coEvery { mockClimbsDb.getAllClimbs() } returns listOf(corruptedClimb1, corruptedClimb2, validRouteClimb, validWorkoutClimb)
+        coEvery { mockClimbsDb.deleteClimb(any()) } returns 1
+        coEvery { mockLiveClimbsRepo.refreshClimbs() } returns Unit
+
+        val purgedCount = repository.cleanupCorruptedWorkoutClimbs()
+
+        assertEquals("Should purge exactly 2 corrupted climbs", 2, purgedCount)
+        coVerify(exactly = 1) { mockClimbsDb.deleteClimb(101L) }
+        coVerify(exactly = 1) { mockClimbsDb.deleteClimb(102L) }
+        coVerify(exactly = 0) { mockClimbsDb.deleteClimb(103L) }
+        coVerify(exactly = 0) { mockClimbsDb.deleteClimb(104L) }
+        verify(exactly = 1) {
+            mockEditor.putBoolean(WorkoutRepository.PREF_CLIMBS_WORKOUT_CLEANUP_V2, true)
+            mockEditor.apply()
+        }
+        coVerify(atLeast = 1) { mockLiveClimbsRepo.refreshClimbs() }
     }
 }

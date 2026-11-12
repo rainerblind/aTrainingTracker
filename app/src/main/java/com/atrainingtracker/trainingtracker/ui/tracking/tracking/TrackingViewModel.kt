@@ -621,6 +621,9 @@ class TrackingViewModel @JvmOverloads constructor(
                         }
 
                         val currentTuning = _tuningConfig.value
+                        val initialSignalQuality = if (config.sensorType == SensorType.HRV_DFA_A1) {
+                            com.atrainingtracker.banalservice.BANALService.getDeviceManager()?.hrvMetricsDevice?.signalQualityResult?.status
+                        } else null
                         SensorFieldState(
                             configHash = uniqueHash,
                             sensorFieldId = config.sensorFieldId,
@@ -645,7 +648,8 @@ class TrackingViewModel @JvmOverloads constructor(
                             sparklineSpanSeconds = sparklineSpanSeconds,
                             colWeight = config.colWeight,
                             dfaA1ThresholdT1 = currentTuning.dfaA1ThresholdT1,
-                            dfaA1ThresholdT2 = currentTuning.dfaA1ThresholdT2
+                            dfaA1ThresholdT2 = currentTuning.dfaA1ThresholdT2,
+                            hrvSignalQualityStatus = initialSignalQuality
                         )
                     }
                     cachedConfigs = configs
@@ -807,11 +811,15 @@ class TrackingViewModel @JvmOverloads constructor(
 
                 // 3. Iterate through every field that needs this update.
                 val isBike = (activityType.sportType == BSportType.BIKE)
+                val currentSignalQuality = if (isDfaA1) {
+                    com.atrainingtracker.banalservice.BANALService.getDeviceManager()?.hrvMetricsDevice?.signalQualityResult?.status
+                } else null
                 for (fieldToUpdate in fieldsToUpdate) {
                     val fieldZoneGaugeState = if (fieldToUpdate.showBar) rawZoneGaugeState else null
                     val fieldPedalBalanceState = if (fieldToUpdate.showBar && isBike) newPedalBalanceState else null
                     val fieldWPrimeBatteryState = if (fieldToUpdate.showBar && isBike && isWPrimeBal) newWPrimeBatteryState else null
                     val newIsArtifactGated = if (isDfaA1) isArtifactGated else fieldToUpdate.isArtifactGated
+                    val newSignalQuality = if (isDfaA1) currentSignalQuality else fieldToUpdate.hrvSignalQualityStatus
 
                     // Check if this specific instance needs an update to avoid unnecessary changes.
                     if (fieldToUpdate.value != newFormattedValue ||
@@ -822,6 +830,7 @@ class TrackingViewModel @JvmOverloads constructor(
                         fieldToUpdate.isArtifactGated != newIsArtifactGated ||
                         fieldToUpdate.dfaA1ThresholdT1 != tuning.dfaA1ThresholdT1 ||
                         fieldToUpdate.dfaA1ThresholdT2 != tuning.dfaA1ThresholdT2 ||
+                        fieldToUpdate.hrvSignalQualityStatus != newSignalQuality ||
                         (isWPrimeBal && fieldToUpdate.wPrimeBatteryState != fieldWPrimeBatteryState)) {
                         val index = updatedFields.indexOf(fieldToUpdate)
                         if (index != -1) {
@@ -834,6 +843,7 @@ class TrackingViewModel @JvmOverloads constructor(
                                 isArtifactGated = newIsArtifactGated,
                                 dfaA1ThresholdT1 = tuning.dfaA1ThresholdT1,
                                 dfaA1ThresholdT2 = tuning.dfaA1ThresholdT2,
+                                hrvSignalQualityStatus = newSignalQuality,
                                 wPrimeBatteryState = if (isWPrimeBal) fieldWPrimeBatteryState else fieldToUpdate.wPrimeBatteryState
                             )
                             hasChanged = true

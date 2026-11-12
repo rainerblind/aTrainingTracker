@@ -791,7 +791,7 @@
   2. *Iso-Intensity Matched-Power & Pace Bin Filtering Test (`TST-PER-046.2`, `HrvDurabilityCalculatorTest.kt`)*:
   • Verify median reference intensity ($P_{\text{ref}}$ or $v_{\text{ref}}$) computation over the fresh baseline.
   • Verify sample filtering strictly matches $[0.90 \cdot I_{\text{ref}}, 1.10 \cdot I_{\text{ref}}]$.
-  • Verify autonomic efficiency ratio normalization: $\alpha_{1,\text{norm}} = \alpha_1 / (I / I_{\text{ref}})$.
+  • Verify autonomic efficiency ratio normalization: $\alpha_{1,\text{norm}} = \alpha_1 \cdot (I / I_{\text{ref}})$.
   3. *Autonomic Durability Drift & 10-Minute Minimum Guard Test (`TST-PER-046.3`, `HrvDurabilityCalculatorTest.kt`)*:
   • Verify drift calculation: $\Delta\alpha_{1,\%} = ((\overline{\alpha}_{1,\text{late}} - \overline{\alpha}_{1,\text{fresh}}) / \overline{\alpha}_{1,\text{fresh}}) \times 100\%$.
   • Verify returning `null` / `INSUFFICIENT_MATCHED_DATA` when fresh baseline matched data is $< 600\text{ s}$ (120 samples).

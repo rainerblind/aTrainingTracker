@@ -227,4 +227,26 @@
     <string name="hrv_durability_trajectory_title">Trajektoria 15-minutowych wycinków</string>
     <string name="hrv_durability_slice_label">%1$d–%2$d min</string>
     <string name="hrv_durability_description">Porównuje DFA α1 ze świeżej linii bazowej (15–45 min) z późnymi segmentami (>60 min) przy dopasowanej intensywności w celu oceny zmęczenia autonomicznego i odporności na spadek napięcia nerwu błędnego.</string>
+
+    <!-- Morning Sleep & Wellness Tracking (ATT-7034 / REQ-HRV-038..042) -->
+    <string name="tuning_morning_sleep_wellness_title">Poranny sen i samopoczucie</string>
+    <string name="tuning_morning_sleep_wellness_desc">Rejestruj subiektywny czas snu, jakość i poziom porannej energii z paskiem tętna HR lub bez</string>
+    <string name="tuning_morning_sleep_wellness_short">Sen &amp; samopoczucie</string>
+    <string name="tuning_morning_sleep_duration_quality_title">Czas i jakość snu (1–5)</string>
+    <string name="tuning_morning_energy_title">Poranna energia / samopoczucie (1–5)</string>
+    <string name="tuning_morning_muscle_soreness_title">Bolesność mięśni / ciężkie nogi (1–5)</string>
+    <string name="tuning_morning_context_tags_title">Tagi kontekstowe (Choroba, Alkohol, Podróż, Odpoczynek)</string>
+
+    <string name="morning_hrv_wellness_title">Poranny sen i samopoczucie</string>
+    <string name="morning_hrv_sleep_duration_label">Czas snu: %s</string>
+    <string name="morning_hrv_sleep_quality_label">Jakość snu: %d/5</string>
+    <string name="morning_hrv_morning_energy_label">Poranna energia: %d/5</string>
+    <string name="morning_hrv_muscle_soreness_label">Bolesność mięśni: %d/5</string>
+    <string name="morning_hrv_context_tags_label">Tagi kontekstowe</string>
+    <string name="morning_hrv_tag_sick">Choroba</string>
+    <string name="morning_hrv_tag_alcohol">Alkohol</string>
+    <string name="morning_hrv_tag_travel">Podróż</string>
+    <string name="morning_hrv_tag_rest">Odpoczynek</string>
+    <string name="morning_hrv_btn_save_wellness">Zapisz poranne samopoczucie</string>
+    <string name="morning_hrv_wellness_saved_toast">Poranne samopoczucie zapisane</string>
 </resources>

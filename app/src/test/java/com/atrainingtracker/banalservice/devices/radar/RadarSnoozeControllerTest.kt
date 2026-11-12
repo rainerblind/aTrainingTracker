@@ -222,4 +222,21 @@ class RadarSnoozeControllerTest {
         assertFalse(state.isPelotonSyncActive)
         assertEquals(RadarAudioSnoozeState.INACTIVE, RadarStateRepository.getState().audioSnoozeState)
     }
+
+    @Test
+    fun snoozeState_isPreservedAcrossWorkoutPauseAndResetOnWorkoutStop() {
+        // Cyclist activates 15m snooze during workout
+        RadarSnoozeController.snooze(RadarAudioSnoozeMode.SNOOZE_15M)
+        assertTrue(RadarSnoozeController.getSnoozeState().isSnoozed)
+
+        // Workout paused: TrackerService onDestroy must NOT reset snooze
+        // (Snooze remains active across READY, PAUSED, and TRACKING)
+        assertTrue("Snooze must remain active during pause", RadarSnoozeController.getSnoozeState().isSnoozed)
+        assertEquals(RadarAudioSnoozeMode.SNOOZE_15M, RadarSnoozeController.getSnoozeState().mode)
+
+        // Workout stopped: explicit reset cleans up state
+        RadarSnoozeController.reset()
+        assertFalse("Snooze must be inactive after workout stopped", RadarSnoozeController.getSnoozeState().isSnoozed)
+        assertEquals(RadarAudioSnoozeMode.NONE, RadarSnoozeController.getSnoozeState().mode)
+    }
 }

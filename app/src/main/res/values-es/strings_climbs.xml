@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="tuning_climb_formula_title">Fórmula de categorización de subidas</string>
+    <string name="tuning_climb_formula_desc">El índice FIETS pondera la pendiente y la altitud (predeterminado). Strava / Garmin categoriza solo por desnivel.</string>
+    <string name="tuning_climb_formula_fiets">Índice FIETS</string>
+    <string name="tuning_climb_formula_strava_garmin">Strava / Garmin</string>
+</resources>

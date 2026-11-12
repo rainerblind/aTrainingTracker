@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="tuning_climb_formula_title">Anstiegs-Kategorisierungsformel</string>
+    <string name="tuning_climb_formula_desc">Der FIETS-Index gewichtet Steigung und Höhenlage (Standard). Strava / Garmin kategorisiert rein nach Höhenmetern.</string>
+    <string name="tuning_climb_formula_fiets">FIETS-Index</string>
+    <string name="tuning_climb_formula_strava_garmin">Strava / Garmin</string>
+</resources>

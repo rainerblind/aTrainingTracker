@@ -177,6 +177,18 @@ public class WorkoutSummariesDatabaseManager {
         // race (ATT-2005)
         values.put(WorkoutSummaries.RACE, workoutData.getRace() ? 1 : 0);
 
+        // rpe and feel (ATT-6879)
+        if (workoutData.getRpe() != null) {
+            values.put(WorkoutSummaries.RPE, workoutData.getRpe());
+        } else {
+            values.putNull(WorkoutSummaries.RPE);
+        }
+        if (workoutData.getFeel() != null) {
+            values.put(WorkoutSummaries.FEEL, workoutData.getFeel());
+        } else {
+            values.putNull(WorkoutSummaries.FEEL);
+        }
+
         // source (ATT-2186)
         if (workoutData.getSource() != null) {
             values.put(WorkoutSummaries.SOURCE, workoutData.getSource().name());
@@ -916,6 +928,7 @@ public class WorkoutSummariesDatabaseManager {
         String sql = "SELECT w." + WorkoutSummaries.C_ID + ", "
                 + "CAST(strftime('%s', w." + WorkoutSummaries.TIME_START + ") AS INTEGER) * 1000 AS start_ms, "
                 + "IFNULL(w." + WorkoutSummaries.TIME_ACTIVE_s + ", 0) AS active_s, "
+                + "w." + WorkoutSummaries.RPE + " AS workout_rpe, "
                 + "MAX(CASE WHEN e." + WorkoutSummaries.SENSOR_TYPE + " = 'TSS' AND e." + WorkoutSummaries.EXTREMA_TYPE + " IN ('END', 'AVG', 'MAX') THEN e." + WorkoutSummaries.VALUE + " END) AS power_tss, "
                 + "MAX(CASE WHEN e." + WorkoutSummaries.SENSOR_TYPE + " = 'NORMALIZED_POWER' AND e." + WorkoutSummaries.EXTREMA_TYPE + " IN ('END', 'AVG') THEN e." + WorkoutSummaries.VALUE + " END) AS np_watts, "
                 + "MAX(CASE WHEN e." + WorkoutSummaries.SENSOR_TYPE + " = 'POWER' AND e." + WorkoutSummaries.EXTREMA_TYPE + " = 'AVG' THEN e." + WorkoutSummaries.VALUE + " END) AS avg_power, "
@@ -930,6 +943,7 @@ public class WorkoutSummariesDatabaseManager {
             if (cursor != null) {
                 int startMsIdx = cursor.getColumnIndex("start_ms");
                 int activeSIdx = cursor.getColumnIndex("active_s");
+                int rpeIdx = cursor.getColumnIndex("workout_rpe");
                 int tssIdx = cursor.getColumnIndex("power_tss");
                 int npIdx = cursor.getColumnIndex("np_watts");
                 int pwrIdx = cursor.getColumnIndex("avg_power");
@@ -938,6 +952,7 @@ public class WorkoutSummariesDatabaseManager {
                 while (cursor.moveToNext()) {
                     long startMs = (startMsIdx != -1 && !cursor.isNull(startMsIdx)) ? cursor.getLong(startMsIdx) : 0L;
                     int activeS = (activeSIdx != -1 && !cursor.isNull(activeSIdx)) ? cursor.getInt(activeSIdx) : 0;
+                    Integer rpe = (rpeIdx != -1 && !cursor.isNull(rpeIdx)) ? cursor.getInt(rpeIdx) : null;
                     Double powerTss = (tssIdx != -1 && !cursor.isNull(tssIdx)) ? cursor.getDouble(tssIdx) : null;
                     Double npWatts = (npIdx != -1 && !cursor.isNull(npIdx)) ? cursor.getDouble(npIdx) : null;
                     Double avgPower = (pwrIdx != -1 && !cursor.isNull(pwrIdx)) ? cursor.getDouble(pwrIdx) : null;
@@ -950,7 +965,8 @@ public class WorkoutSummariesDatabaseManager {
                                 powerTss,
                                 npWatts,
                                 avgPower,
-                                avgHr
+                                avgHr,
+                                rpe
                         ));
                     }
                 }
@@ -2229,6 +2245,8 @@ public class WorkoutSummariesDatabaseManager {
         public static final String RACE = "race"; // added in Version 23 (02.10.2026, ATT-2005)
         public static final String SOURCE = "source"; // added in Version 24 (03.10.2026, ATT-2186)
         public static final String RECORDING_ERRORS = "recordingErrors"; // added in Version 28 (08.11.2026, ATT-5886)
+        public static final String RPE = "rpe"; // added in Version 30 (11.11.2026, ATT-6879)
+        public static final String FEEL = "feel"; // added in Version 30 (11.11.2026, ATT-6879)
         // new entries in version 5 of the DB
         @Deprecated
         public static final String EXTREMA_VALUES_CALCULATED = "extremumValuesCalculated";
@@ -2314,7 +2332,8 @@ public class WorkoutSummariesDatabaseManager {
         // public static final int DB_VERSION = 26; // 21.10.2026 Added missing indexes on extrema and summaries tables (REQ-DAT-034, ATT-4008)
         // public static final int DB_VERSION = 27; // 04.11.2026 Added workout_photos table (ATT-43)
         // public static final int DB_VERSION = 28; // 08.11.2026 Added recordingErrors column (ATT-5886)
-        public static final int DB_VERSION = 29; // 10.11.2026 Added cardio_power_dynamics table (ATT-3904)
+        // public static final int DB_VERSION = 29; // 10.11.2026 Added cardio_power_dynamics table (ATT-3904)
+        public static final int DB_VERSION = 30; // 11.11.2026 Added rpe and feel columns (ATT-6879)
         
 
 
@@ -2357,7 +2376,9 @@ public class WorkoutSummariesDatabaseManager {
                 + WorkoutSummaries.BOUND_MAX_LNG + " real,"   // added in Version 21
                 + WorkoutSummaries.RACE + " int DEFAULT 0, "  // added in Version 23
                 + WorkoutSummaries.SOURCE + " text DEFAULT 'TRACKED', "  // added in Version 24
-                + WorkoutSummaries.RECORDING_ERRORS + " text)";  // added in Version 28
+                + WorkoutSummaries.RECORDING_ERRORS + " text, "  // added in Version 28
+                + WorkoutSummaries.RPE + " int, "  // added in Version 30 (ATT-6879)
+                + WorkoutSummaries.FEEL + " int)";  // added in Version 30 (ATT-6879)
 
         protected static final String CREATE_TABLE_EXTREMA_VALUES = "create table " + WorkoutSummaries.TABLE_EXTREMA_VALUES + " ("
                 + WorkoutSummaries.C_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
@@ -2739,6 +2760,12 @@ public class WorkoutSummariesDatabaseManager {
                 } catch (Exception e) {
                     Log.e(TAG, "Error creating cardio_power_dynamics table in onUpgrade to v29", e);
                 }
+            }
+
+            if (oldVersion < 30) {
+                Log.i(TAG, "upgrading to DB version 30 (Adding rpe and feel columns to WorkoutSummaries)");
+                addColumnIfNotExists(db, WorkoutSummaries.TABLE, WorkoutSummaries.RPE, "int", null);
+                addColumnIfNotExists(db, WorkoutSummaries.TABLE, WorkoutSummaries.FEEL, "int", null);
             }
         }
 

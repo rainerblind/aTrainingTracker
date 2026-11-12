@@ -50,6 +50,7 @@ class TrackOnMapAftermathViewModelTest {
 
     private val testDispatcher = StandardTestDispatcher()
     private val mockApplication = mockk<Application>(relaxed = true)
+    private lateinit var mockWorkoutRepo: WorkoutRepository
 
     @Before
     fun setUp() {
@@ -61,7 +62,7 @@ class TrackOnMapAftermathViewModelTest {
         })
 
         mockkObject(WorkoutRepository.Companion)
-        val mockWorkoutRepo = mockk<WorkoutRepository>(relaxed = true)
+        mockWorkoutRepo = mockk<WorkoutRepository>(relaxed = true)
         every { WorkoutRepository.getInstance(any()) } returns mockWorkoutRepo
         coEvery { mockWorkoutRepo.getWorkoutTrackPoints(any(), any()) } returns emptyList()
         coEvery { mockWorkoutRepo.getWorkoutTelemetryPoints(any()) } returns emptyList()
@@ -210,5 +211,50 @@ class TrackOnMapAftermathViewModelTest {
 
         advanceUntilIdle()
         assertTrue("Tracks remain empty for workout B without polyline", viewModel.uiState.value.tracks.isEmpty())
+    }
+
+    @Test
+    fun updateFtp_persistsPowerZonesAndUpdatesUiState() = runTest(testDispatcher) {
+        val mockSettingsDataStore = mockk<com.atrainingtracker.trainingtracker.settings.SettingsDataStore>(relaxed = true)
+        val mockAthleteMetricsRepo = mockk<com.atrainingtracker.trainingtracker.ui.athleteprofile.AthleteMetricsRepository>(relaxed = true)
+
+        mockkObject(com.atrainingtracker.trainingtracker.settings.SettingsDataStore.Companion)
+        every { com.atrainingtracker.trainingtracker.settings.SettingsDataStore.getInstance(any()) } returns mockSettingsDataStore
+
+        mockkObject(com.atrainingtracker.trainingtracker.ui.athleteprofile.AthleteMetricsRepository.Companion)
+        every { com.atrainingtracker.trainingtracker.ui.athleteprofile.AthleteMetricsRepository.getInstance(any()) } returns mockAthleteMetricsRepo
+
+        val viewModel = TrackOnMapAftermathViewModel(mockApplication, ioDispatcher = testDispatcher)
+
+        viewModel.updateFtp(280)
+        advanceUntilIdle()
+
+        coVerify(exactly = 1) {
+            mockSettingsDataStore.saveCalculatedPowerZones(280, any())
+        }
+        coVerify(exactly = 1) {
+            mockAthleteMetricsRepo.addEntry(
+                metricType = com.atrainingtracker.trainingtracker.database.AthleteMetricType.FTP_WATTS,
+                value = 280.0,
+                timestampMs = any()
+            )
+        }
+
+        assertNotNull(viewModel.uiState.value.powerThresholds)
+        assertEquals(294, viewModel.uiState.value.powerThresholds?.z4Max)
+    }
+
+    @Test
+    fun loadAftermathData_populatesIsSmoothedHrvStreamFromWorkoutRepository() = runTest(testDispatcher) {
+        coEvery { mockWorkoutRepo.isWorkoutHrvSmoothed(101L) } returns true
+
+        val viewModel = TrackOnMapAftermathViewModel(mockApplication, ioDispatcher = testDispatcher)
+        assertFalse("Initial isSmoothedHrvStream must be false", viewModel.uiState.value.isSmoothedHrvStream)
+
+        val workout = createWorkout(101L)
+        viewModel.loadAftermathData(workout)
+        advanceUntilIdle()
+
+        assertTrue("isSmoothedHrvStream must be populated from repository", viewModel.uiState.value.isSmoothedHrvStream)
     }
 }

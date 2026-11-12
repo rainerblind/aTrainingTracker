@@ -32,6 +32,7 @@ import java.nio.charset.StandardCharsets
  * where `WorkoutDetails` is permanently anchored above the dynamic section loop.
  */
 enum class WorkoutDetailSectionType(@StringRes val labelRes: Int) {
+    RPE_AND_FEEL(R.string.settings_workout_card_rpe_feel),
     DETAILS(R.string.workout_detail_section_details),
     DESCRIPTION(R.string.settings_workout_card_description),
     EXTREMA(R.string.settings_workout_card_extrema),
@@ -49,6 +50,7 @@ enum class WorkoutDetailSectionType(@StringRes val labelRes: Int) {
      * Maps this [WorkoutDetailSectionType] to its corresponding [WorkoutSectionType] (REQ-UI-499.1 / ATT-6213).
      */
     fun toWorkoutSectionTypeOrNull(): WorkoutSectionType? = when (this) {
+        RPE_AND_FEEL -> WorkoutSectionType.RPE_AND_FEEL
         DETAILS -> WorkoutSectionType.DETAILS
         DESCRIPTION -> WorkoutSectionType.DESCRIPTION
         EXTREMA -> WorkoutSectionType.EXTREMA
@@ -68,6 +70,7 @@ enum class WorkoutDetailSectionType(@StringRes val labelRes: Int) {
  * Maps a [WorkoutSectionType] to its corresponding [WorkoutDetailSectionType] (REQ-UI-499.1 / ATT-6213).
  */
 fun WorkoutSectionType.toWorkoutDetailSectionType(): WorkoutDetailSectionType = when (this) {
+    WorkoutSectionType.RPE_AND_FEEL -> WorkoutDetailSectionType.RPE_AND_FEEL
     WorkoutSectionType.DETAILS -> WorkoutDetailSectionType.DETAILS
     WorkoutSectionType.DESCRIPTION -> WorkoutDetailSectionType.DESCRIPTION
     WorkoutSectionType.EXTREMA -> WorkoutDetailSectionType.EXTREMA
@@ -126,6 +129,7 @@ enum class WorkoutDetailTabLayoutMode {
  * Per-workout data availability flags used to auto-hide empty tabs and evaluate gesture isolation (`REQ-UI-408.4`).
  */
 data class WorkoutDetailSectionAvailability(
+    val hasRpeAndFeel: Boolean = false,
     val hasDetails: Boolean = true,
     val hasDescription: Boolean = false,
     val hasExtrema: Boolean = false,
@@ -148,6 +152,7 @@ data class WorkoutDetailSectionAvailability(
         section: WorkoutDetailSectionType,
         @Suppress("UNUSED_PARAMETER") detailPreferences: WorkoutDetailPreferences = WorkoutDetailPreferences()
     ): Boolean = when (section) {
+        WorkoutDetailSectionType.RPE_AND_FEEL -> hasRpeAndFeel
         WorkoutDetailSectionType.DETAILS -> hasDetails
         WorkoutDetailSectionType.DESCRIPTION -> hasDescription
         WorkoutDetailSectionType.EXTREMA -> hasExtrema
@@ -183,6 +188,7 @@ data class WorkoutDetailSectionAvailability(
                 !desc.goal.isNullOrBlank() ||
                 !desc.method.isNullOrBlank()
             return WorkoutDetailSectionAvailability(
+                hasRpeAndFeel = workoutData.rpe != null || workoutData.feel != null,
                 hasDetails = true,
                 hasDescription = hasDescriptionContent,
                 hasExtrema = workoutData.extremaData.dataRows.isNotEmpty(),
@@ -289,6 +295,7 @@ data class WorkoutDetailTabConfig(
                 preset = WorkoutDetailTabPreset.OVERVIEW,
                 customTitle = "",
                 sections = listOf(
+                    WorkoutDetailSectionType.RPE_AND_FEEL,
                     WorkoutDetailSectionType.DETAILS,
                     WorkoutDetailSectionType.PHOTOS,
                     WorkoutDetailSectionType.DESCRIPTION,

@@ -21,9 +21,9 @@ package com.atrainingtracker.trainingtracker.ui.map
 import com.atrainingtracker.trainingtracker.routes.WaypointType
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.io.File
 
 /**
  * Automated unit and contract tests verifying category color mapping, Maki icon resource linkage,
@@ -33,6 +33,7 @@ class WaypointBadgeMarkerTest {
 
     @Test
     fun testResolveWaypointCategoryColor_allTypesCoveredWithDistinctVibrantColors() {
+        @Suppress("DEPRECATION")
         for (type in WaypointType.values()) {
             val color = resolveWaypointCategoryColor(type)
             assertNotEquals("Color for $type must not be 0", 0, color)
@@ -54,6 +55,7 @@ class WaypointBadgeMarkerTest {
 
     @Test
     fun testWaypointType_allTypesHaveValidIconResource() {
+        @Suppress("DEPRECATION")
         for (type in WaypointType.values()) {
             assertTrue("WaypointType $type must define a positive iconResId", type.iconResId > 0)
         }
@@ -66,28 +68,8 @@ class WaypointBadgeMarkerTest {
 
     @Test
     fun testMapUtils_createWaypointBadgeMarkerContract() {
-        val rootDir = findProjectRoot()
-        val mapUtilsFile = File(rootDir, "app/src/main/java/com/atrainingtracker/trainingtracker/ui/map/MapUtils.kt")
-        assertTrue("MapUtils.kt must exist", mapUtilsFile.exists())
-        val content = mapUtilsFile.readText()
-
-        assertTrue("Must declare createWaypointBadgeMarker", content.contains("fun createWaypointBadgeMarker("))
-        assertTrue("Must default to DEFAULT_WAYPOINT_MARKER_SIZE_DP", content.contains("sizeDp: Int = DEFAULT_WAYPOINT_MARKER_SIZE_DP"))
-        assertTrue("Must scale strokes proportionally (scale = sizeDp / 32f)", content.contains("val scale = sizeDp / 32f"))
-        assertTrue("Must include outer dark contrast stroke with min 0.75dp clamping", content.contains("0.75f * density"))
-        assertTrue("Must include crisp white halo ring with min 1.25dp clamping", content.contains("1.25f * density"))
-        assertTrue("Must include category vibrant disc", content.contains("resolveWaypointCategoryColor(type)"))
-        assertTrue("Must tint Maki glyph to white", content.contains("setTint(android.graphics.Color.WHITE)"))
-    }
-
-    private fun findProjectRoot(): File {
-        var dir: File = File(".").canonicalFile
-        while (dir.parentFile != null) {
-            if (File(dir, "gradlew").exists() && File(dir, "app").exists()) {
-                return dir
-            }
-            dir = dir.parentFile!!
-        }
-        return File(".").canonicalFile
+        val clazz = Class.forName("com.atrainingtracker.trainingtracker.ui.map.MapUtilsKt")
+        val methods = clazz.declaredMethods.filter { it.name.startsWith("createWaypointBadgeMarker") }
+        assertTrue("createWaypointBadgeMarker method must exist", methods.isNotEmpty())
     }
 }

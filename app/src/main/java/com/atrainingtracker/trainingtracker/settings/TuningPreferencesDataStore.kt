@@ -41,6 +41,7 @@ import kotlin.math.roundToInt
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.banalservice.devices.radar.RadarLightMode
 import com.atrainingtracker.trainingtracker.TrainingApplication
+import com.atrainingtracker.trainingtracker.climbs.ClimbScoringFormula
 import com.atrainingtracker.trainingtracker.tracker.TrackerService
 import com.atrainingtracker.trainingtracker.ui.tracking.typography.CockpitFontFamily
 import com.atrainingtracker.trainingtracker.ui.tracking.typography.CockpitFontWeight
@@ -111,6 +112,7 @@ object TuningPreferencesDefaults {
     val RADAR_LIGHT_DEFAULT_MODE = RadarLightMode.DAY_FLASH
     const val RADAR_AUTO_LIGHT_CONTROL = true
     const val RADAR_SMART_LIGHT_AUTOMATION = false
+    const val RADAR_BRAKE_LIGHT_ENABLED = true
     const val RADAR_PELOTON_AUDIO_SYNC = true
     const val RADAR_SMART_URBAN_MUTE = false
     const val RADAR_SPATIAL_AUDIO_ENABLED = true
@@ -154,6 +156,7 @@ object TuningPreferencesDefaults {
     const val SHOW_LIVE_CLIMBS = true
     const val CLIMB_MIN_LENGTH_METERS = 500.0f
     const val CLIMB_MIN_GRADIENT_PERCENT = 3.0f
+    val DEFAULT_CLIMB_SCORING_FORMULA = ClimbScoringFormula.FIETS
 
     const val TURN_PROMPTS_ENABLED = true
     const val TURN_AUDIO_ALERTS_ENABLED = true
@@ -323,6 +326,12 @@ object TuningPreferencesDefaults {
     const val DEFAULT_ENABLE_CARDIO_POWER_DYNAMICS = false
     const val DEFAULT_SHOW_CARDIO_POWER_IN_WORKOUT_SUMMARY = true
 
+    const val DEFAULT_ENABLE_MORNING_SLEEP_AND_WELLNESS = false
+    const val DEFAULT_ENABLE_SLEEP_DURATION_AND_QUALITY = true
+    const val DEFAULT_ENABLE_MORNING_ENERGY = true
+    const val DEFAULT_ENABLE_MUSCLE_SORENESS = false
+    const val DEFAULT_ENABLE_CONTEXT_TAGS = false
+
     const val DEFAULT_DFA_A1_THRESHOLD_T1 = 0.75f
     const val DEFAULT_DFA_A1_THRESHOLD_T2 = 0.50f
     const val MIN_DFA_A1_THRESHOLD = 0.20f
@@ -356,6 +365,7 @@ data class TuningConfig(
     val showLiveClimbs: Boolean = TuningPreferencesDefaults.SHOW_LIVE_CLIMBS,
     val climbMinLengthMeters: Float = TuningPreferencesDefaults.CLIMB_MIN_LENGTH_METERS,
     val climbMinGradientPercent: Float = TuningPreferencesDefaults.CLIMB_MIN_GRADIENT_PERCENT,
+    val climbScoringFormula: ClimbScoringFormula = TuningPreferencesDefaults.DEFAULT_CLIMB_SCORING_FORMULA,
     val turnPromptsEnabled: Boolean = TuningPreferencesDefaults.TURN_PROMPTS_ENABLED,
     val turnAudioAlertsEnabled: Boolean = TuningPreferencesDefaults.TURN_AUDIO_ALERTS_ENABLED,
     val turnCueCountdownDistanceMeters: Float = TuningPreferencesDefaults.TURN_CUE_COUNTDOWN_DISTANCE_METERS,
@@ -408,6 +418,11 @@ data class TuningConfig(
     val showCriticalPowerInWorkoutSummary: Boolean = TuningPreferencesDefaults.DEFAULT_SHOW_CRITICAL_POWER_IN_WORKOUT_SUMMARY,
     val enableCardioPowerDynamics: Boolean = TuningPreferencesDefaults.DEFAULT_ENABLE_CARDIO_POWER_DYNAMICS,
     val showCardioPowerInWorkoutSummary: Boolean = TuningPreferencesDefaults.DEFAULT_SHOW_CARDIO_POWER_IN_WORKOUT_SUMMARY,
+    val enableMorningSleepAndWellness: Boolean = TuningPreferencesDefaults.DEFAULT_ENABLE_MORNING_SLEEP_AND_WELLNESS,
+    val enableSleepDurationAndQuality: Boolean = TuningPreferencesDefaults.DEFAULT_ENABLE_SLEEP_DURATION_AND_QUALITY,
+    val enableMorningEnergy: Boolean = TuningPreferencesDefaults.DEFAULT_ENABLE_MORNING_ENERGY,
+    val enableMuscleSoreness: Boolean = TuningPreferencesDefaults.DEFAULT_ENABLE_MUSCLE_SORENESS,
+    val enableContextTags: Boolean = TuningPreferencesDefaults.DEFAULT_ENABLE_CONTEXT_TAGS,
     val dfaA1ThresholdT1: Float = TuningPreferencesDefaults.DEFAULT_DFA_A1_THRESHOLD_T1,
     val dfaA1ThresholdT2: Float = TuningPreferencesDefaults.DEFAULT_DFA_A1_THRESHOLD_T2,
     val hrvArtifactGateThresholdPercent: Float = TuningPreferencesDefaults.DEFAULT_HRV_ARTIFACT_GATE_THRESHOLD_PERCENT,
@@ -421,6 +436,7 @@ data class TuningConfig(
     val radarLightDefaultMode: RadarLightMode = TuningPreferencesDefaults.RADAR_LIGHT_DEFAULT_MODE,
     val radarAutoLightControl: Boolean = TuningPreferencesDefaults.RADAR_AUTO_LIGHT_CONTROL,
     val radarSmartLightAutomation: Boolean = TuningPreferencesDefaults.RADAR_SMART_LIGHT_AUTOMATION,
+    val radarBrakeLightEnabled: Boolean = TuningPreferencesDefaults.RADAR_BRAKE_LIGHT_ENABLED,
     val radarPelotonAudioSync: Boolean = TuningPreferencesDefaults.RADAR_PELOTON_AUDIO_SYNC,
     val radarSmartUrbanMute: Boolean = TuningPreferencesDefaults.RADAR_SMART_URBAN_MUTE,
     val radarSpatialAudioEnabled: Boolean = TuningPreferencesDefaults.RADAR_SPATIAL_AUDIO_ENABLED,
@@ -496,6 +512,7 @@ class TuningPreferencesDataStore(private val context: Context) {
         val KEY_SHOW_LIVE_CLIMBS: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_show_live_climbs")
         val KEY_CLIMB_MIN_LENGTH_METERS: Preferences.Key<Float> = floatPreferencesKey("tuning_climb_min_length_meters")
         val KEY_CLIMB_MIN_GRADIENT_PERCENT: Preferences.Key<Float> = floatPreferencesKey("tuning_climb_min_gradient_percent")
+        val KEY_CLIMB_SCORING_FORMULA: Preferences.Key<String> = stringPreferencesKey("tuning_climb_scoring_formula")
         val KEY_TURN_PROMPTS_ENABLED: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_turn_prompts_enabled")
         val KEY_TURN_AUDIO_ALERTS_ENABLED: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_turn_audio_alerts_enabled")
         val KEY_TURN_CUE_COUNTDOWN_DISTANCE: Preferences.Key<Float> = floatPreferencesKey("tuning_turn_cue_countdown_distance")
@@ -572,6 +589,11 @@ class TuningPreferencesDataStore(private val context: Context) {
         val KEY_SHOW_CRITICAL_POWER_IN_WORKOUT_SUMMARY: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_show_critical_power_in_workout_summary")
         val KEY_ENABLE_CARDIO_POWER_DYNAMICS: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_enable_cardio_power_dynamics")
         val KEY_SHOW_CARDIO_POWER_IN_WORKOUT_SUMMARY: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_show_cardio_power_in_workout_summary")
+        val KEY_ENABLE_MORNING_SLEEP_AND_WELLNESS: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_enable_morning_sleep_and_wellness")
+        val KEY_ENABLE_SLEEP_DURATION_AND_QUALITY: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_enable_sleep_duration_and_quality")
+        val KEY_ENABLE_MORNING_ENERGY: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_enable_morning_energy")
+        val KEY_ENABLE_MUSCLE_SORENESS: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_enable_muscle_soreness")
+        val KEY_ENABLE_CONTEXT_TAGS: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_enable_context_tags")
         val KEY_DFA_A1_THRESHOLD_T1: Preferences.Key<Float> = floatPreferencesKey("tuning_dfa_a1_threshold_t1")
         val KEY_DFA_A1_THRESHOLD_T2: Preferences.Key<Float> = floatPreferencesKey("tuning_dfa_a1_threshold_t2")
         val KEY_HRV_ARTIFACT_GATE_THRESHOLD_PERCENT: Preferences.Key<Float> = floatPreferencesKey("tuning_hrv_artifact_gate_threshold_percent")
@@ -585,6 +607,7 @@ class TuningPreferencesDataStore(private val context: Context) {
         val KEY_RADAR_LIGHT_DEFAULT_MODE: Preferences.Key<String> = stringPreferencesKey("tuning_radar_light_default_mode")
         val KEY_RADAR_AUTO_LIGHT_CONTROL: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_radar_auto_light_control")
         val KEY_RADAR_SMART_LIGHT_AUTOMATION: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_radar_smart_light_automation")
+        val KEY_RADAR_BRAKE_LIGHT_ENABLED: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_radar_brake_light_enabled")
         val KEY_RADAR_PELOTON_AUDIO_SYNC: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_radar_peloton_audio_sync")
         val KEY_RADAR_SMART_URBAN_MUTE: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_radar_smart_urban_mute")
         val KEY_RADAR_SPATIAL_AUDIO_ENABLED: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_radar_spatial_audio_enabled")
@@ -613,6 +636,7 @@ class TuningPreferencesDataStore(private val context: Context) {
             KEY_SHOW_LIVE_CLIMBS,
             KEY_CLIMB_MIN_LENGTH_METERS,
             KEY_CLIMB_MIN_GRADIENT_PERCENT,
+            KEY_CLIMB_SCORING_FORMULA,
             KEY_TURN_PROMPTS_ENABLED,
             KEY_TURN_AUDIO_ALERTS_ENABLED,
             KEY_TURN_CUE_COUNTDOWN_DISTANCE,
@@ -666,6 +690,11 @@ class TuningPreferencesDataStore(private val context: Context) {
             KEY_SHOW_CRITICAL_POWER_IN_WORKOUT_SUMMARY,
             KEY_ENABLE_CARDIO_POWER_DYNAMICS,
             KEY_SHOW_CARDIO_POWER_IN_WORKOUT_SUMMARY,
+            KEY_ENABLE_MORNING_SLEEP_AND_WELLNESS,
+            KEY_ENABLE_SLEEP_DURATION_AND_QUALITY,
+            KEY_ENABLE_MORNING_ENERGY,
+            KEY_ENABLE_MUSCLE_SORENESS,
+            KEY_ENABLE_CONTEXT_TAGS,
             KEY_DFA_A1_THRESHOLD_T1,
             KEY_DFA_A1_THRESHOLD_T2,
             KEY_RADAR_EDGE_SIDE,
@@ -678,6 +707,7 @@ class TuningPreferencesDataStore(private val context: Context) {
             KEY_RADAR_LIGHT_DEFAULT_MODE,
             KEY_RADAR_AUTO_LIGHT_CONTROL,
             KEY_RADAR_SMART_LIGHT_AUTOMATION,
+            KEY_RADAR_BRAKE_LIGHT_ENABLED,
             KEY_RADAR_PELOTON_AUDIO_SYNC,
             KEY_RADAR_SMART_URBAN_MUTE,
             KEY_RADAR_SPATIAL_AUDIO_ENABLED,
@@ -794,16 +824,6 @@ class TuningPreferencesDataStore(private val context: Context) {
 
     fun getTuningConfig(): TuningConfig = tuningConfigStateFlow.value
 
-    init {
-        CoroutineScope(Dispatchers.IO).launch {
-            try {
-                purgeLegacyMapCameraPreferences()
-            } catch (_: Exception) {
-                // Best-effort legacy key purge on startup
-            }
-        }
-    }
-
 /**
  * Resolved follow-me camera preferences slice (REQ-MAP-050).
  */
@@ -872,6 +892,7 @@ data class AutoPausePreferences(
         val radarLightDefaultMode = safeEnumValueOf(rawLightDefaultModeStr, TuningPreferencesDefaults.RADAR_LIGHT_DEFAULT_MODE)
         val radarAutoLightControl = prefs[KEY_RADAR_AUTO_LIGHT_CONTROL] ?: TuningPreferencesDefaults.RADAR_AUTO_LIGHT_CONTROL
         val radarSmartLightAutomation = prefs[KEY_RADAR_SMART_LIGHT_AUTOMATION] ?: TuningPreferencesDefaults.RADAR_SMART_LIGHT_AUTOMATION
+        val radarBrakeLightEnabled = prefs[KEY_RADAR_BRAKE_LIGHT_ENABLED] ?: TuningPreferencesDefaults.RADAR_BRAKE_LIGHT_ENABLED
         val radarPelotonAudioSync = prefs[KEY_RADAR_PELOTON_AUDIO_SYNC] ?: TuningPreferencesDefaults.RADAR_PELOTON_AUDIO_SYNC
         val radarSmartUrbanMute = prefs[KEY_RADAR_SMART_URBAN_MUTE] ?: TuningPreferencesDefaults.RADAR_SMART_URBAN_MUTE
         val radarSpatialAudioEnabled = prefs[KEY_RADAR_SPATIAL_AUDIO_ENABLED] ?: TuningPreferencesDefaults.RADAR_SPATIAL_AUDIO_ENABLED
@@ -944,6 +965,13 @@ data class AutoPausePreferences(
         val showLiveClimbs = prefs[KEY_SHOW_LIVE_CLIMBS] ?: TuningPreferencesDefaults.SHOW_LIVE_CLIMBS
         val climbMinLength = prefs[KEY_CLIMB_MIN_LENGTH_METERS] ?: TuningPreferencesDefaults.CLIMB_MIN_LENGTH_METERS
         val climbMinGradient = prefs[KEY_CLIMB_MIN_GRADIENT_PERCENT] ?: TuningPreferencesDefaults.CLIMB_MIN_GRADIENT_PERCENT
+        val climbScoringFormula = prefs[KEY_CLIMB_SCORING_FORMULA]?.let { name ->
+            try {
+                ClimbScoringFormula.valueOf(name)
+            } catch (e: Exception) {
+                TuningPreferencesDefaults.DEFAULT_CLIMB_SCORING_FORMULA
+            }
+        } ?: TuningPreferencesDefaults.DEFAULT_CLIMB_SCORING_FORMULA
 
         val turnPromptsEnabled = prefs[KEY_TURN_PROMPTS_ENABLED] ?: TuningPreferencesDefaults.TURN_PROMPTS_ENABLED
         val turnAudioAlertsEnabled = prefs[KEY_TURN_AUDIO_ALERTS_ENABLED] ?: TuningPreferencesDefaults.TURN_AUDIO_ALERTS_ENABLED
@@ -1001,6 +1029,7 @@ data class AutoPausePreferences(
             showLiveClimbs = showLiveClimbs,
             climbMinLengthMeters = climbMinLength,
             climbMinGradientPercent = climbMinGradient,
+            climbScoringFormula = climbScoringFormula,
             turnPromptsEnabled = turnPromptsEnabled,
             turnAudioAlertsEnabled = turnAudioAlertsEnabled,
             turnCueCountdownDistanceMeters = clampedTurnCountdown,
@@ -1082,6 +1111,11 @@ data class AutoPausePreferences(
             showCriticalPowerInWorkoutSummary = prefs[KEY_SHOW_CRITICAL_POWER_IN_WORKOUT_SUMMARY] ?: TuningPreferencesDefaults.DEFAULT_SHOW_CRITICAL_POWER_IN_WORKOUT_SUMMARY,
             enableCardioPowerDynamics = prefs[KEY_ENABLE_CARDIO_POWER_DYNAMICS] ?: TuningPreferencesDefaults.DEFAULT_ENABLE_CARDIO_POWER_DYNAMICS,
             showCardioPowerInWorkoutSummary = prefs[KEY_SHOW_CARDIO_POWER_IN_WORKOUT_SUMMARY] ?: TuningPreferencesDefaults.DEFAULT_SHOW_CARDIO_POWER_IN_WORKOUT_SUMMARY,
+            enableMorningSleepAndWellness = prefs[KEY_ENABLE_MORNING_SLEEP_AND_WELLNESS] ?: TuningPreferencesDefaults.DEFAULT_ENABLE_MORNING_SLEEP_AND_WELLNESS,
+            enableSleepDurationAndQuality = prefs[KEY_ENABLE_SLEEP_DURATION_AND_QUALITY] ?: TuningPreferencesDefaults.DEFAULT_ENABLE_SLEEP_DURATION_AND_QUALITY,
+            enableMorningEnergy = prefs[KEY_ENABLE_MORNING_ENERGY] ?: TuningPreferencesDefaults.DEFAULT_ENABLE_MORNING_ENERGY,
+            enableMuscleSoreness = prefs[KEY_ENABLE_MUSCLE_SORENESS] ?: TuningPreferencesDefaults.DEFAULT_ENABLE_MUSCLE_SORENESS,
+            enableContextTags = prefs[KEY_ENABLE_CONTEXT_TAGS] ?: TuningPreferencesDefaults.DEFAULT_ENABLE_CONTEXT_TAGS,
             dfaA1ThresholdT1 = prefs[KEY_DFA_A1_THRESHOLD_T1] ?: TuningPreferencesDefaults.DEFAULT_DFA_A1_THRESHOLD_T1,
             dfaA1ThresholdT2 = prefs[KEY_DFA_A1_THRESHOLD_T2] ?: TuningPreferencesDefaults.DEFAULT_DFA_A1_THRESHOLD_T2,
             hrvArtifactGateThresholdPercent = prefs[KEY_HRV_ARTIFACT_GATE_THRESHOLD_PERCENT] ?: TuningPreferencesDefaults.DEFAULT_HRV_ARTIFACT_GATE_THRESHOLD_PERCENT,
@@ -1095,6 +1129,7 @@ data class AutoPausePreferences(
             radarLightDefaultMode = radarLightDefaultMode,
             radarAutoLightControl = radarAutoLightControl,
             radarSmartLightAutomation = radarSmartLightAutomation,
+            radarBrakeLightEnabled = radarBrakeLightEnabled,
             radarPelotonAudioSync = radarPelotonAudioSync,
             radarSmartUrbanMute = radarSmartUrbanMute,
             radarSpatialAudioEnabled = radarSpatialAudioEnabled,
@@ -1103,6 +1138,21 @@ data class AutoPausePreferences(
             radarLaneChangeTickEnabled = radarLaneChangeTickEnabled,
             radarClosePassThresholdM = radarClosePassThresholdM
         )
+    }
+
+    init {
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                purgeLegacyMapCameraPreferences()
+            } catch (_: Exception) {
+                // Best-effort legacy key purge on startup
+            }
+        }
+        appScope.launch {
+            tuningConfigFlow.collect { cfg ->
+                com.atrainingtracker.banalservice.devices.radar.SmartBrakeLightDetector.isEnabled = cfg.radarBrakeLightEnabled
+            }
+        }
     }
 
     val enableCogganPowerMetricsFlow: Flow<Boolean> = context.dataStore.data.map { prefs ->
@@ -1123,6 +1173,16 @@ data class AutoPausePreferences(
 
     val enableCardioPowerDynamicsFlow: Flow<Boolean> = context.dataStore.data.map { prefs ->
         prefs[KEY_ENABLE_CARDIO_POWER_DYNAMICS] ?: TuningPreferencesDefaults.DEFAULT_ENABLE_CARDIO_POWER_DYNAMICS
+    }
+
+    val enableMorningSleepAndWellnessFlow: Flow<Boolean> = context.dataStore.data.map { prefs ->
+        prefs[KEY_ENABLE_MORNING_SLEEP_AND_WELLNESS] ?: TuningPreferencesDefaults.DEFAULT_ENABLE_MORNING_SLEEP_AND_WELLNESS
+    }
+
+    suspend fun setEnableMorningSleepAndWellness(enabled: Boolean) {
+        context.dataStore.edit { prefs ->
+            prefs[KEY_ENABLE_MORNING_SLEEP_AND_WELLNESS] = enabled
+        }
     }
 
     suspend fun setEnableCardioPowerDynamics(enabled: Boolean) {
@@ -1364,6 +1424,7 @@ data class AutoPausePreferences(
             prefs[KEY_SHOW_LIVE_CLIMBS] = config.showLiveClimbs
             prefs[KEY_CLIMB_MIN_LENGTH_METERS] = config.climbMinLengthMeters
             prefs[KEY_CLIMB_MIN_GRADIENT_PERCENT] = config.climbMinGradientPercent
+            prefs[KEY_CLIMB_SCORING_FORMULA] = config.climbScoringFormula.name
             prefs[KEY_TURN_PROMPTS_ENABLED] = config.turnPromptsEnabled
             prefs[KEY_TURN_AUDIO_ALERTS_ENABLED] = config.turnAudioAlertsEnabled
             prefs[KEY_TURN_CUE_COUNTDOWN_DISTANCE] = config.turnCueCountdownDistanceMeters.coerceIn(
@@ -1425,6 +1486,11 @@ data class AutoPausePreferences(
             prefs[KEY_SHOW_CRITICAL_POWER_IN_WORKOUT_SUMMARY] = config.showCriticalPowerInWorkoutSummary
             prefs[KEY_ENABLE_CARDIO_POWER_DYNAMICS] = config.enableCardioPowerDynamics
             prefs[KEY_SHOW_CARDIO_POWER_IN_WORKOUT_SUMMARY] = config.showCardioPowerInWorkoutSummary
+            prefs[KEY_ENABLE_MORNING_SLEEP_AND_WELLNESS] = config.enableMorningSleepAndWellness
+            prefs[KEY_ENABLE_SLEEP_DURATION_AND_QUALITY] = config.enableSleepDurationAndQuality
+            prefs[KEY_ENABLE_MORNING_ENERGY] = config.enableMorningEnergy
+            prefs[KEY_ENABLE_MUSCLE_SORENESS] = config.enableMuscleSoreness
+            prefs[KEY_ENABLE_CONTEXT_TAGS] = config.enableContextTags
             prefs[KEY_DFA_A1_THRESHOLD_T1] = clampedDfaA1T1
             prefs[KEY_DFA_A1_THRESHOLD_T2] = clampedDfaA1T2
             prefs[KEY_HRV_ARTIFACT_GATE_THRESHOLD_PERCENT] = clampedArtifactGate
@@ -1438,6 +1504,7 @@ data class AutoPausePreferences(
             prefs[KEY_RADAR_LIGHT_DEFAULT_MODE] = config.radarLightDefaultMode.name
             prefs[KEY_RADAR_AUTO_LIGHT_CONTROL] = config.radarAutoLightControl
             prefs[KEY_RADAR_SMART_LIGHT_AUTOMATION] = config.radarSmartLightAutomation
+            prefs[KEY_RADAR_BRAKE_LIGHT_ENABLED] = config.radarBrakeLightEnabled
             prefs[KEY_RADAR_PELOTON_AUDIO_SYNC] = config.radarPelotonAudioSync
             prefs[KEY_RADAR_SMART_URBAN_MUTE] = config.radarSmartUrbanMute
             prefs[KEY_RADAR_SPATIAL_AUDIO_ENABLED] = config.radarSpatialAudioEnabled
@@ -1461,6 +1528,12 @@ data class AutoPausePreferences(
     suspend fun updateShowLiveClimbs(show: Boolean) {
         context.dataStore.edit { prefs ->
             prefs[KEY_SHOW_LIVE_CLIMBS] = show
+        }
+    }
+
+    suspend fun updateClimbScoringFormula(formula: ClimbScoringFormula) {
+        context.dataStore.edit { prefs ->
+            prefs[KEY_CLIMB_SCORING_FORMULA] = formula.name
         }
     }
 
@@ -1684,6 +1757,17 @@ data class AutoPausePreferences(
         context.dataStore.edit { prefs ->
             prefs[KEY_RADAR_SMART_LIGHT_AUTOMATION] = enabled
         }
+    }
+
+    val radarBrakeLightEnabledFlow: Flow<Boolean> = context.dataStore.data.map { prefs ->
+        prefs[KEY_RADAR_BRAKE_LIGHT_ENABLED] ?: TuningPreferencesDefaults.RADAR_BRAKE_LIGHT_ENABLED
+    }
+
+    suspend fun updateRadarBrakeLightEnabled(enabled: Boolean) {
+        context.dataStore.edit { prefs ->
+            prefs[KEY_RADAR_BRAKE_LIGHT_ENABLED] = enabled
+        }
+        com.atrainingtracker.banalservice.devices.radar.SmartBrakeLightDetector.isEnabled = enabled
     }
 
     val radarPelotonAudioSyncFlow: Flow<Boolean> = context.dataStore.data.map { prefs ->

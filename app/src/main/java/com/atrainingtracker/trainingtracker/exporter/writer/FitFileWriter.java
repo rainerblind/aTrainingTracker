@@ -597,6 +597,12 @@ public class FitFileWriter extends BaseFileWriter {
                 if (exportHeader.getAvgSpeedMps() != null) {
                     sessionMesg.setAvgSpeed(exportHeader.getAvgSpeedMps().floatValue());
                 }
+                if (exportHeader.getRpe() != null) {
+                    sessionMesg.setWorkoutRpe((short) (exportHeader.getRpe() * 10));
+                }
+                if (exportHeader.getFeel() != null) {
+                    sessionMesg.setWorkoutFeel((short) ((exportHeader.getFeel() - 1) * 25));
+                }
             }
 
             // Populate extrema from WorkoutRepository (REQ-DAT-042.1)

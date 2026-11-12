@@ -139,6 +139,7 @@ import com.atrainingtracker.trainingtracker.routes.ReturnNavigationRepository
 import com.atrainingtracker.trainingtracker.ui.components.RouteSelectionButton
 import com.atrainingtracker.trainingtracker.ui.routes.RouteSelectorModalBottomSheet
 import com.atrainingtracker.trainingtracker.ui.routes.RouteSelectorViewModel
+import com.atrainingtracker.trainingtracker.ui.sportingjourney.SportingJourneySheet
 import android.app.Application
 import android.content.Context
 import android.content.ContextWrapper
@@ -314,6 +315,7 @@ fun TrackingTabsScreen(
     )
     val routeSelectorUiState by routeSelectorViewModel.uiState.collectAsState()
     var showRouteSelectorSheet by remember { mutableStateOf(false) }
+    var showSportingJourneySheet by remember { mutableStateOf(false) }
 
     val returnNavRepo = remember { ReturnNavigationRepository.getInstance(context) }
     val returnNavState by returnNavRepo.navigationState.collectAsState()
@@ -755,6 +757,9 @@ fun TrackingTabsScreen(
                             onMenuClick = {
                                 (activity as? MainActivityWithNavigation)?.openDrawer()
                             },
+                            onSupporterClick = {
+                                showSportingJourneySheet = true
+                            },
                             isCompactLandscape = true
                         )
                     }
@@ -797,6 +802,9 @@ fun TrackingTabsScreen(
                                             },
                                             onMenuClick = {
                                                 (activity as? MainActivityWithNavigation)?.openDrawer()
+                                            },
+                                            onSupporterClick = {
+                                                showSportingJourneySheet = true
                                             }
                                         )
                                     }
@@ -1183,6 +1191,13 @@ fun TrackingTabsScreen(
                         returnNavRepo.startTakeMeHome()
                         showRouteSelectorSheet = false
                     }
+                )
+            }
+
+            // Modal Bottom Sheet for Sporting Journey / Trophy Vault (REQ-SPT-001 / ATT-7022)
+            if (showSportingJourneySheet) {
+                SportingJourneySheet(
+                    onDismissRequest = { showSportingJourneySheet = false }
                 )
             }
 

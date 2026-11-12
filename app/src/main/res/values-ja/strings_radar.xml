@@ -176,4 +176,8 @@
     <string name="radar_min_passing_distance">最小側方間隔</string>
     <string name="radar_close_pass_warning">⚠️ %1$d 回の至近距離追越 (&lt;%2$sm)</string>
     <string name="radar_heavy_vehicle_share">大型車両割合</string>
+
+    <!-- Smartphone IMU/GPS Deceleration Brake-Light Trigger (ATT-5121 / REQ-CON-035) -->
+    <string name="radar_brake_light_title">減速ブレーキライト</string>
+    <string name="radar_brake_light_desc">急減速時にテールライトを高輝度点灯（2.0秒保持、RearVue 820では自動バイパス）</string>
 </resources>

@@ -75,3 +75,18 @@ BUILD SUCCESSFUL in 8s
 3. **Living Documentation Synchronized**: Status in `docs/requirements.md` (Total=1026, Verified=1002, Planned=24) and `docs/tests.md` (Total=1016, Verified=1012, Planned=4) updated to `Verified`.
 4. **Localization Parity**: 100% parity across EN, DE, ES, FR, IT, JA, NL, PL, PT.
 5. **Human Gate Hand-off**: Subtask will transition to `Erledigt` via `gate-verdict PASS` and parent ticket will advance to `Final Review (Human)`.
+
+---
+
+## 6. Cold Carbon Review (Stage 6) Defect Resolution & Healing
+1. **Finding 1 (UI/UX & Localization Parity)**:
+   - `HrvThresholdSummaryCard.kt` previously invoked `stringResource(diagnosticRes)` without formatting arguments on strings with positional placeholders (`hrv_threshold_diag_short_duration`, `hrv_threshold_diag_low_r2`, `hrv_threshold_diag_high_artifact`).
+   - Wired proper arguments (`estimate.meanArtifactRate`, `estimate.effectiveSampleSize`, `minMedN`, `estimate.rSquared`, `0.55`) in a `when (diagnosticRes)` expression, and verified 100% clean formatting across all 9 locales in `HrvThresholdSummaryCardTest`.
+2. **Finding 2 (Math & Physiological Invariants)**:
+   - `HrvThresholdEstimator.kt` now explicitly validates expected slope direction by intensity mode: `slope < -1e-6` for Heart Rate and Power (increasing workload decreases $\alpha_1$), and `slope > 1e-6` for Pace in s/m (increasing s/m indicates slower speed/lower workload, increasing $\alpha_1$).
+   - Invalid slope directions or noisy inverted thresholds (`HRVT1 >= HRVT2` for HR/Power, `HRVT1 <= HRVT2` for Pace) suppress threshold intensities to `null`, set confidence to `ThresholdConfidence.LOW`, and return localized diagnostic reason `R.string.hrv_threshold_diag_low_r2`.
+   - Verified via new unit tests in `HrvThresholdEstimatorTest`: `noisy data with positive slope for heart rate rejects thresholds and sets diagnostic` and `pace mode with positive slope calculates valid thresholds`.
+3. **Finding 3 (End-to-End Wiring)**:
+   - `WorkoutData.kt` now exposes `protocolType: HrvProtocolType` defaulting to `WorkoutData.resolveProtocolType(method, goal, description, workoutName)`.
+   - `WorkoutDetailTabbedContent.kt` passes `protocolType = workoutData.protocolType` to `HrvThresholdSummaryCard`, preserving guided test protocol provenance throughout post-workout analysis.
+

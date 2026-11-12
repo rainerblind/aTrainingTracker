@@ -13,9 +13,9 @@
 ATT-3555 integrates post-workout lag-aligned threshold estimation (`ATT-3554`) and guided step/ramp tests (`ATT-4969`) with athlete training zones (`ZoneCalculationMath.kt`) while enforcing physiological safeguards:
 - **Power Zone Delta & Coggan Anchor Mapping (`REQ-PER-037.1`)**: Compares $HRVT_1$ steady-state power against the Coggan Zone 2 aerobic ceiling (`z2Max = round(0.75 * ftp)`), computing $\Delta P_{\text{T1}} = P_{\text{HRVT1,ss}} - z2Max$. Compares $HRVT_2$ steady-state power against Functional Threshold Power (`100% FTP`), computing $\Delta P_{\text{T2}} = P_{\text{HRVT2,ss}} - FTP$.
 - **Informational Heart Rate Comparison & Non-Overwrite Invariant (`REQ-PER-037.2`)**: Compares $\text{HR}_{\text{HRVT1}}$ against Heart Rate `z2Max` ($\Delta \text{HR}_{\text{T1}}$) and expresses as $\% HR_{\max}$. Compares $\text{HR}_{\text{HRVT2}}$ against Heart Rate `z4Max` ($\Delta \text{HR}_{\text{T2}}$) and expresses as $\% HR_{\max}$. Renders an explanatory tooltip noting that physiological $HRVT_1$ typically occurs at $75\text{--}82\% HR_{\max}$ in trained athletes, and strictly prohibits automatic overwriting of $HR_{\max}$ or HR zones.
-- **Multi-Session Consensus & Guided Test Gating (`REQ-PER-037.3`)**: Implements `HrvZoneComparisonMath.evaluateConsensusGate`. Power zone updates unlock only if EITHER (a) the workout is a `Confidence.HIGH` Guided Step/Ramp Test (`ATT-4969`), OR (b) $M \ge 3$ recent sessions within 30 days agree within $\le 10\text{ W}$, using the statistical median FTP. Single unverified free workouts remain locked.
-- **Summary Card Zone Comparison Section (`HrvThresholdSummaryCard.kt`, `REQ-PER-037.4`)**: Renders power and HR delta chips, consensus status badge (`LOCKED` or `UNLOCKED`), and an "Update Power Zones" action button (disabled with explanatory lock reason when locked).
-- **User-Confirmed Power Zone Update Flow (`REQ-PER-037.5`)**: On button tap when unlocked, displays a modal `AlertDialog` showing target FTP, protocol provenance, ramp slope & MRT adjustment, and an MLSS cautionary advisory noting that VT2/RCP may sit 3–5% above 60-minute MLSS.
+- **Multi-Session Consensus & Guided Test Gating (`REQ-PER-037.3`)**: Implements `HrvZoneComparisonMath.evaluateConsensusGate`. Power zone updates unlock only if EITHER (a) the workout is a `Confidence.HIGH` Guided Step/Ramp Test (`ATT-4969`), OR (b) $M \ge 3$ recent sessions within 30 days agree within $\le 10\text{ W}$, using the statistical median FTP. Single unverified free workouts remain locked. Historical 30-day candidate sessions with valid HRV and Power telemetry are resolved by `WorkoutRepository.getRecentHrvSessionThresholds` with thread-safe `ConcurrentHashMap` caching and cache-invalidation on `refreshWorkout`.
+- **Summary Card Zone Comparison Section (`HrvThresholdSummaryCard.kt`, `REQ-PER-037.4`)**: Renders power and HR delta chips, consensus status badge (`LOCKED` or `UNLOCKED`), and an "Update Power Zones" action button (disabled with explanatory lock reason when locked). Wired end-to-end through `TrackOnMapScreen`, `WorkoutSummariesTabbedScreen`, `WorkoutSummariesListFragment`, and `WorkoutDetailTabbedContent` to `HrvThresholdSummaryCard`.
+- **User-Confirmed Power Zone Update Flow (`REQ-PER-037.5`)**: On button tap when unlocked, displays a modal `AlertDialog` showing target FTP, protocol provenance, ramp slope & MRT adjustment, and an MLSS cautionary advisory noting that VT2/RCP may sit 3–5% above 60-minute MLSS. On confirmation, `TrackOnMapAftermathViewModel.updateFtp` persists calculated Coggan boundaries via `SettingsDataStore.saveCalculatedPowerZones` and records the metric in `AthleteMetricsRepository.addEntry(FTP_WATTS, ...)`. (TrackOnMapScreen includes an IO coroutine fallback).
 - **Cross-Epic Mader-Heck Forwarding (`REQ-PER-037.6`)**: Provides action link forwarding $(P_{\text{HRVT1}}, P_{\text{HRVT2}})$ into `MaderCalibrationDialog` (`ATT-4799`).
 - **Localization Parity**: 24 new string keys verified with 100% parity across all 9 canonical languages in `strings_hrv.xml`.
 
@@ -68,6 +68,12 @@ BUILD SUCCESSFUL in 28s
   - `all zone comparison and consensus string keys exist across canonical resources`: PASSED
   - `HrvThresholdSummaryCard exposes Zone Comparison and Consensus test tags`: PASSED
   - `WorkoutDetailTabbedContent wires configuredFtp, configuredHrMax and callbacks`: PASSED
+- `WorkoutRepositoryHrvConsensusTest`:
+  - `getRecentHrvSessionThresholds_filtersCandidateWorkoutsWithin30Days`: PASSED
+  - `getRecentHrvSessionThresholds_cachesEvaluatedThresholds`: PASSED
+  - `refreshWorkout_invalidatesCachedThreshold`: PASSED
+- `TrackOnMapAftermathViewModelTest`:
+  - `updateFtp_persistsPowerZonesAndUpdatesUiState`: PASSED
 - `TranslationParityTest`: 100% parity across all 9 canonical languages (EN, DE, ES, FR, IT, JA, NL, PL, PT): PASSED
 - `verify_requirement_governance.py`: PASSED (zero unmounted composable islands, zero leaky repository members).
 

@@ -765,7 +765,9 @@ object LegacyImportEngine {
                         goal = parsedWorkout.goal,
                         isCommute = parsedWorkout.isCommute,
                         source = source.name,
-                        uploadToStrava = uploadToStravaPref
+                        uploadToStrava = uploadToStravaPref,
+                        rpe = parsedWorkout.sessionRpe,
+                        feel = parsedWorkout.sessionFeel
                     )
                     require(workoutId > 0) { "Failed to insert summary row for $effectiveBaseFileName" }
 

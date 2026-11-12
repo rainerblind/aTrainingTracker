@@ -32,12 +32,14 @@ import com.atrainingtracker.banalservice.devices.hrv.RrArtifactFilter
 import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.cloud.healthconnect.HealthConnectHrvImporter
+import com.atrainingtracker.trainingtracker.cloud.healthconnect.HealthConnectManager
 import com.atrainingtracker.trainingtracker.database.hrv.HrvPosture
 import com.atrainingtracker.trainingtracker.database.hrv.HrvReadinessCalculator
 import com.atrainingtracker.trainingtracker.database.hrv.HrvReadinessEntry
 import com.atrainingtracker.trainingtracker.database.hrv.HrvReadinessRepository
 import com.atrainingtracker.trainingtracker.database.hrv.HrvReadinessResult
 import com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository
+import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -82,8 +84,19 @@ data class MorningHrvUiState(
     val computedEntry: HrvReadinessEntry? = null,
     val readinessResult: HrvReadinessResult? = null,
     val isSaved: Boolean = false,
+    val isWellnessSaved: Boolean = false,
     val errorMessageResId: Int? = null,
-    val errorMessage: String? = null
+    val errorMessage: String? = null,
+    val enableMorningSleepAndWellness: Boolean = false,
+    val enableSleepDurationAndQuality: Boolean = true,
+    val enableMorningEnergy: Boolean = true,
+    val enableMuscleSoreness: Boolean = false,
+    val enableContextTags: Boolean = false,
+    val sleepDurationMinutes: Int = 450,
+    val sleepQuality1To5: Int = 3,
+    val morningEnergy1To5: Int = 3,
+    val muscleSoreness1To5: Int = 1,
+    val selectedContextTags: Set<String> = emptySet()
 )
 
 /**
@@ -110,6 +123,8 @@ class MorningHrvCheckViewModel @JvmOverloads constructor(
         handleRrBeat(event)
     }
 
+    private val tuningDataStore = TuningPreferencesDataStore.getInstance(application)
+
     init {
         val initialPosture = HrvPosture.fromNameOrNull(TrainingApplication.getLastHrvPosture())
             ?: HrvPosture.SUPINE
@@ -127,6 +142,31 @@ class MorningHrvCheckViewModel @JvmOverloads constructor(
         banalServiceRepository.startSearchingForPairedDevices()
         banalServiceRepository.addRrBeatListener(rrBeatListener)
 
+        viewModelScope.launch(dispatcher) {
+            tuningDataStore.tuningConfigFlow.collect { config ->
+                _uiState.update { current ->
+                    current.copy(
+                        enableMorningSleepAndWellness = config.enableMorningSleepAndWellness,
+                        enableSleepDurationAndQuality = config.enableSleepDurationAndQuality,
+                        enableMorningEnergy = config.enableMorningEnergy,
+                        enableMuscleSoreness = config.enableMuscleSoreness,
+                        enableContextTags = config.enableContextTags
+                    )
+                }
+            }
+        }
+
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val sleepMinutes = HealthConnectManager.getLastNightSleepDurationMinutes(application)
+                if (sleepMinutes != null && sleepMinutes > 0) {
+                    _uiState.update { it.copy(sleepDurationMinutes = sleepMinutes) }
+                }
+            } catch (e: Exception) {
+                Log.w("MorningHrvCheckVM", "Health Connect sleep prefill omitted: ${e.message}")
+            }
+        }
+
         if (TrainingApplication.isHealthConnectHrvImportEnabled()) {
             viewModelScope.launch(Dispatchers.IO) {
                 try {
@@ -139,6 +179,67 @@ class MorningHrvCheckViewModel @JvmOverloads constructor(
                     Log.w("MorningHrvCheckVM", "Background Health Connect HRV refresh failed: ${e.message}")
                 }
             }
+        }
+    }
+
+    /**
+     * Updates subjective sleep duration in minutes (`REQ-HRV-038`, `REQ-HRV-040`).
+     */
+    fun setSleepDurationMinutes(minutes: Int) {
+        _uiState.update { it.copy(sleepDurationMinutes = minutes) }
+    }
+
+    /**
+     * Updates subjective sleep quality on a 1-5 scale (`REQ-HRV-038`, `REQ-HRV-040`).
+     */
+    fun setSleepQuality(quality: Int) {
+        _uiState.update { it.copy(sleepQuality1To5 = quality.coerceIn(1, 5)) }
+    }
+
+    /**
+     * Updates subjective morning energy / feel on a 1-5 scale (`REQ-HRV-038`, `REQ-HRV-040`).
+     */
+    fun setMorningEnergy(energy: Int) {
+        _uiState.update { it.copy(morningEnergy1To5 = energy.coerceIn(1, 5)) }
+    }
+
+    /**
+     * Updates muscle soreness on a 1-5 scale (`REQ-HRV-038`, `REQ-HRV-040`).
+     */
+    fun setMuscleSoreness(soreness: Int) {
+        _uiState.update { it.copy(muscleSoreness1To5 = soreness.coerceIn(1, 5)) }
+    }
+
+    /**
+     * Toggles inclusion of a context tag (`REQ-HRV-038`, `REQ-HRV-040`).
+     */
+    fun toggleContextTag(tag: String) {
+        _uiState.update { state ->
+            val updated = if (state.selectedContextTags.contains(tag)) {
+                state.selectedContextTags - tag
+            } else {
+                state.selectedContextTags + tag
+            }
+            state.copy(selectedContextTags = updated)
+        }
+    }
+
+    @androidx.annotation.VisibleForTesting
+    fun setWellnessTogglesForTesting(
+        enableMorningSleepAndWellness: Boolean = true,
+        enableSleepDurationAndQuality: Boolean = true,
+        enableMorningEnergy: Boolean = true,
+        enableMuscleSoreness: Boolean = true,
+        enableContextTags: Boolean = true
+    ) {
+        _uiState.update {
+            it.copy(
+                enableMorningSleepAndWellness = enableMorningSleepAndWellness,
+                enableSleepDurationAndQuality = enableSleepDurationAndQuality,
+                enableMorningEnergy = enableMorningEnergy,
+                enableMuscleSoreness = enableMuscleSoreness,
+                enableContextTags = enableContextTags
+            )
         }
     }
 
@@ -361,16 +462,76 @@ class MorningHrvCheckViewModel @JvmOverloads constructor(
     }
 
     /**
-     * Persists the computed reading to `HrvReadiness.db` and recalculates baseline readiness (`REQ-PER-032.5`).
+     * Persists a standalone morning wellness entry without chest-strap HRV measurements (`REQ-HRV-040`).
+     */
+    suspend fun saveStandaloneWellness(): Long {
+        val state = _uiState.value
+        val nowMs = System.currentTimeMillis()
+        val dateIso = LocalDate.now().toString()
+        val timezoneId = ZoneId.systemDefault().id
+        val tagsString = if (state.enableContextTags && state.selectedContextTags.isNotEmpty()) {
+            state.selectedContextTags.sorted().joinToString(",")
+        } else null
+
+        val entry = HrvReadinessEntry(
+            timestampMs = nowMs,
+            dateIso = dateIso,
+            timezoneId = timezoneId,
+            restingHrBpm = null,
+            rmssdMs = null,
+            lnRmssd = null,
+            hrvScore100 = null,
+            sdnnMs = null,
+            artifactRatePct = null,
+            durationSec = null,
+            posture = state.posture,
+            isPrimaryForDay = true,
+            sleepDurationMin = if (state.enableSleepDurationAndQuality) state.sleepDurationMinutes else null,
+            sleepQuality1To5 = if (state.enableSleepDurationAndQuality) state.sleepQuality1To5 else null,
+            morningEnergy1To5 = if (state.enableMorningEnergy) state.morningEnergy1To5 else null,
+            muscleSoreness1To5 = if (state.enableMuscleSoreness) state.muscleSoreness1To5 else null,
+            contextTags = tagsString
+        )
+
+        val rowId = hrvReadinessRepository.insertEntry(entry)
+        if (rowId > 0) {
+            _uiState.update {
+                it.copy(isWellnessSaved = true)
+            }
+        }
+        return rowId
+    }
+
+    /**
+     * Persists the computed reading to `HrvReadiness.db` and recalculates baseline readiness (`REQ-PER-032.5`, `REQ-HRV-041`).
      */
     suspend fun saveReading(): Long {
-        val entry = _uiState.value.computedEntry ?: return -1L
+        val baseEntry = _uiState.value.computedEntry ?: return -1L
+        val state = _uiState.value
+        val tagsString = if (state.enableContextTags && state.selectedContextTags.isNotEmpty()) {
+            state.selectedContextTags.sorted().joinToString(",")
+        } else null
+
+        val entry = if (state.enableMorningSleepAndWellness) {
+            baseEntry.copy(
+                sleepDurationMin = if (state.enableSleepDurationAndQuality) state.sleepDurationMinutes else null,
+                sleepQuality1To5 = if (state.enableSleepDurationAndQuality) state.sleepQuality1To5 else null,
+                morningEnergy1To5 = if (state.enableMorningEnergy) state.morningEnergy1To5 else null,
+                muscleSoreness1To5 = if (state.enableMuscleSoreness) state.muscleSoreness1To5 else null,
+                contextTags = tagsString
+            )
+        } else {
+            baseEntry
+        }
+
         val rowId = hrvReadinessRepository.insertEntry(entry)
         if (rowId > 0) {
             val updatedResult = hrvReadinessRepository.calculateReadiness(entry.dateIso, entry.posture)
             _uiState.update {
                 it.copy(
                     isSaved = true,
+                    isWellnessSaved = true,
+                    computedEntry = entry,
                     readinessResult = updatedResult
                 )
             }

@@ -34,13 +34,18 @@ import androidx.health.connect.client.records.RestingHeartRateRecord
 import androidx.health.connect.client.records.SpeedRecord
 import androidx.health.connect.client.records.TotalCaloriesBurnedRecord
 import androidx.health.connect.client.records.CyclingPedalingCadenceRecord
+import androidx.health.connect.client.records.SleepSessionRecord
 import androidx.health.connect.client.records.StepsCadenceRecord
+import androidx.health.connect.client.request.ReadRecordsRequest
+import androidx.health.connect.client.time.TimeRangeFilter
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.time.Instant
+import java.time.temporal.ChronoUnit
 
 /**
  * Manages Health Connect SDK availability, permission inspection, and
@@ -66,6 +71,10 @@ object HealthConnectManager {
     val HRV_READ_PERMISSIONS: Set<String> = setOf(
         HealthPermission.getReadPermission(HeartRateVariabilityRmssdRecord::class),
         HealthPermission.getReadPermission(RestingHeartRateRecord::class)
+    )
+
+    val SLEEP_READ_PERMISSIONS: Set<String> = setOf(
+        HealthPermission.getReadPermission(SleepSessionRecord::class)
     )
 
     @VisibleForTesting
@@ -215,6 +224,35 @@ object HealthConnectManager {
         } catch (e: Exception) {
             Log.e(TAG, "Failed to sync workout to Health Connect: ${e.message}", e)
             Result.failure(e)
+        }
+    }
+
+    /**
+     * Reads the most recent sleep session duration in minutes within the last 24 hours (`REQ-HRV-042`).
+     * Returns null if Health Connect is unavailable, permissions are not granted, or no record is found.
+     */
+    suspend fun getLastNightSleepDurationMinutes(context: Context): Int? = withContext(Dispatchers.IO) {
+        if (!isAvailable(context)) return@withContext null
+        try {
+            val client = getClient(context)
+            val granted = client.permissionController.getGrantedPermissions()
+            if (!granted.containsAll(SLEEP_READ_PERMISSIONS)) return@withContext null
+
+            val now = Instant.now()
+            val startTime = now.minus(24, ChronoUnit.HOURS)
+            val request = ReadRecordsRequest(
+                recordType = SleepSessionRecord::class,
+                timeRangeFilter = TimeRangeFilter.between(startTime, now),
+                ascendingOrder = false,
+                pageSize = 1
+            )
+            val response = client.readRecords(request)
+            val session = response.records.firstOrNull() ?: return@withContext null
+            val durationMinutes = ChronoUnit.MINUTES.between(session.startTime, session.endTime).toInt()
+            if (durationMinutes > 0) durationMinutes else null
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to read SleepSessionRecord from Health Connect: ${e.message}")
+            null
         }
     }
 

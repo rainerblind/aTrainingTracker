@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="tuning_climb_formula_title">Formuła kategoryzacji podjazdów</string>
+    <string name="tuning_climb_formula_desc">Indeks FIETS uwzględnia nachylenie i wysokość n.p.m. (domyślnie). Strava / Garmin kategoryzuje wyłącznie wg przewyższenia.</string>
+    <string name="tuning_climb_formula_fiets">Indeks FIETS</string>
+    <string name="tuning_climb_formula_strava_garmin">Strava / Garmin</string>
+</resources>

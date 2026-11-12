@@ -50,6 +50,7 @@ import androidx.compose.ui.unit.dp
 
 import com.atrainingtracker.trainingtracker.exporter.FileFormat
 import com.atrainingtracker.trainingtracker.WorkoutCardSectionPreferences
+import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRpeFeelSection
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutSectionType
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.ui.aftermath.LapData
@@ -258,6 +259,26 @@ fun WorkoutSummary(
 
         workoutSectionsOrder.forEach { sectionType ->
             when (sectionType) {
+                WorkoutSectionType.RPE_AND_FEEL -> {
+                    if (preferences.showRpeAndFeel && (workoutData.rpe != null || workoutData.feel != null)) {
+                        if (renderedAnySection) {
+                            HorizontalDivider(
+                                modifier = Modifier.fillMaxWidth(),
+                                thickness = 0.5.dp,
+                                color = MaterialTheme.colorScheme.outlineVariant
+                            )
+                        }
+                        WorkoutRpeFeelSection(
+                            rpe = workoutData.rpe,
+                            feel = workoutData.feel,
+                            activeTimeSec = workoutData.activeTimeSec,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 6.dp)
+                        )
+                        renderedAnySection = true
+                    }
+                }
                 WorkoutSectionType.DETAILS -> {
                     if (preferences.showDetails) {
                         if (renderedAnySection) {

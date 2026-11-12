@@ -1,9 +1,9 @@
-# Living Test Specification: Project Governance & Store Presence
+# Living Test Specification: Store Presence
 
-**Domain**: `project_governance`  
+**Domain**: `store_presence`  
 **Prefixes**: `STP`  
 **Scope**: Store presence, Google Play listings, screenshots, store metadata contract testing, and release governance.  
-**Total Tests**: 5
+**Total Tests**: 10
 
 ---
 

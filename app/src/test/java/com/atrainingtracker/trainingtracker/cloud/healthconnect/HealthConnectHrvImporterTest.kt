@@ -272,9 +272,9 @@ class HealthConnectHrvImporterTest {
         assertTrue(entry.notes?.contains("com.ouraring.oura") == true)
 
         // Check math: sqrt(35 * 45) = sqrt(1575) approx 39.686
-        assertEquals(39.686, entry.rmssdMs, 1e-2)
-        assertEquals(Math.log(entry.rmssdMs), entry.lnRmssd, 1e-4)
-        assertEquals(20.0 * entry.lnRmssd, entry.hrvScore100, 1e-4)
+        assertEquals(39.686, entry.rmssdMs!!, 1e-2)
+        assertEquals(Math.log(entry.rmssdMs!!), entry.lnRmssd!!, 1e-4)
+        assertEquals(20.0 * entry.lnRmssd!!, entry.hrvScore100!!, 1e-4)
 
         // Second import (idempotent deduplication) -> should insert 0 new entries
         val result2 = HealthConnectHrvImporter.importHrvRange(context, start, end, repository = repository, clientOverride = mockClient)
@@ -346,7 +346,7 @@ class HealthConnectHrvImporterTest {
 
         val entry = repository.getPrimaryEntryForDate("2026-11-10", HrvPosture.OVERNIGHT_WEARABLE)
         assertNotNull(entry)
-        assertEquals(42.0, entry!!.rmssdMs, 1e-3)
+        assertEquals(42.0, entry!!.rmssdMs!!, 1e-3)
         assertEquals(0, entry.restingHrBpm)
     }
 
@@ -422,7 +422,7 @@ class HealthConnectHrvImporterTest {
 
         val entry = repository.getPrimaryEntryForDate("2026-11-10", HrvPosture.OVERNIGHT_WEARABLE)
         assertNotNull(entry)
-        assertEquals(38.73, entry!!.rmssdMs, 0.05)
+        assertEquals(38.73, entry!!.rmssdMs!!, 0.05)
     }
 
     /**
@@ -477,7 +477,7 @@ class HealthConnectHrvImporterTest {
         val initialEntry = repository.getPrimaryEntryForDate("2026-11-10", HrvPosture.OVERNIGHT_WEARABLE)
         assertNotNull(initialEntry)
         assertEquals(0, initialEntry!!.restingHrBpm)
-        assertEquals(30.0, initialEntry.rmssdMs, 1e-3)
+        assertEquals(30.0, initialEntry.rmssdMs!!, 1e-3)
 
         // Morning sync arrives: full night records + RHR = 50
         val metaLate = createTestMetadata("morning-hrv", "com.ouraring.oura")
@@ -527,7 +527,7 @@ class HealthConnectHrvImporterTest {
         val updatedEntry = allEntries.first()
         assertEquals(initialEntry.id, updatedEntry.id)
         assertEquals(50, updatedEntry.restingHrBpm)
-        assertEquals(38.73, updatedEntry.rmssdMs, 0.05)
+        assertEquals(38.73, updatedEntry.rmssdMs!!, 0.05)
         assertEquals(tLate.toEpochMilli(), updatedEntry.timestampMs)
     }
 
@@ -597,6 +597,6 @@ class HealthConnectHrvImporterTest {
         val entry = repository.getPrimaryEntryForDate("2026-11-10", HrvPosture.OVERNIGHT_WEARABLE)
         assertNotNull(entry)
         assertEquals("UserManualNote", entry!!.notes)
-        assertEquals(65.0, entry.rmssdMs, 1e-4)
+        assertEquals(65.0, entry.rmssdMs!!, 1e-4)
     }
 }

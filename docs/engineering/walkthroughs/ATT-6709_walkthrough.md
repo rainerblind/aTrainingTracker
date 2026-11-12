@@ -22,9 +22,9 @@ Sprint 2026-46.1 review identified three defects: (1) `computeStereoGains()` att
    - Collapses channel gains to centered `(1.0f, 1.0f)` when `route == FORCE_SPEAKER` or (`route == SYSTEM_DEFAULT && !hasHeadphones`), preserving 100% phone-speaker volume.
    - Clarified KDoc documenting that Cartesian lateral offset ($x < 0$ = left, $x > 0$ = right) directly drives physical left/right stereo panning.
 
-2. **Headphone Detection & Volume API Modernization (`RadarAudioSynthesizer.kt`)**:
+2. **Headphone Detection & Stereo Panning Volume API (`RadarAudioSynthesizer.kt`)**:
    - Added `isHeadphonesOrBluetoothConnected(): Boolean` inspecting active audio outputs against `EXTERNAL_DEVICE_TYPES`.
-   - Replaced deprecated `setStereoVolume()` on mono track with `setVolume(maxOf(finalLeft, finalRight))`.
+   - Restored `track.setStereoVolume(finalLeft, finalRight)` when `finalLeft != finalRight` while using non-deprecated `track.setVolume(finalLeft)` for symmetric gains, preserving true 3D spatial panning on headphones (REQ-TRK-065.1).
 
 3. **Fast Threat Kinematics & Multi-Target Lane Hysteresis (`RadarAlertManager.kt`)**:
    - On `FAST_APPROACHING` escalation, prioritizes the `FAST_APPROACHING` target kinematics with highest approach speed over closer slow-moving vehicles.
@@ -53,3 +53,11 @@ Sprint 2026-46.1 review identified three defects: (1) `computeStereoGains()` att
 
 ## 4. Conclusion & Next Steps
 All requirements for `REQ-TRK-063.1`, `REQ-TRK-065.1`, `REQ-TRK-065.3`, and `REQ-TRK-065.5` are verified. Ready for Gate 5 Review by agent2 (`subagent_pro`), parent advancement to `Final Review (Human)`, and squash merge onto `sprint/2026-46.2`.
+
+---
+
+## 5. Cold Carbon Review (Stage 6) Defect Resolution & Healing
+1. **Stereo Volume Panning Restoration**:
+   - In `RadarAudioSynthesizer.kt` (`playTrack`), restored `@Suppress("DEPRECATION") track.setStereoVolume(finalLeft, finalRight)` when `finalLeft != finalRight` and `track.setVolume(finalLeft)` when equal. This ensures that 3D spatial panning is preserved across left/right channels when headphones are connected (REQ-TRK-065.1).
+   - In `RadarAudioSynthesizerTest.kt`, updated `playTrack_setsAsymmetricStereoVolumeToPreserveSpatialPanning` verifying `mockTrack.setStereoVolume` is invoked with asymmetric gains.
+

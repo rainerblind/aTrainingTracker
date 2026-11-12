@@ -18,10 +18,19 @@
 
 package com.atrainingtracker.trainingtracker.ui.aftermath
 
+import android.content.Context
+import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager
+import com.atrainingtracker.trainingtracker.database.EquipmentDbHelper
 import com.atrainingtracker.trainingtracker.database.ExtremaType
+import com.atrainingtracker.trainingtracker.database.WorkoutSource
+import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
+import com.atrainingtracker.trainingtracker.exporter.db.StravaUploadDbHelper
+import com.atrainingtracker.banalservice.sensor.SensorType
+import io.mockk.mockk
 import org.junit.Assert.*
+import org.junit.Before
 import org.junit.Test
-import java.io.File
+import java.time.LocalDateTime
 
 /**
  * Verifies ExtremaType additions, WorkoutData properties, and WorkoutDataMapper persistence
@@ -29,17 +38,61 @@ import java.io.File
  */
 class WorkoutDataMapperDurabilityTest {
 
-    private fun findFile(relativePath: String): File {
-        val candidates = listOf(
-            File(relativePath),
-            File("app", relativePath),
-            File("../app", relativePath),
-            File(File("").absoluteFile, relativePath),
-            File(File("").absoluteFile, "app/$relativePath"),
-            File(File("").absoluteFile.parentFile, "app/$relativePath")
+    private val mockContext = mockk<Context>(relaxed = true)
+    private val mockSummariesDb = mockk<WorkoutSummariesDatabaseManager>(relaxed = true)
+    private val mockSportDb = mockk<SportTypeDatabaseManager>(relaxed = true)
+    private val mockEquipmentDb = mockk<EquipmentDbHelper>(relaxed = true)
+    private val mockStravaDb = mockk<StravaUploadDbHelper>(relaxed = true)
+
+    private lateinit var mapper: WorkoutDataMapper
+
+    @Before
+    fun setUp() {
+        mapper = WorkoutDataMapper(
+            context = mockContext,
+            workoutSummariesDatabaseManager = mockSummariesDb,
+            sportTypeDatabaseManager = mockSportDb,
+            equipmentDbHelper = mockEquipmentDb,
+            stravaUploadDbHelper = mockStravaDb
         )
-        return candidates.firstOrNull { it.exists() }
-            ?: error("Could not find file '$relativePath' in candidates: ${candidates.map { it.absolutePath }}")
+    }
+
+    private fun createSnapshot(workoutId: Long, name: String): WorkoutDataMapper.RawCursorSnapshot {
+        return WorkoutDataMapper.RawCursorSnapshot(
+            workoutId = workoutId,
+            sportId = 1L,
+            equipmentId = 0L,
+            formattedDate = "2026-11-10",
+            formattedTime = "10:00:00",
+            startTimeS = 1794300000L,
+            localDateTime = LocalDateTime.of(2026, 11, 10, 10, 0, 0),
+            fileBaseName = name,
+            totalDistance = 25000.0,
+            mapPolyline = "",
+            encodedAltitudes = "",
+            encodedDistances = "",
+            workoutName = name,
+            clusterId = -1L,
+            finished = true,
+            commute = false,
+            trainer = false,
+            race = false,
+            source = WorkoutSource.TRACKED,
+            uploadToStrava = 0,
+            minLat = null,
+            minLng = null,
+            maxLat = null,
+            maxLng = null,
+            activeTimeSec = 3600L,
+            totalTimeSec = 3800L,
+            avgSpeedMps = 8.5,
+            ascentMeters = 300L,
+            descentMeters = 300L,
+            description = null,
+            goal = null,
+            method = null,
+            recordingErrors = null
+        )
     }
 
     @Test
@@ -62,22 +115,21 @@ class WorkoutDataMapperDurabilityTest {
     }
 
     @Test
-    fun `WorkoutDataMapper maps durability extrema into WorkoutData (TST-PER-046_5)`() {
-        val mapperFile = findFile("src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/WorkoutDataMapper.kt")
-        assertTrue("WorkoutDataMapper.kt must exist", mapperFile.exists())
+    fun `WorkoutDataMapper maps durability extrema into WorkoutData via fromSnapshot (TST-PER-046_5)`() {
+        val snapshot = createSnapshot(42L, "Durability Workout")
+        val extremaRecords = listOf(
+            WorkoutSummariesDatabaseManager.ExtremaRecord(42L, SensorType.HRV_DFA_A1, ExtremaType.DFA_A1_FRESH_BASELINE, 0.95, null),
+            WorkoutSummariesDatabaseManager.ExtremaRecord(42L, SensorType.HRV_DFA_A1, ExtremaType.DFA_A1_LATE_MEAN, 0.72, null),
+            WorkoutSummariesDatabaseManager.ExtremaRecord(42L, SensorType.HRV_DFA_A1, ExtremaType.DFA_A1_DRIFT_PCT, -24.2, null)
+        )
+        val batch = WorkoutDataMapper.BatchMetadata(
+            extrema = mapOf(42L to extremaRecords),
+            stravaData = emptyMap()
+        )
 
-        val source = mapperFile.readText()
-        assertTrue(
-            "WorkoutDataMapper must query DFA_A1_FRESH_BASELINE",
-            source.contains("ExtremaType.DFA_A1_FRESH_BASELINE")
-        )
-        assertTrue(
-            "WorkoutDataMapper must query DFA_A1_LATE_MEAN",
-            source.contains("ExtremaType.DFA_A1_LATE_MEAN")
-        )
-        assertTrue(
-            "WorkoutDataMapper must query DFA_A1_DRIFT_PCT",
-            source.contains("ExtremaType.DFA_A1_DRIFT_PCT")
-        )
+        val workoutData = mapper.fromSnapshot(snapshot, batch)
+        assertEquals(0.95, workoutData.dfaA1FreshBaseline ?: 0.0, 0.001)
+        assertEquals(0.72, workoutData.dfaA1LateMean ?: 0.0, 0.001)
+        assertEquals(-24.2, workoutData.dfaA1DurabilityDriftPct ?: 0.0, 0.001)
     }
 }

@@ -25,9 +25,11 @@ Sprint `2026-46.1` follow-up identified three critical defects in the initial HR
 - In [`LegacyImportEngine.kt`](file:///home/rainer/.gemini/antigravity/worktrees/2d7cbeaa-1dcf-48ee-833c-d8640891d766/subagent-ATT-3539---HRV-Flash-Agent-self-0db0cdb0/app/src/main/java/com/atrainingtracker/trainingtracker/migration/LegacyImportEngine.kt), passed `beatInfo.anchorTimestampMs` to `reconstructor.reconstruct()`, enabling smooth monotonic accumulation ($t_k = t_{k-1} + \text{round}(rr_k)$) without false drift resets.
 
 ### 2.2 Incremental Batched Flushing & Resume Counter (`REQ-PER-034.2`)
-- In [`TrackerService.java`](file:///home/rainer/.gemini/antigravity/worktrees/2d7cbeaa-1dcf-48ee-833c-d8640891d766/subagent-ATT-3539---HRV-Flash-Agent-self-0db0cdb0/app/src/main/java/com/atrainingtracker/trainingtracker/tracker/TrackerService.java):
+- In [`TrackerService.java`](file:///home/rainer/AndroidStudioProjects/aTrainingTracker/app/src/main/java/com/atrainingtracker/trainingtracker/tracker/TrackerService.java):
   - Gated `onRrBeat` with `mAutoPauseManager.getCurrentState() == AutoPauseState.TRACKING && mWorkoutID > 0`.
   - Added periodic batched flushing (`flushLiveRrQueueAsync`, `flushLiveRrQueueSync`) every 100 beats or 30s.
+  - Resolved async flush race condition (Stage 6 Cold Carbon review finding): Introduced dedicated single-threaded FIFO `mRrFlushExecutor = Executors.newSingleThreadExecutor()` and volatile `Future<?> mPendingRrFlushFuture`. In `flushLiveRrQueueAsync`, queue draining and executor submission are protected by `synchronized (mRrFlushLock)`. In `flushLiveRrQueueSync(workoutId)`, any in-flight or newly submitted batch is awaited unconditionally via `pending.get(10, TimeUnit.SECONDS)` outside `synchronized (mRrFlushLock)` to ensure all RR intervals are committed to SQLite before `HrvPostWorkoutRecomputer.recomputeWorkoutBlocking` queries the database, eliminating race conditions without deadlock.
+  - Added executor shutdown lifecycle handling in `handleActionStop` and `onDestroy` finally blocks with inline write fallback.
   - Restored `mRrBeatIndexCounter` to `getMaxBeatIndexBlocking(mWorkoutID) + 1` in `applyResumedState`.
   - Sequenced `recomputeWorkoutBlocking` strictly after summary finalization and dispatched `WorkoutRepository.refreshWorkout(workoutId)`.
 
@@ -69,7 +71,7 @@ Output:
 
 ### 3.2 Specific Acceptance Criteria Verified
 1. **Multi-Minute FIT Import (`TST-PER-042.5`)**: Verified in `LegacyImportEngineFitHrvTest.kt` (`parseFitWithInterleavedHrvMesg_preservesMonotonicAnchors_andAvoidsDriftCollapse`). 60-second record stream with interleaved `HrvMesg` intervals accumulates monotonic timestamps spanning $>40\text{ s}$ without false 2000 ms collapse.
-2. **Incremental Flushing & State Resumption (`TST-PER-042.2`)**: Verified in `WorkoutRrRepositoryTest.kt` and `WorkoutRrDatabaseManagerTest.kt`. Beat indexing resumes monotonically without duplicate key collisions.
+2. **Incremental Flushing & State Resumption (`TST-PER-042.2`)**: Verified in `WorkoutRrRepositoryTest.kt`, `WorkoutRrDatabaseManagerTest.kt`, and `TrackerServiceRrFlushTest.kt`. Concurrency tests confirm `flushLiveRrQueueSync` reliably waits for pending async writes before returning, and beat indexing resumes monotonically without duplicate key collisions.
 3. **5s Grid & Session SDNN (`TST-PER-042.3`)**: Verified in `HrvPostWorkoutRecomputerTest.kt`:
    - `computeSessionSdnn_returnsNullWhenInsufficientBeatsOrHighArtifactRate` verifies null gating on empty, single beat, or artifact rate $>5\%$.
    - `computeSessionSdnn_calculatesUnbiasedSampleStandardDeviation` verifies exact Bessel's sample standard deviation against manual math.
@@ -89,7 +91,7 @@ Output:
 | Requirement | Test Spec | Automated Test | Verdict |
 | :--- | :--- | :--- | :--- |
 | `REQ-PER-034.1` (Schema v2, UNIQUE index & repo) | `TST-PER-042.1` | `WorkoutRrDatabaseManagerTest.kt`, `WorkoutRrRepositoryTest.kt` | **PASS** |
-| `REQ-PER-034.2` (Incremental flush & resume counter) | `TST-PER-042.2` | `WorkoutRrRepositoryTest.kt`, `TrackerService.java` | **PASS** |
+| `REQ-PER-034.2` (Incremental flush & resume counter) | `TST-PER-042.2` | `WorkoutRrRepositoryTest.kt`, `TrackerServiceRrFlushTest.kt`, `TrackerService.java` | **PASS** |
 | `REQ-PER-034.3` (Two-pointer 5s grid & session SDNN) | `TST-PER-042.3` | `HrvPostWorkoutRecomputerTest.kt` | **PASS** |
 | `REQ-PER-034.5` (Interleaved FIT anchor reconstruction) | `TST-PER-042.5` | `LegacyImportEngineFitHrvTest.kt` | **PASS** |
 | `REQ-PRO-001` (Tier 1 regression suite) | `TST-PER-042.6` | Gradle testDebugUnitTest (491 tests) | **PASS** |

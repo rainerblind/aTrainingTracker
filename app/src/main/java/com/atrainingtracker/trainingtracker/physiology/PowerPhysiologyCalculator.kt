@@ -127,13 +127,14 @@ enum class AcwrZone {
 /**
  * Lightweight workout training load summary used as input to the Performance Management Chart (`REQ-UI-401.1`, `REQ-UI-401.2`).
  */
-data class WorkoutTrainingLoadSample(
+data class WorkoutTrainingLoadSample @JvmOverloads constructor(
     val timestampMs: Long,
     val activeTimeSeconds: Int = 0,
     val powerTss: Double? = null,
     val normalizedPowerWatts: Double? = null,
     val avgPowerWatts: Double? = null,
-    val avgHrBpm: Double? = null
+    val avgHrBpm: Double? = null,
+    val rpe: Int? = null
 )
 
 /**
@@ -986,7 +987,25 @@ object PowerPhysiologyCalculator {
             }
         }
 
+        // Tier 4: Session-RPE fallback (REQ-WKO-039 / ATT-6879)
+        val rpe = sample.rpe
+        if (activeSec > 0.0 && rpe != null && rpe in 1..10) {
+            val srpe = calculateSessionRpe(rpe, activeSec)
+            if (srpe > 0.0) {
+                return srpe
+            }
+        }
+
         return 0.0
+    }
+
+    /**
+     * Calculates Foster's Session-RPE training load ($sRPE = \text{RPE} \times \text{duration\_minutes}$) (`REQ-WKO-039`, `ATT-6879`).
+     */
+    @JvmStatic
+    fun calculateSessionRpe(rpe: Int, activeTimeSeconds: Double): Double {
+        if (rpe !in 1..10 || !activeTimeSeconds.isFinite() || activeTimeSeconds <= 0.0) return 0.0
+        return rpe * (activeTimeSeconds / 60.0)
     }
 
     /**

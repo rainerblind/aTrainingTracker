@@ -80,7 +80,7 @@ class TestBearerAuthAndTLS(unittest.TestCase):
         dc_config = {
             "JIRA_URL": "https://jira.internal.corp",
             "JIRA_DEPLOYMENT": "datacenter",
-            "JIRA_TOKEN": "my_datacenter_pat_token_xyz"
+            "JIRA_AGENT1_TOKEN": "my_datacenter_pat_token_xyz"
         }
         headers = root_jira.get_headers(dc_config, role="agent1")
         self.assertEqual(headers["Authorization"], "Bearer my_datacenter_pat_token_xyz")
@@ -92,8 +92,8 @@ class TestBearerAuthAndTLS(unittest.TestCase):
         config = {
             "JIRA_URL": "https://jira.internal.corp",
             "JIRA_AUTH_TYPE": "bearer",
-            "JIRA_USER": "some_user",
-            "JIRA_TOKEN": "pat_token_123"
+            "JIRA_AGENT1_USER": "some_user",
+            "JIRA_AGENT1_TOKEN": "pat_token_123"
         }
         headers = root_jira.get_headers(config, role="agent1")
         self.assertEqual(headers["Authorization"], "Bearer pat_token_123")
@@ -102,8 +102,8 @@ class TestBearerAuthAndTLS(unittest.TestCase):
     def test_basic_auth_in_cloud_retained(self):
         cloud_config = {
             "JIRA_URL": "https://company.atlassian.net",
-            "JIRA_USER": "dev@company.com",
-            "JIRA_TOKEN": "api_token_abc"
+            "JIRA_AGENT1_USER": "dev@company.com",
+            "JIRA_AGENT1_TOKEN": "api_token_abc"
         }
         headers = root_jira.get_headers(cloud_config, role="agent1")
         expected_b64 = base64.b64encode(b"dev@company.com:api_token_abc").decode("ascii")

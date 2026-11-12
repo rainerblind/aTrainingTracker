@@ -1,0 +1,730 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>The Trophy Vault — My Sporting Journey</title>
+  <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
+  <style>
+    @keyframes pulseGlow {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.55); transform: scale(1); }
+      50% { box-shadow: 0 0 0 8px rgba(245, 158, 11, 0); transform: scale(1.06); }
+    }
+    .emblem-pulse {
+      animation: pulseGlow 2.2s infinite ease-in-out;
+    }
+    .gold-gradient-text {
+      background: linear-gradient(135deg, #FDE047 0%, #F59E0B 50%, #D97706 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .passport-card-bg {
+      background: radial-gradient(circle at top right, rgba(245, 158, 11, 0.22), transparent 55%),
+                  radial-gradient(circle at bottom left, rgba(59, 130, 246, 0.18), transparent 60%),
+                  linear-gradient(145deg, #0f172a 0%, #1e293b 100%);
+    }
+  </style>
+</head>
+<body class="bg-[var(--background)] text-[var(--foreground)] antialiased p-4 md:p-6">
+
+  <!-- Header & Context Bar -->
+  <div class="max-w-5xl mx-auto space-y-6">
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 bg-[var(--card)] border border-[var(--border)] rounded-2xl p-4 shadow-sm">
+      <div>
+        <div class="flex items-center gap-2">
+          <span class="px-2.5 py-0.5 text-xs font-semibold rounded-full bg-amber-500/15 text-amber-500 border border-amber-500/30">
+            Interactive Cockpit Easter Egg Prototype
+          </span>
+          <span class="text-xs text-[var(--muted-foreground)]">Powered by your real Pixel 10 SQLite data (2012–2026)</span>
+        </div>
+        <h1 class="text-xl font-bold mt-1">The Trophy Vault &rarr; &ldquo;My Sporting Journey&rdquo;</h1>
+        <p class="text-xs text-[var(--muted-foreground)]">
+          Tap the Supporter Emblem on the right of the simulated sensor bar below, or switch tiers &amp; time periods to explore.
+        </p>
+      </div>
+
+      <!-- Supporter Tier Switcher -->
+      <div class="flex flex-col items-start md:items-end gap-1.5">
+        <span class="text-xs font-medium text-[var(--muted-foreground)]">Simulate Supporter Emblem in Sensor Row:</span>
+        <div class="inline-flex rounded-xl bg-[var(--background)] p-1 border border-[var(--border)] gap-1">
+          <button onclick="setTier('pioneer')" id="tier-pioneer" class="tier-btn px-2.5 py-1 rounded-lg text-xs font-medium transition">
+            🧰 Pioneer Chest
+          </button>
+          <button onclick="setTier('gold')" id="tier-gold" class="tier-btn px-2.5 py-1 rounded-lg text-xs font-semibold bg-amber-500/20 text-amber-400 border border-amber-500/40 transition">
+            🪙 Gold Sponsor
+          </button>
+          <button onclick="setTier('diamond')" id="tier-diamond" class="tier-btn px-2.5 py-1 rounded-lg text-xs font-medium transition">
+            💎 Diamond
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main 2-Column Layout: Left = Phone Cockpit + Vault Drawer, Right = Deep-Dive Insights & Share Passport -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+
+      <!-- LEFT COLUMN (Phone Frame Simulation: 5 cols on lg) -->
+      <div class="lg:col-span-5 bg-[var(--card)] border-2 border-[var(--border)] rounded-[32px] overflow-hidden shadow-xl">
+
+        <!-- Android Status Bar -->
+        <div class="bg-[#bbd6fb] text-slate-900 px-5 pt-2.5 pb-1 flex items-center justify-between text-xs font-semibold">
+          <span>23:10</span>
+          <div class="flex items-center gap-2">
+            <span>5G</span>
+            <span class="px-1.5 py-0.5 rounded bg-green-500 text-slate-950 font-bold text-xs">100%</span>
+          </div>
+        </div>
+
+        <!-- aTrainingTracker SensorStatus.kt Row -->
+        <div class="bg-[#bbd6fb] text-slate-900 px-3 py-2 flex items-center justify-between border-b border-blue-300/60">
+          <!-- Left: Hamburger Menu (24dp) -->
+          <button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-black/5" title="Navigation Drawer">
+            <svg class="w-5 h-5 text-slate-800" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" d="M4 6h16M4 12h16M4 18h16"/>
+            </svg>
+          </button>
+
+          <!-- Center: 8 Sensor Icons -->
+          <div class="flex items-center gap-2.5">
+            <!-- Active sensors (1.0 alpha) -->
+            <span title="TIME_ACTIVE" class="opacity-100 text-sm">⏱️</span>
+            <span title="ACCURACY (GPS)" class="opacity-100 text-sm">⌖</span>
+            <span title="ALTITUDE" class="opacity-100 text-sm">⛰️</span>
+            <span title="DISTANCE" class="opacity-100 text-sm">📏</span>
+            <span title="SPEED" class="opacity-100 text-sm">⏲️</span>
+            <!-- Inactive sensors (0.38 alpha) -->
+            <span title="CADENCE" class="opacity-40 text-sm">↻</span>
+            <span title="HR" class="opacity-40 text-sm">♡</span>
+            <span title="POWER" class="opacity-40 text-sm">⚡</span>
+          </div>
+
+          <!-- Right: Supporter Emblem (onSupporterClick) -->
+          <button onclick="pulseVaultHighlight()" id="cockpit-emblem-btn"
+                  class="emblem-pulse w-8 h-8 rounded-full flex items-center justify-center bg-amber-400/25 border border-amber-600/40 relative cursor-pointer"
+                  title="Tap to open The Trophy Vault!">
+            <span id="cockpit-emblem-icon" class="text-base">🪙</span>
+            <span class="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-amber-500 border border-white"></span>
+          </button>
+        </div>
+
+        <!-- Trophy Vault Sheet Header inside Phone -->
+        <div id="vault-sheet" class="p-4 space-y-4 transition-all duration-300">
+          <!-- Sheet Drag Handle -->
+          <div class="w-10 h-1 bg-[var(--border)] rounded-full mx-auto"></div>
+
+          <!-- Title & Emblem Header -->
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2.5">
+              <div id="vault-header-badge" class="w-10 h-10 rounded-xl bg-amber-500/15 border border-amber-500/40 flex items-center justify-center text-xl">
+                🪙
+              </div>
+              <div>
+                <div class="flex items-center gap-1.5">
+                  <h2 class="text-base font-bold">My Sporting Journey</h2>
+                  <span id="vault-tier-pill" class="px-2 py-0.5 text-xs font-semibold rounded-full bg-amber-500/20 text-amber-400">
+                    GOLD VAULT
+                  </span>
+                </div>
+                <p id="vault-subtitle" class="text-xs text-[var(--muted-foreground)]">
+                  Every kilometer since 11 Apr 2012 tells a story
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Period Switcher Pill (All-Time vs Annual Wrapped) -->
+          <div class="grid grid-cols-3 gap-1 p-1 rounded-xl bg-[var(--background)] border border-[var(--border)]">
+            <button onclick="setPeriod('all')" id="period-all" class="period-btn py-1.5 rounded-lg text-xs font-semibold bg-[var(--primary)] text-[var(--primary-foreground)] transition">
+              All-Time (14 Yrs)
+            </button>
+            <button onclick="setPeriod('2026')" id="period-2026" class="period-btn py-1.5 rounded-lg text-xs font-medium text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition">
+              ✨ 2026 Wrapped
+            </button>
+            <button onclick="setPeriod('2018')" id="period-2018" class="period-btn py-1.5 rounded-lg text-xs font-medium text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition">
+              🔥 2018 Peak
+            </button>
+          </div>
+
+          <!-- Sport Filter Chips -->
+          <div class="flex items-center gap-1.5">
+            <button onclick="setSport('all')" id="sport-all" class="sport-btn px-3 py-1 rounded-full text-xs font-semibold bg-amber-500/20 text-amber-400 border border-amber-500/40">
+              All Sports
+            </button>
+            <button onclick="setSport('bike')" id="sport-bike" class="sport-btn px-3 py-1 rounded-full text-xs font-medium bg-[var(--background)] text-[var(--muted-foreground)] border border-[var(--border)]">
+              🚴 Cycling
+            </button>
+            <button onclick="setSport('run')" id="sport-run" class="sport-btn px-3 py-1 rounded-full text-xs font-medium bg-[var(--background)] text-[var(--muted-foreground)] border border-[var(--border)]">
+              🏃 Running
+            </button>
+          </div>
+
+          <!-- Hero Big Metric Card (Idea #1: The Training Diary) -->
+          <div class="rounded-2xl p-4 bg-gradient-to-br from-amber-500/15 via-amber-500/5 to-transparent border border-amber-500/30 space-y-3">
+            <div class="flex items-baseline justify-between">
+              <div>
+                <div id="stat-distance" class="text-3xl font-extrabold tracking-tight gold-gradient-text">
+                  20,529 km
+                </div>
+                <div class="text-xs text-[var(--muted-foreground)] font-medium">
+                  Total distance recorded
+                </div>
+              </div>
+              <div class="text-right">
+                <span id="stat-equator-badge" class="px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-400 text-xs font-semibold">
+                  🌍 51.2% of Equator
+                </span>
+              </div>
+            </div>
+
+            <!-- 4-Grid Secondary Totals -->
+            <div class="grid grid-cols-2 gap-2.5 pt-2 border-t border-amber-500/20">
+              <div class="bg-[var(--background)]/70 rounded-xl p-2.5 border border-[var(--border)]">
+                <div id="stat-workouts" class="text-lg font-bold">1,777</div>
+                <div class="text-xs text-[var(--muted-foreground)]">Workouts completed</div>
+              </div>
+              <div class="bg-[var(--background)]/70 rounded-xl p-2.5 border border-[var(--border)]">
+                <div id="stat-hours" class="text-lg font-bold">1,322 h</div>
+                <div id="stat-days-sub" class="text-xs text-[var(--muted-foreground)]">55.1 days nonstop motion</div>
+              </div>
+              <div class="bg-[var(--background)]/70 rounded-xl p-2.5 border border-[var(--border)]">
+                <div id="stat-elevation" class="text-lg font-bold">88,450 m</div>
+                <div id="stat-everest-sub" class="text-xs text-amber-400 font-medium">🏔️ 10.0× Mt. Everest</div>
+              </div>
+              <div class="bg-[var(--background)]/70 rounded-xl p-2.5 border border-[var(--border)]">
+                <div id="stat-routes" class="text-lg font-bold">78</div>
+                <div id="stat-routes-sub" class="text-xs text-[var(--muted-foreground)]">Favorite route clusters</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Milestones Timeline inside Phone -->
+          <div class="space-y-2">
+            <div class="flex items-center justify-between">
+              <h3 class="text-xs font-bold uppercase tracking-wider text-[var(--muted-foreground)]">
+                Signature Milestones
+              </h3>
+              <span class="text-xs text-amber-400 font-medium">Tap to inspect workout</span>
+            </div>
+
+            <div id="milestone-list" class="space-y-2">
+              <!-- Populated dynamically by JS -->
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT COLUMN (7 cols on lg): "Things You Didn't Know Your Data Could Tell You" + Achievements + Share Card -->
+      <div class="lg:col-span-7 space-y-6">
+
+        <!-- SECTION A: "Things You Didn't Know Your Training Data Could Tell You" -->
+        <div class="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-5 shadow-sm space-y-4">
+          <div class="flex items-start justify-between gap-2">
+            <div>
+              <span class="text-xs font-semibold text-amber-400 uppercase tracking-wider">
+                ✨ Hidden Gems from SQLite ExtremumValues
+              </span>
+              <h2 class="text-lg font-bold mt-0.5">
+                What You Didn&rsquo;t Know Your Training Data Could Tell You
+              </h2>
+              <p class="text-xs text-[var(--muted-foreground)]">
+                Calculated 100% offline from your recorded HR, Cadence, Power, timestamps, and route clusters.
+              </p>
+            </div>
+          </div>
+
+          <!-- 4 Surprising Discovery Cards -->
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+
+            <!-- Discovery 1: Mechanical & Biological Machine -->
+            <div class="p-4 rounded-xl bg-[var(--background)] border border-[var(--border)] space-y-2">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-bold text-rose-400 uppercase">❤️ The Biological Engine</span>
+                <span class="text-xs px-2 py-0.5 rounded bg-rose-500/15 text-rose-400 font-semibold">HR &times; Cadence</span>
+              </div>
+              <div id="gem-cranks" class="text-xl font-extrabold">1,408,926 Crank Turns</div>
+              <p id="gem-cranks-desc" class="text-xs text-[var(--muted-foreground)] leading-relaxed">
+                Across your 679 cadence-tracked rides, your legs turned the pedals <strong>1.41 million times</strong> while your heart beat an estimated <strong>9.98 million times</strong> for your sport.
+              </p>
+            </div>
+
+            <!-- Discovery 2: The Human Power Plant -->
+            <div class="p-4 rounded-xl bg-[var(--background)] border border-[var(--border)] space-y-2">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-bold text-amber-400 uppercase">⚡ The Human Power Plant</span>
+                <span class="text-xs px-2 py-0.5 rounded bg-amber-500/15 text-amber-400 font-semibold">652 Power Rides</span>
+              </div>
+              <div id="gem-kwh" class="text-xl font-extrabold">67.6 kWh Generated</div>
+              <p id="gem-kwh-desc" class="text-xs text-[var(--muted-foreground)] leading-relaxed">
+                Your <strong>243,207 kJ</strong> of mechanical pedal work could power an e-bike for <strong>6,760 km</strong>, brew <strong>2,704 espressos</strong>, or charge your Pixel 10 <strong>4,500 times</strong>.
+              </p>
+            </div>
+
+            <!-- Discovery 3: Circadian & Day-of-Week DNA -->
+            <div class="p-4 rounded-xl bg-[var(--background)] border border-[var(--border)] space-y-2">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-bold text-sky-400 uppercase">🌅 Your Biological Prime Time</span>
+                <span class="text-xs px-2 py-0.5 rounded bg-sky-500/15 text-sky-400 font-semibold">Circadian DNA</span>
+              </div>
+              <div id="gem-circadian" class="text-xl font-extrabold">Friday Tailwinds (+29%)</div>
+              <p id="gem-circadian-desc" class="text-xs text-[var(--muted-foreground)] leading-relaxed">
+                Your most frequent launch window is <strong>06:00–08:00 (#bike2work)</strong>, and your outdoor rides on <strong>Fridays</strong> average <strong>29% higher speed</strong> than Mondays.
+              </p>
+            </div>
+
+            <!-- Discovery 4: Explorer vs. Local Legend Index -->
+            <div class="p-4 rounded-xl bg-[var(--background)] border border-[var(--border)] space-y-2">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-bold text-emerald-400 uppercase">🧭 Explorer vs. Ritual Index</span>
+                <span class="text-xs px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-400 font-semibold">Spatial Clusters</span>
+              </div>
+              <div id="gem-explorer" class="text-xl font-extrabold">88% Ritual / 12% Explorer</div>
+              <p id="gem-explorer-desc" class="text-xs text-[var(--muted-foreground)] leading-relaxed">
+                <strong>1,606 workouts</strong> conquered your 78 signature loops, while <strong>171 adventures</strong> ventured onto brand-new roads (including your 107 km Schwarzwald crossing).
+              </p>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- SECTION B: Idea #2 — The Achievement Room (Auto-Unlocked Trophies) -->
+        <div class="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-5 shadow-sm space-y-4">
+          <div class="flex items-center justify-between">
+            <div>
+              <span class="text-xs font-semibold text-amber-400 uppercase tracking-wider">
+                🏆 The Achievement Room
+              </span>
+              <h2 class="text-lg font-bold">Unlocked Secret Trophies (7 / 8)</h2>
+            </div>
+            <span id="selected-badge-hint" class="text-xs text-[var(--muted-foreground)]">
+              Tap any badge for its unlock story
+            </span>
+          </div>
+
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+            <button onclick="selectBadge(0)" class="badge-card p-3 rounded-xl bg-amber-500/10 border border-amber-500/40 text-left transition hover:scale-[1.02]">
+              <div class="text-2xl">🌲</div>
+              <div class="text-xs font-bold mt-1">Century Rider</div>
+              <div class="text-xs text-amber-400">178.4 km Max</div>
+            </button>
+
+            <button onclick="selectBadge(1)" class="badge-card p-3 rounded-xl bg-[var(--background)] border border-[var(--border)] text-left transition hover:scale-[1.02]">
+              <div class="text-2xl">🏔️</div>
+              <div class="text-xs font-bold mt-1">10&times; Everest</div>
+              <div class="text-xs text-emerald-400">88,480 m Club</div>
+            </button>
+
+            <button onclick="selectBadge(2)" class="badge-card p-3 rounded-xl bg-[var(--background)] border border-[var(--border)] text-left transition hover:scale-[1.02]">
+              <div class="text-2xl">🌅</div>
+              <div class="text-xs font-bold mt-1">Dawn Patrol</div>
+              <div class="text-xs text-sky-400">57 Rides &lt; 07:00</div>
+            </button>
+
+            <button onclick="selectBadge(3)" class="badge-card p-3 rounded-xl bg-[var(--background)] border border-[var(--border)] text-left transition hover:scale-[1.02]">
+              <div class="text-2xl">⚙️</div>
+              <div class="text-xs font-bold mt-1">Million Cranks</div>
+              <div class="text-xs text-purple-400">1.41M Revolutions</div>
+            </button>
+
+            <button onclick="selectBadge(4)" class="badge-card p-3 rounded-xl bg-[var(--background)] border border-[var(--border)] text-left transition hover:scale-[1.02]">
+              <div class="text-2xl">📡</div>
+              <div class="text-xs font-bold mt-1">ANT+ Pioneer</div>
+              <div class="text-xs text-amber-400">Since Apr 2012</div>
+            </button>
+
+            <button onclick="selectBadge(5)" class="badge-card p-3 rounded-xl bg-[var(--background)] border border-[var(--border)] text-left transition hover:scale-[1.02]">
+              <div class="text-2xl">🔁</div>
+              <div class="text-xs font-bold mt-1">Local Legend</div>
+              <div class="text-xs text-emerald-400">#bike2work #147</div>
+            </button>
+
+            <button onclick="selectBadge(6)" class="badge-card p-3 rounded-xl bg-[var(--background)] border border-[var(--border)] text-left transition hover:scale-[1.02]">
+              <div class="text-2xl">⚡</div>
+              <div class="text-xs font-bold mt-1">60 kWh Grid</div>
+              <div class="text-xs text-amber-400">67.6 kWh Output</div>
+            </button>
+
+            <button onclick="selectBadge(7)" class="badge-card p-3 rounded-xl bg-[var(--background)]/50 border border-dashed border-[var(--border)] text-left opacity-65 transition hover:opacity-100">
+              <div class="text-2xl">🔒</div>
+              <div class="text-xs font-bold mt-1">Half-Way World</div>
+              <div class="text-xs text-[var(--muted-foreground)]">20,529 / 40,075 km</div>
+            </button>
+          </div>
+
+          <!-- Selected Badge Story Box -->
+          <div id="badge-story-box" class="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-between gap-3">
+            <div>
+              <div id="badge-story-title" class="text-xs font-bold text-amber-400">
+                🌲 Century Rider — Unlocked on 14 Apr 2012 &amp; topped on 12 Aug 2018
+              </div>
+              <div id="badge-story-text" class="text-xs text-[var(--foreground)] mt-0.5">
+                First broken just 3 days after installing aTrainingTracker (110.2 km, 1,318 m climb), and crowned by &ldquo;Urlaub 1&rdquo; (178.4 km) and &ldquo;#bike2home #99 via Schwarzwald 🌲🌲🌲⛰️🚴&rdquo; (107.1 km).
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- SECTION C: Idea #4 — Shareable "Athlete Passport / Wrapped" Card -->
+        <div class="passport-card-bg text-white rounded-2xl p-5 border border-amber-500/40 shadow-lg space-y-4">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2.5">
+              <span id="passport-emblem" class="text-2xl">🪙</span>
+              <div>
+                <div class="text-xs uppercase tracking-widest text-amber-300 font-bold">
+                  aTrainingTracker &bull; Official Athlete Passport
+                </div>
+                <div id="passport-title" class="text-base font-extrabold">
+                  Rainer&rsquo;s 14-Year Sporting Journey (2012–2026)
+                </div>
+              </div>
+            </div>
+            <button onclick="copyShareSummary()" id="share-btn" class="px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs transition cursor-pointer">
+              📤 Share Card
+            </button>
+          </div>
+
+          <div class="grid grid-cols-4 gap-2 text-center bg-white/5 rounded-xl p-3 border border-white/10">
+            <div>
+              <div id="pass-km" class="text-base font-extrabold text-amber-300">20,529 km</div>
+              <div class="text-xs text-slate-300">Distance</div>
+            </div>
+            <div>
+              <div id="pass-elev" class="text-base font-extrabold text-amber-300">10.0&times;</div>
+              <div class="text-xs text-slate-300">Mt. Everest</div>
+            </div>
+            <div>
+              <div id="pass-cranks" class="text-base font-extrabold text-amber-300">1.41M</div>
+              <div class="text-xs text-slate-300">Pedal Turns</div>
+            </div>
+            <div>
+              <div id="pass-kwh" class="text-base font-extrabold text-amber-300">67.6 kWh</div>
+              <div class="text-xs text-slate-300">Human Power</div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const DATA = {
+      all: {
+        subtitle: "Every kilometer since 11 Apr 2012 tells a story (5,326 days)",
+        passportTitle: "Rainer’s 14-Year Sporting Journey (2012–2026)",
+        sports: {
+          all: {
+            distance: "20,529 km",
+            equator: "🌍 51.2% of Equator",
+            workouts: "1,777",
+            hours: "1,322 h",
+            daysSub: "55.1 days nonstop motion",
+            elevation: "88,450 m",
+            everestSub: "🏔️ 10.0× Mt. Everest",
+            routes: "78",
+            routesSub: "Favorite route clusters",
+            passKm: "20,529 km",
+            passElev: "10.0×",
+            passCranks: "1.41M",
+            passKwh: "67.6 kWh"
+          },
+          bike: {
+            distance: "18,135 km",
+            equator: "🚴 1,463 Rides",
+            workouts: "1,463",
+            hours: "902 h",
+            daysSub: "37.6 days in the saddle",
+            elevation: "74,200 m",
+            everestSub: "🏔️ 8.4× Mt. Everest",
+            routes: "64",
+            routesSub: "Cycling route clusters",
+            passKm: "18,135 km",
+            passElev: "8.4×",
+            passCranks: "1.41M",
+            passKwh: "67.6 kWh"
+          },
+          run: {
+            distance: "2,394 km",
+            equator: "🏃 56.7 Marathons",
+            workouts: "314",
+            hours: "420 h",
+            daysSub: "17.5 days on foot",
+            elevation: "14,250 m",
+            everestSub: "🏔️ 1.6× Mt. Everest",
+            routes: "14",
+            routesSub: "Running route clusters",
+            passKm: "2,394 km",
+            passElev: "1.6×",
+            passCranks: "3.9M Steps",
+            passKwh: "19.4 kWh"
+          }
+        },
+        milestones: [
+          { icon: "🌱", title: "First Recorded Workout", meta: "11 Apr 2012 • 17:09", val: "Day 1 of 5,326" },
+          { icon: "🌲", title: "#bike2home #99 via Schwarzwald", meta: "17 Jul 2017 • 4h 17m", val: "107.1 km • 1,190 m" },
+          { icon: "🏆", title: "Longest Single Ride (Urlaub 1)", meta: "12 Aug 2018 • Cycling", val: "178.4 km • 1,153 m" },
+          { icon: "🔥", title: "Most Active Year Ever (2018)", meta: "412 Workouts • 309 hours", val: "5,718 km" }
+        ]
+      },
+      "2026": {
+        subtitle: "Your 2026 Season Wrapped (Jan – Nov 2026)",
+        passportTitle: "Rainer’s 2026 Training Wrapped",
+        sports: {
+          all: {
+            distance: "744 km",
+            equator: "✨ 185 Workouts in 2026",
+            workouts: "185",
+            hours: "112.9 h",
+            daysSub: "4.7 days active in 2026",
+            elevation: "15,207 m",
+            everestSub: "🏔️ 1.72× Mt. Everest",
+            routes: "19",
+            routesSub: "Active loops in 2026",
+            passKm: "744 km",
+            passElev: "1.72×",
+            passCranks: "118k",
+            passKwh: "5.4 kWh"
+          },
+          bike: {
+            distance: "582 km",
+            equator: "🚴 142 Rides in 2026",
+            workouts: "142",
+            hours: "78.4 h",
+            daysSub: "3.3 days in the saddle",
+            elevation: "12,410 m",
+            everestSub: "🏔️ 1.40× Mt. Everest",
+            routes: "14",
+            routesSub: "Cycling loops in 2026",
+            passKm: "582 km",
+            passElev: "1.40×",
+            passCranks: "118k",
+            passKwh: "5.4 kWh"
+          },
+          run: {
+            distance: "162 km",
+            equator: "🏃 43 Runs in 2026",
+            workouts: "43",
+            hours: "34.5 h",
+            daysSub: "1.4 days running",
+            elevation: "2,797 m",
+            everestSub: "🏔️ 0.32× Mt. Everest",
+            routes: "5",
+            routesSub: "Running loops in 2026",
+            passKm: "162 km",
+            passElev: "0.32×",
+            passCranks: "265k Steps",
+            passKwh: "1.3 kWh"
+          }
+        },
+        milestones: [
+          { icon: "📅", title: "Busiest Month of 2026", meta: "October 2026", val: "38 Workouts" },
+          { icon: "⛰️", title: "2026 Vertical Milestone", meta: "Passed 1.5× Mt. Everest", val: "15,207 m climbed" },
+          { icon: "💓", title: "First Live DFA a1 HRV Test", meta: "10 Nov 2026 • Evening", val: "ANT+ & BLE Lab" }
+        ]
+      },
+      "2018": {
+        subtitle: "Flashback to Your All-Time Peak Season (2018)",
+        passportTitle: "Rainer’s 2018 Peak Season Retrospective",
+        sports: {
+          all: {
+            distance: "5,718 km",
+            equator: "🔥 1.13 Workouts / Day!",
+            workouts: "412",
+            hours: "309.3 h",
+            daysSub: "12.9 full days moving",
+            elevation: "28,450 m",
+            everestSub: "🏔️ 3.21× Mt. Everest",
+            routes: "34",
+            routesSub: "Routes conquered in 2018",
+            passKm: "5,718 km",
+            passElev: "3.21×",
+            passCranks: "412k",
+            passKwh: "19.8 kWh"
+          },
+          bike: {
+            distance: "5,190 km",
+            equator: "🚴 364 Rides in 2018",
+            workouts: "364",
+            hours: "254.0 h",
+            daysSub: "10.6 days in the saddle",
+            elevation: "25,100 m",
+            everestSub: "🏔️ 2.84× Mt. Everest",
+            routes: "28",
+            routesSub: "Cycling loops in 2018",
+            passKm: "5,190 km",
+            passElev: "2.84×",
+            passCranks: "412k",
+            passKwh: "19.8 kWh"
+          },
+          run: {
+            distance: "528 km",
+            equator: "🏃 48 Runs in 2018",
+            workouts: "48",
+            hours: "55.3 h",
+            daysSub: "2.3 days on foot",
+            elevation: "3,350 m",
+            everestSub: "🏔️ 0.38× Mt. Everest",
+            routes: "6",
+            routesSub: "Running loops in 2018",
+            passKm: "528 km",
+            passElev: "0.38×",
+            passCranks: "840k Steps",
+            passKwh: "4.1 kWh"
+          }
+        },
+        milestones: [
+          { icon: "🚀", title: "Longest Ride of 2018 (Urlaub 1)", meta: "12 Aug 2018", val: "178.4 km • 1,153 m" },
+          { icon: "⚡", title: "Commute Machine", meta: "#bike2work #147 on 12 Oct 2018", val: "412 Workouts/Yr" },
+          { icon: "🏔️", title: "Triple-Everest Season", meta: "28,450 m elevation gain", val: "3.21× Everest" }
+        ]
+      }
+    };
+
+    const BADGES = [
+      {
+        title: "🌲 Century Rider — Unlocked on 14 Apr 2012 & topped on 12 Aug 2018",
+        text: "First broken just 3 days after installing aTrainingTracker (110.2 km, 1,318 m climb), and crowned by “Urlaub 1” (178.4 km) and “#bike2home #99 via Schwarzwald 🌲🌲🌲⛰️🚴” (107.1 km)."
+      },
+      {
+        title: "🏔️ 10× Mount Everest Club — 88,450 m Cumulative Vertical Ascent",
+        text: "You have climbed the equivalent of Mount Everest (8,848 m) ten times over — and already passed 1.72× Mount Everest in 2026 alone."
+      },
+      {
+        title: "🌅 Dawn Patrol Legend — 57 Early-Morning Launches Before 07:00",
+        text: "While the city sleeps, you are already rolling. Your 04:00–06:59 UTC morning rides are the backbone of your #bike2work streak."
+      },
+      {
+        title: "⚙️ The Million-Crank Club — 1,408,926 Pedal Revolutions",
+        text: "Computed directly from your 679 cadence-recorded rides: your legs have completed over 1.4 million full circles."
+      },
+      {
+        title: "📡 ANT+ & BLE Pioneer — Recording Since 11 April 2012",
+        text: "5,326 days of sporting history between your very first workout in 2012 and tonight’s sensor session."
+      },
+      {
+        title: "🔁 Local Legend — 1,606 Workouts Across 78 Signature Loops",
+        text: "From #bike2work #147 to your favorite home climbs, you know every pothole and apex by heart."
+      },
+      {
+        title: "⚡ 60 kWh Human Power Plant — 67.6 kWh Mechanical Energy",
+        text: "Across 652 power-meter workouts (243,207 kJ), your legs produced enough energy to drive an e-bike 6,760 km."
+      },
+      {
+        title: "🔒 Half-Way Around the World — 51.2% of Earth’s Equator (20,529 / 40,075 km)",
+        text: "You passed the halfway mark (20,038 km) this season! Next big planetary milestone: Full Equator Circumnavigation."
+      }
+    ];
+
+    let currentPeriod = "all";
+    let currentSport = "all";
+    let currentTier = "gold";
+
+    function render() {
+      const pData = DATA[currentPeriod];
+      const sData = pData.sports[currentSport];
+
+      document.getElementById("vault-subtitle").textContent = pData.subtitle;
+      document.getElementById("passport-title").textContent = pData.passportTitle;
+
+      document.getElementById("stat-distance").textContent = sData.distance;
+      document.getElementById("stat-equator-badge").textContent = sData.equator;
+      document.getElementById("stat-workouts").textContent = sData.workouts;
+      document.getElementById("stat-hours").textContent = sData.hours;
+      document.getElementById("stat-days-sub").textContent = sData.daysSub;
+      document.getElementById("stat-elevation").textContent = sData.elevation;
+      document.getElementById("stat-everest-sub").textContent = sData.everestSub;
+      document.getElementById("stat-routes").textContent = sData.routes;
+      document.getElementById("stat-routes-sub").textContent = sData.routesSub;
+
+      document.getElementById("pass-km").textContent = sData.passKm;
+      document.getElementById("pass-elev").textContent = sData.passElev;
+      document.getElementById("pass-cranks").textContent = sData.passCranks;
+      document.getElementById("pass-kwh").textContent = sData.passKwh;
+
+      const listEl = document.getElementById("milestone-list");
+      listEl.innerHTML = pData.milestones.map(m => `
+        <div class="flex items-center justify-between p-2.5 rounded-xl bg-[var(--background)] border border-[var(--border)] hover:border-amber-500/40 transition cursor-pointer">
+          <div class="flex items-center gap-2.5">
+            <span class="text-lg">${m.icon}</span>
+            <div>
+              <div class="text-xs font-bold">${m.title}</div>
+              <div class="text-xs text-[var(--muted-foreground)]">${m.meta}</div>
+            </div>
+          </div>
+          <span class="text-xs font-bold text-amber-400">${m.val}</span>
+        </div>
+      `).join("");
+    }
+
+    function setPeriod(period) {
+      currentPeriod = period;
+      ["all", "2026", "2018"].forEach(p => {
+        const btn = document.getElementById("period-" + p);
+        if (p === period) {
+          btn.className = "period-btn py-1.5 rounded-lg text-xs font-semibold bg-[var(--primary)] text-[var(--primary-foreground)] transition";
+        } else {
+          btn.className = "period-btn py-1.5 rounded-lg text-xs font-medium text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition";
+        }
+      });
+      render();
+    }
+
+    function setSport(sport) {
+      currentSport = sport;
+      ["all", "bike", "run"].forEach(s => {
+        const btn = document.getElementById("sport-" + s);
+        if (s === sport) {
+          btn.className = "sport-btn px-3 py-1 rounded-full text-xs font-semibold bg-amber-500/20 text-amber-400 border border-amber-500/40";
+        } else {
+          btn.className = "sport-btn px-3 py-1 rounded-full text-xs font-medium bg-[var(--background)] text-[var(--muted-foreground)] border border-[var(--border)]";
+        }
+      });
+      render();
+    }
+
+    function setTier(tier) {
+      currentTier = tier;
+      const meta = {
+        pioneer: { icon: "🧰", label: "PIONEER CHEST", pillClass: "bg-amber-500/20 text-amber-300" },
+        gold:    { icon: "🪙", label: "GOLD VAULT",    pillClass: "bg-amber-500/20 text-amber-400" },
+        diamond: { icon: "💎", label: "DIAMOND VAULT", pillClass: "bg-cyan-500/20 text-cyan-300" }
+      }[tier];
+
+      document.getElementById("cockpit-emblem-icon").textContent = meta.icon;
+      document.getElementById("vault-header-badge").textContent = meta.icon;
+      document.getElementById("passport-emblem").textContent = meta.icon;
+      const pill = document.getElementById("vault-tier-pill");
+      pill.textContent = meta.label;
+      pill.className = "px-2 py-0.5 text-xs font-semibold rounded-full " + meta.pillClass;
+
+      ["pioneer", "gold", "diamond"].forEach(t => {
+        const btn = document.getElementById("tier-" + t);
+        if (t === tier) {
+          btn.className = "tier-btn px-2.5 py-1 rounded-lg text-xs font-semibold bg-amber-500/20 text-amber-400 border border-amber-500/40 transition";
+        } else {
+          btn.className = "tier-btn px-2.5 py-1 rounded-lg text-xs font-medium transition";
+        }
+      });
+    }
+
+    function selectBadge(idx) {
+      const b = BADGES[idx];
+      document.getElementById("badge-story-title").textContent = b.title;
+      document.getElementById("badge-story-text").textContent = b.text;
+    }
+
+    function pulseVaultHighlight() {
+      const sheet = document.getElementById("vault-sheet");
+      sheet.classList.add("ring-2", "ring-amber-400", "rounded-2xl");
+      setTimeout(() => sheet.classList.remove("ring-2", "ring-amber-400", "rounded-2xl"), 900);
+    }
+
+    function copyShareSummary() {
+      const btn = document.getElementById("share-btn");
+      btn.textContent = "✅ Ready to Share!";
+      setTimeout(() => { btn.textContent = "📤 Share Card"; }, 1800);
+    }
+
+    render();
+  </script>
+</body>
+</html>
