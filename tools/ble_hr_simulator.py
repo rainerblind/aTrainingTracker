@@ -269,6 +269,7 @@ class RrSynthesizer:
         self.quant_error_ms = 0.0
         self.artifact_queue = []
         self.gap_ticks_remaining = 0
+        self.next_rr_ms = None
 
     def set_bpm(self, bpm):
         self.bpm = max(30, min(240, int(bpm)))
@@ -325,26 +326,37 @@ class RrSynthesizer:
         """
         Advances the phase accumulator across a 1 Hz tick (dt_ms).
         Returns a list of completed RR intervals encoded in 1/1024s uint16 raw units.
-        Guarantees 60s cumulative drift <= 50 ms (REQ-SIM-001.2).
+        Guarantees phase-locked wall-clock tracking without timing drift (REQ-SIM-001.2).
+        During RF dropouts ('g'), intermediate beats are dropped over the air to prevent
+        buffer bloat upon resumption and correctly trigger client ARTIFACT_GAP / DRIFT_THRESHOLD_MS.
         """
+        self.phase_ms += dt_ms
+        if self.next_rr_ms is None:
+            self.next_rr_ms = self.generate_next_rr_ms()
+
         if self.gap_ticks_remaining > 0:
             self.gap_ticks_remaining -= 1
-            self.phase_ms += dt_ms
+            # Discard beats that occurred during RF dropout (lost over the air)
+            while self.phase_ms >= self.next_rr_ms - 1e-6:
+                self.phase_ms -= self.next_rr_ms
+                self.next_rr_ms = self.generate_next_rr_ms()
+            if abs(self.phase_ms) < 1e-6:
+                self.phase_ms = 0.0
             return []
 
-        self.phase_ms += dt_ms
-        rr_mean = 60000.0 / self.bpm
         emitted_raw_1024 = []
-
-        while self.phase_ms >= rr_mean - 1e-6:
-            rr_ms = self.generate_next_rr_ms()
+        while self.phase_ms >= self.next_rr_ms - 1e-6:
+            rr_ms = self.next_rr_ms
             target_ms = rr_ms + self.quant_error_ms
             raw = int(round(target_ms * 1024.0 / 1000.0))
             raw = max(1, min(65535, raw))
             eff_ms = raw * 1000.0 / 1024.0
             self.quant_error_ms = target_ms - eff_ms
-            self.phase_ms -= rr_mean
+
+            # Subtract actual generated beat duration to eliminate timing drift
+            self.phase_ms -= rr_ms
             emitted_raw_1024.append(raw)
+            self.next_rr_ms = self.generate_next_rr_ms()
 
         if abs(self.phase_ms) < 1e-6:
             self.phase_ms = 0.0

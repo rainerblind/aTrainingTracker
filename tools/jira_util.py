@@ -1221,9 +1221,10 @@ def submit_stage(parent_key, stage_arg, text_or_file, summary_override=None, rol
     existing_subtask_status = None
     for st in subtasks:
         st_summary = st.get("fields", {}).get("summary", "").strip()
-        if re.search(spec["pattern"], st_summary, re.IGNORECASE):
+        st_status = st.get("fields", {}).get("status", {}).get("name", "").strip().lower()
+        if re.search(spec["pattern"], st_summary, re.IGNORECASE) and st_status not in ("erledigt", "done", "closed", "resolved"):
             existing_subtask_key = st.get("key")
-            existing_subtask_status = st.get("fields", {}).get("status", {}).get("name", "").strip().lower()
+            existing_subtask_status = st_status
             break
 
     if existing_subtask_key:
