@@ -8,15 +8,15 @@
     <string name="sporting_journey_sport_cycling">Cyclisme</string>
     <string name="sporting_journey_sport_running">Course à pied</string>
     <string name="sporting_journey_hero_distance_label">Distance totale enregistrée</string>
-    <string name="sporting_journey_hero_equator_badge">🌍 %1$.1f%% de l\'Équateur</string>
+    <string name="sporting_journey_hero_equator_badge">%1$.1f%% de l\'Équateur</string>
     <string name="sporting_journey_hero_workouts_label">Séances terminées</string>
     <string name="sporting_journey_hero_hours_label">Temps d\'entraînement actif</string>
     <string name="sporting_journey_hero_days_sub">%1$.1f jours d\'activité continue</string>
     <string name="sporting_journey_hero_elevation_label">Dénivelé positif accumulé</string>
-    <string name="sporting_journey_hero_everest_sub">🏔️ %1$.1f× Mt. Everest</string>
+    <string name="sporting_journey_hero_everest_sub">%1$.1f× Mt. Everest</string>
     <string name="sporting_journey_hero_routes_label">Boucles habituelles</string>
     <string name="sporting_journey_hidden_gems_header">Ce que vos données révèlent</string>
-    <string name="sporting_journey_hidden_gems_badge">Trésors cachés de SQLite</string>
+    <string name="sporting_journey_hidden_gems_badge">Aperçus de capteurs hors ligne</string>
     <string name="sporting_journey_hidden_gems_desc" formatted="false">Calculé 100% hors ligne à partir de votre FC, cadence, puissance et parcours enregistrés.</string>
     <string name="sporting_journey_gem_engine_title">Le moteur biologique &amp; mécanique</string>
     <string name="sporting_journey_gem_engine_pill">FC × Cadence</string>
@@ -64,9 +64,9 @@
     <string name="sporting_journey_badge_pioneer_sub">Athlète fidèle</string>
     <string name="sporting_journey_badge_pioneer_story_title">Athlète pionnier — Débloqué !</string>
     <string name="sporting_journey_badge_pioneer_story_text">Plus de %1$d jours d\'historique sportif enregistrés avec aTrainingTracker.</string>
-    <string name="sporting_journey_badge_legend_title">Légende locale</string>
+    <string name="sporting_journey_badge_legend_title">Maître du parcours</string>
     <string name="sporting_journey_badge_legend_sub">Parcours fétiches</string>
-    <string name="sporting_journey_badge_legend_story_title">Légende locale — Débloqué !</string>
+    <string name="sporting_journey_badge_legend_story_title">Maître du parcours — Débloqué !</string>
     <string name="sporting_journey_badge_legend_story_text">Vos circuits fétiches ont été parcourus plus de %1$d fois.</string>
     <string name="sporting_journey_badge_powerplant_title">Centrale humaine</string>
     <string name="sporting_journey_badge_powerplant_sub">Club 60 kWh</string>
@@ -79,6 +79,16 @@
     <string name="sporting_journey_locked_hint">Continuez à vous entraîner pour débloquer ce trophée secret !</string>
     <string name="sporting_journey_share_card">Partager le passeport</string>
     <string name="sporting_journey_share_title">Passeport d\'athlète aTrainingTracker</string>
+    <string name="sporting_journey_share_passport_header">aTrainingTracker • Passeport officiel d\'athlète</string>
+    <string name="sporting_journey_share_tier_horizon">Niveau : %1$s | Période : %2$s</string>
+    <string name="sporting_journey_share_distance">Distance : %1$s (%2$s%% de l\'Équateur)</string>
+    <string name="sporting_journey_share_elevation">Dénivelé : %1$s (%2$s× Mt. Everest)</string>
+    <string name="sporting_journey_share_active_time">Temps actif : %1$s (%2$s jours en continu)</string>
+    <string name="sporting_journey_share_pedal_revs">Tours de pédale : %1$s</string>
+    <string name="sporting_journey_share_heartbeats">Battements de cœur : %1$s</string>
+    <string name="sporting_journey_share_mechanical_work">Travail mécanique : %1$s kWh (%2$s d\'autonomie e-bike)</string>
+    <string name="sporting_journey_share_trophies">Trophées secrets : %1$d / %2$d Débloqués</string>
+    <string name="sporting_journey_share_footer" formatted="false">Enregistré 100% hors ligne avec aTrainingTracker (2012–2026)</string>
     <string name="sporting_journey_entry_supporter_screen">La salle des trophées — Mon parcours sportif</string>
     <string name="sporting_journey_entry_supporter_desc">Explorez votre rétrospective historique, vos pépites et vos trophées.</string>
     <string name="sporting_journey_no_workouts">Aucune séance terminée trouvée pour cette sélection.</string>

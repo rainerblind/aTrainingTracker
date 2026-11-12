@@ -2,21 +2,21 @@
 <resources>
     <string name="sporting_journey_title">Moja podróż sportowa</string>
     <string name="sporting_journey_subtitle_all_time">Każdy kilometr od %1$s opowiada historię (%2$d dni)</string>
-    <string name="sporting_journey_subtitle_wrapped">Podsumowanie Twojego sezonu %1$d</string>
+    <string name="sporting_journey_subtitle_wrapped">Retrospektywa Twojego sezonu %1$d</string>
     <string name="sporting_journey_horizon_all_time">Od początku</string>
     <string name="sporting_journey_sport_all">Wszystkie sporty</string>
     <string name="sporting_journey_sport_cycling">Kolarstwo</string>
     <string name="sporting_journey_sport_running">Bieganie</string>
     <string name="sporting_journey_hero_distance_label">Łączny zarejestrowany dystans</string>
-    <string name="sporting_journey_hero_equator_badge">🌍 %1$.1f%% równika</string>
+    <string name="sporting_journey_hero_equator_badge">%1$.1f%% równika</string>
     <string name="sporting_journey_hero_workouts_label">Ukończone treningi</string>
     <string name="sporting_journey_hero_hours_label">Czas aktywnego treningu</string>
     <string name="sporting_journey_hero_days_sub">%1$.1f dni nieprzerwanego ruchu</string>
     <string name="sporting_journey_hero_elevation_label">Suma przewyższeń</string>
-    <string name="sporting_journey_hero_everest_sub">🏔️ %1$.1f× Mt. Everest</string>
+    <string name="sporting_journey_hero_everest_sub">%1$.1f× Mt. Everest</string>
     <string name="sporting_journey_hero_routes_label">Ulubione pętle tras</string>
     <string name="sporting_journey_hidden_gems_header">Co kryją Twoje dane treningowe</string>
-    <string name="sporting_journey_hidden_gems_badge">Ukryte skarby z SQLite</string>
+    <string name="sporting_journey_hidden_gems_badge">Ukryte wnioski z czujników</string>
     <string name="sporting_journey_hidden_gems_desc" formatted="false">Obliczone w 100% offline na podstawie danych tętna, kadencji, mocy i tras.</string>
     <string name="sporting_journey_gem_engine_title">Silnik biologiczny i mechaniczny</string>
     <string name="sporting_journey_gem_engine_pill">Tętno × Kadencja</string>
@@ -64,9 +64,9 @@
     <string name="sporting_journey_badge_pioneer_sub">Wieloletni weteran</string>
     <string name="sporting_journey_badge_pioneer_story_title">Sportowiec pionier — Odblokowano!</string>
     <string name="sporting_journey_badge_pioneer_story_text">Ponad %1$d dni historii sportowej zarejestrowane w aTrainingTracker.</string>
-    <string name="sporting_journey_badge_legend_title">Lokalna legenda</string>
+    <string name="sporting_journey_badge_legend_title">Mistrz tras</string>
     <string name="sporting_journey_badge_legend_sub">Ulubione pętle</string>
-    <string name="sporting_journey_badge_legend_story_title">Lokalna legenda — Odblokowano!</string>
+    <string name="sporting_journey_badge_legend_story_title">Mistrz tras — Odblokowano!</string>
     <string name="sporting_journey_badge_legend_story_text">Twoje ulubione pętle pokonane ponad %1$d razy.</string>
     <string name="sporting_journey_badge_powerplant_title">Ludzka elektrownia</string>
     <string name="sporting_journey_badge_powerplant_sub">Klub 60 kWh</string>
@@ -79,6 +79,16 @@
     <string name="sporting_journey_locked_hint">Trenuj dalej, aby odblokować to sekretne trofeum!</string>
     <string name="sporting_journey_share_card">Udostępnij paszport</string>
     <string name="sporting_journey_share_title">Paszport sportowca aTrainingTracker</string>
+    <string name="sporting_journey_share_passport_header">aTrainingTracker • Oficjalny paszport sportowca</string>
+    <string name="sporting_journey_share_tier_horizon">Poziom: %1$s | Horyzont: %2$s</string>
+    <string name="sporting_journey_share_distance">Dystans: %1$s (%2$s%% równika)</string>
+    <string name="sporting_journey_share_elevation">Przewyższenie: %1$s (%2$s× Mt. Everest)</string>
+    <string name="sporting_journey_share_active_time">Czas aktywności: %1$s (%2$s dni non-stop)</string>
+    <string name="sporting_journey_share_pedal_revs">Obroty korby: %1$s</string>
+    <string name="sporting_journey_share_heartbeats">Uderzenia serca: %1$s</string>
+    <string name="sporting_journey_share_mechanical_work">Praca mechaniczna: %1$s kWh (%2$s zasięgu e-bike)</string>
+    <string name="sporting_journey_share_trophies">Sekretne trofea: %1$d / %2$d Odblokowane</string>
+    <string name="sporting_journey_share_footer" formatted="false">Zarejestrowano 100% offline w aTrainingTracker (2012–2026)</string>
     <string name="sporting_journey_entry_supporter_screen">Sala trofeów — Moja podróż sportowa</string>
     <string name="sporting_journey_entry_supporter_desc">Przeglądaj podsumowanie historii, ukryte skarby i odznaki.</string>
     <string name="sporting_journey_no_workouts">Brak ukończonych treningów dla wybranego filtru.</string>

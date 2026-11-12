@@ -832,3 +832,23 @@
   • Verify that `setHorizon` and `setSportFilter` immediately key `uiState.horizon` and `uiState.sportFilter` with `isLoading = true`.
   • Verify that rapid filter changes cancel obsolete in-flight repository coroutine jobs.
   (ATT-7321: [Verbesserung] SportingJourneyRepository & Aggregation: Fix recurring route cluster math, sport filtering, historical year range, and lifetime evaluation)
+
+
+---
+
+### TST-SPT-006: SportingJourney UI & UX Redesign, M3 Hierarchy, Grid Layout & Locale Formatting Tests [Verified]
+- **Target Requirement**: `REQ-SPT-005` (SportingJourney UI & UX Redesign, M3 Hierarchy, Grid Layout & Locale Formatting)
+- **Target Verification Component**: `SportingJourneyLocalizationContractTest.kt`, `SportingJourneyComponentsTest.kt`, `SportingJourneyShareHelperTest.kt`
+- **Verification Type**: Automated Unit & Contract Verification
+- **Test Description**:
+  1. *Terminology & Zero-Emoji XML Parity Contract Test (`TST-SPT-006.1`, `SportingJourneyLocalizationContractTest.kt`)*:
+  • Verify that `strings_sporting_journey.xml` across all 9 supported locales contains zero decorative inline Unicode emojis matching the ATT-5400 regex pattern `[\x{1F300}-\x{1F64F}\x{1F680}-\x{1F6FF}\x{2600}-\x{26FF}\x{2700}-\x{27BF}]`.
+  • Verify zero occurrences of Strava trademark "Local Legend", zero developer jargon "SQLite", and zero prototype phrases "Season Wrapped".
+  2. *Achievement Grid Layout & Header Weighting Test (`TST-SPT-006.2`, `SportingJourneyComponentsTest.kt`)*:
+  • Verify that chunked grid layout with 4 items per row pads incomplete rows with equal-weight spacers, preventing stretched cards.
+  • Verify that header rows in `HeroTotalsCard`, `HiddenGemsSection`, `GemCard`, `MilestonesSection`, and `AchievementRoomSection` apply `Modifier.weight(1f)` to title columns, preventing mid-word text wrapping and protecting trailing badges from compression.
+  3. *Locale.getDefault() & Imperial Unit Formatting Test (`TST-SPT-006.3`, `SportingJourneyShareHelperTest.kt`)*:
+  • Verify that number and date formatting across UI cards and share passport respects `Locale.getDefault()`.
+  • Verify that when `TrainingApplication.getUnit() == MyUnits.IMPERIAL`, total distance is formatted in miles (`mi`) and total elevation in feet (`ft`) using `BANALService` conversion factors.
+  • Verify that `SportingJourneyShareHelper.buildShareText` formats localized string templates.
+  (ATT-7323: [Verbesserung] SportingJourneySheet & SportingJourneyComponents: Material 3 redesign, row weight wrapping fixes, grid layout, and locale/unit formatting)

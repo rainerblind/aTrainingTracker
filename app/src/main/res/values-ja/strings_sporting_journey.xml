@@ -8,15 +8,15 @@
     <string name="sporting_journey_sport_cycling">サイクリング</string>
     <string name="sporting_journey_sport_running">ランニング</string>
     <string name="sporting_journey_hero_distance_label">記録された総距離</string>
-    <string name="sporting_journey_hero_equator_badge">🌍 赤道の%1$.1f%%</string>
+    <string name="sporting_journey_hero_equator_badge">赤道の%1$.1f%%</string>
     <string name="sporting_journey_hero_workouts_label">完了したワークアウト</string>
     <string name="sporting_journey_hero_hours_label">アクティブトレーニング時間</string>
     <string name="sporting_journey_hero_days_sub">%1$.1f日間のノンストップ運動</string>
     <string name="sporting_journey_hero_elevation_label">獲得標高</string>
-    <string name="sporting_journey_hero_everest_sub">🏔️ エベレスト%1$.1f個分</string>
+    <string name="sporting_journey_hero_everest_sub">エベレスト%1$.1f個分</string>
     <string name="sporting_journey_hero_routes_label">お気に入りルートクラスター</string>
     <string name="sporting_journey_hidden_gems_header">データが語る意外な事実</string>
-    <string name="sporting_journey_hidden_gems_badge">SQLiteに眠る隠れた宝物</string>
+    <string name="sporting_journey_hidden_gems_badge">オフラインセンサーインサイト</string>
     <string name="sporting_journey_hidden_gems_desc" formatted="false">記録された心拍数、ケイデンス、パワー、ルートから100%オフラインで算出。</string>
     <string name="sporting_journey_gem_engine_title">生体＆機械エンジン</string>
     <string name="sporting_journey_gem_engine_pill">心拍数 × ケイデンス</string>
@@ -64,9 +64,9 @@
     <string name="sporting_journey_badge_pioneer_sub">長年のベテラン</string>
     <string name="sporting_journey_badge_pioneer_story_title">パイオニアアスリート — 解除！</string>
     <string name="sporting_journey_badge_pioneer_story_text">aTrainingTrackerで%1$d日以上のトレーニング履歴を記録。</string>
-    <string name="sporting_journey_badge_legend_title">ローカルレジェンド</string>
+    <string name="sporting_journey_badge_legend_title">定番ルートマスター</string>
     <string name="sporting_journey_badge_legend_sub">お気に入り定番周回</string>
-    <string name="sporting_journey_badge_legend_story_title">ローカルレジェンド — 解除！</string>
+    <string name="sporting_journey_badge_legend_story_title">定番ルートマスター — 解除！</string>
     <string name="sporting_journey_badge_legend_story_text">お気に入り定番ルートを%1$d回以上走破しました。</string>
     <string name="sporting_journey_badge_powerplant_title">人力発電所</string>
     <string name="sporting_journey_badge_powerplant_sub">60 kWh クラブ</string>
@@ -79,6 +79,16 @@
     <string name="sporting_journey_locked_hint">トレーニングを続けてシークレットトロフィーを解除しましょう！</string>
     <string name="sporting_journey_share_card">パスポートを共有</string>
     <string name="sporting_journey_share_title">aTrainingTracker アスリートパスポート</string>
+    <string name="sporting_journey_share_passport_header">aTrainingTracker • 公式アスリートパスポート</string>
+    <string name="sporting_journey_share_tier_horizon">ランク: %1$s | 期間: %2$s</string>
+    <string name="sporting_journey_share_distance">総距離: %1$s（赤道の%2$s%%）</string>
+    <string name="sporting_journey_share_elevation">獲得標高: %1$s（エベレスト%2$s個分）</string>
+    <string name="sporting_journey_share_active_time">活動時間: %1$s（%2$s日間連続）</string>
+    <string name="sporting_journey_share_pedal_revs">ペダル回転数: %1$s</string>
+    <string name="sporting_journey_share_heartbeats">トレーニング心拍数: %1$s</string>
+    <string name="sporting_journey_share_mechanical_work">機械的仕事量: %1$s kWh（eバイク航続距離%2$s）</string>
+    <string name="sporting_journey_share_trophies">シークレットトロフィー: %1$d / %2$d 解除</string>
+    <string name="sporting_journey_share_footer" formatted="false">aTrainingTrackerで100%オフライン記録（2012–2026）</string>
     <string name="sporting_journey_entry_supporter_screen">トロフィールーム — マイ・スポーツジャーニー</string>
     <string name="sporting_journey_entry_supporter_desc">あなたのトレーニング軌跡、隠れた発見、解除バッジを閲覧できます。</string>
     <string name="sporting_journey_no_workouts">選択した条件の完了したワークアウトが見つかりませんでした。</string>

@@ -1174,3 +1174,41 @@
 • *Then* `availableYears` renders all historical years, and `Pioneer Athlete` remains unlocked based on the global 2012 inception date.
 
 **Invariants**: Zero SQLite schema migration; exact distance, elevation, and time math preserved; 100% 9-language localization parity.
+
+
+---
+
+### REQ-SPT-005: SportingJourney UI & UX Redesign, M3 Hierarchy, Grid Layout & Locale Formatting [Verified]
+- **Target**: `SportingJourneySheet.kt`, `SportingJourneyComponents.kt`, `SportingJourneyShareHelper.kt`, `strings_sporting_journey.xml`
+- **Implementation**: `SportingJourneySheet.kt`, `SportingJourneyComponents.kt`, `SportingJourneyShareHelper.kt`, `strings_sporting_journey.xml`
+- **Rationale**: Retrospective vault presentation must provide authentic Material 3 visual hierarchy, robust anti-wrapping layout mechanics, uniform achievement grid geometry, and internationalization compliance across all supported locales (ATT-7323):
+- **Description**:
+  1. *Authentic Material 3 Terminology & De-Jargonization (`REQ-SPT-005.1`)*:
+     - `strings_sporting_journey.xml` across all 9 supported locales SHALL replace Strava trademark terminology ("Local Legend") with authentic athletic terminology "Route Master".
+     - Prototype phrasing "Your %1$d Season Wrapped" SHALL be replaced with "Your %1$d Season Retrospective".
+     - SQLite developer jargon "Hidden Gems from SQLite" SHALL be replaced with user-facing "Offline Sensor Insights".
+  2. *Zero Decorative Emojis & Material 3 Vector Icons (`REQ-SPT-005.2`)*:
+     - All XML string resources in `strings_sporting_journey.xml` across all 9 locales SHALL strictly comply with ATT-5400 / REQ-UI-458.3, containing zero inline decorative Unicode emojis (`🌍`, `🏔️`, etc.).
+     - In `SportingJourneyComponents.kt`, `MilestonesSection` and `AchievementRoomSection` SHALL replace raw unstyled emoji text with styled Material 3 vector iconography using standard Compose `ImageVector`s within tonal surfaces.
+  3. *Row Layout Weighting & Anti-Wrapping Stability (`REQ-SPT-005.3`)*:
+     - In `HeroTotalsCard`, `HiddenGemsSection`, `GemCard`, `MilestonesSection`, `AchievementRoomSection`, and `AthletePassportShareCard`, all horizontal arrangement header rows (`Arrangement.SpaceBetween`) SHALL assign `Modifier.weight(1f)` to their title/content containers to eliminate mid-word wrapping and prevent trailing badges, metric chips, or action buttons from clipping off-screen.
+  4. *Uniform Grid Layout for Achievement Room (`REQ-SPT-005.4`)*:
+     - In `AchievementRoomSection`, the broken `FlowRow` implementation SHALL be replaced by a deterministic chunked grid (`achievements.chunked(4)`), where every cell has `Modifier.weight(1f)` and incomplete final rows are padded with `Spacer(Modifier.weight(1f))` ensuring uniform card widths and heights.
+  5. *Locale.getDefault() Formatting, Imperial Units & Localized Sharing (`REQ-SPT-005.5`)*:
+     - All numerical values (integers, floating-point numbers, percentages, hours) in UI cards and share generation SHALL be formatted using `Locale.getDefault()` instead of hardcoded `Locale.US`.
+     - Distance and elevation formatting SHALL respect user preferences (`TrainingApplication.getUnit() == MyUnits.IMPERIAL`), formatting distance in miles (`(totalDistanceKm * 1000.0) / BANALService.METER_PER_MILE`) and elevation in feet (`totalElevationM / BANALService.METER_PER_FOOT`).
+     - In `SportingJourneyShareHelper`, share passport text SHALL format localized strings using Android string resources and `Locale.getDefault()`, complying with the active unit system.
+  (ATT-7323: [Verbesserung] SportingJourneySheet & SportingJourneyComponents: Material 3 redesign, row weight wrapping fixes, grid layout, and locale/unit formatting)
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* the 9 supported Android locale resource trees,
+• *When* strings are audited by automated localization contract tests,
+• *Then* zero decorative Unicode emojis, zero Strava trademarks ("Local Legend"), zero developer jargon ("SQLite"), and zero prototype phrases ("Season Wrapped") are present.
+• *Given* an arbitrary count of achievements (including counts not divisible by 4),
+• *When* rendered in `AchievementRoomSection`,
+• *Then* all badge surfaces render with identical width and height without stretching across the final row.
+• *Given* device configuration set to `Locale.GERMANY` and Imperial unit system,
+• *When* viewing hero totals and sharing the Athlete Passport,
+• *Then* numbers display comma decimal separators, distance is converted to miles (`mi`), and elevation is converted to feet (`ft`).
+
+**Invariants**: Zero SQLite schema migration; exact distance, elevation, and time math preserved; 100% 9-language localization parity.

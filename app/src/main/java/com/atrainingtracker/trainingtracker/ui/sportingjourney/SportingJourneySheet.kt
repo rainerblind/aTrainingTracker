@@ -60,7 +60,7 @@ import com.atrainingtracker.trainingtracker.ui.theme.TTColor
  *
  * Provides retrospective discovery across 4 pillars:
  * 1. Hero Totals & Planetary Scale (Earth Equator %, Mt. Everest multiplier).
- * 2. SQLite Hidden Gems (crank turns, heartbeats, mechanical work in kWh, circadian DNA).
+ * 2. Hidden Telemetry Gems (crank turns, heartbeats, mechanical work in kWh, circadian DNA).
  * 3. Signature Milestones (interactive drill-down to workout details).
  * 4. The Achievement Room (auto-unlocked secret trophies).
  */
