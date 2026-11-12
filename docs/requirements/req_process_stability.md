@@ -3164,6 +3164,44 @@ The workflow SHALL mandate that:
   • *Then* the transition is unblocked regardless of whether a human review record exists.
 - **Invariants**: Zero modifications to Android production runtime code in `app/src/main/`; pure Python standard library retained; Rule 3 (`Erledigt` human-only gate) preserved.
 
+### REQ-PRO-063: Problem Severity Classification & Defect Trend Metrics [Verified]
+- **Tests**: `tools/test_jira_accounts.py`, `tools/test_sprint_metrics.py`, `tools/hoechstmass/tools/test_sprint_metrics.py`, `tools/hoechstmass/tools/test_hoechstmass_tools.py`
+- **Implementation**: Mandatory severity validation in `create_issue` in `tools/jira_util.py` and `tools/hoechstmass/tools/jira_util.py`, severity labeling (`severity-<level>`), problem trend metrics extraction in `tools/sprint_metrics.py`, and JSONL serialization to `docs/engineering/metrics/process_metrics.jsonl`.
+- **Rationale**: Under ASPICE SUP.9 (Problem Resolution Management) and MAN.3 (Project Monitoring and Control), problem resolution requires classifying defects by severity independently of scheduling priority and tracking problem trends across iterations (Pre-Assessment Finding B-11). Previously, Jira issues recorded priority (`Highest`..`Lowest`) but lacked mandatory severity categorization (`Critical`, `Major`, `Minor`, `Cosmetic`), and quantitative metrics lacked defect trend telemetry:
+  1. *Mandatory Severity on Bug Creation (`REQ-PRO-063.1`, tools/jira_util.py & tools/hoechstmass/tools/jira_util.py)*:
+     • When creating an issue of type `Bug` / `Fehler` (`10006`) via `create_issue()` or `jira_util.py create-issue`, specifying a valid severity level (`Critical`, `Major`, `Minor`, `Cosmetic`) SHALL be mandatory. Omission MUST cause immediate validation failure with exit code 1.
+     • Non-bug issue types (Feature, Improvement, Story, Task, Epic) SHALL NOT require a severity parameter.
+  2. *Severity Labeling & Metadata (`REQ-PRO-063.2`, tools/jira_util.py & tools/hoechstmass/tools/jira_util.py)*:
+     • When a Bug is created with a valid severity, the tooling SHALL append a standardized label `severity-<level>` (e.g. `severity-critical`) and embed severity metadata in the issue description.
+  3. *Problem Trend Metrics Extraction (`REQ-PRO-063.3`, tools/sprint_metrics.py & tools/hoechstmass/tools/sprint_metrics.py)*:
+     • `parse_sprint_gate_metrics()` SHALL identify all Bug issues in the sprint, aggregate counts by severity (`Critical`, `Major`, `Minor`, `Cosmetic`), track `open_bugs` vs `closed_bugs`, and calculate sprint defect escape and resolution rate metrics.
+  4. *Quantitative Process Metrics Schema (`REQ-PRO-063.4`, docs/engineering/metrics/process_metrics.jsonl)*:
+     • Sprint metrics records serialized to `docs/engineering/metrics/process_metrics.jsonl` SHALL include the `problem_trends` object containing `total_bugs`, `by_severity`, `open_bugs`, `closed_bugs`, and `resolution_rate_percent`.
+  5. *Markdown Report Formatting (`REQ-PRO-063.5`, tools/sprint_metrics.py & tools/hoechstmass/tools/sprint_metrics.py)*:
+     • `format_metrics_markdown()` SHALL render a dedicated "Problem Trends & Defect Severity" section displaying bug counts and resolution rates.
+  6. *Governance Verification CLI (`REQ-PRO-063.6`, tools/verify_requirement_governance.py)*:
+     • `verify_sprint_metrics()` in `tools/verify_requirement_governance.py` and Höchstmaß mirror SHALL accept and validate the `problem_trends` schema fields.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Net-new requirement `REQ-PRO-063` (`REQ-PRO-063.1`–`REQ-PRO-063.6`). Targets `tools/jira_util.py`, `tools/sprint_metrics.py`, `docs/engineering/metrics/process_metrics.jsonl`, and `tools/hoechstmass/`.
+  2. *Historical Origin & Commit Trace*: Introduced in Sprint 2026-46.3 via ATT-6156 under Epic ATT-6141 to satisfy ASPICE pre-assessment finding B-11.
+  3. *Root Reason for Existing Formulation*: Sprints previously lacked mandatory defect severity categorization and quantitative problem trend telemetry.
+  4. *Preservation of Core Invariants*: Zero changes to Android runtime code; pure Python 3 standard library; backward compatibility for non-bug issue creation preserved.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* a new Bug issue being created via `jira_util.py create-issue`,
+  • *When* `--severity` is omitted,
+  • *Then* creation is rejected with exit code 1 and error message detailing mandatory severity levels.
+  • *Given* a new Bug issue being created with `--severity=critical`,
+  • *When* created,
+  • *Then* the issue is created with label `severity-critical` and description metadata.
+  • *Given* a non-bug issue being created,
+  • *When* created without severity,
+  • *Then* creation succeeds normally.
+  • *Given* sprint issues processed by `sprint_metrics.py`,
+  • *When* `parse_sprint_gate_metrics()` runs,
+  • *Then* it outputs `problem_trends` with bug counts by severity and resolution rates.
+- **Invariants**: Zero modifications to Android production runtime code in `app/src/main/`; pure Python standard library retained; Rule 3 (`Erledigt` human-only gate) preserved.
+
+
 
 
 

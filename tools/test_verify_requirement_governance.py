@@ -628,6 +628,39 @@ diff --git a/docs/requirements/req_process_stability.md b/docs/requirements/req_
             self.assertTrue(ok_any, f"Expected pass, got: {msgs_any}")
             self.assertTrue(any("Verified 2 sprint metrics record(s)" in m for m in msgs_any))
 
+            # 9. Record with valid problem_trends schema passes
+            valid_pt_record = {
+                "sprint_id": 441,
+                "sprint_name": "2026-47.1",
+                "throughput": {"total_story_points": 15.0, "completed_story_points": 15.0},
+                "quality_gates": {},
+                "problem_trends": {
+                    "total_bugs": 2,
+                    "open_bugs": 0,
+                    "closed_bugs": 2,
+                    "resolution_rate_percent": 100.0,
+                    "by_severity": {"Critical": 1, "Major": 1, "Minor": 0, "Cosmetic": 0},
+                },
+            }
+            with open(metrics_file, "a", encoding="utf-8") as f:
+                f.write(json.dumps(valid_pt_record) + "\n")
+            ok_valid_pt, msgs_valid_pt = verify_sprint_metrics(sprint_name="2026-47.1", repo_root=tmpdir)
+            self.assertTrue(ok_valid_pt, f"Expected valid problem_trends to pass, got: {msgs_valid_pt}")
+
+            # 10. Record with malformed problem_trends schema fails (REQ-PRO-063.6)
+            bad_pt_record = {
+                "sprint_id": 442,
+                "sprint_name": "2026-47.2",
+                "throughput": {"total_story_points": 10.0, "completed_story_points": 10.0},
+                "quality_gates": {},
+                "problem_trends": {"total_bugs": 1},  # missing open_bugs, closed_bugs, by_severity
+            }
+            with open(metrics_file, "a", encoding="utf-8") as f:
+                f.write(json.dumps(bad_pt_record) + "\n")
+            ok_bad_pt, errs_bad_pt = verify_sprint_metrics(sprint_name="2026-47.2", repo_root=tmpdir)
+            self.assertFalse(ok_bad_pt)
+            self.assertTrue(any("problem_trends fields" in e for e in errs_bad_pt))
+
     def test_scenario_16_verify_qa_audits_validation(self):
         """Scenario 16: verify_qa_audits validates report presence, verdicts, and >= 2 sampled tickets (TST-PRO-061.2)."""
         with tempfile.TemporaryDirectory() as tmpdir:

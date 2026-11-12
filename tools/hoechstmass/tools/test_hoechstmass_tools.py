@@ -41,6 +41,7 @@ from tools.hoechstmass.tools.jira_util import (
     VALID_ROLES,
     qa_audit,
     record_review,
+    create_issue,
 )
 from tools.hoechstmass.tools.verify_requirement_governance import (
     load_config,
@@ -619,6 +620,61 @@ class TestEpicCommands(unittest.TestCase):
             ok_any, msgs_any = verify_independent_reviews(sprint_name=None, repo_root=tmpdir)
             self.assertTrue(ok_any)
             self.assertTrue(any("Verified 1 independent review record" in m for m in msgs_any))
+
+    def test_hoechstmass_create_issue_severity_enforcement(self):
+        """TST-PRO-063.4: Verify create_issue severity enforcement in hoechstmass."""
+        from unittest.mock import patch
+
+        def mock_jira_req(url, method="GET", payload=None, role="coordinator", **kwargs):
+            return {"key": "PROJ-8888"}
+
+        with patch("tools.hoechstmass.tools.jira_util.jira_request", side_effect=mock_jira_req):
+            # 1. Bug without severity -> exit 1
+            with self.assertRaises(SystemExit) as cm:
+                create_issue("Bug without severity", "Description", issuetype_id="10006")
+            self.assertEqual(cm.exception.code, 1)
+
+            # 2. Bug with invalid severity -> exit 1
+            with self.assertRaises(SystemExit) as cm:
+                create_issue("Bug with invalid severity", "Description", issuetype_id="10006", severity="catastrophic")
+            self.assertEqual(cm.exception.code, 1)
+
+            # 3. Bug with valid severity -> succeeds
+            key = create_issue("Bug with valid severity", "Description", issuetype_id="10006", severity="major")
+            self.assertEqual(key, "PROJ-8888")
+
+            # 4. Non-bug without severity -> succeeds
+            key_feat = create_issue("Feature without severity", "Description", issuetype_id="10007")
+            self.assertEqual(key_feat, "PROJ-8888")
+
+    def test_hoechstmass_verify_sprint_metrics_problem_trends(self):
+        """TST-PRO-063.4: Verify problem_trends schema validation in hoechstmass verify_sprint_metrics."""
+        import tempfile
+        import json
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            metrics_dir = os.path.join(tmpdir, "docs", "engineering", "metrics")
+            os.makedirs(metrics_dir, exist_ok=True)
+            metrics_file = os.path.join(metrics_dir, "process_metrics.jsonl")
+
+            valid_record = {
+                "sprint_id": 101,
+                "sprint_name": "Sprint 101",
+                "throughput": {"total_story_points": 10.0, "completed_story_points": 10.0},
+                "quality_gates": {},
+                "problem_trends": {
+                    "total_bugs": 2,
+                    "open_bugs": 0,
+                    "closed_bugs": 2,
+                    "resolution_rate_percent": 100.0,
+                    "by_severity": {"Critical": 1, "Major": 1, "Minor": 0, "Cosmetic": 0},
+                },
+            }
+            with open(metrics_file, "w", encoding="utf-8") as f:
+                f.write(json.dumps(valid_record) + "\n")
+
+            ok, msgs = verify_sprint_metrics(sprint_name="Sprint 101", repo_root=tmpdir)
+            self.assertTrue(ok, f"Expected valid metrics with problem_trends to pass, got: {msgs}")
 
 
 

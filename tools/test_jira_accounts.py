@@ -860,6 +860,37 @@ class TestJiraCliTooling(unittest.TestCase):
             self.assertIn("ATT-6155", content_ai)
             self.assertIn("ASPICE compliance and role integrity verified.", content_ai)
 
+    @patch("jira_util.rank_at_top_of_backlog")
+    @patch("jira_util.jira_request")
+    def test_create_issue_requires_severity_for_bugs(self, mock_request, mock_rank):
+        """TST-PRO-063.1: Verify create_issue mandates severity for bugs and passes non-bugs."""
+        mock_request.return_value = {"key": "ATT-9999"}
+
+        # 1. Bug without severity -> SystemExit(1)
+        with self.assertRaises(SystemExit) as cm:
+            jira_util.create_issue("Bug without severity", "Description", issuetype_id="10006")
+        self.assertEqual(cm.exception.code, 1)
+
+        # 2. Bug with invalid severity -> SystemExit(1)
+        with self.assertRaises(SystemExit) as cm:
+            jira_util.create_issue("Bug with invalid severity", "Description", issuetype_id="10006", severity="catastrophic")
+        self.assertEqual(cm.exception.code, 1)
+
+        # 3. Bug with valid severity -> succeeds and tags severity label
+        mock_request.reset_mock()
+        key = jira_util.create_issue("Bug with critical severity", "Description", issuetype_id="10006", severity="critical")
+        self.assertEqual(key, "ATT-9999")
+        posted_fields = mock_request.call_args[1]["payload"]["fields"]
+        self.assertIn("severity-critical", posted_fields["labels"])
+        self.assertIn("**Severity**: Critical", posted_fields["description"])
+
+        # 4. Non-bug (Feature 10007) without severity -> succeeds
+        mock_request.reset_mock()
+        key_feat = jira_util.create_issue("Feature without severity", "Description", issuetype_id="10007")
+        self.assertEqual(key_feat, "ATT-9999")
+        posted_feat = mock_request.call_args[1]["payload"]["fields"]
+        self.assertNotIn("labels", posted_feat)
+
 
 
 if __name__ == "__main__":

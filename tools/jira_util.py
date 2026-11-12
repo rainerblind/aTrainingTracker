@@ -1918,13 +1918,63 @@ def resolve_valid_epic_key(parent_key, role="agent1"):
     except Exception:
         return parent_key
 
-def create_issue(summary, description, issuetype_id="10007", parent_key=None, role="agent1", add_to_sprint=False, fix_version=None, priority=None, labels=None, rank_top=True, points=None):
+VALID_SEVERITIES = ("critical", "major", "minor", "cosmetic")
+
+
+def create_issue(summary, description, issuetype_id="10007", parent_key=None, role="agent1", add_to_sprint=False, fix_version=None, priority=None, labels=None, rank_top=True, points=None, severity=None):
     if description.startswith("@") and os.path.exists(description[1:]):
         with open(description[1:], "r", encoding="utf-8") as f:
             description = f.read()
 
     issuetype_id = resolve_issuetype_id(issuetype_id)
     summary = sanitize_issue_summary(summary)
+
+    # REQ-PRO-063.1: Mandatory severity check for Bugs (10006)
+    labels_list = []
+    if labels:
+        if isinstance(labels, str):
+            labels_list = [l.strip() for l in labels.split(",") if l.strip()]
+        else:
+            labels_list = list(labels)
+
+    if issuetype_id == "10006":
+        existing_sev = None
+        for l in labels_list:
+            if l.lower().startswith("severity-"):
+                candidate = l.lower().replace("severity-", "").strip()
+                if candidate in VALID_SEVERITIES:
+                    existing_sev = candidate
+                    break
+
+        chosen_sev = severity or existing_sev
+        if not chosen_sev:
+            print(
+                f"Error: Severity is mandatory when creating a Bug (10006). Specify --severity=[{'|'.join(VALID_SEVERITIES)}].",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+
+        sev_clean = str(chosen_sev).strip().lower()
+        if sev_clean not in VALID_SEVERITIES:
+            print(
+                f"Error: Invalid severity '{chosen_sev}'. Must be one of: {', '.join(VALID_SEVERITIES)}.",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+
+        sev_label = f"severity-{sev_clean}"
+        if sev_label not in labels_list:
+            labels_list.append(sev_label)
+        if f"**Severity**: {sev_clean.capitalize()}" not in description:
+            description = f"{description.rstrip()}\n\n**Severity**: {sev_clean.capitalize()}"
+    elif severity:
+        sev_clean = str(severity).strip().lower()
+        if sev_clean in VALID_SEVERITIES:
+            sev_label = f"severity-{sev_clean}"
+            if sev_label not in labels_list:
+                labels_list.append(sev_label)
+
+    labels = labels_list if labels_list else None
 
     config = get_config()
     url = f"{config['JIRA_URL']}/rest/api/2/issue"
@@ -3149,7 +3199,7 @@ USAGE_TEXT = (
     "                                                        Sample >= 2 sprint tickets and audit ASPICE process compliance\n"
     "  record-review [--sprint <ID|NAME>] [--ticket KEY] [--reviewer NAME] [--vendor VENDOR] [--model MODEL] [--version VER] [--scope SCOPE] [--verdict PASS|FAIL] [--findings FINDINGS] [--out FILE]\n"
     "                                                        Record Human Sprint Review or Cross-Vendor AI Review in docs/engineering/reviews/\n"
-    "  create-issue SUMMARY DESC [TYPE_ID|Bug|Feature|Verbesserung] [PARENT_KEY] [--type=...] [--parent=...] [--bottom] [--points=N]"
+    "  create-issue SUMMARY DESC [TYPE_ID|Bug|Feature|Verbesserung] [PARENT_KEY] [--type=...] [--parent=...] [--bottom] [--points=N] [--severity=critical|major|minor|cosmetic]"
 )
 
 if __name__ == "__main__":
@@ -3274,6 +3324,7 @@ if __name__ == "__main__":
         priority_arg = None
         labels_arg = None
         points_arg = None
+        severity_arg = None
         explicit_type = None
         explicit_parent = None
         explicit_summary = None
@@ -3305,6 +3356,11 @@ if __name__ == "__main__":
             elif arg in ("--points", "--story-points") and idx + 1 < len(remaining_argv):
                 points_arg = remaining_argv[idx + 1]
                 idx += 1
+            elif arg.startswith("--severity="):
+                severity_arg = arg.split("=", 1)[1]
+            elif arg == "--severity" and idx + 1 < len(remaining_argv):
+                severity_arg = remaining_argv[idx + 1]
+                idx += 1
             elif arg.startswith("--summary="):
                 explicit_summary = arg.split("=", 1)[1]
             elif arg == "--summary" and idx + 1 < len(remaining_argv):
@@ -3332,13 +3388,13 @@ if __name__ == "__main__":
         summary = explicit_summary if explicit_summary else (filtered_args[0] if len(filtered_args) >= 1 else None)
         desc = explicit_desc if explicit_desc else (filtered_args[1] if len(filtered_args) >= 2 else (filtered_args[0] if explicit_summary and len(filtered_args) >= 1 else None))
         if not summary or not desc:
-            print("Usage: create-issue SUMMARY DESC [TYPE_ID|Bug|Feature|Verbesserung] [PARENT_KEY] [--type=...] [--parent=...] [--bottom] [--priority=PRIORITY] [--labels=L1,L2] [--points=N]", file=sys.stderr)
+            print("Usage: create-issue SUMMARY DESC [TYPE_ID|Bug|Feature|Verbesserung] [PARENT_KEY] [--type=...] [--parent=...] [--bottom] [--priority=PRIORITY] [--labels=L1,L2] [--points=N] [--severity=critical|major|minor|cosmetic]", file=sys.stderr)
             sys.exit(1)
 
         pos_offset = (0 if explicit_summary else 1) + (0 if explicit_desc else 1)
         type_id = explicit_type if explicit_type else (filtered_args[pos_offset] if len(filtered_args) > pos_offset else "10008")
         parent = explicit_parent if explicit_parent else (filtered_args[pos_offset + 1] if len(filtered_args) > pos_offset + 1 else None)
-        create_issue(summary, desc, type_id, parent, role=active_role, add_to_sprint=add_sprint, fix_version=fix_ver, priority=priority_arg, labels=labels_arg, rank_top=rank_top, points=points_arg)
+        create_issue(summary, desc, type_id, parent, role=active_role, add_to_sprint=add_sprint, fix_version=fix_ver, priority=priority_arg, labels=labels_arg, rank_top=rank_top, points=points_arg, severity=severity_arg)
     elif cmd in ("recalculate-living-docs", "recalc-docs"):
         recalculate_master_index_tables()
     elif cmd in ("sprint-metrics", "sprint_metrics"):

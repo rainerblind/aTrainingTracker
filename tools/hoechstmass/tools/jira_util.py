@@ -696,6 +696,105 @@ def read_text_or_file(arg):
     return arg.strip()
 
 
+VALID_SEVERITIES = ("critical", "major", "minor", "cosmetic")
+
+
+def create_issue(
+    summary,
+    description,
+    issuetype_id="10007",
+    parent_key=None,
+    role="agent1",
+    add_to_sprint=False,
+    fix_version=None,
+    priority=None,
+    labels=None,
+    rank_top=True,
+    points=None,
+    severity=None,
+    config=None,
+    h_config=None,
+):
+    if config is None:
+        config = load_env_config()
+    if h_config is None:
+        h_config = load_hoechstmass_config()
+
+    if description.startswith("@") and os.path.exists(description[1:]):
+        with open(description[1:], "r", encoding="utf-8") as f:
+            description = f.read()
+
+    itype = str(issuetype_id).strip().lower()
+    if itype in ("bug", "fehler", "10006"):
+        resolved_type = "10006"
+    else:
+        resolved_type = str(issuetype_id).strip()
+
+    labels_list = []
+    if labels:
+        if isinstance(labels, str):
+            labels_list = [l.strip() for l in labels.split(",") if l.strip()]
+        else:
+            labels_list = list(labels)
+
+    if resolved_type == "10006":
+        existing_sev = None
+        for l in labels_list:
+            if l.lower().startswith("severity-"):
+                candidate = l.lower().replace("severity-", "").strip()
+                if candidate in VALID_SEVERITIES:
+                    existing_sev = candidate
+                    break
+
+        chosen_sev = severity or existing_sev
+        if not chosen_sev:
+            print(
+                f"Error: Severity is mandatory when creating a Bug (10006). Specify --severity=[{'|'.join(VALID_SEVERITIES)}].",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+
+        sev_clean = str(chosen_sev).strip().lower()
+        if sev_clean not in VALID_SEVERITIES:
+            print(
+                f"Error: Invalid severity '{chosen_sev}'. Must be one of: {', '.join(VALID_SEVERITIES)}.",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+
+        sev_label = f"severity-{sev_clean}"
+        if sev_label not in labels_list:
+            labels_list.append(sev_label)
+        if f"**Severity**: {sev_clean.capitalize()}" not in description:
+            description = f"{description.rstrip()}\n\n**Severity**: {sev_clean.capitalize()}"
+    elif severity:
+        sev_clean = str(severity).strip().lower()
+        if sev_clean in VALID_SEVERITIES:
+            sev_label = f"severity-{sev_clean}"
+            if sev_label not in labels_list:
+                labels_list.append(sev_label)
+
+    fields = {
+        "project": {"key": h_config.get("project_key", "PROJ")},
+        "summary": summary,
+        "description": description,
+        "issuetype": {"id": resolved_type},
+    }
+    if parent_key:
+        fields["parent"] = {"key": parent_key}
+    if priority:
+        fields["priority"] = {"name": priority}
+    if labels_list:
+        fields["labels"] = labels_list
+
+    create_url = f"{config.get('JIRA_URL', '')}/rest/api/2/issue"
+    payload = {"fields": fields}
+    data = jira_request(create_url, method="POST", payload=payload, role=role, config=config)
+    new_key = data.get("key", "NEW-ISSUE")
+    print(f"Issue {new_key} created.")
+    return new_key
+
+
 def submit_stage(parent_key, stage_int, content_arg, as_role="agent1"):
     """
     Submits a stage deliverable as agent1:
@@ -2105,6 +2204,43 @@ def main():
             findings=findings_arg,
             out_path=out_arg,
             as_role=as_role,
+        )
+    elif cmd == "create-issue" and len(args) >= 3:
+        summary = args[1]
+        desc = args[2]
+        type_id = "10008"
+        parent = None
+        severity_arg = None
+        idx = 3
+        while idx < len(args):
+            a = args[idx]
+            if a.startswith("--type="):
+                type_id = a.split("=", 1)[1]
+            elif a == "--type" and idx + 1 < len(args):
+                type_id = args[idx + 1]
+                idx += 1
+            elif a.startswith("--parent="):
+                parent = a.split("=", 1)[1]
+            elif a == "--parent" and idx + 1 < len(args):
+                parent = args[idx + 1]
+                idx += 1
+            elif a.startswith("--severity="):
+                severity_arg = a.split("=", 1)[1]
+            elif a == "--severity" and idx + 1 < len(args):
+                severity_arg = args[idx + 1]
+                idx += 1
+            elif not a.startswith("--") and type_id == "10008":
+                type_id = a
+            elif not a.startswith("--") and parent is None:
+                parent = a
+            idx += 1
+        create_issue(
+            summary=summary,
+            description=desc,
+            issuetype_id=type_id,
+            parent_key=parent,
+            role=as_role,
+            severity=severity_arg,
         )
     else:
         print(f"Command '{cmd}' ready in parameterized client.")

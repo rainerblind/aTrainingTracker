@@ -368,6 +368,17 @@ def verify_sprint_metrics(sprint_name=None, repo_root=None):
             return False, [f"ERROR: Malformed JSON at line {idx} in {metrics_file}: {e}"]
         if not isinstance(entry, dict) or not required_keys.issubset(entry.keys()):
             return False, [f"ERROR: Line {idx} in {metrics_file} missing required schema fields {required_keys - entry.keys()}"]
+
+        # Validate optional problem_trends schema when present (REQ-PRO-063.4)
+        pt = entry.get("problem_trends")
+        if pt is not None:
+            pt_keys = {"total_bugs", "open_bugs", "closed_bugs", "by_severity"}
+            if not isinstance(pt, dict) or not pt_keys.issubset(pt.keys()):
+                missing = pt_keys - pt.keys() if isinstance(pt, dict) else pt_keys
+                return False, [f"ERROR: Line {idx} in {metrics_file} missing required problem_trends fields {missing}"]
+            if not isinstance(pt.get("by_severity"), dict):
+                return False, [f"ERROR: Line {idx} in {metrics_file} has invalid by_severity mapping in problem_trends"]
+
         entries.append(entry)
 
     if sprint_name:
