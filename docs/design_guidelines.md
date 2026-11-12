@@ -433,6 +433,13 @@ Row(
   * Reusable selection bottom sheets (such as `WorkoutClusterSelectionDialog`) invoke `onSelect(item)` followed immediately by `onDismiss()` when a candidate row is tapped.
   * Therefore, when chaining a second dialog (e.g. a confirmation `AlertDialog`) after candidate selection, the caller **MUST NOT** gate the confirmation dialog on a state variable that `onDismiss()` resets to `null` (such as `if (clusterToMerge != null && mergeTargetCluster != null)` with `onDismiss = { clusterToMerge = null }`). Instead, capture the confirmation payload into an independent state variable inside `onSelect` (`pendingMergePair = source to target`) so `onDismiss` cleanly closes the picker sheet while the confirmation `AlertDialog` opens on the first tap.
 
+### 5.20 Two-Sided `Row` Weighting, Locale/Unit Fidelity & Authentic Anti-Prototype / Anti-Clone UI (`Rule 82` — `ATT-7022` $\rightarrow$ `ATT-7321`)
+* **Mandatory `Modifier.weight(1f)` in Two-Sided Header/Action `Row`s**:
+  * Every `Row(horizontalArrangement = Arrangement.SpaceBetween)` placing a title/subtitle opposite a pill badge, counter, or action `Button` **MUST** apply `Modifier.weight(1f)` (plus explicit horizontal spacing) to the flexible text column (`ATT-7321`). Omitting `weight(1f)` lets long localized titles (`de`) consume nearly 100% of the row width and crushes the trailing badge/button into 1–5 character mid-word wraps (`"Pass / teile / n"`, `"HF × / Trittfrequen / z"`, `"Verborge / ne / Schätze"`).
+  * Never use `FlowRow(maxItemsInEachRow = 4)` with `Modifier.weight(1f)` for multi-word localized badge cards (which overflows into uneven `3 + 3 + 2` rows with mid-word breaks like `"Morgenpatrouill / e"`). Use deterministic 2-column rows (`Modifier.height(IntrinsicSize.Min)`) so sibling cards share identical width and height.
+* **Authentic `aTrainingTracker` Identity (No Raw HTML Prototypes or Strava Clones)**:
+  * Never port LLM-generated HTML/Tailwind prototypes verbatim into Compose with OS emoji confetti (`🌲`, `📡`, `🔁`, `🔒`), internal technical jargon (*"SQLite"*), AI marketing prose, Strava gamification terminology (*"Local Legend" / "Lokale Legende"*, *"Wrapped"*), hardcoded `String.format(Locale.US, ...)` numbers (which mix `.` and `,` in German UI), or fabricated divisor heuristics (`ritualCount / 20`). Always use Material 3 surfaces, clean vector icons, `Locale.getDefault()` + user unit preferences, and genuine sensor/database telemetry.
+
 ---
 
 ## 6. Map Viewport & Camera Guidelines
