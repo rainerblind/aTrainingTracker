@@ -288,6 +288,13 @@ In accordance with **ASPICE SYS.5 (System Verification)**, end-to-end qualificat
 * **Environmental Operating Conditions**: 5 quantified operational endurance environments: (E1) Urban Canyon, (E2) Rural Road / High Speed, (E3) Alpine Climb & Barometric Variation, (E4) Indoor Smart Trainer, and (E5) Extended Endurance Battery Longevity.
 * **Release Qualification**: Formal test cases (`SYS-VRF-001` through `SYS-VRF-008`), objective pass/fail criteria (sample loss $\le 1\%$, battery drain $\le 8\%$/hr, RF reconnection within backoff window, FIT/TCX schema validity), and release sign-off record generation under `docs/releases/<tag>/sys_verification_record.md`.
 
+### 6.4 Release Process Gating & System Verification Evidence (ASPICE SUP.8, SYS.4, SYS.5, `REQ-PRO-072`, `TST-PRO-072`)
+
+In accordance with **ASPICE SUP.8 (Configuration and Release Management)**, **SYS.4**, and **SYS.5**, release qualification enforces mandatory system-level evidence integration into the release lifecycle governed by [`.agents/skills/release-manager/SKILL.md`](../.agents/skills/release-manager/SKILL.md) and [`docs/releases/`](releases/):
+* **Release Evidence Dossier Structure**: Every release candidate tag (`<tag>`) requires an evidence directory `docs/releases/<tag>/` containing automated SYS.4 test results (`system_integration_results.json`) and physical SYS.5 verification protocol records (`sys_verification_record.md`), templated in [`docs/releases/TEMPLATE.md`](releases/TEMPLATE.md) and documented in [`docs/releases/README.md`](releases/README.md).
+* **Blocking Tag Creation Gate**: Creating release candidate tags (`V<versionName>__<versionCode>`), finishing GitFlow releases, or uploading artifacts to Google Play tracks is strictly blocked if either system integration or verification record is missing, incomplete, or contains failing test verdicts.
+
+
 
 
 

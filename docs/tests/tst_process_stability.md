@@ -2213,6 +2213,20 @@
   3. *Action*: Query user-perceived ANR rate over 30 days and run StrictMode thread policy audit in debug tests.
   4. *Expected Result*: Production ANR rate <= 0.05% (Google Play Bad Behavior threshold: 0.47%); zero main-thread I/O violations.
 
+### TST-PRO-072: **Release Manager System Verification Evidence Integration & Release Gating Test Suite** [Verified]
+- **Requirement(s)**: `REQ-PRO-072`
+- **Component**: `.agents/skills/release-manager/SKILL.md`, `docs/releases/README.md`, `docs/releases/TEMPLATE.md`, `app/src/test/java/com/atrainingtracker/trainingtracker/build/ReleaseManagerSystemEvidenceContractTest.kt`, `docs/architecture.md`
+- **Jira**: `ATT-6169`
+- **Test Description**:
+  1. *Skill System Evidence Gate Specification Contract Test (`TST-PRO-072.1`, ReleaseManagerSystemEvidenceContractTest.kt)*:
+  • Assert that `.agents/skills/release-manager/SKILL.md` exists and mandates SYS.4 (`system_integration_results.json`) and SYS.5 (`sys_verification_record.md`) verification gates.
+  2. *Release Tag Blocking Logic Contract Test (`TST-PRO-072.2`, ReleaseManagerSystemEvidenceContractTest.kt)*:
+  • Assert that the release checklist and step-by-step procedures explicitly define pre-tagging blocking checks that reject tag creation if system verification records are missing or failing.
+  3. *Release Template & Directory Structure Contract Test (`TST-PRO-072.3`, ReleaseManagerSystemEvidenceContractTest.kt)*:
+  • Assert that `docs/releases/` contains `README.md` and `TEMPLATE.md` specifying `docs/releases/<tag>/` artifact requirements and SYS.4/SYS.5 sign-off criteria.
+  4. *Contract Test Suite Execution & Governance Parity (`TST-PRO-072.4`, ReleaseManagerSystemEvidenceContractTest.kt & tools/verify_requirement_governance.py)*:
+  • Assert `ReleaseManagerSystemEvidenceContractTest.kt` passes cleanly under Gradle and `python3 tools/verify_requirement_governance.py` confirms 100% living documentation parity.
+
 
 
 
