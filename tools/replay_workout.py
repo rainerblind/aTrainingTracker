@@ -843,13 +843,13 @@ if HAS_DBUS:
             return dbus.Array([dbus.Byte(b) for b in self.value], signature='y')
 
     class HeartRateMeasurementCharacteristic(DBusCharacteristic):
-        def __init__(self, bus, index, service, enable_rr: bool = True, hrv_regime: str = 'auto'):
+        def __init__(self, bus, index, service, enable_rr: bool = True, hrv_regime: str = 'auto', synthesizer=None):
             super().__init__(bus, index, HEART_RATE_MEASUREMENT_UUID, ['notify'], service)
             self.notifying = False
             self.bpm = 0
             self.enable_rr = bool(enable_rr)
             self.hrv_mode = hrv_regime if hrv_regime in ('auto', 'aerobic', 'threshold', 'anaerobic') else 'auto'
-            self.synthesizer = RrSynthesizer(bpm=135, rmssd=35.0, regime='aerobic') if RrSynthesizer else None
+            self.synthesizer = synthesizer if synthesizer is not None else (RrSynthesizer(bpm=135, rmssd=35.0, regime='aerobic') if RrSynthesizer else None)
             self.current_a1 = 1.05
             self.current_rmssd = 35.0
 
@@ -1040,9 +1040,9 @@ if HAS_DBUS:
             self.add_characteristic(SensorLocationCharacteristic(bus, 2, self))
 
     class HeartRateService(DBusService):
-        def __init__(self, bus, index, enable_rr: bool = True, hrv_regime: str = 'auto'):
+        def __init__(self, bus, index, enable_rr: bool = True, hrv_regime: str = 'auto', synthesizer=None):
             super().__init__(bus, index, HEART_RATE_SERVICE_UUID, True)
-            self.meas_char = HeartRateMeasurementCharacteristic(bus, 0, self, enable_rr=enable_rr, hrv_regime=hrv_regime)
+            self.meas_char = HeartRateMeasurementCharacteristic(bus, 0, self, enable_rr=enable_rr, hrv_regime=hrv_regime, synthesizer=synthesizer)
             self.add_characteristic(self.meas_char)
             self.add_characteristic(BodySensorLocationCharacteristic(bus, 1, self))
 
@@ -1079,12 +1079,11 @@ class BleReplayServer:
         self.cumulative_crank_revs = 0
         self.last_crank_event_time = 0
 
-        # Maintain RrSynthesizer instance in server so mock mode (--no-ble) tracks HRV metrics
-        self.hr_synthesizer = RrSynthesizer(bpm=135, rmssd=35.0, regime='aerobic') if (RrSynthesizer and self.enable_rr) else None
-        self.current_rmssd = 35.0
-        self.current_a1 = 1.00
-
         self.radar_engine = RadarKinematicsEngine(tick_rate_hz=5.0) if RadarKinematicsEngine else None
+        self.rr_synthesizer = RrSynthesizer(bpm=135, rmssd=35.0, regime=self.hrv_regime if self.hrv_regime != 'auto' else 'aerobic') if RrSynthesizer else None
+        self.current_hrv_a1 = 1.05
+        self.current_hrv_rmssd = 35.0
+        self.hrv_mode = self.hrv_regime
         self.on_light_mode_changed: Optional[Callable[[int], None]] = None
 
         self.bus = None
@@ -1105,9 +1104,8 @@ class BleReplayServer:
         self._radar_running = False
         self._radar_timer_thread = None
 
-    def start(self):
-        """Starts advertising BLE services over BlueZ D-Bus and launches 5 Hz radar ticker."""
-        # Centralized 5 Hz radar kinematics ticker thread (runs in both BlueZ and mock modes)
+    def _start_radar_ticker(self):
+        """Starts background 5 Hz ticker for radar kinematics progression (REQ-SIM-003.4)."""
         if self.enable_radar and self.radar_engine and not self._radar_running:
             self._radar_running = True
             def radar_worker():
@@ -1117,6 +1115,9 @@ class BleReplayServer:
             self._radar_timer_thread = threading.Thread(target=radar_worker, daemon=True)
             self._radar_timer_thread.start()
 
+    def start(self):
+        """Starts advertising BLE services over BlueZ D-Bus and launches 5 Hz radar ticker."""
+        self._start_radar_ticker()
         if not self.enabled:
             return
         try:
@@ -1145,7 +1146,7 @@ class BleReplayServer:
             # Create GATT application
             self.app = DBusApplication(self.bus)
             self.cp_service = CyclingPowerService(self.bus, 0)
-            self.hr_service = HeartRateService(self.bus, 1, enable_rr=self.enable_rr, hrv_regime=self.hrv_regime)
+            self.hr_service = HeartRateService(self.bus, 1, enable_rr=self.enable_rr, hrv_regime=self.hrv_regime, synthesizer=self.rr_synthesizer)
             self.app.add_service(self.cp_service)
             self.app.add_service(self.hr_service)
             self.app.add_service(DeviceInfoService(self.bus, 2))
@@ -1259,29 +1260,31 @@ class BleReplayServer:
             self.kill_radar()
         return self.is_radar_killed
 
-    def set_radar_light_mode(self, mode: int):
-        if self.radar_engine:
-            self.radar_engine.set_light_mode(mode)
-            self._handle_light_mode_changed(mode)
-
     def set_hrv_mode(self, mode: str):
-        self.hrv_regime = mode
-        if self.hr_synthesizer:
-            if mode != 'auto' and RrSynthesizer and mode in RrSynthesizer.REGIMES:
-                self.hr_synthesizer.set_regime(mode)
-                self.current_a1 = RrSynthesizer.REGIMES[mode]['target_a1']
-                self.current_rmssd = self.hr_synthesizer.rmssd
+        """Sets HRV synthesis regime in both live BlueZ and mock modes (REQ-SIM-003.2)."""
+        if mode in ('auto', 'aerobic', 'threshold', 'anaerobic'):
+            self.hrv_regime = mode
+            self.hrv_mode = mode
+            if self.rr_synthesizer and mode != 'auto' and hasattr(RrSynthesizer, 'REGIMES') and mode in RrSynthesizer.REGIMES:
+                self.rr_synthesizer.set_regime(mode)
+                self.current_hrv_a1 = RrSynthesizer.REGIMES[mode]['target_a1']
+                self.current_hrv_rmssd = self.rr_synthesizer.rmssd
             elif mode == 'auto':
-                a1, rmssd = compute_auto_hrv_params(self.current_hr)
-                self.current_a1 = a1
-                self.current_rmssd = rmssd
-                self.hr_synthesizer.set_rmssd(rmssd)
-        if self.hr_service and self.hr_service.meas_char:
-            self.hr_service.meas_char.set_hrv_mode(mode)
+                target_bpm = self.current_hr if self.current_hr > 0 else 135
+                a1, rmssd = compute_auto_hrv_params(target_bpm)
+                self.current_hrv_a1 = a1
+                self.current_hrv_rmssd = rmssd
+                if self.rr_synthesizer:
+                    self.rr_synthesizer.set_rmssd(rmssd)
+                    phi = max(-0.5, min(0.9, (a1 - 0.5) * 1.5 - 0.2))
+                    self.rr_synthesizer.phi = phi
+            if self.hr_service and self.hr_service.meas_char:
+                self.hr_service.meas_char.set_hrv_mode(mode)
 
     def inject_hrv_artifact(self, kind: str):
-        if self.hr_synthesizer:
-            self.hr_synthesizer.inject_artifact(kind)
+        """Injects HRV artifact or RF gap across simulator and GATT char (REQ-SIM-003.2)."""
+        if self.rr_synthesizer:
+            self.rr_synthesizer.inject_artifact(kind)
         if self.hr_service and self.hr_service.meas_char:
             self.hr_service.meas_char.inject_artifact(kind)
 
@@ -1382,21 +1385,18 @@ class BleReplayServer:
         self.current_cadence = cadence
         self.current_hr = hr_bpm
 
-        if self.enable_rr and self.hr_synthesizer:
-            if self.hrv_regime == 'auto':
+        if self.enable_rr and self.rr_synthesizer:
+            self.rr_synthesizer.set_bpm(self.current_hr)
+            if self.hrv_mode == 'auto':
                 a1, rmssd = compute_auto_hrv_params(self.current_hr)
-                self.current_a1 = a1
-                self.current_rmssd = rmssd
-                self.hr_synthesizer.set_bpm(self.current_hr)
-                self.hr_synthesizer.set_rmssd(rmssd)
-                phi = max(-0.5, min(0.9, 1.6 * (a1 - 0.5) - 0.1))
-                self.hr_synthesizer.phi = phi
-            else:
-                self.hr_synthesizer.set_bpm(self.current_hr)
-                self.current_rmssd = self.hr_synthesizer.rmssd
-                reg = getattr(self.hr_synthesizer, 'regime_name', 'aerobic')
-                self.current_a1 = RrSynthesizer.REGIMES.get(reg, {}).get('target_a1', 1.00) if RrSynthesizer else 1.00
-            self.hr_synthesizer.tick_1hz(1000.0)
+                self.current_hrv_a1 = a1
+                self.current_hrv_rmssd = rmssd
+                self.rr_synthesizer.set_rmssd(rmssd)
+                phi = max(-0.5, min(0.9, (a1 - 0.5) * 1.5 - 0.2))
+                self.rr_synthesizer.phi = phi
+            elif hasattr(RrSynthesizer, 'REGIMES') and self.hrv_mode in RrSynthesizer.REGIMES:
+                self.current_hrv_a1 = RrSynthesizer.REGIMES[self.hrv_mode]['target_a1']
+                self.current_hrv_rmssd = self.rr_synthesizer.rmssd
 
         if cadence > 0:
             revs_per_sec = cadence / 60.0
@@ -2544,14 +2544,8 @@ if HAS_PYQT6:
                 self.btn_radar_loop.setStyleSheet("background-color: #03DAC6; color: #000;" if not active else "")
 
         def _update_hrv_ui(self):
-            rmssd = getattr(self.ble, 'current_rmssd', 35.0)
-            a1 = getattr(self.ble, 'current_a1', 1.00)
-            if self.ble.hr_service and self.ble.hr_service.meas_char:
-                ch = self.ble.hr_service.meas_char
-                rmssd = ch.current_rmssd
-                a1 = ch.current_a1
-            self.lbl_hrv_rmssd_val.setText(f"{rmssd:.1f} ms")
-            self.lbl_hrv_a1_val.setText(f"{a1:.2f}")
+            self.lbl_hrv_rmssd_val.setText(f"{self.ble.current_hrv_rmssd:.1f} ms")
+            self.lbl_hrv_a1_val.setText(f"{self.ble.current_hrv_a1:.2f}")
 
         def _update_radar_ui(self):
             if not self.ble.enable_radar or not self.ble.radar_engine:
@@ -2778,13 +2772,7 @@ def run_headless_cli(engine: ReplayEngine, ble: BleReplayServer, gps: AdbGpsInje
 
             hrv_str = ""
             if ble.enable_rr:
-                cur_mode = getattr(ble, 'hrv_regime', 'auto')
-                cur_a1 = getattr(ble, 'current_a1', 1.00)
-                if ble.hr_service and ble.hr_service.meas_char:
-                    ch = ble.hr_service.meas_char
-                    cur_mode = ch.hrv_mode
-                    cur_a1 = ch.current_a1
-                hrv_str = f" | HRV:{cur_mode} (a1={cur_a1:.2f})"
+                hrv_str = f" | HRV:{ble.hrv_mode} (a1={ble.current_hrv_a1:.2f})"
 
             radar_str = ""
             if ble.enable_radar and ble.radar_engine:

@@ -237,28 +237,17 @@ class RadarKinematicsEngine:
     """
     Manages kinematic radar targets at 5 Hz (200 ms interval),
     interactive presets, tail light state, and watchdog starvation.
-    Thread-safe across GUI, CLI, and BlueZ notification worker threads.
     """
     def __init__(self, tick_rate_hz=5.0, is_stvzo=False):
         self.tick_rate_hz = float(tick_rate_hz)
         self.dt = 1.0 / self.tick_rate_hz
         self.is_stvzo = bool(is_stvzo)
         self._lock = threading.RLock()
-        self._targets = []
+        self.targets = []
         self.light_mode = RadarLightMode.SOLID
         self.starve_ticks_remaining = 0
         self.country_loop_active = False
         self._country_loop_cooldown_ticks = 0
-
-    @property
-    def targets(self):
-        with self._lock:
-            return list(self._targets)
-
-    @targets.setter
-    def targets(self, val):
-        with self._lock:
-            self._targets = list(val)
 
     def is_starving(self):
         with self._lock:
@@ -267,21 +256,21 @@ class RadarKinematicsEngine:
     def trigger_watchdog_starvation(self, duration_sec=4.5):
         with self._lock:
             self.starve_ticks_remaining = int(math.ceil(duration_sec * self.tick_rate_hz))
-            print(f"[WATCHDOG] Starvation active: Suppressing radar notifications for {duration_sec:.1f}s "
-                  f"({self.starve_ticks_remaining} ticks) to trigger client 3500ms timeout...")
+        print(f"[WATCHDOG] Starvation active: Suppressing radar notifications for {duration_sec:.1f}s "
+              f"({self.starve_ticks_remaining} ticks) to trigger client 3500ms timeout...")
 
     def set_light_mode(self, mode_byte):
+        if not RadarLightMode.is_valid(mode_byte):
+            print(f"[LIGHT ERROR] Invalid light mode byte: 0x{mode_byte:02X}")
+            return False
         with self._lock:
-            if not RadarLightMode.is_valid(mode_byte):
-                print(f"[LIGHT ERROR] Invalid light mode byte: 0x{mode_byte:02X}")
-                return False
             if self.is_stvzo and mode_byte in (RadarLightMode.PELOTON, RadarLightMode.NIGHT_FLASH, RadarLightMode.DAY_FLASH):
                 print(f"[LIGHT WARNING] StVZO mode active: Flashing mode {RadarLightMode.name_of(mode_byte)} "
                       f"restricted -> setting SOLID (0x01)")
                 mode_byte = RadarLightMode.SOLID
             self.light_mode = mode_byte
-            print(f"[LIGHT] Phone switched Radar Tail Light -> {RadarLightMode.name_of(mode_byte)} (0x{mode_byte:02X})")
-            return True
+        print(f"[LIGHT] Phone switched Radar Tail Light -> {RadarLightMode.name_of(mode_byte)} (0x{mode_byte:02X})")
+        return True
 
     def spawn_preset(self, key):
         key = key.lower()
@@ -346,26 +335,24 @@ class RadarKinematicsEngine:
 
     def _upsert_target(self, target):
         with self._lock:
-            for idx, existing in enumerate(self._targets):
+            for idx, existing in enumerate(self.targets):
                 if existing.target_id == target.target_id:
-                    self._targets[idx] = target
+                    self.targets[idx] = target
                     return
-            self._targets.append(target)
+            self.targets.append(target)
 
     def clear_targets(self):
         with self._lock:
-            self._targets.clear()
+            self.targets.clear()
 
     def tick(self, dt=None):
-        if dt is None:
-            dt = self.dt
-
         with self._lock:
-            ticks = max(1, int(round(dt * self.tick_rate_hz)))
+            if dt is None:
+                dt = self.dt
 
-            # Watchdog starvation check (properly decremented by elapsed ticks)
+            # Watchdog starvation check
             if self.starve_ticks_remaining > 0:
-                self.starve_ticks_remaining = max(0, self.starve_ticks_remaining - ticks)
+                self.starve_ticks_remaining -= 1
                 if self.starve_ticks_remaining == 0:
                     print("[WATCHDOG] Starvation ended: Resumed radar threat notifications.")
                 return None
@@ -373,8 +360,8 @@ class RadarKinematicsEngine:
             # Country loop traffic generation
             if self.country_loop_active:
                 if self._country_loop_cooldown_ticks > 0:
-                    self._country_loop_cooldown_ticks = max(0, self._country_loop_cooldown_ticks - ticks)
-                elif len(self._targets) < 3:
+                    self._country_loop_cooldown_ticks -= 1
+                elif len(self.targets) < 3:
                     is_truck = random.random() < 0.25
                     size = VehicleSizeCategory.TRUCK_OR_BUS if is_truck else VehicleSizeCategory.CAR
                     speed = random.uniform(12.0, 20.0)
@@ -389,15 +376,15 @@ class RadarKinematicsEngine:
 
             # Update target positions
             active = []
-            for t in self._targets:
+            for t in self.targets:
                 t.range_m -= t.speed_mps * dt
                 if t.range_m > 0.0:
                     active.append(t)
                 else:
                     print(f"[TRAFFIC] Target {t.target_id} passed rider (overtake completed, removed)")
 
-            self._targets = active
-            return list(self._targets)
+            self.targets = active
+            return list(self.targets)
 
 
 # -----------------------------------------------------------------------------

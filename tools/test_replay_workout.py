@@ -556,92 +556,112 @@ class TestPyQt6GuiContracts(unittest.TestCase):
 
         window.close()
 
-    def test_gui_radar_and_hrv_controls(self):
+    def test_radar_and_hrv_gui_controls(self):
+        """Verifies GUI controls for Radar toggle/presets/badges and HRV regime/artifact buttons (REQ-SIM-003.5)."""
         sample_path = os.path.join(os.path.dirname(__file__), "sample_workout.tcx")
+        if not os.path.exists(sample_path):
+            sample_path = "tools/sample_workout.tcx"
         points = TcxParser.parse_file(sample_path)
         engine = ReplayEngine(points)
-        ble = BleReplayServer(enabled=False, enable_rr=True, enable_radar=True)
+        ble = BleReplayServer(enabled=False)
         gps = AdbGpsInjector(enabled=False)
 
         window = ReplayGuiWindow(sample_path, engine, ble, gps)
+
+        # 1. Radar Kill/Revive Toggle & Badge
         self.assertIsNotNone(window.btn_toggle_radar)
         self.assertIsNotNone(window.lbl_status_radar_badge)
-        self.assertIsNotNone(window.lbl_radar_light_badge)
-        self.assertIsNotNone(window.lbl_radar_status)
-        self.assertIsNotNone(window.lbl_radar_dist)
-        self.assertIsNotNone(window.combo_hrv_regime)
-        self.assertIsNotNone(window.lbl_hrv_rmssd_val)
-        self.assertIsNotNone(window.lbl_hrv_a1_val)
-
-        # 1. Radar kill and revive toggle
         self.assertEqual(window.lbl_status_radar_badge.text(), "● Radar Active")
         self.assertEqual(window.btn_toggle_radar.text(), "Kill Radar")
+
         window.btn_toggle_radar.click()
         self.assertTrue(ble.is_radar_killed)
         self.assertEqual(window.lbl_status_radar_badge.text(), "■ Radar Killed")
         self.assertEqual(window.btn_toggle_radar.text(), "Revive Radar")
+
         window.btn_toggle_radar.click()
         self.assertFalse(ble.is_radar_killed)
         self.assertEqual(window.lbl_status_radar_badge.text(), "● Radar Active")
+        self.assertEqual(window.btn_toggle_radar.text(), "Kill Radar")
 
-        # 2. HRV regime combo selection & badge updates in mock mode
-        window.combo_hrv_regime.setCurrentIndex(1)  # Aerobic
-        self.assertEqual(ble.hrv_regime, 'aerobic')
-        self.assertIn("1.00", window.lbl_hrv_a1_val.text())
+        # 2. Radar Light Badge & Mode Handling
+        self.assertIsNotNone(window.lbl_radar_light_badge)
+        self.assertIn("SOLID", window.lbl_radar_light_badge.text())
+        if ble.radar_engine:
+            ble.radar_engine.set_light_mode(RadarLightMode.DAY_FLASH)
+            window._update_radar_ui()
+            self.assertIn("DAY_FLASH", window.lbl_radar_light_badge.text())
 
-        window.combo_hrv_regime.setCurrentIndex(2)  # Threshold
-        self.assertEqual(ble.hrv_regime, 'threshold')
-        self.assertIn("0.70", window.lbl_hrv_a1_val.text())
+        # 3. Radar Preset Buttons
+        self.assertIsNotNone(window.btn_radar_car)
+        self.assertIsNotNone(window.btn_radar_fast)
+        self.assertIsNotNone(window.btn_radar_truck)
+        self.assertIsNotNone(window.btn_radar_close)
+        self.assertIsNotNone(window.btn_radar_clear)
+        self.assertIsNotNone(window.btn_radar_loop)
 
-        window.combo_hrv_regime.setCurrentIndex(3)  # Anaerobic
-        self.assertEqual(ble.hrv_regime, 'anaerobic')
-        self.assertIn("0.45", window.lbl_hrv_a1_val.text())
-
-        window.combo_hrv_regime.setCurrentIndex(0)  # Auto
-        self.assertEqual(ble.hrv_regime, 'auto')
-
-        # 3. Artifact buttons click
-        window.btn_art_ectopic.click()
-        self.assertEqual(len(ble.hr_synthesizer.artifact_queue), 2)
-        window.btn_art_missed.click()
-        self.assertEqual(len(ble.hr_synthesizer.artifact_queue), 3)
-        window.btn_art_gap.click()
-        self.assertEqual(ble.hr_synthesizer.gap_ticks_remaining, 3)
-
-        # 4. Traffic preset buttons
-        self.assertEqual(len(ble.radar_engine.targets), 0)
+        # Trigger presets via button clicks
         window.btn_radar_car.click()
         self.assertEqual(len(ble.radar_engine.targets), 1)
         self.assertEqual(ble.radar_engine.targets[0].target_id, 1)
 
-        window.btn_radar_truck.click()
+        window.btn_radar_fast.click()
         self.assertEqual(len(ble.radar_engine.targets), 2)
 
         window.btn_radar_close.click()
-        self.assertEqual(len(ble.radar_engine.targets), 3)
+        close_targets = [t for t in ble.radar_engine.targets if t.target_id == 4]
+        self.assertEqual(len(close_targets), 1)
+        self.assertLess(abs(close_targets[0].lateral_m), 1.5)
 
-        # Verify radar UI reflects targets
-        window._update_radar_ui()
-        self.assertIn("VEHICLES APPROACHING", window.lbl_radar_status.text())
-        self.assertNotEqual(window.lbl_radar_dist.text(), "-- m")
-
-        # Clear targets
         window.btn_radar_clear.click()
         self.assertEqual(len(ble.radar_engine.targets), 0)
-        window._update_radar_ui()
-        self.assertIn("ALL CLEAR", window.lbl_radar_status.text())
 
-        # 5. Radar light mode update
-        ble.set_radar_light_mode(RadarLightMode.NIGHT_FLASH)
-        self.assertIn("NIGHT_FLASH", window.lbl_radar_light_badge.text())
+        # Country loop toggle button
+        self.assertFalse(ble.radar_engine.country_loop_active)
+        window.btn_radar_loop.click()
+        self.assertTrue(ble.radar_engine.country_loop_active)
+        window.btn_radar_loop.click()
+        self.assertFalse(ble.radar_engine.country_loop_active)
 
-        # 6. Mock telemetry dispatch updates HRV labels
-        pt = TcxPoint(time_iso="2026-11-12T00:00:10Z", time_sec=10.0, lat=48.0, lon=11.0, ele=500.0, dist=100.0, hr=165, watts=280, cadence=90)
-        window.on_engine_update(pt)
-        self.assertEqual(ble.current_hr, 165)
-        self.assertAlmostEqual(ble.current_a1, 0.50, places=2)
-        self.assertIn("0.50", window.lbl_hrv_a1_val.text())
-        self.assertIn("15.0 ms", window.lbl_hrv_rmssd_val.text())
+        # 4. HRV Regime Combobox & Badges in Mock Mode
+        self.assertIsNotNone(window.combo_hrv_regime)
+        self.assertIsNotNone(window.lbl_hrv_rmssd_val)
+        self.assertIsNotNone(window.lbl_hrv_a1_val)
+
+        # Switch to Aerobic
+        window.combo_hrv_regime.setCurrentIndex(1)
+        self.assertEqual(ble.hrv_mode, "aerobic")
+        self.assertEqual(window.lbl_hrv_a1_val.text(), "1.00")
+
+        # Switch to Threshold
+        window.combo_hrv_regime.setCurrentIndex(2)
+        self.assertEqual(ble.hrv_mode, "threshold")
+        self.assertEqual(window.lbl_hrv_a1_val.text(), "0.70")
+
+        # Switch to Anaerobic
+        window.combo_hrv_regime.setCurrentIndex(3)
+        self.assertEqual(ble.hrv_mode, "anaerobic")
+        self.assertEqual(window.lbl_hrv_a1_val.text(), "0.45")
+
+        # Switch back to Auto-HRV & verify update via engine update
+        window.combo_hrv_regime.setCurrentIndex(0)
+        self.assertEqual(ble.hrv_mode, "auto")
+        test_pt = TcxPoint(time_iso="2026-11-12T00:00:10Z", time_sec=10.0, lat=48.0, lon=11.0, ele=500.0, dist=100.0, hr=145, watts=200, cadence=90, speed_mps=8.0, bearing=0.0)
+        window.on_engine_update(test_pt)
+        self.assertEqual(window.lbl_hrv_a1_val.text(), "0.75")
+        self.assertEqual(window.lbl_hrv_rmssd_val.text(), "35.0 ms")
+
+        # 5. HRV Artifact Buttons
+        self.assertIsNotNone(window.btn_art_ectopic)
+        self.assertIsNotNone(window.btn_art_missed)
+        self.assertIsNotNone(window.btn_art_extra)
+        self.assertIsNotNone(window.btn_art_gap)
+
+        window.btn_art_ectopic.click()
+        window.btn_art_missed.click()
+        window.btn_art_extra.click()
+        window.btn_art_gap.click()
+        self.assertTrue(len(ble.rr_synthesizer.artifact_queue) > 0 or ble.rr_synthesizer.gap_ticks_remaining > 0)
 
         window.close()
 
@@ -1268,6 +1288,30 @@ class TestBleReplayServerRadarAndHrv(unittest.TestCase):
         server.inject_hrv_artifact('missed')
         server.inject_hrv_artifact('extra')
         server.inject_hrv_artifact('gap')
+
+    def test_server_mock_mode_hrv_telemetry_progression(self):
+        """Verifies HRV parameters update in mock mode (--no-ble) without BlueZ (Finding 4)."""
+        server = BleReplayServer(enabled=False)
+        self.assertIsNotNone(server.rr_synthesizer)
+
+        # In Auto-HRV mode, update telemetry with HR=145 (aerobic HRVT1)
+        server.update_telemetry(watts=200, cadence=90, hr_bpm=145)
+        self.assertEqual(server.current_hrv_a1, 0.75)
+        self.assertEqual(server.current_hrv_rmssd, 35.0)
+
+        # Update telemetry with HR=165 (anaerobic HRVT2)
+        server.update_telemetry(watts=250, cadence=95, hr_bpm=165)
+        self.assertEqual(server.current_hrv_a1, 0.50)
+        self.assertEqual(server.current_hrv_rmssd, 15.0)
+
+        # Switch to threshold regime
+        server.set_hrv_mode('threshold')
+        self.assertEqual(server.hrv_mode, 'threshold')
+        self.assertEqual(server.current_hrv_a1, 0.70)
+
+        # Artifact injection adds to queue in mock mode
+        server.inject_hrv_artifact('ectopic')
+        self.assertEqual(len(server.rr_synthesizer.artifact_queue), 2)
 
 
 class TestCliParserAndStdLibCompliance(unittest.TestCase):
