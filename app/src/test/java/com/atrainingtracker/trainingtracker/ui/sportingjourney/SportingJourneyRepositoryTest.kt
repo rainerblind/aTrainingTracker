@@ -37,7 +37,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 
 /**
- * Unit verification suite for [SportingJourneyRepository] across All-Time and Annual Wrapped horizons (REQ-SPT-002, TST-SPT-002).
+ * Unit verification suite for [SportingJourneyRepository] across All-Time and Annual Wrapped horizons (REQ-SPT-002, TST-SPT-005).
  */
 @RunWith(RobolectricTestRunner::class)
 class SportingJourneyRepositoryTest {

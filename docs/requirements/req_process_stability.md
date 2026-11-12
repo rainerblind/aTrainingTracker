@@ -3849,3 +3849,40 @@ The workflow SHALL mandate that:
   • *When* executed via unittest,
   • *Then* 100% of unit tests pass.
 - **Invariants**: Pure Python 3 standard library; zero Android runtime changes; zero regression in existing governance checks.
+
+
+### REQ-PRO-080: Aftermath Periods Test Evidence Backfill & Bidirectional Traceability Governance [Verified]
+- **Tests**: `TST-PRO-080`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Implementation**: `docs/requirements/req_aftermath_periods.md`, `docs/tests/tst_aftermath_periods.md`, `PeriodBarGraphTest.kt`, `WorkoutShareBottomSheetContractTest.kt`, `SportingJourneyRepositoryTest.kt`, `SportingJourneyViewModelTest.kt`, `SportingJourneyCalculatorTest.kt`, `tools/verify_requirement_governance.py`
+- **Rationale**: Under ASPICE SWE.6 BP4, SWE.1 BP5, and Remediation A-08.3 (ATT-6129), all requirements in the `aftermath_periods` domain shard must link to valid, existing test specifications in `docs/tests/tst_aftermath_periods.md` with verified test code implementations in `app/src/test/` or be downgraded to `[Implemented]` per REQ-PRO-073. Bidirectional reference integrity must guarantee that every referenced TST cites all of its parent REQs back with zero dangling references:
+  1. *Complete TST Coverage & Evidence Verification (`REQ-PRO-080.1`)*:
+     • Every requirement in `docs/requirements/req_aftermath_periods.md` SHALL cite one or more valid, existing backticked `TST-*` IDs in its `Tests:` field.
+     • All 41 `REQ-PER-*`, `REQ-RAD-*`, and `REQ-SPT-*` requirements SHALL retain `[Verified]` status backed by automated unit, contract, or architecture tests in `app/src/test/`.
+     • `REQ-SPT-002` and `REQ-SPT-005` SHALL be eliminated from `LEGACY_UNGROUNDED_VERIFIED_REQS` in `tools/verify_requirement_governance.py`.
+  2. *Bidirectional Citation Integrity (`REQ-PRO-080.2`)*:
+     • Every test specification in `docs/tests/tst_aftermath_periods.md` SHALL be cited back by 100% of the requirements it declares in its `Requirement(s):` field.
+     • Zero dangling references SHALL exist within the `aftermath_periods` domain.
+  3. *Test Code Tag Synchronization (`REQ-PRO-080.3`)*:
+     • Test source files in `app/src/test/` SHALL be annotated with standardized `TST-*` comment tags for automated scanner discovery: `TST-PER-024`, `TST-PER-029`, `TST-PER-036`, `TST-PER-037`, `TST-SPT-005`, and `TST-SPT-006`.
+  4. *Attribute Compliance & Header Parity (`REQ-PRO-080.4`)*:
+     • All 41 requirements in `docs/requirements/req_aftermath_periods.md` SHALL declare valid `Priority`, `Type`, and `Verification Method` attributes per `REQ-PRO-077`.
+     • Domain shard headers SHALL reflect accurate totals (`Total Requirements: 41`, `Total Tests: 50`) in 100% parity with master index tables.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Net-new requirement `REQ-PRO-080` (`REQ-PRO-080.1`–`REQ-PRO-080.4`). Targets `docs/requirements/req_aftermath_periods.md`, `docs/tests/tst_aftermath_periods.md`, and test tags.
+  2. *Historical Origin & Commit Trace*: Sprint 2026-46.4 via ticket `ATT-6129` under Epic `ATT-6119` (ASPICE CL2, Remediation A-08.3).
+  3. *Root Reason for Existing Formulation*: Baseline pre-assessment identified evidence grounding gaps (`REQ-SPT-002`, `REQ-SPT-005` missing Tests field), header total drift, and bidirectional link gaps across the aftermath periods domain shards.
+  4. *Preservation of Core Invariants*: Full functional test suite execution, master table mathematical parity, and pure Python 3 stdlib execution preserved with zero production Android APK modifications.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* `docs/requirements/req_aftermath_periods.md`,
+  • *When* evaluated via `python3 tools/verify_requirement_governance.py --coverage`,
+  • *Then* 100% of requirements cite valid TSTs, Category 4 bidirectional gaps for the domain are 0, and Category 3 unmapped tags for SPT are eliminated.
+  • *Given* `docs/requirements/req_aftermath_periods.md` and `docs/tests/tst_aftermath_periods.md`,
+  • *When* checked for dangling references and attributes,
+  • *Then* zero dangling references and zero missing attributes are detected.
+  • *Given* `tools/verify_requirement_governance.py --sync-indexes`,
+  • *When* executed,
+  • *Then* master index tables achieve 100% mathematical parity.
+- **Invariants**: Pure Python 3 standard library; zero Android runtime changes; zero regression in existing governance checks.

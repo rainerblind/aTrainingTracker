@@ -1,9 +1,9 @@
 # Living Test Specification: Post-Workout Analytics & Periods
 
 **Domain**: `aftermath_periods`  
-**Prefixes**: `PER`, `PERF`  
+**Prefixes**: `PER`, `PERF`, `RAD`, `SPT`  
 **Scope**: Post-workout analytics, period statistics, zone distributions, graphs and visual scrubbers.  
-**Total Tests**: 44
+**Total Tests**: 50
 
 ---
 
@@ -179,7 +179,7 @@
   • Execute `./gradlew testDebugUnitTest` verifying 100% test pass rate with zero regressions.
 
 ### TST-PER-021: **Calendar-Aware Period Aggregation Boundaries, Sentinel Epoch Symmetry & Local-Day PMC Bucketing Verification Suite** [Verified]
-- **Requirement(s)**: `REQ-PER-015`, `REQ-PER-014`, `REQ-UI-401`
+- **Requirement(s)**: `REQ-PER-015`
 - **Component**: **Calendar-Aware Period Aggregation Boundaries, Sentinel Epoch Symmetry & Local-Day PMC Bucketing Verification Suite**
 - **Jira**: ``ATT-4016``
 - **Test Description**:
@@ -198,7 +198,7 @@
   • Execute targeted unit tests and `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions.
 
 ### TST-PER-022: **Period Rebuild Flow Projection, Single-Owner Tracking Finalization Orchestration & Shared Mapper Instance Verification Suite** [Verified]
-- **Requirement(s)**: `REQ-PER-016`, `REQ-PER-014`, `REQ-STB-018`
+- **Requirement(s)**: `REQ-PER-016`
 - **Component**: **Period Rebuild Flow Projection, Single-Owner Tracking Finalization Orchestration & Shared Mapper Instance Verification Suite**
 - **Jira**: ``ATT-4019``
 - **Test Description**:
@@ -249,7 +249,7 @@
   • Run targeted unit tests `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.*"` verifying 100% pass rate.
 
 ### TST-PER-025: **PeriodCardMapState Background Pipeline, Douglas-Peucker Decimation & Full-Period Route Coverage Verification Suite** [Verified]
-- **Requirement(s)**: `REQ-PER-019`, `REQ-PER-017`, `REQ-PER-013`, `REQ-PER-012`
+- **Requirement(s)**: `REQ-PER-017`, `REQ-PER-019`
 - **Component**: **PeriodCardMapState Pipeline**
 - **Jira**: `ATT-4477`
 - **Test Description**:
@@ -277,7 +277,7 @@
   • Given a summary with both `summary.polylines` and `summary.workoutIdToPolylineMap` populated, verify that `prepareCardMapPreviewSync` prioritizes `summary.polylines`.
 
 ### TST-PER-026: **Self-Contained Period Persistence, Zero-N+1 Batch Loading & Bidirectional Sync Healing Verification Suite** [Verified]
-- **Requirement(s)**: `REQ-PER-020`, `REQ-MIG-026`, `REQ-PER-011`
+- **Requirement(s)**: `REQ-PER-020`
 - **Component**: **Period Summaries Database & Repository Sync**
 - **Jira**: `ATT-4476`
 - **Test Description**:
@@ -300,7 +300,7 @@
   • Execute targeted unit tests and `./gradlew testDebugUnitTest` verifying 100% test pass rate with zero regressions.
 
 ### TST-PER-027: **InteractivePeriodMap UI-Thread Decoupling, Deduplication & Large-Period Spatial Hit-Testing Verification Suite** [Verified]
-- **Requirement(s)**: `REQ-PER-021`, `REQ-PER-012`, `REQ-PER-013`
+- **Requirement(s)**: `REQ-PER-021`
 - **Component**: **Interactive Period Map & Spatial Hit-Testing**
 - **Jira**: `ATT-4475`
 - **Test Description**:
@@ -317,7 +317,7 @@
   • Execute targeted unit tests `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.*"` verifying 100% pass rate.
 
 ### TST-PER-028: **Periods Sport Type Header Filtering & Multi-Sport Projections Verification Suite** [Verified]
-- **Requirement(s)**: `REQ-PER-022`, `REQ-PER-018`, `REQ-PER-019`
+- **Requirement(s)**: `REQ-PER-018`, `REQ-PER-022`
 - **Component**: **Periods Header Sport Filter & ViewModel Projection**
 - **Jira**: `ATT-4770, ATT-5828`
 - **Test Description**:

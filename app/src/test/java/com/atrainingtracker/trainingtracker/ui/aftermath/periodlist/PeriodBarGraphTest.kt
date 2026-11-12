@@ -31,6 +31,11 @@ import org.junit.Test
 import java.time.ZoneOffset
 import java.util.Locale
 
+/**
+ * Unit verification suite for PeriodBarGraph timeline gap interpolation, sub-hour formatting,
+ * sport stacking, metric modes, and imperial/metric unit parity
+ * (REQ-PER-018, REQ-PER-023, TST-PER-024, TST-PER-029, TST-PER-036).
+ */
 class PeriodBarGraphTest {
 
     private val utcZone = ZoneOffset.UTC

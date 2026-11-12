@@ -24,8 +24,8 @@ import org.junit.Test
 import java.lang.reflect.Modifier
 
 /**
- * Contract tests verifying WorkoutShareBottomSheet component existence and MapDetailLayout integration
- * (REQ-UI-447 / TST-UI-447).
+ * Contract tests verifying WorkoutShareBottomSheet component existence, MapDetailLayout integration,
+ * and automated Option A snapshot delegation (REQ-UI-447, REQ-PER-029 / TST-UI-447, TST-PER-037).
  */
 class WorkoutShareBottomSheetContractTest {
 

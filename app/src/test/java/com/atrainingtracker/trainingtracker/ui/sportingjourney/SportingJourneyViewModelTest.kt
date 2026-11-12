@@ -40,7 +40,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 
 /**
- * Unit verification suite for [SportingJourneyViewModel] (REQ-SPT-002, TST-SPT-008).
+ * Unit verification suite for [SportingJourneyViewModel] (REQ-SPT-002, TST-SPT-005).
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
