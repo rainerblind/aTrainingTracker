@@ -3409,6 +3409,38 @@ The workflow SHALL mandate that:
   • *Then* it outputs a PASS diagnostic and exits with code 0.
 - **Invariants**: Pure Python 3 standard library; zero Android runtime changes; zero regression in existing governance checks.
 
+### REQ-PRO-071: Living Documentation Bidirectional REQ-TST Traceability & Code Coverage Reporting [Verified]
+- **Tests**: `TST-PRO-071`
+- **Implementation**: `tools/verify_requirement_governance.py` (`calculate_traceability_coverage()`, `--coverage`, `--coverage-json`, `--min-req-tst-coverage`, `--min-tst-code-coverage`, `--max-code-without-spec`, `--min-bidirectional-coverage`), `tools/test_verify_requirement_governance.py`.
+- **Rationale**: ASPICE SWE.6 BP4 (Verify Software Unit) and SWE.4 (Software Unit Verification) require bidirectional traceability between software requirements, test specifications, and verified test code. Coverage reporting identifies gaps and allows CI ratcheting so progress can be monitored and gated:
+  1. *Category 1: REQs Without TST Citation (`REQ-PRO-071.1`)*:
+     • `tools/verify_requirement_governance.py` SHALL scan all `docs/requirements/*.md` shards and identify all requirements whose `Tests` field contains no valid test citation (empty, None, or absent).
+  2. *Category 2: TSTs Without Test Code (`REQ-PRO-071.2`)*:
+     • `tools/verify_requirement_governance.py` SHALL scan all `docs/tests/*.md` shards and identify all `### TST-*` headings that have no corresponding test code tag in `app/src/test/`.
+  3. *Category 3: Code Tags Without Spec (`REQ-PRO-071.3`)*:
+     • `tools/verify_requirement_governance.py` SHALL scan `app/src/test/` for all test code tags (`TST-*`) and identify any tagged base test IDs that do not exist as valid headings in `docs/tests/*.md`.
+  4. *Category 4: TSTs Not Cited Back by Their REQ (`REQ-PRO-071.4`)*:
+     • `tools/verify_requirement_governance.py` SHALL analyze cross-citations and identify every test specification (`TST-*`) whose cited requirement does not cite that test back in its `Tests` field.
+  5. *Structured Report Generation & Configurable Threshold Gates (`REQ-PRO-071.5`)*:
+     • `tools/verify_requirement_governance.py` SHALL support generating structured Markdown and JSON reports detailing counts, totals, and percentages for all 4 categories.
+     • The verifier SHALL support configurable threshold ratchets (`--min-req-tst-coverage`, `--min-tst-code-coverage`, `--max-code-without-spec`, `--min-bidirectional-coverage`) to enforce CI quality gates.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Net-new requirement `REQ-PRO-071` (`REQ-PRO-071.1`–`REQ-PRO-071.5`). Targets `tools/verify_requirement_governance.py`.
+  2. *Historical Origin & Commit Trace*: Sprint 2026-46.4 via ticket `ATT-6122` under Epic `ATT-6119` (ASPICE CL2 – Evidence Integrity & Bidirectional Traceability).
+  3. *Root Reason for Existing Formulation*: ASPICE 4.0 pre-assessment identified 581 TSTs never cited back, 273 spec TSTs without test code, and 159 code tags missing from spec.
+  4. *Preservation of Core Invariants*: Existing verifier routines (table parity, duplicate IDs, dangling references, tripwires) remain untouched; pure Python 3 standard library; zero Android runtime modifications.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* `--coverage` is invoked on the repository,
+  • *When* `verify_requirement_governance.py` runs,
+  • *Then* it outputs a Markdown matrix report of the 4 gap categories with counts, totals, and percentages.
+  • *Given* `--coverage-json` is specified,
+  • *When* `verify_requirement_governance.py` runs,
+  • *Then* it outputs structured JSON containing exact metric numbers and category item listings.
+  • *Given* a coverage threshold is configured and repository telemetry falls below that threshold,
+  • *When* `verify_requirement_governance.py` runs,
+  • *Then* it exits with code 1 and outputs a descriptive gate violation error.
+- **Invariants**: Pure Python 3 standard library; zero Android runtime changes; zero regression in existing governance checks.
+
 
 
 

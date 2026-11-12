@@ -45,6 +45,13 @@ from tools.verify_requirement_governance import (
     verify_unique_ids,
     validate_impact_analysis_section,
     verify_stage1_impact_analysis,
+    calculate_traceability_coverage,
+    extract_test_code_tags,
+    format_coverage_markdown,
+    format_coverage_json,
+    verify_coverage_thresholds,
+    CoverageCategoryResult,
+    TraceabilityCoverageReport,
 )
 
 
@@ -1203,6 +1210,210 @@ diff --git a/docs/requirements/req_process_stability.md b/docs/requirements/req_
         ok_strict, diag_strict = verify_dangling_references(fail_on_dangling=True)
         self.assertFalse(ok_strict)
         self.assertTrue(any("strict enforcement active" in m for m in diag_strict))
+
+    def test_scenario_31_coverage_category_1_reqs_without_tst(self):
+        """TST-PRO-071.1: Verify Category 1 calculates REQs citing no TST in Tests field."""
+        synthetic_reqs = {
+            "req_shard.md": (
+                "### REQ-A-001: Has TST [Verified]\n"
+                "- **Tests**: `TST-A-001`\n\n"
+                "### REQ-A-002: Has None [Verified]\n"
+                "- **Tests**: None\n\n"
+                "### REQ-A-003: Empty Tests [Verified]\n"
+                "- **Tests**: \n\n"
+                "### REQ-A-004: Missing Tests Field [Verified]\n"
+                "- **Rationale**: No tests specified yet.\n"
+            )
+        }
+        synthetic_tsts = {
+            "tst_shard.md": "### TST-A-001: Valid test [Verified]\n- **Requirements**: `REQ-A-001`\n"
+        }
+        report = calculate_traceability_coverage(
+            req_shards=synthetic_reqs,
+            tst_shards=synthetic_tsts,
+            test_sources={},
+        )
+        cat1 = report.cat1
+        self.assertEqual(cat1.total_count, 4)
+        self.assertEqual(cat1.covered_count, 1)
+        self.assertEqual(cat1.gap_count, 3)
+        self.assertEqual(cat1.gap_items, ["REQ-A-002", "REQ-A-003", "REQ-A-004"])
+        self.assertAlmostEqual(cat1.percentage, 25.0, places=2)
+
+    def test_scenario_32_coverage_category_2_tsts_without_code(self):
+        """TST-PRO-071.2: Verify Category 2 identifies TST headings lacking test code tags and handles sub-tags."""
+        synthetic_reqs = {
+            "req_shard.md": (
+                "### REQ-B-001: Req [Verified]\n"
+                "- **Tests**: `TST-B-001`, `TST-B-002`, `TST-B-003`\n"
+            )
+        }
+        synthetic_tsts = {
+            "tst_shard.md": (
+                "### TST-B-001: Has Direct Code [Verified]\n- **Requirements**: `REQ-B-001`\n\n"
+                "### TST-B-002: Has Sub-Test Method Code [Verified]\n- **Requirements**: `REQ-B-001`\n\n"
+                "### TST-B-003: Has No Test Code [Verified]\n- **Requirements**: `REQ-B-001`\n"
+            )
+        }
+        synthetic_code = {
+            "test_sample.kt": (
+                "// Tests verifying TST-B-001 direct tag\n"
+                "fun `some test for TST-B-002_1 method`() {}\n"
+            )
+        }
+        report = calculate_traceability_coverage(
+            req_shards=synthetic_reqs,
+            tst_shards=synthetic_tsts,
+            test_sources=synthetic_code,
+        )
+        cat2 = report.cat2
+        self.assertEqual(cat2.total_count, 3)
+        self.assertEqual(cat2.covered_count, 2)
+        self.assertEqual(cat2.gap_count, 1)
+        self.assertEqual(cat2.gap_items, ["TST-B-003"])
+        self.assertAlmostEqual(cat2.percentage, 66.67, places=1)
+
+    def test_scenario_33_coverage_category_3_code_tags_without_spec(self):
+        """TST-PRO-071.3: Verify Category 3 flags test code tags whose base TST ID lacks a heading in living docs."""
+        synthetic_reqs = {"req.md": "### REQ-C-001: Req [Verified]\n- **Tests**: `TST-C-001`\n"}
+        synthetic_tsts = {"tst.md": "### TST-C-001: Valid TST [Verified]\n- **Requirements**: `REQ-C-001`\n"}
+        synthetic_code = {
+            "test_orphans.kt": (
+                "// TST-C-001 has valid spec\n"
+                "// TST-UNKNOWN-999 has no spec in living docs\n"
+                "fun `test method with TST-ORPHAN-042_3`() {}\n"
+            )
+        }
+        report = calculate_traceability_coverage(
+            req_shards=synthetic_reqs,
+            tst_shards=synthetic_tsts,
+            test_sources=synthetic_code,
+        )
+        cat3 = report.cat3
+        self.assertEqual(cat3.total_count, 3) # TST-C-001, TST-UNKNOWN-999, TST-ORPHAN-042
+        self.assertEqual(cat3.covered_count, 1) # TST-C-001
+        self.assertEqual(cat3.gap_count, 2)
+        self.assertEqual(cat3.gap_items, ["TST-ORPHAN-042", "TST-UNKNOWN-999"])
+        self.assertAlmostEqual(cat3.percentage, 33.33, places=1)
+
+    def test_scenario_34_coverage_category_4_tsts_not_cited_back(self):
+        """TST-PRO-071.4: Verify Category 4 identifies TSTs whose cited REQs do not cite the TST back."""
+        synthetic_reqs = {
+            "req.md": (
+                "### REQ-D-001: Cites TST-D-001 [Verified]\n"
+                "- **Tests**: `TST-D-001`\n\n"
+                "### REQ-D-002: Does Not Cite TST-D-002 [Verified]\n"
+                "- **Tests**: None\n"
+            )
+        }
+        synthetic_tsts = {
+            "tst.md": (
+                "### TST-D-001: Bidirectional Match [Verified]\n"
+                "- **Requirements**: `REQ-D-001`\n\n"
+                "### TST-D-002: One-way Citation (REQ-D-002 does not cite back) [Verified]\n"
+                "- **Requirements**: `REQ-D-002`\n\n"
+                "### TST-D-003: Cites No REQ [Verified]\n"
+                "- **Requirements**: None\n"
+            )
+        }
+        report = calculate_traceability_coverage(
+            req_shards=synthetic_reqs,
+            tst_shards=synthetic_tsts,
+            test_sources={},
+        )
+        cat4 = report.cat4
+        self.assertEqual(cat4.total_count, 3)
+        self.assertEqual(cat4.covered_count, 1) # TST-D-001
+        self.assertEqual(cat4.gap_count, 2)
+        self.assertEqual(cat4.gap_items, ["TST-D-002", "TST-D-003"])
+        self.assertIn("TST-D-002", cat4.details)
+        self.assertEqual(cat4.details["TST-D-002"], ["REQ-D-002"])
+        self.assertAlmostEqual(cat4.percentage, 33.33, places=1)
+
+    def test_scenario_35_coverage_report_formatting_markdown_and_json(self):
+        """TST-PRO-071.5: Verify format_coverage_markdown and format_coverage_json outputs."""
+        synthetic_reqs = {"req.md": "### REQ-E-001: Req [Verified]\n- **Tests**: `TST-E-001`\n"}
+        synthetic_tsts = {"tst.md": "### TST-E-001: Tst [Verified]\n- **Requirements**: `REQ-E-001`\n"}
+        synthetic_code = {"test.kt": "// TST-E-001\n"}
+
+        report = calculate_traceability_coverage(
+            req_shards=synthetic_reqs,
+            tst_shards=synthetic_tsts,
+            test_sources=synthetic_code,
+        )
+
+        md = format_coverage_markdown(report)
+        self.assertIn("# ASPICE Traceability & Verification Coverage Report", md)
+        self.assertIn("Category 1", md)
+        self.assertIn("Category 2", md)
+        self.assertIn("Category 3", md)
+        self.assertIn("Category 4", md)
+        self.assertIn("100.00%", md)
+
+        js = format_coverage_json(report)
+        import json
+        data = json.loads(js)
+        self.assertIn("category_1_reqs_without_tst", data)
+        self.assertIn("category_2_tsts_without_code", data)
+        self.assertIn("category_3_code_tags_without_spec", data)
+        self.assertIn("category_4_tsts_not_cited_back", data)
+        self.assertIn("summary", data)
+        self.assertEqual(data["summary"]["total_reqs"], 1)
+        self.assertEqual(data["summary"]["req_tst_coverage_pct"], 100.0)
+
+    def test_scenario_36_coverage_threshold_ratchets_pass_and_fail(self):
+        """TST-PRO-071.6: Verify configurable threshold ratchets pass and fail as expected."""
+        synthetic_reqs = {
+            "req.md": (
+                "### REQ-F-001: Req 1 [Verified]\n- **Tests**: `TST-F-001`\n\n"
+                "### REQ-F-002: Req 2 [Verified]\n- **Tests**: None\n"
+            )
+        }
+        synthetic_tsts = {
+            "tst.md": "### TST-F-001: Tst 1 [Verified]\n- **Requirements**: `REQ-F-001`\n"
+        }
+        synthetic_code = {"test.kt": "// TST-F-001\n// TST-ORPHAN-001\n"}
+
+        report = calculate_traceability_coverage(
+            req_shards=synthetic_reqs,
+            tst_shards=synthetic_tsts,
+            test_sources=synthetic_code,
+        )
+        # REQ-TST coverage is 1 / 2 = 50.0%
+        # Code tags without spec is 1 (TST-ORPHAN-001)
+
+        # Pass when min_req_tst_coverage is <= 50.0%
+        ok_pass, diag_pass = verify_coverage_thresholds(report, min_req_tst_coverage=50.0, max_code_without_spec=1)
+        self.assertTrue(ok_pass)
+        self.assertTrue(any("meets threshold 50.00%" in m for m in diag_pass))
+
+        # Fail when min_req_tst_coverage is 60.0%
+        ok_fail_cov, diag_fail_cov = verify_coverage_thresholds(report, min_req_tst_coverage=60.0)
+        self.assertFalse(ok_fail_cov)
+        self.assertTrue(any("below threshold 60.00%" in m for m in diag_fail_cov))
+
+        # Fail when max_code_without_spec is 0
+        ok_fail_spec, diag_fail_spec = verify_coverage_thresholds(report, max_code_without_spec=0)
+        self.assertFalse(ok_fail_spec)
+        self.assertTrue(any("exceeds maximum allowed 0" in m for m in diag_fail_spec))
+
+    def test_scenario_37_repository_coverage_integration(self):
+        """TST-PRO-071: Verify coverage calculation on authentic live repository."""
+        report = calculate_traceability_coverage()
+        self.assertGreater(report.cat1.total_count, 1000)
+        self.assertGreater(report.cat2.total_count, 1000)
+        self.assertGreater(report.cat3.total_count, 500)
+        self.assertGreater(report.cat4.total_count, 1000)
+
+        # Verify ratcheted sanity thresholds on live repo
+        ok, diag = verify_coverage_thresholds(
+            report,
+            min_req_tst_coverage=40.0,
+            min_tst_code_coverage=55.0,
+            max_code_without_spec=25,
+            min_bidirectional_coverage=35.0,
+        )
+        self.assertTrue(ok, f"Expected repository coverage sanity thresholds to pass, got: {diag}")
 
 
 

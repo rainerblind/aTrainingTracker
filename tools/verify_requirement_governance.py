@@ -1265,6 +1265,434 @@ def verify_dangling_references(
     return True, diagnostics
 
 
+class CoverageCategoryResult:
+    """Represents a single coverage gap category with counts, totals, and percentages (REQ-PRO-071)."""
+    def __init__(self, name, description, covered_count, total_count, gap_count, percentage, gap_items=None, details=None):
+        self.name = name
+        self.description = description
+        self.covered_count = covered_count
+        self.total_count = total_count
+        self.gap_count = gap_count
+        self.percentage = float(percentage)
+        self.gap_items = list(gap_items or [])
+        self.details = dict(details or {})
+
+    def to_dict(self):
+        return {
+            "name": self.name,
+            "description": self.description,
+            "covered_count": self.covered_count,
+            "total_count": self.total_count,
+            "gap_count": self.gap_count,
+            "percentage": round(self.percentage, 2),
+            "gap_items": self.gap_items,
+            "details": self.details,
+        }
+
+    def __getitem__(self, item):
+        if hasattr(self, item):
+            return getattr(self, item)
+        d = self.to_dict()
+        if item in d:
+            return d[item]
+        raise KeyError(item)
+
+    def get(self, key, default=None):
+        try:
+            return self[key]
+        except KeyError:
+            return default
+
+    def __repr__(self):
+        return (
+            f"CoverageCategoryResult({self.name}: {self.covered_count}/{self.total_count} "
+            f"({self.percentage:.2f}%), gap={self.gap_count})"
+        )
+
+
+class TraceabilityCoverageReport:
+    """Comprehensive traceability coverage report across all 4 categories (REQ-PRO-071)."""
+    def __init__(self, cat1, cat2, cat3, cat4, metadata=None):
+        self.cat1 = cat1
+        self.cat2 = cat2
+        self.cat3 = cat3
+        self.cat4 = cat4
+        self.metadata = dict(metadata or {})
+
+    def to_dict(self):
+        return {
+            "category_1_reqs_without_tst": self.cat1.to_dict(),
+            "category_2_tsts_without_code": self.cat2.to_dict(),
+            "category_3_code_tags_without_spec": self.cat3.to_dict(),
+            "category_4_tsts_not_cited_back": self.cat4.to_dict(),
+            "summary": {
+                "total_reqs": self.cat1.total_count,
+                "reqs_with_tst": self.cat1.covered_count,
+                "req_tst_coverage_pct": round(self.cat1.percentage, 2),
+                "total_tsts": self.cat2.total_count,
+                "tsts_with_code": self.cat2.covered_count,
+                "tst_code_coverage_pct": round(self.cat2.percentage, 2),
+                "total_code_tsts": self.cat3.total_count,
+                "code_tags_with_spec": self.cat3.covered_count,
+                "code_tags_without_spec": self.cat3.gap_count,
+                "code_spec_match_pct": round(self.cat3.percentage, 2),
+                "tsts_cited_back": self.cat4.covered_count,
+                "bidirectional_coverage_pct": round(self.cat4.percentage, 2),
+            },
+            "metadata": self.metadata,
+        }
+
+    def __getitem__(self, item):
+        d = self.to_dict()
+        if item in d:
+            return d[item]
+        aliases = {
+            "cat1": self.cat1,
+            "cat2": self.cat2,
+            "cat3": self.cat3,
+            "cat4": self.cat4,
+            "category_1": self.cat1,
+            "category_2": self.cat2,
+            "category_3": self.cat3,
+            "category_4": self.cat4,
+        }
+        if item in aliases:
+            return aliases[item]
+        raise KeyError(item)
+
+    def get(self, key, default=None):
+        try:
+            return self[key]
+        except KeyError:
+            return default
+
+
+def extract_test_code_tags(test_sources=None, repo_root=None):
+    """
+    Extracts all test code tags (TST-*) across test source files.
+    Supports:
+      - None (scans app/src/test under repo_root)
+      - directory path (str)
+      - dict: {rel_path: str_content_or_lines}
+      - list/tuple: file paths or (rel_path, content_or_lines) tuples
+    Normalizes method sub-tags (e.g. TST-XXX-001_1, TST-XXX-001.1, TST-XXX-001-A) to their base TST-XXX-001 ID.
+    Returns dict mapping base TST ID to list of occurrences: {base_id: [{"file": fp, "line": lno, "raw_tag": raw}]}.
+    """
+    if repo_root is None:
+        repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+
+    files_to_scan = []
+    if test_sources is None:
+        test_dir = os.path.join(repo_root, "app/src/test")
+        if os.path.isdir(test_dir):
+            for root, dirs, files in os.walk(test_dir):
+                for f in sorted(files):
+                    if f.endswith(".kt") or f.endswith(".java"):
+                        abs_fp = os.path.join(root, f)
+                        rel_fp = os.path.relpath(abs_fp, repo_root)
+                        with open(abs_fp, "r", encoding="utf-8", errors="ignore") as fh:
+                            files_to_scan.append((rel_fp, fh.readlines()))
+    elif isinstance(test_sources, str) and os.path.isdir(test_sources):
+        for root, dirs, files in os.walk(test_sources):
+            for f in sorted(files):
+                if f.endswith(".kt") or f.endswith(".java"):
+                    abs_fp = os.path.join(root, f)
+                    rel_fp = os.path.relpath(abs_fp, repo_root) if repo_root else abs_fp
+                    with open(abs_fp, "r", encoding="utf-8", errors="ignore") as fh:
+                        files_to_scan.append((rel_fp, fh.readlines()))
+    elif isinstance(test_sources, dict):
+        for k, v in sorted(test_sources.items()):
+            lines = v.splitlines(keepends=True) if isinstance(v, str) else list(v)
+            files_to_scan.append((k, lines))
+    elif isinstance(test_sources, (list, tuple)):
+        for item in test_sources:
+            if isinstance(item, tuple) and len(item) == 2:
+                k, v = item
+                lines = v.splitlines(keepends=True) if isinstance(v, str) else list(v)
+                files_to_scan.append((k, lines))
+            elif isinstance(item, str) and os.path.isfile(item):
+                with open(item, "r", encoding="utf-8", errors="ignore") as fh:
+                    files_to_scan.append((item, fh.readlines()))
+
+    tag_pattern = re.compile(r"(?<![A-Za-z0-9_-])(TST-[A-Z]+-[0-9]+(?:[\._-][A-Za-z0-9_-]+)*)")
+    base_pattern = re.compile(r"^(TST-[A-Z]+-[0-9]+)")
+
+    code_tags = {}
+    for rel_fp, lines in files_to_scan:
+        for lno, line in enumerate(lines, 1):
+            for m in tag_pattern.finditer(line):
+                raw = m.group(1).rstrip(".")
+                m_base = base_pattern.match(raw)
+                base_id = m_base.group(1) if m_base else raw
+                code_tags.setdefault(base_id, []).append({
+                    "file": rel_fp,
+                    "line": lno,
+                    "raw_tag": raw,
+                })
+
+    return code_tags
+
+
+def calculate_traceability_coverage(
+    req_shards=None,
+    tst_shards=None,
+    test_sources=None,
+    repo_root=None,
+):
+    """
+    Computes bidirectional REQ-TST traceability and test code existence coverage across 4 categories (REQ-PRO-071):
+      - Category 1: REQs without TST citation (REQ-PRO-071.1)
+      - Category 2: TSTs without test code (REQ-PRO-071.2)
+      - Category 3: Code tags without spec (REQ-PRO-071.3)
+      - Category 4: TSTs not cited back by their REQ (REQ-PRO-071.4)
+    Returns TraceabilityCoverageReport.
+    """
+    if repo_root is None:
+        repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+
+    loaded_reqs = _load_shard_sources(req_shards, "docs/requirements", repo_root)
+    loaded_tsts = _load_shard_sources(tst_shards, "docs/tests", repo_root)
+
+    # 1. Discover all declared headings
+    known_req_ids = set()
+    known_tst_ids = set()
+
+    for rel_path, lines in loaded_reqs:
+        for line in lines:
+            m = re.match(r"^(#{2,4})\s*(REQ-[A-Z0-9_-]+):?\s*(.*?)$", line.strip())
+            if m:
+                known_req_ids.add(m.group(2))
+
+    for rel_path, lines in loaded_tsts:
+        for line in lines:
+            m = re.match(r"^(#{2,4})\s*(TST-[A-Z0-9_-]+):?\s*(.*?)$", line.strip())
+            if m:
+                known_tst_ids.add(m.group(2))
+
+    # 2. Extract cited TSTs in REQs' Tests field
+    req_to_tsts = {r: set() for r in known_req_ids}
+    for rel_path, lines in loaded_reqs:
+        cur_req = None
+        for line in lines:
+            m = re.match(r"^(#{2,4})\s*(REQ-[A-Z0-9_-]+):?\s*(.*?)$", line.strip())
+            if m:
+                cur_req = m.group(2)
+            m_f = re.match(r"^\s*[-*]\s*\*{0,2}Tests?\*{0,2}\s*:\s*(.*)", line, re.IGNORECASE)
+            if m_f and cur_req:
+                cites = re.findall(r"(?<![A-Za-z0-9_-])TST-[A-Z0-9_-]+(?![A-Za-z0-9_-])", m_f.group(1))
+                req_to_tsts[cur_req].update(cites)
+
+    # 3. Extract cited REQs in TSTs' Requirements field
+    tst_to_reqs = {t: set() for t in known_tst_ids}
+    for rel_path, lines in loaded_tsts:
+        cur_tst = None
+        for line in lines:
+            m = re.match(r"^(#{2,4})\s*(TST-[A-Z0-9_-]+):?\s*(.*?)$", line.strip())
+            if m:
+                cur_tst = m.group(2)
+            m_f = re.match(
+                r"^\s*[-*]\s*\*{0,2}(?:Requirements?|Requirement\(s\)|Target Requirement)\*{0,2}\s*:\s*(.*)",
+                line,
+                re.IGNORECASE,
+            )
+            if m_f and cur_tst:
+                cites = re.findall(r"(?<![A-Za-z0-9_-])REQ-[A-Z0-9_-]+(?![A-Za-z0-9_-])", m_f.group(1))
+                tst_to_reqs[cur_tst].update(cites)
+
+    # 4. Scan test code tags
+    code_tsts = extract_test_code_tags(test_sources=test_sources, repo_root=repo_root)
+
+    # Category 1: REQs without TST
+    reqs_without_tst = sorted([r for r in known_req_ids if not req_to_tsts.get(r)])
+    total_reqs = len(known_req_ids)
+    covered_reqs = total_reqs - len(reqs_without_tst)
+    pct_cat1 = (covered_reqs / total_reqs * 100.0) if total_reqs > 0 else 100.0
+    cat1 = CoverageCategoryResult(
+        name="Category 1",
+        description="REQs citing at least one TST in 'Tests' field",
+        covered_count=covered_reqs,
+        total_count=total_reqs,
+        gap_count=len(reqs_without_tst),
+        percentage=pct_cat1,
+        gap_items=reqs_without_tst,
+    )
+
+    # Category 2: TSTs without test code
+    tsts_without_code = sorted([t for t in known_tst_ids if t not in code_tsts])
+    total_tsts = len(known_tst_ids)
+    covered_tsts = total_tsts - len(tsts_without_code)
+    pct_cat2 = (covered_tsts / total_tsts * 100.0) if total_tsts > 0 else 100.0
+    cat2 = CoverageCategoryResult(
+        name="Category 2",
+        description="TST specifications with matching test code tag in test directory",
+        covered_count=covered_tsts,
+        total_count=total_tsts,
+        gap_count=len(tsts_without_code),
+        percentage=pct_cat2,
+        gap_items=tsts_without_code,
+    )
+
+    # Category 3: Code tags without spec
+    code_tags_without_spec = sorted([b for b in code_tsts.keys() if b not in known_tst_ids])
+    total_code_tsts = len(code_tsts)
+    covered_code_tags = total_code_tsts - len(code_tags_without_spec)
+    pct_cat3 = (covered_code_tags / total_code_tsts * 100.0) if total_code_tsts > 0 else 100.0
+    cat3 = CoverageCategoryResult(
+        name="Category 3",
+        description="Code tags with matching TST heading in living documentation",
+        covered_count=covered_code_tags,
+        total_count=total_code_tsts,
+        gap_count=len(code_tags_without_spec),
+        percentage=pct_cat3,
+        gap_items=code_tags_without_spec,
+        details={b: code_tsts[b] for b in code_tags_without_spec},
+    )
+
+    # Category 4: TSTs not cited back by their REQ
+    tsts_not_cited_back = []
+    tst_back_details = {}
+    for t in sorted(known_tst_ids):
+        cited = tst_to_reqs.get(t, set())
+        if not cited:
+            tsts_not_cited_back.append(t)
+            tst_back_details[t] = ["<NO_CITED_REQS>"]
+        else:
+            unciting = [r for r in sorted(cited) if t not in req_to_tsts.get(r, set())]
+            if unciting:
+                tsts_not_cited_back.append(t)
+                tst_back_details[t] = unciting
+
+    covered_bidirectional = total_tsts - len(tsts_not_cited_back)
+    pct_cat4 = (covered_bidirectional / total_tsts * 100.0) if total_tsts > 0 else 100.0
+    cat4 = CoverageCategoryResult(
+        name="Category 4",
+        description="TST specifications cited back by all of their referenced REQs",
+        covered_count=covered_bidirectional,
+        total_count=total_tsts,
+        gap_count=len(tsts_not_cited_back),
+        percentage=pct_cat4,
+        gap_items=tsts_not_cited_back,
+        details=tst_back_details,
+    )
+
+    return TraceabilityCoverageReport(
+        cat1=cat1,
+        cat2=cat2,
+        cat3=cat3,
+        cat4=cat4,
+        metadata={"repo_root": repo_root},
+    )
+
+
+def format_coverage_markdown(report):
+    """Formats a TraceabilityCoverageReport into a GitHub-style Markdown matrix."""
+    lines = [
+        "# ASPICE Traceability & Verification Coverage Report (REQ-PRO-071)",
+        "",
+        "| Category | Metric Description | Covered / Compliant | Total | Gap Count | Coverage % |",
+        "| :--- | :--- | :--- | :--- | :--- | :--- |",
+        f"| **Category 1** | REQs with TST Citation | {report.cat1.covered_count} | {report.cat1.total_count} | {report.cat1.gap_count} | {report.cat1.percentage:.2f}% |",
+        f"| **Category 2** | TSTs with Test Code | {report.cat2.covered_count} | {report.cat2.total_count} | {report.cat2.gap_count} | {report.cat2.percentage:.2f}% |",
+        f"| **Category 3** | Code Tags with Valid Spec | {report.cat3.covered_count} | {report.cat3.total_count} | {report.cat3.gap_count} | {report.cat3.percentage:.2f}% |",
+        f"| **Category 4** | TSTs Cited Back by REQs | {report.cat4.covered_count} | {report.cat4.total_count} | {report.cat4.gap_count} | {report.cat4.percentage:.2f}% |",
+        "",
+        "### Category Summaries:",
+        f"* **Category 1 (REQs without TST)**: {report.cat1.gap_count} requirements cite no test specification in their 'Tests' field.",
+        f"* **Category 2 (TSTs without test code)**: {report.cat2.gap_count} test specifications have no matching test method in the test directory.",
+    ]
+
+    if report.cat3.gap_count > 0:
+        sample = ", ".join(report.cat3.gap_items[:15])
+        suffix = f" ... (+{report.cat3.gap_count - 15} more)" if report.cat3.gap_count > 15 else ""
+        lines.append(f"* **Category 3 (Code tags without spec)**: {report.cat3.gap_count} unique test tags in test code have no living document heading: {sample}{suffix}.")
+    else:
+        lines.append("* **Category 3 (Code tags without spec)**: 0 code tags without spec (100% matched).")
+
+    lines.append(
+        f"* **Category 4 (TSTs not cited back)**: {report.cat4.gap_count} test specifications are not cited back by their referenced requirements."
+    )
+    return "\n".join(lines)
+
+
+def format_coverage_json(report):
+    """Formats a TraceabilityCoverageReport as a formatted JSON string."""
+    return json.dumps(report.to_dict(), indent=2)
+
+
+def verify_coverage_thresholds(
+    report,
+    min_req_tst_coverage=None,
+    min_tst_code_coverage=None,
+    max_code_without_spec=None,
+    min_bidirectional_coverage=None,
+):
+    """
+    Evaluates coverage metrics against optional ratcheting thresholds (REQ-PRO-071.5).
+    Returns (success: bool, diagnostics: list[str]).
+    """
+    diagnostics = []
+    failures = []
+
+    if min_req_tst_coverage is not None:
+        if report.cat1.percentage < min_req_tst_coverage:
+            msg = (
+                f"ERROR: Gate violated: REQ-TST coverage {report.cat1.percentage:.2f}% is below threshold "
+                f"{min_req_tst_coverage:.2f}% (Category 1: {report.cat1.covered_count}/{report.cat1.total_count})."
+            )
+            failures.append(msg)
+            diagnostics.append(msg)
+        else:
+            diagnostics.append(
+                f"PASS: REQ-TST coverage {report.cat1.percentage:.2f}% meets threshold {min_req_tst_coverage:.2f}%."
+            )
+
+    if min_tst_code_coverage is not None:
+        if report.cat2.percentage < min_tst_code_coverage:
+            msg = (
+                f"ERROR: Gate violated: TST-to-code coverage {report.cat2.percentage:.2f}% is below threshold "
+                f"{min_tst_code_coverage:.2f}% (Category 2: {report.cat2.covered_count}/{report.cat2.total_count})."
+            )
+            failures.append(msg)
+            diagnostics.append(msg)
+        else:
+            diagnostics.append(
+                f"PASS: TST-to-code coverage {report.cat2.percentage:.2f}% meets threshold {min_tst_code_coverage:.2f}%."
+            )
+
+    if max_code_without_spec is not None:
+        if report.cat3.gap_count > max_code_without_spec:
+            msg = (
+                f"ERROR: Gate violated: Code tags without spec count {report.cat3.gap_count} exceeds maximum allowed "
+                f"{max_code_without_spec} (Category 3)."
+            )
+            failures.append(msg)
+            diagnostics.append(msg)
+        else:
+            diagnostics.append(
+                f"PASS: Code tags without spec count {report.cat3.gap_count} within maximum allowed {max_code_without_spec}."
+            )
+
+    if min_bidirectional_coverage is not None:
+        if report.cat4.percentage < min_bidirectional_coverage:
+            msg = (
+                f"ERROR: Gate violated: Bidirectional REQ-TST coverage {report.cat4.percentage:.2f}% is below threshold "
+                f"{min_bidirectional_coverage:.2f}% (Category 4: {report.cat4.covered_count}/{report.cat4.total_count})."
+            )
+            failures.append(msg)
+            diagnostics.append(msg)
+        else:
+            diagnostics.append(
+                f"PASS: Bidirectional REQ-TST coverage {report.cat4.percentage:.2f}% meets threshold {min_bidirectional_coverage:.2f}%."
+            )
+
+    if failures:
+        return False, diagnostics
+
+    if not diagnostics:
+        diagnostics.append("PASS: Coverage calculated successfully (no thresholds configured).")
+    return True, diagnostics
+
+
 
 def recalculate_master_index_tables(repo_root=None):
     """
@@ -1705,13 +2133,24 @@ def verify_architecture_and_system_specs(diff_text=None, repo_root=None, base_re
     return True, ["PASS: Architecture & system specification code-grounding and SYSREQ parity verified."]
 
 
-def verify_governance(deliverable_text=None, diff_text=None, base_ref="develop", skip_tripwires=False, fail_on_duplicates=False, fail_on_dangling=False):
+def verify_governance(
+    deliverable_text=None,
+    diff_text=None,
+    base_ref="develop",
+    skip_tripwires=False,
+    fail_on_duplicates=False,
+    fail_on_dangling=False,
+    min_req_tst_coverage=None,
+    min_tst_code_coverage=None,
+    max_code_without_spec=None,
+    min_bidirectional_coverage=None,
+):
     """
     Main governance validation entrypoint.
     Enforces engineering directory structure, master table parity, unique requirement and test IDs,
-    bidirectional reference integrity (REQ-PRO-070), Rule 81 deterministic tripwires (composable islands,
-    repository encapsulation, architecture/system spec grounding), and Chesterton's Fence archaeology
-    on modified requirements.
+    bidirectional reference integrity (REQ-PRO-070), optional coverage threshold ratchets (REQ-PRO-071),
+    Rule 81 deterministic tripwires (composable islands, repository encapsulation, architecture/system
+    spec grounding), and Chesterton's Fence archaeology on modified requirements.
     Returns (success: bool, diagnostics: list[str]).
     """
     diagnostics = []
@@ -1738,6 +2177,24 @@ def verify_governance(deliverable_text=None, diff_text=None, base_ref="develop",
         diagnostics.extend(links_diag)
         return False, diagnostics
     diagnostics.extend(links_diag)
+
+    if (
+        min_req_tst_coverage is not None
+        or min_tst_code_coverage is not None
+        or max_code_without_spec is not None
+        or min_bidirectional_coverage is not None
+    ):
+        cov_report = calculate_traceability_coverage()
+        cov_ok, cov_diag = verify_coverage_thresholds(
+            cov_report,
+            min_req_tst_coverage=min_req_tst_coverage,
+            min_tst_code_coverage=min_tst_code_coverage,
+            max_code_without_spec=max_code_without_spec,
+            min_bidirectional_coverage=min_bidirectional_coverage,
+        )
+        diagnostics.extend(cov_diag)
+        if not cov_ok:
+            return False, diagnostics
 
     if not skip_tripwires:
         islands_ok, islands_diag = verify_composable_islands(diff_text=diff_text, base_ref=base_ref)
@@ -1909,8 +2366,69 @@ def main():
         action="store_true",
         help="Check living documentation shards for dangling REQ and TST citations (REQ-PRO-070.1, REQ-PRO-070.2).",
     )
+    parser.add_argument(
+        "--coverage",
+        action="store_true",
+        help="Report bidirectional REQ-TST coverage and TST-to-test-code existence matrix (REQ-PRO-071).",
+    )
+    parser.add_argument(
+        "--coverage-json",
+        action="store_true",
+        help="Output coverage report in structured JSON format (REQ-PRO-071.5).",
+    )
+    parser.add_argument(
+        "--min-req-tst-coverage",
+        type=float,
+        default=None,
+        help="Minimum required percentage of REQs citing TSTs (0-100).",
+    )
+    parser.add_argument(
+        "--min-tst-code-coverage",
+        type=float,
+        default=None,
+        help="Minimum required percentage of TSTs with test code (0-100).",
+    )
+    parser.add_argument(
+        "--max-code-without-spec",
+        type=int,
+        default=None,
+        help="Maximum allowed count of code tags without specification in living docs.",
+    )
+    parser.add_argument(
+        "--min-bidirectional-coverage",
+        type=float,
+        default=None,
+        help="Minimum required percentage of TSTs cited back by their REQ (0-100).",
+    )
 
     args = parser.parse_args()
+
+    if (
+        args.coverage
+        or args.coverage_json
+        or args.min_req_tst_coverage is not None
+        or args.min_tst_code_coverage is not None
+        or args.max_code_without_spec is not None
+        or args.min_bidirectional_coverage is not None
+    ):
+        report = calculate_traceability_coverage()
+        ok, diag = verify_coverage_thresholds(
+            report,
+            min_req_tst_coverage=args.min_req_tst_coverage,
+            min_tst_code_coverage=args.min_tst_code_coverage,
+            max_code_without_spec=args.max_code_without_spec,
+            min_bidirectional_coverage=args.min_bidirectional_coverage,
+        )
+        if args.coverage_json:
+            out_dict = report.to_dict()
+            out_dict["gate_result"] = {"passed": ok, "diagnostics": diag}
+            print(json.dumps(out_dict, indent=2))
+        else:
+            print(format_coverage_markdown(report))
+            print("")
+            for msg in diag:
+                print(msg, file=sys.stderr if not ok else sys.stdout)
+        sys.exit(0 if ok else 1)
 
     if args.check_links:
         ok, diag = verify_dangling_references(fail_on_dangling=args.enforce_links)
@@ -2057,6 +2575,10 @@ def main():
         skip_tripwires=args.skip_tripwires,
         fail_on_duplicates=args.enforce_unique,
         fail_on_dangling=args.enforce_links,
+        min_req_tst_coverage=args.min_req_tst_coverage,
+        min_tst_code_coverage=args.min_tst_code_coverage,
+        max_code_without_spec=args.max_code_without_spec,
+        min_bidirectional_coverage=args.min_bidirectional_coverage,
     )
 
     for msg in diagnostics:

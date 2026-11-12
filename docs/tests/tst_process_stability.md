@@ -2015,6 +2015,24 @@
   5. *Clean Repository Resolution (`TST-PRO-070.5`, tools/test_verify_requirement_governance.py)*:
   • Assert that verification passes cleanly when all cited IDs resolve to valid headings.
 
+### TST-PRO-071: **Living Documentation Bidirectional REQ-TST Traceability & Code Coverage Test Suite** [Verified]
+- **Requirement(s)**: `REQ-PRO-071`
+- **Component**: `tools/verify_requirement_governance.py`, `tools/test_verify_requirement_governance.py`
+- **Jira**: `ATT-6122`
+- **Test Description**:
+  1. *Category 1 Calculation (REQs without TST) (`TST-PRO-071.1`, tools/test_verify_requirement_governance.py)*:
+  • Assert that requirements with missing, empty, or 'None' `Tests` fields are correctly categorized and quantified.
+  2. *Category 2 Calculation (TSTs without Test Code) (`TST-PRO-071.2`, tools/test_verify_requirement_governance.py)*:
+  • Assert that TST headings lacking corresponding test code tags in test directories are detected and quantified.
+  3. *Category 3 Calculation (Code Tags without Spec) (`TST-PRO-071.3`, tools/test_verify_requirement_governance.py)*:
+  • Assert that code tags referencing test IDs not defined in living doc headings are detected and reported.
+  4. *Category 4 Calculation (TSTs not Cited Back by REQs) (`TST-PRO-071.4`, tools/test_verify_requirement_governance.py)*:
+  • Assert that TST specifications whose cited REQs do not include them in the `Tests` field are identified.
+  5. *Report Output Formatting (`TST-PRO-071.5`, tools/test_verify_requirement_governance.py)*:
+  • Assert that Markdown and JSON coverage reports format counts, totals, and percentages accurately.
+  6. *Threshold Gate Ratcheting (`TST-PRO-071.6`, tools/test_verify_requirement_governance.py)*:
+  • Assert that verifier fails with exit code 1 when coverage metrics fall below configured minimum thresholds, and passes when thresholds are met.
+
 
 
 
