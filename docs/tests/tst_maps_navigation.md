@@ -1235,6 +1235,26 @@
   5. *9-Language Localization Parity Audit (`TST-CLM-010.5`)*:
   • Verify string resources exist in `values`, `values-de`, `values-es`, `values-fr`, `values-it`, `values-ja`, `values-nl`, `values-pl`, `values-pt` without missing keys or unescaped XML formatting errors.
 
+### TST-CLM-011: **Deduplicate Overlapping Climbs in Climbs.db & Map Layer Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-CLM-011` (`REQ-CLM-011.1`..`REQ-CLM-011.3`)
+- **Component**: `ClimbsDatabaseManager.kt`, `WorkoutRepository.kt`, `LiveClimbsRepository.kt`, `MapFragmentWithTrackViewModel.kt`, `ClimbsDatabaseManagerTest.kt`, `WorkoutHistoricalClimbBackfillTest.kt`, `MapFragmentWithTrackViewModelTest.kt`
+- **Jira**: `ATT-7311` | **Target Release**: `V5.0.0`
+- **Test Description**:
+  1. *Spatial Endpoint & Corridor Overlap Deduplication Test (`TST-CLM-011.1`, `ClimbsDatabaseManagerTest.kt`)*:
+  • Verify that candidate climbs whose start and summit coordinates are within 100m are deduplicated via `insertClimbsWithDeduplicationBatch`.
+  • Verify that candidate climbs with start/end offset by > 50m but sharing $\ge 70\%$ corridor overlap in the same heading are deduplicated.
+  • Verify that reverse-heading climbs (heading difference > 45°) or perpendicular roads are NOT deduplicated.
+  • Verify that when a candidate climb possesses a `routeId` and matches an existing climb with `routeId == null`, the existing climb is updated with the `routeId`.
+  2. *Idempotent Historical Database Consolidation Migration Test (`TST-CLM-011.2`, `WorkoutHistoricalClimbBackfillTest.kt` / `ClimbsDatabaseManagerTest.kt`)*:
+  • Verify that `deduplicateExistingClimbs()` detects duplicate/overlapping climb records in SQLite, purges redundant rows, preserves route associations, and returns the count of purged duplicates.
+  • Verify that `WorkoutRepository` executes `deduplicateExistingClimbs()` when `climbs_workout_deduplication_v3` is false, marks the preference flag true, and refreshes `LiveClimbsRepository`.
+  • Verify that subsequent invocations are O(1) no-ops when the flag is true.
+  3. *Map ViewModel Display Deduplication Test (`TST-CLM-011.3`, `MapFragmentWithTrackViewModelTest.kt`)*:
+  • Verify that when `LiveClimbsRepository.allStoredClimbs` contains duplicate or overlapping climbs, `MapFragmentWithTrackViewModel.uiState.climbs` emits only the deduplicated list when `GeneralMapLayer.CLIMBS` is enabled.
+  4. *Targeted Regression Verification Suite (`TST-CLM-011.4`)*:
+  • Run targeted tests: `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.database.Climbs*" --tests "com.atrainingtracker.trainingtracker.climbs.*" --tests "com.atrainingtracker.trainingtracker.ui.map.MapFragmentWithTrackViewModel*" --tests "com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutHistoricalClimbBackfillTest"` asserting 100% pass rate.
+
+
 
 
 

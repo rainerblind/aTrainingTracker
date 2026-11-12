@@ -27,6 +27,7 @@ import com.atrainingtracker.util.safeEnumValueOfOrNull
 import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.climbs.Climb
+import com.atrainingtracker.trainingtracker.climbs.ClimbDeduplicator
 import com.atrainingtracker.trainingtracker.climbs.LiveClimbsRepository
 import com.atrainingtracker.trainingtracker.elevation.ElevationSource
 import com.atrainingtracker.trainingtracker.database.WorkoutClusterRepository
@@ -135,7 +136,7 @@ class MapFragmentWithTrackViewModel @JvmOverloads constructor(
         if (GeneralMapLayer.CLIMBS !in layers) {
             emptyList()
         } else {
-            storedClimbs
+            ClimbDeduplicator.deduplicateForDisplay(storedClimbs)
         }
     }.flowOn(defaultDispatcher).distinctUntilChanged()
 

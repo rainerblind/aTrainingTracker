@@ -27,6 +27,7 @@ import android.location.Location
 import android.provider.BaseColumns
 import com.atrainingtracker.trainingtracker.climbs.Climb
 import com.atrainingtracker.trainingtracker.climbs.ClimbCategory
+import com.atrainingtracker.trainingtracker.climbs.ClimbDeduplicator
 import com.atrainingtracker.trainingtracker.ui.map.PathPoint
 import com.google.android.gms.maps.model.LatLng
 import kotlinx.coroutines.CoroutineDispatcher
@@ -128,25 +129,20 @@ class ClimbsDatabaseManager(
     }
 
     /**
-     * Inserts a climb with 50-meter spatial deduplication on start and summit coordinates.
-     * If an existing climb matches both start and end within [thresholdMeters], returns existing ID.
+     * Inserts a climb with spatial deduplication on start and summit coordinates or corridor overlap (REQ-CLM-011.1).
+     * If an existing climb matches within [thresholdMeters] or shares >= 70% corridor overlap, returns existing ID.
      */
     suspend fun insertClimbWithDeduplication(
         climb: Climb,
         thresholdMeters: Float = 50.0f
     ): Long = withContext(dbDispatcher) {
         val existingClimbs = getAllClimbsInternal()
-        val results = FloatArray(1)
-
         for (cand in existingClimbs) {
-            Location.distanceBetween(climb.startLat, climb.startLng, cand.startLat, cand.startLng, results)
-            val startDist = results[0]
-            if (startDist <= thresholdMeters) {
-                Location.distanceBetween(climb.endLat, climb.endLng, cand.endLat, cand.endLng, results)
-                val endDist = results[0]
-                if (endDist <= thresholdMeters) {
-                    return@withContext cand.id
+            if (ClimbDeduplicator.isDuplicateOrOverlapping(climb, cand, thresholdMeters)) {
+                if (climb.routeId != null && cand.routeId == null) {
+                    updateClimb(cand.copy(routeId = climb.routeId))
                 }
+                return@withContext cand.id
             }
         }
 
@@ -154,8 +150,8 @@ class ClimbsDatabaseManager(
     }
 
     /**
-     * Inserts a collection of climbs in a single atomic SQLite transaction with spatial deduplication (REQ-MAP-027).
-     * Eliminates transaction overhead and SQLite lock contention on batch route imports.
+     * Inserts a collection of climbs in a single atomic SQLite transaction with spatial deduplication (REQ-MAP-027, REQ-CLM-011.1).
+     * Eliminates transaction overhead and SQLite lock contention on batch route imports and workout backfills.
      */
     suspend fun insertClimbsWithDeduplicationBatch(
         climbs: List<Climb>,
@@ -164,25 +160,35 @@ class ClimbsDatabaseManager(
         if (climbs.isEmpty()) return@withContext emptyList()
         val db = dbHelper.writableDatabase
         val existingClimbs = getAllClimbsInternal().toMutableList()
-        val results = FloatArray(1)
         val resultIds = mutableListOf<Long>()
 
         db.beginTransaction()
         try {
             for (climb in climbs) {
-                var matchedId: Long? = null
+                var matchedCand: Climb? = null
                 for (cand in existingClimbs) {
-                    Location.distanceBetween(climb.startLat, climb.startLng, cand.startLat, cand.startLng, results)
-                    if (results[0] <= thresholdMeters) {
-                        Location.distanceBetween(climb.endLat, climb.endLng, cand.endLat, cand.endLng, results)
-                        if (results[0] <= thresholdMeters) {
-                            matchedId = cand.id
-                            break
-                        }
+                    if (ClimbDeduplicator.isDuplicateOrOverlapping(climb, cand, thresholdMeters)) {
+                        matchedCand = cand
+                        break
                     }
                 }
-                if (matchedId != null) {
-                    resultIds.add(matchedId)
+                if (matchedCand != null) {
+                    if (climb.routeId != null && matchedCand.routeId == null) {
+                        val values = ContentValues().apply {
+                            put(ClimbsDbHelper.COLUMN_ROUTE_ID, climb.routeId)
+                        }
+                        db.update(
+                            ClimbsDbHelper.TABLE_CLIMBS,
+                            values,
+                            "${ClimbsDbHelper.COLUMN_ID} = ?",
+                            arrayOf(matchedCand.id.toString())
+                        )
+                        val idx = existingClimbs.indexOfFirst { it.id == matchedCand.id }
+                        if (idx != -1) {
+                            existingClimbs[idx] = matchedCand.copy(routeId = climb.routeId)
+                        }
+                    }
+                    resultIds.add(matchedCand.id)
                 } else {
                     val values = ContentValues().apply {
                         put(ClimbsDbHelper.COLUMN_NAME, climb.name)
@@ -212,6 +218,96 @@ class ClimbsDatabaseManager(
             db.endTransaction()
         }
         resultIds
+    }
+
+    /**
+     * Updates an existing climb in SQLite (REQ-CLM-011.1).
+     */
+    suspend fun updateClimb(climb: Climb): Int = withContext(dbDispatcher) {
+        val db = dbHelper.writableDatabase
+        val values = ContentValues().apply {
+            put(ClimbsDbHelper.COLUMN_NAME, climb.name)
+            if (climb.routeId != null) {
+                put(ClimbsDbHelper.COLUMN_ROUTE_ID, climb.routeId)
+            } else {
+                putNull(ClimbsDbHelper.COLUMN_ROUTE_ID)
+            }
+            put(ClimbsDbHelper.COLUMN_START_LAT, climb.startLat)
+            put(ClimbsDbHelper.COLUMN_START_LNG, climb.startLng)
+            put(ClimbsDbHelper.COLUMN_END_LAT, climb.endLat)
+            put(ClimbsDbHelper.COLUMN_END_LNG, climb.endLng)
+            put(ClimbsDbHelper.COLUMN_DISTANCE_M, climb.distanceMeters)
+            put(ClimbsDbHelper.COLUMN_ELEVATION_GAIN_M, climb.elevationGainMeters)
+            put(ClimbsDbHelper.COLUMN_AVG_GRADE, climb.avgGradePercent)
+            put(ClimbsDbHelper.COLUMN_MAX_GRADE, climb.maxGradePercent)
+            put(ClimbsDbHelper.COLUMN_CATEGORY, climb.category.name)
+            put(ClimbsDbHelper.COLUMN_PATH_POLYLINE, serializePathPoints(climb.pathPoints))
+        }
+        db.update(ClimbsDbHelper.TABLE_CLIMBS, values, "${ClimbsDbHelper.COLUMN_ID} = ?", arrayOf(climb.id.toString()))
+    }
+
+    /**
+     * Scans all stored climbs in SQLite, identifies duplicate or overlapping climbs,
+     * consolidates metadata (preserving route associations), and deletes redundant rows
+     * in a single atomic transaction (REQ-CLM-011.2).
+     *
+     * @return Number of redundant duplicate climbs purged from the database.
+     */
+    suspend fun deduplicateExistingClimbs(thresholdMeters: Float = 100.0f): Int = withContext(dbDispatcher) {
+        val allClimbs = getAllClimbsInternal()
+        if (allClimbs.size < 2) return@withContext 0
+
+        val db = dbHelper.writableDatabase
+        val idsToDelete = mutableSetOf<Long>()
+        val retainedClimbs = mutableListOf<Climb>()
+
+        for (cand in allClimbs) {
+            if (cand.id in idsToDelete) continue
+            var duplicateFound: Climb? = null
+            for (retained in retainedClimbs) {
+                if (ClimbDeduplicator.isDuplicateOrOverlapping(cand, retained, thresholdMeters)) {
+                    duplicateFound = retained
+                    break
+                }
+            }
+
+            if (duplicateFound != null) {
+                // If candidate has routeId and retained does not, transfer routeId
+                if (cand.routeId != null && duplicateFound.routeId == null) {
+                    val updated = duplicateFound.copy(routeId = cand.routeId)
+                    val values = ContentValues().apply {
+                        put(ClimbsDbHelper.COLUMN_ROUTE_ID, cand.routeId)
+                    }
+                    db.update(
+                        ClimbsDbHelper.TABLE_CLIMBS,
+                        values,
+                        "${ClimbsDbHelper.COLUMN_ID} = ?",
+                        arrayOf(duplicateFound.id.toString())
+                    )
+                    val idx = retainedClimbs.indexOfFirst { it.id == duplicateFound.id }
+                    if (idx != -1) {
+                        retainedClimbs[idx] = updated
+                    }
+                }
+                idsToDelete.add(cand.id)
+            } else {
+                retainedClimbs.add(cand)
+            }
+        }
+
+        if (idsToDelete.isEmpty()) return@withContext 0
+
+        db.beginTransaction()
+        try {
+            for (id in idsToDelete) {
+                db.delete(ClimbsDbHelper.TABLE_CLIMBS, "${ClimbsDbHelper.COLUMN_ID} = ?", arrayOf(id.toString()))
+            }
+            db.setTransactionSuccessful()
+        } finally {
+            db.endTransaction()
+        }
+
+        idsToDelete.size
     }
 
     /**

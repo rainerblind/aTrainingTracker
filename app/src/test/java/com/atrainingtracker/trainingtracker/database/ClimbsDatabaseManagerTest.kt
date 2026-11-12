@@ -245,4 +245,120 @@ class ClimbsDatabaseManagerTest {
         verify { mockDb.setTransactionSuccessful() }
         verify { mockDb.endTransaction() }
     }
+
+    @Test
+    fun insertClimbsWithDeduplicationBatch_deduplicatesWithinExpanded100mThreshold() = runBlocking {
+        every { mockDb.beginTransaction() } just Runs
+        every { mockDb.setTransactionSuccessful() } just Runs
+        every { mockDb.endTransaction() } just Runs
+
+        val mockCursor = mockk<Cursor>(relaxed = true)
+        var rowRead = false
+        every { mockCursor.moveToNext() } answers {
+            if (!rowRead) {
+                rowRead = true
+                true
+            } else {
+                false
+            }
+        }
+        every { mockCursor.getColumnIndexOrThrow(ClimbsDbHelper.COLUMN_ID) } returns 0
+        every { mockCursor.getColumnIndexOrThrow(ClimbsDbHelper.COLUMN_NAME) } returns 1
+        every { mockCursor.getColumnIndexOrThrow(ClimbsDbHelper.COLUMN_ROUTE_ID) } returns 2
+        every { mockCursor.getColumnIndexOrThrow(ClimbsDbHelper.COLUMN_START_LAT) } returns 3
+        every { mockCursor.getColumnIndexOrThrow(ClimbsDbHelper.COLUMN_START_LNG) } returns 4
+        every { mockCursor.getColumnIndexOrThrow(ClimbsDbHelper.COLUMN_END_LAT) } returns 5
+        every { mockCursor.getColumnIndexOrThrow(ClimbsDbHelper.COLUMN_END_LNG) } returns 6
+        every { mockCursor.getColumnIndexOrThrow(ClimbsDbHelper.COLUMN_DISTANCE_M) } returns 7
+        every { mockCursor.getColumnIndexOrThrow(ClimbsDbHelper.COLUMN_ELEVATION_GAIN_M) } returns 8
+        every { mockCursor.getColumnIndexOrThrow(ClimbsDbHelper.COLUMN_AVG_GRADE) } returns 9
+        every { mockCursor.getColumnIndexOrThrow(ClimbsDbHelper.COLUMN_MAX_GRADE) } returns 10
+        every { mockCursor.getColumnIndexOrThrow(ClimbsDbHelper.COLUMN_CATEGORY) } returns 11
+        every { mockCursor.getColumnIndexOrThrow(ClimbsDbHelper.COLUMN_PATH_POLYLINE) } returns 12
+
+        every { mockCursor.getLong(0) } returns 42L
+        every { mockCursor.getString(1) } returns "Existing Ascent"
+        every { mockCursor.isNull(2) } returns true
+        every { mockCursor.getDouble(3) } returns 48.0
+        every { mockCursor.getDouble(4) } returns 11.0
+        every { mockCursor.getDouble(5) } returns 48.01
+        every { mockCursor.getDouble(6) } returns 11.02
+        every { mockCursor.getDouble(7) } returns 1500.0
+        every { mockCursor.getDouble(8) } returns 90.0
+        every { mockCursor.getDouble(9) } returns 6.0
+        every { mockCursor.getDouble(10) } returns 9.0
+        every { mockCursor.getString(11) } returns "CAT_4"
+        every { mockCursor.getString(12) } returns ""
+
+        every { mockDb.query(ClimbsDbHelper.TABLE_CLIMBS, null, null, null, null, null, any()) } returns mockCursor
+
+        // Drift: start is ~70m away (0.0006 deg lat), end is ~60m away
+        val candidateClimb = Climb(
+            name = "Candidate Drift Hill",
+            startLat = 48.0006,
+            startLng = 11.0,
+            endLat = 48.0105,
+            endLng = 11.02,
+            distanceMeters = 1500.0,
+            elevationGainMeters = 88.0,
+            avgGradePercent = 5.9,
+            maxGradePercent = 9.0,
+            category = ClimbCategory.CAT_4
+        )
+
+        val ids = manager.insertClimbsWithDeduplicationBatch(listOf(candidateClimb), thresholdMeters = 50.0f)
+        assertEquals(listOf(42L), ids)
+        verify(exactly = 0) { mockDb.insert(any(), any(), any()) }
+    }
+
+    @Test
+    fun deduplicateExistingClimbs_deletesDuplicatesAndPreservesRouteId() = runBlocking {
+        every { mockDb.beginTransaction() } just Runs
+        every { mockDb.setTransactionSuccessful() } just Runs
+        every { mockDb.endTransaction() } just Runs
+        every { mockDb.update(ClimbsDbHelper.TABLE_CLIMBS, any(), any(), any()) } returns 1
+        every { mockDb.delete(ClimbsDbHelper.TABLE_CLIMBS, any(), any()) } returns 1
+
+        val mockCursor = mockk<Cursor>(relaxed = true)
+        var cursorIdx = -1
+        every { mockCursor.moveToNext() } answers {
+            cursorIdx++
+            cursorIdx < 2
+        }
+        every { mockCursor.getColumnIndexOrThrow(ClimbsDbHelper.COLUMN_ID) } returns 0
+        every { mockCursor.getColumnIndexOrThrow(ClimbsDbHelper.COLUMN_NAME) } returns 1
+        every { mockCursor.getColumnIndexOrThrow(ClimbsDbHelper.COLUMN_ROUTE_ID) } returns 2
+        every { mockCursor.getColumnIndexOrThrow(ClimbsDbHelper.COLUMN_START_LAT) } returns 3
+        every { mockCursor.getColumnIndexOrThrow(ClimbsDbHelper.COLUMN_START_LNG) } returns 4
+        every { mockCursor.getColumnIndexOrThrow(ClimbsDbHelper.COLUMN_END_LAT) } returns 5
+        every { mockCursor.getColumnIndexOrThrow(ClimbsDbHelper.COLUMN_END_LNG) } returns 6
+        every { mockCursor.getColumnIndexOrThrow(ClimbsDbHelper.COLUMN_DISTANCE_M) } returns 7
+        every { mockCursor.getColumnIndexOrThrow(ClimbsDbHelper.COLUMN_ELEVATION_GAIN_M) } returns 8
+        every { mockCursor.getColumnIndexOrThrow(ClimbsDbHelper.COLUMN_AVG_GRADE) } returns 9
+        every { mockCursor.getColumnIndexOrThrow(ClimbsDbHelper.COLUMN_MAX_GRADE) } returns 10
+        every { mockCursor.getColumnIndexOrThrow(ClimbsDbHelper.COLUMN_CATEGORY) } returns 11
+        every { mockCursor.getColumnIndexOrThrow(ClimbsDbHelper.COLUMN_PATH_POLYLINE) } returns 12
+
+        every { mockCursor.getLong(0) } answers { if (cursorIdx == 0) 100L else 101L }
+        every { mockCursor.getString(1) } returns "Duplicate Hill"
+        every { mockCursor.isNull(2) } answers { cursorIdx == 0 } // first has null routeId, second has routeId 7L
+        every { mockCursor.getLong(2) } answers { if (cursorIdx == 1) 7L else 0L }
+        every { mockCursor.getDouble(3) } answers { if (cursorIdx == 0) 48.0 else 48.0004 }
+        every { mockCursor.getDouble(4) } returns 11.0
+        every { mockCursor.getDouble(5) } answers { if (cursorIdx == 0) 48.01 else 48.0103 }
+        every { mockCursor.getDouble(6) } returns 11.02
+        every { mockCursor.getDouble(7) } returns 1500.0
+        every { mockCursor.getDouble(8) } returns 90.0
+        every { mockCursor.getDouble(9) } returns 6.0
+        every { mockCursor.getDouble(10) } returns 9.0
+        every { mockCursor.getString(11) } returns "CAT_4"
+        every { mockCursor.getString(12) } returns ""
+
+        every { mockDb.query(ClimbsDbHelper.TABLE_CLIMBS, null, null, null, null, null, any()) } returns mockCursor
+
+        val purged = manager.deduplicateExistingClimbs(thresholdMeters = 100.0f)
+        assertEquals(1, purged)
+        verify { mockDb.delete(ClimbsDbHelper.TABLE_CLIMBS, "${ClimbsDbHelper.COLUMN_ID} = ?", arrayOf("101")) }
+        verify { mockDb.update(ClimbsDbHelper.TABLE_CLIMBS, any(), "${ClimbsDbHelper.COLUMN_ID} = ?", arrayOf("100")) }
+    }
 }

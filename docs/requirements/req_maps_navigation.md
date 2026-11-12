@@ -2402,6 +2402,49 @@
 
 **Invariants**: Default formula is `FIETS`; zero database schema migration; 100% localization parity across 9 languages.
 
+### REQ-CLM-011: Deduplicate Overlapping Climbs in Climbs.db & Map Layer [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-CLM-011` | **Tickets**: `ATT-7311`
+- **Implementation**: `ClimbsDatabaseManager.kt`, `WorkoutRepository.kt`, `LiveClimbsRepository.kt`, `MapFragmentWithTrackViewModel.kt`
+- **Rationale**: During Sprint 2026-46.3 Joint Review of ATT-6692, the Product Owner observed duplicate climbs on the map and in `Climbs.db` on device. Spatial deduplication in `ClimbsDatabaseManager.insertClimbsWithDeduplicationBatch` previously relied on an overly strict 50m tolerance between start and summit coordinates simultaneously (`startDist <= 50m && endDist <= 50m`). Repeated passes, historical backfills across identical road segments, or GPX route imports versus outdoor workout GPS tracks drift by more than 50m due to GPS jitter and barometric detection latency, failing to match existing climb records. Furthermore, the engine lacked corridor overlap deduplication for ascents along the same road segment, existing databases retained duplicate rows from prior backfills, and the map layer lacked display-level deduplication. The system SHALL evaluate expanded endpoint proximity and corridor overlap in `ClimbsDatabaseManager`, execute an idempotent historical database consolidation migration in `WorkoutRepository`, and enforce display deduplication in `MapFragmentWithTrackViewModel`:
+1. *Spatial Endpoint & Corridor Overlap Deduplication (`REQ-CLM-011.1`)*:
+• In `ClimbsDatabaseManager.insertClimbWithDeduplication` and `insertClimbsWithDeduplicationBatch`, candidate climbs SHALL be evaluated against existing climbs using expanded endpoint tolerance ($\le 100\text{ m}$) AND corridor overlap analysis.
+• Two climbs $A$ and $B$ SHALL be classified as duplicates / overlapping if:
+  (a) Both start coordinates are within $\le 100\text{ m}$ AND both summit coordinates are within $\le 100\text{ m}$; OR
+  (b) The start-to-summit heading difference is $\le 45^\circ$, and the spatial polyline overlap between the two climbs is $\ge 70\%$ of the shorter climb's length within a perpendicular cross-track corridor of $\le 40\text{ m}$.
+• When a candidate climb matches an existing climb:
+  - If the candidate climb has an associated `routeId != null` and the existing climb has `routeId == null`, the existing record SHALL be updated with the `routeId`.
+  - If the candidate climb provides longer distance or higher elevation gain while maintaining physical plausibility, the existing record SHALL be updated with the superior climb geometry.
+  - The existing climb ID SHALL be returned without inserting a redundant row.
+2. *Idempotent Historical Database Consolidation Migration (`REQ-CLM-011.2`)*:
+• `ClimbsDatabaseManager` SHALL provide `suspend fun deduplicateExistingClimbs(thresholdMeters: Float = 100.0f): Int`, scanning all stored climbs in `Climbs.db`, identifying duplicate/overlapping climb clusters, consolidating metadata/route IDs, deleting redundant rows, and returning the count of purged records.
+• `WorkoutRepository` SHALL gate a one-time startup consolidation pass on boolean preference flag `climbs_workout_deduplication_v3` (`PREF_CLIMBS_WORKOUT_DEDUPLICATION_V3`). When false, it SHALL execute `climbsDb.deduplicateExistingClimbs()`, set `climbs_workout_deduplication_v3` to true, and invoke `LiveClimbsRepository.refreshClimbs()` if any duplicate climbs were purged. Subsequent calls SHALL be O(1) no-ops.
+3. *Map Layer Display Deduplication Parity (`REQ-CLM-011.3`)*:
+• In `MapFragmentWithTrackViewModel.kt`, `mapClimbsFlow` SHALL filter candidate climbs for display such that if any overlapping or duplicate ascents exist in memory, only the canonical non-overlapping climb is emitted to `uiState.climbs`, guaranteeing zero visually overlapping duplicate climb polylines on `MapScreenWithTrack`.
+
+### Requirement Archaeology & Chesterton's Fence Audit
+1. *Original Requirement ID & Target*: Refines `REQ-MAP-064.1` (*Post-Workout & Import Climb Extraction*) and `REQ-MAP-066.1` (*Historical Climb Backfill*), targeting `ClimbsDatabaseManager.kt`, `WorkoutRepository.kt`, and `MapFragmentWithTrackViewModel.kt`.
+2. *Historical Origin & Commit Trace*: Commit `c7438e78` (`ATT-2766`), `8d42cf31` (`ATT-6691`), `045e14d4` (`ATT-1281`).
+3. *Root Reason for Existing Formulation*: The 50m endpoint tolerance was established as an initial conservative estimate before observing multi-ride GPS drift and repeat-climb accumulation on actual hardware during Sprint 2026-46.3 Joint Review.
+4. *Preservation of Core Invariants*: Route climb associations (`routeId`) remain strictly preserved; underlying `Climbs.db` SQLite schema v1 remains unchanged; 100% test pass rate across existing climb suites.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* two GPS recordings of the same hill where start coordinates differ by 75m and summits differ by 65m,
+• *When* `insertClimbsWithDeduplicationBatch` evaluates the candidate climb,
+• *Then* the climb is matched as an existing ascent and zero duplicate rows are inserted into `Climbs.db`.
+• *Given* an existing climb in `Climbs.db` and a candidate climb sharing $\ge 70\%$ corridor overlap in the same heading direction,
+• *When* insertion is attempted,
+• *Then* the candidate climb is deduplicated against the existing ascent.
+• *Given* a device with existing duplicate climbs in `Climbs.db` from historical backfill,
+• *When* `WorkoutRepository.triggerHistoricalClimbBackfillIfPending()` runs with unset `climbs_workout_deduplication_v3`,
+• *Then* `deduplicateExistingClimbs()` purges the redundant entries, marks `climbs_workout_deduplication_v3 = true`, and refreshes `LiveClimbsRepository`.
+• *Given* `MapScreenWithTrack` with `GeneralMapLayer.CLIMBS` enabled,
+• *When* climbs are rendered on the map,
+• *Then* only distinct, non-overlapping climb polylines are rendered.
+
+**Invariants**: `Climbs.db` SQLite schema v1 integrity; zero modification to detection math or scoring formulas; route association (`routeId`) preserved; 100% test pass rate.
+
+
 
 
 

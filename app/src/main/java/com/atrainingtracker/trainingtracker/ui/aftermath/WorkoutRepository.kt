@@ -160,6 +160,7 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
 
         const val PREF_CLIMBS_WORKOUT_BACKFILL_V1 = "climbs_workout_backfill_v1"
         const val PREF_CLIMBS_WORKOUT_CLEANUP_V2 = "climbs_workout_cleanup_v2"
+        const val PREF_CLIMBS_WORKOUT_DEDUPLICATION_V3 = "climbs_workout_deduplication_v3"
 
         @JvmStatic
         val cropMutex get() = com.atrainingtracker.trainingtracker.domain.crop.CropCoordinator.mutex
@@ -2758,6 +2759,9 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
             if (!prefs.getBoolean(PREF_CLIMBS_WORKOUT_CLEANUP_V2, false)) {
                 cleanupCorruptedWorkoutClimbs()
             }
+            if (!prefs.getBoolean(PREF_CLIMBS_WORKOUT_DEDUPLICATION_V3, false)) {
+                deduplicateHistoricalClimbs()
+            }
         } catch (e: Exception) {
             Log.w(TAG, "Error checking/triggering historical climb backfill/cleanup", e)
         }
@@ -2924,6 +2928,40 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
             }
         } catch (e: Exception) {
             Log.w(TAG, "Failed to finalize climbs_workout_cleanup_v2 preference", e)
+        }
+
+        purgedCount
+    }
+
+    /**
+     * Executes an idempotent one-time deduplication pass for Climbs.db (REQ-CLM-011.2 / ATT-7311).
+     * Purges redundant duplicate and heavily overlapping climb records resulting from historical backfills.
+     *
+     * Marks [PREF_CLIMBS_WORKOUT_DEDUPLICATION_V3] as true in SharedPreferences and refreshes [LiveClimbsRepository].
+     *
+     * @return Total count of purged duplicate climb records (0 if already completed).
+     */
+    suspend fun deduplicateHistoricalClimbs(): Int = withContext(Dispatchers.IO) {
+        val prefs = try {
+            androidx.preference.PreferenceManager.getDefaultSharedPreferences(application)
+        } catch (_: Throwable) {
+            null
+        }
+
+        if (prefs?.getBoolean(PREF_CLIMBS_WORKOUT_DEDUPLICATION_V3, false) == true) {
+            return@withContext 0
+        }
+
+        val climbsDb = ClimbsDatabaseManager.getInstance(application)
+        val purgedCount = climbsDb.deduplicateExistingClimbs(thresholdMeters = 100.0f)
+
+        try {
+            prefs?.edit()?.putBoolean(PREF_CLIMBS_WORKOUT_DEDUPLICATION_V3, true)?.apply()
+            if (purgedCount > 0) {
+                LiveClimbsRepository.getInstance(application).refreshClimbs()
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to finalize climbs_workout_deduplication_v3 preference", e)
         }
 
         purgedCount
