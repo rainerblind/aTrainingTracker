@@ -881,9 +881,15 @@ def collect_sprint_metrics_for_id(sprint_id, sprint_name, board_id, as_role="coo
 
     base = config.get("JIRA_URL", "").rstrip("/")
     sp_field = h_config.get("custom_fields", {}).get("story_points", "customfield_10016")
-    url = f"{base}/rest/agile/1.0/sprint/{sprint_id}/issue?fields=summary,status,issuetype,priority,subtasks,{sp_field}&maxResults=100"
+    url = f"{base}/rest/agile/1.0/sprint/{sprint_id}/issue?fields=summary,status,issuetype,priority,subtasks,comment,{sp_field}&maxResults=100"
     res = jira_request(url, role=as_role, config=config)
     issues = res.get("issues", [])
+
+    subtask_comments = {
+        i["key"]: i.get("fields", {}).get("comment", {}).get("comments", [])
+        for i in issues
+        if i.get("fields", {}).get("issuetype", {}).get("subtask", False) and i.get("key")
+    }
 
     parent_issues = [i for i in issues if not i.get("fields", {}).get("issuetype", {}).get("subtask", False)]
     for p in parent_issues:
@@ -891,11 +897,14 @@ def collect_sprint_metrics_for_id(sprint_id, sprint_name, board_id, as_role="coo
         for st in subtasks:
             st_key = st.get("key")
             if st_key and not st.get("comments"):
-                try:
-                    c_res = jira_request(f"{base}/rest/api/2/issue/{st_key}/comment", role=as_role, config=config)
-                    st["comments"] = c_res.get("comments", [])
-                except Exception:
-                    st["comments"] = []
+                if st_key in subtask_comments:
+                    st["comments"] = subtask_comments[st_key]
+                else:
+                    try:
+                        c_res = jira_request(f"{base}/rest/api/2/issue/{st_key}/comment", role=as_role, config=config)
+                        st["comments"] = c_res.get("comments", [])
+                    except Exception:
+                        st["comments"] = []
 
     sprint_info = {"id": sprint_id, "name": sprint_name}
     return parse_sprint_gate_metrics(parent_issues, sprint_info)
@@ -1282,17 +1291,26 @@ def export_gates(sprint_arg=None, out_path=None, as_role="coordinator", role=Non
     res = jira_request(url, role=as_role, config=config)
     issues = res.get("issues", [])
 
+    subtask_comments = {
+        i["key"]: i.get("fields", {}).get("comment", {}).get("comments", [])
+        for i in issues
+        if i.get("fields", {}).get("issuetype", {}).get("subtask", False) and i.get("key")
+    }
+
     parent_issues = [i for i in issues if not i.get("fields", {}).get("issuetype", {}).get("subtask", False)]
     for p in parent_issues:
         subtasks = p.get("fields", {}).get("subtasks", [])
         for st in subtasks:
             st_key = st.get("key")
             if st_key and not st.get("comments"):
-                try:
-                    c_res = jira_request(f"{base}/rest/api/2/issue/{st_key}/comment", role=as_role, config=config)
-                    st["comments"] = c_res.get("comments", [])
-                except Exception:
-                    st["comments"] = []
+                if st_key in subtask_comments:
+                    st["comments"] = subtask_comments[st_key]
+                else:
+                    try:
+                        c_res = jira_request(f"{base}/rest/api/2/issue/{st_key}/comment", role=as_role, config=config)
+                        st["comments"] = c_res.get("comments", [])
+                    except Exception:
+                        st["comments"] = []
 
     sprint_info = {"id": s_id, "name": s_name}
     records, gate_stats = extract_sprint_gate_records(parent_issues, sprint_info)

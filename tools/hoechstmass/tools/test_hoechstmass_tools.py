@@ -37,12 +37,14 @@ from tools.hoechstmass.tools.jira_util import (
     count_final_review_bounces,
     final_review_verdict,
     export_gates,
+    collect_sprint_metrics_for_id,
     VALID_ROLES,
 )
 from tools.hoechstmass.tools.verify_requirement_governance import (
     load_config,
     validate_archaeology_section,
     verify_engineering_directory_structure,
+    verify_sprint_metrics,
 )
 from tools.hoechstmass.tools.parallel_sprint_lock import (
     sprint_lock,
@@ -302,6 +304,86 @@ class TestEpicCommands(unittest.TestCase):
                     content = f.read()
                 self.assertIn("# Sprint Quality Gate Records: Sprint 100", content)
                 self.assertIn("| PROJ-101 | PROJ-102 | Gate 1 | Analysis (Gate 1) | PASS | agent2 | Agent 2 |", content)
+
+    def test_verify_sprint_metrics_hoechstmass(self):
+        """TST-PRO-060.2 / TST-PRO-060.3: verify_sprint_metrics in hoechstmass."""
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            metrics_dir = os.path.join(tmpdir, "docs", "engineering", "metrics")
+            os.makedirs(metrics_dir, exist_ok=True)
+            metrics_file = os.path.join(metrics_dir, "process_metrics.jsonl")
+
+            # 1. Missing file
+            ok, errs = verify_sprint_metrics(sprint_name="2026-46.3", repo_root=tmpdir)
+            self.assertFalse(ok)
+
+            # 2. Valid metrics file
+            record = {
+                "sprint_id": 100,
+                "sprint_name": "2026-46.3",
+                "recorded_at": "2026-11-12T04:00:00Z",
+                "throughput": {
+                    "total_tickets": 8,
+                    "completed_tickets": 8,
+                    "total_story_points": 18.0,
+                    "completed_story_points": 18.0,
+                },
+                "quality_gates": {"overall_ftpr_percent": 90.0},
+            }
+            with open(metrics_file, "w", encoding="utf-8") as f:
+                f.write(json.dumps(record) + "\n")
+
+            ok, msgs = verify_sprint_metrics(sprint_name="2026-46.3", repo_root=tmpdir)
+            self.assertTrue(ok)
+            self.assertTrue(any("PASS" in m for m in msgs))
+
+    def test_collect_sprint_metrics_preindexed_comments(self):
+        """TST-PRO-060.3 / REQ-PRO-060.4: Pre-indexed subtask comments without extra REST calls."""
+        from unittest.mock import patch
+
+        call_urls = []
+
+        def mock_jira_req(url, role=None, config=None, **kwargs):
+            call_urls.append(url)
+            if "/rest/agile/1.0/sprint/200/issue" in url:
+                return {
+                    "issues": [
+                        {
+                            "key": "PARENT-1",
+                            "fields": {
+                                "summary": "Parent Feature",
+                                "status": {"name": "Final Review (Human)"},
+                                "issuetype": {"subtask": False},
+                                "customfield_10016": 3.0,
+                                "subtasks": [
+                                    {"key": "ST-1", "fields": {"summary": "[Analysis] Task", "status": {"name": "Erledigt"}}}
+                                ],
+                            },
+                        },
+                        {
+                            "key": "ST-1",
+                            "fields": {
+                                "issuetype": {"subtask": True},
+                                "comment": {
+                                    "comments": [
+                                        {"body": "GATE_VERDICT: PASS", "author": {"displayName": "Agent 2"}}
+                                    ]
+                                },
+                            },
+                        },
+                    ]
+                }
+            return {}
+
+        with patch("tools.hoechstmass.tools.jira_util.jira_request", side_effect=mock_jira_req):
+            metrics = collect_sprint_metrics_for_id(200, "Sprint 200", 1)
+            self.assertEqual(metrics["throughput"]["total_story_points"], 3.0)
+            self.assertEqual(metrics["throughput"]["completed_story_points"], 3.0)
+            # Assert only 1 request was made (fetch_all_sprint_issues), zero sequential comment calls for ST-1
+            self.assertEqual(len(call_urls), 1)
+            self.assertTrue(any("/rest/agile/1.0/sprint/200/issue" in u for u in call_urls))
+
 
 
 class TestHoechstmassFlock(unittest.TestCase):

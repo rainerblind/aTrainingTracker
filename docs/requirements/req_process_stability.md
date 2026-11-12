@@ -3071,6 +3071,36 @@ The workflow SHALL mandate that:
   • *Then* `"gates"` is accepted without errors.
 - **Invariants**: Zero modifications to Android production runtime code in `app/src/main/`; pure Python standard library retained; Rule 3 (Human Decision Gate for `Erledigt`) preserved.
 
+### REQ-PRO-060: Sprint Metrics Persistence & Story Point Governance [Verified]
+- **Tests**: `tools/test_sprint_metrics.py`, `tools/test_verify_requirement_governance.py`, `tools/hoechstmass/tools/test_hoechstmass_tools.py`
+- **Implementation**: Story points extraction and serialization in `tools/sprint_metrics.py` and `tools/jira_util.py`, mandatory metrics execution in `.agents/skills/sprint-planner/SKILL.md` Ceremony 2, governance check `--check-metrics [SPRINT]` in `tools/verify_requirement_governance.py` and `tools/hoechstmass/tools/verify_requirement_governance.py`, and subtask comments indexing optimization in `collect_sprint_metrics_for_id`.
+- **Rationale**: Under ASPICE MAN.3 (Project Monitoring and Control) and GP 2.1 (Resource Management), sprint velocity and process metrics must be systematically persisted and verified in configuration management (Pre-Assessment Finding B-05). Historical process metrics in `docs/engineering/metrics/process_metrics.jsonl` lacked story point data for early sprints and lacked automated verification. This requirement establishes mandatory sprint metrics verification (`--check-metrics`), ensures story points are recorded every sprint, and optimizes query execution:
+  1. *Story Points Extraction & Recording (`REQ-PRO-060.1`, tools/sprint_metrics.py & tools/jira_util.py)*:
+     • `sprint_metrics.py` and `jira_util.py` SHALL extract planned and completed story points (`customfield_10016` / `customfield_10026`) and serialize them under `throughput` in `docs/engineering/metrics/process_metrics.jsonl`.
+  2. *Ceremony 2 Metrics Mandate (`REQ-PRO-060.2`, .agents/skills/sprint-planner/SKILL.md)*:
+     • The sprint retrospective process in `sprint-planner/SKILL.md` SHALL mandate execution of `jira_util.py sprint-metrics --record` and `verify_requirement_governance.py --check-metrics` at sprint close.
+  3. *Governance Verification CLI (`REQ-PRO-060.3`, tools/verify_requirement_governance.py & tools/hoechstmass/tools/verify_requirement_governance.py)*:
+     • `tools/verify_requirement_governance.py` and `tools/hoechstmass/tools/verify_requirement_governance.py` SHALL implement `--check-metrics [SPRINT]`, validating file presence, JSONL schema integrity, and requiring `total_story_points > 0` and `completed_story_points > 0` for evaluated sprints.
+  4. *Query Performance Optimization (`REQ-PRO-060.4`, tools/jira_util.py & tools/hoechstmass/tools/jira_util.py)*:
+     • `collect_sprint_metrics_for_id` in `tools/jira_util.py` and `tools/hoechstmass/tools/jira_util.py` SHALL index subtask comments from `fetch_all_sprint_issues` in memory to eliminate serial per-subtask REST requests.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Net-new requirement `REQ-PRO-060` (`REQ-PRO-060.1`–`REQ-PRO-060.4`). Targets `tools/sprint_metrics.py`, `tools/jira_util.py`, `tools/verify_requirement_governance.py`, and `tools/hoechstmass/`.
+  2. *Historical Origin & Commit Trace*: Introduced in Sprint 2026-46.3 via ATT-6150 under Epic ATT-6141 to satisfy ASPICE pre-assessment finding B-05.
+  3. *Root Reason for Existing Formulation*: Historical sprints lacked automated SP verification at sprint close; `process_metrics.jsonl` had gaps and zero story point records.
+  4. *Preservation of Core Invariants*: Zero changes to Android runtime code; pure Python 3 standard library; offline mock testing resilience preserved.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* completed sprint issues with story points assigned,
+  • *When* `sprint-metrics --record` is executed,
+  • *Then* a record with `total_story_points > 0` and `completed_story_points > 0` is appended to `process_metrics.jsonl`.
+  • *Given* a sprint name with no metrics record or with zero story points,
+  • *When* `verify_requirement_governance.py --check-metrics <sprint>` runs,
+  • *Then* it aborts with exit code 1.
+  • *Given* a sprint record with valid schema and positive story points,
+  • *When* `verify_requirement_governance.py --check-metrics <sprint>` runs,
+  • *Then* it passes with exit code 0.
+- **Invariants**: Zero modifications to Android production runtime code in `app/src/main/`; pure Python standard library retained; Rule 3 (`Erledigt` human-only gate) preserved.
+
+
 
 
 

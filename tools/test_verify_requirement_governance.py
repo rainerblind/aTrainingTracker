@@ -33,6 +33,7 @@ from tools.verify_requirement_governance import (
     verify_governance,
     verify_master_table_parity,
     verify_repository_encapsulation,
+    verify_sprint_metrics,
 )
 
 
@@ -175,7 +176,7 @@ index 1234567..89abcdef 100644
                     imported_modules.add(node.module.split(".")[0])
 
         # Allowed standard library modules
-        std_lib_modules = {"os", "sys", "re", "subprocess", "argparse", "unittest"}
+        std_lib_modules = {"os", "sys", "re", "subprocess", "argparse", "unittest", "json"}
         for mod in imported_modules:
             self.assertIn(
                 mod,
@@ -537,6 +538,91 @@ diff --git a/docs/requirements/req_process_stability.md b/docs/requirements/req_
             ok_any, msgs_any = verify_gate_records(sprint_name=None, repo_root=tmpdir)
             self.assertTrue(ok_any)
             self.assertTrue(any("Verified 1 sprint quality gate export record" in m for m in msgs_any))
+
+    def test_scenario_15_verify_sprint_metrics_validation(self):
+        """Scenario 15: verify_sprint_metrics validates JSONL schema and positive story points (TST-PRO-060.2)."""
+        import json
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            metrics_dir = os.path.join(tmpdir, "docs", "engineering", "metrics")
+            os.makedirs(metrics_dir, exist_ok=True)
+            metrics_file = os.path.join(metrics_dir, "process_metrics.jsonl")
+
+            # 1. Missing metrics file
+            ok, errs = verify_sprint_metrics(sprint_name="2026-46.3", repo_root=tmpdir)
+            self.assertFalse(ok)
+            self.assertTrue(any("does not exist" in e for e in errs))
+
+            # 2. Empty metrics file
+            with open(metrics_file, "w", encoding="utf-8") as f:
+                f.write("   \n")
+            ok, errs = verify_sprint_metrics(sprint_name="2026-46.3", repo_root=tmpdir)
+            self.assertFalse(ok)
+            self.assertTrue(any("empty" in e for e in errs))
+
+            # 3. Malformed JSON
+            with open(metrics_file, "w", encoding="utf-8") as f:
+                f.write("not valid json\n")
+            ok, errs = verify_sprint_metrics(sprint_name="2026-46.3", repo_root=tmpdir)
+            self.assertFalse(ok)
+            self.assertTrue(any("Malformed JSON" in e for e in errs))
+
+            # 4. Missing required schema fields
+            with open(metrics_file, "w", encoding="utf-8") as f:
+                f.write(json.dumps({"sprint_id": 1, "sprint_name": "test"}) + "\n")
+            ok, errs = verify_sprint_metrics(sprint_name="test", repo_root=tmpdir)
+            self.assertFalse(ok)
+            self.assertTrue(any("missing required schema fields" in e for e in errs))
+
+            # 5. Sprint with 0 story points
+            zero_sp_record = {
+                "sprint_id": 100,
+                "sprint_name": "2026-40.1",
+                "recorded_at": "2026-11-12T00:00:00Z",
+                "throughput": {
+                    "total_tickets": 5,
+                    "completed_tickets": 5,
+                    "total_story_points": 0.0,
+                    "completed_story_points": 0.0,
+                },
+                "quality_gates": {"overall_ftpr_percent": 100.0},
+            }
+            with open(metrics_file, "w", encoding="utf-8") as f:
+                f.write(json.dumps(zero_sp_record) + "\n")
+            ok, errs = verify_sprint_metrics(sprint_name="2026-40.1", repo_root=tmpdir)
+            self.assertFalse(ok)
+            self.assertTrue(any("invalid story points" in e for e in errs))
+
+            # 6. Missing requested sprint
+            ok, errs = verify_sprint_metrics(sprint_name="nonexistent", repo_root=tmpdir)
+            self.assertFalse(ok)
+            self.assertTrue(any("Missing sprint metrics record" in e for e in errs))
+
+            # 7. Valid sprint record with >0 story points
+            valid_record = {
+                "sprint_id": 440,
+                "sprint_name": "2026-46.3",
+                "recorded_at": "2026-11-12T04:00:00Z",
+                "throughput": {
+                    "total_tickets": 10,
+                    "completed_tickets": 10,
+                    "total_story_points": 25.0,
+                    "completed_story_points": 25.0,
+                },
+                "quality_gates": {"overall_ftpr_percent": 95.0},
+            }
+            with open(metrics_file, "a", encoding="utf-8") as f:
+                f.write(json.dumps(valid_record) + "\n")
+
+            ok, msgs = verify_sprint_metrics(sprint_name="sprint/2026-46.3", repo_root=tmpdir)
+            self.assertTrue(ok, f"Expected pass, got: {msgs}")
+            self.assertTrue(any("PASS" in m for m in msgs))
+
+            # 8. Wildcard verification (latest entry is valid_record)
+            ok_any, msgs_any = verify_sprint_metrics(sprint_name=None, repo_root=tmpdir)
+            self.assertTrue(ok_any, f"Expected pass, got: {msgs_any}")
+            self.assertTrue(any("Verified 2 sprint metrics record(s)" in m for m in msgs_any))
+
 
 
 if __name__ == "__main__":

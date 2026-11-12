@@ -1836,6 +1836,19 @@
   3. *Canonical Directory Registration (`TST-PRO-059.3`, tools/test_verify_requirement_governance.py)*:
   • Assert `"gates"` exists in `ALLOWED_ENGINEERING_ENTRIES` and `hoechstmass_config.json`.
 
+### TST-PRO-060: **Sprint Metrics Persistence, Story Point Governance & Query Optimization** [Verified]
+- **Requirement(s)**: `REQ-PRO-060`
+- **Component**: `tools/sprint_metrics.py`, `tools/jira_util.py`, `tools/verify_requirement_governance.py`, `tools/hoechstmass/tools/jira_util.py`, `tools/hoechstmass/tools/verify_requirement_governance.py`, `tools/test_sprint_metrics.py`, `tools/test_verify_requirement_governance.py`, `tools/hoechstmass/tools/test_hoechstmass_tools.py`
+- **Jira**: `ATT-6150`
+- **Test Description**:
+  1. *Story Point Extraction & Schema Persistence (`TST-PRO-060.1`, tools/test_sprint_metrics.py)*:
+  • Verify `parse_sprint_gate_metrics` populates `total_story_points` and `completed_story_points` from custom fields.
+  2. *Governance Verification Check (`TST-PRO-060.2`, tools/test_verify_requirement_governance.py)*:
+  • Run `verify_sprint_metrics` against valid, missing, empty, and zero-story-point files; assert pass/fail responses.
+  3. *Counterpart Parity & Indexing Optimization (`TST-PRO-060.3`, tools/hoechstmass/tools/test_hoechstmass_tools.py)*:
+  • Assert `verify_sprint_metrics` parity and verify `collect_sprint_metrics_for_id` uses pre-indexed comments without extra network requests.
+
+
 
 
 

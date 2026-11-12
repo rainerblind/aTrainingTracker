@@ -194,6 +194,88 @@ def verify_gate_records(sprint_name=None, repo_root=None):
         return True, [f"PASS: Verified {valid_files} sprint quality gate export record(s) in {gates_dir}."]
 
 
+def verify_sprint_metrics(sprint_name=None, repo_root=None):
+    """
+    REQ-PRO-060.3 / TST-PRO-060.2:
+    Verifies that sprint metrics have been recorded in docs/engineering/metrics/process_metrics.jsonl.
+    Validates:
+    - File exists and is non-empty.
+    - Every line is valid JSON conforming to the schema (sprint_id, sprint_name, throughput, quality_gates).
+    - If sprint_name is specified, verifies that an entry for that sprint exists and has:
+      total_story_points > 0 and completed_story_points > 0.
+    - If sprint_name is not specified, verifies that at least one valid entry exists, and that the latest
+      entry has total_story_points > 0 and completed_story_points > 0.
+    Fails with exit code 1 if the verification fails.
+    """
+    if repo_root is None:
+        repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
+
+    metrics_file = os.path.join(repo_root, "docs", "engineering", "metrics", "process_metrics.jsonl")
+    if not os.path.isfile(metrics_file):
+        return False, [f"ERROR: Sprint process metrics file does not exist: {metrics_file}"]
+
+    try:
+        with open(metrics_file, "r", encoding="utf-8") as f:
+            lines = [line.strip() for line in f if line.strip()]
+    except Exception as e:
+        return False, [f"ERROR: Failed to read sprint process metrics file {metrics_file}: {e}"]
+
+    if not lines:
+        return False, [f"ERROR: Sprint process metrics file is empty: {metrics_file}"]
+
+    entries = []
+    required_keys = {"sprint_id", "sprint_name", "throughput", "quality_gates"}
+    for idx, line in enumerate(lines, start=1):
+        try:
+            entry = json.loads(line)
+        except Exception as e:
+            return False, [f"ERROR: Malformed JSON at line {idx} in {metrics_file}: {e}"]
+        if not isinstance(entry, dict) or not required_keys.issubset(entry.keys()):
+            return False, [f"ERROR: Line {idx} in {metrics_file} missing required schema fields {required_keys - entry.keys()}"]
+        entries.append(entry)
+
+    if sprint_name:
+        clean_target = sprint_name.strip()
+        clean_target = re.sub(r"^sprint[/_]", "", clean_target)
+        found_entry = None
+        for entry in entries:
+            s_name = str(entry.get("sprint_name", "")).strip()
+            s_id = str(entry.get("sprint_id", "")).strip()
+            if clean_target in (s_name, s_id, f"sprint_{s_name}", f"sprint/{s_name}") or s_name == clean_target:
+                found_entry = entry
+                break
+        if not found_entry:
+            return False, [f"ERROR: Missing sprint metrics record for sprint '{sprint_name}' in {metrics_file}"]
+
+        throughput = found_entry.get("throughput", {})
+        total_sp = float(throughput.get("total_story_points", 0.0) or 0.0)
+        completed_sp = float(throughput.get("completed_story_points", 0.0) or 0.0)
+        if total_sp <= 0.0 or completed_sp <= 0.0:
+            return False, [
+                f"ERROR: Sprint metrics for '{sprint_name}' have invalid story points: "
+                f"total_story_points={total_sp}, completed_story_points={completed_sp} (expected > 0)."
+            ]
+        return True, [
+            f"PASS: Sprint metrics verified for '{sprint_name}': "
+            f"total_story_points={total_sp}, completed_story_points={completed_sp}."
+        ]
+    else:
+        latest = entries[-1]
+        throughput = latest.get("throughput", {})
+        total_sp = float(throughput.get("total_story_points", 0.0) or 0.0)
+        completed_sp = float(throughput.get("completed_story_points", 0.0) or 0.0)
+        if total_sp <= 0.0 or completed_sp <= 0.0:
+            return False, [
+                f"ERROR: Latest sprint metrics entry ('{latest.get('sprint_name')}') has invalid story points: "
+                f"total_story_points={total_sp}, completed_story_points={completed_sp} (expected > 0)."
+            ]
+        return True, [
+            f"PASS: Verified {len(entries)} sprint metrics record(s) in {metrics_file}. "
+            f"Latest sprint '{latest.get('sprint_name')}' has total_story_points={total_sp}, completed_story_points={completed_sp}."
+        ]
+
+
+
 def verify_master_table_parity(repo_root=None, config=None):
     """Verifies 100% mathematical parity between master tables and domain shards."""
     if repo_root is None:
@@ -379,11 +461,25 @@ def main():
         default=None,
         help="Verify sprint quality gate records export in docs/engineering/gates/ (optionally specify sprint name).",
     )
+    parser.add_argument(
+        "--check-metrics",
+        nargs="?",
+        const="",
+        default=None,
+        help="Verify sprint process metrics in docs/engineering/metrics/process_metrics.jsonl (optionally specify sprint name).",
+    )
     args = parser.parse_args()
 
     if args.check_gates is not None:
         target_sprint = args.check_gates if args.check_gates != "" else None
         ok, diag = verify_gate_records(sprint_name=target_sprint)
+        for msg in diag:
+            print(msg, file=sys.stderr if not ok else sys.stdout)
+        sys.exit(0 if ok else 1)
+
+    if args.check_metrics is not None:
+        target_sprint = args.check_metrics if args.check_metrics != "" else None
+        ok, diag = verify_sprint_metrics(sprint_name=target_sprint)
         for msg in diag:
             print(msg, file=sys.stderr if not ok else sys.stdout)
         sys.exit(0 if ok else 1)

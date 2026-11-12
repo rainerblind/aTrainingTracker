@@ -178,12 +178,13 @@ Jointly review all completed sprint tickets with the human user against expectat
      4. *Strict Invariant*: Standard sprint tickets (`Feature`, `Bug`, `Verbesserung`) remain strictly under the Human Decision Gate. Only Milestone Epics with 0 open child tickets may be closed via `close-epic` after human confirmation.
 5. **Sprint Retrospective, Tier 2 Sprint Integration Gate & Process Hardening ("Retro Before Merge")**:
    * **Mandate**: Conduct the Retrospective, run the Tier 2 Sprint Integration Gate (`./gradlew testDebugUnitTest --max-workers=2 && python3 tools/verify_requirement_governance.py` if not already verified on the exact final code tree of `sprint/<SPRINT_NAME>`), and update governance documents on `sprint/<SPRINT_NAME>` **BEFORE** merging into `develop`.
-   * **Mandatory Quantitative Sprint Metrics & Scorecard Generation (PA 4.1 & PA 4.2 — `REQ-PRO-038`, `ATT-5764`)**:
+   * **Mandatory Quantitative Sprint Metrics & Scorecard Generation (PA 4.1 & PA 4.2 — `REQ-PRO-038`, `REQ-PRO-060`, `ATT-5764`, `ATT-6150`)**:
      At the very start of Step 4, the Coordinator **MUST** execute:
      ```bash
      python3 tools/jira_util.py --as coordinator sprint-metrics --record --post-to-retro
+     python3 tools/verify_requirement_governance.py --check-metrics
      ```
-     This calculates Gate 1–5 First-Time-Pass-Rates (FTPR), Reason Swiss Cheese defect escape rates ($p_1 \dots p_5$, $P_{\text{escape}} = \prod p_i$), and Statistical Process Control (SPC) moving baseline limits ($\mu \pm 2\sigma$), idempotently updates `docs/engineering/metrics/process_metrics.jsonl`, and posts the markdown scorecard directly as a comment on the sprint's `Review & Retro` ticket.
+     This calculates Gate 1–5 First-Time-Pass-Rates (FTPR), Reason Swiss Cheese defect escape rates ($p_1 \dots p_5$, $P_{\text{escape}} = \prod p_i$), and Statistical Process Control (SPC) moving baseline limits ($\mu \pm 2\sigma$), idempotently updates `docs/engineering/metrics/process_metrics.jsonl`, verifies that planned and completed story points are $> 0$ via `--check-metrics`, and posts the markdown scorecard directly as a comment on the sprint's `Review & Retro` ticket.
    * **Mandatory Sprint Quality Gate Records Export (`REQ-PRO-059`, `ATT-6149`)**:
      To maintain independent ASPICE SUP.1 (Quality Assurance) and GP 2.2 (Work Product Evidence) proof in repository configuration management, the Coordinator **MUST** export all Gate 1–5 and Stage 6 review verdicts to version control and verify its presence before sprint merge:
      ```bash
