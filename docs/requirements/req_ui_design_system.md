@@ -15431,7 +15431,7 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 
 ### REQ-UI-514: Dedicated ANT+ (bike_radar) and Bluetooth LE (bt_bike_radar) Vector Sensor Badges for DeviceType.BIKE_RADAR [Verified]
 - **Target Release**: `V5.0.0`
-- **Tests**: `TST-UI-514` | **Tickets**: `ATT-6699`
+- **Tests**: `TST-UI-514` | **Tickets**: `ATT-6699`, `ATT-7318`
 - **Implementation**: `app/src/main/res/drawable/bike_radar.xml`, `app/src/main/res/drawable/bt_bike_radar.xml`, `UIHelper.java`, `DeviceData.kt`, `VectorAssetResolutionContractTest.kt`
 - **Rationale**: When `DeviceType.BIKE_RADAR` devices are discovered or paired over ANT+ or Bluetooth LE, they currently fall back to generic protocol icons (`ant_logo` or `logo_protocol_bluetooth`). The system SHALL provide dedicated, mathematically constructed vector drawables (`bike_radar.xml` and `bt_bike_radar.xml`) following the established design language of the sensor badge family (REQ-UI-375, REQ-UI-442), wire them into `UIHelper` and `DeviceData`, and enforce Rule 37 geometric constraints.
 - **Description**:
@@ -15439,21 +15439,20 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
      - `app/src/main/res/drawable/bike_radar.xml` SHALL define a `48dp x 48dp` vector drawable with `96x96` viewport.
      - Background badge SHALL be `#000000` rounded rectangle with corner radius $r=10.0$ (`M 10,0 L 86,0 A 10,10 0 0,1 96,10 ...`).
      - Foreground SHALL render standard white silhouette cyclist matching `bike_pwr.xml`.
-     - Radar emission motif SHALL render analytical arcs radiating backward behind the cyclist's saddle/seatpost.
+     - Radar emission motif SHALL render concentric analytical arcs radiating backward behind the cyclist's saddle/seatpost with origin $(36.0, 26.0)$, radii $[8.0, 14.0, 20.0]$, spanning from $+50^\circ$ up (angle $230^\circ$) to $-25^\circ$ down (angle $155^\circ$), maintaining $\ge 3.0$ units visual separation from the rear wheel ($y_{\text{wheel}} \ge 39.0$), cyclist back/saddle, and card border, with all arc endpoints staying cleanly above the rear wheel ($y \le 35.0$).
      - Bottom abbreviation label SHALL render bold uppercase `RDR` centered at $y \in [75.5, 90.5]$ with `android:fillType="evenOdd"` for punch-out transparency on glyph `D` and `R`.
   2. *Bluetooth LE Radar Badge Geometry & Typography (`REQ-UI-514.2` — Rule 37)*:
      - `app/src/main/res/drawable/bt_bike_radar.xml` SHALL define a `48dp x 48dp` vector drawable with `144x144` viewport.
      - Background badge SHALL be full-bleed `#0A3D91` rounded rectangle ($r=22.0$) spanning `0..144` (`M 22,0 L 122,0 A 22,22 0 0,1 144,22 ...`).
-     - Cyclist motif SHALL be horizontally centered using `<group android:translateX="18.18">` matching `bt_bike_pwr.xml`.
-     - Top-left quadrant ($x \approx 12..52, y \approx 10..50$) SHALL embed a canonical radar wave mini-icon group `mini_icon_radar`.
-     - Radar emission motif SHALL render analytical arcs radiating backward from the cyclist's seatpost.
+     - Cyclist motif SHALL be horizontally centered using `<group android:translateX="18.18">` matching canonical `bt_bike_pwr.xml`, containing the unmodified clean cyclist silhouette (18 paths) with zero saddle emission overlays.
+     - Top-left quadrant ($x \approx 12..44, y \approx 17..36$) SHALL embed canonical radar wave mini-icon group `mini_icon_radar` with zero geometric collisions against the cyclist silhouette or viewport boundaries.
      - Bottom abbreviation label SHALL render bold uppercase `RDR` centered at $y \in [113.25, 135.75]$ with `android:fillType="evenOdd"`.
   3. *Protocol Icon Resolution (`REQ-UI-514.3`)*:
      - `UIHelper.getIconId(DeviceType.BIKE_RADAR, Protocol.ANT_PLUS)` and `DeviceData.getIconId(DeviceType.BIKE_RADAR, Protocol.ANT_PLUS)` SHALL return `R.drawable.bike_radar`.
      - `UIHelper.getIconId(DeviceType.BIKE_RADAR, Protocol.BLUETOOTH_LE)` and `DeviceData.getIconId(DeviceType.BIKE_RADAR, Protocol.BLUETOOTH_LE)` SHALL return `R.drawable.bt_bike_radar`.
   4. *Rule 37 Vector Quality & Contract Test Coverage (`REQ-UI-514.4`)*:
      - All `<path>` elements in both radar drawables MUST contain $\le 45$ `L` commands and use analytical curve commands (`A`, `C`, or `Q`).
-     - `VectorAssetResolutionContractTest.kt` SHALL include `bike_radar` and `bt_bike_radar` in DOM validity, color token, Rule 37 complexity, and resolution tests.
+     - `VectorAssetResolutionContractTest.kt` SHALL include `bike_radar` and `bt_bike_radar` in DOM validity, color token, Rule 37 complexity, geometric bounding-box non-overlap, and resolution tests.
 
 **Requirement Archaeology & Chesterton's Fence Audit**:
 1. *Original Requirement ID & Target*: Amends `REQ-UI-375` (*Mathematical VectorDrawable Migration*, `ATT-2859`) and `REQ-UI-442` (*Full-Bleed Badge Geometry & Uppercase Labels for Bluetooth LE Sensor Drawables*, `ATT-4956`, `ATT-5201`). Targets `app/src/main/res/drawable/bike_radar.xml`, `app/src/main/res/drawable/bt_bike_radar.xml`, `UIHelper.java`, `DeviceData.kt`, and `VectorAssetResolutionContractTest.kt`.

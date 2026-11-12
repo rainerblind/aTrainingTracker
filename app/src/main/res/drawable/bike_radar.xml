@@ -8,7 +8,7 @@
   ~ the Free Software Foundation, either version 3 of the License, or
   ~ (at your option) any later version.
   ~
-  ~ Dedicated ANT+ Bike Radar vector logo (ATT-6699 / REQ-UI-513 / Rule 37).
+  ~ Dedicated ANT+ Bike Radar vector logo (ATT-6699 / ATT-7318 / REQ-UI-514 / Rule 37).
   -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="48dp"
@@ -32,7 +32,7 @@
         android:strokeColor="#FFFFFF"
         android:strokeWidth="2.8"
         android:strokeLineCap="round"
-        android:pathData="M 30.5,23.5 A 8.5,8.5 0 0,0 30.5,38.5 M 26.5,18.0 A 14.5,14.5 0 0,0 26.5,44.0 M 22.5,12.5 A 20.5,20.5 0 0,0 22.5,49.5" />
+        android:pathData="M 30.9,19.9 A 8.0,8.0 0 0,0 28.7,29.4 M 27.0,15.3 A 14.0,14.0 0 0,0 23.3,31.9 M 23.1,10.7 A 20.0,20.0 0 0,0 17.9,34.5" />
     <path
         android:fillColor="#FFFFFF"
         android:fillType="evenOdd"

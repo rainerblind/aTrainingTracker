@@ -8,7 +8,7 @@
   ~ the Free Software Foundation, either version 3 of the License, or
   ~ (at your option) any later version.
   ~
-  ~ Dedicated Bluetooth LE Bike Radar vector logo (ATT-6699 / REQ-UI-513 / REQ-UI-442 / Rule 37).
+  ~ Dedicated Bluetooth LE Bike Radar vector logo (ATT-6699 / ATT-7318 / REQ-UI-514 / REQ-UI-442 / Rule 37).
   -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="48dp"
@@ -139,25 +139,6 @@
         android:strokeWidth="1.53"
         android:strokeLineJoin="round"
         android:pathData="M 41.13,31.17 Q 38.85,30.03 37.70,32.32 Q 36.56,34.61 37.12,37.46 Q 37.70,40.33 38.85,38.61 Q 39.99,36.90 41.70,34.61 Q 43.41,32.32 41.13,31.17 Z" />
-    <!-- Rear radar emission arcs behind saddle -->
-    <path
-        android:fillColor="#00000000"
-        android:strokeColor="#FFFFFF"
-        android:strokeWidth="4.0"
-        android:strokeLineCap="round"
-        android:pathData="M 22.0,34.0 A 13.0,13.0 0 0,0 22.0,58.0" />
-    <path
-        android:fillColor="#00000000"
-        android:strokeColor="#FFFFFF"
-        android:strokeWidth="4.0"
-        android:strokeLineCap="round"
-        android:pathData="M 14.0,26.0 A 22.0,22.0 0 0,0 14.0,66.0" />
-    <path
-        android:fillColor="#00000000"
-        android:strokeColor="#FFFFFF"
-        android:strokeWidth="4.0"
-        android:strokeLineCap="round"
-        android:pathData="M 6.0,18.0 A 31.0,31.0 0 0,0 6.0,74.0" />
     </group>
     <!-- Canonical radar wave mini-icon in top-left quadrant -->
     <group
