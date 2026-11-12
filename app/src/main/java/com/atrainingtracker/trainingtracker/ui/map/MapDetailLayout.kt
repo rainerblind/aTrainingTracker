@@ -79,7 +79,9 @@ import com.atrainingtracker.trainingtracker.ui.utils.CollapsingAppBarNestedScrol
 import com.atrainingtracker.trainingtracker.ui.components.core.SplitPaneMath
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.LatLngBounds
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -359,8 +361,10 @@ fun MapDetailLayout(
                                 combineWorkoutAndShare(context, hBmp, mBmp, eBmp, aBmp)
                             },
                             onError = { t ->
-                                android.util.Log.e("MapDetailLayout", "Failed to capture or share workout snapshot", t)
-                                android.widget.Toast.makeText(context, R.string.error_sharing_failed, android.widget.Toast.LENGTH_SHORT).show()
+                                if (t !is CancellationException) {
+                                    android.util.Log.e("MapDetailLayout", "Failed to capture or share workout snapshot", t)
+                                    android.widget.Toast.makeText(context, R.string.error_sharing_failed, android.widget.Toast.LENGTH_SHORT).show()
+                                }
                             },
                             onFinally = {
                                 isSharing = false
@@ -1259,7 +1263,12 @@ internal suspend fun executeSnapshotCaptureAndShare(
         val hBmp = captureHeader()
         val eBmp = captureElevation()
         val aBmp = captureAnalytics()
-        shareAction(hBmp, mapBitmap, eBmp, aBmp)
+        withContext(NonCancellable) {
+            shareAction(hBmp, mapBitmap, eBmp, aBmp)
+        }
+    } catch (_: CancellationException) {
+        // Ignored: coroutine scope left composition (e.g. ChooserActivity was presented).
+        // Prevents false failure toasts when the share operation succeeded (REQ-REV-006.5.d / ATT-7316).
     } catch (t: Throwable) {
         onError(t)
     } finally {

@@ -20,6 +20,7 @@ package com.atrainingtracker.trainingtracker.ui.map
 
 import android.graphics.Bitmap
 import io.mockk.mockk
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
@@ -95,5 +96,77 @@ class MapDetailLayoutSnapshotContractTest {
 
         assertNotNull("Exception must be caught and routed to onError", errorCaught)
         assertTrue("onFinally must still execute when captureHeader throws", finallyInvoked)
+    }
+
+    @Test
+    fun testMapDetailLayout_onSnapshotReady_whenCancellationExceptionThrown_doesNotInvokeOnError_TST_REV_007_6() = runBlocking {
+        val mapBmp = mockk<Bitmap>(relaxed = true)
+        var errorCaught: Throwable? = null
+        var finallyInvoked = false
+
+        executeSnapshotCaptureAndShare(
+            captureHeader = { null },
+            captureElevation = { null },
+            captureAnalytics = { null },
+            mapBitmap = mapBmp,
+            shareAction = { _, _, _, _ ->
+                throw CancellationException("rememberCoroutineScope cancelled")
+            },
+            onError = { errorCaught = it },
+            onFinally = { finallyInvoked = true }
+        )
+
+        assertEquals("CancellationException must be safely ignored without routing to onError", null, errorCaught)
+        assertTrue("onFinally must always execute to reset isSharing and invoke onSnapshotComplete", finallyInvoked)
+    }
+
+    @Test
+    fun testMapDetailLayout_onSnapshotReady_whenForgottenCoroutineScopeException_doesNotInvokeOnError_TST_REV_007_6() = runBlocking {
+        val mapBmp = mockk<Bitmap>(relaxed = true)
+        var errorCaught: Throwable? = null
+        var finallyInvoked = false
+
+        val forgottenException = Class.forName("androidx.compose.runtime.ForgottenCoroutineScopeException")
+            .getDeclaredConstructor()
+            .apply { isAccessible = true }
+            .newInstance() as CancellationException
+
+        executeSnapshotCaptureAndShare(
+            captureHeader = { null },
+            captureElevation = { null },
+            captureAnalytics = { null },
+            mapBitmap = mapBmp,
+            shareAction = { _, _, _, _ ->
+                throw forgottenException
+            },
+            onError = { errorCaught = it },
+            onFinally = { finallyInvoked = true }
+        )
+
+        assertEquals("ForgottenCoroutineScopeException must be safely ignored without routing to onError", null, errorCaught)
+        assertTrue("onFinally must always execute when ForgottenCoroutineScopeException occurs", finallyInvoked)
+    }
+
+    @Test
+    fun testMapDetailLayout_onSnapshotReady_whenNonCancellationExceptionThrownInShareAction_invokesOnError_TST_REV_007_6() = runBlocking {
+        val mapBmp = mockk<Bitmap>(relaxed = true)
+        var errorCaught: Throwable? = null
+        var finallyInvoked = false
+
+        executeSnapshotCaptureAndShare(
+            captureHeader = { null },
+            captureElevation = { null },
+            captureAnalytics = { null },
+            mapBitmap = mapBmp,
+            shareAction = { _, _, _, _ ->
+                throw IllegalStateException("File I/O failure during saveAndShare")
+            },
+            onError = { errorCaught = it },
+            onFinally = { finallyInvoked = true }
+        )
+
+        assertNotNull("Non-cancellation exceptions must still be caught and routed to onError", errorCaught)
+        assertTrue(errorCaught is IllegalStateException)
+        assertTrue("onFinally must always execute", finallyInvoked)
     }
 }
