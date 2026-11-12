@@ -43,6 +43,32 @@ REQ_ROW_PATTERN = re.compile(
 # All legacy duplicates fully resolved in ATT-6123 (SWE.1 BP5, SWE.6 BP4, REQ-PRO-066.6)
 LEGACY_DUPLICATE_IDS = frozenset()
 
+# Known legacy dangling references pending backfill in A-08.x (ATT-6127..6135, SWE.1 BP5, SWE.6 BP4, REQ-PRO-070)
+LEGACY_DANGLING_TST_REFS = frozenset({
+    "TST-FUSION-001",
+    "TST-FUSION-002",
+    "TST-FUSION-003",
+    "TST-FUSION-004",
+    "TST-INT-007",
+    "TST-STR-010",
+    "TST-UI-041",
+    "TST-UI-044",
+})
+
+LEGACY_DANGLING_REQ_REFS = frozenset({
+    "REQ-MAP-037",
+    "REQ-STB-013",
+    "REQ-TRK-035",
+    "REQ-UI-002",
+    "REQ-UI-008",
+    "REQ-UI-009",
+    "REQ-UI-010",
+    "REQ-UI-062",
+    "REQ-UI-135",
+    "REQ-UI-166",
+    "REQ-UI-289",
+})
+
 
 def get_git_diff(base_ref="develop", target_paths=None):
     """
@@ -968,6 +994,278 @@ def verify_unique_ids(repo_root=None, fail_on_duplicates=False, legacy_allowlist
     return True, diagnostics
 
 
+class DanglingReference:
+    """Represents a single dangling reference from a living doc entry to a missing heading."""
+    def __init__(self, source_file, line_no, source_id, target_id, target_type):
+        self.source_file = source_file
+        self.line_no = line_no
+        self.source_id = source_id
+        self.target_id = target_id
+        self.target_type = target_type
+
+    def __iter__(self):
+        return iter((self.source_file, self.line_no, self.source_id, self.target_id))
+
+    def __getitem__(self, item):
+        if isinstance(item, int):
+            return (self.source_file, self.line_no, self.source_id, self.target_id)[item]
+        return getattr(self, item)
+
+    def __repr__(self):
+        return f"DanglingReference({self.source_file}:{self.line_no} [{self.source_id}] -> {self.target_id})"
+
+    def __eq__(self, other):
+        if isinstance(other, (tuple, list)):
+            return (self.source_file, self.line_no, self.source_id, self.target_id) == tuple(other)
+        if isinstance(other, DanglingReference):
+            return (self.source_file, self.line_no, self.source_id, self.target_id) == (
+                other.source_file,
+                other.line_no,
+                other.source_id,
+                other.target_id,
+            )
+        return False
+
+
+class DanglingReferencesList(list):
+    """List containing all dangling references, with dictionary and attribute access for backward compatibility."""
+    def __init__(self, dangling_tsts=None, dangling_reqs=None):
+        tsts = list(dangling_tsts or [])
+        reqs = list(dangling_reqs or [])
+        super().__init__(tsts + reqs)
+        self.dangling_tsts = tsts
+        self.dangling_reqs = reqs
+
+    def __getitem__(self, item):
+        if item == "dangling_tsts":
+            return self.dangling_tsts
+        elif item == "dangling_reqs":
+            return self.dangling_reqs
+        return super().__getitem__(item)
+
+    def get(self, key, default=None):
+        if key == "dangling_tsts":
+            return self.dangling_tsts
+        elif key == "dangling_reqs":
+            return self.dangling_reqs
+        return default
+
+    def __contains__(self, item):
+        if item in ("dangling_tsts", "dangling_reqs"):
+            return True
+        return super().__contains__(item)
+
+
+def _load_shard_sources(shards_arg, default_dir_rel, repo_root):
+    """
+    Normalizes shard inputs into a list of (rel_path, lines) tuples.
+    Supports:
+      - None (scans default_dir_rel under repo_root)
+      - directory path (str)
+      - dict: {rel_path: str_content_or_lines}
+      - list/tuple of file paths
+    """
+    if shards_arg is None:
+        abs_dir = os.path.join(repo_root, default_dir_rel) if repo_root else default_dir_rel
+        if not os.path.isdir(abs_dir):
+            return []
+        result = []
+        for fn in sorted(os.listdir(abs_dir)):
+            if fn.endswith(".md"):
+                rel_path = os.path.join(default_dir_rel, fn)
+                abs_fp = os.path.join(abs_dir, fn)
+                with open(abs_fp, "r", encoding="utf-8") as f:
+                    result.append((rel_path, f.readlines()))
+        return result
+    elif isinstance(shards_arg, str) and os.path.isdir(shards_arg):
+        result = []
+        for fn in sorted(os.listdir(shards_arg)):
+            if fn.endswith(".md"):
+                rel_path = os.path.join(os.path.basename(shards_arg), fn)
+                abs_fp = os.path.join(shards_arg, fn)
+                with open(abs_fp, "r", encoding="utf-8") as f:
+                    result.append((rel_path, f.readlines()))
+        return result
+    elif isinstance(shards_arg, dict):
+        result = []
+        for k, v in sorted(shards_arg.items()):
+            if isinstance(v, str):
+                lines = v.splitlines(keepends=True)
+            else:
+                lines = list(v)
+            result.append((k, lines))
+        return result
+    elif isinstance(shards_arg, (list, tuple)):
+        result = []
+        for item in shards_arg:
+            if isinstance(item, str) and os.path.isfile(item):
+                with open(item, "r", encoding="utf-8") as f:
+                    result.append((item, f.readlines()))
+        return result
+    return []
+
+
+def find_dangling_references(req_shards=None, tst_shards=None, repo_root=None):
+    """
+    Extracts all cited TST IDs from the 'Tests' field of every REQ and verifies they match an existing ### TST-* heading.
+    Extracts all cited REQ IDs from the 'Requirements' field of every TST and verifies they match an existing ### REQ-* heading.
+    Reports all dangling references with source file, line, and missing target ID (REQ-PRO-070.1, REQ-PRO-070.2).
+
+    Returns a DanglingReferencesList (supports list operations, attribute access (.dangling_tsts, .dangling_reqs),
+    and dict key indexing ['dangling_tsts'], ['dangling_reqs']).
+    """
+    if repo_root is None:
+        repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+
+    loaded_reqs = _load_shard_sources(req_shards, "docs/requirements", repo_root)
+    loaded_tsts = _load_shard_sources(tst_shards, "docs/tests", repo_root)
+
+    # 1. Discover all declared headings
+    known_req_ids = set()
+    known_tst_ids = set()
+
+    for rel_path, lines in loaded_reqs:
+        for line in lines:
+            m = re.match(r"^(#{2,4})\s*(REQ-[A-Z0-9_-]+):?\s*(.*?)$", line.strip())
+            if m:
+                known_req_ids.add(m.group(2))
+
+    for rel_path, lines in loaded_tsts:
+        for line in lines:
+            m = re.match(r"^(#{2,4})\s*(TST-[A-Z0-9_-]+):?\s*(.*?)$", line.strip())
+            if m:
+                known_tst_ids.add(m.group(2))
+
+    dangling_tsts = []
+    dangling_reqs = []
+
+    # 2. Extract cited TST IDs in REQ entries
+    for rel_path, lines in loaded_reqs:
+        cur_req = None
+        for lno, line in enumerate(lines, 1):
+            m_h = re.match(r"^(#{2,4})\s*(REQ-[A-Z0-9_-]+):?\s*(.*?)$", line.strip())
+            if m_h:
+                cur_req = m_h.group(2)
+            m_f = re.match(r"^\s*[-*]\s*\*{0,2}Tests?\*{0,2}\s*:\s*(.*)", line, re.IGNORECASE)
+            if m_f:
+                val = m_f.group(1)
+                cites = re.findall(r"(?<![A-Za-z0-9_-])TST-[A-Z0-9_-]+(?![A-Za-z0-9_-])", val)
+                for c in cites:
+                    if c not in known_tst_ids:
+                        dangling_tsts.append(
+                            DanglingReference(
+                                source_file=rel_path,
+                                line_no=lno,
+                                source_id=cur_req or "UNKNOWN",
+                                target_id=c,
+                                target_type="TST",
+                            )
+                        )
+
+    # 3. Extract cited REQ IDs in TST entries
+    for rel_path, lines in loaded_tsts:
+        cur_tst = None
+        for lno, line in enumerate(lines, 1):
+            m_h = re.match(r"^(#{2,4})\s*(TST-[A-Z0-9_-]+):?\s*(.*?)$", line.strip())
+            if m_h:
+                cur_tst = m_h.group(2)
+            m_f = re.match(
+                r"^\s*[-*]\s*\*{0,2}(?:Requirements?|Requirement\(s\)|Target Requirement)\*{0,2}\s*:\s*(.*)",
+                line,
+                re.IGNORECASE,
+            )
+            if m_f:
+                val = m_f.group(1)
+                cites = re.findall(r"(?<![A-Za-z0-9_-])REQ-[A-Z0-9_-]+(?![A-Za-z0-9_-])", val)
+                for c in cites:
+                    if c not in known_req_ids:
+                        dangling_reqs.append(
+                            DanglingReference(
+                                source_file=rel_path,
+                                line_no=lno,
+                                source_id=cur_tst or "UNKNOWN",
+                                target_id=c,
+                                target_type="REQ",
+                            )
+                        )
+
+    return DanglingReferencesList(dangling_tsts=dangling_tsts, dangling_reqs=dangling_reqs)
+
+
+def verify_dangling_references(
+    repo_root=None,
+    fail_on_dangling=False,
+    legacy_tst_allowlist=None,
+    legacy_req_allowlist=None,
+    req_shards=None,
+    tst_shards=None,
+):
+    """
+    Verifies that all cited REQ and TST references resolve to authentic headings (REQ-PRO-070 / TST-PRO-070).
+    Reports all dangling references with source file, line number, source ID, and missing target ID.
+
+    If fail_on_dangling is True (or --enforce-links / --fail-on-dangling CLI flag):
+      Fails if ANY dangling reference is detected (including legacy items).
+    If fail_on_dangling is False (default):
+      Known legacy dangling references present in allowlists are reported as WARNINGs without failing validation.
+      Any NEW dangling reference (not in the allowlist) causes validation to fail.
+
+    Returns (success: bool, diagnostics: list[str]).
+    """
+    if legacy_tst_allowlist is None:
+        legacy_tst_allowlist = LEGACY_DANGLING_TST_REFS
+    if legacy_req_allowlist is None:
+        legacy_req_allowlist = LEGACY_DANGLING_REQ_REFS
+
+    dangling = find_dangling_references(req_shards=req_shards, tst_shards=tst_shards, repo_root=repo_root)
+    diagnostics = []
+
+    if not dangling:
+        diagnostics.append("PASS: All cited REQ and TST references resolve to authentic headings.")
+        return True, diagnostics
+
+    new_dangling = []
+    legacy_dangling = []
+
+    for ref in dangling:
+        is_legacy = (
+            (ref.target_type == "TST" and ref.target_id in legacy_tst_allowlist)
+            or (ref.target_type == "REQ" and ref.target_id in legacy_req_allowlist)
+        )
+        if is_legacy and not fail_on_dangling:
+            legacy_dangling.append(ref)
+            tag = "WARNING (Legacy dangling reference)"
+        else:
+            new_dangling.append(ref)
+            tag = "ERROR (Dangling reference)"
+
+        diagnostics.append(
+            f"{tag}: {ref.source_file}:{ref.line_no} [{ref.source_id}] cites non-existent {ref.target_id}."
+        )
+
+    if fail_on_dangling:
+        diagnostics.insert(
+            0,
+            f"ERROR: Dangling REQ/TST references detected ({len(dangling)} references, strict enforcement active)."
+        )
+        return False, diagnostics
+
+    if new_dangling:
+        diagnostics.insert(
+            0,
+            f"ERROR: {len(new_dangling)} new dangling REQ/TST reference(s) detected outside legacy allowlist: "
+            f"{', '.join(sorted(set(r.target_id for r in new_dangling)))}."
+        )
+        return False, diagnostics
+
+    diagnostics.insert(
+        0,
+        f"PASS: Zero new dangling REQ/TST references detected ({len(legacy_dangling)} legacy references tolerated pending A-08.x)."
+    )
+    return True, diagnostics
+
+
+
 def recalculate_master_index_tables(repo_root=None):
     """
     Recalculates summary tables ('Total', 'Verified', 'Planned / Open') and total requirement/test
@@ -1407,12 +1705,13 @@ def verify_architecture_and_system_specs(diff_text=None, repo_root=None, base_re
     return True, ["PASS: Architecture & system specification code-grounding and SYSREQ parity verified."]
 
 
-def verify_governance(deliverable_text=None, diff_text=None, base_ref="develop", skip_tripwires=False, fail_on_duplicates=False):
+def verify_governance(deliverable_text=None, diff_text=None, base_ref="develop", skip_tripwires=False, fail_on_duplicates=False, fail_on_dangling=False):
     """
     Main governance validation entrypoint.
     Enforces engineering directory structure, master table parity, unique requirement and test IDs,
-    Rule 81 deterministic tripwires (composable islands, repository encapsulation, architecture/system
-    spec grounding), and Chesterton's Fence archaeology on modified requirements.
+    bidirectional reference integrity (REQ-PRO-070), Rule 81 deterministic tripwires (composable islands,
+    repository encapsulation, architecture/system spec grounding), and Chesterton's Fence archaeology
+    on modified requirements.
     Returns (success: bool, diagnostics: list[str]).
     """
     diagnostics = []
@@ -1433,6 +1732,12 @@ def verify_governance(deliverable_text=None, diff_text=None, base_ref="develop",
         diagnostics.extend(unique_diag)
         return False, diagnostics
     diagnostics.extend(unique_diag)
+
+    links_ok, links_diag = verify_dangling_references(fail_on_dangling=fail_on_dangling)
+    if not links_ok:
+        diagnostics.extend(links_diag)
+        return False, diagnostics
+    diagnostics.extend(links_diag)
 
     if not skip_tripwires:
         islands_ok, islands_diag = verify_composable_islands(diff_text=diff_text, base_ref=base_ref)
@@ -1591,8 +1896,27 @@ def main():
         action="store_true",
         help="Check living documentation shards for duplicate REQ and TST heading IDs (REQ-PRO-066.1).",
     )
+    parser.add_argument(
+        "--enforce-links",
+        "--fail-on-dangling",
+        dest="enforce_links",
+        action="store_true",
+        help="Strictly fail if any dangling REQ or TST references exist, including legacy references (REQ-PRO-070.4).",
+    )
+    parser.add_argument(
+        "--check-links",
+        "--check-dangling-references",
+        action="store_true",
+        help="Check living documentation shards for dangling REQ and TST citations (REQ-PRO-070.1, REQ-PRO-070.2).",
+    )
 
     args = parser.parse_args()
+
+    if args.check_links:
+        ok, diag = verify_dangling_references(fail_on_dangling=args.enforce_links)
+        for msg in diag:
+            print(msg, file=sys.stderr if not ok else sys.stdout)
+        sys.exit(0 if ok else 1)
 
     if args.check_unique_ids:
         ok, diag = verify_unique_ids(fail_on_duplicates=args.enforce_unique)
@@ -1645,6 +1969,11 @@ def main():
         unique_ok, unique_diag = verify_unique_ids(fail_on_duplicates=args.enforce_unique)
         if not unique_ok:
             for d in unique_diag:
+                print(d, file=sys.stderr)
+            sys.exit(1)
+        links_ok, links_diag = verify_dangling_references(fail_on_dangling=args.enforce_links)
+        if not links_ok:
+            for d in links_diag:
                 print(d, file=sys.stderr)
             sys.exit(1)
         print("PASS: Master index tables successfully synchronized with 100% parity.")
@@ -1727,6 +2056,7 @@ def main():
         base_ref=args.base_ref,
         skip_tripwires=args.skip_tripwires,
         fail_on_duplicates=args.enforce_unique,
+        fail_on_dangling=args.enforce_links,
     )
 
     for msg in diagnostics:

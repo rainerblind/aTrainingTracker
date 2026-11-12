@@ -24,6 +24,10 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")
 from tools.verify_requirement_governance import (
     ALLOWED_ENGINEERING_ENTRIES,
     LEGACY_DUPLICATE_IDS,
+    LEGACY_DANGLING_TST_REFS,
+    LEGACY_DANGLING_REQ_REFS,
+    find_dangling_references,
+    verify_dangling_references,
     find_duplicate_heading_ids,
     parse_diff_requirements,
     recalculate_master_index_tables,
@@ -1042,6 +1046,164 @@ diff --git a/docs/requirements/req_process_stability.md b/docs/requirements/req_
                 data = yaml.safe_load(f)
             self.assertIsInstance(data, dict, f"Parsed YAML must be a dict: {wf}")
             self.assertIn("jobs", data, f"Workflow must contain jobs: {wf}")
+
+    def test_scenario_26_dangling_tst_detection_in_requirements(self):
+        """TST-PRO-070.1: Assert detection of dangling TST citations in requirement entries."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            req_dir = os.path.join(tmpdir, "docs", "requirements")
+            tst_dir = os.path.join(tmpdir, "docs", "tests")
+            os.makedirs(req_dir, exist_ok=True)
+            os.makedirs(tst_dir, exist_ok=True)
+
+            # Valid test shard
+            with open(os.path.join(tst_dir, "tst_sample.md"), "w", encoding="utf-8") as f:
+                f.write("# Tests\n\n### TST-VALID-001: Valid Test [Verified]\n- **Requirement(s)**: `REQ-VALID-001`\n")
+
+            # REQ shard citing both existing TST-VALID-001 and non-existent TST-GHOST-999
+            with open(os.path.join(req_dir, "req_sample.md"), "w", encoding="utf-8") as f:
+                f.write(
+                    "# Requirements\n\n"
+                    "### REQ-VALID-001: Sample Requirement [Verified]\n"
+                    "- **Tests**: `TST-VALID-001`, `TST-GHOST-999`\n"
+                    "- **Rationale**: Testing dangling ref detection.\n"
+                )
+
+            dangling = find_dangling_references(repo_root=tmpdir)
+            self.assertEqual(len(dangling.dangling_tsts), 1)
+            self.assertEqual(len(dangling.dangling_reqs), 0)
+
+            ref = dangling.dangling_tsts[0]
+            self.assertEqual(ref.source_id, "REQ-VALID-001")
+            self.assertEqual(ref.target_id, "TST-GHOST-999")
+            self.assertIn("req_sample.md", ref.source_file)
+            self.assertEqual(ref.line_no, 4)
+
+    def test_scenario_27_dangling_req_detection_in_tests(self):
+        """TST-PRO-070.2: Assert detection of dangling REQ citations in test entries."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            req_dir = os.path.join(tmpdir, "docs", "requirements")
+            tst_dir = os.path.join(tmpdir, "docs", "tests")
+            os.makedirs(req_dir, exist_ok=True)
+            os.makedirs(tst_dir, exist_ok=True)
+
+            # Valid requirement shard
+            with open(os.path.join(req_dir, "req_sample.md"), "w", encoding="utf-8") as f:
+                f.write("# Requirements\n\n### REQ-VALID-001: Valid Requirement [Verified]\n- **Tests**: `TST-VALID-001`\n")
+
+            # TST shard citing both existing REQ-VALID-001 and non-existent REQ-PHANTOM-888
+            with open(os.path.join(tst_dir, "tst_sample.md"), "w", encoding="utf-8") as f:
+                f.write(
+                    "# Tests\n\n"
+                    "### TST-VALID-001: Valid Test [Verified]\n"
+                    "- **Requirement(s)**: `REQ-VALID-001`, `REQ-PHANTOM-888`\n"
+                    "- **Component**: `TestComponent`\n"
+                )
+
+            dangling = find_dangling_references(repo_root=tmpdir)
+            self.assertEqual(len(dangling.dangling_tsts), 0)
+            self.assertEqual(len(dangling.dangling_reqs), 1)
+
+            ref = dangling.dangling_reqs[0]
+            self.assertEqual(ref.source_id, "TST-VALID-001")
+            self.assertEqual(ref.target_id, "REQ-PHANTOM-888")
+            self.assertIn("tst_sample.md", ref.source_file)
+            self.assertEqual(ref.line_no, 4)
+
+    def test_scenario_28_legacy_dangling_tolerance_and_new_reference_rejection(self):
+        """TST-PRO-070.3: Assert legacy allowlist warnings vs new dangling reference rejection."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            req_dir = os.path.join(tmpdir, "docs", "requirements")
+            tst_dir = os.path.join(tmpdir, "docs", "tests")
+            os.makedirs(req_dir, exist_ok=True)
+            os.makedirs(tst_dir, exist_ok=True)
+
+            with open(os.path.join(req_dir, "req_sample.md"), "w", encoding="utf-8") as f:
+                f.write(
+                    "# Requirements\n\n"
+                    "### REQ-A-001: Requirement A [Verified]\n"
+                    "- **Tests**: `TST-LEGACY-001`\n"
+                )
+            with open(os.path.join(tst_dir, "tst_sample.md"), "w", encoding="utf-8") as f:
+                f.write(
+                    "# Tests\n\n"
+                    "### TST-B-001: Test B [Verified]\n"
+                    "- **Requirement(s)**: `REQ-LEGACY-002`\n"
+                )
+
+            # Tolerated via custom allowlist
+            ok, diag = verify_dangling_references(
+                repo_root=tmpdir,
+                legacy_tst_allowlist=frozenset({"TST-LEGACY-001"}),
+                legacy_req_allowlist=frozenset({"REQ-LEGACY-002"}),
+            )
+            self.assertTrue(ok)
+            self.assertTrue(any("Zero new dangling" in m for m in diag))
+            self.assertTrue(any("WARNING (Legacy dangling reference)" in m for m in diag))
+
+            # Adding a novel dangling reference fails
+            with open(os.path.join(req_dir, "req_sample.md"), "a", encoding="utf-8") as f:
+                f.write(
+                    "\n### REQ-A-002: Requirement Novel [Planned]\n"
+                    "- **Tests**: `TST-NOVEL-999`\n"
+                )
+
+            ok_fail, diag_fail = verify_dangling_references(
+                repo_root=tmpdir,
+                legacy_tst_allowlist=frozenset({"TST-LEGACY-001"}),
+                legacy_req_allowlist=frozenset({"REQ-LEGACY-002"}),
+            )
+            self.assertFalse(ok_fail)
+            self.assertTrue(any("ERROR (Dangling reference)" in m and "TST-NOVEL-999" in m for m in diag_fail))
+
+    def test_scenario_29_strict_enforce_links_flag(self):
+        """TST-PRO-070.4: Assert strict failure under --enforce-links / fail_on_dangling=True."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            req_dir = os.path.join(tmpdir, "docs", "requirements")
+            tst_dir = os.path.join(tmpdir, "docs", "tests")
+            os.makedirs(req_dir, exist_ok=True)
+            os.makedirs(tst_dir, exist_ok=True)
+
+            with open(os.path.join(req_dir, "req_sample.md"), "w", encoding="utf-8") as f:
+                f.write(
+                    "# Requirements\n\n"
+                    "### REQ-A-001: Requirement A [Verified]\n"
+                    "- **Tests**: `TST-LEGACY-001`\n"
+                )
+            with open(os.path.join(tst_dir, "tst_sample.md"), "w", encoding="utf-8") as f:
+                f.write("# Tests\n\n### TST-B-001: Test B [Verified]\n- **Requirement(s)**: `REQ-A-001`\n")
+
+            # Strict mode fails even if in legacy allowlist
+            ok, diag = verify_dangling_references(
+                repo_root=tmpdir,
+                fail_on_dangling=True,
+                legacy_tst_allowlist=frozenset({"TST-LEGACY-001"}),
+            )
+            self.assertFalse(ok)
+            self.assertTrue(any("strict enforcement active" in m for m in diag))
+            self.assertTrue(any("ERROR (Dangling reference)" in m and "TST-LEGACY-001" in m for m in diag))
+
+    def test_scenario_30_repository_dangling_references_baseline_pass(self):
+        """TST-PRO-070.5: Verify live repository living docs pass with zero novel dangling refs."""
+        # Standard mode: passes cleanly with 0 novel dangling references
+        ok, diag = verify_dangling_references()
+        self.assertTrue(ok, f"Expected live repository to pass in standard mode, got: {diag}")
+        self.assertTrue(any("Zero new dangling REQ/TST references detected" in m for m in diag))
+
+        # Check exact counts of legacy dangling references
+        dangling = find_dangling_references()
+        self.assertEqual(len(dangling.dangling_tsts), 11)
+        self.assertEqual(len(dangling.dangling_reqs), 16)
+
+        tst_targets = set(r.target_id for r in dangling.dangling_tsts)
+        req_targets = set(r.target_id for r in dangling.dangling_reqs)
+        self.assertEqual(tst_targets, LEGACY_DANGLING_TST_REFS)
+        self.assertEqual(req_targets, LEGACY_DANGLING_REQ_REFS)
+
+        # Strict mode: fails because 27 legacy dangling references exist pending A-08.x
+        ok_strict, diag_strict = verify_dangling_references(fail_on_dangling=True)
+        self.assertFalse(ok_strict)
+        self.assertTrue(any("strict enforcement active" in m for m in diag_strict))
+
 
 
 if __name__ == "__main__":

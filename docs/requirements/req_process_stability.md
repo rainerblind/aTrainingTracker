@@ -3349,6 +3349,39 @@ The workflow SHALL mandate that:
   • *Then* all contract tests pass with 100% success.
 - **Invariants**: Zero Android production runtime code changes in `app/src/main/`; existing simulator scripts remain fully functional.
 
+### REQ-PRO-070: Living Documentation Bidirectional Reference Integrity Governance [Verified]
+- **Tests**: `TST-PRO-070`
+- **Implementation**: `tools/verify_requirement_governance.py` (`find_dangling_references()`, `verify_dangling_references()`, `--fail-on-dangling`, `--enforce-links`), `tools/test_verify_requirement_governance.py`.
+- **Rationale**: Citations between requirements and test cases across domain shards in `docs/requirements/` and `docs/tests/` must point to authentic, existing target headings (`### REQ-*`, `### TST-*`) to guarantee evidence integrity, bidirectional traceability, and ASPICE SWE.1 BP5 / SWE.6 BP4 compliance. Dangling references (pointing to non-existent tests or non-existent requirements) compromise traceability and prevent automated verification of test coverage:
+  1. *Dangling TST Citation Detection in Requirements (`REQ-PRO-070.1`)*:
+     • `tools/verify_requirement_governance.py` SHALL extract all cited test identifiers (`TST-*`) from the `Tests` field of every requirement in `docs/requirements/*.md` and verify that each cited test matches an existing `### TST-*` heading in `docs/tests/*.md`.
+     • Any missing target identifier SHALL be flagged as a dangling test reference with source file, line number, requirement ID, and missing test ID.
+  2. *Dangling REQ Citation Detection in Tests (`REQ-PRO-070.2`)*:
+     • `tools/verify_requirement_governance.py` SHALL extract all cited requirement identifiers (`REQ-*`) from the `Requirements` (or `Requirement(s)`) field of every test in `docs/tests/*.md` and verify that each cited requirement matches an existing `### REQ-*` heading in `docs/requirements/*.md`.
+     • Any missing target identifier SHALL be flagged as a dangling requirement reference with source file, line number, test ID, and missing requirement ID.
+  3. *Legacy Dangling Reference Allowlist & CI Non-Regression (`REQ-PRO-070.3`)*:
+     • To maintain non-breaking CI compatibility while existing legacy dangling links await scheduled remediation in A-08.x (ATT-6127..6135), `tools/verify_requirement_governance.py` SHALL maintain controlled baseline allowlists (`LEGACY_DANGLING_TST_REFS`, `LEGACY_DANGLING_REQ_REFS`).
+     • In standard verification mode, known legacy dangling references SHALL emit warning diagnostics without failing the process. Any net-new dangling reference (outside the allowlists) SHALL immediately fail verification with exit code 1.
+  4. *Strict Link Enforcement Flag (`REQ-PRO-070.4`)*:
+     • `tools/verify_requirement_governance.py` SHALL support a command-line flag (`--enforce-links` / `--fail-on-dangling`) that triggers exit code 1 if ANY dangling reference (including legacy allowlisted references) is detected.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Net-new requirement `REQ-PRO-070` (`REQ-PRO-070.1`–`REQ-PRO-070.4`). Targets `tools/verify_requirement_governance.py`.
+  2. *Historical Origin & Commit Trace*: Sprint 2026-46.4 via ticket `ATT-6121` under Epic `ATT-6119` (ASPICE CL2 – Evidence Integrity & Bidirectional Traceability).
+  3. *Root Reason for Existing Formulation*: ASPICE 4.0 assessment of 2026-11-08 identified 8 dangling TST citations and 11 dangling REQ citations (SWE.1 BP5, SWE.6 BP4).
+  4. *Preservation of Core Invariants*: Existing master table parity, unique ID checks, architecture validation, Composable island checks, and repository encapsulation remain untouched; pure Python 3 standard library; zero production Android runtime code changes.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* a requirement cites a non-existent `TST-*` ID or a test cites a non-existent `REQ-*` ID outside the legacy allowlist,
+  • *When* `verify_requirement_governance.py` runs,
+  • *Then* it outputs an error identifying the dangling reference with source file, line number, and missing ID, and exits with code 1.
+  • *Given* `--enforce-links` or `--fail-on-dangling` is enabled and any dangling link exists,
+  • *When* `verify_requirement_governance.py` runs,
+  • *Then* it fails with exit code 1 reporting all dangling references.
+  • *Given* all citations resolve to existing headings (or match the legacy allowlist in default mode),
+  • *When* `verify_requirement_governance.py` runs,
+  • *Then* it outputs a PASS diagnostic and exits with code 0.
+- **Invariants**: Pure Python 3 standard library; zero Android runtime changes; zero regression in existing governance checks.
+
+
 
 
 
