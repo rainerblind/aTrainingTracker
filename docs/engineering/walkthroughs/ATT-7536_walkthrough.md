@@ -18,11 +18,14 @@ ATT-7536 standardizes form controls in Expert Settings, eliminates nested `Eleva
    - Replaced all 8 raw `Switch(` calls with `TuningToggleItem` (0.8f scale) or `SubordinateTuningToggleItem` (0.6f scale).
    - Replaced custom Alert Volume `Slider` with `TuningSliderItem`.
    - Replaced raw `SingleChoiceSegmentedButtonRow` blocks with `TuningSegmentedButtonRow`.
+   - Replaced 3-way `RadarClearMode` and 4-way `RadarAudioAlertMode` `FilterChip` rows with `TuningSegmentedButtonRow`.
+   - Replaced raw `ExposedDropdownMenuBox` / `OutlinedTextField` for `RadarScenario` with `TuningDropdownRow`.
+   - Cleaned up stacked `Spacer`s and normalized indentation to 8 spaces.
    - Fully preserved all DataStore keys, default values, reactive flow bindings, and preview synthesizers.
 3. **Design Guidelines Codification (`docs/design_guidelines.md`)**:
    - Updated §1.4 / §3.3 to mandate `TuningFormControls.kt` controls in Expert Settings and forbid nested `ElevatedCard`s inside accordion bodies.
    - Added §2.8 codifying single-line button rules and dynamic weighting for German compound nouns and extended translations.
-4. **Contract & Hygiene Testing (`TuningFormControlsTest.kt`)**: Added JVM reflection assertions for `TuningSegmentedButtonRow` and `TuningDropdownRow`, and verified `RadarSettingsSection.kt` contains 0 `ElevatedCard` occurrences and 0 raw `Switch(` calls.
+4. **Contract & Hygiene Testing (`TuningFormControlsTest.kt`)**: Added JVM reflection assertions for `TuningSegmentedButtonRow` and `TuningDropdownRow`, and verified `RadarSettingsSection.kt` contains 0 `ElevatedCard` occurrences, 0 raw `Switch(` calls, 0 `FilterChip` calls, and 0 raw `ExposedDropdownMenuBox` calls.
 5. **Ceremony 1 Q1 Scope Boundary**: Migration of `NavigationSection.kt`, `AftermathAnalysisSection.kt`, and `TuningDesignGuidelinesContractTest.kt` is strictly deferred to `ATT-7539`.
 
 ---

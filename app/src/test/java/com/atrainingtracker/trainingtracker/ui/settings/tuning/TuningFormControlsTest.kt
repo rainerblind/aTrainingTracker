@@ -110,5 +110,7 @@ class TuningFormControlsTest {
         val content = fileToRead.readText()
         assertFalse("RadarSettingsSection.kt must not contain nested ElevatedCard", content.contains("ElevatedCard"))
         assertFalse("RadarSettingsSection.kt must not contain raw Switch(", content.contains("Switch("))
+        assertFalse("RadarSettingsSection.kt must not contain FilterChip", content.contains("FilterChip"))
+        assertFalse("RadarSettingsSection.kt must not contain raw ExposedDropdownMenuBox", content.contains("ExposedDropdownMenuBox"))
     }
 }
