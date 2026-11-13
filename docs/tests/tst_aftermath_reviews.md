@@ -124,4 +124,27 @@
   6. *Cockpit Grid & Semantic Color State Test (`TrackingViewModelLiveDriftTest`)*: Verify `TrackingViewModel` maps drift ranges ($\le +5.0\text{ bpm}$ Zone 2, $+5.0 < \text{drift} \le +10.0\text{ bpm}$ Zone 3, $> +10.0\text{ bpm}$ Zone 4) to correct semantic zone colors, and verify cell formatting in `SensorFieldState`.
   7. *9-Locale Localization Parity Test (`TranslationParityTest`)*: Verify `live_hr_drift` and `live_hr_drift_short` in `strings_cardio_power.xml` across EN, DE, ES, FR, IT, JA, NL, PL, PT.
 
+### TST-REV-014: **EditWorkout Tag Tiles, Grouped Cloud Sync Card & Localization Contract Test** [Verified]
+- **Requirements Covered**: `REQ-REV-013`
+- **Component Under Test**: `EditWorkoutScreen.kt`, `EditWorkoutViewModel.kt`, `res/values*/strings.xml`
+- **Test Type**: Unit, Robolectric / Compose Contract
+- **Test Description**: Verifies that `EditWorkoutScreen` renders 3 equal-width toggle tiles (`weight(1f)`) with `Modifier.toggleable`, enforces Commute/Indoor mutual exclusivity in `EditWorkoutViewModel`, groups Strava and Health Connect inside a single outlined card with brand vector assets, and verifies 9-locale parity for `indoor_short`.
+- **Preconditions**:
+  1. Test environment with Robolectric / Compose testing context initialized.
+  2. Sample `WorkoutData` instance.
+- **Test Procedure**:
+  1. *ViewModel Exclusivity Verification*: Invoke `updateIsCommute(true)`, assert `commute == true && trainer == false`. Invoke `updateIsTrainer(true)`, assert `trainer == true && commute == false`. Toggle `updateIsRace(true)`, assert race toggles independently.
+  2. *Layout Contract Verification*: Verify `EditWorkoutScreen.kt` structure:
+     - 3 equal-width tiles using `weight(1f)` in a single `Row(Arrangement.spacedBy(8.dp))`
+     - `Modifier.toggleable` with `role = Role.Checkbox` applied to each tile
+     - `Icons.Filled.EmojiEvents` used for race tile with `tertiaryContainer` styling
+     - Outlined `Surface` / `Card` with `10.dp` shape for cloud sync grouping
+     - `R.drawable.logo_square_strava` and `R.drawable.ic_health_connect` vector drawables used in sync rows
+  3. *Localization Parity Verification*: Assert `R.string.indoor_short` exists across all 9 `values*/strings.xml` files.
+- **Expected Results**:
+  1. Commute and Indoor mutually exclude each other; Race is independent.
+  2. Layout contract passes with 3 equal tiles and grouped sync card.
+  3. `TranslationParityTest` passes across 9 locales.
+
+
 

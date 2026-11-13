@@ -84,6 +84,7 @@
     <string name="add_sensor">ajouter capteur</string>
 
     <string name="commute">trajet domicile-travail</string>
+    <string name="indoor_short">Intérieur</string>
     <string name="trainer_general">home-trainer</string>
     <string name="trainer_bike">home-trainer</string>
     <string name="trainer_run">tapis de course</string>

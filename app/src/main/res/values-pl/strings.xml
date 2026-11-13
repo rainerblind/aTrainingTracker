@@ -84,6 +84,7 @@
     <string name="add_sensor">dodaj czujnik</string>
 
     <string name="commute">dojazd do pracy</string>
+    <string name="indoor_short">Indoor</string>
     <string name="trainer_general">trenażer</string>
     <string name="trainer_bike">trenażer rowerowy</string>
     <string name="trainer_run">bieżnia</string>

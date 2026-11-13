@@ -85,6 +85,7 @@
     <string name="add_sensor">Sensor hinzufügen</string>
 
     <string name="commute">Pendeln</string>
+    <string name="indoor_short">Indoor</string>
     <string name="trainer_general">Indoor Trainer</string>
     <string name="trainer_bike">Rolle</string>
     <string name="trainer_run">Laufband</string>

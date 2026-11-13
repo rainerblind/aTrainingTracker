@@ -347,3 +347,48 @@
   • *When* inspected for `RUN_SPEED_AND_CADENCE` or `GENERIC_HR`,
   • *Then* `LIVE_HR_DRIFT` is absent, appearing only for `BIKE_POWER`.
 
+### REQ-REV-013: EditWorkout Equal-Width Workout Classification Tiles, Grouped Cloud Sync Card & Concise Indoor Localization [Verified]
+- **Tests**: `TST-REV-014`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit, Review
+- **Implementation**: `EditWorkoutScreen.kt`, `EditWorkoutViewModel.kt`, `res/values*/strings.xml`
+- **Rationale**: The previous `2 + 1` bare checkbox row layout in `EditWorkoutScreen.kt` wasted vertical space, lacked full-tile touch surfaces, lacked semantic separation between workout classification metadata and third-party cloud sync toggles, and rendered a generic favorite heart icon for Health Connect instead of official brand assets. Replacing the tag checkboxes with a single row of 3 equal-width icon-assisted toggle tiles (`Commute`, `Indoor`, `Race`), grouping cloud sync toggles (`Strava`, `Health Connect`) into a distinct container card with full-row clickable surfaces, and standardizing concise `"Indoor"` localization across all 9 locales establishes ergonomic, thumb-friendly, and brand-consistent workout editing.
+- **Description**:
+  1. *Equal-Width Classification Toggle Tiles (`Variant B`)*:
+     a. `EditWorkoutScreen.kt` SHALL render `Commute`, `Indoor`, and `Race` tags within a single `Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp))` positioned beneath the Sport and Equipment selectors.
+     b. Each tag SHALL be styled as an equal-width tile (`Modifier.weight(1f)`), with `RoundedCornerShape(8.dp)` and minimum touch height of `42.dp`.
+     c. Each tile SHALL provide full-surface touch toggling with `Modifier.toggleable(value = isChecked, role = Role.Checkbox, onValueChange = ...)` for accessibility and testability.
+     d. Commute tile SHALL display `R.string.commute` with a leading bike/commute icon (`Icons.Default.Commute` or `DirectionsBike`).
+     e. Indoor tile SHALL display concise `R.string.indoor_short` with a leading home/gym icon (`Icons.Default.Home` or `FitnessCenter`).
+     f. Race tile SHALL display `R.string.race` with a leading trophy icon (`Icons.Filled.EmojiEvents`). When active, it SHALL render with `tertiaryContainer` background / `tertiary` border accent matching the trophy badge styling in `WorkoutHeader.kt`.
+     g. `EditWorkoutViewModel` SHALL enforce mutual exclusivity between `Commute` and `Indoor` (selecting `Commute` unselects `Indoor`, and selecting `Indoor` unselects `Commute`), while allowing `Race` to combine freely with either.
+  2. *Grouped Cloud Sync Card*:
+     a. When Strava upload (`TrainingApplication.uploadToCommunity(FileFormat.STRAVA)`) and/or Health Connect sync (`isHealthConnectAvailable`) is enabled, `EditWorkoutScreen.kt` SHALL render these controls grouped inside a dedicated outlined `Surface` / `Card` with `RoundedCornerShape(10.dp)`.
+     b. Each sync row inside the card SHALL provide full-row clickable tap targets using `Modifier.toggleable(...)`.
+     c. The Strava sync row SHALL render the official brand icon `R.drawable.logo_square_strava` with `Color.Unspecified` tint. If `stravaMappingAvailable == false`, the row SHALL be disabled with `0.38f` alpha.
+     d. The Health Connect sync row SHALL render the official brand icon `R.drawable.ic_health_connect` with `Color.Unspecified` tint (never generic `Icons.Default.Favorite`).
+     e. Each sync row SHALL display a compact trailing selection indicator (`Checkbox` or `Switch`).
+  3. *9-Language Localization Parity*:
+     a. The concise string token `indoor_short` SHALL be defined across all 9 supported locales (`values`, `values-de`, `values-es`, `values-fr`, `values-it`, `values-ja`, `values-nl`, `values-pl`, `values-pt`) with zero inline emojis.
+  4. *Chesterton's Fence Archaeology*:
+     - `Original Requirement ID & Target`: Refines `REQ-UI-239` (*Unconditional Edit Workout Form Presentation*) and supersedes `REQ-UI-497.3` (*Strava Checkbox Row Alignment*), targeting `EditWorkoutScreen.kt` and `EditWorkoutViewModel.kt`.
+     - `Historical Origin & Commit Trace`: `REQ-UI-239` in `ATT-2029` (Sprint 2026-40.12); `REQ-UI-497.3` in commit `5d17fba6` (`ATT-5838`, Sprint 2026-44.1).
+     - `Root Reason for Existing Formulation`: Loose checkboxes were used as minimal prototypes for initial metadata fields; `REQ-UI-497.3` aligned Strava with these tag checkboxes before cloud sync was encapsulated in a dedicated card.
+     - `Preservation of Core Invariants`: WorkoutData data integrity, Commute/Trainer/Race persistence, Strava disabled state when mapping is absent, and Health Connect manual sync dispatch are 100% preserved.
+
+- **Acceptance Criteria**:
+  • *Given* `EditWorkoutScreen` is opened for any workout session,
+  • *When* inspecting the classification controls below Equipment,
+  • *Then* `Commute`, `Indoor`, and `Race` render on a single row as 3 equal-width tiles with leading icons and min height 42 dp.
+  • *Given* the Commute tile is checked,
+  • *When* the user taps the Indoor tile,
+  • *Then* Indoor becomes selected, Commute is automatically deselected, and Race selection is unaffected.
+  • *Given* `EditWorkoutScreen` with Strava or Health Connect available,
+  • *When* inspecting the cloud sync controls,
+  • *Then* they render inside an outlined card with `logo_square_strava` and `ic_health_connect` drawables and full-row toggle targets.
+  • *Given* `TranslationParityTest` executed against all 9 locales,
+  • *When* evaluating string key `indoor_short`,
+  • *Then* it resolves in all 9 language directories without missing keys or unescaped characters.
+
+

@@ -84,6 +84,7 @@
     <string name="add_sensor">センサー追加</string>
 
     <string name="commute">通勤・通学</string>
+    <string name="indoor_short">インドア</string>
     <string name="trainer_general">屋内トレーナー</string>
     <string name="trainer_bike">屋内トレーナー</string>
     <string name="trainer_run">トレッドミル</string>

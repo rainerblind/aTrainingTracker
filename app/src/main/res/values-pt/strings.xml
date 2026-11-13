@@ -84,6 +84,7 @@
     <string name="add_sensor">adicionar sensor</string>
 
     <string name="commute">trajeto trabalho</string>
+    <string name="indoor_short">Indoor</string>
     <string name="trainer_general">rolo indoor</string>
     <string name="trainer_bike">rolo indoor</string>
     <string name="trainer_run">esteira</string>

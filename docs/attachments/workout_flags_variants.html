@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
+</head>
+<body class="bg-transparent text-[var(--foreground)] antialiased p-3">
+  <div class="bg-[var(--card)] text-[var(--foreground)] border border-[var(--border)] rounded-xl p-4 shadow-sm space-y-4">
+    <div class="flex flex-wrap items-center justify-between gap-2">
+      <div>
+        <h3 class="font-semibold text-base">EditWorkoutScreen — Tag Selector Explorer</h3>
+        <p class="text-[var(--muted-foreground)] text-xs">Tap the tabs to switch variants, and tap Pendeln / Indoor / Wettkampf to test interaction.</p>
+      </div>
+      <div class="flex rounded-lg border border-[var(--border)] overflow-hidden text-xs font-medium">
+        <button id="tab-a" onclick="setVariant('a')" class="px-3 py-1.5 bg-[var(--primary)] text-[var(--primary-foreground)] transition">A: FilterChips ★</button>
+        <button id="tab-b" onclick="setVariant('b')" class="px-3 py-1.5 bg-transparent text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition">B: 3 Equal Tiles</button>
+        <button id="tab-c" onclick="setVariant('c')" class="px-3 py-1.5 bg-transparent text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition">C: Segmented + Race</button>
+      </div>
+    </div>
+
+    <!-- Simulated Phone Form Slice -->
+    <div class="max-w-sm mx-auto border border-[var(--border)] rounded-xl p-3.5 bg-[var(--background)] space-y-3">
+      <!-- Sport & Equipment Mock Row -->
+      <div class="grid grid-cols-2 gap-2 text-xs">
+        <div class="border border-[var(--border)] rounded-lg px-3 py-2 flex items-center justify-between">
+          <div>
+            <div class="text-[var(--muted-foreground)] text-xs">Sport</div>
+            <div class="font-medium text-sm">Radfahren</div>
+          </div>
+          <span class="text-[var(--muted-foreground)]">▾</span>
+        </div>
+        <div class="border border-[var(--border)] rounded-lg px-3 py-2 flex items-center justify-between">
+          <div>
+            <div class="text-[var(--muted-foreground)] text-xs">Ausrüstung</div>
+            <div class="font-medium text-sm">Endurance</div>
+          </div>
+          <span class="text-[var(--muted-foreground)]">▾</span>
+        </div>
+      </div>
+
+      <!-- Dynamic Variant Container -->
+      <div id="variant-container" class="pt-0.5"></div>
+
+      <!-- Separated Compact Sync Row -->
+      <div class="border border-[var(--border)] rounded-lg divide-y divide-[var(--border)] text-xs">
+        <label class="flex items-center justify-between px-3 py-2 cursor-pointer">
+          <span class="flex items-center gap-2 font-medium">
+            <span class="inline-flex items-center justify-center w-4 h-4 rounded bg-orange-500 text-white font-bold text-xs">▲</span>
+            Zu Strava hochladen
+          </span>
+          <input type="checkbox" checked class="w-4 h-4 accent-[var(--primary)]" />
+        </label>
+        <label class="flex items-center justify-between px-3 py-2 cursor-pointer">
+          <span class="flex items-center gap-2 font-medium">
+            <span class="text-sky-500 text-sm">♥</span>
+            Health Connect Sync
+          </span>
+          <input type="checkbox" class="w-4 h-4 accent-[var(--primary)]" />
+        </label>
+      </div>
+    </div>
+
+    <p id="variant-note" class="text-xs text-[var(--muted-foreground)]"></p>
+  </div>
+
+  <script>
+    const state = { variant: 'a', commute: false, indoor: false, race: false };
+
+    function toggleCommute() {
+      state.commute = !state.commute;
+      if (state.commute) state.indoor = false; // mutually exclusive
+      render();
+    }
+    function toggleIndoor() {
+      state.indoor = !state.indoor;
+      if (state.indoor) state.commute = false; // mutually exclusive
+      render();
+    }
+    function setEnv(mode) {
+      state.commute = mode === 'commute';
+      state.indoor = mode === 'indoor';
+      render();
+    }
+    function toggleRace() {
+      state.race = !state.race;
+      render();
+    }
+    function setVariant(v) {
+      state.variant = v;
+      ['a', 'b', 'c'].forEach(id => {
+        const btn = document.getElementById('tab-' + id);
+        if (id === v) {
+          btn.className = 'px-3 py-1.5 bg-[var(--primary)] text-[var(--primary-foreground)] transition';
+        } else {
+          btn.className = 'px-3 py-1.5 bg-transparent text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition';
+        }
+      });
+      render();
+    }
+
+    function render() {
+      const el = document.getElementById('variant-container');
+      const note = document.getElementById('variant-note');
+
+      if (state.variant === 'a') {
+        const chipClass = (active, isRace) => active
+          ? (isRace
+              ? 'px-3 py-1.5 rounded-lg border border-amber-500/60 bg-amber-500/15 text-[var(--foreground)] font-semibold flex items-center gap-1.5 text-xs transition'
+              : 'px-3 py-1.5 rounded-lg border border-[var(--primary)] bg-[var(--primary)] text-[var(--primary-foreground)] font-semibold flex items-center gap-1.5 text-xs transition')
+          : 'px-3 py-1.5 rounded-lg border border-[var(--border)] bg-[var(--card)] text-[var(--foreground)] flex items-center gap-1.5 text-xs hover:border-[var(--muted-foreground)] transition';
+
+        el.innerHTML = `
+          <div class="flex flex-wrap gap-2">
+            <button onclick="toggleCommute()" class="${chipClass(state.commute, false)}">
+              <span>${state.commute ? '✓' : '🎒'}</span><span>Pendeln</span>
+            </button>
+            <button onclick="toggleIndoor()" class="${chipClass(state.indoor, false)}">
+              <span>${state.indoor ? '✓' : '🏠'}</span><span>Indoor</span>
+            </button>
+            <button onclick="toggleRace()" class="${chipClass(state.race, true)}">
+              <span>🏆</span><span>Wettkampf</span>
+            </button>
+          </div>
+        `;
+        note.textContent = 'Variant A (M3 FilterChips): Matches WorkoutFilterBottomSheet, collapses 2 rows into 1, makes full label tappable, auto-unchecks Indoor when Pendeln is tapped (while allowing Indoor + Wettkampf for Zwift races), and visually separates tags from Strava/Health Connect sync.';
+      } else if (state.variant === 'b') {
+        const tileClass = (active, isRace) => active
+          ? (isRace
+              ? 'py-2 px-2 rounded-lg border-2 border-amber-500 bg-amber-500/15 text-[var(--foreground)] font-semibold flex items-center justify-center gap-1.5 text-xs transition'
+              : 'py-2 px-2 rounded-lg border-2 border-[var(--primary)] bg-[var(--secondary)] text-[var(--secondary-foreground)] font-semibold flex items-center justify-center gap-1.5 text-xs transition')
+          : 'py-2 px-2 rounded-lg border border-[var(--border)] bg-[var(--card)] text-[var(--muted-foreground)] flex items-center justify-center gap-1.5 text-xs hover:text-[var(--foreground)] transition';
+
+        el.innerHTML = `
+          <div class="grid grid-cols-3 gap-2">
+            <button onclick="toggleCommute()" class="${tileClass(state.commute, false)}">
+              <span>🎒</span><span>Pendeln</span>
+            </button>
+            <button onclick="toggleIndoor()" class="${tileClass(state.indoor, false)}">
+              <span>🏠</span><span>Indoor</span>
+            </button>
+            <button onclick="toggleRace()" class="${tileClass(state.race, true)}">
+              <span>🏆</span><span>Wettkampf</span>
+            </button>
+          </div>
+        `;
+        note.textContent = 'Variant B (Equal-Width Toggle Tiles): Aligns edge-to-edge with the Sport/Ausrüstung dropdowns above and the Befinden emoji tiles below. Large 3-column thumb targets.';
+      } else {
+        const segClass = (active) => active
+          ? 'flex-1 py-1.5 px-2 bg-[var(--primary)] text-[var(--primary-foreground)] font-semibold text-xs text-center transition'
+          : 'flex-1 py-1.5 px-2 bg-[var(--card)] text-[var(--muted-foreground)] hover:text-[var(--foreground)] text-xs text-center transition';
+        const raceClass = state.race
+          ? 'px-3 py-1.5 rounded-lg border-2 border-amber-500 bg-amber-500/15 text-[var(--foreground)] font-semibold flex items-center gap-1 text-xs transition'
+          : 'px-3 py-1.5 rounded-lg border border-[var(--border)] bg-[var(--card)] text-[var(--muted-foreground)] flex items-center gap-1 text-xs transition';
+        const isNormal = !state.commute && !state.indoor;
+
+        el.innerHTML = `
+          <div class="flex items-center gap-2">
+            <div class="flex flex-1 rounded-lg border border-[var(--border)] overflow-hidden divide-x divide-[var(--border)]">
+              <button onclick="setEnv('normal')" class="${segClass(isNormal)}">Standard</button>
+              <button onclick="setEnv('commute')" class="${segClass(state.commute)}">Pendeln</button>
+              <button onclick="setEnv('indoor')" class="${segClass(state.indoor)}">Indoor</button>
+            </div>
+            <button onclick="toggleRace()" class="${raceClass}" title="Wettkampf">
+              <span>🏆</span><span>Race</span>
+            </button>
+          </div>
+        `;
+        note.textContent = 'Variant C (Segmented + Race): Makes Standard / Pendeln / Indoor explicitly mutually exclusive via a segmented button, with Wettkampf alongside.';
+      }
+    }
+
+    render();
+  </script>
+</body>
+</html>
