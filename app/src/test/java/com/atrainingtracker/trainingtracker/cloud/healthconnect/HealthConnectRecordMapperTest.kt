@@ -22,6 +22,7 @@ import android.content.Context
 import androidx.health.connect.client.records.CyclingPedalingCadenceRecord
 import androidx.health.connect.client.records.DistanceRecord
 import androidx.health.connect.client.records.ElevationGainedRecord
+import androidx.health.connect.client.records.ExerciseRoute
 import androidx.health.connect.client.records.ExerciseRouteResult
 import androidx.health.connect.client.records.ExerciseSessionRecord
 import androidx.health.connect.client.records.HeartRateRecord
@@ -305,5 +306,125 @@ class HealthConnectRecordMapperTest {
         assertEquals("workout_2026-11-10-100000_hr_0", hrRecords[0].metadata.clientRecordId)
         assertEquals("workout_2026-11-10-100000_hr_1", hrRecords[1].metadata.clientRecordId)
         assertEquals("workout_2026-11-10-100000_hr_2", hrRecords[2].metadata.clientRecordId)
+    }
+
+    @Test
+    fun testRouteDeduplicatesDuplicateWholeSecondTimestamps() = runBlocking {
+        // TST-SET-101.6: Duplicate whole-second sample timestamps in WorkoutSamples.db
+        // must not crash ExerciseRoute with IllegalArgumentException.
+        val mockRepo = mockk<WorkoutSamplesRepository>()
+        coEvery { mockRepo.getSamples(any()) } returns listOf(
+            WorkoutTelemetrySample(
+                sampleIdx = 0L,
+                timeString = "2026-11-10 10:00:01",
+                latitude = 48.1370,
+                longitude = 11.5750,
+                altitude = 520.0
+            ),
+            WorkoutTelemetrySample(
+                sampleIdx = 1L,
+                timeString = "2026-11-10 10:00:02", // First sample at 10:00:02
+                latitude = 48.1371,
+                longitude = 11.5751,
+                altitude = 521.0
+            ),
+            WorkoutTelemetrySample(
+                sampleIdx = 2L,
+                timeString = "2026-11-10 10:00:02", // Duplicate second timestamp in same second
+                latitude = 48.1372,
+                longitude = 11.5752,
+                altitude = 522.0
+            ),
+            WorkoutTelemetrySample(
+                sampleIdx = 3L,
+                timeString = "2026-11-10 10:00:03",
+                latitude = 48.1373,
+                longitude = 11.5753,
+                altitude = 523.0
+            )
+        )
+
+        val workout = createWorkoutData(trainer = false, totalTimeSec = 100L)
+        val (sessionRecord, _) = HealthConnectRecordMapper.extractRecords(
+            context = context,
+            workoutData = workout,
+            hasRoutePermission = true,
+            repository = mockRepo
+        )
+
+        val routeResult = sessionRecord.exerciseRouteResult
+        assertTrue(routeResult is ExerciseRouteResult.Data)
+        val route = (routeResult as ExerciseRouteResult.Data).exerciseRoute
+        assertNotNull(route)
+
+        // Duplicate point at 10:00:02 is deduplicated: exactly 3 distinct points (01, 02, 03)
+        assertEquals(3, route.route.size)
+        for (i in 0 until route.route.lastIndex) {
+            assertTrue(route.route[i].time.isBefore(route.route[i + 1].time))
+        }
+    }
+
+    @Test
+    fun testSessionEndTimeExtendedWhenRoutePointAtOrPastDuration() = runBlocking {
+        // TST-SET-101.7: Workout sample point at or beyond startTime + totalTimeSec
+        // must extend sessionRecord.endTime such that maxRouteTime.isBefore(endTime) holds.
+        val mockRepo = mockk<WorkoutSamplesRepository>()
+        // Workout starts at 10:00:00 with totalTimeSec = 10.
+        // Sample at 10:00:10 equals startTime + totalTimeSec (boundary case).
+        coEvery { mockRepo.getSamples(any()) } returns listOf(
+            WorkoutTelemetrySample(
+                sampleIdx = 0L,
+                timeString = "2026-11-10 10:00:00",
+                latitude = 48.1370,
+                longitude = 11.5750,
+                altitude = 520.0
+            ),
+            WorkoutTelemetrySample(
+                sampleIdx = 10L,
+                timeString = "2026-11-10 10:00:10", // Exactly equals startTime + 10s
+                latitude = 48.1380,
+                longitude = 11.5760,
+                altitude = 525.0
+            )
+        )
+
+        val workout = createWorkoutData(trainer = false, totalTimeSec = 10L)
+        val (sessionRecord, seriesRecords) = HealthConnectRecordMapper.extractRecords(
+            context = context,
+            workoutData = workout,
+            hasRoutePermission = true,
+            repository = mockRepo
+        )
+
+        val routeResult = sessionRecord.exerciseRouteResult
+        assertTrue(routeResult is ExerciseRouteResult.Data)
+        val route = (routeResult as ExerciseRouteResult.Data).exerciseRoute
+        assertNotNull(route)
+
+        val maxRouteTime = route.route.maxOf { it.time }
+        // Verify maxRouteTime < sessionRecord.endTime invariant required by ExerciseSessionRecord
+        assertTrue(maxRouteTime.isBefore(sessionRecord.endTime))
+        assertEquals(maxRouteTime.plusSeconds(1), sessionRecord.endTime)
+
+        // Verify non-spatial series records share synchronized endTime
+        val distanceRecord = seriesRecords.filterIsInstance<DistanceRecord>().firstOrNull()
+        assertNotNull(distanceRecord)
+        assertEquals(sessionRecord.endTime, distanceRecord!!.endTime)
+
+        val caloriesRecord = seriesRecords.filterIsInstance<TotalCaloriesBurnedRecord>().firstOrNull()
+        assertNotNull(caloriesRecord)
+        assertEquals(sessionRecord.endTime, caloriesRecord!!.endTime)
+
+        // Also test buildExerciseSessionRecord directly with an ExerciseRoute past duration
+        val pastTime = Instant.ofEpochSecond(workout.startTimeS).plusSeconds(25L)
+        val extendedRoute = ExerciseRoute(
+            listOf(
+                ExerciseRoute.Location(time = Instant.ofEpochSecond(workout.startTimeS), latitude = 48.0, longitude = 11.0),
+                ExerciseRoute.Location(time = pastTime, latitude = 48.1, longitude = 11.1)
+            )
+        )
+        val directSession = HealthConnectRecordMapper.buildExerciseSessionRecord(workout, extendedRoute)
+        assertTrue(pastTime.isBefore(directSession.endTime))
+        assertEquals(pastTime.plusSeconds(1), directSession.endTime)
     }
 }

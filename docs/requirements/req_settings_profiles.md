@@ -2151,14 +2151,14 @@ d. Step 4 (`OnboardingStep.BATTERY_OPTIMIZATION`): Doze mode background survival
 - **Type**: Functional
 - **Verification Method**: Unit, Integration
 - **Implementation**: `HealthConnectRecordMapper.kt`, `HealthConnectManager.kt`, `WorkoutSamplesRepository.kt`, `WorkoutData.kt`
-- **Status**: Specified
+- **Status**: Verified
 - **Rationale**: Completed workout metadata and sensor time-series data must map to standardized Health Connect data models:
 1. *Session Metadata Mapping (`REQ-SET-101.1`)*:
    - `BSportType` SHALL map to Health Connect exercise types: `BIKE` -> `EXERCISE_TYPE_BIKING`, `RUN` -> `EXERCISE_TYPE_RUNNING`, trainer/indoor rides -> `EXERCISE_TYPE_BIKING_STATIONARY`, treadmill runs -> `EXERCISE_TYPE_RUNNING_TREADMILL`, and other sports -> `EXERCISE_TYPE_OTHER_WORKOUT`.
-   - Start time, end time, duration, and title SHALL populate `ExerciseSessionRecord.Builder`.
+   - Start time, end time, duration, and title SHALL populate `ExerciseSessionRecord.Builder`. The session `endTime` SHALL satisfy `maxRouteTime < endTime`; if GPS route points reach or exceed `startTime + durationSec`, `endTime` SHALL be extended to at least `maxRouteTime.plusSeconds(1)` (`ATT-7668`).
 2. *Telemetry Time-Series Conversion & Route Permission Gating (`REQ-SET-101.2`)*:
    - The system SHALL extract per-second samples via `WorkoutSamplesRepository` (`ATT-6426`) and convert them into corresponding Health Connect series records:
-     - GPS coordinates with timestamps and altitude -> `ExerciseRoute` (strictly gated on `"android.permission.health.WRITE_EXERCISE_ROUTE" in granted`; if omitted or denied, `exerciseRoute` SHALL be null).
+     - GPS coordinates with timestamps and altitude -> `ExerciseRoute` (strictly gated on `"android.permission.health.WRITE_EXERCISE_ROUTE" in granted`; if omitted or denied, `exerciseRoute` SHALL be null). Duplicate route points sharing the same timestamp SHALL be deduplicated, and route locations SHALL be strictly monotonically ordered (`sortedRoute[i].time < sortedRoute[i+1].time`, `ATT-7668`).
      - Heart rate samples (bpm) -> `HeartRateRecord`.
      - Power samples (Watts) -> `PowerRecord`.
      - Speed samples (m/s) -> `SpeedRecord`.
@@ -2172,6 +2172,12 @@ d. Step 4 (`OnboardingStep.BATTERY_OPTIMIZATION`): Doze mode background survival
 • *Given* a completed outdoor bike workout with GPS, HR, and cadence,
 • *When* Health Connect synchronization executes,
 • *Then* an `ExerciseSessionRecord` (type `EXERCISE_TYPE_BIKING`) with associated `ExerciseRoute`, `HeartRateRecord`, and `CyclingPedalingCadenceRecord` series is written to Health Connect.
+• *Given* GPS samples containing duplicate whole-second timestamps,
+• *When* `ExerciseRoute` is constructed,
+• *Then* points are deduplicated and strictly monotonically ordered without throwing `IllegalArgumentException`.
+• *Given* a workout where GPS route samples coincide with or exceed `startTime + durationSec`,
+• *When* `ExerciseSessionRecord` is constructed,
+• *Then* `endTime` is extended so that `maxRouteTime.isBefore(endTime)` holds without `IllegalArgumentException`.
 • *Given* an outdoor workout where `WRITE_EXERCISE_ROUTE` is denied,
 • *When* Health Connect synchronization executes,
 • *Then* the session is written with `exerciseRoute = null` without throwing `SecurityException`.
@@ -2179,7 +2185,7 @@ d. Step 4 (`OnboardingStep.BATTERY_OPTIMIZATION`): Doze mode background survival
 • *When* records are mapped and written to Health Connect,
 • *Then* series records are partitioned into chunks of $\le 2,000$ samples without Binder transaction overflow.
 
-**Invariants**: All series record timestamps must strictly fall within the exercise session's `[startTime, endTime]` interval. Calorie extraction MUST be numerical from database models, never scraped from UI presentation strings.
+**Invariants**: All series record timestamps must strictly fall within the exercise session's `[startTime, endTime]` interval. Calorie extraction MUST be numerical from database models, never scraped from UI presentation strings. ExerciseRoute timestamps MUST be strictly ascending with zero duplicates. Session endTime MUST be strictly after the latest route point.
 
 ### REQ-SET-102: Trackless Indoor Workout Health Connect Export Parity [Verified]
 - **Tests**: `TST-SET-102`
