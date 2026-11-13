@@ -217,7 +217,15 @@ public class MySensorManager extends MyDevice {
                 mAllSensorsMapMap.get(sensorType).put(deviceType, new LinkedList<MySensor>());
             }
 
-            mAllSensorsMapMap.get(sensorType).get(deviceType).addLast(mySensor);
+            LinkedList<MySensor> sensorList = mAllSensorsMapMap.get(sensorType).get(deviceType);
+            java.util.Iterator<MySensor> iterator = sensorList.iterator();
+            while (iterator.hasNext()) {
+                MySensor existing = iterator.next();
+                if (existing == mySensor || (existing.getDevice() != null && existing.getDevice() == mySensor.getDevice())) {
+                    iterator.remove();
+                }
+            }
+            sensorList.addLast(mySensor);
 
             if (newSensor) {
                 if (DEBUG) Log.d(TAG, "notifyNewSensor(" + mySensor.mSensorType.name() + ")");

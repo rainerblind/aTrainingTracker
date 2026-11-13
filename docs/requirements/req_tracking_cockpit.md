@@ -3271,8 +3271,13 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 **Invariants**: Thread safety, null safety (`REQ-FIL-011`), pause session isolation (`REQ-FIL-013`), and 100% clean-room test pass rate.
 
 ### REQ-CON-027: Beat-to-Beat RR-Interval Acquisition, BLE GATT 0x2A37 Multi-RR Unpacking & ANT+ Continuity Guard [Verified]
+- **Target Release**: `V5.0.0`
+- **Tickets**: `ATT-3540`, `ATT-7530`
 - **Tests**: `TST-CON-027`
-- **Implementation**: `SensorType.java`, `BTLEHeartRateDevice.java`, `ANTHeartRateDevice.java`, `RrBeatEvent.kt`, `RrBeatListener.kt`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Implementation**: `SensorType.java`, `BTLEHeartRateDevice.java`, `ANTHeartRateDevice.java`, `MyDevice.java`, `MySensorManager.java`, `ProxySensor.java`, `RrBeatEvent.kt`, `RrBeatListener.kt`
 - **Rationale**: Real-time HRV metrics (DFA $\alpha_1$, $rMSSD$, aerobic threshold pacing) require lossless beat-to-beat RR interval acquisition. Existing `BTLEHeartRateDevice` parses only 1-Hz HR from GATT `0x2A37`, dropping Bit 4 RR intervals and creating duplicate timestamps for multi-beat packets. `ANTHeartRateDevice` ignores beat count continuity, risking severe artifact spikes on RF dropouts ($\Delta c \ge 2$) (ATT-3540, Parent Epic ATT-3539, extending `REQ-CON-002`, `REQ-CON-003`, and `REQ-CON-014`):
 1. *SensorType.RR_INTERVAL & Push Dispatch Contract (`REQ-CON-027.1`)*:
 • The system SHALL activate `SensorType.RR_INTERVAL` (`ms`, `SensorValueType.INTEGER`, category `HEART_RATE_AND_ENERGY`) with 9-language translation parity.
@@ -3289,12 +3294,17 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 5. *Defensive Parsing & Backward Compatibility (`REQ-CON-027.5`)*:
 • Malformed/truncated BLE packets SHALL NOT crash (`REQ-CON-014`).
 • Optical sensors omitting Bit 4 SHALL NOT activate `mRrIntervalSensor`, preserving backward compatibility for HR-only tracking.
+6. *Clean Sensor Teardown, De-duplication & Reconnect Continuity (`REQ-CON-027.6`)*:
+• In `BTLEHeartRateDevice.unregisterSensors()` and `ANTHeartRateDevice.unregisterSensors()`, `removeSensor(SensorType.RR_INTERVAL)` SHALL be explicitly invoked before setting `mRrIntervalSensor = null` so `mSensorMap` does not retain zombie sensor instances across disconnects.
+• `MyDevice.addSensor(mySensor)` and `addAndRegisterSensor(mySensor)` SHALL verify whether a sensor of `mySensor.getSensorType()` is already present in `mSensorMap`. If a previous instance exists and differs from `mySensor`, `MyDevice` SHALL deactivate it and unregister it from `MySensorManager` prior to registering the replacement.
+• `MySensorManager.registerSensor(mySensor)` SHALL check for and remove any existing `MySensor` belonging to the exact same `MyDevice` instance (`existing.getDevice() == mySensor.getDevice()`) from `sensorList` before calling `addLast(mySensor)`, preventing duplicate same-device instances and list ordering pollution.
+• When a replacement or lazily allocated sensor is registered in `MySensorManager`, `setBestSensorForProxySensor(sensorType)` SHALL immediately update `ProxySensor`'s source reference, ensuring `ProxySensor(RR_INTERVAL)` and the tracking cockpit display live RR interval values matching the sensor detail view after reconnect.
 
 **Requirement Archaeology & Chesterton's Fence Audit**:
-1. *Original Requirement ID & Target*: Net-new requirement `REQ-CON-027`, extending `REQ-CON-002` (*Bluetooth LE Sensor Support*), `REQ-CON-003` (*ANT+ Sensor Support*), and `REQ-CON-014` (*BLE GATT Measurement Packet Parsing Resilience*). Targets `BTLEHeartRateDevice.java`, `ANTHeartRateDevice.java`, and `SensorType.java`.
-2. *Historical Origin & Commit Trace*: `ATT-1485` (`REQ-CON-014`) added null-safety to BLE parsing; `SensorType.RR_INTERVAL` existed as a commented placeholder since initial architecture.
-3. *Root Reason for Existing Formulation*: Early versions focused strictly on 1-Hz integer HR display, discarding raw beat timings to economize battery and bandwidth.
-4. *Preservation of Core Invariants*: `SensorType.HR` instant bpm emission and existing UI displays remain 100% backward compatible; zero GATT parsing crashes; optical sensors lacking Bit 4 continue regular HR operation without RR.
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-CON-027`, extending `REQ-CON-002` (*Bluetooth LE Sensor Support*), `REQ-CON-003` (*ANT+ Sensor Support*), and `REQ-CON-014` (*BLE GATT Measurement Packet Parsing Resilience*). Targets `BTLEHeartRateDevice.java`, `ANTHeartRateDevice.java`, `MyDevice.java`, and `SensorType.java`.
+2. *Historical Origin & Commit Trace*: `ATT-1485` (`REQ-CON-014`) added null-safety to BLE parsing; `SensorType.RR_INTERVAL` existed as a commented placeholder since initial architecture; `ATT-3540` (`98df60c9`) added lazy `mRrIntervalSensor` allocation; `ATT-7530` fixed orphaned sensor retention across reconnects.
+3. *Root Reason for Existing Formulation*: Early versions focused strictly on 1-Hz integer HR display, discarding raw beat timings. `mRrIntervalSensor` was lazily created and simply nulled in `unregisterSensors()` on disconnect, assuming garbage collection would reap it, without accounting for `mSensorMap` retention or `MySensorManager` multi-device list ordering.
+4. *Preservation of Core Invariants*: Optical HR-only sensors without Bit 4 continue operating without creating `mRrIntervalSensor`; `ProxySensor` lock-free dispatch and thread safety outside monitors is preserved; zero GATT crashes; active sensors on other devices remain prioritized per priority rules.
 
 **Acceptance Criteria (Given-When-Then)**:
 • *Given* a BLE `0x2A37` packet with `flag = 0x10` containing 3 bundled RR intervals (`1024`, `512`, `768`),
@@ -3309,6 +3319,12 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 • *Given* an optical sensor emitting `flag = 0x00`,
 • *When* received,
 • *Then* `SensorType.HR` updates normally and `mRrIntervalSensor` remains null.
+• *Given* a connected BLE Heart Rate sensor or ANT+ Heart Rate sensor with an active `RR_INTERVAL` tile in the tracking cockpit,
+• *When* the sensor disconnects and reconnects during tracking and sends new RR packets,
+• *Then* `ProxySensor(RR_INTERVAL)` rebinds to the newly registered sensor instance and the cockpit displays live RR values instead of freezing at `-- ms`.
+• *Given* any `MyDevice` registers a sensor for a `SensorType` that already has an instance for that same device,
+• *When* registered,
+• *Then* the previous instance is cleanly unregistered and replaced in `MySensorManager`, with `getBestSensor()` resolving to the active instance.
 
 **Invariants**: Backward compatibility for HR-only sensors; zero GATT crashes; mathematical precision of RR intervals; clean-room test pass rate.
 

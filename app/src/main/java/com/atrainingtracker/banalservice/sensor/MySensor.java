@@ -50,6 +50,10 @@ public class MySensor<T> {
         mActivated = false;
     }
 
+    public boolean isActivated() {
+        return mActivated;
+    }
+
     public void addSensorListener(SensorListener sensorListener) {
         if (DEBUG) Log.i(TAG, "addSensorListener() to " + mDevice + ", " + mSensorType);
         if (sensorListener == null) {

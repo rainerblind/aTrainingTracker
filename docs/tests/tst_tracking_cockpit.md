@@ -1807,9 +1807,9 @@
   • Execute targeted package tests (`com.atrainingtracker.banalservice.filters.*`) asserting 100% pass rate.
 
 ### TST-CON-027: **Beat-to-Beat RR-Interval Acquisition, BLE GATT 0x2A37 Multi-RR Unpacking & ANT+ Continuity Guard Verification Suite** [Verified]
-- **Requirement(s)**: `REQ-CON-027` (`REQ-CON-027.1`..`REQ-CON-027.5`)
-- **Component**: `SensorType.java`, `BTLEHeartRateDevice.java`, `ANTHeartRateDevice.java`, `RrBeatEvent.kt`, `RrBeatListener.kt`
-- **Jira**: `ATT-3540`
+- **Requirement(s)**: `REQ-CON-027` (`REQ-CON-027.1`..`REQ-CON-027.6`)
+- **Component**: `SensorType.java`, `BTLEHeartRateDevice.java`, `ANTHeartRateDevice.java`, `MyDevice.java`, `MySensorManager.java`, `ProxySensor.java`, `RrBeatEvent.kt`, `RrBeatListener.kt`
+- **Jira**: `ATT-3540`, `ATT-7530`
 - **Test Description**:
   1. *SensorType & 9-Language Localization Audit (`TST-CON-027.1`, `SensorTypeTest.kt`, `TranslationParityTest.kt`)*:
   • Verify `SensorType.RR_INTERVAL` is registered under `SensorCategory.HEART_RATE_AND_ENERGY` with `SensorValueType.INTEGER` and unit `ms`.
@@ -1830,7 +1830,13 @@
   5. *Optical HR Compatibility & Truncated Payload Defensive Tests (`TST-CON-027.5`, `BTLEHeartRateDeviceTest.kt`)*:
   • Verify packets lacking Bit 4 update `SensorType.HR` without activating or emitting to `mRrIntervalSensor`.
   • Verify truncated packets (length shorter than required for indicated flags) are safely logged without throwing exceptions (`REQ-CON-014`).
-  6. *Clean-Room Targeted Test Suite Execution (`TST-CON-027.6`)*:
+  6. *Clean Sensor Teardown on Disconnect (`TST-CON-027.6`, `BTLEHeartRateDeviceTest.kt`, `ANTHeartRateDeviceTest.kt`)*:
+  • Verify that calling `unregisterSensors()` removes `SensorType.RR_INTERVAL` from `mSensorMap` via `removeSensor(SensorType.RR_INTERVAL)` and resets `mRrIntervalSensor = null`.
+  • Verify that upon subsequent reconnect and arrival of new RR packets, the newly allocated sensor is registered without retaining references to the disconnected sensor.
+  7. *MyDevice and MySensorManager De-duplication & Reconnect Continuity (`TST-CON-027.7`, `MySensorManagerProxyTest.kt`, `MyDeviceTest.kt`)*:
+  • Verify that registering a second sensor for the same `SensorType` on the same `MyDevice` unregisters the previous instance and does not duplicate entries in `MySensorManager`.
+  • Verify that `ProxySensor(RR_INTERVAL)` rebinds its source sensor to the newly registered instance via `setBestSensorForProxySensor()` and that new values update `ProxySensor.getValue()`.
+  8. *Clean-Room Targeted Test Suite Execution (`TST-CON-027.8`)*:
   • Execute targeted package tests (`com.atrainingtracker.banalservice.devices.*`, `com.atrainingtracker.banalservice.sensor.*`) asserting 100% pass rate.
 
 ### TST-TRK-060: **Lipponen Artifact Correction, Real-Time HRV Engine & NeuroKit2 Golden Parity Verification Suite** [Verified]

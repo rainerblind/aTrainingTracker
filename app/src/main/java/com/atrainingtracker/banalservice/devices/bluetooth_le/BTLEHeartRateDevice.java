@@ -282,18 +282,30 @@ public class BTLEHeartRateDevice extends MyBTLEDevice implements RrBeatSource {
 
     @Override
     protected void unregisterSensors() {
+        if (mRrIntervalSensor != null) {
+            if (mMySensorManager != null) {
+                mMySensorManager.unregisterSensor(mRrIntervalSensor);
+            }
+            removeSensor(SensorType.RR_INTERVAL);
+            mRrIntervalSensor = null;
+        }
         super.unregisterSensors();
         mLastBeatTimestampMs = 0.0;
         mPacketCounter = 0;
-        mRrIntervalSensor = null;
     }
 
     @Override
     public void shutDown() {
+        if (mRrIntervalSensor != null) {
+            if (mMySensorManager != null) {
+                mMySensorManager.unregisterSensor(mRrIntervalSensor);
+            }
+            removeSensor(SensorType.RR_INTERVAL);
+            mRrIntervalSensor = null;
+        }
         super.shutDown();
         mLastBeatTimestampMs = 0.0;
         mPacketCounter = 0;
-        mRrIntervalSensor = null;
         mRrBeatListeners.clear();
     }
 }

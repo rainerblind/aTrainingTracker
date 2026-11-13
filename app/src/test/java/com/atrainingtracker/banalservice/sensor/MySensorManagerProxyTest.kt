@@ -139,4 +139,77 @@ class MySensorManagerProxyTest {
         sensorManager.shutDown()
         assertNull(proxy.sourceSensor)
     }
+
+    private class TestDevice(
+        context: Context,
+        sensorManager: MySensorManager,
+        type: DeviceType
+    ) : MyDevice(context, sensorManager, type) {
+        override fun addSensors() {
+            // No static sensors
+        }
+
+        public override fun addSensor(mySensor: MySensor<*>?) {
+            super.addSensor(mySensor)
+        }
+    }
+
+    /**
+     * TST-CON-027.7: MySensorManager deduplicates same-device sensor instances and updates proxy (ATT-7530).
+     */
+    @Test
+    fun registerSensor_replacesDuplicateInstanceFromSameDevice() {
+        val device = mockDevice(DeviceType.HRM)
+        val rrSensor1 = object : MySensor<Int>(device, SensorType.RR_INTERVAL) {}
+        val rrSensor2 = object : MySensor<Int>(device, SensorType.RR_INTERVAL) {}
+
+        // 1. Register first RR sensor
+        sensorManager.registerSensor(rrSensor1)
+        val proxy = sensorManager.getSensor(SensorType.RR_INTERVAL) as ProxySensor<Int>
+        assertSame(rrSensor1, proxy.sourceSensor)
+
+        rrSensor1.newValue(800)
+        assertEquals(800, proxy.value)
+
+        // 2. Register second RR sensor from same device instance without prior unregister
+        sensorManager.registerSensor(rrSensor2)
+        assertSame(rrSensor2, proxy.sourceSensor)
+
+        // Verify only 1 instance exists in all sensors for this device/type
+        val allSensors = sensorManager.allSensors
+        val rrSensorsFromDevice = allSensors.filter { it.sensorType == SensorType.RR_INTERVAL && it.device == device }
+        assertEquals("Duplicate same-device sensor should be replaced, list size must be 1", 1, rrSensorsFromDevice.size)
+        assertSame(rrSensor2, rrSensorsFromDevice[0])
+
+        // Verify values from new sensor propagate to proxy
+        rrSensor2.newValue(850)
+        assertEquals(850, proxy.value)
+    }
+
+    /**
+     * TST-CON-027.7: MyDevice.addSensor deactivates and unregisters previous sensor of the same type (ATT-7530).
+     */
+    @Test
+    fun myDevice_addSensor_deactivatesAndUnregistersPreviousSameTypeSensor() {
+        val testDevice = TestDevice(context, sensorManager, DeviceType.HRM)
+        val rrSensor1 = object : MySensor<Int>(testDevice, SensorType.RR_INTERVAL) {}
+        val rrSensor2 = object : MySensor<Int>(testDevice, SensorType.RR_INTERVAL) {}
+
+        testDevice.addSensor(rrSensor1)
+        sensorManager.registerSensor(rrSensor1)
+        rrSensor1.activateSensor()
+        assertTrue("Sensor 1 must be active", rrSensor1.isActivated)
+
+        val proxy = sensorManager.getSensor(SensorType.RR_INTERVAL) as ProxySensor<Int>
+        assertSame(rrSensor1, proxy.sourceSensor)
+
+        // Add replacement sensor to device
+        testDevice.addSensor(rrSensor2)
+        org.junit.Assert.assertFalse("Previous sensor must be deactivated upon replacement", rrSensor1.isActivated)
+
+        // Register new sensor
+        sensorManager.registerSensor(rrSensor2)
+        rrSensor2.activateSensor()
+        assertSame("Proxy source sensor must be updated to sensor 2", rrSensor2, proxy.sourceSensor)
+    }
 }

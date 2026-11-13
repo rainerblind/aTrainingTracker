@@ -26,6 +26,7 @@ import com.atrainingtracker.banalservice.database.DevicesDatabaseManager
 import com.atrainingtracker.banalservice.devices.ProtocolType
 import com.atrainingtracker.banalservice.devices.RrBeatEvent
 import com.atrainingtracker.banalservice.sensor.MySensorManager
+import com.atrainingtracker.banalservice.sensor.SensorType
 import com.dsi.ant.plugins.antplus.pcc.AntPlusHeartRatePcc.DataState
 import io.mockk.every
 import io.mockk.mockk
@@ -85,6 +86,10 @@ class ANTHeartRateDeviceTest {
     ) : ANTHeartRateDevice(context, sensorManager, deviceId, antDeviceNumber) {
         override fun notifySensorsChanged() {
             // No-op for unit testing
+        }
+
+        public override fun unregisterSensors() {
+            super.unregisterSensors()
         }
     }
 
@@ -268,5 +273,40 @@ class ANTHeartRateDeviceTest {
         assertEquals(1, receivedEvents.size)
         assertEquals(RrBeatEvent.ARTIFACT_NORMAL, receivedEvents[0].artifactFlag)
         assertEquals(0, receivedEvents[0].gapBeats)
+    }
+
+    /**
+     * TST-CON-027.6: Clean RR_INTERVAL sensor teardown on disconnect and reconnect continuity for ANT+ (ATT-7530).
+     */
+    @Test
+    fun testUnregisterSensors_cleansUpRrIntervalSensor_andReconnectCreatesNewInstance() {
+        val device = createDevice() as TestANTHeartRateDevice
+        assertNull("RR sensor must initially be null", device.rrIntervalSensor)
+
+        // Baseline packet + first beat
+        device.parseHeartRateData(100_000L, 70, 10L, BigDecimal("1.000"), DataState.LIVE_DATA)
+        device.parseHeartRateData(100_800L, 70, 11L, BigDecimal("1.800"), DataState.LIVE_DATA)
+        val firstSensor = device.rrIntervalSensor
+        assertNotNull("RR sensor should be created after single beat continuity", firstSensor)
+        assertEquals(800, firstSensor?.value)
+
+        // Verify present in device sensors before disconnect
+        val rrInSensorsBefore = device.sensors.any { it.sensorType == SensorType.RR_INTERVAL }
+        assertTrue("RR_INTERVAL must be present in device sensors before disconnect", rrInSensorsBefore)
+
+        // Unregister sensors (simulating disconnect)
+        device.unregisterSensors()
+
+        assertNull("mRrIntervalSensor field must be null after unregisterSensors()", device.rrIntervalSensor)
+        val rrInSensorsAfter = device.sensors.any { it.sensorType == SensorType.RR_INTERVAL }
+        org.junit.Assert.assertFalse("RR_INTERVAL must be removed from device sensors after unregisterSensors()", rrInSensorsAfter)
+
+        // Reconnect: baseline packet + next beat
+        device.parseHeartRateData(200_000L, 72, 20L, BigDecimal("10.000"), DataState.LIVE_DATA)
+        device.parseHeartRateData(200_750L, 72, 21L, BigDecimal("10.750"), DataState.LIVE_DATA)
+        val secondSensor = device.rrIntervalSensor
+        assertNotNull("RR sensor should be re-created after reconnect", secondSensor)
+        org.junit.Assert.assertNotSame("Reconnected sensor must be a fresh instance", firstSensor, secondSensor)
+        assertEquals(750, secondSensor?.value)
     }
 }
