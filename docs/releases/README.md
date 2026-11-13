@@ -70,3 +70,14 @@ docs/releases/<tag>/
 > 2. `docs/releases/<tag>/sys_verification_record.md` is missing, incomplete, or lacks formal sign-off.
 >
 > Any release attempted without these verified records will be rejected by QA and flagged as an ASPICE SUP.8 compliance violation.
+
+---
+
+## Historical Pre-ASPICE Release Backfill Audit (Finding F3 Governance)
+
+Prior to Sprint 2026-44 and the formal adoption of ASPICE Level 2 process governance (SYS.4, SYS.5, SUP.8), releases preceding `V5.0.0` (versionCode 273) were qualified under legacy regression testing protocols without maintaining structured Markdown dossiers in `docs/releases/<tag>/`.
+
+In compliance with ASPICE audit standards and non-retroactive data integrity:
+1. Historical pre-ASPICE release builds are permanently cataloged in git tag history and Jira release milestones.
+2. In accordance with Chesterton's Fence principles, physical hardware logs are not retroactively fabricated.
+3. Formal release dossiers containing `sys_verification_record.md`, `system_integration_results.json`, and `verification_summary.md` are mandatory beginning with production release `V5.0.0` (code `273`) and all subsequent release candidates.

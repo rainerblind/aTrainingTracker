@@ -219,12 +219,12 @@ class SystemIntegrationRunner:
         if RadarPayloadBuilder is None or RadarKinematicsEngine is None:
             return False, "ble_radar_simulator module components missing", details
 
-        # 1. Empty target frame -> All-clear frame [0x01]
+        # 1. Empty target frame -> Authentic Garmin Varia V2 all-clear frame [0x02, 0x00]
         empty_payload = RadarPayloadBuilder.build_v2_payload([])
-        if empty_payload != [PACKET_TYPE_V2_THREAT]:
-            return False, f"Expected all-clear frame [0x01], got {empty_payload}", details
+        if empty_payload != [0x02, 0x00]:
+            return False, f"Expected authentic all-clear frame [0x02, 0x00], got {empty_payload}", details
 
-        # 2. Approaching target payload encoding
+        # 2. Approaching target payload encoding (authentic Garmin Varia V2 layout)
         target = RadarTargetState(
             target_id=1,
             range_m=120.5,
@@ -235,15 +235,13 @@ class SystemIntegrationRunner:
             lane_state=LaneState.PASSING_LANE,
         )
         payload = RadarPayloadBuilder.build_v2_payload([target])
-        if len(payload) != 9:  # 1 header + 8 bytes
-            return False, f"Expected 9-byte payload for single target, got {len(payload)}", details
-        target_id = payload[1]
-        range_raw = payload[2] | (payload[3] << 8)
-        speed_raw = payload[4] | (payload[5] << 8)
-        if speed_raw >= 0x8000:
-            speed_raw -= 0x10000
-        if target_id != 1 or range_raw != 1205 or speed_raw != 224:
-            return False, f"Target kinematic deserialization error: id={target_id}, r={range_raw}, s={speed_raw}", details
+        if len(payload) != 11 or payload[0:2] != [0x02, 0x38]:
+            return False, f"Expected 11-byte authentic payload [0x02, 0x38, ...], got {payload}", details
+        target_id = payload[2]
+        target_class = payload[3]
+        lat_unpacked, range_unpacked = RadarPayloadBuilder.unpack_v2_target_range(payload[4], payload[5], payload[6])
+        if target_id != 1 or target_class != 23 or abs(range_unpacked - 120.5) > 0.2 or abs(lat_unpacked - (-1.2)) > 0.2:
+            return False, f"Target kinematic deserialization error: id={target_id}, r={range_unpacked}, lat={lat_unpacked}", details
 
         # 3. Kinematics engine approaching vehicle simulation
         engine = RadarKinematicsEngine()

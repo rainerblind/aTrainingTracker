@@ -3,7 +3,7 @@
 **Domain**: `process_stability`  
 **Prefixes**: `ARC`, `BLD`, `BUG`, `INT`, `LIV`, `LOG`, `MAN`, `NFR`, `PRO`, `REG`, `SEC`, `STB`, `STR`, `TOOL`, `TST`  
 **Scope**: ASPICE governance, infinite context, crash stability, build architecture, security, and developer tools.  
-**Total Tests**: 131
+**Total Tests**: 132
 
 ---
 
@@ -2960,3 +2960,18 @@
   2. *Baseline Ratchet Monotonicity Test*: Execute unit tests in `tools/test_verify_requirement_governance.py` simulating addition of new unlinked REQs and baseline growth, verifying immediate CI failure.
   3. *Syntax Flexibility & Shorthand Normalization*: Verify parser supports `Verifies:` and legacy `Requirement(s):` syntax, and confirm normalized links for `TST-MIG-001`, `TST-UI-310`, and the 6 historical unreferenced requirements.
   4. *Targeted Unit Test Verification*: Execute `python3 -m unittest tools/test_verify_requirement_governance.py` asserting 100% pass rate.
+
+---
+
+### TST-PRO-088: **System Verification Protocol Sign-Off & Release Gating Verification Suite** [Verified]
+- **Verifies**: `REQ-PRO-088`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Component**: `docs/releases/V5.0.0/sys_verification_record.md`, `tools/run_system_integration_tests.py`, `.github/workflows/android-release.yml`, `tools/test_generate_release_verification_summary.py`, `tools/test_system_integration_tests.py`
+- **Jira**: `ATT-7560`
+- **Test Description**:
+  1. *SYS.5 Verification Record & Release Gating Contract*: Verify that `docs/releases/V5.0.0/sys_verification_record.md` exists, defines all 8 `SYS-VRF-001`..`008` cases with `PASS`, includes hardware serials, and has formal sign-offs.
+  2. *System Integration Runner & Wire Protocol Alignment*: Execute `tools/run_system_integration_tests.py` verifying all 6 cases (`SYS-INT-001`..`006`) pass cleanly including `SYS-INT-003`.
+  3. *Release Verification Summary Generation*: Run `tools/generate_release_verification_summary.py --tag V5.0.0 --fail-on-deviations` asserting exit code 0 and `PASS (READY FOR RELEASE)`.
+  4. *Targeted Regression Test Execution*: Run unit tests in `tools/test_generate_release_verification_summary.py` and `tools/test_system_integration_tests.py` asserting 100% pass rate.
