@@ -34,6 +34,11 @@
     <string name="hrv_zone_anaerobic_label">High Intensity / Anaerobic (Zone 4)</string>
     <string name="hrv_t1_aerobic_threshold_label">Aerobic Threshold T1 (HRVT1)</string>
     <string name="hrv_t2_anaerobic_threshold_label">Anaerobic Threshold T2 (HRVT2)</string>
+    <string name="hrv_zone_aerobic_base_desc">Aerobic base endurance pacing, low autonomic stress</string>
+    <string name="hrv_zone_threshold_transition_desc">Aerobic-to-anaerobic threshold transition, moderate fatigue</string>
+    <string name="hrv_zone_anaerobic_desc">Anaerobic / high intensity, rapid autonomic depletion</string>
+    <string name="hrv_t1_aerobic_threshold_desc">Aerobic threshold (default 0.75). Invariant: T1 \u2265 T2 + 0.05</string>
+    <string name="hrv_t2_anaerobic_threshold_desc">Anaerobic threshold (default 0.50). Invariant: T2 \u2264 T1 - 0.05</string>
     <string name="tuning_physiology_hrv_zones_link">Configure DFA α1 aerobic and anaerobic thresholds in Training Zones</string>
     <string name="hrv_start_guided_ramp_test">Start Guided Threshold Test</string>
     <string name="hrv_preview_pill_aerobic">Aerobic</string>

@@ -34,6 +34,11 @@
     <string name="hrv_zone_anaerobic_label">Alta Intensidade / Anaeróbico (Zona 4)</string>
     <string name="hrv_t1_aerobic_threshold_label">Limiar Aeróbico T1 (HRVT1)</string>
     <string name="hrv_t2_anaerobic_threshold_label">Limiar Anaeróbico T2 (HRVT2)</string>
+    <string name="hrv_zone_aerobic_base_desc">Ritmo de resistência base aeróbica, baixo estresse autonômico</string>
+    <string name="hrv_zone_threshold_transition_desc">Transição do limiar aeróbico para anaeróbico, fadiga moderada</string>
+    <string name="hrv_zone_anaerobic_desc">Anaeróbico / alta intensidade, rápida depleção autonômica</string>
+    <string name="hrv_t1_aerobic_threshold_desc">Limiar aeróbico (padrão 0,75). Invariante: T1 \u2265 T2 + 0,05</string>
+    <string name="hrv_t2_anaerobic_threshold_desc">Limiar anaeróbico (padrão 0,50). Invariante: T2 \u2264 T1 - 0,05</string>
     <string name="tuning_physiology_hrv_zones_link">Configurar limiares aeróbico e anaeróbico DFA α1 nas Zonas de Treino</string>
     <string name="hrv_start_guided_ramp_test">Iniciar teste de limiar guiado</string>
     <string name="hrv_preview_pill_aerobic">Aeróbico</string>

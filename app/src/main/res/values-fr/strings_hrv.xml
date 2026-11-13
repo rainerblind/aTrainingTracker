@@ -34,6 +34,11 @@
     <string name="hrv_zone_anaerobic_label">Haute Intensité / Anaérobie (Zone 4)</string>
     <string name="hrv_t1_aerobic_threshold_label">Seuil Aérobie T1 (HRVT1)</string>
     <string name="hrv_t2_anaerobic_threshold_label">Seuil Anaérobie T2 (HRVT2)</string>
+    <string name="hrv_zone_aerobic_base_desc">Allure d\'endurance de base aérobie, faible stress autonome</string>
+    <string name="hrv_zone_threshold_transition_desc">Transition du seuil aérobie à anaérobie, fatigue modérée</string>
+    <string name="hrv_zone_anaerobic_desc">Anaérobie / haute intensité, épuisement autonome rapide</string>
+    <string name="hrv_t1_aerobic_threshold_desc">Seuil aérobie (par défaut 0,75). Invariant : T1 \u2265 T2 + 0,05</string>
+    <string name="hrv_t2_anaerobic_threshold_desc">Seuil anaérobie (par défaut 0,50). Invariant : T2 \u2264 T1 - 0,05</string>
     <string name="tuning_physiology_hrv_zones_link">Configurer les seuils aérobie et anaérobie DFA α1 dans les Zones d\'entraînement</string>
     <string name="hrv_start_guided_ramp_test">Démarrer le test de seuil guidé</string>
     <string name="hrv_preview_pill_aerobic">Aérobie</string>

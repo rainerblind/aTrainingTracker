@@ -34,6 +34,11 @@
     <string name="hrv_zone_anaerobic_label">高強度 / 無酸素 (ゾーン4)</string>
     <string name="hrv_t1_aerobic_threshold_label">有酸素閾値 T1 (HRVT1)</string>
     <string name="hrv_t2_anaerobic_threshold_label">無酸素閾値 T2 (HRVT2)</string>
+    <string name="hrv_zone_aerobic_base_desc">有酸素ベースの持久力ペース、自律神経ストレス低</string>
+    <string name="hrv_zone_threshold_transition_desc">有酸素から無酸素への閾値移行、中等度の疲労</string>
+    <string name="hrv_zone_anaerobic_desc">無酸素 / 高強度、急速な自律神経消耗</string>
+    <string name="hrv_t1_aerobic_threshold_desc">有酸素閾値（デフォルト 0.75）。不変条件：T1 \u2265 T2 + 0.05</string>
+    <string name="hrv_t2_anaerobic_threshold_desc">無酸素閾値（デフォルト 0.50）。不変条件：T2 \u2264 T1 - 0.05</string>
     <string name="tuning_physiology_hrv_zones_link">トレーニングゾーンでDFA α1有酸素・無酸素閾値を設定</string>
     <string name="hrv_start_guided_ramp_test">ガイド付き閾値テストを開始</string>
     <string name="hrv_preview_pill_aerobic">有酸素</string>

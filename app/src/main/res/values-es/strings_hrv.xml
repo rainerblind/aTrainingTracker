@@ -34,6 +34,11 @@
     <string name="hrv_zone_anaerobic_label">Alta Intensidad / Anaeróbico (Zona 4)</string>
     <string name="hrv_t1_aerobic_threshold_label">Umbral Aeróbico T1 (HRVT1)</string>
     <string name="hrv_t2_anaerobic_threshold_label">Umbral Anaeróbico T2 (HRVT2)</string>
+    <string name="hrv_zone_aerobic_base_desc">Ritmo de resistencia base aeróbica, bajo estrés autonómico</string>
+    <string name="hrv_zone_threshold_transition_desc">Transición de umbral aeróbico a anaeróbico, fatiga moderada</string>
+    <string name="hrv_zone_anaerobic_desc">Anaeróbico / alta intensidad, rápido agotamiento autonómico</string>
+    <string name="hrv_t1_aerobic_threshold_desc">Umbral aeróbico (predeterminado 0.75). Invariante: T1 \u2265 T2 + 0.05</string>
+    <string name="hrv_t2_anaerobic_threshold_desc">Umbral anaeróbico (predeterminado 0.50). Invariante: T2 \u2264 T1 - 0.05</string>
     <string name="tuning_physiology_hrv_zones_link">Configurar umbrales aeróbicos y anaeróbicos DFA α1 en Zonas de Entrenamiento</string>
     <string name="hrv_start_guided_ramp_test">Iniciar prueba de umbral guiada</string>
     <string name="hrv_preview_pill_aerobic">Aeróbico</string>

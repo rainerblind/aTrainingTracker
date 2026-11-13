@@ -34,6 +34,11 @@
     <string name="hrv_zone_anaerobic_label">Wysoka Intensywność / Beztlenowa (Strefa 4)</string>
     <string name="hrv_t1_aerobic_threshold_label">Próg Tlenowy T1 (HRVT1)</string>
     <string name="hrv_t2_anaerobic_threshold_label">Próg Beztlenowy T2 (HRVT2)</string>
+    <string name="hrv_zone_aerobic_base_desc">Tlenowa baza wytrzymałościowa, niski stres autonomiczny</string>
+    <string name="hrv_zone_threshold_transition_desc">Przejście progowe tlenowo-beztlenowe, umiarkowane zmęczenie</string>
+    <string name="hrv_zone_anaerobic_desc">Beztlenowa / wysoka intensywność, szybkie wyczerpanie autonomiczne</string>
+    <string name="hrv_t1_aerobic_threshold_desc">Próg tlenowy (domyślnie 0,75). Niezmiennik: T1 \u2265 T2 + 0,05</string>
+    <string name="hrv_t2_anaerobic_threshold_desc">Próg beztlenowy (domyślnie 0,50). Niezmiennik: T2 \u2264 T1 - 0,05</string>
     <string name="tuning_physiology_hrv_zones_link">Skonfiguruj progi tlenowe i beztlenowe DFA α1 w Strefach treningowych</string>
     <string name="hrv_start_guided_ramp_test">Rozpocznij prowadzony test progowy</string>
     <string name="hrv_preview_pill_aerobic">Tlenowy</string>

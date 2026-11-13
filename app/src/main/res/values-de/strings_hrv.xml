@@ -34,6 +34,11 @@
     <string name="hrv_zone_anaerobic_label">Hohe Intensität / Anaerob (Zone 4)</string>
     <string name="hrv_t1_aerobic_threshold_label">Aerobe Schwelle T1 (HRVT1)</string>
     <string name="hrv_t2_anaerobic_threshold_label">Anaerobe Schwelle T2 (HRVT2)</string>
+    <string name="hrv_zone_aerobic_base_desc">Aerobe Grundlagenausdauer, geringe vegetative Belastung</string>
+    <string name="hrv_zone_threshold_transition_desc">Aerob-anaerober Schwellenübergang, mäßige Ermüdung</string>
+    <string name="hrv_zone_anaerobic_desc">Anaerob / hohe Intensität, rasche vegetative Erschöpfung</string>
+    <string name="hrv_t1_aerobic_threshold_desc">Aerobe Schwelle (Standard 0,75). Invariante: T1 \u2265 T2 + 0,05</string>
+    <string name="hrv_t2_anaerobic_threshold_desc">Anaerobe Schwelle (Standard 0,50). Invariante: T2 \u2264 T1 - 0,05</string>
     <string name="tuning_physiology_hrv_zones_link">DFA α1 aerobe und anaerobe Schwellen in den Trainingszonen anpassen</string>
     <string name="hrv_start_guided_ramp_test">Geführten Schwellentest starten</string>
     <string name="hrv_preview_pill_aerobic">Aerob</string>
