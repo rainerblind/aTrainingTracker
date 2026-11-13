@@ -53,6 +53,34 @@ RADAR_LIGHT_CONTROL_UUID = '6a4e3202-667b-11e3-949a-0800200c9a66'
 RADAR_V1_CHARACTERISTIC_UUID = '6a4e3203-667b-11e3-949a-0800200c9a66'
 RADAR_V2_CHARACTERISTIC_UUID = '6a4e3204-667b-11e3-949a-0800200c9a66'
 
+# Garmin RearVue 820 Tail Light Control Service & Characteristics (REQ-CON-031.1, REQ-SIM-002.3)
+RADAR_CONTROL_SERVICE_UUID = '6a4e2f00-667b-11e3-949a-0800200c9a66'
+RADAR_CONTROL_WRITE_UUID = '6a4e2f11-667b-11e3-949a-0800200c9a66'
+RADAR_CONTROL_NOTIFY_UUID = '6a4e2f14-667b-11e3-949a-0800200c9a66'
+
+# RearVue 820 Tail Light Modes
+REARVUE_MODE_OFF = 0x1F
+REARVUE_MODE_SOLID = 0x11
+REARVUE_MODE_PELOTON = 0x12
+REARVUE_MODE_DAY_FLASH = 0x13
+REARVUE_MODE_NIGHT_FLASH = 0x14
+
+REARVUE_TO_LEGACY_MAP = {
+    REARVUE_MODE_OFF: 0x00,          # RadarLightMode.OFF
+    REARVUE_MODE_SOLID: 0x01,        # RadarLightMode.SOLID
+    REARVUE_MODE_PELOTON: 0x05,      # RadarLightMode.PELOTON
+    REARVUE_MODE_DAY_FLASH: 0x07,    # RadarLightMode.DAY_FLASH
+    REARVUE_MODE_NIGHT_FLASH: 0x06,  # RadarLightMode.NIGHT_FLASH
+}
+
+LEGACY_TO_REARVUE_MAP = {
+    0x00: REARVUE_MODE_OFF,
+    0x01: REARVUE_MODE_SOLID,
+    0x05: REARVUE_MODE_PELOTON,
+    0x07: REARVUE_MODE_DAY_FLASH,
+    0x06: REARVUE_MODE_NIGHT_FLASH,
+}
+
 # Standard BLE Services
 BATTERY_SERVICE_UUID = '0000180f-0000-1000-8000-00805f9b34fb'
 BATTERY_LEVEL_CHARACTERISTIC_UUID = '00002a19-0000-1000-8000-00805f9b34fb'
@@ -117,7 +145,8 @@ class RadarTargetState:
     def __init__(self, target_id, range_m, speed_mps, lateral_m=-1.8,
                  threat_level=ThreatLevel.APPROACHING,
                  size_category=VehicleSizeCategory.CAR,
-                 lane_state=LaneState.PASSING_LANE):
+                 lane_state=LaneState.PASSING_LANE,
+                 length_m=None, width_m=None):
         self.target_id = int(target_id)
         self.range_m = float(range_m)
         self.speed_mps = float(speed_mps)
@@ -126,10 +155,21 @@ class RadarTargetState:
         self.size_category = int(size_category)
         self.lane_state = int(lane_state)
 
+        if length_m is not None:
+            self.length_m = float(length_m)
+        else:
+            self.length_m = 10.0 if self.size_category == VehicleSizeCategory.TRUCK_OR_BUS else (4.5 if self.size_category == VehicleSizeCategory.CAR else 2.0)
+
+        if width_m is not None:
+            self.width_m = float(width_m)
+        else:
+            self.width_m = 2.5 if self.size_category == VehicleSizeCategory.TRUCK_OR_BUS else (1.8 if self.size_category == VehicleSizeCategory.CAR else 0.8)
+
     def copy(self):
         return RadarTargetState(
             self.target_id, self.range_m, self.speed_mps, self.lateral_m,
-            self.threat_level, self.size_category, self.lane_state
+            self.threat_level, self.size_category, self.lane_state,
+            self.length_m, self.width_m
         )
 
 
@@ -166,67 +206,140 @@ def compute_advertising_pdu_size(local_name: str, service_uuids: list) -> int:
 class RadarPayloadBuilder:
     """
     Binary packet serializer for Garmin Varia BLE Radar protocols:
-    - High-Resolution V2 (6a4e3204): Header 0x01 + N * 8 bytes
-    - Legacy V1 (6a4e3203): Header 0x00 + N * 3 bytes
+    - High-Resolution V2 (6a4e3204):
+      * Authentic: len == 2 idle heartbeat [0x02, 0x00], len >= 11 (2 + 9*N) target frame [0x02, 0x38] + 9-byte structs
+      * Synthetic fallback: len == 1 idle [0x01], len == 1 + 8*N [0x01] + 8-byte structs
+    - Legacy V1 (6a4e3203):
+      * Authentic: sequence header ((counter & 0x0F) << 4) | 0x02, 1-byte idle [seq], 1 + 3*N [seq, 0x80 | (tid & 0x7F), range_m, flag]
+      * Synthetic fallback: 1-byte idle [0x00], 1 + 3*N [0x00, tid, range_m, (threat << 4) | speed]
     """
 
     @staticmethod
-    def build_v2_payload(targets):
+    def pack_v2_target_range(lateral_m, range_m):
         """
-        Builds a V2 threat stream frame (matching BTLERadarDevice.parseV2ThreatPacket).
-        Header byte: 0x01 (PACKET_TYPE_V2_THREAT)
-        Stride per target (8 bytes):
-          +0: targetId (uint8)
-          +1..2: rangeRaw (uint16 LE, 0.1m precision)
-          +3..4: speedRaw (int16 LE signed, 0.1 m/s precision)
-          +5..6: lateralRaw (int16 LE signed, 0.1m precision, negative=left)
-          +7: sizeAndThreat (bits 0..1 threat, bits 2..3 size, bits 4..5 lane)
+        Packs signed 11-bit lateral X (*10) and signed 13-bit range Y (*10) into 24-bit LE bytes.
         """
-        payload = [PACKET_TYPE_V2_THREAT]
+        x_val = max(-1024, min(1023, int(round(lateral_m * 10.0))))
+        x_bits = x_val & 0x7FF
+
+        y_val = max(-4096, min(4095, int(round(range_m * 10.0))))
+        y_bits = y_val & 0x1FFF
+
+        packed = x_bits | (y_bits << 11)
+        b0 = packed & 0xFF
+        b1 = (packed >> 8) & 0xFF
+        b2 = (packed >> 16) & 0xFF
+        return b0, b1, b2
+
+    @staticmethod
+    def unpack_v2_target_range(b0, b1, b2):
+        """
+        Unpacks 24-bit LE bytes into lateral X offset (m) and range Y (m).
+        """
+        packed = (b0 & 0xFF) | ((b1 & 0xFF) << 8) | ((b2 & 0xFF) << 16)
+        x_bits = packed & 0x7FF
+        if x_bits & 0x400:
+            x_bits -= 0x800
+        lateral_m = x_bits * 0.1
+
+        y_bits = (packed >> 11) & 0x1FFF
+        if y_bits & 0x1000:
+            y_bits -= 0x2000
+        range_m = y_bits * 0.1
+        return lateral_m, range_m
+
+    @staticmethod
+    def build_v2_payload(targets, authentic=True):
+        if not authentic:
+            payload = [PACKET_TYPE_V2_THREAT]
+            for t in targets:
+                tid = int(t.target_id) & 0xFF
+                range_raw = max(0, min(65535, int(round(t.range_m * 10.0))))
+                range_lo = range_raw & 0xFF
+                range_hi = (range_raw >> 8) & 0xFF
+
+                speed_raw = max(-32768, min(32767, int(round(t.speed_mps * 10.0))))
+                speed_bytes = struct.pack('<h', speed_raw)
+
+                lat_raw = max(-32768, min(32767, int(round(t.lateral_m * 10.0))))
+                lat_bytes = struct.pack('<h', lat_raw)
+
+                threat_bits = int(t.threat_level) & 0x03
+                size_bits = (int(t.size_category) & 0x03) << 2
+                lane_bits = (int(t.lane_state) & 0x03) << 4
+                size_and_threat = threat_bits | size_bits | lane_bits
+
+                payload.extend([
+                    tid,
+                    range_lo, range_hi,
+                    speed_bytes[0], speed_bytes[1],
+                    lat_bytes[0], lat_bytes[1],
+                    size_and_threat
+                ])
+            return payload
+
+        # Authentic Garmin Varia V2 layout
+        if not targets:
+            return [0x02, 0x00]
+
+        payload = [0x02, 0x38]
         for t in targets:
             tid = int(t.target_id) & 0xFF
-            range_raw = max(0, min(65535, int(round(t.range_m * 10.0))))
-            range_lo = range_raw & 0xFF
-            range_hi = (range_raw >> 8) & 0xFF
 
-            speed_raw = max(-32768, min(32767, int(round(t.speed_mps * 10.0))))
-            speed_bytes = struct.pack('<h', speed_raw)
+            if t.size_category == VehicleSizeCategory.TRUCK_OR_BUS:
+                target_class = 36
+            elif t.size_category == VehicleSizeCategory.CAR:
+                target_class = 23
+            else:
+                target_class = 16
 
-            lat_raw = max(-32768, min(32767, int(round(t.lateral_m * 10.0))))
-            lat_bytes = struct.pack('<h', lat_raw)
+            b0, b1, b2 = RadarPayloadBuilder.pack_v2_target_range(t.lateral_m, t.range_m)
 
-            threat_bits = int(t.threat_level) & 0x03
-            size_bits = (int(t.size_category) & 0x03) << 2
-            lane_bits = (int(t.lane_state) & 0x03) << 4
-            size_and_threat = threat_bits | size_bits | lane_bits
+            length_raw = max(0, min(255, int(round(t.length_m / 0.25))))
+            width_raw = max(0, min(255, int(round(t.width_m / 0.25))))
+
+            # Speed Y: signed int8 * 0.5 m/s closing speed (negative = approaching)
+            speed_y_val = max(-128, min(127, int(round(-t.speed_mps / 0.5))))
+            speed_y = speed_y_val & 0xFF
+
+            # Speed X: lateral speed or 0x80 sentinel
+            speed_x = 0x80
 
             payload.extend([
                 tid,
-                range_lo, range_hi,
-                speed_bytes[0], speed_bytes[1],
-                lat_bytes[0], lat_bytes[1],
-                size_and_threat
+                target_class,
+                b0, b1, b2,
+                length_raw,
+                width_raw,
+                speed_y,
+                speed_x
             ])
         return payload
 
     @staticmethod
-    def build_v1_payload(targets):
-        """
-        Builds a legacy V1 threat frame (matching BTLERadarDevice.parseV1ThreatPacket).
-        Header byte: 0x00 (PACKET_TYPE_THREAT)
-        Stride per target (3 bytes):
-          +0: targetId (uint8)
-          +1: rangeMeters (uint8, 0..255m)
-          +2: (threatBits << 4) | (speedMps & 0x0F)
-        """
-        payload = [PACKET_TYPE_THREAT]
+    def build_v1_payload(targets, seq_counter=0, authentic=True):
+        if not authentic:
+            payload = [PACKET_TYPE_THREAT]
+            for t in targets:
+                tid = int(t.target_id) & 0xFF
+                range_m = max(0, min(255, int(round(t.range_m))))
+                threat_bits = (int(t.threat_level) & 0x03) << 4
+                speed_mps = max(0, min(15, int(round(t.speed_mps)))) & 0x0F
+                speed_and_threat = threat_bits | speed_mps
+                payload.extend([tid, range_m, speed_and_threat])
+            return payload
+
+        # Authentic Garmin Varia V1 layout
+        seq = ((int(seq_counter) & 0x0F) << 4) | 0x02
+        if not targets:
+            return [seq]
+
+        payload = [seq]
         for t in targets:
-            tid = int(t.target_id) & 0xFF
+            vid = 0x80 | (int(t.target_id) & 0x7F)
             range_m = max(0, min(255, int(round(t.range_m))))
-            threat_bits = (int(t.threat_level) & 0x03) << 4
-            speed_mps = max(0, min(15, int(round(t.speed_mps)))) & 0x0F
-            speed_and_threat = threat_bits | speed_mps
-            payload.extend([tid, range_m, speed_and_threat])
+            flag = 0x01 if t.threat_level == ThreatLevel.FAST_APPROACHING else 0x00
+            payload.extend([vid, range_m, flag])
         return payload
 
 
@@ -245,6 +358,7 @@ class RadarKinematicsEngine:
         self._lock = threading.RLock()
         self.targets = []
         self.light_mode = RadarLightMode.SOLID
+        self.seq_counter = 0
         self.starve_ticks_remaining = 0
         self.country_loop_active = False
         self._country_loop_cooldown_ticks = 0
@@ -356,6 +470,8 @@ class RadarKinematicsEngine:
                 if self.starve_ticks_remaining == 0:
                     print("[WATCHDOG] Starvation ended: Resumed radar threat notifications.")
                 return None
+
+            self.seq_counter = (self.seq_counter + 1) & 0x0F
 
             # Country loop traffic generation
             if self.country_loop_active:
@@ -490,7 +606,9 @@ class Service(dbus.service.Object):
         self.uuid = uuid
         self.primary = primary
         self.characteristics = []
-        dbus.service.Object.__init__(self, bus, self.path)
+        self._locations = []
+        if bus is not None:
+            dbus.service.Object.__init__(self, bus, self.path)
 
     def get_properties(self):
         return {
@@ -530,7 +648,10 @@ class Characteristic(dbus.service.Object):
         self.flags = flags
         self.service = service
         self.descriptors = []
-        dbus.service.Object.__init__(self, bus, self.path)
+        self._locations = []
+        self.last_notified_value = None
+        if bus is not None:
+            dbus.service.Object.__init__(self, bus, self.path)
 
     def get_properties(self):
         return {
@@ -578,7 +699,8 @@ class Characteristic(dbus.service.Object):
 
     @dbus.service.signal(DBUS_PROP_IFACE, signature='sa{sv}as')
     def PropertiesChanged(self, interface, changed, invalidated):
-        pass
+        if changed and 'Value' in changed:
+            self.last_notified_value = list(changed['Value'])
 
 
 # -----------------------------------------------------------------------------
@@ -602,7 +724,7 @@ class RadarV2Characteristic(Characteristic):
 
     def send_targets(self, targets):
         if self.notifying:
-            payload = RadarPayloadBuilder.build_v2_payload(targets)
+            payload = RadarPayloadBuilder.build_v2_payload(targets, authentic=True)
             self.PropertiesChanged(
                 GATT_CHRC_IFACE,
                 {'Value': dbus.ByteArray(payload)},
@@ -626,9 +748,9 @@ class RadarV1Characteristic(Characteristic):
             self.notifying = False
             print("[RADAR V1] Client unsubscribed from V1 Target Stream.")
 
-    def send_targets(self, targets):
+    def send_targets(self, targets, seq_counter=0):
         if self.notifying:
-            payload = RadarPayloadBuilder.build_v1_payload(targets)
+            payload = RadarPayloadBuilder.build_v1_payload(targets, seq_counter=seq_counter, authentic=True)
             self.PropertiesChanged(
                 GATT_CHRC_IFACE,
                 {'Value': dbus.ByteArray(payload)},
@@ -642,9 +764,21 @@ class RadarLightControlCharacteristic(Characteristic):
         super().__init__(bus, index, RADAR_LIGHT_CONTROL_UUID, ['read', 'write', 'notify'], service)
         self.engine = engine
         self.notifying = False
+        self.peer_notify_char = None
+
+    def set_peer_notify_char(self, char):
+        self.peer_notify_char = char
 
     def ReadValue(self, options):
         return dbus.ByteArray([self.engine.light_mode])
+
+    def notify_light_mode(self, mode_byte):
+        if self.notifying:
+            self.PropertiesChanged(
+                GATT_CHRC_IFACE,
+                {'Value': dbus.ByteArray([mode_byte])},
+                []
+            )
 
     def WriteValue(self, value, options):
         if not value:
@@ -653,12 +787,9 @@ class RadarLightControlCharacteristic(Characteristic):
         success = self.engine.set_light_mode(mode_byte)
         if not success:
             raise InvalidArgsException(f"Invalid light mode byte: {mode_byte}")
-        if self.notifying:
-            self.PropertiesChanged(
-                GATT_CHRC_IFACE,
-                {'Value': dbus.ByteArray([self.engine.light_mode])},
-                []
-            )
+        self.notify_light_mode(self.engine.light_mode)
+        if self.peer_notify_char:
+            self.peer_notify_char.notify_light_mode(self.engine.light_mode)
 
     def StartNotify(self):
         self.notifying = True
@@ -677,6 +808,76 @@ class RadarService(Service):
         self.add_characteristic(self.v2_char)
         self.add_characteristic(self.v1_char)
         self.add_characteristic(self.light_char)
+
+
+# -----------------------------------------------------------------------------
+# Garmin RearVue 820 Tail Light Control Service (6a4e2f00)
+# -----------------------------------------------------------------------------
+class RadarControlWriteCharacteristic(Characteristic):
+    """Garmin RearVue 820 Tail Light Command characteristic (6a4e2f11)."""
+    def __init__(self, bus, index, service, engine, notify_char=None, legacy_char=None):
+        super().__init__(bus, index, RADAR_CONTROL_WRITE_UUID, ['write', 'write-without-response'], service)
+        self.engine = engine
+        self.notify_char = notify_char
+        self.legacy_char = legacy_char
+
+    def set_peers(self, notify_char, legacy_char):
+        self.notify_char = notify_char
+        self.legacy_char = legacy_char
+
+    def WriteValue(self, value, options):
+        # Format: 06 09 01 TT
+        if not value or len(value) < 4:
+            raise InvalidArgsException(f"Payload too short for RearVue control: len={len(value) if value else 0}")
+        b0, b1, b2, b3 = int(value[0]), int(value[1]), int(value[2]), int(value[3])
+        if b0 != 0x06 or b1 != 0x09 or b2 != 0x01:
+            raise InvalidArgsException(f"Invalid RearVue control header: {b0:02X} {b1:02X} {b2:02X}")
+        legacy_mode = REARVUE_TO_LEGACY_MAP.get(b3)
+        if legacy_mode is None:
+            raise InvalidArgsException(f"Unknown RearVue light mode byte: 0x{b3:02X}")
+        success = self.engine.set_light_mode(legacy_mode)
+        if not success:
+            raise InvalidArgsException(f"Engine rejected light mode: {legacy_mode}")
+        if self.notify_char:
+            self.notify_char.notify_light_mode(self.engine.light_mode)
+        if self.legacy_char:
+            self.legacy_char.notify_light_mode(self.engine.light_mode)
+
+
+class RadarControlNotifyCharacteristic(Characteristic):
+    """Garmin RearVue 820 Tail Light State notification characteristic (6a4e2f14)."""
+    def __init__(self, bus, index, service, engine):
+        super().__init__(bus, index, RADAR_CONTROL_NOTIFY_UUID, ['notify'], service)
+        self.engine = engine
+        self.notifying = False
+
+    def StartNotify(self):
+        self.notifying = True
+        print("[REARVUE LIGHT] Client subscribed to 6a4e2f14 slot notifications.")
+
+    def StopNotify(self):
+        self.notifying = False
+        print("[REARVUE LIGHT] Client unsubscribed from 6a4e2f14 slot notifications.")
+
+    def notify_light_mode(self, legacy_mode):
+        if self.notifying:
+            rearvue_mode = LEGACY_TO_REARVUE_MAP.get(legacy_mode, REARVUE_MODE_OFF)
+            payload = [0x01, 0x00, 0xFF, rearvue_mode]
+            self.PropertiesChanged(
+                GATT_CHRC_IFACE,
+                {'Value': dbus.ByteArray(payload)},
+                []
+            )
+
+
+class RadarControlService(Service):
+    def __init__(self, bus, index, engine):
+        super().__init__(bus, index, RADAR_CONTROL_SERVICE_UUID, True)
+        self.engine = engine
+        self.notify_char = RadarControlNotifyCharacteristic(bus, 0, self, engine)
+        self.write_char = RadarControlWriteCharacteristic(bus, 1, self, engine, notify_char=self.notify_char)
+        self.add_characteristic(self.notify_char)
+        self.add_characteristic(self.write_char)
 
 
 # -----------------------------------------------------------------------------
@@ -829,10 +1030,16 @@ def main():
 
     app = Application(bus)
     radar_service = RadarService(bus, 0, engine)
-    battery_service = BatteryService(bus, 1, initial_battery=args.battery)
-    device_info_service = DeviceInfoService(bus, 2, model_number=model_number)
+    control_service = RadarControlService(bus, 1, engine)
+    battery_service = BatteryService(bus, 2, initial_battery=args.battery)
+    device_info_service = DeviceInfoService(bus, 3, model_number=model_number)
+
+    # Link cross-service light notification peers
+    radar_service.light_char.set_peer_notify_char(control_service.notify_char)
+    control_service.write_char.set_peers(control_service.notify_char, radar_service.light_char)
 
     app.add_service(radar_service)
+    app.add_service(control_service)
     app.add_service(battery_service)
     app.add_service(device_info_service)
 
@@ -845,7 +1052,7 @@ def main():
         targets = engine.tick()
         if targets is not None:
             radar_service.v2_char.send_targets(targets)
-            radar_service.v1_char.send_targets(targets)
+            radar_service.v1_char.send_targets(targets, seq_counter=engine.seq_counter)
         return True
 
     GLib.timeout_add(200, on_radar_tick)
@@ -853,7 +1060,7 @@ def main():
     print("[*] Starte Garmin Varia BLE Radar Simulator...")
     print(f"[*] Modell: {model_number} (StVZO: {args.stvzo}), Batterie: {battery_service.battery_char.battery_level}%")
     print(f"[*] Advertising PDU: {pdu_size} Bytes (Limit: 31 Bytes)")
-    print(f"[*] Radar Services: V2 (0x3204), V1 (0x3203), Light Control (0x3202)")
+    print(f"[*] Radar Services: V2 (0x3204), V1 (0x3203), Light Control (0x3202), RearVue Control (0x2F00/0x2F11/0x2F14)")
     print("[*] Registriere GATT Application...")
     service_manager.RegisterApplication(
         app.get_path(), {},
