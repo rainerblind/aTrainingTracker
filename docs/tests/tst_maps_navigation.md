@@ -1243,7 +1243,7 @@
 ### TST-CLM-010: **Configurable Climb Categorization: FIETS Index & Strava/Garmin Formula Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-CLM-010` (`REQ-CLM-010.1`..`REQ-CLM-010.3`)
 - **Component**: `Climb.kt`, `ClimbDetector.kt`, `TuningPreferencesDataStore.kt`, `NavigationSection.kt`, `ClimbCategorizationFormulaTest.kt`
-- **Jira**: `ATT-7162` | **Target Release**: `V5.0.0`
+- **Jira**: `ATT-7162`, `ATT-7539` | **Target Release**: `V5.0.0`
 - **Test Description**:
   1. *FIETS Index Mathematical Accuracy & Altitude Bonus Test (`TST-CLM-010.1`, `ClimbCategorizationFormulaTest.kt`)*:
   • Verify FIETS base calculation $(H^2)/(10 \times D)$, high-altitude bonus above 1000m, and category classification across HC, Cat 1, Cat 2, Cat 3, Cat 4, Uncategorized.
@@ -1255,6 +1255,8 @@
   • Verify `climbScoringFormula` defaults to `FIETS`, persists `STRAVA_GARMIN`, and resets to `FIETS` on `resetToDefaults()`.
   5. *9-Language Localization Parity Audit (`TST-CLM-010.5`)*:
   • Verify string resources exist in `values`, `values-de`, `values-es`, `values-fr`, `values-it`, `values-ja`, `values-nl`, `values-pl`, `values-pt` without missing keys or unescaped XML formatting errors.
+  6. *Standardized Segmented Button Form Control Test (`TST-CLM-010.6`, `AdvancedTuningVisualContractTest.kt` / `TuningDesignGuidelinesContractTest.kt`)*:
+  • Verify `NavigationSection.kt` renders `TuningSegmentedButtonRow` for `FIETS` vs. `STRAVA_GARMIN` selection with `SingleChoiceSegmentedButtonRow`, zero checkmark insertion (`icon = {}`), `bodyMedium` `SemiBold` title, and `onSurfaceVariant` helper text.
 
 ### TST-CLM-011: **Deduplicate Overlapping Climbs in Climbs.db & Map Layer Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-CLM-011` (`REQ-CLM-011.1`..`REQ-CLM-011.3`)

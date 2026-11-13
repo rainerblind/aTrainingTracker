@@ -20,13 +20,7 @@ package com.atrainingtracker.trainingtracker.ui.settings.tuning.categories
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -35,6 +29,7 @@ import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.sensor.formater.DistanceFormatter
 import com.atrainingtracker.trainingtracker.climbs.ClimbScoringFormula
 import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDefaults
+import com.atrainingtracker.trainingtracker.ui.settings.tuning.TuningSegmentedButtonRow
 import com.atrainingtracker.trainingtracker.ui.settings.tuning.TuningSliderItem
 import com.atrainingtracker.trainingtracker.ui.settings.tuning.TuningToggleItem
 import java.util.Locale
@@ -133,38 +128,19 @@ fun NavigationSection(
             summary = stringResource(R.string.tuning_auto_follow_unique_route_desc)
         )
 
-        // Climb Categorization Formula (REQ-CLM-010 / ATT-7162)
-        Column(
-            modifier = Modifier.fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(6.dp)
-        ) {
-            Text(
-                text = stringResource(R.string.tuning_climb_formula_title),
-                style = MaterialTheme.typography.titleSmall
-            )
-            Text(
-                text = stringResource(R.string.tuning_climb_formula_desc),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Spacer(modifier = Modifier.height(2.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                FilterChip(
-                    selected = climbScoringFormula == ClimbScoringFormula.FIETS,
-                    onClick = { onClimbScoringFormulaChange(ClimbScoringFormula.FIETS) },
-                    label = { Text(stringResource(R.string.tuning_climb_formula_fiets)) },
-                    modifier = Modifier.weight(1f)
-                )
-                FilterChip(
-                    selected = climbScoringFormula == ClimbScoringFormula.STRAVA_GARMIN,
-                    onClick = { onClimbScoringFormulaChange(ClimbScoringFormula.STRAVA_GARMIN) },
-                    label = { Text(stringResource(R.string.tuning_climb_formula_strava_garmin)) },
-                    modifier = Modifier.weight(1f)
-                )
-            }
-        }
+        // Climb Categorization Formula (REQ-CLM-010 / ATT-7162, ATT-7539)
+        TuningSegmentedButtonRow(
+            title = stringResource(R.string.tuning_climb_formula_title),
+            options = listOf(ClimbScoringFormula.FIETS, ClimbScoringFormula.STRAVA_GARMIN),
+            selectedOption = climbScoringFormula,
+            onOptionSelected = onClimbScoringFormulaChange,
+            labelProvider = { formula ->
+                when (formula) {
+                    ClimbScoringFormula.FIETS -> stringResource(R.string.tuning_climb_formula_fiets)
+                    ClimbScoringFormula.STRAVA_GARMIN -> stringResource(R.string.tuning_climb_formula_strava_garmin)
+                }
+            },
+            helperText = stringResource(R.string.tuning_climb_formula_desc)
+        )
     }
 }

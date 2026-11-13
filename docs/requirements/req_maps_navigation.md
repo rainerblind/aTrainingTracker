@@ -2615,6 +2615,9 @@
 ### REQ-CLM-010: Configurable FIETS Index & Strava/Garmin Climb Categorization [Verified]
 - **Target Release**: `V5.0.0`
 - **Tests**: `TST-CLM-010`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `Climb.kt`, `ClimbDetector.kt`, `TuningPreferencesDataStore.kt`, `NavigationSection.kt`
 - **Rationale**: Strava/Garmin score ($\text{dist} \times \text{grade\%} = 100 \times H$) cancels distance entirely, ignoring gradient difficulty: a steep 1.3 km @ 9.6% wall scores the same as a gentle 3% false-flat. The FIETS Index ($H^2 / (10 \times D) + \max(0, (\text{summitAlt} - 1000)/1000)$) accurately weights elevation gain, gradient, and high-altitude difficulty. The system SHALL support FIETS as the default and Strava/Garmin as a selectable alternative in Advanced Tuning, dynamically updating displayed categories without database rebuild:
 1. *FIETS & Strava/Garmin Formula Calculations (`REQ-CLM-010.1`)*:
@@ -2625,13 +2628,13 @@
 • `Climb.resolveCategory(formula: ClimbScoringFormula)` SHALL dynamically evaluate category from distance, elevation gain, and summit altitude without modifying persisted schema or requiring DB rebuilds.
 3. *Preferences & 9-Language Localization Parity (`REQ-CLM-010.3`)*:
 • `TuningPreferencesDataStore` SHALL persist `climbScoringFormula` (default `FIETS`) with reactive `StateFlow` and reset support.
-• `NavigationSection.kt` SHALL expose a FilterChip selector with full 9-language localization parity (`values`, `de`, `es`, `fr`, `it`, `ja`, `nl`, `pl`, `pt`).
+• `NavigationSection.kt` SHALL expose a standardized `TuningSegmentedButtonRow` (`SingleChoiceSegmentedButtonRow` with `icon = {}`, `bodyMedium` `SemiBold` title, and `bodySmall` `onSurfaceVariant` helper text) for selecting between `FIETS` and `STRAVA_GARMIN` with full 9-language localization parity (`values`, `de`, `es`, `fr`, `it`, `ja`, `nl`, `pl`, `pt`).
 
 ### Requirement Archaeology & Chesterton's Fence Audit
-1. *Original Requirement ID & Target*: Refines `REQ-MAP-027` (*Climb Detection*) & `REQ-UI-281` (*Navigation Tuning*).
-2. *Historical Origin & Commit Trace*: Commit `c7438e78` (`ATT-2565`).
-3. *Root Reason for Existing Formulation*: Strava/Garmin was originally adopted for 1:1 parity with Garmin Edge devices.
-4. *Preservation of Core Invariants*: Strava/Garmin formula is preserved as a user-selectable option; detection geometry and DB schema remain untouched.
+1. *Original Requirement ID & Target*: Refines `REQ-MAP-027` (*Climb Detection*) & `REQ-UI-281` (*Navigation Tuning*). Targets `NavigationSection.kt`.
+2. *Historical Origin & Commit Trace*: Commit `c7438e78` (`ATT-2565`), commit `3a5d840d` (`ATT-7162`), and commit `ATT-7539` (standardizing climb formula selector to `TuningSegmentedButtonRow`).
+3. *Root Reason for Existing Formulation*: Strava/Garmin was originally adopted for 1:1 parity with Garmin Edge devices; the selector initially used `FilterChip` because `TuningSegmentedButtonRow` had not yet been created in `TuningFormControls.kt`.
+4. *Preservation of Core Invariants*: Strava/Garmin formula is preserved as a user-selectable option; detection geometry, DataStore keys, and DB schema remain untouched.
 
 **Acceptance Criteria (Given-When-Then)**:
 • *Given* a 1 km climb @ 15% (150m gain, summit 500m),

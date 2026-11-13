@@ -3339,7 +3339,7 @@
 ### TST-UI-221: **Modular Component Architecture for Advanced Tuning Dialog Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-262`
 - **Component**: **Modular Component Architecture for Advanced Tuning Dialog Verification**
-- **Jira**: `ATT-2033`, `ATT-7536`
+- **Jira**: `ATT-2033`, `ATT-7536`, `ATT-7539`
 - **Test Description**:
   1. *Structural File Size & Modularity Tests (`AdvancedTuningModularityTest.kt`)*:
   • Verify each extracted category file exists under `categories/`: `CockpitTypographySection.kt`, `AmoledBatterySaverSection.kt`, `SensorsGpsFilterSection.kt`, `AftermathAnalysisSection.kt`, `WorkoutMasksAndCardsSection.kt`.
@@ -3356,6 +3356,11 @@
   • Verify `TuningFormControls.kt` exports `TuningSegmentedButtonRow` and `TuningDropdownRow` composables.
   • Verify `TuningSegmentedButtonRow` specifies `icon = {}`, `contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)`, `maxLines = 1`, `softWrap = false`, `overflow = TextOverflow.Ellipsis`, and `MaterialTheme.typography.labelSmall`.
   • Verify `RadarSettingsSection.kt` eliminates nested `ElevatedCard` containers and raw `Switch(` calls, standardizing on `TuningToggleItem`, `SubordinateTuningToggleItem`, `TuningSliderItem`, and `TuningSegmentedButtonRow` separated by `HorizontalDivider`s.
+  6. *Design Guidelines Architecture Contract Enforcement (`TST-UI-221.6`, `TuningDesignGuidelinesContractTest.kt`)*:
+  • Verify automated AST/text scanning of all category composables under `ui/settings/tuning/categories/`.
+  • Assert zero raw `FilterChip(` calls for binary exclusive and small discrete selectors across category files (allowing only `SupporterDebugSection.kt` developer tier overrides).
+  • Assert zero unscaled raw `Switch(` calls in `categories/`.
+  • Assert zero nested `ElevatedCard(` containers in `categories/`.
 
 ### TST-UI-222: **Equipment Sensor Matrix Table Layout, Column Continuity, and Information Density Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-263`

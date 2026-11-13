@@ -31,6 +31,7 @@ import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.settings.ProfileXAxisDomain
 import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDefaults
 import com.atrainingtracker.trainingtracker.ui.settings.tuning.TuningPaceCeilingFormatter
+import com.atrainingtracker.trainingtracker.ui.settings.tuning.TuningSegmentedButtonRow
 import com.atrainingtracker.trainingtracker.ui.settings.tuning.TuningSliderItem
 
 import kotlin.math.roundToInt
@@ -87,75 +88,35 @@ fun AftermathAnalysisSection(
             steps = 39
         )
 
-        // Elevation Profile X-Axis Domain (defaults to Distance)
-        Column(
-            modifier = Modifier.fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(6.dp)
-        ) {
-            Text(
-                text = stringResource(R.string.tuning_profile_x_axis_title),
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold
-            )
-            Text(
-                text = stringResource(R.string.tuning_profile_x_axis_desc),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Spacer(modifier = Modifier.height(2.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                FilterChip(
-                    selected = elevationXAxisDomain == ProfileXAxisDomain.DISTANCE,
-                    onClick = { onElevationDomainChange(ProfileXAxisDomain.DISTANCE) },
-                    label = { Text(stringResource(R.string.tuning_profile_x_axis_distance)) },
-                    modifier = Modifier.weight(1f)
-                )
-                FilterChip(
-                    selected = elevationXAxisDomain == ProfileXAxisDomain.TIME,
-                    onClick = { onElevationDomainChange(ProfileXAxisDomain.TIME) },
-                    label = { Text(stringResource(R.string.tuning_profile_x_axis_time)) },
-                    modifier = Modifier.weight(1f)
-                )
-            }
-        }
+        // Elevation Profile X-Axis Domain (defaults to Distance, REQ-UI-262.5 / ATT-7539)
+        TuningSegmentedButtonRow(
+            title = stringResource(R.string.tuning_profile_x_axis_title),
+            options = listOf(ProfileXAxisDomain.DISTANCE, ProfileXAxisDomain.TIME),
+            selectedOption = elevationXAxisDomain,
+            onOptionSelected = onElevationDomainChange,
+            labelProvider = { domain ->
+                when (domain) {
+                    ProfileXAxisDomain.DISTANCE -> stringResource(R.string.tuning_profile_x_axis_distance)
+                    ProfileXAxisDomain.TIME -> stringResource(R.string.tuning_profile_x_axis_time)
+                }
+            },
+            helperText = stringResource(R.string.tuning_profile_x_axis_desc)
+        )
 
-        // Telemetry Graphs X-Axis Domain (defaults to Time)
-        Column(
-            modifier = Modifier.fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(6.dp)
-        ) {
-            Text(
-                text = stringResource(R.string.tuning_telemetry_x_axis_title),
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold
-            )
-            Text(
-                text = stringResource(R.string.tuning_telemetry_x_axis_desc),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Spacer(modifier = Modifier.height(2.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                FilterChip(
-                    selected = telemetryXAxisDomain == ProfileXAxisDomain.DISTANCE,
-                    onClick = { onTelemetryDomainChange(ProfileXAxisDomain.DISTANCE) },
-                    label = { Text(stringResource(R.string.tuning_profile_x_axis_distance)) },
-                    modifier = Modifier.weight(1f)
-                )
-                FilterChip(
-                    selected = telemetryXAxisDomain == ProfileXAxisDomain.TIME,
-                    onClick = { onTelemetryDomainChange(ProfileXAxisDomain.TIME) },
-                    label = { Text(stringResource(R.string.tuning_profile_x_axis_time)) },
-                    modifier = Modifier.weight(1f)
-                )
-            }
-        }
+        // Telemetry Graphs X-Axis Domain (defaults to Time, REQ-UI-262.5 / ATT-7539)
+        TuningSegmentedButtonRow(
+            title = stringResource(R.string.tuning_telemetry_x_axis_title),
+            options = listOf(ProfileXAxisDomain.DISTANCE, ProfileXAxisDomain.TIME),
+            selectedOption = telemetryXAxisDomain,
+            onOptionSelected = onTelemetryDomainChange,
+            labelProvider = { domain ->
+                when (domain) {
+                    ProfileXAxisDomain.DISTANCE -> stringResource(R.string.tuning_profile_x_axis_distance)
+                    ProfileXAxisDomain.TIME -> stringResource(R.string.tuning_profile_x_axis_time)
+                }
+            },
+            helperText = stringResource(R.string.tuning_telemetry_x_axis_desc)
+        )
     }
 }
 

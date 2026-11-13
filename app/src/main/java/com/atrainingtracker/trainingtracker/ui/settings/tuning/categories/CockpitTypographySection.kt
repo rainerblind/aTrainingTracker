@@ -35,6 +35,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import java.util.Locale
 import com.atrainingtracker.R
+import com.atrainingtracker.trainingtracker.ui.settings.tuning.TuningSegmentedButtonRow
 import com.atrainingtracker.trainingtracker.ui.settings.tuning.TuningSliderItem
 import com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldStyle
 import com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldVariant
@@ -124,38 +125,14 @@ fun CockpitTypographySection(
             }
         }
 
-        // Boldness (Font Weight) Selector
-        Column(
-            modifier = Modifier.fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(4.dp)
-        ) {
-            Text(
-                text = stringResource(R.string.tuning_cockpit_font_weight_title),
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold
-            )
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                CockpitFontWeight.values().forEach { weight ->
-                    FilterChip(
-                        selected = cockpitFontWeight == weight,
-                        onClick = { onFontWeightChange(weight) },
-                        label = {
-                            Text(
-                                text = stringResource(weight.getDisplayNameRes()),
-                                fontWeight = weight.asFontWeight(),
-                                modifier = Modifier.fillMaxWidth(),
-                                textAlign = TextAlign.Center
-                            )
-                        },
-                        modifier = Modifier.weight(1f)
-                    )
-                }
-            }
-        }
+        // Boldness (Font Weight) Selector (REQ-UI-257, REQ-UI-262.5 / ATT-7539)
+        TuningSegmentedButtonRow(
+            title = stringResource(R.string.tuning_cockpit_font_weight_title),
+            options = CockpitFontWeight.values().toList(),
+            selectedOption = cockpitFontWeight,
+            onOptionSelected = onFontWeightChange,
+            labelProvider = { weight -> stringResource(weight.getDisplayNameRes()) }
+        )
 
         // Cockpit Tile Design & Grid Style Selector (REQ-UI-258)
         Column(
