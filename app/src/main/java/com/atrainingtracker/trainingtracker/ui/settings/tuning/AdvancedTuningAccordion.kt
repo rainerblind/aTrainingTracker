@@ -230,7 +230,11 @@ object TuningSubtitleFormatter {
             val runningLabel = context.getString(R.string.radar_simulator_running)
             if (scenarioName.isNotEmpty()) "$runningLabel • $scenarioName" else runningLabel
         } else {
-            val edgeStr = context.getString(if (edgeSide == RadarEdgeSide.LEFT) R.string.radar_overlay_edge_left else R.string.radar_overlay_edge_right)
+            val edgeStr = when (edgeSide) {
+                RadarEdgeSide.LEFT -> context.getString(R.string.radar_overlay_edge_left)
+                RadarEdgeSide.FULL_SCREEN -> context.getString(R.string.radar_overlay_mode_fullscreen)
+                RadarEdgeSide.RIGHT -> context.getString(R.string.radar_overlay_edge_right)
+            }
             val alertStr = when (alertMode) {
                 RadarAudioAlertMode.ALL_ALERTS -> context.getString(R.string.radar_alert_mode_all)
                 RadarAudioAlertMode.APPROACH_AND_FAST -> context.getString(R.string.radar_alert_mode_approach_fast)

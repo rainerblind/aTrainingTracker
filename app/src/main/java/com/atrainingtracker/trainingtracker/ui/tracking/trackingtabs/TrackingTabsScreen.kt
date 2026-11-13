@@ -1119,13 +1119,19 @@ fun TrackingTabsScreen(
                             },
                             modifier = Modifier
                                 .align(
-                                    if (tuningConfig.radarEdgeSide == RadarEdgeSide.LEFT) {
-                                        Alignment.CenterStart
-                                    } else {
-                                        Alignment.CenterEnd
+                                    when (tuningConfig.radarEdgeSide) {
+                                        RadarEdgeSide.LEFT -> Alignment.CenterStart
+                                        RadarEdgeSide.RIGHT -> Alignment.CenterEnd
+                                        RadarEdgeSide.FULL_SCREEN -> Alignment.Center
                                     }
                                 )
-                                .fillMaxHeight()
+                                .then(
+                                    if (tuningConfig.radarEdgeSide == RadarEdgeSide.FULL_SCREEN) {
+                                        Modifier.fillMaxSize()
+                                    } else {
+                                        Modifier.fillMaxHeight()
+                                    }
+                                )
                                 .zIndex(1.2f)
                         )
                     }

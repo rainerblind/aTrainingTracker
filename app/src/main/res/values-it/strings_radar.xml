@@ -66,6 +66,7 @@
     <string name="radar_overlay_settings_title">Sovrapposizione radar</string>
     <string name="radar_overlay_edge_side">Bordo dello schermo</string>
     <string name="radar_overlay_edge_left">Bordo sinistro</string>
+    <string name="radar_overlay_mode_fullscreen">Schermo intero</string>
     <string name="radar_overlay_edge_right">Bordo destro</string>
     <string name="radar_overlay_clear_mode">Visualizzazione strada libera</string>
     <string name="radar_overlay_clear_mode_slim">Barra sottile</string>

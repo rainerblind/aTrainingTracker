@@ -66,6 +66,7 @@
     <string name="radar_overlay_settings_title">Radar Overlay</string>
     <string name="radar_overlay_edge_side">Screen Edge</string>
     <string name="radar_overlay_edge_left">Left Edge</string>
+    <string name="radar_overlay_mode_fullscreen">Full Screen</string>
     <string name="radar_overlay_edge_right">Right Edge</string>
     <string name="radar_overlay_clear_mode">Clear State Display</string>
     <string name="radar_overlay_clear_mode_slim">Slim Rail</string>

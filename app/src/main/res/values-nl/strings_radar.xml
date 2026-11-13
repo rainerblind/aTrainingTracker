@@ -66,6 +66,7 @@
     <string name="radar_overlay_settings_title">Radar-overlay</string>
     <string name="radar_overlay_edge_side">Schermrand</string>
     <string name="radar_overlay_edge_left">Linkerrand</string>
+    <string name="radar_overlay_mode_fullscreen">Volledig scherm</string>
     <string name="radar_overlay_edge_right">Rechterrand</string>
     <string name="radar_overlay_clear_mode">Weergave bij vrije weg</string>
     <string name="radar_overlay_clear_mode_slim">Smalle balk</string>

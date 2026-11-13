@@ -66,6 +66,7 @@
     <string name="radar_overlay_settings_title">Sobreposição do radar</string>
     <string name="radar_overlay_edge_side">Borda do ecrã</string>
     <string name="radar_overlay_edge_left">Borda esquerda</string>
+    <string name="radar_overlay_mode_fullscreen">Tela cheia</string>
     <string name="radar_overlay_edge_right">Borda direita</string>
     <string name="radar_overlay_clear_mode">Exibição sem perigo</string>
     <string name="radar_overlay_clear_mode_slim">Barra fina</string>

@@ -66,6 +66,7 @@
     <string name="radar_overlay_settings_title">Superposición de radar</string>
     <string name="radar_overlay_edge_side">Borde de pantalla</string>
     <string name="radar_overlay_edge_left">Borde izquierdo</string>
+    <string name="radar_overlay_mode_fullscreen">Pantalla completa</string>
     <string name="radar_overlay_edge_right">Borde derecho</string>
     <string name="radar_overlay_clear_mode">Visualización sin peligro</string>
     <string name="radar_overlay_clear_mode_slim">Banda estrecha</string>

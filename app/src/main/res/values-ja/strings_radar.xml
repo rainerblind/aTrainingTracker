@@ -66,6 +66,7 @@
     <string name="radar_overlay_settings_title">レーダーオーバーレイ</string>
     <string name="radar_overlay_edge_side">画面端の位置</string>
     <string name="radar_overlay_edge_left">左端</string>
+    <string name="radar_overlay_mode_fullscreen">フルスクリーン</string>
     <string name="radar_overlay_edge_right">右端</string>
     <string name="radar_overlay_clear_mode">クリア時の表示</string>
     <string name="radar_overlay_clear_mode_slim">スリムレール</string>

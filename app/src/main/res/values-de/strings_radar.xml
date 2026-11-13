@@ -66,6 +66,7 @@
     <string name="radar_overlay_settings_title">Radar-Overlay</string>
     <string name="radar_overlay_edge_side">Bildschirmkante</string>
     <string name="radar_overlay_edge_left">Linke Kante</string>
+    <string name="radar_overlay_mode_fullscreen">Vollbild</string>
     <string name="radar_overlay_edge_right">Rechte Kante</string>
     <string name="radar_overlay_clear_mode">Anzeige bei freier Straße</string>
     <string name="radar_overlay_clear_mode_slim">Schmale Leiste</string>

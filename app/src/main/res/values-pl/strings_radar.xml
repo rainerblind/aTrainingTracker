@@ -66,6 +66,7 @@
     <string name="radar_overlay_settings_title">Nakładka radaru</string>
     <string name="radar_overlay_edge_side">Krawędź ekranu</string>
     <string name="radar_overlay_edge_left">Lewa krawędź</string>
+    <string name="radar_overlay_mode_fullscreen">Pełny ekran</string>
     <string name="radar_overlay_edge_right">Prawa krawędź</string>
     <string name="radar_overlay_clear_mode">Wyświetlanie czystej drogi</string>
     <string name="radar_overlay_clear_mode_slim">Wąski pasek</string>

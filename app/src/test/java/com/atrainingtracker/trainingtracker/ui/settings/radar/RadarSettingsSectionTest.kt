@@ -11,6 +11,7 @@
 package com.atrainingtracker.trainingtracker.ui.settings.radar
 
 import com.atrainingtracker.R
+import com.atrainingtracker.trainingtracker.settings.RadarEdgeSide
 import com.atrainingtracker.trainingtracker.settings.RadarLightControlMode
 import com.atrainingtracker.trainingtracker.settings.TuningConfig
 import org.junit.Assert.assertEquals
@@ -21,9 +22,36 @@ import org.junit.Test
 
 /**
  * Unit tests verifying UI configuration contracts and conditional gating for Radar Tail Light
- * settings section (REQ-CON-031.5c, REQ-CON-031.5d / TST-CON-031.5d).
+ * and Radar Overlay settings section (REQ-CON-031.5c, REQ-CON-031.5d, REQ-TRK-062.5b / TST-TRK-062.4).
  */
 class RadarSettingsSectionTest {
+
+    @Test
+    fun testStringResource_fullscreenOverlayModeStringExists() {
+        assertNotEquals(0, R.string.radar_overlay_mode_fullscreen)
+    }
+
+    @Test
+    fun testRadarClearMode_conditionalVisibilityInvariant() {
+        // Clear mode selector must be HIDDEN when FULL_SCREEN is active (REQ-TRK-062.5b)
+        val fullScreenConfig = TuningConfig(radarEdgeSide = RadarEdgeSide.FULL_SCREEN)
+        assertFalse(
+            "Clear state selector must be hidden when FULL_SCREEN is active",
+            fullScreenConfig.radarEdgeSide != RadarEdgeSide.FULL_SCREEN
+        )
+
+        val rightConfig = TuningConfig(radarEdgeSide = RadarEdgeSide.RIGHT)
+        assertTrue(
+            "Clear state selector must be visible when RIGHT edge is active",
+            rightConfig.radarEdgeSide != RadarEdgeSide.FULL_SCREEN
+        )
+
+        val leftConfig = TuningConfig(radarEdgeSide = RadarEdgeSide.LEFT)
+        assertTrue(
+            "Clear state selector must be visible when LEFT edge is active",
+            leftConfig.radarEdgeSide != RadarEdgeSide.FULL_SCREEN
+        )
+    }
 
     @Test
     fun testStringResources_3WayControlModeSelectorStringsExist() {

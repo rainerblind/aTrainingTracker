@@ -110,7 +110,7 @@ fun RadarSettingsSection(
         // Edge Side Selection
         TuningSegmentedButtonRow(
             title = stringResource(R.string.radar_overlay_edge_side),
-            options = listOf(RadarEdgeSide.LEFT, RadarEdgeSide.RIGHT),
+            options = listOf(RadarEdgeSide.LEFT, RadarEdgeSide.FULL_SCREEN, RadarEdgeSide.RIGHT),
             selectedOption = tuningConfig.radarEdgeSide,
             onOptionSelected = { side ->
                 coroutineScope.launch {
@@ -120,29 +120,32 @@ fun RadarSettingsSection(
             labelProvider = { side ->
                 when (side) {
                     RadarEdgeSide.LEFT -> stringResource(R.string.radar_overlay_edge_left)
+                    RadarEdgeSide.FULL_SCREEN -> stringResource(R.string.radar_overlay_mode_fullscreen)
                     RadarEdgeSide.RIGHT -> stringResource(R.string.radar_overlay_edge_right)
                 }
             }
         )
 
-        // Clear State Mode Selection
-        TuningSegmentedButtonRow(
-            title = stringResource(R.string.radar_overlay_clear_mode),
-            options = listOf(RadarClearMode.SLIM_RAIL, RadarClearMode.BADGE_ONLY, RadarClearMode.AUTO_HIDE_3S),
-            selectedOption = tuningConfig.radarClearMode,
-            onOptionSelected = { mode ->
-                coroutineScope.launch {
-                    actualDataStore.updateRadarClearMode(mode)
+        // Clear State Mode Selection (hidden in FULL_SCREEN mode, REQ-TRK-062.5b)
+        if (tuningConfig.radarEdgeSide != RadarEdgeSide.FULL_SCREEN) {
+            TuningSegmentedButtonRow(
+                title = stringResource(R.string.radar_overlay_clear_mode),
+                options = listOf(RadarClearMode.SLIM_RAIL, RadarClearMode.BADGE_ONLY, RadarClearMode.AUTO_HIDE_3S),
+                selectedOption = tuningConfig.radarClearMode,
+                onOptionSelected = { mode ->
+                    coroutineScope.launch {
+                        actualDataStore.updateRadarClearMode(mode)
+                    }
+                },
+                labelProvider = { mode ->
+                    when (mode) {
+                        RadarClearMode.SLIM_RAIL -> stringResource(R.string.radar_overlay_clear_mode_slim)
+                        RadarClearMode.BADGE_ONLY -> stringResource(R.string.radar_overlay_clear_mode_badge)
+                        RadarClearMode.AUTO_HIDE_3S -> stringResource(R.string.radar_overlay_clear_mode_autohide)
+                    }
                 }
-            },
-            labelProvider = { mode ->
-                when (mode) {
-                    RadarClearMode.SLIM_RAIL -> stringResource(R.string.radar_overlay_clear_mode_slim)
-                    RadarClearMode.BADGE_ONLY -> stringResource(R.string.radar_overlay_clear_mode_badge)
-                    RadarClearMode.AUTO_HIDE_3S -> stringResource(R.string.radar_overlay_clear_mode_autohide)
-                }
-            }
-        )
+            )
+        }
 
         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
 

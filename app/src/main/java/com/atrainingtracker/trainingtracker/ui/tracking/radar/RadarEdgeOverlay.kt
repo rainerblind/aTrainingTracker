@@ -36,6 +36,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
@@ -145,6 +146,33 @@ object RadarOverlayMath {
             -offsetDp
         } else {
             offsetDp
+        }
+    }
+
+    /**
+     * Translates target lateral deviation and lane state into a horizontal fraction [0.0..1.0] across screen width.
+     * Respects [RadarTrafficOrientation] (RHT vs LHT) and provides safe margins [0.15f, 0.85f] (REQ-TRK-062.1a).
+     */
+    fun calculateFullScreenHorizontalFraction(
+        target: RadarTarget,
+        trafficOrientation: RadarTrafficOrientation = RadarTrafficOrientation.RIGHT_HAND
+    ): Float {
+        val rawOffset = target.lateralOffsetMeters
+        val rhtFraction = if (rawOffset != null) {
+            val offsetDelta = (rawOffset / 3.0f) * 0.40f
+            (0.70f + offsetDelta).coerceIn(0.15f, 0.85f)
+        } else {
+            when (target.laneState) {
+                LaneState.IN_RIDER_LANE, LaneState.UNKNOWN -> 0.70f
+                LaneState.CHANGING_LANE -> 0.50f
+                LaneState.PASSING_LANE -> 0.30f
+            }
+        }
+
+        return if (trafficOrientation == RadarTrafficOrientation.LEFT_HAND) {
+            (1.0f - rhtFraction).coerceIn(0.15f, 0.85f)
+        } else {
+            rhtFraction
         }
     }
 
@@ -263,62 +291,185 @@ fun RadarEdgeOverlay(
         1.0f
     }
 
-    val containerWidth = if (has2DData) 30.dp else 24.dp
-
-    // Outer container: fillMaxHeight, zero pointer capture
-    Column(
-        modifier = modifier
-            .width(containerWidth)
-            .fillMaxHeight()
-            .navigationBarsPadding()
-            .testTag("RadarEdgeOverlay"),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Spacer(modifier = Modifier.height(8.dp))
-
-        // Top Status Badge Pill (only clickable element in the overlay, permanently visible)
-        RadarStatusBadgePill(
-            radarState = radarState,
-            isClear = isClear,
-            isDisconnectError = isDisconnectError,
-            pulseAlpha = pulseAlpha,
-            onClick = {
-                if (isDisconnectError && onReconnectClick != null) {
-                    onReconnectClick()
-                } else {
-                    onBadgeClick()
-                }
+    if (edgeSide == RadarEdgeSide.FULL_SCREEN) {
+        // FULL_SCREEN Mode (REQ-TRK-062.1a, REQ-TRK-062.3a, REQ-TRK-062.5b)
+        Box(
+            modifier = modifier
+                .fillMaxSize()
+                .navigationBarsPadding()
+                .testTag("RadarEdgeOverlay")
+        ) {
+            // Full-screen vehicle threat overlay (zero pointer capture)
+            if (hasActiveThreats) {
+                RadarFullScreenThreatOverlay(
+                    radarState = radarState,
+                    pulseAlpha = pulseAlpha,
+                    trafficOrientation = trafficOrientation,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(top = 36.dp, bottom = 12.dp)
+                )
             }
-        )
 
-        Spacer(modifier = Modifier.height(6.dp))
-
-        // Vertical Target Rail
-        val showRail = when {
-            hasActiveThreats -> true
-            isDisconnectError -> true
-            clearMode == RadarClearMode.BADGE_ONLY -> false
-            else -> true // SLIM_RAIL or AUTO_HIDE_3S before timeout
-        }
-
-        if (showRail && railAlpha > 0f) {
-            RadarVerticalRail(
+            // Top Status Badge Pill (only clickable element in full-screen overlay)
+            RadarStatusBadgePill(
                 radarState = radarState,
-                hasActiveThreats = hasActiveThreats,
                 isClear = isClear,
                 isDisconnectError = isDisconnectError,
-                clearMode = clearMode,
                 pulseAlpha = pulseAlpha,
-                edgeSide = edgeSide,
-                trafficOrientation = trafficOrientation,
+                onClick = {
+                    if (isDisconnectError && onReconnectClick != null) {
+                        onReconnectClick()
+                    } else {
+                        onBadgeClick()
+                    }
+                },
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f)
-                    .alpha(railAlpha)
-                    .padding(bottom = 12.dp)
+                    .align(Alignment.TopEnd)
+                    .padding(top = 8.dp, end = 8.dp)
             )
-        } else {
-            Spacer(modifier = Modifier.weight(1f))
+        }
+    } else {
+        // Edge Rail Mode (LEFT or RIGHT)
+        val containerWidth = if (has2DData) 30.dp else 24.dp
+
+        Column(
+            modifier = modifier
+                .width(containerWidth)
+                .fillMaxHeight()
+                .navigationBarsPadding()
+                .testTag("RadarEdgeOverlay"),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Top Status Badge Pill (only clickable element in the overlay, permanently visible)
+            RadarStatusBadgePill(
+                radarState = radarState,
+                isClear = isClear,
+                isDisconnectError = isDisconnectError,
+                pulseAlpha = pulseAlpha,
+                onClick = {
+                    if (isDisconnectError && onReconnectClick != null) {
+                        onReconnectClick()
+                    } else {
+                        onBadgeClick()
+                    }
+                }
+            )
+
+            Spacer(modifier = Modifier.height(6.dp))
+
+            // Vertical Target Rail
+            val showRail = when {
+                hasActiveThreats -> true
+                isDisconnectError -> true
+                clearMode == RadarClearMode.BADGE_ONLY -> false
+                else -> true // SLIM_RAIL or AUTO_HIDE_3S before timeout
+            }
+
+            if (showRail && railAlpha > 0f) {
+                RadarVerticalRail(
+                    radarState = radarState,
+                    hasActiveThreats = hasActiveThreats,
+                    isClear = isClear,
+                    isDisconnectError = isDisconnectError,
+                    clearMode = clearMode,
+                    pulseAlpha = pulseAlpha,
+                    edgeSide = edgeSide,
+                    trafficOrientation = trafficOrientation,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f)
+                        .alpha(railAlpha)
+                        .padding(bottom = 12.dp)
+                )
+            } else {
+                Spacer(modifier = Modifier.weight(1f))
+            }
+        }
+    }
+}
+
+/**
+ * Full-screen vehicle threat overlay rendering approaching vehicles directly on top
+ * of the Tracking Screen with 100% touch pass-through (REQ-TRK-062.1a, REQ-TRK-062.3a).
+ */
+@Composable
+private fun RadarFullScreenThreatOverlay(
+    radarState: RadarState,
+    pulseAlpha: Float,
+    trafficOrientation: RadarTrafficOrientation,
+    modifier: Modifier = Modifier
+) {
+    val maxRangeMeters = RadarOverlayMath.resolveRailMaxRange(radarState)
+
+    BoxWithConstraints(
+        modifier = modifier.fillMaxSize()
+    ) {
+        val usableHeightPx = constraints.maxHeight.toFloat()
+        val usableWidthPx = constraints.maxWidth.toFloat()
+
+        radarState.targets.forEach { target ->
+            key(target.targetId) {
+                val (targetWidthDp, targetHeightDp, targetShape) = when (target.vehicleSizeCategory) {
+                    VehicleSizeCategory.UNKNOWN_OR_LIGHT -> Triple(28.dp, 20.dp, RoundedCornerShape(6.dp))
+                    VehicleSizeCategory.CAR -> Triple(32.dp, 22.dp, RoundedCornerShape(6.dp))
+                    VehicleSizeCategory.TRUCK_OR_BUS -> Triple(36.dp, 26.dp, RoundedCornerShape(6.dp))
+                }
+
+                val targetHeightPx = with(LocalDensity.current) { targetHeightDp.toPx() }
+                val targetWidthPx = with(LocalDensity.current) { targetWidthDp.toPx() }
+                val travelHeightPx = (usableHeightPx - targetHeightPx).coerceAtLeast(0f)
+                val travelWidthPx = (usableWidthPx - targetWidthPx).coerceAtLeast(0f)
+
+                val normalizedY = RadarOverlayMath.normalizeRadarRange(target.rangeMeters, maxRangeMeters)
+                val animatedFraction by animateFloatAsState(
+                    targetValue = normalizedY,
+                    animationSpec = tween(durationMillis = 150, easing = LinearEasing),
+                    label = "fullScreenTarget_${target.targetId}_pos"
+                )
+
+                val yOffsetPx = (animatedFraction * travelHeightPx).roundToInt()
+                val horizontalFraction = RadarOverlayMath.calculateFullScreenHorizontalFraction(target, trafficOrientation)
+                val xOffsetPx = (horizontalFraction * travelWidthPx).roundToInt()
+
+                val baseThreatColor = RadarOverlayMath.resolveThreatColor(target.threatLevel)
+                val badgeColor = if (target.threatLevel == ThreatLevel.FAST_APPROACHING) {
+                    baseThreatColor.copy(alpha = 0.85f * pulseAlpha)
+                } else {
+                    baseThreatColor.copy(alpha = 0.85f)
+                }
+                val badgeTextColor = if (target.threatLevel == ThreatLevel.APPROACHING) Color.Black else Color.White
+
+                val vehicleDesc = when (target.vehicleSizeCategory) {
+                    VehicleSizeCategory.TRUCK_OR_BUS -> stringResource(R.string.radar_vehicle_size_truck)
+                    VehicleSizeCategory.CAR -> stringResource(R.string.radar_vehicle_size_car)
+                    VehicleSizeCategory.UNKNOWN_OR_LIGHT -> null
+                }
+
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopStart)
+                        .offset { IntOffset(x = xOffsetPx, y = yOffsetPx) }
+                        .size(width = targetWidthDp, height = targetHeightDp)
+                        .clip(targetShape)
+                        .background(badgeColor)
+                        .border(1.5.dp, Color.White, targetShape)
+                        .semantics {
+                            val prefix = vehicleDesc ?: "Target"
+                            contentDescription = "$prefix, ${target.rangeMeters.roundToInt()}m"
+                        },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "${target.rangeMeters.roundToInt()}m",
+                        color = badgeTextColor,
+                        fontSize = 9.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
         }
     }
 }

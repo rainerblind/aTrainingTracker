@@ -62,6 +62,7 @@ enum class ProfileXAxisDomain {
  */
 enum class RadarEdgeSide {
     LEFT,
+    FULL_SCREEN,
     RIGHT
 }
 

@@ -1976,24 +1976,28 @@
 
 ### TST-TRK-062: **Live Rearview Radar Vertical Edge Overlay & Gesture Pass-Through Test Suite** [Verified]
 - **Requirement(s)**: `REQ-TRK-062` (`REQ-TRK-062.1`..`REQ-TRK-062.6`)
-- **Component**: `RadarEdgeOverlay.kt`, `TrackingTabsScreen.kt`, `TuningPreferencesDataStore.kt`, `RadarSettingsSection.kt`, `strings_radar.xml`
-- **Jira**: `ATT-5085`, `ATT-6703`
+- **Component**: `RadarEdgeOverlay.kt`, `TrackingTabsScreen.kt`, `TuningPreferencesDataStore.kt`, `RadarSettingsSection.kt`, `AdvancedTuningAccordion.kt`, `strings_radar.xml`
+- **Jira**: `ATT-5085`, `ATT-6703`, `ATT-7537`
 - **Test Description**:
-  1. *Radar Edge Rail Kinematics & Dot Position Unit Tests (`TST-TRK-062.1`, `RadarEdgeOverlayTest.kt`)*:
-  • Verify target range normalization ($140\text{ m} \to 1.0\text{ (bottom)}$, $70\text{ m} \to 0.5\text{ (mid)}$, $0\text{ m} \to 0.0\text{ (top/cyclist)}$) and multi-target dot coordinate resolution, asserting vehicles approach upward from bottom to top.
+  1. *Radar Edge Rail & Full-Screen Kinematics Unit Tests (`TST-TRK-062.1`, `RadarEdgeOverlayTest.kt`)*:
+  • Verify target range normalization ($140\text{ m} \to 1.0\text{ (bottom)}$, $70\text{ m} \to 0.5\text{ (mid)}$, $0\text{ m} \to 0.0\text{ (top/cyclist)}$) and multi-target coordinate resolution, asserting vehicles approach upward from bottom to top in both edge rail and `FULL_SCREEN` mode.
+  • Verify lateral lane offset and traffic orientation (RHT vs LHT) mapping across full tracking screen width in `FULL_SCREEN` mode.
   • Verify boundary clamping: $> 140\text{ m} \to 1.0$, negative distance $\to 0.0$, degenerate max range $\le 0\text{ m} \to 0.0$.
   2. *Semantic Threat Color & Conditional Pulsing Alert Tests (`TST-TRK-062.2`, `RadarEdgeOverlayTest.kt`)*:
   • Verify color mapping (Green = `NONE`, Amber = `APPROACHING`, Red = `FAST_APPROACHING`).
   • Verify pulsing red alert animation is evaluated strictly when `overallThreatLevel == ThreatLevel.FAST_APPROACHING`, yielding constant 1.0f alpha during clear and standard approach.
   3. *Fail-Safe Disconnect Warning, Error State & Reconnect Action Tests (`TST-TRK-062.3`, `RadarEdgeOverlayTest.kt`)*:
-  • Verify `DISCONNECTED_ERROR` and `DISCONNECTED` render warning indicator with `ic_device_not_available` and strictly prohibit green clear state.
+  • Verify `DISCONNECTED_ERROR` and `DISCONNECTED` render warning indicator with `ic_device_not_available` and strictly prohibit green clear state across all overlay modes.
   • Verify tapping status badge in `DISCONNECTED_ERROR` triggers `REQUEST_START_SEARCH_FOR_PAIRED_DEVICES` broadcast instead of opening light switch sheet.
-  4. *AUTO_HIDE_3S Rail Scoping & Touch Pass-Through Tests (`TST-TRK-062.4`, `RadarEdgeOverlayTest.kt`)*:
+  4. *Clear State & Touch Pass-Through Tests (`TST-TRK-062.4`, `RadarEdgeOverlayTest.kt`)*:
+  • Verify `FULL_SCREEN` mode renders zero background track rail when road is clear, keeping only `RadarStatusBadgePill` visible and clickable.
   • Verify `AUTO_HIDE_3S` auto-hides only the vertical rail after 3 seconds of all-clear road, while `RadarStatusBadgePill` remains visible, clickable, and accessible with zero ghost click traps.
-  5. *TuningPreferencesDataStore Edge Side & Clear Mode Tests (`TST-TRK-062.5`, `TuningPreferencesDataStoreTest.kt`)*:
-  • Verify default values (`RIGHT`, `SLIM_RAIL`) and persistence of custom edge side and clear mode selections.
+  5. *TuningPreferencesDataStore Edge Side, Clear Mode & Accordion Subtitle Tests (`TST-TRK-062.5`, `TuningPreferencesDataStoreTest.kt`, `RadarAccordionSectionTest.kt`, `RadarSettingsSectionTest.kt`)*:
+  • Verify default values (`RIGHT`, `SLIM_RAIL`) and persistence of custom 3-way `RadarEdgeSide` (`LEFT`, `FULL_SCREEN`, `RIGHT`) with backward-compatible decode.
+  • Verify settings UI displays 3-way segmented button (`Links | Vollbild | Rechts`) and conditionally hides `RadarClearMode` selector when `FULL_SCREEN` is active.
+  • Verify `AdvancedTuningAccordion.formatCyclingRadarSubtitle` formats `RadarEdgeSide.FULL_SCREEN` correctly.
   6. *9-Language Localization Parity & Vector Icon Parity Test (`TST-TRK-062.6`, `TranslationParityTest.kt`)*:
-  • Verify 100% key and format parity across `strings_radar.xml` in all 9 supported locales (`values`, `values-de`, `values-es`, `values-fr`, `values-it`, `values-ja`, `values-nl`, `values-pl`, `values-pt`) for all overlay strings (`radar_overlay_*`).
+  • Verify 100% key and format parity across `strings_radar.xml` in all 9 supported locales (`values`, `values-de`, `values-es`, `values-fr`, `values-it`, `values-ja`, `values-nl`, `values-pl`, `values-pt`) for all overlay strings (`radar_overlay_*`, including `radar_overlay_mode_fullscreen`).
   7. *Clean-Room Targeted Test Suite Execution (`TST-TRK-062.7`)*:
   • Execute targeted package tests (`com.atrainingtracker.trainingtracker.ui.tracking.radar.*`, `com.atrainingtracker.trainingtracker.build.*`) asserting 100% pass rate.
 
