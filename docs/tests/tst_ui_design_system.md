@@ -8299,7 +8299,7 @@
 - **Target Release**: `V5.0.0`
 - **Requirement(s)**: `REQ-UI-514`
 - **Component**: `app/src/main/res/drawable/bike_radar.xml`, `app/src/main/res/drawable/bt_bike_radar.xml`, `UIHelper.java`, `DeviceData.kt`, `VectorAssetResolutionContractTest.kt`
-- **Jira**: `ATT-6699`, `ATT-7318`
+- **Jira**: `ATT-6699`, `ATT-7318`, `ATT-7518`
 - **Test Description**:
   1. *Vector XML Well-Formedness & Rule 37 Geometry Contract Test (`TST-UI-514.1`, `VectorAssetResolutionContractTest.kt`)*:
   • Verify `bike_radar.xml` (96x96) and `bt_bike_radar.xml` (144x144) exist in `app/src/main/res/drawable/`, parse cleanly as XML `<vector>` documents with `48dp x 48dp` dimensions, and have valid positive viewport bounds.
@@ -8319,6 +8319,7 @@
   • Assert 100% pass rate.
   5. *Radar Vector Asset Geometric Bounding Box & Collision-Free Contract Test (`TST-UI-514.5`, `VectorAssetResolutionContractTest.kt`)*:
   • Verify `bt_bike_radar.xml` cyclist group contains exactly 18 standard cyclist paths with zero colliding saddle arcs, and `mini_icon_radar` maintains clean separation ($\ge 7.0$ px) from the cyclist silhouette.
+  • Verify `bt_bike_radar.xml` `mini_icon_radar` path data specifies a single non-degenerate circular source dot ($\Delta x = 2r$ chord or equivalent single circle geometry, zero double-circle snowman artifact) and concentric rearward wave arcs with uniform radial thickness and zero pinched crescents.
   • Verify `bike_radar.xml` emission arcs maintain $\ge 3.0$ units clearance from the rear wheel ($y_{\text{wheel}} \ge 39.0$), cyclist back, and card border, with all arc endpoints staying strictly above the rear wheel ($y \le 35.0$).
 
 
