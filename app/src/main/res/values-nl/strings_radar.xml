@@ -66,6 +66,7 @@
     <string name="radar_overlay_settings_title">Radar-overlay</string>
     <string name="radar_overlay_edge_side">Schermrand</string>
     <string name="radar_overlay_edge_left">Linkerrand</string>
+    <string name="radar_overlay_mode_fullscreen">Volledig scherm</string>
     <string name="radar_overlay_edge_right">Rechterrand</string>
     <string name="radar_overlay_clear_mode">Weergave bij vrije weg</string>
     <string name="radar_overlay_clear_mode_slim">Smalle balk</string>
@@ -95,6 +96,13 @@
 
     <!-- Radar Tail Light Control (ATT-5102 / REQ-CON-031) -->
     <string name="radar_light_settings_title">Achterlichtbediening</string>
+    <string name="radar_light_control_mode_title">Achterlichtbediening</string>
+    <string name="radar_light_control_mode_manual">Handmatig</string>
+    <string name="radar_light_control_mode_manual_desc">Achterlicht wordt handmatig bediend en verandert niet bij start/stop van workout</string>
+    <string name="radar_light_control_mode_fixed">Vaste modus</string>
+    <string name="radar_light_control_mode_fixed_desc">Achterlicht schakelt in bij begin van training en uit bij einde</string>
+    <string name="radar_light_control_mode_smart">Automatisch</string>
+    <string name="radar_light_control_mode_smart_desc">Achterlicht past zich automatisch aan aan omgevingslicht, tunnels en achteropkomend verkeer</string>
     <string name="radar_light_mode_title">Lichtmodus</string>
     <string name="radar_light_mode_off">Uit (Alleen radar)</string>
     <string name="radar_light_mode_day_flash">Dagknipperen</string>

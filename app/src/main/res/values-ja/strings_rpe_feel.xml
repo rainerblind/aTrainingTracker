@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="settings_workout_card_rpe_feel">RPEとフィーリング</string>
-    <string name="tuning_rpe_feel_desc">ワークアウト後のカードとセッションRPE負荷のために主観的運動強度（Borg CR10 1–10）と主観的フィーリング（1–5）を記録します</string>
+    <string name="settings_workout_card_rpe_feel">RPE・運動強度</string>
+    <string name="tuning_rpe_feel_desc">自覚的運動強度（Borg CR10 1–10）と主観的感覚（1–5）を記録し、要約カードおよびセッションRPE負荷を算出</string>
     <string name="workout_rpe_title">自覚的運動強度 (RPE 1–10)</string>
-    <string name="workout_feel_title">フィーリング</string>
+    <string name="workout_feel_title">運動時の感覚</string>
     <string name="srpe_load_badge">sRPE: %d</string>
 
     <string name="rpe_anchor_1">1 — 非常に楽</string>
@@ -11,14 +11,14 @@
     <string name="rpe_anchor_3">3 — 適度</string>
     <string name="rpe_anchor_4">4 — ややつらい</string>
     <string name="rpe_anchor_5">5 — つらい</string>
-    <string name="rpe_anchor_6">6 — つらい+</string>
+    <string name="rpe_anchor_6">6 — つらい〜とてもつらい</string>
     <string name="rpe_anchor_7">7 — とてもつらい</string>
-    <string name="rpe_anchor_8">8 — とてもつらい+</string>
-    <string name="rpe_anchor_9">9 — 極めてつらい</string>
+    <string name="rpe_anchor_8">8 — 極めてつらい</string>
+    <string name="rpe_anchor_9">9 — ほぼ最大限界</string>
     <string name="rpe_anchor_10">10 — 最大限界</string>
 
     <string name="feel_anchor_1">最悪</string>
-    <string name="feel_anchor_2">悪い</string>
+    <string name="feel_anchor_2">重い</string>
     <string name="feel_anchor_3">普通</string>
     <string name="feel_anchor_4">良い</string>
     <string name="feel_anchor_5">最高</string>

@@ -257,7 +257,7 @@ fun RadarLightQuickSwitchSheetContent(
 
 @Preview(name = "RadarLightQuickSwitchSheet - Light", showBackground = true)
 @Composable
-fun RadarLightQuickSwitchSheetPreviewLight() {
+private fun RadarLightQuickSwitchSheetPreviewLight() {
     MaterialTheme {
         Surface {
             RadarLightQuickSwitchSheetContent(
@@ -273,7 +273,7 @@ fun RadarLightQuickSwitchSheetPreviewLight() {
 
 @Preview(name = "RadarLightQuickSwitchSheet - Dark", uiMode = android.content.res.Configuration.UI_MODE_NIGHT_YES, showBackground = true)
 @Composable
-fun RadarLightQuickSwitchSheetPreviewDark() {
+private fun RadarLightQuickSwitchSheetPreviewDark() {
     MaterialTheme {
         Surface {
             RadarLightQuickSwitchSheetContent(
@@ -289,7 +289,7 @@ fun RadarLightQuickSwitchSheetPreviewDark() {
 
 @Preview(name = "RadarLightQuickSwitchSheet - StVZO", showBackground = true)
 @Composable
-fun RadarLightQuickSwitchSheetPreviewStvzo() {
+private fun RadarLightQuickSwitchSheetPreviewStvzo() {
     MaterialTheme {
         Surface {
             RadarLightQuickSwitchSheetContent(

@@ -90,7 +90,8 @@ fun SensorStatus(
             SensorType.SPEED_mps,
             SensorType.CADENCE,
             SensorType.HR,
-            SensorType.POWER
+            SensorType.POWER,
+            SensorType.RADAR_THREAT_COUNT
         )
     }
 
@@ -198,8 +199,8 @@ fun SensorStatus(
                             painter = safePainterResource(id = type.iconResId, fallback = Icons.Default.Sensors),
                             contentDescription = type.name,
                             modifier = Modifier
-                                .padding(horizontal = 6.dp)
-                                .size(22.dp)
+                                .padding(horizontal = SENSOR_STATUS_ICON_HORIZONTAL_PADDING)
+                                .size(SENSOR_STATUS_ICON_SIZE)
                                 .alpha(iconAlpha)
                                 .clickable {
                                     selectedSensor = type
@@ -258,6 +259,8 @@ internal val SENSOR_STATUS_PORTRAIT_HORIZONTAL_PADDING = 8.dp
 internal val SENSOR_STATUS_PORTRAIT_VERTICAL_PADDING = 4.dp
 internal val SENSOR_STATUS_ACTION_BUTTON_SIZE = 32.dp
 internal val SENSOR_STATUS_ACTION_ICON_SIZE = 24.dp
+internal val SENSOR_STATUS_ICON_SIZE = 22.dp
+internal val SENSOR_STATUS_ICON_HORIZONTAL_PADDING = 4.dp
 
 // --- Previews ---
 

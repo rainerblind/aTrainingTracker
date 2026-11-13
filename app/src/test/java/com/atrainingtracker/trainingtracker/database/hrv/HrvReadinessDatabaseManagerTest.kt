@@ -597,4 +597,28 @@ class HrvReadinessDatabaseManagerTest {
         assertEquals("2026-11-10", windowEntries[0].dateIso)
         assertEquals(65.0, windowEntries[0].rmssdMs!!, 1e-4)
     }
+
+    @Test
+    fun hasCompletedMorningCheck_returnsFalseWhenNoEntry_andTrueWhenEntryInserted() {
+        val testDate = "2026-11-12"
+        assertFalse("Initially no check recorded for date", manager.hasCompletedMorningCheck(testDate))
+
+        manager.insertEntry(
+            HrvReadinessEntry(
+                timestampMs = 1731398400000L,
+                dateIso = testDate,
+                timezoneId = "UTC",
+                restingHrBpm = 54,
+                rmssdMs = 62.0,
+                lnRmssd = 4.12,
+                hrvScore100 = 78.0,
+                durationSec = 120,
+                posture = HrvPosture.SUPINE,
+                isPrimaryForDay = true
+            )
+        )
+
+        assertTrue("Should return true once entry is inserted for date", manager.hasCompletedMorningCheck(testDate))
+        assertFalse("Different date should still return false", manager.hasCompletedMorningCheck("2026-11-13"))
+    }
 }

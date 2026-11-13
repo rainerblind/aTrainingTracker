@@ -85,6 +85,25 @@ class RadarAccordionSectionTest {
     }
 
     @Test
+    fun testFormatCyclingRadarSubtitle_idleState_fullScreen() {
+        val mockContext = mockk<Context>()
+        every { mockContext.getString(R.string.radar_overlay_mode_fullscreen) } returns "Full Screen"
+        every { mockContext.getString(R.string.radar_alert_mode_all) } returns "All Alerts"
+        every { mockContext.getString(R.string.radar_light_mode_day_flash) } returns "Day Flash"
+
+        val subtitle = TuningSubtitleFormatter.formatCyclingRadarSubtitle(
+            edgeSide = RadarEdgeSide.FULL_SCREEN,
+            alertMode = RadarAudioAlertMode.ALL_ALERTS,
+            lightMode = RadarLightMode.DAY_FLASH,
+            isRunning = false,
+            scenario = null,
+            context = mockContext
+        )
+
+        assertEquals("Full Screen · All Alerts · Day Flash", subtitle)
+    }
+
+    @Test
     fun testFormatCyclingRadarSubtitle_runningSimulationState_displaysActiveScenario() {
         val mockContext = mockk<Context>()
         every { mockContext.getString(R.string.radar_simulator_running) } returns "Simulation active"

@@ -25,11 +25,17 @@ import androidx.compose.material.icons.filled.RestartAlt
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
@@ -285,6 +291,149 @@ private fun SubordinateTuningToggleItemPreview() {
                     onCheckedChange = {},
                     enabled = false
                 )
+            }
+        }
+    }
+}
+
+/**
+ * Standardized single-choice segmented button row form control for advanced tuning options (REQ-UI-262, ATT-7536).
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun <T> TuningSegmentedButtonRow(
+    title: String,
+    options: List<T>,
+    selectedOption: T,
+    onOptionSelected: (T) -> Unit,
+    labelProvider: @Composable (T) -> String,
+    modifier: Modifier = Modifier,
+    helperText: String? = null,
+    enabled: Boolean = true
+) {
+    val contentAlpha = if (enabled) 1f else TTAlpha.Disabled
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = contentAlpha)
+        )
+        if (!helperText.isNullOrEmpty()) {
+            Text(
+                text = helperText,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = contentAlpha)
+            )
+        }
+        SingleChoiceSegmentedButtonRow(
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            options.forEachIndexed { index, option ->
+                val isSelected = option == selectedOption
+                SegmentedButton(
+                    selected = isSelected,
+                    onClick = { onOptionSelected(option) },
+                    shape = SegmentedButtonDefaults.itemShape(index = index, count = options.size),
+                    enabled = enabled,
+                    icon = {},
+                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
+                ) {
+                    Text(
+                        text = labelProvider(option),
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                        maxLines = 1,
+                        softWrap = false,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Standardized exposed dropdown menu form control for advanced tuning options (REQ-UI-262, ATT-7536).
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun <T> TuningDropdownRow(
+    title: String,
+    options: List<T>,
+    selectedOption: T,
+    onOptionSelected: (T) -> Unit,
+    labelProvider: @Composable (T) -> String,
+    modifier: Modifier = Modifier,
+    helperText: String? = null,
+    enabled: Boolean = true,
+    testTag: String? = null,
+    itemTestTagPrefix: String? = null
+) {
+    var expanded by remember { mutableStateOf(false) }
+    val contentAlpha = if (enabled) 1f else TTAlpha.Disabled
+
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = contentAlpha)
+        )
+        if (!helperText.isNullOrEmpty()) {
+            Text(
+                text = helperText,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = contentAlpha)
+            )
+        }
+        val menuModifier = Modifier.fillMaxWidth().let {
+            if (testTag != null) it.testTag(testTag) else it
+        }
+        ExposedDropdownMenuBox(
+            expanded = expanded && enabled,
+            onExpandedChange = { if (enabled) expanded = !expanded },
+            modifier = menuModifier
+        ) {
+            OutlinedTextField(
+                value = labelProvider(selectedOption),
+                onValueChange = {},
+                readOnly = true,
+                enabled = enabled,
+                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded && enabled) },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .menuAnchor(),
+                textStyle = MaterialTheme.typography.bodyMedium
+            )
+            ExposedDropdownMenu(
+                expanded = expanded && enabled,
+                onDismissRequest = { expanded = false }
+            ) {
+                options.forEach { option ->
+                    val itemModifier = Modifier.let {
+                        if (itemTestTagPrefix != null) it.testTag("${itemTestTagPrefix}_$option") else it
+                    }
+                    DropdownMenuItem(
+                        text = {
+                            Text(
+                                text = labelProvider(option),
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                        },
+                        onClick = {
+                            onOptionSelected(option)
+                            expanded = false
+                        },
+                        modifier = itemModifier
+                    )
+                }
             }
         }
     }

@@ -29,10 +29,11 @@ public enum FileFormat {
     FIT("FIT", ".fit", R.string.FIT),
 
     // not the best solution but should work.
-    STRAVA("Strava", ".tcx", R.string.Strava);
+    STRAVA("Strava", ".tcx", R.string.Strava),
+    HEALTH_CONNECT("HealthConnect", "", R.string.health_connect_title);
 
     public static final FileFormat[] STANDARD_FILE_FORMATS = new FileFormat[]{CSV, GC, TCX, GPX, FIT};
-    public static final FileFormat[] ONLINE_COMMUNITIES = new FileFormat[]{STRAVA};
+    public static final FileFormat[] ONLINE_COMMUNITIES = new FileFormat[]{STRAVA, HEALTH_CONNECT};
 
     private final String mDirName;
     private final String mFileEnding;

@@ -140,7 +140,16 @@ public abstract class MyDevice {
             Log.d(TAG, "addSensor(" + mySensor.getSensorType().name() + ")");
         }
 
-        mSensorMap.put(mySensor.getSensorType(), mySensor);
+        MySensor previousSensor = mSensorMap.put(mySensor.getSensorType(), mySensor);
+        if (previousSensor != null && previousSensor != mySensor) {
+            if (DEBUG) {
+                Log.d(TAG, "addSensor: replacing previous sensor instance for type " + mySensor.getSensorType().name());
+            }
+            previousSensor.deactivateSensor();
+            if (mMySensorManager != null) {
+                mMySensorManager.unregisterSensor(previousSensor);
+            }
+        }
     }
 
     protected synchronized void removeSensor(SensorType sensorType) {

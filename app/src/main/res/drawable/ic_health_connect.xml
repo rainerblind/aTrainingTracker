@@ -11,22 +11,31 @@
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp"
     android:height="24dp"
-    android:viewportWidth="24"
-    android:viewportHeight="24">
-    <!-- Android Health Connect Ring / Heart Vector (ATT-6711) -->
-    <!-- Top-left Blue arch -->
-    <path
-        android:fillColor="#4285F4"
-        android:pathData="M12,4.5C9.5,2 5.5,2 3,4.5C0.5,7 0.5,11 3,13.5L12,22L12,18L5.5,11.5C4,10 4,7.5 5.5,6C7,4.5 9.5,4.5 11,6L12,7L12,4.5Z" />
-    <!-- Top-right Green arch -->
-    <path
-        android:fillColor="#34A853"
-        android:pathData="M12,4.5C14.5,2 18.5,2 21,4.5C23.5,7 23.5,11 21,13.5L12,22L12,18L18.5,11.5C20,10 20,7.5 18.5,6C17,4.5 14.5,4.5 13,6L12,7L12,4.5Z" />
-    <!-- Center pulse / connect node -->
-    <path
-        android:fillColor="#EA4335"
-        android:pathData="M12,8C10.9,8 10,8.9 10,10C10,11.1 10.9,12 12,12C13.1,12 14,11.1 14,10C14,8.9 13.1,8 12,8Z" />
-    <path
-        android:fillColor="#FBBC05"
-        android:pathData="M12,13C10.3,13 9,14.3 9,16C9,17.7 10.3,19 12,19C13.7,19 15,17.7 15,16C15,14.3 13.7,13 12,13Z" />
+    android:viewportWidth="88"
+    android:viewportHeight="88">
+    <group
+        android:translateX="-8"
+        android:translateY="-8">
+        <!-- White interior fill for high contrast across dark themes -->
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M61.478,50.49L45.06,34.072c-5.244,-5.244 -13.745,-5.244 -18.988,0 -5.244,5.243 -5.244,13.745 0,18.988L42.49,69.48c5.244,5.243 13.745,5.243 18.989,0 5.243,-5.244 5.243,-13.745 0,-18.989Z" />
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M61.51,69.572L77.93,53.153c5.243,-5.243 5.243,-13.745 0,-18.989 -5.244,-5.243 -13.745,-5.243 -18.989,0L42.522,50.584c-5.244,5.244 -5.244,13.745 0,18.989 5.243,5.243 13.745,5.243 18.988,0Z" />
+        <!-- Left interlocking capsule ring (Dark Teal #003144) -->
+        <path
+            android:fillColor="#003144"
+            android:fillType="evenOdd"
+            android:pathData="M61.478,50.49L45.06,34.072c-5.244,-5.244 -13.745,-5.244 -18.988,0 -5.244,5.243 -5.244,13.745 0,18.988L42.49,69.48c5.244,5.243 13.745,5.243 18.989,0 5.243,-5.244 5.243,-13.745 0,-18.989ZM17.783,25.783c-9.821,9.821 -9.821,25.745 0,35.566L34.2,77.767c9.822,9.822 25.745,9.822 35.566,0 9.821,-9.821 9.821,-25.744 0,-35.566L53.35,25.783c-9.821,-9.821 -25.745,-9.821 -35.566,0Z" />
+        <!-- Right interlocking capsule ring (Google Blue #4285F4) -->
+        <path
+            android:fillColor="#4285F4"
+            android:fillType="evenOdd"
+            android:pathData="M61.51,69.572L77.93,53.153c5.243,-5.243 5.243,-13.745 0,-18.989 -5.244,-5.243 -13.745,-5.243 -18.989,0L42.522,50.584c-5.244,5.244 -5.244,13.745 0,18.989 5.243,5.243 13.745,5.243 18.988,0Zm24.707,-43.696c-9.821,-9.821 -25.744,-9.821 -35.566,0L34.233,42.294c-9.821,9.822 -9.821,25.745 0,35.566 9.821,9.821 25.745,9.821 35.566,0l16.418,-16.418c9.822,-9.822 9.822,-25.745 0,-35.566Z" />
+        <!-- Upper-right node dot (Google Blue #4285F4) -->
+        <path
+            android:fillColor="#4285F4"
+            android:pathData="M77.365,44.265a9.524,9.524 0,0 1,-9.524 9.524,9.524 9.524,0 1,1 0,-19.048 9.524,9.524 0,0 1,9.524 9.524Z" />
+    </group>
 </vector>

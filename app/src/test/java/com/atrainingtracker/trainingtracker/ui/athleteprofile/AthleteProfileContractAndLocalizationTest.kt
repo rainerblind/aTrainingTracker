@@ -399,6 +399,96 @@ class AthleteProfileContractAndLocalizationTest {
             }
         }
     }
+
+    @Test
+    fun `resolveFitnessHubTabs resolves exact tab ordering and conditional presence for all 4 permutations (REQ-UI-513_4, TST-UI-513_3a)`() {
+        // Permutation 1: Both enabled
+        val allEnabled = resolveFitnessHubTabs(enablePmcModel = true, enableCardioPowerDynamics = true)
+        assertEquals(
+            listOf(
+                R.string.fitness_tab_body,
+                R.string.fitness_tab_pmc,
+                R.string.fitness_tab_hrv,
+                R.string.fitness_tab_cardio_power
+            ),
+            allEnabled
+        )
+
+        // Permutation 2: PMC disabled, Cardio-Power enabled
+        val pmcDisabled = resolveFitnessHubTabs(enablePmcModel = false, enableCardioPowerDynamics = true)
+        assertEquals(
+            listOf(
+                R.string.fitness_tab_body,
+                R.string.fitness_tab_hrv,
+                R.string.fitness_tab_cardio_power
+            ),
+            pmcDisabled
+        )
+
+        // Permutation 3: PMC enabled, Cardio-Power disabled
+        val cardioDisabled = resolveFitnessHubTabs(enablePmcModel = true, enableCardioPowerDynamics = false)
+        assertEquals(
+            listOf(
+                R.string.fitness_tab_body,
+                R.string.fitness_tab_pmc,
+                R.string.fitness_tab_hrv
+            ),
+            cardioDisabled
+        )
+
+        // Permutation 4: Both disabled
+        val bothDisabled = resolveFitnessHubTabs(enablePmcModel = false, enableCardioPowerDynamics = false)
+        assertEquals(
+            listOf(
+                R.string.fitness_tab_body,
+                R.string.fitness_tab_hrv
+            ),
+            bothDisabled
+        )
+    }
+
+    @Test
+    fun `AthleteProfileScreen adheres to REQ-UI-513_4 hub tab ordering, pure helper binding, and dynamic clamping (TST-UI-513_3b)`() {
+        val screenFile = File(
+            resolveModuleRoot(),
+            "src/main/java/com/atrainingtracker/trainingtracker/ui/athleteprofile/AthleteProfileScreen.kt"
+        )
+        assertTrue("AthleteProfileScreen.kt must exist", screenFile.exists())
+        val source = screenFile.readText()
+
+        // Tab resolution delegated to resolveFitnessHubTabs pure helper with both state keys
+        assertTrue(
+            "AthleteProfileContent must remember tabTitleResIds using resolveFitnessHubTabs keyed on enablePmcModel and enableCardioPowerDynamics",
+            source.contains("remember(uiState.enablePmcModel, uiState.enableCardioPowerDynamics)") &&
+                source.contains("resolveFitnessHubTabs(uiState.enablePmcModel, uiState.enableCardioPowerDynamics)")
+        )
+
+        // Pager state must clamp dynamically on tab contraction
+        assertTrue(
+            "AthleteProfileContent must safely clamp pagerState.currentPage on tabTitleResIds.size change",
+            source.contains("LaunchedEffect(tabTitleResIds.size)") &&
+                source.contains("pagerState.currentPage > tabTitleResIds.lastIndex") &&
+                source.contains("pagerState.scrollToPage(tabTitleResIds.lastIndex)")
+        )
+
+        // Selected tab index in PrimaryScrollableTabRow must be coerced to avoid IndexOutOfBoundsException during dynamic contraction
+        assertTrue(
+            "PrimaryScrollableTabRow must clamp selectedTabIndex to valid tab bounds",
+            source.contains("selectedTabIndex = pagerState.currentPage.coerceIn(0, (tabTitleResIds.size - 1).coerceAtLeast(0))")
+        )
+
+        // Add action button shown when viewing bodyTabIndex
+        assertTrue(
+            "Add action button must be conditioned on pagerState.currentPage == bodyTabIndex",
+            source.contains("if (pagerState.currentPage == bodyTabIndex)")
+        )
+
+        // Dead pmc_disabled_guidance fallback card removed from HorizontalPager
+        assertFalse(
+            "AthleteProfileContent must not render dead pmc_disabled_guidance placeholder inside PMC page",
+            source.contains("stringResource(R.string.pmc_disabled_guidance)")
+        )
+    }
 }
 
 

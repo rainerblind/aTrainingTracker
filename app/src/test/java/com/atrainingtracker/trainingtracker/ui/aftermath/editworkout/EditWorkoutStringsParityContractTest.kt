@@ -116,4 +116,25 @@ class EditWorkoutStringsParityContractTest {
             }
         }
     }
+
+    @Test
+    fun testIndoorShortParityAcrossAllLocales() {
+        for (locale in locales) {
+            val strings = LocalizationTestCache.getStrings(locale, "strings.xml")
+            val indoorShort = strings["indoor_short"]
+            assertNotNull("indoor_short must exist in $locale", indoorShort)
+            assertFalse(
+                "indoor_short in $locale ('$indoorShort') must not be blank",
+                indoorShort.isNullOrBlank()
+            )
+            assertFalse(
+                "indoor_short in $locale ('$indoorShort') must not contain emojis",
+                indoorShort!!.any { Character.getType(it) == Character.SURROGATE.toInt() || Character.getType(it) == Character.OTHER_SYMBOL.toInt() }
+            )
+        }
+        assertEquals("Indoor", LocalizationTestCache.getStrings("values", "strings.xml")["indoor_short"])
+        assertEquals("Indoor", LocalizationTestCache.getStrings("values-de", "strings.xml")["indoor_short"])
+        assertEquals("Intérieur", LocalizationTestCache.getStrings("values-fr", "strings.xml")["indoor_short"])
+        assertEquals("インドア", LocalizationTestCache.getStrings("values-ja", "strings.xml")["indoor_short"])
+    }
 }

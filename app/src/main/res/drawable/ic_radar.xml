@@ -1,0 +1,30 @@
+<!--
+  ~ aTrainingTracker (ANT+ BTLE)
+  ~ Copyright (c) 2011 - 2026 Rainer Blind <rainer.blind@gmail.com>
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ This program is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~ GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License
+  ~ along with this program.  If not, see https://www.gnu.org/licenses/gpl-3.0
+  -->
+
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="960"
+    android:viewportHeight="960"
+    android:tint="#000000">
+
+    <path
+        android:fillColor="@android:color/white"
+        android:pathData="M420,720A60,60 0 1,0 540,720A60,60 0 1,0 420,720ZM319,559A228,228 0 0,1 641,559A28,28 0 0,1 602,598A172,172 0 0,0 358,598A28,28 0 0,1 319,559ZM206,446A388,388 0 0,1 754,446A28,28 0 0,1 715,485A332,332 0 0,0 245,485A28,28 0 0,1 206,446ZM93,333A548,548 0 0,1 867,333A28,28 0 0,1 828,372A492,492 0 0,0 132,372A28,28 0 0,1 93,333Z" />
+
+</vector>

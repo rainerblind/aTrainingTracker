@@ -455,7 +455,7 @@ fun SensorFieldView(
                         )
                     }
 
-                    // Optional Live Sparkline Graph (REQ-TRK-059, ATT-1294, ATT-7314)
+                    // Optional Live Sparkline Graph (REQ-TRK-059, ATT-1294, ATT-7314, ATT-7522)
                     if (fieldState.showGraph) {
                         Spacer(modifier = Modifier.height(4.dp))
                         val sparklineLineColor = if (fieldState.zoneColor != Color.Transparent && fieldState.zoneDisplayOptions.showTextColor) {
@@ -463,24 +463,20 @@ fun SensorFieldView(
                         } else {
                             MaterialTheme.colorScheme.primary
                         }
-                        val effectiveSamples = if (fieldState.sparklineSamples.isNotEmpty()) {
-                            fieldState.sparklineSamples
-                        } else if (screenMode != ScreenMode.TRACKING) {
-                            DEFAULT_PREVIEW_SPARKLINE_SAMPLES
-                        } else {
-                            emptyList()
-                        }
-                        val effectiveSpanSeconds = if (fieldState.sparklineSamples.isNotEmpty()) {
-                            fieldState.sparklineSpanSeconds
-                        } else if (screenMode != ScreenMode.TRACKING) {
-                            if (fieldState.graphHorizonSeconds > 0) fieldState.graphHorizonSeconds else 300
-                        } else {
-                            0
-                        }
+                        val hasLiveSamples = fieldState.sparklineSamples.isNotEmpty()
+                        val effectiveSamples = resolveSparklineEffectiveSamples(fieldState.sparklineSamples)
+                        val effectiveSpanSeconds = resolveSparklineEffectiveSpanSeconds(
+                            fieldState.sparklineSamples,
+                            fieldState.sparklineSpanSeconds,
+                            fieldState.graphHorizonSeconds
+                        )
+                        val isPlaceholder = resolveSparklineIsPlaceholder(hasLiveSamples, screenMode)
+
                         SensorSparklineView(
                             samples = effectiveSamples,
                             spanSeconds = effectiveSpanSeconds,
                             lineColor = sparklineLineColor,
+                            isPlaceholder = isPlaceholder,
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .then(

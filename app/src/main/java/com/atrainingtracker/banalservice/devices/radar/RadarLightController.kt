@@ -24,6 +24,7 @@ import android.os.Looper
 import android.os.SystemClock
 import android.util.Log
 import com.atrainingtracker.banalservice.devices.bluetooth_le.BTLERadarDevice
+import com.atrainingtracker.trainingtracker.settings.RadarLightControlMode
 import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore
 import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDefaults
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -145,12 +146,23 @@ object RadarLightController {
 
     private var cachedAutoLightControl: Boolean = TuningPreferencesDefaults.RADAR_AUTO_LIGHT_CONTROL
     private var cachedLightDefaultMode: RadarLightMode = TuningPreferencesDefaults.RADAR_LIGHT_DEFAULT_MODE
+    private var cachedControlMode: RadarLightControlMode = TuningPreferencesDefaults.RADAR_LIGHT_CONTROL_MODE
 
     @JvmStatic
     fun updateCachedPreferences(autoControl: Boolean, defaultMode: RadarLightMode) {
         synchronized(this) {
             cachedAutoLightControl = autoControl
             cachedLightDefaultMode = defaultMode
+            cachedControlMode = if (autoControl) RadarLightControlMode.FIXED_WORKOUT_MODE else RadarLightControlMode.MANUAL
+        }
+    }
+
+    @JvmStatic
+    fun updateCachedPreferences(controlMode: RadarLightControlMode, defaultMode: RadarLightMode) {
+        synchronized(this) {
+            cachedControlMode = controlMode
+            cachedLightDefaultMode = defaultMode
+            cachedAutoLightControl = (controlMode == RadarLightControlMode.FIXED_WORKOUT_MODE)
         }
     }
 
@@ -222,20 +234,25 @@ object RadarLightController {
         return RadarLightMode.getAvailableModes(_isStvzo.value)
     }
 
-    private fun resolveActiveConfig(context: Context?): Pair<Boolean, RadarLightMode> {
+    private data class ActiveLightConfig(
+        val controlMode: RadarLightControlMode,
+        val defaultMode: RadarLightMode
+    )
+
+    private fun resolveActiveConfig(context: Context?): ActiveLightConfig {
         if (context != null && TuningPreferencesDataStore.hasInitializedInstance()) {
             try {
                 val cfg = TuningPreferencesDataStore.getInstance(context).getTuningConfig()
-                updateCachedPreferences(cfg.radarAutoLightControl, cfg.radarLightDefaultMode)
+                updateCachedPreferences(cfg.radarLightControlMode, cfg.radarLightDefaultMode)
                 SmartBrakeLightDetector.isEnabled = cfg.radarBrakeLightEnabled
-                SmartRadarLightEngine.isAutomationEnabled = cfg.radarSmartLightAutomation
-                return Pair(cfg.radarAutoLightControl, cfg.radarLightDefaultMode)
+                SmartRadarLightEngine.isAutomationEnabled = (cfg.radarLightControlMode == RadarLightControlMode.SMART_AUTOMATION)
+                return ActiveLightConfig(cfg.radarLightControlMode, cfg.radarLightDefaultMode)
             } catch (_: Throwable) {
                 // Ignore and use cached
             }
         }
         return synchronized(this) {
-            Pair(cachedAutoLightControl, cachedLightDefaultMode)
+            ActiveLightConfig(cachedControlMode, cachedLightDefaultMode)
         }
     }
 
@@ -258,16 +275,24 @@ object RadarLightController {
                 appContext = context.applicationContext
             }
         }
-        val (autoControl, defaultMode) = resolveActiveConfig(context)
-        if (autoControl) {
-            setLightMode(defaultMode)
+        val config = resolveActiveConfig(context)
+        when (config.controlMode) {
+            RadarLightControlMode.MANUAL -> {
+                Log.d(TAG, "Radar light control is MANUAL; skipping automatic mode dispatch")
+            }
+            RadarLightControlMode.FIXED_WORKOUT_MODE -> {
+                setLightMode(config.defaultMode)
+            }
+            RadarLightControlMode.SMART_AUTOMATION -> {
+                // In SMART_AUTOMATION, do not pre-dispatch defaultMode to prevent race overwrite
+            }
         }
         val ctx = context?.applicationContext ?: synchronized(this) { appContext }
         val isLightAvailable = synchronized(this) { _isLightControlAvailable.value || RadarTrafficSimulator.isSimulating }
         if (ctx != null && isLightAvailable && SmartBrakeLightDetector.isEnabled && !SmartBrakeLightDetector.isAutoBypassed) {
             SmartBrakeLightDetector.startListening(ctx)
         }
-        if (ctx != null && isCycling) {
+        if (ctx != null && isCycling && config.controlMode == RadarLightControlMode.SMART_AUTOMATION) {
             SmartRadarLightEngine.start(ctx)
         }
     }
@@ -315,10 +340,18 @@ object RadarLightController {
                 appContext = context.applicationContext
             }
         }
-        val (autoControl, defaultMode) = resolveActiveConfig(context)
-        if (autoControl) {
-            if (_currentMode.value == RadarLightMode.OFF) {
-                setLightMode(defaultMode)
+        val config = resolveActiveConfig(context)
+        when (config.controlMode) {
+            RadarLightControlMode.MANUAL -> {
+                // Do not change light mode on resume in manual mode
+            }
+            RadarLightControlMode.FIXED_WORKOUT_MODE -> {
+                if (_currentMode.value == RadarLightMode.OFF) {
+                    setLightMode(config.defaultMode)
+                }
+            }
+            RadarLightControlMode.SMART_AUTOMATION -> {
+                // Smart engine handles mode dynamically
             }
         }
         val ctx = context?.applicationContext ?: synchronized(this) { appContext }
@@ -326,7 +359,7 @@ object RadarLightController {
         if (ctx != null && isLightAvailable && SmartBrakeLightDetector.isEnabled && !SmartBrakeLightDetector.isAutoBypassed) {
             SmartBrakeLightDetector.startListening(ctx)
         }
-        if (ctx != null && cycling) {
+        if (ctx != null && cycling && config.controlMode == RadarLightControlMode.SMART_AUTOMATION) {
             SmartRadarLightEngine.start(ctx)
         }
     }
@@ -352,8 +385,8 @@ object RadarLightController {
         SmartBrakeLightDetector.stopListening()
         SmartBrakeLightDetector.reset()
         SmartRadarLightEngine.stop()
-        val (autoControl, _) = resolveActiveConfig(context)
-        if (autoControl) {
+        val config = resolveActiveConfig(context)
+        if (config.controlMode != RadarLightControlMode.MANUAL) {
             setLightMode(RadarLightMode.OFF)
             val device = synchronized(this) { activeRadarDevice }
             device?.disconnectLight()

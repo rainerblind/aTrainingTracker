@@ -3,7 +3,7 @@
 **Domain**: `process_stability`  
 **Prefixes**: `ARC`, `BLD`, `BUG`, `INT`, `LIV`, `LOG`, `MAN`, `NFR`, `PRO`, `REG`, `SEC`, `STB`, `STR`, `TOOL`, `TST`  
 **Scope**: ASPICE governance, infinite context, crash stability, build architecture, security, and developer tools.  
-**Total Requirements**: 87
+**Total Requirements**: 89
 
 ---
 
@@ -4552,4 +4552,78 @@ The workflow SHALL mandate that:
   • *Given* `python3 tools/verify_requirement_governance.py --sync-indexes`,
   • *When* executed,
   • *Then* master index tables achieve 100% mathematical parity.
+- **Invariants**: Pure Python 3 standard library; zero Android runtime changes; zero regression in existing governance checks.
+
+### REQ-PRO-087: Machine-Verified Bidirectional Traceability & Ratchet Baseline Governance [Verified]
+- **Tests**: `TST-PRO-087`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Implementation**: `tools/verify_requirement_governance.py`, `tools/traceability_baseline.json`, `tools/test_verify_requirement_governance.py`
+- **Rationale**: Under ASPICE SWE.1 BP5 and SWE.4 BP5 (Finding F4), requirement-to-test traceability must be machine-verified rather than assumed by ID convention. The governance tooling must standardize machine-readable requirement verification fields (`Verifies:` / `Requirement(s):`), enforce bidirectional traceability across living documentation shards and test specifications, prevent orphan regressions via a strictly shrinking ratchet baseline (`tools/traceability_baseline.json`), resolve historical unreferenced requirements, and ensure zero governance failures:
+  1. *Standardized Test Verification Field (`REQ-PRO-087.1`)*:
+     • Living documentation test shards under `docs/tests/` and test specification deliverables SHALL standardize on a machine-readable `Verifies: REQ-...` field (backward-compatible with `Requirement(s):` / `Target Requirement:`).
+  2. *Machine-Verified Bidirectional Traceability Engine (`REQ-PRO-087.2`)*:
+     • `tools/verify_requirement_governance.py` SHALL verify that every declared requirement in `docs/requirements/` is cited by at least one test specification, and every test specification in `docs/tests/` cites valid, authentic requirement headings.
+     • Any test referencing a non-existent requirement ID SHALL cause governance verification to fail with deterministic diagnostics.
+  3. *Ratchet Baseline File & Monotonicity Enforcement (`REQ-PRO-087.3`)*:
+     • Known existing orphan requirements and test specifications SHALL be recorded in a versioned baseline file (`tools/traceability_baseline.json`).
+     • Adding any new requirement or test orphan absent from the baseline SHALL fail governance verification.
+     • Resolving existing baseline orphans SHALL require updating the baseline file such that the orphan set is strictly monotonic non-increasing ($|B_{t+1}| \le |B_t|$).
+  4. *Historical Orphan Resolution & Syntax Normalization (`REQ-PRO-087.4`)*:
+     • The 6 historical unreferenced requirements (`REQ-CON-001`, `REQ-CON-004`, `REQ-CON-006`, `REQ-EXP-005`, `REQ-EXT-003`, `REQ-FIL-005`) SHALL be resolved with reciprocal test citations.
+     • Malformed citations in `TST-MIG-001` and field inversion in `TST-UI-310` SHALL be normalized.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Net-new requirement `REQ-PRO-087` (`REQ-PRO-087.1`–`REQ-PRO-087.4`). Targets `tools/verify_requirement_governance.py`, `tools/traceability_baseline.json`, `docs/requirements/`, `docs/tests/`.
+  2. *Historical Origin & Commit Trace*: Sprint 2026-46.5 via ticket `ATT-7561` under Epic `ATT-232` (Process). Addresses ASPICE evaluation finding F4.
+  3. *Root Reason for Existing Formulation*: Prior governance scripts relied on convention (ID parity) and only verified dangling links and SYSREQ-to-REQ mappings without enforcing that every REQ has a verifying test or strictly ratcheting the orphan set down.
+  4. *Preservation of Core Invariants*: Deterministic exit codes (0 = valid, 1 = failure); Python 3 standard library only; existing `--sync-indexes` and CI governance checks remain 100% green; zero Android APK runtime code changes.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* living requirement shards and a requirement without a verifying test that is not recorded in `tools/traceability_baseline.json`,
+  • *When* `tools/verify_requirement_governance.py` executes,
+  • *Then* verification fails and lists the orphan requirement ID.
+  • *Given* living test shards and a test referencing a non-existent requirement ID,
+  • *When* `tools/verify_requirement_governance.py` executes,
+  • *Then* verification fails and identifies the dangling target.
+  • *Given* `tools/traceability_baseline.json`,
+  • *When* new orphans are added or the baseline count increases,
+  • *Then* verification fails with a ratchet violation error.
+- **Invariants**: Pure Python 3 standard library; zero Android runtime changes; zero regression in existing governance checks.
+
+---
+
+### REQ-PRO-088: System Verification Records Execution & Release Pipeline Gating [Verified]
+- **Tests**: `TST-PRO-088`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Implementation**: `docs/releases/V5.0.0/sys_verification_record.md`, `tools/run_system_integration_tests.py`, `.github/workflows/android-release.yml`, `.agents/skills/release-manager/SKILL.md`, `docs/releases/README.md`
+- **Rationale**: Under ASPICE SYS.5 (BP1-BP7) and SWE.6 BP5 (Finding F3), system-level verification across real reference hardware, physical BLE/ANT+ sensors, and operating environments must be executed and filed as formal evidence for production releases. The release management pipeline must enforce blocking gates that prevent tag creation, Play Store publishing, and GitHub release creation when verification records are missing or failing:
+  1. *Release System Verification Evidence Execution (`REQ-PRO-088.1`)*:
+     • For target production release `V5.0.0` (code `273`), a formal `sys_verification_record.md` SHALL be executed and filed under `docs/releases/V5.0.0/` adhering to `docs/system/sys_verification_protocol.md`.
+     • All 8 test cases (`SYS-VRF-001` through `SYS-VRF-008`) SHALL be executed against reference hardware (`SYS-HW-01`..`SYS-HW-07`) and recorded with an overall verdict of `PASS`.
+  2. *Automated System Integration Protocol Alignment (`REQ-PRO-088.2`)*:
+     • `tools/run_system_integration_tests.py` SHALL maintain protocol parity with authentic Garmin Varia radar telemetry frames (`[0x02, 0x00]` for `SYS-INT-003`).
+     • Automated integration results SHALL be filed under `docs/releases/V5.0.0/system_integration_results.json` with 100% test pass rate (6/6 PASS).
+  3. *CI/CD Release Workflow Verification Gate (`REQ-PRO-088.3`)*:
+     • `.github/workflows/android-release.yml` SHALL incorporate a mandatory release gate step invoking `tools/generate_release_verification_summary.py --tag ${TAG} --fail-on-deviations`.
+     • Any missing SYS.4/SYS.5 evidence or failing test SHALL fail the release workflow and block artifact distribution.
+  4. *Release Checklist Maintenance & Pre-ASPICE Backfill Governance (`REQ-PRO-088.4`)*:
+     • `.agents/skills/release-manager/SKILL.md` checklist and procedures SHALL enforce verified existence of `sys_verification_record.md` prior to tag finalization.
+     • `docs/releases/README.md` SHALL record an auditable backfill rationale documenting historical pre-ASPICE releases.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Net-new requirement `REQ-PRO-088` (`REQ-PRO-088.1`–`REQ-PRO-088.4`). Targets `docs/releases/`, `.github/workflows/android-release.yml`, `tools/run_system_integration_tests.py`, `.agents/skills/release-manager/SKILL.md`.
+  2. *Historical Origin & Commit Trace*: Sprint 2026-46.5 via ticket `ATT-7560` under Epic `ATT-232` (Process). Addresses ASPICE evaluation finding F3.
+  3. *Root Reason for Existing Formulation*: Baseline assessment identified that while `sys_verification_protocol.md` defined SYS.5 procedures, zero release dossiers existed in `docs/releases/` and CI release workflows bypassed system evidence checks.
+  4. *Preservation of Core Invariants*: Deterministic release gating; `ReleaseManagerSystemEvidenceContractTest.kt` passes 100%; zero Android production runtime code changes.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* a release candidate tag `V5.0.0`,
+  • *When* the release evidence dossier is checked,
+  • *Then* `docs/releases/V5.0.0/sys_verification_record.md` exists with 8/8 `SYS-VRF-xxx` test cases marked PASS and signed off by QA.
+  • *Given* a missing or incomplete system verification record,
+  • *When* `tools/generate_release_verification_summary.py --fail-on-deviations` or release CI runs,
+  • *Then* the process fails and blocks release candidate tag creation.
+  • *Given* the system verification record,
+  • *When* inspected,
+  • *Then* it documents reference devices (`SYS-HW-01`..`SYS-HW-07`), physical sensor models, firmware versions, and formal gatekeeper signatures.
 - **Invariants**: Pure Python 3 standard library; zero Android runtime changes; zero regression in existing governance checks.

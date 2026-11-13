@@ -66,6 +66,7 @@
     <string name="radar_overlay_settings_title">Nakładka radaru</string>
     <string name="radar_overlay_edge_side">Krawędź ekranu</string>
     <string name="radar_overlay_edge_left">Lewa krawędź</string>
+    <string name="radar_overlay_mode_fullscreen">Pełny ekran</string>
     <string name="radar_overlay_edge_right">Prawa krawędź</string>
     <string name="radar_overlay_clear_mode">Wyświetlanie czystej drogi</string>
     <string name="radar_overlay_clear_mode_slim">Wąski pasek</string>
@@ -95,6 +96,13 @@
 
     <!-- Radar Tail Light Control (ATT-5102 / REQ-CON-031) -->
     <string name="radar_light_settings_title">Sterowanie tylnym światłem</string>
+    <string name="radar_light_control_mode_title">Tryb sterowania światłem</string>
+    <string name="radar_light_control_mode_manual">Ręczny</string>
+    <string name="radar_light_control_mode_manual_desc">Tylne światło jest sterowane ręcznie i nie zmienia się na starcie/końcu treningu</string>
+    <string name="radar_light_control_mode_fixed">Stały tryb</string>
+    <string name="radar_light_control_mode_fixed_desc">Tylne światło włącza się na starcie treningu i wyłącza na końcu</string>
+    <string name="radar_light_control_mode_smart">Automatyczny</string>
+    <string name="radar_light_control_mode_smart_desc">Tylne światło automatycznie dostosowuje się do światła otoczenia, tuneli i ruchu</string>
     <string name="radar_light_mode_title">Tryb światła</string>
     <string name="radar_light_mode_off">Wyłączone (Tylko radar)</string>
     <string name="radar_light_mode_day_flash">Miganie w dzień</string>

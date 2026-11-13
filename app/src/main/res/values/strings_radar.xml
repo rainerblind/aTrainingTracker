@@ -66,6 +66,7 @@
     <string name="radar_overlay_settings_title">Radar Overlay</string>
     <string name="radar_overlay_edge_side">Screen Edge</string>
     <string name="radar_overlay_edge_left">Left Edge</string>
+    <string name="radar_overlay_mode_fullscreen">Full Screen</string>
     <string name="radar_overlay_edge_right">Right Edge</string>
     <string name="radar_overlay_clear_mode">Clear State Display</string>
     <string name="radar_overlay_clear_mode_slim">Slim Rail</string>
@@ -95,6 +96,13 @@
 
     <!-- Radar Tail Light Control (ATT-5102 / REQ-CON-031) -->
     <string name="radar_light_settings_title">Tail Light Control</string>
+    <string name="radar_light_control_mode_title">Tail Light Control Mode</string>
+    <string name="radar_light_control_mode_manual">Manual</string>
+    <string name="radar_light_control_mode_manual_desc">Tail light is operated manually and stays unchanged on workout start/finish</string>
+    <string name="radar_light_control_mode_fixed">Fixed Mode</string>
+    <string name="radar_light_control_mode_fixed_desc">Tail light turns on at workout start and turns off at finish</string>
+    <string name="radar_light_control_mode_smart">Smart Auto</string>
+    <string name="radar_light_control_mode_smart_desc">Tail light automatically adapts to ambient light, tunnels, and overtaking traffic</string>
     <string name="radar_light_mode_title">Light Mode</string>
     <string name="radar_light_mode_off">Off (Radar Only)</string>
     <string name="radar_light_mode_day_flash">Day Flash</string>

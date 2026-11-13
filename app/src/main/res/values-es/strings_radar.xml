@@ -66,6 +66,7 @@
     <string name="radar_overlay_settings_title">Superposición de radar</string>
     <string name="radar_overlay_edge_side">Borde de pantalla</string>
     <string name="radar_overlay_edge_left">Borde izquierdo</string>
+    <string name="radar_overlay_mode_fullscreen">Pantalla completa</string>
     <string name="radar_overlay_edge_right">Borde derecho</string>
     <string name="radar_overlay_clear_mode">Visualización sin peligro</string>
     <string name="radar_overlay_clear_mode_slim">Banda estrecha</string>
@@ -95,6 +96,13 @@
 
     <!-- Radar Tail Light Control (ATT-5102 / REQ-CON-031) -->
     <string name="radar_light_settings_title">Control de luz trasera</string>
+    <string name="radar_light_control_mode_title">Modo de control de luz</string>
+    <string name="radar_light_control_mode_manual">Manual</string>
+    <string name="radar_light_control_mode_manual_desc">La luz trasera se controla manualmente y no cambia al iniciar/terminar el entreno</string>
+    <string name="radar_light_control_mode_fixed">Modo fijo</string>
+    <string name="radar_light_control_mode_fixed_desc">La luz trasera se enciende al iniciar el entreno y se apaga al terminar</string>
+    <string name="radar_light_control_mode_smart">Automático</string>
+    <string name="radar_light_control_mode_smart_desc">La luz trasera se adapta automáticamente a la luz ambiental, túneles y tráfico que se aproxima</string>
     <string name="radar_light_mode_title">Modo de luz</string>
     <string name="radar_light_mode_off">Apagado (Solo radar)</string>
     <string name="radar_light_mode_day_flash">Parpadeo diurno</string>

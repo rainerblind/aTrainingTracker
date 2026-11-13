@@ -82,7 +82,11 @@ object HealthConnectRecordMapper {
     ): ExerciseSessionRecord {
         val startTime = Instant.ofEpochSecond(workoutData.startTimeS)
         val durationSec = maxOf(1L, workoutData.totalTimeSec)
-        val endTime = startTime.plusSeconds(durationSec)
+        var endTime = startTime.plusSeconds(durationSec)
+        val maxRouteTime = route?.route?.maxOfOrNull { it.time }
+        if (maxRouteTime != null && !maxRouteTime.isBefore(endTime)) {
+            endTime = maxRouteTime.plusSeconds(1)
+        }
         val zoneOffset = ZoneId.systemDefault().rules.getOffset(startTime)
 
         val clientRecordId = "workout_${workoutData.fileBaseName ?: workoutData.id}"
@@ -139,7 +143,7 @@ object HealthConnectRecordMapper {
             val samples = repository.getSamples(fileBaseName)
             for (sample in samples) {
                 val sampleTime = parseSampleTime(sample.timeString, startTime, sample.sampleIdx)
-                if (sampleTime.isBefore(startTime) || sampleTime.isAfter(endTime)) {
+                if (sampleTime.isBefore(startTime) || sampleTime.isAfter(startTime.plusSeconds(maxOf(durationSec, 86400L * 7)))) {
                     continue
                 }
 
@@ -193,18 +197,21 @@ object HealthConnectRecordMapper {
             }
         }
 
-        val route = if (hasRoutePermission && routeLocations.isNotEmpty()) {
-            ExerciseRoute(routeLocations)
+        val distinctRouteLocations = routeLocations.distinctBy { it.time }.sortedBy { it.time }
+        val route = if (hasRoutePermission && distinctRouteLocations.isNotEmpty()) {
+            ExerciseRoute(distinctRouteLocations)
         } else {
             null
         }
 
         val sessionRecord = buildExerciseSessionRecord(workoutData, route)
+        val effectiveEndTime = sessionRecord.endTime
         val seriesRecords = mutableListOf<Record>()
 
         // Series records partitioned into chunks of <= 2,000 samples (REQ-SET-101.3)
+        val distinctHrSamples = hrSamples.distinctBy { it.time }.sortedBy { it.time }
         addChunkedSeries(
-            samples = hrSamples,
+            samples = distinctHrSamples,
             chunkSize = MAX_CHUNK_SIZE,
             target = seriesRecords
         ) { chunk, chunkStart, chunkEnd, idSuffix ->
@@ -218,8 +225,9 @@ object HealthConnectRecordMapper {
             )
         }
 
+        val distinctPowerSamples = powerSamples.distinctBy { it.time }.sortedBy { it.time }
         addChunkedSeries(
-            samples = powerSamples,
+            samples = distinctPowerSamples,
             chunkSize = MAX_CHUNK_SIZE,
             target = seriesRecords
         ) { chunk, chunkStart, chunkEnd, idSuffix ->
@@ -233,8 +241,9 @@ object HealthConnectRecordMapper {
             )
         }
 
+        val distinctSpeedSamples = speedSamples.distinctBy { it.time }.sortedBy { it.time }
         addChunkedSeries(
-            samples = speedSamples,
+            samples = distinctSpeedSamples,
             chunkSize = MAX_CHUNK_SIZE,
             target = seriesRecords
         ) { chunk, chunkStart, chunkEnd, idSuffix ->
@@ -248,8 +257,9 @@ object HealthConnectRecordMapper {
             )
         }
 
+        val distinctCyclingCadenceSamples = cyclingCadenceSamples.distinctBy { it.time }.sortedBy { it.time }
         addChunkedSeries(
-            samples = cyclingCadenceSamples,
+            samples = distinctCyclingCadenceSamples,
             chunkSize = MAX_CHUNK_SIZE,
             target = seriesRecords
         ) { chunk, chunkStart, chunkEnd, idSuffix ->
@@ -263,8 +273,9 @@ object HealthConnectRecordMapper {
             )
         }
 
+        val distinctStepsCadenceSamples = stepsCadenceSamples.distinctBy { it.time }.sortedBy { it.time }
         addChunkedSeries(
-            samples = stepsCadenceSamples,
+            samples = distinctStepsCadenceSamples,
             chunkSize = MAX_CHUNK_SIZE,
             target = seriesRecords
         ) { chunk, chunkStart, chunkEnd, idSuffix ->
@@ -284,7 +295,7 @@ object HealthConnectRecordMapper {
                 DistanceRecord(
                     startTime = startTime,
                     startZoneOffset = zoneOffset,
-                    endTime = endTime,
+                    endTime = effectiveEndTime,
                     endZoneOffset = zoneOffset,
                     distance = Length.meters(workoutData.totalDistance),
                     metadata = createMetadata("${baseId}_distance")
@@ -298,7 +309,7 @@ object HealthConnectRecordMapper {
                 ElevationGainedRecord(
                     startTime = startTime,
                     startZoneOffset = zoneOffset,
-                    endTime = endTime,
+                    endTime = effectiveEndTime,
                     endZoneOffset = zoneOffset,
                     elevation = Length.meters(workoutData.ascentMeters.toDouble()),
                     metadata = createMetadata("${baseId}_elevation")
@@ -313,7 +324,7 @@ object HealthConnectRecordMapper {
                 TotalCaloriesBurnedRecord(
                     startTime = startTime,
                     startZoneOffset = zoneOffset,
-                    endTime = endTime,
+                    endTime = effectiveEndTime,
                     endZoneOffset = zoneOffset,
                     energy = Energy.kilocalories(calories),
                     metadata = createMetadata("${baseId}_calories")

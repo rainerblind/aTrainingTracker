@@ -20,6 +20,9 @@ package com.atrainingtracker.trainingtracker.ui.tracking
 
 import androidx.compose.ui.unit.dp
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
@@ -69,6 +72,70 @@ class SensorSparklineViewTest {
         assertEquals("Representative curve must contain 24 samples", 24, DEFAULT_PREVIEW_SPARKLINE_SAMPLES.size)
         val min = DEFAULT_PREVIEW_SPARKLINE_SAMPLES.minOrNull() ?: 0f
         val max = DEFAULT_PREVIEW_SPARKLINE_SAMPLES.maxOrNull() ?: 0f
-        org.junit.Assert.assertTrue("Preview samples must vary to produce a visible curve", max > min)
+        assertTrue("Preview samples must vary to produce a visible curve", max > min)
+    }
+
+    @Test
+    fun testResolveSparklineIsPlaceholder_contracts() {
+        // Inactive sensor during live tracking must render placeholder curve (REQ-TRK-059.11, ATT-7522)
+        assertTrue(
+            "Inactive sensor during live tracking must trigger placeholder mode",
+            resolveSparklineIsPlaceholder(hasLiveSamples = false, screenMode = ScreenMode.TRACKING)
+        )
+
+        // Inactive sensor in configuration mode must render standard preview, not placeholder
+        assertFalse(
+            "Inactive sensor in configuration mode must not trigger placeholder mode",
+            resolveSparklineIsPlaceholder(hasLiveSamples = false, screenMode = ScreenMode.CONFIGURATION)
+        )
+        assertFalse(
+            "Inactive sensor in preview mode must not trigger placeholder mode",
+            resolveSparklineIsPlaceholder(hasLiveSamples = false, screenMode = ScreenMode.PREVIEW)
+        )
+
+        // Active sensor with live telemetry must never trigger placeholder mode
+        assertFalse(
+            "Active sensor during live tracking must not trigger placeholder mode",
+            resolveSparklineIsPlaceholder(hasLiveSamples = true, screenMode = ScreenMode.TRACKING)
+        )
+        assertFalse(
+            "Active sensor in configuration mode must not trigger placeholder mode",
+            resolveSparklineIsPlaceholder(hasLiveSamples = true, screenMode = ScreenMode.CONFIGURATION)
+        )
+    }
+
+    @Test
+    fun testResolveSparklineEffectiveSamples_fallbackAndSupersedence() {
+        // Empty live samples fall back to synthetic preview curve
+        assertEquals(
+            DEFAULT_PREVIEW_SPARKLINE_SAMPLES,
+            resolveSparklineEffectiveSamples(emptyList())
+        )
+
+        // Genuine live telemetry supersedes preview curve
+        val liveSamples = listOf(140f, 142f, 145f)
+        assertEquals(
+            liveSamples,
+            resolveSparklineEffectiveSamples(liveSamples)
+        )
+    }
+
+    @Test
+    fun testResolveSparklineEffectiveSpanSeconds_fallbackAndSupersedence() {
+        // Empty live samples use configured horizon seconds
+        assertEquals(300, resolveSparklineEffectiveSpanSeconds(emptyList(), liveSpanSeconds = 0, graphHorizonSeconds = 300))
+        assertEquals(60, resolveSparklineEffectiveSpanSeconds(emptyList(), liveSpanSeconds = 0, graphHorizonSeconds = 60))
+        assertEquals(300, resolveSparklineEffectiveSpanSeconds(emptyList(), liveSpanSeconds = 0, graphHorizonSeconds = 0))
+
+        // Genuine live telemetry uses actual elapsed span seconds
+        val liveSamples = listOf(150f, 152f)
+        assertEquals(42, resolveSparklineEffectiveSpanSeconds(liveSamples, liveSpanSeconds = 42, graphHorizonSeconds = 300))
+    }
+
+    @Test
+    fun testSensorSparklineView_composableSignatureSupportsIsPlaceholder() {
+        val clazz = Class.forName("com.atrainingtracker.trainingtracker.ui.tracking.SensorSparklineViewKt")
+        val composableMethod = clazz.declaredMethods.find { it.name.startsWith("SensorSparklineView") }
+        assertNotNull("SensorSparklineView composable must exist", composableMethod)
     }
 }

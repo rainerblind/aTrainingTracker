@@ -32,6 +32,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -96,14 +97,37 @@ val DEFAULT_PREVIEW_SPARKLINE_SAMPLES: List<Float> = listOf(
 )
 
 /**
+ * Resolves whether the sparkline curve should be rendered in subtle placeholder mode (REQ-TRK-059.11, ATT-7522).
+ *
+ * <p>A placeholder curve is displayed when the sensor is inactive / awaiting initial telemetry
+ * in live tracking mode ([ScreenMode.TRACKING]). Configuration and preview modes display the standard
+ * preview curve with full contrast.</p>
+ */
+fun resolveSparklineIsPlaceholder(hasLiveSamples: Boolean, screenMode: ScreenMode): Boolean =
+    !hasLiveSamples && screenMode == ScreenMode.TRACKING
+
+/**
+ * Resolves effective sparkline sample data, falling back to representative preview samples when no live samples exist (REQ-TRK-059.11, ATT-7314, ATT-7522).
+ */
+fun resolveSparklineEffectiveSamples(liveSamples: List<Float>): List<Float> =
+    if (liveSamples.isNotEmpty()) liveSamples else DEFAULT_PREVIEW_SPARKLINE_SAMPLES
+
+/**
+ * Resolves effective elapsed span in seconds, falling back to configured horizon duration when no live samples exist (REQ-TRK-059.11, ATT-7314, ATT-7522).
+ */
+fun resolveSparklineEffectiveSpanSeconds(liveSamples: List<Float>, liveSpanSeconds: Int, graphHorizonSeconds: Int): Int =
+    if (liveSamples.isNotEmpty()) liveSpanSeconds else (if (graphHorizonSeconds > 0) graphHorizonSeconds else 300)
+
+/**
  * Lightweight, hardware-accelerated Canvas sparkline composable rendering temporal telemetry trends
- * and glanceable X-axis labels with zero recomposition churn or snapshot state mutations (REQ-TRK-059.5, REQ-TRK-059.9, Rule 66).
+ * and glanceable X-axis labels with zero recomposition churn or snapshot state mutations (REQ-TRK-059.5, REQ-TRK-059.9, REQ-TRK-059.11, Rule 66).
  *
  * @param samples Time-series numeric telemetry values ordered chronologically.
  * @param modifier Composable layout modifier.
  * @param spanSeconds Cumulative elapsed time span represented by the sparkline buffer in seconds.
  * @param lineColor Stroke color for the sparkline trend polyline and terminal point.
  * @param fillGradient Whether to render a subtle vertical gradient fill below the polyline.
+ * @param isPlaceholder Whether to render the sparkline in subtle standby/placeholder mode with dashed curve, dimmed opacity, and suppressed terminal dot.
  */
 @Composable
 fun SensorSparklineView(
@@ -111,7 +135,8 @@ fun SensorSparklineView(
     modifier: Modifier = Modifier,
     spanSeconds: Int = 0,
     lineColor: Color = MaterialTheme.colorScheme.primary,
-    fillGradient: Boolean = true
+    fillGradient: Boolean = true,
+    isPlaceholder: Boolean = false
 ) {
     if (samples.isEmpty()) {
         return
@@ -132,12 +157,14 @@ fun SensorSparklineView(
             val usableHeight = (size.height - 2f * verticalPaddingPx).coerceAtLeast(1f)
 
             if (samples.size == 1) {
-                // Single point: render a centered dot
-                drawCircle(
-                    color = lineColor,
-                    radius = 2.5.dp.toPx(),
-                    center = Offset(size.width / 2f, size.height / 2f)
-                )
+                // Single point: render a centered dot (suppressed for placeholder curves)
+                if (!isPlaceholder) {
+                    drawCircle(
+                        color = lineColor,
+                        radius = 2.5.dp.toPx(),
+                        center = Offset(size.width / 2f, size.height / 2f)
+                    )
+                }
                 return@Canvas
             }
 
@@ -152,7 +179,7 @@ fun SensorSparklineView(
             val stepX = size.width / (samples.size - 1).toFloat()
 
             val strokePath = Path()
-            val fillPath = if (fillGradient) Path() else null
+            val fillPath = if (fillGradient && !isPlaceholder) Path() else null
 
             val firstY = if (range > 0f) {
                 size.height - verticalPaddingPx - ((samples[0] - minVal) / range) * usableHeight
@@ -197,26 +224,45 @@ fun SensorSparklineView(
                 )
             }
 
-            // Draw trend stroke polyline
-            drawPath(
-                path = strokePath,
-                color = lineColor,
-                style = Stroke(
+            val effectiveLineColor = if (isPlaceholder) lineColor.copy(alpha = 0.35f) else lineColor
+            val strokeStyle = if (isPlaceholder) {
+                Stroke(
+                    width = strokeWidthPx,
+                    cap = StrokeCap.Round,
+                    join = StrokeJoin.Round,
+                    pathEffect = PathEffect.dashPathEffect(floatArrayOf(6.dp.toPx(), 4.dp.toPx()), 0f)
+                )
+            } else {
+                Stroke(
                     width = strokeWidthPx,
                     cap = StrokeCap.Round,
                     join = StrokeJoin.Round
                 )
+            }
+
+            // Draw trend stroke polyline
+            drawPath(
+                path = strokePath,
+                color = effectiveLineColor,
+                style = strokeStyle
             )
 
-            // Draw terminal dot at current (latest) reading
-            drawCircle(
-                color = lineColor,
-                radius = 2.75.dp.toPx(),
-                center = Offset(lastX, lastY)
-            )
+            // Draw terminal dot at current (latest) reading (suppressed for placeholder curves)
+            if (!isPlaceholder) {
+                drawCircle(
+                    color = lineColor,
+                    radius = 2.75.dp.toPx(),
+                    center = Offset(lastX, lastY)
+                )
+            }
         }
 
         if (samples.size > 1) {
+            val labelColor = if (isPlaceholder) {
+                MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+            } else {
+                MaterialTheme.colorScheme.onSurfaceVariant
+            }
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -225,19 +271,19 @@ fun SensorSparklineView(
                 Text(
                     text = formatSparklineTimeOffset(spanSeconds),
                     style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = labelColor,
                     maxLines = 1
                 )
                 Text(
                     text = formatSparklineTimeOffset(spanSeconds / 2),
                     style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = labelColor,
                     maxLines = 1
                 )
                 Text(
                     text = stringResource(R.string.sparkline_axis_now),
                     style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = labelColor,
                     maxLines = 1
                 )
             }

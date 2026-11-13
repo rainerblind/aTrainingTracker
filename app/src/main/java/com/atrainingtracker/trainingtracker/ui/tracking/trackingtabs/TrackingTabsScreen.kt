@@ -170,7 +170,7 @@ private val DEBUG = BuildConfig.DEBUG
 @Composable
 fun TrackingTabsScreen(
     trackingTabsViewModel: TrackingTabsViewModel,
-    onNavigateToHrvTest: () -> Unit = {}
+    onNavigateToMorningHrv: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val activity = remember(context) { context.findActivity() }
@@ -293,6 +293,7 @@ fun TrackingTabsScreen(
     val bSportType by controlViewModel.bSportType.collectAsState()
     val hasPairedRemoteDevices by controlViewModel.hasPairedRemoteDevices.collectAsState()
     val hasPairedBluetoothSensors by controlViewModel.hasPairedBluetoothSensors.collectAsState()
+    val isMorningCheckVisible by controlViewModel.isMorningHrvCheckVisible.collectAsState()
     val locationCalibrationStatus by trackingTabsViewModel.locationCalibrationStatus.collectAsState()
 
     // Subscription Downgrade Quota Reconciliation Check (REQ-SET-084.5)
@@ -583,6 +584,7 @@ fun TrackingTabsScreen(
         val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
             if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
                 trackingTabsViewModel.onResume()
+                controlViewModel.refreshMorningCheckStatus()
                 cockpitThemeMode = TrainingApplication.getCockpitThemeMode()
                 brightnessMode = TrainingApplication.getDisplayBrightnessMode()
                 customBrightness = TrainingApplication.getCustomDisplayBrightness()
@@ -996,22 +998,24 @@ fun TrackingTabsScreen(
                                         onClick = { showRouteSelectorSheet = true },
                                         onClearRoute = { routeSelectorViewModel.clearRoute() }
                                     )
-                                    Spacer(modifier = Modifier.height(8.dp))
-                                    OutlinedButton(
-                                        onClick = onNavigateToHrvTest,
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .testTag("hrv_test_cockpit_launcher"),
-                                        shape = RoundedCornerShape(8.dp)
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.Favorite,
-                                            contentDescription = null,
-                                            tint = TTColor.HrvHeartRateRed,
-                                            modifier = Modifier.size(18.dp)
-                                        )
-                                        Spacer(modifier = Modifier.width(8.dp))
-                                        Text(stringResource(R.string.hrv_test_title))
+                                    if (isMorningCheckVisible) {
+                                        Spacer(modifier = Modifier.height(8.dp))
+                                        OutlinedButton(
+                                            onClick = onNavigateToMorningHrv,
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .testTag("morning_hrv_check_start_button"),
+                                            shape = RoundedCornerShape(8.dp)
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Favorite,
+                                                contentDescription = null,
+                                                tint = TTColor.HrvHeartRateRed,
+                                                modifier = Modifier.size(18.dp)
+                                            )
+                                            Spacer(modifier = Modifier.width(8.dp))
+                                            Text(stringResource(R.string.hrv_morning_check_start_button))
+                                        }
                                     }
                                 }
                             )
@@ -1115,13 +1119,19 @@ fun TrackingTabsScreen(
                             },
                             modifier = Modifier
                                 .align(
-                                    if (tuningConfig.radarEdgeSide == RadarEdgeSide.LEFT) {
-                                        Alignment.CenterStart
-                                    } else {
-                                        Alignment.CenterEnd
+                                    when (tuningConfig.radarEdgeSide) {
+                                        RadarEdgeSide.LEFT -> Alignment.CenterStart
+                                        RadarEdgeSide.RIGHT -> Alignment.CenterEnd
+                                        RadarEdgeSide.FULL_SCREEN -> Alignment.Center
                                     }
                                 )
-                                .fillMaxHeight()
+                                .then(
+                                    if (tuningConfig.radarEdgeSide == RadarEdgeSide.FULL_SCREEN) {
+                                        Modifier.fillMaxSize()
+                                    } else {
+                                        Modifier.fillMaxHeight()
+                                    }
+                                )
                                 .zIndex(1.2f)
                         )
                     }

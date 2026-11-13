@@ -1199,7 +1199,7 @@ def find_dangling_references(req_shards=None, tst_shards=None, repo_root=None):
             if m_h:
                 cur_tst = m_h.group(2)
             m_f = re.match(
-                r"^\s*[-*]\s*\*{0,2}(?:Requirements?|Requirement\(s\)|Target Requirement)\*{0,2}\s*:\s*(.*)",
+                r"^\s*[-*]\s*\*{0,2}(?:Requirements?|Requirement\(s\)|Target Requirement|Requirements Covered|Verifies)\*{0,2}\s*:\s*(.*)",
                 line,
                 re.IGNORECASE,
             )
@@ -1361,6 +1361,230 @@ def verify_dangling_references(
         f"PASS: Zero new dangling REQ/TST references detected ({len(legacy_dangling)} legacy references tolerated pending A-08.x)."
     )
     return True, diagnostics
+
+
+class TraceabilityOrphansResult:
+    """Represents the outcome of bidirectional REQ-TST orphan discovery (REQ-PRO-087)."""
+    def __init__(self, declared_reqs, declared_tsts, orphan_reqs, dangling_req_cites, tsts_without_reqs):
+        self.declared_reqs = set(declared_reqs)
+        self.declared_tsts = set(declared_tsts)
+        self.orphan_reqs = sorted(orphan_reqs)
+        self.dangling_req_cites = list(dangling_req_cites)
+        self.tsts_without_reqs = sorted(tsts_without_reqs)
+
+
+def load_traceability_baseline(baseline_path=None, repo_root=None):
+    """
+    Loads and validates the JSON traceability orphan baseline (REQ-PRO-087.3).
+    Returns dict: {"orphan_requirements": set(str), "metadata": dict, "raw": dict, "path": str, "exists": bool}.
+    """
+    if repo_root is None:
+        repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+    if baseline_path is None:
+        baseline_path = os.path.join(repo_root, "tools", "traceability_baseline.json")
+    elif not os.path.isabs(baseline_path):
+        baseline_path = os.path.join(repo_root, baseline_path)
+
+    if not os.path.isfile(baseline_path):
+        return {
+            "orphan_requirements": set(),
+            "metadata": {},
+            "raw": {},
+            "path": baseline_path,
+            "exists": False,
+        }
+
+    with open(baseline_path, "r", encoding="utf-8") as f:
+        data = json.load(f)
+
+    orphans = set(data.get("orphan_requirements", []))
+    return {
+        "orphan_requirements": orphans,
+        "metadata": data.get("metadata", {}),
+        "raw": data,
+        "path": baseline_path,
+        "exists": True,
+    }
+
+
+def find_traceability_orphans(req_shards=None, tst_shards=None, repo_root=None):
+    """
+    Computes bidirectional REQ-TST traceability orphans across living doc shards (REQ-PRO-087).
+    Discovers:
+      1. All declared REQ IDs in requirement shards.
+      2. All declared TST IDs in test shards.
+      3. All REQ IDs cited by TST entries across supported fields:
+         'Requirements:', 'Requirement(s):', 'Target Requirement:', 'Requirements Covered:', 'Verifies:'.
+      4. Orphan REQs: declared REQs not cited by ANY test specification.
+      5. Dangling target REQs: REQs cited by TSTs that do not exist in declared REQs.
+      6. TSTs without REQs: TSTs that do not cite any REQ.
+    Returns TraceabilityOrphansResult.
+    """
+    if repo_root is None:
+        repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+
+    loaded_reqs = _load_shard_sources(req_shards, "docs/requirements", repo_root)
+    loaded_tsts = _load_shard_sources(tst_shards, "docs/tests", repo_root)
+
+    known_req_ids = set()
+    for rel_path, lines in loaded_reqs:
+        for line in lines:
+            m = re.match(r"^(#{2,4})\s*(REQ-[A-Z0-9_-]+):?\s*(.*?)$", line.strip())
+            if m:
+                clean_id = m.group(2).rstrip("-_")
+                if clean_id not in ("REQ-XXX", "REQ-DOM-NNN", "REQ-DOM-XXX", "REQ-NNN"):
+                    known_req_ids.add(clean_id)
+
+    known_tst_ids = set()
+    cited_req_ids = set()
+    dangling_cites = []
+    tsts_without_reqs = []
+
+    req_citation_pattern = re.compile(
+        r"^\s*[-*]\s*\*{0,2}(?:Requirements?|Requirement\(s\)|Target Requirement|Requirements Covered|Verifies)\*{0,2}\s*:\s*(.*)",
+        re.IGNORECASE,
+    )
+
+    for rel_path, lines in loaded_tsts:
+        cur_tst = None
+        cur_tst_has_cites = False
+        for lno, line in enumerate(lines, 1):
+            m_h = re.match(r"^(#{2,4})\s*(TST-[A-Z0-9_-]+):?\s*(.*?)$", line.strip())
+            if m_h:
+                if cur_tst and not cur_tst_has_cites:
+                    tsts_without_reqs.append(cur_tst)
+                cur_tst = m_h.group(2).rstrip("-_")
+                cur_tst_has_cites = False
+                if cur_tst not in ("TST-XXX", "TST-DOM-NNN"):
+                    known_tst_ids.add(cur_tst)
+            m_f = req_citation_pattern.match(line)
+            if m_f and cur_tst:
+                val = m_f.group(1)
+                cites = re.findall(r"(?<![A-Za-z0-9_-])REQ-[A-Z0-9_-]+(?![A-Za-z0-9_-])", val)
+                clean_cites = [
+                    c.rstrip("-_")
+                    for c in cites
+                    if c.rstrip("-_") not in ("REQ-XXX", "REQ-DOM-NNN", "REQ-DOM-XXX", "REQ-NNN")
+                ]
+                if clean_cites:
+                    cur_tst_has_cites = True
+                    for c in clean_cites:
+                        cited_req_ids.add(c)
+                        if c not in known_req_ids:
+                            dangling_cites.append(
+                                DanglingReference(
+                                    source_file=rel_path,
+                                    line_no=lno,
+                                    source_id=cur_tst,
+                                    target_id=c,
+                                    target_type="REQ",
+                                )
+                            )
+        if cur_tst and not cur_tst_has_cites:
+            tsts_without_reqs.append(cur_tst)
+
+    orphan_reqs = sorted(known_req_ids - cited_req_ids)
+
+    return TraceabilityOrphansResult(
+        declared_reqs=known_req_ids,
+        declared_tsts=known_tst_ids,
+        orphan_reqs=orphan_reqs,
+        dangling_req_cites=dangling_cites,
+        tsts_without_reqs=tsts_without_reqs,
+    )
+
+
+def verify_traceability_orphans(
+    repo_root=None,
+    baseline_path=None,
+    fail_on_orphans=True,
+    req_shards=None,
+    tst_shards=None,
+):
+    """
+    Verifies machine-verified bidirectional requirement-to-test traceability (REQ-PRO-087 / ASPICE Finding F4).
+    Enforces Acceptance Criteria 1, 2, and 3:
+      - Criterion 1: Fails on any requirement without a verifying test that is not in the baseline.
+      - Criterion 2: Fails on any test referencing a non-existent requirement.
+      - Criterion 3: Fails if new orphans are added (ratchet inflation) or baseline count grows.
+    Returns (success: bool, diagnostics: list[str], report: dict).
+    """
+    if repo_root is None:
+        repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+
+    diagnostics = []
+    errors = []
+
+    res = find_traceability_orphans(req_shards=req_shards, tst_shards=tst_shards, repo_root=repo_root)
+    baseline_info = load_traceability_baseline(baseline_path=baseline_path, repo_root=repo_root)
+    baseline_orphans = baseline_info["orphan_requirements"]
+
+    # 1. Check Criterion 2: Tests referencing non-existent requirements
+    if res.dangling_req_cites:
+        for ref in res.dangling_req_cites:
+            msg = f"ERROR (Criterion 2): {ref.source_file}:{ref.line_no} [{ref.source_id}] references non-existent requirement {ref.target_id}."
+            errors.append(msg)
+            diagnostics.append(msg)
+
+    # 2. Check tests without requirements
+    if res.tsts_without_reqs:
+        for tst in res.tsts_without_reqs:
+            msg = f"ERROR: Test specification {tst} does not declare any requirement in 'Verifies:' / 'Requirement(s):' field."
+            errors.append(msg)
+            diagnostics.append(msg)
+
+    # 3. Check Criterion 1: Requirements without verifying test not in baseline
+    unbaselined_orphans = sorted(set(res.orphan_reqs) - baseline_orphans)
+    if unbaselined_orphans:
+        for req in unbaselined_orphans:
+            msg = f"ERROR (Criterion 1): Requirement {req} has no verifying test and is not recorded in traceability baseline."
+            errors.append(msg)
+            diagnostics.append(msg)
+
+    # 4. Check Criterion 3: Ratchet monotonicity & baseline staleness
+    # If an orphan in the baseline has been resolved, the baseline MUST shrink (|B_{t+1}| <= |B_t|)
+    stale_orphans = sorted(baseline_orphans - set(res.orphan_reqs))
+    if stale_orphans and baseline_info["exists"]:
+        msg = (
+            f"ERROR (Criterion 3 Ratchet): Traceability baseline contains {len(stale_orphans)} resolved requirement(s): "
+            f"{', '.join(stale_orphans)}. Baseline must shrink when orphans are resolved (|B_next| <= |B_curr|). "
+            f"Update {os.path.relpath(baseline_info['path'], repo_root)}."
+        )
+        errors.append(msg)
+        diagnostics.append(msg)
+
+    if len(res.orphan_reqs) > len(baseline_orphans) and baseline_info["exists"]:
+        msg = (
+            f"ERROR (Criterion 3 Ratchet): Current orphan count ({len(res.orphan_reqs)}) exceeds baseline count "
+            f"({len(baseline_orphans)}). Traceability baseline can only shrink, never grow."
+        )
+        if msg not in errors:
+            errors.append(msg)
+            diagnostics.append(msg)
+
+    report = {
+        "total_reqs": len(res.declared_reqs),
+        "total_tsts": len(res.declared_tsts),
+        "orphan_count": len(res.orphan_reqs),
+        "orphan_reqs": res.orphan_reqs,
+        "unbaselined_orphans": unbaselined_orphans,
+        "stale_orphans": stale_orphans,
+        "dangling_cites": [ref.target_id for ref in res.dangling_req_cites],
+        "baseline_count": len(baseline_orphans),
+    }
+
+    if errors:
+        if fail_on_orphans:
+            diagnostics.insert(0, f"ERROR: Traceability orphan governance failed with {len(errors)} violation(s).")
+            return False, diagnostics, report
+        else:
+            diagnostics.insert(0, f"WARNING: Traceability orphan governance detected {len(errors)} violation(s) (non-blocking).")
+            return True, diagnostics, report
+
+    diagnostics.append(
+        f"PASS: 100% REQ-TST bidirectional traceability verified ({len(res.orphan_reqs)} legacy orphans tolerated in baseline)."
+    )
+    return True, diagnostics, report
 
 
 def extract_living_test_ids(repo_root=None, tst_shards=None):
@@ -1995,7 +2219,7 @@ def calculate_traceability_coverage(
             if m:
                 cur_tst = m.group(2)
             m_f = re.match(
-                r"^\s*[-*]\s*\*{0,2}(?:Requirements?|Requirement\(s\)|Target Requirement)\*{0,2}\s*:\s*(.*)",
+                r"^\s*[-*]\s*\*{0,2}(?:Requirements?|Requirement\(s\)|Target Requirement|Requirements Covered|Verifies)\*{0,2}\s*:\s*(.*)",
                 line,
                 re.IGNORECASE,
             )
@@ -2825,6 +3049,9 @@ def verify_governance(
     min_tst_code_coverage=None,
     max_code_without_spec=None,
     min_bidirectional_coverage=None,
+    baseline_path=None,
+    fail_on_orphans=True,
+    repo_root=None,
 ):
     """
     Main governance validation entrypoint.
@@ -2884,6 +3111,16 @@ def verify_governance(
         diagnostics.extend(attrs_diag)
         return False, diagnostics
     diagnostics.extend(attrs_diag)
+
+    orphans_ok, orphans_diag, _ = verify_traceability_orphans(
+        repo_root=repo_root,
+        baseline_path=baseline_path,
+        fail_on_orphans=fail_on_orphans,
+    )
+    if not orphans_ok:
+        diagnostics.extend(orphans_diag)
+        return False, diagnostics
+    diagnostics.extend(orphans_diag)
 
     if (
         min_req_tst_coverage is not None
@@ -3150,8 +3387,39 @@ def main():
         action="store_true",
         help="Check living documentation shards for requirement attributes (Priority, Type, Verification Method) (REQ-PRO-077).",
     )
+    parser.add_argument(
+        "--check-orphans",
+        action="store_true",
+        help="Verify bidirectional requirement-to-test traceability and ratchet baseline (REQ-PRO-087).",
+    )
+    parser.add_argument(
+        "--traceability-baseline",
+        default=None,
+        help="Path to traceability baseline JSON file (default: tools/traceability_baseline.json).",
+    )
+    parser.add_argument(
+        "--fail-on-orphans",
+        action="store_true",
+        default=True,
+        help="Fail if unbaselined orphans or ratchet violations are detected (default: True).",
+    )
+    parser.add_argument(
+        "--no-fail-on-orphans",
+        dest="fail_on_orphans",
+        action="store_false",
+        help="Do not fail on unbaselined orphans (warning only).",
+    )
 
     args = parser.parse_args()
+
+    if args.check_orphans:
+        ok, diag, _ = verify_traceability_orphans(
+            baseline_path=args.traceability_baseline,
+            fail_on_orphans=args.fail_on_orphans,
+        )
+        for msg in diag:
+            print(msg, file=sys.stderr if not ok and "ERROR" in msg else sys.stdout)
+        sys.exit(0 if ok else 1)
 
     if args.check_evidence:
         ok, diag = verify_requirement_evidence_status(fail_on_unverified=args.enforce_evidence)
@@ -3379,6 +3647,8 @@ def main():
         min_tst_code_coverage=args.min_tst_code_coverage,
         max_code_without_spec=args.max_code_without_spec,
         min_bidirectional_coverage=args.min_bidirectional_coverage,
+        baseline_path=args.traceability_baseline,
+        fail_on_orphans=args.fail_on_orphans,
     )
 
     for msg in diagnostics:

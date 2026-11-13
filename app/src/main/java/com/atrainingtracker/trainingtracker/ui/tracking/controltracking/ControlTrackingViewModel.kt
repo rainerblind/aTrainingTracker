@@ -33,8 +33,15 @@ import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceDataReposit
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.monetization.SensorQuotaReconciliationManager
 import com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository
+import com.atrainingtracker.trainingtracker.TrackingMode
+import com.atrainingtracker.trainingtracker.database.hrv.HrvReadinessRepository
+import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import java.time.LocalDate
+import java.time.LocalTime
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -61,7 +68,11 @@ sealed class ControlNavigation {
 
 class ControlTrackingViewModel @JvmOverloads constructor(
     private val application: Application,
-    private val reconciliationManager: SensorQuotaReconciliationManager = SensorQuotaReconciliationManager.getInstance(application)
+    private val reconciliationManager: SensorQuotaReconciliationManager = SensorQuotaReconciliationManager.getInstance(application),
+    private val tuningPreferencesDataStore: TuningPreferencesDataStore = TuningPreferencesDataStore.getInstance(application),
+    private val hrvReadinessRepository: HrvReadinessRepository = HrvReadinessRepository.getInstance(application),
+    private val timeProvider: () -> LocalTime = { LocalTime.now() },
+    private val dateProvider: () -> LocalDate = { LocalDate.now() }
 ) : ViewModel() {
 
     companion object {
@@ -124,6 +135,68 @@ class ControlTrackingViewModel @JvmOverloads constructor(
             started = SharingStarted.WhileSubscribed(5000),
             initialValue = devicesRepository.hasPairedBluetoothDevices()
         )
+
+    /**
+     * Emits `true` if at least one paired Heart Rate (HRM) device
+     * exists in the database, false otherwise (ATT-7532 / REQ-UI-525.2).
+     * Seeded synchronously from SQLite on cold start to prevent UI flicker.
+     */
+    val hasPairedHeartRateDevices: StateFlow<Boolean> = allDevicesFromDb
+        .map { devices ->
+            devices.any { it.isPaired && it.deviceType == DeviceType.HRM }
+        }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = devicesRepository.hasPairedHeartRateDevices()
+        )
+
+    private val _todayMorningCheckCompleted = MutableStateFlow(false)
+    val todayMorningCheckCompleted: StateFlow<Boolean> = _todayMorningCheckCompleted.asStateFlow()
+
+    init {
+        refreshMorningCheckStatus()
+    }
+
+    /**
+     * Queries whether today's morning check has been completed and updates [_todayMorningCheckCompleted] (ATT-7532 / REQ-UI-525.3).
+     */
+    fun refreshMorningCheckStatus() {
+        viewModelScope.launch {
+            try {
+                val todayIso = dateProvider().toString()
+                _todayMorningCheckCompleted.value = hrvReadinessRepository.hasCompletedMorningCheck(todayIso)
+            } catch (e: Throwable) {
+                if (DEBUG) runCatching { Log.e(TAG, "Error checking morning check status", e) }
+            }
+        }
+    }
+
+    /**
+     * Reactive visibility state for the morning HRV check CTA button on the Start screen (ATT-7532 / REQ-UI-525.4).
+     * Evaluates to true iff:
+     * 1. [trackingMode] == [TrackingMode.READY]
+     * 2. [showMorningCheckOnStartScreen] == true
+     * 3. [hasPairedHeartRateDevices] == true
+     * 4. Current hour < [morningCheckCutoffHour]
+     * 5. [todayMorningCheckCompleted] == false
+     */
+    val isMorningHrvCheckVisible: StateFlow<Boolean> = combine(
+        trackingMode.asFlow(),
+        tuningPreferencesDataStore.tuningConfigFlow,
+        hasPairedHeartRateDevices,
+        todayMorningCheckCompleted
+    ) { mode, tuning, hasHrm, completedToday ->
+        mode == TrackingMode.READY &&
+                tuning.showMorningCheckOnStartScreen &&
+                hasHrm &&
+                !completedToday &&
+                timeProvider().hour < tuning.morningCheckCutoffHour
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = false
+    )
 
     // 2. Combine the IDs from the BANALService with the Data from the Database
     val remoteDevices: StateFlow<List<RemoteDeviceUIData>> = banalServiceRepository.activeRemoteDevicesIds

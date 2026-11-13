@@ -20,42 +20,47 @@
 <resources>
     <string name="hrv_rmssd">rMSSD</string>
     <string name="hrv_rmssd_short">rMSSD</string>
-    <string name="hrv_dfa_a1">DFA a1</string>
-    <string name="hrv_dfa_a1_short">a1</string>
+    <string name="hrv_dfa_a1">DFA α1</string>
+    <string name="hrv_dfa_a1_short">α1</string>
     <string name="hrv_artifact_rate">アーチファクト率</string>
     <string name="hrv_artifact_rate_short">Art. %</string>
     <string name="hrv_sdnn">SDNN</string>
     <string name="hrv_sdnn_short">SDNN</string>
 
     <!-- Training Zones Tab (ATT-7317 / REQ-TRK-061.4) -->
-    <string name="tab_hrv_dfa_a1">HRV (DFA a1)</string>
+    <string name="tab_hrv_dfa_a1">HRV (DFA α1)</string>
     <string name="hrv_zone_aerobic_base_label">有酸素ベース (ゾーン2)</string>
     <string name="hrv_zone_threshold_transition_label">閾値移行 (ゾーン3)</string>
     <string name="hrv_zone_anaerobic_label">高強度 / 無酸素 (ゾーン4)</string>
     <string name="hrv_t1_aerobic_threshold_label">有酸素閾値 T1 (HRVT1)</string>
     <string name="hrv_t2_anaerobic_threshold_label">無酸素閾値 T2 (HRVT2)</string>
-    <string name="tuning_physiology_hrv_zones_link">トレーニングゾーンでDFA a1有酸素・無酸素閾値を設定</string>
+    <string name="hrv_zone_aerobic_base_desc">有酸素ベースの持久力ペース、自律神経ストレス低</string>
+    <string name="hrv_zone_threshold_transition_desc">有酸素から無酸素への閾値移行、中等度の疲労</string>
+    <string name="hrv_zone_anaerobic_desc">無酸素 / 高強度、急速な自律神経消耗</string>
+    <string name="hrv_t1_aerobic_threshold_desc">有酸素閾値（デフォルト 0.75）。不変条件：T1 \u2265 T2 + 0.05</string>
+    <string name="hrv_t2_anaerobic_threshold_desc">無酸素閾値（デフォルト 0.50）。不変条件：T2 \u2264 T1 - 0.05</string>
+    <string name="tuning_physiology_hrv_zones_link">トレーニングゾーンでDFA α1有酸素・無酸素閾値を設定</string>
     <string name="hrv_start_guided_ramp_test">ガイド付き閾値テストを開始</string>
     <string name="hrv_preview_pill_aerobic">有酸素</string>
     <string name="hrv_preview_pill_transition">移行</string>
     <string name="hrv_preview_pill_anaerobic">無酸素</string>
-    <string name="hrv_zones_guidance_desc">HRV DFA a1の閾値は有酸素ペースと強度をガイドします。値が高いほどフラクタル変動性（有酸素）が高いことを示します。ゾーン2は緑（&gt; T1）、ゾーン3はオレンジ（T2..T1）、ゾーン4は赤（&lt; T2）です。</string>
+    <string name="hrv_zones_guidance_desc">HRV DFA α1の閾値は有酸素ペースと強度をガイドします。値が高いほどフラクタル変動性（有酸素）が高いことを示します。ゾーン2は緑（&gt; T1）、ゾーン3はオレンジ（T2..T1）、ゾーン4は赤（&lt; T2）です。</string>
 
     <string name="hrv_info_title">心拍変動（HRV）と有酸素閾値</string>
     <string name="hrv_info_trailing_lag_title">ローリングウィンドウとペーシング遅延</string>
-    <string name="hrv_info_trailing_lag_desc">リアルタイムDFA a1は2分間のローリングウィンドウ（5秒毎更新）、rMSSDは60秒間で計算されます。ペース変化が自律神経テレメトリに反映されるまで1〜2分かかります。</string>
+    <string name="hrv_info_trailing_lag_desc">リアルタイムDFA α1は2分間のローリングウィンドウ（5秒毎更新）、rMSSDは60秒間で計算されます。ペース変化が自律神経テレメトリに反映されるまで1〜2分かかります。</string>
     <string name="hrv_info_sensor_recommendation_title">推奨センサー</string>
-    <string name="hrv_info_sensor_recommendation_desc">正確な拍動間RR間隔の測定には、平滑化されていないECG心拍計チェストストラップ（Polar H10、Polar H9、Garmin HRM-Dual、HRM-Pro、HRM-Pro Plusなど）が必要です。光学式手首心拍計やファームウェアで平滑化を行う安価なチェストストラップ（Magene、CooSpoなど）は間隔を歪めるためDFA a1には適していません。</string>
+    <string name="hrv_info_sensor_recommendation_desc">正確な拍動間RR間隔の測定には、平滑化されていないECG心拍計チェストストラップ（Polar H10、Polar H9、Garmin HRM-Dual、HRM-Pro、HRM-Pro Plusなど）が必要です。光学式手首心拍計やファームウェアで平滑化を行う安価なチェストストラップ（Magene、CooSpoなど）は間隔を歪めるためDFA α1には適していません。</string>
     <string name="hrv_info_smoothed_warning_title">平滑化されたRRストリームを検出</string>
-    <string name="hrv_info_smoothed_warning_desc">接続中のセンサーがファームウェアによるRR間隔の平滑化または合成ステップを行っています。リアルタイムのDFA a1および有酸素閾値ガイダンスは不正確です。</string>
+    <string name="hrv_info_smoothed_warning_desc">接続中のセンサーがファームウェアによるRR間隔の平滑化または合成ステップを行っています。リアルタイムのDFA α1および有酸素閾値ガイダンスは不正確です。</string>
     <string name="hrv_info_zones_title">有酸素閾値ゾーン</string>
-    <string name="hrv_info_zones_desc">DFA a1 &gt; 0.75は有酸素持久力ペース（ゾーン2）を示します。0.75〜0.50は閾値移行期（ゾーン3）を反映します。0.50未満は高強度の無酸素運動（ゾーン4）を示します。</string>
+    <string name="hrv_info_zones_desc">DFA α1 &gt; 0.75は有酸素持久力ペース（ゾーン2）を示します。0.75〜0.50は閾値移行期（ゾーン3）を反映します。0.50未満は高強度の無酸素運動（ゾーン4）を示します。</string>
     <string name="hrv_info_disclaimer_title">医療上の免責事項</string>
     <string name="hrv_info_disclaimer_desc">aTrainingTrackerにおける自律神経HRVメトリクスはアスリートのトレーニング管理を目的としており、医師の診断に代わるものではありません。不整脈や期外収縮は推定値に影響を与える場合があります。</string>
 
     <!-- Morning Resting HRV Check (ATT-3556 / REQ-PER-032) -->
     <string name="morning_hrv_title">朝のHRVチェック</string>
-    <string name="morning_hrv_subtitle">自律神経コンディション起床プロトコル</string>
+    <string name="morning_hrv_subtitle">起床直後の安静時測定</string>
     <string name="morning_hrv_posture_label">姿勢</string>
     <string name="morning_hrv_posture_supine">仰向け</string>
     <string name="morning_hrv_posture_seated">座位</string>
@@ -68,9 +73,10 @@
     <string name="morning_hrv_state_stabilizing">安静安定化中: %1$ds</string>
     <string name="morning_hrv_state_measuring">測定中: %1$ds / %2$ds</string>
     <string name="morning_hrv_state_completed">測定完了</string>
+    <string name="morning_hrv_result_title">測定結果</string>
     <string name="morning_hrv_btn_start">測定を開始</string>
     <string name="morning_hrv_btn_cancel">キャンセル</string>
-    <string name="morning_hrv_btn_save">測定値を保存</string>
+    <string name="morning_hrv_btn_save">保存</string>
     <string name="morning_hrv_btn_discard">破棄</string>
     <string name="morning_hrv_instructions_title">標準測定プロトコル</string>
     <string name="morning_hrv_instructions_desc">起床後、排尿を済ませてから測定してください。会話を控え、静かに自然な呼吸を保ちます。正確なSWC比較のため常に同じ姿勢を維持してください。</string>
@@ -104,33 +110,33 @@
     <string name="hrv_readiness_swc_baseline_label">60日間SWCベースライン</string>
     <string name="hrv_readiness_rolling_avg_label">7日間移動平均</string>
 
-    <!-- Interactive DFA a1 / rMSSD Charts & Scatter Plot in Workout Details (ATT-3544 / REQ-PER-035) -->
-    <string name="hrv_scatter_card_title">DFA a1 有酸素閾値ダイナミクス</string>
-    <string name="hrv_scatter_card_subtitle">a1 vs 心拍数・サイクリングパワー</string>
-    <string name="hrv_scatter_aerobic_threshold">有酸素閾値 (a1 = 0.75)</string>
-    <string name="hrv_scatter_anaerobic_threshold">無酸素閾値 (a1 = 0.50)</string>
-    <string name="hrv_scatter_aerobic_threshold_fmt">有酸素閾値 (a1 = %1$.2f)</string>
-    <string name="hrv_scatter_anaerobic_threshold_fmt">無酸素閾値 (a1 = %1$.2f)</string>
+    <!-- Interactive DFA α1 / rMSSD Charts & Scatter Plot in Workout Details (ATT-3544 / REQ-PER-035) -->
+    <string name="hrv_scatter_card_title">DFA α1 有酸素閾値ダイナミクス</string>
+    <string name="hrv_scatter_card_subtitle">α1 vs 心拍数・サイクリングパワー</string>
+    <string name="hrv_scatter_aerobic_threshold">有酸素閾値 (α1 = 0.75)</string>
+    <string name="hrv_scatter_anaerobic_threshold">無酸素閾値 (α1 = 0.50)</string>
+    <string name="hrv_scatter_aerobic_threshold_fmt">有酸素閾値 (α1 = %1$.2f)</string>
+    <string name="hrv_scatter_anaerobic_threshold_fmt">無酸素閾値 (α1 = %1$.2f)</string>
     <string name="hrv_scatter_toggle_hr">心拍数</string>
     <string name="hrv_scatter_toggle_power">パワー</string>
     <string name="hrv_scatter_toggle_pace">ペース</string>
     <string name="hrv_scatter_smoothed_warning_title">平滑化されたセンサーストリーム</string>
-    <string name="hrv_scatter_smoothed_warning_desc">記録されたRR間隔にファームウェアによる平滑化または合成量子化が確認されました。有酸素閾値の推定値（a1 = 0.75 / 0.50）が歪んでいる可能性があります。</string>
+    <string name="hrv_scatter_smoothed_warning_desc">記録されたRR間隔にファームウェアによる平滑化または合成量子化が確認されました。有酸素閾値の推定値（α1 = 0.75 / 0.50）が歪んでいる可能性があります。</string>
     <string name="hrv_scatter_artifact_suppressed">アーティファクト率5%%超の区間を除外</string>
     <string name="hrv_scatter_no_data">このトレーニングのHRVデータはありません</string>
     <string name="hrv_chart_artifact_gap_label">アーティファクトギャップ</string>
 
-    <!-- DFA a1 Threshold Tuning & Dynamic Zones (ATT-6715 / REQ-TRK-061) -->
-    <string name="tuning_dfa_a1_t1_title">DFA a1 有酸素閾値 (T1)</string>
+    <!-- DFA α1 Threshold Tuning & Dynamic Zones (ATT-6715 / REQ-TRK-061) -->
+    <string name="tuning_dfa_a1_t1_title">DFA α1 有酸素閾値 (T1)</string>
     <string name="tuning_dfa_a1_t1_desc">有酸素ベース（ゾーン2）と移行期（ゾーン3）を分ける閾値。高いほどフラクタル／有酸素。</string>
-    <string name="tuning_dfa_a1_t2_title">DFA a1 無酸素閾値 (T2)</string>
+    <string name="tuning_dfa_a1_t2_title">DFA α1 無酸素閾値 (T2)</string>
     <string name="tuning_dfa_a1_t2_desc">移行期（ゾーン3）と高強度無酸素（ゾーン4）を分ける閾値。高いほどフラクタル／有酸素。</string>
     <string name="tuning_dfa_a1_default">デフォルト: %1$.2f (不変条件: T1 \u2265 T2 + 0.05)</string>
-    <string name="hrv_info_zones_desc_fmt">DFA a1 &gt; %1$.2fは有酸素持久力ペース（ゾーン2）を示します。%1$.2f〜%2$.2fは閾値移行期（ゾーン3）を反映します。%2$.2f未満は高強度の無酸素運動（ゾーン4）を示します。</string>
+    <string name="hrv_info_zones_desc_fmt">DFA α1 &gt; %1$.2fは有酸素持久力ペース（ゾーン2）を示します。%1$.2f〜%2$.2fは閾値移行期（ゾーン3）を反映します。%2$.2f未満は高強度の無酸素運動（ゾーン4）を示します。</string>
 
     <!-- Configurable Artifact Gate Threshold (ATT-6714 / REQ-TRK-060.4) -->
     <string name="tuning_hrv_artifact_gate_title">HRVアーティファクト閾値</string>
-    <string name="tuning_hrv_artifact_gate_desc" formatted="false">DFA a1の計算を抑制するウィンドウ内の最大アーティファクト率。範囲：3.0%〜5.0%。</string>
+    <string name="tuning_hrv_artifact_gate_desc" formatted="false">DFA α1の計算を抑制するウィンドウ内の最大アーティファクト率。範囲：3.0%〜5.0%。</string>
     <string name="tuning_hrv_artifact_gate_default">デフォルト：%1$.1f%%</string>
 
     <!-- Morning HRV CTA & Onboarding in Fitness & Physiology (ATT-6720 / REQ-UI-513) -->
@@ -142,7 +148,7 @@
     <string name="hrv_history_title">朝のHRV履歴</string>
 
     <!-- Lag-Aligned, Confidence-Gated HRVT1/HRVT2 Thresholds (ATT-3554 / REQ-PER-036) -->
-    <string name="hrv_threshold_card_title">DFA a1閾値推定（HRVT1 / HRVT2）</string>
+    <string name="hrv_threshold_card_title">DFA α1閾値推定（HRVT1 / HRVT2）</string>
     <string name="hrv_threshold_card_subtitle">遅延補正・信頼性検証済み生理的閾値</string>
     <string name="hrv_threshold_hrvt1_label">有酸素性作業閾値（HRVT1）</string>
     <string name="hrv_threshold_hrvt2_label">無酸素性作業閾値（HRVT2）</string>
@@ -157,15 +163,15 @@
     <string name="hrv_threshold_stat_neff">N: %1$d分</string>
     <string name="hrv_threshold_stat_neff_steps">N: %1$dステップ</string>
     <string name="hrv_threshold_stat_artifact">平均アーティファクト率: %1$.1f%%</string>
-    <string name="hrv_threshold_diag_steady">一定の持久運動: DFA a1が閾値範囲を上回り続けました</string>
+    <string name="hrv_threshold_diag_steady">一定の持久運動: DFA α1が閾値範囲を上回り続けました</string>
     <string name="hrv_threshold_diag_high_artifact">高いRRアーティファクト率（%1$.1f%% &gt; 5.0%%）</string>
     <string name="hrv_threshold_diag_short_duration">遷移時間が不十分です（N = %1$d &lt; %2$d）</string>
     <string name="hrv_threshold_diag_low_r2">低い線形相関（R² = %1$.2f &lt; %2$.2f）</string>
     <string name="hrv_threshold_no_estimate">--</string>
     <string name="hrv_threshold_informative_only">参考情報のみ；ゾーン更新から除外されます</string>
 
-    <!-- Guided DFA a1 Ramp/Step Test Screen (ATT-4969 / REQ-TRK-071) -->
-    <string name="hrv_test_title">ガイド付きDFA a1閾値テスト</string>
+    <!-- Guided DFA α1 Ramp/Step Test Screen (ATT-4969 / REQ-TRK-071) -->
+    <string name="hrv_test_title">ガイド付きDFA α1閾値テスト</string>
     <string name="hrv_test_subtitle">有酸素・無酸素閾値プロトコル</string>
     <string name="hrv_test_protocol_label">プロトコル種別</string>
     <string name="hrv_test_protocol_step">漸進的ステップテスト</string>
@@ -180,7 +186,7 @@
     <string name="hrv_test_increment_label">ステップ増分</string>
     <string name="hrv_test_warmup_label">ウォームアップ時間</string>
     <string name="hrv_test_warmup_desc">プロトコルステップ前の10分間の安定したウォームアップ</string>
-    <string name="hrv_test_preflight_title">事前センサーチェック</string>
+    <string name="hrv_test_preflight_title">センサーと信号の状態</string>
     <string name="hrv_test_preflight_checking">ECG RRストリームと信号品質を確認中…</string>
     <string name="hrv_test_preflight_pass" formatted="false">センサー品質高（アーティファクト ≤ 3.0%）</string>
     <string name="hrv_test_preflight_warning" formatted="false">センサー品質中程度（アーティファクト 3.0〜5.0%）</string>
@@ -193,14 +199,44 @@
     <string name="hrv_test_target_power">目標: %1$d W</string>
     <string name="hrv_test_target_pace">目標: %1$s</string>
     <string name="hrv_test_time_remaining">残り時間: %1$s</string>
-    <string name="hrv_test_live_a1">ライブa1: %1$.2f</string>
+    <string name="hrv_test_live_a1">ライブα1: %1$.2f</string>
     <string name="hrv_test_live_artifacts">アーティファクト: %1$.1f%%</string>
     <string name="hrv_test_early_complete_title">閾値を検出しました！</string>
-    <string name="hrv_test_early_complete_desc">DFA a1が0.45未満に低下しました。HRVT1とHRVT2の両方がキャプチャされました。疲労困憊まで追い込むことなくクールダウンに移行できます。</string>
+    <string name="hrv_test_early_complete_desc">DFA α1が0.45未満に低下しました。HRVT1とHRVT2の両方がキャプチャされました。疲労困憊まで追い込むことなくクールダウンに移行できます。</string>
     <string name="hrv_test_btn_start">テスト開始</string>
     <string name="hrv_test_btn_finish">テスト終了</string>
     <string name="hrv_test_btn_cooldown">クールダウン開始</string>
     <string name="hrv_test_btn_cancel">テストをキャンセル</string>
+
+    <!-- Active Pacing Guidance (ATT-7529) -->
+    <string name="hrv_test_pacing_target_header">目標</string>
+    <string name="hrv_test_pacing_actual_header">現在（実測）</string>
+    <string name="hrv_test_live_power_fmt">パワー：%1$d W</string>
+    <string name="hrv_test_live_speed_fmt">速度：%1$.1f km/h</string>
+    <string name="hrv_test_live_hr_fmt">心拍数：%1$d bpm</string>
+
+    <!-- Protocol Info & Pros/Cons (ATT-7529) -->
+    <string name="hrv_test_info_procedure_label">手順と実施</string>
+    <string name="hrv_test_title_step_fmt">漸増ステップテスト（%1$d分）</string>
+    <string name="hrv_test_title_ramp">連続ランプテスト</string>
+    <string name="hrv_test_badge_step_4min">推奨 · 高精度</string>
+    <string name="hrv_test_badge_step_3min">コンパクト · ステップテスト</string>
+    <string name="hrv_test_badge_ramp">時間効率的 · MRT補正</string>
+    <string name="hrv_test_step1_warmup_cycling" formatted="false">ウォーミングアップ（10分）：100 W（約45% FTP）で軽く一定に走行。</string>
+    <string name="hrv_test_step1_warmup_running">ウォーミングアップ（10分）：8.0 km/h（7:30 min/km）で軽くジョグ。</string>
+    <string name="hrv_test_step2_step_cycling_fmt">ステップ（%1$d分ごとに+20 W）：各ステップでパワーを一定に維持。最後の2分間が評価されます。</string>
+    <string name="hrv_test_step2_step_running_fmt">ステップ（%1$d分ごとに+0.5 km/h）：各ステップでペースを一定に維持（平坦路またはトレッドミル推奨）。</string>
+    <string name="hrv_test_step2_ramp_cycling">ランプ（+15 W/分）：連続的かつ直線的なパワー上昇（スマートトレーナーのERGモード推奨）。</string>
+    <string name="hrv_test_step2_ramp_running">ランプ（1分あたり+0.25 km/h）：連続的かつ直線的な速度上昇。</string>
+    <string name="hrv_test_step3_completion">サブマックス終了：DFA α1が60秒間0.45を下回るとHRVT1とHRVT2が記録されます（限界まで追い込む必要なし）。</string>
+    <string name="hrv_test_pro_label">メリット：</string>
+    <string name="hrv_test_con_label">デメリット：</string>
+    <string name="hrv_test_pro_step_4min">最高の生理学的精度：2分間の過渡適応後、安定した定常状態の2分間ウィンドウを評価。</string>
+    <string name="hrv_test_con_step_4min">テスト所要時間が長め（ウォームアップを含め約30〜38分）。</string>
+    <string name="hrv_test_pro_step_3min">本格的なステッププロトコルでありながら短縮された所要時間（約25〜30分）。</string>
+    <string name="hrv_test_con_step_3min">4分プロトコルに比べ120秒の評価ウィンドウ前の過渡適応時間（60秒）が短い。</string>
+    <string name="hrv_test_pro_ramp">所要時間が短い（約20〜25分）。段差のない滑らかで連続的な負荷移行。</string>
+    <string name="hrv_test_con_ramp">心拍数/HRVはパワーに対して約45秒遅延（平均応答時間）し、計算上補正されます（+15 W/分で-11 W）。</string>
 
     <!-- Training Zone Comparison & Multi-Session Consensus (ATT-3555 / REQ-PER-037) -->
     <string name="hrv_zone_comparison_title">トレーニングゾーン比較</string>
@@ -272,4 +308,11 @@
     <string name="morning_hrv_tag_rest">休養</string>
     <string name="morning_hrv_btn_save_wellness">朝のウェルネスを保存</string>
     <string name="morning_hrv_wellness_saved_toast">朝のウェルネスが保存されました</string>
+
+    <!-- Morning HRV Check on Start Screen (ATT-7532 / REQ-UI-525) -->
+    <string name="hrv_morning_check_start_button">モーニングチェック</string>
+    <string name="tuning_show_morning_check_on_start_screen_title">スタート画面の朝のHRVチェック</string>
+    <string name="tuning_show_morning_check_on_start_screen_desc">心拍センサーがペアリングされている場合、ワークアウト前にスタート画面に朝のHRVチェックを開始するボタンを表示します。</string>
+    <string name="tuning_morning_check_cutoff_hour_title">モーニングチェック終了時刻</string>
+    <string name="tuning_morning_check_cutoff_hour_desc">スタート画面に %d:00 まで表示されます。</string>
 </resources>

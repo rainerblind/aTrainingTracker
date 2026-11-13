@@ -437,6 +437,26 @@ class HrvReadinessDatabaseManager private constructor(context: Context) {
     }
 
     /**
+     * Checks whether at least one morning HRV readiness entry exists for the given [dateIso] (ATT-7532 / REQ-UI-525.3).
+     *
+     * @param dateIso ISO-8601 calendar date ("YYYY-MM-DD").
+     * @return true if at least one entry has been recorded for [dateIso], false otherwise.
+     */
+    @Synchronized
+    fun hasCompletedMorningCheck(dateIso: String): Boolean {
+        val db = database
+        if (!db.isOpen) return false
+        val query = """
+            SELECT ${HrvReadinessDbHelper.COLUMN_ID} FROM ${HrvReadinessDbHelper.TABLE_HRV_READINESS}
+            WHERE ${HrvReadinessDbHelper.COLUMN_DATE_ISO} = ?
+            LIMIT 1
+        """
+        db.rawQuery(query, arrayOf(dateIso)).use { cursor ->
+            return cursor != null && cursor.moveToFirst()
+        }
+    }
+
+    /**
      * Retrieves the primary valid reading for a specific [dateIso] and [posture] (`REQ-PER-030.3`).
      */
     @Synchronized

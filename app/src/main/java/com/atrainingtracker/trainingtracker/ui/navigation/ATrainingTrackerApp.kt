@@ -201,14 +201,6 @@ fun ATrainingTrackerApp(
         }
     }
 
-    // Attach NavController to Activity for direct intent / broadcast routing
-    DisposableEffect(navController) {
-        activity.onNavControllerReady(navController)
-        onDispose {
-            activity.navController = null
-        }
-    }
-
     // Bind drawerController to Compose DrawerState as Single Source of Truth (REQ-UI-162)
     DisposableEffect(drawerState, scope) {
         drawerController.bindDrawer(
@@ -233,13 +225,6 @@ fun ATrainingTrackerApp(
     LaunchedEffect(currentRoute) {
         val mappedId = NavRoutes.toDrawerItemId(currentRoute)
         drawerController.selectedItemId = mappedId
-    }
-
-    // Restore or route initial destination if non-default selectedItemId
-    LaunchedEffect(Unit) {
-        if (drawerController.selectedItemId != R.id.drawer_start_tracking) {
-            activity.navigateToDrawerItem(drawerController.selectedItemId)
-        }
     }
 
     // Authoritative drawer visibility predicate across all animation phases (REQ-UI-162)
@@ -360,7 +345,7 @@ fun ATrainingTrackerApp(
                     )
                     TrackingTabsScreen(
                         trackingTabsViewModel = trackingTabsViewModel,
-                        onNavigateToHrvTest = { navController.navigate(NavRoutes.HRV_TEST) }
+                        onNavigateToMorningHrv = { navController.navigate(NavRoutes.MORNING_HRV) }
                     )
                 }
 
@@ -642,8 +627,7 @@ fun ATrainingTrackerApp(
                     com.atrainingtracker.trainingtracker.ui.athleteprofile.AthleteProfileScreen(
                         viewModel = athleteProfileViewModel,
                         onOpenDrawer = { activity.openDrawer() },
-                        onNavigateToMorningHrv = { navController.navigate(NavRoutes.MORNING_HRV) },
-                        onNavigateToHrvTest = { navController.navigate(NavRoutes.HRV_TEST) }
+                        onNavigateToMorningHrv = { navController.navigate(NavRoutes.MORNING_HRV) }
                     )
                 }
 
@@ -746,6 +730,22 @@ fun ATrainingTrackerApp(
                         viewModel = hrvRampTestViewModel,
                         onNavigateBack = { navController.popBackStack() }
                     )
+                }
+            }
+
+            // Attach NavController to Activity for direct intent / broadcast routing (ATT-7526)
+            // Positioned inside Scaffold after NavHost to guarantee graph is attached before callbacks run.
+            DisposableEffect(navController) {
+                activity.onNavControllerReady(navController)
+                onDispose {
+                    activity.navController = null
+                }
+            }
+
+            // Restore or route initial destination if non-default selectedItemId (ATT-7526)
+            LaunchedEffect(Unit) {
+                if (drawerController.selectedItemId != R.id.drawer_start_tracking) {
+                    activity.navigateToDrawerItem(drawerController.selectedItemId)
                 }
             }
         }

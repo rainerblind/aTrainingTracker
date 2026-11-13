@@ -20,42 +20,47 @@
 <resources>
     <string name="hrv_rmssd">rMSSD</string>
     <string name="hrv_rmssd_short">rMSSD</string>
-    <string name="hrv_dfa_a1">DFA a1</string>
-    <string name="hrv_dfa_a1_short">a1</string>
+    <string name="hrv_dfa_a1">DFA α1</string>
+    <string name="hrv_dfa_a1_short">α1</string>
     <string name="hrv_artifact_rate">Taxa de artefactos</string>
     <string name="hrv_artifact_rate_short">Art. %</string>
     <string name="hrv_sdnn">SDNN</string>
     <string name="hrv_sdnn_short">SDNN</string>
 
     <!-- Training Zones Tab (ATT-7317 / REQ-TRK-061.4) -->
-    <string name="tab_hrv_dfa_a1">VFC (DFA a1)</string>
+    <string name="tab_hrv_dfa_a1">VFC (DFA α1)</string>
     <string name="hrv_zone_aerobic_base_label">Base Aeróbica (Zona 2)</string>
     <string name="hrv_zone_threshold_transition_label">Transição de Limiar (Zona 3)</string>
     <string name="hrv_zone_anaerobic_label">Alta Intensidade / Anaeróbico (Zona 4)</string>
     <string name="hrv_t1_aerobic_threshold_label">Limiar Aeróbico T1 (HRVT1)</string>
     <string name="hrv_t2_anaerobic_threshold_label">Limiar Anaeróbico T2 (HRVT2)</string>
-    <string name="tuning_physiology_hrv_zones_link">Configurar limiares aeróbico e anaeróbico DFA a1 nas Zonas de Treino</string>
+    <string name="hrv_zone_aerobic_base_desc">Ritmo de resistência base aeróbica, baixo estresse autonômico</string>
+    <string name="hrv_zone_threshold_transition_desc">Transição do limiar aeróbico para anaeróbico, fadiga moderada</string>
+    <string name="hrv_zone_anaerobic_desc">Anaeróbico / alta intensidade, rápida depleção autonômica</string>
+    <string name="hrv_t1_aerobic_threshold_desc">Limiar aeróbico (padrão 0,75). Invariante: T1 \u2265 T2 + 0,05</string>
+    <string name="hrv_t2_anaerobic_threshold_desc">Limiar anaeróbico (padrão 0,50). Invariante: T2 \u2264 T1 - 0,05</string>
+    <string name="tuning_physiology_hrv_zones_link">Configurar limiares aeróbico e anaeróbico DFA α1 nas Zonas de Treino</string>
     <string name="hrv_start_guided_ramp_test">Iniciar teste de limiar guiado</string>
     <string name="hrv_preview_pill_aerobic">Aeróbico</string>
     <string name="hrv_preview_pill_transition">Transição</string>
     <string name="hrv_preview_pill_anaerobic">Anaeróbico</string>
-    <string name="hrv_zones_guidance_desc">Os limiares DFA a1 guiam o ritmo aeróbico e a intensidade do treino. Valores mais altos indicam maior variabilidade fractal (aeróbica). A Zona 2 é verde (&gt; T1), a Zona 3 é laranja (T2..T1) e a Zona 4 é vermelha (&lt; T2).</string>
+    <string name="hrv_zones_guidance_desc">Os limiares DFA α1 guiam o ritmo aeróbico e a intensidade do treino. Valores mais altos indicam maior variabilidade fractal (aeróbica). A Zona 2 é verde (&gt; T1), a Zona 3 é laranja (T2..T1) e a Zona 4 é vermelha (&lt; T2).</string>
 
     <string name="hrv_info_title">Variabilidade da frequência cardíaca e limiares aeróbios</string>
     <string name="hrv_info_trailing_lag_title">Janela deslizante e atraso de ritmo</string>
-    <string name="hrv_info_trailing_lag_desc">O DFA a1 em tempo real é calculado sobre uma janela deslizante de 2 minutos (atualizada a cada 5 segundos) e o rMSSD sobre 60 segundos. Mudanças de ritmo levam de 1 a 2 minutos para se refletir na telemetria autonômica.</string>
+    <string name="hrv_info_trailing_lag_desc">O DFA α1 em tempo real é calculado sobre uma janela deslizante de 2 minutos (atualizada a cada 5 segundos) e o rMSSD sobre 60 segundos. Mudanças de ritmo levam de 1 a 2 minutos para se refletir na telemetria autonômica.</string>
     <string name="hrv_info_sensor_recommendation_title">Recomendações de sensores</string>
-    <string name="hrv_info_sensor_recommendation_desc">Intervalos RR precisos batimento a batimento exigem uma cinta peitoral de ECG sem suavização (como Polar H10, Polar H9, Garmin HRM-Dual, HRM-Pro ou HRM-Pro Plus). Sensores ópticos de pulso e cintas económicas com suavização por firmware (ex. Magene, CooSpo) distorcem intervalos e são inadequadas para DFA a1.</string>
+    <string name="hrv_info_sensor_recommendation_desc">Intervalos RR precisos batimento a batimento exigem uma cinta peitoral de ECG sem suavização (como Polar H10, Polar H9, Garmin HRM-Dual, HRM-Pro ou HRM-Pro Plus). Sensores ópticos de pulso e cintas económicas com suavização por firmware (ex. Magene, CooSpo) distorcem intervalos e são inadequadas para DFA α1.</string>
     <string name="hrv_info_smoothed_warning_title">Fluxo RR suavizado detetado</string>
-    <string name="hrv_info_smoothed_warning_desc">O sensor ativo aplica suavização interna por firmware ou quantização sintética aos intervalos RR. O DFA a1 e as orientações de limiar aeróbio são imprecisos e não confiáveis.</string>
+    <string name="hrv_info_smoothed_warning_desc">O sensor ativo aplica suavização interna por firmware ou quantização sintética aos intervalos RR. O DFA α1 e as orientações de limiar aeróbio são imprecisos e não confiáveis.</string>
     <string name="hrv_info_zones_title">Zonas de limiar aeróbio</string>
-    <string name="hrv_info_zones_desc">DFA a1 &gt; 0,75 indica ritmo de resistência aeróbia (Zona 2). Valores entre 0,75 e 0,50 refletem a transição de limiar (Zona 3). Valores abaixo de 0,50 indicam alta intensidade anaeróbia (Zona 4).</string>
+    <string name="hrv_info_zones_desc">DFA α1 &gt; 0,75 indica ritmo de resistência aeróbia (Zona 2). Valores entre 0,75 e 0,50 refletem a transição de limiar (Zona 3). Valores abaixo de 0,50 indicam alta intensidade anaeróbia (Zona 4).</string>
     <string name="hrv_info_disclaimer_title">Aviso médico</string>
     <string name="hrv_info_disclaimer_desc">As métricas autonômicas de HRV no aTrainingTracker destinam-se à orientação desportiva e não substituem uma avaliação médica. Arritmias cardíacas ou batimentos ectópicos podem afetar as estimativas de limiar.</string>
 
     <!-- Morning Resting HRV Check (ATT-3556 / REQ-PER-032) -->
     <string name="morning_hrv_title">Verificação matinal de VFC</string>
-    <string name="morning_hrv_subtitle">Protocolo matinal de prontidão autonômica</string>
+    <string name="morning_hrv_subtitle">Medição de repouso logo após acordar</string>
     <string name="morning_hrv_posture_label">Postura</string>
     <string name="morning_hrv_posture_supine">Supina</string>
     <string name="morning_hrv_posture_seated">Sentada</string>
@@ -68,9 +73,10 @@
     <string name="morning_hrv_state_stabilizing">Estabilizando: %1$ds</string>
     <string name="morning_hrv_state_measuring">Medindo: %1$ds / %2$ds</string>
     <string name="morning_hrv_state_completed">Medição concluída</string>
+    <string name="morning_hrv_result_title">Resultado da medição</string>
     <string name="morning_hrv_btn_start">Iniciar medição</string>
     <string name="morning_hrv_btn_cancel">Cancelar</string>
-    <string name="morning_hrv_btn_save">Salvar medição</string>
+    <string name="morning_hrv_btn_save">Salvar</string>
     <string name="morning_hrv_btn_discard">Descartar</string>
     <string name="morning_hrv_instructions_title">Protocolo padronizado</string>
     <string name="morning_hrv_instructions_desc">Meça ao acordar após esvaziar a bexiga. Permaneça imóvel e respire normalmente sem falar. Mantenha a mesma postura para comparações basais confiáveis.</string>
@@ -104,33 +110,33 @@
     <string name="hrv_readiness_swc_baseline_label">Linha de base SWC 60d</string>
     <string name="hrv_readiness_rolling_avg_label">Média móvel 7d</string>
 
-    <!-- Interactive DFA a1 / rMSSD Charts & Scatter Plot in Workout Details (ATT-3544 / REQ-PER-035) -->
-    <string name="hrv_scatter_card_title">Dinâmica de limiares aeróbios DFA a1</string>
-    <string name="hrv_scatter_card_subtitle">a1 vs. frequência cardíaca e potência</string>
-    <string name="hrv_scatter_aerobic_threshold">Limiar aeróbio (a1 = 0,75)</string>
-    <string name="hrv_scatter_anaerobic_threshold">Limiar anaeróbio (a1 = 0,50)</string>
-    <string name="hrv_scatter_aerobic_threshold_fmt">Limiar aeróbio (a1 = %1$.2f)</string>
-    <string name="hrv_scatter_anaerobic_threshold_fmt">Limiar anaeróbio (a1 = %1$.2f)</string>
+    <!-- Interactive DFA α1 / rMSSD Charts & Scatter Plot in Workout Details (ATT-3544 / REQ-PER-035) -->
+    <string name="hrv_scatter_card_title">Dinâmica de limiares aeróbios DFA α1</string>
+    <string name="hrv_scatter_card_subtitle">α1 vs. frequência cardíaca e potência</string>
+    <string name="hrv_scatter_aerobic_threshold">Limiar aeróbio (α1 = 0,75)</string>
+    <string name="hrv_scatter_anaerobic_threshold">Limiar anaeróbio (α1 = 0,50)</string>
+    <string name="hrv_scatter_aerobic_threshold_fmt">Limiar aeróbio (α1 = %1$.2f)</string>
+    <string name="hrv_scatter_anaerobic_threshold_fmt">Limiar anaeróbio (α1 = %1$.2f)</string>
     <string name="hrv_scatter_toggle_hr">Frequência cardíaca</string>
     <string name="hrv_scatter_toggle_power">Potência</string>
     <string name="hrv_scatter_toggle_pace">Ritmo</string>
     <string name="hrv_scatter_smoothed_warning_title">Fluxo de sensor suavizado</string>
-    <string name="hrv_scatter_smoothed_warning_desc">Os intervalos RR gravados exibem suavização por firmware ou quantização sintética. As estimativas de limiar aeróbio (a1 = 0,75 / 0,50) podem estar distorcidas.</string>
+    <string name="hrv_scatter_smoothed_warning_desc">Os intervalos RR gravados exibem suavização por firmware ou quantização sintética. As estimativas de limiar aeróbio (α1 = 0,75 / 0,50) podem estar distorcidas.</string>
     <string name="hrv_scatter_artifact_suppressed">Intervalos com altos artefatos (&gt;5%%) suprimidos</string>
     <string name="hrv_scatter_no_data">Nenhum dado de VFC disponível para este treino</string>
     <string name="hrv_chart_artifact_gap_label">Intervalo de artefatos</string>
 
-    <!-- DFA a1 Threshold Tuning & Dynamic Zones (ATT-6715 / REQ-TRK-061) -->
-    <string name="tuning_dfa_a1_t1_title">Limiar Aeróbio DFA a1 (T1)</string>
+    <!-- DFA α1 Threshold Tuning & Dynamic Zones (ATT-6715 / REQ-TRK-061) -->
+    <string name="tuning_dfa_a1_t1_title">Limiar Aeróbio DFA α1 (T1)</string>
     <string name="tuning_dfa_a1_t1_desc">Limiar que separa a base aeróbia (Zona 2) da transição (Zona 3). Mais alto = mais fractal / aeróbio.</string>
-    <string name="tuning_dfa_a1_t2_title">Limiar Anaeróbio DFA a1 (T2)</string>
+    <string name="tuning_dfa_a1_t2_title">Limiar Anaeróbio DFA α1 (T2)</string>
     <string name="tuning_dfa_a1_t2_desc">Limiar que separa a transição (Zona 3) da intensidade anaeróbia (Zona 4). Mais alto = mais fractal / aeróbio.</string>
     <string name="tuning_dfa_a1_default">Padrão: %1$.2f (Invariante: T1 \u2265 T2 + 0.05)</string>
-    <string name="hrv_info_zones_desc_fmt">DFA a1 &gt; %1$.2f indica ritmo de resistência aeróbia (Zona 2). Valores entre %1$.2f e %2$.2f refletem a transição de limiar (Zona 3). Valores abaixo de %2$.2f indicam alta intensidade anaeróbia (Zona 4).</string>
+    <string name="hrv_info_zones_desc_fmt">DFA α1 &gt; %1$.2f indica ritmo de resistência aeróbia (Zona 2). Valores entre %1$.2f e %2$.2f refletem a transição de limiar (Zona 3). Valores abaixo de %2$.2f indicam alta intensidade anaeróbia (Zona 4).</string>
 
     <!-- Configurable Artifact Gate Threshold (ATT-6714 / REQ-TRK-060.4) -->
     <string name="tuning_hrv_artifact_gate_title">Limiar de artefatos HRV</string>
-    <string name="tuning_hrv_artifact_gate_desc" formatted="false">Taxa máxima de artefatos na janela antes da supressão do DFA a1. Faixa: 3,0% a 5,0%.</string>
+    <string name="tuning_hrv_artifact_gate_desc" formatted="false">Taxa máxima de artefatos na janela antes da supressão do DFA α1. Faixa: 3,0% a 5,0%.</string>
     <string name="tuning_hrv_artifact_gate_default">Padrão: %1$.1f%%</string>
 
     <!-- Morning HRV CTA & Onboarding in Fitness & Physiology (ATT-6720 / REQ-UI-513) -->
@@ -142,7 +148,7 @@
     <string name="hrv_history_title">Histórico de VFC matinal</string>
 
     <!-- Lag-Aligned, Confidence-Gated HRVT1/HRVT2 Thresholds (ATT-3554 / REQ-PER-036) -->
-    <string name="hrv_threshold_card_title">Estimativas de limiar DFA a1 (HRVT1 / HRVT2)</string>
+    <string name="hrv_threshold_card_title">Estimativas de limiar DFA α1 (HRVT1 / HRVT2)</string>
     <string name="hrv_threshold_card_subtitle">Limiares fisiológicos ajustados por atraso e validados por confiança</string>
     <string name="hrv_threshold_hrvt1_label">Limiar aeróbio (HRVT1)</string>
     <string name="hrv_threshold_hrvt2_label">Limiar anaeróbio (HRVT2)</string>
@@ -157,15 +163,15 @@
     <string name="hrv_threshold_stat_neff">N: %1$d min</string>
     <string name="hrv_threshold_stat_neff_steps">N: %1$d degraus</string>
     <string name="hrv_threshold_stat_artifact">Artefatos médios: %1$.1f%%</string>
-    <string name="hrv_threshold_diag_steady">Resistência constante: DFA a1 permaneceu acima da faixa de limiar</string>
+    <string name="hrv_threshold_diag_steady">Resistência constante: DFA α1 permaneceu acima da faixa de limiar</string>
     <string name="hrv_threshold_diag_high_artifact">Alta taxa de artefatos RR (%1$.1f%% &gt; 5.0%%)</string>
     <string name="hrv_threshold_diag_short_duration">Duração de transição insuficiente (N = %1$d &lt; %2$d)</string>
     <string name="hrv_threshold_diag_low_r2">Baixa correlação linear (R² = %1$.2f &lt; %2$.2f)</string>
     <string name="hrv_threshold_no_estimate">--</string>
     <string name="hrv_threshold_informative_only">Apenas informativo; excluído das atualizações de zona</string>
 
-    <!-- Guided DFA a1 Ramp/Step Test Screen (ATT-4969 / REQ-TRK-071) -->
-    <string name="hrv_test_title">Teste guiado de limiares DFA a1</string>
+    <!-- Guided DFA α1 Ramp/Step Test Screen (ATT-4969 / REQ-TRK-071) -->
+    <string name="hrv_test_title">Teste guiado de limiares DFA α1</string>
     <string name="hrv_test_subtitle">Protocolo de limiares aeróbico e anaeróbico</string>
     <string name="hrv_test_protocol_label">Tipo de protocolo</string>
     <string name="hrv_test_protocol_step">Teste de degraus progressivos</string>
@@ -180,7 +186,7 @@
     <string name="hrv_test_increment_label">Incremento por degrau</string>
     <string name="hrv_test_warmup_label">Duração do aquecimento</string>
     <string name="hrv_test_warmup_desc">Aquecimento constante de 10 minutos antes dos degraus do protocolo</string>
-    <string name="hrv_test_preflight_title">Verificação prévia do sensor</string>
+    <string name="hrv_test_preflight_title">Estado do sensor e do sinal</string>
     <string name="hrv_test_preflight_checking">Verificando fluxo RR de ECG e qualidade do sinal…</string>
     <string name="hrv_test_preflight_pass" formatted="false">Alta qualidade do sensor (Artefatos ≤ 3,0%)</string>
     <string name="hrv_test_preflight_warning" formatted="false">Qualidade moderada do sensor (Artefatos 3,0–5,0%)</string>
@@ -193,14 +199,44 @@
     <string name="hrv_test_target_power">Alvo: %1$d W</string>
     <string name="hrv_test_target_pace">Alvo: %1$s</string>
     <string name="hrv_test_time_remaining">Tempo restante: %1$s</string>
-    <string name="hrv_test_live_a1">a1 ao vivo: %1$.2f</string>
+    <string name="hrv_test_live_a1">α1 ao vivo: %1$.2f</string>
     <string name="hrv_test_live_artifacts">Artefatos: %1$.1f%%</string>
     <string name="hrv_test_early_complete_title">Limiares capturados!</string>
-    <string name="hrv_test_early_complete_desc">O DFA a1 caiu abaixo de 0,45. Ambos HRVT1 e HRVT2 foram capturados. Agora você pode fazer a transição para o desaquecimento sem precisar chegar à exaustão.</string>
+    <string name="hrv_test_early_complete_desc">O DFA α1 caiu abaixo de 0,45. Ambos HRVT1 e HRVT2 foram capturados. Agora você pode fazer a transição para o desaquecimento sem precisar chegar à exaustão.</string>
     <string name="hrv_test_btn_start">Iniciar teste</string>
     <string name="hrv_test_btn_finish">Finalizar teste</string>
     <string name="hrv_test_btn_cooldown">Iniciar resfriamento</string>
     <string name="hrv_test_btn_cancel">Cancelar teste</string>
+
+    <!-- Active Pacing Guidance (ATT-7529) -->
+    <string name="hrv_test_pacing_target_header">Alvo</string>
+    <string name="hrv_test_pacing_actual_header">Atual (Real)</string>
+    <string name="hrv_test_live_power_fmt">Potência: %1$d W</string>
+    <string name="hrv_test_live_speed_fmt">Velocidade: %1$.1f km/h</string>
+    <string name="hrv_test_live_hr_fmt">FC: %1$d bpm</string>
+
+    <!-- Protocol Info & Pros/Cons (ATT-7529) -->
+    <string name="hrv_test_info_procedure_label">Procedimento e execução</string>
+    <string name="hrv_test_title_step_fmt">Teste progressivo de degraus (%1$d min)</string>
+    <string name="hrv_test_title_ramp">Teste contínuo de rampa</string>
+    <string name="hrv_test_badge_step_4min">Recomendado · Alta precisão</string>
+    <string name="hrv_test_badge_step_3min">Compacto · Teste de degraus</string>
+    <string name="hrv_test_badge_ramp">Eficiente no tempo · Corrigido por MRT</string>
+    <string name="hrv_test_step1_warmup_cycling" formatted="false">Aquecimento (10 min): Pedalar suavemente a 100 W (~45% FTP).</string>
+    <string name="hrv_test_step1_warmup_running">Aquecimento (10 min): Corrida suave de aquecimento a 8,0 km/h (7:30 min/km).</string>
+    <string name="hrv_test_step2_step_cycling_fmt">Degraus (+20 W a cada %1$d min): Manter potência constante por degrau; os últimos 2 min de cada degrau são avaliados.</string>
+    <string name="hrv_test_step2_step_running_fmt">Degraus (+0,5 km/h a cada %1$d min): Manter ritmo constante por degrau (pista plana ou esteira recomendada).</string>
+    <string name="hrv_test_step2_ramp_cycling">Rampa (+15 W/min): Aumento contínuo e linear de potência (ideal no modo ERG do rolo inteligente).</string>
+    <string name="hrv_test_step2_ramp_running">Rampa (+0,25 km/h por min): Aumento contínuo e linear de velocidade.</string>
+    <string name="hrv_test_step3_completion">Fim submáximo: Assim que o DFA α1 cair abaixo de 0,45 por 60 s, HRVT1 e HRVT2 estão registados – sem exaustão!</string>
+    <string name="hrv_test_pro_label">Vantagem:</string>
+    <string name="hrv_test_con_label">Desvantagem:</string>
+    <string name="hrv_test_pro_step_4min">Maior precisão fisiológica: após 2 min de estabilização, é avaliada uma janela estável de 2 min em estado estacionário.</string>
+    <string name="hrv_test_con_step_4min">Duração de teste mais longa (~30–38 min incluindo aquecimento).</string>
+    <string name="hrv_test_pro_step_3min">Autêntico protocolo de degraus com duração reduzida (~25–30 min).</string>
+    <string name="hrv_test_con_step_3min">Tempo de estabilização mais curto (60 s) antes da janela de 120 s do que no protocolo de 4 min.</string>
+    <string name="hrv_test_pro_ramp">Menor duração total (~20–25 min) e progressão suave e contínua de carga sem saltos.</string>
+    <string name="hrv_test_con_ramp">A frequência cardíaca e a HRV atrasam-se cerca de 45 s em relação à carga (tempo médio de resposta), corrigido matematicamente (-11 W a +15 W/min).</string>
 
     <!-- Training Zone Comparison & Multi-Session Consensus (ATT-3555 / REQ-PER-037) -->
     <string name="hrv_zone_comparison_title">Comparação de zonas de treino</string>
@@ -272,4 +308,11 @@
     <string name="morning_hrv_tag_rest">Descanso</string>
     <string name="morning_hrv_btn_save_wellness">Salvar bem-estar matinal</string>
     <string name="morning_hrv_wellness_saved_toast">Bem-estar matinal salvo</string>
+
+    <!-- Morning HRV Check on Start Screen (ATT-7532 / REQ-UI-525) -->
+    <string name="hrv_morning_check_start_button">Checagem matinal</string>
+    <string name="tuning_show_morning_check_on_start_screen_title">Checagem VFC matinal na tela inicial</string>
+    <string name="tuning_show_morning_check_on_start_screen_desc">Exibe um botão na tela inicial de monitoramento antes do treino para iniciar a checagem VFC matinal se um sensor de frequência cardíaca estiver emparelhado.</string>
+    <string name="tuning_morning_check_cutoff_hour_title">Horário limite da checagem matinal</string>
+    <string name="tuning_morning_check_cutoff_hour_desc">Exibido na tela inicial até as %d:00.</string>
 </resources>

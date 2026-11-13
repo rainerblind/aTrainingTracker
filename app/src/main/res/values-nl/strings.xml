@@ -84,6 +84,7 @@
     <string name="add_sensor">sensor toevoegen</string>
 
     <string name="commute">woon-werk</string>
+    <string name="indoor_short">Indoor</string>
     <string name="trainer_general">indoor trainer</string>
     <string name="trainer_bike">indoor trainer</string>
     <string name="trainer_run">loopband</string>

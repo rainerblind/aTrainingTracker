@@ -126,4 +126,17 @@ class EditDeviceViewModelTest {
             methodNames.contains("resetTirePressureBaseline")
         )
     }
+
+    /**
+     * REQ-CON-031.5 / TST-CON-031.5: Verify EditDeviceViewModel isolates draft state from live tail light controls.
+     * EditDeviceViewModel has zero radar tail light fields or callbacks; tail light mode operates directly via RadarLightController.
+     */
+    @Test
+    fun testEditDeviceViewModel_isolatesRadarTailLightStateFromDraftData() {
+        val methodNames = EditDeviceViewModel::class.java.declaredMethods.map { it.name }
+        assertFalse(
+            "EditDeviceViewModel must NOT manage radar tail light mode in draft state",
+            methodNames.any { it.contains("RadarLight", ignoreCase = true) || it.contains("TailLight", ignoreCase = true) }
+        )
+    }
 }

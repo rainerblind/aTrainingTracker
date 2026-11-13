@@ -198,6 +198,80 @@ class DevicesDatabaseManagerTest {
     }
 
     @Test
+    fun testHasPairedHeartRateDevices_whenPairedHrmExists_returnsTrue() {
+        val populatedCursor = MockCursorFactory.create(
+            columns = listOf(DevicesDatabaseManager.DevicesDbHelper.C_ID),
+            rows = listOf(listOf(101L))
+        )
+        val selectionSlot = slot<String>()
+        val selectionArgsSlot = slot<Array<String>>()
+        every {
+            mockDb.query(
+                eq(DevicesDatabaseManager.DevicesDbHelper.DEVICES),
+                any<Array<String>>(),
+                capture(selectionSlot),
+                capture(selectionArgsSlot),
+                isNull(),
+                isNull(),
+                isNull(),
+                eq("1")
+            )
+        } returns populatedCursor
+
+        val manager = object : DevicesDatabaseManager(mockContext) {
+            override fun getDatabase(): SQLiteDatabase = mockDb
+        }
+
+        val result = manager.hasPairedHeartRateDevices()
+
+        assertTrue("Expected true when paired HRM device exists", result)
+        assertTrue("Selection must filter on PAIRED and DEVICE_TYPE", selectionSlot.captured.contains(DevicesDatabaseManager.DevicesDbHelper.PAIRED) && selectionSlot.captured.contains(DevicesDatabaseManager.DevicesDbHelper.DEVICE_TYPE))
+        assertEquals("HRM", selectionArgsSlot.captured[0])
+        verify(exactly = 1) { populatedCursor.close() }
+    }
+
+    @Test
+    fun testHasPairedHeartRateDevices_whenNoHrmDevice_returnsFalse() {
+        val emptyCursor = MockCursorFactory.create(
+            columns = listOf(DevicesDatabaseManager.DevicesDbHelper.C_ID),
+            rows = emptyList()
+        )
+        every {
+            mockDb.query(
+                any<String>(),
+                any<Array<String>>(),
+                any<String>(),
+                any<Array<String>>(),
+                isNull(),
+                isNull(),
+                isNull(),
+                any<String>()
+            )
+        } returns emptyCursor
+
+        val manager = object : DevicesDatabaseManager(mockContext) {
+            override fun getDatabase(): SQLiteDatabase = mockDb
+        }
+
+        assertFalse("Expected false when no paired HRM exists", manager.hasPairedHeartRateDevices())
+        verify(exactly = 1) { emptyCursor.close() }
+    }
+
+    @Test
+    fun testHasPairedHeartRateDevices_whenDbNullOrClosed_returnsFalse() {
+        val managerNull = object : DevicesDatabaseManager(mockContext) {
+            override fun getDatabase(): SQLiteDatabase? = null
+        }
+        assertFalse("Expected false when db is null", managerNull.hasPairedHeartRateDevices())
+
+        every { mockDb.isOpen } returns false
+        val managerClosed = object : DevicesDatabaseManager(mockContext) {
+            override fun getDatabase(): SQLiteDatabase = mockDb
+        }
+        assertFalse("Expected false when db is closed", managerClosed.hasPairedHeartRateDevices())
+    }
+
+    @Test
     fun testInsertNewBluetoothDeviceIntoDB_withPairedTrue_storesPairedOne() {
         val emptyCursor = MockCursorFactory.create(
             columns = listOf(DevicesDatabaseManager.DevicesDbHelper.C_ID),

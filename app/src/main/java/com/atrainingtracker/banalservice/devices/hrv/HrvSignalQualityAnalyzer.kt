@@ -44,6 +44,8 @@ object HrvSignalQualityAnalyzer {
     const val SMOOTHED_DFA_A1_THRESHOLD: Double = 1.35
     const val SMOOTHED_TPR_THRESHOLD: Double = 0.20
     const val SMOOTHED_TPR_DFA_A1_THRESHOLD: Double = 1.30
+    const val SMOOTHED_DISCORDANT_TPR_THRESHOLD: Double = 0.28
+    const val SMOOTHED_DISCORDANT_MIN_RMSSD_MS: Double = 2.0
 
     /**
      * Analyzes an RR interval stream and classifies signal quality.
@@ -122,8 +124,14 @@ object HrvSignalQualityAnalyzer {
         }
 
         // 2. Smoothed Stream detection
+        // ATT-7533: Authentic Polar H10 ECG during low-vagal/sympathetic/evening states has low rMSSD (< 10ms)
+        // with baroreflex Mayer-wave drift (a1 > 1.35) but normal respiratory sign reversals (TPR >= 0.28).
+        // Require either suppressed turning points (TPR < 0.28) or extreme variance collapse (rMSSD < 2.0ms).
+        val hasDiscordantTprOrVariance = (tpr != null && tpr < SMOOTHED_DISCORDANT_TPR_THRESHOLD) ||
+            (computedRmssd != null && computedRmssd < SMOOTHED_DISCORDANT_MIN_RMSSD_MS)
         val isDiscordant = computedRmssd != null && computedRmssd < SMOOTHED_RMSSD_THRESHOLD_MS &&
-            computedDfa != null && computedDfa > SMOOTHED_DFA_A1_THRESHOLD
+            computedDfa != null && computedDfa > SMOOTHED_DFA_A1_THRESHOLD &&
+            hasDiscordantTprOrVariance
         val isTprSmoothed = tpr != null && tpr < SMOOTHED_TPR_THRESHOLD &&
             computedDfa != null && computedDfa > SMOOTHED_TPR_DFA_A1_THRESHOLD
 
@@ -138,9 +146,10 @@ object HrvSignalQualityAnalyzer {
                 )
                 isDiscordant -> String.format(
                     Locale.US,
-                    "Smoothed stream (discordance): rMSSD=%.1f ms (< 10 ms) with a1=%.2f (> 1.35)",
+                    "Smoothed stream (discordance): rMSSD=%.1f ms (< 10 ms) with a1=%.2f (> 1.35) and TPR=%s",
                     computedRmssd,
-                    computedDfa
+                    computedDfa,
+                    tpr?.let { String.format(Locale.US, "%.2f", it) } ?: "n/a"
                 )
                 else -> String.format(
                     Locale.US,

@@ -118,6 +118,8 @@ fun AdvancedTuningScreen(
     var enableMorningEnergy by remember { mutableStateOf(TuningPreferencesDefaults.DEFAULT_ENABLE_MORNING_ENERGY) }
     var enableMuscleSoreness by remember { mutableStateOf(TuningPreferencesDefaults.DEFAULT_ENABLE_MUSCLE_SORENESS) }
     var enableContextTags by remember { mutableStateOf(TuningPreferencesDefaults.DEFAULT_ENABLE_CONTEXT_TAGS) }
+    var showMorningCheckOnStartScreen by remember { mutableStateOf(TuningPreferencesDefaults.DEFAULT_SHOW_MORNING_CHECK_ON_START_SCREEN) }
+    var morningCheckCutoffHour by remember { mutableStateOf(TuningPreferencesDefaults.DEFAULT_MORNING_CHECK_CUTOFF_HOUR) }
     var sensorSearchPrefs by remember { mutableStateOf(SensorSearchPreferences.load(context)) }
 
     var workoutCardPrefs by remember { mutableStateOf(WorkoutCardSectionPreferences()) }; var isAftermathPrefsInitialized by remember { mutableStateOf(false) }
@@ -163,6 +165,8 @@ fun AdvancedTuningScreen(
         enableMorningEnergy = config.enableMorningEnergy
         enableMuscleSoreness = config.enableMuscleSoreness
         enableContextTags = config.enableContextTags
+        showMorningCheckOnStartScreen = config.showMorningCheckOnStartScreen
+        morningCheckCutoffHour = config.morningCheckCutoffHour
     }
     var isInitialized by remember { mutableStateOf(false) }
     LaunchedEffect(persistedConfig) {
@@ -216,7 +220,9 @@ fun AdvancedTuningScreen(
             enableSleepDurationAndQuality = enableSleepDurationAndQuality,
             enableMorningEnergy = enableMorningEnergy,
             enableMuscleSoreness = enableMuscleSoreness,
-            enableContextTags = enableContextTags
+            enableContextTags = enableContextTags,
+            showMorningCheckOnStartScreen = showMorningCheckOnStartScreen,
+            morningCheckCutoffHour = morningCheckCutoffHour
         )
         scope.launch {
             tuningDataStore.saveTuningConfig(newConfig)
@@ -421,6 +427,10 @@ fun AdvancedTuningScreen(
                     enableMorningEnergy = enableMorningEnergy, onEnableMorningEnergyChange = { enableMorningEnergy = it },
                     enableMuscleSoreness = enableMuscleSoreness, onEnableMuscleSorenessChange = { enableMuscleSoreness = it },
                     enableContextTags = enableContextTags, onEnableContextTagsChange = { enableContextTags = it },
+                    showMorningCheckOnStartScreen = showMorningCheckOnStartScreen,
+                    onShowMorningCheckOnStartScreenChange = { showMorningCheckOnStartScreen = it },
+                    morningCheckCutoffHour = morningCheckCutoffHour,
+                    onMorningCheckCutoffHourChange = { morningCheckCutoffHour = it },
                     showRpeAndFeel = workoutCardPrefs.showRpeAndFeel,
                     onShowRpeAndFeelChange = { workoutCardPrefs = workoutCardPrefs.copy(showRpeAndFeel = it) }
                 )

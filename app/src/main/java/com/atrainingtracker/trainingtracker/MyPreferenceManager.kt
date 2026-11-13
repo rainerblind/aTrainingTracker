@@ -19,6 +19,8 @@
 package com.atrainingtracker.trainingtracker
 
 import android.content.Context
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import com.atrainingtracker.util.safeEnumValueOf
@@ -43,7 +45,21 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 
-private val Context.dataStore by preferencesDataStore(name = "user_preferences")
+private val Context.backingUserPreferencesDataStore by preferencesDataStore(name = "user_preferences")
+
+private fun resolveUserPreferencesDataStore(context: Context): DataStore<Preferences> {
+    return try {
+        val targetContext = context.applicationContext ?: context
+        val filesDir = targetContext.filesDir
+        if (filesDir != null && java.io.File(filesDir, "probe").path.isNotEmpty()) {
+            targetContext.backingUserPreferencesDataStore
+        } else {
+            com.atrainingtracker.trainingtracker.settings.InMemoryPreferencesDataStore()
+        }
+    } catch (_: Throwable) {
+        com.atrainingtracker.trainingtracker.settings.InMemoryPreferencesDataStore()
+    }
+}
 
 typealias WorkoutListCardPreferences = WorkoutCardSectionPreferences
 
@@ -128,7 +144,7 @@ data class EditWorkoutFieldPreferences(
 )
 
 class MyPreferenceManager(context: Context) {
-    private val dataStore = context.dataStore
+    private val dataStore = resolveUserPreferencesDataStore(context)
     private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     companion object {

@@ -99,6 +99,7 @@
     <string name="add_sensor">add sensor</string>
 
     <string name="commute">commute</string>
+    <string name="indoor_short">Indoor</string>
     <string name="trainer_general">indoor trainer</string>
     <string name="trainer_bike">indoor trainer</string>
     <string name="trainer_run">treadmill</string>

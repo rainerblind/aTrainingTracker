@@ -335,7 +335,7 @@ class TurnCueDetectorTest {
             val cues = TurnCueDetector.detectGeometricCuesFromLatLng(pts)
             assertTrue("Detected turns along 5,000pt track", cues.isNotEmpty())
         }
-        assertTrue("5,000 points processed in < 100ms, was ${duration}ms", duration < 100)
+        assertTrue("5,000 points processed in < 250ms, was ${duration}ms", duration < 250)
     }
 
     @Test

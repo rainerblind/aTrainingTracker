@@ -1091,8 +1091,8 @@
 ### TST-SET-101: **Exercise Session & Telemetry Record Mapping Unit Test Suite** [Verified]
 - **Requirement(s)**: `REQ-SET-101`
 - **Component**: `HealthConnectRecordMapper.kt`, `HealthConnectRecordMapperTest.kt`, `HealthConnectManager.kt`
-- **Jira**: `ATT-3052`, `ATT-6711`
-- **Status**: Specified
+- **Jira**: `ATT-3052`, `ATT-6711`, `ATT-7668`
+- **Status**: Verified
 - **Test Description**:
   1. *Sport Type to Exercise Type Mapping Test (`TST-SET-101.1`)*:
   • Assert `BSportType.BIKE` -> `EXERCISE_TYPE_BIKING`, `BSportType.RUN` -> `EXERCISE_TYPE_RUNNING`, trainer -> `EXERCISE_TYPE_BIKING_STATIONARY`, treadmill -> `EXERCISE_TYPE_RUNNING_TREADMILL`, and unknown -> `EXERCISE_TYPE_OTHER_WORKOUT`.
@@ -1110,6 +1110,9 @@
   • Verify series with >2,000 samples are partitioned into chunks containing $\le 2,000$ samples each.
   5. *Repository Layering Architecture Test (`TST-SET-101.5`)*:
   • Verify `HealthConnectRecordMapper` accesses samples via `WorkoutSamplesRepository`.
+  6. *Route Timestamp Monotonicity & Boundary Test (`TST-SET-101.6`)*:
+  • Verify multiple GPS sample rows with duplicate whole-second timestamps are deduplicated and strictly ascending (`sortedRoute[i].time < sortedRoute[i+1].time`), ensuring `ExerciseRoute` constructs without `IllegalArgumentException`.
+  • Verify workouts with GPS points at or beyond `startTime + durationSec` extend `sessionRecord.endTime` so `maxRouteTime < sessionRecord.endTime` holds, preventing `ExerciseSessionRecord` time range violation (`ATT-7668`).
 
 ### TST-SET-102: **Trackless Indoor Workout Export Unit Test Suite** [Verified]
 - **Requirement(s)**: `REQ-SET-102`

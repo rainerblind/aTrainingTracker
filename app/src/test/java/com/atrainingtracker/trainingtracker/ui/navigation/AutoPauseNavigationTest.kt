@@ -60,21 +60,23 @@ class AutoPauseNavigationTest {
         assertNotNull("Settings drawer group must exist", settingsGroup)
 
         val items = settingsGroup!!.items
-        val sportTypesIndex = items.indexOfFirst { it.id == R.id.drawer_sport_types }
         val trainingZonesIndex = items.indexOfFirst { it.id == R.id.drawer_training_zones }
+        val sportTypesIndex = items.indexOfFirst { it.id == R.id.drawer_sport_types }
+        val displaySettingsIndex = items.indexOfFirst { it.id == R.id.drawer_display_settings }
         val autoPauseIndex = items.indexOfFirst { it.id == R.id.drawer_auto_pause }
 
-        assertTrue("drawer_sport_types must exist in settings group", sportTypesIndex >= 0)
         assertTrue("drawer_training_zones must exist in settings group (REQ-UI-513.2)", trainingZonesIndex >= 0)
+        assertTrue("drawer_sport_types must exist in settings group", sportTypesIndex >= 0)
+        assertTrue("drawer_display_settings must exist in settings group", displaySettingsIndex >= 0)
         assertTrue("drawer_auto_pause must exist in settings group", autoPauseIndex >= 0)
         assertEquals(
-            "drawer_training_zones must be placed directly below drawer_sport_types in the Settings group (REQ-UI-513.2)",
-            sportTypesIndex + 1,
-            trainingZonesIndex
+            "drawer_sport_types must be placed directly below drawer_training_zones in the Settings group (REQ-UI-513.2)",
+            trainingZonesIndex + 1,
+            sportTypesIndex
         )
         assertEquals(
-            "drawer_auto_pause must be placed directly below drawer_training_zones in the Settings group (REQ-UI-513.2)",
-            trainingZonesIndex + 1,
+            "drawer_auto_pause must be placed directly below drawer_display_settings in the Settings group (REQ-UI-513.2)",
+            displaySettingsIndex + 1,
             autoPauseIndex
         )
 

@@ -21,6 +21,7 @@ package com.atrainingtracker.trainingtracker.ui.athleteprofile
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.MyUnits
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.database.AthleteMetricEntry
@@ -49,6 +50,28 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+
+/**
+ * Resolves the list of active tab string resource IDs for the Fitness & Physiology hub
+ * in physiological hierarchy order (REQ-UI-513.4, TST-UI-513.3):
+ * 1. Baseline Anthropometrics & Thresholds (Body & Thresholds)
+ * 2. Training Load & Fatigue Progression (Banister PMC, conditional on [enablePmcModel])
+ * 3. Autonomic Recovery & Readiness (HRV & Readiness)
+ * 4. Longitudinal Efficiency (Cardio-Power, conditional on [enableCardioPowerDynamics])
+ */
+fun resolveFitnessHubTabs(
+    enablePmcModel: Boolean,
+    enableCardioPowerDynamics: Boolean
+): List<Int> = buildList {
+    add(R.string.fitness_tab_body)
+    if (enablePmcModel) {
+        add(R.string.fitness_tab_pmc)
+    }
+    add(R.string.fitness_tab_hrv)
+    if (enableCardioPowerDynamics) {
+        add(R.string.fitness_tab_cardio_power)
+    }
+}
 
 /**
  * Pure helper resolving which [PlotMetricType] pills are visible in [AthleteProfileScreen] (`REQ-UI-403`).

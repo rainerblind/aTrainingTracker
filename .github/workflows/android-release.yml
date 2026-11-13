@@ -4,6 +4,7 @@ on:
   push:
     tags:
       - 'v*'
+      - 'V*'
       - 'release-*'
   workflow_dispatch:
 
@@ -120,6 +121,11 @@ jobs:
             app/build/test-results/testDebugUnitTest/
             app/build/reports/tests/testDebugUnitTest/
             build-evidence/junit-test-results-*
+
+      - name: Verify release candidate system evidence (ASPICE SYS.4 & SYS.5)
+        run: |
+          TAG_NAME="${GITHUB_REF_NAME:-release}"
+          python3 tools/generate_release_verification_summary.py --tag "${TAG_NAME}" --fail-on-deviations
 
       - name: Build release APK and AAB
         env:

@@ -23,6 +23,7 @@ import android.hardware.Sensor
 import android.hardware.SensorManager
 import android.util.Log
 import com.atrainingtracker.banalservice.devices.bluetooth_le.BTLERadarDevice
+import com.atrainingtracker.trainingtracker.settings.RadarLightControlMode
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkStatic
@@ -182,6 +183,63 @@ class RadarLightControllerTest {
         RadarLightController.onWorkoutStarted(mockContext)
         assertEquals(RadarLightMode.DAY_FLASH, RadarLightController.currentMode.value)
         verify { mockDevice.setLightMode(RadarLightMode.DAY_FLASH) }
+
+        RadarLightController.onWorkoutStopped(mockContext)
+        assertEquals(RadarLightMode.OFF, RadarLightController.currentMode.value)
+        verify { mockDevice.setLightMode(RadarLightMode.OFF) }
+    }
+
+    @Test
+    fun testRadarLightController_manualMode_skipsAutoDispatchOnStartAndStop() {
+        val mockDevice = mockk<BTLERadarDevice>(relaxed = true)
+        every { mockDevice.setLightMode(any()) } returns true
+        RadarLightController.registerRadarDevice(mockDevice, lightSupported = true, isStvzo = false)
+
+        RadarLightController.updateCachedPreferences(RadarLightControlMode.MANUAL, RadarLightMode.DAY_FLASH)
+
+        val mockContext = mockk<Context>(relaxed = true)
+        RadarLightController.onWorkoutStarted(mockContext)
+        // In MANUAL, light mode is never dispatched on workout start
+        assertEquals(RadarLightMode.OFF, RadarLightController.currentMode.value)
+        verify(exactly = 0) { mockDevice.setLightMode(any()) }
+        assertFalse(SmartRadarLightEngine.isAutomationEnabled)
+
+        RadarLightController.onWorkoutStopped(mockContext)
+        // In MANUAL, light mode is never dispatched to OFF on workout finish
+        verify(exactly = 0) { mockDevice.setLightMode(any()) }
+    }
+
+    @Test
+    fun testRadarLightController_fixedWorkoutMode_dispatchesOnStartAndOffOnStop() {
+        val mockDevice = mockk<BTLERadarDevice>(relaxed = true)
+        every { mockDevice.setLightMode(any()) } returns true
+        RadarLightController.registerRadarDevice(mockDevice, lightSupported = true, isStvzo = false)
+
+        RadarLightController.updateCachedPreferences(RadarLightControlMode.FIXED_WORKOUT_MODE, RadarLightMode.DAY_FLASH)
+
+        val mockContext = mockk<Context>(relaxed = true)
+        RadarLightController.onWorkoutStarted(mockContext)
+        assertEquals(RadarLightMode.DAY_FLASH, RadarLightController.currentMode.value)
+        verify { mockDevice.setLightMode(RadarLightMode.DAY_FLASH) }
+        assertFalse(SmartRadarLightEngine.isAutomationEnabled)
+
+        RadarLightController.onWorkoutStopped(mockContext)
+        assertEquals(RadarLightMode.OFF, RadarLightController.currentMode.value)
+        verify { mockDevice.setLightMode(RadarLightMode.OFF) }
+    }
+
+    @Test
+    fun testRadarLightController_smartAutomationMode_startsSmartEngineWithoutPreDispatchingDefaultMode() {
+        val mockDevice = mockk<BTLERadarDevice>(relaxed = true)
+        every { mockDevice.setLightMode(any()) } returns true
+        RadarLightController.registerRadarDevice(mockDevice, lightSupported = true, isStvzo = false)
+
+        RadarLightController.updateCachedPreferences(RadarLightControlMode.SMART_AUTOMATION, RadarLightMode.DAY_FLASH)
+
+        val mockContext = mockk<Context>(relaxed = true)
+        RadarLightController.onWorkoutStarted(mockContext)
+        // In SMART_AUTOMATION, defaultMode is NOT dispatched on workout start to avoid racing SmartRadarLightEngine
+        verify(exactly = 0) { mockDevice.setLightMode(RadarLightMode.DAY_FLASH) }
 
         RadarLightController.onWorkoutStopped(mockContext)
         assertEquals(RadarLightMode.OFF, RadarLightController.currentMode.value)
@@ -450,5 +508,55 @@ class RadarLightControllerTest {
         // Radar without light support connects (e.g. Garmin RVR315)
         RadarLightController.registerRadarDevice(mockRadarOnly, lightSupported = false)
         assertFalse("Radar peripheral without light support must NOT register IMU sensors", SmartBrakeLightDetector.isListening)
+    }
+
+    /**
+     * TST-CON-031.5: Verify setManualLightMode updates currentMode, flags manual override, and dispatches command.
+     */
+    @Test
+    fun testRadarLightController_setManualLightMode_updatesModeAndSetsManualOverride() {
+        val mockDevice = mockk<BTLERadarDevice>(relaxed = true)
+        every { mockDevice.setLightMode(any()) } returns true
+        RadarLightController.registerRadarDevice(mockDevice, lightSupported = true, isStvzo = false)
+
+        assertFalse(SmartRadarLightEngine.isManualOverridden)
+
+        val result = RadarLightController.setManualLightMode(RadarLightMode.DAY_FLASH)
+
+        assertTrue(result)
+        assertEquals(RadarLightMode.DAY_FLASH, RadarLightController.currentMode.value)
+        assertTrue(SmartRadarLightEngine.isManualOverridden)
+        verify { mockDevice.setLightMode(RadarLightMode.DAY_FLASH) }
+    }
+
+    /**
+     * TST-CON-031.5: Verify setManualLightMode prunes non-StVZO modes to SOLID when StVZO hardware is active.
+     */
+    @Test
+    fun testRadarLightController_setManualLightMode_stvzoPruning() {
+        val mockDevice = mockk<BTLERadarDevice>(relaxed = true)
+        every { mockDevice.setLightMode(any()) } returns true
+        RadarLightController.registerRadarDevice(mockDevice, lightSupported = true, isStvzo = true)
+
+        val result = RadarLightController.setManualLightMode(RadarLightMode.DAY_FLASH)
+
+        assertTrue(result)
+        assertEquals(RadarLightMode.SOLID, RadarLightController.currentMode.value)
+        assertTrue(SmartRadarLightEngine.isManualOverridden)
+        verify { mockDevice.setLightMode(RadarLightMode.SOLID) }
+    }
+
+    /**
+     * TST-CON-031.5: Verify setManualLightMode fails safe without GATT dispatch when light control is unsupported.
+     */
+    @Test
+    fun testRadarLightController_setManualLightMode_withoutLightSupport_failsGracefully() {
+        val mockRadarOnly = mockk<BTLERadarDevice>(relaxed = true)
+        RadarLightController.registerRadarDevice(mockRadarOnly, lightSupported = false)
+
+        val result = RadarLightController.setManualLightMode(RadarLightMode.SOLID)
+
+        assertFalse(result)
+        assertFalse(RadarLightController.isLightControlAvailable.value)
     }
 }

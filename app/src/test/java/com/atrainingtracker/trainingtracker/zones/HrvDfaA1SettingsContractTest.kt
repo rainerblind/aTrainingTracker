@@ -56,6 +56,9 @@ class HrvDfaA1SettingsContractTest {
 
         val controlRowMethod = methods.find { it.name.startsWith("HrvThresholdControlRow") && Modifier.isPublic(it.modifiers) }
         assertNotNull("HrvThresholdControlRow composable must exist and be public", controlRowMethod)
+
+        val rangeSliderMethod = methods.find { it.name.startsWith("HrvDfaA1RangeSlider") && Modifier.isPublic(it.modifiers) }
+        assertNotNull("HrvDfaA1RangeSlider composable must exist and be public (REQ-TRK-061.4a)", rangeSliderMethod)
     }
 
     @Test
@@ -134,5 +137,122 @@ class HrvDfaA1SettingsContractTest {
         val customT1 = 0.60f
         val maxT2Allowed = customT1 - gap
         assertEquals(0.55f, maxT2Allowed, 0.0001f)
+    }
+
+    @Test
+    fun testHrvZoneRangeBadges_useStandardGreekAlpha1Typography() {
+        val activityFile = resolveActivityFile()
+        assertTrue("ZonesSettingsActivity.kt must exist", activityFile.exists())
+        val content = activityFile.readText()
+
+        assertTrue(
+            "Range badges must use standard Greek α1 > (REQ-UI-526.2 / TST-UI-526.2)",
+            content.contains("\"α1 > %.2f\"")
+        )
+        assertTrue(
+            "Range badges must use standard Greek ≤ α1 ≤ (REQ-UI-526.2 / TST-UI-526.2)",
+            content.contains("\"%.2f ≤ α1 ≤ %.2f\"")
+        )
+        assertTrue(
+            "Range badges must use standard Greek α1 < (REQ-UI-526.2 / TST-UI-526.2)",
+            content.contains("\"α1 < %.2f\"")
+        )
+        assertFalse(
+            "Range badges must not contain subscript α₁ (REQ-UI-526.2 / TST-UI-526.2)",
+            content.contains("α₁")
+        )
+    }
+
+    @Test
+    fun testHrvDfaA1RangeSlider_usesRangeSliderAndSemanticTrackColors() {
+        val activityFile = resolveActivityFile()
+        assertTrue("ZonesSettingsActivity.kt must exist", activityFile.exists())
+        val content = activityFile.readText()
+
+        assertTrue(
+            "HrvDfaA1RangeSlider must declare RangeSlider (REQ-TRK-061.4a / TST-TRK-061.4a)",
+            content.contains("RangeSlider(")
+        )
+        assertTrue(
+            "RangeSlider must span continuous 0.30f..1.20f domain (REQ-TRK-061.4a / TST-TRK-061.4a)",
+            content.contains("0.30f..1.20f")
+        )
+        assertTrue(
+            "HrvDfaA1RangeSlider track must draw TTColor.Zone4 (Red) (REQ-TRK-061.4b / TST-TRK-061.4a)",
+            content.contains("TTColor.Zone4")
+        )
+        assertTrue(
+            "HrvDfaA1RangeSlider track must draw TTColor.Zone3 (Orange) (REQ-TRK-061.4b / TST-TRK-061.4a)",
+            content.contains("TTColor.Zone3")
+        )
+        assertTrue(
+            "HrvDfaA1RangeSlider track must draw TTColor.Zone2 (Green) (REQ-TRK-061.4b / TST-TRK-061.4a)",
+            content.contains("TTColor.Zone2")
+        )
+    }
+
+    @Test
+    fun testHrvLayout_antiWrappingConstraints() {
+        val activityFile = resolveActivityFile()
+        assertTrue("ZonesSettingsActivity.kt must exist", activityFile.exists())
+        val content = activityFile.readText()
+
+        assertTrue(
+            "Header reset button must specify maxLines = 1, softWrap = false (REQ-TRK-061.4d / TST-TRK-061.4c)",
+            content.contains("reset_to_defaults") && content.contains("maxLines = 1") && content.contains("softWrap = false")
+        )
+        assertTrue(
+            "HrvZoneBandCard must apply weight to zoneLabel (REQ-TRK-061.4d / TST-TRK-061.4c)",
+            content.contains("Modifier.weight(1f).padding(end = 8.dp)") || content.contains("Modifier.weight(1f)")
+        )
+    }
+
+    @Test
+    fun testHrvSettings_zeroHardcodedEnglishGuidanceStrings() {
+        val activityFile = resolveActivityFile()
+        assertTrue("ZonesSettingsActivity.kt must exist", activityFile.exists())
+        val content = activityFile.readText()
+
+        assertFalse(
+            "Must not contain hardcoded English aerobic base guidance (REQ-TRK-061.4e / TST-TRK-061.4d)",
+            content.contains("\"Aerobic base endurance pacing, low autonomic stress\"")
+        )
+        assertFalse(
+            "Must not contain hardcoded English threshold transition guidance (REQ-TRK-061.4e / TST-TRK-061.4d)",
+            content.contains("\"Aerobic-to-anaerobic threshold transition, moderate fatigue\"")
+        )
+        assertFalse(
+            "Must not contain hardcoded English anaerobic guidance (REQ-TRK-061.4e / TST-TRK-061.4d)",
+            content.contains("\"Anaerobic / high intensity, rapid autonomic depletion\"")
+        )
+        assertFalse(
+            "Must not contain hardcoded English T1 helper text (REQ-TRK-061.4e / TST-TRK-061.4d)",
+            content.contains("\"Aerobic threshold (default 0.75). Invariant: T1 >= T2 + 0.05\"")
+        )
+        assertFalse(
+            "Must not contain hardcoded English T2 helper text (REQ-TRK-061.4e / TST-TRK-061.4d)",
+            content.contains("\"Anaerobic threshold (default 0.50). Invariant: T2 <= T1 - 0.05\"")
+        )
+
+        assertTrue(
+            "Must use stringResource(R.string.hrv_zone_aerobic_base_desc) (REQ-TRK-061.4e)",
+            content.contains("R.string.hrv_zone_aerobic_base_desc")
+        )
+        assertTrue(
+            "Must use stringResource(R.string.hrv_zone_threshold_transition_desc) (REQ-TRK-061.4e)",
+            content.contains("R.string.hrv_zone_threshold_transition_desc")
+        )
+        assertTrue(
+            "Must use stringResource(R.string.hrv_zone_anaerobic_desc) (REQ-TRK-061.4e)",
+            content.contains("R.string.hrv_zone_anaerobic_desc")
+        )
+        assertTrue(
+            "Must use stringResource(R.string.hrv_t1_aerobic_threshold_desc) (REQ-TRK-061.4e)",
+            content.contains("R.string.hrv_t1_aerobic_threshold_desc")
+        )
+        assertTrue(
+            "Must use stringResource(R.string.hrv_t2_anaerobic_threshold_desc) (REQ-TRK-061.4e)",
+            content.contains("R.string.hrv_t2_anaerobic_threshold_desc")
+        )
     }
 }

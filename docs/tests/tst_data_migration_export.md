@@ -3,7 +3,7 @@
 **Domain**: `data_migration_export`  
 **Prefixes**: `DAT`, `EXP`, `EXT`, `MIG`  
 **Scope**: Database schema, backup/restore, migration pipelines, Strava/cloud upload, FIT/GPX export.  
-**Total Tests**: 117
+**Total Tests**: 118
 
 ---
 
@@ -296,7 +296,7 @@
   • Execute `./gradlew testDebugUnitTest` across all modules asserting 100% test pass rate with zero regressions.
 
 ### TST-MIG-001: **Full Migration Cycle** [Verified]
-- **Requirement(s)**: `REQ-MIG-001`, `002`, `004`, `006`
+- **Requirement(s)**: `REQ-MIG-001`, `REQ-MIG-002`, `REQ-MIG-004`, `REQ-MIG-006`
 - **Component**: **Full Migration Cycle**
 - **Jira**: ``ATT-117``
 - **Test Description**: 1. Generate local backup. 2. Wipe app data. 3. Restore from backup.
@@ -2174,6 +2174,19 @@
   4. *Strava Uploader Description Append & Non-Destructive Update Test (`StravaUploaderRadarSummaryTest.kt`)*: Verify that `StravaUploader.doUpdate()` correctly appends the formatted summary line when `uploadStravaRadarSummary` is enabled, preserves existing user notes without overwriting, and avoids double-appending if the summary line is already present.
   5. *Workout Share Intent Text Test (`ShareUtilsTest.kt`)*: Verify that `Intent.EXTRA_TEXT` is populated with the formatted radar summary line when sharing a workout.
   6. *9-Language Translation Parity Audit (`TranslationParityTest.kt`)*: Verify 100% presence and argument-specifier parity for all `radar_summary_*` and `radar_strava_*` strings across all 9 localized `strings_radar.xml` files.
+
+### TST-EXP-020: **Health Connect Export Status Tracking & Community Display Test** [Verified]
+- **Requirement(s)**: `REQ-EXP-023`
+- **Component**: `FileFormat.java`, `ExportType.java`, `TrainingApplication.java`, `HealthConnectManager.kt`, `ExportStatusDataProvider.kt`, `ExportStatusRepository.kt`, `ExportStatusDataProviderTest.kt`, `HealthConnectSyncTest.kt`, `ExportManagerFitTest.kt`
+- **Jira**: `ATT-7670`
+- **Test Description**:
+  1. *FileFormat & Community Target Registration Test*: Verify `FileFormat.HEALTH_CONNECT` is defined under `FileFormat.ONLINE_COMMUNITIES` with UI title `R.string.health_connect_title` and included in `ExportType.COMMUNITY.getExportToFileFormats()`.
+  2. *Application Setting Gate Test*: Verify `TrainingApplication.uploadToCommunity(FileFormat.HEALTH_CONNECT)` routes to `TrainingApplication.syncToHealthConnect()`.
+  3. *Workout Initialization Lifecycle Test*: Verify `ExportManager.newWorkout(fileBaseName)` initializes `(ExportType.COMMUNITY, FileFormat.HEALTH_CONNECT)` as `TRACKING` when `syncToHealthConnect()` is enabled, and as `UNWANTED` when disabled.
+  4. *Health Connect Status Recording & Broadcast Test*: Verify `HealthConnectManager.syncWorkout()` updates `(ExportType.COMMUNITY, FileFormat.HEALTH_CONNECT)` status to `FINISHED_SUCCESS` on success or `FINISHED_FAILED` with the error message in `ANSWER` on failure, and broadcasts `ExportStatusChangedBroadcaster.broadcastExportStatusChanged(context, fileBaseName)`.
+  5. *Legacy Workout Synthesis & UI Display Test*: Verify `ExportStatusDataProvider.createGroupData` and `ExportStatusRepository.createGroupData` synthesize `HEALTH_CONNECT` as `UNWANTED` on historical workouts where the row is absent, format plural Community headers ("Strava and Health Connect") when both are active, and populate `details` with individual status entries.
+  6. *Localization Parity Audit*: Verify `R.string.health_connect_title` and Community plural resources exist across all 9 supported language configurations.
+
 
 
 

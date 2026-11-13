@@ -23,10 +23,11 @@ import androidx.compose.ui.graphics.Color
 /**
  * Immutable UI state model for the horizontal training zone gauge bar (REQ-UI-376, REQ-UI-390).
  *
- * @property segmentColors Ordered list of zone colors (5 for Heart Rate, 7 for Power).
+ * @property segmentColors Ordered list of zone colors (5 for Heart Rate, 7 for Power, 3 for HRV).
  * @property needleFraction Normalized horizontal position [0.0..1.0] of the needle, or null if telemetry is stale/null.
- * @property activeZoneIndex 1-based index of the currently active zone (e.g. 1..5 for HR, 1..7 for Power), or null.
+ * @property activeZoneIndex 1-based index of the currently active zone (e.g. 1..5 for HR, 1..7 for Power, 1..3 for HRV), or null.
  * @property segmentWeights Normalized visual width weights for each zone segment, summing to 1.0f.
+ * @property zoneLabels Optional list of custom zone labels (e.g. ["Z2", "Z3", "Z4"] for 3-zone HRV). When null, defaults to "Z${activeZoneIndex}".
  */
 data class ZoneGaugeState(
     val segmentColors: List<Color>,
@@ -36,5 +37,6 @@ data class ZoneGaugeState(
         List(segmentColors.size) { 1f / segmentColors.size }
     } else {
         emptyList()
-    }
+    },
+    val zoneLabels: List<String>? = null
 )

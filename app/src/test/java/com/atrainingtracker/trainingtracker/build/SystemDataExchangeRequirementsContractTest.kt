@@ -168,7 +168,7 @@ class SystemDataExchangeRequirementsContractTest {
 
         val repoRoot = findRepoRootFile("settings.gradle").parentFile ?: File(".")
         val filesOnDisk = repoRoot.walkTopDown()
-            .filter { !it.path.contains(".git") && !it.path.contains(File.separator + "build" + File.separator) }
+            .filter { !it.path.contains(".git") && !it.path.contains("app" + File.separator + "build" + File.separator) }
             .map { it.name }
             .toSet()
 

@@ -1048,10 +1048,16 @@ public class TrackerService extends Service {
         if (startType == StartType.START_NORMAL || startType == StartType.RESUME_BY_USER || startType == StartType.RESUME_AUTOMATICALLY) {
             BSportType sportType = (mBanalService != null) ? mBanalService.getBSportType() : null;
             if (sportType == null) {
-                sportType = getSportTypesRepository().getBSportType(getSportTypeId());
+                try {
+                    sportType = getSportTypesRepository().getBSportType(getSportTypeId());
+                } catch (Throwable ignored) {
+                }
             }
             boolean isCycling = (sportType == null || sportType == BSportType.BIKE);
-            RadarLightController.onWorkoutStarted(this, isCycling);
+            try {
+                RadarLightController.onWorkoutStarted(this, isCycling);
+            } catch (Throwable ignored) {
+            }
         }
         switch (startType) {
             case START_NORMAL:

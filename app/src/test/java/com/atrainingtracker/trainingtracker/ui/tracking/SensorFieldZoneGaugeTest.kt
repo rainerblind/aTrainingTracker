@@ -285,4 +285,64 @@ class SensorFieldZoneGaugeTest {
         val barMethod = methods.find { it.name.startsWith("ZoneGaugeBar") && java.lang.reflect.Modifier.isPublic(it.modifiers) }
         assertNotNull("ZoneGaugeBar composable must exist", barMethod)
     }
+
+    /**
+     * TST-TRK-061.3d: Custom zone labels support and backward compatibility in ZoneGaugeState & ZoneGaugeBar (REQ-TRK-061.3, ATT-7520).
+     */
+    @Test
+    fun testZoneGaugeState_customZoneLabels_preserved() {
+        val customState = ZoneGaugeState(
+            segmentColors = listOf(Color.Green, Color.Yellow, Color.Red),
+            needleFraction = 0.5f,
+            activeZoneIndex = 2,
+            zoneLabels = listOf("Z2", "Z3", "Z4")
+        )
+        assertEquals(listOf("Z2", "Z3", "Z4"), customState.zoneLabels)
+        assertEquals(3, customState.segmentColors.size)
+        assertEquals(2, customState.activeZoneIndex)
+    }
+
+    @Test
+    fun testZoneGaugeState_hrAndPowerDefaults_zoneLabelsIsNull() {
+        val hrState = ZoneGaugeState(
+            segmentColors = ZoneGaugeMath.HR_SEGMENT_COLORS,
+            needleFraction = 0.4f,
+            activeZoneIndex = 2
+        )
+        assertNull("HR gauge must default zoneLabels to null for backward compatibility", hrState.zoneLabels)
+
+        val powerState = ZoneGaugeState(
+            segmentColors = ZoneGaugeMath.POWER_SEGMENT_COLORS,
+            needleFraction = 0.7f,
+            activeZoneIndex = 5
+        )
+        assertNull("Power gauge must default zoneLabels to null for backward compatibility", powerState.zoneLabels)
+    }
+
+    @Test
+    fun testHrvZoneGaugeState_threeZones_inSensorFieldState() {
+        val hrvGaugeState = HrvZoneIndicator.calculateZoneGaugeState(0.85)
+        assertNotNull(hrvGaugeState)
+        assertEquals(3, hrvGaugeState!!.segmentColors.size)
+        assertEquals(listOf("Z2", "Z3", "Z4"), hrvGaugeState.zoneLabels)
+        assertEquals(1, hrvGaugeState.activeZoneIndex)
+
+        val fieldState = SensorFieldState(
+            configHash = 3,
+            sensorFieldId = 30,
+            rowNr = 0,
+            colNr = 0,
+            viewSize = ViewSize.NORMAL,
+            label = "HRV (DFA a1)",
+            filterDescription = "",
+            value = "0.85",
+            units = "",
+            zoneColor = Color.Green,
+            zoneGaugeState = hrvGaugeState
+        )
+        assertEquals(3, fieldState.zoneGaugeState?.segmentColors?.size)
+        assertEquals("Z2", fieldState.zoneGaugeState?.zoneLabels?.getOrNull(0))
+        assertEquals("Z3", fieldState.zoneGaugeState?.zoneLabels?.getOrNull(1))
+        assertEquals("Z4", fieldState.zoneGaugeState?.zoneLabels?.getOrNull(2))
+    }
 }

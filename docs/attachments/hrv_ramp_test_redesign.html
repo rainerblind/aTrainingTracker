@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Geführter DFA a1 Schwellentest – Redesign</title>
+<style>
+  :root {
+    --bg: #F8F9FF;
+    --surface: #FFFFFF;
+    --surface-variant: #ECEEF4;
+    --surface-info: #F3F5FB;
+    --primary: #1B5EDB;
+    --primary-container: #D8E2FF;
+    --on-primary-container: #001A41;
+    --text-primary: #191C20;
+    --text-secondary: #44474E;
+    --outline: #74777F;
+    --outline-variant: #C4C6D0;
+    --pro-green: #1B7D3A;
+    --pro-bg: #E8F5E9;
+    --con-amber: #B25E00;
+    --con-bg: #FFF3E0;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  body {
+    background: #E4E7EF;
+    padding: 20px;
+    display: flex;
+    justify-content: center;
+  }
+  .phone-frame {
+    width: 390px;
+    background: var(--bg);
+    border-radius: 28px;
+    box-shadow: 0 12px 32px rgba(0,0,0,0.14);
+    overflow: hidden;
+    border: 1px solid #D0D4E0;
+  }
+  .top-bar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 18px 16px 12px;
+    background: var(--bg);
+  }
+  .back-arrow {
+    font-size: 20px;
+    color: var(--text-primary);
+    cursor: pointer;
+  }
+  .top-title {
+    font-size: 19px;
+    font-weight: 700;
+    color: var(--text-primary);
+  }
+  .content {
+    padding: 4px 16px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .subtitle {
+    font-size: 13.5px;
+    color: var(--text-secondary);
+  }
+  .config-card {
+    background: var(--surface);
+    border-radius: 16px;
+    padding: 16px;
+    border: 1px solid var(--outline-variant);
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .field-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .field-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+  }
+  .segmented-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    border: 1px solid var(--outline);
+    border-radius: 999px;
+    overflow: hidden;
+    height: 38px;
+    background: var(--surface);
+  }
+  .seg-btn {
+    border: none;
+    background: transparent;
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    cursor: pointer;
+    padding: 0 10px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    transition: all 0.15s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+  }
+  .seg-btn:first-child {
+    border-right: 1px solid var(--outline);
+  }
+  .seg-btn.active {
+    background: var(--primary-container);
+    color: var(--on-primary-container);
+  }
+  .badge-rec {
+    font-size: 11px;
+    font-weight: 500;
+    opacity: 0.85;
+  }
+  /* Protocol Explanation & Pros/Cons Box */
+  .protocol-info-box {
+    background: var(--surface-info);
+    border: 1px solid var(--outline-variant);
+    border-radius: 12px;
+    padding: 12px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .info-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .info-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text-primary);
+  }
+  .info-badge {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: var(--primary-container);
+    color: var(--on-primary-container);
+  }
+  .info-section-label {
+    font-size: 11.5px;
+    font-weight: 700;
+    color: var(--text-secondary);
+    margin-bottom: 3px;
+  }
+  .steps-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 12.5px;
+    color: var(--text-primary);
+    line-height: 1.38;
+  }
+  .steps-list li {
+    display: flex;
+    gap: 6px;
+  }
+  .step-num {
+    font-weight: 700;
+    color: var(--primary);
+    min-width: 14px;
+  }
+  .pros-cons-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding-top: 6px;
+    border-top: 1px solid var(--outline-variant);
+  }
+  .pro-row, .con-row {
+    font-size: 12px;
+    line-height: 1.35;
+    padding: 6px 8px;
+    border-radius: 8px;
+    display: flex;
+    gap: 6px;
+    align-items: flex-start;
+  }
+  .pro-row {
+    background: var(--pro-bg);
+    color: #145228;
+  }
+  .con-row {
+    background: var(--con-bg);
+    color: #6E3900;
+  }
+  .pro-icon, .con-icon {
+    font-weight: 800;
+    flex-shrink: 0;
+  }
+  .cta-btn {
+    width: 100%;
+    height: 44px;
+    border: none;
+    border-radius: 10px;
+    background: var(--primary);
+    color: #FFFFFF;
+    font-size: 14.5px;
+    font-weight: 600;
+    cursor: pointer;
+    margin-top: 2px;
+    box-shadow: 0 2px 6px rgba(27, 94, 219, 0.25);
+  }
+  .cta-btn:hover {
+    background: #154DB8;
+  }
+</style>
+</head>
+<body>
+  <div class="phone-frame">
+    <div class="top-bar">
+      <span class="back-arrow">←</span>
+      <span class="top-title">Geführter DFA a1 Schwellentest</span>
+    </div>
+    <div class="content">
+      <div class="subtitle">Submaximale Bestimmung von HRVT1 (aerob) &amp; HRVT2 (anaerob)</div>
+
+      <div class="config-card">
+        <!-- 1. Sportart -->
+        <div class="field-group">
+          <div class="field-label">Sportart</div>
+          <div class="segmented-row">
+            <button id="sport-cycling" class="seg-btn active" onclick="setSport('cycling')">Radfahren (Watt)</button>
+            <button id="sport-running" class="seg-btn" onclick="setSport('running')">Laufen (Pace)</button>
+          </div>
+        </div>
+
+        <!-- 2. Protokolltyp -->
+        <div class="field-group">
+          <div class="field-label">Protokolltyp</div>
+          <div class="segmented-row">
+            <button id="proto-step" class="seg-btn active" onclick="setProto('step')">Stufentest</button>
+            <button id="proto-ramp" class="seg-btn" onclick="setProto('ramp')">Rampentest</button>
+          </div>
+        </div>
+
+        <!-- 3. Stufendauer (only for Stufentest) -->
+        <div class="field-group" id="duration-group">
+          <div class="field-label">Stufendauer</div>
+          <div class="segmented-row">
+            <button id="dur-4" class="seg-btn active" onclick="setDur(4)">4 Min. <span class="badge-rec">(Empfohlen)</span></button>
+            <button id="dur-3" class="seg-btn" onclick="setDur(3)">3 Min. <span class="badge-rec">(Minimum)</span></button>
+          </div>
+        </div>
+
+        <!-- 4. Dynamic Protocol Info & Pros/Cons -->
+        <div class="protocol-info-box">
+          <div class="info-header">
+            <span class="info-title" id="info-title">Progressiver Stufentest (4 Min.)</span>
+            <span class="info-badge" id="info-badge">Goldstandard</span>
+          </div>
+
+          <div>
+            <div class="info-section-label">Ablauf &amp; Durchführung</div>
+            <ul class="steps-list" id="info-steps">
+              <li><span class="step-num">1.</span><span><strong>Aufwärmen (10 Min.):</strong> Gleichmäßig locker bei 100 W (ca. 45 % FTP) pedalieren.</span></li>
+              <li><span class="step-num">2.</span><span><strong>Stufen (+20 W alle 4 Min.):</strong> Leistung auf jeder Stufe konstant halten; die letzten 2 Min. jeder Stufe werden ausgewertet.</span></li>
+              <li><span class="step-num">3.</span><span><strong>Submaximales Ende:</strong> Sobald DFA a1 für 60 s unter 0,45 fällt, sind HRVT1 &amp; HRVT2 erfasst – keine Ausbelastung nötig!</span></li>
+            </ul>
+          </div>
+
+          <div class="pros-cons-grid">
+            <div class="pro-row" id="info-pro">
+              <span class="pro-icon">+</span>
+              <span><strong>Vorteil:</strong> Höchste Genauigkeit – Herzfrequenz und autonomes Nervensystem erreichen pro Stufe ein echtes Fließgleichgewicht (Steady-State).</span>
+            </div>
+            <div class="con-row" id="info-con">
+              <span class="con-icon">–</span>
+              <span><strong>Nachteil:</strong> Etwas längere Gesamtdauer (ca. 30–38 Min. inkl. Aufwärmen).</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 5. Clean German CTA instead of "Vorflug-Sensorkontrolle" -->
+        <button class="cta-btn">Sensor- &amp; Signalprüfung starten</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+  let state = { sport: 'cycling', proto: 'step', dur: 4 };
+
+  function setSport(s) {
+    state.sport = s;
+    document.getElementById('sport-cycling').classList.toggle('active', s === 'cycling');
+    document.getElementById('sport-running').classList.toggle('active', s === 'running');
+    renderInfo();
+  }
+  function setProto(p) {
+    state.proto = p;
+    document.getElementById('proto-step').classList.toggle('active', p === 'step');
+    document.getElementById('proto-ramp').classList.toggle('active', p === 'ramp');
+    document.getElementById('duration-group').style.display = (p === 'step') ? 'flex' : 'none';
+    renderInfo();
+  }
+  function setDur(d) {
+    state.dur = d;
+    document.getElementById('dur-4').classList.toggle('active', d === 4);
+    document.getElementById('dur-3').classList.toggle('active', d === 3);
+    renderInfo();
+  }
+
+  function renderInfo() {
+    const titleEl = document.getElementById('info-title');
+    const badgeEl = document.getElementById('info-badge');
+    const stepsEl = document.getElementById('info-steps');
+    const proEl = document.getElementById('info-pro');
+    const conEl = document.getElementById('info-con');
+
+    if (state.proto === 'step') {
+      const durMin = state.dur;
+      titleEl.textContent = `Progressiver Stufentest (${durMin} Min.)`;
+      badgeEl.textContent = durMin === 4 ? 'Empfohlen · Hohe Präzision' : 'Kompakt · Stufentest';
+      if (state.sport === 'cycling') {
+        stepsEl.innerHTML = `
+          <li><span class="step-num">1.</span><span><strong>Aufwärmen (10 Min.):</strong> Locker und gleichmäßig bei 100 W (ca. 45 % FTP) einfahren.</span></li>
+          <li><span class="step-num">2.</span><span><strong>Stufen (+20 W alle ${durMin} Min.):</strong> Zielwattzahl pro Stufe konstant halten; die letzten 2 Min. jeder Stufe werden ausgewertet.</span></li>
+          <li><span class="step-num">3.</span><span><strong>Submaximales Ende:</strong> Sobald DFA a1 für 60 s unter 0,45 fällt, sind HRVT1 (0,75) &amp; HRVT2 (0,50) erfasst – keine Ausbelastung nötig!</span></li>
+        `;
+      } else {
+        stepsEl.innerHTML = `
+          <li><span class="step-num">1.</span><span><strong>Aufwärmen (10 Min.):</strong> Lockeres Einlaufen bei 8,0 km/h (7:30 min/km).</span></li>
+          <li><span class="step-num">2.</span><span><strong>Stufen (+0,5 km/h alle ${durMin} Min.):</strong> Tempo pro Stufe gleichmäßig halten (flache Strecke oder Laufband empfohlen).</span></li>
+          <li><span class="step-num">3.</span><span><strong>Submaximales Ende:</strong> Sobald DFA a1 für 60 s unter 0,45 fällt, sind HRVT1 &amp; HRVT2 erfasst – direkt zum Auslaufen übergehen.</span></li>
+        `;
+      }
+      if (durMin === 4) {
+        proEl.innerHTML = `<span class="pro-icon">+</span><span><strong>Vorteil:</strong> Höchste physiologische Genauigkeit – nach 2 Min. Einschwingzeit wird ein stabiles 2-Min.-Fenster im Steady-State gemessen.</span>`;
+        conEl.innerHTML = `<span class="con-icon">–</span><span><strong>Nachteil:</strong> Längere Testdauer (ca. 30–38 Min. inkl. Aufwärmen).</span>`;
+      } else {
+        proEl.innerHTML = `<span class="pro-icon">+</span><span><strong>Vorteil:</strong> Echtes Stufenprotokoll bei verkürzter Dauer (ca. 25–30 Min.).</span>`;
+        conEl.innerHTML = `<span class="con-icon">–</span><span><strong>Nachteil:</strong> Kürzere Einschwingzeit (60 s) vor dem 120-s-Messfenster als beim 4-Min.-Protokoll.</span>`;
+      }
+    } else {
+      titleEl.textContent = 'Kontinuierlicher Rampentest';
+      badgeEl.textContent = 'Zeiteffizient · MRT-korrigiert';
+      if (state.sport === 'cycling') {
+        stepsEl.innerHTML = `
+          <li><span class="step-num">1.</span><span><strong>Aufwärmen (10 Min.):</strong> Locker bei 100 W einfahren.</span></li>
+          <li><span class="step-num">2.</span><span><strong>Rampe (+15 W/Min.):</strong> Gleichmäßiger, kontinuierlicher Leistungsanstieg (ideal im Smart-Trainer ERG-Modus).</span></li>
+          <li><span class="step-num">3.</span><span><strong>Submaximales Ende:</strong> Sobald DFA a1 für 60 s unter 0,45 fällt, ist der Test beendet.</span></li>
+        `;
+      } else {
+        stepsEl.innerHTML = `
+          <li><span class="step-num">1.</span><span><strong>Aufwärmen (10 Min.):</strong> Lockeres Einlaufen bei 8,0 km/h (7:30 min/km).</span></li>
+          <li><span class="step-num">2.</span><span><strong>Rampe (+0,25 km/h pro Min.):</strong> Gleichmäßige kontinuierliche Temposteigerung.</span></li>
+          <li><span class="step-num">3.</span><span><strong>Submaximales Ende:</strong> Sobald DFA a1 für 60 s unter 0,45 fällt, ist der Test beendet.</span></li>
+        `;
+      }
+      proEl.innerHTML = `<span class="pro-icon">+</span><span><strong>Vorteil:</strong> Kürzere Gesamtdauer (ca. 20–25 Min.) und fließender Belastungsübergang ohne Stufensprünge.</span>`;
+      conEl.innerHTML = `<span class="con-icon">–</span><span><strong>Nachteil:</strong> Die Herzfrequenz/HRV hinkt der Leistung um ca. 45 s hinterher (Mean Response Time) und wird rechnerisch korrigiert (–11 W bei +15 W/Min.).</span>`;
+    }
+  }
+</script>
+</body>
+</html>

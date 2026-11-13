@@ -203,6 +203,8 @@ public enum SensorType
                  POWER_5S, POWER_1M, POWER_5M, POWER_20M,
                  POWER_PEAK_5S, POWER_PEAK_1M, POWER_PEAK_5M, POWER_PEAK_20M -> R.drawable.ic_power;
             case PHONE_BATTERY, BATTERY_REMAINING_TIME -> R.drawable.ic_battery_full;
+            case RADAR_THREAT_COUNT, RADAR_CLOSEST_DISTANCE_m, RADAR_APPROACH_SPEED_mps,
+                 RADAR_VEHICLE_COUNT, RADAR_PASSING_DISTANCE_m, RADAR_LARGE_VEHICLE_COUNT -> R.drawable.ic_radar;
             default -> R.drawable.ic_cross;
         };
     }

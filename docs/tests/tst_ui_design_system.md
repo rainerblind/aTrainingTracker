@@ -1088,7 +1088,7 @@
 ### TST-UI-114: **ModalNavigationDrawer Back Navigation Isolation & State Synchronization Test** [Verified]
 - **Requirement(s)**: `REQ-UI-162`
 - **Component**: **ModalNavigationDrawer Back Navigation Isolation & State Synchronization Test**
-- **Jira**: ``ATT-1335``
+- **Jira**: ``ATT-1335`, `ATT-7526``
 - **Test Description**:
   1. *Unit Test Navigation Drawer Controller Single Source of Truth (`SingleActivityNavigationTest.kt`)*:
   • Verify that `NavigationDrawerController` properly delegates `openDrawer()`, `closeDrawer()`, and `isDrawerOpen` when bound to an authoritative state provider.
@@ -1113,6 +1113,10 @@
   • Press Android Back button/gesture: verify drawer dismisses smoothly and the screen remains on `Workouts` (does NOT navigate to tracking).
   • Press Back again with drawer closed: verify app navigates to main tracking control screen.
   • While drawer is opening, perform rapid double-back press: verify drawer closes cleanly without unexpected screen route changes.
+  8. *Unit Test Navigation Graph Readiness & Early Drawer Navigation Queuing (`MainActivityWithNavigationTest.kt` / `MainActivityWithNavigationInteropTest.kt`)*:
+  • Verify that invoking `navigateToDrawerItem(itemId)` when `navController` is null or has no graph attached buffers `mPendingDrawerItemId = itemId` without throwing `IllegalStateException`.
+  • Verify that when `onNavControllerReady(controller)` is called with an attached graph, queued pending navigation is executed and cleared.
+  • Verify that `navigateToFilteredWorkouts` and `startWorkoutSummaryListFromPeriod` safely fall back to queued drawer navigation when the graph is uninitialized.
 
 ### TST-UI-115: **Cockpit Tab Navigation on Tracking Initiation & Origin-Aware Resume Neutrality Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-163`
@@ -1391,16 +1395,18 @@
 ### TST-UI-124: **Configurable Zone Visualization & Theme-Aware Preview Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-172`
 - **Component**: **Configurable Zone Visualization & Theme-Aware Preview Verification**
-- **Jira**: `ATT-1265`, `ATT-5200`
+- **Jira**: `ATT-1265`, `ATT-5200`, `ATT-7524`
 - **Test Description**:
   1. *Data Model Unit Tests (`ZoneDisplayOptionsTest.kt`)*:
-  • Verify default constructor sets `showBackground = true`, `showLeftBar = true`, `showRightBar = false`, `showTextColor = false` for backward compatibility.
+  • Verify default constructor sets `showBackground = true`, `showLeftBar = true`, `showRightBar = true`, `showTextColor = false`, `showGauge = false` for symmetrical Cockpit framing.
   • Verify copy mutations produce expected combinations.
   • Verify equality and hash code parity.
-  2. *DataStore Preferences Persistence Unit Tests (`SettingsDataStoreZoneDisplayTest.kt`)*:
-  • Verify reading uninitialized DataStore preferences returns default `ZoneDisplayOptions` for `HR_RUN`, `HR_BIKE`, and `PWR_BIKE`.
-  • Verify saving custom options for `HR_RUN` persists correctly and updates `getZoneDisplayOptionsFlow(ZoneType.HR_RUN)` without contaminating `HR_BIKE` or `PWR_BIKE`.
-  • Verify independent persistence across all 3 zone types with distinct toggle configurations.
+  2. *DataStore Preferences Persistence Unit Tests (`SettingsDataStoreZoneDisplayTest.kt`, `SettingsDataStoreZoneAtomicTest.kt`)*:
+  • Verify reading uninitialized DataStore preferences returns default `ZoneDisplayOptions` (with `showRightBar = true`) for `HR_RUN`, `HR_BIKE`, `PWR_BIKE`, and `HRV (DFA a1)`.
+  • Verify an explicit user setting of `showRightBar = false` is preserved upon reading DataStore.
+  • Verify saving custom options for `HR_RUN` persists correctly and updates `getZoneDisplayOptionsFlow(ZoneType.HR_RUN)` without contaminating `HR_BIKE`, `PWR_BIKE`, or HRV.
+  • Verify dedicated `hrvZoneDisplayOptionsFlow` and `saveHrvZoneDisplayOptions` persist independently and update `SettingsSnapshot.hrvDisplayOptions`.
+  • Verify independent persistence across all zone profiles with distinct toggle configurations.
   • Verify `SettingsDataStoreJavaHelper.getZoneDisplayOptions` returns the persisted values synchronously with safe fallback and non-blocking caching off main thread.
   3. *Cockpit Sensor Tile Rendering Logic Unit Tests (`SensorFieldZoneRenderingTest.kt`)*:
   • Container color resolution: `showBackground = true` returns 12% alpha zone color; `showBackground = false` returns surface; `zoneColor == Transparent` returns surface.
@@ -3333,7 +3339,7 @@
 ### TST-UI-221: **Modular Component Architecture for Advanced Tuning Dialog Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-262`
 - **Component**: **Modular Component Architecture for Advanced Tuning Dialog Verification**
-- **Jira**: ``ATT-2033``
+- **Jira**: `ATT-2033`, `ATT-7536`, `ATT-7539`
 - **Test Description**:
   1. *Structural File Size & Modularity Tests (`AdvancedTuningModularityTest.kt`)*:
   • Verify each extracted category file exists under `categories/`: `CockpitTypographySection.kt`, `AmoledBatterySaverSection.kt`, `SensorsGpsFilterSection.kt`, `AftermathAnalysisSection.kt`, `WorkoutMasksAndCardsSection.kt`.
@@ -3346,6 +3352,15 @@
   • Verify 100% parity across all 9 localized `strings.xml` files.
   4. *Clean-Room Full Suite Regression Execution*:
   • Run `./gradlew testDebugUnitTest` verifying 100% pass rate.
+  5. *Standardized Form Controls & Segmented Button Contracts (`TST-UI-221.5`, `TuningFormControlsTest.kt`)*:
+  • Verify `TuningFormControls.kt` exports `TuningSegmentedButtonRow` and `TuningDropdownRow` composables.
+  • Verify `TuningSegmentedButtonRow` specifies `icon = {}`, `contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)`, `maxLines = 1`, `softWrap = false`, `overflow = TextOverflow.Ellipsis`, and `MaterialTheme.typography.labelSmall`.
+  • Verify `RadarSettingsSection.kt` eliminates nested `ElevatedCard` containers and raw `Switch(` calls, standardizing on `TuningToggleItem`, `SubordinateTuningToggleItem`, `TuningSliderItem`, and `TuningSegmentedButtonRow` separated by `HorizontalDivider`s.
+  6. *Design Guidelines Architecture Contract Enforcement (`TST-UI-221.6`, `TuningDesignGuidelinesContractTest.kt`)*:
+  • Verify automated AST/text scanning of all category composables under `ui/settings/tuning/categories/`.
+  • Assert zero raw `FilterChip(` calls for binary exclusive and small discrete selectors across category files (allowing only `SupporterDebugSection.kt` developer tier overrides).
+  • Assert zero unscaled raw `Switch(` calls in `categories/`.
+  • Assert zero nested `ElevatedCard(` containers in `categories/`.
 
 ### TST-UI-222: **Equipment Sensor Matrix Table Layout, Column Continuity, and Information Density Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-263`
@@ -4957,10 +4972,10 @@
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions.
 
 ### TST-UI-310: WorkoutSummariesTabbedScreenTest, WorkoutSummariesListFragmentTest [Verified]
-- **Requirement(s)**: Verify that `SnackbarHost` in `WorkoutSummariesTabbedScreen` (and `WorkoutSummariesListFragment`) applies `Modifier.navigationBarsPadding()` to ensure snackbars and action buttons render above system navigation bars with zero occlusion.
+- **Requirement(s)**: `REQ-UI-350`
 - **Component**: `WorkoutSummariesTabbedScreenTest`, `WorkoutSummariesListFragmentTest`
 - **Jira**: `**Post-Workout Low Battery Alert Snackbar Navigation Bar Inset Padding Verification.**`
-- **Test Description**: `REQ-UI-350`
+- **Test Description**: Verify that `SnackbarHost` in `WorkoutSummariesTabbedScreen` (and `WorkoutSummariesListFragment`) applies `Modifier.navigationBarsPadding()` to ensure snackbars and action buttons render above system navigation bars with zero occlusion.
 
 ### TST-UI-311: **Multi-Dimensional Sensor Filtering by Protocol, Category, and Battery Level with Deep-Link Navigation Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-351`
@@ -7295,21 +7310,32 @@
   5. *Clean-Room Regression Suite (`TST-UI-450.5`)*:
   • Run targeted package tests (`com.atrainingtracker.trainingtracker.domain.laps.*`, `com.atrainingtracker.trainingtracker.ui.aftermath.*`, `com.atrainingtracker.trainingtracker.ui.map.*`, `database.*`, `ThemeColorCentralizationAuditTest`, `build.*`) asserting 100% pass rate.
 
-### TST-UI-451: **Tracking Cockpit SensorStatus Top Bar 16 dp Margin and Symmetrical Centering Verification Suite** [Verified]
+### TST-UI-451: **Tracking Cockpit SensorStatus Top Bar 16 dp Margin, Symmetrical Centering & 9-Icon Radar Integration Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-UI-451`
-- **Component**: `SensorStatus.kt`, `SensorStatusLayoutTest.kt`, `SensorStatusLegibilityTest.kt`, `TrackingTabsLandscapeLayoutTest.kt`
-- **Jira**: `ATT-5422`
+- **Component**: `SensorStatus.kt`, `SensorSourceDialog.kt`, `SensorType.java`, `SensorStatusTopBarSpacingTest.kt`, `SensorStatusLegibilityTest.kt`, `SensorSourceDialogContractTest.kt`, `TrackingTabsLandscapeLayoutTest.kt`
+- **Jira**: `ATT-5422`, `ATT-7544`
 - **Test Description**:
-  1. *Portrait Edge Margin & Symmetrical Spacer Contract Test (`TST-UI-451.1`, `SensorStatusLayoutTest.kt`)*:
+  1. *Portrait Edge Margin, Symmetrical Spacer & 9-Icon 360dp Budget Contract Test (`TST-UI-451.1`, `SensorStatusTopBarSpacingTest.kt`)*:
   • Verify outer `Row` has `padding(horizontal = 8.dp, vertical = 4.dp)` in portrait mode.
   • Verify left menu button and right supporter emblem (and their fallback `Spacer`s) have identical `Modifier.size(32.dp)` width.
-  • Verify central `Box` has `weight(1f)` with `Alignment.Center` guaranteeing mathematical centering of the 8 sensor icons across `supporterEmblemRes != null` and `supporterEmblemRes == null`.
+  • Verify central `Box` has `weight(1f)` with `Alignment.Center` guaranteeing mathematical centering of the sensor icons across `supporterEmblemRes != null` and `supporterEmblemRes == null`.
+  • Verify `sensorDefinitions` contains 9 sensor types with `RADAR_THREAT_COUNT` as the 9th item.
+  • Verify horizontal padding of 4 dp per icon and 22 dp icon size yields 30 dp per slot and total width of 270 dp, fitting cleanly within the 272 dp budget on 360 dp viewports without clipping.
   2. *Compact Landscape Invariant Contract Test (`TST-UI-451.2`, `TrackingTabsLandscapeLayoutTest.kt`)*:
-  • Verify compact landscape mode (`isCompactLandscape = true`) preserves `padding(horizontal = 4.dp, vertical = 2.dp)` and max height 28 dp per `REQ-UI-434.1`.
+  • Verify compact landscape mode (`isCompactLandscape = true`) preserves `padding(horizontal = 4.dp, vertical = 2.dp)` and max height 28 dp per `REQ-UI-434.1`, rendering all 9 icons.
   3. *Sensor Inactive Alpha & Contrast Non-Regression Test (`TST-UI-451.3`, `SensorStatusLegibilityTest.kt`)*:
-  • Verify `INACTIVE_SENSOR_ALPHA = 0.38f` and WCAG AAA contrast ratio compliance are preserved.
-  4. *Clean-Room Regression Suite Execution (`TST-UI-451.4`)*:
-  • Execute targeted package tests (`com.atrainingtracker.trainingtracker.ui.tracking.controltracking.*`, `com.atrainingtracker.trainingtracker.ui.branding.*`, `ThemeColorCentralizationAuditTest`, `build.*`) asserting 100% pass rate.
+  • Verify `INACTIVE_SENSOR_ALPHA = 0.38f` and WCAG AAA / AA contrast ratio compliance are preserved for active and inactive states.
+  4. *Radar Icon Asset & SensorType Mapping Contract Test (`TST-UI-451.4`, `SensorStatusTopBarSpacingTest.kt`)*:
+  • Verify `R.drawable.ic_radar` exists in `res/drawable/` as a valid 24dp vector drawable.
+  • Verify `SensorType.RADAR_THREAT_COUNT.getIconResId()` returns `R.drawable.ic_radar`.
+  5. *Radar Sensor Source Dialog Contract Test (`TST-UI-451.5`, `SensorSourceDialogContractTest.kt`)*:
+  • Verify `SensorSourceDialog` displays localized "Bike Radar" title (`R.string.device_type_bike_radar`) for `RADAR_THREAT_COUNT`.
+  • Verify scalar `valueWithUnit` is suppressed on device identity rows for `RADAR_THREAT_COUNT`.
+  • Verify `BIKE_RADAR` devices are listed and clicks route to `onDeviceClick`.
+  6. *9-Language Localization Parity Verification (`TST-UI-451.6`)*:
+  • Verify `device_type_bike_radar` and all radar content descriptions across all 9 values folders (`values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`).
+  7. *Clean-Room Regression Suite Execution (`TST-UI-451.7`)*:
+  • Execute targeted package tests (`com.atrainingtracker.trainingtracker.ui.tracking.controltracking.*`, `com.atrainingtracker.banalservice.sensor.*`) asserting 100% pass rate.
 
 ### TST-UI-452: **Dedicated Status Bar Vector Icon, Notification Builder Migration & Monolithic Density Packaging Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-UI-452`
@@ -8256,19 +8282,22 @@
 ### TST-UI-513: **Fitness & Physiology Hub, Training Zones Settings & Drawer Navigation Verification Suite** [Verified]
 - **Target Release**: `V5.0.0`
 - **Requirement(s)**: `REQ-UI-513`
-- **Component**: `AppNavigationDrawer.kt`, `NavRoutes.kt`, `AthleteProfileScreen.kt`, `PeriodsTabsScreen.kt`, `ZoneSettingsScreen.kt`, `NavigationDrawerStateTest.kt`, `AppNavigationDrawerTest.kt`
-- **Jira**: `ATT-6720`
+- **Component**: `AppNavigationDrawer.kt`, `NavRoutes.kt`, `AthleteProfileScreen.kt`, `PeriodsTabsScreen.kt`, `ZoneSettingsScreen.kt`, `NavigationDrawerStateTest.kt`, `AppNavigationDrawerTest.kt`, `AutoPauseNavigationTest.kt`
+- **Jira**: `ATT-6720`, `ATT-7535`
 - **Test Description**:
-  1. *Navigation Drawer Structure & Route Resolution Test (`TST-UI-513.1`, `NavigationDrawerStateTest.kt` / `AppNavigationDrawerTest.kt`)*:
+  1. *Navigation Drawer Structure & Route Resolution Test (`TST-UI-513.1`, `NavigationDrawerStateTest.kt` / `AppNavigationDrawerTest.kt` / `AutoPauseNavigationTest.kt`)*:
   • Verify Training drawer group has exactly 4 items (`drawer_start_tracking`, `drawer_workouts`, `drawer_periods`, `drawer_athlete_profile`).
   • Verify `drawer_morning_hrv` is absent from the drawer group items.
-  • Verify Settings drawer group includes `drawer_training_zones` with icon `ic_speed` and title `prefs_training_zones`.
+  • Verify Settings drawer group contains exactly 7 items in order: `drawer_training_zones`, `drawer_sport_types`, `drawer_tracking_layouts`, `drawer_display_settings`, `drawer_auto_pause`, `drawer_units`, `drawer_advanced_tuning`.
   • Verify `isDrawerItemSelected` separates `drawer_training_zones` and `drawer_athlete_profile`.
   2. *Periods Screen Clean Decoupling Test (`TST-UI-513.2`, `PeriodsViewModelTest.kt`)*:
   • Verify `PeriodsViewModel` operates cleanly without `HrvReadinessRepository` dependencies and `PeriodsTabsScreen` contains zero HRV trend composables.
   3. *Fitness & Physiology Tab Structure & HRV Hub Test (`TST-UI-513.3`, `AthleteProfileContractAndLocalizationTest.kt` / `FitnessPhysiologyTest.kt`)*:
-  • Verify 4-tab hub structure: PMC, HRV & Readiness, Body & Thresholds, Cardio-Power.
-  • Verify Tab 2 provides Morning HRV measurement CTA and empty state when 0 readings exist.
+  • Verify tab ordering starts with Body & Thresholds (`R.string.fitness_tab_body`), followed by conditional PMC (`R.string.fitness_tab_pmc`), HRV & Readiness (`R.string.fitness_tab_hrv`), and conditional Cardio-Power (`R.string.fitness_tab_cardio_power`).
+  • Verify all 4 boolean permutations of `resolveFitnessHubTabs(enablePmcModel, enableCardioPowerDynamics)`.
+  • Verify PMC tab is suppressed when `enablePmcModel = false`.
+  • Verify Morning HRV measurement CTA and empty state when 0 readings exist.
+  • Verify `+` Add Entry action is visible on default landing tab (`initialTab = 0`).
   4. *9-Language Localization Parity Audit (`TST-UI-513.4`)*:
   • Assert 100% presence and parity of all drawer, tab, and empty state strings across all 9 language folders (`values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`).
   5. *Tier 1 Targeted Unit Test Regression Suite (`TST-UI-513.5`)*:
@@ -8281,7 +8310,7 @@
 - **Target Release**: `V5.0.0`
 - **Requirement(s)**: `REQ-UI-514`
 - **Component**: `app/src/main/res/drawable/bike_radar.xml`, `app/src/main/res/drawable/bt_bike_radar.xml`, `UIHelper.java`, `DeviceData.kt`, `VectorAssetResolutionContractTest.kt`
-- **Jira**: `ATT-6699`, `ATT-7318`
+- **Jira**: `ATT-6699`, `ATT-7318`, `ATT-7518`
 - **Test Description**:
   1. *Vector XML Well-Formedness & Rule 37 Geometry Contract Test (`TST-UI-514.1`, `VectorAssetResolutionContractTest.kt`)*:
   • Verify `bike_radar.xml` (96x96) and `bt_bike_radar.xml` (144x144) exist in `app/src/main/res/drawable/`, parse cleanly as XML `<vector>` documents with `48dp x 48dp` dimensions, and have valid positive viewport bounds.
@@ -8301,6 +8330,7 @@
   • Assert 100% pass rate.
   5. *Radar Vector Asset Geometric Bounding Box & Collision-Free Contract Test (`TST-UI-514.5`, `VectorAssetResolutionContractTest.kt`)*:
   • Verify `bt_bike_radar.xml` cyclist group contains exactly 18 standard cyclist paths with zero colliding saddle arcs, and `mini_icon_radar` maintains clean separation ($\ge 7.0$ px) from the cyclist silhouette.
+  • Verify `bt_bike_radar.xml` `mini_icon_radar` path data specifies a single non-degenerate circular source dot ($\Delta x = 2r$ chord or equivalent single circle geometry, zero double-circle snowman artifact) and concentric rearward wave arcs with uniform radial thickness and zero pinched crescents.
   • Verify `bike_radar.xml` emission arcs maintain $\ge 3.0$ units clearance from the rear wheel ($y_{\text{wheel}} \ge 39.0$), cyclist back, and card border, with all arc endpoints staying strictly above the rear wheel ($y \le 35.0$).
 
 
@@ -8409,3 +8439,64 @@
   6. *Targeted Unit Test Regression Suite (`TST-UI-518.6`)*:
      - Execute `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.navigation.*" --tests "com.atrainingtracker.trainingtracker.zones.*" --tests "com.atrainingtracker.trainingtracker.ui.settings.tuning.*" --tests "com.atrainingtracker.trainingtracker.ui.help.*"`.
      - Assert 100% pass rate.
+
+
+### TST-UI-524: **Official Google Drive & Health Connect Brand Vector Contract Verification Suite** [Verified]
+- **Target Release**: `V5.0.0`
+- **Requirement(s)**: `REQ-UI-524`
+- **Component**: `app/src/main/res/drawable/ic_google_drive.xml`, `app/src/main/res/drawable/ic_health_connect.xml`, `BrandIconContractTest.kt`
+- **Jira**: `ATT-7534`
+- **Test Description**:
+  1. *Google Drive Vector Geometry & Color Verification (`TST-UI-524.1`, `BrandIconContractTest.kt`)*:
+     - Verify `ic_google_drive.xml` exists in `app/src/main/res/drawable/`, parses as valid `<vector>` XML, contains 6 distinct `<path>` elements with official 2020+ Google Drive hex color codes (`#0066DA`, `#00AC47`, `#EA4335`, `#00832D`, `#2684FC`, `#FFBA00`), and defines a square 87.3x87.3 viewport.
+  2. *Health Connect Vector Geometry & Color Verification (`TST-UI-524.2`, `BrandIconContractTest.kt`)*:
+     - Verify `ic_health_connect.xml` exists in `app/src/main/res/drawable/`, parses as valid `<vector>` XML, defines `viewportWidth="88"` and `viewportHeight="88"` (or official dimensions), contains the 2 interlocking loops with `fillType="evenOdd"` and the circular node, and uses official brand colors (`#003144` and `#4285F4`).
+  3. *Tier 1 Resource Compilation & Navigation Suite (`TST-UI-524.3`)*:
+     - Execute `./gradlew processDebugResources` and `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.navigation.*"`.
+     - Assert 100% pass rate.
+
+
+### TST-UI-525: **Configurable Morning HRV Check Launch Button on Start Tracking Screen Verification Suite** [Verified]
+- **Target Release**: `V5.0.0`
+- **Requirement(s)**: `REQ-UI-525`
+- **Component**: `TuningPreferencesDataStore.kt`, `DevicesDatabaseManager.java`, `DeviceDataRepository.kt`, `HrvReadinessDatabaseManager.kt`, `HrvReadinessRepository.kt`, `ControlTrackingViewModel.kt`, `TrackingTabsScreen.kt`, `ControlTrackingScreen.kt`
+- **Jira**: `ATT-7532`
+- **Test Description**:
+  1. *Tuning Preferences DataStore & Config Verification (`TST-UI-525.1`, `TuningConfigTest.kt`)*:
+     - Verify default values: `showMorningCheckOnStartScreen = true`, `morningCheckCutoffHour = 11`.
+     - Verify mutation and clamping of cutoff hour (`6..15`).
+  2. *Paired HRM Sensor SQLite Query Verification (`TST-UI-525.2`, `DevicesDatabaseManagerTest.kt`)*:
+     - Verify `hasPairedHeartRateDevices()` returns false when table is empty or contains only non-HRM paired devices (speed, cadence, radar).
+     - Verify `hasPairedHeartRateDevices()` returns true when at least one `DeviceType.HRM` device with `PAIRED > 0` is present.
+  3. *Today's Morning Check SQLite Query Verification (`TST-UI-525.3`, `HrvReadinessDatabaseManagerTest.kt`)*:
+     - Verify `hasCompletedMorningCheck(dateIso)` returns false when no entries exist for `dateIso`.
+     - Verify `hasCompletedMorningCheck(dateIso)` returns true once an entry with `dateIso` is inserted.
+  4. *ControlTrackingViewModel Reactive Visibility Rules Verification (`TST-UI-525.4`, `ControlTrackingViewModelTest.kt`)*:
+     - Verify `isMorningHrvCheckVisible` evaluates to true when mode is `READY`, pref is true, paired HRM exists, hour < cutoff, and today check is not completed.
+     - Verify `isMorningHrvCheckVisible` evaluates to false when: mode is `RECORDING` or `PAUSED`; pref is false; no paired HRM; hour >= cutoff; or check is already completed.
+  5. *9-Language Localization Parity Verification (`TST-UI-525.5`, `TranslationParityTest.kt`)*:
+     - Verify all 5 new string resources exist across all 9 locales with 100% parity.
+  6. *Targeted Unit Test Regression Suite (`TST-UI-525.6`)*:
+     - Execute `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.settings.*" --tests "com.atrainingtracker.banalservice.database.*" --tests "com.atrainingtracker.trainingtracker.database.hrv.*" --tests "com.atrainingtracker.trainingtracker.ui.tracking.controltracking.*"`.
+     - Assert 100% pass rate.
+
+
+### TST-UI-526: **Global Physiological Typography DFA α1 Verification Suite** [Verified]
+- **Target Release**: `V5.0.0`
+- **Requirement(s)**: `REQ-UI-526`
+- **Component**: `strings_hrv.xml` (all 9 locales), `ZonesSettingsActivity.kt`, `SensorType.java`, `SensorTypeHrvTest.kt`, `HrvDfaA1SettingsContractTest.kt`, `TranslationParityTest.kt`
+- **Jira**: `ATT-7521`
+- **Test Description**:
+  1. *SensorType HRV_DFA_A1 Typography Verification (`TST-UI-526.1`, `SensorTypeHrvTest.kt`)*:
+     - Verify `SensorType.HRV_DFA_A1` retains `fullNameId = R.string.hrv_dfa_a1` and `shortNameId = R.string.hrv_dfa_a1_short`.
+     - Assert that resolved string contents for default locale contain `'DFA α1'` and `'α1'`.
+  2. *Zone Settings Badge Contract Verification (`TST-UI-526.2`, `HrvDfaA1SettingsContractTest.kt`)*:
+     - Verify `ZonesSettingsActivity.kt` source code contains standard Greek `"α1"` in range badge templates (`"α1 > "`, `" ≤ α1 ≤ "`, `"α1 < "`) and contains zero occurrences of subscript `"α₁"`.
+  3. *UI Test Fixture Typography Alignment (`TST-UI-526.3`, `HrvInfoBottomSheetTest.kt`, `SensorFieldZoneDisplayTest.kt`, `TrackingViewModelHrvTest.kt`)*:
+     - Update mock sensor field labels and test expectations from `"DFA a1"` to `"DFA α1"` across affected UI test fixtures.
+  4. *9-Language Localization Parity Verification (`TST-UI-526.4`, `TranslationParityTest.kt`)*:
+     - Verify 100% translation parity across all 9 locales (`values`, `values-de`, `values-es`, `values-fr`, `values-it`, `values-ja`, `values-nl`, `values-pl`, `values-pt`) with zero missing keys and matching `%1$.2f` format specifiers.
+  5. *Targeted Unit Test Regression Suite (`TST-UI-526.5`)*:
+     - Execute `./gradlew testDebugUnitTest --tests "com.atrainingtracker.banalservice.sensor.*" --tests "com.atrainingtracker.trainingtracker.zones.*" --tests "com.atrainingtracker.trainingtracker.ui.tracking.*" --tests "com.atrainingtracker.trainingtracker.localization.*"`.
+     - Assert 100% pass rate.
+

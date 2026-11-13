@@ -62,6 +62,13 @@ class HrvReadinessRepository(
         databaseManager.getPrimaryEntryForDate(dateIso, posture)
     }
 
+    /**
+     * Checks whether a morning check entry has already been recorded for [dateIso] (ATT-7532 / REQ-UI-525.3).
+     */
+    suspend fun hasCompletedMorningCheck(dateIso: String): Boolean = withContext(ioDispatcher) {
+        databaseManager.hasCompletedMorningCheck(dateIso)
+    }
+
     suspend fun getAllEntries(posture: HrvPosture? = null): List<HrvReadinessEntry> = withContext(ioDispatcher) {
         databaseManager.getAllEntries(posture)
     }

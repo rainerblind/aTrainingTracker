@@ -27,6 +27,7 @@ import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
 import kotlin.math.*
+import kotlin.system.measureTimeMillis
 
 /**
  * Unit tests verifying endpoint proximity, heading alignment, corridor overlap,
@@ -269,5 +270,115 @@ class ClimbDeduplicatorTest {
         assertTrue(deduplicated.contains(climb1))
         assertTrue(deduplicated.contains(distinctClimb))
         assertFalse(deduplicated.contains(duplicate1))
+    }
+
+    @Test
+    fun isDuplicateOrOverlapping_rejectsDistantClimbsInstantlyViaBoundingBox() {
+        // REQ-CLM-011.1 / TST-CLM-011.5: O(1) Bounding-box pre-filtering
+        val climbMunich = Climb(
+            id = 1001L,
+            name = "Munich Hill",
+            startLat = 48.1351,
+            startLng = 11.5820,
+            endLat = 48.1451,
+            endLng = 11.5820,
+            distanceMeters = 1110.0,
+            elevationGainMeters = 75.0,
+            avgGradePercent = 6.7,
+            maxGradePercent = 9.0
+        )
+        // Climb in Hamburg with identical heading (0 deg due North) and identical elevation profile
+        val climbHamburg = Climb(
+            id = 1002L,
+            name = "Hamburg Hill",
+            startLat = 53.5511,
+            startLng = 9.9937,
+            endLat = 53.5611,
+            endLng = 9.9937,
+            distanceMeters = 1110.0,
+            elevationGainMeters = 75.0,
+            avgGradePercent = 6.7,
+            maxGradePercent = 9.0
+        )
+
+        assertFalse("Munich and Hamburg bounding boxes must not overlap", climbMunich.boundingBox.overlaps(climbHamburg.boundingBox))
+        assertFalse(
+            "Distant climbs with identical heading and elevation must be rejected in O(1) via bounding box",
+            ClimbDeduplicator.isDuplicateOrOverlapping(climbMunich, climbHamburg)
+        )
+    }
+
+    @Test
+    fun deduplicateForDisplay_performanceBenchmark300Climbs_completesUnder100ms() {
+        // REQ-CLM-011.1, REQ-CLM-011.3 / TST-CLM-011.5: Benchmark asserting sub-100ms deduplication for dense dataset
+        val climbs = mutableListOf<Climb>()
+
+        // Generate 300 climbs across 50 distinct geographic regions (6 climbs per region, 3 pairs of duplicates)
+        for (i in 0 until 50) {
+            val baseLat = 45.0 + i * 0.2
+            val baseLng = 10.0 + i * 0.2
+
+            for (j in 0 until 3) {
+                // Canonical climb
+                val path = (0..20).map { step ->
+                    PathPoint(
+                        distance = step * 50.0,
+                        latLng = LatLng(baseLat + j * 0.01 + step * 0.0005, baseLng + j * 0.01),
+                        altitude = 300.0 + step * 3.0
+                    )
+                }
+                val canonical = Climb(
+                    id = (i * 10 + j * 2 + 1).toLong(),
+                    name = "Region $i Climb $j",
+                    startLat = path.first().latLng.latitude,
+                    startLng = path.first().latLng.longitude,
+                    endLat = path.last().latLng.latitude,
+                    endLng = path.last().latLng.longitude,
+                    distanceMeters = 1000.0,
+                    elevationGainMeters = 60.0,
+                    avgGradePercent = 6.0,
+                    maxGradePercent = 9.0,
+                    pathPoints = path
+                )
+                climbs.add(canonical)
+
+                // Duplicate climb (overlapping within 50m)
+                val dupPath = path.map { pt ->
+                    pt.copy(latLng = LatLng(pt.latLng.latitude + 0.0002, pt.latLng.longitude + 0.0002))
+                }
+                val duplicate = Climb(
+                    id = (i * 10 + j * 2 + 2).toLong(),
+                    name = "Region $i Climb $j Dup",
+                    startLat = dupPath.first().latLng.latitude,
+                    startLng = dupPath.first().latLng.longitude,
+                    endLat = dupPath.last().latLng.latitude,
+                    endLng = dupPath.last().latLng.longitude,
+                    distanceMeters = 1000.0,
+                    elevationGainMeters = 60.0,
+                    avgGradePercent = 6.0,
+                    maxGradePercent = 9.0,
+                    pathPoints = dupPath
+                )
+                climbs.add(duplicate)
+            }
+        }
+
+        assertEquals("Total climbs generated for benchmark", 300, climbs.size)
+
+        // Warm-up run
+        val warmResult = ClimbDeduplicator.deduplicateForDisplay(climbs)
+        assertEquals("Deduplicated result count should retain 150 canonical climbs", 150, warmResult.size)
+
+        // Timed benchmark run
+        val elapsedMs = measureTimeMillis {
+            val result = ClimbDeduplicator.deduplicateForDisplay(climbs)
+            assertEquals(150, result.size)
+        }
+
+        println("Performance benchmark: 300 climbs deduplicated in $elapsedMs ms")
+        assertTrue(
+            "Deduplicating 300 climbs must execute in under 100ms on JVM (actual: $elapsedMs ms)",
+            elapsedMs < 100L
+        )
     }
 }

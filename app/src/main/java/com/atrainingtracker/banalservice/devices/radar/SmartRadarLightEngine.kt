@@ -54,6 +54,12 @@ object SmartRadarLightEngine : SensorEventListener {
 
     private const val TAG = "SmartRadarLightEngine"
 
+    private fun safeElapsedRealtime(): Long = try {
+        SystemClock.elapsedRealtime()
+    } catch (_: Throwable) {
+        System.currentTimeMillis()
+    }
+
     const val RATE_LIMIT_INTERVAL_MS = 1500L
     const val COOLDOWN_HYSTERESIS_MS = 3500L
     const val TUNNEL_ENTRY_DARK_THRESHOLD_LX = 50.0f
@@ -69,7 +75,7 @@ object SmartRadarLightEngine : SensorEventListener {
                 if (isWorkoutActive && ctx != null) {
                     startListening(ctx)
                 }
-                evaluateAndDispatch(SystemClock.elapsedRealtime())
+                evaluateAndDispatch(safeElapsedRealtime())
             } else {
                 stopListening()
             }
@@ -135,7 +141,7 @@ object SmartRadarLightEngine : SensorEventListener {
         lux: Float,
         isScreenInteractive: Boolean,
         isProximityNear: Boolean,
-        nowMs: Long = SystemClock.elapsedRealtime()
+        nowMs: Long = safeElapsedRealtime()
     ) {
         if (!isScreenInteractive || isProximityNear) {
             // Pocket / Screen-Off Gating: 0 lx reading is ignored; relying on solar profile (REQ-CON-034.1)
@@ -183,7 +189,7 @@ object SmartRadarLightEngine : SensorEventListener {
         latitudeDeg: Double,
         longitudeDeg: Double,
         epochTimeMs: Long,
-        nowMs: Long = SystemClock.elapsedRealtime()
+        nowMs: Long = safeElapsedRealtime()
     ) {
         val newProfile = SolarElevationCalculator.getSolarProfile(latitudeDeg, longitudeDeg, epochTimeMs)
         if (newProfile != currentSolarProfile) {
@@ -200,7 +206,7 @@ object SmartRadarLightEngine : SensorEventListener {
     @JvmOverloads
     fun onRadarStateChanged(
         state: RadarState,
-        nowMs: Long = SystemClock.elapsedRealtime()
+        nowMs: Long = safeElapsedRealtime()
     ) {
         val rawStage = when {
             state.overallThreatLevel == ThreatLevel.FAST_APPROACHING ||
@@ -258,7 +264,7 @@ object SmartRadarLightEngine : SensorEventListener {
     /**
      * Evaluates current state and dispatches mode command subject to rate-limiting.
      */
-    fun evaluateAndDispatch(nowMs: Long = SystemClock.elapsedRealtime()) {
+    fun evaluateAndDispatch(nowMs: Long = safeElapsedRealtime()) {
         if (!isAutomationEnabled || isManualOverridden || RadarLightController.isBrakeActive) return
 
         val targetMode = computeTargetMode(isTunnelActive, currentSolarProfile, currentThreatStage)
@@ -289,7 +295,7 @@ object SmartRadarLightEngine : SensorEventListener {
 
     private fun flushPendingDispatch() {
         val mode = pendingModeToDispatch ?: return
-        val nowMs = SystemClock.elapsedRealtime()
+        val nowMs = safeElapsedRealtime()
         dispatchMode(mode, nowMs)
     }
 
@@ -310,7 +316,7 @@ object SmartRadarLightEngine : SensorEventListener {
     fun resumeAutomation() {
         isManualOverridden = false
         Log.i(TAG, "Smart light automation resumed")
-        evaluateAndDispatch(SystemClock.elapsedRealtime())
+        evaluateAndDispatch(safeElapsedRealtime())
     }
 
     /**

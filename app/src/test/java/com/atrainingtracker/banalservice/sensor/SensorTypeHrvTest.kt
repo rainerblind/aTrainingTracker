@@ -66,6 +66,20 @@ class SensorTypeHrvTest {
     }
 
     @Test
+    fun testHrvDfaA1_typographyGreekAlpha1Parity() {
+        var current: java.io.File? = java.io.File(".").canonicalFile
+        while (current != null && !java.io.File(current, "settings.gradle").exists() && !java.io.File(current, "settings.gradle.kts").exists()) {
+            current = current.parentFile
+        }
+        val root = current ?: java.io.File(".")
+        val xmlFile = java.io.File(root, "app/src/main/res/values/strings_hrv.xml")
+        assertTrue("values/strings_hrv.xml must exist", xmlFile.exists())
+        val content = xmlFile.readText()
+        assertTrue("hrv_dfa_a1 must contain DFA α1 (REQ-UI-526.1 / TST-UI-526.1)", content.contains("<string name=\"hrv_dfa_a1\">DFA α1</string>"))
+        assertTrue("hrv_dfa_a1_short must contain α1 (REQ-UI-526.1 / TST-UI-526.1)", content.contains("<string name=\"hrv_dfa_a1_short\">α1</string>"))
+    }
+
+    @Test
     fun testHrvArtifactRateProperties() {
         val artifactRate = SensorType.HRV_ARTIFACT_RATE
         assertEquals(SensorCategory.HEART_RATE_AND_ENERGY, artifactRate.category)

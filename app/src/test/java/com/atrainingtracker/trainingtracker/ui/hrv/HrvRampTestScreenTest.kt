@@ -20,7 +20,9 @@ package com.atrainingtracker.trainingtracker.ui.hrv
 
 import com.atrainingtracker.testing.LocalizationTestCache
 import com.atrainingtracker.trainingtracker.ui.navigation.NavRoutes
+import java.io.File
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -101,12 +103,72 @@ class HrvRampTestScreenTest {
             "hrv_test_btn_start",
             "hrv_test_btn_finish",
             "hrv_test_btn_cooldown",
-            "hrv_test_btn_cancel"
+            "hrv_test_btn_cancel",
+            // Active Pacing Guidance (ATT-7529)
+            "hrv_test_pacing_target_header",
+            "hrv_test_pacing_actual_header",
+            "hrv_test_live_power_fmt",
+            "hrv_test_live_speed_fmt",
+            "hrv_test_live_hr_fmt",
+            // Protocol Info & Pros/Cons (ATT-7529)
+            "hrv_test_info_procedure_label",
+            "hrv_test_title_step_fmt",
+            "hrv_test_title_ramp",
+            "hrv_test_badge_step_4min",
+            "hrv_test_badge_step_3min",
+            "hrv_test_badge_ramp",
+            "hrv_test_step1_warmup_cycling",
+            "hrv_test_step1_warmup_running",
+            "hrv_test_step2_step_cycling_fmt",
+            "hrv_test_step2_step_running_fmt",
+            "hrv_test_step2_ramp_cycling",
+            "hrv_test_step2_ramp_running",
+            "hrv_test_step3_completion",
+            "hrv_test_pro_label",
+            "hrv_test_con_label",
+            "hrv_test_pro_step_4min",
+            "hrv_test_con_step_4min",
+            "hrv_test_pro_step_3min",
+            "hrv_test_con_step_3min",
+            "hrv_test_pro_ramp",
+            "hrv_test_con_ramp"
         )
 
         val strings = LocalizationTestCache.getStrings("values", "strings_hrv.xml")
         for (key in requiredKeys) {
             assertTrue("Key '$key' must exist in values/strings_hrv.xml", strings.containsKey(key))
         }
+    }
+
+    @Test
+    fun testConsolidatedLauncherNavigationAndCleanScreen_TST_TRK_072_9() {
+        // REQ-TRK-072.7 / TST-TRK-072.9
+        assertEquals("hrv_test", NavRoutes.HRV_TEST)
+
+        val trackingSource = resolveSourceFile("src/main/java/com/atrainingtracker/trainingtracker/ui/tracking/trackingtabs/TrackingTabsScreen.kt")
+        assertTrue("TrackingTabsScreen source file must exist", trackingSource.exists())
+        val trackingContent = trackingSource.readText()
+        assertFalse("TrackingTabsScreen must not contain hrv_test_cockpit_launcher", trackingContent.contains("hrv_test_cockpit_launcher"))
+        assertFalse("TrackingTabsScreen must not contain onNavigateToHrvTest", trackingContent.contains("onNavigateToHrvTest"))
+
+        val profileSource = resolveSourceFile("src/main/java/com/atrainingtracker/trainingtracker/ui/athleteprofile/AthleteProfileScreen.kt")
+        assertTrue("AthleteProfileScreen source file must exist", profileSource.exists())
+        val profileContent = profileSource.readText()
+        assertFalse("AthleteProfileScreen must not contain btn_guided_hrv_test", profileContent.contains("btn_guided_hrv_test"))
+        assertFalse("AthleteProfileScreen must not contain onNavigateToHrvTest", profileContent.contains("onNavigateToHrvTest"))
+
+        val zonesSource = resolveSourceFile("src/main/java/com/atrainingtracker/trainingtracker/activities/ZonesSettingsActivity.kt")
+        assertTrue("ZonesSettingsActivity source file must exist", zonesSource.exists())
+        val zonesContent = zonesSource.readText()
+        assertTrue("ZonesSettingsActivity must use TrendingUp icon for ramp test", zonesContent.contains("Icons.AutoMirrored.Filled.TrendingUp"))
+        assertFalse("ZonesSettingsActivity must not use FitnessCenter for ramp test", zonesContent.contains("imageVector = Icons.Default.FitnessCenter"))
+    }
+
+    private fun resolveSourceFile(pathUnderApp: String): File {
+        val f1 = File(pathUnderApp)
+        if (f1.exists()) return f1
+        val f2 = File("app/$pathUnderApp")
+        if (f2.exists()) return f2
+        return f1
     }
 }

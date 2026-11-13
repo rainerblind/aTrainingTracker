@@ -85,4 +85,32 @@ class TuningFormControlsTest {
         val method = methods.find { it.name.startsWith("SubordinateTuningToggleItem") && Modifier.isPublic(it.modifiers) }
         assertNotNull("SubordinateTuningToggleItem composable must exist", method)
     }
+
+    @Test
+    fun testTuningSegmentedButtonRow_existsViaReflection() {
+        val clazz = Class.forName("com.atrainingtracker.trainingtracker.ui.settings.tuning.TuningFormControlsKt")
+        val methods = clazz.declaredMethods
+        val method = methods.find { it.name.startsWith("TuningSegmentedButtonRow") && Modifier.isPublic(it.modifiers) }
+        assertNotNull("TuningSegmentedButtonRow composable must exist", method)
+    }
+
+    @Test
+    fun testTuningDropdownRow_existsViaReflection() {
+        val clazz = Class.forName("com.atrainingtracker.trainingtracker.ui.settings.tuning.TuningFormControlsKt")
+        val methods = clazz.declaredMethods
+        val method = methods.find { it.name.startsWith("TuningDropdownRow") && Modifier.isPublic(it.modifiers) }
+        assertNotNull("TuningDropdownRow composable must exist", method)
+    }
+
+    @Test
+    fun testRadarSettingsSection_eliminatesNestedElevatedCardsAndRawSwitches() {
+        val radarFile = java.io.File("src/main/java/com/atrainingtracker/trainingtracker/ui/settings/radar/RadarSettingsSection.kt")
+        val fileToRead = if (radarFile.exists()) radarFile else java.io.File("app/src/main/java/com/atrainingtracker/trainingtracker/ui/settings/radar/RadarSettingsSection.kt")
+        assertTrue("RadarSettingsSection.kt must exist on disk", fileToRead.exists())
+        val content = fileToRead.readText()
+        assertFalse("RadarSettingsSection.kt must not contain nested ElevatedCard", content.contains("ElevatedCard"))
+        assertFalse("RadarSettingsSection.kt must not contain raw Switch(", content.contains("Switch("))
+        assertFalse("RadarSettingsSection.kt must not contain FilterChip", content.contains("FilterChip"))
+        assertFalse("RadarSettingsSection.kt must not contain raw ExposedDropdownMenuBox", content.contains("ExposedDropdownMenuBox"))
+    }
 }

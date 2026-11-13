@@ -96,6 +96,7 @@ data class HrvRampTestUiState(
     val totalElapsedSec: Int = 0,
     val currentHr: Int? = null,
     val currentPower: Double? = null,
+    val currentSpeedKmh: Double? = null,
     val currentDfaA1: Double? = null,
     val currentArtifactRate: Double? = null,
     val earlyCompletionDetected: Boolean = false,

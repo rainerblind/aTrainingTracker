@@ -18,35 +18,45 @@
 
 package com.atrainingtracker.trainingtracker.ui.aftermath.editworkout
 
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material.icons.filled.Commute
 import androidx.compose.material.icons.filled.ContentCut
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.WarningAmber
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.ui.platform.testTag
 import androidx.compose.runtime.Composable
@@ -59,15 +69,18 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.exporter.FileFormat
+import com.atrainingtracker.trainingtracker.ui.theme.safePainterResource
 import com.atrainingtracker.trainingtracker.ui.aftermath.RpeFeelEditorControls
 import com.atrainingtracker.trainingtracker.ui.clusters.EditWorkoutClusterDialog
 import com.atrainingtracker.trainingtracker.ui.clusters.WorkoutClusterSelectionDialog
@@ -287,85 +300,251 @@ fun EditWorkoutDialog(
                 )
             }
 
-            // 4. Checkboxes (Commute / Trainer)
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Checkbox(
-                    checked = workoutData?.commute ?: false,
-                    onCheckedChange = { viewModel.updateIsCommute(it) }
-                )
-                Text(stringResource(R.string.commute))
-                Spacer(Modifier.width(16.dp))
-                Checkbox(
-                    checked = workoutData?.trainer ?: false,
-                    onCheckedChange = { viewModel.updateIsTrainer(it) }
-                )
-                Text(stringResource(R.string.trainer_general))
-            }
+            // 4. Workout classification tag tiles (Commute / Indoor / Race - Variant B, ATT-7517)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                val isCommute = workoutData?.commute ?: false
+                val isTrainer = workoutData?.trainer ?: false
+                val isRace = workoutData?.race ?: false
 
-            // 4b. Checkbox (Race / Wettkampf, ATT-2005)
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Checkbox(
-                    checked = workoutData?.race ?: false,
-                    onCheckedChange = { viewModel.updateIsRace(it) }
-                )
-                Text(stringResource(R.string.race))
-            }
+                // 4a. Commute Tile
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .defaultMinSize(minHeight = 42.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(
+                            if (isCommute) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f)
+                            else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+                        )
+                        .border(
+                            width = if (isCommute) 2.dp else 0.5.dp,
+                            color = if (isCommute) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant,
+                            shape = RoundedCornerShape(8.dp)
+                        )
+                        .toggleable(
+                            value = isCommute,
+                            role = Role.Checkbox,
+                            onValueChange = { viewModel.updateIsCommute(it) }
+                        )
+                        .padding(horizontal = 6.dp, vertical = 8.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Commute,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp),
+                            tint = if (isCommute) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(Modifier.width(6.dp))
+                        Text(
+                            text = stringResource(R.string.commute),
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = if (isCommute) FontWeight.SemiBold else FontWeight.Normal,
+                            color = if (isCommute) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
 
-            // 5. Workout individual upload to Strava (Conditional solely on active Strava community connection)
-            if (TrainingApplication.uploadToCommunity(FileFormat.STRAVA)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    val uploadStatus = workoutData?.uploadToStrava ?: -1
-                    val stravaMappingAvailable = workoutData?.stravaSportName != null
+                // 4b. Indoor Tile
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .defaultMinSize(minHeight = 42.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(
+                            if (isTrainer) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f)
+                            else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+                        )
+                        .border(
+                            width = if (isTrainer) 2.dp else 0.5.dp,
+                            color = if (isTrainer) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant,
+                            shape = RoundedCornerShape(8.dp)
+                        )
+                        .toggleable(
+                            value = isTrainer,
+                            role = Role.Checkbox,
+                            onValueChange = { viewModel.updateIsTrainer(it) }
+                        )
+                        .padding(horizontal = 6.dp, vertical = 8.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Home,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp),
+                            tint = if (isTrainer) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(Modifier.width(6.dp))
+                        Text(
+                            text = stringResource(R.string.indoor_short),
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = if (isTrainer) FontWeight.SemiBold else FontWeight.Normal,
+                            color = if (isTrainer) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
 
-                    val isChecked = if (stravaMappingAvailable) {
-                        when (uploadStatus) {
-                            1 -> true
-                            0 -> false
-                            else -> true
-                        }
-                    } else false
-
-                    Checkbox(
-                        checked = isChecked,
-                        onCheckedChange = { viewModel.updateUploadToStrava(it) },
-                        enabled = stravaMappingAvailable
-                    )
-                    Icon(
-                        painter = painterResource(R.drawable.logo_square_strava),
-                        contentDescription = null,
-                        modifier = Modifier
-                            .size(18.dp)
-                            .alpha(if (stravaMappingAvailable) 1f else 0.38f),
-                        tint = Color.Unspecified
-                    )
-                    Spacer(Modifier.width(8.dp))
-                    Text(
-                        text = stringResource(R.string.stravaUpload),
-                        color = if (stravaMappingAvailable) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f)
-                    )
+                // 4c. Race Tile (EmojiEvents with tertiaryContainer styling matching WorkoutHeader.kt)
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .defaultMinSize(minHeight = 42.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(
+                            if (isRace) MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.7f)
+                            else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+                        )
+                        .border(
+                            width = if (isRace) 2.dp else 0.5.dp,
+                            color = if (isRace) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.outlineVariant,
+                            shape = RoundedCornerShape(8.dp)
+                        )
+                        .toggleable(
+                            value = isRace,
+                            role = Role.Checkbox,
+                            onValueChange = { viewModel.updateIsRace(it) }
+                        )
+                        .padding(horizontal = 6.dp, vertical = 8.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.EmojiEvents,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp),
+                            tint = if (isRace) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(Modifier.width(6.dp))
+                        Text(
+                            text = stringResource(R.string.race),
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = if (isRace) FontWeight.SemiBold else FontWeight.Normal,
+                            color = if (isRace) MaterialTheme.colorScheme.onTertiaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
                 }
             }
 
-            // 5b. Sync to Health Connect (Conditional on Health Connect availability)
-            if (isHealthConnectAvailable) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Checkbox(
-                        checked = syncToHealthConnect,
-                        onCheckedChange = { checked ->
-                            syncToHealthConnect = checked
+            // 5. Grouped Cloud Sync Card (Strava and/or Health Connect, ATT-7517)
+            val showStrava = TrainingApplication.uploadToCommunity(FileFormat.STRAVA)
+            val showHealthConnect = isHealthConnectAvailable
+            if (showStrava || showHealthConnect) {
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(10.dp),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                    color = MaterialTheme.colorScheme.surface
+                ) {
+                    Column {
+                        // 5a. Strava Sync Row
+                        if (showStrava) {
+                            val uploadStatus = workoutData?.uploadToStrava ?: -1
+                            val stravaMappingAvailable = workoutData?.stravaSportName != null
+
+                            val isChecked = if (stravaMappingAvailable) {
+                                when (uploadStatus) {
+                                    1 -> true
+                                    0 -> false
+                                    else -> true
+                                }
+                            } else false
+
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .toggleable(
+                                        value = isChecked,
+                                        enabled = stravaMappingAvailable,
+                                        role = Role.Checkbox,
+                                        onValueChange = { viewModel.updateUploadToStrava(it) }
+                                    )
+                                    .padding(horizontal = 12.dp, vertical = 10.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    painter = safePainterResource(id = R.drawable.logo_square_strava),
+                                    contentDescription = null,
+                                    modifier = Modifier
+                                        .size(20.dp)
+                                        .alpha(if (stravaMappingAvailable) 1f else 0.38f),
+                                    tint = Color.Unspecified
+                                )
+                                Spacer(Modifier.width(10.dp))
+                                Text(
+                                    text = stringResource(R.string.stravaUpload),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = if (stravaMappingAvailable) MaterialTheme.colorScheme.onSurface
+                                            else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f),
+                                    modifier = Modifier.weight(1f)
+                                )
+                                Checkbox(
+                                    checked = isChecked,
+                                    onCheckedChange = null,
+                                    enabled = stravaMappingAvailable
+                                )
+                            }
                         }
-                    )
-                    Icon(
-                        imageVector = Icons.Default.Favorite,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp),
-                        tint = MaterialTheme.colorScheme.primary
-                    )
-                    Spacer(Modifier.width(8.dp))
-                    Text(
-                        text = stringResource(R.string.health_connect_sync_manual),
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
+
+                        if (showStrava && showHealthConnect) {
+                            HorizontalDivider(
+                                thickness = 0.5.dp,
+                                color = MaterialTheme.colorScheme.outlineVariant
+                            )
+                        }
+
+                        // 5b. Health Connect Sync Row
+                        if (showHealthConnect) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .toggleable(
+                                        value = syncToHealthConnect,
+                                        role = Role.Checkbox,
+                                        onValueChange = { syncToHealthConnect = it }
+                                    )
+                                    .padding(horizontal = 12.dp, vertical = 10.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    painter = safePainterResource(id = R.drawable.ic_health_connect, fallback = Icons.Default.Favorite),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(20.dp),
+                                    tint = Color.Unspecified
+                                )
+                                Spacer(Modifier.width(10.dp))
+                                Text(
+                                    text = stringResource(R.string.health_connect_sync_manual),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                Checkbox(
+                                    checked = syncToHealthConnect,
+                                    onCheckedChange = null
+                                )
+                            }
+                        }
+                    }
                 }
             }
 

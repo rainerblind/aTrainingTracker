@@ -18,7 +18,10 @@
 
 package com.atrainingtracker.trainingtracker.ui.tracking
 
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.lang.reflect.Modifier
 
@@ -49,5 +52,34 @@ class SensorFieldViewLayoutTest {
     fun testTelemetryContent_verticallyCenteredInExpandedSpace() {
         val clazz = getSensorFieldViewClass()
         assertNotNull("SensorFieldViewKt must exist", clazz)
+    }
+
+    @Test
+    fun testSensorFieldView_trackingModePlaceholderContracts() {
+        // TST-TRK-059.11b: When showGraph is true and sparklineSamples is empty in ScreenMode.TRACKING,
+        // placeholder mode is activated and representative preview samples are supplied.
+        val isPlaceholder = resolveSparklineIsPlaceholder(hasLiveSamples = false, screenMode = ScreenMode.TRACKING)
+        assertTrue("Tracking mode with inactive sensor must activate placeholder", isPlaceholder)
+
+        val samples = resolveSparklineEffectiveSamples(emptyList())
+        assertEquals(DEFAULT_PREVIEW_SPARKLINE_SAMPLES, samples)
+
+        val span = resolveSparklineEffectiveSpanSeconds(emptyList(), liveSpanSeconds = 0, graphHorizonSeconds = 300)
+        assertEquals(300, span)
+    }
+
+    @Test
+    fun testSensorFieldView_liveTelemetrySupersedesPlaceholder() {
+        // TST-TRK-059.11c: As soon as genuine telemetry arrives, placeholder mode is disabled
+        // and live recorded samples supersede preview samples immediately.
+        val liveSamples = listOf(135f, 138f, 142f)
+        val isPlaceholder = resolveSparklineIsPlaceholder(hasLiveSamples = liveSamples.isNotEmpty(), screenMode = ScreenMode.TRACKING)
+        assertFalse("Live telemetry must deactivate placeholder mode", isPlaceholder)
+
+        val samples = resolveSparklineEffectiveSamples(liveSamples)
+        assertEquals(liveSamples, samples)
+
+        val span = resolveSparklineEffectiveSpanSeconds(liveSamples, liveSpanSeconds = 120, graphHorizonSeconds = 300)
+        assertEquals(120, span)
     }
 }

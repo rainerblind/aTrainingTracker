@@ -60,6 +60,7 @@ python3 tools/jira_util.py comment <RELEASE_TICKET_KEY> "h4. Release Progress: S
 * **[MANDATORY SYSTEM EVIDENCE GATE - ASPICE SYS.4 & SYS.5]**: Release candidate tag creation (Step 7) and Play Store distribution (Step 6) are **STRICTLY BLOCKED** unless verified system evidence artifacts exist under `docs/releases/<tag>/` and pass all criteria:
   - SYS.4: `docs/releases/<tag>/system_integration_results.json` (from `tools/run_system_integration_tests.py`)
   - SYS.5: `docs/releases/<tag>/sys_verification_record.md` (per `docs/system/sys_verification_protocol.md`)
+  - Verification Summary: `docs/releases/<tag>/verification_summary.md` (from `tools/generate_release_verification_summary.py`)
 5. `Jira: Finish Release & Create new one` (Release current version, create next FixVersion)
 6. `Play Store: Upload as Testing` (Upload `.aab` to Internal/Closed Testing track — blocked if system evidence missing/failing)
 7. `Gitflow: Finish Release` (Merge into `master` with tags, merge back into `develop` — tag creation blocked if system evidence missing/failing)

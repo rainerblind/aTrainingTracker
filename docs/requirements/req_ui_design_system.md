@@ -1971,9 +1971,25 @@ Specifically:
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
+- **Implementation**: `ATrainingTrackerApp.kt`, `MainActivityWithNavigation.kt`, `AppNavigationDrawer.kt`
 - **Rationale**: The system SHALL establish Material 3's `DrawerState` as the single authoritative source of truth for navigation drawer visibility and navigation control, eliminating decoupled boolean state flags, and SHALL isolate overlay back navigation (Navigation Drawer and Settings Bottom Sheets) from screen-level destination back navigation using scoped, conditionally composed `BackHandler`s:
 1. *Single Source of Truth*: `NavigationDrawerController` SHALL delegate drawer open and close actions directly to Material 3's `DrawerState` via functional action delegates, removing the decoupled mutable boolean state flag (`isDrawerOpen`) entirely and eliminating split-brain asynchronous synchronization.
-2. *Scoped Overlay Back Navigation & Dynamic LIFO Precedence*: Overlay back handlers for `ModalNavigationDrawer` and Settings Bottom Sheets SHALL be conditionally composed (`if (isDrawerVisible) { BackHandler { ... } }` and `if (activeBottomSheet != null) { BackHandler { ... } }`). Conditionally composing `BackHandler` dynamically appends its callback to the head of the `OnBackPressedDispatcher` LIFO evaluation stack whenever the overlay is presented, guaranteeing that system Back exclusively dismisses the active overlay and strictly supersedes `NavHost`'s internal backstack popping and destination screen back handlers across all animated phases (`currentValue != Closed
+2. *Scoped Overlay Back Navigation & Dynamic LIFO Precedence*: Overlay back handlers for `ModalNavigationDrawer` and Settings Bottom Sheets SHALL be conditionally composed (`if (isDrawerVisible) { BackHandler { ... } }` and `if (activeBottomSheet != null) { BackHandler { ... } }`). Conditionally composing `BackHandler` dynamically appends its callback to the head of the `OnBackPressedDispatcher` LIFO evaluation stack whenever the overlay is presented, guaranteeing that system Back exclusively dismisses the active overlay and strictly supersedes `NavHost`'s internal backstack popping and destination screen back handlers across all animated phases (`currentValue != Closed || targetValue != Closed`).
+3. *NavController Lifecycle Binding & Defensive Graph Readiness*: In `ATrainingTrackerApp.kt`, `DisposableEffect(navController)` binding `activity.onNavControllerReady(navController)` and initial route synchronization SHALL be composed within the `Scaffold` content lambda after `NavHost`, guaranteeing that `NavHost` initializes and attaches the navigation graph (`setGraph`) before `onNavControllerReady` executes queued drawer navigation. In `MainActivityWithNavigation.kt`, navigation methods (`navigateToDrawerItem`, `navigateToFilteredWorkouts`, `startWorkoutSummaryListFromPeriod`) SHALL verify that `navController` has an initialized graph; if called before `NavHost` sets its graph, `navigateToDrawerItem` SHALL buffer `mPendingDrawerItemId = itemId` without accessing `controller.graph` or throwing `IllegalStateException`.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: `REQ-UI-162` (*Single Source of Truth & Scoped Overlay Back Navigation*), implemented under `ATT-1327` / `ATT-1335`. Targets `ATrainingTrackerApp.kt`, `MainActivityWithNavigation.kt`, and `AppNavigationDrawer.kt`.
+2. *Historical Origin & Commit Trace*: Ticket `ATT-1327` / `ATT-1335` bound `MainActivityWithNavigation` navigation callbacks to Compose `NavHostController`. Refined under `ATT-7526` (`Sprint 2026-46.5`).
+3. *Root Reason for Existing Formulation*: `DisposableEffect(navController)` was originally placed in the outer `ATrainingTrackerApp` body to bind `navController` on initial composition. Because `Scaffold` defers subcomposition of its content lambda until the measure/layout pass, the outer `DisposableEffect`'s `onRemembered()` fired before `NavHost` invoked `setGraph()`, crashing on early drawer navigation with `IllegalStateException: You must call setGraph() before calling getGraph()`.
+4. *Preservation of Core Invariants*: Binding `navController` inside `Scaffold` after `NavHost` maintains the exact binding lifecycle contract while eliminating premature callback dispatch before graph readiness. Scoped `BackHandler` LIFO precedence and 21 drawer destinations remain 100% preserved.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* an early drawer navigation request arrives prior to Compose graph initialization (e.g. `mPendingDrawerItemId = itemId`),
+• *When* `ATrainingTrackerApp` initial composition occurs,
+• *Then* `NavHost` SHALL attach the navigation graph before `activity.onNavControllerReady(navController)` executes, successfully navigating to the pending drawer destination without throwing `IllegalStateException`.
+• *Given* `navigateToDrawerItem(itemId)` is invoked while `navController` is present but has no graph attached,
+• *When* the method executes,
+• *Then* it SHALL safely buffer `mPendingDrawerItemId = itemId` and return `true` without accessing `controller.graph`.
 
 ### REQ-UI-163: Cockpit Tab Navigation on Tracking Initiation & Origin-Aware Resume Neutrality [Verified]
 - **Tests**: `TST-UI-115`, `TST-UI-373`, `TST-UI-375`, `TST-UI-399`
@@ -2401,21 +2417,22 @@ Specifically:
 - **Type**: Functional
 - **Verification Method**: Unit
 - **Implementation**: `SettingsDataStore.kt`, `SettingsDataStoreJavaHelper.kt`, `ZonesSettingsActivity.kt`, `SensorFieldState.kt`, `SensorFieldView.kt`, `TrackingViewModel.kt`
-- **Rationale**: The system SHALL provide configurable zone visualization options per athletic zone profile (`HR_RUN`, `HR_BIKE`, and `PWR_BIKE`) within `ZonesSettingsActivity` and reflect the chosen visual cues dynamically across workout cockpit sensor tiles (ATT-1265). ATT-5200 updates string resource `zone_display_background` across all 9 application locales to "Tinted background" (*Eingefärbter Hintergrund*) to resolve user confusion with Dark/AMOLED themes:
+- **Rationale**: The system SHALL provide configurable zone visualization options per athletic zone profile (`HR_RUN`, `HR_BIKE`, `PWR_BIKE`, and `HRV (DFA a1)`) within `ZonesSettingsActivity` and reflect the chosen visual cues dynamically across workout cockpit sensor tiles (ATT-1265). ATT-5200 updates string resource `zone_display_background` across all 9 application locales to "Tinted background" (*Eingefärbter Hintergrund*) to resolve user confusion with Dark/AMOLED themes. ATT-7524 establishes symmetrical defaults (background, left bar, and right bar enabled, text color disabled) and wires dedicated DataStore persistence for `HRV (DFA a1)`:
 1. *Per-Profile Visualization Options (`ZoneDisplayOptions`)*:
-• The system SHALL define four independent, multi-selectable visual presentation cues for each `ZoneType`:
+• The system SHALL define four independent, multi-selectable visual presentation cues for each `ZoneType` and the dedicated `HRV (DFA a1)` profile:
 - *Tinted background* (`showBackground`: Boolean, localized via `R.string.zone_display_background`): Renders the card container with tinted zone color at 12% opacity (`zoneColor.copy(alpha = 0.12f)`). When disabled, the card container remains neutral `MaterialTheme.colorScheme.surface` (pure `#000000` in AMOLED dark mode). Across all 9 locales, the string resource SHALL convey active zone color tinting rather than daylight theme ("Tinted background" / "Eingefärbter Hintergrund").
 - *Left bar* (`showLeftBar`: Boolean): Renders a 6dp vertical indicator strip on the left edge of the tile colored with the active `zoneColor`.
 - *Right bar* (`showRightBar`: Boolean): Renders a 6dp vertical indicator strip on the right edge of the tile colored with the active `zoneColor`.
 - *Text color* (`showTextColor`: Boolean): Renders the primary numeric metric reading (`fieldState.value`) using the active `zoneColor`. When disabled, the reading renders in standard `MaterialTheme.colorScheme.onSurface`.
-• The default configuration for all profiles SHALL be: `showBackground = true`, `showLeftBar = true`, `showRightBar = false`, `showTextColor = false`, ensuring 100% backward compatibility.
+• The default configuration for all profiles SHALL be: `showBackground = true`, `showLeftBar = true`, `showRightBar = true`, `showTextColor = false`, `showGauge = false`. In DataStore, an unset `rightBarKey` SHALL fall back to `true`, while explicitly saved user preferences (`false`) SHALL be strictly preserved.
 2. *Persistent Preferences Storage (`SettingsDataStore.kt`)*:
-• The system SHALL store the four visual toggles independently for each `ZoneType` in DataStore preferences.
-• Modifying a toggle SHALL immediately persist the updated setting to DataStore on an IO dispatcher.
+• The system SHALL store the four visual toggles independently for each `ZoneType` (`HR_RUN`, `HR_BIKE`, `PWR_BIKE`) and dedicated `HRV (DFA a1)` preferences (`hrv_dfa_a1_zone_show_background`, `hrv_dfa_a1_zone_show_left_bar`, `hrv_dfa_a1_zone_show_right_bar`, `hrv_dfa_a1_zone_show_text_color`, `hrv_dfa_a1_zone_show_gauge`) in DataStore preferences.
+• Modifying a toggle SHALL immediately persist the updated setting to DataStore on an IO dispatcher and update the cached `SettingsSnapshot`.
 3. *Settings UI Integration & Theme-Aware Live Preview (`ZonesSettingsActivity.kt`)*:
-• In `ZonesSettingsActivity.kt`, each profile tab (`HR_RUN`, `HR_BIKE`, `PWR_BIKE`) SHALL display a dedicated section titled \"Zonendarstellung\" / \"Zone Visualization\" positioned below the five zone threshold cards.
+• In `ZonesSettingsActivity.kt`, each profile tab (`HR_RUN`, `HR_BIKE`, `PWR_BIKE`, and `HRV (DFA a1)`) SHALL display a dedicated section titled "Zonendarstellung" / "Zone Visualization" positioned below the threshold/band cards.
 • The section SHALL present four interactive toggle controls corresponding to the four display options.
-• Directly below the toggle controls, the section SHALL render an interactive live preview tile (`SensorFieldView`) strictly inheriting `MaterialTheme.colorScheme` from the active application/system theme (respecting dark mode or light mode), with an interactive 5-zone selector chip row.
+• For the `HRV (DFA a1)` tab, toggle changes SHALL be bound reactively to `SettingsDataStore` (`saveHrvZoneDisplayOptions`), eliminating ephemeral state loss.
+• Directly below the toggle controls, the section SHALL render an interactive live preview tile (`SensorFieldView`) strictly inheriting `MaterialTheme.colorScheme` from the active application/system theme (respecting dark mode or light mode), with an interactive zone/band selector row.
 4. *Cockpit Telemetry Rendering (`SensorFieldView.kt`)*:
 • In `SensorFieldView.kt`, when `fieldState.zoneColor != Color.Transparent`: container background evaluates to tinted color or neutral surface, left bar renders if enabled, right bar renders if enabled, and numeric text adopts zoneColor if enabled.
 5. *Preserved Invariants & Guardrails*:
@@ -2426,24 +2443,33 @@ Specifically:
 • 100% localization parity maintained across all 9 supported locales.
 
 **Requirement Archaeology & Chesterton's Fence Audit**:
-1. *Original Requirement ID & Target*: Amends `REQ-UI-172` (*Configurable Zone Visualization Options and Theme-Aware Live Preview*, `ATT-1265`). Targets `app/src/main/res/values*/strings.xml`, `ZoneDisplayLocalizationTest.kt`, and `docs/requirements/req_ui_design_system.md`.
-2. *Historical Origin & Commit Trace*: `ATT-1265` (commit `a48c8a38`, Sprint 2026-40.5) established `ZoneDisplayOptions` and string resource `zone_display_background = "Light background"` / `"Heller Hintergrund"`.
-3. *Root Reason for Existing Formulation*: "Light background" originally denoted "lightly tinted/colored" (12% alpha tint), but caused semantic ambiguity in Dark/AMOLED modes where athletes interpreted it as forcing a light/daylight surface.
-4. *Preservation of Core Invariants*: String identifier `R.string.zone_display_background`, backing property `showBackground: Boolean`, default value `true`, DataStore persistence schema, and 9-language translation parity are 100% preserved.
+1. *Original Requirement ID & Target*: Amends `REQ-UI-172` (*Configurable Zone Visualization Options and Theme-Aware Live Preview*, `ATT-1265`, `ATT-5200`, `ATT-7524`). Targets `ZoneDisplayOptions.kt`, `SettingsDataStore.kt`, `ZonesSettingsActivity.kt`, and `docs/requirements/req_ui_design_system.md`.
+2. *Historical Origin & Commit Trace*: `ATT-1265` (commit `a48c8a38`, Sprint 2026-40.5) established `ZoneDisplayOptions` with `showRightBar = false` by default. `ATT-5200` clarified "Tinted background" localization. `ATT-7317` introduced the 4th `HRV (DFA a1)` tab in `ZonesSettingsActivity` with ephemeral display options.
+3. *Root Reason for Existing Formulation*: `showRightBar` was originally `false` to avoid potential visual crowding before symmetrical card layouts were standardized; `HRV (DFA a1)` lacked persistent DataStore keys upon initial tab introduction.
+4. *Preservation of Core Invariants*: Symmetrical edge bars frame active tiles cleanly on both compact and wide screens; unset `rightBarKey` defaults to `true` while explicitly saved user `false` preferences in DataStore are strictly preserved; 9-language translation parity is 100% maintained.
 
 **Acceptance Criteria (Given-When-Then)**:
+• *Given* a fresh installation or uncustomized `ZoneDisplayOptions` in `SettingsDataStore`,
+• *When* reading `ZoneDisplayOptions` for `HR_RUN`, `HR_BIKE`, `PWR_BIKE`, or `HRV (DFA a1)`,
+• *Then* `showBackground == true`, `showLeftBar == true`, `showRightBar == true`, and `showTextColor == false`.
+• *Given* an athlete in `ZonesSettingsActivity` on the `HRV (DFA a1)` tab,
+• *When* toggling any display option (e.g. disabling Right bar or enabling Text color),
+• *Then* the preference SHALL immediately persist to `SettingsDataStore` and be reflected upon tab switches and activity recreations.
+• *Given* an existing user who previously explicitly saved `showRightBar = false`,
+• *When* reading from `SettingsDataStore`,
+• *Then* the stored `false` preference SHALL be respected without overwrite.
 • *Given* an athlete in `ZonesSettingsActivity` on the Run HR tab,
-• *When* viewing the \"Zonendarstellung\" section,
+• *When* viewing the "Zonendarstellung" section,
 • *Then* four toggle controls (Tinted background, Left bar, Right bar, Text color) and a live preview tile SHALL be rendered below the zone threshold cards.
 • *Given* an athlete viewing the "Zonendarstellung" section in any supported language,
 • *When* inspecting the first toggle,
 • *Then* it SHALL display "Tinted background" (EN), "Eingefärbter Hintergrund" (DE), "Fondo tintado" (ES), "Arrière-plan teinté" (FR), "Sfondo tinto" (IT), "色付き背景" (JA), "Getinte achtergrond" (NL), "Zabarwione tło" (PL), or "Fundo matizado" (PT).
-• *When* the athlete toggles \"Right bar\" ON and \"Tinted background\" OFF,
+• *When* the athlete toggles "Right bar" ON and "Tinted background" OFF,
 • *Then* the live preview tile SHALL immediately update to show a right vertical strip on neutral surface with no background tint, and the preferences SHALL be persisted to DataStore.
 • *Given* the host device is in AMOLED Dark Mode,
 • *When* viewing the live preview tile in `ZonesSettingsActivity`,
 • *Then* the preview tile card background SHALL render in pure black (`#000000`) when background tint is toggled OFF.
-• *Given* an active workout with Run HR zone configured with \"Text color\" ON and \"Tinted background\" OFF,
+• *Given* an active workout with Run HR zone configured with "Text color" ON and "Tinted background" OFF,
 • *When* the heart rate enters Zone 4 (Threshold),
 • *Then* the heart rate metric value SHALL render in red (`#FF0000`) on a neutral dark surface with no background tint.
 • *Given* all four zone visualization toggles are switched OFF,
@@ -6458,17 +6484,25 @@ The methods SHALL encapsulate `SettingsDataStoreJavaHelper.getZoneMax` queries (
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
-- **Implementation**: `AdvancedTuningDialog.kt`, `CockpitTypographySection.kt`, `AmoledBatterySaverSection.kt`, `SensorsGpsFilterSection.kt`, `AftermathAnalysisSection.kt`, `WorkoutMasksAndCardsSection.kt`, `TuningFormControls.kt`
-- **Rationale**: The system SHALL decompose the monolithic `AdvancedTuningDialog.kt` into focused, dedicated category component files under package `com.atrainingtracker.trainingtracker.ui.settings.tuning.categories` and shared form controls under `com.atrainingtracker.trainingtracker.ui.settings.tuning` (ATT-2033):
+- **Implementation**: `AdvancedTuningDialog.kt`, `CockpitTypographySection.kt`, `AmoledBatterySaverSection.kt`, `SensorsGpsFilterSection.kt`, `AftermathAnalysisSection.kt`, `WorkoutMasksAndCardsSection.kt`, `TuningFormControls.kt`, `RadarSettingsSection.kt`, `NavigationSection.kt`, `TuningDesignGuidelinesContractTest.kt`
+- **Rationale**: The system SHALL decompose the monolithic `AdvancedTuningDialog.kt` into focused, dedicated category component files under package `com.atrainingtracker.trainingtracker.ui.settings.tuning.categories` and shared form controls under `com.atrainingtracker.trainingtracker.ui.settings.tuning` (ATT-2033, ATT-7536, ATT-7539):
 1. *Dedicated Category Component Files (`categories/`)*:
 • `CockpitTypographySection.kt`: Font family selection, numeric font weight, tabular numerals, 360dp menu constraints.
 • `AmoledBatterySaverSection.kt`: Display timeout, dimming factor, dynamic battery saver toggles.
 • `SensorsGpsFilterSection.kt`: GPS filter accuracy, slope calculations, elevation window.
 • `AftermathAnalysisSection.kt`: Independent X-axis domain selectors for elevation vs. telemetry, pace ceiling slider.
 • `WorkoutMasksAndCardsSection.kt`: 8 card visibility toggles, section reordering list controls, lap display mode segmented button.
-2. *Decoupled Form Controls (`TuningFormControls.kt`)*: Reusable controls (`TuningSliderItem`, `TuningToggleItem`) SHALL be extracted to `TuningFormControls.kt` for shared consumption across category sections.
+• `NavigationSection.kt`: GPS and turn guidance toggles, route drawing preferences, standardized climb categorization formula segmented selector.
+2. *Decoupled Form Controls (`TuningFormControls.kt`)*: Reusable controls (`TuningSliderItem`, `TuningToggleItem`, `SubordinateTuningToggleItem`, `TuningSegmentedButtonRow`, `TuningDropdownRow`) SHALL be maintained in `TuningFormControls.kt` for shared consumption across category sections.
 3. *File Size Constraint*: No single source file in the tuning package SHALL exceed 400 lines of code.
 4. *Behavioral & State Hoisting Invariants*: Category section composables SHALL be stateless, accepting immutable configuration models and targeted write callbacks. Dialog container `AdvancedTuningDialog.kt` SHALL manage dialog scaffolding, accordion expansion state, DataStore flow collection, and reset operations with 100% behavioral parity.
+5. *Standardized Category Layout, Card-Free Structure & Design Guidelines Contract (`REQ-UI-262.5` — ATT-7536, ATT-7539)*: Category composables inside the accordion (such as `RadarSettingsSection.kt`, `NavigationSection.kt`, `AftermathAnalysisSection.kt`, `CockpitTypographySection.kt`) SHALL NOT nest `ElevatedCard` containers inside the accordion body; logical groups SHALL be demarcated using `HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))` and section subheaders. All toggles SHALL use `TuningToggleItem` (0.8f scale) or `SubordinateTuningToggleItem` (0.65f scale), all sliders SHALL use `TuningSliderItem`, and all binary and 2–4 option segmented selectors SHALL use `TuningSegmentedButtonRow` (`icon = {}`, `labelSmall`, `maxLines = 1`, `softWrap = false`). Raw `FilterChip` calls SHALL NOT be used for mutually exclusive binary or small discrete mode choices in `ui/settings/tuning/categories/` (allowlisted strictly for developer tier overrides in `SupporterDebugSection.kt`). Automated enforcement SHALL be verified by `TuningDesignGuidelinesContractTest`.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Amends `REQ-UI-262` (*Modular Component Architecture for Advanced Tuning Dialog*, `ATT-2033`). Targets `TuningFormControls.kt`, `RadarSettingsSection.kt`, `NavigationSection.kt`, `AftermathAnalysisSection.kt`, `CockpitTypographySection.kt`, `docs/design_guidelines.md`.
+2. *Historical Origin & Commit Trace*: Sprint 2026-39.2 (`ATT-2033`, commit `096fd565`) extracted category files and created `TuningFormControls.kt`. Sprint 2026-46.5 (`ATT-7536`) added `TuningSegmentedButtonRow` and `TuningDropdownRow`, purged nested `ElevatedCard`s and raw `Switch(` blocks from `RadarSettingsSection.kt`, and codified design guidelines. Sprint 2026-46.5 (`ATT-7539`) standardized climb formula, aftermath X-axis, and font weight segmented rows, and created `TuningDesignGuidelinesContractTest`.
+3. *Root Reason for Existing Formulation*: Form controls were initially extracted for sliders and toggles; segmented rows and dropdowns were written ad-hoc in new categories like `RadarSettingsSection.kt`, resulting in nested card anti-patterns and unstandardized button padding.
+4. *Preservation of Core Invariants*: DataStore preference keys, reactive flow bindings, default values, stateless composable architecture, and 9-language localization parity are 100% preserved.
 
 **Acceptance Criteria (Given-When-Then)**:
 • *Given* the tuning settings package,
@@ -14617,13 +14651,13 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 
 **Invariants**: Zero phantom laps (`REQ-TRK-002`), strictly interior boundary clamping $[startIndex(k) + 1, endIndex(k+1) - 1]$, contiguous $1 \dots K$ lap sequence, immutable workout total duration/distance, 9-locale parity without inline emojis, 100% clean-room test pass rate.
 
-### REQ-UI-451: Tracking Cockpit SensorStatus Top Bar 16 dp Screen Edge Offset and 32 dp Touch Target Symmetrical Centering [Verified]
+### REQ-UI-451: Tracking Cockpit SensorStatus Top Bar 16 dp Screen Edge Offset, 32 dp Touch Targets and 9-Icon Radar Integration [Verified]
 - **Tests**: `TST-UI-451`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
-- **Implementation**: `SensorStatus.kt`, `TrackingTabsScreen.kt`
-- **Rationale**: To eliminate display edge clinging (~4 dp) of the hamburger menu button and supporter emblem in the top tracking cockpit bar, align edge margins with Material 3 standard 16 dp offsets (Option A), improve touch ergonomics from 24 dp to 32 dp, and strictly preserve mathematical centering of the 8 telemetry sensor indicators (ATT-5422, extending `REQ-UI-445.3`):
+- **Implementation**: `SensorStatus.kt`, `SensorSourceDialog.kt`, `SensorType.java`, `res/drawable/ic_radar.xml`, `TrackingTabsScreen.kt`
+- **Rationale**: To eliminate display edge clinging (~4 dp) of the hamburger menu button and supporter emblem in the top tracking cockpit bar, align edge margins with Material 3 standard 16 dp offsets (Option A), improve touch ergonomics from 24 dp to 32 dp, strictly preserve mathematical centering of telemetry sensor indicators, and seamlessly integrate the 9th sensor indicator (`SensorType.RADAR_THREAT_COUNT` / `DeviceType.BIKE_RADAR`) within the 272 dp portrait budget without clipping on 360 dp viewports (ATT-5422, ATT-7544, extending `REQ-UI-445.3`):
 - **Description**:
   1. *Screen Edge Offset & Padding Geometry (`REQ-UI-451.1`)*:
      - In portrait mode (`!isCompactLandscape`), `SensorStatus.kt` outer `Row` SHALL apply `padding(horizontal = 8.dp, vertical = 4.dp)`.
@@ -14631,29 +14665,43 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
   2. *Symmetrical 32 dp Touch Targets & Fallback Spacers (`REQ-UI-451.2`)*:
      - The left drawer hamburger menu `IconButton` (`onMenuClick`) and right supporter status emblem `IconButton` (`onSupporterClick`) SHALL have touch target bounds of `Modifier.size(32.dp)` housing their standard 24 dp vector drawables (`Icons.Default.Menu` and `supporterEmblemRes`).
      - Symmetrical inactive/fallback spacers (`onMenuClick == null` and `supporterEmblemRes == null`) in both branches SHALL be sized identically to `Modifier.size(32.dp)`.
-     - The central container `Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center)` housing the 8 telemetry sensor icons SHALL remain strictly and mathematically centered in the viewport across all supporter tiers (`FREE`, `PIONEER`, `BRONZE`, `SILVER`, `GOLD`, `DIAMOND`).
+     - The central container `Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center)` housing the telemetry sensor icons SHALL remain strictly and mathematically centered in the viewport across all supporter tiers (`FREE`, `PIONEER`, `BRONZE`, `SILVER`, `GOLD`, `DIAMOND`).
   3. *Landscape Mode & Invariant Preservation (`REQ-UI-451.3`)*:
-     - Compact landscape mode (`isCompactLandscape = true`) governed by `REQ-UI-434.1` SHALL remain untouched (max 28 dp height, trailing horizontal layout).
+     - Compact landscape mode (`isCompactLandscape = true`) governed by `REQ-UI-434.1` SHALL remain untouched (max 28 dp height, trailing horizontal layout), rendering all 9 sensor icons centered alongside the menu button.
      - Sensor source dialog trigger, sensor alpha states (`INACTIVE_SENSOR_ALPHA = 0.38f`), and telemetry click behaviors SHALL remain 100% operational with zero regressions.
+  4. *Nine-Icon Header Budget & Radar Vector Icon (`REQ-UI-451.4`)*:
+     - `sensorDefinitions` in `SensorStatus.kt` SHALL include `SensorType.RADAR_THREAT_COUNT` as the 9th sensor icon (following `POWER`) in both portrait and compact landscape modes.
+     - In portrait mode (`!isCompactLandscape`), horizontal padding per sensor icon in the central container SHALL be adjusted to `4.dp` (`size(22.dp)` + `padding(horizontal = 4.dp)` = `30.dp` per icon slot), ensuring all 9 icons fit cleanly within the 272 dp central container (`9 * 30.dp = 270.dp <= 272.dp`) without clipping on compact 360 dp viewports.
+     - The radar icon SHALL render at `1.0f` alpha when `RADAR_THREAT_COUNT` is present in `activeSensors` (indicating active BLE/ANT+ radar hardware connected or `RadarTrafficSimulator` active) and at `INACTIVE_SENSOR_ALPHA = 0.38f` when inactive.
+     - `SensorType.getIconResId()` SHALL return dedicated 24dp vector drawable `R.drawable.ic_radar` for `SensorType.RADAR_THREAT_COUNT`, `RADAR_CLOSEST_DISTANCE_m`, `RADAR_APPROACH_SPEED_mps`, and `RADAR_VEHICLE_COUNT`.
+     - Dedicated vector asset `res/drawable/ic_radar.xml` SHALL be authored as a clean, standalone 24dp vector drawable featuring concentric radar waves and origin point.
+  5. *Bike Radar Sensor Source Dialog & Scalar Metric Omission (`REQ-UI-451.5`)*:
+     - When `SensorSourceDialog` is opened for `SensorType.RADAR_THREAT_COUNT`:
+       - The dialog title SHALL display the localized "Bike Radar" string (`R.string.device_type_bike_radar`, capitalized) alongside `R.drawable.ic_radar`.
+       - The dialog SHALL enumerate active source, active backups, and paired disconnected devices of `DeviceType.BIKE_RADAR` (or display `R.string.source_none_configured` when zero radar devices are paired).
+       - Scalar metric `valueWithUnit` text display SHALL be omitted on device identity rows for `RADAR_THREAT_COUNT`.
+       - Clicking any device row SHALL invoke `onDeviceClick` opening `EditDeviceDialog`.
+  6. *Localization Parity (`REQ-UI-451.6`)*:
+     - All radar sensor status and source dialog text, dialog titles, and accessibility content descriptions SHALL maintain 100% localization parity across all 9 supported languages (`de`, `en`, `es`, `fr`, `it`, `ja`, `nl`, `pl`, `pt`).
 
 **Requirement Archaeology & Chesterton's Fence Audit**:
-1. *Original Requirement ID & Target*: Extending `REQ-UI-445.3` (*Live Cockpit Status Emblem & Retirement of Quick Icon Picker Dialog*), targets `SensorStatus.kt` and `TrackingTabsScreen.kt`.
-2. *Historical Origin & Commit Trace*: Sprint 2026-45.4 (`ATT-5397`, commit `8baf42c8`) and Sprint 2026-40.8 (`ATT-1406`, commit `8f8b8098`).
-3. *Root Reason for Existing Formulation*: `REQ-UI-445.3` balanced the hamburger menu button with the supporter emblem at 24 dp, but did not specify outer screen margin padding, resulting in 4 dp display clinging.
-4. *Preservation of Core Invariants*: The 8 sensor icons maintain exact mathematical centering via equal-width 32 dp outer slots; 24 dp icon vectors and click handlers are preserved; touch target increases from 24 dp to 32 dp.
+1. *Original Requirement ID & Target*: Extending `REQ-UI-445.3` (*Live Cockpit Status Emblem & Retirement of Quick Icon Picker Dialog*), targets `SensorStatus.kt`, `SensorSourceDialog.kt`, `SensorType.java`, `TrackingTabsScreen.kt`.
+2. *Historical Origin & Commit Trace*: Sprint 2026-45.4 (`ATT-5397`, commit `8baf42c8`), Sprint 2026-45.4 (`ATT-5422`, commit `fb6797a7`), and Sprint 2026-46.5 (`ATT-7544`).
+3. *Root Reason for Existing Formulation*: `REQ-UI-451` originally budgeted 272 dp for 8 legacy sensors (8 * 34 dp = 272 dp). Adding the 9th sensor for Cycling Rearview Radar (`DeviceType.BIKE_RADAR`) without padding adjustment would require 306 dp (> 272 dp) and cause clipping on 360 dp screens.
+4. *Preservation of Core Invariants*: The 8 legacy sensors maintain 100% functional and visual fidelity; 32 dp symmetrical action buttons and 16 dp total display edge offsets are strictly preserved; central alignment is maintained; compact landscape mode remains preserved.
 
 **Acceptance Criteria (Given-When-Then)**:
-• *Given* an athlete viewing the tracking cockpit in portrait mode,
+• *Given* an athlete viewing the tracking cockpit in portrait mode on a 360 dp display,
 • *When* inspecting the top `SensorStatus` bar,
-• *Then* the left hamburger menu icon and right supporter emblem (or fallback spacer) start at exactly 16 dp from the outer display boundary (Option A).
-• *Given* an athlete with any supporter tier or free tier,
-• *When* the cockpit header renders,
-• *Then* the 8 sensor icons are mathematically centered in the horizontal viewport.
-• *Given* the athlete tapping the hamburger menu or supporter emblem,
-• *When* interacting with the controls,
-• *Then* the enlarged 32 dp touch targets respond reliably to touches.
+• *Then* all 9 sensor icons (including the radar icon `R.drawable.ic_radar`) are visible without clipping, with the left menu button and right supporter emblem starting at exactly 16 dp from the outer display boundary.
+• *Given* Cycling Rearview Radar hardware connected or simulator active,
+• *When* the radar icon renders,
+• *Then* it displays at `1.0f` alpha when active and `0.38f` alpha when inactive.
+• *Given* an athlete tapping the radar icon in `SensorStatus`,
+• *When* `SensorSourceDialog` opens,
+• *Then* the title displays the localized "Bike Radar" with `R.drawable.ic_radar`, enumerates `BIKE_RADAR` devices without scalar value text, and clicking a device opens `EditDeviceDialog`.
 
-**Invariants**: Option A 16 dp visual edge offset, exact mathematical centering of 8 sensor icons across all tiers, untouched compact landscape layout (`REQ-UI-434.1`), and 100% test pass rate.
+**Invariants**: Option A 16 dp visual edge offset, exact mathematical centering of 9 sensor icons across all tiers, 270 dp <= 272 dp width on 360 dp displays, untouched compact landscape layout (`REQ-UI-434.1`), and 100% 9-language localization parity.
 
 ### REQ-UI-452: Dedicated Status Bar Vector Icon, Notification Builder Migration & Monolithic Density Packaging [Verified]
 - **Tests**: `TST-UI-452`
@@ -16778,17 +16826,26 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
        3. Periods (`R.id.drawer_periods`, strictly calendar volume summaries)
        4. Fitness & Physiology (`R.id.drawer_athlete_profile`, title `R.string.drawer_fitness_physiology` / `drawer_athlete_profile`)
      - Standalone `drawer_morning_hrv` SHALL be retired from top-level drawer items.
-  2. *Settings Drawer Training Zones Integration (`REQ-UI-513.2`)*:
-     - The *Settings* drawer group (`drawer__settings`) in `AppNavigationDrawer.kt` SHALL include Training Zones (`R.id.drawer_training_zones`, icon `R.drawable.ic_speed`, title `R.string.prefs_training_zones`), positioned following `drawer_sport_types`.
+  2. *Settings Drawer Items Ordering (`REQ-UI-513.2`)*:
+     - The *Settings* drawer group (`drawer__settings`) in `AppNavigationDrawer.kt` SHALL contain exactly 7 items in the following sequence:
+       1. Trainings Zonen (`R.id.drawer_training_zones`, icon `R.drawable.ic_speed`, title `R.string.prefs_training_zones`)
+       2. Sportarten (`R.id.drawer_sport_types`, icon `R.drawable.ic_sports_combined`, title `R.string.sport_types`)
+       3. Tracking Tabs (`R.id.drawer_tracking_layouts`, icon `R.drawable.ic_table_edit`, title `R.string.prefsConfigureDisplaysTitle`)
+       4. Display (`R.id.drawer_display_settings`, icon `R.drawable.ic_display_settings`, title `R.string.Display`)
+       5. Auto-Pause (`R.id.drawer_auto_pause`, icon `R.drawable.ic_pause_circle`, title `R.string.auto_pause_title`)
+       6. Maßeinheiten (`R.id.drawer_units`, icon `R.drawable.ic_square_foot`, title `R.string.prefsUnitsTitle`)
+       7. Experten-Einstellungen (`R.id.drawer_advanced_tuning`, icon `R.drawable.ic_tune`, title `R.string.advanced_tuning_title`)
      - `isDrawerItemSelected` SHALL recognize `R.id.drawer_training_zones` independently from `R.id.drawer_athlete_profile`, preserving deep-link backward compatibility.
   3. *Clean Periods Screen Decoupling (`REQ-UI-513.3`)*:
      - `PeriodsTabsScreen.kt` and `PeriodsViewModel.kt` SHALL strictly display calendar volume aggregations, removing `HrvReadinessTrendCard` and unnecessary `HrvReadinessRepository` loading overhead.
   4. *Unified Fitness & Physiology Analytical Hub (`REQ-UI-513.4`)*:
-     - `AthleteProfileScreen.kt` (Fitness & Physiology) SHALL host 4 tabs in `PrimaryScrollableTabRow` + `HorizontalPager` with standard fixed header `LayoutConstants.HEADER_TITLE_ROW_HEIGHT` and synchronized `MetricsTimeRange` (`1M | 3M | 6M | 1Y | All`) calendar X-axis:
-       - **Tab 1: Fitness & Fatigue (PMC)**: `CTL / ATL / TSB / ACWR` + Ramp Rate KPI summary tiles and `PerformanceManagementChartCard` (with disabled guidance if PMC is inactive).
-       - **Tab 2: HRV & Readiness**: Primary "Measure Morning HRV" CTA button launching `MorningHrvCheckScreen`, empty-state onboarding card when 0 readings exist in `HrvReadiness.db`, `HrvReadinessTrendCard` (60d posture-isolated SWC corridor + 7d rolling trend + optional Training-Load overlay), and chronological history log of recorded morning HRV entries with delete support.
-       - **Tab 3: Body & Thresholds**: Current KPI summary tiles (`Weight`, `HRrest`, `FTP`, `CP`, `W'`, `W/kg`), `AthleteMetricTimeSeriesChart`, `+` Add Entry action, and filterable History Log.
-       - **Tab 4: Cardio-Power**: Longitudinal `CardioPowerTrendsCard` (`Fresh HR@200W`, Time Constant `τ`, Slope `1/K`), conditionally displayed when `enableCardioPowerDynamics` is true.
+     - `AthleteProfileScreen.kt` (Fitness & Physiology) SHALL host tabs in `PrimaryScrollableTabRow` + `HorizontalPager` with standard fixed header `LayoutConstants.HEADER_TITLE_ROW_HEIGHT` and synchronized `MetricsTimeRange` (`1M | 3M | 6M | 1Y | All`) calendar X-axis:
+       - **Tab 1: Body & Thresholds (`R.string.fitness_tab_body`)**: Primary baseline physiological inputs and thresholds (Weight, Resting HR, FTP, CP, W', W/kg) with `+` Add Entry action visible in top header bar, `AthleteMetricTimeSeriesChart`, and filterable History Log. Default landing tab (`initialTab = 0`).
+       - **Tab 2: Fitness & Fatigue (PMC) (`R.string.fitness_tab_pmc`)**: Conditionally displayed when `enablePmcModel` is true. `CTL / ATL / TSB / ACWR` + Ramp Rate KPI summary tiles and `PerformanceManagementChartCard`. When `enablePmcModel` is false, the tab header and page SHALL be omitted entirely from the hub (no empty placeholder card).
+       - **Tab 3: HRV & Readiness (`R.string.fitness_tab_hrv`)**: Primary "Measure Morning HRV" CTA button launching `MorningHrvCheckScreen`, empty-state onboarding card when 0 readings exist in `HrvReadiness.db`, `HrvReadinessTrendCard` (60d posture-isolated SWC corridor + 7d rolling trend + optional Training-Load overlay), and chronological history log of recorded morning HRV entries with delete support.
+       - **Tab 4: Cardio-Power (`R.string.fitness_tab_cardio_power`)**: Longitudinal `CardioPowerTrendsCard` (`Fresh HR@200W`, Time Constant `τ`, Slope `1/K`), conditionally displayed when `enableCardioPowerDynamics` is true.
+     - Tab resolution SHALL be executed via pure function `resolveFitnessHubTabs(enablePmcModel: Boolean, enableCardioPowerDynamics: Boolean): List<Int>`.
+     - On dynamic shrinkage of active tabs, `pagerState.currentPage` MUST be safely clamped to `0..tabTitleResIds.lastIndex`.
   5. *Dedicated Settings Training Zones Hub (`REQ-UI-513.5`)*:
      - `NavRoutes.TRAINING_ZONES` SHALL route directly to `ZoneSettingsScreen` in `ZonesSettingsActivity.kt` hosting the 3 zone configuration tabs (`HR Run`, `HR Bike`, `Power Bike`), Zone Calculator dialog, and Zone History dialog.
   6. *9-Language Localization Parity (`REQ-UI-513.6`)*:
@@ -16802,8 +16859,11 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 • *When* opened,
 • *Then* it displays only calendar volume bars with zero HRV trend card overhead.
 • *Given* the Fitness & Physiology hub,
-• *When* navigating between tabs,
-• *Then* Tab 1 renders PMC, Tab 2 renders HRV readiness with Morning HRV measurement CTA & log, Tab 3 renders Body & Thresholds, and Tab 4 renders Cardio-Power when enabled.
+• *When* navigating between tabs with default settings (`enablePmcModel = true`, `enableCardioPowerDynamics = true`),
+• *Then* Tab 1 renders Body & Thresholds (with `+` Add Entry visible), Tab 2 renders PMC, Tab 3 renders HRV readiness with Morning HRV CTA & log, and Tab 4 renders Cardio-Power.
+• *Given* `enablePmcModel = false` in Expert Settings,
+• *When* opening Fitness & Physiology,
+• *Then* the PMC tab is completely omitted from the tab row, starting on Body & Thresholds followed by HRV readiness (and Cardio-Power if enabled).
 • *Given* selecting Training Zones from Settings,
 • *When* opened,
 • *Then* it loads `ZoneSettingsScreen` with the 3 zone tabs, calculator, and history dialogs.
@@ -16813,6 +16873,11 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 2. *Historical Origin & Commit Trace*: Commit `b660ef43` (ATT-3704), commit `8471b409` (ATT-3851), and Sprint 2026-46.1 (ATT-3557).
 3. *Root Reason for Existing Formulation*: Zones were initially grouped with athlete profile as an interim consolidation step; HRV trend card was introduced into Periods to surface early longitudinal recovery data before a dedicated multi-tab physiology hub was architected.
 4. *Preservation of Core Invariants*: All zone calculation and editing capabilities preserved; all historical athlete metric entries and morning HRV records remain 100% accessible; backward-compatible route mappings (`NavRoutes.ATHLETE_PROFILE`, `NavRoutes.TRAINING_ZONES`) maintained.
+5. *Tab Hierarchy & Inactive PMC Suppression Archaeology (ATT-7531, Sprint 2026-46.5)*:
+   - *Original Requirement ID & Target*: Refines `REQ-UI-513.4` (*Unified Fitness & Physiology Analytical Hub*, Sprint 2026-46.3, ATT-6720 / commit `83e5f529`).
+   - *Historical Origin & Commit Trace*: Sprint 2026-46.3 commit `83e5f529` (`ATT-6720`).
+   - *Root Reason for Existing Formulation*: PMC was placed first as an umbrella fitness chart, and an inactive placeholder card was displayed to inform the user that PMC was disabled in Expert Settings.
+   - *Preservation of Core Invariants*: Opening the hub lands on active, universally applicable baseline parameters (*Körper & Schwellen*) with immediate `+` entry capability; all underlying PMC, HRV, and Cardio-Power calculation engines, charts, and data stores remain 100% intact; hiding inactive tabs ensures consistency with `enableCardioPowerDynamics` behavior; 9-language localization parity is preserved.
 
 **Invariants**: DataStore zone persistence preserved; SQLite database tables (`HrvReadiness.db`, `AthleteMetricsDb`) unchanged; navigation deep-links backward-compatible; WCAG AA contrast maintained.
 
@@ -16838,6 +16903,7 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
      - Background badge SHALL be full-bleed `#0A3D91` rounded rectangle ($r=22.0$) spanning `0..144` (`M 22,0 L 122,0 A 22,22 0 0,1 144,22 ...`).
      - Cyclist motif SHALL be horizontally centered using `<group android:translateX="18.18">` matching canonical `bt_bike_pwr.xml`, containing the unmodified clean cyclist silhouette (18 paths) with zero saddle emission overlays.
      - Top-left quadrant ($x \approx 12..44, y \approx 17..36$) SHALL embed canonical radar wave mini-icon group `mini_icon_radar` with zero geometric collisions against the cyclist silhouette or viewport boundaries.
+     - The radar mini-icon SHALL comprise a single circular source dot (constructed with true diameter chord $\Delta x = 2r$ or equivalent single-center circle geometry, precluding double-circle / 'snowman' rendering) and concentric radar wave arcs radiating rearward (left-facing) toward oncoming traffic, maintaining uniform radial band thickness and zero pinched crescent artifacts.
      - Bottom abbreviation label SHALL render bold uppercase `RDR` centered at $y \in [113.25, 135.75]$ with `android:fillType="evenOdd"`.
   3. *Protocol Icon Resolution (`REQ-UI-514.3`)*:
      - `UIHelper.getIconId(DeviceType.BIKE_RADAR, Protocol.ANT_PLUS)` and `DeviceData.getIconId(DeviceType.BIKE_RADAR, Protocol.ANT_PLUS)` SHALL return `R.drawable.bike_radar`.
@@ -16848,7 +16914,7 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 
 **Requirement Archaeology & Chesterton's Fence Audit**:
 1. *Original Requirement ID & Target*: Amends `REQ-UI-375` (*Mathematical VectorDrawable Migration*, `ATT-2859`) and `REQ-UI-442` (*Full-Bleed Badge Geometry & Uppercase Labels for Bluetooth LE Sensor Drawables*, `ATT-4956`, `ATT-5201`). Targets `app/src/main/res/drawable/bike_radar.xml`, `app/src/main/res/drawable/bt_bike_radar.xml`, `UIHelper.java`, `DeviceData.kt`, and `VectorAssetResolutionContractTest.kt`.
-2. *Historical Origin & Commit Trace*: `ATT-2859` (`15c74685`, Sprint 2026-42.7) established 96x96 ANT+ sensor vector badges with black rounded rectangle and 3-letter uppercase labels. `ATT-4956` (`be03a5bc14`, Sprint 2026-45.1) and `ATT-5201` (`43de6fd0`, Sprint 2026-45.5) established 144x144 full-bleed BLE badges with official `#0A3D91` color, centered cyclist (`translateX=18.18`), and top-left mini-icons.
+2. *Historical Origin & Commit Trace*: `ATT-2859` (`15c74685`, Sprint 2026-42.7) established 96x96 ANT+ sensor vector badges with black rounded rectangle and 3-letter uppercase labels. `ATT-4956` (`be03a5bc14`, Sprint 2026-45.1) and `ATT-5201` (`43de6fd0`, Sprint 2026-45.5) established 144x144 full-bleed BLE badges with official `#0A3D91` color, centered cyclist (`translateX=18.18`), and top-left mini-icons. `ATT-7518` (Sprint 2026-46.5) corrected `mini_icon_radar` geometry, eliminating the double-circle dot artifact and pinched crescents to render concentric rearward radar wave bands.
 3. *Root Reason for Existing Formulation*: When `DeviceType.BIKE_RADAR` was introduced in `ATT-5083`, dedicated vector drawables were deferred, falling back to generic protocol logos. This creates visual inconsistency in sensor pairing and equipment screens where all other 7 sensor types have dedicated protocol badges.
 4. *Preservation of Core Invariants*: Full-bleed badge geometry `0..144` ($r=22.0$), official `#0A3D91` Bluetooth badge token, `#000000` ANT+ badge token, bold uppercase typography with `evenOdd`, Rule 37 geometric constraints ($\le 45$ `L` commands, analytical curves), and 100% backward compatibility for all existing `DeviceType` icon mappings are strictly preserved.
 
@@ -17018,3 +17084,120 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 • *Then* every button SHALL provide localized `contentDescription` (`navigation_drawer_open` or `back` / `cancel`) and align to the 56 dp title baseline.
 
 **Invariants**: All 21 navigation drawer destinations in `NavRoutes` preserved; `REQ-UI-161` 40 dp threshold preserved for root screens; `REQ-UI-162` LIFO back handling hierarchy preserved; zero regressions on existing deep links.
+
+
+### REQ-UI-524: Official Google Drive and Health Connect Brand Vector Fidelity [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-UI-524`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Implementation**: `app/src/main/res/drawable/ic_google_drive.xml`, `app/src/main/res/drawable/ic_health_connect.xml`
+- **Rationale**: Defective third-party brand icons in the navigation drawer and backup/health settings undermine visual professionalism. Replacing `ic_google_drive.xml` with the official 2020+ 6-segment vector and `ic_health_connect.xml` with the official interlocking dual-loop vector restores authentic brand visual fidelity while ensuring high-contrast rendering across Light and Dark themes.
+- **Description**:
+  1. *Official Google Drive Brand Vector (`REQ-UI-524.1`)*:
+     - `app/src/main/res/drawable/ic_google_drive.xml` SHALL render the official 2020+ Google Drive triangle vector consisting of 6 distinct color paths (`#0066DA`, `#00AC47`, `#EA4335`, `#00832D`, `#2684FC`, `#FFBA00`), centered in a square 87.3x87.3 viewport (`translateY="4.65"`), eliminating broken polygonal gaps and unaligned segments.
+  2. *Official Android Health Connect Brand Vector (`REQ-UI-524.2`)*:
+     - `app/src/main/res/drawable/ic_health_connect.xml` SHALL render the official Google Health Connect dual interlocking loop brand geometry: left loop in Dark Teal (`#003144`), right loop in Google Blue (`#4285F4`), and upper-right circular node in Google Blue (`#4285F4`).
+     - In both Light and Dark themes, the icon SHALL maintain clear contrast and legibility without disappearing on dark backgrounds.
+  3. *Un-tinted Brand Icon Integration (`REQ-UI-524.3`)*:
+     - Both icons SHALL retain `tintIcon = false` in `AppNavigationDrawer.kt` and `Color.Unspecified` in Compose screens, displaying authentic multi-color brand palettes.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* `res/drawable/ic_google_drive.xml` rendered in the Navigation Drawer and Import/Backup screens,
+• *When* displayed,
+• *Then* it renders the official 6-segment Google Drive vector with a horizontal blue base and continuous segment boundaries.
+• *Given* `res/drawable/ic_health_connect.xml` rendered in the Navigation Drawer and Health Connect dialog,
+• *When* displayed in either Light or Dark mode,
+• *Then* it renders the official interlocking dual-loop heart with upper-right blue dot with high contrast.
+
+**Invariants**: Resource IDs `R.drawable.ic_google_drive` and `R.drawable.ic_health_connect` remain stable; zero changes to OAuth or Health Connect API logic.
+
+
+### REQ-UI-525: Configurable Morning HRV Check Launch Button on Start Tracking Screen [Verified]
+- **Target Release**: `V5.0.0`
+- **Tickets**: `ATT-7532`
+- **Tests**: `TST-UI-525`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Implementation**: `TuningPreferencesDataStore.kt`, `DevicesDatabaseManager.java`, `DeviceDataRepository.kt`, `HrvReadinessDatabaseManager.kt`, `HrvReadinessRepository.kt`, `ControlTrackingViewModel.kt`, `TrackingTabsScreen.kt`, `ControlTrackingScreen.kt`, `PhysiologyModelsSection.kt`, `AdvancedTuningScreen.kt`
+- **Rationale**: Following `REQ-UI-513`, athletes performing waking morning HRV check-ins require an immediate 1-tap shortcut on the Start screen (`ControlTrackingScreen`) without navigating nested menus. To prevent cockpit clutter during active tracking and avoid irrelevant prompts for athletes without heart rate sensors, after today's reading has been taken, or past morning hours, the launcher must be strictly conditional and user-configurable.
+- **Description**:
+  1. *Tuning Preferences Configuration (`REQ-UI-525.1`)*:
+     - `TuningPreferencesDataStore.kt` and `TuningConfig.kt` SHALL provide `showMorningCheckOnStartScreen: Boolean` (default `true`) and `morningCheckCutoffHour: Int` (default `11`, range 6..15).
+     - These preferences SHALL be surfaced under the Physiology Models accordion section (`PhysiologyModelsSection.kt`) in `AdvancedTuningScreen.kt` and `AdvancedTuningDialog.kt` with localized titles and summaries.
+  2. *Paired Heart Rate Sensor Check (`REQ-UI-525.2`)*:
+     - `DevicesDatabaseManager.java` SHALL provide `hasPairedHeartRateDevices(): Boolean` which queries SQLite `DEVICES` table for `PAIRED > 0 AND DEVICE_TYPE = 'HRM'`.
+     - `DeviceDataRepository.kt` SHALL expose `hasPairedHeartRateDevices(): Boolean` forwarding this query.
+  3. *Today's Morning Check Completion Check (`REQ-UI-525.3`)*:
+     - `HrvReadinessDatabaseManager.kt` SHALL provide `hasCompletedMorningCheck(dateIso: String): Boolean` which queries SQLite `hrv_readiness.db` for the existence of any entry matching `dateIso`.
+     - `HrvReadinessRepository.kt` SHALL expose `hasCompletedMorningCheck(dateIso: String): Boolean`.
+  4. *Reactive Visibility & Navigation Contract on Start Tracking Screen (`REQ-UI-525.4`)*:
+     - `ControlTrackingViewModel.kt` SHALL expose `isMorningHrvCheckVisible: StateFlow<Boolean>` which evaluates to `true` iff ALL of the following conditions hold:
+       1. Tracking state is `TrackingMode.READY` (not `RECORDING`, `PAUSED`, or `STOPPED`).
+       2. `showMorningCheckOnStartScreen == true` in tuning preferences.
+       3. At least one HRM device is paired (`hasPairedHeartRateDevices == true`).
+       4. Local system time is before cutoff hour (`LocalTime.now().hour < morningCheckCutoffHour`).
+       5. No morning HRV check entry exists for today's local date (`!hasCompletedMorningCheck(LocalDate.now().toString())`).
+     - In `ControlTrackingScreen.kt` / `TrackingTabsScreen.kt`, when `isMorningHrvCheckVisible == true`, `bottomContent` SHALL render a prominent "Morgendlicher Check" CTA button styled with `RoundedCornerShape(8.dp)`, `Icons.Default.Favorite` (or Heart icon), and localized text `R.string.hrv_morning_check_start_button`.
+     - Clicking the CTA button SHALL trigger `onNavigateToMorningHrv` navigating to `NavRoutes.MORNING_HRV`.
+     - Once a morning check entry is saved for today and the athlete navigates back to the Start screen, the button SHALL immediately auto-hide for the remainder of the calendar day.
+  5. *9-Language Localization Parity (`REQ-UI-525.5`)*:
+     - All newly introduced string keys (`hrv_morning_check_start_button`, `pref_show_morning_check_title`, `pref_show_morning_check_summary`, `pref_morning_check_cutoff_title`, `pref_morning_check_cutoff_summary`) SHALL be localized across all 9 supported Android resource directories (`values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`).
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* an athlete with at least one paired HRM sensor opens `ControlTrackingScreen` in `TrackingMode.READY` before 11:00 AM on a day with no morning check recorded,
+• *When* the screen renders,
+• *Then* the "Morgendlicher Check" CTA button is visible in `bottomContent` and tapping it navigates to `NavRoutes.MORNING_HRV`.
+• *Given* the athlete completes and saves today's morning check or the local time passes 11:00 AM or `showMorningCheckOnStartScreen` is disabled,
+• *When* `ControlTrackingScreen` renders or resumes,
+• *Then* the CTA button is hidden.
+• *Given* the athlete starts a workout (`TrackingMode.RECORDING`),
+• *When* the cockpit renders,
+• *Then* the CTA button is hidden.
+• *Given* any of the 9 supported locales,
+• *When* viewing the button or tuning settings,
+• *Then* all titles and summaries are localized with 100% parity and no placeholder text.
+
+**Invariants**: Zero database migrations on `devices.db` or `hrv_readiness.db`; zero modifications to existing morning check scoring, baseline corridors, or workout tracking lifecycle; zero background alarms or wake locks.
+
+
+### REQ-UI-526: Global Physiological Typography Standardization for DFA α1 and α1 [Verified]
+- **Target Release**: `V5.0.0`
+- **Tickets**: `ATT-7521`
+- **Tests**: `TST-UI-526`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Implementation**: `strings_hrv.xml` (all 9 locales), `SensorType.java`, `ZonesSettingsActivity.kt`
+- **Rationale**: Detrended Fluctuation Analysis alpha-1 nomenclature was historically inconsistent across the application due to early ASCII representations (`DFA a1` / `a1`) in `strings_hrv.xml`, subscript Greek notations (`α₁`) in `ZonesSettingsActivity.kt` range badges, and standard Greek notations (`DFA α1`, `Δα1`) in newer durability and ramp test components. Standardizing globally on the authentic Greek letter α (`DFA α1` and `α1`) ensures professional, consistent physiological typography across all user-facing screens and all 9 supported locales while strictly maintaining internal enum and preference key stability.
+- **Description**:
+  1. *9-Locale String Resource Typography Parity (`REQ-UI-526.1`)*:
+     - All user-facing string definitions in `app/src/main/res/values*/strings_hrv.xml` referencing Detrended Fluctuation Analysis alpha-1 SHALL use the authentic Greek letter α (`DFA α1` and `α1`) across all 9 supported locales (`values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`).
+     - This SHALL include `hrv_dfa_a1` (`DFA α1`), `hrv_dfa_a1_short` (`α1`), `tab_hrv_dfa_a1` (`HRV (DFA α1)` / `VFC (DFA α1)`), `hrv_test_live_a1` (`Live α1: %1$.2f` / localized counterparts), and all related threshold, tuning, and guided test descriptions.
+  2. *Zone Settings Dynamic Range Badge Alignment (`REQ-UI-526.2`)*:
+     - In `ZonesSettingsActivity.kt`, dynamic zone range badge strings SHALL use standard `α1` (`"α1 > %.2f"`, `"%.2f ≤ α1 ≤ %.2f"`, `"α1 < %.2f"`) instead of subscript `α₁`, aligning with app-wide typography.
+  3. *Sensor Type Presentation Integrity (`REQ-UI-526.3`)*:
+     - `SensorType.HRV_DFA_A1` SHALL resolve its user-facing full label and short title from `R.string.hrv_dfa_a1` (`DFA α1`) and `R.string.hrv_dfa_a1_short` (`α1`).
+  4. *Internal Symbol, Preference Key, and Test Tag Invariance (`REQ-UI-526.4`)*:
+     - Enum names (`SensorType.HRV_DFA_A1`), resource identifiers (`R.string.hrv_dfa_a1`, `R.string.hrv_dfa_a1_short`, `R.string.tab_hrv_dfa_a1`), DataStore preference keys (`tuning_dfa_a1_threshold_t1`, `tuning_dfa_a1_threshold_t2`, `hrv_dfa_a1_zone_*`), and UI test tags (`hrv_test_live_a1`, `hrv_alpha1_scatter_card`) SHALL remain strictly unchanged to preserve backward compatibility, schema stability, and test harness invariants.
+  5. *Localization Parity & Specifier Safety (`REQ-UI-526.5`)*:
+     - 100% key and format specifier parity SHALL be preserved across all 9 localized resource files with zero missing keys and zero AAPT2 formatting errors.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* the application running under any of the 9 supported locales,
+• *When* the user views any screen referencing Detrended Fluctuation Analysis alpha-1 (sensor telemetry fields, Training Zones tab title, range badges, workout details cards/charts, guided ramp test, or advanced tuning),
+• *Then* the metric is consistently displayed using Greek letter α (`DFA α1` or `α1`) with zero occurrences of ASCII `DFA a1` or subscript `α₁`.
+• *Given* `SensorType.HRV_DFA_A1`,
+• *When* querying `fullNameId` and `shortNameId`,
+• *Then* they resolve to `R.string.hrv_dfa_a1` and `R.string.hrv_dfa_a1_short` which contain `DFA α1` and `α1` respectively.
+• *Given* `ZonesSettingsActivity.kt` range badges,
+• *When* rendered for Aerobic, Transition, and Anaerobic zones,
+• *Then* badge strings display `"α1 > %.2f"`, `"%.2f ≤ α1 ≤ %.2f"`, and `"α1 < %.2f"`.
+• *Given* DataStore keys and SQLite schema,
+• *When* reading or writing preferences,
+• *Then* all keys and database columns remain 100% invariant.
+
+**Invariants**: Resource IDs, DataStore preference keys, enum constants, and SQLite tables remain unchanged; zero changes to mathematical DSP calculation or threshold invariant $T_1 \ge T_2 + 0.05f$.
+

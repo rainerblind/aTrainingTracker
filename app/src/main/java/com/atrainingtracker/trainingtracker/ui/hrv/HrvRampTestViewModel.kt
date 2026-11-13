@@ -31,7 +31,6 @@ import com.atrainingtracker.banalservice.devices.hrv.HrvSignalQualityResult
 import com.atrainingtracker.banalservice.devices.hrv.HrvSignalQualityStatus
 import com.atrainingtracker.banalservice.sensor.SensorType
 import com.atrainingtracker.trainingtracker.TrainingApplication
-import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
 import com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository
 import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore
 import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDefaults
@@ -87,9 +86,21 @@ class HrvRampTestViewModel @JvmOverloads constructor(
         if (bufferedBeats.size > 180) {
             bufferedBeats.removeAt(0)
         }
+        if (_uiState.value.phase == HrvTestPhase.CONFIG || _uiState.value.phase == HrvTestPhase.PRE_FLIGHT) {
+            val rate = _uiState.value.currentArtifactRate ?: calculateBufferedArtifactRate()
+            evaluatePreFlightQuality(
+                artifactRate = rate,
+                hasRrStream = true,
+                isSmoothed = false
+            )
+        }
     }
 
     init {
+        banalServiceRepository.bindToBANALService()
+        banalServiceRepository.startSearchingForPairedDevices()
+        banalServiceRepository.addRrBeatListener(rrBeatListener)
+
         tuningJob = viewModelScope.launch(dispatcher) {
             tuningPreferencesDataStore.dfaA1ThresholdT2Flow.collect { t2 ->
                 dfaA1ThresholdT2 = t2
@@ -101,6 +112,7 @@ class HrvRampTestViewModel @JvmOverloads constructor(
             banalServiceRepository.allFilteredSensorData.collect { sensorDataList ->
                 var hr: Int? = null
                 var power: Double? = null
+                var speedMps: Double? = null
                 var dfaA1: Double? = null
                 var artifactRate: Double? = null
 
@@ -112,6 +124,9 @@ class HrvRampTestViewModel @JvmOverloads constructor(
                         SensorType.POWER -> {
                             power = (data.value as? Number)?.toDouble()
                         }
+                        SensorType.SPEED_mps -> {
+                            speedMps = (data.value as? Number)?.toDouble()
+                        }
                         SensorType.HRV_DFA_A1 -> {
                             dfaA1 = (data.value as? Number)?.toDouble()
                         }
@@ -122,16 +137,19 @@ class HrvRampTestViewModel @JvmOverloads constructor(
                     }
                 }
 
+                val speedKmh = speedMps?.let { it * 3.6 }
+
                 _uiState.update { current ->
                     current.copy(
                         currentHr = hr ?: current.currentHr,
                         currentPower = power ?: current.currentPower,
+                        currentSpeedKmh = speedKmh ?: current.currentSpeedKmh,
                         currentDfaA1 = dfaA1 ?: current.currentDfaA1,
                         currentArtifactRate = artifactRate ?: current.currentArtifactRate
                     )
                 }
 
-                if (_uiState.value.phase == HrvTestPhase.PRE_FLIGHT) {
+                if (_uiState.value.phase == HrvTestPhase.CONFIG || _uiState.value.phase == HrvTestPhase.PRE_FLIGHT) {
                     val hasRr = bufferedBeats.isNotEmpty() || artifactRate != null
                     val rate = artifactRate ?: calculateBufferedArtifactRate()
                     evaluatePreFlightQuality(
@@ -298,23 +316,23 @@ class HrvRampTestViewModel @JvmOverloads constructor(
             val currentConfig = _uiState.value.config
             val values = ContentValues().apply {
                 val protocolTag = if (currentConfig.protocolType == HrvTestProtocolType.GUIDED_STEP) "GUIDED_STEP" else "GUIDED_RAMP"
-                put(WorkoutSummariesDatabaseManager.WorkoutSummaries.METHOD, protocolTag)
+                put("method", protocolTag)
                 val paramDesc = if (currentConfig.protocolType == HrvTestProtocolType.GUIDED_STEP) {
                     "stepDurationSec=${currentConfig.stepDurationSec},stepIncrement=${currentConfig.stepIncrement}"
                 } else {
                     "rampSlopeWattsPerMin=${currentConfig.rampSlopeWattsPerMin}"
                 }
-                put(WorkoutSummariesDatabaseManager.WorkoutSummaries.GOAL, paramDesc)
+                put("goal", paramDesc)
             }
             workoutRepository.updateWorkoutSummary(workoutId, values)
             isWorkoutTagged = true
-            Log.i("HrvRampTestViewModel", "Tagged active workout $workoutId with protocol ${values.getAsString(WorkoutSummariesDatabaseManager.WorkoutSummaries.METHOD)}")
+            Log.i("HrvRampTestViewModel", "Tagged active workout $workoutId with protocol ${values.getAsString("method")}")
         }
     }
 
     fun startProtocol(autoStartTimer: Boolean = true) {
         val currentState = _uiState.value
-        if (!currentState.canStartTest && currentState.phase != HrvTestPhase.CONFIG) {
+        if (!currentState.canStartTest) {
             return
         }
 

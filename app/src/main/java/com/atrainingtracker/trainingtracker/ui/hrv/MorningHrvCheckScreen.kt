@@ -37,6 +37,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -89,6 +90,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -651,7 +653,7 @@ private fun ReadinessResultCard(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Text(
-                text = stringResource(R.string.morning_hrv_state_completed),
+                text = stringResource(R.string.morning_hrv_result_title),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface
@@ -776,13 +778,15 @@ private fun ActionButtonsSection(
                         onClick = onStart,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(52.dp),
+                            .heightIn(min = 52.dp),
                         shape = RoundedCornerShape(12.dp)
                     ) {
                         Text(
                             text = stringResource(R.string.morning_hrv_btn_start),
                             style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.Bold
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
                     }
 
@@ -792,7 +796,7 @@ private fun ActionButtonsSection(
                             enabled = !uiState.isWellnessSaved,
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(52.dp),
+                                .heightIn(min = 52.dp),
                             shape = RoundedCornerShape(12.dp)
                         ) {
                             if (uiState.isWellnessSaved) {
@@ -802,9 +806,17 @@ private fun ActionButtonsSection(
                                     modifier = Modifier.size(18.dp)
                                 )
                                 Spacer(modifier = Modifier.width(6.dp))
-                                Text(stringResource(R.string.morning_hrv_btn_saved))
+                                Text(
+                                    text = stringResource(R.string.morning_hrv_btn_saved),
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
                             } else {
-                                Text(stringResource(R.string.morning_hrv_btn_save_wellness))
+                                Text(
+                                    text = stringResource(R.string.morning_hrv_btn_save_wellness),
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
                             }
                         }
                     }
@@ -815,55 +827,108 @@ private fun ActionButtonsSection(
                     onClick = onCancel,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(52.dp),
+                        .heightIn(min = 52.dp),
                     shape = RoundedCornerShape(12.dp)
                 ) {
                     Text(
                         text = stringResource(R.string.morning_hrv_btn_cancel),
-                        style = MaterialTheme.typography.titleSmall
+                        style = MaterialTheme.typography.titleSmall,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
             }
             MorningHrvPhase.COMPLETED -> {
+                val recommendDiscard = uiState.highArtifactWarning ||
+                    uiState.signalQualityStatus in setOf(
+                        HrvSignalQualityStatus.SMOOTHED_STREAM,
+                        HrvSignalQualityStatus.QUANTIZED_SYNTHETIC,
+                        HrvSignalQualityStatus.HIGH_ARTIFACTS
+                    )
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    OutlinedButton(
-                        onClick = onDiscard,
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(52.dp),
-                        shape = RoundedCornerShape(12.dp)
-                    ) {
-                        Text(stringResource(R.string.morning_hrv_btn_discard))
-                    }
-
-                    Button(
-                        onClick = onSave,
-                        enabled = !uiState.isSaved,
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(52.dp),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = if (uiState.isSaved) {
-                            ButtonDefaults.buttonColors(
-                                containerColor = TTColor.ReadinessOptimal
+                    if (recommendDiscard && !uiState.isSaved) {
+                        // Highlight Discard as primary filled Button when discard is recommended
+                        Button(
+                            onClick = onDiscard,
+                            modifier = Modifier
+                                .weight(1f)
+                                .heightIn(min = 52.dp),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Text(
+                                text = stringResource(R.string.morning_hrv_btn_discard),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
                             )
-                        } else {
-                            ButtonDefaults.buttonColors()
                         }
-                    ) {
-                        if (uiState.isSaved) {
-                            Icon(
-                                imageVector = Icons.Default.Check,
-                                contentDescription = null,
-                                modifier = Modifier.size(18.dp)
+
+                        OutlinedButton(
+                            onClick = onSave,
+                            enabled = !uiState.isSaved,
+                            modifier = Modifier
+                                .weight(1f)
+                                .heightIn(min = 52.dp),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Text(
+                                text = stringResource(R.string.morning_hrv_btn_save),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
                             )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(stringResource(R.string.morning_hrv_btn_saved))
-                        } else {
-                            Text(stringResource(R.string.morning_hrv_btn_save))
+                        }
+                    } else {
+                        // Standard hierarchy: Discard is OutlinedButton, Save is filled Button
+                        OutlinedButton(
+                            onClick = onDiscard,
+                            modifier = Modifier
+                                .weight(1f)
+                                .heightIn(min = 52.dp),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Text(
+                                text = stringResource(R.string.morning_hrv_btn_discard),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+
+                        Button(
+                            onClick = onSave,
+                            enabled = !uiState.isSaved,
+                            modifier = Modifier
+                                .weight(1f)
+                                .heightIn(min = 52.dp),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = if (uiState.isSaved) {
+                                ButtonDefaults.buttonColors(
+                                    containerColor = TTColor.ReadinessOptimal
+                                )
+                            } else {
+                                ButtonDefaults.buttonColors()
+                            }
+                        ) {
+                            if (uiState.isSaved) {
+                                Icon(
+                                    imageVector = Icons.Default.Check,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = stringResource(R.string.morning_hrv_btn_saved),
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            } else {
+                                Text(
+                                    text = stringResource(R.string.morning_hrv_btn_save),
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
                         }
                     }
                 }

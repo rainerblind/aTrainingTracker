@@ -20,42 +20,47 @@
 <resources>
     <string name="hrv_rmssd">rMSSD</string>
     <string name="hrv_rmssd_short">rMSSD</string>
-    <string name="hrv_dfa_a1">DFA a1</string>
-    <string name="hrv_dfa_a1_short">a1</string>
+    <string name="hrv_dfa_a1">DFA α1</string>
+    <string name="hrv_dfa_a1_short">α1</string>
     <string name="hrv_artifact_rate">Artefactpercentage</string>
     <string name="hrv_artifact_rate_short">Art. %</string>
     <string name="hrv_sdnn">SDNN</string>
     <string name="hrv_sdnn_short">SDNN</string>
 
     <!-- Training Zones Tab (ATT-7317 / REQ-TRK-061.4) -->
-    <string name="tab_hrv_dfa_a1">HRV (DFA a1)</string>
+    <string name="tab_hrv_dfa_a1">HRV (DFA α1)</string>
     <string name="hrv_zone_aerobic_base_label">Aerobe Basis (Zone 2)</string>
     <string name="hrv_zone_threshold_transition_label">Drempelovergang (Zone 3)</string>
     <string name="hrv_zone_anaerobic_label">Hoge Intensiteit / Anaeroob (Zone 4)</string>
     <string name="hrv_t1_aerobic_threshold_label">Aerobe Drempel T1 (HRVT1)</string>
     <string name="hrv_t2_anaerobic_threshold_label">Anaerobe Drempel T2 (HRVT2)</string>
-    <string name="tuning_physiology_hrv_zones_link">Configureer DFA a1 aerobe en anaerobe drempels in Trainingszones</string>
+    <string name="hrv_zone_aerobic_base_desc">Aerobe basisuithoudingsvermogen, lage autonome belasting</string>
+    <string name="hrv_zone_threshold_transition_desc">Aeroob-anaerobe drempelovergang, matige vermoeidheid</string>
+    <string name="hrv_zone_anaerobic_desc">Anaeroob / hoge intensiteit, snelle autonome uitputting</string>
+    <string name="hrv_t1_aerobic_threshold_desc">Aerobe drempel (standaard 0,75). Invariant: T1 \u2265 T2 + 0,05</string>
+    <string name="hrv_t2_anaerobic_threshold_desc">Anaerobe drempel (standaard 0,50). Invariant: T2 \u2264 T1 - 0,05</string>
+    <string name="tuning_physiology_hrv_zones_link">Configureer DFA α1 aerobe en anaerobe drempels in Trainingszones</string>
     <string name="hrv_start_guided_ramp_test">Start begeleide drempeltest</string>
     <string name="hrv_preview_pill_aerobic">Aeroob</string>
     <string name="hrv_preview_pill_transition">Overgang</string>
     <string name="hrv_preview_pill_anaerobic">Anaeroob</string>
-    <string name="hrv_zones_guidance_desc">HRV DFA a1 drempelwaarden sturen het aerobe tempo en de trainingsintensiteit. Hogere waarden duiden op hogere fractale variabiliteit (aeroob). Zone 2 is groen (&gt; T1), Zone 3 is oranje (T2..T1) en Zone 4 is rood (&lt; T2).</string>
+    <string name="hrv_zones_guidance_desc">HRV DFA α1 drempelwaarden sturen het aerobe tempo en de trainingsintensiteit. Hogere waarden duiden op hogere fractale variabiliteit (aeroob). Zone 2 is groen (&gt; T1), Zone 3 is oranje (T2..T1) en Zone 4 is rood (&lt; T2).</string>
 
     <string name="hrv_info_title">Hartslagvariabiliteit &amp; aerobe drempels</string>
     <string name="hrv_info_trailing_lag_title">Glijdend venster &amp; tempovertraging</string>
-    <string name="hrv_info_trailing_lag_desc">Realtime DFA a1 wordt berekend over een glijdend venster van 2 minuten (elke 5 seconden bijgewerkt) en rMSSD over 60 seconden. Tempowijzigingen zijn pas na 1–2 minuten zichtbaar in de autonome telemetrie.</string>
+    <string name="hrv_info_trailing_lag_desc">Realtime DFA α1 wordt berekend over een glijdend venster van 2 minuten (elke 5 seconden bijgewerkt) en rMSSD over 60 seconden. Tempowijzigingen zijn pas na 1–2 minuten zichtbaar in de autonome telemetrie.</string>
     <string name="hrv_info_sensor_recommendation_title">Sensoraanbevelingen</string>
-    <string name="hrv_info_sensor_recommendation_desc">Nauwkeurige beat-to-beat RR-intervallen vereisen een niet-afgevlakte ECG-borstband (zoals Polar H10, Polar H9, Garmin HRM-Dual, HRM-Pro of HRM-Pro Plus). Optische polssensoren en budgetborstbanden met firmware-afvlakking (bijv. Magene, CooSpo) vervormen intervallen en zijn ongeschikt voor DFA a1.</string>
+    <string name="hrv_info_sensor_recommendation_desc">Nauwkeurige beat-to-beat RR-intervallen vereisen een niet-afgevlakte ECG-borstband (zoals Polar H10, Polar H9, Garmin HRM-Dual, HRM-Pro of HRM-Pro Plus). Optische polssensoren en budgetborstbanden met firmware-afvlakking (bijv. Magene, CooSpo) vervormen intervallen en zijn ongeschikt voor DFA α1.</string>
     <string name="hrv_info_smoothed_warning_title">Afgevlakte RR-stroom gedetecteerd</string>
-    <string name="hrv_info_smoothed_warning_desc">Je actieve sensor past interne firmware-afvlakking of synthetische kwantisatie toe op RR-intervallen. Realtime DFA a1 en aerobe drempelindicaties zijn onbetrouwbaar.</string>
+    <string name="hrv_info_smoothed_warning_desc">Je actieve sensor past interne firmware-afvlakking of synthetische kwantisatie toe op RR-intervallen. Realtime DFA α1 en aerobe drempelindicaties zijn onbetrouwbaar.</string>
     <string name="hrv_info_zones_title">Aerobe drempelzones</string>
-    <string name="hrv_info_zones_desc">DFA a1 &gt; 0,75 duidt op een aëroob uithoudingsvermogen (Zone 2). Waarden tussen 0,75 en 0,50 weerspiegelen de drempelovergang (Zone 3). Waarden onder 0,50 duiden op hoge anaërobe intensiteit (Zone 4).</string>
+    <string name="hrv_info_zones_desc">DFA α1 &gt; 0,75 duidt op een aëroob uithoudingsvermogen (Zone 2). Waarden tussen 0,75 en 0,50 weerspiegelen de drempelovergang (Zone 3). Waarden onder 0,50 duiden op hoge anaërobe intensiteit (Zone 4).</string>
     <string name="hrv_info_disclaimer_title">Medische disclaimer</string>
     <string name="hrv_info_disclaimer_desc">Autonome HRV-metrieken in aTrainingTracker zijn bedoeld voor trainingsbegeleiding en vervangen geen medisch advies. Hartritmestoornissen of ectopische slagen kunnen drempelschattingen vertekenen.</string>
 
     <!-- Morning Resting HRV Check (ATT-3556 / REQ-PER-032) -->
     <string name="morning_hrv_title">Ochtend HRV-check</string>
-    <string name="morning_hrv_subtitle">Ochtendprotocol voor autonoom herstel</string>
+    <string name="morning_hrv_subtitle">Rustmeting direct na het ontwaken</string>
     <string name="morning_hrv_posture_label">Houding</string>
     <string name="morning_hrv_posture_supine">Liggend</string>
     <string name="morning_hrv_posture_seated">Zittend</string>
@@ -68,9 +73,10 @@
     <string name="morning_hrv_state_stabilizing">Stabiliseren: %1$ds</string>
     <string name="morning_hrv_state_measuring">Meten: %1$ds / %2$ds</string>
     <string name="morning_hrv_state_completed">Meting voltooid</string>
+    <string name="morning_hrv_result_title">Meetresultaat</string>
     <string name="morning_hrv_btn_start">Meting starten</string>
     <string name="morning_hrv_btn_cancel">Annuleren</string>
-    <string name="morning_hrv_btn_save">Meting opslaan</string>
+    <string name="morning_hrv_btn_save">Opslaan</string>
     <string name="morning_hrv_btn_discard">Verwerpen</string>
     <string name="morning_hrv_instructions_title">Gestandaardiseerd protocol</string>
     <string name="morning_hrv_instructions_desc">Meet direct na het ontwaken en legen van de blaas. Blijf stil liggen en adem rustig zonder te spreken. Behoud dezelfde houding voor betrouwbare SWC-vergelijkingen.</string>
@@ -104,33 +110,33 @@
     <string name="hrv_readiness_swc_baseline_label">60d SWC-basislijn</string>
     <string name="hrv_readiness_rolling_avg_label">7-daags rollend gemiddelde</string>
 
-    <!-- Interactive DFA a1 / rMSSD Charts & Scatter Plot in Workout Details (ATT-3544 / REQ-PER-035) -->
-    <string name="hrv_scatter_card_title">DFA a1 Aërobe drempelwaardedynamiek</string>
-    <string name="hrv_scatter_card_subtitle">a1 vs. hartslag &amp; fietsvermogen</string>
-    <string name="hrv_scatter_aerobic_threshold">Aërobe drempel (a1 = 0,75)</string>
-    <string name="hrv_scatter_anaerobic_threshold">Anaërobe drempel (a1 = 0,50)</string>
-    <string name="hrv_scatter_aerobic_threshold_fmt">Aërobe drempel (a1 = %1$.2f)</string>
-    <string name="hrv_scatter_anaerobic_threshold_fmt">Anaërobe drempel (a1 = %1$.2f)</string>
+    <!-- Interactive DFA α1 / rMSSD Charts & Scatter Plot in Workout Details (ATT-3544 / REQ-PER-035) -->
+    <string name="hrv_scatter_card_title">DFA α1 Aërobe drempelwaardedynamiek</string>
+    <string name="hrv_scatter_card_subtitle">α1 vs. hartslag &amp; fietsvermogen</string>
+    <string name="hrv_scatter_aerobic_threshold">Aërobe drempel (α1 = 0,75)</string>
+    <string name="hrv_scatter_anaerobic_threshold">Anaërobe drempel (α1 = 0,50)</string>
+    <string name="hrv_scatter_aerobic_threshold_fmt">Aërobe drempel (α1 = %1$.2f)</string>
+    <string name="hrv_scatter_anaerobic_threshold_fmt">Anaërobe drempel (α1 = %1$.2f)</string>
     <string name="hrv_scatter_toggle_hr">Hartslag</string>
     <string name="hrv_scatter_toggle_power">Vermogen</string>
     <string name="hrv_scatter_toggle_pace">Tempo</string>
     <string name="hrv_scatter_smoothed_warning_title">Afgevlakte sensorstroom</string>
-    <string name="hrv_scatter_smoothed_warning_desc">Opgenomen RR-intervallen vertonen firmware-afvlakking of synthetische kwantisatie. Aerobe drempelschattingen (a1 = 0,75 / 0,50) kunnen vervormd zijn.</string>
+    <string name="hrv_scatter_smoothed_warning_desc">Opgenomen RR-intervallen vertonen firmware-afvlakking of synthetische kwantisatie. Aerobe drempelschattingen (α1 = 0,75 / 0,50) kunnen vervormd zijn.</string>
     <string name="hrv_scatter_artifact_suppressed">Intervallen met hoge artefacten (&gt;5%%) onderdrukt</string>
     <string name="hrv_scatter_no_data">Geen HRV-gegevens beschikbaar voor deze training</string>
     <string name="hrv_chart_artifact_gap_label">Artefactkloof</string>
 
-    <!-- DFA a1 Threshold Tuning & Dynamic Zones (ATT-6715 / REQ-TRK-061) -->
-    <string name="tuning_dfa_a1_t1_title">DFA a1 Aërobe Drempel (T1)</string>
+    <!-- DFA α1 Threshold Tuning & Dynamic Zones (ATT-6715 / REQ-TRK-061) -->
+    <string name="tuning_dfa_a1_t1_title">DFA α1 Aërobe Drempel (T1)</string>
     <string name="tuning_dfa_a1_t1_desc">Drempel tussen aërobe basis (Zone 2) en overgang (Zone 3). Hoger = meer fractaal / aëroob.</string>
-    <string name="tuning_dfa_a1_t2_title">DFA a1 Anaërobe Drempel (T2)</string>
+    <string name="tuning_dfa_a1_t2_title">DFA α1 Anaërobe Drempel (T2)</string>
     <string name="tuning_dfa_a1_t2_desc">Drempel tussen overgang (Zone 3) en anaërobe intensiteit (Zone 4). Hoger = meer fractaal / aëroob.</string>
     <string name="tuning_dfa_a1_default">Standaard: %1$.2f (Invariant: T1 \u2265 T2 + 0.05)</string>
-    <string name="hrv_info_zones_desc_fmt">DFA a1 &gt; %1$.2f duidt op een aëroob uithoudingsvermogen (Zone 2). Waarden tussen %1$.2f en %2$.2f weerspiegelen de drempelovergang (Zone 3). Waarden onder %2$.2f duiden op hoge anaërobe intensiteit (Zone 4).</string>
+    <string name="hrv_info_zones_desc_fmt">DFA α1 &gt; %1$.2f duidt op een aëroob uithoudingsvermogen (Zone 2). Waarden tussen %1$.2f en %2$.2f weerspiegelen de drempelovergang (Zone 3). Waarden onder %2$.2f duiden op hoge anaërobe intensiteit (Zone 4).</string>
 
     <!-- Configurable Artifact Gate Threshold (ATT-6714 / REQ-TRK-060.4) -->
     <string name="tuning_hrv_artifact_gate_title">HRV-artefactdrempel</string>
-    <string name="tuning_hrv_artifact_gate_desc" formatted="false">Maximaal artefactpercentage in venster voordat DFA a1 wordt onderdrukt. Bereik: 3,0% tot 5,0%.</string>
+    <string name="tuning_hrv_artifact_gate_desc" formatted="false">Maximaal artefactpercentage in venster voordat DFA α1 wordt onderdrukt. Bereik: 3,0% tot 5,0%.</string>
     <string name="tuning_hrv_artifact_gate_default">Standaard: %1$.1f%%</string>
 
     <!-- Morning HRV CTA & Onboarding in Fitness & Physiology (ATT-6720 / REQ-UI-513) -->
@@ -142,7 +148,7 @@
     <string name="hrv_history_title">Geschiedenis ochtend-HRV</string>
 
     <!-- Lag-Aligned, Confidence-Gated HRVT1/HRVT2 Thresholds (ATT-3554 / REQ-PER-036) -->
-    <string name="hrv_threshold_card_title">DFA a1-drempelwaardeschattingen (HRVT1 / HRVT2)</string>
+    <string name="hrv_threshold_card_title">DFA α1-drempelwaardeschattingen (HRVT1 / HRVT2)</string>
     <string name="hrv_threshold_card_subtitle">Vertragingsgecorrigeerde, betrouwbaarheidsgevalideerde fysiologische drempels</string>
     <string name="hrv_threshold_hrvt1_label">Aërobe drempel (HRVT1)</string>
     <string name="hrv_threshold_hrvt2_label">Anaërobe drempel (HRVT2)</string>
@@ -157,15 +163,15 @@
     <string name="hrv_threshold_stat_neff">N: %1$d min</string>
     <string name="hrv_threshold_stat_neff_steps">N: %1$d stappen</string>
     <string name="hrv_threshold_stat_artifact">Gemiddelde artefacten: %1$.1f%%</string>
-    <string name="hrv_threshold_diag_steady">Gelijkmatig duurvermogen: DFA a1 bleef boven het drempelbereik</string>
+    <string name="hrv_threshold_diag_steady">Gelijkmatig duurvermogen: DFA α1 bleef boven het drempelbereik</string>
     <string name="hrv_threshold_diag_high_artifact">Hoge RR-artefactgraad (%1$.1f%% &gt; 5.0%%)</string>
     <string name="hrv_threshold_diag_short_duration">Onvoldoende overgangsduur (N = %1$d &lt; %2$d)</string>
     <string name="hrv_threshold_diag_low_r2">Lage lineaire correlatie (R² = %1$.2f &lt; %2$.2f)</string>
     <string name="hrv_threshold_no_estimate">--</string>
     <string name="hrv_threshold_informative_only">Alleen ter informatie; uitgesloten van zone-updates</string>
 
-    <!-- Guided DFA a1 Ramp/Step Test Screen (ATT-4969 / REQ-TRK-071) -->
-    <string name="hrv_test_title">Begeleide DFA a1-drempeltest</string>
+    <!-- Guided DFA α1 Ramp/Step Test Screen (ATT-4969 / REQ-TRK-071) -->
+    <string name="hrv_test_title">Begeleide DFA α1-drempeltest</string>
     <string name="hrv_test_subtitle">Aëroob &amp; anaëroob drempelprotocol</string>
     <string name="hrv_test_protocol_label">Protocoltype</string>
     <string name="hrv_test_protocol_step">Progressieve stappentest</string>
@@ -180,7 +186,7 @@
     <string name="hrv_test_increment_label">Stapverhoging</string>
     <string name="hrv_test_warmup_label">Duur warming-up</string>
     <string name="hrv_test_warmup_desc">10 minuten gelijkmatige warming-up voor de protocolstappen</string>
-    <string name="hrv_test_preflight_title">Sensorcontrole vooraf</string>
+    <string name="hrv_test_preflight_title">Sensor- en signaalstatus</string>
     <string name="hrv_test_preflight_checking">ECG RR-stroom &amp; signaalkwaliteit verifiëren…</string>
     <string name="hrv_test_preflight_pass" formatted="false">Hoge sensorkwaliteit (Artefacten ≤ 3,0%)</string>
     <string name="hrv_test_preflight_warning" formatted="false">Matige sensorkwaliteit (Artefacten 3,0–5,0%)</string>
@@ -193,14 +199,44 @@
     <string name="hrv_test_target_power">Doel: %1$d W</string>
     <string name="hrv_test_target_pace">Doel: %1$s</string>
     <string name="hrv_test_time_remaining">Resterende tijd: %1$s</string>
-    <string name="hrv_test_live_a1">Live a1: %1$.2f</string>
+    <string name="hrv_test_live_a1">Live α1: %1$.2f</string>
     <string name="hrv_test_live_artifacts">Artefacten: %1$.1f%%</string>
     <string name="hrv_test_early_complete_title">Drempels vastgelegd!</string>
-    <string name="hrv_test_early_complete_desc">DFA a1 is onder 0,45 gedaald. Zowel HRVT1 als HRVT2 zijn vastgelegd. U kunt nu overgaan op cooling-down zonder tot uitputting te gaan.</string>
+    <string name="hrv_test_early_complete_desc">DFA α1 is onder 0,45 gedaald. Zowel HRVT1 als HRVT2 zijn vastgelegd. U kunt nu overgaan op cooling-down zonder tot uitputting te gaan.</string>
     <string name="hrv_test_btn_start">Test starten</string>
     <string name="hrv_test_btn_finish">Test voltooien</string>
     <string name="hrv_test_btn_cooldown">Start cooling-down</string>
     <string name="hrv_test_btn_cancel">Test annuleren</string>
+
+    <!-- Active Pacing Guidance (ATT-7529) -->
+    <string name="hrv_test_pacing_target_header">Doel</string>
+    <string name="hrv_test_pacing_actual_header">Actueel (Is)</string>
+    <string name="hrv_test_live_power_fmt">Vermogen: %1$d W</string>
+    <string name="hrv_test_live_speed_fmt">Snelheid: %1$.1f km/h</string>
+    <string name="hrv_test_live_hr_fmt">HF: %1$d bpm</string>
+
+    <!-- Protocol Info & Pros/Cons (ATT-7529) -->
+    <string name="hrv_test_info_procedure_label">Verloop &amp; uitvoering</string>
+    <string name="hrv_test_title_step_fmt">Progressieve stappentest (%1$d min)</string>
+    <string name="hrv_test_title_ramp">Continue rampentest</string>
+    <string name="hrv_test_badge_step_4min">Aanbevolen · Hoge precisie</string>
+    <string name="hrv_test_badge_step_3min">Compact · Stappentest</string>
+    <string name="hrv_test_badge_ramp">Tijdsefficiënt · MRT-gecorrigeerd</string>
+    <string name="hrv_test_step1_warmup_cycling" formatted="false">Warming-up (10 min): Soepel rijden op 100 W (~45% FTP).</string>
+    <string name="hrv_test_step1_warmup_running">Warming-up (10 min): Rustig inlopen op 8,0 km/h (7:30 min/km).</string>
+    <string name="hrv_test_step2_step_cycling_fmt">Stappen (+20 W elke %1$d min): Vermogen per stap constant houden; laatste 2 min per stap worden geanalyseerd.</string>
+    <string name="hrv_test_step2_step_running_fmt">Stappen (+0,5 km/h elke %1$d min): Tempo per stap constant houden (vlak parcours of loopband aanbevolen).</string>
+    <string name="hrv_test_step2_ramp_cycling">Ramp (+15 W/min): Continue lineaire vermogenstoename (ideaal in smart-trainer ERG-modus).</string>
+    <string name="hrv_test_step2_ramp_running">Ramp (+0,25 km/h per min): Continue lineaire snelheidsverhoging.</string>
+    <string name="hrv_test_step3_completion">Submaximaal einde: Zodra DFA α1 gedurende 60 s onder 0,45 daalt, zijn HRVT1 &amp; HRVT2 vastgelegd – geen uitputting nodig!</string>
+    <string name="hrv_test_pro_label">Voordeel:</string>
+    <string name="hrv_test_con_label">Nadeel:</string>
+    <string name="hrv_test_pro_step_4min">Hoogste fysiologische nauwkeurigheid – na 2 min stabilisatie wordt een stabiel steady-state-venster van 2 min geanalyseerd.</string>
+    <string name="hrv_test_con_step_4min">Langere testduur (ongeveer 30–38 min inclusief warming-up).</string>
+    <string name="hrv_test_pro_step_3min">Echt stappenprotocol met kortere duur (ongeveer 25–30 min).</string>
+    <string name="hrv_test_con_step_3min">Kortere stabilisatietijd (60 s) voor het 120-s meetvenster dan bij het 4-min protocol.</string>
+    <string name="hrv_test_pro_ramp">Kortere totale duur (ongeveer 20–25 min) en vloeiende continue belastingsovergang zonder stapsprongen.</string>
+    <string name="hrv_test_con_ramp">Hartslag en HRV lopen ongeveer 45 s achter op het vermogen (Mean Response Time) en worden wiskundig gecorrigeerd (-11 W bij +15 W/min).</string>
 
     <!-- Training Zone Comparison & Multi-Session Consensus (ATT-3555 / REQ-PER-037) -->
     <string name="hrv_zone_comparison_title">Trainingszones vergelijken</string>
@@ -272,4 +308,11 @@
     <string name="morning_hrv_tag_rest">Rust</string>
     <string name="morning_hrv_btn_save_wellness">Ochtendwelzijn opslaan</string>
     <string name="morning_hrv_wellness_saved_toast">Ochtendwelzijn opgeslagen</string>
+
+    <!-- Morning HRV Check on Start Screen (ATT-7532 / REQ-UI-525) -->
+    <string name="hrv_morning_check_start_button">Ochtendcontrole</string>
+    <string name="tuning_show_morning_check_on_start_screen_title">Ochtend HRV-controle op startscherm</string>
+    <string name="tuning_show_morning_check_on_start_screen_desc">Toont voor de training een knop op het startscherm om de ochtend HRV-controle te starten als er een hartslagsensor is gekoppeld.</string>
+    <string name="tuning_morning_check_cutoff_hour_title">Eindtijd ochtendcontrole</string>
+    <string name="tuning_morning_check_cutoff_hour_desc">Zichtbaar op het startscherm tot %d:00 uur.</string>
 </resources>

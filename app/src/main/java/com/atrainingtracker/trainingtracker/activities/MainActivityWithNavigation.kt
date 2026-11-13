@@ -225,6 +225,10 @@ class MainActivityWithNavigation :
     var navController: NavHostController? = null
     private var mPendingDrawerItemId: Int? = null
 
+    @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
+    fun isNavGraphReady(controller: NavHostController?): Boolean =
+        controller != null && runCatching { controller.graph }.isSuccess
+
     /**
      * Invoked when Compose NavHostController is initialized and bound to ATrainingTrackerApp.
      * Executes any queued drawer navigation action that arrived before the controller was ready.
@@ -520,7 +524,9 @@ class MainActivityWithNavigation :
             val clustersViewModel = ViewModelProvider(this)[WorkoutClustersViewModel::class.java]
             clustersViewModel.selectClusterById(clusterId)
 
-            navController?.navigate(NavRoutes.locations(clusterId))
+            if (isNavGraphReady(navController)) {
+                navController?.navigate(NavRoutes.locations(clusterId))
+            }
 
             WorkoutNavigationEvents.resetCluster()
         }
@@ -806,10 +812,10 @@ class MainActivityWithNavigation :
             mDrawerController.selectedItemId = itemId
 
             val controller = navController
-            if (controller == null) {
+            if (!isNavGraphReady(controller)) {
                 mPendingDrawerItemId = itemId
             } else {
-                controller.navigate(route) {
+                controller!!.navigate(route) {
                     popUpTo(controller.graph.findStartDestination().id) {
                         saveState = true
                     }
@@ -870,8 +876,8 @@ class MainActivityWithNavigation :
         val summariesViewModel = androidx.lifecycle.ViewModelProvider(this)[WorkoutSummariesViewModel::class.java]
         summariesViewModel.setFilterCriteria(criteria)
         val controller = navController
-        if (controller != null) {
-            controller.navigate(NavRoutes.workouts(pushed = true))
+        if (isNavGraphReady(controller)) {
+            controller!!.navigate(NavRoutes.workouts(pushed = true))
         } else {
             navigateToDrawerItem(R.id.drawer_workouts)
         }
@@ -890,8 +896,8 @@ class MainActivityWithNavigation :
         val summariesViewModel = androidx.lifecycle.ViewModelProvider(this)[WorkoutSummariesViewModel::class.java]
         summariesViewModel.setFilterCriteria(criteria)
         val controller = navController
-        if (controller != null) {
-            controller.navigate(NavRoutes.workouts(pushed = true))
+        if (isNavGraphReady(controller)) {
+            controller!!.navigate(NavRoutes.workouts(pushed = true))
         } else {
             navigateToDrawerItem(R.id.drawer_workouts)
         }

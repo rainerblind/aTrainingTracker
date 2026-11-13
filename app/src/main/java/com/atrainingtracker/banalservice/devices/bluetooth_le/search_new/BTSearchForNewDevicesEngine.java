@@ -512,9 +512,13 @@ public class BTSearchForNewDevicesEngine
             return null;
         }
         if (deviceType == DeviceType.BIKE_RADAR) {
+            ParcelUuid radarUuid = new ParcelUuid(serviceUuid);
+            ParcelUuid memberUuid = new ParcelUuid(BluetoothConstants.UUID_SERVICE_GARMIN_MEMBER);
             return java.util.Arrays.asList(
-                    new ScanFilter.Builder().setServiceUuid(new ParcelUuid(serviceUuid)).build(),
-                    new ScanFilter.Builder().setServiceData(new ParcelUuid(serviceUuid), null).build()
+                    new ScanFilter.Builder().setServiceUuid(radarUuid).build(),
+                    new ScanFilter.Builder().setServiceData(radarUuid, null).build(),
+                    new ScanFilter.Builder().setServiceUuid(memberUuid).build(),
+                    new ScanFilter.Builder().setServiceData(memberUuid, null).build()
             );
         }
         return Collections.singletonList(new ScanFilter.Builder()

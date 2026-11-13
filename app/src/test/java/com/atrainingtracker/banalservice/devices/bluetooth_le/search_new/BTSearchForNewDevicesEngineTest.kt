@@ -570,7 +570,8 @@ class BTSearchForNewDevicesEngineTest {
 
     /**
      * REQ-CON-028.3 / TST-CON-028.7: buildScanFilters for BIKE_RADAR must include both
-     * Service UUID and Service Data filters. Standard devices build single service UUID filter.
+     * Service UUID and Service Data filters for UUID_SERVICE_RADAR and Garmin Member UUID_SERVICE_GARMIN_MEMBER.
+     * Standard devices build single service UUID filter.
      */
     @Test
     fun testBuildScanFilters_radarAndStandardDevices() {
@@ -578,7 +579,7 @@ class BTSearchForNewDevicesEngineTest {
 
         val radarFilters = engine.buildScanFilters(DeviceType.BIKE_RADAR)
         assertNotNull("Radar filters must not be null", radarFilters)
-        assertEquals("Radar must have 2 scan filters (Service UUID + Service Data)", 2, radarFilters!!.size)
+        assertEquals("Radar must have 4 scan filters (Radar Service UUID + Service Data, Member Service UUID + Service Data)", 4, radarFilters!!.size)
 
         val hrmFilters = engine.buildScanFilters(DeviceType.HRM)
         assertNotNull("HRM filters must not be null", hrmFilters)

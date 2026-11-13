@@ -29,6 +29,7 @@ import com.atrainingtracker.trainingtracker.settings.SettingsDataStore.ZoneType
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
@@ -267,5 +268,73 @@ class SettingsDataStoreZoneAtomicTest {
 
         val invertedPwr = ZoneProfileState(ZoneType.PWR_BIKE, 100, 150, 200, 250, 400, 300)
         assertFalse(invertedPwr.isMonotonic())
+    }
+
+    /**
+     * TST-UI-124.2: DataStore defaults rightBar to true when unconfigured.
+     */
+    @Test
+    fun dataStore_defaultsRightBarToTrue_whenUnconfigured() = runTest(testDispatcher) {
+        val options = dataStore.getZoneDisplayOptionsFlow(ZoneType.HR_RUN).first()
+        assertTrue("showBackground must default to true", options.showBackground)
+        assertTrue("showLeftBar must default to true", options.showLeftBar)
+        assertTrue("showRightBar must default to true", options.showRightBar)
+        assertFalse("showTextColor must default to false", options.showTextColor)
+
+        val hrvOptions = dataStore.hrvZoneDisplayOptionsFlow.first()
+        assertTrue("HRV showBackground must default to true", hrvOptions.showBackground)
+        assertTrue("HRV showLeftBar must default to true", hrvOptions.showLeftBar)
+        assertTrue("HRV showRightBar must default to true", hrvOptions.showRightBar)
+        assertFalse("HRV showTextColor must default to false", hrvOptions.showTextColor)
+    }
+
+    /**
+     * TST-UI-124.2: Explicit false preference for rightBar is strictly preserved.
+     */
+    @Test
+    fun dataStore_preservesExplicitFalseRightBar() = runTest(testDispatcher) {
+        dataStore.saveZoneDisplayOptions(
+            ZoneType.HR_RUN,
+            ZoneDisplayOptions(showRightBar = false)
+        )
+        advanceUntilIdle()
+
+        val loaded = dataStore.getZoneDisplayOptionsFlow(ZoneType.HR_RUN).first()
+        assertFalse("Explicit false rightBar must be preserved", loaded.showRightBar)
+
+        dataStore.saveHrvZoneDisplayOptions(
+            ZoneDisplayOptions(showRightBar = false)
+        )
+        advanceUntilIdle()
+
+        val loadedHrv = dataStore.hrvZoneDisplayOptionsFlow.first()
+        assertFalse("Explicit false rightBar for HRV must be preserved", loadedHrv.showRightBar)
+        val snapshot = dataStore.snapshotFlow.first { !it.hrvDisplayOptions.showRightBar }
+        assertFalse("Snapshot hrvDisplayOptions must reflect explicit false rightBar", snapshot.hrvDisplayOptions.showRightBar)
+    }
+
+    /**
+     * TST-UI-124.2: Dedicated HRV ZoneDisplayOptions persists independently from other zone types.
+     */
+    @Test
+    fun dataStore_hrvZoneDisplayOptions_persistsIndependently() = runTest(testDispatcher) {
+        val customHrv = ZoneDisplayOptions(
+            showBackground = false,
+            showLeftBar = true,
+            showRightBar = true,
+            showTextColor = true,
+            showGauge = false
+        )
+        dataStore.saveHrvZoneDisplayOptions(customHrv)
+        advanceUntilIdle()
+
+        val loadedHrv = dataStore.hrvZoneDisplayOptionsFlow.first()
+        assertEquals(customHrv, loadedHrv)
+        val snapshot = dataStore.snapshotFlow.first { it.hrvDisplayOptions == customHrv }
+        assertEquals(customHrv, snapshot.hrvDisplayOptions)
+
+        // Ensure other zone types are not affected
+        val hrRun = dataStore.getZoneDisplayOptionsFlow(ZoneType.HR_RUN).first()
+        assertTrue("HR_RUN background must remain untouched", hrRun.showBackground)
     }
 }

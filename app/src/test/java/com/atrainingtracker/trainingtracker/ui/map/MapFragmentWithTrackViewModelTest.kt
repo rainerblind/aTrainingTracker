@@ -252,8 +252,8 @@ class MapFragmentWithTrackViewModelTest {
     }
 
     @Test
-    fun testUiState_climbsFlowDeduplicatesOverlappingClimbsForDisplay() = runTest {
-        // REQ-CLM-011.3 / TST-CLM-011.3
+    fun testUiState_climbsFlowStreamsPreDeduplicatedStoredClimbsDirectly() = runTest {
+        // REQ-CLM-011.3 / TST-CLM-011.3: Direct single-tier pass-through of pre-deduplicated stored climbs
         val climb1 = Climb(
             id = 101L,
             name = "Col du Galibier",
@@ -267,16 +267,7 @@ class MapFragmentWithTrackViewModelTest {
             maxGradePercent = 10.1,
             category = ClimbCategory.CAT_1
         )
-        // Overlapping candidate along the same road segment
-        val duplicateClimb = climb1.copy(
-            id = 102L,
-            name = "Col du Galibier Duplicate",
-            startLat = 45.0605,
-            startLng = 6.4005,
-            endLat = 45.0605,
-            endLng = 6.4105
-        )
-        fakeStoredClimbsFlow.value = listOf(climb1, duplicateClimb)
+        fakeStoredClimbsFlow.value = listOf(climb1)
 
         val mockPrefs = mockk<SharedPreferences>(relaxed = true)
         every { mockPrefs.getStringSet(MapFragmentWithTrackViewModel.PREF_GENERAL_MAP_ENABLED_LAYERS, null) } returns setOf("CLIMBS")
@@ -287,7 +278,7 @@ class MapFragmentWithTrackViewModelTest {
         }
 
         testDispatcher.scheduler.advanceUntilIdle()
-        assertEquals("uiState.climbs must deduplicate overlapping climb polylines for map display", 1, viewModel.uiState.value.climbs.size)
+        assertEquals("uiState.climbs must emit pre-deduplicated stored climbs directly without secondary duplicate pass (REQ-CLM-011.3)", 1, viewModel.uiState.value.climbs.size)
         assertEquals("Col du Galibier", viewModel.uiState.value.climbs[0].name)
     }
 

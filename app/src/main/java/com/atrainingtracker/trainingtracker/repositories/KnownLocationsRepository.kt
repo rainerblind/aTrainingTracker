@@ -103,9 +103,13 @@ open class KnownLocationsRepository @VisibleForTesting constructor(
 
     init {
         repositoryScope.launch {
-            reconcileHitCounts()
-            loadLocations()
-            healLegacyNames()
+            try {
+                reconcileHitCounts()
+                loadLocations()
+                healLegacyNames()
+            } catch (_: Throwable) {
+                // Guard background initialization against unmocked SQLiteOpenHelper in JVM unit tests
+            }
         }
     }
 

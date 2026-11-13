@@ -2764,7 +2764,11 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
                 deduplicateHistoricalClimbs()
             }
         } catch (e: Exception) {
-            Log.w(TAG, "Error checking/triggering historical climb backfill/cleanup", e)
+            try {
+                Log.w(TAG, "Error checking/triggering historical climb backfill/cleanup", e)
+            } catch (_: Throwable) {
+                // Guard against unmocked android.util.Log when background IO coroutine finishes after test tearDown
+            }
         }
     }
 

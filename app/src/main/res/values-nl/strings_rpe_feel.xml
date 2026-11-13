@@ -11,14 +11,14 @@
     <string name="rpe_anchor_3">3 — Matig</string>
     <string name="rpe_anchor_4">4 — Enigszins zwaar</string>
     <string name="rpe_anchor_5">5 — Zwaar</string>
-    <string name="rpe_anchor_6">6 — Zwaar+</string>
+    <string name="rpe_anchor_6">6 — Zwaar tot zeer zwaar</string>
     <string name="rpe_anchor_7">7 — Zeer zwaar</string>
-    <string name="rpe_anchor_8">8 — Zeer zwaar+</string>
-    <string name="rpe_anchor_9">9 — Extreem zwaar</string>
-    <string name="rpe_anchor_10">10 — Maximale inspanning</string>
+    <string name="rpe_anchor_8">8 — Extreem zwaar</string>
+    <string name="rpe_anchor_9">9 — Vrijwel maximaal</string>
+    <string name="rpe_anchor_10">10 — Maximaal</string>
 
-    <string name="feel_anchor_1">Zeer slecht</string>
-    <string name="feel_anchor_2">Slecht</string>
+    <string name="feel_anchor_1">Belabberd</string>
+    <string name="feel_anchor_2">Zwaar</string>
     <string name="feel_anchor_3">Normaal</string>
     <string name="feel_anchor_4">Goed</string>
     <string name="feel_anchor_5">Geweldig</string>

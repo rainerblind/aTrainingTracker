@@ -138,4 +138,60 @@ class ExportStatusDataProviderTest {
 
         assertFalse("Group data must have no content when no rows exist", groupData.hasContent)
     }
+
+    @Test
+    fun testCreateGroupData_whenCommunityRowsMissingHealthConnect_synthesizesHealthConnectWithUnwantedStatus() {
+        val fileBaseName = "2026-11-13-10-00-00"
+
+        // Mock database returning Strava row only (legacy row missing HEALTH_CONNECT)
+        val legacyCommunityRows = listOf(
+            ExportStatusDatabaseManager.ExportRow(
+                ExportType.COMMUNITY,
+                FileFormat.STRAVA,
+                ExportStatus.FINISHED_SUCCESS,
+                "Uploaded activity 12345"
+            )
+        )
+        every { mockDbManager.getExportRows(fileBaseName) } returns legacyCommunityRows
+
+        val groupData = provider.createGroupData(fileBaseName, ExportType.COMMUNITY)
+
+        assertTrue("Group data must have content", groupData.hasContent)
+        val hcDetail = groupData.details.firstOrNull { it.formatName == "String_${FileFormat.HEALTH_CONNECT.uiNameId}" }
+        assertNotNull("HEALTH_CONNECT detail must be synthesized when absent from legacy database rows", hcDetail)
+        assertEquals("HEALTH_CONNECT status must be UNWANTED", "String_${ExportStatus.UNWANTED.uiNameId}", hcDetail?.status)
+
+        // Verify order corresponds to ExportType.COMMUNITY.exportToFileFormats
+        val expectedFormatOrder = ExportType.COMMUNITY.exportToFileFormats.map { "String_${it.uiNameId}" }
+        val actualFormatOrder = groupData.details.map { it.formatName }
+        assertEquals("Export details must follow ExportType.COMMUNITY.exportToFileFormats canonical order",
+            expectedFormatOrder, actualFormatOrder)
+    }
+
+    @Test
+    fun testCreateGroupData_whenCommunityBothStravaAndHealthConnectSuccess_formatsPluralCommunityLine() {
+        val fileBaseName = "2026-11-13-10-00-00"
+
+        val rows = listOf(
+            ExportStatusDatabaseManager.ExportRow(
+                ExportType.COMMUNITY,
+                FileFormat.STRAVA,
+                ExportStatus.FINISHED_SUCCESS,
+                "Strava OK"
+            ),
+            ExportStatusDatabaseManager.ExportRow(
+                ExportType.COMMUNITY,
+                FileFormat.HEALTH_CONNECT,
+                ExportStatus.FINISHED_SUCCESS,
+                ""
+            )
+        )
+        every { mockDbManager.getExportRows(fileBaseName) } returns rows
+
+        val groupData = provider.createGroupData(fileBaseName, ExportType.COMMUNITY)
+
+        assertTrue("Group data must have content", groupData.hasContent)
+        assertNotNull("Succeeded line must not be null when jobs succeed", groupData.succeededLine)
+        assertEquals(2, groupData.details.size)
+    }
 }

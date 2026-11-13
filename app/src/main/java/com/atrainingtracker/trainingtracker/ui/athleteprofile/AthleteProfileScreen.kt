@@ -76,6 +76,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -132,7 +133,6 @@ fun AthleteProfileScreen(
     initialTab: Int = 0,
     onOpenDrawer: (() -> Unit)? = null,
     onNavigateToMorningHrv: (() -> Unit)? = null,
-    onNavigateToHrvTest: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -154,7 +154,6 @@ fun AthleteProfileScreen(
         onDeleteHrvReading = viewModel::deleteHrvReading,
         onOpenDrawer = onOpenDrawer,
         onNavigateToMorningHrv = onNavigateToMorningHrv,
-        onNavigateToHrvTest = onNavigateToHrvTest,
         initialTab = initialTab,
         modifier = modifier
     )
@@ -163,11 +162,11 @@ fun AthleteProfileScreen(
 /**
  * Stateless UI content for the unified **Fitness & Physiology** hub (`REQ-UI-513.4`, Rule 23, Rule 38, Rule 41).
  *
- * Hosts 4 tabs in a [PrimaryScrollableTabRow] + [HorizontalPager]:
- * - Page 0: Fitness & Fatigue (PMC) (`R.string.fitness_tab_pmc`)
- * - Page 1: HRV & Readiness (`R.string.fitness_tab_hrv`)
- * - Page 2: Body & Thresholds (`R.string.fitness_tab_body`)
- * - Page 3: Cardio-Power (`R.string.fitness_tab_cardio_power`, conditional)
+ * Hosts tabs in a [PrimaryScrollableTabRow] + [HorizontalPager] ordered by physiological hierarchy:
+ * - Page 0: Body & Thresholds (`R.string.fitness_tab_body`)
+ * - Page 1: PMC (conditional) (`R.string.fitness_tab_pmc`)
+ * - Page 2: HRV & Readiness (`R.string.fitness_tab_hrv`)
+ * - Page 3: Cardio-Power (conditional) (`R.string.fitness_tab_cardio_power`)
  */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
@@ -188,7 +187,6 @@ fun AthleteProfileContent(
     onDeleteHrvReading: (Long) -> Unit = {},
     onOpenDrawer: (() -> Unit)? = null,
     onNavigateToMorningHrv: (() -> Unit)? = null,
-    onNavigateToHrvTest: (() -> Unit)? = null,
     initialTab: Int = 0,
     modifier: Modifier = Modifier
 ) {
@@ -199,20 +197,18 @@ fun AthleteProfileContent(
     var showCardioInfoDialog by remember { mutableStateOf(false) }
     val navBarBottomPadding = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
 
-    val tabTitleResIds = remember(uiState.enableCardioPowerDynamics) {
-        buildList {
-            add(R.string.fitness_tab_pmc)
-            add(R.string.fitness_tab_hrv)
-            add(R.string.fitness_tab_body)
-            if (uiState.enableCardioPowerDynamics) {
-                add(R.string.fitness_tab_cardio_power)
-            }
-        }
+    val tabTitleResIds = remember(uiState.enablePmcModel, uiState.enableCardioPowerDynamics) {
+        resolveFitnessHubTabs(uiState.enablePmcModel, uiState.enableCardioPowerDynamics)
     }
     val pagerState = rememberPagerState(
-        initialPage = initialTab.coerceIn(0, tabTitleResIds.lastIndex),
+        initialPage = initialTab.coerceIn(0, (tabTitleResIds.size - 1).coerceAtLeast(0)),
         pageCount = { tabTitleResIds.size }
     )
+    LaunchedEffect(tabTitleResIds.size) {
+        if (pagerState.currentPage > tabTitleResIds.lastIndex && tabTitleResIds.isNotEmpty()) {
+            pagerState.scrollToPage(tabTitleResIds.lastIndex)
+        }
+    }
     val scope = rememberCoroutineScope()
     val bodyTabIndex = tabTitleResIds.indexOf(R.string.fitness_tab_body)
 
@@ -279,7 +275,7 @@ fun AthleteProfileContent(
                     }
 
                     PrimaryScrollableTabRow(
-                        selectedTabIndex = pagerState.currentPage,
+                        selectedTabIndex = pagerState.currentPage.coerceIn(0, (tabTitleResIds.size - 1).coerceAtLeast(0)),
                         containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
                         divider = {}
                     ) {
@@ -311,42 +307,16 @@ fun AthleteProfileContent(
                             ),
                             verticalArrangement = Arrangement.spacedBy(16.dp)
                         ) {
-                            if (uiState.enablePmcModel) {
-                                item {
-                                    PerformanceManagementChartCard(
-                                        pmcSummary = uiState.pmcSummary,
-                                        pmcPlotPoints = uiState.pmcPlotPoints,
-                                        selectedPmcTimeRange = uiState.selectedPmcTimeRange,
-                                        onSelectPmcTimeRange = { range ->
-                                            onSelectPmcTimeRange(range)
-                                            onSelectTimeRange(range)
-                                        }
-                                    )
-                                }
-                            } else {
-                                item {
-                                    Card(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        shape = RoundedCornerShape(12.dp),
-                                        colors = CardDefaults.cardColors(
-                                            containerColor = MaterialTheme.colorScheme.surfaceContainerLow
-                                        )
-                                    ) {
-                                        Box(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .padding(24.dp),
-                                            contentAlignment = Alignment.Center
-                                        ) {
-                                            Text(
-                                                text = stringResource(R.string.pmc_disabled_guidance),
-                                                style = MaterialTheme.typography.bodyMedium,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                                textAlign = TextAlign.Center
-                                            )
-                                        }
+                            item {
+                                PerformanceManagementChartCard(
+                                    pmcSummary = uiState.pmcSummary,
+                                    pmcPlotPoints = uiState.pmcPlotPoints,
+                                    selectedPmcTimeRange = uiState.selectedPmcTimeRange,
+                                    onSelectPmcTimeRange = { range ->
+                                        onSelectPmcTimeRange(range)
+                                        onSelectTimeRange(range)
                                     }
-                                }
+                                )
                             }
                         }
                     }
@@ -376,28 +346,6 @@ fun AthleteProfileContent(
                                     Spacer(modifier = Modifier.width(8.dp))
                                     Text(
                                         text = stringResource(R.string.hrv_measure_morning_cta),
-                                        style = MaterialTheme.typography.labelLarge
-                                    )
-                                }
-                            }
-
-                            // 1b. "Guided DFA a1 Threshold Test" CTA button (REQ-TRK-072)
-                            item {
-                                OutlinedButton(
-                                    onClick = { onNavigateToHrvTest?.invoke() },
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .testTag("btn_guided_hrv_test"),
-                                    shape = RoundedCornerShape(10.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Favorite,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(18.dp)
-                                    )
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Text(
-                                        text = stringResource(R.string.hrv_test_title),
                                         style = MaterialTheme.typography.labelLarge
                                     )
                                 }

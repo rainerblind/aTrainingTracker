@@ -94,6 +94,10 @@ class BTLEHeartRateDeviceTest {
         override fun notifySensorsChanged() {
             // No-op for unit testing
         }
+
+        public override fun unregisterSensors() {
+            super.unregisterSensors()
+        }
     }
 
     private fun createDevice(): BTLEHeartRateDevice {
@@ -353,5 +357,39 @@ class BTLEHeartRateDeviceTest {
         val lastEvent = receivedEvents.last()
         val expectedTimestamp = Math.round(100_000.0 + (3599 * beatDurationMs))
         assertEquals(expectedTimestamp, lastEvent.beatTimestampMs)
+    }
+
+    /**
+     * TST-CON-027.6: Clean RR_INTERVAL sensor teardown on disconnect and reconnect continuity (ATT-7530).
+     */
+    @Test
+    fun testUnregisterSensors_cleansUpRrIntervalSensor_andReconnectCreatesNewInstance() {
+        val device = createDevice() as TestBTLEHeartRateDevice
+        assertNull("RR sensor must initially be null", device.rrIntervalSensor)
+
+        // Parse RR packet
+        val packet = byteArrayOf(0x10.toByte(), 70.toByte(), 0x00.toByte(), 0x04.toByte()) // 1024 raw -> 1000ms
+        device.parseHeartRateMeasurement(packet, 1000L)
+        val firstSensor = device.rrIntervalSensor
+        assertNotNull("RR sensor should be created on first RR packet", firstSensor)
+        assertEquals(1000, firstSensor?.value)
+
+        // Verify it is present in device sensors
+        val rrInSensorsBefore = device.sensors.any { it.sensorType == SensorType.RR_INTERVAL }
+        assertTrue("RR_INTERVAL must be present in device sensors before disconnect", rrInSensorsBefore)
+
+        // Unregister sensors (simulating disconnect)
+        device.unregisterSensors()
+
+        assertNull("mRrIntervalSensor field must be null after unregisterSensors()", device.rrIntervalSensor)
+        val rrInSensorsAfter = device.sensors.any { it.sensorType == SensorType.RR_INTERVAL }
+        org.junit.Assert.assertFalse("RR_INTERVAL must be removed from device sensors after unregisterSensors()", rrInSensorsAfter)
+
+        // Simulate reconnect and arrival of another RR packet
+        device.parseHeartRateMeasurement(packet, 2000L)
+        val secondSensor = device.rrIntervalSensor
+        assertNotNull("RR sensor should be re-created after reconnect", secondSensor)
+        org.junit.Assert.assertNotSame("Reconnected sensor must be a fresh instance", firstSensor, secondSensor)
+        assertEquals(1000, secondSensor?.value)
     }
 }

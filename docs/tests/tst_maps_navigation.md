@@ -1243,7 +1243,7 @@
 ### TST-CLM-010: **Configurable Climb Categorization: FIETS Index & Strava/Garmin Formula Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-CLM-010` (`REQ-CLM-010.1`..`REQ-CLM-010.3`)
 - **Component**: `Climb.kt`, `ClimbDetector.kt`, `TuningPreferencesDataStore.kt`, `NavigationSection.kt`, `ClimbCategorizationFormulaTest.kt`
-- **Jira**: `ATT-7162` | **Target Release**: `V5.0.0`
+- **Jira**: `ATT-7162`, `ATT-7539` | **Target Release**: `V5.0.0`
 - **Test Description**:
   1. *FIETS Index Mathematical Accuracy & Altitude Bonus Test (`TST-CLM-010.1`, `ClimbCategorizationFormulaTest.kt`)*:
   • Verify FIETS base calculation $(H^2)/(10 \times D)$, high-altitude bonus above 1000m, and category classification across HC, Cat 1, Cat 2, Cat 3, Cat 4, Uncategorized.
@@ -1255,11 +1255,13 @@
   • Verify `climbScoringFormula` defaults to `FIETS`, persists `STRAVA_GARMIN`, and resets to `FIETS` on `resetToDefaults()`.
   5. *9-Language Localization Parity Audit (`TST-CLM-010.5`)*:
   • Verify string resources exist in `values`, `values-de`, `values-es`, `values-fr`, `values-it`, `values-ja`, `values-nl`, `values-pl`, `values-pt` without missing keys or unescaped XML formatting errors.
+  6. *Standardized Segmented Button Form Control Test (`TST-CLM-010.6`, `AdvancedTuningVisualContractTest.kt` / `TuningDesignGuidelinesContractTest.kt`)*:
+  • Verify `NavigationSection.kt` renders `TuningSegmentedButtonRow` for `FIETS` vs. `STRAVA_GARMIN` selection with `SingleChoiceSegmentedButtonRow`, zero checkmark insertion (`icon = {}`), `bodyMedium` `SemiBold` title, and `onSurfaceVariant` helper text.
 
 ### TST-CLM-011: **Deduplicate Overlapping Climbs in Climbs.db & Map Layer Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-CLM-011` (`REQ-CLM-011.1`..`REQ-CLM-011.3`)
-- **Component**: `ClimbsDatabaseManager.kt`, `WorkoutRepository.kt`, `LiveClimbsRepository.kt`, `MapFragmentWithTrackViewModel.kt`, `ClimbsDatabaseManagerTest.kt`, `WorkoutHistoricalClimbBackfillTest.kt`, `MapFragmentWithTrackViewModelTest.kt`
-- **Jira**: `ATT-7311` | **Target Release**: `V5.0.0`
+- **Component**: `ClimbsDatabaseManager.kt`, `WorkoutRepository.kt`, `LiveClimbsRepository.kt`, `MapFragmentWithTrackViewModel.kt`, `ClimbDeduplicator.kt`, `ClimbsDatabaseManagerTest.kt`, `WorkoutHistoricalClimbBackfillTest.kt`, `MapFragmentWithTrackViewModelTest.kt`, `ClimbDeduplicatorTest.kt`
+- **Jira**: `ATT-7311`, `ATT-7523` | **Target Release**: `V5.0.0`
 - **Test Description**:
   1. *Spatial Endpoint & Corridor Overlap Deduplication Test (`TST-CLM-011.1`, `ClimbsDatabaseManagerTest.kt`)*:
   • Verify that candidate climbs whose start and summit coordinates are within 100m are deduplicated via `insertClimbsWithDeduplicationBatch`.
@@ -1271,9 +1273,12 @@
   • Verify that `WorkoutRepository` executes `deduplicateExistingClimbs()` when `climbs_workout_deduplication_v3` is false, marks the preference flag true, and refreshes `LiveClimbsRepository`.
   • Verify that subsequent invocations are O(1) no-ops when the flag is true.
   3. *Map ViewModel Display Deduplication Test (`TST-CLM-011.3`, `MapFragmentWithTrackViewModelTest.kt`)*:
-  • Verify that when `LiveClimbsRepository.allStoredClimbs` contains duplicate or overlapping climbs, `MapFragmentWithTrackViewModel.uiState.climbs` emits only the deduplicated list when `GeneralMapLayer.CLIMBS` is enabled.
+  • Verify that `MapFragmentWithTrackViewModel.uiState.climbs` emits `liveClimbsRepository.allStoredClimbs` directly when `GeneralMapLayer.CLIMBS` is enabled without duplicate execution of `ClimbDeduplicator.deduplicateForDisplay`.
   4. *Targeted Regression Verification Suite (`TST-CLM-011.4`)*:
   • Run targeted tests: `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.database.Climbs*" --tests "com.atrainingtracker.trainingtracker.climbs.*" --tests "com.atrainingtracker.trainingtracker.ui.map.MapFragmentWithTrackViewModel*" --tests "com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutHistoricalClimbBackfillTest"` asserting 100% pass rate.
+  5. *Performance Benchmark & Spatial Bounding Test (`TST-CLM-011.5`, `ClimbDeduplicatorTest.kt`)*:
+  • Verify that geographic bounding box pre-filtering discards non-overlapping climb pairs in $O(1)$ without evaluating heading or segment cross-track distance.
+  • Verify that deduplicating a dense synthetic list of 300 climbs completes in $\le 100\text{ ms}$ on JVM without blocking or thread starvation.
 
 
 

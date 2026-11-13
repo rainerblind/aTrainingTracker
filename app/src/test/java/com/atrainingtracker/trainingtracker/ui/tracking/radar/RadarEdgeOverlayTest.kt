@@ -331,4 +331,60 @@ class RadarEdgeOverlayTest {
         )
         assertEquals(0.0f, RadarOverlayMath.calculateHorizontalOffsetDp(laneStateSameTarget, RadarTrafficOrientation.RIGHT_HAND), 0.01f)
     }
+
+    @Test
+    fun calculateFullScreenHorizontalFraction_mapsLanesAndOffsetsCorrectly() {
+        // TST-TRK-062.1: Full-Screen horizontal coordinate mapping across screen width
+        // In RHT: Rider lane is center-right (0.70f), passing lane is center-left (0.30f)
+        val rhtRiderLane = RadarTarget(targetId = 1, rangeMeters = 50f, approachSpeedMps = 10f, laneState = LaneState.IN_RIDER_LANE)
+        assertEquals(0.70f, RadarOverlayMath.calculateFullScreenHorizontalFraction(rhtRiderLane, RadarTrafficOrientation.RIGHT_HAND), 0.01f)
+
+        val rhtChangingLane = RadarTarget(targetId = 2, rangeMeters = 50f, approachSpeedMps = 10f, laneState = LaneState.CHANGING_LANE)
+        assertEquals(0.50f, RadarOverlayMath.calculateFullScreenHorizontalFraction(rhtChangingLane, RadarTrafficOrientation.RIGHT_HAND), 0.01f)
+
+        val rhtPassingLane = RadarTarget(targetId = 3, rangeMeters = 50f, approachSpeedMps = 10f, laneState = LaneState.PASSING_LANE)
+        assertEquals(0.30f, RadarOverlayMath.calculateFullScreenHorizontalFraction(rhtPassingLane, RadarTrafficOrientation.RIGHT_HAND), 0.01f)
+
+        // Continuous lateral offset in RHT: 0m -> 0.70f, -1.5m -> 0.50f, -3.0m -> 0.30f
+        val rhtZeroOffset = RadarTarget(targetId = 4, rangeMeters = 50f, approachSpeedMps = 10f, lateralOffsetMeters = 0.0f)
+        assertEquals(0.70f, RadarOverlayMath.calculateFullScreenHorizontalFraction(rhtZeroOffset, RadarTrafficOrientation.RIGHT_HAND), 0.01f)
+
+        val rhtMidOffset = RadarTarget(targetId = 5, rangeMeters = 50f, approachSpeedMps = 10f, lateralOffsetMeters = -1.5f)
+        assertEquals(0.50f, RadarOverlayMath.calculateFullScreenHorizontalFraction(rhtMidOffset, RadarTrafficOrientation.RIGHT_HAND), 0.01f)
+
+        val rhtMaxOffset = RadarTarget(targetId = 6, rangeMeters = 50f, approachSpeedMps = 10f, lateralOffsetMeters = -3.0f)
+        assertEquals(0.30f, RadarOverlayMath.calculateFullScreenHorizontalFraction(rhtMaxOffset, RadarTrafficOrientation.RIGHT_HAND), 0.01f)
+
+        // Clamping to safe margins [0.15f, 0.85f]
+        val rhtExtremeLeft = RadarTarget(targetId = 7, rangeMeters = 50f, approachSpeedMps = 10f, lateralOffsetMeters = -10.0f)
+        assertEquals(0.15f, RadarOverlayMath.calculateFullScreenHorizontalFraction(rhtExtremeLeft, RadarTrafficOrientation.RIGHT_HAND), 0.01f)
+
+        val rhtExtremeRight = RadarTarget(targetId = 8, rangeMeters = 50f, approachSpeedMps = 10f, lateralOffsetMeters = 10.0f)
+        assertEquals(0.85f, RadarOverlayMath.calculateFullScreenHorizontalFraction(rhtExtremeRight, RadarTrafficOrientation.RIGHT_HAND), 0.01f)
+
+        // In LHT: Symmetry is inverted (rider lane on left 0.30f, passing lane on right 0.70f)
+        val lhtRiderLane = RadarTarget(targetId = 9, rangeMeters = 50f, approachSpeedMps = 10f, laneState = LaneState.IN_RIDER_LANE)
+        assertEquals(0.30f, RadarOverlayMath.calculateFullScreenHorizontalFraction(lhtRiderLane, RadarTrafficOrientation.LEFT_HAND), 0.01f)
+
+        val lhtPassingLane = RadarTarget(targetId = 10, rangeMeters = 50f, approachSpeedMps = 10f, laneState = LaneState.PASSING_LANE)
+        assertEquals(0.70f, RadarOverlayMath.calculateFullScreenHorizontalFraction(lhtPassingLane, RadarTrafficOrientation.LEFT_HAND), 0.01f)
+
+        val lhtMidOffset = RadarTarget(targetId = 11, rangeMeters = 50f, approachSpeedMps = 10f, lateralOffsetMeters = -1.5f)
+        assertEquals(0.50f, RadarOverlayMath.calculateFullScreenHorizontalFraction(lhtMidOffset, RadarTrafficOrientation.LEFT_HAND), 0.01f)
+    }
+
+    @Test
+    fun radarEdgeSide_containsFullScreenAndDeserializesBackwardCompatibly() {
+        // TST-TRK-062.3: Verify RadarEdgeSide enum extension and backward-compatible decoding
+        val values = RadarEdgeSide.values()
+        assertTrue(values.contains(RadarEdgeSide.LEFT))
+        assertTrue(values.contains(RadarEdgeSide.FULL_SCREEN))
+        assertTrue(values.contains(RadarEdgeSide.RIGHT))
+
+        val decoded = com.atrainingtracker.util.safeEnumValueOf("FULL_SCREEN", RadarEdgeSide.RIGHT)
+        assertEquals(RadarEdgeSide.FULL_SCREEN, decoded)
+
+        val fallback = com.atrainingtracker.util.safeEnumValueOf("INVALID_UNKNOWN", RadarEdgeSide.RIGHT)
+        assertEquals(RadarEdgeSide.RIGHT, fallback)
+    }
 }

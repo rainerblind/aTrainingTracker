@@ -262,6 +262,13 @@ class DeviceDataRepository @androidx.annotation.VisibleForTesting internal const
     }
 
     /**
+     * Checks if at least one Heart Rate (HRM) device is paired (ATT-7532 / REQ-UI-525.2).
+     */
+    fun hasPairedHeartRateDevices(): Boolean {
+        return devicesDatabaseManager.hasPairedHeartRateDevices()
+    }
+
+    /**
      * Retrieves summary information for all remote sensors (REQ-UI-507.5, REQ-UI-511.1).
      */
     val allRemoteSensors: List<SimpleSensorInfo>

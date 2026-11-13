@@ -20,6 +20,38 @@ package com.atrainingtracker.trainingtracker.climbs
 
 import com.atrainingtracker.trainingtracker.ui.map.PathPoint
 import com.google.android.gms.maps.model.LatLng
+import kotlin.math.cos
+
+/**
+ * Axis-aligned geographic bounding box in WGS-84 coordinates (REQ-CLM-011.1).
+ * Provides O(1) spatial pre-filtering to prevent quadratic trigonometric operations in climb deduplication.
+ *
+ * @property minLat Minimum latitude boundary in degrees.
+ * @property maxLat Maximum latitude boundary in degrees.
+ * @property minLng Minimum longitude boundary in degrees.
+ * @property maxLng Maximum longitude boundary in degrees.
+ */
+data class GeoBoundingBox(
+    val minLat: Double,
+    val maxLat: Double,
+    val minLng: Double,
+    val maxLng: Double
+) {
+    /**
+     * Evaluates whether this bounding box intersects [other] when expanded by [marginMeters].
+     * Uses equirectangular coordinate projection for fast O(1) boundary comparison.
+     */
+    fun overlaps(other: GeoBoundingBox, marginMeters: Double = 100.0): Boolean {
+        val meanLat = (minLat + maxLat + other.minLat + other.maxLat) / 4.0
+        val deltaLat = marginMeters / 111_000.0
+        val cosLat = cos(Math.toRadians(meanLat)).coerceAtLeast(0.01)
+        val deltaLng = marginMeters / (111_000.0 * cosLat)
+
+        if (maxLat + deltaLat < other.minLat || other.maxLat + deltaLat < minLat) return false
+        if (maxLng + deltaLng < other.minLng || other.maxLng + deltaLng < minLng) return false
+        return true
+    }
+}
 
 /**
  * Supported climb difficulty categorization formulas (REQ-CLM-010.1).
@@ -158,6 +190,25 @@ data class Climb(
 ) {
     val startLatLng: LatLng get() = LatLng(startLat, startLng)
     val endLatLng: LatLng get() = LatLng(endLat, endLng)
+
+    /**
+     * Cached axis-aligned bounding box encompassing climb start, summit, and all path points (REQ-CLM-011.1).
+     */
+    val boundingBox: GeoBoundingBox by lazy {
+        var minLa = minOf(startLat, endLat)
+        var maxLa = maxOf(startLat, endLat)
+        var minLn = minOf(startLng, endLng)
+        var maxLn = maxOf(startLng, endLng)
+        for (pt in pathPoints) {
+            val la = pt.latLng.latitude
+            val ln = pt.latLng.longitude
+            if (la < minLa) minLa = la
+            if (la > maxLa) maxLa = la
+            if (ln < minLn) minLn = ln
+            if (ln > maxLn) maxLn = ln
+        }
+        GeoBoundingBox(minLa, maxLa, minLn, maxLn)
+    }
 
     /**
      * Sequence of path points normalized to local climb distance starting at 0.0 meters.

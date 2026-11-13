@@ -1,0 +1,117 @@
+{
+  "title": "System Integration Verification Report (ASPICE SYS.4)",
+  "timestamp": "2026-11-13T13:28:34.975878",
+  "git_commit": "9a3b72d90754f9230620977939c8cdae60e7fe18",
+  "overall_status": "PASS",
+  "total_test_cases": 6,
+  "passed_test_cases": 6,
+  "failed_test_cases": 0,
+  "test_results": {
+    "SYS-INT-001": {
+      "name": "BLE Heart Rate & RR Interval Integration",
+      "status": "PASS",
+      "passed": true,
+      "duration_ms": 1.06,
+      "message": "BLE HR measurement format, RR packing, accumulator drift, and backoff verified",
+      "details": {
+        "mean_bpm": 140,
+        "beat_count": 135,
+        "phase_conservation_drift_ms": 0.33,
+        "exponential_backoff_schedule_ms": [
+          1000,
+          2000,
+          4000,
+          8000,
+          16000
+        ]
+      }
+    },
+    "SYS-INT-002": {
+      "name": "BLE Cycling Power & Cadence Integration",
+      "status": "PASS",
+      "passed": true,
+      "duration_ms": 0.3,
+      "message": "BLE Cycling Power 0x1818 measurement, balance asymmetry, and cadence verified",
+      "details": {
+        "feature_bitmask": [
+          9,
+          0,
+          0,
+          0
+        ],
+        "power_watts": 200,
+        "cadence_rpm": 90,
+        "asymmetry_tested": [
+          "Optimal 50%",
+          "Mild 54%",
+          "Severe 40%"
+        ]
+      }
+    },
+    "SYS-INT-003": {
+      "name": "BLE Garmin Varia Radar Integration",
+      "status": "PASS",
+      "passed": true,
+      "duration_ms": 0.28,
+      "message": "Garmin Varia Radar V2 threat streams, kinematics, and tail light control verified",
+      "details": {
+        "initial_target_count": 1,
+        "initial_range_m": 137.6,
+        "light_command_opcodes": {
+          "OFF": 0,
+          "SOLID": 1,
+          "PELOTON": 5,
+          "DAY_FLASH": 7,
+          "NIGHT_FLASH": 6
+        },
+        "starvation_watchdog_ms": 3500,
+        "starvation_suppression_verified": true
+      }
+    },
+    "SYS-INT-004": {
+      "name": "ANT+ Radio IPC Integration",
+      "status": "PASS",
+      "passed": true,
+      "duration_ms": 0.01,
+      "message": "ANT+ IPC broadcast framing, 16-bit rollover math, and 4-Hz timing verified",
+      "details": {
+        "supported_device_types": {
+          "ANT_HR": 120,
+          "ANT_BIKE_POWER": 11,
+          "ANT_CSC": 121
+        },
+        "nominal_broadcast_interval_ms": 250,
+        "timing_tolerance_ms": 25
+      }
+    },
+    "SYS-INT-005": {
+      "name": "Multi-Source GNSS Positioning Integration",
+      "status": "PASS",
+      "passed": true,
+      "duration_ms": 0.1,
+      "message": "GNSS Geodesic distance, 1-Hz sampling alignment, and null-island filtering verified",
+      "details": {
+        "total_distance_m": 267.3,
+        "trackpoint_count": 5,
+        "null_island_rejection": "VERIFIED",
+        "sampling_period_target_ms": 1000
+      }
+    },
+    "SYS-INT-006": {
+      "name": "Cloud Synchronization & Rate Governance",
+      "status": "PASS",
+      "passed": true,
+      "duration_ms": 0.01,
+      "message": "Strava OAuth2 token lifecycle, multipart upload schema, and rate limit 429 backoff verified",
+      "details": {
+        "upload_form_fields": [
+          "data_type",
+          "activity_type",
+          "file"
+        ],
+        "status_polling_path": "/api/v3/uploads/{upload_id}",
+        "expected_terminal_status": "Your activity is ready."
+      }
+    }
+  }
+}

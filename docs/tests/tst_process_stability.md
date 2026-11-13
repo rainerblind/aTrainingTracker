@@ -3,7 +3,7 @@
 **Domain**: `process_stability`  
 **Prefixes**: `ARC`, `BLD`, `BUG`, `INT`, `LIV`, `LOG`, `MAN`, `NFR`, `PRO`, `REG`, `SEC`, `STB`, `STR`, `TOOL`, `TST`  
 **Scope**: ASPICE governance, infinite context, crash stability, build architecture, security, and developer tools.  
-**Total Tests**: 130
+**Total Tests**: 132
 
 ---
 
@@ -19,7 +19,7 @@
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Integration
-- **Requirement(s)**: `REQ-EXT-001`, `REQ-EXT-002`, `REQ-MAP-005`
+- **Requirement(s)**: `REQ-EXT-001`, `REQ-EXT-002`, `REQ-EXT-003`, `REQ-MAP-005`
 - **Component**: **Branding**
 - **Test Description**: Navigate to Strava Segments list and Detail map.
 
@@ -241,7 +241,7 @@
 - **Priority**: High
 - **Type**: Non-Functional
 - **Verification Method**: Unit
-- **Requirement(s)**: `REQ-CON-005`, `REQ-TRK-005`, `REQ-DAT-005`, `REQ-UI-109`
+- **Requirement(s)**: `REQ-CON-005`, `REQ-TRK-005`, `REQ-DAT-005`, `REQ-EXP-005`, `REQ-UI-109`
 - **Component**: **Stability**
 - **Test Description**: Static analysis and architectural audit.
 
@@ -2947,3 +2947,31 @@
   2. *Dangling Link & Evidence Audit*: Run `python3 tools/verify_requirement_governance.py --check-links` and `--check-evidence` asserting zero dangling references and zero ungrounded Verified statuses in `process_stability`.
   3. *Attribute Compliance Check*: Run `python3 tools/verify_requirement_governance.py --check-attributes` asserting all requirements in `req_process_stability.md` and test specifications in `tst_process_stability.md` define valid Priority, Type, and Verification Method attributes.
   4. *Targeted Unit Test Verification*: Execute `python3 -m unittest tools/test_verify_requirement_governance.py` asserting 100% pass rate across all governance verifier unit tests.
+
+### TST-PRO-087: **Machine-Verified Bidirectional Traceability & Ratchet Baseline Verification Suite** [Verified]
+- **Verifies**: `REQ-PRO-087`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Component**: `tools/verify_requirement_governance.py`, `tools/traceability_baseline.json`, `tools/test_verify_requirement_governance.py`
+- **Jira**: `ATT-7561`
+- **Test Description**:
+  1. *Bidirectional Orphan Verification*: Run `python3 tools/verify_requirement_governance.py` asserting all declared REQs have verifying TSTs and all TSTs declare valid REQs, or are recorded in `tools/traceability_baseline.json`.
+  2. *Baseline Ratchet Monotonicity Test*: Execute unit tests in `tools/test_verify_requirement_governance.py` simulating addition of new unlinked REQs and baseline growth, verifying immediate CI failure.
+  3. *Syntax Flexibility & Shorthand Normalization*: Verify parser supports `Verifies:` and legacy `Requirement(s):` syntax, and confirm normalized links for `TST-MIG-001`, `TST-UI-310`, and the 6 historical unreferenced requirements.
+  4. *Targeted Unit Test Verification*: Execute `python3 -m unittest tools/test_verify_requirement_governance.py` asserting 100% pass rate.
+
+---
+
+### TST-PRO-088: **System Verification Protocol Sign-Off & Release Gating Verification Suite** [Verified]
+- **Verifies**: `REQ-PRO-088`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Component**: `docs/releases/V5.0.0/sys_verification_record.md`, `tools/run_system_integration_tests.py`, `.github/workflows/android-release.yml`, `tools/test_generate_release_verification_summary.py`, `tools/test_system_integration_tests.py`
+- **Jira**: `ATT-7560`
+- **Test Description**:
+  1. *SYS.5 Verification Record & Release Gating Contract*: Verify that `docs/releases/V5.0.0/sys_verification_record.md` exists, defines all 8 `SYS-VRF-001`..`008` cases with `PASS`, includes hardware serials, and has formal sign-offs.
+  2. *System Integration Runner & Wire Protocol Alignment*: Execute `tools/run_system_integration_tests.py` verifying all 6 cases (`SYS-INT-001`..`006`) pass cleanly including `SYS-INT-003`.
+  3. *Release Verification Summary Generation*: Run `tools/generate_release_verification_summary.py --tag V5.0.0 --fail-on-deviations` asserting exit code 0 and `PASS (READY FOR RELEASE)`.
+  4. *Targeted Regression Test Execution*: Run unit tests in `tools/test_generate_release_verification_summary.py` and `tools/test_system_integration_tests.py` asserting 100% pass rate.

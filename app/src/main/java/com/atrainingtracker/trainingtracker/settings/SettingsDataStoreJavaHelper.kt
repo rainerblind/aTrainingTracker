@@ -80,6 +80,15 @@ object SettingsDataStoreJavaHelper {
     }
 
     /**
+     * Synchronous bridge for legacy Java or non-coroutine callers to fetch HRV zone display options.
+     * Non-blocking O(1) in-memory lookup.
+     */
+    @JvmStatic
+    fun getHrvZoneDisplayOptions(context: Context): ZoneDisplayOptions {
+        return SettingsDataStore.getInstance(context).getHrvZoneDisplayOptionsSync()
+    }
+
+    /**
      * Synchronous bridge for legacy Java sensor drivers to fetch the active tuning configuration.
      * Non-blocking O(1) in-memory lookup from TuningPreferencesDataStore.
      */

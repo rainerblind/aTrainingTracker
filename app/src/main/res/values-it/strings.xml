@@ -84,6 +84,7 @@
     <string name="add_sensor">aggiungi sensore</string>
 
     <string name="commute">pendolarismo</string>
+    <string name="indoor_short">Indoor</string>
     <string name="trainer_general">rulli indoor</string>
     <string name="trainer_bike">rulli indoor</string>
     <string name="trainer_run">tapis roulant</string>

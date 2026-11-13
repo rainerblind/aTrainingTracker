@@ -70,7 +70,9 @@ class AthleteProfileViewModelHrvTest {
         Dispatchers.setMain(testDispatcher)
 
         mockApplication = mockk(relaxed = true)
+        val tempFilesDir = java.io.File(System.getProperty("java.io.tmpdir", "/tmp"), "athlete_profile_test_${System.nanoTime()}").apply { mkdirs() }
         every { mockApplication.applicationContext } returns mockApplication
+        every { mockApplication.filesDir } returns tempFilesDir
 
         mockRepo = mockk(relaxed = true)
         mockWorkoutRepo = mockk(relaxed = true)

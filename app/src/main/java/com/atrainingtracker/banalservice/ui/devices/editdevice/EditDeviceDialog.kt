@@ -19,6 +19,7 @@
 package com.atrainingtracker.banalservice.ui.devices.editdevice
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -36,6 +37,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontStyle
@@ -48,6 +50,8 @@ import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.ui.theme.TTAlpha
 import com.atrainingtracker.banalservice.Protocol
 import com.atrainingtracker.banalservice.devices.DeviceType
+import com.atrainingtracker.banalservice.devices.radar.RadarLightController
+import com.atrainingtracker.banalservice.devices.radar.RadarLightMode
 import com.atrainingtracker.banalservice.ui.devices.DeviceStatusRow
 import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceUiData
 import com.atrainingtracker.trainingtracker.ui.components.core.AppDialogActions
@@ -105,10 +109,11 @@ fun EditDeviceDialog(
                     .padding(horizontal = 24.dp, vertical = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
+                val currentDevice = liveData ?: data
+                val isConnected = currentDevice.isConnected
+
                 // Technical Status LED & Protocol details (Synchronized - REQ-UI-492.4)
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    val currentDevice = liveData ?: data
-                    val isConnected = currentDevice.isConnected
                     Box(
                         modifier = Modifier.size(18.dp),
                         contentAlignment = Alignment.Center
@@ -129,7 +134,6 @@ fun EditDeviceDialog(
                     )
                 }
 
-                val currentDevice = liveData ?: data
                 if (currentDevice.manufacturer.isNotBlank()) {
                     Text(
                         text = currentDevice.manufacturer,
@@ -171,7 +175,12 @@ fun EditDeviceDialog(
                     AltitudeExplanationSection(data.deviceType)
                 }
 
-                // 6. Live Data Preview
+                // 6. Radar Tail Light Mode Control (ATT-7540, REQ-CON-031.5)
+                if (data.deviceType == DeviceType.BIKE_RADAR) {
+                    RadarLightControlSection(isConnected = isConnected)
+                }
+
+                // 7. Live Data Preview
                 liveData?.let { live ->
                     LivePreviewSection(live)
                 }
@@ -684,6 +693,124 @@ private fun AltitudeExplanationSection(deviceType: DeviceType) {
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+            }
+        }
+    }
+}
+
+/**
+ * Live tail light mode selector for connected radar devices supporting light control (REQ-CON-031.5, ATT-7540).
+ *
+ * Mode selections are dispatched immediately via [RadarLightController.setManualLightMode] and do not
+ * modify [EditDeviceViewModel] draft state.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun RadarLightControlSection(
+    isConnected: Boolean,
+    modifier: Modifier = Modifier
+) {
+    val isLightControlAvailable by RadarLightController.isLightControlAvailable.collectAsStateWithLifecycle()
+    if (!isConnected || !isLightControlAvailable) {
+        return
+    }
+
+    val currentMode by RadarLightController.currentMode.collectAsStateWithLifecycle()
+    val isStvzo by RadarLightController.isStvzo.collectAsStateWithLifecycle()
+    val availableModes = remember(isStvzo) { RadarLightMode.getAvailableModes(isStvzo) }
+
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Text(
+            text = stringResource(R.string.radar_light_sheet_title),
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+
+        if (isStvzo) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(TTColor.RadarDisconnectedAmber.copy(alpha = 0.15f))
+                    .padding(horizontal = 12.dp, vertical = 8.dp)
+            ) {
+                Text(
+                    text = stringResource(R.string.radar_light_stvzo_notice),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    fontWeight = FontWeight.Medium
+                )
+            }
+
+            SingleChoiceSegmentedButtonRow(
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                availableModes.forEachIndexed { index, mode ->
+                    val isSelected = mode == currentMode
+                    SegmentedButton(
+                        selected = isSelected,
+                        onClick = { RadarLightController.setManualLightMode(mode) },
+                        shape = SegmentedButtonDefaults.itemShape(index = index, count = availableModes.size),
+                        icon = {},
+                        modifier = Modifier.testTag("RadarLightMode_${mode.name}")
+                    ) {
+                        Text(
+                            text = stringResource(mode.titleResId),
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
+            }
+        } else {
+            availableModes.forEach { mode ->
+                val isSelected = mode == currentMode
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(8.dp))
+                        .clickable { RadarLightController.setManualLightMode(mode) }
+                        .padding(horizontal = 12.dp, vertical = 8.dp)
+                        .testTag("RadarLightMode_${mode.name}"),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    val dotColor = when (mode) {
+                        RadarLightMode.OFF -> MaterialTheme.colorScheme.outline
+                        RadarLightMode.SOLID -> TTColor.RadarThreatRed
+                        RadarLightMode.DAY_FLASH -> TTColor.RadarThreatAmber
+                        RadarLightMode.NIGHT_FLASH -> TTColor.RadarThreatAmber.copy(alpha = 0.7f)
+                        RadarLightMode.PELOTON -> TTColor.RadarThreatRed.copy(alpha = 0.5f)
+                    }
+                    Box(
+                        modifier = Modifier
+                            .size(10.dp)
+                            .clip(CircleShape)
+                            .background(dotColor)
+                    )
+
+                    Spacer(modifier = Modifier.width(12.dp))
+
+                    Text(
+                        text = stringResource(mode.titleResId),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f)
+                    )
+
+                    RadioButton(
+                        selected = isSelected,
+                        onClick = { RadarLightController.setManualLightMode(mode) }
+                    )
+                }
             }
         }
     }

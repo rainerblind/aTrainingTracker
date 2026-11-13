@@ -280,7 +280,7 @@ class VectorAssetResolutionContractTest {
         assertTrue("bt_bike_speed_and_cadence must embed canonical dual mini-icons in top-left", scXml.contains("mini_icon_spd") && scXml.contains("mini_icon_cad"))
 
         val radarXml = File(drawableDir, "bt_bike_radar.xml").readText()
-        assertTrue("bt_bike_radar must embed canonical radar mini-icon in top-left", radarXml.contains("mini_icon_radar") && radarXml.contains("M 480,720"))
+        assertTrue("bt_bike_radar must embed canonical radar mini-icon in top-left", radarXml.contains("mini_icon_radar") && radarXml.contains("M 660,480"))
 
         val allBle = bikeBadges + listOf("bt_hr", "bt_run")
         for (badge in allBle) {
@@ -429,11 +429,11 @@ class VectorAssetResolutionContractTest {
                 val sx = groupElem.getAttribute("android:scaleX").toDoubleOrNull() ?: 0.0
                 val sy = groupElem.getAttribute("android:scaleY").toDoubleOrNull() ?: 0.0
 
-                // Canonical mini-icon radar path bounds in local coords: x in [80, 960], y in [264, 800]
-                val minX = tx + 80.0 * sx
-                val maxX = tx + 960.0 * sx
-                val minY = ty + 264.0 * sy
-                val maxY = ty + 800.0 * sy
+                // Canonical mini-icon radar path bounds in local coords: x in [160, 780], y in [84, 876]
+                val minX = tx + 160.0 * sx
+                val maxX = tx + 780.0 * sx
+                val minY = ty + 84.0 * sy
+                val maxY = ty + 876.0 * sy
 
                 assertTrue("mini_icon_radar must remain within top-left quadrant (maxX <= 45.0)", maxX <= 45.0)
                 assertTrue("mini_icon_radar must clear cyclist silhouette (separation >= 7.0 units)", 51.3 - maxX >= 7.0)
@@ -508,5 +508,84 @@ class VectorAssetResolutionContractTest {
                 assertTrue("Arc point y must stay >= 8.0 away from card top edge", py - 1.4 >= 8.0)
             }
         }
+    }
+
+    @Test
+    fun testBtBikeRadarMiniIconConcentricity() {
+        val drawableDir = File(resolveResDir(), "drawable")
+        val dbFactory = DocumentBuilderFactory.newInstance()
+        val dBuilder = dbFactory.newDocumentBuilder()
+        val btRadarDoc = dBuilder.parse(File(drawableDir, "bt_bike_radar.xml"))
+        btRadarDoc.documentElement.normalize()
+        val groups = btRadarDoc.getElementsByTagName("group")
+        var pathData = ""
+        var tx = 0.0
+        var ty = 0.0
+        var sx = 0.0
+        var sy = 0.0
+
+        for (i in 0 until groups.length) {
+            val groupElem = groups.item(i) as org.w3c.dom.Element
+            if (groupElem.getAttribute("android:name") == "mini_icon_radar") {
+                tx = groupElem.getAttribute("android:translateX").toDoubleOrNull() ?: 0.0
+                ty = groupElem.getAttribute("android:translateY").toDoubleOrNull() ?: 0.0
+                sx = groupElem.getAttribute("android:scaleX").toDoubleOrNull() ?: 0.0
+                sy = groupElem.getAttribute("android:scaleY").toDoubleOrNull() ?: 0.0
+                val paths = groupElem.getElementsByTagName("path")
+                if (paths.length > 0) {
+                    pathData = (paths.item(0) as org.w3c.dom.Element).getAttribute("android:pathData")
+                }
+            }
+        }
+
+        assertTrue("mini_icon_radar pathData must not be empty", pathData.isNotEmpty())
+
+        // 1. Verify Origin Dot is a single closed circle (no snowman / duplicate center artifact)
+        // M 660,480 A 60,60 0 1,0 780,480 A 60,60 0 1,0 660,480 Z
+        val dotRegex = Regex("""M\s*([\d.]+),([\d.]+)\s*A\s*([\d.]+),([\d.]+)\s+0\s+1,0\s+([\d.]+),([\d.]+)\s+A\s*([\d.]+),([\d.]+)\s+0\s+1,0\s+([\d.]+),([\d.]+)""")
+        val dotMatch = dotRegex.find(pathData)
+        assertTrue("mini_icon_radar must define a valid circular origin dot", dotMatch != null)
+        val dX1 = dotMatch!!.groupValues[1].toDouble()
+        val dY1 = dotMatch.groupValues[2].toDouble()
+        val dR1 = dotMatch.groupValues[3].toDouble()
+        val dX2 = dotMatch.groupValues[5].toDouble()
+        val dY2 = dotMatch.groupValues[6].toDouble()
+        assertEquals("Dot chord length must equal diameter (2 * r)", 2 * dR1, Math.abs(dX2 - dX1), 0.1)
+        assertEquals("Dot y coordinates must be collinear", dY1, dY2, 0.1)
+
+        // 2. Verify Wave Bands concentricity, uniform dr = 80 thickness, and rearward radiation
+        // Format: M x,y A rout,rout 0 0,0 x,y L x,y A rin,rin 0 0,1 x,y Z
+        val bandRegex = Regex("""M\s*([\d.]+),([\d.]+)\s*A\s*([\d.]+),([\d.]+)\s+0\s+0,0\s+([\d.]+),([\d.]+)\s+L\s*([\d.]+),([\d.]+)\s+A\s*([\d.]+),([\d.]+)\s+0\s+0,1\s+([\d.]+),([\d.]+)""")
+        val bandMatches = bandRegex.findAll(pathData).toList()
+        assertEquals("mini_icon_radar must contain exactly 3 concentric wave bands", 3, bandMatches.size)
+
+        val dotCenterX = (dX1 + dX2) / 2.0
+        val dotCenterY = dY1
+
+        for (match in bandMatches) {
+            val rOut = match.groupValues[3].toDouble()
+            val rIn = match.groupValues[9].toDouble()
+            assertEquals("Each wave band must have constant dr = 80 radial thickness", 80.0, rOut - rIn, 0.1)
+
+            // Scaled thickness must equal 2.8 dp
+            assertEquals("Scaled band thickness must be 2.8 dp", 2.8, (rOut - rIn) * sx, 0.01)
+
+            // Outer arc endpoints must be symmetric around center Y
+            val yOutTop = match.groupValues[2].toDouble()
+            val yOutBot = match.groupValues[6].toDouble()
+            assertEquals("Band outer endpoints must be symmetric around dot center Y", dotCenterY, (yOutTop + yOutBot) / 2.0, 1.0)
+
+            // Waves must radiate rearward (left-facing, apex < dotCenterX)
+            val apexX = dotCenterX - rOut
+            assertTrue("Wave apex must radiate rearward (left-facing)", apexX < dotCenterX)
+
+            // Viewport clearances
+            val apexV = tx + apexX * sx
+            assertTrue("Wave apex must stay within top-left badge area (>= 10.0)", apexV >= 10.0)
+        }
+
+        // Viewport bounds and cyclist separation
+        val cyclistClearance = 51.3 - (tx + (dotCenterX + dR1) * sx)
+        assertTrue("Cyclist separation must be >= 7.0 units", cyclistClearance >= 7.0)
     }
 }

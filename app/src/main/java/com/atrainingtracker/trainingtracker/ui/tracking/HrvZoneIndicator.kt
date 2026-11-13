@@ -29,6 +29,23 @@ import com.atrainingtracker.trainingtracker.ui.theme.TTColor
 object HrvZoneIndicator {
 
     /**
+     * Semantic segment colors for the 3-zone HRV DFA alpha 1 model:
+     * - Zone 2 (Aerobic Base): [TTColor.Zone2] (Green)
+     * - Zone 3 (Threshold Transition): [TTColor.Zone3] (Orange)
+     * - Zone 4 (Anaerobic / High Intensity): [TTColor.Zone4] (Red)
+     */
+    val HRV_SEGMENT_COLORS: List<Color> = listOf(
+        TTColor.Zone2,
+        TTColor.Zone3,
+        TTColor.Zone4
+    )
+
+    /**
+     * Zone labels for under-segment active badge in [ZoneGaugeBar] (REQ-TRK-061.3, ATT-7520).
+     */
+    val HRV_ZONE_LABELS: List<String> = listOf("Z2", "Z3", "Z4")
+
+    /**
      * Resolves the semantic zone color for a DFA alpha 1 exponent:
      * - Aerobic Base (alpha1 > t1): [TTColor.Zone2] (Green)
      * - Threshold Transition (t2 <= alpha1 <= t1): [TTColor.Zone3] (Orange / Tempo)
@@ -56,12 +73,13 @@ object HrvZoneIndicator {
     }
 
     /**
-     * Computes the [ZoneGaugeState] for DFA alpha 1 metrics based on active thresholds [t1] and [t2] (REQ-TRK-061.3).
+     * Computes the [ZoneGaugeState] for DFA alpha 1 metrics based on active thresholds [t1] and [t2] (REQ-TRK-061.3, ATT-7520).
      *
-     * Maps to a 5-zone HR gauge bar with:
-     * - Zone 2 (Aerobic Base, alpha1 > t1): activeZoneIndex = 2
-     * - Zone 3 (Threshold Transition, t2 <= alpha1 <= t1): activeZoneIndex = 3
-     * - Zone 4 (Anaerobic / High Intensity, alpha1 < t2): activeZoneIndex = 4
+     * Maps to a 3-zone HRV gauge bar with:
+     * - Zone 2 (Aerobic Base, alpha1 > t1): activeZoneIndex = 1, badge "Z2"
+     * - Zone 3 (Threshold Transition, t2 <= alpha1 <= t1): activeZoneIndex = 2, badge "Z3"
+     * - Zone 4 (Anaerobic / High Intensity, alpha1 < t2): activeZoneIndex = 3, badge "Z4"
+     * - Proportional segment weights reflecting spans (1.20 - t1), (t1 - t2), (t2 - 0.20).
      * - Returns null if [alpha1] is null, NaN, non-finite, or negative.
      */
     fun calculateZoneGaugeState(
@@ -72,30 +90,44 @@ object HrvZoneIndicator {
         if (alpha1 == null || alpha1.isNaN() || alpha1.isInfinite() || alpha1 < 0.0) {
             return null
         }
+
+        val s1 = (1.20f - t1).coerceAtLeast(0.05f)
+        val s2 = (t1 - t2).coerceAtLeast(0.05f)
+        val s3 = (t2 - 0.20f).coerceAtLeast(0.05f)
+        val totalSpan = s1 + s2 + s3
+        val w1 = s1 / totalSpan
+        val w2 = s2 / totalSpan
+        val w3 = s3 / totalSpan
+        val segmentWeights = listOf(w1, w2, w3)
+
         val activeZoneIndex = when {
-            alpha1 > t1 -> 2
-            alpha1 >= t2 -> 3
-            else -> 4
+            alpha1 > t1 -> 1
+            alpha1 >= t2 -> 2
+            else -> 3
         }
-        val needleFraction = when {
+
+        val fraction = when {
             alpha1 > t1 -> {
-                val norm = ((alpha1.toFloat() - t1) / (1.2f - t1).coerceAtLeast(0.1f)).coerceIn(0f, 1f)
-                0.40f - norm * 0.20f
+                val norm = ((1.20f - alpha1.toFloat()) / s1).coerceIn(0f, 1f)
+                norm * w1
             }
             alpha1 >= t2 -> {
-                val norm = ((alpha1.toFloat() - t2) / (t1 - t2).coerceAtLeast(0.05f)).coerceIn(0f, 1f)
-                0.60f - norm * 0.20f
+                val norm = ((t1 - alpha1.toFloat()) / s2).coerceIn(0f, 1f)
+                w1 + norm * w2
             }
             else -> {
-                val norm = ((alpha1.toFloat() - 0.20f) / (t2 - 0.20f).coerceAtLeast(0.05f)).coerceIn(0f, 1f)
-                0.85f - norm * 0.25f
+                val norm = ((t2 - alpha1.toFloat()) / s3).coerceIn(0f, 1f)
+                (w1 + w2) + norm * w3
             }
-        }.coerceIn(0.05f, 0.95f)
+        }
+        val needleFraction = fraction.coerceIn(0.05f, 0.95f)
 
         return ZoneGaugeState(
-            segmentColors = ZoneGaugeMath.HR_SEGMENT_COLORS,
+            segmentColors = HRV_SEGMENT_COLORS,
             needleFraction = needleFraction,
-            activeZoneIndex = activeZoneIndex
+            activeZoneIndex = activeZoneIndex,
+            segmentWeights = segmentWeights,
+            zoneLabels = HRV_ZONE_LABELS
         )
     }
 }

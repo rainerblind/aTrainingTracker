@@ -163,8 +163,8 @@ class SystemContextContractTest {
         assertTrue("Must ground PebbleKit SDK version", content.contains("pebblekit:4.0.1"))
         assertTrue("build.gradle must contain PebbleKit 4.0.1", buildGradleContent.contains("com.getpebble:pebblekit:4.0.1"))
 
-        assertTrue("Must ground Health Connect client version", content.contains("connect-client:1.1.0-alpha11"))
-        assertTrue("build.gradle must contain Health Connect 1.1.0-alpha11", buildGradleContent.contains("androidx.health.connect:connect-client:1.1.0-alpha11"))
+        assertTrue("Must ground Health Connect client version", content.contains("connect-client:1.1.0"))
+        assertTrue("build.gradle must contain Health Connect 1.1.0", buildGradleContent.contains("androidx.health.connect:connect-client:1.1.0"))
         assertTrue("Must document Health Connect READ_HEART_RATE_VARIABILITY", content.contains("READ_HEART_RATE_VARIABILITY"))
         assertTrue("Must document Health Connect READ_RESTING_HEART_RATE", content.contains("READ_RESTING_HEART_RATE"))
         assertTrue("AndroidManifest.xml must declare READ_HEART_RATE_VARIABILITY", manifestContent.contains("android.permission.health.READ_HEART_RATE_VARIABILITY"))

@@ -22,14 +22,19 @@ import android.app.Application
 import android.content.ContentValues
 import androidx.test.core.app.ApplicationProvider
 import com.atrainingtracker.R
+import com.atrainingtracker.banalservice.filters.FilterType
+import com.atrainingtracker.banalservice.filters.FilteredSensorData
+import com.atrainingtracker.banalservice.sensor.SensorType
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
 import com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
+import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
 import io.mockk.verify
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
@@ -343,5 +348,35 @@ class HrvRampTestViewModelTest {
         val slot = slot<ContentValues>()
         verify { mockWorkoutRepo.updateWorkoutSummary(99L, capture(slot)) }
         assertEquals("GUIDED_RAMP", slot.captured.getAsString(WorkoutSummariesDatabaseManager.WorkoutSummaries.METHOD))
+    }
+
+    @Test
+    fun testLiveSpeedTelemetryIngestion_TST_TRK_072_4() = runTest(testDispatcher) {
+        val mockBanalRepo = mockk<BANALServiceRepository>(relaxed = true)
+        val sensorDataFlow = MutableStateFlow<List<FilteredSensorData<*>>>(emptyList())
+        every { mockBanalRepo.allFilteredSensorData } returns sensorDataFlow
+
+        val viewModel = HrvRampTestViewModel(
+            application = application,
+            banalServiceRepository = mockBanalRepo,
+            dispatcher = testDispatcher
+        )
+
+        testDispatcher.scheduler.advanceUntilIdle()
+        assertEquals(null, viewModel.uiState.value.currentSpeedKmh)
+
+        // Ingest 5.0 m/s (5.0 * 3.6 = 18.0 km/h)
+        val speedData = FilteredSensorData(
+            SensorType.SPEED_mps,
+            5.0,
+            "5.0",
+            "SpeedSensor",
+            FilterType.INSTANTANEOUS,
+            0.0
+        )
+        sensorDataFlow.value = listOf(speedData)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertEquals(18.0, viewModel.uiState.value.currentSpeedKmh!!, 0.001)
     }
 }

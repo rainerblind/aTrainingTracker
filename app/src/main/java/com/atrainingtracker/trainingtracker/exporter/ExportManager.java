@@ -86,6 +86,7 @@ public class ExportManager {
                     case GPX -> new GPXFileWriter(context);
                     case FIT -> new FitFileWriter(context);
                     case STRAVA -> new TCXFileWriter(context);
+                    default -> new NotYetImplementedExporter(context);
                 };
             case DROPBOX:
                 return new DropboxUploader(context);
@@ -94,8 +95,7 @@ public class ExportManager {
             case COMMUNITY:
                 return switch (exportInfo.getFileFormat()) {
                     case STRAVA -> new StravaUploader(context);
-                    default ->
-                            throw new IllegalStateException("Unexpected value: " + exportInfo.getFileFormat());
+                    default -> new NotYetImplementedExporter(context);
                 };
         }
         // this should never happen
@@ -345,8 +345,8 @@ public class ExportManager {
      **********************************************************************************************/
 
     private void startFullExportProcess(String fileBaseName, FileFormat fileFormat) {
-        if (!ExportStatusDatabaseManager.isValidFileBaseName(fileBaseName)) {
-            Log.w(TAG, "Cannot startFullExportProcess for invalid fileBaseName: " + fileBaseName);
+        if (!ExportStatusDatabaseManager.isValidFileBaseName(fileBaseName) || fileFormat == FileFormat.HEALTH_CONNECT) {
+            Log.w(TAG, "Cannot startFullExportProcess for invalid fileBaseName: " + fileBaseName + " or format " + fileFormat);
             return;
         }
         Log.i(TAG, "startFullExportProcess: fileBaseName=" + fileBaseName + ", format=" + fileFormat);

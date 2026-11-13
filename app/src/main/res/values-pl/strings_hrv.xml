@@ -20,42 +20,47 @@
 <resources>
     <string name="hrv_rmssd">rMSSD</string>
     <string name="hrv_rmssd_short">rMSSD</string>
-    <string name="hrv_dfa_a1">DFA a1</string>
-    <string name="hrv_dfa_a1_short">a1</string>
+    <string name="hrv_dfa_a1">DFA α1</string>
+    <string name="hrv_dfa_a1_short">α1</string>
     <string name="hrv_artifact_rate">Wskaźnik artefaktów</string>
     <string name="hrv_artifact_rate_short">Art. %</string>
     <string name="hrv_sdnn">SDNN</string>
     <string name="hrv_sdnn_short">SDNN</string>
 
     <!-- Training Zones Tab (ATT-7317 / REQ-TRK-061.4) -->
-    <string name="tab_hrv_dfa_a1">HRV (DFA a1)</string>
+    <string name="tab_hrv_dfa_a1">HRV (DFA α1)</string>
     <string name="hrv_zone_aerobic_base_label">Baza Tlenowa (Strefa 2)</string>
     <string name="hrv_zone_threshold_transition_label">Przejście Progowe (Strefa 3)</string>
     <string name="hrv_zone_anaerobic_label">Wysoka Intensywność / Beztlenowa (Strefa 4)</string>
     <string name="hrv_t1_aerobic_threshold_label">Próg Tlenowy T1 (HRVT1)</string>
     <string name="hrv_t2_anaerobic_threshold_label">Próg Beztlenowy T2 (HRVT2)</string>
-    <string name="tuning_physiology_hrv_zones_link">Skonfiguruj progi tlenowe i beztlenowe DFA a1 w Strefach treningowych</string>
+    <string name="hrv_zone_aerobic_base_desc">Tlenowa baza wytrzymałościowa, niski stres autonomiczny</string>
+    <string name="hrv_zone_threshold_transition_desc">Przejście progowe tlenowo-beztlenowe, umiarkowane zmęczenie</string>
+    <string name="hrv_zone_anaerobic_desc">Beztlenowa / wysoka intensywność, szybkie wyczerpanie autonomiczne</string>
+    <string name="hrv_t1_aerobic_threshold_desc">Próg tlenowy (domyślnie 0,75). Niezmiennik: T1 \u2265 T2 + 0,05</string>
+    <string name="hrv_t2_anaerobic_threshold_desc">Próg beztlenowy (domyślnie 0,50). Niezmiennik: T2 \u2264 T1 - 0,05</string>
+    <string name="tuning_physiology_hrv_zones_link">Skonfiguruj progi tlenowe i beztlenowe DFA α1 w Strefach treningowych</string>
     <string name="hrv_start_guided_ramp_test">Rozpocznij prowadzony test progowy</string>
     <string name="hrv_preview_pill_aerobic">Tlenowy</string>
     <string name="hrv_preview_pill_transition">Przejście</string>
     <string name="hrv_preview_pill_anaerobic">Beztlenowy</string>
-    <string name="hrv_zones_guidance_desc">Progi HRV DFA a1 sterują tempem tlenowym i intensywnością treningu. Wyższe wartości oznaczają wyższą zmienność fraktalną (tlenową). Strefa 2 jest zielona (&gt; T1), Strefa 3 pomarańczowa (T2..T1), a Strefa 4 czerwona (&lt; T2).</string>
+    <string name="hrv_zones_guidance_desc">Progi HRV DFA α1 sterują tempem tlenowym i intensywnością treningu. Wyższe wartości oznaczają wyższą zmienność fraktalną (tlenową). Strefa 2 jest zielona (&gt; T1), Strefa 3 pomarańczowa (T2..T1), a Strefa 4 czerwona (&lt; T2).</string>
 
     <string name="hrv_info_title">Zmienność rytmu zatokowego (HRV) i progi tlenowe</string>
     <string name="hrv_info_trailing_lag_title">Kroczące okno czasowe i opóźnienie tempa</string>
-    <string name="hrv_info_trailing_lag_desc">DFA a1 w czasie rzeczywistym oblicza się w kroczącym oknie 2-minutowym (aktualizowanym co 5 sekund), a rMSSD w oknie 60 sekund. Zmiany tempa wymagają 1–2 minut, aby odzwierciedlić się w telemetrii autonomicznej.</string>
+    <string name="hrv_info_trailing_lag_desc">DFA α1 w czasie rzeczywistym oblicza się w kroczącym oknie 2-minutowym (aktualizowanym co 5 sekund), a rMSSD w oknie 60 sekund. Zmiany tempa wymagają 1–2 minut, aby odzwierciedlić się w telemetrii autonomicznej.</string>
     <string name="hrv_info_sensor_recommendation_title">Rekomendacje dotyczące czujników</string>
-    <string name="hrv_info_sensor_recommendation_desc">Dokładne interwały RR między uderzeniami serca wymagają niewygładzanego paska piersiowego EKG (np. Polar H10, Polar H9, Garmin HRM-Dual, HRM-Pro lub HRM-Pro Plus). Optyczne czujniki nadgarstkowe i tanie paski piersiowe z wygładzaniem w oprogramowaniu układowym (np. Magene, CooSpo) zniekształcają interwały i nie nadają się do DFA a1.</string>
+    <string name="hrv_info_sensor_recommendation_desc">Dokładne interwały RR między uderzeniami serca wymagają niewygładzanego paska piersiowego EKG (np. Polar H10, Polar H9, Garmin HRM-Dual, HRM-Pro lub HRM-Pro Plus). Optyczne czujniki nadgarstkowe i tanie paski piersiowe z wygładzaniem w oprogramowaniu układowym (np. Magene, CooSpo) zniekształcają interwały i nie nadają się do DFA α1.</string>
     <string name="hrv_info_smoothed_warning_title">Wykryto wygładzony strumień RR</string>
-    <string name="hrv_info_smoothed_warning_desc">Twój aktywny czujnik stosuje wewnętrzne wygładzanie oprogramowania układowego lub syntetyczną kwantyzację interwałów RR. DFA a1 i wskazania progu tlenowego są niewiarygodne.</string>
+    <string name="hrv_info_smoothed_warning_desc">Twój aktywny czujnik stosuje wewnętrzne wygładzanie oprogramowania układowego lub syntetyczną kwantyzację interwałów RR. DFA α1 i wskazania progu tlenowego są niewiarygodne.</string>
     <string name="hrv_info_zones_title">Strefy progu tlenowego</string>
-    <string name="hrv_info_zones_desc">DFA a1 &gt; 0,75 wskazuje na tempo tlenowe wytrzymałościowe (Strefa 2). Wartości od 0,75 do 0,50 odzwierciedlają przejście progowe (Strefa 3). Wartości poniżej 0,50 wskazują na wysoką intensywność beztlenową (Strefa 4).</string>
+    <string name="hrv_info_zones_desc">DFA α1 &gt; 0,75 wskazuje na tempo tlenowe wytrzymałościowe (Strefa 2). Wartości od 0,75 do 0,50 odzwierciedlają przejście progowe (Strefa 3). Wartości poniżej 0,50 wskazują na wysoką intensywność beztlenową (Strefa 4).</string>
     <string name="hrv_info_disclaimer_title">Zastrzeżenie medyczne</string>
     <string name="hrv_info_disclaimer_desc">Metryki autonomiczne HRV w aTrainingTracker służą do sterowania treningiem i nie zastępują porady lekarskiej. Arytmie serca lub pobudzenia ektopowe mogą zafałszować szacunki progowe.</string>
 
     <!-- Morning Resting HRV Check (ATT-3556 / REQ-PER-032) -->
     <string name="morning_hrv_title">Poranny test HRV</string>
-    <string name="morning_hrv_subtitle">Protokół poranny gotowości autonomicznej</string>
+    <string name="morning_hrv_subtitle">Pomiar spoczynkowy zaraz po przebudzeniu</string>
     <string name="morning_hrv_posture_label">Postawa</string>
     <string name="morning_hrv_posture_supine">Leżąca</string>
     <string name="morning_hrv_posture_seated">Siedząca</string>
@@ -68,9 +73,10 @@
     <string name="morning_hrv_state_stabilizing">Stabilizacja: %1$ds</string>
     <string name="morning_hrv_state_measuring">Pomiar: %1$ds / %2$ds</string>
     <string name="morning_hrv_state_completed">Pomiar ukończony</string>
+    <string name="morning_hrv_result_title">Wynik pomiaru</string>
     <string name="morning_hrv_btn_start">Rozpocznij pomiar</string>
     <string name="morning_hrv_btn_cancel">Anuluj</string>
-    <string name="morning_hrv_btn_save">Zapisz pomiar</string>
+    <string name="morning_hrv_btn_save">Zapisz</string>
     <string name="morning_hrv_btn_discard">Odrzuć</string>
     <string name="morning_hrv_instructions_title">Standaryzowany protokół</string>
     <string name="morning_hrv_instructions_desc">Wykonaj pomiar po przebudzeniu i opróżnieniu pęcherza. Pozostań w bezruchu i oddychaj normalnie bez mówienia. Zachowaj stałą postawę dla wiarygodnych porównań SWC.</string>
@@ -104,33 +110,33 @@
     <string name="hrv_readiness_swc_baseline_label">Linia bazowa SWC 60 dni</string>
     <string name="hrv_readiness_rolling_avg_label">Średnia ruchoma 7 dni</string>
 
-    <!-- Interactive DFA a1 / rMSSD Charts & Scatter Plot in Workout Details (ATT-3544 / REQ-PER-035) -->
-    <string name="hrv_scatter_card_title">Dynamika progów tlenowych DFA a1</string>
-    <string name="hrv_scatter_card_subtitle">a1 vs tętno i moc kolarska</string>
-    <string name="hrv_scatter_aerobic_threshold">Próg tlenowy (a1 = 0,75)</string>
-    <string name="hrv_scatter_anaerobic_threshold">Próg beztlenowy (a1 = 0,50)</string>
-    <string name="hrv_scatter_aerobic_threshold_fmt">Próg tlenowy (a1 = %1$.2f)</string>
-    <string name="hrv_scatter_anaerobic_threshold_fmt">Próg beztlenowy (a1 = %1$.2f)</string>
+    <!-- Interactive DFA α1 / rMSSD Charts & Scatter Plot in Workout Details (ATT-3544 / REQ-PER-035) -->
+    <string name="hrv_scatter_card_title">Dynamika progów tlenowych DFA α1</string>
+    <string name="hrv_scatter_card_subtitle">α1 vs tętno i moc kolarska</string>
+    <string name="hrv_scatter_aerobic_threshold">Próg tlenowy (α1 = 0,75)</string>
+    <string name="hrv_scatter_anaerobic_threshold">Próg beztlenowy (α1 = 0,50)</string>
+    <string name="hrv_scatter_aerobic_threshold_fmt">Próg tlenowy (α1 = %1$.2f)</string>
+    <string name="hrv_scatter_anaerobic_threshold_fmt">Próg beztlenowy (α1 = %1$.2f)</string>
     <string name="hrv_scatter_toggle_hr">Tętno</string>
     <string name="hrv_scatter_toggle_power">Moc</string>
     <string name="hrv_scatter_toggle_pace">Tempo</string>
     <string name="hrv_scatter_smoothed_warning_title">Wygładzony strumień czujnika</string>
-    <string name="hrv_scatter_smoothed_warning_desc">Zarejestrowane interwały RR wykazują wygładzanie oprogramowania układowego lub syntetyczną kwantyzację. Oszacowania progów tlenowych (a1 = 0.75 / 0.50) mogą być zniekształcone.</string>
+    <string name="hrv_scatter_smoothed_warning_desc">Zarejestrowane interwały RR wykazują wygładzanie oprogramowania układowego lub syntetyczną kwantyzację. Oszacowania progów tlenowych (α1 = 0.75 / 0.50) mogą być zniekształcone.</string>
     <string name="hrv_scatter_artifact_suppressed">Przedziały o wysokich artefaktach (&gt;5%%) pominięte</string>
     <string name="hrv_scatter_no_data">Brak danych HRV dla tego treningu</string>
     <string name="hrv_chart_artifact_gap_label">Luka artefaktów</string>
 
-    <!-- DFA a1 Threshold Tuning & Dynamic Zones (ATT-6715 / REQ-TRK-061) -->
-    <string name="tuning_dfa_a1_t1_title">Próg tlenowy DFA a1 (T1)</string>
+    <!-- DFA α1 Threshold Tuning & Dynamic Zones (ATT-6715 / REQ-TRK-061) -->
+    <string name="tuning_dfa_a1_t1_title">Próg tlenowy DFA α1 (T1)</string>
     <string name="tuning_dfa_a1_t1_desc">Próg oddzielający bazę tlenową (Strefa 2) od strefy przejściowej (Strefa 3). Wyższy = bardziej fraktalny / tlenowy.</string>
-    <string name="tuning_dfa_a1_t2_title">Próg beztlenowy DFA a1 (T2)</string>
+    <string name="tuning_dfa_a1_t2_title">Próg beztlenowy DFA α1 (T2)</string>
     <string name="tuning_dfa_a1_t2_desc">Próg oddzielający strefę przejściową (Strefa 3) od intensywności beztlenowej (Strefa 4). Wyższy = bardziej fraktalny / tlenowy.</string>
     <string name="tuning_dfa_a1_default">Domyślny: %1$.2f (Niezmiennik: T1 \u2265 T2 + 0.05)</string>
-    <string name="hrv_info_zones_desc_fmt">DFA a1 &gt; %1$.2f wskazuje na tempo tlenowe wytrzymałościowe (Strefa 2). Wartości od %1$.2f do %2$.2f odzwierciedlają przejście progowe (Strefa 3). Wartości poniżej %2$.2f wskazują na wysoką intensywność beztlenową (Strefa 4).</string>
+    <string name="hrv_info_zones_desc_fmt">DFA α1 &gt; %1$.2f wskazuje na tempo tlenowe wytrzymałościowe (Strefa 2). Wartości od %1$.2f do %2$.2f odzwierciedlają przejście progowe (Strefa 3). Wartości poniżej %2$.2f wskazują na wysoką intensywność beztlenową (Strefa 4).</string>
 
     <!-- Configurable Artifact Gate Threshold (ATT-6714 / REQ-TRK-060.4) -->
     <string name="tuning_hrv_artifact_gate_title">Próg artefaktów HRV</string>
-    <string name="tuning_hrv_artifact_gate_desc" formatted="false">Maksymalny odsetek artefaktów w oknie przed stłumieniem DFA a1. Zakres: 3,0% do 5,0%.</string>
+    <string name="tuning_hrv_artifact_gate_desc" formatted="false">Maksymalny odsetek artefaktów w oknie przed stłumieniem DFA α1. Zakres: 3,0% do 5,0%.</string>
     <string name="tuning_hrv_artifact_gate_default">Domyślnie: %1$.1f%%</string>
 
     <!-- Morning HRV CTA & Onboarding in Fitness & Physiology (ATT-6720 / REQ-UI-513) -->
@@ -142,7 +148,7 @@
     <string name="hrv_history_title">Historia porannego HRV</string>
 
     <!-- Lag-Aligned, Confidence-Gated HRVT1/HRVT2 Thresholds (ATT-3554 / REQ-PER-036) -->
-    <string name="hrv_threshold_card_title">Szacunki progów DFA a1 (HRVT1 / HRVT2)</string>
+    <string name="hrv_threshold_card_title">Szacunki progów DFA α1 (HRVT1 / HRVT2)</string>
     <string name="hrv_threshold_card_subtitle">Fizjologiczne wartości progowe skorygowane o opóźnienie z oceną ufności</string>
     <string name="hrv_threshold_hrvt1_label">Próg tlenowy (HRVT1)</string>
     <string name="hrv_threshold_hrvt2_label">Próg beztlenowy (HRVT2)</string>
@@ -157,15 +163,15 @@
     <string name="hrv_threshold_stat_neff">N: %1$d min</string>
     <string name="hrv_threshold_stat_neff_steps">N: %1$d stopni</string>
     <string name="hrv_threshold_stat_artifact">Średni odsetek artefaktów: %1$.1f%%</string>
-    <string name="hrv_threshold_diag_steady">Stała wytrzymałość: DFA a1 utrzymało się powyżej zakresu progowego</string>
+    <string name="hrv_threshold_diag_steady">Stała wytrzymałość: DFA α1 utrzymało się powyżej zakresu progowego</string>
     <string name="hrv_threshold_diag_high_artifact">Wysoki odsetek artefaktów RR (%1$.1f%% &gt; 5.0%%)</string>
     <string name="hrv_threshold_diag_short_duration">Niewystarczający czas trwania przejścia (N = %1$d &lt; %2$d)</string>
     <string name="hrv_threshold_diag_low_r2">Niska korelacja liniowa (R² = %1$.2f &lt; %2$.2f)</string>
     <string name="hrv_threshold_no_estimate">--</string>
     <string name="hrv_threshold_informative_only">Tylko informacyjnie; wykluczone z aktualizacji stref</string>
 
-    <!-- Guided DFA a1 Ramp/Step Test Screen (ATT-4969 / REQ-TRK-071) -->
-    <string name="hrv_test_title">Przewodnikowy test progów DFA a1</string>
+    <!-- Guided DFA α1 Ramp/Step Test Screen (ATT-4969 / REQ-TRK-071) -->
+    <string name="hrv_test_title">Przewodnikowy test progów DFA α1</string>
     <string name="hrv_test_subtitle">Protokół progu tlenowego i beztlenowego</string>
     <string name="hrv_test_protocol_label">Typ protokołu</string>
     <string name="hrv_test_protocol_step">Progresywny test stopniowy</string>
@@ -180,7 +186,7 @@
     <string name="hrv_test_increment_label">Przyrost stopnia</string>
     <string name="hrv_test_warmup_label">Czas rozgrzewki</string>
     <string name="hrv_test_warmup_desc">10-minutowa spokojna rozgrzewka przed rozpoczęciem stopni protokołu</string>
-    <string name="hrv_test_preflight_title">Wstępne sprawdzenie czujnika</string>
+    <string name="hrv_test_preflight_title">Stan czujnika i sygnału</string>
     <string name="hrv_test_preflight_checking">Sprawdzanie strumienia RR EKG i jakości sygnału…</string>
     <string name="hrv_test_preflight_pass" formatted="false">Wysoka jakość czujnika (Artefakty ≤ 3,0%)</string>
     <string name="hrv_test_preflight_warning" formatted="false">Umiarkowana jakość czujnika (Artefakty 3,0–5,0%)</string>
@@ -193,14 +199,44 @@
     <string name="hrv_test_target_power">Cel: %1$d W</string>
     <string name="hrv_test_target_pace">Cel: %1$s</string>
     <string name="hrv_test_time_remaining">Pozostały czas: %1$s</string>
-    <string name="hrv_test_live_a1">a1 na żywo: %1$.2f</string>
+    <string name="hrv_test_live_a1">α1 na żywo: %1$.2f</string>
     <string name="hrv_test_live_artifacts">Artefakty: %1$.1f%%</string>
     <string name="hrv_test_early_complete_title">Progi zarejestrowane!</string>
-    <string name="hrv_test_early_complete_desc">DFA a1 spadło poniżej 0,45. Zarówno HRVT1, jak i HRVT2 zostały zarejestrowane. Możesz teraz przejść do schłodzenia bez konieczności jazdy do wyczerpania.</string>
+    <string name="hrv_test_early_complete_desc">DFA α1 spadło poniżej 0,45. Zarówno HRVT1, jak i HRVT2 zostały zarejestrowane. Możesz teraz przejść do schłodzenia bez konieczności jazdy do wyczerpania.</string>
     <string name="hrv_test_btn_start">Rozpocznij test</string>
     <string name="hrv_test_btn_finish">Zakończ test</string>
     <string name="hrv_test_btn_cooldown">Rozpocznij schłodzenie</string>
     <string name="hrv_test_btn_cancel">Anuluj test</string>
+
+    <!-- Active Pacing Guidance (ATT-7529) -->
+    <string name="hrv_test_pacing_target_header">Cel</string>
+    <string name="hrv_test_pacing_actual_header">Aktualnie (Rzeczywiste)</string>
+    <string name="hrv_test_live_power_fmt">Moc: %1$d W</string>
+    <string name="hrv_test_live_speed_fmt">Prędkość: %1$.1f km/h</string>
+    <string name="hrv_test_live_hr_fmt">HR: %1$d bpm</string>
+
+    <!-- Protocol Info & Pros/Cons (ATT-7529) -->
+    <string name="hrv_test_info_procedure_label">Przebieg i wykonanie</string>
+    <string name="hrv_test_title_step_fmt">Progresywny test stopniowy (%1$d min)</string>
+    <string name="hrv_test_title_ramp">Ciągły test rampy</string>
+    <string name="hrv_test_badge_step_4min">Zalecane · Wysoka precyzja</string>
+    <string name="hrv_test_badge_step_3min">Kompaktowy · Test stopniowy</string>
+    <string name="hrv_test_badge_ramp">Oszczędność czasu · Skorygowany o MRT</string>
+    <string name="hrv_test_step1_warmup_cycling" formatted="false">Rozgrzewka (10 min): Spokojna jazda przy 100 W (~45% FTP).</string>
+    <string name="hrv_test_step1_warmup_running">Rozgrzewka (10 min): Spokojny bieg rozgrzewkowy przy 8,0 km/h (7:30 min/km).</string>
+    <string name="hrv_test_step2_step_cycling_fmt">Stopnie (+20 W co %1$d min): Utrzymuj stałą moc na stopień; oceniane są ostatnie 2 minuty każdego stopnia.</string>
+    <string name="hrv_test_step2_step_running_fmt">Stopnie (+0,5 km/h co %1$d min): Utrzymuj równe tempo na stopień (zalecana płaska trasa lub bieżnia).</string>
+    <string name="hrv_test_step2_ramp_cycling">Rampa (+15 W/min): Ciągły liniowy wzrost mocy (idealny w trybie ERG trenażera).</string>
+    <string name="hrv_test_step2_ramp_running">Rampa (+0,25 km/h na min): Ciągły liniowy wzrost prędkości.</string>
+    <string name="hrv_test_step3_completion">Koniec submaksymalny: Gdy DFA α1 spadnie poniżej 0,45 przez 60 s, HRVT1 i HRVT2 są zarejestrowane – bez wyczerpania!</string>
+    <string name="hrv_test_pro_label">Zaleta:</string>
+    <string name="hrv_test_con_label">Wada:</string>
+    <string name="hrv_test_pro_step_4min">Najwyższa precyzja fizjologiczna – po 2 min stabilizacji oceniane jest stabilne 2-minutowe okno w stanie równowagi.</string>
+    <string name="hrv_test_con_step_4min">Dłuższy czas trwania testu (~30–38 min łącznie z rozgrzewką).</string>
+    <string name="hrv_test_pro_step_3min">Prawdziwy protokół stopniowy o skróconym czasie trwania (~25–30 min).</string>
+    <string name="hrv_test_con_step_3min">Krótszy czas stabilizacji (60 s) przed 120-sekundowym oknem pomiarowym niż w protokole 4-minutowym.</string>
+    <string name="hrv_test_pro_ramp">Krótszy całkowity czas trwania (~20–25 min) i płynne, ciągłe przejście obciążenia bez skoków stopni.</string>
+    <string name="hrv_test_con_ramp">Tętno i HRV opóźniają się względem obciążenia o ok. 45 s (średni czas odpowiedzi) i są korygowane matematycznie (-11 W przy +15 W/min).</string>
 
     <!-- Training Zone Comparison & Multi-Session Consensus (ATT-3555 / REQ-PER-037) -->
     <string name="hrv_zone_comparison_title">Porównanie stref treningowych</string>
@@ -272,4 +308,11 @@
     <string name="morning_hrv_tag_rest">Odpoczynek</string>
     <string name="morning_hrv_btn_save_wellness">Zapisz poranne samopoczucie</string>
     <string name="morning_hrv_wellness_saved_toast">Poranne samopoczucie zapisane</string>
+
+    <!-- Morning HRV Check on Start Screen (ATT-7532 / REQ-UI-525) -->
+    <string name="hrv_morning_check_start_button">Poranny pomiar</string>
+    <string name="tuning_show_morning_check_on_start_screen_title">Poranny pomiar HRV na ekranie startowym</string>
+    <string name="tuning_show_morning_check_on_start_screen_desc">Wyświetla przycisk na ekranie startowym przed treningiem, aby rozpocząć poranny pomiar HRV, jeśli sparowany jest czujnik tętna.</string>
+    <string name="tuning_morning_check_cutoff_hour_title">Godzina graniczna porannego pomiaru</string>
+    <string name="tuning_morning_check_cutoff_hour_desc">Wyświetlany na ekranie startowym do godziny %d:00.</string>
 </resources>

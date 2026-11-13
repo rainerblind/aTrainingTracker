@@ -156,4 +156,13 @@ class MainActivityWithNavigationInteropTest {
         assertNotNull("navigateToFilteredWorkouts method must exist", navigateFilteredMethod)
         assertTrue(Modifier.isPublic(navigateFilteredMethod!!.modifiers))
     }
+
+    @Test
+    fun testIsNavGraphReadyMethodPresence() {
+        // REQ-UI-162, TST-UI-114.8 (ATT-7526)
+        val clazz = MainActivityWithNavigation::class.java
+        val isNavGraphReadyMethod = clazz.declaredMethods.find { it.name == "isNavGraphReady" }
+        assertNotNull("isNavGraphReady method must exist", isNavGraphReadyMethod)
+        assertEquals(Boolean::class.javaPrimitiveType, isNavGraphReadyMethod!!.returnType)
+    }
 }

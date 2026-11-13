@@ -286,20 +286,32 @@ public class ANTHeartRateDevice extends MyANTDevice implements RrBeatSource {
 
     @Override
     protected void unregisterSensors() {
+        if (mRrIntervalSensor != null) {
+            if (mMySensorManager != null) {
+                mMySensorManager.unregisterSensor(mRrIntervalSensor);
+            }
+            removeSensor(SensorType.RR_INTERVAL);
+            mRrIntervalSensor = null;
+        }
         super.unregisterSensors();
         mPrevHeartBeatCount = -1L;
         mPrevHeartBeatEventTime = null;
         mLastBeatTimestampMs = 0.0;
-        mRrIntervalSensor = null;
     }
 
     @Override
     public void shutDown() {
+        if (mRrIntervalSensor != null) {
+            if (mMySensorManager != null) {
+                mMySensorManager.unregisterSensor(mRrIntervalSensor);
+            }
+            removeSensor(SensorType.RR_INTERVAL);
+            mRrIntervalSensor = null;
+        }
         super.shutDown();
         mPrevHeartBeatCount = -1L;
         mPrevHeartBeatEventTime = null;
         mLastBeatTimestampMs = 0.0;
-        mRrIntervalSensor = null;
         mRrBeatListeners.clear();
     }
 }
