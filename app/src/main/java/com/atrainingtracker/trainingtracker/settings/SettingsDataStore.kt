@@ -83,7 +83,10 @@ data class SettingsSnapshot(
 }
 
 // Create a single instance of DataStore for the entire app context
-val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "user_settings")
+private val Context.backingDataStore: DataStore<Preferences> by preferencesDataStore(name = "user_settings")
+
+val Context.dataStore: DataStore<Preferences>
+    get() = resolveDataStore(this)
 
 internal class InMemoryPreferencesDataStore(
     initialPreferences: Preferences = emptyPreferences()
@@ -102,7 +105,7 @@ internal fun resolveDataStore(context: Context): DataStore<Preferences> {
         val targetContext = context.applicationContext ?: context
         val filesDir = targetContext.filesDir
         if (filesDir != null && File(filesDir, "probe").path.isNotEmpty()) {
-            context.dataStore
+            targetContext.backingDataStore
         } else {
             InMemoryPreferencesDataStore()
         }

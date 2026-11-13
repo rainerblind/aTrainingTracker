@@ -42,6 +42,10 @@ def sprint_lock(
     if lock_dir and not os.path.exists(lock_dir):
         os.makedirs(lock_dir, exist_ok=True)
 
+    if os.environ.get("ATT_SPRINT_LOCK_HELD") == "1" and lock_path == DEFAULT_LOCK_FILE:
+        yield -1
+        return
+
     fd = os.open(lock_path, os.O_CREAT | os.O_RDWR, 0o666)
     start_time = time.time()
     acquired = False
@@ -52,6 +56,8 @@ def sprint_lock(
             try:
                 fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
                 acquired = True
+                if lock_path == DEFAULT_LOCK_FILE:
+                    os.environ["ATT_SPRINT_LOCK_HELD"] = "1"
                 break
             except (BlockingIOError, IOError, OSError):
                 elapsed = time.time() - start_time

@@ -80,8 +80,8 @@ class ArchitectureConformanceContractTest {
             "com/atrainingtracker/trainingtracker/ui/components/stats/StatsData.kt",
             "com/atrainingtracker/trainingtracker/ui/equipment/EquipmentSensorOrdering.kt",
             "com/atrainingtracker/trainingtracker/ui/knownlocations/KnownLocationsViewModel.kt",
-            "com/atrainingtracker/trainingtracker/ui/map/MapFragmentWithTrackViewModel.kt",
             "com/atrainingtracker/trainingtracker/ui/map/MapInitialLocationResolver.kt",
+            "com/atrainingtracker/trainingtracker/ui/sportingjourney/SportingJourneyRepository.kt",
             "com/atrainingtracker/trainingtracker/ui/tracking/TrackingViewsRepository.kt",
             "com/atrainingtracker/trainingtracker/ui/tracking/editsensorfield/EditSensorFieldViewModel.kt"
         )

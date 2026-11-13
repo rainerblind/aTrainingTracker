@@ -34,6 +34,10 @@ class AntStartupCheckContractTest {
         assertNotNull("MainActivityWithNavigation class must exist", activityClass)
 
         val methodNames = activityClass.declaredMethods.map { it.name }
+        org.junit.Assert.assertTrue(
+            "MainActivityWithNavigation must declare observeNavigationEvents()",
+            methodNames.contains("observeNavigationEvents")
+        )
         assertFalse(
             "MainActivityWithNavigation must not declare checkANTInstallation()",
             methodNames.contains("checkANTInstallation")

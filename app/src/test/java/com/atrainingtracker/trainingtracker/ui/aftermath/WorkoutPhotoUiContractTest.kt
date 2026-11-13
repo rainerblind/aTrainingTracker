@@ -54,12 +54,15 @@ class WorkoutPhotoUiContractTest {
     @Before
     fun setUp() {
         context = ApplicationProvider.getApplicationContext()
+        WorkoutSummariesDatabaseManager.setInstanceForTesting(null)
+        WorkoutRepository.resetForTesting(null)
         mockkStatic(ContextCompat::class)
         every { ContextCompat.registerReceiver(any(), any(), any(), any()) } returns null
     }
 
     @After
     fun tearDown() {
+        WorkoutSummariesDatabaseManager.setInstanceForTesting(null)
         WorkoutRepository.resetForTesting(null)
         unmockkAll()
     }

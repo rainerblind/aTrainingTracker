@@ -140,7 +140,7 @@ The application operates within the Android application sandboxing model:
 3. **Google Drive REST API v3**:
    - Cloud backup and automated database recovery (`GoogleDriveUploader.kt`, `GoogleDriveClient.kt`).
 4. **Android Health Connect**:
-   - Local on-device biometrics and exercise aggregation via `androidx.health.connect:connect-client:1.1.0-alpha11`. Exports `ExerciseSessionRecord` and `HeartRateRecord` and imports biometric recovery indicators via `android.permission.health.READ_HEART_RATE_VARIABILITY` and `android.permission.health.READ_RESTING_HEART_RATE` (`HealthConnectHrvImporter.kt`).
+   - Local on-device biometrics and exercise aggregation via `androidx.health.connect:connect-client:1.1.0`. Exports `ExerciseSessionRecord` and `HeartRateRecord` and imports biometric recovery indicators via `android.permission.health.READ_HEART_RATE_VARIABILITY` and `android.permission.health.READ_RESTING_HEART_RATE` (`HealthConnectHrvImporter.kt`).
 5. **Open-Meteo Elevation API**:
    - Internet Digital Elevation Model (DEM) reference altitude retrieval and spatial cache healing via `https://api.open-meteo.com/v1/elevation` (`ElevationService.kt`, `ElevationCacheDatabaseManager.kt`).
 6. **Firebase Cloud Services**:

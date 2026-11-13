@@ -31,7 +31,6 @@ import com.atrainingtracker.banalservice.devices.hrv.HrvSignalQualityResult
 import com.atrainingtracker.banalservice.devices.hrv.HrvSignalQualityStatus
 import com.atrainingtracker.banalservice.sensor.SensorType
 import com.atrainingtracker.trainingtracker.TrainingApplication
-import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
 import com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository
 import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore
 import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDefaults
@@ -317,17 +316,17 @@ class HrvRampTestViewModel @JvmOverloads constructor(
             val currentConfig = _uiState.value.config
             val values = ContentValues().apply {
                 val protocolTag = if (currentConfig.protocolType == HrvTestProtocolType.GUIDED_STEP) "GUIDED_STEP" else "GUIDED_RAMP"
-                put(WorkoutSummariesDatabaseManager.WorkoutSummaries.METHOD, protocolTag)
+                put("method", protocolTag)
                 val paramDesc = if (currentConfig.protocolType == HrvTestProtocolType.GUIDED_STEP) {
                     "stepDurationSec=${currentConfig.stepDurationSec},stepIncrement=${currentConfig.stepIncrement}"
                 } else {
                     "rampSlopeWattsPerMin=${currentConfig.rampSlopeWattsPerMin}"
                 }
-                put(WorkoutSummariesDatabaseManager.WorkoutSummaries.GOAL, paramDesc)
+                put("goal", paramDesc)
             }
             workoutRepository.updateWorkoutSummary(workoutId, values)
             isWorkoutTagged = true
-            Log.i("HrvRampTestViewModel", "Tagged active workout $workoutId with protocol ${values.getAsString(WorkoutSummariesDatabaseManager.WorkoutSummaries.METHOD)}")
+            Log.i("HrvRampTestViewModel", "Tagged active workout $workoutId with protocol ${values.getAsString("method")}")
         }
     }
 

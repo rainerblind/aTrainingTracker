@@ -187,4 +187,10 @@ if [ "$(uname)" = "Darwin" ] && [ "$HOME" = "$PWD" ]; then
   cd "$(dirname "$0")"
 fi
 
-exec "$JAVACMD" "$@"
+# Hard-enforce mutual exclusion across parallel worktree Gradle invocations (ATT-7525)
+if [ "${ATT_SPRINT_LOCK_HELD:-0}" != "1" ] && command -v flock >/dev/null 2>&1 ; then
+    export ATT_SPRINT_LOCK_HELD=1
+    exec flock -w 600 /tmp/att_build_merge.lock "$JAVACMD" "$@"
+else
+    exec "$JAVACMD" "$@"
+fi
