@@ -164,11 +164,11 @@ fun AthleteProfileScreen(
 /**
  * Stateless UI content for the unified **Fitness & Physiology** hub (`REQ-UI-513.4`, Rule 23, Rule 38, Rule 41).
  *
- * Hosts 4 tabs in a [PrimaryScrollableTabRow] + [HorizontalPager]:
- * - Page 0: Fitness & Fatigue (PMC) (`R.string.fitness_tab_pmc`)
- * - Page 1: HRV & Readiness (`R.string.fitness_tab_hrv`)
- * - Page 2: Body & Thresholds (`R.string.fitness_tab_body`)
- * - Page 3: Cardio-Power (`R.string.fitness_tab_cardio_power`, conditional)
+ * Hosts tabs in a [PrimaryScrollableTabRow] + [HorizontalPager] ordered by physiological hierarchy:
+ * - Page 0: Body & Thresholds (`R.string.fitness_tab_body`)
+ * - Page 1: PMC (conditional) (`R.string.fitness_tab_pmc`)
+ * - Page 2: HRV & Readiness (`R.string.fitness_tab_hrv`)
+ * - Page 3: Cardio-Power (conditional) (`R.string.fitness_tab_cardio_power`)
  */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
@@ -278,7 +278,7 @@ fun AthleteProfileContent(
                     }
 
                     PrimaryScrollableTabRow(
-                        selectedTabIndex = pagerState.currentPage,
+                        selectedTabIndex = pagerState.currentPage.coerceIn(0, (tabTitleResIds.size - 1).coerceAtLeast(0)),
                         containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
                         divider = {}
                     ) {

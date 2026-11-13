@@ -471,6 +471,12 @@ class AthleteProfileContractAndLocalizationTest {
                 source.contains("pagerState.scrollToPage(tabTitleResIds.lastIndex)")
         )
 
+        // Selected tab index in PrimaryScrollableTabRow must be coerced to avoid IndexOutOfBoundsException during dynamic contraction
+        assertTrue(
+            "PrimaryScrollableTabRow must clamp selectedTabIndex to valid tab bounds",
+            source.contains("selectedTabIndex = pagerState.currentPage.coerceIn(0, (tabTitleResIds.size - 1).coerceAtLeast(0))")
+        )
+
         // Add action button shown when viewing bodyTabIndex
         assertTrue(
             "Add action button must be conditioned on pagerState.currentPage == bodyTabIndex",
