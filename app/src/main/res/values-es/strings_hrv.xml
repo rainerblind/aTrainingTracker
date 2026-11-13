@@ -20,36 +20,36 @@
 <resources>
     <string name="hrv_rmssd">rMSSD</string>
     <string name="hrv_rmssd_short">rMSSD</string>
-    <string name="hrv_dfa_a1">DFA a1</string>
-    <string name="hrv_dfa_a1_short">a1</string>
+    <string name="hrv_dfa_a1">DFA α1</string>
+    <string name="hrv_dfa_a1_short">α1</string>
     <string name="hrv_artifact_rate">Tasa de artefactos</string>
     <string name="hrv_artifact_rate_short">Art. %</string>
     <string name="hrv_sdnn">SDNN</string>
     <string name="hrv_sdnn_short">SDNN</string>
 
     <!-- Training Zones Tab (ATT-7317 / REQ-TRK-061.4) -->
-    <string name="tab_hrv_dfa_a1">VFC (DFA a1)</string>
+    <string name="tab_hrv_dfa_a1">VFC (DFA α1)</string>
     <string name="hrv_zone_aerobic_base_label">Base Aeróbica (Zona 2)</string>
     <string name="hrv_zone_threshold_transition_label">Transición de Umbral (Zona 3)</string>
     <string name="hrv_zone_anaerobic_label">Alta Intensidad / Anaeróbico (Zona 4)</string>
     <string name="hrv_t1_aerobic_threshold_label">Umbral Aeróbico T1 (HRVT1)</string>
     <string name="hrv_t2_anaerobic_threshold_label">Umbral Anaeróbico T2 (HRVT2)</string>
-    <string name="tuning_physiology_hrv_zones_link">Configurar umbrales aeróbicos y anaeróbicos DFA a1 en Zonas de Entrenamiento</string>
+    <string name="tuning_physiology_hrv_zones_link">Configurar umbrales aeróbicos y anaeróbicos DFA α1 en Zonas de Entrenamiento</string>
     <string name="hrv_start_guided_ramp_test">Iniciar prueba de umbral guiada</string>
     <string name="hrv_preview_pill_aerobic">Aeróbico</string>
     <string name="hrv_preview_pill_transition">Transición</string>
     <string name="hrv_preview_pill_anaerobic">Anaeróbico</string>
-    <string name="hrv_zones_guidance_desc">Los umbrales DFA a1 guían el ritmo aeróbico y la intensidad. Valores más altos indican mayor variabilidad fractal (aeróbico). Zona 2 es verde (&gt; T1), Zona 3 es naranja (T2..T1) y Zona 4 es roja (&lt; T2).</string>
+    <string name="hrv_zones_guidance_desc">Los umbrales DFA α1 guían el ritmo aeróbico y la intensidad. Valores más altos indican mayor variabilidad fractal (aeróbico). Zona 2 es verde (&gt; T1), Zona 3 es naranja (T2..T1) y Zona 4 es roja (&lt; T2).</string>
 
     <string name="hrv_info_title">Variabilidad de frecuencia cardíaca y umbrales aeróbicos</string>
     <string name="hrv_info_trailing_lag_title">Ventana móvil y retardo de ritmo</string>
-    <string name="hrv_info_trailing_lag_desc">El DFA a1 en tiempo real se calcula sobre una ventana móvil de 2 minutos (actualizada cada 5 segundos) y rMSSD sobre 60 segundos. Los cambios de ritmo tardan de 1 a 2 minutos en manifestarse en la telemetría autonómica.</string>
+    <string name="hrv_info_trailing_lag_desc">El DFA α1 en tiempo real se calcula sobre una ventana móvil de 2 minutos (actualizada cada 5 segundos) y rMSSD sobre 60 segundos. Los cambios de ritmo tardan de 1 a 2 minutos en manifestarse en la telemetría autonómica.</string>
     <string name="hrv_info_sensor_recommendation_title">Recomendaciones de sensores</string>
-    <string name="hrv_info_sensor_recommendation_desc">Los intervalos RR precisos latido a latido requieren una banda pectoral de ECG sin suavizado (como Polar H10, Polar H9, Garmin HRM-Dual, HRM-Pro o HRM-Pro Plus). Los sensores ópticos de muñeca y bandas económicas con suavizado por firmware (p. ej. Magene, CooSpo) distorsionan los intervalos y no son aptos para DFA a1.</string>
+    <string name="hrv_info_sensor_recommendation_desc">Los intervalos RR precisos latido a latido requieren una banda pectoral de ECG sin suavizado (como Polar H10, Polar H9, Garmin HRM-Dual, HRM-Pro o HRM-Pro Plus). Los sensores ópticos de muñeca y bandas económicas con suavizado por firmware (p. ej. Magene, CooSpo) distorsionan los intervalos y no son aptos para DFA α1.</string>
     <string name="hrv_info_smoothed_warning_title">Flujo RR suavizado detectado</string>
-    <string name="hrv_info_smoothed_warning_desc">Su sensor activo aplica suavizado interno por firmware o cuantización sintética a los intervalos RR. El DFA a1 y la guía de umbral aeróbico son inexactos y poco fiables.</string>
+    <string name="hrv_info_smoothed_warning_desc">Su sensor activo aplica suavizado interno por firmware o cuantización sintética a los intervalos RR. El DFA α1 y la guía de umbral aeróbico son inexactos y poco fiables.</string>
     <string name="hrv_info_zones_title">Zonas de umbral aeróbico</string>
-    <string name="hrv_info_zones_desc">DFA a1 &gt; 0,75 indica ritmo de resistencia aeróbica (Zona 2). Valores entre 0,75 y 0,50 reflejan la transición hacia el umbral anaeróbico (Zona 3). Valores por debajo de 0,50 indican alta intensidad anaeróbica (Zona 4).</string>
+    <string name="hrv_info_zones_desc">DFA α1 &gt; 0,75 indica ritmo de resistencia aeróbica (Zona 2). Valores entre 0,75 y 0,50 reflejan la transición hacia el umbral anaeróbico (Zona 3). Valores por debajo de 0,50 indican alta intensidad anaeróbica (Zona 4).</string>
     <string name="hrv_info_disclaimer_title">Aviso médico</string>
     <string name="hrv_info_disclaimer_desc">Las métricas autonómicas de HRV en aTrainingTracker son para control deportivo y no sustituyen una evaluación médica. Las arritmias cardíacas o latidos ectópicos pueden alterar las estimaciones de umbral.</string>
 
@@ -105,33 +105,33 @@
     <string name="hrv_readiness_swc_baseline_label">Línea base SWC 60d</string>
     <string name="hrv_readiness_rolling_avg_label">Promedio móvil 7d</string>
 
-    <!-- Interactive DFA a1 / rMSSD Charts & Scatter Plot in Workout Details (ATT-3544 / REQ-PER-035) -->
-    <string name="hrv_scatter_card_title">Dinámica de umbrales aeróbicos DFA a1</string>
-    <string name="hrv_scatter_card_subtitle">a1 vs. frecuencia cardíaca y potencia</string>
-    <string name="hrv_scatter_aerobic_threshold">Umbral aeróbico (a1 = 0,75)</string>
-    <string name="hrv_scatter_anaerobic_threshold">Umbral anaeróbico (a1 = 0,50)</string>
-    <string name="hrv_scatter_aerobic_threshold_fmt">Umbral aeróbico (a1 = %1$.2f)</string>
-    <string name="hrv_scatter_anaerobic_threshold_fmt">Umbral anaeróbico (a1 = %1$.2f)</string>
+    <!-- Interactive DFA α1 / rMSSD Charts & Scatter Plot in Workout Details (ATT-3544 / REQ-PER-035) -->
+    <string name="hrv_scatter_card_title">Dinámica de umbrales aeróbicos DFA α1</string>
+    <string name="hrv_scatter_card_subtitle">α1 vs. frecuencia cardíaca y potencia</string>
+    <string name="hrv_scatter_aerobic_threshold">Umbral aeróbico (α1 = 0,75)</string>
+    <string name="hrv_scatter_anaerobic_threshold">Umbral anaeróbico (α1 = 0,50)</string>
+    <string name="hrv_scatter_aerobic_threshold_fmt">Umbral aeróbico (α1 = %1$.2f)</string>
+    <string name="hrv_scatter_anaerobic_threshold_fmt">Umbral anaeróbico (α1 = %1$.2f)</string>
     <string name="hrv_scatter_toggle_hr">Frecuencia cardíaca</string>
     <string name="hrv_scatter_toggle_power">Potencia</string>
     <string name="hrv_scatter_toggle_pace">Ritmo</string>
     <string name="hrv_scatter_smoothed_warning_title">Flujo de sensor suavizado</string>
-    <string name="hrv_scatter_smoothed_warning_desc">Los intervalos RR registrados presentan suavizado por firmware o cuantización sintética. Las estimaciones de umbral aeróbico (a1 = 0.75 / 0.50) pueden estar distorsionadas.</string>
+    <string name="hrv_scatter_smoothed_warning_desc">Los intervalos RR registrados presentan suavizado por firmware o cuantización sintética. Las estimaciones de umbral aeróbico (α1 = 0.75 / 0.50) pueden estar distorsionadas.</string>
     <string name="hrv_scatter_artifact_suppressed">Intervalos con artefactos altos (&gt;5%%) suprimidos</string>
     <string name="hrv_scatter_no_data">No hay datos de VFC disponibles para este entrenamiento</string>
     <string name="hrv_chart_artifact_gap_label">Brecha de artefactos</string>
 
-    <!-- DFA a1 Threshold Tuning & Dynamic Zones (ATT-6715 / REQ-TRK-061) -->
-    <string name="tuning_dfa_a1_t1_title">Umbral aeróbico DFA a1 (T1)</string>
+    <!-- DFA α1 Threshold Tuning & Dynamic Zones (ATT-6715 / REQ-TRK-061) -->
+    <string name="tuning_dfa_a1_t1_title">Umbral aeróbico DFA α1 (T1)</string>
     <string name="tuning_dfa_a1_t1_desc">Umbral que separa la base aeróbica (Zona 2) de la transición (Zona 3). Mayor = más fractal / aeróbico.</string>
-    <string name="tuning_dfa_a1_t2_title">Umbral anaeróbico DFA a1 (T2)</string>
+    <string name="tuning_dfa_a1_t2_title">Umbral anaeróbico DFA α1 (T2)</string>
     <string name="tuning_dfa_a1_t2_desc">Umbral que separa la transición (Zona 3) de la intensidad anaeróbica (Zona 4). Mayor = más fractal / aeróbico.</string>
     <string name="tuning_dfa_a1_default">Predeterminado: %1$.2f (Invariante: T1 \u2265 T2 + 0.05)</string>
-    <string name="hrv_info_zones_desc_fmt">DFA a1 &gt; %1$.2f indica ritmo de resistencia aeróbica (Zona 2). Valores entre %1$.2f y %2$.2f reflejan la transición hacia el umbral anaeróbico (Zona 3). Valores por debajo de %2$.2f indican alta intensidad anaeróbica (Zona 4).</string>
+    <string name="hrv_info_zones_desc_fmt">DFA α1 &gt; %1$.2f indica ritmo de resistencia aeróbica (Zona 2). Valores entre %1$.2f y %2$.2f reflejan la transición hacia el umbral anaeróbico (Zona 3). Valores por debajo de %2$.2f indican alta intensidad anaeróbica (Zona 4).</string>
 
     <!-- Configurable Artifact Gate Threshold (ATT-6714 / REQ-TRK-060.4) -->
     <string name="tuning_hrv_artifact_gate_title">Umbral de artefactos HRV</string>
-    <string name="tuning_hrv_artifact_gate_desc" formatted="false">Tasa máxima de artefactos en ventana antes de suprimir DFA a1. Rango: 3.0% a 5.0%.</string>
+    <string name="tuning_hrv_artifact_gate_desc" formatted="false">Tasa máxima de artefactos en ventana antes de suprimir DFA α1. Rango: 3.0% a 5.0%.</string>
     <string name="tuning_hrv_artifact_gate_default">Predeterminado: %1$.1f%%</string>
 
     <!-- Morning HRV CTA & Onboarding in Fitness & Physiology (ATT-6720 / REQ-UI-513) -->
@@ -143,7 +143,7 @@
     <string name="hrv_history_title">Historial de VFC matutina</string>
 
     <!-- Lag-Aligned, Confidence-Gated HRVT1/HRVT2 Thresholds (ATT-3554 / REQ-PER-036) -->
-    <string name="hrv_threshold_card_title">Estimaciones de umbral DFA a1 (HRVT1 / HRVT2)</string>
+    <string name="hrv_threshold_card_title">Estimaciones de umbral DFA α1 (HRVT1 / HRVT2)</string>
     <string name="hrv_threshold_card_subtitle">Umbrales fisiológicos con ajuste de retardo y control de confianza</string>
     <string name="hrv_threshold_hrvt1_label">Umbral aeróbico (HRVT1)</string>
     <string name="hrv_threshold_hrvt2_label">Umbral anaeróbico (HRVT2)</string>
@@ -158,15 +158,15 @@
     <string name="hrv_threshold_stat_neff">N: %1$d min</string>
     <string name="hrv_threshold_stat_neff_steps">N: %1$d escalones</string>
     <string name="hrv_threshold_stat_artifact">Artefacto medio: %1$.1f%%</string>
-    <string name="hrv_threshold_diag_steady">Resistencia continua: DFA a1 se mantuvo por encima del rango de umbral</string>
+    <string name="hrv_threshold_diag_steady">Resistencia continua: DFA α1 se mantuvo por encima del rango de umbral</string>
     <string name="hrv_threshold_diag_high_artifact">Alta tasa de artefactos RR (%1$.1f%% &gt; 5.0%%)</string>
     <string name="hrv_threshold_diag_short_duration">Duración de transición insuficiente (N = %1$d &lt; %2$d)</string>
     <string name="hrv_threshold_diag_low_r2">Baja correlación lineal (R² = %1$.2f &lt; %2$.2f)</string>
     <string name="hrv_threshold_no_estimate">--</string>
     <string name="hrv_threshold_informative_only">Solo informativo; excluido de las actualizaciones de zonas</string>
 
-    <!-- Guided DFA a1 Ramp/Step Test Screen (ATT-4969 / REQ-TRK-071) -->
-    <string name="hrv_test_title">Prueba guiada de umbrales DFA a1</string>
+    <!-- Guided DFA α1 Ramp/Step Test Screen (ATT-4969 / REQ-TRK-071) -->
+    <string name="hrv_test_title">Prueba guiada de umbrales DFA α1</string>
     <string name="hrv_test_subtitle">Protocolo de umbrales aeróbico y anaeróbico</string>
     <string name="hrv_test_protocol_label">Tipo de protocolo</string>
     <string name="hrv_test_protocol_step">Prueba de escalones progresivos</string>
@@ -194,10 +194,10 @@
     <string name="hrv_test_target_power">Objetivo: %1$d W</string>
     <string name="hrv_test_target_pace">Objetivo: %1$s</string>
     <string name="hrv_test_time_remaining">Tiempo restante: %1$s</string>
-    <string name="hrv_test_live_a1">a1 en vivo: %1$.2f</string>
+    <string name="hrv_test_live_a1">α1 en vivo: %1$.2f</string>
     <string name="hrv_test_live_artifacts">Artefactos: %1$.1f%%</string>
     <string name="hrv_test_early_complete_title">¡Umbrales capturados!</string>
-    <string name="hrv_test_early_complete_desc">DFA a1 ha caído por debajo de 0,45. Se han capturado tanto HRVT1 como HRVT2. Ahora puede pasar al enfriamiento sin necesidad de llegar al agotamiento.</string>
+    <string name="hrv_test_early_complete_desc">DFA α1 ha caído por debajo de 0,45. Se han capturado tanto HRVT1 como HRVT2. Ahora puede pasar al enfriamiento sin necesidad de llegar al agotamiento.</string>
     <string name="hrv_test_btn_start">Iniciar prueba</string>
     <string name="hrv_test_btn_finish">Finalizar prueba</string>
     <string name="hrv_test_btn_cooldown">Iniciar enfriamiento</string>
@@ -223,7 +223,7 @@
     <string name="hrv_test_step2_step_running_fmt">Peldaños (+0,5 km/h cada %1$d min): Mantener ritmo constante por peldaño (se recomienda pista plana o cinta).</string>
     <string name="hrv_test_step2_ramp_cycling">Rampa (+15 W/min): Aumento continuo y lineal de potencia (ideal en modo ERG de rodillo inteligente).</string>
     <string name="hrv_test_step2_ramp_running">Rampa (+0,25 km/h por min): Aumento continuo y lineal de velocidad.</string>
-    <string name="hrv_test_step3_completion">Fin submaximal: En cuanto DFA a1 cae bajo 0,45 durante 60 s, HRVT1 y HRVT2 quedan registrados – ¡sin agotamiento!</string>
+    <string name="hrv_test_step3_completion">Fin submaximal: En cuanto DFA α1 cae bajo 0,45 durante 60 s, HRVT1 y HRVT2 quedan registrados – ¡sin agotamiento!</string>
     <string name="hrv_test_pro_label">Ventaja:</string>
     <string name="hrv_test_con_label">Desventaja:</string>
     <string name="hrv_test_pro_step_4min">Máxima precisión fisiológica: tras 2 min de estabilización, se evalúa una ventana estable de 2 min en estado estacionario.</string>

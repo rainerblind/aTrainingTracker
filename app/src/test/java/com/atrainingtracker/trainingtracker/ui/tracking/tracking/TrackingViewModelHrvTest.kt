@@ -171,7 +171,7 @@ class TrackingViewModelHrvTest {
             rowNr = 0,
             colNr = 0,
             viewSize = ViewSize.NORMAL,
-            label = "DFA a1",
+            label = "DFA α1",
             filterDescription = "",
             value = "--.--",
             units = "",

@@ -135,4 +135,28 @@ class HrvDfaA1SettingsContractTest {
         val maxT2Allowed = customT1 - gap
         assertEquals(0.55f, maxT2Allowed, 0.0001f)
     }
+
+    @Test
+    fun testHrvZoneRangeBadges_useStandardGreekAlpha1Typography() {
+        val activityFile = resolveActivityFile()
+        assertTrue("ZonesSettingsActivity.kt must exist", activityFile.exists())
+        val content = activityFile.readText()
+
+        assertTrue(
+            "Range badges must use standard Greek α1 > (REQ-UI-526.2 / TST-UI-526.2)",
+            content.contains("\"α1 > %.2f\"")
+        )
+        assertTrue(
+            "Range badges must use standard Greek ≤ α1 ≤ (REQ-UI-526.2 / TST-UI-526.2)",
+            content.contains("\"%.2f ≤ α1 ≤ %.2f\"")
+        )
+        assertTrue(
+            "Range badges must use standard Greek α1 < (REQ-UI-526.2 / TST-UI-526.2)",
+            content.contains("\"α1 < %.2f\"")
+        )
+        assertFalse(
+            "Range badges must not contain subscript α₁ (REQ-UI-526.2 / TST-UI-526.2)",
+            content.contains("α₁")
+        )
+    }
 }

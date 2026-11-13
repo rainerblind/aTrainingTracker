@@ -1159,7 +1159,7 @@ fun HrvDfaA1SettingsContent(
         // Zone 2: Aerobic Base (a1 > T1)
         HrvZoneBandCard(
             zoneLabel = stringResource(R.string.hrv_zone_aerobic_base_label),
-            rangeDescription = String.format(Locale.US, "α₁ > %.2f", t1),
+            rangeDescription = String.format(Locale.US, "α1 > %.2f", t1),
             guidance = "Aerobic base endurance pacing, low autonomic stress",
             containerColor = TTColor.Zone2
         )
@@ -1167,7 +1167,7 @@ fun HrvDfaA1SettingsContent(
         // Zone 3: Threshold Transition (T2 <= a1 <= T1)
         HrvZoneBandCard(
             zoneLabel = stringResource(R.string.hrv_zone_threshold_transition_label),
-            rangeDescription = String.format(Locale.US, "%.2f ≤ α₁ ≤ %.2f", t2, t1),
+            rangeDescription = String.format(Locale.US, "%.2f ≤ α1 ≤ %.2f", t2, t1),
             guidance = "Aerobic-to-anaerobic threshold transition, moderate fatigue",
             containerColor = TTColor.Zone3
         )
@@ -1175,7 +1175,7 @@ fun HrvDfaA1SettingsContent(
         // Zone 4: High Intensity / Anaerobic (a1 < T2)
         HrvZoneBandCard(
             zoneLabel = stringResource(R.string.hrv_zone_anaerobic_label),
-            rangeDescription = String.format(Locale.US, "α₁ < %.2f", t2),
+            rangeDescription = String.format(Locale.US, "α1 < %.2f", t2),
             guidance = "Anaerobic / high intensity, rapid autonomic depletion",
             containerColor = TTColor.Zone4
         )

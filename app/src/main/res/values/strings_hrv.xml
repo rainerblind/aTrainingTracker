@@ -20,36 +20,36 @@
 <resources>
     <string name="hrv_rmssd">rMSSD</string>
     <string name="hrv_rmssd_short">rMSSD</string>
-    <string name="hrv_dfa_a1">DFA a1</string>
-    <string name="hrv_dfa_a1_short">a1</string>
+    <string name="hrv_dfa_a1">DFA α1</string>
+    <string name="hrv_dfa_a1_short">α1</string>
     <string name="hrv_artifact_rate">Artifact rate</string>
     <string name="hrv_artifact_rate_short">Art. %</string>
     <string name="hrv_sdnn">SDNN</string>
     <string name="hrv_sdnn_short">SDNN</string>
 
     <!-- Training Zones Tab (ATT-7317 / REQ-TRK-061.4) -->
-    <string name="tab_hrv_dfa_a1">HRV (DFA a1)</string>
+    <string name="tab_hrv_dfa_a1">HRV (DFA α1)</string>
     <string name="hrv_zone_aerobic_base_label">Aerobic Base (Zone 2)</string>
     <string name="hrv_zone_threshold_transition_label">Threshold Transition (Zone 3)</string>
     <string name="hrv_zone_anaerobic_label">High Intensity / Anaerobic (Zone 4)</string>
     <string name="hrv_t1_aerobic_threshold_label">Aerobic Threshold T1 (HRVT1)</string>
     <string name="hrv_t2_anaerobic_threshold_label">Anaerobic Threshold T2 (HRVT2)</string>
-    <string name="tuning_physiology_hrv_zones_link">Configure DFA a1 aerobic and anaerobic thresholds in Training Zones</string>
+    <string name="tuning_physiology_hrv_zones_link">Configure DFA α1 aerobic and anaerobic thresholds in Training Zones</string>
     <string name="hrv_start_guided_ramp_test">Start Guided Threshold Test</string>
     <string name="hrv_preview_pill_aerobic">Aerobic</string>
     <string name="hrv_preview_pill_transition">Transition</string>
     <string name="hrv_preview_pill_anaerobic">Anaerobic</string>
-    <string name="hrv_zones_guidance_desc">HRV DFA a1 threshold boundaries guide aerobic pacing and intensity. Higher values indicate higher fractal variability (aerobic). Zone 2 is green (&gt; T1), Zone 3 is orange (T2..T1), and Zone 4 is red (&lt; T2).</string>
+    <string name="hrv_zones_guidance_desc">HRV DFA α1 threshold boundaries guide aerobic pacing and intensity. Higher values indicate higher fractal variability (aerobic). Zone 2 is green (&gt; T1), Zone 3 is orange (T2..T1), and Zone 4 is red (&lt; T2).</string>
 
     <string name="hrv_info_title">Heart Rate Variability &amp; Aerobic Thresholds</string>
     <string name="hrv_info_trailing_lag_title">Rolling Window &amp; Pacing Lag</string>
-    <string name="hrv_info_trailing_lag_desc">Real-time DFA a1 is calculated over a rolling 2-minute window (updated every 5 seconds) and rMSSD over 60 seconds. Rapid pacing changes take 1–2 minutes to manifest in autonomic telemetry.</string>
+    <string name="hrv_info_trailing_lag_desc">Real-time DFA α1 is calculated over a rolling 2-minute window (updated every 5 seconds) and rMSSD over 60 seconds. Rapid pacing changes take 1–2 minutes to manifest in autonomic telemetry.</string>
     <string name="hrv_info_sensor_recommendation_title">Sensor Recommendations</string>
-    <string name="hrv_info_sensor_recommendation_desc">Accurate beat-to-beat RR intervals require an unsmoothed ECG chest strap (such as Polar H10, Polar H9, Garmin HRM-Dual, HRM-Pro, or HRM-Pro Plus). Optical wrist sensors and budget chest straps with firmware moving-average smoothing (e.g. Magene, CooSpo) distort RR intervals and are unsuitable for DFA a1.</string>
+    <string name="hrv_info_sensor_recommendation_desc">Accurate beat-to-beat RR intervals require an unsmoothed ECG chest strap (such as Polar H10, Polar H9, Garmin HRM-Dual, HRM-Pro, or HRM-Pro Plus). Optical wrist sensors and budget chest straps with firmware moving-average smoothing (e.g. Magene, CooSpo) distort RR intervals and are unsuitable for DFA α1.</string>
     <string name="hrv_info_smoothed_warning_title">Smoothed RR Stream Detected</string>
-    <string name="hrv_info_smoothed_warning_desc">Your active sensor applies internal firmware smoothing or synthetic stepping to RR intervals. Real-time DFA a1 and aerobic threshold guidance are distorted and unreliable.</string>
+    <string name="hrv_info_smoothed_warning_desc">Your active sensor applies internal firmware smoothing or synthetic stepping to RR intervals. Real-time DFA α1 and aerobic threshold guidance are distorted and unreliable.</string>
     <string name="hrv_info_zones_title">Aerobic Threshold Zones</string>
-    <string name="hrv_info_zones_desc">DFA a1 &gt; 0.75 indicates aerobic endurance pacing (Zone 2). Values between 0.75 and 0.50 reflect the aerobic-anaerobic threshold transition (Zone 3). Values below 0.50 indicate high anaerobic intensity (Zone 4).</string>
+    <string name="hrv_info_zones_desc">DFA α1 &gt; 0.75 indicates aerobic endurance pacing (Zone 2). Values between 0.75 and 0.50 reflect the aerobic-anaerobic threshold transition (Zone 3). Values below 0.50 indicate high anaerobic intensity (Zone 4).</string>
     <string name="hrv_info_disclaimer_title">Medical Disclaimer</string>
     <string name="hrv_info_disclaimer_desc">Autonomic HRV metrics in aTrainingTracker are designed for athletic training guidance and do not replace medical evaluation. Cardiac arrhythmias or ectopic beats may invalidate threshold estimates.</string>
 
@@ -105,33 +105,33 @@
     <string name="hrv_readiness_swc_baseline_label">60d SWC Baseline</string>
     <string name="hrv_readiness_rolling_avg_label">7d Rolling Average</string>
 
-    <!-- Interactive DFA a1 / rMSSD Charts & Scatter Plot in Workout Details (ATT-3544 / REQ-PER-035) -->
-    <string name="hrv_scatter_card_title">DFA a1 Aerobic Threshold Dynamics</string>
-    <string name="hrv_scatter_card_subtitle">a1 vs. Heart Rate &amp; Cycling Power</string>
-    <string name="hrv_scatter_aerobic_threshold">Aerobic Threshold (a1 = 0.75)</string>
-    <string name="hrv_scatter_anaerobic_threshold">Anaerobic Threshold (a1 = 0.50)</string>
-    <string name="hrv_scatter_aerobic_threshold_fmt">Aerobic Threshold (a1 = %1$.2f)</string>
-    <string name="hrv_scatter_anaerobic_threshold_fmt">Anaerobic Threshold (a1 = %1$.2f)</string>
+    <!-- Interactive DFA α1 / rMSSD Charts & Scatter Plot in Workout Details (ATT-3544 / REQ-PER-035) -->
+    <string name="hrv_scatter_card_title">DFA α1 Aerobic Threshold Dynamics</string>
+    <string name="hrv_scatter_card_subtitle">α1 vs. Heart Rate &amp; Cycling Power</string>
+    <string name="hrv_scatter_aerobic_threshold">Aerobic Threshold (α1 = 0.75)</string>
+    <string name="hrv_scatter_anaerobic_threshold">Anaerobic Threshold (α1 = 0.50)</string>
+    <string name="hrv_scatter_aerobic_threshold_fmt">Aerobic Threshold (α1 = %1$.2f)</string>
+    <string name="hrv_scatter_anaerobic_threshold_fmt">Anaerobic Threshold (α1 = %1$.2f)</string>
     <string name="hrv_scatter_toggle_hr">Heart Rate</string>
     <string name="hrv_scatter_toggle_power">Power</string>
     <string name="hrv_scatter_toggle_pace">Pace</string>
     <string name="hrv_scatter_smoothed_warning_title">Smoothed Sensor Stream</string>
-    <string name="hrv_scatter_smoothed_warning_desc">Recorded RR intervals exhibit firmware smoothing or synthetic quantization. Aerobic threshold estimates (a1 = 0.75 / 0.50) may be distorted.</string>
+    <string name="hrv_scatter_smoothed_warning_desc">Recorded RR intervals exhibit firmware smoothing or synthetic quantization. Aerobic threshold estimates (α1 = 0.75 / 0.50) may be distorted.</string>
     <string name="hrv_scatter_artifact_suppressed">High-artifact intervals (&gt;5%%) suppressed</string>
     <string name="hrv_scatter_no_data">No HRV data available for this workout</string>
     <string name="hrv_chart_artifact_gap_label">Artifact Gap</string>
 
-    <!-- DFA a1 Threshold Tuning & Dynamic Zones (ATT-6715 / REQ-TRK-061) -->
-    <string name="tuning_dfa_a1_t1_title">DFA a1 Aerobic Threshold (T1)</string>
+    <!-- DFA α1 Threshold Tuning & Dynamic Zones (ATT-6715 / REQ-TRK-061) -->
+    <string name="tuning_dfa_a1_t1_title">DFA α1 Aerobic Threshold (T1)</string>
     <string name="tuning_dfa_a1_t1_desc">Threshold separating aerobic base (Zone 2) from transition (Zone 3). Higher = more fractal / aerobic.</string>
-    <string name="tuning_dfa_a1_t2_title">DFA a1 Anaerobic Threshold (T2)</string>
+    <string name="tuning_dfa_a1_t2_title">DFA α1 Anaerobic Threshold (T2)</string>
     <string name="tuning_dfa_a1_t2_desc">Threshold separating transition (Zone 3) from anaerobic intensity (Zone 4). Higher = more fractal / aerobic.</string>
     <string name="tuning_dfa_a1_default">Default: %1$.2f (Invariant: T1 \u2265 T2 + 0.05)</string>
-    <string name="hrv_info_zones_desc_fmt">DFA a1 &gt; %1$.2f indicates aerobic endurance pacing (Zone 2). Values between %1$.2f and %2$.2f reflect the aerobic-anaerobic threshold transition (Zone 3). Values below %2$.2f indicate high anaerobic intensity (Zone 4).</string>
+    <string name="hrv_info_zones_desc_fmt">DFA α1 &gt; %1$.2f indicates aerobic endurance pacing (Zone 2). Values between %1$.2f and %2$.2f reflect the aerobic-anaerobic threshold transition (Zone 3). Values below %2$.2f indicate high anaerobic intensity (Zone 4).</string>
 
     <!-- Configurable Artifact Gate Threshold (ATT-6714 / REQ-TRK-060.4) -->
     <string name="tuning_hrv_artifact_gate_title">HRV Artifact Gate Threshold</string>
-    <string name="tuning_hrv_artifact_gate_desc" formatted="false">Maximum window artifact rate before DFA a1 calculation is suppressed. Range: 3.0% to 5.0%.</string>
+    <string name="tuning_hrv_artifact_gate_desc" formatted="false">Maximum window artifact rate before DFA α1 calculation is suppressed. Range: 3.0% to 5.0%.</string>
     <string name="tuning_hrv_artifact_gate_default">Default: %1$.1f%%</string>
 
     <!-- Morning HRV CTA & Onboarding in Fitness & Physiology (ATT-6720 / REQ-UI-513) -->
@@ -143,7 +143,7 @@
     <string name="hrv_history_title">Morning HRV History</string>
 
     <!-- Lag-Aligned, Confidence-Gated HRVT1/HRVT2 Thresholds (ATT-3554 / REQ-PER-036) -->
-    <string name="hrv_threshold_card_title">DFA a1 Threshold Estimates (HRVT1 / HRVT2)</string>
+    <string name="hrv_threshold_card_title">DFA α1 Threshold Estimates (HRVT1 / HRVT2)</string>
     <string name="hrv_threshold_card_subtitle">Lag-aligned, confidence-gated physiological thresholds</string>
     <string name="hrv_threshold_hrvt1_label">Aerobic Threshold (HRVT1)</string>
     <string name="hrv_threshold_hrvt2_label">Anaerobic Threshold (HRVT2)</string>
@@ -158,15 +158,15 @@
     <string name="hrv_threshold_stat_neff">N: %1$d min</string>
     <string name="hrv_threshold_stat_neff_steps">N: %1$d steps</string>
     <string name="hrv_threshold_stat_artifact">Mean artifact: %1$.1f%%</string>
-    <string name="hrv_threshold_diag_steady">Steady endurance: DFA a1 stayed above threshold span</string>
+    <string name="hrv_threshold_diag_steady">Steady endurance: DFA α1 stayed above threshold span</string>
     <string name="hrv_threshold_diag_high_artifact">High RR artifact rate (%1$.1f%% &gt; 5.0%%)</string>
     <string name="hrv_threshold_diag_short_duration">Insufficient transition duration (N = %1$d &lt; %2$d)</string>
     <string name="hrv_threshold_diag_low_r2">Low linear correlation (R² = %1$.2f &lt; %2$.2f)</string>
     <string name="hrv_threshold_no_estimate">--</string>
     <string name="hrv_threshold_informative_only">Informational only; excluded from zone updates</string>
 
-    <!-- Guided DFA a1 Ramp/Step Test Screen (ATT-4969 / REQ-TRK-071) -->
-    <string name="hrv_test_title">Guided DFA a1 Threshold Test</string>
+    <!-- Guided DFA α1 Ramp/Step Test Screen (ATT-4969 / REQ-TRK-071) -->
+    <string name="hrv_test_title">Guided DFA α1 Threshold Test</string>
     <string name="hrv_test_subtitle">Aerobic &amp; Anaerobic Threshold Protocol</string>
     <string name="hrv_test_protocol_label">Protocol Type</string>
     <string name="hrv_test_protocol_step">Progressive Step Test</string>
@@ -194,10 +194,10 @@
     <string name="hrv_test_target_power">Target: %1$d W</string>
     <string name="hrv_test_target_pace">Target: %1$s</string>
     <string name="hrv_test_time_remaining">Time Remaining: %1$s</string>
-    <string name="hrv_test_live_a1">Live a1: %1$.2f</string>
+    <string name="hrv_test_live_a1">Live α1: %1$.2f</string>
     <string name="hrv_test_live_artifacts">Artifacts: %1$.1f%%</string>
     <string name="hrv_test_early_complete_title">Thresholds Captured!</string>
-    <string name="hrv_test_early_complete_desc">DFA a1 has dropped below 0.45. Both HRVT1 and HRVT2 are captured. You can now transition to cool-down without riding to exhaustion.</string>
+    <string name="hrv_test_early_complete_desc">DFA α1 has dropped below 0.45. Both HRVT1 and HRVT2 are captured. You can now transition to cool-down without riding to exhaustion.</string>
     <string name="hrv_test_btn_start">Start Test</string>
     <string name="hrv_test_btn_finish">Finish Test</string>
     <string name="hrv_test_btn_cooldown">Begin Cool-down</string>
@@ -223,7 +223,7 @@
     <string name="hrv_test_step2_step_running_fmt">Steps (+0.5 km/h every %1$d min): Hold steady pace per step (flat track or treadmill recommended).</string>
     <string name="hrv_test_step2_ramp_cycling">Ramp (+15 W/min): Continuous linear power increase (ideal in smart trainer ERG mode).</string>
     <string name="hrv_test_step2_ramp_running">Ramp (+0.25 km/h per min): Continuous linear speed increase.</string>
-    <string name="hrv_test_step3_completion">Submaximal End: Once DFA a1 drops below 0.45 for 60 s, HRVT1 &amp; HRVT2 are captured – no exhaustion needed!</string>
+    <string name="hrv_test_step3_completion">Submaximal End: Once DFA α1 drops below 0.45 for 60 s, HRVT1 &amp; HRVT2 are captured – no exhaustion needed!</string>
     <string name="hrv_test_pro_label">Advantage:</string>
     <string name="hrv_test_con_label">Disadvantage:</string>
     <string name="hrv_test_pro_step_4min">Highest physiological precision – after a 2-min transient settling period, a stable 2-min steady-state window is evaluated.</string>

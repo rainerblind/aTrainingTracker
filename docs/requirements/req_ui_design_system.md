@@ -17161,3 +17161,43 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 • *Then* all titles and summaries are localized with 100% parity and no placeholder text.
 
 **Invariants**: Zero database migrations on `devices.db` or `hrv_readiness.db`; zero modifications to existing morning check scoring, baseline corridors, or workout tracking lifecycle; zero background alarms or wake locks.
+
+
+### REQ-UI-526: Global Physiological Typography Standardization for DFA α1 and α1 [Verified]
+- **Target Release**: `V5.0.0`
+- **Tickets**: `ATT-7521`
+- **Tests**: `TST-UI-526`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Implementation**: `strings_hrv.xml` (all 9 locales), `SensorType.java`, `ZonesSettingsActivity.kt`
+- **Rationale**: Detrended Fluctuation Analysis alpha-1 nomenclature was historically inconsistent across the application due to early ASCII representations (`DFA a1` / `a1`) in `strings_hrv.xml`, subscript Greek notations (`α₁`) in `ZonesSettingsActivity.kt` range badges, and standard Greek notations (`DFA α1`, `Δα1`) in newer durability and ramp test components. Standardizing globally on the authentic Greek letter α (`DFA α1` and `α1`) ensures professional, consistent physiological typography across all user-facing screens and all 9 supported locales while strictly maintaining internal enum and preference key stability.
+- **Description**:
+  1. *9-Locale String Resource Typography Parity (`REQ-UI-526.1`)*:
+     - All user-facing string definitions in `app/src/main/res/values*/strings_hrv.xml` referencing Detrended Fluctuation Analysis alpha-1 SHALL use the authentic Greek letter α (`DFA α1` and `α1`) across all 9 supported locales (`values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`).
+     - This SHALL include `hrv_dfa_a1` (`DFA α1`), `hrv_dfa_a1_short` (`α1`), `tab_hrv_dfa_a1` (`HRV (DFA α1)` / `VFC (DFA α1)`), `hrv_test_live_a1` (`Live α1: %1$.2f` / localized counterparts), and all related threshold, tuning, and guided test descriptions.
+  2. *Zone Settings Dynamic Range Badge Alignment (`REQ-UI-526.2`)*:
+     - In `ZonesSettingsActivity.kt`, dynamic zone range badge strings SHALL use standard `α1` (`"α1 > %.2f"`, `"%.2f ≤ α1 ≤ %.2f"`, `"α1 < %.2f"`) instead of subscript `α₁`, aligning with app-wide typography.
+  3. *Sensor Type Presentation Integrity (`REQ-UI-526.3`)*:
+     - `SensorType.HRV_DFA_A1` SHALL resolve its user-facing full label and short title from `R.string.hrv_dfa_a1` (`DFA α1`) and `R.string.hrv_dfa_a1_short` (`α1`).
+  4. *Internal Symbol, Preference Key, and Test Tag Invariance (`REQ-UI-526.4`)*:
+     - Enum names (`SensorType.HRV_DFA_A1`), resource identifiers (`R.string.hrv_dfa_a1`, `R.string.hrv_dfa_a1_short`, `R.string.tab_hrv_dfa_a1`), DataStore preference keys (`tuning_dfa_a1_threshold_t1`, `tuning_dfa_a1_threshold_t2`, `hrv_dfa_a1_zone_*`), and UI test tags (`hrv_test_live_a1`, `hrv_alpha1_scatter_card`) SHALL remain strictly unchanged to preserve backward compatibility, schema stability, and test harness invariants.
+  5. *Localization Parity & Specifier Safety (`REQ-UI-526.5`)*:
+     - 100% key and format specifier parity SHALL be preserved across all 9 localized resource files with zero missing keys and zero AAPT2 formatting errors.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* the application running under any of the 9 supported locales,
+• *When* the user views any screen referencing Detrended Fluctuation Analysis alpha-1 (sensor telemetry fields, Training Zones tab title, range badges, workout details cards/charts, guided ramp test, or advanced tuning),
+• *Then* the metric is consistently displayed using Greek letter α (`DFA α1` or `α1`) with zero occurrences of ASCII `DFA a1` or subscript `α₁`.
+• *Given* `SensorType.HRV_DFA_A1`,
+• *When* querying `fullNameId` and `shortNameId`,
+• *Then* they resolve to `R.string.hrv_dfa_a1` and `R.string.hrv_dfa_a1_short` which contain `DFA α1` and `α1` respectively.
+• *Given* `ZonesSettingsActivity.kt` range badges,
+• *When* rendered for Aerobic, Transition, and Anaerobic zones,
+• *Then* badge strings display `"α1 > %.2f"`, `"%.2f ≤ α1 ≤ %.2f"`, and `"α1 < %.2f"`.
+• *Given* DataStore keys and SQLite schema,
+• *When* reading or writing preferences,
+• *Then* all keys and database columns remain 100% invariant.
+
+**Invariants**: Resource IDs, DataStore preference keys, enum constants, and SQLite tables remain unchanged; zero changes to mathematical DSP calculation or threshold invariant $T_1 \ge T_2 + 0.05f$.
+

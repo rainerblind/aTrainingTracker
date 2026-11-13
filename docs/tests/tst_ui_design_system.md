@@ -8479,3 +8479,24 @@
   6. *Targeted Unit Test Regression Suite (`TST-UI-525.6`)*:
      - Execute `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.settings.*" --tests "com.atrainingtracker.banalservice.database.*" --tests "com.atrainingtracker.trainingtracker.database.hrv.*" --tests "com.atrainingtracker.trainingtracker.ui.tracking.controltracking.*"`.
      - Assert 100% pass rate.
+
+
+### TST-UI-526: **Global Physiological Typography DFA α1 Verification Suite** [Verified]
+- **Target Release**: `V5.0.0`
+- **Requirement(s)**: `REQ-UI-526`
+- **Component**: `strings_hrv.xml` (all 9 locales), `ZonesSettingsActivity.kt`, `SensorType.java`, `SensorTypeHrvTest.kt`, `HrvDfaA1SettingsContractTest.kt`, `TranslationParityTest.kt`
+- **Jira**: `ATT-7521`
+- **Test Description**:
+  1. *SensorType HRV_DFA_A1 Typography Verification (`TST-UI-526.1`, `SensorTypeHrvTest.kt`)*:
+     - Verify `SensorType.HRV_DFA_A1` retains `fullNameId = R.string.hrv_dfa_a1` and `shortNameId = R.string.hrv_dfa_a1_short`.
+     - Assert that resolved string contents for default locale contain `'DFA α1'` and `'α1'`.
+  2. *Zone Settings Badge Contract Verification (`TST-UI-526.2`, `HrvDfaA1SettingsContractTest.kt`)*:
+     - Verify `ZonesSettingsActivity.kt` source code contains standard Greek `"α1"` in range badge templates (`"α1 > "`, `" ≤ α1 ≤ "`, `"α1 < "`) and contains zero occurrences of subscript `"α₁"`.
+  3. *UI Test Fixture Typography Alignment (`TST-UI-526.3`, `HrvInfoBottomSheetTest.kt`, `SensorFieldZoneDisplayTest.kt`, `TrackingViewModelHrvTest.kt`)*:
+     - Update mock sensor field labels and test expectations from `"DFA a1"` to `"DFA α1"` across affected UI test fixtures.
+  4. *9-Language Localization Parity Verification (`TST-UI-526.4`, `TranslationParityTest.kt`)*:
+     - Verify 100% translation parity across all 9 locales (`values`, `values-de`, `values-es`, `values-fr`, `values-it`, `values-ja`, `values-nl`, `values-pl`, `values-pt`) with zero missing keys and matching `%1$.2f` format specifiers.
+  5. *Targeted Unit Test Regression Suite (`TST-UI-526.5`)*:
+     - Execute `./gradlew testDebugUnitTest --tests "com.atrainingtracker.banalservice.sensor.*" --tests "com.atrainingtracker.trainingtracker.zones.*" --tests "com.atrainingtracker.trainingtracker.ui.tracking.*" --tests "com.atrainingtracker.trainingtracker.localization.*"`.
+     - Assert 100% pass rate.
+
