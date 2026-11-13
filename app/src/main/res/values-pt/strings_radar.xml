@@ -95,6 +95,13 @@
 
     <!-- Radar Tail Light Control (ATT-5102 / REQ-CON-031) -->
     <string name="radar_light_settings_title">Controlo da luz traseira</string>
+    <string name="radar_light_control_mode_title">Modo de controlo da luz</string>
+    <string name="radar_light_control_mode_manual">Manual</string>
+    <string name="radar_light_control_mode_manual_desc">A luz traseira é operada manualmente e não se altera no início/fim do treino</string>
+    <string name="radar_light_control_mode_fixed">Modo fixo</string>
+    <string name="radar_light_control_mode_fixed_desc">A luz traseira liga no início do treino e desliga no término</string>
+    <string name="radar_light_control_mode_smart">Automático</string>
+    <string name="radar_light_control_mode_smart_desc">A luz traseira adapta-se automaticamente à luz ambiente, túneis e tráfego</string>
     <string name="radar_light_mode_title">Modo de luz</string>
     <string name="radar_light_mode_off">Desligado (Apenas radar)</string>
     <string name="radar_light_mode_day_flash">Flash diurno</string>

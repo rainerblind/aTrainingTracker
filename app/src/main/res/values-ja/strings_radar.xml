@@ -95,6 +95,13 @@
 
     <!-- Radar Tail Light Control (ATT-5102 / REQ-CON-031) -->
     <string name="radar_light_settings_title">テールライト制御</string>
+    <string name="radar_light_control_mode_title">テールライト制御モード</string>
+    <string name="radar_light_control_mode_manual">手動</string>
+    <string name="radar_light_control_mode_manual_desc">テールライトは手動操作され、ワークアウト開始/終了時も維持されます</string>
+    <string name="radar_light_control_mode_fixed">固定モード</string>
+    <string name="radar_light_control_mode_fixed_desc">ワークアウト開始時に点灯し、終了時に消灯します</string>
+    <string name="radar_light_control_mode_smart">自動</string>
+    <string name="radar_light_control_mode_smart_desc">周囲の明るさ、トンネル、後続車に応じて自動調整します</string>
     <string name="radar_light_mode_title">点灯モード</string>
     <string name="radar_light_mode_off">オフ（レーダーのみ）</string>
     <string name="radar_light_mode_day_flash">デイフラッシュ</string>

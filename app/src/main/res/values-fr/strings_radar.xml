@@ -95,6 +95,13 @@
 
     <!-- Radar Tail Light Control (ATT-5102 / REQ-CON-031) -->
     <string name="radar_light_settings_title">Commande du feu arrière</string>
+    <string name="radar_light_control_mode_title">Mode de commande du feu</string>
+    <string name="radar_light_control_mode_manual">Manuel</string>
+    <string name="radar_light_control_mode_manual_desc">Le feu arrière est géré manuellement et reste inchangé au démarrage/à la fin</string>
+    <string name="radar_light_control_mode_fixed">Mode fixe</string>
+    <string name="radar_light_control_mode_fixed_desc">Le feu arrière s\'allume au début de l\'entraînement et s\'éteint à la fin</string>
+    <string name="radar_light_control_mode_smart">Automatique</string>
+    <string name="radar_light_control_mode_smart_desc">Le feu arrière s\'adapte automatiquement à la luminosité, aux tunnels et au trafic</string>
     <string name="radar_light_mode_title">Mode d\'éclairage</string>
     <string name="radar_light_mode_off">Éteint (Radar uniquement)</string>
     <string name="radar_light_mode_day_flash">Flash de jour</string>

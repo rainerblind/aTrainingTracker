@@ -95,6 +95,13 @@
 
     <!-- Radar Tail Light Control (ATT-5102 / REQ-CON-031) -->
     <string name="radar_light_settings_title">Rücklicht-Steuerung</string>
+    <string name="radar_light_control_mode_title">Rücklicht-Steuerung</string>
+    <string name="radar_light_control_mode_manual">Manuell</string>
+    <string name="radar_light_control_mode_manual_desc">Rücklicht wird manuell bedient und bleibt bei Trainingsstart/-ende unverändert</string>
+    <string name="radar_light_control_mode_fixed">Fester Modus</string>
+    <string name="radar_light_control_mode_fixed_desc">Schaltet das Rücklicht bei Trainingsbeginn ein und bei Trainingsende aus</string>
+    <string name="radar_light_control_mode_smart">Automatik</string>
+    <string name="radar_light_control_mode_smart_desc">Rücklicht passt sich automatisch an Umgebungslicht, Tunnel und herannahenden Verkehr an</string>
     <string name="radar_light_mode_title">Lichtmodus</string>
     <string name="radar_light_mode_off">Aus (Nur Radar)</string>
     <string name="radar_light_mode_day_flash">Tag-Blinken</string>

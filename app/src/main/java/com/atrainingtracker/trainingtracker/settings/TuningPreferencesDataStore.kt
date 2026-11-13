@@ -93,6 +93,15 @@ enum class RadarAudioRoute {
 }
 
 /**
+ * Rearview radar tail light control mode (REQ-CON-034.7 / ATT-7538).
+ */
+enum class RadarLightControlMode {
+    MANUAL,
+    FIXED_WORKOUT_MODE,
+    SMART_AUTOMATION
+}
+
+/**
  * Encapsulates battle-tested factory defaults and safety clamping bounds for advanced tuning.
  */
 object TuningPreferencesDefaults {
@@ -110,6 +119,7 @@ object TuningPreferencesDefaults {
     val RADAR_AUDIO_ROUTE = RadarAudioRoute.SYSTEM_DEFAULT
     const val RADAR_HAPTIC_ALERT = true
     val RADAR_LIGHT_DEFAULT_MODE = RadarLightMode.DAY_FLASH
+    val RADAR_LIGHT_CONTROL_MODE = RadarLightControlMode.FIXED_WORKOUT_MODE
     const val RADAR_AUTO_LIGHT_CONTROL = true
     const val RADAR_SMART_LIGHT_AUTOMATION = false
     const val RADAR_BRAKE_LIGHT_ENABLED = true
@@ -441,6 +451,7 @@ data class TuningConfig(
     val radarAudioRoute: RadarAudioRoute = TuningPreferencesDefaults.RADAR_AUDIO_ROUTE,
     val radarHapticAlert: Boolean = TuningPreferencesDefaults.RADAR_HAPTIC_ALERT,
     val radarLightDefaultMode: RadarLightMode = TuningPreferencesDefaults.RADAR_LIGHT_DEFAULT_MODE,
+    val radarLightControlMode: RadarLightControlMode = TuningPreferencesDefaults.RADAR_LIGHT_CONTROL_MODE,
     val radarAutoLightControl: Boolean = TuningPreferencesDefaults.RADAR_AUTO_LIGHT_CONTROL,
     val radarSmartLightAutomation: Boolean = TuningPreferencesDefaults.RADAR_SMART_LIGHT_AUTOMATION,
     val radarBrakeLightEnabled: Boolean = TuningPreferencesDefaults.RADAR_BRAKE_LIGHT_ENABLED,
@@ -614,6 +625,7 @@ class TuningPreferencesDataStore(private val context: Context) {
         val KEY_RADAR_AUDIO_ROUTE: Preferences.Key<String> = stringPreferencesKey("tuning_radar_audio_route")
         val KEY_RADAR_HAPTIC_ALERT: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_radar_haptic_alert")
         val KEY_RADAR_LIGHT_DEFAULT_MODE: Preferences.Key<String> = stringPreferencesKey("tuning_radar_light_default_mode")
+        val KEY_RADAR_LIGHT_CONTROL_MODE: Preferences.Key<String> = stringPreferencesKey("tuning_radar_light_control_mode")
         val KEY_RADAR_AUTO_LIGHT_CONTROL: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_radar_auto_light_control")
         val KEY_RADAR_SMART_LIGHT_AUTOMATION: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_radar_smart_light_automation")
         val KEY_RADAR_BRAKE_LIGHT_ENABLED: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_radar_brake_light_enabled")
@@ -716,6 +728,7 @@ class TuningPreferencesDataStore(private val context: Context) {
             KEY_RADAR_AUDIO_ROUTE,
             KEY_RADAR_HAPTIC_ALERT,
             KEY_RADAR_LIGHT_DEFAULT_MODE,
+            KEY_RADAR_LIGHT_CONTROL_MODE,
             KEY_RADAR_AUTO_LIGHT_CONTROL,
             KEY_RADAR_SMART_LIGHT_AUTOMATION,
             KEY_RADAR_BRAKE_LIGHT_ENABLED,
@@ -727,6 +740,26 @@ class TuningPreferencesDataStore(private val context: Context) {
             KEY_RADAR_LANE_CHANGE_TICK_ENABLED,
             KEY_RADAR_CLOSE_PASS_THRESHOLD
         )
+
+        /**
+         * Resolves and migrates 3-way radar tail light control mode with legacy fallback (REQ-CON-031.5b).
+         */
+        @VisibleForTesting
+        fun resolveRadarLightControlMode(prefs: Preferences): RadarLightControlMode {
+            val rawControlModeStr = prefs[KEY_RADAR_LIGHT_CONTROL_MODE]
+            if (rawControlModeStr != null) {
+                return safeEnumValueOf(rawControlModeStr, TuningPreferencesDefaults.RADAR_LIGHT_CONTROL_MODE)
+            }
+            val legacySmart = prefs[KEY_RADAR_SMART_LIGHT_AUTOMATION]
+            val legacyAuto = prefs[KEY_RADAR_AUTO_LIGHT_CONTROL]
+            return if (legacySmart == true) {
+                RadarLightControlMode.SMART_AUTOMATION
+            } else if (legacyAuto == true || (legacyAuto == null && TuningPreferencesDefaults.RADAR_AUTO_LIGHT_CONTROL)) {
+                RadarLightControlMode.FIXED_WORKOUT_MODE
+            } else {
+                RadarLightControlMode.MANUAL
+            }
+        }
 
         /**
          * Resolves and maps sport-specific auto-pause preferences with fallback to legacy keys and default values.
@@ -869,6 +902,11 @@ data class AutoPausePreferences(
 )
 
     val tuningConfigFlow: Flow<TuningConfig> = context.dataStore.data.map { prefs ->
+        mapPreferencesToConfig(prefs)
+    }
+
+    @VisibleForTesting
+    internal fun mapPreferencesToConfig(prefs: Preferences): TuningConfig {
         val rawElevationDomainStr = prefs[KEY_ELEVATION_X_AXIS_DOMAIN] ?: prefs[KEY_PROFILE_X_AXIS_DOMAIN]
         val elevationDomain = safeEnumValueOf(rawElevationDomainStr, TuningPreferencesDefaults.ELEVATION_X_AXIS_DOMAIN)
 
@@ -901,8 +939,18 @@ data class AutoPausePreferences(
         val radarHapticAlert = prefs[KEY_RADAR_HAPTIC_ALERT] ?: TuningPreferencesDefaults.RADAR_HAPTIC_ALERT
         val rawLightDefaultModeStr = prefs[KEY_RADAR_LIGHT_DEFAULT_MODE]
         val radarLightDefaultMode = safeEnumValueOf(rawLightDefaultModeStr, TuningPreferencesDefaults.RADAR_LIGHT_DEFAULT_MODE)
-        val radarAutoLightControl = prefs[KEY_RADAR_AUTO_LIGHT_CONTROL] ?: TuningPreferencesDefaults.RADAR_AUTO_LIGHT_CONTROL
-        val radarSmartLightAutomation = prefs[KEY_RADAR_SMART_LIGHT_AUTOMATION] ?: TuningPreferencesDefaults.RADAR_SMART_LIGHT_AUTOMATION
+        val rawControlModeStr = prefs[KEY_RADAR_LIGHT_CONTROL_MODE]
+        val radarLightControlMode = resolveRadarLightControlMode(prefs)
+        val radarAutoLightControl = if (rawControlModeStr != null) {
+            radarLightControlMode == RadarLightControlMode.FIXED_WORKOUT_MODE
+        } else {
+            prefs[KEY_RADAR_AUTO_LIGHT_CONTROL] ?: TuningPreferencesDefaults.RADAR_AUTO_LIGHT_CONTROL
+        }
+        val radarSmartLightAutomation = if (rawControlModeStr != null) {
+            radarLightControlMode == RadarLightControlMode.SMART_AUTOMATION
+        } else {
+            prefs[KEY_RADAR_SMART_LIGHT_AUTOMATION] ?: TuningPreferencesDefaults.RADAR_SMART_LIGHT_AUTOMATION
+        }
         val radarBrakeLightEnabled = prefs[KEY_RADAR_BRAKE_LIGHT_ENABLED] ?: TuningPreferencesDefaults.RADAR_BRAKE_LIGHT_ENABLED
         val radarPelotonAudioSync = prefs[KEY_RADAR_PELOTON_AUDIO_SYNC] ?: TuningPreferencesDefaults.RADAR_PELOTON_AUDIO_SYNC
         val radarSmartUrbanMute = prefs[KEY_RADAR_SMART_URBAN_MUTE] ?: TuningPreferencesDefaults.RADAR_SMART_URBAN_MUTE
@@ -1021,7 +1069,7 @@ data class AutoPausePreferences(
 
         val autoPausePrefs = mapAutoPausePreferences(prefs)
 
-        TuningConfig(
+        return TuningConfig(
             elevationXAxisDomain = elevationDomain,
             telemetryXAxisDomain = telemetryDomain,
             cockpitFontFamily = cockpitFontFamily,
@@ -1143,6 +1191,7 @@ data class AutoPausePreferences(
             radarAudioRoute = radarAudioRoute,
             radarHapticAlert = radarHapticAlert,
             radarLightDefaultMode = radarLightDefaultMode,
+            radarLightControlMode = radarLightControlMode,
             radarAutoLightControl = radarAutoLightControl,
             radarSmartLightAutomation = radarSmartLightAutomation,
             radarBrakeLightEnabled = radarBrakeLightEnabled,
@@ -1547,8 +1596,9 @@ data class AutoPausePreferences(
             prefs[KEY_RADAR_AUDIO_ROUTE] = config.radarAudioRoute.name
             prefs[KEY_RADAR_HAPTIC_ALERT] = config.radarHapticAlert
             prefs[KEY_RADAR_LIGHT_DEFAULT_MODE] = config.radarLightDefaultMode.name
-            prefs[KEY_RADAR_AUTO_LIGHT_CONTROL] = config.radarAutoLightControl
-            prefs[KEY_RADAR_SMART_LIGHT_AUTOMATION] = config.radarSmartLightAutomation
+            prefs[KEY_RADAR_LIGHT_CONTROL_MODE] = config.radarLightControlMode.name
+            prefs[KEY_RADAR_AUTO_LIGHT_CONTROL] = (config.radarLightControlMode == RadarLightControlMode.FIXED_WORKOUT_MODE)
+            prefs[KEY_RADAR_SMART_LIGHT_AUTOMATION] = (config.radarLightControlMode == RadarLightControlMode.SMART_AUTOMATION)
             prefs[KEY_RADAR_BRAKE_LIGHT_ENABLED] = config.radarBrakeLightEnabled
             prefs[KEY_RADAR_PELOTON_AUDIO_SYNC] = config.radarPelotonAudioSync
             prefs[KEY_RADAR_SMART_URBAN_MUTE] = config.radarSmartUrbanMute
@@ -1778,8 +1828,17 @@ data class AutoPausePreferences(
         safeEnumValueOf(prefs[KEY_RADAR_LIGHT_DEFAULT_MODE], TuningPreferencesDefaults.RADAR_LIGHT_DEFAULT_MODE)
     }
 
+    val radarLightControlModeFlow: Flow<RadarLightControlMode> = context.dataStore.data.map { prefs ->
+        resolveRadarLightControlMode(prefs)
+    }
+
     val radarAutoLightControlFlow: Flow<Boolean> = context.dataStore.data.map { prefs ->
-        prefs[KEY_RADAR_AUTO_LIGHT_CONTROL] ?: TuningPreferencesDefaults.RADAR_AUTO_LIGHT_CONTROL
+        val rawControl = prefs[KEY_RADAR_LIGHT_CONTROL_MODE]
+        if (rawControl != null) {
+            safeEnumValueOf(rawControl, TuningPreferencesDefaults.RADAR_LIGHT_CONTROL_MODE) == RadarLightControlMode.FIXED_WORKOUT_MODE
+        } else {
+            prefs[KEY_RADAR_AUTO_LIGHT_CONTROL] ?: TuningPreferencesDefaults.RADAR_AUTO_LIGHT_CONTROL
+        }
     }
 
     suspend fun updateRadarLightDefaultMode(mode: RadarLightMode) {
@@ -1788,19 +1847,46 @@ data class AutoPausePreferences(
         }
     }
 
+    suspend fun updateRadarLightControlMode(mode: RadarLightControlMode) {
+        context.dataStore.edit { prefs ->
+            prefs[KEY_RADAR_LIGHT_CONTROL_MODE] = mode.name
+            prefs[KEY_RADAR_AUTO_LIGHT_CONTROL] = (mode == RadarLightControlMode.FIXED_WORKOUT_MODE)
+            prefs[KEY_RADAR_SMART_LIGHT_AUTOMATION] = (mode == RadarLightControlMode.SMART_AUTOMATION)
+        }
+    }
+
     suspend fun updateRadarAutoLightControl(enabled: Boolean) {
         context.dataStore.edit { prefs ->
             prefs[KEY_RADAR_AUTO_LIGHT_CONTROL] = enabled
+            prefs[KEY_RADAR_LIGHT_CONTROL_MODE] = if (enabled) {
+                RadarLightControlMode.FIXED_WORKOUT_MODE.name
+            } else {
+                RadarLightControlMode.MANUAL.name
+            }
         }
     }
 
     val radarSmartLightAutomationFlow: Flow<Boolean> = context.dataStore.data.map { prefs ->
-        prefs[KEY_RADAR_SMART_LIGHT_AUTOMATION] ?: TuningPreferencesDefaults.RADAR_SMART_LIGHT_AUTOMATION
+        val rawControl = prefs[KEY_RADAR_LIGHT_CONTROL_MODE]
+        if (rawControl != null) {
+            safeEnumValueOf(rawControl, TuningPreferencesDefaults.RADAR_LIGHT_CONTROL_MODE) == RadarLightControlMode.SMART_AUTOMATION
+        } else {
+            prefs[KEY_RADAR_SMART_LIGHT_AUTOMATION] ?: TuningPreferencesDefaults.RADAR_SMART_LIGHT_AUTOMATION
+        }
     }
 
     suspend fun updateRadarSmartLightAutomation(enabled: Boolean) {
         context.dataStore.edit { prefs ->
             prefs[KEY_RADAR_SMART_LIGHT_AUTOMATION] = enabled
+            prefs[KEY_RADAR_LIGHT_CONTROL_MODE] = if (enabled) {
+                RadarLightControlMode.SMART_AUTOMATION.name
+            } else {
+                if (prefs[KEY_RADAR_AUTO_LIGHT_CONTROL] == true) {
+                    RadarLightControlMode.FIXED_WORKOUT_MODE.name
+                } else {
+                    RadarLightControlMode.MANUAL.name
+                }
+            }
         }
     }
 

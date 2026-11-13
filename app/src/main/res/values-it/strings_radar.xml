@@ -95,6 +95,13 @@
 
     <!-- Radar Tail Light Control (ATT-5102 / REQ-CON-031) -->
     <string name="radar_light_settings_title">Controllo luce posteriore</string>
+    <string name="radar_light_control_mode_title">Modalità di controllo luce</string>
+    <string name="radar_light_control_mode_manual">Manuale</string>
+    <string name="radar_light_control_mode_manual_desc">La luce posteriore è controllata manualmente e non cambia all\'inizio/fine allenamento</string>
+    <string name="radar_light_control_mode_fixed">Modo fisso</string>
+    <string name="radar_light_control_mode_fixed_desc">La luce posteriore si accende all\'inizio dell\'allenamento e si spegne al termine</string>
+    <string name="radar_light_control_mode_smart">Automatico</string>
+    <string name="radar_light_control_mode_smart_desc">La luce posteriore si adatta automaticamente a luce ambiente, gallerie e traffico</string>
     <string name="radar_light_mode_title">Modalità luce</string>
     <string name="radar_light_mode_off">Spento (Solo radar)</string>
     <string name="radar_light_mode_day_flash">Flash diurno</string>
