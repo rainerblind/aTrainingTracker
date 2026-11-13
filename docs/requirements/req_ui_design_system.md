@@ -14633,13 +14633,13 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 
 **Invariants**: Zero phantom laps (`REQ-TRK-002`), strictly interior boundary clamping $[startIndex(k) + 1, endIndex(k+1) - 1]$, contiguous $1 \dots K$ lap sequence, immutable workout total duration/distance, 9-locale parity without inline emojis, 100% clean-room test pass rate.
 
-### REQ-UI-451: Tracking Cockpit SensorStatus Top Bar 16 dp Screen Edge Offset and 32 dp Touch Target Symmetrical Centering [Verified]
+### REQ-UI-451: Tracking Cockpit SensorStatus Top Bar 16 dp Screen Edge Offset, 32 dp Touch Targets and 9-Icon Radar Integration [Verified]
 - **Tests**: `TST-UI-451`
 - **Priority**: Medium
 - **Type**: Functional
 - **Verification Method**: Unit
-- **Implementation**: `SensorStatus.kt`, `TrackingTabsScreen.kt`
-- **Rationale**: To eliminate display edge clinging (~4 dp) of the hamburger menu button and supporter emblem in the top tracking cockpit bar, align edge margins with Material 3 standard 16 dp offsets (Option A), improve touch ergonomics from 24 dp to 32 dp, and strictly preserve mathematical centering of the 8 telemetry sensor indicators (ATT-5422, extending `REQ-UI-445.3`):
+- **Implementation**: `SensorStatus.kt`, `SensorSourceDialog.kt`, `SensorType.java`, `res/drawable/ic_radar.xml`, `TrackingTabsScreen.kt`
+- **Rationale**: To eliminate display edge clinging (~4 dp) of the hamburger menu button and supporter emblem in the top tracking cockpit bar, align edge margins with Material 3 standard 16 dp offsets (Option A), improve touch ergonomics from 24 dp to 32 dp, strictly preserve mathematical centering of telemetry sensor indicators, and seamlessly integrate the 9th sensor indicator (`SensorType.RADAR_THREAT_COUNT` / `DeviceType.BIKE_RADAR`) within the 272 dp portrait budget without clipping on 360 dp viewports (ATT-5422, ATT-7544, extending `REQ-UI-445.3`):
 - **Description**:
   1. *Screen Edge Offset & Padding Geometry (`REQ-UI-451.1`)*:
      - In portrait mode (`!isCompactLandscape`), `SensorStatus.kt` outer `Row` SHALL apply `padding(horizontal = 8.dp, vertical = 4.dp)`.
@@ -14647,29 +14647,43 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
   2. *Symmetrical 32 dp Touch Targets & Fallback Spacers (`REQ-UI-451.2`)*:
      - The left drawer hamburger menu `IconButton` (`onMenuClick`) and right supporter status emblem `IconButton` (`onSupporterClick`) SHALL have touch target bounds of `Modifier.size(32.dp)` housing their standard 24 dp vector drawables (`Icons.Default.Menu` and `supporterEmblemRes`).
      - Symmetrical inactive/fallback spacers (`onMenuClick == null` and `supporterEmblemRes == null`) in both branches SHALL be sized identically to `Modifier.size(32.dp)`.
-     - The central container `Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center)` housing the 8 telemetry sensor icons SHALL remain strictly and mathematically centered in the viewport across all supporter tiers (`FREE`, `PIONEER`, `BRONZE`, `SILVER`, `GOLD`, `DIAMOND`).
+     - The central container `Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center)` housing the telemetry sensor icons SHALL remain strictly and mathematically centered in the viewport across all supporter tiers (`FREE`, `PIONEER`, `BRONZE`, `SILVER`, `GOLD`, `DIAMOND`).
   3. *Landscape Mode & Invariant Preservation (`REQ-UI-451.3`)*:
-     - Compact landscape mode (`isCompactLandscape = true`) governed by `REQ-UI-434.1` SHALL remain untouched (max 28 dp height, trailing horizontal layout).
+     - Compact landscape mode (`isCompactLandscape = true`) governed by `REQ-UI-434.1` SHALL remain untouched (max 28 dp height, trailing horizontal layout), rendering all 9 sensor icons centered alongside the menu button.
      - Sensor source dialog trigger, sensor alpha states (`INACTIVE_SENSOR_ALPHA = 0.38f`), and telemetry click behaviors SHALL remain 100% operational with zero regressions.
+  4. *Nine-Icon Header Budget & Radar Vector Icon (`REQ-UI-451.4`)*:
+     - `sensorDefinitions` in `SensorStatus.kt` SHALL include `SensorType.RADAR_THREAT_COUNT` as the 9th sensor icon (following `POWER`) in both portrait and compact landscape modes.
+     - In portrait mode (`!isCompactLandscape`), horizontal padding per sensor icon in the central container SHALL be adjusted to `4.dp` (`size(22.dp)` + `padding(horizontal = 4.dp)` = `30.dp` per icon slot), ensuring all 9 icons fit cleanly within the 272 dp central container (`9 * 30.dp = 270.dp <= 272.dp`) without clipping on compact 360 dp viewports.
+     - The radar icon SHALL render at `1.0f` alpha when `RADAR_THREAT_COUNT` is present in `activeSensors` (indicating active BLE/ANT+ radar hardware connected or `RadarTrafficSimulator` active) and at `INACTIVE_SENSOR_ALPHA = 0.38f` when inactive.
+     - `SensorType.getIconResId()` SHALL return dedicated 24dp vector drawable `R.drawable.ic_radar` for `SensorType.RADAR_THREAT_COUNT`, `RADAR_CLOSEST_DISTANCE_m`, `RADAR_APPROACH_SPEED_mps`, and `RADAR_VEHICLE_COUNT`.
+     - Dedicated vector asset `res/drawable/ic_radar.xml` SHALL be authored as a clean, standalone 24dp vector drawable featuring concentric radar waves and origin point.
+  5. *Bike Radar Sensor Source Dialog & Scalar Metric Omission (`REQ-UI-451.5`)*:
+     - When `SensorSourceDialog` is opened for `SensorType.RADAR_THREAT_COUNT`:
+       - The dialog title SHALL display the localized "Bike Radar" string (`R.string.device_type_bike_radar`, capitalized) alongside `R.drawable.ic_radar`.
+       - The dialog SHALL enumerate active source, active backups, and paired disconnected devices of `DeviceType.BIKE_RADAR` (or display `R.string.source_none_configured` when zero radar devices are paired).
+       - Scalar metric `valueWithUnit` text display SHALL be omitted on device identity rows for `RADAR_THREAT_COUNT`.
+       - Clicking any device row SHALL invoke `onDeviceClick` opening `EditDeviceDialog`.
+  6. *Localization Parity (`REQ-UI-451.6`)*:
+     - All radar sensor status and source dialog text, dialog titles, and accessibility content descriptions SHALL maintain 100% localization parity across all 9 supported languages (`de`, `en`, `es`, `fr`, `it`, `ja`, `nl`, `pl`, `pt`).
 
 **Requirement Archaeology & Chesterton's Fence Audit**:
-1. *Original Requirement ID & Target*: Extending `REQ-UI-445.3` (*Live Cockpit Status Emblem & Retirement of Quick Icon Picker Dialog*), targets `SensorStatus.kt` and `TrackingTabsScreen.kt`.
-2. *Historical Origin & Commit Trace*: Sprint 2026-45.4 (`ATT-5397`, commit `8baf42c8`) and Sprint 2026-40.8 (`ATT-1406`, commit `8f8b8098`).
-3. *Root Reason for Existing Formulation*: `REQ-UI-445.3` balanced the hamburger menu button with the supporter emblem at 24 dp, but did not specify outer screen margin padding, resulting in 4 dp display clinging.
-4. *Preservation of Core Invariants*: The 8 sensor icons maintain exact mathematical centering via equal-width 32 dp outer slots; 24 dp icon vectors and click handlers are preserved; touch target increases from 24 dp to 32 dp.
+1. *Original Requirement ID & Target*: Extending `REQ-UI-445.3` (*Live Cockpit Status Emblem & Retirement of Quick Icon Picker Dialog*), targets `SensorStatus.kt`, `SensorSourceDialog.kt`, `SensorType.java`, `TrackingTabsScreen.kt`.
+2. *Historical Origin & Commit Trace*: Sprint 2026-45.4 (`ATT-5397`, commit `8baf42c8`), Sprint 2026-45.4 (`ATT-5422`, commit `fb6797a7`), and Sprint 2026-46.5 (`ATT-7544`).
+3. *Root Reason for Existing Formulation*: `REQ-UI-451` originally budgeted 272 dp for 8 legacy sensors (8 * 34 dp = 272 dp). Adding the 9th sensor for Cycling Rearview Radar (`DeviceType.BIKE_RADAR`) without padding adjustment would require 306 dp (> 272 dp) and cause clipping on 360 dp screens.
+4. *Preservation of Core Invariants*: The 8 legacy sensors maintain 100% functional and visual fidelity; 32 dp symmetrical action buttons and 16 dp total display edge offsets are strictly preserved; central alignment is maintained; compact landscape mode remains preserved.
 
 **Acceptance Criteria (Given-When-Then)**:
-• *Given* an athlete viewing the tracking cockpit in portrait mode,
+• *Given* an athlete viewing the tracking cockpit in portrait mode on a 360 dp display,
 • *When* inspecting the top `SensorStatus` bar,
-• *Then* the left hamburger menu icon and right supporter emblem (or fallback spacer) start at exactly 16 dp from the outer display boundary (Option A).
-• *Given* an athlete with any supporter tier or free tier,
-• *When* the cockpit header renders,
-• *Then* the 8 sensor icons are mathematically centered in the horizontal viewport.
-• *Given* the athlete tapping the hamburger menu or supporter emblem,
-• *When* interacting with the controls,
-• *Then* the enlarged 32 dp touch targets respond reliably to touches.
+• *Then* all 9 sensor icons (including the radar icon `R.drawable.ic_radar`) are visible without clipping, with the left menu button and right supporter emblem starting at exactly 16 dp from the outer display boundary.
+• *Given* Cycling Rearview Radar hardware connected or simulator active,
+• *When* the radar icon renders,
+• *Then* it displays at `1.0f` alpha when active and `0.38f` alpha when inactive.
+• *Given* an athlete tapping the radar icon in `SensorStatus`,
+• *When* `SensorSourceDialog` opens,
+• *Then* the title displays the localized "Bike Radar" with `R.drawable.ic_radar`, enumerates `BIKE_RADAR` devices without scalar value text, and clicking a device opens `EditDeviceDialog`.
 
-**Invariants**: Option A 16 dp visual edge offset, exact mathematical centering of 8 sensor icons across all tiers, untouched compact landscape layout (`REQ-UI-434.1`), and 100% test pass rate.
+**Invariants**: Option A 16 dp visual edge offset, exact mathematical centering of 9 sensor icons across all tiers, 270 dp <= 272 dp width on 360 dp displays, untouched compact landscape layout (`REQ-UI-434.1`), and 100% 9-language localization parity.
 
 ### REQ-UI-452: Dedicated Status Bar Vector Icon, Notification Builder Migration & Monolithic Density Packaging [Verified]
 - **Tests**: `TST-UI-452`

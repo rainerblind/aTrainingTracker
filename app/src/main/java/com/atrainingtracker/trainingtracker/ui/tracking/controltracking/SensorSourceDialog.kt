@@ -113,8 +113,16 @@ fun SensorSourceDialog(
     val unitRes = MyHelper.getUnitsId(sensorType)
     val unit = if (unitRes != 0 && unitRes != R.string.units_none) stringResource(id = unitRes) else ""
 
+    val dialogTitle = if (sensorType == SensorType.RADAR_THREAT_COUNT) {
+        stringResource(id = R.string.device_type_bike_radar).split(" ").joinToString(" ") { word ->
+            word.replaceFirstChar { if (it.isLowerCase()) it.titlecase(java.util.Locale.getDefault()) else it.toString() }
+        }
+    } else {
+        sensorType.getFullName(context)
+    }
+
     AppModalBottomSheet(
-        title = sensorType.getFullName(context),
+        title = dialogTitle,
         iconPainter = safePainterResource(id = sensorType.getIconResId(), fallback = Icons.Default.Sensors),
         iconTint = MaterialTheme.colorScheme.onSurface,
         onDismissRequest = onDismiss,
@@ -250,6 +258,8 @@ fun SensorSourceDialog(
             if (sourceDevice != null) {
                 val telemetry = allActiveTelemetries.find { it.deviceId == sourceDevice.id }
                 val value = telemetry?.allValues?.find { it.sensor == sensorType }?.value ?: "--"
+                val displayValue = if (sensorType == SensorType.RADAR_THREAT_COUNT) null
+                    else if (value != "--") "$value $unit" else value
                 
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(
@@ -261,7 +271,7 @@ fun SensorSourceDialog(
                     DeviceIdentityBlock(
                         device = sourceDevice, 
                         isConnected = true, 
-                        valueWithUnit = if (value != "--") "$value $unit" else value,
+                        valueWithUnit = displayValue,
                         modifier = Modifier.clickable { 
                             onDeviceClick(sourceDevice.id)
                         }
@@ -283,11 +293,13 @@ fun SensorSourceDialog(
                         val device = allDevices.find { it.id == telemetry.deviceId }
                         if (device != null) {
                             val value = telemetry.allValues.find { it.sensor == sensorType }?.value ?: "--"
+                            val displayValue = if (sensorType == SensorType.RADAR_THREAT_COUNT) null
+                                else if (value != "--") "$value $unit" else value
                             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                                 DeviceIdentityBlock(
                                     device = device, 
                                     isConnected = true,
-                                    valueWithUnit = if (value != "--") "$value $unit" else value,
+                                    valueWithUnit = displayValue,
                                     modifier = Modifier.clickable {
                                         onDeviceClick(device.id)
                                     }

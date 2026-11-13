@@ -18,13 +18,17 @@
 
 package com.atrainingtracker.trainingtracker.ui.tracking.controltracking
 
+import com.atrainingtracker.banalservice.devices.DeviceType
+import com.atrainingtracker.banalservice.sensor.SensorType
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.io.File
 import java.lang.reflect.Modifier
 
 /**
- * Architectural contract test for [SensorSourceDialog] (REQ-UI-051, ATT-4374):
+ * Architectural contract test for [SensorSourceDialog] (REQ-UI-051, REQ-UI-451, ATT-4374, ATT-7544):
  * Refactored to reflection per docs/coding_standards.md §5.4 and REQ-PRO-049.
  */
 class SensorSourceDialogContractTest {
@@ -69,5 +73,23 @@ class SensorSourceDialogContractTest {
     fun testSensorSourceDialog_usesDedicatedSensorSourceTokens() {
         val clazz = getDialogClass()
         assertNotNull(clazz)
+    }
+
+    @Test
+    fun testSensorSourceDialog_forRadarThreatCount_mapsDeviceTypeBikeRadar() {
+        val types = DeviceType.getDeviceTypeList(SensorType.RADAR_THREAT_COUNT)
+        assertNotNull("Device types for RADAR_THREAT_COUNT must not be null", types)
+        assertTrue("Device types for RADAR_THREAT_COUNT must include BIKE_RADAR", types.contains(DeviceType.BIKE_RADAR))
+    }
+
+    @Test
+    fun testSensorSourceDialog_sourceFileContainsBikeRadarTitleAndScalarOmission() {
+        val file = File("src/main/java/com/atrainingtracker/trainingtracker/ui/tracking/controltracking/SensorSourceDialog.kt")
+        val altFile = File("app/src/main/java/com/atrainingtracker/trainingtracker/ui/tracking/controltracking/SensorSourceDialog.kt")
+        val target = if (file.exists()) file else altFile
+        assertTrue("SensorSourceDialog.kt must exist", target.exists())
+        val source = target.readText()
+        assertTrue("Dialog title must reference device_type_bike_radar", source.contains("R.string.device_type_bike_radar"))
+        assertTrue("Scalar text must be omitted for RADAR_THREAT_COUNT", source.contains("sensorType == SensorType.RADAR_THREAT_COUNT) null"))
     }
 }

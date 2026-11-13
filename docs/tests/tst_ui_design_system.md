@@ -7299,21 +7299,32 @@
   5. *Clean-Room Regression Suite (`TST-UI-450.5`)*:
   • Run targeted package tests (`com.atrainingtracker.trainingtracker.domain.laps.*`, `com.atrainingtracker.trainingtracker.ui.aftermath.*`, `com.atrainingtracker.trainingtracker.ui.map.*`, `database.*`, `ThemeColorCentralizationAuditTest`, `build.*`) asserting 100% pass rate.
 
-### TST-UI-451: **Tracking Cockpit SensorStatus Top Bar 16 dp Margin and Symmetrical Centering Verification Suite** [Verified]
+### TST-UI-451: **Tracking Cockpit SensorStatus Top Bar 16 dp Margin, Symmetrical Centering & 9-Icon Radar Integration Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-UI-451`
-- **Component**: `SensorStatus.kt`, `SensorStatusLayoutTest.kt`, `SensorStatusLegibilityTest.kt`, `TrackingTabsLandscapeLayoutTest.kt`
-- **Jira**: `ATT-5422`
+- **Component**: `SensorStatus.kt`, `SensorSourceDialog.kt`, `SensorType.java`, `SensorStatusTopBarSpacingTest.kt`, `SensorStatusLegibilityTest.kt`, `SensorSourceDialogContractTest.kt`, `TrackingTabsLandscapeLayoutTest.kt`
+- **Jira**: `ATT-5422`, `ATT-7544`
 - **Test Description**:
-  1. *Portrait Edge Margin & Symmetrical Spacer Contract Test (`TST-UI-451.1`, `SensorStatusLayoutTest.kt`)*:
+  1. *Portrait Edge Margin, Symmetrical Spacer & 9-Icon 360dp Budget Contract Test (`TST-UI-451.1`, `SensorStatusTopBarSpacingTest.kt`)*:
   • Verify outer `Row` has `padding(horizontal = 8.dp, vertical = 4.dp)` in portrait mode.
   • Verify left menu button and right supporter emblem (and their fallback `Spacer`s) have identical `Modifier.size(32.dp)` width.
-  • Verify central `Box` has `weight(1f)` with `Alignment.Center` guaranteeing mathematical centering of the 8 sensor icons across `supporterEmblemRes != null` and `supporterEmblemRes == null`.
+  • Verify central `Box` has `weight(1f)` with `Alignment.Center` guaranteeing mathematical centering of the sensor icons across `supporterEmblemRes != null` and `supporterEmblemRes == null`.
+  • Verify `sensorDefinitions` contains 9 sensor types with `RADAR_THREAT_COUNT` as the 9th item.
+  • Verify horizontal padding of 4 dp per icon and 22 dp icon size yields 30 dp per slot and total width of 270 dp, fitting cleanly within the 272 dp budget on 360 dp viewports without clipping.
   2. *Compact Landscape Invariant Contract Test (`TST-UI-451.2`, `TrackingTabsLandscapeLayoutTest.kt`)*:
-  • Verify compact landscape mode (`isCompactLandscape = true`) preserves `padding(horizontal = 4.dp, vertical = 2.dp)` and max height 28 dp per `REQ-UI-434.1`.
+  • Verify compact landscape mode (`isCompactLandscape = true`) preserves `padding(horizontal = 4.dp, vertical = 2.dp)` and max height 28 dp per `REQ-UI-434.1`, rendering all 9 icons.
   3. *Sensor Inactive Alpha & Contrast Non-Regression Test (`TST-UI-451.3`, `SensorStatusLegibilityTest.kt`)*:
-  • Verify `INACTIVE_SENSOR_ALPHA = 0.38f` and WCAG AAA contrast ratio compliance are preserved.
-  4. *Clean-Room Regression Suite Execution (`TST-UI-451.4`)*:
-  • Execute targeted package tests (`com.atrainingtracker.trainingtracker.ui.tracking.controltracking.*`, `com.atrainingtracker.trainingtracker.ui.branding.*`, `ThemeColorCentralizationAuditTest`, `build.*`) asserting 100% pass rate.
+  • Verify `INACTIVE_SENSOR_ALPHA = 0.38f` and WCAG AAA / AA contrast ratio compliance are preserved for active and inactive states.
+  4. *Radar Icon Asset & SensorType Mapping Contract Test (`TST-UI-451.4`, `SensorStatusTopBarSpacingTest.kt`)*:
+  • Verify `R.drawable.ic_radar` exists in `res/drawable/` as a valid 24dp vector drawable.
+  • Verify `SensorType.RADAR_THREAT_COUNT.getIconResId()` returns `R.drawable.ic_radar`.
+  5. *Radar Sensor Source Dialog Contract Test (`TST-UI-451.5`, `SensorSourceDialogContractTest.kt`)*:
+  • Verify `SensorSourceDialog` displays localized "Bike Radar" title (`R.string.device_type_bike_radar`) for `RADAR_THREAT_COUNT`.
+  • Verify scalar `valueWithUnit` is suppressed on device identity rows for `RADAR_THREAT_COUNT`.
+  • Verify `BIKE_RADAR` devices are listed and clicks route to `onDeviceClick`.
+  6. *9-Language Localization Parity Verification (`TST-UI-451.6`)*:
+  • Verify `device_type_bike_radar` and all radar content descriptions across all 9 values folders (`values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`).
+  7. *Clean-Room Regression Suite Execution (`TST-UI-451.7`)*:
+  • Execute targeted package tests (`com.atrainingtracker.trainingtracker.ui.tracking.controltracking.*`, `com.atrainingtracker.banalservice.sensor.*`) asserting 100% pass rate.
 
 ### TST-UI-452: **Dedicated Status Bar Vector Icon, Notification Builder Migration & Monolithic Density Packaging Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-UI-452`
