@@ -451,4 +451,54 @@ class RadarLightControllerTest {
         RadarLightController.registerRadarDevice(mockRadarOnly, lightSupported = false)
         assertFalse("Radar peripheral without light support must NOT register IMU sensors", SmartBrakeLightDetector.isListening)
     }
+
+    /**
+     * TST-CON-031.5: Verify setManualLightMode updates currentMode, flags manual override, and dispatches command.
+     */
+    @Test
+    fun testRadarLightController_setManualLightMode_updatesModeAndSetsManualOverride() {
+        val mockDevice = mockk<BTLERadarDevice>(relaxed = true)
+        every { mockDevice.setLightMode(any()) } returns true
+        RadarLightController.registerRadarDevice(mockDevice, lightSupported = true, isStvzo = false)
+
+        assertFalse(SmartRadarLightEngine.isManualOverridden)
+
+        val result = RadarLightController.setManualLightMode(RadarLightMode.DAY_FLASH)
+
+        assertTrue(result)
+        assertEquals(RadarLightMode.DAY_FLASH, RadarLightController.currentMode.value)
+        assertTrue(SmartRadarLightEngine.isManualOverridden)
+        verify { mockDevice.setLightMode(RadarLightMode.DAY_FLASH) }
+    }
+
+    /**
+     * TST-CON-031.5: Verify setManualLightMode prunes non-StVZO modes to SOLID when StVZO hardware is active.
+     */
+    @Test
+    fun testRadarLightController_setManualLightMode_stvzoPruning() {
+        val mockDevice = mockk<BTLERadarDevice>(relaxed = true)
+        every { mockDevice.setLightMode(any()) } returns true
+        RadarLightController.registerRadarDevice(mockDevice, lightSupported = true, isStvzo = true)
+
+        val result = RadarLightController.setManualLightMode(RadarLightMode.DAY_FLASH)
+
+        assertTrue(result)
+        assertEquals(RadarLightMode.SOLID, RadarLightController.currentMode.value)
+        assertTrue(SmartRadarLightEngine.isManualOverridden)
+        verify { mockDevice.setLightMode(RadarLightMode.SOLID) }
+    }
+
+    /**
+     * TST-CON-031.5: Verify setManualLightMode fails safe without GATT dispatch when light control is unsupported.
+     */
+    @Test
+    fun testRadarLightController_setManualLightMode_withoutLightSupport_failsGracefully() {
+        val mockRadarOnly = mockk<BTLERadarDevice>(relaxed = true)
+        RadarLightController.registerRadarDevice(mockRadarOnly, lightSupported = false)
+
+        val result = RadarLightController.setManualLightMode(RadarLightMode.SOLID)
+
+        assertFalse(result)
+        assertFalse(RadarLightController.isLightControlAvailable.value)
+    }
 }

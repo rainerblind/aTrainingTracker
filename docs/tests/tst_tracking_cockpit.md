@@ -2044,8 +2044,8 @@
 
 ### TST-CON-031: **BLE Radar Tail Light Mode Control Test Suite** [Verified]
 - **Requirement(s)**: `REQ-CON-031` (`REQ-CON-031.1`..`REQ-CON-031.7`)
-- **Component**: `BTLERadarDevice.java`, `RadarLightController.kt`, `RadarLightMode.kt`, `RadarEdgeOverlay.kt`, `RadarSettingsSection.kt`, `TuningPreferencesDataStore.kt`, `TrackerService.java`, `RadarLightQuickSwitchSheet.kt`, `strings_radar.xml`
-- **Jira**: `ATT-5102`, `ATT-6707`, `ATT-7545`
+- **Component**: `BTLERadarDevice.java`, `RadarLightController.kt`, `RadarLightMode.kt`, `RadarEdgeOverlay.kt`, `RadarSettingsSection.kt`, `TuningPreferencesDataStore.kt`, `TrackerService.java`, `RadarLightQuickSwitchSheet.kt`, `EditDeviceDialog.kt`, `strings_radar.xml`
+- **Jira**: `ATT-5102`, `ATT-6707`, `ATT-7545`, `ATT-7540`
 - **Test Description**:
   1. *Light Characteristic Discovery, Model Number Query & Queue Routing Tests (`TST-CON-031.1`, `BTLERadarDeviceTest.kt`)*:
   • Verify discovery of RearVue 820 Control Service `6a4e2f00` (write `6a4e2f11`, notify `6a4e2f14`) and CCCD subscription on `6a4e2f14`, transparent legacy fallback to `6a4e3202` on service `6a4e3200`, read of Device Information `0x2A24` (Model Number string), StVZO detection (`isStvzo = true` for `010-03180-10`, `RTL516`), initial read/registration of light control on connect, active light mode re-dispatch on mid-ride reconnect, and serialized write queueing.
@@ -2055,8 +2055,9 @@
   • Verify modal sheet rendering upon badge tap, active mode indication, selection callback invocation, non-interactive badge behavior on devices lacking light characteristic, styling using `MaterialTheme.colorScheme.outline`, and `@Preview` coverage.
   4. *Workout Lifecycle Auto-Switch Automation & Pause Safety Tests (`TST-CON-031.4`, `RadarLightControllerTest.kt`, `TrackerServiceTest.kt`)*:
   • Verify automatic transmission of workout light command on tracker start/resume (`START_NORMAL`, `RESUME_BY_USER`, `RESUME_AUTOMATICALLY`), preservation of tail light illumination across workout pause, and synchronous dispatch of `OFF` on explicit stop (`handleActionStop`) before `BANALService` unbinds without MockK `context.filesDir` crashes.
-  5. *Settings Persistence & Config Parity Tests (`TST-CON-031.5`, `TuningPreferencesDataStoreTest.kt`, `RadarSettingsSectionTest.kt`)*:
+  5. *Settings Persistence, EditDeviceDialog Live Controls & Config Parity Tests (`TST-CON-031.5`, `TuningPreferencesDataStoreTest.kt`, `RadarSettingsSectionTest.kt`, `RadarLightControllerTest.kt`)*:
   • Verify preference persistence for `radarLightDefaultMode` and `radarAutoLightControl` in DataStore, compliant selector UI in `RadarSettingsSection`, and absence of live GATT writes when updating idle preferences.
+  • Verify `EditDeviceDialog` live tail light controls: conditional visibility gating (`BIKE_RADAR`, connected, `isLightControlAvailable`), immediate invocation of `RadarLightController.setManualLightMode()`, draft state decoupling, and StVZO option restriction.
   6. *Traffic Simulator Light State Tests (`TST-CON-031.6`, `RadarTrafficSimulatorTest.kt`)*:
   • Verify light command handling and simulated state reflections in `RadarTrafficSimulator`.
   7. *9-Language Localization Parity Test (`TST-CON-031.7`, `TranslationParityTest.kt`)*:
