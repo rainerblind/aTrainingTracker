@@ -2417,21 +2417,22 @@ Specifically:
 - **Type**: Functional
 - **Verification Method**: Unit
 - **Implementation**: `SettingsDataStore.kt`, `SettingsDataStoreJavaHelper.kt`, `ZonesSettingsActivity.kt`, `SensorFieldState.kt`, `SensorFieldView.kt`, `TrackingViewModel.kt`
-- **Rationale**: The system SHALL provide configurable zone visualization options per athletic zone profile (`HR_RUN`, `HR_BIKE`, and `PWR_BIKE`) within `ZonesSettingsActivity` and reflect the chosen visual cues dynamically across workout cockpit sensor tiles (ATT-1265). ATT-5200 updates string resource `zone_display_background` across all 9 application locales to "Tinted background" (*Eingefärbter Hintergrund*) to resolve user confusion with Dark/AMOLED themes:
+- **Rationale**: The system SHALL provide configurable zone visualization options per athletic zone profile (`HR_RUN`, `HR_BIKE`, `PWR_BIKE`, and `HRV (DFA a1)`) within `ZonesSettingsActivity` and reflect the chosen visual cues dynamically across workout cockpit sensor tiles (ATT-1265). ATT-5200 updates string resource `zone_display_background` across all 9 application locales to "Tinted background" (*Eingefärbter Hintergrund*) to resolve user confusion with Dark/AMOLED themes. ATT-7524 establishes symmetrical defaults (background, left bar, and right bar enabled, text color disabled) and wires dedicated DataStore persistence for `HRV (DFA a1)`:
 1. *Per-Profile Visualization Options (`ZoneDisplayOptions`)*:
-• The system SHALL define four independent, multi-selectable visual presentation cues for each `ZoneType`:
+• The system SHALL define four independent, multi-selectable visual presentation cues for each `ZoneType` and the dedicated `HRV (DFA a1)` profile:
 - *Tinted background* (`showBackground`: Boolean, localized via `R.string.zone_display_background`): Renders the card container with tinted zone color at 12% opacity (`zoneColor.copy(alpha = 0.12f)`). When disabled, the card container remains neutral `MaterialTheme.colorScheme.surface` (pure `#000000` in AMOLED dark mode). Across all 9 locales, the string resource SHALL convey active zone color tinting rather than daylight theme ("Tinted background" / "Eingefärbter Hintergrund").
 - *Left bar* (`showLeftBar`: Boolean): Renders a 6dp vertical indicator strip on the left edge of the tile colored with the active `zoneColor`.
 - *Right bar* (`showRightBar`: Boolean): Renders a 6dp vertical indicator strip on the right edge of the tile colored with the active `zoneColor`.
 - *Text color* (`showTextColor`: Boolean): Renders the primary numeric metric reading (`fieldState.value`) using the active `zoneColor`. When disabled, the reading renders in standard `MaterialTheme.colorScheme.onSurface`.
-• The default configuration for all profiles SHALL be: `showBackground = true`, `showLeftBar = true`, `showRightBar = false`, `showTextColor = false`, ensuring 100% backward compatibility.
+• The default configuration for all profiles SHALL be: `showBackground = true`, `showLeftBar = true`, `showRightBar = true`, `showTextColor = false`, `showGauge = false`. In DataStore, an unset `rightBarKey` SHALL fall back to `true`, while explicitly saved user preferences (`false`) SHALL be strictly preserved.
 2. *Persistent Preferences Storage (`SettingsDataStore.kt`)*:
-• The system SHALL store the four visual toggles independently for each `ZoneType` in DataStore preferences.
-• Modifying a toggle SHALL immediately persist the updated setting to DataStore on an IO dispatcher.
+• The system SHALL store the four visual toggles independently for each `ZoneType` (`HR_RUN`, `HR_BIKE`, `PWR_BIKE`) and dedicated `HRV (DFA a1)` preferences (`hrv_dfa_a1_zone_show_background`, `hrv_dfa_a1_zone_show_left_bar`, `hrv_dfa_a1_zone_show_right_bar`, `hrv_dfa_a1_zone_show_text_color`, `hrv_dfa_a1_zone_show_gauge`) in DataStore preferences.
+• Modifying a toggle SHALL immediately persist the updated setting to DataStore on an IO dispatcher and update the cached `SettingsSnapshot`.
 3. *Settings UI Integration & Theme-Aware Live Preview (`ZonesSettingsActivity.kt`)*:
-• In `ZonesSettingsActivity.kt`, each profile tab (`HR_RUN`, `HR_BIKE`, `PWR_BIKE`) SHALL display a dedicated section titled \"Zonendarstellung\" / \"Zone Visualization\" positioned below the five zone threshold cards.
+• In `ZonesSettingsActivity.kt`, each profile tab (`HR_RUN`, `HR_BIKE`, `PWR_BIKE`, and `HRV (DFA a1)`) SHALL display a dedicated section titled "Zonendarstellung" / "Zone Visualization" positioned below the threshold/band cards.
 • The section SHALL present four interactive toggle controls corresponding to the four display options.
-• Directly below the toggle controls, the section SHALL render an interactive live preview tile (`SensorFieldView`) strictly inheriting `MaterialTheme.colorScheme` from the active application/system theme (respecting dark mode or light mode), with an interactive 5-zone selector chip row.
+• For the `HRV (DFA a1)` tab, toggle changes SHALL be bound reactively to `SettingsDataStore` (`saveHrvZoneDisplayOptions`), eliminating ephemeral state loss.
+• Directly below the toggle controls, the section SHALL render an interactive live preview tile (`SensorFieldView`) strictly inheriting `MaterialTheme.colorScheme` from the active application/system theme (respecting dark mode or light mode), with an interactive zone/band selector row.
 4. *Cockpit Telemetry Rendering (`SensorFieldView.kt`)*:
 • In `SensorFieldView.kt`, when `fieldState.zoneColor != Color.Transparent`: container background evaluates to tinted color or neutral surface, left bar renders if enabled, right bar renders if enabled, and numeric text adopts zoneColor if enabled.
 5. *Preserved Invariants & Guardrails*:
@@ -2442,24 +2443,33 @@ Specifically:
 • 100% localization parity maintained across all 9 supported locales.
 
 **Requirement Archaeology & Chesterton's Fence Audit**:
-1. *Original Requirement ID & Target*: Amends `REQ-UI-172` (*Configurable Zone Visualization Options and Theme-Aware Live Preview*, `ATT-1265`). Targets `app/src/main/res/values*/strings.xml`, `ZoneDisplayLocalizationTest.kt`, and `docs/requirements/req_ui_design_system.md`.
-2. *Historical Origin & Commit Trace*: `ATT-1265` (commit `a48c8a38`, Sprint 2026-40.5) established `ZoneDisplayOptions` and string resource `zone_display_background = "Light background"` / `"Heller Hintergrund"`.
-3. *Root Reason for Existing Formulation*: "Light background" originally denoted "lightly tinted/colored" (12% alpha tint), but caused semantic ambiguity in Dark/AMOLED modes where athletes interpreted it as forcing a light/daylight surface.
-4. *Preservation of Core Invariants*: String identifier `R.string.zone_display_background`, backing property `showBackground: Boolean`, default value `true`, DataStore persistence schema, and 9-language translation parity are 100% preserved.
+1. *Original Requirement ID & Target*: Amends `REQ-UI-172` (*Configurable Zone Visualization Options and Theme-Aware Live Preview*, `ATT-1265`, `ATT-5200`, `ATT-7524`). Targets `ZoneDisplayOptions.kt`, `SettingsDataStore.kt`, `ZonesSettingsActivity.kt`, and `docs/requirements/req_ui_design_system.md`.
+2. *Historical Origin & Commit Trace*: `ATT-1265` (commit `a48c8a38`, Sprint 2026-40.5) established `ZoneDisplayOptions` with `showRightBar = false` by default. `ATT-5200` clarified "Tinted background" localization. `ATT-7317` introduced the 4th `HRV (DFA a1)` tab in `ZonesSettingsActivity` with ephemeral display options.
+3. *Root Reason for Existing Formulation*: `showRightBar` was originally `false` to avoid potential visual crowding before symmetrical card layouts were standardized; `HRV (DFA a1)` lacked persistent DataStore keys upon initial tab introduction.
+4. *Preservation of Core Invariants*: Symmetrical edge bars frame active tiles cleanly on both compact and wide screens; unset `rightBarKey` defaults to `true` while explicitly saved user `false` preferences in DataStore are strictly preserved; 9-language translation parity is 100% maintained.
 
 **Acceptance Criteria (Given-When-Then)**:
+• *Given* a fresh installation or uncustomized `ZoneDisplayOptions` in `SettingsDataStore`,
+• *When* reading `ZoneDisplayOptions` for `HR_RUN`, `HR_BIKE`, `PWR_BIKE`, or `HRV (DFA a1)`,
+• *Then* `showBackground == true`, `showLeftBar == true`, `showRightBar == true`, and `showTextColor == false`.
+• *Given* an athlete in `ZonesSettingsActivity` on the `HRV (DFA a1)` tab,
+• *When* toggling any display option (e.g. disabling Right bar or enabling Text color),
+• *Then* the preference SHALL immediately persist to `SettingsDataStore` and be reflected upon tab switches and activity recreations.
+• *Given* an existing user who previously explicitly saved `showRightBar = false`,
+• *When* reading from `SettingsDataStore`,
+• *Then* the stored `false` preference SHALL be respected without overwrite.
 • *Given* an athlete in `ZonesSettingsActivity` on the Run HR tab,
-• *When* viewing the \"Zonendarstellung\" section,
+• *When* viewing the "Zonendarstellung" section,
 • *Then* four toggle controls (Tinted background, Left bar, Right bar, Text color) and a live preview tile SHALL be rendered below the zone threshold cards.
 • *Given* an athlete viewing the "Zonendarstellung" section in any supported language,
 • *When* inspecting the first toggle,
 • *Then* it SHALL display "Tinted background" (EN), "Eingefärbter Hintergrund" (DE), "Fondo tintado" (ES), "Arrière-plan teinté" (FR), "Sfondo tinto" (IT), "色付き背景" (JA), "Getinte achtergrond" (NL), "Zabarwione tło" (PL), or "Fundo matizado" (PT).
-• *When* the athlete toggles \"Right bar\" ON and \"Tinted background\" OFF,
+• *When* the athlete toggles "Right bar" ON and "Tinted background" OFF,
 • *Then* the live preview tile SHALL immediately update to show a right vertical strip on neutral surface with no background tint, and the preferences SHALL be persisted to DataStore.
 • *Given* the host device is in AMOLED Dark Mode,
 • *When* viewing the live preview tile in `ZonesSettingsActivity`,
 • *Then* the preview tile card background SHALL render in pure black (`#000000`) when background tint is toggled OFF.
-• *Given* an active workout with Run HR zone configured with \"Text color\" ON and \"Tinted background\" OFF,
+• *Given* an active workout with Run HR zone configured with "Text color" ON and "Tinted background" OFF,
 • *When* the heart rate enters Zone 4 (Threshold),
 • *Then* the heart rate metric value SHALL render in red (`#FF0000`) on a neutral dark surface with no background tint.
 • *Given* all four zone visualization toggles are switched OFF,

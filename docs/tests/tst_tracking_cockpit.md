@@ -1887,7 +1887,7 @@
   • Verify $\alpha_1 > \alpha_{1,\text{T1}}$ resolves to `TTColor.Zone2` (Green).
   • Verify $\alpha_{1,\text{T2}} \le \alpha_1 \le \alpha_{1,\text{T1}}$ resolves to `TTColor.Zone3` (Orange).
   • Verify $\alpha_1 < \alpha_{1,\text{T2}}$ resolves to `TTColor.Zone4` (Red).
-  • Verify `HRV_DFA_A1` inherits HR `ZoneDisplayOptions` (background, left/right bar, gauge).
+  • Verify `HRV_DFA_A1` resolves its `ZoneDisplayOptions` directly from dedicated persisted HRV display options (`SettingsSnapshot.hrvDisplayOptions`) across all sport profiles (`RUN`, `BIKE`, `UNKNOWN`).
   4. *Training Zones 4th Tab & Invariant Tests (`TST-TRK-061.4`, `HrvDfaA1SettingsContractTest.kt`, `TuningPreferencesDataStoreDfaA1Test.kt`)*:
   • Verify `ZoneSettingsScreen` renders 4th tab `R.string.tab_hrv_dfa_a1` with $0.01$ step precision controls, Reset to Defaults action ($0.75 / 0.50$), and interactive `SensorFieldView` preview pills.
   • Verify default values $\alpha_{1,\text{T1}} = 0.75f$ and $\alpha_{1,\text{T2}} = 0.50f$.

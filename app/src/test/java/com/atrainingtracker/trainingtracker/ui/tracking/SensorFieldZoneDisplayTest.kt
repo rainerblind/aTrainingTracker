@@ -49,7 +49,7 @@ class SensorFieldZoneDisplayTest {
 
         assertTrue(state.zoneDisplayOptions.showBackground)
         assertTrue(state.zoneDisplayOptions.showLeftBar)
-        assertFalse(state.zoneDisplayOptions.showRightBar)
+        assertTrue(state.zoneDisplayOptions.showRightBar)
         assertFalse(state.zoneDisplayOptions.showTextColor)
         assertFalse("isArtifactGated must default to false", state.isArtifactGated)
         assertEquals(0.75f, state.dfaA1ThresholdT1)

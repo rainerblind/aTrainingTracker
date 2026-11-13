@@ -227,6 +227,7 @@ class TrackingViewModel @JvmOverloads constructor(
     private val _tuningConfig = MutableStateFlow(TuningConfig())
     val tuningConfig: StateFlow<TuningConfig> = _tuningConfig.asStateFlow()
     private val zoneDisplayOptionsMap = mutableMapOf<SettingsDataStore.ZoneType, ZoneDisplayOptions>()
+    private var hrvDisplayOptions: ZoneDisplayOptions = ZoneDisplayOptions()
     private val zoneCutoffsMap = mutableMapOf<SettingsDataStore.ZoneType, List<Int>>(
         SettingsDataStore.ZoneType.HR_RUN to listOf(132, 145, 158, 171),
         SettingsDataStore.ZoneType.HR_BIKE to listOf(127, 140, 153, 166),
@@ -340,6 +341,7 @@ class TrackingViewModel @JvmOverloads constructor(
                     zoneDisplayOptionsMap[SettingsDataStore.ZoneType.HR_RUN] = snapshot.hrRunDisplayOptions
                     zoneDisplayOptionsMap[SettingsDataStore.ZoneType.HR_BIKE] = snapshot.hrBikeDisplayOptions
                     zoneDisplayOptionsMap[SettingsDataStore.ZoneType.PWR_BIKE] = snapshot.pwrBikeDisplayOptions
+                    hrvDisplayOptions = snapshot.hrvDisplayOptions
                     zoneCutoffsMap[SettingsDataStore.ZoneType.HR_RUN] = snapshot.hrRunZoneMax
                     zoneCutoffsMap[SettingsDataStore.ZoneType.HR_BIKE] = snapshot.hrBikeZoneMax
                     zoneCutoffsMap[SettingsDataStore.ZoneType.PWR_BIKE] = snapshot.pwrBikeZoneMax
@@ -570,7 +572,7 @@ class TrackingViewModel @JvmOverloads constructor(
                         }
 
                         val zoneType = getZoneType(config.sensorType, currentActivity.sportType)
-                        val displayOptions = zoneType?.let { zoneDisplayOptionsMap[it] } ?: ZoneDisplayOptions()
+                        val displayOptions = resolveDisplayOptions(config.sensorType, currentActivity.sportType)
 
                         val isBike = (currentActivity.sportType == BSportType.BIKE)
                         val isPedalBalance = (config.sensorType == SensorType.PEDAL_POWER_BALANCE)
@@ -781,7 +783,7 @@ class TrackingViewModel @JvmOverloads constructor(
                 }
                 val newZoneColor = calculateZoneColor(sensorData, activityType)
                 val zoneType = getZoneType(sensorData.sensorType, activityType.sportType)
-                val displayOptions = zoneType?.let { zoneDisplayOptionsMap[it] } ?: ZoneDisplayOptions()
+                val displayOptions = resolveDisplayOptions(sensorData.sensorType, activityType.sportType)
                 val numericValue = (sensorData.value as? Number)?.toDouble()
 
                 val isDfaA1 = (sensorData.sensorType == SensorType.HRV_DFA_A1)
@@ -971,12 +973,23 @@ class TrackingViewModel @JvmOverloads constructor(
     }
 
     /**
+     * Resolves the [ZoneDisplayOptions] for a sensor field. Dedicated HRV display options are returned
+     * for [SensorType.HRV_DFA_A1] across all sport types (REQ-TRK-061.3).
+     */
+    private fun resolveDisplayOptions(sensorType: SensorType, sportType: BSportType): ZoneDisplayOptions {
+        if (sensorType == SensorType.HRV_DFA_A1) {
+            return hrvDisplayOptions
+        }
+        val zoneType = getZoneType(sensorType, sportType)
+        return zoneType?.let { zoneDisplayOptionsMap[it] } ?: ZoneDisplayOptions()
+    }
+
+    /**
      * Simple helper function to determines which zone configuration to use based on the sensor type and the current sport.
      */
     private fun getZoneType(sensorType: SensorType, sportType: BSportType): SettingsDataStore.ZoneType? {
         return when (sensorType) {
-            SensorType.HR,
-            SensorType.HRV_DFA_A1 -> when (sportType) {
+            SensorType.HR -> when (sportType) {
                 BSportType.RUN -> SettingsDataStore.ZoneType.HR_RUN
                 BSportType.BIKE -> SettingsDataStore.ZoneType.HR_BIKE
                 else -> null

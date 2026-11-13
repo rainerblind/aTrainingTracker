@@ -3404,13 +3404,13 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 • `DfaA1Formatter` SHALL format dimensionless DFA $\alpha_1$ values to 2 decimal places (`0.00`). When null, uninitialized, or artifact-gated ($> 5.0\%$), it SHALL emit `--.--`.
 • `SensorType.HRV_RMSSD` SHALL use `IntegerFormatter` to display integer milliseconds (`0 ms`).
 • To distinguish initial 60–120s warm-up from poor strap contact, `SensorFieldState` SHALL provide `isArtifactGated: Boolean`. When `isArtifactGated == true`, `SensorFieldView.kt` SHALL render a subtle amber warning icon alongside `--.--`.
-3. *Semantic Aerobic Threshold Zone Indicators & HR ZoneDisplayOptions Parity (`REQ-TRK-061.3`)*:
+3. *Semantic Aerobic Threshold Zone Indicators & Dedicated HRV ZoneDisplayOptions (`REQ-TRK-061.3`)*:
 • In `SensorFieldView.kt` and `TrackingViewModel.kt`, `HRV_DFA_A1` SHALL display semantic zone color coding conforming to Rule 71:
   - Aerobic Base ($\alpha_1 > \alpha_{1,\text{T1}}$): Green (`TTColor.Zone2`).
   - Threshold Transition ($\alpha_{1,\text{T2}} \le \alpha_1 \le \alpha_{1,\text{T1}}$): Orange / Tempo (`TTColor.Zone3`).
   - High Intensity / Anaerobic ($\alpha_1 < \alpha_{1,\text{T2}}$): Red / Anaerobic (`TTColor.Zone4`).
   - Muted / Artifact-Gated ($> 5.0\%$): Neutral transparent / theme outline (`--.--`).
-• `TrackingViewModel.getZoneType` SHALL map `HRV_DFA_A1` to the sport's HR zone type (`HR_RUN` / `HR_BIKE`), honoring the athlete's configured Heart Rate `ZoneDisplayOptions` (background, left/right bar, text color, zone gauge).
+• In `TrackingViewModel.kt`, `SensorType.HRV_DFA_A1` SHALL resolve its `ZoneDisplayOptions` directly from the dedicated persisted HRV display options (`SettingsSnapshot.hrvDisplayOptions`) across ALL sport types (`RUN`, `BIKE`, and `UNKNOWN`/Other), decoupling HRV visualization from Heart Rate zone profiles.
 4. *User-Configurable Individual Threshold Overrides & Invariant (`REQ-TRK-061.4`)*:
 • `TuningPreferencesDataStore.kt` SHALL support athlete-customizable threshold boundaries (`dfaA1ThresholdT1` default `0.75f`, `dfaA1ThresholdT2` default `0.50f`) with mandatory invariant enforcement $\alpha_{1,\text{T1}} \ge \alpha_{1,\text{T2}} + 0.05f$ and bounds $[0.20, 1.50]$.
 • The system SHALL promote $T_1$ and $T_2$ threshold controls into a dedicated 4th tab `R.string.tab_hrv_dfa_a1` (`HRV (DFA a1)`) in `ZoneSettingsScreen` (`ZonesSettingsActivity.kt`) with `0.01` step precision, Reset to Defaults action (`0.75 / 0.50`), and live theme-aware `SensorFieldView` preview displaying semantic bands (`Zone 2` / Green $> T_1$, `Zone 3` / Orange $T_2..T_1$, `Zone 4` / Red $< T_2$). Redundant $T_1$ and $T_2$ sliders in `PhysiologyModelsSection.kt` SHALL be eliminated while preserving the `HRV Artifact Gate` slider ($3.0\% - 5.0\%$).
@@ -3420,10 +3420,10 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 • All UI strings SHALL maintain 100% 9-language translation parity in `strings_hrv.xml`.
 
 **Requirement Archaeology & Chesterton's Fence Audit**:
-1. *Original Requirement ID & Target*: Amends `REQ-TRK-061` (`REQ-TRK-061.1`..`REQ-TRK-061.5`), targeting `SensorFieldView.kt`, `SensorFieldState.kt`, `TrackingViewModel.kt`, `ZonesSettingsActivity.kt`, `TuningPreferencesDataStore.kt`, `HrvInfoBottomSheet.kt`, `ActivityType.java`, `SensorType.java`.
-2. *Historical Origin & Commit Trace*: Introduced in `ATT-3542` (commit `14292b35206`), refined in `ATT-6715` (interim controls in `PhysiologyModelsSection.kt`), and promoted to dedicated Training Zones tab in `ATT-7317`.
-3. *Root Reason for Existing Formulation*: ATT-3542 established initial live telemetry tile rendering. Threshold controls in settings UI were deferred, `ActivityType` exposed sensors globally to simplify initial debugging, and tile warm-up and artifact suppression both rendered identical `--.--` text without warning icons. In ATT-6715, sliders were temporarily placed in Advanced Settings before the dedicated 4th Training Zones tab was designed.
-4. *Preservation of Core Invariants*: Population defaults ($0.75 / 0.50$) preserved; invariant $T_1 \ge T_2 + 0.05$ preserved; theme color centralization (Rule 71); modal bottom sheet scroll safety (Rule 72); 100% clean-room test pass rate and 9-language translation parity strictly preserved.
+1. *Original Requirement ID & Target*: Amends `REQ-TRK-061` (`REQ-TRK-061.1`..`REQ-TRK-061.5`, `ATT-7524`), targeting `SensorFieldView.kt`, `SensorFieldState.kt`, `TrackingViewModel.kt`, `ZonesSettingsActivity.kt`, `SettingsDataStore.kt`, `TuningPreferencesDataStore.kt`, `HrvInfoBottomSheet.kt`, `ActivityType.java`, `SensorType.java`.
+2. *Historical Origin & Commit Trace*: Introduced in `ATT-3542` (commit `14292b35206`), refined in `ATT-6715` (interim controls in `PhysiologyModelsSection.kt`), promoted to dedicated Training Zones tab in `ATT-7317`, and decoupled to dedicated HRV `ZoneDisplayOptions` in `ATT-7524`.
+3. *Root Reason for Existing Formulation*: ATT-3542 established initial live telemetry tile rendering. `TrackingViewModel` originally mapped `HRV_DFA_A1` to HR zones (`HR_RUN`/`HR_BIKE`) because HRV lacked its own dedicated display options storage in DataStore prior to ATT-7524, which caused HRV display options to return `null` under non-running/non-cycling sport types (`UNKNOWN`).
+4. *Preservation of Core Invariants*: Population defaults ($0.75 / 0.50$) preserved; invariant $T_1 \ge T_2 + 0.05$ preserved; theme color centralization (Rule 71); modal bottom sheet scroll safety (Rule 72); dedicated HRV display options apply consistently across all sport profiles; 100% clean-room test pass rate and 9-language translation parity strictly preserved.
 
 **Acceptance Criteria (Given-When-Then)**:
 • *Given* `EditSensorFieldDialog`,

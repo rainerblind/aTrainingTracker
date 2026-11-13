@@ -1067,11 +1067,13 @@ fun ZoneProfileTabContent(
 @Composable
 fun HrvDfaA1SettingsContent(
     tuningPreferencesDataStore: TuningPreferencesDataStore? = null,
+    settingsDataStore: SettingsDataStore? = null,
     onOpenHrvTest: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
     val dataStore = tuningPreferencesDataStore ?: remember { TuningPreferencesDataStore(context) }
+    val appSettingsDataStore = settingsDataStore ?: remember { SettingsDataStore.getInstance(context) }
     val scope = rememberCoroutineScope()
     val scrollState = rememberScrollState()
 
@@ -1084,17 +1086,9 @@ fun HrvDfaA1SettingsContent(
 
     var showInfoSheet by rememberSaveable { mutableStateOf(false) }
 
-    var displayOptions by remember {
-        mutableStateOf(
-            ZoneDisplayOptions(
-                showBackground = true,
-                showLeftBar = true,
-                showRightBar = false,
-                showTextColor = false,
-                showGauge = true
-            )
-        )
-    }
+    val displayOptions by appSettingsDataStore.hrvZoneDisplayOptionsFlow.collectAsState(
+        initial = appSettingsDataStore.getHrvZoneDisplayOptionsSync()
+    )
     var selectedPreviewBand by rememberSaveable { mutableIntStateOf(2) } // 2=Aerobic, 3=Transition, 4=Anaerobic
 
     Column(
@@ -1259,28 +1253,40 @@ fun HrvDfaA1SettingsContent(
                 ZoneDisplayToggleRow(
                     label = stringResource(R.string.zone_display_background),
                     checked = displayOptions.showBackground,
-                    onCheckedChange = { displayOptions = displayOptions.copy(showBackground = it) }
+                    onCheckedChange = {
+                        val updated = displayOptions.copy(showBackground = it)
+                        scope.launch { appSettingsDataStore.saveHrvZoneDisplayOptions(updated) }
+                    }
                 )
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
 
                 ZoneDisplayToggleRow(
                     label = stringResource(R.string.zone_display_left_bar),
                     checked = displayOptions.showLeftBar,
-                    onCheckedChange = { displayOptions = displayOptions.copy(showLeftBar = it) }
+                    onCheckedChange = {
+                        val updated = displayOptions.copy(showLeftBar = it)
+                        scope.launch { appSettingsDataStore.saveHrvZoneDisplayOptions(updated) }
+                    }
                 )
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
 
                 ZoneDisplayToggleRow(
                     label = stringResource(R.string.zone_display_right_bar),
                     checked = displayOptions.showRightBar,
-                    onCheckedChange = { displayOptions = displayOptions.copy(showRightBar = it) }
+                    onCheckedChange = {
+                        val updated = displayOptions.copy(showRightBar = it)
+                        scope.launch { appSettingsDataStore.saveHrvZoneDisplayOptions(updated) }
+                    }
                 )
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
 
                 ZoneDisplayToggleRow(
                     label = stringResource(R.string.zone_display_text_color),
                     checked = displayOptions.showTextColor,
-                    onCheckedChange = { displayOptions = displayOptions.copy(showTextColor = it) }
+                    onCheckedChange = {
+                        val updated = displayOptions.copy(showTextColor = it)
+                        scope.launch { appSettingsDataStore.saveHrvZoneDisplayOptions(updated) }
+                    }
                 )
             }
         }

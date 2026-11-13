@@ -32,7 +32,7 @@ import java.io.Serializable
 data class ZoneDisplayOptions(
     val showBackground: Boolean = true,
     val showLeftBar: Boolean = true,
-    val showRightBar: Boolean = false,
+    val showRightBar: Boolean = true,
     val showTextColor: Boolean = false,
     val showGauge: Boolean = false
 ) : Serializable

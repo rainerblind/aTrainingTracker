@@ -32,6 +32,7 @@ import com.atrainingtracker.trainingtracker.repositories.RoutesRepository
 import com.atrainingtracker.trainingtracker.segments.LiveSegmentsRepository
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStore
 import com.atrainingtracker.trainingtracker.settings.TuningConfig
+import com.atrainingtracker.trainingtracker.settings.ZoneDisplayOptions
 import com.atrainingtracker.trainingtracker.ui.tracking.SensorFieldState
 import com.atrainingtracker.trainingtracker.ui.tracking.TrackingViewsRepository
 import com.atrainingtracker.trainingtracker.ui.tracking.ViewSize
@@ -92,6 +93,18 @@ class TrackingViewModelHrvTest {
         return method.invoke(viewModel, sensorType, sportType) as? SettingsDataStore.ZoneType
     }
 
+    private fun callResolveDisplayOptions(sensorType: SensorType, sportType: BSportType): ZoneDisplayOptions {
+        val method = TrackingViewModel::class.java.declaredMethods.first { it.name.startsWith("resolveDisplayOptions") }
+        method.isAccessible = true
+        return method.invoke(viewModel, sensorType, sportType) as ZoneDisplayOptions
+    }
+
+    private fun setHrvDisplayOptions(options: ZoneDisplayOptions) {
+        val field = TrackingViewModel::class.java.getDeclaredField("hrvDisplayOptions")
+        field.isAccessible = true
+        field.set(viewModel, options)
+    }
+
     @Suppress("UNCHECKED_CAST")
     private fun callApplySensorData(
         currentFields: List<SensorFieldState>,
@@ -117,27 +130,33 @@ class TrackingViewModelHrvTest {
     }
 
     @Test
-    fun testGetZoneType_hrvDfaA1_mapsToHrZonesBySport() {
-        // REQ-TRK-061.3: HRV_DFA_A1 maps to HR zone types
-        val runZone = callGetZoneType(SensorType.HRV_DFA_A1, BSportType.RUN)
-        assertEquals("HRV_DFA_A1 in RUN must map to HR_RUN", SettingsDataStore.ZoneType.HR_RUN, runZone)
-
-        val bikeZone = callGetZoneType(SensorType.HRV_DFA_A1, BSportType.BIKE)
-        assertEquals("HRV_DFA_A1 in BIKE must map to HR_BIKE", SettingsDataStore.ZoneType.HR_BIKE, bikeZone)
-
-        val otherZone = callGetZoneType(SensorType.HRV_DFA_A1, BSportType.UNKNOWN)
-        assertNull("HRV_DFA_A1 in UNKNOWN must return null zoneType", otherZone)
+    fun testGetZoneType_hrvDfaA1_returnsNullForIndependentResolution() {
+        // REQ-TRK-061.3: HRV_DFA_A1 does not map to HR ZoneType enum (uses dedicated HRV options)
+        assertNull("HRV_DFA_A1 in RUN must return null from getZoneType", callGetZoneType(SensorType.HRV_DFA_A1, BSportType.RUN))
+        assertNull("HRV_DFA_A1 in BIKE must return null from getZoneType", callGetZoneType(SensorType.HRV_DFA_A1, BSportType.BIKE))
+        assertNull("HRV_DFA_A1 in UNKNOWN must return null from getZoneType", callGetZoneType(SensorType.HRV_DFA_A1, BSportType.UNKNOWN))
     }
 
     @Test
-    fun testGetZoneType_hrParity_matchesDfaA1Mapping() {
-        val hrRunZone = callGetZoneType(SensorType.HR, BSportType.RUN)
-        val dfaRunZone = callGetZoneType(SensorType.HRV_DFA_A1, BSportType.RUN)
-        assertEquals(hrRunZone, dfaRunZone)
+    fun testResolveDisplayOptions_hrvDfaA1_resolvesDedicatedOptionsAcrossAllSports() {
+        // REQ-TRK-061.3: HRV_DFA_A1 resolves dedicated hrvDisplayOptions across all sport types
+        val customHrvOptions = ZoneDisplayOptions(
+            showBackground = false,
+            showLeftBar = true,
+            showRightBar = false,
+            showTextColor = true,
+            showGauge = true
+        )
+        setHrvDisplayOptions(customHrvOptions)
 
-        val hrBikeZone = callGetZoneType(SensorType.HR, BSportType.BIKE)
-        val dfaBikeZone = callGetZoneType(SensorType.HRV_DFA_A1, BSportType.BIKE)
-        assertEquals(hrBikeZone, dfaBikeZone)
+        val runOptions = callResolveDisplayOptions(SensorType.HRV_DFA_A1, BSportType.RUN)
+        assertEquals(customHrvOptions, runOptions)
+
+        val bikeOptions = callResolveDisplayOptions(SensorType.HRV_DFA_A1, BSportType.BIKE)
+        assertEquals(customHrvOptions, bikeOptions)
+
+        val otherOptions = callResolveDisplayOptions(SensorType.HRV_DFA_A1, BSportType.UNKNOWN)
+        assertEquals(customHrvOptions, otherOptions)
     }
 
     @Test

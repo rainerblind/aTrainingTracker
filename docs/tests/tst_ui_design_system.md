@@ -1395,16 +1395,18 @@
 ### TST-UI-124: **Configurable Zone Visualization & Theme-Aware Preview Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-172`
 - **Component**: **Configurable Zone Visualization & Theme-Aware Preview Verification**
-- **Jira**: `ATT-1265`, `ATT-5200`
+- **Jira**: `ATT-1265`, `ATT-5200`, `ATT-7524`
 - **Test Description**:
   1. *Data Model Unit Tests (`ZoneDisplayOptionsTest.kt`)*:
-  • Verify default constructor sets `showBackground = true`, `showLeftBar = true`, `showRightBar = false`, `showTextColor = false` for backward compatibility.
+  • Verify default constructor sets `showBackground = true`, `showLeftBar = true`, `showRightBar = true`, `showTextColor = false`, `showGauge = false` for symmetrical Cockpit framing.
   • Verify copy mutations produce expected combinations.
   • Verify equality and hash code parity.
-  2. *DataStore Preferences Persistence Unit Tests (`SettingsDataStoreZoneDisplayTest.kt`)*:
-  • Verify reading uninitialized DataStore preferences returns default `ZoneDisplayOptions` for `HR_RUN`, `HR_BIKE`, and `PWR_BIKE`.
-  • Verify saving custom options for `HR_RUN` persists correctly and updates `getZoneDisplayOptionsFlow(ZoneType.HR_RUN)` without contaminating `HR_BIKE` or `PWR_BIKE`.
-  • Verify independent persistence across all 3 zone types with distinct toggle configurations.
+  2. *DataStore Preferences Persistence Unit Tests (`SettingsDataStoreZoneDisplayTest.kt`, `SettingsDataStoreZoneAtomicTest.kt`)*:
+  • Verify reading uninitialized DataStore preferences returns default `ZoneDisplayOptions` (with `showRightBar = true`) for `HR_RUN`, `HR_BIKE`, `PWR_BIKE`, and `HRV (DFA a1)`.
+  • Verify an explicit user setting of `showRightBar = false` is preserved upon reading DataStore.
+  • Verify saving custom options for `HR_RUN` persists correctly and updates `getZoneDisplayOptionsFlow(ZoneType.HR_RUN)` without contaminating `HR_BIKE`, `PWR_BIKE`, or HRV.
+  • Verify dedicated `hrvZoneDisplayOptionsFlow` and `saveHrvZoneDisplayOptions` persist independently and update `SettingsSnapshot.hrvDisplayOptions`.
+  • Verify independent persistence across all zone profiles with distinct toggle configurations.
   • Verify `SettingsDataStoreJavaHelper.getZoneDisplayOptions` returns the persisted values synchronously with safe fallback and non-blocking caching off main thread.
   3. *Cockpit Sensor Tile Rendering Logic Unit Tests (`SensorFieldZoneRenderingTest.kt`)*:
   • Container color resolution: `showBackground = true` returns 12% alpha zone color; `showBackground = false` returns surface; `zoneColor == Transparent` returns surface.

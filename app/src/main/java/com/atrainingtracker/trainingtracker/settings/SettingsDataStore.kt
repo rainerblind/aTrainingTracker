@@ -62,7 +62,8 @@ data class SettingsSnapshot(
     val wPrimeKj: Float?,
     val hrRunDisplayOptions: ZoneDisplayOptions,
     val hrBikeDisplayOptions: ZoneDisplayOptions,
-    val pwrBikeDisplayOptions: ZoneDisplayOptions
+    val pwrBikeDisplayOptions: ZoneDisplayOptions,
+    val hrvDisplayOptions: ZoneDisplayOptions = ZoneDisplayOptions()
 ) {
     companion object {
         val DEFAULT = SettingsSnapshot(
@@ -75,7 +76,8 @@ data class SettingsSnapshot(
             wPrimeKj = null,
             hrRunDisplayOptions = ZoneDisplayOptions(),
             hrBikeDisplayOptions = ZoneDisplayOptions(),
-            pwrBikeDisplayOptions = ZoneDisplayOptions()
+            pwrBikeDisplayOptions = ZoneDisplayOptions(),
+            hrvDisplayOptions = ZoneDisplayOptions()
         )
     }
 }
@@ -192,6 +194,12 @@ class SettingsDataStore(
         private val PWR_BIKE_ZONE_SHOW_RIGHT_BAR = booleanPreferencesKey("pwr_bike_zone_show_right_bar")
         private val PWR_BIKE_ZONE_SHOW_TEXT_COLOR = booleanPreferencesKey("pwr_bike_zone_show_text_color")
         private val PWR_BIKE_ZONE_SHOW_GAUGE = booleanPreferencesKey("pwr_bike_zone_show_gauge")
+
+        private val HRV_DFA_A1_ZONE_SHOW_BACKGROUND = booleanPreferencesKey("hrv_dfa_a1_zone_show_background")
+        private val HRV_DFA_A1_ZONE_SHOW_LEFT_BAR = booleanPreferencesKey("hrv_dfa_a1_zone_show_left_bar")
+        private val HRV_DFA_A1_ZONE_SHOW_RIGHT_BAR = booleanPreferencesKey("hrv_dfa_a1_zone_show_right_bar")
+        private val HRV_DFA_A1_ZONE_SHOW_TEXT_COLOR = booleanPreferencesKey("hrv_dfa_a1_zone_show_text_color")
+        private val HRV_DFA_A1_ZONE_SHOW_GAUGE = booleanPreferencesKey("hrv_dfa_a1_zone_show_gauge")
 
         // Automated Zone Calculation (ATT-3188, REQ-UI-373)
         const val CURRENT_ZONE_CALC_VERSION = 1
@@ -701,7 +709,7 @@ class SettingsDataStore(
         val hrRunDisplay = ZoneDisplayOptions(
             showBackground = prefs[hrRunKeys.bgKey] ?: true,
             showLeftBar = prefs[hrRunKeys.leftBarKey] ?: true,
-            showRightBar = prefs[hrRunKeys.rightBarKey] ?: false,
+            showRightBar = prefs[hrRunKeys.rightBarKey] ?: true,
             showTextColor = prefs[hrRunKeys.textColorKey] ?: false,
             showGauge = prefs[hrRunKeys.gaugeKey] ?: false
         )
@@ -710,7 +718,7 @@ class SettingsDataStore(
         val hrBikeDisplay = ZoneDisplayOptions(
             showBackground = prefs[hrBikeKeys.bgKey] ?: true,
             showLeftBar = prefs[hrBikeKeys.leftBarKey] ?: true,
-            showRightBar = prefs[hrBikeKeys.rightBarKey] ?: false,
+            showRightBar = prefs[hrBikeKeys.rightBarKey] ?: true,
             showTextColor = prefs[hrBikeKeys.textColorKey] ?: false,
             showGauge = prefs[hrBikeKeys.gaugeKey] ?: false
         )
@@ -719,9 +727,17 @@ class SettingsDataStore(
         val pwrBikeDisplay = ZoneDisplayOptions(
             showBackground = prefs[pwrBikeKeys.bgKey] ?: true,
             showLeftBar = prefs[pwrBikeKeys.leftBarKey] ?: true,
-            showRightBar = prefs[pwrBikeKeys.rightBarKey] ?: false,
+            showRightBar = prefs[pwrBikeKeys.rightBarKey] ?: true,
             showTextColor = prefs[pwrBikeKeys.textColorKey] ?: false,
             showGauge = prefs[pwrBikeKeys.gaugeKey] ?: false
+        )
+
+        val hrvDisplay = ZoneDisplayOptions(
+            showBackground = prefs[HRV_DFA_A1_ZONE_SHOW_BACKGROUND] ?: true,
+            showLeftBar = prefs[HRV_DFA_A1_ZONE_SHOW_LEFT_BAR] ?: true,
+            showRightBar = prefs[HRV_DFA_A1_ZONE_SHOW_RIGHT_BAR] ?: true,
+            showTextColor = prefs[HRV_DFA_A1_ZONE_SHOW_TEXT_COLOR] ?: false,
+            showGauge = prefs[HRV_DFA_A1_ZONE_SHOW_GAUGE] ?: false
         )
 
         return SettingsSnapshot(
@@ -734,7 +750,8 @@ class SettingsDataStore(
             wPrimeKj = prefs[KEY_CYCLING_W_PRIME_KJ]?.takeIf { it > 0.0f },
             hrRunDisplayOptions = hrRunDisplay,
             hrBikeDisplayOptions = hrBikeDisplay,
-            pwrBikeDisplayOptions = pwrBikeDisplay
+            pwrBikeDisplayOptions = pwrBikeDisplay,
+            hrvDisplayOptions = hrvDisplay
         )
     }
 
@@ -768,6 +785,10 @@ class SettingsDataStore(
             ZoneType.HR_BIKE -> snapshot.hrBikeDisplayOptions
             ZoneType.PWR_BIKE -> snapshot.pwrBikeDisplayOptions
         }
+    }
+
+    fun getHrvZoneDisplayOptionsSync(): ZoneDisplayOptions {
+        return snapshotStateFlow.value.hrvDisplayOptions
     }
 
     fun getFtpSync(): Int? = snapshotStateFlow.value.ftp
@@ -1071,7 +1092,7 @@ class SettingsDataStore(
             ZoneDisplayOptions(
                 showBackground = prefs[keys.bgKey] ?: true,
                 showLeftBar = prefs[keys.leftBarKey] ?: true,
-                showRightBar = prefs[keys.rightBarKey] ?: false,
+                showRightBar = prefs[keys.rightBarKey] ?: true,
                 showTextColor = prefs[keys.textColorKey] ?: false,
                 showGauge = prefs[keys.gaugeKey] ?: false
             )
@@ -1086,6 +1107,26 @@ class SettingsDataStore(
             prefs[keys.rightBarKey] = options.showRightBar
             prefs[keys.textColorKey] = options.showTextColor
             prefs[keys.gaugeKey] = options.showGauge
+        }
+    }
+
+    val hrvZoneDisplayOptionsFlow: Flow<ZoneDisplayOptions> = dataStore.data.map { prefs ->
+        ZoneDisplayOptions(
+            showBackground = prefs[HRV_DFA_A1_ZONE_SHOW_BACKGROUND] ?: true,
+            showLeftBar = prefs[HRV_DFA_A1_ZONE_SHOW_LEFT_BAR] ?: true,
+            showRightBar = prefs[HRV_DFA_A1_ZONE_SHOW_RIGHT_BAR] ?: true,
+            showTextColor = prefs[HRV_DFA_A1_ZONE_SHOW_TEXT_COLOR] ?: false,
+            showGauge = prefs[HRV_DFA_A1_ZONE_SHOW_GAUGE] ?: false
+        )
+    }
+
+    suspend fun saveHrvZoneDisplayOptions(options: ZoneDisplayOptions) {
+        dataStore.edit { prefs ->
+            prefs[HRV_DFA_A1_ZONE_SHOW_BACKGROUND] = options.showBackground
+            prefs[HRV_DFA_A1_ZONE_SHOW_LEFT_BAR] = options.showLeftBar
+            prefs[HRV_DFA_A1_ZONE_SHOW_RIGHT_BAR] = options.showRightBar
+            prefs[HRV_DFA_A1_ZONE_SHOW_TEXT_COLOR] = options.showTextColor
+            prefs[HRV_DFA_A1_ZONE_SHOW_GAUGE] = options.showGauge
         }
     }
 }
