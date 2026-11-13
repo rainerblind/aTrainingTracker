@@ -181,7 +181,7 @@
     <string name="hrv_test_increment_label">Stapverhoging</string>
     <string name="hrv_test_warmup_label">Duur warming-up</string>
     <string name="hrv_test_warmup_desc">10 minuten gelijkmatige warming-up voor de protocolstappen</string>
-    <string name="hrv_test_preflight_title">Sensorcontrole vooraf</string>
+    <string name="hrv_test_preflight_title">Sensor- en signaalstatus</string>
     <string name="hrv_test_preflight_checking">ECG RR-stroom &amp; signaalkwaliteit verifiëren…</string>
     <string name="hrv_test_preflight_pass" formatted="false">Hoge sensorkwaliteit (Artefacten ≤ 3,0%)</string>
     <string name="hrv_test_preflight_warning" formatted="false">Matige sensorkwaliteit (Artefacten 3,0–5,0%)</string>
@@ -202,6 +202,36 @@
     <string name="hrv_test_btn_finish">Test voltooien</string>
     <string name="hrv_test_btn_cooldown">Start cooling-down</string>
     <string name="hrv_test_btn_cancel">Test annuleren</string>
+
+    <!-- Active Pacing Guidance (ATT-7529) -->
+    <string name="hrv_test_pacing_target_header">Doel</string>
+    <string name="hrv_test_pacing_actual_header">Actueel (Is)</string>
+    <string name="hrv_test_live_power_fmt">Vermogen: %1$d W</string>
+    <string name="hrv_test_live_speed_fmt">Snelheid: %1$.1f km/h</string>
+    <string name="hrv_test_live_hr_fmt">HF: %1$d bpm</string>
+
+    <!-- Protocol Info & Pros/Cons (ATT-7529) -->
+    <string name="hrv_test_info_procedure_label">Verloop &amp; uitvoering</string>
+    <string name="hrv_test_title_step_fmt">Progressieve stappentest (%1$d min)</string>
+    <string name="hrv_test_title_ramp">Continue rampentest</string>
+    <string name="hrv_test_badge_step_4min">Aanbevolen · Hoge precisie</string>
+    <string name="hrv_test_badge_step_3min">Compact · Stappentest</string>
+    <string name="hrv_test_badge_ramp">Tijdsefficiënt · MRT-gecorrigeerd</string>
+    <string name="hrv_test_step1_warmup_cycling" formatted="false">Warming-up (10 min): Soepel rijden op 100 W (~45% FTP).</string>
+    <string name="hrv_test_step1_warmup_running">Warming-up (10 min): Rustig inlopen op 8,0 km/h (7:30 min/km).</string>
+    <string name="hrv_test_step2_step_cycling_fmt">Stappen (+20 W elke %1$d min): Vermogen per stap constant houden; laatste 2 min per stap worden geanalyseerd.</string>
+    <string name="hrv_test_step2_step_running_fmt">Stappen (+0,5 km/h elke %1$d min): Tempo per stap constant houden (vlak parcours of loopband aanbevolen).</string>
+    <string name="hrv_test_step2_ramp_cycling">Ramp (+15 W/min): Continue lineaire vermogenstoename (ideaal in smart-trainer ERG-modus).</string>
+    <string name="hrv_test_step2_ramp_running">Ramp (+0,25 km/h per min): Continue lineaire snelheidsverhoging.</string>
+    <string name="hrv_test_step3_completion">Submaximaal einde: Zodra DFA a1 gedurende 60 s onder 0,45 daalt, zijn HRVT1 &amp; HRVT2 vastgelegd – geen uitputting nodig!</string>
+    <string name="hrv_test_pro_label">Voordeel:</string>
+    <string name="hrv_test_con_label">Nadeel:</string>
+    <string name="hrv_test_pro_step_4min">Hoogste fysiologische nauwkeurigheid – na 2 min stabilisatie wordt een stabiel steady-state-venster van 2 min geanalyseerd.</string>
+    <string name="hrv_test_con_step_4min">Langere testduur (ongeveer 30–38 min inclusief warming-up).</string>
+    <string name="hrv_test_pro_step_3min">Echt stappenprotocol met kortere duur (ongeveer 25–30 min).</string>
+    <string name="hrv_test_con_step_3min">Kortere stabilisatietijd (60 s) voor het 120-s meetvenster dan bij het 4-min protocol.</string>
+    <string name="hrv_test_pro_ramp">Kortere totale duur (ongeveer 20–25 min) en vloeiende continue belastingsovergang zonder stapsprongen.</string>
+    <string name="hrv_test_con_ramp">Hartslag en HRV lopen ongeveer 45 s achter op het vermogen (Mean Response Time) en worden wiskundig gecorrigeerd (-11 W bij +15 W/min).</string>
 
     <!-- Training Zone Comparison & Multi-Session Consensus (ATT-3555 / REQ-PER-037) -->
     <string name="hrv_zone_comparison_title">Trainingszones vergelijken</string>

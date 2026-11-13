@@ -181,7 +181,7 @@
     <string name="hrv_test_increment_label">Przyrost stopnia</string>
     <string name="hrv_test_warmup_label">Czas rozgrzewki</string>
     <string name="hrv_test_warmup_desc">10-minutowa spokojna rozgrzewka przed rozpoczęciem stopni protokołu</string>
-    <string name="hrv_test_preflight_title">Wstępne sprawdzenie czujnika</string>
+    <string name="hrv_test_preflight_title">Stan czujnika i sygnału</string>
     <string name="hrv_test_preflight_checking">Sprawdzanie strumienia RR EKG i jakości sygnału…</string>
     <string name="hrv_test_preflight_pass" formatted="false">Wysoka jakość czujnika (Artefakty ≤ 3,0%)</string>
     <string name="hrv_test_preflight_warning" formatted="false">Umiarkowana jakość czujnika (Artefakty 3,0–5,0%)</string>
@@ -202,6 +202,36 @@
     <string name="hrv_test_btn_finish">Zakończ test</string>
     <string name="hrv_test_btn_cooldown">Rozpocznij schłodzenie</string>
     <string name="hrv_test_btn_cancel">Anuluj test</string>
+
+    <!-- Active Pacing Guidance (ATT-7529) -->
+    <string name="hrv_test_pacing_target_header">Cel</string>
+    <string name="hrv_test_pacing_actual_header">Aktualnie (Rzeczywiste)</string>
+    <string name="hrv_test_live_power_fmt">Moc: %1$d W</string>
+    <string name="hrv_test_live_speed_fmt">Prędkość: %1$.1f km/h</string>
+    <string name="hrv_test_live_hr_fmt">HR: %1$d bpm</string>
+
+    <!-- Protocol Info & Pros/Cons (ATT-7529) -->
+    <string name="hrv_test_info_procedure_label">Przebieg i wykonanie</string>
+    <string name="hrv_test_title_step_fmt">Progresywny test stopniowy (%1$d min)</string>
+    <string name="hrv_test_title_ramp">Ciągły test rampy</string>
+    <string name="hrv_test_badge_step_4min">Zalecane · Wysoka precyzja</string>
+    <string name="hrv_test_badge_step_3min">Kompaktowy · Test stopniowy</string>
+    <string name="hrv_test_badge_ramp">Oszczędność czasu · Skorygowany o MRT</string>
+    <string name="hrv_test_step1_warmup_cycling" formatted="false">Rozgrzewka (10 min): Spokojna jazda przy 100 W (~45% FTP).</string>
+    <string name="hrv_test_step1_warmup_running">Rozgrzewka (10 min): Spokojny bieg rozgrzewkowy przy 8,0 km/h (7:30 min/km).</string>
+    <string name="hrv_test_step2_step_cycling_fmt">Stopnie (+20 W co %1$d min): Utrzymuj stałą moc na stopień; oceniane są ostatnie 2 minuty każdego stopnia.</string>
+    <string name="hrv_test_step2_step_running_fmt">Stopnie (+0,5 km/h co %1$d min): Utrzymuj równe tempo na stopień (zalecana płaska trasa lub bieżnia).</string>
+    <string name="hrv_test_step2_ramp_cycling">Rampa (+15 W/min): Ciągły liniowy wzrost mocy (idealny w trybie ERG trenażera).</string>
+    <string name="hrv_test_step2_ramp_running">Rampa (+0,25 km/h na min): Ciągły liniowy wzrost prędkości.</string>
+    <string name="hrv_test_step3_completion">Koniec submaksymalny: Gdy DFA a1 spadnie poniżej 0,45 przez 60 s, HRVT1 i HRVT2 są zarejestrowane – bez wyczerpania!</string>
+    <string name="hrv_test_pro_label">Zaleta:</string>
+    <string name="hrv_test_con_label">Wada:</string>
+    <string name="hrv_test_pro_step_4min">Najwyższa precyzja fizjologiczna – po 2 min stabilizacji oceniane jest stabilne 2-minutowe okno w stanie równowagi.</string>
+    <string name="hrv_test_con_step_4min">Dłuższy czas trwania testu (~30–38 min łącznie z rozgrzewką).</string>
+    <string name="hrv_test_pro_step_3min">Prawdziwy protokół stopniowy o skróconym czasie trwania (~25–30 min).</string>
+    <string name="hrv_test_con_step_3min">Krótszy czas stabilizacji (60 s) przed 120-sekundowym oknem pomiarowym niż w protokole 4-minutowym.</string>
+    <string name="hrv_test_pro_ramp">Krótszy całkowity czas trwania (~20–25 min) i płynne, ciągłe przejście obciążenia bez skoków stopni.</string>
+    <string name="hrv_test_con_ramp">Tętno i HRV opóźniają się względem obciążenia o ok. 45 s (średni czas odpowiedzi) i są korygowane matematycznie (-11 W przy +15 W/min).</string>
 
     <!-- Training Zone Comparison & Multi-Session Consensus (ATT-3555 / REQ-PER-037) -->
     <string name="hrv_zone_comparison_title">Porównanie stref treningowych</string>

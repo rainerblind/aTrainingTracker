@@ -2348,28 +2348,31 @@
 ### TST-TRK-072: **Guided DFA a1 Step & Ramp Test Protocol Suite** [Verified]
 - **Requirement(s)**: `REQ-TRK-072` (`REQ-TRK-072.1`..`REQ-TRK-072.6`)
 - **Component**: `HrvRampTestViewModel.kt`, `HrvRampTestScreen.kt`, `HrvRampTestConfig.kt`, `HrvThresholdEstimator.kt`
-- **Jira**: `ATT-4969`
+- **Jira**: `ATT-4969`, `ATT-7529`
 - **Test Description**:
-  1. *Protocol Configuration & State Machine Transitions (`TST-TRK-072.1`, `HrvRampTestViewModelTest.kt`)*:
-     • Verify lifecycle state machine transitions across `CONFIG` -> `PRE_FLIGHT` -> `WARMUP` -> `TESTING` -> `COOLDOWN` -> `FINISHED`.
-     • Verify Cycling step presets (default 4 min / 240 s steps, starting load 100 W, increment +15 W) and continuous ramp configuration ($\tau_{\text{MRT}} = 45\text{ s}$).
-     • Verify Running presets (start speed / pace, 4-min steps, +0.5 km/h increment).
-  2. *Pre-Flight Sensor Quality & RR Stream Check (`TST-TRK-072.2`, `HrvRampTestViewModelTest.kt`)*:
-     • Verify `HIGH` quality status when beat-to-beat RR is streaming with artifact rate $\le 3.0\%$.
-     • Verify `WARNING` status when artifact rate is between $3.0\%$ and $5.0\%$.
-     • Verify `FAIL` status and blocked start when artifact rate $> 5.0\%$, smoothed stream detected, or no RR data available.
-  3. *Early Sub-Exhaustion Auto-Completion Detection (`TST-TRK-072.3`, `HrvRampTestViewModelTest.kt`)*:
+  1. *Protocol Configuration & Direct Start from CONFIG Phase (`TST-TRK-072.1`, `HrvRampTestViewModelTest.kt`, `HrvRampTestScreenTest.kt`)*:
+     • Verify sensor telemetry is bound in `init` and continuously evaluates readiness while in `CONFIG` phase.
+     • Verify `canStartTest` is `true` when sensor quality is `HIGH` or `MODERATE`, enabling the `Test starten` button.
+     • Verify tapping `Test starten` transitions directly into `WARMUP` phase without requiring an intermediate pre-flight screen.
+  2. *Inline Sensor- & Signalstatus UI & Quality Diagnostics (`TST-TRK-072.2`, `HrvRampTestScreenTest.kt`)*:
+     • Verify inline sensor status card renders directly on `ProtocolConfigurationCard` above `Test starten`.
+     • Verify that when sensors are disconnected or artifact rate $> 5.0\%$ (`UNSUITABLE`), `Test starten` is disabled and clear diagnostic advice is shown.
+  3. *Single-Line SegmentedButton & Active Action Button Layout Integrity (`TST-TRK-072.3`, `HrvRampTestScreenTest.kt`)*:
+     • Verify all `SegmentedButton` rows (Sport, Protocol Type, Step Duration) render without checkmark icons (`icon = {}`) and enforce single-line text formatting (`maxLines = 1, overflow = TextOverflow.Ellipsis`).
+     • Verify action buttons on `ActivePacingGuidanceCard` (*Abwärmen beginnen* / *Test beenden*) render with uniform `height(44.dp)`.
+  4. *Dynamic Protocol Explanation & Pros/Cons Box (`TST-TRK-072.4`, `HrvRampTestScreenTest.kt`)*:
+     • Verify dynamic update of summary badge, 3 numbered procedural steps (*Ablauf & Durchführung*), and protocol-specific *+ Vorteil* / *– Nachteil* bullet points when switching Sport (Cycling/Running), Protocol (Step/Ramp), and Step Duration (4 min / 3 min).
+  5. *Dual Power (W) and Speed (km/h) Live Telemetry & Target Comparison (`TST-TRK-072.5`, `HrvRampTestViewModelTest.kt`, `HrvRampTestScreenTest.kt`)*:
+     • Verify `HrvRampTestViewModel` collects `SensorType.SPEED_mps` and exposes `currentSpeedKmh`.
+     • Verify `ActivePacingGuidanceCard` renders prominent **Ziel** vs. **Aktuell (Ist)** pacing comparison block.
+     • Verify simultaneous display of live Power (`W`) and live Speed (`km/h`) alongside current HR, live DFA $\alpha_1$, and artifact rate %.
+  6. *Early Sub-Exhaustion Auto-Completion Detection (`TST-TRK-072.6`, `HrvRampTestViewModelTest.kt`)*:
      • Stream simulated DFA $\alpha_1$ values descending below dynamic cutoff $(T_2 - 0.05f).\text{coerceAtLeast}(0.25f)$ (cutoff $0.45$ for default $T_2 = 0.50$, or cutoff $0.55$ for custom $T_2 = 0.60$).
      • Verify that sustained $\alpha_1 < \text{cutoff}$ for $\ge 60\text{ s}$ transitions state to `EARLY_COMPLETION` with user alert and prompts transition to `COOLDOWN`.
      • Verify that transient dips below cutoff lasting $< 60\text{ s}$ do not trigger early completion.
-  4. *Per-Step Evaluation Window & Metadata Tagging (`TST-TRK-072.4`, `HrvRampTestViewModelTest.kt` / `HrvThresholdEstimatorTest.kt`)*:
-     • Verify workout session is tagged with `hrvTestProtocol = GUIDED_STEP` or `GUIDED_RAMP` with step duration and ramp slope.
-     • Verify `HrvThresholdEstimator` computes step points strictly over $[t_{\text{end},j} - 120\text{ s}, t_{\text{end},j}]$ with zero bleed into subsequent steps.
-  5. *Compose UI Screen Rendering & Pacing Guidance (`TST-TRK-072.5`, `HrvRampTestScreenTest.kt`)*:
-     • Verify Compose rendering of protocol title, active step indicator, target power/pace gauge, countdown timer, live $\alpha_1$, live artifact %, and early completion dialog.
-  6. *9-Language Localization & Format Parity Test (`TST-TRK-072.6`, `TranslationParityTest.kt`)*:
-     • Verify 100% presence and parity of all test screen string keys in `strings_hrv.xml` across all 9 locales: `values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`.
-  7. *Clean-Room Targeted Test Suite Execution (`TST-TRK-072.7`)*:
+  7. *9-Language Localization & Format Parity Test (`TST-TRK-072.7`, `TranslationParityTest.kt`)*:
+     • Verify 100% presence and argument-specifier parity for all new protocol guidance strings and natural sensor status copy across all 9 localized `strings_hrv.xml` files (`values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`).
+  8. *Clean-Room Targeted Test Suite Execution (`TST-TRK-072.8`)*:
      • `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.hrv.*" --tests "com.atrainingtracker.trainingtracker.localization.TranslationParityTest"` asserting 100% pass rate.
 
 ### TST-TRK-073: **Live 2D Lane-Offset & Vehicle Sizing Radar Edge Overlay Test Suite** [Verified]

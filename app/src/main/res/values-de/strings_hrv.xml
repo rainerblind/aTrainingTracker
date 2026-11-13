@@ -181,7 +181,7 @@
     <string name="hrv_test_increment_label">Stufensteigerung</string>
     <string name="hrv_test_warmup_label">Aufwärmdauer</string>
     <string name="hrv_test_warmup_desc">10 Minuten gleichmäßiges Aufwärmen vor den Teststufen</string>
-    <string name="hrv_test_preflight_title">Vorflug-Sensorkontrolle</string>
+    <string name="hrv_test_preflight_title">Sensor- &amp; Signalstatus</string>
     <string name="hrv_test_preflight_checking">EKG-RR-Stream &amp; Signalqualität werden überprüft…</string>
     <string name="hrv_test_preflight_pass" formatted="false">Hohe Sensorqualität (Artefakte ≤ 3,0 %)</string>
     <string name="hrv_test_preflight_warning" formatted="false">Mäßige Sensorqualität (Artefakte 3,0–5,0 %)</string>
@@ -202,6 +202,36 @@
     <string name="hrv_test_btn_finish">Test beenden</string>
     <string name="hrv_test_btn_cooldown">Abwärmen beginnen</string>
     <string name="hrv_test_btn_cancel">Test abbrechen</string>
+
+    <!-- Active Pacing Guidance (ATT-7529) -->
+    <string name="hrv_test_pacing_target_header">Ziel</string>
+    <string name="hrv_test_pacing_actual_header">Aktuell (Ist)</string>
+    <string name="hrv_test_live_power_fmt">Leistung: %1$d W</string>
+    <string name="hrv_test_live_speed_fmt">Geschw.: %1$.1f km/h</string>
+    <string name="hrv_test_live_hr_fmt">HF: %1$d bpm</string>
+
+    <!-- Protocol Info & Pros/Cons (ATT-7529) -->
+    <string name="hrv_test_info_procedure_label">Ablauf &amp; Durchführung</string>
+    <string name="hrv_test_title_step_fmt">Progressiver Stufentest (%1$d Min.)</string>
+    <string name="hrv_test_title_ramp">Kontinuierlicher Rampentest</string>
+    <string name="hrv_test_badge_step_4min">Empfohlen · Hohe Präzision</string>
+    <string name="hrv_test_badge_step_3min">Kompakt · Stufentest</string>
+    <string name="hrv_test_badge_ramp">Zeiteffizient · MRT-korrigiert</string>
+    <string name="hrv_test_step1_warmup_cycling" formatted="false">Aufwärmen (10 Min.): Locker und gleichmäßig bei 100 W (ca. 45 % FTP) einfahren.</string>
+    <string name="hrv_test_step1_warmup_running">Aufwärmen (10 Min.): Lockeres Einlaufen bei 8,0 km/h (7:30 min/km).</string>
+    <string name="hrv_test_step2_step_cycling_fmt">Stufen (+20 W alle %1$d Min.): Zielwattzahl pro Stufe konstant halten; die letzten 2 Min. jeder Stufe werden ausgewertet.</string>
+    <string name="hrv_test_step2_step_running_fmt">Stufen (+0,5 km/h alle %1$d Min.): Tempo pro Stufe gleichmäßig halten (flache Strecke oder Laufband empfohlen).</string>
+    <string name="hrv_test_step2_ramp_cycling">Rampe (+15 W/Min.): Gleichmäßiger, kontinuierlicher Leistungsanstieg (ideal im Smart-Trainer ERG-Modus).</string>
+    <string name="hrv_test_step2_ramp_running">Rampe (+0,25 km/h pro Min.): Gleichmäßige kontinuierliche Temposteigerung.</string>
+    <string name="hrv_test_step3_completion">Submaximales Ende: Sobald DFA a1 für 60 s unter 0,45 fällt, sind HRVT1 &amp; HRVT2 erfasst – keine Ausbelastung nötig!</string>
+    <string name="hrv_test_pro_label">Vorteil:</string>
+    <string name="hrv_test_con_label">Nachteil:</string>
+    <string name="hrv_test_pro_step_4min">Höchste physiologische Genauigkeit – nach 2 Min. Einschwingzeit wird ein stabiles 2-Min.-Fenster im Steady-State gemessen.</string>
+    <string name="hrv_test_con_step_4min">Längere Testdauer (ca. 30–38 Min. inkl. Aufwärmen).</string>
+    <string name="hrv_test_pro_step_3min">Echtes Stufenprotokoll bei verkürzter Dauer (ca. 25–30 Min.).</string>
+    <string name="hrv_test_con_step_3min">Kürzere Einschwingzeit (60 s) vor dem 120-s-Messfenster als beim 4-Min.-Protokoll.</string>
+    <string name="hrv_test_pro_ramp">Kürzere Gesamtdauer (ca. 20–25 Min.) und fließender Belastungsübergang ohne Stufensprünge.</string>
+    <string name="hrv_test_con_ramp">Die Herzfrequenz/HRV hinkt der Leistung um ca. 45 s hinterher (Mean Response Time) und wird rechnerisch korrigiert (–11 W bei +15 W/Min.).</string>
 
     <!-- Training Zone Comparison & Multi-Session Consensus (ATT-3555 / REQ-PER-037) -->
     <string name="hrv_zone_comparison_title">Trainingszonen-Vergleich</string>

@@ -101,7 +101,35 @@ class HrvRampTestScreenTest {
             "hrv_test_btn_start",
             "hrv_test_btn_finish",
             "hrv_test_btn_cooldown",
-            "hrv_test_btn_cancel"
+            "hrv_test_btn_cancel",
+            // Active Pacing Guidance (ATT-7529)
+            "hrv_test_pacing_target_header",
+            "hrv_test_pacing_actual_header",
+            "hrv_test_live_power_fmt",
+            "hrv_test_live_speed_fmt",
+            "hrv_test_live_hr_fmt",
+            // Protocol Info & Pros/Cons (ATT-7529)
+            "hrv_test_info_procedure_label",
+            "hrv_test_title_step_fmt",
+            "hrv_test_title_ramp",
+            "hrv_test_badge_step_4min",
+            "hrv_test_badge_step_3min",
+            "hrv_test_badge_ramp",
+            "hrv_test_step1_warmup_cycling",
+            "hrv_test_step1_warmup_running",
+            "hrv_test_step2_step_cycling_fmt",
+            "hrv_test_step2_step_running_fmt",
+            "hrv_test_step2_ramp_cycling",
+            "hrv_test_step2_ramp_running",
+            "hrv_test_step3_completion",
+            "hrv_test_pro_label",
+            "hrv_test_con_label",
+            "hrv_test_pro_step_4min",
+            "hrv_test_con_step_4min",
+            "hrv_test_pro_step_3min",
+            "hrv_test_con_step_3min",
+            "hrv_test_pro_ramp",
+            "hrv_test_con_ramp"
         )
 
         val strings = LocalizationTestCache.getStrings("values", "strings_hrv.xml")

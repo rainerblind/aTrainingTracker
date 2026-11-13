@@ -181,7 +181,7 @@
     <string name="hrv_test_increment_label">Incremento por escalón</string>
     <string name="hrv_test_warmup_label">Duración del calentamiento</string>
     <string name="hrv_test_warmup_desc">Calentamiento constante de 10 minutos antes de los escalones del protocolo</string>
-    <string name="hrv_test_preflight_title">Comprobación previa del sensor</string>
+    <string name="hrv_test_preflight_title">Estado del sensor y de la señal</string>
     <string name="hrv_test_preflight_checking">Verificando flujo RR de ECG y calidad de señal…</string>
     <string name="hrv_test_preflight_pass" formatted="false">Alta calidad del sensor (Artefactos ≤ 3,0%)</string>
     <string name="hrv_test_preflight_warning" formatted="false">Calidad moderada del sensor (Artefactos 3,0–5,0%)</string>
@@ -202,6 +202,36 @@
     <string name="hrv_test_btn_finish">Finalizar prueba</string>
     <string name="hrv_test_btn_cooldown">Iniciar enfriamiento</string>
     <string name="hrv_test_btn_cancel">Cancelar prueba</string>
+
+    <!-- Active Pacing Guidance (ATT-7529) -->
+    <string name="hrv_test_pacing_target_header">Objetivo</string>
+    <string name="hrv_test_pacing_actual_header">Actual (Real)</string>
+    <string name="hrv_test_live_power_fmt">Potencia: %1$d W</string>
+    <string name="hrv_test_live_speed_fmt">Velocidad: %1$.1f km/h</string>
+    <string name="hrv_test_live_hr_fmt">FC: %1$d bpm</string>
+
+    <!-- Protocol Info & Pros/Cons (ATT-7529) -->
+    <string name="hrv_test_info_procedure_label">Procedimiento y ejecución</string>
+    <string name="hrv_test_title_step_fmt">Prueba escalonada progresiva (%1$d min)</string>
+    <string name="hrv_test_title_ramp">Prueba continua de rampa</string>
+    <string name="hrv_test_badge_step_4min">Recomendado · Alta precisión</string>
+    <string name="hrv_test_badge_step_3min">Compacto · Prueba escalonada</string>
+    <string name="hrv_test_badge_ramp">Eficiente en tiempo · Corregido por MRT</string>
+    <string name="hrv_test_step1_warmup_cycling" formatted="false">Calentamiento (10 min): Rodar suavemente a 100 W (~45% FTP).</string>
+    <string name="hrv_test_step1_warmup_running">Calentamiento (10 min): Carrera suave de calentamiento a 8,0 km/h (7:30 min/km).</string>
+    <string name="hrv_test_step2_step_cycling_fmt">Peldaños (+20 W cada %1$d min): Mantener potencia constante por peldaño; se evalúan los últimos 2 min de cada peldaño.</string>
+    <string name="hrv_test_step2_step_running_fmt">Peldaños (+0,5 km/h cada %1$d min): Mantener ritmo constante por peldaño (se recomienda pista plana o cinta).</string>
+    <string name="hrv_test_step2_ramp_cycling">Rampa (+15 W/min): Aumento continuo y lineal de potencia (ideal en modo ERG de rodillo inteligente).</string>
+    <string name="hrv_test_step2_ramp_running">Rampa (+0,25 km/h por min): Aumento continuo y lineal de velocidad.</string>
+    <string name="hrv_test_step3_completion">Fin submaximal: En cuanto DFA a1 cae bajo 0,45 durante 60 s, HRVT1 y HRVT2 quedan registrados – ¡sin agotamiento!</string>
+    <string name="hrv_test_pro_label">Ventaja:</string>
+    <string name="hrv_test_con_label">Desventaja:</string>
+    <string name="hrv_test_pro_step_4min">Máxima precisión fisiológica: tras 2 min de estabilización, se evalúa una ventana estable de 2 min en estado estacionario.</string>
+    <string name="hrv_test_con_step_4min">Duración de prueba más larga (~30–38 min incluyendo calentamiento).</string>
+    <string name="hrv_test_pro_step_3min">Auténtico protocolo escalonado con duración más corta (~25–30 min).</string>
+    <string name="hrv_test_con_step_3min">Menor tiempo de estabilización (60 s) antes de la ventana de 120 s que en el protocolo de 4 min.</string>
+    <string name="hrv_test_pro_ramp">Menor duración total (~20–25 min) y progresión continua y suave de carga sin saltos bruscos.</string>
+    <string name="hrv_test_con_ramp">La frecuencia cardíaca y HRV tienen un retraso de ~45 s respecto a la carga (tiempo medio de respuesta), corregido matemáticamente (-11 W a +15 W/min).</string>
 
     <!-- Training Zone Comparison & Multi-Session Consensus (ATT-3555 / REQ-PER-037) -->
     <string name="hrv_zone_comparison_title">Comparación de zonas de entrenamiento</string>

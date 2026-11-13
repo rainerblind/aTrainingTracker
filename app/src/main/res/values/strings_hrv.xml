@@ -181,7 +181,7 @@
     <string name="hrv_test_increment_label">Step Increment</string>
     <string name="hrv_test_warmup_label">Warm-up Duration</string>
     <string name="hrv_test_warmup_desc">10-minute steady warm-up before protocol steps</string>
-    <string name="hrv_test_preflight_title">Pre-Flight Sensor Check</string>
+    <string name="hrv_test_preflight_title">Sensor &amp; Signal Status</string>
     <string name="hrv_test_preflight_checking">Verifying ECG RR stream &amp; signal quality…</string>
     <string name="hrv_test_preflight_pass" formatted="false">Sensor Quality High (Artifacts ≤ 3.0%)</string>
     <string name="hrv_test_preflight_warning" formatted="false">Sensor Quality Moderate (Artifacts 3.0–5.0%)</string>
@@ -202,6 +202,36 @@
     <string name="hrv_test_btn_finish">Finish Test</string>
     <string name="hrv_test_btn_cooldown">Begin Cool-down</string>
     <string name="hrv_test_btn_cancel">Cancel Test</string>
+
+    <!-- Active Pacing Guidance (ATT-7529) -->
+    <string name="hrv_test_pacing_target_header">Target</string>
+    <string name="hrv_test_pacing_actual_header">Actual (Current)</string>
+    <string name="hrv_test_live_power_fmt">Power: %1$d W</string>
+    <string name="hrv_test_live_speed_fmt">Speed: %1$.1f km/h</string>
+    <string name="hrv_test_live_hr_fmt">HR: %1$d bpm</string>
+
+    <!-- Protocol Info & Pros/Cons (ATT-7529) -->
+    <string name="hrv_test_info_procedure_label">Procedure &amp; Execution</string>
+    <string name="hrv_test_title_step_fmt">Progressive Step Test (%1$d min)</string>
+    <string name="hrv_test_title_ramp">Continuous Ramp Test</string>
+    <string name="hrv_test_badge_step_4min">Recommended · High Precision</string>
+    <string name="hrv_test_badge_step_3min">Compact · Step Test</string>
+    <string name="hrv_test_badge_ramp">Time-efficient · MRT-corrected</string>
+    <string name="hrv_test_step1_warmup_cycling" formatted="false">Warm-up (10 min): Ride smoothly at 100 W (~45% FTP).</string>
+    <string name="hrv_test_step1_warmup_running">Warm-up (10 min): Easy warm-up run at 8.0 km/h (7:30 min/km).</string>
+    <string name="hrv_test_step2_step_cycling_fmt">Steps (+20 W every %1$d min): Hold power constant per step; trailing 2 min of each step are evaluated.</string>
+    <string name="hrv_test_step2_step_running_fmt">Steps (+0.5 km/h every %1$d min): Hold steady pace per step (flat track or treadmill recommended).</string>
+    <string name="hrv_test_step2_ramp_cycling">Ramp (+15 W/min): Continuous linear power increase (ideal in smart trainer ERG mode).</string>
+    <string name="hrv_test_step2_ramp_running">Ramp (+0.25 km/h per min): Continuous linear speed increase.</string>
+    <string name="hrv_test_step3_completion">Submaximal End: Once DFA a1 drops below 0.45 for 60 s, HRVT1 &amp; HRVT2 are captured – no exhaustion needed!</string>
+    <string name="hrv_test_pro_label">Advantage:</string>
+    <string name="hrv_test_con_label">Disadvantage:</string>
+    <string name="hrv_test_pro_step_4min">Highest physiological precision – after a 2-min transient settling period, a stable 2-min steady-state window is evaluated.</string>
+    <string name="hrv_test_con_step_4min">Longer test duration (~30–38 min including warm-up).</string>
+    <string name="hrv_test_pro_step_3min">Genuine step protocol with shorter duration (~25–30 min).</string>
+    <string name="hrv_test_con_step_3min">Shorter settling time (60 s) before the 120-s evaluation window than the 4-min protocol.</string>
+    <string name="hrv_test_pro_ramp">Shorter overall duration (~20–25 min) and smooth continuous workload progression without step jumps.</string>
+    <string name="hrv_test_con_ramp">Heart rate and HRV lag workload by ~45 s (Mean Response Time), mathematically corrected (-11 W at +15 W/min).</string>
 
     <!-- Training Zone Comparison & Multi-Session Consensus (ATT-3555 / REQ-PER-037) -->
     <string name="hrv_zone_comparison_title">Training Zone Comparison</string>

@@ -181,7 +181,7 @@
     <string name="hrv_test_increment_label">Incremento por degrau</string>
     <string name="hrv_test_warmup_label">Duração do aquecimento</string>
     <string name="hrv_test_warmup_desc">Aquecimento constante de 10 minutos antes dos degraus do protocolo</string>
-    <string name="hrv_test_preflight_title">Verificação prévia do sensor</string>
+    <string name="hrv_test_preflight_title">Estado do sensor e do sinal</string>
     <string name="hrv_test_preflight_checking">Verificando fluxo RR de ECG e qualidade do sinal…</string>
     <string name="hrv_test_preflight_pass" formatted="false">Alta qualidade do sensor (Artefatos ≤ 3,0%)</string>
     <string name="hrv_test_preflight_warning" formatted="false">Qualidade moderada do sensor (Artefatos 3,0–5,0%)</string>
@@ -202,6 +202,36 @@
     <string name="hrv_test_btn_finish">Finalizar teste</string>
     <string name="hrv_test_btn_cooldown">Iniciar resfriamento</string>
     <string name="hrv_test_btn_cancel">Cancelar teste</string>
+
+    <!-- Active Pacing Guidance (ATT-7529) -->
+    <string name="hrv_test_pacing_target_header">Alvo</string>
+    <string name="hrv_test_pacing_actual_header">Atual (Real)</string>
+    <string name="hrv_test_live_power_fmt">Potência: %1$d W</string>
+    <string name="hrv_test_live_speed_fmt">Velocidade: %1$.1f km/h</string>
+    <string name="hrv_test_live_hr_fmt">FC: %1$d bpm</string>
+
+    <!-- Protocol Info & Pros/Cons (ATT-7529) -->
+    <string name="hrv_test_info_procedure_label">Procedimento e execução</string>
+    <string name="hrv_test_title_step_fmt">Teste progressivo de degraus (%1$d min)</string>
+    <string name="hrv_test_title_ramp">Teste contínuo de rampa</string>
+    <string name="hrv_test_badge_step_4min">Recomendado · Alta precisão</string>
+    <string name="hrv_test_badge_step_3min">Compacto · Teste de degraus</string>
+    <string name="hrv_test_badge_ramp">Eficiente no tempo · Corrigido por MRT</string>
+    <string name="hrv_test_step1_warmup_cycling" formatted="false">Aquecimento (10 min): Pedalar suavemente a 100 W (~45% FTP).</string>
+    <string name="hrv_test_step1_warmup_running">Aquecimento (10 min): Corrida suave de aquecimento a 8,0 km/h (7:30 min/km).</string>
+    <string name="hrv_test_step2_step_cycling_fmt">Degraus (+20 W a cada %1$d min): Manter potência constante por degrau; os últimos 2 min de cada degrau são avaliados.</string>
+    <string name="hrv_test_step2_step_running_fmt">Degraus (+0,5 km/h a cada %1$d min): Manter ritmo constante por degrau (pista plana ou esteira recomendada).</string>
+    <string name="hrv_test_step2_ramp_cycling">Rampa (+15 W/min): Aumento contínuo e linear de potência (ideal no modo ERG do rolo inteligente).</string>
+    <string name="hrv_test_step2_ramp_running">Rampa (+0,25 km/h por min): Aumento contínuo e linear de velocidade.</string>
+    <string name="hrv_test_step3_completion">Fim submáximo: Assim que o DFA a1 cair abaixo de 0,45 por 60 s, HRVT1 e HRVT2 estão registados – sem exaustão!</string>
+    <string name="hrv_test_pro_label">Vantagem:</string>
+    <string name="hrv_test_con_label">Desvantagem:</string>
+    <string name="hrv_test_pro_step_4min">Maior precisão fisiológica: após 2 min de estabilização, é avaliada uma janela estável de 2 min em estado estacionário.</string>
+    <string name="hrv_test_con_step_4min">Duração de teste mais longa (~30–38 min incluindo aquecimento).</string>
+    <string name="hrv_test_pro_step_3min">Autêntico protocolo de degraus com duração reduzida (~25–30 min).</string>
+    <string name="hrv_test_con_step_3min">Tempo de estabilização mais curto (60 s) antes da janela de 120 s do que no protocolo de 4 min.</string>
+    <string name="hrv_test_pro_ramp">Menor duração total (~20–25 min) e progressão suave e contínua de carga sem saltos.</string>
+    <string name="hrv_test_con_ramp">A frequência cardíaca e a HRV atrasam-se cerca de 45 s em relação à carga (tempo médio de resposta), corrigido matematicamente (-11 W a +15 W/min).</string>
 
     <!-- Training Zone Comparison & Multi-Session Consensus (ATT-3555 / REQ-PER-037) -->
     <string name="hrv_zone_comparison_title">Comparação de zonas de treino</string>

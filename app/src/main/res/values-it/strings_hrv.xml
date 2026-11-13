@@ -181,7 +181,7 @@
     <string name="hrv_test_increment_label">Incremento per gradino</string>
     <string name="hrv_test_warmup_label">Durata del riscaldamento</string>
     <string name="hrv_test_warmup_desc">Riscaldamento costante di 10 minuti prima delle fasi del protocollo</string>
-    <string name="hrv_test_preflight_title">Controllo preliminare del sensore</string>
+    <string name="hrv_test_preflight_title">Stato del sensore e del segnale</string>
     <string name="hrv_test_preflight_checking">Verifica del flusso RR ECG e della qualità del segnale…</string>
     <string name="hrv_test_preflight_pass" formatted="false">Alta qualità del sensore (Artefatti ≤ 3,0%)</string>
     <string name="hrv_test_preflight_warning" formatted="false">Qualità moderata del sensore (Artefatti 3,0–5,0%)</string>
@@ -202,6 +202,36 @@
     <string name="hrv_test_btn_finish">Termina test</string>
     <string name="hrv_test_btn_cooldown">Inizia defaticamento</string>
     <string name="hrv_test_btn_cancel">Annulla test</string>
+
+    <!-- Active Pacing Guidance (ATT-7529) -->
+    <string name="hrv_test_pacing_target_header">Obiettivo</string>
+    <string name="hrv_test_pacing_actual_header">Attuale (Reale)</string>
+    <string name="hrv_test_live_power_fmt">Potenza: %1$d W</string>
+    <string name="hrv_test_live_speed_fmt">Velocità: %1$.1f km/h</string>
+    <string name="hrv_test_live_hr_fmt">FC: %1$d bpm</string>
+
+    <!-- Protocol Info & Pros/Cons (ATT-7529) -->
+    <string name="hrv_test_info_procedure_label">Procedura ed esecuzione</string>
+    <string name="hrv_test_title_step_fmt">Test progressivo a gradini (%1$d min)</string>
+    <string name="hrv_test_title_ramp">Test continuo a rampa</string>
+    <string name="hrv_test_badge_step_4min">Consigliato · Alta precisione</string>
+    <string name="hrv_test_badge_step_3min">Compatto · Test a gradini</string>
+    <string name="hrv_test_badge_ramp">Efficiente nei tempi · Corretto per MRT</string>
+    <string name="hrv_test_step1_warmup_cycling" formatted="false">Riscaldamento (10 min): Pedalare agevolmente a 100 W (~45% FTP).</string>
+    <string name="hrv_test_step1_warmup_running">Riscaldamento (10 min): Corsa di riscaldamento leggera a 8,0 km/h (7:30 min/km).</string>
+    <string name="hrv_test_step2_step_cycling_fmt">Gradini (+20 W ogni %1$d min): Mantenere potenza costante per gradino; valutati gli ultimi 2 min di ogni gradino.</string>
+    <string name="hrv_test_step2_step_running_fmt">Gradini (+0,5 km/h ogni %1$d min): Mantenere andatura costante per gradino (consigliato percorso piano o tapis roulant).</string>
+    <string name="hrv_test_step2_ramp_cycling">Rampa (+15 W/min): Aumento continuo e lineare di potenza (ideale in modalità ERG del rullo smart).</string>
+    <string name="hrv_test_step2_ramp_running">Rampa (+0,25 km/h al min): Aumento continuo e lineare di velocità.</string>
+    <string name="hrv_test_step3_completion">Fine submassimale: Non appena DFA a1 scende sotto 0,45 per 60 s, HRVT1 e HRVT2 sono acquisiti – nessuno sfinimento necessario!</string>
+    <string name="hrv_test_pro_label">Vantaggio:</string>
+    <string name="hrv_test_con_label">Svantaggio:</string>
+    <string name="hrv_test_pro_step_4min">Massima precisione fisiologica: dopo 2 min di stabilizzazione, viene valutata una finestra stabile di 2 min in steady-state.</string>
+    <string name="hrv_test_con_step_4min">Durata del test più lunga (~30–38 min compreso riscaldamento).</string>
+    <string name="hrv_test_pro_step_3min">Autentico protocollo a gradini con durata ridotta (~25–30 min).</string>
+    <string name="hrv_test_con_step_3min">Tempo di stabilizzazione più breve (60 s) prima della finestra di valutazione di 120 s rispetto al protocollo di 4 min.</string>
+    <string name="hrv_test_pro_ramp">Durata complessiva più breve (~20–25 min) e transizione fluida e continua del carico senza salti.</string>
+    <string name="hrv_test_con_ramp">La frequenza cardiaca e la HRV hanno un ritardo di circa 45 s rispetto alla potenza (tempo medio di risposta), corretto matematicamente (-11 W a +15 W/min).</string>
 
     <!-- Training Zone Comparison & Multi-Session Consensus (ATT-3555 / REQ-PER-037) -->
     <string name="hrv_zone_comparison_title">Confronto zone di allenamento</string>

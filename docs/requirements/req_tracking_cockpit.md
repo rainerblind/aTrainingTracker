@@ -4289,25 +4289,35 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 ### REQ-TRK-072: Guided DFA a1 Step & Ramp Test Protocol Screen [Verified]
 - **Target Release**: `V5.0.0`
 - **Tests**: `TST-TRK-072`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `app/src/main/java/com/atrainingtracker/trainingtracker/ui/hrv/HrvRampTestScreen.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/ui/hrv/HrvRampTestViewModel.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/ui/hrv/HrvRampTestConfig.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/ui/hrv/HrvRampTestState.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/navigation/NavRoutes.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/ui/ATrainingTrackerApp.kt`
-- **Rationale**: While `ATT-3554` established confidence-gated post-workout threshold estimation (`REQ-PER-036`), determining physiological thresholds ($HRVT_1$ and $HRVT_2$) in unstandardized free-form workouts suffers from non-monotonic power/pace progressions, cadence surges, and pacing variability that reduce $R^2$ and trigger span failures. Furthermore, athletes often mistakenly believe threshold testing requires riding to maximal physical exhaustion, whereas autonomic threshold capture is complete as soon as DFA $\alpha_1$ sustainably drops below $(T_2 - 0.05f).\text{coerceAtLeast}(0.25f)$ (defaulting to $0.45$). The system SHALL provide a dedicated, guided DFA $\alpha_1$ step and continuous ramp test protocol screen with pre-flight sensor checks, live target pacing guidance, and automated early sub-exhaustion completion detection.
+- **Rationale**: While `ATT-3554` established confidence-gated post-workout threshold estimation (`REQ-PER-036`), determining physiological thresholds ($HRVT_1$ and $HRVT_2$) in unstandardized free-form workouts suffers from non-monotonic power/pace progressions, cadence surges, and pacing variability that reduce $R^2$ and trigger span failures. Furthermore, athletes often mistakenly believe threshold testing requires riding to maximal physical exhaustion, whereas autonomic threshold capture is complete as soon as DFA $\alpha_1$ sustainably drops below $(T_2 - 0.05f).\text{coerceAtLeast}(0.25f)$ (defaulting to $0.45$). The system SHALL provide a dedicated, guided DFA $\alpha_1$ step and continuous ramp test protocol screen with inline real-time sensor quality status, dynamic protocol guidance and pros/cons, clean single-line controls, prominent live target vs. actual pacing guidance, and automated early sub-exhaustion completion detection.
 - **Description**:
-  1. *Protocol Configuration & Pacing Presets (`REQ-TRK-072.1`)*:
+  1. *Protocol Configuration, Pacing Presets & Dynamic Guidance (`REQ-TRK-072.1`)*:
      - The system SHALL provide configurable test protocols supporting both Cycling (`BIKE_POWER`, power in Watts) and Running (`RUNNING`, speed in km/h or pace in min/km).
      - **Progressive Step Protocol (`GUIDED_STEP`)**: Defaults to 4 min (240 s) steps for complete cardiodynamic and autonomic settling (with selectable 3 min / 180 s minimum option). Configurable starting target (e.g. 100 W or 45% FTP for cycling) and step increment (default +15 W or +20 W; +0.5 km/h for running).
      - **Continuous Ramp Protocol (`GUIDED_RAMP`)**: Continuous linear progression with gentle slope $s \in \{+10\text{ W/min}, +15\text{ W/min}\}$ starting at 100 W or 45% FTP, tagging Mean Response Time $\tau_{\text{MRT}} = 45\text{ s}$ for downstream lag-compensated threshold estimation.
      - **Standard Warm-up**: Configurable steady warm-up defaulting to 10 minutes prior to protocol steps.
+     - **Segmented Control Layout**: All `SegmentedButton` rows (Sport, Protocol Type, Step Duration) SHALL render without checkmark icons (`icon = {}`) and enforce single-line text formatting (`maxLines = 1, overflow = TextOverflow.Ellipsis`).
+     - **Dynamic Protocol Information Box**: The configuration card SHALL render a structured protocol summary card containing a title and badge, 3 numbered procedural steps (*Ablauf & Durchführung*), and protocol-specific *+ Vorteil* / *– Nachteil* items dynamically updated when toggling sport, protocol type, or step duration.
   2. *Per-Step Evaluation Window & Zero Bleed Contract (`REQ-TRK-072.2`)*:
      - For `GUIDED_STEP`, each completed step $j$ ending at $t_{\text{end},j}$ SHALL contribute exactly one $(\overline{P}_j, \overline{\text{HR}}_j, \alpha_{1,j})$ data point evaluated strictly on RR beats inside $[t_{\text{end},j} - 120\text{ s}, t_{\text{end},j}]$.
      - Step evaluation SHALL NOT use data points beyond $t_{\text{end},j} - 60\text{ s}$ for centered windows, guaranteeing zero bleed into subsequent step transitions and eliminating step settling transients.
-  3. *Pre-Flight Sensor Quality & RR Stream Check (`REQ-TRK-072.3`)*:
-     - Prior to commencing the test, the system SHALL evaluate connected heart rate telemetry for beat-to-beat RR intervals.
-     - The pre-flight check SHALL grade sensor readiness:
+  3. *Inline Sensor Quality & Direct Test Launch (`REQ-TRK-072.3`)*:
+     - The system SHALL immediately bind to sensor telemetry and begin evaluating heart rate and beat-to-beat RR intervals upon opening `HrvRampTestScreen`.
+     - Sensor readiness and diagnostic advice SHALL be embedded inline directly on `ProtocolConfigurationCard` above the primary **`Test starten`** action button, eliminating the separate intermediate pre-flight screen.
+     - The inline sensor card SHALL grade sensor readiness:
        - **High Quality**: ECG chest strap connected, beat-to-beat RR streaming, artifact rate $\le 3.0\%$.
        - **Moderate Quality**: Artifact rate between $3.0\%$ and $5.0\%$, displaying a warning that results will be capped at `Confidence.MEDIUM`.
-       - **Unsuitable**: Artifact rate $> 5.0\%$, firmware-smoothed RR stream detected, or no RR interval stream available (e.g., optical wrist sensor). Test start SHALL be gated with clear user diagnostics.
+       - **Unsuitable**: Artifact rate $> 5.0\%$, firmware-smoothed RR stream detected, or no RR interval stream available (e.g., optical wrist sensor). Test start SHALL be gated (`enabled = uiState.canStartTest`) with actionable user diagnostics.
+     - User-visible status copy across all 9 supported locales SHALL use natural phrasing (*"Sensor- & Signalstatus"* / *"Sensor & Signal Status"*) replacing literal aviation translations (*"Vorflug-Sensorkontrolle"*).
   4. *In-Workout Real-Time Guidance & Cockpit Overlay (`REQ-TRK-072.4`)*:
+     - `HrvRampTestViewModel` SHALL collect `SensorType.SPEED_mps` and expose `currentSpeedKmh = speedMps * 3.6`.
      - The protocol screen SHALL render current phase (`WARMUP`, `STEP`, `RAMP`, `COOLDOWN`), active target intensity (Watts or Pace), step countdown timer ($MM:SS$), live DFA $\alpha_1$, live artifact rate (%), and current HR.
+     - `ActivePacingGuidanceCard` SHALL display a prominent **Ziel** vs. **Aktuell (Ist)** pacing comparison block and show both live Power (`W`) and live Speed (`km/h`).
+     - Action buttons on `ActivePacingGuidanceCard` (*Abwärmen beginnen* / *Test beenden*) SHALL enforce uniform single-line height (`height(44.dp)`, `maxLines = 1, overflow = TextOverflow.Ellipsis`).
   5. *Early Sub-Exhaustion Auto-Completion Detection (`REQ-TRK-072.5`)*:
      - During the test phase, when live DFA $\alpha_1$ drops sustainably below $(T_2 - 0.05f).\text{coerceAtLeast}(0.25f)$ (where $T_2$ is the athlete's anaerobic threshold from `TuningPreferencesDataStore.dfaA1ThresholdT2Flow`, defaulting to $0.50f$ yielding cutoff $0.45f$) for at least 60 consecutive seconds (confirming both $HRVT_1$ and $HRVT_2$ have been traversed), the system SHALL immediately notify the athlete via visual banner and audible tone that threshold determination is complete.
      - The system SHALL offer a 1-tap transition into cool-down, terminating test loading without requiring maximal volitional exhaustion.
@@ -4317,17 +4327,26 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 **Requirement Archaeology & Chesterton's Fence Audit**:
 1. *Original Requirement ID & Target*: Net-new requirement `REQ-TRK-072`, extending `REQ-TRK-061` (*Live HRV Telemetry & Configurable DFA a1 Thresholds*) and companion to `REQ-PER-036` (*Confidence-Gated HRVT1/HRVT2 Estimation & Summary Card*). Targets `HrvRampTestScreen.kt`, `HrvRampTestViewModel.kt`, `HrvRampTestConfig.kt`, and `ATrainingTrackerApp.kt`.
-2. *Historical Origin & Commit Trace*: Conceived in Epic `ATT-3539` (*Heart Rate Variability*), companion to `ATT-3554` (commit `5deec7cd`).
-3. *Root Reason for Existing Formulation*: Athletic tracking previously supported only free progression or static zone alerts. Free progression frequently suffers from pacing variability and non-monotonicity, while athletes lacked guidance to terminate tests sub-maximally when DFA $\alpha_1 < 0.45$.
-4. *Preservation of Core Invariants*: Preserves `TrackerService` 1 Hz telemetry and SQLite persistence (`REQ-TRK-015`, `REQ-TRK-026`), `HrvThresholdEstimator` mathematical model (`REQ-PER-036`), Section 5.8 Composable lifecycle isolation, and 100% 9-language localization parity.
+2. *Historical Origin & Commit Trace*: Conceived in Epic `ATT-3539` (*Heart Rate Variability*), companion to `ATT-3554` (commit `5deec7cd`), implemented in `ATT-4969` (commit `424580a2`), refined in `ATT-7317` (commit `fce6777b`), and ergonomically streamlined in `ATT-7529`.
+3. *Root Reason for Existing Formulation*: Athletic tracking previously supported only free progression or static zone alerts. Free progression frequently suffers from pacing variability and non-monotonicity, while athletes lacked guidance to terminate tests sub-maximally when DFA $\alpha_1 < 0.45$. ATT-4969 initially created a separate `PRE_FLIGHT` screen to enforce sensor checking, but athletes experienced friction having to navigate through an extra screen to start their test.
+4. *Preservation of Core Invariants*: Retains strict signal quality gating ($rMSSD$, artifact rate $\le 3.0\%$ for `HIGH`, $> 5.0\%$ blocks start), early sub-45 s completion detection, and `GUIDED_STEP`/`GUIDED_RAMP` session tagging. Preserves `TrackerService` 1 Hz telemetry and SQLite persistence (`REQ-TRK-015`, `REQ-TRK-026`), `HrvThresholdEstimator` mathematical model (`REQ-PER-036`), Section 5.8 Composable lifecycle isolation, and 100% 9-language localization parity.
 
 **Acceptance Criteria (Given-When-Then)**:
-• *Given* an athlete configuring a Guided DFA $\alpha_1$ Step Test on cycling,
-• *When* inspecting protocol options,
-• *Then* default step duration is 4 minutes (with 3-minute minimum option), warm-up is 10 minutes, and power targets increment by +15 W or +20 W per step.
-• *Given* an athlete with an ECG chest strap initiating pre-flight sensor check,
-• *When* beat-to-beat RR intervals stream with artifact rate $\le 3.0\%$,
-• *Then* pre-flight passes with High Quality status enabling test start.
+• *Given* an athlete opening `HrvRampTestScreen`,
+• *When* the setup screen renders,
+• *Then* sensor quality status (HR, RR artifact rate %, quality tier `HIGH`/`MODERATE`/`UNSUITABLE`) is displayed directly inline on `ProtocolConfigurationCard` above the `Test starten` button (`enabled = uiState.canStartTest`), and tapping `Test starten` directly commences the test protocol into `WARMUP` without requiring an intermediate screen.
+• *Given* an active guided test on `ActivePacingGuidanceCard`,
+• *When* telemetry updates arrive from connected sensors,
+• *Then* `HrvRampTestViewModel` ingests both `SensorType.POWER` and `SensorType.SPEED_mps`, displaying a prominent **Ziel** vs. **Aktuell (Ist)** pacing comparison block and rendering both live Power (`W`) and live Speed (`km/h`) alongside current HR, live DFA $\alpha_1$, and artifact rate %.
+• *Given* the configuration and active pacing cards in `HrvRampTestScreen.kt`,
+• *When* controls are rendered,
+• *Then* all `SegmentedButton` rows display without checkmark icons (`icon = {}`) with single-line labels (`maxLines = 1, overflow = TextOverflow.Ellipsis`), and active-screen action buttons share uniform `height(44.dp)`.
+• *Given* an athlete configuring protocol options on `ProtocolConfigurationCard`,
+• *When* toggling Sport (`Radfahren` / `Laufen`), Protocol (`Stufentest` / `Rampentest`), or Step Duration (`4 Min.` / `3 Min.`),
+• *Then* the dynamic Protocol Info card updates immediately with the matching title badge, 3 numbered procedural steps (*Ablauf & Durchführung*), and protocol-specific *+ Vorteil* and *– Nachteil* bullet items.
+• *Given* the 9 supported application locales,
+• *When* inspecting sensor readiness and protocol guidance strings in `strings_hrv.xml`,
+• *Then* aviation terminology (*"Vorflug-Sensorkontrolle"*) is replaced with natural sensor status wording with 100% parity verified by `TranslationParityTest`.
 • *Given* a test in progress where DFA $\alpha_1$ drops below $0.45$ sustainably for $\ge 60\text{ s}$,
 • *When* the condition is met,
 • *Then* the screen notifies the athlete that both thresholds ($HRVT_1$ and $HRVT_2$) are captured and prompts immediate transition to cool-down without exhaustion.

@@ -87,9 +87,21 @@ class HrvRampTestViewModel @JvmOverloads constructor(
         if (bufferedBeats.size > 180) {
             bufferedBeats.removeAt(0)
         }
+        if (_uiState.value.phase == HrvTestPhase.CONFIG || _uiState.value.phase == HrvTestPhase.PRE_FLIGHT) {
+            val rate = _uiState.value.currentArtifactRate ?: calculateBufferedArtifactRate()
+            evaluatePreFlightQuality(
+                artifactRate = rate,
+                hasRrStream = true,
+                isSmoothed = false
+            )
+        }
     }
 
     init {
+        banalServiceRepository.bindToBANALService()
+        banalServiceRepository.startSearchingForPairedDevices()
+        banalServiceRepository.addRrBeatListener(rrBeatListener)
+
         tuningJob = viewModelScope.launch(dispatcher) {
             tuningPreferencesDataStore.dfaA1ThresholdT2Flow.collect { t2 ->
                 dfaA1ThresholdT2 = t2
@@ -101,6 +113,7 @@ class HrvRampTestViewModel @JvmOverloads constructor(
             banalServiceRepository.allFilteredSensorData.collect { sensorDataList ->
                 var hr: Int? = null
                 var power: Double? = null
+                var speedMps: Double? = null
                 var dfaA1: Double? = null
                 var artifactRate: Double? = null
 
@@ -112,6 +125,9 @@ class HrvRampTestViewModel @JvmOverloads constructor(
                         SensorType.POWER -> {
                             power = (data.value as? Number)?.toDouble()
                         }
+                        SensorType.SPEED_mps -> {
+                            speedMps = (data.value as? Number)?.toDouble()
+                        }
                         SensorType.HRV_DFA_A1 -> {
                             dfaA1 = (data.value as? Number)?.toDouble()
                         }
@@ -122,16 +138,19 @@ class HrvRampTestViewModel @JvmOverloads constructor(
                     }
                 }
 
+                val speedKmh = speedMps?.let { it * 3.6 }
+
                 _uiState.update { current ->
                     current.copy(
                         currentHr = hr ?: current.currentHr,
                         currentPower = power ?: current.currentPower,
+                        currentSpeedKmh = speedKmh ?: current.currentSpeedKmh,
                         currentDfaA1 = dfaA1 ?: current.currentDfaA1,
                         currentArtifactRate = artifactRate ?: current.currentArtifactRate
                     )
                 }
 
-                if (_uiState.value.phase == HrvTestPhase.PRE_FLIGHT) {
+                if (_uiState.value.phase == HrvTestPhase.CONFIG || _uiState.value.phase == HrvTestPhase.PRE_FLIGHT) {
                     val hasRr = bufferedBeats.isNotEmpty() || artifactRate != null
                     val rate = artifactRate ?: calculateBufferedArtifactRate()
                     evaluatePreFlightQuality(
@@ -314,7 +333,7 @@ class HrvRampTestViewModel @JvmOverloads constructor(
 
     fun startProtocol(autoStartTimer: Boolean = true) {
         val currentState = _uiState.value
-        if (!currentState.canStartTest && currentState.phase != HrvTestPhase.CONFIG) {
+        if (!currentState.canStartTest) {
             return
         }
 

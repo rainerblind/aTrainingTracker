@@ -181,7 +181,7 @@
     <string name="hrv_test_increment_label">ステップ増分</string>
     <string name="hrv_test_warmup_label">ウォームアップ時間</string>
     <string name="hrv_test_warmup_desc">プロトコルステップ前の10分間の安定したウォームアップ</string>
-    <string name="hrv_test_preflight_title">事前センサーチェック</string>
+    <string name="hrv_test_preflight_title">センサーと信号の状態</string>
     <string name="hrv_test_preflight_checking">ECG RRストリームと信号品質を確認中…</string>
     <string name="hrv_test_preflight_pass" formatted="false">センサー品質高（アーティファクト ≤ 3.0%）</string>
     <string name="hrv_test_preflight_warning" formatted="false">センサー品質中程度（アーティファクト 3.0〜5.0%）</string>
@@ -202,6 +202,36 @@
     <string name="hrv_test_btn_finish">テスト終了</string>
     <string name="hrv_test_btn_cooldown">クールダウン開始</string>
     <string name="hrv_test_btn_cancel">テストをキャンセル</string>
+
+    <!-- Active Pacing Guidance (ATT-7529) -->
+    <string name="hrv_test_pacing_target_header">目標</string>
+    <string name="hrv_test_pacing_actual_header">現在（実測）</string>
+    <string name="hrv_test_live_power_fmt">パワー：%1$d W</string>
+    <string name="hrv_test_live_speed_fmt">速度：%1$.1f km/h</string>
+    <string name="hrv_test_live_hr_fmt">心拍数：%1$d bpm</string>
+
+    <!-- Protocol Info & Pros/Cons (ATT-7529) -->
+    <string name="hrv_test_info_procedure_label">手順と実施</string>
+    <string name="hrv_test_title_step_fmt">漸増ステップテスト（%1$d分）</string>
+    <string name="hrv_test_title_ramp">連続ランプテスト</string>
+    <string name="hrv_test_badge_step_4min">推奨 · 高精度</string>
+    <string name="hrv_test_badge_step_3min">コンパクト · ステップテスト</string>
+    <string name="hrv_test_badge_ramp">時間効率的 · MRT補正</string>
+    <string name="hrv_test_step1_warmup_cycling" formatted="false">ウォーミングアップ（10分）：100 W（約45% FTP）で軽く一定に走行。</string>
+    <string name="hrv_test_step1_warmup_running">ウォーミングアップ（10分）：8.0 km/h（7:30 min/km）で軽くジョグ。</string>
+    <string name="hrv_test_step2_step_cycling_fmt">ステップ（%1$d分ごとに+20 W）：各ステップでパワーを一定に維持。最後の2分間が評価されます。</string>
+    <string name="hrv_test_step2_step_running_fmt">ステップ（%1$d分ごとに+0.5 km/h）：各ステップでペースを一定に維持（平坦路またはトレッドミル推奨）。</string>
+    <string name="hrv_test_step2_ramp_cycling">ランプ（+15 W/分）：連続的かつ直線的なパワー上昇（スマートトレーナーのERGモード推奨）。</string>
+    <string name="hrv_test_step2_ramp_running">ランプ（1分あたり+0.25 km/h）：連続的かつ直線的な速度上昇。</string>
+    <string name="hrv_test_step3_completion">サブマックス終了：DFA a1が60秒間0.45を下回るとHRVT1とHRVT2が記録されます（限界まで追い込む必要なし）。</string>
+    <string name="hrv_test_pro_label">メリット：</string>
+    <string name="hrv_test_con_label">デメリット：</string>
+    <string name="hrv_test_pro_step_4min">最高の生理学的精度：2分間の過渡適応後、安定した定常状態の2分間ウィンドウを評価。</string>
+    <string name="hrv_test_con_step_4min">テスト所要時間が長め（ウォームアップを含め約30〜38分）。</string>
+    <string name="hrv_test_pro_step_3min">本格的なステッププロトコルでありながら短縮された所要時間（約25〜30分）。</string>
+    <string name="hrv_test_con_step_3min">4分プロトコルに比べ120秒の評価ウィンドウ前の過渡適応時間（60秒）が短い。</string>
+    <string name="hrv_test_pro_ramp">所要時間が短い（約20〜25分）。段差のない滑らかで連続的な負荷移行。</string>
+    <string name="hrv_test_con_ramp">心拍数/HRVはパワーに対して約45秒遅延（平均応答時間）し、計算上補正されます（+15 W/分で-11 W）。</string>
 
     <!-- Training Zone Comparison & Multi-Session Consensus (ATT-3555 / REQ-PER-037) -->
     <string name="hrv_zone_comparison_title">トレーニングゾーン比較</string>
