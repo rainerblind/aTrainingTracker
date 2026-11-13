@@ -1769,10 +1769,12 @@
   • Verify SensorFieldView when showValue = false, showBar = false, showGraph = true inside Row(Modifier.height(IntrinsicSize.Min)) measures non-zero height matching resolveSparklineHeight(viewSize, isGraphOnly = true) across SMALL, NORMAL, LARGE, and XLARGE ViewSizes.
   • Verify BANALServiceRepository resets all registered sparkline buffers upon receiving BANALService.RESET_ACCUMULATORS_INTENT and upon transition from TrackingMode.READY to TrackingMode.TRACKING.
   • Verify TrackingViewModel clears active sparkline samples and span seconds upon workout reset.
-  11. *Configuration Mode Sparkline Preview & Inactive Sensor Fallback Test (`TST-TRK-059.11`, `SensorFieldViewLayoutTest.kt`, `EditSensorFieldDialogSparklineTest.kt`, `ATT-7314`)*:
-  • Verify SensorFieldView in ScreenMode.CONFIGURATION and ScreenMode.PREVIEW renders DEFAULT_PREVIEW_SPARKLINE_SAMPLES and positive horizon span when sparklineSamples is empty and showGraph = true.
-  • Verify SensorFieldView in ScreenMode.TRACKING leaves sparkline empty when sparklineSamples is empty, asserting zero fake data during live recording.
+  11. *Configuration Mode Preview & Tracking Mode Inactive Sensor Placeholder Test (`TST-TRK-059.11`, `SensorFieldViewLayoutTest.kt`, `SensorSparklineViewTest.kt`, `EditSensorFieldDialogSparklineTest.kt`, `ATT-7314`, `ATT-7522`)*:
+  • Verify SensorFieldView in ScreenMode.CONFIGURATION and ScreenMode.PREVIEW renders DEFAULT_PREVIEW_SPARKLINE_SAMPLES and positive horizon span with isPlaceholder = false when sparklineSamples is empty and showGraph = true.
+  • Verify SensorFieldView in ScreenMode.TRACKING renders DEFAULT_PREVIEW_SPARKLINE_SAMPLES and positive horizon span with isPlaceholder = true when sparklineSamples is empty and showGraph = true, displaying dimmed dashed curve and dimmed X-axis labels.
+  • Verify SensorFieldView immediately transitions to genuine live samples and isPlaceholder = false when sparklineSamples becomes non-empty in ScreenMode.TRACKING.
   • Verify EditSensorFieldDialog renders a preview sparkline container displaying DEFAULT_PREVIEW_SPARKLINE_SAMPLES and active duration when showGraph is true.
+  • Verify SensorSparklineView applies dashed styling, dimmed stroke alpha, suppressed terminal circle, and dimmed label row when isPlaceholder = true.
   12. *Sparkline Buffer History Preservation Across Horizon Transition Test (`TST-TRK-059.12`, `LiveSparklineBufferSpanTest.kt`, `BANALServiceRepositorySparklineTest.kt`, `ATT-7314`)*:
   • Verify LiveSparklineBuffer.transferFrom preserves historical samples when expanding horizon (e.g. 60s to 300s), contracting horizon (e.g. 300s to 60s taking trailing samples), transitioning to Full Workout, and transitioning from Full Workout to fixed horizon.
   • Verify BANALServiceRepository.registerSparklineBuffer preserves existing buffer samples and span when re-registering an identical sensor configuration with a modified time horizon.
