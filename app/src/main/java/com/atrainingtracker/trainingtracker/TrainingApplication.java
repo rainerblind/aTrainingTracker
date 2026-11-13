@@ -1421,6 +1421,7 @@ public class TrainingApplication extends Application {
             case GPX -> exportToGPX();
             case FIT -> exportToFIT();
             case STRAVA -> uploadToStrava();
+            case HEALTH_CONNECT -> false;
         };
     }
 
@@ -1428,6 +1429,8 @@ public class TrainingApplication extends Application {
         switch (fileFormat) {
             case STRAVA:
                 return uploadToStrava();
+            case HEALTH_CONNECT:
+                return syncToHealthConnect();
             default:
                 return false;
         }

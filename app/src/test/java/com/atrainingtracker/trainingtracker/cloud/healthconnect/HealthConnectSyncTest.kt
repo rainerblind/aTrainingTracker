@@ -29,13 +29,19 @@ import androidx.test.core.app.ApplicationProvider
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.database.WorkoutSource
+import com.atrainingtracker.trainingtracker.exporter.ExportStatus
+import com.atrainingtracker.trainingtracker.exporter.ExportType
+import com.atrainingtracker.trainingtracker.exporter.FileFormat
+import com.atrainingtracker.trainingtracker.exporter.db.ExportStatusDatabaseManager
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
 import kotlinx.coroutines.runBlocking
 import org.junit.After
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -177,5 +183,37 @@ class HealthConnectSyncTest {
         val result = HealthConnectManager.syncWorkout(context, sampleWorkout())
         assertTrue(result.isSuccess)
         coVerify(atLeast = 1) { mockClient.insertRecords(any()) }
+    }
+
+    @Test
+    fun testSyncRecordsFinishedSuccessInExportStatusDb() = runBlocking {
+        TrainingApplication.setSyncToHealthConnect(true)
+        val workout = sampleWorkout()
+
+        val result = HealthConnectManager.syncWorkout(context, workout)
+        assertTrue(result.isSuccess)
+
+        val rows = ExportStatusDatabaseManager.getInstance(context).getExportRows(workout.fileBaseName)
+        val hcRow = rows.firstOrNull { it.type == ExportType.COMMUNITY && it.format == FileFormat.HEALTH_CONNECT }
+        assertNotNull("Health Connect status row must exist in DB", hcRow)
+        assertEquals(ExportStatus.FINISHED_SUCCESS, hcRow?.status)
+    }
+
+    @Test
+    fun testSyncRecordsFinishedFailedInExportStatusDbOnFailure() = runBlocking {
+        TrainingApplication.setSyncToHealthConnect(true)
+        val workout = sampleWorkout()
+
+        // Deny exercise write permission so sync fails
+        coEvery { mockPermissionController.getGrantedPermissions() } returns emptySet()
+
+        val result = HealthConnectManager.syncWorkout(context, workout)
+        assertFalse(result.isSuccess)
+
+        val rows = ExportStatusDatabaseManager.getInstance(context).getExportRows(workout.fileBaseName)
+        val hcRow = rows.firstOrNull { it.type == ExportType.COMMUNITY && it.format == FileFormat.HEALTH_CONNECT }
+        assertNotNull("Health Connect status row must exist in DB", hcRow)
+        assertEquals(ExportStatus.FINISHED_FAILED, hcRow?.status)
+        assertEquals("Missing Health Connect exercise write permission", hcRow?.answer)
     }
 }

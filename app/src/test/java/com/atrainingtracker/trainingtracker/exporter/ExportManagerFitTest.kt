@@ -106,4 +106,42 @@ class ExportManagerFitTest {
         TrainingApplication.setExportToFIT(true)
         verify { mockEditor.putBoolean(TrainingApplication.SP_EXPORT_FIT, true) }
     }
+
+    @Test
+    fun testFileFormat_healthConnectRegisteredInOnlineCommunities() {
+        assertTrue(
+            "FileFormat.ONLINE_COMMUNITIES must contain HEALTH_CONNECT",
+            FileFormat.ONLINE_COMMUNITIES.contains(FileFormat.HEALTH_CONNECT)
+        )
+        assertEquals("HealthConnect", FileFormat.HEALTH_CONNECT.dirName)
+        assertEquals(com.atrainingtracker.R.string.health_connect_title, FileFormat.HEALTH_CONNECT.uiNameId)
+    }
+
+    @Test
+    fun testExportType_communityIncludesHealthConnect() {
+        val communityFormats = ExportType.COMMUNITY.exportToFileFormats
+        assertTrue(
+            "ExportType.COMMUNITY must support FileFormat.HEALTH_CONNECT",
+            communityFormats.contains(FileFormat.HEALTH_CONNECT)
+        )
+    }
+
+    @Test
+    fun testExportManager_getExporterHealthConnectFallback() {
+        val exportInfo = ExportInfo("workout_test", FileFormat.HEALTH_CONNECT, ExportType.COMMUNITY)
+        val exporter = ExportManager.getExporter(mockContext, exportInfo)
+        assertTrue(
+            "ExportManager.getExporter for HEALTH_CONNECT must return NotYetImplementedExporter",
+            exporter is NotYetImplementedExporter
+        )
+    }
+
+    @Test
+    fun testTrainingApplication_uploadToCommunityRoutesHealthConnect() {
+        every { mockPrefs.getBoolean(TrainingApplication.SP_SYNC_TO_HEALTH_CONNECT, false) } returns true
+        assertTrue(TrainingApplication.uploadToCommunity(FileFormat.HEALTH_CONNECT))
+
+        every { mockPrefs.getBoolean(TrainingApplication.SP_SYNC_TO_HEALTH_CONNECT, false) } returns false
+        org.junit.Assert.assertFalse(TrainingApplication.uploadToCommunity(FileFormat.HEALTH_CONNECT))
+    }
 }

@@ -1387,6 +1387,9 @@ object LegacyImportEngine {
             }
 
             for (format in ExportType.COMMUNITY.exportToFileFormats) {
+                if (format == FileFormat.HEALTH_CONNECT) {
+                    continue
+                }
                 val uploadEnabled = TrainingApplication.uploadToCommunity(format)
                 Log.i(TAG, "Checking community format ${format.name}: uploadToCommunity=$uploadEnabled")
                 if (uploadEnabled) {

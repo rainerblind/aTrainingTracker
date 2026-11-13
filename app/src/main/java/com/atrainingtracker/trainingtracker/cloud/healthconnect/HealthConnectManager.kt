@@ -18,6 +18,7 @@
 
 package com.atrainingtracker.trainingtracker.cloud.healthconnect
 
+import android.content.ContentValues
 import android.content.Context
 import android.util.Log
 import androidx.annotation.VisibleForTesting
@@ -39,6 +40,11 @@ import androidx.health.connect.client.records.StepsCadenceRecord
 import androidx.health.connect.client.request.ReadRecordsRequest
 import androidx.health.connect.client.time.TimeRangeFilter
 import com.atrainingtracker.trainingtracker.TrainingApplication
+import com.atrainingtracker.trainingtracker.exporter.ExportStatus
+import com.atrainingtracker.trainingtracker.exporter.ExportStatusChangedBroadcaster
+import com.atrainingtracker.trainingtracker.exporter.ExportType
+import com.atrainingtracker.trainingtracker.exporter.FileFormat
+import com.atrainingtracker.trainingtracker.exporter.db.ExportStatusDatabaseManager
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -177,16 +183,35 @@ object HealthConnectManager {
         if (!force && !TrainingApplication.syncToHealthConnect()) {
             return@withContext Result.failure(IllegalStateException("Health Connect sync is disabled in settings"))
         }
-        if (!isAvailable(context)) {
-            return@withContext Result.failure(IllegalStateException("Health Connect is not available on this device"))
-        }
+
+        val fileBaseName = workoutData.fileBaseName
+        val hasFileBaseName = ExportStatusDatabaseManager.isValidFileBaseName(fileBaseName)
+        val exportRepo = if (hasFileBaseName) ExportStatusDatabaseManager.getInstance(context) else null
 
         try {
+            if (hasFileBaseName && exportRepo != null) {
+                val progressValues = ContentValues().apply {
+                    put(ExportStatusDatabaseManager.EXPORT_STATUS, ExportStatus.PROCESSING.name)
+                    put(ExportStatusDatabaseManager.ANSWER, "")
+                }
+                exportRepo.updateExportStatus(
+                    progressValues,
+                    fileBaseName,
+                    ExportType.COMMUNITY,
+                    FileFormat.HEALTH_CONNECT
+                )
+                ExportStatusChangedBroadcaster.broadcastExportStatusChanged(context, fileBaseName)
+            }
+
+            if (!isAvailable(context)) {
+                throw IllegalStateException("Health Connect is not available on this device")
+            }
+
             val client = getClient(context)
             val granted = client.permissionController.getGrantedPermissions()
             val writeExercisePerm = HealthPermission.getWritePermission(ExerciseSessionRecord::class)
             if (writeExercisePerm !in granted) {
-                return@withContext Result.failure(SecurityException("Missing Health Connect exercise write permission"))
+                throw SecurityException("Missing Health Connect exercise write permission")
             }
 
             val hasRoutePermission = "android.permission.health.WRITE_EXERCISE_ROUTE" in granted
@@ -220,9 +245,37 @@ object HealthConnectManager {
 
             TrainingApplication.setHealthConnectLastSyncTimestamp(System.currentTimeMillis())
             Log.i(TAG, "Successfully synced workout '${workoutData.workoutName}' (${workoutData.fileBaseName}) to Health Connect")
+
+            if (hasFileBaseName && exportRepo != null) {
+                val successValues = ContentValues().apply {
+                    put(ExportStatusDatabaseManager.EXPORT_STATUS, ExportStatus.FINISHED_SUCCESS.name)
+                    put(ExportStatusDatabaseManager.ANSWER, "")
+                }
+                exportRepo.updateExportStatus(
+                    successValues,
+                    fileBaseName,
+                    ExportType.COMMUNITY,
+                    FileFormat.HEALTH_CONNECT
+                )
+                ExportStatusChangedBroadcaster.broadcastExportStatusChanged(context, fileBaseName)
+            }
+
             Result.success(Unit)
         } catch (e: Exception) {
             Log.e(TAG, "Failed to sync workout to Health Connect: ${e.message}", e)
+            if (hasFileBaseName && exportRepo != null) {
+                val failureValues = ContentValues().apply {
+                    put(ExportStatusDatabaseManager.EXPORT_STATUS, ExportStatus.FINISHED_FAILED.name)
+                    put(ExportStatusDatabaseManager.ANSWER, e.message ?: e.javaClass.simpleName)
+                }
+                exportRepo.updateExportStatus(
+                    failureValues,
+                    fileBaseName,
+                    ExportType.COMMUNITY,
+                    FileFormat.HEALTH_CONNECT
+                )
+                ExportStatusChangedBroadcaster.broadcastExportStatusChanged(context, fileBaseName)
+            }
             Result.failure(e)
         }
     }

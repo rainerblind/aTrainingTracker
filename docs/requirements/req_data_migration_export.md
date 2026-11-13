@@ -3,7 +3,7 @@
 **Domain**: `data_migration_export`  
 **Prefixes**: `DAT`, `EXP`, `EXT`, `MIG`  
 **Scope**: Database schema, backup/restore, migration pipelines, Strava/cloud upload, FIT/GPX export.  
-**Total Requirements**: 130
+**Total Requirements**: 131
 
 ---
 
@@ -3759,6 +3759,35 @@
 • *Then* the summary line is not duplicated.
 
 **Invariants**: Zero overwrite or loss of user notes; zero SQLite schema modifications; 100% localization parity across 9 languages.
+
+### REQ-EXP-023: Health Connect Export Status Tracking & Community Display [Verified]
+- **Tests**: `TST-EXP-020`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Implementation**: `FileFormat.java`, `ExportType.java`, `TrainingApplication.java`, `HealthConnectManager.kt`, `ExportStatusDataProvider.kt`, `ExportStatusRepository.kt`
+- **Rationale**: Synchronizing workouts to Android Health Connect must provide athletes with explicit status visibility (waiting, ongoing, success, or failed error inspection) under the Community group alongside Strava on workout cards and the Export Details bottom sheet.
+- **Description**:
+  1. *FileFormat & Community Target Registration*: The system SHALL define `FileFormat.HEALTH_CONNECT` under `ONLINE_COMMUNITIES` with string resource `R.string.health_connect_title` and register it in `ExportType.COMMUNITY.getExportToFileFormats()`.
+  2. *Application Setting Gate*: `TrainingApplication.uploadToCommunity(FileFormat.HEALTH_CONNECT)` SHALL route directly to `TrainingApplication.syncToHealthConnect()`.
+  3. *Workout Initialization Lifecycle*: When a new workout is created (`ExportManager.newWorkout`), the system SHALL record an initial `ExportStatus` row for `(ExportType.COMMUNITY, FileFormat.HEALTH_CONNECT)` set to `TRACKING` if Health Connect sync is enabled, or `UNWANTED` if disabled.
+  4. *Health Connect Status Recording & Broadcast*: When `HealthConnectManager.syncWorkout()` executes, the system SHALL update `(ExportType.COMMUNITY, FileFormat.HEALTH_CONNECT)` status in `ExportStatusDatabaseManager` (`PROCESSING` / `WAITING` -> `FINISHED_SUCCESS` or `FINISHED_FAILED` with error details in `ANSWER`), and SHALL invoke `ExportStatusChangedBroadcaster.broadcastExportStatusChanged(context, fileBaseName)` to refresh UI flows in real time.
+  5. *Legacy Workout Synthesis & UI Display*: `ExportStatusDataProvider` and `ExportStatusRepository` SHALL synthesize missing `HEALTH_CONNECT` rows on legacy workouts as `UNWANTED` and SHALL render `Health Connect` reactively under the `COMMUNITY` group in workout cards, notifications, and `ExportDetailsDialog`.
+  6. *Localization Parity*: The system SHALL preserve 100% 9-language localization parity across all resource configurations.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* a completed workout and Health Connect sync enabled,
+• *When* the workout is synchronized to Health Connect,
+• *Then* `ExportStatus.db` contains a row for `(ExportType.COMMUNITY, FileFormat.HEALTH_CONNECT)` with status `FINISHED_SUCCESS` and the Community export group displays Health Connect as succeeded.
+• *Given* a Health Connect sync failure due to missing permissions or API error,
+• *When* `HealthConnectManager.syncWorkout()` catches the exception,
+• *Then* `ExportStatus.db` contains status `FINISHED_FAILED` with the error message in `ANSWER`, and tapping the workout card opens `ExportDetailsDialog` displaying the error answer.
+• *Given* an existing historical workout without a `HEALTH_CONNECT` export status row,
+• *When* loaded in `ExportStatusDataProvider` or `ExportStatusRepository`,
+• *Then* `FileFormat.HEALTH_CONNECT` is synthesized as `UNWANTED` without crashing or corrupting database rows.
+
+**Invariants**: Strava upload behavior, WorkManager worker pipeline, existing DB schema, and 100% 9-language localization parity MUST NOT be broken.
+
 
 
 
