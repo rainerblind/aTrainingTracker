@@ -2374,6 +2374,11 @@
      • Verify 100% presence and argument-specifier parity for all new protocol guidance strings and natural sensor status copy across all 9 localized `strings_hrv.xml` files (`values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`).
   8. *Clean-Room Targeted Test Suite Execution (`TST-TRK-072.8`)*:
      • `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.hrv.*" --tests "com.atrainingtracker.trainingtracker.localization.TranslationParityTest"` asserting 100% pass rate.
+  9. *Consolidated Launcher Access & Ergonomic Entry Point Verification (`TST-TRK-072.9`, `HrvRampTestScreenTest.kt`)*:
+     • Verify `hrv_test_cockpit_launcher` is absent from `TrackingTabsScreen.kt` `bottomContent`.
+     • Verify `btn_guided_hrv_test` is absent from `AthleteProfileScreen.kt` HRV tab.
+     • Verify `ZonesSettingsActivity.kt` `HrvDfaA1SettingsContent` renders `Icons.AutoMirrored.Filled.TrendingUp` for `hrv_start_guided_ramp_test`.
+     • Verify host route `NavRoutes.HRV_TEST` remains mounted in `ATrainingTrackerApp.kt` and reachable via Training Zones.
 
 ### TST-TRK-073: **Live 2D Lane-Offset & Vehicle Sizing Radar Edge Overlay Test Suite** [Verified]
 - **Requirement(s)**: `REQ-TRK-073` (`REQ-TRK-073.1`..`REQ-TRK-073.8`)

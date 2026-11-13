@@ -170,7 +170,6 @@ private val DEBUG = BuildConfig.DEBUG
 @Composable
 fun TrackingTabsScreen(
     trackingTabsViewModel: TrackingTabsViewModel,
-    onNavigateToHrvTest: () -> Unit = {},
     onNavigateToMorningHrv: () -> Unit = {}
 ) {
     val context = LocalContext.current
@@ -1017,23 +1016,6 @@ fun TrackingTabsScreen(
                                             Spacer(modifier = Modifier.width(8.dp))
                                             Text(stringResource(R.string.hrv_morning_check_start_button))
                                         }
-                                    }
-                                    Spacer(modifier = Modifier.height(8.dp))
-                                    OutlinedButton(
-                                        onClick = onNavigateToHrvTest,
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .testTag("hrv_test_cockpit_launcher"),
-                                        shape = RoundedCornerShape(8.dp)
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.Favorite,
-                                            contentDescription = null,
-                                            tint = TTColor.HrvHeartRateRed,
-                                            modifier = Modifier.size(18.dp)
-                                        )
-                                        Spacer(modifier = Modifier.width(8.dp))
-                                        Text(stringResource(R.string.hrv_test_title))
                                     }
                                 }
                             )

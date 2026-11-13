@@ -20,7 +20,9 @@ package com.atrainingtracker.trainingtracker.ui.hrv
 
 import com.atrainingtracker.testing.LocalizationTestCache
 import com.atrainingtracker.trainingtracker.ui.navigation.NavRoutes
+import java.io.File
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -136,5 +138,37 @@ class HrvRampTestScreenTest {
         for (key in requiredKeys) {
             assertTrue("Key '$key' must exist in values/strings_hrv.xml", strings.containsKey(key))
         }
+    }
+
+    @Test
+    fun testConsolidatedLauncherNavigationAndCleanScreen_TST_TRK_072_9() {
+        // REQ-TRK-072.7 / TST-TRK-072.9
+        assertEquals("hrv_test", NavRoutes.HRV_TEST)
+
+        val trackingSource = resolveSourceFile("src/main/java/com/atrainingtracker/trainingtracker/ui/tracking/trackingtabs/TrackingTabsScreen.kt")
+        assertTrue("TrackingTabsScreen source file must exist", trackingSource.exists())
+        val trackingContent = trackingSource.readText()
+        assertFalse("TrackingTabsScreen must not contain hrv_test_cockpit_launcher", trackingContent.contains("hrv_test_cockpit_launcher"))
+        assertFalse("TrackingTabsScreen must not contain onNavigateToHrvTest", trackingContent.contains("onNavigateToHrvTest"))
+
+        val profileSource = resolveSourceFile("src/main/java/com/atrainingtracker/trainingtracker/ui/athleteprofile/AthleteProfileScreen.kt")
+        assertTrue("AthleteProfileScreen source file must exist", profileSource.exists())
+        val profileContent = profileSource.readText()
+        assertFalse("AthleteProfileScreen must not contain btn_guided_hrv_test", profileContent.contains("btn_guided_hrv_test"))
+        assertFalse("AthleteProfileScreen must not contain onNavigateToHrvTest", profileContent.contains("onNavigateToHrvTest"))
+
+        val zonesSource = resolveSourceFile("src/main/java/com/atrainingtracker/trainingtracker/activities/ZonesSettingsActivity.kt")
+        assertTrue("ZonesSettingsActivity source file must exist", zonesSource.exists())
+        val zonesContent = zonesSource.readText()
+        assertTrue("ZonesSettingsActivity must use TrendingUp icon for ramp test", zonesContent.contains("Icons.AutoMirrored.Filled.TrendingUp"))
+        assertFalse("ZonesSettingsActivity must not use FitnessCenter for ramp test", zonesContent.contains("imageVector = Icons.Default.FitnessCenter"))
+    }
+
+    private fun resolveSourceFile(pathUnderApp: String): File {
+        val f1 = File(pathUnderApp)
+        if (f1.exists()) return f1
+        val f2 = File("app/$pathUnderApp")
+        if (f2.exists()) return f2
+        return f1
     }
 }

@@ -4324,12 +4324,15 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
   6. *Session Metadata Tagging & Decimated Grid Quality Governance (`REQ-TRK-072.6`)*:
      - Upon completion, the session SHALL be tagged with `hrvTestProtocol = GUIDED_STEP` or `GUIDED_RAMP` and associated protocol parameters (`stepDurationSec`, `rampSlopeWattsPerMin`).
      - Downstream threshold estimation in `HrvThresholdEstimator` (`REQ-PER-036`) SHALL restrict regression analysis strictly to the post-warmup monotonic test window and enforce quality gates on the decimated grid ($R^2 \ge 0.70$, artifact rate $\le 3.0\%$, $\ge 5$ steps or $N_{\text{eff}} \ge 10$) for `Confidence.HIGH`.
+  7. *Consolidated Launcher Access & Ergonomic Entry Point Alignment (`REQ-TRK-072.7`)*:
+     - The Guided DFA $\alpha_1$ Threshold Test launcher SHALL reside exclusively in **`ZoneSettingsScreen` -> `HRV (DFA a1)` tab** (`ZonesSettingsActivity.kt`) with leading icon `Icons.AutoMirrored.Filled.TrendingUp`.
+     - Redundant launcher CTA buttons in the Start Tracking screen (`TrackingTabsScreen.kt`, `hrv_test_cockpit_launcher`) and Athlete Profile HRV Readiness tab (`AthleteProfileScreen.kt`, `btn_guided_hrv_test`) SHALL be removed, preventing everyday workout clutter and separating resting morning readiness checks from exercise threshold testing.
 
 **Requirement Archaeology & Chesterton's Fence Audit**:
-1. *Original Requirement ID & Target*: Net-new requirement `REQ-TRK-072`, extending `REQ-TRK-061` (*Live HRV Telemetry & Configurable DFA a1 Thresholds*) and companion to `REQ-PER-036` (*Confidence-Gated HRVT1/HRVT2 Estimation & Summary Card*). Targets `HrvRampTestScreen.kt`, `HrvRampTestViewModel.kt`, `HrvRampTestConfig.kt`, and `ATrainingTrackerApp.kt`.
-2. *Historical Origin & Commit Trace*: Conceived in Epic `ATT-3539` (*Heart Rate Variability*), companion to `ATT-3554` (commit `5deec7cd`), implemented in `ATT-4969` (commit `424580a2`), refined in `ATT-7317` (commit `fce6777b`), and ergonomically streamlined in `ATT-7529`.
-3. *Root Reason for Existing Formulation*: Athletic tracking previously supported only free progression or static zone alerts. Free progression frequently suffers from pacing variability and non-monotonicity, while athletes lacked guidance to terminate tests sub-maximally when DFA $\alpha_1 < 0.45$. ATT-4969 initially created a separate `PRE_FLIGHT` screen to enforce sensor checking, but athletes experienced friction having to navigate through an extra screen to start their test.
-4. *Preservation of Core Invariants*: Retains strict signal quality gating ($rMSSD$, artifact rate $\le 3.0\%$ for `HIGH`, $> 5.0\%$ blocks start), early sub-45 s completion detection, and `GUIDED_STEP`/`GUIDED_RAMP` session tagging. Preserves `TrackerService` 1 Hz telemetry and SQLite persistence (`REQ-TRK-015`, `REQ-TRK-026`), `HrvThresholdEstimator` mathematical model (`REQ-PER-036`), Section 5.8 Composable lifecycle isolation, and 100% 9-language localization parity.
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-TRK-072`, extending `REQ-TRK-061` (*Live HRV Telemetry & Configurable DFA a1 Thresholds*) and companion to `REQ-PER-036` (*Confidence-Gated HRVT1/HRVT2 Estimation & Summary Card*). Targets `HrvRampTestScreen.kt`, `HrvRampTestViewModel.kt`, `HrvRampTestConfig.kt`, `TrackingTabsScreen.kt`, `AthleteProfileScreen.kt`, `ZonesSettingsActivity.kt`, and `ATrainingTrackerApp.kt`.
+2. *Historical Origin & Commit Trace*: Conceived in Epic `ATT-3539` (*Heart Rate Variability*), companion to `ATT-3554` (commit `5deec7cd`), implemented in `ATT-4969` (commit `424580a2`), refined in `ATT-7317` (commit `fce6777b`), ergonomically streamlined in `ATT-7529`, and launcher access consolidated in `ATT-7527`.
+3. *Root Reason for Existing Formulation*: Athletic tracking previously supported only free progression or static zone alerts. Free progression frequently suffers from pacing variability and non-monotonicity, while athletes lacked guidance to terminate tests sub-maximally when DFA $\alpha_1 < 0.45$. ATT-4969 initially created a separate `PRE_FLIGHT` screen to enforce sensor checking, and sprinkled launcher buttons across tracking and profile screens to boost beta discoverability. Once the dedicated Training Zones `HRV (DFA a1)` tab was built in ATT-7317, these duplicated buttons caused UI clutter on everyday tracking launches and conflated resting readiness checks with strenuous exercise ramp testing.
+4. *Preservation of Core Invariants*: Full host navigation reachability (`NavRoutes.HRV_TEST`) is preserved via the authoritative Training Zones entry point; resting morning HRV and everyday tracking remain completely intact; strict signal quality gating ($rMSSD$, artifact rate $\le 3.0\%$ for `HIGH`, $> 5.0\%$ blocks start), early sub-45 s completion detection, and `GUIDED_STEP`/`GUIDED_RAMP` session tagging preserved; zero regressions in tracking, readiness, or ramp test functionality.
 
 **Acceptance Criteria (Given-When-Then)**:
 • *Given* an athlete opening `HrvRampTestScreen`,
@@ -4353,6 +4356,15 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 • *Given* a completed Guided Step Test session evaluated by `HrvThresholdEstimator`,
 • *When* regression is performed,
 • *Then* each step is evaluated strictly over $[t_{\text{end},j} - 120\text{ s}, t_{\text{end},j}]$ with zero bleed into subsequent steps, and high confidence is emitted only if $R^2 \ge 0.70$, artifact rate $\le 3.0\%$, and $\ge 5$ valid steps are present.
+• *Given* the Start Tracking screen (`TrackingTabsScreen.kt`),
+• *When* `ControlTrackingScreen` renders,
+• *Then* `hrv_test_cockpit_launcher` is absent from `bottomContent`, displaying only `RouteSelectionButton` and optional Morning HRV check.
+• *Given* the Athlete Profile screen (`AthleteProfileScreen.kt`),
+• *When* the HRV Readiness tab is displayed,
+• *Then* `btn_guided_hrv_test` is absent, presenting only the resting Morning Readiness CTA and readiness trend cards.
+• *Given* `ZoneSettingsScreen` in `ZonesSettingsActivity.kt`,
+• *When* viewing the `HRV (DFA a1)` tab (`HrvDfaA1SettingsContent`),
+• *Then* the Guided Threshold Test launcher button is displayed with leading icon `Icons.AutoMirrored.Filled.TrendingUp` navigating to `NavRoutes.HRV_TEST`.
 
 **Invariants**: Zero background service sampling regressions; zero SQLite schema modifications; Section 5.8 Composable navigation safety; 100% clean-room test pass rate across all 9 locales.
 

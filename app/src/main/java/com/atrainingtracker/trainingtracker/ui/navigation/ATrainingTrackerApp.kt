@@ -345,7 +345,6 @@ fun ATrainingTrackerApp(
                     )
                     TrackingTabsScreen(
                         trackingTabsViewModel = trackingTabsViewModel,
-                        onNavigateToHrvTest = { navController.navigate(NavRoutes.HRV_TEST) },
                         onNavigateToMorningHrv = { navController.navigate(NavRoutes.MORNING_HRV) }
                     )
                 }
@@ -628,8 +627,7 @@ fun ATrainingTrackerApp(
                     com.atrainingtracker.trainingtracker.ui.athleteprofile.AthleteProfileScreen(
                         viewModel = athleteProfileViewModel,
                         onOpenDrawer = { activity.openDrawer() },
-                        onNavigateToMorningHrv = { navController.navigate(NavRoutes.MORNING_HRV) },
-                        onNavigateToHrvTest = { navController.navigate(NavRoutes.HRV_TEST) }
+                        onNavigateToMorningHrv = { navController.navigate(NavRoutes.MORNING_HRV) }
                     )
                 }
 
