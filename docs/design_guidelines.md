@@ -61,12 +61,16 @@ SingleChoiceSegmentedButtonRow(
   * Options list exceeds horizontal screen space.
   * *Examples*: Sensor device selection, audio cue sound profile selection, map tile source.
 
-### 1.4 Discrete Scalar Ranges & Durations ($\ge 5$ Numeric Values) (ATT-3325 / ATT-3450)
-* **Standard Control**: Discrete Slider (`TuningSliderItem` / Material 3 `Slider`) or connected `SingleChoiceSegmentedButtonRow`.
-* **When to Use**:
-  * Configuring durations, distances, or numeric settings offering $\ge 5$ discrete scalar options (e.g. `[1s, 2s, 3s, ... 10s]` or `[30m, 40m, ... 300m]`).
-* **Anti-Pattern (Avoid)**:
+### 1.4 Discrete Scalar Ranges & Expert Settings Form Controls (ATT-3325 / ATT-3450 / ATT-7536)
+* **Standard Controls in Expert Settings (`TuningFormControls.kt`)**:
+  * **Discrete Scalar Ranges ($\ge 5$ Numeric Values)**: Discrete Slider (`TuningSliderItem` / Material 3 `Slider`) or connected segmented row.
+  * **Segmented Choice (2–4 Options)**: `TuningSegmentedButtonRow`. Must enforce `icon = {}`, compact horizontal padding `PaddingValues(horizontal = 8.dp, vertical = 0.dp)`, `maxLines = 1`, `softWrap = false`, and `overflow = TextOverflow.Ellipsis` with `MaterialTheme.typography.labelSmall`.
+  * **Dropdown Pickers ($\ge 5$ Options)**: `TuningDropdownRow` (wrapping `ExposedDropdownMenuBox` with single-line labels and standard padding).
+  * **Feature Toggles**: Primary feature toggles MUST use `TuningToggleItem` (scaled to `0.8f`). Subordinate child toggles MUST use `SubordinateTuningToggleItem` (scaled to `0.6f` with lighter alpha track).
+* **Anti-Patterns (Avoid)**:
   * ❌ **Do NOT use multi-chip rows (`FilterChip` in `FlowRow`)** for large scalar sets. On mobile viewports, the trailing chip(s) frequently wrap onto an isolated second row, creating unbalanced whitespace and poor visual rhythm. Prefer an interactive slider with snap steps and a live value indicator.
+  * ❌ **Do NOT use raw Material 3 `Switch(` or custom unscaled toggles** in accordion tuning dialogs. Always standardize on `TuningToggleItem` or `SubordinateTuningToggleItem`.
+  * ❌ **Do NOT nest `ElevatedCard` containers inside accordion sections**. Accordions are already elevated surface containers; nesting cards inside cards introduces unnecessary elevation shadows, double padding, and visual noise. Separate subsections using `HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))` and section subheaders matching `PhysiologyModelsSection.kt`.
 
 ---
 
@@ -148,6 +152,16 @@ Post-workout analysis combines geographic terrain (Elevation Profile) with conti
   * Gating the background track on `durationSec > 0L` skips empty intermediate bins between non-contiguous high-wattage spikes, leaving horizontal white stripes across the Zone 7 background band (`ATT-5281`).
   * **Domain-Boundary Clamping Guard (`Rule 70` — `ATT-5281` $\rightarrow$ `ATT-5311`)**: Always filter out-of-domain bins (`bin.rangeMax > dataMin && bin.rangeMin < dataMax`) and clamp `[rangeMin, rangeMax]` to `[dataMin, dataMax]` before mapping via `valueToY(...)`. Never apply `.coerceAtLeast(1f)` to zero-height clamped bins outside `[dataMin, dataMax]`, which causes dozens of `alpha = 0.15f` rectangles to stack at `y = 0f` into a solid black bar along the top edge.
 
+### 2.8 Side-by-Side Action Buttons & German String Length (§2.4 — ATT-7536)
+* **Single-Line Button Label Invariant**:
+  * Action buttons placed horizontally side-by-side in rows (such as Start/Stop, Confirm/Cancel, or primary/secondary action pairs) **MUST** accommodate German compound nouns and extended translations without awkward line wrapping or horizontal overflow.
+  * Button labels must set `maxLines = 1`, `softWrap = false`, and `overflow = TextOverflow.Ellipsis`.
+* **Dynamic Weighting & Responsive Stacking**:
+  * Where two buttons share a row, use `Modifier.weight(1f)` for balanced distribution, or give the primary action greater weight when appropriate.
+  * If German string length exceeds available viewport width at 130% font scaling, the layout must gracefully stack actions vertically in a `Column` or abbreviate button labels via dedicated short-string resources rather than wrapping words into illegible vertical slices.
+* **Visual Hierarchy**:
+  * Pair an `OutlinedButton` or `TextButton` for the secondary/dismiss/destructive-cancel action with a filled `Button` for the primary affirmative action.
+
 ---
 
 ## 3. Settings & Accordion Structure
@@ -170,10 +184,13 @@ Post-workout analysis combines geographic terrain (Elevation Profile) with conti
   * When introducing a dedicated configuration sheet or editor for a view (such as `WorkoutDetailTabsConfigSheet` for `DetailedWorkoutView` tab ordering and visibility), any legacy settings controls that previously toggled the same view (such as the `Details` column in the 2-column `WorkoutMasksAndCardsSection` matrix) **MUST** be retired and cleaned up in the same change.
   * Never keep two competing UI surfaces in the same settings screen that toggle the same underlying preferences; doing so confuses the athlete about which control is authoritative.
 
-### 3.3 Subordinate Settings Toggles: Lighter Visual Weight & Compact Switches (Rule 59 — ATT-4369 / ATT-4432 / ATT-4464 / ATT-4513)
+### 3.3 Subordinate Settings Toggles & Form Control Hygiene (Rule 59 — ATT-4369 / ATT-4432 / ATT-4464 / ATT-4513 / ATT-7536)
 * **Clear Parent-Child Hierarchy**:
   * Subordinate child toggles nested under a primary feature/model toggle (such as `"Show in Workout Summary"` / `"In Workout-Zusammenfassung anzeigen"` under a Physiology Model toggle) **MUST NOT** reuse the full-sized primary `TuningToggleItem` row or the same `Switch` scale (`0.8f`) as `TuningToggleItem`, which visually competes with the parent header.
   * Because `TuningToggleItem` already scales its primary `Switch` to `0.8f`, subordinate toggles (`SubordinateTuningToggleItem`) **MUST** render with a significantly smaller/lighter control (e.g., `Modifier.scale(0.6f)` with lighter checked track color `MaterialTheme.colorScheme.primary.copy(alpha = 0.45f)` and thumb `primary` [ATT-4513] to avoid excessively dark navy tracks in Light Mode), smaller/lighter text (`MaterialTheme.typography.bodySmall` or `labelMedium` with `MaterialTheme.colorScheme.onSurfaceVariant`), and compact vertical padding.
+* **Prohibition of Nested Cards in Accordion Bodies**:
+  * Accordion bodies (such as sections in `AdvancedTuningDialog`) are already elevated card/surface containers. Placing nested `ElevatedCard`s inside an accordion section creates visual clutter, nested margin overhead, and double borders.
+  * Subsections within an accordion section **MUST** be separated by `HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))` and section subheaders (`MaterialTheme.typography.titleMedium`).
 * **No Unrequested Top-Level Model Toggles**:
   * Do not invent extra top-level settings toggles for baseline metrics (e.g. `"Basic Power Metrics (Work, W/kg)"`) that were not requested in the ticket specification.
 

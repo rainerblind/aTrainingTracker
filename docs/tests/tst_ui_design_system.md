@@ -3337,7 +3337,7 @@
 ### TST-UI-221: **Modular Component Architecture for Advanced Tuning Dialog Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-262`
 - **Component**: **Modular Component Architecture for Advanced Tuning Dialog Verification**
-- **Jira**: ``ATT-2033``
+- **Jira**: `ATT-2033`, `ATT-7536`
 - **Test Description**:
   1. *Structural File Size & Modularity Tests (`AdvancedTuningModularityTest.kt`)*:
   • Verify each extracted category file exists under `categories/`: `CockpitTypographySection.kt`, `AmoledBatterySaverSection.kt`, `SensorsGpsFilterSection.kt`, `AftermathAnalysisSection.kt`, `WorkoutMasksAndCardsSection.kt`.
@@ -3350,6 +3350,10 @@
   • Verify 100% parity across all 9 localized `strings.xml` files.
   4. *Clean-Room Full Suite Regression Execution*:
   • Run `./gradlew testDebugUnitTest` verifying 100% pass rate.
+  5. *Standardized Form Controls & Segmented Button Contracts (`TST-UI-221.5`, `TuningFormControlsTest.kt`)*:
+  • Verify `TuningFormControls.kt` exports `TuningSegmentedButtonRow` and `TuningDropdownRow` composables.
+  • Verify `TuningSegmentedButtonRow` specifies `icon = {}`, `contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)`, `maxLines = 1`, `softWrap = false`, `overflow = TextOverflow.Ellipsis`, and `MaterialTheme.typography.labelSmall`.
+  • Verify `RadarSettingsSection.kt` eliminates nested `ElevatedCard` containers and raw `Switch(` calls, standardizing on `TuningToggleItem`, `SubordinateTuningToggleItem`, `TuningSliderItem`, and `TuningSegmentedButtonRow` separated by `HorizontalDivider`s.
 
 ### TST-UI-222: **Equipment Sensor Matrix Table Layout, Column Continuity, and Information Density Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-263`
