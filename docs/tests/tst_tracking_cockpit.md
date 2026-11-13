@@ -224,7 +224,7 @@
   5. *Empty Queue Descriptor Safety*: Invoke empty queue branch when `mBluetoothGatt` is null or service/characteristic is missing; verify zero crashes.
 
 ### TST-CON-004: **Barometric Altitude Sensor Initialization & Null-Safe Correction Dispatch Test** [Verified]
-- **Requirement(s)**: `REQ-CON-013`
+- **Requirement(s)**: `REQ-CON-006`, `REQ-CON-013`
 - **Component**: **Barometric Altitude Sensor Initialization & Null-Safe Correction Dispatch Test**
 - **Jira**: ``ATT-1353``
 - **Test Description**:
@@ -308,7 +308,7 @@
   • Execute `./gradlew testDebugUnitTest` across all modules to verify 100% test pass rate with 0 regressions.
 
 ### TST-CON-008: **Barometric Altimeter Idempotent Calibration, Delta Shift Dispatch, Physical Sanity Limiting & Mountain Climb Preservation Test** [Verified]
-- **Requirement(s)**: `REQ-CON-017`
+- **Requirement(s)**: `REQ-CON-006`, `REQ-CON-017`
 - **Component**: **Barometric Altimeter Idempotent Calibration, Delta Shift Dispatch, Physical Sanity Limiting & Mountain Climb Preservation Test**
 - **Jira**: ``ATT-1810`, `ATT-3990``
 - **Test Description**:
@@ -337,7 +337,7 @@
   • Execute `./gradlew testDebugUnitTest` across all modules verifying 0 test failures.
 
 ### TST-CON-009: **Robust Bluetooth LE Sensor Discovery: GATT Queue Deadlock Prevention and State Reset Test** [Verified]
-- **Requirement(s)**: `REQ-CON-018`
+- **Requirement(s)**: `REQ-CON-004`, `REQ-CON-018`
 - **Component**: **Robust Bluetooth LE Sensor Discovery: GATT Queue Deadlock Prevention and State Reset Test**
 - **Jira**: ``ATT-2224``
 - **Test Description**:
@@ -390,7 +390,7 @@
   • Execute `./gradlew testDebugUnitTest` verifying 100% pass rate.
 
 ### TST-CON-011: **Bluetooth LE Sensor Discovery, LE Transport Selection & Foreground Service Compliance Test** [Verified]
-- **Requirement(s)**: `REQ-CON-019`
+- **Requirement(s)**: `REQ-CON-004`, `REQ-CON-019`
 - **Component**: **Bluetooth LE Sensor Discovery, LE Transport Selection & Foreground Service Compliance Test**
 - **Jira**: ``ATT-2773`, `ATT-4449``
 - **Test Description**:
@@ -896,7 +896,7 @@
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions.
 
 ### TST-TRK-028: **Lock-Free ProxySensor Listener Dispatch & Deadlock Prevention Concurrency Suite** [Verified]
-- **Requirement(s)**: `REQ-SEN-021`, `REQ-TRK-032`
+- **Requirement(s)**: `REQ-FIL-005`, `REQ-SEN-021`, `REQ-TRK-032`
 - **Component**: **Lock-Free ProxySensor Listener Dispatch & Deadlock Prevention Concurrency Suite**
 - **Jira**: ``ATT-4096``
 - **Test Description**:
@@ -1519,7 +1519,7 @@
   • Run targeted package tests across `com.atrainingtracker.banalservice.devices.bluetooth_le.*` and `com.atrainingtracker.trainingtracker.build.*` asserting 100% pass rate.
 
 ### TST-CON-025: **ANT+ Speed/Cadence PCC Handle Leak Prevention & Power Pedal Smoothness Routing Test Suite** [Verified]
-- **Requirement(s)**: `REQ-CON-025`
+- **Requirement(s)**: `REQ-CON-001`, `REQ-CON-025`
 - **Component**: `ANTBikeSpeedAndCadenceDevice.java`, `ANTBikePowerDevice.java`, `ANTBikeSpeedAndCadenceDeviceTest.kt`, `ANTBikePowerDeviceTest.kt`
 - **Jira**: `ATT-6046`
 - **Test Description**:

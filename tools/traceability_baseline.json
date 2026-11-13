@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "description": "ASPICE SWE.1 BP5 / SWE.4 Bidirectional Requirement-to-Test Traceability Orphan Baseline (REQ-PRO-087).",
+  "ratchet_principle": "The orphan set is strictly monotonic non-increasing (|B_{t+1}| <= |B_t|). CI fails if an unbaselined orphan is introduced.",
+  "metadata": {
+    "ticket": "ATT-7561",
+    "total_baseline_orphans": 15,
+    "last_updated": "2026-11-13"
+  },
+  "orphan_requirements": [
+    "REQ-CON-002",
+    "REQ-CON-003",
+    "REQ-DAT-001",
+    "REQ-MAP-001",
+    "REQ-MIG-051",
+    "REQ-PRI-001",
+    "REQ-SET-001",
+    "REQ-SET-002",
+    "REQ-SET-004",
+    "REQ-SET-005",
+    "REQ-TRK-010",
+    "REQ-UI-008",
+    "REQ-UI-010",
+    "REQ-UI-521",
+    "REQ-UI-522"
+  ]
+}

@@ -4972,10 +4972,10 @@
   • Execute `./gradlew testDebugUnitTest` asserting 100% test pass rate with zero regressions.
 
 ### TST-UI-310: WorkoutSummariesTabbedScreenTest, WorkoutSummariesListFragmentTest [Verified]
-- **Requirement(s)**: Verify that `SnackbarHost` in `WorkoutSummariesTabbedScreen` (and `WorkoutSummariesListFragment`) applies `Modifier.navigationBarsPadding()` to ensure snackbars and action buttons render above system navigation bars with zero occlusion.
+- **Requirement(s)**: `REQ-UI-350`
 - **Component**: `WorkoutSummariesTabbedScreenTest`, `WorkoutSummariesListFragmentTest`
 - **Jira**: `**Post-Workout Low Battery Alert Snackbar Navigation Bar Inset Padding Verification.**`
-- **Test Description**: `REQ-UI-350`
+- **Test Description**: Verify that `SnackbarHost` in `WorkoutSummariesTabbedScreen` (and `WorkoutSummariesListFragment`) applies `Modifier.navigationBarsPadding()` to ensure snackbars and action buttons render above system navigation bars with zero occlusion.
 
 ### TST-UI-311: **Multi-Dimensional Sensor Filtering by Protocol, Category, and Battery Level with Deep-Link Navigation Verification** [Verified]
 - **Requirement(s)**: `REQ-UI-351`

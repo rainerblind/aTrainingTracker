@@ -3,7 +3,7 @@
 **Domain**: `process_stability`  
 **Prefixes**: `ARC`, `BLD`, `BUG`, `INT`, `LIV`, `LOG`, `MAN`, `NFR`, `PRO`, `REG`, `SEC`, `STB`, `STR`, `TOOL`, `TST`  
 **Scope**: ASPICE governance, infinite context, crash stability, build architecture, security, and developer tools.  
-**Total Requirements**: 87
+**Total Requirements**: 88
 
 ---
 
@@ -4552,4 +4552,40 @@ The workflow SHALL mandate that:
   • *Given* `python3 tools/verify_requirement_governance.py --sync-indexes`,
   • *When* executed,
   • *Then* master index tables achieve 100% mathematical parity.
+- **Invariants**: Pure Python 3 standard library; zero Android runtime changes; zero regression in existing governance checks.
+
+### REQ-PRO-087: Machine-Verified Bidirectional Traceability & Ratchet Baseline Governance [Verified]
+- **Tests**: `TST-PRO-087`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Implementation**: `tools/verify_requirement_governance.py`, `tools/traceability_baseline.json`, `tools/test_verify_requirement_governance.py`
+- **Rationale**: Under ASPICE SWE.1 BP5 and SWE.4 BP5 (Finding F4), requirement-to-test traceability must be machine-verified rather than assumed by ID convention. The governance tooling must standardize machine-readable requirement verification fields (`Verifies:` / `Requirement(s):`), enforce bidirectional traceability across living documentation shards and test specifications, prevent orphan regressions via a strictly shrinking ratchet baseline (`tools/traceability_baseline.json`), resolve historical unreferenced requirements, and ensure zero governance failures:
+  1. *Standardized Test Verification Field (`REQ-PRO-087.1`)*:
+     • Living documentation test shards under `docs/tests/` and test specification deliverables SHALL standardize on a machine-readable `Verifies: REQ-...` field (backward-compatible with `Requirement(s):` / `Target Requirement:`).
+  2. *Machine-Verified Bidirectional Traceability Engine (`REQ-PRO-087.2`)*:
+     • `tools/verify_requirement_governance.py` SHALL verify that every declared requirement in `docs/requirements/` is cited by at least one test specification, and every test specification in `docs/tests/` cites valid, authentic requirement headings.
+     • Any test referencing a non-existent requirement ID SHALL cause governance verification to fail with deterministic diagnostics.
+  3. *Ratchet Baseline File & Monotonicity Enforcement (`REQ-PRO-087.3`)*:
+     • Known existing orphan requirements and test specifications SHALL be recorded in a versioned baseline file (`tools/traceability_baseline.json`).
+     • Adding any new requirement or test orphan absent from the baseline SHALL fail governance verification.
+     • Resolving existing baseline orphans SHALL require updating the baseline file such that the orphan set is strictly monotonic non-increasing ($|B_{t+1}| \le |B_t|$).
+  4. *Historical Orphan Resolution & Syntax Normalization (`REQ-PRO-087.4`)*:
+     • The 6 historical unreferenced requirements (`REQ-CON-001`, `REQ-CON-004`, `REQ-CON-006`, `REQ-EXP-005`, `REQ-EXT-003`, `REQ-FIL-005`) SHALL be resolved with reciprocal test citations.
+     • Malformed citations in `TST-MIG-001` and field inversion in `TST-UI-310` SHALL be normalized.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Net-new requirement `REQ-PRO-087` (`REQ-PRO-087.1`–`REQ-PRO-087.4`). Targets `tools/verify_requirement_governance.py`, `tools/traceability_baseline.json`, `docs/requirements/`, `docs/tests/`.
+  2. *Historical Origin & Commit Trace*: Sprint 2026-46.5 via ticket `ATT-7561` under Epic `ATT-232` (Process). Addresses ASPICE evaluation finding F4.
+  3. *Root Reason for Existing Formulation*: Prior governance scripts relied on convention (ID parity) and only verified dangling links and SYSREQ-to-REQ mappings without enforcing that every REQ has a verifying test or strictly ratcheting the orphan set down.
+  4. *Preservation of Core Invariants*: Deterministic exit codes (0 = valid, 1 = failure); Python 3 standard library only; existing `--sync-indexes` and CI governance checks remain 100% green; zero Android APK runtime code changes.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* living requirement shards and a requirement without a verifying test that is not recorded in `tools/traceability_baseline.json`,
+  • *When* `tools/verify_requirement_governance.py` executes,
+  • *Then* verification fails and lists the orphan requirement ID.
+  • *Given* living test shards and a test referencing a non-existent requirement ID,
+  • *When* `tools/verify_requirement_governance.py` executes,
+  • *Then* verification fails and identifies the dangling target.
+  • *Given* `tools/traceability_baseline.json`,
+  • *When* new orphans are added or the baseline count increases,
+  • *Then* verification fails with a ratchet violation error.
 - **Invariants**: Pure Python 3 standard library; zero Android runtime changes; zero regression in existing governance checks.

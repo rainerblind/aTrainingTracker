@@ -13,6 +13,7 @@ Scenarios tested:
   5. Standard Library Footprint Invariant: Zero external pip dependencies; imports only standard library.
 """
 
+import json
 import os
 import subprocess
 import sys
@@ -65,6 +66,10 @@ from tools.verify_requirement_governance import (
     ALLOWED_VERIFICATION_METHODS,
     find_missing_requirement_attributes,
     verify_requirement_attributes,
+    find_traceability_orphans,
+    load_traceability_baseline,
+    verify_traceability_orphans,
+    TraceabilityOrphansResult,
 )
 
 
@@ -1908,6 +1913,220 @@ diff --git a/docs/requirements/req_process_stability.md b/docs/requirements/req_
         """TST-PRO-075.4: Assert all living requirement shards in repository pass Tests format verification."""
         ok, diag = verify_tests_field_format()
         self.assertTrue(ok, f"Expected live repository requirement shards to pass Tests format rule, got: {diag}")
+
+    def test_scenario_47_bidirectional_traceability_clean_pass_with_baseline(self):
+        """TST-PRO-087.1 (Criterion 1): Valid bidirectional traceability with baselined orphans passes cleanly."""
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            req_dir = os.path.join(tmp_dir, "docs", "requirements")
+            tst_dir = os.path.join(tmp_dir, "docs", "tests")
+            tools_dir = os.path.join(tmp_dir, "tools")
+            os.makedirs(req_dir)
+            os.makedirs(tst_dir)
+            os.makedirs(tools_dir)
+
+            with open(os.path.join(req_dir, "req_test.md"), "w", encoding="utf-8") as f:
+                f.write(
+                    "# Shard\n"
+                    "### REQ-DOM-001: First Requirement [Verified]\n- **Tests**: `TST-DOM-001`\n\n"
+                    "### REQ-DOM-002: Baselined Legacy Requirement [Verified]\n- **Tests**: `Planned`\n"
+                )
+
+            with open(os.path.join(tst_dir, "tst_test.md"), "w", encoding="utf-8") as f:
+                f.write(
+                    "# Test Shard\n"
+                    "### TST-DOM-001: First Test [Verified]\n- **Verifies**: `REQ-DOM-001`\n"
+                )
+
+            baseline_data = {
+                "metadata": {"total_baseline_orphans": 1},
+                "orphan_requirements": ["REQ-DOM-002"],
+            }
+            baseline_path = os.path.join(tools_dir, "traceability_baseline.json")
+            with open(baseline_path, "w", encoding="utf-8") as f:
+                json.dump(baseline_data, f)
+
+            ok, diag, report = verify_traceability_orphans(
+                repo_root=tmp_dir,
+                baseline_path=baseline_path,
+                fail_on_orphans=True,
+            )
+            self.assertTrue(ok, f"Expected clean pass, got: {diag}")
+            self.assertEqual(report["orphan_count"], 1)
+            self.assertEqual(report["unbaselined_orphans"], [])
+            self.assertEqual(report["stale_orphans"], [])
+
+    def test_scenario_48_criterion_1_unbaselined_orphan_rejection(self):
+        """TST-PRO-087.1 (Criterion 1): Requirements without verifying test outside baseline are rejected."""
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            req_dir = os.path.join(tmp_dir, "docs", "requirements")
+            tst_dir = os.path.join(tmp_dir, "docs", "tests")
+            tools_dir = os.path.join(tmp_dir, "tools")
+            os.makedirs(req_dir)
+            os.makedirs(tst_dir)
+            os.makedirs(tools_dir)
+
+            with open(os.path.join(req_dir, "req_test.md"), "w", encoding="utf-8") as f:
+                f.write(
+                    "# Shard\n"
+                    "### REQ-DOM-001: Verified Requirement [Verified]\n- **Tests**: `TST-DOM-001`\n\n"
+                    "### REQ-DOM-003: Unbaselined Orphan [Verified]\n- **Tests**: `Planned`\n"
+                )
+
+            with open(os.path.join(tst_dir, "tst_test.md"), "w", encoding="utf-8") as f:
+                f.write(
+                    "# Test Shard\n"
+                    "### TST-DOM-001: First Test [Verified]\n- **Verifies**: `REQ-DOM-001`\n"
+                )
+
+            baseline_path = os.path.join(tools_dir, "traceability_baseline.json")
+            with open(baseline_path, "w", encoding="utf-8") as f:
+                json.dump({"orphan_requirements": []}, f)
+
+            ok, diag, report = verify_traceability_orphans(
+                repo_root=tmp_dir,
+                baseline_path=baseline_path,
+                fail_on_orphans=True,
+            )
+            self.assertFalse(ok, "Expected failure on unbaselined orphan")
+            diag_text = "\n".join(diag)
+            self.assertIn("REQ-DOM-003", diag_text)
+            self.assertIn("Criterion 1", diag_text)
+            self.assertEqual(report["unbaselined_orphans"], ["REQ-DOM-003"])
+
+    def test_scenario_49_criterion_2_dangling_target_requirement_rejection(self):
+        """TST-PRO-087.1 (Criterion 2): Tests referencing non-existent requirements are rejected."""
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            req_dir = os.path.join(tmp_dir, "docs", "requirements")
+            tst_dir = os.path.join(tmp_dir, "docs", "tests")
+            tools_dir = os.path.join(tmp_dir, "tools")
+            os.makedirs(req_dir)
+            os.makedirs(tst_dir)
+            os.makedirs(tools_dir)
+
+            with open(os.path.join(req_dir, "req_test.md"), "w", encoding="utf-8") as f:
+                f.write("# Shard\n### REQ-DOM-001: Real Requirement [Verified]\n- **Tests**: `TST-DOM-001`\n")
+
+            with open(os.path.join(tst_dir, "tst_test.md"), "w", encoding="utf-8") as f:
+                f.write(
+                    "# Test Shard\n"
+                    "### TST-DOM-001: Valid Test [Verified]\n- **Verifies**: `REQ-DOM-001`\n\n"
+                    "### TST-DOM-002: Broken Test [Verified]\n- **Verifies**: `REQ-NONEXISTENT-999`\n"
+                )
+
+            baseline_path = os.path.join(tools_dir, "traceability_baseline.json")
+            with open(baseline_path, "w", encoding="utf-8") as f:
+                json.dump({"orphan_requirements": []}, f)
+
+            ok, diag, report = verify_traceability_orphans(
+                repo_root=tmp_dir,
+                baseline_path=baseline_path,
+                fail_on_orphans=True,
+            )
+            self.assertFalse(ok, "Expected failure on dangling requirement target")
+            diag_text = "\n".join(diag)
+            self.assertIn("REQ-NONEXISTENT-999", diag_text)
+            self.assertIn("Criterion 2", diag_text)
+
+    def test_scenario_50_criterion_3_ratchet_monotonicity_and_inflation_rejection(self):
+        """TST-PRO-087.1 (Criterion 3): Ratchet rejects baseline inflation when orphan count grows."""
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            req_dir = os.path.join(tmp_dir, "docs", "requirements")
+            tst_dir = os.path.join(tmp_dir, "docs", "tests")
+            tools_dir = os.path.join(tmp_dir, "tools")
+            os.makedirs(req_dir)
+            os.makedirs(tst_dir)
+            os.makedirs(tools_dir)
+
+            with open(os.path.join(req_dir, "req_test.md"), "w", encoding="utf-8") as f:
+                f.write(
+                    "# Shard\n"
+                    "### REQ-DOM-001: Req 1 [Verified]\n- **Tests**: `Planned`\n\n"
+                    "### REQ-DOM-002: Req 2 [Verified]\n- **Tests**: `Planned`\n"
+                )
+
+            with open(os.path.join(tst_dir, "tst_test.md"), "w", encoding="utf-8") as f:
+                f.write("# Empty Test Shard\n")
+
+            # Baseline has only 1 orphan, but 2 exist in docs -> inflation
+            baseline_path = os.path.join(tools_dir, "traceability_baseline.json")
+            with open(baseline_path, "w", encoding="utf-8") as f:
+                json.dump({"orphan_requirements": ["REQ-DOM-001"]}, f)
+
+            ok, diag, report = verify_traceability_orphans(
+                repo_root=tmp_dir,
+                baseline_path=baseline_path,
+                fail_on_orphans=True,
+            )
+            self.assertFalse(ok, "Expected failure when orphan count exceeds baseline count")
+            diag_text = "\n".join(diag)
+            self.assertIn("Criterion 3 Ratchet", diag_text)
+
+    def test_scenario_51_criterion_3_stale_baseline_rejection_forces_shrink(self):
+        """TST-PRO-087.1 (Criterion 3): Resolving an orphan forces baseline shrinking (stale baseline rejected)."""
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            req_dir = os.path.join(tmp_dir, "docs", "requirements")
+            tst_dir = os.path.join(tmp_dir, "docs", "tests")
+            tools_dir = os.path.join(tmp_dir, "tools")
+            os.makedirs(req_dir)
+            os.makedirs(tst_dir)
+            os.makedirs(tools_dir)
+
+            with open(os.path.join(req_dir, "req_test.md"), "w", encoding="utf-8") as f:
+                f.write(
+                    "# Shard\n"
+                    "### REQ-DOM-001: Resolved Requirement [Verified]\n- **Tests**: `TST-DOM-001`\n"
+                )
+
+            with open(os.path.join(tst_dir, "tst_test.md"), "w", encoding="utf-8") as f:
+                f.write(
+                    "# Test Shard\n"
+                    "### TST-DOM-001: Verifying Test [Verified]\n- **Verifies**: `REQ-DOM-001`\n"
+                )
+
+            # Baseline still lists REQ-DOM-001 even though it was resolved
+            baseline_path = os.path.join(tools_dir, "traceability_baseline.json")
+            with open(baseline_path, "w", encoding="utf-8") as f:
+                json.dump({"orphan_requirements": ["REQ-DOM-001"]}, f)
+
+            ok, diag, report = verify_traceability_orphans(
+                repo_root=tmp_dir,
+                baseline_path=baseline_path,
+                fail_on_orphans=True,
+            )
+            self.assertFalse(ok, "Expected failure when baseline contains resolved requirement")
+            diag_text = "\n".join(diag)
+            self.assertIn("resolved requirement(s): REQ-DOM-001", diag_text)
+            self.assertEqual(report["stale_orphans"], ["REQ-DOM-001"])
+
+    def test_scenario_52_verifies_field_syntax_variants_compatibility(self):
+        """TST-PRO-087.1: Validates parser compatibility across Verifies, Requirement(s), and Target Requirement."""
+        req_shards = {
+            "req_demo.md": (
+                "### REQ-DEMO-001: Item 1 [Verified]\n- **Tests**: `TST-DEMO-001`\n\n"
+                "### REQ-DEMO-002: Item 2 [Verified]\n- **Tests**: `TST-DEMO-002`\n\n"
+                "### REQ-DEMO-003: Item 3 [Verified]\n- **Tests**: `TST-DEMO-003`\n"
+            )
+        }
+        tst_shards = {
+            "tst_demo.md": (
+                "### TST-DEMO-001: Test 1 [Verified]\n- **Verifies**: `REQ-DEMO-001`\n\n"
+                "### TST-DEMO-002: Test 2 [Verified]\n- **Requirement(s)**: `REQ-DEMO-002`\n\n"
+                "### TST-DEMO-003: Test 3 [Verified]\n- **Target Requirement**: `REQ-DEMO-003`\n"
+            )
+        }
+        res = find_traceability_orphans(req_shards=req_shards, tst_shards=tst_shards)
+        self.assertEqual(len(res.orphan_reqs), 0)
+        self.assertEqual(len(res.dangling_req_cites), 0)
+        self.assertEqual(len(res.tsts_without_reqs), 0)
+
+    def test_scenario_53_live_repository_traceability_orphans_governance(self):
+        """TST-PRO-087.1 / TST-PRO-087.3: Assert live repository passes bidirectional traceability with baseline."""
+        ok, diag, report = verify_traceability_orphans()
+        self.assertTrue(ok, f"Expected live repository to pass traceability governance, got: {diag}")
+        self.assertEqual(report["unbaselined_orphans"], [])
+        self.assertEqual(report["stale_orphans"], [])
+        self.assertEqual(report["orphan_count"], 15)
+        self.assertEqual(report["baseline_count"], 15)
 
 
 

@@ -296,7 +296,7 @@
   • Execute `./gradlew testDebugUnitTest` across all modules asserting 100% test pass rate with zero regressions.
 
 ### TST-MIG-001: **Full Migration Cycle** [Verified]
-- **Requirement(s)**: `REQ-MIG-001`, `002`, `004`, `006`
+- **Requirement(s)**: `REQ-MIG-001`, `REQ-MIG-002`, `REQ-MIG-004`, `REQ-MIG-006`
 - **Component**: **Full Migration Cycle**
 - **Jira**: ``ATT-117``
 - **Test Description**: 1. Generate local backup. 2. Wipe app data. 3. Restore from backup.
