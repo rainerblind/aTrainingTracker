@@ -1885,11 +1885,14 @@
   • Verify 2 decimal place formatting (`0.00`) for continuous ratio values.
   • Verify `SensorType.HRV_RMSSD` uses `IntegerFormatter` emitting `0 ms`.
   • Verify `isArtifactGated: Boolean` triggers warning icon alongside `--.--` in `SensorFieldViewTest.kt`.
-  3. *Tracking HRV Semantic Zone Indicator & ZoneDisplayOptions Tests (`TST-TRK-061.3`, `TrackingHrvZoneIndicatorTest.kt`, `TrackingViewModelTest.kt`)*:
+  3. *Tracking HRV Semantic Zone Indicator & ZoneDisplayOptions Tests (`TST-TRK-061.3`, `TrackingHrvZoneIndicatorTest.kt`, `TrackingViewModelTest.kt`, `SensorFieldZoneGaugeTest.kt`)*:
   • Verify $\alpha_1 > \alpha_{1,\text{T1}}$ resolves to `TTColor.Zone2` (Green).
   • Verify $\alpha_{1,\text{T2}} \le \alpha_1 \le \alpha_{1,\text{T1}}$ resolves to `TTColor.Zone3` (Orange).
   • Verify $\alpha_1 < \alpha_{1,\text{T2}}$ resolves to `TTColor.Zone4` (Red).
   • Verify `HRV_DFA_A1` resolves its `ZoneDisplayOptions` directly from dedicated persisted HRV display options (`SettingsSnapshot.hrvDisplayOptions`) across all sport profiles (`RUN`, `BIKE`, `UNKNOWN`).
+  • Verify `HrvZoneIndicator.calculateZoneGaugeState` returns exactly 3 segments (`TTColor.Zone2`, `TTColor.Zone3`, `TTColor.Zone4`), `zoneLabels = listOf("Z2", "Z3", "Z4")`, dynamic proportional `segmentWeights`, and monotonic `needleFraction` clamped in $[0.05, 0.95]$.
+  • Verify `ZoneGaugeBar` displays correct under-segment badge `"Z2"`, `"Z3"`, or `"Z4"` when `zoneLabels` is provided.
+  • Verify backward-compatibility of `ZoneGaugeState` and `ZoneGaugeBar` when `zoneLabels == null` (HR 5-zone `"Z1"`..`"Z5"`, Power 7-zone `"Z1"`..`"Z7"`).
   4. *Training Zones 4th Tab & Invariant Tests (`TST-TRK-061.4`, `HrvDfaA1SettingsContractTest.kt`, `TuningPreferencesDataStoreDfaA1Test.kt`)*:
   • Verify `ZoneSettingsScreen` renders 4th tab `R.string.tab_hrv_dfa_a1` with unified 3-zone colored dual-thumb `RangeSlider` (`0.30..1.20`), fine-tuning $0.01$ step steppers, single-line Reset to Defaults action ($0.75 / 0.50$), and interactive `SensorFieldView` preview pills.
   • Verify default values $\alpha_{1,\text{T1}} = 0.75f$ and $\alpha_{1,\text{T2}} = 0.50f$.

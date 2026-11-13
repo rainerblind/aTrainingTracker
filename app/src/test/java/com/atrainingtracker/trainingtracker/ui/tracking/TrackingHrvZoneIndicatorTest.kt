@@ -102,25 +102,63 @@ class TrackingHrvZoneIndicatorTest {
     fun testCalculateZoneGaugeState_aerobicBase_mapsToZone2() {
         val state = HrvZoneIndicator.calculateZoneGaugeState(0.85)
         org.junit.Assert.assertNotNull(state)
-        assertEquals(2, state?.activeZoneIndex)
-        assertEquals(ZoneGaugeMath.HR_SEGMENT_COLORS, state?.segmentColors)
-        org.junit.Assert.assertTrue((state?.needleFraction ?: 0f) in 0.1f..0.5f)
+        assertEquals(1, state?.activeZoneIndex)
+        assertEquals(HrvZoneIndicator.HRV_SEGMENT_COLORS, state?.segmentColors)
+        assertEquals(listOf("Z2", "Z3", "Z4"), state?.zoneLabels)
+        assertEquals(3, state?.segmentColors?.size)
+        org.junit.Assert.assertTrue((state?.needleFraction ?: 0f) in 0.05f..0.45f)
     }
 
     @Test
     fun testCalculateZoneGaugeState_thresholdTransition_mapsToZone3() {
         val state = HrvZoneIndicator.calculateZoneGaugeState(0.65)
         org.junit.Assert.assertNotNull(state)
-        assertEquals(3, state?.activeZoneIndex)
-        org.junit.Assert.assertTrue((state?.needleFraction ?: 0f) in 0.35f..0.65f)
+        assertEquals(2, state?.activeZoneIndex)
+        org.junit.Assert.assertTrue((state?.needleFraction ?: 0f) in 0.45f..0.70f)
     }
 
     @Test
     fun testCalculateZoneGaugeState_highIntensity_mapsToZone4() {
         val state = HrvZoneIndicator.calculateZoneGaugeState(0.40)
         org.junit.Assert.assertNotNull(state)
-        assertEquals(4, state?.activeZoneIndex)
-        org.junit.Assert.assertTrue((state?.needleFraction ?: 0f) in 0.6f..0.95f)
+        assertEquals(3, state?.activeZoneIndex)
+        org.junit.Assert.assertTrue((state?.needleFraction ?: 0f) in 0.70f..0.95f)
+    }
+
+    @Test
+    fun testCalculateZoneGaugeState_proportionalSegmentWeights() {
+        // Default T1 = 0.75, T2 = 0.50 -> spans: 0.45, 0.25, 0.30 (total 1.0)
+        val defaultState = HrvZoneIndicator.calculateZoneGaugeState(0.70)
+        org.junit.Assert.assertNotNull(defaultState)
+        val weights = defaultState!!.segmentWeights
+        assertEquals(3, weights.size)
+        assertEquals(0.45f, weights[0], 0.001f)
+        assertEquals(0.25f, weights[1], 0.001f)
+        assertEquals(0.30f, weights[2], 0.001f)
+        assertEquals(1.0f, weights.sum(), 0.001f)
+
+        // Custom T1 = 0.80, T2 = 0.60 -> spans: 0.40, 0.20, 0.40 (total 1.0)
+        val customState = HrvZoneIndicator.calculateZoneGaugeState(0.70, t1 = 0.80f, t2 = 0.60f)
+        org.junit.Assert.assertNotNull(customState)
+        val customWeights = customState!!.segmentWeights
+        assertEquals(0.40f, customWeights[0], 0.001f)
+        assertEquals(0.20f, customWeights[1], 0.001f)
+        assertEquals(0.40f, customWeights[2], 0.001f)
+        assertEquals(1.0f, customWeights.sum(), 0.001f)
+    }
+
+    @Test
+    fun testCalculateZoneGaugeState_strictlyMonotonicNeedle() {
+        val alphaValues = listOf(1.15, 1.0, 0.85, 0.75, 0.65, 0.50, 0.40, 0.25)
+        val fractions = alphaValues.map {
+            HrvZoneIndicator.calculateZoneGaugeState(it)!!.needleFraction!!
+        }
+        for (i in 0 until fractions.size - 1) {
+            org.junit.Assert.assertTrue(
+                "Needle fraction must strictly increase as alpha1 decreases: ${fractions[i]} < ${fractions[i + 1]}",
+                fractions[i] < fractions[i + 1]
+            )
+        }
     }
 
     @Test

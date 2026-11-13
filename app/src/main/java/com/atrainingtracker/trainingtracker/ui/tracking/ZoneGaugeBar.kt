@@ -222,8 +222,9 @@ fun ZoneGaugeBar(
                         contentAlignment = Alignment.Center
                     ) {
                         if (index == state.activeZoneIndex - 1) {
+                            val badgeLabel = state.zoneLabels?.getOrNull(index) ?: "Z${state.activeZoneIndex}"
                             Text(
-                                text = "Z${state.activeZoneIndex}",
+                                text = badgeLabel,
                                 style = MaterialTheme.typography.labelSmall.copy(
                                     fontSize = 10.sp,
                                     fontWeight = FontWeight.Bold

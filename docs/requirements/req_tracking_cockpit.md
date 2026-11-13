@@ -3430,6 +3430,17 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
   - High Intensity / Anaerobic ($\alpha_1 < \alpha_{1,\text{T2}}$): Red / Anaerobic (`TTColor.Zone4`).
   - Muted / Artifact-Gated ($> 5.0\%$): Neutral transparent / theme outline (`--.--`).
 • In `TrackingViewModel.kt`, `SensorType.HRV_DFA_A1` SHALL resolve its `ZoneDisplayOptions` directly from the dedicated persisted HRV display options (`SettingsSnapshot.hrvDisplayOptions`) across ALL sport types (`RUN`, `BIKE`, and `UNKNOWN`/Other), decoupling HRV visualization from Heart Rate zone profiles.
+• In `ZoneGaugeBar.kt`, `ZoneGaugeState` SHALL provide optional `val zoneLabels: List<String>? = null` (default `null`). When `zoneLabels != null`, `ZoneGaugeBar` SHALL render the active zone badge using `zoneLabels.getOrNull(index) ?: "Z${state.activeZoneIndex}"`, decoupling badge text from 1-based indexing (`REQ-UI-376`, `ATT-7520`).
+• In `HrvZoneIndicator.kt`, `calculateZoneGaugeState(alpha1, t1, t2)` SHALL calculate and return a 3-segment `ZoneGaugeState` representing the 3 physiological zones of the HRV DFA $\alpha_1$ model:
+  - `segmentColors = listOf(TTColor.Zone2, TTColor.Zone3, TTColor.Zone4)` (3 segments: Green, Orange, Red from left to right).
+  - `zoneLabels = listOf("Z2", "Z3", "Z4")`.
+  - Dynamic `segmentWeights` proportionally calculated from threshold spans: $S_1 = 1.20f - t1$, $S_2 = t1 - t2$, $S_3 = t2 - 0.20f$ normalized to sum to $1.0f$.
+  - Continuous `needleFraction` across $[0.0, 1.0]$ representing $\alpha_1 \in [0.20, 1.20]$ monotonically across the 3 segments (Zone 2 left, Zone 3 middle, Zone 4 right):
+    - When $\alpha_1 > t1$: needle in segment 1 (Zone 2), mapped from $[1.20, t1]$ to $[0.0, w_1]$.
+    - When $t2 \le \alpha_1 \le t1$: needle in segment 2 (Zone 3), mapped from $[t1, t2]$ to $[w_1, w_1 + w_2]$.
+    - When $\alpha_1 < t2$: needle in segment 3 (Zone 4), mapped from $[t2, 0.20]$ to $[w_1 + w_2, 1.0]$.
+  - `activeZoneIndex`: 1 when $\alpha_1 > t1$ (Z2), 2 when $t2 \le \alpha_1 \le t1$ (Z3), 3 when $\alpha_1 < t2$ (Z4).
+  - When $\alpha_1$ is null, NaN, infinite, or negative, `calculateZoneGaugeState` SHALL return `null`.
 4. *User-Configurable Individual Threshold Overrides & Invariant (`REQ-TRK-061.4`)*:
 • `TuningPreferencesDataStore.kt` SHALL support athlete-customizable threshold boundaries (`dfaA1ThresholdT1` default `0.75f`, `dfaA1ThresholdT2` default `0.50f`) with mandatory invariant enforcement $\alpha_{1,\text{T1}} \ge \alpha_{1,\text{T2}} + 0.05f$ and bounds $[0.20, 1.50]$.
 • The system SHALL promote $T_1$ and $T_2$ threshold controls into a dedicated 4th tab `R.string.tab_hrv_dfa_a1` (`HRV (DFA α1)`) in `ZoneSettingsScreen` (`ZonesSettingsActivity.kt`) featuring a unified 3-zone colored dual-thumb `RangeSlider` spanning a single continuous domain `0.30f..1.20f` with $T_2$ and $T_1$ thumbs enforcing invariant $\alpha_{1,\text{T1}} \ge \alpha_{1,\text{T2}} + 0.05f$. Track segments SHALL be styled using semantic tokens: `TTColor.Zone4` (Red, $< T_2$), `TTColor.Zone3` (Orange, $T_2..T_1$), and `TTColor.Zone2` (Green, $> T_1$).
@@ -3444,10 +3455,10 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 • All UI strings SHALL maintain 100% 9-language translation parity in `strings_hrv.xml`.
 
 **Requirement Archaeology & Chesterton's Fence Audit**:
-1. *Original Requirement ID & Target*: Amends `REQ-TRK-061` (`REQ-TRK-061.1`..`REQ-TRK-061.5`, `ATT-7524`), targeting `SensorFieldView.kt`, `SensorFieldState.kt`, `TrackingViewModel.kt`, `ZonesSettingsActivity.kt`, `SettingsDataStore.kt`, `TuningPreferencesDataStore.kt`, `HrvInfoBottomSheet.kt`, `ActivityType.java`, `SensorType.java`.
-2. *Historical Origin & Commit Trace*: Introduced in `ATT-3542` (commit `14292b35206`), refined in `ATT-6715` (interim controls in `PhysiologyModelsSection.kt`), promoted to dedicated Training Zones tab in `ATT-7317`, decoupled to dedicated HRV `ZoneDisplayOptions` in `ATT-7524`, and refined in `ATT-7519` with a unified 3-zone colored dual-thumb slider and layout wrapping/localization fixes.
-3. *Root Reason for Existing Formulation*: ATT-3542 established initial live telemetry tile rendering. `TrackingViewModel` originally mapped `HRV_DFA_A1` to HR zones (`HR_RUN`/`HR_BIKE`) because HRV lacked its own dedicated display options storage in DataStore prior to ATT-7524, which caused HRV display options to return `null` under non-running/non-cycling sport types (`UNKNOWN`). ATT-7317 initially implemented separate T1 and T2 sliders as a quick MVP which created mismatched optical scales.
-4. *Preservation of Core Invariants*: Population defaults ($0.75 / 0.50$) preserved; invariant $T_1 \ge T_2 + 0.05$ preserved; theme color centralization (Rule 71); modal bottom sheet scroll safety (Rule 72); dedicated HRV display options apply consistently across all sport profiles; 100% clean-room test pass rate and 9-language translation parity strictly preserved.
+1. *Original Requirement ID & Target*: Amends `REQ-TRK-061` (`REQ-TRK-061.1`..`REQ-TRK-061.5`, `ATT-7524`, `ATT-7520`), targeting `SensorFieldView.kt`, `SensorFieldState.kt`, `TrackingViewModel.kt`, `ZonesSettingsActivity.kt`, `SettingsDataStore.kt`, `TuningPreferencesDataStore.kt`, `HrvInfoBottomSheet.kt`, `HrvZoneIndicator.kt`, `ZoneGaugeState.kt`, `ZoneGaugeBar.kt`, `ActivityType.java`, `SensorType.java`.
+2. *Historical Origin & Commit Trace*: Introduced in `ATT-3542` (commit `14292b35206`), refined in `ATT-6715` (interim controls in `PhysiologyModelsSection.kt`), promoted to dedicated Training Zones tab in `ATT-7317`, decoupled to dedicated HRV `ZoneDisplayOptions` in `ATT-7524`, refined in `ATT-7519` with a unified 3-zone colored dual-thumb slider, and refined in `ATT-7520` with 3-segment HRV gauge bar architecture.
+3. *Root Reason for Existing Formulation*: ATT-3542 established initial live telemetry tile rendering. `ZoneGaugeBar` originally supported only 5-zone HR and 7-zone Power. Rather than generalizing `ZoneGaugeState` for 3-segment models, `HrvZoneIndicator` temporarily mapped HRV onto the 5-zone HR color palette as an MVP workaround, leaving dummy segments Z1 and Z5 visible.
+4. *Preservation of Core Invariants*: 5-zone HR and 7-zone Power models remain 100% untouched; `ZoneGaugeState` defaults `zoneLabels` to null preserving `"Z${activeZoneIndex}"` fallback; population defaults ($0.75 / 0.50$) preserved; invariant $T_1 \ge T_2 + 0.05$ preserved; theme color centralization (Rule 71); modal bottom sheet scroll safety (Rule 72); dedicated HRV display options apply consistently across all sport profiles; 100% clean-room test pass rate and 9-language translation parity strictly preserved.
 
 **Acceptance Criteria (Given-When-Then)**:
 • *Given* `EditSensorFieldDialog`,
@@ -3459,6 +3470,9 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 • *Given* thresholds $\alpha_{1,\text{T1}} = 0.75$ and $\alpha_{1,\text{T2}} = 0.50$,
 • *When* $\alpha_1 = 0.85$,
 • *Then* `TTColor.Zone2` (Green); *When* $\alpha_1 = 0.65$, *Then* `TTColor.Zone3` (Orange); *When* $\alpha_1 = 0.45$, *Then* `TTColor.Zone4` (Red); *When* gated, *Then* neutral theme outline.
+• *Given* horizontal zone gauge bar for `HRV_DFA_A1`,
+• *When* rendered in preview or live tracking cockpit,
+• *Then* the gauge bar renders exactly 3 segments (`Zone2`, `Zone3`, `Zone4`), proportional segment widths ($1.20-t1$, $t1-t2$, $t2-0.20$), and displays active badge `"Z2"`, `"Z3"`, or `"Z4"` under the elevated active segment.
 • *Given* custom thresholds $\alpha_{1,\text{T1}} = 0.80$ and $\alpha_{1,\text{T2}} = 0.55$,
 • *When* updated in Settings,
 • *Then* invariant $T_1 \ge T_2 + 0.05f$ is enforced, and `TrackingViewModel` + `HrvInfoBottomSheet` immediately reflect updated thresholds.
