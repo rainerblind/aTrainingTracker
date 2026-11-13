@@ -18,6 +18,12 @@
 
 package com.atrainingtracker.trainingtracker.ui.aftermath
 
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.SentimentDissatisfied
+import androidx.compose.material.icons.filled.SentimentNeutral
+import androidx.compose.material.icons.filled.SentimentSatisfied
+import androidx.compose.material.icons.filled.SentimentVeryDissatisfied
+import androidx.compose.material.icons.filled.SentimentVerySatisfied
 import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummariesDbHelper
@@ -78,11 +84,21 @@ class WorkoutRpeFeelTest {
             4 to R.string.feel_anchor_4,
             5 to R.string.feel_anchor_5
         )
+        val expectedIcons = mapOf(
+            1 to Icons.Filled.SentimentVeryDissatisfied,
+            2 to Icons.Filled.SentimentDissatisfied,
+            3 to Icons.Filled.SentimentNeutral,
+            4 to Icons.Filled.SentimentSatisfied,
+            5 to Icons.Filled.SentimentVerySatisfied
+        )
         expectedEmojis.forEach { (score, expectedEmoji) ->
             assertEquals("Feel $score emoji mismatch", expectedEmoji, getFeelEmoji(score))
         }
         expectedAnchors.forEach { (score, expectedRes) ->
             assertEquals("Feel $score anchor string resource mismatch", expectedRes, getFeelAnchorStringRes(score))
+        }
+        expectedIcons.forEach { (score, expectedIcon) ->
+            assertEquals("Feel $score vector icon mismatch", expectedIcon, getFeelIcon(score))
         }
     }
 
@@ -93,6 +109,9 @@ class WorkoutRpeFeelTest {
         assertEquals("workout_feel_badge", WorkoutRpeFeelTestTags.FEEL_BADGE)
         assertEquals("workout_srpe_badge", WorkoutRpeFeelTestTags.SRPE_BADGE)
         assertEquals("workout_rpe_feel_editor", WorkoutRpeFeelTestTags.EDITOR)
+        assertEquals("workout_rpe_slider", WorkoutRpeFeelTestTags.RPE_SLIDER)
+        assertEquals("workout_rpe_clear", WorkoutRpeFeelTestTags.RPE_CLEAR)
+        assertEquals("workout_feel_clear", WorkoutRpeFeelTestTags.FEEL_CLEAR)
     }
 
     // --- TST-WKO-037: Reorderable section defaults & tab configuration ---

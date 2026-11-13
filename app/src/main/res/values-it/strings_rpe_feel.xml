@@ -11,14 +11,14 @@
     <string name="rpe_anchor_3">3 — Moderato</string>
     <string name="rpe_anchor_4">4 — Abbastanza duro</string>
     <string name="rpe_anchor_5">5 — Duro</string>
-    <string name="rpe_anchor_6">6 — Duro+</string>
+    <string name="rpe_anchor_6">6 — Duro a molto duro</string>
     <string name="rpe_anchor_7">7 — Molto duro</string>
-    <string name="rpe_anchor_8">8 — Molto duro+</string>
-    <string name="rpe_anchor_9">9 — Estremamente duro</string>
-    <string name="rpe_anchor_10">10 — Sforzo massimo</string>
+    <string name="rpe_anchor_8">8 — Estremamente duro</string>
+    <string name="rpe_anchor_9">9 — Quasi massimale</string>
+    <string name="rpe_anchor_10">10 — Massimale</string>
 
     <string name="feel_anchor_1">Pessimo</string>
-    <string name="feel_anchor_2">Scarso</string>
+    <string name="feel_anchor_2">Pesante</string>
     <string name="feel_anchor_3">Normale</string>
     <string name="feel_anchor_4">Buono</string>
     <string name="feel_anchor_5">Ottimo</string>

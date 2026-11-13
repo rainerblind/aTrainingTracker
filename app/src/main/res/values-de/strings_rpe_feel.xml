@@ -8,17 +8,17 @@
 
     <string name="rpe_anchor_1">1 — Sehr leicht</string>
     <string name="rpe_anchor_2">2 — Leicht</string>
-    <string name="rpe_anchor_3">3 — Moderat</string>
-    <string name="rpe_anchor_4">4 — Etwas anstrengend</string>
-    <string name="rpe_anchor_5">5 — Anstrengend</string>
-    <string name="rpe_anchor_6">6 — Anstrengend+</string>
-    <string name="rpe_anchor_7">7 — Sehr anstrengend</string>
-    <string name="rpe_anchor_8">8 — Sehr anstrengend+</string>
-    <string name="rpe_anchor_9">9 — Extrem anstrengend</string>
+    <string name="rpe_anchor_3">3 — Mäßig</string>
+    <string name="rpe_anchor_4">4 — Etwas schwer</string>
+    <string name="rpe_anchor_5">5 — Schwer</string>
+    <string name="rpe_anchor_6">6 — Schwer bis sehr schwer</string>
+    <string name="rpe_anchor_7">7 — Sehr schwer</string>
+    <string name="rpe_anchor_8">8 — Extrem schwer</string>
+    <string name="rpe_anchor_9">9 — Nahezu maximal</string>
     <string name="rpe_anchor_10">10 — Maximal</string>
 
-    <string name="feel_anchor_1">Sehr schlecht</string>
-    <string name="feel_anchor_2">Schlecht</string>
+    <string name="feel_anchor_1">Miserabel</string>
+    <string name="feel_anchor_2">Schwerfällig</string>
     <string name="feel_anchor_3">Normal</string>
     <string name="feel_anchor_4">Gut</string>
     <string name="feel_anchor_5">Großartig</string>
