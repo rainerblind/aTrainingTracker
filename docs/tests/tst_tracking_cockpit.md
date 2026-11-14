@@ -2264,6 +2264,24 @@
   4. *1 Hz Driver Gating Test (`TST-CON-040.4`, `ANTBikeRadarDeviceTest.kt`, `BTLERadarDeviceTest.kt`)*:
   • Given rapid 8 Hz packet updates delivered to `ANTBikeRadarDevice` and `BTLERadarDevice`, verify that `sampleAndResetWindow()` and scalar sensor `.newValue()` updates occur on a 1-second cadence rather than per-frame.
 
+### TST-CON-041: **Concurrent Radar Source Arbitration & Multi-Transport Decoupling Test Suite** [Verified]
+- **Requirement(s)**: `REQ-CON-041` (`REQ-CON-041.1`..`REQ-CON-041.4`)
+- **Component**: `RadarState.kt`, `RadarStateRepository.kt`, `ANTBikeRadarDevice.kt`, `BTLERadarDevice.java`, `RadarTrafficSimulator.kt`, `RadarStateRepositoryTest.kt`, `ANTBikeRadarDeviceTest.kt`, `BTLERadarDeviceTest.kt`
+- **Jira**: `ATT-7575`
+- **Test Description**:
+  1. *Prioritized Source Selection Test (`TST-CON-041.1`, `RadarStateRepositoryTest.kt`)*:
+  • Given `ANT_PLUS` publishes `CONNECTED` with targets and `BLE` subsequently publishes `CONNECTED` with targets, verify that `BLE` preempts `ANT_PLUS` and `RadarStateRepository.radarState` emits `BLE` targets exclusively.
+  • Given both sources streaming, verify secondary `ANT_PLUS` updates do not interleave or overwrite `radarState`.
+  2. *Secondary Watchdog Immunity Test (`TST-CON-041.2`, `RadarStateRepositoryTest.kt`)*:
+  • While `BLE` is streaming (`CONNECTED`), deliver a `DISCONNECTED_ERROR` update from `ANT_PLUS`.
+  • Verify `RadarStateRepository.radarState` remains in `CONNECTED` with `BLE` targets and does not transition to `DISCONNECTED_ERROR`.
+  3. *Primary Disconnect Failover Test (`TST-CON-041.3`, `RadarStateRepositoryTest.kt`)*:
+  • While `BLE` is primary and `ANT_PLUS` is connected, deliver `DISCONNECTED_ERROR` or `DISCONNECTED` from `BLE`.
+  • Verify `RadarStateRepository` fails over immediately to `ANT_PLUS`, and `radarState` transitions to `ANT_PLUS` targets.
+  4. *Driver isReceivingData Scoping Test (`TST-CON-041.4`, `ANTBikeRadarDeviceTest.kt`)*:
+  • When only `BLE` is connected and `ANT_PLUS` has not received data, verify `ANTBikeRadarDevice.isReceivingData()` returns `false`.
+  • When `ANT_PLUS` receives data, verify `ANTBikeRadarDevice.isReceivingData()` returns `true`.
+
 ### TST-TRK-064: **1-Tap Radar Audio Snooze, Peloton Sync & Urban Suppression Test Suite** [Verified]
 - **Requirement(s)**: `REQ-TRK-064` (`REQ-TRK-064.1`..`REQ-TRK-064.7`)
 - **Component**: `RadarSnoozeController.kt`, `RadarAlertManager.kt`, `RadarEdgeOverlay.kt`, `RadarLightQuickSwitchSheet.kt`, `RadarState.kt`, `RadarStateRepository.kt`, `BTLERadarDevice.java`, `TuningPreferencesDataStore.kt`, `RadarSettingsSection.kt`, `strings_radar.xml`

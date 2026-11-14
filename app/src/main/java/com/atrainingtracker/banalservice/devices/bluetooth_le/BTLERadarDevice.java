@@ -38,6 +38,7 @@ import com.atrainingtracker.banalservice.devices.radar.RadarConnectionState;
 import com.atrainingtracker.banalservice.devices.radar.RadarLatchedSnapshot;
 import com.atrainingtracker.banalservice.devices.radar.RadarLightController;
 import com.atrainingtracker.banalservice.devices.radar.RadarLightMode;
+import com.atrainingtracker.banalservice.devices.radar.RadarSource;
 import com.atrainingtracker.banalservice.devices.radar.RadarState;
 import com.atrainingtracker.banalservice.devices.radar.RadarStateRepository;
 import com.atrainingtracker.banalservice.devices.radar.RadarTarget;
@@ -153,7 +154,8 @@ public class BTLERadarDevice extends MyBTLEDevice implements RadarLightDeviceCli
                     SystemClock.elapsedRealtime(),
                     currentState.getLightMode(),
                     mIsLightControlSupported,
-                    currentState.getAudioSnoozeState()
+                    currentState.getAudioSnoozeState(),
+                    RadarSource.BLE
             ));
             resetSensorsToClear();
         }
@@ -175,7 +177,8 @@ public class BTLERadarDevice extends MyBTLEDevice implements RadarLightDeviceCli
                 SystemClock.elapsedRealtime(),
                 currentState.getLightMode(),
                 mIsLightControlSupported,
-                currentState.getAudioSnoozeState()
+                currentState.getAudioSnoozeState(),
+                RadarSource.BLE
         ));
     }
 
@@ -218,7 +221,8 @@ public class BTLERadarDevice extends MyBTLEDevice implements RadarLightDeviceCli
                 SystemClock.elapsedRealtime(),
                 currentState.getLightMode(),
                 mIsLightControlSupported,
-                currentState.getAudioSnoozeState()
+                currentState.getAudioSnoozeState(),
+                RadarSource.BLE
         ));
         if (mHandler != null) {
             mHandler.removeCallbacks(mWatchdogRunnable);
@@ -468,7 +472,8 @@ public class BTLERadarDevice extends MyBTLEDevice implements RadarLightDeviceCli
                 SystemClock.elapsedRealtime(),
                 currentState.getLightMode(),
                 mIsLightControlSupported,
-                currentState.getAudioSnoozeState()
+                currentState.getAudioSnoozeState(),
+                RadarSource.BLE
         );
         RadarStateRepository.updateState(state);
 
@@ -557,7 +562,8 @@ public class BTLERadarDevice extends MyBTLEDevice implements RadarLightDeviceCli
                 SystemClock.elapsedRealtime(),
                 RadarLightMode.OFF,
                 false,
-                RadarStateRepository.getState().getAudioSnoozeState()
+                RadarStateRepository.getState().getAudioSnoozeState(),
+                RadarSource.BLE
         ));
         resetSensorsToClear();
         super.disconnectFromGatt();

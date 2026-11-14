@@ -28,6 +28,8 @@ import com.atrainingtracker.banalservice.database.DevicesDatabaseManager
 import com.atrainingtracker.banalservice.devices.radar.LaneState
 import com.atrainingtracker.banalservice.devices.radar.RadarConnectionState
 import com.atrainingtracker.banalservice.devices.radar.RadarScenario
+import com.atrainingtracker.banalservice.devices.radar.RadarSource
+import com.atrainingtracker.banalservice.devices.radar.RadarState
 import com.atrainingtracker.banalservice.devices.radar.RadarStateRepository
 import com.atrainingtracker.banalservice.devices.radar.RadarTrafficSimulator
 import com.atrainingtracker.banalservice.devices.radar.ThreatLevel
@@ -700,5 +702,34 @@ class ANTBikeRadarDeviceTest {
         radarDevice.decodeBroadcastData(clearPacket)
         // Now 1 Hz window samples again, reflecting the clear road (threat count -> 0)
         assertEquals(0, radarDevice.getSensor(SensorType.RADAR_THREAT_COUNT).value)
+    }
+
+    /**
+     * TST-CON-041.2: ANTBikeRadarDevice isReceivingData Source Isolation Test.
+     * Verifies isReceivingData() queries only RadarSource.ANT_PLUS state and is unaffected by BLE.
+     */
+    @Test
+    fun testIsReceivingData_isolatedToAntPlusSource() {
+        // BLE is CONNECTED in repository
+        RadarStateRepository.updateState(
+            RadarState(connectionState = RadarConnectionState.CONNECTED, source = RadarSource.BLE)
+        )
+        // ANT+ has not received data, so isolated query must return false despite global CONNECTED
+        assertFalse("isReceivingData must be false when ANT+ has not connected", radarDevice.isReceivingData())
+
+        // ANT+ receives packet and publishes CONNECTED
+        val validPayload = byteArrayOf(
+            0x30.toByte(), 0x01.toByte(), 0x00.toByte(),
+            0x10.toByte(), 0x00.toByte(), 0x00.toByte(),
+            0x05.toByte(), 0x00.toByte()
+        )
+        radarDevice.decodeBroadcastData(validPayload)
+        assertTrue("isReceivingData must be true when ANT+ is connected", radarDevice.isReceivingData())
+
+        // ANT+ watchdog times out and publishes DISCONNECTED_ERROR
+        radarDevice.onWatchdogTimeout()
+        assertFalse("isReceivingData must be false after ANT+ watchdog timeout", radarDevice.isReceivingData())
+        // Global repository remains CONNECTED on BLE
+        assertEquals(RadarConnectionState.CONNECTED, RadarStateRepository.getState().connectionState)
     }
 }

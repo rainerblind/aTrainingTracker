@@ -387,7 +387,8 @@ object RadarTrafficSimulator {
         val frame = generateFrame(scenario, elapsedMs).copy(
             lightMode = simulatedLightMode,
             isLightControlSupported = true,
-            audioSnoozeState = RadarStateRepository.getState().audioSnoozeState
+            audioSnoozeState = RadarStateRepository.getState().audioSnoozeState,
+            source = RadarSource.SIMULATOR
         )
         RadarStateRepository.updateState(frame)
         aggregator.onTargetsUpdated(frame.targets)
@@ -461,7 +462,8 @@ object RadarTrafficSimulator {
                     val frame = generateFrame(scenario, elapsed).copy(
                         lightMode = simulatedLightMode,
                         isLightControlSupported = true,
-                        audioSnoozeState = RadarStateRepository.getState().audioSnoozeState
+                        audioSnoozeState = RadarStateRepository.getState().audioSnoozeState,
+                        source = RadarSource.SIMULATOR
                     )
                     RadarStateRepository.updateState(frame)
                     aggregator.onTargetsUpdated(frame.targets)
@@ -494,7 +496,16 @@ object RadarTrafficSimulator {
         _isSimulatingFlow.value = false
         activeScenario = null
         simulatedLightMode = RadarLightMode.OFF
-        RadarStateRepository.reset()
+        if (RadarStateRepository.getActiveSource() == RadarSource.SIMULATOR) {
+            RadarStateRepository.reset()
+        } else {
+            RadarStateRepository.updateState(
+                RadarState(
+                    connectionState = RadarConnectionState.DISCONNECTED,
+                    source = RadarSource.SIMULATOR
+                )
+            )
+        }
         windowAggregator.resetSession()
     }
 
@@ -502,6 +513,8 @@ object RadarTrafficSimulator {
      * Preemption handler invoked when physical radar hardware connects or streams data.
      */
     fun onPhysicalHardwareConnected() {
-        stop()
+        if (isSimulating) {
+            stop()
+        }
     }
 }

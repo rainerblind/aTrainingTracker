@@ -4191,6 +4191,49 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 **Invariants**: Predefined Network Slot 1 isolation; thread safety via single-threaded MainLooper serialization; zero memory leaks or unhandled exceptions on shutdown; 100% test pass rate.
 
+### REQ-CON-041: Concurrent Radar Source Arbitration & Multi-Transport State Decoupling [Verified]
+- **Tests**: `TST-CON-041`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Implementation**: `RadarState.kt`, `RadarStateRepository.kt`, `ANTBikeRadarDevice.kt`, `BTLERadarDevice.java`, `RadarTrafficSimulator.kt`
+- **Rationale**: Dual-protocol cycling rearview radars (e.g., Garmin Varia RTL515, RearVue 820) broadcast telemetry over Bluetooth LE and ANT+ concurrently. If a cyclist pairs both transports in the application, unarbitrated updates in `RadarStateRepository` cause high-frequency target clobbering, jitter in Cockpit overlays, and erroneous disconnect alerts when one transport experiences transient packet starvation while the other is healthy. Furthermore, drivers inspecting global state for link health misreport their own connectivity. The system must establish deterministic source priority arbitration (`BLE` > `ANT_PLUS` > `SIMULATOR`), isolate watchdog disconnect states, provide per-source state inspection, and scope driver link telemetry strictly to its own transport (ATT-7575, Parent Epic ATT-1286, extending `REQ-CON-028`, `REQ-CON-029`, and `REQ-CON-032`):
+- **Description**:
+  1. *RadarSource Classification & Priority Hierarchy (`REQ-CON-041.1`)*:
+     - The system SHALL define `RadarSource` enum (`NONE`, `SIMULATOR`, `ANT_PLUS`, `BLE`) with priority order `BLE` (3) > `ANT_PLUS` (2) > `SIMULATOR` (1) > `NONE` (0).
+     - Every `RadarState` published SHALL include `source: RadarSource`.
+  2. *Active Source Arbitration & Clashing Prevention (`REQ-CON-041.2`)*:
+     - In `RadarStateRepository`, updates from a lower-priority source SHALL NOT overwrite the active prioritized source's `targets` or `connectionState` while the active prioritized source remains in `CONNECTED` state and has received updates within 3,500 ms.
+     - When both `BLE` and `ANT_PLUS` drivers are connected and receiving packets, `RadarStateRepository.radarState` SHALL exclusively emit telemetry from the higher-priority `BLE` stream.
+  3. *Watchdog Collision & Disconnect Isolation (`REQ-CON-041.3`)*:
+     - If a secondary or subordinate radar source times out (watchdog fires with `DISCONNECTED_ERROR`), `RadarStateRepository` SHALL ignore the error state while the active prioritized source remains `CONNECTED`, strictly preventing false disconnect flashes or target erasure in Cockpit overlays.
+     - If the active prioritized source disconnects (`DISCONNECTED` or `DISCONNECTED_ERROR`), `RadarStateRepository` SHALL failover immediately to any connected secondary source (e.g. `ANT_PLUS`), or transition to disconnected if no other source is active.
+  4. *Per-Source State Inspection & Driver isReceivingData Isolation (`REQ-CON-041.4`)*:
+     - `RadarStateRepository` SHALL expose `getState(source: RadarSource): RadarState` returning the isolated state of the specified transport.
+     - In `ANTBikeRadarDevice.kt`, `isReceivingData()` SHALL query `RadarStateRepository.getState(RadarSource.ANT_PLUS).connectionState == RadarConnectionState.CONNECTED`, strictly isolating ANT+ link status from concurrent BLE activity.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: `REQ-CON-028.4` (Reactive Repository) and `REQ-CON-032.3` (Target Demuxing) in `docs/requirements/req_tracking_cockpit.md`.
+2. *Historical Origin & Commit Trace*: Sprints 2026-46.3 (`ATT-5083`, `ATT-5084`).
+3. *Root Reason for Existing Formulation*: `RadarStateRepository` was introduced as a single `MutableStateFlow` under the initial assumption that only one radar transport would be paired or active at a time.
+4. *Preservation of Core Invariants*: 4–8 Hz reactive telemetry stream; fail-safe timeout transitions; backward-compatible `RadarState` constructors; 100% test pass rate.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* both BLE and ANT+ radar drivers are connected,  
+• *When* both receive packets,  
+• *Then* only the active prioritized source updates `RadarStateRepository.radarState`.  
+• *Given* the primary link is streaming and the secondary link times out,  
+• *When* the secondary watchdog fires,  
+• *Then* the primary `CONNECTED` state is not overwritten with `DISCONNECTED_ERROR`.  
+• *Given* the primary link disconnects while a secondary link is connected,  
+• *When* the primary disconnects,  
+• *Then* `RadarStateRepository` seamlessly fails over to the secondary source.  
+• *Given* only BLE is connected and ANT+ is not receiving data,  
+• *When* `ANTBikeRadarDevice.isReceivingData()` is invoked,  
+• *Then* it returns `false`.  
+
+**Invariants**: Predefined Network Slot 1 isolation; thread-safe state synchronization; zero memory leaks; 100% test pass rate.
+
 ### REQ-TRK-064: 1-Tap Radar Audio Snooze, Peloton-Mode Audio Sync & Smart Urban Alert Suppression [Verified]
 - **Tests**: `TST-TRK-064`
 - **Implementation**: `RadarSnoozeController.kt`, `RadarAlertManager.kt`, `RadarEdgeOverlay.kt`, `RadarLightQuickSwitchSheet.kt`, `RadarState.kt`, `RadarStateRepository.kt`, `BTLERadarDevice.java`, `TuningPreferencesDataStore.kt`, `RadarSettingsSection.kt`, `strings_radar.xml`

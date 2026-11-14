@@ -33,6 +33,7 @@ import com.atrainingtracker.banalservice.devices.Manufacturer
 import com.atrainingtracker.banalservice.devices.MyRemoteDevice
 import com.atrainingtracker.banalservice.devices.radar.LaneState
 import com.atrainingtracker.banalservice.devices.radar.RadarConnectionState
+import com.atrainingtracker.banalservice.devices.radar.RadarSource
 import com.atrainingtracker.banalservice.devices.radar.RadarState
 import com.atrainingtracker.banalservice.devices.radar.RadarStateRepository
 import com.atrainingtracker.banalservice.devices.radar.RadarTarget
@@ -222,7 +223,7 @@ class ANTBikeRadarDevice(
     override fun getProtocol(): Protocol = Protocol.ANT_PLUS
 
     override fun isReceivingData(): Boolean =
-        RadarStateRepository.getState().connectionState == RadarConnectionState.CONNECTED
+        RadarStateRepository.getState(RadarSource.ANT_PLUS).connectionState == RadarConnectionState.CONNECTED
 
     override fun addSensors() {
         threatCountSensor = MySensor(this, SensorType.RADAR_THREAT_COUNT)
@@ -452,7 +453,8 @@ class ANTBikeRadarDevice(
             lastUpdateRealtimeMs = nowMs,
             lightMode = currentState.lightMode,
             isLightControlSupported = currentState.isLightControlSupported || (companionLightDevice?.isAssociated == true),
-            audioSnoozeState = currentState.audioSnoozeState
+            audioSnoozeState = currentState.audioSnoozeState,
+            source = RadarSource.ANT_PLUS
         )
         RadarStateRepository.updateState(state)
 
@@ -509,7 +511,8 @@ class ANTBikeRadarDevice(
             lastUpdateRealtimeMs = SystemClock.elapsedRealtime(),
             lightMode = currentState.lightMode,
             isLightControlSupported = currentState.isLightControlSupported,
-            audioSnoozeState = currentState.audioSnoozeState
+            audioSnoozeState = currentState.audioSnoozeState,
+            source = RadarSource.ANT_PLUS
         )
         RadarStateRepository.updateState(state)
         resetSensorsToClear()
@@ -621,7 +624,8 @@ class ANTBikeRadarDevice(
             lastUpdateRealtimeMs = SystemClock.elapsedRealtime(),
             lightMode = currentState.lightMode,
             isLightControlSupported = currentState.isLightControlSupported,
-            audioSnoozeState = currentState.audioSnoozeState
+            audioSnoozeState = currentState.audioSnoozeState,
+            source = RadarSource.ANT_PLUS
         )
         RadarStateRepository.updateState(state)
         resetSensorsToClear()
