@@ -19,6 +19,7 @@
 package com.atrainingtracker.banalservice.ui.devices.devicetabs
 
 import com.atrainingtracker.testing.LocalizationTestCache
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -88,5 +89,23 @@ class DevicesTabbedScreenContractTest {
             "DevicesTabbedScreen composable must be declared",
             screenClass.declaredMethods.any { it.name.startsWith("DevicesTabbedScreen") }
         )
+    }
+
+    @Test
+    fun testDevicesTabbedScreen_sortOrderContract() {
+        // Verify DeviceSortOrder enum exists and has 4 dimensions
+        val sortOrderClass = Class.forName("com.atrainingtracker.banalservice.ui.devices.devicelist.DeviceSortOrder")
+        assertNotNull("DeviceSortOrder enum must exist", sortOrderClass)
+        assertTrue("DeviceSortOrder must be an enum", sortOrderClass.isEnum)
+        val enumConstants = sortOrderClass.enumConstants
+        assertNotNull(enumConstants)
+        assertEquals(4, enumConstants.size)
+
+        // Verify localized string definitions in strings_devices.xml
+        val strings = LocalizationTestCache.getStrings("values", "strings_devices.xml")
+        assertTrue("Must reference devices_sort_alphabetical", strings.containsKey("devices_sort_alphabetical"))
+        assertTrue("Must reference devices_sort_first_seen", strings.containsKey("devices_sort_first_seen"))
+        assertTrue("Must reference devices_sort_last_usage", strings.containsKey("devices_sort_last_usage"))
+        assertTrue("Must reference devices_sort_battery_level", strings.containsKey("devices_sort_battery_level"))
     }
 }

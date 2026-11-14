@@ -310,10 +310,46 @@ class HrvRampTestViewModel @JvmOverloads constructor(
     // Protocol Execution & Pacing Guidance (WARMUP / TESTING / COOLDOWN)
     // ------------------------------------------------------------------------
 
+    private fun sendNewLapBroadcast() {
+        try {
+            if (TrainingApplication.isTracking()) {
+                val app = getApplication<Application>()
+                val lapIntent = Intent(TrainingApplication.REQUEST_NEW_LAP).apply {
+                    setPackage(app.packageName)
+                }
+                app.sendBroadcast(lapIntent)
+                Log.i("HrvRampTestViewModel", "Broadcasted REQUEST_NEW_LAP for test phase transition")
+            }
+        } catch (e: Exception) {
+            Log.w("HrvRampTestViewModel", "Could not dispatch REQUEST_NEW_LAP", e)
+        }
+    }
+
+    private fun sendStopTrackingBroadcast() {
+        try {
+            if (TrainingApplication.isTracking()) {
+                val app = getApplication<Application>()
+                val stopIntent = Intent(TrainingApplication.REQUEST_STOP_TRACKING).apply {
+                    setPackage(app.packageName)
+                }
+                app.sendBroadcast(stopIntent)
+                Log.i("HrvRampTestViewModel", "Broadcasted REQUEST_STOP_TRACKING on test completion")
+            }
+        } catch (e: Exception) {
+            Log.w("HrvRampTestViewModel", "Could not dispatch REQUEST_STOP_TRACKING", e)
+        }
+    }
+
     fun tagActiveWorkoutWithProtocol(targetWorkoutId: Long? = null) {
         val workoutId = targetWorkoutId ?: TrainingApplication.getActiveWorkoutID()
         if (workoutId > 0) {
             val currentConfig = _uiState.value.config
+            val app = getApplication<Application>()
+            val workoutTitle = if (currentConfig.protocolType == HrvTestProtocolType.GUIDED_STEP) {
+                runCatching { app.getString(R.string.hrv_workout_name_step) }.getOrDefault("HRV Step Test (DFA α1)")
+            } else {
+                runCatching { app.getString(R.string.hrv_workout_name_ramp) }.getOrDefault("HRV Ramp Test (DFA α1)")
+            }
             val values = ContentValues().apply {
                 val protocolTag = if (currentConfig.protocolType == HrvTestProtocolType.GUIDED_STEP) "GUIDED_STEP" else "GUIDED_RAMP"
                 put("method", protocolTag)
@@ -325,8 +361,9 @@ class HrvRampTestViewModel @JvmOverloads constructor(
                 put("goal", paramDesc)
             }
             workoutRepository.updateWorkoutSummary(workoutId, values)
+            workoutRepository.updateWorkoutName(workoutId, workoutTitle)
             isWorkoutTagged = true
-            Log.i("HrvRampTestViewModel", "Tagged active workout $workoutId with protocol ${values.getAsString("method")}")
+            Log.i("HrvRampTestViewModel", "Tagged active workout $workoutId with protocol ${values.getAsString("method")} and name $workoutTitle")
         }
     }
 
@@ -418,6 +455,7 @@ class HrvRampTestViewModel @JvmOverloads constructor(
                         stepElapsed = 0
                         stepRemaining = state.config.stepDurationSec
                         target = state.config.startingTarget
+                        sendNewLapBroadcast()
                     }
                 }
                 HrvTestPhase.TESTING -> {
@@ -454,6 +492,8 @@ class HrvRampTestViewModel @JvmOverloads constructor(
                         currentPhase = HrvTestPhase.FINISHED
                         completed = true
                         timerJob?.cancel()
+                        tagActiveWorkoutWithProtocol()
+                        sendStopTrackingBroadcast()
                     }
                 }
                 HrvTestPhase.FINISHED, HrvTestPhase.CONFIG, HrvTestPhase.PRE_FLIGHT -> {
@@ -480,6 +520,7 @@ class HrvRampTestViewModel @JvmOverloads constructor(
 
     fun transitionToCooldown() {
         val recoveryTarget = (_uiState.value.config.startingTarget * 0.5).coerceAtLeast(0.0)
+        sendNewLapBroadcast()
         _uiState.update {
             it.copy(
                 phase = HrvTestPhase.COOLDOWN,
@@ -488,11 +529,13 @@ class HrvRampTestViewModel @JvmOverloads constructor(
                 stepRemainingSec = it.config.cooldownDurationSec
             )
         }
+        startTimer()
     }
 
     fun finishTest() {
         timerJob?.cancel()
         tagActiveWorkoutWithProtocol()
+        sendStopTrackingBroadcast()
         _uiState.update {
             it.copy(
                 phase = HrvTestPhase.FINISHED,

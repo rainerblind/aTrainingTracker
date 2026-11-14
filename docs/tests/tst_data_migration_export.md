@@ -2187,6 +2187,44 @@
   5. *Legacy Workout Synthesis & UI Display Test*: Verify `ExportStatusDataProvider.createGroupData` and `ExportStatusRepository.createGroupData` synthesize `HEALTH_CONNECT` as `UNWANTED` on historical workouts where the row is absent, format plural Community headers ("Strava and Health Connect") when both are active, and populate `details` with individual status entries.
   6. *Localization Parity Audit*: Verify `R.string.health_connect_title` and Community plural resources exist across all 9 supported language configurations.
 
+### TST-MIG-050: **Multi-Device Incremental Cloud Auto-Import, Health Connect Relay Worker & Auto-Import Tab Interface Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-MIG-052`
+- **Component**: `AutoImportManager.kt`, `HealthConnectWorkoutSyncWorker.kt`, `ImportBackupTabsScreen.kt`, `BackupRestoreViewModel.kt`, `LegacyImportEngine.kt`, `AutoImportContractTest.kt`, `AutoImportManagerTest.kt`, `HealthConnectWorkoutSyncWorkerTest.kt`, `TranslationParityTest.kt`
+- **Jira**: `ATT-7748`
+- **Test Description**:
+  1. *Auto-Import Tab & Tab Navigation Index Contract Test (`AutoImportContractTest.kt`)*:
+     - Verify `ImportBackupTabsScreen` renders 4 tabs with exact order: index 0 (`tab_import`), index 1 (`tab_auto_import`), index 2 (`tab_backup`), index 3 (`tab_restore`).
+     - Verify Material 3 controls for master switch, Dropbox & Google Drive toggles, format selector (default `.fit`), Health Connect & Strava relay toggles, and Sync Now action.
+  2. *AutoImportManager Incremental Delta & Pre-Download Deduplication Test (`AutoImportManagerTest.kt`)*:
+     - Verify remote cloud entries are pre-filtered against `ExistingWorkoutsSnapshot` before downloading.
+     - Verify non-interactive execution (cluster routes matched automatically without blocking dialogs).
+     - Verify cooldown guard prevents redundant cloud polling within cooldown threshold.
+  3. *HealthConnectWorkoutSyncWorker & Export Status Lifecycle Test (`HealthConnectWorkoutSyncWorkerTest.kt`)*:
+     - Verify `HealthConnectWorkoutSyncWorker.enqueue(context, workoutId)` executes `HealthConnectManager.syncWorkout(..., force = true)` and tracks `(ExportType.COMMUNITY, FileFormat.HEALTH_CONNECT)` status.
+  4. *9-Language Localization Parity (`TranslationParityTest.kt` / `AutoImportLocalizationTest.kt`)*:
+     - Verify presence and non-empty content of all `auto_import_*` and `tab_auto_import` strings across all 9 locales (EN, DE, ES, FR, IT, JA, NL, PL, PT).
+  5. *Clean-Room Regression Suite Execution*:
+     - Verify `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.migration.*" --tests "com.atrainingtracker.trainingtracker.cloud.healthconnect.*"`.
+
+### TST-MIG-051: **Lossless FIT Workout Metadata, HRV Protocol & Bike Radar Round-Trip Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-MIG-053`
+- **Component**: `FitFileWriter.java`, `FitWorkoutParser.kt`, `ParsedWorkoutData.kt`, `LegacyImportEngine.kt`, `FitLosslessRoundTripTest.kt`
+- **Jira**: `ATT-7747`
+- **Test Description**:
+  1. *FIT Session Metadata Developer Fields Round-Trip Test (`FitLosslessRoundTripTest.kt`)*:
+     - Verify `FitFileWriter` writes developer fields for `workout_name`, `notes`, `equipment_name`, `method`, `goal`, `is_commute`, `is_trainer`, and `is_race` onto `SessionMesg`.
+     - Verify `FitWorkoutParser` decodes these developer fields from `SessionMesg` into `ParsedWorkoutData` with 100% value parity.
+  2. *Standard FIT Session Metrics Serialization Test (`FitLosslessRoundTripTest.kt`)*:
+     - Verify `normalizedPower`, `intensityFactor`, `trainingStressScore`, and `totalWork` are serialized onto `SessionMesg` by `FitFileWriter` and parsed into `ParsedWorkoutData` by `FitWorkoutParser`.
+  3. *Bike Radar Developer Fields Import Test (`FitLosslessRoundTripTest.kt`)*:
+     - Verify `FitWorkoutParser` decodes developer fields on `RecordMesg` into `bufferedSamples` and `foundSensors` for threat count, vehicle count, passing speed, passing distance, and large vehicle count.
+  4. *Equipment Matching & Ingestion Test (`FitLosslessRoundTripTest.kt`)*:
+     - Verify `LegacyImportEngine.importFromFitResult` matches `equipmentName` to existing equipment database records and sets `equipmentId`.
+  5. *Third-Party FIT Backward Compatibility Test (`FitLosslessRoundTripTest.kt`)*:
+     - Verify parsing standard FIT files lacking developer fields produces null metadata without crashing or throwing exceptions.
+
+
+
 
 
 

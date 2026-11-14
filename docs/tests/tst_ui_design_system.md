@@ -7328,6 +7328,7 @@
   4. *Radar Icon Asset & SensorType Mapping Contract Test (`TST-UI-451.4`, `SensorStatusTopBarSpacingTest.kt`)*:
   • Verify `R.drawable.ic_radar` exists in `res/drawable/` as a valid 24dp vector drawable.
   • Verify `SensorType.RADAR_THREAT_COUNT.getIconResId()` returns `R.drawable.ic_radar`.
+  • Verify `ic_radar.xml` reorients radar waves 90 degrees counter-clockwise (to the left) via `<group>` rotation (`android:rotation="270"` around `android:pivotX="480"` and `android:pivotY="480"`) (`ATT-7736`).
   5. *Radar Sensor Source Dialog Contract Test (`TST-UI-451.5`, `SensorSourceDialogContractTest.kt`)*:
   • Verify `SensorSourceDialog` displays localized "Bike Radar" title (`R.string.device_type_bike_radar`) for `RADAR_THREAT_COUNT`.
   • Verify scalar `valueWithUnit` is suppressed on device identity rows for `RADAR_THREAT_COUNT`.
@@ -8463,8 +8464,8 @@
 - **Jira**: `ATT-7532`
 - **Test Description**:
   1. *Tuning Preferences DataStore & Config Verification (`TST-UI-525.1`, `TuningConfigTest.kt`)*:
-     - Verify default values: `showMorningCheckOnStartScreen = true`, `morningCheckCutoffHour = 11`.
-     - Verify mutation and clamping of cutoff hour (`6..15`).
+     - Verify default values: `showMorningCheckOnStartScreen = true`, `morningCheckCutoffHour = 8` (`ATT-7740`).
+     - Verify mutation and clamping of cutoff hour (`6..23`) (`ATT-7740`).
   2. *Paired HRM Sensor SQLite Query Verification (`TST-UI-525.2`, `DevicesDatabaseManagerTest.kt`)*:
      - Verify `hasPairedHeartRateDevices()` returns false when table is empty or contains only non-HRM paired devices (speed, cadence, radar).
      - Verify `hasPairedHeartRateDevices()` returns true when at least one `DeviceType.HRM` device with `PAIRED > 0` is present.
@@ -8500,3 +8501,89 @@
      - Execute `./gradlew testDebugUnitTest --tests "com.atrainingtracker.banalservice.sensor.*" --tests "com.atrainingtracker.trainingtracker.zones.*" --tests "com.atrainingtracker.trainingtracker.ui.tracking.*" --tests "com.atrainingtracker.trainingtracker.localization.*"`.
      - Assert 100% pass rate.
 
+
+### TST-UI-527: **Dedicated HRV Tab, Wire Migration & Telemetry-Gated Zone Comparison Verification Suite** [Verified]
+- **Target Release**: `V5.0.0`
+- **Requirement(s)**: `REQ-UI-527`
+- **Component**: `WorkoutDetailTabConfig.kt`, `WorkoutSectionType.kt`, `WorkoutDetailTabbedContent.kt`, `TrackOnMapScreen.kt`, `HrvThresholdSummaryCard.kt`, `WorkoutDetailTabsTest.kt`, `HrvThresholdSummaryCardTest.kt`, `TranslationParityTest.kt`
+- **Jira**: `ATT-7756`
+- **Test Description**:
+  1. *Default 5-Tab Archetype, Enum Sizing & Mapping Test (`TST-UI-527.1`, `WorkoutDetailTabsTest.kt`)*:
+     - Verify `WorkoutDetailSectionType.entries.size == 14` (including `HRV`).
+     - Verify `WorkoutSectionType.entries.size == 14` (including `HRV`).
+     - Verify bidirectional mapping between `WorkoutDetailSectionType.HRV` and `WorkoutSectionType.HRV`.
+     - Verify `WorkoutDetailTabConfig.DEFAULT_TABS` contains 5 tabs in canonical order: `tab_overview`, `tab_map_graphs`, `tab_zones`, `tab_hrv`, and `tab_laps_segments`.
+     - Verify `tab_hrv` has preset `WorkoutDetailTabPreset.HRV` and sections `[WorkoutDetailSectionType.HRV]`.
+  2. *Serialization & Auto-Migration of HRV Tab Test (`TST-UI-527.2`, `WorkoutDetailTabsTest.kt`)*:
+     - Verify round-trip serialization/deserialization of tabs containing `tab_hrv`.
+     - Verify that deserializing a legacy wire string (e.g. from v2 format lacking `HRV`) automatically injects `tab_hrv` directly after `tab_zones`.
+  3. *Dynamic Availability & Empty Tab Auto-Hiding Test (`TST-UI-527.3`, `WorkoutDetailTabsTest.kt`)*:
+     - Verify `WorkoutDetailSectionAvailability.isSectionActive(WorkoutDetailSectionType.HRV)` reflects `hasHrv`.
+     - Verify `filterVisibleWorkoutDetailTabs` retains `tab_hrv` when `hasHrv == true` and filters out `tab_hrv` when `hasHrv == false`.
+  4. *HRV Cards Mounting Under HRV Section Test (`TST-UI-527.4`, `HrvThresholdSummaryCardTest.kt`)*:
+     - Verify `HrvThresholdSummaryCard`, `HrvAlpha1ScatterCard`, and `HrvDurabilityCard` are mounted under `WorkoutDetailSectionType.HRV` in `WorkoutDetailTabbedContent.kt`.
+     - Verify `WorkoutDetailSectionType.ZONES` renders only `HeartRateZoneDistributionCard`, `PowerZoneDistributionCard`, and `GradeZoneDistributionCard`.
+  5. *Telemetry-Gated Zone Comparison Section Test (`TST-UI-527.5`, `HrvThresholdSummaryCardTest.kt`)*:
+     - Verify that when `hasPower == false`, the Coggan Power comparison block, FTP label, power delta chips, power consensus badge, and "Leistungszonen aktualisieren" button are omitted from `HrvThresholdSummaryCard`.
+     - Verify that when `hasPower == true && configuredFtp != null`, the power comparison block and update button are rendered.
+     - Verify that when neither power nor HR comparison applies, the entire `hrv_zone_comparison_section` is omitted.
+  6. *9-Language Localization Parity Audit (`TST-UI-527.6`, `TranslationParityTest.kt`)*:
+     - Verify `workout_detail_tab_hrv` and `settings_workout_card_hrv` exist across all 9 localized `strings.xml` files (`values`, `values-de`, `values-es`, `values-fr`, `values-it`, `values-ja`, `values-nl`, `values-pl`, `values-pt`).
+  7. *Targeted Unit Test Regression Suite (`TST-UI-527.7`)*:
+     - Execute `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.aftermath.*" --tests "com.atrainingtracker.trainingtracker.localization.*"`.
+     - Assert 100% pass rate.
+
+
+### TST-UI-528: **Multi-Dimensional Sensor List Sorting (Alphabetical, First Seen, Last Usage, Battery Level) Verification Suite** [Verified]
+- **Target Release**: `V5.0.0`
+- **Requirement(s)**: `REQ-UI-528` (`REQ-UI-528.1`..`REQ-UI-528.5`)
+- **Component**: `DeviceSortOrder.kt`, `DeviceListViewModel.kt`, `DevicesTabbedViewModel.kt`, `DevicesTabbedScreen.kt`, `strings_devices.xml` (all 9 locales)
+- **Jira**: `ATT-7663`
+- **Test Description**:
+  1. *DeviceSortOrder Model & Comparator Unit Tests (`TST-UI-528.1`, `DeviceSortOrderTest.kt`)*:
+     - Verify `ALPHABETICAL` sorts case-insensitively ascending by name with ID tie-breaker.
+     - Verify `FIRST_SEEN` sorts by `id` descending.
+     - Verify `LAST_USAGE` sorts connected devices first, then descending by parsed `lastSeen` timestamp, with unknown/null placed at bottom.
+     - Verify `BATTERY_LEVEL` sorts known percentages ascending (0%..100%), followed by unknown (-1).
+  2. *Scan Recency Pinning Across All Sort Orders (`TST-UI-528.2`, `DeviceListViewModelPriorityTest.kt`)*:
+     - Verify that across all 4 sort orders, `isNewlyDiscovered == true` sensors remain pinned at the very top of the list in reverse discovery order.
+  3. *DevicesTabbedViewModel Sort Order State & SavedStateHandle (`TST-UI-528.3`, `DevicesTabbedViewModelTest.kt`)*:
+     - Verify default sort order is `ALPHABETICAL`.
+     - Verify updating sort order updates state flow and saves to `SavedStateHandle`.
+  4. *Top App Bar Sort Button Visibility Contract Tests (`TST-UI-528.4`, `DevicesTabbedScreenContractTest.kt`)*:
+     - Verify Sort button is present on sensor tabs (0, 1, 2) and hidden on Equipment tabs (3, 4).
+  5. *9-Language Localization Parity Verification (`TST-UI-528.5`, `TranslationParityTest.kt`)*:
+     - Verify all 4 sort labels exist across all 9 locales (`values`, `values-de`, `values-es`, `values-fr`, `values-it`, `values-ja`, `values-nl`, `values-pl`, `values-pt`) with zero missing entries.
+  6. *Targeted Unit Test Regression Suite (`TST-UI-528.6`)*:
+     - Execute `./gradlew testDebugUnitTest --tests "com.atrainingtracker.banalservice.ui.devices.*" --tests "com.atrainingtracker.trainingtracker.build.*"`.
+
+
+### TST-UI-529: **Borg CR10 RPE 7-Zone Palette, Slider Stop-Dot & Header Readout Verification Suite** [Verified]
+- **Target Release**: `V5.0.0`
+- **Requirement(s)**: `REQ-UI-529` (`REQ-UI-529.1`..`REQ-UI-529.5`)
+- **Component**: `Color.kt`, `WorkoutRpeFeelSection.kt`, `WorkoutRpeFeelTest.kt`
+- **Jira**: `ATT-7743`
+- **Test Description**:
+  1. *Borg CR10 7-Zone Physiological Color Mapping Unit Tests (`TST-UI-529.1`, `WorkoutRpeFeelTest.kt`)*:
+     - Verify `TTColor.rpeColor(1)` and `TTColor.rpeColor(2)` return `TTColor.Zone1`.
+     - Verify `TTColor.rpeColor(3)` and `TTColor.rpeColor(4)` return `TTColor.Zone2`.
+     - Verify `TTColor.rpeColor(5)` and `TTColor.rpeColor(6)` return `TTColor.Zone3`.
+     - Verify `TTColor.rpeColor(7)` returns `TTColor.Zone4`.
+     - Verify `TTColor.rpeColor(8)` returns `TTColor.Zone5`.
+     - Verify `TTColor.rpeColor(9)` returns `TTColor.Zone6`.
+     - Verify `TTColor.rpeColor(10)` returns `TTColor.Zone7`.
+     - Verify boundary clamping: `TTColor.rpeColor(0)` returns `TTColor.Zone1`, `TTColor.rpeColor(11)` returns `TTColor.Zone7`.
+  2. *Dark Theme Contrast & Accessibility Verification (`TST-UI-529.2`, `WorkoutRpeFeelTest.kt`)*:
+     - Verify WCAG 2.1 relative luminance calculation between `TTColor.Zone7` and `DarkBackground` / `DarkSurface`.
+     - Verify RPE 10 text color resolves to `MaterialTheme.colorScheme.onSurface`.
+     - Verify RPE 10 badge and thumb receive `outlineVariant` border.
+  3. *Redundant Button Row Absence Contract Test (`TST-UI-529.3`, `WorkoutRpeFeelTest.kt`)*:
+     - Verify `RpeFeelEditorControls` does NOT render the 10 numbered score boxes beneath the slider.
+  4. *Slider Track Stop-Dot Uniformity Contract Test (`TST-UI-529.4`, `WorkoutRpeFeelTest.kt`)*:
+     - Verify `Slider` passes `drawStopIndicator = null` inside `track = { SliderDefaults.Track(...) }` so inactive tick 10 is not colored with active track color.
+  5. *Decoupled Header & Full-Width Readout Structure Contract Test (`TST-UI-529.5`, `WorkoutRpeFeelTest.kt`)*:
+     - Verify title row hosts `workout_rpe_title` and Clear button (`RPE_CLEAR`).
+     - Verify dynamic anchor readout renders on a dedicated full-width line positioned directly above the slider.
+  6. *Targeted Unit Test Regression Suite (`TST-UI-529.6`)*:
+     - Execute `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRpeFeelTest" --tests "com.atrainingtracker.trainingtracker.build.ThemeColorCentralizationAuditTest"`.
+     - Assert 100% pass rate.

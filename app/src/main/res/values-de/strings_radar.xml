@@ -81,10 +81,14 @@
     <!-- Radar Audio & Haptic Alerts (ATT-5086 / REQ-TRK-063) -->
     <string name="radar_alerts_settings_title">Radar-Warnungen &amp; Audio</string>
     <string name="radar_alert_mode_title">Audio-Warnmodus</string>
-    <string name="radar_alert_mode_all">Alle Warnungen</string>
-    <string name="radar_alert_mode_approach_fast">Annäherung &amp; Schnell</string>
-    <string name="radar_alert_mode_fast_only">Nur schnelle Fahrzeuge</string>
+    <string name="radar_alert_mode_all">Alle</string>
+    <string name="radar_alert_mode_approach_fast">Annäherung</string>
+    <string name="radar_alert_mode_fast_only">Nur schnell</string>
     <string name="radar_alert_mode_muted">Stumm</string>
+    <string name="radar_alert_mode_all_desc">Spielt akustische Warnungen für alle herannahenden und schnellen Fahrzeuge</string>
+    <string name="radar_alert_mode_approach_fast_desc">Spielt akustische Warnungen für normale Annäherung und schnelle Gefahren</string>
+    <string name="radar_alert_mode_fast_only_desc">Spielt akustische Warnungen nur für Fahrzeuge mit hoher Annäherungsgeschwindigkeit (&gt;= 30 km/h)</string>
+    <string name="radar_alert_mode_muted_desc">Nur visuelle Rand-Einblendung; alle akustischen Warnungen sind stumm</string>
     <string name="radar_alert_volume_title">Warnlautstärke</string>
     <string name="radar_alert_speaker_boost">Lautsprecher verstärken</string>
     <string name="radar_alert_speaker_boost_desc">Erhöht leise Lautsprecherlautstärke während Warnungen kurzzeitig</string>
@@ -96,7 +100,7 @@
 
     <!-- Radar Tail Light Control (ATT-5102 / REQ-CON-031) -->
     <string name="radar_light_settings_title">Rücklicht-Steuerung</string>
-    <string name="radar_light_control_mode_title">Rücklicht-Steuerung</string>
+    <string name="radar_light_control_mode_title">Steuerungsmodus</string>
     <string name="radar_light_control_mode_manual">Manuell</string>
     <string name="radar_light_control_mode_manual_desc">Rücklicht wird manuell bedient und bleibt bei Trainingsstart/-ende unverändert</string>
     <string name="radar_light_control_mode_fixed">Fester Modus</string>
@@ -174,9 +178,9 @@
     <string name="radar_summary_max_speed_simple">🚀 Max %1$s km/h</string>
     <string name="radar_close_pass_threshold_title">Warnschwelle für Überholabstand</string>
     <string name="radar_close_pass_threshold_summary">Hebt überholende Fahrzeuge unter dem Mindestsicherheitsabstand auf der Karte hervor</string>
-    <string name="radar_close_pass_threshold_1_0m">1,0 m (3,3 ft - UK/US)</string>
-    <string name="radar_close_pass_threshold_1_5m">1,5 m (5,0 ft - Innerorts / StVO)</string>
-    <string name="radar_close_pass_threshold_2_0m">2,0 m (6,6 ft - Außerorts / StVO)</string>
+    <string name="radar_close_pass_threshold_1_0m">1,0 m (3,3 ft)</string>
+    <string name="radar_close_pass_threshold_1_5m">1,5 m (5,0 ft)</string>
+    <string name="radar_close_pass_threshold_2_0m">2,0 m (6,6 ft)</string>
     <string name="radar_marker_close_pass_title">⚠️ Zu dichter Überholvorgang (%1$sm) • %2$s • %3$s km/h</string>
     <string name="radar_vehicle_size_light">Leichtfahrzeug</string>
     <string name="radar_vehicle_size_car">PKW</string>
@@ -188,4 +192,9 @@
     <!-- Smartphone IMU/GPS Deceleration Brake-Light Trigger (ATT-5121 / REQ-CON-035) -->
     <string name="radar_brake_light_title">Verzögerungs-Bremslicht</string>
     <string name="radar_brake_light_desc">Hellt das Rücklicht bei starker Smartphone-IMU/GPS-Verzögerung auf (2,0 s Haltezeit, bei RearVue 820 automatisch umgangen)</string>
+    <!-- Developer Menu (ATT-7659 / REQ-SET-087.2 / REQ-CON-030.8) -->
+    <string name="developer_menu_title">Entwicklermenü</string>
+    <string name="developer_menu_radar_section_title">Fahrrad-Radar Debugging</string>
+    <string name="developer_menu_radar_v1_only_title">Radar V1-Protokoll erzwingen (Legacy)</string>
+    <string name="developer_menu_radar_v1_only_desc">Umgeht die Garmin Varia V2-Charakteristikerkennung und greift sofort auf das alte V1-Streaming zurück (6a4e3203).</string>
 </resources>

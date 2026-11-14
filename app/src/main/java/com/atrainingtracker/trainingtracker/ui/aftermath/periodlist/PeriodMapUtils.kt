@@ -19,6 +19,8 @@
 package com.atrainingtracker.trainingtracker.ui.aftermath.periodlist
 
 import android.content.Context
+import androidx.annotation.VisibleForTesting
+import androidx.collection.LruCache
 import com.atrainingtracker.trainingtracker.location.RegionNameResolver
 import com.atrainingtracker.trainingtracker.ui.map.PolylineHeatmapTileProvider
 import com.atrainingtracker.trainingtracker.ui.map.ThermalColorLut
@@ -57,6 +59,17 @@ data class PeriodCardMapState(
     val maxCorridorPassCount: Int? = null,
     val primaryRegionName: String? = null
 )
+
+/**
+ * 64-entry LRU cache for precomputed [PeriodCardMapState] (ATT-7666 / REQ-PER-039.3).
+ * Eliminates redundant polyline decoding and spatial clustering during LazyColumn scroll passes.
+ */
+internal val periodCardMapStateCache = LruCache<String, PeriodCardMapState>(64)
+
+@VisibleForTesting
+fun clearPeriodCardMapStateCache() {
+    periodCardMapStateCache.evictAll()
+}
 
 /**
  * Returns Douglas-Peucker simplification tolerance in meters for the given [PeriodType].
@@ -229,6 +242,12 @@ fun prepareCardMapPreviewSync(
     summary: PeriodSummary,
     context: Context? = null
 ): PeriodCardMapState {
+    val cacheKey = "${summary.periodType}_${summary.sortKey}_${summary.polylines.hashCode()}_${summary.workoutIdToPolylineMap.hashCode()}"
+    val cached = periodCardMapStateCache.get(cacheKey)
+    if (cached != null) {
+        return cached
+    }
+
     val rawPolylines: Collection<String> = when {
         summary.polylines.isNotEmpty() -> summary.polylines
         summary.workoutIdToPolylineMap.isNotEmpty() -> summary.workoutIdToPolylineMap.values
@@ -236,7 +255,9 @@ fun prepareCardMapPreviewSync(
     }
 
     if (rawPolylines.isEmpty()) {
-        return PeriodCardMapState(isReady = true)
+        val emptyState = PeriodCardMapState(isReady = true)
+        periodCardMapStateCache.put(cacheKey, emptyState)
+        return emptyState
     }
 
     val tolerance = getPeriodSimplificationToleranceMeters(summary.periodType)
@@ -341,7 +362,7 @@ fun prepareCardMapPreviewSync(
         RegionNameResolver.findNearestKnownLocationName(context, primaryPathRegion.region.center)
     } else null
 
-    return PeriodCardMapState(
+    val state = PeriodCardMapState(
         primaryPaths = activePaths,
         bounds = activeBounds,
         visuals = visuals,
@@ -353,6 +374,8 @@ fun prepareCardMapPreviewSync(
         maxCorridorPassCount = visuals.maxCorridorPassCount,
         primaryRegionName = primaryRegionName
     )
+    periodCardMapStateCache.put(cacheKey, state)
+    return state
 }
 
 /**
@@ -364,6 +387,12 @@ suspend fun prepareCardMapPreview(
     context: Context? = null,
     dispatcher: CoroutineDispatcher = Dispatchers.Default
 ): PeriodCardMapState = withContext(dispatcher) {
+    val cacheKey = "${summary.periodType}_${summary.sortKey}_${summary.polylines.hashCode()}_${summary.workoutIdToPolylineMap.hashCode()}"
+    val cached = periodCardMapStateCache.get(cacheKey)
+    if (cached != null && (cached.primaryRegionName != null || context == null)) {
+        return@withContext cached
+    }
+
     var state = prepareCardMapPreviewSync(summary, context)
     if (context != null && state.primaryRegionName == null && state.bounds != null) {
         val center = LatLng(
@@ -373,6 +402,7 @@ suspend fun prepareCardMapPreview(
         val place = RegionNameResolver.resolvePlaceName(context, center)
         if (place != null) {
             state = state.copy(primaryRegionName = place)
+            periodCardMapStateCache.put(cacheKey, state)
         }
     }
     state

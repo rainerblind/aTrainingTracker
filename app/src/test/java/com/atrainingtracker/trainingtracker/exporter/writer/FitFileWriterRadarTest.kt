@@ -383,11 +383,13 @@ class FitFileWriterRadarTest {
         }
 
         // 1. Verify Developer Data ID
-        assertEquals(1, devIds.size)
-        assertEquals(0.toShort(), devIds[0].developerDataIndex)
+        val radarDevIds = devIds.filter { it.developerDataIndex == 0.toShort() }
+        assertEquals(1, radarDevIds.size)
+        assertEquals(0.toShort(), radarDevIds[0].developerDataIndex)
 
         // 2. Verify Field Descriptions (radar_current, radar_total, passing_speed, passing_speed_abs, passing_distance, large_vehicle_count)
-        assertEquals(6, devFieldDescs.size)
+        val radarFieldDescs = devFieldDescs.filter { it.developerDataIndex == 0.toShort() }
+        assertEquals(6, radarFieldDescs.size)
         val fieldNames = devFieldDescs.map { it.getFieldName(0) }
         assertTrue(fieldNames.contains("radar_current"))
         assertTrue(fieldNames.contains("radar_total"))
@@ -500,8 +502,9 @@ class FitFileWriterRadarTest {
             assertTrue("Decode must return true", decodeResult)
         }
 
-        // Verify zero developer IDs, zero radar threat events, and zero developer fields
-        assertEquals(0, devIds.size)
+        // Verify zero radar developer IDs, zero radar threat events, and zero developer fields
+        val radarDevIds = devIds.filter { it.developerDataIndex == 0.toShort() }
+        assertEquals(0, radarDevIds.size)
         assertEquals(0, events.filter { it.event == Event.RADAR_THREAT_ALERT }.size)
         assertTrue(records.all { !it.developerFields.iterator().hasNext() })
     }

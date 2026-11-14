@@ -165,6 +165,9 @@
     <string name="units_percent" translatable="false">%</string>
     <string name="units_degree" translatable="false">°</string>
     <string name="units_rpm" translatable="false">/min</string>
+    <string name="units_rad_per_sec" translatable="false">rad/s</string>
+    <string name="world_yaw_rate">World Yaw Rate</string>
+    <string name="world_yaw_rate_short">Yaw Rate</string>
 
     <string name="value_unit_float_string">%1$.2f %2$s</string>
     <!-- TODO: correct??? -->
@@ -1468,6 +1471,7 @@
     <string name="settings_workout_card_description">Description &amp; Notes</string>
     <string name="settings_workout_card_charts">Telemetry Charts</string>
     <string name="settings_workout_card_zones">Zone Analysis (HR &amp; Power)</string>
+    <string name="settings_workout_card_hrv">HRV Analytics</string>
     <string name="settings_edit_workout_title">Edit Workout</string>
     <string name="settings_edit_workout_cluster">Route / Cluster</string>
     <string name="settings_edit_workout_commute_trainer">Commute &amp; Trainer</string>
@@ -1724,6 +1728,8 @@
     <string name="tuning_altitude_window_desc">Moving average time window for instantaneous altitude and vertical speed.</string>
     <string name="tuning_slope_min_speed_title">Slope Minimum Speed</string>
     <string name="tuning_slope_min_speed_desc">Minimum moving speed required to calculate real-time gradient.</string>
+    <string name="tuning_post_workout_erts_smoothing_title">Post-Workout ERTS Smoothing</string>
+    <string name="tuning_post_workout_erts_smoothing_desc">Applies bidirectional Extended Rauch-Tung-Striebel smoothing to trajectory and elevation profiles after workout save.</string>
     <string name="tuning_show_ant_missing_adapter_warnings_title">Show missing ANT+ adapter warnings</string>
     <string name="tuning_show_ant_missing_adapter_warnings_desc">Show alert dialog when an ANT+ sensor is searched but no adapter is detected</string>
     <string name="tuning_cat_aftermath">Aftermath &amp; Profile Analytics</string>
@@ -2369,6 +2375,7 @@
     <string name="workout_detail_tab_overview">Overview</string>
     <string name="workout_detail_tab_map_graphs">Map &amp; Graphs</string>
     <string name="workout_detail_tab_zones">Zones</string>
+    <string name="workout_detail_tab_hrv">HRV</string>
     <string name="workout_detail_tab_laps_segments">Laps &amp; Segments</string>
     <string name="workout_detail_tab_custom_default">Custom Tab</string>
     <string name="workout_detail_section_details">Workout Metrics &amp; Summary</string>

@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Cloud Auto-Import for Multi-Device Synchronization (ATT-7748 / REQ-MIG-052) -->
+    <string name="tab_auto_import">Import auto</string>
+    <string name="auto_import_title">Importation cloud auto</string>
+    <string name="auto_import_master_switch">Activer l\'importation auto</string>
+    <string name="auto_import_master_switch_summary">Importer automatiquement les nouvelles séances depuis le cloud à l\'ouverture de l\'application</string>
+    <string name="auto_import_cloud_sources_title">Sources de stockage cloud</string>
+    <string name="auto_import_dropbox_title">Dropbox</string>
+    <string name="auto_import_dropbox_summary">Importation auto depuis les dossiers /Workouts ou /FIT</string>
+    <string name="auto_import_googledrive_title">Google Drive</string>
+    <string name="auto_import_googledrive_summary">Importation auto depuis le dossier Workouts de Google Drive</string>
+    <string name="auto_import_format_title">Format de fichier préféré</string>
+    <string name="auto_import_relays_title">Relais locaux</string>
+    <string name="auto_import_relay_health_connect">Synchroniser les séances importées avec Health Connect</string>
+    <string name="auto_import_relay_health_connect_summary">Relayer automatiquement les séances importées vers Android Health Connect sur cet appareil</string>
+    <string name="auto_import_relay_strava">Téléverser les séances importées vers Strava</string>
+    <string name="auto_import_relay_strava_summary">Mettre automatiquement en file d\'attente les séances importées pour l\'envoi vers Strava</string>
+    <string name="auto_import_sync_now">Synchroniser maintenant</string>
+    <string name="auto_import_syncing">Synchronisation…</string>
+    <string name="auto_import_last_sync">Dernière synchronisation : %1$s</string>
+    <string name="auto_import_never_synced">Jamais synchronisé</string>
+    <string name="auto_import_status_success">%1$d importé(s), %2$d ignoré(s)</string>
+    <string name="auto_import_status_error">Échec de la synchronisation : %1$s</string>
+    <string name="auto_import_cloud_not_connected">Non connecté</string>
+    <string name="auto_import_cloud_connected">Connecté (%1$s)</string>
+    <string name="auto_import_format_fit">FIT (.fit)</string>
+    <string name="auto_import_format_tcx">TCX (.tcx)</string>
+    <string name="auto_import_format_gpx">GPX (.gpx)</string>
+    <string name="auto_import_format_all">Tous les formats</string>
+</resources>

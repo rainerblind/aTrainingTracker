@@ -21,18 +21,59 @@ package com.atrainingtracker.banalservice.devices.radar
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import java.util.concurrent.ConcurrentHashMap
 
 /**
- * Reactive state repository providing high-frequency (4–8 Hz) radar telemetry stream (REQ-CON-028.4).
+ * Reactive state repository providing high-frequency (4–8 Hz) radar telemetry stream (REQ-CON-028.4, REQ-CON-041).
+ *
+ * Implements deterministic multi-source arbitration across concurrent BLE, ANT+, and simulation streams:
+ * BLE (3) > ANT_PLUS (2) > SIMULATOR (1) > NONE (0).
  */
 object RadarStateRepository {
+
+    private val lock = Any()
+    private val sourceStates = ConcurrentHashMap<RadarSource, RadarState>()
+
+    @Volatile
+    private var activeSource: RadarSource = RadarSource.NONE
 
     private val _radarState = MutableStateFlow(RadarState())
     val radarState: StateFlow<RadarState> = _radarState.asStateFlow()
 
     @JvmStatic
     fun updateState(newState: RadarState) {
-        _radarState.value = newState
+        synchronized(lock) {
+            sourceStates[newState.source] = newState
+
+            // Two-level arbitration: CONNECTED sources strictly take precedence over CONNECTING sources (REQ-CON-041.2).
+            // An active CONNECTED stream (e.g. ANT+) must never be preempted by a CONNECTING source (e.g. BLE scanning).
+            val bestActive = sourceStates.values
+                .filter { it.connectionState == RadarConnectionState.CONNECTED }
+                .maxByOrNull { it.source.priority }
+                ?: sourceStates.values
+                    .filter { it.connectionState == RadarConnectionState.CONNECTING }
+                    .maxByOrNull { it.source.priority }
+
+            if (bestActive != null) {
+                activeSource = bestActive.source
+                _radarState.value = bestActive
+            } else {
+                // If no sources are connected, update from the incoming source if it matches active or if active was NONE
+                if (activeSource == RadarSource.NONE || activeSource == newState.source) {
+                    activeSource = newState.source
+                    _radarState.value = newState
+                } else {
+                    val bestSource = sourceStates.values.maxByOrNull { it.source.priority }
+                    if (bestSource != null) {
+                        activeSource = bestSource.source
+                        _radarState.value = bestSource
+                    } else {
+                        activeSource = newState.source
+                        _radarState.value = newState
+                    }
+                }
+            }
+        }
     }
 
     @JvmStatic
@@ -41,7 +82,21 @@ object RadarStateRepository {
     }
 
     @JvmStatic
+    fun getState(source: RadarSource): RadarState {
+        return sourceStates[source] ?: RadarState(source = source)
+    }
+
+    @JvmStatic
+    fun getActiveSource(): RadarSource {
+        return activeSource
+    }
+
+    @JvmStatic
     fun reset() {
-        _radarState.value = RadarState()
+        synchronized(lock) {
+            sourceStates.clear()
+            activeSource = RadarSource.NONE
+            _radarState.value = RadarState()
+        }
     }
 }

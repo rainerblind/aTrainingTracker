@@ -33,6 +33,7 @@ import com.atrainingtracker.banalservice.devices.Manufacturer
 import com.atrainingtracker.banalservice.devices.MyRemoteDevice
 import com.atrainingtracker.banalservice.devices.radar.LaneState
 import com.atrainingtracker.banalservice.devices.radar.RadarConnectionState
+import com.atrainingtracker.banalservice.devices.radar.RadarSource
 import com.atrainingtracker.banalservice.devices.radar.RadarState
 import com.atrainingtracker.banalservice.devices.radar.RadarStateRepository
 import com.atrainingtracker.banalservice.devices.radar.RadarTarget
@@ -48,9 +49,11 @@ import com.dsi.ant.channel.AntChannel
 import com.dsi.ant.channel.IAntChannelEventHandler
 import com.dsi.ant.message.ChannelId
 import com.dsi.ant.message.ChannelType
+import com.dsi.ant.message.EventCode
 import com.dsi.ant.message.LibConfig
 import com.dsi.ant.message.LowPrioritySearchTimeout
 import com.dsi.ant.message.fromant.BroadcastDataMessage
+import com.dsi.ant.message.fromant.ChannelEventMessage
 import com.dsi.ant.message.fromant.MessageFromAntType
 import com.dsi.ant.message.ipc.AntMessageParcel
 import java.util.Collections
@@ -86,6 +89,12 @@ class ANTBikeRadarDevice(
         const val PAGE_BATTERY_STATUS = 0x52
     }
 
+    internal data class TrackRecord(
+        val trackId: Int,
+        var rangeMeters: Float,
+        var baseId: Int
+    )
+
     private lateinit var threatCountSensor: MySensor<Int>
     private lateinit var closestDistanceSensor: MySensor<Double>
     private lateinit var approachSpeedSensor: MySensor<Double>
@@ -94,38 +103,67 @@ class ANTBikeRadarDevice(
     private lateinit var largeVehicleCountSensor: MySensor<Int>
 
     private val activeTargets = ConcurrentHashMap<Int, RadarTarget>()
-    private val windowAggregator = RadarWindowAggregator()
+    private val activeTracks = ConcurrentHashMap<Int, TrackRecord>()
+    private var nextTrackId = 1
+    private var lastWindowSampleMs = 0L
+    private val windowAggregator = RadarWindowAggregator { SystemClock.elapsedRealtime() }
 
     private var antService: AntService? = null
     var antChannel: AntChannel? = null
-        private set
+        internal set
     var companionLightDevice: ANTBikeLightDevice? = null
         internal set
+    internal var channelAcquisitionHandle: AntChannelHelper.AcquisitionCancellationHandle? = null
     private var isServiceBound = false
+    internal var isShutDown = false
+    internal var detectedManufacturerId: Int? = null
 
     private val handler = Handler(Looper.getMainLooper())
     private val watchdogRunnable = Runnable {
         onWatchdogTimeout()
     }
 
-    private val serviceConnection = object : ServiceConnection {
+    internal val serviceConnection = object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
             if (DEBUG) Log.d(TAG, "onServiceConnected to AntRadioService")
             try {
                 val serviceInstance = AntService(service)
                 antService = serviceInstance
                 val provider = serviceInstance.channelProvider
-                val channel = AntChannelHelper.acquireAntPlusChannel(mContext, provider)
-                antChannel = channel
-                configureChannel(channel)
+                channelAcquisitionHandle?.cancel()
+                channelAcquisitionHandle = AntChannelHelper.acquireAntPlusChannelAsync(
+                    mContext,
+                    provider,
+                    object : AntChannelHelper.ChannelAcquisitionListener {
+                        override fun onChannelAcquired(channel: AntChannel) {
+                            channelAcquisitionHandle = null
+                            antChannel = channel
+                            try {
+                                configureChannel(channel)
+                            } catch (e: Exception) {
+                                Log.e(TAG, "Failed to configure acquired ANT+ radar channel", e)
+                                notifyStopSearching(false)
+                            }
+                        }
+
+                        override fun onAcquisitionFailed(exception: Exception) {
+                            channelAcquisitionHandle = null
+                            Log.e(TAG, "Failed to acquire ANT+ radar channel", exception)
+                            notifyStopSearching(false)
+                        }
+                    },
+                    handler
+                )
             } catch (e: Exception) {
-                Log.e(TAG, "Failed to acquire/configure ANT+ radar channel", e)
+                Log.e(TAG, "Failed to initiate ANT+ radar channel acquisition", e)
                 notifyStopSearching(false)
             }
         }
 
         override fun onServiceDisconnected(name: ComponentName?) {
             if (DEBUG) Log.d(TAG, "onServiceDisconnected from AntRadioService")
+            channelAcquisitionHandle?.cancel()
+            channelAcquisitionHandle = null
             antService = null
             antChannel = null
             onWatchdogTimeout()
@@ -134,14 +172,38 @@ class ANTBikeRadarDevice(
 
     private val channelEventHandler = object : IAntChannelEventHandler {
         override fun onReceiveMessage(messageType: MessageFromAntType, messageParcel: AntMessageParcel) {
+            if (isShutDown) return
             when (messageType) {
                 MessageFromAntType.BROADCAST_DATA,
                 MessageFromAntType.ACKNOWLEDGED_DATA -> {
-                    if (isSearching) {
-                        notifyStopSearching(true)
-                    }
                     val broadcastMsg = BroadcastDataMessage(messageParcel)
-                    decodeBroadcastData(broadcastMsg.payload)
+                    val payloadCopy = broadcastMsg.payload?.clone()
+                    handler.post {
+                        if (isShutDown) return@post
+                        if (isSearching) {
+                            notifyStopSearching(true)
+                        }
+                        decodeBroadcastData(payloadCopy)
+                    }
+                }
+                MessageFromAntType.CHANNEL_EVENT -> {
+                    try {
+                        val eventMsg = ChannelEventMessage(messageParcel)
+                        val code = eventMsg.eventCode
+                        if (code == EventCode.RX_SEARCH_TIMEOUT || code == EventCode.CHANNEL_CLOSED) {
+                            handler.post {
+                                if (!isShutDown) {
+                                    try {
+                                        antChannel?.open()
+                                    } catch (e: Exception) {
+                                        Log.w(TAG, "Error re-opening ANT radar channel on event $code", e)
+                                    }
+                                }
+                            }
+                        }
+                    } catch (e: Exception) {
+                        Log.w(TAG, "Error handling channel event during radar search", e)
+                    }
                 }
                 else -> {
                     // Ignore other event types
@@ -151,14 +213,18 @@ class ANTBikeRadarDevice(
 
         override fun onChannelDeath() {
             if (DEBUG) Log.w(TAG, "ANT channel died")
-            onWatchdogTimeout()
+            handler.post {
+                if (!isShutDown) {
+                    onWatchdogTimeout()
+                }
+            }
         }
     }
 
     override fun getProtocol(): Protocol = Protocol.ANT_PLUS
 
     override fun isReceivingData(): Boolean =
-        RadarStateRepository.getState().connectionState == RadarConnectionState.CONNECTED
+        RadarStateRepository.getState(RadarSource.ANT_PLUS).connectionState == RadarConnectionState.CONNECTED
 
     override fun addSensors() {
         threatCountSensor = MySensor(this, SensorType.RADAR_THREAT_COUNT)
@@ -181,6 +247,7 @@ class ANTBikeRadarDevice(
     }
 
     override fun startSearching() {
+        isShutDown = false
         notifyStartSearching()
         if (antChannel != null) {
             try {
@@ -207,7 +274,7 @@ class ANTBikeRadarDevice(
         channel.setChannelId(ChannelId(antDeviceNumber, BIKE_RADAR_DEVICE_TYPE, 0))
         channel.setPeriod(BIKE_RADAR_CHANNEL_PERIOD)
         channel.setRfFrequency(BIKE_RADAR_RF_FREQUENCY)
-        channel.setAdapterWideLibConfig(LibConfig(true, true, false))
+        AntChannelHelper.safeSetAdapterWideLibConfig(channel, LibConfig(true, true, false))
         channel.setSearchTimeout(LowPrioritySearchTimeout.TWENTY_FIVE_SECONDS)
         channel.setChannelEventHandler(channelEventHandler)
         channel.open()
@@ -215,7 +282,7 @@ class ANTBikeRadarDevice(
 
         if (companionLightDevice == null) {
             try {
-                val lightDev = ANTBikeLightDevice(mContext, antDeviceNumber)
+                val lightDev = ANTBikeLightDevice(mContext, antDeviceNumber, expectedManufacturerId = detectedManufacturerId)
                 companionLightDevice = lightDev
                 val provider = antService?.channelProvider
                 lightDev.start(provider)
@@ -252,17 +319,14 @@ class ANTBikeRadarDevice(
     }
 
     private fun parseTargetsPage(payload: ByteArray, baseId: Int) {
-        // Physical hardware preemption (REQ-CON-029.3, REQ-CON-032.6)
-        RadarTrafficSimulator.onPhysicalHardwareConnected()
+        // Physical hardware preemption (REQ-CON-029.3, REQ-CON-032.6, REQ-CON-042.4)
+        if (RadarTrafficSimulator.isSimulating) {
+            RadarTrafficSimulator.onPhysicalHardwareConnected()
+        }
 
         // Restart 3.5s watchdog
         handler.removeCallbacks(watchdogRunnable)
         handler.postDelayed(watchdogRunnable, WATCHDOG_TIMEOUT_MS)
-
-        // Clear slot bank
-        for (i in 0..3) {
-            activeTargets.remove(baseId + i)
-        }
 
         val threatByte = payload[1].toInt() and 0xFF
         val sideByte = payload[2].toInt() and 0xFF
@@ -274,13 +338,26 @@ class ANTBikeRadarDevice(
         val speedBits = ((payload[6].toInt() and 0xFF)) or
                 ((payload[7].toInt() and 0xFF) shl 8)
 
+        data class RawTarget(
+            val rawRange: Int,
+            val rawSpeed: Int,
+            val threatLevel: ThreatLevel,
+            val laneState: LaneState,
+            val lateralOffsetMeters: Float?,
+            val distanceMeters: Float,
+            val approachSpeedMps: Float
+        )
+
+        val rawTargets = mutableListOf<RawTarget>()
+
         for (i in 0..3) {
             val threatLevelBits = (threatByte ushr (i * 2)) and 0x03
             val threatSideBits = (sideByte ushr (i * 2)) and 0x03
             val rawRange = ((rangeBits ushr (i * 6)) and 0x3F).toInt()
             val rawSpeed = (speedBits ushr (i * 4)) and 0x0F
 
-            if (threatLevelBits > 0 && rawRange > 0) {
+            // REQ-CON-040.2: Accept 0-bin targets at 0.0m (rawRange == 0) when threatLevelBits > 0
+            if (threatLevelBits > 0) {
                 val distanceMeters = rawRange * 3.125f
                 val approachSpeedMps = rawSpeed * 3.04f
                 val threatLevel = when (threatLevelBits) {
@@ -300,17 +377,66 @@ class ANTBikeRadarDevice(
                     else -> null
                 }
 
-                val target = RadarTarget(
-                    targetId = baseId + i,
-                    rangeMeters = distanceMeters,
-                    approachSpeedMps = approachSpeedMps,
-                    threatLevel = threatLevel,
-                    lateralOffsetMeters = lateralOffsetMeters,
-                    vehicleSizeCategory = VehicleSizeCategory.UNKNOWN_OR_LIGHT,
-                    laneState = laneState
+                rawTargets.add(
+                    RawTarget(
+                        rawRange = rawRange,
+                        rawSpeed = rawSpeed,
+                        threatLevel = threatLevel,
+                        laneState = laneState,
+                        lateralOffsetMeters = lateralOffsetMeters,
+                        distanceMeters = distanceMeters,
+                        approachSpeedMps = approachSpeedMps
+                    )
                 )
-                activeTargets[baseId + i] = target
             }
+        }
+
+        // Sort incoming targets by range ascending (closest first)
+        rawTargets.sortBy { it.distanceMeters }
+
+        val assignedTrackIds = mutableSetOf<Int>()
+
+        for (raw in rawTargets) {
+            val rNew = raw.distanceMeters
+            // Candidate matching window: r_new in [r_old - 16.0m, r_old + 4.0m] (REQ-CON-040.1)
+            val candidates = activeTracks.values.filter { track ->
+                track.trackId !in assignedTrackIds &&
+                        rNew >= (track.rangeMeters - 16.0f) &&
+                        rNew <= (track.rangeMeters + 4.0f)
+            }
+
+            val bestMatch = candidates.minByOrNull { kotlin.math.abs(rNew - it.rangeMeters) }
+            val trackId: Int
+            if (bestMatch != null) {
+                trackId = bestMatch.trackId
+                bestMatch.rangeMeters = rNew
+                bestMatch.baseId = baseId
+            } else {
+                trackId = nextTrackId++
+                activeTracks[trackId] = TrackRecord(trackId, rNew, baseId)
+            }
+            assignedTrackIds.add(trackId)
+
+            val target = RadarTarget(
+                targetId = trackId,
+                rangeMeters = raw.distanceMeters,
+                approachSpeedMps = raw.approachSpeedMps,
+                threatLevel = raw.threatLevel,
+                lateralOffsetMeters = raw.lateralOffsetMeters,
+                vehicleSizeCategory = VehicleSizeCategory.UNKNOWN_OR_LIGHT,
+                laneState = raw.laneState
+            )
+            activeTargets[trackId] = target
+        }
+
+        // Evict unassigned tracks from reporting page bank (REQ-CON-040.1)
+        val evictedTrackIds = activeTracks.values
+            .filter { it.baseId == baseId && it.trackId !in assignedTrackIds }
+            .map { it.trackId }
+
+        for (id in evictedTrackIds) {
+            activeTracks.remove(id)
+            activeTargets.remove(id)
         }
 
         publishTargets()
@@ -321,37 +447,45 @@ class ANTBikeRadarDevice(
         val overallThreat = computeOverallThreatLevel(targetsList)
         val currentState = RadarStateRepository.getState()
 
+        val nowMs = SystemClock.elapsedRealtime()
+
         val state = RadarState(
             connectionState = RadarConnectionState.CONNECTED,
             overallThreatLevel = overallThreat,
             targets = targetsList,
-            lastUpdateRealtimeMs = SystemClock.elapsedRealtime(),
+            lastUpdateRealtimeMs = nowMs,
             lightMode = currentState.lightMode,
             isLightControlSupported = currentState.isLightControlSupported || (companionLightDevice?.isAssociated == true),
-            audioSnoozeState = currentState.audioSnoozeState
+            audioSnoozeState = currentState.audioSnoozeState,
+            source = RadarSource.ANT_PLUS
         )
         RadarStateRepository.updateState(state)
 
-        windowAggregator.onTargetsUpdated(targetsList)
-        val snapshot = windowAggregator.sampleAndResetWindow()
+        windowAggregator.onTargetsUpdated(targetsList, nowMs)
 
-        if (::threatCountSensor.isInitialized) {
-            threatCountSensor.newValue(snapshot.threatCount)
-        }
-        if (::closestDistanceSensor.isInitialized) {
-            closestDistanceSensor.newValue(snapshot.closestDistanceMeters)
-        }
-        if (::approachSpeedSensor.isInitialized) {
-            approachSpeedSensor.newValue(snapshot.approachSpeedMps)
-        }
-        if (::vehicleCountSensor.isInitialized) {
-            vehicleCountSensor.newValue(snapshot.vehicleCount)
-        }
-        if (::passingDistanceSensor.isInitialized) {
-            passingDistanceSensor.newValue(snapshot.passingDistanceMeters)
-        }
-        if (::largeVehicleCountSensor.isInitialized) {
-            largeVehicleCountSensor.newValue(snapshot.largeVehicleCount)
+        // 1 Hz gating for scalar sensor updates (REQ-CON-040.4)
+        if (lastWindowSampleMs == 0L || nowMs - lastWindowSampleMs >= 1000L) {
+            lastWindowSampleMs = nowMs
+            val snapshot = windowAggregator.sampleAndResetWindow(nowMs)
+
+            if (::threatCountSensor.isInitialized) {
+                threatCountSensor.newValue(snapshot.threatCount)
+            }
+            if (::closestDistanceSensor.isInitialized) {
+                closestDistanceSensor.newValue(snapshot.closestDistanceMeters)
+            }
+            if (::approachSpeedSensor.isInitialized) {
+                approachSpeedSensor.newValue(snapshot.approachSpeedMps)
+            }
+            if (::vehicleCountSensor.isInitialized) {
+                vehicleCountSensor.newValue(snapshot.vehicleCount)
+            }
+            if (::passingDistanceSensor.isInitialized) {
+                passingDistanceSensor.newValue(snapshot.passingDistanceMeters)
+            }
+            if (::largeVehicleCountSensor.isInitialized) {
+                largeVehicleCountSensor.newValue(snapshot.largeVehicleCount)
+            }
         }
     }
 
@@ -369,6 +503,8 @@ class ANTBikeRadarDevice(
     }
 
     fun onWatchdogTimeout() {
+        channelAcquisitionHandle?.cancel()
+        channelAcquisitionHandle = null
         activeTargets.clear()
         val currentState = RadarStateRepository.getState()
         val state = RadarState(
@@ -378,13 +514,17 @@ class ANTBikeRadarDevice(
             lastUpdateRealtimeMs = SystemClock.elapsedRealtime(),
             lightMode = currentState.lightMode,
             isLightControlSupported = currentState.isLightControlSupported,
-            audioSnoozeState = currentState.audioSnoozeState
+            audioSnoozeState = currentState.audioSnoozeState,
+            source = RadarSource.ANT_PLUS
         )
         RadarStateRepository.updateState(state)
         resetSensorsToClear()
     }
 
     fun resetSensorsToClear() {
+        activeTracks.clear()
+        nextTrackId = 1
+        lastWindowSampleMs = 0L
         if (::threatCountSensor.isInitialized) {
             threatCountSensor.newValue(0)
         }
@@ -402,6 +542,7 @@ class ANTBikeRadarDevice(
     public override fun onAccumulatorsReset() {
         super.onAccumulatorsReset()
         windowAggregator.resetSession()
+        lastWindowSampleMs = 0L
         if (::vehicleCountSensor.isInitialized) {
             vehicleCountSensor.newValue(0)
         }
@@ -419,10 +560,12 @@ class ANTBikeRadarDevice(
 
     private fun parseManufacturerPage(payload: ByteArray) {
         val manufacturerId = (payload[4].toInt() and 0xFF) or ((payload[5].toInt() and 0xFF) shl 8)
+        detectedManufacturerId = manufacturerId
         val manufacturerName = Manufacturer.getName(manufacturerId)
         if (manufacturerName != null) {
             mDevicesDatabaseManager.setManufacturerName(mDeviceId, manufacturerName)
         }
+        companionLightDevice?.expectedManufacturerId = manufacturerId
     }
 
     private fun parseProductInfoPage(payload: ByteArray) {
@@ -447,9 +590,14 @@ class ANTBikeRadarDevice(
     }
 
     fun getActiveTargets(): Map<Int, RadarTarget> = Collections.unmodifiableMap(activeTargets)
+    internal fun getActiveTracks(): Map<Int, TrackRecord> = Collections.unmodifiableMap(activeTracks)
+    internal fun getWindowAggregator(): RadarWindowAggregator = windowAggregator
 
     override fun shutDown() {
-        handler.removeCallbacks(watchdogRunnable)
+        isShutDown = true
+        handler.removeCallbacksAndMessages(null)
+        channelAcquisitionHandle?.cancel()
+        channelAcquisitionHandle = null
         try {
             companionLightDevice?.stop()
         } catch (e: Exception) {
@@ -472,6 +620,19 @@ class ANTBikeRadarDevice(
             isServiceBound = false
         }
         antService = null
+        activeTargets.clear()
+        val currentState = RadarStateRepository.getState()
+        val state = RadarState(
+            connectionState = RadarConnectionState.DISCONNECTED,
+            overallThreatLevel = ThreatLevel.NONE,
+            targets = emptyList(),
+            lastUpdateRealtimeMs = SystemClock.elapsedRealtime(),
+            lightMode = currentState.lightMode,
+            isLightControlSupported = currentState.isLightControlSupported,
+            audioSnoozeState = currentState.audioSnoozeState,
+            source = RadarSource.ANT_PLUS
+        )
+        RadarStateRepository.updateState(state)
         resetSensorsToClear()
         super.shutDown()
     }

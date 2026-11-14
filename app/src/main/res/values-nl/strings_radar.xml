@@ -81,10 +81,14 @@
     <!-- Radar Audio & Haptic Alerts (ATT-5086 / REQ-TRK-063) -->
     <string name="radar_alerts_settings_title">Radarwaarschuwingen en audio</string>
     <string name="radar_alert_mode_title">Audiowaarschuwingsmodus</string>
-    <string name="radar_alert_mode_all">Alle waarschuwingen</string>
-    <string name="radar_alert_mode_approach_fast">Nadering en snel</string>
+    <string name="radar_alert_mode_all">Alle</string>
+    <string name="radar_alert_mode_approach_fast">Nadering</string>
     <string name="radar_alert_mode_fast_only">Alleen snel</string>
     <string name="radar_alert_mode_muted">Gedempt</string>
+    <string name="radar_alert_mode_all_desc">Speelt geluidswaarschuwingen voor alle naderende en snelle voertuigen</string>
+    <string name="radar_alert_mode_approach_fast_desc">Speelt geluidswaarschuwingen voor normale nadering en snelle dreigingen</string>
+    <string name="radar_alert_mode_fast_only_desc">Speelt alleen geluidswaarschuwingen voor voertuigen met hoge naderingssnelheid (&gt;= 30 km/u)</string>
+    <string name="radar_alert_mode_muted_desc">Alleen visuele randbalk; alle geluidswaarschuwingen zijn gedempt</string>
     <string name="radar_alert_volume_title">Waarschuwingsvolume</string>
     <string name="radar_alert_speaker_boost">Luidsprekervolume versterken</string>
     <string name="radar_alert_speaker_boost_desc">Verhoogt stil luidsprekervolume tijdelijk tijdens waarschuwingen</string>
@@ -96,7 +100,7 @@
 
     <!-- Radar Tail Light Control (ATT-5102 / REQ-CON-031) -->
     <string name="radar_light_settings_title">Achterlichtbediening</string>
-    <string name="radar_light_control_mode_title">Achterlichtbediening</string>
+    <string name="radar_light_control_mode_title">Bedieningsmodus</string>
     <string name="radar_light_control_mode_manual">Handmatig</string>
     <string name="radar_light_control_mode_manual_desc">Achterlicht wordt handmatig bediend en verandert niet bij start/stop van workout</string>
     <string name="radar_light_control_mode_fixed">Vaste modus</string>
@@ -174,9 +178,9 @@
     <string name="radar_summary_max_speed_simple">🚀 Max %1$s km/u</string>
     <string name="radar_close_pass_threshold_title">Waarschuwingsdrempel inhaaldrempel</string>
     <string name="radar_close_pass_threshold_summary">Markeert inhalende voertuigen onder de minimale veiligheidsafstand op de kaart</string>
-    <string name="radar_close_pass_threshold_1_0m">1,0 m (3,3 ft - UK/US)</string>
-    <string name="radar_close_pass_threshold_1_5m">1,5 m (5,0 ft - Binnen bebouwde kom)</string>
-    <string name="radar_close_pass_threshold_2_0m">2,0 m (6,6 ft - Buiten bebouwde kom)</string>
+    <string name="radar_close_pass_threshold_1_0m">1,0 m (3,3 ft)</string>
+    <string name="radar_close_pass_threshold_1_5m">1,5 m (5,0 ft)</string>
+    <string name="radar_close_pass_threshold_2_0m">2,0 m (6,6 ft)</string>
     <string name="radar_marker_close_pass_title">⚠️ Krappe inhaalactie (%1$sm) • %2$s • %3$s km/u</string>
     <string name="radar_vehicle_size_light">Licht voertuig</string>
     <string name="radar_vehicle_size_car">Auto</string>
@@ -188,4 +192,9 @@
     <!-- Smartphone IMU/GPS Deceleration Brake-Light Trigger (ATT-5121 / REQ-CON-035) -->
     <string name="radar_brake_light_title">Vertragingsremlicht</string>
     <string name="radar_brake_light_desc">Laat achterlicht oplichten bij sterke IMU/GPS-vertraging (2,0 s vasthouden, overgeslagen op RearVue 820)</string>
+    <!-- Developer Menu (ATT-7659 / REQ-SET-087.2 / REQ-CON-030.8) -->
+    <string name="developer_menu_title">Ontwikkelaarsmenu</string>
+    <string name="developer_menu_radar_section_title">Fietsradar foutopsporing</string>
+    <string name="developer_menu_radar_v1_only_title">Radar V1-protocol forceren (verouderd)</string>
+    <string name="developer_menu_radar_v1_only_desc">Omzeilt Garmin Varia V2-karakteristiekdetectie en valt onmiddellijk terug op verouderde V1-streaming (6a4e3203).</string>
 </resources>

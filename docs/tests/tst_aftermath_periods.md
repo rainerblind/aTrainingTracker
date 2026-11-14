@@ -605,8 +605,9 @@
   5. *Pre-Save In-Memory Readiness Preview & Persistence Test (`TST-PER-040.5`, `MorningHrvCheckViewModelTest.kt`)*:
   • Verify that completion view previews `ReadinessStatus` calculated in-memory with the newly measured entry combined with existing historical records before saving.
   • Verify that saving persists `HrvReadinessEntry` into `HrvReadinessRepository` (`HrvReadiness.db`).
-  6. *Localization Parity & Semantic Color Audit (`TST-PER-040.6`, `TranslationParityTest.kt`, `ThemeColorCentralizationAuditTest.kt`)*:
+  6. *Localization Parity, Instruction Hygiene & Semantic Color Audit (`TST-PER-040.6`, `TranslationParityTest.kt`, `ThemeColorCentralizationAuditTest.kt`)*:
   • Verify 100% translation parity across all 9 locales in `strings_hrv.xml` with zero hardcoded English or `Locale.US` formatters.
+  • Verify `morning_hrv_instructions_desc` across all 9 locales does not contain bladder emptying phrasing and verifies rest phrasing (`TranslationParityTest.kt`).
   • Verify zero raw `Color.White` literals on readiness pills, adhering to `TTColor.ReadinessOnStatus`.
   7. *Tier 1 Clean-Room Targeted Regression Execution (`TST-PER-040.7`)*:
   • Execute targeted unit tests `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.hrv.*" --tests "com.atrainingtracker.trainingtracker.localization.TranslationParityTest" --tests "com.atrainingtracker.trainingtracker.build.*"` verifying 100% clean-room test pass rate.
@@ -823,6 +824,27 @@
   7. *9-Language Localization Parity Test (`TST-PER-046.7`, `TranslationParityTest`)*:
   • Verify all 11 durability string keys exist with 100% parity across all 9 `strings_hrv.xml` files with matching formatting tokens.
   (ATT-4970: [Feature] Model DFA a1 autonomic durability and drift across multi-hour workouts (paired with ATT-4842 Heart Efficiency))
+
+
+### TST-PER-047: **PeriodsRepository Memory Footprint, Bounded LRU Cache & Lite Mode Map Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-PER-039` (`REQ-PER-039.1`..`REQ-PER-039.4`)
+- **Component**: `PeriodsRepository.kt`, `PeriodSummaryCard.kt`, `PeriodMapUtils.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/ui/aftermath/periodlist/PeriodsRepositoryMemoryTest.kt`
+- **Jira**: `ATT-7666`
+- **Test Description**:
+  1. *Empty workoutIdToPathMap in Singleton StateFlow Test (`TST-PER-047.1`, `PeriodsRepositoryMemoryTest.kt`)*:
+     • Load and enrich period summaries with simulated workout polylines.
+     • Assert `summary.workoutIdToPathMap.isEmpty()` in `_groupedPeriods` to verify zero eager `LatLng` allocation.
+  2. *Bounded polylines Count Test (`TST-PER-047.2`, `PeriodsRepositoryMemoryTest.kt`)*:
+     • Enrich a period containing > 10 workouts with polylines.
+     • Assert `summary.polylines.size <= 8` (`MAX_SUMMARY_THUMBNAIL_TRACKS`), verifying full collection duplication is eliminated.
+  3. *LRU Preview Cache Hit & Eviction Test (`TST-PER-047.3`, `PeriodMapUtilsTest.kt`)*:
+     • Invoke `prepareCardMapPreviewSync` repeatedly for the same period summary.
+     • Verify cache hit returns identical `PeriodCardMapState` without re-running `PolyUtil.decode`.
+     • Verify LRU capacity bounds storage to 64 items.
+  4. *GoogleMap Lite Mode Configuration Audit (`TST-PER-047.4`, `PeriodSummaryCardTest.kt`)*:
+     • Verify `GoogleMapOptions().liteMode(true)` is provided to `GoogleMap` in `PeriodSummaryCard` when rendering vector polylines.
+  5. *Tier 1 Targeted Package Regression Execution (`TST-PER-047.5`)*:
+     • `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.*"` asserting 100% pass rate.
 
 
 ---

@@ -212,7 +212,7 @@ index 1234567..89abcdef 100644
                     imported_modules.add(node.module.split(".")[0])
 
         # Allowed standard library modules
-        std_lib_modules = {"os", "sys", "re", "subprocess", "argparse", "unittest", "json"}
+        std_lib_modules = {"os", "sys", "re", "subprocess", "argparse", "unittest", "json", "math"}
         for mod in imported_modules:
             self.assertIn(
                 mod,
@@ -744,6 +744,7 @@ diff --git a/docs/requirements/req_process_stability.md b/docs/requirements/req_
             # 6. Valid report with >= 2 sampled tickets
             valid_content = (
                 "# Sprint QA Process-Compliance Audit: Sprint 2026-46.3\n\n"
+                "**Auditor Role**: `qa`\n\n"
                 "**Overall Process Verdict**: **COMPLIANT**\n\n"
                 "| Ticket | Summary | Compliance Verdict |\n"
                 "| ATT-6149 | Gate Records Export | COMPLIANT |\n"
@@ -2127,6 +2128,177 @@ diff --git a/docs/requirements/req_process_stability.md b/docs/requirements/req_
         self.assertEqual(report["stale_orphans"], [])
         self.assertEqual(report["orphan_count"], 15)
         self.assertEqual(report["baseline_count"], 15)
+
+    def test_scenario_54_verify_qa_audits_enforces_auditor_independence(self):
+        """TST-PRO-091.4: verify_qa_audits enforces auditor role independence (qa/agent2 vs coordinator/agent1)."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            audits_dir = os.path.join(tmpdir, "docs", "engineering", "qa_audits")
+            os.makedirs(audits_dir, exist_ok=True)
+            target_file = os.path.join(audits_dir, "sprint_2026-46.3.md")
+
+            content_template = (
+                "# Sprint QA Process-Compliance Audit: Sprint 2026-46.3\n\n"
+                "**Auditor Role**: `{role}`\n\n"
+                "**Overall Process Verdict**: **COMPLIANT**\n\n"
+                "| ATT-6149 | Gate Records Export | COMPLIANT |\n"
+                "| ATT-6150 | Metrics Persistence | COMPLIANT |\n\n"
+                "### Ticket: ATT-6149\n* **Process Verdict**: **COMPLIANT**\n\n"
+                "### Ticket: ATT-6150\n* **Process Verdict**: **COMPLIANT**\n"
+            )
+
+            # coordinator role rejected
+            with open(target_file, "w", encoding="utf-8") as f:
+                f.write(content_template.format(role="coordinator"))
+            ok, msgs = verify_qa_audits(sprint_name="sprint/2026-46.3", repo_root=tmpdir)
+            self.assertFalse(ok)
+            self.assertTrue(any("lacks ASPICE SUP.1 independence" in m for m in msgs))
+
+            # agent1 role rejected
+            with open(target_file, "w", encoding="utf-8") as f:
+                f.write(content_template.format(role="agent1"))
+            ok, msgs = verify_qa_audits(sprint_name="sprint/2026-46.3", repo_root=tmpdir)
+            self.assertFalse(ok)
+            self.assertTrue(any("lacks ASPICE SUP.1 independence" in m for m in msgs))
+
+            # qa role accepted
+            with open(target_file, "w", encoding="utf-8") as f:
+                f.write(content_template.format(role="qa"))
+            ok, msgs = verify_qa_audits(sprint_name="sprint/2026-46.3", repo_root=tmpdir)
+            self.assertTrue(ok, f"Expected pass for qa role, got: {msgs}")
+
+            # agent2 role accepted
+            with open(target_file, "w", encoding="utf-8") as f:
+                f.write(content_template.format(role="agent2"))
+            ok, msgs = verify_qa_audits(sprint_name="sprint/2026-46.3", repo_root=tmpdir)
+            self.assertTrue(ok, f"Expected pass for agent2 role, got: {msgs}")
+
+    def test_scenario_55_verify_qa_audits_enforces_dynamic_sample_size(self):
+        """TST-PRO-091.2: verify_qa_audits enforces dynamic sample size >= max(2, ceil(0.10 * N))."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            audits_dir = os.path.join(tmpdir, "docs", "engineering", "qa_audits")
+            os.makedirs(audits_dir, exist_ok=True)
+            target_file = os.path.join(audits_dir, "sprint_2026-46.3.md")
+
+            # 25 total tickets requires ceil(25 * 0.10) = 3 samples. 2 sampled tickets should fail.
+            content_insufficient = (
+                "# Sprint QA Process-Compliance Audit: Sprint 2026-46.3\n\n"
+                "**Auditor Role**: `qa`\n\n"
+                "**Sample Size**: 2 / 25 tickets (8.0%)\n\n"
+                "**Overall Process Verdict**: **COMPLIANT**\n\n"
+                "| ATT-6149 | Gate Records Export | COMPLIANT |\n"
+                "| ATT-6150 | Metrics Persistence | COMPLIANT |\n\n"
+                "### Ticket: ATT-6149\n* **Process Verdict**: **COMPLIANT**\n\n"
+                "### Ticket: ATT-6150\n* **Process Verdict**: **COMPLIANT**\n"
+            )
+            with open(target_file, "w", encoding="utf-8") as f:
+                f.write(content_insufficient)
+            ok, msgs = verify_qa_audits(sprint_name="sprint/2026-46.3", repo_root=tmpdir)
+            self.assertFalse(ok)
+            self.assertTrue(any("below required >= 10% dynamic threshold" in m for m in msgs))
+
+            # 3 sampled tickets out of 25 tickets passes (>= 3)
+            content_sufficient = (
+                "# Sprint QA Process-Compliance Audit: Sprint 2026-46.3\n\n"
+                "**Auditor Role**: `qa`\n\n"
+                "**Sample Size**: 3 / 25 tickets (12.0%)\n\n"
+                "**Overall Process Verdict**: **COMPLIANT**\n\n"
+                "| ATT-6149 | Gate Records Export | COMPLIANT |\n"
+                "| ATT-6150 | Metrics Persistence | COMPLIANT |\n"
+                "| ATT-6151 | Notification Service | COMPLIANT |\n\n"
+                "### Ticket: ATT-6149\n* **Process Verdict**: **COMPLIANT**\n\n"
+                "### Ticket: ATT-6150\n* **Process Verdict**: **COMPLIANT**\n\n"
+                "### Ticket: ATT-6151\n* **Process Verdict**: **COMPLIANT**\n"
+            )
+            with open(target_file, "w", encoding="utf-8") as f:
+                f.write(content_sufficient)
+            ok, msgs = verify_qa_audits(sprint_name="sprint/2026-46.3", repo_root=tmpdir)
+            self.assertTrue(ok, f"Expected pass for sufficient sample size, got: {msgs}")
+
+    def test_scenario_56_verify_qa_audits_requires_corrective_action_links(self):
+        """TST-PRO-091.3: verify_qa_audits requires Section 4 with Jira ticket links [ATT-XXXX] for NON-COMPLIANT audits."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            audits_dir = os.path.join(tmpdir, "docs", "engineering", "qa_audits")
+            os.makedirs(audits_dir, exist_ok=True)
+            target_file = os.path.join(audits_dir, "sprint_2026-46.3.md")
+
+            # Missing Section 4 on NON-COMPLIANT verdict
+            content_no_sec4 = (
+                "# Sprint QA Process-Compliance Audit: Sprint 2026-46.3\n\n"
+                "**Auditor Role**: `qa`\n\n"
+                "**Overall Process Verdict**: **NON-COMPLIANT**\n\n"
+                "| ATT-6149 | Gate Records Export | NON-COMPLIANT |\n"
+                "| ATT-6150 | Metrics Persistence | COMPLIANT |\n\n"
+                "### Ticket: ATT-6149\n* **Process Verdict**: **NON-COMPLIANT**\n\n"
+                "### Ticket: ATT-6150\n* **Process Verdict**: **COMPLIANT**\n"
+            )
+            with open(target_file, "w", encoding="utf-8") as f:
+                f.write(content_no_sec4)
+            ok, msgs = verify_qa_audits(sprint_name="sprint/2026-46.3", repo_root=tmpdir)
+            self.assertFalse(ok)
+            self.assertTrue(any("missing Section 4" in m for m in msgs))
+
+            # Section 4 present but lacking Jira ticket links
+            content_sec4_no_links = content_no_sec4 + (
+                "\n## 4. Non-Compliance Tracking & Remediation\n"
+                "Some issues were found but no ticket was filed yet.\n"
+            )
+            with open(target_file, "w", encoding="utf-8") as f:
+                f.write(content_sec4_no_links)
+            ok, msgs = verify_qa_audits(sprint_name="sprint/2026-46.3", repo_root=tmpdir)
+            self.assertFalse(ok)
+            self.assertTrue(any("lacks required Jira corrective action ticket links" in m for m in msgs))
+
+            # Section 4 with valid Jira ticket link passes
+            content_sec4_with_links = content_no_sec4 + (
+                "\n## 4. Non-Compliance Tracking & Remediation\n"
+                "- Ticket: [ATT-7025](https://jira.example.com/browse/ATT-7025) - Fix gate verification\n"
+            )
+            with open(target_file, "w", encoding="utf-8") as f:
+                f.write(content_sec4_with_links)
+            ok, msgs = verify_qa_audits(sprint_name="sprint/2026-46.3", repo_root=tmpdir)
+            self.assertTrue(ok, f"Expected pass when corrective action ticket link is present, got: {msgs}")
+
+    def test_scenario_57_req_pro_094_strict_attribute_enforcement_default(self):
+        """TST-PRO-094: Verify strict attribute enforcement is enabled by default without flags."""
+        shard_content = """### REQ-LEG-001: Legacy Item [Verified]
+- **Tests**: `TST-LEG-001`
+- **Implementation**: `Legacy.kt`
+"""
+        shards = {"docs/requirements/req_test.md": shard_content}
+
+        # Default mode (no enforce_attributes argument specified) -> MUST fail strictly under REQ-PRO-094
+        ok_def, diag_def = verify_requirement_attributes(
+            req_shards=shards,
+            diff_text="",
+        )
+        self.assertFalse(ok_def, "Default verification must fail when attributes are missing")
+        self.assertTrue(any("ERROR" in msg and "REQ-LEG-001" in msg for msg in diag_def))
+        self.assertTrue(any("lacks required attributes" in msg for msg in diag_def))
+
+        # Explicitly opt-out via enforce_attributes=False -> passes with warning
+        ok_lenient, diag_lenient = verify_requirement_attributes(
+            req_shards=shards,
+            diff_text="",
+            enforce_attributes=False,
+        )
+        self.assertTrue(ok_lenient)
+        self.assertTrue(any("WARNING" in msg and "REQ-LEG-001" in msg for msg in diag_lenient))
+
+        # Fully compliant requirement -> passes strictly with PASS message
+        compliant_shard = """### REQ-LEG-001: Legacy Item [Verified]
+- **Tests**: `TST-LEG-001`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Implementation**: `Legacy.kt`
+"""
+        ok_comp, diag_comp = verify_requirement_attributes(
+            req_shards={"docs/requirements/req_test.md": compliant_shard},
+            diff_text="",
+        )
+        self.assertTrue(ok_comp)
+        self.assertTrue(any("PASS: 100% of living requirements define valid Priority, Type, and Verification Method attributes" in msg for msg in diag_comp))
+
 
 
 

@@ -134,7 +134,7 @@ class TestHoechstmassConfig(unittest.TestCase):
 
     def test_valid_roles_excludes_human(self):
         self.assertNotIn("human", VALID_ROLES)
-        self.assertEqual(VALID_ROLES, ["agent1", "agent2", "coordinator"])
+        self.assertEqual(VALID_ROLES, ["agent1", "agent2", "coordinator", "qa"])
 
     def test_load_env_config_per_role(self):
         """load_env_config(role=...) loads per-role files and isolates role credentials (ATT-6147)."""
@@ -214,6 +214,8 @@ class TestGovernanceVerification(unittest.TestCase):
             # Valid with >= 2 sampled tickets and COMPLIANT verdict
             with open(audit_file, "w", encoding="utf-8") as f:
                 f.write("""# Sprint QA Process-Compliance Audit: Sprint 2026-46.3
+**Auditor Role**: `qa`
+
 ## 2. Sampled Tickets Audit
 ### Sample 1: ATT-6149
 * Verdict: COMPLIANT
@@ -228,6 +230,8 @@ class TestGovernanceVerification(unittest.TestCase):
             # Invalid: < 2 sampled tickets
             with open(audit_file, "w", encoding="utf-8") as f:
                 f.write("""# Sprint QA Process-Compliance Audit: Sprint 2026-46.3
+**Auditor Role**: `qa`
+
 ## 2. Sampled Tickets Audit
 ### Sample 1: ATT-6149
 * Verdict: COMPLIANT
@@ -597,7 +601,7 @@ class TestEpicCommands(unittest.TestCase):
 """)
 
                 out_file = os.path.join(tmpdir, "docs", "engineering", "qa_audits", "sprint_2026-46.3.md")
-                res_path, results = qa_audit(sprint_arg=None, sample_size=2, out_path=out_file, role="coordinator", repo_root=tmpdir)
+                res_path, results = qa_audit(sprint_arg=None, sample_size=2, out_path=out_file, role="qa", repo_root=tmpdir)
                 self.assertEqual(res_path, out_file)
                 self.assertTrue(os.path.exists(out_file))
                 self.assertEqual(len(results), 2)

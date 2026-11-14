@@ -324,7 +324,7 @@ class SensorFieldZoneGaugeTest {
         val hrvGaugeState = HrvZoneIndicator.calculateZoneGaugeState(0.85)
         assertNotNull(hrvGaugeState)
         assertEquals(3, hrvGaugeState!!.segmentColors.size)
-        assertEquals(listOf("Z2", "Z3", "Z4"), hrvGaugeState.zoneLabels)
+        assertEquals(listOf("Aerobic", "Transition", "Anaerobic"), hrvGaugeState.zoneLabels)
         assertEquals(1, hrvGaugeState.activeZoneIndex)
 
         val fieldState = SensorFieldState(
@@ -341,8 +341,8 @@ class SensorFieldZoneGaugeTest {
             zoneGaugeState = hrvGaugeState
         )
         assertEquals(3, fieldState.zoneGaugeState?.segmentColors?.size)
-        assertEquals("Z2", fieldState.zoneGaugeState?.zoneLabels?.getOrNull(0))
-        assertEquals("Z3", fieldState.zoneGaugeState?.zoneLabels?.getOrNull(1))
-        assertEquals("Z4", fieldState.zoneGaugeState?.zoneLabels?.getOrNull(2))
+        assertEquals("Aerobic", fieldState.zoneGaugeState?.zoneLabels?.getOrNull(0))
+        assertEquals("Transition", fieldState.zoneGaugeState?.zoneLabels?.getOrNull(1))
+        assertEquals("Anaerobic", fieldState.zoneGaugeState?.zoneLabels?.getOrNull(2))
     }
 }

@@ -63,7 +63,8 @@ data class SettingsSnapshot(
     val hrRunDisplayOptions: ZoneDisplayOptions,
     val hrBikeDisplayOptions: ZoneDisplayOptions,
     val pwrBikeDisplayOptions: ZoneDisplayOptions,
-    val hrvDisplayOptions: ZoneDisplayOptions = ZoneDisplayOptions()
+    val hrvDisplayOptions: ZoneDisplayOptions = ZoneDisplayOptions(),
+    val isRadarV1OnlyOverrideEnabled: Boolean = false
 ) {
     companion object {
         val DEFAULT = SettingsSnapshot(
@@ -77,7 +78,8 @@ data class SettingsSnapshot(
             hrRunDisplayOptions = ZoneDisplayOptions(),
             hrBikeDisplayOptions = ZoneDisplayOptions(),
             pwrBikeDisplayOptions = ZoneDisplayOptions(),
-            hrvDisplayOptions = ZoneDisplayOptions()
+            hrvDisplayOptions = ZoneDisplayOptions(),
+            isRadarV1OnlyOverrideEnabled = false
         )
     }
 }
@@ -230,6 +232,9 @@ class SettingsDataStore(
         val KEY_HAS_SHOWN_FIRST_JUBILEE_PROMPT = booleanPreferencesKey("has_shown_first_jubilee_prompt")
         val KEY_HAS_SHOWN_GOLD_GARAGE_NUDGE = booleanPreferencesKey("has_shown_gold_garage_nudge")
         val KEY_HAS_SHOWN_DIAMOND_GARAGE_NUDGE = booleanPreferencesKey("has_shown_diamond_garage_nudge")
+
+        // Developer Overrides (ATT-7659, REQ-CON-030.8)
+        val KEY_RADAR_V1_ONLY_OVERRIDE = booleanPreferencesKey("radar_v1_only_override")
 
         // Athlete Baselines (ATT-1289, REQ-TRK-019, ATT-3704, REQ-UI-391, ATT-3862, REQ-UI-399)
         val KEY_ATHLETE_WEIGHT_KG = floatPreferencesKey("athlete_weight_kg")
@@ -672,6 +677,16 @@ class SettingsDataStore(
         }
     }
 
+    val isRadarV1OnlyOverrideEnabled: Flow<Boolean> = dataStore.data.map { prefs ->
+        prefs[KEY_RADAR_V1_ONLY_OVERRIDE] ?: false
+    }
+
+    suspend fun setRadarV1OnlyOverride(enabled: Boolean) {
+        dataStore.edit { prefs ->
+            prefs[KEY_RADAR_V1_ONLY_OVERRIDE] = enabled
+        }
+    }
+
     // --- NON-BLOCKING IN-MEMORY SNAPSHOT & SYNCHRONOUS GETTERS (REQ-SET-079) ---
 
     private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
@@ -754,7 +769,8 @@ class SettingsDataStore(
             hrRunDisplayOptions = hrRunDisplay,
             hrBikeDisplayOptions = hrBikeDisplay,
             pwrBikeDisplayOptions = pwrBikeDisplay,
-            hrvDisplayOptions = hrvDisplay
+            hrvDisplayOptions = hrvDisplay,
+            isRadarV1OnlyOverrideEnabled = prefs[KEY_RADAR_V1_ONLY_OVERRIDE] ?: false
         )
     }
 
@@ -798,6 +814,7 @@ class SettingsDataStore(
     fun getAthleteWeightKgSync(): Float = snapshotStateFlow.value.athleteWeightKg
     fun getCpWattsSync(): Int? = snapshotStateFlow.value.cpWatts
     fun getWPrimeKjSync(): Float? = snapshotStateFlow.value.wPrimeKj
+    fun isRadarV1OnlyOverrideEnabledSync(): Boolean = snapshotStateFlow.value.isRadarV1OnlyOverrideEnabled
 
     fun launchSetAthleteWeightKg(weightKg: Float) {
         appScope.launch {

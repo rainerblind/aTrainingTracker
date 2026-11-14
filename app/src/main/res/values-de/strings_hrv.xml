@@ -29,9 +29,9 @@
 
     <!-- Training Zones Tab (ATT-7317 / REQ-TRK-061.4) -->
     <string name="tab_hrv_dfa_a1">HRV (DFA α1)</string>
-    <string name="hrv_zone_aerobic_base_label">Aerobe Basis (Zone 2)</string>
-    <string name="hrv_zone_threshold_transition_label">Schwellenübergang (Zone 3)</string>
-    <string name="hrv_zone_anaerobic_label">Hohe Intensität / Anaerob (Zone 4)</string>
+    <string name="hrv_zone_aerobic_base_label">Aerobe Basis</string>
+    <string name="hrv_zone_threshold_transition_label">Schwellenübergang</string>
+    <string name="hrv_zone_anaerobic_label">Hohe Intensität / Anaerob</string>
     <string name="hrv_t1_aerobic_threshold_label">Aerobe Schwelle T1 (HRVT1)</string>
     <string name="hrv_t2_anaerobic_threshold_label">Anaerobe Schwelle T2 (HRVT2)</string>
     <string name="hrv_zone_aerobic_base_desc">Aerobe Grundlagenausdauer, geringe vegetative Belastung</string>
@@ -79,7 +79,7 @@
     <string name="morning_hrv_btn_save">Speichern</string>
     <string name="morning_hrv_btn_discard">Verwerfen</string>
     <string name="morning_hrv_instructions_title">Standardisiertes Protokoll</string>
-    <string name="morning_hrv_instructions_desc">Direkt nach dem Aufwachen und Entleeren der Blase messen. Ruhig bleiben, normal atmen und nicht sprechen. Haltung beibehalten für verlässliche SWC-Vergleiche.</string>
+    <string name="morning_hrv_instructions_desc">Direkt nach dem Aufwachen in Ruhe messen. Ruhig bleiben, normal atmen und nicht sprechen. Haltung beibehalten für verlässliche SWC-Vergleiche.</string>
     <string name="morning_hrv_artifact_warning_title">Hohe Artefaktrate</string>
     <string name="morning_hrv_artifact_warning_desc">Artefaktrate überschreitet 5%% (%1$.1f%%). Bitte Brustgurt-Elektroden anfeuchten und korrekten Sitz prüfen.</string>
     <string name="morning_hrv_smoothed_warning_title">Geglätteter RR-Datenstrom erkannt</string>
@@ -207,6 +207,8 @@
     <string name="hrv_test_btn_finish">Test beenden</string>
     <string name="hrv_test_btn_cooldown">Abwärmen beginnen</string>
     <string name="hrv_test_btn_cancel">Test abbrechen</string>
+    <string name="hrv_workout_name_step">HRV-Stufentest (DFA α1)</string>
+    <string name="hrv_workout_name_ramp">HRV-Rampentest (DFA α1)</string>
 
     <!-- Active Pacing Guidance (ATT-7529) -->
     <string name="hrv_test_pacing_target_header">Ziel</string>

@@ -114,10 +114,11 @@ fun ImportBackupTabsScreen(
     val queueCount by viewModel.pendingInteractionsCount.collectAsState()
     
     val scope = rememberCoroutineScope()
-    val pagerState = rememberPagerState(pageCount = { 3 })
+    val pagerState = rememberPagerState(pageCount = { 4 })
     
     val tabs = listOf(
         stringResource(R.string.tab_import),
+        stringResource(R.string.tab_auto_import),
         stringResource(R.string.tab_backup),
         stringResource(R.string.tab_restore)
     )
@@ -389,7 +390,13 @@ fun ImportBackupTabsScreen(
                             pickStravaArchiveLauncher.launch(arrayOf("application/zip", "application/x-zip-compressed", "*/*"))
                         }
                     )
-                    1 -> BackupTabContent(
+                    1 -> AutoImportTabContent(
+                        viewModel = viewModel,
+                        isBusy = isBusy,
+                        isDropboxConnected = isDropboxConnected,
+                        isGoogleDriveConnected = isGoogleDriveConnected
+                    )
+                    2 -> BackupTabContent(
                         viewModel = viewModel,
                         isBusy = isBusy,
                         isDropboxConnected = isDropboxConnected,
@@ -412,7 +419,7 @@ fun ImportBackupTabsScreen(
                             }
                         }
                     )
-                    2 -> {
+                    3 -> {
                         val autoBackupTimestamp = remember(pagerState.currentPage, isBusy) {
                             viewModel.getAutomaticBackupTimestamp(context)
                         }

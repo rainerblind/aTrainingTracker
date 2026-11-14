@@ -81,10 +81,14 @@
     <!-- Radar Audio & Haptic Alerts (ATT-5086 / REQ-TRK-063) -->
     <string name="radar_alerts_settings_title">レーダー警告と音声</string>
     <string name="radar_alert_mode_title">音声警告モード</string>
-    <string name="radar_alert_mode_all">すべての警告</string>
-    <string name="radar_alert_mode_approach_fast">接近と高速</string>
+    <string name="radar_alert_mode_all">すべて</string>
+    <string name="radar_alert_mode_approach_fast">接近</string>
     <string name="radar_alert_mode_fast_only">高速のみ</string>
     <string name="radar_alert_mode_muted">消音</string>
+    <string name="radar_alert_mode_all_desc">接近中および高速接近中のすべての車両に対して音声アラートを鳴らします</string>
+    <string name="radar_alert_mode_approach_fast_desc">標準接近および高速接近の脅威に対して音声アラートを鳴らします</string>
+    <string name="radar_alert_mode_fast_only_desc">高速接近車両（時速30km以上）に対してのみ音声アラートを鳴らします</string>
+    <string name="radar_alert_mode_muted_desc">画面端の視覚オーバーレイのみ表示し、音声アラートはミュートします</string>
     <string name="radar_alert_volume_title">警告音量</string>
     <string name="radar_alert_speaker_boost">スピーカー音量を増幅</string>
     <string name="radar_alert_speaker_boost_desc">警告時にスマホの控えめなスピーカー音量を一時的に増幅します</string>
@@ -174,9 +178,9 @@
     <string name="radar_summary_max_speed_simple">🚀 最高 %1$s km/h</string>
     <string name="radar_close_pass_threshold_title">至近距離追越警告しきい値</string>
     <string name="radar_close_pass_threshold_summary">最低安全間隔を下回る追越車両をマップ上で強調表示します</string>
-    <string name="radar_close_pass_threshold_1_0m">1.0 m (3.3 ft - UK/US)</string>
-    <string name="radar_close_pass_threshold_1_5m">1.5 m (5.0 ft - 市街地 / StVO)</string>
-    <string name="radar_close_pass_threshold_2_0m">2.0 m (6.6 ft - 郊外 / StVO)</string>
+    <string name="radar_close_pass_threshold_1_0m">1.0 m (3.3 ft)</string>
+    <string name="radar_close_pass_threshold_1_5m">1.5 m (5.0 ft)</string>
+    <string name="radar_close_pass_threshold_2_0m">2.0 m (6.6 ft)</string>
     <string name="radar_marker_close_pass_title">⚠️ 至近距離通過 (%1$sm) • %2$s • %3$s km/h</string>
     <string name="radar_vehicle_size_light">小型車両</string>
     <string name="radar_vehicle_size_car">乗用車</string>
@@ -188,4 +192,9 @@
     <!-- Smartphone IMU/GPS Deceleration Brake-Light Trigger (ATT-5121 / REQ-CON-035) -->
     <string name="radar_brake_light_title">減速ブレーキライト</string>
     <string name="radar_brake_light_desc">急減速時にテールライトを高輝度点灯（2.0秒保持、RearVue 820では自動バイパス）</string>
+    <!-- Developer Menu (ATT-7659 / REQ-SET-087.2 / REQ-CON-030.8) -->
+    <string name="developer_menu_title">開発者メニュー</string>
+    <string name="developer_menu_radar_section_title">自転車レーダーデバッグ</string>
+    <string name="developer_menu_radar_v1_only_title">レーダーV1プロトコルを強制 (レガシー)</string>
+    <string name="developer_menu_radar_v1_only_desc">Garmin Varia V2の特性検出をバイパスし、レガシーなV1ストリーミング (6a4e3203) に即座にフォールバックします。</string>
 </resources>

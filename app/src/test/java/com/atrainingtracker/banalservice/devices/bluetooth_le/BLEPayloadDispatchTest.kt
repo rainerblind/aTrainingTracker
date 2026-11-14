@@ -40,6 +40,7 @@ import org.junit.After
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNotSame
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
 import org.junit.Before
@@ -62,6 +63,7 @@ class BLEPayloadDispatchTest {
     // Use IdentityHashMap so instances with matching UUIDs do not collide in map lookups
     private val characteristicValues = Collections.synchronizedMap(IdentityHashMap<BluetoothGattCharacteristic, ByteArray>())
     private val characteristicUuids = Collections.synchronizedMap(IdentityHashMap<BluetoothGattCharacteristic, UUID>())
+    private val capturedPayloads = Collections.synchronizedList(mutableListOf<ByteArray>())
 
     private class TestHarnessBTLEDevice(
         context: Context,
@@ -96,6 +98,7 @@ class BLEPayloadDispatchTest {
         postedRunnables.clear()
         characteristicValues.clear()
         characteristicUuids.clear()
+        capturedPayloads.clear()
 
         mockkStatic(Log::class)
         every { Log.d(any<String>(), any<String>()) } returns 0
@@ -139,7 +142,7 @@ class BLEPayloadDispatchTest {
         every { anyConstructed<BluetoothGattCharacteristic>().setValue(any<ByteArray>()) } answers {
             val instance = self as BluetoothGattCharacteristic
             val bytes = firstArg<ByteArray>()
-            // Crucial: clone the bytes so internal backing storage is distinct per instance
+            capturedPayloads.add(bytes.clone())
             characteristicValues[instance] = bytes.clone()
             true
         }
@@ -190,6 +193,8 @@ class BLEPayloadDispatchTest {
     @Test
     fun testBleNotificationPayloadClonedAndDecoupled_Api33Signature() {
         val device = TestHarnessBTLEDevice(mockContext, mockSensorManager, 101L, "AA:BB:CC:DD:EE:01")
+        device.setBluetoothGattForTesting(mockGatt)
+        device.setStateForTesting(MyBTLEDevice.State.CONNECTED_WITH_SERVICE)
         injectImmediateHandler(device)
 
         val hrmUuid = BluetoothConstants.getCharacteristicUUID(DeviceType.HRM)
@@ -224,6 +229,8 @@ class BLEPayloadDispatchTest {
     @Test
     fun testBleNotificationPayloadClonedAndDecoupled_LegacySignature() {
         val device = TestHarnessBTLEDevice(mockContext, mockSensorManager, 102L, "AA:BB:CC:DD:EE:02")
+        device.setBluetoothGattForTesting(mockGatt)
+        device.setStateForTesting(MyBTLEDevice.State.CONNECTED_WITH_SERVICE)
         injectImmediateHandler(device)
 
         val hrmUuid = BluetoothConstants.getCharacteristicUUID(DeviceType.HRM)
@@ -257,6 +264,8 @@ class BLEPayloadDispatchTest {
     @Test
     fun testCharacteristicReadClonesPayloadOnSuccess() {
         val device = TestHarnessBTLEDevice(mockContext, mockSensorManager, 103L, "AA:BB:CC:DD:EE:03")
+        device.setBluetoothGattForTesting(mockGatt)
+        device.setStateForTesting(MyBTLEDevice.State.CONNECTED_WITH_SERVICE)
         injectImmediateHandler(device)
 
         val hrmUuid = BluetoothConstants.getCharacteristicUUID(DeviceType.HRM)
@@ -285,14 +294,16 @@ class BLEPayloadDispatchTest {
     }
 
     @Test
-    fun testCharacteristicPoolIndexWrappingAndShutdownSafety() {
+    fun testCharacteristicSnapshot_distinctAllocationsPreservePayloads() {
         val device = TestHarnessBTLEDevice(mockContext, mockSensorManager, 104L, "AA:BB:CC:DD:EE:04")
         injectImmediateHandler(device)
         val hrmUuid = BluetoothConstants.getCharacteristicUUID(DeviceType.HRM)
         val source = BluetoothGattCharacteristic(hrmUuid, BluetoothGattCharacteristic.PROPERTY_NOTIFY, 0)
         characteristicUuids[source] = hrmUuid
 
-        // Allocate 16 snapshots: 8-slot ring buffer wraps around cleanly twice
+        capturedPayloads.clear()
+
+        // Allocate 16 snapshots: verify distinct instances and uncorrupted payloads (REQ-CON-020.1, TST-CON-012.1)
         val snapshots = mutableListOf<BluetoothGattCharacteristic>()
         for (i in 0 until 16) {
             val payload = byteArrayOf(i.toByte())
@@ -301,14 +312,61 @@ class BLEPayloadDispatchTest {
             snapshots.add(snapshot!!)
         }
 
-        // Verify slot wrapping: snapshots 0 and 8 share the same instance in the 8-slot ring buffer
-        assertSame(snapshots[0], snapshots[8])
-        assertSame(snapshots[1], snapshots[9])
+        // Verify distinct instances: no ring-buffer slot reuse across modulo-8 boundaries
+        assertNotSame(snapshots[0], snapshots[8])
+        assertNotSame(snapshots[1], snapshots[9])
+
+        // Verify all 16 payloads were passed distinctly to setValue on each snapshot
+        assertEquals(16, capturedPayloads.size)
+        for (i in 0 until 16) {
+            assertArrayEquals(byteArrayOf(i.toByte()), capturedPayloads[i])
+        }
+
+        // Verify snapshots retain distinct payloads on evaluation
+        for (i in 0 until 16) {
+            every { anyConstructed<BluetoothGattCharacteristic>().value } returns capturedPayloads[i]
+            every { anyConstructed<BluetoothGattCharacteristic>().getValue() } returns capturedPayloads[i]
+            assertArrayEquals(byteArrayOf(i.toByte()), snapshots[i].value)
+        }
 
         // Verify shutdown returns null
         device.shutDown()
         val afterShutdown = device.obtainSnapshotCharacteristic(source, byteArrayOf(0x01))
         assertNull(afterShutdown)
+    }
+
+    @Test
+    fun testMeasurementRunnable_droppedWhenGattDisconnected() {
+        val device = TestHarnessBTLEDevice(mockContext, mockSensorManager, 106L, "AA:BB:CC:DD:EE:06")
+        injectImmediateHandler(device)
+        val hrmUuid = BluetoothConstants.getCharacteristicUUID(DeviceType.HRM)
+        val characteristic = BluetoothGattCharacteristic(hrmUuid, BluetoothGattCharacteristic.PROPERTY_NOTIFY, 0)
+        characteristicUuids[characteristic] = hrmUuid
+        characteristic.setValue(byteArrayOf(0x01, 0x60))
+
+        // Set device to connected state
+        val stateField = MyBTLEDevice::class.java.getDeclaredField("mState")
+        stateField.isAccessible = true
+        stateField.set(device, MyBTLEDevice.State.CONNECTED_WITH_SERVICE)
+
+        val gattField = MyBTLEDevice::class.java.getDeclaredField("mBluetoothGatt")
+        gattField.isAccessible = true
+        gattField.set(device, mockGatt)
+
+        val callback = device.gattCallbackForTesting
+        callback.onCharacteristicChanged(mockGatt, characteristic, byteArrayOf(0x01, 0x60))
+
+        assertEquals(1, postedRunnables.size)
+
+        // Simulate disconnect before runnable drains
+        stateField.set(device, MyBTLEDevice.State.DISCONNECTED)
+        gattField.set(device, null)
+
+        // Drain the posted runnable
+        postedRunnables.forEach { it.run() }
+
+        // Assert packet dropped and measurementCharacteristicUpdate was not executed
+        assertEquals(0, device.receivedCharacteristics.size)
     }
 
     @Test

@@ -18,6 +18,7 @@
 
 package com.atrainingtracker.trainingtracker.ui.navigation
 
+import com.atrainingtracker.BuildConfig
 import com.atrainingtracker.R
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
@@ -167,14 +168,18 @@ class NavigationDrawerStateTest {
         assertEquals(R.drawable.ic_speed, trainingZonesItem.iconRes)
         assertEquals(R.string.prefs_training_zones, trainingZonesItem.titleRes)
 
-        // Verify Info & Support ordering: Supporter, Tips Guide, Privacy Policy (REQ-UI-463.1)
+        // Verify Info & Support ordering: Supporter, Tips Guide, Privacy Policy, and Developer Menu in debug (REQ-UI-463.1, REQ-SET-087.2)
         val infoSupportIds = infoSupportGroup.items.map { it.id }
+        val expectedInfoSupportIds = buildList {
+            add(R.id.drawer_supporter)
+            add(R.id.drawer_tips_guide)
+            add(R.id.drawer_privacy_policy)
+            if (BuildConfig.DEBUG) {
+                add(R.id.drawer_developer_menu)
+            }
+        }
         assertEquals(
-            listOf(
-                R.id.drawer_supporter,
-                R.id.drawer_tips_guide,
-                R.id.drawer_privacy_policy
-            ),
+            expectedInfoSupportIds,
             infoSupportIds
         )
 
@@ -191,8 +196,9 @@ class NavigationDrawerStateTest {
         assertEquals("Default visible destination items when secondary groups are collapsed must be 9", 9, defaultVisibleCount)
 
         val allItems = groups.flatMap { it.items.map { item -> item.id } }
-        assertEquals("Navigation drawer must contain 27 total items across 6 groups", 27, allItems.size)
-        assertEquals("All 27 navigation items must have distinct IDs", 27, allItems.toSet().size)
+        val expectedTotalItems = if (BuildConfig.DEBUG) 28 else 27
+        assertEquals("Navigation drawer item count check (ATT-7659 / REQ-SET-087.2)", expectedTotalItems, allItems.size)
+        assertEquals("All navigation items must have distinct IDs", expectedTotalItems, allItems.toSet().size)
         org.junit.Assert.assertFalse(
             "drawer_search_settings must be removed from drawer destinations",
             allItems.contains(R.id.drawer_search_settings)

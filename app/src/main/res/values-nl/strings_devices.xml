@@ -91,6 +91,8 @@
 
     <string name="devices_location_GPS">Telefoon GPS (Satelliet)</string>
     <string name="devices_location_GoogleFused">Google Locatie (Fused)</string>
+    <string name="devices_location_ATT_fused">ATT Odometrie-fusie</string>
+    <string name="devices_altitude_slope_ATT_fused">ATT Fused (Hoogte en helling)</string>
     <string name="devices_altitude_from_pressure">Hoogte uit luchtdruk</string>
 
     <!-- Specialized Altitude Devices Explanations (ATT-5073, REQ-SEN-026) -->
@@ -102,6 +104,30 @@
     <string name="device_altitude_position_how_it_works">Koppelt uw GPS-positie aan digitale hoogtemodellen (DEM) uit routecaches of van Open-Meteo.</string>
     <string name="device_altitude_position_pros_cons">+ Immuun voor weer en barometrische drift; absolute hoogte zonder kalibratie.\n- Vereist actieve internetverbinding voor niet-gecachte gebieden; afhankelijk van GPS-nauwkeurigheid (kan verspringen op bruggen en kliffen).</string>
 
+    <!-- ATT Odometry Fusion Device Configuration (ATT-7751, REQ-SEN-028) -->
+    <string name="device_att_fused_how_it_works">Combineert GNSS-posities, gekalibreerde wielomwentelingen en 3D-gyroscooprotaties in een 5-toestands Extended Kalman Filter (EKF) met continue gegist bestek-navigatie.</string>
+    <string name="device_att_fused_pros_cons">+ Ononderbroken registratie in tunnels en dichte bossen; submeter-precisie; uitschieteronderdrukking.\n- Hoger batterijverbruik door continu bemonsteren van de gyroscoop.</string>
+    <string name="device_att_fused_toggle_gnss">GNSS-posities gebruiken</string>
+    <string name="device_att_fused_toggle_gnss_hint_disabled">Locatietoestemming vereist</string>
+    <string name="device_att_fused_toggle_wheel">Wielsnelheidssensoren gebruiken</string>
+    <string name="device_att_fused_toggle_wheel_hint_disabled">Geen gekoppelde wielsensor beschikbaar</string>
+    <string name="device_att_fused_toggle_gyro">Gyroscoop-IMU gebruiken</string>
+    <string name="device_att_fused_toggle_gyro_hint_disabled">Geen telefoongyroscoop gedetecteerd</string>
+    <string name="device_att_fused_toggle_autocalib">Continue wiel-autokalibratie</string>
+    <string name="device_att_fused_toggle_autocalib_hint_disabled">Vereist wielsensor en GNSS</string>
+
+    <!-- ATT Altitude & Slope Fusion Device Configuration (ATT-6279, REQ-FIL-016) -->
+    <string name="device_att_fused_alt_how_it_works">Koppelt hoogteveranderingen direct aan horizontale voortgang (dh = g * ds) met stilstand-vergrendeling en driftvrije Kalman-fusie van barometer en DEM/GPS.</string>
+    <string name="device_att_fused_alt_pros_cons">+ Voorkomt spookhoogtemeters bij stilstand en DEM-traptreden; zeer responsieve helling.\n- Vereist actieve barometer of hoogtesensor.</string>
+    <string name="device_att_fused_alt_toggle_baro">Barometrische hoogte (Barometer)</string>
+    <string name="device_att_fused_alt_toggle_baro_hint_disabled">Geen barometersensor gekoppeld of beschikbaar</string>
+    <string name="device_att_fused_alt_toggle_dem">Topografische hoogte (DEM)</string>
+    <string name="device_att_fused_alt_toggle_dem_hint_disabled">Topografische hoogte (DEM) niet gekoppeld</string>
+    <string name="device_att_fused_alt_toggle_gps">GPS-hoogte (Langetermijndriftcorrectie)</string>
+    <string name="device_att_fused_alt_toggle_gps_hint_disabled">Geen locatie- of GPS-sensor gekoppeld</string>
+    <string name="device_att_fused_alt_toggle_speed">Snelheidskoppeling (Stilstandfix &amp; dh = g * ds)</string>
+    <string name="device_att_fused_alt_toggle_speed_hint_disabled">Geen snelheids- of bewegingssensor beschikbaar</string>
+
     <string name="devices_live_sensor_data_header">Sensorgegevens</string>
 
     <string name="devices_dialog_delete_device_title">Echt verwijderen?</string>
@@ -111,4 +137,10 @@
 
     <!-- Indirect Tire Pressure Monitoring (ATT-4880, REQ-TRK-050) -->
     <string name="devices_reset_tire_pressure_baseline">Bandenspanning-basiswaarde resetten (net opgepompt)</string>
+
+    <!-- Sensor List Sorting (ATT-7663, REQ-UI-528) -->
+    <string name="devices_sort_alphabetical">Alfabetisch</string>
+    <string name="devices_sort_first_seen">Eerst gezien</string>
+    <string name="devices_sort_last_usage">Laatst gebruikt</string>
+    <string name="devices_sort_battery_level">Batterijniveau</string>
 </resources>

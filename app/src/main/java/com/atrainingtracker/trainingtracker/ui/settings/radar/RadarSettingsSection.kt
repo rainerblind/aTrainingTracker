@@ -171,6 +171,12 @@ fun RadarSettingsSection(
                     actualDataStore.updateRadarAudioAlertMode(mode)
                 }
             },
+            helperText = when (tuningConfig.radarAudioAlertMode) {
+                RadarAudioAlertMode.ALL_ALERTS -> stringResource(R.string.radar_alert_mode_all_desc)
+                RadarAudioAlertMode.APPROACH_AND_FAST -> stringResource(R.string.radar_alert_mode_approach_fast_desc)
+                RadarAudioAlertMode.FAST_ONLY -> stringResource(R.string.radar_alert_mode_fast_only_desc)
+                RadarAudioAlertMode.MUTED -> stringResource(R.string.radar_alert_mode_muted_desc)
+            },
             labelProvider = { mode ->
                 when (mode) {
                     RadarAudioAlertMode.ALL_ALERTS -> stringResource(R.string.radar_alert_mode_all)
@@ -459,19 +465,13 @@ fun RadarSettingsSection(
         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
 
         // 4. Close-Pass Hazard Threshold (REQ-TRK-073.4 / ATT-5096)
-        Text(
-            text = stringResource(R.string.radar_close_pass_threshold_title),
-            style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.onSurface
-        )
-
         val thresholdPresets = listOf(1.0f, 1.5f, 2.0f)
         val currentThreshold = thresholdPresets.firstOrNull {
             kotlin.math.abs(tuningConfig.radarClosePassThresholdM - it) < 0.01f
         } ?: 1.5f
 
         TuningSegmentedButtonRow(
-            title = stringResource(R.string.radar_close_pass_threshold_summary),
+            title = stringResource(R.string.radar_close_pass_threshold_title),
             options = thresholdPresets,
             selectedOption = currentThreshold,
             onOptionSelected = { threshold ->
@@ -479,6 +479,7 @@ fun RadarSettingsSection(
                     actualDataStore.updateRadarClosePassThreshold(threshold)
                 }
             },
+            helperText = stringResource(R.string.radar_close_pass_threshold_summary),
             labelProvider = { threshold ->
                 when (threshold) {
                     1.0f -> stringResource(R.string.radar_close_pass_threshold_1_0m)

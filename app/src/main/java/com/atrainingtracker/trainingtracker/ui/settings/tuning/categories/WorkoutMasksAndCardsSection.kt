@@ -72,6 +72,7 @@ private fun buildMatrixFeatureRow(
     WorkoutSectionType.CHARTS -> MatrixFeatureRow(type, R.string.settings_workout_card_charts, prefs.showTelemetryCharts) { onPrefsChange(prefs.copy(showTelemetryCharts = it)) }
     WorkoutSectionType.ZONES -> MatrixFeatureRow(type, R.string.settings_workout_card_zones, prefs.showZoneAnalysis) { onPrefsChange(prefs.copy(showZoneAnalysis = it)) }
     WorkoutSectionType.GRADE_DISTRIBUTION -> MatrixFeatureRow(type, R.string.settings_workout_card_grade_distribution, prefs.showGradeDistribution) { onPrefsChange(prefs.copy(showGradeDistribution = it)) }
+    WorkoutSectionType.HRV -> MatrixFeatureRow(type, R.string.settings_workout_card_hrv, prefs.showHrv) { onPrefsChange(prefs.copy(showHrv = it)) }
     WorkoutSectionType.EXPORT_STATUS -> MatrixFeatureRow(type, R.string.export_status, prefs.showExportStatus) { onPrefsChange(prefs.copy(showExportStatus = it)) }
     WorkoutSectionType.PHOTOS -> MatrixFeatureRow(type, R.string.settings_workout_card_photos, prefs.showPhotos) { onPrefsChange(prefs.copy(showPhotos = it)) }
 }

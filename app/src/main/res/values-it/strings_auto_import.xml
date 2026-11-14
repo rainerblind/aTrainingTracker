@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Cloud Auto-Import for Multi-Device Synchronization (ATT-7748 / REQ-MIG-052) -->
+    <string name="tab_auto_import">Auto-import</string>
+    <string name="auto_import_title">Auto-importazione cloud</string>
+    <string name="auto_import_master_switch">Attiva auto-importazione</string>
+    <string name="auto_import_master_switch_summary">Importa automaticamente i nuovi allenamenti dal cloud all\'apertura dell\'app</string>
+    <string name="auto_import_cloud_sources_title">Sorgenti di archiviazione cloud</string>
+    <string name="auto_import_dropbox_title">Dropbox</string>
+    <string name="auto_import_dropbox_summary">Auto-importa dalle cartelle cloud /Workouts o /FIT</string>
+    <string name="auto_import_googledrive_title">Google Drive</string>
+    <string name="auto_import_googledrive_summary">Auto-importa dalla cartella Workouts di Google Drive</string>
+    <string name="auto_import_format_title">Formato file preferito</string>
+    <string name="auto_import_relays_title">Inoltri locali</string>
+    <string name="auto_import_relay_health_connect">Sincronizza gli allenamenti importati con Health Connect</string>
+    <string name="auto_import_relay_health_connect_summary">Inoltra automaticamente gli allenamenti importati ad Android Health Connect su questo dispositivo</string>
+    <string name="auto_import_relay_strava">Carica gli allenamenti importati su Strava</string>
+    <string name="auto_import_relay_strava_summary">Accoda automaticamente gli allenamenti importati per il caricamento su Strava</string>
+    <string name="auto_import_sync_now">Sincronizza ora</string>
+    <string name="auto_import_syncing">Sincronizzazione…</string>
+    <string name="auto_import_last_sync">Ultima sincronizzazione: %1$s</string>
+    <string name="auto_import_never_synced">Mai sincronizzato</string>
+    <string name="auto_import_status_success">%1$d importati, %2$d ignorati</string>
+    <string name="auto_import_status_error">Sincronizzazione non riuscita: %1$s</string>
+    <string name="auto_import_cloud_not_connected">Non connesso</string>
+    <string name="auto_import_cloud_connected">Connesso (%1$s)</string>
+    <string name="auto_import_format_fit">FIT (.fit)</string>
+    <string name="auto_import_format_tcx">TCX (.tcx)</string>
+    <string name="auto_import_format_gpx">GPX (.gpx)</string>
+    <string name="auto_import_format_all">Tutti i formati</string>
+</resources>

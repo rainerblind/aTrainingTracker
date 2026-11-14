@@ -29,9 +29,9 @@
 
     <!-- Training Zones Tab (ATT-7317 / REQ-TRK-061.4) -->
     <string name="tab_hrv_dfa_a1">HRV (DFA α1)</string>
-    <string name="hrv_zone_aerobic_base_label">Baza Tlenowa (Strefa 2)</string>
-    <string name="hrv_zone_threshold_transition_label">Przejście Progowe (Strefa 3)</string>
-    <string name="hrv_zone_anaerobic_label">Wysoka Intensywność / Beztlenowa (Strefa 4)</string>
+    <string name="hrv_zone_aerobic_base_label">Baza Tlenowa</string>
+    <string name="hrv_zone_threshold_transition_label">Przejście Progowe</string>
+    <string name="hrv_zone_anaerobic_label">Wysoka Intensywność / Beztlenowa</string>
     <string name="hrv_t1_aerobic_threshold_label">Próg Tlenowy T1 (HRVT1)</string>
     <string name="hrv_t2_anaerobic_threshold_label">Próg Beztlenowy T2 (HRVT2)</string>
     <string name="hrv_zone_aerobic_base_desc">Tlenowa baza wytrzymałościowa, niski stres autonomiczny</string>
@@ -79,7 +79,7 @@
     <string name="morning_hrv_btn_save">Zapisz</string>
     <string name="morning_hrv_btn_discard">Odrzuć</string>
     <string name="morning_hrv_instructions_title">Standaryzowany protokół</string>
-    <string name="morning_hrv_instructions_desc">Wykonaj pomiar po przebudzeniu i opróżnieniu pęcherza. Pozostań w bezruchu i oddychaj normalnie bez mówienia. Zachowaj stałą postawę dla wiarygodnych porównań SWC.</string>
+    <string name="morning_hrv_instructions_desc">Wykonaj pomiar w spoczynku bezpośrednio po przebudzeniu. Pozostań w bezruchu i oddychaj normalnie bez mówienia. Zachowaj stałą postawę dla wiarygodnych porównań SWC.</string>
     <string name="morning_hrv_artifact_warning_title">Wysoki odsetek artefaktów</string>
     <string name="morning_hrv_artifact_warning_desc">Odsetek artefaktów przekracza 5%% (%1$.1f%%). Zwilż elektrody pasa piersiowego i sprawdź jego dopasowanie.</string>
     <string name="morning_hrv_smoothed_warning_title">Wykryto wygładzony strumień RR</string>
@@ -207,6 +207,8 @@
     <string name="hrv_test_btn_finish">Zakończ test</string>
     <string name="hrv_test_btn_cooldown">Rozpocznij schłodzenie</string>
     <string name="hrv_test_btn_cancel">Anuluj test</string>
+    <string name="hrv_workout_name_step">Test stopniowany HRV (DFA α1)</string>
+    <string name="hrv_workout_name_ramp">Test rampowy HRV (DFA α1)</string>
 
     <!-- Active Pacing Guidance (ATT-7529) -->
     <string name="hrv_test_pacing_target_header">Cel</string>

@@ -169,11 +169,25 @@ class SmartBrakeLightDetectorTest {
     }
 
     @Test
-    fun testReset_doesNotClobberDisabledPreference() {
-        // Finding 2: reset() must preserve isEnabled and not overwrite disabled preference to true
+    fun testResetMotionState_preservesConfigAndAutoBypass() {
+        // TST-CON-035.5: resetMotionState() clears transient motion state while preserving isEnabled and isAutoBypassed
         SmartBrakeLightDetector.isEnabled = false
+        SmartBrakeLightDetector.isAutoBypassed = true
+        SmartBrakeLightDetector.onSpeedChanged(speedMps = 10f, nowMs = 1000L)
+        SmartBrakeLightDetector.onLinearAccelerationChanged(0f, -3.0f, 0f, nowMs = 1000L)
+        SmartBrakeLightDetector.onLinearAccelerationChanged(0f, -3.0f, 0f, nowMs = 1300L)
+
+        SmartBrakeLightDetector.resetMotionState()
+
+        assertEquals(0f, SmartBrakeLightDetector.currentSpeedMps, 0.001f)
+        assertFalse(SmartBrakeLightDetector.isBraking)
+        assertFalse("resetMotionState() must preserve isEnabled = false", SmartBrakeLightDetector.isEnabled)
+        assertTrue("resetMotionState() must preserve isAutoBypassed = true", SmartBrakeLightDetector.isAutoBypassed)
+
+        // reset() clears isAutoBypassed to false and restores isEnabled to true for test isolation
         SmartBrakeLightDetector.reset()
-        assertFalse("reset() must NOT clobber disabled preference", SmartBrakeLightDetector.isEnabled)
+        assertTrue("reset() restores isEnabled = true for test isolation", SmartBrakeLightDetector.isEnabled)
+        assertFalse("reset() restores isAutoBypassed = false for test isolation", SmartBrakeLightDetector.isAutoBypassed)
     }
 
     @Test

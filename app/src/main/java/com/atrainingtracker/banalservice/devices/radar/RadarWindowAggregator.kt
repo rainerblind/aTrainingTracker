@@ -57,6 +57,7 @@ class RadarWindowAggregator @JvmOverloads constructor(
     private var cumulativeVehicleCount: Int = 0
     private var cumulativeLargeVehicleCount: Int = 0
     private var latchedPassingDistance: Double? = null
+    private var latchedPassingDistanceTimestampMs: Long = 0L
 
     // Target tracking for vehicle passing hysteresis and metadata
     private data class TrackedTargetInfo(
@@ -83,6 +84,7 @@ class RadarWindowAggregator @JvmOverloads constructor(
             cumulativeVehicleCount = 0
             cumulativeLargeVehicleCount = 0
             latchedPassingDistance = null
+            latchedPassingDistanceTimestampMs = 0L
             activeTargetInfo.clear()
             hasReceivedData = false
         }
@@ -147,8 +149,12 @@ class RadarWindowAggregator @JvmOverloads constructor(
                         cumulativeLargeVehicleCount++
                     }
                     info.minPassingLateral?.let { lat ->
-                        if (latchedPassingDistance == null || lat < latchedPassingDistance!!) {
+                        if (latchedPassingDistance == null ||
+                            nowMs - latchedPassingDistanceTimestampMs > WINDOW_DURATION_MS ||
+                            lat < latchedPassingDistance!!
+                        ) {
                             latchedPassingDistance = lat
+                            latchedPassingDistanceTimestampMs = nowMs
                         }
                     }
                 }
@@ -196,8 +202,12 @@ class RadarWindowAggregator @JvmOverloads constructor(
                 }
             }
 
+            // Decay latched passing distance strictly after 1,000 ms window (REQ-CON-040.3)
+            if (latchedPassingDistance != null && nowMs - latchedPassingDistanceTimestampMs > WINDOW_DURATION_MS) {
+                latchedPassingDistance = null
+            }
+
             val effectivePassingDistance = minPassingDistance ?: latchedPassingDistance
-            latchedPassingDistance = null
 
             return RadarLatchedSnapshot(
                 threatCount = maxThreats,

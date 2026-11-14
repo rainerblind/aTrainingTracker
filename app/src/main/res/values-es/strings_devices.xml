@@ -91,6 +91,8 @@
 
     <string name="devices_location_GPS">GPS del teléfono (Satélite)</string>
     <string name="devices_location_GoogleFused">Ubicación de Google (Fused)</string>
+    <string name="devices_location_ATT_fused">ATT Odometría fusionada</string>
+    <string name="devices_altitude_slope_ATT_fused">ATT Fused (Altitud y pendiente)</string>
     <string name="devices_altitude_from_pressure">Altitud por presión</string>
 
     <!-- Specialized Altitude Devices Explanations (ATT-5073, REQ-SEN-026) -->
@@ -102,6 +104,30 @@
     <string name="device_altitude_position_how_it_works">Compara su posición GPS con modelos de elevación digital (DEM) en caché de rutas o de Open-Meteo.</string>
     <string name="device_altitude_position_pros_cons">+ Inmune al clima y deriva barométrica; altitud absoluta sin calibración.\n- Requiere conexión activa a internet para áreas sin caché; depende de la precisión del GPS; escalonada en puentes y desfiladeros.</string>
 
+    <!-- ATT Odometry Fusion Device Configuration (ATT-7751, REQ-SEN-028) -->
+    <string name="device_att_fused_how_it_works">Fusiona posiciones GNSS, giros de rueda calibrados y rotaciones de giroscopio 3D en un filtro de Kalman extendido (EKF) de 5 estados con navegación estimada precisa.</string>
+    <string name="device_att_fused_pros_cons">+ Registro ininterrumpido en túneles y bosques densos; precisión submétrica; rechazo de anomalías.\n- Mayor consumo de batería por el muestreo continuo del giroscopio del teléfono.</string>
+    <string name="device_att_fused_toggle_gnss">Usar posiciones GNSS</string>
+    <string name="device_att_fused_toggle_gnss_hint_disabled">Se requiere permiso de ubicación</string>
+    <string name="device_att_fused_toggle_wheel">Usar sensores de velocidad de rueda</string>
+    <string name="device_att_fused_toggle_wheel_hint_disabled">No hay sensor de rueda emparejado</string>
+    <string name="device_att_fused_toggle_gyro">Usar IMU giroscópica</string>
+    <string name="device_att_fused_toggle_gyro_hint_disabled">No se detectó giroscopio en el teléfono</string>
+    <string name="device_att_fused_toggle_autocalib">Autocalibración continua de rueda</string>
+    <string name="device_att_fused_toggle_autocalib_hint_disabled">Requiere sensor de rueda y GNSS</string>
+
+    <!-- ATT Altitude & Slope Fusion Device Configuration (ATT-6279, REQ-FIL-016) -->
+    <string name="device_att_fused_alt_how_it_works">Acopla los cambios de altitud directamente al avance horizontal (dh = g * ds) con fijación en reposo y fusión Kalman sin deriva entre barómetro y DEM/GPS.</string>
+    <string name="device_att_fused_alt_pros_cons">+ Evita desnivel fantasma en paradas y saltos en escalón del DEM; pendiente muy sensible.\n- Requiere barómetro o sensor de altitud activo.</string>
+    <string name="device_att_fused_alt_toggle_baro">Altitud barométrica (Barómetro)</string>
+    <string name="device_att_fused_alt_toggle_baro_hint_disabled">Ningún sensor barométrico emparejado o disponible</string>
+    <string name="device_att_fused_alt_toggle_dem">Altitud topográfica (DEM)</string>
+    <string name="device_att_fused_alt_toggle_dem_hint_disabled">Altitud topográfica (DEM) no emparejada</string>
+    <string name="device_att_fused_alt_toggle_gps">Altitud GPS (Corrección de deriva a largo plazo)</string>
+    <string name="device_att_fused_alt_toggle_gps_hint_disabled">Ningún sensor de ubicación o GPS emparejado</string>
+    <string name="device_att_fused_alt_toggle_speed">Acoplamiento de velocidad (Fijación en reposo y dh = g * ds)</string>
+    <string name="device_att_fused_alt_toggle_speed_hint_disabled">Ningún sensor de velocidad o movimiento disponible</string>
+
     <string name="devices_live_sensor_data_header">Datos Sensores</string>
 
     <string name="devices_dialog_delete_device_title">¿Eliminar realmente?</string>
@@ -111,4 +137,10 @@
 
     <!-- Indirect Tire Pressure Monitoring (ATT-4880, REQ-TRK-050) -->
     <string name="devices_reset_tire_pressure_baseline">Restablecer presión base de neumáticos (recién inflados)</string>
+
+    <!-- Sensor List Sorting (ATT-7663, REQ-UI-528) -->
+    <string name="devices_sort_alphabetical">Alfabético</string>
+    <string name="devices_sort_first_seen">Visto por primera vez</string>
+    <string name="devices_sort_last_usage">Último uso</string>
+    <string name="devices_sort_battery_level">Nivel de batería</string>
 </resources>

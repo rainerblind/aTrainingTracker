@@ -82,6 +82,7 @@ class MyBTLEDeviceAddressAndSearchTest {
 
     @Before
     fun setUp() {
+        MyBTLEDevice.clearScanTimestampsForTesting()
         mockkStatic(Log::class)
         every { Log.d(any<String>(), any<String>()) } returns 0
         every { Log.i(any<String>(), any<String>()) } returns 0

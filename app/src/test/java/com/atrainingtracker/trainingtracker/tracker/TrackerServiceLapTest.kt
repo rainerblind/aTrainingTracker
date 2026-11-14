@@ -46,6 +46,10 @@ class TrackerServiceLapTest {
     private class TestableLapTrackerService : TrackerService() {
         val savedLaps = mutableListOf<SavedLapRecord>()
 
+        override fun saveLap(workoutId: Long, lapNr: Long, lapTime: Int, lapDistance: Double, averageSpeed: Double) {
+            savedLaps.add(SavedLapRecord(lapNr, lapTime, lapDistance, averageSpeed))
+        }
+
         override fun saveLap(lapNr: Long, lapTime: Int, lapDistance: Double, averageSpeed: Double) {
             savedLaps.add(SavedLapRecord(lapNr, lapTime, lapDistance, averageSpeed))
         }

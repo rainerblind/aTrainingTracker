@@ -48,4 +48,22 @@ Wenn du dedizierte Leistungsmesser oder Geschwindigkeits-Sensoren an bestimmten 
 
 ---
 
+<a id="wheel-sensors-guidance"></a>
+
+## 3.3 Warum 1 oder 2 Laufradsensoren neben GPS?
+
+Moderne Smartphones bieten GPS-Ortung, doch Satellitensignale unterliegen Abschattungen, Mehrwegeffekten und Filterverzögerungen. Die Koppelung physikalischer Laufrad-Geschwindigkeitssensoren (über ANT+ oder Bluetooth LE) bringt entscheidende physikalische Vorteile:
+
+- **1 Laufradsensor + GPS**:
+  - **Verzögerungsfreie Geschwindigkeit**: Unmittelbare Geschwindigkeitsanzeige bei Antritten und Sprints ohne GPS-Glättungsverzögerung.
+  - **Koppelnavigation (Dead Reckoning)**: Exakte Geschwindigkeits- und Distanzerfassung unter dichtem Blätterdach, in Tunnels, Häuserschluchten und alpinen Kehren bei schwachem Satellitenempfang.
+  - **Präzise Steigungsanzeige (Steigung %)**: Die Kombination aus hochauflösender Laufrad-Geschwindigkeit und barometrischem Höhenverlauf ermöglicht eine exakte, jitterfreie Steigungsprozentanzeige in Echtzeit.
+- **2 Laufradsensoren (Vorder- + Hinterrad) + GPS**:
+  - **Indirekte Reifendrucküberwachung (iTPMS)**: Sinkender Reifendruck verringert den wirksamen Abrollradius, sodass sich das Rad mit Druckverlust relativ schneller dreht. Durch vergleichende Analyse der relativen Radumdrehungen über ein 150–250 m Auswertefenster erkennt die App schleichenden Druckverlust frühzeitig (differenziert nach Vorder- vs. Hinterrad).
+  - **Unabhängige Abrollumfangskalibrierung**: Das GPS kalibriert automatisch beide Laufräder unabhängig voneinander unter realer Gewichtsbelastung.
+  - **Multisensor-Odometriefusion**: Redundante Sensordaten gewährleisten lückenlose Distanzerfassung auch bei temporären Sensorbatterie- oder Funkunterbrechungen.
+- **Positions-Badge in der Matrix**: In der Ausrüstungs-Sensor-Matrix werden Laufradsensoren mit einem kompakten Positions-Badge gekennzeichnet (**V** für Vorderrad, **H** für Hinterrad). Ein Antippen der Zelle öffnet den Auswahldialog; integrierte Schutzregeln verhindern versehentliche Doppelbelegungen desselben Rads.
+
+---
+
 [Vorheriges Kapitel: Sensoren & Hardware](02-sensors-dual-protocol.md) | [Nächstes Kapitel: Live-Cockpit & Tabs](04-live-cockpit-tabs.md) | [Zurück zur Übersicht](index.md)

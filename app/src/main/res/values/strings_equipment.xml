@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="equipment_wheel_position_title">Wheel Mounting Position</string>
+    <string name="equipment_wheel_position_front">Front Wheel</string>
+    <string name="equipment_wheel_position_rear">Rear Wheel</string>
+    <string name="equipment_wheel_position_unspecified">Unspecified Position</string>
+    <string name="equipment_wheel_position_unlink">Unlink Sensor</string>
+    <string name="equipment_wheel_position_front_badge">F</string>
+    <string name="equipment_wheel_position_rear_badge">R</string>
+    <string name="equipment_guidance_title">Why Wheel Sensors Alongside GPS?</string>
+    <string name="equipment_guidance_subtitle">Physical advantages of wheel speed sensors vs. smartphone GPS</string>
+    <string name="equipment_guidance_1_sensor_title">1 Wheel Sensor + GPS</string>
+    <string name="equipment_guidance_1_sensor_body">Provides instant zero-lag speed response, exact distance progression under dense forest canopy, in tunnels, and through alpine switchbacks where satellite visibility drops, as well as sharper live slope grade (Slope %).</string>
+    <string name="equipment_guidance_2_sensors_title">2 Wheel Sensors (Front + Rear) + GPS</string>
+    <string name="equipment_guidance_2_sensors_body">Enables GPS-free indirect tire pressure monitoring (iTPMS) to detect slow punctures within 150–250 m by measuring relative wheel circumference changes (identifying front vs. rear pressure loss), independent tire circumference calibration, and multi-sensor odometry fusion.</string>
+    <string name="equipment_guidance_got_it">Got it</string>
+    <string name="itpms_dual_puncture_rear_title">Rear Wheel Pressure Loss!</string>
+    <string name="itpms_dual_puncture_rear_message">Rapid pressure drop detected on rear wheel (%1$s). Please stop and check tire!</string>
+    <string name="itpms_dual_puncture_front_title">Front Wheel Pressure Loss!</string>
+    <string name="itpms_dual_puncture_front_message">Rapid pressure drop detected on front wheel (%1$s). Please stop and check tire!</string>
+    <string name="equipment_tpms_history_title">Wheel Circumference &amp; Pressure History</string>
+    <string name="equipment_tpms_reset_baseline">Tires Just Pumped (Set Baseline)</string>
+    <string name="equipment_tpms_no_history">No measurement data recorded yet. Complete rides with linked front and rear wheel sensors.</string>
+    <string name="equipment_tpms_front_legend">Front Wheel</string>
+    <string name="equipment_tpms_rear_legend">Rear Wheel</string>
+</resources>

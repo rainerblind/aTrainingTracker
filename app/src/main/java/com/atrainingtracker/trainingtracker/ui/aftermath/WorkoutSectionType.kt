@@ -45,6 +45,7 @@ enum class WorkoutSectionType(@StringRes val titleRes: Int) {
     CHARTS(R.string.settings_workout_card_charts),
     ZONES(R.string.settings_workout_card_zones),
     GRADE_DISTRIBUTION(R.string.settings_workout_card_grade_distribution),
+    HRV(R.string.settings_workout_card_hrv),
     EXPORT_STATUS(R.string.export_status),
     PHOTOS(R.string.settings_workout_card_photos);
 
@@ -60,6 +61,7 @@ enum class WorkoutSectionType(@StringRes val titleRes: Int) {
             CHARTS,
             ZONES,
             GRADE_DISTRIBUTION,
+            HRV,
             LAPS,
             EXPORT_STATUS,
             STRAVA

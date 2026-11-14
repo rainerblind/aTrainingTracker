@@ -102,6 +102,7 @@ data class WorkoutCardSectionPreferences(
     val showTelemetryCharts: Boolean = false,
     val showZoneAnalysis: Boolean = true,
     val showGradeDistribution: Boolean = false,
+    val showHrv: Boolean = false,
     val showExportStatus: Boolean = true,
     val showPhotos: Boolean = true,
     val showPhotoAddButton: Boolean = true,
@@ -168,6 +169,7 @@ class MyPreferenceManager(context: Context) {
         val WORKOUT_CARD_SHOW_CHARTS = booleanPreferencesKey("workout_card_show_charts")
         val WORKOUT_CARD_SHOW_ZONES = booleanPreferencesKey("workout_card_show_zones")
         val WORKOUT_CARD_SHOW_GRADE_DISTRIBUTION = booleanPreferencesKey("workout_card_show_grade_distribution")
+        val WORKOUT_CARD_SHOW_HRV = booleanPreferencesKey("workout_card_show_hrv")
         val WORKOUT_CARD_SHOW_EXPORT_STATUS = booleanPreferencesKey("workout_card_show_export_status")
         val WORKOUT_CARD_SHOW_PHOTOS = booleanPreferencesKey("workout_card_show_photos")
         val WORKOUT_CARD_SHOW_PHOTO_ADD_BUTTON = booleanPreferencesKey("workout_card_show_photo_add_button")
@@ -214,6 +216,7 @@ class MyPreferenceManager(context: Context) {
             showTelemetryCharts = preferences[WORKOUT_CARD_SHOW_CHARTS] ?: false,
             showZoneAnalysis = preferences[WORKOUT_CARD_SHOW_ZONES] ?: true,
             showGradeDistribution = preferences[WORKOUT_CARD_SHOW_GRADE_DISTRIBUTION] ?: false,
+            showHrv = preferences[WORKOUT_CARD_SHOW_HRV] ?: false,
             showExportStatus = preferences[WORKOUT_CARD_SHOW_EXPORT_STATUS] ?: true,
             showPhotos = preferences[WORKOUT_CARD_SHOW_PHOTOS] ?: true,
             showPhotoAddButton = preferences[WORKOUT_CARD_SHOW_PHOTO_ADD_BUTTON] ?: true,
@@ -245,6 +248,7 @@ class MyPreferenceManager(context: Context) {
             preferences[WORKOUT_CARD_SHOW_CHARTS] = prefs.showTelemetryCharts
             preferences[WORKOUT_CARD_SHOW_ZONES] = prefs.showZoneAnalysis
             preferences[WORKOUT_CARD_SHOW_GRADE_DISTRIBUTION] = prefs.showGradeDistribution
+            preferences[WORKOUT_CARD_SHOW_HRV] = prefs.showHrv
             preferences[WORKOUT_CARD_SHOW_EXPORT_STATUS] = prefs.showExportStatus
             preferences[WORKOUT_CARD_SHOW_PHOTOS] = prefs.showPhotos
             preferences[WORKOUT_CARD_SHOW_PHOTO_ADD_BUTTON] = prefs.showPhotoAddButton

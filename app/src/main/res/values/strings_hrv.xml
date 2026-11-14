@@ -29,9 +29,9 @@
 
     <!-- Training Zones Tab (ATT-7317 / REQ-TRK-061.4) -->
     <string name="tab_hrv_dfa_a1">HRV (DFA α1)</string>
-    <string name="hrv_zone_aerobic_base_label">Aerobic Base (Zone 2)</string>
-    <string name="hrv_zone_threshold_transition_label">Threshold Transition (Zone 3)</string>
-    <string name="hrv_zone_anaerobic_label">High Intensity / Anaerobic (Zone 4)</string>
+    <string name="hrv_zone_aerobic_base_label">Aerobic Base</string>
+    <string name="hrv_zone_threshold_transition_label">Threshold Transition</string>
+    <string name="hrv_zone_anaerobic_label">High Intensity / Anaerobic</string>
     <string name="hrv_t1_aerobic_threshold_label">Aerobic Threshold T1 (HRVT1)</string>
     <string name="hrv_t2_anaerobic_threshold_label">Anaerobic Threshold T2 (HRVT2)</string>
     <string name="hrv_zone_aerobic_base_desc">Aerobic base endurance pacing, low autonomic stress</string>
@@ -79,7 +79,7 @@
     <string name="morning_hrv_btn_save">Save</string>
     <string name="morning_hrv_btn_discard">Discard</string>
     <string name="morning_hrv_instructions_title">Standardized Protocol</string>
-    <string name="morning_hrv_instructions_desc">Measure upon waking after bladder voiding. Remain still and breathe normally without speaking. Maintain posture consistency for reliable SWC baseline comparisons.</string>
+    <string name="morning_hrv_instructions_desc">Measure at rest directly upon waking. Remain still and breathe normally without speaking. Maintain posture consistency for reliable SWC baseline comparisons.</string>
     <string name="morning_hrv_artifact_warning_title">High Artifact Rate</string>
     <string name="morning_hrv_artifact_warning_desc">Artifact rate exceeds 5%% (%1$.1f%%). Ensure your ECG chest strap electrodes are well moistened and firmly positioned.</string>
     <string name="morning_hrv_smoothed_warning_title">Smoothed RR Stream Detected</string>
@@ -207,6 +207,8 @@
     <string name="hrv_test_btn_finish">Finish Test</string>
     <string name="hrv_test_btn_cooldown">Begin Cool-down</string>
     <string name="hrv_test_btn_cancel">Cancel Test</string>
+    <string name="hrv_workout_name_step">HRV Step Test (DFA α1)</string>
+    <string name="hrv_workout_name_ramp">HRV Ramp Test (DFA α1)</string>
 
     <!-- Active Pacing Guidance (ATT-7529) -->
     <string name="hrv_test_pacing_target_header">Target</string>

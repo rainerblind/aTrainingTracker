@@ -26,6 +26,7 @@ import androidx.lifecycle.SavedStateHandle
 import com.atrainingtracker.banalservice.BANALService
 import com.atrainingtracker.banalservice.Protocol
 import com.atrainingtracker.banalservice.devices.DeviceType
+import com.atrainingtracker.banalservice.ui.devices.devicelist.DeviceSortOrder
 import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceDataRepository
 import com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStore
@@ -467,6 +468,34 @@ class DevicesTabbedViewModelTest {
         assertNotNull(viewModel.zonePromptState.value)
         viewModel.dismissZonePrompt()
         assertNull(viewModel.zonePromptState.value)
+    }
+
+    @Test
+    fun testSortOrder_defaultIsAlphabetical() {
+        val viewModel = DevicesTabbedViewModel(mockApplication, SavedStateHandle())
+        assertEquals(DeviceSortOrder.ALPHABETICAL, viewModel.sortOrder.value)
+    }
+
+    @Test
+    fun testSortOrder_setSortOrderUpdatesFlowAndSavesToSavedStateHandle() {
+        val savedStateHandle = SavedStateHandle()
+        val viewModel = DevicesTabbedViewModel(mockApplication, savedStateHandle)
+
+        viewModel.setSortOrder(DeviceSortOrder.BATTERY_LEVEL)
+        assertEquals(DeviceSortOrder.BATTERY_LEVEL, viewModel.sortOrder.value)
+        assertEquals(DeviceSortOrder.BATTERY_LEVEL.name, savedStateHandle.get<String>(DevicesTabbedViewModel.KEY_SORT_ORDER))
+
+        viewModel.setSortOrder(DeviceSortOrder.LAST_USAGE)
+        assertEquals(DeviceSortOrder.LAST_USAGE, viewModel.sortOrder.value)
+        assertEquals(DeviceSortOrder.LAST_USAGE.name, savedStateHandle.get<String>(DevicesTabbedViewModel.KEY_SORT_ORDER))
+    }
+
+    @Test
+    fun testSortOrder_restoredFromSavedStateHandle() {
+        val savedStateHandle = SavedStateHandle(mapOf(DevicesTabbedViewModel.KEY_SORT_ORDER to DeviceSortOrder.FIRST_SEEN.name))
+        val viewModel = DevicesTabbedViewModel(mockApplication, savedStateHandle)
+
+        assertEquals(DeviceSortOrder.FIRST_SEEN, viewModel.sortOrder.value)
     }
 }
 

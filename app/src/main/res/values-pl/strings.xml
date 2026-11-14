@@ -153,6 +153,8 @@
 
     <!-- sensor types -->
     <string name="accumulated_sensors">skumulowane czujniki</string>
+    <string name="world_yaw_rate">Prędkość kątowa odchylenia</string>
+    <string name="world_yaw_rate_short">Prędkość odchylenia</string>
     <string name="accumulated_sensors_short">czuj. skum.</string>
     <string name="accuracy">dokładność</string>
     <string name="accuracy_short">dokł.</string>
@@ -1267,6 +1269,7 @@
     <string name="settings_workout_card_description">Opis i notatki</string>
     <string name="settings_workout_card_charts">Wykresy telemetryczne</string>
     <string name="settings_workout_card_zones">Analiza stref (tętno i moc)</string>
+    <string name="settings_workout_card_hrv">Analiza HRV</string>
     <string name="settings_edit_workout_title">Edytuj trening</string>
     <string name="settings_edit_workout_cluster">Trasa / Segment</string>
     <string name="settings_edit_workout_commute_trainer">Dojazd do pracy i trenażer</string>
@@ -1527,6 +1530,8 @@
     <string name="tuning_altitude_window_desc">Okno czasowe średniej kroczącej dla chwilowej wysokości i prędkości pionowej.</string>
     <string name="tuning_slope_min_speed_title">Minimalna prędkość dla nachylenia</string>
     <string name="tuning_slope_min_speed_desc">Minimalna prędkość wymagana do obliczania nachylenia w czasie rzeczywistym.</string>
+    <string name="tuning_post_workout_erts_smoothing_title">Wygładzanie ERTS po treningu</string>
+    <string name="tuning_post_workout_erts_smoothing_desc">Stosuje dwukierunkowe wygładzanie Extended Rauch-Tung-Striebel do trajektorii i profilu wysokości po zapisaniu treningu.</string>
     <string name="tuning_cat_aftermath">Aftermath i analiza profilu</string>
     <string name="tuning_profile_x_axis_title">Oś X profilu wysokości</string>
     <string name="tuning_profile_x_axis_desc">Wybierz metrykę osi poziomej dla wykresów profilu wysokości.</string>
@@ -2169,6 +2174,7 @@
     <string name="workout_detail_tab_overview">Przegląd</string>
     <string name="workout_detail_tab_map_graphs">Mapa i wykresy</string>
     <string name="workout_detail_tab_zones">Strefy</string>
+    <string name="workout_detail_tab_hrv">HRV</string>
     <string name="workout_detail_tab_laps_segments">Okrążenia i segmenty</string>
     <string name="workout_detail_tab_custom_default">Własna karta</string>
     <string name="workout_detail_section_details">Metryki i podsumowanie treningu</string>

@@ -41,9 +41,9 @@ object HrvZoneIndicator {
     )
 
     /**
-     * Zone labels for under-segment active badge in [ZoneGaugeBar] (REQ-TRK-061.3, ATT-7520).
+     * Zone labels for under-segment active badge in [ZoneGaugeBar] (REQ-TRK-061.3, ATT-7520, ATT-7742).
      */
-    val HRV_ZONE_LABELS: List<String> = listOf("Z2", "Z3", "Z4")
+    val HRV_ZONE_LABELS: List<String> = listOf("Aerobic", "Transition", "Anaerobic")
 
     /**
      * Resolves the semantic zone color for a DFA alpha 1 exponent:
@@ -73,19 +73,20 @@ object HrvZoneIndicator {
     }
 
     /**
-     * Computes the [ZoneGaugeState] for DFA alpha 1 metrics based on active thresholds [t1] and [t2] (REQ-TRK-061.3, ATT-7520).
+     * Computes the [ZoneGaugeState] for DFA alpha 1 metrics based on active thresholds [t1] and [t2] (REQ-TRK-061.3, ATT-7520, ATT-7742).
      *
      * Maps to a 3-zone HRV gauge bar with:
-     * - Zone 2 (Aerobic Base, alpha1 > t1): activeZoneIndex = 1, badge "Z2"
-     * - Zone 3 (Threshold Transition, t2 <= alpha1 <= t1): activeZoneIndex = 2, badge "Z3"
-     * - Zone 4 (Anaerobic / High Intensity, alpha1 < t2): activeZoneIndex = 3, badge "Z4"
+     * - Zone 1 (Aerobic Base, alpha1 > t1): activeZoneIndex = 1, badge "Aerobic" (or localized equivalent)
+     * - Zone 2 (Threshold Transition, t2 <= alpha1 <= t1): activeZoneIndex = 2, badge "Transition" (or localized equivalent)
+     * - Zone 3 (Anaerobic / High Intensity, alpha1 < t2): activeZoneIndex = 3, badge "Anaerobic" (or localized equivalent)
      * - Proportional segment weights reflecting spans (1.20 - t1), (t1 - t2), (t2 - 0.20).
      * - Returns null if [alpha1] is null, NaN, non-finite, or negative.
      */
     fun calculateZoneGaugeState(
         alpha1: Double?,
         t1: Float = TuningPreferencesDefaults.DEFAULT_DFA_A1_THRESHOLD_T1,
-        t2: Float = TuningPreferencesDefaults.DEFAULT_DFA_A1_THRESHOLD_T2
+        t2: Float = TuningPreferencesDefaults.DEFAULT_DFA_A1_THRESHOLD_T2,
+        zoneLabels: List<String>? = HRV_ZONE_LABELS
     ): ZoneGaugeState? {
         if (alpha1 == null || alpha1.isNaN() || alpha1.isInfinite() || alpha1 < 0.0) {
             return null
@@ -127,7 +128,7 @@ object HrvZoneIndicator {
             needleFraction = needleFraction,
             activeZoneIndex = activeZoneIndex,
             segmentWeights = segmentWeights,
-            zoneLabels = HRV_ZONE_LABELS
+            zoneLabels = zoneLabels ?: HRV_ZONE_LABELS
         )
     }
 }

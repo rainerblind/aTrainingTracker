@@ -94,6 +94,7 @@ fun AdvancedTuningDialog(
     var wakeupSec by remember { mutableIntStateOf(TuningPreferencesDefaults.WAKEUP_DURATION_SEC) }; var downwardDelaySec by remember { mutableIntStateOf(TuningPreferencesDefaults.DOWNWARD_DELAY_SEC) }
     var gpsAccuracy by remember { mutableFloatStateOf(TuningPreferencesDefaults.GPS_ACCURACY_THRESHOLD_M) }; var altitudeWindowSec by remember { mutableIntStateOf(TuningPreferencesDefaults.ALTITUDE_FILTER_WINDOW_SEC) }
     var slopeMinSpeed by remember { mutableFloatStateOf(TuningPreferencesDefaults.SLOPE_MIN_SPEED_MPS) }; var paceCeilingMinKm by remember { mutableFloatStateOf(TuningPreferencesDefaults.DEFAULT_PACE_CEILING_MIN_KM) }
+    var postWorkoutErtsSmoothingEnabled by remember { mutableStateOf(TuningPreferencesDefaults.DEFAULT_POST_WORKOUT_ERTS_SMOOTHING_ENABLED) }
     var cockpitFontFamily by remember { mutableStateOf(TuningPreferencesDefaults.COCKPIT_FONT_FAMILY) }; var cockpitFontWeight by remember { mutableStateOf(TuningPreferencesDefaults.COCKPIT_FONT_WEIGHT) }
     var sensorFieldVariant by remember { mutableStateOf(TuningPreferencesDefaults.SENSOR_FIELD_VARIANT) }; var sensorFieldCornerRadius by remember { mutableFloatStateOf(TuningPreferencesDefaults.SENSOR_FIELD_CORNER_RADIUS) }
     var sensorFieldBorderThickness by remember { mutableFloatStateOf(TuningPreferencesDefaults.SENSOR_FIELD_BORDER_THICKNESS) }; var sensorFieldBorderContrast by remember { mutableFloatStateOf(TuningPreferencesDefaults.SENSOR_FIELD_BORDER_CONTRAST) }
@@ -154,6 +155,7 @@ fun AdvancedTuningDialog(
         wakeupSec = config.wakeupDurationSec; downwardDelaySec = config.downwardDelaySec
         gpsAccuracy = config.gpsAccuracyThresholdMeters; altitudeWindowSec = config.altitudeFilterWindowSec
         slopeMinSpeed = config.slopeMinSpeedMps; paceCeilingMinKm = config.paceCeilingMinKm
+        postWorkoutErtsSmoothingEnabled = config.postWorkoutErtsSmoothingEnabled
         routeSelectionRadiusKm = config.routeSelectionRadiusKm
         navigationCueDismissDurationSec = config.navigationCueDismissDurationSec; elevationSmoothingSigmaMeters = config.elevationSmoothingSigmaMeters
         showAntMissingAdapterWarnings = config.showAntMissingAdapterWarnings; autoFollowUniqueRouteEnabled = config.autoFollowUniqueRouteEnabled
@@ -200,7 +202,7 @@ fun AdvancedTuningDialog(
                         sensorFieldVariant = sensorFieldVariant, sensorFieldCornerRadius = sensorFieldCornerRadius, sensorFieldBorderThickness = sensorFieldBorderThickness, sensorFieldBorderContrast = sensorFieldBorderContrast,
                         fullDimFactor = fullDimFactor, mediumDimFactor = mediumDimFactor, slopeFlatThreshold = slopeFlat, slopeSteepThreshold = slopeSteep,
                         wakeupDurationSec = wakeupSec, downwardDelaySec = downwardDelaySec, gpsAccuracyThresholdMeters = gpsAccuracy, altitudeFilterWindowSec = altitudeWindowSec,
-                        slopeMinSpeedMps = slopeMinSpeed, paceCeilingMinKm = paceCeilingMinKm, routeSelectionRadiusKm = routeSelectionRadiusKm,
+                        slopeMinSpeedMps = slopeMinSpeed, postWorkoutErtsSmoothingEnabled = postWorkoutErtsSmoothingEnabled, paceCeilingMinKm = paceCeilingMinKm, routeSelectionRadiusKm = routeSelectionRadiusKm,
                         navigationCueDismissDurationSec = navigationCueDismissDurationSec, elevationSmoothingSigmaMeters = elevationSmoothingSigmaMeters,
                         suppressAntMissingAdapterDialog = !showAntMissingAdapterWarnings, autoFollowUniqueRouteEnabled = autoFollowUniqueRouteEnabled,
                         turnCueCountdownDistanceMeters = turnCueCountdownDistanceMeters,
@@ -314,7 +316,9 @@ fun AdvancedTuningDialog(
                 SensorsGpsFilterSection(
                     gpsAccuracy = gpsAccuracy, onGpsAccuracyChange = { gpsAccuracy = it },
                     altitudeWindowSec = altitudeWindowSec, onAltitudeWindowChange = { altitudeWindowSec = it },
-                    slopeMinSpeed = slopeMinSpeed, onSlopeMinSpeedChange = { slopeMinSpeed = it }
+                    slopeMinSpeed = slopeMinSpeed, onSlopeMinSpeedChange = { slopeMinSpeed = it },
+                    postWorkoutErtsSmoothingEnabled = postWorkoutErtsSmoothingEnabled,
+                    onPostWorkoutErtsSmoothingChange = { postWorkoutErtsSmoothingEnabled = it }
                 )
             }
 

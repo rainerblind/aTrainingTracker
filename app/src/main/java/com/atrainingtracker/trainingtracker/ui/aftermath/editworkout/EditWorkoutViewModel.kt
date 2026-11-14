@@ -35,6 +35,7 @@ import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
 import com.atrainingtracker.trainingtracker.repositories.EquipmentRepository
 import com.atrainingtracker.trainingtracker.repositories.SportTypesRepository
+import com.atrainingtracker.trainingtracker.TrainingApplication
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -102,7 +103,7 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
     val clusterSuggestions: StateFlow<List<Pair<WorkoutCluster, Double>>> = _clusterSuggestions.asStateFlow()
 
     var userManuallyChangedWorkoutName: Boolean = false
-        private set
+        internal set
 
     init {
         loadWorkoutData()
@@ -143,7 +144,9 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
                             stravaSportName = data.stravaSportName
                         )
                     } else {
-                        data
+                        data.copy(
+                            syncToHealthConnect = data.syncToHealthConnect ?: TrainingApplication.syncToHealthConnect()
+                        )
                     }
                 }
                 
@@ -192,6 +195,10 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
     fun updateWorkoutName(newName: String) {
         userManuallyChangedWorkoutName = true
         _workoutData.update { it?.copy(workoutName = newName) }
+    }
+
+    fun onWorkoutNameChanged(newName: String) {
+        updateWorkoutName(newName)
     }
 
     /**
@@ -402,6 +409,13 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
         _workoutData.update { it?.copy(uploadToStrava = if (isChecked) 1 else 0) }
     }
 
+    /**
+     * Updates the per-workout Health Connect sync selection (REQ-REV-014.1 / ATT-7669).
+     */
+    fun updateSyncToHealthConnect(isChecked: Boolean) {
+        _workoutData.update { it?.copy(syncToHealthConnect = isChecked) }
+    }
+
     fun updateIsRace(isChecked: Boolean) {
         _workoutData.update { it?.copy(race = isChecked) }
     }
@@ -465,6 +479,7 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
     }
 
     fun applyClusterIdentity(cluster: WorkoutCluster) {
+        userManuallyChangedWorkoutName = false
         val displayCount = cluster.hitCount + 1
         val formattedName = WorkoutClusterEngine.formatClusterWorkoutName(application, cluster.name, displayCount, cluster.hasCounter)
         _workoutData.update { current ->
@@ -485,10 +500,13 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
     }
 
     fun unassignCluster() {
+        userManuallyChangedWorkoutName = false
         _workoutData.update { current ->
+            val fallbackName = current?.fileBaseName?.takeIf { it.isNotBlank() } ?: current?.sportName ?: current?.workoutName ?: ""
             current?.copy(
                 clusterId = -1L,
-                clusterName = null
+                clusterName = null,
+                workoutName = fallbackName
             )
         }
         repository.unassignClusterFromWorkout(workoutId)
@@ -497,12 +515,8 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
     fun createNewCluster(customName: String, hasCounter: Boolean = true) {
         val trimmedName = customName.trim()
         val current = _workoutData.value
-        val customWorkoutName = if (userManuallyChangedWorkoutName) current?.workoutName else null
-        val resolvedWorkoutName = if (userManuallyChangedWorkoutName) {
-            current?.workoutName ?: trimmedName
-        } else {
-            WorkoutClusterEngine.formatClusterWorkoutName(application, trimmedName, 1, hasCounter)
-        }
+        userManuallyChangedWorkoutName = false
+        val resolvedWorkoutName = WorkoutClusterEngine.formatClusterWorkoutName(application, trimmedName, 1, hasCounter)
 
         // Synchronous in-memory update so UI reflects the new route and name immediately (REQ-SET-072)
         _workoutData.update { curr ->
@@ -513,9 +527,9 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
         }
 
         if (current != null) {
-            repository.createNewClusterFromWorkout(current, trimmedName, hasCounter, customWorkoutName)
+            repository.createNewClusterFromWorkout(current, trimmedName, hasCounter, null)
         } else {
-            repository.createNewClusterFromWorkout(workoutId, trimmedName, hasCounter, customWorkoutName)
+            repository.createNewClusterFromWorkout(workoutId, trimmedName, hasCounter, null)
         }
     }
 

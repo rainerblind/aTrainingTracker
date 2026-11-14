@@ -23,6 +23,7 @@ import android.content.BroadcastReceiver
 import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.ServiceConnection
 import android.content.pm.ServiceInfo
 import android.database.sqlite.SQLiteDatabase
@@ -36,6 +37,7 @@ import com.atrainingtracker.banalservice.sensor.MySensorManager
 import com.atrainingtracker.banalservice.sensor.SensorType
 import com.atrainingtracker.trainingtracker.database.EquipmentAndSportTypeDiscoveryManager
 import com.atrainingtracker.trainingtracker.database.ExtremaType
+import com.atrainingtracker.trainingtracker.database.WorkoutCluster
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
@@ -53,6 +55,7 @@ import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotSame
+import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -85,6 +88,10 @@ class TrackerServiceFinalizationTest {
         var onUnbindServiceAction: (() -> Unit)? = null
 
         var capturedSnapshot: TrackerService.BanalFinalizationSnapshot? = null
+        var capturedFinalizationWorkoutId: Long? = null
+        var capturedFinalizationBaseFileName: String? = null
+        var capturedFinalizationLiveSession: LiveWorkoutSession? = null
+        var mockCreatedWorkoutId: Long? = null
         var savedLapNr: Long? = null
         var savedLapTime: Int? = null
         var savedLapDistance: Double? = null
@@ -93,14 +100,64 @@ class TrackerServiceFinalizationTest {
         override fun getBuildVersionSdkInt(): Int = testSdkInt
         override fun hasHealthPermission(): Boolean = healthGranted
 
+        private var inEndWorkoutWithArgs = false
+
         override fun endWorkout() {
             endWorkoutCalled = true
             banalServicePresentDuringEndWorkout = (mBanalService != null)
             onEndWorkoutAction?.invoke()
             endWorkoutLatchHook?.invoke()
-            if (delegateToRealEndWorkout) {
+            if (delegateToRealEndWorkout && !inEndWorkoutWithArgs) {
                 super.endWorkout()
             }
+        }
+
+        override fun endWorkout(
+            snapshot: TrackerService.BanalFinalizationSnapshot?,
+            workoutId: Long,
+            baseFileName: String?,
+            liveSession: LiveWorkoutSession?
+        ) {
+            capturedSnapshot = snapshot
+            capturedFinalizationWorkoutId = workoutId
+            capturedFinalizationBaseFileName = baseFileName
+            capturedFinalizationLiveSession = liveSession
+            inEndWorkoutWithArgs = true
+            try {
+                endWorkout()
+            } finally {
+                inEndWorkoutWithArgs = false
+            }
+            if (delegateToRealEndWorkout) {
+                super.endWorkout(snapshot, workoutId, baseFileName, liveSession)
+            }
+        }
+
+        val finalizationSnapshotForTesting: TrackerService.BanalFinalizationSnapshot?
+            get() = capturedSnapshot
+
+        override fun createNewWorkout(): Long {
+            return mockCreatedWorkoutId ?: super.createNewWorkout()
+        }
+
+        override fun performStartForeground(id: Int, notification: android.app.Notification?, foregroundServiceType: Int) {
+            // No-op in unit tests
+        }
+
+        override fun registerReceiver(receiver: BroadcastReceiver?, filter: IntentFilter?): Intent? = null
+
+        override fun bindService(service: Intent, conn: ServiceConnection, flags: Int): Boolean = true
+
+        override fun registerTransientReceivers() {
+            // No-op in unit tests
+        }
+
+        override fun unregisterTransientReceivers() {
+            // No-op in unit tests
+        }
+
+        override fun onSearchingFinished() {
+            // No-op in unit tests
         }
 
         override fun saveLap(lapNr: Long, lapTime: Int, lapDistance: Double, averageSpeed: Double) {
@@ -108,6 +165,10 @@ class TrackerServiceFinalizationTest {
             savedLapTime = lapTime
             savedLapDistance = lapDistance
             savedLapSpeed = averageSpeed
+        }
+
+        override fun saveLap(workoutId: Long, lapNr: Long, lapTime: Int, lapDistance: Double, averageSpeed: Double) {
+            saveLap(lapNr, lapTime, lapDistance, averageSpeed)
         }
 
         override fun performStopForeground() {
@@ -334,6 +395,99 @@ class TrackerServiceFinalizationTest {
                 any(),
                 any()
             )
+        }
+    }
+
+    /**
+     * TST-TRK-072.10d: Verifies that in finalizeLiveSession(), if the workout is a guided HRV test
+     * (method == "GUIDED_STEP" or "GUIDED_RAMP"), cluster and location auto-naming do NOT overwrite
+     * the localized protocol title via repository.updateWorkoutName(), while cluster ID and hardware identity
+     * are still assigned.
+     */
+    @Test
+    fun testFinalizeLiveSession_GuidedHrvTest_PreservesProtocolNameAndSuppressesClusterOverwrite_TST_TRK_072_10d() {
+        val workoutId = 7745L
+        setWorkoutId(workoutId)
+        setField("mTimeActive_s", 1800)
+        setField("mDistanceTotal_m", 15000.0)
+        setField("mBanalService", null)
+
+        val repositoryMock = mockk<WorkoutRepository>(relaxed = true)
+        every { repositoryMock.getWorkoutMethod(workoutId) } returns "GUIDED_STEP"
+        every { repositoryMock.getExtremaPosition(any(), any(), any()) } returns LatLng(48.139, 11.578)
+        setField("mWorkoutRepository", repositoryMock)
+
+        val summariesManagerMock = mockk<WorkoutSummariesDatabaseManager>(relaxed = true)
+        mockkStatic(WorkoutSummariesDatabaseManager::class)
+        every { WorkoutSummariesDatabaseManager.getInstance(any()) } returns summariesManagerMock
+
+        val discoveryManagerMock = mockk<EquipmentAndSportTypeDiscoveryManager>(relaxed = true)
+        mockkObject(EquipmentAndSportTypeDiscoveryManager.Companion)
+        every { EquipmentAndSportTypeDiscoveryManager.getInstance(any()) } returns discoveryManagerMock
+        val identity = EquipmentAndSportTypeDiscoveryManager.InferredIdentity(
+            sportId = 1L,
+            bSportType = BSportType.BIKE,
+            equipmentId = 0L,
+            stravaSportName = null,
+            uploadToStrava = 1,
+            isHighConfidence = true
+        )
+        every { discoveryManagerMock.resolveIdentity(any<Set<Long>>(), any<BSportType>(), any<Double>()) } returns identity
+
+        val liveSessionMock = mockk<LiveWorkoutSession>(relaxed = true)
+        val trackPoints = listOf(LatLng(48.137, 11.576), LatLng(48.138, 11.577))
+        every { liveSessionMock.rawLatLngs } returns trackPoints
+        every { liveSessionMock.sampledLatLngs } returns trackPoints
+        every { liveSessionMock.startLatLng } returns trackPoints.first()
+        every { liveSessionMock.lastLatLng } returns trackPoints.last()
+        setField("mLiveSession", liveSessionMock)
+
+        val engineMock = mockk<com.atrainingtracker.trainingtracker.database.WorkoutClusterEngine>(relaxed = true)
+        val clusterSuggestion = WorkoutCluster(
+            id = 55L,
+            name = "Hausrunde",
+            probableSportId = 1L,
+            startLat = 48.137,
+            startLng = 11.576,
+            endLat = 48.138,
+            endLng = 11.577,
+            maxDispLat = 48.139,
+            maxDispLng = 11.578,
+            refDistance = 1000.0,
+            hitCount = 4,
+            hasCounter = true
+        )
+        com.atrainingtracker.trainingtracker.database.WorkoutClusterEngine.resetForTesting(engineMock)
+        mockkObject(com.atrainingtracker.trainingtracker.database.WorkoutClusterEngine.Companion)
+        every { com.atrainingtracker.trainingtracker.database.WorkoutClusterEngine.getInstance(any()) } returns engineMock
+        every {
+            engineMock.suggestCluster(
+                start = any(),
+                end = any(),
+                apex = any(),
+                distance = any(),
+                workoutName = or(isNull(), any()),
+                candidateSportTypes = any(),
+                minAltPos = or(isNull(), any()),
+                maxAltPos = or(isNull(), any()),
+                cachedClusters = or(isNull(), any()),
+                scoreThreshold = any(),
+                workoutPolyline = or(isNull(), any())
+            )
+        } returns clusterSuggestion
+
+        service.throwInGuessCommuteAndTrainer = true
+
+        // Act
+        service.callFinalizeLiveSession()
+
+        // Assert: updateWorkoutName was NEVER called because isGuidedHrvTest is true
+        verify(exactly = 0) {
+            repositoryMock.updateWorkoutName(eq(workoutId), any())
+        }
+        // Cluster ID was still associated
+        verify(exactly = 1) {
+            repositoryMock.updateWorkoutClusterId(eq(workoutId), eq(55L))
         }
     }
 
@@ -743,7 +897,9 @@ class TrackerServiceFinalizationTest {
             mockBanal,
             mockContext,
             7.5,
-            true
+            true,
+            5000.0,
+            667
         )
 
         assertEquals(3, snapshot.lapNr)
@@ -754,6 +910,10 @@ class TrackerServiceFinalizationTest {
         assertEquals("HR=150,SPD=25", snapshot.accumulatedGCDataString)
         assertEquals(BSportType.BIKE, snapshot.bSportType)
         assertEquals(BSportType.BIKE, snapshot.userSelectedSportType)
+        assertEquals(7.5, snapshot.avgSpeed, 1e-6)
+        assertTrue(snapshot.avgSpeedCalculable)
+        assertEquals(5000.0, snapshot.totalDistance_m, 1e-6)
+        assertEquals(667, snapshot.timeActive_s)
     }
 
     /**
@@ -891,6 +1051,265 @@ class TrackerServiceFinalizationTest {
         realService.handleActionStop()
 
         assertFalse("handleActionStop must stop RadarTrafficSimulator", com.atrainingtracker.banalservice.devices.radar.RadarTrafficSimulator.isSimulating)
+    }
+
+    /**
+     * TST-TRK-076.1 / TST-TRK-076.4: Verifies that handleActionStop() does NOT shut down
+     * mDbExecutor, mScheduler, or mRrFlushExecutor, and that complete executor shutdown occurs
+     * strictly in onDestroy() (REQ-TRK-076.1).
+     */
+    @Test
+    fun testHandleActionStop_doesNotShutdownExecutors_executorsOnlyShutdownInOnDestroy() {
+        val realService = TestableTrackerService()
+        val workoutIdField = TrackerService::class.java.getDeclaredField("mWorkoutID").apply { isAccessible = true }
+        workoutIdField.set(realService, 1001L)
+        val baseFileNameField = TrackerService::class.java.getDeclaredField("mBaseFileName").apply { isAccessible = true }
+        baseFileNameField.set(realService, "2026-11-14_1001")
+
+        // Act 1: Stop workout
+        realService.handleActionStop()
+
+        // Assert 1: Immediately upon stop, executors must remain active (not shut down)
+        assertFalse("mDbExecutor must NOT be shut down in handleActionStop", realService.isDbExecutorShutdownForTesting)
+        assertFalse("mScheduler must NOT be shut down in handleActionStop", realService.isSchedulerShutdownForTesting)
+        assertFalse("mRrFlushExecutor must NOT be shut down in handleActionStop", realService.isRrFlushExecutorShutdownForTesting)
+        assertTrue("isStopping must be true while finalization is running", realService.isStoppingForTesting)
+
+        // Wait for async finalization to complete
+        realService.finalizationFuture.get(3, java.util.concurrent.TimeUnit.SECONDS)
+
+        // Assert 2: Even after finalization completes, executors remain active until onDestroy
+        assertFalse("mDbExecutor must remain open after finalization until onDestroy", realService.isDbExecutorShutdownForTesting)
+        assertFalse("mScheduler must remain open after finalization until onDestroy", realService.isSchedulerShutdownForTesting)
+        assertFalse("mRrFlushExecutor must remain open after finalization until onDestroy", realService.isRrFlushExecutorShutdownForTesting)
+
+        // Act 2: Destroy service
+        realService.onDestroy()
+
+        // Assert 3: Executors are cleanly shut down strictly in onDestroy()
+        assertTrue("mDbExecutor must be shut down in onDestroy", realService.isDbExecutorShutdownForTesting)
+        assertTrue("mScheduler must be shut down in onDestroy", realService.isSchedulerShutdownForTesting)
+        assertTrue("mRrFlushExecutor must be shut down in onDestroy", realService.isRrFlushExecutorShutdownForTesting)
+    }
+
+    /**
+     * TST-TRK-076.1 / TST-TRK-076.2: Verifies that starting a new workout while async finalization
+     * is in progress on mDbExecutor does not throw RejectedExecutionException, increments mSessionGeneration,
+     * resets mIsStopping, and ensures session 1 finalization executes with its isolated snapshot parameters.
+     */
+    @Test
+    fun testOnStartCommand_duringAsyncFinalization_noRejectedExecution_and_isolatedParameters() {
+        val realService = TestableTrackerService()
+        val repositoryMock = mockk<WorkoutRepository>(relaxed = true)
+        val repoField = TrackerService::class.java.getDeclaredField("mWorkoutRepository").apply { isAccessible = true }
+        repoField.set(realService, repositoryMock)
+
+        val workoutIdField = TrackerService::class.java.getDeclaredField("mWorkoutID").apply { isAccessible = true }
+        val baseFileNameField = TrackerService::class.java.getDeclaredField("mBaseFileName").apply { isAccessible = true }
+        val liveSessionField = TrackerService::class.java.getDeclaredField("mLiveSession").apply { isAccessible = true }
+
+        val session1WorkoutId = 1001L
+        val session1BaseFileName = "2026-11-14_session1"
+        val session1LiveSession = LiveWorkoutSession(0, TrackerService.IMPORTANT_SENSOR_TYPES)
+
+        workoutIdField.set(realService, session1WorkoutId)
+        baseFileNameField.set(realService, session1BaseFileName)
+        liveSessionField.set(realService, session1LiveSession)
+
+        val session1ExecutingLatch = java.util.concurrent.CountDownLatch(1)
+        val session2StartLatch = java.util.concurrent.CountDownLatch(1)
+
+        realService.endWorkoutLatchHook = {
+            session1ExecutingLatch.countDown()
+            // Hold session 1 in endWorkout() until session 2 is submitted via onStartCommand
+            session2StartLatch.await(3, java.util.concurrent.TimeUnit.SECONDS)
+        }
+
+        val initialGeneration = realService.sessionGenerationForTesting
+
+        // Trigger stop for session 1
+        realService.handleActionStop()
+
+        // Wait until session 1's endWorkout() is active on mDbExecutor
+        assertTrue("Session 1 endWorkout must be active", session1ExecutingLatch.await(2, java.util.concurrent.TimeUnit.SECONDS))
+        assertTrue("realService must be in stopping state", realService.isStoppingForTesting)
+
+        // Session 2 start intent
+        val startIntent = mockk<Intent>(relaxed = true)
+        every { startIntent.getStringExtra(TrackerService.START_TYPE) } returns TrackerService.StartType.START_NORMAL.name
+        realService.mockCreatedWorkoutId = 2002L
+
+        // Act: Start session 2 re-entrantly during session 1 finalization
+        var rejectedExecutionOccurred = false
+        try {
+            realService.onStartCommand(startIntent, 0, 1)
+        } catch (e: java.util.concurrent.RejectedExecutionException) {
+            rejectedExecutionOccurred = true
+        } finally {
+            session2StartLatch.countDown()
+        }
+
+        assertFalse("onStartCommand must NEVER throw RejectedExecutionException during async stop finalization", rejectedExecutionOccurred)
+
+        // Verify session generation incremented and stopping flag cleared
+        assertTrue("mSessionGeneration must increment on restart", realService.sessionGenerationForTesting > initialGeneration)
+        assertFalse("mIsStopping must be reset to false on restart", realService.isStoppingForTesting)
+
+        // Wait for session 1 finalization to complete
+        realService.finalizationFuture.get(3, java.util.concurrent.TimeUnit.SECONDS)
+        realService.cancelTrackerHandle()
+
+        // Assert: Session 1 finalization received its isolated snapshot parameters
+        assertEquals("Session 1 endWorkout must use isolated workoutId", session1WorkoutId, realService.capturedFinalizationWorkoutId)
+        assertEquals("Session 1 endWorkout must use isolated baseFileName", session1BaseFileName, realService.capturedFinalizationBaseFileName)
+        assertSame("Session 1 endWorkout must use isolated liveSession", session1LiveSession, realService.capturedFinalizationLiveSession)
+    }
+
+    /**
+     * TST-TRK-076.3: Verifies that session teardown (performStopSelf, performStopForeground,
+     * safeUnbindBanalService) is suppressed when a new session starts while finalization is in progress.
+     */
+    @Test
+    fun testTeardownSuppressed_whenRestartedDuringFinalization() {
+        val realService = TestableTrackerService()
+        val repositoryMock = mockk<WorkoutRepository>(relaxed = true)
+        val repoField = TrackerService::class.java.getDeclaredField("mWorkoutRepository").apply { isAccessible = true }
+        repoField.set(realService, repositoryMock)
+
+        val workoutIdField = TrackerService::class.java.getDeclaredField("mWorkoutID").apply { isAccessible = true }
+        workoutIdField.set(realService, 3001L)
+
+        val banalMock = mockk<com.atrainingtracker.banalservice.BANALService.BANALServiceComm>(relaxed = true)
+        val banalField = TrackerService::class.java.getDeclaredField("mBanalService").apply { isAccessible = true }
+        banalField.set(realService, banalMock)
+        realService.setBanalBoundForTesting(true)
+
+        val finalizationActiveLatch = java.util.concurrent.CountDownLatch(1)
+        val restartLatch = java.util.concurrent.CountDownLatch(1)
+
+        realService.endWorkoutLatchHook = {
+            finalizationActiveLatch.countDown()
+            restartLatch.await(3, java.util.concurrent.TimeUnit.SECONDS)
+        }
+
+        realService.handleActionStop()
+        assertTrue(finalizationActiveLatch.await(2, java.util.concurrent.TimeUnit.SECONDS))
+
+        // Trigger restart before finalization task completes
+        val startIntent = mockk<Intent>(relaxed = true)
+        every { startIntent.getStringExtra(TrackerService.START_TYPE) } returns TrackerService.StartType.START_NORMAL.name
+        realService.mockCreatedWorkoutId = 3002L
+        realService.onStartCommand(startIntent, 0, 1)
+
+        restartLatch.countDown()
+        realService.finalizationFuture.get(3, java.util.concurrent.TimeUnit.SECONDS)
+        realService.cancelTrackerHandle()
+
+        // Teardown should have been suppressed because generation was incremented and mIsStopping was reset to false
+        assertFalse("performStopSelf must be suppressed when new workout starts during finalization", realService.performStopSelfCalled)
+        assertFalse("performStopForeground must be suppressed when new workout starts during finalization", realService.performStopForegroundCalled)
+        assertFalse("safeUnbindBanalService must be suppressed when new workout starts during finalization", realService.unbindServiceCalled)
+    }
+
+    /**
+     * TST-TRK-076.4: Verifies that when stop finalization finishes and no restart has occurred,
+     * teardown (performStopForeground, performStopSelf, unbindService) proceeds normally.
+     */
+    @Test
+    fun testCleanTerminalTeardown_whenNotRestarted() {
+        val realService = TestableTrackerService()
+        val workoutIdField = TrackerService::class.java.getDeclaredField("mWorkoutID").apply { isAccessible = true }
+        workoutIdField.set(realService, 4001L)
+        val banalMock = mockk<com.atrainingtracker.banalservice.BANALService.BANALServiceComm>(relaxed = true)
+        val banalField = TrackerService::class.java.getDeclaredField("mBanalService").apply { isAccessible = true }
+        banalField.set(realService, banalMock)
+        realService.setBanalBoundForTesting(true)
+
+        realService.handleActionStop()
+        realService.finalizationFuture.get(3, java.util.concurrent.TimeUnit.SECONDS)
+
+        assertTrue("performStopForeground must be called when terminal stop completes", realService.performStopForegroundCalled)
+        assertTrue("performStopSelf must be called when terminal stop completes", realService.performStopSelfCalled)
+        assertTrue("unbindService must be called when terminal stop completes", realService.unbindServiceCalled)
+    }
+
+    /**
+     * TST-TRK-076.5: Verifies that finalizeLiveSession consumes snapshot speed, distance, and duration
+     * instead of mutating TrackerService instance fields when a concurrent session restart occurs.
+     */
+    @Test
+    fun testFinalizeLiveSession_usesSnapshotMetrics_isolatedFromServiceFieldMutations() {
+        val service = TestableTrackerService()
+        val repoMock = mockk<WorkoutRepository>(relaxed = true)
+        val repoField = TrackerService::class.java.getDeclaredField("mWorkoutRepository").apply { isAccessible = true }
+        repoField.set(service, repoMock)
+
+        // Mutate service fields as if session 2 has started
+        val workoutIdField = TrackerService::class.java.getDeclaredField("mWorkoutID").apply { isAccessible = true }
+        workoutIdField.set(service, 9999L)
+        val distField = TrackerService::class.java.getDeclaredField("mDistanceTotal_m").apply { isAccessible = true }
+        distField.set(service, 100.0)
+        val timeField = TrackerService::class.java.getDeclaredField("mTimeActive_s").apply { isAccessible = true }
+        timeField.set(service, 10)
+
+        // Snapshot captures Session 1 telemetry
+        val session1WorkoutId = 1234L
+        val snapshot = TrackerService.BanalFinalizationSnapshot(
+            1, 600, 5000.0,
+            emptySet(), emptySet(), null,
+            BSportType.RUN, null, 1L,
+            8.33, true, 5000.0, 600
+        )
+
+        val liveSession = mockk<LiveWorkoutSession>(relaxed = true)
+        val speedStats = LiveWorkoutSession.RunningStats()
+        speedStats.count = 20
+        speedStats.min = 5.0
+        speedStats.max = 12.0
+        speedStats.sum = 160.0
+        every { liveSession.sensorStats } returns mapOf(SensorType.SPEED_mps to speedStats)
+
+        service.finalizeLiveSession(snapshot, session1WorkoutId, "2026-10-18_session1", liveSession)
+
+        // Verify updateExtremaValue for SPEED_mps AVG used snapshot.avgSpeed (8.33), NOT service getAverageSpeed() (10.0)
+        io.mockk.verify {
+            repoMock.updateExtremaValue(
+                session1WorkoutId,
+                SensorType.SPEED_mps,
+                ExtremaType.AVG,
+                8.33,
+                null,
+                20
+            )
+        }
+    }
+
+    @Test
+    fun testFinalizeLiveSession_triggersPersistConvergedCircumferences() {
+        val service = TestableTrackerService()
+        val repoMock = mockk<WorkoutRepository>(relaxed = true)
+        val repoField = TrackerService::class.java.getDeclaredField("mWorkoutRepository").apply { isAccessible = true }
+        repoField.set(service, repoMock)
+
+        val banalRepoMock = mockk<com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository>(relaxed = true)
+        com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository.resetForTesting(banalRepoMock)
+        try {
+            val liveSession = mockk<LiveWorkoutSession>(relaxed = true)
+            val snapshot = TrackerService.BanalFinalizationSnapshot(
+                1, 600, 5000.0,
+                emptySet(), emptySet(), null,
+                BSportType.BIKE, null, 1L,
+                8.33, true, 5000.0, 600
+            )
+
+            service.finalizeLiveSession(snapshot, 1234L, "2026-10-18_session1", liveSession)
+
+            io.mockk.verify {
+                banalRepoMock.persistConvergedCircumferences(null, any())
+            }
+        } finally {
+            com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository.resetForTesting(null)
+        }
     }
 }
 

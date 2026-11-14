@@ -14674,7 +14674,7 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
      - In portrait mode (`!isCompactLandscape`), horizontal padding per sensor icon in the central container SHALL be adjusted to `4.dp` (`size(22.dp)` + `padding(horizontal = 4.dp)` = `30.dp` per icon slot), ensuring all 9 icons fit cleanly within the 272 dp central container (`9 * 30.dp = 270.dp <= 272.dp`) without clipping on compact 360 dp viewports.
      - The radar icon SHALL render at `1.0f` alpha when `RADAR_THREAT_COUNT` is present in `activeSensors` (indicating active BLE/ANT+ radar hardware connected or `RadarTrafficSimulator` active) and at `INACTIVE_SENSOR_ALPHA = 0.38f` when inactive.
      - `SensorType.getIconResId()` SHALL return dedicated 24dp vector drawable `R.drawable.ic_radar` for `SensorType.RADAR_THREAT_COUNT`, `RADAR_CLOSEST_DISTANCE_m`, `RADAR_APPROACH_SPEED_mps`, and `RADAR_VEHICLE_COUNT`.
-     - Dedicated vector asset `res/drawable/ic_radar.xml` SHALL be authored as a clean, standalone 24dp vector drawable featuring concentric radar waves and origin point.
+     - Dedicated vector asset `res/drawable/ic_radar.xml` SHALL be authored as a clean, standalone 24dp vector drawable featuring concentric radar waves and origin point, rotated 90 degrees counter-clockwise (to the left) so waves radiate horizontally to the left representing rearview vehicular radar detection horizon (`ATT-7736`).
   5. *Bike Radar Sensor Source Dialog & Scalar Metric Omission (`REQ-UI-451.5`)*:
      - When `SensorSourceDialog` is opened for `SensorType.RADAR_THREAT_COUNT`:
        - The dialog title SHALL display the localized "Bike Radar" string (`R.string.device_type_bike_radar`, capitalized) alongside `R.drawable.ic_radar`.
@@ -14685,10 +14685,10 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
      - All radar sensor status and source dialog text, dialog titles, and accessibility content descriptions SHALL maintain 100% localization parity across all 9 supported languages (`de`, `en`, `es`, `fr`, `it`, `ja`, `nl`, `pl`, `pt`).
 
 **Requirement Archaeology & Chesterton's Fence Audit**:
-1. *Original Requirement ID & Target*: Extending `REQ-UI-445.3` (*Live Cockpit Status Emblem & Retirement of Quick Icon Picker Dialog*), targets `SensorStatus.kt`, `SensorSourceDialog.kt`, `SensorType.java`, `TrackingTabsScreen.kt`.
-2. *Historical Origin & Commit Trace*: Sprint 2026-45.4 (`ATT-5397`, commit `8baf42c8`), Sprint 2026-45.4 (`ATT-5422`, commit `fb6797a7`), and Sprint 2026-46.5 (`ATT-7544`).
-3. *Root Reason for Existing Formulation*: `REQ-UI-451` originally budgeted 272 dp for 8 legacy sensors (8 * 34 dp = 272 dp). Adding the 9th sensor for Cycling Rearview Radar (`DeviceType.BIKE_RADAR`) without padding adjustment would require 306 dp (> 272 dp) and cause clipping on 360 dp screens.
-4. *Preservation of Core Invariants*: The 8 legacy sensors maintain 100% functional and visual fidelity; 32 dp symmetrical action buttons and 16 dp total display edge offsets are strictly preserved; central alignment is maintained; compact landscape mode remains preserved.
+1. *Original Requirement ID & Target*: Extending `REQ-UI-445.3` (*Live Cockpit Status Emblem & Retirement of Quick Icon Picker Dialog*), targets `SensorStatus.kt`, `SensorSourceDialog.kt`, `SensorType.java`, `TrackingTabsScreen.kt`, `res/drawable/ic_radar.xml`.
+2. *Historical Origin & Commit Trace*: Sprint 2026-45.4 (`ATT-5397`, commit `8baf42c8`), Sprint 2026-45.4 (`ATT-5422`, commit `fb6797a7`), Sprint 2026-46.5 (`ATT-7544`), and Sprint 2026-46.6 (`ATT-7736`).
+3. *Root Reason for Existing Formulation*: `REQ-UI-451` originally budgeted 272 dp for 8 legacy sensors (8 * 34 dp = 272 dp). Adding the 9th sensor for Cycling Rearview Radar (`DeviceType.BIKE_RADAR`) without padding adjustment would require 306 dp (> 272 dp) and cause clipping on 360 dp screens. ATT-7544 authored the standalone 24dp vector asset with concentric waves, but defaulted to upward-pointing waves. Sprint 2026-46.5 Review noted that cycling radar icons canonically radiate horizontally to the left (rearview radar perspective).
+4. *Preservation of Core Invariants*: The 8 legacy sensors maintain 100% functional and visual fidelity; 32 dp symmetrical action buttons and 16 dp total display edge offsets are strictly preserved; central alignment is maintained; compact landscape mode remains preserved; 24dp asset bounds, 960x960 viewport, and vector tinting are strictly preserved under 90° counter-clockwise rotation.
 
 **Acceptance Criteria (Given-When-Then)**:
 • *Given* an athlete viewing the tracking cockpit in portrait mode on a 360 dp display,
@@ -14700,6 +14700,9 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 • *Given* an athlete tapping the radar icon in `SensorStatus`,
 • *When* `SensorSourceDialog` opens,
 • *Then* the title displays the localized "Bike Radar" with `R.drawable.ic_radar`, enumerates `BIKE_RADAR` devices without scalar value text, and clicking a device opens `EditDeviceDialog`.
+• *Given* the Bike Radar status icon `R.drawable.ic_radar` rendered in `SensorStatus` or `SensorSourceDialog`,
+• *When* visually inspected,
+• *Then* the origin point is located at the center-right and the concentric radar wave arcs radiate horizontally to the left (90 degrees counter-clockwise from upward).
 
 **Invariants**: Option A 16 dp visual edge offset, exact mathematical centering of 9 sensor icons across all tiers, 270 dp <= 272 dp width on 360 dp displays, untouched compact landscape layout (`REQ-UI-434.1`), and 100% 9-language localization parity.
 
@@ -17125,8 +17128,8 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 - **Rationale**: Following `REQ-UI-513`, athletes performing waking morning HRV check-ins require an immediate 1-tap shortcut on the Start screen (`ControlTrackingScreen`) without navigating nested menus. To prevent cockpit clutter during active tracking and avoid irrelevant prompts for athletes without heart rate sensors, after today's reading has been taken, or past morning hours, the launcher must be strictly conditional and user-configurable.
 - **Description**:
   1. *Tuning Preferences Configuration (`REQ-UI-525.1`)*:
-     - `TuningPreferencesDataStore.kt` and `TuningConfig.kt` SHALL provide `showMorningCheckOnStartScreen: Boolean` (default `true`) and `morningCheckCutoffHour: Int` (default `11`, range 6..15).
-     - These preferences SHALL be surfaced under the Physiology Models accordion section (`PhysiologyModelsSection.kt`) in `AdvancedTuningScreen.kt` and `AdvancedTuningDialog.kt` with localized titles and summaries.
+     - `TuningPreferencesDataStore.kt` and `TuningConfig.kt` SHALL provide `showMorningCheckOnStartScreen: Boolean` (default `true`) and `morningCheckCutoffHour: Int` (default `8` [08:00 AM], range 6..23) (`ATT-7740`).
+     - These preferences SHALL be surfaced under the Physiology Models accordion section (`PhysiologyModelsSection.kt`) in `AdvancedTuningScreen.kt` and `AdvancedTuningDialog.kt` with localized titles and summaries, formatted as 2-digit zero-padded hours (`%02d:00`).
   2. *Paired Heart Rate Sensor Check (`REQ-UI-525.2`)*:
      - `DevicesDatabaseManager.java` SHALL provide `hasPairedHeartRateDevices(): Boolean` which queries SQLite `DEVICES` table for `PAIRED > 0 AND DEVICE_TYPE = 'HRM'`.
      - `DeviceDataRepository.kt` SHALL expose `hasPairedHeartRateDevices(): Boolean` forwarding this query.
@@ -17147,10 +17150,10 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
      - All newly introduced string keys (`hrv_morning_check_start_button`, `pref_show_morning_check_title`, `pref_show_morning_check_summary`, `pref_morning_check_cutoff_title`, `pref_morning_check_cutoff_summary`) SHALL be localized across all 9 supported Android resource directories (`values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`).
 
 **Acceptance Criteria (Given-When-Then)**:
-• *Given* an athlete with at least one paired HRM sensor opens `ControlTrackingScreen` in `TrackingMode.READY` before 11:00 AM on a day with no morning check recorded,
+• *Given* an athlete with at least one paired HRM sensor opens `ControlTrackingScreen` in `TrackingMode.READY` before cutoff hour (default 08:00 AM) on a day with no morning check recorded,
 • *When* the screen renders,
 • *Then* the "Morgendlicher Check" CTA button is visible in `bottomContent` and tapping it navigates to `NavRoutes.MORNING_HRV`.
-• *Given* the athlete completes and saves today's morning check or the local time passes 11:00 AM or `showMorningCheckOnStartScreen` is disabled,
+• *Given* the athlete completes and saves today's morning check or the local time passes cutoff hour (default 08:00 AM) or `showMorningCheckOnStartScreen` is disabled,
 • *When* `ControlTrackingScreen` renders or resumes,
 • *Then* the CTA button is hidden.
 • *Given* the athlete starts a workout (`TrackingMode.RECORDING`),
@@ -17159,6 +17162,12 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 • *Given* any of the 9 supported locales,
 • *When* viewing the button or tuning settings,
 • *Then* all titles and summaries are localized with 100% parity and no placeholder text.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: `REQ-UI-525` (`REQ-UI-525.1`), targeting `TuningPreferencesDataStore.kt`, `TuningConfig.kt`, `PhysiologyModelsSection.kt`.
+2. *Historical Origin & Commit Trace*: Introduced in `ATT-7532` (commit `647ef674d06`), refined in `ATT-7740` to set default cutoff hour to 08:00 (8:00 AM) and extend selectable upper bound to 23:00.
+3. *Root Reason for Existing Formulation*: 11:00 AM was an initial conservative morning assumption; 15:00 was an arbitrary ceiling. 08:00 AM matches standard waking readiness protocols, while extending the upper bound to 23 allows full afternoon/evening flexibility for shift workers.
+4. *Preservation of Core Invariants*: Reactive gating logic (`hour < morningCheckCutoffHour`), paired HRM requirement, and daily single-completion auto-hide invariant remain strictly preserved. Zero DB schema impact.
 
 **Invariants**: Zero database migrations on `devices.db` or `hrv_readiness.db`; zero modifications to existing morning check scoring, baseline corridors, or workout tracking lifecycle; zero background alarms or wake locks.
 
@@ -17201,3 +17210,154 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 
 **Invariants**: Resource IDs, DataStore preference keys, enum constants, and SQLite tables remain unchanged; zero changes to mathematical DSP calculation or threshold invariant $T_1 \ge T_2 + 0.05f$.
 
+
+### REQ-UI-527: Dedicated HRV Tab in Workout Details, Wire Migration & Telemetry-Gated Zone Comparison [Verified]
+- **Target Release**: `V5.0.0`
+- **Tickets**: `ATT-7756`
+- **Tests**: `TST-UI-527`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Implementation**: `WorkoutDetailTabConfig.kt`, `WorkoutSectionType.kt`, `WorkoutDetailTabbedContent.kt`, `TrackOnMapScreen.kt`, `HrvThresholdSummaryCard.kt`, `strings.xml` (all 9 locales)
+- **Rationale**: Post-workout HRV analytics (`HrvAlpha1ScatterCard`, `HrvThresholdSummaryCard`, `HrvDurabilityCard`) were previously colocated within the Training Zones section (`WorkoutDetailSectionType.ZONES`), cluttering the standard HR and Power distribution cards. Furthermore, `HrvThresholdSummaryCard` rendered Coggan Power headers, FTP comparison deltas, consensus status rows, and zone update buttons whenever `configuredFtp > 0` even when the workout contained no power telemetry. The system SHALL extract a dedicated `HRV` section (`WorkoutDetailSectionType.HRV`, `WorkoutSectionType.HRV`, and `WorkoutDetailTabPreset.HRV`), define a canonical 5-tab default layout, auto-migrate legacy persisted tab configurations, dynamically auto-hide the HRV tab when no HRV data exists, and gate Power and HR zone comparison blocks strictly on actual telemetry availability (ATT-7756, Parent Epic ATT-3539, status: Planned, refining `REQ-UI-408`, `REQ-PER-036.5`, and `REQ-PER-037.4`):
+- **Description**:
+  1. *Dedicated HRV Section & Canonical 5-Tab Default Layout (`REQ-UI-527.1`)*:
+     - `WorkoutDetailSectionType` and `WorkoutSectionType` SHALL define `HRV(R.string.settings_workout_card_hrv)`.
+     - `WorkoutDetailTabPreset` SHALL define `HRV(R.string.workout_detail_tab_hrv)`.
+     - `WorkoutDetailTabConfig.DEFAULT_TABS` SHALL define 5 default tabs in canonical order:
+       1. `tab_overview` (`OVERVIEW`: `[RPE_AND_FEEL, DETAILS, PHOTOS, DESCRIPTION, EXTREMA, EXPORT_STATUS]`)
+       2. `tab_map_graphs` (`MAP_AND_GRAPHS`: `[MAP, ELEVATION, CHARTS]`)
+       3. `tab_zones` (`ZONES`: `[ZONES, GRADE_DISTRIBUTION]`)
+       4. `tab_hrv` (`HRV`: `[HRV]`)
+       5. `tab_laps_segments` (`LAPS_AND_SEGMENTS`: `[LAPS, STRAVA]`)
+  2. *Automatic Wire Migration & Backward Compatibility (`REQ-UI-527.2`)*:
+     - In `WorkoutDetailTabConfig.deserializeTabs`, if `WorkoutDetailSectionType.HRV` is not present in ANY tab of a valid non-empty tab list, the system SHALL automatically insert a new tab `tab_hrv` (`preset = WorkoutDetailTabPreset.HRV`, `sections = listOf(WorkoutDetailSectionType.HRV)`) directly after `tab_zones` (or before `tab_laps_segments`), guaranteeing existing user configurations seamlessly surface the new HRV tab without data loss.
+  3. *Dynamic Availability & Empty Tab Auto-Hiding (`REQ-UI-527.3`)*:
+     - `WorkoutDetailSectionAvailability` SHALL expose `val hasHrv: Boolean = false`, mapped to `WorkoutDetailSectionType.HRV -> hasHrv` in `isSectionActive`.
+     - `TrackOnMapScreen.kt` SHALL compute `hasHrvData = TelemetryMetricUtils.hasHrvData(activeScrubPath)` and pass it into `WorkoutDetailSectionAvailability.fromWorkoutState`.
+     - For workouts lacking HRV telemetry (`hasHrvData == false`), `filterVisibleWorkoutDetailTabs` SHALL automatically hide `tab_hrv` with zero layout shifts.
+  4. *HRV Card Migration from ZONES to HRV (`REQ-UI-527.4`)*:
+     - In `WorkoutDetailTabbedContent.kt`, `HrvAlpha1ScatterCard`, `HrvThresholdSummaryCard`, and `HrvDurabilityCard` SHALL be rendered under `WorkoutDetailSectionType.HRV` preserving their relative order (`1. HrvAlpha1ScatterCard` -> `2. HrvThresholdSummaryCard` -> `3. HrvDurabilityCard`).
+     - Those three HRV cards SHALL be completely removed from `WorkoutDetailSectionType.ZONES`.
+  5. *Telemetry-Gated Power & HR Zone Comparison in HrvThresholdSummaryCard (`REQ-UI-527.5`)*:
+     - In `HrvThresholdSummaryCard.kt`, power comparison (`showPowerComparison = hasPower && configuredFtp != null && configuredFtp > 0`) SHALL gate the Coggan Power header, configured FTP text, power delta chips (`hrv_power_delta_t1`, `hrv_power_delta_t2`), power consensus badge (`hrv_consensus_badge`), and "Leistungszonen aktualisieren" button (`hrv_btn_update_power_zones`).
+     - Heart rate comparison (`showHrComparison = hasHr && configuredHrMax != null && configuredHrMax > 0`) SHALL gate the HR header, HR delta chips, HR consensus badge, and "HF-Zonen aktualisieren" button.
+     - The entire `hrv_zone_comparison_section` SHALL be rendered only when `showPowerComparison || showHrComparison`. If neither applies (e.g. workout has no power data and no HR max is configured), the comparison section and its divider SHALL be completely omitted.
+  6. *9-Language Localization Parity (`REQ-UI-527.6`)*:
+     - String resources `workout_detail_tab_hrv` and `settings_workout_card_hrv` SHALL exist across all 9 supported application locales (`values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`).
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* a workout with valid HRV telemetry (`hasHrvData == true`) and default tab preferences,
+• *When* the user views Workout Details,
+• *Then* a dedicated HRV tab appears at tab index 3 (between Zones and Laps & Segments) containing `HrvAlpha1ScatterCard`, `HrvThresholdSummaryCard`, and `HrvDurabilityCard`, and the Zones tab contains only HR/Power/Grade distribution cards.
+• *Given* a workout recorded without HRV telemetry (`hasHrvData == false`),
+• *When* the user views Workout Details,
+• *Then* `filterVisibleWorkoutDetailTabs` suppresses the HRV tab entirely.
+• *Given* a legacy serialized tabs string omitting `HRV`,
+• *When* `deserializeTabs` parses the payload,
+• *Then* `tab_hrv` is automatically inserted directly following `tab_zones`.
+• *Given* a workout with HRV and HR data but no power meter (`hasPower == false`),
+• *When* viewing `HrvThresholdSummaryCard`,
+• *Then* the Power zone comparison header, FTP label, power deltas, power consensus badge, and power zone update button are omitted while the HR zone comparison remains visible.
+• *Given* a workout with HRV but neither power nor configured HR max,
+• *When* viewing `HrvThresholdSummaryCard`,
+• *Then* the entire `hrv_zone_comparison_section` is omitted.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: `REQ-UI-408.1` (Default Tab Archetype), `REQ-PER-036.5` (Threshold Card Host), `REQ-PER-037.4` (Zone Comparison Section), amended by `ATT-7756`.
+2. *Historical Origin & Commit Trace*: `ATT-3920` (Sprint 2026-44.1, 4-tab model), `ATT-3554` (Sprint 2026-46.4, HRV cards placed under `ZONES`), `ATT-3555` (Sprint 2026-46.5, zone comparison section).
+3. *Root Reason for Existing Formulation*: When the multi-tab layout was created in `ATT-3920`, HRV analytics did not yet exist. In `ATT-3554`, the 3 HRV cards were temporarily colocated in `tab_zones` because an HRV tab did not exist. In `ATT-3555`, zone comparison assumed power was available if `configuredFtp > 0`.
+4. *Preservation of Core Invariants*: Wire backward compatibility in `deserializeTabs` via auto-migration; map-at-index-0 invariant; empty tab auto-hiding; 100% 9-language localization parity.
+
+**Invariants**: Map remains pinned at index 0 in any tab where present; zero layout shifts on non-HRV workouts; existing user tab configurations migrate without data loss; 100% 9-language localization parity.
+
+
+### REQ-UI-528: Multi-Dimensional Sensor List Sorting (Alphabetical, First Seen, Last Usage, Battery Level) [Verified]
+- **Target Release**: `V5.0.0`
+- **Tickets**: `ATT-7663`
+- **Tests**: `TST-UI-528`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Implementation**: `DeviceSortOrder.kt`, `DeviceListViewModel.kt`, `DevicesTabbedViewModel.kt`, `DevicesTabbedScreen.kt`, `strings_devices.xml` (all 9 locales)
+- **Rationale**: Athletes managing multiple wireless sensors (ANT+ and Bluetooth LE) need quick, intuitive ways to locate newly paired sensors, review recently active sensors, or check battery levels before workouts. Providing a top app bar Sort dropdown with checkmark indicators matching Routes and Known Locations patterns enhances navigation without disrupting existing scan discovery pinning or alphabetical stability (ATT-7663, Parent Epic ATT-5910, extending `REQ-UI-334`).
+- **Description**:
+  1. *DeviceSortOrder Domain Enumeration (`REQ-UI-528.1`)*:
+     - The system SHALL define `DeviceSortOrder` enum in `com.atrainingtracker.banalservice.ui.devices.devicelist` with values: `ALPHABETICAL` (Default), `FIRST_SEEN`, `LAST_USAGE`, and `BATTERY_LEVEL`, each mapped to a localized string resource ID (`labelResId`).
+  2. *Multi-Tier Deterministic Sorting Pipeline (`REQ-UI-528.2`)*:
+     - `DeviceListViewModel.getFilteredDevices` SHALL accept a `sortOrder: DeviceSortOrder` parameter (defaulting to `DeviceSortOrder.ALPHABETICAL`).
+     - *Primary Scan Recency Tier*: All newly discovered sensors (`isNewlyDiscovered == true`) SHALL remain pinned at the very top of the list in reverse discovery order (`newlyFoundDevicesIds.indexOf(it.id)` descending), strictly preserving `REQ-UI-334`.
+     - *Secondary User-Selected Tier*:
+       - `ALPHABETICAL`: Case-insensitive `deviceName` ascending (`A–Z`), tie-broken by `id` ascending.
+       - `FIRST_SEEN`: Database row ID (`id`) descending (newest added/discovered first).
+       - `LAST_USAGE`: Currently connected devices (`isConnected == true`) first, followed by disconnected devices ordered by parsed `lastSeen` timestamp descending (most recently active first, treating null or unparseable timestamps as 0L), tie-broken by `deviceName` (`A–Z`) and `id` ascending.
+       - `BATTERY_LEVEL`: Known battery percentage (`batteryPercentage >= 0`) ascending (lowest battery first), followed by unknown battery (`batteryPercentage < 0`), tie-broken by `deviceName` (`A–Z`) and `id` ascending.
+  3. *Top App Bar Sort Action Button & Dropdown Menu (`REQ-UI-528.3`)*:
+     - In `DevicesTabbedScreen.kt`, the top app bar SHALL display a Sort `IconButton` with `Icons.AutoMirrored.Filled.Sort` right next to `FilterActionButton` when the active tab is a sensor list tab (`pagerState.currentPage in 0..2`).
+     - Tapping the button SHALL open a `DropdownMenu` listing all 4 sort options, displaying a `Check` leading icon next to the currently active sort order.
+     - The Sort button SHALL be hidden on Equipment Matrix tabs (`pagerState.currentPage in 3..4`).
+  4. *ViewModel State & Process Death Persistence (`REQ-UI-528.4`)*:
+     - `DevicesTabbedViewModel` SHALL expose `sortOrder: StateFlow<DeviceSortOrder>` initialized from `SavedStateHandle[KEY_SORT_ORDER]`, surviving configuration changes and process restoration.
+  5. *100% 9-Language Localization Parity (`REQ-UI-528.5`)*:
+     - All 4 sort order labels (`devices_sort_alphabetical`, `devices_sort_first_seen`, `devices_sort_last_usage`, `devices_sort_battery_level`) and menu title/description SHALL be localized across all 9 supported application locales (EN, DE, ES, FR, IT, JA, NL, PL, PT) with zero missing entries and zero empty strings.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* the athlete opens "My Sensors" (`DevicesTabbedScreen`),
+• *When* viewing any sensor tab (Available, Paired, All Known),
+• *Then* a Sort icon button is displayed next to the Filter button, and clicking it opens a dropdown menu with a checkmark on the active sort order (defaulting to Alphabetical).
+• *Given* an active sort order selected (e.g. `BATTERY_LEVEL`, `FIRST_SEEN`, `LAST_USAGE`),
+• *When* the sensor list renders,
+• *Then* sensors are sorted deterministically according to the selected criteria, while any newly discovered sensors (`isNewlyDiscovered == true`) remain pinned at index 0..N at the top.
+• *Given* the athlete switches to Equipment tabs (Bikes or Shoes),
+• *When* viewing tab 3 or 4,
+• *Then* the Sort icon button is not displayed in the top bar.
+
+**Invariants**: Zero changes to `devices.db` SQLite schema; `isNewlyDiscovered` top-of-list recency pinning (`REQ-UI-334`) preserved; stable alphabetical default with zero connection jumping preserved; 100% 9-language localization parity.
+
+
+### REQ-UI-529: Borg CR10 RPE 7-Zone Physiological Palette, Discrete Slider Stop-Dot Uniformity & Dedicated Non-Occluding Header [Verified]
+- **Tests**: `TST-UI-529`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit, On-Device Manual
+- **Implementation**: `Color.kt`, `WorkoutRpeFeelSection.kt`
+- **Rationale**: In `WorkoutRpeFeelSection.kt`, the initial Borg CR10 slider prototype from ATT-7515 mapped RPE 1–10 to only 5 zones, leaving Zone 6 (#8B5A2B) and Zone 7 (#000000) unused and inverting Zone 1 and Zone 2. Furthermore, the redundant row of 10 number boxes beneath the slider wasted vertical space, the Compose Material 3 slider track stop indicator erroneously painted tick 10 in the active track color when dragging at lower values, and sharing a single row between section title, dynamic value, and Clear button caused line wrapping and finger occlusion during right-handed interaction. Mapping RPE 1–10 to all 7 physiological zones with OLED dark theme high-contrast protection, removing the redundant number boxes, ensuring uniform track stop-dot rendering, and elevating the dynamic RPE descriptor to a dedicated full-width line establishes ergonomic, accessible, and sports-scientifically accurate workout perception editing (ATT-7743, Parent Epic ATT-68, refining `REQ-WKO-037.1` and `REQ-WKO-038`).
+- **Description**:
+  1. *Borg CR10 7-Zone Physiological Color Mapping (`REQ-UI-529.1`)*:
+     - `TTColor.rpeColor(rpe: Int): Color` in `Color.kt` SHALL map all 10 Borg CR10 exertion scores strictly to `TTColor.Zone1..Zone7`:
+       - `1, 2` $\rightarrow$ `TTColor.Zone1` (Chartreuse `#7FFF00`, Active Recovery)
+       - `3, 4` $\rightarrow$ `TTColor.Zone2` (Green `#008000`, Endurance)
+       - `5, 6` $\rightarrow$ `TTColor.Zone3` (Orange `#FFA500`, Tempo / Sweet Spot)
+       - `7` $\rightarrow$ `TTColor.Zone4` (Red `#FF0000`, Threshold)
+       - `8` $\rightarrow$ `TTColor.Zone5` (Dark Violet `#9400D3`, VO2max)
+       - `9` $\rightarrow$ `TTColor.Zone6` (Warm Earthy Brown `#8B5A2B`, Anaerobic Capacity)
+       - `10` $\rightarrow$ `TTColor.Zone7` (Pure Black `#000000`, Neuromuscular / Max)
+       - Values out of range ($< 1$) SHALL default to `TTColor.Zone1`; values $> 10$ SHALL default to `TTColor.Zone7`.
+  2. *Dark Theme High-Contrast Accessibility for RPE 10 / Zone 7 (`REQ-UI-529.2`)*:
+     - When `rpe == 10` (or `TTColor.rpeColor(rpe) == TTColor.Zone7`), the dynamic RPE score and Borg descriptor text in `RpeFeelEditorControls` SHALL be rendered using `MaterialTheme.colorScheme.onSurface` (achieving $\ge 12:1$ contrast against dark surfaces and $\ge 14:1$ on light surfaces) rather than invisible pure black text.
+     - In `WorkoutRpeFeelSection` badge row, when `rpe == 10`, the badge surface border and inner indicator dot SHALL render an outline border (`0.5.dp` to `1.dp`, `MaterialTheme.colorScheme.outlineVariant`) guaranteeing visibility against OLED black backgrounds.
+     - In `RpeFeelEditorControls` slider, when `rpe == 10`, the slider thumb SHALL render a subtle border (`1.dp`, `MaterialTheme.colorScheme.outline`) ensuring distinct visual edge separation against dark backgrounds.
+  3. *Removal of Redundant 1–10 Number Boxes (`REQ-UI-529.3`)*:
+     - `RpeFeelEditorControls` in `WorkoutRpeFeelSection.kt` SHALL omit the secondary 10-box button row beneath the slider, relying solely on the discrete Material 3 `Slider` (1f..10f, `steps = 8`) for RPE selection, thereby freeing substantial vertical screen space in `EditWorkoutScreen`.
+  4. *Slider Track Stop-Dot Uniformity (`REQ-UI-529.4`)*:
+     - In `RpeFeelEditorControls`, the Material 3 `Slider` SHALL supply `track = { sliderState -> SliderDefaults.Track(sliderState = sliderState, colors = colors, drawStopIndicator = null) }` (or equivalent), preventing `SliderDefaults.Track` from hardcoding the active track color at the rightmost inactive stop tick (position 10) when the slider thumb is set to values $< 10$.
+  5. *Dedicated Non-Wrapping, Non-Occluding Dynamic RPE Header (`REQ-UI-529.5`)*:
+     - `RpeFeelEditorControls` SHALL decouple the section title and dynamic RPE readout:
+       - *Title Row*: Standard `Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween)` containing `workout_rpe_title` ("Belastungsempfinden (RPE 1–10)") on the start and the Clear action (`Icons.Default.Clear`, `WorkoutRpeFeelTestTags.RPE_CLEAR`) on the end when `rpe != null`.
+       - *Dynamic Readout Line*: Dedicated full-width line positioned immediately above the `Slider`. When `rpe != null`, it SHALL display the full formatted anchor descriptor (`stringResource(getRpeAnchorStringRes(rpe))`) in bold typography, ensuring zero line-wrapping across all 9 localized string sets (including German "6 — Schwer bis sehr schwer") and zero occlusion by the athlete's dragging finger.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* an athlete selecting RPE ratings 1 through 10 in `EditWorkoutScreen`,
+• *When* the rating is evaluated in `TTColor.rpeColor`,
+• *Then* scores 1–2 map to Zone1, 3–4 to Zone2, 5–6 to Zone3, 7 to Zone4, 8 to Zone5, 9 to Zone6, and 10 to Zone7.
+• *Given* the app running in Dark Theme with RPE set to 10 (`Maximal`),
+• *When* viewing the editor readout or workout badge,
+• *Then* the text is rendered with `onSurface` and the badge/thumb features an `outlineVariant` border with $\ge 3.0:1$ non-text contrast against the dark background.
+• *Given* `EditWorkoutScreen` opened with the RPE editor active,
+• *When* inspecting the component hierarchy,
+• *Then* the slider provides discrete steps 1..10, the redundant 10-box button row is absent, and setting RPE to 7 renders inactive ticks 8, 9, and 10 in identical inactive tick color without a red stop dot.
+• *Given* RPE set to 6 on a 360dp portrait device in German locale,
+• *When* the dynamic readout renders,
+• *Then* "6 — Schwer bis sehr schwer" renders on a single line without wrapping and remains visible above the slider during dragging.
+
+**Invariants**: `rpe` (1..10) nullable database persistence (`DB_VERSION = 30`) preserved; Foster sRPE calculation preserved; Feel (1..5) M3 cards and sentiment icons preserved; 100% 9-language localization parity preserved.

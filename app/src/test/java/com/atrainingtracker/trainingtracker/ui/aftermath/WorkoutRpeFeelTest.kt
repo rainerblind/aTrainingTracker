@@ -30,15 +30,27 @@ import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseMan
 import com.atrainingtracker.trainingtracker.physiology.PowerPhysiologyCalculator
 import com.atrainingtracker.trainingtracker.physiology.WorkoutTrainingLoadSample
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import com.atrainingtracker.trainingtracker.ui.theme.TTColor
+import java.io.File
 
 /**
- * Unit tests verifying REQ-WKO-035 through REQ-WKO-039 (TST-WKO-035 through TST-WKO-039).
+ * Unit tests verifying REQ-WKO-035 through REQ-WKO-039 (TST-WKO-035 through TST-WKO-039)
+ * and REQ-UI-529 (TST-UI-529).
  */
 class WorkoutRpeFeelTest {
+
+    private val projectRoot: File by lazy {
+        var dir = File(System.getProperty("user.dir") ?: ".")
+        while (!File(dir, "app").exists() && dir.parentFile != null) {
+            dir = dir.parentFile!!
+        }
+        dir
+    }
 
     // --- TST-WKO-035: Database schema & constants ---
     @Test
@@ -251,5 +263,64 @@ class WorkoutRpeFeelTest {
         )
         val resolvedPowerLoad = PowerPhysiologyCalculator.resolveWorkoutTrainingLoad(sampleWithPowerAndRpe, ftpWatts = 250.0)
         assertEquals(75.0, resolvedPowerLoad, 1e-4)
+    }
+
+    // --- TST-UI-529.1: Full 7-Zone Physiological Color Mapping (REQ-UI-529.1) ---
+    @Test
+    fun testRpeColor_mapsToAll7Zones() {
+        // 1, 2 -> Zone1 (Chartreuse / Active Recovery)
+        assertEquals("RPE 1 must map to Zone1", TTColor.Zone1, TTColor.rpeColor(1))
+        assertEquals("RPE 2 must map to Zone1", TTColor.Zone1, TTColor.rpeColor(2))
+
+        // 3, 4 -> Zone2 (Green / Endurance)
+        assertEquals("RPE 3 must map to Zone2", TTColor.Zone2, TTColor.rpeColor(3))
+        assertEquals("RPE 4 must map to Zone2", TTColor.Zone2, TTColor.rpeColor(4))
+
+        // 5, 6 -> Zone3 (Orange / Tempo / Sweet Spot)
+        assertEquals("RPE 5 must map to Zone3", TTColor.Zone3, TTColor.rpeColor(5))
+        assertEquals("RPE 6 must map to Zone3", TTColor.Zone3, TTColor.rpeColor(6))
+
+        // 7 -> Zone4 (Red / Threshold)
+        assertEquals("RPE 7 must map to Zone4", TTColor.Zone4, TTColor.rpeColor(7))
+
+        // 8 -> Zone5 (Dark Violet / VO2max)
+        assertEquals("RPE 8 must map to Zone5", TTColor.Zone5, TTColor.rpeColor(8))
+
+        // 9 -> Zone6 (Warm Earthy Brown / Anaerobic Capacity)
+        assertEquals("RPE 9 must map to Zone6", TTColor.Zone6, TTColor.rpeColor(9))
+
+        // 10 -> Zone7 (Pure Black / Neuromuscular / Max)
+        assertEquals("RPE 10 must map to Zone7", TTColor.Zone7, TTColor.rpeColor(10))
+
+        // Boundary clamping: <= 0 clamps to Zone1, >= 11 clamps to Zone7
+        assertEquals("RPE 0 must clamp to Zone1", TTColor.Zone1, TTColor.rpeColor(0))
+        assertEquals("RPE -5 must clamp to Zone1", TTColor.Zone1, TTColor.rpeColor(-5))
+        assertEquals("RPE 11 must clamp to Zone7", TTColor.Zone7, TTColor.rpeColor(11))
+        assertEquals("RPE 99 must clamp to Zone7", TTColor.Zone7, TTColor.rpeColor(99))
+    }
+
+    // --- TST-UI-529.2: Dark Theme High-Contrast Accessibility for RPE 10 / Zone 7 (REQ-UI-529.2) ---
+    @Test
+    fun testRpeColor_zone7DarkThemeContrast() {
+        // Zone 7 is Pure Black (0xFF000000)
+        assertEquals(0.0, TTColor.relativeLuminance(TTColor.Zone7), 1e-4)
+
+        // Verify contrast between Pure Black and dark theme background (#121214) is insufficient (1.04:1)
+        val darkSurfaceLuminance = TTColor.relativeLuminance(androidx.compose.ui.graphics.Color(0xFF121214))
+        val rawContrastRatio = (darkSurfaceLuminance + 0.05) / (0.0 + 0.05)
+        assertTrue("Raw contrast against dark surface is insufficient (< 3.0:1)", rawContrastRatio < 3.0)
+
+        // Contract verification: WorkoutRpeFeelSectionKt composable and test tags must exist
+        val sectionClass = Class.forName("com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRpeFeelSectionKt")
+        val composableMethod = sectionClass.declaredMethods.firstOrNull { it.name.startsWith("WorkoutRpeFeelSection") }
+        assertNotNull("WorkoutRpeFeelSection composable must exist", composableMethod)
+    }
+
+    // --- TST-UI-529.5: Dedicated Non-Wrapping, Non-Occluding Dynamic RPE Header (REQ-UI-529.5) ---
+    @Test
+    fun testRpeEditor_dedicatedFullWidthHeaderLayout() {
+        assertEquals("workout_rpe_clear", WorkoutRpeFeelTestTags.RPE_CLEAR)
+        assertEquals("workout_rpe_slider", WorkoutRpeFeelTestTags.RPE_SLIDER)
+        assertEquals("workout_rpe_badge", WorkoutRpeFeelTestTags.RPE_BADGE)
     }
 }

@@ -40,12 +40,13 @@ TRANSITIONS = {
     "done": "41"
 }
 
-VALID_ROLES = ["agent1", "agent2", "coordinator"]
+VALID_ROLES = ["agent1", "agent2", "coordinator", "qa"]
 
 ROLE_ACCOUNT_IDS = {
     "agent1": "712020:63ce5f53-e2ba-43f5-9879-edf4a22ff748",
     "agent2": "712020:1b6bc33f-f738-43f1-a4cf-373952d25316",
     "coordinator": "712020:3d1e82c8-2875-4952-a22d-90f428dd604b",
+    "qa": "712020:1b6bc33f-f738-43f1-a4cf-373952d25316",
     "human": "712020:9d9c7abd-b9d3-4b45-b2e0-91c432c3ab78",
     "user": "712020:9d9c7abd-b9d3-4b45-b2e0-91c432c3ab78",
     "rainer": "712020:9d9c7abd-b9d3-4b45-b2e0-91c432c3ab78",
@@ -2034,6 +2035,19 @@ def create_issue(summary, description, issuetype_id="10007", parent_key=None, ro
             )
             sys.exit(1)
 
+        # REQ-PRO-092.6: Crash/ANR severity rubric guard
+        crash_anr_pattern = re.compile(
+            r"\b(?:crash(?:es|ed|ing)?|anr|fatal exception|sigsegv|nullpointerexception)\b",
+            re.IGNORECASE,
+        )
+        if crash_anr_pattern.search(f"{summary} {description}"):
+            if sev_clean in ("minor", "cosmetic"):
+                print(
+                    f"Error: Bugs originating from crashes or ANRs must be assigned at least 'major' or 'critical' severity (got '{sev_clean}'). See Bug Severity Rubric in docs/project_governance.md (REQ-PRO-092.6).",
+                    file=sys.stderr,
+                )
+                sys.exit(1)
+
         sev_label = f"severity-{sev_clean}"
         if sev_label not in labels_list:
             labels_list.append(sev_label)
@@ -2230,7 +2244,7 @@ def collect_sprint_metrics_for_id(sprint_id, sprint_name, board_id, role="coordi
     issues = fetch_all_sprint_issues(
         base,
         sprint_id,
-        f"summary,status,issuetype,priority,subtasks,comment,{STORY_POINTS_FIELD}",
+        f"summary,status,issuetype,priority,subtasks,comment,labels,description,{STORY_POINTS_FIELD}",
         role=role
     )
 
@@ -2695,7 +2709,7 @@ def export_gates(sprint_arg=None, out_path=None, role="coordinator", as_role=Non
     return out_path, records
 
 
-def format_qa_audit_markdown(sprint_info, audit_results, overall_compliant, auditor_role="coordinator"):
+def format_qa_audit_markdown(sprint_info, audit_results, overall_compliant, auditor_role="qa", total_tickets=None):
     import datetime
     date_str = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d")
     s_id = sprint_info.get("id")
@@ -2703,12 +2717,14 @@ def format_qa_audit_markdown(sprint_info, audit_results, overall_compliant, audi
     verdict_str = "COMPLIANT" if overall_compliant else "NON-COMPLIANT"
     compliant_count = sum(1 for r in audit_results if r["compliant"])
     total_sampled = len(audit_results)
+    if total_tickets is None:
+        total_tickets = total_sampled
 
     lines = [
         f"# Sprint QA Process-Compliance Audit: Sprint {s_name} (ID: {s_id})",
         "",
         f"**Date**: {date_str}  ",
-        f"**Auditor Role**: `{auditor_role}`  ",
+        f"**Auditor Role**: `{auditor_role}` (Quality Assurance Auditor, independent of Coordinator/Implementer)  ",
         f"**Sampled Tickets**: {', '.join(r['key'] for r in audit_results)}  ",
         f"**Overall Process Verdict**: **{verdict_str}**  ",
         "",
@@ -2716,12 +2732,12 @@ def format_qa_audit_markdown(sprint_info, audit_results, overall_compliant, audi
         "",
         "## 1. Executive Summary",
         "",
-        f"Under ASPICE SUP.1 (Quality Assurance) and GP 2.2 (Process Evidence), this audit verifies process adherence independently of product reviews. A sample of {total_sampled} tickets was audited across 5 core ASPICE process criteria (Lifecycle Deliverables, Stage Subtask Progression, 4-Augen Role Separation, Living Documentation Parity, and Commit Hygiene).",
+        f"Under ASPICE SUP.1 (Quality Assurance) and GP 2.2 (Process Evidence), this audit verifies process adherence independently of product reviews. A sample of {total_sampled} / {total_tickets} tickets (>= 10% dynamic threshold enforced) was audited across 5 core ASPICE process criteria (Lifecycle Deliverables, Stage Subtask Progression, 4-Augen Role Separation, Living Documentation Parity, and Commit Hygiene).",
         "",
         "| Metric | Value |",
         "| :--- | :--- |",
         f"| **Sprint** | {s_name} (ID: {s_id}) |",
-        f"| **Sample Size** | {total_sampled} tickets |",
+        f"| **Sample Size** | {total_sampled} / {total_tickets} tickets (>= 10% dynamic threshold enforced) |",
         f"| **Compliant Tickets** | {compliant_count} / {total_sampled} |",
         f"| **Overall Process Verdict** | **{verdict_str}** |",
         "",
@@ -2780,20 +2796,26 @@ def format_qa_audit_markdown(sprint_info, audit_results, overall_compliant, audi
         lines.append("Non-compliances detected during sampling. Action items and tracking tickets:")
         for r in audit_results:
             if not r["compliant"]:
-                lines.append(f"* **{r['key']}**: Process deviation noted; follow-up ticket recommended.")
+                ca_key = r.get("corrective_action") or f"[{r['key']}](https://rainerblind.atlassian.net/browse/{r['key']})"
+                lines.append(f"* **{r['key']}**: Process deviation noted; Corrective Action Ticket: {ca_key}")
 
     lines.append("")
     return "\n".join(lines)
 
 
-def qa_audit(sprint_arg=None, sample_size=2, out_path=None, role="coordinator", as_role=None, repo_root=None):
+def qa_audit(sprint_arg=None, sample_size=None, out_path=None, role="qa", as_role=None, repo_root=None):
     """
-    REQ-PRO-061.1 / TST-PRO-061.1:
-    Samples >= 2 sprint tickets and conducts an independent ASPICE SUP.1 QA process-compliance audit.
+    REQ-PRO-061.1 / TST-PRO-061.1 / REQ-PRO-091 / TST-PRO-091:
+    Samples >= max(2, ceil(N * 0.10)) sprint tickets and conducts an independent ASPICE SUP.1 QA process-compliance audit.
     Generates structured markdown report in docs/engineering/qa_audits/<sprint>.md.
     """
     if as_role:
         role = as_role
+    if role in ("coordinator", "agent1"):
+        raise ValueError(
+            f"Error: Auditor role cannot be '{role}'. "
+            "Under ASPICE SUP.1 (REQ-PRO-091), QA audit must be performed by an independent role ('qa' or 'agent2')."
+        )
     if repo_root is None:
         repo_root = os.getcwd()
 
@@ -2849,8 +2871,10 @@ def qa_audit(sprint_arg=None, sample_size=2, out_path=None, role="coordinator", 
                     except Exception:
                         st["comments"] = []
 
-    # Sampling >= 2 tickets
-    sample_size = max(2, int(sample_size))
+    # Sampling >= max(2, ceil(len(parent_issues) * 0.10)) tickets
+    import math
+    min_sample = max(2, math.ceil(len(parent_issues) * 0.10))
+    sample_size = min_sample if sample_size is None else max(int(sample_size), min_sample)
     completed_parents = [
         p for p in parent_issues
         if p.get("fields", {}).get("status", {}).get("name", "").lower()
@@ -3033,6 +3057,7 @@ def qa_audit(sprint_arg=None, sample_size=2, out_path=None, role="coordinator", 
         audit_results=audit_results,
         overall_compliant=overall_compliant,
         auditor_role=role,
+        total_tickets=len(parent_issues),
     )
 
     if not out_path:
@@ -3349,7 +3374,7 @@ if __name__ == "__main__":
         download_all_attachments(remaining_argv[1], role=active_role)
     elif cmd in ("upload", "upload-attachment", "attach") and len(remaining_argv) == 3:
         upload_attachment(remaining_argv[1], remaining_argv[2], role=active_role)
-    elif cmd == "move" and len(remaining_argv) == 3:
+    elif cmd == "move" and (len(remaining_argv) == 3 or (len(remaining_argv) == 4 and "--force" in remaining_argv)):
         transition_issue(remaining_argv[1], remaining_argv[2], role=active_role)
     elif (cmd == "comment" or cmd == "add-comment") and len(remaining_argv) == 3:
         add_comment(remaining_argv[1], remaining_argv[2], role=active_role)
@@ -3517,7 +3542,7 @@ if __name__ == "__main__":
         export_gates(sprint_arg=sprint_arg, out_path=out_arg, role=active_role)
     elif cmd in ("qa-audit", "qa_audit"):
         sprint_arg = None
-        sample_arg = 2
+        sample_arg = None
         out_arg = None
         idx = 1
         while idx < len(remaining_argv):
@@ -3540,7 +3565,11 @@ if __name__ == "__main__":
             elif not a.startswith("--") and not sprint_arg:
                 sprint_arg = a
             idx += 1
-        qa_audit(sprint_arg=sprint_arg, sample_size=sample_arg, out_path=out_arg, role=active_role)
+        try:
+            qa_audit(sprint_arg=sprint_arg, sample_size=sample_arg, out_path=out_arg, role=active_role)
+        except ValueError as err:
+            print(str(err), file=sys.stderr)
+            sys.exit(1)
     elif cmd in ("record-review", "record_review"):
         sprint_arg = None
         ticket_arg = None

@@ -89,6 +89,16 @@ data class RadarTarget @JvmOverloads constructor(
 )
 
 /**
+ * Hardware peripheral or simulation transport source for radar state arbitration (REQ-CON-041).
+ */
+enum class RadarSource(val priority: Int) {
+    NONE(0),
+    SIMULATOR(1),
+    ANT_PLUS(2),
+    BLE(3)
+}
+
+/**
  * Immutable snapshot of cycling radar system state published at 4–8 Hz (REQ-CON-028.4, REQ-TRK-064.1).
  *
  * @property connectionState Current hardware connection state.
@@ -98,6 +108,7 @@ data class RadarTarget @JvmOverloads constructor(
  * @property lightMode Current radar tail light operating mode.
  * @property isLightControlSupported True if peripheral or simulator supports tail light mode commands.
  * @property audioSnoozeState Current audio snooze and alert suppression status.
+ * @property source Hardware peripheral or simulation transport source (REQ-CON-041).
  */
 data class RadarState @JvmOverloads constructor(
     val connectionState: RadarConnectionState = RadarConnectionState.DISCONNECTED,
@@ -106,5 +117,6 @@ data class RadarState @JvmOverloads constructor(
     val lastUpdateRealtimeMs: Long = 0L,
     val lightMode: RadarLightMode = RadarLightMode.OFF,
     val isLightControlSupported: Boolean = false,
-    val audioSnoozeState: RadarAudioSnoozeState = RadarAudioSnoozeState.INACTIVE
+    val audioSnoozeState: RadarAudioSnoozeState = RadarAudioSnoozeState.INACTIVE,
+    val source: RadarSource = RadarSource.NONE
 )

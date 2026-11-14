@@ -225,7 +225,11 @@ class DevicesDatabaseManagerTest {
         val result = manager.hasPairedHeartRateDevices()
 
         assertTrue("Expected true when paired HRM device exists", result)
-        assertTrue("Selection must filter on PAIRED and DEVICE_TYPE", selectionSlot.captured.contains(DevicesDatabaseManager.DevicesDbHelper.PAIRED) && selectionSlot.captured.contains(DevicesDatabaseManager.DevicesDbHelper.DEVICE_TYPE))
+        assertTrue(
+            "Selection must filter on PAIRED and DEVICE_TYPE",
+            selectionSlot.captured.contains(DevicesDatabaseManager.DevicesDbHelper.PAIRED) &&
+                selectionSlot.captured.contains(DevicesDatabaseManager.DevicesDbHelper.DEVICE_TYPE)
+        )
         assertEquals("HRM", selectionArgsSlot.captured[0])
         verify(exactly = 1) { populatedCursor.close() }
     }
@@ -444,8 +448,12 @@ class DevicesDatabaseManagerTest {
     }
 
     @Test
-    fun testDevicesDbHelper_dbVersionIsTen() {
-        assertEquals("DevicesDbHelper.DB_VERSION must be 10 for ATT-5492", 10, DevicesDatabaseManager.DevicesDbHelper.DB_VERSION)
+    fun testDevicesDbHelper_dbVersionIsTwelve() {
+        assertEquals(
+            "DevicesDbHelper.DB_VERSION must be 12 for ATT-6279",
+            12,
+            DevicesDatabaseManager.DevicesDbHelper.DB_VERSION
+        )
     }
 
     @Test

@@ -975,13 +975,13 @@
 3. *Sensor Ingestion, Cold-Start Discovery & Lifecycle Scoping (`REQ-PER-032.3`)*: Measurement SHALL ingest raw beat-to-beat intervals via `BANALServiceRepository` without launching `TrackerService` or creating rows in `WorkoutSummaries.db`. Upon screen entry and ViewModel initialization, `MorningHrvCheckViewModel` SHALL invoke `startSearchingForPairedDevices()` to discover paired BLE/ANT+ HR sensors immediately on cold launch. The ViewModel SHALL be scoped to `NavBackStackEntry` (`NavRoutes.MORNING_HRV`). Upon clearance (`onCleared()`), it SHALL detach `rrBeatListener` and cancel timers without calling `unbindFromBANALService()` on the shared singleton repository.
 4. *Live Causal Filtering & Post-Hoc Centered Filter Invariant (`REQ-PER-032.4`)*: Raw RR intervals buffered during the measurement phase SHALL be processed post hoc upon completion using `RrArtifactFilter.filterBidirectional` (Lipponen & Tarvainen 2019 centered filter) as the single source of truth for persisted metrics (`rmssdMs`, `lnRmssd`, `hrvScore100`, `sdnnMs`, `restingHrBpm`, and `artifactRatePct`). During `STABILIZING` and `MEASURING`, incoming beats SHALL be evaluated via `RrArtifactFilter.filterLiveCausal` to display a live artifact percentage and trigger a high-artifact warning (> 5.0%) during countdown.
 5. *Persistence, Pre-Save Readiness Preview & Baseline Feedback (`REQ-PER-032.5`)*: When measurement completes, the view SHALL display an in-memory pre-save `ReadinessStatus` calculated via `HrvReadinessCalculator.calculateReadiness(dateIso, posture, existingEntries + entry)` before persistence. When user confirms save, the measurement SHALL be persisted into `HrvReadinessRepository` (`HrvReadiness.db`). If `artifactRatePct > 5.0%`, the UI SHALL display a warning indicating potential electrode drying/poor contact.
-6. *Localization & Theme Token Centralization (`REQ-PER-032.6`)*: All UI strings (error messages, beat count, readiness status labels, metrics formatters, saved button text) SHALL be localized across all 9 supported locales (EN, DE, ES, FR, IT, JA, NL, PL, PT) using locale-aware format specifiers without raw English strings or `Locale.US` hardcoding. All status labels SHALL use semantic theme tokens (`TTColor.ReadinessOnStatus`) without hardcoded `Color.White` literals.
+6. *Localization, Waking Instruction Hygiene & Theme Token Centralization (`REQ-PER-032.6`)*: All UI strings (error messages, beat count, readiness status labels, metrics formatters, saved button text) SHALL be localized across all 9 supported locales (EN, DE, ES, FR, IT, JA, NL, PL, PT) using locale-aware format specifiers without raw English strings or `Locale.US` hardcoding. Waking protocol instruction text (`morning_hrv_instructions_desc`) SHALL emphasize morning rest upon waking, stillness, normal breathing without speaking, and posture consistency, without referring to bladder emptying or clinical voiding terms across all 9 locales. All status labels SHALL use semantic theme tokens (`TTColor.ReadinessOnStatus`) without hardcoded `Color.White` literals.
 
 **Requirement Archaeology & Chesterton's Fence Audit**:
 1. *Original Requirement ID & Target*: `REQ-PER-032` (`REQ-PER-032.1`, `REQ-PER-032.3`, `REQ-PER-032.4`, `REQ-PER-032.5`, `REQ-PER-032.6`). Targets `MorningHrvCheckScreen.kt`, `MorningHrvCheckViewModel.kt`, `ATrainingTrackerApp.kt`, and `strings_hrv.xml`.
-2. *Historical Origin & Commit Trace*: Introduced in `ATT-3556` (commit `dc034c08`); refined in `ATT-6719` under Epic `ATT-3539` (*Heart Rate Variability*).
-3. *Root Reason for Existing Formulation*: Passive binding was used to avoid duplicate broadcasts; live artifact filtering was deferred to save CPU; ViewModel was assigned to `activity` out of convenience during navigation setup.
-4. *Preservation of Core Invariants*: Zero workout generation, post-hoc centered filter calculation as single source of truth for persisted metrics, strict posture baseline isolation, 100% 9-language translation parity, and clean-room test pass rate.
+2. *Historical Origin & Commit Trace*: Introduced in `ATT-3556` (commit `dc034c08`); refined in `ATT-6719` under Epic `ATT-3539` (*Heart Rate Variability*); instruction phrasing refined in `ATT-7739` (*Remove bladder emptying phrasing*).
+3. *Root Reason for Existing Formulation*: Literal adaptation of Esco & Flatt (2014) clinical protocol specifications standardizing bladder state before morning orthostatic testing to avoid sympathetic bladder distention artifact, which was phrased literally in user-facing UI text.
+4. *Preservation of Core Invariants*: Zero workout generation, post-hoc centered filter calculation as single source of truth for persisted metrics, strict posture baseline isolation, 100% 9-language translation parity, rest and stillness guidance, and clean-room test pass rate.
 
 **Acceptance Criteria (Given-When-Then)**:
 • *Given* an athlete launching `MorningHrvCheckScreen`,
@@ -1275,6 +1275,44 @@
 • *Then* `HrvDurabilityCard` displays the durability drift percentage and 15-minute slice trajectory in the user's active locale across all 9 supported languages.
 
 **Invariants**: Zero SQLite schema migration; strict 10-minute matched data guard; 100% 9-language localization parity; graceful omission for non-HRV or short workouts.
+
+
+### REQ-PER-039: Lazy Decoded Path Resolution, Bounded Period Mini-Map Caching and Lite Mode Rendering [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-PER-047`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Implementation**: `PeriodsRepository.kt`, `PeriodSummaryCard.kt`, `PeriodMapUtils.kt`
+- **Rationale**: Eagerly decoding `List<LatLng>` objects across all historical periods into the singleton `_groupedPeriods` `StateFlow` and running full interactive OpenGL `GoogleMap` engines in scrolling `PeriodSummaryCard` list items causes `OutOfMemoryError` and thread churn. The system SHALL decouple decoded path storage, bound polyline collections, cache decoded card previews in a bounded LRU cache, and render thumbnail maps using Google Maps Lite Mode (ATT-7666, refining `REQ-PER-021.3`):
+- **Description**:
+  1. *Decoupled Path Decoding in Singleton Repository (`REQ-PER-039.1`)*:
+     - `PeriodsRepository.enrich()` SHALL NOT eagerly invoke `PolyUtil.decode(...)` or retain populated `List<LatLng>` graphs in `PeriodSummary.workoutIdToPathMap`. `workoutIdToPathMap` in the repository singleton SHALL remain empty (`emptyMap()`), resolving paths lazily on demand.
+  2. *Bounded Polyline Collections (`REQ-PER-039.2`)*:
+     - `PeriodSummary.polylines` SHALL be strictly bounded to `previewWorkouts` (`<= MAX_SUMMARY_THUMBNAIL_TRACKS` / 8 tracks), and `workoutIdToAllPolylinesMap` duplication across all 4 hierarchy levels SHALL be eliminated.
+  3. *Bounded LRU Preview Caching (`REQ-PER-039.3`)*:
+     - `PeriodMapUtils` SHALL cache computed `PeriodCardMapState` in a thread-safe `LruCache<String, PeriodCardMapState>` (capacity: 64 entries) keyed by period sort key, preventing repetitive polyline decoding and decimation during scroll passes.
+  4. *Google Maps Lite Mode Card Thumbnail Rendering (`REQ-PER-039.4`)*:
+     - `PeriodSummaryCard.PeriodMultiWorkoutMap` SHALL pass `googleMapOptionsFactory = { GoogleMapOptions().liteMode(true) }` when `visuals.heatmapProvider == null`, eliminating OpenGL context allocation and background thread spawning in `LazyColumn` items while preserving tap-to-open interactive `PeriodMapScreen` navigation.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: `REQ-PER-021.3` (*Pre-decode anchor paths off main thread*).
+2. *Historical Origin & Commit Trace*: Sprint 2026-44.2 (`ATT-4475`). Pre-decoded anchor paths during `enrich()` to prevent main-thread jank when opening maps.
+3. *Root Reason for Existing Formulation*: Aimed to eliminate UI-thread `PolyUtil.decode`, but eagerly decoded for all periods at startup into a singleton, exhausting the 512 MB heap during long sessions.
+4. *Preservation of Core Invariants*: `InteractivePeriodMap` already decodes `workoutIdToPolylineMap` asynchronously off the main thread upon opening. Setting `workoutIdToPathMap = emptyMap()` in the singleton eliminates OOM while preserving zero main-thread decoding.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* a database with many periods across Days, Weeks, Months, and Years,
+• *When* `PeriodsRepository.loadFromDatabase()` and `enrich()` execute,
+• *Then* `workoutIdToPathMap` remains empty in the singleton `_groupedPeriods`, eliminating eager `LatLng` object retention in heap.
+• *Given* period cards scrolling in `LazyColumn`,
+• *When* `PeriodSummaryCard` renders mini-maps,
+• *Then* `GoogleMapOptions().liteMode(true)` is configured for vector polylines, and preview states are served from the bounded LRU cache without spawning redundant OpenGL threads.
+• *Given* a user tapping a Period card map,
+• *When* `onMapClick` is triggered,
+• *Then* the full interactive `PeriodMapScreen` launches with full zoom/pan capabilities and complete workout tracks.
+
+**Invariants**: Zero visual regression on card thumbnails; tap-to-open interactive `PeriodMapScreen` intact; bounded heap usage during continuous scrolling.
 
 
 ---

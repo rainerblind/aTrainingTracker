@@ -3,7 +3,7 @@
 **Domain**: `process_stability`  
 **Prefixes**: `ARC`, `BLD`, `BUG`, `INT`, `LIV`, `LOG`, `MAN`, `NFR`, `PRO`, `REG`, `SEC`, `STB`, `STR`, `TOOL`, `TST`  
 **Scope**: ASPICE governance, infinite context, crash stability, build architecture, security, and developer tools.  
-**Total Requirements**: 89
+**Total Requirements**: 90
 
 ---
 
@@ -2319,6 +2319,60 @@ The workflow SHALL mandate that:
 
 **Invariants**: Zero alteration to clustering algorithms or StateFlows, coroutine dispatcher injection preserved, 100% clean-room test pass rate.
 
+### REQ-ARC-005: Java Core Services Architecture Decision Record & Prioritized Migration Strategy [Verified]
+- **Tests**: `TST-ARC-005`
+- **Priority**: Medium
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Implementation**: `docs/architecture/adr_001_java_core_services_migration.md`, `JavaCoreMigrationStrategyContractTest.kt`, `docs/architecture.md`
+- **Rationale**: To address ASPICE evaluation finding F9, eliminate Java platform types (`T!`) across core boundaries, ensure SWE.3 compile-time null safety, unify static analysis under Detekt/KtLint, and modernize concurrency models, an authoritative Architecture Decision Record (ADR-001) SHALL document the class-by-class inventory, migrate/keep/retire determinations, dependency-ordered migration tiers (Tiers 0–6), quality safeguards, and atomic child tickets (1–3 SP) under Epic ATT-431 (ATT-7566):
+1. *Comprehensive Quantitative Inventory & Classification (`REQ-ARC-005.1`)*:
+• An authoritative ADR (`docs/architecture/adr_001_java_core_services_migration.md`) SHALL catalog all 149 Java classes (45,167 LOC) across 12 architectural subsystems, documenting size, commit churn, unit test coverage, and defect risk per class.
+2. *Class-by-Class Migrate vs. Keep vs. Retire Decision Matrix (`REQ-ARC-005.2`)*:
+• The ADR SHALL record an explicit decision for every core subsystem:
+  - Migrate: Core tracking (`TrackerService`), peripheral device ingestion (`BANALService`, `DeviceManager`, `CyclingPowerMetricsDevice`, `BTLERadarDevice`), sensor formatting/filters, and file exporters (`FitFileWriter`, `TCXFileWriter`).
+  - Keep / Modernize via Repository: SQLite database managers (`WorkoutSummariesDatabaseManager`, `WorkoutSamplesDatabaseManager`).
+  - Keep / Sunset: Legacy Pebble smartwatch integration (7 files, 1,739 LOC) frozen for formal deprecation.
+  - Keep / Replace with standard library: 3rd-party embedded `au.com.bytecode.opencsv` (3 files, 493 LOC).
+3. *Phased, Bottom-Up Migration Sequencing & Integration Seams (`REQ-ARC-005.3`)*:
+• Migration SHALL follow bottom-up ASPICE SWE.5 integration seams across 7 ordered tiers:
+  - Tier 0: Characterisation test baseline & test harness scaffolding.
+  - Tier 1: Leaf sensor formatters & pure mathematical signal filters (`banalservice/sensor/formater/`, `banalservice/filters/`).
+  - Tier 2: File exporters & serializers (`FitFileWriter`, `TCXFileWriter`, `GCFileWriter`).
+  - Tier 3: Peripheral BLE & ANT+ leaf device drivers (`BTLEBikePowerDevice`, `ANTHeartRateDevice`, `BTLERadarDevice`).
+  - Tier 4: Database managers & repository modernization.
+  - Tier 5: Background core services & session state machines (`TrackerService`, `LiveWorkoutSession`, `BANALService`).
+  - Tier 6: Legacy subsystem deprecation & retirement.
+4. *Mandatory Migration Quality Safeguards (`REQ-ARC-005.4`)*:
+• Every migration child ticket SHALL enforce:
+  - Characterisation tests first: Existing behavioral contract and edge cases must be captured before touching Java sources.
+  - Zero functional change: Migrations must be pure refactorings without UI or behavioral alterations.
+  - Platform type nullability shielding: Adjacent Java boundaries must be fortified with `@NonNull` / `@Nullable` annotations.
+  - 100% clean-room test pass rate under `./gradlew testDebugUnitTest`.
+5. *Atomic Backlog Ticket Decomposition (`REQ-ARC-005.5`)*:
+• All resulting migration work SHALL be partitioned into atomic backlog tickets sized between 1 and 3 Story Points under Epic `ATT-431` (*Clean Code*), precluding monolithic multi-thousand LOC migration tickets.
+6. *Automated Strategy Contract Test Verification (`REQ-ARC-005.6`)*:
+• `JavaCoreMigrationStrategyContractTest.kt` SHALL programmatically assert the existence of ADR-001, verify that all core Java classes cited in the inventory are accounted for with valid decision classifications, and check that required quality safeguards and child tickets are documented.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-ARC-005` under Epic `ATT-431` (*Clean Code*), extending `REQ-ARC-001` through `REQ-ARC-004`. Targets `docs/architecture/adr_001_java_core_services_migration.md`, `JavaCoreMigrationStrategyContractTest.kt`, and `docs/architecture.md`.
+2. *Historical Origin & Commit Trace*: Initiated in Sprint `2026-46.6` under ticket `ATT-7566` to resolve ASPICE evaluation finding F9.
+3. *Root Reason for Existing Formulation*: Java core was retained during Kotlin adoption to prevent regressions in high-frequency sensor/GPS ingestion. A documented, phased migration strategy with pre-existing characterisation tests eliminates migration risk while restoring null safety and architectural homogeneity.
+4. *Preservation of Core Invariants*: Zero production code modification in this ticket; all existing telemetry processing, database schemas, and background services remain unaltered.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* the Java codebase inventory in `aTrainingTracker`,
+• *When* `docs/architecture/adr_001_java_core_services_migration.md` is reviewed,
+• *Then* it states a migrate/keep/retire decision per core class with technical rationale and risk tier.
+• *Given* the approved ADR-001,
+• *When* migration phases are formulated,
+• *Then* atomic child tickets of 1–3 Story Points are structured under Epic `ATT-431`.
+• *Given* `JavaCoreMigrationStrategyContractTest`,
+• *When* executed via `./gradlew testDebugUnitTest --tests com.atrainingtracker.architecture.JavaCoreMigrationStrategyContractTest`,
+• *Then* all assertions pass with zero failures.
+
+**Invariants**: Zero modification to production runtime code in `app/src/main/`, strict characterisation test prerequisite for all future child tickets, 100% test pass rate.
+
 ### REQ-PRO-027: Agile Agentic ASPICE (AAA) Governance, Constructive Resistance, Hypothesis Verification, Stage 5 Resource Gate & Ceremony 2 Completeness Sweep [Verified]
 - **Tests**: `TST-PRO-020`
 - **Priority**: High
@@ -4627,3 +4681,240 @@ The workflow SHALL mandate that:
   • *When* inspected,
   • *Then* it documents reference devices (`SYS-HW-01`..`SYS-HW-07`), physical sensor models, firmware versions, and formal gatekeeper signatures.
 - **Invariants**: Pure Python 3 standard library; zero Android runtime changes; zero regression in existing governance checks.
+
+
+---
+
+### REQ-PRO-089: Kover Coverage Floor Ratcheting and Critical Subsystem Bounds [Verified]
+- **Tests**: `TST-PRO-089`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Implementation**: `app/build.gradle`, `docs/tests.md`, `docs/coding_standards.md`
+- **Rationale**: Under ASPICE F6 verification criteria, the project's verification floor must ratchet upwards as the test suite matures and establish package-level guardrails for safety-critical components.
+- **Description**:
+  1. *Global Verification Floor*: `app/build.gradle` SHALL enforce a minimum of 40% line coverage (`minBound(40)`) and 35% branch coverage (`CoverageUnit.BRANCH`, `minValue = 35`).
+  2. *Subsystem Verification Bounds*: `app/build.gradle` SHALL define bounded verification rules for:
+     - `Tracking`: packages `com.atrainingtracker.trainingtracker.tracker` (line $\ge 55\%$, branch $\ge 45\%$).
+     - `Filters`: packages `com.atrainingtracker.banalservice.filters` (line $\ge 70\%$, branch $\ge 50\%$, noting actual baseline is 54.15%).
+     - `Sensors & Devices`: packages `com.atrainingtracker.banalservice.devices` and `com.atrainingtracker.banalservice.sensor` (line $\ge 60\%$, branch $\ge 50\%$).
+  3. *Test Suite Execution Precondition*: All unit tests SHALL pass cleanly before coverage verification is evaluated.
+  4. *Documentation Synchronization*: `docs/tests.md` and `docs/coding_standards.md` SHALL document the new bounds.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Net-new requirement `REQ-PRO-089`. Targets `app/build.gradle` Kover DSL and associated documentation.
+  2. *Historical Origin & Commit Trace*: Sprint 2026-46.6 via ticket `ATT-7563` under Epic `ATT-235`.
+  3. *Root Reason for Existing Formulation*: Baseline Kover floor was set to 35% line / 30% branch during early Java-to-Kotlin UI migration. Test maturity now exceeds ~45%+ line globally with ~6,000 unit tests, requiring ratcheting and package-level guardrails.
+  4. *Preservation of Core Invariants*: Build deterministic pass/fail semantics preserved; zero Android production runtime code changes.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* the complete codebase and test suite,
+  • *When* `./gradlew koverVerifyDebug` is executed,
+  • *Then* all global and subsystem rules pass without violation.
+  • *Given* any critical package falling below its designated line or branch bound,
+  • *When* `./gradlew koverVerifyDebug` executes,
+  • *Then* the build fails with a specific bounded rule violation.
+- **Invariants**: Zero changes to production runtime logic; zero flaky or bypassed tests.
+
+---
+
+### REQ-PRO-090: Unified CI & Release Quality Gates and Automated Governance Gating [Verified]
+- **Tests**: `TST-PRO-090`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit
+- **Implementation**: `.github/workflows/android-release.yml`, `.github/workflows/android-branch-build.yml`, `ReleaseCiAndLintConfigContractTest.kt`
+- **Rationale**: Continuous integration pipelines exhibited quality gate disparity between development and release branches (ASPICE evaluation finding F7). `.github/workflows/android-release.yml` previously executed only unit tests (`:app:testDebugUnitTest`), skipping Android Lint (`:app:lintDebug`), Detekt (`:app:detekt`), Kover coverage verification (`:app:koverVerifyDebug`), and requirement governance verification (`python3 tools/verify_requirement_governance.py`). Concurrently, `.github/workflows/android-branch-build.yml` omitted `tools/verify_requirement_governance.py`, allowing governance regressions to bypass automated CI gates on pull requests and branch pushes. Aligning quality gates across release and PR/branch workflows and enforcing this via automated contract tests guarantees ASPICE SUP.8 and SWE.4 process integrity (ATT-7564, Parent Epic ATT-232, refining and extending `REQ-BLD-002`, `REQ-PRO-046`, `REQ-PRO-047`, and `REQ-PRO-048`):
+- **Description**:
+  1. *Release Workflow Quality Gate Parity (`REQ-PRO-090.1`)*:
+     • `.github/workflows/android-release.yml` SHALL execute Android Lint (`./gradlew :app:lintDebug`), Detekt (`./gradlew :app:detekt`), Kover coverage report and verification (`./gradlew :app:koverXmlReportDebug :app:koverHtmlReportDebug :app:koverVerifyDebug`), and Requirement Governance (`python3 tools/verify_requirement_governance.py`) prior to release assembly (`:app:assembleRelease :app:bundleRelease`).
+     • Any failure in lint, detekt, kover, or requirement governance SHALL fail the release workflow and immediately abort APK/AAB assembly and distribution.
+  2. *Release Workflow Report Artifact Archiving (`REQ-PRO-090.2`)*:
+     • `.github/workflows/android-release.yml` SHALL upload report artifacts for lint (`app/build/reports/lint-results-debug.*`), detekt (`app/build/reports/detekt/`), and kover (`app/build/reports/kover/`) via `actions/upload-artifact@v4` with `if: always()`, ensuring static analysis and coverage evidence is preserved across release builds.
+  3. *Branch & Pull Request Governance Script Gating (`REQ-PRO-090.3`)*:
+     • `.github/workflows/android-branch-build.yml` SHALL execute `python3 tools/verify_requirement_governance.py` on all branch pushes and pull requests within the `build-debug` job.
+     • Any failure in requirement archaeology, master table parity, identifier uniqueness, link integrity, or evidence status SHALL fail the branch/PR build.
+  4. *Automated CI Contract Test Verification (`REQ-PRO-090.4`)*:
+     • `ReleaseCiAndLintConfigContractTest.kt` SHALL verify via automated unit contract tests that `.github/workflows/android-release.yml` contains execution steps for `lintDebug`, `detekt`, `koverVerifyDebug`, and `verify_requirement_governance.py` prior to `assembleRelease`, archives lint/detekt/kover reports, and verifies that `.github/workflows/android-branch-build.yml` contains the `verify_requirement_governance.py` step.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Net-new requirement `REQ-PRO-090` (`REQ-PRO-090.1`–`REQ-PRO-090.4`), refining and extending `REQ-BLD-002` (*Release CI Gating*), `REQ-PRO-046` (*Lint CI Gating*), `REQ-PRO-047` (*Detekt Static Analysis*), and `REQ-PRO-048` (*Kover Coverage Gating*). Targets `.github/workflows/android-release.yml`, `.github/workflows/android-branch-build.yml`, and `ReleaseCiAndLintConfigContractTest.kt`.
+  2. *Historical Origin & Commit Trace*: Ticket ATT-4025 (commit `00155b5d`, `REQ-BLD-002`) introduced unit test gating in release workflow; ATT-6173 (commit `08a744c1`, `REQ-PRO-046`), ATT-6175 (`REQ-PRO-047`), and ATT-6171 (`REQ-PRO-048`) added lint, detekt, and kover to branch builds. ASPICE evaluation finding F7 (Sprint 2026-46.6, ATT-7564) identified gate disparity between release and branch builds.
+  3. *Root Reason for Existing Formulation*: Workflows were created iteratively; release CI prioritized artifact generation and signing, while requirement governance was originally invoked manually by the coordinator rather than in CI.
+  4. *Preservation of Core Invariants*: 100% clean-room test pass rate; release signing keystore and secret resolution chain preserved; zero Android production runtime code changes.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* `.github/workflows/android-release.yml`,
+  • *When* inspected,
+  • *Then* it contains steps for `:app:lintDebug`, `:app:detekt`, `:app:koverVerifyDebug`, and `python3 tools/verify_requirement_governance.py` prior to `:app:assembleRelease :app:bundleRelease`, along with artifact upload steps for lint, detekt, and kover reports.
+  • *Given* `.github/workflows/android-branch-build.yml`,
+  • *When* inspected,
+  • *Then* it contains a step executing `python3 tools/verify_requirement_governance.py` in the `build-debug` job.
+  • *Given* `ReleaseCiAndLintConfigContractTest.kt`,
+  • *When* executed as part of the unit test suite,
+  • *Then* all contract tests verifying gate presence, sequencing, and artifact uploads across both workflows pass with 100% success.
+- **Invariants**: Zero runtime code changes; existing release signing provider chain and secrets handling remain unmodified.
+
+---
+
+### REQ-PRO-091: Independent ASPICE SUP.1 QA Auditing, Representative Sampling & Corrective Action Tracking [Verified]
+- **Tests**: `TST-PRO-091`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Implementation**: `tools/jira_util.py`, `tools/verify_requirement_governance.py`, `tools/hoechstmass/`, `.agents/skills/sprint-planner/SKILL.md`, `.agents/skills/jira-workflow/SKILL.md`, `.agents/rules/aspice_governance.md`, `docs/project_governance.md`, `docs/engineering/qa_audits/`
+- **Rationale**: ASPICE evaluation finding F1 identified three systemic gaps in process quality assurance under SUP.1 (Quality Assurance): lack of auditor role independence (audits were authored by `coordinator`), under-sampling (static 2-ticket sample regardless of sprint size), and open-loop non-compliances (prior non-compliant findings had no tracked Jira corrective action tickets and were never reviewed at sprint planning). Establishing strict auditor independence, representative statistical sampling ($\ge 10\%$), closed-loop corrective action tracking, and Ceremony 1 verification satisfies ASPICE SUP.1 BP1, BP4, and BP5 (ATT-7558, Parent Epic ATT-232, refining and extending `REQ-PRO-061`):
+- **Description**:
+  1. *Independent QA Auditor Role Enforcement (`REQ-PRO-091.1`)*:
+     • The QA process audit tool (`qa-audit`) and audit records in `docs/engineering/qa_audits/<sprint>.md` SHALL enforce an independent auditor role (`qa` / `agent2` / `quality-assurance`) that is strictly distinct from the sprint coordinator (`coordinator`) and ticket implementers (`agent1`).
+     • Invoking `qa-audit` with `role="coordinator"` or `role="agent1"` SHALL be forbidden and rejected with exit code 1.
+  2. *Representative Statistical Sampling Ratio (`REQ-PRO-091.2`)*:
+     • The QA audit tool SHALL dynamically compute the minimum required sample size as at least 10% of completed parent sprint tickets:
+       $$\text{sample\_size} \ge \max(2, \lceil 0.10 \times N \rceil)$$
+       where $N$ is the count of completed parent sprint tickets (or a documented risk-based sampling rationale).
+     • The audit report in `docs/engineering/qa_audits/<sprint>.md` SHALL explicitly document the total sprint population, sample size, and statistical/risk rationale in Section 1.
+  3. *Closed-Loop Jira Corrective-Action Tracking (`REQ-PRO-091.3`)*:
+     • For any audit evaluating a `NON-COMPLIANT` overall verdict or finding, Section 4 of `docs/engineering/qa_audits/<sprint>.md` SHALL link every non-compliant finding to a dedicated Jira corrective-action ticket (formatted as `[ATT-XXXX](https://.../browse/ATT-XXXX)` or `ATT-XXXX`).
+     • Generic placeholder text without authentic Jira ticket links is prohibited.
+  4. *Ceremony 1 Corrective Action Closure Verification (`REQ-PRO-091.4`)*:
+     • `.agents/skills/sprint-planner/SKILL.md` Ceremony 1 (Sprint Planning) SHALL mandate reviewing the previous sprint's QA process-compliance audit in `docs/engineering/qa_audits/` and verifying that all corrective-action tickets from non-compliant findings are either closed or scheduled for remediation in the active sprint.
+  5. *Automated Governance Verifier Enforcement (`REQ-PRO-091.5`)*:
+     • `tools/verify_requirement_governance.py --check-qa-audits` (and Höchstmaß mirror) SHALL validate that:
+       (a) Auditor role is independent (not `coordinator` or `agent1`),
+       (b) Sample size is $\ge \max(2, \lceil 0.10 \times N \rceil)$ or documented rationale, and
+       (c) Every `NON-COMPLIANT` audit record contains valid Jira ticket links for each non-compliant finding.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Net-new requirement `REQ-PRO-091` (`REQ-PRO-091.1`–`REQ-PRO-091.5`), refining and extending `REQ-PRO-061` (*Sprint-Level QA Process-Compliance Audit*). Targets `tools/jira_util.py`, `tools/verify_requirement_governance.py`, `tools/hoechstmass/`, `.agents/skills/sprint-planner/SKILL.md`, and `docs/engineering/qa_audits/`.
+  2. *Historical Origin & Commit Trace*: Introduced in Sprint 2026-46.3 via ATT-6154 (`REQ-PRO-061`). Finding F1 in ASPICE independent evaluation (2026-11-12) identified that `coordinator` authored audits, under-sampled, and left non-compliances open-loop.
+  3. *Root Reason for Existing Formulation*: Early tooling prioritized basic automated markdown generation over strict organizational independence and closed-loop corrective action tracking.
+  4. *Preservation of Core Invariants*: Existing CLI commands (`qa-audit`, `--check-qa-audits`) remain backward-compatible; pure Python standard library; zero production Android runtime code changes.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* an execution of `qa-audit`,
+  • *When* the auditor role is evaluated,
+  • *Then* it executes under an independent role (`qa` / `agent2`), and aborts if invoked under `coordinator` or `agent1`.
+  • *Given* a sprint with $N$ completed parent tickets,
+  • *When* `qa-audit` draws the sample,
+  • *Then* the sample size is $\ge \max(2, \lceil 0.10 \times N \rceil)$ with documented sampling rationale.
+  • *Given* an audit record with a `NON-COMPLIANT` finding,
+  • *When* validated by `verify_requirement_governance.py --check-qa-audits`,
+  • *Then* it passes only if every non-compliant finding links to an authentic Jira corrective-action ticket.
+  • *Given* Ceremony 1 in `sprint-planner/SKILL.md`,
+  • *When* executed at Sprint-Start,
+  • *Then* it includes verification of open corrective action tickets from the prior sprint's QA audit.
+- **Invariants**: Zero Android runtime code changes; pure Python 3 standard library; Rule 3 human-only gate preserved.
+
+
+
+### REQ-PRO-092: Process Metrics Credibility, Bug Severity Rubric, and Downstream Gate Defect Accounting [Verified]
+- **Tests**: `TST-PRO-092`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Implementation**: `tools/sprint_metrics.py`, `tools/jira_util.py`, `tools/hoechstmass/`, `docs/project_governance.md`, `.agents/skills/sprint-planner/SKILL.md`
+- **Rationale**: ASPICE evaluation finding F2 identified that quantitative process metrics recorded in `process_metrics.jsonl` lacked credibility: 100% first-time pass rates across Gates 1–5 contradicted 22 Stage 6 bounces, 100% of bugs were deflated to "Minor" because Jira fetch omitted labels and description, gate subtasks without verdicts inflated FTPR via fallback, ADF comment bodies crashed parsers, downstream escapes were unmodeled, and plausibility warnings were absent. Correcting metric ingestion, parsing ADF structures, segregating unverified subtasks, attributing downstream escapes, enforcing a bug severity rubric, and auditing gate spot-checks satisfies ASPICE PA 4.1, PA 4.2, and SUP.9 (ATT-7559, Parent Epic ATT-232, refining and extending `REQ-PRO-058`, `REQ-PRO-059`, and `REQ-PRO-063`):
+- **Description**:
+  1. *Jira API Metric Field Ingestion (`REQ-PRO-092.1`)*:
+     • `collect_sprint_metrics_for_id` in `tools/jira_util.py` (and Höchstmaß mirror) SHALL include `labels` and `description` in the queried issue fields (`summary,status,issuetype,priority,subtasks,comment,labels,description,{STORY_POINTS_FIELD}`).
+     • Bug severity detection SHALL prioritize explicit severity labels (`severity-critical`, `severity-major`, `severity-minor`, `severity-cosmetic`), followed by regex extraction of `**Severity**: <Level>` or `Severity: <Level>` from issue descriptions, before falling back to priority mappings.
+  2. *Robust Atlassian Document Format (ADF) Comment Body Parsing (`REQ-PRO-092.2`)*:
+     • `parse_verdicts_from_comments` and `parse_final_review_agent_verdicts_from_comments` SHALL support both string bodies and nested Jira Cloud v3 ADF dictionary structures without raising `AttributeError` or `TypeError`.
+     • Text nodes in ADF document structures SHALL be extracted recursively prior to regex verdict matching.
+  3. *Segregation of Unverified Gate Subtasks (`REQ-PRO-092.3`)*:
+     • Gate subtasks (Gates 1–5) in status `Erledigt` (or done/closed) that lack an explicit, parsable reviewer verdict comment (`PASS` / `REVISION`) SHALL NOT be counted as `passed_first_time`.
+     • Such subtasks SHALL be categorized as `unverified` and tracked separately in gate metrics (`gate_data[g]["unverified"]`).
+  4. *Downstream Defect Escape Accounting across Swiss Cheese Layers (`REQ-PRO-092.4`)*:
+     • Swiss Cheese barrier escape metrics ($p_g$) SHALL account for defects identified downstream at Gate 6 (Stage 6 Cold Review bounces and escalations).
+     • Stage 6 bounces SHALL be attributed to the responsible upstream gate layers (Gates 3, 4, 5) when computing composite escape rates, ensuring $p_g > 0$ when defects escape to Stage 6.
+  5. *Metric Plausibility Warning Thresholds (`REQ-PRO-092.5`)*:
+     • When generating or recording sprint metrics, `sprint_metrics.py` SHALL evaluate a plausibility check: if the first-time pass rate across $\ge 20$ evaluated gate subtasks is 100.0% without a single revision or bounce, a prominent plausibility warning (`PA 4.1 Plausibility Warning: Potential Gate Discrimination Blind Spot`) SHALL be recorded in metrics metadata and markdown outputs.
+  6. *Bug Severity Rubric Governance & Spot-Check Auditing (`REQ-PRO-092.6`)*:
+     • `docs/project_governance.md` SHALL document the authoritative 4-tier Bug Severity Rubric:
+       - **Critical**: Startup crash, tracking loop termination, data corruption/loss, ANR blocking core app workflow; release-blocking.
+       - **Major**: Crash/ANR in non-critical screens, primary sensor disconnection recovery failure, severe battery drain, functional impairment with workaround.
+       - **Minor**: Non-crashing functional defect, transient UI glitch, localized string formatting issue.
+       - **Cosmetic**: Visual styling quirk, margin/alignment flaw, icon tint mismatch.
+     • `create_issue` in `tools/jira_util.py` SHALL enforce that bugs originating from crashes, ANRs, or Crashlytics traces are assigned at least `Major` or `Critical` severity unless explicitly exempted with rationale.
+     • Sprint QA audits and retrospective checklists SHALL record a periodic spot-check of gate verdicts with discrepancy rates documented.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Net-new requirement `REQ-PRO-092` (`REQ-PRO-092.1`–`REQ-PRO-092.6`), extending `REQ-PRO-058` (*Stage 6 Final Review*), `REQ-PRO-059` (*PA 4.1 Quantitative Process Metrics*), and `REQ-PRO-063` (*Problem Resolution Management*). Targets `tools/sprint_metrics.py`, `tools/jira_util.py`, `tools/hoechstmass/`, `docs/project_governance.md`, and `.agents/skills/sprint-planner/SKILL.md`.
+  2. *Historical Origin & Commit Trace*: Finding F2 in ASPICE independent evaluation (2026-11-12) confirmed that 100% first-pass rates and 100% Minor bug ratings undermined the credibility of process data under PA 4.x and SUP.9.
+  3. *Root Reason for Existing Formulation*: Initial implementations used minimal field queries and simple fallback assumptions (`Erledigt -> passed_first_time`) to simplify sprint metrics generation.
+  4. *Preservation of Core Invariants*: Backward-compatible JSONL output schema; standard library only; zero runtime app code changes.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* sprint issues fetched for metrics collection,
+  • *When* `collect_sprint_metrics_for_id` queries Jira,
+  • *Then* `labels` and `description` are included and bug severities correctly reflect labels (e.g. 1 Critical and 5 Major in Sprint 441).
+  • *Given* an ADF-formatted comment body dict,
+  • *When* `parse_verdicts_from_comments` processes the comment,
+  • *Then* text is extracted recursively and verdicts parsed without throwing exceptions.
+  • *Given* gate subtasks without verdict comments in status `Erledigt`,
+  • *When* gate metrics are evaluated,
+  • *Then* they are recorded as `unverified` and not counted toward `passed_first_time`.
+  • *Given* Stage 6 bounces in a sprint,
+  • *When* escape rates are calculated,
+  • *Then* downstream escapes are reflected in upstream gate escape probabilities.
+  • *Given* 100% FTPR across $\ge 20$ gate reviews without rejections,
+  • *When* sprint metrics are calculated,
+  • *Then* a plausibility warning is emitted in the output.
+  • *Given* a bug ticket created with crash/ANR keywords,
+  • *When* validated against the severity rubric,
+  • *Then* it is assigned at least `Major` or `Critical` severity.
+- **Invariants**: Pure Python standard library; zero Android application runtime footprint; Rule 3 human-only gate preserved.
+
+
+---
+
+### REQ-PRO-093: Normative Governance Rules Restructuring and Living Document Shard Size Capping [Verified]
+- **Tests**: `TST-PRO-093`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Implementation**: `.agents/rules/aspice_governance.md`, `tools/hoechstmass/.agents/rules/aspice_governance.md`, `docs/engineering/rule_history_archive.md`, `tools/shard_living_docs.py`, `tools/test_shard_living_docs.py`
+- **Rationale**: Under ASPICE PA 3.1 and evaluation finding F8, process governance rules must be concise, normative (who/what/when), and free of embedded ticket quotes, retrospective stories, and superseded contradictions, while preserving a permanent historical cross-reference archive. Furthermore, living documentation shards must have an enforced maximum line limit and automated tooling checks to flag and partition oversized shards.
+- **Description**:
+  1. *Normative Rule Consolidation (`REQ-PRO-093.1`)*: `.agents/rules/aspice_governance.md` and `tools/hoechstmass/.agents/rules/aspice_governance.md` SHALL define the 9 Core Rules strictly as concise normative requirements with stable sub-rule IDs (`Rule 1.1`–`Rule 9.5`), removing all inline ticket quotes and historical anecdotes.
+  2. *Rule History & Rationale Archive (`REQ-PRO-093.2`)*: `docs/engineering/rule_history_archive.md` SHALL maintain the complete historical mapping of Rules 1–84+, capturing historical origin commits, retrospective rationales, and exact quotes.
+  3. *Shard Size Limit & Tooling Check (`REQ-PRO-093.3`)*: `tools/shard_living_docs.py` SHALL define a default maximum shard size (`DEFAULT_MAX_SHARD_LINES = 4000`), provide a `--check-size` inspection CLI, and flag any requirement shard that exceeds the configured limit.
+  4. *Oversized Shard Partitioning Facility (`REQ-PRO-093.4`)*: `tools/shard_living_docs.py` SHALL provide automated partitioning facilities (`split_oversized_shard`) to split oversized requirement shards into compliant sub-shards while strictly preserving 100% ID uniqueness, master index table parity, and bidirectional traceability.
+  5. *Governance Contract Invariance (`REQ-PRO-093.5`)*: All existing governance contract tests (`AspiceSweAuditContractTest.kt`, `HoechstmassCoreFrameworkContractTest.kt`, `test_agent_emulator.py`, `test_verify_requirement_governance.py`) SHALL pass with 100% success.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Net-new requirement `REQ-PRO-093`. Targets `.agents/rules/aspice_governance.md`, `docs/engineering/rule_history_archive.md`, and `tools/shard_living_docs.py`.
+  2. *Historical Origin & Commit Trace*: Sprint 2026-46.6 via ticket `ATT-7565` under Epic `ATT-232` (Finding F8).
+  3. *Root Reason for Existing Formulation*: Rules accumulated inline rationale and quotes over 46 sprints; sharding was originally 9 domains without per-shard line limits.
+  4. *Preservation of Core Invariants*: Human Decision Gate, two-tier device policy, 100% contract test pass rate, and zero runtime regression preserved.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* `.agents/rules/aspice_governance.md`,
+  • *When* inspected,
+  • *Then* each rule consists of concise normative clauses with stable IDs, and retrospective quotes/history live in `docs/engineering/rule_history_archive.md`.
+  • *Given* a requirement shard exceeding the maximum line limit,
+  • *When* `tools/shard_living_docs.py --check-size` is executed,
+  • *Then* the tool flags the oversized shard with line counts.
+  • *Given* the automated test suite,
+  • *When* `python3 tools/test_shard_living_docs.py` and `python3 tools/verify_requirement_governance.py` are executed,
+  • *Then* all tests pass with exit code 0.
+- **Invariants**: Zero changes to production runtime logic; existing master table parity intact; Human Decision Gate inviolable.
+
+
+---
+
+### REQ-PRO-094: Legacy Requirement Attribute Backfill and Strict SWE.1 BP2 Enforcement [Verified]
+- **Tests**: `TST-PRO-094`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Implementation**: `docs/requirements/req_tracking_cockpit.md`, `docs/requirements/req_maps_navigation.md`, `tools/verify_requirement_governance.py`, `tools/test_verify_requirement_governance.py`
+- **Rationale**: Under ASPICE SWE.1 BP2 and BP3, all software requirements must define Priority, Type, and Verification Method attributes. The legacy tolerance in `tools/verify_requirement_governance.py` permitted 115 legacy requirements to omit these attributes with non-fatal warnings (ASPICE finding F5). Backfilling attributes across all living shards and enabling strict enforcement by default guarantees 100% attribute completeness and prevents future regressions.
+- **Description**:
+  1. *Legacy Attribute Backfill (`REQ-PRO-094.1`)*: All 115 legacy requirements across `docs/requirements/req_tracking_cockpit.md` and `docs/requirements/req_maps_navigation.md` SHALL define explicit, valid `Priority` (`Critical`, `High`, `Medium`, `Low`), `Type` (`Functional`, `Non-Functional`), and `Verification Method` (`Unit`, `Integration`, `On-Device Manual`, `Review`, `Formal Analysis`) attributes.
+  2. *Strict Attribute Enforcement by Default (`REQ-PRO-094.2`)*: `tools/verify_requirement_governance.py` (`verify_requirement_attributes` and `verify_governance`) SHALL enforce valid Priority, Type, and Verification Method attributes by default (`enforce_attributes=True`), treating any missing or invalid attribute in any requirement shard as a fatal verification error.
+  3. *Zero Warning Requirement (`REQ-PRO-094.3`)*: Executing `tools/verify_requirement_governance.py` SHALL emit zero legacy-missing-attribute warnings and confirm 100% attribute compliance.
+  4. *Regression Test Parity (`REQ-PRO-094.4`)*: `tools/test_verify_requirement_governance.py` SHALL verify that any requirement lacking attributes fails verification unconditionally.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Net-new requirement `REQ-PRO-094`. Targets `docs/requirements/req_tracking_cockpit.md`, `docs/requirements/req_maps_navigation.md`, and `tools/verify_requirement_governance.py`.
+  2. *Historical Origin & Commit Trace*: Sprint 2026-46.6 via ticket `ATT-7562` under Epic `ATT-232` (Finding F5).
+  3. *Root Reason for Existing Formulation*: Legacy tolerance was introduced in `ATT-6147` as an interim bridge during ASPICE CL2 remediation.
+  4. *Preservation of Core Invariants*: Human Decision Gate, zero Android runtime logic changes, and 100% test pass rate preserved.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* all requirement shards under `docs/requirements/`,
+  • *When* `tools/verify_requirement_governance.py` executes,
+  • *Then* zero legacy-missing-attribute warnings are emitted and 100% attribute compliance is certified.
+  • *Given* any requirement lacking Priority, Type, or Verification Method,
+  • *When* the governance verifier runs,
+  • *Then* it fails unconditionally with exit code 1.
+- **Invariants**: Zero changes to production runtime logic; existing master table parity intact; Human Decision Gate inviolable.

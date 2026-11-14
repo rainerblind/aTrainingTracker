@@ -55,6 +55,32 @@ def identify_gate_number(summary):
     return None
 
 
+def extract_text_from_comment_body(body):
+    """
+    REQ-PRO-092.2:
+    Recursively extracts plain text from Atlassian Document Format (ADF) dicts
+    or returns string bodies unmodified.
+    """
+    if isinstance(body, str):
+        return body
+    if isinstance(body, dict):
+        texts = []
+
+        def _recurse(node):
+            if isinstance(node, dict):
+                if node.get("type") == "text" and "text" in node:
+                    texts.append(node["text"])
+                for v in node.values():
+                    _recurse(v)
+            elif isinstance(node, list):
+                for item in node:
+                    _recurse(item)
+
+        _recurse(body)
+        return " ".join(texts)
+    return str(body) if body is not None else ""
+
+
 def parse_final_review_agent_verdicts_from_comments(comments):
     """
     REQ-PRO-058.4 / TST-PRO-058.4:
@@ -63,7 +89,7 @@ def parse_final_review_agent_verdicts_from_comments(comments):
     """
     verdicts = []
     for c in (comments or []):
-        body = c.get("body", "")
+        body = extract_text_from_comment_body(c.get("body", ""))
         if FINAL_REVIEW_BOUNCE_RE.search(body):
             verdicts.append("BOUNCE")
         elif FINAL_REVIEW_ESCALATED_RE.search(body):
@@ -81,7 +107,7 @@ def parse_verdicts_from_comments(comments):
     """
     verdicts = []
     for c in comments:
-        body = c.get("body", "")
+        body = extract_text_from_comment_body(c.get("body", ""))
         author_name = c.get("author", {}).get("displayName", "")
         # Reviewer comment identification: role tag or display name
         is_agent2 = (
@@ -130,7 +156,7 @@ def parse_sprint_gate_metrics(parent_issues, sprint_info):
 
     # Gate statistics containers
     gate_data = {
-        g: {"total": 0, "passed_first_time": 0, "revisions": 0, "bounces": 0}
+        g: {"total": 0, "passed_first_time": 0, "revisions": 0, "bounces": 0, "unverified": 0}
         for g in range(1, 7)
     }
 
@@ -186,8 +212,9 @@ def parse_sprint_gate_metrics(parent_issues, sprint_info):
                     break
 
             if not detected_sev:
-                desc = fields.get("description", "")
-                m_sev = re.search(r"(?:\*\*Severity\*\*|Severity:?)\s*([A-Za-z]+)", desc, re.I)
+                raw_desc = fields.get("description", "")
+                desc = extract_text_from_comment_body(raw_desc) if raw_desc else ""
+                m_sev = re.search(r"(?:\*\*Severity\*\*|Severity)\s*:?\s*([A-Za-z]+)", desc, re.I)
                 if m_sev:
                     cand = m_sev.group(1).capitalize()
                     if cand in by_severity:
@@ -227,11 +254,11 @@ def parse_sprint_gate_metrics(parent_issues, sprint_info):
             verdicts = parse_verdicts_from_comments(comments)
 
             if not verdicts:
-                # If subtask is marked Erledigt with no explicit revision comments, count as passed
+                # If subtask is marked Erledigt with no explicit revision comments:
+                # REQ-PRO-092.3: do NOT count as passed_first_time. Track as unverified!
                 st_status = st.get("fields", {}).get("status", {}).get("name", "").lower()
                 if st_status in ("erledigt", "done", "closed"):
-                    gate_data[g_num]["total"] += 1
-                    gate_data[g_num]["passed_first_time"] += 1
+                    gate_data[g_num]["unverified"] += 1
                 continue
 
             gate_data[g_num]["total"] += 1
@@ -242,32 +269,13 @@ def parse_sprint_gate_metrics(parent_issues, sprint_info):
 
     # 2. Compute FTPR and Swiss Cheese Layer Escape Rates (p1..p6)
     total_evaluated_subtasks = sum(gate_data[g]["total"] for g in range(1, 6))
+    total_unverified_subtasks = sum(gate_data[g]["unverified"] for g in range(1, 6))
     total_passed_first_time = sum(gate_data[g]["passed_first_time"] for g in range(1, 6))
 
     overall_ftpr = (
         round((total_passed_first_time / total_evaluated_subtasks) * 100.0, 1)
         if total_evaluated_subtasks > 0 else 100.0
     )
-
-    gates_summary = {}
-    p_layers = []
-    for g in range(1, 6):
-        tot = gate_data[g]["total"]
-        pft = gate_data[g]["passed_first_time"]
-        rev = gate_data[g]["revisions"]
-        ftpr = round((pft / tot) * 100.0, 1) if tot > 0 else 100.0
-        # Escape rate p_g is the defect escape probability from authoring into rework
-        escape_rate = round(1.0 - (ftpr / 100.0), 4)
-        p_layers.append(escape_rate)
-
-        gates_summary[f"gate_{g}"] = {
-            "name": STAGE_MAP[g]["name"],
-            "total_subtasks": tot,
-            "passed_first_time": pft,
-            "revisions": rev,
-            "ftpr_percent": ftpr,
-            "escape_rate_p": escape_rate,
-        }
 
     # Gate 6: Stage 6 ('Final Review (Agent)') Cold Carbon Review
     tot6 = gate_data[6]["total"]
@@ -276,6 +284,44 @@ def parse_sprint_gate_metrics(parent_issues, sprint_info):
     bounces6 = gate_data[6]["bounces"]
     ftpr6 = round((pft6 / tot6) * 100.0, 1) if tot6 > 0 else 100.0
     escape_rate6 = round(1.0 - (ftpr6 / 100.0), 4)
+
+    # Downstream defect escape attribution across upstream gates (REQ-PRO-092.4)
+    # Stage 6 bounces represent defects that escaped upstream verification barriers (Gates 3, 4, 5).
+    # Attribute downstream escapes to Gates 3, 4, 5 to ensure p_g reflects downstream defect leakage.
+    downstream_escape_ratio = 0.0
+    if bounces6 > 0:
+        base_pop = max(1.0, float(tot6 if tot6 > 0 else total_evaluated_subtasks))
+        downstream_escape_ratio = min(1.0, round(float(bounces6) / (base_pop * 3.0), 4))
+        if downstream_escape_ratio <= 0.0:
+            downstream_escape_ratio = 0.05
+
+    gates_summary = {}
+    p_layers = []
+    for g in range(1, 6):
+        tot = gate_data[g]["total"]
+        pft = gate_data[g]["passed_first_time"]
+        rev = gate_data[g]["revisions"]
+        unver = gate_data[g]["unverified"]
+        ftpr = round((pft / tot) * 100.0, 1) if tot > 0 else 100.0
+        # Escape rate p_g is the defect escape probability from authoring into rework
+        escape_rate = round(1.0 - (ftpr / 100.0), 4)
+
+        # REQ-PRO-092.4: If Stage 6 bounces occurred, attribute downstream escape to Gates 3, 4, 5
+        if g in (3, 4, 5) and bounces6 > 0:
+            escape_rate = max(escape_rate, downstream_escape_ratio)
+
+        p_layers.append(escape_rate)
+
+        gates_summary[f"gate_{g}"] = {
+            "name": STAGE_MAP[g]["name"],
+            "total_subtasks": tot,
+            "passed_first_time": pft,
+            "revisions": rev,
+            "unverified": unver,
+            "ftpr_percent": ftpr,
+            "escape_rate_p": escape_rate,
+        }
+
     gates_summary["gate_6"] = {
         "name": STAGE_MAP[6]["name"],
         "total_subtasks": tot6,
@@ -283,6 +329,7 @@ def parse_sprint_gate_metrics(parent_issues, sprint_info):
         "passed_first_time": pft6,
         "revisions": rev6,
         "bounces": bounces6,
+        "unverified": gate_data[6]["unverified"],
         "ftpr_percent": ftpr6,
         "escape_rate_p": escape_rate6,
     }
@@ -306,6 +353,14 @@ def parse_sprint_gate_metrics(parent_issues, sprint_info):
         round((closed_bugs / total_bugs) * 100.0, 1)
         if total_bugs > 0 else 100.0
     )
+
+    # REQ-PRO-092.5: Metric Plausibility Warning Thresholds
+    plausibility_warnings = []
+    total_revisions_all = sum(gate_data[g]["revisions"] for g in range(1, 6)) + rev6 + bounces6
+    if total_evaluated_subtasks >= 20 and overall_ftpr >= 100.0 and total_revisions_all == 0:
+        plausibility_warnings.append(
+            f"PA 4.1 Plausibility Warning: Gate first-time pass rate is 100.0% across {total_evaluated_subtasks} subtasks without revisions, indicating potential gate discrimination blind spots."
+        )
 
     metrics = {
         "sprint_id": sprint_id,
@@ -331,6 +386,7 @@ def parse_sprint_gate_metrics(parent_issues, sprint_info):
         "quality_gates": {
             "overall_ftpr_percent": overall_ftpr,
             "total_subtasks_evaluated": total_evaluated_subtasks,
+            "total_unverified_subtasks": total_unverified_subtasks,
             "gates": gates_summary,
             "swiss_cheese": {
                 "p1_analysis_escape": p_layers[0],
@@ -343,6 +399,7 @@ def parse_sprint_gate_metrics(parent_issues, sprint_info):
             },
             "human_acceptance_rate_percent": human_acceptance_rate,
         },
+        "plausibility_warnings": plausibility_warnings,
     }
 
     return metrics
@@ -551,5 +608,11 @@ def format_metrics_markdown(metrics, spc=None):
                 lines.append(f"* {w}")
         else:
             lines.append("*Process Stability*: All metrics within +/- 2sigma control limits (In Statistical Control).")
+
+    plausibility_warnings = metrics.get("plausibility_warnings", [])
+    if plausibility_warnings:
+        lines.append("")
+        for w in plausibility_warnings:
+            lines.append(f"*⚠️ {w}*")
 
     return "\n".join(lines)

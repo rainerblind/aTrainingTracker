@@ -25,6 +25,7 @@ import android.content.res.Configuration
 import android.util.Log
 import android.view.KeyEvent
 import androidx.activity.compose.BackHandler
+import androidx.annotation.VisibleForTesting
 import androidx.core.content.ContextCompat
 import com.atrainingtracker.util.safeUnregisterReceiver
 import com.atrainingtracker.trainingtracker.ui.tracking.tracking.CockpitStatus
@@ -1096,10 +1097,11 @@ fun TrackingTabsScreen(
                         )
                     }
 
-                    // Live Rearview Radar Vertical Edge Overlay (REQ-TRK-062 / ATT-5085)
-                    val isRadarActive = screenMode == ScreenMode.TRACKING && (
-                        radarState.connectionState != RadarConnectionState.DISCONNECTED ||
-                        RadarTrafficSimulator.isSimulating
+                    // Live Rearview Radar Vertical Edge Overlay (REQ-TRK-062 / ATT-5085 / ATT-7744 / REQ-TRK-062.4)
+                    val isRadarActive = isRadarOverlayVisible(
+                        screenMode = screenMode,
+                        connectionState = radarState.connectionState,
+                        isSimulating = RadarTrafficSimulator.isSimulating
                     )
                     if (isRadarActive) {
                         RadarEdgeOverlay(
@@ -1382,4 +1384,23 @@ internal suspend fun navigateToPagerTarget(
         Log.e(TAG, "Cannot scroll to target $target: pageCount is $finalPageCount")
         return false
     }
+}
+
+/**
+ * Evaluates whether the live rearview radar vertical edge overlay should be rendered (REQ-TRK-062.4 / ATT-7744).
+ * Strictly suppresses rendering during initial sensor search (CONNECTING) and idle disconnect,
+ * while maintaining display for active connections (CONNECTED), mid-ride disconnect warnings (DISCONNECTED_ERROR),
+ * and indoor traffic simulation.
+ */
+@VisibleForTesting
+fun isRadarOverlayVisible(
+    screenMode: ScreenMode,
+    connectionState: com.atrainingtracker.banalservice.devices.radar.RadarConnectionState,
+    isSimulating: Boolean
+): Boolean {
+    return screenMode == ScreenMode.TRACKING && (
+        connectionState == com.atrainingtracker.banalservice.devices.radar.RadarConnectionState.CONNECTED ||
+        connectionState == com.atrainingtracker.banalservice.devices.radar.RadarConnectionState.DISCONNECTED_ERROR ||
+        isSimulating
+    )
 }

@@ -90,7 +90,7 @@ STAGE_TO_SKILL_DIR = {
     "final review (agent)": "stage6-final-review",
 }
 
-VALID_ROLES = ["agent1", "agent2", "coordinator"]
+VALID_ROLES = ["agent1", "agent2", "coordinator", "qa"]
 
 
 def resolve_desired_parent_stage_for_subtask(subtask_summary, subtask_done=True):
@@ -767,6 +767,19 @@ def create_issue(
             )
             sys.exit(1)
 
+        # REQ-PRO-092.6: Crash/ANR severity rubric guard
+        crash_anr_pattern = re.compile(
+            r"\b(?:crash(?:es|ed|ing)?|anr|fatal exception|sigsegv|nullpointerexception)\b",
+            re.IGNORECASE,
+        )
+        if crash_anr_pattern.search(f"{summary} {description}"):
+            if sev_clean in ("minor", "cosmetic"):
+                print(
+                    f"Error: Bugs originating from crashes or ANRs must be assigned at least 'major' or 'critical' severity (got '{sev_clean}'). See Bug Severity Rubric in docs/project_governance.md (REQ-PRO-092.6).",
+                    file=sys.stderr,
+                )
+                sys.exit(1)
+
         sev_label = f"severity-{sev_clean}"
         if sev_label not in labels_list:
             labels_list.append(sev_label)
@@ -1026,7 +1039,7 @@ def collect_sprint_metrics_for_id(sprint_id, sprint_name, board_id, as_role="coo
 
     base = config.get("JIRA_URL", "").rstrip("/")
     sp_field = h_config.get("custom_fields", {}).get("story_points", "customfield_10016")
-    url = f"{base}/rest/agile/1.0/sprint/{sprint_id}/issue?fields=summary,status,issuetype,priority,subtasks,comment,{sp_field}&maxResults=100"
+    url = f"{base}/rest/agile/1.0/sprint/{sprint_id}/issue?fields=summary,status,issuetype,priority,subtasks,comment,labels,description,{sp_field}&maxResults=100"
     res = jira_request(url, role=as_role, config=config)
     issues = res.get("issues", [])
 
@@ -1480,7 +1493,7 @@ def export_gates(sprint_arg=None, out_path=None, as_role="coordinator", role=Non
     return out_path, records
 
 
-def format_qa_audit_markdown(sprint_info, audit_results, overall_compliant, auditor_role="coordinator"):
+def format_qa_audit_markdown(sprint_info, audit_results, overall_compliant, auditor_role="qa", total_tickets=None):
     import datetime
     date_str = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d")
     s_id = sprint_info.get("id")
@@ -1488,12 +1501,14 @@ def format_qa_audit_markdown(sprint_info, audit_results, overall_compliant, audi
     verdict_str = "COMPLIANT" if overall_compliant else "NON-COMPLIANT"
     compliant_count = sum(1 for r in audit_results if r["compliant"])
     total_sampled = len(audit_results)
+    if total_tickets is None:
+        total_tickets = total_sampled
 
     lines = [
         f"# Sprint QA Process-Compliance Audit: Sprint {s_name} (ID: {s_id})",
         "",
         f"**Date**: {date_str}  ",
-        f"**Auditor Role**: `{auditor_role}`  ",
+        f"**Auditor Role**: `{auditor_role}` (Quality Assurance Auditor, independent of Coordinator/Implementer)  ",
         f"**Sampled Tickets**: {', '.join(r['key'] for r in audit_results)}  ",
         f"**Overall Process Verdict**: **{verdict_str}**  ",
         "",
@@ -1501,12 +1516,12 @@ def format_qa_audit_markdown(sprint_info, audit_results, overall_compliant, audi
         "",
         "## 1. Executive Summary",
         "",
-        f"Under ASPICE SUP.1 (Quality Assurance) and GP 2.2 (Process Evidence), this audit verifies process adherence independently of product reviews. A sample of {total_sampled} tickets was audited across 5 core ASPICE process criteria (Lifecycle Deliverables, Stage Subtask Progression, 4-Augen Role Separation, Living Documentation Parity, and Commit Hygiene).",
+        f"Under ASPICE SUP.1 (Quality Assurance) and GP 2.2 (Process Evidence), this audit verifies process adherence independently of product reviews. A sample of {total_sampled} / {total_tickets} tickets (>= 10% dynamic threshold enforced) was audited across 5 core ASPICE process criteria (Lifecycle Deliverables, Stage Subtask Progression, 4-Augen Role Separation, Living Documentation Parity, and Commit Hygiene).",
         "",
         "| Metric | Value |",
         "| :--- | :--- |",
         f"| **Sprint** | {s_name} (ID: {s_id}) |",
-        f"| **Sample Size** | {total_sampled} tickets |",
+        f"| **Sample Size** | {total_sampled} / {total_tickets} tickets (>= 10% dynamic threshold enforced) |",
         f"| **Compliant Tickets** | {compliant_count} / {total_sampled} |",
         f"| **Overall Process Verdict** | **{verdict_str}** |",
         "",
@@ -1565,14 +1580,21 @@ def format_qa_audit_markdown(sprint_info, audit_results, overall_compliant, audi
         lines.append("Non-compliances detected during sampling. Action items and tracking tickets:")
         for r in audit_results:
             if not r["compliant"]:
-                lines.append(f"* **{r['key']}**: Process deviation noted; follow-up ticket recommended.")
+                ca_key = r.get("corrective_action") or f"[{r['key']}]"
+                lines.append(f"* **{r['key']}**: Process deviation noted; Corrective Action Ticket: {ca_key}")
 
     lines.append("")
     return "\n".join(lines)
 
 
-def qa_audit(sprint_arg=None, sample_size=2, out_path=None, as_role="coordinator", role=None, config=None, h_config=None, repo_root=None):
+def qa_audit(sprint_arg=None, sample_size=None, out_path=None, as_role="qa", role=None, config=None, h_config=None, repo_root=None):
     if role:
+        as_role = role
+    if as_role in ("coordinator", "agent1"):
+        raise ValueError(
+            f"Error: Auditor role cannot be '{as_role}'. "
+            "Under ASPICE SUP.1 (REQ-PRO-091), QA audit must be performed by an independent role ('qa' or 'agent2')."
+        )
         as_role = role
     if config is None:
         config = load_env_config()
@@ -1626,7 +1648,10 @@ def qa_audit(sprint_arg=None, sample_size=2, out_path=None, as_role="coordinator
                     except Exception:
                         st["comments"] = []
 
-    sample_size = max(2, int(sample_size))
+    # Sampling >= max(2, ceil(len(parent_issues) * 0.10)) tickets
+    import math
+    min_sample = max(2, math.ceil(len(parent_issues) * 0.10))
+    sample_size = min_sample if sample_size is None else max(int(sample_size), min_sample)
     completed_parents = [
         p for p in parent_issues
         if p.get("fields", {}).get("status", {}).get("name", "").lower()
@@ -1809,6 +1834,7 @@ def qa_audit(sprint_arg=None, sample_size=2, out_path=None, as_role="coordinator
         audit_results=audit_results,
         overall_compliant=overall_compliant,
         auditor_role=as_role,
+        total_tickets=len(parent_issues),
     )
 
     if not out_path:

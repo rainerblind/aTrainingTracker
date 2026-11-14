@@ -37,6 +37,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -49,6 +50,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.ui.theme.TTAlpha
 import com.atrainingtracker.banalservice.Protocol
+import com.atrainingtracker.banalservice.devices.AttFusedAltitudePreferences
+import com.atrainingtracker.banalservice.devices.AttFusedPreferences
 import com.atrainingtracker.banalservice.devices.DeviceType
 import com.atrainingtracker.banalservice.devices.radar.RadarLightController
 import com.atrainingtracker.banalservice.devices.radar.RadarLightMode
@@ -56,6 +59,7 @@ import com.atrainingtracker.banalservice.ui.devices.DeviceStatusRow
 import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceUiData
 import com.atrainingtracker.trainingtracker.ui.components.core.AppDialogActions
 import com.atrainingtracker.trainingtracker.ui.components.core.AppModalBottomSheet
+import com.atrainingtracker.trainingtracker.ui.equipment.WheelSensorGuidanceDialog
 import com.atrainingtracker.trainingtracker.ui.theme.TTColor
 
 /**
@@ -71,6 +75,7 @@ fun EditDeviceDialog(
     val snapshot by viewModel.deviceSnapshot.collectAsStateWithLifecycle()
     val liveData by viewModel.deviceLiveData.collectAsStateWithLifecycle(initialValue = null)
     val deviceNotFound by viewModel.deviceNotFound.collectAsStateWithLifecycle()
+    var showWheelGuidanceDialog by remember { mutableStateOf(false) }
 
     // Initialize data only once
     LaunchedEffect(deviceId) {
@@ -81,6 +86,10 @@ fun EditDeviceDialog(
         if (deviceNotFound) {
             onDismiss()
         }
+    }
+
+    if (showWheelGuidanceDialog) {
+        WheelSensorGuidanceDialog(onDismiss = { showWheelGuidanceDialog = false })
     }
 
     snapshot?.let { data ->
@@ -175,12 +184,27 @@ fun EditDeviceDialog(
                     AltitudeExplanationSection(data.deviceType)
                 }
 
-                // 6. Radar Tail Light Mode Control (ATT-7540, REQ-CON-031.5)
+                // 6. ATT Odometry Fusion Configuration & Guards (ATT-7751, REQ-SEN-028)
+                if (data.deviceType == DeviceType.SPEED_AND_LOCATION_ATT_FUSED) {
+                    AttFusedConfigSection()
+                }
+
+                // 7. ATT Altitude & Slope Fusion Configuration & Guards (ATT-6279, REQ-FIL-016)
+                if (data.deviceType == DeviceType.ALTITUDE_AND_SLOPE_ATT_FUSED) {
+                    AttFusedAltitudeConfigSection()
+                }
+
+                // 8. Radar Tail Light Mode Control (ATT-7540, REQ-CON-031.5)
                 if (data.deviceType == DeviceType.BIKE_RADAR) {
                     RadarLightControlSection(isConnected = isConnected)
                 }
 
-                // 7. Live Data Preview
+                // 9. Wheel Sensor Guidance (ATT-7752, REQ-SEN-029.4)
+                if (shouldShowWheelSensorGuidance(data.deviceType)) {
+                    WheelSensorGuidanceCard(onShowGuidance = { showWheelGuidanceDialog = true })
+                }
+
+                // 10. Live Data Preview
                 liveData?.let { live ->
                     LivePreviewSection(live)
                 }
@@ -699,6 +723,377 @@ private fun AltitudeExplanationSection(deviceType: DeviceType) {
 }
 
 /**
+ * Educational information card and guarded input toggles for ATT Odometry Fusion
+ * (REQ-SEN-028.3, REQ-SEN-028.4, ATT-7751).
+ */
+@Composable
+@Suppress("FunctionNaming", "LongMethod")
+private fun AttFusedConfigSection() {
+    val context = LocalContext.current
+    var gnssChecked by remember { mutableStateOf(AttFusedPreferences.isGnssEnabled(context)) }
+    var wheelChecked by remember { mutableStateOf(AttFusedPreferences.isWheelEnabled(context)) }
+    var gyroChecked by remember { mutableStateOf(AttFusedPreferences.isGyroEnabled(context)) }
+    var autoCalibChecked by remember { mutableStateOf(AttFusedPreferences.isAutoCalibEnabled(context)) }
+
+    val gnssAvailable = remember { AttFusedPreferences.isGnssAvailable(context) }
+    val wheelAvailable = remember { AttFusedPreferences.isWheelAvailable(context) }
+    val gyroAvailable = remember { AttFusedPreferences.isGyroAvailable(context) }
+    val autoCalibAvailable = remember { AttFusedPreferences.isAutoCalibAvailable(context) }
+
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        // Educational Card
+        OutlinedCard(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp),
+            colors = CardDefaults.outlinedCardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+            ),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Info,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp),
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                    Text(
+                        text = stringResource(R.string.device_altitude_explanation_title),
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(
+                        text = stringResource(R.string.device_altitude_how_it_works_header),
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Text(
+                        text = stringResource(R.string.device_att_fused_how_it_works),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
+                HorizontalDivider(
+                    thickness = 0.5.dp,
+                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f)
+                )
+
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(
+                        text = stringResource(R.string.device_altitude_pros_cons_header),
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Text(
+                        text = stringResource(R.string.device_att_fused_pros_cons),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        }
+
+        // Guarded Toggles Section
+        OutlinedCard(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp),
+            colors = CardDefaults.outlinedCardColors(
+                containerColor = MaterialTheme.colorScheme.surface
+            ),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                AttFusedToggleRow(
+                    title = stringResource(R.string.device_att_fused_toggle_gnss),
+                    checked = gnssChecked,
+                    enabled = gnssAvailable,
+                    disabledHint = stringResource(R.string.device_att_fused_toggle_gnss_hint_disabled),
+                    onCheckedChange = {
+                        gnssChecked = it
+                        AttFusedPreferences.setGnssEnabled(context, it)
+                    }
+                )
+
+                HorizontalDivider(
+                    thickness = 0.5.dp,
+                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
+                )
+
+                AttFusedToggleRow(
+                    title = stringResource(R.string.device_att_fused_toggle_wheel),
+                    checked = wheelChecked,
+                    enabled = wheelAvailable,
+                    disabledHint = stringResource(R.string.device_att_fused_toggle_wheel_hint_disabled),
+                    onCheckedChange = {
+                        wheelChecked = it
+                        AttFusedPreferences.setWheelEnabled(context, it)
+                    }
+                )
+
+                HorizontalDivider(
+                    thickness = 0.5.dp,
+                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
+                )
+
+                AttFusedToggleRow(
+                    title = stringResource(R.string.device_att_fused_toggle_gyro),
+                    checked = gyroChecked,
+                    enabled = gyroAvailable,
+                    disabledHint = stringResource(R.string.device_att_fused_toggle_gyro_hint_disabled),
+                    onCheckedChange = {
+                        gyroChecked = it
+                        AttFusedPreferences.setGyroEnabled(context, it)
+                    }
+                )
+
+                HorizontalDivider(
+                    thickness = 0.5.dp,
+                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
+                )
+
+                AttFusedToggleRow(
+                    title = stringResource(R.string.device_att_fused_toggle_autocalib),
+                    checked = autoCalibChecked,
+                    enabled = autoCalibAvailable,
+                    disabledHint = stringResource(R.string.device_att_fused_toggle_autocalib_hint_disabled),
+                    onCheckedChange = {
+                        autoCalibChecked = it
+                        AttFusedPreferences.setAutoCalibEnabled(context, it)
+                    }
+                )
+            }
+        }
+    }
+}
+
+/**
+ * Educational information card and guarded input toggles for ATT Altitude & Slope Fusion
+ * (REQ-FIL-016.5, ATT-6279).
+ */
+@Composable
+@Suppress("FunctionNaming", "LongMethod")
+private fun AttFusedAltitudeConfigSection() {
+    val context = LocalContext.current
+    var baroChecked by remember { mutableStateOf(AttFusedAltitudePreferences.isBarometerEnabled(context)) }
+    var demChecked by remember { mutableStateOf(AttFusedAltitudePreferences.isDemEnabled(context)) }
+    var gpsChecked by remember { mutableStateOf(AttFusedAltitudePreferences.isGpsEnabled(context)) }
+    var speedChecked by remember { mutableStateOf(AttFusedAltitudePreferences.isSpeedEnabled(context)) }
+
+    val baroAvailable = remember { AttFusedAltitudePreferences.isBarometerAvailable(context) }
+    val demAvailable = remember { AttFusedAltitudePreferences.isDemAvailable(context) }
+    val gpsAvailable = remember { AttFusedAltitudePreferences.isGpsAvailable(context) }
+    val speedAvailable = remember { AttFusedAltitudePreferences.isSpeedAvailable(context) }
+
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        // Educational Card
+        OutlinedCard(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp),
+            colors = CardDefaults.outlinedCardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+            ),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Info,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp),
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                    Text(
+                        text = stringResource(R.string.device_altitude_explanation_title),
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(
+                        text = stringResource(R.string.device_altitude_how_it_works_header),
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Text(
+                        text = stringResource(R.string.device_att_fused_alt_how_it_works),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
+                HorizontalDivider(
+                    thickness = 0.5.dp,
+                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f)
+                )
+
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(
+                        text = stringResource(R.string.device_altitude_pros_cons_header),
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Text(
+                        text = stringResource(R.string.device_att_fused_alt_pros_cons),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        }
+
+        // Guarded Toggles Section
+        OutlinedCard(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp),
+            colors = CardDefaults.outlinedCardColors(
+                containerColor = MaterialTheme.colorScheme.surface
+            ),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                Text(
+                    text = stringResource(R.string.devices_live_sensor_data_header),
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary
+                )
+
+                AttFusedToggleRow(
+                    title = stringResource(R.string.device_att_fused_alt_toggle_baro),
+                    checked = baroChecked,
+                    enabled = baroAvailable,
+                    disabledHint = stringResource(R.string.device_att_fused_alt_toggle_baro_hint_disabled),
+                    onCheckedChange = {
+                        baroChecked = it
+                        AttFusedAltitudePreferences.setBarometerEnabled(context, it)
+                    }
+                )
+
+                HorizontalDivider(
+                    thickness = 0.5.dp,
+                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
+                )
+
+                AttFusedToggleRow(
+                    title = stringResource(R.string.device_att_fused_alt_toggle_dem),
+                    checked = demChecked,
+                    enabled = demAvailable,
+                    disabledHint = stringResource(R.string.device_att_fused_alt_toggle_dem_hint_disabled),
+                    onCheckedChange = {
+                        demChecked = it
+                        AttFusedAltitudePreferences.setDemEnabled(context, it)
+                    }
+                )
+
+                HorizontalDivider(
+                    thickness = 0.5.dp,
+                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
+                )
+
+                AttFusedToggleRow(
+                    title = stringResource(R.string.device_att_fused_alt_toggle_gps),
+                    checked = gpsChecked,
+                    enabled = gpsAvailable,
+                    disabledHint = stringResource(R.string.device_att_fused_alt_toggle_gps_hint_disabled),
+                    onCheckedChange = {
+                        gpsChecked = it
+                        AttFusedAltitudePreferences.setGpsEnabled(context, it)
+                    }
+                )
+
+                HorizontalDivider(
+                    thickness = 0.5.dp,
+                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
+                )
+
+                AttFusedToggleRow(
+                    title = stringResource(R.string.device_att_fused_alt_toggle_speed),
+                    checked = speedChecked,
+                    enabled = speedAvailable,
+                    disabledHint = stringResource(R.string.device_att_fused_alt_toggle_speed_hint_disabled),
+                    onCheckedChange = {
+                        speedChecked = it
+                        AttFusedAltitudePreferences.setSpeedEnabled(context, it)
+                    }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun AttFusedToggleRow(
+    title: String,
+    checked: Boolean,
+    enabled: Boolean,
+    disabledHint: String,
+    onCheckedChange: (Boolean) -> Unit
+) {
+    Column(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+        verticalArrangement = Arrangement.spacedBy(2.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.bodyMedium,
+                color = if (enabled) {
+                    MaterialTheme.colorScheme.onSurface
+                } else {
+                    MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                }
+            )
+            Switch(
+                checked = checked && enabled,
+                onCheckedChange = onCheckedChange,
+                enabled = enabled
+            )
+        }
+        if (!enabled) {
+            Text(
+                text = disabledHint,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error.copy(alpha = 0.8f)
+            )
+        }
+    }
+}
+
+/**
  * Live tail light mode selector for connected radar devices supporting light control (REQ-CON-031.5, ATT-7540).
  *
  * Mode selections are dispatched immediately via [RadarLightController.setManualLightMode] and do not
@@ -706,6 +1101,7 @@ private fun AltitudeExplanationSection(deviceType: DeviceType) {
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
+@Suppress("LongMethod")
 private fun RadarLightControlSection(
     isConnected: Boolean,
     modifier: Modifier = Modifier
@@ -815,3 +1211,78 @@ private fun RadarLightControlSection(
         }
     }
 }
+
+/**
+ * In-app educational guidance card for wheel speed sensors and fused odometry (REQ-SEN-029.4, ATT-7752).
+ */
+@Composable
+internal fun WheelSensorGuidanceCard(
+    onShowGuidance: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    OutlinedCard(
+        onClick = onShowGuidance,
+        modifier = modifier
+            .fillMaxWidth()
+            .testTag("edit_device_wheel_guidance_card"),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.outlinedCardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+        ),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Info,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp),
+                    tint = MaterialTheme.colorScheme.primary
+                )
+                Text(
+                    text = stringResource(R.string.equipment_guidance_title),
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.weight(1f)
+                )
+                IconButton(
+                    onClick = onShowGuidance,
+                    modifier = Modifier
+                        .size(32.dp)
+                        .testTag("edit_device_wheel_guidance_button")
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Info,
+                        contentDescription = stringResource(R.string.equipment_guidance_title),
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
+
+            Text(
+                text = stringResource(R.string.equipment_guidance_subtitle),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+/**
+ * Determines whether the wheel sensor guidance entry point should be displayed for the given [deviceType]
+ * (REQ-SEN-029.4, ATT-7752).
+ */
+fun shouldShowWheelSensorGuidance(deviceType: DeviceType): Boolean =
+    deviceType == DeviceType.BIKE_SPEED ||
+    deviceType == DeviceType.BIKE_SPEED_AND_CADENCE ||
+    deviceType == DeviceType.SPEED_AND_LOCATION_ATT_FUSED
+

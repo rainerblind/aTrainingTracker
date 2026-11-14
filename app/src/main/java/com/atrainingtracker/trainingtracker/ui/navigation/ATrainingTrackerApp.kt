@@ -118,7 +118,9 @@ import com.atrainingtracker.trainingtracker.ui.settings.dropbox.DropboxSettingsD
 import com.atrainingtracker.trainingtracker.ui.settings.export.ExportSettingsDialog
 import com.atrainingtracker.trainingtracker.ui.settings.healthconnect.HealthConnectSettingsDialog
 import com.atrainingtracker.trainingtracker.ui.settings.googledrive.GoogleDriveSettingsDialog
+import com.atrainingtracker.BuildConfig
 import com.atrainingtracker.trainingtracker.ui.help.TipsGuideScreen
+import com.atrainingtracker.trainingtracker.ui.settings.developer.DeveloperMenuScreen
 import com.atrainingtracker.trainingtracker.ui.settings.tuning.AdvancedTuningDialog
 import com.atrainingtracker.trainingtracker.ui.settings.tuning.AdvancedTuningScreen
 import com.atrainingtracker.trainingtracker.ui.settings.search.SearchSettingsDialog
@@ -714,6 +716,24 @@ fun ATrainingTrackerApp(
                             }
                         }
                     )
+                }
+
+                if (BuildConfig.DEBUG) {
+                    composable(
+                        route = NavRoutes.DEVELOPER_MENU_PATTERN,
+                        arguments = listOf(
+                            navArgument(NavRoutes.ARG_PUSHED) {
+                                type = NavType.BoolType
+                                defaultValue = false
+                            }
+                        )
+                    ) { backStackEntry ->
+                        val isPushed = backStackEntry.arguments?.getBoolean(NavRoutes.ARG_PUSHED) == true
+                        DeveloperMenuScreen(
+                            onNavigateBack = { navController.popBackStack() },
+                            onOpenDrawer = if (isPushed) null else { { activity.openDrawer() } }
+                        )
+                    }
                 }
 
                 composable(NavRoutes.MORNING_HRV) {

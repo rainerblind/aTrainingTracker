@@ -339,13 +339,12 @@ object SmartBrakeLightDetector : SensorEventListener {
     }
 
     /**
-     * Resets detector state for unit test isolation.
+     * Resets transient motion state across workout stops while preserving configuration and auto-bypass status (REQ-CON-035.5).
      */
     @JvmStatic
-    fun reset() {
+    fun resetMotionState() {
         synchronized(this) {
             stopListening()
-            isAutoBypassed = false
             isBraking = false
             currentSpeedMps = 0f
             currentDvDt = 0f
@@ -357,6 +356,18 @@ object SmartBrakeLightDetector : SensorEventListener {
             gravityY = 0f
             gravityZ = 9.81f
             decelerationStartRealtimeMs = 0L
+        }
+    }
+
+    /**
+     * Resets detector state for unit test isolation.
+     */
+    @JvmStatic
+    fun reset() {
+        synchronized(this) {
+            resetMotionState()
+            isEnabled = true
+            isAutoBypassed = false
         }
     }
 }

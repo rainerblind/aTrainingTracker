@@ -206,7 +206,9 @@ def _merge_ticket_impl(ticket_key, sprint=None, summary=None, cwd=None):
     clean_key = ticket_key
     if clean_key.startswith("feature/"):
         clean_key = clean_key[len("feature/"):]
-    feature_branch = f"feature/{clean_key}"
+    elif clean_key.startswith("feat/"):
+        clean_key = clean_key[len("feat/"):]
+    feature_branches = [f"feature/{clean_key}", f"feat/{clean_key}"]
 
     if not summary:
         summary = f"{clean_key}: Implement {clean_key}"
@@ -308,20 +310,21 @@ def _merge_ticket_impl(ticket_key, sprint=None, summary=None, cwd=None):
             )
             git_cmd(["branch", "-f", sprint_ref, new_sha], cwd=current_wt)
 
-    # 6. Detach any sibling worktree from feature_branch and delete feature_branch
+    # 6. Detach any sibling worktree from feature_branches and delete them
     worktrees = get_worktrees(cwd=current_wt)
-    feature_full_ref = f"refs/heads/{feature_branch}"
-    for wt in worktrees:
-        if wt.get("branch") == feature_full_ref:
-            wt_path = wt["path"]
-            print(f"[merge-ticket] Detaching worktree '{wt_path}' from {feature_branch}...", file=sys.stderr)
-            git_cmd(["-C", wt_path, "checkout", "--detach", sprint_ref], cwd=current_wt)
+    for fb in feature_branches:
+        feature_full_ref = f"refs/heads/{fb}"
+        for wt in worktrees:
+            if wt.get("branch") == feature_full_ref:
+                wt_path = wt["path"]
+                print(f"[merge-ticket] Detaching worktree '{wt_path}' from {fb}...", file=sys.stderr)
+                git_cmd(["-C", wt_path, "checkout", "--detach", sprint_ref], cwd=current_wt)
 
-    # Delete feature branch if it exists
-    res_feat = git_cmd(["show-ref", "--verify", feature_full_ref], cwd=current_wt, check=False)
-    if res_feat.returncode == 0:
-        print(f"[merge-ticket] Deleting branch {feature_branch}...", file=sys.stderr)
-        git_cmd(["branch", "-D", feature_branch], cwd=current_wt, check=False)
+        # Delete feature branch if it exists
+        res_feat = git_cmd(["show-ref", "--verify", feature_full_ref], cwd=current_wt, check=False)
+        if res_feat.returncode == 0:
+            print(f"[merge-ticket] Deleting branch {fb}...", file=sys.stderr)
+            git_cmd(["branch", "-D", fb], cwd=current_wt, check=False)
 
     # Clean up any temporary branches
     for temp_name in [f"temp_{clean_key}", f"temp_sprint_{clean_key}"]:

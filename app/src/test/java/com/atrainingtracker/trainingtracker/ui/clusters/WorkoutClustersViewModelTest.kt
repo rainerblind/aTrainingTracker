@@ -180,6 +180,7 @@ class WorkoutClustersViewModelTest {
 
         mockkObject(WorkoutRepository.Companion)
         every { WorkoutRepository.getInstance(any()) } returns mockWorkoutRepo
+        every { mockWorkoutRepo.unassignClusterFromWorkout(any()) } returns kotlinx.coroutines.CompletableDeferred(Unit)
 
         mockkObject(KnownLocationsRepository.Companion)
         every { KnownLocationsRepository.getInstance(any()) } returns mockKnownLocationsRepo
@@ -438,6 +439,52 @@ class WorkoutClustersViewModelTest {
 
         assertEquals("Trail", viewModel.filterCriteria.value.query)
         assertNull(viewModel.filterCriteria.value.minHitCount)
+    }
+
+    @Test
+    fun testWorkoutClustersViewModel_unassignWorkout_updatesRepository() = runTest(testDispatcher) {
+        val cluster = createCluster(10L, "Isar Trail")
+        val workout = createWorkout(101L, 10L)
+        val unclusteredWorkout = workout.copy(clusterId = -1L, clusterName = null)
+
+        coEvery { mockClusterRepo.getWorkoutsForCluster(10L) } returns listOf(workout) andThen emptyList()
+        coEvery { mockClusterRepo.getUnclusteredWorkouts() } returns listOf(unclusteredWorkout)
+
+        val viewModel = WorkoutClustersViewModel(mockApplication, testDispatcher)
+        activeViewModel = viewModel
+        advanceUntilIdle()
+
+        viewModel.selectCluster(cluster)
+        advanceUntilIdle()
+        assertEquals(1, viewModel.clusterWorkouts.value.size)
+
+        viewModel.unassignWorkout(workout)
+        advanceUntilIdle()
+
+        verify { mockWorkoutRepo.unassignClusterFromWorkout(101L) }
+        coVerify { mockClusterRepo.refreshClusters() }
+        coVerify { mockWorkoutRepo.reloadWorkoutData(101L) }
+        assertEquals(0, viewModel.clusterWorkouts.value.size)
+        assertEquals(1, viewModel.unclusteredWorkouts.value.size)
+        assertEquals(101L, viewModel.unclusteredWorkouts.value[0].id)
+    }
+
+    @Test
+    fun testWorkoutClustersViewModel_createNewClusterFromWorkout_delegatesToEngineAndRefreshes() = runTest(testDispatcher) {
+        val workout = createWorkout(101L, -1L)
+        every { mockClusterEngine.createNewClusterFromWorkout(any(), workout) } returns 15L
+        coEvery { mockClusterRepo.getUnclusteredWorkouts() } returns emptyList()
+
+        val viewModel = WorkoutClustersViewModel(mockApplication, testDispatcher)
+        activeViewModel = viewModel
+        advanceUntilIdle()
+
+        viewModel.createNewClusterFromWorkout(workout)
+        advanceUntilIdle()
+
+        verify { mockClusterEngine.createNewClusterFromWorkout(mockApplication, workout) }
+        coVerify { mockClusterRepo.refreshClusters() }
+        coVerify { mockWorkoutRepo.reloadWorkoutData(101L) }
     }
 }
 

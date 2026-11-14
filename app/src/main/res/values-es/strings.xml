@@ -153,6 +153,8 @@
 
     <!-- sensor types -->
     <string name="accumulated_sensors">sensores acumulados</string>
+    <string name="world_yaw_rate">Velocidad angular mundial</string>
+    <string name="world_yaw_rate_short">Velocidad angular</string>
     <string name="accumulated_sensors_short">sens. ac.</string>
     <string name="accuracy">precisión</string>
     <string name="accuracy_short">prec.</string>
@@ -1270,6 +1272,7 @@
     <string name="settings_workout_card_description">Descripción y notas</string>
     <string name="settings_workout_card_charts">Gráficos de telemetría</string>
     <string name="settings_workout_card_zones">Análisis de zonas (FC y potencia)</string>
+    <string name="settings_workout_card_hrv">Análisis de VFC</string>
     <string name="settings_edit_workout_title">Editar entrenamiento</string>
     <string name="settings_edit_workout_cluster">Ruta / Recorrido</string>
     <string name="settings_edit_workout_commute_trainer">Desplazamiento y rodillo</string>
@@ -1526,6 +1529,8 @@
     <string name="tuning_altitude_window_desc">Ventana de tiempo para la media móvil de altitud instantánea y velocidad vertical.</string>
     <string name="tuning_slope_min_speed_title">Velocidad mínima para pendiente</string>
     <string name="tuning_slope_min_speed_desc">Velocidad mínima requerida para calcular la pendiente en tiempo real.</string>
+    <string name="tuning_post_workout_erts_smoothing_title">Suavizado ERTS posentrenamiento</string>
+    <string name="tuning_post_workout_erts_smoothing_desc">Aplica suavizado bidireccional Extended Rauch-Tung-Striebel a la trayectoria y al perfil de altitud tras guardar el entrenamiento.</string>
     <string name="tuning_show_ant_missing_adapter_warnings_title">Mostrar advertencias de adaptador ANT+ ausente</string>
     <string name="tuning_show_ant_missing_adapter_warnings_desc">Mostrar cuadro de diálogo de alerta cuando se busca un sensor ANT+ pero no se detecta ningún adaptador</string>
     <string name="tuning_cat_aftermath">Aftermath y análisis de perfil</string>
@@ -2168,6 +2173,7 @@
     <string name="workout_detail_tab_overview">Resumen</string>
     <string name="workout_detail_tab_map_graphs">Mapa y gráficos</string>
     <string name="workout_detail_tab_zones">Zonas</string>
+    <string name="workout_detail_tab_hrv">VFC</string>
     <string name="workout_detail_tab_laps_segments">Vueltas y segmentos</string>
     <string name="workout_detail_tab_custom_default">Pestaña personalizada</string>
     <string name="workout_detail_section_details">Métricas y resumen</string>

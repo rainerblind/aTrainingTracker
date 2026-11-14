@@ -344,5 +344,48 @@ class AppNavigationDrawerTest {
         val privacyIndex = infoSupportGroup.items.indexOfFirst { it.id == R.id.drawer_privacy_policy }
         assertTrue("Tips guide must be placed before privacy policy", tipsIndex < privacyIndex)
     }
+
+    @Test
+    fun testDeveloperMenuDrawerItem_presentWhenDebug_absentWhenRelease() {
+        // REQ-SET-087.2 / TST-SET-087.3
+        val debugGroups = createDrawerGroups(R.string.tab_start, isDebug = true)
+        val debugInfoGroup = debugGroups.firstOrNull { it.titleRes == R.string.drawer__info_support }
+        assertTrue("Info & Support group must exist in debug build", debugInfoGroup != null)
+        val devMenuItemDebug = debugInfoGroup!!.items.firstOrNull { it.id == R.id.drawer_developer_menu }
+        assertTrue("Developer menu must be present in Info & Support group when isDebug == true", devMenuItemDebug != null)
+        assertEquals(R.drawable.ic_settings_24, devMenuItemDebug?.iconRes)
+        assertEquals(R.string.developer_menu_title, devMenuItemDebug?.titleRes)
+
+        val releaseGroups = createDrawerGroups(R.string.tab_start, isDebug = false)
+        val releaseInfoGroup = releaseGroups.firstOrNull { it.titleRes == R.string.drawer__info_support }
+        assertTrue("Info & Support group must exist in release build", releaseInfoGroup != null)
+        val devMenuItemRelease = releaseInfoGroup!!.items.firstOrNull { it.id == R.id.drawer_developer_menu }
+        assertNull("Developer menu must NOT be present when isDebug == false", devMenuItemRelease)
+    }
+
+    @Test
+    fun testDeveloperMenuRouteResolution() {
+        // REQ-SET-087.2 / TST-SET-087.3
+        assertEquals(
+            NavRoutes.DEVELOPER_MENU,
+            NavRoutes.fromDrawerItemId(R.id.drawer_developer_menu)
+        )
+        assertEquals(
+            R.id.drawer_developer_menu,
+            NavRoutes.toDrawerItemId(NavRoutes.DEVELOPER_MENU)
+        )
+        assertEquals(
+            "developer_menu",
+            NavRoutes.developerMenu(pushed = false)
+        )
+        assertEquals(
+            "developer_menu?pushed=true",
+            NavRoutes.developerMenu(pushed = true)
+        )
+        assertNull(
+            "Developer menu must be a screen route, not a modal settings bottom sheet",
+            NavRoutes.toBottomSheetType(R.id.drawer_developer_menu)
+        )
+    }
 }
 

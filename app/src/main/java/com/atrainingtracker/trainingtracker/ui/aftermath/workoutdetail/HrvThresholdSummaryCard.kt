@@ -456,8 +456,10 @@ fun HrvThresholdSummaryCard(
                 )
             }
 
-            // Training Zone Comparison & Multi-Session Consensus Section (REQ-PER-037)
-            val hasZoneData = (configuredFtp != null && configuredFtp > 0) || (configuredHrMax != null && configuredHrMax > 0)
+            // Training Zone Comparison & Multi-Session Consensus Section (REQ-PER-037 / REQ-UI-527.5)
+            val showPowerComparison = hasPower && configuredFtp != null && configuredFtp > 0
+            val showHrComparison = hasHr && configuredHrMax != null && configuredHrMax > 0
+            val hasZoneData = showPowerComparison || showHrComparison
             if (hasZoneData) {
                 HorizontalDivider()
 
@@ -494,8 +496,8 @@ fun HrvThresholdSummaryCard(
                         }
                     }
 
-                    // Power Zone Delta Comparison
-                    if (configuredFtp != null && configuredFtp > 0) {
+                    // Power Zone Delta Comparison & Consensus
+                    if (showPowerComparison) {
                         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
@@ -551,10 +553,48 @@ fun HrvThresholdSummaryCard(
                                 }
                             }
                         }
+
+                        // Power Consensus Status Indicator Row
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            val isUnlocked = comparison.consensusGate.status == ConsensusGateStatus.UNLOCKED
+                            val badgeBg = if (isUnlocked) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant
+                            val badgeFg = if (isUnlocked) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
+                            val badgeText = if (isUnlocked) stringResource(R.string.hrv_consensus_badge_unlocked) else stringResource(R.string.hrv_consensus_badge_locked)
+
+                            Surface(
+                                shape = RoundedCornerShape(6.dp),
+                                color = badgeBg,
+                                modifier = Modifier.testTag("hrv_consensus_badge")
+                            ) {
+                                Text(
+                                    text = badgeText,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = badgeFg,
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                )
+                            }
+
+                            val reasonText = if (comparison.consensusGate.reasonParam != null) {
+                                stringResource(comparison.consensusGate.reasonResId, comparison.consensusGate.reasonParam)
+                            } else {
+                                stringResource(comparison.consensusGate.reasonResId)
+                            }
+                            Text(
+                                text = reasonText,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
                     }
 
                     // Heart Rate Zone Informational Comparison
-                    if (configuredHrMax != null && configuredHrMax > 0) {
+                    if (showHrComparison) {
                         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                             Text(
                                 text = stringResource(R.string.hrv_zone_comparison_hr_header),
@@ -680,82 +720,50 @@ fun HrvThresholdSummaryCard(
                         }
                     }
 
-                    // Consensus Status Indicator Row
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        val isUnlocked = comparison.consensusGate.status == ConsensusGateStatus.UNLOCKED
-                        val badgeBg = if (isUnlocked) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant
-                        val badgeFg = if (isUnlocked) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
-                        val badgeText = if (isUnlocked) stringResource(R.string.hrv_consensus_badge_unlocked) else stringResource(R.string.hrv_consensus_badge_locked)
-
-                        Surface(
-                            shape = RoundedCornerShape(6.dp),
-                            color = badgeBg,
-                            modifier = Modifier.testTag("hrv_consensus_badge")
-                        ) {
-                            Text(
-                                text = badgeText,
-                                style = MaterialTheme.typography.labelSmall,
-                                fontWeight = FontWeight.Bold,
-                                color = badgeFg,
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                            )
-                        }
-
-                        val reasonText = if (comparison.consensusGate.reasonParam != null) {
-                            stringResource(comparison.consensusGate.reasonResId, comparison.consensusGate.reasonParam)
-                        } else {
-                            stringResource(comparison.consensusGate.reasonResId)
-                        }
-                        Text(
-                            text = reasonText,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.weight(1f)
-                        )
-                    }
-
                     // Action Buttons Row
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        val isUnlocked = comparison.consensusGate.status == ConsensusGateStatus.UNLOCKED
-                        val suggestedFtp = comparison.consensusGate.suggestedFtp
-                        Button(
-                            onClick = { showConfirmDialog = true },
-                            enabled = isUnlocked && suggestedFtp != null && onUpdateFtp != null,
-                            modifier = Modifier
-                                .weight(1f)
-                                .testTag("hrv_btn_update_power_zones")
-                        ) {
-                            Text(stringResource(R.string.hrv_zone_comparison_btn_update_power))
-                        }
-
-                        val isHrUnlocked = comparison.hrConsensusGate.status == ConsensusGateStatus.UNLOCKED
-                        val suggestedT1 = comparison.hrConsensusGate.suggestedHrvt1Bpm
-                        val suggestedT2 = comparison.hrConsensusGate.suggestedHrvt2Bpm
-                        Button(
-                            onClick = { showHrConfirmDialog = true },
-                            enabled = isHrUnlocked && suggestedT1 != null && suggestedT2 != null && onUpdateHrZones != null,
-                            modifier = Modifier
-                                .weight(1f)
-                                .testTag("hrv_btn_update_hr_zones")
-                        ) {
-                            Text(stringResource(R.string.hrv_zone_comparison_btn_update_hr))
-                        }
-
-                        val pT1 = powerEstimate?.hrvt1?.intensity?.roundToInt()
-                        val pT2 = powerEstimate?.hrvt2?.intensity?.roundToInt()
-                        if (onCalibrateMader != null && (pT1 != null || pT2 != null)) {
-                            OutlinedButton(
-                                onClick = { onCalibrateMader(pT1, pT2) },
-                                modifier = Modifier.testTag("hrv_btn_calibrate_mader")
+                        if (showPowerComparison) {
+                            val isUnlocked = comparison.consensusGate.status == ConsensusGateStatus.UNLOCKED
+                            val suggestedFtp = comparison.consensusGate.suggestedFtp
+                            Button(
+                                onClick = { showConfirmDialog = true },
+                                enabled = isUnlocked && suggestedFtp != null && onUpdateFtp != null,
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .testTag("hrv_btn_update_power_zones")
                             ) {
-                                Text(stringResource(R.string.hrv_zone_comparison_forward_mader))
+                                Text(stringResource(R.string.hrv_zone_comparison_btn_update_power))
+                            }
+                        }
+
+                        if (showHrComparison) {
+                            val isHrUnlocked = comparison.hrConsensusGate.status == ConsensusGateStatus.UNLOCKED
+                            val suggestedT1 = comparison.hrConsensusGate.suggestedHrvt1Bpm
+                            val suggestedT2 = comparison.hrConsensusGate.suggestedHrvt2Bpm
+                            Button(
+                                onClick = { showHrConfirmDialog = true },
+                                enabled = isHrUnlocked && suggestedT1 != null && suggestedT2 != null && onUpdateHrZones != null,
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .testTag("hrv_btn_update_hr_zones")
+                            ) {
+                                Text(stringResource(R.string.hrv_zone_comparison_btn_update_hr))
+                            }
+                        }
+
+                        if (showPowerComparison) {
+                            val pT1 = powerEstimate?.hrvt1?.intensity?.roundToInt()
+                            val pT2 = powerEstimate?.hrvt2?.intensity?.roundToInt()
+                            if (onCalibrateMader != null && (pT1 != null || pT2 != null)) {
+                                OutlinedButton(
+                                    onClick = { onCalibrateMader(pT1, pT2) },
+                                    modifier = Modifier.testTag("hrv_btn_calibrate_mader")
+                                ) {
+                                    Text(stringResource(R.string.hrv_zone_comparison_forward_mader))
+                                }
                             }
                         }
                     }

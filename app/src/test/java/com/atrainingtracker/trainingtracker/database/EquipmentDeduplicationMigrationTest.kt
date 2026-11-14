@@ -124,12 +124,12 @@ class EquipmentDeduplicationMigrationTest {
 
     @Test
     fun testDatabaseSchemaRegistry_referencesEquipmentDbVersionDirectly() {
-        assertEquals(3, EquipmentDbHelper.DB_VERSION)
+        assertEquals(5, EquipmentDbHelper.DB_VERSION)
         assertEquals(
             EquipmentDbHelper.DB_VERSION,
             DatabaseSchemaRegistry.getMaxSupportedVersion("Equipment.db")
         )
-        assertTrue(DatabaseSchemaRegistry.isVersionSupported("Equipment.db", 3))
+        assertTrue(DatabaseSchemaRegistry.isVersionSupported("Equipment.db", 5))
     }
 
     @Test

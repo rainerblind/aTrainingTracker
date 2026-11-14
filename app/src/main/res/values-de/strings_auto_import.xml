@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Cloud Auto-Import for Multi-Device Synchronization (ATT-7748 / REQ-MIG-052) -->
+    <string name="tab_auto_import">Auto-Import</string>
+    <string name="auto_import_title">Cloud-Auto-Import</string>
+    <string name="auto_import_master_switch">Auto-Import aktivieren</string>
+    <string name="auto_import_master_switch_summary">Neu aufgezeichnete Workouts beim Öffnen der App automatisch aus dem Cloud-Speicher importieren</string>
+    <string name="auto_import_cloud_sources_title">Cloud-Speicherquellen</string>
+    <string name="auto_import_dropbox_title">Dropbox</string>
+    <string name="auto_import_dropbox_summary">Auto-Import aus den Cloud-Ordnern /Workouts oder /FIT</string>
+    <string name="auto_import_googledrive_title">Google Drive</string>
+    <string name="auto_import_googledrive_summary">Auto-Import aus dem Google Drive Workouts-Ordner</string>
+    <string name="auto_import_format_title">Bevorzugtes Dateiformat</string>
+    <string name="auto_import_relays_title">Lokale Weiterleitungen</string>
+    <string name="auto_import_relay_health_connect">Importierte Workouts mit Health Connect synchronisieren</string>
+    <string name="auto_import_relay_health_connect_summary">Importierte Workouts auf diesem Gerät automatisch an Android Health Connect weiterleiten</string>
+    <string name="auto_import_relay_strava">Importierte Workouts zu Strava hochladen</string>
+    <string name="auto_import_relay_strava_summary">Importierte Workouts automatisch für den Upload zu Strava vormerken</string>
+    <string name="auto_import_sync_now">Jetzt synchronisieren</string>
+    <string name="auto_import_syncing">Synchronisierung läuft…</string>
+    <string name="auto_import_last_sync">Letzte Synchronisierung: %1$s</string>
+    <string name="auto_import_never_synced">Noch nie synchronisiert</string>
+    <string name="auto_import_status_success">%1$d importiert, %2$d übersprungen</string>
+    <string name="auto_import_status_error">Synchronisierung fehlgeschlagen: %1$s</string>
+    <string name="auto_import_cloud_not_connected">Nicht verbunden</string>
+    <string name="auto_import_cloud_connected">Verbunden (%1$s)</string>
+    <string name="auto_import_format_fit">FIT (.fit)</string>
+    <string name="auto_import_format_tcx">TCX (.tcx)</string>
+    <string name="auto_import_format_gpx">GPX (.gpx)</string>
+    <string name="auto_import_format_all">Alle Formate</string>
+</resources>

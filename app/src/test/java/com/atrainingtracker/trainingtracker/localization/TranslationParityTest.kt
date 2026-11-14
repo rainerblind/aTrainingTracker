@@ -449,5 +449,53 @@ class TranslationParityTest {
             }
         }
     }
+
+    /**
+     * TST-PER-040.6 (REQ-PER-032.6): Verify that morning_hrv_instructions_desc in strings_hrv.xml
+     * exists in base and all 8 non-default locales, contains zero crude clinical bladder voiding
+     * references, and contains rest-oriented morning waking instructions across all 9 locales.
+     */
+    @Test
+    fun testMorningHrvInstructionsDesc_noBladderPhrasingAcrossAllLocales_TST_PER_040_6() {
+        val allLocaleDirs = listOf(File(resDir, "values")) + locales.map { File(resDir, "values-$it") }
+        val forbiddenSubstrings = listOf(
+            "blase", "bladder", "vejiga", "vessie", "vescica", "排尿", "blaas", "pęcherz", "bexiga"
+        )
+        val expectedRestPhrasings = mapOf(
+            "values" to "at rest",
+            "values-de" to "Ruhe",
+            "values-es" to "en reposo",
+            "values-fr" to "au repos",
+            "values-it" to "a riposo",
+            "values-ja" to "安静",
+            "values-nl" to "in rust",
+            "values-pl" to "w spoczynku",
+            "values-pt" to "em repouso"
+        )
+
+        for (dir in allLocaleDirs) {
+            val stringsMap = parseStrings(dir)
+            val res = stringsMap["morning_hrv_instructions_desc"]
+            assertNotNull("morning_hrv_instructions_desc missing in ${dir.name}", res)
+            val text = res!!.text
+
+            // 1. Forbidden terms check
+            val lowerText = text.lowercase()
+            for (forbidden in forbiddenSubstrings) {
+                assertTrue(
+                    "morning_hrv_instructions_desc in ${dir.name} must not contain '$forbidden', but was: '$text'",
+                    !lowerText.contains(forbidden)
+                )
+            }
+
+            // 2. Positive rest phrasing check
+            val expectedPhrase = expectedRestPhrasings[dir.name]
+            assertNotNull("No expected rest phrase configured for ${dir.name}", expectedPhrase)
+            assertTrue(
+                "morning_hrv_instructions_desc in ${dir.name} must contain '$expectedPhrase', but was: '$text'",
+                text.contains(expectedPhrase!!)
+            )
+        }
+    }
 }
 

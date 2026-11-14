@@ -291,3 +291,12 @@ This document serves as the authoritative living source of truth for software en
   * Collecting an asynchronous persistence `Flow` (`DataStore`, `Room`, `SQLite`) via `flow.collectAsState(initial = NonNullDefault())` emits the synthetic default object synchronously on **Frame 0** before disk I/O completes. If a `LaunchedEffect(persisted)` block gates form hydration with `if (!isInitialized) { applyConfig(persisted); isInitialized = true }`, Frame 0 consumes the synthetic default, flips `isInitialized = true`, and **permanently ignores the real persisted configuration** emitted on Frame 1 (`ATT-7319` broke all 44 settings in `AdvancedTuningScreen` and `AdvancedTuningDialog` while passing synchronous `UnconfinedTestDispatcher` unit tests).
   * Furthermore, never pair `rememberSaveable` on `isInitialized` with non-saveable `remember` on form state fields: Drawer navigation with `restoreState = true` restores `isInitialized = true` while resetting all `remember` fields back to hardcoded defaults.
   * **Canonical Pattern**: Collect async persistence flows with `initial = null` (`val persisted by flow.collectAsStateWithLifecycle(initialValue = null)` or `collectAsState(initial = null)`), guard hydration with `val loaded = persisted ?: return@LaunchedEffect`, and verify async emission transitions (`emptyFlow` $\rightarrow$ delayed persisted value) in unit tests.
+
+### 5.11 Code Coverage Floors and Bounded Subsystem Verification (REQ-PRO-089 / ATT-7563)
+* **Kover Verification Guardrails (`app/build.gradle`)**:
+  * CI enforces a global coverage floor of **40% Line Coverage** (`minBound(40)`) and **35% Branch Coverage** (`CoverageUnit.BRANCH`, `minValue = 35`).
+  * Safety-critical subsystems enforce dedicated bounded verification rules:
+    * **Tracking Subsystem** (`com.atrainingtracker.trainingtracker.tracker`): $\ge 55\%$ Line, $\ge 45\%$ Branch.
+    * **Filter Subsystem** (`com.atrainingtracker.banalservice.filters`): $\ge 70\%$ Line, $\ge 50\%$ Branch.
+    * **Sensors & Protocols Subsystem** (`com.atrainingtracker.banalservice.devices`, `com.atrainingtracker.banalservice.sensor`): $\ge 60\%$ Line, $\ge 50\%$ Branch.
+  * Running `./gradlew koverVerifyDebug` executes all unit tests prior to computing coverage and fails fast if any global or subsystem bound is violated.

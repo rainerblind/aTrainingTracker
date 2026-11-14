@@ -48,4 +48,22 @@ If you operate dedicated power meters, cadence pods, or wheel sensors across dif
 
 ---
 
+<a id="wheel-sensors-guidance"></a>
+
+## 3.3 Why 1 or 2 Wheel Sensors Alongside GPS?
+
+Modern smartphones provide GPS positioning, but satellite signals suffer from satellite geometry delays, canopy attenuation, and multi-path reflections. Pairing physical wheel speed sensors (via ANT+ or Bluetooth LE) provides distinct advantages:
+
+- **1 Wheel Sensor + GPS**:
+  - **Zero-Lag Speed**: Instantaneous speed response during sudden sprints and sharp accelerations without GPS filter lag.
+  - **Dead Reckoning Continuity**: Exact speed and distance progression under dense forest canopy, in tunnels, urban canyons, and switchback descents where satellite visibility drops.
+  - **Precise Live Grade (Slope %)**: Combining wheel-derived instantaneous ground speed with barometric altimeter vertical delta delivers a crisp, responsive live gradient display.
+- **2 Wheel Sensors (Front + Rear) + GPS**:
+  - **Indirect Tire Pressure Monitoring (iTPMS)**: As tire pressure drops, effective rolling radius decreases, causing the deflating wheel to rotate faster. By comparing relative front vs. rear wheel revolution deltas over a 150–250 m baseline window, the app detects slow punctures before rim damage or safety hazards occur (identifying whether pressure loss is in the front or rear tire).
+  - **Independent Circumference Calibration**: GPS auto-calibrates individual tire circumferences under real riding weight and inflation levels.
+  - **Multi-Sensor Odometry Fusion**: Redundant odometry fusion maintains high-accuracy distance tracking even if one sensor encounters intermittent battery or connection drops.
+- **Mounting Position Badging in Matrix**: In the Equipment-Sensor Matrix, wheel speed sensors display a compact mounting badge (**F** for Front Wheel, **R** for Rear Wheel). Tapping the cell allows quick reassignment or unlinking, with built-in guardrails preventing duplicate front or rear assignments on the same bicycle.
+
+---
+
 [Previous Chapter: Sensors & Hardware](02-sensors-dual-protocol.md) | [Next Chapter: Live Cockpit & Tabs](04-live-cockpit-tabs.md) | [Back to Table of Contents](index.md)

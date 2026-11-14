@@ -31,6 +31,8 @@ import com.atrainingtracker.trainingtracker.settings.RadarEdgeSide
 import com.atrainingtracker.trainingtracker.settings.RadarTrafficOrientation
 import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDefaults
 import com.atrainingtracker.trainingtracker.ui.theme.TTColor
+import com.atrainingtracker.trainingtracker.ui.tracking.ScreenMode
+import com.atrainingtracker.trainingtracker.ui.tracking.trackingtabs.isRadarOverlayVisible
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
@@ -386,5 +388,55 @@ class RadarEdgeOverlayTest {
 
         val fallback = com.atrainingtracker.util.safeEnumValueOf("INVALID_UNKNOWN", RadarEdgeSide.RIGHT)
         assertEquals(RadarEdgeSide.RIGHT, fallback)
+    }
+
+    /**
+     * TST-TRK-062.8: Live Rearview Radar Overlay Visibility Gating (ATT-7744 / REQ-TRK-062.4).
+     * Strictly suppresses overlay rendering during initial sensor search (CONNECTING) and idle disconnect,
+     * while rendering on CONNECTED, DISCONNECTED_ERROR, or indoor simulator.
+     */
+    @Test
+    fun isRadarOverlayVisible_suppressesOverlayDuringSearchAndDisconnected() {
+        // Suppressed while searching for sensor
+        assertFalse(
+            "Overlay must be hidden while searching (CONNECTING)",
+            isRadarOverlayVisible(ScreenMode.TRACKING, RadarConnectionState.CONNECTING, isSimulating = false)
+        )
+
+        // Suppressed when disconnected and not simulating
+        assertFalse(
+            "Overlay must be hidden when idle DISCONNECTED",
+            isRadarOverlayVisible(ScreenMode.TRACKING, RadarConnectionState.DISCONNECTED, isSimulating = false)
+        )
+    }
+
+    @Test
+    fun isRadarOverlayVisible_rendersOnConnectedDisconnectedErrorAndSimulation() {
+        // Visible on CONNECTED
+        assertTrue(
+            "Overlay must be visible when CONNECTED",
+            isRadarOverlayVisible(ScreenMode.TRACKING, RadarConnectionState.CONNECTED, isSimulating = false)
+        )
+
+        // Visible on DISCONNECTED_ERROR (fail-safe amber warning)
+        assertTrue(
+            "Overlay must be visible on DISCONNECTED_ERROR",
+            isRadarOverlayVisible(ScreenMode.TRACKING, RadarConnectionState.DISCONNECTED_ERROR, isSimulating = false)
+        )
+
+        // Visible when simulator is active regardless of connection state
+        assertTrue(
+            "Overlay must be visible when simulator is running",
+            isRadarOverlayVisible(ScreenMode.TRACKING, RadarConnectionState.DISCONNECTED, isSimulating = true)
+        )
+    }
+
+    @Test
+    fun isRadarOverlayVisible_suppressedWhenNotInTrackingScreenMode() {
+        // Suppressed when not in ScreenMode.TRACKING
+        assertFalse(
+            "Overlay must be suppressed outside ScreenMode.TRACKING even if connected",
+            isRadarOverlayVisible(ScreenMode.CONFIGURATION, RadarConnectionState.CONNECTED, isSimulating = false)
+        )
     }
 }

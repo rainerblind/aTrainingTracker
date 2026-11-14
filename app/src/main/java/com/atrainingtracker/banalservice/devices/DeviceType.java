@@ -44,9 +44,11 @@ public enum DeviceType {
 
     SPEED_AND_LOCATION_GPS(SensorType.SPEED_mps, BSportType.UNKNOWN, 1),
     SPEED_AND_LOCATION_GOOGLE_FUSED(SensorType.SPEED_mps, BSportType.UNKNOWN, 1),
+    SPEED_AND_LOCATION_ATT_FUSED(SensorType.SPEED_mps, BSportType.UNKNOWN, 1),
 
     ALTITUDE_FROM_PRESSURE(SensorType.ALTITUDE, BSportType.UNKNOWN, 1),
     ALTITUDE_FROM_POSITION(SensorType.ALTITUDE, BSportType.UNKNOWN, 1),
+    ALTITUDE_AND_SLOPE_ATT_FUSED(SensorType.ALTITUDE, BSportType.UNKNOWN, 1),
 
 
     SENSOR_MANAGER(SensorType.SENSORS, BSportType.UNKNOWN, 1),
@@ -150,12 +152,18 @@ public enum DeviceType {
             case LONGITUDE:
                 deviceTypes.add(DeviceType.SPEED_AND_LOCATION_GPS);
                 deviceTypes.add(DeviceType.SPEED_AND_LOCATION_GOOGLE_FUSED);
+                deviceTypes.add(DeviceType.SPEED_AND_LOCATION_ATT_FUSED);
+                break;
+
+            case WORLD_YAW_RATE_radps:
+                deviceTypes.add(DeviceType.SPEED_AND_LOCATION_ATT_FUSED);
                 break;
 
             // either from pressure of from location
             case ALTITUDE:
                 deviceTypes.add(DeviceType.ALTITUDE_FROM_PRESSURE);
                 deviceTypes.add(DeviceType.ALTITUDE_FROM_POSITION);
+                deviceTypes.add(DeviceType.ALTITUDE_AND_SLOPE_ATT_FUSED);
                 deviceTypes.add(DeviceType.ENVIRONMENT);
                 deviceTypes.add(DeviceType.SPEED_AND_LOCATION_GPS);
                 deviceTypes.add(DeviceType.SPEED_AND_LOCATION_GOOGLE_FUSED);
@@ -185,6 +193,7 @@ public enum DeviceType {
                 deviceTypes.add(DeviceType.RUN_SPEED);
                 deviceTypes.add(DeviceType.SPEED_AND_LOCATION_GPS);
                 deviceTypes.add(DeviceType.SPEED_AND_LOCATION_GOOGLE_FUSED);
+                deviceTypes.add(DeviceType.SPEED_AND_LOCATION_ATT_FUSED);
                 break;
 
             // only HR
@@ -213,7 +222,10 @@ public enum DeviceType {
 
             case SLOPE:
             case VERTICAL_SPEED:
+            case ASCENT:
+            case DESCENT:
                 deviceTypes.add(DeviceType.VERTICAL_SPEED_AND_SLOPE);
+                deviceTypes.add(DeviceType.ALTITUDE_AND_SLOPE_ATT_FUSED);
                 deviceTypes.add(DeviceType.BIKE_POWER);
                 break;
             case TEMPERATURE:

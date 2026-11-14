@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Cloud Auto-Import for Multi-Device Synchronization (ATT-7748 / REQ-MIG-052) -->
+    <string name="tab_auto_import">自動インポート</string>
+    <string name="auto_import_title">クラウド自動インポート</string>
+    <string name="auto_import_master_switch">自動インポートを有効化</string>
+    <string name="auto_import_master_switch_summary">アプリ起動時にクラウドから新着ワークアウトを自動インポートします</string>
+    <string name="auto_import_cloud_sources_title">クラウドストレージソース</string>
+    <string name="auto_import_dropbox_title">Dropbox</string>
+    <string name="auto_import_dropbox_summary">/Workouts または /FIT フォルダから自動インポート</string>
+    <string name="auto_import_googledrive_title">Google ドライブ</string>
+    <string name="auto_import_googledrive_summary">Google ドライブの Workouts フォルダから自動インポート</string>
+    <string name="auto_import_format_title">優先ファイル形式</string>
+    <string name="auto_import_relays_title">ローカル転送</string>
+    <string name="auto_import_relay_health_connect">インポートしたワークアウトを Health Connect と同期</string>
+    <string name="auto_import_relay_health_connect_summary">インポートされたワークアウトを本端末の Android Health Connect へ自動転送</string>
+    <string name="auto_import_relay_strava">インポートしたワークアウトを Strava にアップロード</string>
+    <string name="auto_import_relay_strava_summary">インポートされたワークアウトを Strava アップロードキューに自動追加</string>
+    <string name="auto_import_sync_now">今すぐ同期</string>
+    <string name="auto_import_syncing">同期中…</string>
+    <string name="auto_import_last_sync">最終同期: %1$s</string>
+    <string name="auto_import_never_synced">同期履歴なし</string>
+    <string name="auto_import_status_success">%1$d 件インポート、%2$d 件スキップ</string>
+    <string name="auto_import_status_error">同期に失敗しました: %1$s</string>
+    <string name="auto_import_cloud_not_connected">未接続</string>
+    <string name="auto_import_cloud_connected">接続済み (%1$s)</string>
+    <string name="auto_import_format_fit">FIT (.fit)</string>
+    <string name="auto_import_format_tcx">TCX (.tcx)</string>
+    <string name="auto_import_format_gpx">GPX (.gpx)</string>
+    <string name="auto_import_format_all">すべての形式</string>
+</resources>

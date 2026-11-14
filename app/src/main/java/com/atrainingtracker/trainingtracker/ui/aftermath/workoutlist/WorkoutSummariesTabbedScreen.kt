@@ -35,6 +35,7 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import com.atrainingtracker.trainingtracker.activities.MainActivityWithNavigation
+import com.atrainingtracker.trainingtracker.migration.AutoImportManager
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
@@ -93,6 +94,7 @@ fun WorkoutSummariesTabbedScreen(
 
     LaunchedEffect(Unit) {
         viewModel.loadWorkoutsIfNeeded()
+        AutoImportManager.triggerSyncIfNeeded(context.applicationContext)
     }
 
     // 1. HOIST SCROLL STATES

@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="equipment_wheel_position_title">Pozycja montażu koła</string>
+    <string name="equipment_wheel_position_front">Przednie koło</string>
+    <string name="equipment_wheel_position_rear">Tylne koło</string>
+    <string name="equipment_wheel_position_unspecified">Nieokreślona pozycja</string>
+    <string name="equipment_wheel_position_unlink">Odłącz czujnik</string>
+    <string name="equipment_wheel_position_front_badge">P</string>
+    <string name="equipment_wheel_position_rear_badge">T</string>
+    <string name="equipment_guidance_title">Dlaczego czujniki koła obok GPS?</string>
+    <string name="equipment_guidance_subtitle">Fizyczne zalety czujników prędkości koła w porównaniu z GPS smartfona</string>
+    <string name="equipment_guidance_1_sensor_title">1 czujnik koła + GPS</string>
+    <string name="equipment_guidance_1_sensor_body">Zapewnia natychmiastową reakcję na prędkość bez opóźnień, dokładny pomiar dystansu pod gęstymi koronami drzew, w tunelach i na górskich serpentynach, gdzie sygnał satelitarny zanika, a także precyzyjniejsze nachylenie w czasie rzeczywistym (Nachylenie %).</string>
+    <string name="equipment_guidance_2_sensors_title">2 czujniki koła (przód + tył) + GPS</string>
+    <string name="equipment_guidance_2_sensors_body">Umożliwia pośrednie monitorowanie ciśnienia w oponach (iTPMS) bez GPS w celu wykrywania powolnego spadku ciśnienia w odległości 150–250 m poprzez pomiar względnych zmian obwodu tocznego (identyfikacja utraty ciśnienia z przodu lub z tyłu), niezależną kalibrację obwodu opony i fuzję odometrii wieloczujnikowej.</string>
+    <string name="equipment_guidance_got_it">Rozumiem</string>
+    <string name="itpms_dual_puncture_rear_title">Spadek ciśnienia w tylnym kole!</string>
+    <string name="itpms_dual_puncture_rear_message">Wykryto szybki spadek ciśnienia w tylnym kole (%1$s). Zatrzymaj się i sprawdź oponę!</string>
+    <string name="itpms_dual_puncture_front_title">Spadek ciśnienia w przednim kole!</string>
+    <string name="itpms_dual_puncture_front_message">Wykryto szybki spadek ciśnienia w przednim kole (%1$s). Zatrzymaj się i sprawdź oponę!</string>
+    <string name="equipment_tpms_history_title">Historia obwodu koła i ciśnienia</string>
+    <string name="equipment_tpms_reset_baseline">Opony świeżo napompowane (Ustaw bazę)</string>
+    <string name="equipment_tpms_no_history">Brak zarejestrowanych danych. Wykonaj przejazdy z czujnikami przedniego i tylnego koła.</string>
+    <string name="equipment_tpms_front_legend">Przednie koło</string>
+    <string name="equipment_tpms_rear_legend">Tylne koło</string>
+</resources>

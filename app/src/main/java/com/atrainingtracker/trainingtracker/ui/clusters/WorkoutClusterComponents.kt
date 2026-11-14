@@ -718,7 +718,8 @@ fun WorkoutClusterSelectionDialog(
     onDismiss: () -> Unit,
     sportNameResolver: (Long) -> String,
     bSportTypeResolver: (Long) -> BSportType,
-    onCreateNew: (() -> Unit)? = null
+    onCreateNew: (() -> Unit)? = null,
+    onUnassign: (() -> Unit)? = null
 ) {
     AppModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -733,6 +734,41 @@ fun WorkoutClusterSelectionDialog(
                 .fillMaxWidth()
                 .padding(horizontal = 24.dp, vertical = 8.dp)
         ) {
+            // ATT-7754: Optional action to remove workout from its cluster ("leave unclustered")
+            if (onUnassign != null) {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable {
+                            onUnassign()
+                            onDismiss()
+                        },
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant
+                    )
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Clear,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            text = stringResource(R.string.cluster_naming__leave_unclustered),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.height(12.dp))
+            }
+
             // ATT-5674: Optional escape hatch to create a new favorite route from selection dialog
             if (onCreateNew != null) {
                 Card(

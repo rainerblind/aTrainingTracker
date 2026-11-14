@@ -3788,6 +3788,64 @@
 
 **Invariants**: Strava upload behavior, WorkManager worker pipeline, existing DB schema, and 100% 9-language localization parity MUST NOT be broken.
 
+### REQ-MIG-052: Multi-Device Incremental Cloud Auto-Import & Local Health Connect / Strava Relay [Verified]
+- **Tests**: `TST-MIG-050`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Implementation**: `ImportBackupTabsScreen.kt`, `BackupRestoreViewModel.kt`, `AutoImportManager.kt`, `HealthConnectWorkoutSyncWorker.kt`, `LegacyImportEngine.kt`, `TrainingApplication.java`
+- **Rationale**: Secondary recording devices (e.g., handlebar bike phones) require automatic, seamless forwarding of newly recorded workouts to primary devices (phones/tablets) via cloud storage (Dropbox / Google Drive) without manual bulk recovery initiation or blocking cluster dialogs, with optional relays to local Health Connect and Strava on the receiving device.
+- **Description**:
+  1. *Dedicated Auto-Import Tab Navigation (`ImportBackupTabsScreen.kt`)*: The system SHALL insert the `Auto-Import` tab at index 1 (second position), maintaining the exact sequence `1. Import | 2. Auto-Import | 3. Backup | 4. Restore`.
+  2. *Independent Cloud Source & Format Controls*: The system SHALL provide independent master and source toggles (`auto_import_enabled`, `auto_import_dropbox`, `auto_import_google_drive`), format selection (`.fit`, `.tcx`, `.gpx`, `all` defaulting to `.fit`), and cloud connection status indicators.
+  3. *Zero-I/O Pre-Download Deduplication & Non-Interactive Processing*: The incremental cloud sync engine SHALL query configured cloud folders, pre-filter remote file entries against `ExistingWorkoutsSnapshot` before downloading any file bytes, and parse new files non-interactively without interactive route cluster selection dialogs.
+  4. *Local Health Connect Relay Worker*: When `syncImportedWorkoutsToHealthConnect` is enabled, the system SHALL enqueue `HealthConnectWorkoutSyncWorker.enqueue(context, workoutId)` to synchronize newly imported workouts to local Android Health Connect and update `(ExportType.COMMUNITY, FileFormat.HEALTH_CONNECT)` status.
+  5. *Optional Dual-Account Strava Relay & Manual Trigger*: When `uploadImportedWorkoutsToStrava` is enabled, the system SHALL schedule Strava upload on the receiving device. The tab SHALL display the last sync timestamp/summary and provide an immediate "Sync Now" trigger.
+  6. *Cooldown-Gated App & Workout List Trigger*: The system SHALL evaluate Auto-Import on app start / workout list display subject to a cooldown period to prevent excessive cloud polling.
+  7. *9-Language Localization Parity*: All Auto-Import controls and status messages SHALL be localized across all 9 supported languages (EN, DE, ES, FR, IT, JA, NL, PL, PT).
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* the user opens `Import & Backup`,
+• *When* the screen renders its top tab row,
+• *Then* the tabs are ordered `Import` (0), `Auto-Import` (1), `Backup` (2), and `Restore` (3), and selecting `Auto-Import` presents controls for cloud sources, format selection defaulting to `.fit`, Health Connect/Strava relays, and Sync Now.
+• *Given* Auto-Import is enabled and a new `.fit` file is available in Dropbox or Google Drive,
+• *When* an auto-import cycle executes,
+• *Then* only files whose `fileBaseName` is absent from `ExistingWorkoutsSnapshot` are downloaded, imported non-interactively, and repositories (`WorkoutRepository`, `PeriodsRepository`, `WorkoutClusterRepository`) are reactively refreshed.
+• *Given* a workout is auto-imported with `syncImportedWorkoutsToHealthConnect` enabled,
+• *When* the import transaction completes,
+• *Then* `HealthConnectWorkoutSyncWorker.enqueue(context, workoutId)` is invoked and the Health Connect export status is tracked.
+
+**Invariants**: Zero duplicate workout insertion; zero blocking UI dialogs during auto-import; zero network polling when Auto-Import is disabled.
+
+### REQ-MIG-053: Lossless FIT Round-Trip for Workout Metadata, HRV Protocol Tags & Bike Radar Developer Fields [Verified]
+- **Tests**: `TST-MIG-051`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Implementation**: `FitFileWriter.java`, `FitWorkoutParser.kt`, `ParsedWorkoutData.kt`, `LegacyImportEngine.kt`
+- **Rationale**: When workouts recorded on one device are exported to `.fit` and imported on a secondary device (e.g. tablet or replacement phone), workout title, notes, gear assignment, commute/trainer/race flags, HRV protocol tags, and Bike Radar metrics must round-trip with 100% fidelity without loss or corruption.
+- **Description**:
+  1. *FIT Session Metadata Developer Fields (`FitFileWriter.java`)*: The system SHALL define an application metadata Developer Data ID (`APP_METADATA_DEVELOPER_DATA_ID`) and write Developer Fields onto `SessionMesg`: field 0 `workout_name` (string), field 1 `notes` (string), field 2 `equipment_name` (string), field 3 `method` (string), field 4 `goal` (string), field 5 `is_commute` (uint8), field 6 `is_trainer` (uint8), and field 7 `is_race` (uint8).
+  2. *Standard FIT Metric Serialization (`FitFileWriter.java`)*: The system SHALL serialize `normalizedPower`, `trainingStressScore`, `intensityFactor`, and `totalWork` onto `SessionMesg` using standard FIT SDK setters when available in workout data.
+  3. *FIT Session Metadata & Developer Field Parsing (`FitWorkoutParser.kt`)*: The parser SHALL decode `workoutName`, `workoutNotes`, `equipmentName`, `method`, `goal`, `isCommute`, `isTrainer`, and `isRace` from `SessionMesg` developer fields into `ParsedWorkoutData`.
+  4. *Bike Radar Developer Field Ingestion (`FitWorkoutParser.kt`)*: The parser SHALL decode Garmin FIT V2.0 Developer Fields from `RecordMesg` into `bufferedSamples` and `foundSensors` for field 0 (`radar_current` -> `SensorType.RADAR_THREAT_COUNT`), field 1 (`radar_total` -> `SensorType.RADAR_VEHICLE_COUNT`), field 2 (`passing_speed` -> `SensorType.RADAR_APPROACH_SPEED_mps`), field 4 (`passing_distance` -> `SensorType.RADAR_PASSING_DISTANCE_m`), and field 5 (`large_vehicle_count` -> `SensorType.RADAR_LARGE_VEHICLE_COUNT`).
+  5. *Persistence & Equipment Resolution (`LegacyImportEngine.kt`)*: When importing parsed FIT data via `importFromFitResult`, the system SHALL persist `workoutName`, `workoutNotes`, match `equipmentName` against `EquipmentDatabaseManager` to resolve `equipmentId`, persist `isCommute`, `isTrainer`, `isRace`, `method`, and `goal`, register radar sensors in `foundSensors`, and calculate radar extrema.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* a workout recorded with title, description, assigned equipment name, commute/trainer/race flags, and HRV protocol tags,
+• *When* exported to `.fit` via `FitFileWriter` and parsed via `FitWorkoutParser`,
+• *Then* `ParsedWorkoutData` contains exact matching metadata, flags, and HRV tags.
+• *Given* a workout with Bike Radar developer telemetry (`radar_current`, `radar_total`, `passing_speed`, `passing_distance`, `large_vehicle_count`),
+• *When* exported to `.fit` and parsed by `FitWorkoutParser`,
+• *Then* `bufferedSamples` contains all radar sample values and `foundSensors` contains the corresponding radar `SensorType` entries.
+• *Given* a third-party `.fit` file lacking developer fields,
+• *When* parsed by `FitWorkoutParser`,
+• *Then* the parser completes successfully without exceptions and populates standard telemetry with null metadata fallbacks.
+
+**Invariants**: Third-party FIT file backward compatibility preserved; zero data loss during FIT export/import cycle; Garmin FIT SDK V2.0 Developer Field profile compliance.
+
+
+
 
 
 

@@ -76,6 +76,7 @@ class MySensorManagerPriorityTest {
     @Test
     fun speedPriority_prioritizesGoogleFusedOverGps() {
         val expectedSpeedPriority = arrayOf(
+            DeviceType.SPEED_AND_LOCATION_ATT_FUSED,
             DeviceType.RUN_SPEED,
             DeviceType.BIKE_SPEED,
             DeviceType.BIKE_SPEED_AND_CADENCE,
@@ -86,6 +87,7 @@ class MySensorManagerPriorityTest {
         assertArrayEquals(expectedSpeedPriority, MySensorManager.SPEED_PRIORITY)
 
         val expectedAltitudePriority = arrayOf(
+            DeviceType.ALTITUDE_AND_SLOPE_ATT_FUSED,
             DeviceType.ALTITUDE_FROM_POSITION,
             DeviceType.ALTITUDE_FROM_PRESSURE,
             DeviceType.SPEED_AND_LOCATION_GOOGLE_FUSED,
@@ -107,8 +109,71 @@ class MySensorManagerPriorityTest {
             MySensorManager.ALTITUDE_PRIORITY.filter { it in locationProviders }
         )
         assertEquals(
-            locationProviders,
+            listOf(
+                DeviceType.SPEED_AND_LOCATION_ATT_FUSED,
+                DeviceType.SPEED_AND_LOCATION_GOOGLE_FUSED,
+                DeviceType.SPEED_AND_LOCATION_GPS
+            ),
             MySensorManager.LOCATION_PRIORITY.toList()
+        )
+    }
+
+    /**
+     * `TST-SEN-028.2`: Verifies that [DeviceType.SPEED_AND_LOCATION_ATT_FUSED] occupies rank 0
+     * in SPEED_PRIORITY and LOCATION_PRIORITY, takes highest operational precedence over GNSS
+     * and external speed sensors when registered, and cleanly falls back upon unregistering (REQ-SEN-028.2).
+     */
+    @Test
+    fun attFusedPriority_highestPrecedenceAndCleanFallback() {
+        val attFusedDevice = mockDevice(DeviceType.SPEED_AND_LOCATION_ATT_FUSED)
+        val googleFusedDevice = mockDevice(DeviceType.SPEED_AND_LOCATION_GOOGLE_FUSED)
+        val gpsDevice = mockDevice(DeviceType.SPEED_AND_LOCATION_GPS)
+        val bikeSpeedDevice = mockDevice(DeviceType.BIKE_SPEED)
+
+        val attSpeed = MySensor<Number>(attFusedDevice, SensorType.SPEED_mps)
+        val attLoc = MySensor<Number>(attFusedDevice, SensorType.LATITUDE)
+        val bikeSpeed = MySensor<Number>(bikeSpeedDevice, SensorType.SPEED_mps)
+        val googleLoc = MySensor<Number>(googleFusedDevice, SensorType.LATITUDE)
+        val gpsLoc = MySensor<Number>(gpsDevice, SensorType.LATITUDE)
+
+        // 1. Register lower priority sensors first
+        sensorManager.registerSensors(listOf(bikeSpeed, googleLoc, gpsLoc))
+        assertSame(
+            "Bike speed takes precedence before Google Fused/GPS",
+            bikeSpeed,
+            sensorManager.getBestSensor(SensorType.SPEED_mps)
+        )
+        assertSame(
+            "Google Fused location takes precedence over GPS",
+            googleLoc,
+            sensorManager.getBestSensor(SensorType.LATITUDE)
+        )
+
+        // 2. Register ATT Fused sensors -> immediately becomes best sensor
+        sensorManager.registerSensors(listOf(attSpeed, attLoc))
+        assertSame(
+            "ATT Fused speed takes rank 0 precedence over bike speed",
+            attSpeed,
+            sensorManager.getBestSensor(SensorType.SPEED_mps)
+        )
+        assertSame(
+            "ATT Fused location takes rank 0 precedence over Google Fused",
+            attLoc,
+            sensorManager.getBestSensor(SensorType.LATITUDE)
+        )
+
+        // 3. Unregister ATT Fused sensors -> cleanly falls back
+        sensorManager.unregisterSensor(attSpeed)
+        sensorManager.unregisterSensor(attLoc)
+        assertSame(
+            "Speed cleanly falls back to bike speed",
+            bikeSpeed,
+            sensorManager.getBestSensor(SensorType.SPEED_mps)
+        )
+        assertSame(
+            "Location cleanly falls back to Google Fused",
+            googleLoc,
+            sensorManager.getBestSensor(SensorType.LATITUDE)
         )
     }
 
@@ -205,8 +270,9 @@ class MySensorManagerPriorityTest {
     }
 
     /**
-     * `TST-TRK-016.2`: Verifies that [SensorType.LINE_DISTANCE_m] is registered with [MySensorManager.LOCATION_PRIORITY]
-     * and correctly selects [DeviceType.SPEED_AND_LOCATION_GOOGLE_FUSED] over [DeviceType.SPEED_AND_LOCATION_GPS].
+     * `TST-TRK-016.2`: Verifies that [SensorType.LINE_DISTANCE_m] is registered with
+     * [MySensorManager.LOCATION_PRIORITY] and correctly selects
+     * [DeviceType.SPEED_AND_LOCATION_GOOGLE_FUSED] over [DeviceType.SPEED_AND_LOCATION_GPS].
      */
     @Test
     fun lineDistancePriority_prioritizesGoogleFusedOverGps() {
@@ -282,7 +348,7 @@ class MySensorManagerPriorityTest {
      */
     @Test
     fun getPriorityRank_returnsCanonicalIndicesAcrossAllSensorTypes() {
-        // Location types: GOOGLE_FUSED (0) -> GPS (1)
+        // Location types: ATT_FUSED (0) -> GOOGLE_FUSED (1) -> GPS (2)
         val locationTypes = listOf(
             SensorType.LATITUDE,
             SensorType.LONGITUDE,
@@ -291,13 +357,14 @@ class MySensorManagerPriorityTest {
             SensorType.LINE_DISTANCE_m
         )
         for (sensor in locationTypes) {
-            assertEquals(0, MySensorManager.getPriorityRank(sensor, DeviceType.SPEED_AND_LOCATION_GOOGLE_FUSED))
-            assertEquals(1, MySensorManager.getPriorityRank(sensor, DeviceType.SPEED_AND_LOCATION_GPS))
+            assertEquals(0, MySensorManager.getPriorityRank(sensor, DeviceType.SPEED_AND_LOCATION_ATT_FUSED))
+            assertEquals(1, MySensorManager.getPriorityRank(sensor, DeviceType.SPEED_AND_LOCATION_GOOGLE_FUSED))
+            assertEquals(2, MySensorManager.getPriorityRank(sensor, DeviceType.SPEED_AND_LOCATION_GPS))
         }
 
         // Speed / Distance types:
-        // RUN_SPEED (0) -> BIKE_SPEED (1) -> BIKE_SPEED_AND_CADENCE (2) -> BIKE_POWER (3)
-        // -> GOOGLE_FUSED (4) -> GPS (5)
+        // ATT_FUSED (0) -> RUN_SPEED (1) -> BIKE_SPEED (2) -> BIKE_SPEED_AND_CADENCE (3) -> BIKE_POWER (4)
+        // -> GOOGLE_FUSED (5) -> GPS (6)
         val speedTypes = listOf(
             SensorType.SPEED_mps,
             SensorType.PACE_spm,
@@ -305,19 +372,39 @@ class MySensorManagerPriorityTest {
             SensorType.DISTANCE_m_LAP
         )
         for (sensor in speedTypes) {
-            assertEquals(0, MySensorManager.getPriorityRank(sensor, DeviceType.RUN_SPEED))
-            assertEquals(1, MySensorManager.getPriorityRank(sensor, DeviceType.BIKE_SPEED))
-            assertEquals(2, MySensorManager.getPriorityRank(sensor, DeviceType.BIKE_SPEED_AND_CADENCE))
-            assertEquals(3, MySensorManager.getPriorityRank(sensor, DeviceType.BIKE_POWER))
-            assertEquals(4, MySensorManager.getPriorityRank(sensor, DeviceType.SPEED_AND_LOCATION_GOOGLE_FUSED))
-            assertEquals(5, MySensorManager.getPriorityRank(sensor, DeviceType.SPEED_AND_LOCATION_GPS))
+            assertEquals(0, MySensorManager.getPriorityRank(sensor, DeviceType.SPEED_AND_LOCATION_ATT_FUSED))
+            assertEquals(1, MySensorManager.getPriorityRank(sensor, DeviceType.RUN_SPEED))
+            assertEquals(2, MySensorManager.getPriorityRank(sensor, DeviceType.BIKE_SPEED))
+            assertEquals(3, MySensorManager.getPriorityRank(sensor, DeviceType.BIKE_SPEED_AND_CADENCE))
+            assertEquals(4, MySensorManager.getPriorityRank(sensor, DeviceType.BIKE_POWER))
+            assertEquals(5, MySensorManager.getPriorityRank(sensor, DeviceType.SPEED_AND_LOCATION_GOOGLE_FUSED))
+            assertEquals(6, MySensorManager.getPriorityRank(sensor, DeviceType.SPEED_AND_LOCATION_GPS))
         }
 
-        // Altitude: ALTITUDE_FROM_POSITION (0) -> ALTITUDE_FROM_PRESSURE (1) -> GOOGLE_FUSED (2) -> GPS (3)
-        assertEquals(0, MySensorManager.getPriorityRank(SensorType.ALTITUDE, DeviceType.ALTITUDE_FROM_POSITION))
-        assertEquals(1, MySensorManager.getPriorityRank(SensorType.ALTITUDE, DeviceType.ALTITUDE_FROM_PRESSURE))
-        assertEquals(2, MySensorManager.getPriorityRank(SensorType.ALTITUDE, DeviceType.SPEED_AND_LOCATION_GOOGLE_FUSED))
-        assertEquals(3, MySensorManager.getPriorityRank(SensorType.ALTITUDE, DeviceType.SPEED_AND_LOCATION_GPS))
+        // Altitude: ATT_FUSED (0) -> ALTITUDE_FROM_POSITION (1)
+        // -> ALTITUDE_FROM_PRESSURE (2) -> GOOGLE_FUSED (3) -> GPS (4)
+        assertEquals(0, MySensorManager.getPriorityRank(SensorType.ALTITUDE, DeviceType.ALTITUDE_AND_SLOPE_ATT_FUSED))
+        assertEquals(1, MySensorManager.getPriorityRank(SensorType.ALTITUDE, DeviceType.ALTITUDE_FROM_POSITION))
+        assertEquals(2, MySensorManager.getPriorityRank(SensorType.ALTITUDE, DeviceType.ALTITUDE_FROM_PRESSURE))
+        assertEquals(
+            3,
+            MySensorManager.getPriorityRank(SensorType.ALTITUDE, DeviceType.SPEED_AND_LOCATION_GOOGLE_FUSED)
+        )
+        assertEquals(4, MySensorManager.getPriorityRank(SensorType.ALTITUDE, DeviceType.SPEED_AND_LOCATION_GPS))
+
+        // Slope / Vertical Speed / Ascent / Descent:
+        // ATT_FUSED (0) -> VERTICAL_SPEED_AND_SLOPE (1) -> BIKE_POWER (2)
+        val slopeTypes = listOf(
+            SensorType.SLOPE,
+            SensorType.VERTICAL_SPEED,
+            SensorType.ASCENT,
+            SensorType.DESCENT
+        )
+        for (sensor in slopeTypes) {
+            assertEquals(0, MySensorManager.getPriorityRank(sensor, DeviceType.ALTITUDE_AND_SLOPE_ATT_FUSED))
+            assertEquals(1, MySensorManager.getPriorityRank(sensor, DeviceType.VERTICAL_SPEED_AND_SLOPE))
+            assertEquals(2, MySensorManager.getPriorityRank(sensor, DeviceType.BIKE_POWER))
+        }
 
         // Cadence: RUN_SPEED (0) -> BIKE_CADENCE (1) -> BIKE_SPEED_AND_CADENCE (2) -> BIKE_POWER (3)
         // Note: CADENCE_PRIORITY in MySensorManager starts with RUN_SPEED (Gate 3 advisory).

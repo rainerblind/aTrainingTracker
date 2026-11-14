@@ -153,6 +153,8 @@
 
     <!-- sensor types -->
     <string name="accumulated_sensors">capteurs cumulés</string>
+    <string name="world_yaw_rate">Vitesse de lacet globale</string>
+    <string name="world_yaw_rate_short">Vitesse de lacet</string>
     <string name="accumulated_sensors_short">cap. cum.</string>
     <string name="accuracy">précision</string>
     <string name="accuracy_short">préc.</string>
@@ -1269,6 +1271,7 @@
     <string name="settings_workout_card_description">Description et remarques</string>
     <string name="settings_workout_card_charts">Graphiques de télémétrie</string>
     <string name="settings_workout_card_zones">Analyse des zones (FC et puissance)</string>
+    <string name="settings_workout_card_hrv">Analyse VFC</string>
     <string name="settings_edit_workout_title">Modifier l\'entraînement</string>
     <string name="settings_edit_workout_cluster">Itinéraire / Parcours</string>
     <string name="settings_edit_workout_commute_trainer">Trajet quotidien et home-trainer</string>
@@ -1525,6 +1528,8 @@
     <string name="tuning_altitude_window_desc">Fenêtre temporelle de moyenne mobile pour l\'altitude instantanée et la vitesse verticale.</string>
     <string name="tuning_slope_min_speed_title">Vitesse minimale pour la pente</string>
     <string name="tuning_slope_min_speed_desc">Vitesse minimale requise pour calculer la pente en temps réel.</string>
+    <string name="tuning_post_workout_erts_smoothing_title">Lissage ERTS post-entraînement</string>
+    <string name="tuning_post_workout_erts_smoothing_desc">Applique un lissage bidirectionnel Extended Rauch-Tung-Striebel à la trajectoire et au profil d\'altitude après l\'enregistrement de la séance.</string>
     <string name="tuning_show_ant_missing_adapter_warnings_title">Afficher les avertissements d\'adaptateur ANT+ manquant</string>
     <string name="tuning_show_ant_missing_adapter_warnings_desc">Afficher une boîte de dialogue d\'alerte lorsqu\'un capteur ANT+ est recherché mais qu\'aucun adaptateur n\'est détecté</string>
     <string name="tuning_cat_aftermath">Aftermath et analyse de profil</string>
@@ -2167,6 +2172,7 @@
     <string name="workout_detail_tab_overview">Aperçu</string>
     <string name="workout_detail_tab_map_graphs">Carte et graphiques</string>
     <string name="workout_detail_tab_zones">Zones</string>
+    <string name="workout_detail_tab_hrv">VFC</string>
     <string name="workout_detail_tab_laps_segments">Tours et segments</string>
     <string name="workout_detail_tab_custom_default">Onglet personnalisé</string>
     <string name="workout_detail_section_details">Métriques et résumé</string>

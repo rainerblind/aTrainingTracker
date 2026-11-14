@@ -87,6 +87,11 @@ public class FitFileWriter extends BaseFileWriter {
     private static final DateTimeFormatter DATE_TIME_FORMATTER =
             DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss", Locale.US);
 
+    public static final byte[] APP_METADATA_DEVELOPER_DATA_ID = new byte[]{
+            0x54, 0x72, 0x61, 0x69, 0x6e, 0x69, 0x6e, 0x67,
+            0x54, 0x72, 0x61, 0x63, 0x6b, 0x65, 0x72, 0x01
+    };
+
     public FitFileWriter(@NonNull Context context) {
         super(context.getApplicationContext() != null ? context.getApplicationContext() : context);
     }
@@ -102,7 +107,7 @@ public class FitFileWriter extends BaseFileWriter {
 
     @NonNull
     @Override
-    protected ExportResult doExport(@NonNull ExportInfo exportInfo) throws IOException, ParseException {
+    public ExportResult doExport(@NonNull ExportInfo exportInfo) throws IOException, ParseException {
         if (DEBUG) Log.d(TAG, "doExport: " + exportInfo.getFileBaseName());
 
         getHeaderData(exportInfo);
@@ -298,6 +303,72 @@ public class FitFileWriter extends BaseFileWriter {
                 largeVehCountDesc.setUnits(0, "vehicles");
                 encoder.write(largeVehCountDesc);
             }
+
+            // Write Application Metadata Developer Data ID & Field Descriptions (REQ-MIG-053 / ATT-7747)
+            DeveloperDataIdMesg metaDevDataIdMesg = new DeveloperDataIdMesg();
+            metaDevDataIdMesg.setDeveloperDataIndex((short) 1);
+            metaDevDataIdMesg.setManufacturerId(Manufacturer.DEVELOPMENT);
+            metaDevDataIdMesg.setApplicationVersion(1L);
+            for (int i = 0; i < 16; i++) {
+                metaDevDataIdMesg.setApplicationId(i, APP_METADATA_DEVELOPER_DATA_ID[i]);
+            }
+            encoder.write(metaDevDataIdMesg);
+
+            FieldDescriptionMesg workoutNameDesc = new FieldDescriptionMesg();
+            workoutNameDesc.setDeveloperDataIndex((short) 1);
+            workoutNameDesc.setFieldDefinitionNumber((short) 0);
+            workoutNameDesc.setFitBaseTypeId((short) Fit.BASE_TYPE_STRING);
+            workoutNameDesc.setFieldName(0, "workout_name");
+            encoder.write(workoutNameDesc);
+
+            FieldDescriptionMesg notesDesc = new FieldDescriptionMesg();
+            notesDesc.setDeveloperDataIndex((short) 1);
+            notesDesc.setFieldDefinitionNumber((short) 1);
+            notesDesc.setFitBaseTypeId((short) Fit.BASE_TYPE_STRING);
+            notesDesc.setFieldName(0, "notes");
+            encoder.write(notesDesc);
+
+            FieldDescriptionMesg equipmentNameDesc = new FieldDescriptionMesg();
+            equipmentNameDesc.setDeveloperDataIndex((short) 1);
+            equipmentNameDesc.setFieldDefinitionNumber((short) 2);
+            equipmentNameDesc.setFitBaseTypeId((short) Fit.BASE_TYPE_STRING);
+            equipmentNameDesc.setFieldName(0, "equipment_name");
+            encoder.write(equipmentNameDesc);
+
+            FieldDescriptionMesg methodDesc = new FieldDescriptionMesg();
+            methodDesc.setDeveloperDataIndex((short) 1);
+            methodDesc.setFieldDefinitionNumber((short) 3);
+            methodDesc.setFitBaseTypeId((short) Fit.BASE_TYPE_STRING);
+            methodDesc.setFieldName(0, "method");
+            encoder.write(methodDesc);
+
+            FieldDescriptionMesg goalDesc = new FieldDescriptionMesg();
+            goalDesc.setDeveloperDataIndex((short) 1);
+            goalDesc.setFieldDefinitionNumber((short) 4);
+            goalDesc.setFitBaseTypeId((short) Fit.BASE_TYPE_STRING);
+            goalDesc.setFieldName(0, "goal");
+            encoder.write(goalDesc);
+
+            FieldDescriptionMesg isCommuteDesc = new FieldDescriptionMesg();
+            isCommuteDesc.setDeveloperDataIndex((short) 1);
+            isCommuteDesc.setFieldDefinitionNumber((short) 5);
+            isCommuteDesc.setFitBaseTypeId((short) Fit.BASE_TYPE_UINT8);
+            isCommuteDesc.setFieldName(0, "is_commute");
+            encoder.write(isCommuteDesc);
+
+            FieldDescriptionMesg isTrainerDesc = new FieldDescriptionMesg();
+            isTrainerDesc.setDeveloperDataIndex((short) 1);
+            isTrainerDesc.setFieldDefinitionNumber((short) 6);
+            isTrainerDesc.setFitBaseTypeId((short) Fit.BASE_TYPE_UINT8);
+            isTrainerDesc.setFieldName(0, "is_trainer");
+            encoder.write(isTrainerDesc);
+
+            FieldDescriptionMesg isRaceDesc = new FieldDescriptionMesg();
+            isRaceDesc.setDeveloperDataIndex((short) 1);
+            isRaceDesc.setFieldDefinitionNumber((short) 7);
+            isRaceDesc.setFitBaseTypeId((short) Fit.BASE_TYPE_UINT8);
+            isRaceDesc.setFieldName(0, "is_race");
+            encoder.write(isRaceDesc);
 
             final boolean finalHaveRadar = haveRadar;
             final DeveloperDataIdMesg finalDevDataIdMesg = devDataIdMesg;
@@ -626,6 +697,93 @@ public class FitFileWriter extends BaseFileWriter {
             if (maxSpeed != null) sessionMesg.setMaxSpeed(maxSpeed.floatValue());
             Double avgSpeed = repo.getExtremaValue(workoutId, SensorType.SPEED_mps, ExtremaType.AVG);
             if (avgSpeed != null) sessionMesg.setAvgSpeed(avgSpeed.floatValue());
+
+            // Populate standard FIT session power/stress metrics (REQ-MIG-053.2 / ATT-7747)
+            Double np = (exportHeader != null && exportHeader.getNormalizedPower() != null)
+                    ? exportHeader.getNormalizedPower()
+                    : repo.getExtremaValue(workoutId, SensorType.NORMALIZED_POWER, ExtremaType.END);
+            if (np == null && workoutId > 0) {
+                np = repo.getExtremaValue(workoutId, SensorType.NORMALIZED_POWER, ExtremaType.AVG);
+            }
+            if (np != null && np > 0.0) {
+                sessionMesg.setNormalizedPower((int) Math.round(np));
+            }
+
+            Double ifVal = (exportHeader != null && exportHeader.getIntensityFactor() != null)
+                    ? exportHeader.getIntensityFactor()
+                    : repo.getExtremaValue(workoutId, SensorType.INTENSITY_FACTOR, ExtremaType.END);
+            if (ifVal == null && workoutId > 0) {
+                ifVal = repo.getExtremaValue(workoutId, SensorType.INTENSITY_FACTOR, ExtremaType.AVG);
+            }
+            if (ifVal != null && ifVal > 0.0) {
+                sessionMesg.setIntensityFactor(ifVal.floatValue());
+            }
+
+            Double tss = (exportHeader != null && exportHeader.getTss() != null)
+                    ? exportHeader.getTss()
+                    : repo.getExtremaValue(workoutId, SensorType.TSS, ExtremaType.END);
+            if (tss == null && workoutId > 0) {
+                tss = repo.getExtremaValue(workoutId, SensorType.TSS, ExtremaType.AVG);
+            }
+            if (tss == null && workoutId > 0) {
+                tss = repo.getExtremaValue(workoutId, SensorType.TSS, ExtremaType.MAX);
+            }
+            if (tss != null && tss > 0.0) {
+                sessionMesg.setTrainingStressScore(tss.floatValue());
+            }
+
+            Double workKj = (exportHeader != null && exportHeader.getWorkKj() != null)
+                    ? exportHeader.getWorkKj()
+                    : repo.getExtremaValue(workoutId, SensorType.WORK_KJ, ExtremaType.END);
+            if (workKj == null && workoutId > 0) {
+                workKj = repo.getExtremaValue(workoutId, SensorType.WORK_KJ, ExtremaType.AVG);
+            }
+            if (workKj == null && workoutId > 0) {
+                workKj = repo.getExtremaValue(workoutId, SensorType.WORK_KJ, ExtremaType.MAX);
+            }
+            if (workKj != null && workKj > 0.0) {
+                sessionMesg.setTotalWork((long) Math.round(workKj * 1000.0));
+            }
+
+            // Attach Session Metadata Developer Fields (REQ-MIG-053.1 / ATT-7747)
+            if (exportHeader != null) {
+                if (exportHeader.getWorkoutName() != null && !exportHeader.getWorkoutName().trim().isEmpty()) {
+                    DeveloperField f = new DeveloperField(workoutNameDesc, metaDevDataIdMesg);
+                    f.setValue(exportHeader.getWorkoutName().trim());
+                    sessionMesg.addDeveloperField(f);
+                }
+                if (exportHeader.getDescription() != null && !exportHeader.getDescription().trim().isEmpty()) {
+                    DeveloperField f = new DeveloperField(notesDesc, metaDevDataIdMesg);
+                    f.setValue(exportHeader.getDescription().trim());
+                    sessionMesg.addDeveloperField(f);
+                }
+                if (exportHeader.getEquipmentName() != null && !exportHeader.getEquipmentName().trim().isEmpty()) {
+                    DeveloperField f = new DeveloperField(equipmentNameDesc, metaDevDataIdMesg);
+                    f.setValue(exportHeader.getEquipmentName().trim());
+                    sessionMesg.addDeveloperField(f);
+                }
+                if (exportHeader.getMethod() != null && !exportHeader.getMethod().trim().isEmpty()) {
+                    DeveloperField f = new DeveloperField(methodDesc, metaDevDataIdMesg);
+                    f.setValue(exportHeader.getMethod().trim());
+                    sessionMesg.addDeveloperField(f);
+                }
+                if (exportHeader.getGoal() != null && !exportHeader.getGoal().trim().isEmpty()) {
+                    DeveloperField f = new DeveloperField(goalDesc, metaDevDataIdMesg);
+                    f.setValue(exportHeader.getGoal().trim());
+                    sessionMesg.addDeveloperField(f);
+                }
+                DeveloperField fCommute = new DeveloperField(isCommuteDesc, metaDevDataIdMesg);
+                fCommute.setValue((short) (exportHeader.getCommute() ? 1 : 0));
+                sessionMesg.addDeveloperField(fCommute);
+
+                DeveloperField fTrainer = new DeveloperField(isTrainerDesc, metaDevDataIdMesg);
+                fTrainer.setValue((short) (exportHeader.getIndoorTrainerSession() ? 1 : 0));
+                sessionMesg.addDeveloperField(fTrainer);
+
+                DeveloperField fRace = new DeveloperField(isRaceDesc, metaDevDataIdMesg);
+                fRace.setValue((short) (exportHeader.getRace() ? 1 : 0));
+                sessionMesg.addDeveloperField(fRace);
+            }
 
             encoder.write(sessionMesg);
 

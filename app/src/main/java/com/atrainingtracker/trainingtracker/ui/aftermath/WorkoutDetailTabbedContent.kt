@@ -927,6 +927,20 @@ private fun RenderWorkoutDetailCardSections(
                             .padding(horizontal = 16.dp, vertical = 4.dp)
                     )
                 }
+            }
+            WorkoutDetailSectionType.GRADE_DISTRIBUTION -> {
+                gradeZoneDistribution?.let { distribution ->
+                    GradeZoneDistributionCard(
+                        distribution = distribution,
+                        displayMode = effectiveGradeZoneDisplayMode,
+                        onDisplayModeChange = onGradeZoneDisplayModeChange,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 4.dp)
+                    )
+                }
+            }
+            WorkoutDetailSectionType.HRV -> {
                 if (TelemetryMetricUtils.hasHrvData(activeScrubPath)) {
                     HrvAlpha1ScatterCard(
                         points = activeScrubPath ?: emptyList(),
@@ -960,18 +974,6 @@ private fun RenderWorkoutDetailCardSections(
                         freshBaseline = workoutData.dfaA1FreshBaseline,
                         lateMean = workoutData.dfaA1LateMean,
                         durabilityDriftPct = workoutData.dfaA1DurabilityDriftPct,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 4.dp)
-                    )
-                }
-            }
-            WorkoutDetailSectionType.GRADE_DISTRIBUTION -> {
-                gradeZoneDistribution?.let { distribution ->
-                    GradeZoneDistributionCard(
-                        distribution = distribution,
-                        displayMode = effectiveGradeZoneDisplayMode,
-                        onDisplayModeChange = onGradeZoneDisplayModeChange,
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 16.dp, vertical = 4.dp)

@@ -122,6 +122,39 @@ jobs:
             app/build/reports/tests/testDebugUnitTest/
             build-evidence/junit-test-results-*
 
+      - name: Run Android Lint
+        run: ./gradlew :app:lintDebug
+
+      - name: Upload Lint Report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: release-lint-report
+          path: app/build/reports/lint-results-debug.*
+
+      - name: Run Detekt
+        run: ./gradlew :app:detekt
+
+      - name: Upload Detekt Report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: release-detekt-report
+          path: app/build/reports/detekt/
+
+      - name: Run Kover Coverage & Verification
+        run: ./gradlew :app:koverXmlReportDebug :app:koverHtmlReportDebug :app:koverVerifyDebug
+
+      - name: Upload Coverage Report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: release-kover-report
+          path: app/build/reports/kover/
+
+      - name: Verify ASPICE requirement governance
+        run: python3 tools/verify_requirement_governance.py
+
       - name: Verify release candidate system evidence (ASPICE SYS.4 & SYS.5)
         run: |
           TAG_NAME="${GITHUB_REF_NAME:-release}"

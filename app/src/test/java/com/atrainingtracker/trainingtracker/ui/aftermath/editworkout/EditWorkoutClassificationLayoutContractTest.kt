@@ -15,6 +15,7 @@
 
 package com.atrainingtracker.trainingtracker.ui.aftermath.editworkout
 
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
@@ -110,6 +111,23 @@ class EditWorkoutClassificationLayoutContractTest {
         assertTrue(
             "Trailing checkboxes in full-row toggleable cards must set onCheckedChange = null",
             source.contains("onCheckedChange = null")
+        )
+    }
+
+    @Test
+    fun testEditWorkoutScreen_removesDirectSyncCallInOnSave() {
+        val source = loadEditWorkoutScreenSource()
+
+        // 1. HealthConnectManager.syncWorkoutAsync must NOT be called from UI layer (TST-REV-015.2 / REQ-REV-014.2)
+        assertFalse(
+            "EditWorkoutScreen must not trigger HealthConnectManager.syncWorkoutAsync directly from UI layer",
+            source.contains("HealthConnectManager.syncWorkoutAsync")
+        )
+
+        // 2. Health Connect toggle row must dispatch to viewModel.updateSyncToHealthConnect
+        assertTrue(
+            "Health Connect toggle row must dispatch to viewModel.updateSyncToHealthConnect",
+            source.contains("viewModel.updateSyncToHealthConnect(it)")
         )
     }
 }

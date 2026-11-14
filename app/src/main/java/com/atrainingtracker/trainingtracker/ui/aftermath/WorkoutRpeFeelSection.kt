@@ -19,9 +19,11 @@
 package com.atrainingtracker.trainingtracker.ui.aftermath
 
 import androidx.annotation.StringRes
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -41,6 +43,7 @@ import androidx.compose.material.icons.filled.SentimentNeutral
 import androidx.compose.material.icons.filled.SentimentSatisfied
 import androidx.compose.material.icons.filled.SentimentVeryDissatisfied
 import androidx.compose.material.icons.filled.SentimentVerySatisfied
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -49,6 +52,7 @@ import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -148,10 +152,11 @@ fun WorkoutRpeFeelSection(
     ) {
         if (rpe != null && rpe in 1..10) {
             val rpeColor = TTColor.rpeColor(rpe)
+            val isZone7 = rpe == 10 || rpeColor == TTColor.Zone7
             Surface(
                 shape = RoundedCornerShape(8.dp),
-                color = rpeColor.copy(alpha = 0.15f),
-                border = androidx.compose.foundation.BorderStroke(1.dp, rpeColor.copy(alpha = 0.6f)),
+                color = if (isZone7) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f) else rpeColor.copy(alpha = 0.15f),
+                border = if (isZone7) BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant) else BorderStroke(1.dp, rpeColor.copy(alpha = 0.6f)),
                 modifier = Modifier.testTag(WorkoutRpeFeelTestTags.RPE_BADGE)
             ) {
                 Row(
@@ -163,6 +168,10 @@ fun WorkoutRpeFeelSection(
                             .size(8.dp)
                             .clip(CircleShape)
                             .background(rpeColor)
+                            .then(
+                                if (isZone7) Modifier.border(0.5.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape)
+                                else Modifier
+                            )
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
@@ -222,8 +231,9 @@ fun WorkoutRpeFeelSection(
 
 /**
  * Interactive editor controls for Perceived Exertion (RPE 1–10) and Workout Feel (1–5)
- * positioned in [EditWorkoutScreen] directly above the Description field (`REQ-WKO-037.1`, `REQ-WKO-037.2`).
+ * positioned in [EditWorkoutScreen] directly above the Description field (`REQ-WKO-037.1`, `REQ-WKO-037.2`, `REQ-UI-529`).
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RpeFeelEditorControls(
     rpe: Int?,
@@ -238,8 +248,9 @@ fun RpeFeelEditorControls(
             .testTag(WorkoutRpeFeelTestTags.EDITOR),
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        // 1. RPE (1..10) Discrete Borg CR10 Slider & Non-clipping Button Row (REQ-WKO-037.1)
+        // 1. RPE (1..10) Discrete Borg CR10 Slider with Dedicated Dynamic Readout Row (REQ-WKO-037.1 / REQ-UI-529)
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            // Decoupled Title Row: Section title on start and Clear action on end (REQ-UI-529.5)
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -252,34 +263,42 @@ fun RpeFeelEditorControls(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 if (rpe != null) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    IconButton(
+                        onClick = { onRpeChange(null) },
+                        modifier = Modifier
+                            .size(24.dp)
+                            .testTag(WorkoutRpeFeelTestTags.RPE_CLEAR)
                     ) {
-                        Text(
-                            text = stringResource(getRpeAnchorStringRes(rpe)),
-                            style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = TTColor.rpeColor(rpe)
+                        Icon(
+                            imageVector = Icons.Default.Clear,
+                            contentDescription = stringResource(R.string.clear),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(16.dp)
                         )
-                        IconButton(
-                            onClick = { onRpeChange(null) },
-                            modifier = Modifier
-                                .size(24.dp)
-                                .testTag(WorkoutRpeFeelTestTags.RPE_CLEAR)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Clear,
-                                contentDescription = stringResource(R.string.clear),
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.size(16.dp)
-                            )
-                        }
                     }
                 }
             }
 
-            // Interactive discrete Material 3 Slider (1..10, steps = 8)
+            // Dedicated full-width dynamic RPE descriptor line above slider (REQ-UI-529.5)
+            if (rpe != null) {
+                val rpeColor = TTColor.rpeColor(rpe)
+                val isZone7 = rpe == 10 || rpeColor == TTColor.Zone7
+                Text(
+                    text = stringResource(getRpeAnchorStringRes(rpe)),
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = if (isZone7) MaterialTheme.colorScheme.onSurface else rpeColor,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+
+            // Interactive discrete Material 3 Slider (1..10, steps = 8) with uniform stop indicator and contrast thumb
+            val sliderColors = SliderDefaults.colors(
+                thumbColor = if (rpe != null) TTColor.rpeColor(rpe) else MaterialTheme.colorScheme.primary,
+                activeTrackColor = if (rpe != null) TTColor.rpeColor(rpe) else MaterialTheme.colorScheme.primary
+            )
+            val isThumbZone7 = rpe == 10 || (rpe != null && TTColor.rpeColor(rpe) == TTColor.Zone7)
+            val interactionSource = remember { MutableInteractionSource() }
             Slider(
                 value = (rpe ?: 1).toFloat(),
                 onValueChange = { newValue ->
@@ -287,51 +306,26 @@ fun RpeFeelEditorControls(
                 },
                 valueRange = 1f..10f,
                 steps = 8,
-                colors = SliderDefaults.colors(
-                    thumbColor = if (rpe != null) TTColor.rpeColor(rpe) else MaterialTheme.colorScheme.primary,
-                    activeTrackColor = if (rpe != null) TTColor.rpeColor(rpe) else MaterialTheme.colorScheme.primary
-                ),
+                colors = sliderColors,
+                interactionSource = interactionSource,
+                thumb = {
+                    SliderDefaults.Thumb(
+                        interactionSource = interactionSource,
+                        colors = sliderColors,
+                        modifier = if (isThumbZone7) Modifier.border(1.dp, MaterialTheme.colorScheme.outline, CircleShape) else Modifier
+                    )
+                },
+                track = { sliderState ->
+                    SliderDefaults.Track(
+                        sliderState = sliderState,
+                        colors = sliderColors,
+                        drawStopIndicator = null
+                    )
+                },
                 modifier = Modifier
                     .fillMaxWidth()
                     .testTag(WorkoutRpeFeelTestTags.RPE_SLIDER)
             )
-
-            // Equal-width buttons row (weight(1f), no horizontal clipping on standard portrait viewports)
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                for (score in 1..10) {
-                    val isSelected = rpe == score
-                    val color = TTColor.rpeColor(score)
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(
-                                if (isSelected) color.copy(alpha = 0.25f)
-                                else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
-                            )
-                            .border(
-                                width = if (isSelected) 2.dp else 0.5.dp,
-                                color = if (isSelected) color else MaterialTheme.colorScheme.outlineVariant,
-                                shape = RoundedCornerShape(8.dp)
-                            )
-                            .clickable {
-                                onRpeChange(if (isSelected) null else score)
-                            }
-                            .padding(vertical = 8.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = score.toString(),
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                            color = if (isSelected) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-            }
         }
 
         // 2. Feel (1..5) M3 Tonal Cards with Vector Sentiment Icons (REQ-WKO-037.2)

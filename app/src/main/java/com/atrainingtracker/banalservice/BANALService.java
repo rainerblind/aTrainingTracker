@@ -153,6 +153,7 @@ public class BANALService
     private static volatile MySensorManager cSensorManager;
     private static volatile FilterManager cFilterManager;
     protected volatile ActivityType mActivityTypeMax = ActivityType.getDefaultActivityType();
+    private volatile boolean mIsIndoorMode = false;
 
     @Nullable
     public static Context getServiceContext() {
@@ -318,6 +319,56 @@ public class BANALService
         }
     }
 
+    /**
+     * REQ-TRK-077.1: Sets indoor mode on BANALService, propagating to DeviceManager and active SpeedAndLocationDevices.
+     */
+    public void setIndoorMode(boolean indoorMode) {
+        mIsIndoorMode = indoorMode;
+        DeviceManager deviceManager = cDeviceManager;
+        if (deviceManager != null) {
+            deviceManager.setIndoorMode(indoorMode);
+        }
+    }
+
+    /**
+     * REQ-TRK-077.1: Returns whether indoor mode is active on BANALService or its DeviceManager.
+     */
+    public boolean isIndoorMode() {
+        DeviceManager deviceManager = cDeviceManager;
+        return deviceManager != null ? deviceManager.isIndoorMode() : mIsIndoorMode;
+    }
+
+    /**
+     * REQ-TRK-077.1: Static method to set indoor mode on current active DeviceManager.
+     */
+    public static void setStaticIndoorMode(boolean indoorMode) {
+        DeviceManager deviceManager = cDeviceManager;
+        if (deviceManager != null) {
+            deviceManager.setIndoorMode(indoorMode);
+        }
+    }
+
+    /**
+     * REQ-TRK-077.1: Static method to query indoor mode from current active DeviceManager.
+     */
+    public static boolean isStaticIndoorMode() {
+        DeviceManager deviceManager = cDeviceManager;
+        return deviceManager != null && deviceManager.isIndoorMode();
+    }
+
+    /**
+     * REQ-TRK-077.1: Updates indoor mode based on the given sport type id.
+     */
+    public void updateIndoorModeForSportType(long sportTypeId) {
+        boolean isIndoor = false;
+        try {
+            isIndoor = getSportTypesRepository().isIndoorSportType(sportTypeId);
+        } catch (Throwable t) {
+            Log.w(TAG, "Error resolving indoor status for sport type " + sportTypeId, t);
+        }
+        setIndoorMode(isIndoor);
+    }
+
     public static List<MySensor> getSensorList(SensorType sensorType) {
         DeviceManager deviceManager = cDeviceManager;
         return deviceManager != null ? deviceManager.getSensorList(sensorType) : new LinkedList<>();
@@ -362,6 +413,7 @@ public class BANALService
     private void setUserSelectedSportTypeId(long sportTypeId) {
         mHaveUserSelectedSportType = true;
         mUserSelectedSportTypeId = sportTypeId;
+        updateIndoorModeForSportType(sportTypeId);
         sendBroadcast(new Intent(SPORT_TYPE_CHANGED_BY_USER_INTENT)
                 .setPackage(this.getPackageName()));
         if (TrainingApplication.startSearchWhenUserChangesSport()) {
@@ -609,6 +661,11 @@ public class BANALService
         cServiceContext = this.getApplicationContext();
         cSensorManager = new MySensorManager(this);
         cDeviceManager = new DeviceManager(this, cSensorManager);
+        if (mIsIndoorMode) {
+            cDeviceManager.setIndoorMode(true);
+        } else {
+            updateIndoorModeForSportType(getSportTypeId());
+        }
         cFilterManager = new FilterManager(this, cDeviceManager, cSensorManager);
 
         // when there is a FilterManager, we can create the devices that need filtered data.
@@ -797,6 +854,18 @@ public class BANALService
 
         public void setUserSelectedSportType(BSportType bSportType) {
             BANALService.this.setUserSelectedBSportType(bSportType);
+        }
+
+        public void setIndoorMode(boolean indoorMode) {
+            BANALService.this.setIndoorMode(indoorMode);
+        }
+
+        public boolean isIndoorMode() {
+            return BANALService.this.isIndoorMode();
+        }
+
+        public void updateIndoorModeForSportType(long sportTypeId) {
+            BANALService.this.updateIndoorModeForSportType(sportTypeId);
         }
 
         // without the speed and location devices.

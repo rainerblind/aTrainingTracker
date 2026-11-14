@@ -531,6 +531,38 @@ class WorkoutClustersViewModel @JvmOverloads constructor(
         }
     }
 
+    /**
+     * Unassigns a workout from its current favorite route and refreshes cluster state (ATT-7754 / REQ-SET-059).
+     */
+    fun unassignWorkout(workout: WorkoutData) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val job = WorkoutRepository.getInstance(getApplication()).unassignClusterFromWorkout(workout.id)
+            job.join()
+            repository.refreshClusters()
+            _selectedCluster.value?.let { current ->
+                _clusterWorkouts.value = repository.getWorkoutsForCluster(current.id)
+            }
+            _unclusteredWorkouts.value = repository.getUnclusteredWorkouts()
+            WorkoutRepository.getInstance(getApplication()).reloadWorkoutData(workout.id)
+        }
+    }
+
+    /**
+     * Creates a new favorite route from the workout's spatial fingerprint and refreshes cluster state (ATT-7754 / REQ-SET-059).
+     */
+    fun createNewClusterFromWorkout(workout: WorkoutData) {
+        viewModelScope.launch(Dispatchers.IO) {
+            WorkoutClusterEngine.getInstance(getApplication())
+                .createNewClusterFromWorkout(getApplication(), workout)
+            repository.refreshClusters()
+            _selectedCluster.value?.let { current ->
+                _clusterWorkouts.value = repository.getWorkoutsForCluster(current.id)
+            }
+            _unclusteredWorkouts.value = repository.getUnclusteredWorkouts()
+            WorkoutRepository.getInstance(getApplication()).reloadWorkoutData(workout.id)
+        }
+    }
+
     fun addManualCluster(
         name: String,
         sportId: Long,

@@ -271,7 +271,13 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
     fun deleteWorkoutSamples(fileBaseName: String) = samplesManager.deleteWorkout(fileBaseName)
     fun reassignClusterWorkouts(sourceId: Long, targetId: Long) = summariesManager.reassignClusterWorkouts(sourceId, targetId)
 
-    fun createNewTrackedWorkout(baseFileName: String, sportTypeId: Long, bSportType: com.atrainingtracker.banalservice.BSportType): Long {
+    @JvmOverloads
+    fun createNewTrackedWorkout(
+        baseFileName: String,
+        sportTypeId: Long,
+        bSportType: com.atrainingtracker.banalservice.BSportType,
+        isTrainer: Boolean = false
+    ): Long {
         val values = ContentValues().apply {
             put(WorkoutSummariesDatabaseManager.WorkoutSummaries.GOAL, "")
             put(WorkoutSummariesDatabaseManager.WorkoutSummaries.METHOD, "")
@@ -282,6 +288,7 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
             put(WorkoutSummariesDatabaseManager.WorkoutSummaries.FILE_BASE_NAME, baseFileName)
             put(WorkoutSummariesDatabaseManager.WorkoutSummaries.SOURCE, WorkoutSource.TRACKED.name)
             put(WorkoutSummariesDatabaseManager.WorkoutSummaries.FINISHED, 0)
+            put(WorkoutSummariesDatabaseManager.WorkoutSummaries.TRAINER, if (isTrainer) 1 else 0)
         }
         return insertWorkoutSummary(values)
     }
@@ -812,9 +819,25 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
                 val spdIdx = col(WorkoutSummariesDatabaseManager.WorkoutSummaries.SPEED_AVERAGE_mps)
                 val rpeIdx = col(WorkoutSummariesDatabaseManager.WorkoutSummaries.RPE)
                 val feelIdx = col(WorkoutSummariesDatabaseManager.WorkoutSummaries.FEEL)
+                val commuteIdx = col(WorkoutSummariesDatabaseManager.WorkoutSummaries.COMMUTE)
+                val raceIdx = col(WorkoutSummariesDatabaseManager.WorkoutSummaries.RACE)
+                val eqIdx = col(WorkoutSummariesDatabaseManager.WorkoutSummaries.EQUIPMENT_ID)
+
+                val wId = if (idIdx >= 0 && !cursor.isNull(idIdx)) cursor.getLong(idIdx) else DatabaseConstants.INVALID_ID
+                val eqId = if (eqIdx >= 0 && !cursor.isNull(eqIdx)) cursor.getLong(eqIdx) else null
+                val eqName = if (eqId != null && eqId > 0) {
+                    try {
+                        com.atrainingtracker.trainingtracker.database.EquipmentDbHelper.getInstance(application).getEquipmentNameFromId(eqId)
+                    } catch (_: Exception) { null }
+                } else null
+
+                val np = if (wId > 0) getExtremaValue(wId, SensorType.NORMALIZED_POWER, ExtremaType.END) ?: getExtremaValue(wId, SensorType.NORMALIZED_POWER, ExtremaType.AVG) else null
+                val ifVal = if (wId > 0) getExtremaValue(wId, SensorType.INTENSITY_FACTOR, ExtremaType.END) ?: getExtremaValue(wId, SensorType.INTENSITY_FACTOR, ExtremaType.AVG) else null
+                val tss = if (wId > 0) getExtremaValue(wId, SensorType.TSS, ExtremaType.END) ?: getExtremaValue(wId, SensorType.TSS, ExtremaType.AVG) ?: getExtremaValue(wId, SensorType.TSS, ExtremaType.MAX) else null
+                val work = if (wId > 0) getExtremaValue(wId, SensorType.WORK_KJ, ExtremaType.END) ?: getExtremaValue(wId, SensorType.WORK_KJ, ExtremaType.AVG) ?: getExtremaValue(wId, SensorType.WORK_KJ, ExtremaType.MAX) else null
 
                 return WorkoutExportHeader(
-                    workoutId = if (idIdx >= 0 && !cursor.isNull(idIdx)) cursor.getLong(idIdx) else DatabaseConstants.INVALID_ID,
+                    workoutId = wId,
                     fileBaseName = fileBaseName,
                     startTime = myGet(WorkoutSummariesDatabaseManager.WorkoutSummaries.TIME_START, ""),
                     totalTime = myGet(WorkoutSummariesDatabaseManager.WorkoutSummaries.TIME_TOTAL_s, "0"),
@@ -831,7 +854,15 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
                     totalDescent = if (descIdx >= 0 && !cursor.isNull(descIdx)) cursor.getInt(descIdx) else null,
                     avgSpeedMps = if (spdIdx >= 0 && !cursor.isNull(spdIdx)) cursor.getDouble(spdIdx) else null,
                     rpe = if (rpeIdx >= 0 && !cursor.isNull(rpeIdx)) cursor.getInt(rpeIdx) else null,
-                    feel = if (feelIdx >= 0 && !cursor.isNull(feelIdx)) cursor.getInt(feelIdx) else null
+                    feel = if (feelIdx >= 0 && !cursor.isNull(feelIdx)) cursor.getInt(feelIdx) else null,
+                    commute = commuteIdx >= 0 && !cursor.isNull(commuteIdx) && cursor.getInt(commuteIdx) > 0,
+                    race = raceIdx >= 0 && !cursor.isNull(raceIdx) && cursor.getInt(raceIdx) > 0,
+                    equipmentId = eqId,
+                    equipmentName = eqName,
+                    normalizedPower = np,
+                    intensityFactor = ifVal,
+                    tss = tss,
+                    workKj = work
                 )
             }
         } catch (e: Exception) {
@@ -1094,7 +1125,10 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
         source: String,
         uploadToStrava: Boolean,
         rpe: Int? = null,
-        feel: Int? = null
+        feel: Int? = null,
+        method: String? = null,
+        isTrainer: Boolean = false,
+        isRace: Boolean = false
     ): Long {
         val summaryValues = ContentValues().apply {
             put(WorkoutSummariesDatabaseManager.WorkoutSummaries.FILE_BASE_NAME, fileBaseName)
@@ -1109,8 +1143,17 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
             if (!goal.isNullOrBlank()) {
                 put(WorkoutSummariesDatabaseManager.WorkoutSummaries.GOAL, goal.trim())
             }
+            if (!method.isNullOrBlank()) {
+                put(WorkoutSummariesDatabaseManager.WorkoutSummaries.METHOD, method.trim())
+            }
             if (isCommute) {
                 put(WorkoutSummariesDatabaseManager.WorkoutSummaries.COMMUTE, 1)
+            }
+            if (isTrainer) {
+                put(WorkoutSummariesDatabaseManager.WorkoutSummaries.TRAINER, 1)
+            }
+            if (isRace) {
+                put(WorkoutSummariesDatabaseManager.WorkoutSummaries.RACE, 1)
             }
             if (rpe != null) {
                 put(WorkoutSummariesDatabaseManager.WorkoutSummaries.RPE, rpe)
@@ -1275,10 +1318,21 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
         minAltPos: LatLng? = null,
         maxAltPos: LatLng? = null
     ) {
-        val sensorsToCalculate = listOf(
+        val sensorsToCalculate = mutableListOf(
             SensorType.HR, SensorType.CADENCE, SensorType.POWER, SensorType.SPEED_mps,
             SensorType.ALTITUDE, SensorType.TEMPERATURE
         )
+        if (hasRadarData(workoutId, baseFileName)) {
+            sensorsToCalculate.addAll(
+                listOf(
+                    SensorType.RADAR_THREAT_COUNT,
+                    SensorType.RADAR_VEHICLE_COUNT,
+                    SensorType.RADAR_APPROACH_SPEED_mps,
+                    SensorType.RADAR_PASSING_DISTANCE_m,
+                    SensorType.RADAR_LARGE_VEHICLE_COUNT
+                )
+            )
+        }
         val extremaTypes = listOf(ExtremaType.MIN, ExtremaType.MAX, ExtremaType.AVG)
 
         sensorsToCalculate.forEach { sensor ->
@@ -1376,10 +1430,14 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
         return summariesManager.getString(workoutId, WorkoutSummariesDatabaseManager.WorkoutSummaries.TIME_START)
     }
 
-    fun updateWorkoutSport(workoutId: Long, sportId: Long, bSportType: BSportType) {
+    @JvmOverloads
+    fun updateWorkoutSport(workoutId: Long, sportId: Long, bSportType: BSportType, isTrainer: Boolean? = null) {
         val updateVals = ContentValues().apply {
             put(WorkoutSummariesDatabaseManager.WorkoutSummaries.SPORT_ID, sportId)
             put(WorkoutSummariesDatabaseManager.WorkoutSummaries.B_SPORT, bSportType.name)
+            if (isTrainer != null) {
+                put(WorkoutSummariesDatabaseManager.WorkoutSummaries.TRAINER, if (isTrainer) 1 else 0)
+            }
         }
         updateWorkoutSummary(workoutId, updateVals)
     }
@@ -1424,6 +1482,9 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
 
     fun getWorkoutName(workoutId: Long): String? =
         summariesManager.getString(workoutId, WorkoutSummariesDatabaseManager.WorkoutSummaries.WORKOUT_NAME)
+
+    fun getWorkoutMethod(workoutId: Long): String? =
+        summariesManager.getString(workoutId, WorkoutSummariesDatabaseManager.WorkoutSummaries.METHOD)
 
     fun getWorkoutFileBaseName(workoutId: Long): String? =
         summariesManager.getString(workoutId, WorkoutSummariesDatabaseManager.WorkoutSummaries.FILE_BASE_NAME)
@@ -1569,6 +1630,22 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
     fun getWorkoutById(id: Long): kotlinx.coroutines.flow.Flow<WorkoutData?> {
         return allWorkouts.map { list ->
             list.find { it.id == id }
+        }
+    }
+
+    /**
+     * Resolves [WorkoutData] directly by [workoutId] without reactive Flow observation (REQ-MIG-052.4).
+     * Inspects the in-memory cache first, falling back to database query and cursor mapping.
+     */
+    fun getWorkoutDataDirect(workoutId: Long): WorkoutData? {
+        val cached = _allWorkouts.value.find { it.id == workoutId }
+        if (cached != null) return cached
+        return summariesManager.getWorkoutCursor(workoutId)?.use { cursor ->
+            if (cursor.moveToFirst()) {
+                mapper.fromCursor(cursor)
+            } else {
+                null
+            }
         }
     }
 
@@ -4272,7 +4349,8 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
                             trainer = userEditedWorkout.trainer,
                             race = userEditedWorkout.race,
                             source = current.source,
-                            uploadToStrava = userEditedWorkout.uploadToStrava
+                            uploadToStrava = userEditedWorkout.uploadToStrava,
+                            syncToHealthConnect = userEditedWorkout.syncToHealthConnect
                         )
                     } else current
                 }
@@ -4447,14 +4525,14 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
     /**
      * Unassigns the workout from its cluster, decrementing the cluster's hit count (REQ-SET-059).
      */
-    fun unassignClusterFromWorkout(workoutId: Long) {
-        launch(Dispatchers.IO) {
-            WorkoutClusterEngine.getInstance(application)
-                .unassignClusterFromWorkout(application, workoutId)
+    fun unassignClusterFromWorkout(workoutId: Long): Job = launch(Dispatchers.IO) {
+        WorkoutClusterEngine.getInstance(application)
+            .unassignClusterFromWorkout(application, workoutId)
 
-            reloadWorkoutData(workoutId)
-            loadWorkout(workoutId)
-        }
+        WorkoutClusterRepository.getInstance(application).refreshClusters()
+
+        reloadWorkoutData(workoutId)
+        loadWorkout(workoutId)
     }
 
     /**

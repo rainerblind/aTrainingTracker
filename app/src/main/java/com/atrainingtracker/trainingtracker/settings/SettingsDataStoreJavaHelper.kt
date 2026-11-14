@@ -20,6 +20,7 @@ package com.atrainingtracker.trainingtracker.settings
 
 import android.content.Context
 import com.atrainingtracker.banalservice.BSportType
+import com.atrainingtracker.BuildConfig
 import com.atrainingtracker.trainingtracker.MyUnits
 import com.atrainingtracker.trainingtracker.TrainingApplication
 import com.atrainingtracker.trainingtracker.tracker.autopause.AutoPauseConfig
@@ -136,6 +137,14 @@ object SettingsDataStoreJavaHelper {
     @JvmStatic
     fun getSlopeMinSpeed(context: Context): Float {
         return getTuningConfig(context).slopeMinSpeedMps
+    }
+
+    /**
+     * Synchronous bridge to fetch whether post-workout ERTS smoothing is enabled (REQ-FIL-017.3, ATT-7750).
+     */
+    @JvmStatic
+    fun isPostWorkoutErtsSmoothingEnabled(context: Context): Boolean {
+        return getTuningConfig(context).postWorkoutErtsSmoothingEnabled
     }
 
     /**
@@ -324,5 +333,19 @@ object SettingsDataStoreJavaHelper {
             }
         }
         return getAthleteWeightKg(context)
+    }
+
+    /**
+     * Synchronous bridge for BTLERadarDevice to check whether developer forced legacy V1 BLE protocol.
+     * Strictly returns false in release builds (BuildConfig.DEBUG == false). (ATT-7659 / REQ-CON-030.8)
+     */
+    @JvmStatic
+    fun isRadarV1OnlyOverrideEnabled(context: Context): Boolean {
+        if (!BuildConfig.DEBUG) return false
+        return try {
+            SettingsDataStore.getInstance(context).isRadarV1OnlyOverrideEnabledSync()
+        } catch (_: Throwable) {
+            false
+        }
     }
 }

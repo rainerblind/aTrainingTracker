@@ -20,6 +20,10 @@ package com.atrainingtracker.banalservice.devices;
 
 import android.content.Context;
 import android.content.Intent;
+import android.hardware.Sensor;
+import android.hardware.SensorEvent;
+import android.hardware.SensorEventListener;
+import android.hardware.SensorManager;
 import android.location.Location;
 import android.os.Handler;
 import android.os.Looper;
@@ -32,8 +36,11 @@ import com.atrainingtracker.banalservice.sensor.MySensorManager;
 import com.atrainingtracker.banalservice.sensor.SensorType;
 import com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper;
 
+import java.util.ArrayDeque;
+import java.util.Deque;
 
-public abstract class SpeedAndLocationDevice extends MyDevice {
+
+public abstract class SpeedAndLocationDevice extends MyDevice implements SensorEventListener {
     public static final double ACCURACY_THRESHOLD = 200;
     public static final long INACTIVITY_TIMEOUT_MS = 10000L;
     public static final long DECAY_INTERVAL_MS = 1000L;
@@ -68,6 +75,28 @@ public abstract class SpeedAndLocationDevice extends MyDevice {
     // REQ-TRK-074.3: Consecutive stationary candidate updates required before entering stationary pinned state
     public static final int STATIONARY_PINNING_HYSTERESIS_TICKS = 3;
     protected int mStationaryHysteresisCount = 0;
+
+    // REQ-TRK-077.1: Indoor GPS suppression mode flag
+    protected volatile boolean mIsIndoorMode = false;
+
+    // REQ-TRK-077.3: Hardware accelerometer listener & rolling rest-variance engine
+    public static final double ACCELEROMETER_REST_VARIANCE_THRESHOLD = 0.05;
+    public static final long ACCELEROMETER_WINDOW_MS = 2000L;
+    public static final long ACCELEROMETER_STALENESS_MS = 1000L;
+    protected Sensor mAccelerometerSensor = null;
+    protected boolean mAccelRegistered = false;
+
+    private static class AccelSample {
+        final long timestampMs;
+        final double norm;
+
+        AccelSample(long timestampMs, double norm) {
+            this.timestampMs = timestampMs;
+            this.norm = norm;
+        }
+    }
+
+    private final Deque<AccelSample> mAccelSamples = new ArrayDeque<>();
 
     protected Handler mWatchdogHandler;
     private final Runnable mInactivityRunnable = new Runnable() {
@@ -197,6 +226,7 @@ public abstract class SpeedAndLocationDevice extends MyDevice {
         if (!LocationAvailable) {
             LocationAvailable = true;
             registerSensors();
+            registerAccelerometer();
             mContext.sendBroadcast(new Intent(BANALService.LOCATION_AVAILABLE_INTENT)
                     .setPackage(mContext.getPackageName()));
         }
@@ -208,6 +238,7 @@ public abstract class SpeedAndLocationDevice extends MyDevice {
         if (LocationAvailable) {
             LocationAvailable = false;
             unregisterSensors();
+            unregisterAccelerometer();
             cancelWatchdog();
             if (mSpeed > 0) {
                 triggerDecayTick();
@@ -274,6 +305,9 @@ public abstract class SpeedAndLocationDevice extends MyDevice {
         mStationaryHysteresisCount = 0;
         mFilteredLatitude = Double.NaN;
         mFilteredLongitude = Double.NaN;
+        mIsIndoorMode = false;
+        unregisterAccelerometer();
+        clearAccelerometerBuffer();
         super.shutDown();
     }
 
@@ -286,6 +320,7 @@ public abstract class SpeedAndLocationDevice extends MyDevice {
         mStationaryHysteresisCount = 0;
         mFilteredLatitude = Double.NaN;
         mFilteredLongitude = Double.NaN;
+        clearAccelerometerBuffer();
     }
 
     /**
@@ -307,6 +342,212 @@ public abstract class SpeedAndLocationDevice extends MyDevice {
      */
     public synchronized int getStationaryHysteresisCount() {
         return mStationaryHysteresisCount;
+    }
+
+    /**
+     * REQ-TRK-077.1: Sets whether indoor workout mode is active.
+     * When true, GPS coordinate drift emission, speed, and distance accumulation are suppressed.
+     */
+    public synchronized void setIndoorMode(boolean isIndoorMode) {
+        mIsIndoorMode = isIndoorMode;
+        if (mIsIndoorMode && mPrevLocation != null && mStationaryAnchor == null) {
+            mStationaryAnchor = mPrevLocation;
+            mIsStationaryPinned = true;
+            mStationaryHysteresisCount = 0;
+        }
+    }
+
+    /**
+     * REQ-TRK-077.1: Returns whether indoor mode is active.
+     */
+    public synchronized boolean isIndoorMode() {
+        return mIsIndoorMode;
+    }
+
+    /**
+     * REQ-TRK-077.2: Returns true if an active connected external speed sensor (BIKE_SPEED,
+     * BIKE_SPEED_AND_CADENCE, RUN_SPEED, BIKE_POWER) reported <= 0.1 m/s within the last 5 seconds.
+     */
+    public synchronized boolean isExternalSpeedSensorStationary() {
+        return isExternalSpeedSensorStationary(System.currentTimeMillis());
+    }
+
+    /**
+     * REQ-TRK-077.2: Overload for testing and timestamp-synchronized evaluation.
+     */
+    public synchronized boolean isExternalSpeedSensorStationary(long nowMs) {
+        if (mMySensorManager == null) {
+            return false;
+        }
+        DeviceType[] candidateDeviceTypes = new DeviceType[] {
+            DeviceType.BIKE_SPEED,
+            DeviceType.BIKE_SPEED_AND_CADENCE,
+            DeviceType.RUN_SPEED,
+            DeviceType.BIKE_POWER
+        };
+        boolean hasFreshStationary = false;
+        for (DeviceType deviceType : candidateDeviceTypes) {
+            MySensor<?> sensor = mMySensorManager.getSensorForDeviceType(SensorType.SPEED_mps, deviceType);
+            if (sensor != null && sensor.isActivated()) {
+                long lastUpdate = sensor.getLastUpdateTimestamp();
+                long effectiveNow = nowMs;
+                if (lastUpdate > 1_500_000_000_000L && nowMs < 1_500_000_000_000L) {
+                    effectiveNow = System.currentTimeMillis();
+                }
+                long ageMs = Math.abs(effectiveNow - lastUpdate);
+                if (lastUpdate > 0 && ageMs <= 5000) {
+                    Object val = sensor.getValue();
+                    if (val instanceof Number) {
+                        double speedVal = ((Number) val).doubleValue();
+                        if (speedVal > 0.1) {
+                            return false;
+                        } else if (speedVal >= 0.0) {
+                            hasFreshStationary = true;
+                        }
+                    }
+                }
+            }
+        }
+        return hasFreshStationary;
+    }
+
+    /**
+     * Registers the hardware accelerometer listener for IMU rest-variance calculation.
+     */
+    protected synchronized void registerAccelerometer() {
+        if (mAccelRegistered) {
+            return;
+        }
+        if (mContext != null) {
+            try {
+                SensorManager sm = (SensorManager) mContext.getSystemService(Context.SENSOR_SERVICE);
+                if (sm != null) {
+                    mAccelerometerSensor = sm.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
+                    if (mAccelerometerSensor != null) {
+                        sm.registerListener(this, mAccelerometerSensor, SensorManager.SENSOR_DELAY_UI);
+                        mAccelRegistered = true;
+                    }
+                }
+            } catch (Exception e) {
+                Log.w(TAG, "Could not register accelerometer: " + e.getMessage());
+            }
+        }
+    }
+
+    /**
+     * Unregisters the hardware accelerometer listener to conserve battery.
+     */
+    protected synchronized void unregisterAccelerometer() {
+        if (!mAccelRegistered) {
+            return;
+        }
+        if (mContext != null) {
+            try {
+                SensorManager sm = (SensorManager) mContext.getSystemService(Context.SENSOR_SERVICE);
+                if (sm != null) {
+                    if (mAccelerometerSensor != null) {
+                        sm.unregisterListener(this, mAccelerometerSensor);
+                    } else {
+                        sm.unregisterListener(this);
+                    }
+                }
+            } catch (Exception e) {
+                Log.w(TAG, "Could not unregister accelerometer: " + e.getMessage());
+            }
+        }
+        mAccelRegistered = false;
+    }
+
+    /**
+     * REQ-TRK-077.3: Ingests an accelerometer measurement (x, y, z) in m/s^2.
+     */
+    public synchronized void processAccelerometerMeasurement(float x, float y, float z, long timestampMs) {
+        double norm = Math.sqrt((double) x * x + (double) y * y + (double) z * z);
+        mAccelSamples.addLast(new AccelSample(timestampMs, norm));
+        purgeOldAccelerometerSamples(timestampMs);
+    }
+
+    private void purgeOldAccelerometerSamples(long nowMs) {
+        long cutoff = nowMs - ACCELEROMETER_WINDOW_MS;
+        while (!mAccelSamples.isEmpty() && mAccelSamples.peekFirst().timestampMs < cutoff) {
+            mAccelSamples.removeFirst();
+        }
+    }
+
+    public synchronized void clearAccelerometerBuffer() {
+        mAccelSamples.clear();
+    }
+
+    public synchronized int getAccelerometerSampleSize() {
+        return mAccelSamples.size();
+    }
+
+    public synchronized double getAccelerometerVariance() {
+        return computeAccelerometerVariance();
+    }
+
+    private double computeAccelerometerVariance() {
+        if (mAccelSamples.size() < 3) {
+            return Double.NaN;
+        }
+        double sum = 0.0;
+        for (AccelSample sample : mAccelSamples) {
+            sum += sample.norm;
+        }
+        double mean = sum / mAccelSamples.size();
+        double sumSqDiff = 0.0;
+        for (AccelSample sample : mAccelSamples) {
+            double diff = sample.norm - mean;
+            sumSqDiff += diff * diff;
+        }
+        return sumSqDiff / mAccelSamples.size();
+    }
+
+    /**
+     * REQ-TRK-077.3: Returns true if rolling variance of accelerometer norm over 1.5-2.0s is <= 0.05 (m/s^2)^2.
+     */
+    public synchronized boolean isAccelerometerAtRest() {
+        return isAccelerometerAtRest(System.currentTimeMillis());
+    }
+
+    /**
+     * REQ-TRK-077.3: Overload for testing and timestamp-synchronized evaluation.
+     */
+    public synchronized boolean isAccelerometerAtRest(long nowMs) {
+        if (mAccelSamples.isEmpty()) {
+            return false;
+        }
+        long effectiveNow = nowMs;
+        long newestTs = mAccelSamples.peekLast().timestampMs;
+        if (newestTs < 1_500_000_000_000L && nowMs > 1_500_000_000_000L) {
+            effectiveNow = newestTs;
+        } else if (newestTs > 1_500_000_000_000L && nowMs < 1_500_000_000_000L) {
+            effectiveNow = System.currentTimeMillis();
+        }
+        purgeOldAccelerometerSamples(effectiveNow);
+        if (mAccelSamples.size() < 3) {
+            return false;
+        }
+        AccelSample newest = mAccelSamples.peekLast();
+        if (newest == null || Math.abs(effectiveNow - newest.timestampMs) > ACCELEROMETER_STALENESS_MS) {
+            return false;
+        }
+        double variance = computeAccelerometerVariance();
+        return !Double.isNaN(variance) && variance <= ACCELEROMETER_REST_VARIANCE_THRESHOLD;
+    }
+
+    @Override
+    public void onSensorChanged(SensorEvent event) {
+        if (event != null && event.sensor != null && event.sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
+            if (event.values != null && event.values.length >= 3) {
+                processAccelerometerMeasurement(event.values[0], event.values[1], event.values[2], System.currentTimeMillis());
+            }
+        }
+    }
+
+    @Override
+    public void onAccuracyChanged(Sensor sensor, int accuracy) {
+        // No-op
     }
 
     public void onNewLocation(Location location) {
@@ -353,9 +594,22 @@ public abstract class SpeedAndLocationDevice extends MyDevice {
                 }
 
                 double speed = 0.0;
+                long evalTime = (location.getTime() > 0) ? location.getTime() : System.currentTimeMillis();
+                boolean extStationary = isExternalSpeedSensorStationary(evalTime);
+                boolean accelAtRest = isAccelerometerAtRest(evalTime);
 
-                // REQ-TRK-048.1, REQ-TRK-048.2, REQ-TRK-048.4: Anchor pinning, deadband gating, and Doppler zero preservation
-                if (mIsStationaryPinned && mStationaryAnchor != null) {
+                // REQ-TRK-048.1, REQ-TRK-048.2, REQ-TRK-048.4, REQ-TRK-077: Anchor pinning, deadband gating, and standstill coupling
+                if (mIsIndoorMode) {
+                    // REQ-TRK-077.1: Indoor GPS suppression unconditionally pins to anchor, clamps speed to 0.0,
+                    // and suppresses GPS distance increments while allowing external sensors to record unimpeded.
+                    if (mStationaryAnchor == null) {
+                        mStationaryAnchor = location;
+                    }
+                    mIsStationaryPinned = true;
+                    mStationaryHysteresisCount = 0;
+                    delta_distance = 0.0;
+                    speed = 0.0;
+                } else if (mIsStationaryPinned && mStationaryAnchor != null) {
                     mStationaryHysteresisCount = 0;
                     float distFromAnchor = mStationaryAnchor.distanceTo(location);
                     boolean shouldUnpin = false;
@@ -364,6 +618,11 @@ public abstract class SpeedAndLocationDevice extends MyDevice {
                         if (!hasSpeed || rawSpeed > SPEED_ZERO_THRESHOLD || distFromAnchor > escapeRadius) {
                             shouldUnpin = true;
                         }
+                    }
+
+                    // REQ-TRK-077.2 & REQ-TRK-077.3: Block unpinning if external sensor standstill or IMU rest variance holds
+                    if (shouldUnpin && (extStationary || accelAtRest)) {
+                        shouldUnpin = false;
                     }
 
                     if (shouldUnpin) {
@@ -393,17 +652,19 @@ public abstract class SpeedAndLocationDevice extends MyDevice {
                 } else {
                     double rawDelta = (mPrevLocation != null) ? mPrevLocation.distanceTo(location) : 0.0;
 
-                    // REQ-TRK-074.4 & REQ-TRK-048.1: Immediate pinning on initial location fix
-                    if (mPrevLocation == null && (isDopplerStationary || !hasSpeed)) {
+                    // REQ-TRK-074.4 & REQ-TRK-048.1 & REQ-TRK-077.2 & REQ-TRK-077.3: Immediate pinning on initial location fix
+                    if (mPrevLocation == null && (isDopplerStationary || !hasSpeed || extStationary || accelAtRest)) {
                         mStationaryAnchor = location;
                         mIsStationaryPinned = true;
                         mStationaryHysteresisCount = 0;
                         delta_distance = 0.0;
                         speed = 0.0;
                     } else {
-                        // REQ-TRK-074.2: Candidate stationary update while moving evaluated against deadbandRadius
+                        // REQ-TRK-074.2 & REQ-TRK-077.2 & REQ-TRK-077.3: Candidate stationary update while moving evaluated against deadbandRadius
                         boolean isCandidateStationary = (isDopplerStationary && rawDelta <= deadbandRadius)
-                                || (!hasSpeed && rawDelta <= deadbandRadius && mSpeed <= SPEED_ZERO_THRESHOLD);
+                                || (!hasSpeed && rawDelta <= deadbandRadius && mSpeed <= SPEED_ZERO_THRESHOLD)
+                                || extStationary
+                                || accelAtRest;
 
                         if (isCandidateStationary) {
                             mStationaryHysteresisCount++;

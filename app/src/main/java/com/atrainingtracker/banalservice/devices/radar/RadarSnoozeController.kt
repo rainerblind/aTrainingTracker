@@ -18,6 +18,7 @@
 
 package com.atrainingtracker.banalservice.devices.radar
 
+import android.os.SystemClock
 import androidx.annotation.VisibleForTesting
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -39,11 +40,23 @@ object RadarSnoozeController {
 
     private val lock = Any()
 
+    /**
+     * Canonical monotonic time provider using [SystemClock.elapsedRealtime] with JVM test fallback (REQ-TRK-064.1).
+     */
+    @Suppress("TooGenericExceptionCaught")
+    val DEFAULT_TIME_PROVIDER: () -> Long = {
+        try {
+            SystemClock.elapsedRealtime()
+        } catch (_: Throwable) {
+            System.nanoTime() / 1_000_000L
+        }
+    }
+
     @Volatile
     private var coroutineScope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     @Volatile
-    private var timeProvider: () -> Long = { System.currentTimeMillis() }
+    private var timeProvider: () -> Long = DEFAULT_TIME_PROVIDER
 
     private var currentSnoozeMode: RadarAudioSnoozeMode = RadarAudioSnoozeMode.NONE
     private var snoozeEndTimeMs: Long? = null
@@ -235,6 +248,7 @@ object RadarSnoozeController {
             isManualResumeOverridingAutoMute = false
             lastObservedThreatLevel = ThreatLevel.NONE
             lastObservedLightMode = RadarLightMode.OFF
+            timeProvider = DEFAULT_TIME_PROVIDER
             publishSnoozeStateLocked()
         }
     }

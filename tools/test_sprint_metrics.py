@@ -19,6 +19,7 @@ sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
 
 from sprint_metrics import (
     calculate_spc_limits,
+    extract_text_from_comment_body,
     format_metrics_markdown,
     identify_gate_number,
     load_historical_metrics,
@@ -350,6 +351,194 @@ class TestSprintMetrics(unittest.TestCase):
         self.assertIn("Critical", md)
         self.assertIn("Major", md)
         self.assertIn("*Resolution Rate*: *100.0%*", md)
+
+    def test_collect_sprint_metrics_extracts_labels_and_description(self):
+        """TST-PRO-092.1: Priority to labels and description for bug severity classification."""
+        parent_issues = [
+            {
+                "key": "ATT-401",
+                "fields": {
+                    "summary": "Crash on sensor connect",
+                    "status": {"name": "Erledigt"},
+                    "priority": {"name": "Lowest"},  # would fallback to Cosmetic without label
+                    "issuetype": {"id": "10006", "name": "Bug"},
+                    "labels": ["severity-critical"],
+                    "customfield_10016": 1.0,
+                    "subtasks": [],
+                },
+            },
+            {
+                "key": "ATT-402",
+                "fields": {
+                    "summary": "ANR in workout summary",
+                    "status": {"name": "Erledigt"},
+                    "priority": {"name": "Medium"},  # would fallback to Minor without description
+                    "issuetype": {"id": "10006", "name": "Bug"},
+                    "description": "App freezes on save.\n\n**Severity**: Major",
+                    "labels": [],
+                    "customfield_10016": 2.0,
+                    "subtasks": [],
+                },
+            },
+        ]
+        metrics = parse_sprint_gate_metrics(parent_issues, {"id": 441, "name": "Sprint 2026-46.4"})
+        pt = metrics["problem_trends"]
+        self.assertEqual(pt["by_severity"]["Critical"], 1)
+        self.assertEqual(pt["by_severity"]["Major"], 1)
+        self.assertEqual(pt["by_severity"]["Minor"], 0)
+        self.assertEqual(pt["by_severity"]["Cosmetic"], 0)
+
+    def test_parse_verdicts_from_adf_comments(self):
+        """TST-PRO-092.2: Parse ADF dict comment structures recursively without exception."""
+        adf_rev = {
+            "type": "doc",
+            "version": 1,
+            "content": [
+                {
+                    "type": "paragraph",
+                    "content": [
+                        {"type": "text", "text": "[ROLE: agent2] Gate 4 Audit: REVISION required."}
+                    ]
+                }
+            ]
+        }
+        adf_pass = {
+            "type": "doc",
+            "version": 1,
+            "content": [
+                {
+                    "type": "paragraph",
+                    "content": [
+                        {"type": "text", "text": "[ROLE: agent2] Gate 4 Audit PASS (Re-Review): Verified."}
+                    ]
+                }
+            ]
+        }
+        adf_fr_bounce = {
+            "type": "doc",
+            "version": 1,
+            "content": [
+                {
+                    "type": "paragraph",
+                    "content": [
+                        {"type": "text", "text": "[ROLE: agent2] Stage 6 Final Review (Agent) BOUNCE (1/3): Architecture violation."}
+                    ]
+                }
+            ]
+        }
+
+        # Subtask comments
+        comments = [
+            {"author": {"displayName": "Agent 2"}, "body": adf_rev},
+            {"author": {"displayName": "Agent 2"}, "body": adf_pass},
+        ]
+        verdicts = parse_verdicts_from_comments(comments)
+        self.assertEqual(verdicts, ["REVISION", "PASS"])
+
+        # Final review comments
+        fr_comments = [
+            {"author": {"displayName": "Agent 2"}, "body": adf_fr_bounce},
+        ]
+        fr_verdicts = parse_final_review_agent_verdicts_from_comments(fr_comments)
+        self.assertEqual(fr_verdicts, ["BOUNCE"])
+
+        # Direct text extractor test
+        extracted = extract_text_from_comment_body(adf_rev)
+        self.assertIn("[ROLE: agent2]", extracted)
+        self.assertIn("REVISION", extracted)
+
+    def test_gate_subtasks_without_verdicts_marked_unverified(self):
+        """TST-PRO-092.3: Unverified subtasks in Erledigt are segregated and do not increment passed_first_time."""
+        parent_issues = [
+            {
+                "key": "ATT-501",
+                "fields": {
+                    "summary": "Feature without reviewer comment",
+                    "status": {"name": "Erledigt"},
+                    "priority": {"name": "Medium"},
+                    "customfield_10016": 3.0,
+                    "subtasks": [
+                        {"fields": {"summary": "[Analysis] F501", "status": {"name": "Erledigt"}}, "comments": []},
+                        {"fields": {"summary": "[Req & Test Spec] F501", "status": {"name": "Erledigt"}}, "comments": []},
+                    ],
+                },
+            }
+        ]
+        metrics = parse_sprint_gate_metrics(parent_issues, {"id": 442, "name": "Sprint 2026-46.5"})
+        qg = metrics["quality_gates"]
+        self.assertEqual(qg["total_unverified_subtasks"], 2)
+        self.assertEqual(qg["total_subtasks_evaluated"], 0)
+        self.assertEqual(qg["gates"]["gate_1"]["unverified"], 1)
+        self.assertEqual(qg["gates"]["gate_1"]["passed_first_time"], 0)
+        self.assertEqual(qg["gates"]["gate_2"]["unverified"], 1)
+        self.assertEqual(qg["gates"]["gate_2"]["passed_first_time"], 0)
+
+    def test_downstream_stage6_bounces_attributed_to_escape_rate(self):
+        """TST-PRO-092.4: Stage 6 Cold Review defect bounces are attributed to upstream gate escape rates."""
+        parent_issues = [
+            {
+                "key": "ATT-601",
+                "fields": {
+                    "summary": "Feature ticket with Stage 6 defect bounce",
+                    "status": {"name": "Final Review (Human)"},
+                    "priority": {"name": "High"},
+                    "customfield_10016": 5.0,
+                    "comment": {
+                        "comments": [
+                            {"author": {"displayName": "Agent 2"}, "body": "[ROLE: agent2] Stage 6 Final Review (Agent) BOUNCE (1/3): Code flaw."}
+                            for _ in range(5)
+                        ]
+                    },
+                    "subtasks": [
+                        {"fields": {"summary": "[Analysis] F601", "status": {"name": "Erledigt"}}, "comments": [{"author": {"displayName": "Agent 2"}, "body": "[ROLE: agent2] Gate 1 PASS"}]},
+                        {"fields": {"summary": "[Req & Test Spec] F601", "status": {"name": "Erledigt"}}, "comments": [{"author": {"displayName": "Agent 2"}, "body": "[ROLE: agent2] Gate 2 PASS"}]},
+                        {"fields": {"summary": "[Impl-Plan] F601", "status": {"name": "Erledigt"}}, "comments": [{"author": {"displayName": "Agent 2"}, "body": "[ROLE: agent2] Gate 3 PASS"}]},
+                        {"fields": {"summary": "[Implementation] F601", "status": {"name": "Erledigt"}}, "comments": [{"author": {"displayName": "Agent 2"}, "body": "[ROLE: agent2] Gate 4 PASS"}]},
+                        {"fields": {"summary": "[Test] F601", "status": {"name": "Erledigt"}}, "comments": [{"author": {"displayName": "Agent 2"}, "body": "[ROLE: agent2] Gate 5 PASS"}]},
+                    ],
+                },
+            }
+        ]
+        metrics = parse_sprint_gate_metrics(parent_issues, {"id": 443, "name": "Sprint 2026-46.6"})
+        sc = metrics["quality_gates"]["swiss_cheese"]
+        # Analysis and Req/Spec are unaffected by Stage 6 code defect
+        self.assertEqual(sc["p1_analysis_escape"], 0.0)
+        self.assertEqual(sc["p2_req_test_spec_escape"], 0.0)
+        # Upstream gates (Impl-Plan, Implementation, Test) must have escape rates > 0 due to downstream escape attribution
+        self.assertTrue(sc["p3_impl_plan_escape"] > 0.0, f"Expected p3 > 0, got {sc['p3_impl_plan_escape']}")
+        self.assertTrue(sc["p4_implementation_escape"] > 0.0, f"Expected p4 > 0, got {sc['p4_implementation_escape']}")
+        self.assertTrue(sc["p5_test_verification_escape"] > 0.0, f"Expected p5 > 0, got {sc['p5_test_verification_escape']}")
+
+    def test_plausibility_warning_emitted_on_100_percent_pass(self):
+        """TST-PRO-092.5: Plausibility warning emitted when FTPR is 100% across >= 20 gate subtasks."""
+        subtasks = []
+        for i in range(20):
+            g = (i % 5) + 1
+            stage_name = ["Analysis", "Req & Test Spec", "Impl-Plan", "Implementation", "Test"][g - 1]
+            subtasks.append({
+                "fields": {"summary": f"[{stage_name}] Subtask {i}", "status": {"name": "Erledigt"}},
+                "comments": [{"author": {"displayName": "Agent 2"}, "body": f"[ROLE: agent2] Gate {g} PASS: Clean."}],
+            })
+
+        parent_issues = [
+            {
+                "key": "ATT-701",
+                "fields": {
+                    "summary": "Large sprint with 100% gate pass rate",
+                    "status": {"name": "Erledigt"},
+                    "priority": {"name": "Medium"},
+                    "customfield_10016": 20.0,
+                    "subtasks": subtasks,
+                },
+            }
+        ]
+        metrics = parse_sprint_gate_metrics(parent_issues, {"id": 444, "name": "Sprint 2026-47.1"})
+        warnings = metrics.get("plausibility_warnings", [])
+        self.assertTrue(len(warnings) > 0, "Expected plausibility warning for 100% FTPR across 20 subtasks")
+        self.assertTrue(any("PA 4.1 Plausibility Warning" in w for w in warnings))
+
+        md = format_metrics_markdown(metrics)
+        self.assertIn("PA 4.1 Plausibility Warning", md)
 
 
 if __name__ == "__main__":

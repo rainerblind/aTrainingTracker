@@ -38,6 +38,7 @@ import com.atrainingtracker.banalservice.devices.radar.RadarConnectionState;
 import com.atrainingtracker.banalservice.devices.radar.RadarLatchedSnapshot;
 import com.atrainingtracker.banalservice.devices.radar.RadarLightController;
 import com.atrainingtracker.banalservice.devices.radar.RadarLightMode;
+import com.atrainingtracker.banalservice.devices.radar.RadarSource;
 import com.atrainingtracker.banalservice.devices.radar.RadarState;
 import com.atrainingtracker.banalservice.devices.radar.RadarStateRepository;
 import com.atrainingtracker.banalservice.devices.radar.RadarTarget;
@@ -48,6 +49,8 @@ import com.atrainingtracker.banalservice.devices.radar.VehicleSizeCategory;
 import com.atrainingtracker.banalservice.sensor.MySensor;
 import com.atrainingtracker.banalservice.sensor.MySensorManager;
 import com.atrainingtracker.banalservice.sensor.SensorType;
+import com.atrainingtracker.BuildConfig;
+import com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -107,8 +110,9 @@ public class BTLERadarDevice extends MyBTLEDevice implements RadarLightDeviceCli
     private volatile boolean mIsStvzo = false;
     private volatile String mModelNumber = null;
     private volatile RadarLightMode mLastConfiguredLightMode = null;
+    private long mLastWindowSampleMs = 0L;
 
-    private RadarWindowAggregator mWindowAggregator = new RadarWindowAggregator();
+    private RadarWindowAggregator mWindowAggregator = new RadarWindowAggregator(SystemClock::elapsedRealtime);
 
     private void pruneStaleTracks(long nowMs) {
         synchronized (mTrackHistory) {
@@ -152,7 +156,8 @@ public class BTLERadarDevice extends MyBTLEDevice implements RadarLightDeviceCli
                     SystemClock.elapsedRealtime(),
                     currentState.getLightMode(),
                     mIsLightControlSupported,
-                    currentState.getAudioSnoozeState()
+                    currentState.getAudioSnoozeState(),
+                    RadarSource.BLE
             ));
             resetSensorsToClear();
         }
@@ -164,18 +169,46 @@ public class BTLERadarDevice extends MyBTLEDevice implements RadarLightDeviceCli
     }
 
     @Override
+    public boolean isReceivingData() {
+        return RadarStateRepository.getState(RadarSource.BLE).getConnectionState() == RadarConnectionState.CONNECTED;
+    }
+
+    @Override
     public void startSearching() {
         super.startSearching();
         RadarState currentState = RadarStateRepository.getState();
-        RadarStateRepository.updateState(new RadarState(
-                RadarConnectionState.CONNECTING,
-                ThreatLevel.NONE,
-                Collections.emptyList(),
-                SystemClock.elapsedRealtime(),
-                currentState.getLightMode(),
-                mIsLightControlSupported,
-                currentState.getAudioSnoozeState()
-        ));
+        if (currentState.getConnectionState() != RadarConnectionState.DISCONNECTED_ERROR) {
+            RadarStateRepository.updateState(new RadarState(
+                    RadarConnectionState.CONNECTING,
+                    ThreatLevel.NONE,
+                    Collections.emptyList(),
+                    SystemClock.elapsedRealtime(),
+                    currentState.getLightMode(),
+                    mIsLightControlSupported,
+                    currentState.getAudioSnoozeState(),
+                    RadarSource.BLE
+            ));
+        }
+    }
+
+    @Override
+    protected void notifyStopSearching(boolean success) {
+        super.notifyStopSearching(success);
+        if (!success) {
+            RadarState currentState = RadarStateRepository.getState();
+            if (currentState.getConnectionState() != RadarConnectionState.DISCONNECTED_ERROR) {
+                RadarStateRepository.updateState(new RadarState(
+                        RadarConnectionState.DISCONNECTED,
+                        ThreatLevel.NONE,
+                        Collections.emptyList(),
+                        SystemClock.elapsedRealtime(),
+                        currentState.getLightMode(),
+                        mIsLightControlSupported,
+                        currentState.getAudioSnoozeState(),
+                        RadarSource.BLE
+                ));
+            }
+        }
     }
 
     @Override
@@ -217,7 +250,8 @@ public class BTLERadarDevice extends MyBTLEDevice implements RadarLightDeviceCli
                 SystemClock.elapsedRealtime(),
                 currentState.getLightMode(),
                 mIsLightControlSupported,
-                currentState.getAudioSnoozeState()
+                currentState.getAudioSnoozeState(),
+                RadarSource.BLE
         ));
         if (mHandler != null) {
             mHandler.removeCallbacks(mWatchdogRunnable);
@@ -255,8 +289,12 @@ public class BTLERadarDevice extends MyBTLEDevice implements RadarLightDeviceCli
         BluetoothGattCharacteristic v2Char = btGattService.getCharacteristic(BluetoothConstants.UUID_CHARACTERISTIC_RADAR_V2);
         BluetoothDevice device = gatt.getDevice();
         boolean isBonded = (device != null && device.getBondState() == BluetoothDevice.BOND_BONDED);
+        boolean isV1Override = BuildConfig.DEBUG && SettingsDataStoreJavaHelper.isRadarV1OnlyOverrideEnabled(mContext);
 
-        if (v2Char != null && isBonded) {
+        if (isV1Override) {
+            Log.w(TAG, "Developer override enabled: radar_v1_only_override=true. Bypassing V2 discovery and forcing legacy V1 protocol (REQ-CON-030.8).");
+            fallbackToV1(gatt, btGattService);
+        } else if (v2Char != null && isBonded) {
             if (DEBUG) Log.i(TAG, "Garmin Varia V2 characteristic 6a4e3204 discovered and device is bonded. Initiating V2 handshake.");
             mIsV2Stream = true;
             enqueueRequestMtu(247);
@@ -291,6 +329,7 @@ public class BTLERadarDevice extends MyBTLEDevice implements RadarLightDeviceCli
 
         if (controlWriteChar != null && controlNotifyChar != null) {
             if (DEBUG) Log.i(TAG, "Garmin RearVue 820 control service 6a4e2f00 discovered (REQ-CON-031.1).");
+            controlWriteChar.setWriteType(BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE);
             mRadarControlWriteChar = controlWriteChar;
             mRadarControlNotifyChar = controlNotifyChar;
             mLightControlCharacteristic = controlWriteChar;
@@ -429,6 +468,9 @@ public class BTLERadarDevice extends MyBTLEDevice implements RadarLightDeviceCli
 
     @Override
     protected void measurementCharacteristicUpdate(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic) {
+        if (mIsShutDown || gatt != mBluetoothGatt || mState != State.CONNECTED_WITH_SERVICE) {
+            return;
+        }
         if (characteristic == null || characteristic.getValue() == null) {
             return;
         }
@@ -450,8 +492,11 @@ public class BTLERadarDevice extends MyBTLEDevice implements RadarLightDeviceCli
 
     private void processTargets(List<RadarTarget> targets) {
         pruneStaleTracks(SystemClock.elapsedRealtime());
-        // Hardware preemption (REQ-CON-029.3): physical data preempts simulator immediately
-        RadarTrafficSimulator.INSTANCE.onPhysicalHardwareConnected();
+        RadarState currentState = RadarStateRepository.getState();
+        // Hardware preemption (REQ-CON-029.3, REQ-CON-042.4): physical data preempts simulator immediately
+        if (RadarTrafficSimulator.INSTANCE.isSimulating()) {
+            RadarTrafficSimulator.INSTANCE.onPhysicalHardwareConnected();
+        }
 
         if (mHandler != null) {
             mHandler.removeCallbacks(mWatchdogRunnable);
@@ -459,7 +504,6 @@ public class BTLERadarDevice extends MyBTLEDevice implements RadarLightDeviceCli
         }
 
         ThreatLevel overallThreat = computeOverallThreatLevel(targets);
-        RadarState currentState = RadarStateRepository.getState();
         RadarState state = new RadarState(
                 RadarConnectionState.CONNECTED,
                 overallThreat,
@@ -467,31 +511,38 @@ public class BTLERadarDevice extends MyBTLEDevice implements RadarLightDeviceCli
                 SystemClock.elapsedRealtime(),
                 currentState.getLightMode(),
                 mIsLightControlSupported,
-                currentState.getAudioSnoozeState()
+                currentState.getAudioSnoozeState(),
+                RadarSource.BLE
         );
         RadarStateRepository.updateState(state);
 
-        // Update 1 Hz aggregator
-        mWindowAggregator.onTargetsUpdated(targets);
-        RadarLatchedSnapshot snapshot = mWindowAggregator.sampleAndResetWindow();
+        long nowMs = SystemClock.elapsedRealtime();
 
-        if (mThreatCountSensor != null) {
-            mThreatCountSensor.newValue(snapshot.getThreatCount());
-        }
-        if (mClosestDistanceSensor != null) {
-            mClosestDistanceSensor.newValue(snapshot.getClosestDistanceMeters());
-        }
-        if (mApproachSpeedSensor != null) {
-            mApproachSpeedSensor.newValue(snapshot.getApproachSpeedMps());
-        }
-        if (mVehicleCountSensor != null) {
-            mVehicleCountSensor.newValue(snapshot.getVehicleCount());
-        }
-        if (mPassingDistanceSensor != null) {
-            mPassingDistanceSensor.newValue(snapshot.getPassingDistanceMeters());
-        }
-        if (mLargeVehicleCountSensor != null) {
-            mLargeVehicleCountSensor.newValue(snapshot.getLargeVehicleCount());
+        // Update 1 Hz aggregator
+        mWindowAggregator.onTargetsUpdated(targets, nowMs);
+
+        if (mLastWindowSampleMs == 0L || nowMs - mLastWindowSampleMs >= 1000L) {
+            mLastWindowSampleMs = nowMs;
+            RadarLatchedSnapshot snapshot = mWindowAggregator.sampleAndResetWindow(nowMs);
+
+            if (mThreatCountSensor != null) {
+                mThreatCountSensor.newValue(snapshot.getThreatCount());
+            }
+            if (mClosestDistanceSensor != null) {
+                mClosestDistanceSensor.newValue(snapshot.getClosestDistanceMeters());
+            }
+            if (mApproachSpeedSensor != null) {
+                mApproachSpeedSensor.newValue(snapshot.getApproachSpeedMps());
+            }
+            if (mVehicleCountSensor != null) {
+                mVehicleCountSensor.newValue(snapshot.getVehicleCount());
+            }
+            if (mPassingDistanceSensor != null) {
+                mPassingDistanceSensor.newValue(snapshot.getPassingDistanceMeters());
+            }
+            if (mLargeVehicleCountSensor != null) {
+                mLargeVehicleCountSensor.newValue(snapshot.getLargeVehicleCount());
+            }
         }
     }
 
@@ -499,6 +550,7 @@ public class BTLERadarDevice extends MyBTLEDevice implements RadarLightDeviceCli
      * Resets dynamic radar sensors to clear state (0 threats/speed, null distances).
      */
     private void resetSensorsToClear() {
+        mLastWindowSampleMs = 0L;
         if (mThreatCountSensor != null) {
             mThreatCountSensor.newValue(0);
         }
@@ -516,6 +568,7 @@ public class BTLERadarDevice extends MyBTLEDevice implements RadarLightDeviceCli
     @Override
     protected void onAccumulatorsReset() {
         super.onAccumulatorsReset();
+        mLastWindowSampleMs = 0L;
         mWindowAggregator.resetSession();
         if (mVehicleCountSensor != null) {
             mVehicleCountSensor.newValue(0);
@@ -548,7 +601,8 @@ public class BTLERadarDevice extends MyBTLEDevice implements RadarLightDeviceCli
                 SystemClock.elapsedRealtime(),
                 RadarLightMode.OFF,
                 false,
-                RadarStateRepository.getState().getAudioSnoozeState()
+                RadarStateRepository.getState().getAudioSnoozeState(),
+                RadarSource.BLE
         ));
         resetSensorsToClear();
         super.disconnectFromGatt();
@@ -588,6 +642,7 @@ public class BTLERadarDevice extends MyBTLEDevice implements RadarLightDeviceCli
      */
     public boolean setLightMode(@NonNull RadarLightMode mode) {
         if (mRadarControlWriteChar != null) {
+            mRadarControlWriteChar.setWriteType(BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE);
             byte type = getRearVueModeType(mode);
             byte[] cmd = new byte[]{0x06, 0x09, 0x01, type};
             enqueueWriteCharacteristic(mRadarControlWriteChar, cmd);
@@ -1135,6 +1190,10 @@ public class BTLERadarDevice extends MyBTLEDevice implements RadarLightDeviceCli
         return mIsV2Stream;
     }
 
+    public void notifyStopSearchingForTesting(boolean success) {
+        notifyStopSearching(success);
+    }
+
     public RadarWindowAggregator getWindowAggregatorForTesting() {
         return mWindowAggregator;
     }
@@ -1188,5 +1247,21 @@ public class BTLERadarDevice extends MyBTLEDevice implements RadarLightDeviceCli
     @androidx.annotation.VisibleForTesting
     public void setLastLightModeCommandTimeMsForTesting(long timeMs) {
         mLastLightModeCommandTimeMs = timeMs;
+    }
+
+    @Override
+    @androidx.annotation.VisibleForTesting
+    public void setStateForTesting(State state) {
+        super.setStateForTesting(state);
+    }
+
+    @androidx.annotation.VisibleForTesting
+    public State getStateForTesting() {
+        return mState;
+    }
+
+    @androidx.annotation.VisibleForTesting
+    public void measurementCharacteristicUpdateForTesting(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic) {
+        measurementCharacteristicUpdate(gatt, characteristic);
     }
 }

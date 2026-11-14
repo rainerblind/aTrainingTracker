@@ -15,6 +15,7 @@ Scenarios tested:
 """
 
 import os
+import re
 import subprocess
 import sys
 import tempfile
@@ -23,12 +24,15 @@ import unittest
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from tools.shard_living_docs import (
+    DEFAULT_MAX_SHARD_LINES,
+    check_shard_sizes,
     clean_multiline_text,
     format_requirement_section,
     format_test_section,
     parse_requirements_file,
     parse_tests_file,
     split_markdown_table_row,
+    split_oversized_shard,
 )
 
 
@@ -204,6 +208,144 @@ class TestShardLivingDocs(unittest.TestCase):
         )
         self.assertEqual(proc.returncode, 0, f"--verify-only failed: {proc.stderr}")
         self.assertIn("PASS: All 18 domain shards exist.", proc.stdout)
+
+    def test_check_shard_sizes_within_limits(self):
+        """TST-PRO-090.1: check_shard_sizes passes when all shards are within max_lines."""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            docs_req = os.path.join(temp_dir, "docs", "requirements")
+            docs_tst = os.path.join(temp_dir, "docs", "tests")
+            os.makedirs(docs_req, exist_ok=True)
+            os.makedirs(docs_tst, exist_ok=True)
+
+            shard_file = os.path.join(docs_req, "req_tracking_cockpit.md")
+            with open(shard_file, "w") as f:
+                f.write("# Header\nLine 2\nLine 3\n")
+
+            res = check_shard_sizes(repo_root=temp_dir, max_lines=50)
+            self.assertTrue(res["passed"])
+            self.assertEqual(len(res["oversized"]), 0)
+            self.assertIn("docs/requirements/req_tracking_cockpit.md", res["shards"])
+            self.assertEqual(res["shards"]["docs/requirements/req_tracking_cockpit.md"], 3)
+
+    def test_check_shard_sizes_flags_oversized(self):
+        """TST-PRO-090.1: check_shard_sizes flags shards exceeding max_lines."""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            docs_req = os.path.join(temp_dir, "docs", "requirements")
+            os.makedirs(docs_req, exist_ok=True)
+
+            shard_file = os.path.join(docs_req, "req_tracking_cockpit.md")
+            with open(shard_file, "w") as f:
+                f.write("\n".join(f"Line {i}" for i in range(1, 61)) + "\n")
+
+            res = check_shard_sizes(repo_root=temp_dir, max_lines=40)
+            self.assertFalse(res["passed"])
+            self.assertEqual(len(res["oversized"]), 1)
+            item = res["oversized"][0]
+            self.assertEqual(item["path"], "docs/requirements/req_tracking_cockpit.md")
+            self.assertEqual(item["lines"], 60)
+            self.assertEqual(item["type"], "requirement")
+
+    def test_split_oversized_shard_preserves_all_ids_and_sections(self):
+        """TST-PRO-090.2: split_oversized_shard partitions into sub-shards with 100% ID parity."""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            shard_path = os.path.join(temp_dir, "req_sample_oversized.md")
+
+            # Create an oversized requirement shard with 15 sections
+            header = (
+                "# Living Requirements: Sample Domain\n\n"
+                "**Domain**: `sample_domain`  \n"
+                "**Prefixes**: `SMP`  \n"
+                "**Scope**: Test domain for splitting.  \n"
+                "**Total Requirements**: 15\n\n"
+                "---\n\n"
+            )
+            sections = []
+            expected_ids = set()
+            for i in range(1, 16):
+                req_id = f"REQ-SMP-{i:03d}"
+                expected_ids.add(req_id)
+                sec = (
+                    f"### {req_id}: Sample Requirement {i} [Verified]\n"
+                    f"- **Tests**: `TST-SMP-{i:03d}`\n"
+                    f"- **Priority**: High\n"
+                    f"- **Type**: Functional\n"
+                    f"- **Verification Method**: Unit\n"
+                    f"- **Implementation**: `SampleClass.kt`\n"
+                    f"- **Rationale**: Rationale for req {i}.\n"
+                    f"- **Description**: Detailed description of sample requirement {i}.\n"
+                )
+                sections.append(sec)
+
+            with open(shard_path, "w", encoding="utf-8") as f:
+                f.write(header + "\n".join(sections))
+
+            # Split with max_lines = 45 lines per sub-shard
+            out_dir = os.path.join(temp_dir, "split_output")
+            sub_shards = split_oversized_shard(shard_path, max_lines=45, output_dir=out_dir)
+
+            self.assertGreater(len(sub_shards), 1, "Must partition into >= 2 sub-shards")
+
+            found_ids = set()
+            total_req_count_in_headers = 0
+            for part_file in sub_shards:
+                self.assertTrue(os.path.exists(part_file))
+                with open(part_file, "r", encoding="utf-8") as pf:
+                    part_content = pf.read()
+
+                part_lines = part_content.splitlines()
+                # Line count should be within budget (or close to chunk budget)
+                part_ids = set(re.findall(r"###\s*(REQ-[A-Z0-9_-]+):", part_content))
+
+                # Disjoint: no duplicate IDs across parts
+                intersection = found_ids.intersection(part_ids)
+                self.assertEqual(len(intersection), 0, f"Duplicate IDs found across sub-shards: {intersection}")
+                found_ids.update(part_ids)
+
+                # Total count in header matches actual count in part
+                total_m = re.search(r"\*\*Total Requirements\*\*:\s*(\d+)", part_content)
+                self.assertIsNotNone(total_m)
+                total_in_header = int(total_m.group(1))
+                self.assertEqual(total_in_header, len(part_ids))
+                total_req_count_in_headers += total_in_header
+
+            # 100% ID parity: exact set equality
+            self.assertEqual(found_ids, expected_ids, "All original IDs must be preserved in sub-shards")
+            self.assertEqual(total_req_count_in_headers, 15)
+
+    def test_cli_check_size_flag(self):
+        """TST-PRO-090.3: CLI --check-size reports status and flags oversized shards."""
+        repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+        script_path = os.path.join(repo_root, "tools", "shard_living_docs.py")
+
+        # 1. With high max-lines: passes cleanly
+        proc_pass = subprocess.run(
+            [sys.executable, script_path, "--repo-root", repo_root, "--check-size", "--max-lines", "50000"],
+            capture_output=True,
+            text=True,
+        )
+        self.assertEqual(proc_pass.returncode, 0)
+        self.assertIn("PASS: All 18 domain shards are within line limits", proc_pass.stdout)
+
+        # 2. Default limit flags real oversized shards
+        proc_flag = subprocess.run(
+            [sys.executable, script_path, "--repo-root", repo_root, "--check-size"],
+            capture_output=True,
+            text=True,
+        )
+        self.assertEqual(proc_flag.returncode, 0)
+        self.assertIn("FLAGGED:", proc_flag.stdout)
+        self.assertIn("OVERSIZED:", proc_flag.stdout)
+        self.assertIn("req_ui_design_system.md", proc_flag.stdout)
+
+        # 3. With --strict: exits with code 1
+        proc_strict = subprocess.run(
+            [sys.executable, script_path, "--repo-root", repo_root, "--check-size", "--strict"],
+            capture_output=True,
+            text=True,
+        )
+        self.assertEqual(proc_strict.returncode, 1)
+        self.assertIn("FLAGGED:", proc_strict.stdout)
+
 
 
 if __name__ == "__main__":

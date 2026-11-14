@@ -37,6 +37,7 @@ import com.atrainingtracker.R
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import com.atrainingtracker.banalservice.BSportType
+import com.atrainingtracker.trainingtracker.database.WheelCircumferenceRecord
 import com.atrainingtracker.trainingtracker.ui.components.core.AppDialogActions
 import com.atrainingtracker.trainingtracker.ui.components.core.AppModalBottomSheet
 
@@ -49,6 +50,8 @@ fun EditEquipmentDialog(
     item: EquipmentItem,
     availableSensors: List<SimpleSensorInfo>,
     availableSportTypes: List<SimpleSportTypeInfo>,
+    historyRecords: List<WheelCircumferenceRecord> = emptyList(),
+    onResetBaseline: (() -> Unit)? = null,
     onConfirm: (EquipmentItem) -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -158,6 +161,14 @@ fun EditEquipmentDialog(
                 Switch(
                     checked = isRetired,
                     onCheckedChange = { isRetired = it }
+                )
+            }
+
+            // Wheel Circumference History Chart for Bikes (REQ-SEN-030.4, ATT-7753)
+            if (item.frameType > 0) {
+                WheelCircumferenceHistoryChart(
+                    historyRecords = historyRecords,
+                    onResetBaseline = { onResetBaseline?.invoke() }
                 )
             }
 

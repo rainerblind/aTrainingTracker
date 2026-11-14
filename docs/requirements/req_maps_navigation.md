@@ -2420,6 +2420,9 @@
 ### REQ-MAP-065: LiveSegmentsRepository Concurrency Safety & Immutability [Verified]
 - **Target Release**: `V5.0.0`
 - **Tests**: `TST-MAP-067`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `app/src/main/java/com/atrainingtracker/trainingtracker/segments/LiveSegmentsRepository.kt`
 - **Rationale**: In `LiveSegmentsRepository.kt`, `_liveSegments` (`MutableStateFlow<List<LiveSegment>>`) is updated concurrently from `reconcileSegments` (database synchronization) and `updateLiveSegments` (GPS location listener) under `Dispatchers.Default`. Non-atomic read-modify-write operations (`_liveSegments.value = ...`) lead to lost updates, overwriting active segment status transitions or newly synced segments. Furthermore, `LiveSegmentMath` declares 6 mutable `var` properties, and in-place field mutations invalidate compare-and-set retry idempotency. In addition, line 126 contains a redundant dead `.collect()` call. The system SHALL modernize `LiveSegmentsRepository` with atomic `_liveSegments.update { ... }` operations, convert `LiveSegmentMath` to an immutable data structure (`val` only), utilize pure state copying, and eliminate dead collection code:
 1. *Atomic StateFlow Update & Lost Update Elimination (`REQ-MAP-065.1`)*:
@@ -2458,6 +2461,9 @@
 ### REQ-MAP-066: Historical Workout Climb Backfill & Backup Self-Healing Parity [Verified]
 - **Target Release**: `V5.0.0`
 - **Tests**: `TST-MAP-068`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Integration
 - **Implementation**: `WorkoutRepository.kt`, `ClimbsDatabaseManager.kt`, `DatabaseSchemaRegistry.kt`, `DatabaseConnectionManager.kt`, `MigrationEngine.kt`
 - **Rationale**: Prior to `V5.0.0`, `Climbs.db` did not exist; `ATT-2766` added climb ingestion exclusively for newly recorded or imported workouts. Pursuant to `Rule 80` (*Three-Way Parity: Live + Import + Historical Database Self-Healing*), legacy workouts present in `WorkoutSummaries.db` / `WorkoutSamples.db` and legacy `.attbackup` restores lacking `Climbs.db` leave athletes without climb coverage in `Climbs.db`. Furthermore, `Climbs.db` must participate in schema version tracking and database connection quiescence. The system SHALL execute an idempotent background backfill for historical workouts, register `Climbs.db` in `DatabaseSchemaRegistry` and `DatabaseConnectionManager`, and self-heal on restore of legacy backups:
 1. *One-Time Historical Workout Backfill (`REQ-MAP-066.1`)*:
@@ -2491,6 +2497,9 @@
 ### REQ-MAP-067: Reactive Stored Climbs Flow & ViewModel Repository Decoupling [Verified]
 - **Target Release**: `V5.0.0`
 - **Tests**: `TST-MAP-069`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `LiveClimbsRepository.kt`, `MapFragmentWithTrackViewModel.kt`, `RepositoryUiCleanlinessContractTest.kt`
 - **Rationale**: In `ATT-2766`, `MapFragmentWithTrackViewModel.kt` injected `ClimbsDatabaseManager` directly and implemented `mapClimbsFlow` by mapping exclusively over `enabledLayers`. This introduced two defects: (1) newly stored climbs (from GPX imports, workout finishes, or backfill) did not render on `MapScreenWithTrack` while `CLIMBS` was already toggled ON until manually toggled off and back on; (2) direct database access from a ViewModel violated clean architecture layering (`ATT-432`). The system SHALL expose reactive `allStoredClimbs` on `LiveClimbsRepository`, combine it with `enabledLayers` in `MapFragmentWithTrackViewModel`, and decouple `MapFragmentWithTrackViewModel` from `ClimbsDatabaseManager`:
 1. *Reactive Stored Climbs StateFlow (`REQ-MAP-067.1`)*:
@@ -2543,6 +2552,9 @@
 ### REQ-CLM-008: Live Climb Detection Movement-Bearing Gating & Cache Reconciliation [Verified]
 - **Target Release**: `V5.0.0`
 - **Tests**: `TST-CLM-008`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `LiveClimbsRepository.kt`
 - **Rationale**: When stationary or indoors (`Nicht gestartet` / `IDLE`), `banalRepository.currentBearing` is null. Previously, `LiveClimbsRepository` substituted `0.0°` (due North), causing stored climbs within 250m whose initial segment pointed North (315°..45°) to falsely trigger `LiveClimbStatus.APPROACHING` and display `LiveClimbSheet`. The system SHALL require a non-null movement bearing before matching approaching climbs, preserve active tracking during mid-climb pauses, and reconcile `_activeLiveClimb` on database refresh:
 1. *Movement-Bearing Gating (`REQ-CLM-008.1`)*:
@@ -2578,6 +2590,9 @@
 ### REQ-CLM-009: Climb Detection Spike Guards, DEM Ground-Truth Cross-Validation & Corrupted Climbs Self-Healing [Verified]
 - **Target Release**: `V5.0.0`
 - **Tests**: `TST-CLM-009`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Integration
 - **Implementation**: `ClimbDetector.kt`, `WorkoutRepository.kt`
 - **Rationale**: `Climbs.db` contains corrupted climbs (e.g. `541m @ 104.6%`, `max_grade = 367.4%` on a flat residential street) and phantom climbs caused by cold-air barometer thermal drift on winter commutes (`+50m` drift vs `-9.6m` DEM). `ClimbDetector` lacks vertical jump and gradient ceiling checks, `WorkoutRepository` feeds raw `ALTITUDE` without DEM validation, and existing `Climbs.db` instances lack an automated cleanup pass. The system SHALL reject vertical step jumps and non-physical gradients in `ClimbDetector`, cross-validate workout climbs against DEM ground truth, and execute an idempotent cleanup migration:
 1. *Vertical Discontinuity & Plausibility Spike Guards (`REQ-CLM-009.1`)*:

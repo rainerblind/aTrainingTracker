@@ -153,6 +153,8 @@
 
     <!-- sensor types -->
     <string name="accumulated_sensors">累積センサー</string>
+    <string name="world_yaw_rate">絶対ヨーレート</string>
+    <string name="world_yaw_rate_short">ヨーレート</string>
     <string name="accumulated_sensors_short">累積</string>
     <string name="accuracy">精度</string>
     <string name="accuracy_short">精度</string>
@@ -1250,6 +1252,7 @@
     <string name="settings_workout_card_description">説明とメモ</string>
     <string name="settings_workout_card_charts">テレメトリグラフ</string>
     <string name="settings_workout_card_zones">ゾーン分析（心拍数＆パワー）</string>
+    <string name="settings_workout_card_hrv">HRV分析</string>
     <string name="settings_edit_workout_title">ワークアウトの編集</string>
     <string name="settings_edit_workout_cluster">ルート / クラスター</string>
     <string name="settings_edit_workout_commute_trainer">通勤・通学＆ローラートレーナー</string>
@@ -1504,6 +1507,8 @@
     <string name="tuning_altitude_window_desc">瞬間高度および垂直速度の移動平均時間枠。</string>
     <string name="tuning_slope_min_speed_title">勾配計算の最低速度</string>
     <string name="tuning_slope_min_speed_desc">リアルタイム勾配を計算するために必要な最低移動速度。</string>
+    <string name="tuning_post_workout_erts_smoothing_title">ワークアウト後ERTS平滑化</string>
+    <string name="tuning_post_workout_erts_smoothing_desc">ワークアウト保存後に軌跡と標高プロファイルへ双方向Extended Rauch-Tung-Striebel平滑化を適用します。</string>
     <string name="tuning_cat_aftermath">アフターマス＆プロファイル分析</string>
     <string name="tuning_profile_x_axis_title">高度プロファイルX軸</string>
     <string name="tuning_profile_x_axis_desc">高度プロファイルグラフの横軸メトリクスを選択します。</string>
@@ -2147,6 +2152,7 @@
     <string name="workout_detail_tab_overview">概要</string>
     <string name="workout_detail_tab_map_graphs">地図とグラフ</string>
     <string name="workout_detail_tab_zones">ゾーン</string>
+    <string name="workout_detail_tab_hrv">HRV</string>
     <string name="workout_detail_tab_laps_segments">ラップ＆セグメント</string>
     <string name="workout_detail_tab_custom_default">カスタムタブ</string>
     <string name="workout_detail_section_details">ワークアウト指標と概要</string>

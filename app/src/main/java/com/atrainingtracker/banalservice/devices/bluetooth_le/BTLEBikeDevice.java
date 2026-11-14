@@ -155,6 +155,10 @@ abstract public class BTLEBikeDevice extends MyBTLEDevice {
                                 if (DEBUG) Log.i(TAG, "got new distance: " + distance);
                                 mDistanceSensor.accumulate(distance);
                                 mLapDistanceSensor.accumulate(distance);
+
+                                if (mMySensorManager != null) {
+                                    mMySensorManager.notifyWheelRevolutions(revDiff, cumulativeWheelRevolutions, System.currentTimeMillis());
+                                }
                             } else {
                                 mIdenticalWheelTime++;
                                 if (mIdenticalWheelTime >= MAX_IDENTICAL) {

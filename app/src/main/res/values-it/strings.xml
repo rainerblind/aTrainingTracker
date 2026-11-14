@@ -153,6 +153,8 @@
 
     <!-- sensor types -->
     <string name="accumulated_sensors">sensori accumulati</string>
+    <string name="world_yaw_rate">Velocità d\'imbardata globale</string>
+    <string name="world_yaw_rate_short">Velocità imbardata</string>
     <string name="accumulated_sensors_short">sens. acc.</string>
     <string name="accuracy">precisione</string>
     <string name="accuracy_short">prec.</string>
@@ -1268,6 +1270,7 @@
     <string name="settings_workout_card_description">Descrizione e note</string>
     <string name="settings_workout_card_charts">Grafici di telemetria</string>
     <string name="settings_workout_card_zones">Analisi zone (FC e potenza)</string>
+    <string name="settings_workout_card_hrv">Analisi HRV</string>
     <string name="settings_edit_workout_title">Modifica allenamento</string>
     <string name="settings_edit_workout_cluster">Percorso / Itinerario</string>
     <string name="settings_edit_workout_commute_trainer">Tragitto casa-lavoro e rullo</string>
@@ -1524,6 +1527,8 @@
     <string name="tuning_altitude_window_desc">Finestra temporale della media mobile per altitudine istantanea e velocità verticale.</string>
     <string name="tuning_slope_min_speed_title">Velocità minima per pendenza</string>
     <string name="tuning_slope_min_speed_desc">Velocità minima necessaria per calcolare la pendenza in tempo reale.</string>
+    <string name="tuning_post_workout_erts_smoothing_title">Levigatura ERTS post-allenamento</string>
+    <string name="tuning_post_workout_erts_smoothing_desc">Applica la levigatura bidirezionale Extended Rauch-Tung-Striebel alla traiettoria e al profilo altimetrico dopo il salvataggio dell\'allenamento.</string>
     <string name="tuning_cat_aftermath">Aftermath e analisi profilo</string>
     <string name="tuning_profile_x_axis_title">Asse X del profilo altimetrico</string>
     <string name="tuning_profile_x_axis_desc">Seleziona la metrica dell\'asse orizzontale per i grafici altimetrici.</string>
@@ -2168,6 +2173,7 @@
     <string name="workout_detail_tab_overview">Panoramica</string>
     <string name="workout_detail_tab_map_graphs">Mappa e grafici</string>
     <string name="workout_detail_tab_zones">Zone</string>
+    <string name="workout_detail_tab_hrv">HRV</string>
     <string name="workout_detail_tab_laps_segments">Giri e segmenti</string>
     <string name="workout_detail_tab_custom_default">Scheda personalizzata</string>
     <string name="workout_detail_section_details">Metriche e riepilogo</string>

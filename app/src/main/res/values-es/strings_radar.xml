@@ -81,10 +81,14 @@
     <!-- Radar Audio & Haptic Alerts (ATT-5086 / REQ-TRK-063) -->
     <string name="radar_alerts_settings_title">Alertas de radar y audio</string>
     <string name="radar_alert_mode_title">Modo de alerta de audio</string>
-    <string name="radar_alert_mode_all">Todas las alertas</string>
-    <string name="radar_alert_mode_approach_fast">Aproximación y rápido</string>
-    <string name="radar_alert_mode_fast_only">Solo rápidos</string>
-    <string name="radar_alert_mode_muted">Silenciado</string>
+    <string name="radar_alert_mode_all">Todas</string>
+    <string name="radar_alert_mode_approach_fast">Aproximación</string>
+    <string name="radar_alert_mode_fast_only">Solo rápidas</string>
+    <string name="radar_alert_mode_muted">Silencio</string>
+    <string name="radar_alert_mode_all_desc">Emite alertas audibles para todos los vehículos que se aproximan</string>
+    <string name="radar_alert_mode_approach_fast_desc">Emite alertas audibles para aproximación estándar y amenazas a alta velocidad</string>
+    <string name="radar_alert_mode_fast_only_desc">Emite alertas audibles únicamente para vehículos a alta velocidad (&gt;= 30 km/h)</string>
+    <string name="radar_alert_mode_muted_desc">Solo superposición visual; todas las alertas audibles están silenciadas</string>
     <string name="radar_alert_volume_title">Volumen de alerta</string>
     <string name="radar_alert_speaker_boost">Amplificar altavoz</string>
     <string name="radar_alert_speaker_boost_desc">Anula temporalmente el volumen bajo del altavoz en alertas</string>
@@ -174,9 +178,9 @@
     <string name="radar_summary_max_speed_simple">🚀 Máx %1$s km/h</string>
     <string name="radar_close_pass_threshold_title">Umbral de adelantamiento peligroso</string>
     <string name="radar_close_pass_threshold_summary">Resalta vehículos adelantando por debajo de la distancia mínima de seguridad en el mapa</string>
-    <string name="radar_close_pass_threshold_1_0m">1,0 m (3,3 ft - UK/US)</string>
-    <string name="radar_close_pass_threshold_1_5m">1,5 m (5,0 ft - Urbano / StVO)</string>
-    <string name="radar_close_pass_threshold_2_0m">2,0 m (6,6 ft - Rural / StVO)</string>
+    <string name="radar_close_pass_threshold_1_0m">1,0 m (3,3 ft)</string>
+    <string name="radar_close_pass_threshold_1_5m">1,5 m (5,0 ft)</string>
+    <string name="radar_close_pass_threshold_2_0m">2,0 m (6,6 ft)</string>
     <string name="radar_marker_close_pass_title">⚠️ Adelantamiento peligroso (%1$sm) • %2$s • %3$s km/h</string>
     <string name="radar_vehicle_size_light">Vehículo ligero</string>
     <string name="radar_vehicle_size_car">Coche</string>
@@ -188,4 +192,9 @@
     <!-- Smartphone IMU/GPS Deceleration Brake-Light Trigger (ATT-5121 / REQ-CON-035) -->
     <string name="radar_brake_light_title">Luz de freno por desaceleración</string>
     <string name="radar_brake_light_desc">Ilumina la luz trasera durante una desaceleración brusca por IMU/GPS (2,0 s de retención, omitido en RearVue 820)</string>
+    <!-- Developer Menu (ATT-7659 / REQ-SET-087.2 / REQ-CON-030.8) -->
+    <string name="developer_menu_title">Menú de desarrollador</string>
+    <string name="developer_menu_radar_section_title">Depuración de radar para bicicletas</string>
+    <string name="developer_menu_radar_v1_only_title">Forzar protocolo de radar V1 (heredado)</string>
+    <string name="developer_menu_radar_v1_only_desc">Omite la detección de características de Garmin Varia V2 y recurre inmediatamente a la transmisión V1 heredada (6a4e3203).</string>
 </resources>

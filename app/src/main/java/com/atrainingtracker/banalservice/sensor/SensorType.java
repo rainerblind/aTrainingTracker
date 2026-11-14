@@ -129,7 +129,8 @@ public enum SensorType
     RADAR_VEHICLE_COUNT(SensorCategory.SYSTEM_ENVIRONMENT_AND_DIAGNOSTICS, SensorSubCategory.RADAR_SAFETY, R.string.radar_vehicle_count, R.string.radar_vehicle_count_short, R.string.units_none, SensorValueType.INTEGER, new IntegerFormatter(), false),
     RADAR_PASSING_DISTANCE_m(SensorCategory.SYSTEM_ENVIRONMENT_AND_DIAGNOSTICS, SensorSubCategory.RADAR_SAFETY, R.string.radar_passing_distance, R.string.radar_passing_distance_short, R.string.units_distance_basic, SensorValueType.DOUBLE, new DistanceFormatter(), false),
     RADAR_LARGE_VEHICLE_COUNT(SensorCategory.SYSTEM_ENVIRONMENT_AND_DIAGNOSTICS, SensorSubCategory.RADAR_SAFETY, R.string.radar_large_vehicle_count, R.string.radar_large_vehicle_count_short, R.string.units_none, SensorValueType.INTEGER, new IntegerFormatter(), false),
-    LIVE_HR_DRIFT(SensorCategory.HEART_RATE_AND_ENERGY, SensorSubCategory.HRV_AND_DRIFT, R.string.live_hr_drift, R.string.live_hr_drift_short, R.string.units_heart_rate, SensorValueType.INTEGER, new SignedIntegerFormatter(), true);
+    LIVE_HR_DRIFT(SensorCategory.HEART_RATE_AND_ENERGY, SensorSubCategory.HRV_AND_DRIFT, R.string.live_hr_drift, R.string.live_hr_drift_short, R.string.units_heart_rate, SensorValueType.INTEGER, new SignedIntegerFormatter(), true),
+    WORLD_YAW_RATE_radps(SensorCategory.SYSTEM_ENVIRONMENT_AND_DIAGNOSTICS, null, R.string.world_yaw_rate, R.string.world_yaw_rate_short, R.string.units_rad_per_sec, SensorValueType.DOUBLE, new DefaultNumberFormatter(), false);
 
     // max bit = 118
 

@@ -910,11 +910,12 @@
 
 ### TST-SET-087: **Debug Supporter Tier Override & Pro Feature Manager Governance Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-SET-087`
-- **Component**: `ProFeatureManager.kt`, `AdvancedTuningScreen.kt`, `SettingsDataStore.kt`
+- **Component**: `ProFeatureManager.kt`, `DeveloperMenuScreen.kt`, `AppNavigationDrawer.kt`, `AdvancedTuningScreen.kt`, `SettingsDataStore.kt`
 - **Test Description**:
 1. In debug build, set `supporterTierOverride` to `BRONZE`, `SILVER`, `GOLD`, `DIAMOND`; verify `ProFeatureManager.effectiveTier` and `isProActive()` immediately reflect override.
 2. Verify setting override to `NONE` falls back to Pioneer or Subscription status.
-3. Verify `AdvancedTuningScreen` override control is conditionally compiled/rendered only when `BuildConfig.DEBUG == true`.
+3. *Developer Menu Navigation & Release Isolation (`TST-SET-087.3`)*: Verify `DeveloperMenuScreen` is accessible in the navigation drawer via `R.id.drawer_developer_menu` in debug builds (`BuildConfig.DEBUG == true`), and that the drawer item, route, and debug overrides are completely absent in release builds (`BuildConfig.DEBUG == false`).
+4. *Clean AdvancedTuningScreen (`TST-SET-087.4`)*: Verify `AdvancedTuningScreen` contains zero developer or supporter tier override controls, having relocated them cleanly to `DeveloperMenuScreen`.
 
 ### TST-SET-088: **Supporter N+1 Garage Detector & Upgrade Prompts Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-SET-088`
@@ -1145,6 +1146,43 @@
   • Verify `WorkoutHeader.onSyncHealthConnect` is wired and invokes `HealthConnectManager.syncWorkout(context, workoutData, force = true)`.
   • Verify `HealthConnectManager.syncWorkout(..., force = true)` succeeds when global auto-sync is disabled.
   • Verify `EditWorkoutScreen` does not trigger sync on checkbox toggle, but executes sync upon Save when checked.
+
+### TST-SET-104: **Move Workout Dialog Unassignment and State Synchronization** [Verified]
+- **Requirement(s)**: `REQ-SET-059`
+- **Component**: `WorkoutClusterComponents.kt`, `WorkoutClustersViewModel.kt`, `WorkoutRepository.kt`, `WorkoutClustersScreen.kt`, `WorkoutClusterHeatmapScreen.kt`
+- **Jira**: `ATT-7754`
+- **Status**: Verified
+- **Test Description**:
+  1. *Selection Dialog Unassign Action Test (`TST-SET-104.1`)*:
+  • Verify `WorkoutClusterSelectionDialog` renders "Keiner Route zuordnen" when `onUnassign` is non-null.
+  • Verify clicking unassign card triggers `onUnassign()` and `onDismiss()`.
+  2. *ViewModel Unassign and Flow Refresh Test (`TST-SET-104.2`)*:
+  • Verify `WorkoutClustersViewModel.unassignWorkout` calls `WorkoutRepository.unassignClusterFromWorkout` and `refreshClusters()`.
+  • Verify `_clusterWorkouts` and `_unclusteredWorkouts` are updated.
+  3. *Repository Refresh Integration Test (`TST-SET-104.3`)*:
+  • Verify `WorkoutRepository.unassignClusterFromWorkout` calls `WorkoutClusterRepository.refreshClusters()`.
+  4. *9-Locale Translation Parity Verification (`TST-SET-104.4`)*:
+  • Verify `cluster_naming__leave_unclustered` and `cluster_naming__create_new` parity across all 9 locales.
+  5. *Inspected Workout Reactive Update Test (`TST-SET-104.5`)*:
+  • Verify `inspectedWorkout` in `WorkoutClustersScreen` updates when cluster assignment changes or upon return from editing.
+
+### TST-SET-105: **Immediate Workout Name Synchronization on Route Cluster Change** [Verified]
+- **Requirement(s)**: `REQ-SET-059`
+- **Component**: `EditWorkoutViewModel.kt`, `EditWorkoutScreen.kt`, `WorkoutClusterEngine.kt`
+- **Jira**: `ATT-7667`
+- **Status**: Verified
+- **Test Description**:
+  1. *Immediate Workout Name Update on Cluster Selection (`TST-SET-105.1`)*:
+  • Verify that calling `applyClusterIdentity(cluster)` immediately sets `workoutName` to the cluster-formatted name in `_workoutData.value` and resets `userManuallyChangedWorkoutName` to `false`.
+  2. *Repository Emission Name Preservation (`TST-SET-105.2`)*:
+  • Verify that asynchronous emissions from `repository.initialWorkoutLoaded` adopt the new cluster's formatted name when `userManuallyChangedWorkoutName` is `false`.
+  3. *Unassign Cluster Name Reversion (`TST-SET-105.3`)*:
+  • Verify that calling `unassignCluster()` resets `clusterId = -1L`, `clusterName = null`, resets `userManuallyChangedWorkoutName = false`, and restores the fallback unclustered workout name.
+  4. *User Manual Override Protection (`TST-SET-105.4`)*:
+  • Verify that calling `onWorkoutNameChanged(...)` after cluster selection sets `userManuallyChangedWorkoutName = true`, and subsequent repository updates do NOT overwrite the manually entered name.
+  5. *New Cluster Creation Name Synchronization (`TST-SET-105.5`)*:
+  • Verify that calling `createNewCluster(...)` immediately sets `workoutName` to the formatted name and resets `userManuallyChangedWorkoutName` to `false`.
+
 
 
 

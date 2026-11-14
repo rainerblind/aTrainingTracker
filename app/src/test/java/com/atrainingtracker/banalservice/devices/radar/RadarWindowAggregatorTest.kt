@@ -20,6 +20,7 @@ package com.atrainingtracker.banalservice.devices.radar
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -236,5 +237,50 @@ class RadarWindowAggregatorTest {
         agg.onTargetsUpdated(emptyList())
         assertEquals(2, agg.getVehicleCount())
         assertEquals("Car must not increment large vehicle count", 1, agg.getLargeVehicleCount())
+    }
+
+    /**
+     * TST-CON-040.3: Rolling Window Latch Preservation Test.
+     * Verifies that latched passing clearance persists across sub-second frames and decays after 1,000 ms.
+     */
+    @Test
+    fun testRollingWindow_preservesLatchedPassingDistanceAcrossSubSecondSamplesUntilDecay() {
+        var currentTime = 1000L
+        val agg = RadarWindowAggregator { currentTime }
+
+        // Target 1 approaches with lateral clearance at t = 1000 ms
+        agg.onTargetsUpdated(
+            listOf(
+                RadarTarget(
+                    targetId = 1,
+                    rangeMeters = 2.0f,
+                    approachSpeedMps = 15f,
+                    threatLevel = ThreatLevel.APPROACHING,
+                    lateralOffsetMeters = 1.5f
+                )
+            ),
+            nowMs = currentTime
+        )
+
+        // Target exits at t = 1125 ms (completed pass)
+        currentTime = 1125L
+        agg.onTargetsUpdated(emptyList(), nowMs = currentTime)
+        assertEquals(1, agg.getVehicleCount())
+
+        // Sample at t = 1125 ms (immediate frame upon exit): passing clearance must be non-null
+        val snap1125 = agg.sampleAndResetWindow(nowMs = currentTime)
+        assertNotNull("Passing distance must be non-null immediately upon target exit", snap1125.passingDistanceMeters)
+        assertEquals(1.5, snap1125.passingDistanceMeters!!, 0.001)
+
+        // Sample at t = 1500 ms (intermediate 8 Hz / 1 Hz DB poll frame): must remain preserved!
+        currentTime = 1500L
+        val snap1500 = agg.sampleAndResetWindow(nowMs = currentTime)
+        assertNotNull("Passing distance must persist across intermediate sub-second frames", snap1500.passingDistanceMeters)
+        assertEquals(1.5, snap1500.passingDistanceMeters!!, 0.001)
+
+        // Road clear expires after full 1,000 ms window: at t = 2126 ms (> 1000 ms after exit at 1125 ms)
+        currentTime = 2126L
+        val snap2126 = agg.sampleAndResetWindow(nowMs = currentTime)
+        assertNull("Passing distance must decay to null after 1,000 ms window expires", snap2126.passingDistanceMeters)
     }
 }

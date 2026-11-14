@@ -3,7 +3,7 @@
 **Domain**: `process_stability`  
 **Prefixes**: `ARC`, `BLD`, `BUG`, `INT`, `LIV`, `LOG`, `MAN`, `NFR`, `PRO`, `REG`, `SEC`, `STB`, `STR`, `TOOL`, `TST`  
 **Scope**: ASPICE governance, infinite context, crash stability, build architecture, security, and developer tools.  
-**Total Tests**: 132
+**Total Tests**: 133
 
 ---
 
@@ -1553,6 +1553,23 @@
   4. *Clean-Room Full Suite Regression Execution (`TST-ARC-004.4`)*:
   • Execute `./gradlew testDebugUnitTest` verifying 100% pass rate across the full unit test suite without regressions.
 
+### TST-ARC-005: **Java Core Services Architecture Decision Record & Migration Strategy Verification Suite** [Verified]
+- **Priority**: Medium
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Requirement(s)**: `REQ-ARC-005`
+- **Component**: **Java Core Services Architecture Decision Record & Migration Strategy Verification Suite**
+- **Jira**: `ATT-7566`
+- **Test Description**:
+  1. *ADR Existence & Structural Integrity Contract Test (`TST-ARC-005.1`, `JavaCoreMigrationStrategyContractTest.kt`)*:
+  • Verify that `docs/architecture/adr_001_java_core_services_migration.md` exists and contains required sections: Context, Java Inventory, Decision Matrix, Phased Roadmap (Tiers 0–6), Quality Safeguards, and Child Tickets.
+  2. *Class Inventory & Decision Coverage Test (`TST-ARC-005.2`, `JavaCoreMigrationStrategyContractTest.kt`)*:
+  • Verify that ADR-001 accounts for all top Java anchors (`TrackerService`, `BANALService`, `WorkoutSummariesDatabaseManager`, `TrainingApplication`, `DevicesDatabaseManager`, `DeviceManager`, `BTLERadarDevice`, `FitFileWriter`) with unambiguous Migrate/Keep/Retire determinations.
+  3. *Child Ticket Sizing & Traceability Audit (`TST-ARC-005.3`, `JavaCoreMigrationStrategyContractTest.kt`)*:
+  • Verify that all child tickets identified in ADR-001 have defined Story Points between 1 and 3 SP and map to Epic `ATT-431`.
+  4. *Targeted & Full Suite Clean-Room Regression Execution (`TST-ARC-005.4`)*:
+  • Execute `./gradlew testDebugUnitTest --tests com.atrainingtracker.architecture.JavaCoreMigrationStrategyContractTest` verifying 100% pass rate.
+
 ### TST-PRO-020: **Agile Agentic ASPICE (AAA) Governance, Constructive Resistance, Hypothesis Verification, Stage 5 Resource Gate & Ceremony 2 Completeness Sweep Verification** [Verified]
 - **Priority**: High
 - **Type**: Non-Functional
@@ -2975,3 +2992,101 @@
   2. *System Integration Runner & Wire Protocol Alignment*: Execute `tools/run_system_integration_tests.py` verifying all 6 cases (`SYS-INT-001`..`006`) pass cleanly including `SYS-INT-003`.
   3. *Release Verification Summary Generation*: Run `tools/generate_release_verification_summary.py --tag V5.0.0 --fail-on-deviations` asserting exit code 0 and `PASS (READY FOR RELEASE)`.
   4. *Targeted Regression Test Execution*: Run unit tests in `tools/test_generate_release_verification_summary.py` and `tools/test_system_integration_tests.py` asserting 100% pass rate.
+
+
+---
+
+### TST-PRO-089: **Kover Verification Gate Execution and Multi-Package Rule Audit** [Verified]
+- **Verifies**: `REQ-PRO-089`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Component**: `app/build.gradle`, `WorkoutSectionOrderPersistenceTest.kt`, `WorkoutSectionReorderContractTest.kt`, `docs/tests.md`
+- **Jira**: `ATT-7563`
+- **Test Description**:
+  1. *Test Suite Hygiene Verification*: Execute `./gradlew testDebugUnitTest` and assert all unit tests pass (100% pass rate).
+  2. *Kover Global Rule Verification*: Execute `./gradlew koverVerifyDebug` and assert line coverage $\ge 40\%$ and branch coverage $\ge 35\%$.
+  3. *Kover Subsystem Rule Verification*: Verify bounded rules for `tracker`, `filter`, and `devices`/`sensor` packages pass in `koverVerifyDebug`.
+  4. *Negative Mutation Verification*: Artificially elevate bounds (e.g., line 99%) and assert build failure, verifying gate enforcement.
+  5. *Documentation Parity*: Confirm `docs/tests.md` and `docs/coding_standards.md` reflect ratcheted figures.
+
+---
+
+### TST-PRO-090: **Unified CI & Release Quality Gates Contract Verification Suite** [Verified]
+- **Verifies**: `REQ-PRO-090`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit
+- **Component**: `app/src/test/java/com/atrainingtracker/trainingtracker/build/ReleaseCiAndLintConfigContractTest.kt`, `.github/workflows/android-release.yml`, `.github/workflows/android-branch-build.yml`
+- **Jira**: `ATT-7564`
+- **Test Description**:
+  1. *Release Workflow Gate Presence & Ordering Contract*: Execute `ReleaseCiAndLintConfigContractTest.testReleaseWorkflow_runsLintDetektKoverAndGovernanceBeforeAssembly` verifying that `android-release.yml` executes `lintDebug`, `detekt`, `koverVerifyDebug`, and `verify_requirement_governance.py` prior to `assembleRelease :app:bundleRelease`.
+  2. *Release Workflow Report Artifact Archiving Contract*: Execute `ReleaseCiAndLintConfigContractTest.testReleaseWorkflow_archivesQualityGateReports` verifying that `android-release.yml` uploads artifacts for lint, detekt, and kover reports with `if: always()`.
+  3. *Branch Build Governance Step Contract*: Execute `ReleaseCiAndLintConfigContractTest.testBranchBuildWorkflow_runsGovernanceVerification` verifying that `android-branch-build.yml` executes `python3 tools/verify_requirement_governance.py`.
+  4. *Governance Script Validation*: Run `python3 tools/verify_requirement_governance.py` asserting exit code 0 and zero governance violations across all shards.
+
+---
+
+### TST-PRO-091: **Independent ASPICE SUP.1 QA Auditing, Representative Sampling & Corrective Action Verification Suite** [Verified]
+- **Verifies**: `REQ-PRO-091`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Component**: `tools/jira_util.py`, `tools/verify_requirement_governance.py`, `tools/hoechstmass/`, `tools/test_jira_accounts.py`, `tools/test_verify_requirement_governance.py`, `tools/hoechstmass/tools/test_hoechstmass_tools.py`, `docs/engineering/qa_audits/`
+- **Jira**: `ATT-7558`
+- **Test Description**:
+  1. *QA Auditor Role Independence & Coordinator Rejection*: Test in `test_jira_accounts.py` that `qa_audit` executes under `qa` / `agent2` and rejects `role="coordinator"` or `role="agent1"`.
+  2. *Representative Sample Size Dynamic Scaling*: Test in `test_jira_accounts.py` that `qa_audit` samples $\ge 10\%$ when population exceeds 20 tickets (e.g. 25 tickets $\rightarrow \ge 3$ sampled).
+  3. *Corrective Action Link Validation in Verifier*: Test in `test_verify_requirement_governance.py` that `verify_qa_audits` rejects `NON-COMPLIANT` reports lacking Jira issue keys in Section 4 and accepts reports with linked corrective actions.
+  4. *Auditor Independence Verification in Verifier*: Test in `test_verify_requirement_governance.py` that `verify_qa_audits` rejects reports with `Auditor Role: coordinator`.
+  5. *Counterpart Mirror Parity*: Verify parity in Höchstmaß mirror tooling (`test_hoechstmass_tools.py`).
+  6. *Governance Script Validation*: Run `python3 tools/verify_requirement_governance.py` verifying exit code 0.
+
+
+
+### TST-PRO-092: **Process Metrics Credibility, Bug Severity Rubric & Downstream Escape Verification Suite** [Verified]
+- **Verifies**: `REQ-PRO-092`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Component**: `tools/sprint_metrics.py`, `tools/jira_util.py`, `tools/hoechstmass/`, `tools/test_sprint_metrics.py`, `tools/test_jira_accounts.py`, `tools/hoechstmass/tools/test_sprint_metrics.py`, `docs/project_governance.md`
+- **Jira**: `ATT-7559`
+- **Test Description**:
+  1. *Jira API Issue Field Query & Severity Extraction*: Test that `collect_sprint_metrics_for_id` requests `labels` and `description` and that `parse_sprint_gate_metrics` correctly detects `severity-critical` and `severity-major` labels without defaulting to Minor.
+  2. *Atlassian Document Format (ADF) Comment Parsing*: Test that `parse_verdicts_from_comments` and `parse_final_review_agent_verdicts_from_comments` correctly extract text and parse PASS / REVISION / BOUNCE from ADF dict structures without throwing `AttributeError` or `TypeError`.
+  3. *Segregation of Unverified Gate Subtasks*: Test that gate subtasks in `Erledigt` status without verdict comments increment `unverified` and do NOT increment `passed_first_time` or inflate FTPR.
+  4. *Downstream Defect Escape Accounting*: Test that Stage 6 bounces are incorporated into upstream gate escape metrics, yielding non-zero escape probabilities for gates with downstream defects.
+  5. *Plausibility Warning Thresholds*: Test that `parse_sprint_gate_metrics` generates a plausibility warning when FTPR is 100% across $\ge 20$ gate subtasks without rejections.
+  6. *Bug Severity Rubric Enforcement*: Test in `test_jira_accounts.py` that `create_issue` enforces valid severities and flags crash/ANR origin bugs when submitted with sub-Major severity without justification.
+
+
+---
+
+### TST-PRO-093: **Governance Rules Normative Structure and Shard Size Capping Enforcement Test** [Verified]
+- **Verifies**: `REQ-PRO-093`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Component**: `tools/shard_living_docs.py`, `tools/test_shard_living_docs.py`, `.agents/rules/aspice_governance.md`, `docs/engineering/rule_history_archive.md`
+- **Jira**: `ATT-7565`
+- **Test Description**:
+  1. *Shard Size Verification Test (`tools/test_shard_living_docs.py`)*: Assert `check_shard_sizes()` flags temporary shards exceeding `max_lines` and passes for shards within limits.
+  2. *Oversized Shard Splitting Test (`tools/test_shard_living_docs.py`)*: Verify `split_oversized_shard()` partitions an oversized shard into sub-shards with zero ID loss or format corruption.
+  3. *Governance Contract Preservation*: Run `test_verify_requirement_governance.py`, `test_agent_emulator.py`, and `AspiceSweAuditContractTest.kt`, asserting all tests pass without regression.
+  4. *Living Documentation Parity*: Execute `python3 tools/verify_requirement_governance.py` confirming 100% master table parity and zero dangling references.
+
+
+---
+
+### TST-PRO-094: **Legacy Requirement Attribute Backfill and Strict Verification Gate Suite** [Verified]
+- **Verifies**: `REQ-PRO-094`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Component**: `tools/verify_requirement_governance.py`, `tools/test_verify_requirement_governance.py`, `docs/requirements/`
+- **Jira**: `ATT-7562`
+- **Test Description**:
+  1. *Missing Attribute Discovery*: Assert `find_missing_requirement_attributes()` returns 0 defective requirements.
+  2. *Strict Verifier Execution*: Run `verify_requirement_attributes(enforce_attributes=True)` and assert pass with message `PASS: 100% of living requirements define valid Priority, Type, and Verification Method attributes.`
+  3. *Negative Mutation Verification*: In `tools/test_verify_requirement_governance.py`, assert that any requirement without attributes fails verification.
+  4. *Governance Parity Verification*: Execute `python3 tools/verify_requirement_governance.py` and confirm 100% parity with zero warnings.

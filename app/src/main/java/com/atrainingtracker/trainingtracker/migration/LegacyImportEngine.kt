@@ -752,6 +752,20 @@ object LegacyImportEngine {
                         Log.w(TAG, "Could not clean StravaUploadDb for $effectiveBaseFileName: ${t.message}")
                     }
 
+                    val resolvedEquipmentId = if (parsedWorkout.equipmentId > 0) {
+                        parsedWorkout.equipmentId
+                    } else if (!parsedWorkout.equipmentName.isNullOrBlank()) {
+                        try {
+                            com.atrainingtracker.trainingtracker.repositories.EquipmentRepository.getInstance(context)
+                                .equipmentItems.find { it.name.equals(parsedWorkout.equipmentName.trim(), ignoreCase = true) }
+                                ?.id ?: -1L
+                        } catch (_: Exception) {
+                            -1L
+                        }
+                    } else {
+                        -1L
+                    }
+
                     val uploadToStravaPref = parsedWorkout.stravaActivityId.isNullOrBlank() && uploadToStrava && TrainingApplication.uploadToCommunity(FileFormat.STRAVA)
                     val wName = if (!parsedWorkout.workoutName.isNullOrBlank()) parsedWorkout.workoutName.trim() else effectiveBaseFileName
                     workoutId = workoutRepo.insertImportedWorkout(
@@ -760,14 +774,17 @@ object LegacyImportEngine {
                         timeStart = firstTime,
                         sportId = parsedWorkout.resolvedSportId,
                         bSportType = parsedWorkout.bSportType,
-                        equipmentId = parsedWorkout.equipmentId,
+                        equipmentId = resolvedEquipmentId,
                         workoutNotes = parsedWorkout.workoutNotes,
                         goal = parsedWorkout.goal,
                         isCommute = parsedWorkout.isCommute,
                         source = source.name,
                         uploadToStrava = uploadToStravaPref,
                         rpe = parsedWorkout.sessionRpe,
-                        feel = parsedWorkout.sessionFeel
+                        feel = parsedWorkout.sessionFeel,
+                        method = parsedWorkout.method,
+                        isTrainer = parsedWorkout.isTrainer,
+                        isRace = parsedWorkout.isRace
                     )
                     require(workoutId > 0) { "Failed to insert summary row for $effectiveBaseFileName" }
 

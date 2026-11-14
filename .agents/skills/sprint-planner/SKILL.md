@@ -69,6 +69,11 @@ Ensure that every ticket committed to the active sprint has clear, unambiguous a
        1. Verify that active project risks (`RISK-001`..`RISK-006`) are reviewed against current sprint scope and operational context.
        2. Confirm that every risk evaluated with High Exposure ($E \ge 15$) links to an active or planned Jira remediation ticket.
        3. Append a row to the Sprint Review Log table in `docs/management/risk_register.md` recording the review date, current sprint ID, and reviewer notes.
+   * **Prior Sprint QA Audit Corrective Action Verification (`REQ-PRO-091.4` — `ATT-7558`, ASPICE `SUP.1`)**:
+     * The Coordinator MUST inspect the previous sprint's QA process audit report in `docs/engineering/qa_audits/`:
+       1. Review Section 4 ("Non-Compliance Tracking & Remediation") of the prior sprint's QA audit report.
+       2. Verify that all referenced Jira corrective-action tickets (`[ATT-XXXX]`) for non-compliant findings are either completed (`Erledigt`) or actively scheduled in the active sprint backlog.
+       3. Flag any unaddressed or orphaned non-compliance findings to the human user before sprint execution begins.
    * **Consolidated Presentation & Approval — Keep Tickets in `Zu erledigen` Until Stage 1 Starts (`Rule 78` — `ATT-5829`, `"Tickets sollten von den Agenten erst dann nach Analyse geschoben werden, wenn die Analyse startet."`)**:
      * Present a compact overview table of all sprint tickets (Rank, Key, Summary, Story Points, Audit Status) together with any specific clarifying questions or proposed estimates in a single turn.
      * Wait for the user's confirmation (and answers to any open questions) and update any refined descriptions (`python3 tools/jira_util.py update-desc <KEY> ...`).
@@ -192,13 +197,15 @@ Jointly review all completed sprint tickets with the human user against expectat
      python3 tools/verify_requirement_governance.py --check-gates
      ```
      This exports all gate decisions, review comments, evaluator roles, actor IDs, and timestamps to `docs/engineering/gates/<sprint>.md`.
-   * **Mandatory Sprint QA Process-Compliance Audit (`REQ-PRO-061`, `ATT-6154`)**:
-     To maintain independent ASPICE SUP.1 process compliance evidence, the Coordinator **MUST** sample $\ge 2$ tickets and execute an independent QA process-compliance audit before sprint merge:
+   * **Mandatory Sprint QA Process-Compliance Audit (`REQ-PRO-061`, `REQ-PRO-091`, `ATT-6154`, `ATT-7558`)**:
+     To maintain independent ASPICE SUP.1 process compliance evidence, an independent QA auditor (`--as qa` or `--as agent2`, rejecting `coordinator` and `agent1` per `REQ-PRO-091`) **MUST** dynamically sample $\ge \max(2, \lceil 0.10 \times N \rceil)$ sprint tickets and execute an independent QA process-compliance audit before sprint merge:
      ```bash
-     python3 tools/jira_util.py --as coordinator qa-audit
+     python3 tools/jira_util.py --as qa qa-audit
      python3 tools/verify_requirement_governance.py --check-qa-audits
      ```
      This evaluates the 5-point lifecycle process checklist (artifacts, gate order, 4-Augen role separation, living doc parity, commit hygiene) and persists the audit report in `docs/engineering/qa_audits/<sprint>.md`.
+   * **Quality Gate Verdict Spot-Check Auditing (`REQ-PRO-092.6`, `ATT-7559`)**:
+     To prevent gate discrimination blind spots and verify that gate subtask verdicts authentically reflect technical quality, the QA Auditor / Coordinator **MUST** spot-check a sample of completed gate subtasks (Gates 1–5), verify that written review verdicts correlate with codebase evidence, and document any discrepancy observations or false-pass rates in the Retrospective deliverable.
    * **Mandatory Independent QA & Cross-Vendor Review Recording (`REQ-PRO-062`, `ATT-6155`)**:
      To maintain demonstrable QA independence from the authoring agent vendor under ASPICE SUP.1 (Quality Assurance), the Coordinator **MUST** record the independent Human Sprint Review (Ceremony 2) and any Layer 5 cross-vendor reviews into repository configuration management before sprint merge:
      ```bash

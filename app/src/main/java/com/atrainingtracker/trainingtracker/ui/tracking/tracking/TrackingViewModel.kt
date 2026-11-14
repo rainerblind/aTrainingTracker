@@ -249,6 +249,14 @@ class TrackingViewModel @JvmOverloads constructor(
         Color(ContextCompat.getColor(application, R.color.zone_7))
     )
 
+    private val hrvZoneLabels: List<String> by lazy {
+        listOf(
+            application.getString(R.string.hrv_preview_pill_aerobic),
+            application.getString(R.string.hrv_preview_pill_transition),
+            application.getString(R.string.hrv_preview_pill_anaerobic)
+        )
+    }
+
     private var cachedPowerBenchmarks: Map<Int, Double> = emptyMap()
     private var latestArtifactRate: Double? = null
 
@@ -588,7 +596,12 @@ class TrackingViewModel @JvmOverloads constructor(
                         val initialZoneGauge = if (config.showBar) {
                             if (config.sensorType == SensorType.HRV_DFA_A1) {
                                 val tuning = _tuningConfig.value
-                                HrvZoneIndicator.calculateZoneGaugeState(null, tuning.dfaA1ThresholdT1, tuning.dfaA1ThresholdT2)
+                                HrvZoneIndicator.calculateZoneGaugeState(
+                                    null,
+                                    tuning.dfaA1ThresholdT1,
+                                    tuning.dfaA1ThresholdT2,
+                                    hrvZoneLabels
+                                )
                             } else {
                                 calculateZoneGaugeState(zoneType, null)
                             }
@@ -789,7 +802,12 @@ class TrackingViewModel @JvmOverloads constructor(
                 val isDfaA1 = (sensorData.sensorType == SensorType.HRV_DFA_A1)
                 val tuning = _tuningConfig.value
                 val rawZoneGaugeState = if (isDfaA1) {
-                    HrvZoneIndicator.calculateZoneGaugeState(numericValue, tuning.dfaA1ThresholdT1, tuning.dfaA1ThresholdT2)
+                    HrvZoneIndicator.calculateZoneGaugeState(
+                        numericValue,
+                        tuning.dfaA1ThresholdT1,
+                        tuning.dfaA1ThresholdT2,
+                        hrvZoneLabels
+                    )
                 } else {
                     calculateZoneGaugeState(zoneType, numericValue)
                 }

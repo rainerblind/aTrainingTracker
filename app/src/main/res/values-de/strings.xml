@@ -154,6 +154,8 @@
     <!-- sensor types -->
     <!-- TODO: check for maximal size of short names! -->
     <string name="accumulated_sensors">Akkumulierte Sensoren</string>
+    <string name="world_yaw_rate">Welt-Gierrate</string>
+    <string name="world_yaw_rate_short">Gierrate</string>
     <string name="accumulated_sensors_short">Akkum. Sensoren</string>
     <string name="accuracy">Genauigkeit</string>
     <string name="accuracy_short">acc.</string>
@@ -1355,6 +1357,7 @@
     <string name="settings_workout_card_description">Beschreibung &amp; Notizen</string>
     <string name="settings_workout_card_charts">Telemetrie-Diagramme</string>
     <string name="settings_workout_card_zones">Zonenauswertung (HF &amp; Power)</string>
+    <string name="settings_workout_card_hrv">HRV-Analyse</string>
     <string name="settings_edit_workout_title">Training bearbeiten</string>
     <string name="settings_edit_workout_cluster">Strecke / Route</string>
     <string name="settings_edit_workout_commute_trainer">Pendeln &amp; Trainer</string>
@@ -1611,6 +1614,8 @@
     <string name="tuning_altitude_window_desc">Gleitendes Zeitfenster für Momentanhöhe und Vertikalgeschwindigkeit.</string>
     <string name="tuning_slope_min_speed_title">Mindestgeschwindigkeit für Steigung</string>
     <string name="tuning_slope_min_speed_desc">Erforderliche Mindestgeschwindigkeit zur Berechnung der Echtzeit-Steigung.</string>
+    <string name="tuning_post_workout_erts_smoothing_title">Post-Workout-ERTS-Glättung</string>
+    <string name="tuning_post_workout_erts_smoothing_desc">Wendet nach dem Speichern des Workouts eine bidirektionale Extended-Rauch-Tung-Striebel-Glättung auf Trajektorie und Höhenprofil an.</string>
     <string name="tuning_show_ant_missing_adapter_warnings_title">Warnung bei fehlendem ANT+ Adapter</string>
     <string name="tuning_show_ant_missing_adapter_warnings_desc">Hinweisdialog anzeigen, wenn nach ANT+ Sensoren gesucht wird, aber kein Adapter erkannt wurde</string>
     <string name="tuning_cat_aftermath">Nachbereitung &amp; Profil-Analytik</string>
@@ -2253,6 +2258,7 @@
     <string name="workout_detail_tab_overview">Übersicht</string>
     <string name="workout_detail_tab_map_graphs">Karte &amp; Diagramme</string>
     <string name="workout_detail_tab_zones">Zonen</string>
+    <string name="workout_detail_tab_hrv">HRV</string>
     <string name="workout_detail_tab_laps_segments">Runden &amp; Segmente</string>
     <string name="workout_detail_tab_custom_default">Eigener Tab</string>
     <string name="workout_detail_section_details">Trainingsmetriken &amp; Übersicht</string>

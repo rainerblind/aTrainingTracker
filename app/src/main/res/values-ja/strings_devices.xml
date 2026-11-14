@@ -91,6 +91,8 @@
 
     <string name="devices_location_GPS">端末 GPS (衛星)</string>
     <string name="devices_location_GoogleFused">Google 位置情報 (Fused)</string>
+    <string name="devices_location_ATT_fused">ATT 複合オドメトリ</string>
+    <string name="devices_altitude_slope_ATT_fused">ATT Fused (高度と勾配)</string>
     <string name="devices_altitude_from_pressure">気圧からの高度</string>
 
     <!-- Specialized Altitude Devices Explanations (ATT-5073, REQ-SEN-026) -->
@@ -102,6 +104,30 @@
     <string name="device_altitude_position_how_it_works">GPS位置を保存されたルートのキャッシュまたはOpen-Meteoの標高モデル(DEM)と照合します。</string>
     <string name="device_altitude_position_pros_cons">+ 天候や気圧ドリフトに影響されず、校正不要で正確な絶対標高を提供。\n- 未キャッシュ地域ではアクティブなインターネット接続が必要；GPS精度に依存し、橋や急崖などでは誤差が生じる場合があります。</string>
 
+    <!-- ATT Odometry Fusion Device Configuration (ATT-7751, REQ-SEN-028) -->
+    <string name="device_att_fused_how_it_works">GNSS位置情報、校正済みホイール回転、3Dジャイロの回転を5状態拡張カルマンフィルター（EKF）で統合し、高精度な推測航法を提供します。</string>
+    <string name="device_att_fused_pros_cons">+ トンネルや森林でも途切れないトラッキング、サブメートル精度、外れ値の除去。\n- ジャイロセンサーの常時動作によるバッテリー消費の増加。</string>
+    <string name="device_att_fused_toggle_gnss">GNSS位置情報を使用</string>
+    <string name="device_att_fused_toggle_gnss_hint_disabled">位置情報の権限が必要です</string>
+    <string name="device_att_fused_toggle_wheel">スピードセンサーを使用</string>
+    <string name="device_att_fused_toggle_wheel_hint_disabled">ペアリングされたホイールセンサーがありません</string>
+    <string name="device_att_fused_toggle_gyro">ジャイロIMUを使用</string>
+    <string name="device_att_fused_toggle_gyro_hint_disabled">ジャイロセンサーが検出されません</string>
+    <string name="device_att_fused_toggle_autocalib">ホイール周長の自動校正</string>
+    <string name="device_att_fused_toggle_autocalib_hint_disabled">ホイールセンサーとGNSSが必要です</string>
+
+    <!-- ATT Altitude & Slope Fusion Device Configuration (ATT-6279, REQ-FIL-016) -->
+    <string name="device_att_fused_alt_how_it_works">気圧計とDEM/GPSのドリフトフリーなカルマン融合と停止時クランプにより、高度変化を水平移動に直接連動(dh = g * ds)させます。</string>
+    <string name="device_att_fused_alt_pros_cons">+ 停止中の不要な獲得標高やDEMの階段状変化を防止。俊敏な勾配反応。\n- 有効な気圧計または高度センサーが必要。</string>
+    <string name="device_att_fused_alt_toggle_baro">気圧高度 (気圧計)</string>
+    <string name="device_att_fused_alt_toggle_baro_hint_disabled">気圧計センサーがペアリングされていないか利用できません</string>
+    <string name="device_att_fused_alt_toggle_dem">地形高度 (DEM)</string>
+    <string name="device_att_fused_alt_toggle_dem_hint_disabled">地形高度 (DEM) がペアリングされていません</string>
+    <string name="device_att_fused_alt_toggle_gps">GPS高度 (長期ドリフト補正)</string>
+    <string name="device_att_fused_alt_toggle_gps_hint_disabled">位置情報またはGPSセンサーがペアリングされていません</string>
+    <string name="device_att_fused_alt_toggle_speed">速度連動 (停止時クランプ &amp; dh = g * ds)</string>
+    <string name="device_att_fused_alt_toggle_speed_hint_disabled">利用可能な速度または運動センサーがありません</string>
+
     <string name="devices_live_sensor_data_header">センサーデータ</string>
 
     <string name="devices_dialog_delete_device_title">削除しますか？</string>
@@ -111,4 +137,10 @@
 
     <!-- Indirect Tire Pressure Monitoring (ATT-4880, REQ-TRK-050) -->
     <string name="devices_reset_tire_pressure_baseline">タイヤ空気圧基準値をリセット（空気補充直後）</string>
+
+    <!-- Sensor List Sorting (ATT-7663, REQ-UI-528) -->
+    <string name="devices_sort_alphabetical">アルファベット順</string>
+    <string name="devices_sort_first_seen">初回検出順</string>
+    <string name="devices_sort_last_usage">最近使用順</string>
+    <string name="devices_sort_battery_level">バッテリー残量順</string>
 </resources>

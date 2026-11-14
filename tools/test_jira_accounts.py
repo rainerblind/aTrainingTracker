@@ -227,9 +227,10 @@ class TestRolePrecedenceAndAttribution(unittest.TestCase):
         self.assertIn("Invalid role 'imposter_role'", stderr_capture.getvalue())
 
     def test_valid_roles_excludes_human(self):
-        """VALID_ROLES must not contain human (REQ-PRO-020.5)."""
+        """VALID_ROLES must not contain human (REQ-PRO-020.5), but must include qa (REQ-PRO-091.1)."""
         self.assertNotIn("human", jira_util.VALID_ROLES)
-        self.assertEqual(jira_util.VALID_ROLES, ["agent1", "agent2", "coordinator"])
+        self.assertEqual(jira_util.VALID_ROLES, ["agent1", "agent2", "coordinator", "qa"])
+        self.assertIn("qa", jira_util.VALID_ROLES)
 
     def test_human_role_selection_rejected_from_cli(self):
         """Selecting human role via --as human or --as=human causes fatal governance abort (AC-1)."""
@@ -696,7 +697,7 @@ class TestJiraCliTooling(unittest.TestCase):
 """)
 
             out_file = os.path.join(tmpdir, "docs", "engineering", "qa_audits", "sprint_2026-46.3.md")
-            res_path, results = jira_util.qa_audit(sprint_arg=None, sample_size=2, out_path=out_file, role="coordinator", repo_root=tmpdir)
+            res_path, results = jira_util.qa_audit(sprint_arg=None, sample_size=2, out_path=out_file, role="qa", repo_root=tmpdir)
             self.assertEqual(res_path, out_file)
             self.assertTrue(os.path.exists(out_file))
             self.assertEqual(len(results), 2)
@@ -707,6 +708,8 @@ class TestJiraCliTooling(unittest.TestCase):
 
             self.assertIn("# Sprint QA Process-Compliance Audit: Sprint 2026-46.3", content)
             self.assertIn("Overall Process Verdict", content)
+            self.assertIn("Auditor Role", content)
+            self.assertIn("`qa`", content)
             self.assertIn("ATT-6149", content)
             self.assertIn("ATT-6150", content)
             self.assertIn("COMPLIANT", content)
@@ -760,7 +763,7 @@ class TestJiraCliTooling(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as tmpdir:
             out_file = os.path.join(tmpdir, "docs", "engineering", "qa_audits", "sprint_2026-46.3.md")
-            res_path, results = jira_util.qa_audit(sprint_arg=None, sample_size=2, out_path=out_file, role="coordinator", repo_root=tmpdir)
+            res_path, results = jira_util.qa_audit(sprint_arg=None, sample_size=2, out_path=out_file, role="qa", repo_root=tmpdir)
             self.assertEqual(len(results), 2)
             # Both tickets should be NON-COMPLIANT
             self.assertFalse(results[0]["compliant"])
@@ -775,6 +778,59 @@ class TestJiraCliTooling(unittest.TestCase):
             with open(out_file, "r", encoding="utf-8") as f:
                 content = f.read()
             self.assertIn("NON-COMPLIANT", content)
+            self.assertIn("Corrective Action Ticket:", content)
+            self.assertIn("[ATT-9001]", content)
+            self.assertIn("[ATT-9003]", content)
+
+    @patch("jira_util.jira_request")
+    def test_qa_audit_enforces_independent_role(self, mock_request):
+        """TST-PRO-091.1: Verify qa-audit rejects coordinator and agent1 roles, allowing qa and agent2."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            out_file = os.path.join(tmpdir, "docs", "engineering", "qa_audits", "sprint_test.md")
+            # 1. coordinator role rejected
+            with self.assertRaises(ValueError) as cm:
+                jira_util.qa_audit(role="coordinator", out_path=out_file, repo_root=tmpdir)
+            self.assertIn("Auditor role cannot be 'coordinator'", str(cm.exception))
+
+            # 2. agent1 role rejected
+            with self.assertRaises(ValueError) as cm2:
+                jira_util.qa_audit(role="agent1", out_path=out_file, repo_root=tmpdir)
+            self.assertIn("Auditor role cannot be 'agent1'", str(cm2.exception))
+
+    @patch("jira_util.jira_request")
+    def test_qa_audit_dynamic_sample_size(self, mock_request):
+        """TST-PRO-091.2: Verify qa-audit dynamically scales sample size to >= max(2, ceil(N * 0.10))."""
+        def mock_jira_side_effect(url, method="GET", payload=None, role="qa"):
+            if "/rest/agile/1.0/board" in url and "/sprint" not in url:
+                return {"values": [{"id": 1, "name": "ATT Board"}]}
+            elif "/rest/agile/1.0/board/1/sprint?state=active" in url:
+                return {"values": [{"id": 440, "name": "2026-46.3", "state": "active"}]}
+            elif "/rest/agile/1.0/sprint/440/issue" in url:
+                issues = [
+                    {
+                        "key": f"ATT-{7000 + idx}",
+                        "fields": {
+                            "summary": f"Sprint task {idx}",
+                            "status": {"name": "Final Review (Human)"},
+                            "issuetype": {"subtask": False},
+                            "subtasks": [],
+                        },
+                    }
+                    for idx in range(25)
+                ]
+                return {"issues": issues, "total": 25}
+            return {}
+
+        mock_request.side_effect = mock_jira_side_effect
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            out_file = os.path.join(tmpdir, "docs", "engineering", "qa_audits", "sprint_2026-46.3.md")
+            res_path, results = jira_util.qa_audit(sprint_arg=None, sample_size=None, out_path=out_file, role="qa", repo_root=tmpdir)
+            # 25 * 0.10 = 2.5 -> ceil is 3. Max(2, 3) = 3 tickets sampled
+            self.assertEqual(len(results), 3)
+            with open(out_file, "r", encoding="utf-8") as f:
+                content = f.read()
+            self.assertIn("3 / 25 tickets (>= 10% dynamic threshold enforced)", content)
 
     @patch("jira_util.jira_request")
     def test_record_review_command_generates_markdown(self, mock_request):
@@ -890,6 +946,36 @@ class TestJiraCliTooling(unittest.TestCase):
         self.assertEqual(key_feat, "ATT-9999")
         posted_feat = mock_request.call_args[1]["payload"]["fields"]
         self.assertNotIn("labels", posted_feat)
+
+    @patch("jira_util.rank_at_top_of_backlog")
+    @patch("jira_util.jira_request")
+    def test_bug_severity_rubric_enforcement(self, mock_request, mock_rank):
+        """TST-PRO-092.6: create_issue enforces Bug Severity Rubric for crash/ANR origin bugs."""
+        mock_request.return_value = {"key": "ATT-9999"}
+
+        # 1. Bug mentioning "crash" with severity=minor -> rejected with exit code 1
+        with self.assertRaises(SystemExit) as cm:
+            jira_util.create_issue("Fatal crash on startup", "App terminates immediately", issuetype_id="10006", severity="minor")
+        self.assertEqual(cm.exception.code, 1)
+
+        # 2. Bug mentioning "ANR" with severity=cosmetic -> rejected with exit code 1
+        with self.assertRaises(SystemExit) as cm:
+            jira_util.create_issue("UI freezing during workout", "ANR dialog triggered", issuetype_id="10006", severity="cosmetic")
+        self.assertEqual(cm.exception.code, 1)
+
+        # 3. Bug mentioning "crash" with severity=major -> accepted
+        mock_request.reset_mock()
+        key_major = jira_util.create_issue("Crash in background export", "Occasional crash during export", issuetype_id="10006", severity="major")
+        self.assertEqual(key_major, "ATT-9999")
+        posted = mock_request.call_args[1]["payload"]["fields"]
+        self.assertIn("severity-major", posted["labels"])
+
+        # 4. Bug mentioning "ANR" with severity=critical -> accepted
+        mock_request.reset_mock()
+        key_crit = jira_util.create_issue("Main loop ANR", "Fatal ANR blocks workout", issuetype_id="10006", severity="critical")
+        self.assertEqual(key_crit, "ATT-9999")
+        posted_crit = mock_request.call_args[1]["payload"]["fields"]
+        self.assertIn("severity-critical", posted_crit["labels"])
 
     @patch("jira_util.transition_issue")
     @patch("jira_util.assign_issue")

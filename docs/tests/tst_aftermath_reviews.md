@@ -146,5 +146,35 @@
   2. Layout contract passes with 3 equal tiles and grouped sync card.
   3. `TranslationParityTest` passes across 9 locales.
 
+### TST-REV-015: **EditWorkout Per-Workout Health Connect Sync & Export Deduplication Contract Test** [Verified]
+- **Requirements Covered**: `REQ-REV-014`
+- **Component Under Test**: `WorkoutData.kt`, `EditWorkoutViewModel.kt`, `EditWorkoutScreen.kt`, `WorkoutRepository.kt`, `ExportManager.java`
+- **Test Type**: Unit, Robolectric / Component Test
+- **Test Description**: Verifies that `EditWorkoutViewModel` initializes and updates `syncToHealthConnect`, `EditWorkoutScreen.kt` delegates save cleanly without calling `HealthConnectManager.syncWorkoutAsync` directly in `onSave`, and `ExportManager.exportWorkout` honors `syncToHealthConnect` (skips when false, forces when true, falls back to prefs when null).
+- **Preconditions**:
+  1. Test environment with Robolectric / MockK context initialized.
+  2. Mocked `Context`, `ExportStatusDatabaseManager`, and `HealthConnectManager`.
+- **Test Procedure**:
+  1. *ViewModel State Verification*:
+     - Load workout in `EditWorkoutViewModel`. Verify initial `syncToHealthConnect` reflects `TrainingApplication.syncToHealthConnect()`.
+     - Call `viewModel.updateSyncToHealthConnect(false)`, verify `workoutData.value.syncToHealthConnect == false`.
+     - Call `viewModel.updateSyncToHealthConnect(true)`, verify `workoutData.value.syncToHealthConnect == true`.
+  2. *UI Layout Contract Verification*:
+     - Verify `EditWorkoutScreen.kt` no longer contains direct invocation of `HealthConnectManager.syncWorkoutAsync` in `onSave` or anywhere in `EditWorkoutDialog`.
+     - Verify Health Connect row binds to `viewModel.updateSyncToHealthConnect`.
+  3. *ExportManager Pipeline Verification*:
+     - With `TrainingApplication.syncToHealthConnect() == true`:
+       - Call `exportManager.exportWorkout(workoutData.copy(syncToHealthConnect = false))`. Verify `HealthConnectManager.syncWorkoutAsync` is NOT called.
+       - Call `exportManager.exportWorkout(workoutData.copy(syncToHealthConnect = true))`. Verify `HealthConnectManager.syncWorkoutAsync` is called exactly once with `force = true`.
+       - Call `exportManager.exportWorkout(workoutData.copy(syncToHealthConnect = null))`. Verify `HealthConnectManager.syncWorkoutAsync` is called once with `force = false`.
+     - With `TrainingApplication.syncToHealthConnect() == false`:
+       - Call `exportManager.exportWorkout(workoutData.copy(syncToHealthConnect = true))`. Verify `HealthConnectManager.syncWorkoutAsync` is called with `force = true`.
+       - Call `exportManager.exportWorkout(workoutData.copy(syncToHealthConnect = null))`. Verify `HealthConnectManager.syncWorkoutAsync` is NOT called.
+- **Expected Results**:
+  1. `syncToHealthConnect` state transitions correctly in `EditWorkoutViewModel`.
+  2. `EditWorkoutScreen.kt` delegates save without redundant duplicate triggers.
+  3. `ExportManager` honors per-workout sync selection and preserves fallback when null.
+
+
 
 

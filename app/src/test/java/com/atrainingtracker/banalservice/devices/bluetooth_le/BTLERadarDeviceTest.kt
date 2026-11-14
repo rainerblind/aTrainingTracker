@@ -35,10 +35,14 @@ import androidx.core.content.ContextCompat
 import com.atrainingtracker.banalservice.database.DevicesDatabaseManager
 import com.atrainingtracker.banalservice.devices.DeviceType
 import com.atrainingtracker.banalservice.devices.radar.LaneState
+import com.atrainingtracker.banalservice.devices.radar.RadarAudioSnoozeMode
+import com.atrainingtracker.banalservice.devices.radar.RadarAudioSnoozeState
 import com.atrainingtracker.banalservice.devices.radar.RadarConnectionState
 import com.atrainingtracker.banalservice.devices.radar.RadarLightController
 import com.atrainingtracker.banalservice.devices.radar.RadarLightMode
 import com.atrainingtracker.banalservice.devices.radar.RadarScenario
+import com.atrainingtracker.banalservice.devices.radar.RadarSource
+import com.atrainingtracker.banalservice.devices.radar.RadarState
 import com.atrainingtracker.banalservice.devices.radar.RadarStateRepository
 import com.atrainingtracker.banalservice.devices.radar.RadarTarget
 import com.atrainingtracker.banalservice.devices.radar.RadarTrafficSimulator
@@ -47,11 +51,13 @@ import com.atrainingtracker.banalservice.devices.radar.ThreatLevel
 import com.atrainingtracker.banalservice.devices.radar.VehicleSizeCategory
 import com.atrainingtracker.banalservice.sensor.MySensorManager
 import com.atrainingtracker.banalservice.sensor.SensorType
+import com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkConstructor
 import io.mockk.mockkStatic
 import io.mockk.unmockkAll
+import io.mockk.verify
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -220,6 +226,44 @@ class BTLERadarDeviceTest {
         assertTrue(state.targets.isEmpty())
     }
 
+    /**
+     * TST-CON-041.6: BTLERadarDevice isReceivingData Source Isolation & Watchdog Test.
+     * Verifies isReceivingData() queries only RadarSource.BLE state and returns false on watchdog timeout
+     * even if underlying GATT state is CONNECTED_WITH_SERVICE.
+     */
+    @Test
+    fun testIsReceivingData_returnsFalseOnWatchdogTimeoutEvenIfGattConnected() {
+        // Initially disconnected
+        assertFalse("isReceivingData must be false initially", radarDevice.isReceivingData)
+
+        // Radar connects via BLE
+        val mockGatt = mockk<BluetoothGatt>(relaxed = true)
+        val mockRadarService = mockk<BluetoothGattService>(relaxed = true)
+        every { mockGatt.getService(BluetoothConstants.UUID_SERVICE_RADAR) } returns mockRadarService
+
+        radarDevice.configureServices(mockGatt)
+        radarDevice.setStateForTesting(MyBTLEDevice.State.CONNECTED_WITH_SERVICE)
+
+        assertEquals(MyBTLEDevice.State.CONNECTED_WITH_SERVICE, radarDevice.stateForTesting)
+        assertTrue("isReceivingData must be true when BLE radar is connected", radarDevice.isReceivingData)
+
+        // Watchdog fires due to packet starvation (e.g. 3.5s timeout)
+        radarDevice.watchdogRunnableForTesting.run()
+
+        // Even though underlying GATT state is CONNECTED_WITH_SERVICE, isReceivingData must return false!
+        assertEquals(MyBTLEDevice.State.CONNECTED_WITH_SERVICE, radarDevice.stateForTesting)
+        assertFalse("isReceivingData must return false on DISCONNECTED_ERROR after watchdog timeout", radarDevice.isReceivingData)
+
+        // Verify ANT+ connection does not falsely make BTLERadarDevice.isReceivingData return true
+        RadarStateRepository.updateState(
+            com.atrainingtracker.banalservice.devices.radar.RadarState(
+                connectionState = RadarConnectionState.CONNECTED,
+                source = com.atrainingtracker.banalservice.devices.radar.RadarSource.ANT_PLUS
+            )
+        )
+        assertFalse("isReceivingData must remain false for BLE when only ANT+ is CONNECTED", radarDevice.isReceivingData)
+    }
+
     @Test
     fun testParseV2ThreatPacket_demuxesNonThreatPackets() {
         // Null or empty payload
@@ -329,6 +373,7 @@ class BTLERadarDeviceTest {
     @Test
     fun testProcessTargets_propagatesNullDistanceWhenRoadClears() {
         var currentTimeMs = 1000L
+        every { android.os.SystemClock.elapsedRealtime() } answers { currentTimeMs }
         radarDevice.setWindowAggregatorForTesting(RadarWindowAggregator(clock = { currentTimeMs }))
 
         // Approaching target at 15m
@@ -349,8 +394,12 @@ class BTLERadarDeviceTest {
 
     @Test
     fun testOnAccumulatorsReset_clearsVehicleCountSensorsAndSession() {
+        var currentTimeMs = 1000L
+        every { android.os.SystemClock.elapsedRealtime() } answers { currentTimeMs }
+
         // Vehicle approaches and passes (closing to <= 18m and disappearing)
         radarDevice.processTargetsForTesting(listOf(RadarTarget(1, 12f, 8f, ThreatLevel.APPROACHING)))
+        currentTimeMs = 2000L
         radarDevice.processTargetsForTesting(emptyList())
         assertEquals(1, radarDevice.getSensor(SensorType.RADAR_VEHICLE_COUNT).value)
 
@@ -362,6 +411,39 @@ class BTLERadarDeviceTest {
         assertEquals("Large vehicle count sensor must reset to 0 on accumulator reset",
             0, radarDevice.getSensor(SensorType.RADAR_LARGE_VEHICLE_COUNT).value)
         assertEquals(0, radarDevice.windowAggregatorForTesting.getVehicleCount())
+    }
+
+    /**
+     * TST-CON-040.4: 1 Hz Driver Gating for Scalar Metric Sampling (BTLERadarDevice).
+     * Deliver 8 consecutive frames spaced 125 ms apart and verify sampleAndResetWindow/newValue execute at 1 Hz cadence.
+     */
+    @Test
+    fun testBTLERadarDevice_oneHzDriverGating_limitsScalarSensorUpdates() {
+        var currentTimeMs = 1000L
+        every { android.os.SystemClock.elapsedRealtime() } answers { currentTimeMs }
+
+        assertNull("Initial threat count sensor must be null before any packet", radarDevice.getSensor(SensorType.RADAR_THREAT_COUNT).value)
+
+        // Frame 1 at t = 1000ms: approaching target triggers initial 1 Hz sample tick
+        radarDevice.processTargetsForTesting(listOf(RadarTarget(1, 15f, 5f, ThreatLevel.APPROACHING)))
+        assertEquals(1, radarDevice.getSensor(SensorType.RADAR_THREAT_COUNT).value)
+
+        // Frames 2..7 spaced 125ms apart (t = 1125..1875ms)
+        for (i in 1..7) {
+            currentTimeMs += 125L
+            radarDevice.processTargetsForTesting(emptyList())
+            // Sensor value must NOT update during sub-second interval
+            assertEquals(
+                "Sensor must not update during sub-second cadence at t=$currentTimeMs",
+                1,
+                radarDevice.getSensor(SensorType.RADAR_THREAT_COUNT).value
+            )
+        }
+
+        // Frame 8 at t = 2001ms (rolling 1,000 ms window expired and 1 Hz sample tick elapsed)
+        currentTimeMs = 2001L
+        radarDevice.processTargetsForTesting(emptyList())
+        assertEquals(0, radarDevice.getSensor(SensorType.RADAR_THREAT_COUNT).value)
     }
 
     @Test
@@ -522,7 +604,10 @@ class BTLERadarDeviceTest {
             0x00.toByte(), 0x01.toByte(), 60.toByte(), 0x15.toByte()
         )
 
-        radarDevice.measurementCharacteristicUpdate(mockk(relaxed = true), v1Char)
+        val mockGatt = mockk<BluetoothGatt>(relaxed = true)
+        radarDevice.setBluetoothGattForTesting(mockGatt)
+        radarDevice.setStateForTesting(MyBTLEDevice.State.CONNECTED_WITH_SERVICE)
+        radarDevice.measurementCharacteristicUpdate(mockGatt, v1Char)
 
         // Verifies hardware packet arrival halted simulation immediately (REQ-CON-029.3)
         assertFalse(RadarTrafficSimulator.isSimulating)
@@ -881,6 +966,7 @@ class BTLERadarDeviceTest {
         radarDevice.configureServices(mockGatt)
 
         assertTrue(radarDevice.isLightControlSupported)
+        verify { mockWriteChar.writeType = BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE }
         assertEquals(mockWriteChar, radarDevice.radarControlWriteCharForTesting)
         assertEquals(mockNotifyChar, radarDevice.radarControlNotifyCharForTesting)
     }
@@ -920,8 +1006,35 @@ class BTLERadarDeviceTest {
 
         val success = radarDevice.setLightMode(RadarLightMode.DAY_FLASH)
         assertTrue(success)
+        verify { mockWriteChar.writeType = BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE }
         assertEquals(RadarLightMode.DAY_FLASH, RadarLightController.currentMode.value)
         assertEquals(RadarLightMode.DAY_FLASH, RadarStateRepository.getState().lightMode)
+    }
+
+    /**
+     * TST-CON-031.2c / ATT-7737: Selecting tail light mode (Night Flash) enqueues RearVue 4-byte command
+     * explicitly with WRITE_TYPE_NO_RESPONSE, preventing write rejection and subsequent reversion.
+     */
+    @Test
+    fun testSetLightMode_rearVueEnforcesWriteTypeNoResponseAndPreventsReversion() {
+        val mockGatt = mockk<BluetoothGatt>(relaxed = true)
+        val mockRadarService = mockk<BluetoothGattService>(relaxed = true)
+        val mockControlService = mockk<BluetoothGattService>(relaxed = true)
+        val mockWriteChar = mockk<BluetoothGattCharacteristic>(relaxed = true)
+        val mockNotifyChar = mockk<BluetoothGattCharacteristic>(relaxed = true)
+
+        every { mockGatt.getService(BluetoothConstants.UUID_SERVICE_RADAR) } returns mockRadarService
+        every { mockGatt.getService(BluetoothConstants.UUID_SERVICE_RADAR_CONTROL) } returns mockControlService
+        every { mockControlService.getCharacteristic(BluetoothConstants.UUID_CHARACTERISTIC_RADAR_CONTROL_WRITE) } returns mockWriteChar
+        every { mockControlService.getCharacteristic(BluetoothConstants.UUID_CHARACTERISTIC_RADAR_CONTROL_NOTIFY) } returns mockNotifyChar
+
+        radarDevice.configureServices(mockGatt)
+
+        // Select Night Flash (ATT-7737)
+        val success = radarDevice.setLightMode(RadarLightMode.NIGHT_FLASH)
+        assertTrue(success)
+        verify { mockWriteChar.writeType = BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE }
+        assertEquals(RadarLightMode.NIGHT_FLASH, RadarLightController.currentMode.value)
     }
 
     @Test
@@ -985,5 +1098,197 @@ class BTLERadarDeviceTest {
         assertFalse(radarDevice.isLightControlSupported)
         assertNull(radarDevice.radarControlWriteCharForTesting)
         assertNull(radarDevice.radarControlNotifyCharForTesting)
+    }
+
+    /**
+     * TST-CON-042.1 & TST-CON-042.4: BLE Packet Ingestion Preserves Snooze & Light Mode.
+     * Verifies processTargets() maintains active audioSnoozeState and lightMode from currentState,
+     * and bypasses simulator preemption when isSimulating is false.
+     */
+    @Test
+    fun testProcessTargets_preservesAudioSnoozeAndLightMode() {
+        // Pre-configure active audio snooze and light mode in repository
+        val activeSnooze = RadarAudioSnoozeState(isSnoozed = true, mode = RadarAudioSnoozeMode.SNOOZE_15M)
+        RadarStateRepository.updateState(
+            RadarState(
+                connectionState = RadarConnectionState.DISCONNECTED,
+                lightMode = RadarLightMode.DAY_FLASH,
+                isLightControlSupported = true,
+                audioSnoozeState = activeSnooze,
+                source = RadarSource.BLE
+            )
+        )
+
+        // Ensure simulator is not running
+        assertFalse(RadarTrafficSimulator.isSimulating)
+
+        // Process incoming targets
+        val targets = listOf(RadarTarget(1, 45f, 10f, ThreatLevel.APPROACHING))
+        radarDevice.processTargetsForTesting(targets)
+
+        // Verify repository retains active snooze and light mode
+        val state = RadarStateRepository.getState()
+        assertEquals(RadarConnectionState.CONNECTED, state.connectionState)
+        assertEquals(RadarLightMode.DAY_FLASH, state.lightMode)
+        assertTrue(state.audioSnoozeState.isSnoozed)
+        assertEquals(RadarAudioSnoozeMode.SNOOZE_15M, state.audioSnoozeState.mode)
+        assertEquals(RadarSource.BLE, state.source)
+    }
+
+    /**
+     * TST-CON-028.2: BTLERadarDevice Disconnect Stale Target Revival Prevention (ATT-7579).
+     * Verifies that after disconnectFromGatt(), late-arriving queued measurement runnables
+     * are dropped under mGattLock and do not revive CONNECTED state or repopulate active targets.
+     */
+    @Test
+    fun testDisconnectFromGatt_dropsLateQueuedMeasurementRunnable() {
+        val mockGatt = mockk<BluetoothGatt>(relaxed = true)
+        val mockRadarService = mockk<BluetoothGattService>(relaxed = true)
+        val mockV1Char = mockk<BluetoothGattCharacteristic>(relaxed = true)
+        every { mockGatt.getService(BluetoothConstants.UUID_SERVICE_RADAR) } returns mockRadarService
+        every { mockRadarService.getCharacteristic(BluetoothConstants.UUID_CHARACTERISTIC_RADAR_V1) } returns mockV1Char
+
+        radarDevice.configureServices(mockGatt)
+        assertEquals(RadarConnectionState.CONNECTED, RadarStateRepository.getState().connectionState)
+
+        val mockMeasurementChar = mockk<BluetoothGattCharacteristic>(relaxed = true)
+        every { mockMeasurementChar.uuid } returns BluetoothConstants.UUID_CHARACTERISTIC_RADAR_V1
+        val payload = byteArrayOf(
+            0x01.toByte(), 0x01.toByte(),
+            0x01.toByte(), 0x10.toByte(), 0x00.toByte()
+        )
+        every { mockMeasurementChar.value } returns payload
+
+        // Disconnect from GATT
+        radarDevice.disconnectFromGatt()
+        assertEquals(RadarConnectionState.DISCONNECTED, RadarStateRepository.getState().connectionState)
+
+        // Late-arriving measurement update invocation against disconnected GATT must be dropped
+        radarDevice.measurementCharacteristicUpdateForTesting(mockGatt, mockMeasurementChar)
+
+        // Verify state remains DISCONNECTED and zero targets revived
+        val postState = RadarStateRepository.getState()
+        assertEquals(RadarConnectionState.DISCONNECTED, postState.connectionState)
+        assertTrue(postState.targets.isEmpty())
+    }
+
+    /**
+     * TST-CON-030.9: BLE Radar V1-Only Protocol Override (ATT-7659 / REQ-CON-030.8).
+     * Verifies that when isRadarV1OnlyOverrideEnabled returns true, configureServices()
+     * immediately falls back to V1 characteristic (6a4e3203) even if V2 is present and bonded.
+     */
+    @Test
+    fun testConfigureServices_radarV1OnlyOverrideForcesV1Fallback() {
+        mockkStatic(SettingsDataStoreJavaHelper::class)
+        every { SettingsDataStoreJavaHelper.isRadarV1OnlyOverrideEnabled(any()) } returns true
+
+        val mockGatt = mockk<BluetoothGatt>(relaxed = true)
+        val mockDevice = mockk<BluetoothDevice>(relaxed = true)
+        val mockRadarService = mockk<BluetoothGattService>(relaxed = true)
+        val mockV2Char = mockk<BluetoothGattCharacteristic>(relaxed = true)
+        val mockV1Char = mockk<BluetoothGattCharacteristic>(relaxed = true)
+
+        every { mockGatt.device } returns mockDevice
+        every { mockDevice.bondState } returns BluetoothDevice.BOND_BONDED
+        every { mockGatt.getService(BluetoothConstants.UUID_SERVICE_RADAR) } returns mockRadarService
+        every { mockRadarService.getCharacteristic(BluetoothConstants.UUID_CHARACTERISTIC_RADAR_V2) } returns mockV2Char
+        every { mockRadarService.getCharacteristic(BluetoothConstants.UUID_CHARACTERISTIC_RADAR_V1) } returns mockV1Char
+
+        radarDevice.configureServices(mockGatt)
+
+        // When forced V1 override is true, mIsV2Stream must be false
+        assertFalse("Forced V1 override must keep isV2Stream false", radarDevice.isV2Stream)
+    }
+
+    /**
+     * TST-CON-030.9: BLE Radar V1-Only Protocol Override Disabled (ATT-7659 / REQ-CON-030.8).
+     * Verifies that when isRadarV1OnlyOverrideEnabled returns false, standard V2 handshake is initiated.
+     */
+    @Test
+    fun testConfigureServices_radarV1OnlyOverrideDisabled_initiatesV2Handshake() {
+        mockkStatic(SettingsDataStoreJavaHelper::class)
+        every { SettingsDataStoreJavaHelper.isRadarV1OnlyOverrideEnabled(any()) } returns false
+
+        val mockGatt = mockk<BluetoothGatt>(relaxed = true)
+        val mockDevice = mockk<BluetoothDevice>(relaxed = true)
+        val mockRadarService = mockk<BluetoothGattService>(relaxed = true)
+        val mockV2Char = mockk<BluetoothGattCharacteristic>(relaxed = true)
+        val mockV1Char = mockk<BluetoothGattCharacteristic>(relaxed = true)
+
+        every { mockGatt.device } returns mockDevice
+        every { mockDevice.bondState } returns BluetoothDevice.BOND_BONDED
+        every { mockGatt.getService(BluetoothConstants.UUID_SERVICE_RADAR) } returns mockRadarService
+        every { mockRadarService.getCharacteristic(BluetoothConstants.UUID_CHARACTERISTIC_RADAR_V2) } returns mockV2Char
+        every { mockRadarService.getCharacteristic(BluetoothConstants.UUID_CHARACTERISTIC_RADAR_V1) } returns mockV1Char
+
+        radarDevice.configureServices(mockGatt)
+
+        // When forced V1 override is false and device is bonded, V2 handshake is initiated
+        assertTrue("V2 handshake must be initiated when override is false and device is bonded", radarDevice.isV2Stream)
+    }
+
+    /**
+     * TST-TRK-062.8: Preserves DISCONNECTED_ERROR during reconnect startSearching() (ATT-7744 / REQ-TRK-062.4).
+     */
+    @Test
+    fun testStartSearching_whenDisconnectedError_preservesDisconnectedError() {
+        RadarStateRepository.updateState(
+            RadarState(
+                connectionState = RadarConnectionState.DISCONNECTED_ERROR,
+                lightMode = RadarLightMode.DAY_FLASH,
+                isLightControlSupported = true,
+                source = RadarSource.BLE
+            )
+        )
+        assertEquals(RadarConnectionState.DISCONNECTED_ERROR, RadarStateRepository.getState().connectionState)
+
+        radarDevice.startSearching()
+
+        assertEquals(RadarConnectionState.DISCONNECTED_ERROR, RadarStateRepository.getState().connectionState)
+    }
+
+    /**
+     * TST-TRK-062.8: startSearching transitions to CONNECTING from normal states (ATT-7744 / REQ-TRK-062.4).
+     */
+    @Test
+    fun testStartSearching_whenDisconnected_transitionsToConnecting() {
+        RadarStateRepository.updateState(
+            RadarState(
+                connectionState = RadarConnectionState.DISCONNECTED,
+                source = RadarSource.BLE
+            )
+        )
+        radarDevice.startSearching()
+        assertEquals(RadarConnectionState.CONNECTING, RadarStateRepository.getState().connectionState)
+    }
+
+    /**
+     * TST-TRK-062.8: Initial search failure transitions to DISCONNECTED (ATT-7744 / REQ-TRK-062.4).
+     */
+    @Test
+    fun testNotifyStopSearching_failure_transitionsToDisconnected() {
+        RadarStateRepository.updateState(
+            RadarState(
+                connectionState = RadarConnectionState.CONNECTING,
+                source = RadarSource.BLE
+            )
+        )
+        radarDevice.notifyStopSearchingForTesting(false)
+        assertEquals(RadarConnectionState.DISCONNECTED, RadarStateRepository.getState().connectionState)
+    }
+
+    /**
+     * TST-TRK-062.8: Search failure preserves DISCONNECTED_ERROR if already in error (ATT-7744 / REQ-TRK-062.4).
+     */
+    @Test
+    fun testNotifyStopSearching_failure_preservesDisconnectedError() {
+        RadarStateRepository.updateState(
+            RadarState(
+                connectionState = RadarConnectionState.DISCONNECTED_ERROR,
+                source = RadarSource.BLE
+            )
+        )
+        radarDevice.notifyStopSearchingForTesting(false)
+        assertEquals(RadarConnectionState.DISCONNECTED_ERROR, RadarStateRepository.getState().connectionState)
     }
 }

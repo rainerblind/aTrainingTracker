@@ -92,8 +92,11 @@ public class DeviceManager {
     protected volatile ClockDevice mClockDevice;
     protected volatile BatteryDevice mBatteryDevice;
     protected volatile SpeedAndLocationDevice mSpeedAndLocationDevice_GPS, mSpeedAndLocationDevice_GoogleFused;
+    protected volatile SpeedAndLocationDevice_ATTFused mSpeedAndLocationDevice_ATTFused;
+    protected volatile boolean mIsIndoorMode = false;
     protected volatile AltitudeFromPressureDevice mAltitudeFromPressureDevice;
     protected volatile AltitudeFromPositionDevice mAltitudeFromPositionDevice;
+    protected volatile AltitudeAndSlopeDevice_ATTFused mAltitudeAndSlopeDevice_ATTFused;
     protected volatile VerticalSpeedAndSlopeDevice mVerticalSpeedAndSlopeDevice;
     protected volatile CyclingPowerMetricsDevice mCyclingPowerMetricsDevice;
     protected volatile HRVMetricsDevice mHrvMetricsDevice;
@@ -372,6 +375,15 @@ public class DeviceManager {
             mAltitudeFromPositionDevice = new AltitudeFromPositionDevice(mContext, mSensorManager);
         }
 
+        long attFusedAltitudeId = mDeviceDataRepository.getAltitudeAndSlopeAttFusedDeviceId();
+        if (mDeviceDataRepository.isPaired(attFusedAltitudeId)) {
+            try {
+                mAltitudeAndSlopeDevice_ATTFused = new AltitudeAndSlopeDevice_ATTFused(mContext, mSensorManager);
+            } catch (Exception e) {
+                Log.w(TAG, "Could not initialize ATT Fused altitude device: " + e.getMessage());
+            }
+        }
+
         // create the location devices when they are paired.
         LocationManager locationManager = (LocationManager) mContext.getSystemService(Context.LOCATION_SERVICE);
 
@@ -382,6 +394,7 @@ public class DeviceManager {
                 if (DEBUG) Log.i(TAG, "creating GPS location device");
                 try {
                     mSpeedAndLocationDevice_GPS = new SpeedAndLocationDevice_GPS(mContext, mSensorManager);
+                    applyIndoorMode(mSpeedAndLocationDevice_GPS);
                 } catch (Exception e) {
                     Log.w(TAG, "Could not initialize GPS location device: " + e.getMessage());
                 }
@@ -397,8 +410,21 @@ public class DeviceManager {
             if (DEBUG) Log.i(TAG, "creating google fused location device");
             try {
                 mSpeedAndLocationDevice_GoogleFused = new SpeedAndLocationDevice_GoogleFused(mContext, mSensorManager);
+                applyIndoorMode(mSpeedAndLocationDevice_GoogleFused);
             } catch (Exception e) {
                 Log.w(TAG, "Could not initialize Google Fused location device: " + e.getMessage());
+            }
+        }
+
+        long attFusedDeviceId = mDeviceDataRepository.getSpeedAndLocationAttFusedDeviceId();
+        if (mDeviceDataRepository.isPaired(attFusedDeviceId)
+                && TrainingApplication.havePermission(Manifest.permission.ACCESS_FINE_LOCATION)) {
+            if (DEBUG) Log.i(TAG, "creating ATT fused location device");
+            try {
+                mSpeedAndLocationDevice_ATTFused = new SpeedAndLocationDevice_ATTFused(mContext, mSensorManager);
+                applyIndoorMode(mSpeedAndLocationDevice_ATTFused);
+            } catch (Exception e) {
+                Log.w(TAG, "Could not initialize ATT Fused location device: " + e.getMessage());
             }
         }
 
@@ -487,6 +513,7 @@ public class DeviceManager {
                     if (DEBUG) Log.i(TAG, "checkOrInitializeLocationDevices: creating GPS location device");
                     try {
                         mSpeedAndLocationDevice_GPS = new SpeedAndLocationDevice_GPS(mContext, mSensorManager);
+                        applyIndoorMode(mSpeedAndLocationDevice_GPS);
                     } catch (Exception e) {
                         Log.w(TAG, "Could not initialize GPS location device: " + e.getMessage());
                     }
@@ -506,11 +533,28 @@ public class DeviceManager {
                 if (DEBUG) Log.i(TAG, "checkOrInitializeLocationDevices: creating Google Fused location device");
                 try {
                     mSpeedAndLocationDevice_GoogleFused = new SpeedAndLocationDevice_GoogleFused(mContext, mSensorManager);
+                    applyIndoorMode(mSpeedAndLocationDevice_GoogleFused);
                 } catch (Exception e) {
                     Log.w(TAG, "Could not initialize Google Fused location device: " + e.getMessage());
                 }
             } else {
                 mSpeedAndLocationDevice_GoogleFused.checkOrReRegisterLocationUpdates();
+            }
+        }
+
+        long attFusedDeviceId = mDeviceDataRepository.getSpeedAndLocationAttFusedDeviceId();
+        if (mDeviceDataRepository.isPaired(attFusedDeviceId)
+                && TrainingApplication.havePermission(Manifest.permission.ACCESS_FINE_LOCATION)) {
+            if (mSpeedAndLocationDevice_ATTFused == null) {
+                if (DEBUG) Log.i(TAG, "checkOrInitializeLocationDevices: creating ATT Fused location device");
+                try {
+                    mSpeedAndLocationDevice_ATTFused = new SpeedAndLocationDevice_ATTFused(mContext, mSensorManager);
+                    applyIndoorMode(mSpeedAndLocationDevice_ATTFused);
+                } catch (Exception e) {
+                    Log.w(TAG, "Could not initialize ATT Fused location device: " + e.getMessage());
+                }
+            } else {
+                mSpeedAndLocationDevice_ATTFused.checkOrReRegisterLocationUpdates();
             }
         }
     }
@@ -554,8 +598,10 @@ public class DeviceManager {
         mBatteryDevice = null;
         mSpeedAndLocationDevice_GPS = null;
         mSpeedAndLocationDevice_GoogleFused = null;
+        mSpeedAndLocationDevice_ATTFused = null;
         mAltitudeFromPressureDevice = null;
         mAltitudeFromPositionDevice = null;
+        mAltitudeAndSlopeDevice_ATTFused = null;
         mVerticalSpeedAndSlopeDevice = null;
         mCyclingPowerMetricsDevice = null;
         mHrvMetricsDevice = null;
@@ -580,6 +626,7 @@ public class DeviceManager {
                     if (isProviderAvailableSafely(locationManager, LocationManager.GPS_PROVIDER)) {
                         try {
                             mSpeedAndLocationDevice_GPS = new SpeedAndLocationDevice_GPS(mContext, mSensorManager);
+                            applyIndoorMode(mSpeedAndLocationDevice_GPS);
                         } catch (Exception e) {
                             Log.w(TAG, "Could not create GPS location device on pairing change: " + e.getMessage());
                         }
@@ -601,6 +648,7 @@ public class DeviceManager {
                         && TrainingApplication.havePermission(Manifest.permission.ACCESS_FINE_LOCATION)) { // and we have the permission to do so
                     try {
                         mSpeedAndLocationDevice_GoogleFused = new SpeedAndLocationDevice_GoogleFused(mContext, mSensorManager);
+                        applyIndoorMode(mSpeedAndLocationDevice_GoogleFused);
                     } catch (Exception e) {
                         Log.w(TAG, "Could not create Google Fused location device on pairing change: " + e.getMessage());
                     }
@@ -610,6 +658,27 @@ public class DeviceManager {
             } else if (mSpeedAndLocationDevice_GoogleFused != null) { // destroy if unpaired and exists
                 mSpeedAndLocationDevice_GoogleFused.shutDown();
                 mSpeedAndLocationDevice_GoogleFused = null;
+            }
+            return;
+        }
+
+        long attFusedDeviceId = mDeviceDataRepository.getSpeedAndLocationAttFusedDeviceId();
+        if (deviceId == attFusedDeviceId) {
+            if (paired) {
+                if (mSpeedAndLocationDevice_ATTFused == null
+                        && TrainingApplication.havePermission(Manifest.permission.ACCESS_FINE_LOCATION)) {
+                    try {
+                        mSpeedAndLocationDevice_ATTFused = new SpeedAndLocationDevice_ATTFused(mContext, mSensorManager);
+                        applyIndoorMode(mSpeedAndLocationDevice_ATTFused);
+                    } catch (Exception e) {
+                        Log.w(TAG, "Could not create ATT Fused location device on pairing change: " + e.getMessage());
+                    }
+                } else if (mSpeedAndLocationDevice_ATTFused != null) {
+                    mSpeedAndLocationDevice_ATTFused.checkOrReRegisterLocationUpdates();
+                }
+            } else if (mSpeedAndLocationDevice_ATTFused != null) {
+                mSpeedAndLocationDevice_ATTFused.shutDown();
+                mSpeedAndLocationDevice_ATTFused = null;
             }
             return;
         }
@@ -632,6 +701,21 @@ public class DeviceManager {
             } else if (!paired && mAltitudeFromPositionDevice != null) {
                 mAltitudeFromPositionDevice.shutDown();
                 mAltitudeFromPositionDevice = null;
+            }
+            return;
+        }
+
+        long attFusedAltitudeId = mDeviceDataRepository.getAltitudeAndSlopeAttFusedDeviceId();
+        if (deviceId == attFusedAltitudeId) {
+            if (paired && mAltitudeAndSlopeDevice_ATTFused == null) {
+                try {
+                    mAltitudeAndSlopeDevice_ATTFused = new AltitudeAndSlopeDevice_ATTFused(mContext, mSensorManager);
+                } catch (Exception e) {
+                    Log.w(TAG, "Could not initialize ATT Fused altitude device on pairing change: " + e.getMessage());
+                }
+            } else if (!paired && mAltitudeAndSlopeDevice_ATTFused != null) {
+                mAltitudeAndSlopeDevice_ATTFused.shutDown();
+                mAltitudeAndSlopeDevice_ATTFused = null;
             }
             return;
         }
@@ -808,6 +892,11 @@ public class DeviceManager {
             result.add(fused);
         }
 
+        SpeedAndLocationDevice attFused = mSpeedAndLocationDevice_ATTFused;
+        if (attFused != null) {
+            result.add(attFused);
+        }
+
         return result;
     }
 
@@ -817,6 +906,40 @@ public class DeviceManager {
 
     public SpeedAndLocationDevice getSpeedAndLocationDevice_GoogleFused() {
         return mSpeedAndLocationDevice_GoogleFused;
+    }
+
+    public SpeedAndLocationDevice_ATTFused getSpeedAndLocationDevice_ATTFused() {
+        return mSpeedAndLocationDevice_ATTFused;
+    }
+
+    /**
+     * REQ-TRK-077.1: Sets indoor workout mode on DeviceManager and forwards to all active
+     * SpeedAndLocationDevice instances. Newly created SpeedAndLocationDevices also inherit this setting.
+     */
+    public synchronized void setIndoorMode(boolean indoorMode) {
+        mIsIndoorMode = indoorMode;
+        for (SpeedAndLocationDevice device : getActiveSpeedAndLocationDevices()) {
+            if (device != null) {
+                device.setIndoorMode(indoorMode);
+            }
+        }
+    }
+
+    /**
+     * REQ-TRK-077.1: Returns whether indoor mode is active on DeviceManager.
+     */
+    public synchronized boolean isIndoorMode() {
+        return mIsIndoorMode;
+    }
+
+    private void applyIndoorMode(SpeedAndLocationDevice device) {
+        if (device != null && mIsIndoorMode) {
+            device.setIndoorMode(true);
+        }
+    }
+
+    public AltitudeAndSlopeDevice_ATTFused getAltitudeAndSlopeDevice_ATTFused() {
+        return mAltitudeAndSlopeDevice_ATTFused;
     }
 
     public List<MyDevice> getActiveDevicesIncludingSpeedAndLocationDevices() {
@@ -831,6 +954,10 @@ public class DeviceManager {
         AltitudeFromPositionDevice altPosDevice = mAltitudeFromPositionDevice;
         if (altPosDevice != null) {
             result.add(altPosDevice);
+        }
+        AltitudeAndSlopeDevice_ATTFused attFusedAlt = mAltitudeAndSlopeDevice_ATTFused;
+        if (attFusedAlt != null) {
+            result.add(attFusedAlt);
         }
 
         return result;
@@ -906,6 +1033,10 @@ public class DeviceManager {
         if (fused != null) {
             myDeviceList.add(fused);
         }
+        SpeedAndLocationDevice attFused = mSpeedAndLocationDevice_ATTFused;
+        if (attFused != null) {
+            myDeviceList.add(attFused);
+        }
         AltitudeFromPressureDevice altDevice = mAltitudeFromPressureDevice;
         if (altDevice != null) {
             myDeviceList.add(altDevice);
@@ -913,6 +1044,10 @@ public class DeviceManager {
         AltitudeFromPositionDevice altPosDevice = mAltitudeFromPositionDevice;
         if (altPosDevice != null) {
             myDeviceList.add(altPosDevice);
+        }
+        AltitudeAndSlopeDevice_ATTFused attFusedAlt = mAltitudeAndSlopeDevice_ATTFused;
+        if (attFusedAlt != null) {
+            myDeviceList.add(attFusedAlt);
         }
         VerticalSpeedAndSlopeDevice vSpeedDevice = mVerticalSpeedAndSlopeDevice;
         if (vSpeedDevice != null) {

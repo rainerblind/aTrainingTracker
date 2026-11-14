@@ -124,7 +124,8 @@ class DeviceListViewModel @JvmOverloads constructor(
      */
     fun getFilteredDevices(
         spec: DeviceFilterSpec,
-        criteria: DeviceFilterCriteria = DeviceFilterCriteria()
+        criteria: DeviceFilterCriteria = DeviceFilterCriteria(),
+        sortOrder: DeviceSortOrder = DeviceSortOrder.ALPHABETICAL
     ): Flow<List<DeviceUiData>> {
         // We apply another .map transformation to our already-transformed list.
         // This returns a new Flow stream that will re-filter whenever allListDevices changes.
@@ -147,11 +148,11 @@ class DeviceListViewModel @JvmOverloads constructor(
             val filtered = specFiltered.filter { criteria.matches(it) }
 
             val newlyFoundIds = banalServiceRepository.newlyFoundDevicesIds.value
+            val baseComparator = DeviceSortOrder.getComparator(sortOrder)
             filtered.sortedWith(
                 compareByDescending<DeviceUiData> { it.isNewlyDiscovered }
                     .thenByDescending { if (it.isNewlyDiscovered) newlyFoundIds.indexOf(it.id) else -1 }
-                    .thenBy(String.CASE_INSENSITIVE_ORDER) { it.deviceName }
-                    .thenBy { it.id }
+                    .then(baseComparator)
             )
         }
     }

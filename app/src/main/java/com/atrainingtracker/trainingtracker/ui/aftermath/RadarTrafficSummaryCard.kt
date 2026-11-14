@@ -35,6 +35,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -53,6 +54,7 @@ fun RadarTrafficSummaryCard(
     modifier: Modifier = Modifier
 ) {
     if (summary == null || summary.totalVehicles <= 0) return
+    val locale = LocalConfiguration.current.locales[0]
 
     ElevatedCard(
         shape = RoundedCornerShape(12.dp),
@@ -105,14 +107,14 @@ fun RadarTrafficSummaryCard(
                 MetricItem(
                     iconRes = null,
                     label = stringResource(R.string.radar_traffic_density_km),
-                    value = String.format(Locale.getDefault(), "%.1f", summary.vehiclesPerKm),
+                    value = String.format(locale, "%.1f", summary.vehiclesPerKm),
                     layout = MetricLayout.VERTICAL,
                     modifier = Modifier.weight(1f)
                 )
                 MetricItem(
                     iconRes = null,
                     label = stringResource(R.string.radar_traffic_density_hour),
-                    value = String.format(Locale.getDefault(), "%.1f", summary.vehiclesPerHour),
+                    value = String.format(locale, "%.1f", summary.vehiclesPerHour),
                     layout = MetricLayout.VERTICAL,
                     modifier = Modifier.weight(1f)
                 )
@@ -126,14 +128,14 @@ fun RadarTrafficSummaryCard(
                 MetricItem(
                     iconRes = null,
                     label = stringResource(R.string.radar_max_closing_speed),
-                    value = String.format(Locale.getDefault(), "%.1f km/h", summary.maxApproachSpeedMps * 3.6),
+                    value = String.format(locale, "%.1f km/h", summary.maxApproachSpeedMps * 3.6),
                     layout = MetricLayout.VERTICAL,
                     modifier = Modifier.weight(1f)
                 )
                 MetricItem(
                     iconRes = null,
                     label = stringResource(R.string.radar_max_vehicle_speed),
-                    value = String.format(Locale.getDefault(), "%.1f km/h", summary.maxVehicleSpeedMps * 3.6),
+                    value = String.format(locale, "%.1f km/h", summary.maxVehicleSpeedMps * 3.6),
                     layout = MetricLayout.VERTICAL,
                     modifier = Modifier.weight(1f)
                 )

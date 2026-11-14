@@ -62,8 +62,15 @@ public class EquipmentDbHelper extends SQLiteOpenHelper {
     public static final String FRAME_TYPE = "FrameType";
     public static final String ANT_DEVICE_ID = "ANTDeviceId";
     public static final String RETIRED = "Retired";
+    public static final String WHEEL_POSITION = "wheel_position";
+    public static final String TABLE_WHEEL_CIRCUMFERENCE_HISTORY = "WheelCircumferenceHistory";
+    public static final String C_HISTORY_EQUIPMENT_ID = "equipment_id";
+    public static final String C_HISTORY_TIMESTAMP = "timestamp";
+    public static final String C_HISTORY_WHEEL_POSITION = "wheel_position";
+    public static final String C_HISTORY_CIRCUMFERENCE_MM = "circumference_mm";
+    public static final String C_HISTORY_SOURCE = "source";
     static final String DB_NAME = "Equipment.db";
-    public static final int DB_VERSION = 3;
+    public static final int DB_VERSION = 5;
     private static final String TAG = "EquipmentDbHelper";
     private static final boolean DEBUG = com.atrainingtracker.BuildConfig.DEBUG;
     private static final String CREATE_EQUIPMENT_TABLE = "create table " + EQUIPMENT + " ("
@@ -77,7 +84,15 @@ public class EquipmentDbHelper extends SQLiteOpenHelper {
     private static final String CREATE_LINKS_TABLE = "create table " + LINKS + " ("
             // + C_ID          + " INTEGER PRIMARY KEY AUTOINCREMENT, "
             + EQUIPMENT_ID + " int,"
-            + ANT_DEVICE_ID + " int)";
+            + ANT_DEVICE_ID + " int,"
+            + WHEEL_POSITION + " text default 'UNSPECIFIED')";
+    private static final String CREATE_WHEEL_CIRCUMFERENCE_HISTORY_TABLE = "create table " + TABLE_WHEEL_CIRCUMFERENCE_HISTORY + " ("
+            + C_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
+            + C_HISTORY_EQUIPMENT_ID + " int not null, "
+            + C_HISTORY_TIMESTAMP + " int not null, "
+            + C_HISTORY_WHEEL_POSITION + " text not null, "
+            + C_HISTORY_CIRCUMFERENCE_MM + " int not null, "
+            + C_HISTORY_SOURCE + " text);";
     private final Context mContext;
     private static volatile EquipmentDbHelper sInstance;
 
@@ -219,14 +234,38 @@ public class EquipmentDbHelper extends SQLiteOpenHelper {
             values.put(RETIRED, isRetired ? 1 : 0);
             db.update(EQUIPMENT, values, C_ID + "=?", new String[]{String.valueOf(id)});
 
+            // Query existing wheel positions to preserve them during equipment updates
+            java.util.Map<Long, WheelPosition> existingPositions = new java.util.HashMap<>();
+            try {
+                try (Cursor cursor = db.query(LINKS, new String[]{ANT_DEVICE_ID, WHEEL_POSITION},
+                        EQUIPMENT_ID + "=?", new String[]{String.valueOf(id)}, null, null, null)) {
+                    if (cursor != null && cursor.moveToFirst()) {
+                        int devCol = cursor.getColumnIndex(ANT_DEVICE_ID);
+                        int posCol = cursor.getColumnIndex(WHEEL_POSITION);
+                        do {
+                            long devId = cursor.getLong(devCol);
+                            WheelPosition pos = (posCol != -1 && !cursor.isNull(posCol))
+                                    ? WheelPosition.fromString(cursor.getString(posCol))
+                                    : WheelPosition.UNSPECIFIED;
+                            existingPositions.put(devId, pos);
+                        } while (cursor.moveToNext());
+                    }
+                }
+            } catch (Throwable t) {
+                // Graceful fallback when links table is not yet migrated or in unit tests with unmocked query
+                if (DEBUG) Log.d(TAG, "Could not query existing positions in updateEquipment: " + t.getMessage());
+            }
+
             // 2. Clear existing links for this equipment
             db.delete(LINKS, EQUIPMENT_ID + "=?", new String[]{String.valueOf(id)});
 
-            // 3. Insert new links
+            // 3. Insert new links preserving wheel positions
             for (Long deviceId : linkedDeviceIds) {
                 ContentValues linkValues = new ContentValues();
                 linkValues.put(EQUIPMENT_ID, id);
                 linkValues.put(ANT_DEVICE_ID, deviceId);
+                WheelPosition pos = existingPositions.get(deviceId);
+                linkValues.put(WHEEL_POSITION, pos != null ? pos.name() : WheelPosition.UNSPECIFIED.name());
                 db.insert(LINKS, null, linkValues);
             }
 
@@ -278,6 +317,17 @@ public class EquipmentDbHelper extends SQLiteOpenHelper {
      * @param deviceId ID of the sensor device
      */
     public void addDeviceLink(long equipmentId, long deviceId) {
+        addDeviceLink(equipmentId, deviceId, WheelPosition.UNSPECIFIED);
+    }
+
+    /**
+     * REQ-SEN-029.1: Establishes a link with explicit wheel mounting position.
+     *
+     * @param equipmentId   ID of the equipment (bike or shoe)
+     * @param deviceId      ID of the sensor device
+     * @param wheelPosition FRONT, REAR, or UNSPECIFIED
+     */
+    public void addDeviceLink(long equipmentId, long deviceId, @NonNull WheelPosition wheelPosition) {
         if (equipmentId <= 0 || deviceId <= 0) {
             return;
         }
@@ -288,8 +338,16 @@ public class EquipmentDbHelper extends SQLiteOpenHelper {
                 ContentValues values = new ContentValues();
                 values.put(EQUIPMENT_ID, equipmentId);
                 values.put(ANT_DEVICE_ID, deviceId);
+                values.put(WHEEL_POSITION, wheelPosition.name());
                 db.insert(LINKS, null, values);
-                if (DEBUG) Log.d(TAG, "addDeviceLink: linked eq " + equipmentId + " to device " + deviceId);
+                if (DEBUG) Log.d(TAG, "addDeviceLink: linked eq " + equipmentId + " to device " + deviceId + " pos=" + wheelPosition);
+                EquipmentRepository.notifyEquipmentLinksChanged(deviceId);
+            } else {
+                ContentValues values = new ContentValues();
+                values.put(WHEEL_POSITION, wheelPosition.name());
+                db.update(LINKS, values, EQUIPMENT_ID + "=? AND " + ANT_DEVICE_ID + "=?",
+                        new String[]{String.valueOf(equipmentId), String.valueOf(deviceId)});
+                if (DEBUG) Log.d(TAG, "addDeviceLink: updated pos eq " + equipmentId + " to device " + deviceId + " pos=" + wheelPosition);
                 EquipmentRepository.notifyEquipmentLinksChanged(deviceId);
             }
         } catch (Exception e) {
@@ -336,7 +394,208 @@ public class EquipmentDbHelper extends SQLiteOpenHelper {
     }
 
     /**
-     * Deletes equipment and its associated sensor links in one transaction.
+     * REQ-SEN-029.1: Toggles or sets a link with an explicit wheel mounting position.
+     *
+     * @param equipmentId   ID of the equipment (bike or shoe)
+     * @param deviceId      ID of the sensor device
+     * @param isLinked      True to establish link, false to remove
+     * @param wheelPosition FRONT, REAR, or UNSPECIFIED
+     */
+    public void setDeviceLink(long equipmentId, long deviceId, boolean isLinked, @NonNull WheelPosition wheelPosition) {
+        if (isLinked) {
+            addDeviceLink(equipmentId, deviceId, wheelPosition);
+        } else {
+            removeDeviceLink(equipmentId, deviceId);
+        }
+    }
+
+    /**
+     * REQ-SEN-029.1: Updates the wheel mounting position of an existing equipment link.
+     */
+    public void updateDeviceLinkWheelPosition(long equipmentId, long deviceId, @NonNull WheelPosition wheelPosition) {
+        if (equipmentId <= 0 || deviceId <= 0) {
+            return;
+        }
+        SQLiteDatabase db = this.getWritableDatabase();
+        try {
+            ContentValues values = new ContentValues();
+            values.put(WHEEL_POSITION, wheelPosition.name());
+            int updated = db.update(LINKS, values, EQUIPMENT_ID + "=? AND " + ANT_DEVICE_ID + "=?",
+                    new String[]{String.valueOf(equipmentId), String.valueOf(deviceId)});
+            if (DEBUG) Log.d(TAG, "updateDeviceLinkWheelPosition: eq " + equipmentId + ", dev " + deviceId + " -> " + wheelPosition + " (rows: " + updated + ")");
+            if (updated > 0) {
+                EquipmentRepository.notifyEquipmentLinksChanged(deviceId);
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error updating device link wheel position: eq=" + equipmentId + ", dev=" + deviceId, e);
+        }
+    }
+
+    /**
+     * REQ-SEN-029.1: Returns the wheel mounting position for a linked device on equipment.
+     * Returns null if the sensor is not linked to the equipment.
+     */
+    @Nullable
+    public WheelPosition getWheelPosition(long equipmentId, long deviceId) {
+        if (equipmentId <= 0 || deviceId <= 0) {
+            return null;
+        }
+        SQLiteDatabase db = this.getReadableDatabase();
+        try (Cursor cursor = db.query(LINKS, new String[]{WHEEL_POSITION},
+                EQUIPMENT_ID + "=? AND " + ANT_DEVICE_ID + "=?",
+                new String[]{String.valueOf(equipmentId), String.valueOf(deviceId)},
+                null, null, null)) {
+            if (cursor != null && cursor.moveToFirst()) {
+                int col = cursor.getColumnIndex(WHEEL_POSITION);
+                if (col != -1 && !cursor.isNull(col)) {
+                    return WheelPosition.fromString(cursor.getString(col));
+                }
+                return WheelPosition.UNSPECIFIED;
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error querying wheel position for eq=" + equipmentId + ", dev=" + deviceId, e);
+        }
+        return null;
+    }
+
+    /**
+     * REQ-SEN-029.1: Returns a map of linked device IDs to their assigned wheel positions.
+     */
+    @NonNull
+    public java.util.Map<Long, WheelPosition> getDeviceWheelPositionsForEquipment(long equipmentId) {
+        if (equipmentId <= 0) {
+            return Collections.emptyMap();
+        }
+        SQLiteDatabase db = this.getReadableDatabase();
+        java.util.Map<Long, WheelPosition> map = new java.util.HashMap<>();
+        try (Cursor cursor = db.query(LINKS, new String[]{ANT_DEVICE_ID, WHEEL_POSITION},
+                EQUIPMENT_ID + "=?",
+                new String[]{String.valueOf(equipmentId)},
+                null, null, null)) {
+            if (cursor != null && cursor.moveToFirst()) {
+                int devCol = cursor.getColumnIndex(ANT_DEVICE_ID);
+                int posCol = cursor.getColumnIndex(WHEEL_POSITION);
+                do {
+                    long devId = cursor.getLong(devCol);
+                    WheelPosition pos = (posCol != -1 && !cursor.isNull(posCol))
+                            ? WheelPosition.fromString(cursor.getString(posCol))
+                            : WheelPosition.UNSPECIFIED;
+                    map.put(devId, pos);
+                } while (cursor.moveToNext());
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error querying device wheel positions for equipment " + equipmentId, e);
+        }
+        return map;
+    }
+
+    /**
+     * REQ-SEN-030.3: Persists a historical wheel circumference measurement record for a bike.
+     */
+    public long addCircumferenceHistory(long equipmentId, long timestampMs, @NonNull WheelPosition position, int circumferenceMm, @Nullable String source) {
+        if (equipmentId <= 0 || circumferenceMm <= 0) {
+            return -1L;
+        }
+        SQLiteDatabase db = this.getWritableDatabase();
+        ContentValues values = new ContentValues();
+        values.put(C_HISTORY_EQUIPMENT_ID, equipmentId);
+        values.put(C_HISTORY_TIMESTAMP, timestampMs);
+        values.put(C_HISTORY_WHEEL_POSITION, position.name());
+        values.put(C_HISTORY_CIRCUMFERENCE_MM, circumferenceMm);
+        values.put(C_HISTORY_SOURCE, source != null ? source : WheelCircumferenceRecord.SOURCE_GNSS_AUTO);
+        return db.insert(TABLE_WHEEL_CIRCUMFERENCE_HISTORY, null, values);
+    }
+
+    /**
+     * REQ-SEN-030.3: Returns the chronological wheel circumference history records for a bike.
+     */
+    @NonNull
+    public List<WheelCircumferenceRecord> getCircumferenceHistory(long equipmentId) {
+        if (equipmentId <= 0) {
+            return Collections.emptyList();
+        }
+        SQLiteDatabase db = this.getReadableDatabase();
+        List<WheelCircumferenceRecord> list = new ArrayList<>();
+        try (Cursor cursor = db.query(TABLE_WHEEL_CIRCUMFERENCE_HISTORY,
+                new String[]{C_ID, C_HISTORY_EQUIPMENT_ID, C_HISTORY_TIMESTAMP, C_HISTORY_WHEEL_POSITION, C_HISTORY_CIRCUMFERENCE_MM, C_HISTORY_SOURCE},
+                C_HISTORY_EQUIPMENT_ID + "=?",
+                new String[]{String.valueOf(equipmentId)},
+                null, null, C_HISTORY_TIMESTAMP + " ASC")) {
+            if (cursor != null && cursor.moveToFirst()) {
+                int idCol = cursor.getColumnIndex(C_ID);
+                int eqCol = cursor.getColumnIndex(C_HISTORY_EQUIPMENT_ID);
+                int timeCol = cursor.getColumnIndex(C_HISTORY_TIMESTAMP);
+                int posCol = cursor.getColumnIndex(C_HISTORY_WHEEL_POSITION);
+                int circCol = cursor.getColumnIndex(C_HISTORY_CIRCUMFERENCE_MM);
+                int srcCol = cursor.getColumnIndex(C_HISTORY_SOURCE);
+                do {
+                    long id = cursor.getLong(idCol);
+                    long eqId = cursor.getLong(eqCol);
+                    long time = cursor.getLong(timeCol);
+                    WheelPosition pos = WheelPosition.Companion.fromString(cursor.getString(posCol));
+                    int circMm = cursor.getInt(circCol);
+                    String src = cursor.getString(srcCol);
+                    list.add(new WheelCircumferenceRecord(id, eqId, time, pos, circMm, src != null ? src : WheelCircumferenceRecord.SOURCE_GNSS_AUTO));
+                } while (cursor.moveToNext());
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error querying circumference history for equipment " + equipmentId, e);
+        }
+        return list;
+    }
+
+    /**
+     * REQ-SEN-030.3: Clears or resets circumference history for an equipment item.
+     */
+    public int clearCircumferenceHistory(long equipmentId) {
+        if (equipmentId <= 0) {
+            return 0;
+        }
+        SQLiteDatabase db = this.getWritableDatabase();
+        return db.delete(TABLE_WHEEL_CIRCUMFERENCE_HISTORY, C_HISTORY_EQUIPMENT_ID + "=?", new String[]{String.valueOf(equipmentId)});
+    }
+
+    /**
+     * REQ-SEN-030.2: Finds the assigned wheel position for a hardware sensor on a specific equipment item.
+     */
+    @NonNull
+    public WheelPosition getWheelPositionForDevice(long equipmentId, long antDeviceId) {
+        if (equipmentId <= 0 || antDeviceId <= 0) {
+            return WheelPosition.UNSPECIFIED;
+        }
+        WheelPosition pos = getWheelPosition(equipmentId, antDeviceId);
+        return pos != null ? pos : WheelPosition.UNSPECIFIED;
+    }
+
+    /**
+     * REQ-SEN-030.2: Finds the assigned wheel position for a hardware sensor across active (non-retired) links.
+     */
+    @NonNull
+    public WheelPosition getWheelPositionForDevice(long antDeviceId) {
+        if (antDeviceId <= 0) {
+            return WheelPosition.UNSPECIFIED;
+        }
+        SQLiteDatabase db = this.getReadableDatabase();
+        String query = "SELECT " + LINKS + "." + WHEEL_POSITION +
+                " FROM " + LINKS +
+                " INNER JOIN " + EQUIPMENT + " ON " + LINKS + "." + EQUIPMENT_ID + " = " + EQUIPMENT + "." + C_ID +
+                " WHERE " + LINKS + "." + ANT_DEVICE_ID + "=? AND " + EQUIPMENT + "." + RETIRED + "=0" +
+                " LIMIT 1";
+        try (Cursor cursor = db.rawQuery(query, new String[]{String.valueOf(antDeviceId)})) {
+            if (cursor != null && cursor.moveToFirst()) {
+                int posCol = cursor.getColumnIndex(WHEEL_POSITION);
+                if (posCol != -1 && !cursor.isNull(posCol)) {
+                    return WheelPosition.Companion.fromString(cursor.getString(posCol));
+                }
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error querying wheel position for device " + antDeviceId, e);
+        }
+        return WheelPosition.UNSPECIFIED;
+    }
+
+    /**
+     * Deletes equipment, its circumference history, and its associated sensor links in one transaction.
      */
     public void deleteEquipment(long id) {
         if (id <= 0) {
@@ -345,6 +604,7 @@ public class EquipmentDbHelper extends SQLiteOpenHelper {
         SQLiteDatabase db = this.getWritableDatabase();
         db.beginTransaction();
         try {
+            db.delete(TABLE_WHEEL_CIRCUMFERENCE_HISTORY, C_HISTORY_EQUIPMENT_ID + "=?", new String[]{String.valueOf(id)});
             db.delete(LINKS, EQUIPMENT_ID + "=?", new String[]{String.valueOf(id)});
             db.delete(EQUIPMENT, C_ID + "=?", new String[]{String.valueOf(id)});
             db.setTransactionSuccessful();
@@ -574,21 +834,51 @@ public class EquipmentDbHelper extends SQLiteOpenHelper {
     public void setEquipmentLinks(int antDeviceId, @NonNull List<String> equipmentList) {
         if (DEBUG) Log.d(TAG, "setEquipmentLinks: " + antDeviceId);
 
-        // first of all, delete all existing links
         SQLiteDatabase db = this.getWritableDatabase();
-        db.delete(LINKS, ANT_DEVICE_ID + "=?", new String[]{antDeviceId + ""});
 
-        // insert new links
-        ContentValues values = new ContentValues();
-        values.put(ANT_DEVICE_ID, antDeviceId);
+        // Query existing wheel positions to preserve them during equipment link updates (REQ-SEN-029, ATT-7752)
+        java.util.Map<Long, WheelPosition> existingPositions = new java.util.HashMap<>();
+        try {
+            try (Cursor cursor = db.query(LINKS, new String[]{EQUIPMENT_ID, WHEEL_POSITION},
+                    ANT_DEVICE_ID + "=?", new String[]{String.valueOf(antDeviceId)}, null, null, null)) {
+                if (cursor != null && cursor.moveToFirst()) {
+                    int eqCol = cursor.getColumnIndex(EQUIPMENT_ID);
+                    int posCol = cursor.getColumnIndex(WHEEL_POSITION);
+                    do {
+                        long eqId = cursor.getLong(eqCol);
+                        WheelPosition pos = (posCol != -1 && !cursor.isNull(posCol))
+                                ? WheelPosition.fromString(cursor.getString(posCol))
+                                : WheelPosition.UNSPECIFIED;
+                        existingPositions.put(eqId, pos);
+                    } while (cursor.moveToNext());
+                }
+            }
+        } catch (Throwable t) {
+            // Graceful fallback when links table is not yet migrated or in unit tests with unmocked query
+            if (DEBUG) Log.d(TAG, "Could not query existing positions in setEquipmentLinks: " + t.getMessage());
+        }
 
-        for (String equipmentName : equipmentList) {
+        db.beginTransaction();
+        try {
+            // first of all, delete all existing links
+            db.delete(LINKS, ANT_DEVICE_ID + "=?", new String[]{String.valueOf(antDeviceId)});
 
-            if (DEBUG)
-                Log.d(TAG, "save " + equipmentName + ", id=" + getEquipmentId(db, equipmentName));
-            // ContentValues values = new ContentValues();
-            values.put(EQUIPMENT_ID, getEquipmentId(db, equipmentName));
-            db.insert(LINKS, null, values);
+            // insert new links preserving wheel positions
+            for (String equipmentName : equipmentList) {
+                long eqId = getEquipmentId(db, equipmentName);
+                if (DEBUG)
+                    Log.d(TAG, "save " + equipmentName + ", id=" + eqId);
+                ContentValues values = new ContentValues();
+                values.put(ANT_DEVICE_ID, antDeviceId);
+                values.put(EQUIPMENT_ID, eqId);
+                WheelPosition pos = existingPositions.get(eqId);
+                values.put(WHEEL_POSITION, pos != null ? pos.name() : WheelPosition.UNSPECIFIED.name());
+                db.insert(LINKS, null, values);
+            }
+            db.setTransactionSuccessful();
+            if (DEBUG) Log.d(TAG, "Successfully updated equipment links for device " + antDeviceId + " with " + equipmentList.size() + " items");
+        } finally {
+            db.endTransaction();
         }
 
         if (DEBUG) Log.d(TAG, "inserted");
@@ -775,10 +1065,11 @@ public class EquipmentDbHelper extends SQLiteOpenHelper {
     public void onCreate(@NonNull SQLiteDatabase db) {
         db.execSQL(CREATE_EQUIPMENT_TABLE);
         db.execSQL(CREATE_LINKS_TABLE);
+        db.execSQL(CREATE_WHEEL_CIRCUMFERENCE_HISTORY_TABLE);
 
         if (DEBUG) Log.d(TAG, "onCreated sql: " + CREATE_EQUIPMENT_TABLE);
         if (DEBUG) Log.d(TAG, "onCreated sql: " + CREATE_LINKS_TABLE);
-
+        if (DEBUG) Log.d(TAG, "onCreated sql: " + CREATE_WHEEL_CIRCUMFERENCE_HISTORY_TABLE);
     }
 
     @Override
@@ -788,6 +1079,12 @@ public class EquipmentDbHelper extends SQLiteOpenHelper {
         }
         if (oldVersion < 3) {
             EquipmentReconciliationHelper.reconcileDuplicates(mContext, db, null, null);
+        }
+        if (oldVersion < 4) {
+            db.execSQL("ALTER TABLE " + LINKS + " ADD COLUMN " + WHEEL_POSITION + " TEXT DEFAULT 'UNSPECIFIED'");
+        }
+        if (oldVersion < 5) {
+            db.execSQL(CREATE_WHEEL_CIRCUMFERENCE_HISTORY_TABLE);
         }
         if (DEBUG) Log.d(TAG, "onUpgraded from " + oldVersion + " to " + newVersion);
     }

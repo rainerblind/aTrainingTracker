@@ -467,11 +467,11 @@ When the user navigates to a cluster detail view via this workout button, pressi
 **Invariants**: Workout editing via clicking the rest of `WorkoutHeader` MUST NOT be compromised; existing database schemas, clustering calculations, and cluster-to-recordings navigation (`REQ-SET-057`) MUST remain unaltered.
 
 ### REQ-SET-059: Explicit Workout Cluster Management & Assignment in Editor [Verified]
-- **Tests**: `TST-SET-043`, `TST-SET-050`, `TST-SET-064`
+- **Tests**: `TST-SET-043`, `TST-SET-050`, `TST-SET-064`, `TST-SET-104`, `TST-SET-105`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit, Integration
-- **Implementation**: `EditWorkoutScreen.kt`, `EditWorkoutViewModel.kt`, `WorkoutClusterComponents.kt`, `WorkoutClusterEngine.kt`, `WorkoutRepository.kt`
+- **Implementation**: `EditWorkoutScreen.kt`, `EditWorkoutViewModel.kt`, `WorkoutClusterComponents.kt`, `WorkoutClusterEngine.kt`, `WorkoutRepository.kt`, `WorkoutClustersScreen.kt`, `WorkoutClusterHeatmapScreen.kt`, `WorkoutClustersViewModel.kt`
 - **Rationale**: The system SHALL provide an explicit, dedicated cluster management selector within `EditWorkoutScreen` positioned immediately below the workout name input field:
 1. *Harmonized Selector UI*: The editor SHALL display an explicit cluster selector field displaying the route cluster icon (`ic_favorite_route`), label (`cluster_naming__selected_route_label`), and current cluster name (or `cluster_naming__leave_unclustered` / `unclustered` if unassigned), matching the look and feel of the TCX import naming dialog.
 2. *Unified Assignment Dialog*: Tapping the cluster selector SHALL present an assignment dialog providing:
@@ -479,6 +479,14 @@ When the user navigates to a cluster detail view via this workout button, pressi
 • **Create New ("Neuer Cluster...")**: An explicit action to create a brand new Workout Cluster from the workout session's spatial fingerprint (Start, End, Apex, Distance) and assign it to the workout.
 • **Candidate Clusters**: Spatially similar cluster candidates sorted by similarity score, displaying hit counts and sport types.
 3. *Atomic Hit Count & Identity Maintenance*: Reassigning or clearing a cluster SHALL atomically synchronize `WorkoutSummaries.CLUSTER_ID` and update cluster hit counts in `WorkoutClusterDatabaseManager`.
+4. *Move Workout Dialog Unassignment & Reactive State Synchronization (ATT-7754)*: Tapping the "Einheit verschieben" button (`R.string.cluster_move_workout_title`) across `WorkoutClustersScreen` and `WorkoutClusterHeatmapScreen` SHALL present the cluster selection sheet (`WorkoutClusterSelectionDialog`) offering:
+• **Leave Unclustered ("Keiner Route zuordnen")**: Rendered when the workout is currently assigned to a cluster (`clusterId > 0`), which unassigns the session (`clusterId = -1L`), atomically decrements the previous cluster's hit count, and triggers reactive refresh of `WorkoutClusterRepository`.
+• **Create New ("Neue Lieblingsstrecke erstellen")**: Creates a new cluster from the workout's spatial fingerprint.
+• **Reactive Inspection State Sync**: When returning from `EditWorkoutScreen` or modifying cluster assignments in `WorkoutClustersScreen`, `inspectedWorkout` SHALL immediately update its state to reflect the latest workout summary.
+5. *Immediate Workout Name Update on Cluster Assignment & Reassignment (ATT-7667)*:
+• Selecting or creating a route cluster in `EditWorkoutScreen` SHALL immediately update the workout name input field to the cluster-formatted name (or resolved custom cluster name) and reset the internal manual-edit tracking flag (`userManuallyChangedWorkoutName = false`), ensuring subsequent background repository flow emissions adopt the newly assigned cluster identity.
+• Unassigning a cluster SHALL reset `userManuallyChangedWorkoutName = false`, clear cluster fields (`clusterId = -1L`, `clusterName = null`), and restore the unclustered default workout name if the user had not manually typed a custom name post-selection.
+• Explicit manual text edits entered into the workout name field post-cluster-selection SHALL re-engage manual tracking (`userManuallyChangedWorkoutName = true`) and MUST NOT be overwritten by subsequent background repository updates.
 **Acceptance Criteria**:
 • *Given* `EditWorkoutScreen` for any workout,
 • *When* viewed,
@@ -489,6 +497,15 @@ When the user navigates to a cluster detail view via this workout button, pressi
 • *Given* the cluster assignment dialog,
 • *When* the user chooses "Create New" with a name,
 • *Then* a new cluster SHALL be created from the workout and assigned to it.
+• *Given* `EditWorkoutScreen` with a workout assigned to a cluster or unclustered,
+• *When* the user selects a different route cluster or creates a new cluster,
+• *Then* the workout name SHALL immediately update to the cluster's formatted name and subsequent repository data emissions SHALL retain that name.
+• *Given* `EditWorkoutScreen` with a cluster assigned,
+• *When* the user chooses "Leave Unclustered",
+• *Then* the workout SHALL be unassigned from any cluster (`clusterId = -1L`) and the name SHALL revert to the default unclustered seed name.
+• *Given* `EditWorkoutScreen` after selecting a cluster,
+• *When* the user types a custom workout name into the text field,
+• *Then* subsequent repository emissions SHALL preserve the user's custom workout name.
 **Invariants**: Existing sport type and equipment selections MUST NOT be mutated without user confirmation; non-target workout metrics MUST be preserved; existing hit count recalculation logic MUST NOT be corrupted.
 
 ### REQ-SET-060: Selectable Cluster Markers [Verified]
@@ -1787,23 +1804,25 @@ d. Step 4 (`OnboardingStep.BATTERY_OPTIMIZATION`): Doze mode background survival
 - **Priority**: High
 - **Type**: Non-Functional
 - **Verification Method**: Unit / Review
-- **Implementation**: `ProFeatureManager.kt`, `AdvancedTuningScreen.kt`, `SettingsDataStore.kt`
+- **Implementation**: `ProFeatureManager.kt`, `DeveloperMenuScreen.kt`, `AppNavigationDrawer.kt`, `NavRoutes.kt`, `ATrainingTrackerApp.kt`, `AdvancedTuningScreen.kt`, `SettingsDataStore.kt`
 - **Rationale**: Provide deterministic local and UI testing capabilities without requiring live Play Billing credentials, while maintaining strict release-build security invariants.
 - **Description**:
 1. *Unified ProFeatureManager (`REQ-SET-087.1`)*:
 • `ProFeatureManager` SHALL compute effective Pro status via priority order: `BuildConfig.DEBUG` Tier Override > Lifetime Pioneer Status > Active Google Play Subscription.
 • `isProActive()` SHALL return `true` if any tier $\ge$ `BRONZE` or `isPioneerEarlyAdopter == true`.
-2. *Debug Tier Override Selector (`REQ-SET-087.2`)*:
-• `AdvancedTuningScreen` SHALL expose a "Supporter Tier Override" dropdown/segmented selector offering options `[NONE, PIONEER, BRONZE, SILVER, GOLD, DIAMOND]`, strictly enclosed within `if (BuildConfig.DEBUG)` (Rule 22).
-• In release builds, `BuildConfig.DEBUG` override code SHALL be completely inert or compiled out, preventing unauthorized tier escalation.
+2. *Debug Developer Menu & Supporter Tier Override (`REQ-SET-087.2`)*:
+• The system SHALL provide a dedicated `DeveloperMenuScreen` accessible via `R.id.drawer_developer_menu` in the navigation drawer, strictly displayed and accessible when `BuildConfig.DEBUG == true`.
+• `DeveloperMenuScreen` SHALL host the Supporter Tier Override selector (`[NONE, PIONEER, BRONZE, SILVER, GOLD, DIAMOND]`), Jubilee Celebration dialog preview, and N+1 Garage upgrade previews / flag reset.
+• `AdvancedTuningScreen` SHALL NOT display developer or supporter tier overrides.
+• In release builds (`BuildConfig.DEBUG == false`), the Developer Menu drawer entry, screen route, and override mechanisms SHALL be completely omitted or inert, preventing unauthorized tier escalation.
 
 **Acceptance Criteria (Given-When-Then)**:
 • *Given* a debug build of the app,
-• *When* the tester selects "SILVER" in the Advanced Tuning Supporter Tier Override,
-• *Then* `ProFeatureManager.effectiveTier` evaluates to `SILVER`, `isProActive()` returns `true`, and unlimited device pairing is enabled.
+• *When* the user opens the Navigation Drawer,
+• *Then* `Developer Menu` is displayed, and selecting it opens `DeveloperMenuScreen` containing the Supporter Tier Override, Jubilee Celebration preview, and Garage Detector previews.
 • *Given* a release build,
 • *When* inspected,
-• *Then* the debug override control is absent from `AdvancedTuningScreen` and cannot be activated via UI.
+• *Then* the Developer Menu drawer entry and debug overrides are completely absent.
 
 **Invariants**: Release builds must never permit arbitrary tier override; ProFeatureManager resolution must be thread-safe.
 
