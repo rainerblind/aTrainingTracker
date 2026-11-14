@@ -2206,6 +2206,24 @@
   5. *Clean-Room Regression Suite Execution*:
      - Verify `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.migration.*" --tests "com.atrainingtracker.trainingtracker.cloud.healthconnect.*"`.
 
+### TST-MIG-051: **Lossless FIT Workout Metadata, HRV Protocol & Bike Radar Round-Trip Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-MIG-053`
+- **Component**: `FitFileWriter.java`, `FitWorkoutParser.kt`, `ParsedWorkoutData.kt`, `LegacyImportEngine.kt`, `FitLosslessRoundTripTest.kt`
+- **Jira**: `ATT-7747`
+- **Test Description**:
+  1. *FIT Session Metadata Developer Fields Round-Trip Test (`FitLosslessRoundTripTest.kt`)*:
+     - Verify `FitFileWriter` writes developer fields for `workout_name`, `notes`, `equipment_name`, `method`, `goal`, `is_commute`, `is_trainer`, and `is_race` onto `SessionMesg`.
+     - Verify `FitWorkoutParser` decodes these developer fields from `SessionMesg` into `ParsedWorkoutData` with 100% value parity.
+  2. *Standard FIT Session Metrics Serialization Test (`FitLosslessRoundTripTest.kt`)*:
+     - Verify `normalizedPower`, `intensityFactor`, `trainingStressScore`, and `totalWork` are serialized onto `SessionMesg` by `FitFileWriter` and parsed into `ParsedWorkoutData` by `FitWorkoutParser`.
+  3. *Bike Radar Developer Fields Import Test (`FitLosslessRoundTripTest.kt`)*:
+     - Verify `FitWorkoutParser` decodes developer fields on `RecordMesg` into `bufferedSamples` and `foundSensors` for threat count, vehicle count, passing speed, passing distance, and large vehicle count.
+  4. *Equipment Matching & Ingestion Test (`FitLosslessRoundTripTest.kt`)*:
+     - Verify `LegacyImportEngine.importFromFitResult` matches `equipmentName` to existing equipment database records and sets `equipmentId`.
+  5. *Third-Party FIT Backward Compatibility Test (`FitLosslessRoundTripTest.kt`)*:
+     - Verify parsing standard FIT files lacking developer fields produces null metadata without crashing or throwing exceptions.
+
+
 
 
 

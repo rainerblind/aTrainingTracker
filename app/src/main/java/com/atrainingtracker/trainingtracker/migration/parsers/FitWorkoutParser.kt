@@ -280,6 +280,43 @@ object FitWorkoutParser {
                     foundSensors.add(SensorType.TEMPERATURE)
                 }
 
+                // Decode Garmin FIT V2.0 Developer Fields for Bike Radar (REQ-MIG-053.4 / ATT-7747)
+                record.developerFields?.forEach { devField ->
+                    val fieldName = devField.name
+                    val num = devField.num
+                    if (fieldName == "radar_current" || num == 0) {
+                        val count = devField.integerValue ?: (devField.value as? Number)?.toInt()
+                        if (count != null) {
+                            values.put(SensorType.RADAR_THREAT_COUNT.name, count)
+                            foundSensors.add(SensorType.RADAR_THREAT_COUNT)
+                        }
+                    } else if (fieldName == "radar_total" || num == 1) {
+                        val total = devField.integerValue ?: (devField.value as? Number)?.toInt()
+                        if (total != null) {
+                            values.put(SensorType.RADAR_VEHICLE_COUNT.name, total)
+                            foundSensors.add(SensorType.RADAR_VEHICLE_COUNT)
+                        }
+                    } else if (fieldName == "passing_speed" || num == 2) {
+                        val speed = devField.doubleValue ?: (devField.value as? Number)?.toDouble()
+                        if (speed != null) {
+                            values.put(SensorType.RADAR_APPROACH_SPEED_mps.name, speed)
+                            foundSensors.add(SensorType.RADAR_APPROACH_SPEED_mps)
+                        }
+                    } else if (fieldName == "passing_distance" || num == 4) {
+                        val dist = devField.doubleValue ?: (devField.value as? Number)?.toDouble()
+                        if (dist != null) {
+                            values.put(SensorType.RADAR_PASSING_DISTANCE_m.name, dist)
+                            foundSensors.add(SensorType.RADAR_PASSING_DISTANCE_m)
+                        }
+                    } else if (fieldName == "large_vehicle_count" || num == 5) {
+                        val large = devField.integerValue ?: (devField.value as? Number)?.toInt()
+                        if (large != null) {
+                            values.put(SensorType.RADAR_LARGE_VEHICLE_COUNT.name, large)
+                            foundSensors.add(SensorType.RADAR_LARGE_VEHICLE_COUNT)
+                        }
+                    }
+                }
+
                 // Determine lapNr
                 var sampleLapNr = 0L
                 if (parsedLaps.size > 1) {
@@ -343,10 +380,64 @@ object FitWorkoutParser {
                 }
             }
 
+            // Decode Garmin FIT V2.0 Developer Fields on SessionMesg (REQ-MIG-053.3 / ATT-7747)
+            var metaWorkoutName: String? = null
+            var metaWorkoutNotes: String? = null
+            var metaEquipmentName: String? = null
+            var metaMethod: String? = null
+            var metaGoal: String? = null
+            var metaIsCommute = false
+            var metaIsTrainer = false
+            var metaIsRace = false
+
+            primarySession?.developerFields?.forEach { devField ->
+                val fieldName = devField.name
+                val num = devField.num
+                if (fieldName == "workout_name" || num == 0) {
+                    metaWorkoutName = devField.stringValue?.takeIf { it.isNotBlank() }
+                        ?: (devField.value as? String)?.takeIf { it.isNotBlank() }
+                } else if (fieldName == "notes" || num == 1) {
+                    metaWorkoutNotes = devField.stringValue?.takeIf { it.isNotBlank() }
+                        ?: (devField.value as? String)?.takeIf { it.isNotBlank() }
+                } else if (fieldName == "equipment_name" || num == 2) {
+                    metaEquipmentName = devField.stringValue?.takeIf { it.isNotBlank() }
+                        ?: (devField.value as? String)?.takeIf { it.isNotBlank() }
+                } else if (fieldName == "method" || num == 3) {
+                    metaMethod = devField.stringValue?.takeIf { it.isNotBlank() }
+                        ?: (devField.value as? String)?.takeIf { it.isNotBlank() }
+                } else if (fieldName == "goal" || num == 4) {
+                    metaGoal = devField.stringValue?.takeIf { it.isNotBlank() }
+                        ?: (devField.value as? String)?.takeIf { it.isNotBlank() }
+                } else if (fieldName == "is_commute" || num == 5) {
+                    val raw = devField.integerValue ?: (devField.value as? Number)?.toInt()
+                    metaIsCommute = (raw ?: 0) > 0
+                } else if (fieldName == "is_trainer" || num == 6) {
+                    val raw = devField.integerValue ?: (devField.value as? Number)?.toInt()
+                    metaIsTrainer = (raw ?: 0) > 0
+                } else if (fieldName == "is_race" || num == 7) {
+                    val raw = devField.integerValue ?: (devField.value as? Number)?.toInt()
+                    metaIsRace = (raw ?: 0) > 0
+                }
+            }
+
+            if (!metaIsTrainer) {
+                if (primarySession?.subSport == com.garmin.fit.SubSport.INDOOR_CYCLING ||
+                    primarySession?.subSport == com.garmin.fit.SubSport.TREADMILL ||
+                    primarySession?.sport == com.garmin.fit.Sport.FITNESS_EQUIPMENT) {
+                    metaIsTrainer = true
+                }
+            }
+
             Result.success(
                 ParsedWorkoutData(
-                    workoutName = null,
-                    workoutNotes = null,
+                    workoutName = metaWorkoutName,
+                    workoutNotes = metaWorkoutNotes,
+                    equipmentName = metaEquipmentName,
+                    method = metaMethod,
+                    goal = metaGoal,
+                    isCommute = metaIsCommute,
+                    isTrainer = metaIsTrainer,
+                    isRace = metaIsRace,
                     sportName = primarySession?.sport?.name,
                     bSportType = bSportType,
                     resolvedSportId = resolvedSportId,
