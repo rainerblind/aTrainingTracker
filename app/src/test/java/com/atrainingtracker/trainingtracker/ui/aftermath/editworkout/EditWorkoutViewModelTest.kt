@@ -24,6 +24,7 @@ import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.banalservice.database.SportTypeDatabaseManager
 import com.atrainingtracker.trainingtracker.database.EquipmentAndSportTypeDiscoveryManager
+import com.atrainingtracker.trainingtracker.database.WorkoutCluster
 import com.atrainingtracker.trainingtracker.database.WorkoutClusterEngine
 import com.atrainingtracker.trainingtracker.repositories.EquipmentRepository
 import com.atrainingtracker.trainingtracker.repositories.SimpleSportTypeInfo
@@ -85,6 +86,14 @@ class EditWorkoutViewModelTest {
         every { mockApplication.getString(R.string.all_shoes) } returns "+ all shoes +"
         every { mockApplication.getString(R.string.all_bikes) } returns "+ all bikes +"
         every { mockApplication.getString(R.string.no_equipment) } returns "- none -"
+        every {
+            mockApplication.getString(R.string.cluster_autoname_format, *anyVararg())
+        } answers {
+            val formatArgs = args[1] as Array<*>
+            val name = formatArgs[0]
+            val count = formatArgs[1]
+            "$name #$count"
+        }
 
         mockWorkoutRepository = mockk(relaxed = true)
         mockEquipmentRepository = mockk(relaxed = true)
@@ -244,5 +253,155 @@ class EditWorkoutViewModelTest {
         assertNotNull(updated)
         assertFalse("Commute must be false", updated!!.commute)
         assertFalse("Trainer must remain false", updated.trainer)
+    }
+
+    // --- TST-SET-105: Immediate Workout Name Synchronization on Route Cluster Change (ATT-7667) ---
+
+    @Test
+    fun testApplyClusterIdentity_updatesWorkoutName_andResetsManualFlag() {
+        // Given: ViewModel loaded with existing workout and user manually modified workout name (TST-SET-105.1)
+        val initial = createTestWorkout()
+        val viewModel = createViewModel(initial)
+        viewModel.onWorkoutNameChanged("Manual User Title")
+        assertTrue("User manual flag must be true after typing", viewModel.userManuallyChangedWorkoutName)
+        assertEquals("Manual User Title", viewModel.workoutData.value?.workoutName)
+
+        val targetCluster = WorkoutCluster(
+            id = 55L,
+            name = "Morning Route",
+            startLat = 48.0,
+            startLng = 11.0,
+            endLat = 48.01,
+            endLng = 11.01,
+            maxDispLat = 48.005,
+            maxDispLng = 11.005,
+            refDistance = 10000.0,
+            hitCount = 2,
+            hasCounter = true,
+            bSportType = BSportType.BIKE,
+            probableSportId = 1L
+        )
+
+        // When: User explicitly applies cluster identity
+        viewModel.applyClusterIdentity(targetCluster)
+
+        // Then: Workout name must update immediately to formatted name ("Morning Route #3"), and manual flag resets
+        val updated = viewModel.workoutData.value
+        assertNotNull(updated)
+        assertEquals("Morning Route #3", updated!!.workoutName)
+        assertEquals(55L, updated.clusterId)
+        assertEquals("Morning Route", updated.clusterName)
+        assertFalse("User manual flag must be reset to false after selecting cluster", viewModel.userManuallyChangedWorkoutName)
+        verify { mockWorkoutRepository.assignClusterToWorkout(initial.id, 55L) }
+    }
+
+    @Test
+    fun testRepositoryEmission_whenManualFlagFalse_preservesNewClusterName() {
+        // Given: Cluster identity applied and manual flag false (TST-SET-105.2)
+        val initial = createTestWorkout()
+        val viewModel = createViewModel(initial)
+
+        val targetCluster = WorkoutCluster(
+            id = 55L,
+            name = "Morning Route",
+            startLat = 48.0,
+            startLng = 11.0,
+            endLat = 48.01,
+            endLng = 11.01,
+            maxDispLat = 48.005,
+            maxDispLng = 11.005,
+            refDistance = 10000.0,
+            hitCount = 2,
+            hasCounter = true,
+            bSportType = BSportType.BIKE,
+            probableSportId = 1L
+        )
+        viewModel.applyClusterIdentity(targetCluster)
+        assertFalse(viewModel.userManuallyChangedWorkoutName)
+
+        // When: Repository emits an update with saved cluster data
+        val repoWorkoutUpdate = initial.copy(
+            clusterId = 55L,
+            clusterName = "Morning Route",
+            workoutName = "Morning Route #3"
+        )
+        initialWorkoutLoadedLiveEvent.value = repoWorkoutUpdate
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        // Then: Formatted cluster name is preserved (not overwritten by stale name)
+        assertEquals("Morning Route #3", viewModel.workoutData.value?.workoutName)
+        assertEquals(55L, viewModel.workoutData.value?.clusterId)
+    }
+
+    @Test
+    fun testUnassignCluster_resetsManualFlag_andRevertsToFallbackName() {
+        // Given: Workout with assigned cluster and manual flag set (TST-SET-105.3)
+        val initial = createTestWorkout().copy(
+            clusterId = 55L,
+            clusterName = "Morning Route",
+            workoutName = "Morning Route #3",
+            fileBaseName = "test_42"
+        )
+        val viewModel = createViewModel(initial)
+        viewModel.onWorkoutNameChanged("Custom Title")
+        assertTrue(viewModel.userManuallyChangedWorkoutName)
+
+        // When: Unassigning cluster
+        viewModel.unassignCluster()
+
+        // Then: Cluster cleared, manual flag reset, and name reverted to fallback fileBaseName
+        val updated = viewModel.workoutData.value
+        assertNotNull(updated)
+        assertEquals(-1L, updated!!.clusterId)
+        assertNull(updated.clusterName)
+        assertEquals("test_42", updated.workoutName)
+        assertFalse("Manual flag must be reset to false on unassign", viewModel.userManuallyChangedWorkoutName)
+        verify { mockWorkoutRepository.unassignClusterFromWorkout(initial.id) }
+    }
+
+    @Test
+    fun testOnWorkoutNameChanged_setsManualFlag_andProtectsAgainstRepoEmissions() {
+        // Given: Workout with assigned cluster (TST-SET-105.4)
+        val initial = createTestWorkout().copy(
+            clusterId = 55L,
+            clusterName = "Morning Route",
+            workoutName = "Morning Route #3"
+        )
+        val viewModel = createViewModel(initial)
+
+        // When: User types a custom workout name
+        viewModel.onWorkoutNameChanged("Custom Athlete Title")
+        assertTrue(viewModel.userManuallyChangedWorkoutName)
+        assertEquals("Custom Athlete Title", viewModel.workoutData.value?.workoutName)
+
+        // And: Background repository emits an update with default/cluster name
+        val repoWorkoutUpdate = initial.copy(
+            workoutName = "Morning Route #3"
+        )
+        initialWorkoutLoadedLiveEvent.value = repoWorkoutUpdate
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        // Then: Custom athlete title must be protected against repo overwrite
+        assertEquals("Custom Athlete Title", viewModel.workoutData.value?.workoutName)
+    }
+
+    @Test
+    fun testCreateNewCluster_resetsManualFlag_andUpdatesWorkoutName() {
+        // Given: Workout loaded and user had previously modified workout name (TST-SET-105.5)
+        val initial = createTestWorkout()
+        val viewModel = createViewModel(initial)
+        viewModel.onWorkoutNameChanged("Stale Custom Name")
+        assertTrue(viewModel.userManuallyChangedWorkoutName)
+
+        // When: Creating a new cluster with counter
+        viewModel.createNewCluster("Morning Loop", hasCounter = true)
+
+        // Then: Workout name updates to new cluster formatted name and manual flag is reset
+        val updated = viewModel.workoutData.value
+        assertNotNull(updated)
+        assertEquals("Morning Loop", updated!!.clusterName)
+        assertEquals("Morning Loop", updated.workoutName)
+        assertFalse("Manual flag must be reset to false on creating new cluster", viewModel.userManuallyChangedWorkoutName)
+        verify { mockWorkoutRepository.createNewClusterFromWorkout(any<WorkoutData>(), "Morning Loop", true, null) }
     }
 }

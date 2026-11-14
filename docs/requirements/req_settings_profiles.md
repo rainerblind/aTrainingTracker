@@ -467,7 +467,7 @@ When the user navigates to a cluster detail view via this workout button, pressi
 **Invariants**: Workout editing via clicking the rest of `WorkoutHeader` MUST NOT be compromised; existing database schemas, clustering calculations, and cluster-to-recordings navigation (`REQ-SET-057`) MUST remain unaltered.
 
 ### REQ-SET-059: Explicit Workout Cluster Management & Assignment in Editor [Verified]
-- **Tests**: `TST-SET-043`, `TST-SET-050`, `TST-SET-064`, `TST-SET-104`
+- **Tests**: `TST-SET-043`, `TST-SET-050`, `TST-SET-064`, `TST-SET-104`, `TST-SET-105`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit, Integration
@@ -483,6 +483,10 @@ When the user navigates to a cluster detail view via this workout button, pressi
 • **Leave Unclustered ("Keiner Route zuordnen")**: Rendered when the workout is currently assigned to a cluster (`clusterId > 0`), which unassigns the session (`clusterId = -1L`), atomically decrements the previous cluster's hit count, and triggers reactive refresh of `WorkoutClusterRepository`.
 • **Create New ("Neue Lieblingsstrecke erstellen")**: Creates a new cluster from the workout's spatial fingerprint.
 • **Reactive Inspection State Sync**: When returning from `EditWorkoutScreen` or modifying cluster assignments in `WorkoutClustersScreen`, `inspectedWorkout` SHALL immediately update its state to reflect the latest workout summary.
+5. *Immediate Workout Name Update on Cluster Assignment & Reassignment (ATT-7667)*:
+• Selecting or creating a route cluster in `EditWorkoutScreen` SHALL immediately update the workout name input field to the cluster-formatted name (or resolved custom cluster name) and reset the internal manual-edit tracking flag (`userManuallyChangedWorkoutName = false`), ensuring subsequent background repository flow emissions adopt the newly assigned cluster identity.
+• Unassigning a cluster SHALL reset `userManuallyChangedWorkoutName = false`, clear cluster fields (`clusterId = -1L`, `clusterName = null`), and restore the unclustered default workout name if the user had not manually typed a custom name post-selection.
+• Explicit manual text edits entered into the workout name field post-cluster-selection SHALL re-engage manual tracking (`userManuallyChangedWorkoutName = true`) and MUST NOT be overwritten by subsequent background repository updates.
 **Acceptance Criteria**:
 • *Given* `EditWorkoutScreen` for any workout,
 • *When* viewed,
@@ -493,6 +497,15 @@ When the user navigates to a cluster detail view via this workout button, pressi
 • *Given* the cluster assignment dialog,
 • *When* the user chooses "Create New" with a name,
 • *Then* a new cluster SHALL be created from the workout and assigned to it.
+• *Given* `EditWorkoutScreen` with a workout assigned to a cluster or unclustered,
+• *When* the user selects a different route cluster or creates a new cluster,
+• *Then* the workout name SHALL immediately update to the cluster's formatted name and subsequent repository data emissions SHALL retain that name.
+• *Given* `EditWorkoutScreen` with a cluster assigned,
+• *When* the user chooses "Leave Unclustered",
+• *Then* the workout SHALL be unassigned from any cluster (`clusterId = -1L`) and the name SHALL revert to the default unclustered seed name.
+• *Given* `EditWorkoutScreen` after selecting a cluster,
+• *When* the user types a custom workout name into the text field,
+• *Then* subsequent repository emissions SHALL preserve the user's custom workout name.
 **Invariants**: Existing sport type and equipment selections MUST NOT be mutated without user confirmation; non-target workout metrics MUST be preserved; existing hit count recalculation logic MUST NOT be corrupted.
 
 ### REQ-SET-060: Selectable Cluster Markers [Verified]

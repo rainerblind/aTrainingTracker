@@ -102,7 +102,7 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
     val clusterSuggestions: StateFlow<List<Pair<WorkoutCluster, Double>>> = _clusterSuggestions.asStateFlow()
 
     var userManuallyChangedWorkoutName: Boolean = false
-        private set
+        internal set
 
     init {
         loadWorkoutData()
@@ -192,6 +192,10 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
     fun updateWorkoutName(newName: String) {
         userManuallyChangedWorkoutName = true
         _workoutData.update { it?.copy(workoutName = newName) }
+    }
+
+    fun onWorkoutNameChanged(newName: String) {
+        updateWorkoutName(newName)
     }
 
     /**
@@ -465,6 +469,7 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
     }
 
     fun applyClusterIdentity(cluster: WorkoutCluster) {
+        userManuallyChangedWorkoutName = false
         val displayCount = cluster.hitCount + 1
         val formattedName = WorkoutClusterEngine.formatClusterWorkoutName(application, cluster.name, displayCount, cluster.hasCounter)
         _workoutData.update { current ->
@@ -485,10 +490,13 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
     }
 
     fun unassignCluster() {
+        userManuallyChangedWorkoutName = false
         _workoutData.update { current ->
+            val fallbackName = current?.fileBaseName?.takeIf { it.isNotBlank() } ?: current?.sportName ?: current?.workoutName ?: ""
             current?.copy(
                 clusterId = -1L,
-                clusterName = null
+                clusterName = null,
+                workoutName = fallbackName
             )
         }
         repository.unassignClusterFromWorkout(workoutId)
@@ -497,12 +505,8 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
     fun createNewCluster(customName: String, hasCounter: Boolean = true) {
         val trimmedName = customName.trim()
         val current = _workoutData.value
-        val customWorkoutName = if (userManuallyChangedWorkoutName) current?.workoutName else null
-        val resolvedWorkoutName = if (userManuallyChangedWorkoutName) {
-            current?.workoutName ?: trimmedName
-        } else {
-            WorkoutClusterEngine.formatClusterWorkoutName(application, trimmedName, 1, hasCounter)
-        }
+        userManuallyChangedWorkoutName = false
+        val resolvedWorkoutName = WorkoutClusterEngine.formatClusterWorkoutName(application, trimmedName, 1, hasCounter)
 
         // Synchronous in-memory update so UI reflects the new route and name immediately (REQ-SET-072)
         _workoutData.update { curr ->
@@ -513,9 +517,9 @@ class EditWorkoutViewModel(application: Application, private val workoutId: Long
         }
 
         if (current != null) {
-            repository.createNewClusterFromWorkout(current, trimmedName, hasCounter, customWorkoutName)
+            repository.createNewClusterFromWorkout(current, trimmedName, hasCounter, null)
         } else {
-            repository.createNewClusterFromWorkout(workoutId, trimmedName, hasCounter, customWorkoutName)
+            repository.createNewClusterFromWorkout(workoutId, trimmedName, hasCounter, null)
         }
     }
 

@@ -1165,6 +1165,24 @@
   5. *Inspected Workout Reactive Update Test (`TST-SET-104.5`)*:
   • Verify `inspectedWorkout` in `WorkoutClustersScreen` updates when cluster assignment changes or upon return from editing.
 
+### TST-SET-105: **Immediate Workout Name Synchronization on Route Cluster Change** [Verified]
+- **Requirement(s)**: `REQ-SET-059`
+- **Component**: `EditWorkoutViewModel.kt`, `EditWorkoutScreen.kt`, `WorkoutClusterEngine.kt`
+- **Jira**: `ATT-7667`
+- **Status**: Verified
+- **Test Description**:
+  1. *Immediate Workout Name Update on Cluster Selection (`TST-SET-105.1`)*:
+  • Verify that calling `applyClusterIdentity(cluster)` immediately sets `workoutName` to the cluster-formatted name in `_workoutData.value` and resets `userManuallyChangedWorkoutName` to `false`.
+  2. *Repository Emission Name Preservation (`TST-SET-105.2`)*:
+  • Verify that asynchronous emissions from `repository.initialWorkoutLoaded` adopt the new cluster's formatted name when `userManuallyChangedWorkoutName` is `false`.
+  3. *Unassign Cluster Name Reversion (`TST-SET-105.3`)*:
+  • Verify that calling `unassignCluster()` resets `clusterId = -1L`, `clusterName = null`, resets `userManuallyChangedWorkoutName = false`, and restores the fallback unclustered workout name.
+  4. *User Manual Override Protection (`TST-SET-105.4`)*:
+  • Verify that calling `onWorkoutNameChanged(...)` after cluster selection sets `userManuallyChangedWorkoutName = true`, and subsequent repository updates do NOT overwrite the manually entered name.
+  5. *New Cluster Creation Name Synchronization (`TST-SET-105.5`)*:
+  • Verify that calling `createNewCluster(...)` immediately sets `workoutName` to the formatted name and resets `userManuallyChangedWorkoutName` to `false`.
+
+
 
 
 
