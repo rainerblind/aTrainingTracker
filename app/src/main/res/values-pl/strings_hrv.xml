@@ -29,9 +29,9 @@
 
     <!-- Training Zones Tab (ATT-7317 / REQ-TRK-061.4) -->
     <string name="tab_hrv_dfa_a1">HRV (DFA α1)</string>
-    <string name="hrv_zone_aerobic_base_label">Baza Tlenowa (Strefa 2)</string>
-    <string name="hrv_zone_threshold_transition_label">Przejście Progowe (Strefa 3)</string>
-    <string name="hrv_zone_anaerobic_label">Wysoka Intensywność / Beztlenowa (Strefa 4)</string>
+    <string name="hrv_zone_aerobic_base_label">Baza Tlenowa</string>
+    <string name="hrv_zone_threshold_transition_label">Przejście Progowe</string>
+    <string name="hrv_zone_anaerobic_label">Wysoka Intensywność / Beztlenowa</string>
     <string name="hrv_t1_aerobic_threshold_label">Próg Tlenowy T1 (HRVT1)</string>
     <string name="hrv_t2_anaerobic_threshold_label">Próg Beztlenowy T2 (HRVT2)</string>
     <string name="hrv_zone_aerobic_base_desc">Tlenowa baza wytrzymałościowa, niski stres autonomiczny</string>

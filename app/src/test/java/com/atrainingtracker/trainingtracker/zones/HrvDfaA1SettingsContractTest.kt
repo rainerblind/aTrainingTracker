@@ -255,4 +255,26 @@ class HrvDfaA1SettingsContractTest {
             content.contains("R.string.hrv_t2_anaerobic_threshold_desc")
         )
     }
+
+    @Test
+    fun testHrvSettings_gaugeToggleAndPreviewBarContracts() {
+        val activityFile = resolveActivityFile()
+        assertTrue("ZonesSettingsActivity.kt must exist", activityFile.exists())
+        val content = activityFile.readText()
+
+        assertTrue(
+            "HrvDfaA1SettingsContent must provide zone_display_gauge toggle (REQ-TRK-061.4 / ATT-7742)",
+            content.contains("R.string.zone_display_gauge") && content.contains("displayOptions.showGauge")
+        )
+        assertTrue(
+            "HrvDfaA1SettingsContent previewFieldState must bind showBar to displayOptions.showGauge (ATT-7742)",
+            content.contains("showBar = displayOptions.showGauge")
+        )
+        assertTrue(
+            "HrvDfaA1SettingsContent preview gauge must pass localized labels (ATT-7742)",
+            content.contains("R.string.hrv_preview_pill_aerobic") &&
+                content.contains("R.string.hrv_preview_pill_transition") &&
+                content.contains("R.string.hrv_preview_pill_anaerobic")
+        )
+    }
 }

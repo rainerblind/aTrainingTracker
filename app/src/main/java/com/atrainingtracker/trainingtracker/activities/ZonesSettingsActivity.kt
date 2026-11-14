@@ -1312,6 +1312,16 @@ fun HrvDfaA1SettingsContent(
                         scope.launch { appSettingsDataStore.saveHrvZoneDisplayOptions(updated) }
                     }
                 )
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+
+                ZoneDisplayToggleRow(
+                    label = stringResource(R.string.zone_display_gauge),
+                    checked = displayOptions.showGauge,
+                    onCheckedChange = {
+                        val updated = displayOptions.copy(showGauge = it)
+                        scope.launch { appSettingsDataStore.saveHrvZoneDisplayOptions(updated) }
+                    }
+                )
             }
         }
 
@@ -1364,10 +1374,16 @@ fun HrvDfaA1SettingsContent(
             3 -> TTColor.Zone3
             else -> TTColor.Zone4
         }
+        val localizedHrvLabels = listOf(
+            stringResource(R.string.hrv_preview_pill_aerobic),
+            stringResource(R.string.hrv_preview_pill_transition),
+            stringResource(R.string.hrv_preview_pill_anaerobic)
+        )
         val previewGaugeState = HrvZoneIndicator.calculateZoneGaugeState(
             alpha1 = previewAlpha1,
             t1 = t1,
-            t2 = t2
+            t2 = t2,
+            zoneLabels = localizedHrvLabels
         )
 
         val previewFieldState = SensorFieldState(
@@ -1384,7 +1400,7 @@ fun HrvDfaA1SettingsContent(
             zoneDisplayOptions = displayOptions,
             zoneGaugeState = previewGaugeState,
             showValue = true,
-            showBar = true
+            showBar = displayOptions.showGauge
         )
 
         val isSystemDark = isSystemInDarkTheme()

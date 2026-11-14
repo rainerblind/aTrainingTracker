@@ -29,9 +29,9 @@
 
     <!-- Training Zones Tab (ATT-7317 / REQ-TRK-061.4) -->
     <string name="tab_hrv_dfa_a1">VFC (DFA α1)</string>
-    <string name="hrv_zone_aerobic_base_label">Base Aérobie (Zone 2)</string>
-    <string name="hrv_zone_threshold_transition_label">Transition de Seuil (Zone 3)</string>
-    <string name="hrv_zone_anaerobic_label">Haute Intensité / Anaérobie (Zone 4)</string>
+    <string name="hrv_zone_aerobic_base_label">Base Aérobie</string>
+    <string name="hrv_zone_threshold_transition_label">Transition de Seuil</string>
+    <string name="hrv_zone_anaerobic_label">Haute Intensité / Anaérobie</string>
     <string name="hrv_t1_aerobic_threshold_label">Seuil Aérobie T1 (HRVT1)</string>
     <string name="hrv_t2_anaerobic_threshold_label">Seuil Anaérobie T2 (HRVT2)</string>
     <string name="hrv_zone_aerobic_base_desc">Allure d\'endurance de base aérobie, faible stress autonome</string>

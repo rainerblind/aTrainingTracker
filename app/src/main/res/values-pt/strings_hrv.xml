@@ -29,9 +29,9 @@
 
     <!-- Training Zones Tab (ATT-7317 / REQ-TRK-061.4) -->
     <string name="tab_hrv_dfa_a1">VFC (DFA α1)</string>
-    <string name="hrv_zone_aerobic_base_label">Base Aeróbica (Zona 2)</string>
-    <string name="hrv_zone_threshold_transition_label">Transição de Limiar (Zona 3)</string>
-    <string name="hrv_zone_anaerobic_label">Alta Intensidade / Anaeróbico (Zona 4)</string>
+    <string name="hrv_zone_aerobic_base_label">Base Aeróbica</string>
+    <string name="hrv_zone_threshold_transition_label">Transição de Limiar</string>
+    <string name="hrv_zone_anaerobic_label">Alta Intensidade / Anaeróbico</string>
     <string name="hrv_t1_aerobic_threshold_label">Limiar Aeróbico T1 (HRVT1)</string>
     <string name="hrv_t2_anaerobic_threshold_label">Limiar Anaeróbico T2 (HRVT2)</string>
     <string name="hrv_zone_aerobic_base_desc">Ritmo de resistência base aeróbica, baixo estresse autonômico</string>

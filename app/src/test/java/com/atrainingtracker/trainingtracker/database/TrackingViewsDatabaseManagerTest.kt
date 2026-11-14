@@ -556,6 +556,11 @@ class TrackingViewsDatabaseManagerTest {
         assertTrue(TrackingViewsDatabaseManager.TrackingViewsDbHelper.isBarSupported(SensorType.W_PRIME_BAL, com.atrainingtracker.banalservice.BSportType.BIKE))
         assertFalse(TrackingViewsDatabaseManager.TrackingViewsDbHelper.isBarSupported(SensorType.W_PRIME_BAL, com.atrainingtracker.banalservice.BSportType.RUN))
 
+        // HRV DFA a1: all sports (RUN, BIKE, etc.)
+        assertTrue(TrackingViewsDatabaseManager.TrackingViewsDbHelper.isBarSupported(SensorType.HRV_DFA_A1, com.atrainingtracker.banalservice.BSportType.RUN))
+        assertTrue(TrackingViewsDatabaseManager.TrackingViewsDbHelper.isBarSupported(SensorType.HRV_DFA_A1, com.atrainingtracker.banalservice.BSportType.BIKE))
+        assertTrue(TrackingViewsDatabaseManager.TrackingViewsDbHelper.isBarSupportedSensorType(SensorType.HRV_DFA_A1))
+
         // Others: false
         assertFalse(TrackingViewsDatabaseManager.TrackingViewsDbHelper.isBarSupported(SensorType.SPEED_mps, com.atrainingtracker.banalservice.BSportType.BIKE))
         assertFalse(TrackingViewsDatabaseManager.TrackingViewsDbHelper.isBarSupported(null as SensorType?, com.atrainingtracker.banalservice.BSportType.BIKE))

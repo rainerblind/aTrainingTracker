@@ -1874,8 +1874,8 @@
 
 ### TST-TRK-061: **Live HRV Telemetry, Category Partitioning & Aerobic Threshold Guidance Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-TRK-061` (`REQ-TRK-061.1`..`REQ-TRK-061.5`)
-- **Component**: `SensorType.java`, `ActivityType.java`, `DfaA1Formatter.java`, `SensorFieldView.kt`, `SensorFieldState.kt`, `TrackingViewModel.kt`, `TuningPreferencesDataStore.kt`, `HrvInfoBottomSheet.kt`, `strings_hrv.xml`
-- **Jira**: `ATT-3542`, `ATT-6715`
+- **Component**: `SensorType.java`, `ActivityType.java`, `DfaA1Formatter.java`, `SensorFieldView.kt`, `SensorFieldState.kt`, `TrackingViewModel.kt`, `TuningPreferencesDataStore.kt`, `HrvInfoBottomSheet.kt`, `HrvZoneIndicator.kt`, `TrackingViewsDatabaseManager.java`, `strings_hrv.xml`
+- **Jira**: `ATT-3542`, `ATT-6715`, `ATT-7742`
 - **Test Description**:
   1. *Sensor Category & Profile Gating Contract Tests (`TST-TRK-061.1`, `SensorCategoryAndSelectorContractTest.kt`, `ActivityTypeTest.kt`)*:
   • Verify `HRV_DFA_A1`, `HRV_RMSSD`, and `HRV_SDNN` belong to `HEART_RATE_AND_ENERGY`.
@@ -1890,15 +1890,18 @@
   • Verify $\alpha_{1,\text{T2}} \le \alpha_1 \le \alpha_{1,\text{T1}}$ resolves to `TTColor.Zone3` (Orange).
   • Verify $\alpha_1 < \alpha_{1,\text{T2}}$ resolves to `TTColor.Zone4` (Red).
   • Verify `HRV_DFA_A1` resolves its `ZoneDisplayOptions` directly from dedicated persisted HRV display options (`SettingsSnapshot.hrvDisplayOptions`) across all sport profiles (`RUN`, `BIKE`, `UNKNOWN`).
-  • Verify `HrvZoneIndicator.calculateZoneGaugeState` returns exactly 3 segments (`TTColor.Zone2`, `TTColor.Zone3`, `TTColor.Zone4`), `zoneLabels = listOf("Z2", "Z3", "Z4")`, dynamic proportional `segmentWeights`, and monotonic `needleFraction` clamped in $[0.05, 0.95]$.
-  • Verify `ZoneGaugeBar` displays correct under-segment badge `"Z2"`, `"Z3"`, or `"Z4"` when `zoneLabels` is provided.
+  • Verify `HrvZoneIndicator.calculateZoneGaugeState` returns exactly 3 segments (`TTColor.Zone2`, `TTColor.Zone3`, `TTColor.Zone4`), default `zoneLabels = listOf("Aerobic", "Transition", "Anaerobic")` (`HRV_ZONE_LABELS`), or caller-supplied localized zone labels, dynamic proportional `segmentWeights`, and monotonic `needleFraction` clamped in $[0.05, 0.95]$.
+  • Verify `ZoneGaugeBar` displays correct under-segment badge (e.g. localized Aerobic/Transition/Anaerobic) when `zoneLabels` is provided without `"Z2"`, `"Z3"`, or `"Z4"`.
   • Verify backward-compatibility of `ZoneGaugeState` and `ZoneGaugeBar` when `zoneLabels == null` (HR 5-zone `"Z1"`..`"Z5"`, Power 7-zone `"Z1"`..`"Z7"`).
-  4. *Training Zones 4th Tab & Invariant Tests (`TST-TRK-061.4`, `HrvDfaA1SettingsContractTest.kt`, `TuningPreferencesDataStoreDfaA1Test.kt`)*:
+  4. *Training Zones 4th Tab & Invariant Tests (`TST-TRK-061.4`, `HrvDfaA1SettingsContractTest.kt`, `TuningPreferencesDataStoreDfaA1Test.kt`, `TrackingViewsDatabaseManagerTest.java`)*:
   • Verify `ZoneSettingsScreen` renders 4th tab `R.string.tab_hrv_dfa_a1` with unified 3-zone colored dual-thumb `RangeSlider` (`0.30..1.20`), fine-tuning $0.01$ step steppers, single-line Reset to Defaults action ($0.75 / 0.50$), and interactive `SensorFieldView` preview pills.
+  • Verify `HrvDfaA1SettingsContent` exposes `zone_display_gauge` row toggling `ZoneDisplayOptions.showGauge`.
+  • Verify `TrackingViewsDatabaseManager.isBarSupported(SensorType.HRV_DFA_A1, sport)` and `isBarSupportedSensorType(SensorType.HRV_DFA_A1)` return `true` for all sports.
+  • Verify `strings_hrv.xml` zone labels across all 9 locales do not contain `(Zone 2)`, `(Zone 3)`, `(Zone 4)`.
   • Verify default values $\alpha_{1,\text{T1}} = 0.75f$ and $\alpha_{1,\text{T2}} = 0.50f$.
   • Verify invariant enforcement: setting $T_1$ or $T_2$ enforces $T_1 \ge T_2 + 0.05f$ and bounds $[0.30, 1.20]$.
   • Verify single-line wrapping constraints on header Reset button and `HrvZoneBandCard` title (`Modifier.weight(1f)`) and range badge (`maxLines = 1, softWrap = false`).
-  • Verify 100% 9-language translation parity for 5 localized guidance/helper string resources and zero hardcoded English text in `ZonesSettingsActivity.kt`.
+  • Verify 100% 9-language translation parity for localized guidance/helper string resources and zero hardcoded English text in `ZonesSettingsActivity.kt`.
   • Verify top bar calculator/history buttons are hidden when the 4th tab is active.
   • Verify removal of redundant $T_1$ and $T_2$ sliders from `PhysiologyModelsSection.kt`.
   5. *HrvInfoBottomSheet Dynamic Thresholds & 9-Language Localization Audit (`TST-TRK-061.5`, `HrvInfoBottomSheetTest.kt`, `TranslationParityTest.kt`)*:

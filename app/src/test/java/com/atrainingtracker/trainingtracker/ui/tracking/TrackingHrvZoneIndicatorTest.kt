@@ -104,9 +104,18 @@ class TrackingHrvZoneIndicatorTest {
         org.junit.Assert.assertNotNull(state)
         assertEquals(1, state?.activeZoneIndex)
         assertEquals(HrvZoneIndicator.HRV_SEGMENT_COLORS, state?.segmentColors)
-        assertEquals(listOf("Z2", "Z3", "Z4"), state?.zoneLabels)
+        assertEquals(listOf("Aerobic", "Transition", "Anaerobic"), state?.zoneLabels)
         assertEquals(3, state?.segmentColors?.size)
         org.junit.Assert.assertTrue((state?.needleFraction ?: 0f) in 0.05f..0.45f)
+    }
+
+    @Test
+    fun testCalculateZoneGaugeState_customZoneLabels() {
+        val customLabels = listOf("Aerob", "Übergang", "Anaerob")
+        val state = HrvZoneIndicator.calculateZoneGaugeState(0.65, zoneLabels = customLabels)
+        org.junit.Assert.assertNotNull(state)
+        assertEquals(2, state?.activeZoneIndex)
+        assertEquals(customLabels, state?.zoneLabels)
     }
 
     @Test

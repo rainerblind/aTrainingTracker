@@ -2193,6 +2193,9 @@ public class TrackingViewsDatabaseManager {
 
         public static boolean isBarSupported(@Nullable SensorType sensorType, @Nullable BSportType sportType) {
             if (sensorType == null || sportType == null) return false;
+            if (sensorType == SensorType.HRV_DFA_A1) {
+                return true;
+            }
             if (sensorType == SensorType.HR) {
                 return sportType == BSportType.RUN || sportType == BSportType.BIKE;
             }
@@ -2212,7 +2215,8 @@ public class TrackingViewsDatabaseManager {
             return sensorType == SensorType.HR ||
                     sensorType == SensorType.POWER ||
                     sensorType == SensorType.PEDAL_POWER_BALANCE ||
-                    sensorType == SensorType.W_PRIME_BAL;
+                    sensorType == SensorType.W_PRIME_BAL ||
+                    sensorType == SensorType.HRV_DFA_A1;
         }
 
         /*******************************************************************************************

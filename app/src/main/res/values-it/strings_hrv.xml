@@ -29,9 +29,9 @@
 
     <!-- Training Zones Tab (ATT-7317 / REQ-TRK-061.4) -->
     <string name="tab_hrv_dfa_a1">HRV (DFA α1)</string>
-    <string name="hrv_zone_aerobic_base_label">Base Aerobica (Zone 2)</string>
-    <string name="hrv_zone_threshold_transition_label">Transizione di Soglia (Zone 3)</string>
-    <string name="hrv_zone_anaerobic_label">Alta Intensità / Anaerobico (Zone 4)</string>
+    <string name="hrv_zone_aerobic_base_label">Base Aerobica</string>
+    <string name="hrv_zone_threshold_transition_label">Transizione di Soglia</string>
+    <string name="hrv_zone_anaerobic_label">Alta Intensità / Anaerobico</string>
     <string name="hrv_t1_aerobic_threshold_label">Soglia Aerobica T1 (HRVT1)</string>
     <string name="hrv_t2_anaerobic_threshold_label">Soglia Anaerobica T2 (HRVT2)</string>
     <string name="hrv_zone_aerobic_base_desc">Ritmo di resistenza di base aerobica, basso stress autonomico</string>
