@@ -285,4 +285,49 @@ class RadarTrafficSimulatorTest {
             RadarTrafficSimulator.simulatedDevice = null
         }
     }
+
+    /**
+     * TST-CON-042.3: Non-Destructive Simulator Preemption.
+     * Verifies onPhysicalHardwareConnected() transitions isSimulating to false without calling
+     * RadarStateRepository.reset(), preserving active audioSnoozeState and lightMode.
+     */
+    @Test
+    fun testOnPhysicalHardwareConnected_preservesSnoozeAndLightMode() = runTest {
+        val testDispatcher = StandardTestDispatcher(testScheduler)
+        val testScope = TestScope(testDispatcher)
+
+        // Pre-configure active audio snooze and light mode
+        val activeSnooze = RadarAudioSnoozeState(isSnoozed = true, mode = RadarAudioSnoozeMode.SNOOZE_15M)
+        RadarStateRepository.updateState(
+            RadarState(
+                connectionState = RadarConnectionState.DISCONNECTED,
+                lightMode = RadarLightMode.DAY_FLASH,
+                isLightControlSupported = true,
+                audioSnoozeState = activeSnooze,
+                source = RadarSource.SIMULATOR
+            )
+        )
+
+        RadarTrafficSimulator.start(
+            scenario = RadarScenario.SINGLE_CAR,
+            scope = testScope,
+            tickIntervalMs = 125L
+        )
+        testScope.runCurrent()
+        assertTrue(RadarTrafficSimulator.isSimulating)
+
+        // Preempt simulator via physical hardware event
+        RadarTrafficSimulator.onPhysicalHardwareConnected()
+        assertFalse(RadarTrafficSimulator.isSimulating)
+        assertFalse(RadarTrafficSimulator.isSimulatingFlow.value)
+        assertNull(RadarTrafficSimulator.activeScenario)
+
+        // Verify repository state: connectionState DISCONNECTED, but snooze & light mode preserved intact
+        val state = RadarStateRepository.getState()
+        assertEquals(RadarConnectionState.DISCONNECTED, state.connectionState)
+        assertEquals(RadarLightMode.DAY_FLASH, state.lightMode)
+        assertTrue(state.isLightControlSupported)
+        assertTrue(state.audioSnoozeState.isSnoozed)
+        assertEquals(RadarAudioSnoozeMode.SNOOZE_15M, state.audioSnoozeState.mode)
+    }
 }

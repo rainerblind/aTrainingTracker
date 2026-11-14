@@ -2282,6 +2282,23 @@
   • When only `BLE` is connected and `ANT_PLUS` has not received data, verify `ANTBikeRadarDevice.isReceivingData()` returns `false`.
   • When `ANT_PLUS` receives data, verify `ANTBikeRadarDevice.isReceivingData()` returns `true`.
 
+### TST-CON-042: **Radar Application State Preservation During Preemption & Hardware Packet Ingestion Test Suite** [Verified]
+- **Requirement(s)**: `REQ-CON-042` (`REQ-CON-042.1`..`REQ-CON-042.3`)
+- **Component**: `RadarTrafficSimulator.kt`, `BTLERadarDevice.java`, `ANTBikeRadarDevice.kt`, `RadarStateRepository.kt`, `RadarTrafficSimulatorTest.kt`, `BTLERadarDeviceTest.kt`, `ANTBikeRadarDeviceTest.kt`
+- **Jira**: `ATT-7574`
+- **Test Description**:
+  1. *Physical Telemetry Packet Application State Preservation (`TST-CON-042.1`, `BTLERadarDeviceTest.kt`, `ANTBikeRadarDeviceTest.kt`)*:
+  • Given `RadarStateRepository` with an active non-default `lightMode` (e.g. `DAY_FLASH`) and active `audioSnoozeState` (e.g. `SNOOZE_15M`),
+  • When real BLE packets (`processTargets()`) or ANT+ packets (`parseTargetsPage()` / `publishTargets()`) arrive,
+  • Verify that `RadarStateRepository.getState()` continues to report the active `lightMode` and `audioSnoozeState` without being wiped to `OFF` or `INACTIVE`.
+  2. *Simulator Preemption State Preservation (`TST-CON-042.2`, `RadarTrafficSimulatorTest.kt`)*:
+  • Given `RadarTrafficSimulator` actively running a simulation scenario (`isSimulating == true`),
+  • When `onPhysicalHardwareConnected()` is invoked,
+  • Verify that `RadarTrafficSimulator.isSimulating` transitions to `false` and the simulation job terminates immediately,
+  • And verify that `RadarStateRepository.reset()` is NOT invoked, preserving any pre-existing application `lightMode` or `audioSnoozeState`.
+  3. *Gated Simulator Preemption Call-Site Verification (`TST-CON-042.3`, `BTLERadarDeviceTest.kt`, `ANTBikeRadarDeviceTest.kt`)*:
+  • Verify that when `RadarTrafficSimulator.isSimulating` is `false`, `onPhysicalHardwareConnected()` is bypassed upon incoming target frames.
+
 ### TST-TRK-064: **1-Tap Radar Audio Snooze, Peloton Sync & Urban Suppression Test Suite** [Verified]
 - **Requirement(s)**: `REQ-TRK-064` (`REQ-TRK-064.1`..`REQ-TRK-064.7`)
 - **Component**: `RadarSnoozeController.kt`, `RadarAlertManager.kt`, `RadarEdgeOverlay.kt`, `RadarLightQuickSwitchSheet.kt`, `RadarState.kt`, `RadarStateRepository.kt`, `BTLERadarDevice.java`, `TuningPreferencesDataStore.kt`, `RadarSettingsSection.kt`, `strings_radar.xml`

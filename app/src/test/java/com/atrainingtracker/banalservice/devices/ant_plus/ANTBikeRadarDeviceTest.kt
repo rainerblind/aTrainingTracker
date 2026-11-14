@@ -26,7 +26,10 @@ import android.util.Log
 import androidx.core.content.ContextCompat
 import com.atrainingtracker.banalservice.database.DevicesDatabaseManager
 import com.atrainingtracker.banalservice.devices.radar.LaneState
+import com.atrainingtracker.banalservice.devices.radar.RadarAudioSnoozeMode
+import com.atrainingtracker.banalservice.devices.radar.RadarAudioSnoozeState
 import com.atrainingtracker.banalservice.devices.radar.RadarConnectionState
+import com.atrainingtracker.banalservice.devices.radar.RadarLightMode
 import com.atrainingtracker.banalservice.devices.radar.RadarScenario
 import com.atrainingtracker.banalservice.devices.radar.RadarSource
 import com.atrainingtracker.banalservice.devices.radar.RadarState
@@ -731,5 +734,44 @@ class ANTBikeRadarDeviceTest {
         assertFalse("isReceivingData must be false after ANT+ watchdog timeout", radarDevice.isReceivingData())
         // Global repository remains CONNECTED on BLE
         assertEquals(RadarConnectionState.CONNECTED, RadarStateRepository.getState().connectionState)
+    }
+
+    /**
+     * TST-CON-042.2 & TST-CON-042.4: ANT+ Packet Ingestion Preserves Snooze & Light Mode.
+     * Verifies parseTargetsPage() and publishTargets() retain active audioSnoozeState and lightMode,
+     * and bypass simulator preemption when isSimulating is false.
+     */
+    @Test
+    fun testDecodeBroadcastData_preservesAudioSnoozeAndLightMode() {
+        // Pre-configure active audio snooze and light mode in repository
+        val activeSnooze = RadarAudioSnoozeState(isSnoozed = true, mode = RadarAudioSnoozeMode.SNOOZE_30M)
+        RadarStateRepository.updateState(
+            RadarState(
+                connectionState = RadarConnectionState.DISCONNECTED,
+                lightMode = RadarLightMode.PELOTON,
+                isLightControlSupported = true,
+                audioSnoozeState = activeSnooze,
+                source = RadarSource.ANT_PLUS
+            )
+        )
+
+        // Ensure simulator is not running
+        assertFalse(RadarTrafficSimulator.isSimulating)
+
+        // ANT+ receives packet and publishes CONNECTED
+        val validPayload = byteArrayOf(
+            0x30.toByte(), 0x01.toByte(), 0x00.toByte(),
+            0x10.toByte(), 0x00.toByte(), 0x00.toByte(),
+            0x05.toByte(), 0x00.toByte()
+        )
+        radarDevice.decodeBroadcastData(validPayload)
+
+        // Verify repository retains active snooze and light mode
+        val state = RadarStateRepository.getState()
+        assertEquals(RadarConnectionState.CONNECTED, state.connectionState)
+        assertEquals(RadarLightMode.PELOTON, state.lightMode)
+        assertTrue(state.audioSnoozeState.isSnoozed)
+        assertEquals(RadarAudioSnoozeMode.SNOOZE_30M, state.audioSnoozeState.mode)
+        assertEquals(RadarSource.ANT_PLUS, state.source)
     }
 }

@@ -384,10 +384,11 @@ object RadarTrafficSimulator {
         elapsedMs: Long,
         aggregator: RadarWindowAggregator = windowAggregator
     ): RadarState {
+        val currentState = RadarStateRepository.getState()
         val frame = generateFrame(scenario, elapsedMs).copy(
-            lightMode = simulatedLightMode,
+            lightMode = if (simulatedLightMode != RadarLightMode.OFF) simulatedLightMode else currentState.lightMode,
             isLightControlSupported = true,
-            audioSnoozeState = RadarStateRepository.getState().audioSnoozeState,
+            audioSnoozeState = currentState.audioSnoozeState,
             source = RadarSource.SIMULATOR
         )
         RadarStateRepository.updateState(frame)
@@ -459,10 +460,11 @@ object RadarTrafficSimulator {
                         break
                     }
                     val elapsed = clock() - startTime
+                    val currentState = RadarStateRepository.getState()
                     val frame = generateFrame(scenario, elapsed).copy(
-                        lightMode = simulatedLightMode,
+                        lightMode = if (simulatedLightMode != RadarLightMode.OFF) simulatedLightMode else currentState.lightMode,
                         isLightControlSupported = true,
-                        audioSnoozeState = RadarStateRepository.getState().audioSnoozeState,
+                        audioSnoozeState = currentState.audioSnoozeState,
                         source = RadarSource.SIMULATOR
                     )
                     RadarStateRepository.updateState(frame)
@@ -495,17 +497,17 @@ object RadarTrafficSimulator {
         simulatedDevice = null
         _isSimulatingFlow.value = false
         activeScenario = null
+        val currentState = RadarStateRepository.getState()
         simulatedLightMode = RadarLightMode.OFF
-        if (RadarStateRepository.getActiveSource() == RadarSource.SIMULATOR) {
-            RadarStateRepository.reset()
-        } else {
-            RadarStateRepository.updateState(
-                RadarState(
-                    connectionState = RadarConnectionState.DISCONNECTED,
-                    source = RadarSource.SIMULATOR
-                )
+        RadarStateRepository.updateState(
+            RadarState(
+                connectionState = RadarConnectionState.DISCONNECTED,
+                lightMode = currentState.lightMode,
+                isLightControlSupported = currentState.isLightControlSupported,
+                audioSnoozeState = currentState.audioSnoozeState,
+                source = RadarSource.SIMULATOR
             )
-        }
+        )
         windowAggregator.resetSession()
     }
 

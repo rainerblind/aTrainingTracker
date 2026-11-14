@@ -318,8 +318,10 @@ class ANTBikeRadarDevice(
     }
 
     private fun parseTargetsPage(payload: ByteArray, baseId: Int) {
-        // Physical hardware preemption (REQ-CON-029.3, REQ-CON-032.6)
-        RadarTrafficSimulator.onPhysicalHardwareConnected()
+        // Physical hardware preemption (REQ-CON-029.3, REQ-CON-032.6, REQ-CON-042.4)
+        if (RadarTrafficSimulator.isSimulating) {
+            RadarTrafficSimulator.onPhysicalHardwareConnected()
+        }
 
         // Restart 3.5s watchdog
         handler.removeCallbacks(watchdogRunnable)

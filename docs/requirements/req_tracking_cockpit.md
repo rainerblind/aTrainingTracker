@@ -4234,6 +4234,34 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 **Invariants**: Predefined Network Slot 1 isolation; thread-safe state synchronization; zero memory leaks; 100% test pass rate.
 
+### REQ-CON-042: Radar Application State Preservation During Preemption & Hardware Packet Ingestion [Verified]
+- **Tests**: `TST-CON-042`
+- **Priority**: Critical
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Implementation**: `RadarTrafficSimulator.kt`, `BTLERadarDevice.java`, `ANTBikeRadarDevice.kt`, `RadarStateRepository.kt`
+- **Rationale**: Cyclists setting active 1-tap audio snooze (`RadarAudioSnoozeState`) or active tail light operating modes (`RadarLightMode`) expect these user-configured application states to persist when connecting real radar hardware or when receiving 4–8 Hz physical telemetry frames. Unconditional invocation of simulator preemption and destructive `RadarStateRepository.reset()` during simulator shutdown wiped these states to defaults (`INACTIVE`, `OFF`). The system must guarantee that hardware packet processing and simulator preemption non-destructively preserve active audio snooze and tail light modes (ATT-7574, Parent Epic ATT-1286, extending `REQ-CON-029`, `REQ-CON-031`, and `REQ-TRK-064`):
+- **Description**:
+  1. *Non-Destructive Simulator Shutdown (`REQ-CON-042.1`)*:
+     - When `RadarTrafficSimulator.stop()` or `onPhysicalHardwareConnected()` terminates an active simulation, it SHALL NOT invoke `RadarStateRepository.reset()`.
+     - It SHALL update `RadarSource.SIMULATOR` connection state to `DISCONNECTED` while preserving `lightMode`, `audioSnoozeState`, and `isLightControlSupported`.
+  2. *Gated Simulator Preemption & Inverted State Sampling (`REQ-CON-042.2`)*:
+     - `RadarTrafficSimulator.onPhysicalHardwareConnected()` SHALL be invoked only when `RadarTrafficSimulator.isSimulating` is true.
+     - In `BTLERadarDevice.java`, `currentState = RadarStateRepository.getState()` SHALL be sampled before any simulator preemption invocation.
+     - In `ANTBikeRadarDevice.kt`, preemption invocation SHALL be gated with `if (RadarTrafficSimulator.isSimulating)`.
+  3. *Application State Preservation Invariant (`REQ-CON-042.3`)*:
+     - In `RadarStateRepository`, an active `audioSnoozeState` or `lightMode` SHALL NOT be reset to defaults by physical radar telemetry packets arriving over BLE or ANT+.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* an active audio snooze or non-default tail light mode in `RadarStateRepository`,  
+• *When* real BLE or ANT+ radar packets arrive,  
+• *Then* `audioSnoozeState` and `lightMode` remain preserved in `RadarStateRepository.getState()`.  
+• *Given* `RadarTrafficSimulator` is running,  
+• *When* physical radar hardware connects or emits packets,  
+• *Then* simulation stops immediately and physical hardware state is active without wiping repository snooze or light state.  
+
+**Invariants**: Predefined Network Slot 1 isolation; thread safety via repository synchronization lock; zero memory leaks; 100% test pass rate.
+
 ### REQ-TRK-064: 1-Tap Radar Audio Snooze, Peloton-Mode Audio Sync & Smart Urban Alert Suppression [Verified]
 - **Tests**: `TST-TRK-064`
 - **Implementation**: `RadarSnoozeController.kt`, `RadarAlertManager.kt`, `RadarEdgeOverlay.kt`, `RadarLightQuickSwitchSheet.kt`, `RadarState.kt`, `RadarStateRepository.kt`, `BTLERadarDevice.java`, `TuningPreferencesDataStore.kt`, `RadarSettingsSection.kt`, `strings_radar.xml`

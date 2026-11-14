@@ -35,10 +35,14 @@ import androidx.core.content.ContextCompat
 import com.atrainingtracker.banalservice.database.DevicesDatabaseManager
 import com.atrainingtracker.banalservice.devices.DeviceType
 import com.atrainingtracker.banalservice.devices.radar.LaneState
+import com.atrainingtracker.banalservice.devices.radar.RadarAudioSnoozeMode
+import com.atrainingtracker.banalservice.devices.radar.RadarAudioSnoozeState
 import com.atrainingtracker.banalservice.devices.radar.RadarConnectionState
 import com.atrainingtracker.banalservice.devices.radar.RadarLightController
 import com.atrainingtracker.banalservice.devices.radar.RadarLightMode
 import com.atrainingtracker.banalservice.devices.radar.RadarScenario
+import com.atrainingtracker.banalservice.devices.radar.RadarSource
+import com.atrainingtracker.banalservice.devices.radar.RadarState
 import com.atrainingtracker.banalservice.devices.radar.RadarStateRepository
 import com.atrainingtracker.banalservice.devices.radar.RadarTarget
 import com.atrainingtracker.banalservice.devices.radar.RadarTrafficSimulator
@@ -1023,5 +1027,40 @@ class BTLERadarDeviceTest {
         assertFalse(radarDevice.isLightControlSupported)
         assertNull(radarDevice.radarControlWriteCharForTesting)
         assertNull(radarDevice.radarControlNotifyCharForTesting)
+    }
+
+    /**
+     * TST-CON-042.1 & TST-CON-042.4: BLE Packet Ingestion Preserves Snooze & Light Mode.
+     * Verifies processTargets() maintains active audioSnoozeState and lightMode from currentState,
+     * and bypasses simulator preemption when isSimulating is false.
+     */
+    @Test
+    fun testProcessTargets_preservesAudioSnoozeAndLightMode() {
+        // Pre-configure active audio snooze and light mode in repository
+        val activeSnooze = RadarAudioSnoozeState(isSnoozed = true, mode = RadarAudioSnoozeMode.SNOOZE_15M)
+        RadarStateRepository.updateState(
+            RadarState(
+                connectionState = RadarConnectionState.DISCONNECTED,
+                lightMode = RadarLightMode.DAY_FLASH,
+                isLightControlSupported = true,
+                audioSnoozeState = activeSnooze,
+                source = RadarSource.BLE
+            )
+        )
+
+        // Ensure simulator is not running
+        assertFalse(RadarTrafficSimulator.isSimulating)
+
+        // Process incoming targets
+        val targets = listOf(RadarTarget(1, 45f, 10f, ThreatLevel.APPROACHING))
+        radarDevice.processTargetsForTesting(targets)
+
+        // Verify repository retains active snooze and light mode
+        val state = RadarStateRepository.getState()
+        assertEquals(RadarConnectionState.CONNECTED, state.connectionState)
+        assertEquals(RadarLightMode.DAY_FLASH, state.lightMode)
+        assertTrue(state.audioSnoozeState.isSnoozed)
+        assertEquals(RadarAudioSnoozeMode.SNOOZE_15M, state.audioSnoozeState.mode)
+        assertEquals(RadarSource.BLE, state.source)
     }
 }

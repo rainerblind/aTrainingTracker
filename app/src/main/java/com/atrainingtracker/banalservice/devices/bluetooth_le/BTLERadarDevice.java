@@ -455,8 +455,11 @@ public class BTLERadarDevice extends MyBTLEDevice implements RadarLightDeviceCli
 
     private void processTargets(List<RadarTarget> targets) {
         pruneStaleTracks(SystemClock.elapsedRealtime());
-        // Hardware preemption (REQ-CON-029.3): physical data preempts simulator immediately
-        RadarTrafficSimulator.INSTANCE.onPhysicalHardwareConnected();
+        RadarState currentState = RadarStateRepository.getState();
+        // Hardware preemption (REQ-CON-029.3, REQ-CON-042.4): physical data preempts simulator immediately
+        if (RadarTrafficSimulator.INSTANCE.isSimulating()) {
+            RadarTrafficSimulator.INSTANCE.onPhysicalHardwareConnected();
+        }
 
         if (mHandler != null) {
             mHandler.removeCallbacks(mWatchdogRunnable);
@@ -464,7 +467,6 @@ public class BTLERadarDevice extends MyBTLEDevice implements RadarLightDeviceCli
         }
 
         ThreatLevel overallThreat = computeOverallThreatLevel(targets);
-        RadarState currentState = RadarStateRepository.getState();
         RadarState state = new RadarState(
                 RadarConnectionState.CONNECTED,
                 overallThreat,
