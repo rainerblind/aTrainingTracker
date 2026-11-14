@@ -93,6 +93,7 @@
     <string name="devices_location_GPS">GPS du téléphone (Satellite)</string>
     <string name="devices_location_GoogleFused">Localisation Google (Fused)</string>
     <string name="devices_location_ATT_fused">ATT Odométrie fusionnée</string>
+    <string name="devices_altitude_slope_ATT_fused">ATT Fused (Altitude et pente)</string>
     <string name="devices_altitude_from_pressure">Altitude par pression</string>
 
     <!-- Specialized Altitude Devices Explanations (ATT-5073, REQ-SEN-026) -->
@@ -115,6 +116,18 @@
     <string name="device_att_fused_toggle_gyro_hint_disabled">Aucun gyroscope détecté sur le téléphone</string>
     <string name="device_att_fused_toggle_autocalib">Auto-étalonnage continu de la roue</string>
     <string name="device_att_fused_toggle_autocalib_hint_disabled">Nécessite un capteur de roue et le GNSS</string>
+
+    <!-- ATT Altitude & Slope Fusion Device Configuration (ATT-6279, REQ-FIL-016) -->
+    <string name="device_att_fused_alt_how_it_works">Associe directement les changements d\'altitude à la progression horizontale (dh = g * ds) avec verrouillage à l\'arrêt et fusion de Kalman sans dérive entre baromètre et MNT/GPS.</string>
+    <string name="device_att_fused_alt_pros_cons">+ Empêche le dénivelé fantôme à l\'arrêt et les marches d\'escalier du MNT; pente très réactive.\n- Nécessite un baromètre ou capteur d\'altitude actif.</string>
+    <string name="device_att_fused_alt_toggle_baro">Altitude barométrique (Baromètre)</string>
+    <string name="device_att_fused_alt_toggle_baro_hint_disabled">Aucun capteur barométrique appairé ou disponible</string>
+    <string name="device_att_fused_alt_toggle_dem">Altitude topographique (MNT)</string>
+    <string name="device_att_fused_alt_toggle_dem_hint_disabled">Altitude topographique (MNT) non appairée</string>
+    <string name="device_att_fused_alt_toggle_gps">Altitude GPS (Correction de dérive à long terme)</string>
+    <string name="device_att_fused_alt_toggle_gps_hint_disabled">Aucun capteur de position ou GPS appairé</string>
+    <string name="device_att_fused_alt_toggle_speed">Couplage de vitesse (Fixe à l\'arrêt &amp; dh = g * ds)</string>
+    <string name="device_att_fused_alt_toggle_speed_hint_disabled">Aucun capteur de vitesse ou de mouvement disponible</string>
 
     <string name="devices_live_sensor_data_header">Données Capteurs</string>
 

@@ -92,6 +92,7 @@
     <string name="devices_location_GPS">Telefon GPS (Satelita)</string>
     <string name="devices_location_GoogleFused">Lokalizacja Google (Fused)</string>
     <string name="devices_location_ATT_fused">ATT Odometria scalona</string>
+    <string name="devices_altitude_slope_ATT_fused">ATT Fused (Wysokość i nachylenie)</string>
     <string name="devices_altitude_from_pressure">Wysokość z ciśnienia</string>
 
     <!-- Specialized Altitude Devices Explanations (ATT-5073, REQ-SEN-026) -->
@@ -114,6 +115,18 @@
     <string name="device_att_fused_toggle_gyro_hint_disabled">Brak wbudowanego żyroskopu</string>
     <string name="device_att_fused_toggle_autocalib">Ciągła autokalibracja koła</string>
     <string name="device_att_fused_toggle_autocalib_hint_disabled">Wymaga czujnika koła i GNSS</string>
+
+    <!-- ATT Altitude & Slope Fusion Device Configuration (ATT-6279, REQ-FIL-016) -->
+    <string name="device_att_fused_alt_how_it_works">Wiąże zmiany wysokości bezpośrednio z postępem poziomym (dh = g * ds) z blokadą podczas postoju i bezdryfową fuzją Kalmana barometru i DEM/GPS.</string>
+    <string name="device_att_fused_alt_pros_cons">+ Zapobiega fałszywym przewyższeniom na postoju i schodkowaniu DEM; bardzo czułe nachylenie.\n- Wymaga aktywnego barometru lub czujnika wysokości.</string>
+    <string name="device_att_fused_alt_toggle_baro">Wysokość barometryczna (Barometr)</string>
+    <string name="device_att_fused_alt_toggle_baro_hint_disabled">Brak sparowanego lub dostępnego czujnika barometru</string>
+    <string name="device_att_fused_alt_toggle_dem">Wysokość topograficzna (DEM)</string>
+    <string name="device_att_fused_alt_toggle_dem_hint_disabled">Wysokość topograficzna (DEM) nie jest sparowana</string>
+    <string name="device_att_fused_alt_toggle_gps">Wysokość GPS (Długoterminowa korekcja dryfu)</string>
+    <string name="device_att_fused_alt_toggle_gps_hint_disabled">Brak sparowanego czujnika lokalizacji lub GPS</string>
+    <string name="device_att_fused_alt_toggle_speed">Sprzężenie z prędkością (Blokada postoju &amp; dh = g * ds)</string>
+    <string name="device_att_fused_alt_toggle_speed_hint_disabled">Brak dostępnego czujnika prędkości lub ruchu</string>
 
     <string name="devices_live_sensor_data_header">Dane czujników</string>
 

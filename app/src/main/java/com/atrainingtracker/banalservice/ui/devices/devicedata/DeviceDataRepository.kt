@@ -585,6 +585,9 @@ class DeviceDataRepository @androidx.annotation.VisibleForTesting internal const
     fun getSpeedAndLocationAttFusedDeviceId(): Long =
         devicesDatabaseManager.speedAndLocationAttFusedDeviceId
 
+    fun getAltitudeAndSlopeAttFusedDeviceId(): Long =
+        devicesDatabaseManager.altitudeAndSlopeAttFusedDeviceId
+
     fun hasPairedWheelSpeedSensor(): Boolean =
         devicesDatabaseManager.hasPairedWheelSpeedSensor()
 

@@ -2659,3 +2659,31 @@
      • Verify 9-language localization parity (`values*/strings_devices.xml` and `strings.xml`) with zero missing keys or broken specifiers.
   6. *Targeted Unit & Regression Suite Execution (`TST-SEN-028.6`)*:
      • `python3 tools/parallel_sprint_lock.py -- ./gradlew testDebugUnitTest --tests "com.atrainingtracker.banalservice.devices.*" --tests "com.atrainingtracker.banalservice.odometry.*"` asserting 100% pass rate.
+
+
+### TST-FIL-016: **Kinematic Terrain-Slope Altitude Fusion Engine Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-FIL-016` (`REQ-FIL-016.1`..`REQ-FIL-016.5`)
+- **Component**: `KinematicAltitudeSlopeEkf.kt`, `AltitudeAndSlopeDevice_ATTFused.kt`, `BarometricAltitudeFilter.kt`, `DeviceType.java`, `DeviceManager.java`, `MySensorManager.java`, `DevicesDatabaseManager.java`, `DatabaseSchemaRegistry.kt`, `EditDeviceDialog.kt`
+- **Jira**: `ATT-6279`
+- **Test Description**:
+  1. *Kinematic Altitude & Slope EKF 2-State & 3-State Simulation Test (`TST-FIL-016.1`, `KinematicAltitudeSlopeEkfTest.kt`)*:
+     • In 2-State mode ($[h_k, g_k]^T$), feed constant $+8\%$ slope at $5\text{ m/s}$; assert $h_k$ advances kinematically via $dh = g \cdot ds$ and estimated grade tracks $+8\%$.
+     • Simulate standstill ($v=0, \Delta s = 0$) with drifting barometric pressure; assert $Q_g = 0$ and altitude is clamped with zero false climb accumulation.
+     • In 3-State mode ($[h_k, g_k, b_{baro,k}]^T$), simulate pocket heating bias drift ($+0.2\text{ m/min}$) anchored by 1m-stepped DEM measurements; assert $b_{baro}$ absorbs the drift and estimated elevation remains smooth without staircase jumps.
+  2. *DeviceType Registration & Schema Version 12 Migration Test (`TST-FIL-016.2`, `DevicesDatabaseManagerMigrationV12Test.kt`)*:
+     • Verify `DeviceType.ALTITUDE_AND_SLOPE_ATT_FUSED` exists and maps correctly to `ALTITUDE`, `SLOPE`, `VERTICAL_SPEED`, `ASCENT`, and `DESCENT`.
+     • Create in-memory `Devices.db` at version 11; upgrade to 12 and assert row inserted with `PAIRED = 0`. Verify `DatabaseSchemaRegistry` parity.
+  3. *MySensorManager Priority Hierarchy & Fallback Test (`TST-FIL-016.3`, `AltitudeSlopePriorityTest.kt`)*:
+     • When `ALTITUDE_AND_SLOPE_ATT_FUSED` is paired and receiving, assert it is selected as `bestSensor` for `ALTITUDE`, `SLOPE`, `VERTICAL_SPEED`, `ASCENT`, and `DESCENT`.
+     • When unpaired, assert priority cleanly reverts to `VerticalSpeedAndSlopeDevice` and standard altitude hierarchy.
+  4. *AltitudeAndSlopeDevice_ATTFused Driver Lifecycle Test (`TST-FIL-016.4`, `AltitudeAndSlopeDevice_ATTFusedTest.kt`)*:
+     • Verify driver registers listeners for barometric, DEM, and speed sensors.
+     • Feed simulated pressure, DEM, and speed samples; verify EKF updates and emission of fused altitude, slope %, vertical speed m/h, ascent, and descent.
+     • Verify clean teardown in `shutDown()` with zero leaked receivers.
+  5. *EditDeviceDialog Educational Card & Source Guards Test (`TST-FIL-016.5`, `EditDeviceDialogAltitudeGuardsTest.kt`)*:
+     • Verify educational "How It Works" card is rendered for `ALTITUDE_AND_SLOPE_ATT_FUSED`.
+     • Simulate missing barometric sensor; assert barometer toggle is disabled with localized hint.
+     • Simulate unpaired DEM; assert DEM toggle is disabled with localized hint.
+     • Verify 9-language localization parity across all 9 supported locales with zero missing strings.
+  6. *Targeted Unit & Regression Suite Execution (`TST-FIL-016.6`)*:
+     • `python3 tools/parallel_sprint_lock.py -- ./gradlew testDebugUnitTest --tests "com.atrainingtracker.banalservice.devices.*" --tests "com.atrainingtracker.banalservice.odometry.*"` asserting 100% pass rate.

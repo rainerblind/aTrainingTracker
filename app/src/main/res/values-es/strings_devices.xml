@@ -92,6 +92,7 @@
     <string name="devices_location_GPS">GPS del teléfono (Satélite)</string>
     <string name="devices_location_GoogleFused">Ubicación de Google (Fused)</string>
     <string name="devices_location_ATT_fused">ATT Odometría fusionada</string>
+    <string name="devices_altitude_slope_ATT_fused">ATT Fused (Altitud y pendiente)</string>
     <string name="devices_altitude_from_pressure">Altitud por presión</string>
 
     <!-- Specialized Altitude Devices Explanations (ATT-5073, REQ-SEN-026) -->
@@ -114,6 +115,18 @@
     <string name="device_att_fused_toggle_gyro_hint_disabled">No se detectó giroscopio en el teléfono</string>
     <string name="device_att_fused_toggle_autocalib">Autocalibración continua de rueda</string>
     <string name="device_att_fused_toggle_autocalib_hint_disabled">Requiere sensor de rueda y GNSS</string>
+
+    <!-- ATT Altitude & Slope Fusion Device Configuration (ATT-6279, REQ-FIL-016) -->
+    <string name="device_att_fused_alt_how_it_works">Acopla los cambios de altitud directamente al avance horizontal (dh = g * ds) con fijación en reposo y fusión Kalman sin deriva entre barómetro y DEM/GPS.</string>
+    <string name="device_att_fused_alt_pros_cons">+ Evita desnivel fantasma en paradas y saltos en escalón del DEM; pendiente muy sensible.\n- Requiere barómetro o sensor de altitud activo.</string>
+    <string name="device_att_fused_alt_toggle_baro">Altitud barométrica (Barómetro)</string>
+    <string name="device_att_fused_alt_toggle_baro_hint_disabled">Ningún sensor barométrico emparejado o disponible</string>
+    <string name="device_att_fused_alt_toggle_dem">Altitud topográfica (DEM)</string>
+    <string name="device_att_fused_alt_toggle_dem_hint_disabled">Altitud topográfica (DEM) no emparejada</string>
+    <string name="device_att_fused_alt_toggle_gps">Altitud GPS (Corrección de deriva a largo plazo)</string>
+    <string name="device_att_fused_alt_toggle_gps_hint_disabled">Ningún sensor de ubicación o GPS emparejado</string>
+    <string name="device_att_fused_alt_toggle_speed">Acoplamiento de velocidad (Fijación en reposo y dh = g * ds)</string>
+    <string name="device_att_fused_alt_toggle_speed_hint_disabled">Ningún sensor de velocidad o movimiento disponible</string>
 
     <string name="devices_live_sensor_data_header">Datos Sensores</string>
 

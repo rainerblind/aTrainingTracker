@@ -75,17 +75,23 @@ public class MySensorManager extends MyDevice {
     /**
      * Priority hierarchy for altitude sensors ({@link SensorType#ALTITUDE}).
      * <p>
-     * Topographic Altitude (DEM / {@link DeviceType#ALTITUDE_FROM_POSITION}) takes precedence
-     * over Barometric Altitude ({@link DeviceType#ALTITUDE_FROM_PRESSURE}) when explicitly paired by
-     * the athlete, followed by Google Fused and GPS elevation
-     * ({@code REQ-TRK-024.1} / {@code ATT-6264}).
+     * ATT Fused Altitude and Slope ({@link DeviceType#ALTITUDE_AND_SLOPE_ATT_FUSED}) takes precedence
+     * over Topographic Altitude (DEM) and Barometric Altitude when paired by the athlete,
+     * followed by Google Fused and GPS elevation (REQ-FIL-016.4, ATT-6279).
      */
     protected static final DeviceType[] ALTITUDE_PRIORITY
             = new DeviceType[]{
+            DeviceType.ALTITUDE_AND_SLOPE_ATT_FUSED,
             DeviceType.ALTITUDE_FROM_POSITION,
             DeviceType.ALTITUDE_FROM_PRESSURE,
             DeviceType.SPEED_AND_LOCATION_GOOGLE_FUSED,
             DeviceType.SPEED_AND_LOCATION_GPS
+    };
+    protected static final DeviceType[] SLOPE_AND_VERTICAL_SPEED_PRIORITY
+            = new DeviceType[]{
+            DeviceType.ALTITUDE_AND_SLOPE_ATT_FUSED,
+            DeviceType.VERTICAL_SPEED_AND_SLOPE,
+            DeviceType.BIKE_POWER
     };
     protected static final DeviceType[] LOCATION_PRIORITY
             = new DeviceType[]{
@@ -122,6 +128,10 @@ public class MySensorManager extends MyDevice {
         setPriorityList(SensorType.DISTANCE_m_LAP, SPEED_PRIORITY);
         setPriorityList(SensorType.CADENCE, CADENCE_PRIORITY);
         setPriorityList(SensorType.ALTITUDE, ALTITUDE_PRIORITY);
+        setPriorityList(SensorType.SLOPE, SLOPE_AND_VERTICAL_SPEED_PRIORITY);
+        setPriorityList(SensorType.VERTICAL_SPEED, SLOPE_AND_VERTICAL_SPEED_PRIORITY);
+        setPriorityList(SensorType.ASCENT, SLOPE_AND_VERTICAL_SPEED_PRIORITY);
+        setPriorityList(SensorType.DESCENT, SLOPE_AND_VERTICAL_SPEED_PRIORITY);
 
         setPriorityList(SensorType.ACCURACY, LOCATION_PRIORITY);
         setPriorityList(SensorType.BEARING, LOCATION_PRIORITY);
@@ -394,6 +404,15 @@ public class MySensorManager extends MyDevice {
         return mySensorList;
     }
 
+    public synchronized MySensor<?> getSensorForDeviceType(SensorType sensorType, DeviceType deviceType) {
+        if (mAllSensorsMapMap == null) return null;
+        EnumMap<DeviceType, LinkedList<MySensor>> deviceMap = mAllSensorsMapMap.get(sensorType);
+        if (deviceMap == null) return null;
+        LinkedList<MySensor> list = deviceMap.get(deviceType);
+        if (list == null || list.isEmpty()) return null;
+        return list.getFirst();
+    }
+
 
     public void registerSensors(Collection<MySensor> sensorCollection) {
         if (DEBUG) Log.d(TAG, "registerSensors");
@@ -604,6 +623,11 @@ public class MySensorManager extends MyDevice {
                 return CADENCE_PRIORITY;
             case ALTITUDE:
                 return ALTITUDE_PRIORITY;
+            case SLOPE:
+            case VERTICAL_SPEED:
+            case ASCENT:
+            case DESCENT:
+                return SLOPE_AND_VERTICAL_SPEED_PRIORITY;
             case ACCURACY:
             case BEARING:
             case LATITUDE:

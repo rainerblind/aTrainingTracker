@@ -132,6 +132,7 @@
     <string name="devices_location_GPS">Phone GPS (Satellite)</string>
     <string name="devices_location_GoogleFused">Google Location (Fused)</string>
     <string name="devices_location_ATT_fused">ATT Odometry Fused</string>
+    <string name="devices_altitude_slope_ATT_fused">ATT Fused (Altitude &amp; Slope)</string>
     <string name="devices_altitude_from_pressure">Altitude from Pressure</string>
 
     <!-- Specialized Altitude Devices Explanations (ATT-5073, REQ-SEN-026) -->
@@ -154,6 +155,18 @@
     <string name="device_att_fused_toggle_gyro_hint_disabled">No phone gyroscope hardware detected</string>
     <string name="device_att_fused_toggle_autocalib">Continuous Wheel Auto-Calibration</string>
     <string name="device_att_fused_toggle_autocalib_hint_disabled">Requires wheel speed sensor and GNSS</string>
+
+    <!-- ATT Altitude & Slope Fusion Device Configuration (ATT-6279, REQ-FIL-016) -->
+    <string name="device_att_fused_alt_how_it_works">Couples vertical elevation changes directly to horizontal progress (dh = g * ds) with standstill altitude clamping and drift-free Kalman fusion of barometer and DEM/GPS.</string>
+    <string name="device_att_fused_alt_pros_cons">+ Prevents phantom elevation gain during standstills and DEM staircase steps; highly responsive slope.\n- Requires active barometer or altitude sensor.</string>
+    <string name="device_att_fused_alt_toggle_baro">Barometric Altitude (Barometer)</string>
+    <string name="device_att_fused_alt_toggle_baro_hint_disabled">No barometer sensor paired or available</string>
+    <string name="device_att_fused_alt_toggle_dem">Topographic Altitude (DEM)</string>
+    <string name="device_att_fused_alt_toggle_dem_hint_disabled">Topographic altitude (DEM) not paired</string>
+    <string name="device_att_fused_alt_toggle_gps">GPS Altitude (Long-Term Drift Correction)</string>
+    <string name="device_att_fused_alt_toggle_gps_hint_disabled">No location or GPS sensor paired</string>
+    <string name="device_att_fused_alt_toggle_speed">Speed Coupling (Standstill Clamp &amp; dh = g * ds)</string>
+    <string name="device_att_fused_alt_toggle_speed_hint_disabled">No speed or motion sensor available</string>
 
     <!-- live sensor data -->
     <string name="devices_live_sensor_data_header">Sensor Data</string>

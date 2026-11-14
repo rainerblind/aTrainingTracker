@@ -48,6 +48,7 @@ public enum DeviceType {
 
     ALTITUDE_FROM_PRESSURE(SensorType.ALTITUDE, BSportType.UNKNOWN, 1),
     ALTITUDE_FROM_POSITION(SensorType.ALTITUDE, BSportType.UNKNOWN, 1),
+    ALTITUDE_AND_SLOPE_ATT_FUSED(SensorType.ALTITUDE, BSportType.UNKNOWN, 1),
 
 
     SENSOR_MANAGER(SensorType.SENSORS, BSportType.UNKNOWN, 1),
@@ -162,6 +163,7 @@ public enum DeviceType {
             case ALTITUDE:
                 deviceTypes.add(DeviceType.ALTITUDE_FROM_PRESSURE);
                 deviceTypes.add(DeviceType.ALTITUDE_FROM_POSITION);
+                deviceTypes.add(DeviceType.ALTITUDE_AND_SLOPE_ATT_FUSED);
                 deviceTypes.add(DeviceType.ENVIRONMENT);
                 deviceTypes.add(DeviceType.SPEED_AND_LOCATION_GPS);
                 deviceTypes.add(DeviceType.SPEED_AND_LOCATION_GOOGLE_FUSED);
@@ -220,7 +222,10 @@ public enum DeviceType {
 
             case SLOPE:
             case VERTICAL_SPEED:
+            case ASCENT:
+            case DESCENT:
                 deviceTypes.add(DeviceType.VERTICAL_SPEED_AND_SLOPE);
+                deviceTypes.add(DeviceType.ALTITUDE_AND_SLOPE_ATT_FUSED);
                 deviceTypes.add(DeviceType.BIKE_POWER);
                 break;
             case TEMPERATURE:

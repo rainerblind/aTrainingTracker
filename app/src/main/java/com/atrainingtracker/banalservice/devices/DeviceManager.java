@@ -95,6 +95,7 @@ public class DeviceManager {
     protected volatile SpeedAndLocationDevice_ATTFused mSpeedAndLocationDevice_ATTFused;
     protected volatile AltitudeFromPressureDevice mAltitudeFromPressureDevice;
     protected volatile AltitudeFromPositionDevice mAltitudeFromPositionDevice;
+    protected volatile AltitudeAndSlopeDevice_ATTFused mAltitudeAndSlopeDevice_ATTFused;
     protected volatile VerticalSpeedAndSlopeDevice mVerticalSpeedAndSlopeDevice;
     protected volatile CyclingPowerMetricsDevice mCyclingPowerMetricsDevice;
     protected volatile HRVMetricsDevice mHrvMetricsDevice;
@@ -373,6 +374,15 @@ public class DeviceManager {
             mAltitudeFromPositionDevice = new AltitudeFromPositionDevice(mContext, mSensorManager);
         }
 
+        long attFusedAltitudeId = mDeviceDataRepository.getAltitudeAndSlopeAttFusedDeviceId();
+        if (mDeviceDataRepository.isPaired(attFusedAltitudeId)) {
+            try {
+                mAltitudeAndSlopeDevice_ATTFused = new AltitudeAndSlopeDevice_ATTFused(mContext, mSensorManager);
+            } catch (Exception e) {
+                Log.w(TAG, "Could not initialize ATT Fused altitude device: " + e.getMessage());
+            }
+        }
+
         // create the location devices when they are paired.
         LocationManager locationManager = (LocationManager) mContext.getSystemService(Context.LOCATION_SERVICE);
 
@@ -584,6 +594,7 @@ public class DeviceManager {
         mSpeedAndLocationDevice_ATTFused = null;
         mAltitudeFromPressureDevice = null;
         mAltitudeFromPositionDevice = null;
+        mAltitudeAndSlopeDevice_ATTFused = null;
         mVerticalSpeedAndSlopeDevice = null;
         mCyclingPowerMetricsDevice = null;
         mHrvMetricsDevice = null;
@@ -680,6 +691,21 @@ public class DeviceManager {
             } else if (!paired && mAltitudeFromPositionDevice != null) {
                 mAltitudeFromPositionDevice.shutDown();
                 mAltitudeFromPositionDevice = null;
+            }
+            return;
+        }
+
+        long attFusedAltitudeId = mDeviceDataRepository.getAltitudeAndSlopeAttFusedDeviceId();
+        if (deviceId == attFusedAltitudeId) {
+            if (paired && mAltitudeAndSlopeDevice_ATTFused == null) {
+                try {
+                    mAltitudeAndSlopeDevice_ATTFused = new AltitudeAndSlopeDevice_ATTFused(mContext, mSensorManager);
+                } catch (Exception e) {
+                    Log.w(TAG, "Could not initialize ATT Fused altitude device on pairing change: " + e.getMessage());
+                }
+            } else if (!paired && mAltitudeAndSlopeDevice_ATTFused != null) {
+                mAltitudeAndSlopeDevice_ATTFused.shutDown();
+                mAltitudeAndSlopeDevice_ATTFused = null;
             }
             return;
         }
@@ -876,6 +902,10 @@ public class DeviceManager {
         return mSpeedAndLocationDevice_ATTFused;
     }
 
+    public AltitudeAndSlopeDevice_ATTFused getAltitudeAndSlopeDevice_ATTFused() {
+        return mAltitudeAndSlopeDevice_ATTFused;
+    }
+
     public List<MyDevice> getActiveDevicesIncludingSpeedAndLocationDevices() {
         List<MyDevice> result = new LinkedList<>();
 
@@ -888,6 +918,10 @@ public class DeviceManager {
         AltitudeFromPositionDevice altPosDevice = mAltitudeFromPositionDevice;
         if (altPosDevice != null) {
             result.add(altPosDevice);
+        }
+        AltitudeAndSlopeDevice_ATTFused attFusedAlt = mAltitudeAndSlopeDevice_ATTFused;
+        if (attFusedAlt != null) {
+            result.add(attFusedAlt);
         }
 
         return result;
@@ -974,6 +1008,10 @@ public class DeviceManager {
         AltitudeFromPositionDevice altPosDevice = mAltitudeFromPositionDevice;
         if (altPosDevice != null) {
             myDeviceList.add(altPosDevice);
+        }
+        AltitudeAndSlopeDevice_ATTFused attFusedAlt = mAltitudeAndSlopeDevice_ATTFused;
+        if (attFusedAlt != null) {
+            myDeviceList.add(attFusedAlt);
         }
         VerticalSpeedAndSlopeDevice vSpeedDevice = mVerticalSpeedAndSlopeDevice;
         if (vSpeedDevice != null) {

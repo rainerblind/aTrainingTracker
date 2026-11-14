@@ -5010,3 +5010,62 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 • *Then* location and speed routing cleanly reverts to standard GPS/Google Fused/wheel priority with zero background gyro drain.
 
 **Invariants**: Unpaired by default; zero battery consumption when inactive; thread safety on sensor single-thread dispatchers; 9-language localization parity; 100% clean-room test pass rate.
+
+### REQ-FIL-016: Kinematic Terrain-Slope Altitude Fusion Engine & Pairable ATT Fused (Höhe und Steigung) Virtual Device [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-FIL-016`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Implementation**: `KinematicAltitudeSlopeEkf.kt`, `AltitudeAndSlopeDevice_ATTFused.kt`, `BarometricAltitudeFilter.kt`, `DeviceType.java`, `DeviceManager.java`, `MySensorManager.java`, `DevicesDatabaseManager.java`, `EditDeviceDialog.kt`, `strings_devices.xml`
+- **Rationale**: Provide a coupled kinematic altitude and slope estimation engine ($dh = g \cdot ds$) with observability-aware 2-State $[h_k, g_k]^T$ and 3-State $[h_k, g_k, b_{baro,k}]^T$ filtering, standstill altitude clamping, and paired-source UI configuration guards, exposed as pairable virtual sensor ATT Fused (Höhe und Steigung) (ATT-6279, extending REQ-FIL-012, REQ-SEN-025, and REQ-SEN-026):
+- **Description**:
+  1. *Kinematic Terrain-Slope EKF & Observability Modes (`REQ-FIL-016.1`)*:
+     - The system SHALL maintain state elevation $h$ (meters) and terrain slope grade $g$ (dimensionless, $\frac{dh}{ds}$) coupled to horizontal ground displacement $\Delta s_k = v_k \cdot \Delta t_k$ via $h_k = h_{k-1} + g_{k-1} \cdot \Delta s_k$.
+     - When unanchored (Barometer + Speed only), the filter SHALL operate in *2-State mode $[h_k, g_k]^T$*, updating elevation via barometric measurements $z_{baro,k} = h_k$.
+     - When anchored (DEM via `ALTITUDE_FROM_POSITION` or GPS altitude paired & enabled), the filter SHALL operate in *3-State mode $[h_k, g_k, b_{baro,k}]^T$*, where $z_{baro,k} = h_k + b_{baro,k}$ and $z_{ref,k} = h_k$, making barometric thermal and synoptic weather drift continuously observable and smoothly decoupling elevation from 1m DEM discrete grid staircase artifacts.
+  2. *Standstill Clamping & Double-EMA Prevention (`REQ-FIL-016.2`)*:
+     - When horizontal speed $v = 0$ ($\Delta s_k = 0$), slope process noise SHALL be zero ($Q_g = 0$) and ground altitude SHALL be clamped ($dh = 0$), preventing stationary barometric weather/temperature drift from accumulating false climbing meters or oscillating slope.
+     - In 3-State mode, standstill barometric drift SHALL update barometric bias $b_{baro,k}$ directly.
+     - `BarometricAltitudeFilter.kt` SHALL expose `filterSlewOnly(rawAltitude, timestampMs)` (or equivalent) providing median-filtered and slew-rate clamped raw elevation, which `AltitudeAndSlopeDevice_ATTFused` SHALL ingest to prevent cascaded double-EMA phase lag.
+  3. *Pairable Virtual Device & Devices.db Schema v12 Migration (`REQ-FIL-016.3`)*:
+     - `DeviceType.ALTITUDE_AND_SLOPE_ATT_FUSED` SHALL be declared under `Protocol.SMARTPHONE`, providing `ALTITUDE`, `SLOPE`, `VERTICAL_SPEED`, `ASCENT`, and `DESCENT`.
+     - `DevicesDbHelper.DB_VERSION` SHALL be incremented to `12`. Idempotent migration `migrateAddAltitudeAndSlopeAttFused()` SHALL insert the device row with default `PAIRED = 0` (unpaired/opt-in) on upgrade (`oldVersion <= 11`) and fresh install.
+     - Display name strings `devices_altitude_slope_ATT_fused` SHALL be localized across all 9 supported languages ("ATT Fused (Höhe und Steigung)" / "ATT Fused (Altitude & Slope)").
+  4. *MySensorManager Priority Hierarchy Integration (`REQ-FIL-016.4`)*:
+     - When paired, `ALTITUDE_AND_SLOPE_ATT_FUSED` SHALL be placed at index 0 of `ALTITUDE_PRIORITY` (ahead of `ALTITUDE_FROM_POSITION` and `ALTITUDE_FROM_PRESSURE`).
+     - Dedicated priority arrays SHALL be established in `MySensorManager.java` for `SLOPE`, `VERTICAL_SPEED`, `ASCENT`, and `DESCENT` prioritizing `ALTITUDE_AND_SLOPE_ATT_FUSED` at index 0 over `VERTICAL_SPEED_AND_SLOPE`.
+     - Deactivating `ALTITUDE_AND_SLOPE_ATT_FUSED` SHALL cleanly fall back to `VerticalSpeedAndSlopeDevice` and standard altitude priority.
+  5. *EditDeviceDialog Educational Card & Source Guards (`REQ-FIL-016.5`)*:
+     - In `EditDeviceDialog.kt`, opening configuration for `ALTITUDE_AND_SLOPE_ATT_FUSED` SHALL display an educational "How It Works" card detailing kinematic slope coupling, thermal drift decoupling, and battery considerations.
+     - The dialog SHALL provide 4 configuration toggles with pairing and hardware availability guards:
+       a) *Höhe aus Luftdruck (Barometer)*: Default true; disabled with localized hint if `ALTITUDE_FROM_PRESSURE` is not paired or pressure hardware is absent.
+       b) *Topografische Höhe (DEM)*: Default false (opt-in); disabled with localized hint if `ALTITUDE_FROM_POSITION` is not paired.
+       c) *GPS-Höhe (Langzeit-Driftkorrektur)*: Default false; disabled with localized hint if no location provider is paired.
+       d) *Geschwindigkeits-Kopplung (Stillstands-Fix & dh = g * ds)*: Default true; uses active speed/distance sensor.
+     - The UI layout SHALL satisfy Rule 84 visual inspection with zero text clipping or ellipsizing across German and English.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-FIL-016`, extending `REQ-FIL-012` (*Stabilized VAM Metric*), `REQ-SEN-025` (*DEM Elevation*), and `REQ-SEN-026` (*Barometric Elevation*). Targets `KinematicAltitudeSlopeEkf.kt`, `AltitudeAndSlopeDevice_ATTFused.kt`, `MySensorManager.java`, `DevicesDatabaseManager.java`, and `EditDeviceDialog.kt`.
+2. *Historical Origin & Commit Trace*: `ATT-1621` / `ATT-1738` (VAM linear regression), `ATT-4859` (DEM altitude device), `ATT-6265` (causal barometric outlier filtering).
+3. *Root Reason for Existing Formulation*: Prior designs treated barometric elevation, DEM elevation, and vertical speed as decoupled silos without kinematic terrain-slope progression ($dh = g \cdot ds$).
+4. *Preservation of Core Invariants*: Default state is unpaired (`PAIRED = 0`). When inactive, priority routing, battery drain, and sensor behavior are 100% identical to baseline. Independent device-attributed columns in `WorkoutSamples.db` remain preserved.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* the Smartphone sensor list on fresh install or upgrade to DB_VERSION 12,
+• *When* the user views available sensors,
+• *Then* `ATT Fused (Höhe und Steigung)` is listed with default unpaired state (`PAIRED = 0`) across all 9 supported languages.
+• *Given* `ATT Fused (Höhe und Steigung)` is configured with Barometer + Speed only (DEM disabled),
+• *When* the user moves and then stops ($v = 0$),
+• *Then* the filter operates in 2-State mode $[h_k, g_k]^T$ without double-EMA lag and clamps altitude changes during standstills to prevent false climb accumulation.
+• *Given* `ATT Fused (Höhe und Steigung)` is configured with Barometer + DEM + Speed,
+• *When* DEM elevation updates arrive,
+• *Then* the filter operates in 3-State mode $[h_k, g_k, b_{baro,k}]^T$, isolating barometric thermal/weather drift into $b_{baro}$ while maintaining smooth altitude and slope without 1m staircase artifacts.
+• *Given* the user opens `EditDeviceDialog.kt` for `ATT Fused (Höhe und Steigung)`,
+• *When* `ALTITUDE_FROM_PRESSURE` or `ALTITUDE_FROM_POSITION` is not paired,
+• *Then* the corresponding toggle is greyed out with a clear localized hint and zero text clipping.
+• *Given* `ATT Fused (Höhe und Steigung)` is deactivated in the sensor list,
+• *When* a workout is recorded,
+• *Then* altitude, slope, and VAM cleanly revert to `VerticalSpeedAndSlopeDevice` and standard altitude priority.
+
+**Invariants**: Unpaired by default (`PAIRED = 0`); zero CPU/battery drain when inactive; single-thread sensor dispatcher safety; 9-language localization parity; 100% clean-room test pass rate.

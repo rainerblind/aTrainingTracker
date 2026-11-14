@@ -105,6 +105,59 @@ class BarometricAltitudeFilter @JvmOverloads constructor(
         return filtered
     }
 
+    /**
+     * Executes Stage 1 (median window) and Stage 2 (physical slew-rate limiter) only,
+     * omitting the EMA stage to prevent cascaded double-EMA phase lag when ingested by
+     * downstream Kalman filters (REQ-FIL-016.2, ATT-6279).
+     */
+    @Synchronized
+    fun filterSlewOnly(rawAltitude: Double, timestampMs: Long): Double {
+        if (rawAltitude.isNaN() || rawAltitude.isInfinite()) {
+            return if (!lastSlewAltitude.isNaN()) lastSlewAltitude else Double.NaN
+        }
+
+        if (lastSlewAltitude.isNaN() || lastTimestampMs < 0L) {
+            window.clear()
+            repeat(medianWindowSize) { window.add(rawAltitude) }
+            lastSlewAltitude = rawAltitude
+            lastFilteredAltitude = rawAltitude
+            lastTimestampMs = timestampMs
+            return rawAltitude
+        }
+
+        val elapsedMs = timestampMs - lastTimestampMs
+        val dtSec = if (elapsedMs >= 0) elapsedMs / 1000.0 else 1.0
+
+        if (dtSec > MAX_TIME_GAP_SEC) {
+            window.clear()
+            repeat(medianWindowSize) { window.add(rawAltitude) }
+            lastSlewAltitude = rawAltitude
+            lastFilteredAltitude = rawAltitude
+            lastTimestampMs = timestampMs
+            return rawAltitude
+        }
+
+        // Stage 1: Sliding Median Window
+        if (window.size >= medianWindowSize) {
+            window.removeFirst()
+        }
+        window.addLast(rawAltitude)
+        val medianValue = computeMedian(window)
+
+        // Stage 2: Physical Vertical Slew-Rate Limiter
+        val maxDelta = maxSlewRateMps * dtSec
+        val delta = medianValue - lastSlewAltitude
+        val clampedDelta = delta.coerceIn(-maxDelta, maxDelta)
+        lastSlewAltitude += clampedDelta
+
+        lastFilteredAltitude = lastSlewAltitude
+        lastTimestampMs = timestampMs
+        return lastSlewAltitude
+    }
+
+    @Synchronized
+    fun getSlewAltitude(): Double = lastSlewAltitude
+
     @Synchronized
     fun getFilteredAltitude(): Double = lastFilteredAltitude
 

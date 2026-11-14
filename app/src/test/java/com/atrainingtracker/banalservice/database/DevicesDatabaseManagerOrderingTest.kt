@@ -218,8 +218,12 @@ class DevicesDatabaseManagerOrderingTest {
         assertEquals(0, devices[2].third) // Unpaired by default (REQ-SEN-028.1, ATT-7751)
 
         assertEquals(4L, devices[3].first)
-        assertEquals(DeviceType.ALTITUDE_FROM_POSITION.name, devices[3].second)
-        assertEquals(0, devices[3].third)
+        assertEquals(DeviceType.ALTITUDE_AND_SLOPE_ATT_FUSED.name, devices[3].second)
+        assertEquals(0, devices[3].third) // Unpaired by default (REQ-FIL-016.3, ATT-6279)
+
+        assertEquals(5L, devices[4].first)
+        assertEquals(DeviceType.ALTITUDE_FROM_POSITION.name, devices[4].second)
+        assertEquals(0, devices[4].third)
     }
 
     /**
@@ -281,8 +285,12 @@ class DevicesDatabaseManagerOrderingTest {
         assertEquals(0, devices[2].third) // Unpaired by default (REQ-SEN-028.1, ATT-7751)
 
         assertEquals(4L, devices[3].first)
-        assertEquals(DeviceType.ALTITUDE_FROM_POSITION.name, devices[3].second)
-        assertEquals(0, devices[3].third)
+        assertEquals(DeviceType.ALTITUDE_AND_SLOPE_ATT_FUSED.name, devices[3].second)
+        assertEquals(0, devices[3].third) // Unpaired by default (REQ-FIL-016.3, ATT-6279)
+
+        assertEquals(5L, devices[4].first)
+        assertEquals(DeviceType.ALTITUDE_FROM_POSITION.name, devices[4].second)
+        assertEquals(0, devices[4].third)
     }
 
     /**

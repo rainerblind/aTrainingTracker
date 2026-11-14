@@ -103,6 +103,7 @@
     <string name="devices_location_GPS">Smartphone GPS (Satellit)</string>
     <string name="devices_location_GoogleFused">Google Standort (Fused)</string>
     <string name="devices_location_ATT_fused">ATT Odometrie-Fusion</string>
+    <string name="devices_altitude_slope_ATT_fused">ATT Fused (Höhe und Steigung)</string>
     <string name="devices_altitude_from_pressure">Höhe aus Luftdruck</string>
 
     <!-- Specialized Altitude Devices Explanations (ATT-5073, REQ-SEN-026) -->
@@ -125,6 +126,18 @@
     <string name="device_att_fused_toggle_gyro_hint_disabled">Kein Smartphone-Gyroskop vorhanden</string>
     <string name="device_att_fused_toggle_autocalib">Kontinuierliche Rad-Autokalibrierung</string>
     <string name="device_att_fused_toggle_autocalib_hint_disabled">Erfordert Radsensor und GNSS</string>
+
+    <!-- ATT Altitude & Slope Fusion Device Configuration (ATT-6279, REQ-FIL-016) -->
+    <string name="device_att_fused_alt_how_it_works">Koppelt Höhenänderungen kontinuierlich an den horizontalen Weg (dh = g * ds) mit Stillstands-Fixierung und driftfreier Kalman-Fusion aus Barometer und DEM/GPS.</string>
+    <string name="device_att_fused_alt_pros_cons">+ Verhindert Schein-Höhenmeter im Stand und DEM-Treppenstufen; sehr reaktionsschnelle Steigung.\n- Erfordert aktiven Barometer- oder Höhensensor.</string>
+    <string name="device_att_fused_alt_toggle_baro">Höhe aus Luftdruck (Barometer)</string>
+    <string name="device_att_fused_alt_toggle_baro_hint_disabled">Kein Barometer-Sensor gekoppelt oder vorhanden</string>
+    <string name="device_att_fused_alt_toggle_dem">Topografische Höhe (DEM)</string>
+    <string name="device_att_fused_alt_toggle_dem_hint_disabled">Topografische Höhe (DEM) nicht gekoppelt</string>
+    <string name="device_att_fused_alt_toggle_gps">GPS-Höhe (Langzeit-Driftkorrektur)</string>
+    <string name="device_att_fused_alt_toggle_gps_hint_disabled">Kein Standort- oder GPS-Sensor gekoppelt</string>
+    <string name="device_att_fused_alt_toggle_speed">Geschwindigkeits-Kopplung (Stillstands-Fix &amp; dh = g * ds)</string>
+    <string name="device_att_fused_alt_toggle_speed_hint_disabled">Kein Geschwindigkeits- oder Bewegungssensor verfügbar</string>
 
     <!-- live sensor data -->
     <string name="devices_live_sensor_data_header">Sensordaten</string>

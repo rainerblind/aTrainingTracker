@@ -92,6 +92,7 @@
     <string name="devices_location_GPS">端末 GPS (衛星)</string>
     <string name="devices_location_GoogleFused">Google 位置情報 (Fused)</string>
     <string name="devices_location_ATT_fused">ATT 複合オドメトリ</string>
+    <string name="devices_altitude_slope_ATT_fused">ATT Fused (高度と勾配)</string>
     <string name="devices_altitude_from_pressure">気圧からの高度</string>
 
     <!-- Specialized Altitude Devices Explanations (ATT-5073, REQ-SEN-026) -->
@@ -114,6 +115,18 @@
     <string name="device_att_fused_toggle_gyro_hint_disabled">ジャイロセンサーが検出されません</string>
     <string name="device_att_fused_toggle_autocalib">ホイール周長の自動校正</string>
     <string name="device_att_fused_toggle_autocalib_hint_disabled">ホイールセンサーとGNSSが必要です</string>
+
+    <!-- ATT Altitude & Slope Fusion Device Configuration (ATT-6279, REQ-FIL-016) -->
+    <string name="device_att_fused_alt_how_it_works">気圧計とDEM/GPSのドリフトフリーなカルマン融合と停止時クランプにより、高度変化を水平移動に直接連動(dh = g * ds)させます。</string>
+    <string name="device_att_fused_alt_pros_cons">+ 停止中の不要な獲得標高やDEMの階段状変化を防止。俊敏な勾配反応。\n- 有効な気圧計または高度センサーが必要。</string>
+    <string name="device_att_fused_alt_toggle_baro">気圧高度 (気圧計)</string>
+    <string name="device_att_fused_alt_toggle_baro_hint_disabled">気圧計センサーがペアリングされていないか利用できません</string>
+    <string name="device_att_fused_alt_toggle_dem">地形高度 (DEM)</string>
+    <string name="device_att_fused_alt_toggle_dem_hint_disabled">地形高度 (DEM) がペアリングされていません</string>
+    <string name="device_att_fused_alt_toggle_gps">GPS高度 (長期ドリフト補正)</string>
+    <string name="device_att_fused_alt_toggle_gps_hint_disabled">位置情報またはGPSセンサーがペアリングされていません</string>
+    <string name="device_att_fused_alt_toggle_speed">速度連動 (停止時クランプ &amp; dh = g * ds)</string>
+    <string name="device_att_fused_alt_toggle_speed_hint_disabled">利用可能な速度または運動センサーがありません</string>
 
     <string name="devices_live_sensor_data_header">センサーデータ</string>
 

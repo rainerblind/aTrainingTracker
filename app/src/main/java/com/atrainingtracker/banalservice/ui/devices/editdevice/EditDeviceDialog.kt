@@ -50,6 +50,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.ui.theme.TTAlpha
 import com.atrainingtracker.banalservice.Protocol
+import com.atrainingtracker.banalservice.devices.AttFusedAltitudePreferences
 import com.atrainingtracker.banalservice.devices.AttFusedPreferences
 import com.atrainingtracker.banalservice.devices.DeviceType
 import com.atrainingtracker.banalservice.devices.radar.RadarLightController
@@ -182,7 +183,12 @@ fun EditDeviceDialog(
                     AttFusedConfigSection()
                 }
 
-                // 7. Radar Tail Light Mode Control (ATT-7540, REQ-CON-031.5)
+                // 7. ATT Altitude & Slope Fusion Configuration & Guards (ATT-6279, REQ-FIL-016)
+                if (data.deviceType == DeviceType.ALTITUDE_AND_SLOPE_ATT_FUSED) {
+                    AttFusedAltitudeConfigSection()
+                }
+
+                // 8. Radar Tail Light Mode Control (ATT-7540, REQ-CON-031.5)
                 if (data.deviceType == DeviceType.BIKE_RADAR) {
                     RadarLightControlSection(isConnected = isConnected)
                 }
@@ -859,6 +865,174 @@ private fun AttFusedConfigSection() {
                     onCheckedChange = {
                         autoCalibChecked = it
                         AttFusedPreferences.setAutoCalibEnabled(context, it)
+                    }
+                )
+            }
+        }
+    }
+}
+
+/**
+ * Educational information card and guarded input toggles for ATT Altitude & Slope Fusion
+ * (REQ-FIL-016.5, ATT-6279).
+ */
+@Composable
+@Suppress("FunctionNaming", "LongMethod")
+private fun AttFusedAltitudeConfigSection() {
+    val context = LocalContext.current
+    var baroChecked by remember { mutableStateOf(AttFusedAltitudePreferences.isBarometerEnabled(context)) }
+    var demChecked by remember { mutableStateOf(AttFusedAltitudePreferences.isDemEnabled(context)) }
+    var gpsChecked by remember { mutableStateOf(AttFusedAltitudePreferences.isGpsEnabled(context)) }
+    var speedChecked by remember { mutableStateOf(AttFusedAltitudePreferences.isSpeedEnabled(context)) }
+
+    val baroAvailable = remember { AttFusedAltitudePreferences.isBarometerAvailable(context) }
+    val demAvailable = remember { AttFusedAltitudePreferences.isDemAvailable(context) }
+    val gpsAvailable = remember { AttFusedAltitudePreferences.isGpsAvailable(context) }
+    val speedAvailable = remember { AttFusedAltitudePreferences.isSpeedAvailable(context) }
+
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        // Educational Card
+        OutlinedCard(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp),
+            colors = CardDefaults.outlinedCardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+            ),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Info,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp),
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                    Text(
+                        text = stringResource(R.string.device_altitude_explanation_title),
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(
+                        text = stringResource(R.string.device_altitude_how_it_works_header),
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Text(
+                        text = stringResource(R.string.device_att_fused_alt_how_it_works),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
+                HorizontalDivider(
+                    thickness = 0.5.dp,
+                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f)
+                )
+
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(
+                        text = stringResource(R.string.device_altitude_pros_cons_header),
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Text(
+                        text = stringResource(R.string.device_att_fused_alt_pros_cons),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        }
+
+        // Guarded Toggles Section
+        OutlinedCard(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp),
+            colors = CardDefaults.outlinedCardColors(
+                containerColor = MaterialTheme.colorScheme.surface
+            ),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                Text(
+                    text = stringResource(R.string.devices_live_sensor_data_header),
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary
+                )
+
+                AttFusedToggleRow(
+                    title = stringResource(R.string.device_att_fused_alt_toggle_baro),
+                    checked = baroChecked,
+                    enabled = baroAvailable,
+                    disabledHint = stringResource(R.string.device_att_fused_alt_toggle_baro_hint_disabled),
+                    onCheckedChange = {
+                        baroChecked = it
+                        AttFusedAltitudePreferences.setBarometerEnabled(context, it)
+                    }
+                )
+
+                HorizontalDivider(
+                    thickness = 0.5.dp,
+                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
+                )
+
+                AttFusedToggleRow(
+                    title = stringResource(R.string.device_att_fused_alt_toggle_dem),
+                    checked = demChecked,
+                    enabled = demAvailable,
+                    disabledHint = stringResource(R.string.device_att_fused_alt_toggle_dem_hint_disabled),
+                    onCheckedChange = {
+                        demChecked = it
+                        AttFusedAltitudePreferences.setDemEnabled(context, it)
+                    }
+                )
+
+                HorizontalDivider(
+                    thickness = 0.5.dp,
+                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
+                )
+
+                AttFusedToggleRow(
+                    title = stringResource(R.string.device_att_fused_alt_toggle_gps),
+                    checked = gpsChecked,
+                    enabled = gpsAvailable,
+                    disabledHint = stringResource(R.string.device_att_fused_alt_toggle_gps_hint_disabled),
+                    onCheckedChange = {
+                        gpsChecked = it
+                        AttFusedAltitudePreferences.setGpsEnabled(context, it)
+                    }
+                )
+
+                HorizontalDivider(
+                    thickness = 0.5.dp,
+                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
+                )
+
+                AttFusedToggleRow(
+                    title = stringResource(R.string.device_att_fused_alt_toggle_speed),
+                    checked = speedChecked,
+                    enabled = speedAvailable,
+                    disabledHint = stringResource(R.string.device_att_fused_alt_toggle_speed_hint_disabled),
+                    onCheckedChange = {
+                        speedChecked = it
+                        AttFusedAltitudePreferences.setSpeedEnabled(context, it)
                     }
                 )
             }

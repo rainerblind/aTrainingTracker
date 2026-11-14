@@ -92,6 +92,7 @@
     <string name="devices_location_GPS">Telefoon GPS (Satelliet)</string>
     <string name="devices_location_GoogleFused">Google Locatie (Fused)</string>
     <string name="devices_location_ATT_fused">ATT Odometrie-fusie</string>
+    <string name="devices_altitude_slope_ATT_fused">ATT Fused (Hoogte en helling)</string>
     <string name="devices_altitude_from_pressure">Hoogte uit luchtdruk</string>
 
     <!-- Specialized Altitude Devices Explanations (ATT-5073, REQ-SEN-026) -->
@@ -114,6 +115,18 @@
     <string name="device_att_fused_toggle_gyro_hint_disabled">Geen telefoongyroscoop gedetecteerd</string>
     <string name="device_att_fused_toggle_autocalib">Continue wiel-autokalibratie</string>
     <string name="device_att_fused_toggle_autocalib_hint_disabled">Vereist wielsensor en GNSS</string>
+
+    <!-- ATT Altitude & Slope Fusion Device Configuration (ATT-6279, REQ-FIL-016) -->
+    <string name="device_att_fused_alt_how_it_works">Koppelt hoogteveranderingen direct aan horizontale voortgang (dh = g * ds) met stilstand-vergrendeling en driftvrije Kalman-fusie van barometer en DEM/GPS.</string>
+    <string name="device_att_fused_alt_pros_cons">+ Voorkomt spookhoogtemeters bij stilstand en DEM-traptreden; zeer responsieve helling.\n- Vereist actieve barometer of hoogtesensor.</string>
+    <string name="device_att_fused_alt_toggle_baro">Barometrische hoogte (Barometer)</string>
+    <string name="device_att_fused_alt_toggle_baro_hint_disabled">Geen barometersensor gekoppeld of beschikbaar</string>
+    <string name="device_att_fused_alt_toggle_dem">Topografische hoogte (DEM)</string>
+    <string name="device_att_fused_alt_toggle_dem_hint_disabled">Topografische hoogte (DEM) niet gekoppeld</string>
+    <string name="device_att_fused_alt_toggle_gps">GPS-hoogte (Langetermijndriftcorrectie)</string>
+    <string name="device_att_fused_alt_toggle_gps_hint_disabled">Geen locatie- of GPS-sensor gekoppeld</string>
+    <string name="device_att_fused_alt_toggle_speed">Snelheidskoppeling (Stilstandfix &amp; dh = g * ds)</string>
+    <string name="device_att_fused_alt_toggle_speed_hint_disabled">Geen snelheids- of bewegingssensor beschikbaar</string>
 
     <string name="devices_live_sensor_data_header">Sensorgegevens</string>
 

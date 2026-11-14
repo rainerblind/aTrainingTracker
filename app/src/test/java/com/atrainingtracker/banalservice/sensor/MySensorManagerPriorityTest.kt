@@ -87,6 +87,7 @@ class MySensorManagerPriorityTest {
         assertArrayEquals(expectedSpeedPriority, MySensorManager.SPEED_PRIORITY)
 
         val expectedAltitudePriority = arrayOf(
+            DeviceType.ALTITUDE_AND_SLOPE_ATT_FUSED,
             DeviceType.ALTITUDE_FROM_POSITION,
             DeviceType.ALTITUDE_FROM_PRESSURE,
             DeviceType.SPEED_AND_LOCATION_GOOGLE_FUSED,
@@ -380,14 +381,30 @@ class MySensorManagerPriorityTest {
             assertEquals(6, MySensorManager.getPriorityRank(sensor, DeviceType.SPEED_AND_LOCATION_GPS))
         }
 
-        // Altitude: ALTITUDE_FROM_POSITION (0) -> ALTITUDE_FROM_PRESSURE (1) -> GOOGLE_FUSED (2) -> GPS (3)
-        assertEquals(0, MySensorManager.getPriorityRank(SensorType.ALTITUDE, DeviceType.ALTITUDE_FROM_POSITION))
-        assertEquals(1, MySensorManager.getPriorityRank(SensorType.ALTITUDE, DeviceType.ALTITUDE_FROM_PRESSURE))
+        // Altitude: ATT_FUSED (0) -> ALTITUDE_FROM_POSITION (1)
+        // -> ALTITUDE_FROM_PRESSURE (2) -> GOOGLE_FUSED (3) -> GPS (4)
+        assertEquals(0, MySensorManager.getPriorityRank(SensorType.ALTITUDE, DeviceType.ALTITUDE_AND_SLOPE_ATT_FUSED))
+        assertEquals(1, MySensorManager.getPriorityRank(SensorType.ALTITUDE, DeviceType.ALTITUDE_FROM_POSITION))
+        assertEquals(2, MySensorManager.getPriorityRank(SensorType.ALTITUDE, DeviceType.ALTITUDE_FROM_PRESSURE))
         assertEquals(
-            2,
+            3,
             MySensorManager.getPriorityRank(SensorType.ALTITUDE, DeviceType.SPEED_AND_LOCATION_GOOGLE_FUSED)
         )
-        assertEquals(3, MySensorManager.getPriorityRank(SensorType.ALTITUDE, DeviceType.SPEED_AND_LOCATION_GPS))
+        assertEquals(4, MySensorManager.getPriorityRank(SensorType.ALTITUDE, DeviceType.SPEED_AND_LOCATION_GPS))
+
+        // Slope / Vertical Speed / Ascent / Descent:
+        // ATT_FUSED (0) -> VERTICAL_SPEED_AND_SLOPE (1) -> BIKE_POWER (2)
+        val slopeTypes = listOf(
+            SensorType.SLOPE,
+            SensorType.VERTICAL_SPEED,
+            SensorType.ASCENT,
+            SensorType.DESCENT
+        )
+        for (sensor in slopeTypes) {
+            assertEquals(0, MySensorManager.getPriorityRank(sensor, DeviceType.ALTITUDE_AND_SLOPE_ATT_FUSED))
+            assertEquals(1, MySensorManager.getPriorityRank(sensor, DeviceType.VERTICAL_SPEED_AND_SLOPE))
+            assertEquals(2, MySensorManager.getPriorityRank(sensor, DeviceType.BIKE_POWER))
+        }
 
         // Cadence: RUN_SPEED (0) -> BIKE_CADENCE (1) -> BIKE_SPEED_AND_CADENCE (2) -> BIKE_POWER (3)
         // Note: CADENCE_PRIORITY in MySensorManager starts with RUN_SPEED (Gate 3 advisory).
