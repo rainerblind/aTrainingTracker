@@ -97,6 +97,15 @@ class TrackerServiceResilienceTest {
             endWorkoutCalled = true
         }
 
+        override fun endWorkout(
+            snapshot: BanalFinalizationSnapshot?,
+            workoutId: Long,
+            baseFileName: String?,
+            liveSession: LiveWorkoutSession?
+        ) {
+            endWorkoutCalled = true
+        }
+
         override fun sendBroadcast(intent: Intent?) {
             // No-op in unit tests
         }

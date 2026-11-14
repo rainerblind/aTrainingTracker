@@ -99,24 +99,41 @@ class TrackerServiceFinalizationTest {
         override fun getBuildVersionSdkInt(): Int = testSdkInt
         override fun hasHealthPermission(): Boolean = healthGranted
 
+        private var inEndWorkoutWithArgs = false
+
         override fun endWorkout() {
             endWorkoutCalled = true
             banalServicePresentDuringEndWorkout = (mBanalService != null)
-            try {
-                val workoutIdField = TrackerService::class.java.getDeclaredField("mFinalizationWorkoutId").apply { isAccessible = true }
-                capturedFinalizationWorkoutId = workoutIdField.get(this) as? Long
-                val baseFileNameField = TrackerService::class.java.getDeclaredField("mFinalizationBaseFileName").apply { isAccessible = true }
-                capturedFinalizationBaseFileName = baseFileNameField.get(this) as? String
-                val liveSessionField = TrackerService::class.java.getDeclaredField("mFinalizationLiveSession").apply { isAccessible = true }
-                capturedFinalizationLiveSession = liveSessionField.get(this) as? LiveWorkoutSession
-            } catch (ignored: Throwable) {
-            }
             onEndWorkoutAction?.invoke()
             endWorkoutLatchHook?.invoke()
-            if (delegateToRealEndWorkout) {
+            if (delegateToRealEndWorkout && !inEndWorkoutWithArgs) {
                 super.endWorkout()
             }
         }
+
+        override fun endWorkout(
+            snapshot: TrackerService.BanalFinalizationSnapshot?,
+            workoutId: Long,
+            baseFileName: String?,
+            liveSession: LiveWorkoutSession?
+        ) {
+            capturedSnapshot = snapshot
+            capturedFinalizationWorkoutId = workoutId
+            capturedFinalizationBaseFileName = baseFileName
+            capturedFinalizationLiveSession = liveSession
+            inEndWorkoutWithArgs = true
+            try {
+                endWorkout()
+            } finally {
+                inEndWorkoutWithArgs = false
+            }
+            if (delegateToRealEndWorkout) {
+                super.endWorkout(snapshot, workoutId, baseFileName, liveSession)
+            }
+        }
+
+        val finalizationSnapshotForTesting: TrackerService.BanalFinalizationSnapshot?
+            get() = capturedSnapshot
 
         override fun createNewWorkout(): Long {
             return mockCreatedWorkoutId ?: super.createNewWorkout()
@@ -786,7 +803,9 @@ class TrackerServiceFinalizationTest {
             mockBanal,
             mockContext,
             7.5,
-            true
+            true,
+            5000.0,
+            667
         )
 
         assertEquals(3, snapshot.lapNr)
@@ -797,6 +816,10 @@ class TrackerServiceFinalizationTest {
         assertEquals("HR=150,SPD=25", snapshot.accumulatedGCDataString)
         assertEquals(BSportType.BIKE, snapshot.bSportType)
         assertEquals(BSportType.BIKE, snapshot.userSelectedSportType)
+        assertEquals(7.5, snapshot.avgSpeed, 1e-6)
+        assertTrue(snapshot.avgSpeedCalculable)
+        assertEquals(5000.0, snapshot.totalDistance_m, 1e-6)
+        assertEquals(667, snapshot.timeActive_s)
     }
 
     /**
@@ -1114,6 +1137,57 @@ class TrackerServiceFinalizationTest {
         assertTrue("performStopForeground must be called when terminal stop completes", realService.performStopForegroundCalled)
         assertTrue("performStopSelf must be called when terminal stop completes", realService.performStopSelfCalled)
         assertTrue("unbindService must be called when terminal stop completes", realService.unbindServiceCalled)
+    }
+
+    /**
+     * TST-TRK-076.5: Verifies that finalizeLiveSession consumes snapshot speed, distance, and duration
+     * instead of mutating TrackerService instance fields when a concurrent session restart occurs.
+     */
+    @Test
+    fun testFinalizeLiveSession_usesSnapshotMetrics_isolatedFromServiceFieldMutations() {
+        val service = TestableTrackerService()
+        val repoMock = mockk<WorkoutRepository>(relaxed = true)
+        val repoField = TrackerService::class.java.getDeclaredField("mWorkoutRepository").apply { isAccessible = true }
+        repoField.set(service, repoMock)
+
+        // Mutate service fields as if session 2 has started
+        val workoutIdField = TrackerService::class.java.getDeclaredField("mWorkoutID").apply { isAccessible = true }
+        workoutIdField.set(service, 9999L)
+        val distField = TrackerService::class.java.getDeclaredField("mDistanceTotal_m").apply { isAccessible = true }
+        distField.set(service, 100.0)
+        val timeField = TrackerService::class.java.getDeclaredField("mTimeActive_s").apply { isAccessible = true }
+        timeField.set(service, 10)
+
+        // Snapshot captures Session 1 telemetry
+        val session1WorkoutId = 1234L
+        val snapshot = TrackerService.BanalFinalizationSnapshot(
+            1, 600, 5000.0,
+            emptySet(), emptySet(), null,
+            BSportType.RUN, null, 1L,
+            8.33, true, 5000.0, 600
+        )
+
+        val liveSession = mockk<LiveWorkoutSession>(relaxed = true)
+        val speedStats = LiveWorkoutSession.RunningStats()
+        speedStats.count = 20
+        speedStats.min = 5.0
+        speedStats.max = 12.0
+        speedStats.sum = 160.0
+        every { liveSession.sensorStats } returns mapOf(SensorType.SPEED_mps to speedStats)
+
+        service.finalizeLiveSession(snapshot, session1WorkoutId, "2026-10-18_session1", liveSession)
+
+        // Verify updateExtremaValue for SPEED_mps AVG used snapshot.avgSpeed (8.33), NOT service getAverageSpeed() (10.0)
+        io.mockk.verify {
+            repoMock.updateExtremaValue(
+                session1WorkoutId,
+                SensorType.SPEED_mps,
+                ExtremaType.AVG,
+                8.33,
+                null,
+                20
+            )
+        }
     }
 }
 

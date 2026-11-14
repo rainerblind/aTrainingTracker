@@ -193,19 +193,9 @@ public class TrackerService extends Service {
     private volatile CompletableFuture<Void> mFinalizationFuture = CompletableFuture.completedFuture(null);
     private volatile boolean mIsStopping = false;
     private volatile boolean mBanalBound = false;
-    @Nullable private volatile BanalFinalizationSnapshot mFinalizationSnapshot = null;
-    @Nullable private volatile Long mFinalizationWorkoutId = null;
-    @Nullable private volatile String mFinalizationBaseFileName = null;
-    @Nullable private volatile LiveWorkoutSession mFinalizationLiveSession = null;
     private final AtomicInteger mSessionGeneration = new AtomicInteger(0);
     private volatile boolean mReceiversRegistered = false;
     @Nullable private volatile MilestoneAutoNamingManager.MilestoneCelebrationData mFirstJubileeCelebrationData = null;
-
-    @VisibleForTesting
-    @Nullable
-    public BanalFinalizationSnapshot getFinalizationSnapshotForTesting() {
-        return mFinalizationSnapshot;
-    }
     // we assume that we start while the BANAL Service is searching
     protected volatile boolean mSearching = true;
     protected volatile boolean mCreateNewLapWhenConnectedToBanalService = false;
@@ -503,6 +493,10 @@ public class TrackerService extends Service {
         @NonNull public final BSportType bSportType;
         @Nullable public final BSportType userSelectedSportType;
         public final long sportTypeId;
+        public final double avgSpeed;
+        public final boolean avgSpeedCalculable;
+        public final double totalDistance_m;
+        public final int timeActive_s;
 
         public BanalFinalizationSnapshot(
                 int lapNr,
@@ -514,6 +508,25 @@ public class TrackerService extends Service {
                 @Nullable BSportType bSportType,
                 @Nullable BSportType userSelectedSportType,
                 long sportTypeId) {
+            this(lapNr, lapTime_s, lapDistance_m, activeRemoteDeviceIds, accumulatedSensorTypes,
+                    accumulatedGCDataString, bSportType, userSelectedSportType, sportTypeId,
+                    0.0, false, 0.0, 0);
+        }
+
+        public BanalFinalizationSnapshot(
+                int lapNr,
+                int lapTime_s,
+                double lapDistance_m,
+                @Nullable Set<Long> activeRemoteDeviceIds,
+                @Nullable Set<SensorType> accumulatedSensorTypes,
+                @Nullable String accumulatedGCDataString,
+                @Nullable BSportType bSportType,
+                @Nullable BSportType userSelectedSportType,
+                long sportTypeId,
+                double avgSpeed,
+                boolean avgSpeedCalculable,
+                double totalDistance_m,
+                int timeActive_s) {
             this.lapNr = lapNr;
             this.lapTime_s = lapTime_s;
             this.lapDistance_m = lapDistance_m;
@@ -527,6 +540,10 @@ public class TrackerService extends Service {
             this.bSportType = bSportType != null ? bSportType : BSportType.UNKNOWN;
             this.userSelectedSportType = userSelectedSportType;
             this.sportTypeId = sportTypeId;
+            this.avgSpeed = avgSpeed;
+            this.avgSpeedCalculable = avgSpeedCalculable;
+            this.totalDistance_m = totalDistance_m;
+            this.timeActive_s = timeActive_s;
         }
 
         @NonNull
@@ -535,6 +552,17 @@ public class TrackerService extends Service {
                 @NonNull Context context,
                 double avgSpeed,
                 boolean avgSpeedCalculable) {
+            return capture(banalService, context, avgSpeed, avgSpeedCalculable, 0.0, 0);
+        }
+
+        @NonNull
+        public static BanalFinalizationSnapshot capture(
+                @Nullable BANALServiceComm banalService,
+                @NonNull Context context,
+                double avgSpeed,
+                boolean avgSpeedCalculable,
+                double totalDistance_m,
+                int timeActive_s) {
             if (banalService == null) {
                 return new BanalFinalizationSnapshot(
                         0, 0, 0.0,
@@ -543,7 +571,11 @@ public class TrackerService extends Service {
                         null,
                         BSportType.UNKNOWN,
                         null,
-                        BANALService.getDefaultSportTypeId());
+                        BANALService.getDefaultSportTypeId(),
+                        avgSpeed,
+                        avgSpeedCalculable,
+                        totalDistance_m,
+                        timeActive_s);
             }
 
             int lapNr = 0;
@@ -624,7 +656,11 @@ public class TrackerService extends Service {
                     gcData,
                     bSport,
                     userSelectedSport,
-                    sportTypeId);
+                    sportTypeId,
+                    avgSpeed,
+                    avgSpeedCalculable,
+                    totalDistance_m,
+                    timeActive_s);
         }
     }
 
@@ -1341,7 +1377,7 @@ public class TrackerService extends Service {
         unregisterTransientReceivers();
 
         final BanalFinalizationSnapshot snapshot = BanalFinalizationSnapshot.capture(
-                mBanalService, this, getAverageSpeed(), averageSpeedCalculateable());
+                mBanalService, this, getAverageSpeed(), averageSpeedCalculateable(), mDistanceTotal_m, mTimeActive_s);
         final boolean interrupted = mTrackingInterrupted;
         final long stoppingWorkoutId = mWorkoutID;
         final String stoppingBaseFileName = mBaseFileName;
@@ -1359,28 +1395,27 @@ public class TrackerService extends Service {
                 Log.e(TAG, "Unexpected error during async workout finalization in handleActionStop", t);
             } finally {
                 // ATT-7746 (REQ-TRK-076.3): Gate teardown on session generation and stopping state.
-                // If a new session started while this finalizationTask was queued/running on mDbExecutor,
-                // keep the service running in foreground and suppress performStopSelf/unbinding.
-                if (mSessionGeneration.get() == stoppingGeneration && mIsStopping) {
-                    mBanalService = null;
-                    releaseWakeLock();
-                    runOnMainThread(() -> {
-                        try {
+                // Teardown checks, unbinding, and stopping execute atomically on the Main Looper thread
+                // to prevent race conditions with concurrent onStartCommand.
+                runOnMainThread(() -> {
+                    try {
+                        if (mSessionGeneration.get() == stoppingGeneration && mIsStopping) {
+                            mBanalService = null;
+                            releaseWakeLock();
                             safeUnbindBanalService();
                             performStopForeground();
                             performStopSelf();
-                        } finally {
-                            finalizationFuture.complete(null);
+                        } else {
+                            if (DEBUG) {
+                                Log.d(TAG, "handleActionStop: New session started (generation="
+                                        + mSessionGeneration.get() + " vs stopping=" + stoppingGeneration
+                                        + ", isStopping=" + mIsStopping + "); suppressing stopSelf and teardown.");
+                            }
                         }
-                    });
-                } else {
-                    if (DEBUG) {
-                        Log.d(TAG, "handleActionStop: New session started (generation="
-                                + mSessionGeneration.get() + " vs stopping=" + stoppingGeneration
-                                + ", isStopping=" + mIsStopping + "); suppressing stopSelf and teardown.");
+                    } finally {
+                        finalizationFuture.complete(null);
                     }
-                    finalizationFuture.complete(null);
-                }
+                });
             }
         };
 
@@ -1566,7 +1601,7 @@ public class TrackerService extends Service {
         }
 
         final BanalFinalizationSnapshot snapshot = BanalFinalizationSnapshot.capture(
-                mBanalService, this, getAverageSpeed(), averageSpeedCalculateable());
+                mBanalService, this, getAverageSpeed(), averageSpeedCalculateable(), mDistanceTotal_m, mTimeActive_s);
 
         final boolean interrupted = mTrackingInterrupted;
         final long stoppingWorkoutId = mWorkoutID;
@@ -1978,8 +2013,7 @@ public class TrackerService extends Service {
     }
 
     protected void createNewLap(@Nullable BanalFinalizationSnapshot snapshot) {
-        long targetWorkoutId = (mFinalizationWorkoutId != null) ? mFinalizationWorkoutId : mWorkoutID;
-        createNewLap(snapshot, targetWorkoutId);
+        createNewLap(snapshot, mWorkoutID);
     }
 
     protected void createNewLap(@Nullable BanalFinalizationSnapshot snapshot, long workoutId) {
@@ -2028,12 +2062,11 @@ public class TrackerService extends Service {
 
         double lapSpeed = (lapTime_s > 0) ? (lapDistance / lapTime_s) : 0.0;
 
-        saveLap(prevLapNr, lapTime_s, lapDistance, lapSpeed);
+        saveLap(workoutId, prevLapNr, lapTime_s, lapDistance, lapSpeed);
     }
 
     protected void saveLap(long lapNr, int lapTime, double lapDistance, double averageSpeed) {
-        long targetWorkoutId = (mFinalizationWorkoutId != null) ? mFinalizationWorkoutId : mWorkoutID;
-        saveLap(targetWorkoutId, lapNr, lapTime, lapDistance, averageSpeed);
+        saveLap(mWorkoutID, lapNr, lapTime, lapDistance, averageSpeed);
     }
 
     protected void saveLap(long workoutId, long lapNr, int lapTime, double lapDistance, double averageSpeed) {
@@ -2147,34 +2180,22 @@ public class TrackerService extends Service {
      *    via {@link LocalBroadcastManager} to notify internal data layers (e.g. {@code WorkoutRepository},
      *    {@code PeriodsRepository}, and {@code WorkoutClusterEngine}) for reactive period and cluster aggregation.
      */
+    public void endWorkout() {
+        endWorkout(null, mWorkoutID, mBaseFileName, mLiveSession);
+    }
+
+    public void endWorkout(@Nullable BanalFinalizationSnapshot snapshot) {
+        endWorkout(snapshot, mWorkoutID, mBaseFileName, mLiveSession);
+    }
+
     public void endWorkout(
             @Nullable BanalFinalizationSnapshot snapshot,
             long workoutId,
             @Nullable String baseFileName,
             @Nullable LiveWorkoutSession liveSession) {
-        mFinalizationSnapshot = snapshot;
-        mFinalizationWorkoutId = workoutId;
-        mFinalizationBaseFileName = baseFileName;
-        mFinalizationLiveSession = liveSession;
-        endWorkout();
-    }
-
-    public void endWorkout(@Nullable BanalFinalizationSnapshot snapshot) {
-        long targetWorkoutId = (mFinalizationWorkoutId != null) ? mFinalizationWorkoutId : mWorkoutID;
-        String targetBaseFileName = (mFinalizationBaseFileName != null) ? mFinalizationBaseFileName : mBaseFileName;
-        LiveWorkoutSession targetLiveSession = (mFinalizationLiveSession != null) ? mFinalizationLiveSession : mLiveSession;
-        endWorkout(snapshot, targetWorkoutId, targetBaseFileName, targetLiveSession);
-    }
-
-    public void endWorkout() {
         if (DEBUG) {
-            Log.d(TAG, "endWorkout");
+            Log.d(TAG, "endWorkout: workoutId=" + workoutId);
         }
-
-        final BanalFinalizationSnapshot snapshot = mFinalizationSnapshot;
-        final long workoutId = (mFinalizationWorkoutId != null) ? mFinalizationWorkoutId : mWorkoutID;
-        final String baseFileName = (mFinalizationBaseFileName != null) ? mFinalizationBaseFileName : mBaseFileName;
-        final LiveWorkoutSession liveSession = (mFinalizationLiveSession != null) ? mFinalizationLiveSession : mLiveSession;
 
         try {
             createNewLap(snapshot, workoutId);
@@ -2316,10 +2337,6 @@ public class TrackerService extends Service {
             } catch (Throwable t) {
                 Log.w(TAG, "Error broadcasting tracking finished intents during endWorkout", t);
             } finally {
-                mFinalizationSnapshot = null;
-                mFinalizationWorkoutId = null;
-                mFinalizationBaseFileName = null;
-                mFinalizationLiveSession = null;
                 mFirstJubileeCelebrationData = null;
             }
         }
@@ -2936,10 +2953,7 @@ public class TrackerService extends Service {
 
     @VisibleForTesting
     protected void finalizeLiveSession(@Nullable BanalFinalizationSnapshot snapshot) {
-        long targetWorkoutId = (mFinalizationWorkoutId != null) ? mFinalizationWorkoutId : mWorkoutID;
-        String targetBaseFileName = (mFinalizationBaseFileName != null) ? mFinalizationBaseFileName : mBaseFileName;
-        LiveWorkoutSession targetLiveSession = (mFinalizationLiveSession != null) ? mFinalizationLiveSession : mLiveSession;
-        finalizeLiveSession(snapshot, targetWorkoutId, targetBaseFileName, targetLiveSession);
+        finalizeLiveSession(snapshot, mWorkoutID, mBaseFileName, mLiveSession);
     }
 
     @VisibleForTesting
@@ -2953,6 +2967,11 @@ public class TrackerService extends Service {
 
         final BANALServiceComm banalService = mBanalService;
         WorkoutRepository repository = getWorkoutRepository();
+
+        final double effectiveAvgSpeed = (snapshot != null) ? snapshot.avgSpeed : getAverageSpeed();
+        final boolean effectiveAvgSpeedCalculable = (snapshot != null) ? snapshot.avgSpeedCalculable : averageSpeedCalculateable();
+        final double effectiveDistanceTotal_m = (snapshot != null) ? snapshot.totalDistance_m : mDistanceTotal_m;
+        final int effectiveTimeActive_s = (snapshot != null) ? snapshot.timeActive_s : mTimeActive_s;
 
         // 1. Finalize Map and Streams first so route geometry and profile streams are never lost if downstream steps fail (REQ-TRK-030.4)
         try {
@@ -3006,8 +3025,8 @@ public class TrackerService extends Service {
                 if (IMPORTANT_SENSOR_TYPES.contains(sensor)) {
                     double avgValue = stats.getAverage();
                     // Special case: for Speed, use the authoritative distance/time average (SCRUM-108)
-                    if (sensor == SensorType.SPEED_mps && averageSpeedCalculateable()) {
-                        avgValue = getAverageSpeed();
+                    if (sensor == SensorType.SPEED_mps && effectiveAvgSpeedCalculable) {
+                        avgValue = effectiveAvgSpeed;
                     }
                     if (Double.isFinite(avgValue)) {
                         Integer avgCount = stats.getCount() > 0 ? stats.getCount() : null;
@@ -3076,7 +3095,7 @@ public class TrackerService extends Service {
                     com.atrainingtracker.trainingtracker.physiology.PowerTrainingMetricsResult powerMetrics =
                             com.atrainingtracker.trainingtracker.physiology.PowerPhysiologyCalculator.computePowerTrainingMetrics(
                                     powerSamples,
-                                    mTimeActive_s,
+                                    effectiveTimeActive_s,
                                     ftpWattsObj,
                                     weightKgObj
                             );
@@ -3140,7 +3159,7 @@ public class TrackerService extends Service {
                             : BSportType.UNKNOWN);
 
             // Initial arbitration using currently active devices in memory (more reliable than waiting for DB sync)
-            EquipmentAndSportTypeDiscoveryManager.InferredIdentity identity = discoveryManager.resolveIdentity(activeRemoteDeviceIds, banalSportType, getAverageSpeed());
+            EquipmentAndSportTypeDiscoveryManager.InferredIdentity identity = discoveryManager.resolveIdentity(activeRemoteDeviceIds, banalSportType, effectiveAvgSpeed);
 
             LatLng startPosRaw = (liveSession != null) ? liveSession.getStartLatLng() : null;
             LatLng endPosRaw = (liveSession != null) ? liveSession.getLastLatLng() : null;
@@ -3162,12 +3181,12 @@ public class TrackerService extends Service {
                     candidateSports = Collections.singleton(identity.getBSportType());
                 } else {
                     // Tier 3: Speed-Based Multi-Sport Candidate Set
-                    candidateSports = discoveryManager.getCandidateBSportTypes(banalSportType, getAverageSpeed());
+                    candidateSports = discoveryManager.getCandidateBSportTypes(banalSportType, effectiveAvgSpeed);
                 }
 
                 LatLng minAltPos = repository.getExtremaPosition(workoutId, SensorType.ALTITUDE, ExtremaType.MIN);
                 LatLng maxAltPos = repository.getExtremaPosition(workoutId, SensorType.ALTITUDE, ExtremaType.MAX);
-                WorkoutCluster suggestion = engine.suggestCluster(startPosRaw, endPosRaw, maxDispPos, mDistanceTotal_m, null, candidateSports, minAltPos, maxAltPos);
+                WorkoutCluster suggestion = engine.suggestCluster(startPosRaw, endPosRaw, maxDispPos, effectiveDistanceTotal_m, null, candidateSports, minAltPos, maxAltPos);
                 if (suggestion != null) {
                     // If hardware confidence is high, we only take the name from the cluster
                     if (identity.isHighConfidence()) {
@@ -3200,7 +3219,7 @@ public class TrackerService extends Service {
                         startLoc,
                         endLoc,
                         endpointDist,
-                        mDistanceTotal_m
+                        effectiveDistanceTotal_m
                     );
                     if (autoName != null && !autoName.trim().isEmpty()) {
                         repository.updateWorkoutName(workoutId, autoName);
