@@ -1146,6 +1146,25 @@
   • Verify `HealthConnectManager.syncWorkout(..., force = true)` succeeds when global auto-sync is disabled.
   • Verify `EditWorkoutScreen` does not trigger sync on checkbox toggle, but executes sync upon Save when checked.
 
+### TST-SET-104: **Move Workout Dialog Unassignment and State Synchronization** [Verified]
+- **Requirement(s)**: `REQ-SET-059`
+- **Component**: `WorkoutClusterComponents.kt`, `WorkoutClustersViewModel.kt`, `WorkoutRepository.kt`, `WorkoutClustersScreen.kt`, `WorkoutClusterHeatmapScreen.kt`
+- **Jira**: `ATT-7754`
+- **Status**: Verified
+- **Test Description**:
+  1. *Selection Dialog Unassign Action Test (`TST-SET-104.1`)*:
+  • Verify `WorkoutClusterSelectionDialog` renders "Keiner Route zuordnen" when `onUnassign` is non-null.
+  • Verify clicking unassign card triggers `onUnassign()` and `onDismiss()`.
+  2. *ViewModel Unassign and Flow Refresh Test (`TST-SET-104.2`)*:
+  • Verify `WorkoutClustersViewModel.unassignWorkout` calls `WorkoutRepository.unassignClusterFromWorkout` and `refreshClusters()`.
+  • Verify `_clusterWorkouts` and `_unclusteredWorkouts` are updated.
+  3. *Repository Refresh Integration Test (`TST-SET-104.3`)*:
+  • Verify `WorkoutRepository.unassignClusterFromWorkout` calls `WorkoutClusterRepository.refreshClusters()`.
+  4. *9-Locale Translation Parity Verification (`TST-SET-104.4`)*:
+  • Verify `cluster_naming__leave_unclustered` and `cluster_naming__create_new` parity across all 9 locales.
+  5. *Inspected Workout Reactive Update Test (`TST-SET-104.5`)*:
+  • Verify `inspectedWorkout` in `WorkoutClustersScreen` updates when cluster assignment changes or upon return from editing.
+
 
 
 

@@ -332,6 +332,15 @@ class WorkoutClusterRepository internal constructor(
         }
     }
 
+    /**
+     * Asynchronously refreshes clusters and stats on the repository scope (Dispatchers.IO) (ATT-7754 / REQ-SET-059).
+     */
+    fun refreshClustersAsync() {
+        repositoryScope.launch(Dispatchers.IO) {
+            refreshClusters()
+        }
+    }
+
     suspend fun refreshClusterStats(): Unit = withContext(Dispatchers.IO) {
         _clusterStats.value = summariesManager.getWorkoutClusterStatsForAllClusters()
     }

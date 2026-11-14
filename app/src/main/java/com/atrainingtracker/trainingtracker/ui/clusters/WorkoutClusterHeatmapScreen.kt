@@ -328,7 +328,19 @@ fun WorkoutClusterHeatmapScreen(
             },
             onDismiss = { workoutToMove = null },
             sportNameResolver = { viewModel.getSportName(it) },
-            bSportTypeResolver = { viewModel.getBSportType(it) }
+            bSportTypeResolver = { viewModel.getBSportType(it) },
+            onCreateNew = {
+                viewModel.createNewClusterFromWorkout(workoutToMove!!)
+                workoutToMove = null
+                viewModel.clearPeekSelection()
+            },
+            onUnassign = if (workoutToMove!!.clusterId > 0) {
+                {
+                    viewModel.unassignWorkout(workoutToMove!!)
+                    workoutToMove = null
+                    viewModel.clearPeekSelection()
+                }
+            } else null
         )
     }
 

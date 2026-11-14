@@ -44,6 +44,7 @@ class EditWorkoutClusterTest {
     private lateinit var mockSummariesDb: SQLiteDatabase
     private lateinit var mockSummariesManager: WorkoutSummariesDatabaseManager
     private lateinit var mockClusterDb: WorkoutClusterDatabaseManager
+    private lateinit var mockClusterRepo: WorkoutClusterRepository
     private lateinit var mockSportDb: SportTypeDatabaseManager
     private lateinit var clusterEngine: WorkoutClusterEngine
 
@@ -85,8 +86,11 @@ class EditWorkoutClusterTest {
         every { mockSummariesManager.getWorkoutCountForCluster(any()) } returns -1
         every { mockSummariesManager.workoutCountsForAllClusters } returns emptyMap()
 
-        WorkoutClusterDatabaseManager.resetForTesting(mockClusterDb)
         WorkoutClusterEngine.resetForTesting(null)
+        WorkoutClusterDatabaseManager.resetForTesting(mockClusterDb)
+        mockClusterRepo = spyk(WorkoutClusterRepository.getInstance(mockContext))
+        every { mockClusterRepo.refreshClustersAsync() } just Runs
+        WorkoutClusterRepository.resetForTesting(mockClusterRepo)
 
         clusterEngine = WorkoutClusterEngine.getInstance(mockContext)
     }
@@ -95,6 +99,7 @@ class EditWorkoutClusterTest {
     fun tearDown() {
         EquipmentAndSportTypeDiscoveryManager.resetForTesting(null)
         WorkoutClusterDatabaseManager.resetForTesting(null)
+        WorkoutClusterRepository.resetForTesting(null)
         WorkoutClusterEngine.resetForTesting(null)
         unmockkAll()
     }
@@ -141,6 +146,9 @@ class EditWorkoutClusterTest {
                 arrayOf(workoutId.toString())
             )
         }
+
+        // Verify repository async refresh triggered (ATT-7754 / TST-SET-104.3)
+        verify { mockClusterRepo.refreshClustersAsync() }
     }
 
     @Test

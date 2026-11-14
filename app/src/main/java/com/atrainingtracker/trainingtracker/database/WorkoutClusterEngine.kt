@@ -899,6 +899,7 @@ class WorkoutClusterEngine private constructor(context: Context) {
                 }
             }
         }
+        WorkoutClusterRepository.getInstance(context).refreshClustersAsync()
     }
 
     /**

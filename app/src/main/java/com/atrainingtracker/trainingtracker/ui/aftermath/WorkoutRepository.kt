@@ -4447,14 +4447,14 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
     /**
      * Unassigns the workout from its cluster, decrementing the cluster's hit count (REQ-SET-059).
      */
-    fun unassignClusterFromWorkout(workoutId: Long) {
-        launch(Dispatchers.IO) {
-            WorkoutClusterEngine.getInstance(application)
-                .unassignClusterFromWorkout(application, workoutId)
+    fun unassignClusterFromWorkout(workoutId: Long): Job = launch(Dispatchers.IO) {
+        WorkoutClusterEngine.getInstance(application)
+            .unassignClusterFromWorkout(application, workoutId)
 
-            reloadWorkoutData(workoutId)
-            loadWorkout(workoutId)
-        }
+        WorkoutClusterRepository.getInstance(application).refreshClusters()
+
+        reloadWorkoutData(workoutId)
+        loadWorkout(workoutId)
     }
 
     /**

@@ -467,11 +467,11 @@ When the user navigates to a cluster detail view via this workout button, pressi
 **Invariants**: Workout editing via clicking the rest of `WorkoutHeader` MUST NOT be compromised; existing database schemas, clustering calculations, and cluster-to-recordings navigation (`REQ-SET-057`) MUST remain unaltered.
 
 ### REQ-SET-059: Explicit Workout Cluster Management & Assignment in Editor [Verified]
-- **Tests**: `TST-SET-043`, `TST-SET-050`, `TST-SET-064`
+- **Tests**: `TST-SET-043`, `TST-SET-050`, `TST-SET-064`, `TST-SET-104`
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit, Integration
-- **Implementation**: `EditWorkoutScreen.kt`, `EditWorkoutViewModel.kt`, `WorkoutClusterComponents.kt`, `WorkoutClusterEngine.kt`, `WorkoutRepository.kt`
+- **Implementation**: `EditWorkoutScreen.kt`, `EditWorkoutViewModel.kt`, `WorkoutClusterComponents.kt`, `WorkoutClusterEngine.kt`, `WorkoutRepository.kt`, `WorkoutClustersScreen.kt`, `WorkoutClusterHeatmapScreen.kt`, `WorkoutClustersViewModel.kt`
 - **Rationale**: The system SHALL provide an explicit, dedicated cluster management selector within `EditWorkoutScreen` positioned immediately below the workout name input field:
 1. *Harmonized Selector UI*: The editor SHALL display an explicit cluster selector field displaying the route cluster icon (`ic_favorite_route`), label (`cluster_naming__selected_route_label`), and current cluster name (or `cluster_naming__leave_unclustered` / `unclustered` if unassigned), matching the look and feel of the TCX import naming dialog.
 2. *Unified Assignment Dialog*: Tapping the cluster selector SHALL present an assignment dialog providing:
@@ -479,6 +479,10 @@ When the user navigates to a cluster detail view via this workout button, pressi
 • **Create New ("Neuer Cluster...")**: An explicit action to create a brand new Workout Cluster from the workout session's spatial fingerprint (Start, End, Apex, Distance) and assign it to the workout.
 • **Candidate Clusters**: Spatially similar cluster candidates sorted by similarity score, displaying hit counts and sport types.
 3. *Atomic Hit Count & Identity Maintenance*: Reassigning or clearing a cluster SHALL atomically synchronize `WorkoutSummaries.CLUSTER_ID` and update cluster hit counts in `WorkoutClusterDatabaseManager`.
+4. *Move Workout Dialog Unassignment & Reactive State Synchronization (ATT-7754)*: Tapping the "Einheit verschieben" button (`R.string.cluster_move_workout_title`) across `WorkoutClustersScreen` and `WorkoutClusterHeatmapScreen` SHALL present the cluster selection sheet (`WorkoutClusterSelectionDialog`) offering:
+• **Leave Unclustered ("Keiner Route zuordnen")**: Rendered when the workout is currently assigned to a cluster (`clusterId > 0`), which unassigns the session (`clusterId = -1L`), atomically decrements the previous cluster's hit count, and triggers reactive refresh of `WorkoutClusterRepository`.
+• **Create New ("Neue Lieblingsstrecke erstellen")**: Creates a new cluster from the workout's spatial fingerprint.
+• **Reactive Inspection State Sync**: When returning from `EditWorkoutScreen` or modifying cluster assignments in `WorkoutClustersScreen`, `inspectedWorkout` SHALL immediately update its state to reflect the latest workout summary.
 **Acceptance Criteria**:
 • *Given* `EditWorkoutScreen` for any workout,
 • *When* viewed,

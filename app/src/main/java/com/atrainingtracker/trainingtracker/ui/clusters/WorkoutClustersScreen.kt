@@ -53,6 +53,7 @@ import com.atrainingtracker.R
 import com.atrainingtracker.trainingtracker.database.WorkoutCluster
 import com.atrainingtracker.trainingtracker.ui.aftermath.TrackOnMapScreen
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
+import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
 import com.atrainingtracker.trainingtracker.ui.aftermath.editworkout.EditWorkoutScreen
 import com.atrainingtracker.trainingtracker.ui.aftermath.editworkout.EditWorkoutViewModel
 import com.atrainingtracker.trainingtracker.ui.aftermath.editworkout.EditWorkoutViewModelFactory
@@ -90,6 +91,16 @@ fun WorkoutClustersScreen(
     var inspectedWorkout by remember { mutableStateOf<WorkoutData?>(null) }
     var editedWorkoutId by rememberSaveable { mutableStateOf<Long?>(null) }
     var autoShareSnapshotOnOpen by remember { mutableStateOf(false) }
+
+    val allWorkouts by summariesViewModel.workouts.collectAsStateWithLifecycle()
+
+    LaunchedEffect(allWorkouts, inspectedWorkout?.id) {
+        val currentId = inspectedWorkout?.id ?: return@LaunchedEffect
+        val updated = allWorkouts.find { it.id == currentId }
+        if (updated != null && updated != inspectedWorkout) {
+            inspectedWorkout = updated
+        }
+    }
 
     var isAdding by remember { mutableStateOf(false) }
 
@@ -189,7 +200,21 @@ fun WorkoutClustersScreen(
                     },
                     onDismiss = { workoutToCluster = null },
                     sportNameResolver = { viewModel.getSportName(it) },
-                    bSportTypeResolver = { viewModel.getBSportType(it) }
+                    bSportTypeResolver = { viewModel.getBSportType(it) },
+                    onCreateNew = {
+                        viewModel.createNewClusterFromWorkout(workoutToCluster!!)
+                        workoutToCluster = null
+                        inspectedWorkout = null
+                        viewModel.clearPeekSelection()
+                    },
+                    onUnassign = if (workoutToCluster!!.clusterId > 0) {
+                        {
+                            viewModel.unassignWorkout(workoutToCluster!!)
+                            workoutToCluster = null
+                            inspectedWorkout = null
+                            viewModel.clearPeekSelection()
+                        }
+                    } else null
                 )
             }
         }
@@ -392,11 +417,33 @@ fun WorkoutClustersScreen(
                     candidates = candidates,
                     onSelect = { target ->
                         viewModel.moveWorkout(workoutToCluster!!, target.id)
+                        if (inspectedWorkout?.id == workoutToCluster!!.id) {
+                            inspectedWorkout = inspectedWorkout?.copy(
+                                clusterId = target.id,
+                                clusterName = target.name
+                            )
+                        }
                         workoutToCluster = null
                     },
                     onDismiss = { workoutToCluster = null },
                     sportNameResolver = { viewModel.getSportName(it) },
-                    bSportTypeResolver = { viewModel.getBSportType(it) }
+                    bSportTypeResolver = { viewModel.getBSportType(it) },
+                    onCreateNew = {
+                        viewModel.createNewClusterFromWorkout(workoutToCluster!!)
+                        workoutToCluster = null
+                    },
+                    onUnassign = if (workoutToCluster!!.clusterId > 0) {
+                        {
+                            viewModel.unassignWorkout(workoutToCluster!!)
+                            if (inspectedWorkout?.id == workoutToCluster!!.id) {
+                                inspectedWorkout = inspectedWorkout?.copy(
+                                    clusterId = -1L,
+                                    clusterName = null
+                                )
+                            }
+                            workoutToCluster = null
+                        }
+                    } else null
                 )
             }
         }
@@ -415,6 +462,10 @@ fun WorkoutClustersScreen(
                 val id = editedWorkoutId
                 editedWorkoutId = null
                 if (id != null) {
+                    val updated = WorkoutRepository.getInstance(context).allWorkouts.value.find { it.id == id }
+                    if (updated != null && inspectedWorkout?.id == id) {
+                        inspectedWorkout = updated
+                    }
                     viewModel.selectWorkoutForPeek(id)
                 }
             }
