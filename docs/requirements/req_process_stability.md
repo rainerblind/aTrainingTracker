@@ -2319,6 +2319,60 @@ The workflow SHALL mandate that:
 
 **Invariants**: Zero alteration to clustering algorithms or StateFlows, coroutine dispatcher injection preserved, 100% clean-room test pass rate.
 
+### REQ-ARC-005: Java Core Services Architecture Decision Record & Prioritized Migration Strategy [Verified]
+- **Tests**: `TST-ARC-005`
+- **Priority**: Medium
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Implementation**: `docs/architecture/adr_001_java_core_services_migration.md`, `JavaCoreMigrationStrategyContractTest.kt`, `docs/architecture.md`
+- **Rationale**: To address ASPICE evaluation finding F9, eliminate Java platform types (`T!`) across core boundaries, ensure SWE.3 compile-time null safety, unify static analysis under Detekt/KtLint, and modernize concurrency models, an authoritative Architecture Decision Record (ADR-001) SHALL document the class-by-class inventory, migrate/keep/retire determinations, dependency-ordered migration tiers (Tiers 0–6), quality safeguards, and atomic child tickets (1–3 SP) under Epic ATT-431 (ATT-7566):
+1. *Comprehensive Quantitative Inventory & Classification (`REQ-ARC-005.1`)*:
+• An authoritative ADR (`docs/architecture/adr_001_java_core_services_migration.md`) SHALL catalog all 149 Java classes (45,167 LOC) across 12 architectural subsystems, documenting size, commit churn, unit test coverage, and defect risk per class.
+2. *Class-by-Class Migrate vs. Keep vs. Retire Decision Matrix (`REQ-ARC-005.2`)*:
+• The ADR SHALL record an explicit decision for every core subsystem:
+  - Migrate: Core tracking (`TrackerService`), peripheral device ingestion (`BANALService`, `DeviceManager`, `CyclingPowerMetricsDevice`, `BTLERadarDevice`), sensor formatting/filters, and file exporters (`FitFileWriter`, `TCXFileWriter`).
+  - Keep / Modernize via Repository: SQLite database managers (`WorkoutSummariesDatabaseManager`, `WorkoutSamplesDatabaseManager`).
+  - Keep / Sunset: Legacy Pebble smartwatch integration (7 files, 1,739 LOC) frozen for formal deprecation.
+  - Keep / Replace with standard library: 3rd-party embedded `au.com.bytecode.opencsv` (3 files, 493 LOC).
+3. *Phased, Bottom-Up Migration Sequencing & Integration Seams (`REQ-ARC-005.3`)*:
+• Migration SHALL follow bottom-up ASPICE SWE.5 integration seams across 7 ordered tiers:
+  - Tier 0: Characterisation test baseline & test harness scaffolding.
+  - Tier 1: Leaf sensor formatters & pure mathematical signal filters (`banalservice/sensor/formater/`, `banalservice/filters/`).
+  - Tier 2: File exporters & serializers (`FitFileWriter`, `TCXFileWriter`, `GCFileWriter`).
+  - Tier 3: Peripheral BLE & ANT+ leaf device drivers (`BTLEBikePowerDevice`, `ANTHeartRateDevice`, `BTLERadarDevice`).
+  - Tier 4: Database managers & repository modernization.
+  - Tier 5: Background core services & session state machines (`TrackerService`, `LiveWorkoutSession`, `BANALService`).
+  - Tier 6: Legacy subsystem deprecation & retirement.
+4. *Mandatory Migration Quality Safeguards (`REQ-ARC-005.4`)*:
+• Every migration child ticket SHALL enforce:
+  - Characterisation tests first: Existing behavioral contract and edge cases must be captured before touching Java sources.
+  - Zero functional change: Migrations must be pure refactorings without UI or behavioral alterations.
+  - Platform type nullability shielding: Adjacent Java boundaries must be fortified with `@NonNull` / `@Nullable` annotations.
+  - 100% clean-room test pass rate under `./gradlew testDebugUnitTest`.
+5. *Atomic Backlog Ticket Decomposition (`REQ-ARC-005.5`)*:
+• All resulting migration work SHALL be partitioned into atomic backlog tickets sized between 1 and 3 Story Points under Epic `ATT-431` (*Clean Code*), precluding monolithic multi-thousand LOC migration tickets.
+6. *Automated Strategy Contract Test Verification (`REQ-ARC-005.6`)*:
+• `JavaCoreMigrationStrategyContractTest.kt` SHALL programmatically assert the existence of ADR-001, verify that all core Java classes cited in the inventory are accounted for with valid decision classifications, and check that required quality safeguards and child tickets are documented.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-ARC-005` under Epic `ATT-431` (*Clean Code*), extending `REQ-ARC-001` through `REQ-ARC-004`. Targets `docs/architecture/adr_001_java_core_services_migration.md`, `JavaCoreMigrationStrategyContractTest.kt`, and `docs/architecture.md`.
+2. *Historical Origin & Commit Trace*: Initiated in Sprint `2026-46.6` under ticket `ATT-7566` to resolve ASPICE evaluation finding F9.
+3. *Root Reason for Existing Formulation*: Java core was retained during Kotlin adoption to prevent regressions in high-frequency sensor/GPS ingestion. A documented, phased migration strategy with pre-existing characterisation tests eliminates migration risk while restoring null safety and architectural homogeneity.
+4. *Preservation of Core Invariants*: Zero production code modification in this ticket; all existing telemetry processing, database schemas, and background services remain unaltered.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* the Java codebase inventory in `aTrainingTracker`,
+• *When* `docs/architecture/adr_001_java_core_services_migration.md` is reviewed,
+• *Then* it states a migrate/keep/retire decision per core class with technical rationale and risk tier.
+• *Given* the approved ADR-001,
+• *When* migration phases are formulated,
+• *Then* atomic child tickets of 1–3 Story Points are structured under Epic `ATT-431`.
+• *Given* `JavaCoreMigrationStrategyContractTest`,
+• *When* executed via `./gradlew testDebugUnitTest --tests com.atrainingtracker.architecture.JavaCoreMigrationStrategyContractTest`,
+• *Then* all assertions pass with zero failures.
+
+**Invariants**: Zero modification to production runtime code in `app/src/main/`, strict characterisation test prerequisite for all future child tickets, 100% test pass rate.
+
 ### REQ-PRO-027: Agile Agentic ASPICE (AAA) Governance, Constructive Resistance, Hypothesis Verification, Stage 5 Resource Gate & Ceremony 2 Completeness Sweep [Verified]
 - **Tests**: `TST-PRO-020`
 - **Priority**: High

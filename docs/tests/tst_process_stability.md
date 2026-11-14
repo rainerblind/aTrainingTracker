@@ -1553,6 +1553,23 @@
   4. *Clean-Room Full Suite Regression Execution (`TST-ARC-004.4`)*:
   • Execute `./gradlew testDebugUnitTest` verifying 100% pass rate across the full unit test suite without regressions.
 
+### TST-ARC-005: **Java Core Services Architecture Decision Record & Migration Strategy Verification Suite** [Verified]
+- **Priority**: Medium
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Requirement(s)**: `REQ-ARC-005`
+- **Component**: **Java Core Services Architecture Decision Record & Migration Strategy Verification Suite**
+- **Jira**: `ATT-7566`
+- **Test Description**:
+  1. *ADR Existence & Structural Integrity Contract Test (`TST-ARC-005.1`, `JavaCoreMigrationStrategyContractTest.kt`)*:
+  • Verify that `docs/architecture/adr_001_java_core_services_migration.md` exists and contains required sections: Context, Java Inventory, Decision Matrix, Phased Roadmap (Tiers 0–6), Quality Safeguards, and Child Tickets.
+  2. *Class Inventory & Decision Coverage Test (`TST-ARC-005.2`, `JavaCoreMigrationStrategyContractTest.kt`)*:
+  • Verify that ADR-001 accounts for all top Java anchors (`TrackerService`, `BANALService`, `WorkoutSummariesDatabaseManager`, `TrainingApplication`, `DevicesDatabaseManager`, `DeviceManager`, `BTLERadarDevice`, `FitFileWriter`) with unambiguous Migrate/Keep/Retire determinations.
+  3. *Child Ticket Sizing & Traceability Audit (`TST-ARC-005.3`, `JavaCoreMigrationStrategyContractTest.kt`)*:
+  • Verify that all child tickets identified in ADR-001 have defined Story Points between 1 and 3 SP and map to Epic `ATT-431`.
+  4. *Targeted & Full Suite Clean-Room Regression Execution (`TST-ARC-005.4`)*:
+  • Execute `./gradlew testDebugUnitTest --tests com.atrainingtracker.architecture.JavaCoreMigrationStrategyContractTest` verifying 100% pass rate.
+
 ### TST-PRO-020: **Agile Agentic ASPICE (AAA) Governance, Constructive Resistance, Hypothesis Verification, Stage 5 Resource Gate & Ceremony 2 Completeness Sweep Verification** [Verified]
 - **Priority**: High
 - **Type**: Non-Functional
