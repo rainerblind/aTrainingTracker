@@ -177,16 +177,38 @@ public class BTLERadarDevice extends MyBTLEDevice implements RadarLightDeviceCli
     public void startSearching() {
         super.startSearching();
         RadarState currentState = RadarStateRepository.getState();
-        RadarStateRepository.updateState(new RadarState(
-                RadarConnectionState.CONNECTING,
-                ThreatLevel.NONE,
-                Collections.emptyList(),
-                SystemClock.elapsedRealtime(),
-                currentState.getLightMode(),
-                mIsLightControlSupported,
-                currentState.getAudioSnoozeState(),
-                RadarSource.BLE
-        ));
+        if (currentState.getConnectionState() != RadarConnectionState.DISCONNECTED_ERROR) {
+            RadarStateRepository.updateState(new RadarState(
+                    RadarConnectionState.CONNECTING,
+                    ThreatLevel.NONE,
+                    Collections.emptyList(),
+                    SystemClock.elapsedRealtime(),
+                    currentState.getLightMode(),
+                    mIsLightControlSupported,
+                    currentState.getAudioSnoozeState(),
+                    RadarSource.BLE
+            ));
+        }
+    }
+
+    @Override
+    protected void notifyStopSearching(boolean success) {
+        super.notifyStopSearching(success);
+        if (!success) {
+            RadarState currentState = RadarStateRepository.getState();
+            if (currentState.getConnectionState() != RadarConnectionState.DISCONNECTED_ERROR) {
+                RadarStateRepository.updateState(new RadarState(
+                        RadarConnectionState.DISCONNECTED,
+                        ThreatLevel.NONE,
+                        Collections.emptyList(),
+                        SystemClock.elapsedRealtime(),
+                        currentState.getLightMode(),
+                        mIsLightControlSupported,
+                        currentState.getAudioSnoozeState(),
+                        RadarSource.BLE
+                ));
+            }
+        }
     }
 
     @Override
@@ -1164,6 +1186,10 @@ public class BTLERadarDevice extends MyBTLEDevice implements RadarLightDeviceCli
 
     public boolean isV2Stream() {
         return mIsV2Stream;
+    }
+
+    public void notifyStopSearchingForTesting(boolean success) {
+        notifyStopSearching(success);
     }
 
     public RadarWindowAggregator getWindowAggregatorForTesting() {

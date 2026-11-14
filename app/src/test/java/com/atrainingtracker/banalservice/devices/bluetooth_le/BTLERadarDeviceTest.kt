@@ -1197,4 +1197,69 @@ class BTLERadarDeviceTest {
         // When forced V1 override is false and device is bonded, V2 handshake is initiated
         assertTrue("V2 handshake must be initiated when override is false and device is bonded", radarDevice.isV2Stream)
     }
+
+    /**
+     * TST-TRK-062.8: Preserves DISCONNECTED_ERROR during reconnect startSearching() (ATT-7744 / REQ-TRK-062.4).
+     */
+    @Test
+    fun testStartSearching_whenDisconnectedError_preservesDisconnectedError() {
+        RadarStateRepository.updateState(
+            RadarState(
+                connectionState = RadarConnectionState.DISCONNECTED_ERROR,
+                lightMode = RadarLightMode.DAY_FLASH,
+                isLightControlSupported = true,
+                source = RadarSource.BLE
+            )
+        )
+        assertEquals(RadarConnectionState.DISCONNECTED_ERROR, RadarStateRepository.getState().connectionState)
+
+        radarDevice.startSearching()
+
+        assertEquals(RadarConnectionState.DISCONNECTED_ERROR, RadarStateRepository.getState().connectionState)
+    }
+
+    /**
+     * TST-TRK-062.8: startSearching transitions to CONNECTING from normal states (ATT-7744 / REQ-TRK-062.4).
+     */
+    @Test
+    fun testStartSearching_whenDisconnected_transitionsToConnecting() {
+        RadarStateRepository.updateState(
+            RadarState(
+                connectionState = RadarConnectionState.DISCONNECTED,
+                source = RadarSource.BLE
+            )
+        )
+        radarDevice.startSearching()
+        assertEquals(RadarConnectionState.CONNECTING, RadarStateRepository.getState().connectionState)
+    }
+
+    /**
+     * TST-TRK-062.8: Initial search failure transitions to DISCONNECTED (ATT-7744 / REQ-TRK-062.4).
+     */
+    @Test
+    fun testNotifyStopSearching_failure_transitionsToDisconnected() {
+        RadarStateRepository.updateState(
+            RadarState(
+                connectionState = RadarConnectionState.CONNECTING,
+                source = RadarSource.BLE
+            )
+        )
+        radarDevice.notifyStopSearchingForTesting(false)
+        assertEquals(RadarConnectionState.DISCONNECTED, RadarStateRepository.getState().connectionState)
+    }
+
+    /**
+     * TST-TRK-062.8: Search failure preserves DISCONNECTED_ERROR if already in error (ATT-7744 / REQ-TRK-062.4).
+     */
+    @Test
+    fun testNotifyStopSearching_failure_preservesDisconnectedError() {
+        RadarStateRepository.updateState(
+            RadarState(
+                connectionState = RadarConnectionState.DISCONNECTED_ERROR,
+                source = RadarSource.BLE
+            )
+        )
+        radarDevice.notifyStopSearchingForTesting(false)
+        assertEquals(RadarConnectionState.DISCONNECTED_ERROR, RadarStateRepository.getState().connectionState)
+    }
 }
