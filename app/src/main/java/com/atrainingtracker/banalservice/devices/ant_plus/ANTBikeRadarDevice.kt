@@ -48,9 +48,11 @@ import com.dsi.ant.channel.AntChannel
 import com.dsi.ant.channel.IAntChannelEventHandler
 import com.dsi.ant.message.ChannelId
 import com.dsi.ant.message.ChannelType
+import com.dsi.ant.message.EventCode
 import com.dsi.ant.message.LibConfig
 import com.dsi.ant.message.LowPrioritySearchTimeout
 import com.dsi.ant.message.fromant.BroadcastDataMessage
+import com.dsi.ant.message.fromant.ChannelEventMessage
 import com.dsi.ant.message.fromant.MessageFromAntType
 import com.dsi.ant.message.ipc.AntMessageParcel
 import java.util.Collections
@@ -98,7 +100,7 @@ class ANTBikeRadarDevice(
 
     private var antService: AntService? = null
     var antChannel: AntChannel? = null
-        private set
+        internal set
     var companionLightDevice: ANTBikeLightDevice? = null
         internal set
     internal var channelAcquisitionHandle: AntChannelHelper.AcquisitionCancellationHandle? = null
@@ -167,6 +169,18 @@ class ANTBikeRadarDevice(
                     val broadcastMsg = BroadcastDataMessage(messageParcel)
                     decodeBroadcastData(broadcastMsg.payload)
                 }
+                MessageFromAntType.CHANNEL_EVENT -> {
+                    if (isSearching) {
+                        try {
+                            val eventMsg = ChannelEventMessage(messageParcel)
+                            if (eventMsg.eventCode == EventCode.RX_SEARCH_TIMEOUT || eventMsg.eventCode == EventCode.CHANNEL_CLOSED) {
+                                antChannel?.open()
+                            }
+                        } catch (e: Exception) {
+                            Log.w(TAG, "Error handling channel event during radar search", e)
+                        }
+                    }
+                }
                 else -> {
                     // Ignore other event types
                 }
@@ -231,7 +245,7 @@ class ANTBikeRadarDevice(
         channel.setChannelId(ChannelId(antDeviceNumber, BIKE_RADAR_DEVICE_TYPE, 0))
         channel.setPeriod(BIKE_RADAR_CHANNEL_PERIOD)
         channel.setRfFrequency(BIKE_RADAR_RF_FREQUENCY)
-        channel.setAdapterWideLibConfig(LibConfig(true, true, false))
+        AntChannelHelper.safeSetAdapterWideLibConfig(channel, LibConfig(true, true, false))
         channel.setSearchTimeout(LowPrioritySearchTimeout.TWENTY_FIVE_SECONDS)
         channel.setChannelEventHandler(channelEventHandler)
         channel.open()

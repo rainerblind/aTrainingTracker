@@ -28,8 +28,20 @@ import android.util.Log
 import androidx.core.content.ContextCompat
 import com.dsi.ant.channel.AntChannel
 import com.dsi.ant.channel.AntChannelProvider
+import com.dsi.ant.channel.AntCommandFailedException
+import com.dsi.ant.channel.Capabilities
 import com.dsi.ant.channel.ChannelNotAvailableException
 import com.dsi.ant.channel.ChannelNotAvailableReason
+import com.dsi.ant.message.ChannelId
+import com.dsi.ant.message.ChannelType
+import com.dsi.ant.message.ExtendedAssignment
+import com.dsi.ant.message.ExtendedData
+import com.dsi.ant.message.LibConfig
+import com.dsi.ant.message.Rssi
+import com.dsi.ant.message.fromant.AcknowledgedDataMessage
+import com.dsi.ant.message.fromant.BroadcastDataMessage
+import com.dsi.ant.message.fromant.MessageFromAntType
+import com.dsi.ant.message.ipc.AntMessageParcel
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkConstructor
@@ -39,7 +51,9 @@ import io.mockk.unmockkAll
 import io.mockk.verify
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -303,5 +317,152 @@ class AntChannelHelperTest {
 
         verify(exactly = 0) { mockListener.onChannelAcquired(any()) }
         verify(exactly = 0) { mockListener.onAcquisitionFailed(any()) }
+    }
+
+    /**
+     * TST-CON-038.3: Background Scanning Assignment & Fallback Tests.
+     */
+    @Test
+    fun testAssignScanChannel_whenCapabilitiesSupportBackgroundScanning_assignsWithExtendedAssignment() {
+        val mockCapabilities = mockk<Capabilities>()
+        every { mockCapabilities.hasBackgroundScanning() } returns true
+        every { mockChannel.capabilities } returns mockCapabilities
+
+        val assignedSlot = slot<ExtendedAssignment>()
+        every { mockChannel.assign(ChannelType.BIDIRECTIONAL_SLAVE, capture(assignedSlot)) } returns Unit
+
+        val result = AntChannelHelper.assignScanChannel(mockChannel)
+
+        assertTrue(result)
+        verify(exactly = 1) { mockChannel.assign(ChannelType.BIDIRECTIONAL_SLAVE, any<ExtendedAssignment>()) }
+        assertTrue(assignedSlot.captured.enableBackgroundScanning)
+    }
+
+    @Test
+    fun testAssignScanChannel_whenCapabilitiesUnsupported_fallsBackToStandardSlave() {
+        val mockCapabilities = mockk<Capabilities>()
+        every { mockCapabilities.hasBackgroundScanning() } returns false
+        every { mockChannel.capabilities } returns mockCapabilities
+
+        every { mockChannel.assign(ChannelType.BIDIRECTIONAL_SLAVE) } returns Unit
+
+        val result = AntChannelHelper.assignScanChannel(mockChannel)
+
+        assertFalse(result)
+        verify(exactly = 1) { mockChannel.assign(ChannelType.BIDIRECTIONAL_SLAVE) }
+        verify(exactly = 0) { mockChannel.assign(any(), any<ExtendedAssignment>()) }
+    }
+
+    @Test
+    fun testAssignScanChannel_whenCapabilitiesThrowsException_fallsBackToStandardSlave() {
+        every { mockChannel.capabilities } throws RuntimeException("Capabilities not supported")
+        every { mockChannel.assign(ChannelType.BIDIRECTIONAL_SLAVE) } returns Unit
+
+        val result = AntChannelHelper.assignScanChannel(mockChannel)
+
+        assertFalse(result)
+        verify(exactly = 1) { mockChannel.assign(ChannelType.BIDIRECTIONAL_SLAVE) }
+    }
+
+    /**
+     * TST-CON-038.4: Safe LibConfig Exception Tolerance Tests.
+     */
+    @Test
+    fun testSafeSetAdapterWideLibConfig_whenSuccessful_returnsTrue() {
+        val libConfig = LibConfig(true, true, false)
+        every { mockChannel.setAdapterWideLibConfig(libConfig) } returns Unit
+
+        val result = AntChannelHelper.safeSetAdapterWideLibConfig(mockChannel, libConfig)
+
+        assertTrue(result)
+        verify(exactly = 1) { mockChannel.setAdapterWideLibConfig(libConfig) }
+    }
+
+    @Test
+    fun testSafeSetAdapterWideLibConfig_whenAntCommandFailedException_returnsFalseWithoutCrashing() {
+        val libConfig = LibConfig(true, true, false)
+        val mockCmdException = mockk<AntCommandFailedException>(relaxed = true)
+        every { mockCmdException.message } returns "LibConfig already configured on adapter"
+        every { mockChannel.setAdapterWideLibConfig(libConfig) } throws mockCmdException
+
+        val result = AntChannelHelper.safeSetAdapterWideLibConfig(mockChannel, libConfig)
+
+        assertFalse(result)
+        verify(exactly = 1) { mockChannel.setAdapterWideLibConfig(libConfig) }
+    }
+
+    /**
+     * TST-CON-038.5: DataMessage ExtendedData & RSSI Extraction Tests.
+     */
+    @Test
+    fun testExtractExtendedDeviceAndRssi_broadcastData_withValidChannelIdAndRssi() {
+        val mockParcel = mockk<AntMessageParcel>(relaxed = true)
+        every { mockParcel.messageId } returns 78
+        every { mockParcel.messageContent } returns ByteArray(9)
+        mockkConstructor(BroadcastDataMessage::class)
+
+        val mockExtendedData = mockk<ExtendedData>()
+        val mockChannelId = mockk<ChannelId>()
+        val mockRssi = mockk<Rssi>()
+
+        every { mockChannelId.deviceNumber } returns 43210
+        every { mockRssi.rssiValue } returns -58
+        every { mockExtendedData.hasChannelId() } returns true
+        every { mockExtendedData.channelId } returns mockChannelId
+        every { mockExtendedData.hasRssi() } returns true
+        every { mockExtendedData.rssi } returns mockRssi
+
+        every { anyConstructed<BroadcastDataMessage>().hasExtendedData() } returns true
+        every { anyConstructed<BroadcastDataMessage>().extendedData } returns mockExtendedData
+
+        val info = AntChannelHelper.extractExtendedDeviceAndRssi(MessageFromAntType.BROADCAST_DATA, mockParcel)
+
+        assertNotNull(info)
+        assertEquals(43210, info!!.deviceNumber)
+        assertEquals(-58, info.rssi)
+    }
+
+    @Test
+    fun testExtractExtendedDeviceAndRssi_acknowledgedData_withoutRssi_defaultsToMinusOne() {
+        val mockParcel = mockk<AntMessageParcel>(relaxed = true)
+        every { mockParcel.messageId } returns 79
+        every { mockParcel.messageContent } returns ByteArray(9)
+        mockkConstructor(AcknowledgedDataMessage::class)
+
+        val mockExtendedData = mockk<ExtendedData>()
+        val mockChannelId = mockk<ChannelId>()
+
+        every { mockChannelId.deviceNumber } returns 12345
+        every { mockExtendedData.hasChannelId() } returns true
+        every { mockExtendedData.channelId } returns mockChannelId
+        every { mockExtendedData.hasRssi() } returns false
+
+        every { anyConstructed<AcknowledgedDataMessage>().hasExtendedData() } returns true
+        every { anyConstructed<AcknowledgedDataMessage>().extendedData } returns mockExtendedData
+
+        val info = AntChannelHelper.extractExtendedDeviceAndRssi(MessageFromAntType.ACKNOWLEDGED_DATA, mockParcel)
+
+        assertNotNull(info)
+        assertEquals(12345, info!!.deviceNumber)
+        assertEquals(-1, info.rssi)
+    }
+
+    @Test
+    fun testExtractExtendedDeviceAndRssi_nonDataMessage_returnsNull() {
+        val mockParcel = mockk<AntMessageParcel>(relaxed = true)
+        val info = AntChannelHelper.extractExtendedDeviceAndRssi(MessageFromAntType.CHANNEL_EVENT, mockParcel)
+        assertNull(info)
+    }
+
+    @Test
+    fun testExtractExtendedDeviceAndRssi_broadcastData_withoutExtendedData_returnsNull() {
+        val mockParcel = mockk<AntMessageParcel>(relaxed = true)
+        every { mockParcel.messageId } returns 78
+        every { mockParcel.messageContent } returns ByteArray(9)
+        mockkConstructor(BroadcastDataMessage::class)
+        every { anyConstructed<BroadcastDataMessage>().hasExtendedData() } returns false
+
+        val info = AntChannelHelper.extractExtendedDeviceAndRssi(MessageFromAntType.BROADCAST_DATA, mockParcel)
+        assertNull(info)
     }
 }

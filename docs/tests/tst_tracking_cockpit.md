@@ -2215,6 +2215,26 @@
   • Verify `ANTSearchForNewDevicesEngineMultiDeviceSearch.stopAsyncSearch()` cancels pending acquisition.
   • Verify `ANTBikeRadarDevice.shutDown()` and `onServiceDisconnected()` cancels pending acquisition.
 
+### TST-CON-038: **ANT+ Bike Radar Continuous Discovery, Channel Event Re-Opening & ExtendedData Parsing Test Suite** [Verified]
+- **Requirement(s)**: `REQ-CON-038` (`REQ-CON-038.1`..`REQ-CON-038.5`)
+- **Component**: `AntChannelHelperTest.kt`, `ANTSearchForNewDevicesEngineMultiDeviceSearchTest.kt`, `ANTBikeRadarDeviceTest.kt`
+- **Jira**: `ATT-7547`
+- **Test Description**:
+  1. *Discovery Channel Event Re-Open on 25s Timeout Test (`TST-CON-038.1`, `ANTSearchForNewDevicesEngineMultiDeviceSearchTest.kt`)*:
+  • Verify that delivering `CHANNEL_EVENT` with `RX_SEARCH_TIMEOUT` or `CHANNEL_CLOSED` while radar search is active triggers `channel.open()`.
+  • Verify that when radar search is stopped (`mIsRadarSearchActive == false`), `CHANNEL_EVENT` does NOT re-open the channel.
+  2. *Tracking Channel Search Re-Open on Timeout Test (`TST-CON-038.2`, `ANTBikeRadarDeviceTest.kt`)*:
+  • Verify that delivering `CHANNEL_EVENT` with `RX_SEARCH_TIMEOUT` or `CHANNEL_CLOSED` while `ANTBikeRadarDevice.isSearching == true` triggers `channel.open()`.
+  • Verify that when `isSearching == false` (device already receiving data), timeout does NOT re-open the channel.
+  3. *Background Scanning Assignment & Fallback Test (`TST-CON-038.3`, `AntChannelHelperTest.kt`)*:
+  • Verify `AntChannelHelper.assignScanChannel` assigns `ExtendedAssignment(BACKGROUND_SCANNING)` when adapter capabilities report support.
+  • Verify fallback to standard `BIDIRECTIONAL_SLAVE` assignment when background scanning is unsupported or assignment fails.
+  4. *Safe LibConfig Exception Tolerance Test (`TST-CON-038.4`, `AntChannelHelperTest.kt`, `ANTBikeRadarDeviceTest.kt`)*:
+  • Verify that when `setAdapterWideLibConfig()` throws `AntCommandFailedException`, `AntChannelHelper.safeSetAdapterWideLibConfig` catches the exception without crashing and logs a warning.
+  5. *DataMessage ExtendedData & RSSI Extraction Test (`TST-CON-038.5`, `AntChannelHelperTest.kt`, `ANTSearchForNewDevicesEngineMultiDeviceSearchTest.kt`)*:
+  • Verify that both `AcknowledgedDataMessage` and `BroadcastDataMessage` extract device number and real RSSI values when extended data is present.
+  • Verify that missing RSSI defaults to `-1` safely.
+
 ### TST-TRK-064: **1-Tap Radar Audio Snooze, Peloton Sync & Urban Suppression Test Suite** [Verified]
 - **Requirement(s)**: `REQ-TRK-064` (`REQ-TRK-064.1`..`REQ-TRK-064.7`)
 - **Component**: `RadarSnoozeController.kt`, `RadarAlertManager.kt`, `RadarEdgeOverlay.kt`, `RadarLightQuickSwitchSheet.kt`, `RadarState.kt`, `RadarStateRepository.kt`, `BTLERadarDevice.java`, `TuningPreferencesDataStore.kt`, `RadarSettingsSection.kt`, `strings_radar.xml`

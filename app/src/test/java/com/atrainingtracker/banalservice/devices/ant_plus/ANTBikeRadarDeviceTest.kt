@@ -35,8 +35,14 @@ import com.atrainingtracker.banalservice.sensor.MySensorManager
 import com.dsi.ant.AntService
 import com.dsi.ant.channel.AntChannel
 import com.dsi.ant.channel.AntChannelProvider
+import com.dsi.ant.channel.AntCommandFailedException
+import com.dsi.ant.channel.IAntChannelEventHandler
 import com.dsi.ant.message.ChannelId
 import com.dsi.ant.message.ChannelType
+import com.dsi.ant.message.EventCode
+import com.dsi.ant.message.fromant.ChannelEventMessage
+import com.dsi.ant.message.fromant.MessageFromAntType
+import com.dsi.ant.message.ipc.AntMessageParcel
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkConstructor
@@ -71,6 +77,7 @@ class ANTBikeRadarDeviceTest {
         every { Log.d(any<String>(), any<String>()) } returns 0
         every { Log.i(any<String>(), any<String>()) } returns 0
         every { Log.w(any<String>(), any<String>()) } returns 0
+        every { Log.w(any<String>(), any<String>(), any()) } returns 0
         every { Log.e(any<String>(), any<String>()) } returns 0
         every { Log.e(any<String>(), any<String>(), any()) } returns 0
 
@@ -328,5 +335,73 @@ class ANTBikeRadarDeviceTest {
         radarDevice.shutDown()
         verify(exactly = 3) { mockHandle.cancel() }
         assertNull(radarDevice.channelAcquisitionHandle)
+    }
+
+    /**
+     * TST-CON-038.2: Tracking Channel Search Re-Open on Timeout Test.
+     */
+    @Test
+    fun testRadarDevice_channelEvent_reOpensChannel_whenSearching() {
+        val mockChannel = mockk<AntChannel>(relaxed = true)
+        val handlerSlot = slot<IAntChannelEventHandler>()
+        every { mockChannel.setChannelEventHandler(capture(handlerSlot)) } returns Unit
+
+        radarDevice.antChannel = mockChannel
+        radarDevice.startSearching()
+        assertTrue(radarDevice.isSearching)
+
+        radarDevice.configureChannel(mockChannel)
+        assertTrue(handlerSlot.isCaptured)
+        val handler = handlerSlot.captured
+
+        mockkConstructor(ChannelEventMessage::class)
+        every { anyConstructed<ChannelEventMessage>().eventCode } returns EventCode.RX_SEARCH_TIMEOUT
+
+        val mockParcel = mockk<AntMessageParcel>(relaxed = true)
+        every { mockParcel.messageId } returns 64
+        every { mockParcel.messageContent } returns byteArrayOf(0, 1, 1)
+        // Handler receives RX_SEARCH_TIMEOUT
+        handler.onReceiveMessage(MessageFromAntType.CHANNEL_EVENT, mockParcel)
+
+        // mockChannel.open() was called in startSearching(), configureChannel(), and now upon RX_SEARCH_TIMEOUT
+        verify(atLeast = 3) { mockChannel.open() }
+
+        // Handler receives CHANNEL_CLOSED
+        every { anyConstructed<ChannelEventMessage>().eventCode } returns EventCode.CHANNEL_CLOSED
+        handler.onReceiveMessage(MessageFromAntType.CHANNEL_EVENT, mockParcel)
+        verify(atLeast = 4) { mockChannel.open() }
+
+        // When data is received, isSearching becomes false
+        val dummyPayload = byteArrayOf(0x30.toByte(), 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00)
+        mockkConstructor(com.dsi.ant.message.fromant.BroadcastDataMessage::class)
+        every { anyConstructed<com.dsi.ant.message.fromant.BroadcastDataMessage>().payload } returns dummyPayload
+        every { mockParcel.messageId } returns 78
+        every { mockParcel.messageContent } returns ByteArray(9)
+
+        handler.onReceiveMessage(MessageFromAntType.BROADCAST_DATA, mockParcel)
+        assertFalse(radarDevice.isSearching)
+
+        val openCallsBefore = 4
+        every { mockParcel.messageId } returns 64
+        every { mockParcel.messageContent } returns byteArrayOf(0, 1, 1)
+        handler.onReceiveMessage(MessageFromAntType.CHANNEL_EVENT, mockParcel)
+        // Should not trigger another open() call when not searching
+        verify(exactly = openCallsBefore) { mockChannel.open() }
+    }
+
+    /**
+     * TST-CON-038.4: Safe LibConfig Exception Tolerance in configureChannel.
+     */
+    @Test
+    fun testConfigureChannel_continuesWhenLibConfigThrowsAntCommandFailedException() {
+        val mockChannel = mockk<AntChannel>(relaxed = true)
+        val mockCmdException = mockk<AntCommandFailedException>(relaxed = true)
+        every { mockCmdException.message } returns "LibConfig already set"
+        every { mockChannel.setAdapterWideLibConfig(any()) } throws mockCmdException
+
+        radarDevice.configureChannel(mockChannel)
+
+        // Verifies channel configuration completed and open() was still invoked
+        verify(exactly = 1) { mockChannel.open() }
     }
 }

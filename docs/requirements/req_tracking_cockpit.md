@@ -4049,6 +4049,50 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 **Invariants**: Predefined Network Slot 1 isolation; zero regression on BLE radar or standard ANT PCC devices; memory leak prevention via deterministic unregistration; thread safety on MainLooper.
 
+### REQ-CON-038: ANT+ Bike Radar Continuous Discovery, Channel Event Re-Opening & ExtendedData SDK Parsing [Verified]
+- **Tests**: `TST-CON-038`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Implementation**: `AntChannelHelper.kt`, `ANTSearchForNewDevicesEngineMultiDeviceSearch.java`, `ANTBikeRadarDevice.kt`
+- **Rationale**: When searching for or tracking ANT+ bike radar units, slave channels automatically close after 25s (`LowPrioritySearchTimeout.TWENTY_FIVE_SECONDS`) with `EVENT_RX_SEARCH_TIMEOUT` and `EVENT_CHANNEL_CLOSED`. The system must observe `CHANNEL_EVENT` messages, automatically re-open the channel while search remains active, utilize `ExtendedAssignment(BACKGROUND_SCANNING)` where supported by adapter capabilities, gracefully handle `AntCommandFailedException` on `setAdapterWideLibConfig()`, and unpack extended data (`ChannelId` and `Rssi`) through authentic ANT SDK `DataMessage` abstractions (ATT-7547, Parent Epic ATT-1286, extending `REQ-CON-032` and `REQ-CON-037`):
+- **Description**:
+  1. *Continuous Radar Discovery & Channel Event Handling (`REQ-CON-038.1`)*:
+     - In `ANTSearchForNewDevicesEngineMultiDeviceSearch`, incoming `MessageFromAntType.CHANNEL_EVENT` messages SHALL be decoded via `ChannelEventMessage`.
+     - When `eventCode` is `EventCode.RX_SEARCH_TIMEOUT` or `EventCode.CHANNEL_CLOSED` and `mIsRadarSearchActive == true`, `mRadarAntChannel.open()` SHALL be invoked to maintain continuous discovery.
+  2. *Tracking Channel Search Re-Opening (`REQ-CON-038.2`)*:
+     - In `ANTBikeRadarDevice`, when `isSearching == true` and `CHANNEL_EVENT` reports `RX_SEARCH_TIMEOUT` or `CHANNEL_CLOSED`, `antChannel.open()` SHALL be invoked so pairing and connecting to a newly switched-on radar unit is not silently abandoned after 25 seconds.
+  3. *Adapter Background Scanning Assignment (`REQ-CON-038.3`)*:
+     - When configuring the radar discovery channel, `AntChannelHelper` SHALL check if the adapter supports background scanning via `channel.getCapabilities().hasBackgroundScanning()`.
+     - If supported, the channel SHALL be assigned with `ExtendedAssignment` enabling background scanning. If unsupported or rejected, assignment SHALL fall back gracefully to standard `ChannelType.BIDIRECTIONAL_SLAVE`.
+  4. *Safe Adapter-Wide LibConfig Handling (`REQ-CON-038.4`)*:
+     - In both `ANTSearchForNewDevicesEngineMultiDeviceSearch` and `ANTBikeRadarDevice`, calls to `setAdapterWideLibConfig()` SHALL catch `AntCommandFailedException`, logging a warning and proceeding with channel configuration rather than aborting connection setup when another channel already configured the adapter.
+  5. *Standardized Extended Data & RSSI Extraction (`REQ-CON-038.5`)*:
+     - Incoming ANT messages SHALL be handled uniformly for both `BROADCAST_DATA` and `ACKNOWLEDGED_DATA` using `DataMessage`.
+     - When `msg.hasExtendedData()` is true, `ChannelId.getDeviceNumber()` SHALL be extracted, and if `msg.getExtendedData().hasRssi()` is true, `Rssi.getRssiValue()` SHALL be forwarded to `onNewDeviceFound(...)`.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: `REQ-CON-032.2` and `REQ-CON-032.5` targeting `AntChannelHelper.kt`, `ANTBikeRadarDevice.kt`, and `ANTSearchForNewDevicesEngineMultiDeviceSearch.java`.
+2. *Historical Origin & Commit Trace*: Sprint 2026-46.3 (`ATT-5084`).
+3. *Root Reason for Existing Formulation*: Assumed wildcard slave channel remains open indefinitely and `setAdapterWideLibConfig()` always succeeds on an exclusive adapter.
+4. *Preservation of Core Invariants*: Predefined Network Slot 1 (`ANT_PLUS`) isolation, channel parameters (4084 period, RF 57, device type 40), and 3.5s starvation watchdog remain 100% preserved.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* an active ANT+ radar search or device tracking session,
+• *When* the 25-second slave search timeout expires emitting `RX_SEARCH_TIMEOUT` or `CHANNEL_CLOSED`,
+• *Then* the channel event handler automatically re-opens the channel without user intervention while search is active.
+• *Given* an ANT adapter supporting background scanning capabilities,
+• *When* radar discovery starts,
+• *Then* the channel is assigned with `ExtendedAssignment` enabling background scanning.
+• *Given* an adapter where another channel already configured adapter-wide lib config,
+• *When* `setAdapterWideLibConfig()` throws `AntCommandFailedException`,
+• *Then* the exception is caught, logged as a warning, and channel configuration completes successfully.
+• *Given* an incoming `BROADCAST_DATA` or `ACKNOWLEDGED_DATA` message containing extended data and RSSI,
+• *When* parsed by the discovery engine,
+• *Then* `deviceNumber` and real RSSI values are extracted and reported to `onNewDeviceFound(...)`.
+
+**Invariants**: Predefined Network Slot 1 isolation; backward compatibility with adapters lacking background scanning; zero disruption to concurrently open ANT+ channels.
+
 ### REQ-TRK-064: 1-Tap Radar Audio Snooze, Peloton-Mode Audio Sync & Smart Urban Alert Suppression [Verified]
 - **Tests**: `TST-TRK-064`
 - **Implementation**: `RadarSnoozeController.kt`, `RadarAlertManager.kt`, `RadarEdgeOverlay.kt`, `RadarLightQuickSwitchSheet.kt`, `RadarState.kt`, `RadarStateRepository.kt`, `BTLERadarDevice.java`, `TuningPreferencesDataStore.kt`, `RadarSettingsSection.kt`, `strings_radar.xml`

@@ -28,11 +28,17 @@ import com.atrainingtracker.banalservice.devices.ant_plus.AntChannelHelper
 import com.dsi.ant.AntService
 import com.dsi.ant.channel.AntChannel
 import com.dsi.ant.channel.AntChannelProvider
+import com.dsi.ant.channel.IAntChannelEventHandler
 import com.dsi.ant.message.ChannelType
+import com.dsi.ant.message.EventCode
+import com.dsi.ant.message.fromant.ChannelEventMessage
+import com.dsi.ant.message.fromant.MessageFromAntType
+import com.dsi.ant.message.ipc.AntMessageParcel
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkConstructor
 import io.mockk.mockkStatic
+import io.mockk.slot
 import io.mockk.unmockkAll
 import io.mockk.verify
 import org.junit.After
@@ -173,5 +179,100 @@ class ANTSearchForNewDevicesEngineMultiDeviceSearchTest {
         engine.mRadarServiceConnection.onServiceDisconnected(mockk(relaxed = true))
         verify(exactly = 2) { mockHandle.cancel() }
         assertNull(engine.mChannelAcquisitionHandle)
+    }
+
+    /**
+     * TST-CON-038.1: Discovery Channel Event Re-Open on 25s Timeout Test.
+     */
+    @Test
+    fun testRadarSearch_channelEvent_reOpensChannel_whenSearchActive() {
+        mockkConstructor(AntService::class)
+        val mockProvider = mockk<AntChannelProvider>(relaxed = true)
+        every { anyConstructed<AntService>().channelProvider } returns mockProvider
+        every { mockProvider.numChannelsAvailable } returns 8
+
+        val mockChannel = mockk<AntChannel>(relaxed = true)
+        val handlerSlot = slot<IAntChannelEventHandler>()
+        every { mockChannel.setChannelEventHandler(capture(handlerSlot)) } returns Unit
+        AntChannelHelper.setChannelAcquirerForTesting { _, _ -> mockChannel }
+
+        val engine = ANTSearchForNewDevicesEngineMultiDeviceSearch(
+            mockContext,
+            DeviceType.BIKE_RADAR,
+            mockCallback
+        )
+        engine.mIsRadarSearchActive = true
+        engine.mRadarServiceConnection.onServiceConnected(mockk(relaxed = true), mockk(relaxed = true))
+
+        assertTrue(handlerSlot.isCaptured)
+        val handler = handlerSlot.captured
+
+        // Simulate ChannelEventMessage for RX_SEARCH_TIMEOUT
+        mockkConstructor(ChannelEventMessage::class)
+        every { anyConstructed<ChannelEventMessage>().eventCode } returns EventCode.RX_SEARCH_TIMEOUT
+
+        val mockParcel = mockk<AntMessageParcel>(relaxed = true)
+        every { mockParcel.messageId } returns 64
+        every { mockParcel.messageContent } returns byteArrayOf(0, 1, 1)
+        handler.onReceiveMessage(MessageFromAntType.CHANNEL_EVENT, mockParcel)
+
+        // mockChannel.open() was called once during onServiceConnected, and now a second time
+        verify(exactly = 2) { mockChannel.open() }
+
+        // Simulate CHANNEL_CLOSED while still active
+        every { anyConstructed<ChannelEventMessage>().eventCode } returns EventCode.CHANNEL_CLOSED
+        handler.onReceiveMessage(MessageFromAntType.CHANNEL_EVENT, mockParcel)
+        verify(exactly = 3) { mockChannel.open() }
+
+        // When search is inactive, channel should NOT be re-opened
+        engine.mIsRadarSearchActive = false
+        handler.onReceiveMessage(MessageFromAntType.CHANNEL_EVENT, mockParcel)
+        verify(exactly = 3) { mockChannel.open() }
+    }
+
+    /**
+     * TST-CON-038.5: Discovery Engine ExtendedData & RSSI Forwarding Test.
+     */
+    @Test
+    fun testRadarSearch_onReceiveMessage_forwardsExtractedRssiToCallback() {
+        mockkConstructor(AntService::class)
+        val mockProvider = mockk<AntChannelProvider>(relaxed = true)
+        every { anyConstructed<AntService>().channelProvider } returns mockProvider
+        every { mockProvider.numChannelsAvailable } returns 8
+
+        val mockChannel = mockk<AntChannel>(relaxed = true)
+        val handlerSlot = slot<IAntChannelEventHandler>()
+        every { mockChannel.setChannelEventHandler(capture(handlerSlot)) } returns Unit
+        AntChannelHelper.setChannelAcquirerForTesting { _, _ -> mockChannel }
+
+        val engine = ANTSearchForNewDevicesEngineMultiDeviceSearch(
+            mockContext,
+            DeviceType.BIKE_RADAR,
+            mockCallback
+        )
+        engine.mIsRadarSearchActive = true
+        engine.mRadarServiceConnection.onServiceConnected(mockk(relaxed = true), mockk(relaxed = true))
+
+        val handler = handlerSlot.captured
+
+        // Deliver broadcast message with extended device number 98765 and rssi -54
+        mockkStatic(AntChannelHelper::class)
+        val mockParcel = mockk<AntMessageParcel>()
+        every {
+            AntChannelHelper.extractExtendedDeviceAndRssi(MessageFromAntType.BROADCAST_DATA, mockParcel)
+        } returns AntChannelHelper.ExtendedDeviceInfo(98765, -54)
+
+        handler.onReceiveMessage(MessageFromAntType.BROADCAST_DATA, mockParcel)
+
+        verify(exactly = 1) {
+            mockCallback.onNewDeviceFound(
+                DeviceType.BIKE_RADAR,
+                98765,
+                "ANT+ Radar 98765",
+                true,
+                null,
+                -54
+            )
+        }
     }
 }

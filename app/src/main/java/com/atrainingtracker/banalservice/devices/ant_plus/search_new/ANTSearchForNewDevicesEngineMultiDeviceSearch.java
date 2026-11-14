@@ -34,9 +34,11 @@ import com.dsi.ant.channel.AntChannelProvider;
 import com.dsi.ant.channel.IAntChannelEventHandler;
 import com.dsi.ant.message.ChannelId;
 import com.dsi.ant.message.ChannelType;
+import com.dsi.ant.message.EventCode;
 import com.dsi.ant.message.LibConfig;
 import com.dsi.ant.message.LowPrioritySearchTimeout;
 import com.dsi.ant.message.fromant.BroadcastDataMessage;
+import com.dsi.ant.message.fromant.ChannelEventMessage;
 import com.dsi.ant.message.fromant.MessageFromAntType;
 import com.dsi.ant.message.ipc.AntMessageParcel;
 import com.dsi.ant.plugins.antplus.pcc.MultiDeviceSearch;
@@ -97,29 +99,36 @@ public class ANTSearchForNewDevicesEngineMultiDeviceSearch
                                 }
                                 mRadarAntChannel = channel;
                                 try {
-                                    mRadarAntChannel.assign(ChannelType.BIDIRECTIONAL_SLAVE);
+                                    AntChannelHelper.assignScanChannel(mRadarAntChannel);
                                     mRadarAntChannel.setChannelId(new ChannelId(0, AntChannelHelper.BIKE_RADAR_DEVICE_TYPE, 0));
                                     mRadarAntChannel.setPeriod(AntChannelHelper.BIKE_RADAR_CHANNEL_PERIOD);
                                     mRadarAntChannel.setRfFrequency(AntChannelHelper.BIKE_RADAR_RF_FREQUENCY);
-                                    mRadarAntChannel.setAdapterWideLibConfig(new LibConfig(true, true, false));
+                                    AntChannelHelper.safeSetAdapterWideLibConfig(mRadarAntChannel, new LibConfig(true, true, false));
                                     mRadarAntChannel.setSearchTimeout(LowPrioritySearchTimeout.TWENTY_FIVE_SECONDS);
                                     mRadarAntChannel.setChannelEventHandler(new IAntChannelEventHandler() {
                                         @Override
                                         public void onReceiveMessage(MessageFromAntType messageType, AntMessageParcel messageParcel) {
                                             if (messageType == MessageFromAntType.BROADCAST_DATA || messageType == MessageFromAntType.ACKNOWLEDGED_DATA) {
-                                                BroadcastDataMessage msg = new BroadcastDataMessage(messageParcel);
-                                                if (msg.hasExtendedData() && msg.getExtendedData().hasChannelId()) {
-                                                    int deviceNumber = msg.getExtendedData().getChannelId().getDeviceNumber();
-                                                    if (deviceNumber > 0 && mDiscoveredRadarDeviceNumbers.add(deviceNumber)) {
-                                                        mCallbackInterface.onNewDeviceFound(
-                                                                DeviceType.BIKE_RADAR,
-                                                                deviceNumber,
-                                                                "ANT+ Radar " + deviceNumber,
-                                                                true,
-                                                                null,
-                                                                -1
-                                                        );
+                                                AntChannelHelper.ExtendedDeviceInfo info = AntChannelHelper.extractExtendedDeviceAndRssi(messageType, messageParcel);
+                                                if (info != null && mDiscoveredRadarDeviceNumbers.add(info.getDeviceNumber())) {
+                                                    mCallbackInterface.onNewDeviceFound(
+                                                            DeviceType.BIKE_RADAR,
+                                                            info.getDeviceNumber(),
+                                                            "ANT+ Radar " + info.getDeviceNumber(),
+                                                            true,
+                                                            null,
+                                                            info.getRssi()
+                                                    );
+                                                }
+                                            } else if (messageType == MessageFromAntType.CHANNEL_EVENT) {
+                                                try {
+                                                    ChannelEventMessage eventMsg = new ChannelEventMessage(messageParcel);
+                                                    EventCode code = eventMsg.getEventCode();
+                                                    if ((code == EventCode.RX_SEARCH_TIMEOUT || code == EventCode.CHANNEL_CLOSED) && mIsRadarSearchActive) {
+                                                        mRadarAntChannel.open();
                                                     }
+                                                } catch (Exception e) {
+                                                    Log.w(TAG, "Error handling channel event during radar search", e);
                                                 }
                                             }
                                         }

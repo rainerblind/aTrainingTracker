@@ -30,10 +30,18 @@ import android.util.Log
 import androidx.core.content.ContextCompat
 import com.dsi.ant.channel.AntChannel
 import com.dsi.ant.channel.AntChannelProvider
+import com.dsi.ant.channel.AntCommandFailedException
 import com.dsi.ant.channel.ChannelNotAvailableException
 import com.dsi.ant.channel.ChannelNotAvailableReason
 import com.dsi.ant.channel.ipc.IAntChannelCommunicator
 import com.dsi.ant.channel.ipc.IAntChannelProviderCommunicator
+import com.dsi.ant.message.ChannelType
+import com.dsi.ant.message.ExtendedAssignment
+import com.dsi.ant.message.LibConfig
+import com.dsi.ant.message.fromant.AcknowledgedDataMessage
+import com.dsi.ant.message.fromant.BroadcastDataMessage
+import com.dsi.ant.message.fromant.MessageFromAntType
+import com.dsi.ant.message.ipc.AntMessageParcel
 import java.lang.reflect.Constructor
 import java.lang.reflect.Field
 import java.lang.reflect.Method
@@ -68,6 +76,11 @@ object AntChannelHelper {
     const val DEFAULT_MAX_RETRIES = 5
     const val DEFAULT_RETRY_INTERVAL_MS = 1000L
     const val DEFAULT_OVERALL_TIMEOUT_MS = 10000L
+
+    /**
+     * Extended device discovery information parsed from ANT+ broadcast/acknowledged messages (REQ-CON-038.5).
+     */
+    data class ExtendedDeviceInfo(val deviceNumber: Int, val rssi: Int)
 
     /**
      * Handle to cancel an in-flight asynchronous channel acquisition (REQ-CON-037.1).
@@ -194,6 +207,88 @@ object AntChannelHelper {
         )
         session.start()
         return session
+    }
+
+    /**
+     * Safely sets adapter-wide [LibConfig] on [channel] (REQ-CON-038.4).
+     * If another active channel on the adapter already owns or set the LibConfig,
+     * [AntCommandFailedException] is caught and logged, allowing channel configuration
+     * and opening to proceed without failure.
+     *
+     * @return true if configuration succeeded, false if an AntCommandFailedException occurred.
+     */
+    @JvmStatic
+    fun safeSetAdapterWideLibConfig(channel: AntChannel, libConfig: LibConfig): Boolean {
+        return try {
+            channel.setAdapterWideLibConfig(libConfig)
+            true
+        } catch (e: AntCommandFailedException) {
+            Log.w(TAG, "Adapter-wide lib config already owned or failed on channel: ${e.message}")
+            false
+        } catch (e: Exception) {
+            Log.w(TAG, "Unexpected error setting adapter-wide lib config: ${e.message}", e)
+            false
+        }
+    }
+
+    /**
+     * Assigns the channel for discovery scanning (REQ-CON-038.3).
+     * If the adapter capabilities support background scanning, assigns with
+     * ExtendedAssignment enabling background scanning. Otherwise falls back to
+     * standard BIDIRECTIONAL_SLAVE assignment.
+     *
+     * @return true if background scanning was assigned, false if standard slave was used.
+     */
+    @JvmStatic
+    fun assignScanChannel(channel: AntChannel): Boolean {
+        return try {
+            val capabilities = try { channel.capabilities } catch (_: Exception) { null }
+            if (capabilities?.hasBackgroundScanning() == true) {
+                val extendedAssignment = ExtendedAssignment()
+                extendedAssignment.enableBackgroundScanning()
+                channel.assign(ChannelType.BIDIRECTIONAL_SLAVE, extendedAssignment)
+                true
+            } else {
+                channel.assign(ChannelType.BIDIRECTIONAL_SLAVE)
+                false
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to assign background scanning, falling back to BIDIRECTIONAL_SLAVE", e)
+            channel.assign(ChannelType.BIDIRECTIONAL_SLAVE)
+            false
+        }
+    }
+
+    /**
+     * Extracts device number and RSSI from extended data in BROADCAST_DATA or ACKNOWLEDGED_DATA (REQ-CON-038.5).
+     *
+     * @return ExtendedDeviceInfo if valid channel ID present with deviceNumber > 0, or null otherwise.
+     */
+    @JvmStatic
+    fun extractExtendedDeviceAndRssi(
+        messageType: MessageFromAntType,
+        messageParcel: AntMessageParcel
+    ): ExtendedDeviceInfo? {
+        if (messageType != MessageFromAntType.BROADCAST_DATA && messageType != MessageFromAntType.ACKNOWLEDGED_DATA) {
+            return null
+        }
+        val dataMsg = if (messageType == MessageFromAntType.BROADCAST_DATA) {
+            BroadcastDataMessage(messageParcel)
+        } else {
+            AcknowledgedDataMessage(messageParcel)
+        }
+        if (dataMsg.hasExtendedData() && dataMsg.extendedData.hasChannelId()) {
+            val deviceNumber = dataMsg.extendedData.channelId.deviceNumber
+            val rssi = if (dataMsg.extendedData.hasRssi()) {
+                dataMsg.extendedData.rssi.rssiValue
+            } else {
+                -1
+            }
+            if (deviceNumber > 0) {
+                return ExtendedDeviceInfo(deviceNumber, rssi)
+            }
+        }
+        return null
     }
 
     private class AsyncAcquisitionSession(
