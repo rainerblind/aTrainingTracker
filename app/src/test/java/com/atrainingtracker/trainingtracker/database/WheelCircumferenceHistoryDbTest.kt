@@ -136,4 +136,46 @@ class WheelCircumferenceHistoryDbTest {
         assertEquals(WheelPosition.REAR, helper.getWheelPositionForDevice(502L))
         assertEquals(WheelPosition.UNSPECIFIED, helper.getWheelPositionForDevice(999L))
     }
+
+    @Test
+    fun testDeleteEquipment_cascadesCircumferenceHistoryCleanup() {
+        val database = checkNotNull(db)
+        database.execSQL(createV4EquipmentTable)
+        database.execSQL(createV4LinksTable)
+        helper.onUpgrade(database, 4, 5)
+
+        val eqId = helper.addEquipment("Canyon Aeroad", EquipmentDbHelper.ROAD, emptyList())
+        val id1 = helper.addCircumferenceHistory(eqId, 1000L, WheelPosition.FRONT, 2105, WheelCircumferenceRecord.SOURCE_GNSS_AUTO)
+        val id2 = helper.addCircumferenceHistory(eqId, 2000L, WheelPosition.REAR, 2095, WheelCircumferenceRecord.SOURCE_GNSS_AUTO)
+        assertTrue(id1 > 0)
+        assertTrue(id2 > 0)
+        assertEquals(2, helper.getCircumferenceHistory(eqId).size)
+
+        // Delete equipment must cascade to WheelCircumferenceHistory (Finding 5)
+        helper.deleteEquipment(eqId)
+        assertTrue("Circumference history must be wiped when equipment is deleted", helper.getCircumferenceHistory(eqId).isEmpty())
+    }
+
+    @Test
+    fun testGetWheelPositionForDevice_scopedByEquipmentIdAndActiveEquipment() {
+        val database = checkNotNull(db)
+        database.execSQL(createV4EquipmentTable)
+        database.execSQL(createV4LinksTable)
+        helper.onUpgrade(database, 4, 5)
+
+        val bike1 = helper.addEquipment("Bike One", EquipmentDbHelper.ROAD, emptyList())
+        val bike2 = helper.addEquipment("Bike Two", EquipmentDbHelper.CROSS, emptyList())
+
+        // Same sensor linked with different positions on different bikes
+        helper.addDeviceLink(bike1, 601L, WheelPosition.FRONT)
+        helper.addDeviceLink(bike2, 601L, WheelPosition.REAR)
+
+        // Scoped lookup (Finding 2)
+        assertEquals(WheelPosition.FRONT, helper.getWheelPositionForDevice(bike1, 601L))
+        assertEquals(WheelPosition.REAR, helper.getWheelPositionForDevice(bike2, 601L))
+
+        // Retire bike 1, unscoped lookup returns the position from active bike 2
+        helper.setEquipmentRetired(bike1, true)
+        assertEquals(WheelPosition.REAR, helper.getWheelPositionForDevice(601L))
+    }
 }

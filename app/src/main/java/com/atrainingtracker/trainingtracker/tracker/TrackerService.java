@@ -69,6 +69,7 @@ import com.atrainingtracker.banalservice.sensor.SensorData;
 import com.atrainingtracker.banalservice.sensor.SensorType;
 import com.atrainingtracker.banalservice.sensor.SensorValueType;
 import com.atrainingtracker.trainingtracker.database.EquipmentAndSportTypeDiscoveryManager;
+import com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository;
 import com.atrainingtracker.trainingtracker.exporter.ExportManager;
 import com.atrainingtracker.trainingtracker.TrainingApplication;
 import com.atrainingtracker.trainingtracker.database.ExtremaType;
@@ -3187,6 +3188,7 @@ public class TrackerService extends Service {
             mDiagnosticCollector.record(DiagnosticStage.FINALIZE, t, "Error in guessCommuteAndTrainer");
         }
 
+        EquipmentAndSportTypeDiscoveryManager.InferredIdentity identity = null;
         // 5. Identity Determination, Route Clustering & Auto-Naming (SCRUM-200, ATT-1398, REQ-TRK-030.4)
         try {
             EquipmentAndSportTypeDiscoveryManager discoveryManager = EquipmentAndSportTypeDiscoveryManager.getInstance(this);
@@ -3202,7 +3204,7 @@ public class TrackerService extends Service {
                             : BSportType.UNKNOWN);
 
             // Initial arbitration using currently active devices in memory (more reliable than waiting for DB sync)
-            EquipmentAndSportTypeDiscoveryManager.InferredIdentity identity = discoveryManager.resolveIdentity(activeRemoteDeviceIds, banalSportType, effectiveAvgSpeed);
+            identity = discoveryManager.resolveIdentity(activeRemoteDeviceIds, banalSportType, effectiveAvgSpeed);
 
             LatLng startPosRaw = (liveSession != null) ? liveSession.getStartLatLng() : null;
             LatLng endPosRaw = (liveSession != null) ? liveSession.getLastLatLng() : null;
@@ -3300,6 +3302,20 @@ public class TrackerService extends Service {
         } catch (Throwable t) {
             Log.e(TAG, "finalizeLiveSession: Error in identity determination, clustering, or auto-naming", t);
             mDiagnosticCollector.record(DiagnosticStage.FINALIZE, t, "Error in identity determination, clustering, or auto-naming");
+        }
+
+        // 6. Persist Converged Wheel Circumferences for Bike Equipment (REQ-SEN-030.3, ATT-7753)
+        try {
+            long targetEquipmentId = (identity != null && identity.getEquipmentId() > 0)
+                    ? identity.getEquipmentId()
+                    : -1L;
+            BANALServiceRepository.Companion.getInstance(this).persistConvergedCircumferences(
+                    targetEquipmentId > 0 ? targetEquipmentId : null,
+                    System.currentTimeMillis()
+            );
+        } catch (Throwable t) {
+            Log.e(TAG, "finalizeLiveSession: Error persisting converged wheel circumferences", t);
+            mDiagnosticCollector.record(DiagnosticStage.FINALIZE, t, "Error persisting converged wheel circumferences");
         }
 
         // 7. Persist final diagnostic recording errors summary (REQ-TRK-053.2)

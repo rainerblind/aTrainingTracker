@@ -80,6 +80,9 @@ open class EquipmentRepository internal constructor(
     open fun getDeviceWheelPositionsForEquipment(equipmentId: Long): Map<Long, WheelPosition> =
         equipmentDbHelper.getDeviceWheelPositionsForEquipment(equipmentId)
 
+    open fun getWheelPositionForDevice(equipmentId: Long, sensorId: Long): WheelPosition =
+        equipmentDbHelper.getWheelPositionForDevice(equipmentId, sensorId)
+
     open fun getWheelPositionForDevice(sensorId: Long): WheelPosition =
         equipmentDbHelper.getWheelPositionForDevice(sensorId)
 

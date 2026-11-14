@@ -92,3 +92,36 @@ flowchart TD
 | **TST-SEN-030.4** | `WheelCircumferenceHistoryChartTest` | Compose chart structure, zero-clipping inspection (`Rule 84`), baseline reset button | Passing |
 | **TST-SEN-030.5** | `TranslationParityTest` | 100% 9-language translation parity for dual-puncture and history strings in `strings_equipment.xml` | Passing |
 | **TST-SEN-030.6** | `ThemeColorCentralizationAuditTest` & Core UI | Theme color tokens, zero hardcoded colors, component architecture integrity | Passing |
+
+---
+
+## 5. Stage 6 Cold Carbon Review Remediation (Bounce 1/3)
+
+All 5 findings identified during the adversarial Stage 6 Cold Carbon Review were cleanly resolved:
+
+1. **Finding 1 (1-Hz Main Thread SQLite Query in `BANALServiceRepository.kt`)**:
+   - Eliminated the uncached `eqRepo.getWheelPositionForDevice(it.deviceId)` call on `Dispatchers.Main` inside the 1-Hz observation loop.
+   - Cached positions in thread-safe `cachedScopedWheelPositions` (`(equipmentId, deviceId) -> WheelPosition`) and `cachedActiveWheelPositions` (`deviceId -> WheelPosition`).
+   - Refreshed mappings off the main thread (`Dispatchers.IO`) at startup and reactively on `EquipmentRepository.equipmentLinksChanged`.
+
+2. **Finding 2 (Unscoped `getWheelPositionForDevice` Query)**:
+   - Added scoped `getWheelPositionForDevice(long equipmentId, long antDeviceId)` in `EquipmentDbHelper` and `EquipmentRepository`.
+   - Updated unscoped `getWheelPositionForDevice(long antDeviceId)` to filter by active non-retired equipment (`RETIRED = 0`), preventing arbitrary row returns across multi-bike setups.
+
+3. **Finding 3 (Broken Empty State & Baseline Button in `EditEquipmentDialog.kt`)**:
+   - Changed `if (item.frameType > 0 && historyRecords.isNotEmpty())` to `if (item.frameType > 0)`.
+   - The empty-state card (`equipment_tpms_no_history`) and *"Reifen gerade aufgepumpt (Baseline setzen)"* baseline reset button now render properly for bikes with empty history.
+
+4. **Finding 4 (Missing Post-Workout Circumference Persistence — `REQ-SEN-030.3`)**:
+   - Implemented `BANALServiceRepository.persistConvergedCircumferences(equipmentId, timestampMs)` saving locked circumference baselines from active wheel sensors into `EquipmentRepository.addCircumferenceHistory(...)`.
+   - Wired `persistConvergedCircumferences` into `TrackerService.finalizeLiveSession(...)` in an independent fault-isolated block.
+
+5. **Finding 5 (Missing Cascade Cleanup in `EquipmentDbHelper.deleteEquipment`)**:
+   - Added `db.delete(TABLE_WHEEL_CIRCUMFERENCE_HISTORY, C_HISTORY_EQUIPMENT_ID + "=?", new String[]{String.valueOf(id)});` inside the transaction in `EquipmentDbHelper.deleteEquipment(long id)`.
+
+6. **Targeted Regression Tests**:
+   - `testDeleteEquipment_cascadesCircumferenceHistoryCleanup` in `WheelCircumferenceHistoryDbTest`.
+   - `testGetWheelPositionForDevice_scopedByEquipmentIdAndActiveEquipment` in `WheelCircumferenceHistoryDbTest`.
+   - `testRepositorySourceContract_zeroMainThreadQueriesAndCaching` and `testPersistConvergedCircumferences_savesLockedEstimatorData` in `BANALServiceRepositoryMultiWheelTpmsTest`.
+   - `testEditEquipmentDialog_rendersChartEvenWhenHistoryEmpty` in `WheelCircumferenceHistoryChartTest`.
+   - `testFinalizeLiveSession_triggersPersistConvergedCircumferences` in `TrackerServiceFinalizationTest`.

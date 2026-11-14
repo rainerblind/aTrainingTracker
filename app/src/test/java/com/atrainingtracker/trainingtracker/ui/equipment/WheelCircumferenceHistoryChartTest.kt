@@ -78,4 +78,19 @@ class WheelCircumferenceHistoryChartTest {
         val method = clazz.declaredMethods.firstOrNull { it.name.startsWith("WheelCircumferenceHistoryChart") && Modifier.isPublic(it.modifiers) }
         assertNotNull("WheelCircumferenceHistoryChart composable must exist", method)
     }
+
+    @Test
+    fun testEditEquipmentDialog_rendersChartEvenWhenHistoryEmpty() {
+        val file = findFile("src/main/java/com/atrainingtracker/trainingtracker/ui/equipment/EditEquipmentDialog.kt")
+        val content = file.readText()
+
+        assertTrue(
+            "EditEquipmentDialog must render chart for bikes (frameType > 0)",
+            content.contains("if (item.frameType > 0)")
+        )
+        org.junit.Assert.assertFalse(
+            "EditEquipmentDialog must NOT suppress chart when history is empty (Finding 3)",
+            content.contains("if (item.frameType > 0 && historyRecords.isNotEmpty())")
+        )
+    }
 }

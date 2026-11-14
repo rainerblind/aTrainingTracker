@@ -556,7 +556,19 @@ public class EquipmentDbHelper extends SQLiteOpenHelper {
     }
 
     /**
-     * REQ-SEN-030.2: Finds the assigned wheel position for a hardware sensor across active links.
+     * REQ-SEN-030.2: Finds the assigned wheel position for a hardware sensor on a specific equipment item.
+     */
+    @NonNull
+    public WheelPosition getWheelPositionForDevice(long equipmentId, long antDeviceId) {
+        if (equipmentId <= 0 || antDeviceId <= 0) {
+            return WheelPosition.UNSPECIFIED;
+        }
+        WheelPosition pos = getWheelPosition(equipmentId, antDeviceId);
+        return pos != null ? pos : WheelPosition.UNSPECIFIED;
+    }
+
+    /**
+     * REQ-SEN-030.2: Finds the assigned wheel position for a hardware sensor across active (non-retired) links.
      */
     @NonNull
     public WheelPosition getWheelPositionForDevice(long antDeviceId) {
@@ -564,10 +576,12 @@ public class EquipmentDbHelper extends SQLiteOpenHelper {
             return WheelPosition.UNSPECIFIED;
         }
         SQLiteDatabase db = this.getReadableDatabase();
-        try (Cursor cursor = db.query(LINKS, new String[]{WHEEL_POSITION},
-                ANT_DEVICE_ID + "=?",
-                new String[]{String.valueOf(antDeviceId)},
-                null, null, null)) {
+        String query = "SELECT " + LINKS + "." + WHEEL_POSITION +
+                " FROM " + LINKS +
+                " INNER JOIN " + EQUIPMENT + " ON " + LINKS + "." + EQUIPMENT_ID + " = " + EQUIPMENT + "." + C_ID +
+                " WHERE " + LINKS + "." + ANT_DEVICE_ID + "=? AND " + EQUIPMENT + "." + RETIRED + "=0" +
+                " LIMIT 1";
+        try (Cursor cursor = db.rawQuery(query, new String[]{String.valueOf(antDeviceId)})) {
             if (cursor != null && cursor.moveToFirst()) {
                 int posCol = cursor.getColumnIndex(WHEEL_POSITION);
                 if (posCol != -1 && !cursor.isNull(posCol)) {
@@ -581,7 +595,7 @@ public class EquipmentDbHelper extends SQLiteOpenHelper {
     }
 
     /**
-     * Deletes equipment and its associated sensor links in one transaction.
+     * Deletes equipment, its circumference history, and its associated sensor links in one transaction.
      */
     public void deleteEquipment(long id) {
         if (id <= 0) {
@@ -590,6 +604,7 @@ public class EquipmentDbHelper extends SQLiteOpenHelper {
         SQLiteDatabase db = this.getWritableDatabase();
         db.beginTransaction();
         try {
+            db.delete(TABLE_WHEEL_CIRCUMFERENCE_HISTORY, C_HISTORY_EQUIPMENT_ID + "=?", new String[]{String.valueOf(id)});
             db.delete(LINKS, EQUIPMENT_ID + "=?", new String[]{String.valueOf(id)});
             db.delete(EQUIPMENT, C_ID + "=?", new String[]{String.valueOf(id)});
             db.setTransactionSuccessful();

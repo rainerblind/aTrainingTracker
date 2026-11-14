@@ -165,7 +165,7 @@ fun EditEquipmentDialog(
             }
 
             // Wheel Circumference History Chart for Bikes (REQ-SEN-030.4, ATT-7753)
-            if (item.frameType > 0 && historyRecords.isNotEmpty()) {
+            if (item.frameType > 0) {
                 WheelCircumferenceHistoryChart(
                     historyRecords = historyRecords,
                     onResetBaseline = { onResetBaseline?.invoke() }

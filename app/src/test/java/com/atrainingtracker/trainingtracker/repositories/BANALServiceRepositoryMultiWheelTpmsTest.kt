@@ -89,7 +89,8 @@ class BANALServiceRepositoryMultiWheelTpmsTest {
 
     @After
     fun tearDown() {
-        resetSingleton()
+        EquipmentRepository.resetForTesting(null)
+        BANALServiceRepository.resetForTesting(null)
         ArchTaskExecutor.getInstance().setDelegate(null)
         Dispatchers.resetMain()
         unmockkAll()
@@ -160,5 +161,77 @@ class BANALServiceRepositoryMultiWheelTpmsTest {
             "Repository must dispatch dual wheel ratio telemetry when >= 2 wheel sensors present",
             content.contains("dualWheelTpmsEstimator.processTelemetry")
         )
+    }
+
+    @Test
+    fun testRepositorySourceContract_zeroMainThreadQueriesAndCaching() {
+        val file = resolveSourceFile("app/src/main/java/com/atrainingtracker/trainingtracker/repositories/BANALServiceRepository.kt")
+        val content = file.readText()
+
+        // Finding 1: Must NOT call uncached getWheelPositionForDevice in 1-Hz loop
+        org.junit.Assert.assertFalse(
+            "Repository must NOT execute uncached SQLite query eqRepo.getWheelPositionForDevice in 1-Hz loop",
+            content.contains("eqRepo.getWheelPositionForDevice")
+        )
+        // Finding 1 & 2: In-memory cache structures and methods
+        assertTrue(
+            "Repository must maintain cachedActiveWheelPositions map",
+            content.contains("cachedActiveWheelPositions")
+        )
+        assertTrue(
+            "Repository must maintain cachedScopedWheelPositions map",
+            content.contains("cachedScopedWheelPositions")
+        )
+        assertTrue(
+            "Repository must provide refreshWheelPositionsCache method",
+            content.contains("fun refreshWheelPositionsCache()")
+        )
+        assertTrue(
+            "Repository must provide setCachedWheelPosition method",
+            content.contains("fun setCachedWheelPosition(")
+        )
+        // Finding 4: Post-workout persistence wiring
+        assertTrue(
+            "Repository must provide persistConvergedCircumferences method",
+            content.contains("fun persistConvergedCircumferences(")
+        )
+    }
+
+    @Test
+    fun testPersistConvergedCircumferences_savesLockedEstimatorData() {
+        val mockEqRepo = mockk<EquipmentRepository>(relaxed = true)
+        every { mockEqRepo.getDeviceWheelPositionsForEquipment(any()) } returns mapOf(
+            201L to com.atrainingtracker.trainingtracker.database.WheelPosition.FRONT,
+            202L to com.atrainingtracker.trainingtracker.database.WheelPosition.REAR
+        )
+        every { mockEqRepo.addCircumferenceHistory(any(), any(), any(), any(), any()) } returns 101L
+        EquipmentRepository.resetForTesting(mockEqRepo)
+
+        repository.setCachedWheelPosition(201L, com.atrainingtracker.trainingtracker.database.WheelPosition.FRONT, 77L)
+        repository.setCachedWheelPosition(202L, com.atrainingtracker.trainingtracker.database.WheelPosition.REAR, 77L)
+
+        val estimator1 = repository.perDeviceItpmsEstimators.getOrPut(201L) { IndirectTpmsEstimator() }
+        val estimator2 = repository.perDeviceItpmsEstimators.getOrPut(202L) { IndirectTpmsEstimator() }
+
+        // Lock start baseline on estimator 1 (2.105m -> 2105mm)
+        estimator1.onGatedStep(2050.0, 2050.0 / 2.105)
+        assertTrue(estimator1.isStartLocked)
+
+        // Estimator 2 is not locked yet
+        org.junit.Assert.assertFalse(estimator2.isStartLocked)
+
+        val inserted = repository.persistConvergedCircumferences(equipmentId = 77L, timestampMs = 123456789L)
+        assertEquals(1, inserted.size)
+        assertEquals(101L, inserted[0])
+
+        io.mockk.verify {
+            mockEqRepo.addCircumferenceHistory(
+                equipmentId = 77L,
+                timestampMs = 123456789L,
+                wheelPosition = com.atrainingtracker.trainingtracker.database.WheelPosition.FRONT,
+                circumferenceMm = 2105,
+                source = com.atrainingtracker.trainingtracker.database.WheelCircumferenceRecord.SOURCE_GNSS_AUTO
+            )
+        }
     }
 }

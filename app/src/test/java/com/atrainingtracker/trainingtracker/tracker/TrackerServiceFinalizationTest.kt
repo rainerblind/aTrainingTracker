@@ -1283,6 +1283,34 @@ class TrackerServiceFinalizationTest {
             )
         }
     }
+
+    @Test
+    fun testFinalizeLiveSession_triggersPersistConvergedCircumferences() {
+        val service = TestableTrackerService()
+        val repoMock = mockk<WorkoutRepository>(relaxed = true)
+        val repoField = TrackerService::class.java.getDeclaredField("mWorkoutRepository").apply { isAccessible = true }
+        repoField.set(service, repoMock)
+
+        val banalRepoMock = mockk<com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository>(relaxed = true)
+        com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository.resetForTesting(banalRepoMock)
+        try {
+            val liveSession = mockk<LiveWorkoutSession>(relaxed = true)
+            val snapshot = TrackerService.BanalFinalizationSnapshot(
+                1, 600, 5000.0,
+                emptySet(), emptySet(), null,
+                BSportType.BIKE, null, 1L,
+                8.33, true, 5000.0, 600
+            )
+
+            service.finalizeLiveSession(snapshot, 1234L, "2026-10-18_session1", liveSession)
+
+            io.mockk.verify {
+                banalRepoMock.persistConvergedCircumferences(null, any())
+            }
+        } finally {
+            com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository.resetForTesting(null)
+        }
+    }
 }
 
 
