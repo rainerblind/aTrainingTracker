@@ -50,7 +50,7 @@ import java.time.temporal.TemporalAdjusters
  * Threading: Intensive database rollups are offloaded to [Dispatchers.IO].
  */
 @OptIn(FlowPreview::class)
-class PeriodsRepository private constructor(private val application: Application) {
+class PeriodsRepository @androidx.annotation.VisibleForTesting internal constructor(private val application: Application) {
 
     internal val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private val dbManager = PeriodSummariesDatabaseManager.getInstance(application)
@@ -998,28 +998,15 @@ class PeriodsRepository private constructor(private val application: Application
             selectedWorkouts
         } else anchorWorkouts
         
-        // 2. Curate full polylines for the card thumbnail preview (REQ-PER-019)
-        val allPolylineMap = if (groupWorkouts.isNotEmpty()) {
-            groupWorkouts
-                .filter { it.mapPolyline.isNotEmpty() }
-                .associate { it.id to it.mapPolyline }
-        } else if (summary.workoutIdToAllPolylinesMap.isNotEmpty()) {
-            summary.workoutIdToAllPolylinesMap
-        } else summary.workoutIdToPolylineMap
-
         // 3. Scope workoutIdToPolylineMap strictly to spatial anchors (<= 5 workouts) (REQ-PER-021.1)
-        // Pre-decode anchor paths off the main thread to eliminate UI-thread PolyUtil.decode calls (REQ-PER-021.3)
         val anchorPolylineMap = if (groupWorkouts.isNotEmpty()) {
             anchorWorkouts
                 .filter { it.mapPolyline.isNotEmpty() }
                 .associate { it.id to it.mapPolyline }
         } else summary.workoutIdToPolylineMap.filterKeys { it in anchorIds }
 
-        val anchorPathMap = if (groupWorkouts.isNotEmpty()) {
-            anchorWorkouts
-                .filter { it.mapPolyline.isNotEmpty() }
-                .associate { it.id to PolyUtil.decode(it.mapPolyline) }
-        } else summary.workoutIdToPathMap.filterKeys { it in anchorIds }
+        // REQ-PER-039.1: Defer LatLng decoding to eliminate eager memory retention in repository flows.
+        // workoutIdToPathMap and workoutIdToAllPolylinesMap are set to emptyMap() (REQ-PER-039.1, REQ-PER-039.2).
 
         // 4. Hydrate LongestWorkout metrics for each sport from in-memory workouts if available (ATT-536 / ATT-579 / ATT-4476)
         val enrichedSportStats = summary.sportStats.mapValues { (sport, stats) ->
@@ -1137,14 +1124,16 @@ class PeriodsRepository private constructor(private val application: Application
 
         return summary.copy(
             sportStats = enrichedSportStats,
-            polylines = if (allPolylineMap.isNotEmpty()) {
-                allPolylineMap.values.toList()
-            } else if (previewWorkouts.isNotEmpty()) {
+            polylines = if (previewWorkouts.isNotEmpty()) {
                 previewWorkouts.map { it.mapPolyline }.filter { it.isNotEmpty() }
-            } else summary.polylines,
+            } else if (summary.polylines.isNotEmpty()) {
+                summary.polylines.take(MAX_SUMMARY_THUMBNAIL_TRACKS)
+            } else {
+                emptyList()
+            },
             workoutIdToPolylineMap = anchorPolylineMap,
-            workoutIdToAllPolylinesMap = allPolylineMap,
-            workoutIdToPathMap = anchorPathMap,
+            workoutIdToAllPolylinesMap = emptyMap(),
+            workoutIdToPathMap = emptyMap(),
             workoutIdToSportMap = if (groupWorkouts.isNotEmpty()) groupWorkouts.associate { it.id to it.bSportType } else summary.workoutIdToSportMap,
             yearlySportContributions = yearlyContributions,
             dailySportContributions = dailyContributions,

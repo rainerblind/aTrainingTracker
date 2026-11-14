@@ -825,6 +825,27 @@
   (ATT-4970: [Feature] Model DFA a1 autonomic durability and drift across multi-hour workouts (paired with ATT-4842 Heart Efficiency))
 
 
+### TST-PER-047: **PeriodsRepository Memory Footprint, Bounded LRU Cache & Lite Mode Map Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-PER-039` (`REQ-PER-039.1`..`REQ-PER-039.4`)
+- **Component**: `PeriodsRepository.kt`, `PeriodSummaryCard.kt`, `PeriodMapUtils.kt`, `app/src/test/java/com/atrainingtracker/trainingtracker/ui/aftermath/periodlist/PeriodsRepositoryMemoryTest.kt`
+- **Jira**: `ATT-7666`
+- **Test Description**:
+  1. *Empty workoutIdToPathMap in Singleton StateFlow Test (`TST-PER-047.1`, `PeriodsRepositoryMemoryTest.kt`)*:
+     • Load and enrich period summaries with simulated workout polylines.
+     • Assert `summary.workoutIdToPathMap.isEmpty()` in `_groupedPeriods` to verify zero eager `LatLng` allocation.
+  2. *Bounded polylines Count Test (`TST-PER-047.2`, `PeriodsRepositoryMemoryTest.kt`)*:
+     • Enrich a period containing > 10 workouts with polylines.
+     • Assert `summary.polylines.size <= 8` (`MAX_SUMMARY_THUMBNAIL_TRACKS`), verifying full collection duplication is eliminated.
+  3. *LRU Preview Cache Hit & Eviction Test (`TST-PER-047.3`, `PeriodMapUtilsTest.kt`)*:
+     • Invoke `prepareCardMapPreviewSync` repeatedly for the same period summary.
+     • Verify cache hit returns identical `PeriodCardMapState` without re-running `PolyUtil.decode`.
+     • Verify LRU capacity bounds storage to 64 items.
+  4. *GoogleMap Lite Mode Configuration Audit (`TST-PER-047.4`, `PeriodSummaryCardTest.kt`)*:
+     • Verify `GoogleMapOptions().liteMode(true)` is provided to `GoogleMap` in `PeriodSummaryCard` when rendering vector polylines.
+  5. *Tier 1 Targeted Package Regression Execution (`TST-PER-047.5`)*:
+     • `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.aftermath.periodlist.*"` asserting 100% pass rate.
+
+
 ---
 
 ### TST-SPT-005: Retrospective Filtering, Cluster Math, Lifetime Evaluation & ViewModel Tests [Verified]

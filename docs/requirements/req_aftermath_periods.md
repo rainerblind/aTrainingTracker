@@ -1277,6 +1277,44 @@
 **Invariants**: Zero SQLite schema migration; strict 10-minute matched data guard; 100% 9-language localization parity; graceful omission for non-HRV or short workouts.
 
 
+### REQ-PER-039: Lazy Decoded Path Resolution, Bounded Period Mini-Map Caching and Lite Mode Rendering [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-PER-047`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Implementation**: `PeriodsRepository.kt`, `PeriodSummaryCard.kt`, `PeriodMapUtils.kt`
+- **Rationale**: Eagerly decoding `List<LatLng>` objects across all historical periods into the singleton `_groupedPeriods` `StateFlow` and running full interactive OpenGL `GoogleMap` engines in scrolling `PeriodSummaryCard` list items causes `OutOfMemoryError` and thread churn. The system SHALL decouple decoded path storage, bound polyline collections, cache decoded card previews in a bounded LRU cache, and render thumbnail maps using Google Maps Lite Mode (ATT-7666, refining `REQ-PER-021.3`):
+- **Description**:
+  1. *Decoupled Path Decoding in Singleton Repository (`REQ-PER-039.1`)*:
+     - `PeriodsRepository.enrich()` SHALL NOT eagerly invoke `PolyUtil.decode(...)` or retain populated `List<LatLng>` graphs in `PeriodSummary.workoutIdToPathMap`. `workoutIdToPathMap` in the repository singleton SHALL remain empty (`emptyMap()`), resolving paths lazily on demand.
+  2. *Bounded Polyline Collections (`REQ-PER-039.2`)*:
+     - `PeriodSummary.polylines` SHALL be strictly bounded to `previewWorkouts` (`<= MAX_SUMMARY_THUMBNAIL_TRACKS` / 8 tracks), and `workoutIdToAllPolylinesMap` duplication across all 4 hierarchy levels SHALL be eliminated.
+  3. *Bounded LRU Preview Caching (`REQ-PER-039.3`)*:
+     - `PeriodMapUtils` SHALL cache computed `PeriodCardMapState` in a thread-safe `LruCache<String, PeriodCardMapState>` (capacity: 64 entries) keyed by period sort key, preventing repetitive polyline decoding and decimation during scroll passes.
+  4. *Google Maps Lite Mode Card Thumbnail Rendering (`REQ-PER-039.4`)*:
+     - `PeriodSummaryCard.PeriodMultiWorkoutMap` SHALL pass `googleMapOptionsFactory = { GoogleMapOptions().liteMode(true) }` when `visuals.heatmapProvider == null`, eliminating OpenGL context allocation and background thread spawning in `LazyColumn` items while preserving tap-to-open interactive `PeriodMapScreen` navigation.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: `REQ-PER-021.3` (*Pre-decode anchor paths off main thread*).
+2. *Historical Origin & Commit Trace*: Sprint 2026-44.2 (`ATT-4475`). Pre-decoded anchor paths during `enrich()` to prevent main-thread jank when opening maps.
+3. *Root Reason for Existing Formulation*: Aimed to eliminate UI-thread `PolyUtil.decode`, but eagerly decoded for all periods at startup into a singleton, exhausting the 512 MB heap during long sessions.
+4. *Preservation of Core Invariants*: `InteractivePeriodMap` already decodes `workoutIdToPolylineMap` asynchronously off the main thread upon opening. Setting `workoutIdToPathMap = emptyMap()` in the singleton eliminates OOM while preserving zero main-thread decoding.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* a database with many periods across Days, Weeks, Months, and Years,
+• *When* `PeriodsRepository.loadFromDatabase()` and `enrich()` execute,
+• *Then* `workoutIdToPathMap` remains empty in the singleton `_groupedPeriods`, eliminating eager `LatLng` object retention in heap.
+• *Given* period cards scrolling in `LazyColumn`,
+• *When* `PeriodSummaryCard` renders mini-maps,
+• *Then* `GoogleMapOptions().liteMode(true)` is configured for vector polylines, and preview states are served from the bounded LRU cache without spawning redundant OpenGL threads.
+• *Given* a user tapping a Period card map,
+• *When* `onMapClick` is triggered,
+• *Then* the full interactive `PeriodMapScreen` launches with full zoom/pan capabilities and complete workout tracks.
+
+**Invariants**: Zero visual regression on card thumbnails; tap-to-open interactive `PeriodMapScreen` intact; bounded heap usage during continuous scrolling.
+
+
 ---
 
 ### REQ-SPT-002: Retrospective Filtering, Cluster Aggregation & Lifetime Engine [Verified]

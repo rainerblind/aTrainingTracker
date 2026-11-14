@@ -45,6 +45,7 @@ import androidx.compose.ui.unit.sp
 import java.time.LocalDate
 import com.atrainingtracker.banalservice.BSportType
 import com.atrainingtracker.trainingtracker.ui.theme.TTAlpha
+import com.google.android.gms.maps.GoogleMapOptions
 import com.google.android.gms.maps.model.JointType
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.RoundCap
@@ -577,6 +578,14 @@ fun CompactMetricRow(label: String, count: Int, distance: String, duration: Stri
     }
 }
 
+/**
+ * Factory contract creating [GoogleMapOptions] for period card mini-maps (ATT-7666 / REQ-PER-039.4 / TST-PER-047.4).
+ * Vector polylines operate in lite mode (`liteMode(true)`) to prevent OpenGL thread accumulation,
+ * while tile overlays (e.g. heatmap) utilize regular mode as lite mode does not support TileOverlay.
+ */
+fun createPeriodMapOptions(hasHeatmap: Boolean): GoogleMapOptions =
+    GoogleMapOptions().liteMode(!hasHeatmap)
+
 @Composable
 private fun PeriodMultiWorkoutMap(
     summary: PeriodSummary,
@@ -654,6 +663,9 @@ private fun PeriodMultiWorkoutMap(
             modifier = Modifier.fillMaxSize(),
             cameraPositionState = cameraPositionState,
             properties = mapProperties,
+            googleMapOptionsFactory = {
+                createPeriodMapOptions(visuals.heatmapProvider != null)
+            },
             onMapLoaded = { isMapLoaded = true },
             uiSettings = MapUiSettings(
                 zoomControlsEnabled = false,
