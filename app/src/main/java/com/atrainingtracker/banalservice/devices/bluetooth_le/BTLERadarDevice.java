@@ -107,8 +107,9 @@ public class BTLERadarDevice extends MyBTLEDevice implements RadarLightDeviceCli
     private volatile boolean mIsStvzo = false;
     private volatile String mModelNumber = null;
     private volatile RadarLightMode mLastConfiguredLightMode = null;
+    private long mLastWindowSampleMs = 0L;
 
-    private RadarWindowAggregator mWindowAggregator = new RadarWindowAggregator();
+    private RadarWindowAggregator mWindowAggregator = new RadarWindowAggregator(SystemClock::elapsedRealtime);
 
     private void pruneStaleTracks(long nowMs) {
         synchronized (mTrackHistory) {
@@ -471,27 +472,33 @@ public class BTLERadarDevice extends MyBTLEDevice implements RadarLightDeviceCli
         );
         RadarStateRepository.updateState(state);
 
-        // Update 1 Hz aggregator
-        mWindowAggregator.onTargetsUpdated(targets);
-        RadarLatchedSnapshot snapshot = mWindowAggregator.sampleAndResetWindow();
+        long nowMs = SystemClock.elapsedRealtime();
 
-        if (mThreatCountSensor != null) {
-            mThreatCountSensor.newValue(snapshot.getThreatCount());
-        }
-        if (mClosestDistanceSensor != null) {
-            mClosestDistanceSensor.newValue(snapshot.getClosestDistanceMeters());
-        }
-        if (mApproachSpeedSensor != null) {
-            mApproachSpeedSensor.newValue(snapshot.getApproachSpeedMps());
-        }
-        if (mVehicleCountSensor != null) {
-            mVehicleCountSensor.newValue(snapshot.getVehicleCount());
-        }
-        if (mPassingDistanceSensor != null) {
-            mPassingDistanceSensor.newValue(snapshot.getPassingDistanceMeters());
-        }
-        if (mLargeVehicleCountSensor != null) {
-            mLargeVehicleCountSensor.newValue(snapshot.getLargeVehicleCount());
+        // Update 1 Hz aggregator
+        mWindowAggregator.onTargetsUpdated(targets, nowMs);
+
+        if (mLastWindowSampleMs == 0L || nowMs - mLastWindowSampleMs >= 1000L) {
+            mLastWindowSampleMs = nowMs;
+            RadarLatchedSnapshot snapshot = mWindowAggregator.sampleAndResetWindow(nowMs);
+
+            if (mThreatCountSensor != null) {
+                mThreatCountSensor.newValue(snapshot.getThreatCount());
+            }
+            if (mClosestDistanceSensor != null) {
+                mClosestDistanceSensor.newValue(snapshot.getClosestDistanceMeters());
+            }
+            if (mApproachSpeedSensor != null) {
+                mApproachSpeedSensor.newValue(snapshot.getApproachSpeedMps());
+            }
+            if (mVehicleCountSensor != null) {
+                mVehicleCountSensor.newValue(snapshot.getVehicleCount());
+            }
+            if (mPassingDistanceSensor != null) {
+                mPassingDistanceSensor.newValue(snapshot.getPassingDistanceMeters());
+            }
+            if (mLargeVehicleCountSensor != null) {
+                mLargeVehicleCountSensor.newValue(snapshot.getLargeVehicleCount());
+            }
         }
     }
 
@@ -499,6 +506,7 @@ public class BTLERadarDevice extends MyBTLEDevice implements RadarLightDeviceCli
      * Resets dynamic radar sensors to clear state (0 threats/speed, null distances).
      */
     private void resetSensorsToClear() {
+        mLastWindowSampleMs = 0L;
         if (mThreatCountSensor != null) {
             mThreatCountSensor.newValue(0);
         }
@@ -516,6 +524,7 @@ public class BTLERadarDevice extends MyBTLEDevice implements RadarLightDeviceCli
     @Override
     protected void onAccumulatorsReset() {
         super.onAccumulatorsReset();
+        mLastWindowSampleMs = 0L;
         mWindowAggregator.resetSession();
         if (mVehicleCountSensor != null) {
             mVehicleCountSensor.newValue(0);

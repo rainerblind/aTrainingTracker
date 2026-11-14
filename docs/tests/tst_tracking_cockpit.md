@@ -2250,6 +2250,20 @@
   4. *Post-Shutdown Message Ingestion Suppression Test (`TST-CON-039.4`, `ANTBikeRadarDeviceTest.kt`)*:
   • Verify that late-arriving messages or channel events received after `shutDown()` do not re-open the channel or mutate `RadarStateRepository`.
 
+### TST-CON-040: **ANT+ Bike Radar Track Identity Continuity, 0-Bin Ingestion & Rolling Window Latch Preservation Test Suite** [Verified]
+- **Requirement(s)**: `REQ-CON-040` (`REQ-CON-040.1`..`REQ-CON-040.4`)
+- **Component**: `ANTBikeRadarDevice.kt`, `RadarWindowAggregator.kt`, `BTLERadarDevice.java`, `ANTBikeRadarDeviceTest.kt`, `RadarWindowAggregatorTest.kt`, `BTLERadarDeviceTest.kt`
+- **Jira**: `ATT-7578`
+- **Test Description**:
+  1. *ANT+ Track Stability Across Slot Shifts Test (`TST-CON-040.1`, `ANTBikeRadarDeviceTest.kt`)*:
+  • Given two approaching vehicles (Car A at 5m slot 0, Car B at 15m slot 1) decoded by `ANTBikeRadarDevice`, when Car A passes and drops out and Car B moves to slot 0 at 12m in the subsequent frame, verify that Car B preserves its stable `trackId` and `RadarWindowAggregator` increments `cumulativeVehicleCount` by exactly 1.
+  2. *0-Bin Target Ingestion and Lateral Latch Test (`TST-CON-040.2`, `ANTBikeRadarDeviceTest.kt`)*:
+  • Given an incoming ANT+ Page 0x30 packet with `threatLevelBits > 0` and `rawRange = 0`, verify that `ANTBikeRadarDevice` decodes a valid `RadarTarget` with `rangeMeters = 0.0f` and latches lateral passing clearance $\le 3.0\text{ m}$.
+  3. *Rolling Window Latch Preservation Test (`TST-CON-040.3`, `RadarWindowAggregatorTest.kt`)*:
+  • Given a target that exits tracking with passing clearance, verify that multiple consecutive calls to `sampleAndResetWindow()` at 8 Hz rate within 1,000 ms retain `passingDistanceMeters` non-null, and that `passingDistanceMeters` resets to `null` only after 1,000 ms expires.
+  4. *1 Hz Driver Gating Test (`TST-CON-040.4`, `ANTBikeRadarDeviceTest.kt`, `BTLERadarDeviceTest.kt`)*:
+  • Given rapid 8 Hz packet updates delivered to `ANTBikeRadarDevice` and `BTLERadarDevice`, verify that `sampleAndResetWindow()` and scalar sensor `.newValue()` updates occur on a 1-second cadence rather than per-frame.
+
 ### TST-TRK-064: **1-Tap Radar Audio Snooze, Peloton Sync & Urban Suppression Test Suite** [Verified]
 - **Requirement(s)**: `REQ-TRK-064` (`REQ-TRK-064.1`..`REQ-TRK-064.7`)
 - **Component**: `RadarSnoozeController.kt`, `RadarAlertManager.kt`, `RadarEdgeOverlay.kt`, `RadarLightQuickSwitchSheet.kt`, `RadarState.kt`, `RadarStateRepository.kt`, `BTLERadarDevice.java`, `TuningPreferencesDataStore.kt`, `RadarSettingsSection.kt`, `strings_radar.xml`

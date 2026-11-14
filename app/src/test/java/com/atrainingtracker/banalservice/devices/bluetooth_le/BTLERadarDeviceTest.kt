@@ -329,6 +329,7 @@ class BTLERadarDeviceTest {
     @Test
     fun testProcessTargets_propagatesNullDistanceWhenRoadClears() {
         var currentTimeMs = 1000L
+        every { android.os.SystemClock.elapsedRealtime() } answers { currentTimeMs }
         radarDevice.setWindowAggregatorForTesting(RadarWindowAggregator(clock = { currentTimeMs }))
 
         // Approaching target at 15m
@@ -349,8 +350,12 @@ class BTLERadarDeviceTest {
 
     @Test
     fun testOnAccumulatorsReset_clearsVehicleCountSensorsAndSession() {
+        var currentTimeMs = 1000L
+        every { android.os.SystemClock.elapsedRealtime() } answers { currentTimeMs }
+
         // Vehicle approaches and passes (closing to <= 18m and disappearing)
         radarDevice.processTargetsForTesting(listOf(RadarTarget(1, 12f, 8f, ThreatLevel.APPROACHING)))
+        currentTimeMs = 2000L
         radarDevice.processTargetsForTesting(emptyList())
         assertEquals(1, radarDevice.getSensor(SensorType.RADAR_VEHICLE_COUNT).value)
 
@@ -362,6 +367,39 @@ class BTLERadarDeviceTest {
         assertEquals("Large vehicle count sensor must reset to 0 on accumulator reset",
             0, radarDevice.getSensor(SensorType.RADAR_LARGE_VEHICLE_COUNT).value)
         assertEquals(0, radarDevice.windowAggregatorForTesting.getVehicleCount())
+    }
+
+    /**
+     * TST-CON-040.4: 1 Hz Driver Gating for Scalar Metric Sampling (BTLERadarDevice).
+     * Deliver 8 consecutive frames spaced 125 ms apart and verify sampleAndResetWindow/newValue execute at 1 Hz cadence.
+     */
+    @Test
+    fun testBTLERadarDevice_oneHzDriverGating_limitsScalarSensorUpdates() {
+        var currentTimeMs = 1000L
+        every { android.os.SystemClock.elapsedRealtime() } answers { currentTimeMs }
+
+        assertNull("Initial threat count sensor must be null before any packet", radarDevice.getSensor(SensorType.RADAR_THREAT_COUNT).value)
+
+        // Frame 1 at t = 1000ms: approaching target triggers initial 1 Hz sample tick
+        radarDevice.processTargetsForTesting(listOf(RadarTarget(1, 15f, 5f, ThreatLevel.APPROACHING)))
+        assertEquals(1, radarDevice.getSensor(SensorType.RADAR_THREAT_COUNT).value)
+
+        // Frames 2..7 spaced 125ms apart (t = 1125..1875ms)
+        for (i in 1..7) {
+            currentTimeMs += 125L
+            radarDevice.processTargetsForTesting(emptyList())
+            // Sensor value must NOT update during sub-second interval
+            assertEquals(
+                "Sensor must not update during sub-second cadence at t=$currentTimeMs",
+                1,
+                radarDevice.getSensor(SensorType.RADAR_THREAT_COUNT).value
+            )
+        }
+
+        // Frame 8 at t = 2001ms (rolling 1,000 ms window expired and 1 Hz sample tick elapsed)
+        currentTimeMs = 2001L
+        radarDevice.processTargetsForTesting(emptyList())
+        assertEquals(0, radarDevice.getSensor(SensorType.RADAR_THREAT_COUNT).value)
     }
 
     @Test

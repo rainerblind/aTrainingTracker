@@ -32,6 +32,7 @@ import com.atrainingtracker.banalservice.devices.radar.RadarStateRepository
 import com.atrainingtracker.banalservice.devices.radar.RadarTrafficSimulator
 import com.atrainingtracker.banalservice.devices.radar.ThreatLevel
 import com.atrainingtracker.banalservice.sensor.MySensorManager
+import com.atrainingtracker.banalservice.sensor.SensorType
 import com.dsi.ant.AntService
 import com.dsi.ant.channel.AntChannel
 import com.dsi.ant.channel.AntChannelProvider
@@ -185,17 +186,19 @@ class ANTBikeRadarDeviceTest {
         assertEquals(ThreatLevel.FAST_APPROACHING, state.overallThreatLevel)
         assertEquals(2, state.targets.size)
 
-        val target0 = state.targets.find { it.targetId == 0 }
+        val target0 = state.targets.find { it.rangeMeters == 62.5f }
         assertNotNull(target0)
-        assertEquals(62.5f, target0!!.rangeMeters, 0.01f)
+        assertEquals(1, target0!!.targetId)
+        assertEquals(62.5f, target0.rangeMeters, 0.01f)
         assertEquals(15.2f, target0.approachSpeedMps, 0.01f)
         assertEquals(ThreatLevel.APPROACHING, target0.threatLevel)
         assertEquals(LaneState.IN_RIDER_LANE, target0.laneState)
         assertEquals(0.0f, target0.lateralOffsetMeters!!, 0.01f)
 
-        val target1 = state.targets.find { it.targetId == 1 }
+        val target1 = state.targets.find { it.rangeMeters == 125.0f }
         assertNotNull(target1)
-        assertEquals(125.0f, target1!!.rangeMeters, 0.01f)
+        assertEquals(2, target1!!.targetId)
+        assertEquals(125.0f, target1.rangeMeters, 0.01f)
         assertEquals(30.4f, target1.approachSpeedMps, 0.01f)
         assertEquals(ThreatLevel.FAST_APPROACHING, target1.threatLevel)
         assertEquals(LaneState.PASSING_LANE, target1.laneState)
@@ -222,7 +225,7 @@ class ANTBikeRadarDeviceTest {
         val state = RadarStateRepository.getState()
         assertEquals(1, state.targets.size)
         val target4 = state.targets.first()
-        assertEquals(4, target4.targetId)
+        assertEquals(1, target4.targetId)
         assertEquals(31.25f, target4.rangeMeters, 0.01f)
         assertEquals(9.12f, target4.approachSpeedMps, 0.01f)
         assertEquals(ThreatLevel.APPROACHING, target4.threatLevel)
@@ -552,5 +555,150 @@ class ANTBikeRadarDeviceTest {
 
         // Verifies channel configuration completed and open() was still invoked
         verify(exactly = 1) { mockChannel.open() }
+    }
+
+    /**
+     * TST-CON-040.1: ANT+ Track Stability Across Slot Shifts Test.
+     * Given two approaching vehicles where the closest passes and slot indices shift,
+     * When ANTBikeRadarDevice decodes consecutive frames,
+     * Then the remaining vehicle retains its track identity and only one pass is counted.
+     */
+    @Test
+    fun testTrackContinuity_acrossSlotShifts_retainsIdentityAndSinglePass() {
+        // Frame 1: Car A at 6.25m in slot 0, Car B at 15.625m in slot 1
+        // Threat byte: 0x01 | (0x01 << 2) = 0x05
+        // Side byte: 0x00
+        // Range 24-bit: 2 | (5 << 6) = 2 | 320 = 322 (0x42, 0x01, 0x00)
+        // Speed 16-bit: 4 | (4 << 4) = 0x44 (0x44, 0x00)
+        val frame1 = byteArrayOf(
+            0x30.toByte(),
+            0x05.toByte(),
+            0x00.toByte(),
+            0x42.toByte(), 0x01.toByte(), 0x00.toByte(),
+            0x44.toByte(), 0x00.toByte()
+        )
+        radarDevice.decodeBroadcastData(frame1)
+
+        val state1 = RadarStateRepository.getState()
+        assertEquals(2, state1.targets.size)
+        val carA = state1.targets.find { it.rangeMeters == 6.25f }
+        val carB = state1.targets.find { it.rangeMeters == 15.625f }
+        assertNotNull(carA)
+        assertNotNull(carB)
+        val carATrackId = carA!!.targetId
+        val carBTrackId = carB!!.targetId
+        assertTrue(carATrackId != carBTrackId)
+
+        // Frame 2: Car A has passed and disappeared. Car B shifts to slot 0 at 12.5m (rawRange = 4)
+        // Threat byte: 0x01
+        // Side byte: 0x00
+        // Range 24-bit: 4 (0x04, 0x00, 0x00)
+        // Speed 16-bit: 4 (0x04, 0x00)
+        val frame2 = byteArrayOf(
+            0x30.toByte(),
+            0x01.toByte(),
+            0x00.toByte(),
+            0x04.toByte(), 0x00.toByte(), 0x00.toByte(),
+            0x04.toByte(), 0x00.toByte()
+        )
+        radarDevice.decodeBroadcastData(frame2)
+
+        val state2 = RadarStateRepository.getState()
+        assertEquals(1, state2.targets.size)
+        val remainingCar = state2.targets.first()
+        // Car B MUST retain its persistent track ID despite slot shift from slot 1 to slot 0
+        assertEquals("Car B must retain its persistent trackId across slot shift", carBTrackId, remainingCar.targetId)
+        assertEquals(12.5f, remainingCar.rangeMeters, 0.01f)
+
+        // RadarWindowAggregator must increment vehicle count strictly once (for Car A's pass)
+        assertEquals(1, radarDevice.getWindowAggregator().getVehicleCount())
+    }
+
+    /**
+     * TST-CON-040.2: 0-Bin Target Ingestion and Lateral Latch Test.
+     * Given an ANT+ target frame with threatLevelBits > 0 and rawRange == 0,
+     * When decoded by ANTBikeRadarDevice,
+     * Then the vehicle is retained at 0.0m range and its lateral passing clearance is recorded.
+     */
+    @Test
+    fun testZeroBinTargetIngestion_decodesAtZeroDistanceAndLatchesClearance() {
+        // Page 0x30 with rawRange = 0, threatLevel = 1 (APPROACHING), threatSide = 1 (RIGHT lane -> lateralOffset = 1.5m)
+        // Threat byte: 0x01
+        // Side byte: 0x01
+        // Range: 0x00, 0x00, 0x00 (0.0m)
+        // Speed: 0x03, 0x00 (rawSpeed = 3 -> 9.12 m/s)
+        val zeroBinPayload = byteArrayOf(
+            0x30.toByte(),
+            0x01.toByte(),
+            0x01.toByte(),
+            0x00.toByte(), 0x00.toByte(), 0x00.toByte(),
+            0x03.toByte(), 0x00.toByte()
+        )
+        radarDevice.decodeBroadcastData(zeroBinPayload)
+
+        val state = RadarStateRepository.getState()
+        assertEquals(1, state.targets.size)
+        val target = state.targets.first()
+        assertEquals(0.0f, target.rangeMeters, 0.001f)
+        assertEquals(1.5f, target.lateralOffsetMeters!!, 0.01f)
+        assertEquals(ThreatLevel.APPROACHING, target.threatLevel)
+
+        // Next frame: road clears (target exits)
+        val clearPayload = byteArrayOf(0x30.toByte(), 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00)
+        radarDevice.decodeBroadcastData(clearPayload)
+
+        // Window snapshot must latch the passing distance of 1.5m
+        val snapshot = radarDevice.getWindowAggregator().sampleAndResetWindow()
+        assertNotNull("Passing distance must be latched for 0-bin target", snapshot.passingDistanceMeters)
+        assertEquals(1.5, snapshot.passingDistanceMeters!!, 0.001)
+        assertEquals(1, radarDevice.getWindowAggregator().getVehicleCount())
+    }
+
+    /**
+     * TST-CON-040.4: 1 Hz Driver Gating for Scalar Metric Sampling (ANTBikeRadarDevice).
+     * Deliver 8 consecutive frames spaced 125 ms apart and verify sampleAndResetWindow/newValue execute at 1 Hz cadence.
+     */
+    @Test
+    fun testANTBikeRadarDevice_oneHzDriverGating_limitsScalarSensorUpdates() {
+        var currentTimeMs = 1000L
+        every { android.os.SystemClock.elapsedRealtime() } answers { currentTimeMs }
+
+        // Initial sensor state
+        assertNull(radarDevice.getSensor(SensorType.RADAR_THREAT_COUNT).value)
+
+        // Target packet: 1 approaching target at 21.875m
+        val packet = byteArrayOf(
+            0x30.toByte(),
+            0x01.toByte(),
+            0x00.toByte(),
+            0x07.toByte(), 0x00.toByte(), 0x00.toByte(), // rawRange = 7 -> 21.875m
+            0x04.toByte(), 0x00.toByte()
+        )
+
+        // Frame 1 at t = 1000ms: first frame triggers 1 Hz sample (lastWindowSampleMs = 0 -> nowMs = 1000)
+        radarDevice.decodeBroadcastData(packet)
+        assertEquals(1, radarDevice.getSensor(SensorType.RADAR_THREAT_COUNT).value)
+
+        // Clear packet
+        val clearPacket = byteArrayOf(0x30.toByte(), 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00)
+
+        // Frames 2..7 spaced 125ms apart (t = 1125, 1250, 1375, 1500, 1625, 1750, 1875)
+        for (i in 1..7) {
+            currentTimeMs += 125L
+            radarDevice.decodeBroadcastData(clearPacket)
+            // Scalar sensors MUST NOT update because < 1000ms elapsed since last sample at 1000ms!
+            // Threat count sensor remains 1 (retained from t = 1000ms)
+            assertEquals(
+                "Sensor must not update during sub-second cadence at t=$currentTimeMs",
+                1,
+                radarDevice.getSensor(SensorType.RADAR_THREAT_COUNT).value
+            )
+        }
+
+        // Frame 8 at t = 2001ms (rolling 1,000 ms window expired and 1 Hz sample tick elapsed)
+        currentTimeMs = 2001L
+        radarDevice.decodeBroadcastData(clearPacket)
+        // Now 1 Hz window samples again, reflecting the clear road (threat count -> 0)
+        assertEquals(0, radarDevice.getSensor(SensorType.RADAR_THREAT_COUNT).value)
     }
 }
