@@ -439,6 +439,9 @@ public class BTLERadarDevice extends MyBTLEDevice implements RadarLightDeviceCli
 
     @Override
     protected void measurementCharacteristicUpdate(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic) {
+        if (mIsShutDown || gatt != mBluetoothGatt || mState != State.CONNECTED_WITH_SERVICE) {
+            return;
+        }
         if (characteristic == null || characteristic.getValue() == null) {
             return;
         }
@@ -1212,13 +1215,19 @@ public class BTLERadarDevice extends MyBTLEDevice implements RadarLightDeviceCli
         mLastLightModeCommandTimeMs = timeMs;
     }
 
+    @Override
     @androidx.annotation.VisibleForTesting
     public void setStateForTesting(State state) {
-        mState = state;
+        super.setStateForTesting(state);
     }
 
     @androidx.annotation.VisibleForTesting
     public State getStateForTesting() {
         return mState;
+    }
+
+    @androidx.annotation.VisibleForTesting
+    public void measurementCharacteristicUpdateForTesting(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic) {
+        measurementCharacteristicUpdate(gatt, characteristic);
     }
 }

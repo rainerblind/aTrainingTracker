@@ -950,6 +950,8 @@
   • Invoke API 33 `onCharacteristicChanged(gatt, ch, value)` with packet 1 (`[0x01, 0x50]`).
   • Mutate the underlying byte array immediately to packet 2 (`[0x02, 0x60]`).
   • Drain the main-thread Looper and verify the receiver observes the exact original cloned byte payload (`[0x01, 0x50]`) without in-place mutation.
+  • Allocate 16 rapid snapshots while the main-thread Looper is paused and verify all 16 snapshots retain their distinct, uncorrupted payloads without ring-buffer pool overwrite (`ATT-7579`).
+  • Verify queued notification runnables on `mHandler` drop execution when `gatt != mBluetoothGatt` or `mState != State.CONNECTED_WITH_SERVICE` (`ATT-7579`).
   2. *Deterministic Search Timeout Lifecycle & Reconnect Backoff Unit Test (`TST-CON-012.2`, `BLEReconnectRobustnessTest.kt`)*:
   • Verify `startSearching()` cancels any prior pending timeout.
   • Verify successful connection discovery (`notifyStopSearching(true)`) cancels `mSearchTimeoutRunnable`.
@@ -1929,6 +1931,7 @@
   • Verify threat triplets with `vid >= 0x80` decode valid targets (`trackId = vid & 0x7F`, `rangeMeters = dist & 0xFF`), discarding `vid < 0x80`, `vid == 0xFD`, and `dist == 0xFF`.
   • Verify stateful track history calculates closing speed $\Delta d / \Delta t$ across observations and classifies `FAST_APPROACHING` vs `APPROACHING` with `STALE_MS = 2000L` ageing.
   • Verify that 3.5 seconds of packet starvation triggers transition to `DISCONNECTED_ERROR`.
+  • Verify that invoking `disconnectFromGatt()` purges tracks, updates `RadarStateRepository` to `DISCONNECTED`, and drops subsequent late measurement runnables without reviving `CONNECTED` state (`ATT-7579`).
   3. *1 Hz Window Aggregator & Vehicle Counter Hysteresis Unit Tests (`TST-CON-028.3`, `RadarWindowAggregatorTest.kt`, `BTLERadarDeviceTest.kt`)*:
   • Verify 1,000 ms rolling latch window retention across 8 Hz bursts followed by clear frames: metrics are retained for 1,000 ms before decaying.
   • Verify transition to `null` for `closestDistanceMeters` and `passingDistanceMeters` when road clears, asserting that `mClosestDistanceSensor.getValue()` returns `null` (cockpit `--` display).

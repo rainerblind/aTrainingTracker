@@ -1734,12 +1734,16 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 ### REQ-CON-020: Resilient Bluetooth LE & ANT+ Reconnection, Immutable Telemetry Dispatch, and Queue Integrity Architecture [Verified]
 - **Tests**: `TST-CON-012`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `MyBTLEDevice.java`, `DeviceManager.java`, `MyANTDevice.java`
-- **Rationale**: The system (`MyBTLEDevice`, `DeviceManager`, `MyANTDevice`) SHALL guarantee immutable BLE notification payload dispatch to eliminate main-thread data corruption from Binder buffer reuse, provide deterministic search timeout lifecycle management with exponential backoff on disconnect to prevent GATT 133/257 storms, enforce search queue device matching in `DeviceManager` to prevent alien event preemption, and ensure clean handle release and non-locking recovery on ANT+ `DEAD` state (ATT-4007, extending `REQ-CON-019`):
-1. *Immutable BLE Notification Payload Dispatch (`REQ-CON-020.1`)*:
+- **Rationale**: The system (`MyBTLEDevice`, `DeviceManager`, `MyANTDevice`) SHALL guarantee immutable BLE notification payload dispatch to eliminate main-thread data corruption from Binder buffer reuse, provide deterministic search timeout lifecycle management with exponential backoff on disconnect to prevent GATT 133/257 storms, enforce search queue device matching in `DeviceManager` to prevent alien event preemption, and ensure clean handle release and non-locking recovery on ANT+ `DEAD` state (ATT-4007, ATT-7579, extending `REQ-CON-019`):
+1. *Immutable BLE Notification Payload Dispatch & Connection Lifecycle Guarding (`REQ-CON-020.1`)*:
 • In `MyBTLEDevice.java`, the `BluetoothGattCallback` SHALL implement the Android 13+ (API 33) signature `onCharacteristicChanged(BluetoothGatt, BluetoothGattCharacteristic, byte[])` alongside the legacy fallback.
 • When a notification arrives, the raw payload bytes SHALL immediately be defensively cloned on the Binder callback thread (`(value != null ? value : characteristic.getValue()).clone()`).
-• A decoupled snapshot characteristic populated with the cloned byte buffer SHALL be dispatched to `mHandler`, guaranteeing that subsequent incoming BLE packets cannot mutate payload data before or during main-thread processing.
+• A decoupled, unshared snapshot characteristic populated with the cloned byte buffer SHALL be dispatched to `mHandler`, guaranteeing that subsequent incoming BLE packets cannot mutate payload data before or during main-thread processing, eliminating ring-buffer pool overrun (`SNAPSHOT_POOL_SIZE = 8`) during main-thread stalls (ATT-7579).
+• Queued notification runnables on `mHandler` SHALL verify connection validity under `mGattLock`: if `mIsShutDown`, `gatt != mBluetoothGatt`, or `mState != State.CONNECTED_WITH_SERVICE`, the packet SHALL be dropped immediately without dispatching to `measurementCharacteristicUpdate`, preventing stale execution against disconnected GATT sessions (ATT-7579).
 2. *Deterministic Search Timeout Lifecycle & Reconnect Backoff (`REQ-CON-020.2`)*:
 • `MyBTLEDevice` SHALL maintain a single, reusable `mSearchTimeoutRunnable`.
 • All pending search timeouts SHALL be explicitly cancelled via `mHandler.removeCallbacks(mSearchTimeoutRunnable)` upon: starting a new search (`startSearching()`), disconnecting from GATT (`disconnectFromGatt()`), explicit teardown (`shutDown()`), and successful service discovery (`notifyStopSearching(true)`).
@@ -1754,18 +1758,24 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 • In `MyANTDevice.onDeviceStateChangeHandler(DeviceState.DEAD)`, `releaseAccess()` SHALL be invoked, `pccReleaseHandle` SHALL be set to `null`, `notifyStopSearching(false)` SHALL be ensured, and sensors unregistered without leaving dangling channel allocations.
 
 **Requirement Archaeology & Chesterton's Fence Audit**:
-1. *Original Requirement ID & Target*: Net-new requirement `REQ-CON-020`, extending `REQ-CON-019` (`ATT-2773`). Targets `MyBTLEDevice.java`, `DeviceManager.java`, `MyANTDevice.java`, and peripheral drivers under `com.atrainingtracker.banalservice.devices`.
-2. *Historical Origin & Commit Trace*: Ticket `ATT-4007`, Sprint `2026-42.10`, discovered during whole-app code review of `feature/ATT-3921` (`0234bfc0`). `DeviceManager` and `MyBTLEDevice` were part of initial BLE/ANT+ architecture and lacked concurrency/lifecycle hardening for modern Android 13+ APIs.
-3. *Root Reason for Existing Formulation*: Early BLE APIs on Android (API 18–32) passed `BluetoothGattCharacteristic` directly without byte arrays, and single-threaded looper assumptions obscured race conditions. In `DeviceManager`, `searchForNextRemoteDevice()` was placed outside the check under the assumption that `SEARCHING_STOPPED` would only fire for the active device.
-4. *Preservation of Core Invariants*: Existing peripheral drivers (`BTLEHeartRateDevice`, `BTLEBikePowerDevice`, `BTLEBikeDevice`, `BTLERunSpeedDevice`), service discovery sequences, and pairing flows must continue to function with 100% fidelity. Clean-room test suite must pass completely.
+1. *Original Requirement ID & Target*: Requirement `REQ-CON-020` (extending `REQ-CON-019`). Targets `MyBTLEDevice.java`, `DeviceManager.java`, `MyANTDevice.java`, and peripheral drivers under `com.atrainingtracker.banalservice.devices`.
+2. *Historical Origin & Commit Trace*: Ticket `ATT-4007`, Sprint `2026-42.10`, commit `0234bfc0`. Refined in `ATT-7579` (Sprint `2026-46.6`).
+3. *Root Reason for Existing Formulation*: Early BLE APIs on Android (API 18–32) passed `BluetoothGattCharacteristic` directly without byte arrays. In `ATT-4007`, an 8-slot ring-buffer pool was introduced to reduce GC allocations under 1 Hz sensor rates; with 4–8 Hz radar streams, the pool wraps around within 1s during main-thread UI stalls, overwriting queued characteristic payloads.
+4. *Preservation of Core Invariants*: Existing peripheral drivers (`BTLEHeartRateDevice`, `BTLEBikePowerDevice`, `BTLEBikeDevice`, `BTLERunSpeedDevice`, `BTLERadarDevice`), service discovery sequences, and pairing flows must continue to function with 100% fidelity. Clean-room test suite must pass completely.
 
 **Acceptance Criteria (Given-When-Then)**:
 • *Given* a `MyBTLEDevice` receiving rapid BLE notifications,
 • *When* the Bluetooth callback thread receives consecutive packets where the underlying characteristic byte array is mutated in place,
 • *Then* the main-thread handler receives independent immutable byte snapshots matching each exact packet payload without data corruption.
+• *Given* 16 rapid BLE notifications queued while the main thread is busy,
+• *When* the handler drains,
+• *Then* all 16 payloads are preserved in order without overwriting earlier snapshots (ATT-7579).
 • *Given* a connected BLE sensor that disconnects unexpectedly,
 • *When* `onConnectionStateChange` receives `STATE_DISCONNECTED`,
 • *Then* it cancels any prior timeout, schedules reconnection with initial 1,000 ms backoff, doubles backoff on successive disconnects up to 16,000 ms, and cancels all pending timeouts when shut down.
+• *Given* `disconnectFromGatt()` has been called,
+• *When* a previously queued notification runnable executes on `mHandler`,
+• *Then* it is dropped and ignored without mutating state or reviving disconnected connections (ATT-7579).
 • *Given* `DeviceManager` actively searching for Device A with Device B queued in `mSearchQueue`,
 • *When* a `SEARCHING_STOPPED_FOR_ONE_INTENT` arrives with `deviceID = C` (alien device),
 • *Then* the event is discarded, `cMyRemoteDeviceCurrentlySearchingFor` remains Device A, and Device B is NOT popped from `mSearchQueue`.
@@ -3531,6 +3541,7 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 • Threat frames (`len >= 4 && (len - 1) % 3 == 0 && ((payload[0] & 0x0F) == 0x02 || payload[0] == 0x00)`) SHALL decode `1 + 3*N` bytes into triplets `[vid, dist, flag]`, discarding invalid tracks with `vid < 0x80`, `vid == 0xFD`, or `dist == 0xFF`. Valid tracks (`trackId = vid & 0x7F`, `rangeMeters = dist & 0xFF`) SHALL be maintained in a stateful track history with ageing (`STALE_MS = 2000L`) to derive closing speed (`approachSpeedMps`) from range deltas over time ($\Delta d / \Delta t$) and classify `ThreatLevel` (`FAST_APPROACHING` for closing speed $\ge 15.0\text{ m/s}$ or legacy threat bits, `APPROACHING` for closing speed $> 0.0\text{ m/s}$).
 • Target updates SHALL be published to `RadarStateRepository` (`StateFlow<RadarState>`) at 4–8 Hz.
 • A 3.5s watchdog timer SHALL transition `RadarState` to `DISCONNECTED_ERROR` if no valid packets arrive or GATT disconnects.
+• Upon GATT disconnection (`disconnectFromGatt()`), `RadarStateRepository` SHALL transition to `RadarConnectionState.DISCONNECTED` with empty targets; late-arriving queued measurement runnables on `mHandler` SHALL be dropped under `mGattLock` when `gatt != mBluetoothGatt` or `mState != State.CONNECTED_WITH_SERVICE`, strictly preventing post-disconnect stale target revival and false reconnection (ATT-7579).
 5. *Scalar 1 Hz Latch Aggregator, Vehicle Counter & Zero-Migration Persistence (`REQ-CON-028.5`)*:
 • The system SHALL expose scalar metrics `RADAR_THREAT_COUNT`, `RADAR_CLOSEST_DISTANCE_m`, `RADAR_APPROACH_SPEED_mps`, and `RADAR_VEHICLE_COUNT` in `SensorType.java`.
 • `RadarWindowAggregator` SHALL maintain a 1,000 ms rolling latch window using timestamped target observations, retaining peak threat count, max approach speed, minimum closest distance, and minimum passing clearance across the last 1,000 ms so sub-second vehicle passes are preserved for 1 Hz `TrackerService` database sampling.
@@ -3543,8 +3554,8 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 **Requirement Archaeology & Chesterton's Fence Audit**:
 1. *Original Requirement ID & Target*: Net-new requirement `REQ-CON-028`, extending `REQ-CON-002` (*Bluetooth LE Sensor Support*), `REQ-CON-014` (*GATT Packet Resilience*), and `REQ-CON-020` (*GATT Queue Integrity*). Targets `DeviceType.java`, `SensorType.java`, `MyBTLEDevice.java`, `BTSearchForNewDevicesEngine.java`, `BTLERadarDevice.java`, `RadarWindowAggregator.kt`.
-2. *Historical Origin & Commit Trace*: `ATT-1485` (`REQ-CON-014`) established safe BLE payload parsing; `ATT-3312` introduced chained battery CCCD writes; `ATT-3540` established multi-sensor push architecture; `ATT-6700` refined 1,000 ms rolling latch window, road-clear null distance reset, and workout-start accumulator reset; `ATT-6701` unified `MyBTLEDevice` GATT read queue and aligned `BTSearchForNewDevicesEngine` discovery; `ATT-7543` aligned V1 packet parsing with real Garmin Varia / RearVue 820 framing (`(seq << 4) | 0x02`), heartbeats, sector frames, track ageing, GATT connection states, and Member Service UUID `0xFE1F` discovery.
-3. *Root Reason for Existing Formulation*: Existing BLE devices relied on single-characteristic notifications or ad-hoc descriptor writes. Multi-target radar requires sequential CCCD setup, packet demuxing, and dual-rate (reactive 8 Hz vs. persisted 1 Hz) handling. In ATT-5083, synthetic simulator assumptions assumed `header = 0x00`, hardcoded approach speed in byte 3, and only updated connection state upon target reception. Real hardware uses sequence-nibble framing, heartbeats when no cars are present, stateful closing speed derivation ($\Delta d / \Delta t$), and requires explicit `CONNECTING`/`CONNECTED` state progression to render `RadarEdgeOverlay`.
+2. *Historical Origin & Commit Trace*: `ATT-1485` (`REQ-CON-014`) established safe BLE payload parsing; `ATT-3312` introduced chained battery CCCD writes; `ATT-3540` established multi-sensor push architecture; `ATT-6700` refined 1,000 ms rolling latch window, road-clear null distance reset, and workout-start accumulator reset; `ATT-6701` unified `MyBTLEDevice` GATT read queue and aligned `BTSearchForNewDevicesEngine` discovery; `ATT-7543` aligned V1 packet parsing with real Garmin Varia / RearVue 820 framing (`(seq << 4) | 0x02`), heartbeats, sector frames, track ageing, GATT connection states, and Member Service UUID `0xFE1F` discovery; refined in `ATT-7579` for post-disconnect stale target prevention.
+3. *Root Reason for Existing Formulation*: Existing BLE devices relied on single-characteristic notifications or ad-hoc descriptor writes. Multi-target radar requires sequential CCCD setup, packet demuxing, and dual-rate (reactive 8 Hz vs. persisted 1 Hz) handling. In ATT-5083, synthetic simulator assumptions assumed `header = 0x00`, hardcoded approach speed in byte 3, and only updated connection state upon target reception. Real hardware uses sequence-nibble framing, heartbeats when no cars are present, stateful closing speed derivation ($\Delta d / \Delta t$), and requires explicit `CONNECTING`/`CONNECTED` state progression to render `RadarEdgeOverlay`. In ATT-5083, asynchronous main-thread handler execution was assumed to be cleared on shutdown, but mid-ride disconnects left queued measurement runnables in `mHandler` that revived `CONNECTED` state.
 4. *Preservation of Core Invariants*: Existing BLE sensors (HRM, Power, Speed, Cadence) remain completely unaffected; zero SQLite schema migrations; 100% 9-language translation parity; vehicle counting hysteresis and Rule 1.8 constructor parity preserved. Unifying reads into `mGattQueue` and verifying radar service at the end of discovery preserves strict FIFO serialization without dropped callbacks, while ensuring Device Information and Battery Level are read consistently across all peripheral types. Real-hardware framing maintains full backward compatibility with legacy simulator packets (`0x00`).
 
 **Acceptance Criteria (Given-When-Then)**:
@@ -3575,6 +3586,9 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 • *Given* a disconnected or out-of-range radar,
 • *When* 3.5 seconds elapse without valid packets,
 • *Then* `RadarStateRepository` transitions to `DISCONNECTED_ERROR`.
+• *Given* `BTLERadarDevice.disconnectFromGatt()` has executed,
+• *When* late measurement runnables execute on `mHandler`,
+• *Then* they are ignored and `RadarStateRepository` remains in `DISCONNECTED` state with zero active targets (ATT-7579).
 • *Given* a peripheral discovery session for `DeviceType.BIKE_RADAR` in `BTSearchForNewDevicesEngine`,
 • *When* services are discovered,
 • *Then* Device Information and Battery Level characteristics are enqueued first, and `UUID_SERVICE_RADAR` is verified upon queue completion before invoking `newDeviceFound`.

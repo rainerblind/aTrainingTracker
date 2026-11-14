@@ -602,7 +602,10 @@ class BTLERadarDeviceTest {
             0x00.toByte(), 0x01.toByte(), 60.toByte(), 0x15.toByte()
         )
 
-        radarDevice.measurementCharacteristicUpdate(mockk(relaxed = true), v1Char)
+        val mockGatt = mockk<BluetoothGatt>(relaxed = true)
+        radarDevice.setBluetoothGattForTesting(mockGatt)
+        radarDevice.setStateForTesting(MyBTLEDevice.State.CONNECTED_WITH_SERVICE)
+        radarDevice.measurementCharacteristicUpdate(mockGatt, v1Char)
 
         // Verifies hardware packet arrival halted simulation immediately (REQ-CON-029.3)
         assertFalse(RadarTrafficSimulator.isSimulating)
@@ -1100,5 +1103,42 @@ class BTLERadarDeviceTest {
         assertTrue(state.audioSnoozeState.isSnoozed)
         assertEquals(RadarAudioSnoozeMode.SNOOZE_15M, state.audioSnoozeState.mode)
         assertEquals(RadarSource.BLE, state.source)
+    }
+
+    /**
+     * TST-CON-028.2: BTLERadarDevice Disconnect Stale Target Revival Prevention (ATT-7579).
+     * Verifies that after disconnectFromGatt(), late-arriving queued measurement runnables
+     * are dropped under mGattLock and do not revive CONNECTED state or repopulate active targets.
+     */
+    @Test
+    fun testDisconnectFromGatt_dropsLateQueuedMeasurementRunnable() {
+        val mockGatt = mockk<BluetoothGatt>(relaxed = true)
+        val mockRadarService = mockk<BluetoothGattService>(relaxed = true)
+        val mockV1Char = mockk<BluetoothGattCharacteristic>(relaxed = true)
+        every { mockGatt.getService(BluetoothConstants.UUID_SERVICE_RADAR) } returns mockRadarService
+        every { mockRadarService.getCharacteristic(BluetoothConstants.UUID_CHARACTERISTIC_RADAR_V1) } returns mockV1Char
+
+        radarDevice.configureServices(mockGatt)
+        assertEquals(RadarConnectionState.CONNECTED, RadarStateRepository.getState().connectionState)
+
+        val mockMeasurementChar = mockk<BluetoothGattCharacteristic>(relaxed = true)
+        every { mockMeasurementChar.uuid } returns BluetoothConstants.UUID_CHARACTERISTIC_RADAR_V1
+        val payload = byteArrayOf(
+            0x01.toByte(), 0x01.toByte(),
+            0x01.toByte(), 0x10.toByte(), 0x00.toByte()
+        )
+        every { mockMeasurementChar.value } returns payload
+
+        // Disconnect from GATT
+        radarDevice.disconnectFromGatt()
+        assertEquals(RadarConnectionState.DISCONNECTED, RadarStateRepository.getState().connectionState)
+
+        // Late-arriving measurement update invocation against disconnected GATT must be dropped
+        radarDevice.measurementCharacteristicUpdateForTesting(mockGatt, mockMeasurementChar)
+
+        // Verify state remains DISCONNECTED and zero targets revived
+        val postState = RadarStateRepository.getState()
+        assertEquals(RadarConnectionState.DISCONNECTED, postState.connectionState)
+        assertTrue(postState.targets.isEmpty())
     }
 }

@@ -56,12 +56,9 @@ import com.atrainingtracker.trainingtracker.TrackingMode;
 import java.util.ArrayDeque;
 import java.util.Collections;
 import java.util.Deque;
-import java.util.Map;
 import java.util.Queue;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.atomic.AtomicInteger;
 
 //import de.rainerblind.MyAntPlusApp;
 
@@ -81,7 +78,7 @@ public abstract class MyBTLEDevice extends MyRemoteDevice {
     protected volatile State mState = State.DISCONNECTED;
     Handler mHandler;
     protected volatile BluetoothGattCharacteristic mBatteryCharacteristic;
-    private volatile boolean mIsShutDown = false;
+    protected volatile boolean mIsShutDown = false;
     private volatile long mCurrentReconnectDelayMs = INITIAL_RECONNECT_DELAY_MS;
     private volatile boolean mIsScanning = false;
     private ScanCallback mScanCallback;
@@ -218,10 +215,6 @@ public abstract class MyBTLEDevice extends MyRemoteDevice {
             onGattOperationCompleted();
         }
     };
-
-    private static final int SNAPSHOT_POOL_SIZE = 8;
-    private final Map<UUID, BluetoothGattCharacteristic[]> mCharacteristicPool = new ConcurrentHashMap<>();
-    private final AtomicInteger mPoolIndex = new AtomicInteger(0);
 
     /**
      * Determines whether a given Bluetooth MAC address is a BLE Random Static Address
@@ -439,26 +432,20 @@ public abstract class MyBTLEDevice extends MyRemoteDevice {
     }
 
     /**
-     * Obtains an immutable snapshot BluetoothGattCharacteristic from a pre-allocated pool
-     * to eliminate GC churn during continuous high-frequency telemetry streaming (e.g. 1-4 Hz).
+     * Obtains an immutable snapshot BluetoothGattCharacteristic with defensively cloned payload
+     * to eliminate main-thread data corruption and ring-buffer pool overrun during continuous
+     * high-frequency telemetry streaming (REQ-CON-020.1).
      */
     protected BluetoothGattCharacteristic obtainSnapshotCharacteristic(BluetoothGattCharacteristic source, byte[] payload) {
         if (mIsShutDown) {
             return null;
         }
-        BluetoothGattCharacteristic[] pool = mCharacteristicPool.computeIfAbsent(source.getUuid(), uuid -> {
-            BluetoothGattCharacteristic[] array = new BluetoothGattCharacteristic[SNAPSHOT_POOL_SIZE];
-            for (int i = 0; i < SNAPSHOT_POOL_SIZE; i++) {
-                array[i] = new BluetoothGattCharacteristic(uuid, source.getProperties(), source.getPermissions());
-            }
-            return array;
-        });
-        int rawIndex = mPoolIndex.getAndIncrement();
-        int idx = ((rawIndex % SNAPSHOT_POOL_SIZE) + SNAPSHOT_POOL_SIZE) % SNAPSHOT_POOL_SIZE;
-        BluetoothGattCharacteristic snapshot = pool[idx];
-        if (snapshot != null) {
-            snapshot.setValue(payload);
-        }
+        BluetoothGattCharacteristic snapshot = new BluetoothGattCharacteristic(
+                source.getUuid(),
+                source.getProperties(),
+                source.getPermissions()
+        );
+        snapshot.setValue(payload != null ? payload.clone() : null);
         return snapshot;
     }
 
@@ -790,6 +777,7 @@ public abstract class MyBTLEDevice extends MyRemoteDevice {
 
         final BluetoothGatt gattToClose;
         synchronized (mGattLock) {
+            mState = State.DISCONNECTED;
             gattToClose = mBluetoothGatt;
             mBluetoothGatt = null;
         }
@@ -831,7 +819,6 @@ public abstract class MyBTLEDevice extends MyRemoteDevice {
             mHandler.removeCallbacks(mReconnectRunnable);
             mHandler.removeCallbacks(mBatteryReadRunnable);
             mHandler.removeCallbacksAndMessages(null);
-            mCharacteristicPool.clear();
         }
 
         disconnectFromGatt();
@@ -922,10 +909,14 @@ public abstract class MyBTLEDevice extends MyRemoteDevice {
         }
 
         if (isMeasurementCharacteristic(characteristic.getUuid())) {
-
             mHandler.post(new Runnable() {
                 @Override
                 public void run() {
+                    synchronized (mGattLock) {
+                        if (mIsShutDown || gatt != mBluetoothGatt || mState != State.CONNECTED_WITH_SERVICE) {
+                            return;
+                        }
+                    }
                     measurementCharacteristicUpdate(gatt, characteristic);
                 }
             });
@@ -1054,6 +1045,13 @@ public abstract class MyBTLEDevice extends MyRemoteDevice {
     public void setBluetoothGattForTesting(BluetoothGatt gatt) {
         synchronized (mGattLock) {
             mBluetoothGatt = gatt;
+        }
+    }
+
+    @androidx.annotation.VisibleForTesting
+    public void setStateForTesting(State state) {
+        synchronized (mGattLock) {
+            mState = state;
         }
     }
 
