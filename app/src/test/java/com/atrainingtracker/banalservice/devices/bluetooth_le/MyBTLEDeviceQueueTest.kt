@@ -272,4 +272,24 @@ class MyBTLEDeviceQueueTest {
         assertTrue("Legacy queue must be drained", testDevice.getLegacyQueue().isEmpty())
         assertTrue("Operation must be pending in GATT queue", testDevice.isGattOperationPendingForTesting)
     }
+
+    /**
+     * TST-CON-031.2b / ATT-7737: Verify WriteCharacteristicOp automatically sets WRITE_TYPE_NO_RESPONSE
+     * when characteristic supports PROPERTY_WRITE_NO_RESPONSE and not PROPERTY_WRITE.
+     */
+    @Test
+    fun testWriteCharacteristicOp_enforcesNoResponseWhenPropertyMatches() {
+        val mockChar = mockk<BluetoothGattCharacteristic>(relaxed = true)
+        val mockGatt = mockk<BluetoothGatt>(relaxed = true)
+        every { mockChar.properties } returns BluetoothGattCharacteristic.PROPERTY_WRITE_NO_RESPONSE
+        every { mockGatt.writeCharacteristic(any()) } returns true
+
+        val op = MyBTLEDevice.WriteCharacteristicOp(mockChar, byteArrayOf(0x06, 0x09, 0x01, 0x14))
+        val executed = op.execute(mockGatt)
+
+        assertTrue("WriteCharacteristicOp must succeed", executed)
+        io.mockk.verify { mockChar.writeType = BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE }
+        io.mockk.verify { mockChar.value = byteArrayOf(0x06, 0x09, 0x01, 0x14) }
+        io.mockk.verify { mockGatt.writeCharacteristic(mockChar) }
+    }
 }

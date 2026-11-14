@@ -169,6 +169,11 @@ public abstract class MyBTLEDevice extends MyRemoteDevice {
         @android.annotation.SuppressLint("MissingPermission")
         public boolean execute(BluetoothGatt gatt) {
             if (characteristic == null || gatt == null) return false;
+            int properties = characteristic.getProperties();
+            if ((properties & BluetoothGattCharacteristic.PROPERTY_WRITE_NO_RESPONSE) != 0
+                    && (properties & BluetoothGattCharacteristic.PROPERTY_WRITE) == 0) {
+                characteristic.setWriteType(BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE);
+            }
             characteristic.setValue(value);
             try {
                 return gatt.writeCharacteristic(characteristic);

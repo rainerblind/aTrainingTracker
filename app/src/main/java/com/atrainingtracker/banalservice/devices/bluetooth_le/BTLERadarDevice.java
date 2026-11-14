@@ -329,6 +329,7 @@ public class BTLERadarDevice extends MyBTLEDevice implements RadarLightDeviceCli
 
         if (controlWriteChar != null && controlNotifyChar != null) {
             if (DEBUG) Log.i(TAG, "Garmin RearVue 820 control service 6a4e2f00 discovered (REQ-CON-031.1).");
+            controlWriteChar.setWriteType(BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE);
             mRadarControlWriteChar = controlWriteChar;
             mRadarControlNotifyChar = controlNotifyChar;
             mLightControlCharacteristic = controlWriteChar;
@@ -641,6 +642,7 @@ public class BTLERadarDevice extends MyBTLEDevice implements RadarLightDeviceCli
      */
     public boolean setLightMode(@NonNull RadarLightMode mode) {
         if (mRadarControlWriteChar != null) {
+            mRadarControlWriteChar.setWriteType(BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE);
             byte type = getRearVueModeType(mode);
             byte[] cmd = new byte[]{0x06, 0x09, 0x01, type};
             enqueueWriteCharacteristic(mRadarControlWriteChar, cmd);
