@@ -35,9 +35,19 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 public class MySensorManager extends MyDevice {
     public static final String EMPTY_GC_DATA = "-----------";
+
+    /**
+     * Listener interface for live wheel speed and revolution measurements (ATT-7751 / REQ-SEN-028).
+     */
+    public interface WheelMeasurementListener {
+        void onWheelMeasurement(double speedMps, double variance, long timestampMs);
+        void onWheelDistance(double accumulatedDistanceMeters, long timestampMs);
+        void onWheelRevolutions(double deltaRevolutions, double totalRevolutions, long timestampMs);
+    }
     /**
      * Priority hierarchy for speed and distance sensors ({@link SensorType#SPEED_mps},
      * {@link SensorType#PACE_spm}, {@link SensorType#DISTANCE_m}, {@link SensorType#DISTANCE_m_LAP}).
@@ -96,6 +106,8 @@ public class MySensorManager extends MyDevice {
     protected EnumMap<SensorType, EnumMap<DeviceType, LinkedList<MySensor>>> mAllSensorsMapMap
             = new EnumMap<SensorType, EnumMap<DeviceType, LinkedList<MySensor>>>(SensorType.class);
 
+    protected final List<WheelMeasurementListener> mWheelMeasurementListeners = new CopyOnWriteArrayList<>();
+    protected final Map<MySensor<?>, MySensor.SensorListener<?>> mWheelSensorListeners = new ConcurrentHashMap<>();
 
     protected MySensor<String> mSensorsSensor;
     protected MySensor<String> mAccumulatedSensorsSensor;
@@ -146,8 +158,108 @@ public class MySensorManager extends MyDevice {
                 ((ProxySensor<?>) sensor).setSourceSensor(null);
             }
         }
+        for (Map.Entry<MySensor<?>, MySensor.SensorListener<?>> entry : mWheelSensorListeners.entrySet()) {
+            @SuppressWarnings("unchecked")
+            MySensor<Object> s = (MySensor<Object>) entry.getKey();
+            @SuppressWarnings("unchecked")
+            MySensor.SensorListener<Object> l = (MySensor.SensorListener<Object>) entry.getValue();
+            s.removeSensorListener(l);
+        }
+        mWheelSensorListeners.clear();
+        mWheelMeasurementListeners.clear();
         mAllSensorsMapMap.clear();
         mAccumulatedSensorTypeSet.clear();
+    }
+
+    public void addWheelMeasurementListener(WheelMeasurementListener listener) {
+        if (listener != null && !mWheelMeasurementListeners.contains(listener)) {
+            mWheelMeasurementListeners.add(listener);
+            attachWheelListenersToExistingSensorsLocked();
+        }
+    }
+
+    public void removeWheelMeasurementListener(WheelMeasurementListener listener) {
+        if (listener != null) {
+            mWheelMeasurementListeners.remove(listener);
+        }
+    }
+
+    public void notifyWheelMeasurement(double speedMps, double variance, long timestampMs) {
+        for (WheelMeasurementListener listener : mWheelMeasurementListeners) {
+            try {
+                listener.onWheelMeasurement(speedMps, variance, timestampMs);
+            } catch (Exception e) {
+                if (DEBUG) Log.w(TAG, "Error in notifyWheelMeasurement: " + e.getMessage());
+            }
+        }
+    }
+
+    public void notifyWheelDistance(double accumulatedDistanceMeters, long timestampMs) {
+        for (WheelMeasurementListener listener : mWheelMeasurementListeners) {
+            try {
+                listener.onWheelDistance(accumulatedDistanceMeters, timestampMs);
+            } catch (Exception e) {
+                if (DEBUG) Log.w(TAG, "Error in notifyWheelDistance: " + e.getMessage());
+            }
+        }
+    }
+
+    public void notifyWheelRevolutions(double deltaRevolutions, double totalRevolutions, long timestampMs) {
+        for (WheelMeasurementListener listener : mWheelMeasurementListeners) {
+            try {
+                listener.onWheelRevolutions(deltaRevolutions, totalRevolutions, timestampMs);
+            } catch (Exception e) {
+                if (DEBUG) Log.w(TAG, "Error in notifyWheelRevolutions: " + e.getMessage());
+            }
+        }
+    }
+
+    public static boolean isWheelDevice(DeviceType deviceType) {
+        return deviceType == DeviceType.BIKE_SPEED
+                || deviceType == DeviceType.BIKE_SPEED_AND_CADENCE
+                || deviceType == DeviceType.BIKE_POWER;
+    }
+
+    @SuppressWarnings("unchecked")
+    private void attachWheelListenerToSensor(MySensor<?> mySensor, SensorType sensorType) {
+        if (mySensor == null || mWheelSensorListeners.containsKey(mySensor)) return;
+        if (sensorType == SensorType.SPEED_mps) {
+            MySensor.SensorListener<Double> listener = speed -> {
+                if (speed != null) {
+                    notifyWheelMeasurement(speed, 0.05, System.currentTimeMillis());
+                }
+            };
+            mWheelSensorListeners.put(mySensor, listener);
+            ((MySensor<Double>) mySensor).addSensorListener(listener);
+        } else if (sensorType == SensorType.DISTANCE_m) {
+            MySensor.SensorListener<Double> listener = distance -> {
+                if (distance != null) {
+                    notifyWheelDistance(distance, System.currentTimeMillis());
+                }
+            };
+            mWheelSensorListeners.put(mySensor, listener);
+            ((MySensor<Double>) mySensor).addSensorListener(listener);
+        }
+    }
+
+    public synchronized void attachWheelListenersToExistingSensorsLocked() {
+        attachWheelListenerForTypeLocked(SensorType.SPEED_mps);
+        attachWheelListenerForTypeLocked(SensorType.DISTANCE_m);
+    }
+
+    private void attachWheelListenerForTypeLocked(SensorType sensorType) {
+        EnumMap<DeviceType, LinkedList<MySensor>> deviceMap = mAllSensorsMapMap.get(sensorType);
+        if (deviceMap == null) return;
+        for (DeviceType deviceType : deviceMap.keySet()) {
+            if (isWheelDevice(deviceType)) {
+                LinkedList<MySensor> list = deviceMap.get(deviceType);
+                if (list != null) {
+                    for (MySensor sensor : list) {
+                        attachWheelListenerToSensor(sensor, sensorType);
+                    }
+                }
+            }
+        }
     }
 
     // @Override
@@ -242,6 +354,11 @@ public class MySensorManager extends MyDevice {
         // potential lock-order inversion with ProxySensor listeners (REQ-SEN-021.3).
         setBestSensorForProxySensor(sensorType);
 
+        DeviceType registeredDevType = mySensor.getDevice() != null ? mySensor.getDevice().getDeviceType() : null;
+        if (isWheelDevice(registeredDevType)) {
+            attachWheelListenerToSensor(mySensor, sensorType);
+        }
+
         if (gcData != null) {
             mSensorsSensor.newValue(gcData);
         }
@@ -324,6 +441,14 @@ public class MySensorManager extends MyDevice {
         // potential lock-order inversion with ProxySensor listeners (REQ-SEN-021.3).
         if (shouldUpdateProxy) {
             setBestSensorForProxySensor(sensorType);
+        }
+
+        @SuppressWarnings("unchecked")
+        MySensor.SensorListener<Object> wheelListener = (MySensor.SensorListener<Object>) mWheelSensorListeners.remove(mySensor);
+        if (wheelListener != null) {
+            @SuppressWarnings("unchecked")
+            MySensor<Object> typedSensor = (MySensor<Object>) mySensor;
+            typedSensor.removeSensorListener(wheelListener);
         }
 
         if (gcData != null) {

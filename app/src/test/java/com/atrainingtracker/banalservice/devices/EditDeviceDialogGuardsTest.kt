@@ -143,10 +143,16 @@ class EditDeviceDialogGuardsTest {
         assertTrue(AttFusedPreferences.isGyroAvailable(mockContext))
         assertTrue(AttFusedPreferences.isAutoCalibAvailable(mockContext))
 
-        // Default state: all true
+        // Default state: sensors enabled, auto-calibration defaults to false (opt-in per REQ-SEN-028.4(d))
         assertTrue(AttFusedPreferences.isEffectiveGnssActive(mockContext))
         assertTrue(AttFusedPreferences.isEffectiveWheelActive(mockContext))
         assertTrue(AttFusedPreferences.isEffectiveGyroActive(mockContext))
+        assertFalse(AttFusedPreferences.isAutoCalibEnabled(mockContext))
+        assertFalse(AttFusedPreferences.isEffectiveAutoCalibActive(mockContext))
+
+        // Toggle user preference on for AutoCalib
+        AttFusedPreferences.setAutoCalibEnabled(mockContext, true)
+        assertTrue(AttFusedPreferences.isAutoCalibEnabled(mockContext))
         assertTrue(AttFusedPreferences.isEffectiveAutoCalibActive(mockContext))
 
         // Toggle user preference off

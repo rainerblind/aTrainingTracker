@@ -159,6 +159,10 @@ public class ANTBikeSpeedAndCadenceDevice extends MyANTDevice {
                     if (calculatedAccumulatedDistance != null) {
                         mDistanceSensor.accumulate(calculatedAccumulatedDistance.doubleValue());
                         mLapDistanceSensor.accumulate(calculatedAccumulatedDistance.doubleValue());
+                        if (mMySensorManager != null && mCalibrationFactor > 0.0) {
+                            double totalRevs = calculatedAccumulatedDistance.doubleValue() / mCalibrationFactor;
+                            mMySensorManager.notifyWheelRevolutions(0.0, totalRevs, System.currentTimeMillis());
+                        }
                     } else {
                         mDistanceSensor.accumulate(0.0);
                         mLapDistanceSensor.accumulate(0.0);

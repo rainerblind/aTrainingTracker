@@ -61,3 +61,41 @@
 | `REQ-SEN-028.4` | `TST-SEN-028.4` | Educational card & 4 guarded toggles in `EditDeviceDialog` | Verified |
 | `REQ-SEN-028.5` | `TST-SEN-028.5` | Sample persistence with `_att_fused` source suffix | Verified |
 | `REQ-SEN-028.6` | `TST-SEN-028.6` | 9-language localization parity across strings files | Verified |
+
+---
+
+## 4. Stage 6 Cold Carbon Review - Bounce 1/3 Remediation
+
+### Findings Remediated
+1. **Finding 1 (Feed GNSS Speed into EKF)**:
+   - In `SpeedAndLocationDevice_ATTFused.kt:onLocationChanged`, when `location.hasSpeed()` is valid, `ekf.updateSpeed(location.speed.toDouble(), speedVar, timestampMs)` is now called before updating `location.speed = ekf.speedMps.toFloat()`. This prevents the EKF speed state from being permanently stuck at 0.0 m/s and enables unicycle dead-reckoning coordinate propagation during GPS outages.
+2. **Finding 2 (Production Wiring for Wheel Speed & Auto-Calibration)**:
+   - Implemented `MySensorManager.WheelMeasurementListener` interface (`onWheelMeasurement`, `onWheelDistance`, `onWheelRevolutions`) and listener lifecycle in `MySensorManager.java`.
+   - Connected `MySensorManager` listeners for physical wheel sensors (`BIKE_SPEED`, `BIKE_SPEED_AND_CADENCE`, `BIKE_POWER`) on registration/unregistration.
+   - Wired `SpeedAndLocationDevice_ATTFused` to subscribe to `MySensorManager.WheelMeasurementListener`.
+   - Wired `BTLEBikeDevice`, `ANTBikeSpeedDevice`, and `ANTBikeSpeedAndCadenceDevice` to notify revolutions and distance.
+   - In `SpeedAndLocationDevice_ATTFused.onLocationChanged`, wired step-by-step auto-calibration invoking `processWheelCalibrationStep` on straight qualified segments.
+3. **Finding 3 (Auto-Calibration Default Value)**:
+   - Updated `AttFusedPreferences.isAutoCalibEnabled(context)` to default to `false` (Opt-in toggle) matching `REQ-SEN-028.4(d)` and ticket specification.
+   - Updated `EditDeviceDialogGuardsTest.kt` to verify that auto-calibration is off by default and turns on when toggled.
+4. **Finding 4 (Strengthened Unit Tests)**:
+   - Strengthened `SpeedAndLocationDevice_ATTFusedTest.testOnLocationChanged_updatesEkfAndEmitsFusedLocation` to assert `ekf.speedMps > 0.0` and that emitted location speed matches the EKF/GNSS speed.
+   - Added `testProductionWheelSpeedWiring_updatesSpeedAndCalibratesWheel` verifying live speed and distance wiring from `MySensorManager` into `SpeedAndLocationDevice_ATTFused`, wheel revolution tracking, and auto-calibrator step updates.
+
+### Verification Evidence (Bounce 1/3)
+- **Targeted Test Suite**:
+  ```bash
+  python3 tools/parallel_sprint_lock.py --timeout 1800 ./gradlew testDebugUnitTest \
+      --tests "com.atrainingtracker.banalservice.devices.SpeedAndLocationDevice_ATTFusedTest" \
+      --tests "com.atrainingtracker.banalservice.devices.EditDeviceDialogGuardsTest" \
+      --tests "com.atrainingtracker.banalservice.database.DevicesDatabaseManagerMigrationTest" \
+      --tests "com.atrainingtracker.banalservice.sensor.MySensorManagerPriorityTest" \
+      --tests "*TranslationParityTest*"
+  ```
+  **Result**: `BUILD SUCCESSFUL` (100% pass across all targeted tests).
+- **ASPICE Requirement & Traceability Governance**:
+  ```bash
+  python3 tools/parallel_sprint_lock.py --timeout 1800 python3 tools/verify_requirement_governance.py
+  ```
+  **Result**: `PASS: 100% System-to-Software requirement traceability verified. Zero ungrounded [Verified] requirements detected.`
+

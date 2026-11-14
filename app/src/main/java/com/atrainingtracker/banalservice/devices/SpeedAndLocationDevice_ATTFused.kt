@@ -39,6 +39,8 @@ import com.atrainingtracker.banalservice.sensor.MySensor
 import com.atrainingtracker.banalservice.sensor.MySensorManager
 import com.atrainingtracker.banalservice.sensor.SensorType
 import kotlin.math.cos
+import kotlin.math.max
+import kotlin.math.pow
 import kotlin.math.sqrt
 
 /**
@@ -57,7 +59,8 @@ open class SpeedAndLocationDevice_ATTFused(
     mySensorManager: MySensorManager
 ) : SpeedAndLocationDevice(context, mySensorManager, DeviceType.SPEED_AND_LOCATION_ATT_FUSED),
     LocationListener,
-    SensorEventListener {
+    SensorEventListener,
+    MySensorManager.WheelMeasurementListener {
 
     companion object {
         private const val TAG = "SpeedAndLocationDev_ATT"
@@ -76,6 +79,7 @@ open class SpeedAndLocationDevice_ATTFused(
     protected var mHardwareSensorManager: SensorManager? = null
     protected var mUpdatesRegistered = false
     protected var mSensorsRegistered = false
+    protected var mWheelListenerRegistered = false
 
     private val mRotationVector = FloatArray(4)
     private var mHasRotationVector = false
@@ -84,6 +88,14 @@ open class SpeedAndLocationDevice_ATTFused(
     // Tangent plane reference coordinates
     var refLat: Double? = null
     var refLon: Double? = null
+
+    // Wheel odometry and auto-calibration state
+    var currentTotalRevolutions: Double? = null
+        private set
+    private var mLastCalibLat: Double? = null
+    private var mLastCalibLon: Double? = null
+    private var mLastCalibAlt: Double? = null
+    private var mLastCalibRevolutions: Double? = null
 
     init {
         val devicesDatabaseManager = DevicesDatabaseManager.getInstance(mContext)
@@ -106,6 +118,15 @@ open class SpeedAndLocationDevice_ATTFused(
     fun registerUpdates() {
         registerLocationUpdates()
         registerImuSensors()
+        registerWheelMeasurementListener()
+    }
+
+    @Synchronized
+    fun registerWheelMeasurementListener() {
+        if (mWheelListenerRegistered) return
+        mMySensorManager?.addWheelMeasurementListener(this)
+        mWheelListenerRegistered = true
+        setLastActive()
     }
 
     @Synchronized
@@ -161,6 +182,9 @@ open class SpeedAndLocationDevice_ATTFused(
         if (!mSensorsRegistered) {
             registerImuSensors()
         }
+        if (!mWheelListenerRegistered) {
+            registerWheelMeasurementListener()
+        }
     }
 
     override fun onSensorChanged(event: SensorEvent?) {
@@ -206,7 +230,7 @@ open class SpeedAndLocationDevice_ATTFused(
 
         val lat = location.latitude
         val lon = location.longitude
-        val acc = if (location.hasAccuracy()) location.accuracy.toDouble() else 10.0
+        val acc = if (location.hasAccuracy() && !location.accuracy.isNaN()) location.accuracy.toDouble() else 10.0
         val timestampMs = if (location.time > 0L) location.time else System.currentTimeMillis()
 
         if (refLat == null || refLon == null) {
@@ -223,12 +247,61 @@ open class SpeedAndLocationDevice_ATTFused(
 
         ekf.updateGnssPosition(eastMeters, northMeters, acc, timestampMs)
 
+        // Finding 1: Feed GNSS speed into EKF before overwriting location.speed
+        if (location.hasSpeed() && !location.speed.isNaN() && location.speed >= 0.0f) {
+            val speedVar = if (location.hasAccuracy() && !location.accuracy.isNaN()) {
+                max(0.5, (location.accuracy.toDouble() * 0.25).pow(2))
+            } else {
+                1.0
+            }
+            ekf.updateSpeed(location.speed.toDouble(), speedVar, timestampMs)
+        }
+
         if (location.hasSpeed() && location.hasBearing() &&
             location.speed > UnicycleOdometryEkf.MIN_DOPPLER_SPEED_MPS
         ) {
             val cogDeg = location.bearing.toDouble()
             val enuHeadingRad = Math.toRadians((450.0 - cogDeg) % 360.0)
             ekf.updateDopplerHeading(enuHeadingRad, Math.toRadians(5.0) * Math.toRadians(5.0), timestampMs)
+        }
+
+        // Finding 2: Feed distance & revolutions into auto-calibration step
+        if (AttFusedPreferences.isEffectiveAutoCalibActive(mContext)) {
+            val pLat = mLastCalibLat
+            val pLon = mLastCalibLon
+            val pAlt = mLastCalibAlt
+            val pRevs = mLastCalibRevolutions
+            val currentRevs = currentTotalRevolutions
+
+            if (pLat != null && pLon != null && pRevs != null && currentRevs != null) {
+                val deltaRevs = currentRevs - pRevs
+                if (deltaRevs > 0.0) {
+                    val stepDLatRad = Math.toRadians(lat - pLat)
+                    val stepDLonRad = Math.toRadians(lon - pLon)
+                    val stepNorth = stepDLatRad * EARTH_RADIUS_METERS
+                    val stepEast = stepDLonRad * EARTH_RADIUS_METERS * cos(Math.toRadians(pLat))
+                    val dist2d = sqrt(stepNorth * stepNorth + stepEast * stepEast)
+                    val dist3d = if (pAlt != null && location.hasAltitude() && !location.altitude.isNaN()) {
+                        val dh = location.altitude - pAlt
+                        sqrt(dist2d * dist2d + dh * dh)
+                    } else {
+                        dist2d
+                    }
+                    val yawRate = mWorldYawRateSensor?.value ?: 0.0
+                    val speed = if (location.hasSpeed() && !location.speed.isNaN()) location.speed.toDouble() else ekf.speedMps
+                    processWheelCalibrationStep(
+                        deltaDistance3d = dist3d,
+                        deltaRevolutions = deltaRevs,
+                        gnssAccuracyMeters = acc,
+                        speedMps = speed,
+                        yawRateRadPerSec = yawRate
+                    )
+                }
+            }
+            mLastCalibLat = lat
+            mLastCalibLon = lon
+            mLastCalibAlt = if (location.hasAltitude() && !location.altitude.isNaN()) location.altitude else null
+            mLastCalibRevolutions = currentRevs
         }
 
         val fusedLat = rLat + Math.toDegrees(ekf.northMeters / EARTH_RADIUS_METERS)
@@ -243,14 +316,36 @@ open class SpeedAndLocationDevice_ATTFused(
         onNewLocation(location)
     }
 
-    fun onWheelMeasurement(
+    override fun onWheelMeasurement(
         speedMps: Double,
-        variance: Double = 0.05,
-        timestampMs: Long = System.currentTimeMillis()
+        variance: Double,
+        timestampMs: Long
     ) {
         if (!AttFusedPreferences.isEffectiveWheelActive(mContext)) return
         ekf.updateSpeed(speedMps, variance, timestampMs)
         setLastActive()
+    }
+
+    fun onWheelMeasurement(
+        speedMps: Double,
+        variance: Double = 0.05
+    ) {
+        onWheelMeasurement(speedMps, variance, System.currentTimeMillis())
+    }
+
+    override fun onWheelDistance(accumulatedDistanceMeters: Double, timestampMs: Long) {
+        val initialCircumference = wheelCalibrator.circumferenceMeters
+        if (initialCircumference > 0.0) {
+            val totalRevs = accumulatedDistanceMeters / initialCircumference
+            onWheelRevolutions(0.0, totalRevs, timestampMs)
+        }
+    }
+
+    override fun onWheelRevolutions(deltaRevolutions: Double, totalRevolutions: Double, timestampMs: Long) {
+        currentTotalRevolutions = totalRevolutions
+        if (deltaRevolutions > 0.0 && mLastCalibRevolutions == null) {
+            mLastCalibRevolutions = totalRevolutions - deltaRevolutions
+        }
     }
 
     fun processWheelCalibrationStep(
@@ -285,6 +380,11 @@ open class SpeedAndLocationDevice_ATTFused(
 
     @Synchronized
     override fun shutDown() {
+        if (mWheelListenerRegistered) {
+            mMySensorManager?.removeWheelMeasurementListener(this)
+            mWheelListenerRegistered = false
+        }
+
         if (mLocationManager != null) {
             try {
                 mLocationManager?.removeUpdates(this)

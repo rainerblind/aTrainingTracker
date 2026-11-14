@@ -157,14 +157,16 @@ class SpeedAndLocationDevice_ATTFusedTest {
         assertEquals(48.0000, device.refLat ?: 0.0, 1e-6)
         assertEquals(11.0000, device.refLon ?: 0.0, 1e-6)
 
-        // Second fix 50 meters North
+        // Second fix 50 meters North with valid speed
+        var emittedSpeed = 5.0f
         val loc2 = mockk<Location>(relaxed = true) {
             every { latitude } returns 48.00045 // ~50m North
             every { longitude } returns 11.0000
             every { hasAccuracy() } returns true
             every { accuracy } returns 2.5f
             every { hasSpeed() } returns true
-            every { speed } returns 5.0f // > 3.0 m/s Doppler threshold
+            every { speed } answers { emittedSpeed }
+            every { speed = any() } answers { emittedSpeed = firstArg() }
             every { hasBearing() } returns true
             every { bearing } returns 0.0f // North
             every { time } returns 2000L
@@ -173,6 +175,9 @@ class SpeedAndLocationDevice_ATTFusedTest {
         device.onLocationChanged(loc2)
 
         assertTrue("EKF North position must be positive", device.ekf.northMeters > 0.0)
+        assertTrue("EKF speed must be positive (> 0.0) after GNSS speed update", device.ekf.speedMps > 0.0)
+        assertEquals("Emitted location speed must match EKF speed", device.ekf.speedMps.toFloat(), emittedSpeed, 1e-4f)
+        assertTrue("Emitted location speed must be > 0.0", emittedSpeed > 0.0f)
     }
 
     @Test
@@ -184,6 +189,71 @@ class SpeedAndLocationDevice_ATTFusedTest {
         device.onWheelMeasurement(speedMps = 7.5, variance = 0.05, timestampMs = 1500L)
 
         assertTrue("EKF speed must increase towards wheel speed measurement", device.ekf.speedMps > 0.0)
+    }
+
+    @Test
+    fun testProductionWheelSpeedWiring_updatesSpeedAndCalibratesWheel() {
+        val realSensorManager = MySensorManager(mockContext)
+        val device = SpeedAndLocationDevice_ATTFused(mockContext, realSensorManager)
+
+        assertEquals(0.0, device.ekf.speedMps, 1e-6)
+
+        // Simulate active physical wheel speed & distance sensors registered in MySensorManager
+        val mockWheelDevice = mockk<MyDevice>(relaxed = true) {
+            every { deviceType } returns DeviceType.BIKE_SPEED
+        }
+        val wheelSpeedSensor = com.atrainingtracker.banalservice.sensor.MySensor<Double>(mockWheelDevice, SensorType.SPEED_mps)
+        val wheelDistSensor = com.atrainingtracker.banalservice.sensor.MyDoubleAccumulatorSensor(mockWheelDevice, SensorType.DISTANCE_m, false)
+
+        realSensorManager.registerSensor(wheelSpeedSensor)
+        realSensorManager.registerSensor(wheelDistSensor)
+
+        // 1. Wheel speed emission triggers onWheelMeasurement through MySensorManager listener
+        wheelSpeedSensor.newValue(6.5)
+        assertTrue("EKF speed must be updated by wheel speed sensor via MySensorManager", device.ekf.speedMps > 0.0)
+
+        // 2. Wheel distance emission triggers onWheelDistance / onWheelRevolutions
+        wheelDistSensor.accumulate(0.0) // Establish baseline
+        wheelDistSensor.accumulate(25.0) // Emit 25m displacement
+        assertNotNull("Total revolutions must be tracked from wheel sensor distance", device.currentTotalRevolutions)
+        assertTrue("Total revolutions must be positive", (device.currentTotalRevolutions ?: 0.0) > 0.0)
+
+        // 3. First GNSS fix establishes calibration baseline
+        val loc1 = mockk<Location>(relaxed = true) {
+            every { latitude } returns 48.0000
+            every { longitude } returns 11.0000
+            every { hasAccuracy() } returns true
+            every { accuracy } returns 2.0f
+            every { hasSpeed() } returns true
+            every { speed } returns 6.0f
+            every { hasBearing() } returns true
+            every { bearing } returns 0.0f
+            every { time } returns 1000L
+        }
+        device.onLocationChanged(loc1)
+
+        // Wheel progresses another 25m on a straight path
+        wheelDistSensor.accumulate(50.0)
+
+        // Second GNSS fix 25m North (~0.000225 deg lat), good accuracy, straight line
+        val loc2 = mockk<Location>(relaxed = true) {
+            every { latitude } returns 48.000225
+            every { longitude } returns 11.0000
+            every { hasAccuracy() } returns true
+            every { accuracy } returns 2.0f
+            every { hasSpeed() } returns true
+            every { speed } returns 6.0f
+            every { hasBearing() } returns true
+            every { bearing } returns 0.0f
+            every { time } returns 5000L
+        }
+        device.onLocationChanged(loc2)
+
+        assertTrue("Auto-calibrator update count must increment after qualified segment", device.wheelCalibrator.updateCount > 0)
+
+        // 4. Verify clean shutdown unregisters listener
+        device.shutDown()
+        realSensorManager.shutDown()
     }
 
     @Test

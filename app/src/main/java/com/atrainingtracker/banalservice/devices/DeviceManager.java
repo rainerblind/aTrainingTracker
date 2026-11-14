@@ -872,7 +872,7 @@ public class DeviceManager {
         return mSpeedAndLocationDevice_GoogleFused;
     }
 
-    public SpeedAndLocationDevice getSpeedAndLocationDevice_ATTFused() {
+    public SpeedAndLocationDevice_ATTFused getSpeedAndLocationDevice_ATTFused() {
         return mSpeedAndLocationDevice_ATTFused;
     }
 

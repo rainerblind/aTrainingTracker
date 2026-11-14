@@ -58,7 +58,7 @@ object AttFusedPreferences {
     }
 
     fun isAutoCalibEnabled(context: Context): Boolean =
-        PreferenceManager.getDefaultSharedPreferences(context).getBoolean(KEY_USE_AUTOCALIB, true)
+        PreferenceManager.getDefaultSharedPreferences(context).getBoolean(KEY_USE_AUTOCALIB, false)
 
     fun setAutoCalibEnabled(context: Context, enabled: Boolean) {
         PreferenceManager.getDefaultSharedPreferences(context).edit().putBoolean(KEY_USE_AUTOCALIB, enabled).apply()
