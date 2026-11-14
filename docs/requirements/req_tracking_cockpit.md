@@ -4040,7 +4040,7 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 - **Priority**: High
 - **Type**: Functional
 - **Verification Method**: Unit
-- **Implementation**: `BTLERadarDevice.java`, `MyBTLEDevice.java`, `DeviceType.java`, `RadarTarget.kt`, `RadarWindowAggregator.kt`, `RadarTrafficSimulator.kt`, `SensorType.java`, `BluetoothConstants.java`, `strings_radar.xml`
+- **Implementation**: `BTLERadarDevice.java`, `MyBTLEDevice.java`, `DeviceType.java`, `RadarTarget.kt`, `RadarWindowAggregator.kt`, `RadarTrafficSimulator.kt`, `SensorType.java`, `BluetoothConstants.java`, `SettingsDataStore.kt`, `SettingsDataStoreJavaHelper.kt`, `DeveloperMenuScreen.kt`, `strings_radar.xml`
 - **Rationale**: Next-generation Garmin Varia radar units (e.g. RearVue 820) introduce a high-resolution 2D BLE telemetry stream on characteristic `6a4e3204-667b-11e3-949a-0800200c9a66` extending radar detection range up to 175 m, providing lateral offset (identifying overtaking trajectory and close passes), and classifying vehicle size (Bikes/Motorcycles vs. Cars vs. Trucks/Busses). The protocol requires LESC bonding, MTU 247 negotiation, and a serialized GATT handshake while enforcing seamless, automatic fallback to legacy V1 characteristic `6a4e3203` on unbonded devices, silent streams, or older hardware (RTL515/516/315/715) without breaking the 3.5s starvation watchdog (ATT-5095, ATT-6706, ATT-7542, Parent Epic ATT-1286, extending `REQ-CON-028` and `REQ-CON-029`):
 1. *BLE V2 Handshake Choreography (`REQ-CON-030.1`)*:
 • Upon peripheral connection and service discovery, `BTLERadarDevice` SHALL enqueue Battery Level (`0x2A19`) read and CCCD notification subscription *before* proceeding to V2 characteristic `6a4e3204`.
@@ -4063,10 +4063,13 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 • `RadarTrafficSimulator` SHALL generate realistic V2 trajectory scenarios including vehicle size diversity, lane positioning, and close-pass overtaking events.
 7. *9-Language Localization Parity (`REQ-CON-030.7`)*:
 • All sensor names and short labels in `strings_radar.xml` SHALL maintain 100% key and format parity across EN, DE, ES, FR, IT, JA, NL, PL, PT (zero inline emojis).
+8. *Developer BLE V1-Only Protocol Override (`REQ-CON-030.8`)*:
+• In debug builds (`BuildConfig.DEBUG == true`), a developer toggle `radar_v1_only_override` (persisted in DataStore/SharedPreferences) SHALL allow developers and QA to disable V2 radar negotiation. When enabled, `BTLERadarDevice.configureServices()` SHALL bypass V2 characteristic discovery and directly invoke `fallbackToV1()`, forcing legacy V1 protocol parsing for testing backward compatibility.
+• In release builds (`BuildConfig.DEBUG == false`), the override SHALL be strictly ignored and default to false (V2 negotiation enabled).
 
 ### Requirement Archaeology & Chesterton's Fence Audit
 1. *Original Requirement ID & Target*: `REQ-CON-030` (Garmin Varia BLE V2 High-Resolution Radar Stream & Vehicle Classification), targeting `MyBTLEDevice.java`, `BTLERadarDevice.java`, `DeviceType.java`, `ActivityType.java`, and `RadarTrafficSimulator.kt`.
-2. *Historical Origin & Commit Trace*: Introduced in `ATT-5095` (commit `524e937d`) establishing BLE V2 packet decoding and window aggregation for 2D radar metrics; refined in `ATT-6706`; refined in `ATT-7542` to align with authentic RearVue 820 GATT pre-handshake ordering, 1500 ms silence fallback, and 24-bit packed range `2 + 9*N` wire framing.
+2. *Historical Origin & Commit Trace*: Introduced in `ATT-5095` (commit `524e937d`) establishing BLE V2 packet decoding and window aggregation for 2D radar metrics; refined in `ATT-6706`; refined in `ATT-7542` to align with authentic RearVue 820 GATT pre-handshake ordering, 1500 ms silence fallback, and 24-bit packed range `2 + 9*N` wire framing; refined in `ATT-7659` to introduce debug-only Developer Menu V1-only protocol override for backward compatibility QA.
 3. *Root Reason for Existing Formulation*: The initial formulation assumed single-characteristic measurement filtering, synthetic 1-byte header `0x01`, and 8-byte target structs with embedded threat bits. Real hardware accepts V2 CCCD writes with `GATT_SUCCESS` even when silent, requiring Battery CCCD prioritization, a 1500 ms silence watchdog fallback to V1, and 24-bit packed range word unpacking.
 4. *Preservation of Core Invariants*: Refining `REQ-CON-030` with `isMeasurementCharacteristic(UUID)` extraction, serialized `RequestMtuOp`, LESC bonding verification, 1500 ms fallback, and `DeviceType` registration guarantees 100% backward compatibility for legacy V1 radars (`6a4e3203`), seamless fallback on unbonded/failed handshakes, and full Cockpit UI tile availability without schema migrations.
 

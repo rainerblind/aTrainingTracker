@@ -49,6 +49,8 @@ import com.atrainingtracker.banalservice.devices.radar.VehicleSizeCategory;
 import com.atrainingtracker.banalservice.sensor.MySensor;
 import com.atrainingtracker.banalservice.sensor.MySensorManager;
 import com.atrainingtracker.banalservice.sensor.SensorType;
+import com.atrainingtracker.BuildConfig;
+import com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -265,8 +267,12 @@ public class BTLERadarDevice extends MyBTLEDevice implements RadarLightDeviceCli
         BluetoothGattCharacteristic v2Char = btGattService.getCharacteristic(BluetoothConstants.UUID_CHARACTERISTIC_RADAR_V2);
         BluetoothDevice device = gatt.getDevice();
         boolean isBonded = (device != null && device.getBondState() == BluetoothDevice.BOND_BONDED);
+        boolean isV1Override = BuildConfig.DEBUG && SettingsDataStoreJavaHelper.isRadarV1OnlyOverrideEnabled(mContext);
 
-        if (v2Char != null && isBonded) {
+        if (isV1Override) {
+            Log.w(TAG, "Developer override enabled: radar_v1_only_override=true. Bypassing V2 discovery and forcing legacy V1 protocol (REQ-CON-030.8).");
+            fallbackToV1(gatt, btGattService);
+        } else if (v2Char != null && isBonded) {
             if (DEBUG) Log.i(TAG, "Garmin Varia V2 characteristic 6a4e3204 discovered and device is bonded. Initiating V2 handshake.");
             mIsV2Stream = true;
             enqueueRequestMtu(247);

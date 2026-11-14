@@ -188,4 +188,9 @@
     <!-- Smartphone IMU/GPS Deceleration Brake-Light Trigger (ATT-5121 / REQ-CON-035) -->
     <string name="radar_brake_light_title">Luz de travão por desaceleração</string>
     <string name="radar_brake_light_desc">Acende a luz traseira durante desaceleração brusca de IMU/GPS (2,0 s de retenção, ignorado no RearVue 820)</string>
+    <!-- Developer Menu (ATT-7659 / REQ-SET-087.2 / REQ-CON-030.8) -->
+    <string name="developer_menu_title">Menu do programador</string>
+    <string name="developer_menu_radar_section_title">Depuração de radar para bicicleta</string>
+    <string name="developer_menu_radar_v1_only_title">Forçar protocolo de radar V1 (legado)</string>
+    <string name="developer_menu_radar_v1_only_desc">Ignora a deteção de características Garmin Varia V2 e reverte imediatamente para a transmissão legada V1 (6a4e3203).</string>
 </resources>

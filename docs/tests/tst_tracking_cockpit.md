@@ -2037,9 +2037,9 @@
   • Execute targeted package tests (`com.atrainingtracker.trainingtracker.audio.radar.*`, `com.atrainingtracker.trainingtracker.settings.*`, `com.atrainingtracker.trainingtracker.build.*`) asserting 100% pass rate.
 
 ### TST-CON-030: **Garmin Varia BLE V2 High-Resolution Radar Stream Test Suite** [Verified]
-- **Requirement(s)**: `REQ-CON-030` (`REQ-CON-030.1`..`REQ-CON-030.7`)
+- **Requirement(s)**: `REQ-CON-030` (`REQ-CON-030.1`..`REQ-CON-030.8`)
 - **Component**: `BTLERadarDevice.java`, `MyBTLEDevice.java`, `DeviceType.java`, `ActivityType.java`, `RadarTarget.kt`, `RadarWindowAggregator.kt`, `RadarTrafficSimulator.kt`, `SensorType.java`, `BluetoothConstants.java`, `strings_radar.xml`
-- **Jira**: `ATT-5095`, `ATT-6706`, `ATT-7542`
+- **Jira**: `ATT-5095`, `ATT-6706`, `ATT-7542`, `ATT-7659`
 - **Test Description**:
   1. *V2 Handshake Choreography, MTU Negotiation & Notification Routing Tests (`TST-CON-030.1`, `BTLERadarDeviceTest.kt`, `MyBTLEDeviceTest.kt`)*:
   • Verify Battery 0x2a19 read and CCCD notification subscription execute prior to V2 characteristic 6a4e3204 setup without touching V1 prematurely.
@@ -2059,6 +2059,9 @@
   • Verify 100% key and format parity across `strings_radar.xml` in all 9 supported locales (`values`, `values-de`, `values-es`, `values-fr`, `values-it`, `values-ja`, `values-nl`, `values-pl`, `values-pt`).
   8. *Clean-Room Targeted Test Suite Execution (`TST-CON-030.8`)*:
   • Execute targeted package tests (`com.atrainingtracker.banalservice.devices.bluetooth_le.*`, `com.atrainingtracker.banalservice.devices.radar.*`, `com.atrainingtracker.trainingtracker.build.*`) asserting 100% pass rate.
+  9. *Developer BLE V1-Only Protocol Override Tests (`TST-CON-030.9`, `BTLERadarDeviceTest.kt`, `DeveloperMenuScreenTest.kt`)*:
+  • Verify that when `isRadarV1OnlyOverrideEnabled` is true in `BuildConfig.DEBUG`, `BTLERadarDevice.configureServices()` directly invokes `fallbackToV1()` bypassing V2 GATT discovery/setup.
+  • Verify that when `BuildConfig.DEBUG` is false or override is disabled, normal V2 discovery and negotiation proceed.
 
 ### TST-CON-031: **BLE Radar Tail Light Mode Control Test Suite** [Verified]
 - **Requirement(s)**: `REQ-CON-031` (`REQ-CON-031.1`..`REQ-CON-031.7`)

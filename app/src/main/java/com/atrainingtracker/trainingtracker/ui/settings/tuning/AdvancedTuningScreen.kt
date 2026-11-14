@@ -66,7 +66,6 @@ import com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.Physio
 import com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.SensorsGpsFilterSection
 import com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.SensorSearchPreferences
 import com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.SensorSearchTuningSection
-import com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.SupporterDebugSection
 import com.atrainingtracker.trainingtracker.ui.settings.tuning.categories.WorkoutMasksAndCardsSection
 import kotlinx.coroutines.launch
 
@@ -455,10 +454,6 @@ fun AdvancedTuningScreen(
                     useAltitudePosForClustering = clusterUseAltitudePos, onUseAltitudePosChange = { clusterUseAltitudePos = it },
                     clusterScoreThreshold = clusterScoreThreshold, onClusterScoreThresholdChange = { clusterScoreThreshold = it }
                 )
-            }
-
-            if (BuildConfig.DEBUG) {
-                SupporterDebugSection()
             }
 
             Spacer(modifier = Modifier.height(8.dp))

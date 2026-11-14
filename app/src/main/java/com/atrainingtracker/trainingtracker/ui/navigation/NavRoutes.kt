@@ -76,6 +76,8 @@ object NavRoutes {
     const val SUPPORTER = "supporter"
     const val ARG_PLAN_ID = "planId"
     const val SUPPORTER_PATTERN = "supporter?planId={planId}&pushed={pushed}"
+    const val DEVELOPER_MENU = "developer_menu"
+    const val DEVELOPER_MENU_PATTERN = "developer_menu?pushed={pushed}"
 
     /**
      * Builds a navigation route to the Supporter screen, optionally pre-selecting a base plan (REQ-SET-088.5).
@@ -100,6 +102,12 @@ object NavRoutes {
      */
     fun tipsGuide(pushed: Boolean = false): String =
         if (pushed) "$TIPS_GUIDE?$ARG_PUSHED=true" else TIPS_GUIDE
+
+    /**
+     * Builds a navigation route to the Developer Menu screen, optionally marking it as pushed contextual navigation (ATT-7659 / REQ-SET-087.2).
+     */
+    fun developerMenu(pushed: Boolean = false): String =
+        if (pushed) "$DEVELOPER_MENU?$ARG_PUSHED=true" else DEVELOPER_MENU
 
     /**
      * Builds a navigation route to Training Zones, optionally parameterized with an initial tab and onboarding prompt reason (REQ-UI-374.3).
@@ -162,6 +170,7 @@ object NavRoutes {
         R.id.drawer_advanced_tuning -> ADVANCED_SETTINGS
         R.id.drawer_tips_guide -> TIPS_GUIDE
         R.id.drawer_supporter -> SUPPORTER
+        R.id.drawer_developer_menu -> DEVELOPER_MENU
         else -> null
     }
 
@@ -191,6 +200,7 @@ object NavRoutes {
         TIPS_GUIDE -> R.id.drawer_tips_guide
         TRACKING_LAYOUTS -> R.id.drawer_tracking_layouts
         SUPPORTER -> R.id.drawer_supporter
+        DEVELOPER_MENU -> R.id.drawer_developer_menu
         else -> R.id.drawer_start_tracking
     }
 

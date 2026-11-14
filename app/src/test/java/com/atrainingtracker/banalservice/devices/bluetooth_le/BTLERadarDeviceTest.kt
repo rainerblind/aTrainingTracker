@@ -51,6 +51,7 @@ import com.atrainingtracker.banalservice.devices.radar.ThreatLevel
 import com.atrainingtracker.banalservice.devices.radar.VehicleSizeCategory
 import com.atrainingtracker.banalservice.sensor.MySensorManager
 import com.atrainingtracker.banalservice.sensor.SensorType
+import com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkConstructor
@@ -1140,5 +1141,60 @@ class BTLERadarDeviceTest {
         val postState = RadarStateRepository.getState()
         assertEquals(RadarConnectionState.DISCONNECTED, postState.connectionState)
         assertTrue(postState.targets.isEmpty())
+    }
+
+    /**
+     * TST-CON-030.9: BLE Radar V1-Only Protocol Override (ATT-7659 / REQ-CON-030.8).
+     * Verifies that when isRadarV1OnlyOverrideEnabled returns true, configureServices()
+     * immediately falls back to V1 characteristic (6a4e3203) even if V2 is present and bonded.
+     */
+    @Test
+    fun testConfigureServices_radarV1OnlyOverrideForcesV1Fallback() {
+        mockkStatic(SettingsDataStoreJavaHelper::class)
+        every { SettingsDataStoreJavaHelper.isRadarV1OnlyOverrideEnabled(any()) } returns true
+
+        val mockGatt = mockk<BluetoothGatt>(relaxed = true)
+        val mockDevice = mockk<BluetoothDevice>(relaxed = true)
+        val mockRadarService = mockk<BluetoothGattService>(relaxed = true)
+        val mockV2Char = mockk<BluetoothGattCharacteristic>(relaxed = true)
+        val mockV1Char = mockk<BluetoothGattCharacteristic>(relaxed = true)
+
+        every { mockGatt.device } returns mockDevice
+        every { mockDevice.bondState } returns BluetoothDevice.BOND_BONDED
+        every { mockGatt.getService(BluetoothConstants.UUID_SERVICE_RADAR) } returns mockRadarService
+        every { mockRadarService.getCharacteristic(BluetoothConstants.UUID_CHARACTERISTIC_RADAR_V2) } returns mockV2Char
+        every { mockRadarService.getCharacteristic(BluetoothConstants.UUID_CHARACTERISTIC_RADAR_V1) } returns mockV1Char
+
+        radarDevice.configureServices(mockGatt)
+
+        // When forced V1 override is true, mIsV2Stream must be false
+        assertFalse("Forced V1 override must keep isV2Stream false", radarDevice.isV2Stream)
+    }
+
+    /**
+     * TST-CON-030.9: BLE Radar V1-Only Protocol Override Disabled (ATT-7659 / REQ-CON-030.8).
+     * Verifies that when isRadarV1OnlyOverrideEnabled returns false, standard V2 handshake is initiated.
+     */
+    @Test
+    fun testConfigureServices_radarV1OnlyOverrideDisabled_initiatesV2Handshake() {
+        mockkStatic(SettingsDataStoreJavaHelper::class)
+        every { SettingsDataStoreJavaHelper.isRadarV1OnlyOverrideEnabled(any()) } returns false
+
+        val mockGatt = mockk<BluetoothGatt>(relaxed = true)
+        val mockDevice = mockk<BluetoothDevice>(relaxed = true)
+        val mockRadarService = mockk<BluetoothGattService>(relaxed = true)
+        val mockV2Char = mockk<BluetoothGattCharacteristic>(relaxed = true)
+        val mockV1Char = mockk<BluetoothGattCharacteristic>(relaxed = true)
+
+        every { mockGatt.device } returns mockDevice
+        every { mockDevice.bondState } returns BluetoothDevice.BOND_BONDED
+        every { mockGatt.getService(BluetoothConstants.UUID_SERVICE_RADAR) } returns mockRadarService
+        every { mockRadarService.getCharacteristic(BluetoothConstants.UUID_CHARACTERISTIC_RADAR_V2) } returns mockV2Char
+        every { mockRadarService.getCharacteristic(BluetoothConstants.UUID_CHARACTERISTIC_RADAR_V1) } returns mockV1Char
+
+        radarDevice.configureServices(mockGatt)
+
+        // When forced V1 override is false and device is bonded, V2 handshake is initiated
+        assertTrue("V2 handshake must be initiated when override is false and device is bonded", radarDevice.isV2Stream)
     }
 }

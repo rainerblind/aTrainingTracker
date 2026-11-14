@@ -1804,23 +1804,25 @@ d. Step 4 (`OnboardingStep.BATTERY_OPTIMIZATION`): Doze mode background survival
 - **Priority**: High
 - **Type**: Non-Functional
 - **Verification Method**: Unit / Review
-- **Implementation**: `ProFeatureManager.kt`, `AdvancedTuningScreen.kt`, `SettingsDataStore.kt`
+- **Implementation**: `ProFeatureManager.kt`, `DeveloperMenuScreen.kt`, `AppNavigationDrawer.kt`, `NavRoutes.kt`, `ATrainingTrackerApp.kt`, `AdvancedTuningScreen.kt`, `SettingsDataStore.kt`
 - **Rationale**: Provide deterministic local and UI testing capabilities without requiring live Play Billing credentials, while maintaining strict release-build security invariants.
 - **Description**:
 1. *Unified ProFeatureManager (`REQ-SET-087.1`)*:
 • `ProFeatureManager` SHALL compute effective Pro status via priority order: `BuildConfig.DEBUG` Tier Override > Lifetime Pioneer Status > Active Google Play Subscription.
 • `isProActive()` SHALL return `true` if any tier $\ge$ `BRONZE` or `isPioneerEarlyAdopter == true`.
-2. *Debug Tier Override Selector (`REQ-SET-087.2`)*:
-• `AdvancedTuningScreen` SHALL expose a "Supporter Tier Override" dropdown/segmented selector offering options `[NONE, PIONEER, BRONZE, SILVER, GOLD, DIAMOND]`, strictly enclosed within `if (BuildConfig.DEBUG)` (Rule 22).
-• In release builds, `BuildConfig.DEBUG` override code SHALL be completely inert or compiled out, preventing unauthorized tier escalation.
+2. *Debug Developer Menu & Supporter Tier Override (`REQ-SET-087.2`)*:
+• The system SHALL provide a dedicated `DeveloperMenuScreen` accessible via `R.id.drawer_developer_menu` in the navigation drawer, strictly displayed and accessible when `BuildConfig.DEBUG == true`.
+• `DeveloperMenuScreen` SHALL host the Supporter Tier Override selector (`[NONE, PIONEER, BRONZE, SILVER, GOLD, DIAMOND]`), Jubilee Celebration dialog preview, and N+1 Garage upgrade previews / flag reset.
+• `AdvancedTuningScreen` SHALL NOT display developer or supporter tier overrides.
+• In release builds (`BuildConfig.DEBUG == false`), the Developer Menu drawer entry, screen route, and override mechanisms SHALL be completely omitted or inert, preventing unauthorized tier escalation.
 
 **Acceptance Criteria (Given-When-Then)**:
 • *Given* a debug build of the app,
-• *When* the tester selects "SILVER" in the Advanced Tuning Supporter Tier Override,
-• *Then* `ProFeatureManager.effectiveTier` evaluates to `SILVER`, `isProActive()` returns `true`, and unlimited device pairing is enabled.
+• *When* the user opens the Navigation Drawer,
+• *Then* `Developer Menu` is displayed, and selecting it opens `DeveloperMenuScreen` containing the Supporter Tier Override, Jubilee Celebration preview, and Garage Detector previews.
 • *Given* a release build,
 • *When* inspected,
-• *Then* the debug override control is absent from `AdvancedTuningScreen` and cannot be activated via UI.
+• *Then* the Developer Menu drawer entry and debug overrides are completely absent.
 
 **Invariants**: Release builds must never permit arbitrary tier override; ProFeatureManager resolution must be thread-safe.
 

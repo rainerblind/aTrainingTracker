@@ -188,4 +188,9 @@
     <!-- Smartphone IMU/GPS Deceleration Brake-Light Trigger (ATT-5121 / REQ-CON-035) -->
     <string name="radar_brake_light_title">Vertragingsremlicht</string>
     <string name="radar_brake_light_desc">Laat achterlicht oplichten bij sterke IMU/GPS-vertraging (2,0 s vasthouden, overgeslagen op RearVue 820)</string>
+    <!-- Developer Menu (ATT-7659 / REQ-SET-087.2 / REQ-CON-030.8) -->
+    <string name="developer_menu_title">Ontwikkelaarsmenu</string>
+    <string name="developer_menu_radar_section_title">Fietsradar foutopsporing</string>
+    <string name="developer_menu_radar_v1_only_title">Radar V1-protocol forceren (verouderd)</string>
+    <string name="developer_menu_radar_v1_only_desc">Omzeilt Garmin Varia V2-karakteristiekdetectie en valt onmiddellijk terug op verouderde V1-streaming (6a4e3203).</string>
 </resources>

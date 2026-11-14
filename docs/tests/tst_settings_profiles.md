@@ -910,11 +910,12 @@
 
 ### TST-SET-087: **Debug Supporter Tier Override & Pro Feature Manager Governance Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-SET-087`
-- **Component**: `ProFeatureManager.kt`, `AdvancedTuningScreen.kt`, `SettingsDataStore.kt`
+- **Component**: `ProFeatureManager.kt`, `DeveloperMenuScreen.kt`, `AppNavigationDrawer.kt`, `AdvancedTuningScreen.kt`, `SettingsDataStore.kt`
 - **Test Description**:
 1. In debug build, set `supporterTierOverride` to `BRONZE`, `SILVER`, `GOLD`, `DIAMOND`; verify `ProFeatureManager.effectiveTier` and `isProActive()` immediately reflect override.
 2. Verify setting override to `NONE` falls back to Pioneer or Subscription status.
-3. Verify `AdvancedTuningScreen` override control is conditionally compiled/rendered only when `BuildConfig.DEBUG == true`.
+3. *Developer Menu Navigation & Release Isolation (`TST-SET-087.3`)*: Verify `DeveloperMenuScreen` is accessible in the navigation drawer via `R.id.drawer_developer_menu` in debug builds (`BuildConfig.DEBUG == true`), and that the drawer item, route, and debug overrides are completely absent in release builds (`BuildConfig.DEBUG == false`).
+4. *Clean AdvancedTuningScreen (`TST-SET-087.4`)*: Verify `AdvancedTuningScreen` contains zero developer or supporter tier override controls, having relocated them cleanly to `DeveloperMenuScreen`.
 
 ### TST-SET-088: **Supporter N+1 Garage Detector & Upgrade Prompts Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-SET-088`

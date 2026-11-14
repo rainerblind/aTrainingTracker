@@ -188,4 +188,9 @@
     <!-- Smartphone IMU/GPS Deceleration Brake-Light Trigger (ATT-5121 / REQ-CON-035) -->
     <string name="radar_brake_light_title">Feu stop de décélération</string>
     <string name="radar_brake_light_desc">Allume le feu arrière lors d\'une forte décélération IMU/GPS (maintien de 2,0 s, contourné sur RearVue 820)</string>
+    <!-- Developer Menu (ATT-7659 / REQ-SET-087.2 / REQ-CON-030.8) -->
+    <string name="developer_menu_title">Menu développeur</string>
+    <string name="developer_menu_radar_section_title">Débogage du radar vélo</string>
+    <string name="developer_menu_radar_v1_only_title">Forcer le protocole radar V1 (hérité)</string>
+    <string name="developer_menu_radar_v1_only_desc">Ignore la détection des caractéristiques Garmin Varia V2 et bascule immédiatement sur le streaming V1 hérité (6a4e3203).</string>
 </resources>

@@ -188,4 +188,9 @@
     <!-- Smartphone IMU/GPS Deceleration Brake-Light Trigger (ATT-5121 / REQ-CON-035) -->
     <string name="radar_brake_light_title">Deceleration Brake Light</string>
     <string name="radar_brake_light_desc">Brightens tail light during sharp smartphone IMU/GPS deceleration (2.0s hold, auto-bypassed on RearVue 820)</string>
+    <!-- Developer Menu (ATT-7659 / REQ-SET-087.2 / REQ-CON-030.8) -->
+    <string name="developer_menu_title">Developer Menu</string>
+    <string name="developer_menu_radar_section_title">Bike Radar Debugging</string>
+    <string name="developer_menu_radar_v1_only_title">Force Radar V1 Protocol (Legacy)</string>
+    <string name="developer_menu_radar_v1_only_desc">Bypasses Garmin Varia V2 characteristic discovery and immediately falls back to legacy V1 streaming (6a4e3203).</string>
 </resources>

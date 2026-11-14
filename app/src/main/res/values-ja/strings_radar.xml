@@ -188,4 +188,9 @@
     <!-- Smartphone IMU/GPS Deceleration Brake-Light Trigger (ATT-5121 / REQ-CON-035) -->
     <string name="radar_brake_light_title">減速ブレーキライト</string>
     <string name="radar_brake_light_desc">急減速時にテールライトを高輝度点灯（2.0秒保持、RearVue 820では自動バイパス）</string>
+    <!-- Developer Menu (ATT-7659 / REQ-SET-087.2 / REQ-CON-030.8) -->
+    <string name="developer_menu_title">開発者メニュー</string>
+    <string name="developer_menu_radar_section_title">自転車レーダーデバッグ</string>
+    <string name="developer_menu_radar_v1_only_title">レーダーV1プロトコルを強制 (レガシー)</string>
+    <string name="developer_menu_radar_v1_only_desc">Garmin Varia V2の特性検出をバイパスし、レガシーなV1ストリーミング (6a4e3203) に即座にフォールバックします。</string>
 </resources>

@@ -54,7 +54,7 @@ class AdvancedTuningScreenTest {
         assertNotNull(strings["tuning_group_analysis_models"])
 
         val sectionEnum = Class.forName("com.atrainingtracker.trainingtracker.ui.settings.tuning.TuningSection")
-        val constants = sectionEnum.enumConstants.map { it.toString() }
+        val constants = sectionEnum.enumConstants!!.map { it.toString() }
 
         assertTrue(constants.contains("COCKPIT_TYPOGRAPHY"))
         assertTrue(constants.contains("NAVIGATION"))
@@ -79,5 +79,22 @@ class AdvancedTuningScreenTest {
         val dsClass = Class.forName("com.atrainingtracker.trainingtracker.settings.TuningPreferencesDataStore")
         val getInstanceMethod = dsClass.declaredMethods.find { it.name == "getInstance" && Modifier.isStatic(it.modifiers) }
         assertNotNull("TuningPreferencesDataStore must have a static getInstance(context) factory", getInstanceMethod)
+    }
+
+    @Test
+    fun testAdvancedTuningScreen_doesNotContainSupporterDebugSection() {
+        // REQ-SET-087.2 / TST-SET-087.4
+        val sourceFile = java.io.File("src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning/AdvancedTuningScreen.kt")
+        if (sourceFile.exists()) {
+            val content = sourceFile.readText()
+            org.junit.Assert.assertFalse(
+                "AdvancedTuningScreen must not reference SupporterDebugSection (REQ-SET-087.2)",
+                content.contains("SupporterDebugSection")
+            )
+        }
+
+        val devMenuClass = Class.forName("com.atrainingtracker.trainingtracker.ui.settings.developer.DeveloperMenuScreenKt")
+        val devMenuMethod = devMenuClass.declaredMethods.find { it.name.startsWith("DeveloperMenuScreen") && Modifier.isPublic(it.modifiers) }
+        assertNotNull("DeveloperMenuScreen composable must exist and be public", devMenuMethod)
     }
 }

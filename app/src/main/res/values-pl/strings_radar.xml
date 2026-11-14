@@ -188,4 +188,9 @@
     <!-- Smartphone IMU/GPS Deceleration Brake-Light Trigger (ATT-5121 / REQ-CON-035) -->
     <string name="radar_brake_light_title">Światło hamowania po zwolnieniu</string>
     <string name="radar_brake_light_desc">Rozjaśnia tylne światło podczas gwałtownego hamowania IMU/GPS (utrzymanie 2,0 s, pomijane w RearVue 820)</string>
+    <!-- Developer Menu (ATT-7659 / REQ-SET-087.2 / REQ-CON-030.8) -->
+    <string name="developer_menu_title">Menu programisty</string>
+    <string name="developer_menu_radar_section_title">Debugowanie radaru rowerowego</string>
+    <string name="developer_menu_radar_v1_only_title">Wymuś protokół radaru V1 (starsza wersja)</string>
+    <string name="developer_menu_radar_v1_only_desc">Pomija wykrywanie charakterystyki Garmin Varia V2 i natychmiast przełącza na starszą transmisję strumieniową V1 (6a4e3203).</string>
 </resources>

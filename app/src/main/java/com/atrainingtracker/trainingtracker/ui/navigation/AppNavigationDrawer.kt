@@ -20,6 +20,7 @@ package com.atrainingtracker.trainingtracker.ui.navigation
 
 import android.content.res.Resources
 import android.util.Log
+import com.atrainingtracker.BuildConfig
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -183,7 +184,10 @@ fun isDrawerGroupInitiallyExpanded(group: DrawerGroup, selectedItemId: Int): Boo
  * Creates the list of [DrawerGroup] objects defining the drawer layout and items (REQ-UI-397, REQ-UI-405, REQ-UI-422).
  */
 @VisibleForTesting
-fun createDrawerGroups(startTrackingTitleRes: Int): List<DrawerGroup> {
+fun createDrawerGroups(
+    startTrackingTitleRes: Int,
+    isDebug: Boolean = BuildConfig.DEBUG
+): List<DrawerGroup> {
     return listOf(
         DrawerGroup(
             titleRes = R.string.drawer__training,
@@ -242,11 +246,14 @@ fun createDrawerGroups(startTrackingTitleRes: Int): List<DrawerGroup> {
         DrawerGroup(
             titleRes = R.string.drawer__info_support,
             collapsible = true,
-            items = listOf(
-                DrawerItemConfig(R.id.drawer_supporter, R.drawable.ic_crown, R.string.drawer_supporter),
-                DrawerItemConfig(R.id.drawer_tips_guide, R.drawable.ic_tips_and_updates, R.string.drawer_tips_guide),
-                DrawerItemConfig(R.id.drawer_privacy_policy, R.drawable.ic_privacy, R.string.privacy_policy)
-            )
+            items = buildList {
+                add(DrawerItemConfig(R.id.drawer_supporter, R.drawable.ic_crown, R.string.drawer_supporter))
+                add(DrawerItemConfig(R.id.drawer_tips_guide, R.drawable.ic_tips_and_updates, R.string.drawer_tips_guide))
+                add(DrawerItemConfig(R.id.drawer_privacy_policy, R.drawable.ic_privacy, R.string.privacy_policy))
+                if (isDebug) {
+                    add(DrawerItemConfig(R.id.drawer_developer_menu, R.drawable.ic_settings_24, R.string.developer_menu_title))
+                }
+            }
         )
     )
 }
