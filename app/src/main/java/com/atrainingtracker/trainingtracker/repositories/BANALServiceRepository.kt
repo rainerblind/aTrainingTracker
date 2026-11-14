@@ -732,6 +732,27 @@ class BANALServiceRepository private constructor(context: Context) {
         _serviceBinder.value?.setUserSelectedSportType(bSportType)
     }
 
+    /**
+     * REQ-TRK-077.1: Sets indoor workout mode via [BANALService.BANALServiceComm].
+     */
+    fun setIndoorMode(isIndoor: Boolean) {
+        _serviceBinder.value?.setIndoorMode(isIndoor)
+    }
+
+    /**
+     * REQ-TRK-077.1: Returns whether indoor mode is active on the connected service binder.
+     */
+    fun isIndoorMode(): Boolean {
+        return _serviceBinder.value?.isIndoorMode() ?: false
+    }
+
+    /**
+     * REQ-TRK-077.1: Updates indoor mode based on the given sport type id via [BANALService.BANALServiceComm].
+     */
+    fun updateIndoorModeForSportType(sportTypeId: Long) {
+        _serviceBinder.value?.updateIndoorModeForSportType(sportTypeId)
+    }
+
     fun startSearchingForPairedDevices() {
         sendBroadcast(TrainingApplication.REQUEST_START_SEARCH_FOR_PAIRED_DEVICES)
     }

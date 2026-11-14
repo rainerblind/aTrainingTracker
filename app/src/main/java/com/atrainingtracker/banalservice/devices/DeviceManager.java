@@ -93,6 +93,7 @@ public class DeviceManager {
     protected volatile BatteryDevice mBatteryDevice;
     protected volatile SpeedAndLocationDevice mSpeedAndLocationDevice_GPS, mSpeedAndLocationDevice_GoogleFused;
     protected volatile SpeedAndLocationDevice_ATTFused mSpeedAndLocationDevice_ATTFused;
+    protected volatile boolean mIsIndoorMode = false;
     protected volatile AltitudeFromPressureDevice mAltitudeFromPressureDevice;
     protected volatile AltitudeFromPositionDevice mAltitudeFromPositionDevice;
     protected volatile AltitudeAndSlopeDevice_ATTFused mAltitudeAndSlopeDevice_ATTFused;
@@ -393,6 +394,7 @@ public class DeviceManager {
                 if (DEBUG) Log.i(TAG, "creating GPS location device");
                 try {
                     mSpeedAndLocationDevice_GPS = new SpeedAndLocationDevice_GPS(mContext, mSensorManager);
+                    applyIndoorMode(mSpeedAndLocationDevice_GPS);
                 } catch (Exception e) {
                     Log.w(TAG, "Could not initialize GPS location device: " + e.getMessage());
                 }
@@ -408,6 +410,7 @@ public class DeviceManager {
             if (DEBUG) Log.i(TAG, "creating google fused location device");
             try {
                 mSpeedAndLocationDevice_GoogleFused = new SpeedAndLocationDevice_GoogleFused(mContext, mSensorManager);
+                applyIndoorMode(mSpeedAndLocationDevice_GoogleFused);
             } catch (Exception e) {
                 Log.w(TAG, "Could not initialize Google Fused location device: " + e.getMessage());
             }
@@ -419,6 +422,7 @@ public class DeviceManager {
             if (DEBUG) Log.i(TAG, "creating ATT fused location device");
             try {
                 mSpeedAndLocationDevice_ATTFused = new SpeedAndLocationDevice_ATTFused(mContext, mSensorManager);
+                applyIndoorMode(mSpeedAndLocationDevice_ATTFused);
             } catch (Exception e) {
                 Log.w(TAG, "Could not initialize ATT Fused location device: " + e.getMessage());
             }
@@ -509,6 +513,7 @@ public class DeviceManager {
                     if (DEBUG) Log.i(TAG, "checkOrInitializeLocationDevices: creating GPS location device");
                     try {
                         mSpeedAndLocationDevice_GPS = new SpeedAndLocationDevice_GPS(mContext, mSensorManager);
+                        applyIndoorMode(mSpeedAndLocationDevice_GPS);
                     } catch (Exception e) {
                         Log.w(TAG, "Could not initialize GPS location device: " + e.getMessage());
                     }
@@ -528,6 +533,7 @@ public class DeviceManager {
                 if (DEBUG) Log.i(TAG, "checkOrInitializeLocationDevices: creating Google Fused location device");
                 try {
                     mSpeedAndLocationDevice_GoogleFused = new SpeedAndLocationDevice_GoogleFused(mContext, mSensorManager);
+                    applyIndoorMode(mSpeedAndLocationDevice_GoogleFused);
                 } catch (Exception e) {
                     Log.w(TAG, "Could not initialize Google Fused location device: " + e.getMessage());
                 }
@@ -543,6 +549,7 @@ public class DeviceManager {
                 if (DEBUG) Log.i(TAG, "checkOrInitializeLocationDevices: creating ATT Fused location device");
                 try {
                     mSpeedAndLocationDevice_ATTFused = new SpeedAndLocationDevice_ATTFused(mContext, mSensorManager);
+                    applyIndoorMode(mSpeedAndLocationDevice_ATTFused);
                 } catch (Exception e) {
                     Log.w(TAG, "Could not initialize ATT Fused location device: " + e.getMessage());
                 }
@@ -619,6 +626,7 @@ public class DeviceManager {
                     if (isProviderAvailableSafely(locationManager, LocationManager.GPS_PROVIDER)) {
                         try {
                             mSpeedAndLocationDevice_GPS = new SpeedAndLocationDevice_GPS(mContext, mSensorManager);
+                            applyIndoorMode(mSpeedAndLocationDevice_GPS);
                         } catch (Exception e) {
                             Log.w(TAG, "Could not create GPS location device on pairing change: " + e.getMessage());
                         }
@@ -640,6 +648,7 @@ public class DeviceManager {
                         && TrainingApplication.havePermission(Manifest.permission.ACCESS_FINE_LOCATION)) { // and we have the permission to do so
                     try {
                         mSpeedAndLocationDevice_GoogleFused = new SpeedAndLocationDevice_GoogleFused(mContext, mSensorManager);
+                        applyIndoorMode(mSpeedAndLocationDevice_GoogleFused);
                     } catch (Exception e) {
                         Log.w(TAG, "Could not create Google Fused location device on pairing change: " + e.getMessage());
                     }
@@ -660,6 +669,7 @@ public class DeviceManager {
                         && TrainingApplication.havePermission(Manifest.permission.ACCESS_FINE_LOCATION)) {
                     try {
                         mSpeedAndLocationDevice_ATTFused = new SpeedAndLocationDevice_ATTFused(mContext, mSensorManager);
+                        applyIndoorMode(mSpeedAndLocationDevice_ATTFused);
                     } catch (Exception e) {
                         Log.w(TAG, "Could not create ATT Fused location device on pairing change: " + e.getMessage());
                     }
@@ -900,6 +910,32 @@ public class DeviceManager {
 
     public SpeedAndLocationDevice_ATTFused getSpeedAndLocationDevice_ATTFused() {
         return mSpeedAndLocationDevice_ATTFused;
+    }
+
+    /**
+     * REQ-TRK-077.1: Sets indoor workout mode on DeviceManager and forwards to all active
+     * SpeedAndLocationDevice instances. Newly created SpeedAndLocationDevices also inherit this setting.
+     */
+    public synchronized void setIndoorMode(boolean indoorMode) {
+        mIsIndoorMode = indoorMode;
+        for (SpeedAndLocationDevice device : getActiveSpeedAndLocationDevices()) {
+            if (device != null) {
+                device.setIndoorMode(indoorMode);
+            }
+        }
+    }
+
+    /**
+     * REQ-TRK-077.1: Returns whether indoor mode is active on DeviceManager.
+     */
+    public synchronized boolean isIndoorMode() {
+        return mIsIndoorMode;
+    }
+
+    private void applyIndoorMode(SpeedAndLocationDevice device) {
+        if (device != null && mIsIndoorMode) {
+            device.setIndoorMode(true);
+        }
     }
 
     public AltitudeAndSlopeDevice_ATTFused getAltitudeAndSlopeDevice_ATTFused() {

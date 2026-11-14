@@ -271,7 +271,13 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
     fun deleteWorkoutSamples(fileBaseName: String) = samplesManager.deleteWorkout(fileBaseName)
     fun reassignClusterWorkouts(sourceId: Long, targetId: Long) = summariesManager.reassignClusterWorkouts(sourceId, targetId)
 
-    fun createNewTrackedWorkout(baseFileName: String, sportTypeId: Long, bSportType: com.atrainingtracker.banalservice.BSportType): Long {
+    @JvmOverloads
+    fun createNewTrackedWorkout(
+        baseFileName: String,
+        sportTypeId: Long,
+        bSportType: com.atrainingtracker.banalservice.BSportType,
+        isTrainer: Boolean = false
+    ): Long {
         val values = ContentValues().apply {
             put(WorkoutSummariesDatabaseManager.WorkoutSummaries.GOAL, "")
             put(WorkoutSummariesDatabaseManager.WorkoutSummaries.METHOD, "")
@@ -282,6 +288,7 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
             put(WorkoutSummariesDatabaseManager.WorkoutSummaries.FILE_BASE_NAME, baseFileName)
             put(WorkoutSummariesDatabaseManager.WorkoutSummaries.SOURCE, WorkoutSource.TRACKED.name)
             put(WorkoutSummariesDatabaseManager.WorkoutSummaries.FINISHED, 0)
+            put(WorkoutSummariesDatabaseManager.WorkoutSummaries.TRAINER, if (isTrainer) 1 else 0)
         }
         return insertWorkoutSummary(values)
     }
@@ -1423,10 +1430,14 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
         return summariesManager.getString(workoutId, WorkoutSummariesDatabaseManager.WorkoutSummaries.TIME_START)
     }
 
-    fun updateWorkoutSport(workoutId: Long, sportId: Long, bSportType: BSportType) {
+    @JvmOverloads
+    fun updateWorkoutSport(workoutId: Long, sportId: Long, bSportType: BSportType, isTrainer: Boolean? = null) {
         val updateVals = ContentValues().apply {
             put(WorkoutSummariesDatabaseManager.WorkoutSummaries.SPORT_ID, sportId)
             put(WorkoutSummariesDatabaseManager.WorkoutSummaries.B_SPORT, bSportType.name)
+            if (isTrainer != null) {
+                put(WorkoutSummariesDatabaseManager.WorkoutSummaries.TRAINER, if (isTrainer) 1 else 0)
+            }
         }
         updateWorkoutSummary(workoutId, updateVals)
     }

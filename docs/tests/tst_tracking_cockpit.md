@@ -2732,7 +2732,7 @@
      • `python3 tools/parallel_sprint_lock.py -- ./gradlew testDebugUnitTest --tests "com.atrainingtracker.banalservice.odometry.*" --tests "com.atrainingtracker.trainingtracker.database.*"` asserting 100% pass rate.
 
 
-### TST-TRK-077: Indoor GPS Suppression, External Speed Sensor Coupling & IMU Rest-Variance Stationary Pinning Verification
+### TST-TRK-077: Indoor GPS Suppression, External Speed Sensor Coupling & IMU Rest-Variance Stationary Pinning Verification [Verified]
 - **Target Release**: `V5.0.0`
 - **Requirement(s)**: `REQ-TRK-077` (`REQ-TRK-077.1`..`REQ-TRK-077.4`)
 - **Component**: `SpeedAndLocationDevice.java`, `SpeedAndLocationDeviceStationaryJitterTest.kt`, `SpeedAndLocationDeviceIndoorAndRestCouplingTest.kt`

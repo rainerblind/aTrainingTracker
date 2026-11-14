@@ -91,9 +91,36 @@ class SportTypesRepository private constructor(private val context: Context) :
     fun getSportTypesIdList(sportType: BSportType, avgSpd: Double): List<Long>? =
         sportTypeDatabaseManager.getSportTypesIdList(sportType, avgSpd)
 
+    /**
+     * Resolves whether the specified sport type represents an indoor activity (REQ-TRK-077.1).
+     */
+    fun isIndoorSportType(sportId: Long): Boolean {
+        val uiName = getUIName(sportId)
+        val tcxName = getTcxName(sportId)
+        val stravaName = getStravaName(sportId)
+        return isIndoorName(uiName) || isIndoorName(tcxName) || isIndoorName(stravaName)
+    }
+
     companion object {
         private val TAG = "SportTypesRepository"
         private val DEBUG = TrainingApplication.getDebug(true)
+
+        /**
+         * Returns true if the sport type name contains common indoor keywords (case-insensitive) (REQ-TRK-077.1).
+         */
+        @JvmStatic
+        fun isIndoorName(name: String?): Boolean {
+            if (name.isNullOrBlank()) return false
+            val lower = name.lowercase(java.util.Locale.ROOT)
+            return lower.contains("indoor")
+                    || lower.contains("trainer")
+                    || lower.contains("rolle")
+                    || lower.contains("treadmill")
+                    || lower.contains("laufband")
+                    || lower.contains("spinning")
+                    || lower.contains("ergometer")
+                    || lower.contains("stationary")
+        }
 
         // The single, volatile instance of the repository.
         // @Volatile guarantees that writes to this field are immediately visible to other threads.

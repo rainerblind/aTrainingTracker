@@ -179,6 +179,7 @@ public class TrackerService extends Service {
     
     public static final String ACTION_STOP = "com.atrainingtracker.trainingtracker.tracker.TrackerService.ACTION_STOP";
     public static final String START_TYPE = "START_TYPE";
+    public static final String EXTRA_INDOOR = "com.atrainingtracker.trainingtracker.tracker.EXTRA_INDOOR";
     private static final String TAG = "TrackerService";
     private static final boolean DEBUG = TrainingApplication.getDebug(false);
     protected final IntentFilter mAltitudeCorrectionFilter = new IntentFilter(AltitudeFromPressureDevice.ALTITUDE_CORRECTION_INTENT);
@@ -897,6 +898,12 @@ public class TrackerService extends Service {
             if (DEBUG) Log.i(TAG, "connected to BANAL Service");
             if (mBanalService != null) {
                 mBanalService.addRrBeatListener(mRrBeatListener);
+                try {
+                    long sportTypeId = getSportTypeId();
+                    boolean isIndoor = getSportTypesRepository().isIndoorSportType(sportTypeId);
+                    mBanalService.setIndoorMode(isIndoor);
+                } catch (Throwable ignored) {
+                }
             }
 
             // ATT-3045: Ensure location devices are checked/initialized defensively when service connects
@@ -1167,6 +1174,22 @@ public class TrackerService extends Service {
             try {
                 RadarLightController.onWorkoutStarted(this, isCycling);
             } catch (Throwable ignored) {
+            }
+
+            long sportTypeId = getSportTypeId();
+            boolean isIndoor = false;
+            if (intent != null && intent.hasExtra(EXTRA_INDOOR)) {
+                isIndoor = intent.getBooleanExtra(EXTRA_INDOOR, false);
+            } else {
+                try {
+                    isIndoor = getSportTypesRepository().isIndoorSportType(sportTypeId);
+                } catch (Throwable ignored) {
+                }
+            }
+            if (mBanalService != null) {
+                mBanalService.setIndoorMode(isIndoor);
+            } else {
+                BANALService.setStaticIndoorMode(isIndoor);
             }
         }
         switch (startType) {
@@ -2108,7 +2131,12 @@ public class TrackerService extends Service {
 
         long sportTypeId = getSportTypeId();
         BSportType bSport = getSportTypesRepository().getBSportType(sportTypeId);
-        long workoutId = getWorkoutRepository().createNewTrackedWorkout(mBaseFileName, sportTypeId, bSport);
+        boolean isIndoor = false;
+        try {
+            isIndoor = getSportTypesRepository().isIndoorSportType(sportTypeId);
+        } catch (Throwable ignored) {
+        }
+        long workoutId = getWorkoutRepository().createNewTrackedWorkout(mBaseFileName, sportTypeId, bSport, isIndoor);
 
         ExportManager exportManager = new ExportManager(this);
         exportManager.newWorkout(mBaseFileName);
@@ -2144,6 +2172,16 @@ public class TrackerService extends Service {
     private void onUserSelectedSportTypeChanged() {
         long sportTypeId = getSportTypeId();
         BSportType bSport = getSportTypesRepository().getBSportType(sportTypeId);
+        boolean isIndoor = false;
+        try {
+            isIndoor = getSportTypesRepository().isIndoorSportType(sportTypeId);
+        } catch (Throwable ignored) {
+        }
+        if (mBanalService != null) {
+            mBanalService.setIndoorMode(isIndoor);
+        } else {
+            BANALService.setStaticIndoorMode(isIndoor);
+        }
 
         if (bSport == BSportType.BIKE) {
             RadarLightController.onWorkoutStarted(this, true);
@@ -2151,9 +2189,10 @@ public class TrackerService extends Service {
             RadarLightController.onWorkoutStopped(this);
         }
 
+        final boolean finalIsIndoor = isIndoor;
         mTableInitializationFuture.thenAcceptAsync(v -> {
             try {
-                getWorkoutRepository().updateWorkoutSport(mWorkoutID, sportTypeId, bSport);
+                getWorkoutRepository().updateWorkoutSport(mWorkoutID, sportTypeId, bSport, finalIsIndoor);
             } catch (Exception e) {
                 Log.e(TAG, "Failed to update sport type in summaries DB", e);
             }

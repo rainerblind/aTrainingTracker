@@ -59,3 +59,21 @@ Pure background sensor fusion and driver telemetry logic; zero APK UI layout cha
 3. **No 3D Accelerometer Integration**: Raw accelerometer is strictly utilized for scalar norm variance computation; no 2D/3D integration.
 4. **Thread Safety & Lifecycle Hygiene**: Sensor listener cleanly unregistered in `shutDown()` and `LocationUnavailable()`.
 5. **Living Documentation Synchronized**: Status in `docs/requirements.md` and `docs/tests.md` updated to `Verified`.
+
+---
+
+## 6. Stage 6 Cold Carbon Review — Bounce 1 Remediation Summary
+
+### Remediation of Finding 1 (Production Wiring & Reachability Defect)
+* **Root Cause**: `SpeedAndLocationDevice.setIndoorMode(boolean)` was implemented and tested in unit tests, but had zero production callers in `app/src/main/`.
+* **Resolution**:
+  1. **`DeviceManager.java`**: Added thread-safe `setIndoorMode(boolean)` and `isIndoorMode()`. Propagates mode to all active `SpeedAndLocationDevice` instances (`mSpeedAndLocationDevice_GPS`, `mSpeedAndLocationDevice_GoogleFused`, `mSpeedAndLocationDevice_ATTFused`) and caches `mIsIndoorMode` so dynamically/lazily created devices immediately inherit indoor mode via `applyIndoorMode()`.
+  2. **`BANALService.java`**: Added `setIndoorMode(boolean)`, `isIndoorMode()`, `setStaticIndoorMode(boolean)`, `isStaticIndoorMode()`, and `updateIndoorModeForSportType(long)`. Forwarded from `BANALServiceComm` binder and automatically triggered on `setUserSelectedSportTypeId(sportTypeId)`.
+  3. **`SportTypesRepository.kt`**: Added `isIndoorSportType(sportId: Long)` and `@JvmStatic isIndoorName(name: String?)` matching indoor keywords ("indoor", "trainer", "rolle", "laufband", "treadmill", "spinning", "ergometer", "stationary").
+  4. **`TrackerService.java`**: Wired indoor mode propagation on workout start (`onStartCommand` checking `EXTRA_INDOOR` or sport type), on sport type change (`onUserSelectedSportTypeChanged`), on BANAL service connection (`mBanalConnection`), and when creating new tracked workouts (`createNewWorkout` persisting `WorkoutSummaries.TRAINER = 1`).
+  5. **`WorkoutRepository.kt`**: Updated `createNewTrackedWorkout` and `updateWorkoutSport` with `@JvmOverloads` accepting `isTrainer: Boolean`.
+  6. **Targeted Unit Test**: Authored `DeviceManagerIndoorModeTest.kt` verifying `DeviceManager.setIndoorMode(true)` propagation to `SpeedAndLocationDevice_GPS`, GPS coordinate and distance suppression during indoor fixes, dynamic inheritance upon lazy device creation, and sport keyword matching.
+
+### Remediation of Finding 2 (Living Documentation & Governance Parity)
+* **Root Cause**: Heading `### TST-TRK-077` in `docs/tests/tst_tracking_cockpit.md` omitted the status marker `[Verified]`, causing the master index in `docs/tests.md` to report 1 test as `Planned / Open`.
+* **Resolution**: Added `[Verified]` to `### TST-TRK-077` in `docs/tests/tst_tracking_cockpit.md`. Ran `python3 tools/verify_requirement_governance.py --sync-indexes`, establishing 100% parity (`119 | 119 | 0 | 0`).
