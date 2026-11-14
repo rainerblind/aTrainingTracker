@@ -153,6 +153,8 @@
 
     <!-- sensor types -->
     <string name="accumulated_sensors">sensores acumulados</string>
+    <string name="world_yaw_rate">Velocidad angular mundial</string>
+    <string name="world_yaw_rate_short">Velocidad angular</string>
     <string name="accumulated_sensors_short">sens. ac.</string>
     <string name="accuracy">precisión</string>
     <string name="accuracy_short">prec.</string>

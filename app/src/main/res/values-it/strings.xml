@@ -153,6 +153,8 @@
 
     <!-- sensor types -->
     <string name="accumulated_sensors">sensori accumulati</string>
+    <string name="world_yaw_rate">Velocità d\'imbardata globale</string>
+    <string name="world_yaw_rate_short">Velocità imbardata</string>
     <string name="accumulated_sensors_short">sens. acc.</string>
     <string name="accuracy">precisione</string>
     <string name="accuracy_short">prec.</string>

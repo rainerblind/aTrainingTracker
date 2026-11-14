@@ -417,11 +417,7 @@ object AntChannelHelper {
             handler.removeCallbacks(retryRunnable)
             handler.removeCallbacks(timeoutRunnable)
             if (isReceiverRegistered) {
-                try {
-                    context.unregisterReceiver(receiver)
-                } catch (e: Exception) {
-                    Log.w(TAG, "Error unregistering receiver", e)
-                }
+                com.atrainingtracker.util.LifecycleUtils.safeUnregisterReceiver(context, receiver, TAG)
                 isReceiverRegistered = false
             }
         }

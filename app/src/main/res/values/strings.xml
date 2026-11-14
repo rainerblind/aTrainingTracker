@@ -165,6 +165,9 @@
     <string name="units_percent" translatable="false">%</string>
     <string name="units_degree" translatable="false">°</string>
     <string name="units_rpm" translatable="false">/min</string>
+    <string name="units_rad_per_sec" translatable="false">rad/s</string>
+    <string name="world_yaw_rate">World Yaw Rate</string>
+    <string name="world_yaw_rate_short">Yaw Rate</string>
 
     <string name="value_unit_float_string">%1$.2f %2$s</string>
     <!-- TODO: correct??? -->

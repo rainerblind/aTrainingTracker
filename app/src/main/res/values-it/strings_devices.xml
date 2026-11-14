@@ -91,6 +91,7 @@
 
     <string name="devices_location_GPS">GPS del telefono (Satellite)</string>
     <string name="devices_location_GoogleFused">Posizione Google (Fused)</string>
+    <string name="devices_location_ATT_fused">ATT Odometria combinata</string>
     <string name="devices_altitude_from_pressure">Altitudine da pressione</string>
 
     <!-- Specialized Altitude Devices Explanations (ATT-5073, REQ-SEN-026) -->
@@ -101,6 +102,18 @@
     <string name="device_altitude_pressure_pros_cons">+ Molto reattivo e fluido; nessun disturbo verticale GPS; funziona nei tunnel.\n- Il meteo può causare derive di quota nel corso del tempo.</string>
     <string name="device_altitude_position_how_it_works">Confronta la posizione GPS con modelli digitali di elevazione (DEM) memorizzati o scaricati da Open-Meteo.</string>
     <string name="device_altitude_position_pros_cons">+ Immune a meteo e derive barometriche; quota assoluta senza calibrazione.\n- Richiede connessione Internet attiva per aree non memorizzate nella cache; dipende dalla precisione GPS (a scalini su ponti e pareti scoscese).</string>
+
+    <!-- ATT Odometry Fusion Device Configuration (ATT-7751, REQ-SEN-028) -->
+    <string name="device_att_fused_how_it_works">Unisce posizioni GNSS, giri ruota calibrati e rotazioni giroscopiche 3D in un filtro di Kalman esteso (EKF) a 5 stati con stima della posizione continua.</string>
+    <string name="device_att_fused_pros_cons">+ Tracciamento ininterrotto in gallerie e boschi densi; precisione sub-metrica; esclusione anomalie.\n- Maggiore consumo di batteria per il campionamento continuo del giroscopio.</string>
+    <string name="device_att_fused_toggle_gnss">Usa posizioni GNSS</string>
+    <string name="device_att_fused_toggle_gnss_hint_disabled">Autorizzazione posizione richiesta</string>
+    <string name="device_att_fused_toggle_wheel">Usa sensori velocità ruota</string>
+    <string name="device_att_fused_toggle_wheel_hint_disabled">Nessun sensore ruota abbinato</string>
+    <string name="device_att_fused_toggle_gyro">Usa IMU giroscopio</string>
+    <string name="device_att_fused_toggle_gyro_hint_disabled">Giroscopio non rilevato sullo smartphone</string>
+    <string name="device_att_fused_toggle_autocalib">Calibrazione automatica ruota continua</string>
+    <string name="device_att_fused_toggle_autocalib_hint_disabled">Richiede sensore ruota e GNSS</string>
 
     <string name="devices_live_sensor_data_header">Dati Sensori</string>
 

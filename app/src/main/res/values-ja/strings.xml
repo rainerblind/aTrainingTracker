@@ -153,6 +153,8 @@
 
     <!-- sensor types -->
     <string name="accumulated_sensors">累積センサー</string>
+    <string name="world_yaw_rate">絶対ヨーレート</string>
+    <string name="world_yaw_rate_short">ヨーレート</string>
     <string name="accumulated_sensors_short">累積</string>
     <string name="accuracy">精度</string>
     <string name="accuracy_short">精度</string>

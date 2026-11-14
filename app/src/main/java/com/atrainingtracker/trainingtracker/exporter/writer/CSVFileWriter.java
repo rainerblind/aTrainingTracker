@@ -84,7 +84,7 @@ public class CSVFileWriter extends BaseFileWriter {
             List<String> sortedNames = new LinkedList<>();    // list for the sensors without the source.  Here, we want to keep the order
             List<String> unsortedNames = new LinkedList<>();    // list for the sensors with the source.  Since they are added whenever they appear, they are unsorted
 
-            Pattern pattern = Pattern.compile("(.*)( \\(.*\\)|_gps|_network|_google_fused)");
+            Pattern pattern = Pattern.compile("(.*)( \\(.*\\)|_gps|_network|_google_fused|_att_fused)");
             Map<String, SensorValueType> columnName2Type = new HashMap<>();
 
             for (int i = 0; i < columnNames.length; i++) {

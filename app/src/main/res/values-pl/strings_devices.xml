@@ -91,6 +91,7 @@
 
     <string name="devices_location_GPS">Telefon GPS (Satelita)</string>
     <string name="devices_location_GoogleFused">Lokalizacja Google (Fused)</string>
+    <string name="devices_location_ATT_fused">ATT Odometria scalona</string>
     <string name="devices_altitude_from_pressure">Wysokość z ciśnienia</string>
 
     <!-- Specialized Altitude Devices Explanations (ATT-5073, REQ-SEN-026) -->
@@ -101,6 +102,18 @@
     <string name="device_altitude_pressure_pros_cons">+ Płynna i czuła; brak szumów pionowych GPS; działa w tunelach.\n- Zmiany pogody mogą powodować dryf wysokości w czasie.</string>
     <string name="device_altitude_position_how_it_works">Porównuje pozycję GPS z cyfrowymi modelami terenu (DEM) z pamięci podręcznej lub z Open-Meteo.</string>
     <string name="device_altitude_position_pros_cons">+ Niewrażliwa na pogodę i dryf ciśnienia; bezwzględna wysokość bez kalibracji.\n- Wymaga aktywnego połączenia z internetem w niebuforowanych obszarach; zależy od dokładności GPS (schodkowa na mostach i urwiskach).</string>
+
+    <!-- ATT Odometry Fusion Device Configuration (ATT-7751, REQ-SEN-028) -->
+    <string name="device_att_fused_how_it_works">Łączy pozycje GNSS, skalibrowane obroty koła i obroty żyroskopu 3D w 5-stanowy rozszerzony filtr Kalmana (EKF) z ciągłą nawigacją zliczeniową.</string>
+    <string name="device_att_fused_pros_cons">+ Płynne śledzenie w tunelach i gęstym lesie; precyzja submetrowa; odrzucanie błędnych pomiarów.\n- Większe zużycie baterii przez ciągłe próbkowanie żyroskopu.</string>
+    <string name="device_att_fused_toggle_gnss">Użyj pozycji GNSS</string>
+    <string name="device_att_fused_toggle_gnss_hint_disabled">Wymagane uprawnienie do lokalizacji</string>
+    <string name="device_att_fused_toggle_wheel">Użyj czujników prędkości koła</string>
+    <string name="device_att_fused_toggle_wheel_hint_disabled">Brak sparowanego czujnika koła</string>
+    <string name="device_att_fused_toggle_gyro">Użyj IMU żyroskopu</string>
+    <string name="device_att_fused_toggle_gyro_hint_disabled">Brak wbudowanego żyroskopu</string>
+    <string name="device_att_fused_toggle_autocalib">Ciągła autokalibracja koła</string>
+    <string name="device_att_fused_toggle_autocalib_hint_disabled">Wymaga czujnika koła i GNSS</string>
 
     <string name="devices_live_sensor_data_header">Dane czujników</string>
 

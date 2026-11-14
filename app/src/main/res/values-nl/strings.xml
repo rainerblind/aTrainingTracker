@@ -153,6 +153,8 @@
 
     <!-- sensor types -->
     <string name="accumulated_sensors">geaccumuleerde sensoren</string>
+    <string name="world_yaw_rate">Wereld giersnelheid</string>
+    <string name="world_yaw_rate_short">Giersnelheid</string>
     <string name="accumulated_sensors_short">acc. sensoren</string>
     <string name="accuracy">nauwkeurigheid</string>
     <string name="accuracy_short">nauwkeur.</string>

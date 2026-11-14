@@ -316,6 +316,31 @@ public class DevicesDatabaseManager {
     }
 
     /**
+     * Checks whether at least one paired wheel speed sensor exists (ATT-7751 / REQ-SEN-028.4).
+     */
+    public boolean hasPairedWheelSpeedSensor() {
+        SQLiteDatabase db = getDatabase();
+        if (db == null || !db.isOpen()) {
+            return false;
+        }
+        try (Cursor cursor = db.query(
+                DevicesDbHelper.DEVICES,
+                new String[]{DevicesDbHelper.C_ID},
+                DevicesDbHelper.PAIRED + " > 0 AND (" + DevicesDbHelper.DEVICE_TYPE + "=? OR " + DevicesDbHelper.DEVICE_TYPE + "=?)",
+                new String[]{DeviceType.BIKE_SPEED.name(), DeviceType.BIKE_SPEED_AND_CADENCE.name()},
+                null,
+                null,
+                null,
+                "1"
+        )) {
+            return cursor != null && cursor.moveToFirst();
+        } catch (Exception e) {
+            Log.e(TAG, "Error checking paired wheel speed sensor", e);
+            return false;
+        }
+    }
+
+    /**
      * Checks whether at least one paired Bluetooth LE device exists in the database (ATT-3998 / REQ-PRI-006).
      *
      * @return true if at least one paired Bluetooth LE device is registered in SQLite, false otherwise.
@@ -950,6 +975,10 @@ public class DevicesDatabaseManager {
         return getSmartphoneDeviceId(DeviceType.SPEED_AND_LOCATION_GOOGLE_FUSED);
     }
 
+    public long getSpeedAndLocationAttFusedDeviceId() {
+        return getSmartphoneDeviceId(DeviceType.SPEED_AND_LOCATION_ATT_FUSED);
+    }
+
     public long getAltitudeFromPositionDeviceId() {
         return getSmartphoneDeviceId(DeviceType.ALTITUDE_FROM_POSITION);
     }
@@ -1074,7 +1103,8 @@ public class DevicesDatabaseManager {
         // static final int DB_VERSION = 7;    // upgraded at 20.03.2018: added the location devices to this database
         // static final int DB_VERSION = 8;    // upgraded at 01.11.2026: added baselineCircumference for iTPMS
         // static final int DB_VERSION = 9;    // upgraded at 03.11.2026: renamed legacy ALTITUDE_FROM_PRESSURE default names (ATT-5073)
-        public static final int DB_VERSION = 10;   // upgraded at 06.11.2026: excised obsolete SPEED_AND_LOCATION_NETWORK (ATT-5492)
+        // static final int DB_VERSION = 10;   // upgraded at 06.11.2026: excised obsolete SPEED_AND_LOCATION_NETWORK (ATT-5492)
+        public static final int DB_VERSION = 11;   // upgraded at 14.11.2026: added SPEED_AND_LOCATION_ATT_FUSED (ATT-7751)
         private static final String TAG = "DeviceDbHelper";
         private static final boolean DEBUG = BANALService.getDebug(false);
         private static final String DEVICES_V3 = "Devices";               // in version 3, the table was simply called Devices
@@ -1182,6 +1212,7 @@ public class DevicesDatabaseManager {
                 case 8:
                 case 9:
                 case 10:
+                case 11:
                     db.execSQL(CREATE_DEVICE_DB_8);
                     if (DEBUG) Log.d(TAG, "onCreated sql: " + CREATE_DEVICE_DB_8);
                     db.execSQL(CREATE_BIKE_POWER_SENSORS_TABLE_6);
@@ -1323,6 +1354,36 @@ public class DevicesDatabaseManager {
                 if (DEBUG) Log.i(TAG, "onUpgrade: upgrading from Version <= 9 to 10 (excising obsolete SPEED_AND_LOCATION_NETWORK)");
                 migrateRemoveSpeedAndLocationNetwork(db);
             }
+
+            if (oldVersion <= 10) {
+                if (DEBUG) Log.i(TAG, "onUpgrade: upgrading from Version <= 10 to 11 (adding SPEED_AND_LOCATION_ATT_FUSED)");
+                migrateAddSpeedAndLocationAttFused(db);
+            }
+        }
+
+        /**
+         * Idempotent migration adding SPEED_AND_LOCATION_ATT_FUSED virtual device
+         * to Devices4 table (REQ-SEN-028.1, ATT-7751).
+         */
+        public long migrateAddSpeedAndLocationAttFused(SQLiteDatabase db) {
+            try (Cursor cursor = db.query(DEVICES, new String[]{C_ID},
+                    PROTOCOL + "=? AND " + DEVICE_TYPE + "=?",
+                    new String[]{Protocol.SMARTPHONE.name(), DeviceType.SPEED_AND_LOCATION_ATT_FUSED.name()},
+                    null, null, null)) {
+                if (cursor != null && cursor.moveToFirst()) {
+                    if (DEBUG) Log.i(TAG, "migrateAddSpeedAndLocationAttFused: already exists");
+                    return cursor.getLong(0);
+                }
+            }
+            ContentValues contentValues = new ContentValues();
+            contentValues.put(PROTOCOL, Protocol.SMARTPHONE.name());
+            contentValues.put(DEVICE_TYPE, DeviceType.SPEED_AND_LOCATION_ATT_FUSED.name());
+            contentValues.put(PAIRED, false);
+            contentValues.put(NAME, getStringSafely(R.string.devices_location_ATT_fused, "ATT Fused"));
+            contentValues.put(MANUFACTURER_NAME, Build.BRAND);
+            long id = db.insert(DEVICES, null, contentValues);
+            if (DEBUG) Log.i(TAG, "migrateAddSpeedAndLocationAttFused: inserted row id " + id);
+            return id;
         }
 
         /**
@@ -1428,6 +1489,14 @@ public class DevicesDatabaseManager {
             contentValues.put(DEVICE_TYPE, DeviceType.SPEED_AND_LOCATION_GOOGLE_FUSED.name());
             contentValues.put(PAIRED, playServicesAvailable);
             contentValues.put(NAME, getStringSafely(R.string.devices_location_GoogleFused, "Google Fused"));
+            contentValues.put(MANUFACTURER_NAME, Build.BRAND);
+            db.insert(DEVICES, null, contentValues);
+
+            contentValues = new ContentValues();
+            contentValues.put(PROTOCOL, Protocol.SMARTPHONE.name());
+            contentValues.put(DEVICE_TYPE, DeviceType.SPEED_AND_LOCATION_ATT_FUSED.name());
+            contentValues.put(PAIRED, false);
+            contentValues.put(NAME, getStringSafely(R.string.devices_location_ATT_fused, "ATT Fused"));
             contentValues.put(MANUFACTURER_NAME, Build.BRAND);
             db.insert(DEVICES, null, contentValues);
 

@@ -102,6 +102,7 @@
     <!-- smartphone devices -->
     <string name="devices_location_GPS">Smartphone GPS (Satellit)</string>
     <string name="devices_location_GoogleFused">Google Standort (Fused)</string>
+    <string name="devices_location_ATT_fused">ATT Odometrie-Fusion</string>
     <string name="devices_altitude_from_pressure">Höhe aus Luftdruck</string>
 
     <!-- Specialized Altitude Devices Explanations (ATT-5073, REQ-SEN-026) -->
@@ -112,6 +113,18 @@
     <string name="device_altitude_pressure_pros_cons">+ Sehr reaktionsschnell und glatt; kein GPS-Höhenflattern; funktioniert in Tunnels.\n- Wetterwechsel können im Zeitverlauf zu Höhendrift führen.</string>
     <string name="device_altitude_position_how_it_works">Gleicht Ihre GPS-Position mit digitalen Geländemodellen (DEM) ab, die aus Strecken zwischengespeichert oder von Open-Meteo geladen werden.</string>
     <string name="device_altitude_position_pros_cons">+ Wetterunabhängig und ohne Barometerdrift; absolute Höhe ohne Kalibrierung.\n- Erfordert aktive Internetverbindung für ungecachte Gebiete; abhängig von GPS-Genauigkeit, auf Brücken und Steilhängen ungenauer.</string>
+
+    <!-- ATT Odometry Fusion Device Configuration (ATT-7751, REQ-SEN-028) -->
+    <string name="device_att_fused_how_it_works">Fusioniert GNSS-Positionen, kalibrierte Radumdrehungen und 3D-Gyroskopdrehungen in einem kontinuierlichen 5-Zustands-Unicycle-Extended-Kalman-Filter (EKF) mit Koppelnavigation im Subsekundentakt.</string>
+    <string name="device_att_fused_pros_cons">+ Lückenlose Aufzeichnung in Tunnels und dichtem Wald; Submeter-Präzision; Ausreißerunterdrückung.\n- Höherer Akkuverbrauch durch kontinuierliche Abtastung des Smartphone-Gyroskops.</string>
+    <string name="device_att_fused_toggle_gnss">GNSS-Positionen nutzen</string>
+    <string name="device_att_fused_toggle_gnss_hint_disabled">Standortberechtigung muss erteilt sein</string>
+    <string name="device_att_fused_toggle_wheel">Geschwindigkeitssensoren nutzen</string>
+    <string name="device_att_fused_toggle_wheel_hint_disabled">Kein gekoppelter Radsensor verfügbar</string>
+    <string name="device_att_fused_toggle_gyro">Gyroskop-IMU nutzen</string>
+    <string name="device_att_fused_toggle_gyro_hint_disabled">Kein Smartphone-Gyroskop vorhanden</string>
+    <string name="device_att_fused_toggle_autocalib">Kontinuierliche Rad-Autokalibrierung</string>
+    <string name="device_att_fused_toggle_autocalib_hint_disabled">Erfordert Radsensor und GNSS</string>
 
     <!-- live sensor data -->
     <string name="devices_live_sensor_data_header">Sensordaten</string>

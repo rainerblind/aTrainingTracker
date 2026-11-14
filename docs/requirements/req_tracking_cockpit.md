@@ -4921,3 +4921,56 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 • *Then* `mDbExecutor.shutdown()` and `mScheduler.shutdownNow()` are executed to prevent worker thread leaks.
 
 **Invariants**: Zero `RejectedExecutionException`; strict single-thread FIFO execution on `mDbExecutor`; zero state cross-contamination between consecutive sessions; clean service and executor destruction on terminal exit.
+
+### REQ-SEN-028: Pairable Virtual Sensor ATT Fused (Position und Geschwindigkeit) with Priority Routing and Input Source Guards [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-SEN-028`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Implementation**: `DeviceType.java`, `SpeedAndLocationDevice_ATTFused.kt`, `DeviceManager.java`, `MySensorManager.java`, `DevicesDatabaseManager.java`, `DatabaseSchemaRegistry.kt`, `SensorType.java`, `TrackerService.java`, `EditDeviceDialog.kt`, `strings_devices.xml`
+- **Rationale**: Expose the 5-state unicycle odometry fusion engine (ATT-131) as an activatable/pairable virtual Smartphone device with MySensorManager priority routing, 1-Hz world yaw-rate persistence in WorkoutSamples.db for post-workout ERTS replay (ATT-7750), and guarded UI source configuration in EditDeviceDialog.kt (ATT-7751, extending REQ-TRK-024 and REQ-FIL-007..010):
+- **Description**:
+  1. *Pairable Smartphone Virtual Device & Schema Migration (`REQ-SEN-028.1`)*:
+     - `DeviceType.SPEED_AND_LOCATION_ATT_FUSED` SHALL be declared under `Protocol.SMARTPHONE`, providing `LATITUDE`, `LONGITUDE`, `SPEED_mps`, `PACE_spm`, `DISTANCE_m`, `DISTANCE_m_LAP`, `LINE_DISTANCE_m`, `BEARING`, and `ACCURACY`.
+     - `DevicesDbHelper.DB_VERSION` SHALL be incremented to `11`.
+     - An idempotent migration `migrateAddSpeedAndLocationAttFused()` SHALL insert the `SPEED_AND_LOCATION_ATT_FUSED` device row into `Devices4` table with default `PAIRED = 0` (unpaired/opt-in) on upgrade (`oldVersion <= 10`) and on fresh database creation (`addLocationDevicesToDb`).
+     - Display name strings `devices_location_ATT_fused` SHALL be localized across all 9 supported languages ("ATT Fused (Position und Geschwindigkeit)" / "ATT Fused (Location & Speed)").
+  2. *MySensorManager Priority Hierarchy Integration (`REQ-SEN-028.2`)*:
+     - In `MySensorManager.java`, `SPEED_AND_LOCATION_ATT_FUSED` SHALL be placed at index 0 of `LOCATION_PRIORITY` (ahead of `SPEED_AND_LOCATION_GOOGLE_FUSED` and `SPEED_AND_LOCATION_GPS`).
+     - `SPEED_AND_LOCATION_ATT_FUSED` SHALL be integrated at index 0 of `SPEED_PRIORITY` when active and paired, ensuring fused speed and distance incorporating calibrated wheel revolutions take precedence over raw speed, and cleanly falling back to standard hardware/GNSS priority when unpaired.
+  3. *Device Driver Lifecycle & 1-Hz Yaw-Rate Persistence (`REQ-SEN-028.3`)*:
+     - `SpeedAndLocationDevice_ATTFused` SHALL extend `SpeedAndLocationDevice`, driving `UnicycleOdometryEkf`, `QuaternionGyroProjector`, and `WheelCircumferenceCalibrator`.
+     - `DeviceManager` SHALL instantiate and manage `mSpeedAndLocationDevice_ATTFused` upon pairing activation and shut it down upon unpairing.
+     - `SensorType.WORLD_YAW_RATE_radps` SHALL be declared in `SensorType.java` (`SensorCategory.SYSTEM_ENVIRONMENT_AND_DIAGNOSTICS`).
+     - While `SPEED_AND_LOCATION_ATT_FUSED` is active with Gyro turn support enabled, it SHALL emit 1-Hz world yaw-rate $\omega_{ENU,z}$ which `TrackerService` SHALL persist into `WorkoutSamples.db` for post-workout ERTS replay (ATT-7750).
+  4. *EditDeviceDialog Educational Card & Paired-Source Guards (`REQ-SEN-028.4`)*:
+     - In `EditDeviceDialog.kt`, opening configuration for `SPEED_AND_LOCATION_ATT_FUSED` SHALL display an educational "How It Works" card detailing multi-sensor fusion benefits and trade-offs.
+     - The dialog SHALL provide 4 configuration toggles with pairing and hardware availability guards:
+       a) *Location Source (GNSS)*: Default true; disabled with localized hint if neither GPS nor Google Fused is paired.
+       b) *External Wheel/Footpod Sensors*: Default true; disabled with localized hint if no external speed sensor is paired.
+       c) *3D Gyro Turn Support*: Default true; disabled with localized hint if hardware gyroscope / game rotation vector sensors are unavailable.
+       d) *Auto Wheel Circumference Calibration ($C_{wheel}$)*: Default false; disabled with localized hint if no external wheel sensor is paired.
+     - The UI layout SHALL satisfy Rule 84 visual inspection with zero text clipping or ellipsizing across German and English.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-SEN-028`, extending `REQ-TRK-024` (*Sensor Priority Hierarchy*) and `REQ-FIL-007`..`010` (*Odometry EKF*). Targets `DeviceType.java`, `SpeedAndLocationDevice_ATTFused.kt`, `DeviceManager.java`, `MySensorManager.java`, `DevicesDatabaseManager.java`, `EditDeviceDialog.kt`, and `TrackerService.java`.
+2. *Historical Origin & Commit Trace*: `ATT-3961` / `ATT-5491` / `ATT-5492` (sensor priority hierarchy and network excision in `Devices.db` v10) and `ATT-131` (`bc4a4109`, 5-state unicycle EKF core).
+3. *Root Reason for Existing Formulation*: Prior versions only supported single-source position tracking without cross-sensor coupling or modular opt-in virtual devices.
+4. *Preservation of Core Invariants*: Default state is unpaired (`PAIRED = 0`). When inactive, priority routing, battery drain, and sensor behavior are 100% identical to baseline. Independent device-attributed columns in `WorkoutSamples.db` remain preserved.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* the Smartphone sensor list on fresh install or upgrade to DB_VERSION 11,
+• *When* the user views available sensors,
+• *Then* `ATT Fused (Position und Geschwindigkeit)` is listed with default unpaired state (`PAIRED = 0`) across all 9 supported languages.
+• *Given* `ATT Fused (Position und Geschwindigkeit)` is paired/activated,
+• *When* tracking runs,
+• *Then* `MySensorManager` prioritizes its fused coordinates, bearing, speed, and distance above Google Fused and GPS, and `WorkoutSamples.db` persists separate device-attributed columns and 1-Hz `WORLD_YAW_RATE_radps`.
+• *Given* the user opens `EditDeviceDialog.kt` for `ATT Fused`,
+• *When* hardware gyroscopes or external speed sensors are absent/unpaired,
+• *Then* the corresponding toggle is greyed out with a clear localized hint and zero text clipping.
+• *Given* `ATT Fused` is deactivated in the sensor list,
+• *When* a workout is recorded,
+• *Then* location and speed routing cleanly reverts to standard GPS/Google Fused/wheel priority with zero background gyro drain.
+
+**Invariants**: Unpaired by default; zero battery consumption when inactive; thread safety on sensor single-thread dispatchers; 9-language localization parity; 100% clean-room test pass rate.

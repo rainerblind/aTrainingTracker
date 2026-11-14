@@ -756,9 +756,9 @@ object LegacyImportEngine {
                         parsedWorkout.equipmentId
                     } else if (!parsedWorkout.equipmentName.isNullOrBlank()) {
                         try {
-                            com.atrainingtracker.trainingtracker.database.EquipmentDbHelper.getInstance(context)
-                                .getEquipmentId(parsedWorkout.equipmentName.trim())
-                                .takeIf { it > 0 } ?: -1L
+                            com.atrainingtracker.trainingtracker.repositories.EquipmentRepository.getInstance(context)
+                                .equipmentItems.find { it.name.equals(parsedWorkout.equipmentName.trim(), ignoreCase = true) }
+                                ?.id ?: -1L
                         } catch (_: Exception) {
                             -1L
                         }

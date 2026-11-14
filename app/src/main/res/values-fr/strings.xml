@@ -153,6 +153,8 @@
 
     <!-- sensor types -->
     <string name="accumulated_sensors">capteurs cumulés</string>
+    <string name="world_yaw_rate">Vitesse de lacet globale</string>
+    <string name="world_yaw_rate_short">Vitesse de lacet</string>
     <string name="accumulated_sensors_short">cap. cum.</string>
     <string name="accuracy">précision</string>
     <string name="accuracy_short">préc.</string>

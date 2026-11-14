@@ -131,6 +131,7 @@
     <!-- smartphone devices -->
     <string name="devices_location_GPS">Phone GPS (Satellite)</string>
     <string name="devices_location_GoogleFused">Google Location (Fused)</string>
+    <string name="devices_location_ATT_fused">ATT Odometry Fused</string>
     <string name="devices_altitude_from_pressure">Altitude from Pressure</string>
 
     <!-- Specialized Altitude Devices Explanations (ATT-5073, REQ-SEN-026) -->
@@ -141,6 +142,18 @@
     <string name="device_altitude_pressure_pros_cons">+ Very responsive and smooth; zero GPS vertical jitter; works indoors and in tunnels.\n- Weather and atmospheric pressure changes can cause altitude drift over time.</string>
     <string name="device_altitude_position_how_it_works">Matches your GPS position against digital elevation models (DEM) cached locally from saved routes or fetched online from Open-Meteo.</string>
     <string name="device_altitude_position_pros_cons">+ Immune to weather and barometric drift; accurate absolute height without calibration.\n- Requires active internet connection for uncached areas; depends on GPS accuracy and can be stepped on bridges or cliffs.</string>
+
+    <!-- ATT Odometry Fusion Device Configuration (ATT-7751, REQ-SEN-028) -->
+    <string name="device_att_fused_how_it_works">Fuses GNSS position fixes, calibrated wheel revolutions, and 3D gyroscope turns into a continuous 5-state unicycle Extended Kalman Filter (EKF) with sub-second dead reckoning.</string>
+    <string name="device_att_fused_pros_cons">+ Uninterrupted tracking through tunnels and dense forest canopy; sub-meter precision; outlier rejection.\n- Increased battery consumption from continuous phone gyroscope sampling.</string>
+    <string name="device_att_fused_toggle_gnss">Use GNSS Positions</string>
+    <string name="device_att_fused_toggle_gnss_hint_disabled">Requires location permission to be granted</string>
+    <string name="device_att_fused_toggle_wheel">Use Wheel Speed Sensors</string>
+    <string name="device_att_fused_toggle_wheel_hint_disabled">No paired wheel speed sensor available</string>
+    <string name="device_att_fused_toggle_gyro">Use Gyroscope IMU</string>
+    <string name="device_att_fused_toggle_gyro_hint_disabled">No phone gyroscope hardware detected</string>
+    <string name="device_att_fused_toggle_autocalib">Continuous Wheel Auto-Calibration</string>
+    <string name="device_att_fused_toggle_autocalib_hint_disabled">Requires wheel speed sensor and GNSS</string>
 
     <!-- live sensor data -->
     <string name="devices_live_sensor_data_header">Sensor Data</string>

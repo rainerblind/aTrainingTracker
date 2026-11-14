@@ -92,6 +92,7 @@
 
     <string name="devices_location_GPS">GPS du téléphone (Satellite)</string>
     <string name="devices_location_GoogleFused">Localisation Google (Fused)</string>
+    <string name="devices_location_ATT_fused">ATT Odométrie fusionnée</string>
     <string name="devices_altitude_from_pressure">Altitude par pression</string>
 
     <!-- Specialized Altitude Devices Explanations (ATT-5073, REQ-SEN-026) -->
@@ -102,6 +103,18 @@
     <string name="device_altitude_pressure_pros_cons">+ Très réactif et fluide ; sans bruit vertical GPS ; fonctionne en tunnel.\n- La météo peut entraîner une dérive d\'altitude au fil du temps.</string>
     <string name="device_altitude_position_how_it_works">Associe votre position GPS à des modèles numériques de terrain (MNT) en cache ou en ligne via Open-Meteo.</string>
     <string name="device_altitude_position_pros_cons">+ Insensible à la météo et aux dérives ; altitude absolue sans calibrage.\n- Nécessite une connexion Internet active pour les zones non mises en cache ; dépend de la précision GPS (moins précis sur ponts et falaises).</string>
+
+    <!-- ATT Odometry Fusion Device Configuration (ATT-7751, REQ-SEN-028) -->
+    <string name="device_att_fused_how_it_works">Fusionne les positions GNSS, les tours de roue calibrés et les rotations gyroscopiques 3D dans un filtre de Kalman étendu (EKF) à 5 états avec navigation à l\'estime continue.</string>
+    <string name="device_att_fused_pros_cons">+ Suivi ininterrompu dans les tunnels et sous couvert forestier; précision métrique; rejet des valeurs aberrantes.\n- Consommation de batterie accrue due à l\'échantillonnage continu du gyroscope.</string>
+    <string name="device_att_fused_toggle_gnss">Utiliser les positions GNSS</string>
+    <string name="device_att_fused_toggle_gnss_hint_disabled">Autorisation de localisation requise</string>
+    <string name="device_att_fused_toggle_wheel">Utiliser les capteurs de vitesse de roue</string>
+    <string name="device_att_fused_toggle_wheel_hint_disabled">Aucun capteur de roue appairé disponible</string>
+    <string name="device_att_fused_toggle_gyro">Utiliser l\'IMU gyroscopique</string>
+    <string name="device_att_fused_toggle_gyro_hint_disabled">Aucun gyroscope détecté sur le téléphone</string>
+    <string name="device_att_fused_toggle_autocalib">Auto-étalonnage continu de la roue</string>
+    <string name="device_att_fused_toggle_autocalib_hint_disabled">Nécessite un capteur de roue et le GNSS</string>
 
     <string name="devices_live_sensor_data_header">Données Capteurs</string>
 

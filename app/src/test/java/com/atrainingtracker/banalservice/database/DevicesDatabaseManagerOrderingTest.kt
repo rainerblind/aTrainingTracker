@@ -204,7 +204,7 @@ class DevicesDatabaseManagerOrderingTest {
             }
         }
 
-        assertTrue(devices.size >= 3)
+        assertTrue(devices.size >= 4)
         assertEquals(1L, devices[0].first)
         assertEquals(DeviceType.SPEED_AND_LOCATION_GPS.name, devices[0].second)
         assertEquals(0, devices[0].third) // Unpaired when Play Services is available
@@ -214,8 +214,12 @@ class DevicesDatabaseManagerOrderingTest {
         assertEquals(1, devices[1].third) // Paired by default when Play Services is available (REQ-TRK-024.6, ATT-5491)
 
         assertEquals(3L, devices[2].first)
-        assertEquals(DeviceType.ALTITUDE_FROM_POSITION.name, devices[2].second)
-        assertEquals(0, devices[2].third)
+        assertEquals(DeviceType.SPEED_AND_LOCATION_ATT_FUSED.name, devices[2].second)
+        assertEquals(0, devices[2].third) // Unpaired by default (REQ-SEN-028.1, ATT-7751)
+
+        assertEquals(4L, devices[3].first)
+        assertEquals(DeviceType.ALTITUDE_FROM_POSITION.name, devices[3].second)
+        assertEquals(0, devices[3].third)
     }
 
     /**
@@ -263,7 +267,7 @@ class DevicesDatabaseManagerOrderingTest {
             }
         }
 
-        assertTrue(devices.size >= 3)
+        assertTrue(devices.size >= 4)
         assertEquals(1L, devices[0].first)
         assertEquals(DeviceType.SPEED_AND_LOCATION_GPS.name, devices[0].second)
         assertEquals(1, devices[0].third) // Paired on de-Googled fallback
@@ -273,8 +277,12 @@ class DevicesDatabaseManagerOrderingTest {
         assertEquals(0, devices[1].third) // Unpaired when Play Services is missing
 
         assertEquals(3L, devices[2].first)
-        assertEquals(DeviceType.ALTITUDE_FROM_POSITION.name, devices[2].second)
-        assertEquals(0, devices[2].third)
+        assertEquals(DeviceType.SPEED_AND_LOCATION_ATT_FUSED.name, devices[2].second)
+        assertEquals(0, devices[2].third) // Unpaired by default (REQ-SEN-028.1, ATT-7751)
+
+        assertEquals(4L, devices[3].first)
+        assertEquals(DeviceType.ALTITUDE_FROM_POSITION.name, devices[3].second)
+        assertEquals(0, devices[3].third)
     }
 
     /**

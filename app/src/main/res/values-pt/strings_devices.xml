@@ -91,6 +91,7 @@
 
     <string name="devices_location_GPS">GPS do telefone (Satélite)</string>
     <string name="devices_location_GoogleFused">Localização Google (Fused)</string>
+    <string name="devices_location_ATT_fused">ATT Odometria fundida</string>
     <string name="devices_altitude_from_pressure">Altitude por pressão</string>
 
     <!-- Specialized Altitude Devices Explanations (ATT-5073, REQ-SEN-026) -->
@@ -101,6 +102,18 @@
     <string name="device_altitude_pressure_pros_cons">+ Muito responsivo e suave; sem ruído vertical de GPS; funciona em túneis.\n- Mudanças climáticas podem causar deriva de altitude com o tempo.</string>
     <string name="device_altitude_position_how_it_works">Compara sua posição GPS com modelos digitais de elevação (DEM) em cache ou do Open-Meteo.</string>
     <string name="device_altitude_position_pros_cons">+ Imune ao clima e deriva barométrica; altitude absoluta sem calibração.\n- Requer conexão ativa à internet para áreas sem cache; depende da precisão do GPS (pode variar em pontes e despenhadeiros).</string>
+
+    <!-- ATT Odometry Fusion Device Configuration (ATT-7751, REQ-SEN-028) -->
+    <string name="device_att_fused_how_it_works">Combina posições GNSS, rotações de roda calibradas e rotações de giroscópio 3D em um filtro de Kalman estendido (EKF) de 5 estados com navegação estimada contínua.</string>
+    <string name="device_att_fused_pros_cons">+ Rastreamento contínuo em túneis e florestas densas; precisão submétrica; rejeição de discrepâncias.\n- Maior consumo de bateria pela amostragem contínua do giroscópio.</string>
+    <string name="device_att_fused_toggle_gnss">Usar posições GNSS</string>
+    <string name="device_att_fused_toggle_gnss_hint_disabled">Permissão de localização necessária</string>
+    <string name="device_att_fused_toggle_wheel">Usar sensores de velocidade de roda</string>
+    <string name="device_att_fused_toggle_wheel_hint_disabled">Nenhum sensor de roda pareado disponível</string>
+    <string name="device_att_fused_toggle_gyro">Usar IMU de giroscópio</string>
+    <string name="device_att_fused_toggle_gyro_hint_disabled">Giroscópio não detectado no telefone</string>
+    <string name="device_att_fused_toggle_autocalib">Calibração automática contínua de roda</string>
+    <string name="device_att_fused_toggle_autocalib_hint_disabled">Requer sensor de roda e GNSS</string>
 
     <string name="devices_live_sensor_data_header">Dados dos Sensores</string>
 

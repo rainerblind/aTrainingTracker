@@ -47,6 +47,7 @@ public class MySensorManager extends MyDevice {
      */
     protected static final DeviceType[] SPEED_PRIORITY
             = new DeviceType[]{
+            DeviceType.SPEED_AND_LOCATION_ATT_FUSED,
             DeviceType.RUN_SPEED,
             DeviceType.BIKE_SPEED,
             DeviceType.BIKE_SPEED_AND_CADENCE,
@@ -78,6 +79,7 @@ public class MySensorManager extends MyDevice {
     };
     protected static final DeviceType[] LOCATION_PRIORITY
             = new DeviceType[]{
+            DeviceType.SPEED_AND_LOCATION_ATT_FUSED,
             DeviceType.SPEED_AND_LOCATION_GOOGLE_FUSED,
             DeviceType.SPEED_AND_LOCATION_GPS
     };

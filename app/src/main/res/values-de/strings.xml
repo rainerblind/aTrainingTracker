@@ -154,6 +154,8 @@
     <!-- sensor types -->
     <!-- TODO: check for maximal size of short names! -->
     <string name="accumulated_sensors">Akkumulierte Sensoren</string>
+    <string name="world_yaw_rate">Welt-Gierrate</string>
+    <string name="world_yaw_rate_short">Gierrate</string>
     <string name="accumulated_sensors_short">Akkum. Sensoren</string>
     <string name="accuracy">Genauigkeit</string>
     <string name="accuracy_short">acc.</string>

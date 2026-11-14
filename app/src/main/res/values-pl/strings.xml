@@ -153,6 +153,8 @@
 
     <!-- sensor types -->
     <string name="accumulated_sensors">skumulowane czujniki</string>
+    <string name="world_yaw_rate">Prędkość kątowa odchylenia</string>
+    <string name="world_yaw_rate_short">Prędkość odchylenia</string>
     <string name="accumulated_sensors_short">czuj. skum.</string>
     <string name="accuracy">dokładność</string>
     <string name="accuracy_short">dokł.</string>

@@ -2516,7 +2516,7 @@ public class TrackerService extends Service {
                 String sensorName = sensorType.name();
                 String deviceName = sensorData.getDeviceName();
                 if (deviceName != null) {
-                    if (deviceName.equals("gps") || deviceName.equals("network") || deviceName.equals("google_fused")) {
+                    if (deviceName.equals("gps") || deviceName.equals("network") || deviceName.equals("google_fused") || deviceName.equals("att_fused")) {
                         sensorName += "_" + deviceName;
                     } else {
                         sensorName = quoteSqlColumnIdentifier(sensorName + " (" + deviceName + ")");

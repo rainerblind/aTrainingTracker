@@ -92,6 +92,7 @@ public class DeviceManager {
     protected volatile ClockDevice mClockDevice;
     protected volatile BatteryDevice mBatteryDevice;
     protected volatile SpeedAndLocationDevice mSpeedAndLocationDevice_GPS, mSpeedAndLocationDevice_GoogleFused;
+    protected volatile SpeedAndLocationDevice_ATTFused mSpeedAndLocationDevice_ATTFused;
     protected volatile AltitudeFromPressureDevice mAltitudeFromPressureDevice;
     protected volatile AltitudeFromPositionDevice mAltitudeFromPositionDevice;
     protected volatile VerticalSpeedAndSlopeDevice mVerticalSpeedAndSlopeDevice;
@@ -402,6 +403,17 @@ public class DeviceManager {
             }
         }
 
+        long attFusedDeviceId = mDeviceDataRepository.getSpeedAndLocationAttFusedDeviceId();
+        if (mDeviceDataRepository.isPaired(attFusedDeviceId)
+                && TrainingApplication.havePermission(Manifest.permission.ACCESS_FINE_LOCATION)) {
+            if (DEBUG) Log.i(TAG, "creating ATT fused location device");
+            try {
+                mSpeedAndLocationDevice_ATTFused = new SpeedAndLocationDevice_ATTFused(mContext, mSensorManager);
+            } catch (Exception e) {
+                Log.w(TAG, "Could not initialize ATT Fused location device: " + e.getMessage());
+            }
+        }
+
         // also create paired remote devices and start searching for them
         if (TrainingApplication.startSearchWhenAppStarts()) {
             startSearchForPairedDevices();
@@ -513,6 +525,21 @@ public class DeviceManager {
                 mSpeedAndLocationDevice_GoogleFused.checkOrReRegisterLocationUpdates();
             }
         }
+
+        long attFusedDeviceId = mDeviceDataRepository.getSpeedAndLocationAttFusedDeviceId();
+        if (mDeviceDataRepository.isPaired(attFusedDeviceId)
+                && TrainingApplication.havePermission(Manifest.permission.ACCESS_FINE_LOCATION)) {
+            if (mSpeedAndLocationDevice_ATTFused == null) {
+                if (DEBUG) Log.i(TAG, "checkOrInitializeLocationDevices: creating ATT Fused location device");
+                try {
+                    mSpeedAndLocationDevice_ATTFused = new SpeedAndLocationDevice_ATTFused(mContext, mSensorManager);
+                } catch (Exception e) {
+                    Log.w(TAG, "Could not initialize ATT Fused location device: " + e.getMessage());
+                }
+            } else {
+                mSpeedAndLocationDevice_ATTFused.checkOrReRegisterLocationUpdates();
+            }
+        }
     }
 
     public static boolean isSearchingForARemoteDevice() {
@@ -554,6 +581,7 @@ public class DeviceManager {
         mBatteryDevice = null;
         mSpeedAndLocationDevice_GPS = null;
         mSpeedAndLocationDevice_GoogleFused = null;
+        mSpeedAndLocationDevice_ATTFused = null;
         mAltitudeFromPressureDevice = null;
         mAltitudeFromPositionDevice = null;
         mVerticalSpeedAndSlopeDevice = null;
@@ -610,6 +638,26 @@ public class DeviceManager {
             } else if (mSpeedAndLocationDevice_GoogleFused != null) { // destroy if unpaired and exists
                 mSpeedAndLocationDevice_GoogleFused.shutDown();
                 mSpeedAndLocationDevice_GoogleFused = null;
+            }
+            return;
+        }
+
+        long attFusedDeviceId = mDeviceDataRepository.getSpeedAndLocationAttFusedDeviceId();
+        if (deviceId == attFusedDeviceId) {
+            if (paired) {
+                if (mSpeedAndLocationDevice_ATTFused == null
+                        && TrainingApplication.havePermission(Manifest.permission.ACCESS_FINE_LOCATION)) {
+                    try {
+                        mSpeedAndLocationDevice_ATTFused = new SpeedAndLocationDevice_ATTFused(mContext, mSensorManager);
+                    } catch (Exception e) {
+                        Log.w(TAG, "Could not create ATT Fused location device on pairing change: " + e.getMessage());
+                    }
+                } else if (mSpeedAndLocationDevice_ATTFused != null) {
+                    mSpeedAndLocationDevice_ATTFused.checkOrReRegisterLocationUpdates();
+                }
+            } else if (mSpeedAndLocationDevice_ATTFused != null) {
+                mSpeedAndLocationDevice_ATTFused.shutDown();
+                mSpeedAndLocationDevice_ATTFused = null;
             }
             return;
         }
@@ -808,6 +856,11 @@ public class DeviceManager {
             result.add(fused);
         }
 
+        SpeedAndLocationDevice attFused = mSpeedAndLocationDevice_ATTFused;
+        if (attFused != null) {
+            result.add(attFused);
+        }
+
         return result;
     }
 
@@ -817,6 +870,10 @@ public class DeviceManager {
 
     public SpeedAndLocationDevice getSpeedAndLocationDevice_GoogleFused() {
         return mSpeedAndLocationDevice_GoogleFused;
+    }
+
+    public SpeedAndLocationDevice getSpeedAndLocationDevice_ATTFused() {
+        return mSpeedAndLocationDevice_ATTFused;
     }
 
     public List<MyDevice> getActiveDevicesIncludingSpeedAndLocationDevices() {
@@ -905,6 +962,10 @@ public class DeviceManager {
         SpeedAndLocationDevice fused = mSpeedAndLocationDevice_GoogleFused;
         if (fused != null) {
             myDeviceList.add(fused);
+        }
+        SpeedAndLocationDevice attFused = mSpeedAndLocationDevice_ATTFused;
+        if (attFused != null) {
+            myDeviceList.add(attFused);
         }
         AltitudeFromPressureDevice altDevice = mAltitudeFromPressureDevice;
         if (altDevice != null) {

@@ -2625,3 +2625,31 @@
      • Assert that upon `finalizationTask` completion, teardown is invoked, and `onDestroy()` shuts down `mDbExecutor`, `mScheduler`, and `mRrFlushExecutor`.
   5. *Targeted Package Regression Execution (`TST-TRK-076.5`)*:
      • `python3 tools/parallel_sprint_lock.py -- ./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.tracker.*"` asserting 100% pass rate.
+
+
+### TST-SEN-028: **Pairable Virtual Sensor ATT Fused (Position und Geschwindigkeit) Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-SEN-028` (`REQ-SEN-028.1`..`REQ-SEN-028.4`)
+- **Component**: `DeviceType.java`, `SpeedAndLocationDevice_ATTFused.kt`, `DeviceManager.java`, `MySensorManager.java`, `DevicesDatabaseManager.java`, `DatabaseSchemaRegistry.kt`, `SensorType.java`, `TrackerService.java`, `EditDeviceDialog.kt`
+- **Jira**: `ATT-7751`
+- **Test Description**:
+  1. *DeviceType Registration & Schema Version 11 Migration Test (`TST-SEN-028.1`, `DevicesDatabaseManagerMigrationTest.kt`)*:
+     • Verify `DeviceType.SPEED_AND_LOCATION_ATT_FUSED` exists and maps correctly to `SensorType` collection.
+     • Create in-memory `Devices.db` at version 10. Upgrade to version 11; verify `SPEED_AND_LOCATION_ATT_FUSED` row inserted with `PAIRED = 0`.
+     • Verify `DatabaseSchemaRegistry` reflects schema version 11 without discrepancy.
+  2. *MySensorManager Priority Hierarchy & Dynamic Fallback Test (`TST-SEN-028.2`, `MySensorManagerPriorityTest.kt`)*:
+     • When `SPEED_AND_LOCATION_ATT_FUSED` is paired and receiving, assert it is selected as `bestSensor` for `LATITUDE`, `LONGITUDE`, `BEARING`, `SPEED_mps`, `DISTANCE_m`.
+     • When `SPEED_AND_LOCATION_ATT_FUSED` is unpaired, assert priority cleanly reverts to hardware wheel sensors for speed and Google Fused/GPS for location.
+  3. *SpeedAndLocationDevice_ATTFused Driver Lifecycle & IMU Sampling Test (`TST-SEN-028.3`, `SpeedAndLocationDevice_ATTFusedTest.kt`)*:
+     • Verify driver registers listeners for `Sensor.TYPE_GYROSCOPE` and `Sensor.TYPE_GAME_ROTATION_VECTOR` when enabled.
+     • Feed simulated GPS fixes and wheel revolutions; assert EKF predicts and updates, emitting fused location, speed, distance, and 1-Hz `WORLD_YAW_RATE_radps`.
+     • Verify clean teardown in `shutDown()` unregistering all IMU listeners with zero leaks.
+  4. *Side-by-Side WorkoutSamples Persistence Test (`TST-SEN-028.4`, `WorkoutSamplesPersistenceTest.kt`)*:
+     • Run simulated tracking session with both Google Fused and ATT Fused enabled.
+     • Assert `WorkoutSamples.db` records both canonical/fused columns and dedicated `LATITUDE_att_fused`, `LONGITUDE_att_fused`, `SPEED_mps_att_fused`, and `WORLD_YAW_RATE_radps` columns.
+  5. *EditDeviceDialog Educational Card & Source Guards Test (`TST-SEN-028.5`, `EditDeviceDialogGuardsTest.kt`)*:
+     • Verify educational "How It Works" card is rendered for `SPEED_AND_LOCATION_ATT_FUSED`.
+     • Simulate missing external wheel sensor; assert wheel speed and auto-calibration toggles are disabled with localized hint.
+     • Simulate missing gyroscope hardware; assert gyro toggle is disabled with localized hardware hint.
+     • Verify 9-language localization parity (`values*/strings_devices.xml` and `strings.xml`) with zero missing keys or broken specifiers.
+  6. *Targeted Unit & Regression Suite Execution (`TST-SEN-028.6`)*:
+     • `python3 tools/parallel_sprint_lock.py -- ./gradlew testDebugUnitTest --tests "com.atrainingtracker.banalservice.devices.*" --tests "com.atrainingtracker.banalservice.odometry.*"` asserting 100% pass rate.

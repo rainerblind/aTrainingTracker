@@ -44,6 +44,7 @@ public enum DeviceType {
 
     SPEED_AND_LOCATION_GPS(SensorType.SPEED_mps, BSportType.UNKNOWN, 1),
     SPEED_AND_LOCATION_GOOGLE_FUSED(SensorType.SPEED_mps, BSportType.UNKNOWN, 1),
+    SPEED_AND_LOCATION_ATT_FUSED(SensorType.SPEED_mps, BSportType.UNKNOWN, 1),
 
     ALTITUDE_FROM_PRESSURE(SensorType.ALTITUDE, BSportType.UNKNOWN, 1),
     ALTITUDE_FROM_POSITION(SensorType.ALTITUDE, BSportType.UNKNOWN, 1),
@@ -150,6 +151,11 @@ public enum DeviceType {
             case LONGITUDE:
                 deviceTypes.add(DeviceType.SPEED_AND_LOCATION_GPS);
                 deviceTypes.add(DeviceType.SPEED_AND_LOCATION_GOOGLE_FUSED);
+                deviceTypes.add(DeviceType.SPEED_AND_LOCATION_ATT_FUSED);
+                break;
+
+            case WORLD_YAW_RATE_radps:
+                deviceTypes.add(DeviceType.SPEED_AND_LOCATION_ATT_FUSED);
                 break;
 
             // either from pressure of from location
@@ -185,6 +191,7 @@ public enum DeviceType {
                 deviceTypes.add(DeviceType.RUN_SPEED);
                 deviceTypes.add(DeviceType.SPEED_AND_LOCATION_GPS);
                 deviceTypes.add(DeviceType.SPEED_AND_LOCATION_GOOGLE_FUSED);
+                deviceTypes.add(DeviceType.SPEED_AND_LOCATION_ATT_FUSED);
                 break;
 
             // only HR

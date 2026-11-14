@@ -153,6 +153,8 @@
 
     <!-- sensor types -->
     <string name="accumulated_sensors">sensores acumulados</string>
+    <string name="world_yaw_rate">Taxa de guinada global</string>
+    <string name="world_yaw_rate_short">Taxa de guinada</string>
     <string name="accumulated_sensors_short">sens. ac.</string>
     <string name="accuracy">precisão</string>
     <string name="accuracy_short">prec.</string>
