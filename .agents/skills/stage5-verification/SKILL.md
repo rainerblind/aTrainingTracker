@@ -22,16 +22,15 @@ Reuse the Epic-scoped (or standalone ticket) persistent `TypeName: "self"` subag
        ```
      - Run `TranslationParityTest` whenever any `strings.xml` resource file is modified (~3s):
        ```bash
-       ./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.localization.TranslationParityTest"
+       ./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.localization.TranslationParityTest" \
+         --tests "com.atrainingtracker.trainingtracker.build.SourceTextReadingAuditContractTest" \
+         --tests "com.atrainingtracker.trainingtracker.build.AspiceSweAuditContractTest"
        ```
-     - Run fast AAPT2 resource compilation verification to rapidly trap 9-language XML/AAPT2 resource errors without full APK build overhead (~5s, ATT-3534):
-       ```bash
-       ./gradlew processDebugResources
-       ```
+     - Run `:app:lintDebug` (plus fast AAPT2 `./gradlew processDebugResources` during iterative edits) so Lint errors (`MissingPermission`, `NonObservableLocale`) and `REQ-PRO-049.1` / ASPICE doc-format violations are caught per-ticket before squash-merging to `sprint/<SPRINT_NAME>`.
      - Run `python3 tools/verify_requirement_governance.py` when existing requirements are modified.
      - **Exception (High-Risk Core Infrastructure)**: Run the full `./gradlew testDebugUnitTest` suite per-ticket *only* for High-Risk cross-cutting changes touching core shared infrastructure (`TrainingApplication`, `TrackerService`, `BANALService`, or SQLite database schema migrations).
-   - **Tier 2 — Sprint Integration Gate (Once per Sprint at the End of Phase 2, ~8m)** (Rule 66 — `ATT-4864`):
-     - After the **last** sprint ticket is squashed onto `sprint/<SPRINT_NAME>`, the Coordinator runs the full suite `./gradlew testDebugUnitTest --max-workers=2 && python3 tools/verify_requirement_governance.py` and fixes every failure (stale tests of earlier tickets, cross-test leaks) as separate attributed commits **before** Ceremony 2. The background run at the start of the Sprint Review is a confirmation only.
+   - **Tier 2 — Sprint Integration Gate (Once per Sprint at the End of Phase 2)** (Rule 66 — `ATT-4864`):
+     - After the **last** sprint ticket is squashed onto `sprint/<SPRINT_NAME>`, the Coordinator runs the full suite `./gradlew testDebugUnitTest :app:lintDebug :app:compileDebugAndroidTestKotlin --continue --max-workers=2 && python3 tools/verify_requirement_governance.py` (`--continue` reports all unit, Lint, and compile errors in a single pass) and fixes every failure (stale tests of earlier tickets, cross-test leaks) as separate attributed commits **before** Ceremony 2. The background run at the start of the Sprint Review is a confirmation only.
    - **Explicit Test Scope in the Walkthrough**: State exactly what was run (`Tier 1 targeted: <packages/classes>` or `full suite`). Never write "100% PASS" / "zero regressions" for a targeted subset without naming the scope.
 2. **Conditional On-Device / Emulator Verification (Two-Tier Device Policy — ATT-6506, REQ-TST-004, Rules 60, 62 & 76)**:
    - **Stages 1–5 (In-Sprint Per-Ticket Validation)**: Autonomous agents MUST deploy and verify exclusively on an emulated device (`emulator-5554`, `Pixel_8_Android_15`). Run `python3 tools/agent_emulator.py ensure` to boot, unlock keyguard, zero animation scales (`0.0`), configure permissions, and seed golden databases. Prefix all Gradle and ADB commands with `ANDROID_SERIAL=emulator-5554` (`ANDROID_SERIAL=emulator-5554 ./gradlew installDebug`, `adb -s emulator-5554 ...`). Autonomous agents are strictly prohibited from touching or deploying to the PO's connected physical USB phone during Phase 2.
