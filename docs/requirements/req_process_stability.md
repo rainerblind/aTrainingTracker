@@ -4713,3 +4713,41 @@ The workflow SHALL mandate that:
   • *When* `./gradlew koverVerifyDebug` executes,
   • *Then* the build fails with a specific bounded rule violation.
 - **Invariants**: Zero changes to production runtime logic; zero flaky or bypassed tests.
+
+---
+
+### REQ-PRO-090: Unified CI & Release Quality Gates and Automated Governance Gating [Verified]
+- **Tests**: `TST-PRO-090`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit
+- **Implementation**: `.github/workflows/android-release.yml`, `.github/workflows/android-branch-build.yml`, `ReleaseCiAndLintConfigContractTest.kt`
+- **Rationale**: Continuous integration pipelines exhibited quality gate disparity between development and release branches (ASPICE evaluation finding F7). `.github/workflows/android-release.yml` previously executed only unit tests (`:app:testDebugUnitTest`), skipping Android Lint (`:app:lintDebug`), Detekt (`:app:detekt`), Kover coverage verification (`:app:koverVerifyDebug`), and requirement governance verification (`python3 tools/verify_requirement_governance.py`). Concurrently, `.github/workflows/android-branch-build.yml` omitted `tools/verify_requirement_governance.py`, allowing governance regressions to bypass automated CI gates on pull requests and branch pushes. Aligning quality gates across release and PR/branch workflows and enforcing this via automated contract tests guarantees ASPICE SUP.8 and SWE.4 process integrity (ATT-7564, Parent Epic ATT-232, refining and extending `REQ-BLD-002`, `REQ-PRO-046`, `REQ-PRO-047`, and `REQ-PRO-048`):
+- **Description**:
+  1. *Release Workflow Quality Gate Parity (`REQ-PRO-090.1`)*:
+     • `.github/workflows/android-release.yml` SHALL execute Android Lint (`./gradlew :app:lintDebug`), Detekt (`./gradlew :app:detekt`), Kover coverage report and verification (`./gradlew :app:koverXmlReportDebug :app:koverHtmlReportDebug :app:koverVerifyDebug`), and Requirement Governance (`python3 tools/verify_requirement_governance.py`) prior to release assembly (`:app:assembleRelease :app:bundleRelease`).
+     • Any failure in lint, detekt, kover, or requirement governance SHALL fail the release workflow and immediately abort APK/AAB assembly and distribution.
+  2. *Release Workflow Report Artifact Archiving (`REQ-PRO-090.2`)*:
+     • `.github/workflows/android-release.yml` SHALL upload report artifacts for lint (`app/build/reports/lint-results-debug.*`), detekt (`app/build/reports/detekt/`), and kover (`app/build/reports/kover/`) via `actions/upload-artifact@v4` with `if: always()`, ensuring static analysis and coverage evidence is preserved across release builds.
+  3. *Branch & Pull Request Governance Script Gating (`REQ-PRO-090.3`)*:
+     • `.github/workflows/android-branch-build.yml` SHALL execute `python3 tools/verify_requirement_governance.py` on all branch pushes and pull requests within the `build-debug` job.
+     • Any failure in requirement archaeology, master table parity, identifier uniqueness, link integrity, or evidence status SHALL fail the branch/PR build.
+  4. *Automated CI Contract Test Verification (`REQ-PRO-090.4`)*:
+     • `ReleaseCiAndLintConfigContractTest.kt` SHALL verify via automated unit contract tests that `.github/workflows/android-release.yml` contains execution steps for `lintDebug`, `detekt`, `koverVerifyDebug`, and `verify_requirement_governance.py` prior to `assembleRelease`, archives lint/detekt/kover reports, and verifies that `.github/workflows/android-branch-build.yml` contains the `verify_requirement_governance.py` step.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Net-new requirement `REQ-PRO-090` (`REQ-PRO-090.1`–`REQ-PRO-090.4`), refining and extending `REQ-BLD-002` (*Release CI Gating*), `REQ-PRO-046` (*Lint CI Gating*), `REQ-PRO-047` (*Detekt Static Analysis*), and `REQ-PRO-048` (*Kover Coverage Gating*). Targets `.github/workflows/android-release.yml`, `.github/workflows/android-branch-build.yml`, and `ReleaseCiAndLintConfigContractTest.kt`.
+  2. *Historical Origin & Commit Trace*: Ticket ATT-4025 (commit `00155b5d`, `REQ-BLD-002`) introduced unit test gating in release workflow; ATT-6173 (commit `08a744c1`, `REQ-PRO-046`), ATT-6175 (`REQ-PRO-047`), and ATT-6171 (`REQ-PRO-048`) added lint, detekt, and kover to branch builds. ASPICE evaluation finding F7 (Sprint 2026-46.6, ATT-7564) identified gate disparity between release and branch builds.
+  3. *Root Reason for Existing Formulation*: Workflows were created iteratively; release CI prioritized artifact generation and signing, while requirement governance was originally invoked manually by the coordinator rather than in CI.
+  4. *Preservation of Core Invariants*: 100% clean-room test pass rate; release signing keystore and secret resolution chain preserved; zero Android production runtime code changes.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* `.github/workflows/android-release.yml`,
+  • *When* inspected,
+  • *Then* it contains steps for `:app:lintDebug`, `:app:detekt`, `:app:koverVerifyDebug`, and `python3 tools/verify_requirement_governance.py` prior to `:app:assembleRelease :app:bundleRelease`, along with artifact upload steps for lint, detekt, and kover reports.
+  • *Given* `.github/workflows/android-branch-build.yml`,
+  • *When* inspected,
+  • *Then* it contains a step executing `python3 tools/verify_requirement_governance.py` in the `build-debug` job.
+  • *Given* `ReleaseCiAndLintConfigContractTest.kt`,
+  • *When* executed as part of the unit test suite,
+  • *Then* all contract tests verifying gate presence, sequencing, and artifact uploads across both workflows pass with 100% success.
+- **Invariants**: Zero runtime code changes; existing release signing provider chain and secrets handling remain unmodified.
+

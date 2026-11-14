@@ -26,9 +26,9 @@ import java.io.File
 /**
  * Validates Release CI test gating, AndroidManifest hygiene, Lint configuration,
  * Detekt static analysis, Kover code coverage gating, CI integrity, and instrumented androidTest
- * infrastructure with emulator CI runner, and JUnit test results archival across CI runs and release tags (REQ-BLD-002, TST-BLD-002, REQ-PRO-042,
+ * infrastructure with emulator CI runner, JUnit test results archival, and unified quality gate alignment across PR, branch, and release CI pipelines (REQ-BLD-002, TST-BLD-002, REQ-PRO-042,
  * TST-PRO-042, REQ-PRO-046, TST-PRO-046, REQ-PRO-047, TST-PRO-047, REQ-PRO-048, TST-PRO-048,
- * REQ-PRO-051, TST-PRO-051, REQ-PRO-067, TST-PRO-067, REQ-STP-007, TST-STP-007, REQ-STP-008, TST-STP-008, REQ-STP-009, TST-STP-009, ATT-6137, ATT-6148, ATT-6152, ATT-6153, ATT-6171, ATT-6175, ATT-6184, ATT-6737).
+ * REQ-PRO-051, TST-PRO-051, REQ-PRO-067, TST-PRO-067, REQ-PRO-090, TST-PRO-090, REQ-STP-007, TST-STP-007, REQ-STP-008, TST-STP-008, REQ-STP-009, TST-STP-009, ATT-6137, ATT-6148, ATT-6152, ATT-6153, ATT-6171, ATT-6175, ATT-6184, ATT-6737, ATT-7564).
  */
 class ReleaseCiAndLintConfigContractTest {
 
@@ -937,5 +937,133 @@ class ReleaseCiAndLintConfigContractTest {
             assertTrue("${wf.name} must define triggers (on:)", lines.any { it.startsWith("on:") })
             assertTrue("${wf.name} must define jobs", lines.any { it.startsWith("jobs:") })
         }
+    }
+
+    /**
+     * Asserts that .github/workflows/android-release.yml executes Android Lint, Detekt,
+     * Kover verification, and ASPICE requirement governance before release assembly
+     * (REQ-PRO-090.1, TST-PRO-090.1, ATT-7564).
+     */
+    @Test
+    fun testReleaseWorkflow_runsLintDetektKoverAndGovernanceBeforeAssembly() {
+        val content = findReleaseWorkflowFile().readText()
+        val lintStep = "./gradlew :app:lintDebug"
+        val detektStep = "./gradlew :app:detekt"
+        val koverVerifyStep = ":app:koverVerifyDebug"
+        val governanceStep = "python3 tools/verify_requirement_governance.py"
+        val assembleStep = "./gradlew :app:assembleRelease :app:bundleRelease"
+
+        assertTrue(
+            "Release workflow must include Android Lint execution ($lintStep) (REQ-PRO-090.1)",
+            content.contains(lintStep)
+        )
+        assertTrue(
+            "Release workflow must include Detekt execution ($detektStep) (REQ-PRO-090.1)",
+            content.contains(detektStep)
+        )
+        assertTrue(
+            "Release workflow must include Kover verification ($koverVerifyStep) (REQ-PRO-090.1)",
+            content.contains(koverVerifyStep)
+        )
+        assertTrue(
+            "Release workflow must include ASPICE governance verification ($governanceStep) (REQ-PRO-090.1)",
+            content.contains(governanceStep)
+        )
+        assertTrue(
+            "Release workflow must include release assembly ($assembleStep)",
+            content.contains(assembleStep)
+        )
+
+        val lintIndex = content.indexOf(lintStep)
+        val detektIndex = content.indexOf(detektStep)
+        val koverIndex = content.indexOf(koverVerifyStep)
+        val governanceIndex = content.indexOf(governanceStep)
+        val assembleIndex = content.indexOf(assembleStep)
+
+        assertTrue(
+            "Lint must be executed before release assembly (REQ-PRO-090.1)",
+            lintIndex < assembleIndex
+        )
+        assertTrue(
+            "Detekt must be executed before release assembly (REQ-PRO-090.1)",
+            detektIndex < assembleIndex
+        )
+        assertTrue(
+            "Kover verification must be executed before release assembly (REQ-PRO-090.1)",
+            koverIndex < assembleIndex
+        )
+        assertTrue(
+            "Requirement governance must be executed before release assembly (REQ-PRO-090.1)",
+            governanceIndex < assembleIndex
+        )
+    }
+
+    /**
+     * Asserts that .github/workflows/android-release.yml archives and uploads report artifacts
+     * for Lint, Detekt, and Kover with 'if: always()' (REQ-PRO-090.2, TST-PRO-090.2, ATT-7564).
+     */
+    @Test
+    fun testReleaseWorkflow_archivesQualityGateReports() {
+        val content = findReleaseWorkflowFile().readText()
+        val lintReportPath = "app/build/reports/lint-results-debug.*"
+        val detektReportPath = "app/build/reports/detekt/"
+        val koverReportPath = "app/build/reports/kover/"
+
+        assertTrue(
+            "Release workflow must upload lint reports (REQ-PRO-090.2)",
+            content.contains(lintReportPath)
+        )
+        assertTrue(
+            "Release workflow must upload detekt reports (REQ-PRO-090.2)",
+            content.contains(detektReportPath)
+        )
+        assertTrue(
+            "Release workflow must upload kover reports (REQ-PRO-090.2)",
+            content.contains(koverReportPath)
+        )
+
+        val lintReportIndex = content.indexOf(lintReportPath)
+        val detektReportIndex = content.indexOf(detektReportPath)
+        val koverReportIndex = content.indexOf(koverReportPath)
+
+        assertTrue("Lint report path found in release workflow", lintReportIndex != -1)
+        assertTrue("Detekt report path found in release workflow", detektReportIndex != -1)
+        assertTrue("Kover report path found in release workflow", koverReportIndex != -1)
+
+        val lintBlock = content.substring(maxOf(0, lintReportIndex - 300), lintReportIndex)
+        val detektBlock = content.substring(maxOf(0, detektReportIndex - 300), detektReportIndex)
+        val koverBlock = content.substring(maxOf(0, koverReportIndex - 300), koverReportIndex)
+
+        assertTrue("Lint report upload must use if: always() (REQ-PRO-090.2)", lintBlock.contains("if: always()"))
+        assertTrue("Detekt report upload must use if: always() (REQ-PRO-090.2)", detektBlock.contains("if: always()"))
+        assertTrue("Kover report upload must use if: always() (REQ-PRO-090.2)", koverBlock.contains("if: always()"))
+    }
+
+    /**
+     * Asserts that .github/workflows/android-branch-build.yml executes ASPICE requirement governance
+     * within the build-debug job before assembly (REQ-PRO-090.3, TST-PRO-090.3, ATT-7564).
+     */
+    @Test
+    fun testBranchBuildWorkflow_runsGovernanceVerification() {
+        val content = findCiWorkflowFile().readText()
+        val governanceStep = "python3 tools/verify_requirement_governance.py"
+        val assembleStep = "./gradlew :app:assembleDebug"
+
+        assertTrue(
+            "Branch build workflow must include ASPICE governance verification ($governanceStep) (REQ-PRO-090.3)",
+            content.contains(governanceStep)
+        )
+        assertTrue(
+            "Branch build workflow must include assembleDebug ($assembleStep)",
+            content.contains(assembleStep)
+        )
+
+        val governanceIndex = content.indexOf(governanceStep)
+        val assembleIndex = content.indexOf(assembleStep)
+
+        assertTrue(
+            "Governance verification must be executed before debug assembly in branch build (REQ-PRO-090.3)",
+            governanceIndex < assembleIndex
+        )
     }
 }

@@ -3009,3 +3009,19 @@
   3. *Kover Subsystem Rule Verification*: Verify bounded rules for `tracker`, `filter`, and `devices`/`sensor` packages pass in `koverVerifyDebug`.
   4. *Negative Mutation Verification*: Artificially elevate bounds (e.g., line 99%) and assert build failure, verifying gate enforcement.
   5. *Documentation Parity*: Confirm `docs/tests.md` and `docs/coding_standards.md` reflect ratcheted figures.
+
+---
+
+### TST-PRO-090: **Unified CI & Release Quality Gates Contract Verification Suite** [Verified]
+- **Verifies**: `REQ-PRO-090`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit
+- **Component**: `app/src/test/java/com/atrainingtracker/trainingtracker/build/ReleaseCiAndLintConfigContractTest.kt`, `.github/workflows/android-release.yml`, `.github/workflows/android-branch-build.yml`
+- **Jira**: `ATT-7564`
+- **Test Description**:
+  1. *Release Workflow Gate Presence & Ordering Contract*: Execute `ReleaseCiAndLintConfigContractTest.testReleaseWorkflow_runsLintDetektKoverAndGovernanceBeforeAssembly` verifying that `android-release.yml` executes `lintDebug`, `detekt`, `koverVerifyDebug`, and `verify_requirement_governance.py` prior to `assembleRelease :app:bundleRelease`.
+  2. *Release Workflow Report Artifact Archiving Contract*: Execute `ReleaseCiAndLintConfigContractTest.testReleaseWorkflow_archivesQualityGateReports` verifying that `android-release.yml` uploads artifacts for lint, detekt, and kover reports with `if: always()`.
+  3. *Branch Build Governance Step Contract*: Execute `ReleaseCiAndLintConfigContractTest.testBranchBuildWorkflow_runsGovernanceVerification` verifying that `android-branch-build.yml` executes `python3 tools/verify_requirement_governance.py`.
+  4. *Governance Script Validation*: Run `python3 tools/verify_requirement_governance.py` asserting exit code 0 and zero governance violations across all shards.
+

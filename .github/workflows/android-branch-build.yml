@@ -141,6 +141,9 @@ jobs:
           name: kover-report
           path: app/build/reports/kover/
 
+      - name: Verify ASPICE requirement governance
+        run: python3 tools/verify_requirement_governance.py
+
       - name: Build debug APK
         run: ./gradlew :app:assembleDebug
 
