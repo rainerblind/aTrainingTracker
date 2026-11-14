@@ -2196,6 +2196,25 @@
   4. *Tier 1 Targeted Package Regression (`TST-CON-036.4`)*:
   • Verify 100% test pass rate across `com.atrainingtracker.banalservice.devices.bluetooth_le.*` and `com.atrainingtracker.trainingtracker.build.*`.
 
+### TST-CON-037: **ANT+ Bike Radar Cold-Start Channel Acquisition and Race Resilience Test Suite** [Verified]
+- **Requirement(s)**: `REQ-CON-037` (`REQ-CON-037.1`..`REQ-CON-037.4`)
+- **Component**: `AntChannelHelperTest.kt`, `ANTBikeRadarDeviceTest.kt`, `ANTSearchForNewDevicesEngineMultiDeviceSearchTest.kt`
+- **Jira**: `ATT-7546`
+- **Test Description**:
+  1. *Immediate Synchronous Channel Acquisition Test (`TST-CON-037.1`, `AntChannelHelperTest.kt`)*:
+  • Verify that when channels are already available, `acquireAntPlusChannelAsync` acquires the channel immediately on Predefined Network slot 1 without registering a broadcast receiver.
+  2. *Cold-Start Broadcast-Triggered Channel Acquisition Test (`TST-CON-037.2`, `AntChannelHelperTest.kt`)*:
+  • Verify that when initial acquisition throws `SERVICE_INITIALIZING` or `NO_ADAPTERS_EXIST` (or `numChannelsAvailable == 0`), a receiver for `ACTION_CHANNEL_PROVIDER_STATE_CHANGED` is registered with `ContextCompat.RECEIVER_EXPORTED`.
+  • Verify that upon receiving `ACTION_CHANNEL_PROVIDER_STATE_CHANGED` with `NUM_CHANNELS_AVAILABLE > 0`, the channel is successfully acquired and delivered to `onChannelAcquired(channel)`.
+  3. *Bounded Retry Backoff Fallback Test (`TST-CON-037.3`, `AntChannelHelperTest.kt`)*:
+  • Verify that if the broadcast is delayed, scheduled retry timer triggers successful acquisition once channels become available.
+  4. *Acquisition Timeout & User-Visible Failure Test (`TST-CON-037.4`, `AntChannelHelperTest.kt`)*:
+  • Verify that after 10 seconds of persistent channel unavailability, `onAcquisitionFailed` is invoked and the receiver is unregistered.
+  5. *Teardown & Unregistration Contract Tests (`TST-CON-037.5`, `AntChannelHelperTest.kt`, `ANTBikeRadarDeviceTest.kt`, `ANTSearchForNewDevicesEngineMultiDeviceSearchTest.kt`)*:
+  • Verify calling `cancel()` unregisters the broadcast receiver and removes all pending handler callbacks immediately.
+  • Verify `ANTSearchForNewDevicesEngineMultiDeviceSearch.stopAsyncSearch()` cancels pending acquisition.
+  • Verify `ANTBikeRadarDevice.shutDown()` and `onServiceDisconnected()` cancels pending acquisition.
+
 ### TST-TRK-064: **1-Tap Radar Audio Snooze, Peloton Sync & Urban Suppression Test Suite** [Verified]
 - **Requirement(s)**: `REQ-TRK-064` (`REQ-TRK-064.1`..`REQ-TRK-064.7`)
 - **Component**: `RadarSnoozeController.kt`, `RadarAlertManager.kt`, `RadarEdgeOverlay.kt`, `RadarLightQuickSwitchSheet.kt`, `RadarState.kt`, `RadarStateRepository.kt`, `BTLERadarDevice.java`, `TuningPreferencesDataStore.kt`, `RadarSettingsSection.kt`, `strings_radar.xml`

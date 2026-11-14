@@ -3821,6 +3821,9 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 ### REQ-CON-032: ANT+ Cycling Rearview Radar Profile (Device Type 0x28) Acquisition & Target Demuxing [Verified]
 - **Tests**: `TST-CON-032`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `ANTBikeRadarDevice.java`, `ANTSearchForNewDevicesEngineMultiDeviceSearch.java`, `DeviceManager.java`, `DeviceType.java`, `RadarStateRepository.kt`, `RadarState.kt`, `RadarTarget.kt`, `app/build.gradle`
 - **Rationale**: Legacy cycling rearview radars (Garmin Varia RTL500, RTL510) and multiple third-party radars (Sigma RECO 80/81 LINK, Bryton Gardia R300L, Magene L508, Trek CarBack) transmit target telemetry over the standardized ANT+ Bike Radar profile (Device Type 40 / 0x28). Since `antpluginlib_3-9-0.aar` predates Device Type 40 and omits it from PCC drivers and `MultiDeviceSearch`, the system must link low-level `android_antlib_4-16-0.aar`, acquire an ANT slave channel on predefined network slot 1 (`ANT_PLUS`), decode Data Pages 0x30/0x31/0x01/0x50/0x51/0x52, and route demuxed multi-target frames into the unified `RadarStateRepository` and `RadarWindowAggregator` pipeline (ATT-5084, Parent Epic ATT-1286, extending `REQ-CON-001`, `REQ-CON-004`, and `REQ-CON-028`):
 1. *SDK Dependency & Predefined ANT+ Network Channel Acquisition (`REQ-CON-032.1`)*:
@@ -4000,6 +4003,51 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 • *Then* scan quota throttling limits scanner invocations to <= 4 per 30 seconds and falls back to direct `connectGatt`.
 
 **Invariants**: Offline sensor startup battery bounding preserved; thread safety under `mGattLock` preserved; zero idle battery regression; 100% test pass rate.
+
+### REQ-CON-037: ANT+ Bike Radar Cold-Start Channel Acquisition and UsbAntService Race Resilience [Verified]
+- **Tests**: `TST-CON-037`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Implementation**: `AntChannelHelper.kt`, `ANTBikeRadarDevice.kt`, `ANTSearchForNewDevicesEngineMultiDeviceSearch.java`
+- **Rationale**: When an external USB ANT+ stick is plugged in, `AntRadioService` cold-starts `UsbAntService` asynchronously on a background executor. Initial channel acquisition attempts via `AntChannelHelper.acquireAntPlusChannel()` immediately throw `ChannelNotAvailableException` (`SERVICE_INITIALIZING` / `NO_ADAPTERS_EXIST` or zero available channels). The system must register a broadcast receiver for `AntChannelProvider.ACTION_CHANNEL_PROVIDER_STATE_CHANGED` with `ContextCompat.RECEIVER_EXPORTED`, execute bounded interval retry backoff (up to 5 retries spaced 1000ms apart with 10s overall timeout), and automatically acquire the channel once channels become available, ensuring clean unregistration upon teardown (ATT-7546, Parent Epic ATT-1286, extending `REQ-CON-032`):
+- **Description**:
+  1. *Shared Asynchronous Channel Acquisition Engine (`REQ-CON-037.1`)*:
+     - `AntChannelHelper` SHALL provide an asynchronous channel acquisition facility (`acquireAntPlusChannelAsync`) returning an `AcquisitionCancellationHandle`.
+     - Upon invocation, it SHALL attempt immediate channel acquisition. If channels are available (`provider.getNumChannelsAvailable() > 0`), it SHALL acquire the channel and deliver it via `onChannelAcquired(channel)`.
+  2. *Cold-Start State Observation & Bounded Backoff (`REQ-CON-037.2`)*:
+     - If initial acquisition fails with `ChannelNotAvailableException` indicating `SERVICE_INITIALIZING` or `NO_ADAPTERS_EXIST` (or `getNumChannelsAvailable() == 0`), the engine SHALL register a `BroadcastReceiver` for `AntChannelProvider.ACTION_CHANNEL_PROVIDER_STATE_CHANGED` using `ContextCompat.RECEIVER_EXPORTED`.
+     - The engine SHALL schedule periodic retry attempts (1000ms interval, up to 5 retries) and enforce a 10-second overall timeout.
+     - When `ACTION_CHANNEL_PROVIDER_STATE_CHANGED` is received or a retry timer fires, the engine SHALL verify `provider.getNumChannelsAvailable() > 0` before attempting `acquireAntPlusChannel`.
+     - Upon successful acquisition, the receiver and retry timers SHALL be unregistered and `onChannelAcquired(channel)` SHALL be invoked.
+     - If the 10-second timeout expires or an unrecoverable exception occurs, the receiver and timers SHALL be unregistered and `onAcquisitionFailed(exception)` SHALL be invoked.
+  3. *Clean Lifecycle Teardown & Unregistration (`REQ-CON-037.3`)*:
+     - In `ANTSearchForNewDevicesEngineMultiDeviceSearch`, invocation of `stopAsyncSearch()` or `onServiceDisconnected()` SHALL invoke `cancel()` on any pending channel acquisition handle.
+     - In `ANTBikeRadarDevice`, invocation of `shutDown()`, `onWatchdogTimeout()`, or `onServiceDisconnected()` SHALL invoke `cancel()` on any pending channel acquisition handle.
+  4. *Security & Broadcast Spoofing Guard (`REQ-CON-037.4`)*:
+     - The broadcast receiver SHALL treat `ACTION_CHANNEL_PROVIDER_STATE_CHANGED` solely as an event notification and SHALL query the authentic bound `AntChannelProvider` IPC interface for channel availability, never relying on untrusted intent extras.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: `REQ-CON-032.1` and `REQ-CON-032.5` targeting `AntChannelHelper.kt`, `ANTBikeRadarDevice.kt`, and `ANTSearchForNewDevicesEngineMultiDeviceSearch.java`.
+2. *Historical Origin & Commit Trace*: Sprint 2026-46.3 (`ATT-5084`).
+3. *Root Reason for Existing Formulation*: Assumed synchronous channel availability upon `onServiceConnected()` (valid for built-in SOC ANT chips, but races with USB ANT+ stick asynchronous driver initialization).
+4. *Preservation of Core Invariants*: Predefined Network Slot 1 (`ANT_PLUS`) isolation, channel parameters (4084 period, RF 57, device type 40), and 3.5s starvation watchdog remain 100% preserved.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* an external USB ANT+ stick plugged in and `AntRadioService` cold-starting,
+• *When* `ANTBikeRadarDevice` or `ANTSearchForNewDevicesEngineMultiDeviceSearch` attempts channel acquisition and encounters `SERVICE_INITIALIZING` or `NO_ADAPTERS_EXIST`,
+• *Then* the acquisition engine registers a receiver for `ACTION_CHANNEL_PROVIDER_STATE_CHANGED` with `ContextCompat.RECEIVER_EXPORTED` and schedules 1000ms retry backoff.
+• *Given* an active waiting acquisition session,
+• *When* `UsbAntService` completes initialization and broadcasts `ACTION_CHANNEL_PROVIDER_STATE_CHANGED` or a retry fires with available channels,
+• *Then* `AntChannel` is acquired on Predefined Network slot 1, the receiver is unregistered, and `onChannelAcquired(channel)` is invoked.
+• *Given* channels remain unavailable for 10 seconds,
+• *When* the overall timeout expires,
+• *Then* the receiver is cleanly unregistered and `onAcquisitionFailed(exception)` is invoked without unhandled crashes.
+• *Given* an ongoing acquisition attempt,
+• *When* the user stops search (`stopAsyncSearch()`) or the device is shut down (`shutDown()`),
+• *Then* `cancel()` unregisters the receiver and removes all pending handler callbacks immediately.
+
+**Invariants**: Predefined Network Slot 1 isolation; zero regression on BLE radar or standard ANT PCC devices; memory leak prevention via deterministic unregistration; thread safety on MainLooper.
 
 ### REQ-TRK-064: 1-Tap Radar Audio Snooze, Peloton-Mode Audio Sync & Smart Urban Alert Suppression [Verified]
 - **Tests**: `TST-TRK-064`

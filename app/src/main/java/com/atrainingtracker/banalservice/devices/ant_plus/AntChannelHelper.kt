@@ -18,12 +18,20 @@
 
 package com.atrainingtracker.banalservice.devices.ant_plus
 
+import android.content.BroadcastReceiver
 import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.os.RemoteException
+import android.util.Log
+import androidx.core.content.ContextCompat
 import com.dsi.ant.channel.AntChannel
 import com.dsi.ant.channel.AntChannelProvider
 import com.dsi.ant.channel.ChannelNotAvailableException
+import com.dsi.ant.channel.ChannelNotAvailableReason
 import com.dsi.ant.channel.ipc.IAntChannelCommunicator
 import com.dsi.ant.channel.ipc.IAntChannelProviderCommunicator
 import java.lang.reflect.Constructor
@@ -32,12 +40,17 @@ import java.lang.reflect.Method
 
 /**
  * Helper utility for acquiring ANT+ channels on Predefined Network slot 1 (ANT_PLUS)
- * using android_antlib_4-16-0.aar (REQ-CON-032.1, ATT-5084).
+ * using android_antlib_4-16-0.aar (REQ-CON-032.1, REQ-CON-037.1..4, ATT-5084, ATT-7546).
  *
  * Avoids Android_ANTRadioService rejecting RF frequency 57 on PredefinedNetwork.PUBLIC (slot 0)
  * and avoiding raw network key rejection.
+ *
+ * Handles asynchronous cold-start channel acquisition races when AntRadioService unfreezes
+ * and initializes UsbAntService in the background.
  */
 object AntChannelHelper {
+    private const val TAG = "AntChannelHelper"
+
     /** Predefined network number for ANT+ profiles (slot 1) */
     const val PREDEFINED_NETWORK_ANT_PLUS = 1
 
@@ -51,6 +64,26 @@ object AntChannelHelper {
     const val BIKE_LIGHT_RF_FREQUENCY = 57 // 2457 MHz
     const val BIKE_LIGHT_CHANNEL_PERIOD = 4084 // ~8.0235 Hz (counts)
 
+    /** Default retry and timeout constants for asynchronous channel acquisition (REQ-CON-037.2) */
+    const val DEFAULT_MAX_RETRIES = 5
+    const val DEFAULT_RETRY_INTERVAL_MS = 1000L
+    const val DEFAULT_OVERALL_TIMEOUT_MS = 10000L
+
+    /**
+     * Handle to cancel an in-flight asynchronous channel acquisition (REQ-CON-037.1).
+     */
+    interface AcquisitionCancellationHandle {
+        fun cancel()
+    }
+
+    /**
+     * Callback listener for asynchronous channel acquisition results (REQ-CON-037.1).
+     */
+    interface ChannelAcquisitionListener {
+        fun onChannelAcquired(channel: AntChannel)
+        fun onAcquisitionFailed(exception: Exception)
+    }
+
     fun interface ChannelAcquirer {
         @Throws(ChannelNotAvailableException::class, RemoteException::class)
         fun acquire(context: Context, provider: AntChannelProvider): AntChannel
@@ -60,7 +93,7 @@ object AntChannelHelper {
         val providerField: Field = AntChannelProvider::class.java.getDeclaredField("mAntChannelProvider")
         providerField.isAccessible = true
         val communicator = providerField.get(provider) as? IAntChannelProviderCommunicator
-            ?: throw ChannelNotAvailableException(com.dsi.ant.channel.ChannelNotAvailableReason.UNKNOWN)
+            ?: throw ChannelNotAvailableException(ChannelNotAvailableReason.UNKNOWN)
 
         val bundle = Bundle()
         val channelComm: IAntChannelCommunicator? = communicator.acquireChannel(
@@ -77,7 +110,7 @@ object AntChannelHelper {
             if (error != null) {
                 throw error
             }
-            throw ChannelNotAvailableException(com.dsi.ant.channel.ChannelNotAvailableReason.UNKNOWN)
+            throw ChannelNotAvailableException(ChannelNotAvailableReason.UNKNOWN)
         }
 
         val constructor: Constructor<AntChannel> = AntChannel::class.java.getDeclaredConstructor(IAntChannelCommunicator::class.java)
@@ -106,5 +139,209 @@ object AntChannelHelper {
     @Throws(ChannelNotAvailableException::class, RemoteException::class)
     fun acquireAntPlusChannel(context: Context, provider: AntChannelProvider): AntChannel {
         return currentAcquirer.acquire(context, provider)
+    }
+
+    /**
+     * Asynchronously acquires an ANT+ channel on Predefined Network slot 1 (REQ-CON-037.1..4).
+     *
+     * If channels are immediately available, invokes [ChannelAcquisitionListener.onChannelAcquired] synchronously.
+     * If the service is initializing or no channels/adapters are yet available, registers a broadcast receiver
+     * for [AntChannelProvider.ACTION_CHANNEL_PROVIDER_STATE_CHANGED] (using ContextCompat.RECEIVER_EXPORTED)
+     * and executes periodic retry backoff until channels become available or the overall timeout expires.
+     */
+    @JvmStatic
+    @JvmOverloads
+    fun acquireAntPlusChannelAsync(
+        context: Context,
+        provider: AntChannelProvider,
+        listener: ChannelAcquisitionListener,
+        handler: Handler = Handler(Looper.getMainLooper()),
+        maxRetries: Int = DEFAULT_MAX_RETRIES,
+        retryIntervalMs: Long = DEFAULT_RETRY_INTERVAL_MS,
+        overallTimeoutMs: Long = DEFAULT_OVERALL_TIMEOUT_MS
+    ): AcquisitionCancellationHandle {
+        val session = AsyncAcquisitionSession(
+            context = context,
+            provider = provider,
+            listener = listener,
+            handler = handler,
+            maxRetries = maxRetries,
+            retryIntervalMs = retryIntervalMs,
+            overallTimeoutMs = overallTimeoutMs
+        )
+        session.start()
+        return session
+    }
+
+    @JvmStatic
+    fun acquireAntPlusChannelAsync(
+        context: Context,
+        provider: AntChannelProvider,
+        handler: Handler,
+        maxRetries: Int,
+        retryIntervalMs: Long,
+        overallTimeoutMs: Long,
+        listener: ChannelAcquisitionListener
+    ): AcquisitionCancellationHandle {
+        val session = AsyncAcquisitionSession(
+            context = context,
+            provider = provider,
+            listener = listener,
+            handler = handler,
+            maxRetries = maxRetries,
+            retryIntervalMs = retryIntervalMs,
+            overallTimeoutMs = overallTimeoutMs
+        )
+        session.start()
+        return session
+    }
+
+    private class AsyncAcquisitionSession(
+        private val context: Context,
+        private val provider: AntChannelProvider,
+        private val listener: ChannelAcquisitionListener,
+        private val handler: Handler,
+        private val maxRetries: Int,
+        private val retryIntervalMs: Long,
+        private val overallTimeoutMs: Long
+    ) : AcquisitionCancellationHandle {
+        private var isCompleted = false
+        private var isCancelled = false
+        private var isReceiverRegistered = false
+        private var retryCount = 0
+        private var lastException: ChannelNotAvailableException? = null
+
+        private val receiver = object : BroadcastReceiver() {
+            override fun onReceive(recvContext: Context?, intent: Intent?) {
+                if (intent?.action == AntChannelProvider.ACTION_CHANNEL_PROVIDER_STATE_CHANGED) {
+                    synchronized(this@AsyncAcquisitionSession) {
+                        attemptAcquisitionLocked()
+                    }
+                }
+            }
+        }
+
+        private val retryRunnable = object : Runnable {
+            override fun run() {
+                synchronized(this@AsyncAcquisitionSession) {
+                    if (isCompleted || isCancelled) return
+                    retryCount++
+                    attemptAcquisitionLocked()
+                    if (!isCompleted && !isCancelled && retryCount < maxRetries) {
+                        handler.postDelayed(this, retryIntervalMs)
+                    }
+                }
+            }
+        }
+
+        private val timeoutRunnable = object : Runnable {
+            override fun run() {
+                synchronized(this@AsyncAcquisitionSession) {
+                    if (isCompleted || isCancelled) return
+                    isCompleted = true
+                    cleanupLocked()
+                    val timeoutEx = ChannelNotAvailableException(
+                        lastException?.reasonCode ?: ChannelNotAvailableReason.SERVICE_INITIALIZING,
+                        "Timed out waiting for ANT+ channel after ${overallTimeoutMs}ms"
+                    )
+                    listener.onAcquisitionFailed(timeoutEx)
+                }
+            }
+        }
+
+        fun start() {
+            synchronized(this) {
+                if (isCancelled) return
+                try {
+                    val available = try {
+                        provider.numChannelsAvailable
+                    } catch (_: Exception) {
+                        0
+                    }
+                    if (available > 0) {
+                        val channel = acquireAntPlusChannel(context, provider)
+                        isCompleted = true
+                        listener.onChannelAcquired(channel)
+                        return
+                    }
+                } catch (e: ChannelNotAvailableException) {
+                    lastException = e
+                    if (!isRetryable(e)) {
+                        isCompleted = true
+                        listener.onAcquisitionFailed(e)
+                        return
+                    }
+                } catch (e: Exception) {
+                    isCompleted = true
+                    listener.onAcquisitionFailed(e)
+                    return
+                }
+
+                try {
+                    val filter = IntentFilter(AntChannelProvider.ACTION_CHANNEL_PROVIDER_STATE_CHANGED)
+                    ContextCompat.registerReceiver(context, receiver, filter, ContextCompat.RECEIVER_EXPORTED)
+                    isReceiverRegistered = true
+                } catch (e: Exception) {
+                    Log.w(TAG, "Failed to register ACTION_CHANNEL_PROVIDER_STATE_CHANGED receiver", e)
+                }
+
+                handler.postDelayed(retryRunnable, retryIntervalMs)
+                handler.postDelayed(timeoutRunnable, overallTimeoutMs)
+            }
+        }
+
+        private fun attemptAcquisitionLocked() {
+            if (isCompleted || isCancelled) return
+            try {
+                val available = try {
+                    provider.numChannelsAvailable
+                } catch (_: Exception) {
+                    0
+                }
+                if (available > 0) {
+                    val channel = acquireAntPlusChannel(context, provider)
+                    isCompleted = true
+                    cleanupLocked()
+                    listener.onChannelAcquired(channel)
+                }
+            } catch (e: ChannelNotAvailableException) {
+                lastException = e
+                if (!isRetryable(e)) {
+                    isCompleted = true
+                    cleanupLocked()
+                    listener.onAcquisitionFailed(e)
+                }
+            } catch (e: Exception) {
+                isCompleted = true
+                cleanupLocked()
+                listener.onAcquisitionFailed(e)
+            }
+        }
+
+        private fun cleanupLocked() {
+            handler.removeCallbacks(retryRunnable)
+            handler.removeCallbacks(timeoutRunnable)
+            if (isReceiverRegistered) {
+                try {
+                    context.unregisterReceiver(receiver)
+                } catch (e: Exception) {
+                    Log.w(TAG, "Error unregistering receiver", e)
+                }
+                isReceiverRegistered = false
+            }
+        }
+
+        override fun cancel() {
+            synchronized(this) {
+                if (isCompleted || isCancelled) return
+                isCancelled = true
+                cleanupLocked()
+            }
+        }
+
+        private fun isRetryable(e: ChannelNotAvailableException): Boolean {
+            return e.reasonCode == ChannelNotAvailableReason.SERVICE_INITIALIZING ||
+                    e.reasonCode == ChannelNotAvailableReason.NO_ADAPTERS_EXIST
+        }
     }
 }

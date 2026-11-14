@@ -19,16 +19,25 @@
 package com.atrainingtracker.banalservice.devices.ant_plus.search_new
 
 import android.content.Context
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
 import com.atrainingtracker.banalservice.Protocol
 import com.atrainingtracker.banalservice.devices.DeviceType
+import com.atrainingtracker.banalservice.devices.ant_plus.AntChannelHelper
+import com.dsi.ant.AntService
+import com.dsi.ant.channel.AntChannel
+import com.dsi.ant.channel.AntChannelProvider
+import com.dsi.ant.message.ChannelType
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.mockkConstructor
 import io.mockk.mockkStatic
 import io.mockk.unmockkAll
 import io.mockk.verify
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -47,7 +56,24 @@ class ANTSearchForNewDevicesEngineMultiDeviceSearchTest {
         every { Log.d(any<String>(), any<String>()) } returns 0
         every { Log.i(any<String>(), any<String>()) } returns 0
         every { Log.w(any<String>(), any<String>()) } returns 0
+        every { Log.w(any<String>(), any<String>(), any()) } returns 0
         every { Log.e(any<String>(), any<String>()) } returns 0
+        every { Log.e(any<String>(), any<String>(), any()) } returns 0
+
+        mockkStatic(Looper::class)
+        val mockLooper = mockk<Looper>(relaxed = true)
+        every { Looper.getMainLooper() } returns mockLooper
+
+        mockkConstructor(Handler::class)
+        every { anyConstructed<Handler>().post(any()) } answers {
+            firstArg<Runnable>().run()
+            true
+        }
+        every { anyConstructed<Handler>().postDelayed(any(), any()) } answers {
+            true
+        }
+        every { anyConstructed<Handler>().removeCallbacks(any<Runnable>()) } answers {}
+        every { anyConstructed<Handler>().removeCallbacksAndMessages(any()) } answers {}
 
         mockContext = mockk(relaxed = true)
         mockCallback = mockk(relaxed = true)
@@ -55,6 +81,7 @@ class ANTSearchForNewDevicesEngineMultiDeviceSearchTest {
 
     @After
     fun tearDown() {
+        AntChannelHelper.setChannelAcquirerForTesting(null)
         unmockkAll()
     }
 
@@ -102,5 +129,49 @@ class ANTSearchForNewDevicesEngineMultiDeviceSearchTest {
                 100
             )
         }
+    }
+
+    @Test
+    fun testRadarSearchConnection_usesAcquireAntPlusChannelAsync_andConfiguresChannel() {
+        mockkConstructor(AntService::class)
+        val mockProvider = mockk<AntChannelProvider>(relaxed = true)
+        every { anyConstructed<AntService>().channelProvider } returns mockProvider
+        every { mockProvider.numChannelsAvailable } returns 8
+
+        val mockChannel = mockk<AntChannel>(relaxed = true)
+        AntChannelHelper.setChannelAcquirerForTesting { _, _ -> mockChannel }
+
+        val engine = ANTSearchForNewDevicesEngineMultiDeviceSearch(
+            mockContext,
+            DeviceType.BIKE_RADAR,
+            mockCallback
+        )
+        engine.mIsRadarSearchActive = true
+
+        engine.mRadarServiceConnection.onServiceConnected(mockk(relaxed = true), mockk(relaxed = true))
+
+        verify { mockChannel.assign(ChannelType.BIDIRECTIONAL_SLAVE) }
+        verify { mockChannel.open() }
+        assertEquals(mockChannel, engine.mRadarAntChannel)
+    }
+
+    @Test
+    fun testRadarSearch_handleCancellation_onStopSearch_and_disconnect() {
+        val engine = ANTSearchForNewDevicesEngineMultiDeviceSearch(
+            mockContext,
+            DeviceType.BIKE_RADAR,
+            mockCallback
+        )
+        val mockHandle = mockk<AntChannelHelper.AcquisitionCancellationHandle>(relaxed = true)
+
+        engine.mChannelAcquisitionHandle = mockHandle
+        engine.stopAsyncSearch()
+        verify(exactly = 1) { mockHandle.cancel() }
+        assertNull(engine.mChannelAcquisitionHandle)
+
+        engine.mChannelAcquisitionHandle = mockHandle
+        engine.mRadarServiceConnection.onServiceDisconnected(mockk(relaxed = true))
+        verify(exactly = 2) { mockHandle.cancel() }
+        assertNull(engine.mChannelAcquisitionHandle)
     }
 }

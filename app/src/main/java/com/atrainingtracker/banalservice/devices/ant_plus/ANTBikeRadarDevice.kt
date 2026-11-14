@@ -101,6 +101,7 @@ class ANTBikeRadarDevice(
         private set
     var companionLightDevice: ANTBikeLightDevice? = null
         internal set
+    internal var channelAcquisitionHandle: AntChannelHelper.AcquisitionCancellationHandle? = null
     private var isServiceBound = false
 
     private val handler = Handler(Looper.getMainLooper())
@@ -108,24 +109,47 @@ class ANTBikeRadarDevice(
         onWatchdogTimeout()
     }
 
-    private val serviceConnection = object : ServiceConnection {
+    internal val serviceConnection = object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
             if (DEBUG) Log.d(TAG, "onServiceConnected to AntRadioService")
             try {
                 val serviceInstance = AntService(service)
                 antService = serviceInstance
                 val provider = serviceInstance.channelProvider
-                val channel = AntChannelHelper.acquireAntPlusChannel(mContext, provider)
-                antChannel = channel
-                configureChannel(channel)
+                channelAcquisitionHandle?.cancel()
+                channelAcquisitionHandle = AntChannelHelper.acquireAntPlusChannelAsync(
+                    mContext,
+                    provider,
+                    object : AntChannelHelper.ChannelAcquisitionListener {
+                        override fun onChannelAcquired(channel: AntChannel) {
+                            channelAcquisitionHandle = null
+                            antChannel = channel
+                            try {
+                                configureChannel(channel)
+                            } catch (e: Exception) {
+                                Log.e(TAG, "Failed to configure acquired ANT+ radar channel", e)
+                                notifyStopSearching(false)
+                            }
+                        }
+
+                        override fun onAcquisitionFailed(exception: Exception) {
+                            channelAcquisitionHandle = null
+                            Log.e(TAG, "Failed to acquire ANT+ radar channel", exception)
+                            notifyStopSearching(false)
+                        }
+                    },
+                    handler
+                )
             } catch (e: Exception) {
-                Log.e(TAG, "Failed to acquire/configure ANT+ radar channel", e)
+                Log.e(TAG, "Failed to initiate ANT+ radar channel acquisition", e)
                 notifyStopSearching(false)
             }
         }
 
         override fun onServiceDisconnected(name: ComponentName?) {
             if (DEBUG) Log.d(TAG, "onServiceDisconnected from AntRadioService")
+            channelAcquisitionHandle?.cancel()
+            channelAcquisitionHandle = null
             antService = null
             antChannel = null
             onWatchdogTimeout()
@@ -369,6 +393,8 @@ class ANTBikeRadarDevice(
     }
 
     fun onWatchdogTimeout() {
+        channelAcquisitionHandle?.cancel()
+        channelAcquisitionHandle = null
         activeTargets.clear()
         val currentState = RadarStateRepository.getState()
         val state = RadarState(
@@ -450,6 +476,8 @@ class ANTBikeRadarDevice(
 
     override fun shutDown() {
         handler.removeCallbacks(watchdogRunnable)
+        channelAcquisitionHandle?.cancel()
+        channelAcquisitionHandle = null
         try {
             companionLightDevice?.stop()
         } catch (e: Exception) {

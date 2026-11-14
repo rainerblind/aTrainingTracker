@@ -32,7 +32,9 @@ import com.atrainingtracker.banalservice.devices.radar.RadarStateRepository
 import com.atrainingtracker.banalservice.devices.radar.RadarTrafficSimulator
 import com.atrainingtracker.banalservice.devices.radar.ThreatLevel
 import com.atrainingtracker.banalservice.sensor.MySensorManager
+import com.dsi.ant.AntService
 import com.dsi.ant.channel.AntChannel
+import com.dsi.ant.channel.AntChannelProvider
 import com.dsi.ant.message.ChannelId
 import com.dsi.ant.message.ChannelType
 import io.mockk.every
@@ -46,6 +48,7 @@ import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -288,5 +291,42 @@ class ANTBikeRadarDeviceTest {
         // descriptiveByte = (2 << 4) | 3 = 0x23
         val page52 = byteArrayOf(0x52.toByte(), 0, 0, 0, 0, 0, 128.toByte(), 0x23.toByte())
         radarDevice.decodeBroadcastData(page52)
+    }
+
+    @Test
+    fun testServiceConnection_usesAcquireAntPlusChannelAsync_andConfiguresChannel() {
+        mockkConstructor(AntService::class)
+        val mockProvider = mockk<AntChannelProvider>(relaxed = true)
+        every { anyConstructed<AntService>().channelProvider } returns mockProvider
+        every { mockProvider.numChannelsAvailable } returns 8
+
+        val mockChannel = mockk<AntChannel>(relaxed = true)
+        AntChannelHelper.setChannelAcquirerForTesting { _, _ -> mockChannel }
+
+        radarDevice.serviceConnection.onServiceConnected(mockk(relaxed = true), mockk(relaxed = true))
+
+        verify { mockChannel.assign(ChannelType.BIDIRECTIONAL_SLAVE) }
+        verify { mockChannel.open() }
+        assertEquals(mockChannel, radarDevice.antChannel)
+    }
+
+    @Test
+    fun testPendingHandleCancellation_onShutDown_watchdog_and_disconnect() {
+        val mockHandle = mockk<AntChannelHelper.AcquisitionCancellationHandle>(relaxed = true)
+        radarDevice.channelAcquisitionHandle = mockHandle
+
+        radarDevice.onWatchdogTimeout()
+        verify(exactly = 1) { mockHandle.cancel() }
+        assertNull(radarDevice.channelAcquisitionHandle)
+
+        radarDevice.channelAcquisitionHandle = mockHandle
+        radarDevice.serviceConnection.onServiceDisconnected(mockk(relaxed = true))
+        verify(exactly = 2) { mockHandle.cancel() }
+        assertNull(radarDevice.channelAcquisitionHandle)
+
+        radarDevice.channelAcquisitionHandle = mockHandle
+        radarDevice.shutDown()
+        verify(exactly = 3) { mockHandle.cancel() }
+        assertNull(radarDevice.channelAcquisitionHandle)
     }
 }
