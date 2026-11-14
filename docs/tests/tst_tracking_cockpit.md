@@ -2235,6 +2235,21 @@
   • Verify that both `AcknowledgedDataMessage` and `BroadcastDataMessage` extract device number and real RSSI values when extended data is present.
   • Verify that missing RSSI defaults to `-1` safely.
 
+### TST-CON-039: **ANT+ Bike Radar Shutdown Cleanup, Thread Serialization & Channel-Close Reconnect Test Suite** [Verified]
+- **Requirement(s)**: `REQ-CON-039` (`REQ-CON-039.1`..`REQ-CON-039.4`)
+- **Component**: `ANTBikeRadarDevice.kt`, `ANTBikeRadarDeviceTest.kt`
+- **Jira**: `ATT-7576`
+- **Test Description**:
+  1. *Shutdown State Cleanup & Repository Disconnect Test (`TST-CON-039.1`, `ANTBikeRadarDeviceTest.kt`)*:
+  • Verify that calling `shutDown()` on `ANTBikeRadarDevice` with active targets clears `activeTargets` and transitions `RadarStateRepository` to `RadarConnectionState.DISCONNECTED` with empty targets.
+  2. *Main Thread Ingestion & Concurrency Serialization Test (`TST-CON-039.2`, `ANTBikeRadarDeviceTest.kt`)*:
+  • Verify that incoming `BROADCAST_DATA` and `ACKNOWLEDGED_DATA` messages clone the payload and dispatch `decodeBroadcastData` onto `handler` (`Looper.getMainLooper()`).
+  • Verify that `onChannelDeath()` posts `onWatchdogTimeout()` to `handler`.
+  3. *Tracking Mode Channel-Close Reconnect Test (`TST-CON-039.3`, `ANTBikeRadarDeviceTest.kt`)*:
+  • Verify that delivering `CHANNEL_EVENT` with `RX_SEARCH_TIMEOUT` or `CHANNEL_CLOSED` triggers `antChannel.open()` even when `isSearching == false` (connected/tracking).
+  4. *Post-Shutdown Message Ingestion Suppression Test (`TST-CON-039.4`, `ANTBikeRadarDeviceTest.kt`)*:
+  • Verify that late-arriving messages or channel events received after `shutDown()` do not re-open the channel or mutate `RadarStateRepository`.
+
 ### TST-TRK-064: **1-Tap Radar Audio Snooze, Peloton Sync & Urban Suppression Test Suite** [Verified]
 - **Requirement(s)**: `REQ-TRK-064` (`REQ-TRK-064.1`..`REQ-TRK-064.7`)
 - **Component**: `RadarSnoozeController.kt`, `RadarAlertManager.kt`, `RadarEdgeOverlay.kt`, `RadarLightQuickSwitchSheet.kt`, `RadarState.kt`, `RadarStateRepository.kt`, `BTLERadarDevice.java`, `TuningPreferencesDataStore.kt`, `RadarSettingsSection.kt`, `strings_radar.xml`

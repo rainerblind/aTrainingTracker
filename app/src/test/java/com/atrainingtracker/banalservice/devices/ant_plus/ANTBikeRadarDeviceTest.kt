@@ -338,7 +338,7 @@ class ANTBikeRadarDeviceTest {
     }
 
     /**
-     * TST-CON-038.2: Tracking Channel Search Re-Open on Timeout Test.
+     * TST-CON-038.2 / TST-CON-039.3: Tracking Channel Search Re-Open on Timeout Test.
      */
     @Test
     fun testRadarDevice_channelEvent_reOpensChannel_whenSearching() {
@@ -381,12 +381,161 @@ class ANTBikeRadarDeviceTest {
         handler.onReceiveMessage(MessageFromAntType.BROADCAST_DATA, mockParcel)
         assertFalse(radarDevice.isSearching)
 
-        val openCallsBefore = 4
+        // Under REQ-CON-039.3, channel re-opens even in tracking mode (isSearching == false)
         every { mockParcel.messageId } returns 64
         every { mockParcel.messageContent } returns byteArrayOf(0, 1, 1)
         handler.onReceiveMessage(MessageFromAntType.CHANNEL_EVENT, mockParcel)
-        // Should not trigger another open() call when not searching
-        verify(exactly = openCallsBefore) { mockChannel.open() }
+        verify(exactly = 5) { mockChannel.open() }
+
+        // Once shutDown() is called, subsequent channel events are dropped
+        radarDevice.shutDown()
+        handler.onReceiveMessage(MessageFromAntType.CHANNEL_EVENT, mockParcel)
+        verify(exactly = 5) { mockChannel.open() }
+    }
+
+    /**
+     * TST-CON-039.1: Shutdown State Cleanup & Repository Disconnect Test.
+     */
+    @Test
+    fun testRadarDevice_shutDown_clearsTargets_andSetsDisconnectedState() {
+        val payload = byteArrayOf(
+            0x30.toByte(),
+            0x01.toByte(), // Threat level 1 (APPROACHING)
+            0x00.toByte(), // Side 0
+            0x50.toByte(), 0x00.toByte(), 0x00.toByte(), // Range 80m
+            0x10.toByte(), // Speed 16 m/s
+            0x00.toByte()
+        )
+        radarDevice.decodeBroadcastData(payload)
+
+        // Verify active target and CONNECTED state prior to shutdown
+        assertEquals(1, radarDevice.getActiveTargets().size)
+        assertEquals(RadarConnectionState.CONNECTED, RadarStateRepository.getState().connectionState)
+
+        radarDevice.shutDown()
+
+        assertTrue(radarDevice.isShutDown)
+        assertTrue(radarDevice.getActiveTargets().isEmpty())
+        val finalState = RadarStateRepository.getState()
+        assertEquals(RadarConnectionState.DISCONNECTED, finalState.connectionState)
+        assertEquals(ThreatLevel.NONE, finalState.overallThreatLevel)
+        assertTrue(finalState.targets.isEmpty())
+    }
+
+    /**
+     * TST-CON-039.2: Main Thread Ingestion & Concurrency Serialization Test.
+     */
+    @Test
+    fun testRadarDevice_onReceiveMessage_postsToHandler_andSerializesState() {
+        val mockChannel = mockk<AntChannel>(relaxed = true)
+        val handlerSlot = slot<IAntChannelEventHandler>()
+        every { mockChannel.setChannelEventHandler(capture(handlerSlot)) } returns Unit
+        radarDevice.configureChannel(mockChannel)
+        val handler = handlerSlot.captured
+
+        val dummyPayload = byteArrayOf(0x30.toByte(), 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00)
+        mockkConstructor(com.dsi.ant.message.fromant.BroadcastDataMessage::class)
+        every { anyConstructed<com.dsi.ant.message.fromant.BroadcastDataMessage>().payload } returns dummyPayload
+
+        val mockParcel = mockk<AntMessageParcel>(relaxed = true)
+        every { mockParcel.messageId } returns 78
+        every { mockParcel.messageContent } returns ByteArray(9)
+
+        handler.onReceiveMessage(MessageFromAntType.BROADCAST_DATA, mockParcel)
+
+        // Verifies handler.post was called to process the broadcast data
+        verify(atLeast = 1) { anyConstructed<Handler>().post(any()) }
+
+        // Test onChannelDeath posts to handler as well
+        handler.onChannelDeath()
+        verify(atLeast = 2) { anyConstructed<Handler>().post(any()) }
+    }
+
+    /**
+     * TST-CON-039.3: Tracking Mode Channel-Close Reconnect Test.
+     */
+    @Test
+    fun testRadarDevice_channelEvent_reOpensChannel_whenTracking() {
+        val mockChannel = mockk<AntChannel>(relaxed = true)
+        val handlerSlot = slot<IAntChannelEventHandler>()
+        every { mockChannel.setChannelEventHandler(capture(handlerSlot)) } returns Unit
+
+        radarDevice.antChannel = mockChannel
+        radarDevice.configureChannel(mockChannel)
+        val handler = handlerSlot.captured
+
+        // Transition out of searching mode (isSearching = false)
+        val dummyPayload = byteArrayOf(0x30.toByte(), 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00)
+        mockkConstructor(com.dsi.ant.message.fromant.BroadcastDataMessage::class)
+        every { anyConstructed<com.dsi.ant.message.fromant.BroadcastDataMessage>().payload } returns dummyPayload
+
+        val dataParcel = mockk<AntMessageParcel>(relaxed = true)
+        every { dataParcel.messageId } returns 78
+        every { dataParcel.messageContent } returns ByteArray(9)
+        handler.onReceiveMessage(MessageFromAntType.BROADCAST_DATA, dataParcel)
+        assertFalse(radarDevice.isSearching)
+
+        val openCallsBefore = 1 // from configureChannel()
+        mockkConstructor(ChannelEventMessage::class)
+        val eventParcel = mockk<AntMessageParcel>(relaxed = true)
+        every { eventParcel.messageId } returns 64
+        every { eventParcel.messageContent } returns byteArrayOf(0, 1, 1)
+
+        // EventCode.RX_SEARCH_TIMEOUT while tracking
+        every { anyConstructed<ChannelEventMessage>().eventCode } returns EventCode.RX_SEARCH_TIMEOUT
+        handler.onReceiveMessage(MessageFromAntType.CHANNEL_EVENT, eventParcel)
+        verify(exactly = openCallsBefore + 1) { mockChannel.open() }
+
+        // EventCode.CHANNEL_CLOSED while tracking
+        every { anyConstructed<ChannelEventMessage>().eventCode } returns EventCode.CHANNEL_CLOSED
+        handler.onReceiveMessage(MessageFromAntType.CHANNEL_EVENT, eventParcel)
+        verify(exactly = openCallsBefore + 2) { mockChannel.open() }
+    }
+
+    /**
+     * TST-CON-039.4: Post-Shutdown Message Ingestion Suppression Test.
+     */
+    @Test
+    fun testRadarDevice_postShutdown_dropsMessagesAndEvents() {
+        val mockChannel = mockk<AntChannel>(relaxed = true)
+        val handlerSlot = slot<IAntChannelEventHandler>()
+        every { mockChannel.setChannelEventHandler(capture(handlerSlot)) } returns Unit
+
+        radarDevice.antChannel = mockChannel
+        radarDevice.configureChannel(mockChannel)
+        val handler = handlerSlot.captured
+
+        radarDevice.shutDown()
+        assertTrue(radarDevice.isShutDown)
+        assertEquals(RadarConnectionState.DISCONNECTED, RadarStateRepository.getState().connectionState)
+
+        // Attempt BROADCAST_DATA post-shutdown
+        val dummyPayload = byteArrayOf(0x30.toByte(), 0x01, 0x00, 0x50, 0x00, 0x00, 0x10, 0x00)
+        mockkConstructor(com.dsi.ant.message.fromant.BroadcastDataMessage::class)
+        every { anyConstructed<com.dsi.ant.message.fromant.BroadcastDataMessage>().payload } returns dummyPayload
+
+        val dataParcel = mockk<AntMessageParcel>(relaxed = true)
+        every { dataParcel.messageId } returns 78
+        every { dataParcel.messageContent } returns ByteArray(9)
+
+        handler.onReceiveMessage(MessageFromAntType.BROADCAST_DATA, dataParcel)
+        assertTrue(radarDevice.getActiveTargets().isEmpty())
+        assertEquals(RadarConnectionState.DISCONNECTED, RadarStateRepository.getState().connectionState)
+
+        // Attempt CHANNEL_EVENT post-shutdown
+        mockkConstructor(ChannelEventMessage::class)
+        every { anyConstructed<ChannelEventMessage>().eventCode } returns EventCode.CHANNEL_CLOSED
+        val eventParcel = mockk<AntMessageParcel>(relaxed = true)
+        every { eventParcel.messageId } returns 64
+        every { eventParcel.messageContent } returns byteArrayOf(0, 1, 1)
+
+        handler.onReceiveMessage(MessageFromAntType.CHANNEL_EVENT, eventParcel)
+        // No new open() calls occurred
+        verify(exactly = 1) { mockChannel.open() }
+
+        // Attempt onChannelDeath post-shutdown
+        handler.onChannelDeath()
+        assertEquals(RadarConnectionState.DISCONNECTED, RadarStateRepository.getState().connectionState)
     }
 
     /**

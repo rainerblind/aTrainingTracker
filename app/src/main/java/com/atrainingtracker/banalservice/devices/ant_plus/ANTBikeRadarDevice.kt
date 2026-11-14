@@ -105,6 +105,7 @@ class ANTBikeRadarDevice(
         internal set
     internal var channelAcquisitionHandle: AntChannelHelper.AcquisitionCancellationHandle? = null
     private var isServiceBound = false
+    internal var isShutDown = false
 
     private val handler = Handler(Looper.getMainLooper())
     private val watchdogRunnable = Runnable {
@@ -160,25 +161,37 @@ class ANTBikeRadarDevice(
 
     private val channelEventHandler = object : IAntChannelEventHandler {
         override fun onReceiveMessage(messageType: MessageFromAntType, messageParcel: AntMessageParcel) {
+            if (isShutDown) return
             when (messageType) {
                 MessageFromAntType.BROADCAST_DATA,
                 MessageFromAntType.ACKNOWLEDGED_DATA -> {
-                    if (isSearching) {
-                        notifyStopSearching(true)
-                    }
                     val broadcastMsg = BroadcastDataMessage(messageParcel)
-                    decodeBroadcastData(broadcastMsg.payload)
+                    val payloadCopy = broadcastMsg.payload?.clone()
+                    handler.post {
+                        if (isShutDown) return@post
+                        if (isSearching) {
+                            notifyStopSearching(true)
+                        }
+                        decodeBroadcastData(payloadCopy)
+                    }
                 }
                 MessageFromAntType.CHANNEL_EVENT -> {
-                    if (isSearching) {
-                        try {
-                            val eventMsg = ChannelEventMessage(messageParcel)
-                            if (eventMsg.eventCode == EventCode.RX_SEARCH_TIMEOUT || eventMsg.eventCode == EventCode.CHANNEL_CLOSED) {
-                                antChannel?.open()
+                    try {
+                        val eventMsg = ChannelEventMessage(messageParcel)
+                        val code = eventMsg.eventCode
+                        if (code == EventCode.RX_SEARCH_TIMEOUT || code == EventCode.CHANNEL_CLOSED) {
+                            handler.post {
+                                if (!isShutDown) {
+                                    try {
+                                        antChannel?.open()
+                                    } catch (e: Exception) {
+                                        Log.w(TAG, "Error re-opening ANT radar channel on event $code", e)
+                                    }
+                                }
                             }
-                        } catch (e: Exception) {
-                            Log.w(TAG, "Error handling channel event during radar search", e)
                         }
+                    } catch (e: Exception) {
+                        Log.w(TAG, "Error handling channel event during radar search", e)
                     }
                 }
                 else -> {
@@ -189,7 +202,11 @@ class ANTBikeRadarDevice(
 
         override fun onChannelDeath() {
             if (DEBUG) Log.w(TAG, "ANT channel died")
-            onWatchdogTimeout()
+            handler.post {
+                if (!isShutDown) {
+                    onWatchdogTimeout()
+                }
+            }
         }
     }
 
@@ -219,6 +236,7 @@ class ANTBikeRadarDevice(
     }
 
     override fun startSearching() {
+        isShutDown = false
         notifyStartSearching()
         if (antChannel != null) {
             try {
@@ -489,7 +507,8 @@ class ANTBikeRadarDevice(
     fun getActiveTargets(): Map<Int, RadarTarget> = Collections.unmodifiableMap(activeTargets)
 
     override fun shutDown() {
-        handler.removeCallbacks(watchdogRunnable)
+        isShutDown = true
+        handler.removeCallbacksAndMessages(null)
         channelAcquisitionHandle?.cancel()
         channelAcquisitionHandle = null
         try {
@@ -514,6 +533,18 @@ class ANTBikeRadarDevice(
             isServiceBound = false
         }
         antService = null
+        activeTargets.clear()
+        val currentState = RadarStateRepository.getState()
+        val state = RadarState(
+            connectionState = RadarConnectionState.DISCONNECTED,
+            overallThreatLevel = ThreatLevel.NONE,
+            targets = emptyList(),
+            lastUpdateRealtimeMs = SystemClock.elapsedRealtime(),
+            lightMode = currentState.lightMode,
+            isLightControlSupported = currentState.isLightControlSupported,
+            audioSnoozeState = currentState.audioSnoozeState
+        )
+        RadarStateRepository.updateState(state)
         resetSensorsToClear()
         super.shutDown()
     }

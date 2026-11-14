@@ -4105,6 +4105,49 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 **Invariants**: Predefined Network Slot 1 isolation; backward compatibility with adapters lacking background scanning; zero disruption to concurrently open ANT+ channels.
 
+### REQ-CON-039: ANT+ Bike Radar Shutdown Cleanup, MainLooper Thread Serialization & Channel-Close Reconnect [Verified]
+- **Tests**: `TST-CON-039`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Implementation**: `ANTBikeRadarDevice.kt`
+- **Rationale**: When an ANT+ Bike Radar device is shut down, all active target maps, sensor values, and `RadarStateRepository` states must be cleanly reset to prevent ghost vehicles from lingering in downstream Cockpit overlays. Concurrently, ANT message ingestion runs on the IPC binder thread while starvation watchdog timers and shutdown routines run on the main thread; message processing must be serialized onto `Handler(Looper.getMainLooper())` to avoid race conditions. Furthermore, if tracking channel connection drops or the 25-second slave search timeout expires, the device must re-open the channel automatically to resume tracking (ATT-7576, Parent Epic ATT-1286, extending `REQ-CON-032`, `REQ-CON-037`, and `REQ-CON-038`):
+- **Description**:
+  1. *Clean Shutdown State & Repository Disconnect (`REQ-CON-039.1`)*:
+     - In `ANTBikeRadarDevice.shutDown()`, the device SHALL mark `isShutDown = true`, invoke `handler.removeCallbacksAndMessages(null)` to cancel pending runnables and watchdogs, clear `activeTargets`, and publish `RadarState` with `RadarConnectionState.DISCONNECTED`, `ThreatLevel.NONE`, and empty targets to `RadarStateRepository`.
+     - `resetSensorsToClear()` SHALL be invoked to clear all scalar sensor values.
+  2. *MainLooper Thread Serialization for ANT Message Ingestion (`REQ-CON-039.2`)*:
+     - In `ANTBikeRadarDevice.channelEventHandler`, incoming `BROADCAST_DATA` and `ACKNOWLEDGED_DATA` messages received on the ANT binder thread SHALL clone their payload (`payload.clone()`) and dispatch `decodeBroadcastData` onto `handler` (`Looper.getMainLooper()`).
+     - State mutations (`activeTargets`, `RadarStateRepository.updateState()`, `windowAggregator`, and `MySensor.newValue()`) SHALL execute exclusively on the main thread, eliminating thread concurrency races with `onWatchdogTimeout()` and `shutDown()`.
+     - In `channelEventHandler.onChannelDeath()`, `onWatchdogTimeout()` SHALL also be posted to `handler`.
+  3. *Tracking Mode Channel-Close Reconnect (`REQ-CON-039.3`)*:
+     - In `ANTBikeRadarDevice.channelEventHandler`, when `MessageFromAntType.CHANNEL_EVENT` reports `EventCode.RX_SEARCH_TIMEOUT` or `EventCode.CHANNEL_CLOSED`, if `!isShutDown` and `antChannel != null`, the event handler SHALL dispatch a channel re-open request (`antChannel.open()`) via `handler`.
+     - This re-open SHALL occur regardless of whether `isSearching` is true or false, allowing the radar channel to automatically recover and resume tracking after a 25-second slave search timeout or transient radio drop.
+  4. *Shutdown Guard on Late-Arriving Messages (`REQ-CON-039.4`)*:
+     - Once `shutDown()` has been invoked (`isShutDown == true`), all callbacks posted to `handler` and any late-arriving ANT messages SHALL be dropped immediately without modifying state, touching sensors, or re-opening `antChannel`.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: `REQ-CON-032.2` & `REQ-CON-038.2` targeting `ANTBikeRadarDevice.kt`.
+2. *Historical Origin & Commit Trace*: Sprints 2026-46.3 (`ATT-5084`) and 2026-46.6 (`ATT-7547`).
+3. *Root Reason for Existing Formulation*: Scoped channel re-open strictly to initial discovery search (`isSearching == true`) to avoid interference with tracking, overlooking that a 25s tracking loss also closes the slave channel.
+4. *Preservation of Core Invariants*: Predefined Network Slot 1 isolation, 3.5s starvation watchdog, and strict sensor decoupling remain intact.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* `ANTBikeRadarDevice.shutDown()` is called while targets are active,
+• *When* shutdown completes,
+• *Then* `activeTargets` is cleared and `RadarStateRepository` transitions to `DISCONNECTED` with empty targets.
+• *Given* concurrent ANT+ broadcast packets on the binder thread and watchdog timeout on main,
+• *When* messages are received,
+• *Then* payload bytes are cloned and decoded sequentially on `Handler(Looper.getMainLooper())` without race conditions.
+• *Given* an active tracking session (`isSearching == false`),
+• *When* `EVENT_RX_SEARCH_TIMEOUT` or `EVENT_CHANNEL_CLOSED` is received,
+• *Then* the channel event handler dispatches `antChannel.open()` to re-arm tracking.
+• *Given* `shutDown()` has executed,
+• *When* late ANT events arrive,
+• *Then* they are ignored without re-opening channels or emitting state changes.
+
+**Invariants**: Predefined Network Slot 1 isolation; thread safety via single-threaded MainLooper serialization; zero memory leaks or unhandled exceptions on shutdown.
+
 ### REQ-TRK-064: 1-Tap Radar Audio Snooze, Peloton-Mode Audio Sync & Smart Urban Alert Suppression [Verified]
 - **Tests**: `TST-TRK-064`
 - **Implementation**: `RadarSnoozeController.kt`, `RadarAlertManager.kt`, `RadarEdgeOverlay.kt`, `RadarLightQuickSwitchSheet.kt`, `RadarState.kt`, `RadarStateRepository.kt`, `BTLERadarDevice.java`, `TuningPreferencesDataStore.kt`, `RadarSettingsSection.kt`, `strings_radar.xml`
