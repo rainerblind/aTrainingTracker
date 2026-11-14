@@ -2130,6 +2130,13 @@
   • Verify mode transitions, workout auto-switch, and state updates dispatch to `ANTBikeLightDevice` identically to BLE.
   5. *Fail-Safe Isolation & Radar Telemetry Non-Interference Tests (`TST-CON-033.5`, `ANTBikeRadarDeviceTest.kt`)*:
   • Verify that companion light channel drop or timeout leaves ANT+ radar target tracking (Pages `0x30`/`0x31`) completely unaffected.
+  6. *Channel Event Filtering & Wildcard Safe Fallback Tests (`TST-CON-033.6`, `ANTBikeLightDeviceTest.kt`)*:
+  • Verify non-timeout channel events (e.g. `EventCode.TX`, `TRANSFER_RX_FAILED`, `TRANSFER_TX_COMPLETED`) do not trigger wildcard fallback.
+  • Verify that on `EventCode.RX_SEARCH_TIMEOUT` or `EventCode.CHANNEL_CLOSED`, the active channel is closed before `setChannelId(ChannelId(0, 35, 0))` and reopened.
+  7. *Group Ride Disambiguation & Verified Mode Byte Mapping Tests (`TST-CON-033.7`, `ANTBikeLightDeviceTest.kt`)*:
+  • Verify that during wildcard search, broadcast packets with non-matching `deviceNumber` or non-matching `manufacturerId` (Page `0x50`) are rejected and do not trigger `sendConnectCommand()`.
+  • Verify verified mode byte mapping: `OFF=0x00`, `SOLID=0x01`, `PELOTON=0x05`, `NIGHT_FLASH=0x06`, `DAY_FLASH=0x07`.
+  • Verify that `sendLightSettingsCommand()` does not synchronously mark mode applied; applied mode is updated upon `EventCode.TRANSFER_TX_COMPLETED` or Page `0x01` decode.
 
 ### TST-CON-034: **Environmental & Traffic-Adaptive Smart Tail Light Automation Test Suite** [Verified]
 - **Requirement(s)**: `REQ-CON-034` (`REQ-CON-034.1`..`REQ-CON-034.6`)

@@ -34,9 +34,11 @@ import com.dsi.ant.channel.AntChannelProvider
 import com.dsi.ant.channel.IAntChannelEventHandler
 import com.dsi.ant.message.ChannelId
 import com.dsi.ant.message.ChannelType
+import com.dsi.ant.message.EventCode
 import com.dsi.ant.message.LibConfig
 import com.dsi.ant.message.LowPrioritySearchTimeout
 import com.dsi.ant.message.fromant.BroadcastDataMessage
+import com.dsi.ant.message.fromant.ChannelEventMessage
 import com.dsi.ant.message.fromant.MessageFromAntType
 import com.dsi.ant.message.ipc.AntMessageParcel
 
@@ -55,7 +57,8 @@ import com.dsi.ant.message.ipc.AntMessageParcel
 class ANTBikeLightDevice(
     private val context: Context,
     val antDeviceNumber: Int,
-    private val controllerId: Int = DEFAULT_CONTROLLER_ID
+    private val controllerId: Int = DEFAULT_CONTROLLER_ID,
+    var expectedManufacturerId: Int? = null
 ) : RadarLightDeviceClient {
 
     companion object {
@@ -71,6 +74,7 @@ class ANTBikeLightDevice(
         const val PAGE_DISCONNECT_COMMAND = 0x20 // 32
         const val PAGE_CONNECT_COMMAND = 0x21 // 33
         const val PAGE_LIGHT_SETTINGS_COMMAND = 0x22 // 34
+        const val PAGE_MANUFACTURER_ID = 0x50 // 80
 
         const val LIGHT_TYPE_TAIL_LIGHT = 2
         const val ASSIGNED_LIGHT_INDEX = 1
@@ -79,11 +83,9 @@ class ANTBikeLightDevice(
         // ANT+ Bike Lights Mode Constants (Page 0x22 / Page 0x01)
         const val ANT_LIGHT_MODE_OFF = 0x00
         const val ANT_LIGHT_MODE_SOLID_HIGH = 0x01
-        const val ANT_LIGHT_MODE_SOLID_LOW = 0x02
-        const val ANT_LIGHT_MODE_FLASH_FAST = 0x03
-        const val ANT_LIGHT_MODE_FLASH_SLOW = 0x04
-        const val ANT_LIGHT_MODE_DAY_FLASH = 0x05
-        const val ANT_LIGHT_MODE_NIGHT_FLASH = 0x06
+        const val ANT_LIGHT_MODE_SOLID_LOW = 0x05 // Steady Low / Peloton
+        const val ANT_LIGHT_MODE_NIGHT_FLASH = 0x06 // Slow Flash
+        const val ANT_LIGHT_MODE_DAY_FLASH = 0x07 // Fast Flash
     }
 
     var antChannel: AntChannel? = null
@@ -104,23 +106,33 @@ class ANTBikeLightDevice(
     var pendingTargetMode: RadarLightMode? = null
         internal set
 
+    var pendingModeCommand: RadarLightMode? = null
+        internal set
+
+    var discoveredManufacturerId: Int? = null
+        internal set
+
     var sequenceNumber: Int = 0
         internal set
 
     var triedWildcardFallback: Boolean = false
         internal set
 
-    private val channelEventHandler = object : IAntChannelEventHandler {
+    internal val channelEventHandler = object : IAntChannelEventHandler {
         override fun onReceiveMessage(messageType: MessageFromAntType, messageParcel: AntMessageParcel) {
             when (messageType) {
                 MessageFromAntType.BROADCAST_DATA,
                 MessageFromAntType.ACKNOWLEDGED_DATA -> {
+                    val extInfo = AntChannelHelper.extractExtendedDeviceAndRssi(messageType, messageParcel)
                     val broadcastMessage = BroadcastDataMessage(messageParcel)
-                    decodeBroadcastData(broadcastMessage.payload)
+                    decodeBroadcastData(broadcastMessage.payload, extInfo?.deviceNumber)
                 }
                 MessageFromAntType.CHANNEL_EVENT -> {
-                    if (!isAssociated && antDeviceNumber != 0 && !triedWildcardFallback) {
-                        fallbackToWildcardSearch()
+                    try {
+                        val eventMsg = ChannelEventMessage(messageParcel)
+                        handleChannelEvent(eventMsg.eventCode)
+                    } catch (e: Exception) {
+                        Log.w(TAG, "Error handling ANT channel event for bike lights", e)
                     }
                 }
                 else -> {}
@@ -133,16 +145,67 @@ class ANTBikeLightDevice(
         }
     }
 
+    internal fun handleChannelEvent(eventCode: EventCode) {
+        when (eventCode) {
+            EventCode.RX_SEARCH_TIMEOUT,
+            EventCode.CHANNEL_CLOSED -> {
+                if (!isAssociated && antDeviceNumber != 0 && !triedWildcardFallback) {
+                    fallbackToWildcardSearch()
+                }
+            }
+            EventCode.TRANSFER_TX_COMPLETED -> {
+                onTransferTxCompleted()
+            }
+            EventCode.TRANSFER_TX_FAILED -> {
+                onTransferTxFailed()
+            }
+            else -> {}
+        }
+    }
+
+    internal fun onTransferTxCompleted() {
+        val pending = pendingModeCommand
+        if (pending != null) {
+            currentLightMode = pending
+            RadarLightController.updateHardwareLightMode(pending)
+            pendingModeCommand = null
+            if (DEBUG) Log.d(TAG, "Mode $pending confirmed via TRANSFER_TX_COMPLETED")
+        }
+    }
+
+    internal fun onTransferTxFailed() {
+        if (DEBUG) Log.w(TAG, "Mode command $pendingModeCommand failed via TRANSFER_TX_FAILED")
+        pendingModeCommand = null
+    }
+
     fun fallbackToWildcardSearch() {
         val channel = antChannel ?: return
         triedWildcardFallback = true
         try {
+            try {
+                channel.close()
+            } catch (e: Exception) {
+                // Channel may already be closed
+            }
             channel.setChannelId(ChannelId(0, BIKE_LIGHT_DEVICE_TYPE, 0))
             channel.open()
             if (DEBUG) Log.i(TAG, "ANT+ Bike Light fallback to wildcard (deviceNumber=0) search")
         } catch (e: Exception) {
             Log.w(TAG, "Failed wildcard fallback on ANT+ Bike Light channel", e)
         }
+    }
+
+    fun isDeviceAcceptable(senderDeviceNumber: Int?): Boolean {
+        if (!triedWildcardFallback) {
+            return true
+        }
+        if (antDeviceNumber != 0 && senderDeviceNumber != null && senderDeviceNumber != antDeviceNumber) {
+            return false
+        }
+        if (expectedManufacturerId != null && discoveredManufacturerId != null && discoveredManufacturerId != expectedManufacturerId) {
+            return false
+        }
+        return true
     }
 
     private val serviceConnection = object : ServiceConnection {
@@ -216,18 +279,38 @@ class ANTBikeLightDevice(
         }
     }
 
-    fun decodeBroadcastData(payload: ByteArray?) {
+    fun decodeBroadcastData(payload: ByteArray?, senderDeviceNumber: Int? = null) {
         if (payload == null || payload.size < 8) return
 
         val pageNumber = payload[0].toInt() and 0xFF
         when (pageNumber) {
             PAGE_MAIN_LIGHT_STATE -> {
+                if (!isDeviceAcceptable(senderDeviceNumber)) {
+                    if (DEBUG) Log.d(TAG, "Ignoring Page 0x01 from non-matching device (dev=$senderDeviceNumber, mfg=$discoveredManufacturerId)")
+                    return
+                }
                 parseMainLightState(payload)
             }
             PAGE_LIGHT_CAPABILITIES -> {
+                if (!isDeviceAcceptable(senderDeviceNumber)) {
+                    return
+                }
                 parseLightCapabilities(payload)
             }
+            PAGE_MANUFACTURER_ID -> {
+                parseManufacturerPage(payload, senderDeviceNumber)
+            }
         }
+    }
+
+    private fun parseManufacturerPage(payload: ByteArray, senderDeviceNumber: Int?) {
+        if (antDeviceNumber != 0 && senderDeviceNumber != null && senderDeviceNumber != antDeviceNumber) {
+            if (DEBUG) Log.d(TAG, "Ignoring Page 0x50 from unrelated device $senderDeviceNumber")
+            return
+        }
+        val manufacturerId = (payload[4].toInt() and 0xFF) or ((payload[5].toInt() and 0xFF) shl 8)
+        discoveredManufacturerId = manufacturerId
+        if (DEBUG) Log.d(TAG, "Discovered light manufacturer: $manufacturerId")
     }
 
     private fun parseMainLightState(payload: ByteArray) {
@@ -244,6 +327,10 @@ class ANTBikeLightDevice(
             ANT_LIGHT_MODE_DAY_FLASH -> RadarLightMode.DAY_FLASH
             ANT_LIGHT_MODE_NIGHT_FLASH -> RadarLightMode.NIGHT_FLASH
             else -> RadarLightMode.SOLID
+        }
+
+        if (pendingModeCommand == decodedMode) {
+            pendingModeCommand = null
         }
         currentLightMode = decodedMode
 
@@ -268,7 +355,9 @@ class ANTBikeLightDevice(
                 pendingTargetMode = null
                 sendLightSettingsCommand(pending)
             } else {
-                RadarLightController.updateHardwareLightMode(decodedMode)
+                if (pendingModeCommand == null) {
+                    RadarLightController.updateHardwareLightMode(decodedMode)
+                }
             }
         }
     }
@@ -311,8 +400,7 @@ class ANTBikeLightDevice(
 
         val sent = sendAcknowledgedData(payload)
         if (sent) {
-            currentLightMode = mode
-            RadarLightController.updateHardwareLightMode(mode)
+            pendingModeCommand = mode
         }
         return sent
     }
@@ -404,5 +492,8 @@ class ANTBikeLightDevice(
         isAssociated = false
         lightIndex = 0
         pendingTargetMode = null
+        pendingModeCommand = null
+        triedWildcardFallback = false
+        discoveredManufacturerId = null
     }
 }

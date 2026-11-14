@@ -116,6 +116,7 @@ class ANTBikeRadarDevice(
     internal var channelAcquisitionHandle: AntChannelHelper.AcquisitionCancellationHandle? = null
     private var isServiceBound = false
     internal var isShutDown = false
+    internal var detectedManufacturerId: Int? = null
 
     private val handler = Handler(Looper.getMainLooper())
     private val watchdogRunnable = Runnable {
@@ -281,7 +282,7 @@ class ANTBikeRadarDevice(
 
         if (companionLightDevice == null) {
             try {
-                val lightDev = ANTBikeLightDevice(mContext, antDeviceNumber)
+                val lightDev = ANTBikeLightDevice(mContext, antDeviceNumber, expectedManufacturerId = detectedManufacturerId)
                 companionLightDevice = lightDev
                 val provider = antService?.channelProvider
                 lightDev.start(provider)
@@ -559,10 +560,12 @@ class ANTBikeRadarDevice(
 
     private fun parseManufacturerPage(payload: ByteArray) {
         val manufacturerId = (payload[4].toInt() and 0xFF) or ((payload[5].toInt() and 0xFF) shl 8)
+        detectedManufacturerId = manufacturerId
         val manufacturerName = Manufacturer.getName(manufacturerId)
         if (manufacturerName != null) {
             mDevicesDatabaseManager.setManufacturerName(mDeviceId, manufacturerName)
         }
+        companionLightDevice?.expectedManufacturerId = manufacturerId
     }
 
     private fun parseProductInfoPage(payload: ByteArray) {
