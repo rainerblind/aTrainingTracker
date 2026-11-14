@@ -17,11 +17,7 @@ Living requirements use multi-line Markdown headings (`### REQ-XXX: Title [Statu
 | [Jubilee Milestones & App Reviews](requirements/req_aftermath_reviews.md) | Milestone workout auto-naming, jubilee achievements, Google Play in-app reviews, athlete feedback, and supporter tier promotions. | `REV` | 14 | 14 | 0 | 0 |
 | [Store Presence](requirements/req_store_presence.md) | Store presence, Google Play listings, screenshots, store metadata contract testing, and release governance. | `STP` | 10 | 10 | 0 | 0 |
 
-<<<<<<< HEAD
 **Total Living Requirements**: 1127 across 9 domain shards.
-=======
-**Total Living Requirements**: 1127 across 9 domain shards.
->>>>>>> 1cdc631f (ATT-6279: Stage 1-3 specification & architecture preparation for ATT Fused Altitude & Slope sensor)
 
 ---
 
