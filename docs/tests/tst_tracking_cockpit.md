@@ -2172,12 +2172,13 @@
   • Verify that in dark/night/tunnel environments or when pre-brake mode is night/peloton, brake mode is strictly clamped to `RadarLightMode.SOLID` (25 lm), never emitting `DAY_FLASH` (100 lm).
   5. *RearVue 820 Hardware Auto-Bypass Tests (`TST-CON-035.5`, `RadarLightControllerTest.kt`)*:
   • Verify that connecting a RearVue 820 device (`010-03180-00`/`010-03180-10`) automatically sets brake light auto-bypass to active.
+  • Verify that hardware auto-bypass remains active across workout stop and sequential workout start while the device remains connected, preventing IMU sensor listener registration (`ATT-7514`).
   6. *Settings & 9-Language Localization Parity Tests (`TST-CON-035.6`, `TranslationParityTest.kt`)*:
   • Verify `radarBrakeLightEnabled` DataStore persistence, default value, and UI toggle in `RadarSettingsSection.kt`.
   • Verify 100% key parity and format specifiers across all 9 locales in `strings_radar.xml`.
   7. *Lifecycle Management & Sensor Conservation Tests (`TST-CON-035.7`, `SmartBrakeLightDetectorTest.kt`, `RadarLightControllerTest.kt`)*:
   • Verify `SensorEventListener` registration with `SensorManager` on workout start/resume and clean unregistration on pause/stop.
-  • Verify that stopping a workout cancels pending brake holds and prevents post-workout light resuscitation.
+  • Verify that pausing a workout while braking reverts the light mode to `preBrakeMode` (including `OFF`), and that stopping a workout cancels pending brake holds and prevents post-workout light resuscitation (`ATT-7514`).
 
 ### TST-CON-036: **Resilient Mid-Workout BLE Peripheral Reconnection, Scan-Quota Throttling & Hardware Auto-Connect Verification Suite** [Verified]
 - **Requirement(s)**: `REQ-CON-036` (`REQ-CON-036.1`..`REQ-CON-036.4`)

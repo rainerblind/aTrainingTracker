@@ -559,4 +559,89 @@ class RadarLightControllerTest {
         assertFalse(result)
         assertFalse(RadarLightController.isLightControlAvailable.value)
     }
+
+    /**
+     * TST-CON-035.5: Sequential workouts hardware auto-bypass persistence.
+     * Stopping a workout must not wipe hardware auto-bypass; sequential workouts must not register IMU listeners.
+     */
+    @Test
+    fun testRadarLightController_sequentialWorkouts_hardwareBrakeAutoBypassPersists() {
+        val mockSensorManager = mockk<SensorManager>(relaxed = true)
+        val mockLinAcc = mockk<Sensor>(relaxed = true)
+        val mockGravity = mockk<Sensor>(relaxed = true)
+        every { mockSensorManager.getDefaultSensor(Sensor.TYPE_LINEAR_ACCELERATION) } returns mockLinAcc
+        every { mockSensorManager.getDefaultSensor(Sensor.TYPE_GRAVITY) } returns mockGravity
+        every { mockSensorManager.registerListener(any(), any<Sensor>(), any()) } returns true
+
+        val mockContext = mockk<Context>(relaxed = true)
+        every { mockContext.applicationContext } returns mockContext
+        every { mockContext.getSystemService(Context.SENSOR_SERVICE) } returns mockSensorManager
+
+        val mockDevice = mockk<BTLERadarDevice>(relaxed = true)
+        every { mockDevice.setLightMode(any()) } returns true
+
+        // Register Garmin RearVue 820 with hardware brake sensor
+        RadarLightController.registerRadarDevice(
+            mockDevice,
+            lightSupported = true,
+            isStvzo = false,
+            hasHardwareBrakeSensor = true
+        )
+        assertTrue(RadarLightController.hasHardwareBrakeSensor.value)
+        assertTrue(RadarLightController.isAutoBypassed.value)
+        assertTrue(SmartBrakeLightDetector.isAutoBypassed)
+
+        // Workout 1: Start
+        RadarLightController.onWorkoutStarted(mockContext, isCycling = true)
+        assertFalse("Workout 1 must not register IMU listeners due to auto-bypass", SmartBrakeLightDetector.isListening)
+
+        // Workout 1: Stop
+        RadarLightController.onWorkoutStopped(mockContext)
+        assertTrue("SmartBrakeLightDetector auto-bypass must persist after workout stop", SmartBrakeLightDetector.isAutoBypassed)
+        assertTrue("RadarLightController auto-bypass must persist after workout stop", RadarLightController.isAutoBypassed.value)
+
+        // Workout 2: Start sequential workout
+        RadarLightController.onWorkoutStarted(mockContext, isCycling = true)
+        assertTrue("Auto-bypass must still be active for sequential workout", SmartBrakeLightDetector.isAutoBypassed)
+        assertFalse("Sequential workout must NOT register IMU listeners when auto-bypassed", SmartBrakeLightDetector.isListening)
+        verify(exactly = 0) { mockSensorManager.registerListener(any(), any<Sensor>(), any()) }
+
+        RadarLightController.onWorkoutStopped(mockContext)
+    }
+
+    /**
+     * TST-CON-035.7: Stuck brake light on pause in RADAR_ONLY_LIGHT_OFF restored to OFF.
+     * Pausing workout while braking with preBrakeMode == OFF must restore RadarLightMode.OFF.
+     */
+    @Test
+    fun testRadarLightController_onWorkoutPaused_withLightOffPreBrake_restoresOffMode() {
+        val mockDevice = mockk<BTLERadarDevice>(relaxed = true)
+        every { mockDevice.setLightMode(any()) } returns true
+
+        val mockContext = mockk<Context>(relaxed = true)
+        RadarLightController.registerRadarDevice(mockDevice, lightSupported = true, isStvzo = false)
+
+        RadarLightController.onWorkoutStarted(mockContext, isCycling = true)
+        RadarLightController.setLightMode(RadarLightMode.OFF)
+        assertEquals(RadarLightMode.OFF, RadarLightController.currentMode.value)
+
+        // Hard braking triggers brake light while light was OFF
+        val triggered = RadarLightController.triggerBrakeLight(
+            active = true,
+            brakeMode = RadarLightMode.DAY_FLASH,
+            nowMs = 1000L
+        )
+        assertTrue(triggered)
+        assertTrue(RadarLightController.isBrakeActive)
+        assertEquals(RadarLightMode.DAY_FLASH, RadarLightController.currentMode.value)
+        verify { mockDevice.setLightMode(RadarLightMode.DAY_FLASH) }
+
+        // Cyclist stops at intersection; workout auto-pauses
+        RadarLightController.onWorkoutPaused()
+
+        assertFalse("Brake flag must be cleared on pause", RadarLightController.isBrakeActive)
+        assertFalse("IMU detector must stop listening on pause", SmartBrakeLightDetector.isListening)
+        assertEquals("Pre-brake mode OFF must be restored on pause", RadarLightMode.OFF, RadarLightController.currentMode.value)
+        verify { mockDevice.setLightMode(RadarLightMode.OFF) }
+    }
 }

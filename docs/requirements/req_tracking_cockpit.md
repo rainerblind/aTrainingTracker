@@ -3946,6 +3946,9 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 ### REQ-CON-035: Smartphone IMU/GPS Deceleration Brake-Light Trigger for BLE & ANT+ (0x23) Radar Tail Lights [Verified]
 - **Tests**: `TST-CON-035`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `SmartBrakeLightDetector.kt`, `RadarLightController.kt`, `RadarLightMode.kt`, `TuningPreferencesDataStore.kt`, `RadarSettingsSection.kt`, `strings_radar.xml`
 - **Rationale**: Cycling radar tail lights lacking internal brake sensors (e.g. Garmin Varia RTL515, RTL516, RTL510, Bryton Gardia R300L, Magene L508) cannot warn approaching traffic or group ride partners during emergency or sudden braking. Smartphone devices mounted on handlebars or carried during rides feature high-frequency IMU sensors (`Sensor.TYPE_LINEAR_ACCELERATION`, `Sensor.TYPE_GRAVITY`) and GPS/wheel-speed telemetry. The system provides an automated software brake-light trigger that fuses linear deceleration and attitude compensation, rejects road shocks/potholes, immediately overrides tail light rate-limiting with high-visibility illumination (`SOLID` or `DAY_FLASH`), preserves a 2.0s hold window, and automatically bypasses when radar hardware with onboard brake sensing (Garmin Varia RearVue 820) is detected (ATT-5121, Parent Epic ATT-1286, extending `REQ-CON-031`, `REQ-CON-033`, and `REQ-CON-034`):
 1. *Sensor Fusion Deceleration Trigger & Sustained Threshold (`REQ-CON-035.1`)*:
@@ -3961,12 +3964,13 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 • In strict compliance with `REQ-CON-031.2`, `REQ-CON-034.4`, and StVZO regulations, if connected hardware is StVZO-certified (`isStvzo == true`) OR the ambient environment is dark/night/tunnel (`SmartRadarLightEngine.isTunnelActive == true` or solar profile `DUSK_NIGHT`), the brake mode command SHALL be clamped to steady `RadarLightMode.SOLID` (25 lm), strictly prohibiting `DAY_FLASH` (100 lm) or any flashing mode at night to prevent blinding trailing motorists.
 5. *Hardware Brake Sensor Auto-Bypass (`REQ-CON-035.5`)*:
 • When the connected radar peripheral is identified as having an onboard hardware brake sensor—specifically Garmin Varia RearVue 820 (`010-03180-00` or `010-03180-10`) identified via BLE Model Number `0x2A24` or ANT+ Page `0x50` Product ID—software deceleration triggering SHALL be automatically bypassed (defaulted to disabled) to prevent redundant actuation, with manual override permitted in Settings.
+• Auto-bypass status SHALL persist across sequential workout sessions while the hardware device remains connected; stopping a workout SHALL reset transient motion state without resetting the hardware auto-bypass flag.
 6. *Settings Preference & 9-Language Localization Parity (`REQ-CON-035.6`)*:
 • `TuningPreferencesDataStore` SHALL persist preference `radarBrakeLightEnabled` (`Boolean`, default `true`, auto-bypassed for RearVue 820).
 • `RadarSettingsSection.kt` SHALL expose a dedicated toggle and status description with 100% localization parity across EN, DE, ES, FR, IT, JA, NL, PL, PT in `strings_radar.xml`.
 7. *Active Workout Lifecycle Management & Sensor Conservation (`REQ-CON-035.7`)*:
 • `SmartBrakeLightDetector` SHALL register Android `SensorEventListener` (`Sensor.TYPE_LINEAR_ACCELERATION` and `Sensor.TYPE_GRAVITY`) exclusively during active cycling tracking sessions when radar light control is connected and enabled.
-• Sensor listeners SHALL be immediately unregistered and any pending post-brake hold cancelled upon workout pause, stop, or service destruction to prevent battery drain and prevent tail light resuscitation.
+• Sensor listeners SHALL be immediately unregistered, any active brake light immediately reverted to `preBrakeMode` (including restoring `OFF` when `preBrakeMode == RadarLightMode.OFF`), and any pending post-brake hold cancelled upon workout pause, stop, or service destruction to prevent battery drain and prevent tail light resuscitation.
 
 **Acceptance Criteria (Given-When-Then)**:
 • *Given* Software Brake Light enabled and tail light in `PELOTON` (8 lm) mode at $25\text{ km/h}$,
@@ -3981,6 +3985,12 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 • *Given* a Garmin Varia RearVue 820 connected,
 • *When* device identification completes,
 • *Then* software brake triggering is automatically bypassed to defer to the peripheral's hardware brake sensor.
+• *Given* an active cycling workout with tail light in `OFF` mode (`RadarLightMode.OFF`),
+• *When* the cyclist decelerates hard triggering a brake light event and the workout pauses,
+• *Then* `RadarLightController` immediately reverts the tail light to `preBrakeMode` (`OFF`), clearing active brake state and cancelling pending holds.
+• *Given* a connected Garmin Varia RearVue 820 with hardware brake sensing (`isAutoBypassed == true`),
+• *When* a workout is stopped and a subsequent cycling workout is started without disconnecting the peripheral,
+• *Then* `SmartBrakeLightDetector.isAutoBypassed` remains `true` and smartphone IMU sensor listeners are NOT registered.
 
 **Invariants**: StVZO flashing prohibition compliance; road shock/pothole immunity; 2.0s hold window with exact pre-brake mode restoration; zero SQLite schema modifications; 100% 9-language translation parity.
 

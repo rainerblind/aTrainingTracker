@@ -299,23 +299,22 @@ object RadarLightController {
 
     /**
      * Workout pause hook: stops IMU and ambient light listening to conserve battery, clears pending brake holds,
-     * and reverts from active brake light to pre-brake mode.
+     * and reverts from active brake light to pre-brake mode (REQ-CON-035.7).
+     * Mode restoration executes outside synchronized(this) to prevent deadlock and re-entrancy.
      */
     @JvmStatic
     fun onWorkoutPaused() {
-        synchronized(this) {
+        val modeToRestore = synchronized(this) {
             isWorkoutActive = false
-            if (isBrakeActive) {
-                if (preBrakeMode != RadarLightMode.OFF) {
-                    setLightMode(preBrakeMode)
-                }
-                isBrakeActive = false
-            }
+            val mode = if (isBrakeActive) preBrakeMode else null
+            isBrakeActive = false
             brakeHoldUntilRealtimeMs = 0L
             try {
                 handler.removeCallbacks(brakeHoldRunnable)
             } catch (_: Exception) {}
+            mode
         }
+        modeToRestore?.let { setLightMode(it) }
         SmartBrakeLightDetector.stopListening()
         SmartRadarLightEngine.stopListening()
     }
@@ -383,7 +382,7 @@ object RadarLightController {
             } catch (_: Exception) {}
         }
         SmartBrakeLightDetector.stopListening()
-        SmartBrakeLightDetector.reset()
+        SmartBrakeLightDetector.resetMotionState()
         SmartRadarLightEngine.stop()
         val config = resolveActiveConfig(context)
         if (config.controlMode != RadarLightControlMode.MANUAL) {
