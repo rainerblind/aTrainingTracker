@@ -3960,6 +3960,38 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 **Invariants**: StVZO flashing prohibition compliance; road shock/pothole immunity; 2.0s hold window with exact pre-brake mode restoration; zero SQLite schema modifications; 100% 9-language translation parity.
 
+### REQ-CON-036: Resilient Mid-Workout BLE Peripheral Reconnection, Scan-Quota Throttling & Hardware Auto-Connect Architecture [Verified]
+- **Tests**: `TST-CON-036`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Implementation**: `MyBTLEDevice.java`, `DeviceManager.java`
+- **Rationale**: Mid-workout BLE disconnections caused by RF body-shadowing or momentary signal loss must not permanently abandon reconnection when a single search timeout expires. Peripheral drivers must persist retry chains with exponential backoff and hardware autoConnect while preserving battery bounding for never-seen offline sensors at startup (ATT-7755, Parent Epic ATT-5910, extending REQ-CON-020 and REQ-CON-023).
+- **Description**:
+1. *Continuous Mid-Session Reconnection Invariant (`REQ-CON-036.1`)*:
+• `MyBTLEDevice` SHALL track whether the device has successfully connected in the current session (`mHasConnectedInSession`) and/or whether workout tracking is active (`TrackingMode.TRACKING` / `PAUSED`).
+• While initial startup search for never-seen offline sensors MUST continue to terminate after `mSearchTimeoutRunnable` and bounded `mMyRemoteDeviceTries` (conserving battery), a mid-session disconnect of a previously connected peripheral (`!mIsShutDown`) SHALL NEVER abandon reconnection upon search timeout expiration. Upon timeout expiration without data, it SHALL reschedule `mReconnectRunnable` with exponential backoff (1s up to 16s) until reconnected or shut down.
+2. *Hardware-Offloaded `autoConnect = true` & Direct Connection Resilience (`REQ-CON-036.2`)*:
+• For reconnecting an already-known / session-connected BLE peripheral, `MyBTLEDevice` SHALL maintain a persistent controller-level GATT connection request (`connectGatt(mContext, /* autoConnect = */ true, mGattCallback, BluetoothDevice.TRANSPORT_LE)`) so the Bluetooth controller automatically establishes connection upon receiving the peripheral's advertisement without hammering active scanner windows.
+3. *Sliding-Window BLE Scan Quota Throttling & Safe Fallback (`REQ-CON-036.3`)*:
+• `MyBTLEDevice` SHALL enforce sliding-window scan rate throttling (maximum 4 scans per 30 seconds) to comply with Android framework BLE scanner limits (preventing `BluetoothLeScanner` unregistration errors).
+• When scan assistance is throttled, unavailable, or encounters `onScanFailed`, `MyBTLEDevice` SHALL fall back immediately to direct/auto `connectGatt` without stranding the state machine.
+4. *Session Re-Registration & State Machine Hygiene (`REQ-CON-036.4`)*:
+• Upon successful reconnection (`STATE_CONNECTED` -> `onServicesDiscovered`), `MyBTLEDevice` SHALL re-discover services, re-enable characteristic notifications (CCCD), re-register sensors with `MySensorManager`, and reset backoff delay to `INITIAL_RECONNECT_DELAY_MS`.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* an active workout tracking session with a connected BLE heart rate monitor (e.g. Polar H10),
+• *When* an RF body-shadowing disconnect occurs (LSTO `HCI reason = 8`) and no advertisement is received during the initial 5-second search window,
+• *Then* `MyBTLEDevice` does not abandon reconnection; it reschedules reconnection with exponential backoff, maintains auto-connect, and reconnects as soon as the peripheral reappears.
+• *Given* a paired sensor that is offline during app startup,
+• *When* the startup discovery search queue exhausts its configured retry attempts,
+• *Then* `DeviceManager` and `MyBTLEDevice` terminate searching cleanly to conserve battery.
+• *Given* multiple rapid reconnect cycles within 30 seconds,
+• *When* BLE scan start is requested,
+• *Then* scan quota throttling limits scanner invocations to <= 4 per 30 seconds and falls back to direct `connectGatt`.
+
+**Invariants**: Offline sensor startup battery bounding preserved; thread safety under `mGattLock` preserved; zero idle battery regression; 100% test pass rate.
+
 ### REQ-TRK-064: 1-Tap Radar Audio Snooze, Peloton-Mode Audio Sync & Smart Urban Alert Suppression [Verified]
 - **Tests**: `TST-TRK-064`
 - **Implementation**: `RadarSnoozeController.kt`, `RadarAlertManager.kt`, `RadarEdgeOverlay.kt`, `RadarLightQuickSwitchSheet.kt`, `RadarState.kt`, `RadarStateRepository.kt`, `BTLERadarDevice.java`, `TuningPreferencesDataStore.kt`, `RadarSettingsSection.kt`, `strings_radar.xml`

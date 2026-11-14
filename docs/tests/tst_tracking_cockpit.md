@@ -2176,6 +2176,23 @@
   • Verify `SensorEventListener` registration with `SensorManager` on workout start/resume and clean unregistration on pause/stop.
   • Verify that stopping a workout cancels pending brake holds and prevents post-workout light resuscitation.
 
+### TST-CON-036: **Resilient Mid-Workout BLE Peripheral Reconnection, Scan-Quota Throttling & Hardware Auto-Connect Verification Suite** [Verified]
+- **Requirement(s)**: `REQ-CON-036` (`REQ-CON-036.1`..`REQ-CON-036.4`)
+- **Component**: `MyBTLEDevice.java`, `DeviceManager.java`
+- **Jira**: `ATT-7755`
+- **Test Description**:
+  1. *Mid-Workout Disconnect & Consecutive Timeout Recovery (`TST-CON-036.1`, `BLEReconnectRobustnessTest.kt`)*:
+  • Verify that when a session-connected peripheral experiences an unexpected GATT disconnection (`STATE_DISCONNECTED`), `mReconnectRunnable` is scheduled with exponential backoff.
+  • Verify that upon `mSearchTimeoutRunnable` expiring with zero scan results, the device does NOT abandon search, but reschedules `mReconnectRunnable` with doubled backoff delay (capped at 16s) and maintains auto-connect.
+  • Verify that when peripheral advertisement or connection resume occurs, services are rediscovered and sensors re-registered cleanly.
+  2. *Startup Offline Sensor Search Bounding Preserved (`TST-CON-036.2`, `BLEReconnectRobustnessTest.kt`)*:
+  • Verify that for a never-connected device during initial app search, `mSearchTimeoutRunnable` expiring invokes `notifyStopSearching(false)` without rescheduling infinite reconnect timers, preserving `DeviceManager`'s `mMyRemoteDeviceTries` limit and battery conservation.
+  3. *Sliding-Window Scan Quota Throttling & Fallback (`TST-CON-036.3`, `BLEReconnectRobustnessTest.kt`)*:
+  • Verify that scan rate throttling restricts BLE scanner starts to <= 4 per 30-second window.
+  • Verify that when scan quota is exhausted or `onScanFailed` occurs, connection falls back immediately to direct `connectGatt` without stranding the device in `SEARCHING`.
+  4. *Tier 1 Targeted Package Regression (`TST-CON-036.4`)*:
+  • Verify 100% test pass rate across `com.atrainingtracker.banalservice.devices.bluetooth_le.*` and `com.atrainingtracker.trainingtracker.build.*`.
+
 ### TST-TRK-064: **1-Tap Radar Audio Snooze, Peloton Sync & Urban Suppression Test Suite** [Verified]
 - **Requirement(s)**: `REQ-TRK-064` (`REQ-TRK-064.1`..`REQ-TRK-064.7`)
 - **Component**: `RadarSnoozeController.kt`, `RadarAlertManager.kt`, `RadarEdgeOverlay.kt`, `RadarLightQuickSwitchSheet.kt`, `RadarState.kt`, `RadarStateRepository.kt`, `BTLERadarDevice.java`, `TuningPreferencesDataStore.kt`, `RadarSettingsSection.kt`, `strings_radar.xml`

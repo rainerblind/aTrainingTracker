@@ -106,6 +106,7 @@ class MyBTLEDeviceLifecycleTest {
 
     @Before
     fun setUp() {
+        MyBTLEDevice.clearScanTimestampsForTesting()
         postedRunnables.clear()
         delayedRunnables.clear()
         removedRunnables.clear()
