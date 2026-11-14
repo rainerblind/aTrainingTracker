@@ -98,8 +98,8 @@ class TuningConfigTest {
         assertEquals(ClimbScoringFormula.FIETS, TuningPreferencesDefaults.DEFAULT_CLIMB_SCORING_FORMULA)
         assertEquals(true, config.showMorningCheckOnStartScreen)
         assertEquals(true, TuningPreferencesDefaults.DEFAULT_SHOW_MORNING_CHECK_ON_START_SCREEN)
-        assertEquals(11, config.morningCheckCutoffHour)
-        assertEquals(11, TuningPreferencesDefaults.DEFAULT_MORNING_CHECK_CUTOFF_HOUR)
+        assertEquals(8, config.morningCheckCutoffHour)
+        assertEquals(8, TuningPreferencesDefaults.DEFAULT_MORNING_CHECK_CUTOFF_HOUR)
     }
 
     @Test
@@ -135,7 +135,7 @@ class TuningConfigTest {
         assertEquals(0.2f, TuningPreferencesDefaults.MIN_SLOPE_SPEED_MPS, 0.001f)
         assertEquals(2.0f, TuningPreferencesDefaults.MAX_SLOPE_SPEED_MPS, 0.001f)
         assertEquals(6, TuningPreferencesDefaults.MIN_MORNING_CHECK_CUTOFF_HOUR)
-        assertEquals(15, TuningPreferencesDefaults.MAX_MORNING_CHECK_CUTOFF_HOUR)
+        assertEquals(23, TuningPreferencesDefaults.MAX_MORNING_CHECK_CUTOFF_HOUR)
     }
 
     @Test
@@ -208,11 +208,11 @@ class TuningConfigTest {
         )
         assertEquals(6, clampedCutoffLow)
 
-        val rawCutoffHigh = 18
+        val rawCutoffHigh = 25
         val clampedCutoffHigh = rawCutoffHigh.coerceIn(
             TuningPreferencesDefaults.MIN_MORNING_CHECK_CUTOFF_HOUR,
             TuningPreferencesDefaults.MAX_MORNING_CHECK_CUTOFF_HOUR
         )
-        assertEquals(15, clampedCutoffHigh)
+        assertEquals(23, clampedCutoffHigh)
     }
 }

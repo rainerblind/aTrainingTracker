@@ -339,15 +339,20 @@ fun PhysiologyModelsSection(
         if (showMorningCheckOnStartScreen) {
             TuningSliderItem(
                 title = stringResource(R.string.tuning_morning_check_cutoff_hour_title),
-                valueText = "${morningCheckCutoffHour}:00",
+                valueText = String.format(Locale.US, "%02d:00", morningCheckCutoffHour),
                 helperText = stringResource(R.string.tuning_morning_check_cutoff_hour_desc, morningCheckCutoffHour),
-                defaultText = "${TuningPreferencesDefaults.DEFAULT_MORNING_CHECK_CUTOFF_HOUR}:00",
+                defaultText = String.format(Locale.US, "%02d:00", TuningPreferencesDefaults.DEFAULT_MORNING_CHECK_CUTOFF_HOUR),
                 value = morningCheckCutoffHour.toFloat(),
                 onValueChange = { hourFloat ->
-                    morningCheckCutoffHourCallback(kotlin.math.round(hourFloat).toInt().coerceIn(6, 15))
+                    morningCheckCutoffHourCallback(
+                        kotlin.math.round(hourFloat).toInt().coerceIn(
+                            TuningPreferencesDefaults.MIN_MORNING_CHECK_CUTOFF_HOUR,
+                            TuningPreferencesDefaults.MAX_MORNING_CHECK_CUTOFF_HOUR
+                        )
+                    )
                 },
-                valueRange = 6.0f..15.0f,
-                steps = 8
+                valueRange = TuningPreferencesDefaults.MIN_MORNING_CHECK_CUTOFF_HOUR.toFloat()..TuningPreferencesDefaults.MAX_MORNING_CHECK_CUTOFF_HOUR.toFloat(),
+                steps = TuningPreferencesDefaults.MAX_MORNING_CHECK_CUTOFF_HOUR - TuningPreferencesDefaults.MIN_MORNING_CHECK_CUTOFF_HOUR - 1
             )
         }
 

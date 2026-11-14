@@ -8463,8 +8463,8 @@
 - **Jira**: `ATT-7532`
 - **Test Description**:
   1. *Tuning Preferences DataStore & Config Verification (`TST-UI-525.1`, `TuningConfigTest.kt`)*:
-     - Verify default values: `showMorningCheckOnStartScreen = true`, `morningCheckCutoffHour = 11`.
-     - Verify mutation and clamping of cutoff hour (`6..15`).
+     - Verify default values: `showMorningCheckOnStartScreen = true`, `morningCheckCutoffHour = 8` (`ATT-7740`).
+     - Verify mutation and clamping of cutoff hour (`6..23`) (`ATT-7740`).
   2. *Paired HRM Sensor SQLite Query Verification (`TST-UI-525.2`, `DevicesDatabaseManagerTest.kt`)*:
      - Verify `hasPairedHeartRateDevices()` returns false when table is empty or contains only non-HRM paired devices (speed, cadence, radar).
      - Verify `hasPairedHeartRateDevices()` returns true when at least one `DeviceType.HRM` device with `PAIRED > 0` is present.

@@ -502,6 +502,54 @@ class ControlTrackingViewModelTest {
         job.cancel()
     }
 
+    @Test
+    fun isMorningHrvCheckVisible_defaultCutoffHour8() = runTest {
+        val trackingModeLiveData = MutableLiveData(TrackingMode.READY)
+        every { mockBanalRepo.trackingMode } returns trackingModeLiveData
+
+        // Default config: morningCheckCutoffHour = 8
+        val configFlow = MutableStateFlow(TuningConfig())
+        val mockTuning = mockk<TuningPreferencesDataStore>(relaxed = true)
+        every { mockTuning.tuningConfigFlow } returns configFlow
+
+        val mockHrv = mockk<HrvReadinessRepository>(relaxed = true)
+        coEvery { mockHrv.hasCompletedMorningCheck(any()) } returns false
+
+        allDevicesFlow.value = listOf(
+            createDeviceUiData(1L, DeviceType.HRM, "Polar H10")
+        )
+
+        // At 07:30 AM (before default cutoff 08:00) -> visible
+        val viewModelBefore = ControlTrackingViewModel(
+            application = application,
+            tuningPreferencesDataStore = mockTuning,
+            hrvReadinessRepository = mockHrv,
+            timeProvider = { java.time.LocalTime.of(7, 30) }
+        )
+
+        val valuesBefore = mutableListOf<Boolean>()
+        val jobBefore = launch(testDispatcher) {
+            viewModelBefore.isMorningHrvCheckVisible.collect { valuesBefore.add(it) }
+        }
+        assertTrue("Expected button visible before default cutoff 08:00 (at 07:30 AM)", valuesBefore.last())
+        jobBefore.cancel()
+
+        // At 08:00 AM (at default cutoff 08:00) -> hidden
+        val viewModelAtCutoff = ControlTrackingViewModel(
+            application = application,
+            tuningPreferencesDataStore = mockTuning,
+            hrvReadinessRepository = mockHrv,
+            timeProvider = { java.time.LocalTime.of(8, 0) }
+        )
+
+        val valuesAtCutoff = mutableListOf<Boolean>()
+        val jobAtCutoff = launch(testDispatcher) {
+            viewModelAtCutoff.isMorningHrvCheckVisible.collect { valuesAtCutoff.add(it) }
+        }
+        assertFalse("Expected button hidden at default cutoff 08:00 AM", valuesAtCutoff.last())
+        jobAtCutoff.cancel()
+    }
+
     private fun createDeviceUiData(id: Long, deviceType: DeviceType, name: String): DeviceUiData {
         return DeviceUiData(
             id = id,

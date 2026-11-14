@@ -17125,8 +17125,8 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 - **Rationale**: Following `REQ-UI-513`, athletes performing waking morning HRV check-ins require an immediate 1-tap shortcut on the Start screen (`ControlTrackingScreen`) without navigating nested menus. To prevent cockpit clutter during active tracking and avoid irrelevant prompts for athletes without heart rate sensors, after today's reading has been taken, or past morning hours, the launcher must be strictly conditional and user-configurable.
 - **Description**:
   1. *Tuning Preferences Configuration (`REQ-UI-525.1`)*:
-     - `TuningPreferencesDataStore.kt` and `TuningConfig.kt` SHALL provide `showMorningCheckOnStartScreen: Boolean` (default `true`) and `morningCheckCutoffHour: Int` (default `11`, range 6..15).
-     - These preferences SHALL be surfaced under the Physiology Models accordion section (`PhysiologyModelsSection.kt`) in `AdvancedTuningScreen.kt` and `AdvancedTuningDialog.kt` with localized titles and summaries.
+     - `TuningPreferencesDataStore.kt` and `TuningConfig.kt` SHALL provide `showMorningCheckOnStartScreen: Boolean` (default `true`) and `morningCheckCutoffHour: Int` (default `8` [08:00 AM], range 6..23) (`ATT-7740`).
+     - These preferences SHALL be surfaced under the Physiology Models accordion section (`PhysiologyModelsSection.kt`) in `AdvancedTuningScreen.kt` and `AdvancedTuningDialog.kt` with localized titles and summaries, formatted as 2-digit zero-padded hours (`%02d:00`).
   2. *Paired Heart Rate Sensor Check (`REQ-UI-525.2`)*:
      - `DevicesDatabaseManager.java` SHALL provide `hasPairedHeartRateDevices(): Boolean` which queries SQLite `DEVICES` table for `PAIRED > 0 AND DEVICE_TYPE = 'HRM'`.
      - `DeviceDataRepository.kt` SHALL expose `hasPairedHeartRateDevices(): Boolean` forwarding this query.
@@ -17147,10 +17147,10 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
      - All newly introduced string keys (`hrv_morning_check_start_button`, `pref_show_morning_check_title`, `pref_show_morning_check_summary`, `pref_morning_check_cutoff_title`, `pref_morning_check_cutoff_summary`) SHALL be localized across all 9 supported Android resource directories (`values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`).
 
 **Acceptance Criteria (Given-When-Then)**:
-• *Given* an athlete with at least one paired HRM sensor opens `ControlTrackingScreen` in `TrackingMode.READY` before 11:00 AM on a day with no morning check recorded,
+• *Given* an athlete with at least one paired HRM sensor opens `ControlTrackingScreen` in `TrackingMode.READY` before cutoff hour (default 08:00 AM) on a day with no morning check recorded,
 • *When* the screen renders,
 • *Then* the "Morgendlicher Check" CTA button is visible in `bottomContent` and tapping it navigates to `NavRoutes.MORNING_HRV`.
-• *Given* the athlete completes and saves today's morning check or the local time passes 11:00 AM or `showMorningCheckOnStartScreen` is disabled,
+• *Given* the athlete completes and saves today's morning check or the local time passes cutoff hour (default 08:00 AM) or `showMorningCheckOnStartScreen` is disabled,
 • *When* `ControlTrackingScreen` renders or resumes,
 • *Then* the CTA button is hidden.
 • *Given* the athlete starts a workout (`TrackingMode.RECORDING`),
@@ -17159,6 +17159,12 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 • *Given* any of the 9 supported locales,
 • *When* viewing the button or tuning settings,
 • *Then* all titles and summaries are localized with 100% parity and no placeholder text.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: `REQ-UI-525` (`REQ-UI-525.1`), targeting `TuningPreferencesDataStore.kt`, `TuningConfig.kt`, `PhysiologyModelsSection.kt`.
+2. *Historical Origin & Commit Trace*: Introduced in `ATT-7532` (commit `647ef674d06`), refined in `ATT-7740` to set default cutoff hour to 08:00 (8:00 AM) and extend selectable upper bound to 23:00.
+3. *Root Reason for Existing Formulation*: 11:00 AM was an initial conservative morning assumption; 15:00 was an arbitrary ceiling. 08:00 AM matches standard waking readiness protocols, while extending the upper bound to 23 allows full afternoon/evening flexibility for shift workers.
+4. *Preservation of Core Invariants*: Reactive gating logic (`hour < morningCheckCutoffHour`), paired HRM requirement, and daily single-completion auto-hide invariant remain strictly preserved. Zero DB schema impact.
 
 **Invariants**: Zero database migrations on `devices.db` or `hrv_readiness.db`; zero modifications to existing morning check scoring, baseline corridors, or workout tracking lifecycle; zero background alarms or wake locks.
 
