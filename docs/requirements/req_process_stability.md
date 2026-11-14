@@ -4856,3 +4856,36 @@ The workflow SHALL mandate that:
   • *When* validated against the severity rubric,
   • *Then* it is assigned at least `Major` or `Critical` severity.
 - **Invariants**: Pure Python standard library; zero Android application runtime footprint; Rule 3 human-only gate preserved.
+
+
+---
+
+### REQ-PRO-093: Normative Governance Rules Restructuring and Living Document Shard Size Capping [Verified]
+- **Tests**: `TST-PRO-093`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Implementation**: `.agents/rules/aspice_governance.md`, `tools/hoechstmass/.agents/rules/aspice_governance.md`, `docs/engineering/rule_history_archive.md`, `tools/shard_living_docs.py`, `tools/test_shard_living_docs.py`
+- **Rationale**: Under ASPICE PA 3.1 and evaluation finding F8, process governance rules must be concise, normative (who/what/when), and free of embedded ticket quotes, retrospective stories, and superseded contradictions, while preserving a permanent historical cross-reference archive. Furthermore, living documentation shards must have an enforced maximum line limit and automated tooling checks to flag and partition oversized shards.
+- **Description**:
+  1. *Normative Rule Consolidation (`REQ-PRO-093.1`)*: `.agents/rules/aspice_governance.md` and `tools/hoechstmass/.agents/rules/aspice_governance.md` SHALL define the 9 Core Rules strictly as concise normative requirements with stable sub-rule IDs (`Rule 1.1`–`Rule 9.5`), removing all inline ticket quotes and historical anecdotes.
+  2. *Rule History & Rationale Archive (`REQ-PRO-093.2`)*: `docs/engineering/rule_history_archive.md` SHALL maintain the complete historical mapping of Rules 1–84+, capturing historical origin commits, retrospective rationales, and exact quotes.
+  3. *Shard Size Limit & Tooling Check (`REQ-PRO-093.3`)*: `tools/shard_living_docs.py` SHALL define a default maximum shard size (`DEFAULT_MAX_SHARD_LINES = 4000`), provide a `--check-size` inspection CLI, and flag any requirement shard that exceeds the configured limit.
+  4. *Oversized Shard Partitioning Facility (`REQ-PRO-093.4`)*: `tools/shard_living_docs.py` SHALL provide automated partitioning facilities (`split_oversized_shard`) to split oversized requirement shards into compliant sub-shards while strictly preserving 100% ID uniqueness, master index table parity, and bidirectional traceability.
+  5. *Governance Contract Invariance (`REQ-PRO-093.5`)*: All existing governance contract tests (`AspiceSweAuditContractTest.kt`, `HoechstmassCoreFrameworkContractTest.kt`, `test_agent_emulator.py`, `test_verify_requirement_governance.py`) SHALL pass with 100% success.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Net-new requirement `REQ-PRO-093`. Targets `.agents/rules/aspice_governance.md`, `docs/engineering/rule_history_archive.md`, and `tools/shard_living_docs.py`.
+  2. *Historical Origin & Commit Trace*: Sprint 2026-46.6 via ticket `ATT-7565` under Epic `ATT-232` (Finding F8).
+  3. *Root Reason for Existing Formulation*: Rules accumulated inline rationale and quotes over 46 sprints; sharding was originally 9 domains without per-shard line limits.
+  4. *Preservation of Core Invariants*: Human Decision Gate, two-tier device policy, 100% contract test pass rate, and zero runtime regression preserved.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* `.agents/rules/aspice_governance.md`,
+  • *When* inspected,
+  • *Then* each rule consists of concise normative clauses with stable IDs, and retrospective quotes/history live in `docs/engineering/rule_history_archive.md`.
+  • *Given* a requirement shard exceeding the maximum line limit,
+  • *When* `tools/shard_living_docs.py --check-size` is executed,
+  • *Then* the tool flags the oversized shard with line counts.
+  • *Given* the automated test suite,
+  • *When* `python3 tools/test_shard_living_docs.py` and `python3 tools/verify_requirement_governance.py` are executed,
+  • *Then* all tests pass with exit code 0.
+- **Invariants**: Zero changes to production runtime logic; existing master table parity intact; Human Decision Gate inviolable.
