@@ -167,6 +167,11 @@ public class BTLERadarDevice extends MyBTLEDevice implements RadarLightDeviceCli
     }
 
     @Override
+    public boolean isReceivingData() {
+        return RadarStateRepository.getState(RadarSource.BLE).getConnectionState() == RadarConnectionState.CONNECTED;
+    }
+
+    @Override
     public void startSearching() {
         super.startSearching();
         RadarState currentState = RadarStateRepository.getState();
@@ -1205,5 +1210,15 @@ public class BTLERadarDevice extends MyBTLEDevice implements RadarLightDeviceCli
     @androidx.annotation.VisibleForTesting
     public void setLastLightModeCommandTimeMsForTesting(long timeMs) {
         mLastLightModeCommandTimeMs = timeMs;
+    }
+
+    @androidx.annotation.VisibleForTesting
+    public void setStateForTesting(State state) {
+        mState = state;
+    }
+
+    @androidx.annotation.VisibleForTesting
+    public State getStateForTesting() {
+        return mState;
     }
 }

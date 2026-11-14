@@ -198,6 +198,69 @@ class RadarStateRepositoryTest {
     }
 
     /**
+     * TST-CON-041.5: Active CONNECTED stream not preempted by CONNECTING stream.
+     * Given ANT_PLUS is CONNECTED and actively publishing targets,
+     * When BLE begins CONNECTING (searching / connecting state with 0 targets),
+     * Then ANT_PLUS remains the active source and active road targets are preserved (REQ-CON-041.2).
+     * When BLE reaches CONNECTED, BLE then preempts ANT_PLUS.
+     */
+    @Test
+    fun testConnectedSourceNotPreemptedByConnectingSource() {
+        val antTarget = RadarTarget(targetId = 1, rangeMeters = 45f, approachSpeedMps = 15f, threatLevel = ThreatLevel.APPROACHING)
+        val antConnectedState = RadarState(
+            connectionState = RadarConnectionState.CONNECTED,
+            overallThreatLevel = ThreatLevel.APPROACHING,
+            targets = listOf(antTarget),
+            lastUpdateRealtimeMs = 1000L,
+            source = RadarSource.ANT_PLUS
+        )
+        RadarStateRepository.updateState(antConnectedState)
+
+        assertEquals(RadarSource.ANT_PLUS, RadarStateRepository.getActiveSource())
+        assertEquals(RadarConnectionState.CONNECTED, RadarStateRepository.getState().connectionState)
+        assertEquals(1, RadarStateRepository.getState().targets.size)
+        assertEquals(45f, RadarStateRepository.getState().targets.first().rangeMeters, 0.01f)
+
+        // BLE begins scanning / connecting (priority 3, but connectionState is CONNECTING)
+        val bleConnectingState = RadarState(
+            connectionState = RadarConnectionState.CONNECTING,
+            overallThreatLevel = ThreatLevel.NONE,
+            targets = emptyList(),
+            lastUpdateRealtimeMs = 1100L,
+            source = RadarSource.BLE
+        )
+        RadarStateRepository.updateState(bleConnectingState)
+
+        // ANT_PLUS must remain the active source with its active targets!
+        assertEquals(RadarSource.ANT_PLUS, RadarStateRepository.getActiveSource())
+        assertEquals(RadarConnectionState.CONNECTED, RadarStateRepository.getState().connectionState)
+        assertEquals(RadarSource.ANT_PLUS, RadarStateRepository.getState().source)
+        assertEquals(1, RadarStateRepository.getState().targets.size)
+        assertEquals(45f, RadarStateRepository.getState().targets.first().rangeMeters, 0.01f)
+
+        // Isolated BLE state shows CONNECTING
+        assertEquals(RadarConnectionState.CONNECTING, RadarStateRepository.getState(RadarSource.BLE).connectionState)
+
+        // Now BLE connects successfully
+        val bleTarget = RadarTarget(targetId = 2, rangeMeters = 25f, approachSpeedMps = 20f, threatLevel = ThreatLevel.FAST_APPROACHING)
+        val bleConnectedState = RadarState(
+            connectionState = RadarConnectionState.CONNECTED,
+            overallThreatLevel = ThreatLevel.FAST_APPROACHING,
+            targets = listOf(bleTarget),
+            lastUpdateRealtimeMs = 1500L,
+            source = RadarSource.BLE
+        )
+        RadarStateRepository.updateState(bleConnectedState)
+
+        // BLE now preempts ANT_PLUS because it reached CONNECTED
+        assertEquals(RadarSource.BLE, RadarStateRepository.getActiveSource())
+        assertEquals(RadarConnectionState.CONNECTED, RadarStateRepository.getState().connectionState)
+        assertEquals(RadarSource.BLE, RadarStateRepository.getState().source)
+        assertEquals(1, RadarStateRepository.getState().targets.size)
+        assertEquals(25f, RadarStateRepository.getState().targets.first().rangeMeters, 0.01f)
+    }
+
+    /**
      * TST-CON-041.4: Reset Invariant.
      * Given repository with multiple source states,
      * When reset() is invoked,

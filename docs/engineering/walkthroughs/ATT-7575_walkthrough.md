@@ -77,3 +77,37 @@ Net-new requirement(s) detected: REQ-CON-041. Bypassing archaeology check cleanl
 2. **Predefined Network Slot 1 Isolation**: Maintained Predefined Network Slot 1 isolation for ANT+ bike radar channel.
 3. **Thread Safety**: Guaranteed atomic state arbitration via synchronized lock in `RadarStateRepository`.
 4. **Living Documentation Synchronized**: Status of `REQ-CON-041` and `TST-CON-041` updated to `Verified`.
+
+---
+
+## 6. Stage 6 Healing & Bounce 1/3 Verification
+
+### Defects Addressed
+1. **Two-Level Arbitration Hierarchy (`RadarStateRepository.kt`)**: Previously, priority arbitration grouped `CONNECTED || CONNECTING` together, causing a higher-priority scanning/connecting stream (`BLE`, priority 3) to immediately preempt an active streaming link (`ANT_PLUS`, priority 2) with 0 targets. Fixed by establishing strict two-level arbitration: any `CONNECTED` stream strictly takes precedence over any `CONNECTING` stream.
+2. **Sibling Parity for `isReceivingData()` (`BTLERadarDevice.java`)**: Overrode `isReceivingData()` to query `RadarStateRepository.getState(RadarSource.BLE).getConnectionState() == RadarConnectionState.CONNECTED`. Previously inherited from `MyBTLEDevice` returning `true` on GATT connection even when packet starvation watchdog fired `DISCONNECTED_ERROR`.
+3. **Comprehensive Arbitration & Watchdog Tests**:
+   - `RadarStateRepositoryTest.testConnectedSourceNotPreemptedByConnectingSource`: Confirmed active `CONNECTED` `ANT_PLUS` stream with targets is not preempted when `BLE` begins `CONNECTING`, and only switches when `BLE` reaches `CONNECTED`.
+   - `BTLERadarDeviceTest.testIsReceivingData_returnsFalseOnWatchdogTimeoutEvenIfGattConnected`: Confirmed `isReceivingData()` returns `false` on watchdog timeout even while underlying GATT state remains `CONNECTED_WITH_SERVICE`.
+
+### Automated Test Evidence Post-Healing
+Executed via `python3 tools/parallel_sprint_lock.py --timeout 1800 ./gradlew testDebugUnitTest --tests "com.atrainingtracker.banalservice.devices.radar.RadarStateRepositoryTest" --tests "com.atrainingtracker.banalservice.devices.ant_plus.ANTBikeRadarDeviceTest" --tests "com.atrainingtracker.banalservice.devices.bluetooth_le.BTLERadarDeviceTest" --tests "com.atrainingtracker.banalservice.devices.radar.RadarTrafficSimulatorTest" --max-workers=2`:
+```text
+BUILD SUCCESSFUL in 5m 5s
+33 actionable tasks: 18 executed, 10 from cache, 5 up-to-date
+79 tests completed, 0 failed (100% PASS rate)
+- ANTBikeRadarDeviceTest: 19 tests, 0 failures
+- RadarTrafficSimulatorTest: 11 tests, 0 failures
+- RadarStateRepositoryTest: 5 tests, 0 failures (+1 net-new test)
+- BTLERadarDeviceTest: 44 tests, 0 failures (+1 net-new test)
+```
+
+Requirement governance verified via `python3 tools/verify_requirement_governance.py`:
+```text
+PASS: Living documentation master tables match all 9 domain shards with 100% parity.
+PASS: All REQ and TST heading IDs are unique across living documentation shards.
+PASS: All cited REQ and TST references resolve to authentic headings.
+PASS: Zero ungrounded [Verified] requirements detected.
+PASS: 100% REQ-TST bidirectional traceability verified.
+PASS: Zero unmounted Composable islands detected in git diff.
+PASS: Repository encapsulation verified (zero leaky DatabaseManager/Cursor members).
+```

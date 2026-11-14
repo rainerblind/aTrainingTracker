@@ -224,6 +224,44 @@ class BTLERadarDeviceTest {
         assertTrue(state.targets.isEmpty())
     }
 
+    /**
+     * TST-CON-041.6: BTLERadarDevice isReceivingData Source Isolation & Watchdog Test.
+     * Verifies isReceivingData() queries only RadarSource.BLE state and returns false on watchdog timeout
+     * even if underlying GATT state is CONNECTED_WITH_SERVICE.
+     */
+    @Test
+    fun testIsReceivingData_returnsFalseOnWatchdogTimeoutEvenIfGattConnected() {
+        // Initially disconnected
+        assertFalse("isReceivingData must be false initially", radarDevice.isReceivingData)
+
+        // Radar connects via BLE
+        val mockGatt = mockk<BluetoothGatt>(relaxed = true)
+        val mockRadarService = mockk<BluetoothGattService>(relaxed = true)
+        every { mockGatt.getService(BluetoothConstants.UUID_SERVICE_RADAR) } returns mockRadarService
+
+        radarDevice.configureServices(mockGatt)
+        radarDevice.setStateForTesting(MyBTLEDevice.State.CONNECTED_WITH_SERVICE)
+
+        assertEquals(MyBTLEDevice.State.CONNECTED_WITH_SERVICE, radarDevice.stateForTesting)
+        assertTrue("isReceivingData must be true when BLE radar is connected", radarDevice.isReceivingData)
+
+        // Watchdog fires due to packet starvation (e.g. 3.5s timeout)
+        radarDevice.watchdogRunnableForTesting.run()
+
+        // Even though underlying GATT state is CONNECTED_WITH_SERVICE, isReceivingData must return false!
+        assertEquals(MyBTLEDevice.State.CONNECTED_WITH_SERVICE, radarDevice.stateForTesting)
+        assertFalse("isReceivingData must return false on DISCONNECTED_ERROR after watchdog timeout", radarDevice.isReceivingData)
+
+        // Verify ANT+ connection does not falsely make BTLERadarDevice.isReceivingData return true
+        RadarStateRepository.updateState(
+            com.atrainingtracker.banalservice.devices.radar.RadarState(
+                connectionState = RadarConnectionState.CONNECTED,
+                source = com.atrainingtracker.banalservice.devices.radar.RadarSource.ANT_PLUS
+            )
+        )
+        assertFalse("isReceivingData must remain false for BLE when only ANT+ is CONNECTED", radarDevice.isReceivingData)
+    }
+
     @Test
     fun testParseV2ThreatPacket_demuxesNonThreatPackets() {
         // Null or empty payload

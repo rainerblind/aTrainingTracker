@@ -45,14 +45,18 @@ object RadarStateRepository {
         synchronized(lock) {
             sourceStates[newState.source] = newState
 
-            // Arbitrate active stream: highest priority source that is CONNECTED or CONNECTING
-            val bestConnected = sourceStates.values
-                .filter { it.connectionState == RadarConnectionState.CONNECTED || it.connectionState == RadarConnectionState.CONNECTING }
+            // Two-level arbitration: CONNECTED sources strictly take precedence over CONNECTING sources (REQ-CON-041.2).
+            // An active CONNECTED stream (e.g. ANT+) must never be preempted by a CONNECTING source (e.g. BLE scanning).
+            val bestActive = sourceStates.values
+                .filter { it.connectionState == RadarConnectionState.CONNECTED }
                 .maxByOrNull { it.source.priority }
+                ?: sourceStates.values
+                    .filter { it.connectionState == RadarConnectionState.CONNECTING }
+                    .maxByOrNull { it.source.priority }
 
-            if (bestConnected != null) {
-                activeSource = bestConnected.source
-                _radarState.value = bestConnected
+            if (bestActive != null) {
+                activeSource = bestActive.source
+                _radarState.value = bestActive
             } else {
                 // If no sources are connected, update from the incoming source if it matches active or if active was NONE
                 if (activeSource == RadarSource.NONE || activeSource == newState.source) {
