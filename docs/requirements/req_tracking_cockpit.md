@@ -5465,3 +5465,61 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 **Invariants**: Disabled by default (`false`); raw device-attributed columns 100% byte-for-byte preserved; single-transaction SQLite update; zero external math libraries; 9-language localization parity; 100% clean-room test pass rate.
 
+### REQ-TRK-077: Indoor GPS Suppression, External Speed Sensor Coupling & IMU Rest-Variance Stationary Pinning [Verified] (ATT-47: Indoor GPS suppression & external sensor / IMU rest-variance coupling for stationary coordinate pinning)
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-TRK-077`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Implementation**: `SpeedAndLocationDevice.java`, `SpeedAndLocationDevice_GPS.java`, `SpeedAndLocationDevice_GoogleFused.java`, `MySensorManager.java`, `TuningConfig.kt`, `SettingsDataStoreJavaHelper.kt`
+- **Rationale**: While GNSS Doppler and spatial displacement pinning (REQ-TRK-048, REQ-TRK-056, REQ-TRK-074) suppress stationary jitter during outdoor riding at open sky, indoor trainer workouts and café/rest stops suffer from severe multipath coordinate jumps (> 1.5 * accuracy) that break stationary pinning, recording tangled spiderweb polylines and accumulating spurious GPS distance. The system SHALL support indoor GPS suppression, couple stationary pinning to connected external wheel/footpod sensors reporting 0.0 m/s, and gate unpinning on low-power accelerometer rest variance (ATT-47, refining REQ-TRK-048, REQ-TRK-056, and REQ-TRK-074):
+- **Description**:
+  1. *Indoor Workout GPS Drift & Distance Suppression (`REQ-TRK-077.1`)*:
+     - `SpeedAndLocationDevice` SHALL maintain an `mIsIndoorMode` state (default `false`, with thread-safe `setIndoorMode(boolean)` and `isIndoorMode()`).
+     - When `mIsIndoorMode == true`:
+       - Upon receiving the first valid location fix, `SpeedAndLocationDevice` SHALL initialize `mStationaryAnchor = location` and `mIsStationaryPinned = true`.
+       - While `mIsIndoorMode == true`, `SpeedAndLocationDevice` SHALL keep `mIsStationaryPinned = true` unconditionally: unpinning checks SHALL evaluate `shouldUnpin = false` regardless of coordinate displacement or GPS speed.
+       - GPS distance increments SHALL be suppressed (`delta_distance = 0.0`), preventing distance creep in `mDistanceSensor` and `mLapDistanceSensor`.
+       - GPS speed SHALL be clamped to `0.0 m/s` (`mSpeed = 0.0`), ensuring paired external sensors (smart trainer, speed sensor, footpod) retain uninterrupted priority for speed and distance in `MySensorManager`.
+       - Published coordinates SHALL remain pinned to `mStationaryAnchor`, eliminating indoor spiderweb polylines.
+  2. *External Wheel / Footpod Zero-Speed Pinning Coupling (`REQ-TRK-077.2`)*:
+     - In `SpeedAndLocationDevice.onNewLocation()`, before evaluating coordinate displacement unpinning, the device SHALL inspect connected speed sensors via `mMySensorManager`.
+     - When an active external speed sensor (`BIKE_SPEED`, `BIKE_SPEED_AND_CADENCE`, `RUN_SPEED`, or `BIKE_POWER`) is connected, has updated within the last $5000\text{ ms}$ (`System.currentTimeMillis() - sensor.getLastUpdateTimestamp() <= 5000L`), and reports zero velocity (`sensor.getValue() <= SPEED_ZERO_THRESHOLD` where threshold $= 0.1\text{ m/s}$):
+       - Standstill is established by physical wheel/footpod measurement.
+       - Unpinning SHALL be blocked (`shouldUnpin = false`), and `isCandidateStationary` SHALL evaluate as `true`.
+       - The device SHALL remain pinned to `mStationaryAnchor` even if GNSS multipath displacement exceeds `escapeRadius` ($> 1.5 \times \text{accuracy}$).
+       - Distance creep SHALL be suppressed (`delta_distance = 0.0`).
+       - As soon as the external sensor reports physical motion ($v > 0.1\text{ m/s}$) or updates become stale ($> 5000\text{ ms}$), external standstill locking SHALL disengage immediately.
+  3. *Low-Power Accelerometer Rest-Variance Gating (`REQ-TRK-077.3`)*:
+     - When a hardware accelerometer (`Sensor.TYPE_ACCELEROMETER`) is available, `SpeedAndLocationDevice` SHALL monitor 3D acceleration samples $(a_x, a_y, a_z)$ at low power (`SensorManager.SENSOR_DELAY_UI`).
+     - The device SHALL compute the Euclidean acceleration norm $||a|| = \sqrt{a_x^2 + a_y^2 + a_z^2}$ and maintain a rolling window of samples over $1.5\text{--}2.0\text{ s}$.
+     - When the rolling variance $\sigma^2 = \frac{1}{N}\sum (||a||_i - \mu)^2$ is below the static rest floor ($\sigma^2 \le 0.05\text{ (m/s}^2)^2$):
+       - The phone/bike is confirmed physically motionless (e.g. resting on table or stationary against a wall).
+       - Stationary pinning SHALL be reinforced: unpinning on single-fix GNSS multipath spikes or noisy Doppler velocity SHALL be blocked (`shouldUnpin = false`).
+       - As soon as physical motion variance resumes ($\sigma^2 > 0.05\text{ (m/s}^2)^2$), the rest gate SHALL release within $\le 1.0\text{ s}$, restoring standard dynamic escape bounds.
+  4. *Mock & Sensorless Fallback Invariance (`REQ-TRK-077.4`)*:
+     - When no external wheel/footpod sensor is connected and hardware accelerometer is absent (e.g. mock GPS replay via `tools/replay_workout.py`, headless emulators, or standard outdoor GPS-only tracking):
+       - `SpeedAndLocationDevice` SHALL operate with neutral fallback, preserving 100% mathematical and behavioral equivalence with baseline `REQ-TRK-048`, `REQ-TRK-056`, and `REQ-TRK-074`.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-TRK-077`, refining `REQ-TRK-048` (*Stationary GPS Jitter Suppression*, `ATT-4850`), `REQ-TRK-056` (*Google Fused Doppler Velocity Plausibility & Movement Pinning Prevention*, `ATT-6256`), and `REQ-TRK-074` (*Entry Hysteresis & Sub-Second Duplicate Filtering*, `ATT-6682`). Targets `SpeedAndLocationDevice.java`, `SpeedAndLocationDevice_GPS.java`, and `SpeedAndLocationDevice_GoogleFused.java`.
+2. *Historical Origin & Commit Trace*: Sprint 2026-44.2 (`ATT-4850`), Sprint 2026-45.13 (`ATT-6256`), and Sprint 2026-46.2 (`ATT-6682`).
+3. *Root Reason for Existing Formulation*: Prior requirements assumed GPS signals alone were sufficient to detect standstill and motion. In indoor environments (trainers, gyms) and café stops under awnings, multipath reflection produces non-zero Doppler and 10–30 m coordinate jumps that defeat GPS-only deadbands.
+4. *Preservation of Core Invariants*: Standalone outdoor GPS tracking, 3-tick entry hysteresis, start-line pinning (`mPrevLocation == null`), Doppler zero preservation, and teleportation spike limit $\le 70\text{ m/s}$ (`REQ-TRK-041.1`) remain 100% intact.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* `SpeedAndLocationDevice` with indoor mode active (`mIsIndoorMode == true`),
+• *When* indoor GNSS multipath fixes arrive with random coordinate jumps $> 1.5 \times \text{accuracy}$,
+• *Then* `SpeedAndLocationDevice` remains pinned to `mStationaryAnchor`, clamps GPS speed to $0.0\text{ m/s}$, and accumulates zero distance creep (`delta_distance = 0.0`).
+• *Given* an outdoor ride with a connected ANT+/BLE wheel speed sensor reporting $0.0\text{ m/s}$ at a café stop,
+• *When* indoor GNSS multipath jumps beyond $\text{escapeRadius}$ ($> 1.5 \times \text{accuracy}$),
+• *Then* `SpeedAndLocationDevice` remains pinned to `mStationaryAnchor` without accumulating false GPS coordinates or distance.
+• *Given* the phone/bike resting completely motionless with accelerometer rolling variance $\sigma^2 \le 0.05\text{ (m/s}^2)^2$,
+• *When* degraded GNSS reports noisy non-zero Doppler jumps,
+• *Then* stationary pinning is maintained and releases within $\le 1.0\text{ s}$ once physical movement resumes.
+• *Given* standalone GPS tracking without external sensors or accelerometer hardware (e.g. mock replay via `tools/replay_workout.py`),
+• *When* location fixes arrive,
+• *Then* existing GNSS/Doppler unpinning and hysteresis behavior works identically with zero regressions.
+
+**Invariants**: Zero GPS distance creep during indoor trainer workouts; zero spiderweb polyline drift at rest stops; 100% backward compatibility for mock GPS replays and standalone GPS tracking; 100% test pass rate across `banalservice.devices.*`.
+

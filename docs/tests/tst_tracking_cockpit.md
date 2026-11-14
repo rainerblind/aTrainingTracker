@@ -2730,3 +2730,29 @@
 
   6. *Targeted Unit & Regression Suite Execution (`TST-FIL-017.6`)*:
      • `python3 tools/parallel_sprint_lock.py -- ./gradlew testDebugUnitTest --tests "com.atrainingtracker.banalservice.odometry.*" --tests "com.atrainingtracker.trainingtracker.database.*"` asserting 100% pass rate.
+
+
+### TST-TRK-077: Indoor GPS Suppression, External Speed Sensor Coupling & IMU Rest-Variance Stationary Pinning Verification
+- **Target Release**: `V5.0.0`
+- **Requirement(s)**: `REQ-TRK-077` (`REQ-TRK-077.1`..`REQ-TRK-077.4`)
+- **Component**: `SpeedAndLocationDevice.java`, `SpeedAndLocationDeviceStationaryJitterTest.kt`, `SpeedAndLocationDeviceIndoorAndRestCouplingTest.kt`
+- **Test Type**: Unit & Contract
+- **Verification Method**: Unit
+- **Procedure**:
+  1. *Indoor Mode GPS Suppression & Distance Freezing Test (`TST-TRK-077.1`, `SpeedAndLocationDeviceIndoorAndRestCouplingTest.kt`)*:
+     • Enable indoor mode (`device.setIndoorMode(true)`).
+     • Deliver initial location fix; verify `isStationaryPinned == true` and anchor is set.
+     • Deliver series of erratic multipath location fixes ($30\text{ m}$ jump, $v = 5\text{ m/s}$, accuracy $= 10\text{ m}$); assert `isStationaryPinned == true`, `getDistanceSensor().getValue() == 0.0`, and published coordinates remain clamped to anchor.
+  2. *External Wheel/Footpod Standstill Coupling Test (`TST-TRK-077.2`, `SpeedAndLocationDeviceIndoorAndRestCouplingTest.kt`)*:
+     • Configure mock `MySensorManager` with active external speed sensor (`BIKE_SPEED`) reporting $0.0\text{ m/s}$ with timestamp $t_{\text{now}}$.
+     • Deliver location fixes with coordinate jumps exceeding `escapeRadius` ($> 1.5 \times \text{accuracy}$); assert `shouldUnpin` is blocked, `isStationaryPinned == true`, and distance does not advance.
+     • Update external sensor to $5.0\text{ m/s}$; assert unpinning engages immediately upon motion.
+     • Stale sensor test: advance time by $6000\text{ ms}$ without external updates; assert stale sensor does not block normal GPS movement unpinning.
+  3. *Accelerometer Rest-Variance Gating & Rapid Motion Release Test (`TST-TRK-077.3`, `SpeedAndLocationDeviceIndoorAndRestCouplingTest.kt`)*:
+     • Feed accelerometer samples with static noise floor ($\sigma^2 \le 0.05\text{ (m/s}^2)^2$); assert `isAccelerometerAtRest() == true`.
+     • Deliver noisy Doppler location fixes; assert stationary pinning holds.
+     • Feed dynamic movement accelerometer samples ($\sigma^2 \ge 0.5\text{ (m/s}^2)^2$); assert `isAccelerometerAtRest() == false` and device unpins within $\le 1.0\text{ s}$.
+  4. *Mock Replay & Baseline Compatibility Test (`TST-TRK-077.4`, `SpeedAndLocationDeviceStationaryJitterTest.kt`)*:
+     • Execute existing `SpeedAndLocationDeviceStationaryJitterTest` suite with external sensors and accelerometer absent; assert 100% pass rate with zero regression in 3-tick hysteresis, deadband gating, and start-line pinning.
+  5. *Targeted Unit & Regression Suite Execution (`TST-TRK-077.5`)*:
+     • `./gradlew testDebugUnitTest --tests "com.atrainingtracker.banalservice.devices.SpeedAndLocationDevice*"` asserting 100% pass rate.
