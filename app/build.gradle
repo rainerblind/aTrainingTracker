@@ -162,11 +162,47 @@ kover {
             }
         }
         verify {
-            rule {
-                minBound(35)
+            rule("Global Coverage Floor") {
+                minBound(40)
                 bound {
                     coverageUnits = kotlinx.kover.gradle.plugin.dsl.CoverageUnit.BRANCH
-                    minValue = 30
+                    minValue = 35
+                }
+            }
+            rule("Critical Tracking") {
+                filters {
+                    includes {
+                        packages('com.atrainingtracker.trainingtracker.tracker')
+                    }
+                }
+                minBound(55)
+                bound {
+                    coverageUnits = kotlinx.kover.gradle.plugin.dsl.CoverageUnit.BRANCH
+                    minValue = 45
+                }
+            }
+            rule("Critical Filters") {
+                filters {
+                    includes {
+                        packages('com.atrainingtracker.banalservice.filters')
+                    }
+                }
+                minBound(70)
+                bound {
+                    coverageUnits = kotlinx.kover.gradle.plugin.dsl.CoverageUnit.BRANCH
+                    minValue = 50
+                }
+            }
+            rule("Critical Sensors & Protocols") {
+                filters {
+                    includes {
+                        packages('com.atrainingtracker.banalservice.devices', 'com.atrainingtracker.banalservice.sensor')
+                    }
+                }
+                minBound(60)
+                bound {
+                    coverageUnits = kotlinx.kover.gradle.plugin.dsl.CoverageUnit.BRANCH
+                    minValue = 50
                 }
             }
         }

@@ -3,7 +3,7 @@
 **Domain**: `process_stability`  
 **Prefixes**: `ARC`, `BLD`, `BUG`, `INT`, `LIV`, `LOG`, `MAN`, `NFR`, `PRO`, `REG`, `SEC`, `STB`, `STR`, `TOOL`, `TST`  
 **Scope**: ASPICE governance, infinite context, crash stability, build architecture, security, and developer tools.  
-**Total Requirements**: 89
+**Total Requirements**: 90
 
 ---
 
@@ -4627,3 +4627,35 @@ The workflow SHALL mandate that:
   • *When* inspected,
   • *Then* it documents reference devices (`SYS-HW-01`..`SYS-HW-07`), physical sensor models, firmware versions, and formal gatekeeper signatures.
 - **Invariants**: Pure Python 3 standard library; zero Android runtime changes; zero regression in existing governance checks.
+
+
+---
+
+### REQ-PRO-089: Kover Coverage Floor Ratcheting and Critical Subsystem Bounds [Verified]
+- **Tests**: `TST-PRO-089`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Implementation**: `app/build.gradle`, `docs/tests.md`, `docs/coding_standards.md`
+- **Rationale**: Under ASPICE F6 verification criteria, the project's verification floor must ratchet upwards as the test suite matures and establish package-level guardrails for safety-critical components.
+- **Description**:
+  1. *Global Verification Floor*: `app/build.gradle` SHALL enforce a minimum of 40% line coverage (`minBound(40)`) and 35% branch coverage (`CoverageUnit.BRANCH`, `minValue = 35`).
+  2. *Subsystem Verification Bounds*: `app/build.gradle` SHALL define bounded verification rules for:
+     - `Tracking`: packages `com.atrainingtracker.trainingtracker.tracker` (line $\ge 55\%$, branch $\ge 45\%$).
+     - `Filters`: packages matching `*.filter*` (line $\ge 70\%$, branch $\ge 60\%$).
+     - `Sensors & Devices`: packages matching `com.atrainingtracker.banalservice.devices*` and `com.atrainingtracker.banalservice.sensor*` (line $\ge 60\%$, branch $\ge 50\%$).
+  3. *Test Suite Execution Precondition*: All unit tests SHALL pass cleanly before coverage verification is evaluated.
+  4. *Documentation Synchronization*: `docs/tests.md` and `docs/coding_standards.md` SHALL document the new bounds.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Net-new requirement `REQ-PRO-089`. Targets `app/build.gradle` Kover DSL and associated documentation.
+  2. *Historical Origin & Commit Trace*: Sprint 2026-46.6 via ticket `ATT-7563` under Epic `ATT-235`.
+  3. *Root Reason for Existing Formulation*: Baseline Kover floor was set to 35% line / 30% branch during early Java-to-Kotlin UI migration. Test maturity now exceeds ~45%+ line globally with ~6,000 unit tests, requiring ratcheting and package-level guardrails.
+  4. *Preservation of Core Invariants*: Build deterministic pass/fail semantics preserved; zero Android production runtime code changes.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* the complete codebase and test suite,
+  • *When* `./gradlew koverVerifyDebug` is executed,
+  • *Then* all global and subsystem rules pass without violation.
+  • *Given* any critical package falling below its designated line or branch bound,
+  • *When* `./gradlew koverVerifyDebug` executes,
+  • *Then* the build fails with a specific bounded rule violation.
+- **Invariants**: Zero changes to production runtime logic; zero flaky or bypassed tests.

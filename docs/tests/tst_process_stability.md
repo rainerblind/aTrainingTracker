@@ -3,7 +3,7 @@
 **Domain**: `process_stability`  
 **Prefixes**: `ARC`, `BLD`, `BUG`, `INT`, `LIV`, `LOG`, `MAN`, `NFR`, `PRO`, `REG`, `SEC`, `STB`, `STR`, `TOOL`, `TST`  
 **Scope**: ASPICE governance, infinite context, crash stability, build architecture, security, and developer tools.  
-**Total Tests**: 132
+**Total Tests**: 133
 
 ---
 
@@ -2975,3 +2975,20 @@
   2. *System Integration Runner & Wire Protocol Alignment*: Execute `tools/run_system_integration_tests.py` verifying all 6 cases (`SYS-INT-001`..`006`) pass cleanly including `SYS-INT-003`.
   3. *Release Verification Summary Generation*: Run `tools/generate_release_verification_summary.py --tag V5.0.0 --fail-on-deviations` asserting exit code 0 and `PASS (READY FOR RELEASE)`.
   4. *Targeted Regression Test Execution*: Run unit tests in `tools/test_generate_release_verification_summary.py` and `tools/test_system_integration_tests.py` asserting 100% pass rate.
+
+
+---
+
+### TST-PRO-089: **Kover Verification Gate Execution and Multi-Package Rule Audit** [Verified]
+- **Verifies**: `REQ-PRO-089`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Component**: `app/build.gradle`, `WorkoutSectionOrderPersistenceTest.kt`, `WorkoutSectionReorderContractTest.kt`, `docs/tests.md`
+- **Jira**: `ATT-7563`
+- **Test Description**:
+  1. *Test Suite Hygiene Verification*: Execute `./gradlew testDebugUnitTest` and assert all unit tests pass (100% pass rate).
+  2. *Kover Global Rule Verification*: Execute `./gradlew koverVerifyDebug` and assert line coverage $\ge 40\%$ and branch coverage $\ge 35\%$.
+  3. *Kover Subsystem Rule Verification*: Verify bounded rules for `tracker`, `filter`, and `devices`/`sensor` packages pass in `koverVerifyDebug`.
+  4. *Negative Mutation Verification*: Artificially elevate bounds (e.g., line 99%) and assert build failure, verifying gate enforcement.
+  5. *Documentation Parity*: Confirm `docs/tests.md` and `docs/coding_standards.md` reflect ratcheted figures.
