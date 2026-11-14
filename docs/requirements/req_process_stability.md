@@ -4800,3 +4800,59 @@ The workflow SHALL mandate that:
 - **Invariants**: Zero Android runtime code changes; pure Python 3 standard library; Rule 3 human-only gate preserved.
 
 
+
+### REQ-PRO-092: Process Metrics Credibility, Bug Severity Rubric, and Downstream Gate Defect Accounting [Verified]
+- **Tests**: `TST-PRO-092`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Implementation**: `tools/sprint_metrics.py`, `tools/jira_util.py`, `tools/hoechstmass/`, `docs/project_governance.md`, `.agents/skills/sprint-planner/SKILL.md`
+- **Rationale**: ASPICE evaluation finding F2 identified that quantitative process metrics recorded in `process_metrics.jsonl` lacked credibility: 100% first-time pass rates across Gates 1–5 contradicted 22 Stage 6 bounces, 100% of bugs were deflated to "Minor" because Jira fetch omitted labels and description, gate subtasks without verdicts inflated FTPR via fallback, ADF comment bodies crashed parsers, downstream escapes were unmodeled, and plausibility warnings were absent. Correcting metric ingestion, parsing ADF structures, segregating unverified subtasks, attributing downstream escapes, enforcing a bug severity rubric, and auditing gate spot-checks satisfies ASPICE PA 4.1, PA 4.2, and SUP.9 (ATT-7559, Parent Epic ATT-232, refining and extending `REQ-PRO-058`, `REQ-PRO-059`, and `REQ-PRO-063`):
+- **Description**:
+  1. *Jira API Metric Field Ingestion (`REQ-PRO-092.1`)*:
+     • `collect_sprint_metrics_for_id` in `tools/jira_util.py` (and Höchstmaß mirror) SHALL include `labels` and `description` in the queried issue fields (`summary,status,issuetype,priority,subtasks,comment,labels,description,{STORY_POINTS_FIELD}`).
+     • Bug severity detection SHALL prioritize explicit severity labels (`severity-critical`, `severity-major`, `severity-minor`, `severity-cosmetic`), followed by regex extraction of `**Severity**: <Level>` or `Severity: <Level>` from issue descriptions, before falling back to priority mappings.
+  2. *Robust Atlassian Document Format (ADF) Comment Body Parsing (`REQ-PRO-092.2`)*:
+     • `parse_verdicts_from_comments` and `parse_final_review_agent_verdicts_from_comments` SHALL support both string bodies and nested Jira Cloud v3 ADF dictionary structures without raising `AttributeError` or `TypeError`.
+     • Text nodes in ADF document structures SHALL be extracted recursively prior to regex verdict matching.
+  3. *Segregation of Unverified Gate Subtasks (`REQ-PRO-092.3`)*:
+     • Gate subtasks (Gates 1–5) in status `Erledigt` (or done/closed) that lack an explicit, parsable reviewer verdict comment (`PASS` / `REVISION`) SHALL NOT be counted as `passed_first_time`.
+     • Such subtasks SHALL be categorized as `unverified` and tracked separately in gate metrics (`gate_data[g]["unverified"]`).
+  4. *Downstream Defect Escape Accounting across Swiss Cheese Layers (`REQ-PRO-092.4`)*:
+     • Swiss Cheese barrier escape metrics ($p_g$) SHALL account for defects identified downstream at Gate 6 (Stage 6 Cold Review bounces and escalations).
+     • Stage 6 bounces SHALL be attributed to the responsible upstream gate layers (Gates 3, 4, 5) when computing composite escape rates, ensuring $p_g > 0$ when defects escape to Stage 6.
+  5. *Metric Plausibility Warning Thresholds (`REQ-PRO-092.5`)*:
+     • When generating or recording sprint metrics, `sprint_metrics.py` SHALL evaluate a plausibility check: if the first-time pass rate across $\ge 20$ evaluated gate subtasks is 100.0% without a single revision or bounce, a prominent plausibility warning (`PA 4.1 Plausibility Warning: Potential Gate Discrimination Blind Spot`) SHALL be recorded in metrics metadata and markdown outputs.
+  6. *Bug Severity Rubric Governance & Spot-Check Auditing (`REQ-PRO-092.6`)*:
+     • `docs/project_governance.md` SHALL document the authoritative 4-tier Bug Severity Rubric:
+       - **Critical**: Startup crash, tracking loop termination, data corruption/loss, ANR blocking core app workflow; release-blocking.
+       - **Major**: Crash/ANR in non-critical screens, primary sensor disconnection recovery failure, severe battery drain, functional impairment with workaround.
+       - **Minor**: Non-crashing functional defect, transient UI glitch, localized string formatting issue.
+       - **Cosmetic**: Visual styling quirk, margin/alignment flaw, icon tint mismatch.
+     • `create_issue` in `tools/jira_util.py` SHALL enforce that bugs originating from crashes, ANRs, or Crashlytics traces are assigned at least `Major` or `Critical` severity unless explicitly exempted with rationale.
+     • Sprint QA audits and retrospective checklists SHALL record a periodic spot-check of gate verdicts with discrepancy rates documented.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Net-new requirement `REQ-PRO-092` (`REQ-PRO-092.1`–`REQ-PRO-092.6`), extending `REQ-PRO-058` (*Stage 6 Final Review*), `REQ-PRO-059` (*PA 4.1 Quantitative Process Metrics*), and `REQ-PRO-063` (*Problem Resolution Management*). Targets `tools/sprint_metrics.py`, `tools/jira_util.py`, `tools/hoechstmass/`, `docs/project_governance.md`, and `.agents/skills/sprint-planner/SKILL.md`.
+  2. *Historical Origin & Commit Trace*: Finding F2 in ASPICE independent evaluation (2026-11-12) confirmed that 100% first-pass rates and 100% Minor bug ratings undermined the credibility of process data under PA 4.x and SUP.9.
+  3. *Root Reason for Existing Formulation*: Initial implementations used minimal field queries and simple fallback assumptions (`Erledigt -> passed_first_time`) to simplify sprint metrics generation.
+  4. *Preservation of Core Invariants*: Backward-compatible JSONL output schema; standard library only; zero runtime app code changes.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* sprint issues fetched for metrics collection,
+  • *When* `collect_sprint_metrics_for_id` queries Jira,
+  • *Then* `labels` and `description` are included and bug severities correctly reflect labels (e.g. 1 Critical and 5 Major in Sprint 441).
+  • *Given* an ADF-formatted comment body dict,
+  • *When* `parse_verdicts_from_comments` processes the comment,
+  • *Then* text is extracted recursively and verdicts parsed without throwing exceptions.
+  • *Given* gate subtasks without verdict comments in status `Erledigt`,
+  • *When* gate metrics are evaluated,
+  • *Then* they are recorded as `unverified` and not counted toward `passed_first_time`.
+  • *Given* Stage 6 bounces in a sprint,
+  • *When* escape rates are calculated,
+  • *Then* downstream escapes are reflected in upstream gate escape probabilities.
+  • *Given* 100% FTPR across $\ge 20$ gate reviews without rejections,
+  • *When* sprint metrics are calculated,
+  • *Then* a plausibility warning is emitted in the output.
+  • *Given* a bug ticket created with crash/ANR keywords,
+  • *When* validated against the severity rubric,
+  • *Then* it is assigned at least `Major` or `Critical` severity.
+- **Invariants**: Pure Python standard library; zero Android application runtime footprint; Rule 3 human-only gate preserved.

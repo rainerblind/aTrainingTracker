@@ -3043,3 +3043,18 @@
   6. *Governance Script Validation*: Run `python3 tools/verify_requirement_governance.py` verifying exit code 0.
 
 
+
+### TST-PRO-092: **Process Metrics Credibility, Bug Severity Rubric & Downstream Escape Verification Suite** [Verified]
+- **Verifies**: `REQ-PRO-092`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Component**: `tools/sprint_metrics.py`, `tools/jira_util.py`, `tools/hoechstmass/`, `tools/test_sprint_metrics.py`, `tools/test_jira_accounts.py`, `tools/hoechstmass/tools/test_sprint_metrics.py`, `docs/project_governance.md`
+- **Jira**: `ATT-7559`
+- **Test Description**:
+  1. *Jira API Issue Field Query & Severity Extraction*: Test that `collect_sprint_metrics_for_id` requests `labels` and `description` and that `parse_sprint_gate_metrics` correctly detects `severity-critical` and `severity-major` labels without defaulting to Minor.
+  2. *Atlassian Document Format (ADF) Comment Parsing*: Test that `parse_verdicts_from_comments` and `parse_final_review_agent_verdicts_from_comments` correctly extract text and parse PASS / REVISION / BOUNCE from ADF dict structures without throwing `AttributeError` or `TypeError`.
+  3. *Segregation of Unverified Gate Subtasks*: Test that gate subtasks in `Erledigt` status without verdict comments increment `unverified` and do NOT increment `passed_first_time` or inflate FTPR.
+  4. *Downstream Defect Escape Accounting*: Test that Stage 6 bounces are incorporated into upstream gate escape metrics, yielding non-zero escape probabilities for gates with downstream defects.
+  5. *Plausibility Warning Thresholds*: Test that `parse_sprint_gate_metrics` generates a plausibility warning when FTPR is 100% across $\ge 20$ gate subtasks without rejections.
+  6. *Bug Severity Rubric Enforcement*: Test in `test_jira_accounts.py` that `create_issue` enforces valid severities and flags crash/ANR origin bugs when submitted with sub-Major severity without justification.

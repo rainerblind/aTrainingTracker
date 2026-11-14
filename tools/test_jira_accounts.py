@@ -947,6 +947,36 @@ class TestJiraCliTooling(unittest.TestCase):
         posted_feat = mock_request.call_args[1]["payload"]["fields"]
         self.assertNotIn("labels", posted_feat)
 
+    @patch("jira_util.rank_at_top_of_backlog")
+    @patch("jira_util.jira_request")
+    def test_bug_severity_rubric_enforcement(self, mock_request, mock_rank):
+        """TST-PRO-092.6: create_issue enforces Bug Severity Rubric for crash/ANR origin bugs."""
+        mock_request.return_value = {"key": "ATT-9999"}
+
+        # 1. Bug mentioning "crash" with severity=minor -> rejected with exit code 1
+        with self.assertRaises(SystemExit) as cm:
+            jira_util.create_issue("Fatal crash on startup", "App terminates immediately", issuetype_id="10006", severity="minor")
+        self.assertEqual(cm.exception.code, 1)
+
+        # 2. Bug mentioning "ANR" with severity=cosmetic -> rejected with exit code 1
+        with self.assertRaises(SystemExit) as cm:
+            jira_util.create_issue("UI freezing during workout", "ANR dialog triggered", issuetype_id="10006", severity="cosmetic")
+        self.assertEqual(cm.exception.code, 1)
+
+        # 3. Bug mentioning "crash" with severity=major -> accepted
+        mock_request.reset_mock()
+        key_major = jira_util.create_issue("Crash in background export", "Occasional crash during export", issuetype_id="10006", severity="major")
+        self.assertEqual(key_major, "ATT-9999")
+        posted = mock_request.call_args[1]["payload"]["fields"]
+        self.assertIn("severity-major", posted["labels"])
+
+        # 4. Bug mentioning "ANR" with severity=critical -> accepted
+        mock_request.reset_mock()
+        key_crit = jira_util.create_issue("Main loop ANR", "Fatal ANR blocks workout", issuetype_id="10006", severity="critical")
+        self.assertEqual(key_crit, "ATT-9999")
+        posted_crit = mock_request.call_args[1]["payload"]["fields"]
+        self.assertIn("severity-critical", posted_crit["labels"])
+
     @patch("jira_util.transition_issue")
     @patch("jira_util.assign_issue")
     @patch("jira_util.add_comment")

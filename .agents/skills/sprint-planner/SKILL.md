@@ -204,6 +204,8 @@ Jointly review all completed sprint tickets with the human user against expectat
      python3 tools/verify_requirement_governance.py --check-qa-audits
      ```
      This evaluates the 5-point lifecycle process checklist (artifacts, gate order, 4-Augen role separation, living doc parity, commit hygiene) and persists the audit report in `docs/engineering/qa_audits/<sprint>.md`.
+   * **Quality Gate Verdict Spot-Check Auditing (`REQ-PRO-092.6`, `ATT-7559`)**:
+     To prevent gate discrimination blind spots and verify that gate subtask verdicts authentically reflect technical quality, the QA Auditor / Coordinator **MUST** spot-check a sample of completed gate subtasks (Gates 1–5), verify that written review verdicts correlate with codebase evidence, and document any discrepancy observations or false-pass rates in the Retrospective deliverable.
    * **Mandatory Independent QA & Cross-Vendor Review Recording (`REQ-PRO-062`, `ATT-6155`)**:
      To maintain demonstrable QA independence from the authoring agent vendor under ASPICE SUP.1 (Quality Assurance), the Coordinator **MUST** record the independent Human Sprint Review (Ceremony 2) and any Layer 5 cross-vendor reviews into repository configuration management before sprint merge:
      ```bash

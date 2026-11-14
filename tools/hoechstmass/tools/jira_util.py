@@ -767,6 +767,19 @@ def create_issue(
             )
             sys.exit(1)
 
+        # REQ-PRO-092.6: Crash/ANR severity rubric guard
+        crash_anr_pattern = re.compile(
+            r"\b(?:crash(?:es|ed|ing)?|anr|fatal exception|sigsegv|nullpointerexception)\b",
+            re.IGNORECASE,
+        )
+        if crash_anr_pattern.search(f"{summary} {description}"):
+            if sev_clean in ("minor", "cosmetic"):
+                print(
+                    f"Error: Bugs originating from crashes or ANRs must be assigned at least 'major' or 'critical' severity (got '{sev_clean}'). See Bug Severity Rubric in docs/project_governance.md (REQ-PRO-092.6).",
+                    file=sys.stderr,
+                )
+                sys.exit(1)
+
         sev_label = f"severity-{sev_clean}"
         if sev_label not in labels_list:
             labels_list.append(sev_label)
@@ -1026,7 +1039,7 @@ def collect_sprint_metrics_for_id(sprint_id, sprint_name, board_id, as_role="coo
 
     base = config.get("JIRA_URL", "").rstrip("/")
     sp_field = h_config.get("custom_fields", {}).get("story_points", "customfield_10016")
-    url = f"{base}/rest/agile/1.0/sprint/{sprint_id}/issue?fields=summary,status,issuetype,priority,subtasks,comment,{sp_field}&maxResults=100"
+    url = f"{base}/rest/agile/1.0/sprint/{sprint_id}/issue?fields=summary,status,issuetype,priority,subtasks,comment,labels,description,{sp_field}&maxResults=100"
     res = jira_request(url, role=as_role, config=config)
     issues = res.get("issues", [])
 

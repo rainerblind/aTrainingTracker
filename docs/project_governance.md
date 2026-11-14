@@ -59,3 +59,23 @@ Under ASPICE SYS.2 BP5 and SWE.1 BP5, bidirectional traceability must connect th
    - `tools/verify_requirement_governance.py` validates that 100% of declared `SYSREQ-*` identifiers have verified coverage by at least one software requirement.
    - All cited `SYSREQ-*` identifiers must exist in `docs/system/sysreq_*.md`. Dangling citations fail verification.
 
+---
+
+## 5. Defect Severity Classification Rubric & Spot-Check Governance (ASPICE SUP.9 / REQ-PRO-092.6)
+
+Under ASPICE SUP.9 (Problem Resolution Management) and PA 4.1 / PA 4.2 quantitative process evaluation, all defects and bugs must be classified according to the authoritative 4-tier Bug Severity Rubric:
+
+| Severity Level | Operational Impact & Defect Criteria | Release Gate Governance | Tooling & Labeling Standard |
+| :--- | :--- | :--- | :--- |
+| **Critical** | Startup crash, tracking loop termination, unrecoverable data corruption or permanent data loss, ANR blocking core user flows. | Release-blocking. Blocks release branch cut and PR gate. | `severity-critical`, `**Severity**: Critical` |
+| **Major** | Crash or ANR in non-critical screens or peripheral views, primary sensor disconnection recovery failure, abnormal high battery consumption, functional defect without immediate workaround. | Sprint-blocking. Blocks sprint merge unless formal risk sign-off is logged. | `severity-major`, `**Severity**: Major` |
+| **Minor** | Non-crashing functional defect with available user workaround, transient UI rendering glitch, localized date or numerical formatting flaw. | Tracked for regular sprint backlog prioritization. | `severity-minor`, `**Severity**: Minor` |
+| **Cosmetic** | Purely visual styling quirk, minor margin or padding irregularity, icon tint mismatch, non-truncating text alignment anomaly. | Low priority refinement. | `severity-cosmetic`, `**Severity**: Cosmetic` |
+
+### 5.1 Crash & ANR Severity Invariant
+Bugs originating from application crashes, Application Not Responding (ANR) events, unhandled fatal exceptions, `SIGSEGV`, or `NullPointerException` traces **SHALL NOT** be downgraded to `Minor` or `Cosmetic`. `tools/jira_util.py create-issue` enforces that all crash/ANR bugs are assigned at least `Major` or `Critical` severity unless accompanied by documented rationale.
+
+### 5.2 Quality Gate Spot-Check Audits
+To prevent gate discrimination blind spots and verify that gate verdicts accurately reflect technical quality, the Coordinator and QA Auditor **SHALL** conduct periodic spot-checks during Ceremony 2 (Sprint Review & Retrospective) sampling completed gate subtasks and recording any verdict discrepancy rates in the retrospective deliverable.
+
+
