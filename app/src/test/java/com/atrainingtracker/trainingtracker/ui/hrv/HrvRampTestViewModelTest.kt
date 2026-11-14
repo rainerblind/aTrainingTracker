@@ -28,6 +28,7 @@ import com.atrainingtracker.banalservice.sensor.SensorType
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
 import com.atrainingtracker.trainingtracker.repositories.BANALServiceRepository
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
+import com.atrainingtracker.trainingtracker.TrackingMode
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
@@ -71,6 +72,7 @@ class HrvRampTestViewModelTest {
     @After
     fun tearDown() {
         Dispatchers.resetMain()
+        com.atrainingtracker.trainingtracker.TrainingApplication.setTrackingModeForTesting(TrackingMode.READY)
     }
 
     @Test
@@ -325,6 +327,8 @@ class HrvRampTestViewModelTest {
         val slot = slot<ContentValues>()
         verify { mockWorkoutRepo.updateWorkoutSummary(42L, capture(slot)) }
         assertEquals("GUIDED_STEP", slot.captured.getAsString(WorkoutSummariesDatabaseManager.WorkoutSummaries.METHOD))
+        val expectedStepName = runCatching { application.getString(R.string.hrv_workout_name_step) }.getOrDefault("HRV Step Test (DFA α1)")
+        verify { mockWorkoutRepo.updateWorkoutName(42L, expectedStepName) }
         assertTrue(slot.captured.getAsString(WorkoutSummariesDatabaseManager.WorkoutSummaries.GOAL).contains("stepDurationSec=240"))
         assertTrue(viewModel.isWorkoutTagged)
     }
@@ -348,6 +352,120 @@ class HrvRampTestViewModelTest {
         val slot = slot<ContentValues>()
         verify { mockWorkoutRepo.updateWorkoutSummary(99L, capture(slot)) }
         assertEquals("GUIDED_RAMP", slot.captured.getAsString(WorkoutSummariesDatabaseManager.WorkoutSummaries.METHOD))
+        val expectedRampName = runCatching { application.getString(R.string.hrv_workout_name_ramp) }.getOrDefault("HRV Ramp Test (DFA α1)")
+        verify { mockWorkoutRepo.updateWorkoutName(99L, expectedRampName) }
+    }
+
+    @Test
+    fun testWarmupCompletionAndCooldownLapSplits_TST_TRK_072_10a() = runTest(testDispatcher) {
+        com.atrainingtracker.trainingtracker.TrainingApplication.setTrackingModeForTesting(TrackingMode.TRACKING)
+        val shadowApp = org.robolectric.Shadows.shadowOf(application)
+        shadowApp.clearBroadcastIntents()
+
+        val viewModel = HrvRampTestViewModel(application, banalRepository, testDispatcher)
+        viewModel.evaluatePreFlightQuality(artifactRate = 1.0, hasRrStream = true, isSmoothed = false)
+        viewModel.setWarmupDurationSec(2)
+        viewModel.startProtocol(autoStartTimer = false)
+
+        assertEquals(HrvTestPhase.WARMUP, viewModel.uiState.value.phase)
+        assertTrue(shadowApp.broadcastIntents.none { it.action == com.atrainingtracker.trainingtracker.TrainingApplication.REQUEST_NEW_LAP })
+
+        // Warmup Tick 1 (1s remaining)
+        viewModel.processTick()
+        assertTrue(shadowApp.broadcastIntents.none { it.action == com.atrainingtracker.trainingtracker.TrainingApplication.REQUEST_NEW_LAP })
+
+        // Warmup Tick 2 (expires -> transitions to TESTING)
+        viewModel.processTick()
+        assertEquals(HrvTestPhase.TESTING, viewModel.uiState.value.phase)
+        val lapIntentsWarmup = shadowApp.broadcastIntents.filter { it.action == com.atrainingtracker.trainingtracker.TrainingApplication.REQUEST_NEW_LAP }
+        assertEquals(1, lapIntentsWarmup.size)
+        assertEquals(application.packageName, lapIntentsWarmup.first().`package`)
+
+        // Transition to Cooldown
+        viewModel.transitionToCooldown()
+        assertEquals(HrvTestPhase.COOLDOWN, viewModel.uiState.value.phase)
+        val lapIntentsAfterCooldown = shadowApp.broadcastIntents.filter { it.action == com.atrainingtracker.trainingtracker.TrainingApplication.REQUEST_NEW_LAP }
+        assertEquals(2, lapIntentsAfterCooldown.size)
+    }
+
+    @Test
+    fun testCooldownTimerExpirationBroadcastsStopTracking_TST_TRK_072_10b() = runTest(testDispatcher) {
+        com.atrainingtracker.trainingtracker.TrainingApplication.setTrackingModeForTesting(TrackingMode.TRACKING)
+        val shadowApp = org.robolectric.Shadows.shadowOf(application)
+        shadowApp.clearBroadcastIntents()
+
+        val mockWorkoutRepo = mockk<WorkoutRepository>(relaxed = true)
+        val viewModel = HrvRampTestViewModel(
+            application = application,
+            banalServiceRepository = banalRepository,
+            workoutRepository = mockWorkoutRepo,
+            dispatcher = testDispatcher
+        )
+        viewModel.evaluatePreFlightQuality(artifactRate = 1.0, hasRrStream = true, isSmoothed = false)
+        viewModel.setWarmupDurationSec(0)
+        viewModel.startProtocol(autoStartTimer = false)
+
+        viewModel.transitionToCooldown()
+        assertEquals(HrvTestPhase.COOLDOWN, viewModel.uiState.value.phase)
+        assertTrue(shadowApp.broadcastIntents.none { it.action == com.atrainingtracker.trainingtracker.TrainingApplication.REQUEST_STOP_TRACKING })
+
+        // Cooldown timer expires
+        val cooldownSec = viewModel.uiState.value.stepRemainingSec
+        for (i in 0 until cooldownSec) {
+            viewModel.processTick()
+        }
+
+        assertEquals(HrvTestPhase.FINISHED, viewModel.uiState.value.phase)
+        assertTrue(viewModel.uiState.value.isCompleted)
+        val stopIntents = shadowApp.broadcastIntents.filter { it.action == com.atrainingtracker.trainingtracker.TrainingApplication.REQUEST_STOP_TRACKING }
+        assertEquals(1, stopIntents.size)
+        assertEquals(application.packageName, stopIntents.first().`package`)
+    }
+
+    @Test
+    fun testFinishTestBroadcastsStopTracking_TST_TRK_072_10b() = runTest(testDispatcher) {
+        com.atrainingtracker.trainingtracker.TrainingApplication.setTrackingModeForTesting(TrackingMode.TRACKING)
+        val shadowApp = org.robolectric.Shadows.shadowOf(application)
+        shadowApp.clearBroadcastIntents()
+
+        val mockWorkoutRepo = mockk<WorkoutRepository>(relaxed = true)
+        val viewModel = HrvRampTestViewModel(
+            application = application,
+            banalServiceRepository = banalRepository,
+            workoutRepository = mockWorkoutRepo,
+            dispatcher = testDispatcher
+        )
+        viewModel.finishTest()
+
+        assertEquals(HrvTestPhase.FINISHED, viewModel.uiState.value.phase)
+        val stopIntents = shadowApp.broadcastIntents.filter { it.action == com.atrainingtracker.trainingtracker.TrainingApplication.REQUEST_STOP_TRACKING }
+        assertEquals(1, stopIntents.size)
+        assertEquals(application.packageName, stopIntents.first().`package`)
+    }
+
+    @Test
+    fun testOfflineOrNotTrackingDoesNotBroadcast_TST_TRK_072_10b() = runTest(testDispatcher) {
+        com.atrainingtracker.trainingtracker.TrainingApplication.setTrackingModeForTesting(TrackingMode.READY)
+        val shadowApp = org.robolectric.Shadows.shadowOf(application)
+        shadowApp.clearBroadcastIntents()
+
+        val viewModel = HrvRampTestViewModel(application, banalRepository, testDispatcher)
+        viewModel.evaluatePreFlightQuality(artifactRate = 1.0, hasRrStream = true, isSmoothed = false)
+        viewModel.setWarmupDurationSec(1)
+        viewModel.startProtocol(autoStartTimer = false)
+
+        // Warmup expires
+        viewModel.processTick()
+        assertEquals(HrvTestPhase.TESTING, viewModel.uiState.value.phase)
+        assertTrue(shadowApp.broadcastIntents.none { it.action == com.atrainingtracker.trainingtracker.TrainingApplication.REQUEST_NEW_LAP })
+
+        // Transition to cooldown
+        viewModel.transitionToCooldown()
+        assertTrue(shadowApp.broadcastIntents.none { it.action == com.atrainingtracker.trainingtracker.TrainingApplication.REQUEST_NEW_LAP })
+
+        // Finish test
+        viewModel.finishTest()
+        assertTrue(shadowApp.broadcastIntents.none { it.action == com.atrainingtracker.trainingtracker.TrainingApplication.REQUEST_STOP_TRACKING })
     }
 
     @Test

@@ -4426,12 +4426,21 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
   7. *Consolidated Launcher Access & Ergonomic Entry Point Alignment (`REQ-TRK-072.7`)*:
      - The Guided DFA $\alpha_1$ Threshold Test launcher SHALL reside exclusively in **`ZoneSettingsScreen` -> `HRV (DFA a1)` tab** (`ZonesSettingsActivity.kt`) with leading icon `Icons.AutoMirrored.Filled.TrendingUp`.
      - Redundant launcher CTA buttons in the Start Tracking screen (`TrackingTabsScreen.kt`, `hrv_test_cockpit_launcher`) and Athlete Profile HRV Readiness tab (`AthleteProfileScreen.kt`, `btn_guided_hrv_test`) SHALL be removed, preventing everyday workout clutter and separating resting morning readiness checks from exercise threshold testing.
+  8. *Lifecycle Automation: Auto-Naming, Lap Splits & Automated Stop (`REQ-TRK-072.8`)*:
+     - **Phase Lap Splits**: Upon `WARMUP -> TESTING` countdown reaching 0, `HrvRampTestViewModel` SHALL broadcast `TrainingApplication.REQUEST_NEW_LAP`. Upon transition into `COOLDOWN` (`transitionToCooldown()`), `HrvRampTestViewModel` SHALL broadcast `TrainingApplication.REQUEST_NEW_LAP`. Intermediate laps between steps in `GUIDED_STEP` SHALL NOT be triggered, guaranteeing exactly 3 canonical laps (Warmup, Active Test, Cooldown).
+     - **Descriptive Protocol Auto-Naming & Overwrite Guard**: In `tagActiveWorkoutWithProtocol()`, the system SHALL persist `WorkoutSummaries.WORKOUT_NAME` as a localized protocol title (`hrv_workout_name_step` / `hrv_workout_name_ramp` across all 9 supported locales). In `TrackerService.finalizeLiveSession()`, the system SHALL check whether `method` is `"GUIDED_STEP"` or `"GUIDED_RAMP"`; if true, the pre-assigned protocol workout name SHALL be strictly preserved and route cluster / known-location auto-naming overwrites SHALL be suppressed.
+     - **Automated Stop on Test Completion**: When cooldown expires (`COOLDOWN -> FINISHED`) or `finishTest()` is invoked while tracking is active (`TrainingApplication.isTracking() == true`), `HrvRampTestViewModel` SHALL broadcast `TrainingApplication.REQUEST_STOP_TRACKING` to stop and finalize workout recording.
 
 **Requirement Archaeology & Chesterton's Fence Audit**:
 1. *Original Requirement ID & Target*: Net-new requirement `REQ-TRK-072`, extending `REQ-TRK-061` (*Live HRV Telemetry & Configurable DFA a1 Thresholds*) and companion to `REQ-PER-036` (*Confidence-Gated HRVT1/HRVT2 Estimation & Summary Card*). Targets `HrvRampTestScreen.kt`, `HrvRampTestViewModel.kt`, `HrvRampTestConfig.kt`, `TrackingTabsScreen.kt`, `AthleteProfileScreen.kt`, `ZonesSettingsActivity.kt`, and `ATrainingTrackerApp.kt`.
 2. *Historical Origin & Commit Trace*: Conceived in Epic `ATT-3539` (*Heart Rate Variability*), companion to `ATT-3554` (commit `5deec7cd`), implemented in `ATT-4969` (commit `424580a2`), refined in `ATT-7317` (commit `fce6777b`), ergonomically streamlined in `ATT-7529`, and launcher access consolidated in `ATT-7527`.
 3. *Root Reason for Existing Formulation*: Athletic tracking previously supported only free progression or static zone alerts. Free progression frequently suffers from pacing variability and non-monotonicity, while athletes lacked guidance to terminate tests sub-maximally when DFA $\alpha_1 < 0.45$. ATT-4969 initially created a separate `PRE_FLIGHT` screen to enforce sensor checking, and sprinkled launcher buttons across tracking and profile screens to boost beta discoverability. Once the dedicated Training Zones `HRV (DFA a1)` tab was built in ATT-7317, these duplicated buttons caused UI clutter on everyday tracking launches and conflated resting readiness checks with strenuous exercise ramp testing.
 4. *Preservation of Core Invariants*: Full host navigation reachability (`NavRoutes.HRV_TEST`) is preserved via the authoritative Training Zones entry point; resting morning HRV and everyday tracking remain completely intact; strict signal quality gating ($rMSSD$, artifact rate $\le 3.0\%$ for `HIGH`, $> 5.0\%$ blocks start), early sub-45 s completion detection, and `GUIDED_STEP`/`GUIDED_RAMP` session tagging preserved; zero regressions in tracking, readiness, or ramp test functionality.
+5. *Chesterton's Fence Audit (`REQ-TRK-072.8` - ATT-7745)*:
+   - *Original Requirement ID & Target*: `REQ-TRK-072.8` (Lifecycle Automation: Auto-Naming, Lap Splits & Automated Stop).
+   - *Historical Origin & Commit Trace*: `ATT-4969` (commit `424580a2`), `ATT-7317` (`fce6777b`), `ATT-7745`.
+   - *Root Reason for Existing Formulation*: Initial guided test implementation left workout stop and lap boundaries to manual user intervention. Free workout clustering in `TrackerService.finalizeLiveSession()` assumed any workout with location points was an outdoor route eligible for cluster renaming.
+   - *Preservation of Core Invariants*: Manual stop and lap splits remain available; free workouts and outdoor rides retain full cluster and known-location auto-naming; Option A (phase lap transitions only) avoids per-step lap fragmentation; 100% 9-language localization parity.
 
 **Acceptance Criteria (Given-When-Then)**:
 • *Given* an athlete opening `HrvRampTestScreen`,
@@ -4464,6 +4473,18 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 • *Given* `ZoneSettingsScreen` in `ZonesSettingsActivity.kt`,
 • *When* viewing the `HRV (DFA a1)` tab (`HrvDfaA1SettingsContent`),
 • *Then* the Guided Threshold Test launcher button is displayed with leading icon `Icons.AutoMirrored.Filled.TrendingUp` navigating to `NavRoutes.HRV_TEST`.
+• *Given* a Guided DFA α1 Threshold Test running in `HrvTestPhase.WARMUP`,
+• *When* the warmup timer reaches 0,
+• *Then* `REQUEST_NEW_LAP` is broadcast and the active test phase starts in a new lap.
+• *Given* a Guided DFA α1 Threshold Test in `TESTING` or `EARLY_COMPLETION`,
+• *When* transitioning to `COOLDOWN` (`transitionToCooldown()`),
+• *Then* `REQUEST_NEW_LAP` is broadcast and the cooldown phase starts in a new lap.
+• *Given* a Guided DFA α1 Threshold Test whose cooldown timer reaches 0 or `finishTest()` is invoked while tracking is active,
+• *When* `finishTest()` or timer completion runs,
+• *Then* `REQUEST_STOP_TRACKING` is broadcast to stop the recording.
+• *Given* a guided test workout tagged with `method == "GUIDED_STEP"` or `"GUIDED_RAMP"`,
+• *When* `finalizeLiveSession()` completes in `TrackerService`,
+• *Then* the localized protocol title is preserved and not overwritten by cluster or location auto-naming.
 
 **Invariants**: Zero background service sampling regressions; zero SQLite schema modifications; Section 5.8 Composable navigation safety; 100% clean-room test pass rate across all 9 locales.
 

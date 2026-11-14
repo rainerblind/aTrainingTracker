@@ -207,6 +207,8 @@
     <string name="hrv_test_btn_finish">Finalizar teste</string>
     <string name="hrv_test_btn_cooldown">Iniciar resfriamento</string>
     <string name="hrv_test_btn_cancel">Cancelar teste</string>
+    <string name="hrv_workout_name_step">Teste de degraus VFC (DFA α1)</string>
+    <string name="hrv_workout_name_ramp">Teste de rampa VFC (DFA α1)</string>
 
     <!-- Active Pacing Guidance (ATT-7529) -->
     <string name="hrv_test_pacing_target_header">Alvo</string>

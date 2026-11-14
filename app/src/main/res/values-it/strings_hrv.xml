@@ -207,6 +207,8 @@
     <string name="hrv_test_btn_finish">Termina test</string>
     <string name="hrv_test_btn_cooldown">Inizia defaticamento</string>
     <string name="hrv_test_btn_cancel">Annulla test</string>
+    <string name="hrv_workout_name_step">Test a gradini HRV (DFA α1)</string>
+    <string name="hrv_workout_name_ramp">Test a rampa HRV (DFA α1)</string>
 
     <!-- Active Pacing Guidance (ATT-7529) -->
     <string name="hrv_test_pacing_target_header">Obiettivo</string>

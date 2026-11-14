@@ -3186,13 +3186,17 @@ public class TrackerService extends Service {
 
                 LatLng minAltPos = repository.getExtremaPosition(workoutId, SensorType.ALTITUDE, ExtremaType.MIN);
                 LatLng maxAltPos = repository.getExtremaPosition(workoutId, SensorType.ALTITUDE, ExtremaType.MAX);
-                WorkoutCluster suggestion = engine.suggestCluster(startPosRaw, endPosRaw, maxDispPos, effectiveDistanceTotal_m, null, candidateSports, minAltPos, maxAltPos);
+                WorkoutCluster suggestion = engine.suggestCluster(startPosRaw, endPosRaw, maxDispPos, effectiveDistanceTotal_m, null, candidateSports, minAltPos, maxAltPos, null, 1.2, null);
+                String workoutMethod = repository.getWorkoutMethod(workoutId);
+                boolean isGuidedHrvTest = "GUIDED_STEP".equals(workoutMethod) || "GUIDED_RAMP".equals(workoutMethod);
                 if (suggestion != null) {
                     // If hardware confidence is high, we only take the name from the cluster
                     if (identity.isHighConfidence()) {
-                        int displayCount = suggestion.getHitCount() + 1;
-                        String autoName = WorkoutClusterEngine.formatClusterWorkoutName(this, suggestion.getName(), displayCount, suggestion.getHasCounter());
-                        repository.updateWorkoutName(workoutId, autoName);
+                        if (!isGuidedHrvTest) {
+                            int displayCount = suggestion.getHitCount() + 1;
+                            String autoName = WorkoutClusterEngine.formatClusterWorkoutName(this, suggestion.getName(), displayCount, suggestion.getHasCounter());
+                            repository.updateWorkoutName(workoutId, autoName);
+                        }
                         repository.updateWorkoutClusterId(workoutId, suggestion.getId());
 
                         // Apply hardware-based identity (Sport, Gear, Strava)
@@ -3206,23 +3210,25 @@ public class TrackerService extends Service {
                     repository.applyInferredIdentity(workoutId, identity);
 
                     // ATT-1398: Intelligent Workout Auto-Naming based on recognized start/destination Lieblingsorte
-                    KnownLocationsRepository knownLocationsRepo = getKnownLocationsRepository();
-                    KnownLocationsDatabaseManager.MyLocation startLoc = knownLocationsRepo.getMyLocation(startPosRaw);
-                    KnownLocationsDatabaseManager.MyLocation endLoc = knownLocationsRepo.getMyLocation(endPosRaw);
-                    float endpointDist = engine.distanceBetween(startPosRaw, endPosRaw);
-                    BSportType resolvedSport = (identity != null && identity.getBSportType() != null && identity.getBSportType() != BSportType.UNKNOWN)
-                        ? identity.getBSportType()
-                        : banalSportType;
-                    String autoName = WorkoutAutoNamingHelper.generateWorkoutName(
-                        this,
-                        resolvedSport,
-                        startLoc,
-                        endLoc,
-                        endpointDist,
-                        effectiveDistanceTotal_m
-                    );
-                    if (autoName != null && !autoName.trim().isEmpty()) {
-                        repository.updateWorkoutName(workoutId, autoName);
+                    if (!isGuidedHrvTest) {
+                        KnownLocationsRepository knownLocationsRepo = getKnownLocationsRepository();
+                        KnownLocationsDatabaseManager.MyLocation startLoc = knownLocationsRepo.getMyLocation(startPosRaw);
+                        KnownLocationsDatabaseManager.MyLocation endLoc = knownLocationsRepo.getMyLocation(endPosRaw);
+                        float endpointDist = engine.distanceBetween(startPosRaw, endPosRaw);
+                        BSportType resolvedSport = (identity != null && identity.getBSportType() != null && identity.getBSportType() != BSportType.UNKNOWN)
+                            ? identity.getBSportType()
+                            : banalSportType;
+                        String autoName = WorkoutAutoNamingHelper.generateWorkoutName(
+                            this,
+                            resolvedSport,
+                            startLoc,
+                            endLoc,
+                            endpointDist,
+                            effectiveDistanceTotal_m
+                        );
+                        if (autoName != null && !autoName.trim().isEmpty()) {
+                            repository.updateWorkoutName(workoutId, autoName);
+                        }
                     }
                 }
             } else {

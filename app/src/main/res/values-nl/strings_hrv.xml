@@ -207,6 +207,8 @@
     <string name="hrv_test_btn_finish">Test voltooien</string>
     <string name="hrv_test_btn_cooldown">Start cooling-down</string>
     <string name="hrv_test_btn_cancel">Test annuleren</string>
+    <string name="hrv_workout_name_step">HRV-stappentest (DFA α1)</string>
+    <string name="hrv_workout_name_ramp">HRV-hellingtest (DFA α1)</string>
 
     <!-- Active Pacing Guidance (ATT-7529) -->
     <string name="hrv_test_pacing_target_header">Doel</string>

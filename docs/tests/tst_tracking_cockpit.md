@@ -2375,9 +2375,9 @@
   • `./gradlew testDebugUnitTest --tests "com.atrainingtracker.banalservice.devices.*" --tests "com.atrainingtracker.trainingtracker.build.SystemContextContractTest"` asserting 100% pass rate.
 
 ### TST-TRK-072: **Guided DFA a1 Step & Ramp Test Protocol Suite** [Verified]
-- **Requirement(s)**: `REQ-TRK-072` (`REQ-TRK-072.1`..`REQ-TRK-072.6`)
-- **Component**: `HrvRampTestViewModel.kt`, `HrvRampTestScreen.kt`, `HrvRampTestConfig.kt`, `HrvThresholdEstimator.kt`
-- **Jira**: `ATT-4969`, `ATT-7529`
+- **Requirement(s)**: `REQ-TRK-072` (`REQ-TRK-072.1`..`REQ-TRK-072.8`)
+- **Component**: `HrvRampTestViewModel.kt`, `HrvRampTestScreen.kt`, `HrvRampTestConfig.kt`, `HrvThresholdEstimator.kt`, `TrackerService.java`, `strings_hrv.xml`
+- **Jira**: `ATT-4969`, `ATT-7529`, `ATT-7745`
 - **Test Description**:
   1. *Protocol Configuration & Direct Start from CONFIG Phase (`TST-TRK-072.1`, `HrvRampTestViewModelTest.kt`, `HrvRampTestScreenTest.kt`)*:
      • Verify sensor telemetry is bound in `init` and continuously evaluates readiness while in `CONFIG` phase.
@@ -2408,6 +2408,12 @@
      • Verify `btn_guided_hrv_test` is absent from `AthleteProfileScreen.kt` HRV tab.
      • Verify `ZonesSettingsActivity.kt` `HrvDfaA1SettingsContent` renders `Icons.AutoMirrored.Filled.TrendingUp` for `hrv_start_guided_ramp_test`.
      • Verify host route `NavRoutes.HRV_TEST` remains mounted in `ATrainingTrackerApp.kt` and reachable via Training Zones.
+  10. *Lifecycle Automation: Lap Splits, Protocol Auto-Naming & Stop Broadcast Tests (`TST-TRK-072.10`, `HrvRampTestViewModelTest.kt`, `TrackerServiceAutoNamingTest.kt`)*:
+     • Verify `REQUEST_NEW_LAP` is broadcast on `WARMUP -> TESTING` transition.
+     • Verify `REQUEST_NEW_LAP` is broadcast on `transitionToCooldown()`.
+     • Verify `REQUEST_STOP_TRACKING` is broadcast on `COOLDOWN -> FINISHED` and on `finishTest()`.
+     • Verify `tagActiveWorkoutWithProtocol()` sets `WORKOUT_NAME` to localized step/ramp test title across all 9 locales in `strings_hrv.xml`.
+     • Verify `TrackerService.finalizeLiveSession()` preserves `WORKOUT_NAME` when `method` is `"GUIDED_STEP"` or `"GUIDED_RAMP"` and does not overwrite it with cluster or location names.
 
 ### TST-TRK-073: **Live 2D Lane-Offset & Vehicle Sizing Radar Edge Overlay Test Suite** [Verified]
 - **Requirement(s)**: `REQ-TRK-073` (`REQ-TRK-073.1`..`REQ-TRK-073.8`)

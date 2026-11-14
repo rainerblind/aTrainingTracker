@@ -207,6 +207,8 @@
     <string name="hrv_test_btn_finish">テスト終了</string>
     <string name="hrv_test_btn_cooldown">クールダウン開始</string>
     <string name="hrv_test_btn_cancel">テストをキャンセル</string>
+    <string name="hrv_workout_name_step">HRVステップテスト (DFA α1)</string>
+    <string name="hrv_workout_name_ramp">HRVランプテスト (DFA α1)</string>
 
     <!-- Active Pacing Guidance (ATT-7529) -->
     <string name="hrv_test_pacing_target_header">目標</string>

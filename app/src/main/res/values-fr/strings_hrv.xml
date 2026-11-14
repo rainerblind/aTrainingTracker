@@ -207,6 +207,8 @@
     <string name="hrv_test_btn_finish">Terminer le test</string>
     <string name="hrv_test_btn_cooldown">Commencer le retour au calme</string>
     <string name="hrv_test_btn_cancel">Annuler le test</string>
+    <string name="hrv_workout_name_step">Test par paliers VRC (DFA α1)</string>
+    <string name="hrv_workout_name_ramp">Test en rampe VRC (DFA α1)</string>
 
     <!-- Active Pacing Guidance (ATT-7529) -->
     <string name="hrv_test_pacing_target_header">Cible</string>

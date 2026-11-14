@@ -207,6 +207,8 @@
     <string name="hrv_test_btn_finish">Zakończ test</string>
     <string name="hrv_test_btn_cooldown">Rozpocznij schłodzenie</string>
     <string name="hrv_test_btn_cancel">Anuluj test</string>
+    <string name="hrv_workout_name_step">Test stopniowany HRV (DFA α1)</string>
+    <string name="hrv_workout_name_ramp">Test rampowy HRV (DFA α1)</string>
 
     <!-- Active Pacing Guidance (ATT-7529) -->
     <string name="hrv_test_pacing_target_header">Cel</string>

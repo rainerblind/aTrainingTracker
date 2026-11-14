@@ -37,6 +37,7 @@ import com.atrainingtracker.banalservice.sensor.MySensorManager
 import com.atrainingtracker.banalservice.sensor.SensorType
 import com.atrainingtracker.trainingtracker.database.EquipmentAndSportTypeDiscoveryManager
 import com.atrainingtracker.trainingtracker.database.ExtremaType
+import com.atrainingtracker.trainingtracker.database.WorkoutCluster
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager
 import com.atrainingtracker.trainingtracker.database.WorkoutSummariesDatabaseManager.WorkoutSummaries
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRepository
@@ -394,6 +395,99 @@ class TrackerServiceFinalizationTest {
                 any(),
                 any()
             )
+        }
+    }
+
+    /**
+     * TST-TRK-072.10d: Verifies that in finalizeLiveSession(), if the workout is a guided HRV test
+     * (method == "GUIDED_STEP" or "GUIDED_RAMP"), cluster and location auto-naming do NOT overwrite
+     * the localized protocol title via repository.updateWorkoutName(), while cluster ID and hardware identity
+     * are still assigned.
+     */
+    @Test
+    fun testFinalizeLiveSession_GuidedHrvTest_PreservesProtocolNameAndSuppressesClusterOverwrite_TST_TRK_072_10d() {
+        val workoutId = 7745L
+        setWorkoutId(workoutId)
+        setField("mTimeActive_s", 1800)
+        setField("mDistanceTotal_m", 15000.0)
+        setField("mBanalService", null)
+
+        val repositoryMock = mockk<WorkoutRepository>(relaxed = true)
+        every { repositoryMock.getWorkoutMethod(workoutId) } returns "GUIDED_STEP"
+        every { repositoryMock.getExtremaPosition(any(), any(), any()) } returns LatLng(48.139, 11.578)
+        setField("mWorkoutRepository", repositoryMock)
+
+        val summariesManagerMock = mockk<WorkoutSummariesDatabaseManager>(relaxed = true)
+        mockkStatic(WorkoutSummariesDatabaseManager::class)
+        every { WorkoutSummariesDatabaseManager.getInstance(any()) } returns summariesManagerMock
+
+        val discoveryManagerMock = mockk<EquipmentAndSportTypeDiscoveryManager>(relaxed = true)
+        mockkObject(EquipmentAndSportTypeDiscoveryManager.Companion)
+        every { EquipmentAndSportTypeDiscoveryManager.getInstance(any()) } returns discoveryManagerMock
+        val identity = EquipmentAndSportTypeDiscoveryManager.InferredIdentity(
+            sportId = 1L,
+            bSportType = BSportType.BIKE,
+            equipmentId = 0L,
+            stravaSportName = null,
+            uploadToStrava = 1,
+            isHighConfidence = true
+        )
+        every { discoveryManagerMock.resolveIdentity(any<Set<Long>>(), any<BSportType>(), any<Double>()) } returns identity
+
+        val liveSessionMock = mockk<LiveWorkoutSession>(relaxed = true)
+        val trackPoints = listOf(LatLng(48.137, 11.576), LatLng(48.138, 11.577))
+        every { liveSessionMock.rawLatLngs } returns trackPoints
+        every { liveSessionMock.sampledLatLngs } returns trackPoints
+        every { liveSessionMock.startLatLng } returns trackPoints.first()
+        every { liveSessionMock.lastLatLng } returns trackPoints.last()
+        setField("mLiveSession", liveSessionMock)
+
+        val engineMock = mockk<com.atrainingtracker.trainingtracker.database.WorkoutClusterEngine>(relaxed = true)
+        val clusterSuggestion = WorkoutCluster(
+            id = 55L,
+            name = "Hausrunde",
+            probableSportId = 1L,
+            startLat = 48.137,
+            startLng = 11.576,
+            endLat = 48.138,
+            endLng = 11.577,
+            maxDispLat = 48.139,
+            maxDispLng = 11.578,
+            refDistance = 1000.0,
+            hitCount = 4,
+            hasCounter = true
+        )
+        com.atrainingtracker.trainingtracker.database.WorkoutClusterEngine.resetForTesting(engineMock)
+        mockkObject(com.atrainingtracker.trainingtracker.database.WorkoutClusterEngine.Companion)
+        every { com.atrainingtracker.trainingtracker.database.WorkoutClusterEngine.getInstance(any()) } returns engineMock
+        every {
+            engineMock.suggestCluster(
+                start = any(),
+                end = any(),
+                apex = any(),
+                distance = any(),
+                workoutName = or(isNull(), any()),
+                candidateSportTypes = any(),
+                minAltPos = or(isNull(), any()),
+                maxAltPos = or(isNull(), any()),
+                cachedClusters = or(isNull(), any()),
+                scoreThreshold = any(),
+                workoutPolyline = or(isNull(), any())
+            )
+        } returns clusterSuggestion
+
+        service.throwInGuessCommuteAndTrainer = true
+
+        // Act
+        service.callFinalizeLiveSession()
+
+        // Assert: updateWorkoutName was NEVER called because isGuidedHrvTest is true
+        verify(exactly = 0) {
+            repositoryMock.updateWorkoutName(eq(workoutId), any())
+        }
+        // Cluster ID was still associated
+        verify(exactly = 1) {
+            repositoryMock.updateWorkoutClusterId(eq(workoutId), eq(55L))
         }
     }
 

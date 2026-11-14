@@ -1425,6 +1425,9 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
     fun getWorkoutName(workoutId: Long): String? =
         summariesManager.getString(workoutId, WorkoutSummariesDatabaseManager.WorkoutSummaries.WORKOUT_NAME)
 
+    fun getWorkoutMethod(workoutId: Long): String? =
+        summariesManager.getString(workoutId, WorkoutSummariesDatabaseManager.WorkoutSummaries.METHOD)
+
     fun getWorkoutFileBaseName(workoutId: Long): String? =
         summariesManager.getString(workoutId, WorkoutSummariesDatabaseManager.WorkoutSummaries.FILE_BASE_NAME)
 
