@@ -1181,7 +1181,9 @@ fun HrvDfaA1SettingsContent(
                             TuningPreferencesDefaults.DEFAULT_DFA_A1_THRESHOLD_T2
                         )
                     }
-                }
+                },
+                modifier = Modifier.weight(1f, fill = false),
+                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
             ) {
                 Icon(
                     imageVector = Icons.Default.RestartAlt,
@@ -1192,8 +1194,9 @@ fun HrvDfaA1SettingsContent(
                 Text(
                     text = stringResource(R.string.reset_to_defaults),
                     style = MaterialTheme.typography.labelMedium,
-                    maxLines = 1,
-                    softWrap = false
+                    maxLines = 2,
+                    softWrap = true,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
         }
@@ -1529,9 +1532,11 @@ fun HrvZoneBandCard(
 }
 
 /**
- * Unified 3-zone colored dual-thumb range slider for DFA α1 thresholds (T2 and T1)
+ * Unified 3-zone colored dual-thumb range slider for DFA α1 thresholds (T1 and T2)
  * across continuous domain 0.30..1.20 with semantic track colors (REQ-TRK-061.4a, REQ-TRK-061.4b).
+ * Inverted orientation renders Zone 2 (Green) on left and Zone 4 (Red) on right.
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HrvDfaA1RangeSlider(
     t1: Float,
@@ -1541,7 +1546,12 @@ fun HrvDfaA1RangeSlider(
 ) {
     val domainStart = 0.30f
     val domainEnd = 1.20f
-    val totalSpan = domainEnd - domainStart
+    val gap = TuningPreferencesDefaults.MIN_DFA_A1_THRESHOLD_GAP
+
+    // Inverted coordinate transform: s = domainEnd + domainStart - alpha1 (1.50f - alpha1)
+    // Left thumb (sliderStart) maps to T1 (Green, Zone 2); Right thumb (sliderEnd) maps to T2 (Red, Zone 4)
+    val sliderStart = domainEnd + domainStart - t1
+    val sliderEnd = domainEnd + domainStart - t2
 
     Card(
         modifier = modifier.fillMaxWidth(),
@@ -1553,17 +1563,17 @@ fun HrvDfaA1RangeSlider(
         Column(
             modifier = Modifier.padding(12.dp)
         ) {
-            // Zone label summary row: Zone 4 (Red) | Zone 3 (Orange) | Zone 2 (Green)
+            // Zone label summary row: Zone 2 (Green, left) | Zone 3 (Orange, center) | Zone 4 (Red, right)
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = String.format(Locale.US, "T2: %.2f", t2),
+                    text = String.format(Locale.US, "T1: %.2f", t1),
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.Bold,
-                    color = TTColor.Zone4
+                    color = TTColor.Zone2
                 )
                 Text(
                     text = stringResource(R.string.hrv_preview_pill_transition),
@@ -1571,73 +1581,34 @@ fun HrvDfaA1RangeSlider(
                     color = TTColor.Zone3
                 )
                 Text(
-                    text = String.format(Locale.US, "T1: %.2f", t1),
+                    text = String.format(Locale.US, "T2: %.2f", t2),
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.Bold,
-                    color = TTColor.Zone2
+                    color = TTColor.Zone4
                 )
             }
 
             Spacer(modifier = Modifier.height(6.dp))
 
-            // Multi-segment 3-zone colored track bar
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 8.dp)
-                    .height(8.dp)
-                    .clip(RoundedCornerShape(4.dp))
-                    .background(MaterialTheme.colorScheme.surfaceVariant)
-            ) {
-                Canvas(modifier = Modifier.fillMaxSize()) {
-                    val w = size.width
-                    val h = size.height
-
-                    val fracT2 = ((t2 - domainStart) / totalSpan).coerceIn(0f, 1f)
-                    val fracT1 = ((t1 - domainStart) / totalSpan).coerceIn(0f, 1f)
-
-                    val xT2 = w * fracT2
-                    val xT1 = w * fracT1
-
-                    // Zone 4: Red (< T2)
-                    drawRect(
-                        color = TTColor.Zone4,
-                        topLeft = Offset(0f, 0f),
-                        size = Size(xT2, h)
-                    )
-                    // Zone 3: Orange (T2..T1)
-                    drawRect(
-                        color = TTColor.Zone3,
-                        topLeft = Offset(xT2, 0f),
-                        size = Size((xT1 - xT2).coerceAtLeast(0f), h)
-                    )
-                    // Zone 2: Green (> T1)
-                    drawRect(
-                        color = TTColor.Zone2,
-                        topLeft = Offset(xT1, 0f),
-                        size = Size((w - xT1).coerceAtLeast(0f), h)
-                    )
-                }
-            }
-
             RangeSlider(
-                value = t2..t1,
+                value = sliderStart..sliderEnd,
                 onValueChange = { range ->
-                    val roundedStart = Math.round(range.start * 100f) / 100f
-                    val roundedEnd = Math.round(range.endInclusive * 100f) / 100f
+                    val newT1Raw = domainEnd + domainStart - range.start
+                    val newT2Raw = domainEnd + domainStart - range.endInclusive
+                    val roundedT1 = Math.round(newT1Raw * 100f) / 100f
+                    val roundedT2 = Math.round(newT2Raw * 100f) / 100f
 
-                    val gap = TuningPreferencesDefaults.MIN_DFA_A1_THRESHOLD_GAP
-                    if (roundedEnd != t1) {
-                        // T1 moved: clamp T1 >= t2 + gap
-                        val clampedT1 = roundedEnd.coerceIn(t2 + gap, domainEnd)
+                    if (roundedT1 != t1) {
+                        // T1 (left thumb) moved: clamp T1 >= t2 + gap
+                        val clampedT1 = roundedT1.coerceIn(t2 + gap, domainEnd)
                         onThresholdsChange(clampedT1, t2)
-                    } else if (roundedStart != t2) {
-                        // T2 moved: clamp T2 <= t1 - gap
-                        val clampedT2 = roundedStart.coerceIn(domainStart, t1 - gap)
+                    } else if (roundedT2 != t2) {
+                        // T2 (right thumb) moved: clamp T2 <= t1 - gap
+                        val clampedT2 = roundedT2.coerceIn(domainStart, t1 - gap)
                         onThresholdsChange(t1, clampedT2)
                     } else {
-                        val clampedT2 = roundedStart.coerceIn(domainStart, domainEnd - gap)
-                        val clampedT1 = roundedEnd.coerceIn(clampedT2 + gap, domainEnd)
+                        val clampedT1 = roundedT1.coerceIn(domainStart + gap, domainEnd)
+                        val clampedT2 = roundedT2.coerceIn(domainStart, clampedT1 - gap)
                         onThresholdsChange(clampedT1, clampedT2)
                     }
                 },
@@ -1647,6 +1618,46 @@ fun HrvDfaA1RangeSlider(
                     activeTrackColor = TTColor.Zone3,
                     inactiveTrackColor = MaterialTheme.colorScheme.surfaceVariant
                 ),
+                track = { rangeSliderState ->
+                    Canvas(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(8.dp)
+                            .clip(RoundedCornerShape(4.dp))
+                    ) {
+                        val w = size.width
+                        val h = size.height
+
+                        val span = (rangeSliderState.valueRange.endInclusive - rangeSliderState.valueRange.start)
+                            .coerceAtLeast(0.0001f)
+                        val fracStart = ((rangeSliderState.activeRangeStart - rangeSliderState.valueRange.start) / span)
+                            .coerceIn(0f, 1f)
+                        val fracEnd = ((rangeSliderState.activeRangeEnd - rangeSliderState.valueRange.start) / span)
+                            .coerceIn(0f, 1f)
+
+                        val xStart = w * fracStart
+                        val xEnd = w * fracEnd
+
+                        // Zone 2: Green (alpha1 > T1, left side of slider)
+                        drawRect(
+                            color = TTColor.Zone2,
+                            topLeft = Offset(0f, 0f),
+                            size = Size(xStart, h)
+                        )
+                        // Zone 3: Orange (T2 <= alpha1 <= T1, middle segment)
+                        drawRect(
+                            color = TTColor.Zone3,
+                            topLeft = Offset(xStart, 0f),
+                            size = Size((xEnd - xStart).coerceAtLeast(0f), h)
+                        )
+                        // Zone 4: Red (alpha1 < T2, right side of slider)
+                        drawRect(
+                            color = TTColor.Zone4,
+                            topLeft = Offset(xEnd, 0f),
+                            size = Size((w - xEnd).coerceAtLeast(0f), h)
+                        )
+                    }
+                },
                 modifier = Modifier.fillMaxWidth()
             )
         }

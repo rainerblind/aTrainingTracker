@@ -1894,13 +1894,13 @@
   • Verify `ZoneGaugeBar` displays correct under-segment badge (e.g. localized Aerobic/Transition/Anaerobic) when `zoneLabels` is provided without `"Z2"`, `"Z3"`, or `"Z4"`.
   • Verify backward-compatibility of `ZoneGaugeState` and `ZoneGaugeBar` when `zoneLabels == null` (HR 5-zone `"Z1"`..`"Z5"`, Power 7-zone `"Z1"`..`"Z7"`).
   4. *Training Zones 4th Tab & Invariant Tests (`TST-TRK-061.4`, `HrvDfaA1SettingsContractTest.kt`, `TuningPreferencesDataStoreDfaA1Test.kt`, `TrackingViewsDatabaseManagerTest.java`)*:
-  • Verify `ZoneSettingsScreen` renders 4th tab `R.string.tab_hrv_dfa_a1` with unified 3-zone colored dual-thumb `RangeSlider` (`0.30..1.20`), fine-tuning $0.01$ step steppers, single-line Reset to Defaults action ($0.75 / 0.50$), and interactive `SensorFieldView` preview pills.
+  • Verify `ZoneSettingsScreen` renders 4th tab `R.string.tab_hrv_dfa_a1` with unified 3-zone colored dual-thumb `RangeSlider` (`0.30..1.20`) with Green (Zone 2) on the left, Orange (Zone 3) in the middle, and Red (Zone 4) on the right, directly in `RangeSlider`'s `track` slot (zero duplicate track container and zero M3 end-dots), fine-tuning $0.01$ step steppers, non-clipping Reset to Defaults action ($0.75 / 0.50$), and interactive `SensorFieldView` preview pills (`ATT-7741`).
   • Verify `HrvDfaA1SettingsContent` exposes `zone_display_gauge` row toggling `ZoneDisplayOptions.showGauge`.
   • Verify `TrackingViewsDatabaseManager.isBarSupported(SensorType.HRV_DFA_A1, sport)` and `isBarSupportedSensorType(SensorType.HRV_DFA_A1)` return `true` for all sports.
   • Verify `strings_hrv.xml` zone labels across all 9 locales do not contain `(Zone 2)`, `(Zone 3)`, `(Zone 4)`.
   • Verify default values $\alpha_{1,\text{T1}} = 0.75f$ and $\alpha_{1,\text{T2}} = 0.50f$.
   • Verify invariant enforcement: setting $T_1$ or $T_2$ enforces $T_1 \ge T_2 + 0.05f$ and bounds $[0.30, 1.20]$.
-  • Verify single-line wrapping constraints on header Reset button and `HrvZoneBandCard` title (`Modifier.weight(1f)`) and range badge (`maxLines = 1, softWrap = false`).
+  • Verify wrapping and anti-clipping constraints on header Reset button (`maxLines = 2, softWrap = true, overflow = TextOverflow.Ellipsis`), preventing German glyph truncation (`zurücl`), and `HrvZoneBandCard` title (`Modifier.weight(1f)`) and range badge (`maxLines = 1, softWrap = false`) (`ATT-7741`).
   • Verify 100% 9-language translation parity for localized guidance/helper string resources and zero hardcoded English text in `ZonesSettingsActivity.kt`.
   • Verify top bar calculator/history buttons are hidden when the 4th tab is active.
   • Verify removal of redundant $T_1$ and $T_2$ sliders from `PhysiologyModelsSection.kt`.

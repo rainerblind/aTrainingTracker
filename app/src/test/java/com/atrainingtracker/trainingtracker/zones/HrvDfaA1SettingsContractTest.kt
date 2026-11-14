@@ -165,6 +165,11 @@ class HrvDfaA1SettingsContractTest {
 
     @Test
     fun testHrvDfaA1RangeSlider_usesRangeSliderAndSemanticTrackColors() {
+        testHrvDfaA1RangeSlider_invertedOrientationAndUnifiedTrack()
+    }
+
+    @Test
+    fun testHrvDfaA1RangeSlider_invertedOrientationAndUnifiedTrack() {
         val activityFile = resolveActivityFile()
         assertTrue("ZonesSettingsActivity.kt must exist", activityFile.exists())
         val content = activityFile.readText()
@@ -178,6 +183,10 @@ class HrvDfaA1SettingsContractTest {
             content.contains("0.30f..1.20f")
         )
         assertTrue(
+            "HrvDfaA1RangeSlider must define custom track slot lambda (REQ-TRK-061.4a / TST-TRK-061.4a)",
+            content.contains("track = {")
+        )
+        assertTrue(
             "HrvDfaA1RangeSlider track must draw TTColor.Zone4 (Red) (REQ-TRK-061.4b / TST-TRK-061.4a)",
             content.contains("TTColor.Zone4")
         )
@@ -189,17 +198,40 @@ class HrvDfaA1SettingsContractTest {
             "HrvDfaA1RangeSlider track must draw TTColor.Zone2 (Green) (REQ-TRK-061.4b / TST-TRK-061.4a)",
             content.contains("TTColor.Zone2")
         )
+
+        val sliderCode = content.substringAfter("fun HrvDfaA1RangeSlider")
+        val leftT1Index = sliderCode.indexOf("T1: %.2f")
+        val rightT2Index = sliderCode.indexOf("T2: %.2f")
+        assertTrue("T1 must appear before T2 in HrvDfaA1RangeSlider (left-green, right-red)", leftT1Index < rightT2Index)
+
+        val beforeRangeSlider = sliderCode.substringBefore("RangeSlider(")
+        assertFalse(
+            "HrvDfaA1RangeSlider must eliminate duplicate standalone track Canvas above RangeSlider (REQ-TRK-061.4a)",
+            beforeRangeSlider.contains("Canvas(")
+        )
     }
 
     @Test
     fun testHrvLayout_antiWrappingConstraints() {
+        testHrvLayout_resetButtonWrappingAndAntiClipping()
+    }
+
+    @Test
+    fun testHrvLayout_resetButtonWrappingAndAntiClipping() {
         val activityFile = resolveActivityFile()
-        assertTrue("ZonesSettingsActivity.kt must exist", activityFile.exists())
+        assertTrue("ZonesSettingsActivity.kt must exist", activityFile.readText().isNotEmpty())
         val content = activityFile.readText()
 
         assertTrue(
-            "Header reset button must specify maxLines = 1, softWrap = false (REQ-TRK-061.4d / TST-TRK-061.4c)",
-            content.contains("reset_to_defaults") && content.contains("maxLines = 1") && content.contains("softWrap = false")
+            "Header reset button must specify maxLines = 2, softWrap = true, overflow = TextOverflow.Ellipsis (REQ-TRK-061.4d / TST-TRK-061.4b)",
+            content.contains("reset_to_defaults") &&
+                content.contains("maxLines = 2") &&
+                content.contains("softWrap = true") &&
+                content.contains("overflow = TextOverflow.Ellipsis")
+        )
+        assertTrue(
+            "Header reset button must specify weight(1f, fill = false) to prevent clipping (REQ-TRK-061.4d)",
+            content.contains("Modifier.weight(1f, fill = false)")
         )
         assertTrue(
             "HrvZoneBandCard must apply weight to zoneLabel (REQ-TRK-061.4d / TST-TRK-061.4c)",
