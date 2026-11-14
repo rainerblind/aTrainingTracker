@@ -3,7 +3,7 @@
 **Document Identifier**: `RISK-REG-ATT`  
 **Standard**: ASPICE 4.0 `MAN.3` (Project Management — `MAN.3.BP5` Define, monitor and adjust project risks)  
 **Target Release**: `V5.0.0` | **Version**: 1.0.0  
-**Status**: Approved | **Last Review Date**: 2026-11-13  
+**Status**: Approved | **Last Review Date**: 2026-11-15  
 **Governing Ticket**: [ATT-6151](https://rainerblind.atlassian.net/browse/ATT-6151) | **Requirement**: `REQ-STP-010` | **Test**: `TST-STP-010`  
 
 ---
@@ -71,6 +71,7 @@ The risk register is reviewed at every Sprint-Start ceremony to capture newly su
 | **2026-11-12** | **2026-46.5** *(Start)* | Sprint Coordinator (`ATT-7525`) | Ceremony 1 review across 29 queued sprint tickets (`RISK-001`..`RISK-006` verified; High-exposure `RISK-001` [`E=16`] & `RISK-002` [`E=15`] linked to `ATT-6148`/`ATT-6152` & `ATT-6150`/`ATT-6141` plus active Sprint `2026-46.5` design-guideline contract test `ATT-7536`/`ATT-7539`; `RISK-004` actively mitigated via real-hardware RearVue 820 BLE V1/V2/Light fixes `ATT-7543`, `ATT-7542`, `ATT-7545`, `ATT-7541`, and Polar H10 reconnect/signal fixes `ATT-7530`, `ATT-7533`). |
 | **2026-11-13** | **2026-46.5** *(Close)* | Sprint Coordinator / Human Reviewer (`ATT-7525`) | Ceremony 2 review across 32 tickets in `Final Review (Human)` (`66.0 SP` completed; 30 accepted with `V5.0.0`, 1 deferred for live morning test [`ATT-7532`], 1 rejected on-device [`ATT-7540` -> `ATT-7737`]). Enacted **Rule 84** (mandatory `Model: "pro"` + 4-point `read_file` screenshot inspection for all graphical/UI/slider/icon tickets; hard-enforced `flock` directly in `./gradlew` + `-Xmx2048m` / `60s` daemon limits; DataStore MockK `resolveDataStore` singleton isolation preventing cross-test NPE contamination). |
 | **2026-11-13** | **2026-46.6** *(Start)* | Sprint Coordinator (`ATT-7749`) | Ceremony 1 review across 47 queued sprint tickets (`RISK-001`..`RISK-006` verified; High-exposure `RISK-001` [`E=16`] & `RISK-002` [`E=15`] linked to `ATT-6148`/`ATT-6152` & `ATT-6150`/`ATT-6141` plus active Sprint `2026-46.6` ASPICE/CI/governance hardening `ATT-7558`, `ATT-7559`, `ATT-7562`–`ATT-7565`; `RISK-004` actively mitigated via BLE/ANT+ radar & Polar H10 reconnect fixes `ATT-7755`, `ATT-7546`, `ATT-7547`, `ATT-7573`–`ATT-7580`). |
+| **2026-11-15** | **2026-46.7** *(Start)* | Sprint Coordinator (`ATT-8030`) | Ceremony 1 review across 31 regular sprint tickets (`82.0 SP`, `RISK-001`..`RISK-006` verified; High-exposure `RISK-001` [`E=16`] & `RISK-002` [`E=15`] linked to `ATT-6148`/`ATT-6152` [`Erledigt`] & `ATT-6150` [`Erledigt`]/`ATT-6141` [`Zu erledigen`] plus active `TrackerService`/`BANALService` characterisation harness `ATT-7902`; `RISK-003`/`RISK-004`/`RISK-006` actively mitigated via API 33+ gated `polar-ble-sdk` GATT arbitration [`ATT-7762`..`ATT-8020`], OOM/crash-recovery hardening [`ATT-7874`–`ATT-7877`], and serialized `TrackingViewsDbHelper`/SQLite repository migrations [`ATT-7972`, `ATT-7760`, `ATT-7909`]). |
 
 ---
 
