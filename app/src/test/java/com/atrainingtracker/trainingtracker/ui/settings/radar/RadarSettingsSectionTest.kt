@@ -21,6 +21,7 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
+import javax.xml.parsers.DocumentBuilderFactory
 
 /**
  * Unit tests verifying UI configuration contracts and conditional gating for Radar Tail Light
@@ -108,9 +109,15 @@ class RadarSettingsSectionTest {
 
     private fun getXmlString(file: File, stringName: String): String? {
         val target = if (file.exists()) file else File("app/" + file.path)
-        val content = target.readText()
-        val regex = Regex("""<string name="$stringName">([^<]*)</string>""")
-        return regex.find(content)?.groupValues?.get(1)
+        val doc = DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(target)
+        val nodes = doc.getElementsByTagName("string")
+        for (i in 0 until nodes.length) {
+            val el = nodes.item(i) as? org.w3c.dom.Element ?: continue
+            if (el.getAttribute("name") == stringName) {
+                return el.textContent
+            }
+        }
+        return null
     }
 
     /**

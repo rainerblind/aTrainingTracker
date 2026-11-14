@@ -84,14 +84,14 @@ class AdvancedTuningScreenTest {
     @Test
     fun testAdvancedTuningScreen_doesNotContainSupporterDebugSection() {
         // REQ-SET-087.2 / TST-SET-087.4
-        val sourceFile = java.io.File("src/main/java/com/atrainingtracker/trainingtracker/ui/settings/tuning/AdvancedTuningScreen.kt")
-        if (sourceFile.exists()) {
-            val content = sourceFile.readText()
-            org.junit.Assert.assertFalse(
-                "AdvancedTuningScreen must not reference SupporterDebugSection (REQ-SET-087.2)",
-                content.contains("SupporterDebugSection")
-            )
-        }
+        val screenClass = Class.forName("com.atrainingtracker.trainingtracker.ui.settings.tuning.AdvancedTuningScreenKt")
+        val metadata = screenClass.getAnnotation(Metadata::class.java)
+        assertNotNull("AdvancedTuningScreenKt must carry Kotlin Metadata", metadata)
+        val symbols = metadata!!.data2.toList()
+        org.junit.Assert.assertFalse(
+            "AdvancedTuningScreen must not reference SupporterDebugSection (REQ-SET-087.2)",
+            symbols.any { it.contains("SupporterDebugSection") }
+        )
 
         val devMenuClass = Class.forName("com.atrainingtracker.trainingtracker.ui.settings.developer.DeveloperMenuScreenKt")
         val devMenuMethod = devMenuClass.declaredMethods.find { it.name.startsWith("DeveloperMenuScreen") && Modifier.isPublic(it.modifiers) }

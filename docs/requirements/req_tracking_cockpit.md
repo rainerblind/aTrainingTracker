@@ -5465,7 +5465,7 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 **Invariants**: Disabled by default (`false`); raw device-attributed columns 100% byte-for-byte preserved; single-transaction SQLite update; zero external math libraries; 9-language localization parity; 100% clean-room test pass rate.
 
-### REQ-TRK-077: Indoor GPS Suppression, External Speed Sensor Coupling & IMU Rest-Variance Stationary Pinning [Verified] (ATT-47: Indoor GPS suppression & external sensor / IMU rest-variance coupling for stationary coordinate pinning)
+### REQ-TRK-077: Indoor GPS Suppression, External Speed Sensor Coupling & IMU Rest-Variance Stationary Pinning [Verified]
 - **Target Release**: `V5.0.0`
 - **Tests**: `TST-TRK-077`
 - **Priority**: High

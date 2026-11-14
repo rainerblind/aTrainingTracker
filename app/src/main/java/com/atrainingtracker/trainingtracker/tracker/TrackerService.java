@@ -2104,10 +2104,9 @@ public class TrackerService extends Service {
      *  get the 'best' sport type based on the available equipment and average speed.
      */
     protected long getSportTypeId() {
-        EquipmentAndSportTypeDiscoveryManager discoveryManager = EquipmentAndSportTypeDiscoveryManager.getInstance(this);
-
         final BANALServiceComm banalService = mBanalService;
         if (banalService != null) {
+            EquipmentAndSportTypeDiscoveryManager discoveryManager = EquipmentAndSportTypeDiscoveryManager.getInstance(this);
             if (averageSpeedCalculateable()) {
                 return discoveryManager.resolveSportType(
                         new HashSet<>(banalService.getDatabaseIdsOfActiveRemoteDevices()),

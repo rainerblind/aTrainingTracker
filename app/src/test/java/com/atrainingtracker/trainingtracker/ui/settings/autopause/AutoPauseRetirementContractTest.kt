@@ -37,12 +37,17 @@ class AutoPauseRetirementContractTest {
         val sectionMethod = methods.find { it.name == "SensorsGpsFilterSection" && Modifier.isPublic(it.modifiers) }
         assertNotNull("SensorsGpsFilterSection composable must exist", sectionMethod)
 
-        // SensorsGpsFilterSection takes gpsAccuracy (Float), onGpsAccuracyChange, altitudeWindowSec (Int),
-        // onAltitudeWindowChange, slopeMinSpeed (Float), onSlopeMinSpeedChange + Composer + changed.
-        // It must NOT declare autoPauseBikeEnabled, autoPauseRunEnabled, or autoPauseOtherEnabled (Booleans).
-        val paramTypes = sectionMethod!!.parameterTypes
-        val booleanParams = paramTypes.count { it == java.lang.Boolean.TYPE }
-        assertTrue("SensorsGpsFilterSection must not accept any Boolean parameters (auto-pause controls retired)", booleanParams == 0)
+        // SensorsGpsFilterSection must NOT declare autoPauseBikeEnabled, autoPauseRunEnabled, or autoPauseOtherEnabled
+        // (while allowing unrelated Boolean toggles such as postWorkoutErtsSmoothingEnabled).
+        val metadata = clazz.getAnnotation(Metadata::class.java)
+        assertNotNull("SensorsGpsFilterSectionKt must carry Kotlin Metadata", metadata)
+        val symbols = metadata!!.data2.toList()
+        val retiredParams = listOf("autoPauseBikeEnabled", "autoPauseRunEnabled", "autoPauseOtherEnabled")
+        val foundRetired = retiredParams.filter { it in symbols }
+        assertTrue(
+            "SensorsGpsFilterSection must not declare retired auto-pause parameters: $foundRetired",
+            foundRetired.isEmpty()
+        )
     }
 
     @Test

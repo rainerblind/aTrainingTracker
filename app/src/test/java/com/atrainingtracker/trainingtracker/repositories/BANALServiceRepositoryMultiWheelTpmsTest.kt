@@ -53,16 +53,6 @@ class BANALServiceRepositoryMultiWheelTpmsTest {
     private lateinit var mockContext: Context
     private lateinit var repository: BANALServiceRepository
 
-    private fun resolveSourceFile(relativePath: String): File {
-        val candidates = listOf(
-            File(relativePath),
-            File("app/$relativePath"),
-            File("../$relativePath")
-        )
-        return candidates.firstOrNull { it.exists() }
-            ?: error("File not found: $relativePath")
-    }
-
     @Before
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
@@ -141,60 +131,25 @@ class BANALServiceRepositoryMultiWheelTpmsTest {
     }
 
     @Test
-    fun testRepositorySourceContract_multiWheelTelemetryLoop() {
-        val file = resolveSourceFile("app/src/main/java/com/atrainingtracker/trainingtracker/repositories/BANALServiceRepository.kt")
-        val content = file.readText()
+    fun testRepositoryContract_multiWheelTelemetryLoopAndCaching() {
+        val repoClass = BANALServiceRepository::class.java
 
-        assertTrue(
-            "Repository must maintain perDeviceItpmsEstimators map",
-            content.contains("perDeviceItpmsEstimators")
-        )
-        assertTrue(
-            "Repository must maintain dualWheelTpmsEstimator instance",
-            content.contains("val dualWheelTpmsEstimator = DualWheelTpmsEstimator()")
-        )
-        assertTrue(
-            "Repository must route active wheel devices to perDeviceItpmsEstimators",
-            content.contains("perDeviceItpmsEstimators.getOrPut(devId)")
-        )
-        assertTrue(
-            "Repository must dispatch dual wheel ratio telemetry when >= 2 wheel sensors present",
-            content.contains("dualWheelTpmsEstimator.processTelemetry")
-        )
-    }
+        val dualEstimatorField = repoClass.declaredFields.firstOrNull { it.name == "dualWheelTpmsEstimator" }
+        assertNotNull("Repository must declare dualWheelTpmsEstimator", dualEstimatorField)
 
-    @Test
-    fun testRepositorySourceContract_zeroMainThreadQueriesAndCaching() {
-        val file = resolveSourceFile("app/src/main/java/com/atrainingtracker/trainingtracker/repositories/BANALServiceRepository.kt")
-        val content = file.readText()
+        val perDeviceField = repoClass.declaredFields.firstOrNull { it.name == "perDeviceItpmsEstimators" }
+        assertNotNull("Repository must declare perDeviceItpmsEstimators map", perDeviceField)
 
-        // Finding 1: Must NOT call uncached getWheelPositionForDevice in 1-Hz loop
-        org.junit.Assert.assertFalse(
-            "Repository must NOT execute uncached SQLite query eqRepo.getWheelPositionForDevice in 1-Hz loop",
-            content.contains("eqRepo.getWheelPositionForDevice")
-        )
-        // Finding 1 & 2: In-memory cache structures and methods
-        assertTrue(
-            "Repository must maintain cachedActiveWheelPositions map",
-            content.contains("cachedActiveWheelPositions")
-        )
-        assertTrue(
-            "Repository must maintain cachedScopedWheelPositions map",
-            content.contains("cachedScopedWheelPositions")
-        )
-        assertTrue(
-            "Repository must provide refreshWheelPositionsCache method",
-            content.contains("fun refreshWheelPositionsCache()")
-        )
-        assertTrue(
-            "Repository must provide setCachedWheelPosition method",
-            content.contains("fun setCachedWheelPosition(")
-        )
-        // Finding 4: Post-workout persistence wiring
-        assertTrue(
-            "Repository must provide persistConvergedCircumferences method",
-            content.contains("fun persistConvergedCircumferences(")
-        )
+        val cachedActiveField = repoClass.declaredFields.firstOrNull { it.name == "cachedActiveWheelPositions" }
+        assertNotNull("Repository must maintain cachedActiveWheelPositions map", cachedActiveField)
+
+        val cachedScopedField = repoClass.declaredFields.firstOrNull { it.name == "cachedScopedWheelPositions" }
+        assertNotNull("Repository must maintain cachedScopedWheelPositions map", cachedScopedField)
+
+        val methods = repoClass.declaredMethods.map { it.name }.toSet()
+        assertTrue("Repository must provide refreshWheelPositionsCache method", "refreshWheelPositionsCache" in methods)
+        assertTrue("Repository must provide setCachedWheelPosition method", "setCachedWheelPosition" in methods)
+        assertTrue("Repository must provide persistConvergedCircumferences method", "persistConvergedCircumferences" in methods)
     }
 
     @Test

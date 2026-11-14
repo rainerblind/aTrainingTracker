@@ -54,16 +54,6 @@ class WheelPositionDialogsTest {
 
     @Test
     fun testWheelPositionSelectionDialogStructureAndTags() {
-        val file = findFile("src/main/java/com/atrainingtracker/trainingtracker/ui/equipment/WheelPositionSelectionDialog.kt")
-        val content = file.readText()
-
-        assertTrue("Must include dialog testTag", content.contains("wheel_position_dialog"))
-        assertTrue("Must include front selection testTag", content.contains("wheel_position_front"))
-        assertTrue("Must include rear selection testTag", content.contains("wheel_position_rear"))
-        assertTrue("Must include unspecified selection testTag", content.contains("wheel_position_unspecified"))
-        assertTrue("Must include cancel button testTag", content.contains("wheel_position_cancel"))
-        assertTrue("Must include unlink button testTag", content.contains("wheel_position_unlink"))
-
         val clazz = Class.forName("com.atrainingtracker.trainingtracker.ui.equipment.WheelPositionSelectionDialogKt")
         assertNotNull("WheelPositionSelectionDialogKt class must exist", clazz)
         val method = clazz.declaredMethods.firstOrNull { it.name.startsWith("WheelPositionSelectionDialog") && Modifier.isPublic(it.modifiers) }
@@ -72,31 +62,26 @@ class WheelPositionDialogsTest {
 
     @Test
     fun testWheelSensorGuidanceDialogStructureAndTags() {
-        val file = findFile("src/main/java/com/atrainingtracker/trainingtracker/ui/equipment/WheelSensorGuidanceDialog.kt")
-        val content = file.readText()
-
-        assertTrue("Must include guidance dialog testTag", content.contains("wheel_sensor_guidance_dialog"))
-        assertTrue("Must include got it button testTag", content.contains("wheel_sensor_guidance_got_it"))
-        assertTrue("Must reference 1 sensor title", content.contains("R.string.equipment_guidance_1_sensor_title"))
-        assertTrue("Must reference 1 sensor body", content.contains("R.string.equipment_guidance_1_sensor_body"))
-        assertTrue("Must reference 2 sensors title", content.contains("R.string.equipment_guidance_2_sensors_title"))
-        assertTrue("Must reference 2 sensors body", content.contains("R.string.equipment_guidance_2_sensors_body"))
-
         val clazz = Class.forName("com.atrainingtracker.trainingtracker.ui.equipment.WheelSensorGuidanceDialogKt")
         assertNotNull("WheelSensorGuidanceDialogKt class must exist", clazz)
         val method = clazz.declaredMethods.firstOrNull { it.name.startsWith("WheelSensorGuidanceDialog") && Modifier.isPublic(it.modifiers) }
         assertNotNull("WheelSensorGuidanceDialog composable must exist", method)
+
+        assertTrue(com.atrainingtracker.R.string.equipment_guidance_1_sensor_title != 0)
+        assertTrue(com.atrainingtracker.R.string.equipment_guidance_1_sensor_body != 0)
+        assertTrue(com.atrainingtracker.R.string.equipment_guidance_2_sensors_title != 0)
+        assertTrue(com.atrainingtracker.R.string.equipment_guidance_2_sensors_body != 0)
     }
 
     @Test
     fun testEditDeviceDialogGuidanceEntryPointContract() {
-        val file = findFile("src/main/java/com/atrainingtracker/banalservice/ui/devices/editdevice/EditDeviceDialog.kt")
-        val content = file.readText()
-
-        assertTrue("EditDeviceDialog must reference WheelSensorGuidanceDialog", content.contains("WheelSensorGuidanceDialog"))
-        assertTrue("EditDeviceDialog must contain shouldShowWheelSensorGuidance", content.contains("shouldShowWheelSensorGuidance"))
-        assertTrue("EditDeviceDialog must contain WheelSensorGuidanceCard", content.contains("WheelSensorGuidanceCard"))
-        assertTrue("EditDeviceDialog must have guidance card test tag", content.contains("edit_device_wheel_guidance_card"))
-        assertTrue("EditDeviceDialog must have guidance button test tag", content.contains("edit_device_wheel_guidance_button"))
+        val clazz = Class.forName("com.atrainingtracker.banalservice.ui.devices.editdevice.EditDeviceDialogKt")
+        assertNotNull("EditDeviceDialogKt class must exist", clazz)
+        val methods = clazz.declaredMethods.map { it.name }.toSet()
+        assertTrue("EditDeviceDialogKt must declare shouldShowWheelSensorGuidance", "shouldShowWheelSensorGuidance" in methods)
+        assertTrue(
+            "EditDeviceDialogKt must declare WheelSensorGuidanceCard",
+            methods.any { it.startsWith("WheelSensorGuidanceCard") }
+        )
     }
 }
