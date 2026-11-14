@@ -144,4 +144,55 @@ class EquipmentDbHelperMigrationTest {
         helper.removeDeviceLink(eqId, 201L)
         assertNull(helper.getWheelPosition(eqId, 201L))
     }
+
+    @Test
+    fun testSetEquipmentLinksPreservesExistingWheelPositions() {
+        // Create 3 pieces of equipment
+        val bike1Id = helper.addEquipment("Aeroad CFR", EquipmentDbHelper.ROAD, emptyList())
+        val bike2Id = helper.addEquipment("Endurace CF", EquipmentDbHelper.ROAD, emptyList())
+        val bike3Id = helper.addEquipment("Grail CF", EquipmentDbHelper.ROAD, emptyList())
+        assertTrue(bike1Id > 0 && bike2Id > 0 && bike3Id > 0)
+
+        val sensorId = 505
+
+        // Link sensor to bike1 as FRONT and bike2 as REAR
+        helper.addDeviceLink(bike1Id, sensorId.toLong(), WheelPosition.FRONT)
+        helper.addDeviceLink(bike2Id, sensorId.toLong(), WheelPosition.REAR)
+
+        assertEquals(WheelPosition.FRONT, helper.getWheelPosition(bike1Id, sensorId.toLong()))
+        assertEquals(WheelPosition.REAR, helper.getWheelPosition(bike2Id, sensorId.toLong()))
+
+        // Update links via setEquipmentLinks with existing bikes
+        helper.setEquipmentLinks(sensorId, listOf("Aeroad CFR", "Endurace CF"))
+
+        // Verify existing FRONT and REAR wheel positions are preserved without data loss
+        assertEquals(
+            "FRONT position must be preserved after setEquipmentLinks",
+            WheelPosition.FRONT,
+            helper.getWheelPosition(bike1Id, sensorId.toLong())
+        )
+        assertEquals(
+            "REAR position must be preserved after setEquipmentLinks",
+            WheelPosition.REAR,
+            helper.getWheelPosition(bike2Id, sensorId.toLong())
+        )
+
+        // Update links removing bike2 and adding new bike3
+        helper.setEquipmentLinks(sensorId, listOf("Aeroad CFR", "Grail CF"))
+
+        assertEquals(
+            "FRONT position on surviving bike1 must be preserved",
+            WheelPosition.FRONT,
+            helper.getWheelPosition(bike1Id, sensorId.toLong())
+        )
+        assertNull(
+            "Removed bike2 must no longer be linked",
+            helper.getWheelPosition(bike2Id, sensorId.toLong())
+        )
+        assertEquals(
+            "Newly linked bike3 must default to UNSPECIFIED position",
+            WheelPosition.UNSPECIFIED,
+            helper.getWheelPosition(bike3Id, sensorId.toLong())
+        )
+    }
 }

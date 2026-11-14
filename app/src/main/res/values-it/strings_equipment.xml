@@ -7,9 +7,6 @@
     <string name="equipment_wheel_position_unlink">Scollega sensore</string>
     <string name="equipment_wheel_position_front_badge">A</string>
     <string name="equipment_wheel_position_rear_badge">P</string>
-    <string name="equipment_wheel_position_conflict_title">Conflitto posizione ruota</string>
-    <string name="equipment_wheel_position_conflict_message">%1$s è già assegnato alla %2$s su questa bicicletta. Scambiare le posizioni dei sensori?</string>
-    <string name="equipment_wheel_position_swap">Scambia posizioni</string>
     <string name="equipment_guidance_title">Perché i sensori ruota insieme al GPS?</string>
     <string name="equipment_guidance_subtitle">Vantaggi fisici dei sensori di velocità ruota rispetto al GPS dello smartphone</string>
     <string name="equipment_guidance_1_sensor_title">1 sensore ruota + GPS</string>

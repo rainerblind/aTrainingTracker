@@ -7,9 +7,6 @@
     <string name="equipment_wheel_position_unlink">Unlink Sensor</string>
     <string name="equipment_wheel_position_front_badge">F</string>
     <string name="equipment_wheel_position_rear_badge">R</string>
-    <string name="equipment_wheel_position_conflict_title">Wheel Position Conflict</string>
-    <string name="equipment_wheel_position_conflict_message">%1$s is already assigned to the %2$s on this bike. Swap sensor positions?</string>
-    <string name="equipment_wheel_position_swap">Swap Positions</string>
     <string name="equipment_guidance_title">Why Wheel Sensors Alongside GPS?</string>
     <string name="equipment_guidance_subtitle">Physical advantages of wheel speed sensors vs. smartphone GPS</string>
     <string name="equipment_guidance_1_sensor_title">1 Wheel Sensor + GPS</string>

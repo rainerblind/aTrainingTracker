@@ -59,6 +59,7 @@ import com.atrainingtracker.banalservice.ui.devices.DeviceStatusRow
 import com.atrainingtracker.banalservice.ui.devices.devicedata.DeviceUiData
 import com.atrainingtracker.trainingtracker.ui.components.core.AppDialogActions
 import com.atrainingtracker.trainingtracker.ui.components.core.AppModalBottomSheet
+import com.atrainingtracker.trainingtracker.ui.equipment.WheelSensorGuidanceDialog
 import com.atrainingtracker.trainingtracker.ui.theme.TTColor
 
 /**
@@ -74,6 +75,7 @@ fun EditDeviceDialog(
     val snapshot by viewModel.deviceSnapshot.collectAsStateWithLifecycle()
     val liveData by viewModel.deviceLiveData.collectAsStateWithLifecycle(initialValue = null)
     val deviceNotFound by viewModel.deviceNotFound.collectAsStateWithLifecycle()
+    var showWheelGuidanceDialog by remember { mutableStateOf(false) }
 
     // Initialize data only once
     LaunchedEffect(deviceId) {
@@ -84,6 +86,10 @@ fun EditDeviceDialog(
         if (deviceNotFound) {
             onDismiss()
         }
+    }
+
+    if (showWheelGuidanceDialog) {
+        WheelSensorGuidanceDialog(onDismiss = { showWheelGuidanceDialog = false })
     }
 
     snapshot?.let { data ->
@@ -193,7 +199,12 @@ fun EditDeviceDialog(
                     RadarLightControlSection(isConnected = isConnected)
                 }
 
-                // 7. Live Data Preview
+                // 9. Wheel Sensor Guidance (ATT-7752, REQ-SEN-029.4)
+                if (shouldShowWheelSensorGuidance(data.deviceType)) {
+                    WheelSensorGuidanceCard(onShowGuidance = { showWheelGuidanceDialog = true })
+                }
+
+                // 10. Live Data Preview
                 liveData?.let { live ->
                     LivePreviewSection(live)
                 }
@@ -1200,3 +1211,78 @@ private fun RadarLightControlSection(
         }
     }
 }
+
+/**
+ * In-app educational guidance card for wheel speed sensors and fused odometry (REQ-SEN-029.4, ATT-7752).
+ */
+@Composable
+internal fun WheelSensorGuidanceCard(
+    onShowGuidance: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    OutlinedCard(
+        onClick = onShowGuidance,
+        modifier = modifier
+            .fillMaxWidth()
+            .testTag("edit_device_wheel_guidance_card"),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.outlinedCardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+        ),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Info,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp),
+                    tint = MaterialTheme.colorScheme.primary
+                )
+                Text(
+                    text = stringResource(R.string.equipment_guidance_title),
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.weight(1f)
+                )
+                IconButton(
+                    onClick = onShowGuidance,
+                    modifier = Modifier
+                        .size(32.dp)
+                        .testTag("edit_device_wheel_guidance_button")
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Info,
+                        contentDescription = stringResource(R.string.equipment_guidance_title),
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
+
+            Text(
+                text = stringResource(R.string.equipment_guidance_subtitle),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+/**
+ * Determines whether the wheel sensor guidance entry point should be displayed for the given [deviceType]
+ * (REQ-SEN-029.4, ATT-7752).
+ */
+fun shouldShowWheelSensorGuidance(deviceType: DeviceType): Boolean =
+    deviceType == DeviceType.BIKE_SPEED ||
+    deviceType == DeviceType.BIKE_SPEED_AND_CADENCE ||
+    deviceType == DeviceType.SPEED_AND_LOCATION_ATT_FUSED
+

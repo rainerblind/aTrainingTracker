@@ -7,9 +7,6 @@
     <string name="equipment_wheel_position_unlink">Dissocier le capteur</string>
     <string name="equipment_wheel_position_front_badge">Av</string>
     <string name="equipment_wheel_position_rear_badge">Ar</string>
-    <string name="equipment_wheel_position_conflict_title">Conflit de position de roue</string>
-    <string name="equipment_wheel_position_conflict_message">%1$s est déjà assigné à la %2$s sur ce vélo. Échanger les positions des capteurs ?</string>
-    <string name="equipment_wheel_position_swap">Échanger les positions</string>
     <string name="equipment_guidance_title">Pourquoi des capteurs de roue avec le GPS ?</string>
     <string name="equipment_guidance_subtitle">Avantages physiques des capteurs de vitesse de roue par rapport au GPS du smartphone</string>
     <string name="equipment_guidance_1_sensor_title">1 capteur de roue + GPS</string>

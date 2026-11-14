@@ -87,4 +87,16 @@ class WheelPositionDialogsTest {
         val method = clazz.declaredMethods.firstOrNull { it.name.startsWith("WheelSensorGuidanceDialog") && Modifier.isPublic(it.modifiers) }
         assertNotNull("WheelSensorGuidanceDialog composable must exist", method)
     }
+
+    @Test
+    fun testEditDeviceDialogGuidanceEntryPointContract() {
+        val file = findFile("src/main/java/com/atrainingtracker/banalservice/ui/devices/editdevice/EditDeviceDialog.kt")
+        val content = file.readText()
+
+        assertTrue("EditDeviceDialog must reference WheelSensorGuidanceDialog", content.contains("WheelSensorGuidanceDialog"))
+        assertTrue("EditDeviceDialog must contain shouldShowWheelSensorGuidance", content.contains("shouldShowWheelSensorGuidance"))
+        assertTrue("EditDeviceDialog must contain WheelSensorGuidanceCard", content.contains("WheelSensorGuidanceCard"))
+        assertTrue("EditDeviceDialog must have guidance card test tag", content.contains("edit_device_wheel_guidance_card"))
+        assertTrue("EditDeviceDialog must have guidance button test tag", content.contains("edit_device_wheel_guidance_button"))
+    }
 }

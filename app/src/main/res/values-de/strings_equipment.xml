@@ -7,9 +7,6 @@
     <string name="equipment_wheel_position_unlink">Sensor trennen</string>
     <string name="equipment_wheel_position_front_badge">V</string>
     <string name="equipment_wheel_position_rear_badge">H</string>
-    <string name="equipment_wheel_position_conflict_title">Laufrad-Positionskonflikt</string>
-    <string name="equipment_wheel_position_conflict_message">%1$s ist auf diesem Fahrrad bereits dem %2$s zugewiesen. Sensorpositionen tauschen?</string>
-    <string name="equipment_wheel_position_swap">Positionen tauschen</string>
     <string name="equipment_guidance_title">Warum Laufradsensoren neben GPS?</string>
     <string name="equipment_guidance_subtitle">Physikalische Vorteile von Laufrad-Geschwindigkeitssensoren gegenüber Smartphone-GPS</string>
     <string name="equipment_guidance_1_sensor_title">1 Laufradsensor + GPS</string>

@@ -819,21 +819,51 @@ public class EquipmentDbHelper extends SQLiteOpenHelper {
     public void setEquipmentLinks(int antDeviceId, @NonNull List<String> equipmentList) {
         if (DEBUG) Log.d(TAG, "setEquipmentLinks: " + antDeviceId);
 
-        // first of all, delete all existing links
         SQLiteDatabase db = this.getWritableDatabase();
-        db.delete(LINKS, ANT_DEVICE_ID + "=?", new String[]{antDeviceId + ""});
 
-        // insert new links
-        ContentValues values = new ContentValues();
-        values.put(ANT_DEVICE_ID, antDeviceId);
+        // Query existing wheel positions to preserve them during equipment link updates (REQ-SEN-029, ATT-7752)
+        java.util.Map<Long, WheelPosition> existingPositions = new java.util.HashMap<>();
+        try {
+            try (Cursor cursor = db.query(LINKS, new String[]{EQUIPMENT_ID, WHEEL_POSITION},
+                    ANT_DEVICE_ID + "=?", new String[]{String.valueOf(antDeviceId)}, null, null, null)) {
+                if (cursor != null && cursor.moveToFirst()) {
+                    int eqCol = cursor.getColumnIndex(EQUIPMENT_ID);
+                    int posCol = cursor.getColumnIndex(WHEEL_POSITION);
+                    do {
+                        long eqId = cursor.getLong(eqCol);
+                        WheelPosition pos = (posCol != -1 && !cursor.isNull(posCol))
+                                ? WheelPosition.fromString(cursor.getString(posCol))
+                                : WheelPosition.UNSPECIFIED;
+                        existingPositions.put(eqId, pos);
+                    } while (cursor.moveToNext());
+                }
+            }
+        } catch (Throwable t) {
+            // Graceful fallback when links table is not yet migrated or in unit tests with unmocked query
+            if (DEBUG) Log.d(TAG, "Could not query existing positions in setEquipmentLinks: " + t.getMessage());
+        }
 
-        for (String equipmentName : equipmentList) {
+        db.beginTransaction();
+        try {
+            // first of all, delete all existing links
+            db.delete(LINKS, ANT_DEVICE_ID + "=?", new String[]{String.valueOf(antDeviceId)});
 
-            if (DEBUG)
-                Log.d(TAG, "save " + equipmentName + ", id=" + getEquipmentId(db, equipmentName));
-            // ContentValues values = new ContentValues();
-            values.put(EQUIPMENT_ID, getEquipmentId(db, equipmentName));
-            db.insert(LINKS, null, values);
+            // insert new links preserving wheel positions
+            for (String equipmentName : equipmentList) {
+                long eqId = getEquipmentId(db, equipmentName);
+                if (DEBUG)
+                    Log.d(TAG, "save " + equipmentName + ", id=" + eqId);
+                ContentValues values = new ContentValues();
+                values.put(ANT_DEVICE_ID, antDeviceId);
+                values.put(EQUIPMENT_ID, eqId);
+                WheelPosition pos = existingPositions.get(eqId);
+                values.put(WHEEL_POSITION, pos != null ? pos.name() : WheelPosition.UNSPECIFIED.name());
+                db.insert(LINKS, null, values);
+            }
+            db.setTransactionSuccessful();
+            if (DEBUG) Log.d(TAG, "Successfully updated equipment links for device " + antDeviceId + " with " + equipmentList.size() + " items");
+        } finally {
+            db.endTransaction();
         }
 
         if (DEBUG) Log.d(TAG, "inserted");

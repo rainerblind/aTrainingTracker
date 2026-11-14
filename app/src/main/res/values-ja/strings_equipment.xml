@@ -7,9 +7,6 @@
     <string name="equipment_wheel_position_unlink">センサーのリンクを解除</string>
     <string name="equipment_wheel_position_front_badge">前</string>
     <string name="equipment_wheel_position_rear_badge">後</string>
-    <string name="equipment_wheel_position_conflict_title">ホイール位置の競合</string>
-    <string name="equipment_wheel_position_conflict_message">%1$s はこの自転車の %2$s に既に割り当てられています。センサーの位置を入れ替えますか？</string>
-    <string name="equipment_wheel_position_swap">位置を入れ替える</string>
     <string name="equipment_guidance_title">GPSに加えてホイールセンサーを使用する理由</string>
     <string name="equipment_guidance_subtitle">スマートフォンGPSに対するホイールスピードセンサーの物理的利点</string>
     <string name="equipment_guidance_1_sensor_title">ホイールセンサー1基 + GPS</string>

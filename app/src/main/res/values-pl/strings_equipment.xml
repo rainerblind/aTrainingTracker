@@ -7,9 +7,6 @@
     <string name="equipment_wheel_position_unlink">Odłącz czujnik</string>
     <string name="equipment_wheel_position_front_badge">P</string>
     <string name="equipment_wheel_position_rear_badge">T</string>
-    <string name="equipment_wheel_position_conflict_title">Konflikt pozycji koła</string>
-    <string name="equipment_wheel_position_conflict_message">%1$s jest już przypisany do %2$s w tym rowerze. Zamienić pozycje czujników?</string>
-    <string name="equipment_wheel_position_swap">Zamień pozycje</string>
     <string name="equipment_guidance_title">Dlaczego czujniki koła obok GPS?</string>
     <string name="equipment_guidance_subtitle">Fizyczne zalety czujników prędkości koła w porównaniu z GPS smartfona</string>
     <string name="equipment_guidance_1_sensor_title">1 czujnik koła + GPS</string>

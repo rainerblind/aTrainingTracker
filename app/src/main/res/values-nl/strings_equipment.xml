@@ -7,9 +7,6 @@
     <string name="equipment_wheel_position_unlink">Sensor ontkoppelen</string>
     <string name="equipment_wheel_position_front_badge">V</string>
     <string name="equipment_wheel_position_rear_badge">A</string>
-    <string name="equipment_wheel_position_conflict_title">Wielpositieconflict</string>
-    <string name="equipment_wheel_position_conflict_message">%1$s is op deze fiets al toegewezen aan het %2$s. Sensorposities omwisselen?</string>
-    <string name="equipment_wheel_position_swap">Posities omwisselen</string>
     <string name="equipment_guidance_title">Waarom wielsensoren naast GPS?</string>
     <string name="equipment_guidance_subtitle">Fysieke voordelen van wielsnelheidssensoren ten opzichte van smartphone-GPS</string>
     <string name="equipment_guidance_1_sensor_title">1 wielsensor + GPS</string>
