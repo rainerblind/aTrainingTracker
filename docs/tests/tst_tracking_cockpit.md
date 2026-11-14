@@ -2013,6 +2013,7 @@
   • Verify audio chime and vibration triggers on `NONE -> APPROACHING`, escalation to `FAST_APPROACHING`, all-clear `-> NONE`, and disconnect `-> DISCONNECTED_ERROR`. Verify debouncing prevents repeated chimes on continuous 8 Hz range telemetry.
   • Verify `FAST_APPROACHING` escalation occurring within `< 800 ms` of initial approach is NOT debounced, immediately triggers the fast-threat chime and vibration, and debounced non-escalating frames do not mutate `lastThreatLevel`.
   • Verify `FAST_APPROACHING` escalation selects the target with highest approach speed to drive alert pitch and spatial panning when multiple targets exist.
+  • Verify monotonic time source resilience against backward and forward wall-clock jumps for alert debouncing and cooldowns (`ATT-7580`).
   2. *PCM Audio Synthesis & MODE_STATIC Replay Tests (`TST-TRK-063.2`, `RadarAudioSynthesizerTest.kt`)*:
   • Verify multi-tone PCM wave generation (non-empty byte arrays, 16-bit signed PCM within [-1.0, 1.0]), `USAGE_MEDIA` AudioAttributes, and warm `MODE_STATIC` replay (`pause()`, `playbackHeadPosition = 0`, `play()`).
   3. *Independent Volume Boost & Safe Restoration Tests (`TST-TRK-063.3`, `RadarAlertManagerTest.kt`)*:
@@ -2308,6 +2309,7 @@
   1. *Lifecycle-Decoupled Audio Snooze & Resilient Reconnect Tests (`TST-TRK-064.1`, `RadarSnoozeControllerTest.kt`, `RadarAlertManagerTest.kt`)*:
   • Verify audio snooze triggers (15m, 30m, Fast Only, Rest of Ride), countdown decrementing, automatic restoration upon timer expiry, and manual resume across READY, PAUSED, and TRACKING modes.
   • Verify snooze state is preserved across transient BLE drops (`disconnectFromGatt`) and reset cleanly upon explicit workout finish.
+  • Verify monotonic time source resilience for snooze duration and expiration against wall-clock jumps (`ATT-7580`).
   2. *Muted Badge Countdown Indicator, Muted-Bell Icon & Approaching Vehicle Count Tests (`TST-TRK-064.2`, `RadarEdgeOverlayTest.kt`)*:
   • Verify top badge pill displays muted-bell vector icon and localized countdown indicator alongside (never replacing) approaching vehicle count (`targets.size`).
   • Verify all threat badge accessibility descriptions format cleanly using localized string resources.

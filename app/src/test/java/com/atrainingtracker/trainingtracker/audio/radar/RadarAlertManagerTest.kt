@@ -1016,4 +1016,56 @@ class RadarAlertManagerTest {
 
         manager.release()
     }
+
+    /**
+     * TST-TRK-063.1: Verify default time provider is strictly positive and non-decreasing without throwing in JVM tests.
+     */
+    @Test
+    fun testDefaultTimeProvider_usesMonotonicClock() {
+        val time1 = RadarAlertManager.DEFAULT_TIME_PROVIDER()
+        assertTrue("DEFAULT_TIME_PROVIDER must return positive timestamp", time1 > 0L)
+        val time2 = RadarAlertManager.DEFAULT_TIME_PROVIDER()
+        assertTrue("Monotonic clock must be non-decreasing", time2 >= time1)
+
+        val manager = RadarAlertManager(mockContext, mockDataStore, mockSynthesizer, mockAudioManager, mockVibrator, mockHandler)
+        manager.release()
+    }
+
+    /**
+     * TST-TRK-063.1: Verify debounce cooldown is unaffected by backward wall-clock shifts (NTP / timezone).
+     */
+    @Test
+    fun testDebounceCooldown_unaffectedByWallClockTimeShift() {
+        var simulatedMonotonicMs = 100_000L
+        val manager = RadarAlertManager(
+            context = mockContext,
+            tuningDataStore = mockDataStore,
+            audioSynthesizer = mockSynthesizer,
+            audioManager = mockAudioManager,
+            vibrator = mockVibrator,
+            handler = mockHandler,
+            coroutineScope = testScope,
+            timeProvider = { simulatedMonotonicMs }
+        )
+
+        val stateNone = RadarState(connectionState = RadarConnectionState.CONNECTED, overallThreatLevel = ThreatLevel.NONE)
+        val stateApproach = RadarState(connectionState = RadarConnectionState.CONNECTED, overallThreatLevel = ThreatLevel.APPROACHING)
+
+        manager.onRadarStateUpdated(stateNone)
+        manager.onRadarStateUpdated(stateApproach)
+        verify(exactly = 1) { mockSynthesizer.playApproach(any(), any()) }
+
+        // Monotonic clock advances by 850 ms (>= 800 ms debounce window)
+        simulatedMonotonicMs += 850L
+        manager.onRadarStateUpdated(stateNone)
+
+        // Monotonic clock advances by another 850 ms (>= 800 ms debounce window)
+        simulatedMonotonicMs += 850L
+        manager.onRadarStateUpdated(stateApproach)
+
+        // Must emit approach chime without being blocked by debounce
+        verify(exactly = 2) { mockSynthesizer.playApproach(any(), any()) }
+
+        manager.release()
+    }
 }

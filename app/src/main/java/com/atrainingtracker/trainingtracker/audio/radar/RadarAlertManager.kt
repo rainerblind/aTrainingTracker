@@ -25,6 +25,7 @@ import android.media.AudioManager
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.util.Log
@@ -86,11 +87,24 @@ class RadarAlertManager @JvmOverloads constructor(
     vibrator: Vibrator? = null,
     handler: Handler? = null,
     private val coroutineScope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default),
-    private val timeProvider: () -> Long = { System.currentTimeMillis() }
+    private val timeProvider: () -> Long = DEFAULT_TIME_PROVIDER
 ) : AutoCloseable {
 
     companion object {
         private const val TAG = "RadarAlertManager"
+
+        /**
+         * Canonical monotonic time provider using [SystemClock.elapsedRealtime] with JVM test fallback (REQ-TRK-063.1).
+         */
+        @Suppress("TooGenericExceptionCaught")
+        val DEFAULT_TIME_PROVIDER: () -> Long = {
+            try {
+                SystemClock.elapsedRealtime()
+            } catch (_: Throwable) {
+                System.nanoTime() / 1_000_000L
+            }
+        }
+
         const val CHIME_DURATION_MS: Long = 350L
         const val DEBOUNCE_COOLDOWN_MS: Long = 800L
         const val URBAN_CONGESTION_DURATION_MS: Long = 30_000L

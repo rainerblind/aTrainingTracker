@@ -3673,10 +3673,13 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 ### REQ-TRK-063: Radar Audio Chime and Haptic Alert Engine [Verified]
 - **Tests**: `TST-TRK-063`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `RadarAlertManager.kt`, `RadarAudioSynthesizer.kt`, `TrackerService.kt`, `TuningPreferencesDataStore.kt`, `RadarSettingsSection.kt`, `strings_radar.xml`
 - **Rationale**: Cyclists operating in traffic require eyes-free situational awareness through audible and tactile cues that cut through outdoor wind and road noise. `RadarAlertManager` observes `RadarStateRepository.radarState` during active tracking in `TrackerService` (including foreground and screen-off execution), synthesizing distinct PCM audio chimes via `AudioTrack` (`USAGE_MEDIA`, `MODE_STATIC` warm replay) and triggering `VibrationEffect` patterns on threat level transitions (`APPROACHING`, `FAST_APPROACHING`, `ALL_CLEAR`, `DISCONNECTED_ERROR`). The alert engine must support independent radar alert volume, transient background media audio ducking (`AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK`), temporary hardware phone-speaker volume boost with guaranteed auto-restore, and configurable audio routing to connected headphones or forced phone speaker output (`AudioTrack.setPreferredDevice()`) without switching `AudioManager` into telephony communication mode (ATT-5086, Parent Epic ATT-1286, extending `REQ-CON-028` and `REQ-TRK-062`):
 1. *Threat Transition Alerts, Target Selection & Debouncing (`REQ-TRK-063.1`)*:
-• The system SHALL emit distinct acoustic chimes and vibration patterns on threat transitions: double ascending chime for initial approach (`NONE -> APPROACHING`), urgent triple high-pitch chime for high-speed threat (`-> FAST_APPROACHING`), soft single chime for all-clear (`APPROACHING/FAST -> NONE`), and descending warning chime with long vibration for disconnect (`-> DISCONNECTED_ERROR`). When multiple approaching targets exist during high-speed threat escalation, the system SHALL select the `FAST_APPROACHING` target with highest approach speed to drive alert pitch and spatial panning. State transitions SHALL be debounced to prevent alert spamming during continuous 4–8 Hz telemetry updates; however, high-speed escalations (`-> FAST_APPROACHING`) SHALL NOT be suppressed by routine debounce cooldown windows, and debounced frames SHALL NOT advance or mutate the tracked threat level unless the transition alert is actually emitted.
+• The system SHALL emit distinct acoustic chimes and vibration patterns on threat transitions: double ascending chime for initial approach (`NONE -> APPROACHING`), urgent triple high-pitch chime for high-speed threat (`-> FAST_APPROACHING`), soft single chime for all-clear (`APPROACHING/FAST -> NONE`), and descending warning chime with long vibration for disconnect (`-> DISCONNECTED_ERROR`). When multiple approaching targets exist during high-speed threat escalation, the system SHALL select the `FAST_APPROACHING` target with highest approach speed to drive alert pitch and spatial panning. State transitions SHALL be debounced to prevent alert spamming during continuous 4–8 Hz telemetry updates; however, high-speed escalations (`-> FAST_APPROACHING`) SHALL NOT be suppressed by routine debounce cooldown windows, and debounced frames SHALL NOT advance or mutate the tracked threat level unless the transition alert is actually emitted. Alert debounce cooldowns, chime playback intervals, and lane change cooldowns SHALL be tracked using a strictly monotonic time clock (`SystemClock.elapsedRealtime()`), ensuring wall-clock NTP adjustments or timezone jumps do not freeze or prematurely expire alert timers.
 2. *AudioTrack USAGE_MEDIA Synthesis & Warm MODE_STATIC Replay (`REQ-TRK-063.2`)*:
 • `RadarAudioSynthesizer` SHALL synthesize low-latency multi-tone PCM audio (2.2–3.2 kHz harmonics) via `AudioTrack` configured with `AudioAttributes.USAGE_MEDIA` (never sonification). Persistent static tracks SHALL use warm replay (`pause()` + `playbackHeadPosition = 0` + `play()`), strictly prohibiting `track.stop()` prior to replay.
 3. *Independent Volume & Speaker Override Hardware Boost (`REQ-TRK-063.3`)*:
@@ -3709,6 +3712,9 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 • *Given* active background media playback over Bluetooth headphones and "Force Phone Speaker" enabled,
 • *When* an alert chime plays,
 • *Then* background media ducks transiently and the chime routes to `TYPE_BUILTIN_SPEAKER` via `setPreferredDevice()`.
+• *Given* active alert debouncing in `RadarAlertManager`,
+• *When* the system wall clock jumps backwards or forwards by 1 hour (NTP sync / timezone change),
+• *Then* debounce cooldowns remain strictly governed by monotonic elapsed time without freezing or sticking.
 
 **Invariants**: Guaranteed volume restoration in `finally`/`onDestroy()`; §3.4 warm static replay (zero `track.stop()`); zero main-thread blocking; zero SQLite schema modifications; 100% 9-language translation parity.
 
@@ -4274,10 +4280,13 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 ### REQ-TRK-064: 1-Tap Radar Audio Snooze, Peloton-Mode Audio Sync & Smart Urban Alert Suppression [Verified]
 - **Tests**: `TST-TRK-064`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `RadarSnoozeController.kt`, `RadarAlertManager.kt`, `RadarEdgeOverlay.kt`, `RadarLightQuickSwitchSheet.kt`, `RadarState.kt`, `RadarStateRepository.kt`, `BTLERadarDevice.java`, `TuningPreferencesDataStore.kt`, `RadarSettingsSection.kt`, `strings_radar.xml`
 - **Rationale**: Cyclists riding through city traffic, along busy parallel roads, or in group rides experience severe alert fatigue from continuous radar beeping. Navigating deeply buried menus mid-ride is hazardous, and following riders in peloton formations trigger constant spurious alerts. The system must provide 1-tap temporary audio snooze from the Cockpit overlay badge, automatic audio suppression coupled to tail light Peloton mode, and an automated smart urban convoy filter while preserving 100% active visual rail tracking, haptic feedback, and high-speed threat alerts (ATT-5119, ATT-6708, Parent Epic ATT-1286, extending `REQ-TRK-062`, `REQ-TRK-063`, and `REQ-CON-031`):
 1. *Lifecycle-Decoupled 1-Tap Cockpit Audio Snooze (`REQ-TRK-064.1`)*:
-• The system SHALL provide 1-tap quick snooze actions accessible from `RadarEdgeOverlay` and `RadarLightQuickSwitchSheet`: Snooze 15 minutes, Snooze 30 minutes, High-Threat Only, and Mute Rest of Ride. Snooze state, ticker countdown, and expiration SHALL be managed by a lifecycle-safe singleton (`RadarSnoozeController`) in `com.atrainingtracker.banalservice.devices.radar`, ensuring snooze and resume operate consistently across `READY`, `PAUSED`, and `TRACKING` states, survive transient BLE disconnects/reconnects without reset to `INACTIVE`, and reset cleanly upon explicit workout finish.
+• The system SHALL provide 1-tap quick snooze actions accessible from `RadarEdgeOverlay` and `RadarLightQuickSwitchSheet`: Snooze 15 minutes, Snooze 30 minutes, High-Threat Only, and Mute Rest of Ride. Snooze state, ticker countdown, and expiration SHALL be managed by a lifecycle-safe singleton (`RadarSnoozeController`) in `com.atrainingtracker.banalservice.devices.radar` using a strictly monotonic time clock (`SystemClock.elapsedRealtime()`), ensuring snooze and resume operate consistently across `READY`, `PAUSED`, and `TRACKING` states, survive transient BLE disconnects/reconnects without reset to `INACTIVE`, remain unaffected by wall-clock NTP adjustments or timezone jumps, and reset cleanly upon explicit workout finish.
 2. *Approaching Vehicle Count Retention, Muted-Bell Vector Icon & Accessibility Localization (`REQ-TRK-064.2`)*:
 • While audio is snoozed, `RadarStatusBadgePill` SHALL render a dedicated muted-bell vector icon and localized countdown indicator alongside (never replacing) the active approaching vehicle count (`targets.size`). Audio snooze SHALL strictly preserve 100% active, un-dimmed visual vertical target rail tracking and threat animations. All threat badge accessibility descriptions SHALL be localized across all 9 supported locales via `radar_overlay_threats_format` and `radar_overlay_threats_fast_format`.
 3. *Acoustic Chime Gating, Haptics Preservation & Manual Resume Override (`REQ-TRK-064.3`)*:
@@ -4309,6 +4318,9 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 • *Then* audio chimes resume immediately and remain active until the next radar state transition.
 • *Given* audio snooze is active and a vehicle approaches,
 • *Then* `RadarStatusBadgePill` continues to display the approaching vehicle count alongside the muted-bell indicator.
+• *Given* an active 15m or 30m audio snooze,
+• *When* the system wall clock jumps backwards or forwards by 1 hour (NTP sync / timezone change),
+• *Then* `RadarSnoozeController` remaining snooze duration and expiration remain strictly governed by monotonic elapsed time.
 
 **Invariants**: Visual target rail remains 100% active during audio snooze; `FAST_APPROACHING` high-speed threat safety alerts preserved; haptic vibrations preserved during audio snooze; zero SQLite schema modifications; 100% 9-language translation parity.
 

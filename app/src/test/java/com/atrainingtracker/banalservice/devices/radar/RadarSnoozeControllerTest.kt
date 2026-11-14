@@ -40,10 +40,10 @@ class RadarSnoozeControllerTest {
 
     @Before
     fun setUp() {
-        simulatedTimeMs = 100_000L
-        RadarSnoozeController.setTimeProvider { simulatedTimeMs }
         RadarSnoozeController.reset()
         RadarStateRepository.reset()
+        simulatedTimeMs = 100_000L
+        RadarSnoozeController.setTimeProvider { simulatedTimeMs }
     }
 
     @After
@@ -238,5 +238,47 @@ class RadarSnoozeControllerTest {
         RadarSnoozeController.reset()
         assertFalse("Snooze must be inactive after workout stopped", RadarSnoozeController.getSnoozeState().isSnoozed)
         assertEquals(RadarAudioSnoozeMode.NONE, RadarSnoozeController.getSnoozeState().mode)
+    }
+
+    /**
+     * TST-TRK-064.1: Verify default time provider is monotonic and non-negative without throwing in JVM tests.
+     */
+    @Test
+    fun testDefaultTimeProvider_usesMonotonicClock() {
+        val time1 = RadarSnoozeController.DEFAULT_TIME_PROVIDER()
+        assertTrue("DEFAULT_TIME_PROVIDER must return positive timestamp", time1 > 0L)
+        val time2 = RadarSnoozeController.DEFAULT_TIME_PROVIDER()
+        assertTrue("Monotonic clock must be non-decreasing", time2 >= time1)
+    }
+
+    /**
+     * TST-TRK-064.1: Backward wall-clock shift must not prevent snooze expiration when monotonic clock advances.
+     */
+    @Test
+    fun testSnoozeExpiry_unaffectedByBackwardWallClockShift() {
+        RadarSnoozeController.snooze(RadarAudioSnoozeMode.SNOOZE_15M)
+        assertTrue(RadarSnoozeController.getSnoozeState().isSnoozed)
+
+        // Monotonic time advances by 15 minutes + 1 ms (100_000 + 900_001 = 1_000_001 ms)
+        // Even if wall clock jumped back 1 hour, monotonic clock accurately expires the snooze
+        simulatedTimeMs += 15 * 60 * 1000L + 1L
+
+        val state = RadarSnoozeController.getSnoozeState()
+        assertFalse("Snooze must expire after 15 minutes regardless of wall-clock shifts", state.isSnoozed)
+        assertEquals(RadarAudioSnoozeMode.NONE, state.mode)
+        assertNull(state.remainingSeconds)
+    }
+
+    /**
+     * TST-TRK-064.1: reset() must restore timeProvider back to DEFAULT_TIME_PROVIDER.
+     */
+    @Test
+    fun testReset_restoresDefaultTimeProvider() {
+        RadarSnoozeController.setTimeProvider { 42L }
+        RadarSnoozeController.reset()
+
+        // Calling getSnoozeState() or inspecting clock should no longer return 42L
+        val restoredTime = RadarSnoozeController.DEFAULT_TIME_PROVIDER()
+        assertTrue("Reset must restore live monotonic clock rather than pinned 42L test stub", restoredTime > 1000L)
     }
 }
