@@ -8556,3 +8556,33 @@
   6. *Targeted Unit Test Regression Suite (`TST-UI-528.6`)*:
      - Execute `./gradlew testDebugUnitTest --tests "com.atrainingtracker.banalservice.ui.devices.*" --tests "com.atrainingtracker.trainingtracker.build.*"`.
 
+
+### TST-UI-529: **Borg CR10 RPE 7-Zone Palette, Slider Stop-Dot & Header Readout Verification Suite** [Verified]
+- **Target Release**: `V5.0.0`
+- **Requirement(s)**: `REQ-UI-529` (`REQ-UI-529.1`..`REQ-UI-529.5`)
+- **Component**: `Color.kt`, `WorkoutRpeFeelSection.kt`, `WorkoutRpeFeelTest.kt`
+- **Jira**: `ATT-7743`
+- **Test Description**:
+  1. *Borg CR10 7-Zone Physiological Color Mapping Unit Tests (`TST-UI-529.1`, `WorkoutRpeFeelTest.kt`)*:
+     - Verify `TTColor.rpeColor(1)` and `TTColor.rpeColor(2)` return `TTColor.Zone1`.
+     - Verify `TTColor.rpeColor(3)` and `TTColor.rpeColor(4)` return `TTColor.Zone2`.
+     - Verify `TTColor.rpeColor(5)` and `TTColor.rpeColor(6)` return `TTColor.Zone3`.
+     - Verify `TTColor.rpeColor(7)` returns `TTColor.Zone4`.
+     - Verify `TTColor.rpeColor(8)` returns `TTColor.Zone5`.
+     - Verify `TTColor.rpeColor(9)` returns `TTColor.Zone6`.
+     - Verify `TTColor.rpeColor(10)` returns `TTColor.Zone7`.
+     - Verify boundary clamping: `TTColor.rpeColor(0)` returns `TTColor.Zone1`, `TTColor.rpeColor(11)` returns `TTColor.Zone7`.
+  2. *Dark Theme Contrast & Accessibility Verification (`TST-UI-529.2`, `WorkoutRpeFeelTest.kt`)*:
+     - Verify WCAG 2.1 relative luminance calculation between `TTColor.Zone7` and `DarkBackground` / `DarkSurface`.
+     - Verify RPE 10 text color resolves to `MaterialTheme.colorScheme.onSurface`.
+     - Verify RPE 10 badge and thumb receive `outlineVariant` border.
+  3. *Redundant Button Row Absence Contract Test (`TST-UI-529.3`, `WorkoutRpeFeelTest.kt`)*:
+     - Verify `RpeFeelEditorControls` does NOT render the 10 numbered score boxes beneath the slider.
+  4. *Slider Track Stop-Dot Uniformity Contract Test (`TST-UI-529.4`, `WorkoutRpeFeelTest.kt`)*:
+     - Verify `Slider` passes `drawStopIndicator = null` inside `track = { SliderDefaults.Track(...) }` so inactive tick 10 is not colored with active track color.
+  5. *Decoupled Header & Full-Width Readout Structure Contract Test (`TST-UI-529.5`, `WorkoutRpeFeelTest.kt`)*:
+     - Verify title row hosts `workout_rpe_title` and Clear button (`RPE_CLEAR`).
+     - Verify dynamic anchor readout renders on a dedicated full-width line positioned directly above the slider.
+  6. *Targeted Unit Test Regression Suite (`TST-UI-529.6`)*:
+     - Execute `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutRpeFeelTest" --tests "com.atrainingtracker.trainingtracker.build.ThemeColorCentralizationAuditTest"`.
+     - Assert 100% pass rate.

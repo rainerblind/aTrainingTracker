@@ -207,15 +207,18 @@ object TTColor {
     val Zone7 = Color(0xFF000000) // Pure Black
 
     /**
-     * Color mapping for Borg CR10 RPE scale (1–10) (REQ-WKO-038 / ATT-6879).
+     * Color mapping for Borg CR10 RPE scale (1–10) across all 7 physiological zones (REQ-WKO-038 / REQ-UI-529).
+     * Maps 1–2 -> Zone1, 3–4 -> Zone2, 5–6 -> Zone3, 7 -> Zone4, 8 -> Zone5, 9 -> Zone6, 10 -> Zone7.
+     * Values <= 0 clamp to Zone1; values >= 11 clamp to Zone7.
      */
-    fun rpeColor(rpe: Int): Color = when (rpe) {
-        1, 2 -> Zone2 // Green / Recovery
-        3, 4 -> Zone1 // Light Green / Aerobic
-        5, 6 -> Zone3 // Orange / Tempo
-        7, 8 -> Zone4 // Red / Threshold
-        9, 10 -> Zone5 // Dark Violet / Anaerobic Max
-        else -> Zone2
+    fun rpeColor(rpe: Int): Color = when {
+        rpe <= 2 -> Zone1 // Chartreuse / Active Recovery
+        rpe in 3..4 -> Zone2 // Green / Endurance
+        rpe in 5..6 -> Zone3 // Orange / Tempo / Sweet Spot
+        rpe == 7 -> Zone4 // Red / Threshold
+        rpe == 8 -> Zone5 // Dark Violet / VO2max
+        rpe == 9 -> Zone6 // Warm Earthy Brown / Anaerobic Capacity
+        else -> Zone7 // Pure Black / Neuromuscular / Max (>= 10)
     }
 
     /**

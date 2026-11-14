@@ -17311,3 +17311,50 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 
 **Invariants**: Zero changes to `devices.db` SQLite schema; `isNewlyDiscovered` top-of-list recency pinning (`REQ-UI-334`) preserved; stable alphabetical default with zero connection jumping preserved; 100% 9-language localization parity.
 
+
+### REQ-UI-529: Borg CR10 RPE 7-Zone Physiological Palette, Discrete Slider Stop-Dot Uniformity & Dedicated Non-Occluding Header [Verified]
+- **Tests**: `TST-UI-529`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit, On-Device Manual
+- **Implementation**: `Color.kt`, `WorkoutRpeFeelSection.kt`
+- **Rationale**: In `WorkoutRpeFeelSection.kt`, the initial Borg CR10 slider prototype from ATT-7515 mapped RPE 1–10 to only 5 zones, leaving Zone 6 (#8B5A2B) and Zone 7 (#000000) unused and inverting Zone 1 and Zone 2. Furthermore, the redundant row of 10 number boxes beneath the slider wasted vertical space, the Compose Material 3 slider track stop indicator erroneously painted tick 10 in the active track color when dragging at lower values, and sharing a single row between section title, dynamic value, and Clear button caused line wrapping and finger occlusion during right-handed interaction. Mapping RPE 1–10 to all 7 physiological zones with OLED dark theme high-contrast protection, removing the redundant number boxes, ensuring uniform track stop-dot rendering, and elevating the dynamic RPE descriptor to a dedicated full-width line establishes ergonomic, accessible, and sports-scientifically accurate workout perception editing (ATT-7743, Parent Epic ATT-68, refining `REQ-WKO-037.1` and `REQ-WKO-038`).
+- **Description**:
+  1. *Borg CR10 7-Zone Physiological Color Mapping (`REQ-UI-529.1`)*:
+     - `TTColor.rpeColor(rpe: Int): Color` in `Color.kt` SHALL map all 10 Borg CR10 exertion scores strictly to `TTColor.Zone1..Zone7`:
+       - `1, 2` $\rightarrow$ `TTColor.Zone1` (Chartreuse `#7FFF00`, Active Recovery)
+       - `3, 4` $\rightarrow$ `TTColor.Zone2` (Green `#008000`, Endurance)
+       - `5, 6` $\rightarrow$ `TTColor.Zone3` (Orange `#FFA500`, Tempo / Sweet Spot)
+       - `7` $\rightarrow$ `TTColor.Zone4` (Red `#FF0000`, Threshold)
+       - `8` $\rightarrow$ `TTColor.Zone5` (Dark Violet `#9400D3`, VO2max)
+       - `9` $\rightarrow$ `TTColor.Zone6` (Warm Earthy Brown `#8B5A2B`, Anaerobic Capacity)
+       - `10` $\rightarrow$ `TTColor.Zone7` (Pure Black `#000000`, Neuromuscular / Max)
+       - Values out of range ($< 1$) SHALL default to `TTColor.Zone1`; values $> 10$ SHALL default to `TTColor.Zone7`.
+  2. *Dark Theme High-Contrast Accessibility for RPE 10 / Zone 7 (`REQ-UI-529.2`)*:
+     - When `rpe == 10` (or `TTColor.rpeColor(rpe) == TTColor.Zone7`), the dynamic RPE score and Borg descriptor text in `RpeFeelEditorControls` SHALL be rendered using `MaterialTheme.colorScheme.onSurface` (achieving $\ge 12:1$ contrast against dark surfaces and $\ge 14:1$ on light surfaces) rather than invisible pure black text.
+     - In `WorkoutRpeFeelSection` badge row, when `rpe == 10`, the badge surface border and inner indicator dot SHALL render an outline border (`0.5.dp` to `1.dp`, `MaterialTheme.colorScheme.outlineVariant`) guaranteeing visibility against OLED black backgrounds.
+     - In `RpeFeelEditorControls` slider, when `rpe == 10`, the slider thumb SHALL render a subtle border (`1.dp`, `MaterialTheme.colorScheme.outline`) ensuring distinct visual edge separation against dark backgrounds.
+  3. *Removal of Redundant 1–10 Number Boxes (`REQ-UI-529.3`)*:
+     - `RpeFeelEditorControls` in `WorkoutRpeFeelSection.kt` SHALL omit the secondary 10-box button row beneath the slider, relying solely on the discrete Material 3 `Slider` (1f..10f, `steps = 8`) for RPE selection, thereby freeing substantial vertical screen space in `EditWorkoutScreen`.
+  4. *Slider Track Stop-Dot Uniformity (`REQ-UI-529.4`)*:
+     - In `RpeFeelEditorControls`, the Material 3 `Slider` SHALL supply `track = { sliderState -> SliderDefaults.Track(sliderState = sliderState, colors = colors, drawStopIndicator = null) }` (or equivalent), preventing `SliderDefaults.Track` from hardcoding the active track color at the rightmost inactive stop tick (position 10) when the slider thumb is set to values $< 10$.
+  5. *Dedicated Non-Wrapping, Non-Occluding Dynamic RPE Header (`REQ-UI-529.5`)*:
+     - `RpeFeelEditorControls` SHALL decouple the section title and dynamic RPE readout:
+       - *Title Row*: Standard `Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween)` containing `workout_rpe_title` ("Belastungsempfinden (RPE 1–10)") on the start and the Clear action (`Icons.Default.Clear`, `WorkoutRpeFeelTestTags.RPE_CLEAR`) on the end when `rpe != null`.
+       - *Dynamic Readout Line*: Dedicated full-width line positioned immediately above the `Slider`. When `rpe != null`, it SHALL display the full formatted anchor descriptor (`stringResource(getRpeAnchorStringRes(rpe))`) in bold typography, ensuring zero line-wrapping across all 9 localized string sets (including German "6 — Schwer bis sehr schwer") and zero occlusion by the athlete's dragging finger.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* an athlete selecting RPE ratings 1 through 10 in `EditWorkoutScreen`,
+• *When* the rating is evaluated in `TTColor.rpeColor`,
+• *Then* scores 1–2 map to Zone1, 3–4 to Zone2, 5–6 to Zone3, 7 to Zone4, 8 to Zone5, 9 to Zone6, and 10 to Zone7.
+• *Given* the app running in Dark Theme with RPE set to 10 (`Maximal`),
+• *When* viewing the editor readout or workout badge,
+• *Then* the text is rendered with `onSurface` and the badge/thumb features an `outlineVariant` border with $\ge 3.0:1$ non-text contrast against the dark background.
+• *Given* `EditWorkoutScreen` opened with the RPE editor active,
+• *When* inspecting the component hierarchy,
+• *Then* the slider provides discrete steps 1..10, the redundant 10-box button row is absent, and setting RPE to 7 renders inactive ticks 8, 9, and 10 in identical inactive tick color without a red stop dot.
+• *Given* RPE set to 6 on a 360dp portrait device in German locale,
+• *When* the dynamic readout renders,
+• *Then* "6 — Schwer bis sehr schwer" renders on a single line without wrapping and remains visible above the slider during dragging.
+
+**Invariants**: `rpe` (1..10) nullable database persistence (`DB_VERSION = 30`) preserved; Foster sRPE calculation preserved; Feel (1..5) M3 cards and sentiment icons preserved; 100% 9-language localization parity preserved.
