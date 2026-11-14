@@ -1576,6 +1576,22 @@ class WorkoutRepository private constructor(private val context: Context) : Coro
     }
 
     /**
+     * Resolves [WorkoutData] directly by [workoutId] without reactive Flow observation (REQ-MIG-052.4).
+     * Inspects the in-memory cache first, falling back to database query and cursor mapping.
+     */
+    fun getWorkoutDataDirect(workoutId: Long): WorkoutData? {
+        val cached = _allWorkouts.value.find { it.id == workoutId }
+        if (cached != null) return cached
+        return summariesManager.getWorkoutCursor(workoutId)?.use { cursor ->
+            if (cursor.moveToFirst()) {
+                mapper.fromCursor(cursor)
+            } else {
+                null
+            }
+        }
+    }
+
+    /**
      * Emits a one-time event when a workout has been successfully loaded into memory.
      */
     private val _initialWorkoutLoaded = SingleLiveEvent<WorkoutData>()

@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Cloud Auto-Import for Multi-Device Synchronization (ATT-7748 / REQ-MIG-052) -->
+    <string name="tab_auto_import">Auto-import</string>
+    <string name="auto_import_title">Cloud auto-import</string>
+    <string name="auto_import_master_switch">Auto-import inschakelen</string>
+    <string name="auto_import_master_switch_summary">Automatisch nieuw opgenomen trainingen importeren uit de cloud bij openen van de app</string>
+    <string name="auto_import_cloud_sources_title">Cloudopslagbronnen</string>
+    <string name="auto_import_dropbox_title">Dropbox</string>
+    <string name="auto_import_dropbox_summary">Auto-import vanuit /Workouts- of /FIT-mappen</string>
+    <string name="auto_import_googledrive_title">Google Drive</string>
+    <string name="auto_import_googledrive_summary">Auto-import vanuit Google Drive Workouts-map</string>
+    <string name="auto_import_format_title">Voorkeursbestandsindeling</string>
+    <string name="auto_import_relays_title">Lokale doorgiften</string>
+    <string name="auto_import_relay_health_connect">Geïmporteerde trainingen synchroniseren met Health Connect</string>
+    <string name="auto_import_relay_health_connect_summary">Geïmporteerde trainingen automatisch doorsturen naar Android Health Connect op dit apparaat</string>
+    <string name="auto_import_relay_strava">Geïmporteerde trainingen uploaden naar Strava</string>
+    <string name="auto_import_relay_strava_summary">Geïmporteerde trainingen automatisch klaarzetten voor upload naar Strava</string>
+    <string name="auto_import_sync_now">Nu synchroniseren</string>
+    <string name="auto_import_syncing">Synchroniseren…</string>
+    <string name="auto_import_last_sync">Laatste synchronisatie: %1$s</string>
+    <string name="auto_import_never_synced">Nooit gesynchroniseerd</string>
+    <string name="auto_import_status_success">%1$d geïmporteerd, %2$d overgeslagen</string>
+    <string name="auto_import_status_error">Synchronisatie mislukt: %1$s</string>
+    <string name="auto_import_cloud_not_connected">Niet verbonden</string>
+    <string name="auto_import_cloud_connected">Verbonden (%1$s)</string>
+    <string name="auto_import_format_fit">FIT (.fit)</string>
+    <string name="auto_import_format_tcx">TCX (.tcx)</string>
+    <string name="auto_import_format_gpx">GPX (.gpx)</string>
+    <string name="auto_import_format_all">Alle indelingen</string>
+</resources>

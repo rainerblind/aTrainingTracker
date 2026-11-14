@@ -141,6 +141,13 @@ public class TrainingApplication extends Application {
     public static final String SP_GOOGLE_DRIVE_AUTH_TOKEN = "googleDriveAuthToken";
     public static final String SP_GOOGLE_DRIVE_LAST_SYNC = "googleDriveLastSync";
     public static final String SP_GOOGLE_DRIVE_LAST_SYNC_STATUS = "googleDriveLastSyncStatus";
+    public static final String SP_AUTO_IMPORT_ENABLED = "auto_import_enabled";
+    public static final String SP_AUTO_IMPORT_DROPBOX = "auto_import_dropbox";
+    public static final String SP_AUTO_IMPORT_GOOGLE_DRIVE = "auto_import_google_drive";
+    public static final String SP_AUTO_IMPORT_FORMAT = "auto_import_format";
+    public static final String SP_SYNC_IMPORTED_WORKOUTS_TO_HEALTH_CONNECT = "sync_imported_workouts_to_health_connect";
+    public static final String SP_AUTO_IMPORT_LAST_SYNC_TIME = "auto_import_last_sync_time";
+    public static final String SP_AUTO_IMPORT_LAST_SYNC_RESULT = "auto_import_last_sync_result";
     public static final String SP_SYNC_TO_HEALTH_CONNECT = "syncToHealthConnect";
     public static final String SP_HEALTH_CONNECT_LAST_SYNC = "healthConnectLastSync";
     public static final String SP_IMPORT_HRV_FROM_HEALTH_CONNECT = "importHrvFromHealthConnect";
@@ -956,6 +963,81 @@ public class TrainingApplication extends Application {
     public static void setHealthConnectHrvImportEnabled(boolean value) {
         if (cSharedPreferences == null) return;
         cSharedPreferences.edit().putBoolean(SP_IMPORT_HRV_FROM_HEALTH_CONNECT, value).apply();
+    }
+
+    /*
+     * Cloud Auto-Import helpers (ATT-7748 / REQ-MIG-052)
+     */
+    public static boolean isAutoImportEnabled() {
+        if (cSharedPreferences == null) return false;
+        return cSharedPreferences.getBoolean(SP_AUTO_IMPORT_ENABLED, false);
+    }
+
+    public static void setAutoImportEnabled(boolean value) {
+        if (cSharedPreferences == null) return;
+        cSharedPreferences.edit().putBoolean(SP_AUTO_IMPORT_ENABLED, value).apply();
+    }
+
+    public static boolean isAutoImportDropboxEnabled() {
+        if (cSharedPreferences == null) return false;
+        return cSharedPreferences.getBoolean(SP_AUTO_IMPORT_DROPBOX, false);
+    }
+
+    public static void setAutoImportDropboxEnabled(boolean value) {
+        if (cSharedPreferences == null) return;
+        cSharedPreferences.edit().putBoolean(SP_AUTO_IMPORT_DROPBOX, value).apply();
+    }
+
+    public static boolean isAutoImportGoogleDriveEnabled() {
+        if (cSharedPreferences == null) return false;
+        return cSharedPreferences.getBoolean(SP_AUTO_IMPORT_GOOGLE_DRIVE, false);
+    }
+
+    public static void setAutoImportGoogleDriveEnabled(boolean value) {
+        if (cSharedPreferences == null) return;
+        cSharedPreferences.edit().putBoolean(SP_AUTO_IMPORT_GOOGLE_DRIVE, value).apply();
+    }
+
+    @NonNull
+    public static String getAutoImportFormat() {
+        if (cSharedPreferences == null) return "fit";
+        return cSharedPreferences.getString(SP_AUTO_IMPORT_FORMAT, "fit");
+    }
+
+    public static void setAutoImportFormat(@Nullable String format) {
+        if (cSharedPreferences == null) return;
+        cSharedPreferences.edit().putString(SP_AUTO_IMPORT_FORMAT, format != null ? format : "fit").apply();
+    }
+
+    public static boolean isSyncImportedWorkoutsToHealthConnect() {
+        if (cSharedPreferences == null) return false;
+        return cSharedPreferences.getBoolean(SP_SYNC_IMPORTED_WORKOUTS_TO_HEALTH_CONNECT, false);
+    }
+
+    public static void setSyncImportedWorkoutsToHealthConnect(boolean value) {
+        if (cSharedPreferences == null) return;
+        cSharedPreferences.edit().putBoolean(SP_SYNC_IMPORTED_WORKOUTS_TO_HEALTH_CONNECT, value).apply();
+    }
+
+    public static long getAutoImportLastSyncTime() {
+        if (cSharedPreferences == null) return 0L;
+        return cSharedPreferences.getLong(SP_AUTO_IMPORT_LAST_SYNC_TIME, 0L);
+    }
+
+    public static void setAutoImportLastSyncTime(long timestamp) {
+        if (cSharedPreferences == null) return;
+        cSharedPreferences.edit().putLong(SP_AUTO_IMPORT_LAST_SYNC_TIME, timestamp).apply();
+    }
+
+    @NonNull
+    public static String getAutoImportLastSyncResult() {
+        if (cSharedPreferences == null) return "";
+        return cSharedPreferences.getString(SP_AUTO_IMPORT_LAST_SYNC_RESULT, "");
+    }
+
+    public static void setAutoImportLastSyncResult(@Nullable String result) {
+        if (cSharedPreferences == null) return;
+        cSharedPreferences.edit().putString(SP_AUTO_IMPORT_LAST_SYNC_RESULT, result != null ? result : "").apply();
     }
 
     /*

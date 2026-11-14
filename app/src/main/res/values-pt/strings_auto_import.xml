@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Cloud Auto-Import for Multi-Device Synchronization (ATT-7748 / REQ-MIG-052) -->
+    <string name="tab_auto_import">Autoimportação</string>
+    <string name="auto_import_title">Autoimportação na nuvem</string>
+    <string name="auto_import_master_switch">Ativar autoimportação</string>
+    <string name="auto_import_master_switch_summary">Importar automaticamente treinos recém-gravados da nuvem ao abrir o app</string>
+    <string name="auto_import_cloud_sources_title">Fontes de armazenamento em nuvem</string>
+    <string name="auto_import_dropbox_title">Dropbox</string>
+    <string name="auto_import_dropbox_summary">Autoimportar das pastas /Workouts ou /FIT</string>
+    <string name="auto_import_googledrive_title">Google Drive</string>
+    <string name="auto_import_googledrive_summary">Autoimportar da pasta Workouts do Google Drive</string>
+    <string name="auto_import_format_title">Formato de arquivo preferido</string>
+    <string name="auto_import_relays_title">Encaminhamentos locais</string>
+    <string name="auto_import_relay_health_connect">Sincronizar treinos importados com o Health Connect</string>
+    <string name="auto_import_relay_health_connect_summary">Encaminhar treinos importados automaticamente para o Android Health Connect neste dispositivo</string>
+    <string name="auto_import_relay_strava">Enviar treinos importados para o Strava</string>
+    <string name="auto_import_relay_strava_summary">Enfileirar treinos importados automaticamente para envio ao Strava</string>
+    <string name="auto_import_sync_now">Sincronizar agora</string>
+    <string name="auto_import_syncing">Sincronizando…</string>
+    <string name="auto_import_last_sync">Última sincronização: %1$s</string>
+    <string name="auto_import_never_synced">Nunca sincronizado</string>
+    <string name="auto_import_status_success">%1$d importados, %2$d ignorados</string>
+    <string name="auto_import_status_error">Falha na sincronização: %1$s</string>
+    <string name="auto_import_cloud_not_connected">Não conectado</string>
+    <string name="auto_import_cloud_connected">Conectado (%1$s)</string>
+    <string name="auto_import_format_fit">FIT (.fit)</string>
+    <string name="auto_import_format_tcx">TCX (.tcx)</string>
+    <string name="auto_import_format_gpx">GPX (.gpx)</string>
+    <string name="auto_import_format_all">Todos os formatos</string>
+</resources>

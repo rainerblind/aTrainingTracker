@@ -17,6 +17,7 @@ import android.util.Log
 import android.net.Uri
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.core.content.FileProvider
@@ -172,6 +173,72 @@ class BackupRestoreViewModel @JvmOverloads constructor(
 
     var uploadToStravaOnImport by mutableStateOf(TrainingApplication.uploadImportedWorkoutsToStrava())
         private set
+
+    // Auto-Import & Multi-Device Synchronization (ATT-7748 / REQ-MIG-052)
+    var autoImportEnabled by mutableStateOf(TrainingApplication.isAutoImportEnabled())
+        private set
+
+    var autoImportDropbox by mutableStateOf(TrainingApplication.isAutoImportDropboxEnabled())
+        private set
+
+    var autoImportGoogleDrive by mutableStateOf(TrainingApplication.isAutoImportGoogleDriveEnabled())
+        private set
+
+    var autoImportFormat by mutableStateOf(TrainingApplication.getAutoImportFormat())
+        private set
+
+    var syncImportedToHealthConnect by mutableStateOf(TrainingApplication.isSyncImportedWorkoutsToHealthConnect())
+        private set
+
+    var autoImportLastSyncTime by mutableLongStateOf(TrainingApplication.getAutoImportLastSyncTime())
+        private set
+
+    var autoImportLastSyncResult by mutableStateOf(TrainingApplication.getAutoImportLastSyncResult())
+        private set
+
+    var isAutoImportSyncing by mutableStateOf(false)
+        private set
+
+    fun updateAutoImportEnabled(enabled: Boolean) {
+        autoImportEnabled = enabled
+        TrainingApplication.setAutoImportEnabled(enabled)
+    }
+
+    fun updateAutoImportDropbox(enabled: Boolean) {
+        autoImportDropbox = enabled
+        TrainingApplication.setAutoImportDropboxEnabled(enabled)
+    }
+
+    fun updateAutoImportGoogleDrive(enabled: Boolean) {
+        autoImportGoogleDrive = enabled
+        TrainingApplication.setAutoImportGoogleDriveEnabled(enabled)
+    }
+
+    fun updateAutoImportFormat(format: String) {
+        autoImportFormat = format
+        TrainingApplication.setAutoImportFormat(format)
+    }
+
+    fun updateSyncImportedToHealthConnect(enabled: Boolean) {
+        syncImportedToHealthConnect = enabled
+        TrainingApplication.setSyncImportedWorkoutsToHealthConnect(enabled)
+    }
+
+    fun triggerAutoImportSync(context: Context) {
+        if (isAutoImportSyncing) return
+        isAutoImportSyncing = true
+        viewModelScope.launch {
+            try {
+                AutoImportManager.syncIncremental(context)
+                autoImportLastSyncTime = TrainingApplication.getAutoImportLastSyncTime()
+                autoImportLastSyncResult = TrainingApplication.getAutoImportLastSyncResult()
+            } catch (e: Exception) {
+                Log.w("BackupRestoreVM", "Auto-import sync failed: ${e.message}")
+            } finally {
+                isAutoImportSyncing = false
+            }
+        }
+    }
 
     fun updateUploadToStravaOnImport(enabled: Boolean) {
         uploadToStravaOnImport = enabled

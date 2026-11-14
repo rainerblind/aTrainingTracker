@@ -3788,6 +3788,36 @@
 
 **Invariants**: Strava upload behavior, WorkManager worker pipeline, existing DB schema, and 100% 9-language localization parity MUST NOT be broken.
 
+### REQ-MIG-052: Multi-Device Incremental Cloud Auto-Import & Local Health Connect / Strava Relay [Verified]
+- **Tests**: `TST-MIG-050`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Implementation**: `ImportBackupTabsScreen.kt`, `BackupRestoreViewModel.kt`, `AutoImportManager.kt`, `HealthConnectWorkoutSyncWorker.kt`, `LegacyImportEngine.kt`, `TrainingApplication.java`
+- **Rationale**: Secondary recording devices (e.g., handlebar bike phones) require automatic, seamless forwarding of newly recorded workouts to primary devices (phones/tablets) via cloud storage (Dropbox / Google Drive) without manual bulk recovery initiation or blocking cluster dialogs, with optional relays to local Health Connect and Strava on the receiving device.
+- **Description**:
+  1. *Dedicated Auto-Import Tab Navigation (`ImportBackupTabsScreen.kt`)*: The system SHALL insert the `Auto-Import` tab at index 1 (second position), maintaining the exact sequence `1. Import | 2. Auto-Import | 3. Backup | 4. Restore`.
+  2. *Independent Cloud Source & Format Controls*: The system SHALL provide independent master and source toggles (`auto_import_enabled`, `auto_import_dropbox`, `auto_import_google_drive`), format selection (`.fit`, `.tcx`, `.gpx`, `all` defaulting to `.fit`), and cloud connection status indicators.
+  3. *Zero-I/O Pre-Download Deduplication & Non-Interactive Processing*: The incremental cloud sync engine SHALL query configured cloud folders, pre-filter remote file entries against `ExistingWorkoutsSnapshot` before downloading any file bytes, and parse new files non-interactively without interactive route cluster selection dialogs.
+  4. *Local Health Connect Relay Worker*: When `syncImportedWorkoutsToHealthConnect` is enabled, the system SHALL enqueue `HealthConnectWorkoutSyncWorker.enqueue(context, workoutId)` to synchronize newly imported workouts to local Android Health Connect and update `(ExportType.COMMUNITY, FileFormat.HEALTH_CONNECT)` status.
+  5. *Optional Dual-Account Strava Relay & Manual Trigger*: When `uploadImportedWorkoutsToStrava` is enabled, the system SHALL schedule Strava upload on the receiving device. The tab SHALL display the last sync timestamp/summary and provide an immediate "Sync Now" trigger.
+  6. *Cooldown-Gated App & Workout List Trigger*: The system SHALL evaluate Auto-Import on app start / workout list display subject to a cooldown period to prevent excessive cloud polling.
+  7. *9-Language Localization Parity*: All Auto-Import controls and status messages SHALL be localized across all 9 supported languages (EN, DE, ES, FR, IT, JA, NL, PL, PT).
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* the user opens `Import & Backup`,
+• *When* the screen renders its top tab row,
+• *Then* the tabs are ordered `Import` (0), `Auto-Import` (1), `Backup` (2), and `Restore` (3), and selecting `Auto-Import` presents controls for cloud sources, format selection defaulting to `.fit`, Health Connect/Strava relays, and Sync Now.
+• *Given* Auto-Import is enabled and a new `.fit` file is available in Dropbox or Google Drive,
+• *When* an auto-import cycle executes,
+• *Then* only files whose `fileBaseName` is absent from `ExistingWorkoutsSnapshot` are downloaded, imported non-interactively, and repositories (`WorkoutRepository`, `PeriodsRepository`, `WorkoutClusterRepository`) are reactively refreshed.
+• *Given* a workout is auto-imported with `syncImportedWorkoutsToHealthConnect` enabled,
+• *When* the import transaction completes,
+• *Then* `HealthConnectWorkoutSyncWorker.enqueue(context, workoutId)` is invoked and the Health Connect export status is tracked.
+
+**Invariants**: Zero duplicate workout insertion; zero blocking UI dialogs during auto-import; zero network polling when Auto-Import is disabled.
+
+
 
 
 
