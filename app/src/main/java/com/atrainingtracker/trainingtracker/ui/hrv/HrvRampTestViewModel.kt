@@ -529,6 +529,7 @@ class HrvRampTestViewModel @JvmOverloads constructor(
                 stepRemainingSec = it.config.cooldownDurationSec
             )
         }
+        startTimer()
     }
 
     fun finishTest() {

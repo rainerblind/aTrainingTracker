@@ -423,6 +423,52 @@ class HrvRampTestViewModelTest {
     }
 
     @Test
+    fun testEarlyCompletionToCooldownRestartsTimerAndBroadcastsStopTracking_TST_TRK_072_10c() = runTest(testDispatcher) {
+        com.atrainingtracker.trainingtracker.TrainingApplication.setTrackingModeForTesting(TrackingMode.TRACKING)
+        val shadowApp = org.robolectric.Shadows.shadowOf(application)
+        shadowApp.clearBroadcastIntents()
+
+        val mockWorkoutRepo = mockk<WorkoutRepository>(relaxed = true)
+        val viewModel = HrvRampTestViewModel(
+            application = application,
+            banalServiceRepository = banalRepository,
+            workoutRepository = mockWorkoutRepo,
+            dispatcher = testDispatcher
+        )
+        viewModel.evaluatePreFlightQuality(artifactRate = 1.0, hasRrStream = true, isSmoothed = false)
+        viewModel.setWarmupDurationSec(0)
+        viewModel.startProtocol(autoStartTimer = true)
+
+        assertEquals(HrvTestPhase.TESTING, viewModel.uiState.value.phase)
+        assertFalse(viewModel.uiState.value.earlyCompletionDetected)
+
+        // 1. Trigger early completion by injecting alpha1 below cutoff for 60 seconds
+        for (i in 1..60) {
+            viewModel.processTick(injectedDfaA1 = 0.40)
+        }
+        assertEquals(HrvTestPhase.EARLY_COMPLETION, viewModel.uiState.value.phase)
+        assertTrue(viewModel.uiState.value.earlyCompletionDetected)
+
+        // 2. Transition to cooldown, which must restart timerJob
+        viewModel.transitionToCooldown()
+        assertEquals(HrvTestPhase.COOLDOWN, viewModel.uiState.value.phase)
+        assertTrue(shadowApp.broadcastIntents.none { it.action == com.atrainingtracker.trainingtracker.TrainingApplication.REQUEST_STOP_TRACKING })
+
+        val cooldownDuration = viewModel.uiState.value.stepRemainingSec
+        assertTrue(cooldownDuration > 0)
+
+        // 3. Advance virtual time past cooldown duration
+        testDispatcher.scheduler.advanceTimeBy((cooldownDuration + 1) * 1000L)
+
+        // 4. Verify completion and broadcast
+        assertEquals(HrvTestPhase.FINISHED, viewModel.uiState.value.phase)
+        assertTrue(viewModel.uiState.value.isCompleted)
+        val stopIntents = shadowApp.broadcastIntents.filter { it.action == com.atrainingtracker.trainingtracker.TrainingApplication.REQUEST_STOP_TRACKING }
+        assertEquals(1, stopIntents.size)
+        assertEquals(application.packageName, stopIntents.first().`package`)
+    }
+
+    @Test
     fun testFinishTestBroadcastsStopTracking_TST_TRK_072_10b() = runTest(testDispatcher) {
         com.atrainingtracker.trainingtracker.TrainingApplication.setTrackingModeForTesting(TrackingMode.TRACKING)
         val shadowApp = org.robolectric.Shadows.shadowOf(application)
