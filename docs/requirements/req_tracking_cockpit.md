@@ -774,29 +774,41 @@
 - **Rationale**: Allow users to view data on their wrist.
 - **Description**: Support Pebble smartwatches for live metrics.
 
-### REQ-FIL-007: EKF Sensor Fusion [Planned]
+### REQ-FIL-007: Coupled Unicycle Odometry Extended Kalman Filter Engine [Verified]
 - **Tests**: `TST-FUSION-001`
-- **Implementation**: TBD
-- **Rationale**: The system SHALL implement an Extended Kalman Filter to fuse GPS, IMU (Accel/Mag), and Hardware Speed Sensors for high-precision state estimation.
-- **Description**: EKF Sensor Fusion.
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Implementation**: `com.atrainingtracker.banalservice.odometry.UnicycleOdometryEkf.kt`
+- **Rationale**: Android's `FusedLocationProvider` lacks integration with external ANT+/BLE cycling wheel speed and footpod sensors. A kinematically coupled 5-state Extended Kalman Filter ($x = [E, N, v, \psi, b_{\omega_z}]^T$) SHALL fuse GNSS position and Doppler velocity with multi-source wheel speed and quaternion-projected gyro yaw-rate to deliver high-precision position, speed, and heading estimates with Huber outlier rejection across all speed sources (ATT-131, Parent Epic ATT-166).
+- **Description**: The system SHALL maintain a 5-state unicycle EKF ($E_k, N_k, v_k, \psi_k, b_{\omega_z, k}$) operating on local tangent ENU coordinates. The prediction step SHALL propagate heading and position using world yaw-rate $\omega_{ENU,z}$ corrected by estimated bias $b_{\omega_z}$. Measurement updates SHALL sequentially ingest all active speed sources (Front Wheel, Rear Wheel, GNSS Doppler) with Huber innovation down-weighting. High-confidence GNSS fixes SHALL update 2D position ($E, N$), and Doppler course-over-ground ($v > 3\text{ m/s}$) SHALL continuously anchor heading $\psi$ to bound yaw bias drift. The engine SHALL expose per-step forward states, covariances, and transition Jacobians ($F_k$) for backward RTS smoothing.
 
-### REQ-FIL-008: Body-to-World Frame Transformation [Planned]
+### REQ-FIL-008: Magnetometer-Free Quaternion Body-to-World Gyro Yaw-Rate Projection [Verified]
 - **Tests**: `TST-FUSION-001`
-- **Implementation**: TBD
-- **Rationale**: The system SHALL rotate raw phone MEMS data into the geographic East-North-Up (ENU) frame using a 3x3 Rotation Matrix or Quaternions.
-- **Description**: Body-to-World Frame Transformation.
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Implementation**: `com.atrainingtracker.banalservice.odometry.QuaternionGyroProjector.kt`
+- **Rationale**: Bike-mounted smartphones encounter arbitrary pitch and roll orientations (handlebar, stem, pocket, frame bag) as well as magnetic interference from steel frames and power lines. Angular rates from `Sensor.TYPE_GYROSCOPE` ($\vec{\omega}_{body}$) SHALL be projected into the local ENU world frame via magnetometer-free `Sensor.TYPE_GAME_ROTATION_VECTOR` quaternions to extract pure vertical world yaw-rate ($\omega_{ENU,z}$), explicitly prohibiting linear accelerometer double-integration (ATT-131, Parent Epic ATT-166).
+- **Description**: The system SHALL project 3D angular velocity $\vec{\omega}_{body}$ into the world East-North-Up frame via quaternion rotation $\vec{\omega}_{ENU} = q \otimes \vec{\omega}_{body} \otimes q^*$ using closed-form algebra with zero external matrix dependencies. The vertical world yaw-rate $\omega_{ENU,z} = 2(q_x q_z - q_w q_y)\omega_x + 2(q_y q_z + q_w q_x)\omega_y + (1 - 2(q_x^2 + q_y^2))\omega_z$ SHALL integrate to true horizontal turn angles within $< 2^\circ$ across arbitrary static device pitch and roll angles up to $90^\circ$. Linear acceleration vectors SHALL NOT be double-integrated into position or velocity.
 
-### REQ-FIL-009: Dead Reckoning Navigation [Planned]
+### REQ-FIL-009: Continuous Odometry Dead Reckoning in GPS-Denied Environments [Verified]
 - **Tests**: `TST-FUSION-002`
-- **Implementation**: TBD
-- **Rationale**: In GPS-denied environments, the system SHALL maintain location and speed predictions using integrated IMU and wheel speed data.
-- **Description**: Dead Reckoning Navigation.
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Implementation**: `com.atrainingtracker.banalservice.odometry.UnicycleOdometryEkf.kt`
+- **Rationale**: In tunnels, deep alpine valleys, and dense tree canopies where GNSS fixes drop or degrade ($\text{accuracy} > 25\text{ m}$), the odometry engine SHALL maintain continuous, kinematically consistent dead reckoning without freezing, corner-cutting, or teleportation artifacts upon GNSS re-acquisition (ATT-131, Parent Epic ATT-166).
+- **Description**: During GNSS outages or degraded fixes ($\text{accuracy} > 20\text{ m}$), the system SHALL propagate 2D trajectory ($E_k, N_k$) and forward speed ($v_k$) solely from wheel speed revolutions and quaternion-projected world yaw-rate ($\omega_{ENU,z}$). Across a 45-second curved tunnel simulation at $8\text{ m/s}$ with a $90^\circ$ turn, accumulated distance error SHALL remain $< 1.0\%$ and lateral position drift SHALL remain bounded by wheel calibration error and residual gyro bias, transitioning smoothly back to GNSS upon tunnel exit without teleportation spikes.
 
-### REQ-FIL-010: Speed Sensor Auto-Calibration [Planned]
+### REQ-FIL-010: Gated Online Wheel Circumference Auto-Calibration [Verified]
 - **Tests**: `TST-FUSION-003`
-- **Implementation**: TBD
-- **Rationale**: The system SHALL dynamically solve for the "Wheel Scale Factor" within the EKF state vector to automate circumference calibration.
-- **Description**: Speed Sensor Auto-Calibration.
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Implementation**: `com.atrainingtracker.banalservice.odometry.WheelCircumferenceCalibrator.kt`
+- **Rationale**: Manual wheel circumference entry is error-prone and varies with tire wear and pressure. The engine SHALL dynamically calibrate effective wheel circumference ($C_{wheel}$) against high-confidence 3D GNSS displacement on straight road segments, sharing gating criteria with `IndirectTpmsEstimator` without corrupting slow-puncture detection (ATT-131, Parent Epic ATT-166).
+- **Description**: The system SHALL maintain a scalar Kalman filter tracking effective circumference $C_{wheel}$. Calibration updates SHALL occur strictly when all gating criteria are satisfied: GNSS horizontal accuracy $\le 6.0\text{ m}$, forward speed $\ge 4.0\text{ m/s}$, world yaw-rate $|\omega_{ENU,z}| < 3.0^\circ/\text{s}$ ($0.052\text{ rad/s}$), and 3D slope-corrected distance $\Delta s_{3D} \ge 20\text{ m}$. On straight segments, $C_{wheel}$ SHALL converge to within $< 0.3\%$ of ground truth within 1,000 meters of qualified riding.
 
 ### REQ-FIL-011: Null-Safe Sensor Filtering [Verified]
 - **Tests**: `TST-FIL-001`, `TST-FIL-002`, `TST-FIL-014`, `TST-FIL-015`

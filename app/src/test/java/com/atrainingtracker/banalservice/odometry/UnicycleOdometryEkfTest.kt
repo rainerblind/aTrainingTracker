@@ -1,0 +1,215 @@
+/*
+ * aTrainingTracker (ANT+ BTLE)
+ * Copyright (c) 2011 - 2026 Rainer Blind <rainer.blind@gmail.com>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/gpl-3.0/>.
+ */
+
+package com.atrainingtracker.banalservice.odometry
+
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
+import org.junit.Before
+import org.junit.Test
+import kotlin.math.PI
+import kotlin.math.abs
+
+/**
+ * Unit tests for [UnicycleOdometryEkf] (REQ-FIL-007, TST-FUSION-001.2, ATT-131).
+ *
+ * Verifies:
+ * 1. Unicycle kinematics prediction (straight and curved trajectories).
+ * 2. Multi-source speed updates and Huber innovation outlier down-weighting.
+ * 3. 2D GNSS position update gating (accuracy <= 20.0m).
+ * 4. Doppler course-over-ground heading anchoring gating (speed > 3.0 m/s).
+ * 5. Offline snapshot capture for RTS backward smoothing (ATT-7750).
+ */
+class UnicycleOdometryEkfTest {
+
+    private lateinit var ekf: UnicycleOdometryEkf
+
+    @Before
+    fun setUp() {
+        ekf = UnicycleOdometryEkf(
+            initialEast = 0.0,
+            initialNorth = 0.0,
+            initialSpeed = 0.0,
+            initialHeadingRad = PI / 2.0, // Pointing North
+            initialGyroBias = 0.0
+        )
+    }
+
+    @Test
+    fun testInitialization_setsCorrectInitialStateAndVariances() {
+        assertEquals(0.0, ekf.eastMeters, 1e-6)
+        assertEquals(0.0, ekf.northMeters, 1e-6)
+        assertEquals(0.0, ekf.speedMps, 1e-6)
+        assertEquals(PI / 2.0, ekf.headingRad, 1e-6)
+        assertEquals(0.0, ekf.bearingDeg, 1e-6) // 0 deg is North
+        assertEquals(0.0, ekf.gyroBiasRadPerSec, 1e-6)
+        assertTrue(ekf.positionVariance > 0.0)
+        assertTrue(ekf.speedVariance > 0.0)
+    }
+
+    @Test
+    fun testPrediction_straightMotion_propagatesPositionAlongHeading() {
+        // Heading is North (pi/2). Set speed = 10 m/s.
+        ekf.reset(east = 0.0, north = 0.0, speed = 10.0, headingRad = PI / 2.0)
+
+        // Predict 1.0 second with 0 yaw rate
+        ekf.predict(dtSec = 1.0, gyroYawRateRadPerSec = 0.0)
+
+        // North should be ~10 meters, East should be ~0 meters
+        assertEquals(0.0, ekf.eastMeters, 1e-3)
+        assertEquals(10.0, ekf.northMeters, 1e-3)
+        assertEquals(PI / 2.0, ekf.headingRad, 1e-6)
+    }
+
+    @Test
+    fun testPrediction_curvedMotion_updatesHeadingAndArc() {
+        // Start pointing East (heading = 0.0). Speed = 10 m/s.
+        ekf.reset(east = 0.0, north = 0.0, speed = 10.0, headingRad = 0.0)
+
+        // Counter-clockwise turn at 0.1 rad/s for 5 steps of 1.0s (total 0.5 rad)
+        val yawRate = 0.1
+        for (i in 0 until 5) {
+            ekf.predict(dtSec = 1.0, gyroYawRateRadPerSec = yawRate)
+        }
+
+        // Heading should be 0.5 rad
+        assertEquals(0.5, ekf.headingRad, 1e-4)
+        // Bike turned left towards North, so North position must be > 0
+        assertTrue(ekf.northMeters > 0.0)
+        assertTrue(ekf.eastMeters > 0.0)
+    }
+
+    @Test
+    fun testSpeedUpdate_sequentialFusion_reducesVariance() {
+        ekf.reset(speed = 8.0)
+        val initialVar = ekf.speedVariance
+
+        // Front wheel speed update
+        val frontMeas = SpeedMeasurement(
+            speedMps = 8.0,
+            variance = 0.20,
+            timestampMs = 1000L,
+            source = SpeedSource.FRONT_WHEEL
+        )
+        ekf.updateSpeed(frontMeas)
+        val varAfterFront = ekf.speedVariance
+        assertTrue(varAfterFront < initialVar)
+
+        // Rear wheel speed update (consistent speed)
+        val rearMeas = SpeedMeasurement(
+            speedMps = 8.0,
+            variance = 0.20,
+            timestampMs = 1000L,
+            source = SpeedSource.REAR_WHEEL
+        )
+        ekf.updateSpeed(rearMeas)
+        val varAfterRear = ekf.speedVariance
+
+        // Sequential updates should halve remaining measurement uncertainty
+        assertTrue(varAfterRear < varAfterFront)
+        assertEquals(8.0, ekf.speedMps, 1e-4)
+    }
+
+    @Test
+    fun testSpeedUpdate_huberRejection_neutralizesSprintSlip() {
+        ekf.reset(speed = 8.0)
+        // High confidence prior speed 8.0 m/s
+        ekf.updateSpeed(8.0, variance = 0.05)
+        val speedBeforeSlip = ekf.speedMps
+
+        // Sudden rear wheel slip spike to 18.0 m/s (10 m/s discrepancy)
+        val slipMeas = SpeedMeasurement(
+            speedMps = 18.0,
+            variance = 0.10,
+            timestampMs = 2000L,
+            source = SpeedSource.REAR_WHEEL
+        )
+        ekf.updateSpeed(slipMeas)
+
+        // Huber weighting should heavily down-weight the slip outlier
+        val speedAfterSlip = ekf.speedMps
+        assertTrue(
+            "Estimated speed ($speedAfterSlip) must remain close to true speed ($speedBeforeSlip) during slip",
+            abs(speedAfterSlip - speedBeforeSlip) < 1.0
+        )
+    }
+
+    @Test
+    fun testGnssPositionUpdate_accuracyGating_rejectsDegradedFixes() {
+        ekf.reset(east = 100.0, north = 200.0)
+
+        // Degraded GPS with 35m accuracy (> 20.0m limit)
+        val acceptedDegraded = ekf.updateGnssPosition(
+            eastMeters = 150.0,
+            northMeters = 250.0,
+            accuracyMeters = 35.0
+        )
+        assertFalse("GNSS fixes with accuracy > 20m must be gated out", acceptedDegraded)
+        assertEquals(100.0, ekf.eastMeters, 1e-6)
+        assertEquals(200.0, ekf.northMeters, 1e-6)
+
+        // High accuracy GPS fix (3.0m <= 20.0m)
+        val acceptedGood = ekf.updateGnssPosition(
+            eastMeters = 105.0,
+            northMeters = 205.0,
+            accuracyMeters = 3.0
+        )
+        assertTrue("GNSS fix with accuracy <= 20m must be accepted", acceptedGood)
+        // Position must be pulled towards fix
+        assertTrue(ekf.eastMeters > 100.0)
+        assertTrue(ekf.northMeters > 200.0)
+    }
+
+    @Test
+    fun testDopplerHeadingAnchoring_gatedAtLowSpeed() {
+        // Stationary / low speed: 1.5 m/s (<= 3.0 m/s threshold)
+        ekf.reset(speed = 1.5, headingRad = 0.0)
+
+        val updatedLowSpeed = ekf.updateDopplerHeading(headingRad = PI / 2.0)
+        assertFalse("Doppler heading must be gated when speed <= 3.0 m/s", updatedLowSpeed)
+        assertEquals(0.0, ekf.headingRad, 1e-6)
+
+        // Qualified speed: 8.0 m/s (> 3.0 m/s threshold)
+        ekf.reset(speed = 8.0, headingRad = 0.0)
+        val updatedHighSpeed = ekf.updateDopplerHeading(headingRad = PI / 2.0, varianceRad = 0.05)
+        assertTrue("Doppler heading must be accepted when speed > 3.0 m/s", updatedHighSpeed)
+        // Heading pulled towards PI/2
+        assertTrue(ekf.headingRad > 0.0)
+    }
+
+    @Test
+    fun testSnapshotCapture_recordsValidSnapshotsForRtsSmoother() {
+        ekf.reset(speed = 10.0, headingRad = 0.0)
+        ekf.clearSnapshots()
+        assertEquals(0, ekf.getSnapshots().size)
+
+        ekf.predict(dtSec = 0.1, gyroYawRateRadPerSec = 0.05, timestampMs = 1000L)
+        val snapshots = ekf.getSnapshots()
+        assertTrue("Snapshots list must not be empty after predict", snapshots.isNotEmpty())
+
+        val snap = snapshots.last()
+        assertEquals(1000L, snap.timestampMs)
+        assertEquals(0.1, snap.dtSec, 1e-6)
+        assertEquals(5, snap.statePrior.size)
+        assertEquals(5, snap.covariancePrior.size)
+        assertEquals(5, snap.transitionJacobian.size)
+        assertEquals(5, snap.statePosterior.size)
+        assertEquals(5, snap.covariancePosterior.size)
+    }
+}

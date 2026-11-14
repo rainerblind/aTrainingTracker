@@ -18,24 +18,24 @@
 - **Jira**: ``ATT-275``
 - **Test Description**: 1. Execute `AverageFilterTest` (or similar unit test). 2. Pass `null` as a new value to the filter. 3. Call `getFilteredValue`.
 
-### TST-FUSION-001: Extended Kalman Filter State Estimation and Body-to-World Frame Rotation [Planned]
+### TST-FUSION-001: Extended Kalman Filter State Estimation and Body-to-World Frame Rotation [Verified]
 - **Requirement(s)**: `REQ-FIL-007`, `REQ-FIL-008`
 - **Component**: Sensor Fusion Engine
 - **Test Description**:
-  1. *EKF Multi-Sensor Fusion Test*: Verify EKF correctly fuses simulated GPS coordinates, accelerometer/magnetometer IMU signals, and wheel speed telemetry into unified position and velocity state vectors.
-  2. *Body-to-World ENU Transformation Test*: Verify 3x3 direction cosine rotation matrix rotates arbitrary phone orientations into geographic East-North-Up coordinate frames.
+  1. *EKF Multi-Sensor Fusion Test*: Verify EKF correctly fuses simulated GPS coordinates, multi-wheel speed telemetry (front and rear), and gyro yaw-rate into unified position, velocity, and heading state vectors.
+  2. *Body-to-World ENU Transformation Test*: Verify quaternion rotation projects arbitrary 3D phone mounting orientations (pitch/roll up to 90°) into geographic East-North-Up coordinate frames, integrating 90° and 180° turns to within < 2° error.
 
-### TST-FUSION-002: Dead Reckoning Navigation in GPS-Denied Environments [Planned]
+### TST-FUSION-002: Dead Reckoning Navigation in GPS-Denied Environments [Verified]
 - **Requirement(s)**: `REQ-FIL-009`
 - **Component**: Sensor Fusion Engine
 - **Test Description**:
-  1. *GPS Loss Dead Reckoning Test*: Simulate GPS drop in a tunnel or urban canyon; verify integrated IMU and wheel speed data maintain continuous trajectory and speed predictions without freeze or spike.
+  1. *GPS Loss Dead Reckoning Test*: Simulate 45 s curved tunnel GNSS drop at 8 m/s with 90° turn; verify integrated wheel speed and gyro yaw-rate maintain continuous trajectory and distance (< 1% error) without corner cutting or exit teleportation spikes.
 
-### TST-FUSION-003: Dynamic Speed Sensor Wheel Scale Factor Auto-Calibration [Planned]
+### TST-FUSION-003: Dynamic Speed Sensor Wheel Scale Factor Auto-Calibration [Verified]
 - **Requirement(s)**: `REQ-FIL-010`
 - **Component**: Sensor Fusion Engine
 - **Test Description**:
-  1. *Auto-Calibration Convergence Test*: Feed raw wheel revolutions alongside ground-truth high-accuracy GPS fixes; verify the filter dynamically solves and converges the wheel scale factor within 1% error.
+  1. *Auto-Calibration Convergence Test*: Feed raw wheel revolutions alongside ground-truth high-accuracy GPS fixes on straight road segments; verify the filter dynamically converges wheel circumference within < 0.3% error.
 
 ### TST-FIL-003: **Atomic Altitude Correction** [Verified]
 - **Requirement(s)**: `REQ-FIL-004`
