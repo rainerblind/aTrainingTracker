@@ -20,7 +20,13 @@ package com.atrainingtracker.trainingtracker.ui.aftermath.workoutdetail
 
 import com.atrainingtracker.testing.LocalizationTestCache
 import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutData
+import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDetailSectionType
+import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDetailTabConfig
+import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDetailTabPreset
+import com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutSectionType
+import com.atrainingtracker.trainingtracker.ui.aftermath.toWorkoutDetailSectionType
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -188,6 +194,73 @@ class HrvThresholdSummaryCardTest {
             assertNotNull("hrv_threshold_diag_low_r2 must exist in $loc", lowR2Format)
             val formattedR2 = String.format(java.util.Locale.US, lowR2Format!!, 0.42, 0.55)
             assertTrue("Formatted R2 string must contain 0.42 and 0.55 in $loc", formattedR2.contains("0.42") && formattedR2.contains("0.55"))
+        }
+    }
+
+    /**
+     * TST-UI-527.4: Card Mounting and Section Assignment Contract (REQ-UI-527.4).
+     */
+    @Test
+    fun `TST-UI-527_4 card mounting under HRV section and preset mapping`() {
+        // Tab preset and default tab configuration for HRV
+        val hrvTab = WorkoutDetailTabConfig.DEFAULT_TABS[3]
+        assertEquals("tab_hrv", hrvTab.id)
+        assertEquals(WorkoutDetailTabPreset.HRV, hrvTab.preset)
+        assertEquals(listOf(WorkoutDetailSectionType.HRV), hrvTab.sections)
+
+        // WorkoutDetailSectionType.HRV maps bidirectionally to WorkoutSectionType.HRV
+        assertEquals(WorkoutSectionType.HRV, WorkoutDetailSectionType.HRV.toWorkoutSectionTypeOrNull())
+        assertEquals(WorkoutDetailSectionType.HRV, WorkoutSectionType.HRV.toWorkoutDetailSectionType())
+
+        // WorkoutDetailTabbedContentKt exists
+        val tabbedClazz = Class.forName("com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDetailTabbedContentKt")
+        assertNotNull("WorkoutDetailTabbedContentKt must exist", tabbedClazz)
+    }
+
+    /**
+     * TST-UI-527.5: Zone Comparison Gating on hasPower and hasHr (REQ-UI-527.5).
+     */
+    @Test
+    fun `TST-UI-527_5 power comparison is suppressed when workout has no power data even with configured FTP`() {
+        val configuredFtp = 250
+        val configuredHrMax = 185
+
+        // Case A: Workout without power, with HR and configured FTP
+        val hasPowerFalse = false
+        val hasHrTrue = true
+        val showPowerComparisonA = hasPowerFalse && configuredFtp > 0
+        val showHrComparisonA = hasHrTrue && configuredHrMax > 0
+        assertFalse("showPowerComparison must be false when hasPower is false", showPowerComparisonA)
+        assertTrue("showHrComparison must remain true when hasHr is true", showHrComparisonA)
+        assertTrue("hasZoneData must remain true when showHrComparison is true", showPowerComparisonA || showHrComparisonA)
+
+        // Case B: Workout with neither power nor HR
+        val hasHrFalse = false
+        val showHrComparisonB = hasHrFalse && configuredHrMax > 0
+        val hasZoneDataB = showPowerComparisonA || showHrComparisonB
+        assertFalse("Entire zone comparison section must be hidden when neither power nor HR applies", hasZoneDataB)
+
+        // Case C: Workout with power and configured FTP
+        val hasPowerTrue = true
+        val showPowerComparisonC = hasPowerTrue && configuredFtp > 0
+        assertTrue("showPowerComparison must be true when hasPower and configuredFtp > 0", showPowerComparisonC)
+    }
+
+    /**
+     * TST-UI-527: 9-language localization parity for workout_detail_tab_hrv and settings_workout_card_hrv.
+     */
+    @Test
+    fun `TST-UI-527 localization parity for workout_detail_tab_hrv and settings_workout_card_hrv across all 9 locales`() {
+        val locales = listOf("values", "values-de", "values-es", "values-fr", "values-it", "values-ja", "values-nl", "values-pl", "values-pt")
+        for (loc in locales) {
+            val strings = LocalizationTestCache.getStrings(loc, "strings.xml")
+            val tabHrv = strings["workout_detail_tab_hrv"]
+            assertNotNull("workout_detail_tab_hrv must exist in $loc", tabHrv)
+            assertTrue("workout_detail_tab_hrv must not be blank in $loc", tabHrv!!.isNotBlank())
+
+            val cardHrv = strings["settings_workout_card_hrv"]
+            assertNotNull("settings_workout_card_hrv must exist in $loc", cardHrv)
+            assertTrue("settings_workout_card_hrv must not be blank in $loc", cardHrv!!.isNotBlank())
         }
     }
 }

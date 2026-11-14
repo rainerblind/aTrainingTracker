@@ -1270,6 +1270,7 @@
     <string name="settings_workout_card_description">Descripción y notas</string>
     <string name="settings_workout_card_charts">Gráficos de telemetría</string>
     <string name="settings_workout_card_zones">Análisis de zonas (FC y potencia)</string>
+    <string name="settings_workout_card_hrv">Análisis de VFC</string>
     <string name="settings_edit_workout_title">Editar entrenamiento</string>
     <string name="settings_edit_workout_cluster">Ruta / Recorrido</string>
     <string name="settings_edit_workout_commute_trainer">Desplazamiento y rodillo</string>
@@ -2168,6 +2169,7 @@
     <string name="workout_detail_tab_overview">Resumen</string>
     <string name="workout_detail_tab_map_graphs">Mapa y gráficos</string>
     <string name="workout_detail_tab_zones">Zonas</string>
+    <string name="workout_detail_tab_hrv">VFC</string>
     <string name="workout_detail_tab_laps_segments">Vueltas y segmentos</string>
     <string name="workout_detail_tab_custom_default">Pestaña personalizada</string>
     <string name="workout_detail_section_details">Métricas y resumen</string>

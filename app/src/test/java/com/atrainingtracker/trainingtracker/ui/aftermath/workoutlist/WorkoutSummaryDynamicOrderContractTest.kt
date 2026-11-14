@@ -91,6 +91,7 @@ class WorkoutSummaryDynamicOrderContractTest {
                 WorkoutSectionType.CHARTS -> prefs.showTelemetryCharts
                 WorkoutSectionType.ZONES -> prefs.showZoneAnalysis
                 WorkoutSectionType.GRADE_DISTRIBUTION -> prefs.showGradeDistribution
+                WorkoutSectionType.HRV -> prefs.showHrv
                 WorkoutSectionType.EXPORT_STATUS -> prefs.showExportStatus
                 WorkoutSectionType.PHOTOS -> prefs.showPhotos
             }

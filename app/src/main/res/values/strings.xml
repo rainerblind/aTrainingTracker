@@ -1468,6 +1468,7 @@
     <string name="settings_workout_card_description">Description &amp; Notes</string>
     <string name="settings_workout_card_charts">Telemetry Charts</string>
     <string name="settings_workout_card_zones">Zone Analysis (HR &amp; Power)</string>
+    <string name="settings_workout_card_hrv">HRV Analytics</string>
     <string name="settings_edit_workout_title">Edit Workout</string>
     <string name="settings_edit_workout_cluster">Route / Cluster</string>
     <string name="settings_edit_workout_commute_trainer">Commute &amp; Trainer</string>
@@ -2369,6 +2370,7 @@
     <string name="workout_detail_tab_overview">Overview</string>
     <string name="workout_detail_tab_map_graphs">Map &amp; Graphs</string>
     <string name="workout_detail_tab_zones">Zones</string>
+    <string name="workout_detail_tab_hrv">HRV</string>
     <string name="workout_detail_tab_laps_segments">Laps &amp; Segments</string>
     <string name="workout_detail_tab_custom_default">Custom Tab</string>
     <string name="workout_detail_section_details">Workout Metrics &amp; Summary</string>

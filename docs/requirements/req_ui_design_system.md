@@ -17201,3 +17201,64 @@ $$x_{\text{needle}} = \frac{(K - 1) + \text{fraction}_{\text{top}}}{K}$$
 
 **Invariants**: Resource IDs, DataStore preference keys, enum constants, and SQLite tables remain unchanged; zero changes to mathematical DSP calculation or threshold invariant $T_1 \ge T_2 + 0.05f$.
 
+
+
+### REQ-UI-527: Dedicated HRV Tab in Workout Details, Wire Migration & Telemetry-Gated Zone Comparison [Verified]
+- **Target Release**: `V5.0.0`
+- **Tickets**: `ATT-7756`
+- **Tests**: `TST-UI-527`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Implementation**: `WorkoutDetailTabConfig.kt`, `WorkoutSectionType.kt`, `WorkoutDetailTabbedContent.kt`, `TrackOnMapScreen.kt`, `HrvThresholdSummaryCard.kt`, `strings.xml` (all 9 locales)
+- **Rationale**: Post-workout HRV analytics (`HrvAlpha1ScatterCard`, `HrvThresholdSummaryCard`, `HrvDurabilityCard`) were previously colocated within the Training Zones section (`WorkoutDetailSectionType.ZONES`), cluttering the standard HR and Power distribution cards. Furthermore, `HrvThresholdSummaryCard` rendered Coggan Power headers, FTP comparison deltas, consensus status rows, and zone update buttons whenever `configuredFtp > 0` even when the workout contained no power telemetry. The system SHALL extract a dedicated `HRV` section (`WorkoutDetailSectionType.HRV`, `WorkoutSectionType.HRV`, and `WorkoutDetailTabPreset.HRV`), define a canonical 5-tab default layout, auto-migrate legacy persisted tab configurations, dynamically auto-hide the HRV tab when no HRV data exists, and gate Power and HR zone comparison blocks strictly on actual telemetry availability (ATT-7756, Parent Epic ATT-3539, status: Planned, refining `REQ-UI-408`, `REQ-PER-036.5`, and `REQ-PER-037.4`):
+- **Description**:
+  1. *Dedicated HRV Section & Canonical 5-Tab Default Layout (`REQ-UI-527.1`)*:
+     - `WorkoutDetailSectionType` and `WorkoutSectionType` SHALL define `HRV(R.string.settings_workout_card_hrv)`.
+     - `WorkoutDetailTabPreset` SHALL define `HRV(R.string.workout_detail_tab_hrv)`.
+     - `WorkoutDetailTabConfig.DEFAULT_TABS` SHALL define 5 default tabs in canonical order:
+       1. `tab_overview` (`OVERVIEW`: `[RPE_AND_FEEL, DETAILS, PHOTOS, DESCRIPTION, EXTREMA, EXPORT_STATUS]`)
+       2. `tab_map_graphs` (`MAP_AND_GRAPHS`: `[MAP, ELEVATION, CHARTS]`)
+       3. `tab_zones` (`ZONES`: `[ZONES, GRADE_DISTRIBUTION]`)
+       4. `tab_hrv` (`HRV`: `[HRV]`)
+       5. `tab_laps_segments` (`LAPS_AND_SEGMENTS`: `[LAPS, STRAVA]`)
+  2. *Automatic Wire Migration & Backward Compatibility (`REQ-UI-527.2`)*:
+     - In `WorkoutDetailTabConfig.deserializeTabs`, if `WorkoutDetailSectionType.HRV` is not present in ANY tab of a valid non-empty tab list, the system SHALL automatically insert a new tab `tab_hrv` (`preset = WorkoutDetailTabPreset.HRV`, `sections = listOf(WorkoutDetailSectionType.HRV)`) directly after `tab_zones` (or before `tab_laps_segments`), guaranteeing existing user configurations seamlessly surface the new HRV tab without data loss.
+  3. *Dynamic Availability & Empty Tab Auto-Hiding (`REQ-UI-527.3`)*:
+     - `WorkoutDetailSectionAvailability` SHALL expose `val hasHrv: Boolean = false`, mapped to `WorkoutDetailSectionType.HRV -> hasHrv` in `isSectionActive`.
+     - `TrackOnMapScreen.kt` SHALL compute `hasHrvData = TelemetryMetricUtils.hasHrvData(activeScrubPath)` and pass it into `WorkoutDetailSectionAvailability.fromWorkoutState`.
+     - For workouts lacking HRV telemetry (`hasHrvData == false`), `filterVisibleWorkoutDetailTabs` SHALL automatically hide `tab_hrv` with zero layout shifts.
+  4. *HRV Card Migration from ZONES to HRV (`REQ-UI-527.4`)*:
+     - In `WorkoutDetailTabbedContent.kt`, `HrvAlpha1ScatterCard`, `HrvThresholdSummaryCard`, and `HrvDurabilityCard` SHALL be rendered under `WorkoutDetailSectionType.HRV` preserving their relative order (`1. HrvAlpha1ScatterCard` -> `2. HrvThresholdSummaryCard` -> `3. HrvDurabilityCard`).
+     - Those three HRV cards SHALL be completely removed from `WorkoutDetailSectionType.ZONES`.
+  5. *Telemetry-Gated Power & HR Zone Comparison in HrvThresholdSummaryCard (`REQ-UI-527.5`)*:
+     - In `HrvThresholdSummaryCard.kt`, power comparison (`showPowerComparison = hasPower && configuredFtp != null && configuredFtp > 0`) SHALL gate the Coggan Power header, configured FTP text, power delta chips (`hrv_power_delta_t1`, `hrv_power_delta_t2`), power consensus badge (`hrv_consensus_badge`), and "Leistungszonen aktualisieren" button (`hrv_btn_update_power_zones`).
+     - Heart rate comparison (`showHrComparison = hasHr && configuredHrMax != null && configuredHrMax > 0`) SHALL gate the HR header, HR delta chips, HR consensus badge, and "HF-Zonen aktualisieren" button.
+     - The entire `hrv_zone_comparison_section` SHALL be rendered only when `showPowerComparison || showHrComparison`. If neither applies (e.g. workout has no power data and no HR max is configured), the comparison section and its divider SHALL be completely omitted.
+  6. *9-Language Localization Parity (`REQ-UI-527.6`)*:
+     - String resources `workout_detail_tab_hrv` and `settings_workout_card_hrv` SHALL exist across all 9 supported application locales (`values/`, `values-de/`, `values-es/`, `values-fr/`, `values-it/`, `values-ja/`, `values-nl/`, `values-pl/`, `values-pt/`).
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* a workout with valid HRV telemetry (`hasHrvData == true`) and default tab preferences,
+• *When* the user views Workout Details,
+• *Then* a dedicated HRV tab appears at tab index 3 (between Zones and Laps & Segments) containing `HrvAlpha1ScatterCard`, `HrvThresholdSummaryCard`, and `HrvDurabilityCard`, and the Zones tab contains only HR/Power/Grade distribution cards.
+• *Given* a workout recorded without HRV telemetry (`hasHrvData == false`),
+• *When* the user views Workout Details,
+• *Then* `filterVisibleWorkoutDetailTabs` suppresses the HRV tab entirely.
+• *Given* a legacy serialized tabs string omitting `HRV`,
+• *When* `deserializeTabs` parses the payload,
+• *Then* `tab_hrv` is automatically inserted directly following `tab_zones`.
+• *Given* a workout with HRV and HR data but no power meter (`hasPower == false`),
+• *When* viewing `HrvThresholdSummaryCard`,
+• *Then* the Power zone comparison header, FTP label, power deltas, power consensus badge, and power zone update button are omitted while the HR zone comparison remains visible.
+• *Given* a workout with HRV but neither power nor configured HR max,
+• *When* viewing `HrvThresholdSummaryCard`,
+• *Then* the entire `hrv_zone_comparison_section` is omitted.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: `REQ-UI-408.1` (Default Tab Archetype), `REQ-PER-036.5` (Threshold Card Host), `REQ-PER-037.4` (Zone Comparison Section), amended by `ATT-7756`.
+2. *Historical Origin & Commit Trace*: `ATT-3920` (Sprint 2026-44.1, 4-tab model), `ATT-3554` (Sprint 2026-46.4, HRV cards placed under `ZONES`), `ATT-3555` (Sprint 2026-46.5, zone comparison section).
+3. *Root Reason for Existing Formulation*: When the multi-tab layout was created in `ATT-3920`, HRV analytics did not yet exist. In `ATT-3554`, the 3 HRV cards were temporarily colocated in `tab_zones` because an HRV tab did not exist. In `ATT-3555`, zone comparison assumed power was available if `configuredFtp > 0`.
+4. *Preservation of Core Invariants*: Wire backward compatibility in `deserializeTabs` via auto-migration; map-at-index-0 invariant; empty tab auto-hiding; 100% 9-language localization parity.
+
+**Invariants**: Map remains pinned at index 0 in any tab where present; zero layout shifts on non-HRV workouts; existing user tab configurations migrate without data loss; 100% 9-language localization parity.

@@ -1268,6 +1268,7 @@
     <string name="settings_workout_card_description">Beschrijving en notities</string>
     <string name="settings_workout_card_charts">Telemetriegrafieken</string>
     <string name="settings_workout_card_zones">Zone-analyse (HF &amp; vermogen)</string>
+    <string name="settings_workout_card_hrv">HRV-analyse</string>
     <string name="settings_edit_workout_title">Training bewerken</string>
     <string name="settings_edit_workout_cluster">Route / Cluster</string>
     <string name="settings_edit_workout_commute_trainer">Woon-werk &amp; fietstrainer</string>
@@ -2167,6 +2168,7 @@
     <string name="workout_detail_tab_overview">Overzicht</string>
     <string name="workout_detail_tab_map_graphs">Kaart &amp; grafieken</string>
     <string name="workout_detail_tab_zones">Zones</string>
+    <string name="workout_detail_tab_hrv">HRV</string>
     <string name="workout_detail_tab_laps_segments">Rondes &amp; segmenten</string>
     <string name="workout_detail_tab_custom_default">Aangepast tabblad</string>
     <string name="workout_detail_section_details">Trainingsmetingen &amp; overzicht</string>

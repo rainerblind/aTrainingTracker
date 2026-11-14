@@ -41,6 +41,7 @@ enum class WorkoutDetailSectionType(@StringRes val labelRes: Int) {
     CHARTS(R.string.settings_workout_card_charts),
     ZONES(R.string.settings_workout_card_zones),
     GRADE_DISTRIBUTION(R.string.settings_workout_card_grade_distribution),
+    HRV(R.string.settings_workout_card_hrv),
     LAPS(R.string.settings_workout_card_laps),
     STRAVA(R.string.settings_workout_card_strava),
     EXPORT_STATUS(R.string.export_status),
@@ -59,6 +60,7 @@ enum class WorkoutDetailSectionType(@StringRes val labelRes: Int) {
         CHARTS -> WorkoutSectionType.CHARTS
         ZONES -> WorkoutSectionType.ZONES
         GRADE_DISTRIBUTION -> WorkoutSectionType.GRADE_DISTRIBUTION
+        HRV -> WorkoutSectionType.HRV
         LAPS -> WorkoutSectionType.LAPS
         STRAVA -> WorkoutSectionType.STRAVA
         EXPORT_STATUS -> WorkoutSectionType.EXPORT_STATUS
@@ -81,6 +83,7 @@ fun WorkoutSectionType.toWorkoutDetailSectionType(): WorkoutDetailSectionType = 
     WorkoutSectionType.CHARTS -> WorkoutDetailSectionType.CHARTS
     WorkoutSectionType.ZONES -> WorkoutDetailSectionType.ZONES
     WorkoutSectionType.GRADE_DISTRIBUTION -> WorkoutDetailSectionType.GRADE_DISTRIBUTION
+    WorkoutSectionType.HRV -> WorkoutDetailSectionType.HRV
     WorkoutSectionType.EXPORT_STATUS -> WorkoutDetailSectionType.EXPORT_STATUS
     WorkoutSectionType.PHOTOS -> WorkoutDetailSectionType.PHOTOS
 }
@@ -109,6 +112,7 @@ enum class WorkoutDetailTabPreset(@StringRes val defaultTitleRes: Int) {
     OVERVIEW(R.string.workout_detail_tab_overview),
     MAP_AND_GRAPHS(R.string.workout_detail_tab_map_graphs),
     ZONES(R.string.workout_detail_tab_zones),
+    HRV(R.string.workout_detail_tab_hrv),
     LAPS_AND_SEGMENTS(R.string.workout_detail_tab_laps_segments),
     CUSTOM(R.string.workout_detail_tab_custom_default)
 }
@@ -138,6 +142,7 @@ data class WorkoutDetailSectionAvailability(
     val hasCharts: Boolean = false,
     val hasZones: Boolean = false,
     val hasGradeDistribution: Boolean = false,
+    val hasHrv: Boolean = false,
     val hasLaps: Boolean = false,
     val hasStrava: Boolean = false,
     val hasExportStatus: Boolean = false,
@@ -161,6 +166,7 @@ data class WorkoutDetailSectionAvailability(
         WorkoutDetailSectionType.CHARTS -> hasCharts
         WorkoutDetailSectionType.ZONES -> hasZones
         WorkoutDetailSectionType.GRADE_DISTRIBUTION -> hasGradeDistribution
+        WorkoutDetailSectionType.HRV -> hasHrv
         WorkoutDetailSectionType.LAPS -> hasLaps
         WorkoutDetailSectionType.STRAVA -> hasStrava
         WorkoutDetailSectionType.EXPORT_STATUS -> hasExportStatus
@@ -181,7 +187,8 @@ data class WorkoutDetailSectionAvailability(
             hasZonesData: Boolean,
             hasLapsData: Boolean,
             hasPhotos: Boolean = true,
-            hasGradeDistribution: Boolean = false
+            hasGradeDistribution: Boolean = false,
+            hasHrvData: Boolean = false
         ): WorkoutDetailSectionAvailability {
             val desc = workoutData.descriptionData
             val hasDescriptionContent = !desc.description.isNullOrBlank() ||
@@ -197,6 +204,7 @@ data class WorkoutDetailSectionAvailability(
                 hasCharts = hasTelemetrySeries,
                 hasZones = hasZonesData,
                 hasGradeDistribution = hasGradeDistribution,
+                hasHrv = hasHrvData,
                 hasLaps = hasLapsData,
                 hasStrava = !workoutData.stravaActivityData.isNullOrBlank(),
                 hasExportStatus = workoutData.exportStatuses.any { it.hasContent },
@@ -283,11 +291,12 @@ data class WorkoutDetailTabConfig(
         private const val SCHEMA_PREFIX_V1 = "v1|"
 
         /**
-         * Canonical 4-tab default configuration (`REQ-UI-408.1` / `ATT-5655`):
+         * Canonical 5-tab default configuration (`REQ-UI-408.1` / `ATT-5655` / `REQ-UI-527.1` / `ATT-7756`):
          * 1. Overview: `[DETAILS, PHOTOS, DESCRIPTION, EXTREMA, EXPORT_STATUS]`
          * 2. Map & Graphs: `[MAP, ELEVATION, CHARTS]`
-         * 3. Zones: `[ZONES]`
-         * 4. Laps & Segments: `[LAPS, STRAVA]`
+         * 3. Zones: `[ZONES, GRADE_DISTRIBUTION]`
+         * 4. HRV: `[HRV]`
+         * 5. Laps & Segments: `[LAPS, STRAVA]`
          */
         val DEFAULT_TABS: List<WorkoutDetailTabConfig> = listOf(
             WorkoutDetailTabConfig(
@@ -320,6 +329,14 @@ data class WorkoutDetailTabConfig(
                 sections = listOf(
                     WorkoutDetailSectionType.ZONES,
                     WorkoutDetailSectionType.GRADE_DISTRIBUTION
+                )
+            ),
+            WorkoutDetailTabConfig(
+                id = "tab_hrv",
+                preset = WorkoutDetailTabPreset.HRV,
+                customTitle = "",
+                sections = listOf(
+                    WorkoutDetailSectionType.HRV
                 )
             ),
             WorkoutDetailTabConfig(
@@ -507,7 +524,31 @@ data class WorkoutDetailTabConfig(
                 } else {
                     withGrade
                 }
-                withRpe
+
+                // ATT-7756 / REQ-UI-527.2: If HRV is not present in ANY tab,
+                // auto-migrate tab_hrv directly after tab_zones (or before tab_laps_segments).
+                val withHrv = if (withRpe.none { tab -> WorkoutDetailSectionType.HRV in tab.sections }) {
+                    val mutable = withRpe.toMutableList()
+                    val zonesIndex = mutable.indexOfFirst { it.id == "tab_zones" || it.preset == WorkoutDetailTabPreset.ZONES }
+                    val newTab = WorkoutDetailTabConfig(
+                        id = "tab_hrv",
+                        preset = WorkoutDetailTabPreset.HRV,
+                        customTitle = "",
+                        sections = listOf(WorkoutDetailSectionType.HRV)
+                    )
+                    if (zonesIndex >= 0) {
+                        mutable.add(zonesIndex + 1, newTab)
+                    } else {
+                        val lapsIndex = mutable.indexOfFirst { it.id == "tab_laps_segments" || it.preset == WorkoutDetailTabPreset.LAPS_AND_SEGMENTS }
+                        if (lapsIndex >= 0) {
+                            mutable.add(lapsIndex, newTab)
+                        }
+                    }
+                    mutable
+                } else {
+                    withRpe
+                }
+                withHrv
             }.getOrElse { DEFAULT_TABS }
         }
 

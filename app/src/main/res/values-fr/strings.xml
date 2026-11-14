@@ -1269,6 +1269,7 @@
     <string name="settings_workout_card_description">Description et remarques</string>
     <string name="settings_workout_card_charts">Graphiques de télémétrie</string>
     <string name="settings_workout_card_zones">Analyse des zones (FC et puissance)</string>
+    <string name="settings_workout_card_hrv">Analyse VFC</string>
     <string name="settings_edit_workout_title">Modifier l\'entraînement</string>
     <string name="settings_edit_workout_cluster">Itinéraire / Parcours</string>
     <string name="settings_edit_workout_commute_trainer">Trajet quotidien et home-trainer</string>
@@ -2167,6 +2168,7 @@
     <string name="workout_detail_tab_overview">Aperçu</string>
     <string name="workout_detail_tab_map_graphs">Carte et graphiques</string>
     <string name="workout_detail_tab_zones">Zones</string>
+    <string name="workout_detail_tab_hrv">VFC</string>
     <string name="workout_detail_tab_laps_segments">Tours et segments</string>
     <string name="workout_detail_tab_custom_default">Onglet personnalisé</string>
     <string name="workout_detail_section_details">Métriques et résumé</string>

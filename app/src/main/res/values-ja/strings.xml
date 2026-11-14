@@ -1250,6 +1250,7 @@
     <string name="settings_workout_card_description">説明とメモ</string>
     <string name="settings_workout_card_charts">テレメトリグラフ</string>
     <string name="settings_workout_card_zones">ゾーン分析（心拍数＆パワー）</string>
+    <string name="settings_workout_card_hrv">HRV分析</string>
     <string name="settings_edit_workout_title">ワークアウトの編集</string>
     <string name="settings_edit_workout_cluster">ルート / クラスター</string>
     <string name="settings_edit_workout_commute_trainer">通勤・通学＆ローラートレーナー</string>
@@ -2147,6 +2148,7 @@
     <string name="workout_detail_tab_overview">概要</string>
     <string name="workout_detail_tab_map_graphs">地図とグラフ</string>
     <string name="workout_detail_tab_zones">ゾーン</string>
+    <string name="workout_detail_tab_hrv">HRV</string>
     <string name="workout_detail_tab_laps_segments">ラップ＆セグメント</string>
     <string name="workout_detail_tab_custom_default">カスタムタブ</string>
     <string name="workout_detail_section_details">ワークアウト指標と概要</string>

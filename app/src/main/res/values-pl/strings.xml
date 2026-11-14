@@ -1267,6 +1267,7 @@
     <string name="settings_workout_card_description">Opis i notatki</string>
     <string name="settings_workout_card_charts">Wykresy telemetryczne</string>
     <string name="settings_workout_card_zones">Analiza stref (tętno i moc)</string>
+    <string name="settings_workout_card_hrv">Analiza HRV</string>
     <string name="settings_edit_workout_title">Edytuj trening</string>
     <string name="settings_edit_workout_cluster">Trasa / Segment</string>
     <string name="settings_edit_workout_commute_trainer">Dojazd do pracy i trenażer</string>
@@ -2169,6 +2170,7 @@
     <string name="workout_detail_tab_overview">Przegląd</string>
     <string name="workout_detail_tab_map_graphs">Mapa i wykresy</string>
     <string name="workout_detail_tab_zones">Strefy</string>
+    <string name="workout_detail_tab_hrv">HRV</string>
     <string name="workout_detail_tab_laps_segments">Okrążenia i segmenty</string>
     <string name="workout_detail_tab_custom_default">Własna karta</string>
     <string name="workout_detail_section_details">Metryki i podsumowanie treningu</string>

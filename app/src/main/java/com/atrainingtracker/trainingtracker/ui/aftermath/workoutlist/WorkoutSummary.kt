@@ -609,6 +609,9 @@ fun WorkoutSummary(
                         renderedAnySection = true
                     }
                 }
+                WorkoutSectionType.HRV -> {
+                    // HRV analytics are rendered exclusively in Workout Details multi-tab view (REQ-UI-527)
+                }
             }
         }
 

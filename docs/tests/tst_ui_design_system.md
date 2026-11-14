@@ -8500,3 +8500,35 @@
      - Execute `./gradlew testDebugUnitTest --tests "com.atrainingtracker.banalservice.sensor.*" --tests "com.atrainingtracker.trainingtracker.zones.*" --tests "com.atrainingtracker.trainingtracker.ui.tracking.*" --tests "com.atrainingtracker.trainingtracker.localization.*"`.
      - Assert 100% pass rate.
 
+
+
+### TST-UI-527: **Dedicated HRV Tab, Wire Migration & Telemetry-Gated Zone Comparison Verification Suite** [Verified]
+- **Target Release**: `V5.0.0`
+- **Requirement(s)**: `REQ-UI-527`
+- **Component**: `WorkoutDetailTabConfig.kt`, `WorkoutSectionType.kt`, `WorkoutDetailTabbedContent.kt`, `TrackOnMapScreen.kt`, `HrvThresholdSummaryCard.kt`, `WorkoutDetailTabsTest.kt`, `HrvThresholdSummaryCardTest.kt`, `TranslationParityTest.kt`
+- **Jira**: `ATT-7756`
+- **Test Description**:
+  1. *Default 5-Tab Archetype, Enum Sizing & Mapping Test (`TST-UI-527.1`, `WorkoutDetailTabsTest.kt`)*:
+     - Verify `WorkoutDetailSectionType.entries.size == 14` (including `HRV`).
+     - Verify `WorkoutSectionType.entries.size == 14` (including `HRV`).
+     - Verify bidirectional mapping between `WorkoutDetailSectionType.HRV` and `WorkoutSectionType.HRV`.
+     - Verify `WorkoutDetailTabConfig.DEFAULT_TABS` contains 5 tabs in canonical order: `tab_overview`, `tab_map_graphs`, `tab_zones`, `tab_hrv`, and `tab_laps_segments`.
+     - Verify `tab_hrv` has preset `WorkoutDetailTabPreset.HRV` and sections `[WorkoutDetailSectionType.HRV]`.
+  2. *Serialization & Auto-Migration of HRV Tab Test (`TST-UI-527.2`, `WorkoutDetailTabsTest.kt`)*:
+     - Verify round-trip serialization/deserialization of tabs containing `tab_hrv`.
+     - Verify that deserializing a legacy wire string (e.g. from v2 format lacking `HRV`) automatically injects `tab_hrv` directly after `tab_zones`.
+  3. *Dynamic Availability & Empty Tab Auto-Hiding Test (`TST-UI-527.3`, `WorkoutDetailTabsTest.kt`)*:
+     - Verify `WorkoutDetailSectionAvailability.isSectionActive(WorkoutDetailSectionType.HRV)` reflects `hasHrv`.
+     - Verify `filterVisibleWorkoutDetailTabs` retains `tab_hrv` when `hasHrv == true` and filters out `tab_hrv` when `hasHrv == false`.
+  4. *HRV Cards Mounting Under HRV Section Test (`TST-UI-527.4`, `HrvThresholdSummaryCardTest.kt`)*:
+     - Verify `HrvThresholdSummaryCard`, `HrvAlpha1ScatterCard`, and `HrvDurabilityCard` are mounted under `WorkoutDetailSectionType.HRV` in `WorkoutDetailTabbedContent.kt`.
+     - Verify `WorkoutDetailSectionType.ZONES` renders only `HeartRateZoneDistributionCard`, `PowerZoneDistributionCard`, and `GradeZoneDistributionCard`.
+  5. *Telemetry-Gated Zone Comparison Section Test (`TST-UI-527.5`, `HrvThresholdSummaryCardTest.kt`)*:
+     - Verify that when `hasPower == false`, the Coggan Power comparison block, FTP label, power delta chips, power consensus badge, and "Leistungszonen aktualisieren" button are omitted from `HrvThresholdSummaryCard`.
+     - Verify that when `hasPower == true && configuredFtp != null`, the power comparison block and update button are rendered.
+     - Verify that when neither power nor HR comparison applies, the entire `hrv_zone_comparison_section` is omitted.
+  6. *9-Language Localization Parity Audit (`TST-UI-527.6`, `TranslationParityTest.kt`)*:
+     - Verify `workout_detail_tab_hrv` and `settings_workout_card_hrv` exist across all 9 localized `strings.xml` files (`values`, `values-de`, `values-es`, `values-fr`, `values-it`, `values-ja`, `values-nl`, `values-pl`, `values-pt`).
+  7. *Targeted Unit Test Regression Suite (`TST-UI-527.7`)*:
+     - Execute `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.aftermath.*" --tests "com.atrainingtracker.trainingtracker.localization.*"`.
+     - Assert 100% pass rate.

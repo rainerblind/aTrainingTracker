@@ -229,6 +229,7 @@ fun TrackOnMapScreen(
 
     val hasZonesData = hrZoneDistribution != null || powerZoneDistribution != null
     val hasGradeDistribution = gradeZoneDistribution != null
+    val hasHrvData = remember(activeScrubPath) { TelemetryMetricUtils.hasHrvData(activeScrubPath) }
     val hasLapsData = workoutData.laps.isNotEmpty()
     val sectionAvailability = remember(
         workoutData,
@@ -239,6 +240,7 @@ fun TrackOnMapScreen(
         hasTelemetrySeries,
         hasZonesData,
         hasGradeDistribution,
+        hasHrvData,
         hasLapsData
     ) {
         WorkoutDetailSectionAvailability.fromWorkoutState(
@@ -250,7 +252,8 @@ fun TrackOnMapScreen(
             hasTelemetrySeries = hasTelemetrySeries,
             hasZonesData = hasZonesData,
             hasLapsData = hasLapsData,
-            hasGradeDistribution = hasGradeDistribution
+            hasGradeDistribution = hasGradeDistribution,
+            hasHrvData = hasHrvData
         )
     }
 
@@ -824,6 +827,7 @@ fun TrackOnMapScreen(
                         }
                         WorkoutSectionType.DETAILS,
                         WorkoutSectionType.PHOTOS,
+                        WorkoutSectionType.HRV,
                         WorkoutSectionType.MAP -> {
                             // Handled in Tabbed content / MapDetailLayout
                         }

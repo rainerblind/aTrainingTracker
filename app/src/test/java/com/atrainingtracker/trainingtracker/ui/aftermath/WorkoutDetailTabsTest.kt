@@ -37,12 +37,12 @@ import java.lang.reflect.Modifier
 class WorkoutDetailTabsTest {
 
     /**
-     * TST-UI-371.1: Default 4-Tab Preset & Bidirectional Section Enum Mapping.
+     * TST-UI-371.1: Default 5-Tab Preset & Bidirectional Section Enum Mapping (ATT-7756 / REQ-UI-527.1).
      */
     @Test
     fun `TST-UI-371_1 default 4-tab preset and bidirectional section enum mapping`() {
         val defaults = WorkoutDetailTabConfig.DEFAULT_TABS
-        assertEquals(4, defaults.size)
+        assertEquals(5, defaults.size)
 
         // Tab 1: Overview (REQ-UI-408.1 / ATT-5655 / REQ-WKO-037)
         assertEquals("tab_overview", defaults[0].id)
@@ -82,19 +82,31 @@ class WorkoutDetailTabsTest {
             defaults[2].sections
         )
 
-        // Tab 4: Laps & Segments
-        assertEquals("tab_laps_segments", defaults[3].id)
-        assertEquals(R.string.workout_detail_tab_laps_segments, defaults[3].preset.defaultTitleRes)
+        // Tab 4: HRV (REQ-UI-527.1 / ATT-7756)
+        assertEquals("tab_hrv", defaults[3].id)
+        assertEquals(R.string.workout_detail_tab_hrv, defaults[3].preset.defaultTitleRes)
+        assertEquals(
+            listOf(
+                WorkoutDetailSectionType.HRV
+            ),
+            defaults[3].sections
+        )
+
+        // Tab 5: Laps & Segments
+        assertEquals("tab_laps_segments", defaults[4].id)
+        assertEquals(R.string.workout_detail_tab_laps_segments, defaults[4].preset.defaultTitleRes)
         assertEquals(
             listOf(
                 WorkoutDetailSectionType.LAPS,
                 WorkoutDetailSectionType.STRAVA
             ),
-            defaults[3].sections
+            defaults[4].sections
         )
 
-        // Verify bidirectional enum mapping (WorkoutDetailSectionType <-> WorkoutSectionType, REQ-UI-499.1)
+        // Verify bidirectional enum mapping (WorkoutDetailSectionType <-> WorkoutSectionType, REQ-UI-499.1 / REQ-UI-527.1)
         assertEquals(WorkoutSectionType.DETAILS, WorkoutDetailSectionType.DETAILS.toWorkoutSectionTypeOrNull())
+        assertEquals(WorkoutSectionType.HRV, WorkoutDetailSectionType.HRV.toWorkoutSectionTypeOrNull())
+        assertEquals(WorkoutDetailSectionType.HRV, WorkoutSectionType.HRV.toWorkoutDetailSectionType())
         for (legacyType in WorkoutSectionType.values()) {
             val detailType = legacyType.toWorkoutDetailSectionType()
             assertEquals(legacyType, detailType.toWorkoutSectionTypeOrNull())
@@ -184,7 +196,7 @@ class WorkoutDetailTabsTest {
     fun `TST-UI-371_2b legacy v1 wire migration auto-injects PHOTOS into overview`() {
         val legacyV1Payload = "v1|tab_overview:OVERVIEW::DETAILS,DESCRIPTION,EXTREMA,EXPORT_STATUS;tab_map_graphs:MAP_AND_GRAPHS::MAP,ELEVATION,CHARTS;tab_zones:ZONES::ZONES;tab_laps_segments:LAPS_AND_SEGMENTS::LAPS,STRAVA"
         val migrated = WorkoutDetailTabConfig.deserializeTabs(legacyV1Payload)
-        assertEquals(4, migrated.size)
+        assertEquals(5, migrated.size)
         assertEquals(
             listOf(
                 WorkoutDetailSectionType.RPE_AND_FEEL,
@@ -221,22 +233,24 @@ class WorkoutDetailTabsTest {
 
         // Add tab
         tabs = WorkoutDetailTabConfig.addCustomTab(tabs, "Custom Analysis")
-        assertEquals(5, tabs.size)
+        assertEquals(6, tabs.size)
         assertEquals("Custom Analysis", tabs.last().customTitle)
         assertEquals(listOf(WorkoutDetailSectionType.DETAILS), tabs.last().sections)
 
         // Rename tab
         val customId = tabs.last().id
-        tabs = WorkoutDetailTabConfig.renameTab(tabs, 4, "Climbing Focus")
+        tabs = WorkoutDetailTabConfig.renameTab(tabs, 5, "Climbing Focus")
         assertEquals("Climbing Focus", tabs.last().customTitle)
 
         // Move tab up
-        tabs = WorkoutDetailTabConfig.moveTab(tabs, 4, 3)
-        assertEquals(customId, tabs[3].id)
-        assertEquals("tab_laps_segments", tabs[4].id)
+        tabs = WorkoutDetailTabConfig.moveTab(tabs, 5, 4)
+        assertEquals(customId, tabs[4].id)
+        assertEquals("tab_laps_segments", tabs[5].id)
 
         // Delete tabs down to minimum 1 tab guard
-        tabs = WorkoutDetailTabConfig.deleteTab(tabs, 3)
+        tabs = WorkoutDetailTabConfig.deleteTab(tabs, 4)
+        assertEquals(5, tabs.size)
+        tabs = WorkoutDetailTabConfig.deleteTab(tabs, 4)
         assertEquals(4, tabs.size)
         tabs = WorkoutDetailTabConfig.deleteTab(tabs, 3)
         assertEquals(3, tabs.size)
@@ -427,6 +441,8 @@ class WorkoutDetailTabsTest {
             "workout_detail_tab_overview",
             "workout_detail_tab_map_graphs",
             "workout_detail_tab_zones",
+            "workout_detail_tab_hrv",
+            "settings_workout_card_hrv",
             "workout_detail_tab_laps_segments",
             "workout_detail_tab_custom_default",
             "workout_detail_section_details",
@@ -471,6 +487,7 @@ class WorkoutDetailTabsTest {
             hasCharts = true,
             hasZones = true,
             hasGradeDistribution = true,
+            hasHrv = true,
             hasLaps = true,
             hasStrava = true,
             hasExportStatus = true,
@@ -514,7 +531,7 @@ class WorkoutDetailTabsTest {
     fun `TST-UI-453_4b grade distribution auto-migration into tab_zones when missing from wire string`() {
         val legacyWire = "v2|tab_overview:OVERVIEW::DETAILS,PHOTOS,DESCRIPTION,EXTREMA,EXPORT_STATUS;tab_zones:ZONES::ZONES"
         val migrated = WorkoutDetailTabConfig.deserializeTabs(legacyWire)
-        assertEquals(2, migrated.size)
+        assertEquals(3, migrated.size)
         val zonesTab = migrated[1]
         assertEquals(
             listOf(WorkoutDetailSectionType.ZONES, WorkoutDetailSectionType.GRADE_DISTRIBUTION),
@@ -529,7 +546,7 @@ class WorkoutDetailTabsTest {
     fun `TST-UI-453_4c rpe and feel auto-migration into tab_overview when missing from wire string`() {
         val legacyWire = "v2|tab_overview:OVERVIEW::DETAILS,PHOTOS,DESCRIPTION,EXTREMA,EXPORT_STATUS;tab_zones:ZONES::ZONES,GRADE_DISTRIBUTION"
         val migrated = WorkoutDetailTabConfig.deserializeTabs(legacyWire)
-        assertEquals(2, migrated.size)
+        assertEquals(3, migrated.size)
         val overviewTab = migrated[0]
         assertEquals(WorkoutDetailSectionType.RPE_AND_FEEL, overviewTab.sections.first())
         assertEquals(
@@ -676,5 +693,66 @@ class WorkoutDetailTabsTest {
         // Composable contract: WorkoutDetailTabbedContent wires gesture isolation
         val tabbedClazz = Class.forName("com.atrainingtracker.trainingtracker.ui.aftermath.WorkoutDetailTabbedContentKt")
         assertNotNull("WorkoutDetailTabbedContentKt class must exist", tabbedClazz)
+    }
+
+    /**
+     * TST-UI-527.1: Dedicated 5-Tab Preset, Sizing, and Bidirectional Enum Mapping (REQ-UI-527.1).
+     */
+    @Test
+    fun `TST-UI-527_1 dedicated 5-tab preset, sizing, and bidirectional enum mapping`() {
+        val defaults = WorkoutDetailTabConfig.DEFAULT_TABS
+        assertEquals(5, defaults.size)
+        assertEquals("tab_hrv", defaults[3].id)
+        assertEquals(WorkoutDetailTabPreset.HRV, defaults[3].preset)
+        assertEquals(listOf(WorkoutDetailSectionType.HRV), defaults[3].sections)
+        assertEquals(14, WorkoutDetailSectionType.entries.size)
+        assertEquals(14, WorkoutSectionType.entries.size)
+        assertEquals(WorkoutSectionType.HRV, WorkoutDetailSectionType.HRV.toWorkoutSectionTypeOrNull())
+        assertEquals(WorkoutDetailSectionType.HRV, WorkoutSectionType.HRV.toWorkoutDetailSectionType())
+    }
+
+    /**
+     * TST-UI-527.2: Wire Round-Trip & Automatic Migration of tab_hrv when missing from wire string (REQ-UI-527.2).
+     */
+    @Test
+    fun `TST-UI-527_2 wire migration injects tab_hrv after tab_zones when missing from wire string`() {
+        val legacyWire = "v2|tab_overview:OVERVIEW::DETAILS,PHOTOS,DESCRIPTION,EXTREMA,EXPORT_STATUS;tab_zones:ZONES::ZONES,GRADE_DISTRIBUTION;tab_laps_segments:LAPS_AND_SEGMENTS::LAPS,STRAVA"
+        val migrated = WorkoutDetailTabConfig.deserializeTabs(legacyWire)
+        assertEquals(4, migrated.size)
+        assertEquals("tab_overview", migrated[0].id)
+        assertEquals("tab_zones", migrated[1].id)
+        assertEquals("tab_hrv", migrated[2].id)
+        assertEquals(WorkoutDetailTabPreset.HRV, migrated[2].preset)
+        assertEquals(listOf(WorkoutDetailSectionType.HRV), migrated[2].sections)
+        assertEquals("tab_laps_segments", migrated[3].id)
+    }
+
+    /**
+     * TST-UI-527.3: Dynamic Empty-Tab Hiding & Data Availability for HRV (REQ-UI-527.3).
+     */
+    @Test
+    fun `TST-UI-527_3 dynamic empty-tab hiding suppresses tab_hrv when workout lacks HRV data`() {
+        val defaults = WorkoutDetailTabConfig.DEFAULT_TABS
+
+        // Workout with HR, power and zones, but NO HRV
+        val withoutHrv = WorkoutDetailSectionAvailability(
+            hasDetails = true,
+            hasZones = true,
+            hasHrv = false
+        )
+        val visibleWithoutHrv = WorkoutDetailTabConfig.filterVisibleWorkoutDetailTabs(defaults, withoutHrv)
+        assertFalse("tab_hrv must not be visible when hasHrv is false", visibleWithoutHrv.any { it.id == "tab_hrv" })
+
+        // Workout with HRV
+        val withHrv = WorkoutDetailSectionAvailability(
+            hasDetails = true,
+            hasZones = true,
+            hasHrv = true
+        )
+        val visibleWithHrv = WorkoutDetailTabConfig.filterVisibleWorkoutDetailTabs(defaults, withHrv)
+        assertTrue("tab_hrv must be visible when hasHrv is true", visibleWithHrv.any { it.id == "tab_hrv" })
+        val hrvIndex = visibleWithHrv.indexOfFirst { it.id == "tab_hrv" }
+        val zonesIndex = visibleWithHrv.indexOfFirst { it.id == "tab_zones" }
+        assertTrue("tab_hrv must be positioned after tab_zones", hrvIndex > zonesIndex)
     }
 }
