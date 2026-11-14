@@ -140,6 +140,7 @@ object TuningPreferencesDefaults {
     const val GPS_ACCURACY_THRESHOLD_M = 50.0f
     const val ALTITUDE_FILTER_WINDOW_SEC = 21
     const val SLOPE_MIN_SPEED_MPS = 0.5f
+    const val DEFAULT_POST_WORKOUT_ERTS_SMOOTHING_ENABLED = false
 
     const val MIN_FULL_DIM_FACTOR = 0.05f
     const val MAX_FULL_DIM_FACTOR = 0.50f
@@ -377,6 +378,7 @@ data class TuningConfig(
     val gpsAccuracyThresholdMeters: Float = TuningPreferencesDefaults.GPS_ACCURACY_THRESHOLD_M,
     val altitudeFilterWindowSec: Int = TuningPreferencesDefaults.ALTITUDE_FILTER_WINDOW_SEC,
     val slopeMinSpeedMps: Float = TuningPreferencesDefaults.SLOPE_MIN_SPEED_MPS,
+    val postWorkoutErtsSmoothingEnabled: Boolean = TuningPreferencesDefaults.DEFAULT_POST_WORKOUT_ERTS_SMOOTHING_ENABLED,
     val paceCeilingMinKm: Float = TuningPreferencesDefaults.DEFAULT_PACE_CEILING_MIN_KM,
     val showLiveClimbs: Boolean = TuningPreferencesDefaults.SHOW_LIVE_CLIMBS,
     val climbMinLengthMeters: Float = TuningPreferencesDefaults.CLIMB_MIN_LENGTH_METERS,
@@ -527,6 +529,7 @@ class TuningPreferencesDataStore(private val context: Context) {
         val KEY_GPS_ACCURACY_THRESHOLD: Preferences.Key<Float> = floatPreferencesKey("tuning_gps_accuracy_threshold")
         val KEY_ALTITUDE_FILTER_WINDOW: Preferences.Key<Int> = intPreferencesKey("tuning_altitude_filter_window")
         val KEY_SLOPE_MIN_SPEED: Preferences.Key<Float> = floatPreferencesKey("tuning_slope_min_speed")
+        val KEY_POST_WORKOUT_ERTS_SMOOTHING: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_post_workout_erts_smoothing")
         val KEY_PACE_CEILING_MIN_KM: Preferences.Key<Float> = floatPreferencesKey("tuning_pace_ceiling_min_km")
         val KEY_SHOW_LIVE_CLIMBS: Preferences.Key<Boolean> = booleanPreferencesKey("tuning_show_live_climbs")
         val KEY_CLIMB_MIN_LENGTH_METERS: Preferences.Key<Float> = floatPreferencesKey("tuning_climb_min_length_meters")
@@ -654,6 +657,7 @@ class TuningPreferencesDataStore(private val context: Context) {
             KEY_GPS_ACCURACY_THRESHOLD,
             KEY_ALTITUDE_FILTER_WINDOW,
             KEY_SLOPE_MIN_SPEED,
+            KEY_POST_WORKOUT_ERTS_SMOOTHING,
             KEY_PACE_CEILING_MIN_KM,
             KEY_SHOW_LIVE_CLIMBS,
             KEY_CLIMB_MIN_LENGTH_METERS,
@@ -1085,6 +1089,7 @@ data class AutoPausePreferences(
             gpsAccuracyThresholdMeters = clampedAccuracy,
             altitudeFilterWindowSec = clampedAltWindow,
             slopeMinSpeedMps = clampedSlopeSpeed,
+            postWorkoutErtsSmoothingEnabled = prefs[KEY_POST_WORKOUT_ERTS_SMOOTHING] ?: TuningPreferencesDefaults.DEFAULT_POST_WORKOUT_ERTS_SMOOTHING_ENABLED,
             paceCeilingMinKm = clampedPaceCeiling,
             showLiveClimbs = showLiveClimbs,
             climbMinLengthMeters = climbMinLength,
@@ -1510,6 +1515,7 @@ data class AutoPausePreferences(
             prefs[KEY_GPS_ACCURACY_THRESHOLD] = clampedAccuracy
             prefs[KEY_ALTITUDE_FILTER_WINDOW] = clampedAltWindow
             prefs[KEY_SLOPE_MIN_SPEED] = clampedSlopeSpeed
+            prefs[KEY_POST_WORKOUT_ERTS_SMOOTHING] = config.postWorkoutErtsSmoothingEnabled
             prefs[KEY_PACE_CEILING_MIN_KM] = clampedPaceCeiling
             prefs[KEY_SHOW_LIVE_CLIMBS] = config.showLiveClimbs
             prefs[KEY_CLIMB_MIN_LENGTH_METERS] = config.climbMinLengthMeters
@@ -1731,6 +1737,16 @@ data class AutoPausePreferences(
 
     val suppressAntMissingAdapterDialogFlow: Flow<Boolean> = context.dataStore.data.map { prefs ->
         prefs[KEY_SUPPRESS_ANT_MISSING_ADAPTER_DIALOG] ?: TuningPreferencesDefaults.SUPPRESS_ANT_MISSING_ADAPTER_DIALOG
+    }
+
+    val postWorkoutErtsSmoothingFlow: Flow<Boolean> = context.dataStore.data.map { prefs ->
+        prefs[KEY_POST_WORKOUT_ERTS_SMOOTHING] ?: TuningPreferencesDefaults.DEFAULT_POST_WORKOUT_ERTS_SMOOTHING_ENABLED
+    }
+
+    suspend fun updatePostWorkoutErtsSmoothingEnabled(enabled: Boolean) {
+        context.dataStore.edit { prefs ->
+            prefs[KEY_POST_WORKOUT_ERTS_SMOOTHING] = enabled
+        }
     }
 
     suspend fun setSuppressAntMissingAdapterDialog(suppress: Boolean) {

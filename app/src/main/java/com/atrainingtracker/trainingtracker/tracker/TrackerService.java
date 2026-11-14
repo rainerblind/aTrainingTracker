@@ -2291,11 +2291,15 @@ public class TrackerService extends Service {
                 java.util.concurrent.ForkJoinPool.commonPool().execute(() -> {
                     try {
                         boolean recomputed = HrvPostWorkoutRecomputer.recomputeWorkoutBlocking(appContext, finalWorkoutId);
-                        if (recomputed) {
+                        boolean ertsRecomputed = false;
+                        if (com.atrainingtracker.trainingtracker.settings.SettingsDataStoreJavaHelper.isPostWorkoutErtsSmoothingEnabled(appContext)) {
+                            ertsRecomputed = com.atrainingtracker.trainingtracker.database.ErtsPostWorkoutRecomputer.recomputeWorkoutBlocking(appContext, finalWorkoutId);
+                        }
+                        if (recomputed || ertsRecomputed) {
                             WorkoutRepository.getInstance(appContext).refreshWorkout(finalWorkoutId);
                         }
                     } catch (Throwable t) {
-                        Log.e(TAG, "Error in post-workout HRV recompute for workout " + finalWorkoutId, t);
+                        Log.e(TAG, "Error in post-workout recompute for workout " + finalWorkoutId, t);
                     }
                 });
             }

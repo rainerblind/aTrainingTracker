@@ -5407,3 +5407,59 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 • *Then* altitude, slope, and VAM cleanly revert to `VerticalSpeedAndSlopeDevice` and standard altitude priority.
 
 **Invariants**: Unpaired by default (`PAIRED = 0`); zero CPU/battery drain when inactive; single-thread sensor dispatcher safety; 9-language localization parity; 100% clean-room test pass rate.
+
+### REQ-FIL-017: Post-Workout Extended Rauch-Tung-Striebel (ERTS/RTS) Zero-Phase Smoothing Engine [Verified]
+- **Target Release**: `V5.0.0`
+- **Tests**: `TST-FIL-017`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Implementation**: `ExtendedRtsOdometrySmoother.kt`, `ExtendedRtsAltitudeSlopeSmoother.kt`, `ErtsPostWorkoutRecomputer.kt`, `TuningPreferencesDataStore.kt`, `SensorsGpsFilterSection.kt`, `AdvancedTuningScreen.kt`, `TrackerService.java`
+- **Rationale**: Provide a non-causal bidirectional Extended Rauch-Tung-Striebel (ERTS/RTS) smoother for 2D track odometry and 3D elevation profiles reusing ATT-131 and ATT-6279 kinematic models, strictly preserving raw device columns in `WorkoutSamples.db` while updating canonical columns and `WorkoutSummaries.db` streams, guarded by an expert settings opt-in toggle (ATT-7750, extending `REQ-FIL-007`, `REQ-FIL-008`, `REQ-FIL-009`, `REQ-FIL-010`, and `REQ-FIL-016`):
+- **Description**:
+  1. *2D Trajectory & Speed Extended RTS Pass (`REQ-FIL-017.1`)*:
+     - The system SHALL execute a forward EKF replay using the 5-state unicycle odometry model $[E, N, v, \psi, b_{\omega_z}]^T$, recording prior states $x_{k|k-1}$, prior covariances $P_{k|k-1}$, state-transition Jacobians $F_{k-1}$, posterior states $x_{k|k}$, and posterior covariances $P_{k|k}$ across discrete 1-Hz sample points $k = 0 \dots N$.
+     - The backward recursion SHALL execute:
+       $$C_k = P_{k|k} F_k^T (P_{k+1|k})^{-1}$$
+       $$x_{k|N} = x_{k|k} + C_k \left(x_{k+1|N} - x_{k+1|k}\right)$$
+       $$P_{k|N} = P_{k|k} + C_k \left(P_{k+1|N} - P_{k+1|k}\right) C_k^T$$
+       for $k = N-1 \dots 0$, normalizing angular heading differences $\psi_{k+1|N} - \psi_{k+1|k}$ to $[-\pi, \pi)$ via `normalizeAngle`.
+     - Backward smoothing SHALL propagate post-outage GNSS position and Doppler speed fixes backward through outages (e.g. 45s curved tunnel or canopy dropout) to eliminate trajectory steps and speed dropouts without rounding genuine sharp turns or hairpins.
+     - The 5x5 matrix inversion $(P_{k+1|k})^{-1}$ and recursion across 14,400 samples (4-hour workout) SHALL execute in $< 100\text{ ms}$ with zero external matrix libraries.
+  2. *Kinematic Altitude & Slope Extended RTS Pass (`REQ-FIL-017.2`)*:
+     - The system SHALL execute a forward-backward RTS pass over vertical elevation and terrain slope using the exact kinematic model $[h_k, g_k, b_{baro,k}]^T$ (or 2-State $[h_k, g_k]^T$ if DEM/GPS reference is absent), driven by smoothed horizontal displacements $\Delta s_{k|N} = v_{k|N} \cdot \Delta t_k$.
+     - Backward recursion SHALL eliminate causal startup transients and filter phase delay, yielding zero-phase altitude $h_{k|N}$, terrain slope $g_{k|N}$, vertical speed $v_{z,k|N} = \frac{h_{k|N} - h_{k-1|N}}{\Delta t_k}$, and cumulative ascent/descent.
+     - Standstill segments ($v < 0.3\text{ m/s}$) SHALL clamp slope process noise ($Q_g = 0$) and prevent false climb accumulation.
+  3. *Strict Column Scope Invariant (`REQ-FIL-017.3`)*:
+     - In `WorkoutSamples.db`, the post-workout smoother SHALL update *exclusively* the canonical unsuffixed columns:
+       `LATITUDE`, `LONGITUDE`, `SPEED_mps`, `PACE_spm`, `DISTANCE_m`, `BEARING`, `ALTITUDE`, `SLOPE`, `VERTICAL_SPEED`, `ASCENT`, and `DESCENT`.
+     - Every source-attributed per-device column (`<SensorType> (<SourceName>)`), explicitly including `LATITUDE (GPS)`, `SPEED_mps (GPS)`, `SPEED_mps (Google Fused)`, `SPEED_mps (att_fused)`, `ALTITUDE (Höhe aus Luftdruck)`, `ALTITUDE (Topografische Höhe (DEM))`, and `ALTITUDE (att_fused_altitude_slope)`, SHALL remain 100% byte-for-byte untouched.
+  4. *Workout Summaries & Stream Synchronization (`REQ-FIL-017.4`)*:
+     - Upon successful ERTS smoothing of `WorkoutSamples.db`, the system SHALL update `WorkoutSummaries.db` via `WorkoutSummariesDatabaseManager.updateMapAndStreams` with the re-encoded smoothed polyline, altitude stream, and distance stream, and update summary metrics (total distance, total ascent/descent, max/avg speed).
+  5. *Expert Settings Opt-In Configuration (`REQ-FIL-017.5`)*:
+     - The smoother SHALL be guarded by a preference `postWorkoutErtsSmoothingEnabled` in `TuningPreferencesDataStore.kt` (`KEY_POST_WORKOUT_ERTS_SMOOTHING`), defaulting to `false`.
+     - In `SensorsGpsFilterSection.kt` and `AdvancedTuningScreen.kt`, a dedicated `TuningToggleItem` SHALL expose this setting ("Post-Workout-ERTS-Glättung" / "Post-Workout ERTS Smoothing"), localized across all 9 supported languages with zero text clipping.
+     - When the preference is disabled, post-workout finalization SHALL bypass ERTS smoothing with zero behavioral change from baseline.
+
+**Requirement Archaeology & Chesterton's Fence Audit**:
+1. *Original Requirement ID & Target*: Net-new requirement `REQ-FIL-017`, extending `REQ-FIL-007`..`REQ-FIL-010` (*Odometry EKF & Calibration*) and `REQ-FIL-016` (*Coupled Kinematic Elevation EKF*). Targets `ExtendedRtsOdometrySmoother.kt`, `ExtendedRtsAltitudeSlopeSmoother.kt`, `ErtsPostWorkoutRecomputer.kt`, `TuningPreferencesDataStore.kt`, and `TrackerService.java`.
+2. *Historical Origin & Commit Trace*: `ATT-131` (Unicycle odometry EKF), `ATT-7751` (SpeedAndLocationDevice_ATTFused), `ATT-6279` (Kinematic altitude and slope EKF), `ATT-352` (Polyline and streams decoding).
+3. *Root Reason for Existing Formulation*: Live filtering is inherently causal and suffers from irreversible filter lag and GNSS re-acquisition position steps. Post-workout zero-phase bidirectional smoothing eliminates latency while maintaining mathematical consistency.
+4. *Preservation of Core Invariants*: Raw sensor and device-specific columns remain untouched; opt-in default (`false`); zero runtime overhead during active recording; 100% clean-room test pass rate.
+
+**Acceptance Criteria (Given-When-Then)**:
+• *Given* an active workout with a 45s curved tunnel GNSS outage and a 15m exit position jump,
+• *When* the workout is completed with ERTS smoothing enabled,
+• *Then* the backward pass eliminates the exit step discontinuity and produces a smooth, continuous trajectory without jagged steps.
+• *Given* an altitude profile with initial barometric offset followed by delayed DEM anchor lock,
+• *When* processed by ERTS backward smoothing,
+• *Then* the DEM anchor propagates backward to eliminate initial elevation bias and standstill climb accumulation is 0.0 m.
+• *Given* a `WorkoutSamples.db` table containing canonical and device columns (`LATITUDE (GPS)`, `SPEED_mps (GPS)`, etc.),
+• *When* `ErtsPostWorkoutRecomputer` runs,
+• *Then* all device columns remain byte-for-byte identical, canonical columns are updated with smoothed data, and `WorkoutSummaries.db` streams are refreshed.
+• *Given* the preference `postWorkoutErtsSmoothingEnabled` is false (default),
+• *When* a workout is finalized,
+• *Then* ERTS recomputation is completely bypassed and live recorded values remain unmodified.
+
+**Invariants**: Disabled by default (`false`); raw device-attributed columns 100% byte-for-byte preserved; single-transaction SQLite update; zero external math libraries; 9-language localization parity; 100% clean-room test pass rate.
+

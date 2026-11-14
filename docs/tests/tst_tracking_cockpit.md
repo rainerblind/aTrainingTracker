@@ -2697,3 +2697,33 @@
      • Verify 9-language localization parity across all 9 supported locales with zero missing strings.
   6. *Targeted Unit & Regression Suite Execution (`TST-FIL-016.6`)*:
      • `python3 tools/parallel_sprint_lock.py -- ./gradlew testDebugUnitTest --tests "com.atrainingtracker.banalservice.devices.*" --tests "com.atrainingtracker.banalservice.odometry.*"` asserting 100% pass rate.
+
+### TST-FIL-017: Extended Rauch-Tung-Striebel (ERTS/RTS) Zero-Phase Smoothing Verification Suite [Verified]
+- **Requirement(s)**: `REQ-FIL-017` (`REQ-FIL-017.1`..`REQ-FIL-017.5`)
+- **Component**: `ExtendedRtsOdometrySmoother.kt`, `ExtendedRtsAltitudeSlopeSmoother.kt`, `ErtsPostWorkoutRecomputer.kt`, `TuningPreferencesDataStore.kt`, `SensorsGpsFilterSection.kt`, `AdvancedTuningScreen.kt`, `TrackerService.java`
+- **Jira**: `ATT-7750`
+- **Test Description**:
+  1. *Unicycle Odometry Extended RTS 5-State Simulation Test (`TST-FIL-017.1`, `ExtendedRtsOdometrySmootherTest.kt`)*:
+     • Curved Tunnel Outage Replay: Simulate 45s $90^\circ$ curved tunnel at $10\text{ m/s}$ with IMU yaw-rate and wheel speed, followed by a 15m GNSS position jump at exit. Verify the backward RTS pass eliminates the step at the exit and smoothly bends the trajectory through the tunnel without jagged discontinuities.
+     • Doppler Dropout Replay: Simulate 10s canopy Doppler speed dropout ($v_{GNSS} = 0$). Verify smoothed speed $v_{k|N}$ remains smooth and continuous at $\sim 10\text{ m/s}$.
+     • Performance Benchmark: Replay 14,400 1-Hz synthetic samples (4-hour ride); verify the complete forward-backward pass finishes in $< 100\text{ ms}$.
+  2. *Kinematic Altitude & Slope RTS Simulation Test (`TST-FIL-017.2`, `ExtendedRtsAltitudeSlopeSmootherTest.kt`)*:
+     • Delayed Anchor Convergence: Simulate hill climb (+8% grade) where barometric altitude drifts by $+20\text{ m}$ in first 60s before DEM lock stabilizes. Verify RTS backward pass propagates DEM anchor backward, eliminating initial elevation bias.
+     • Standstill Clamping: Simulate 5-minute coffee stop ($v=0$) with barometric pressure drop ($1\text{ hPa} \approx 8\text{ m}$). Verify smoothed elevation remains flat and false climb accumulation is 0.0 m.
+  3. *Strict Column Scope Invariant & Database Recomputation Test (`TST-FIL-017.3`, `ErtsPostWorkoutRecomputerTest.kt`)*:
+     • Column Invariant Verification: Populate SQLite `WorkoutSamples.db` table with canonical columns and 6 device columns (`LATITUDE (GPS)`, `SPEED_mps (GPS)`, `SPEED_mps (Google Fused)`, `SPEED_mps (att_fused)`, `ALTITUDE (Höhe aus Luftdruck)`, `ALTITUDE (Topografische Höhe (DEM))`). Run `ErtsPostWorkoutRecomputer.recomputeWorkout(...)`.
+     • Assert all device-attributed columns are byte-for-byte identical before and after recomputation.
+     • Assert canonical `LATITUDE`, `LONGITUDE`, `SPEED_mps`, `PACE_spm`, `DISTANCE_m`, `ALTITUDE`, `SLOPE`, `ASCENT`, `DESCENT` are updated with smoothed values.
+     • Assert `WorkoutSummaries.db` polyline, streams, distance, and extrema are refreshed.
+  4. *TrackerService Lifecycle & Toggle Gating Test (`TST-FIL-017.4`, `TrackerServiceErtsFinalizationTest.kt`)*:
+     • Finalize workout with toggle disabled: verify `ErtsPostWorkoutRecomputer` is never invoked.
+     • Finalize workout with toggle enabled: verify `ErtsPostWorkoutRecomputer` runs asynchronously and dispatches `refreshWorkout`.
+  5. *Expert Settings UI & 9-Language Localization Contract Test (`TST-FIL-017.5`, `AdvancedTuningErtsContractTest.kt`)*:
+     • Verify `TuningPreferencesDataStore` default value is `false` for `KEY_POST_WORKOUT_ERTS_SMOOTHING`.
+     • Verify toggle item rendered in `SensorsGpsFilterSection` and `AdvancedTuningScreen`.
+     • Verify 9-language localization parity across `values`, `values-de`, `values-es`, `values-fr`, `values-it`, `values-ja`, `values-nl`, `values-pl`, `values-pt`.
+  6. *Targeted Unit & Regression Suite Execution (`TST-FIL-017.6`)*:
+     • Full regression check across odometry, database, and settings packages.
+
+  6. *Targeted Unit & Regression Suite Execution (`TST-FIL-017.6`)*:
+     • `python3 tools/parallel_sprint_lock.py -- ./gradlew testDebugUnitTest --tests "com.atrainingtracker.banalservice.odometry.*" --tests "com.atrainingtracker.trainingtracker.database.*"` asserting 100% pass rate.

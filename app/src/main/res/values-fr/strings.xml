@@ -1528,6 +1528,8 @@
     <string name="tuning_altitude_window_desc">Fenêtre temporelle de moyenne mobile pour l\'altitude instantanée et la vitesse verticale.</string>
     <string name="tuning_slope_min_speed_title">Vitesse minimale pour la pente</string>
     <string name="tuning_slope_min_speed_desc">Vitesse minimale requise pour calculer la pente en temps réel.</string>
+    <string name="tuning_post_workout_erts_smoothing_title">Lissage ERTS post-entraînement</string>
+    <string name="tuning_post_workout_erts_smoothing_desc">Applique un lissage bidirectionnel Extended Rauch-Tung-Striebel à la trajectoire et au profil d\'altitude après l\'enregistrement de la séance.</string>
     <string name="tuning_show_ant_missing_adapter_warnings_title">Afficher les avertissements d\'adaptateur ANT+ manquant</string>
     <string name="tuning_show_ant_missing_adapter_warnings_desc">Afficher une boîte de dialogue d\'alerte lorsqu\'un capteur ANT+ est recherché mais qu\'aucun adaptateur n\'est détecté</string>
     <string name="tuning_cat_aftermath">Aftermath et analyse de profil</string>

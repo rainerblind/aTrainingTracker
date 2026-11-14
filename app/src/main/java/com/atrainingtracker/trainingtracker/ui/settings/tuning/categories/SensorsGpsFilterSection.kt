@@ -30,6 +30,7 @@ import com.atrainingtracker.R
 import com.atrainingtracker.banalservice.sensor.formater.SpeedFormatter
 import com.atrainingtracker.trainingtracker.settings.TuningPreferencesDefaults
 import com.atrainingtracker.trainingtracker.ui.settings.tuning.TuningSliderItem
+import com.atrainingtracker.trainingtracker.ui.settings.tuning.TuningToggleItem
 import java.util.Locale
 import kotlin.math.roundToInt
 
@@ -45,7 +46,9 @@ fun SensorsGpsFilterSection(
     altitudeWindowSec: Int,
     onAltitudeWindowChange: (Int) -> Unit,
     slopeMinSpeed: Float,
-    onSlopeMinSpeedChange: (Float) -> Unit
+    onSlopeMinSpeedChange: (Float) -> Unit,
+    postWorkoutErtsSmoothingEnabled: Boolean = false,
+    onPostWorkoutErtsSmoothingChange: (Boolean) -> Unit = {}
 ) {
     val currentLocale = LocalConfiguration.current.locales[0]
     Column(
@@ -88,6 +91,13 @@ fun SensorsGpsFilterSection(
             onValueChange = onSlopeMinSpeedChange,
             valueRange = TuningPreferencesDefaults.MIN_SLOPE_SPEED_MPS..TuningPreferencesDefaults.MAX_SLOPE_SPEED_MPS,
             steps = 18
+        )
+
+        TuningToggleItem(
+            title = stringResource(R.string.tuning_post_workout_erts_smoothing_title),
+            isChecked = postWorkoutErtsSmoothingEnabled,
+            onCheckedChange = onPostWorkoutErtsSmoothingChange,
+            summary = stringResource(R.string.tuning_post_workout_erts_smoothing_desc)
         )
     }
 }

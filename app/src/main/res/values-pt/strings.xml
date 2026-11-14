@@ -1527,6 +1527,8 @@
     <string name="tuning_altitude_window_desc">Janela de tempo de média móvel para altitude instantânea e velocidade vertical.</string>
     <string name="tuning_slope_min_speed_title">Velocidade mínima para inclinação</string>
     <string name="tuning_slope_min_speed_desc">Velocidade mínima necessária para calcular a inclinação em tempo real.</string>
+    <string name="tuning_post_workout_erts_smoothing_title">Suavização ERTS pós-treino</string>
+    <string name="tuning_post_workout_erts_smoothing_desc">Aplica suavização bidirecional Extended Rauch-Tung-Striebel à trajetória e ao perfil de elevação após salvar o treino.</string>
     <string name="tuning_cat_aftermath">Aftermath e análise de perfil</string>
     <string name="tuning_profile_x_axis_title">Eixo X do perfil de altitude</string>
     <string name="tuning_profile_x_axis_desc">Selecionar a métrica do eixo horizontal para os gráficos de altitude.</string>

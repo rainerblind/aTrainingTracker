@@ -140,6 +140,14 @@ object SettingsDataStoreJavaHelper {
     }
 
     /**
+     * Synchronous bridge to fetch whether post-workout ERTS smoothing is enabled (REQ-FIL-017.3, ATT-7750).
+     */
+    @JvmStatic
+    fun isPostWorkoutErtsSmoothingEnabled(context: Context): Boolean {
+        return getTuningConfig(context).postWorkoutErtsSmoothingEnabled
+    }
+
+    /**
      * Synchronous bridge to fetch athlete Functional Threshold Power (FTP) in Watts.
      * Returns null if unconfigured or <= 0. Non-blocking in-memory read.
      */

@@ -1507,6 +1507,8 @@
     <string name="tuning_altitude_window_desc">瞬間高度および垂直速度の移動平均時間枠。</string>
     <string name="tuning_slope_min_speed_title">勾配計算の最低速度</string>
     <string name="tuning_slope_min_speed_desc">リアルタイム勾配を計算するために必要な最低移動速度。</string>
+    <string name="tuning_post_workout_erts_smoothing_title">ワークアウト後ERTS平滑化</string>
+    <string name="tuning_post_workout_erts_smoothing_desc">ワークアウト保存後に軌跡と標高プロファイルへ双方向Extended Rauch-Tung-Striebel平滑化を適用します。</string>
     <string name="tuning_cat_aftermath">アフターマス＆プロファイル分析</string>
     <string name="tuning_profile_x_axis_title">高度プロファイルX軸</string>
     <string name="tuning_profile_x_axis_desc">高度プロファイルグラフの横軸メトリクスを選択します。</string>

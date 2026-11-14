@@ -470,6 +470,10 @@ class UnicycleOdometryEkf(
         return Collections.unmodifiableList(snapshotList)
     }
 
+    fun getCovarianceCopy(): Array<DoubleArray> = Array(STATE_DIM) { i -> p[i].clone() }
+
+    fun getTransitionJacobianCopy(): Array<DoubleArray> = Array(STATE_DIM) { i -> transitionJacobian[i].clone() }
+
     /**
      * Clears recorded step snapshots.
      */

@@ -1527,6 +1527,8 @@
     <string name="tuning_altitude_window_desc">Finestra temporale della media mobile per altitudine istantanea e velocità verticale.</string>
     <string name="tuning_slope_min_speed_title">Velocità minima per pendenza</string>
     <string name="tuning_slope_min_speed_desc">Velocità minima necessaria per calcolare la pendenza in tempo reale.</string>
+    <string name="tuning_post_workout_erts_smoothing_title">Levigatura ERTS post-allenamento</string>
+    <string name="tuning_post_workout_erts_smoothing_desc">Applica la levigatura bidirezionale Extended Rauch-Tung-Striebel alla traiettoria e al profilo altimetrico dopo il salvataggio dell\'allenamento.</string>
     <string name="tuning_cat_aftermath">Aftermath e analisi profilo</string>
     <string name="tuning_profile_x_axis_title">Asse X del profilo altimetrico</string>
     <string name="tuning_profile_x_axis_desc">Seleziona la metrica dell\'asse orizzontale per i grafici altimetrici.</string>

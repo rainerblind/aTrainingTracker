@@ -1614,6 +1614,8 @@
     <string name="tuning_altitude_window_desc">Gleitendes Zeitfenster für Momentanhöhe und Vertikalgeschwindigkeit.</string>
     <string name="tuning_slope_min_speed_title">Mindestgeschwindigkeit für Steigung</string>
     <string name="tuning_slope_min_speed_desc">Erforderliche Mindestgeschwindigkeit zur Berechnung der Echtzeit-Steigung.</string>
+    <string name="tuning_post_workout_erts_smoothing_title">Post-Workout-ERTS-Glättung</string>
+    <string name="tuning_post_workout_erts_smoothing_desc">Wendet nach dem Speichern des Workouts eine bidirektionale Extended-Rauch-Tung-Striebel-Glättung auf Trajektorie und Höhenprofil an.</string>
     <string name="tuning_show_ant_missing_adapter_warnings_title">Warnung bei fehlendem ANT+ Adapter</string>
     <string name="tuning_show_ant_missing_adapter_warnings_desc">Hinweisdialog anzeigen, wenn nach ANT+ Sensoren gesucht wird, aber kein Adapter erkannt wurde</string>
     <string name="tuning_cat_aftermath">Nachbereitung &amp; Profil-Analytik</string>
