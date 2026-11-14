@@ -9,42 +9,63 @@
 
 ### REQ-CON-001: Support multiple ANT+ sensor profiles (HR, Speed, Cadence, Power, Env) [Verified]
 - **Tests**: `TST-CON-025`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `BANALService.java`, `ant_plus/`
 - **Rationale**: Provide comprehensive data for diverse athletic activities.
 - **Description**: Support multiple ANT+ sensor profiles (HR, Speed, Cadence, Power, Env).
 
 ### REQ-CON-002: Support Bluetooth LE (BLE) sensor profiles (HR, Speed, Cadence, Power) [Verified]
 - **Tests**: `TST-CON-003`, `TST-CON-005`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `BANALService.java`, `bluetooth_le/`
 - **Rationale**: Ensure compatibility with modern fitness hardware.
 - **Description**: Support Bluetooth LE (BLE) sensor profiles (HR, Speed, Cadence, Power).
 
 ### REQ-CON-003: Implement "Best Sensor" selection logic using priority lists [Verified]
 - **Tests**: `TST-TRK-016`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `MySensorManager.java`
 - **Rationale**: Maximize data quality by preferring hardware over GPS.
 - **Description**: Implement "Best Sensor" selection logic using priority lists.
 
 ### REQ-CON-004: Provide asynchronous background searching for devices [Verified]
 - **Tests**: `TST-CON-009`, `TST-CON-011`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `DeviceManager.java`
 - **Rationale**: Allow users to discover sensors without interrupting app use.
 - **Description**: Provide asynchronous background searching for devices.
 
 ### REQ-CON-005: All BLE characteristic reads must be null-safe [Verified]
 - **Tests**: `TST-CON-003`, `TST-CON-005`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit
 - **Implementation**: `MyBTLEDevice.java`
 - **Rationale**: Prevent application crashes when communicating with hardware.
 - **Description**: All BLE characteristic reads must be null-safe.
 
 ### REQ-CON-006: Support barometric pressure sensors for altitude [Verified]
 - **Tests**: `TST-CON-004`, `TST-CON-008`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `AltitudeFromPressureDevice.java`
 - **Rationale**: Provide precise elevation data where GPS is insufficient.
 - **Description**: Support barometric pressure sensors for altitude.
 
 ### REQ-CON-007: Continuous Sensor Battery State Persistence, Live Battery Display in Sensors List & Post-Workout Alerting [Verified]
 - **Tests**: `TST-CON-010`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `MainActivityWithNavigation.kt`, `SensorBatteryNotificationManager.kt`, `TrackerService.java`, `ActiveDevicesDbHelper.java`, `MyBTLEDevice.java`, `GetMergedDevicesUseCase.kt`, `DeviceDataRepository.kt`, `DevicesDatabaseManager.java`
 - **Rationale**: The system SHALL continuously persist remote sensor battery level updates, maintain real-time session participation records in `ActiveDevicesDbHelper`, dynamically reflect live battery levels in "Meine Sensoren", and reliably alert athletes about critical battery levels following a completed workout (ATT-2192, ATT-3312):
 1. *Elimination of Modal Disruption*: The system SHALL NOT display modal dialogs (`AlertDialog`) upon workout finalization or stopping (`checkBatteryStatus()`).
@@ -107,53 +128,80 @@
 
 ### REQ-CON-008: Detect missing ANT+ services and link to Play Store [Implemented]
 - **Tests**: `TST-MAN-001`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: On-Device Manual
 - **Implementation**: `BANALService.java`
 - **Rationale**: Ensure users can easily set up required hardware drivers.
 - **Description**: Detect missing ANT+ services and link to Play Store.
 
 ### REQ-CON-009: Support per-device calibration (wheel circumference) [Implemented]
 - **Tests**: `TST-MAN-001`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: On-Device Manual
 - **Implementation**: `EditSimpleBikeDeviceFragment.kt`
 - **Rationale**: Ensure distance and speed accuracy across setups.
 - **Description**: Support per-device calibration (wheel circumference).
 
 ### REQ-FIL-001: Flexible filtering (Moving Avg, Exponential Smoothing) [Verified]
 - **Tests**: `TST-FIL-004`, `TST-FIL-005`, `TST-FIL-014`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `FilterManager.java`
 - **Rationale**: Allow for smooth visualization of noisy sensor data.
 - **Description**: Flexible filtering (Moving Avg, Exponential Smoothing).
 
 ### REQ-FIL-002: Configurable smoothing factors (α) for Power [Verified]
 - **Tests**: `TST-FIL-005`, `TST-FIL-015`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `ExponentialSmoothingFilter.java`
 - **Rationale**: Balance responsiveness vs. stability.
 - **Description**: Configurable smoothing factors (α) for Power.
 
 ### REQ-FIL-003: Calculate derived metrics (VAM, slope, pace) [Verified]
 - **Tests**: `TST-FIL-004`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `VerticalSpeedAndSlopeDevice.java`
 - **Rationale**: Provide advanced metrics for climbing and analysis.
 - **Description**: Calculate derived metrics (VAM, slope, pace).
 
 ### REQ-FIL-004: Atomic Altitude Correction [Implemented]
 - **Tests**: `TST-FIL-003`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `TrackerService.java`, `KnownLocationsDatabaseManager.java`
 - **Rationale**: The system SHALL apply altitude corrections from known locations atomically across all data structures. This MUST include shifting previous sample points, updating summary extrema (Min/Max), and recalculating total ascent/descent for the active workout to ensure 100% data consistency.
 
 ### REQ-FIL-005: Implement "Proxy Sensors" and "Accumulator Sensors" [Verified]
 - **Tests**: `TST-TRK-028`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `ProxySensor.java`
 - **Rationale**: Extensible architecture for complex multi-sensor data.
 - **Description**: Implement "Proxy Sensors" and "Accumulator Sensors".
 
 ### REQ-FIL-006: Geographical rolling averages for start altitude [Verified]
 - **Tests**: `TST-FIL-002`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `WorkoutSamplesDatabaseManager.java`
 - **Rationale**: Filter out momentary GPS or barometric jitter.
 - **Description**: Geographical rolling averages for start altitude.
 
 ### REQ-FIL-012: Stabilized VAM (Vertical Speed) Metric, Location Accuracy Gating & Indoor Drift Suppression Architecture [Verified]
 - **Tests**: `TST-FIL-004`, `TST-FIL-015`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `VerticalSpeedAndSlopeDevice.java`, `TimedMovingAverageFilter.java`, `FilterManager.java`, `BANALService.java`
 - **Rationale**: The system SHALL calculate the vertical ascent/descent rate (VAM / Vertical Speed in m/h) in `VerticalSpeedAndSlopeDevice` using linear regression slope smoothing over a sliding window, suppress indoor GPS wander and stationary drift, enforce location accuracy gating, maintain a noise deadband, reject outlier anomalies, and synchronize filter pipelines across altitude source transitions and calibrations (ATT-1621, ATT-1738, ATT-5373):
 1. *Sliding Window Linear Regression Derivative ($N = 15$ seconds)*:
@@ -201,12 +249,18 @@
 
 ### REQ-TRK-001: Support Start, Stop, Pause with Service persistence [Verified]
 - **Tests**: `TST-TRK-075`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Integration
 - **Implementation**: `TrackerService.java`
 - **Rationale**: Ensure data integrity in the background.
 - **Description**: Support Start, Stop, Pause with Service persistence.
 
 ### REQ-TRK-002: Workout Lap Recording Lifecycle, Manual Splitting & Pause/Resume Neutrality [Verified]
 - **Tests**: `TST-TRK-002`
+- **Priority**: Medium
+- **Type**: Non-Functional
+- **Verification Method**: Unit
 - **Implementation**: `TrainingApplication.java`, `TrackerService.java`, `LapsDatabaseManager.java`
 - **Rationale**: The system SHALL manage the lifecycle of workout laps deterministically during recording, tracking termination, and database retrieval, preventing the creation and presentation of zero-duration phantom laps:
 1. *Pause and Resume Neutrality*: Transitioning active tracking into a paused state (`pauseTracking()`) or resuming tracking from paused (`resumeFromPaused()`) SHALL NOT broadcast `REQUEST_NEW_LAP` and SHALL NOT create, increment, or close workout laps. Active lap duration and distance accumulation SHALL pause and resume transparently with the session.
@@ -231,48 +285,72 @@
 
 ### REQ-TRK-003: Use WakeLocks during active tracking [Verified]
 - **Tests**: `TST-TRK-025`, `TST-TRK-026`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit
 - **Implementation**: `TrackerService.java`
 - **Rationale**: Prevent CPU sleep and data gaps.
 - **Description**: Use WakeLocks during active tracking.
 
 ### REQ-TRK-004: Automatically guess Sport Type and Equipment [Implemented]
 - **Tests**: `TST-MAN-001`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: On-Device Manual
 - **Implementation**: `EquipmentDiscoveryManager.kt`
 - **Rationale**: Minimize user effort via automated categorization.
 - **Description**: Automatically guess Sport Type and Equipment.
 
 ### REQ-TRK-005: Implement session recovery ("Resume from Crash") [Verified]
 - **Tests**: `TST-TRK-018`, `TST-TRK-023`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Integration
 - **Implementation**: `TrackerService.java`
 - **Rationale**: Ensure data integrity against system pressure.
 - **Description**: Implement session recovery ("Resume from Crash").
 
 ### REQ-TRK-006: Support sport-specific search triggers [Implemented]
 - **Tests**: `TST-MAN-001`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: On-Device Manual
 - **Implementation**: `TrainingApplication.java`
 - **Rationale**: Sensors ready when user changes activity.
 - **Description**: Support sport-specific search triggers.
 
 ### REQ-TRK-007: Deterministic 1Hz sampling rate during recording [Verified]
 - **Tests**: `TST-TRK-019`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `TrackerService.java`
 - **Rationale**: Consistent time-base for analysis and export.
 - **Description**: Deterministic 1Hz sampling rate during recording.
 
 ### REQ-TRK-008: Align session averages with core summary metrics [Verified]
 - **Tests**: `TST-TRK-022`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `TrackerService.java`
 - **Rationale**: Ensure background tracking focus matches optimized UI summary for consistency and performance.
 - **Description**: Align session averages with core summary metrics.
 
 ### REQ-TRK-009: Total Time Persistence [Verified]
 - **Tests**: `TST-TRK-002`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `TrackerService.java`
 - **Rationale**: The `TrackerService` SHALL continue to update the `TIME_TOTAL_s` field in the `WorkoutSummaries` database table even when the recording is in a PAUSED state.
 - **Description**: Total Time Persistence.
 
 ### REQ-TRK-010: Live Tracking Finalization Event Dispatch [Verified]
 - **Tests**: `TST-TRK-008`, `TST-TRK-022`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `TrackerService.java`, `WorkoutRepository.kt`, `PeriodsRepository.kt`
 - **Rationale**: Upon tracking completion (`endWorkout`), the system SHALL broadcast `WORKOUT_UPDATED_INTENT` and `TRACKING_FINISHED_INTENT` with the workout ID parameter (`WORKOUT_ID`) via `LocalBroadcastManager`, while preserving the package-targeted system broadcast of `TRACKING_FINISHED_INTENT`. The system SHALL ensure downstream subscribers (`WorkoutRepository`, `PeriodsRepository`, `WorkoutClusterEngine`) consume the finalized session to reactively create and update period summaries (Day, Week, Month, Year).
 **Acceptance Criteria**:
@@ -283,6 +361,9 @@
 
 ### REQ-TRK-011: Intelligent Workout Auto-Naming based on Recognized Start and Destination Lieblingsorte [Verified]
 - **Tests**: `TST-TRK-003`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `TrackerService.java`, `WorkoutAutoNamingHelper.kt`, `WorkoutClusterEngine.kt`, `KnownLocationsDatabaseManager.java`
 - **Rationale**: The system SHALL automatically generate meaningful, localized workout names based on recognized favorite locations (*Lieblingsorte*) for recorded sessions that do not match an existing Route Cluster (ATT-1398):
 1. *Start & Destination Location Resolution*:
@@ -324,6 +405,9 @@
 
 ### REQ-TRK-012: Distance-Enriched Auto-Generated Workout Names for Start-Location Sessions [Verified]
 - **Tests**: `TST-TRK-004`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `TrackerService.java`, `WorkoutAutoNamingHelper.kt`
 - **Rationale**: The system SHALL append the formatted total workout distance to automatically generated workout names for unclustered activities when the title is derived solely from a recognized starting location (*Lieblingsort*) (ATT-2247):
 1. *Total Distance Parameter Integration (`WorkoutAutoNamingHelper.kt`)*:
@@ -376,6 +460,9 @@
 
 ### REQ-TRK-013: GPS Speed Inactivity Watchdog, Gradual Speed Decay & Pace Nullification Architecture [Verified]
 - **Tests**: `TST-TRK-005`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `SpeedAndLocationDevice.java`
 - **Rationale**: The system SHALL monitor elapsed time since the last valid `Location` fix during active tracking and execute deterministic speed decay when location updates cease:
 1. *Location Inactivity Watchdog ($T_{\text{timeout}} = 10.0\text{ s}$)*:
@@ -420,6 +507,9 @@
 
 ### REQ-TRK-014: Successive Geodesic Location Delta Fallback for Missing GPS Bearing and Speed in SpeedAndLocationDevice [Implemented]
 - **Tests**: `TST-TRK-006`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `SpeedAndLocationDevice.java`, `TrackingTabsScreen.kt`
 - **Rationale**: The system SHALL calculate forward heading bearing and travel speed from the geodesic displacement and elapsed time interval between successive location fixes when incoming `Location` fixes lack explicit bearing or speed data (ATT-2467):
 1. *Bearing Fallback Calculation (`SpeedAndLocationDevice.java`)*:
@@ -465,6 +555,9 @@
 
 ### REQ-TRK-015: Permission-Gated Foreground Service Types in TrackerService [Verified]
 - **Tests**: `TST-TRK-007`, `TST-TRK-025`, `TST-TRK-026`
+- **Priority**: Medium
+- **Type**: Non-Functional
+- **Verification Method**: Unit
 - **Implementation**: CONNECTED_DEVICE` and SHALL NOT contain `HEALTH`.
 • *Given* an Android 14+ device where health runtime permission IS granted,
 • *When* `TrackerService.onStartCommand()` derives foreground service types,
@@ -488,6 +581,9 @@
 
 ### REQ-TRK-016: Guaranteed Workout Finalization and Unconditional Completion Broadcast on Stop [Verified]
 - **Tests**: `TST-TRK-008`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `TrackerService.java`
 - **Rationale**: The system SHALL guarantee the finalization and closure of an active workout session when tracking terminates (ATT-2972):
 1. *Guaranteed Finalization Protocol*:
@@ -512,16 +608,25 @@
 
 ### REQ-CON-010: Internal Sensor Pairing [Verified]
 - **Tests**: `TST-CON-010`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `DeviceManager.java`, `AltitudeFromPressureDevice.java`, `DeviceItem.kt`
 - **Rationale**: The system SHALL allow the user to manually activate or deactivate internal smartphone sensors (e.g., Barometric Pressure Sensor) via the "My Sensors" interface. The system MUST respect this "Paired" state and only utilize telemetry from internal sources that are explicitly activated by the user.
 
 ### REQ-CON-011: Barometric Cold-Start Baseline Protection [Implemented]
 - **Tests**: `TST-CON-002`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `AltitudeFromPressureDevice.java`
 - **Rationale**: The `AltitudeFromPressureDevice` SHALL NOT emit uncalibrated standard atmosphere altitude readings (calculated using the default 1013.25 hPa assumption) to session listeners or running statistics prior to establishing a calibrated baseline (via known locations or valid GPS altitude fix), preventing cold-start pressure offsets from polluting session extrema.
 
 ### REQ-CON-012: Asynchronous BLE GATT Lifecycle, Thread-Safe Concurrency & Read Queue Null-Safety [Verified]
 - **Tests**: `TST-CON-003`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit
 - **Implementation**: `MyBTLEDevice.java`
 - **Rationale**: The system SHALL guarantee thread-safe lifecycle and communication management for all Bluetooth Low Energy (BLE) peripherals (`MyBTLEDevice`):
 1. *Thread Synchronization & TOCTOU Immunity*: All operations interacting with `mBluetoothGatt` and `mReadCharacteristicQueue` SHALL use thread-safe synchronization primitives (a dedicated in-memory mutex `mGattLock` and thread-safe queue collections) and the local variable capture snapshot idiom (`final BluetoothGatt gatt = mBluetoothGatt; if (gatt != null) ...`), eliminating Time-of-Check to Time-of-Use (TOCTOU) race conditions between Binder callback threads and the UI Looper.
@@ -544,6 +649,9 @@
 
 ### REQ-CON-013: Barometric Altitude Sensor Initialization & Null-Safe Correction Dispatch [Verified]
 - **Tests**: `TST-CON-004`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit
 - **Implementation**: `AltitudeFromPressureDevice.java`
 - **Rationale**: The system SHALL guarantee null-safe initialization and altitude correction dispatch within `AltitudeFromPressureDevice`:
 1. *Defensive Sensor Value Resolution*: In `AltitudeFromPressureDevice.setAltitudeCorrection(double correctAltitude)`, the system SHALL verify that `mAltitudeSensor != null` and `mAltitudeSensor.getValue() != null` prior to unboxing the current sensor reading.
@@ -566,6 +674,9 @@
 
 ### REQ-CON-014: BLE GATT Measurement Packet Parsing Resilience & Null-Safe Telemetry Extraction [Verified]
 - **Tests**: `TST-CON-005`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit
 - **Implementation**: `BTLEBikePowerDevice.java`, `BTLEBikeDevice.java`, `BTLERunSpeedDevice.java`, `BTLEHeartRateDevice.java`
 - **Rationale**: The system SHALL guarantee null-safe and length-validated parsing for all incoming Bluetooth Low Energy (BLE) GATT measurement characteristics across all supported sensor device types (`BTLEBikePowerDevice`, `BTLEBikeDevice`, `BTLERunSpeedDevice`, `BTLEHeartRateDevice`):
 1. *Mandatory Header Length Verification*: Prior to reading flags or mandatory telemetry metrics, the system SHALL verify that `characteristic.getValue()` is non-null and that its byte length is greater than or equal to the minimum required specification length (e.g. 4 bytes for Cycling Power: 2-byte flags + 2-byte instantaneous power). If the payload is truncated below this threshold, the packet SHALL be discarded with an advisory warning.
@@ -595,6 +706,9 @@
 
 ### REQ-CON-015: Smartphone Battery Level and Estimated Remaining Duration Telemetry Sensors (`PHONE_BATTERY` & `BATTERY_REMAINING_TIME`) [Verified]
 - **Tests**: `TST-CON-006`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `SensorType.java`, `BatteryDevice.java`, `DeviceManager.java`, `ActivityType.java`, `BatteryRemainingTimeFormatter.java`
 - **Rationale**: The system SHALL provide live telemetry sensors for monitoring the host smartphone's internal battery level and projecting remaining operating duration during athletic workouts (ATT-1454):
 1. *Base Smartphone Battery Percentage (`PHONE_BATTERY`)*:
@@ -632,6 +746,9 @@
 
 ### REQ-CON-016: Smartphone Battery Remaining Duration Continuous Countdown & Discrete Transition Drain Rate Architecture [Implemented]
 - **Tests**: `TST-CON-007`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `BatteryDevice.java`
 - **Rationale**: The system SHALL compute smartphone battery drain rate strictly across discrete percentage step-down transition events and provide a continuous, monotonic countdown during periods of constant battery level, eliminating sampling-induced upward drift and abrupt multi-hour estimate plunges (ATT-1631):
 1. *Discrete Transition-Triggered Drain Rate Computation (`BatteryDevice.java`)*:
@@ -675,6 +792,9 @@
 
 ### REQ-CON-017: Barometric Altimeter Idempotent Calibration, Delta Shift Dispatch, Physical Sanity Limiting & Historical Workout Data Sanitization [Verified]
 - **Tests**: `TST-CON-008`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: \text{deltaOffset}
 - **Rationale**: The system SHALL eliminate barometric calibration oscillations, prevent runaway retroactive sample accumulation, enforce physical climb rate sanity limits, and strictly protect legitimate high-altitude workout data (ATT-1810, ATT-3990):
 1. *Absolute Baseline Correction Formulation (`AltitudeFromPressureDevice.java`)*:
@@ -684,6 +804,9 @@
 
 ### REQ-CON-018: Robust Bluetooth LE Sensor Discovery: GATT Queue Deadlock Prevention and State Reset in BTSearchForNewDevicesEngine [Verified]
 - **Tests**: `TST-CON-009`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `BTSearchForNewDevicesEngine.java`
 - **Rationale**: The system SHALL guarantee robust, non-blocking GATT characteristic queue management and state reset in `BTSearchForNewDevicesEngine` during peripheral discovery (ATT-2224):
 1. *Defensive Queue Enqueueing*: In `onServicesDiscovered()`, only non-null `BluetoothGattCharacteristic` references returned by `service.getCharacteristic(...)` SHALL be appended to `mReadCharacteristicQueue`.
@@ -717,6 +840,9 @@
 
 ### REQ-CON-019: Robust Bluetooth LE Sensor Discovery & Direct LE Transport Connection Architecture [Verified]
 - **Tests**: `TST-CON-011`, `TST-CON-021`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
 • In `TrackerService.java`, `performStartForeground` SHALL include `ServiceInfo.FOREGROUND_SERVICE_TYPE_HEALTH` and `ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE` in its bitmask on API 34+.
 
 **Requirement Archaeology & Chesterton's Fence Audit**:
@@ -770,6 +896,9 @@
 
 ### REQ-WEA-001: Support Pebble smartwatches for live metrics [Implemented]
 - **Tests**: `TST-MAN-001`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: On-Device Manual
 - **Implementation**: `PebbleService.java`
 - **Rationale**: Allow users to view data on their wrist.
 - **Description**: Support Pebble smartwatches for live metrics.
@@ -812,11 +941,17 @@
 
 ### REQ-FIL-011: Null-Safe Sensor Filtering [Verified]
 - **Tests**: `TST-FIL-001`, `TST-FIL-002`, `TST-FIL-014`, `TST-FIL-015`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit
 - **Implementation**: `MyFilter.java`, `AverageFilter.java`, `ExponentialSmoothingFilter.java`, `NumberedMovingAverageFilter.java`
 - **Rationale**: All sensor filters SHALL gracefully handle null values passed from the sensor manager. The filters SHALL NOT attempt to process null data and SHALL NOT crash when a sensor provides a null value (e.g., during initialization or signal loss).
 
 ### REQ-TRK-017: Guaranteed Defensive Location Device Initialization on Tracking Startup and BANAL Connection [Verified]
 - **Tests**: `TST-TRK-009`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `TrackerService.java`, `BANALService.java`, `DeviceManager.java`, `TrainingApplication.java`
 - **Rationale**: The system SHALL guarantee the lazy instantiation and update registration of GPS, Fused, and paired Network location devices when starting a workout or connecting `TrackerService` to `BANALService`, preventing zero-distance trackpoints and missing coordinates on fresh installations or when permissions are granted dynamically (ATT-3045):
 1. *Pre-Flight & Service Connection Initialization (`TrackerService.java`)*:
@@ -854,6 +989,9 @@
 
 ### REQ-FIL-013: Continuous Pre-Start Rolling Telemetry Filtering, Session Reset Isolation & Live Cockpit Metric Readiness [Verified]
 - **Tests**: `TST-FIL-005`, `TST-FIL-015`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `ExponentialSmoothingFilter.java`, `TimedMovingAverageFilter.java`, `NumberedMovingAverageFilter.java`, `AverageFilter.java`, `MaxValueFilter.java`, `MyFilter.java`, `FilterManager.java`, `VerticalSpeedAndSlopeDevice.java`
 - **Rationale**: The system SHALL decouple rolling telemetry smoothing filters from recording state, process sensor samples continuously in pre-start ready mode, isolate cumulative workout session statistics, and execute lifecycle accumulator resets upon starting recording (ATT-3222, refining `REQ-FIL-001`, `REQ-FIL-002`, `REQ-FIL-003`, and `REQ-FIL-011`):
 1. *Continuous Rolling Smoothing Telemetry*:
@@ -900,6 +1038,9 @@
 
 ### REQ-TRK-018: Sport-Specific Auto-Pause Engine with Anti-Chatter Hysteresis, Mutex Precedence, Sensor Dropout Guard, Synchronous Ingestion Gating, and Sport-Decoupled Thresholds [Verified]
 - **Tests**: `TST-TRK-010`, `TST-TRK-020`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `AutoPauseManager.kt`, `TrainingApplication.java`, `TrackerService.java`, `TuningPreferencesDataStore.kt`, `SensorsGpsFilterSection.kt`, `SensorGridScreen.kt`
 - **Rationale**: The system SHALL provide an automated, sport-specific Auto-Pause Engine (`AutoPauseManager.kt`) that suspends active recording when an athlete becomes stationary and seamlessly resumes recording upon departure, maintaining strict metric integrity, crash resilience, and manual user sovereignty (ATT-45, ATT-3677, extending `REQ-TRK-001` and `REQ-TRK-002`, complementing `REQ-FIL-012`, `REQ-FIL-013`, and `REQ-UI-262`):
 1. *Sport-Specific Default Activation*:
@@ -979,6 +1120,9 @@
 
 ### REQ-TRK-019: Real-Time Power-to-Weight (W/kg) Cockpit Telemetry & Athlete Weight Baseline Architecture [Verified]
 - **Tests**: `TST-TRK-011`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `SettingsDataStore.kt`, `SensorType.java`, `CyclingPowerMetricsDevice.java`, `ZonesSettingsActivity.kt`, `SensorGridScreen.kt`
 - **Rationale**: The system SHALL provide a real-time power-to-weight ratio (W/kg) computed metric for cycling workouts, maintaining persistent athlete weight baselines, unit-aware conversions, seamless cockpit grid integration, and zero-disruption unconfigured prompt workflows (ATT-1289, complementing `REQ-UI-370`, `REQ-UI-373`, and `REQ-UI-374`):
 1. *Persistent Athlete Weight Preference (`SettingsDataStore.kt`)*:
@@ -1029,6 +1173,9 @@
 
 ### REQ-TRK-020: Live Normalized Power (NP) and Intensity Factor (IF) Calculations & Cockpit Integration [Verified]
 - **Tests**: `TST-TRK-012`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Integration
 - **Implementation**: `CyclingPowerMetricsDevice.java`, `SensorType.java`, `IntensityFactorFormatter.java`, `EditSensorFieldDialog.kt`
 - **Rationale**: The system SHALL calculate Dr. Andrew Coggan's Normalized Power (NP) and Intensity Factor (IF) in real time during cycling workouts, integrating these metrics into the telemetry engine, filter presets, and tracking cockpit (ATT-1290, complementing `REQ-TRK-019`, `REQ-UI-370`, `REQ-UI-373`, and `REQ-UI-374`):
 1. *First-Class Sensor & Metric Definitions*:
@@ -1090,6 +1237,9 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 ### REQ-TRK-021: Real-Time Mechanical Work (kJ) and Training Stress Score (TSS) Telemetry [Verified]
 - **Tests**: `TST-TRK-013`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `CyclingPowerMetricsDevice.java`, `SensorType.java`, `EditSensorFieldDialog.kt`
 - **Rationale**: The system SHALL integrate Mechanical Work (kJ) and Dr. Andrew Coggan's Training Stress Score (TSS) in real time during cycling workouts, integrating these cumulative load metrics into the telemetry engine, filter presets, and tracking cockpit (ATT-1291, complementing `REQ-TRK-019`, `REQ-TRK-020`, `REQ-UI-370`, `REQ-UI-373`, and `REQ-UI-374`):
 1. *First-Class Sensor & Metric Definitions*:
@@ -1144,6 +1294,9 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 **Invariants**: Zero SecurityExceptions on service start; uninterrupted workout tracking; 100% clean-room test pass rate.]
 - **Tests**: `TST-TRK-014`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
 • *Given* `TrackerService.determineForegroundServiceType()` evaluated on Android 14+ (API 34+),
 • *When* health runtime permission is NOT granted,
 • *Then* the bitmask equals strictly `ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION`.
@@ -1184,6 +1337,9 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 ### REQ-TRK-023: Growing 1..29s Warm-Up Rolling Window for Live Normalized Power, Intensity Factor, and TSS [Verified]
 - **Tests**: `TST-TRK-015`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `CyclingPowerMetricsDevice.java`, `NormalizedPowerMathTest.kt`, `MechanicalWorkAndTssMathTest.kt`, `CyclingPowerMetricsDeviceTest.kt`
 - **Rationale**: The system SHALL compute live Normalized Power (`NORMALIZED_POWER`), Intensity Factor (`INTENSITY_FACTOR`), and Training Stress Score (`TSS`) over the growing rolling window ($1 \le k < 30$) during the initial 29-second warm-up phase and after long-pause window flushes (`> 30s`), adhering to Rule 40 (`docs/coding_standards.md` Section 1.6, ATT-3778, amending `REQ-TRK-020` and `REQ-TRK-021`):
 1. *Growing Rolling Window Evaluation (`REQ-TRK-023.1`)*:
@@ -1213,6 +1369,9 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 ### REQ-TRK-024: Google Fused & Topographic DEM Priority Ordering in `MySensorManager`, Enum Declaration Alignment & `LINE_DISTANCE_m` Priority [Verified]
 - **Tests**: `TST-TRK-016`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `MySensorManager.java`, `DeviceType.java`, `DevicesDatabaseManager.java`, `MySensorManagerPriorityTest.kt`
 - **Rationale**: `MySensorManager` (`app/src/main/java/com/atrainingtracker/banalservice/sensor/MySensorManager.java`), `DeviceType` (`app/src/main/java/com/atrainingtracker/banalservice/devices/DeviceType.java`), and `DevicesDatabaseManager` (`app/src/main/java/com/atrainingtracker/banalservice/database/DevicesDatabaseManager.java`) SHALL maintain strict, consistent location provider priority ordering across speed, altitude, location, distance, and database storage (ATT-3961, ATT-4375, ATT-5491, ATT-5492, ATT-6264):
 1. *`SPEED_PRIORITY`, `ALTITUDE_PRIORITY` & `LOCATION_PRIORITY` Ordering (`REQ-TRK-024.1`)*:
@@ -1268,6 +1427,9 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 ### REQ-TRK-025: Deterministic `AdbGpsInjector` Mock Provider Lifecycle Bound to `PLAYING` State in `tools/replay_workout.py` [Implemented]
 - **Tests**: `TST-TRK-017`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit
 - **Implementation**: Release ADB mock location test providers in `tools/replay_workout.py` immediately on Pause, Stop, or completion, and clean up lingering providers on startup.
 - **Rationale**: `AdbGpsInjector` (`tools/replay_workout.py`) SHALL bind ADB mock location test provider registration (`add-test-provider gps/network/fused`) strictly to the active `PLAYING` state and immediately remove test providers (`remove-test-provider gps/network/fused`) whenever replay is `PAUSED`, `STOPPED`, `kill_gps`, or reaches workout completion (`EOF`), as well as on startup cleanup and `--cleanup` CLI invocation, so Android's hardware `LocationManager.GPS_PROVIDER` is never left trapped in `[mock]` mode if the phone is unplugged while paused or stopped (ATT-3961 / ATT-3971, amending `REQ-TOOL-002` Clause 4):
 1. *Proactive Startup & `--cleanup` Test Provider Removal (`REQ-TRK-025.1`)*:
@@ -1293,6 +1455,9 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 ### REQ-TRK-026: Resumed Workout Sample Table Resolution, Asynchronous BANAL Binding Barrier, and Sample Write Error Surfacing in `TrackerService` [Verified]
 - **Tests**: `TST-TRK-018`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Integration
 - **Implementation**: `TrackerService.java`, `WorkoutSamplesDatabaseManager.java`, `TrackerServiceResumeTest.kt`
 - **Rationale**: `TrackerService` (`app/src/main/java/com/atrainingtracker/trainingtracker/tracker/TrackerService.java`) and `WorkoutSamplesDatabaseManager` (`app/src/main/java/com/atrainingtracker/trainingtracker/database/WorkoutSamplesDatabaseManager.java`) SHALL guarantee that resumed workouts (`RESUME_BY_USER` and `RESUME_SERVICE_RECREATION`) always resolve and write 1 Hz samples to the resumed workout's existing SQLite sample table (`"\"<BASE_FILE_NAME>\""`), even when `BANALService` binds asynchronously after `onStartCommand()` returns (ATT-3980, extending `REQ-TRK-015`, `REQ-TRK-016`, and `REQ-TRK-017`):
 1. *Sample Table Name Synchronization on Resume (`REQ-TRK-026.1`)*:
@@ -1326,6 +1491,9 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 ### REQ-TRK-027: Fault-Tolerant 1 Hz Sampling Loop, Clock Timer Exception Guard, and Volatile `BANALServiceComm` Snapshot Concurrency Safety [Verified]
 - **Tests**: `TST-TRK-019`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit
 - **Implementation**: `TrackerService.java`, `ClockDevice.java`, `DeviceManager.java`, `TrackerServiceResilienceTest.kt`, `ClockDeviceResilienceTest.kt`
 - **Rationale**: `TrackerService` (`app/src/main/java/com/atrainingtracker/trainingtracker/tracker/TrackerService.java`) and `ClockDevice` (`app/src/main/java/com/atrainingtracker/banalservice/devices/ClockDevice.java`) SHALL guarantee that no single unchecked exception or concurrent `BANALService` disconnection permanently stops the 1 Hz workout sampling loop (`ScheduledExecutorService.scheduleAtFixedRate`) or the 1 Hz clock timer (`java.util.Timer`) (ATT-3981, complementing `REQ-TRK-015` and `REQ-TRK-026`):
 1. *Top-Level `try / catch (Throwable t)` Guard in `TrackerService.tracker.run()` (`REQ-TRK-027.1`)*:
@@ -1354,6 +1522,9 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 ### REQ-TRK-028: `ProxySensor` Timestamp Delegation, Registered-Source Standstill Evaluation, Manual Resume State Synchronization & `ToneGenerator` Lifecycle Management [Verified]
 - **Tests**: `TST-TRK-020`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit
 • When `(currentSpeedMps != null && !isSpeedFiniteAndValid(currentSpeedMps))` OR `!hasSpeedSource`: `AutoPauseManager` SHALL transition to `AutoPauseState.SENSOR_LOST` and require `SENSOR_LOST_RECOVERY_TICKS` (2 consecutive fresh valid ticks) to recover to `TRACKING`.
 • When `hasSpeedSource == true` and `currentSpeedMps` is `null` or finite $\ge 0.0$: if `currentSpeedMps == null` or the packet timestamp is stale (`packetTimestampMs <= 0L
 - **Rationale**: `MySensor` (`app/src/main/java/com/atrainingtracker/banalservice/sensor/MySensor.java`), `ProxySensor` (`app/src/main/java/com/atrainingtracker/banalservice/sensor/ProxySensor.java`), `AutoPauseManager` (`app/src/main/java/com/atrainingtracker/trainingtracker/tracker/autopause/AutoPauseManager.kt`), `TrackerService` (`app/src/main/java/com/atrainingtracker/trainingtracker/tracker/TrackerService.java`), and `TrainingApplication` (`app/src/main/java/com/atrainingtracker/trainingtracker/TrainingApplication.java`) SHALL guarantee reliable end-to-end auto-pause and auto-resume evaluation through `ProxySensor` (ATT-3984, refining and extending `REQ-TRK-018`):
@@ -1365,6 +1536,9 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 ### REQ-TRK-029: Safe SQLite Column Identifier Escaping for Custom Device Names & Rate-Limited Sample Insert Failure Telemetry in `TrackerService` [Verified]
 - **Tests**: `TST-TRK-021`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
 
 **Invariants**: `<SensorType> (<DeviceName>)` column naming convention (`CSVFileWriter`, `.attbackup`, `WorkoutSamples.db`), `REQ-TRK-026` transaction semantics, and 100% clean-room test pass rate MUST NOT be broken.
 - **Rationale**: `TrackerService` (`app/src/main/java/com/atrainingtracker/trainingtracker/tracker/TrackerService.java`) SHALL safely quote and unquote SQLite sample column identifiers using SQL-standard double quotes (`"..."` with `""` escaping for embedded double quotes) and rate-limit sample insertion error telemetry while preserving 100% backward compatibility with the `<SensorType> (<DeviceName>)` column naming convention (ATT-3985, extending `REQ-TRK-026.4`):
@@ -1395,6 +1569,9 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 ### REQ-TRK-030: Fault-Isolated Workout Finalization, Dedicated `FINISHED=1` Commit, Defensive `AccumulatedSensorTypeSet` Copy, and Zero-Duration Average Speed Guard [Verified]
 - **Tests**: `TST-TRK-022`, `TST-TRK-025`, `TST-TRK-026`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `TrackerService.java`, `MySensorManager.java`, `TrackerServiceFinalizationTest.kt`
 - **Rationale**: `TrackerService` (`app/src/main/java/com/atrainingtracker/trainingtracker/tracker/TrackerService.java`) and `MySensorManager` (`app/src/main/java/com/atrainingtracker/banalservice/sensor/MySensorManager.java`) SHALL guarantee that stopping any workout deterministically marks `WorkoutSummaries.FINISHED = 1`, prevents `NaN`/`Infinity` average speed at `0 s` active time, avoids `ConcurrentModificationException` on accumulated sensor types, and isolates post-workout finalization steps so map polylines and altitude/distance streams are always persisted (ATT-3986, complementing `REQ-TRK-015`, `REQ-TRK-016`, and `REQ-TRK-027`):
 1. *Dedicated, Minimal `FINISHED = 1` Transaction First in `endWorkout()` (`REQ-TRK-030.1`)*:
@@ -1431,6 +1608,9 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 ### REQ-TRK-031: LiveWorkoutSession Instantiation & State Rehydration on Workout Resume (`RESUME_BY_USER` & `RESUME_SERVICE_RECREATION`) [Verified]
 - **Tests**: `TST-TRK-023`, `TST-TRK-029`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Integration
 - **Implementation**: `WorkoutSummariesDatabaseManager.java`, `LiveWorkoutSession.java`, `TrackerService.java`, `LiveWorkoutSessionTest.kt`, `TrackerServiceResumeTest.kt`
 - **Rationale**: `TrackerService` (`app/src/main/java/com/atrainingtracker/trainingtracker/tracker/TrackerService.java`), `LiveWorkoutSession` (`app/src/main/java/com/atrainingtracker/trainingtracker/tracker/LiveWorkoutSession.java`), and `WorkoutSummariesDatabaseManager` (`app/src/main/java/com/atrainingtracker/trainingtracker/database/WorkoutSummariesDatabaseManager.java`) SHALL instantiate and rehydrate `LiveWorkoutSession` whenever a workout is resumed (`StartMode.RESUME_BY_USER` or `StartMode.RESUME_SERVICE_RECREATION`), preserving delta-encoded 20-second map/altitude/distance streams, per-sensor `MIN`/`MAX`/`AVG` statistics (including mid-workout sensor sample counts), and full post-workout finalization (ATT-3987, complementing `REQ-TRK-015`, `REQ-TRK-016`, `REQ-TRK-026`, and `REQ-TRK-030`):
 1. *Sample Count Persistence in `TABLE_EXTREMA_VALUES` (`REQ-TRK-031.1` — Rule 20)*:
@@ -1459,6 +1639,9 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 ### REQ-TRK-032: Thread-Safe Sensor, Device, Filter, Service & Live Session Concurrency Architecture [Verified]
 - **Tests**: `TST-TRK-024`, `TST-TRK-028`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit
 - **Implementation**: `DeviceManager.java`, `MySensor.java`, `ProxySensor.java`, `MyAccumulatorSensor.java`, `MySensorManager.java`, `MyDevice.java`, `MyRemoteDevice.java`, `MyBTLEDevice.java`, `MyANTDevice.java`, `FilterManager.java`, `BANALService.java`, `TrackerService.java`, `LiveWorkoutSession.java`, `SensorAndDeviceConcurrencyStressTest.kt`
 - **Rationale**: `DeviceManager`, `MySensor`, `ProxySensor`, `MyAccumulatorSensor`, `MySensorManager`, `MyDevice`, `MyRemoteDevice`, `MyBTLEDevice`, `MyANTDevice`, `FilterManager`, `BANALService`, `TrackerService`, and `LiveWorkoutSession` SHALL guarantee thread-safe concurrent access across Main/UI, BLE GATT binder, ANT+ PCC, 1 Hz `ClockDevice` Timer, 1 Hz `TrackerService` scheduler, and DB executor threads without `ConcurrentModificationException`, post-shutdown `NullPointerException`, duplicate device registration, or lock-ordering deadlocks (ATT-3988, complementing `REQ-PRO-006`, `REQ-TRK-027`, `REQ-TRK-028`, `REQ-TRK-030`, and `REQ-TRK-031`):
 1. *Thread-Safe `DeviceManager` Collections, Atomic Registration & Non-Null Teardown (`REQ-TRK-032.1`)*:
@@ -1495,6 +1678,9 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 ### REQ-TRK-033: Non-Blocking `TrackerService.onDestroy()` Finalization on `mDbExecutor`, Deterministic `mScheduler` Thread Teardown, and `TrainingApplication` State Recovery on Async Init Failure [Verified]
 - **Tests**: `TST-TRK-025`, `TST-TRK-026`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `TrackerService.java`, `TrainingApplication.java`, `TrackerServiceFinalizationTest.kt`, `TrackerServiceResilienceTest.kt`, `TrackerServiceAsyncInitTest.kt`
 - **Rationale**: `TrackerService` (`app/src/main/java/com/atrainingtracker/trainingtracker/tracker/TrackerService.java`) and `TrainingApplication` (`app/src/main/java/com/atrainingtracker/trainingtracker/TrainingApplication.java`) SHALL guarantee that stopping a workout in `TrackerService.onDestroy()` never blocks the Android main thread on database operations (`awaitTermination` or `endWorkout()`), deterministically shuts down the 1 Hz `mScheduler` thread pool prior to queuing finalization on `mDbExecutor`, and resets `TrainingApplication`'s tracking state to `TrackingMode.READY` if asynchronous workout initialization fails (ATT-4006, extending `REQ-TRK-015`, `REQ-TRK-027`, `REQ-TRK-028`, `REQ-TRK-030`, and `REQ-TRK-032`):
 1. *Deterministic `mScheduler` Shutdown Before `mDbExecutor` Finalization (`REQ-TRK-033.1`)*:
@@ -1528,6 +1714,9 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 ### REQ-SEN-020: Streamlined Sensor Onboarding, Empty-State Action & Discovery Auto-Pairing [Verified]
 - **Tests**: `TST-SEN-020`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `ControlTrackingScreen.kt`, `TrackingTabsScreen.kt`, `DeviceListScreen.kt`, `DevicesTabbedScreen.kt`, `DeviceManager.java`, `ANTSearchForNewDevicesEngineMultiDeviceSearch.java`, `values*/strings.xml`
 - **Rationale**: The system SHALL provide streamlined sensor onboarding, actionable empty-state search controls, and default discovery auto-pairing across `ControlTrackingScreen.kt`, `TrackingTabsScreen.kt`, `DeviceListScreen.kt`, `DevicesTabbedScreen.kt`, `DeviceManager.java`, and `ANTSearchForNewDevicesEngineMultiDeviceSearch.java` with 9-language localization parity and text-only action strings without duplicate '+' glyphs (ATT-4051, refined by ATT-4288, extending `REQ-UI-301` / `REQ-UI-393`):
 1. *Start Screen Onboarding Entry Point (`REQ-SEN-020.1`)*:
@@ -1589,6 +1778,9 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 ### REQ-TRK-034: Foreground-Protected Asynchronous Workout Finalization and Stop Lifecycle Isolation [Verified]
 - **Tests**: `TST-TRK-026`, `TST-TRK-027`
+- **Priority**: Medium
+- **Type**: Non-Functional
+- **Verification Method**: Unit
 - **Implementation**: `TrackerService.java`, `TrainingApplication.java`, `TrackerServiceFinalizationTest.kt`, `TrackerServiceResilienceTest.kt`
 - **Rationale**: `TrackerService` (`app/src/main/java/com/atrainingtracker/trainingtracker/tracker/TrackerService.java`) and `TrainingApplication` (`app/src/main/java/com/atrainingtracker/trainingtracker/TrainingApplication.java`) SHALL guarantee that asynchronous workout finalization on `mDbExecutor` is protected within the Android Foreground Service lifecycle, keeping process priority elevated and `BANALService` bound until `endWorkout()` completes (ATT-4098, extending `REQ-TRK-015`, `REQ-TRK-030`, and `REQ-TRK-033`):
 1. *Graceful Stop Command Dispatch via `ACTION_STOP` (`REQ-TRK-034.1`)*:
@@ -1671,6 +1863,9 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 ### REQ-SEN-021: Lock-Free Initial newValue Dispatch & Decoupled ProxySensor Monitor Lifecycle [Verified]
 - **Tests**: `TST-TRK-028`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit
 - **Implementation**: `ProxySensor.java`, `MySensorManager.java`, `SensorAndDeviceConcurrencyStressTest.kt`
 - **Rationale**: `ProxySensor` (`app/src/main/java/com/atrainingtracker/banalservice/sensor/ProxySensor.java`) and `MySensorManager` (`app/src/main/java/com/atrainingtracker/banalservice/sensor/MySensorManager.java`) SHALL guarantee that initial `newValue()` callbacks to registered `SensorListener`s are never executed while holding monitor locks on `ProxySensor` or `MySensorManager`, eliminating circular A/B lock-order inversion and thread deadlock risks between sensor registration and UI/filter listener subscription (ATT-4096, extending `REQ-TRK-032`):
 1. *Elimination of `synchronized` Monitor on `ProxySensor` Public API (`REQ-SEN-021.1`)*:
@@ -1704,6 +1899,9 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 ### REQ-TRK-036: In-Memory `LiveWorkoutSession` Reuse on User Resume and Safe Publication after Rehydration [Verified]
 - **Tests**: `TST-TRK-029`
+- **Priority**: Medium
+- **Type**: Non-Functional
+- **Verification Method**: Unit
 • In the rehydration task on `mDbExecutor`: `LiveWorkoutSession newSession = new LiveWorkoutSession(resumedWorkoutId, IMPORTANT_SENSOR_TYPES);`
 • `rehydrateLiveSession(newSession, resumedWorkoutId, resumedActiveTimeS)` SHALL populate the candidate session directly.
 • The newly rehydrated session SHALL be published to the `volatile mLiveSession` reference (`mLiveSession = newSession;`) strictly **after** database stream and extrema decoding completes.
@@ -1787,6 +1985,9 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 ### REQ-TRK-037: Speed Sensor Standstill vs. In-Motion Signal Loss (Tunnel / Dropout) Discrimination in AutoPauseManager and Static Coupling Decoupling [Verified]
 - **Tests**: `TST-TRK-030`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
 2. *Dynamic Sensor Unpairing & Disconnection Reset (`REQ-TRK-037.2`)*:
 • When a speed sensor is dynamically unpaired, powered off, or disconnected mid-session such that `hasSpeedSource == false`: `AutoPauseManager` SHALL immediately transition to `SENSOR_LOST` (`auditLogEvent = "SENSOR_LOST_STALE_TTL_EXCEEDED"`).
 • In addition, `AutoPauseManager` SHALL explicitly reset `lastValidSpeedMps = null` upon `!hasSpeedSource` or when reset via `setState(TRACKING)` / `setState(MANUAL_PAUSED)`, guaranteeing that stale historic speed values cannot linger across sensor unpairing or distinct workout sessions.
@@ -1830,6 +2031,9 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 ### REQ-TRK-038: Constructor State Seeding Parity (Rule 51), Telemetry-Gated W'bal Emission (Rule 52), Stationary/Paused W/kg Alignment, and Aftermath Presentation Defense [Verified]
 - **Tests**: `TST-TRK-031`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `CyclingPowerMetricsDevice.java`, `TelemetryMetricUtils.kt`, `WorkoutDataMapper.kt`
 - **Rationale**: The system SHALL maintain internal constructor and session reset capacity parity in `CyclingPowerMetricsDevice` (Rule 51) while strictly gating `W_PRIME_BAL` sensor emissions and pause reconstitution on the receipt of actual numeric power telemetry (Rule 52) to prevent persisting phantom 20.0 kJ samples on power-less bike workouts with offline/paired sensors, and SHALL gate aftermath W'-Bilanz chart rendering in `TelemetryMetricUtils.hasWPrimeBalData()` on `hasPowerData(path)` (ATT-5068, refining `REQ-TRK-038` and `REQ-UI-399.3`):
 1. *Constructor State Seeding Parity & Telemetry-Gated W'bal Emission (`REQ-TRK-038.1` — Rule 51 & Rule 52)*:
@@ -1854,6 +2058,9 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 ### REQ-FIL-014: Backend Filter Key Normalization, Runtime 'Best Sensor' Field Registration & Post-Trim Rolling Filter NaN Guard [Verified]
 - **Tests**: `TST-FIL-014`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `app/src/main/java/com/atrainingtracker/trainingtracker/ui/tracking/editsensorfield/EditSensorFieldViewModel.kt`, `app/src/main/java/com/atrainingtracker/banalservice/filters/TimedMovingAverageFilter.java`
 - **Rationale**: The system SHALL normalize numeric sentinel device IDs (`selectedDeviceId <= 0`) to `null` before constructing backend filter keys in `EditSensorFieldViewModel.kt` (`saveChanges()`), ensuring newly created or edited sensor fields configured with "Best Sensor" register active filters in `BANALService` via `MySensorManager.getSensor()` rather than leaking localized display strings (`context.getString(R.string.bestSensor)`) into `FilterData.deviceName`, and SHALL execute `trimValues()` before checking collection emptiness in `TimedMovingAverageFilter.java` (`getFilteredValue()`), returning `null` when all window samples age out and strictly preventing division-by-zero (`0.0 / 0 = Double.NaN`), while preserving explicit device mapping (`selectedDeviceId > 0`), thread safety, and 9-language localization parity without requiring UI alterations or database migrations (ATT-4282, amending `REQ-FIL-011` and `REQ-UI-167`, and enforcing Governance Rule 50):
 1. *Sentinel ID Normalization in `EditSensorFieldViewModel.saveChanges()` (`REQ-FIL-014.1`)*:
@@ -1904,6 +2111,9 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 ### REQ-CON-021: BLUETOOTH_ADMIN Manifest Declaration for Android 8–11 Compatibility and Defensive BLE Scan Exception Handling [Verified]
 - **Tests**: `TST-CON-021`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
 • If the platform throws an exception during teardown (e.g., Bluetooth adapter disabled or permissions revoked mid-scan), the engine SHALL log a warning, ensure `scanning = false` is maintained, and proceed to invoke `resetTrackingState()` cleanly.
 
 **Requirement Archaeology & Chesterton's Fence Audit**:
@@ -1949,6 +2159,9 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 ### REQ-CON-022: Automated BLE/ANT+ Pedal Power Balance Reference Normalization & Obsolete UI Checkbox Deprecation [Verified]
 - **Tests**: `TST-CON-022`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `BTLEBikePowerDevice.java`, `ANTBikePowerDevice.java`, `BikePowerSensorsHelper.java`, `DeviceData.kt`, `DeviceDataRepository.kt`, `EditDeviceDialog.kt`, `EditDeviceViewModel.kt`
 - **Rationale**: The system SHALL automatically normalize cycling pedal power balance telemetry from both Bluetooth Low Energy (BLE) and ANT+ power meters to represent the Right pedal percentage $P_R \in [0, 100]\%$ according to protocol reference indicators, strictly adhering to `REQ-UI-377.1`, AND SHALL eliminate obsolete manual correction checkboxes from device configuration UI and data models (ATT-4554, parent epic ATT-355, status: Verified, complementing `REQ-UI-377`):
 1. *Automated BLE Pedal Power Balance Reference Normalization (`BTLEBikePowerDevice.java`, `REQ-CON-022.1`)*:
@@ -2003,6 +2216,9 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 ### REQ-TRK-039: Tracking Subsystem Robustness, Resource Lifecycle & Rate-Limited Error Telemetry Hygiene [Verified]
 - **Tests**: `TST-TRK-039`
+- **Priority**: Medium
+- **Type**: Non-Functional
+- **Verification Method**: Integration
 - **Implementation**: `BANALService.java`, `MyDevice.java`, `TrackerService.java`, `TrainingApplication.java`, `ClockDevice.java`, `DeviceManager.java`, `AltitudeFromPressureDevice.java`, `BatterySaverController.kt`
 - **Rationale**: The application tracking and sensor subsystem SHALL enforce robust defensive numerics, lifecycle-aware notification gating, rate-limited failure telemetry, cache-backed scheduler efficiency, and leak-free resource teardown across tracking engines (`BANALService`, `MyDevice`, `TrackerService`, `TrainingApplication`, `ClockDevice`, `DeviceManager`, `AltitudeFromPressureDevice`, `BatterySaverController`) (ATT-4032, extending `REQ-TRK-027` and `REQ-TRK-029`).
 - **Description**:
@@ -2054,6 +2270,9 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 ### REQ-TRK-040: Landscape Cockpit Dual-Pane Layout, Widescreen Sensor Grid & Sub-Pane Overlay Docking [Verified]
 - **Tests**: `TST-TRK-040`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `SensorGridScreen.kt`, `SensorFieldView.kt`, `TrackingTabsScreen.kt`, `MainActivityWithNavigation.kt`
 - **Rationale**: The tracking cockpit SHALL support landscape device orientation with a responsive dual-pane layout when maps are active, a full-width widescreen grid when maps are disabled, sub-sheet docking within the map pane to prevent telemetry masking, and strict adherence to the athlete's portrait lock preference (ATT-52, ATT-2144):
 1. *Orientation Adaptation & Preference Gating (`REQ-TRK-040.1`)*:
@@ -2100,6 +2319,9 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 ### REQ-TRK-041: Geodesic Displacement Plausibility Gating for Distance Accumulation & Canonical Multi-Sensor Summary Filtering [Verified]
 - **Tests**: `TST-TRK-041`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `SpeedAndLocationDevice.java`, `TrackerService.java`
 - **Rationale**: The tracking subsystem SHALL prevent multi-kilometer teleportation / cellular triangulation multipath spikes from accumulating into distance metrics and SHALL guarantee that secondary multi-sensor telemetry streams do not overwrite canonical summary distance and speed metrics in `WorkoutSummaries` (ATT-4843):
 1. *Geodesic Displacement Plausibility Clamping in `SpeedAndLocationDevice` (`REQ-TRK-041.1`)*:
@@ -2135,6 +2357,9 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 ### REQ-TRK-042: 1-Hz Live-Tracking Allocation Hotspot Elimination, Recomposition Decoupling & Bounded Polyline Serialization [Verified]
 - **Tests**: `TST-TRK-042`
+- **Priority**: Medium
+- **Type**: Non-Functional
+- **Verification Method**: Unit
 - **Implementation**: `BANALServiceRepository.kt`, `MapLayers.kt`, `SensorGridScreen.kt`, `TrackingViewModel.kt`
 - **Rationale**: The live-tracking subsystem SHALL eliminate high-frequency object allocations, O(N^2) list copies, Compose snapshot invalidations during composition, and unbounded Binder IPC transfers during 1-Hz tracking to protect JVM heap stability and prevent `OutOfMemoryError` on long-running workouts (ATT-4863, ATT-4923):
 1. *Amortized O(1) Snapshot Append & Deduplicated PathPoint Invariants (`REQ-TRK-042.1`)*:
@@ -2179,6 +2404,9 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 ### REQ-TRK-043: Sport-Specific Auto-Pause Resume Debounce & Symmetric Single-Threshold Evaluation [Verified]
 - **Tests**: `TST-TRK-043`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `AutoPauseManager.kt`, `TuningConfig.kt`, `TuningPreferencesDataStore.kt`, `AutoPauseTabsScreen.kt`, `AutoPauseViewModel.kt`
 - **Rationale**: The auto-pause engine SHALL replace immediate single-tick resumption and asymmetric `+0.5` speed hysteresis deadbands with configurable sport-specific resume debounce timers evaluated against the exact configured sport speed threshold, eliminating false resume triggers from transient GPS jitter spikes (ATT-4839, extending `REQ-TRK-018` and `REQ-SET-080`):
 1. *Configurable Sport-Specific Resume Debounce Window (`REQ-TRK-043.1`)*:
@@ -2219,6 +2447,9 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 ### REQ-TRK-044: Optional Automatic Stationary Auto-Pause at Workout Start [Verified]
 - **Tests**: `TST-TRK-044`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `AutoPauseManager.kt`, `TuningConfig.kt`, `TuningPreferencesDataStore.kt`, `AutoPauseTabsScreen.kt`, `AutoPauseViewModel.kt`, `TrainingApplication.java`, `TrackerService.java`, `BANALServiceRepository.kt`
 - **Rationale**: When starting a workout while stationary, the tracker SHALL optionally transition directly into `AUTO_PAUSED` without waiting for the pause debounce timer to elapse (ATT-4840, extending `REQ-TRK-018`, `REQ-SET-080`, and `REQ-TRK-043`):
 1. *Global Start in Auto-Paused Preference (`REQ-TRK-044.1`)*:
@@ -2261,6 +2492,9 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 ### REQ-TRK-045: Clear Non-Recording Status Indication: Unified HUD Banner and Grid Dimming [Verified]
 - **Tests**: `TST-TRK-045`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `SensorGridScreen.kt`, `Color.kt`, `strings.xml`
 - **Rationale**: When viewing live sensor tabs in `ScreenMode.TRACKING`, athletes SHALL have immediate, unambiguous visual clarity when workout recording is not active (ATT-4856, extending `REQ-TRK-018`):
 1. *Stationary Floating Non-Recording Top HUD Banner across Tabs (`REQ-TRK-045.1`)*:
@@ -2303,6 +2537,9 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 ### REQ-TRK-046: Per-Sensor-Field Display Elements Configuration: Value and Bar Gating [Verified]
 - **Tests**: `TST-TRK-046`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `TrackingViewsDatabaseManager.java`, `TrackingViewsRepository.kt`, `SensorFieldConfig`, `SensorFieldState.kt`, `EditSensorFieldViewModel.kt`, `EditSensorFieldDialog.kt`, `SensorFieldView.kt`, `TrackingViewModel.kt`, `DatabaseSchemaRegistry.kt`
 - **Rationale**: Cockpit sensor fields SHALL support granular, per-field configuration of which visual elements are rendered (numeric Value + Unit row vs. horizontal Bar), allowing athletes to customize tiles (e.g. bar-only, value-only, or both) independently for instantaneous vs. average metrics (ATT-4841, Parent Epic ATT-355, extending `REQ-UI-376`, `REQ-UI-377`, `REQ-UI-416`). Bar availability SHALL depend on both sensor type and layout sport type, tiles configured as bar-only SHALL gracefully fall back to displaying the numeric value if no bar can be drawn, and database migrations SHALL carry over the athlete's previous global `showGauge` setting per zone profile rather than forcing bars on existing fields (ATT-4927):
 1. *SQLite Schema v18 & Migration Parity (`REQ-TRK-046.1`)*:
@@ -2352,6 +2589,9 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 ### REQ-TRK-047: Cockpit Manual Altitude Calibration with Permanent Known Location Persistence and Retroactive Piecewise-Linear Drift Correction [Verified]
 - **Tests**: `TST-TRK-047`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `SensorSourceDialog.kt`, `SensorStatus.kt`, `AltitudeFromPressureDevice.java`, `TrackerService.java`, `LiveWorkoutSession.java`, `WorkoutSamplesDatabaseManager.java`, `WorkoutSummariesDatabaseManager.java`, `BANALServiceRepository.kt`, `KnownLocationsDatabaseManager.java`
 - **Rationale**: When passing a landmark with known altitude during outdoor workouts, athletes SHALL be able to trigger manual altimeter calibration from the tracking cockpit altitude icon, permanently persist the landmark to Known Locations (`KnownLocations.db`), and apply retroactive elevation history correction without step discontinuities or false ascent/descent spikes (ATT-4845, Parent Epic ATT-166, extending `REQ-UI-199` and `REQ-CON-017`):
 1. *Cockpit Header Manual Altitude Calibration & Geofence Persistence (`REQ-TRK-047.1`)*:
@@ -2406,6 +2646,9 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 ### REQ-SEN-025: Pairable Position-Based Elevation Sensor & Dedicated Spatial DEM Cache [Verified]
 - **Tests**: `TST-SEN-025`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `AltitudeFromPositionDevice.java`, `DeviceType.java`, `ElevationCacheDatabaseManager.kt`, `DeviceManager.java`, `DevicesDatabaseManager.java`, `SensorSourceDialog.kt`, `MySensorManager.java`, `DatabaseSchemaRegistry.kt`, `WorkoutRepository.kt`, `ElevationSmoothingMath.kt`
 - **Rationale**: Currently, `SensorType.ALTITUDE` is supplied either by internal barometric pressure (`AltitudeFromPressureDevice`) or raw GNSS altitude ($\pm 20\text{--}50\text{ m}$ vertical GPS multipath noise). Introducing a pairable `AltitudeFromPositionDevice` (`DeviceType.ALTITUDE_FROM_POSITION`, `Protocol.SMARTPHONE`) backed by a dedicated spatial cache (`ElevationCache.db`) provides continuous topographic/DEM altitude based on GPS coordinates, seeded from route elevations (`Routes.db`) and Open-Meteo DEM queries (`ElevationService`), strictly separated from *Lieblingsorte* (`KnownLocations.db`) (ATT-4859, Parent Epic ATT-166):
 1. *Device Registration & Smartphone Pairing Lifecycle (`REQ-SEN-025.1`)*:
@@ -2468,6 +2711,9 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 ### REQ-TRK-048: Stationary GPS Jitter Suppression, Doppler Zero Preservation & Anchor Pinning [Verified]
 - **Tests**: `TST-TRK-048`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `SpeedAndLocationDevice.java`, `BANALServiceRepository.kt`
 - **Rationale**: When an athlete stops at traffic lights, cafés, or rests indoors, GNSS multipath reflections cause horizontal coordinates to wander 1–4 m per second. Overriding GNSS Doppler zero speed with geometric displacement creates phantom 5–14 km/h speed readings, prevents or breaks Auto-Pause, accumulates creeping distance, spins compass bearing, and records dense spiderweb track artifacts (ATT-4850, Parent Epic ATT-166):
 1. *Doppler Zero Velocity Preservation (`REQ-TRK-048.1`)*:
@@ -2504,6 +2750,9 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 ### REQ-TRK-049: Post-Workout State Cleansing, Breadcrumb Purge & Idle Service Dormancy [Verified]
 - **Tests**: `TST-TRK-049`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `TrainingApplication.java`, `BANALServiceRepository.kt`, `MainActivityWithNavigation.kt`, `ProxySensor.java`, `MyAccumulatorSensor.java`, `InstantaneousFilter.java`, `FilterManager.java`, `DefaultStringFormatter.java`, `SensorData.java`, `TrackingViewModel.kt`
 - **Rationale**: When an athlete completes or stops a workout and re-enters the app in `TrackingMode.READY`, lingering historical polylines, elevation profiles, and accumulator values create a confusing UI and cause phantom metric accumulation during idle periods. Clearing breadcrumbs on workout stop/abort, normalizing the service binding lifecycle, gating accumulator sensors to active tracking, dispatching zero-value resets, re-seeding accumulator filters from baseline values, and guarding against null formatted strings ensures a clean, crash-free slate for upcoming sessions (ATT-4926, ATT-5080, ATT-5191, Parent Epic ATT-355, extending `REQ-TRK-001`, `REQ-TRK-002`, and refining `REQ-FIL-013`):
 1. *Map & Elevation Breadcrumb Cleansing (`REQ-TRK-049.1`)*:
@@ -2548,6 +2797,9 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 ### REQ-TRK-050: Indirect Tire Pressure Monitoring (iTPMS) via GPS vs. Wheel Circumference Drift [Verified]
 - **Tests**: `TST-TRK-050`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `IndirectTpmsEstimator.kt`, `DevicesDatabaseManager.java`, `DeviceData.kt`, `EditDeviceViewModel.kt`, `SensorGridScreen.kt`
 - **Rationale**: When riding with a paired ANT+/BLE wheel speed sensor alongside GNSS, comparing 3D ground distance with wheel revolutions yields the effective rolling circumference $C_{\text{eff}} = \Delta s_{3D} / \Delta N_{\text{wheel}}$. Air deflation increases vertical tire deflection under load, reducing $C_{\text{eff}}$ by $1.0\%\text{--}2.2\%$. Tracking $C_{\text{eff}}$ across straight-line, good-GPS segments enables early warnings for slow punctures and reminders for multi-day low tire pressure without requiring valve-stem hardware sensors (ATT-4880, Parent Epic ATT-166, complementing `REQ-CON-009`, `REQ-TRK-024`, and `REQ-TRK-048`):
 1. *Straight-Line, 3D-Slope & GNSS Quality Gating (`REQ-TRK-050.1`)*:
@@ -2589,6 +2841,9 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 ### REQ-SEN-026: Specialized Altitude Devices: Barometric Altimeter Naming Parity, Idempotent SQLite Migration & Educational Operation Details [Verified]
 - **Tests**: `TST-SEN-026`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `strings_devices.xml` (all 9 locales), `strings.xml` (all 9 locales), `DevicesDatabaseManager.java`, `EditDeviceDialog.kt`
 - **Rationale**: Following the introduction of `ALTITUDE_FROM_POSITION` ("Topografische Höhe (DEM)"), the internal barometric altimeter (`ALTITUDE_FROM_PRESSURE`) remained named simply "Luftdruck" ("Air Pressure") via `R.string.devices_altitude_from_pressure`, creating a naming asymmetry and confusing athletes about what the sensor produces. Furthermore, athletes in the device details bottom sheet (`EditDeviceDialog.kt`) have no visibility into how specialized altitude devices work or their respective advantages and disadvantages (e.g. barometer smooth relative ascent vs. weather drift; DEM weather immunity vs. grid resolution) (ATT-5073, Parent Epic ATT-166, complementing `REQ-SEN-025` and `REQ-UI-149`):
 1. *Barometric Altimeter Naming Parity Across 9 Locales (`REQ-SEN-026.1`)*:
@@ -2626,6 +2881,9 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 ### REQ-TRK-051: Dynamic SQLite Schema Discovery via PRAGMA table_info & Decoupled Summary Telemetry [Verified]
 - **Tests**: `TST-TRK-051`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `TrackerService.java`, `TrackOnMapAftermathViewModel.kt`
 - **Rationale**: During workouts on Android $\le 14$ (API $\le 34$), `SQLiteConnection.mPreparedStatementCache` caches compiled statements across transactions and does NOT invalidate them upon dynamic `ALTER TABLE ... ADD COLUMN` DDL. In `TrackerService.handleMissingColumns()`, querying via `samplesDb.query(tableName, null, null, null, null, null, null, "1")` returns a stale cached cursor missing newly added columns, causing false negatives in column existence checks and throwing `SQLiteException: duplicate column name` on subsequent ticks. Additionally, in `TrackerService.sampleAndWriteToDb()`, an abort guard `if (!sampleInserted) return;` prematurely halts execution upon sample insert failures, freezing `WorkoutSummaries.db` updates (duration, distance, energy) at 1 second and 0.00 km. In `TrackOnMapAftermathViewModel`, Phase 4 overwrites valid multi-point summary fast tracks with single-point sample tracks. Formulating `PRAGMA table_info` schema inspection, decoupling live summary updates from sample write failures, and gating map track replacement ensures continuous, fault-tolerant workout recording across all Android API levels (ATT-4968, Parent Epic ATT-115, extending `REQ-TRK-026`, `REQ-TRK-029`, and `REQ-DAT-033`):
 1. *Uncached Real-Time Schema Discovery via PRAGMA table_info (`REQ-TRK-051.1`)*:
@@ -2661,6 +2919,9 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 ### REQ-CON-023: Paired BLE Random Static Address Resolution, Scan-Assisted Connection & Configurable Search Timeout [Verified]
 - **Tests**: `TST-CON-023`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `MyBTLEDeviceTest.java`, `SensorSearchPreferencesTest.kt`, `SensorSearchTuningSectionTest.kt`, `SearchSettingsDialogTest.kt`, `TranslationParityTest.kt`
 - **Rationale**: Paired BLE fitness peripherals utilizing BLE Random Static Addresses fail to connect during paired search when Android's `BluetoothRemoteDevices` cache is empty because `getRemoteDevice(mAddress)` defaults to `ADDRESS_TYPE_PUBLIC`. The system SHALL resolve Random Static addresses using `BluetoothDevice.ADDRESS_TYPE_RANDOM` (via `getRemoteLeDevice` on API 33+), provide active filtered BLE scan assistance to warm the OS remote device cache across all supported Android versions, and expose a configurable BLE search timeout per attempt ($3\text{--}15$ seconds, default 5 seconds) across Expert Settings and Search Settings Dialog to prevent head-of-line blocking in sequential paired search (ATT-5489, refining `REQ-CON-019` and `REQ-UI-154`):
 1. *BLE Random Static MAC Classification & Address Type Resolution (`MyBTLEDevice.java`, `REQ-CON-023.1`)*:
@@ -2699,6 +2960,9 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 ### REQ-CON-024: BLE Crank Revolution 16-Bit Rollover, Precision & Disconnect State Reset [Verified]
 - **Tests**: `TST-CON-024`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `BTLEBikeDevice.java`, `BTLEBikePowerDevice.java`
 - **Rationale**: The system SHALL handle 16-bit UINT16 counter rollover for cumulative crank revolutions in BLE CSC and CPS GATT measurements, prevent integer division truncation, discard non-physiological cadence samples, and reset state on sensor unregistration (Sprint 2026-46.1, ATT-6162, refining `REQ-CON-002` and `REQ-CON-014`):
 1. *16-Bit Crank Revolution Rollover Masking (`REQ-CON-024.1`)*:
@@ -2734,6 +2998,9 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 ### REQ-CON-025: ANT+ Device Driver Resource Cleanup & Telemetry Routing Safety [Verified]
 - **Tests**: `TST-CON-025`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `ANTBikeSpeedAndCadenceDevice.java`, `ANTBikePowerDevice.java`
 - **Rationale**: In BANALService ANT+ device drivers, resource leaks and inverted routing guards degrade connection reliability and drop live metrics:
   1. In combined speed & cadence devices (`ANTBikeSpeedAndCadenceDevice.java`), `releaseAccess()` guarded `super.releaseAccess()` inside `if (pccReleaseHandle2 != null)`. If cadence search fails, is cancelled, or speed disconnects before cadence connects, the primary speed handle (`pccReleaseHandle`) leaks, causing subsequent reconnects to fail with `DEVICE_ALREADY_IN_USE` (`REQ-CON-020.4`).
@@ -2767,6 +3034,9 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 ### REQ-CON-026: BLE Run Speed Device Lifecycle & Telemetry Hygiene [Verified]
 - **Tests**: `TST-CON-026`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit
 - **Implementation**: `BTLERunSpeedDevice.java`, `BTLERunSpeedDeviceTest.kt`
 - **Rationale**: In `BTLERunSpeedDevice`, lifecycle thread cleanup and packet freshness omissions compromise stability and live metric accuracy:
   1. `shutDown()` only cancels `mDistanceCalculatorHandle` without calling `mScheduler.shutdownNow()`, permanently leaking a background thread pool worker per device instance.
@@ -2802,6 +3072,9 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 ### REQ-TRK-052: Zero-Allocation 1-Hz ClockTimeTask Time-of-Day Formatting [Verified]
 - **Tests**: `TST-TRK-052`
+- **Priority**: Medium
+- **Type**: Non-Functional
+- **Verification Method**: Unit
 - **Implementation**: `ClockDevice.java`, `ClockDeviceResilienceTest.kt`
 - **Rationale**: During live tracking, `ClockDevice.ClockTimeTask` executes on the background timer thread at 1 Hz. Calling `Calendar.getInstance().getTime()` on every tick instantiates fresh `GregorianCalendar`, internal `int[]` field arrays, and `Date` instances ($\ge 43,200$ ephemeral objects per 4-hour workout), inducing garbage collection pauses and unnecessary CPU/battery consumption. The system SHALL reuse a pre-allocated `Date` instance mutated via `setTime(System.currentTimeMillis())` to achieve 0-byte heap allocation per 1-Hz tick while 100% preserving localized time-of-day formatting output (ATT-5481, extending `REQ-TRK-027` and `REQ-TRK-039`):
 1. *Pre-Allocated Date Holder (`ClockDevice.java`, `REQ-TRK-052.1`)*:
@@ -2831,6 +3104,9 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 ### REQ-SEN-027: Complete Removal of Obsolete Network Location Provider & Devices.db Version 10 Migration [Verified]
 - **Tests**: `TST-SEN-027`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `DeviceType.java`, `SpeedAndLocationDevice_Network.java` (deleted), `DeviceManager.java`, `MySensorManager.java`, `DevicesDatabaseManager.java`, `DatabaseSchemaRegistry.kt`, `DeviceData.kt`, `UIHelper.java`, `TrainingApplication.java`, `strings_devices.xml`
 - **Rationale**: Raw cell-tower and Wi-Fi network triangulation has no athletic tracking value (accuracy 50–1,500 m, no reliable speed/altitude), especially since Google Fused already incorporates network signals. Removing it eliminates dead code, declutters the UI, and avoids wasting Free-tier sensor slots.
 - **Description**:
@@ -2865,6 +3141,9 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 ### REQ-TRK-053: Persisted Deduplicated Workout Diagnostic Errors & Actionable Report Dialog [Verified]
 - **Tests**: `TST-TRK-053`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `TrackerService.java`, `WorkoutSummariesDatabaseManager.java`, `WorkoutData.kt`, `WorkoutHeaderData.kt`, `WorkoutDataMapper.kt`, `WorkoutRepository.kt`, `WorkoutSummary.kt`, `WorkoutDetailTabbedContent.kt`, `EditWorkoutScreen.kt`, `WorkoutDiagnosticBottomSheet.kt`
 - **Rationale**: Runtime exceptions during table initialization, 1-Hz sample recording, or post-workout finalization are caught defensively in `TrackerService` to prevent foreground service crashes. Currently, these caught exceptions are logged exclusively to volatile Android logcat, which rolls over outdoors before an athlete can inspect or export diagnostics. Persisting a compact, deduplicated diagnostic log in `WorkoutSummaries.TABLE` (which commits independently from sample insertion) guarantees error capture across the entire workout lifecycle, preserves zero storage/UI overhead on clean workouts, and empowers athletes to report or clear actionable diagnostics.
 - **Description**:
@@ -2927,6 +3206,9 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 ### REQ-TRK-054: Hardware Volume Keys Cockpit Tab Cycling with Cyclic Wrap-Around [Verified]
 - **Tests**: `TST-TRK-054`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `TrackingTabsPageResolver.kt`, `MainActivityWithNavigation.kt`, `TrackingTabsScreen.kt`, `DisplaySettingsDialog.kt`, `TrainingApplication.java`
 - **Rationale**: When riding or running in rain, cold weather, or with thick gloves, capacitive touch-screen swipes between Cockpit tabs (`Standard`, `Karte`, `Runden`, `Live Segments`) in `TrackingTabsScreen` can be unreliable or hazardous. Utilizing physical hardware volume buttons (`KEYCODE_VOLUME_UP`, `KEYCODE_VOLUME_DOWN`) provides dedicated bike computer-like physical ergonomics. Cyclic wrap-around ensures athletes can navigate through all configured Cockpit tabs even if handlebar mounts block one physical volume button.
 - **Description**:
@@ -2976,6 +3258,9 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 ### REQ-TRK-055: Persistent Sensor Proxy Binding & Automatic Filter Re-Connection [Verified]
 - **Tests**: `TST-TRK-055`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `MySensorManager.java`, `ProxySensor.java`, `FilterManager.java`, `BANALService.java`, `DeviceManager.java`
 - **Rationale**: Cockpit tiles (`TrackingViewModel` via `allFilteredSensorData`) and derived sensor devices (`VerticalSpeedAndSlopeDevice` via `getFilteredSensorData`) read sensor values through `FilterManager`. When a sensor disconnects or unregisters (e.g., GPS signal loss via `LocationUnavailable()`, BLE/ANT+ peripheral disconnect, pairing changes), previous implementations removed the `ProxySensor` from `MySensorManager.mSensorMap`, creating a new instance on reconnection. Existing filters in `FilterManager` remained permanently attached to the orphaned `ProxySensor` or previous `MySensor` instance, causing live Cockpit tiles (Speed, Distance, Altitude, Slope) to permanently freeze or show `--` / `0,00 km` even while background logging and map polylines continued. Retaining persistent `ProxySensor` instances and dynamically re-binding existing filters guarantees uninterrupted live telemetry updates across all reconnection and service lifecycle transitions.
 - **Description**:
@@ -3014,6 +3299,9 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 ### REQ-TRK-056: Google Fused Doppler Velocity Plausibility & Movement Pinning Prevention [Verified]
 - **Tests**: `TST-TRK-056`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `SpeedAndLocationDevice.java`
 - **Rationale**: When tracking with Google Fused (`SpeedAndLocationDevice_GoogleFused`), Android's location provider fuses GNSS coordinates with smartphone IMU motion sensors. When the phone is mounted steadily or in mock/replay runs, the provider frequently outputs location fixes with Doppler speed damped near or at zero (`rawSpeed <= 0.1 m/s` or `0.10 < rawSpeed <= 0.25 m/s`) despite true coordinate displacement exceeding 7–10 m/s. Prior implementations checked Doppler zero speed unconditionally before testing displacement, causing an oscillation loop where the device toggled between pinned (0.0 km/h) and unpinned (~25–30 km/h) every second, or stuck at 0.5 km/h while distance accumulated steadily. Requiring spatial displacement to be within the escape radius before pinning on Doppler zero and falling back to geometric displacement speed when Doppler speed is unplausibly suppressed eliminates toggling while preserving true stationary jitter suppression (ATT-6256, Parent Epic ATT-166, refining `REQ-TRK-048`):
 - **Description**:
@@ -3047,6 +3335,9 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 ### REQ-TRK-057: Barometer Altitude Pocket-Compression Spike Rejection & Sourced DB Sync [Verified]
 - **Tests**: `TST-TRK-057`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `AltitudeFromPressureDevice.java`, `BarometricAltitudeFilter.kt`, `WorkoutSamplesDatabaseManager.java`
 - **Rationale**: Carrying a smartphone in a jacket or trouser pocket causes abrupt 1-second pressure transients of ±20m to ±96m due to body movement and fabric compression. Linear moving averages fail because single-second pulses smear into multi-second waves that trip the 5m hysteresis elevation accumulator, creating massive phantom elevation gain (>1,500m on flat rides). A causal non-linear filter (physical slew-rate limiter + sliding median + EMA) eliminates pocket noise while preserving genuine mountain climbs up to 3,000 m/h with zero attenuation. Additionally, anchoring calibration to the filtered baseline and synchronizing retroactive drift corrections across all source-attributed altitude columns ensures database and sensor consistency (ATT-6265, Parent Epic ATT-166, extending `REQ-CON-017` and `REQ-TRK-047`).
 - **Description**:
@@ -3082,6 +3373,9 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 ### REQ-TRK-058: Live Mean Maximal Power (MMP) Accumulators, Benchmark Durations (5s, 1m, 5m, 20m) & Cockpit MMP Curve Chart [Verified]
 - **Tests**: `TST-TRK-058`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `CyclingPowerMetricsDevice.java`, `SlidingWindowPowerAccumulator.kt`, `SensorType.java`, `LiveMmpCurveChart.kt`, `SensorGridScreen.kt`, `TrackingViewModel.kt`, `TrackingViewsDatabaseManager.java`, `TrackingViewsRepository.kt`
 - **Rationale**: Cyclists evaluating high-intensity efforts require real-time pacing feedback and Mean Maximal Power (MMP) benchmarking during active sessions. Calculating rolling means and session peak powers for benchmark durations (5s, 1m, 5m, 20m) and rendering an interactive logarithmic MMP vector curve in the cockpit provides live tactical feedback without degrading CPU or battery performance (ATT-1298, Parent Epic ATT-5908, extending `REQ-TRK-019`, `REQ-TRK-020`, `REQ-TRK-021`, and `REQ-TRK-023`).
 - **Description**:
@@ -3260,6 +3554,9 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 ### REQ-FIL-015: Filter Initialization State Tracking, Alpha Range Validation & Zero-Bias Elimination [Verified]
 - **Tests**: `TST-FIL-015`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `app/src/test/java/com/atrainingtracker/banalservice/filters/FilterInitializationAndBoundsTest.kt`, `app/src/test/java/com/atrainingtracker/banalservice/filters/FilterResetAndPreStartTest.kt`
 - **Rationale**: The system SHALL maintain initialization state tracking (`mIsInitialized`) in `MaxValueFilter.java` and `ExponentialSmoothingFilter.java` to ensure the first valid non-paused sample seeds filter state directly without artificial zero-bias, supporting sub-zero telemetry (e.g. ambient temperature or below-sea-level elevation), and SHALL validate smoothing factor bounds (`0.0 < alpha <= 1.0`) in `ExponentialSmoothingFilter` constructor with `final` immutability, while strictly preserving session isolation during pause (`REQ-FIL-013.3`), null safety (`REQ-FIL-011`), and thread safety (`synchronized`) (ATT-6382, refining `REQ-FIL-012.5` and `REQ-FIL-013`):
 1. *MaxValueFilter First Non-Paused Sample Seeding & Sub-Zero Support (`REQ-FIL-015.1`)*:
@@ -3368,6 +3665,9 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 ### REQ-TRK-060: Lipponen & Tarvainen RR Artifact Correction, Real-Time HRV Engine & NeuroKit2 Golden Parity [Verified]
 - **Tests**: `TST-TRK-060`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `SensorType.java`, `RrArtifactFilter.kt`, `DfaCalculator.kt`, `HRVMetricsDevice.kt`, `TuningPreferencesDataStore.kt`, `PhysiologyModelsSection.kt`, `DeviceType.java`, `DeviceManager.java`, `strings_hrv.xml`
 - **Rationale**: Athletic autonomic guidance requires Kubios-grade Beat-to-Beat HRV telemetry ($rMSSD$, DFA $\alpha_1$). Sensor artifacts (ectopic beats, missed triggers, RF dropouts) corrupt raw intervals. Downward interpolation bias distorts $rMSSD$ while artifact-adjacent noise breaks fractal DFA scaling. The system SHALL provide causal Mode A (live) and centered Mode B (post-hoc) Lipponen & Tarvainen (2019) artifact filters, artifact pair-exclusion for $rMSSD$, 120s DFA $\alpha_1$ scaling ($n \in [4, 16]$), and automated golden validation against pinned NeuroKit2 0.2.10 (ATT-3541, ATT-6714, Parent Epic ATT-3539, extending `REQ-CON-027` and `REQ-TRK-019`):
 1. *HRV SensorTypes & Domain Localization Partitioning (`REQ-TRK-060.1`)*:
@@ -3601,6 +3901,9 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 ### REQ-CON-029: Built-in Cycling Radar Traffic Simulator & Scenario Engine [Verified]
 - **Tests**: `TST-CON-029`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `RadarTrafficSimulator.kt`, `SimulatedRadarDevice.kt`, `BANALService.java`, `BTLERadarDevice.java`, `TrackerService.java`, `RadarStateRepository.kt`, `RadarWindowAggregator.kt`, `RadarSettingsSection.kt`, `strings_radar.xml`
 - **Rationale**: Developing and testing cycling radar UI overlays (`ATT-5085`), audio/haptic alert synthesis (`ATT-5086`), and post-ride safety analytics (`ATT-5088`) without physical radar hardware on open roads requires a realistic, scriptable traffic simulator. `RadarTrafficSimulator` provides 5 scriptable scenario presets emitting synthetic target vectors at 8 Hz directly into `RadarStateRepository` and `RadarWindowAggregator`, enabling indoor workouts, UI preview, and automated clean-room CI validation. Physical radar hardware retains absolute precedence (ATT-5087, ATT-6704, Parent Epic ATT-1286, extending `REQ-CON-028`):
 1. *Scriptable Scenario Presets (`REQ-CON-029.1`)*:
@@ -3929,6 +4232,9 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 ### REQ-CON-034: Environmental & Traffic-Adaptive Smart Tail Light Mode Automation [Verified]
 - **Tests**: `TST-CON-034`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `SmartRadarLightEngine.kt`, `SolarElevationCalculator.kt`, `RadarLightController.kt`, `RadarLightMode.kt`, `RadarStateRepository.kt`, `TuningPreferencesDataStore.kt`, `RadarSettingsSection.kt`, `strings_radar.xml`
 - **Rationale**: Cyclists need their radar tail light to adapt dynamically to lighting conditions (daylight, tunnels, dusk, night) and approaching traffic threats without manual distraction. At night, lights must alert drivers without blinding them (anti-glare cap preventing 100 lm flash), while tunnels demand rapid activation (< 2s) from daytime modes. Ambient sensors on smartphones in jersey pockets or with screens turned off experience total darkness and must not falsely trigger tunnel modes. The system must establish a robust smart lighting engine utilizing pocket/screen-off sensor gating, astronomical solar elevation fallback, 3-stage threat escalation, and $\ge 1.5\text{ s}$ command rate-limiting (ATT-5104, Parent Epic ATT-1286, extending `REQ-CON-031`, `REQ-CON-032`, and `REQ-CON-033`):
 1. *Sensor Gating & Pocket/Screen-Off Protection (`REQ-CON-034.1`)*:
@@ -4345,6 +4651,9 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 ### REQ-TRK-065: 3D Stereo Lateral-Offset Panning & Approach-Speed Pitch Modulation for Radar Audio [Verified]
 - **Tests**: `TST-TRK-065`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `RadarSpatialAudioMath.kt`, `RadarAlertManager.kt`, `RadarAudioSynthesizer.kt`, `TuningPreferencesDataStore.kt`, `RadarSettingsSection.kt`, `strings_radar.xml`
 - **Rationale**: Standard mono radar beeps only signal vehicle proximity, requiring cyclists with headphones to divert their gaze from the roadway to assess whether an approaching vehicle is directly behind them or has pulled into the passing lane, and how rapidly it is closing. By decoding BLE V2 lateral lane offset $x$ and approach speed $v_{\text{rel}}$, the system delivers intuitive 3D spatial audio panning and speed-adaptive pitch modulation directly over stereo and bone-conduction headphones without compromising visual rail tracking or maximum phone speaker output (ATT-5120, Parent Epic ATT-1286, extending `REQ-TRK-063` and `REQ-CON-030`):
 1. *Stereo Lateral-Offset Panning & Speaker Gain Collapsing (`REQ-TRK-065.1`)*:
@@ -4392,6 +4701,9 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 ### REQ-TRK-066: Repository-Only Live Recording Service Database Access Layer (Phase C) [Verified]
 - **Target Release**: `V5.0.0`
 - **Tests**: `TST-TRK-066`
+- **Priority**: Medium
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `app/src/main/java/com/atrainingtracker/trainingtracker/tracker/TrackerService.java`, `app/src/main/java/com/atrainingtracker/banalservice/BANALService.java`, `app/src/main/java/com/atrainingtracker/banalservice/devices/DeviceManager.java`, `app/src/main/java/com/atrainingtracker/trainingtracker/repositories/WorkoutRepository.kt`, `app/src/main/java/com/atrainingtracker/banalservice/repositories/SportTypesRepository.kt`, `app/src/main/java/com/atrainingtracker/banalservice/repositories/DeviceDataRepository.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/database/KnownLocationsRepository.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/database/hrv/WorkoutRrRepository.kt`
 - **Rationale**: Direct instantiation of SQLite database manager singletons (`*DatabaseManager.getInstance()`) and raw `Cursor` queries within foreground services (`TrackerService`, `BANALService`) and hardware coordinators (`DeviceManager`) violate SWE.2 Clean Architecture boundaries, couple service lifecycles to low-level SQLite helpers, and impede automated unit testing. All persistence operations across Phase C live recording components SHALL route through domain repositories, and raw `Cursor` extractions for paired devices SHALL be encapsulated behind domain DTOs (`PairedRemoteDeviceDto`).
 - **Description**:
@@ -4550,6 +4862,9 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 ### REQ-TRK-069: ANT+ UTC Epoch Timestamping, Reconnection Sensor Registration & BLE Bundled Drift Guard [Verified]
 - **Target Release**: `V5.0.0`
 - **Tests**: `TST-TRK-069`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `app/src/main/java/com/atrainingtracker/banalservice/devices/ANTHeartRateDevice.java`, `app/src/main/java/com/atrainingtracker/banalservice/devices/BTLEHeartRateDevice.java`, `app/src/main/java/com/atrainingtracker/banalservice/devices/hrv/HRVMetricsDevice.kt`
 - **Rationale**: Real-time HRV metrics (`rMSSD`, `DFA a1`) and lossless `WorkoutRrIntervals` persistence require accurate UTC Unix epoch timestamps across hardware acquisition interfaces. Under `ATT-3540`/`ATT-6742`, ANT+ `estTimestamp` was passed as raw boot-relative time (`SystemClock.elapsedRealtime()`), causing immediate eviction in `HRVMetricsDevice.pruneOldBeats()` and near-1970 timestamp corruption. Additionally, `unregisterSensors()` in both ANT+ and BLE drivers failed to clear `mRrIntervalSensor`, preventing sensor re-registration upon device reconnection. Finally, BLE bundled RR packets anchored the first beat instead of the newest beat and accumulated integer millisecond rounding errors, triggering spurious `ARTIFACT_GAP` drift events after 30–40 min. Hardware drivers must convert ANT+ timestamps to UTC epoch ms, reset sensor handles on disconnect, anchor bundled BLE packets to arrival time, and accumulate timestamps with sub-millisecond precision.
 - **Description**:
@@ -4589,6 +4904,9 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 ### REQ-TRK-070: 2-Level Sensor Hierarchy (SensorSubCategory), Unified HRV/Radar Groups & Complete ActivityType Sensor Mapping [Verified]
 - **Target Release**: `V5.0.0`
 - **Tests**: `TST-TRK-070`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `app/src/main/java/com/atrainingtracker/banalservice/sensor/SensorCategory.java`, `app/src/main/java/com/atrainingtracker/banalservice/sensor/SensorSubCategory.java`, `app/src/main/java/com/atrainingtracker/banalservice/sensor/SensorType.java`, `app/src/main/java/com/atrainingtracker/banalservice/ActivityType.java`, `app/src/main/java/com/atrainingtracker/trainingtracker/ui/tracking/editsensorfield/EditSensorFieldDialog.kt`
 - **Rationale**: Since `ATT-3852` introduced the 7-category accordion in `EditSensorFieldDialog.kt` (`REQ-UI-395`), telemetry metrics have grown from 43 to 63 constants (50 cockpit-selectable), creating significant UX and architectural friction: `POWER_AND_PEDALING` contains 22 flat metrics, and `SYSTEM_ENVIRONMENT_AND_DIAGNOSTICS` contains 16 mixed metrics; HRV metrics are fragmented across Heart Rate (`HRV_DFA_A1`, `HRV_RMSSD`) and System Diagnostics (`RR_INTERVAL`, `HRV_ARTIFACT_RATE`); `CADENCE` is stranded under a running icon in cycling; `ELEVATION_AND_NAVIGATION` mentions navigation without selectable navigational coordinates; 10 telemetry metrics (8 power duration metrics `POWER_5S..20M`, `POWER_PEAK_5S..20M` and 2 radar v2 metrics `RADAR_PASSING_DISTANCE_m`, `RADAR_LARGE_VEHICLE_COUNT`) are missing from `ActivityType.getSensorTypeArray()`; `CALORIES` is commented out across 3 profiles; and athletes have no visual indicators in the picker for Bar (`isBarSupported`) or Graph (`isGraphSupported`) capabilities. The system must establish a 2-level taxonomy (`SensorCategory` and `SensorSubCategory`), wire all missing telemetry into `ActivityType`, and provide a 2-level accordion with capability badges in `EditSensorFieldDialog.kt`.
 - **Description**:
@@ -4662,6 +4980,9 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 
 ### REQ-TRK-071: Google Fused Location Registration Idempotency & Teardown Lifecycle [Verified]
 - **Tests**: `TST-TRK-071`
+- **Priority**: Medium
+- **Type**: Non-Functional
+- **Verification Method**: Unit
 - **Implementation**: `SpeedAndLocationDevice_GoogleFused.java`
 - **Rationale**: When tracking with Google Fused (`SpeedAndLocationDevice_GoogleFused`), Android lifecycle and tracking startup invoke `BANALService.checkOrInitializeLocationDevices()` repeatedly across UI and service entry points (e.g. `MainActivityWithNavigation.onResume`, `ControlTrackingScreen` composition and start button, `TrainingApplication.startTracking`, and `TrackerService` connection/start). Without internal registration state tracking, `checkOrReRegisterLocationUpdates()` executed `LocationServices.FusedLocationApi.requestLocationUpdates(...)` on every invocation, creating up to 7 concurrent duplicate listeners in Google Play Services and flooding Logcat 6 times per second (`location delivery to %s blocked - too fast`). Furthermore, `shutDown()` failed to unregister listeners via `LocationServices.FusedLocationApi.removeLocationUpdates(...)`, leaking active registrations until process death. Introducing an idempotent `mUpdatesRegistered` guard and clean defensive lifecycle teardown guarantees strictly at most 1 active listener while preserving permission recovery (ATT-6683, Parent Epic ATT-166, refining `REQ-STB-004`).
 - **Description**:
@@ -4802,6 +5123,9 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 ### REQ-TRK-073: Live 2D Lane-Offset & Vehicle Sizing Radar Edge Overlay [Verified]
 - **Target Release**: `V5.0.0`
 - **Tests**: `TST-TRK-073`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `app/src/main/java/com/atrainingtracker/trainingtracker/ui/tracking/radar/RadarEdgeOverlay.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/ui/settings/radar/RadarSettingsSection.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/TrackOnMapScreen.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/ui/aftermath/RadarTrafficSummaryCard.kt`, `app/src/main/java/com/atrainingtracker/trainingtracker/exporter/writer/FitFileWriter.java`
 - **Rationale**: Following BLE V2 high-resolution radar decoding (ATT-5095 / Garmin Varia RearVue 820), the system receives 2D spatial telemetry (lateral offset, vehicle classification, lane trajectory, passing clearance). Athletes need real-time visual distinction between vehicle sizes (cars vs trucks) and lateral lane-change status on the live Cockpit vertical edge overlay, alongside configurable close-pass (< 1.5 m) safety thresholds, aftermath map hazard markers, summary card metrics, and FIT developer fields.
 - **Description**:
@@ -4836,6 +5160,9 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 ### REQ-TRK-074: Duplicate Location Callback Filtering, Asymmetric Deadband Separation & Stationary Pinning Entry Hysteresis in `SpeedAndLocationDevice` [Verified]
 - **Target Release**: `V5.0.0`
 - **Tests**: `TST-TRK-074`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
 - **Implementation**: `app/src/main/java/com/atrainingtracker/banalservice/devices/SpeedAndLocationDevice.java`, `app/src/test/java/com/atrainingtracker/banalservice/devices/SpeedAndLocationDeviceStationaryJitterTest.kt`
 - **Rationale**: During active athletic tracking (especially on devices using Google Fused Location Provider, `SpeedAndLocationDevice_GoogleFused`), sub-second duplicate/burst callbacks (e.g. 50–150 ms apart with identical coordinates and `speed == 0.0f` from resting phone IMUs) and low-speed movements (e.g. hill climbing $\le 15\text{--}21\text{ km/h}$ where 1-second displacement $\le \text{escapeRadius}$) erroneously triggered stationary anchor pinning (`mIsStationaryPinned = true`), repeatedly overwriting valid moving velocity with `0.0 km/h` and interrupting distance accumulation. The system SHALL ignore sub-interval and duplicate location callbacks, separate the stationary pinning entry threshold (`deadbandRadius`) from the exit escape threshold (`escapeRadius`), and enforce multi-tick entry hysteresis ($\ge 3$ consecutive 1 Hz updates) before transitioning from moving (`!mIsStationaryPinned`) into pinned (`mIsStationaryPinned = true`) state (ATT-6682, amending `REQ-TRK-048.1` and `REQ-TRK-056.1`):
 - **Description**:
@@ -4889,6 +5216,9 @@ c. If FTP is unconfigured ($\le 0$ or null), publish `null` to `mIntensityFactor
 ### REQ-TRK-075: Core Tracking Pipeline Integration Verification (TrackerService, Sensor Layer & SQLite Database) [Verified]
 - **Target Release**: `V5.0.0`
 - **Tests**: `TST-TRK-075`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Integration
 - **Implementation**: `TrackerService.java`, `WorkoutRepository.kt`, `AutoPauseManager.kt`, `LiveWorkoutSession.java`, `app/src/test/java/com/atrainingtracker/trainingtracker/integration/TrackerServiceIntegrationTest.kt`
 - **Rationale**: Prior unit tests isolated tracking components using heavy mocking of databases and services, leaving the full tracking chain unverified as integrated software. In compliance with ASPICE SWE.5 (Remediation ID C-11), the system SHALL verify the integrated execution of TrackerService, sensor telemetry ingestion, active/pause/resume state transitions, and real SQLite persistence (workout_summaries, workout_samples, workout_rr_intervals, and laps) using Robolectric and authentic database engines (ATT-6185):
 - **Description**:

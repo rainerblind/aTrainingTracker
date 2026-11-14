@@ -2258,6 +2258,48 @@ diff --git a/docs/requirements/req_process_stability.md b/docs/requirements/req_
             ok, msgs = verify_qa_audits(sprint_name="sprint/2026-46.3", repo_root=tmpdir)
             self.assertTrue(ok, f"Expected pass when corrective action ticket link is present, got: {msgs}")
 
+    def test_scenario_57_req_pro_094_strict_attribute_enforcement_default(self):
+        """TST-PRO-094: Verify strict attribute enforcement is enabled by default without flags."""
+        shard_content = """### REQ-LEG-001: Legacy Item [Verified]
+- **Tests**: `TST-LEG-001`
+- **Implementation**: `Legacy.kt`
+"""
+        shards = {"docs/requirements/req_test.md": shard_content}
+
+        # Default mode (no enforce_attributes argument specified) -> MUST fail strictly under REQ-PRO-094
+        ok_def, diag_def = verify_requirement_attributes(
+            req_shards=shards,
+            diff_text="",
+        )
+        self.assertFalse(ok_def, "Default verification must fail when attributes are missing")
+        self.assertTrue(any("ERROR" in msg and "REQ-LEG-001" in msg for msg in diag_def))
+        self.assertTrue(any("lacks required attributes" in msg for msg in diag_def))
+
+        # Explicitly opt-out via enforce_attributes=False -> passes with warning
+        ok_lenient, diag_lenient = verify_requirement_attributes(
+            req_shards=shards,
+            diff_text="",
+            enforce_attributes=False,
+        )
+        self.assertTrue(ok_lenient)
+        self.assertTrue(any("WARNING" in msg and "REQ-LEG-001" in msg for msg in diag_lenient))
+
+        # Fully compliant requirement -> passes strictly with PASS message
+        compliant_shard = """### REQ-LEG-001: Legacy Item [Verified]
+- **Tests**: `TST-LEG-001`
+- **Priority**: High
+- **Type**: Functional
+- **Verification Method**: Unit
+- **Implementation**: `Legacy.kt`
+"""
+        ok_comp, diag_comp = verify_requirement_attributes(
+            req_shards={"docs/requirements/req_test.md": compliant_shard},
+            diff_text="",
+        )
+        self.assertTrue(ok_comp)
+        self.assertTrue(any("PASS: 100% of living requirements define valid Priority, Type, and Verification Method attributes" in msg for msg in diag_comp))
+
+
 
 
 if __name__ == "__main__":

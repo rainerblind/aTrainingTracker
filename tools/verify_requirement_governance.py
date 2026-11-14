@@ -1970,7 +1970,7 @@ def find_missing_requirement_attributes(repo_root=None, req_shards=None):
 
 def verify_requirement_attributes(
     repo_root=None,
-    enforce_attributes=False,
+    enforce_attributes=True,
     diff_text=None,
     base_ref="develop",
     req_shards=None,
@@ -3103,7 +3103,7 @@ def verify_governance(
     fail_on_duplicates=False,
     fail_on_dangling=False,
     fail_on_unverified=False,
-    enforce_attributes=False,
+    enforce_attributes=True,
     min_req_tst_coverage=None,
     min_tst_code_coverage=None,
     max_code_without_spec=None,
@@ -3439,7 +3439,14 @@ def main():
         "--fail-on-missing-attributes",
         dest="enforce_attributes",
         action="store_true",
-        help="Fail verification if any requirement lacks Priority, Type, or Verification Method attributes (REQ-PRO-077).",
+        default=True,
+        help="Fail verification if any requirement lacks Priority, Type, or Verification Method attributes (REQ-PRO-077, REQ-PRO-094; strict by default).",
+    )
+    parser.add_argument(
+        "--no-enforce-attributes",
+        dest="enforce_attributes",
+        action="store_false",
+        help="Allow legacy requirements to lack attributes with warnings instead of fatal errors.",
     )
     parser.add_argument(
         "--check-attributes",

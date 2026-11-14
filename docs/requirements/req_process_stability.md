@@ -4889,3 +4889,32 @@ The workflow SHALL mandate that:
   • *When* `python3 tools/test_shard_living_docs.py` and `python3 tools/verify_requirement_governance.py` are executed,
   • *Then* all tests pass with exit code 0.
 - **Invariants**: Zero changes to production runtime logic; existing master table parity intact; Human Decision Gate inviolable.
+
+
+---
+
+### REQ-PRO-094: Legacy Requirement Attribute Backfill and Strict SWE.1 BP2 Enforcement [Verified]
+- **Tests**: `TST-PRO-094`
+- **Priority**: High
+- **Type**: Non-Functional
+- **Verification Method**: Unit / Review
+- **Implementation**: `docs/requirements/req_tracking_cockpit.md`, `docs/requirements/req_maps_navigation.md`, `tools/verify_requirement_governance.py`, `tools/test_verify_requirement_governance.py`
+- **Rationale**: Under ASPICE SWE.1 BP2 and BP3, all software requirements must define Priority, Type, and Verification Method attributes. The legacy tolerance in `tools/verify_requirement_governance.py` permitted 115 legacy requirements to omit these attributes with non-fatal warnings (ASPICE finding F5). Backfilling attributes across all living shards and enabling strict enforcement by default guarantees 100% attribute completeness and prevents future regressions.
+- **Description**:
+  1. *Legacy Attribute Backfill (`REQ-PRO-094.1`)*: All 115 legacy requirements across `docs/requirements/req_tracking_cockpit.md` and `docs/requirements/req_maps_navigation.md` SHALL define explicit, valid `Priority` (`Critical`, `High`, `Medium`, `Low`), `Type` (`Functional`, `Non-Functional`), and `Verification Method` (`Unit`, `Integration`, `On-Device Manual`, `Review`, `Formal Analysis`) attributes.
+  2. *Strict Attribute Enforcement by Default (`REQ-PRO-094.2`)*: `tools/verify_requirement_governance.py` (`verify_requirement_attributes` and `verify_governance`) SHALL enforce valid Priority, Type, and Verification Method attributes by default (`enforce_attributes=True`), treating any missing or invalid attribute in any requirement shard as a fatal verification error.
+  3. *Zero Warning Requirement (`REQ-PRO-094.3`)*: Executing `tools/verify_requirement_governance.py` SHALL emit zero legacy-missing-attribute warnings and confirm 100% attribute compliance.
+  4. *Regression Test Parity (`REQ-PRO-094.4`)*: `tools/test_verify_requirement_governance.py` SHALL verify that any requirement lacking attributes fails verification unconditionally.
+- **Requirement Archaeology & Chesterton's Fence Audit**:
+  1. *Original Requirement ID & Target*: Net-new requirement `REQ-PRO-094`. Targets `docs/requirements/req_tracking_cockpit.md`, `docs/requirements/req_maps_navigation.md`, and `tools/verify_requirement_governance.py`.
+  2. *Historical Origin & Commit Trace*: Sprint 2026-46.6 via ticket `ATT-7562` under Epic `ATT-232` (Finding F5).
+  3. *Root Reason for Existing Formulation*: Legacy tolerance was introduced in `ATT-6147` as an interim bridge during ASPICE CL2 remediation.
+  4. *Preservation of Core Invariants*: Human Decision Gate, zero Android runtime logic changes, and 100% test pass rate preserved.
+- **Acceptance Criteria (Given-When-Then)**:
+  • *Given* all requirement shards under `docs/requirements/`,
+  • *When* `tools/verify_requirement_governance.py` executes,
+  • *Then* zero legacy-missing-attribute warnings are emitted and 100% attribute compliance is certified.
+  • *Given* any requirement lacking Priority, Type, or Verification Method,
+  • *When* the governance verifier runs,
+  • *Then* it fails unconditionally with exit code 1.
+- **Invariants**: Zero changes to production runtime logic; existing master table parity intact; Human Decision Gate inviolable.
