@@ -70,6 +70,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -183,16 +184,16 @@ fun HeroTotalsCard(
 
     val distanceFormatted = if (isImperial) {
         val distMiles = (totals.totalDistanceKm * 1000.0) / BANALService.METER_PER_MILE
-        "${String.format(Locale.getDefault(), "%,.1f", distMiles)} mi"
+        "${String.format(LocalConfiguration.current.locales[0], "%,.1f", distMiles)} mi"
     } else {
-        "${String.format(Locale.getDefault(), "%,.1f", totals.totalDistanceKm)} km"
+        "${String.format(LocalConfiguration.current.locales[0], "%,.1f", totals.totalDistanceKm)} km"
     }
 
     val elevationFormatted = if (isImperial) {
         val elevFeet = (totals.totalElevationM / BANALService.METER_PER_FOOT).roundToLong()
-        "${String.format(Locale.getDefault(), "%,d", elevFeet)} ft"
+        "${String.format(LocalConfiguration.current.locales[0], "%,d", elevFeet)} ft"
     } else {
-        "${String.format(Locale.getDefault(), "%,d", totals.totalElevationM)} m"
+        "${String.format(LocalConfiguration.current.locales[0], "%,d", totals.totalElevationM)} m"
     }
 
     Card(
@@ -254,12 +255,12 @@ fun HeroTotalsCard(
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 SecondaryStatBox(
-                    title = String.format(Locale.getDefault(), "%,d", totals.totalWorkouts),
+                    title = String.format(LocalConfiguration.current.locales[0], "%,d", totals.totalWorkouts),
                     subtitle = stringResource(R.string.sporting_journey_hero_workouts_label),
                     modifier = Modifier.weight(1f)
                 )
                 SecondaryStatBox(
-                    title = "${String.format(Locale.getDefault(), "%,.0f", totals.totalActiveHours)} h",
+                    title = "${String.format(LocalConfiguration.current.locales[0], "%,.0f", totals.totalActiveHours)} h",
                     subtitle = stringResource(R.string.sporting_journey_hero_days_sub, totals.nonstopDays),
                     modifier = Modifier.weight(1f)
                 )
@@ -361,13 +362,13 @@ fun HiddenGemsSection(
             pillColor = TTColor.VaultBiologicalRed,
             headline = stringResource(
                 R.string.sporting_journey_gem_cranks_val,
-                String.format(Locale.getDefault(), "%,d", gems.pedalRevolutions)
+                String.format(LocalConfiguration.current.locales[0], "%,d", gems.pedalRevolutions)
             ),
             description = stringResource(
                 R.string.sporting_journey_gem_cranks_desc,
                 gems.cadenceTrackedRidesCount,
-                String.format(Locale.getDefault(), "%,d", gems.pedalRevolutions),
-                String.format(Locale.getDefault(), "%,d", gems.estimatedHeartbeats)
+                String.format(LocalConfiguration.current.locales[0], "%,d", gems.pedalRevolutions),
+                String.format(LocalConfiguration.current.locales[0], "%,d", gems.estimatedHeartbeats)
             )
         )
 
@@ -379,8 +380,8 @@ fun HiddenGemsSection(
             headline = stringResource(R.string.sporting_journey_gem_kwh_val, gems.mechanicalKwh),
             description = stringResource(
                 R.string.sporting_journey_gem_kwh_desc,
-                String.format(Locale.getDefault(), "%,.0f", gems.mechanicalKj),
-                String.format(Locale.getDefault(), "%,.0f", gems.ebikeKmEquivalent),
+                String.format(LocalConfiguration.current.locales[0], "%,.0f", gems.mechanicalKj),
+                String.format(LocalConfiguration.current.locales[0], "%,.0f", gems.ebikeKmEquivalent),
                 gems.espressosEquivalent,
                 gems.phoneChargesEquivalent
             )
@@ -389,7 +390,8 @@ fun HiddenGemsSection(
         // Gem 3: Circadian DNA
         val startH = gems.mostActiveHourStart ?: 6
         val endH = (startH + 2) % 24
-        val dowName = remember(gems.mostActiveDayOfWeek) {
+        val currentLocale = LocalConfiguration.current.locales[0]
+        val dowName = remember(gems.mostActiveDayOfWeek, currentLocale) {
             gems.mostActiveDayOfWeek?.let { dow ->
                 val dayOfWeek = when (dow) {
                     0 -> DayOfWeek.SUNDAY
@@ -401,8 +403,8 @@ fun HiddenGemsSection(
                     6 -> DayOfWeek.SATURDAY
                     else -> DayOfWeek.FRIDAY
                 }
-                dayOfWeek.getDisplayName(TextStyle.FULL, Locale.getDefault())
-            } ?: DayOfWeek.FRIDAY.getDisplayName(TextStyle.FULL, Locale.getDefault())
+                dayOfWeek.getDisplayName(TextStyle.FULL, currentLocale)
+            } ?: DayOfWeek.FRIDAY.getDisplayName(TextStyle.FULL, currentLocale)
         }
         GemCard(
             categoryTitle = stringResource(R.string.sporting_journey_gem_circadian_title),
@@ -793,7 +795,7 @@ fun AthletePassportShareCard(
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = stringResource(R.string.sporting_journey_share_title).uppercase(Locale.getDefault()),
+                        text = stringResource(R.string.sporting_journey_share_title).uppercase(LocalConfiguration.current.locales[0]),
                         style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.Bold,
                         color = TTColor.VaultAmber

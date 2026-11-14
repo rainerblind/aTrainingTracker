@@ -19,6 +19,7 @@
 package com.atrainingtracker.trainingtracker.ui.hrv
 
 import android.widget.Toast
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
@@ -973,7 +974,8 @@ private fun MorningWellnessInputCard(
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     val hours = uiState.sleepDurationMinutes / 60
                     val mins = uiState.sleepDurationMinutes % 60
-                    val durationText = String.format(Locale.getDefault(), "%dh %02dm", hours, mins)
+                    val locale = LocalConfiguration.current.locales[0]
+                    val durationText = String.format(locale, "%dh %02dm", hours, mins)
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,

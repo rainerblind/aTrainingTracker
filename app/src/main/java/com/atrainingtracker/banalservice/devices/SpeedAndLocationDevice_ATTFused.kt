@@ -18,6 +18,7 @@
 
 package com.atrainingtracker.banalservice.devices
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.hardware.Sensor
 import android.hardware.SensorEvent
@@ -129,6 +130,7 @@ open class SpeedAndLocationDevice_ATTFused(
         setLastActive()
     }
 
+    @SuppressLint("MissingPermission")
     @Synchronized
     fun registerLocationUpdates() {
         if (mUpdatesRegistered) return
