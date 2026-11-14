@@ -81,10 +81,14 @@
     <!-- Radar Audio & Haptic Alerts (ATT-5086 / REQ-TRK-063) -->
     <string name="radar_alerts_settings_title">Radar Alerts &amp; Audio</string>
     <string name="radar_alert_mode_title">Audio Alert Mode</string>
-    <string name="radar_alert_mode_all">All Alerts</string>
-    <string name="radar_alert_mode_approach_fast">Approach &amp; Fast</string>
+    <string name="radar_alert_mode_all">All</string>
+    <string name="radar_alert_mode_approach_fast">Approach</string>
     <string name="radar_alert_mode_fast_only">Fast Only</string>
     <string name="radar_alert_mode_muted">Muted</string>
+    <string name="radar_alert_mode_all_desc">Plays audio chimes for all approaching and fast-approaching targets</string>
+    <string name="radar_alert_mode_approach_fast_desc">Plays audio chimes for standard approach and high-speed threat targets</string>
+    <string name="radar_alert_mode_fast_only_desc">Plays audio chimes only for high-speed threat targets (&gt;= 30 km/h approach)</string>
+    <string name="radar_alert_mode_muted_desc">Visual edge overlay only; all audio chimes are muted</string>
     <string name="radar_alert_volume_title">Alert Volume</string>
     <string name="radar_alert_speaker_boost">Boost Speaker Volume</string>
     <string name="radar_alert_speaker_boost_desc">Temporarily overrides quiet phone speaker during alerts</string>
@@ -174,9 +178,9 @@
     <string name="radar_summary_max_speed_simple">🚀 Max %1$s km/h</string>
     <string name="radar_close_pass_threshold_title">Close-Pass Warning Threshold</string>
     <string name="radar_close_pass_threshold_summary">Highlights passing motorists below minimum safety clearance distance on aftermath map</string>
-    <string name="radar_close_pass_threshold_1_0m">1.0 m (3.3 ft - UK/US)</string>
-    <string name="radar_close_pass_threshold_1_5m">1.5 m (5.0 ft - Urban / StVO)</string>
-    <string name="radar_close_pass_threshold_2_0m">2.0 m (6.6 ft - Rural / StVO)</string>
+    <string name="radar_close_pass_threshold_1_0m">1.0 m (3.3 ft)</string>
+    <string name="radar_close_pass_threshold_1_5m">1.5 m (5.0 ft)</string>
+    <string name="radar_close_pass_threshold_2_0m">2.0 m (6.6 ft)</string>
     <string name="radar_marker_close_pass_title">⚠️ Close Pass (%1$sm) • %2$s • %3$s km/h</string>
     <string name="radar_vehicle_size_light">Light Vehicle</string>
     <string name="radar_vehicle_size_car">Car</string>

@@ -81,10 +81,14 @@
     <!-- Radar Audio & Haptic Alerts (ATT-5086 / REQ-TRK-063) -->
     <string name="radar_alerts_settings_title">Alertes radar et audio</string>
     <string name="radar_alert_mode_title">Mode d\'alerte audio</string>
-    <string name="radar_alert_mode_all">Toutes les alertes</string>
-    <string name="radar_alert_mode_approach_fast">Approche et rapide</string>
-    <string name="radar_alert_mode_fast_only">Rapides uniquement</string>
+    <string name="radar_alert_mode_all">Toutes</string>
+    <string name="radar_alert_mode_approach_fast">Approche</string>
+    <string name="radar_alert_mode_fast_only">Rapides seuls</string>
     <string name="radar_alert_mode_muted">Muet</string>
+    <string name="radar_alert_mode_all_desc">Émet des alertes sonores pour tous les véhicules en approche</string>
+    <string name="radar_alert_mode_approach_fast_desc">Émet des alertes sonores pour l\'approche standard et les menaces rapides</string>
+    <string name="radar_alert_mode_fast_only_desc">Émet des alertes sonores uniquement pour les véhicules à grande vitesse (&gt;= 30 km/h)</string>
+    <string name="radar_alert_mode_muted_desc">Bandeau visuel uniquement ; toutes les alertes sonores sont coupées</string>
     <string name="radar_alert_volume_title">Volume d\'alerte</string>
     <string name="radar_alert_speaker_boost">Amplifier le haut-parleur</string>
     <string name="radar_alert_speaker_boost_desc">Augmente temporairement le haut-parleur pendant les alertes</string>
@@ -174,9 +178,9 @@
     <string name="radar_summary_max_speed_simple">🚀 Max %1$s km/h</string>
     <string name="radar_close_pass_threshold_title">Seuil de dépassement serré</string>
     <string name="radar_close_pass_threshold_summary">Met en évidence les véhicules dépassant sous la distance de sécurité minimale sur la carte</string>
-    <string name="radar_close_pass_threshold_1_0m">1,0 m (3,3 ft - UK/US)</string>
-    <string name="radar_close_pass_threshold_1_5m">1,5 m (5,0 ft - Urbain / StVO)</string>
-    <string name="radar_close_pass_threshold_2_0m">2,0 m (6,6 ft - Hors agglomération)</string>
+    <string name="radar_close_pass_threshold_1_0m">1,0 m (3,3 ft)</string>
+    <string name="radar_close_pass_threshold_1_5m">1,5 m (5,0 ft)</string>
+    <string name="radar_close_pass_threshold_2_0m">2,0 m (6,6 ft)</string>
     <string name="radar_marker_close_pass_title">⚠️ Dépassement serré (%1$sm) • %2$s • %3$s km/h</string>
     <string name="radar_vehicle_size_light">Véhicule léger</string>
     <string name="radar_vehicle_size_car">Voiture</string>

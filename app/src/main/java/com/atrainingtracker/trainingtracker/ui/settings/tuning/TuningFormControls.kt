@@ -340,7 +340,7 @@ fun <T> TuningSegmentedButtonRow(
                     shape = SegmentedButtonDefaults.itemShape(index = index, count = options.size),
                     enabled = enabled,
                     icon = {},
-                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
+                    contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp)
                 ) {
                     Text(
                         text = labelProvider(option),

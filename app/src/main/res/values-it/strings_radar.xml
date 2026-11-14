@@ -81,10 +81,14 @@
     <!-- Radar Audio & Haptic Alerts (ATT-5086 / REQ-TRK-063) -->
     <string name="radar_alerts_settings_title">Avvisi radar e audio</string>
     <string name="radar_alert_mode_title">Modalità avviso audio</string>
-    <string name="radar_alert_mode_all">Tutti gli avvisi</string>
-    <string name="radar_alert_mode_approach_fast">Avvicinamento e rapido</string>
+    <string name="radar_alert_mode_all">Tutti</string>
+    <string name="radar_alert_mode_approach_fast">Avvicinamento</string>
     <string name="radar_alert_mode_fast_only">Solo veloci</string>
-    <string name="radar_alert_mode_muted">Disattivato</string>
+    <string name="radar_alert_mode_muted">Muto</string>
+    <string name="radar_alert_mode_all_desc">Riproduce avvisi sonori per tutti i veicoli in avvicinamento</string>
+    <string name="radar_alert_mode_approach_fast_desc">Riproduce avvisi sonori per avvicinamenti standard e minacce ad alta velocità</string>
+    <string name="radar_alert_mode_fast_only_desc">Riproduce avvisi sonori solo per veicoli ad alta velocità di avvicinamento (&gt;= 30 km/h)</string>
+    <string name="radar_alert_mode_muted_desc">Solo sovrapposizione visiva laterale; tutti gli avvisi sonori sono disattivati</string>
     <string name="radar_alert_volume_title">Volume avviso</string>
     <string name="radar_alert_speaker_boost">Amplifica altoparlante</string>
     <string name="radar_alert_speaker_boost_desc">Aumenta temporaneamente il volume dell\'altoparlante per gli avvisi</string>
@@ -174,9 +178,9 @@
     <string name="radar_summary_max_speed_simple">🚀 Max %1$s km/h</string>
     <string name="radar_close_pass_threshold_title">Soglia sorpasso ravvicinato</string>
     <string name="radar_close_pass_threshold_summary">Evidenzia i veicoli in sorpasso sotto la distanza minima di sicurezza sulla mappa</string>
-    <string name="radar_close_pass_threshold_1_0m">1,0 m (3,3 ft - UK/US)</string>
-    <string name="radar_close_pass_threshold_1_5m">1,5 m (5,0 ft - Urbano / StVO)</string>
-    <string name="radar_close_pass_threshold_2_0m">2,0 m (6,6 ft - Extraurbano)</string>
+    <string name="radar_close_pass_threshold_1_0m">1,0 m (3,3 ft)</string>
+    <string name="radar_close_pass_threshold_1_5m">1,5 m (5,0 ft)</string>
+    <string name="radar_close_pass_threshold_2_0m">2,0 m (6,6 ft)</string>
     <string name="radar_marker_close_pass_title">⚠️ Sorpasso ravvicinato (%1$sm) • %2$s • %3$s km/h</string>
     <string name="radar_vehicle_size_light">Veicolo leggero</string>
     <string name="radar_vehicle_size_car">Auto</string>

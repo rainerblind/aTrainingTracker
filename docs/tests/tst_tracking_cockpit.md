@@ -2035,7 +2035,7 @@
   • Verify `RadarAlertManager` collects `tuningConfigFlow` reactively and caches configuration without per-frame DataStore queries on 8 Hz telemetry.
   7. *9-Language Localization Parity & Compact Segmented Controls (`TST-TRK-063.7`, `TranslationParityTest.kt`)*:
   • Verify 100% key and format parity across `strings_radar.xml` in all 9 supported locales (`values`, `values-de`, `values-es`, `values-fr`, `values-it`, `values-ja`, `values-nl`, `values-pl`, `values-pt`).
-  • Verify compact phrasing and single-line rendering enforcement on `SegmentedButton` labels across all 9 locales.
+  • Verify compact phrasing and single-line rendering enforcement on `SegmentedButton` labels across all 9 locales, asserting non-ellipsized fit on standard screen widths.
   8. *Clean-Room Targeted Test Suite Execution (`TST-TRK-063.8`)*:
   • Execute targeted package tests (`com.atrainingtracker.trainingtracker.audio.radar.*`, `com.atrainingtracker.trainingtracker.settings.*`, `com.atrainingtracker.trainingtracker.build.*`) asserting 100% pass rate.
 

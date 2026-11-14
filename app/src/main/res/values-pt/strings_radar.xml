@@ -81,10 +81,14 @@
     <!-- Radar Audio & Haptic Alerts (ATT-5086 / REQ-TRK-063) -->
     <string name="radar_alerts_settings_title">Alertas de radar e áudio</string>
     <string name="radar_alert_mode_title">Modo de alerta sonoro</string>
-    <string name="radar_alert_mode_all">Todos os alertas</string>
-    <string name="radar_alert_mode_approach_fast">Aproximação e rápido</string>
+    <string name="radar_alert_mode_all">Todos</string>
+    <string name="radar_alert_mode_approach_fast">Aproximação</string>
     <string name="radar_alert_mode_fast_only">Apenas rápidos</string>
     <string name="radar_alert_mode_muted">Silenciado</string>
+    <string name="radar_alert_mode_all_desc">Reproduz alertas sonoros para todos os veículos em aproximação</string>
+    <string name="radar_alert_mode_approach_fast_desc">Reproduz alertas sonoros para aproximação padrão e ameaças de alta velocidade</string>
+    <string name="radar_alert_mode_fast_only_desc">Reproduz alertas sonoros apenas para veículos com alta velocidade de aproximação (&gt;= 30 km/h)</string>
+    <string name="radar_alert_mode_muted_desc">Apenas sobreposição visual na borda; todos os alertas sonoros estão silenciados</string>
     <string name="radar_alert_volume_title">Volume do alerta</string>
     <string name="radar_alert_speaker_boost">Amplificar alto-falante</string>
     <string name="radar_alert_speaker_boost_desc">Substitui temporariamente o volume baixo do alto-falante em alertas</string>
@@ -174,9 +178,9 @@
     <string name="radar_summary_max_speed_simple">🚀 Máx %1$s km/h</string>
     <string name="radar_close_pass_threshold_title">Limite de aviso de ultrapassagem</string>
     <string name="radar_close_pass_threshold_summary">Destaca veículos a ultrapassar abaixo da distância mínima de segurança no mapa</string>
-    <string name="radar_close_pass_threshold_1_0m">1,0 m (3,3 ft - UK/US)</string>
-    <string name="radar_close_pass_threshold_1_5m">1,5 m (5,0 ft - Urbano / StVO)</string>
-    <string name="radar_close_pass_threshold_2_0m">2,0 m (6,6 ft - Fora de localidades)</string>
+    <string name="radar_close_pass_threshold_1_0m">1,0 m (3,3 ft)</string>
+    <string name="radar_close_pass_threshold_1_5m">1,5 m (5,0 ft)</string>
+    <string name="radar_close_pass_threshold_2_0m">2,0 m (6,6 ft)</string>
     <string name="radar_marker_close_pass_title">⚠️ Ultrapassagem perigosa (%1$sm) • %2$s • %3$s km/h</string>
     <string name="radar_vehicle_size_light">Veículo ligeiro</string>
     <string name="radar_vehicle_size_car">Carro</string>
