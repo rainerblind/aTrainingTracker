@@ -79,7 +79,7 @@
     <string name="morning_hrv_btn_save">Salva</string>
     <string name="morning_hrv_btn_discard">Scarta</string>
     <string name="morning_hrv_instructions_title">Protocollo standardizzato</string>
-    <string name="morning_hrv_instructions_desc">Misurare al risveglio dopo aver svuotato la vescica. Rimanere fermi e respirare normalmente senza parlare. Mantenere la postura per confronti affidabili.</string>
+    <string name="morning_hrv_instructions_desc">Misurare a riposo direttamente al risveglio. Rimanere fermi e respirare normalmente senza parlare. Mantenere la postura per confronti affidabili.</string>
     <string name="morning_hrv_artifact_warning_title">Tasso di artefatti elevato</string>
     <string name="morning_hrv_artifact_warning_desc">Il tasso di artefatti supera il 5%% (%1$.1f%%). Inumidire gli elettrodi della fascia cardio e verificare il posizionamento.</string>
     <string name="morning_hrv_smoothed_warning_title">Rilevato flusso RR approssimato</string>

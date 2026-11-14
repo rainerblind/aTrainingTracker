@@ -79,7 +79,7 @@
     <string name="morning_hrv_btn_save">Guardar</string>
     <string name="morning_hrv_btn_discard">Descartar</string>
     <string name="morning_hrv_instructions_title">Protocolo estandarizado</string>
-    <string name="morning_hrv_instructions_desc">Medir al despertar tras vaciar la vejiga. Permanezca quieto y respire con normalidad sin hablar. Mantenga la misma postura para comparaciones basales fiables.</string>
+    <string name="morning_hrv_instructions_desc">Medir en reposo directamente al despertar. Permanezca quieto y respire con normalidad sin hablar. Mantenga la misma postura para comparaciones basales fiables.</string>
     <string name="morning_hrv_artifact_warning_title">Tasa alta de artefactos</string>
     <string name="morning_hrv_artifact_warning_desc">La tasa de artefactos supera el 5%% (%1$.1f%%). Humedezca los electrodos de la banda pectoral y compruebe su ajuste.</string>
     <string name="morning_hrv_smoothed_warning_title">Flujo RR suavizado detectado</string>

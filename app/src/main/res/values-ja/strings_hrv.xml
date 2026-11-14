@@ -79,7 +79,7 @@
     <string name="morning_hrv_btn_save">保存</string>
     <string name="morning_hrv_btn_discard">破棄</string>
     <string name="morning_hrv_instructions_title">標準測定プロトコル</string>
-    <string name="morning_hrv_instructions_desc">起床後、排尿を済ませてから測定してください。会話を控え、静かに自然な呼吸を保ちます。正確なSWC比較のため常に同じ姿勢を維持してください。</string>
+    <string name="morning_hrv_instructions_desc">起床後、安静にして測定してください。会話を控え、静かに自然な呼吸を保ちます。正確なSWC比較のため常に同じ姿勢を維持してください。</string>
     <string name="morning_hrv_artifact_warning_title">高いアーチファクト率</string>
     <string name="morning_hrv_artifact_warning_desc">アーチファクト率が5%%を超えています（%1$.1f%%）。胸部心拍ストラップの電極を十分に湿らせ、しっかりと装着してください。</string>
     <string name="morning_hrv_smoothed_warning_title">平滑化されたRRストリームを検出</string>

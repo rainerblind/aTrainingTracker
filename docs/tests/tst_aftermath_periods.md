@@ -605,8 +605,9 @@
   5. *Pre-Save In-Memory Readiness Preview & Persistence Test (`TST-PER-040.5`, `MorningHrvCheckViewModelTest.kt`)*:
   • Verify that completion view previews `ReadinessStatus` calculated in-memory with the newly measured entry combined with existing historical records before saving.
   • Verify that saving persists `HrvReadinessEntry` into `HrvReadinessRepository` (`HrvReadiness.db`).
-  6. *Localization Parity & Semantic Color Audit (`TST-PER-040.6`, `TranslationParityTest.kt`, `ThemeColorCentralizationAuditTest.kt`)*:
+  6. *Localization Parity, Instruction Hygiene & Semantic Color Audit (`TST-PER-040.6`, `TranslationParityTest.kt`, `ThemeColorCentralizationAuditTest.kt`)*:
   • Verify 100% translation parity across all 9 locales in `strings_hrv.xml` with zero hardcoded English or `Locale.US` formatters.
+  • Verify `morning_hrv_instructions_desc` across all 9 locales does not contain bladder emptying phrasing and verifies rest phrasing (`TranslationParityTest.kt`).
   • Verify zero raw `Color.White` literals on readiness pills, adhering to `TTColor.ReadinessOnStatus`.
   7. *Tier 1 Clean-Room Targeted Regression Execution (`TST-PER-040.7`)*:
   • Execute targeted unit tests `./gradlew testDebugUnitTest --tests "com.atrainingtracker.trainingtracker.ui.hrv.*" --tests "com.atrainingtracker.trainingtracker.localization.TranslationParityTest" --tests "com.atrainingtracker.trainingtracker.build.*"` verifying 100% clean-room test pass rate.
